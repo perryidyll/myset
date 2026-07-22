@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
-<meta name="theme-color" content="#0a0a0f" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0e15" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="MySet" />
+<meta name="format-detection" content="telephone=no" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5ef6'/><g fill='%23fff'><rect x='29' y='38' width='11' height='36' rx='5.5'/><rect x='46' y='24' width='11' height='50' rx='5.5'/><rect x='63' y='50' width='11' height='24' rx='5.5'/></g></svg>" />
 <title>MySet — the crowd builds your set</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%236d5ef6'/><stop offset='1' stop-color='%238b5cf6'/></linearGradient></defs><rect width='100' height='100' rx='26' fill='url(%23g)'/><g fill='%23fff'><rect x='29' y='38' width='11' height='36' rx='5.5'/><rect x='46' y='24' width='11' height='50' rx='5.5'/><rect x='63' y='50' width='11' height='24' rx='5.5'/></g></svg>" />
 <style>
@@ -407,6 +414,11 @@ body.theme-dark .field textarea:focus{background:var(--bg-elev)}
 .cam-btn.on .cd{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
 @media(max-width:560px){.cam-player{flex-direction:column}.cam-rail{flex-direction:row;width:auto}.cam-btn{flex-direction:row;padding:10px}}
 
+/* safe-area for notched phones; per-song boost pill hidden until mobile */
+.topbar{padding-top:env(safe-area-inset-top)}
+.wrap{padding-left:max(22px,env(safe-area-inset-left));padding-right:max(22px,env(safe-area-inset-right))}
+.bt-mobile{display:none}
+
 @media(max-width:820px){
   .grid-3{grid-template-columns:1fr}
   .grid-2{grid-template-columns:1fr}
@@ -416,6 +428,47 @@ body.theme-dark .field textarea:focus{background:var(--bg-elev)}
   .pstats{gap:20px}
 }
 @media(min-width:821px){ .botnav{display:none} .app{padding-bottom:40px} }
+
+/* ---------- phone tuning ---------- */
+@media(max-width:560px){
+  .wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+  /* de-crowd the top bar so nothing clips */
+  .brand{font-size:18px;gap:8px}
+  .brand small{display:none}
+  .topbar-inner{gap:8px}
+  .topbar-inner>.row.gap12{display:none}          /* empty centered search slot */
+  .topbar .row.gap10{gap:7px}
+  .theme-btn{width:34px;height:34px;font-size:15px}
+  .role-toggle button{padding:6px 13px;font-size:13px}
+  .avatar-btn{width:32px;height:32px;font-size:11.5px;flex:0 0 auto}
+
+  /* section headers + filter chips */
+  .sec-head{flex-wrap:wrap;gap:6px 10px}
+  .filter-row{gap:7px}
+  .fchip{padding:8px 13px}
+
+  /* keep the live "Leave" button on the same row as the artist */
+  .live-head{flex-wrap:nowrap}
+  .live-head>.row{min-width:0}
+  .live-head .btn-sm{flex:0 0 auto}
+
+  /* vote card: move the ⚡ boost into the reactions row, tighten the top row */
+  .bt-desktop{display:none}
+  .bt-mobile{display:inline-flex}
+  .react-btn.bt-mobile{border-color:rgba(255,159,10,.55);color:#e07d00;font-weight:750}
+  .venue .react-btn.bt-mobile{border-color:rgba(255,159,10,.5);color:#ffb84d}
+  .vc-top{gap:10px;padding:13px 13px 8px}
+  .vote-rank{width:20px;font-size:13px}
+  .vote-art{width:42px;height:42px}
+  .vote-count{min-width:38px}
+  .vote-count b{font-size:17px}
+  .vote-count span{display:none}
+  .vote-sub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vote-btn{width:46px;height:46px}
+
+  /* now-playing + hero readability */
+  .hero h1{font-size:34px}
+}
 
 .fadein{animation:fade .5s var(--ease) both}
 @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -725,9 +778,9 @@ function viewLive(artistSide=false){
 
   return `
   <div style="padding-top:18px">
-    <div class="row between wrapf gap12">
-      <div class="row gap12">
-        <div class="pavatar" style="width:52px;height:52px;border-radius:14px;background-image:url('${a.avatar}');border:2px solid var(--line)"></div>
+    <div class="row between gap12 live-head">
+      <div class="row gap12" style="min-width:0">
+        <div class="pavatar" style="width:52px;height:52px;border-radius:14px;background-image:url('${a.avatar}');border:2px solid var(--line);flex:0 0 auto"></div>
         <div>
           <div class="row gap8"><b style="font-size:17px">${a.name}</b> <span class="pill-live"><span class="bl"></span>Live</span></div>
           <div class="muted tiny">Mohawk · Austin, TX · <b style="color:var(--ink-2)">312</b> in the room</div>
@@ -855,11 +908,12 @@ function voteCard(s,i,leader,coinsLeft){
         <div class="vote-sub">${s.dur}${s.tag?` · <span class="chip" style="padding:2px 8px;font-size:10.5px">${s.tag}</span>`:''}</div>
       </div>
       <div class="vote-count"><b>${s.v}</b><span>votes</span></div>
-      <button class="boost-btn" title="Boost this song" onclick="showBoost('${s.id}')">⚡</button>
+      <button class="boost-btn bt-desktop" title="Boost this song" onclick="showBoost('${s.id}')">⚡</button>
       <button class="vote-btn ${mine?'voted':''}" onclick="castVote('${s.id}')" ${(!canVote&&!mine)?'disabled style="opacity:.4"':''}>${mine?'✓':'▲'}</button>
     </div>
     <div class="vc-react">
       ${reactBtns}
+      <button class="react-btn bt-mobile" title="Boost this song" onclick="showBoost('${s.id}')">⚡ Boost</button>
       <button class="react-btn cmt" onclick="showComments('${s.id}')">💬 ${cc} ${cc===1?'comment':'comments'}</button>
     </div>
   </div>`;
