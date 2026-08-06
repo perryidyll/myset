@@ -269,6 +269,28 @@ body.venue-scope{background:#06060d}
 .eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}.eq i:nth-child(4){animation-delay:.15s}
 @keyframes eq{0%,100%{height:4px}50%{height:14px}}
 
+/* ---------- now-playing hero (Live page) ---------- */
+.np-hero{display:flex;gap:16px;align-items:center;background:var(--grad-2);color:#fff;border-radius:var(--radius);padding:18px 20px;box-shadow:0 12px 34px rgba(91,75,225,.34);position:relative;overflow:hidden}
+.np-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(420px 180px at 90% -20%,rgba(255,255,255,.22),transparent 70%);pointer-events:none}
+.np-art{width:74px;height:74px;border-radius:16px;background-size:cover;background-position:center;flex:0 0 auto;box-shadow:0 8px 22px rgba(0,0,0,.4)}
+.np-body{flex:1;min-width:0;position:relative}
+.np-label{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;opacity:.9}
+.np-label .dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
+.np-title{font-size:23px;font-weight:750;letter-spacing:-.025em;margin:5px 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-meta{font-size:13px;opacity:.82}
+.np-prog{height:5px;background:rgba(255,255,255,.28);border-radius:3px;margin-top:13px;overflow:hidden}
+.np-prog i{display:block;height:100%;background:#fff;border-radius:3px}
+.np-eq{height:24px;flex:0 0 auto;align-self:flex-start;margin-top:4px;position:relative}
+.np-eq i{width:3.5px}
+@keyframes eqbig{0%,100%{height:5px}50%{height:24px}}
+.np-eq i{animation-name:eqbig}
+@media(max-width:560px){
+  .np-hero{padding:15px 16px;gap:13px}
+  .np-art{width:60px;height:60px;border-radius:13px}
+  .np-title{font-size:20px}
+  .np-eq{display:none}
+}
+
 /* credits / gamification */
 .credit-bar{display:flex;align-items:center;gap:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:8px 8px 8px 16px}
 .credit-coins{display:flex;gap:3px}
@@ -789,39 +811,33 @@ function viewLive(artistSide=false){
       ${artistSide?`<span class="chip accent">🎚️ Artist control</span>`:`<button class="btn btn-ghost btn-sm" onclick="go('home')">Leave</button>`}
     </div>
 
-    <!-- multi-cam placeholder player -->
-    ${camPlayer()}
-
-    <!-- video stream -->
-    <div style="margin-top:16px">
-      ${S.showStream?`
-        <div class="stream-wrap"><iframe src="${S.streamUrl}?autoplay=0&mute=1" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Live stream"></iframe></div>
-        <div class="row between" style="margin-top:8px">
-          <span class="tiny muted">📺 Streaming live · watching from afar? You can still vote, boost &amp; tip below.</span>
-          <button class="chip" style="cursor:pointer" onclick="toggleStream()">Hide stream</button>
-        </div>`:`
-        <div class="stream-toggle" onclick="toggleStream()">
-          <div class="st-ic">📺</div>
-          <div style="flex:1"><b>Watch the show live</b><div class="tiny muted">Streaming now via YouTube — tune in and vote from anywhere</div></div>
-          <span class="pill-live"><span class="bl"></span>Live</span>
-        </div>`}
-    </div>
-
-    <!-- now playing -->
-    <div class="vote-item nowplaying" style="margin-top:16px">
-      <div class="vote-art" style="background-image:url('${np.art}')"></div>
-      <div class="vote-main">
-        <div class="tiny" style="opacity:.8;text-transform:uppercase;letter-spacing:.08em;font-weight:700">Now playing</div>
-        <div class="vote-title">${np.title}</div>
+    <!-- NOW PLAYING — hero card -->
+    <div class="np-hero" style="margin-top:16px">
+      <div class="np-art" style="background-image:url('${np.art}')"></div>
+      <div class="np-body">
+        <div class="np-label"><span class="dot"></span>Now playing</div>
+        <div class="np-title">${np.title}</div>
+        <div class="np-meta">${np.dur} · ${a.name}</div>
+        <div class="np-prog"><i style="width:38%"></i></div>
       </div>
-      <div class="eq"><i></i><i></i><i></i><i></i></div>
+      <div class="eq np-eq"><i></i><i></i><i></i><i></i></div>
     </div>
 
     <!-- credits / window strip -->
     ${creditStrip(coinsLeft)}
 
-    <!-- BIG power actions: boost + tip -->
-    <div class="power-actions">
+    <!-- VOTE POOL — the hero body -->
+    <div class="sec-head" style="margin-top:22px;margin-bottom:12px">
+      <h2 style="font-size:22px">Up next — you decide</h2>
+      <span class="chip">${S.rules.everyN?`Every ${S.rules.everyNval}${nth(S.rules.everyNval)} song = crowd pick`:'Open voting'}</span>
+    </div>
+    ${filterChips(filterLive,'setFilterLive')}
+    <div class="stack gap12">
+      ${shown.length?shown.map(s=>voteCard(s,rankOf[s.id],leader,coinsLeft)).join(''):`<div class="card pad" style="text-align:center"><div class="muted tiny">No songs match “${filterLive}”.</div></div>`}
+    </div>
+
+    <!-- support the band -->
+    <div class="power-actions" style="margin-top:20px">
       <button class="pa-btn pa-boost" onclick="showBoost()">
         <span class="pa-ic">⚡</span>
         <span><span class="pa-t">Boost a song</span><span class="pa-s">Skip the line · extra votes</span></span>
@@ -830,16 +846,6 @@ function viewLive(artistSide=false){
         <span class="pa-ic">💸</span>
         <span><span class="pa-t">Tip the band</span><span class="pa-s">Show some love${S.tipped?` · $${S.tipped} so far`:''}</span></span>
       </button>
-    </div>
-
-    <!-- vote pool -->
-    <div class="sec-head" style="margin-top:24px;margin-bottom:12px">
-      <h2 style="font-size:20px">Up next — you decide</h2>
-      <span class="chip">${S.rules.everyN?`Every ${S.rules.everyNval}${nth(S.rules.everyNval)} song = crowd pick`:'Open voting'}</span>
-    </div>
-    ${filterChips(filterLive,'setFilterLive')}
-    <div class="stack gap12">
-      ${shown.length?shown.map(s=>voteCard(s,rankOf[s.id],leader,coinsLeft)).join(''):`<div class="card pad" style="text-align:center"><div class="muted tiny">No songs match “${filterLive}”.</div></div>`}
     </div>
 
     <!-- played tonight -->
@@ -1259,17 +1265,6 @@ function viewDash(){
 
 function dashPanel(){
   if(dashTab==='setlist') return `
-    <div class="rule-card" style="margin-bottom:18px">
-      <div class="rule-ic">📺</div>
-      <div style="flex:1">
-        <b>Livestream link</b>
-        <div class="tiny muted">Paste your YouTube or Twitch stream — remote fans watch here and can still vote, boost &amp; tip.</div>
-        <div class="row gap8 wrapf" style="margin-top:10px">
-          <input value="${S.streamUrl||''}" onchange="setStreamUrl(this.value)" placeholder="https://youtube.com/embed/… or twitch" style="flex:1;min-width:220px;border:1px solid var(--line-2);border-radius:12px;padding:10px 12px;font-size:14px;outline:none;background:var(--bg-soft)">
-          <span class="chip ${S.streamUrl?'accent':''}">${S.streamUrl?'✓ Connected':'Not set'}</span>
-        </div>
-      </div>
-    </div>
     <div class="row between" style="margin-bottom:12px">
       <div><b>Songs you're ready to play</b><div class="tiny muted">Toggle what's in tonight's vote pool.</div></div>
       <button class="btn btn-accent btn-sm" onclick="openUpload()">＋ Add song</button>
