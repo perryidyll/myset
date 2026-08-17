@@ -269,8 +269,9 @@ async function checkout(kind){
     const r=await fetch(`${API}/pay`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
     if(d.ok&&d.url){ window.location.href=d.url; return; }
-    toast(d.error==='payments-not-configured'?'Payments not switched on yet':(d.error||'Could not start checkout'));
-  }catch(e){ toast('Could not reach checkout'); }
+    // never surface raw gateway errors to the room
+    toast('Card payments aren’t working right now — grab Perry between songs');
+  }catch(e){ toast('Card payments aren’t working right now — grab Perry between songs'); }
   if(btn){ btn.disabled=false; btn.textContent='Continue to payment'; }
 }
 

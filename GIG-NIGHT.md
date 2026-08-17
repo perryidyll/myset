@@ -5,7 +5,7 @@
 | | Link | Who |
 |---|---|---|
 | **Audience** | **myset.vip** | Everyone. No app, no login. |
-| **Your stage control** | **myset.vip/stage.html** | Just you. Code: `perry2026` |
+| **Your stage control** | **myset.vip/stage.html** | Just you. Code: see below |
 
 Tell the room: *"Go to **myset.vip** and vote for what I play next."*
 (Say it as "my set dot vip". Consider a QR code on the tip jar / table tents.)
@@ -14,7 +14,11 @@ Tell the room: *"Go to **myset.vip** and vote for what I play next."*
 
 ## Running the show
 
-Open **myset.vip/stage.html** on your phone, enter the code once (it remembers).
+Open **myset.vip/stage.html** on your phone, enter your show code once (it remembers).
+
+> **Your show code is never written down in this project.** It lives only in Netlify
+> under the `ADMIN_CODE` environment variable. To see or change it:
+> Netlify → project **mysetvip** → Site configuration → Environment variables → `ADMIN_CODE`.
 
 - **▶ START TOP VOTED** — the big red button. Plays whatever is winning, moves the
   current song to "Played", and **refreshes everyone's votes** for the next round.
