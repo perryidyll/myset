@@ -9,7 +9,7 @@ export default async (req) => {
   return json({
     ok: true,
     show: {
-      artist: show.artist, venue: show.venue, status: show.status,
+      artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime, status: show.status,
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
       played: show.played, freeCredits: show.freeCredits,
     },

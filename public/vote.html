@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#f3f2f2" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="MySet" />
+<meta name="format-detection" content="telephone=no" />
+<meta name="description" content="Vote on what Perry Idyll plays next." />
+<title>Vote the setlist — Perry Idyll</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23ec3013'/><g fill='%23fff'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23ec3013'/><g fill='%23fff'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
+<style>
+#app{padding-bottom:130px}
+
+/* ---------- TIER 1 · NOW PLAYING ---------- */
+.now{background:var(--accent);color:#fff;padding:16px 14px;position:relative;overflow:hidden}
+.now .lab{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.95}
+.now .lab .dot{background:#fff}
+.now .t{font-size:26px;font-weight:800;letter-spacing:-.025em;margin-top:6px;line-height:1.1}
+.now .eq{position:absolute;right:14px;bottom:16px;display:flex;gap:3px;align-items:flex-end;height:22px;opacity:.9}
+.now .eq i{width:4px;background:#fff;animation:eq .9s ease-in-out infinite}
+.now .eq i:nth-child(2){animation-delay:.2s}.now .eq i:nth-child(3){animation-delay:.4s}
+@keyframes eq{0%,100%{height:5px}50%{height:22px}}
+.now.none{background:var(--surface);color:var(--ink)}
+.now.none .lab{color:var(--muted)}
+.now.none .t{font-size:19px}
+
+/* ---------- TIER 2 · UP NEXT (locked queue) ---------- */
+.queue{border:2px solid var(--ink);margin:14px}
+.queue .qh{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;
+  background:var(--ink);color:var(--bg)}
+.queue .qh b{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.queue .qh span{font-size:10px;opacity:.8;letter-spacing:.04em;text-transform:uppercase}
+.qrow{display:flex;align-items:center;gap:11px;padding:11px 12px;border-top:1px solid var(--hair)}
+.qrow:first-of-type{border-top:none}
+.qrow .pos{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;font-size:12px;font-weight:800;
+  background:var(--ink);color:var(--bg)}
+.qrow.lead .pos{background:var(--accent)}
+.qrow .m{flex:1;min-width:0}
+.qrow .t{font-size:15.5px;font-weight:700;line-height:1.25}
+.qrow .s{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.qrow .cnt{text-align:right;flex:0 0 auto}
+.qrow .cnt b{font-size:16px;font-weight:800}
+.qrow .cnt span{display:block;font-size:7px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.qempty{padding:16px 12px;font-size:13px;color:var(--muted)}
+
+/* ---------- TIER 3 · POOL ---------- */
+.poolhead{display:flex;align-items:baseline;justify-content:space-between;padding:18px 14px 8px}
+.poolhead b{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.prow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--hair)}
+.prow .m{flex:1;min-width:0}
+.prow .t{font-size:15px;font-weight:600;line-height:1.25}
+.prow .cnt{text-align:right;flex:0 0 auto;min-width:26px}
+.prow .cnt b{font-size:13px;font-weight:800;color:var(--muted)}
+.prow.hasv .cnt b{color:var(--ink)}
+.vb{flex:0 0 auto;min-width:62px;min-height:38px;font-size:11px;font-weight:800;letter-spacing:.05em;
+  text-transform:uppercase;padding:9px 10px;border:2px solid var(--ink);color:var(--ink);transition:.1s}
+.vb.on{background:var(--accent-tint);border-color:transparent;color:var(--accent-tint-ink)}
+.vb:disabled{opacity:.35}
+.vb:active{transform:translateY(1px)}
+
+/* band */
+.band{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--ink);
+  color:var(--bg);padding:10px 14px;margin:14px 14px 0}
+.band.shut{background:var(--muted)}
+.band .l{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.band .dot{background:var(--bg)}
+
+/* sticky actions */
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:var(--maxw);
+  background:var(--bg);border-top:2px solid var(--ink);padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;z-index:30}
+.dock .btn{flex-direction:column;align-items:flex-start;gap:2px;padding:12px 13px;text-transform:uppercase}
+.dock .btn small{font-size:9px;font-weight:600;letter-spacing:.03em;text-transform:none;color:var(--muted)}
+.dock .btn-pri small{color:rgba(255,255,255,.85)}
+
+.played{padding:0 14px}
+.played .p{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--hair);font-size:13px;color:var(--muted)}
+.backlink{display:block;padding:10px 14px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app"><div class="empty"><b>Loading the show…</b><span class="spin"></span></div></div></div>
+<div class="dock" id="dock" hidden></div>
+<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), API='/api';
+function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
+  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
+  return v;}
+const FAN=fanId();
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+let ST=null,busy=new Set(),sel={};
+
+async function load(){
+  try{const r=await fetch(`${API}/show?fan=${encodeURIComponent(FAN)}`,{cache:'no-store'});
+    const d=await r.json(); if(d.ok){ST=d;render();}}catch(e){}
+}
+async function vote(id){
+  if(busy.has(id))return; busy.add(id);
+  const s=ST&&ST.songs.find(x=>x.id===id);
+  if(s){s.mine=!s.mine;s.votes+=s.mine?1:-1;ST.credits.remaining+=s.mine?-1:1;render();}
+  try{
+    const r=await fetch(`${API}/vote`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({fan:FAN,song:id})});
+    const d=await r.json();
+    if(!d.ok){ if(d.error==='no-credits'){toast('Out of votes — get more below');openBuy();}
+      else toast(d.error||'Could not save that vote'); }
+  }catch(e){ toast('Connection hiccup — retrying'); }
+  busy.delete(id); load();
+}
+
+function render(){
+  const d=ST,c=d.credits;
+  const ended=d.status==='ended',pre=d.status==='pre';
+  const open=d.windowOpen&&!ended&&!pre;
+  const queue=d.songs.slice(0,3);
+  const pool=d.songs.slice(3);
+
+  /* header */
+  let h=`<div class="head">
+    <div style="min-width:0">
+      <h1>${esc(d.artist)}</h1>
+      <div class="sub">${ended?'That’s a wrap — thanks for coming'
+        :`<span class="dot" style="margin-right:5px"></span>Live${d.venue?' · '+esc(d.venue):''}`}</div>
+    </div>
+    <div class="credits ${c.remaining<=0?'low':''} mono">${c.remaining}<span style="font-size:10px;font-weight:600">/${c.total}</span></div>
+  </div>`;
+
+  /* TIER 1 — now playing */
+  h += d.nowPlaying
+    ? `<div class="now"><div class="lab"><span class="dot"></span>Playing now</div>
+        <div class="t">${esc(d.nowPlaying.title)}</div>
+        <div class="eq"><i></i><i></i><i></i></div></div>`
+    : `<div class="now none"><div class="lab">Playing now</div><div class="t">${ended?'Show finished':'Starting soon…'}</div></div>`;
+
+  /* voting band */
+  if(!ended) h += `<div class="band ${open?'':'shut'}">
+      <span class="l">${open?'<span class="dot"></span>Voting open':'Voting paused'}</span>
+      <span style="font-size:11px;font-weight:700">${c.remaining} vote${c.remaining===1?'':'s'} left</span></div>`;
+
+  /* TIER 2 — up next queue */
+  h += `<div class="queue">
+    <div class="qh"><b>Up next</b><span>Top ${Math.min(3,queue.length)||''} by votes</span></div>
+    ${queue.length?queue.map((s,i)=>`
+      <div class="qrow ${i===0?'lead':''}">
+        <span class="pos">${i+1}</span>
+        <div class="m"><div class="t">${esc(s.title)}</div>
+          <div class="s">${i===0?'Winning — plays next':'In the queue'}${s.mine?' · you voted':''}</div></div>
+        <div class="cnt"><b class="mono">${s.votes}</b><span>VOTES</span></div>
+      </div>`).join('')
+     :`<div class="qempty">No votes yet — be the first below.</div>`}
+  </div>`;
+
+  /* TIER 3 — the pool */
+  h += `<div class="poolhead"><b>${open?'Vote for these':'The setlist'}</b><span class="kick">${pool.length} more</span></div>`;
+  h += pool.length? pool.map(s=>{
+      const dis=!open||(c.remaining<=0&&!s.mine);
+      return `<div class="prow ${s.votes?'hasv':''}">
+        <div class="m"><div class="t">${esc(s.title)}</div></div>
+        <div class="cnt"><b class="mono">${s.votes||''}</b></div>
+        <button class="vb ${s.mine?'on':''}" ${dis?'disabled':''} onclick="vote('${s.id}')">${s.mine?'Voted ✓':'Vote'}</button>
+      </div>`;}).join('')
+    : `<div class="empty" style="padding:24px"><b>That’s the whole list</b>Everything’s in the queue above.</div>`;
+
+  /* played */
+  if(d.played.length) h += `<div class="poolhead" style="padding-top:22px"><b>Already played (${d.played.length})</b></div>
+    <div class="played">${d.played.slice().reverse().map(p=>`<div class="p"><span>${esc(p.title)}</span><span>♪</span></div>`).join('')}</div>`;
+
+  h += `<a class="backlink" href="/">← Back to Perry’s page</a><div class="foot">MySet · myset.vip</div>`;
+  $('#app').innerHTML=h;
+
+  /* sticky dock */
+  const dock=$('#dock');
+  if(ended){ dock.hidden=true; }
+  else{
+    dock.hidden=false;
+    dock.innerHTML=`
+      <button class="btn" onclick="openBuy()">More votes<small>${d.paymentsEnabled?'From $3':'Ask Perry'}</small></button>
+      <button class="btn btn-pri" onclick="openTip()">Tip Perry<small>Say thanks</small></button>`;
+  }
+}
+
+/* sheets */
+function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}
+function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+function openBuy(){
+  if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="muted" style="font-size:14px">Card payments aren’t on tonight — grab Perry between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
+  sel.pack='small';
+  openSheet(`<h3>Get more votes</h3>
+    <p class="muted" style="font-size:14px;margin:0">Extra votes for tonight’s setlist. Goes straight to Perry.</p>
+    <div class="tiles">
+      <button class="tile on" id="p-small" onclick="pickPack('small')"><b>$3</b><span>5 votes</span></button>
+      <button class="tile" id="p-big" onclick="pickPack('big')"><b>$7</b><span>15 votes</span></button>
+    </div>
+    <button class="go" id="goBuy" onclick="checkout('votes')">Continue to payment</button>
+    <p class="fine">Secure checkout by Stripe. You’ll come right back.</p>`);
+}
+function pickPack(p){sel.pack=p;['small','big'].forEach(k=>$('#p-'+k).classList.toggle('on',k===p));}
+function openTip(){
+  if(!ST.paymentsEnabled){openSheet(`<h3>Tip Perry</h3><p class="muted" style="font-size:14px">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
+  sel.tip=10;
+  openSheet(`<h3>Tip Perry</h3>
+    <p class="muted" style="font-size:14px;margin:0">100% goes to Perry. Add a note and he’ll see it on stage.</p>
+    <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice':v===10?'Thanks!':'Encore'}</span></button>`).join('')}</div>
+    <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
+    <input class="inp" id="tipNote" maxlength="120" placeholder="Note (optional)">
+    <button class="go" id="goTip" onclick="checkout('tip')">Continue to payment</button>
+    <p class="fine">Secure checkout by Stripe. You’ll come right back.</p>`);
+}
+function pickTip(v){sel.tip=v;[5,10,20].forEach(k=>$('#t-'+k).classList.toggle('on',k===v));const a=$('#tipAmt');if(a)a.value='';}
+async function checkout(kind){
+  const btn=kind==='votes'?$('#goBuy'):$('#goTip');
+  const body={fan:FAN,kind};
+  if(kind==='votes')body.pack=sel.pack||'small';
+  else{const c=parseFloat(($('#tipAmt')||{}).value);
+    body.amount=Number.isFinite(c)&&c>0?c:(sel.tip||10);
+    body.note=(($('#tipNote')||{}).value||'').slice(0,120);}
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Opening secure checkout…';}
+  try{
+    const r=await fetch(`${API}/pay`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.ok&&d.url){window.location.href=d.url;return;}
+    toast('Card payments aren’t working right now — grab Perry between songs');
+  }catch(e){toast('Card payments aren’t working right now — grab Perry between songs');}
+  if(btn){btn.disabled=false;btn.textContent='Continue to payment';}
+}
+async function handleReturn(){
+  const q=new URLSearchParams(location.search),sid=q.get('paid');
+  if(q.get('cancelled')){history.replaceState({},'','/vote.html');toast('Payment cancelled');return;}
+  if(!sid)return;
+  history.replaceState({},'','/vote.html');
+  toast('Confirming payment…');
+  try{
+    const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}`);
+    const d=await r.json();
+    if(d.ok) toast(d.kind==='votes'?`✓ ${d.granted} extra votes added — vote away!`:`✓ Thank you! Your $${d.amount} tip reached Perry 🫶`);
+    else toast('Could not confirm payment');
+  }catch(e){toast('Could not confirm payment');}
+  load();
+}
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3400);}
+
+(async function(){
+  await load(); await handleReturn();
+  setInterval(()=>{if(!document.hidden)load();},3000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
+})();
+</script>
+</body>
+</html>

@@ -21,7 +21,7 @@ export default async (req) => {
 
   return json({
     ok: true,
-    artist: show.artist, venue: show.venue, status: show.status,
+    artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime, status: show.status,
     windowOpen: !!show.windowOpen,
     nowPlaying: np ? { id: np.id, title: np.title } : null,
     songs, played,

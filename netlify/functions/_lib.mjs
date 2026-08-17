@@ -19,7 +19,9 @@ export const slug = (t) =>
 export function defaultShow() {
   return {
     artist: 'Perry Idyll',
-    venue: '',
+    venue: 'The Ugly Duckling Irish Pub',
+    city: 'Koh Phangan, Thailand',
+    showTime: '8:00 PM',
     status: 'live',              // pre | live | ended
     windowOpen: true,
     nowPlaying: null,

@@ -8,302 +8,125 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
-<meta name="description" content="Vote on what Perry Idyll plays next." />
-<title>MySet — vote the setlist</title>
+<meta name="description" content="Perry Idyll — live tonight. Vote on what he plays next." />
+<meta property="og:title" content="Perry Idyll — vote the setlist" />
+<meta property="og:description" content="Live tonight. You pick what gets played." />
+<meta property="og:image" content="/img/band.jpg" />
+<title>Perry Idyll — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23ec3013'/><g fill='%23fff'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23ec3013'/><g fill='%23fff'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/app.css">
 <style>
-:root{
-  --bg:#f3f2f2;--surface:#eae9e9;--ink:#201e1d;--muted:#7d7979;--hair:#d7d3d3;--slot:#e0dddc;
-  --accent:#ec3013;--accent-600:#dd2b0f;--accent-tint:#ffe0d9;--accent-tint-ink:#ae1800;
-  --maxw:520px;--f:"Archivo",system-ui,-apple-system,sans-serif;
-}
-@media (prefers-color-scheme: dark){
-  :root{--bg:#161413;--surface:#211e1d;--ink:#f4f2f2;--muted:#a29d9d;--hair:#3a3635;--slot:#2f2b2a;
-    --accent-tint:#3a1c15;--accent-tint-ink:#ff9783}
-}
-*,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.5;
-  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
-button{font-family:inherit;background:none;border:none;color:inherit;padding:0;cursor:pointer}
-input{font-family:inherit}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-#app{max-width:var(--maxw);margin:0 auto;min-height:100vh;padding-bottom:120px}
-.pad{padding-left:14px;padding-right:14px}
-.mono{font-variant-numeric:tabular-nums}
-.muted{color:var(--muted)}
-.kick{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.brandbar{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:2px solid var(--ink)}
+.mark{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;letter-spacing:-.02em}
+.mark i{width:20px;height:20px;background:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+.mark i svg{width:12px;height:12px;fill:#fff;display:block}
 
-/* header */
-.head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px;
-  border-bottom:2px solid var(--ink);position:sticky;top:0;background:var(--bg);z-index:10}
-.head h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
-.head .sub{font-size:11px;color:var(--muted);margin-top:1px}
-.dot{width:8px;height:8px;background:var(--accent);display:inline-block;flex:0 0 auto;animation:pulse 1.6s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-.credits{border:2px solid var(--ink);padding:4px 8px;font-size:13px;font-weight:800;flex:0 0 auto}
-.credits.low{border-color:var(--accent);color:var(--accent)}
+.hero{position:relative}
+.hero img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:center 34%}
+.hero .badge{position:absolute;top:12px;left:12px;display:inline-flex;align-items:center;gap:7px;
+  background:var(--accent);color:#fff;font-size:10px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;padding:6px 10px}
+.hero .badge .dot{background:#fff}
 
-/* now playing */
-.np{padding:14px;border-bottom:1px solid var(--hair)}
-.np .t{font-size:21px;font-weight:800;letter-spacing:-.02em;margin-top:3px}
+.who{padding:16px 14px 4px}
+.who h1{font-size:30px}
+.who .role{font-size:13px;color:var(--muted);margin-top:5px}
 
-/* band */
-.band{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--ink);
-  color:var(--bg);padding:11px 14px;margin:14px 14px 0}
-.band.shut{background:var(--muted)}
-.band .l{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
-.band .dot{background:var(--bg)}
+.gig{margin:16px 14px;border:2px solid var(--ink)}
+.gig .top{display:flex;align-items:stretch}
+.gig .when{background:var(--ink);color:var(--bg);padding:12px 14px;text-align:center;flex:0 0 auto;
+  display:flex;flex-direction:column;justify-content:center;min-width:88px}
+.gig .when b{font-size:20px;font-weight:800;line-height:1}
+.gig .when span{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:4px;opacity:.85}
+.gig .where{padding:11px 14px;flex:1;min-width:0}
+.gig .where b{display:block;font-size:15px;font-weight:700;line-height:1.25}
+.gig .where span{font-size:12px;color:var(--muted)}
+.gig .cta{border-top:2px solid var(--ink)}
 
-/* list */
-.lhead{display:flex;align-items:baseline;justify-content:space-between;padding:16px 14px 8px}
-.lhead .k{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
-.row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--hair)}
-.row:first-child{border-top:none}
-.row .rk{width:18px;text-align:center;font-size:13px;font-weight:700;color:var(--muted)}
-.row .rk.one{color:var(--accent)}
-.row .m{flex:1;min-width:0}
-.row .ti{font-size:15px;font-weight:600;line-height:1.25}
-.row .cnt{text-align:right;flex:0 0 auto;min-width:30px}
-.row .cnt b{font-size:14px;font-weight:800}
-.row .cnt span{display:block;font-size:7px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
-.vb{flex:0 0 auto;min-width:64px;min-height:38px;font-size:11px;font-weight:800;letter-spacing:.05em;
-  text-transform:uppercase;padding:9px 10px;border:2px solid var(--ink);color:var(--ink);transition:.1s}
-.vb.one{background:var(--accent);border-color:var(--accent);color:#fff}
-.vb.on{background:var(--accent-tint);border-color:transparent;color:var(--accent-tint-ink)}
-.vb:disabled{opacity:.35}
-.vb:active{transform:translateY(1px)}
+.steps{padding:6px 14px 0}
+.step{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--hair)}
+.step:first-child{border-top:none}
+.step .n{width:22px;height:22px;background:var(--ink);color:var(--bg);font-size:11px;font-weight:800;
+  display:grid;place-items:center;flex:0 0 auto}
+.step .t{font-size:14px;font-weight:700}
+.step .d{font-size:12.5px;color:var(--muted);margin-top:1px}
 
-/* actions */
-.acts{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:18px 14px 0}
-.btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;
-  font-weight:800;font-size:13px;letter-spacing:.03em;text-transform:uppercase;border:2px solid var(--ink)}
-.btn small{font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:none;color:var(--muted)}
-.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn.pri small{color:rgba(255,255,255,.85)}
-.btn:active{transform:translateY(1px)}
-
-.played{padding:6px 14px 0}
-.played .p{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--hair);font-size:13px;color:var(--muted)}
-
-/* sheet */
-.bg{position:fixed;inset:0;background:rgba(32,30,29,.45);z-index:60;opacity:0;pointer-events:none;transition:.2s}
-.bg.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;
-  max-width:var(--maxw);background:var(--surface);border-top:2px solid var(--ink);z-index:61;
-  transition:transform .25s cubic-bezier(.2,.8,.2,1);padding:16px 14px calc(20px + env(safe-area-inset-bottom));
-  max-height:88vh;overflow-y:auto}
-.sheet.on{transform:translateX(-50%) translateY(0)}
-.grab{width:40px;height:4px;background:var(--hair);margin:0 auto 14px}
-.sheet h3{margin:0 0 4px;font-size:20px;font-weight:800;letter-spacing:-.02em}
-.tiles{display:flex;gap:8px;margin:14px 0 4px}
-.tile{flex:1;border:1px solid var(--hair);padding:13px 10px;text-align:left;background:var(--bg)}
-.tile.on{border:2px solid var(--accent)}
-.tile b{display:block;font-size:17px;font-weight:800}
-.tile span{display:block;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px}
-.inp{width:100%;min-height:44px;padding:10px 12px;font-size:16px;background:var(--bg);
-  border:2px solid var(--hair);color:var(--ink);margin-top:10px}
-.inp:focus{border-color:var(--accent);outline:none}
-.go{width:100%;margin-top:14px;padding:15px;background:var(--accent);color:#fff;font-weight:800;
-  font-size:13px;letter-spacing:.05em;text-transform:uppercase;text-align:left;border:2px solid var(--accent)}
-.go:disabled{opacity:.5}
-.fine{font-size:10.5px;color:var(--muted);margin-top:12px;text-align:center}
-
-/* toast */
-.toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%) translateY(14px);
-  width:calc(100% - 28px);max-width:calc(var(--maxw) - 28px);background:var(--ink);color:var(--bg);
-  font-size:13px;font-weight:600;padding:13px 14px;z-index:70;opacity:0;pointer-events:none;transition:.2s}
-.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-.empty{padding:44px 24px;text-align:center;color:var(--muted)}
-.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
-.foot{padding:26px 14px;text-align:center;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.spin{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-right-color:transparent;
-  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px}
-@keyframes sp{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.stat3{display:flex;border:1px solid var(--hair);margin:16px 14px}
+.stat3 .c{flex:1;padding:11px;border-left:1px solid var(--hair);text-align:left}
+.stat3 .c:first-child{border-left:none}
+.stat3 b{display:block;font-size:17px;font-weight:800}
+.stat3 span{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px;display:block}
+.sec{padding:20px 14px 6px}
+.artistlink{display:block;padding:12px 14px;border-top:1px solid var(--hair);font-size:11px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center}
 </style>
 </head>
 <body>
-<div id="app"><div class="empty"><b>Loading the show…</b><span class="spin"></span></div></div>
-<div class="bg" id="bg" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet"></div>
-<div class="toast" id="toast"></div>
+<div class="wrap">
+
+  <div class="brandbar">
+    <span class="mark"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11"/><rect x="10.3" y="4" width="3.4" height="16"/><rect x="16.6" y="12" width="3.4" height="8"/></svg></i>MySet</span>
+    <span class="kick" id="liveChip">&nbsp;</span>
+  </div>
+
+  <div class="hero">
+    <img src="/img/band.jpg" alt="Perry Idyll and band playing live on the beach at sunset" width="1600" height="1000" fetchpriority="high">
+    <span class="badge" id="heroBadge"><span class="dot"></span>Live tonight</span>
+  </div>
+
+  <div class="who">
+    <h1>Perry Idyll</h1>
+    <div class="role">Live acoustic &amp; band · Koh Phangan, Thailand</div>
+  </div>
+
+  <div class="gig">
+    <div class="top">
+      <div class="when"><b id="gTime">8:00 PM</b><span>Tonight</span></div>
+      <div class="where"><b id="gVenue">The Ugly Duckling Irish Pub</b><span id="gCity">Koh Phangan, Thailand</span></div>
+    </div>
+    <div class="cta">
+      <a class="btn btn-pri btn-block" href="/vote.html" style="text-decoration:none">▶ Vote the setlist</a>
+    </div>
+  </div>
+
+  <div class="stat3">
+    <div class="c"><b class="mono" id="sSongs">—</b><span>Songs to pick</span></div>
+    <div class="c"><b class="mono" id="sVotes">—</b><span>Votes cast</span></div>
+    <div class="c"><b class="mono" id="sFree">—</b><span>Free votes each</span></div>
+  </div>
+
+  <div class="sec"><span class="kick">How it works</span></div>
+  <div class="steps">
+    <div class="step"><span class="n">1</span><div><div class="t">Open myset.vip on your phone</div><div class="d">No app, no sign-up. That's it.</div></div></div>
+    <div class="step"><span class="n">2</span><div><div class="t">Vote for the songs you want</div><div class="d">You get free votes every round. Change your mind anytime.</div></div></div>
+    <div class="step"><span class="n">3</span><div><div class="t">Perry plays the winner</div><div class="d">Top-voted song is up next. Votes refresh — go again.</div></div></div>
+  </div>
+
+  <div class="pad" style="margin-top:18px">
+    <a class="btn btn-block" href="/vote.html" style="text-decoration:none">See what's playing now →</a>
+  </div>
+
+  <a class="artistlink" href="/studio.html">Artist? Open your studio</a>
+  <div class="foot">MySet · myset.vip</div>
+</div>
 
 <script>
-const $=s=>document.querySelector(s);
-const API='/api';
-
-/* stable per-device id */
-function fanId(){
-  let v=null; try{v=localStorage.getItem('myset.fan')}catch(e){}
-  if(!v){ v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
-    try{localStorage.setItem('myset.fan',v)}catch(e){} }
-  return v;
-}
-const FAN=fanId();
-let ST=null, busy=new Set(), poll=null, sel={};
-
-/* ---------- net ---------- */
-async function fetchShow(){
-  try{
-    const r=await fetch(`${API}/show?fan=${encodeURIComponent(FAN)}`,{cache:'no-store'});
-    const d=await r.json();
-    if(d.ok){ ST=d; render(); }
-  }catch(e){ /* keep last good state */ }
-}
-async function vote(id){
-  if(busy.has(id))return; busy.add(id);
-  const s=ST&&ST.songs.find(x=>x.id===id);
-  if(s){ // optimistic
-    s.mine=!s.mine; s.votes+=s.mine?1:-1;
-    ST.credits.remaining+=s.mine?-1:1; render();
-  }
-  try{
-    const r=await fetch(`${API}/vote`,{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({fan:FAN,song:id})});
-    const d=await r.json();
-    if(!d.ok){
-      if(d.error==='no-credits'){ toast('Out of votes — grab more below'); openBuy(); }
-      else toast(d.error||'Could not save that vote');
-    }
-  }catch(e){ toast('Connection hiccup — retrying'); }
-  busy.delete(id);
-  fetchShow();
-}
-
-/* ---------- render ---------- */
-function render(){
-  if(!ST)return;
-  const d=ST, c=d.credits;
-  const ended=d.status==='ended', pre=d.status==='pre';
-  const open=d.windowOpen&&!ended&&!pre;
-
-  const head=`<div class="head">
-    <div style="min-width:0">
-      <h1>${esc(d.artist)}</h1>
-      <div class="sub">${ended?'That’s a wrap — thanks for coming':
-        pre?'Doors open — voting starts soon':
-        `<span class="dot" style="margin-right:5px"></span>Live${d.venue?' · '+esc(d.venue):''}`}</div>
-    </div>
-    <div class="credits ${c.remaining<=0?'low':''} mono">${c.remaining}<span style="font-size:10px;font-weight:600">/${c.total}</span></div>
-  </div>`;
-
-  const np=d.nowPlaying?`<div class="np"><div class="kick">Now playing</div><div class="t">${esc(d.nowPlaying.title)}</div></div>`:'';
-
-  const band=ended?'':`<div class="band ${open?'':'shut'}">
-    <span class="l">${open?'<span class="dot"></span>Voting open':'Voting paused'}</span>
-    <span style="font-size:11px;font-weight:700">${c.remaining} vote${c.remaining===1?'':'s'} left</span>
-  </div>`;
-
-  const rows=d.songs.length? d.songs.map((s,i)=>{
-    const one=i===0&&s.votes>0;
-    const dis=!open||(c.remaining<=0&&!s.mine);
-    return `<div class="row">
-      <div class="rk ${one?'one':''} mono">${i+1}</div>
-      <div class="m"><div class="ti">${esc(s.title)}</div></div>
-      <div class="cnt"><b class="mono">${s.votes}</b><span>${s.mine?'YOU +1':'VOTES'}</span></div>
-      <button class="vb ${s.mine?'on':(one?'one':'')}" ${dis?'disabled':''} onclick="vote('${s.id}')">
-        ${s.mine?'Voted ✓':'Vote'}</button>
-    </div>`;}).join('')
-   : `<div class="empty"><b>Setlist coming up</b>Hang tight — songs appear here.</div>`;
-
-  const acts=ended?'':`<div class="acts">
-    <button class="btn" onclick="openBuy()">More votes<small>${d.paymentsEnabled?'From $3':'Ask Perry'}</small></button>
-    <button class="btn pri" onclick="openTip()">Tip Perry<small>Say thanks</small></button>
-  </div>`;
-
-  const played=d.played.length?`<div class="lhead" style="padding-top:22px"><span class="k">Played tonight (${d.played.length})</span></div>
-    <div class="played">${d.played.slice().reverse().map(p=>`<div class="p"><span>${esc(p.title)}</span><span>♪</span></div>`).join('')}</div>`:'';
-
-  $('#app').innerHTML = head+np+band+
-    `<div class="lhead"><span class="k">${open?'Vote what’s next':'Up next'}</span><span class="kick">${d.songs.length} songs</span></div>`+
-    rows+acts+played+`<div class="foot">MySet · myset.vip</div>`;
-}
-const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-/* ---------- sheets ---------- */
-function openSheet(h){ $('#sheet').innerHTML=`<div class="grab"></div>${h}`; $('#bg').classList.add('on'); $('#sheet').classList.add('on'); }
-function closeSheet(){ $('#bg').classList.remove('on'); $('#sheet').classList.remove('on'); }
-function openBuy(){
-  if(!ST.paymentsEnabled){ openSheet(`<h3>More votes</h3><p class="muted" style="font-size:14px">Card payments aren’t switched on yet tonight — grab Perry between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`); return; }
-  sel.pack='small';
-  openSheet(`<h3>Get more votes</h3>
-    <p class="muted" style="font-size:14px;margin:0">Extra votes for tonight’s setlist. Goes straight to Perry.</p>
-    <div class="tiles">
-      <button class="tile on" id="p-small" onclick="pickPack('small')"><b>$3</b><span>5 votes</span></button>
-      <button class="tile" id="p-big" onclick="pickPack('big')"><b>$7</b><span>15 votes</span></button>
-    </div>
-    <button class="go" id="goBuy" onclick="checkout('votes')">Continue to payment</button>
-    <p class="fine">Secure checkout by Stripe. You’ll come right back.</p>`);
-}
-function pickPack(p){ sel.pack=p; ['small','big'].forEach(k=>$('#p-'+k).classList.toggle('on',k===p)); }
-function openTip(){
-  if(!ST.paymentsEnabled){ openSheet(`<h3>Tip Perry</h3><p class="muted" style="font-size:14px">Card tips aren’t switched on yet tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`); return; }
-  sel.tip=10;
-  openSheet(`<h3>Tip Perry</h3>
-    <p class="muted" style="font-size:14px;margin:0">100% goes to Perry. Add a note and he’ll see it.</p>
-    <div class="tiles">
-      ${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice':v===10?'Thanks!':'Encore'}</span></button>`).join('')}
-    </div>
-    <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
-    <input class="inp" id="tipNote" maxlength="120" placeholder="Note (optional)">
-    <button class="go" id="goTip" onclick="checkout('tip')">Continue to payment</button>
-    <p class="fine">Secure checkout by Stripe. You’ll come right back.</p>`);
-}
-function pickTip(v){ sel.tip=v; [5,10,20].forEach(k=>$('#t-'+k).classList.toggle('on',k===v)); const a=$('#tipAmt'); if(a)a.value=''; }
-
-async function checkout(kind){
-  const btn=kind==='votes'?$('#goBuy'):$('#goTip');
-  const body={fan:FAN,kind};
-  if(kind==='votes') body.pack=sel.pack||'small';
-  else{
-    const custom=parseFloat(($('#tipAmt')||{}).value);
-    body.amount=Number.isFinite(custom)&&custom>0?custom:(sel.tip||10);
-    body.note=(($('#tipNote')||{}).value||'').slice(0,120);
-  }
-  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span> Opening secure checkout…'; }
-  try{
-    const r=await fetch(`${API}/pay`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
-    const d=await r.json();
-    if(d.ok&&d.url){ window.location.href=d.url; return; }
-    // never surface raw gateway errors to the room
-    toast('Card payments aren’t working right now — grab Perry between songs');
-  }catch(e){ toast('Card payments aren’t working right now — grab Perry between songs'); }
-  if(btn){ btn.disabled=false; btn.textContent='Continue to payment'; }
-}
-
-/* ---------- payment return ---------- */
-async function handleReturn(){
-  const q=new URLSearchParams(location.search);
-  const sid=q.get('paid');
-  if(q.get('cancelled')){ history.replaceState({},'','/'); toast('Payment cancelled'); return; }
-  if(!sid) return;
-  history.replaceState({},'','/');
-  toast('Confirming payment…');
-  try{
-    const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}`);
-    const d=await r.json();
-    if(d.ok){
-      if(d.kind==='votes') toast(`✓ ${d.granted} extra votes added — vote away!`);
-      else toast(`✓ Thank you! Your $${d.amount} tip reached Perry 🫶`);
-    } else toast(d.error||'Could not confirm payment');
-  }catch(e){ toast('Could not confirm payment'); }
-  fetchShow();
-}
-
-let tT; function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on');
-  clearTimeout(tT); tT=setTimeout(()=>t.classList.remove('on'),3400); }
-
-/* ---------- boot ---------- */
-(async function(){
-  await fetchShow();
-  await handleReturn();
-  poll=setInterval(()=>{ if(!document.hidden) fetchShow(); },3000);
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) fetchShow(); });
-})();
+fetch('/api/show?fan=home',{cache:'no-store'}).then(r=>r.json()).then(d=>{
+  if(!d.ok)return;
+  const set=(id,v)=>{const el=document.getElementById(id); if(el&&v!==undefined&&v!==null&&v!=='') el.textContent=v;};
+  set('gVenue',d.venue); set('gCity',d.city); set('gTime',d.showTime);
+  set('sSongs',d.songs.length + (d.nowPlaying?1:0) + d.played.length);
+  set('sVotes',d.totalVotes);
+  set('sFree',d.credits.total);
+  const badge=document.getElementById('heroBadge'), chip=document.getElementById('liveChip');
+  if(d.status==='ended'){ badge.innerHTML='That’s a wrap'; badge.style.background='var(--muted)'; }
+  else if(d.status==='pre'){ badge.innerHTML='Doors soon'; badge.style.background='var(--ink)'; }
+  else { chip.innerHTML='<span class="dot" style="margin-right:5px"></span>Live now'; }
+  if(d.nowPlaying){ chip.innerHTML='<span class="dot" style="margin-right:5px"></span>Now: '+d.nowPlaying.title; }
+}).catch(()=>{});
 </script>
 </body>
 </html>

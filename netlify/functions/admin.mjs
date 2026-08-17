@@ -37,6 +37,8 @@ export default async (req) => {
       case 'status':
         show.status = ['pre','live','ended'].includes(body.status) ? body.status : show.status; break;
       case 'venue': show.venue = String(body.venue || '').slice(0, 80); break;
+      case 'city': show.city = String(body.city || '').slice(0, 80); break;
+      case 'showTime': show.showTime = String(body.showTime || '').slice(0, 40); break;
       case 'freeCredits':
         show.freeCredits = Math.max(0, Math.min(50, parseInt(body.n, 10) || 3)); break;
       case 'toggleSong': {
