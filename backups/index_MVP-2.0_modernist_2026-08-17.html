@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f2f2" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#181615" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="MySet" />
+<meta name="format-detection" content="telephone=no" />
+<title>MySet — the crowd builds your set</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23ec3013'/><g fill='%23fff'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23ec3013'/><g fill='%23fff'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   MySet — "Modernist" design system · Direction 1a "The Queue"
+   Flat · zero-radius · one accent (#ec3013) · flush-left · 2px rules
+   ============================================================ */
+:root{
+  --bg:#f3f2f2; --surface:#eae9e9; --ink:#201e1d; --muted:#7d7979; --muted-2:#9b9797;
+  --rule:#201e1d;               /* 2px major rules */
+  --hair:#d7d3d3;               /* 1px row lines (neutral-300) */
+  --hair-2:#e3e0e0;             /* subtle (neutral-200) */
+  --slot:#e0dddc;               /* image placeholder / neutral fill */
+  --accent:#ec3013; --accent-600:#dd2b0f; --accent-700:#ae1800;
+  --accent-tint:#ffe0d9; --accent-tint-ink:#ae1800;
+  --band:#201e1d;               /* vote-window band fill */
+  --band-ink:#ffffff;
+  --shadow-lg:0 -2px 0 var(--ink), 0 12px 40px rgba(20,18,17,.28);
+  --tabH:54px; --miniH:46px; --maxw:520px;
+  --f-head:"Archivo",system-ui,sans-serif;
+  --f-exp:"Archivo Expanded","Archivo",system-ui,sans-serif;
+}
+html[data-theme=dark]{
+  --bg:#161413; --surface:#211e1d; --ink:#f4f2f2; --muted:#a29d9d; --muted-2:#8a8585;
+  --rule:#f4f2f2; --hair:#3a3635; --hair-2:#2b2827; --slot:#2f2b2a;
+  --accent:#ec3013; --accent-600:#ff563c; --accent-700:#ff9783;
+  --accent-tint:#3a1c15; --accent-tint-ink:#ff9783;
+  --band:#f4f2f2; --band-ink:#161413;
+  --shadow-lg:0 -2px 0 var(--ink), 0 12px 40px rgba(0,0,0,.6);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:var(--f-head); font-size:15px; line-height:1.5; font-weight:400;
+  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+}
+img{display:block;max-width:100%}
+button{font-family:inherit;cursor:pointer;background:none;border:none;color:inherit;padding:0}
+input,textarea,select{font-family:inherit}
+a{color:var(--accent);text-decoration:none}
+::selection{background:color-mix(in srgb,var(--accent) 28%,transparent)}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hidden{display:none!important}
+h1,h2,h3,h4{margin:0;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.grayscale{filter:grayscale(1) contrast(1.04)}
+
+/* ---------- layout shell ---------- */
+#app{max-width:var(--maxw);margin:0 auto;min-height:100vh;position:relative;background:var(--bg)}
+.screen{padding-bottom:calc(var(--tabH) + env(safe-area-inset-bottom) + 8px)}
+.screen.has-mini{padding-bottom:calc(var(--tabH) + var(--miniH) + env(safe-area-inset-bottom) + 8px)}
+.pad{padding-left:14px;padding-right:14px}
+.kick{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.muted{color:var(--muted)}
+.rule2{border-bottom:2px solid var(--rule)}
+.row{display:flex;align-items:center}
+.between{justify-content:space-between}
+.wide{width:100%}
+
+/* ---------- buttons (Modernist: sharp, flush-left labels) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--f-head);font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:9px 12px;border:2px solid transparent;transition:background .12s,color .12s,opacity .12s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-600)}
+.btn-outline{border-color:var(--ink);color:var(--ink)}
+.btn-outline:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.btn-block{width:100%;justify-content:flex-start;padding:14px}
+.btn-lg{font-size:13px;padding:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-text{color:var(--accent);font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+
+/* ---------- chips (filters) ---------- */
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:5px 9px;border:1px solid var(--hair);color:var(--muted);background:transparent}
+.chip.on{border-color:var(--ink);color:var(--ink)}
+
+/* ---------- credit chip ---------- */
+.credit-chip{font-size:11px;font-weight:700;border:2px solid var(--ink);padding:3px 7px;letter-spacing:.02em}
+.credit-chip .mono{font-weight:700}
+
+/* ---------- now-playing hero ---------- */
+.np{display:flex;gap:12px;padding:14px}
+.np-art{width:96px;height:96px;flex:0 0 auto;background:var(--slot) center/cover no-repeat}
+.np-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.np-title{font-family:var(--f-exp);font-weight:800;font-size:19px;letter-spacing:-.02em;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.np-prog{height:4px;background:var(--hair);margin-top:11px;overflow:hidden}
+.np-prog i{display:block;height:100%;background:var(--ink)}
+
+/* ---------- vote window band ---------- */
+.band{display:flex;align-items:center;justify-content:space-between;background:var(--band);color:var(--band-ink);padding:10px 14px;margin:0 14px}
+.band .lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.band .t{font-size:14px;font-weight:700}
+.band.closed{background:var(--muted)}
+.band.between{background:var(--muted-2)}
+.live-dot{width:8px;height:8px;background:var(--accent);display:inline-block;animation:pulse 1.6s infinite}
+.band .live-dot{background:#fff}
+html[data-theme=dark] .band .live-dot{background:var(--band-ink)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ---------- queue header ---------- */
+.qhead{display:flex;align-items:baseline;justify-content:space-between;padding:14px 14px 8px}
+.qhead .k{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+
+/* ---------- vote pool rows ---------- */
+.prow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--hair)}
+.prow:first-child{border-top:none}
+.prow.dim{opacity:.5}
+.prow .rank{width:16px;font-size:13px;font-weight:700;text-align:center;color:var(--muted)}
+.prow .rank.lead{color:var(--accent)}
+.prow .art{width:34px;height:34px;flex:0 0 auto;background:var(--slot) center/cover no-repeat}
+.prow .main{flex:1;min-width:0}
+.prow .t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .m{font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .m .act{color:var(--ink);text-transform:none;letter-spacing:0}
+.prow .cnt{text-align:right;flex:0 0 auto;min-width:34px}
+.prow .cnt b{font-size:13px;font-weight:700}
+.prow .cnt span{display:block;font-size:7px;font-weight:600;letter-spacing:.08em;color:var(--muted)}
+.prow .cnt .you{color:var(--accent)}
+.vbtn{flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 11px;border:2px solid var(--ink);color:var(--ink);background:transparent;min-height:34px}
+.vbtn.lead{background:var(--accent);border-color:var(--accent);color:#fff}
+.vbtn.voted{background:var(--accent-tint);border-color:transparent;color:var(--accent-tint-ink)}
+.vbtn.boost{border-style:dashed;border-color:var(--accent);color:var(--accent)}
+.vbtn:disabled{opacity:.4}
+
+/* ---------- played tonight collapsed row ---------- */
+.played-bar{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-top:2px solid var(--rule);margin-top:8px}
+.played-bar .l{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.played-bar .r{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
+
+/* ---------- generic list row ---------- */
+.lrow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--hair)}
+.lrow:first-child{border-top:none}
+.avatar{width:38px;height:38px;flex:0 0 auto;background:var(--slot) center/cover no-repeat}
+.lrow .main{flex:1;min-width:0}
+.lrow .t{font-size:14px;font-weight:600}
+.lrow .s{font-size:11px;color:var(--muted);margin-top:1px}
+
+/* ---------- section header ---------- */
+.sec{padding:16px 14px 8px;display:flex;align-items:baseline;justify-content:space-between}
+.sec .k{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.sec .a{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
+
+/* ---------- discover cards ---------- */
+.hscroll{display:flex;gap:10px;overflow-x:auto;padding:0 14px 4px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.dcard{flex:0 0 auto;width:150px;border:1px solid var(--hair)}
+.dcard .cov{height:104px;background:var(--slot) center/cover no-repeat}
+.dcard .b{padding:8px}
+.dcard .n{font-size:13px;font-weight:700}
+.dcard .v{font-size:11px;color:var(--muted);margin:1px 0 8px}
+
+/* ---------- stat strip / tiles ---------- */
+.stats{display:flex;border:1px solid var(--hair);margin:12px 14px}
+.stats .cell{flex:1;padding:10px 12px;border-left:1px solid var(--hair)}
+.stats .cell:first-child{border-left:none}
+.stats .v{font-size:16px;font-weight:800}
+.stats .v.acc{color:var(--accent)}
+.stats .l{font-size:7px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+
+/* ---------- profile ---------- */
+.cover{height:104px;background:var(--slot) center/cover no-repeat}
+.phead{display:flex;align-items:flex-end;gap:12px;padding:0 14px;margin-top:-26px}
+.pav{width:60px;height:60px;flex:0 0 auto;background:var(--slot) center/cover no-repeat;border:2px solid var(--bg)}
+.pname{font-family:var(--f-exp);font-weight:800;font-size:22px;letter-spacing:-.02em;display:flex;align-items:center;gap:6px}
+.verified{color:var(--accent);font-size:15px}
+.tabstrip{display:flex;gap:16px;overflow-x:auto;padding:12px 14px 0;border-bottom:2px solid var(--rule);scrollbar-width:none}
+.tabstrip::-webkit-scrollbar{display:none}
+.tabstrip button{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-bottom:10px;border-bottom:3px solid transparent;white-space:nowrap}
+.tabstrip button.on{color:var(--ink);border-color:var(--ink)}
+.merch-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border:1px solid var(--hair)}
+.merch-cell{background:var(--bg);padding:10px}
+.merch-cell .img{height:120px;background:var(--slot) center/cover no-repeat;margin-bottom:8px}
+
+/* ---------- toggle (studio) ---------- */
+.tgl{width:34px;height:18px;flex:0 0 auto;background:var(--hair);position:relative;transition:background .15s}
+.tgl::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;background:var(--bg);transition:left .15s}
+.tgl.on{background:var(--ink)}
+.tgl.on::after{left:18px;background:var(--bg)}
+html[data-theme=dark] .tgl.on::after{background:#161413}
+
+/* ---------- mini-player ---------- */
+.mini{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabH) + env(safe-area-inset-bottom));width:100%;max-width:var(--maxw);z-index:40;display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border-top:2px solid var(--rule)}
+.mini .art{width:26px;height:26px;flex:0 0 auto;background:var(--slot) center/cover no-repeat}
+.mini .m{flex:1;min-width:0}
+.mini .t{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .v{font-size:10px;color:var(--muted)}
+.mini .tip{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);flex:0 0 auto}
+
+/* ---------- tab bar ---------- */
+.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:var(--maxw);z-index:41;display:flex;height:calc(var(--tabH) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--bg);border-top:1px solid var(--hair)}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);position:relative;font-size:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.tabbar button.on{color:var(--ink)}
+.tabbar button.on::before{content:"";position:absolute;top:0;left:16%;right:16%;height:3px;background:var(--accent)}
+.tabbar svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- top bar (screen headers) ---------- */
+.shead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;border-bottom:2px solid var(--rule)}
+.shead h1{font-family:var(--f-exp);font-size:22px}
+.brandmark{width:20px;height:20px;background:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+.brandmark svg{width:12px;height:12px;fill:#fff;display:block}
+
+/* ---------- bottom sheet ---------- */
+.sheet-bg{position:fixed;inset:0;background:rgba(32,30,29,.42);z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
+.sheet-bg.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;max-width:var(--maxw);background:var(--surface);border-top:2px solid var(--rule);box-shadow:var(--shadow-lg);z-index:61;transition:transform .26s cubic-bezier(.2,.8,.2,1);max-height:90vh;overflow-y:auto;padding:14px 14px calc(18px + env(safe-area-inset-bottom))}
+.sheet.show{transform:translateX(-50%) translateY(0)}
+.grabber{width:40px;height:4px;background:var(--hair);margin:0 auto 14px}
+.sheet h3{font-family:var(--f-exp);font-size:19px;margin-bottom:4px}
+.field{margin-top:12px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.field input,.field textarea,.field select{width:100%;min-height:40px;padding:9px 11px;font-size:15px;background:var(--bg);border:2px solid var(--hair);color:var(--ink)}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{min-height:80px;resize:vertical}
+.tiles{display:flex;gap:8px;margin-top:12px}
+.tile{flex:1;border:1px solid var(--hair);padding:12px 10px;text-align:left}
+.tile.on{border:2px solid var(--accent)}
+.tile .a{font-size:16px;font-weight:800}
+.tile .b{font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.money{color:var(--accent);font-weight:800}
+.total{display:flex;justify-content:space-between;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:14px;padding-top:10px;border-top:1px solid var(--hair)}
+.total .muted{color:var(--muted)}
+
+/* ---------- reactions / comments ---------- */
+.reacts{display:flex;gap:8px;margin:12px 0}
+.react{font-size:12px;font-weight:700;padding:7px 11px;border:1px solid var(--hair);display:flex;gap:5px;align-items:center}
+.react.on{border-color:var(--accent);color:var(--accent)}
+.cmt{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--hair)}
+.cmt .a{width:28px;height:28px;flex:0 0 auto;background:var(--slot)}
+.cmt .u{font-size:11px;font-weight:700}
+.cmt .x{font-size:13px}
+
+/* ---------- rating tiers ---------- */
+.rate{display:flex;gap:6px;flex:0 0 auto}
+.rt{min-width:34px;height:32px;padding:0 9px;border:1px solid var(--hair);display:grid;place-items:center;font-size:13px;font-weight:700}
+.rt.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ---------- toast ---------- */
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:calc(var(--tabH) + var(--miniH) + env(safe-area-inset-bottom) + 8px);width:calc(100% - 28px);max-width:calc(var(--maxw) - 28px);background:var(--ink);color:var(--bg);font-size:12px;font-weight:600;padding:12px 14px;z-index:70;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;display:flex;gap:12px;justify-content:space-between;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast .undo{color:var(--accent);font-weight:800;text-transform:uppercase;font-size:10px;letter-spacing:.06em}
+html[data-theme=dark] .toast .undo{color:var(--accent-600)}
+
+/* ---------- misc ---------- */
+.empty{padding:40px 24px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
+.spark{height:44px;border:1px dashed var(--hair);margin:12px 14px;display:flex;align-items:flex-end;gap:3px;padding:8px}
+.spark i{flex:1;background:var(--slot)}
+.ledger{display:flex;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--hair);font-size:12px}
+.ledger .amt{font-weight:700}
+.ledger .amt.acc{color:var(--accent)}
+.badges{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px}
+.badge{border:1px solid var(--hair);padding:8px 10px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;display:flex;gap:6px;align-items:center}
+.fadein{animation:fade .28s ease both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="toast" id="toast"></div>
+<div class="sheet-bg" id="sheetBg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
+
+<script>
+/* ============================================================ DATA ============ */
+const $=(s,el=document)=>el.querySelector(s);
+const IMG={
+  c1:'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&q=80',
+  c2:'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
+  c3:'https://images.unsplash.com/photo-1501612780327-45045538702b?w=600&q=80',
+  c4:'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80',
+  c5:'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=80',
+  f1:'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300&q=80',
+  f2:'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=300&q=80',
+  f3:'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&q=80',
+  m1:'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80',
+  m2:'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=400&q=80',
+  m3:'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=400&q=80',
+  a1:'https://images.unsplash.com/photo-1458560871784-56d23406c091?w=200&q=80',
+  a2:'https://images.unsplash.com/photo-1487215078519-e21cc028cb29?w=200&q=80',
+  a3:'https://images.unsplash.com/photo-1446057032654-9d8885db76c6?w=200&q=80',
+};
+const SEED={
+  artists:[
+    {id:'nova',name:'Nova Vega',genre:'Dream Pop',verified:true,cover:IMG.c1,avatar:IMG.f1,tag:'Austin, TX',fans:'24.1k',shows:186,live:true,bio:'Dream-pop songwriter blending shimmering synths with raw, honest storytelling.'},
+    {id:'juna',name:'Juna Sol',genre:'Neo-Soul',verified:false,cover:IMG.c3,avatar:IMG.f3,tag:'Brooklyn, NY',fans:'11.3k',shows:74,live:true,bio:'Neo-soul with a live-loop heart.'},
+    {id:'echo',name:'The Echo Method',genre:'Alt Rock',verified:true,cover:IMG.c2,avatar:IMG.f2,tag:'Portland, OR',fans:'58.7k',shows:302,live:false,bio:'Four-piece alt-rock built for the encore.'},
+    {id:'moss',name:'Moss & Marrow',genre:'Folk',verified:true,cover:IMG.c4,avatar:IMG.f1,tag:'Nashville, TN',fans:'41.2k',shows:220,live:false,bio:'Two voices, one guitar, a lot of miles.'},
+  ],
+  songs:[
+    {id:'s1',title:'Golden Hour',dur:'3:48',art:IMG.a1,ready:true,type:'Original',genre:'Dream Pop',vibe:'Anthemic',year:2023},
+    {id:'s2',title:'Paper Moon',dur:'4:12',art:IMG.a2,ready:true,type:'Original',genre:'Dream Pop',vibe:'Chill',year:2024},
+    {id:'s3',title:'Static & Signal',dur:'3:31',art:IMG.a3,ready:true,type:'Original',genre:'Synth',vibe:'Upbeat',year:2022},
+    {id:'s4',title:'Ceremony',dur:'5:02',art:IMG.a1,ready:true,type:'Cover',genre:'Post-Punk',vibe:'Anthemic',year:1981},
+    {id:'s5',title:'Undertow',dur:'3:57',art:IMG.a2,ready:true,type:'Original',genre:'Dream Pop',vibe:'Chill',year:2023},
+    {id:'s6',title:'Bloom',dur:'4:40',art:IMG.a3,ready:true,type:'Original',genre:'Acoustic',vibe:'Acoustic',year:2020},
+    {id:'s7',title:'Cassette Dreams',dur:'3:22',art:IMG.a1,ready:false,type:'Cover',genre:'Synth',vibe:'Upbeat',year:1994},
+    {id:'s8',title:'Vega',dur:'6:11',art:IMG.a2,ready:false,type:'Original',genre:'Dream Pop',vibe:'Anthemic',year:2025},
+  ],
+  feed:[
+    {id:'p1',artist:'nova',time:'2h',text:'Tonight at Mohawk we are letting YOU build the setlist. Doors 8pm — open the show to vote.',likes:412,comments:38},
+    {id:'p2',artist:'juna',time:'5h',text:'New loop pedal, who dis. Bringing 3 unreleased ones to the vote pool this week.',likes:189,comments:22},
+  ],
+};
+const ICON={
+  radio:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4"/></svg>',
+  search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  feed:'<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg>',
+  user:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+  studio:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>',
+};
+
+/* ============================================================ STATE =========== */
+const KEY='myset.modernist.v1';
+function load(){
+  let s=null; try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+  if(!s){ s={
+    role:'fan', tab:'live', theme:'light', artistId:'nova', profileTab:'music',
+    joined:true,
+    nowPlaying:'s1', progress:38,
+    windowState:'open', windowSecs:24, windowMax:30,
+    votes:{s2:128,s3:97,s4:212,s5:64,s6:41}, myVotes:{}, credits:{remaining:7,total:10},
+    reactions:{s4:{'♥':12,'🔥':8}, s2:{'♥':4}}, myReactions:{},
+    comments:{s4:[{u:'mara',t:'this one live is unreal'},{u:'devin',t:'PLEASE play this next'}]}, commentCount:{s4:4,s2:1},
+    played:['s6','s7-x'], ratings:{},
+    filter:'ALL',
+    artistReady:{}, rules:{windowLen:30, everyN:3, showtimeOnly:true, encore:true},
+    tipped:0, receipts:[{k:'vote',t:'Golden Hour',a:'−1 vote',at:'21:14'}],
+    votingOpenTonight:false,
+  }; save(s); }
+  return s;
+}
+function save(s){ localStorage.setItem(KEY,JSON.stringify(s)); }
+let S=load();
+window.addEventListener('storage',e=>{ if(e.key===KEY){ S=load(); render(); }});
+function persist(){ save(S); }
+
+/* played tonight: real ids only */
+function playedIds(){ return (S.played||[]).filter(id=>SEED.songs.some(s=>s.id===id)); }
+
+/* ============================================================ HELPERS ========= */
+let toastTimer;
+function toast(msg,undo){
+  const t=$('#toast');
+  t.innerHTML=`<span>${msg}</span>${undo?`<button class="undo" onclick="(${undo})()">Undo</button>`:''}`;
+  t.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'), undo?4000:2600);
+}
+function openSheet(html){ $('#sheet').innerHTML=`<div class="grabber"></div>${html}`; $('#sheetBg').classList.add('show'); $('#sheet').classList.add('show'); }
+function closeSheet(){ $('#sheetBg').classList.remove('show'); $('#sheet').classList.remove('show'); }
+function go(tab){ S.tab=tab; S.viewArtist=null; persist(); render(); window.scrollTo(0,0); }
+function openArtist(id){ S.viewArtist=id; S.artistId=id; persist(); render(); window.scrollTo(0,0); }
+function backFromArtist(){ S.viewArtist=null; persist(); render(); }
+function setRole(r){ S.role=r; S.tab = r==='artist'?'studio':'live'; S.viewArtist=null; persist(); render(); }
+function toggleTheme(){ S.theme=S.theme==='dark'?'light':'dark'; persist(); render(); }
+
+/* ============================================================ RENDER ========== */
+function render(){
+  document.documentElement.setAttribute('data-theme', S.theme);
+  const app=$('#app');
+  let body, tab=S.tab;
+  if(S.viewArtist){ body=viewArtist(S.viewArtist); }
+  else if(S.role==='artist'){
+    body = tab==='studio'?viewStudio() : tab==='discover'?viewDiscover() : tab==='feed'?viewFeed() : viewYou();
+  } else {
+    body = tab==='live'?viewLive() : tab==='discover'?viewDiscover() : tab==='feed'?viewFeed() : viewYou();
+  }
+  const showMini = S.joined && !(tab==='live' && !S.viewArtist && S.role==='fan');
+  app.innerHTML = `<div class="screen ${showMini?'has-mini':''} fadein">${body}</div>` + (showMini?miniPlayer():'') + tabBar();
+  bindTimer();
+}
+
+/* ---------- tab bar ---------- */
+function tabBar(){
+  const items = S.role==='artist'
+    ? [['studio','studio','Studio'],['discover','search','Discover'],['feed','feed','Feed'],['you','user','You']]
+    : [['live','radio','Live'],['discover','search','Discover'],['feed','feed','Feed'],['you','user','You']];
+  return `<nav class="tabbar">${items.map(([t,ic,l])=>
+    `<button class="${(!S.viewArtist&&S.tab===t)?'on':''}" onclick="go('${t}')">${ICON[ic]}<span>${l}</span></button>`).join('')}</nav>`;
+}
+/* ---------- mini-player ---------- */
+function miniPlayer(){
+  const np=SEED.songs.find(s=>s.id===S.nowPlaying); const a=SEED.artists.find(x=>x.id==='nova');
+  return `<div class="mini">
+    <div class="art grayscale" style="background-image:url('${np.art}')"></div>
+    <div class="m" onclick="go('live')" style="cursor:pointer"><div class="t">${np.title}</div><div class="v">${a.name} · Mohawk</div></div>
+    <button class="tip" onclick="sheetTip()">Tip ♥</button>
+  </div>`;
+}
+
+/* ============================================================ LIVE ============ */
+function nth(n){return n===2?'nd':n===3?'rd':'th';}
+function fmtTime(sec){ sec=Math.max(0,sec|0); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); }
+function poolCands(){
+  const played=playedIds();
+  return SEED.songs.filter(s=>s.ready && s.id!==S.nowPlaying && !played.includes(s.id))
+    .map(s=>({...s,v:S.votes[s.id]||0})).sort((a,b)=>b.v-a.v);
+}
+function matchFilter(s,f){
+  if(!f||f==='ALL')return true;
+  if(f==='ORIGINALS')return s.type!=='Cover';
+  if(f==='COVERS')return s.type==='Cover';
+  if(f==='90s')return s.year>=1990&&s.year<2000;
+  if(f==='80s')return s.year>=1980&&s.year<1990;
+  return s.vibe.toUpperCase()===f || s.genre.toUpperCase()===f;
+}
+function viewLive(){
+  const a=SEED.artists.find(x=>x.id==='nova');
+  const np=SEED.songs.find(s=>s.id===S.nowPlaying);
+  const cands=poolCands();
+  const shown=cands.filter(s=>matchFilter(s,S.filter));
+  const rankOf={}; cands.forEach((s,i)=>rankOf[s.id]=i);
+  const cLeft=S.credits.remaining, cTot=S.credits.total;
+  const open=S.windowState==='open';
+  const bandCls = S.windowState==='open'?'':S.windowState==='between'?'between':'closed';
+  const bandLbl = S.windowState==='open'?'VOTING OPEN':S.windowState==='between'?'VOTING OPENS AFTER THIS SONG':'VOTING CLOSED';
+  const chips=['ALL','ORIGINALS','COVERS','ANTHEMIC','CHILL','UPBEAT','90s','80s'];
+  return `
+  <div class="shead">
+    <div class="row" style="gap:8px">
+      <span class="live-dot"></span>
+      <div><div style="font-size:13px;font-weight:700;line-height:1.1">Mohawk</div><div style="font-size:11px;color:var(--muted)">${a.name} · 312 in the room</div></div>
+    </div>
+    <button class="credit-chip mono" onclick="go('you')">${cLeft}/${cTot}</button>
+  </div>
+
+  <div class="np">
+    <div class="np-art grayscale" style="background-image:url('${np.art}')"></div>
+    <div class="np-info">
+      <div class="kick">Now Playing</div>
+      <div class="np-title">${np.title}</div>
+      <div class="np-sub">${a.name} · ${np.dur}</div>
+      <div class="np-prog"><i style="width:${S.progress}%"></i></div>
+    </div>
+  </div>
+
+  <div class="band ${bandCls}">
+    <span class="lbl">${open?'<span class="live-dot"></span>':''}${bandLbl}</span>
+    ${open?`<span class="t mono" id="winSecs">${fmtTime(S.windowSecs)}</span>`:''}
+  </div>
+
+  <div class="qhead"><span class="k">Up next — you decide</span><button class="btn-text" onclick="sheetFilter()">Sort ⌄</button></div>
+  <div class="chips pad">${chips.map(c=>`<button class="chip ${S.filter===c?'on':''}" onclick="setFilter('${c}')">${c}</button>`).join('')}</div>
+
+  <div style="margin-top:8px">
+    ${shown.length?shown.map(s=>poolRow(s,rankOf[s.id],cLeft,open)).join(''):`<div class="empty"><b>Nothing matches “${S.filter}”.</b>Try another filter.</div>`}
+  </div>
+
+  <div class="played-bar" onclick="sheetPlayed()">
+    <span class="l">Played tonight (${playedIds().length})</span>
+    <span class="r">Rate ›</span>
+  </div>`;
+}
+function poolRow(s,i,cLeft,open){
+  const mine=S.myVotes[s.id];
+  const lead=i===0;
+  const rx=S.reactions[s.id]||{}; const rTot=Object.values(rx).reduce((x,y)=>x+y,0);
+  const cc=(S.commentCount&&S.commentCount[s.id])||0;
+  const meta = (rTot||cc)
+    ? `<span class="act">♥ ${rTot} · 💬 ${cc}</span>`
+    : `${s.type} · ${s.year}`;
+  const canVote = open && (cLeft>0 || mine);
+  let btn;
+  if(mine) btn=`<button class="vbtn voted" onclick="castVote('${s.id}')">Voted ✓</button>`;
+  else if(open && cLeft>0) btn=`<button class="vbtn ${lead?'lead':''}" onclick="castVote('${s.id}')">Vote</button>`;
+  else if(open && cLeft<=0) btn=`<button class="vbtn boost" onclick="sheetBoost('${s.id}')">⚡ Boost</button>`;
+  else btn=`<button class="vbtn" disabled>Vote</button>`;
+  return `<div class="prow ${(!open||(cLeft<=0&&!mine))?'':''}" data-song="${s.id}">
+    <div class="rank ${lead?'lead':''} mono">${i+1}</div>
+    <div class="art grayscale" style="background-image:url('${s.art}')" onclick="sheetSong('${s.id}')"></div>
+    <div class="main" onclick="sheetSong('${s.id}')">
+      <div class="t">${s.title}</div>
+      <div class="m">${meta}</div>
+    </div>
+    <div class="cnt"><b class="mono">${s.v}</b><span>${mine?'<span class="you">+1 YOU</span>':'VOTES'}</span></div>
+    ${btn}
+  </div>`;
+}
+function setFilter(c){ S.filter=c; persist(); render(); }
+function castVote(id){
+  if(S.myVotes[id]){ delete S.myVotes[id]; S.votes[id]=Math.max(0,(S.votes[id]||1)-1); S.credits.remaining=Math.min(S.credits.total,S.credits.remaining+1); persist(); render(); return; }
+  if(S.windowState!=='open'){ toast('Voting is closed right now'); return; }
+  if(S.credits.remaining<=0){ toast('No credits left — boost a song instead'); return; }
+  S.myVotes[id]=true; S.votes[id]=(S.votes[id]||0)+1; S.credits.remaining--;
+  S.receipts.unshift({k:'vote',t:SEED.songs.find(s=>s.id===id).title,a:'−1 vote',at:'now'});
+  persist(); render();
+}
+
+/* ---------- vote-window timer ---------- */
+function bindTimer(){
+  clearInterval(window._t);
+  if(!(S.role==='fan'&&S.tab==='live'&&!S.viewArtist&&S.windowState==='open')) return;
+  window._t=setInterval(()=>{
+    S.windowSecs--; if(S.windowSecs<0){S.windowSecs=0;}
+    const el=$('#winSecs'); if(el) el.textContent=fmtTime(S.windowSecs);
+    if(S.windowSecs<=0){ S.windowState='between'; persist(); render(); }
+  },1000);
+}
+
+/* ============================================================ DISCOVER ======== */
+function viewDiscover(){
+  const live=SEED.artists.filter(x=>x.live), rising=SEED.artists;
+  return `
+  <div class="shead" style="flex-direction:column;align-items:stretch;gap:10px">
+    <h1>Discover</h1>
+    <input class="field" style="min-height:40px;padding:9px 11px;font-size:14px;background:var(--bg);border:2px solid var(--ink);color:var(--ink);width:100%" placeholder="Search artists, songs, venues">
+  </div>
+  <div class="sec"><span class="k">Live right now</span></div>
+  <div class="hscroll">${live.map((x,i)=>`
+    <div class="dcard">
+      <div class="cov grayscale" style="background-image:url('${x.cover}')" onclick="openArtist('${x.id}')"></div>
+      <div class="b">
+        <div class="n">${x.name}${x.verified?' <span class="verified" style="font-size:11px">✓</span>':''}</div>
+        <div class="v">${x.genre} · ${x.tag.split(',')[0]}</div>
+        <button class="btn ${i===0?'btn-primary':'btn-outline'} wide" onclick="joinLive('${x.id}')">Join Live</button>
+      </div>
+    </div>`).join('')}</div>
+
+  <div class="sec"><span class="k">Rising near you</span></div>
+  <div>${rising.map(x=>`
+    <div class="lrow">
+      <div class="avatar grayscale" style="background-image:url('${x.avatar}')" onclick="openArtist('${x.id}')"></div>
+      <div class="main" onclick="openArtist('${x.id}')"><div class="t">${x.name}</div><div class="s">${x.genre} · ${x.tag}</div></div>
+      <button class="btn-text" onclick="follow(this,'${x.name}')">Follow</button>
+    </div>`).join('')}</div>
+
+  <div class="sec"><span class="k">Upcoming near you</span></div>
+  <div>
+    ${[['26 JUL','The Crocodile','Seattle, WA'],['02 AUG','Bowery Ballroom','New York, NY']].map(([d,v,c])=>`
+    <div class="lrow"><div style="width:52px;flex:0 0 auto"><b style="font-size:12px">${d.split(' ')[0]}</b><div style="font-size:8px;letter-spacing:.1em;color:var(--muted)">${d.split(' ')[1]}</div></div>
+    <div class="main"><div class="t">${v}</div><div class="s">${c}</div></div>
+    <button class="btn-text" onclick="toast('Opening tickets')">Tickets ›</button></div>`).join('')}
+  </div>`;
+}
+function joinLive(id){ S.joined=true; S.artistId=id; S.viewArtist=null; go('live'); toast('Joined the show'); }
+
+/* ============================================================ ARTIST PROFILE == */
+function viewArtist(id){
+  const a=SEED.artists.find(x=>x.id===id)||SEED.artists[0];
+  const tabs=['music','links','merch','tour','community','epk'];
+  return `
+  <div class="row between pad" style="padding-top:10px;padding-bottom:8px"><button class="btn-text" onclick="backFromArtist()">‹ Back</button><button class="theme-t btn-text" onclick="toggleTheme()">${S.theme==='dark'?'Light':'Dark'}</button></div>
+  <div class="cover grayscale" style="background-image:url('${a.cover}')"></div>
+  <div class="phead"><div class="pav grayscale" style="background-image:url('${a.avatar}')"></div>
+    <div style="padding-bottom:2px"><div class="pname">${a.name}${a.verified?'<span class="verified">✓</span>':''}</div>
+    <div style="font-size:12px;color:var(--muted)">${a.genre} · ${a.tag}</div></div>
+  </div>
+  <div class="stats"><div class="cell"><div class="v">${a.fans}</div><div class="l">Fans</div></div>
+    <div class="cell"><div class="v">${a.shows}</div><div class="l">Shows</div></div>
+    <div class="cell"><div class="v">★★★</div><div class="l">Set rating</div></div></div>
+  <div class="row pad" style="gap:8px;padding-top:2px;padding-bottom:12px">
+    ${a.live?`<button class="btn btn-primary" style="flex:1" onclick="joinLive('${a.id}')">Join Live</button>`:`<button class="btn btn-outline" style="flex:1" disabled>Not playing tonight</button>`}
+    <button class="btn btn-outline" onclick="follow(this,'${a.name}')">Follow</button>
+  </div>
+  <div class="tabstrip">${tabs.map(t=>`<button class="${S.profileTab===t?'on':''}" onclick="S.profileTab='${t}';persist();render()">${t}</button>`).join('')}</div>
+  <div class="fadein">${artistPanel(a)}</div>`;
+}
+function artistPanel(a){
+  const t=S.profileTab;
+  if(t==='music') return `
+    <div class="chips pad" style="padding-top:12px">${['ALL','ORIGINALS','COVERS','ANTHEMIC','CHILL'].map(c=>`<button class="chip ${S.mfilter===c||(!S.mfilter&&c==='ALL')?'on':''}" onclick="S.mfilter='${c}';persist();render()">${c}</button>`).join('')}</div>
+    <div style="margin-top:8px">${SEED.songs.filter(s=>s.ready&&matchFilter(s,S.mfilter||'ALL')).map(s=>`
+      <div class="lrow"><div class="art grayscale" style="width:32px;height:32px;background-image:url('${s.art}')"></div>
+      <div class="main"><div class="t">${s.title}</div><div class="s">${s.type} · ${s.dur} · ${s.year}</div></div>
+      <button class="btn-text" onclick="toast('Preview')">▷</button></div>`).join('')}</div>`;
+  if(t==='links'){
+    const grp=(k,arr)=>`<div class="sec"><span class="k">${k}</span></div>${arr.map(([n,s])=>`<div class="lrow"><div class="main"><div class="t">${n}</div><div class="s">${s}</div></div><span class="muted">↗</span></div>`).join('')}`;
+    return grp('Listen',[['Spotify','2.4M monthly listeners'],['Apple Music','Full discography'],['YouTube','Latest: Golden Hour (live)']])
+      + grp('Buy the music',[['Bandcamp','Fans name their price'],['iTunes Store','Buy albums & singles'],['Amazon Music','Buy or stream']])
+      + grp('Follow',[['Instagram','@novavega · 24.1k'],['TikTok','1.1M likes']])
+      + `<div class="lrow" onclick="sheetMailing()"><div class="main"><div class="t">Mailing list</div><div class="s">Get show alerts first</div></div><span class="btn-text">Join</span></div>`;
+  }
+  if(t==='merch') return `<div class="merch-grid" style="margin:12px 14px">${[['Tour Tee 2026',IMG.m1,'$32'],['Vinyl — Nova',IMG.m2,'$28'],['Enamel Pins',IMG.m3,'$14'],['Hoodie',IMG.m1,'$54']].map(([n,img,p])=>`
+    <div class="merch-cell"><div class="img grayscale" style="background-image:url('${img}')"></div><div class="t" style="font-size:13px;font-weight:700">${n}</div><div class="row between" style="margin-top:4px"><span class="money">${p}</span><button class="btn-text" onclick="sheetBuy('${n}','${p}')">Buy</button></div></div>`).join('')}</div>`;
+  if(t==='tour') return `<div style="margin-top:6px">${[['22 JUL','Mohawk','Austin, TX','Tonight',true],['26 JUL','The Crocodile','Seattle, WA','Few left',false],['02 AUG','Bowery Ballroom','New York, NY','On sale',false]].map(([d,v,c,st,live])=>{
+    const act = live ? `joinLive('nova')` : `sheetBuy('Ticket — ${v}','$35')`;
+    return `<div class="lrow"><div style="width:52px;flex:0 0 auto"><b style="font-size:13px">${d.split(' ')[0]}</b><div style="font-size:8px;letter-spacing:.1em;color:var(--muted)">${d.split(' ')[1]}</div></div>
+    <div class="main"><div class="t">${v}</div><div class="s">${c} · ${st}</div></div>
+    <button class="btn ${live?'btn-primary':'btn-outline'}" onclick="${act}">${live?'Vote live':'Tickets'}</button></div>`;}).join('')}</div>`;
+  if(t==='community') return `
+    <div style="margin:12px 14px;border:2px solid var(--ink);padding:14px">
+      <div class="kick">Members only</div><div class="np-title" style="font-size:17px;margin:4px 0">Inner Circle</div>
+      <div class="s muted" style="font-size:12px">Early drops · setlist input · monthly livestreams</div>
+      <button class="btn btn-primary btn-block" onclick="sheetMembership()">Join · $5/mo</button></div>
+    ${SEED.feed.map(p=>postCard(p)).join('')}`;
+  if(t==='epk') return `
+    <div class="stats" style="margin-top:12px"><div class="cell"><div class="v">24.1k</div><div class="l">Followers</div></div><div class="cell"><div class="v">2.4M</div><div class="l">Streams</div></div><div class="cell"><div class="v">186</div><div class="l">Shows</div></div></div>
+    <div class="sec"><span class="k">Downloads</span></div>
+    ${['Press photos','One-sheet','Stage plot & rider'].map(x=>`<div class="lrow"><div class="main"><div class="t">${x}</div></div><span class="btn-text" onclick="toast('Downloading')">Get ↓</span></div>`).join('')}
+    <div class="pad" style="padding-top:14px"><button class="btn btn-primary btn-block" onclick="sheetBooking()">Request booking</button></div>`;
+  return '';
+}
+
+/* ============================================================ FEED ============ */
+function viewFeed(){
+  return `
+  <div class="shead"><h1 style="font-family:var(--f-exp)">Feed</h1><button class="btn-text" onclick="toast('Superfan leaderboard')">🏆 Leaders</button></div>
+  <div class="lrow"><div class="avatar" style="background:var(--accent)"></div><input style="flex:1;border:none;background:none;outline:none;font-size:14px;color:var(--ink)" placeholder="Share something with the crowd"></div>
+  ${SEED.feed.map(p=>postCard(p)).join('')}
+  <div style="margin:16px 14px;border:1px solid var(--hair)">
+    <div class="row between" style="padding:12px 14px;border-bottom:2px solid var(--rule)"><span class="k" style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase">Superfan leaderboard</span><span class="muted" style="font-size:10px">This month</span></div>
+    ${[['1','You','2,140','🔥 4-show streak'],['2','mara','1,980','🎯 Called the encore'],['3','devin','1,410','⚡ Top booster']].map(([r,n,pts,b])=>`
+    <div class="lrow"><div class="rank mono" style="width:16px;font-weight:700">${r}</div><div class="avatar grayscale" style="background-image:url('${IMG.f2}')"></div><div class="main"><div class="t">${n}</div><div class="s">${b}</div></div><b class="mono" style="font-size:13px">${pts}</b></div>`).join('')}
+  </div>`;
+}
+function postCard(p){
+  const a=SEED.artists.find(x=>x.id===p.artist);
+  return `<div style="border-top:1px solid var(--hair);padding:14px">
+    <div class="row" style="gap:10px"><div class="avatar grayscale" style="width:34px;height:34px;background-image:url('${a.avatar}')"></div>
+    <div><div style="font-size:13px;font-weight:700">${a.name}${a.verified?' <span class="verified" style="font-size:11px">✓</span>':''}</div><div style="font-size:11px;color:var(--muted)">${p.time} ago</div></div></div>
+    <div style="margin:10px 0;font-size:14px">${p.text}</div>
+    <div class="row" style="gap:18px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)">
+      <span onclick="toast('Liked')">♥ ${p.likes}</span><span>💬 ${p.comments}</span><span>↗ Share</span></div>
+  </div>`;
+}
+
+/* ============================================================ YOU ============= */
+function viewYou(){
+  const c=S.credits;
+  return `
+  <div class="shead"><h1 style="font-family:var(--f-exp)">You</h1><button class="btn-text" onclick="toggleTheme()">${S.theme==='dark'?'☀ Light':'☾ Dark'}</button></div>
+
+  <div class="sec"><span class="k">Vote credits</span></div>
+  <div class="row between pad" style="align-items:flex-end;padding-bottom:12px">
+    <div><span style="font-family:var(--f-exp);font-size:44px;font-weight:800" class="mono">${c.remaining}</span><span style="font-size:18px;color:var(--muted)"> / ${c.total} left</span></div>
+    <span class="muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.06em">Refills at encore</span>
+  </div>
+  <div>${(S.receipts||[]).slice(0,5).map(r=>`<div class="ledger"><span>${r.k==='vote'?r.t:r.k} · ${r.at}</span><span class="amt ${r.k!=='vote'?'acc':''}">${r.a}</span></div>`).join('')}</div>
+
+  <div class="sec"><span class="k">Streaks & badges</span></div>
+  <div class="badges"><span class="badge">🔥 4-show streak</span><span class="badge">🎯 Called the encore</span><span class="badge">⚡ Top booster</span></div>
+
+  <div class="sec"><span class="k">Wallet</span></div>
+  ${[['Tips & boosts','$'+(S.tipped||0)+' this month'],['Memberships','Inner Circle · Nova Vega'],['Tickets','2 upcoming']].map(([t,s])=>`<div class="lrow"><div class="main"><div class="t">${t}</div><div class="s">${s}</div></div><span class="muted">›</span></div>`).join('')}
+
+  <div class="sec"><span class="k">Settings</span></div>
+  <div class="lrow"><div class="main"><div class="t">Theme</div></div>
+    <div class="seg-wrap row" style="gap:0;border:1px solid var(--hair)">
+      ${['light','dark'].map(th=>`<button onclick="S.theme='${th}';persist();render()" style="padding:7px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;${S.theme===th?'background:var(--ink);color:var(--bg)':''}">${th}</button>`).join('')}
+    </div></div>
+  <div class="lrow"><div class="main"><div class="t">You are in</div><div class="s">${S.role==='artist'?'Artist mode':'Fan mode'}</div></div>
+    <button class="btn btn-outline" onclick="setRole('${S.role==='artist'?'fan':'artist'}')">Switch to ${S.role==='artist'?'Fan':'Artist'}</button></div>`;
+}
+
+/* ============================================================ STUDIO ========== */
+function viewStudio(){
+  return `
+  <div class="shead"><div><div class="kick">Studio</div><h1 style="font-family:var(--f-exp);font-size:20px">Nova Vega</h1></div>
+    <button class="credit-chip" onclick="setRole('fan')">Fan ⇄ Artist</button></div>
+
+  <div class="stats"><div class="cell"><div class="v">1.2k</div><div class="l">Fans</div></div>
+    <div class="cell"><div class="v">3.4k</div><div class="l">Votes cast</div></div>
+    <div class="cell"><div class="v acc">$412</div><div class="l">Boost + merch</div></div></div>
+
+  <div class="sec"><span class="k">Tonight's setlist pool</span><button class="a" onclick="sheetAddSong()">+ Add song</button></div>
+  <div>${SEED.songs.map(s=>{
+    const on=S.artistReady[s.id]!==undefined?S.artistReady[s.id]:s.ready;
+    return `<div class="lrow"><div class="main"><div class="t">${s.title}</div><div class="s">${s.type} · ${s.genre} · ${s.dur}</div></div>
+      <div class="tgl ${on?'on':''}" onclick="togglePool('${s.id}',${on})"></div></div>`;
+  }).join('')}</div>
+
+  <div class="lrow" style="border-top:2px solid var(--rule)" onclick="sheetRules()"><div class="main"><div class="t">Voting rules</div><div class="s">Windows · Every ${S.rules.everyN}${nth(S.rules.everyN)} · Encore</div></div><span class="muted">›</span></div>
+  <div class="lrow" onclick="toast('Insights: Ceremony over-indexes late-set')"><div class="main"><div class="t">Insights</div><div class="s">Most requested · Crowd map</div></div><span class="muted">›</span></div>
+  <div class="spark">${[30,45,38,62,55,80,72,90].map(h=>`<i style="height:${h}%"></i>`).join('')}</div>
+
+  <div class="pad" style="padding-top:8px">
+    ${S.votingOpenTonight
+      ? `<button class="btn btn-outline btn-block" onclick="S.votingOpenTonight=false;persist();render();toast('Voting closed')">Close voting</button>`
+      : `<button class="btn btn-primary btn-block" onclick="S.votingOpenTonight=true;persist();render();toast('Voting is open — fans can vote')">Open voting for tonight</button>`}
+  </div>`;
+}
+function togglePool(id,cur){ S.artistReady[id]=!cur; persist(); render(); toast(!cur?'Added to pool':'Removed from pool', `()=>{S.artistReady['${id}']=${cur};persist();render()}`); }
+
+/* ============================================================ SHEETS ========== */
+function sheetBoost(id){
+  const s=id?SEED.songs.find(x=>x.id===id):null;
+  openSheet(`<div class="kick">Boost a song</div>
+    ${s?`<div class="lrow" style="border:none;padding:8px 0"><div class="art grayscale" style="width:44px;height:44px;background-image:url('${s.art}')"></div><div class="main"><div class="t">${s.title}</div><div class="s">Nova Vega</div></div></div>`:'<h3>Boost a song</h3>'}
+    <div class="tiles">
+      <div class="tile" onclick="selTile(this)"><div class="a money">$2</div><div class="b">+3 votes</div></div>
+      <div class="tile on" onclick="selTile(this)"><div class="a money">$5</div><div class="b">+8 · jump queue</div></div>
+      <div class="tile" onclick="selTile(this)"><div class="a money">$10</div><div class="b">+20 votes</div></div>
+    </div>
+    <div class="total"><span class="muted">Total</span><span class="money">$5.00</span></div>
+    <p style="font-size:11px;color:var(--muted);margin:8px 0 0">Boost moves this song up the queue and adds votes. Charged to Apple Pay — confirm below.</p>
+    <button class="btn btn-primary btn-block" onclick="doBoost('${id||''}')">Confirm boost · $5</button>
+    <button class="btn-text" style="display:block;margin:12px auto 0" onclick="sheetTip()">or tip the band instead</button>
+    <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:10px">Demo — no payment is taken.</p>`);
+}
+let tileSel=1;
+function selTile(el){ [...el.parentElement.children].forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
+function doBoost(id){ if(id){S.votes[id]=(S.votes[id]||0)+8;} S.tipped=(S.tipped||0); closeSheet(); persist(); render(); toast('Boosted · $5.00 · receipt in You'); }
+function sheetTip(){
+  openSheet(`<h3>Tip the band</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 4px">100% goes to the artist. Add a note and they'll see it on stage.</p>
+    <div class="tiles"><div class="tile" onclick="selTile(this)"><div class="a money">$3</div><div class="b">Nice</div></div>
+      <div class="tile on" onclick="selTile(this)"><div class="a money">$7</div><div class="b">Love it</div></div>
+      <div class="tile" onclick="selTile(this)"><div class="a money">$15</div><div class="b">Encore!</div></div></div>
+    <div class="field"><label>Note (optional)</label><input id="tipNote" placeholder="You all are killing it"></div>
+    <button class="btn btn-primary btn-block" onclick="doTip()">Send $7</button>
+    <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:10px">Demo — no payment is taken.</p>`);
+}
+function doTip(){ S.tipped=(S.tipped||0)+7; closeSheet(); persist(); render(); toast('Tipped · $7.00 · the band felt that'); }
+function sheetSong(id){
+  const s=SEED.songs.find(x=>x.id===id); const rx=S.reactions[id]||{}; const list=(S.comments&&S.comments[id])||[];
+  const reacts=['♥','🔥','🎸'];
+  openSheet(`<div class="row" style="gap:12px"><div class="art grayscale" style="width:56px;height:56px;background-image:url('${s.art}')"></div>
+    <div><h3 style="margin:0">${s.title}</h3><div class="s muted" style="font-size:12px">${s.type} · ${s.genre} · ${s.year}</div></div></div>
+    <div class="reacts">${reacts.map(e=>{const on=S.myReactions[id]===e;const n=rx[e]||0;return `<button class="react ${on?'on':''}" onclick="react('${id}','${e}')">${e} ${n||''}</button>`}).join('')}
+      <button class="vbtn ${S.myVotes[id]?'voted':''}" style="margin-left:auto" onclick="castVote('${id}');closeSheet()">${S.myVotes[id]?'Voted ✓':'Vote'}</button></div>
+    <div class="kick">Comments (${(S.commentCount&&S.commentCount[id])||list.length})</div>
+    <div id="cmtList">${list.length?list.map(c=>`<div class="cmt"><div class="a grayscale"></div><div><div class="u">@${c.u}</div><div class="x">${c.t}</div></div></div>`).join(''):'<p class="muted" style="font-size:13px">Be the first.</p>'}</div>
+    <div class="row" style="gap:8px;margin-top:12px"><input id="cInp" style="flex:1;min-height:40px;padding:9px 11px;background:var(--bg);border:2px solid var(--hair);color:var(--ink)" placeholder="Add a comment"><button class="btn btn-primary" onclick="addComment('${id}')">Post</button></div>
+    <button class="btn btn-outline btn-block" onclick="sheetBoost('${id}')">⚡ Boost this song</button>`);
+}
+function react(id,e){
+  S.reactions[id]=S.reactions[id]||{}; const prev=S.myReactions[id];
+  if(prev===e){ S.reactions[id][e]=Math.max(0,(S.reactions[id][e]||1)-1); delete S.myReactions[id]; }
+  else { if(prev) S.reactions[id][prev]=Math.max(0,(S.reactions[id][prev]||1)-1); S.reactions[id][e]=(S.reactions[id][e]||0)+1; S.myReactions[id]=e; }
+  persist(); sheetSong(id); render();
+}
+function addComment(id){ const i=$('#cInp'); const t=(i&&i.value||'').trim(); if(!t)return; S.comments[id]=S.comments[id]||[]; S.comments[id].push({u:'you',t}); S.commentCount=S.commentCount||{}; S.commentCount[id]=((S.commentCount[id])||0)+1; persist(); sheetSong(id); render(); }
+function sheetFilter(){
+  openSheet(`<h3>Filter & sort</h3>
+    <div class="kick" style="margin-top:8px">Sort</div>
+    <div class="chips" style="margin-top:8px">${['Top voted','Recently added','Boosted first'].map((x,i)=>`<button class="chip ${i===0?'on':''}" onclick="closeSheet()">${x}</button>`).join('')}</div>
+    <div class="kick" style="margin-top:16px">Filter</div>
+    <div class="chips" style="margin-top:8px;flex-wrap:wrap;overflow:visible">${['ALL','ORIGINALS','COVERS','ANTHEMIC','CHILL','UPBEAT','90s','80s'].map(c=>`<button class="chip ${S.filter===c?'on':''}" onclick="setFilter('${c}');closeSheet()">${c}</button>`).join('')}</div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet()">Done</button>`);
+}
+function playedSheetRow(id){
+  const s=SEED.songs.find(x=>x.id===id); if(!s) return '';
+  const r=S.ratings[id]||0;
+  const tiers=[['★',1],['★★',2],['★★★',3]].map(([lab,n])=>`<button class="rt ${n<=r?'on':''}" onclick="rate('${id}',${n})">${lab}</button>`).join('');
+  return `<div class="lrow" style="border-top:1px solid var(--hair);padding:12px 0"><div class="art grayscale" style="width:34px;height:34px;background-image:url('${s.art}')"></div>
+    <div class="main"><div class="t">${s.title}</div><div class="s">${r?'You rated '+r+'/3':'Rate the performance'}</div></div>
+    <div class="rate">${tiers}</div></div>`;
+}
+function sheetPlayed(){
+  const ids=playedIds();
+  openSheet(`<h3>Played tonight</h3>${ids.length?ids.slice().reverse().map(playedSheetRow).join(''):'<p class="muted">No songs played yet.</p>'}`);
+}
+function rate(id,n){ S.ratings[id]=(S.ratings[id]===n)?n-1:n; persist(); sheetPlayed(); render(); }
+function sheetAddSong(){
+  openSheet(`<h3>Add a song</h3>
+    <div class="field"><label>Title</label><input placeholder="Midnight Radio"></div>
+    <div class="field"><label>Type</label><select><option>Original</option><option>Cover</option></select></div>
+    <div class="field"><label>Genre · vibe · year</label><input placeholder="Dream Pop · Chill · 2024"></div>
+    <div class="field"><label>Duration</label><input placeholder="4:02"></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('Song added to pool')">Add to pool</button>`);
+}
+function sheetRules(){
+  openSheet(`<h3>Voting rules</h3>
+    ${ruleToggle('Vote windows','Voting opens in short windows between songs','windowOn',true)}
+    <div class="lrow" style="border:none;padding:12px 0"><div class="main"><div class="t">Every Nth song is a crowd pick</div><div class="s">You curate the rest</div></div>
+      <div class="row" style="gap:0;border:1px solid var(--hair)">${[2,3,5].map(n=>`<button onclick="S.rules.everyN=${n};persist();sheetRules();render()" style="padding:7px 11px;font-weight:700;${S.rules.everyN===n?'background:var(--ink);color:var(--bg)':''}">${n}</button>`).join('')}</div></div>
+    ${ruleToggle('Showtime only','Voting unlocks at doors, closes at last call','showtimeOnly')}
+    ${ruleToggle('Encore mode','Top unplayed song becomes the guaranteed encore','encore')}
+    <button class="btn btn-primary btn-block" onclick="closeSheet()">Done</button>`);
+}
+function ruleToggle(t,s,key,forceOn){
+  const on = forceOn||S.rules[key]!==false&&(S.rules[key]||forceOn);
+  const val=S.rules[key]!==undefined?S.rules[key]:!!forceOn;
+  return `<div class="lrow" style="border:none;padding:12px 0"><div class="main"><div class="t">${t}</div><div class="s">${s}</div></div>
+    <div class="tgl ${val?'on':''}" onclick="S.rules['${key}']=${!val};persist();sheetRules();render()"></div></div>`;
+}
+function sheetBooking(){
+  openSheet(`<h3>Request booking</h3>
+    <div class="field"><label>Venue / event</label><input placeholder="The Fillmore"></div>
+    <div class="field"><label>Date</label><input type="date"></div>
+    <div class="field"><label>City</label><input placeholder="San Francisco, CA"></div>
+    <div class="field"><label>Message</label><textarea placeholder="Tell them about the show"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('Booking request sent')">Send request</button>`);
+}
+function sheetBuy(name,price){
+  openSheet(`<div class="kick">Buy</div><h3>${name}</h3>
+    <div class="field"><label>Size / variant</label><select><option>S</option><option>M</option><option>L</option><option>XL</option></select></div>
+    <div class="field"><label>Quantity</label><input type="number" value="1" min="1"></div>
+    <div class="total"><span class="muted">Total</span><span class="money">${price}</span></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('Added · receipt in You')">Confirm · ${price}</button>
+    <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:10px">Demo — no payment is taken.</p>`);
+}
+function sheetMembership(){
+  openSheet(`<div class="kick">Membership</div><h3>Inner Circle</h3>
+    <p style="font-size:13px;color:var(--muted)">Early drops, setlist input, monthly livestreams, member-only posts.</p>
+    <div class="total"><span class="muted">Monthly</span><span class="money">$5.00</span></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('Welcome to the Inner Circle')">Join · $5/mo</button>`);
+}
+function sheetMailing(){
+  openSheet(`<h3>Get show alerts</h3>
+    <div class="field"><label>Email</label><input type="email" placeholder="you@email.com"></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('You are on the list')">Sign up</button>`);
+}
+function follow(el,name){ const on=el.textContent.trim().toUpperCase()==='FOLLOWING'; el.textContent=on?'Follow':'Following'; el.style.color=on?'':'var(--ink)'; toast(on?'Unfollowed':'Following '+name); }
+
+/* ---- boot ---- */
+render();
+</script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 .DS_Store
 ._*
 Thumbs.db
-wireframes.html
+node_modules/
+.netlify/
+archive/
 design-handoff/
