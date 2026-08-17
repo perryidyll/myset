@@ -3,1339 +3,815 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e0e15" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f3f2f2" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#181615" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%236d5ef6'/><g fill='%23fff'><rect x='29' y='38' width='11' height='36' rx='5.5'/><rect x='46' y='24' width='11' height='50' rx='5.5'/><rect x='63' y='50' width='11' height='24' rx='5.5'/></g></svg>" />
 <title>MySet — the crowd builds your set</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%236d5ef6'/><stop offset='1' stop-color='%238b5cf6'/></linearGradient></defs><rect width='100' height='100' rx='26' fill='url(%23g)'/><g fill='%23fff'><rect x='29' y='38' width='11' height='36' rx='5.5'/><rect x='46' y='24' width='11' height='50' rx='5.5'/><rect x='63' y='50' width='11' height='24' rx='5.5'/></g></svg>" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23ec3013'/><g fill='%23fff'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23ec3013'/><g fill='%23fff'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Archivo+Expanded:wght@700;800&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
-   ENCORE — design system
-   Apple-esque · minimal · premium · Skool × Instagram × Airbnb
+   MySet — "Modernist" design system · Direction 1a "The Queue"
+   Flat · zero-radius · one accent (#ec3013) · flush-left · 2px rules
    ============================================================ */
 :root{
-  --bg:#ffffff;
-  --bg-soft:#f6f6f8;
-  --bg-elev:#ffffff;
-  --ink:#0b0b0f;
-  --ink-2:#3a3a44;
-  --ink-3:#6b6b78;
-  --ink-4:#9a9aa6;
-  --line:#ececf0;
-  --line-2:#e2e2e8;
-  --accent:#5b4be1;      /* signature indigo-violet */
-  --accent-2:#8b5cf6;
-  --accent-ink:#3a2fb0;
-  --grad:linear-gradient(120deg,#6d5ef6 0%,#a855f7 45%,#ff5fa2 100%);
-  --grad-2:linear-gradient(135deg,#5b4be1,#8b5cf6);
-  --live:#ff3b5c;
-  --amber:#ff9f0a;
-  --good:#2fbf71;
-  --radius:22px;
-  --radius-sm:14px;
-  --radius-lg:30px;
-  --shadow-sm:0 1px 2px rgba(10,10,20,.05),0 4px 14px rgba(10,10,20,.05);
-  --shadow-md:0 4px 12px rgba(10,10,20,.06),0 18px 44px rgba(10,10,20,.10);
-  --shadow-lg:0 12px 30px rgba(10,10,20,.10),0 40px 90px rgba(10,10,20,.18);
-  --maxw:1140px;
-  --ease:cubic-bezier(.22,1,.36,1);
-  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
+  --bg:#f3f2f2; --surface:#eae9e9; --ink:#201e1d; --muted:#7d7979; --muted-2:#9b9797;
+  --rule:#201e1d;               /* 2px major rules */
+  --hair:#d7d3d3;               /* 1px row lines (neutral-300) */
+  --hair-2:#e3e0e0;             /* subtle (neutral-200) */
+  --slot:#e0dddc;               /* image placeholder / neutral fill */
+  --accent:#ec3013; --accent-600:#dd2b0f; --accent-700:#ae1800;
+  --accent-tint:#ffe0d9; --accent-tint-ink:#ae1800;
+  --band:#201e1d;               /* vote-window band fill */
+  --band-ink:#ffffff;
+  --shadow-lg:0 -2px 0 var(--ink), 0 12px 40px rgba(20,18,17,.28);
+  --tabH:54px; --miniH:46px; --maxw:520px;
+  --f-head:"Archivo",system-ui,sans-serif;
+  --f-exp:"Archivo Expanded","Archivo",system-ui,sans-serif;
 }
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html[data-theme=dark]{
+  --bg:#161413; --surface:#211e1d; --ink:#f4f2f2; --muted:#a29d9d; --muted-2:#8a8585;
+  --rule:#f4f2f2; --hair:#3a3635; --hair-2:#2b2827; --slot:#2f2b2a;
+  --accent:#ec3013; --accent-600:#ff563c; --accent-700:#ff9783;
+  --accent-tint:#3a1c15; --accent-tint-ink:#ff9783;
+  --band:#f4f2f2; --band-ink:#161413;
+  --shadow-lg:0 -2px 0 var(--ink), 0 12px 40px rgba(0,0,0,.6);
+}
+*,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
-  font-family:var(--font);
-  background:var(--bg);
-  color:var(--ink);
-  -webkit-font-smoothing:antialiased;
-  text-rendering:optimizeLegibility;
-  letter-spacing:-.01em;
-  line-height:1.45;
-  overflow-x:hidden;
+  background:var(--bg); color:var(--ink);
+  font-family:var(--f-head); font-size:15px; line-height:1.5; font-weight:400;
+  -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
 }
-img{max-width:100%;display:block}
-button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
-a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+button{font-family:inherit;cursor:pointer;background:none;border:none;color:inherit;padding:0}
 input,textarea,select{font-family:inherit}
-::selection{background:var(--accent);color:#fff}
+a{color:var(--accent);text-decoration:none}
+::selection{background:color-mix(in srgb,var(--accent) 28%,transparent)}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .hidden{display:none!important}
+h1,h2,h3,h4{margin:0;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.grayscale{filter:grayscale(1) contrast(1.04)}
 
-/* ---------- typography ---------- */
-h1,h2,h3,h4{margin:0;font-weight:680;letter-spacing:-.03em;line-height:1.05}
-.eyebrow{font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
-.muted{color:var(--ink-3)}
-.tiny{font-size:12.5px}
-
-/* ---------- layout ---------- */
-.wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
-.app{min-height:100vh;padding-bottom:96px}
-.stack{display:flex;flex-direction:column}
+/* ---------- layout shell ---------- */
+#app{max-width:var(--maxw);margin:0 auto;min-height:100vh;position:relative;background:var(--bg)}
+.screen{padding-bottom:calc(var(--tabH) + env(safe-area-inset-bottom) + 8px)}
+.screen.has-mini{padding-bottom:calc(var(--tabH) + var(--miniH) + env(safe-area-inset-bottom) + 8px)}
+.pad{padding-left:14px;padding-right:14px}
+.kick{font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.muted{color:var(--muted)}
+.rule2{border-bottom:2px solid var(--rule)}
 .row{display:flex;align-items:center}
 .between{justify-content:space-between}
-.gap6{gap:6px}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}.gap20{gap:20px}
-.wrapf{flex-wrap:wrap}
+.wide{width:100%}
 
-/* ---------- top bar ---------- */
-.topbar{
-  position:sticky;top:0;z-index:60;
-  backdrop-filter:saturate(180%) blur(24px);
-  -webkit-backdrop-filter:saturate(180%) blur(24px);
-  background:rgba(255,255,255,.72);
-  border-bottom:1px solid var(--line);
-}
-.topbar-inner{height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.brand{display:flex;align-items:center;gap:9px;font-weight:760;font-size:19px;letter-spacing:-.04em}
-.brand .dot{width:22px;height:22px;border-radius:8px;background:var(--grad-2);display:grid;place-items:center;color:#fff;font-size:12px;box-shadow:0 2px 8px rgba(91,75,225,.4)}
-.brand small{font-weight:600;color:var(--ink-4);font-size:11px;letter-spacing:.02em;margin-left:2px}
-.role-toggle{display:flex;background:var(--bg-soft);border-radius:999px;padding:3px;border:1px solid var(--line)}
-.role-toggle button{font-size:13px;font-weight:600;padding:7px 15px;border-radius:999px;color:var(--ink-3);transition:.25s var(--ease)}
-.role-toggle button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow-sm)}
-.topbar .search{flex:1;max-width:340px;display:flex;align-items:center;gap:8px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:8px 14px;color:var(--ink-3);font-size:14px}
-.topbar .search input{border:none;background:none;outline:none;flex:1;color:var(--ink);font-size:14px}
-.avatar-btn{width:34px;height:34px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;box-shadow:var(--shadow-sm)}
+/* ---------- buttons (Modernist: sharp, flush-left labels) ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-family:var(--f-head);font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding:9px 12px;border:2px solid transparent;transition:background .12s,color .12s,opacity .12s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-600)}
+.btn-outline{border-color:var(--ink);color:var(--ink)}
+.btn-outline:hover{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.btn-block{width:100%;justify-content:flex-start;padding:14px}
+.btn-lg{font-size:13px;padding:14px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-text{color:var(--accent);font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase}
 
-/* ---------- buttons ---------- */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:640;font-size:15px;padding:12px 20px;border-radius:999px;transition:.2s var(--ease);white-space:nowrap}
-.btn:active{transform:scale(.97)}
-.btn-primary{background:var(--ink);color:#fff}
-.btn-primary:hover{background:#26262e}
-.btn-accent{background:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(91,75,225,.32)}
-.btn-accent:hover{filter:brightness(1.06)}
-.btn-grad{background:var(--grad);color:#fff;box-shadow:0 8px 24px rgba(168,85,247,.32)}
-.btn-ghost{background:var(--bg-soft);color:var(--ink);border:1px solid var(--line)}
-.btn-ghost:hover{background:#eeeef2}
-.btn-sm{padding:8px 14px;font-size:13.5px}
-.btn-block{width:100%}
-.btn-icon{width:40px;height:40px;padding:0;border-radius:50%;background:var(--bg-soft);border:1px solid var(--line)}
+/* ---------- chips (filters) ---------- */
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:5px 9px;border:1px solid var(--hair);color:var(--muted);background:transparent}
+.chip.on{border-color:var(--ink);color:var(--ink)}
 
-/* ---------- cards ---------- */
-.card{background:var(--bg-elev);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
-.pad{padding:20px}.pad24{padding:24px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:5px 11px;border-radius:999px;background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-2)}
-.chip.solid{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.chip.accent{background:rgba(91,75,225,.1);color:var(--accent-ink);border-color:transparent}
-.pill-live{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--live);padding:5px 11px;border-radius:999px}
-.pill-live .bl{width:7px;height:7px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+/* ---------- credit chip ---------- */
+.credit-chip{font-size:11px;font-weight:700;border:2px solid var(--ink);padding:3px 7px;letter-spacing:.02em}
+.credit-chip .mono{font-weight:700}
 
-/* ---------- hero (fan home) ---------- */
-.hero{position:relative;border-radius:var(--radius-lg);overflow:hidden;color:#fff;padding:52px 40px;margin-top:22px;isolation:isolate}
-.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(115deg,#1a0f3d,#3d1a6b 40%,#8b2d6b 100%);z-index:-2}
-.hero::after{content:"";position:absolute;inset:0;background:radial-gradient(1000px 400px at 80% -10%,rgba(255,95,162,.5),transparent 60%),radial-gradient(700px 500px at 10% 120%,rgba(109,94,246,.55),transparent 60%);z-index:-1}
-.hero h1{font-size:clamp(32px,5.4vw,58px);letter-spacing:-.045em;max-width:16ch;margin-top:20px}
-.hero p{font-size:clamp(16px,2vw,20px);color:rgba(255,255,255,.82);max-width:46ch;margin:16px 0 26px}
-.hero .btn-ghost{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.24);color:#fff;backdrop-filter:blur(10px)}
-.hero .btn-ghost:hover{background:rgba(255,255,255,.24)}
+/* ---------- now-playing hero ---------- */
+.np{display:flex;gap:12px;padding:14px}
+.np-art{width:96px;height:96px;flex:0 0 auto;background:var(--slot) center/cover no-repeat}
+.np-info{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.np-title{font-family:var(--f-exp);font-weight:800;font-size:19px;letter-spacing:-.02em;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.np-prog{height:4px;background:var(--hair);margin-top:11px;overflow:hidden}
+.np-prog i{display:block;height:100%;background:var(--ink)}
 
-/* section headers */
-.sec{margin-top:40px}
-.sec-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:16px}
-.sec-head h2{font-size:24px}
-.sec-head a{font-size:14px;font-weight:600;color:var(--accent)}
+/* ---------- vote window band ---------- */
+.band{display:flex;align-items:center;justify-content:space-between;background:var(--band);color:var(--band-ink);padding:10px 14px;margin:0 14px}
+.band .lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.band .t{font-size:14px;font-weight:700}
+.band.closed{background:var(--muted)}
+.band.between{background:var(--muted-2)}
+.live-dot{width:8px;height:8px;background:var(--accent);display:inline-block;animation:pulse 1.6s infinite}
+.band .live-dot{background:#fff}
+html[data-theme=dark] .band .live-dot{background:var(--band-ink)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* grids */
-.grid{display:grid;gap:18px}
-.grid-3{grid-template-columns:repeat(3,1fr)}
-.grid-2{grid-template-columns:repeat(2,1fr)}
-.hscroll{display:flex;gap:16px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
-.hscroll::-webkit-scrollbar{height:0}
-.hscroll>*{scroll-snap-align:start;flex:0 0 auto}
+/* ---------- queue header ---------- */
+.qhead{display:flex;align-items:baseline;justify-content:space-between;padding:14px 14px 8px}
+.qhead .k{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
 
-/* artist card */
-.acard{width:270px;border-radius:var(--radius);overflow:hidden;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow-sm);transition:.28s var(--ease);cursor:pointer}
-.acard:hover{transform:translateY(-4px);box-shadow:var(--shadow-md)}
-.acard .cover{height:150px;position:relative;background-size:cover;background-position:center}
-.acard .cover .top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between}
-.acard .body{padding:14px 16px 16px}
-.acard .name{font-weight:700;font-size:16.5px;display:flex;align-items:center;gap:5px}
-.acard .genre{color:var(--ink-3);font-size:13px;margin-top:2px}
-.acard .meta{display:flex;gap:14px;margin-top:12px;font-size:12.5px;color:var(--ink-3)}
-.acard .meta b{color:var(--ink);font-weight:700}
-.verified{color:var(--accent);font-size:14px}
+/* ---------- vote pool rows ---------- */
+.prow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-top:1px solid var(--hair)}
+.prow:first-child{border-top:none}
+.prow.dim{opacity:.5}
+.prow .rank{width:16px;font-size:13px;font-weight:700;text-align:center;color:var(--muted)}
+.prow .rank.lead{color:var(--accent)}
+.prow .art{width:34px;height:34px;flex:0 0 auto;background:var(--slot) center/cover no-repeat}
+.prow .main{flex:1;min-width:0}
+.prow .t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .m{font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .m .act{color:var(--ink);text-transform:none;letter-spacing:0}
+.prow .cnt{text-align:right;flex:0 0 auto;min-width:34px}
+.prow .cnt b{font-size:13px;font-weight:700}
+.prow .cnt span{display:block;font-size:7px;font-weight:600;letter-spacing:.08em;color:var(--muted)}
+.prow .cnt .you{color:var(--accent)}
+.vbtn{flex:0 0 auto;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:7px 11px;border:2px solid var(--ink);color:var(--ink);background:transparent;min-height:34px}
+.vbtn.lead{background:var(--accent);border-color:var(--accent);color:#fff}
+.vbtn.voted{background:var(--accent-tint);border-color:transparent;color:var(--accent-tint-ink)}
+.vbtn.boost{border-style:dashed;border-color:var(--accent);color:var(--accent)}
+.vbtn:disabled{opacity:.4}
 
-/* ---------- live show / voting ---------- */
-body.venue-scope{background:#06060d}
-.venue{color:#fff;min-height:100vh;--line:#1e1e28;--line-2:#2a2a36;--bg:#08080c;--bg-soft:#14141c;--bg-elev:#101018;--ink:#fff;--ink-2:#c9c9d4;--ink-3:#8e8e9e;--ink-4:#6a6a78;
-  background:
-    radial-gradient(820px 500px at 10% -6%, rgba(124,108,255,.30), transparent 60%),
-    radial-gradient(720px 560px at 94% 4%, rgba(255,95,162,.22), transparent 56%),
-    radial-gradient(680px 540px at 50% 42%, rgba(139,92,246,.10), transparent 62%),
-    radial-gradient(760px 580px at 82% 106%, rgba(72,196,255,.17), transparent 60%),
-    radial-gradient(660px 540px at 14% 114%, rgba(160,90,255,.22), transparent 60%),
-    #06060d;
-  background-attachment:fixed;
-}
-.venue .vote-item{background:#101018}
-.venue .vote-item.nowplaying{background:var(--grad-2)}
-.venue .vote-item .fill{background:linear-gradient(90deg,rgba(139,92,246,.42),rgba(139,92,246,.16))}
-.venue .vote-item.leading .fill{background:linear-gradient(90deg,rgba(255,95,162,.5),rgba(168,85,247,.22))}
-.venue .vote-btn{background:#16161f;border-color:#26262f}
-.venue .window-ring::after{background:#101018}
-.venue .link-tile{background:#101018;border-color:#1e1e28}
-.venue .topbar{background:rgba(8,8,12,.7);border-color:#1a1a24}
-.venue .card{background:#101018;border-color:#1e1e28;box-shadow:none}
-.venue .chip{background:#16161f;border-color:#242430;color:#c9c9d4}
-.venue .btn-ghost{background:#16161f;border-color:#26262f;color:#fff}
-.venue .search{background:#14141c;border-color:#24242f}
-.venue .vote-card{background:#101018}
-.venue .vote-card .fill{background:linear-gradient(90deg,rgba(139,92,246,.42),rgba(139,92,246,.16))}
-.venue .vote-card.leading .fill{background:linear-gradient(90deg,rgba(255,95,162,.5),rgba(168,85,247,.22))}
-.venue .react-btn{background:#16161f;border-color:#26262f;color:#c9c9d4}
-.venue .react-btn.on{background:rgba(139,92,246,.24);border-color:var(--accent-2);color:#fff}
-.venue .played-row{background:#101018}
-.venue .thumb{background:#16161f;border-color:#26262f}
-.venue .stream-wrap{border-color:#1e1e28}
+/* ---------- played tonight collapsed row ---------- */
+.played-bar{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-top:2px solid var(--rule);margin-top:8px}
+.played-bar .l{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.played-bar .r{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:center}
 
-/* ---- video stream embed ---- */
-.stream-wrap{border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--line);background:#000;aspect-ratio:16/9;position:relative}
-.stream-wrap iframe{width:100%;height:100%;border:0;display:block}
-.stream-toggle{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--bg-elev);cursor:pointer;transition:.2s var(--ease)}
-.stream-toggle:hover{border-color:var(--accent)}
-.stream-toggle .st-ic{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#ff3b5c,#a855f7);display:grid;place-items:center;font-size:18px;color:#fff;flex:0 0 auto}
+/* ---------- generic list row ---------- */
+.lrow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--hair)}
+.lrow:first-child{border-top:none}
+.avatar{width:38px;height:38px;flex:0 0 auto;background:var(--slot) center/cover no-repeat}
+.lrow .main{flex:1;min-width:0}
+.lrow .t{font-size:14px;font-weight:600}
+.lrow .s{font-size:11px;color:var(--muted);margin-top:1px}
 
-/* ---- big power actions (boost + tip) ---- */
-.power-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
-.pa-btn{display:flex;align-items:center;gap:13px;padding:16px 20px;border-radius:20px;color:#fff;text-align:left;transition:.18s var(--ease)}
-.pa-btn:active{transform:scale(.98)}
-.pa-btn .pa-ic{font-size:26px;line-height:1;flex:0 0 auto}
-.pa-btn .pa-t{display:block;font-weight:760;font-size:17px;letter-spacing:-.02em}
-.pa-btn .pa-s{display:block;font-weight:500;font-size:12.5px;opacity:.9;margin-top:1px}
-.pa-boost{background:linear-gradient(135deg,#ff9f0a,#ff5fa2);box-shadow:0 10px 26px rgba(255,95,162,.4)}
-.pa-tip{background:linear-gradient(135deg,#6d5ef6,#a855f7);box-shadow:0 10px 26px rgba(109,94,246,.4)}
-@media(max-width:560px){.power-actions{grid-template-columns:1fr}}
+/* ---------- section header ---------- */
+.sec{padding:16px 14px 8px;display:flex;align-items:baseline;justify-content:space-between}
+.sec .k{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.sec .a{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent)}
 
-/* ---- vote card (with reactions row) ---- */
-.vote-card{position:relative;overflow:hidden;border:1px solid var(--line);background:var(--bg-elev);border-radius:var(--radius-sm);transition:.35s var(--ease)}
-.vote-card .fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,rgba(91,75,225,.22),rgba(168,85,247,.14));transition:width .7s var(--ease);z-index:0}
-.vote-card.leading{border-color:rgba(255,95,162,.4)}
-.vote-card.leading .fill{background:linear-gradient(90deg,rgba(255,95,162,.28),rgba(168,85,247,.16))}
-.vc-top{display:flex;align-items:center;gap:14px;padding:14px 16px 8px;position:relative;z-index:1}
-.vc-react{display:flex;align-items:center;gap:7px;padding:0 16px 12px;position:relative;z-index:1;flex-wrap:wrap}
-.react-btn{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;padding:6px 11px;border-radius:999px;background:var(--bg-soft);border:1px solid var(--line);transition:.15s var(--ease);font-variant-numeric:tabular-nums}
-.react-btn:hover{transform:translateY(-1px)}
-.react-btn.on{background:rgba(91,75,225,.12);border-color:var(--accent);color:var(--accent-ink)}
-.react-btn.cmt{margin-left:auto;color:var(--ink-3)}
-.boost-btn{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#ff9f0a,#ff5fa2);color:#fff;display:grid;place-items:center;font-size:21px;flex:0 0 auto;box-shadow:0 6px 16px rgba(255,95,162,.4);transition:.15s var(--ease)}
-.boost-btn:active{transform:scale(.9)}
+/* ---------- discover cards ---------- */
+.hscroll{display:flex;gap:10px;overflow-x:auto;padding:0 14px 4px;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+.dcard{flex:0 0 auto;width:150px;border:1px solid var(--hair)}
+.dcard .cov{height:104px;background:var(--slot) center/cover no-repeat}
+.dcard .b{padding:8px}
+.dcard .n{font-size:13px;font-weight:700}
+.dcard .v{font-size:11px;color:var(--muted);margin:1px 0 8px}
 
-/* ---- played tonight + thumbs rating ---- */
-.played-row{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:var(--radius-sm);border:1px solid var(--line);background:var(--bg-elev)}
-.thumbs{display:flex;gap:5px;flex:0 0 auto}
-.thumb{min-width:38px;height:38px;padding:0 10px;border-radius:11px;background:var(--bg-soft);border:1px solid var(--line);display:grid;place-items:center;font-size:15px;line-height:1;transition:.15s var(--ease);white-space:nowrap}
-.thumb:hover{border-color:var(--good)}
-.thumb.on{background:var(--good);border-color:var(--good);color:#fff;transform:scale(1.05)}
-
-/* ---- profile avatar cluster ---- */
-.avatar-cluster{position:relative;width:172px;height:172px;flex:0 0 auto}
-.pavatar-xl{width:172px;height:172px;border-radius:36px;background-size:cover;background-position:center;border:5px solid var(--bg);box-shadow:var(--shadow-lg)}
-.pthumb{position:absolute;width:62px;height:62px;border-radius:18px;background-size:cover;background-position:center;border:4px solid var(--bg);box-shadow:var(--shadow-md);transition:.25s var(--ease)}
-.pthumb:hover{transform:scale(1.06)}
-.pthumb.a{top:-16px;right:-18px}
-.pthumb.b{top:52px;right:-30px}
-.pthumb.c{bottom:-14px;right:6px}
-.pname{flex:1;min-width:0;padding-bottom:10px}
-.pstat b{line-height:1.05}
-.btn-live{background:var(--live);color:#fff;font-size:16px;font-weight:740;padding:14px 26px;box-shadow:0 10px 26px rgba(255,59,92,.42)}
-.btn-live:hover{filter:brightness(1.06)}
-.btn-live .lv-dot{width:9px;height:9px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
-.follow-cover{position:absolute;bottom:16px;right:16px;z-index:3;background:rgba(255,255,255,.16);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.28);color:#fff}
-.follow-cover:hover{background:rgba(255,255,255,.28)}
-
-.vote-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--radius-sm);position:relative;overflow:hidden;border:1px solid var(--line);background:var(--bg-elev);transition:.35s var(--ease)}
-.vote-item .fill{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,rgba(91,75,225,.22),rgba(168,85,247,.14));transition:width .7s var(--ease);z-index:0}
-.vote-item.leading .fill{background:linear-gradient(90deg,rgba(255,95,162,.28),rgba(168,85,247,.16))}
-.vote-item>*{position:relative;z-index:1}
-.vote-rank{width:26px;font-weight:800;font-size:15px;color:var(--ink-3);text-align:center}
-.vote-art{width:46px;height:46px;border-radius:10px;background-size:cover;background-position:center;flex:0 0 auto;box-shadow:0 2px 8px rgba(0,0,0,.25)}
-.vote-main{flex:1;min-width:0}
-.vote-title{font-weight:660;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.vote-sub{font-size:12.5px;color:var(--ink-3);display:flex;gap:8px;align-items:center;margin-top:1px}
-.vote-count{text-align:right;min-width:52px}
-.vote-count b{font-size:19px;font-weight:760;font-variant-numeric:tabular-nums}
-.vote-count span{display:block;font-size:10.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.05em}
-.vote-btn{width:52px;height:52px;border-radius:14px;background:var(--bg-soft);border:1px solid var(--line);display:grid;place-items:center;font-size:19px;transition:.18s var(--ease);flex:0 0 auto}
-.vote-btn:hover{border-color:var(--accent);color:var(--accent)}
-.vote-btn:active{transform:scale(.9)}
-.vote-btn.voted{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(91,75,225,.4)}
-.nowplaying{background:var(--grad-2);color:#fff;border:none}
-.nowplaying .vote-art{box-shadow:0 4px 16px rgba(0,0,0,.4)}
-.eq{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
-.eq i{width:3px;background:#fff;border-radius:2px;animation:eq .9s ease-in-out infinite}
-.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}.eq i:nth-child(4){animation-delay:.15s}
-@keyframes eq{0%,100%{height:4px}50%{height:14px}}
-
-/* ---------- now-playing hero (Live page) ---------- */
-.np-hero{display:flex;gap:16px;align-items:center;background:var(--grad-2);color:#fff;border-radius:var(--radius);padding:18px 20px;box-shadow:0 12px 34px rgba(91,75,225,.34);position:relative;overflow:hidden}
-.np-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(420px 180px at 90% -20%,rgba(255,255,255,.22),transparent 70%);pointer-events:none}
-.np-art{width:74px;height:74px;border-radius:16px;background-size:cover;background-position:center;flex:0 0 auto;box-shadow:0 8px 22px rgba(0,0,0,.4)}
-.np-body{flex:1;min-width:0;position:relative}
-.np-label{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;opacity:.9}
-.np-label .dot{width:7px;height:7px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
-.np-title{font-size:23px;font-weight:750;letter-spacing:-.025em;margin:5px 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.np-meta{font-size:13px;opacity:.82}
-.np-prog{height:5px;background:rgba(255,255,255,.28);border-radius:3px;margin-top:13px;overflow:hidden}
-.np-prog i{display:block;height:100%;background:#fff;border-radius:3px}
-.np-eq{height:24px;flex:0 0 auto;align-self:flex-start;margin-top:4px;position:relative}
-.np-eq i{width:3.5px}
-@keyframes eqbig{0%,100%{height:5px}50%{height:24px}}
-.np-eq i{animation-name:eqbig}
-@media(max-width:560px){
-  .np-hero{padding:15px 16px;gap:13px}
-  .np-art{width:60px;height:60px;border-radius:13px}
-  .np-title{font-size:20px}
-  .np-eq{display:none}
-}
-
-/* credits / gamification */
-.credit-bar{display:flex;align-items:center;gap:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:8px 8px 8px 16px}
-.credit-coins{display:flex;gap:3px}
-.coin{width:16px;height:16px;border-radius:50%;background:var(--grad);box-shadow:0 1px 4px rgba(168,85,247,.4)}
-.coin.spent{background:var(--line-2);box-shadow:none}
-.window-ring{--p:0;width:44px;height:44px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*1%),var(--line) 0);display:grid;place-items:center;position:relative}
-.window-ring::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--bg-elev)}
-.window-ring b{position:relative;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+/* ---------- stat strip / tiles ---------- */
+.stats{display:flex;border:1px solid var(--hair);margin:12px 14px}
+.stats .cell{flex:1;padding:10px 12px;border-left:1px solid var(--hair)}
+.stats .cell:first-child{border-left:none}
+.stats .v{font-size:16px;font-weight:800}
+.stats .v.acc{color:var(--accent)}
+.stats .l{font-size:7px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 
 /* ---------- profile ---------- */
-.pcover{height:230px;border-radius:var(--radius-lg);background-size:cover;background-position:center;position:relative;margin-top:16px}
-.pcover::after{content:"";position:absolute;inset:0;border-radius:var(--radius-lg);background:linear-gradient(to top,rgba(0,0,0,.55),transparent 55%)}
-.phead{display:flex;gap:34px;align-items:flex-end;margin-top:-72px;padding:0 30px 0 24px;position:relative;z-index:2}
-.pavatar{width:118px;height:118px;border-radius:28px;background-size:cover;border:4px solid #fff;box-shadow:var(--shadow-md);flex:0 0 auto}
-.pstats{display:flex;gap:26px}
-.pstat b{font-size:19px;font-weight:760;display:block}
-.pstat span{font-size:12.5px;color:var(--ink-3)}
-.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-top:24px;overflow-x:auto}
-.tabs button{font-size:14.5px;font-weight:600;color:var(--ink-3);padding:12px 14px;border-bottom:2px solid transparent;white-space:nowrap}
-.tabs button.on{color:var(--ink);border-color:var(--ink)}
+.cover{height:104px;background:var(--slot) center/cover no-repeat}
+.phead{display:flex;align-items:flex-end;gap:12px;padding:0 14px;margin-top:-26px}
+.pav{width:60px;height:60px;flex:0 0 auto;background:var(--slot) center/cover no-repeat;border:2px solid var(--bg)}
+.pname{font-family:var(--f-exp);font-weight:800;font-size:22px;letter-spacing:-.02em;display:flex;align-items:center;gap:6px}
+.verified{color:var(--accent);font-size:15px}
+.tabstrip{display:flex;gap:16px;overflow-x:auto;padding:12px 14px 0;border-bottom:2px solid var(--rule);scrollbar-width:none}
+.tabstrip::-webkit-scrollbar{display:none}
+.tabstrip button{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-bottom:10px;border-bottom:3px solid transparent;white-space:nowrap}
+.tabstrip button.on{color:var(--ink);border-color:var(--ink)}
+.merch-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--hair);border:1px solid var(--hair)}
+.merch-cell{background:var(--bg);padding:10px}
+.merch-cell .img{height:120px;background:var(--slot) center/cover no-repeat;margin-bottom:8px}
 
-.link-tile{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:var(--radius-sm);border:1px solid var(--line);background:#fff;transition:.2s var(--ease)}
-.link-tile:hover{box-shadow:var(--shadow-sm);transform:translateY(-2px)}
-.link-ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:19px;color:#fff;flex:0 0 auto}
-.merch{border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--line);background:#fff;transition:.24s var(--ease)}
-.merch:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
-.merch .m-img{height:150px;background-size:cover;background-position:center}
-.merch .m-b{padding:12px 14px}
-.tour-row{display:flex;align-items:center;gap:16px;padding:16px;border-bottom:1px solid var(--line)}
-.tour-date{text-align:center;width:52px;flex:0 0 auto}
-.tour-date b{font-size:20px;display:block;line-height:1}
-.tour-date span{font-size:11px;text-transform:uppercase;color:var(--ink-3);letter-spacing:.05em}
+/* ---------- toggle (studio) ---------- */
+.tgl{width:34px;height:18px;flex:0 0 auto;background:var(--hair);position:relative;transition:background .15s}
+.tgl::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;background:var(--bg);transition:left .15s}
+.tgl.on{background:var(--ink)}
+.tgl.on::after{left:18px;background:var(--bg)}
+html[data-theme=dark] .tgl.on::after{background:#161413}
 
-/* feed / community */
-.post{border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:hidden}
-.post-head{display:flex;align-items:center;gap:10px;padding:14px 16px}
-.post-av{width:38px;height:38px;border-radius:50%;background-size:cover}
-.post-actions{display:flex;gap:20px;padding:10px 16px 14px;color:var(--ink-2);font-size:14px;font-weight:600}
-.post-actions span{display:flex;align-items:center;gap:6px}
+/* ---------- mini-player ---------- */
+.mini{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--tabH) + env(safe-area-inset-bottom));width:100%;max-width:var(--maxw);z-index:40;display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface);border-top:2px solid var(--rule)}
+.mini .art{width:26px;height:26px;flex:0 0 auto;background:var(--slot) center/cover no-repeat}
+.mini .m{flex:1;min-width:0}
+.mini .t{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .v{font-size:10px;color:var(--muted)}
+.mini .tip{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--accent);flex:0 0 auto}
 
-/* ---------- artist dashboard ---------- */
-.dash-grid{display:grid;grid-template-columns:1fr;gap:18px}
-.song-row{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--line);background:#fff}
-.toggle{width:46px;height:28px;border-radius:999px;background:var(--line-2);position:relative;transition:.22s var(--ease);flex:0 0 auto}
-.toggle::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:.22s var(--ease)}
-.toggle.on{background:var(--good)}
-.toggle.on::after{left:21px}
-.rule-card{display:flex;align-items:flex-start;gap:14px;padding:16px;border:1px solid var(--line);border-radius:var(--radius-sm);background:#fff}
-.rule-ic{width:40px;height:40px;border-radius:12px;background:rgba(91,75,225,.1);color:var(--accent);display:grid;place-items:center;font-size:18px;flex:0 0 auto}
-.stat-tile{padding:18px;border-radius:var(--radius-sm);border:1px solid var(--line);background:#fff}
-.stat-tile b{font-size:28px;font-weight:760;letter-spacing:-.03em;display:block}
-.stat-tile span{font-size:13px;color:var(--ink-3)}
-.stat-tile .up{color:var(--good);font-weight:700;font-size:12.5px}
+/* ---------- tab bar ---------- */
+.tabbar{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:var(--maxw);z-index:41;display:flex;height:calc(var(--tabH) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:var(--bg);border-top:1px solid var(--hair)}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--muted);position:relative;font-size:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.tabbar button.on{color:var(--ink)}
+.tabbar button.on::before{content:"";position:absolute;top:0;left:16%;right:16%;height:3px;background:var(--accent)}
+.tabbar svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* segmented */
-.seg{display:inline-flex;background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;padding:3px}
-.seg button{font-size:13px;font-weight:600;padding:7px 14px;border-radius:9px;color:var(--ink-3)}
-.seg button.on{background:#fff;color:var(--ink);box-shadow:var(--shadow-sm)}
+/* ---------- top bar (screen headers) ---------- */
+.shead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;border-bottom:2px solid var(--rule)}
+.shead h1{font-family:var(--f-exp);font-size:22px}
+.brandmark{width:20px;height:20px;background:var(--accent);display:grid;place-items:center;flex:0 0 auto}
+.brandmark svg{width:12px;height:12px;fill:#fff;display:block}
 
-/* ---------- bottom nav (mobile-first fan) ---------- */
-.botnav{position:fixed;bottom:0;left:0;right:0;z-index:70;background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(24px);-webkit-backdrop-filter:saturate(180%) blur(24px);border-top:1px solid var(--line);display:flex;padding:8px 6px calc(8px + env(safe-area-inset-bottom))}
-.botnav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:600;color:var(--ink-4);padding:6px 0}
-.botnav button .ic{font-size:21px;line-height:1}
-.botnav button.on{color:var(--accent)}
-.venue-scope .botnav{background:rgba(8,8,12,.8);border-color:#1a1a24}
-
-/* toast + confetti */
-.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:12px 20px;border-radius:999px;font-size:14px;font-weight:600;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.35s var(--ease);z-index:200;display:flex;align-items:center;gap:8px}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* modal */
-.sheet-bg{position:fixed;inset:0;background:rgba(10,10,20,.42);backdrop-filter:blur(6px);z-index:150;opacity:0;pointer-events:none;transition:.3s var(--ease)}
+/* ---------- bottom sheet ---------- */
+.sheet-bg{position:fixed;inset:0;background:rgba(32,30,29,.42);z-index:60;opacity:0;pointer-events:none;transition:opacity .2s}
 .sheet-bg.show{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:min(560px,100%);background:#fff;border-radius:26px 26px 0 0;z-index:160;transition:.42s var(--ease);max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg)}
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;max-width:var(--maxw);background:var(--surface);border-top:2px solid var(--rule);box-shadow:var(--shadow-lg);z-index:61;transition:transform .26s cubic-bezier(.2,.8,.2,1);max-height:90vh;overflow-y:auto;padding:14px 14px calc(18px + env(safe-area-inset-bottom))}
 .sheet.show{transform:translateX(-50%) translateY(0)}
-.sheet .grab{width:40px;height:5px;border-radius:3px;background:var(--line-2);margin:12px auto 4px}
-.field{margin-top:14px}
-.field label{font-size:13px;font-weight:600;color:var(--ink-2);display:block;margin-bottom:6px}
-.field input,.field textarea,.field select{width:100%;border:1px solid var(--line-2);border-radius:12px;padding:12px 14px;font-size:15px;outline:none;background:var(--bg-soft);transition:.18s}
-.field input:focus,.field textarea:focus{border-color:var(--accent);background:#fff}
+.grabber{width:40px;height:4px;background:var(--hair);margin:0 auto 14px}
+.sheet h3{font-family:var(--f-exp);font-size:19px;margin-bottom:4px}
+.field{margin-top:12px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.field input,.field textarea,.field select{width:100%;min-height:40px;padding:9px 11px;font-size:15px;background:var(--bg);border:2px solid var(--hair);color:var(--ink)}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{min-height:80px;resize:vertical}
+.tiles{display:flex;gap:8px;margin-top:12px}
+.tile{flex:1;border:1px solid var(--hair);padding:12px 10px;text-align:left}
+.tile.on{border:2px solid var(--accent)}
+.tile .a{font-size:16px;font-weight:800}
+.tile .b{font-size:9px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.money{color:var(--accent);font-weight:800}
+.total{display:flex;justify-content:space-between;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:14px;padding-top:10px;border-top:1px solid var(--hair)}
+.total .muted{color:var(--muted)}
 
-/* ---------- theme toggle button ---------- */
-.theme-btn{width:38px;height:38px;border-radius:50%;background:var(--bg-soft);border:1px solid var(--line);display:grid;place-items:center;font-size:16px;transition:.2s var(--ease)}
-.theme-btn:hover{background:#eeeef2}
+/* ---------- reactions / comments ---------- */
+.reacts{display:flex;gap:8px;margin:12px 0}
+.react{font-size:12px;font-weight:700;padding:7px 11px;border:1px solid var(--hair);display:flex;gap:5px;align-items:center}
+.react.on{border-color:var(--accent);color:var(--accent)}
+.cmt{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--hair)}
+.cmt .a{width:28px;height:28px;flex:0 0 auto;background:var(--slot)}
+.cmt .u{font-size:11px;font-weight:700}
+.cmt .x{font-size:13px}
 
-/* ---------- dark theme (fan-side toggle; the live venue is always dark) ---------- */
-body.theme-dark{
-  --bg:#0e0e15; --bg-soft:#191922; --bg-elev:#16161f; --ink:#f3f3f7; --ink-2:#c7c7d2; --ink-3:#9090a0; --ink-4:#6a6a7a;
-  --line:#24242f; --line-2:#2f2f3b;
-  --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.34);
-  --shadow-md:0 4px 12px rgba(0,0,0,.44),0 18px 44px rgba(0,0,0,.5);
-  --shadow-lg:0 12px 30px rgba(0,0,0,.5),0 40px 90px rgba(0,0,0,.62);
-  background:#0e0e15;
-}
-body.theme-dark .topbar{background:rgba(14,14,21,.72);border-color:var(--line)}
-body.theme-dark .botnav{background:rgba(14,14,21,.82);border-color:var(--line)}
-body.theme-dark .theme-btn:hover{background:#22222c}
-body.theme-dark .btn-ghost:hover{background:#22222c}
-body.theme-dark .acard,
-body.theme-dark .link-tile,
-body.theme-dark .merch,
-body.theme-dark .post,
-body.theme-dark .song-row,
-body.theme-dark .rule-card,
-body.theme-dark .stat-tile,
-body.theme-dark .sheet{background:var(--bg-elev)}
-body.theme-dark .role-toggle button.on,
-body.theme-dark .seg button.on{background:var(--bg-elev);color:var(--ink)}
-body.theme-dark .field input,
-body.theme-dark .field textarea,
-body.theme-dark .field select{background:var(--bg-soft);color:var(--ink);border-color:var(--line-2)}
-body.theme-dark .field input:focus,
-body.theme-dark .field textarea:focus{background:var(--bg-elev)}
+/* ---------- rating tiers ---------- */
+.rate{display:flex;gap:6px;flex:0 0 auto}
+.rt{min-width:34px;height:32px;padding:0 9px;border:1px solid var(--hair);display:grid;place-items:center;font-size:13px;font-weight:700}
+.rt.on{background:var(--accent);border-color:var(--accent);color:#fff}
 
-/* ---------- filter chips ---------- */
-.filter-row{gap:8px;margin:0 0 16px;padding-bottom:2px}
-.fchip{font-size:12.5px;font-weight:640;padding:7px 13px;border-radius:999px;background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap;transition:.15s var(--ease)}
-.fchip:hover{border-color:var(--ink-4)}
-.fchip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.venue .fchip{background:#16161f;border-color:#26262f;color:#c9c9d4}
-.venue .fchip.on{background:#fff;color:#08080c;border-color:#fff}
+/* ---------- toast ---------- */
+.toast{position:fixed;left:50%;transform:translateX(-50%) translateY(16px);bottom:calc(var(--tabH) + var(--miniH) + env(safe-area-inset-bottom) + 8px);width:calc(100% - 28px);max-width:calc(var(--maxw) - 28px);background:var(--ink);color:var(--bg);font-size:12px;font-weight:600;padding:12px 14px;z-index:70;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;display:flex;gap:12px;justify-content:space-between;align-items:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast .undo{color:var(--accent);font-weight:800;text-transform:uppercase;font-size:10px;letter-spacing:.06em}
+html[data-theme=dark] .toast .undo{color:var(--accent-600)}
 
-/* ---------- vote meter (credits fraction) ---------- */
-.vote-meter{width:66px;height:7px;border-radius:4px;background:var(--line-2);overflow:hidden;flex:0 0 auto}
-.vote-meter .vm-fill{height:100%;background:var(--grad);transition:width .35s var(--ease)}
-
-/* ---------- multi-cam placeholder player ---------- */
-.cam-player{display:flex;gap:12px;margin-bottom:12px}
-.cam-stage{flex:1;position:relative;border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:16/9;background-size:cover;background-position:center;background-color:#000;min-width:0}
-.cam-stage::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.6),transparent 40%,rgba(0,0,0,.28))}
-.cam-badge{position:absolute;top:12px;left:12px;z-index:2}
-.cam-play{position:absolute;inset:0;display:grid;place-items:center;z-index:2}
-.cam-play .pp{width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.5);display:grid;place-items:center;color:#fff;font-size:22px;transition:.2s var(--ease)}
-.cam-play .pp:hover{background:rgba(255,255,255,.28);transform:scale(1.06)}
-.cam-label{position:absolute;left:14px;bottom:12px;z-index:2;color:#fff;font-size:12.5px;font-weight:650;text-shadow:0 1px 4px rgba(0,0,0,.6);display:flex;align-items:center;gap:7px}
-.cam-scrub{position:absolute;left:14px;right:14px;bottom:8px;z-index:2;height:4px;border-radius:2px;background:rgba(255,255,255,.28);overflow:hidden}
-.cam-scrub i{display:block;height:100%;width:38%;background:var(--live)}
-.cam-rail{display:flex;flex-direction:column;gap:8px;width:124px;flex:0 0 auto}
-.cam-btn{flex:1;border-radius:14px;border:1px solid var(--line);background:var(--bg-elev);color:var(--ink-2);font-weight:650;font-size:13px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:.15s var(--ease);min-height:44px}
-.cam-btn .cd{width:6px;height:6px;border-radius:50%;background:var(--ink-4)}
-.cam-btn:hover{border-color:var(--accent)}
-.cam-btn.on{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 6px 16px rgba(91,75,225,.4)}
-.cam-btn.on .cd{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
-@media(max-width:560px){.cam-player{flex-direction:column}.cam-rail{flex-direction:row;width:auto}.cam-btn{flex-direction:row;padding:10px}}
-
-/* safe-area for notched phones; per-song boost pill hidden until mobile */
-.topbar{padding-top:env(safe-area-inset-top)}
-.wrap{padding-left:max(22px,env(safe-area-inset-left));padding-right:max(22px,env(safe-area-inset-right))}
-.bt-mobile{display:none}
-
-@media(max-width:820px){
-  .grid-3{grid-template-columns:1fr}
-  .grid-2{grid-template-columns:1fr}
-  .topbar .search{display:none}
-  .hero{padding:38px 24px}
-  .phead{flex-direction:column;align-items:flex-start;gap:14px}
-  .pstats{gap:20px}
-}
-@media(min-width:821px){ .botnav{display:none} .app{padding-bottom:40px} }
-
-/* ---------- phone tuning ---------- */
-@media(max-width:560px){
-  .wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
-  /* de-crowd the top bar so nothing clips */
-  .brand{font-size:18px;gap:8px}
-  .brand small{display:none}
-  .topbar-inner{gap:8px}
-  .topbar-inner>.row.gap12{display:none}          /* empty centered search slot */
-  .topbar .row.gap10{gap:7px}
-  .theme-btn{width:34px;height:34px;font-size:15px}
-  .role-toggle button{padding:6px 13px;font-size:13px}
-  .avatar-btn{width:32px;height:32px;font-size:11.5px;flex:0 0 auto}
-
-  /* section headers + filter chips */
-  .sec-head{flex-wrap:wrap;gap:6px 10px}
-  .filter-row{gap:7px}
-  .fchip{padding:8px 13px}
-
-  /* keep the live "Leave" button on the same row as the artist */
-  .live-head{flex-wrap:nowrap}
-  .live-head>.row{min-width:0}
-  .live-head .btn-sm{flex:0 0 auto}
-
-  /* vote card: move the ⚡ boost into the reactions row, tighten the top row */
-  .bt-desktop{display:none}
-  .bt-mobile{display:inline-flex}
-  .react-btn.bt-mobile{border-color:rgba(255,159,10,.55);color:#e07d00;font-weight:750}
-  .venue .react-btn.bt-mobile{border-color:rgba(255,159,10,.5);color:#ffb84d}
-  .vc-top{gap:10px;padding:13px 13px 8px}
-  .vote-rank{width:20px;font-size:13px}
-  .vote-art{width:42px;height:42px}
-  .vote-count{min-width:38px}
-  .vote-count b{font-size:17px}
-  .vote-count span{display:none}
-  .vote-sub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .vote-btn{width:46px;height:46px}
-
-  /* now-playing + hero readability */
-  .hero h1{font-size:34px}
-}
-
-.fadein{animation:fade .5s var(--ease) both}
-@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-.confetti{position:fixed;width:9px;height:14px;z-index:300;pointer-events:none;top:-20px}
+/* ---------- misc ---------- */
+.empty{padding:40px 24px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:6px}
+.spark{height:44px;border:1px dashed var(--hair);margin:12px 14px;display:flex;align-items:flex-end;gap:3px;padding:8px}
+.spark i{flex:1;background:var(--slot)}
+.ledger{display:flex;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--hair);font-size:12px}
+.ledger .amt{font-weight:700}
+.ledger .amt.acc{color:var(--accent)}
+.badges{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px}
+.badge{border:1px solid var(--hair);padding:8px 10px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;display:flex;gap:6px;align-items:center}
+.fadein{animation:fade .28s ease both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="app"></div>
 <div class="toast" id="toast"></div>
 <div class="sheet-bg" id="sheetBg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
 
 <script>
-/* ============================================================
-   ENCORE — state + mock data
-   ============================================================ */
-const $ = (s,el=document)=>el.querySelector(s);
-const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
-const rid = ()=>Math.random().toString(36).slice(2);
-
-const IMG = {
-  cover1:'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80',
-  cover2:'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80',
-  cover3:'https://images.unsplash.com/photo-1501612780327-45045538702b?w=800&q=80',
-  cover4:'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=800&q=80',
-  cover5:'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=80',
-  face1:'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&q=80',
-  face2:'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&q=80',
-  face3:'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&q=80',
-  merch1:'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80',
-  merch2:'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=500&q=80',
-  merch3:'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=500&q=80',
-  art1:'https://images.unsplash.com/photo-1458560871784-56d23406c091?w=200&q=80',
-  art2:'https://images.unsplash.com/photo-1487215078519-e21cc028cb29?w=200&q=80',
-  art3:'https://images.unsplash.com/photo-1446057032654-9d8885db76c6?w=200&q=80',
+/* ============================================================ DATA ============ */
+const $=(s,el=document)=>el.querySelector(s);
+const IMG={
+  c1:'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&q=80',
+  c2:'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
+  c3:'https://images.unsplash.com/photo-1501612780327-45045538702b?w=600&q=80',
+  c4:'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&q=80',
+  c5:'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=80',
+  f1:'https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=300&q=80',
+  f2:'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=300&q=80',
+  f3:'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&q=80',
+  m1:'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=80',
+  m2:'https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=400&q=80',
+  m3:'https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=400&q=80',
+  a1:'https://images.unsplash.com/photo-1458560871784-56d23406c091?w=200&q=80',
+  a2:'https://images.unsplash.com/photo-1487215078519-e21cc028cb29?w=200&q=80',
+  a3:'https://images.unsplash.com/photo-1446057032654-9d8885db76c6?w=200&q=80',
 };
-
-const SEED = {
+const SEED={
   artists:[
-    {id:'nova',name:'Nova Vega',genre:'Indie / Dream Pop',verified:true,cover:IMG.cover1,avatar:IMG.face1,
-     tag:'Austin, TX',followers:'24.1k',shows:186,bio:'Dream-pop songwriter blending shimmering synths with raw, honest storytelling. Building each set with the room, every night.',
-     live:true},
-    {id:'echo',name:'The Echo Method',genre:'Alt Rock',verified:true,cover:IMG.cover2,avatar:IMG.face2,tag:'Portland, OR',followers:'58.7k',shows:302,live:false,
-     bio:'Four-piece alt-rock built for the encore.'},
-    {id:'juna',name:'Juna Sol',genre:'Neo-Soul / R&B',verified:false,cover:IMG.cover3,avatar:IMG.face3,tag:'Brooklyn, NY',followers:'11.3k',shows:74,live:true,
-     bio:'Neo-soul with a live-loop heart.'},
-    {id:'moss',name:'Moss & Marrow',genre:'Folk / Americana',verified:true,cover:IMG.cover4,avatar:IMG.face1,tag:'Nashville, TN',followers:'41.2k',shows:220,live:false,bio:'Two voices, one guitar, a lot of miles.'},
-    {id:'kite',name:'PAPER KITE',genre:'Synthwave',verified:false,cover:IMG.cover5,avatar:IMG.face2,tag:'Los Angeles, CA',followers:'8.9k',shows:39,live:false,bio:'Retro-future synth built for late nights.'},
+    {id:'nova',name:'Nova Vega',genre:'Dream Pop',verified:true,cover:IMG.c1,avatar:IMG.f1,tag:'Austin, TX',fans:'24.1k',shows:186,live:true,bio:'Dream-pop songwriter blending shimmering synths with raw, honest storytelling.'},
+    {id:'juna',name:'Juna Sol',genre:'Neo-Soul',verified:false,cover:IMG.c3,avatar:IMG.f3,tag:'Brooklyn, NY',fans:'11.3k',shows:74,live:true,bio:'Neo-soul with a live-loop heart.'},
+    {id:'echo',name:'The Echo Method',genre:'Alt Rock',verified:true,cover:IMG.c2,avatar:IMG.f2,tag:'Portland, OR',fans:'58.7k',shows:302,live:false,bio:'Four-piece alt-rock built for the encore.'},
+    {id:'moss',name:'Moss & Marrow',genre:'Folk',verified:true,cover:IMG.c4,avatar:IMG.f1,tag:'Nashville, TN',fans:'41.2k',shows:220,live:false,bio:'Two voices, one guitar, a lot of miles.'},
   ],
   songs:[
-    {id:'s1',title:'Golden Hour',dur:'3:48',art:IMG.art1,ready:true,tag:'Fan favorite',type:'Original',vibe:'Anthemic',year:2023},
-    {id:'s2',title:'Paper Moon',dur:'4:12',art:IMG.art2,ready:true,tag:'New',type:'Original',vibe:'Chill',year:2024},
-    {id:'s3',title:'Static & Signal',dur:'3:31',art:IMG.art3,ready:true,type:'Original',vibe:'Upbeat',year:2022},
-    {id:'s4',title:'Ceremony',dur:'5:02',art:IMG.art1,ready:true,tag:'Rare live',type:'Cover',vibe:'Anthemic',year:2021},
-    {id:'s5',title:'Undertow',dur:'3:57',art:IMG.art2,ready:true,type:'Original',vibe:'Chill',year:2023},
-    {id:'s6',title:'Bloom (acoustic)',dur:'4:40',art:IMG.art3,ready:true,tag:'Acoustic',type:'Original',vibe:'Acoustic',year:2020},
-    {id:'s7',title:'Cassette Dreams',dur:'3:22',art:IMG.art1,ready:false,tag:'Cover',type:'Cover',vibe:'Upbeat',year:2019},
-    {id:'s8',title:'Vega',dur:'6:11',art:IMG.art2,ready:false,tag:'Unreleased',type:'Original',vibe:'Anthemic',year:2025},
+    {id:'s1',title:'Golden Hour',dur:'3:48',art:IMG.a1,ready:true,type:'Original',genre:'Dream Pop',vibe:'Anthemic',year:2023},
+    {id:'s2',title:'Paper Moon',dur:'4:12',art:IMG.a2,ready:true,type:'Original',genre:'Dream Pop',vibe:'Chill',year:2024},
+    {id:'s3',title:'Static & Signal',dur:'3:31',art:IMG.a3,ready:true,type:'Original',genre:'Synth',vibe:'Upbeat',year:2022},
+    {id:'s4',title:'Ceremony',dur:'5:02',art:IMG.a1,ready:true,type:'Cover',genre:'Post-Punk',vibe:'Anthemic',year:1981},
+    {id:'s5',title:'Undertow',dur:'3:57',art:IMG.a2,ready:true,type:'Original',genre:'Dream Pop',vibe:'Chill',year:2023},
+    {id:'s6',title:'Bloom',dur:'4:40',art:IMG.a3,ready:true,type:'Original',genre:'Acoustic',vibe:'Acoustic',year:2020},
+    {id:'s7',title:'Cassette Dreams',dur:'3:22',art:IMG.a1,ready:false,type:'Cover',genre:'Synth',vibe:'Upbeat',year:1994},
+    {id:'s8',title:'Vega',dur:'6:11',art:IMG.a2,ready:false,type:'Original',genre:'Dream Pop',vibe:'Anthemic',year:2025},
   ],
   feed:[
-    {id:'f1',artist:'nova',time:'2h',text:'Tonight at Mohawk we are letting YOU build the setlist. Doors 8pm — open the show in the app to vote 🎛️',likes:412,comments:38},
-    {id:'f2',artist:'juna',time:'5h',text:'New loop pedal, who dis. Bringing 3 unreleased ones to the vote pool this week 👀',likes:189,comments:22},
+    {id:'p1',artist:'nova',time:'2h',text:'Tonight at Mohawk we are letting YOU build the setlist. Doors 8pm — open the show to vote.',likes:412,comments:38},
+    {id:'p2',artist:'juna',time:'5h',text:'New loop pedal, who dis. Bringing 3 unreleased ones to the vote pool this week.',likes:189,comments:22},
   ],
 };
+const ICON={
+  radio:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M4.9 19.1a10 10 0 0 1 0-14.2M19.1 4.9a10 10 0 0 1 0 14.2M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4"/></svg>',
+  search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+  feed:'<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg>',
+  user:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>',
+  studio:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>',
+};
 
-/* --- persistent live-show state (syncs across tabs) --- */
-const KEY='encore.state.v3';
-function loadState(){
+/* ============================================================ STATE =========== */
+const KEY='myset.modernist.v1';
+function load(){
   let s=null; try{s=JSON.parse(localStorage.getItem(KEY))}catch(e){}
-  if(!s){
-    s={
-      role:'fan', route:'home', artistId:'nova', theme:'light', cam:1,
-      nowPlaying:'s1',
-      votes:{s2:34,s3:21,s4:47},
-      myVotes:{},           // songId -> true
-      credits:10,
-      rules:{window:true, everyN:true, everyNval:3, showtimeOnly:true, encoreMode:true},
-      windowOpen:true, windowSecs:15, windowMax:20,
-      artistReady:{}, // overrides
-      reactions:{s4:{'🔥':18,'😍':9,'💜':6}, s2:{'🔥':7,'😍':11,'💜':4}, s3:{'🔥':5,'😍':3,'💜':8}},
-      myReactions:{},       // songId -> emoji
-      comments:{s4:[{u:'mara',t:'this one live is unreal 🔥'},{u:'devin',t:'PLEASE play this next'}], s2:[{u:'kayla',t:'new favorite fr'}]},
-      commentCount:{s4:12,s2:5,s3:3},
-      played:['s6','s5'],   // most-recent last
-      ratings:{},           // songId -> 1..3 thumbs
-      tipped:0,             // running tip total (demo)
-      streamUrl:'https://www.youtube.com/embed/K4DyBUG242c',
-      showStream:false,
-    };
-    saveState(s);
-  }
+  if(!s){ s={
+    role:'fan', tab:'live', theme:'light', artistId:'nova', profileTab:'music',
+    joined:true,
+    nowPlaying:'s1', progress:38,
+    windowState:'open', windowSecs:24, windowMax:30,
+    votes:{s2:128,s3:97,s4:212,s5:64,s6:41}, myVotes:{}, credits:{remaining:7,total:10},
+    reactions:{s4:{'♥':12,'🔥':8}, s2:{'♥':4}}, myReactions:{},
+    comments:{s4:[{u:'mara',t:'this one live is unreal'},{u:'devin',t:'PLEASE play this next'}]}, commentCount:{s4:4,s2:1},
+    played:['s6','s7-x'], ratings:{},
+    filter:'ALL',
+    artistReady:{}, rules:{windowLen:30, everyN:3, showtimeOnly:true, encore:true},
+    tipped:0, receipts:[{k:'vote',t:'Golden Hour',a:'−1 vote',at:'21:14'}],
+    votingOpenTonight:false,
+  }; save(s); }
   return s;
 }
-function saveState(s){localStorage.setItem(KEY,JSON.stringify(s));}
-let S = loadState();
-window.addEventListener('storage',e=>{ if(e.key===KEY){ S=loadState(); render(); }});
+function save(s){ localStorage.setItem(KEY,JSON.stringify(s)); }
+let S=load();
+window.addEventListener('storage',e=>{ if(e.key===KEY){ S=load(); render(); }});
+function persist(){ save(S); }
 
-function persist(){ saveState(S); }
+/* played tonight: real ids only */
+function playedIds(){ return (S.played||[]).filter(id=>SEED.songs.some(s=>s.id===id)); }
 
-/* ============================================================
-   UI helpers
-   ============================================================ */
-function toast(msg,icon='✓'){
-  const t=$('#toast'); t.innerHTML=`<span>${icon}</span>${msg}`; t.classList.add('show');
-  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1900);
+/* ============================================================ HELPERS ========= */
+let toastTimer;
+function toast(msg,undo){
+  const t=$('#toast');
+  t.innerHTML=`<span>${msg}</span>${undo?`<button class="undo" onclick="(${undo})()">Undo</button>`:''}`;
+  t.classList.add('show'); clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'), undo?4000:2600);
 }
-function openSheet(html){
-  const s=$('#sheet'); s.innerHTML=`<div class="grab"></div><div style="padding:8px 24px 32px">${html}</div>`;
-  $('#sheetBg').classList.add('show'); s.classList.add('show');
-}
+function openSheet(html){ $('#sheet').innerHTML=`<div class="grabber"></div>${html}`; $('#sheetBg').classList.add('show'); $('#sheet').classList.add('show'); }
 function closeSheet(){ $('#sheetBg').classList.remove('show'); $('#sheet').classList.remove('show'); }
-function go(route,artistId){ S.route=route; if(artistId)S.artistId=artistId; persist(); render(); window.scrollTo(0,0); }
-function setRole(r){ S.role=r; S.route = r==='artist'?'dash':'home'; persist(); render(); }
-function toggleTheme(){ S.theme = S.theme==='dark'?'light':'dark'; persist(); render(); toast(S.theme==='dark'?'Dark mode':'Light mode', S.theme==='dark'?'🌙':'☀️'); }
+function go(tab){ S.tab=tab; S.viewArtist=null; persist(); render(); window.scrollTo(0,0); }
+function openArtist(id){ S.viewArtist=id; S.artistId=id; persist(); render(); window.scrollTo(0,0); }
+function backFromArtist(){ S.viewArtist=null; persist(); render(); }
+function setRole(r){ S.role=r; S.tab = r==='artist'?'studio':'live'; S.viewArtist=null; persist(); render(); }
+function toggleTheme(){ S.theme=S.theme==='dark'?'light':'dark'; persist(); render(); }
 
-function confetti(){
-  const colors=['#6d5ef6','#a855f7','#ff5fa2','#ff9f0a','#2fbf71'];
-  for(let i=0;i<70;i++){
-    const c=document.createElement('div'); c.className='confetti';
-    c.style.left=Math.random()*100+'vw';
-    c.style.background=colors[i%colors.length];
-    c.style.transform=`rotate(${Math.random()*360}deg)`;
-    const dur=1.4+Math.random()*1.4;
-    c.animate([{transform:`translateY(0) rotate(0)`,opacity:1},{transform:`translateY(105vh) rotate(${720*Math.random()}deg)`,opacity:.9}],{duration:dur*1000,easing:'cubic-bezier(.3,.7,.4,1)'});
-    document.body.appendChild(c); setTimeout(()=>c.remove(),dur*1000);
-  }
-}
-
-/* ============================================================
-   RENDER — router
-   ============================================================ */
+/* ============================================================ RENDER ========== */
 function render(){
-  const root=$('#root');
-  const venue = S.route==='live';
-  document.body.className = `${venue?'venue-scope ':''}${S.theme==='dark'?'theme-dark':''}`.trim();
-  root.className = venue? 'venue' : '';
-  let body='';
-  if(S.role==='fan'){
-    if(S.route==='home') body=viewHome();
-    else if(S.route==='profile') body=viewProfile();
-    else if(S.route==='live') body=viewLive();
-    else if(S.route==='feed') body=viewFeed();
-    else if(S.route==='tickets') body=viewProfile();
-    else body=viewHome();
-  }else{
-    if(S.route==='dash') body=viewDash();
-    else if(S.route==='live') body=viewLive(true);
-    else if(S.route==='profile') body=viewProfile();
-    else body=viewDash();
+  document.documentElement.setAttribute('data-theme', S.theme);
+  const app=$('#app');
+  let body, tab=S.tab;
+  if(S.viewArtist){ body=viewArtist(S.viewArtist); }
+  else if(S.role==='artist'){
+    body = tab==='studio'?viewStudio() : tab==='discover'?viewDiscover() : tab==='feed'?viewFeed() : viewYou();
+  } else {
+    body = tab==='live'?viewLive() : tab==='discover'?viewDiscover() : tab==='feed'?viewFeed() : viewYou();
   }
-  root.innerHTML = topbar() + `<div class="app"><div class="wrap fadein">${body}</div></div>` + botnav();
-  bindWindowTimer();
+  const showMini = S.joined && !(tab==='live' && !S.viewArtist && S.role==='fan');
+  app.innerHTML = `<div class="screen ${showMini?'has-mini':''} fadein">${body}</div>` + (showMini?miniPlayer():'') + tabBar();
+  bindTimer();
 }
 
-/* ---------- top bar ---------- */
-function topbar(){
-  const initials = S.role==='artist'?'NV':'YOU';
-  return `<div class="topbar"><div class="wrap topbar-inner">
-    <div class="brand" onclick="go('${S.role==='artist'?'dash':'home'}')" style="cursor:pointer">
-      <span class="dot"><svg width="13" height="13" viewBox="0 0 24 24" fill="#fff"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></span>MySet<small>beta</small>
-    </div>
-    <div class="row gap12" style="flex:1;justify-content:center;max-width:420px">
-      ${S.role==='fan'?`<div class="search"><span>🔎</span><input placeholder="Search artists, shows, songs"></div>`:''}
-    </div>
-    <div class="row gap10">
-      <button class="theme-btn" onclick="toggleTheme()" title="${S.theme==='dark'?'Switch to light':'Switch to dark'}">${S.theme==='dark'?'☀️':'🌙'}</button>
-      <div class="role-toggle">
-        <button class="${S.role==='fan'?'on':''}" onclick="setRole('fan')">Fan</button>
-        <button class="${S.role==='artist'?'on':''}" onclick="setRole('artist')">Artist</button>
-      </div>
-      <div class="avatar-btn">${initials}</div>
-    </div>
-  </div></div>`;
+/* ---------- tab bar ---------- */
+function tabBar(){
+  const items = S.role==='artist'
+    ? [['studio','studio','Studio'],['discover','search','Discover'],['feed','feed','Feed'],['you','user','You']]
+    : [['live','radio','Live'],['discover','search','Discover'],['feed','feed','Feed'],['you','user','You']];
+  return `<nav class="tabbar">${items.map(([t,ic,l])=>
+    `<button class="${(!S.viewArtist&&S.tab===t)?'on':''}" onclick="go('${t}')">${ICON[ic]}<span>${l}</span></button>`).join('')}</nav>`;
 }
-
-/* ---------- bottom nav ---------- */
-function botnav(){
-  if(S.role==='artist'){
-    const items=[['dash','▦','Studio'],['live','◉','Live'],['profile','👤','Profile']];
-    return `<div class="botnav">${items.map(([r,i,l])=>`<button class="${S.route===r?'on':''}" onclick="go('${r}')"><span class="ic">${i}</span>${l}</button>`).join('')}</div>`;
-  }
-  const items=[['home','⌂','Discover'],['live','◉','Live'],['feed','❋','Community'],['profile','👤','Artist']];
-  return `<div class="botnav">${items.map(([r,i,l])=>`<button class="${S.route===r?'on':''}" onclick="go('${r}')"><span class="ic">${i}</span>${l}</button>`).join('')}</div>`;
-}
-
-/* ============================================================
-   FAN — Discover / Home
-   ============================================================ */
-function viewHome(){
-  const a=SEED.artists;
-  const liveNow=a.filter(x=>x.live);
-  return `
-  <div class="hero">
-    <span class="chip" style="background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.24);color:#fff">🎛️ Live, crowd-built setlists</span>
-    <h1>Where the crowd decides what plays next.</h1>
-    <p>Vote the setlist into existence — in real time, from the floor. Discover artists, shape their shows, and connect after the encore.</p>
-    <div class="row gap12 wrapf">
-      <button class="btn btn-grad" onclick="go('live')">◉ Join a live show</button>
-      <button class="btn btn-ghost" onclick="go('profile','nova')">Explore an artist →</button>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-head"><h2>Live right now</h2><a onclick="go('live')" style="cursor:pointer">Open venue →</a></div>
-    <div class="hscroll">
-      ${liveNow.map(x=>artistCard(x)).join('')}
-      ${a.filter(x=>!x.live).slice(0,2).map(x=>artistCard(x)).join('')}
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="sec-head"><h2>Rising near you</h2><a style="cursor:pointer">See all →</a></div>
-    <div class="grid grid-3">
-      ${a.slice(1).map(x=>artistCard(x)).join('')}
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="card pad24" style="background:var(--bg-soft);border:none">
-      <div class="row between wrapf gap16">
-        <div style="max-width:52ch">
-          <span class="eyebrow">For artists</span>
-          <h2 style="font-size:26px;margin-top:8px">Turn every set into a two-way night.</h2>
-          <p class="muted" style="margin:10px 0 0">Upload the songs you're ready to play, set your voting rules, and let the room build the show with you. Your profile, merch, tickets, and fanbase — all in one place.</p>
-        </div>
-        <button class="btn btn-accent" onclick="setRole('artist')">Open Artist Studio →</button>
-      </div>
-    </div>
+/* ---------- mini-player ---------- */
+function miniPlayer(){
+  const np=SEED.songs.find(s=>s.id===S.nowPlaying); const a=SEED.artists.find(x=>x.id==='nova');
+  return `<div class="mini">
+    <div class="art grayscale" style="background-image:url('${np.art}')"></div>
+    <div class="m" onclick="go('live')" style="cursor:pointer"><div class="t">${np.title}</div><div class="v">${a.name} · Mohawk</div></div>
+    <button class="tip" onclick="sheetTip()">Tip ♥</button>
   </div>`;
 }
 
-function artistCard(x){
-  return `<div class="acard" onclick="go('profile','${x.id}')">
-    <div class="cover" style="background-image:url('${x.cover}')">
-      <div class="top">
-        ${x.live?'<span class="pill-live"><span class="bl"></span>Live</span>':'<span></span>'}
-        <span class="chip" style="background:rgba(0,0,0,.4);border:none;color:#fff;backdrop-filter:blur(8px)">${x.genre.split(' / ')[0]}</span>
-      </div>
-    </div>
-    <div class="body">
-      <div class="name">${x.name} ${x.verified?'<span class="verified">✔</span>':''}</div>
-      <div class="genre">${x.tag}</div>
-      <div class="meta"><span><b>${x.followers}</b> fans</span><span><b>${x.shows}</b> shows</span></div>
-    </div>
-  </div>`;
+/* ============================================================ LIVE ============ */
+function nth(n){return n===2?'nd':n===3?'rd':'th';}
+function fmtTime(sec){ sec=Math.max(0,sec|0); return Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'); }
+function poolCands(){
+  const played=playedIds();
+  return SEED.songs.filter(s=>s.ready && s.id!==S.nowPlaying && !played.includes(s.id))
+    .map(s=>({...s,v:S.votes[s.id]||0})).sort((a,b)=>b.v-a.v);
 }
-
-/* ============================================================
-   LIVE SHOW — the core voting experience
-   ============================================================ */
-const REACTS=['🔥','😍','💜'];
-
-/* multi-cam placeholder feeds */
-const CAMS=[
-  {n:1,label:'Camera 1',sub:'Stage &amp; front rows',img:IMG.cover3},
-  {n:2,label:'Camera 2',sub:'Center stage',img:IMG.cover2},
-  {n:3,label:'Camera 3',sub:'The crowd',img:IMG.cover4},
-];
-function setCam(n){ S.cam=n; persist(); render(); }
-function camPlayer(){
-  const cam=CAMS.find(c=>c.n===(S.cam||1))||CAMS[0];
-  return `<div class="cam-player" style="margin-top:16px">
-    <div class="cam-stage" style="background-image:url('${cam.img}')">
-      <span class="cam-badge pill-live"><span class="bl"></span>Live</span>
-      <div class="cam-play"><div class="pp">▶</div></div>
-      <div class="cam-label">🎥 ${cam.label} · ${cam.sub}</div>
-      <div class="cam-scrub"><i></i></div>
-    </div>
-    <div class="cam-rail">
-      ${CAMS.map(c=>`<button class="cam-btn ${c.n===(S.cam||1)?'on':''}" onclick="setCam(${c.n})"><span class="cd"></span>${c.label}</button>`).join('')}
-    </div>
-  </div>`;
-}
-
-/* song filters (shared across song lists) */
-const VIBES=['Upbeat','Anthemic','Chill','Acoustic'];
-const FILTER_CATS=['All','Originals','Covers',...VIBES,'2020s','2010s'];
 function matchFilter(s,f){
-  if(!f||f==='All')return true;
-  if(f==='Originals')return s.type!=='Cover';
-  if(f==='Covers')return s.type==='Cover';
-  if(f==='2020s')return s.year>=2020;
-  if(f==='2010s')return s.year>=2010&&s.year<2020;
-  return s.vibe===f;
+  if(!f||f==='ALL')return true;
+  if(f==='ORIGINALS')return s.type!=='Cover';
+  if(f==='COVERS')return s.type==='Cover';
+  if(f==='90s')return s.year>=1990&&s.year<2000;
+  if(f==='80s')return s.year>=1980&&s.year<1990;
+  return s.vibe.toUpperCase()===f || s.genre.toUpperCase()===f;
 }
-function filterChips(current,setter){
-  return `<div class="hscroll filter-row">${FILTER_CATS.map(c=>`<button class="fchip ${current===c?'on':''}" onclick="${setter}('${c}')">${c}</button>`).join('')}</div>`;
-}
-let filterLive='All', filterMusic='All', filterStudio='All';
-function setFilterLive(c){ filterLive=c; render(); }
-function setFilterMusic(c){ filterMusic=c; render(); }
-function setFilterStudio(c){ filterStudio=c; render(); }
-
-function viewLive(artistSide=false){
+function viewLive(){
   const a=SEED.artists.find(x=>x.id==='nova');
   const np=SEED.songs.find(s=>s.id===S.nowPlaying);
-  const played=(S.played||[]);
-  // candidates: ready, not now-playing, not already played
-  const cands=SEED.songs.filter(s=>s.ready && s.id!==S.nowPlaying && !played.includes(s.id))
-    .map(s=>({...s,v:S.votes[s.id]||0}))
-    .sort((x,y)=>y.v-x.v);
-  const leader=cands[0]?.id;
+  const cands=poolCands();
+  const shown=cands.filter(s=>matchFilter(s,S.filter));
   const rankOf={}; cands.forEach((s,i)=>rankOf[s.id]=i);
-  const shown=cands.filter(s=>matchFilter(s,filterLive));
-  const coinsUsed = Object.keys(S.myVotes).length;
-  const coinsLeft = Math.max(0,S.credits-coinsUsed);
-
+  const cLeft=S.credits.remaining, cTot=S.credits.total;
+  const open=S.windowState==='open';
+  const bandCls = S.windowState==='open'?'':S.windowState==='between'?'between':'closed';
+  const bandLbl = S.windowState==='open'?'VOTING OPEN':S.windowState==='between'?'VOTING OPENS AFTER THIS SONG':'VOTING CLOSED';
+  const chips=['ALL','ORIGINALS','COVERS','ANTHEMIC','CHILL','UPBEAT','90s','80s'];
   return `
-  <div style="padding-top:18px">
-    <div class="row between gap12 live-head">
-      <div class="row gap12" style="min-width:0">
-        <div class="pavatar" style="width:52px;height:52px;border-radius:14px;background-image:url('${a.avatar}');border:2px solid var(--line);flex:0 0 auto"></div>
-        <div>
-          <div class="row gap8"><b style="font-size:17px">${a.name}</b> <span class="pill-live"><span class="bl"></span>Live</span></div>
-          <div class="muted tiny">Mohawk · Austin, TX · <b style="color:var(--ink-2)">312</b> in the room</div>
-        </div>
-      </div>
-      ${artistSide?`<span class="chip accent">🎚️ Artist control</span>`:`<button class="btn btn-ghost btn-sm" onclick="go('home')">Leave</button>`}
+  <div class="shead">
+    <div class="row" style="gap:8px">
+      <span class="live-dot"></span>
+      <div><div style="font-size:13px;font-weight:700;line-height:1.1">Mohawk</div><div style="font-size:11px;color:var(--muted)">${a.name} · 312 in the room</div></div>
     </div>
+    <button class="credit-chip mono" onclick="go('you')">${cLeft}/${cTot}</button>
+  </div>
 
-    <!-- NOW PLAYING — hero card -->
-    <div class="np-hero" style="margin-top:16px">
-      <div class="np-art" style="background-image:url('${np.art}')"></div>
-      <div class="np-body">
-        <div class="np-label"><span class="dot"></span>Now playing</div>
-        <div class="np-title">${np.title}</div>
-        <div class="np-meta">${np.dur} · ${a.name}</div>
-        <div class="np-prog"><i style="width:38%"></i></div>
-      </div>
-      <div class="eq np-eq"><i></i><i></i><i></i><i></i></div>
+  <div class="np">
+    <div class="np-art grayscale" style="background-image:url('${np.art}')"></div>
+    <div class="np-info">
+      <div class="kick">Now Playing</div>
+      <div class="np-title">${np.title}</div>
+      <div class="np-sub">${a.name} · ${np.dur}</div>
+      <div class="np-prog"><i style="width:${S.progress}%"></i></div>
     </div>
+  </div>
 
-    <!-- credits / window strip -->
-    ${creditStrip(coinsLeft)}
+  <div class="band ${bandCls}">
+    <span class="lbl">${open?'<span class="live-dot"></span>':''}${bandLbl}</span>
+    ${open?`<span class="t mono" id="winSecs">${fmtTime(S.windowSecs)}</span>`:''}
+  </div>
 
-    <!-- VOTE POOL — the hero body -->
-    <div class="sec-head" style="margin-top:22px;margin-bottom:12px">
-      <h2 style="font-size:22px">Up next — you decide</h2>
-      <span class="chip">${S.rules.everyN?`Every ${S.rules.everyNval}${nth(S.rules.everyNval)} song = crowd pick`:'Open voting'}</span>
-    </div>
-    ${filterChips(filterLive,'setFilterLive')}
-    <div class="stack gap12">
-      ${shown.length?shown.map(s=>voteCard(s,rankOf[s.id],leader,coinsLeft)).join(''):`<div class="card pad" style="text-align:center"><div class="muted tiny">No songs match “${filterLive}”.</div></div>`}
-    </div>
+  <div class="qhead"><span class="k">Up next — you decide</span><button class="btn-text" onclick="sheetFilter()">Sort ⌄</button></div>
+  <div class="chips pad">${chips.map(c=>`<button class="chip ${S.filter===c?'on':''}" onclick="setFilter('${c}')">${c}</button>`).join('')}</div>
 
-    <!-- support the band -->
-    <div class="power-actions" style="margin-top:20px">
-      <button class="pa-btn pa-boost" onclick="showBoost()">
-        <span class="pa-ic">⚡</span>
-        <span><span class="pa-t">Boost a song</span><span class="pa-s">Skip the line · extra votes</span></span>
-      </button>
-      <button class="pa-btn pa-tip" onclick="showTip()">
-        <span class="pa-ic">💸</span>
-        <span><span class="pa-t">Tip the band</span><span class="pa-s">Show some love${S.tipped?` · $${S.tipped} so far`:''}</span></span>
-      </button>
-    </div>
+  <div style="margin-top:8px">
+    ${shown.length?shown.map(s=>poolRow(s,rankOf[s.id],cLeft,open)).join(''):`<div class="empty"><b>Nothing matches “${S.filter}”.</b>Try another filter.</div>`}
+  </div>
 
-    <!-- played tonight -->
-    ${played.length?`
-    <div class="sec-head" style="margin-top:28px;margin-bottom:12px">
-      <h2 style="font-size:20px">Played tonight</h2>
-      <span class="chip">Rate the performance</span>
-    </div>
-    <div class="stack gap10">
-      ${played.slice().reverse().map(id=>playedRow(id)).join('')}
-    </div>`:''}
-
-    ${artistSide?`
-      <div class="card pad" style="margin-top:24px">
-        <div class="row between wrapf gap10">
-          <div><b>Artist controls</b><div class="muted tiny">Lock the winner into your queue, or override.</div></div>
-          <div class="row gap8">
-            <button class="btn btn-ghost btn-sm" onclick="simulateVotes()">↺ Simulate crowd</button>
-            <button class="btn btn-accent btn-sm" onclick="lockWinner()">Lock winner →</button>
-          </div>
-        </div>
-      </div>`:`
-      <div class="card pad" style="margin-top:24px;text-align:center">
-        <div class="muted tiny">Open this page in a second tab to watch votes sync live between the crowd and the stage. ✨</div>
-      </div>`}
+  <div class="played-bar" onclick="sheetPlayed()">
+    <span class="l">Played tonight (${playedIds().length})</span>
+    <span class="r">Rate ›</span>
   </div>`;
 }
-function nth(n){return n===2?'nd':n===3?'rd':'th';}
-
-function creditStrip(coinsLeft){
-  const pct = Math.round((coinsLeft/S.credits)*100);
-  const p = S.rules.window? Math.round((S.windowSecs/S.windowMax)*100):100;
-  return `<div class="row gap12 wrapf" style="margin-top:16px">
-    <div class="credit-bar">
-      <span class="tiny" style="font-weight:700">Your votes</span>
-      <div class="vote-meter"><div class="vm-fill" style="width:${pct}%"></div></div>
-      <span class="chip solid" style="font-size:11.5px">${coinsLeft}/${S.credits} left</span>
-    </div>
-    ${S.rules.window?`
-    <div class="credit-bar" title="Voting window between songs">
-      <div class="window-ring" style="--p:${p}"><b id="winSecs">${S.windowSecs}</b></div>
-      <div><div class="tiny" style="font-weight:700">Vote window ${S.windowOpen?'open':'closed'}</div><div class="tiny muted">${S.windowOpen?'closes soon — vote now':'opens between songs'}</div></div>
-    </div>`:''}
-  </div>`;
-}
-
-function voteCard(s,i,leader,coinsLeft){
-  const maxV = Math.max(...cardVals(),1);
-  const pct = Math.round(((s.v)/maxV)*100);
-  const mine = S.myVotes[s.id];
-  const canVote = coinsLeft>0 && S.windowOpen;
-  const rx=S.reactions[s.id]||{};
+function poolRow(s,i,cLeft,open){
+  const mine=S.myVotes[s.id];
+  const lead=i===0;
+  const rx=S.reactions[s.id]||{}; const rTot=Object.values(rx).reduce((x,y)=>x+y,0);
   const cc=(S.commentCount&&S.commentCount[s.id])||0;
-  const reactBtns=REACTS.map(e=>{
-    const on=S.myReactions[s.id]===e;
-    const n=(rx[e]||0);
-    return `<button class="react-btn ${on?'on':''}" onclick="react('${s.id}','${e}')">${e}${n?` ${n}`:''}</button>`;
-  }).join('');
-  return `<div class="vote-card ${s.id===leader?'leading':''}" data-song="${s.id}">
-    <div class="fill" style="width:${Math.max(8,pct)}%"></div>
-    <div class="vc-top">
-      <div class="vote-rank">${i===0?'👑':'#'+(i+1)}</div>
-      <div class="vote-art" style="background-image:url('${s.art}')"></div>
-      <div class="vote-main">
-        <div class="vote-title">${s.title}</div>
-        <div class="vote-sub">${s.dur}${s.tag?` · <span class="chip" style="padding:2px 8px;font-size:10.5px">${s.tag}</span>`:''}</div>
-      </div>
-      <div class="vote-count"><b>${s.v}</b><span>votes</span></div>
-      <button class="boost-btn bt-desktop" title="Boost this song" onclick="showBoost('${s.id}')">⚡</button>
-      <button class="vote-btn ${mine?'voted':''}" onclick="castVote('${s.id}')" ${(!canVote&&!mine)?'disabled style="opacity:.4"':''}>${mine?'✓':'▲'}</button>
+  const meta = (rTot||cc)
+    ? `<span class="act">♥ ${rTot} · 💬 ${cc}</span>`
+    : `${s.type} · ${s.year}`;
+  const canVote = open && (cLeft>0 || mine);
+  let btn;
+  if(mine) btn=`<button class="vbtn voted" onclick="castVote('${s.id}')">Voted ✓</button>`;
+  else if(open && cLeft>0) btn=`<button class="vbtn ${lead?'lead':''}" onclick="castVote('${s.id}')">Vote</button>`;
+  else if(open && cLeft<=0) btn=`<button class="vbtn boost" onclick="sheetBoost('${s.id}')">⚡ Boost</button>`;
+  else btn=`<button class="vbtn" disabled>Vote</button>`;
+  return `<div class="prow ${(!open||(cLeft<=0&&!mine))?'':''}" data-song="${s.id}">
+    <div class="rank ${lead?'lead':''} mono">${i+1}</div>
+    <div class="art grayscale" style="background-image:url('${s.art}')" onclick="sheetSong('${s.id}')"></div>
+    <div class="main" onclick="sheetSong('${s.id}')">
+      <div class="t">${s.title}</div>
+      <div class="m">${meta}</div>
     </div>
-    <div class="vc-react">
-      ${reactBtns}
-      <button class="react-btn bt-mobile" title="Boost this song" onclick="showBoost('${s.id}')">⚡ Boost</button>
-      <button class="react-btn cmt" onclick="showComments('${s.id}')">💬 ${cc} ${cc===1?'comment':'comments'}</button>
-    </div>
+    <div class="cnt"><b class="mono">${s.v}</b><span>${mine?'<span class="you">+1 YOU</span>':'VOTES'}</span></div>
+    ${btn}
   </div>`;
 }
-function cardVals(){
-  const played=(S.played||[]);
-  return SEED.songs.filter(s=>s.ready&&s.id!==S.nowPlaying&&!played.includes(s.id)).map(s=>S.votes[s.id]||0);
-}
-
-function playedRow(id){
-  const s=SEED.songs.find(x=>x.id===id); if(!s)return'';
-  const r=S.ratings[id]||0;
-  const TIERS=[['👍🏼',1],['🙌🏼🙌🏼',2],['🤘🏼🤘🏼🤘🏼',3]];
-  const thumbs=TIERS.map(([label,n])=>`<button class="thumb ${n<=r?'on':''}" onclick="ratePlayed('${id}',${n})" title="Rate ${n} of 3">${label}</button>`).join('');
-  return `<div class="played-row">
-    <div class="vote-art" style="width:42px;height:42px;background-image:url('${s.art}')"></div>
-    <div style="flex:1;min-width:0"><b style="font-size:15px">${s.title}</b><div class="tiny muted">${s.dur}${r?` · you rated ${r}/3`:' · tap to rate'}</div></div>
-    <div class="thumbs">${thumbs}</div>
-  </div>`;
-}
-function ratePlayed(id,n){
-  S.ratings[id] = (S.ratings[id]===n)? n-1 : n; // tap same top thumb to lower
-  persist(); render(); toast(S.ratings[id]?`Rated ${S.ratings[id]}/3`:'Rating cleared','👍');
-}
-
-function react(id,emoji){
-  S.reactions[id]=S.reactions[id]||{};
-  const prev=S.myReactions[id];
-  if(prev===emoji){ // toggle off
-    S.reactions[id][emoji]=Math.max(0,(S.reactions[id][emoji]||1)-1); delete S.myReactions[id];
-  }else{
-    if(prev){ S.reactions[id][prev]=Math.max(0,(S.reactions[id][prev]||1)-1); }
-    S.reactions[id][emoji]=(S.reactions[id][emoji]||0)+1; S.myReactions[id]=emoji;
-  }
-  persist(); render();
-}
-
-function showComments(id){
-  const s=SEED.songs.find(x=>x.id===id);
-  const list=(S.comments&&S.comments[id])||[];
-  openSheet(`
-    <h2 style="font-size:21px">${s.title}</h2>
-    <p class="muted tiny" style="margin:4px 0 14px">${(S.commentCount&&S.commentCount[id])||list.length} comments · react with the crowd</p>
-    <div class="stack gap12" id="cmtList">
-      ${list.length?list.map(c=>`<div class="row gap10" style="align-items:flex-start"><div class="post-av" style="width:34px;height:34px;background:var(--grad);flex:0 0 auto"></div><div><b class="tiny">@${c.u}</b><div style="font-size:14px">${c.t}</div></div></div>`).join(''):`<div class="muted tiny">Be the first to comment.</div>`}
-    </div>
-    <div class="row gap8" style="margin-top:16px">
-      <input id="cmtInput" placeholder="Add a comment…" style="flex:1;border:1px solid var(--line-2);border-radius:12px;padding:11px 14px;font-size:15px;outline:none;background:var(--bg-soft)">
-      <button class="btn btn-accent btn-sm" onclick="addComment('${id}')">Post</button>
-    </div>
-  `);
-}
-function addComment(id){
-  const inp=$('#cmtInput'); const t=(inp&&inp.value||'').trim(); if(!t)return;
-  S.comments[id]=S.comments[id]||[]; S.comments[id].push({u:'you',t});
-  S.commentCount=S.commentCount||{}; S.commentCount[id]=((S.commentCount[id])||0)+1;
-  persist(); showComments(id); render(); toast('Comment posted','💬');
-}
-
+function setFilter(c){ S.filter=c; persist(); render(); }
 function castVote(id){
-  const coinsUsed=Object.keys(S.myVotes).length;
-  if(S.myVotes[id]){ // undo
-    delete S.myVotes[id]; S.votes[id]=Math.max(0,(S.votes[id]||1)-1); toast('Vote removed','↩');
-  }else{
-    if(!S.windowOpen){ toast('Voting window is closed','⏳'); return; }
-    if(coinsUsed>=S.credits){ toast('Out of votes — boost for more ⚡','⚡'); return; }
-    S.myVotes[id]=true; S.votes[id]=(S.votes[id]||0)+1; toast('Vote counted','▲');
-  }
+  if(S.myVotes[id]){ delete S.myVotes[id]; S.votes[id]=Math.max(0,(S.votes[id]||1)-1); S.credits.remaining=Math.min(S.credits.total,S.credits.remaining+1); persist(); render(); return; }
+  if(S.windowState!=='open'){ toast('Voting is closed right now'); return; }
+  if(S.credits.remaining<=0){ toast('No credits left — boost a song instead'); return; }
+  S.myVotes[id]=true; S.votes[id]=(S.votes[id]||0)+1; S.credits.remaining--;
+  S.receipts.unshift({k:'vote',t:SEED.songs.find(s=>s.id===id).title,a:'−1 vote',at:'now'});
   persist(); render();
 }
 
-function simulateVotes(){
-  cardIds().forEach(k=>{ S.votes[k]=(S.votes[k]||0)+Math.floor(Math.random()*9); });
-  persist(); render(); toast('Crowd voted','👥');
-}
-function cardIds(){
-  const played=(S.played||[]);
-  return SEED.songs.filter(s=>s.ready&&s.id!==S.nowPlaying&&!played.includes(s.id)).map(s=>s.id);
-}
-function lockWinner(){
-  const cands=cardIds().map(id=>({id,v:S.votes[id]||0})).sort((a,b)=>b.v-a.v);
-  const w=cands[0]; if(!w)return;
-  const win=SEED.songs.find(s=>s.id===w.id);
-  S.played=S.played||[]; S.played.push(S.nowPlaying);   // current song joins the history
-  S.nowPlaying=w.id; delete S.votes[w.id]; S.myVotes={}; S.myReactions={};
-  // reseed fresh vote counts for remaining candidates
-  cardIds().forEach(id=>{ S.votes[id]=Math.floor(Math.random()*24)+3; });
-  S.windowOpen=true; S.windowSecs=S.windowMax;
-  persist(); render(); confetti(); toast(`Now playing: ${win.title}`,'🎉');
-}
-
-function toggleStream(){ S.showStream=!S.showStream; persist(); render(); }
-function setStreamUrl(v){
-  v=(v||'').trim();
-  // normalize common share URLs into embeddable form
-  let m;
-  if(m=v.match(/youtube\.com\/watch\?v=([\w-]+)/)) v=`https://www.youtube.com/embed/${m[1]}`;
-  else if(m=v.match(/youtu\.be\/([\w-]+)/)) v=`https://www.youtube.com/embed/${m[1]}`;
-  else if(m=v.match(/twitch\.tv\/([\w]+)$/)) v=`https://player.twitch.tv/?channel=${m[1]}&parent=localhost`;
-  S.streamUrl=v; persist(); render(); toast(v?'Livestream connected':'Stream link cleared','📺');
-}
-
-function showBoost(songId){
-  const s=songId?SEED.songs.find(x=>x.id===songId):null;
-  openSheet(`
-    <h2 style="font-size:22px">⚡ Boost ${s?`“${s.title}”`:'a song'}</h2>
-    <p class="muted" style="margin:6px 0 18px">Push your pick up the queue and pile on extra votes. Most of every boost goes straight to the artist — ${'artists keep the majority'}.</p>
-    <div class="stack gap10">
-      ${[['+3 votes','$1.99','⚡'],['+8 votes · skip the line','$4.99','⚡⚡'],['Dedicate &amp; spotlight on the big screen','$9.99','🌟']].map(([t,p,ic])=>`
-        <div class="link-tile" onclick="applyBoost('${songId||''}')" style="cursor:pointer">
-          <div class="link-ic" style="background:linear-gradient(135deg,#ff9f0a,#ff5fa2)">${ic}</div>
-          <div style="flex:1"><b>${t}</b></div>
-          <span class="chip solid">${p}</span>
-        </div>`).join('')}
-    </div>
-    <p class="tiny muted" style="margin-top:16px;text-align:center">Demo only — no payment is taken.</p>
-  `);
-}
-function applyBoost(songId){
-  if(songId){ S.votes[songId]=(S.votes[songId]||0)+8; }
-  closeSheet(); confetti(); persist(); render(); toast('Boost applied — thank you! ⚡','⚡');
-}
-
-function showTip(){
-  openSheet(`
-    <h2 style="font-size:22px">💸 Tip the band</h2>
-    <p class="muted" style="margin:6px 0 18px">No song attached — just love. 100% goes to ${'the artist'}. Add a note and they'll see it on stage.</p>
-    <div class="row gap10 wrapf" style="margin-bottom:6px">
-      ${[2,5,10,20].map(v=>`<button class="btn btn-ghost" style="flex:1;min-width:90px" onclick="setTip(${v})">$${v}</button>`).join('')}
-    </div>
-    <div class="field"><label>Or a custom amount</label><input id="tipAmt" type="number" placeholder="$" min="1"></div>
-    <div class="field"><label>Add a message (optional)</label><input id="tipMsg" placeholder="You all are killing it 🔥"></div>
-    <button class="btn btn-block" style="margin-top:16px;background:linear-gradient(135deg,#6d5ef6,#a855f7);color:#fff" onclick="sendTip()">Send tip 💜</button>
-    <p class="tiny muted" style="margin-top:14px;text-align:center">Demo only — no payment is taken.</p>
-  `);
-}
-function setTip(v){ const el=$('#tipAmt'); if(el)el.value=v; }
-function sendTip(){
-  const el=$('#tipAmt'); const v=Math.max(0,parseInt(el&&el.value||'0',10))||5;
-  S.tipped=(S.tipped||0)+v; closeSheet(); confetti(); persist(); render(); toast(`Tipped $${v} — the band felt that 💜`,'💸');
-}
-
-/* window countdown timer */
-function bindWindowTimer(){
-  clearInterval(window._wt);
-  if(S.route!=='live' || !S.rules.window) return;
-  window._wt=setInterval(()=>{
-    if(!S.windowOpen){return;}
-    S.windowSecs--;
-    if(S.windowSecs<=0){ S.windowOpen=false; S.windowSecs=0; }
-    const el=$('#winSecs'); if(el){ el.textContent=S.windowSecs;
-      const ring=el.parentElement; ring.style.setProperty('--p', Math.round((S.windowSecs/S.windowMax)*100));
-      if(!S.windowOpen){ const lbl=ring.parentElement.querySelector('div div'); }
-    }
-    if(S.windowSecs<=0){ persist(); render(); }
+/* ---------- vote-window timer ---------- */
+function bindTimer(){
+  clearInterval(window._t);
+  if(!(S.role==='fan'&&S.tab==='live'&&!S.viewArtist&&S.windowState==='open')) return;
+  window._t=setInterval(()=>{
+    S.windowSecs--; if(S.windowSecs<0){S.windowSecs=0;}
+    const el=$('#winSecs'); if(el) el.textContent=fmtTime(S.windowSecs);
+    if(S.windowSecs<=0){ S.windowState='between'; persist(); render(); }
   },1000);
 }
 
-/* ============================================================
-   ARTIST PROFILE (Instagram × Airbnb × Skool)
-   ============================================================ */
-let profileTab='links';
-function viewProfile(){
-  const a=SEED.artists.find(x=>x.id===S.artistId)||SEED.artists[0];
-  const gallery=[IMG.cover2,IMG.cover3,IMG.cover5];
+/* ============================================================ DISCOVER ======== */
+function viewDiscover(){
+  const live=SEED.artists.filter(x=>x.live), rising=SEED.artists;
   return `
-  <div class="pcover" style="background-image:url('${a.cover}')">
-    ${a.live?'<div style="position:absolute;top:16px;left:16px;z-index:3"><button class="pill-live" onclick="go(\'live\')" style="border:none;cursor:pointer"><span class="bl"></span>Live now — vote the setlist</button></div>':''}
-    <button class="btn btn-sm follow-cover" onclick="toast('Following ${a.name}','＋')">＋ Follow</button>
+  <div class="shead" style="flex-direction:column;align-items:stretch;gap:10px">
+    <h1>Discover</h1>
+    <input class="field" style="min-height:40px;padding:9px 11px;font-size:14px;background:var(--bg);border:2px solid var(--ink);color:var(--ink);width:100%" placeholder="Search artists, songs, venues">
   </div>
-  <div class="phead">
-    <div class="avatar-cluster">
-      <div class="pavatar-xl" style="background-image:url('${a.avatar}')"></div>
-      <div class="pthumb a" style="background-image:url('${gallery[0]}')"></div>
-      <div class="pthumb b" style="background-image:url('${gallery[1]}')"></div>
-      <div class="pthumb c" style="background-image:url('${gallery[2]}')"></div>
-    </div>
-    <div class="pname">
-      <div class="row gap10" style="align-items:center"><h1 style="font-size:38px">${a.name}</h1>${a.verified?'<span class="verified" style="font-size:26px">✔</span>':''}</div>
-      <div class="muted" style="margin-top:6px;font-size:17px;font-weight:500">${a.genre} · ${a.tag}</div>
-    </div>
-  </div>
+  <div class="sec"><span class="k">Live right now</span></div>
+  <div class="hscroll">${live.map((x,i)=>`
+    <div class="dcard">
+      <div class="cov grayscale" style="background-image:url('${x.cover}')" onclick="openArtist('${x.id}')"></div>
+      <div class="b">
+        <div class="n">${x.name}${x.verified?' <span class="verified" style="font-size:11px">✓</span>':''}</div>
+        <div class="v">${x.genre} · ${x.tag.split(',')[0]}</div>
+        <button class="btn ${i===0?'btn-primary':'btn-outline'} wide" onclick="joinLive('${x.id}')">Join Live</button>
+      </div>
+    </div>`).join('')}</div>
 
-  <div class="row wrapf pstats-row" style="gap:28px;align-items:center;margin-top:22px;padding:0 6px">
-    <div class="pstat"><b style="font-size:24px">${a.followers}</b><span style="font-size:13.5px">Fans</span></div>
-    <div class="pstat"><b style="font-size:24px">${a.shows}</b><span style="font-size:13.5px">Shows</span></div>
-    <div class="pstat"><b style="font-size:24px">4.9★</b><span style="font-size:13.5px">Set rating</span></div>
-    ${a.live
-      ?`<button class="btn btn-live" onclick="go('live')"><span class="lv-dot"></span>Join live</button>`
-      :`<button class="btn btn-accent" onclick="toast('You\\'ll get an alert when ${a.name} goes live','🔔')">🔔 Get alerts</button>`}
-  </div>
+  <div class="sec"><span class="k">Rising near you</span></div>
+  <div>${rising.map(x=>`
+    <div class="lrow">
+      <div class="avatar grayscale" style="background-image:url('${x.avatar}')" onclick="openArtist('${x.id}')"></div>
+      <div class="main" onclick="openArtist('${x.id}')"><div class="t">${x.name}</div><div class="s">${x.genre} · ${x.tag}</div></div>
+      <button class="btn-text" onclick="follow(this,'${x.name}')">Follow</button>
+    </div>`).join('')}</div>
 
-  <p style="margin:20px 6px 0;max-width:60ch;color:var(--ink-2);font-size:16px">${a.bio}</p>
-
-  <div class="tabs">
-    ${[['links','Links'],['music','Music'],['merch','Merch'],['tour','Tour'],['community','Community'],['epk','EPK']].map(([k,l])=>`<button class="${profileTab===k?'on':''}" onclick="profileTab='${k}';render()">${l}</button>`).join('')}
-  </div>
-  <div style="margin-top:22px" class="fadein">${profilePanel(a)}</div>`;
+  <div class="sec"><span class="k">Upcoming near you</span></div>
+  <div>
+    ${[['26 JUL','The Crocodile','Seattle, WA'],['02 AUG','Bowery Ballroom','New York, NY']].map(([d,v,c])=>`
+    <div class="lrow"><div style="width:52px;flex:0 0 auto"><b style="font-size:12px">${d.split(' ')[0]}</b><div style="font-size:8px;letter-spacing:.1em;color:var(--muted)">${d.split(' ')[1]}</div></div>
+    <div class="main"><div class="t">${v}</div><div class="s">${c}</div></div>
+    <button class="btn-text" onclick="toast('Opening tickets')">Tickets ›</button></div>`).join('')}
+  </div>`;
 }
+function joinLive(id){ S.joined=true; S.artistId=id; S.viewArtist=null; go('live'); toast('Joined the show'); }
 
-function profilePanel(a){
-  if(profileTab==='links'){
-    const tile=(i,t,s,c)=>`<div class="link-tile" onclick="toast('Opening ${t}','↗')" style="cursor:pointer"><div class="link-ic" style="background:${c}">${i}</div><div style="flex:1"><b>${t}</b><div class="tiny muted">${s}</div></div><span style="color:var(--ink-4)">↗</span></div>`;
-    const listen=[['🎧','Spotify','2.4M monthly listeners','#1DB954'],['🍎','Apple Music','Full discography','#FA2D48'],['▶','YouTube','Latest: "Golden Hour (live)"','#FF0000'],['📷','Instagram','@novavega · 24.1k','#E1306C'],['🎵','TikTok','1.1M likes','#000']];
-    const buy=[['💿','Bandcamp','Buy music & merch — fans name their price','#1DA0C3'],['🎼','iTunes Store','Buy albums & singles','#C74BE0'],['🎶','Amazon Music','Buy MP3s or stream','#22C2E8']];
-    return `
-      <div class="eyebrow" style="margin-bottom:12px">Listen &amp; follow</div>
-      <div class="grid grid-2">${listen.map(x=>tile(...x)).join('')}</div>
-      <div class="eyebrow" style="margin:26px 0 12px">Buy the music</div>
-      <div class="grid grid-2">${buy.map(x=>tile(...x)).join('')}</div>
-      <div class="eyebrow" style="margin:26px 0 12px">Stay in the loop</div>
-      <div class="grid grid-2">${tile('✉️','Mailing list','Get show alerts first','#5b4be1')}</div>`;
+/* ============================================================ ARTIST PROFILE == */
+function viewArtist(id){
+  const a=SEED.artists.find(x=>x.id===id)||SEED.artists[0];
+  const tabs=['music','links','merch','tour','community','epk'];
+  return `
+  <div class="row between pad" style="padding-top:10px;padding-bottom:8px"><button class="btn-text" onclick="backFromArtist()">‹ Back</button><button class="theme-t btn-text" onclick="toggleTheme()">${S.theme==='dark'?'Light':'Dark'}</button></div>
+  <div class="cover grayscale" style="background-image:url('${a.cover}')"></div>
+  <div class="phead"><div class="pav grayscale" style="background-image:url('${a.avatar}')"></div>
+    <div style="padding-bottom:2px"><div class="pname">${a.name}${a.verified?'<span class="verified">✓</span>':''}</div>
+    <div style="font-size:12px;color:var(--muted)">${a.genre} · ${a.tag}</div></div>
+  </div>
+  <div class="stats"><div class="cell"><div class="v">${a.fans}</div><div class="l">Fans</div></div>
+    <div class="cell"><div class="v">${a.shows}</div><div class="l">Shows</div></div>
+    <div class="cell"><div class="v">★★★</div><div class="l">Set rating</div></div></div>
+  <div class="row pad" style="gap:8px;padding-top:2px;padding-bottom:12px">
+    ${a.live?`<button class="btn btn-primary" style="flex:1" onclick="joinLive('${a.id}')">Join Live</button>`:`<button class="btn btn-outline" style="flex:1" disabled>Not playing tonight</button>`}
+    <button class="btn btn-outline" onclick="follow(this,'${a.name}')">Follow</button>
+  </div>
+  <div class="tabstrip">${tabs.map(t=>`<button class="${S.profileTab===t?'on':''}" onclick="S.profileTab='${t}';persist();render()">${t}</button>`).join('')}</div>
+  <div class="fadein">${artistPanel(a)}</div>`;
+}
+function artistPanel(a){
+  const t=S.profileTab;
+  if(t==='music') return `
+    <div class="chips pad" style="padding-top:12px">${['ALL','ORIGINALS','COVERS','ANTHEMIC','CHILL'].map(c=>`<button class="chip ${S.mfilter===c||(!S.mfilter&&c==='ALL')?'on':''}" onclick="S.mfilter='${c}';persist();render()">${c}</button>`).join('')}</div>
+    <div style="margin-top:8px">${SEED.songs.filter(s=>s.ready&&matchFilter(s,S.mfilter||'ALL')).map(s=>`
+      <div class="lrow"><div class="art grayscale" style="width:32px;height:32px;background-image:url('${s.art}')"></div>
+      <div class="main"><div class="t">${s.title}</div><div class="s">${s.type} · ${s.dur} · ${s.year}</div></div>
+      <button class="btn-text" onclick="toast('Preview')">▷</button></div>`).join('')}</div>`;
+  if(t==='links'){
+    const grp=(k,arr)=>`<div class="sec"><span class="k">${k}</span></div>${arr.map(([n,s])=>`<div class="lrow"><div class="main"><div class="t">${n}</div><div class="s">${s}</div></div><span class="muted">↗</span></div>`).join('')}`;
+    return grp('Listen',[['Spotify','2.4M monthly listeners'],['Apple Music','Full discography'],['YouTube','Latest: Golden Hour (live)']])
+      + grp('Buy the music',[['Bandcamp','Fans name their price'],['iTunes Store','Buy albums & singles'],['Amazon Music','Buy or stream']])
+      + grp('Follow',[['Instagram','@novavega · 24.1k'],['TikTok','1.1M likes']])
+      + `<div class="lrow" onclick="sheetMailing()"><div class="main"><div class="t">Mailing list</div><div class="s">Get show alerts first</div></div><span class="btn-text">Join</span></div>`;
   }
-  if(profileTab==='music'){
-    const songs=SEED.songs.filter(s=>s.ready && matchFilter(s,filterMusic));
-    return `${filterChips(filterMusic,'setFilterMusic')}
-    <div class="stack gap10">
-      ${songs.length?songs.map(s=>`
-        <div class="song-row">
-          <div class="vote-art" style="width:44px;height:44px;background-image:url('${s.art}')"></div>
-          <div style="flex:1"><b>${s.title}</b><div class="tiny muted">${s.dur} · ${s.type} · ${s.vibe} · ${s.year}</div></div>
-          <button class="btn-icon" onclick="toast('Playing preview','▶')">▶</button>
-        </div>`).join(''):`<div class="muted tiny" style="padding:8px 2px">No songs match “${filterMusic}”.</div>`}
-    </div>`;
-  }
-  if(profileTab==='merch') return `
-    <div class="grid grid-3">
-      ${[['Tour Tee 2026',IMG.merch1,'$32'],['Vinyl — Nova',IMG.merch2,'$28'],['Enamel Pin Set',IMG.merch3,'$14']].map(([t,img,p])=>`
-        <div class="merch">
-          <div class="m-img" style="background-image:url('${img}')"></div>
-          <div class="m-b"><div class="row between"><b>${t}</b><span class="chip solid">${p}</span></div>
-          <button class="btn btn-ghost btn-sm btn-block" style="margin-top:10px" onclick="toast('Added to cart','🛍️')">Add to cart</button></div>
-        </div>`).join('')}
-    </div>`;
-  if(profileTab==='tour') return `
-    <div class="card" style="overflow:hidden">
-      ${[['22','JUL','Mohawk','Austin, TX','Tonight',true],['26','JUL','The Crocodile','Seattle, WA','Few left',false],['02','AUG','Bowery Ballroom','New York, NY','On sale',false],['09','AUG','The Echo','Los Angeles, CA','On sale',false]].map(([d,m,v,c,st,live])=>`
-        <div class="tour-row">
-          <div class="tour-date"><b>${d}</b><span>${m}</span></div>
-          <div style="flex:1"><b>${v}</b><div class="tiny muted">${c}</div></div>
-          <span class="chip ${live?'accent':''}">${st}</span>
-          <button class="btn ${live?'btn-grad':'btn-accent'} btn-sm" onclick="${live?"go('live')":"toast('Opening tickets','🎟️')"}">${live?'Vote live':'Tickets'}</button>
-        </div>`).join('')}
-    </div>`;
-  if(profileTab==='community') return `
-    <div class="card pad" style="margin-bottom:16px;background:var(--bg-soft);border:none">
-      <div class="row between wrapf gap10"><div><b>Inner Circle</b><div class="tiny muted">Nova's members-only community · early drops, setlist input, livestreams</div></div>
-      <button class="btn btn-accent btn-sm" onclick="toast('Joined Inner Circle','★')">Join · $5/mo</button></div>
-    </div>
+  if(t==='merch') return `<div class="merch-grid" style="margin:12px 14px">${[['Tour Tee 2026',IMG.m1,'$32'],['Vinyl — Nova',IMG.m2,'$28'],['Enamel Pins',IMG.m3,'$14'],['Hoodie',IMG.m1,'$54']].map(([n,img,p])=>`
+    <div class="merch-cell"><div class="img grayscale" style="background-image:url('${img}')"></div><div class="t" style="font-size:13px;font-weight:700">${n}</div><div class="row between" style="margin-top:4px"><span class="money">${p}</span><button class="btn-text" onclick="sheetBuy('${n}','${p}')">Buy</button></div></div>`).join('')}</div>`;
+  if(t==='tour') return `<div style="margin-top:6px">${[['22 JUL','Mohawk','Austin, TX','Tonight',true],['26 JUL','The Crocodile','Seattle, WA','Few left',false],['02 AUG','Bowery Ballroom','New York, NY','On sale',false]].map(([d,v,c,st,live])=>{
+    const act = live ? `joinLive('nova')` : `sheetBuy('Ticket — ${v}','$35')`;
+    return `<div class="lrow"><div style="width:52px;flex:0 0 auto"><b style="font-size:13px">${d.split(' ')[0]}</b><div style="font-size:8px;letter-spacing:.1em;color:var(--muted)">${d.split(' ')[1]}</div></div>
+    <div class="main"><div class="t">${v}</div><div class="s">${c} · ${st}</div></div>
+    <button class="btn ${live?'btn-primary':'btn-outline'}" onclick="${act}">${live?'Vote live':'Tickets'}</button></div>`;}).join('')}</div>`;
+  if(t==='community') return `
+    <div style="margin:12px 14px;border:2px solid var(--ink);padding:14px">
+      <div class="kick">Members only</div><div class="np-title" style="font-size:17px;margin:4px 0">Inner Circle</div>
+      <div class="s muted" style="font-size:12px">Early drops · setlist input · monthly livestreams</div>
+      <button class="btn btn-primary btn-block" onclick="sheetMembership()">Join · $5/mo</button></div>
     ${SEED.feed.map(p=>postCard(p)).join('')}`;
-  if(profileTab==='epk') return `
-    <div class="card pad24">
-      <span class="eyebrow">Electronic Press Kit</span>
-      <h2 style="font-size:22px;margin-top:10px">${a.name} — Press & Booking</h2>
-      <div class="grid grid-2" style="margin-top:16px">
-        <div class="stat-tile"><b>24.1k</b><span>Total followers</span></div>
-        <div class="stat-tile"><b>2.4M</b><span>Monthly streams</span></div>
-        <div class="stat-tile"><b>186</b><span>Live shows</span></div>
-        <div class="stat-tile"><b>4.9★</b><span>Avg set rating</span></div>
-      </div>
-      <p class="muted" style="margin-top:16px">Press photos, stage plot, tech rider, and past-show analytics — all shareable with one link.</p>
-      <div class="row gap8 wrapf" style="margin-top:14px">
-        <button class="btn btn-ghost btn-sm" onclick="toast('Downloading press kit','⬇')">⬇ Download kit</button>
-        <button class="btn btn-ghost btn-sm" onclick="toast('Stage plot','📐')">📐 Stage plot</button>
-        <button class="btn btn-accent btn-sm" onclick="openBooking()">Send booking request</button>
-      </div>
-    </div>`;
+  if(t==='epk') return `
+    <div class="stats" style="margin-top:12px"><div class="cell"><div class="v">24.1k</div><div class="l">Followers</div></div><div class="cell"><div class="v">2.4M</div><div class="l">Streams</div></div><div class="cell"><div class="v">186</div><div class="l">Shows</div></div></div>
+    <div class="sec"><span class="k">Downloads</span></div>
+    ${['Press photos','One-sheet','Stage plot & rider'].map(x=>`<div class="lrow"><div class="main"><div class="t">${x}</div></div><span class="btn-text" onclick="toast('Downloading')">Get ↓</span></div>`).join('')}
+    <div class="pad" style="padding-top:14px"><button class="btn btn-primary btn-block" onclick="sheetBooking()">Request booking</button></div>`;
   return '';
 }
 
-function postCard(p){
-  const a=SEED.artists.find(x=>x.id===p.artist);
-  return `<div class="post" style="margin-bottom:16px">
-    <div class="post-head">
-      <div class="post-av" style="background-image:url('${a.avatar}')"></div>
-      <div style="flex:1"><b>${a.name}</b> ${a.verified?'<span class="verified">✔</span>':''}<div class="tiny muted">${p.time} ago</div></div>
-      <span style="color:var(--ink-4)">···</span>
-    </div>
-    <div style="padding:0 16px 12px">${p.text}</div>
-    <div class="post-actions">
-      <span onclick="toast('Liked','♥')" style="cursor:pointer">♥ ${p.likes}</span>
-      <span style="cursor:pointer">💬 ${p.comments}</span>
-      <span style="cursor:pointer">↗ Share</span>
-    </div>
-  </div>`;
-}
-
-function openBooking(){
-  openSheet(`
-    <h2 style="font-size:22px">Booking request</h2>
-    <p class="muted" style="margin:6px 0 4px">Send an inquiry — the artist's team gets it instantly.</p>
-    <div class="field"><label>Venue / event</label><input placeholder="e.g. The Fillmore"></div>
-    <div class="field"><label>Date</label><input type="date"></div>
-    <div class="field"><label>Message</label><textarea rows="3" placeholder="Tell them about the show..."></textarea></div>
-    <button class="btn btn-accent btn-block" style="margin-top:16px" onclick="closeSheet();toast('Booking request sent','✉️')">Send request</button>
-  `);
-}
-
-/* ============================================================
-   COMMUNITY FEED (fan tab)
-   ============================================================ */
+/* ============================================================ FEED ============ */
 function viewFeed(){
   return `
-  <div class="sec-head" style="margin-top:20px"><h2>Community</h2><span class="chip">Following</span></div>
-  <div class="card pad" style="margin-bottom:16px">
-    <div class="row gap10"><div class="avatar-btn">YOU</div><input placeholder="Share something with the artists you follow..." style="flex:1;border:none;background:none;outline:none;font-size:15px"></div>
-  </div>
+  <div class="shead"><h1 style="font-family:var(--f-exp)">Feed</h1><button class="btn-text" onclick="toast('Superfan leaderboard')">🏆 Leaders</button></div>
+  <div class="lrow"><div class="avatar" style="background:var(--accent)"></div><input style="flex:1;border:none;background:none;outline:none;font-size:14px;color:var(--ink)" placeholder="Share something with the crowd"></div>
   ${SEED.feed.map(p=>postCard(p)).join('')}
-  <div class="card pad" style="text-align:center;background:var(--bg-soft);border:none">
-    <b>🏆 Superfan leaderboard</b>
-    <div class="muted tiny" style="margin:6px 0 12px">You've voted at 4 shows this month — you're #12 in Nova's crowd.</div>
-    <div class="row gap8" style="justify-content:center;flex-wrap:wrap">
-      <span class="chip accent">🔥 4-show streak</span><span class="chip accent">🎯 Called the encore</span><span class="chip accent">⚡ Top booster</span>
-    </div>
+  <div style="margin:16px 14px;border:1px solid var(--hair)">
+    <div class="row between" style="padding:12px 14px;border-bottom:2px solid var(--rule)"><span class="k" style="font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase">Superfan leaderboard</span><span class="muted" style="font-size:10px">This month</span></div>
+    ${[['1','You','2,140','🔥 4-show streak'],['2','mara','1,980','🎯 Called the encore'],['3','devin','1,410','⚡ Top booster']].map(([r,n,pts,b])=>`
+    <div class="lrow"><div class="rank mono" style="width:16px;font-weight:700">${r}</div><div class="avatar grayscale" style="background-image:url('${IMG.f2}')"></div><div class="main"><div class="t">${n}</div><div class="s">${b}</div></div><b class="mono" style="font-size:13px">${pts}</b></div>`).join('')}
+  </div>`;
+}
+function postCard(p){
+  const a=SEED.artists.find(x=>x.id===p.artist);
+  return `<div style="border-top:1px solid var(--hair);padding:14px">
+    <div class="row" style="gap:10px"><div class="avatar grayscale" style="width:34px;height:34px;background-image:url('${a.avatar}')"></div>
+    <div><div style="font-size:13px;font-weight:700">${a.name}${a.verified?' <span class="verified" style="font-size:11px">✓</span>':''}</div><div style="font-size:11px;color:var(--muted)">${p.time} ago</div></div></div>
+    <div style="margin:10px 0;font-size:14px">${p.text}</div>
+    <div class="row" style="gap:18px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)">
+      <span onclick="toast('Liked')">♥ ${p.likes}</span><span>💬 ${p.comments}</span><span>↗ Share</span></div>
   </div>`;
 }
 
-/* ============================================================
-   ARTIST STUDIO (dashboard)
-   ============================================================ */
-let dashTab='setlist';
-function viewDash(){
+/* ============================================================ YOU ============= */
+function viewYou(){
+  const c=S.credits;
   return `
-  <div class="row between wrapf gap12" style="margin-top:20px">
-    <div><span class="eyebrow">Artist Studio</span><h1 style="font-size:26px;margin-top:6px">Good evening, Nova 👋</h1></div>
-    <div class="row gap8">
-      <button class="btn btn-ghost btn-sm" onclick="go('profile','nova')">View public profile</button>
-      <button class="btn btn-grad btn-sm" onclick="go('live')">◉ Go live</button>
-    </div>
-  </div>
+  <div class="shead"><h1 style="font-family:var(--f-exp)">You</h1><button class="btn-text" onclick="toggleTheme()">${S.theme==='dark'?'☀ Light':'☾ Dark'}</button></div>
 
-  <div class="grid grid-3" style="margin-top:18px">
-    <div class="stat-tile"><span>Fans</span><b>24,118</b><span class="up">▲ 312 this week</span></div>
-    <div class="stat-tile"><span>Votes cast (30d)</span><b>18.4k</b><span class="up">▲ 22%</span></div>
-    <div class="stat-tile"><span>Boost + merch revenue</span><b>$3,240</b><span class="up">▲ $840</span></div>
+  <div class="sec"><span class="k">Vote credits</span></div>
+  <div class="row between pad" style="align-items:flex-end;padding-bottom:12px">
+    <div><span style="font-family:var(--f-exp);font-size:44px;font-weight:800" class="mono">${c.remaining}</span><span style="font-size:18px;color:var(--muted)"> / ${c.total} left</span></div>
+    <span class="muted" style="font-size:10px;text-transform:uppercase;letter-spacing:.06em">Refills at encore</span>
   </div>
+  <div>${(S.receipts||[]).slice(0,5).map(r=>`<div class="ledger"><span>${r.k==='vote'?r.t:r.k} · ${r.at}</span><span class="amt ${r.k!=='vote'?'acc':''}">${r.a}</span></div>`).join('')}</div>
 
-  <div class="seg" style="margin-top:24px">
-    ${[['setlist','Setlist pool'],['rules','Voting rules'],['insights','Insights']].map(([k,l])=>`<button class="${dashTab===k?'on':''}" onclick="dashTab='${k}';render()">${l}</button>`).join('')}
-  </div>
-  <div style="margin-top:18px" class="fadein">${dashPanel()}</div>`;
+  <div class="sec"><span class="k">Streaks & badges</span></div>
+  <div class="badges"><span class="badge">🔥 4-show streak</span><span class="badge">🎯 Called the encore</span><span class="badge">⚡ Top booster</span></div>
+
+  <div class="sec"><span class="k">Wallet</span></div>
+  ${[['Tips & boosts','$'+(S.tipped||0)+' this month'],['Memberships','Inner Circle · Nova Vega'],['Tickets','2 upcoming']].map(([t,s])=>`<div class="lrow"><div class="main"><div class="t">${t}</div><div class="s">${s}</div></div><span class="muted">›</span></div>`).join('')}
+
+  <div class="sec"><span class="k">Settings</span></div>
+  <div class="lrow"><div class="main"><div class="t">Theme</div></div>
+    <div class="seg-wrap row" style="gap:0;border:1px solid var(--hair)">
+      ${['light','dark'].map(th=>`<button onclick="S.theme='${th}';persist();render()" style="padding:7px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;${S.theme===th?'background:var(--ink);color:var(--bg)':''}">${th}</button>`).join('')}
+    </div></div>
+  <div class="lrow"><div class="main"><div class="t">You are in</div><div class="s">${S.role==='artist'?'Artist mode':'Fan mode'}</div></div>
+    <button class="btn btn-outline" onclick="setRole('${S.role==='artist'?'fan':'artist'}')">Switch to ${S.role==='artist'?'Fan':'Artist'}</button></div>`;
 }
 
-function dashPanel(){
-  if(dashTab==='setlist') return `
-    <div class="row between" style="margin-bottom:12px">
-      <div><b>Songs you're ready to play</b><div class="tiny muted">Toggle what's in tonight's vote pool.</div></div>
-      <button class="btn btn-accent btn-sm" onclick="openUpload()">＋ Add song</button>
-    </div>
-    ${filterChips(filterStudio,'setFilterStudio')}
-    <div class="stack gap10">
-      ${SEED.songs.filter(s=>matchFilter(s,filterStudio)).map(s=>{
-        const on = S.artistReady[s.id]!==undefined ? S.artistReady[s.id] : s.ready;
-        return `<div class="song-row">
-          <div class="vote-art" style="width:44px;height:44px;background-image:url('${s.art}')"></div>
-          <div style="flex:1"><b>${s.title}</b><div class="tiny muted">${s.dur} · ${s.type} · ${s.vibe}${s.tag?' · '+s.tag:''}</div></div>
-          <span class="tiny muted">${on?'In pool':'Hidden'}</span>
-          <div class="toggle ${on?'on':''}" onclick="toggleReady('${s.id}',${on})"></div>
-        </div>`;
-      }).join('')}
-    </div>`;
-  if(dashTab==='rules') return `
-    <div class="stack gap12">
-      ${ruleCard('⏱️','Vote windows','Open voting only for a short window between songs.',
-        `<div class="row gap8" style="margin-top:8px">${[5,10,15,20].map(n=>`<span class="chip ${S.windowMax===n?'accent':''}" style="cursor:pointer" onclick="S.windowMax=${n};S.windowSecs=${n};persist();render()">${n}s</span>`).join('')}</div>`,
-        'window')}
-      ${ruleCard('🎯','Crowd-pick cadence','Let the crowd choose every Nth song; you curate the rest.',
-        `<div class="row gap8" style="margin-top:8px">${[2,3,5].map(n=>`<span class="chip ${S.rules.everyNval===n?'accent':''}" style="cursor:pointer" onclick="S.rules.everyNval=${n};persist();render()">Every ${n}${n===2?'nd':n===3?'rd':'th'}</span>`).join('')}</div>`,
-        'everyN')}
-      ${ruleCard('🕗','Showtime only','Voting unlocks when doors open and closes at last call.','','showtimeOnly')}
-      ${ruleCard('🎉','Encore mode','Top-voted unplayed song becomes the guaranteed encore.','','encoreMode')}
-    </div>
-    <div class="card pad" style="margin-top:16px;background:var(--bg-soft);border:none">
-      <b>More ways to gamify 💡</b>
-      <ul style="margin:10px 0 0;padding-left:18px;color:var(--ink-2);line-height:1.7">
-        <li>Vote credits — free fans get 3/night, members get more</li>
-        <li>Boosts & dedications (paid) split revenue with you</li>
-        <li>Genre / era / tempo battles ("acoustic vs. electric")</li>
-        <li>Surprise "wildcard" slot the crowd can't see coming</li>
-      </ul>
-    </div>`;
-  if(dashTab==='insights') return `
-    <div class="grid grid-2">
-      <div class="card pad24"><b>Most requested (never enough)</b>
-        ${[['Ceremony',47],['Golden Hour',41],['Undertow',33]].map(([t,v])=>`<div class="row between" style="margin-top:12px"><span>${t}</span><div style="flex:1;margin:0 12px;height:8px;border-radius:4px;background:var(--line);overflow:hidden"><div style="width:${v*2}%;height:100%;background:var(--grad)"></div></div><b class="tiny">${v}</b></div>`).join('')}
-      </div>
-      <div class="card pad24"><b>Where your crowd is</b>
-        ${[['Austin, TX',38],['Los Angeles',22],['Online',18]].map(([t,v])=>`<div class="row between" style="margin-top:12px"><span>${t}</span><div style="flex:1;margin:0 12px;height:8px;border-radius:4px;background:var(--line);overflow:hidden"><div style="width:${v*2}%;height:100%;background:var(--accent)"></div></div><b class="tiny">${v}%</b></div>`).join('')}
-      </div>
-    </div>
-    <div class="card pad24" style="margin-top:16px">
-      <b>Set intelligence</b>
-      <p class="muted" style="margin-top:8px">Fans consistently vote <b style="color:var(--ink)">"Ceremony"</b> into the back third of your set — try slotting it as the pre-encore peak. Acoustic versions over-index with your Nashville crowd.</p>
-    </div>`;
-  return '';
-}
-function ruleCard(ic,title,desc,extra,key){
-  const on=S.rules[key]!==undefined?S.rules[key]:true;
-  return `<div class="rule-card">
-    <div class="rule-ic">${ic}</div>
-    <div style="flex:1"><b>${title}</b><div class="tiny muted">${desc}</div>${extra}</div>
-    <div class="toggle ${on?'on':''}" onclick="S.rules['${key}']=${!on};persist();render()"></div>
+/* ============================================================ STUDIO ========== */
+function viewStudio(){
+  return `
+  <div class="shead"><div><div class="kick">Studio</div><h1 style="font-family:var(--f-exp);font-size:20px">Nova Vega</h1></div>
+    <button class="credit-chip" onclick="setRole('fan')">Fan ⇄ Artist</button></div>
+
+  <div class="stats"><div class="cell"><div class="v">1.2k</div><div class="l">Fans</div></div>
+    <div class="cell"><div class="v">3.4k</div><div class="l">Votes cast</div></div>
+    <div class="cell"><div class="v acc">$412</div><div class="l">Boost + merch</div></div></div>
+
+  <div class="sec"><span class="k">Tonight's setlist pool</span><button class="a" onclick="sheetAddSong()">+ Add song</button></div>
+  <div>${SEED.songs.map(s=>{
+    const on=S.artistReady[s.id]!==undefined?S.artistReady[s.id]:s.ready;
+    return `<div class="lrow"><div class="main"><div class="t">${s.title}</div><div class="s">${s.type} · ${s.genre} · ${s.dur}</div></div>
+      <div class="tgl ${on?'on':''}" onclick="togglePool('${s.id}',${on})"></div></div>`;
+  }).join('')}</div>
+
+  <div class="lrow" style="border-top:2px solid var(--rule)" onclick="sheetRules()"><div class="main"><div class="t">Voting rules</div><div class="s">Windows · Every ${S.rules.everyN}${nth(S.rules.everyN)} · Encore</div></div><span class="muted">›</span></div>
+  <div class="lrow" onclick="toast('Insights: Ceremony over-indexes late-set')"><div class="main"><div class="t">Insights</div><div class="s">Most requested · Crowd map</div></div><span class="muted">›</span></div>
+  <div class="spark">${[30,45,38,62,55,80,72,90].map(h=>`<i style="height:${h}%"></i>`).join('')}</div>
+
+  <div class="pad" style="padding-top:8px">
+    ${S.votingOpenTonight
+      ? `<button class="btn btn-outline btn-block" onclick="S.votingOpenTonight=false;persist();render();toast('Voting closed')">Close voting</button>`
+      : `<button class="btn btn-primary btn-block" onclick="S.votingOpenTonight=true;persist();render();toast('Voting is open — fans can vote')">Open voting for tonight</button>`}
   </div>`;
 }
-function toggleReady(id,cur){ S.artistReady[id]=!cur; persist(); render(); toast(!cur?'Added to pool':'Hidden from pool',!cur?'＋':'–'); }
-function openUpload(){
-  openSheet(`
-    <h2 style="font-size:22px">Add a song to your pool</h2>
-    <p class="muted" style="margin:6px 0 4px">Upload audio or link a streaming track. Fans vote from what's in your pool.</p>
-    <div class="field"><label>Song title</label><input placeholder="e.g. Midnight Radio"></div>
-    <div class="field"><label>Duration</label><input placeholder="4:02"></div>
-    <div class="field"><label>Tag (optional)</label><select><option>New</option><option>Fan favorite</option><option>Rare live</option><option>Acoustic</option><option>Unreleased</option></select></div>
-    <div class="field"><label>Audio / link</label><input placeholder="Drop file or paste Spotify / YouTube URL"></div>
-    <button class="btn btn-accent btn-block" style="margin-top:16px" onclick="closeSheet();toast('Song added to pool','🎵')">Add to pool</button>
-  `);
+function togglePool(id,cur){ S.artistReady[id]=!cur; persist(); render(); toast(!cur?'Added to pool':'Removed from pool', `()=>{S.artistReady['${id}']=${cur};persist();render()}`); }
+
+/* ============================================================ SHEETS ========== */
+function sheetBoost(id){
+  const s=id?SEED.songs.find(x=>x.id===id):null;
+  openSheet(`<div class="kick">Boost a song</div>
+    ${s?`<div class="lrow" style="border:none;padding:8px 0"><div class="art grayscale" style="width:44px;height:44px;background-image:url('${s.art}')"></div><div class="main"><div class="t">${s.title}</div><div class="s">Nova Vega</div></div></div>`:'<h3>Boost a song</h3>'}
+    <div class="tiles">
+      <div class="tile" onclick="selTile(this)"><div class="a money">$2</div><div class="b">+3 votes</div></div>
+      <div class="tile on" onclick="selTile(this)"><div class="a money">$5</div><div class="b">+8 · jump queue</div></div>
+      <div class="tile" onclick="selTile(this)"><div class="a money">$10</div><div class="b">+20 votes</div></div>
+    </div>
+    <div class="total"><span class="muted">Total</span><span class="money">$5.00</span></div>
+    <p style="font-size:11px;color:var(--muted);margin:8px 0 0">Boost moves this song up the queue and adds votes. Charged to Apple Pay — confirm below.</p>
+    <button class="btn btn-primary btn-block" onclick="doBoost('${id||''}')">Confirm boost · $5</button>
+    <button class="btn-text" style="display:block;margin:12px auto 0" onclick="sheetTip()">or tip the band instead</button>
+    <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:10px">Demo — no payment is taken.</p>`);
 }
+let tileSel=1;
+function selTile(el){ [...el.parentElement.children].forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
+function doBoost(id){ if(id){S.votes[id]=(S.votes[id]||0)+8;} S.tipped=(S.tipped||0); closeSheet(); persist(); render(); toast('Boosted · $5.00 · receipt in You'); }
+function sheetTip(){
+  openSheet(`<h3>Tip the band</h3>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 4px">100% goes to the artist. Add a note and they'll see it on stage.</p>
+    <div class="tiles"><div class="tile" onclick="selTile(this)"><div class="a money">$3</div><div class="b">Nice</div></div>
+      <div class="tile on" onclick="selTile(this)"><div class="a money">$7</div><div class="b">Love it</div></div>
+      <div class="tile" onclick="selTile(this)"><div class="a money">$15</div><div class="b">Encore!</div></div></div>
+    <div class="field"><label>Note (optional)</label><input id="tipNote" placeholder="You all are killing it"></div>
+    <button class="btn btn-primary btn-block" onclick="doTip()">Send $7</button>
+    <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:10px">Demo — no payment is taken.</p>`);
+}
+function doTip(){ S.tipped=(S.tipped||0)+7; closeSheet(); persist(); render(); toast('Tipped · $7.00 · the band felt that'); }
+function sheetSong(id){
+  const s=SEED.songs.find(x=>x.id===id); const rx=S.reactions[id]||{}; const list=(S.comments&&S.comments[id])||[];
+  const reacts=['♥','🔥','🎸'];
+  openSheet(`<div class="row" style="gap:12px"><div class="art grayscale" style="width:56px;height:56px;background-image:url('${s.art}')"></div>
+    <div><h3 style="margin:0">${s.title}</h3><div class="s muted" style="font-size:12px">${s.type} · ${s.genre} · ${s.year}</div></div></div>
+    <div class="reacts">${reacts.map(e=>{const on=S.myReactions[id]===e;const n=rx[e]||0;return `<button class="react ${on?'on':''}" onclick="react('${id}','${e}')">${e} ${n||''}</button>`}).join('')}
+      <button class="vbtn ${S.myVotes[id]?'voted':''}" style="margin-left:auto" onclick="castVote('${id}');closeSheet()">${S.myVotes[id]?'Voted ✓':'Vote'}</button></div>
+    <div class="kick">Comments (${(S.commentCount&&S.commentCount[id])||list.length})</div>
+    <div id="cmtList">${list.length?list.map(c=>`<div class="cmt"><div class="a grayscale"></div><div><div class="u">@${c.u}</div><div class="x">${c.t}</div></div></div>`).join(''):'<p class="muted" style="font-size:13px">Be the first.</p>'}</div>
+    <div class="row" style="gap:8px;margin-top:12px"><input id="cInp" style="flex:1;min-height:40px;padding:9px 11px;background:var(--bg);border:2px solid var(--hair);color:var(--ink)" placeholder="Add a comment"><button class="btn btn-primary" onclick="addComment('${id}')">Post</button></div>
+    <button class="btn btn-outline btn-block" onclick="sheetBoost('${id}')">⚡ Boost this song</button>`);
+}
+function react(id,e){
+  S.reactions[id]=S.reactions[id]||{}; const prev=S.myReactions[id];
+  if(prev===e){ S.reactions[id][e]=Math.max(0,(S.reactions[id][e]||1)-1); delete S.myReactions[id]; }
+  else { if(prev) S.reactions[id][prev]=Math.max(0,(S.reactions[id][prev]||1)-1); S.reactions[id][e]=(S.reactions[id][e]||0)+1; S.myReactions[id]=e; }
+  persist(); sheetSong(id); render();
+}
+function addComment(id){ const i=$('#cInp'); const t=(i&&i.value||'').trim(); if(!t)return; S.comments[id]=S.comments[id]||[]; S.comments[id].push({u:'you',t}); S.commentCount=S.commentCount||{}; S.commentCount[id]=((S.commentCount[id])||0)+1; persist(); sheetSong(id); render(); }
+function sheetFilter(){
+  openSheet(`<h3>Filter & sort</h3>
+    <div class="kick" style="margin-top:8px">Sort</div>
+    <div class="chips" style="margin-top:8px">${['Top voted','Recently added','Boosted first'].map((x,i)=>`<button class="chip ${i===0?'on':''}" onclick="closeSheet()">${x}</button>`).join('')}</div>
+    <div class="kick" style="margin-top:16px">Filter</div>
+    <div class="chips" style="margin-top:8px;flex-wrap:wrap;overflow:visible">${['ALL','ORIGINALS','COVERS','ANTHEMIC','CHILL','UPBEAT','90s','80s'].map(c=>`<button class="chip ${S.filter===c?'on':''}" onclick="setFilter('${c}');closeSheet()">${c}</button>`).join('')}</div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet()">Done</button>`);
+}
+function playedSheetRow(id){
+  const s=SEED.songs.find(x=>x.id===id); if(!s) return '';
+  const r=S.ratings[id]||0;
+  const tiers=[['★',1],['★★',2],['★★★',3]].map(([lab,n])=>`<button class="rt ${n<=r?'on':''}" onclick="rate('${id}',${n})">${lab}</button>`).join('');
+  return `<div class="lrow" style="border-top:1px solid var(--hair);padding:12px 0"><div class="art grayscale" style="width:34px;height:34px;background-image:url('${s.art}')"></div>
+    <div class="main"><div class="t">${s.title}</div><div class="s">${r?'You rated '+r+'/3':'Rate the performance'}</div></div>
+    <div class="rate">${tiers}</div></div>`;
+}
+function sheetPlayed(){
+  const ids=playedIds();
+  openSheet(`<h3>Played tonight</h3>${ids.length?ids.slice().reverse().map(playedSheetRow).join(''):'<p class="muted">No songs played yet.</p>'}`);
+}
+function rate(id,n){ S.ratings[id]=(S.ratings[id]===n)?n-1:n; persist(); sheetPlayed(); render(); }
+function sheetAddSong(){
+  openSheet(`<h3>Add a song</h3>
+    <div class="field"><label>Title</label><input placeholder="Midnight Radio"></div>
+    <div class="field"><label>Type</label><select><option>Original</option><option>Cover</option></select></div>
+    <div class="field"><label>Genre · vibe · year</label><input placeholder="Dream Pop · Chill · 2024"></div>
+    <div class="field"><label>Duration</label><input placeholder="4:02"></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('Song added to pool')">Add to pool</button>`);
+}
+function sheetRules(){
+  openSheet(`<h3>Voting rules</h3>
+    ${ruleToggle('Vote windows','Voting opens in short windows between songs','windowOn',true)}
+    <div class="lrow" style="border:none;padding:12px 0"><div class="main"><div class="t">Every Nth song is a crowd pick</div><div class="s">You curate the rest</div></div>
+      <div class="row" style="gap:0;border:1px solid var(--hair)">${[2,3,5].map(n=>`<button onclick="S.rules.everyN=${n};persist();sheetRules();render()" style="padding:7px 11px;font-weight:700;${S.rules.everyN===n?'background:var(--ink);color:var(--bg)':''}">${n}</button>`).join('')}</div></div>
+    ${ruleToggle('Showtime only','Voting unlocks at doors, closes at last call','showtimeOnly')}
+    ${ruleToggle('Encore mode','Top unplayed song becomes the guaranteed encore','encore')}
+    <button class="btn btn-primary btn-block" onclick="closeSheet()">Done</button>`);
+}
+function ruleToggle(t,s,key,forceOn){
+  const on = forceOn||S.rules[key]!==false&&(S.rules[key]||forceOn);
+  const val=S.rules[key]!==undefined?S.rules[key]:!!forceOn;
+  return `<div class="lrow" style="border:none;padding:12px 0"><div class="main"><div class="t">${t}</div><div class="s">${s}</div></div>
+    <div class="tgl ${val?'on':''}" onclick="S.rules['${key}']=${!val};persist();sheetRules();render()"></div></div>`;
+}
+function sheetBooking(){
+  openSheet(`<h3>Request booking</h3>
+    <div class="field"><label>Venue / event</label><input placeholder="The Fillmore"></div>
+    <div class="field"><label>Date</label><input type="date"></div>
+    <div class="field"><label>City</label><input placeholder="San Francisco, CA"></div>
+    <div class="field"><label>Message</label><textarea placeholder="Tell them about the show"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('Booking request sent')">Send request</button>`);
+}
+function sheetBuy(name,price){
+  openSheet(`<div class="kick">Buy</div><h3>${name}</h3>
+    <div class="field"><label>Size / variant</label><select><option>S</option><option>M</option><option>L</option><option>XL</option></select></div>
+    <div class="field"><label>Quantity</label><input type="number" value="1" min="1"></div>
+    <div class="total"><span class="muted">Total</span><span class="money">${price}</span></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('Added · receipt in You')">Confirm · ${price}</button>
+    <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:10px">Demo — no payment is taken.</p>`);
+}
+function sheetMembership(){
+  openSheet(`<div class="kick">Membership</div><h3>Inner Circle</h3>
+    <p style="font-size:13px;color:var(--muted)">Early drops, setlist input, monthly livestreams, member-only posts.</p>
+    <div class="total"><span class="muted">Monthly</span><span class="money">$5.00</span></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('Welcome to the Inner Circle')">Join · $5/mo</button>`);
+}
+function sheetMailing(){
+  openSheet(`<h3>Get show alerts</h3>
+    <div class="field"><label>Email</label><input type="email" placeholder="you@email.com"></div>
+    <button class="btn btn-primary btn-block" onclick="closeSheet();toast('You are on the list')">Sign up</button>`);
+}
+function follow(el,name){ const on=el.textContent.trim().toUpperCase()==='FOLLOWING'; el.textContent=on?'Follow':'Following'; el.style.color=on?'':'var(--ink)'; toast(on?'Unfollowed':'Following '+name); }
 
 /* ---- boot ---- */
 render();

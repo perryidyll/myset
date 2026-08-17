@@ -1,0 +1,262 @@
+# MySet — Project Handoff
+
+> **Purpose:** Seamless-pickup handover so a fresh Claude account (or a new collaborator) can continue the **MySet** project with zero context loss.
+> **Prepared:** 2026-08-12 · verified against on-disk state at `~/Docs/MySet/`
+> **One-liner:** MySet is a web app where a live audience votes — in real time, from the floor — on which songs a musician plays next, plus a full artist promo/community/revenue hub.
+
+---
+
+## Table of Contents
+
+1. [Overview & Concept](#1-overview--concept)
+2. [Current Build (tech + structure)](#2-current-build)
+3. [Feature Inventory](#3-feature-inventory)
+4. [How to Run / Preview](#4-how-to-run--preview)
+5. [Design / UX Notes](#5-design--ux-notes)
+6. [Next Steps / TODOs / Ideas](#6-next-steps--todos--ideas)
+7. [File-Path Index](#7-file-path-index)
+8. [Discrepancies (disk vs. memory)](#8-discrepancies-disk-vs-memory)
+
+---
+
+## 1. Overview & Concept
+
+**MySet** is a two-sided live-music product:
+
+- **Audience side (Fan):** During a live show, the crowd votes — from their phones, in real time — on *which song the artist plays next* and *in what order*. Votes reorder a ranked queue live. It's gamified: vote credits/coins, timed voting windows between songs, a crowned leader, "every Nth song is a crowd pick," and a guaranteed-encore mode. Fans can also spend to **boost** a song up the queue, **tip the band**, drop **emoji reactions** and **comments** on songs, and **rate** each song after it's played.
+- **Artist side (Artist):** A promo + operations hub. An **Artist Studio** to manage the setlist pool and configure voting rules + see insights, plus a rich **artist profile** (streaming/social links, music-purchase links, merch, tour dates + ticketing, community feed, shareable EPK with booking requests). The pitch: *"turn every set into a two-way night."*
+
+**Two-sided value:**
+- Fans get agency, connection, and a memorable participatory show.
+- Artists get engagement data, in-the-moment revenue (boosts/tips/merch), a fanbase hub, and set intelligence — all in one place.
+
+**Vision / positioning:** Minimal, premium, Apple-esque consumer product; brand feel is "Skool × Instagram × Airbnb." Tagline: **"the crowd builds your set."** Hero headline: **"Where the crowd decides what plays next."**
+
+**Name history:**
+- Originally named **"Encore"** (started 2026-07-22).
+- Renamed to **"MySet"** on **2026-07-22** (same day). The name "Encore" survives only as a *feature* name — **"Encore mode"** = the guaranteed-encore rule — which is intentionally kept because it's a natural music term.
+- **Note:** the localStorage state key and internal code comments still literally say `encore.*` (see §2). This is intentional/harmless legacy naming, not a bug.
+
+**Project relocation:** MySet was explicitly **moved out of the iOhm folder** to become its **own top-level project**, mirrored on Mac + SSD (mirror convention shared with the user's other projects). Do **not** file it back under iOhm.
+
+---
+
+## 2. Current Build
+
+**Type:** Single-file, self-contained front-end **prototype**. No build step, no dependencies, no framework. Vanilla HTML + CSS + JavaScript in one `index.html`. PWA-ready (Apple/mobile web-app meta tags, inline SVG favicon + apple-touch-icon, safe-area insets). Deployable to any static host; easy to later wrap as a native app.
+
+**Primary file:** `~/Docs/MySet/index.html` — ~81 KB, ~1,345 lines.
+
+**Tech details (verified in code):**
+- **Rendering:** A tiny hand-rolled SPA. Global mutable state object `S`; a single `render()` function acts as the router — it reads `S.role` (`fan`/`artist`) and `S.route` and swaps `#root.innerHTML` from string-template view functions (`viewHome`, `viewLive`, `viewProfile`, `viewFeed`, `viewDash`). Navigation via `go(route, artistId)`, `setRole(r)`.
+- **State persistence:** All live-show state persists to `localStorage` under key **`encore.state.v3`** (constant `KEY` at top of script; bumped from v2 → v3). `loadState()` seeds a default state object on first run; `saveState()`/`persist()` write it back.
+- **Cross-tab sync:** A `window.addEventListener('storage', …)` listener re-loads state and re-renders whenever another tab writes the key. **Open two tabs** to demo crowd ↔ stage live voting sync.
+- **Mock data:** `SEED` object holds 5 artists, 8 songs (each with `type`/`vibe`/`year` for filtering), and a 2-post feed. Images are remote Unsplash URLs in the `IMG` map (so an internet connection is needed for imagery).
+- **UI primitives:** `toast()`, `openSheet()`/`closeSheet()` (bottom-sheet modal), `confetti()`.
+- **Single design system** in one `<style>` block (CSS custom properties for theming; see §5).
+
+**Structure inside `index.html` (rough map):**
+- Lines ~16–498: `<style>` — full design system (tokens, components, venue dark scope, dark theme, responsive/phone tuning).
+- Lines ~506–620: state + mock data (`IMG`, `SEED`, `KEY`, `loadState`, cross-tab listener, `toast`/`sheet`/`confetti`).
+- Lines ~622–677: router `render()`, `topbar()`, `botnav()`.
+- Lines ~679–739: Fan Discover/Home (`viewHome`, `artistCard`).
+- Lines ~741–1079: **Live show** (the core) — `viewLive`, `voteCard`, `creditStrip`, `playedRow`, `react`, `castVote`, `showBoost`/`applyBoost`, `showTip`/`sendTip`, `showComments`/`addComment`, `simulateVotes`, `lockWinner`, `bindWindowTimer`, plus filter helpers. **Also contains dead code:** `camPlayer`, `CAMS`, `setCam`, `toggleStream`, `setStreamUrl` (multi-cam + livestream — defined but no longer called; see §8).
+- Lines ~1081–1219: Artist profile (`viewProfile`, `profilePanel`, `postCard`, `openBooking`).
+- Lines ~1221–1238: Community feed (`viewFeed`).
+- Lines ~1240–1338: Artist Studio (`viewDash`, `dashPanel`, `ruleCard`, `toggleReady`, `openUpload`).
+- Line ~1341: `render()` boot call.
+
+**Version control:**
+- Git repo lives in the **Mac copy only** (`~/Docs/MySet/.git`). Working tree currently **clean**, on branch `main`, up to date with `origin/main`.
+- **GitHub:** private repo `github.com/perryidyll/myset` (remote `origin`). Authed as `perryidyll`.
+- `gh` CLI path (per memory): `~/.local/tools/gh_2.93.0_macOS_arm64/bin/gh`.
+- Commit identity is set **repo-local** to perryidyll (global git identity is `wellmee26` — override per-repo when committing here).
+- **Commit history (most recent first):**
+  - `4b369bf` — Live page redesign (Concept B): pool-first, Now-Playing hero, no video *(current HEAD / origin/main)*
+  - `f2aa385` — Snapshot: cache live-page design v1 before redesign
+  - `c6b34d9` — Hero: add breathing room between tag and headline
+  - `2406035` — Optimize mobile: fix topbar overflow, declutter vote cards, PWA polish
+  - `3ed3030` — Initial commit — MySet prototype
+
+**Repo also contains:** `README.md`, `.gitignore`, `netlify.toml` (static, `publish="."`, no build), `backups/`, and `wireframes.html` (gitignored).
+
+---
+
+## 3. Feature Inventory
+
+Every feature currently built (verified in `index.html`):
+
+### Fan side
+
+**Discover / Home (`viewHome`)**
+- Gradient hero with the "Where the crowd decides what plays next" headline + two CTAs ("Join a live show", "Explore an artist").
+- "Live right now" horizontal-scroll rail of artist cards (live artists first).
+- "Rising near you" 3-up grid of artist cards.
+- "For artists" promo band → opens Artist Studio.
+
+**Live show / voting (`viewLive`) — the core experience**
+- **Now-Playing hero card** (`.np-hero`): big gradient card with cover art, title, duration, animated progress bar, pulsing "Now playing" label, and an animated equalizer. This is the redesigned (Concept B, 2026-08-06) top-of-page.
+- **Credit / window strip** (`creditStrip`): "Your votes" meter showing **N/10 left** as a fraction + meter; plus a **voting-window countdown ring** (conic-gradient timer, "closes soon — vote now") when vote windows are enabled.
+- **Vote pool** (`voteCard` list) — the main body ("Up next — you decide"): each song row shows rank (👑 for the leader, else `#n`), art, title, meta, live vote count, and an animated **fill bar** proportional to votes. Rows reorder by vote count. A **▲ vote button** casts/undoes a vote; disabled when out of credits or window closed.
+- **Per-song ⚡ Boost** button (desktop pill on the card; on mobile it moves into the reactions row).
+- **Per-song emoji reactions** (`react`): 🔥 / 😍 / 💜 with live counts; one active reaction per song (toggle/switch logic).
+- **Per-song comments** (`showComments`/`addComment`): opens a bottom sheet with the comment list + an input to post; comment counts shown on each card.
+- **Big "power actions"** below the pool: **⚡ Boost a song** (`showBoost` → tiered pricing sheet, "skip the line / extra votes / spotlight on the big screen") and **💸 Tip the band** (`showTip` → preset + custom amount + message; running "$X so far" total). Both fire confetti; **demo only, no payment taken.**
+- **"Played tonight"** list (`playedRow`): songs already played, each with a **1–3 tier thumbs rating** — 👍🏼 (1) / 🙌🏼🙌🏼 (2) / 🤘🏼🤘🏼🤘🏼 (3).
+- **Filter chips** (`filterChips`/`matchFilter`) on the pool: All / Originals / Covers / vibe tags (Upbeat, Anthemic, Chill, Acoustic) / decades (2020s, 2010s).
+- **Vote-window countdown timer** (`bindWindowTimer`): live per-second countdown; closes the window at 0.
+- **Artist-side controls** (when viewed as Artist): "↺ Simulate crowd" (`simulateVotes` — adds random votes to demo movement) and "Lock winner →" (`lockWinner` — moves current song to "played", promotes the top-voted song to Now Playing, reseeds counts, fires confetti).
+
+**Community feed (`viewFeed`)**
+- Composer box, artist posts (`postCard` with like/comment/share), and a **🏆 Superfan leaderboard** card with streak/achievement chips ("4-show streak", "Called the encore", "Top booster").
+
+**Artist profile (`viewProfile`)**
+- Cover image with a live "Live now — vote the setlist" pill (when live) and a Follow button.
+- **XL 172px avatar** with a **3-thumbnail overlapping cluster**; big name + verified check below (Instagram-style).
+- Stats row (Fans / Shows / Set rating 4.9★) with a big red **Join live** button (or "Get alerts" when offline).
+- Bio, then **tabbed panels** (`profilePanel`):
+  - **Links** — split into *Listen & follow* (Spotify/Apple/YouTube/Instagram/TikTok), *Buy the music* (Bandcamp, iTunes Store, Amazon Music), *Stay in the loop* (mailing list).
+  - **Music** — filterable ready-song list with preview buttons.
+  - **Merch** — product grid with add-to-cart.
+  - **Tour** — dated tour rows with ticket / "Vote live" CTAs.
+  - **Community** — "Inner Circle" members-only join card ($5/mo) + feed posts.
+  - **EPK** — electronic press kit: stat tiles, press-kit/stage-plot download buttons, and a **booking request** sheet (`openBooking`).
+
+### Artist side
+
+**Artist Studio / dashboard (`viewDash`)**
+- Greeting header + "View public profile" / "◉ Go live" actions.
+- KPI stat tiles (Fans, Votes cast 30d, Boost + merch revenue).
+- Segmented tabs (`dashPanel`):
+  - **Setlist pool** — filterable song list with per-song **toggle** to include/hide from tonight's vote pool (`toggleReady`); "＋ Add song" upload sheet (`openUpload`).
+  - **Voting rules** — toggle cards (`ruleCard`): **Vote windows** (5/10/15/20s), **Crowd-pick cadence** (every 2nd/3rd/5th), **Showtime only**, **Encore mode**; plus a "More ways to gamify" ideas card.
+  - **Insights** — "Most requested," "Where your crowd is," and a "Set intelligence" narrative card.
+
+### Cross-cutting
+
+- **Fan/Artist role toggle** in the top bar (`setRole`).
+- **Light ⇄ dark theme toggle** (🌙/☀️ button; `S.theme`, `body.theme-dark`). The live "venue" screen stays dark regardless.
+- **Cross-tab live sync** via the `storage` event (see §2).
+- **Bottom nav** (mobile) that swaps per role; **top bar** with brand, search (fan only), theme + role toggle, avatar.
+- **Toasts, bottom-sheet modals, confetti** throughout.
+
+### Present-but-dormant (dead code)
+
+- **Multi-cam placeholder player** (`camPlayer`, `CAMS`, `setCam`) and **YouTube/Twitch livestream embed** (`toggleStream`, `setStreamUrl`, `stream-wrap` CSS). These were **removed from the live page in the Concept B redesign (2026-08-06)** for MVP focus. The functions/CSS remain in the file but are **no longer called** — harmless, but note if cleaning up. State still carries `streamUrl`/`showStream`/`cam`. (The README still lists these as highlights — stale; see §8.)
+
+---
+
+## 4. How to Run / Preview
+
+It's a single static file — open it directly or serve the folder.
+
+**Locations (Mac ↔ SSD mirror):**
+- **Mac (source of truth + git):** `/Users/perryidyll/Docs/MySet/index.html`
+- **SSD (working-files mirror, no `.git`):** `/Volumes/IDYLL SSD 1/Docs/MySet/index.html`
+  - ✅ **Verified in sync 2026-08-12** (SSD remounted): `index.html` = 81,070 bytes, dated Aug 6 11:06, matching the Mac copy; `backups/`, `README.md`, `netlify.toml`, `wireframes.html`, `.gitignore` all present. Keep both copies in sync per the user's mirror convention after future edits.
+
+**Serve locally (from memory / README):**
+```bash
+python3 -m http.server 8940 -d "/Users/perryidyll/Docs/MySet"
+# then open http://localhost:8940
+```
+- README example uses port **8940**; memory notes it "was last served on :8940" (earlier sessions used :8940/older :8940-ish). Any port is fine. No `launch.json` is wired — start the server manually.
+- **To demo cross-tab sync:** open the URL in **two browser tabs** (or one Fan + one Artist), go to the Live page in both, and cast votes / lock winner in one to watch the other update live.
+
+**Deploy:**
+- Single static `index.html` — any static host works.
+- **Netlify:** drag-drop the folder (or just `index.html`) onto https://app.netlify.com/drop, **or** connect the `perryidyll/myset` repo. No build command; publish dir `/` (see `netlify.toml`).
+- **Currently NOT deployed anywhere** (no live URL). Do **not** push MySet to iohm.io — that CLI/site is a separate project.
+
+---
+
+## 5. Design / UX Notes
+
+**Aesthetic:** Apple-esque, minimal, premium; "Skool × Instagram × Airbnb." Light throughout **except** the live "venue" screen, which is dark.
+
+**Brand:**
+- Wordmark **"MySet"** + a white **equalizer-bars** logo mark (3 rounded vertical bars of varying height) inside an indigo-violet gradient rounded square. Matching inline-SVG favicon + apple-touch-icon. Brand shows a small "beta" tag in the top bar.
+- Tagline: **"the crowd builds your set."**
+
+**Color tokens (CSS custom properties in `:root`):**
+- Accent `#5b4be1` (signature indigo-violet); accent-2 `#8b5cf6`.
+- Primary gradient `--grad`: `linear-gradient(120deg,#6d5ef6 0%,#a855f7 45%,#ff5fa2 100%)`.
+- Live/red `#ff3b5c`, amber `#ff9f0a`, good/green `#2fbf71`.
+- Radii 14/22/30px; layered soft shadows; system font stack (SF Pro / -apple-system).
+
+**The "venue" live screen (dark mode):**
+- Scoped via `.venue` + `body.venue-scope` — overrides the CSS vars to a dark palette. **Gotcha (from memory, still relevant):** `--bg-elev` MUST be overridden inside `.venue` or vote rows render white; `body.venue-scope` bg must be dark to avoid a white scroll gap.
+- Background is **abstract neon ambience** — layered radial gradients (indigo/pink/violet/cyan) with `background-attachment:fixed` — not pure black.
+
+**Theming:**
+- `body.theme-dark` provides a full fan-side dark theme (separate from the always-dark venue).
+
+**Rating tiers:** 👍🏼 (1) / 🙌🏼🙌🏼 (2) / 🤘🏼🤘🏼🤘🏼 (3).
+
+**Responsive:** mobile-first; bottom nav on phones, hidden ≥821px; extensive `@media(max-width:560px)` phone tuning (top-bar de-crowding, vote-card compaction, boost moved into reactions row, safe-area insets for notched phones).
+
+**Personas / demo content:** Seed artist **Nova Vega** (Austin indie/dream-pop, "live now") is the default profile/live subject; supporting artists The Echo Method, Juna Sol, Moss & Marrow, PAPER KITE. Fan identity is "YOU." 8 seed songs (Golden Hour, Paper Moon, Static & Signal, Ceremony, Undertow, Bloom (acoustic), Cassette Dreams, Vega).
+
+**Live-page design history:** On **2026-08-06** the user chose **Concept B — "Now-Playing hero + up-next pool" (pool-first)** from 3 wireframes (in `wireframes.html`). The prior "v1" live design is snapshotted at `backups/index_live-v1_2026-08-06_c6b34d9.html` (git commit `c6b34d9`) — restore by copying it over `index.html`.
+
+---
+
+## 6. Next Steps / TODOs / Ideas
+
+**Status:** Front-end prototype only — **mock data, no backend, no auth, no real payments, no real audio.**
+
+**Productization / backend (the big lift to make it real):**
+- Real-time backend for live voting (WebSocket / Firebase / Supabase realtime) to replace the localStorage cross-tab hack — so an actual crowd on separate devices syncs.
+- Auth + accounts (fan + artist roles).
+- Payments for boosts / tips / merch / tickets / memberships (Stripe or similar) — currently all "demo only, no payment taken."
+- Real audio / streaming track integration for the setlist pool and previews.
+- Real artist onboarding: song upload, profile setup, go-live flow.
+- Ticketing + tour-date integration; EPK generation/sharing; booking-request routing.
+
+**In-app gamification ideas already noted (Studio "More ways to gamify" card):**
+- Vote credits tiering — free fans get a few per night, members get more.
+- Paid boosts & dedications that revenue-share with the artist.
+- Genre / era / tempo "battles" (e.g. "acoustic vs. electric").
+- Surprise "wildcard" slot the crowd can't see coming.
+
+**Housekeeping / cleanup:**
+- **Remove dead multi-cam + livestream code** (`camPlayer`, `CAMS`, `setCam`, `toggleStream`, `setStreamUrl` + their CSS + state keys `cam`/`streamUrl`/`showStream`) if the video features are staying out of MVP — currently unused but present.
+- **Update `README.md`** — its "Highlights" still advertise the multi-cam + livestream features that were cut in Concept B (stale).
+- **SSD mirror verified in sync (2026-08-12)** — no action needed; just keep it synced after future edits.
+- Consider renaming the internal `encore.*` state key / comments to `myset.*` for clarity (optional — a rename would orphan existing localStorage; bump the version key if so).
+
+**Deploy when ready:** connect `perryidyll/myset` to Netlify (or drag-drop) — zero-config static deploy. Not yet live anywhere.
+
+---
+
+## 7. File-Path Index
+
+| Item | Absolute path |
+|---|---|
+| **Project root (Mac, source of truth)** | `/Users/perryidyll/Docs/MySet/` |
+| **Main prototype** | `/Users/perryidyll/Docs/MySet/index.html` |
+| Live-page v1 backup (pre-Concept-B) | `/Users/perryidyll/Docs/MySet/backups/index_live-v1_2026-08-06_c6b34d9.html` |
+| Live-redesign wireframes (gitignored) | `/Users/perryidyll/Docs/MySet/wireframes.html` |
+| README | `/Users/perryidyll/Docs/MySet/README.md` |
+| Netlify config | `/Users/perryidyll/Docs/MySet/netlify.toml` |
+| .gitignore | `/Users/perryidyll/Docs/MySet/.gitignore` |
+| Git repo | `/Users/perryidyll/Docs/MySet/.git` (branch `main`, clean, = origin/main) |
+| **SSD mirror (working files, no git)** | `/Volumes/IDYLL SSD 1/Docs/MySet/index.html` ✅ *verified in sync 2026-08-12* |
+| GitHub remote | `https://github.com/perryidyll/myset` (private, origin) |
+| `gh` CLI (per memory) | `/Users/perryidyll/.local/tools/gh_2.93.0_macOS_arm64/bin/gh` |
+| Project memory file | `/Users/perryidyll/.claude/projects/-Users-perryidyll-Docs-iOhm--Self-Singing-Bowl-Product-Design-Renderings/memory/project_myset_app.md` |
+| localStorage key | `encore.state.v3` (legacy `encore.*` naming, intentional) |
+
+---
+
+## 8. Discrepancies (disk vs. memory)
+
+1. **SSD mirror — RESOLVED.** The SSD ("IDYLL SSD 1") was remounted 2026-08-12 and the MySet mirror was **verified in sync** (`index.html` 81,070 bytes, Aug 6 11:06, matching the Mac copy; all sibling files present). No action needed beyond keeping them synced after future edits.
+
+2. **README is stale on multi-cam + livestream.** `README.md` still lists "Multi-cam + livestream" as a headline feature and describes the in-app multi-camera player + embedded YouTube/Twitch stream. Per the memory note and confirmed in code, these were **removed from the live page in the Concept B redesign (2026-08-06)** — the functions/CSS remain as dead code but aren't rendered. Memory is correct; README needs updating.
+
+3. **Port note.** README's run example uses `:8940`; memory says it "was last served on :8940." Consistent. No `launch.json` is wired; server is started manually. (No real discrepancy — just confirming any port works.)
+
+4. **Naming:** Product is "MySet" everywhere user-facing, but the code's design-system comments still say "ENCORE" and the state key is `encore.state.v3`. This is the intentional legacy naming the memory flags — not a bug.
+
+Everything else in the memory file matches the on-disk code (feature set, state shape, credits=10, rating tiers, filter categories, Concept-B live layout, git history, brand/aesthetic).
