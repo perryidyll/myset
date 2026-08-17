@@ -4,8 +4,9 @@
 
 | | Link | Who |
 |---|---|---|
-| **Audience** | **myset.vip** | Everyone. No app, no login. |
-| **Your stage control** | **myset.vip/stage.html** | Just you. Code: see below |
+| **Audience — homepage** | **myset.vip** | Your page: photo, gig, big VOTE button |
+| **Audience — voting** | **myset.vip/vote.html** | Now playing · Up next · Vote |
+| **Your studio** | **myset.vip/studio.html** | Just you. Code: see below |
 
 Tell the room: *"Go to **myset.vip** and vote for what I play next."*
 (Say it as "my set dot vip". Consider a QR code on the tip jar / table tents.)
@@ -14,7 +15,9 @@ Tell the room: *"Go to **myset.vip** and vote for what I play next."*
 
 ## Running the show
 
-Open **myset.vip/stage.html** on your phone, enter your show code once (it remembers).
+Open **myset.vip/studio.html** on your phone, enter your show code once (it remembers).
+Three tabs: **Live** (run the show) · **Setlist** (add/hide/remove songs) · **Settings**
+(free votes per person, gig details, pause voting, end show).
 
 > **Your show code is never written down in this project.** It lives only in Netlify
 > under the `ADMIN_CODE` environment variable. To see or change it:
