@@ -60,6 +60,31 @@ If you are about to violate one, stop and say so rather than working around it.
 9. **The app must work fully with payments switched off.** If `STRIPE_SECRET_KEY`
    is absent, voting still works and the paid buttons degrade gracefully.
 
+## Profile & embeds
+
+9b. **A pasted URL is a parse input, never a record and never an iframe src.**
+    `_embeds.mjs` extracts an id, re-validates it against a strict pattern, and
+    rebuilds the URL from a literal template. Host checks are exact `Set` lookups:
+    `includes('youtube.com')` matches `evil.com/?x=youtube.com`, and both
+    `youtube.com@evil.tld` and `open.spotify.com.evil.tld` defeat naive matching.
+    Stored media is re-validated on read too, and `frame-src` in `netlify.toml`
+    is the third layer. Never accept pasted `<iframe>` markup.
+
+9c. **Embed attributes that look cosmetic are not.**
+    `referrerpolicy="strict-origin-when-cross-origin"` on YouTube — `no-referrer`
+    causes playback error 153. `encrypted-media` in `allow` or DRM fails silently.
+    `allow-storage-access-by-user-activation` in Apple's sandbox or every
+    subscriber is stuck on 30-second previews. Spotify and Apple heights are
+    discrete widget states — never wrap them in an aspect-ratio box.
+
+## Cost
+
+9d. **Every phone in the room polls.** At 3s, a two-hour gig with twenty people
+    is ~24,000 function calls — enough to exhaust a month's free tier in a few
+    shows, which is exactly what happened on 2026-08-31. `vote.html` backs off
+    to 6s then 12s when nothing changes and snaps back on any change or tap.
+    Do not reintroduce a fixed fast interval.
+
 ## Secrets & publishing
 
 10. **Only `./public` is published.** `publish = "."` once meant docs, backups and

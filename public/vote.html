@@ -416,10 +416,37 @@ async function handleReturn(){
 const money=c=>{const n=(Number(c)||0)/100;return '$'+(n%1?n.toFixed(2):String(n));};
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3600);}
 
+/* Adaptive polling. Every phone in the room hitting /api/show every 3 seconds
+   is 24,000 function calls for a two-hour gig — enough to burn a month's free
+   tier in a handful of shows. So: 3s while anything is actually moving, easing
+   to 12s when the room has gone quiet, and instantly back to 3s on any change
+   or any tap. Nobody can perceive the difference; the bill can. */
+let TIMER=null, QUIET=0, LASTSIG=null;
+function signature(){
+  const d=ST; if(!d)return null;
+  return [d.updatedAt,d.totalVotes,d.nowPlaying&&d.nowPlaying.id,d.status,d.windowOpen,
+          d.credits&&d.credits.remaining].join('|');
+}
+function schedule(){
+  clearTimeout(TIMER);
+  const wait = QUIET<5 ? 3000 : QUIET<12 ? 6000 : 12000;
+  TIMER=setTimeout(tick, wait);
+}
+async function tick(){
+  if(document.hidden){ schedule(); return; }
+  await load();
+  const sig=signature();
+  if(sig!==null && sig===LASTSIG) QUIET++; else { QUIET=0; LASTSIG=sig; }
+  schedule();
+}
+function wakeUp(){ QUIET=0; schedule(); }     // a tap means something is about to change
+
 (async function(){
   await load(); await handleReturn();
-  setInterval(()=>{if(!document.hidden)load();},3000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)load();});
+  LASTSIG=signature();
+  schedule();
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) wakeUp(); });
+  document.addEventListener('pointerdown',wakeUp,{passive:true});
 })();
 </script>
 </body>

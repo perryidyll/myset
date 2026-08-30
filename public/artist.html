@@ -62,8 +62,9 @@ body{padding-bottom:34px}
 .facade{position:relative;display:block;width:100%;padding:0;border:0;background:var(--bg-2);cursor:pointer;
   overflow:hidden;line-height:0}
 .facade img{width:100%;height:100%;object-fit:cover;display:block}
-.facade .noart{display:grid;place-items:center;width:100%;height:100%;background:var(--grad);
-  color:#fff;font-weight:600;font-size:15px;letter-spacing:-.01em;padding:26px;text-align:center;line-height:1.4}
+.facade .noart{display:flex;align-items:flex-end;width:100%;height:100%;background:var(--grad);
+  color:#fff;font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+  padding:16px 18px;text-align:left;line-height:1.3;opacity:.92}
 .facade .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   width:62px;height:62px;border-radius:50%;background:rgba(255,255,255,.94);display:grid;place-items:center;
   box-shadow:0 6px 22px rgba(0,0,0,.32);transition:transform .3s var(--spring)}
@@ -149,10 +150,12 @@ function render(){
     h+=`<div class="sect">Watch &amp; listen</div>`;
     h+=P.media.map(m=>{
       const shape=m.ratio?`r${m.ratio}`:'';
-      const style=m.height?`height:${m.height}px`:'';
+      // the facade is just a poster — the widget takes its real height on load,
+      // so a 450px Apple album card doesn't sit there as an empty slab first
+      const style=m.height?`height:${Math.min(m.height,168)}px`:'';
       const art=m.thumb
         ? `<img src="${esc(m.thumb)}" alt="" loading="lazy">`
-        : `<span class="noart">${esc(m.title||PROV[m.provider]||'Play')}</span>`;
+        : `<span class="noart">${esc(PROV[m.provider]||'Play')}</span>`;
       return `<div class="media rise" data-mid="${esc(m.mid)}">
         <button class="facade ${shape}" style="${shape?'':style}" data-mid="${esc(m.mid)}"
           aria-label="Play ${esc(m.title||PROV[m.provider]||'media')}">
