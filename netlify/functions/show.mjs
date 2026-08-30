@@ -1,4 +1,5 @@
-import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, json, cleanFanId } from './_lib.mjs';
+import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
+         json, cleanFanId } from './_lib.mjs';
 
 export default async (req) => {
   const fanId = cleanFanId(new URL(req.url).searchParams.get('fan'));
@@ -40,7 +41,11 @@ export default async (req) => {
     songs: ordered, played,
     replayCost: show.replayCost || 5,
     packs: show.packs,
-    credits: { remaining: Math.max(0, total - used), total, used, extra: me.extra || 0 },
+    credits: {
+      remaining: Math.max(0, total - used), total, used, extra: me.extra || 0,
+      paidLeft: unspentPaid(me, show),           // votes they bought and haven't spent
+      decided: me.decided === show.showId,       // already chose what happens to them
+    },
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),
     paymentsEnabled: !!process.env.STRIPE_SECRET_KEY,
     updatedAt: show.updatedAt,

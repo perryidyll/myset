@@ -17,6 +17,10 @@
   [headers.values]
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    # Only these three can ever be framed. A stored media record that somehow
+    # produced a different host would be blocked by the browser as well as by
+    # the parser in _embeds.mjs.
+    Content-Security-Policy = "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com https://embed.music.apple.com; object-src 'none'; base-uri 'self'"
 
 [[headers]]
   for = "/stage.html"

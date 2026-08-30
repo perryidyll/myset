@@ -1,7 +1,63 @@
-import { getShow, mutateShow, readFans, clearAllFanVotes, wipeFans, voteCounts,
+import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, checkAdmin, slug, defaultShow, sha,
-         normPacks, newShowId } from './_lib.mjs';
+         normPacks, newShowId, carryFans } from './_lib.mjs';
 import { archiveShow } from './_history.mjs';
+import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
+import { lookup } from './_embeds.mjs';
+
+/* Profile edits don't touch the show record at all, so they short-circuit before
+   the show mutation below. */
+async function handleProfile(action, body) {
+  if (action === 'profileSet') {
+    await mutateProfile((p) => {
+      for (const k of ['name', 'tagline', 'bio', 'photo'])
+        if (typeof body[k] === 'string') p[k] = body[k];
+      if (body.links && typeof body.links === 'object')
+        p.links = { ...p.links, ...body.links };
+      return true;
+    });
+    return json({ ok: true, profile: await getProfile() });
+  }
+
+  if (action === 'mediaAdd') {
+    const m = parseMedia(body.url);
+    if (!m) return bad('That isn’t a YouTube, Spotify or Apple Music link I can embed.', 400);
+    const info = await lookup(m);
+    if (!info.ok) return bad(info.why, 400);
+    const mid = 'm' + Math.random().toString(36).slice(2, 9);   // outside the CAS
+    let added = null;
+    await mutateProfile((p) => {
+      const dupe = p.media.some((x) =>
+        x.provider === m.provider && x.id === m.id &&
+        (x.i || null) === (m.i || null) && (x.list || null) === (m.list || null));
+      if (dupe) return false;
+      added = { mid, ...m, title: String(body.title || info.title || '').slice(0, 120),
+                thumb: String(info.thumb || '').slice(0, 300) };
+      p.media.push(added);
+      return true;
+    });
+    if (!added) return bad('That one’s already on your page.', 409);
+    return json({ ok: true, item: shapeMedia(added) });
+  }
+
+  if (action === 'mediaRemove') {
+    await mutateProfile((p) => { p.media = p.media.filter((x) => x.mid !== body.mid); return true; });
+    return json({ ok: true });
+  }
+
+  if (action === 'mediaMove') {
+    await mutateProfile((p) => {
+      const i = p.media.findIndex((x) => x.mid === body.mid);
+      const j = i + (body.dir === 'up' ? -1 : 1);
+      if (i < 0 || j < 0 || j >= p.media.length) return false;
+      [p.media[i], p.media[j]] = [p.media[j], p.media[i]];
+      return true;
+    });
+    return json({ ok: true });
+  }
+  return bad('unknown action', 400);
+}
+const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove']);
 
 export default async (req) => {
   if (!(await checkAdmin(req))) return bad('unauthorized', 401);
@@ -9,6 +65,8 @@ export default async (req) => {
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const action = body.action;
+  if (PROFILE_ACTIONS.has(action)) return handleProfile(action, body);
+
   let err = null, resetVotes = false, wipe = false;
 
   // Anything that starts a song needs the tally BEFORE it is wiped.
@@ -29,6 +87,7 @@ export default async (req) => {
   }
 
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
+  const prevShow = action === 'newShow' ? await getShow() : null;   // read before it resets
 
   await mutateShow((show) => {
     /* Records what a song won with, at the moment it is started. Without this the
@@ -143,7 +202,8 @@ export default async (req) => {
   });
 
   if (err) return bad(err[0], err[1]);
-  if (wipe) await wipeFans();
+  // paid votes survive a reset — only a fan who gifted them loses them
+  if (wipe) await carryFans(prevShow || (await getShow()));
   else if (resetVotes) await clearAllFanVotes();
   return json({ ok: true });
 };

@@ -44,7 +44,8 @@ a{color:inherit;text-decoration:none}
 
 .tabs{position:sticky;top:66px;z-index:29;display:flex;gap:5px;margin:14px 18px 0;padding:4px;
   background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1)}
-.tabs button{flex:1;padding:10px 8px;font-size:14.5px;font-weight:600;color:var(--muted);
+.tabs button{flex:1;padding:10px 4px;font-size:13px;font-weight:600;color:var(--muted);
+  white-space:nowrap;letter-spacing:-.015em;
   border-radius:var(--pill);transition:background .25s var(--ease),color .2s var(--ease)}
 .tabs button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)}
 
@@ -100,6 +101,7 @@ a{color:inherit;text-decoration:none}
   transition:box-shadow .2s var(--ease)}
 .inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
 .inp::placeholder{color:var(--faint)}
+textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 .field{padding:14px 18px 0}
 .field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px}
 .chips{display:flex;gap:9px;flex-wrap:wrap}
@@ -135,7 +137,7 @@ a{color:inherit;text-decoration:none}
 <div class="toast" id="toast"></div>
 <script>
 const $=s=>document.querySelector(s), API='/api';
-let CODE=localStorage.getItem('myset.admin')||'', D=null, REV=null, HIST=null, DETAIL=null, timer=null;
+let CODE=localStorage.getItem('myset.admin')||'', D=null, REV=null, HIST=null, DETAIL=null, PROF=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 
 async function api(p,o={}){
@@ -147,6 +149,7 @@ async function load(){
   if(!d.ok){ if(d.error==='unauthorized'){CODE='';localStorage.removeItem('myset.admin');} gate(d.error); return; }
   D=d; render();
   if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
+  if(TAB==='profile'&&!PROF) loadProf();
 }
 async function act(action,extra={}){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
@@ -165,13 +168,46 @@ function gate(err){
 }
 function unlock(){CODE=$('#code').value.trim();localStorage.setItem('myset.admin',CODE);start();}
 function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();
-  if(t==='money'){DETAIL=null;loadRev();loadHist();}}
+  if(t==='money'){DETAIL=null;loadRev();loadHist();}
+  if(t==='profile') loadProf();}
 /* Stripe is the source of truth for money, so this reads it directly rather than
    trusting the app's own ledger. Fetched on demand — never on the 4s live poll. */
 async function loadRev(force){
   if(REV&&!force)return;
   REV=await api('/revenue');
   if(TAB==='money'&&D)render();
+}
+async function loadProf(force){
+  if(PROF&&!force)return;
+  PROF=await fetch('/api/profile',{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+  if(TAB==='profile'&&D)render();
+}
+async function saveProfile(){
+  const v=id=>(($('#'+id)||{}).value||'').trim();
+  const IDS={spotify:'lkSpotify',applemusic:'lkApple',ytmusic:'lkYtm',instagram:'lkIg',website:'lkWeb'};
+  const typed={}; for(const k in IDS) typed[k]=v(IDS[k]);   // capture BEFORE the re-render
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'profileSet',
+    name:v('pfName'),tagline:v('pfTag'),bio:(($('#pfBio')||{}).value||''),
+    photo:v('pfPhoto'),links:typed})});
+  if(!d.ok){toast(d.error||'Could not save');return;}
+  PROF=null; await loadProf(true);
+  const saved=(PROF&&PROF.links)||{};
+  const dropped=Object.keys(IDS).filter(k=>typed[k]&&!saved[k]);
+  toast(dropped.length?`Saved — but ${dropped.join(', ')} didn’t look like a real link for that service`
+                      :'Profile saved');
+}
+async function addMedia(){
+  const el=$('#mdUrl'); const url=(el.value||'').trim(); if(!url)return;
+  const btn=$('#mdAdd'); if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span>';}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'mediaAdd',url})});
+  if(btn){btn.disabled=false;btn.textContent='Add';}
+  if(!d.ok){toast(d.error||'Could not add that');return;}
+  el.value=''; PROF=null; await loadProf(true); render(); toast('Added to your page');
+}
+async function media(action,mid,dir){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action,mid,dir})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  PROF=null; await loadProf(true); render();
 }
 async function loadHist(force){
   if(HIST&&!force)return;
@@ -358,6 +394,47 @@ function render(){
     }
   }
 
+  if(TAB==='profile'){
+    const P=PROF;
+    if(!P||!P.ok) body=`<div class="sec"><span class="kick">Your page</span></div>
+      <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`;
+    else{
+      const L=P.links||{};
+      body=`
+      <div class="wrap" style="padding-top:14px"><a class="big alt" href="/artist.html" target="_blank" style="justify-content:center">View your page ↗</a></div>
+
+      <div class="sec"><span class="kick">Who you are</span></div>
+      <div class="field"><label>Name</label><input class="inp" id="pfName" maxlength="60" value="${esc(P.name||'')}"></div>
+      <div class="field"><label>One line under your name</label><input class="inp" id="pfTag" maxlength="120" value="${esc(P.tagline||'')}" placeholder="Live, and you pick the songs."></div>
+      <div class="field"><label>Bio</label><textarea class="inp" id="pfBio" rows="6" maxlength="2000" placeholder="A few lines about you and your music.">${esc(P.bio||'')}</textarea></div>
+      <div class="field"><label>Cover photo</label><input class="inp" id="pfPhoto" maxlength="300" value="${esc(P.photo||'')}" placeholder="/img/band.jpg">
+        <p class="muted" style="font-size:12px;margin:6px 0 0">Photos live in the site itself — send me a new one and I’ll add it. <b>/img/band.jpg</b> is the one you have now.</p></div>
+
+      <div class="sec"><span class="kick">Listen &amp; follow</span></div>
+      <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Paste the share link for each. Anything that isn’t a real link from that service is dropped rather than shown broken.</p>
+      <div class="field"><label>Spotify</label><input class="inp" id="lkSpotify" value="${esc(L.spotify||'')}" placeholder="https://open.spotify.com/artist/…"></div>
+      <div class="field"><label>Apple Music</label><input class="inp" id="lkApple" value="${esc(L.applemusic||'')}" placeholder="https://music.apple.com/…"></div>
+      <div class="field"><label>YouTube Music</label><input class="inp" id="lkYtm" value="${esc(L.ytmusic||'')}" placeholder="https://music.youtube.com/…"></div>
+      <div class="field"><label>Instagram</label><input class="inp" id="lkIg" value="${esc(L.instagram||'')}" placeholder="https://instagram.com/…"></div>
+      <div class="field"><label>Website</label><input class="inp" id="lkWeb" value="${esc(L.website||'')}" placeholder="https://…"></div>
+      <div class="wrap" style="margin-top:14px"><button class="big" onclick="saveProfile()">Save profile</button></div>
+
+      <div class="sec"><span class="kick">Videos &amp; music</span><span class="kick">${P.media.length}/24</span></div>
+      <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Paste a YouTube, Spotify or Apple Music link. I check it exists before it goes on your page.</p>
+      <div class="wrap"><div style="display:flex;gap:8px">
+        <input class="inp" id="mdUrl" style="flex:1" placeholder="Paste a link" autocomplete="off">
+        <button class="act pri" id="mdAdd" style="min-width:64px" onclick="addMedia()">Add</button>
+      </div></div>
+      <div class="list" style="margin-top:14px">${P.media.map((m,i)=>`<div class="row">
+        <div class="m"><div class="t">${esc(m.title||m.provider)}</div>
+          <div class="by">${esc({youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'}[m.provider]||m.provider)}</div></div>
+        <button class="act" data-act="mup" data-id="${esc(m.mid)}" ${i===0?'disabled style="opacity:.3"':''}>↑</button>
+        <button class="act" data-act="mdn" data-id="${esc(m.mid)}" ${i===P.media.length-1?'disabled style="opacity:.3"':''}>↓</button>
+        <button class="act warn" data-act="mrm" data-id="${esc(m.mid)}">✕</button>
+      </div>`).join('')||'<div class="row muted">Nothing yet. Paste a link above.</div>'}</div>`;
+    }
+  }
+
   if(TAB==='settings'){
     body=`
     <div class="sec"><span class="kick">Free votes per person</span></div>
@@ -428,6 +505,7 @@ function render(){
     <button class="${TAB==='live'?'on':''}" onclick="setTab('live')">Live</button>
     <button class="${TAB==='setlist'?'on':''}" onclick="setTab('setlist')">Setlist</button>
     <button class="${TAB==='money'?'on':''}" onclick="setTab('money')">Money</button>
+    <button class="${TAB==='profile'?'on':''}" onclick="setTab('profile')">Profile</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${body}
   <div style="padding:22px 14px;text-align:center"><a class="kick" href="/">← View the audience page</a></div>`;
@@ -455,6 +533,9 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='del') removeSong(id);
   if(b.dataset.act==='show') openShow(id);
   if(b.dataset.act==='recon') reconcile(id);
+  if(b.dataset.act==='mup') media('mediaMove',id,'up');
+  if(b.dataset.act==='mdn') media('mediaMove',id,'down');
+  if(b.dataset.act==='mrm') media('mediaRemove',id);
 });
 async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'venue',venue:$('#fVenue').value})});

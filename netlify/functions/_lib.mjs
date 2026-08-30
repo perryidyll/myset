@@ -249,6 +249,30 @@ export async function clearAllFanVotes() {
     )
   );
 }
+/* Votes someone PAID for shouldn't evaporate because the artist tapped
+   "New show". Unspent paid votes carry into the next show unless the fan chose
+   to gift them. Everything else — free credits, picks, timestamps — resets. */
+export function unspentPaid(fan, show) {
+  const extra = fan.extra || 0;
+  if (extra <= 0) return 0;
+  const total = (show.freeCredits || 0) + extra;
+  return Math.max(0, Math.min(extra, total - creditsUsed(fan, show)));
+}
+export async function carryFans(show) {
+  await Promise.all(
+    Array.from({ length: SHARDS }, (_, n) =>
+      casDoc(shardKey(n), () => ({}), (bag) => {
+        for (const id of Object.keys(bag)) {
+          const carry = unspentPaid(bag[id], show);
+          if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted: bag[id].gifted || 0 };
+          else delete bag[id];          // nothing owed — don't keep the record
+        }
+        return true;
+      }, null).catch(() => {})
+    )
+  );
+}
+
 export async function wipeFans() {
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
@@ -258,15 +282,15 @@ export async function wipeFans() {
 }
 
 /* ---------- meta (tips / payment markers) ---------- */
-export const emptyMeta = () => ({ tips: [], paid: {} });
+export const emptyMeta = () => ({ tips: [], paid: {}, gifts: [] });
 export async function readMeta() {
   const { data } = await readDoc('meta', null);
   const m = data || emptyMeta();
-  m.tips ||= []; m.paid ||= {};
+  m.tips ||= []; m.paid ||= {}; m.gifts ||= [];
   return m;
 }
 export const mutateMeta = (fn) =>
-  casDoc('meta', emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; return fn(m); });
+  casDoc('meta', emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; return fn(m); });
 
 /* ---------- derived ---------- */
 /** A vote on an already-played song costs more (a "play it again" request). */

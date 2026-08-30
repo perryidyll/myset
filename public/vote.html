@@ -142,7 +142,7 @@ function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
 const FAN=fanId();
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
-let ST=null,busy=new Set(),sel={},FILTER='',FOCUS=false,POP=null,PREV=null,BOOTED=false;
+let ST=null,busy=new Set(),sel={},FILTER='',FOCUS=false,POP=null,PREV=null,BOOTED=false,SHEETED=false;
 
 /* skeleton while the first load lands */
 $('#app').innerHTML=`<div class="head"><div><div class="sk" style="width:130px;height:21px"></div>
@@ -268,6 +268,9 @@ function render(){
   if(cr&&PREV!==null&&PREV!==c.remaining){ cr.classList.add('bump'); setTimeout(()=>cr.classList.remove('bump'),320); }
   PREV=c.remaining;
 
+  // they paid for votes the night ended before they could spend — their call
+  if(ended&&c.paidLeft>0&&!c.decided&&!SHEETED){ SHEETED=true; setTimeout(()=>openLeftover(c.paidLeft),700); }
+
   const dock=$('#dock');
   if(ended){ dock.hidden=true; }
   else{ dock.hidden=false;
@@ -290,6 +293,27 @@ function setFilter(v){ FILTER=v; FOCUS=false; render(); }
 /* ── sheets ── */
 function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}
 function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+function openLeftover(n){
+  openSheet(`<h3>You\u2019ve got ${n} vote${n===1?'':'s'} left</h3>
+    <p class="lede">${n===1?'That one':'Those'} you paid for and the night ended first. Your call \u2014 no charge either way.</p>
+    <div class="tiles">
+      <button class="tile" id="lf-keep" onclick="decideLeftover('keep')"><b>Keep ${n===1?'it':'them'}</b><span>For the next show</span></button>
+      <button class="tile" id="lf-gift" onclick="decideLeftover('gift')"><b>Let ${esc((ST.artist||'').split(' ')[0]||'them')} keep it</b><span>Call it a tip</span></button>
+    </div>
+    <p class="fine">Do nothing and ${n===1?'it stays':'they stay'} yours.</p>`);
+}
+async function decideLeftover(choice){
+  closeSheet();
+  try{
+    const r=await fetch(`${API}/gift`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({fan:FAN,choice})});
+    const d=await r.json();
+    if(!d.ok){toast('Couldn\u2019t save that \u2014 your votes are safe');return;}
+    if(choice==='gift'){ buzz([10,40,10]); toast('Lovely \u2014 thank you'); }
+    else toast('Saved \u2014 they\u2019ll be here next show');
+  }catch(e){ toast('Couldn\u2019t save that \u2014 your votes are safe'); }
+  load();
+}
 function openBuy(){
   if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab Perry between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.pack='small';
