@@ -57,8 +57,9 @@ export default async (req) => {
       mode: 'payment',
       line_items: [line],
       metadata,
-      success_url: `${origin}/?paid={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/?cancelled=1`,
+      // MUST be the page that calls /api/confirm — only vote.html redeems the session
+      success_url: `${origin}/vote.html?paid={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/vote.html?cancelled=1`,
     });
     return json({ ok: true, url: session.url });
   } catch (e) {

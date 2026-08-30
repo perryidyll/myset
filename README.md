@@ -6,25 +6,26 @@ MySet is a web app where a live audience votes — in real time, from the floor 
 musician or band plays next, and in what order. It doubles as an artist hub for promotion, community,
 and revenue (streaming/social links, music sales, merch, tour dates, ticketing, EPK, booking).
 
-This repository contains a self-contained, single-file front-end **prototype** (`index.html`) — no build
-step, no dependencies. Open it in any browser or drop it on any static host.
+This repository is the **live product** running at **https://myset.vip** — static pages in `public/`
+plus Netlify Functions in `netlify/functions/` backed by Netlify Blobs, taking real payments via Stripe.
 
-## Highlights
+> **Read [`INVARIANTS.md`](INVARIANTS.md) before changing anything.** It records storage behaviour
+> that will silently lose votes if you reintroduce it, plus the money and publishing rules.
 
-- **Live crowd voting** — ranked queue that reorders by votes, vote windows, "every Nth song is a
-  crowd pick", vote credits (e.g. `10/10 left`), and a guaranteed-encore mode.
-- **In-the-moment revenue** — a prominent **Boost a song** action and a **Tip the band** jar
-  (revenue-share / 100%-to-artist), plus per-song boosts.
-- **Engagement** — per-song emoji reactions and comments, plus a "Played tonight" list with a
-  1–3 tier performance rating (👍🏼 / 🙌🏼🙌🏼 / 🤘🏼🤘🏼🤘🏼).
-- **Multi-cam + livestream** — an in-app multi-camera placeholder player and an embedded
-  YouTube/Twitch livestream so remote fans can watch and still vote / boost / tip.
-- **Artist profile** — streaming, social, and music-purchase links (Bandcamp, iTunes, Amazon Music),
-  merch, tour dates + ticketing, community feed, and a shareable EPK with booking requests.
-- **Artist Studio** — manage the setlist pool, configure voting rules, and see insights.
-- **Design** — minimal, premium, Apple-esque. Light/dark theme toggle; the live "venue" view stays in
-  a dark, neon-ambient mode. State persists in `localStorage` and syncs across browser tabs (open two
-  tabs to see the crowd ↔ stage sync live).
+## What it actually does
+
+- **Live crowd voting** — one shared, real-time tally across every phone in the room. Songs rank by
+  votes; ties go to whichever was voted for first. Top-voted song is what the artist plays next.
+- **Vote credits** — a few free votes per person per round; starting a song refreshes everyone's.
+- **Replay requests** — already-played songs stay votable at a higher cost (default 5 votes).
+- **Payments (Stripe)** — buy extra votes, or tip the artist. Verified server-side before anything
+  is granted; each checkout redeems exactly once.
+- **Artist Studio** (`/studio.html`, passcode-protected) — run the show (start top-voted, start any
+  song, pause voting, undo), manage the setlist (add / hide / remove / edit artist), and tune
+  settings (free votes, replay cost, gig details).
+- **Search** the setlist by song title or artist.
+
+Not built yet: multi-artist accounts, auth, audio playback, merch/ticketing.
 
 ## Run locally
 
@@ -37,9 +38,18 @@ python3 -m http.server 8940
 
 ## Deploy
 
-Any static host works. For **Netlify**, drag-and-drop this folder (or just `index.html`) onto
-https://app.netlify.com/drop, or connect this repo — no build command, publish directory `/`.
+Deploys to the Netlify project **mysetvip**:
+
+```bash
+cd ~/Docs/MySet && netlify deploy --build --prod
+```
+
+**The publish directory is `public/` and must stay that way** (see INVARIANT 10) — publishing the
+repo root once exposed docs, backups and the design handoff on the live domain.
+
+Required environment variables (Netlify, never in the repo):
+`ADMIN_CODE` (Studio passcode) and `STRIPE_SECRET_KEY` (payments; the app degrades gracefully without it).
 
 ---
 
-> Prototype only: mock data, no backend/auth/payments/real audio yet.
+> Single-artist product today: no multi-artist accounts or auth, and no audio playback.

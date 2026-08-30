@@ -39,7 +39,14 @@ export default async (req) => {
     return json({ ok: true, already: true, ...(m.paid[sessionId] || {}) });
   }
   if (md.kind === 'votes' && who && granted) {
-    await mutateFan(who, (me) => { me.extra = (me.extra || 0) + granted; return true; });
+    // INVARIANT 4: verify the grant actually stuck. The session is already claimed,
+    // so a silent write failure would lose paid-for votes permanently.
+    let target = null;
+    await mutateFan(
+      who,
+      (me) => { target = (me.extra || 0) + granted; me.extra = target; return true; },
+      (me) => target !== null && (me.extra || 0) >= target
+    );
   }
   return json({ ok: true, kind: md.kind || 'unknown', amount, granted });
 };

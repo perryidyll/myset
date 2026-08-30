@@ -1,5 +1,5 @@
 import { getShow, mutateShow, readFans, clearAllFanVotes, wipeFans, voteCounts,
-         json, bad, checkAdmin, slug, defaultShow } from './_lib.mjs';
+         firstVotedAt, rankSongs, json, bad, checkAdmin, slug, defaultShow } from './_lib.mjs';
 
 export default async (req) => {
   if (!checkAdmin(req)) return bad('unauthorized', 401);
@@ -10,8 +10,8 @@ export default async (req) => {
   let err = null, resetVotes = false, wipe = false;
 
   // actions that need vote counts must read fans first
-  let counts = null;
-  if (action === 'playTop') counts = voteCounts(await readFans());
+  let counts = null, firstAt = null;
+  if (action === 'playTop') { const f = await readFans(); counts = voteCounts(f); firstAt = firstVotedAt(f); }
 
   await mutateShow((show) => {
     switch (action) {
@@ -25,10 +25,11 @@ export default async (req) => {
         break;
       }
       case 'playTop': {
-        const pool = show.songs
-          .filter((s) => s.active !== false && s.id !== show.nowPlaying)
-          .filter((s) => !show.played.includes(s.id) || (counts[s.id] || 0) > 0)
-          .sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
+        const pool = rankSongs(
+          show.songs
+            .filter((s) => s.active !== false && s.id !== show.nowPlaying)
+            .filter((s) => !show.played.includes(s.id) || (counts[s.id] || 0) > 0),
+          counts, firstAt);
         if (!pool.length) { err = ['nothing left in the pool', 409]; return false; }
         if (show.nowPlaying && !show.played.includes(show.nowPlaying)) show.played.push(show.nowPlaying);
         show.played = show.played.filter((p) => p !== pool[0].id);

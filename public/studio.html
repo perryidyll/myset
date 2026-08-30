@@ -9,8 +9,6 @@
 <meta name="apple-mobile-web-app-title" content="Studio" />
 <title>Artist Studio — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
@@ -167,7 +165,9 @@ function render(){
   const s=D.show, songs=D.songs;
   const now=songs.find(x=>x.now);
   const pool=songs.filter(x=>!x.played&&!x.now&&x.active!==false);
-  const top=pool[0];
+  // must mirror admin.mjs playTop: unplayed songs PLUS played songs with replay votes
+  const startPool=songs.filter(x=>!x.now&&x.active!==false&&(!x.played||x.votes>0));
+  const top=startPool[0];
 
   let body='';
   if(TAB==='live'){
@@ -215,12 +215,12 @@ function render(){
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
         <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden':'In the pool'}${x.votes?' · '+x.votes+' votes':''}</div></div>
-      <button class="act" onclick="editArtist('${x.id}','${esc(x.title).replace(/'/g,'&#39;')}','${esc(x.artist||'').replace(/'/g,'&#39;')}')">Edit</button>
+      <button class="act" data-act="edit" data-id="${x.id}">Edit</button>
       <button class="act" onclick="act('toggleSong',{song:'${x.id}'})">${x.active===false?'Show':'Hide'}</button>
-      <button class="act warn" onclick="if(confirm('Remove ${esc(x.title).replace(/'/g,'')} from your setlist?'))act('removeSong',{song:'${x.id}'})">✕</button>
+      <button class="act warn" data-act="del" data-id="${x.id}">✕</button>
     </div>`).join('')}</div>
     <div class="wrap" style="margin-top:18px">
-      <button class="big alt" onclick="if(confirm('Restore the original 31-song setlist? Songs you added will be removed.'))act('resetSetlist')">↺ Restore default setlist</button>
+      <button class="big alt" onclick="if(confirm('Restore the default setlist? Songs you added will be removed.'))act('resetSetlist')">↺ Restore default setlist</button>
     </div>`;
   }
 
@@ -284,10 +284,24 @@ function render(){
 }
 function addSong(){const el=$('#newSong'),ea=$('#newArtist');const t=el.value.trim();if(!t)return;
   const a=ea?ea.value.trim():'';el.value='';if(ea)ea.value='';act('addSong',{title:t,artist:a});}
-function editArtist(id,title,artist){
-  const a=prompt('Artist for “'+title+'”:',artist==='— no artist —'?'':artist);
+/* Song titles/artists are user text — never interpolate them into an onclick.
+   Look the song up from state by id instead. */
+function songById(id){ return (D&&D.songs||[]).find(x=>x.id===id); }
+function editArtist(id){
+  const x=songById(id); if(!x)return;
+  const a=prompt('Artist for “'+x.title+'”:', x.artist||'');
   if(a===null)return; act('editSong',{song:id,artist:a});
 }
+function removeSong(id){
+  const x=songById(id); if(!x)return;
+  if(confirm('Remove “'+x.title+'” from your setlist?')) act('removeSong',{song:id});
+}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b)return;
+  const id=b.getAttribute('data-id');
+  if(b.dataset.act==='edit') editArtist(id);
+  if(b.dataset.act==='del') removeSong(id);
+});
 async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'venue',venue:$('#fVenue').value})});
   await api('/admin',{method:'POST',body:JSON.stringify({action:'city',city:$('#fCity').value})});

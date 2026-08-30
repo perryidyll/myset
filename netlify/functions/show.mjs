@@ -1,4 +1,4 @@
-import { getShow, readFans, voteCounts, firstVotedAt, creditsUsed, costOf, json, cleanFanId } from './_lib.mjs';
+import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, json, cleanFanId } from './_lib.mjs';
 
 export default async (req) => {
   const fanId = cleanFanId(new URL(req.url).searchParams.get('fan'));
@@ -17,15 +17,11 @@ export default async (req) => {
   });
 
   // songs still to play
-  const songs = show.songs
+  const songsRaw = show.songs
     .filter((s) => s.active !== false)
     .filter((s) => s.id !== show.nowPlaying && !show.played.includes(s.id))
-    .map(shape)
-    // most votes first; equal votes -> whoever was voted for first; then A–Z
-    .sort((a, b) =>
-      b.votes - a.votes ||
-      (a.firstAt || Number.MAX_SAFE_INTEGER) - (b.firstAt || Number.MAX_SAFE_INTEGER) ||
-      a.title.localeCompare(b.title));
+    .map(shape);
+  const ordered = rankSongs(songsRaw, counts, firstAt);
 
   // already played — still votable, at the higher replay cost
   const played = show.played
@@ -41,7 +37,7 @@ export default async (req) => {
     artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
     status: show.status, windowOpen: !!show.windowOpen,
     nowPlaying: np ? { id: np.id, title: np.title, artist: np.artist || '' } : null,
-    songs, played,
+    songs: ordered, played,
     replayCost: show.replayCost || 5,
     credits: { remaining: Math.max(0, total - used), total, used, extra: me.extra || 0 },
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),

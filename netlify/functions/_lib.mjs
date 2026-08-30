@@ -242,6 +242,16 @@ export function firstVotedAt(fans) {
   return first;
 }
 
+/** THE ordering rule for "what plays next". Used by show, stage and playTop so
+ *  the audience can never be shown a winner the Studio won't start. */
+export function rankSongs(list, counts, first) {
+  const F = (id) => first[id] || Number.MAX_SAFE_INTEGER;
+  return [...list].sort((a, b) =>
+    (counts[b.id] || 0) - (counts[a.id] || 0) ||
+    F(a.id) - F(b.id) ||
+    a.title.localeCompare(b.title));
+}
+
 export function voteCounts(fans) {
   const counts = {};
   for (const id of Object.keys(fans))
@@ -262,7 +272,8 @@ export const json = (body, status = 200) =>
 export const bad = (msg, status = 400) => json({ ok: false, error: msg }, status);
 
 export function checkAdmin(req) {
-  const expected = process.env.ADMIN_CODE || 'letmein';
+  const expected = process.env.ADMIN_CODE;
+  if (!expected) return false;          // fail closed — never fall back to a known default
   const url = new URL(req.url);
   const given = req.headers.get('x-admin-code') || url.searchParams.get('code') || '';
   return !!given && given === expected;

@@ -21,9 +21,11 @@ export default async (req) => {
   try {
     await mutateFan(fan, (me) => {
       me.ts ||= {};
+      // window closed => no changes at all, in or out (an un-vote while paused
+      // could not be re-cast and would silently drop the on-stage tally)
+      if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
       const at = me.v.indexOf(song);
       if (at >= 0) { me.v.splice(at, 1); delete me.ts[song]; want = false; outcome = { voted: false }; return true; }
-      if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
       const total = show.freeCredits + (me.extra || 0);
       if (creditsUsed(me, show) + cost > total) { err = ['no-credits', 402]; return false; }
       me.v.push(song);

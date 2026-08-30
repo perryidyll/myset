@@ -23,7 +23,7 @@ Three tabs: **Live** (run the show) · **Setlist** (add/hide/remove songs) · **
 > under the `ADMIN_CODE` environment variable. To see or change it:
 > Netlify → project **mysetvip** → Site configuration → Environment variables → `ADMIN_CODE`.
 
-- **▶ START TOP VOTED** — the big red button. Plays whatever is winning, moves the
+- **▶ Start top voted** — the big button. Plays whatever is winning, moves the
   current song to "Played", and **refreshes everyone's votes** for the next round.
 - **▶ Start** on any row — override and start that specific song instead.
 - **OPEN / PAUSE** — pause voting during a song, open it between songs. (Leaving it
@@ -58,7 +58,7 @@ export PATH="$HOME/.local/node/bin:$PATH" && netlify env:set STRIPE_SECRET_KEY "
 3. Trigger a redeploy.
 
 Then the buttons go live:
-- **Extra votes** — $3 → 5 votes, $7 → 15 votes (credited automatically on return)
+- **Extra votes** — $3 → 5 votes, $7 → 15 votes (verified with Stripe, then credited automatically when the buyer lands back on the voting page)
 - **Tips** — $5 / $10 / $20 / custom, with an optional note you'll see on stage
 
 Money lands in your Stripe account. Payment is verified server-side before any votes

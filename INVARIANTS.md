@@ -31,6 +31,10 @@ If you are about to violate one, stop and say so rather than working around it.
 
 ## Money
 
+5b. **Stripe's `success_url` must point at the page that calls `/api/confirm`.**
+   It is `/vote.html`. Pointing it anywhere else takes the money and grants
+   nothing — that shipped once and was caught in review, not by a user.
+
 6. **Never grant anything from a client claim.** `/api/confirm` retrieves the
    Checkout Session from Stripe server-side and requires
    `payment_status === 'paid'` before granting votes or recording a tip.
@@ -57,6 +61,18 @@ If you are about to violate one, stop and say so rather than working around it.
 12. **`STRIPE_SECRET_KEY` is server-side only**, never referenced from anything in
     `public/`.
 
+## Ordering
+
+12b. **One ordering rule, one implementation.** `rankSongs()` in `_lib.mjs` is the
+    only definition of "what plays next" (votes desc -> earliest vote -> title).
+    `show.mjs`, `stage.mjs` and `admin.mjs`'s `playTop` all call it. They drifted
+    once and the audience was shown a winner the Studio would not start.
+
+12c. **Never interpolate a song title or artist into an `onclick`.** `esc()` is an
+    HTML escaper; the parser decodes it back before the JS is compiled, which both
+    broke every song with an apostrophe and opened an injection hole. Use
+    `data-` attributes and a delegated listener.
+
 ## Show behaviour
 
 13. **A fan can never spend more credits than they have.** Enforced server-side in
@@ -70,6 +86,12 @@ If you are about to violate one, stop and say so rather than working around it.
     the credit; it must never double-count.
 
 ## Live-show safety
+
+15b. **Voting paused means no changes at all** — a fan must not be able to remove
+    an existing vote either, because they could not re-cast it.
+
+15c. **`checkAdmin` fails closed.** If `ADMIN_CODE` is unset, deny. Never fall back
+    to a default that lives in the repo.
 
 16. **Nothing in the app may break the gig.** Every failure path degrades to "the
     setlist is still readable". No error state should block the page from rendering.

@@ -66,6 +66,7 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
 .mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
 .muted{color:var(--muted)}
 .hidden{display:none!important}
+[hidden]{display:none!important}   /* author display:* otherwise beats the UA rule */
 .kick{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
 
 /* ── live dot ───────────────────────────────────────────── */
