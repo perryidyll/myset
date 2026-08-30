@@ -1,7 +1,7 @@
 import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad, checkAdmin } from './_lib.mjs';
 
 export default async (req) => {
-  if (!checkAdmin(req)) return bad('unauthorized', 401);
+  if (!(await checkAdmin(req))) return bad('unauthorized', 401);
   const [show, fans, meta] = await Promise.all([getShow(), readFans(), readMeta()]);
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);

@@ -1,8 +1,8 @@
 import { getShow, mutateShow, readFans, clearAllFanVotes, wipeFans, voteCounts,
-         firstVotedAt, rankSongs, json, bad, checkAdmin, slug, defaultShow } from './_lib.mjs';
+         firstVotedAt, rankSongs, json, bad, checkAdmin, slug, defaultShow, sha } from './_lib.mjs';
 
 export default async (req) => {
-  if (!checkAdmin(req)) return bad('unauthorized', 401);
+  if (!(await checkAdmin(req))) return bad('unauthorized', 401);
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
@@ -70,6 +70,12 @@ export default async (req) => {
         show.replayCost = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5)); break;
       case 'removeSong': show.songs = show.songs.filter((s) => s.id !== body.song); break;
       case 'unplay': show.played = show.played.filter((id) => id !== body.song); break;
+      case 'setCode': {
+        const code = String(body.code || '');
+        if (code.length < 4) { err = ['Pick at least 4 characters', 400]; return false; }
+        show.codeHash = sha(code);          // stored hashed, never in plaintext
+        break;
+      }
       case 'resetVotes': resetVotes = true; break;
       case 'resetSetlist': show.songs = defaultShow().songs; break;
       case 'newShow':

@@ -108,6 +108,11 @@ a{color:inherit;text-decoration:none}
 .chip:active{transform:scale(.93)}
 .chip.on{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(255,55,95,.34)}
 
+.warnbox{margin:16px 18px 0;padding:18px 20px;border-radius:var(--r-lg);background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px rgba(255,69,110,.3)}
+.warnbox b{display:block;font-size:16.5px;font-weight:600;letter-spacing:-.015em;color:var(--accent)}
+.warnbox p{margin:5px 0 14px;font-size:14px;color:var(--ink-2);line-height:1.4}
+.warnbox .big{margin:0}
 .gate{max-width:360px;margin:16vh auto;padding:0 24px}
 .gate h2{font-size:29px;font-weight:700;letter-spacing:-.03em;margin:0 0 8px}
 .tip{display:flex;justify-content:space-between;padding:12px 16px;border-top:.5px solid var(--hair);font-size:14.5px}
@@ -130,7 +135,7 @@ a{color:inherit;text-decoration:none}
 <div class="toast" id="toast"></div>
 <script>
 const $=s=>document.querySelector(s), API='/api';
-let CODE=localStorage.getItem('myset.admin')||'', D=null, timer=null;
+let CODE=localStorage.getItem('myset.admin')||'', D=null, REV=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 
 async function api(p,o={}){
@@ -141,6 +146,7 @@ async function load(){
   const d=await api('/stage');
   if(!d.ok){ if(d.error==='unauthorized'){CODE='';localStorage.removeItem('myset.admin');} gate(d.error); return; }
   D=d; render();
+  if(TAB==='money'&&!REV) loadRev();   // deep-link / reload straight into Money
 }
 async function act(action,extra={}){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
@@ -158,7 +164,22 @@ function gate(err){
   setTimeout(()=>$('#code').focus(),100);
 }
 function unlock(){CODE=$('#code').value.trim();localStorage.setItem('myset.admin',CODE);start();}
-function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();}
+function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();
+  if(t==='money') loadRev();}
+/* Stripe is the source of truth for money, so this reads it directly rather than
+   trusting the app's own ledger. Fetched on demand — never on the 4s live poll. */
+async function loadRev(force){
+  if(REV&&!force)return;
+  REV=await api('/revenue');
+  if(TAB==='money'&&D)render();
+}
+async function recover(){
+  toast('Checking Stripe\u2026');
+  const d=await api('/revenue',{method:'POST'});
+  if(!d.ok){toast(d.error||'Could not reach Stripe');return;}
+  toast(d.recovered?`Delivered ${d.recovered} payment${d.recovered===1?'':'s'}`:'Nothing outstanding');
+  await loadRev(true); await load();
+}
 
 function render(){
   if(!D||!D.show)return;                 // data not in yet — never crash the page
@@ -224,6 +245,39 @@ function render(){
     </div>`;
   }
 
+  if(TAB==='money'){
+    const R=REV;
+    if(!R) body=`<div class="sec"><span class="kick">Money</span></div>
+      <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Reading Stripe\u2026</div></div>`;
+    else if(!R.ok) body=`<div class="sec"><span class="kick">Money</span></div>
+      <div class="list"><div class="row muted">Couldn\u2019t reach Stripe just now. Pull down to retry.</div></div>`;
+    else if(!R.enabled) body=`<div class="sec"><span class="kick">Money</span></div>
+      <div class="list"><div class="row muted">Card payments are off. Set STRIPE_SECRET_KEY in Netlify to switch them on.</div></div>`;
+    else{
+      const t=R.totals;
+      body=`
+      <div class="stats">
+        <div class="c"><b class="mono acc">$${t.all.toFixed(2)}</b><span>All time</span></div>
+        <div class="c"><b class="mono">$${t.votes.toFixed(2)}</b><span>Extra votes</span></div>
+        <div class="c"><b class="mono">$${t.tips.toFixed(2)}</b><span>Tips</span></div>
+      </div>
+      ${R.unredeemed?`<div class="warnbox rise">
+        <b>${R.unredeemed} payment${R.unredeemed===1?' was':'s were'} never delivered</b>
+        <p>Someone paid and the app didn\u2019t hand over what they bought. This gives it to them \u2014 safe to tap twice.</p>
+        <button class="big" onclick="recover()">Deliver ${R.unredeemed===1?'it':'them'} now</button></div>`:''}
+      <div class="sec"><span class="kick">Every payment</span><span class="kick">${t.count}</span></div>
+      <div class="list">${R.payments.map(p=>`<div class="row">
+        <div class="m">
+          <div class="t">$${p.amount.toFixed(2)} \u00b7 ${p.kind==='tip'?'Tip':esc(p.votes+' extra votes')}</div>
+          <div class="by">${esc(p.email||'\u2014')}${p.note?' \u00b7 \u201c'+esc(p.note)+'\u201d':''}</div>
+          <div class="s">${dstamp(p.at)}${p.redeemed?'':' \u00b7 not delivered'}</div>
+        </div>
+        <span class="cnt" style="font-size:15px;color:${p.redeemed?'var(--good)':'var(--accent)'}">${p.redeemed?'\u2713':'!'}</span>
+      </div>`).join('')||'<div class="row muted">No payments yet.</div>'}</div>
+      <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
+    }
+  }
+
   if(TAB==='settings'){
     body=`
     <div class="sec"><span class="kick">Free votes per person</span></div>
@@ -255,6 +309,11 @@ function render(){
       <div class="s">${D.paymentsEnabled?'Tips + extra votes are live via Stripe':'Set STRIPE_SECRET_KEY in Netlify to switch on'}</div></div>
       <span class="cnt" style="color:${D.paymentsEnabled?'var(--good)':'var(--muted)'}">${D.paymentsEnabled?'✓':'—'}</span></div>
 
+    <div class="sec"><span class="kick">Your studio code</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Set something you\u2019ll actually remember \u2014 it works from any phone. The original code from Netlify keeps working as a backup, so you can never lock yourself out.</p>
+    <div class="field"><label>New code</label><input class="inp" id="fCode" type="password" placeholder="At least 4 characters" autocomplete="new-password"></div>
+    <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="saveCode()">Save new code</button></div>
+
     <div class="sec"><span class="kick">Show</span></div>
     <div class="wrap">
       <button class="big alt" onclick="if(confirm('Start a brand new show? Clears all votes, purchased votes and the played list.'))act('newShow')">↺ New show (reset everything)</button>
@@ -276,6 +335,7 @@ function render(){
   <div class="tabs">
     <button class="${TAB==='live'?'on':''}" onclick="setTab('live')">Live</button>
     <button class="${TAB==='setlist'?'on':''}" onclick="setTab('setlist')">Setlist</button>
+    <button class="${TAB==='money'?'on':''}" onclick="setTab('money')">Money</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${body}
   <div style="padding:22px 14px;text-align:center"><a class="kick" href="/">← View the audience page</a></div>`;
@@ -308,6 +368,16 @@ async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'showTime',showTime:$('#fTime').value})});
   toast('Gig details saved'); load();
 }
+async function saveCode(){
+  const el=$('#fCode'), v=(el.value||'').trim();
+  if(v.length<4){toast('At least 4 characters');return;}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'setCode',code:v})});
+  if(!d.ok){toast(d.error||'Could not save that');return;}
+  CODE=v; localStorage.setItem('myset.admin',v); el.value='';
+  toast('Saved \u2014 that\u2019s your code from now on');
+}
+const dstamp=t=>{try{return new Date(t).toLocaleString(undefined,
+  {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const when=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':Math.floor(m/60)+'h ago';};
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3000);}

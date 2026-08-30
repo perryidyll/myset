@@ -35,6 +35,18 @@ If you are about to violate one, stop and say so rather than working around it.
    It is `/vote.html`. Pointing it anywhere else takes the money and grants
    nothing — that shipped once and was caught in review, not by a user.
 
+5c. **A payment must have more than one path to delivery.** The return trip
+   through `/vote.html` is not enough — on 2026-08-30 a real $3 purchase was
+   charged and never granted because the buyer's browser never came back.
+   Three independent paths now grant it, all funnelling through `redeemSession()`
+   in `_pay.mjs` so none can drift: the return page, the Stripe **webhook**, and
+   the artist's **reconcile sweep** in the Money tab. All three are replay-safe.
+
+5d. **Only sessions this app created are MySet revenue.** Perry's Stripe account
+   holds unrelated charges. `/api/revenue` filters on `metadata.kind` being
+   `votes` or `tip`; without that filter his dashboard showed $133 of other
+   people's business and offered to "redeem" it.
+
 6. **Never grant anything from a client claim.** `/api/confirm` retrieves the
    Checkout Session from Stripe server-side and requires
    `payment_status === 'paid'` before granting votes or recording a tip.
@@ -92,6 +104,13 @@ If you are about to violate one, stop and say so rather than working around it.
 
 15c. **`checkAdmin` fails closed.** If `ADMIN_CODE` is unset, deny. Never fall back
     to a default that lives in the repo.
+
+15d. **The artist must be able to get into his own Studio without a terminal.**
+   The passcode used to live only in the Netlify `ADMIN_CODE` env var, so during
+   his first real gig he could not open his own dashboard and never started a
+   single song. He can now set his own code in Settings (stored **hashed** in
+   `show.codeHash`); `ADMIN_CODE` remains the recovery key so he cannot lock
+   himself out. Never make env-var-only the sole way in.
 
 16. **Nothing in the app may break the gig.** Every failure path degrades to "the
     setlist is still readable". No error state should block the page from rendering.

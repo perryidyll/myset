@@ -61,7 +61,9 @@ export default async (req) => {
       success_url: `${origin}/vote.html?paid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/vote.html?cancelled=1`,
     });
-    return json({ ok: true, url: session.url });
+    // the id goes back so the buyer's phone can re-try redemption if the
+    // return trip fails (INVARIANT 5c)
+    return json({ ok: true, url: session.url, id: session.id });
   } catch (e) {
     return bad(e.message || 'stripe error', 502);
   }

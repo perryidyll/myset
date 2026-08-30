@@ -74,6 +74,14 @@
   fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none}
 .search .clr{position:absolute;right:8px;top:8px;width:32px;height:32px;border-radius:50%;
   display:grid;place-items:center;color:var(--muted);font-size:17px;background:var(--bg)}
+/* ── sort ─────────────────────────────────────────────── */
+.sortbar{display:flex;gap:4px;margin:10px 18px 2px;padding:4px;background:var(--bg-2);
+  border-radius:var(--pill);box-shadow:inset 0 0 0 .5px var(--hair)}
+.sortbar button{flex:1;min-height:36px;padding:8px 6px;font-size:13.5px;font-weight:600;
+  color:var(--muted);border-radius:var(--pill);letter-spacing:-.01em;
+  transition:background .26s var(--ease),color .2s var(--ease),transform .22s var(--spring)}
+.sortbar button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
+.sortbar button:active{transform:scale(.96)}
 
 /* ── TIER 3 · POOL ────────────────────────────────────── */
 .sect{display:flex;align-items:baseline;justify-content:space-between;padding:24px 20px 10px}
@@ -167,6 +175,18 @@ async function vote(id){
   busy.delete(id); load();
 }
 
+let SORT=(()=>{try{return localStorage.getItem('myset.sort')||'votes'}catch(e){return 'votes'}})();
+function setSort(v){SORT=v;try{localStorage.setItem('myset.sort',v)}catch(e){}render();}
+const collate=(a,b)=>String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base'});
+/* 'votes' keeps the server's ranking (votes desc -> voted-first -> title) so the
+   pool always agrees with Up next. The other two are pure browse orders. */
+function applySort(list){
+  if(SORT==='title')  return [...list].sort((a,b)=>collate(a.title,b.title));
+  if(SORT==='artist') return [...list].sort((a,b)=>collate(a.artist,b.artist)||collate(a.title,b.title));
+  return list;
+}
+const SORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
+
 function render(){
   const d=ST,c=d.credits;
   const ended=d.status==='ended',pre=d.status==='pre';
@@ -179,8 +199,8 @@ function render(){
   const voted=d.songs.filter(s=>s.votes>0);
   const queue=voted.slice(0,3);
   const queueIds=new Set(queue.map(s=>s.id));
-  const rest=d.songs.filter(s=>!queueIds.has(s.id)).filter(match);
-  const replays=(d.played||[]).filter(match);
+  const rest=applySort(d.songs.filter(s=>!queueIds.has(s.id)).filter(match));
+  const replays=applySort((d.played||[]).filter(match));
   const by=a=>a?`<div class="by">${esc(a)}</div>`:'';
 
   let h=`<div class="head">
@@ -221,6 +241,9 @@ function render(){
     ${FILTER?`<button class="clr" onclick="setFilter('')" aria-label="Clear search">✕</button>`:''}
   </div>`;
 
+  h += `<div class="sortbar" role="group" aria-label="Sort songs">${SORTS.map(([k,l])=>
+    `<button data-sort="${k}" class="${SORT===k?'on':''}" aria-pressed="${SORT===k}">${l}</button>`).join('')}</div>`;
+
   h += `<div class="sect"><b>${open?'Vote for these':'The setlist'}</b><span>${rest.length} song${rest.length===1?'':'s'}</span></div>`;
   h += rest.length
     ? `<div class="list">${rest.map(s=>row(s,c,open,false)).join('')}</div>`
@@ -232,6 +255,9 @@ function render(){
   h += `<a class="backlink" href="/">← Perry’s page</a><div class="foot">MySet · myset.vip</div>`;
   $('#app').innerHTML=h;
   if(!BOOTED){ $('#app').classList.add('rise'); BOOTED=true; }
+
+  $('#app').querySelectorAll('[data-sort]').forEach(b=>
+    b.addEventListener('click',()=>setSort(b.getAttribute('data-sort'))));
 
   const qi=$('#q');
   if(qi){ qi.addEventListener('input',e=>{FILTER=e.target.value;render();});
@@ -298,7 +324,11 @@ async function checkout(kind){
   try{
     const r=await fetch(`${API}/pay`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
-    if(d.ok&&d.url){window.location.href=d.url;return;}
+    if(d.ok&&d.url){
+      // remember it BEFORE leaving. If the return trip fails (tab closed, flaky
+      // venue wifi, wallet app hijacks the redirect) the next page load redeems it.
+      if(d.id) pendingSet({id:d.id,at:Date.now()});
+      window.location.href=d.url;return;}
     toast('Card payments aren’t working right now — grab Perry between songs');
   }catch(e){toast('Card payments aren’t working right now — grab Perry between songs');}
   if(btn){btn.disabled=false;btn.textContent='Continue to payment';}
@@ -315,20 +345,47 @@ function confetti(){
     document.body.appendChild(c);setTimeout(()=>c.remove(),dur);
   }
 }
-async function handleReturn(){
-  const q=new URLSearchParams(location.search),sid=q.get('paid');
-  if(q.get('cancelled')){history.replaceState({},'','/vote.html');toast('Payment cancelled');return;}
-  if(!sid)return;
-  history.replaceState({},'','/vote.html');
-  toast('Confirming payment…');
+/* A payment must never be charged without the buyer getting what they bought.
+   Three independent paths grant it: this return trip, the Stripe webhook, and
+   the artist's reconcile sweep. All three are replay-safe, so overlap is fine. */
+const PEND='myset.pending';
+function pendingGet(){try{return JSON.parse(localStorage.getItem(PEND)||'null')}catch(e){return null}}
+function pendingSet(v){try{v?localStorage.setItem(PEND,JSON.stringify(v)):localStorage.removeItem(PEND)}catch(e){}}
+
+async function redeem(sid,loud){
   try{
     const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}`);
     const d=await r.json();
-    if(d.ok){ confetti(); buzz([12,50,12]);
-      toast(d.kind==='votes'?`${d.granted} extra votes added — vote away!`:`Thank you! Your $${d.amount} tip reached Perry`); }
-    else toast('Could not confirm payment');
-  }catch(e){toast('Could not confirm payment');}
-  load();
+    if(d.ok){
+      pendingSet(null);
+      if(!d.already){ confetti(); buzz([12,50,12]);
+        toast(d.kind==='tip'?`Thank you! Your $${d.amount} tip reached Perry`
+                            :`${d.granted||0} extra votes added — vote away!`); }
+      else if(loud) toast('Already added — you\u2019re all set');
+      load(); return true;
+    }
+    // 402 = not paid yet; keep it pending. A hard 4xx means it will never work.
+    if(r.status>=400&&r.status!==402&&r.status<500) pendingSet(null);
+    if(loud) toast('Could not confirm that payment \u2014 show Perry your receipt');
+  }catch(e){ if(loud) toast('Could not confirm that payment \u2014 show Perry your receipt'); }
+  return false;
+}
+
+async function handleReturn(){
+  const q=new URLSearchParams(location.search),sid=q.get('paid');
+  if(q.get('cancelled')){history.replaceState({},'','/vote.html');pendingSet(null);toast('Payment cancelled');return;}
+  if(sid){
+    history.replaceState({},'','/vote.html');
+    toast('Confirming payment\u2026');
+    await redeem(sid,true);
+    return;
+  }
+  // no return params: quietly retry anything still owed to this phone
+  const p=pendingGet();
+  if(p&&p.id){
+    if(Date.now()-(p.at||0)>26*3600e3){ pendingSet(null); return; }  // Stripe sessions expire
+    await redeem(p.id,false);
+  }
 }
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3600);}
 

@@ -1,4 +1,5 @@
 import { getStore } from '@netlify/blobs';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 export const store = () => getStore('myset');
 
@@ -31,7 +32,6 @@ export const DEFAULT_SONGS = [
   ['Drops Of Jupiter','Train'],
   ['Perfect','Ed Sheeran'],
   ['All Of Me','John Legend'],
-  ['I Found You','Andy Grammer'],
   ['Circles','Post Malone'],
   ['Wish You Were Here','Pink Floyd'],
   ['Sitting On The Dock Of The Bay','Otis Redding'],
@@ -271,12 +271,25 @@ export const json = (body, status = 200) =>
   });
 export const bad = (msg, status = 400) => json({ ok: false, error: msg }, status);
 
-export function checkAdmin(req) {
-  const expected = process.env.ADMIN_CODE;
-  if (!expected) return false;          // fail closed — never fall back to a known default
+export const sha = (v) => createHash('sha256').update(String(v)).digest('hex');
+const sameHash = (a, b) => {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  try { return timingSafeEqual(Buffer.from(a), Buffer.from(b)); } catch { return false; }
+};
+
+/* Two ways in, both fail closed (INVARIANT 15c):
+     ADMIN_CODE env  — the recovery key, only Perry and Netlify know it
+     show.codeHash   — a code he set himself from the Studio, stored hashed
+   The second exists because on 2026-08-30 he could not get into his own Studio
+   during a gig: the only code lived in an env var he had no copy of. */
+export async function checkAdmin(req) {
   const url = new URL(req.url);
   const given = req.headers.get('x-admin-code') || url.searchParams.get('code') || '';
-  return !!given && given === expected;
+  if (!given) return false;
+  const master = process.env.ADMIN_CODE;
+  if (master && sameHash(sha(given), sha(master))) return true;
+  const show = await getShow();
+  return !!show.codeHash && sameHash(sha(given), show.codeHash);
 }
 export const cleanFanId = (v) =>
   typeof v === 'string' ? v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) : '';
