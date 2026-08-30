@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { json, bad, checkAdmin, readMeta } from './_lib.mjs';
+import { json, bad, requireArtist, readMeta } from './_lib.mjs';
 import { redeemSession } from './_pay.mjs';
 
 /* Artist-only. Stripe is the source of truth for money; the app's own ledger can
@@ -7,7 +7,9 @@ import { redeemSession } from './_pay.mjs';
    anything the app failed to grant. POST redeems those, so a payment can never be
    silently kept without the buyer getting what they bought. */
 export default async (req) => {
-  if (!(await checkAdmin(req))) return bad('unauthorized', 401);
+  const me = await requireArtist(req);
+  if (!me) return bad('unauthorized', 401);
+  const aid = me.aid;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return json({ ok: true, enabled: false, payments: [], unredeemed: 0 });
 
@@ -24,21 +26,23 @@ export default async (req) => {
   // charges; showing those in his MySet dashboard would be wrong, and sweeping
   // them would pollute the ledger with payments MySet never sold.
   const isOurs = (s) => {
-    const k = (s.metadata || {}).kind;
-    return k === 'votes' || k === 'tip';
+    const md = s.metadata || {};
+    if (md.kind !== 'votes' && md.kind !== 'tip') return false;
+    // once payments carry an artist, only this artist's are ever shown
+    return !md.artist || md.artist === aid;
   };
   const paidSessions = sessions.filter((s) => s.payment_status === 'paid' && isOurs(s));
 
   if (req.method === 'POST') {
     const results = [];
     for (const s of paidSessions) {
-      const r = await redeemSession(s);
+      const r = await redeemSession(aid, s);
       if (r.ok && !r.already) results.push({ id: s.id, kind: r.kind, amount: r.amount, granted: r.granted });
     }
     return json({ ok: true, recovered: results.length, results });
   }
 
-  const meta = await readMeta();
+  const meta = await readMeta(aid);
   const payments = paidSessions.map((s) => {
     const md = s.metadata || {};
     return {

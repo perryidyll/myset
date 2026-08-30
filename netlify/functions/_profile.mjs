@@ -1,11 +1,11 @@
-import { casDoc, readDoc, ARTIST_ID } from './_lib.mjs';
+import { casDoc, readDoc, KEY } from './_lib.mjs';
 import { parseMedia, embedSrc, linkOut, embedShape } from './_embeds.mjs';
 
 export const defaultProfile = () => ({
   v: 1,
-  artistId: ARTIST_ID,
-  name: 'Perry Idyll',
-  tagline: 'Live, and you pick the songs.',
+  artistId: null,
+  name: '',
+  tagline: '',
   bio: '',
   photo: '/img/band.jpg',
   links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', website: '' },
@@ -43,8 +43,7 @@ const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().s
 export function normProfile(p) {
   const d = defaultProfile();
   const out = { ...d, ...(p || {}) };
-  out.artistId ||= ARTIST_ID;
-  out.name = clean(out.name, 60) || d.name;
+  out.name = clean(out.name, 60);
   out.tagline = clean(out.tagline, 120);
   out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 2000);   // newlines kept
   out.photo = String(out.photo || d.photo).slice(0, 300);
@@ -65,12 +64,14 @@ export function normProfile(p) {
   return out;
 }
 
-export async function getProfile() {
-  const { data } = await readDoc('profile', null);
-  return normProfile(data);
+export async function getProfile(aid) {
+  const { data } = await readDoc(KEY.profile(aid), null);
+  const p = normProfile(data);
+  p.artistId = aid;
+  return p;
 }
-export const mutateProfile = (fn) =>
-  casDoc('profile', defaultProfile, (p) => {
+export const mutateProfile = (aid, fn) =>
+  casDoc(KEY.profile(aid), defaultProfile, (p) => {
     const np = normProfile(p);
     Object.keys(p || {}).forEach((k) => delete p[k]);
     Object.assign(p, np);

@@ -150,6 +150,16 @@
 
 <script>
 const $=s=>document.querySelector(s), API='/api';
+/* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
+   A path segment containing a dot is a real file, so the legacy /vote.html and
+   /artist.html routes fall through to the founding artist. */
+const SLUG=(()=>{const p=location.pathname.split('/').filter(Boolean);
+  return (p[0]&&!p[0].includes('.'))?p[0]:'';})();
+const AQ=SLUG?'&a='+encodeURIComponent(SLUG):'';
+const AQ1=SLUG?'?a='+encodeURIComponent(SLUG):'';
+const HOME=SLUG?'/'+SLUG:'/';
+const VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
+
 function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
   if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
   return v;}
@@ -168,7 +178,7 @@ $('#app').innerHTML=`<div class="head"><div><div class="sk" style="width:130px;h
 
 async function load(){
   try{
-    const r=await fetch(`${API}/show?fan=${encodeURIComponent(FAN)}`,{cache:'no-store'});
+    const r=await fetch(`${API}/show?fan=${encodeURIComponent(FAN)}${AQ}`,{cache:'no-store'});
     const d=await r.json();
     if(d.ok){ const el=document.activeElement; FOCUS=!!(el&&el.id==='q'); ST=d; render(); FOCUS=false; }
   }catch(e){}
@@ -180,7 +190,7 @@ async function vote(id){
     s.mine=adding; s.votes+=adding?1:-1; ST.credits.remaining+=adding?-k:k;
     POP=id; buzz(adding?18:10); render(); POP=null; }
   try{
-    const r=await fetch(`${API}/vote`,{method:'POST',headers:{'content-type':'application/json'},
+    const r=await fetch(`${API}/vote${AQ1}`,{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({fan:FAN,song:id})});
     const d=await r.json();
     if(!d.ok){ if(d.error==='no-credits'){toast('Out of votes — grab more below');openBuy();}
@@ -269,7 +279,7 @@ function render(){
   if(replays.length) h += `<div class="sect"><b>Already played</b><span>${d.replayCost} votes to hear again</span></div>
     <div class="list">${replays.map(s=>row(s,c,open,true)).join('')}</div>`;
 
-  h += `<a class="backlink" href="/">← Perry’s page</a><div class="foot">MySet · myset.vip</div>`;
+  h += `<a class="backlink" href="${HOME}">← ${esc(d.artist||'Artist')}’s page</a><div class="foot">MySet · myset.vip</div>`;
   $('#app').innerHTML=h;
   if(!BOOTED){ $('#app').classList.add('rise'); BOOTED=true; }
 
@@ -316,7 +326,7 @@ async function openLyrics(){
     <p class="lede">${esc(np.artist||'')}</p>
     <div class="lyr" id="lyrBody"><span class="spin"></span> Finding the words…</div>`);
   let d=null;
-  try{ d=await fetch(`${API}/lyrics?song=${encodeURIComponent(np.id)}`).then(r=>r.json()); }catch(e){}
+  try{ d=await fetch(`${API}/lyrics?song=${encodeURIComponent(np.id)}${AQ}`).then(r=>r.json()); }catch(e){}
   const el=$('#lyrBody'); if(!el)return;
   if(!d||!d.ok||!d.found){
     el.innerHTML=`<p style="font-size:15px;color:var(--muted);white-space:normal">
@@ -347,7 +357,7 @@ function openLeftover(n){
 async function decideLeftover(choice){
   closeSheet();
   try{
-    const r=await fetch(`${API}/gift`,{method:'POST',headers:{'content-type':'application/json'},
+    const r=await fetch(`${API}/gift${AQ1}`,{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({fan:FAN,choice})});
     const d=await r.json();
     if(!d.ok){toast('Couldn\u2019t save that \u2014 your votes are safe');return;}
@@ -392,7 +402,7 @@ async function checkout(kind){
     body.note=(($('#tipNote')||{}).value||'').slice(0,120);}
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Opening secure checkout…';}
   try{
-    const r=await fetch(`${API}/pay`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch(`${API}/pay${AQ1}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
     if(d.ok&&d.url){
       // remember it BEFORE leaving. If the return trip fails (tab closed, flaky
@@ -424,7 +434,7 @@ function pendingSet(v){try{v?localStorage.setItem(PEND,JSON.stringify(v)):localS
 
 async function redeem(sid,loud){
   try{
-    const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}`);
+    const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}${AQ}`);
     const d=await r.json();
     if(d.ok){
       pendingSet(null);
@@ -443,9 +453,9 @@ async function redeem(sid,loud){
 
 async function handleReturn(){
   const q=new URLSearchParams(location.search),sid=q.get('paid');
-  if(q.get('cancelled')){history.replaceState({},'','/vote.html');pendingSet(null);toast('Payment cancelled');return;}
+  if(q.get('cancelled')){history.replaceState({},'',location.pathname);pendingSet(null);toast('Payment cancelled');return;}
   if(sid){
-    history.replaceState({},'','/vote.html');
+    history.replaceState({},'',location.pathname);
     toast('Confirming payment\u2026');
     await redeem(sid,true);
     return;

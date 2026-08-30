@@ -1,15 +1,15 @@
 import Stripe from 'stripe';
-import { casDoc, readDoc, voteCounts, ARTIST_ID } from './_lib.mjs';
+import { casDoc, readDoc, voteCounts, KEY } from './_lib.mjs';
 
-const HIST = (id) => `hist_${id}`;      // flat key — INVARIANT 2
-const INDEX = 'hist_index';
+const HIST = KEY.hist;                  // flat key — INVARIANT 2
+const INDEX = KEY.histIdx;
 const round = (n) => Math.round(n * 100) / 100;
 
 /* Stripe stays the source of truth for money (INVARIANT 5d); this is a cache of
    it that the artist can re-pull at any time. Bounded to the show's own window
    and auto-paged, because sessions.list() does NOT paginate on its own and a
    busy month would silently truncate. */
-export async function moneyForShow(showId, fromMs, toMs) {
+export async function moneyForShow(aid, showId, fromMs, toMs) {
   const key = process.env.STRIPE_SECRET_KEY;
   const out = {
     currency: 'USD', gross: 0,
@@ -58,7 +58,7 @@ export async function moneyForShow(showId, fromMs, toMs) {
 /* Snapshot a finished show. MUST run before wipeFans()/clearAllFanVotes(),
    because those destroy the only copy of the tally. Idempotent: re-archiving an
    already-archived show only refreshes its money block. */
-export async function archiveShow(show, fans) {
+export async function archiveShow(aid, show, fans) {
   const showId = show && show.showId;
   if (!showId) return null;
 
@@ -88,10 +88,10 @@ export async function archiveShow(show, fans) {
   const top = [...played].sort((a, b) => (b.votes || 0) - (a.votes || 0))[0] || requested[0] || null;
   const endedAt = Date.now();
 
-  const money = await moneyForShow(showId, show.startedAt, endedAt);
+  const money = await moneyForShow(aid, showId, show.startedAt, endedAt);
 
   const doc = {
-    v: 1, showId, artistId: show.artistId || ARTIST_ID,
+    v: 1, showId, artistId: aid,
     venue: show.venue || '', city: show.city || '', showTime: show.showTime || '',
     startedAt: show.startedAt || null, endedAt,
     played, requested,
@@ -105,14 +105,14 @@ export async function archiveShow(show, fans) {
     archivedAt: endedAt,
   };
 
-  await casDoc(HIST(showId), () => ({}), (d) => {
+  await casDoc(HIST(aid, showId), () => ({}), (d) => {
     if (d && d.showId) {           // already archived — only refresh the money
       d.money = money; d.archivedAt = endedAt; return true;
     }
     Object.assign(d, doc); return true;
   }).catch(() => {});
 
-  await casDoc(INDEX, () => ({ shows: [] }), (idx) => {
+  await casDoc(INDEX(aid), () => ({ shows: [] }), (idx) => {
     idx.shows ||= [];
     const row = {
       showId, venue: doc.venue, city: doc.city,
@@ -130,23 +130,23 @@ export async function archiveShow(show, fans) {
   return doc;
 }
 
-export async function readHistIndex() {
-  const { data } = await readDoc(INDEX, { shows: [] });
+export async function readHistIndex(aid) {
+  const { data } = await readDoc(INDEX(aid), { shows: [] });
   return { shows: (data && data.shows) || [] };
 }
-export async function readHistShow(showId) {
-  const { data } = await readDoc(HIST(showId), null);
+export async function readHistShow(aid, showId) {
+  const { data } = await readDoc(HIST(aid, showId), null);
   return data;
 }
-export async function reconcileShow(showId) {
-  const doc = await readHistShow(showId);
+export async function reconcileShow(aid, showId) {
+  const doc = await readHistShow(aid, showId);
   if (!doc) return null;
-  const money = await moneyForShow(showId, doc.startedAt, doc.endedAt);
-  await casDoc(HIST(showId), () => ({}), (d) => {
+  const money = await moneyForShow(aid, showId, doc.startedAt, doc.endedAt);
+  await casDoc(HIST(aid, showId), () => ({}), (d) => {
     if (!d || !d.showId) return false;
     d.money = money; return true;
   }).catch(() => {});
-  await casDoc(INDEX, () => ({ shows: [] }), (idx) => {
+  await casDoc(INDEX(aid), () => ({ shows: [] }), (idx) => {
     const row = (idx.shows || []).find((x) => x.showId === showId);
     if (row) row.gross = money.gross;
     return true;

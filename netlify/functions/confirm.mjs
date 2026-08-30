@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { json, bad, cleanFanId } from './_lib.mjs';
+import { json, bad, cleanFanId, cleanArtistId, DEFAULT_ARTIST } from './_lib.mjs';
 import { redeemSession } from './_pay.mjs';
 
 /* The fast path: the buyer lands back on /vote.html?paid=<session id> and this
@@ -19,7 +19,9 @@ export default async (req) => {
   catch { return bad('could not verify payment', 502); }
   if (session.payment_status !== 'paid') return bad('not paid', 402);
 
-  const r = await redeemSession(session, fallbackFan);
+  // whose money this is was decided when the session was created, not now
+  const aid = cleanArtistId((session.metadata || {}).artist) || DEFAULT_ARTIST;
+  const r = await redeemSession(aid, session, fallbackFan);
   if (!r.ok) return bad(r.error || 'could not grant', 409);
   return json(r);
 };

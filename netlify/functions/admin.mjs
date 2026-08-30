@@ -1,18 +1,18 @@
 import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
-         firstVotedAt, rankSongs, json, bad, checkAdmin, slug, defaultShow, sha,
-         normPacks, newShowId, carryFans } from './_lib.mjs';
+         firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
+         normPacks, newShowId, carryFans, STARTER_SONGS } from './_lib.mjs';
 import { archiveShow } from './_history.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
 
 /* Lyrics live in their own flat docs, not on the show, so these short-circuit too. */
-async function handleLyrics(action, body, show) {
+async function handleLyrics(aid, action, body, show) {
   const song = show.songs.find((x) => x.id === body.song);
   if (!song && action !== 'lyricsWarm') return bad('unknown song', 404);
 
   if (action === 'lyricsGet') {
-    const d = await readLyrics(body.song);
+    const d = await readLyrics(aid, body.song);
     return json({ ok: true, song: body.song, title: song.title, artist: song.artist || '',
                   plain: (d && d.plain) || '', credit: (d && d.credit) || '',
                   state: (d && d.state) || 'unfetched', owned: !!(d && d.owned) });
@@ -21,12 +21,12 @@ async function handleLyrics(action, body, show) {
   if (action === 'lyricsSet') {
     const plain = String(body.plain || '').replace(/\r/g, '').slice(0, 20000).trim();
     if (!plain) {                               // empty = take them down
-      await saveLyrics(body.song, { v: 1, songId: body.song, title: song.title,
+      await saveLyrics(aid, body.song, { v: 1, songId: body.song, title: song.title,
         artist: song.artist || '', plain: '', synced: '', credit: '',
         state: 'blocked', fetchedAt: Date.now() });
       return json({ ok: true, cleared: true });
     }
-    await saveLyrics(body.song, {
+    await saveLyrics(aid, body.song, {
       v: 1, songId: body.song, title: song.title, artist: song.artist || '',
       plain, synced: '', credit: String(body.credit || '').slice(0, 200),
       state: 'ok', owned: !!body.owned,
@@ -36,8 +36,8 @@ async function handleLyrics(action, body, show) {
   }
 
   if (action === 'lyricsFetch') {              // pull this one from LRCLIB now
-    await saveLyrics(body.song, { v: 1, songId: body.song, state: 'unfetched', fetchedAt: 0 });
-    const d = await getLyrics(song);
+    await saveLyrics(aid, body.song, { v: 1, songId: body.song, state: 'unfetched', fetchedAt: 0 });
+    const d = await getLyrics(aid, song);
     return json({ ok: true, found: !!(d && d.state === 'ok' && d.plain),
                   plain: (d && d.plain) || '', credit: (d && d.credit) || '' });
   }
@@ -46,7 +46,7 @@ async function handleLyrics(action, body, show) {
     const todo = show.songs.filter((x) => x.active !== false);
     let got = 0; const missing = [];
     for (const sg of todo) {
-      const d = await getLyrics(sg);
+      const d = await getLyrics(aid, sg);
       if (d && d.state === 'ok' && d.plain) got++; else missing.push(sg.title);
       await new Promise((r) => setTimeout(r, 350));   // LRCLIB asks for spacing
     }
@@ -58,16 +58,16 @@ const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyrics
 
 /* Profile edits don't touch the show record at all, so they short-circuit before
    the show mutation below. */
-async function handleProfile(action, body) {
+async function handleProfile(aid, action, body) {
   if (action === 'profileSet') {
-    await mutateProfile((p) => {
+    await mutateProfile(aid, (p) => {
       for (const k of ['name', 'tagline', 'bio', 'photo'])
         if (typeof body[k] === 'string') p[k] = body[k];
       if (body.links && typeof body.links === 'object')
         p.links = { ...p.links, ...body.links };
       return true;
     });
-    return json({ ok: true, profile: await getProfile() });
+    return json({ ok: true, profile: await getProfile(aid) });
   }
 
   if (action === 'mediaAdd') {
@@ -77,7 +77,7 @@ async function handleProfile(action, body) {
     if (!info.ok) return bad(info.why, 400);
     const mid = 'm' + Math.random().toString(36).slice(2, 9);   // outside the CAS
     let added = null;
-    await mutateProfile((p) => {
+    await mutateProfile(aid, (p) => {
       const dupe = p.media.some((x) =>
         x.provider === m.provider && x.id === m.id &&
         (x.i || null) === (m.i || null) && (x.list || null) === (m.list || null));
@@ -92,12 +92,12 @@ async function handleProfile(action, body) {
   }
 
   if (action === 'mediaRemove') {
-    await mutateProfile((p) => { p.media = p.media.filter((x) => x.mid !== body.mid); return true; });
+    await mutateProfile(aid, (p) => { p.media = p.media.filter((x) => x.mid !== body.mid); return true; });
     return json({ ok: true });
   }
 
   if (action === 'mediaMove') {
-    await mutateProfile((p) => {
+    await mutateProfile(aid, (p) => {
       const i = p.media.findIndex((x) => x.mid === body.mid);
       const j = i + (body.dir === 'up' ? -1 : 1);
       if (i < 0 || j < 0 || j >= p.media.length) return false;
@@ -111,20 +111,22 @@ async function handleProfile(action, body) {
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove']);
 
 export default async (req) => {
-  if (!(await checkAdmin(req))) return bad('unauthorized', 401);
+  const me = await requireArtist(req);
+  if (!me) return bad('unauthorized', 401);
+  const aid = me.aid;
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const action = body.action;
-  if (PROFILE_ACTIONS.has(action)) return handleProfile(action, body);
-  if (LYRICS_ACTIONS.has(action)) return handleLyrics(action, body, await getShow());
+  if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
+  if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
 
   let err = null, resetVotes = false, wipe = false;
 
   // Anything that starts a song needs the tally BEFORE it is wiped.
   let counts = null, firstAt = null, votersNow = 0;
   if (action === 'play' || action === 'playTop') {
-    const f = await readFans();
+    const f = await readFans(aid);
     counts = voteCounts(f); firstAt = firstVotedAt(f);
     votersNow = Object.values(f).filter((x) => (x.v || []).length).length;
   }
@@ -133,15 +135,15 @@ export default async (req) => {
   // clearAllFanVotes()/wipeFans() destroy the only copy.
   if (action === 'newShow' || (action === 'status' && body.status === 'ended')) {
     try {
-      const [prev, fans] = await Promise.all([getShow(), readFans()]);
-      await archiveShow(prev, fans);
+      const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
+      await archiveShow(aid, prev, fans);
     } catch { /* never block ending a show on the archive */ }
   }
 
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
-  const prevShow = action === 'newShow' ? await getShow() : null;   // read before it resets
+  const prevShow = action === 'newShow' ? await getShow(aid) : null;   // read before it resets
 
-  await mutateShow((show) => {
+  await mutateShow(aid, (show) => {
     /* Records what a song won with, at the moment it is started. Without this the
        number is gone a millisecond later and no history is recoverable. */
     const logPlay = (id) => {
@@ -252,7 +254,15 @@ export default async (req) => {
         break;
       }
       case 'resetVotes': resetVotes = true; break;
-      case 'resetSetlist': show.songs = defaultShow().songs; break;
+      case 'starterSetlist': {          // append the generic covers, never replace
+        const have = new Set(show.songs.map((x) => x.id));
+        for (const [t, a] of STARTER_SONGS) {
+          const id = slug(t);
+          if (!have.has(id)) show.songs.push({ id, title: t, artist: a, active: true });
+        }
+        break;
+      }
+      case 'clearSetlist': show.songs = []; break;
       case 'newShow':
         show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
         show.status = 'live'; show.windowOpen = true;
@@ -268,7 +278,7 @@ export default async (req) => {
 
   if (err) return bad(err[0], err[1]);
   // paid votes survive a reset — only a fan who gifted them loses them
-  if (wipe) await carryFans(prevShow || (await getShow()));
-  else if (resetVotes) await clearAllFanVotes();
+  if (wipe) await carryFans(aid, prevShow || (await getShow(aid)));
+  else if (resetVotes) await clearAllFanVotes(aid);
   return json({ ok: true });
 };

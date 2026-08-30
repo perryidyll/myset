@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
-import { casDoc, readDoc } from './_lib.mjs';
+import { casDoc, readDoc, cleanArtistId } from './_lib.mjs';
 
 /* Magic-link sign-in for ARTISTS. The audience never signs in — that is the
    whole reason the app works in a bar — so this exists only for the Studio.
@@ -34,18 +34,77 @@ async function secret() {
   return (again.data && again.data.k) || k;
 }
 
-/* ---------- who is allowed in ---------- */
+/* ---------- the artist registry ----------
+   One global document. Everything else in the store belongs to exactly one
+   artist; this is the only thing that maps between them.
+     byId    artistId -> { slug, name, createdAt, plan }
+     bySlug  slug     -> artistId      (so myset.vip/perryidyll resolves)
+     byEmail email    -> { artistId, role }   (who can sign in, and as whom)
+*/
+const emptyRegistry = () => ({ v: 2, rev: 1, byId: {}, bySlug: {}, byEmail: {} });
+
 export async function readArtists() {
   const { data } = await readDoc('artists', null);
-  const a = data || {};
-  a.emails ||= {};
-  a.rev ||= 1;                       // bump to sign every session out at once
+  const a = { ...emptyRegistry(), ...(data || {}) };
+  a.byId ||= {}; a.bySlug ||= {}; a.byEmail ||= {}; a.rev ||= 1;
   return a;
 }
 export const mutateArtists = (fn) =>
-  casDoc('artists', () => ({ emails: {}, rev: 1 }), (a) => {
-    a.emails ||= {}; a.rev ||= 1; return fn(a);
+  casDoc('artists', emptyRegistry, (a) => {
+    a.v ||= 2; a.rev ||= 1; a.byId ||= {}; a.bySlug ||= {}; a.byEmail ||= {};
+    return fn(a);
   });
+
+/** Slugs live in public URLs, so they get the strictest cleaning of anything. */
+export const cleanSlug = (v) =>
+  String(v || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').slice(0, 32);
+
+const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','static','img',
+  'assets','stage','about','help','support','login','signup','signin','terms','privacy',
+  'settings','account','new','index','home','myset','null','undefined']);
+
+export async function artistBySlug(slug) {
+  const a = await readArtists();
+  return a.bySlug[cleanSlug(slug)] || null;
+}
+export async function artistById(aid) {
+  const a = await readArtists();
+  return a.byId[aid] || null;
+}
+
+/** Turn a name into a free slug. Deterministic given the registry it is handed,
+    so a CAS retry can't produce a different one mid-flight. */
+export function pickSlug(name, reg, wanted) {
+  let base = cleanSlug(wanted || name) || 'artist';
+  if (base.length < 3) base = base + 'live';
+  if (!RESERVED.has(base) && !reg.bySlug[base]) return base;
+  for (let i = 2; i < 500; i++) {
+    const t = `${base}${i}`;
+    if (!RESERVED.has(t) && !reg.bySlug[t]) return t;
+  }
+  return null;
+}
+
+/** Creates the artist AND their first login in one atomic write. */
+export async function createArtist({ email, name, slug }) {
+  const clean = String(name || '').trim().slice(0, 60) || 'New artist';
+  let made = null, err = null;
+  await mutateArtists((reg) => {
+    if (reg.byEmail[email]) { err = 'already'; return false; }
+    const s = pickSlug(clean, reg, slug);
+    if (!s) { err = 'no-slug'; return false; }
+    const aid = cleanArtistId(s) || s;
+    if (reg.byId[aid]) { err = 'no-slug'; return false; }
+    reg.byId[aid] = { slug: s, name: clean, createdAt: Date.now(), plan: 'free' };
+    reg.bySlug[s] = aid;
+    reg.byEmail[email] = { artistId: aid, role: 'owner' };
+    made = { artistId: aid, slug: s, name: clean };
+    return true;
+  });
+  return made ? { ok: true, ...made } : { ok: false, error: err || 'failed' };
+}
+
+export { RESERVED };
 
 /* ---------- session tokens ---------- */
 export async function signToken(email, rev) {
@@ -64,16 +123,18 @@ export async function verifyToken(token) {
   if (!eq(mac, want)) return null;
   const [email, exp, rev] = body.split('|');
   if (!email || Number(exp) < Date.now()) return null;
-  const artists = await readArtists();
-  if (String(artists.rev) !== String(rev)) return null;     // revoked
-  if (!artists.emails[email]) return null;                  // access removed
-  return { email, artist: artists.emails[email] };
+  const reg = await readArtists();
+  if (String(reg.rev) !== String(rev)) return null;         // signed out everywhere
+  const link = reg.byEmail[email];
+  if (!link || !reg.byId[link.artistId]) return null;       // access removed
+  return { email, artistId: link.artistId, role: link.role,
+           artist: reg.byId[link.artistId] };
 }
 
 /* ---------- one-time codes ---------- */
 const codeKey = (email) => `authc_${sha(email).slice(0, 32)}`;
 
-export async function issueCode(email) {
+export async function issueCode(email, pendingName) {
   const key = codeKey(email);
   const now = Date.now();
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
@@ -87,25 +148,29 @@ export async function issueCode(email) {
     d.hash = createHmac('sha256', salt).update(code).digest('hex');
     d.exp = now + CODE_TTL;
     d.tries = 0;
+    // the name they typed on the way in, so a brand-new account can be created
+    // when the code comes back without asking twice
+    d.name = pendingName ? String(pendingName).slice(0, 60) : null;
     return true;
   });
   return tooMany ? null : code;
 }
 
+/** Returns { ok, name } — name is whatever they typed when the code was sent. */
 export async function checkCode(email, given) {
   const key = codeKey(email);
   const salt = await secret();
   const want = createHmac('sha256', salt).update(String(given || '')).digest('hex');
-  let ok = false;
+  let ok = false, name = null;
 
   await casDoc(key, () => ({}), (d) => {
     if (!d.hash || !d.exp || d.exp < Date.now()) return false;
     if ((d.tries || 0) >= MAX_TRIES) { d.hash = null; return true; }
     d.tries = (d.tries || 0) + 1;
-    if (eq(d.hash, want)) { ok = true; d.hash = null; }      // burn it on success
+    if (eq(d.hash, want)) { ok = true; name = d.name || null; d.hash = null; }   // burn on success
     return true;
   }).catch(() => {});
-  return ok;
+  return { ok, name };
 }
 
 /* ---------- delivery ---------- */

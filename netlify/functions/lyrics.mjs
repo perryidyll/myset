@@ -1,4 +1,4 @@
-import { getShow, json, bad } from './_lib.mjs';
+import { getShow, publicArtist, json, bad } from './_lib.mjs';
 import { getLyrics } from './_lyrics.mjs';
 
 /* Public, but deliberately narrow: one song at a time, and only a song that is
@@ -8,11 +8,13 @@ export default async (req) => {
   const id = (new URL(req.url).searchParams.get('song') || '').slice(0, 60);
   if (!id) return bad('missing song');
 
-  const show = await getShow();
+  const aid = await publicArtist(req);
+  if (!aid) return bad('unknown artist', 404);
+  const show = await getShow(aid);
   const song = show.songs.find((s) => s.id === id);
   if (!song) return bad('unknown song', 404);
 
-  const d = await getLyrics(song);
+  const d = await getLyrics(aid, song);
   if (!d || d.state !== 'ok' || !d.plain)
     return json({ ok: true, found: false, title: song.title, artist: song.artist || '' });
 

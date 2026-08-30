@@ -12,6 +12,28 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Pretty URLs. Real files always win over these, so /vote.html and /studio.html
+# keep working; the slug rules only catch paths that aren't files.
+[[redirects]]
+  from = "/studio"
+  to = "/studio.html"
+  status = 200
+
+[[redirects]]
+  from = "/signup"
+  to = "/studio.html"
+  status = 200
+
+[[redirects]]
+  from = "/:slug/vote"
+  to = "/vote.html"
+  status = 200
+
+[[redirects]]
+  from = "/:slug"
+  to = "/artist.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

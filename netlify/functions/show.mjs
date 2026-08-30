@@ -1,9 +1,11 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
-         isUnlimited, json, cleanFanId } from './_lib.mjs';
+         isUnlimited, publicArtist, json, bad, cleanFanId } from './_lib.mjs';
 
 export default async (req) => {
+  const aid = await publicArtist(req);
+  if (!aid) return bad('unknown artist', 404);
   const fanId = cleanFanId(new URL(req.url).searchParams.get('fan'));
-  const [show, fans] = await Promise.all([getShow(), readFans()]);
+  const [show, fans] = await Promise.all([getShow(aid), readFans(aid)]);
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);
   const me = fans[fanId] || { v: [], extra: 0 };
@@ -36,7 +38,7 @@ export default async (req) => {
 
   return json({
     ok: true,
-    artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
+    artistId: aid, artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
     status: show.status, windowOpen: !!show.windowOpen,
     nowPlaying: np ? { id: np.id, title: np.title, artist: np.artist || '' } : null,
     songs: ordered, played,

@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { json, bad } from './_lib.mjs';
+import { json, bad, cleanArtistId, DEFAULT_ARTIST } from './_lib.mjs';
 import { redeemSession } from './_pay.mjs';
 
 /* The safety net. /api/confirm only runs if the buyer's browser makes it back to
@@ -33,7 +33,8 @@ export default async (req) => {
     }
     // redeemSession is replay-safe, so a webhook retry racing the return page is fine
     if (session && session.payment_status === 'paid') {
-      try { await redeemSession(session); } catch { /* Stripe will retry */ }
+      const aid = cleanArtistId((session.metadata || {}).artist) || DEFAULT_ARTIST;
+      try { await redeemSession(aid, session); } catch { /* Stripe will retry */ }
     }
   }
   return json({ received: true });       // 200 so Stripe stops retrying

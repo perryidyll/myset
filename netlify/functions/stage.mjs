@@ -1,8 +1,10 @@
-import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad, checkAdmin } from './_lib.mjs';
+import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad, requireArtist } from './_lib.mjs';
 
 export default async (req) => {
-  if (!(await checkAdmin(req))) return bad('unauthorized', 401);
-  const [show, fans, meta] = await Promise.all([getShow(), readFans(), readMeta()]);
+  const me = await requireArtist(req);
+  if (!me) return bad('unauthorized', 401);
+  const aid = me.aid;
+  const [show, fans, meta] = await Promise.all([getShow(aid), readFans(aid), readMeta(aid)]);
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);
   const total = meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0);
@@ -14,6 +16,7 @@ export default async (req) => {
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
       played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
       packs: show.packs, showId: show.showId, startedAt: show.startedAt,
+      artistId: aid, unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],
     },
     voters: Object.values(fans).filter((f) => (f.v || []).length).length,
     songs: rankSongs(

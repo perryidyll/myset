@@ -5,12 +5,12 @@ import { mutateFan, mutateMeta, readMeta, cleanFanId } from './_lib.mjs';
    reconcile sweep, so all three grant identically and none can drift.
    Replay-safe: the session is claimed in meta.paid before anything is granted,
    so a refresh, a webhook retry and a sweep can all race without double-paying. */
-export async function redeemSession(session, fallbackFan = '') {
+export async function redeemSession(aid, session, fallbackFan = '') {
   if (!session || !session.id) return { ok: false, error: 'no session' };
   if (session.payment_status !== 'paid') return { ok: false, error: 'not paid' };
 
   const sid = session.id;
-  const pre = await readMeta();
+  const pre = await readMeta(aid);
   if (pre.paid[sid]) return { ok: true, already: true, ...pre.paid[sid] };
 
   const md = session.metadata || {};
@@ -20,7 +20,7 @@ export async function redeemSession(session, fallbackFan = '') {
   let granted = 0, already = false;
 
   // claim first so a double-tap / webhook race can't grant twice
-  await mutateMeta((m) => {
+  await mutateMeta(aid, (m) => {
     if (m.paid[sid]) { already = true; return false; }
     if (md.kind === 'votes') granted = parseInt(md.votes, 10) || 0;
     if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at });
@@ -29,7 +29,7 @@ export async function redeemSession(session, fallbackFan = '') {
   });
 
   if (already) {
-    const m = await readMeta();
+    const m = await readMeta(aid);
     return { ok: true, already: true, ...(m.paid[sid] || {}) };
   }
 
@@ -38,7 +38,7 @@ export async function redeemSession(session, fallbackFan = '') {
     // would lose paid-for votes permanently. Verify by read-back and retry.
     let target = null;
     await mutateFan(
-      who,
+      aid, who,
       (me) => { target = (me.extra || 0) + granted; me.extra = target; return true; },
       (me) => target !== null && (me.extra || 0) >= target
     );

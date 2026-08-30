@@ -94,6 +94,16 @@ body{padding-bottom:34px}
 
 <script>
 const $=s=>document.querySelector(s), API='/api';
+/* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
+   A path segment containing a dot is a real file, so the legacy /vote.html and
+   /artist.html routes fall through to the founding artist. */
+const SLUG=(()=>{const p=location.pathname.split('/').filter(Boolean);
+  return (p[0]&&!p[0].includes('.'))?p[0]:'';})();
+const AQ=SLUG?'&a='+encodeURIComponent(SLUG):'';
+const AQ1=SLUG?'?a='+encodeURIComponent(SLUG):'';
+const HOME=SLUG?'/'+SLUG:'/';
+const VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
+
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const PROV={youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'};
 
@@ -110,8 +120,8 @@ let P=null,S=null;
 
 async function boot(){
   const [p,s]=await Promise.all([
-    fetch(`${API}/profile`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
-    fetch(`${API}/show?fan=profile`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+    fetch(`${API}/profile${AQ1}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+    fetch(`${API}/show?fan=profile${AQ}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
   ]);
   P=p; S=s; render();
 }
@@ -134,7 +144,7 @@ function render(){
         <div class="when"><b>${esc(S.showTime||'Tonight')}</b><span>${live?'Live now':'Next up'}</span></div>
         <div class="where"><b>${esc(S.venue||'')}</b><span>${esc(S.city||'')}</span></div>
       </div>
-      <div class="cta"><a class="btn btn-pri btn-block" href="/vote.html">Vote the setlist</a></div>
+      <div class="cta"><a class="btn btn-pri btn-block" href="${VOTEHREF}">Vote the setlist</a></div>
     </div>`;
   }
 
@@ -174,7 +184,7 @@ function render(){
 
   h+=`<div class="sect">Tonight</div>
     <div class="card" style="text-align:center">
-      <a class="btn btn-pri btn-block" href="/vote.html">${live?'Vote on what plays next':'See the setlist'}</a>
+      <a class="btn btn-pri btn-block" href="${VOTEHREF}">${live?'Vote on what plays next':'See the setlist'}</a>
     </div>`;
 
   $('#app').innerHTML=h;

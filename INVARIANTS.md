@@ -91,6 +91,27 @@ If you are about to violate one, stop and say so rather than working around it.
     a one-tap removal per song in the Studio. Lyrics the artist typed himself are
     labelled "provided by the artist" — never "community-contributed".
 
+## Multi-tenancy
+
+0a. **Nothing in the store is global except the registry.** Every show, setlist,
+    fan record, payment, history doc, profile and lyric is keyed by artist id via
+    `KEY.*` in `_lib.mjs`. The one global document is `artists`, which maps
+    id -> slug -> email. Do not add a new singleton.
+
+0b. **The artist id comes from the session, never from the request.** Admin
+    endpoints resolve it with `requireArtist(req)`; public ones with
+    `publicArtist(req)` from `?a=<slug>`. An artist passing someone else's id in
+    a body must never reach their data — so no handler reads an id from `body`.
+
+0c. **A new artist starts blank.** `defaultShow()` has no name, no venue and no
+    songs. It once returned Perry's name, his venue and all 66 of his songs, so
+    the second artist ever created appeared to BE him. The starter pack of covers
+    is an explicit opt-in button, and nobody's own compositions belong in it.
+
+0d. **Slugs are public URLs**: cleaned to `[a-z0-9-]`, min 3 chars, checked
+    against a reserved list (`api`, `studio`, `vote`, `signup`, …) so an artist
+    can never claim a route.
+
 ## Artist sign-in
 
 9g. **The audience never signs in.** Anonymous is why the app works in a bar.

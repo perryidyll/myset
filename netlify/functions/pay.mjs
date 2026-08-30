@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { json, bad, cleanFanId, getShow } from './_lib.mjs';
+import { json, bad, cleanFanId, getShow, publicArtist } from './_lib.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -12,7 +12,9 @@ export default async (req) => {
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
 
-  const show = await getShow();
+  const aid = await publicArtist(req);
+  if (!aid) return bad('unknown artist', 404);
+  const show = await getShow(aid);
   const artist = show.artist || 'the artist';
   const origin = new URL(req.url).origin;
   const stripe = new Stripe(key);
@@ -33,7 +35,8 @@ export default async (req) => {
         },
       },
     };
-    metadata = { fan, kind: 'votes', votes: String(pack.votes), pack: String(body.pack), show: show.showId || '' };
+    metadata = { fan, kind: 'votes', votes: String(pack.votes), pack: String(body.pack),
+                 show: show.showId || '', artist: aid };
   } else if (body.kind === 'tip') {
     const cents = Math.round(Number(body.amount) * 100);
     if (!Number.isFinite(cents) || cents < 100 || cents > 50000)
@@ -46,7 +49,8 @@ export default async (req) => {
         product_data: { name: `Tip for ${artist}`, description: 'Thanks for the music' },
       },
     };
-    metadata = { fan, kind: 'tip', note: String(body.note || '').slice(0, 120), show: show.showId || '' };
+    metadata = { fan, kind: 'tip', note: String(body.note || '').slice(0, 120),
+                 show: show.showId || '', artist: aid };
   } else {
     return bad('unknown kind');
   }

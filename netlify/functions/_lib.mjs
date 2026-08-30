@@ -3,9 +3,10 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 
 export const store = () => getStore('myset');
 
-/* ---------- Perry's default set ---------- */
-export const DEFAULT_SONGS = [
-  // [title, artist]  — artists are best guesses; edit any of them in the Studio
+/* ---------- starter setlist offered to a new artist ---------- */
+export const STARTER_SONGS = [
+  // A starter pack of well-known covers, offered to a brand-new artist so their
+  // first gig isn't a blank page. Nobody's own songs belong in here.
   ['The Joker','Steve Miller Band'],
   ['Jack & Diane','John Mellencamp'],
   ['Faith','George Michael'],
@@ -47,10 +48,6 @@ export const DEFAULT_SONGS = [
   ['Stick Season','Noah Kahan'],
   ['Do You Remember','Jack Johnson'],
   ['Taylor','Jack Johnson'],
-  ['Like The Tides','Perry Idyll'],
-  ['All Or Nothing','Perry Idyll'],
-  ['Dissolve','Perry Idyll'],
-  ['Lost In Love','Perry Idyll'],
   ['Fast Car','Tracy Chapman'],
   ['3 AM','Matchbox Twenty'],
   ['Landslide','Fleetwood Mac'],
@@ -77,6 +74,8 @@ export const DEFAULT_SONGS = [
 /* Stamped on every new record. Nothing is multi-artist yet, but a field costs
    nothing now and is the difference between a rename and a rewrite later. */
 export const ARTIST_ID = 'perry-idyll';
+/** The founding artist. Used when no slug is given and by the legacy studio code. */
+export const DEFAULT_ARTIST = 'perry-idyll';
 
 /* Must be generated OUTSIDE a CAS callback — a retry would otherwise produce a
    different id on each attempt. */
@@ -89,12 +88,15 @@ export function newShowId(now = Date.now()) {
 export const slug = (t) =>
   t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
+/* Deliberately blank. A second artist signing up must never inherit the first
+   artist's name, venue or setlist — `getShow` fills the name in from the
+   registry, and the Studio offers the starter pack as an explicit choice. */
 export function defaultShow() {
   return {
-    artist: 'Perry Idyll',
-    venue: 'The Ugly Duckling Irish Pub',
-    city: 'Koh Phangan, Thailand',
-    showTime: '8:00 PM',
+    artist: '',
+    venue: '',
+    city: '',
+    showTime: '',
     status: 'live',              // pre | live | ended
     windowOpen: true,
     nowPlaying: null,
@@ -104,7 +106,7 @@ export function defaultShow() {
     unlimitedFans: [],       // specific devices that do — the artist's own, for testing
     replayCost: 5,
     packs: DEFAULT_PACKS(),
-    songs: DEFAULT_SONGS.map(([t, a]) => ({ id: slug(t), title: t, artist: a, active: true })),
+    songs: [],
     showId: null,
     artistId: ARTIST_ID,
     startedAt: null,
@@ -150,8 +152,24 @@ export function normPacks(p) {
    of voters spreads across many documents instead of contending
    on one, which is what makes concurrent voting lossless.
    ============================================================ */
+/* Every record that belongs to an artist is namespaced by their id. Nothing
+   about a show, a setlist, a fan's votes or a payment is global any more —
+   that is what makes a second artist possible without a rewrite. */
+export const KEY = {
+  show:    (a) => `show_${a}`,
+  fan:     (a, n) => `f${n}_${a}`,
+  meta:    (a) => `meta_${a}`,
+  profile: (a) => `profile_${a}`,
+  histIdx: (a) => `histidx_${a}`,
+  hist:    (a, showId) => `hist_${a}_${showId}`,
+  lyrics:  (a, songId) => `lyr_${a}_${songId}`,
+};
+/** Artist ids are used inside blob keys, so they must stay boring. */
+export const cleanArtistId = (v) =>
+  String(v || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
+
 export const SHARDS = 12;
-const shardKey = (n) => `f${n}`;
+const shardKey = (a, n) => KEY.fan(a, n);
 export function shardOf(fanId) {
   let h = 5381;
   for (let i = 0; i < fanId.length; i++) h = ((h * 33) ^ fanId.charCodeAt(i)) >>> 0;
@@ -195,7 +213,7 @@ export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
 function normShow(s) {
   const d = defaultShow();
   const show = { ...d, ...(s || {}) };
-  if (!Array.isArray(show.songs) || !show.songs.length) show.songs = d.songs;
+  if (!Array.isArray(show.songs)) show.songs = [];
   if (!Array.isArray(show.played)) show.played = [];
   if (typeof show.freeCredits !== 'number') show.freeCredits = 3;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
@@ -209,13 +227,21 @@ function normShow(s) {
   if (!show.startedAt) show.startedAt = show.updatedAt || Date.now();
   return show;
 }
-export async function getShow() {
-  const { data } = await readDoc('show', null);
-  return normShow(data);
+export async function getShow(aid) {
+  const { data } = await readDoc(KEY.show(aid), null);
+  const show = normShow(data);
+  show.artistId = aid;
+  if (!show.artist) {                      // the name lives in the registry
+    const { artistById } = await import('./_auth.mjs');
+    const a = await artistById(aid);
+    show.artist = (a && a.name) || '';
+  }
+  return show;
 }
-export const mutateShow = (fn) =>
-  casDoc('show', defaultShow, (s) => {
+export const mutateShow = (aid, fn) =>
+  casDoc(KEY.show(aid), defaultShow, (s) => {
     const show = normShow(s);
+    show.artistId = aid;
     Object.keys(s || {}).forEach((k) => delete s[k]);
     Object.assign(s, show);
     const r = fn(s);
@@ -224,9 +250,9 @@ export const mutateShow = (fn) =>
   });
 
 /* ---------- fan shards ---------- */
-export const mutateFan = (fanId, fn, verifyFan = null) =>
+export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
   casDoc(
-    shardKey(shardOf(fanId)),
+    shardKey(aid, shardOf(fanId)),
     () => ({}),
     (bag) => {
       const me = (bag[fanId] ||= { v: [], extra: 0, ts: {} });
@@ -237,18 +263,18 @@ export const mutateFan = (fanId, fn, verifyFan = null) =>
   );
 
 /** All fan records, merged from every shard (parallel strong reads). */
-export async function readFans() {
+export async function readFans(aid) {
   const parts = await Promise.all(
-    Array.from({ length: SHARDS }, (_, n) => readDoc(shardKey(n), {}))
+    Array.from({ length: SHARDS }, (_, n) => readDoc(shardKey(aid, n), {}))
   );
   const fans = {};
   for (const p of parts) Object.assign(fans, p.data || {});
   return fans;
 }
-export async function clearAllFanVotes() {
+export async function clearAllFanVotes(aid) {
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
-      casDoc(shardKey(n), () => ({}), (bag) => {
+      casDoc(shardKey(aid, n), () => ({}), (bag) => {
         for (const id of Object.keys(bag)) { bag[id].v = []; bag[id].ts = {}; }  // drop stale stamps too
         return true;
       }, null).catch(() => {})
@@ -264,10 +290,10 @@ export function unspentPaid(fan, show) {
   const total = (show.freeCredits || 0) + extra;
   return Math.max(0, Math.min(extra, total - creditsUsed(fan, show)));
 }
-export async function carryFans(show) {
+export async function carryFans(aid, show) {
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
-      casDoc(shardKey(n), () => ({}), (bag) => {
+      casDoc(shardKey(aid, n), () => ({}), (bag) => {
         for (const id of Object.keys(bag)) {
           const carry = unspentPaid(bag[id], show);
           if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted: bag[id].gifted || 0 };
@@ -279,24 +305,24 @@ export async function carryFans(show) {
   );
 }
 
-export async function wipeFans() {
+export async function wipeFans(aid) {
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
-      store().set(shardKey(n), '{}').catch(() => {})
+      store().set(shardKey(aid, n), '{}').catch(() => {})
     )
   );
 }
 
 /* ---------- meta (tips / payment markers) ---------- */
 export const emptyMeta = () => ({ tips: [], paid: {}, gifts: [] });
-export async function readMeta() {
-  const { data } = await readDoc('meta', null);
+export async function readMeta(aid) {
+  const { data } = await readDoc(KEY.meta(aid), null);
   const m = data || emptyMeta();
   m.tips ||= []; m.paid ||= {}; m.gifts ||= [];
   return m;
 }
-export const mutateMeta = (fn) =>
-  casDoc('meta', emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; return fn(m); });
+export const mutateMeta = (aid, fn) =>
+  casDoc(KEY.meta(aid), emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; return fn(m); });
 
 /* ---------- derived ---------- */
 /** Does this device vote without limit? Either the whole room is unlimited, or
@@ -365,22 +391,38 @@ const sameHash = (a, b) => {
      show.codeHash   — a code he set himself from the Studio, stored hashed
    The second exists because on 2026-08-30 he could not get into his own Studio
    during a gig: the only code lived in an env var he had no copy of. */
-export async function checkAdmin(req) {
-  const url = new URL(req.url);
-
-  // a signed session from email sign-in (see _auth.mjs)
+/** Who is making this request, and which artist do they own?
+ *  Returns { aid, email, role } or null. Every admin endpoint uses this — an
+ *  artist can only ever reach their own records because the id comes from the
+ *  session, never from the request body. */
+export async function requireArtist(req) {
   const auth = req.headers.get('authorization') || '';
   if (auth.startsWith('Bearer ')) {
     const { verifyToken } = await import('./_auth.mjs');
-    if (await verifyToken(auth.slice(7))) return true;
+    const me = await verifyToken(auth.slice(7));
+    if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner' };
   }
 
+  // The studio code predates accounts and belongs to the founding artist.
+  // Everyone else signs in with email.
+  const url = new URL(req.url);
   const given = req.headers.get('x-admin-code') || url.searchParams.get('code') || '';
-  if (!given) return false;
+  if (!given) return null;
   const master = process.env.ADMIN_CODE;
-  if (master && sameHash(sha(given), sha(master))) return true;
-  const show = await getShow();
-  return !!show.codeHash && sameHash(sha(given), show.codeHash);
+  if (master && sameHash(sha(given), sha(master)))
+    return { aid: DEFAULT_ARTIST, email: null, role: 'owner' };
+  const show = await getShow(DEFAULT_ARTIST);
+  if (show.codeHash && sameHash(sha(given), show.codeHash))
+    return { aid: DEFAULT_ARTIST, email: null, role: 'owner' };
+  return null;
+}
+
+/** Which artist is a PUBLIC request about? From ?a=<slug>. */
+export async function publicArtist(req) {
+  const slug = new URL(req.url).searchParams.get('a') || '';
+  if (!slug) return DEFAULT_ARTIST;          // bare myset.vip still means Perry
+  const { artistBySlug } = await import('./_auth.mjs');
+  return await artistBySlug(slug);
 }
 export const cleanFanId = (v) =>
   typeof v === 'string' ? v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) : '';

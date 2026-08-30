@@ -191,11 +191,18 @@ function gate(err,mode){
         maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:26px">
       <button class="big" style="margin-top:12px" onclick="submitCode()">Sign in</button>
       <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'start')">← Use a different email</button>`;
+  }else if(m==='new'){
+    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">Set up your page. It takes about a minute and it’s free.</p>
+      <input class="inp" id="newName" maxlength="60" placeholder="Your artist or band name">
+      <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" style="margin-top:10px">
+      <button class="big" style="margin-top:12px" onclick="sendCode(true)">Create my page</button>
+      <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'start')">← I already have one</button>`;
   }else{
     inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">${
       err==='unauthorized'?'That didn’t work — try again.':'Sign in to run your show.'}</p>
       <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
       <button class="big" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
+      <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'new')">New here? Create your page →</button>
       <div style="display:flex;align-items:center;gap:12px;margin:22px 0 14px">
         <span style="flex:1;height:.5px;background:var(--hair)"></span>
         <span class="kick" style="font-size:12px">or</span>
@@ -211,12 +218,15 @@ function gate(err,mode){
   const c=$('#code'); if(c) c.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
 }
 function unlock(){CODE=($('#code').value||'').trim();localStorage.setItem('myset.admin',CODE);start();}
-async function sendCode(){
+async function sendCode(isNew){
   const em=(($('#email')||{}).value||'').trim();
+  const nm=(($('#newName')||{}).value||'').trim();
   if(!em){toast('Enter your email');return;}
+  if(isNew&&!nm){toast('What should we call you?');return;}
   GATE_EMAIL=em;
-  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'request',email:em})});
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'start',email:em,name:nm})});
   if(!d.ok){toast(d.error||'Could not send that');return;}
+  if(d.needName){ toast('Looks new — tell us your name'); gate(null,'new'); return; }
   gate(null,'code');
 }
 async function submitCode(){
@@ -225,7 +235,8 @@ async function submitCode(){
   if(!d.ok){toast(d.error||'Check the code and try again');return;}
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
-  toast(`Signed in as ${d.email}`); start();
+  toast(d.isNew?`Welcome — your page is myset.vip/${d.slug}`:`Signed in as ${d.email}`);
+  start();
 }
 function signOut(){
   CODE='';TOKEN='';
@@ -351,6 +362,8 @@ function render(){
         <button class="act pri" style="min-width:64px" onclick="addSong()">Add</button>
       </div>
     </div>
+    ${songs.length?'':`<div class="sec"><span class="kick">No songs yet</span></div>
+      <div class="list"><div class="row muted">Add your songs above, or tap <b>Add the starter pack</b> at the bottom for around 60 well-known covers to edit down.</div></div>`}
     <div class="sec"><span class="kick">Your setlist — ${active} of ${songs.length} live</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Turn a song OFF to hide it from the audience tonight. Remove deletes it for good.</p>
     <div class="list">${songs.map(x=>`<div class="row ${x.active===false?'off':''}">
@@ -362,7 +375,8 @@ function render(){
       <button class="act warn" data-act="del" data-id="${x.id}">✕</button>
     </div>`).join('')}</div>
     <div class="wrap" style="margin-top:18px">
-      <button class="big alt" onclick="if(confirm('Restore the default setlist? Songs you added will be removed.'))act('resetSetlist')">↺ Restore default setlist</button>
+      <button class="big alt" onclick="if(confirm('Add around 60 well-known covers to your setlist? Nothing you already have is touched.'))act('starterSetlist')">+ Add the starter pack</button>
+      <button class="big alt" onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear the whole setlist</button>
     </div>`;
   }
 
@@ -561,6 +575,15 @@ function render(){
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fetch the words for your whole setlist once, before a gig. They’re stored on your own server after that, so a room full of people tapping “Lyrics” never hits the internet. Takes about half a minute.</p>
     <div class="wrap"><button class="big alt" id="lyrWarm" onclick="warmLyrics()">↓ Fetch lyrics for the whole setlist</button></div>
 
+    <div class="sec"><span class="kick">Your public page</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">This is the link you give people. Change it any time — the old one stops working.</p>
+    <div class="field"><label>myset.vip/</label><div style="display:flex;gap:8px">
+      <input class="inp" id="slugIn" maxlength="32" placeholder="yourname" style="flex:1"
+        value="${esc((TEAM&&TEAM.slug)||'')}">
+      <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
+    ${TEAM&&TEAM.slug?`<div class="wrap" style="margin-top:10px">
+      <a class="big alt" href="/${esc(TEAM.slug)}" target="_blank" style="justify-content:center">Open myset.vip/${esc(TEAM.slug)} ↗</a></div>`:''}
+
     <div class="sec"><span class="kick">Who can sign in</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Emails that can sign in with a code instead of the studio code. Add your own so you never have to remember anything.</p>
     ${TEAM&&TEAM.ok?`<div class="list">${TEAM.emails.map(e=>`<div class="row">
@@ -734,6 +757,12 @@ async function loadTeam(force){
   if(TEAM&&!force)return;
   TEAM=await api('/auth',{method:'POST',body:JSON.stringify({action:'list'})});
   if(TAB==='settings'&&D)render();
+}
+async function saveSlug(){
+  const v=(($('#slugIn')||{}).value||'').trim();
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'setSlug',slug:v})});
+  if(!d.ok){toast(d.error||'Could not save that');return;}
+  TEAM=d; render(); toast(`Your page is now myset.vip/${d.slug}`);
 }
 async function addTeam(){
   const el=$('#teamEmail'), em=(el.value||'').trim();

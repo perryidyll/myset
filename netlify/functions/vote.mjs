@@ -1,4 +1,4 @@
-import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, json, bad, cleanFanId } from './_lib.mjs';
+import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, publicArtist, json, bad, cleanFanId } from './_lib.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -9,7 +9,9 @@ export default async (req) => {
   const song = typeof body.song === 'string' ? body.song.slice(0, 60) : '';
   if (!fan || !song) return bad('missing fan or song');
 
-  const show = await getShow();
+  const aid = await publicArtist(req);
+  if (!aid) return bad('unknown artist', 404);
+  const show = await getShow(aid);
   if (show.status === 'ended') return bad('The show has ended', 409);
   const s0 = show.songs.find((x) => x.id === song && x.active !== false);
   if (!s0) return bad('unknown song', 404);
@@ -19,7 +21,7 @@ export default async (req) => {
   let err = null, outcome = null, want = null;
 
   try {
-    await mutateFan(fan, (me) => {
+    await mutateFan(aid, fan, (me) => {
       me.ts ||= {};
       // window closed => no changes at all, in or out (an un-vote while paused
       // could not be re-cast and would silently drop the on-stage tally)
