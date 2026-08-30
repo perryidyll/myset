@@ -91,6 +91,23 @@ If you are about to violate one, stop and say so rather than working around it.
     a one-tap removal per song in the Studio. Lyrics the artist typed himself are
     labelled "provided by the artist" — never "community-contributed".
 
+## Artist sign-in
+
+9g. **The audience never signs in.** Anonymous is why the app works in a bar.
+    Auth exists only for the Studio.
+
+9h. **Every unauthenticated auth response must be identical** whether or not the
+    address is on the artist list, or the endpoint becomes a way to discover who
+    has an account. This broke once already: "email isn't switched on" is a
+    property of the SITE, so it has to be checked *before* the allowlist, not
+    after. Wrong code and unknown email both return the same 401 text.
+
+9i. **Codes and tokens.** Six digits, 10-minute expiry, burned on use, max 5
+    guesses, max 5 sends per address per hour, compared in constant time and
+    stored only as an HMAC. Sessions are signed with a secret generated once into
+    Blobs — never in the repo, and one less thing to configure. Bumping
+    `artists.rev` signs every device out at once.
+
 ## Cost
 
 9d0. **Production deploys are the expensive thing, not traffic.** A production

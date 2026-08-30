@@ -367,6 +367,14 @@ const sameHash = (a, b) => {
    during a gig: the only code lived in an env var he had no copy of. */
 export async function checkAdmin(req) {
   const url = new URL(req.url);
+
+  // a signed session from email sign-in (see _auth.mjs)
+  const auth = req.headers.get('authorization') || '';
+  if (auth.startsWith('Bearer ')) {
+    const { verifyToken } = await import('./_auth.mjs');
+    if (await verifyToken(auth.slice(7))) return true;
+  }
+
   const given = req.headers.get('x-admin-code') || url.searchParams.get('code') || '';
   if (!given) return false;
   const master = process.env.ADMIN_CODE;

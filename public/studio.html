@@ -153,39 +153,89 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 <div class="toast" id="toast"></div>
 <script>
 const $=s=>document.querySelector(s), API='/api';
-let CODE=localStorage.getItem('myset.admin')||'', D=null, REV=null, HIST=null, DETAIL=null, PROF=null, timer=null;
+let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('myset.token')||'';
+let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 
 async function api(p,o={}){
-  const r=await fetch(API+p,{...o,headers:{'content-type':'application/json','x-admin-code':CODE,...(o.headers||{})}});
+  const h={'content-type':'application/json',...(o.headers||{})};
+  if(CODE) h['x-admin-code']=CODE;
+  if(TOKEN) h['authorization']='Bearer '+TOKEN;
+  const r=await fetch(API+p,{...o,headers:h});
   return r.json();
 }
 async function load(){
   const d=await api('/stage');
-  if(!d.ok){ if(d.error==='unauthorized'){CODE='';localStorage.removeItem('myset.admin');} gate(d.error); return; }
+  if(!d.ok){ if(d.error==='unauthorized'){
+      CODE='';TOKEN='';localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token'); }
+    gate(d.error); return; }
   D=d; render();
   if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
   if(TAB==='profile'&&!PROF) loadProf();
+  if(TAB==='settings'&&!TEAM) loadTeam();
 }
 async function act(action,extra={}){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
   if(!d.ok){toast(d.error||'Failed');return;}
   await load();
 }
-function gate(err){
+let GATE_EMAIL='';
+function gate(err,mode){
   clearInterval(timer);
-  document.getElementById('app').innerHTML=`<div class="gate">
-    <h2>Artist Studio</h2>
-    <p class="muted" style="font-size:14px;margin:0 0 16px">${err==='unauthorized'?'Wrong code — try again.':'Enter your show code.'}</p>
-    <input class="inp" id="code" type="password" placeholder="Show code" autocomplete="off">
-    <button class="big" style="margin-top:12px" onclick="unlock()">Unlock</button></div>`;
-  $('#code').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
-  setTimeout(()=>$('#code').focus(),100);
+  const m=mode||'start';
+  const head=`<h2>Artist Studio</h2>`;
+  let inner;
+  if(m==='code'){
+    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">We sent a 6-digit code to <b>${esc(GATE_EMAIL)}</b>. It works for ten minutes.</p>
+      <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code"
+        maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:26px">
+      <button class="big" style="margin-top:12px" onclick="submitCode()">Sign in</button>
+      <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'start')">← Use a different email</button>`;
+  }else{
+    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">${
+      err==='unauthorized'?'That didn’t work — try again.':'Sign in to run your show.'}</p>
+      <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
+      <button class="big" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
+      <div style="display:flex;align-items:center;gap:12px;margin:22px 0 14px">
+        <span style="flex:1;height:.5px;background:var(--hair)"></span>
+        <span class="kick" style="font-size:12px">or</span>
+        <span style="flex:1;height:.5px;background:var(--hair)"></span>
+      </div>
+      <input class="inp" id="code" type="password" placeholder="Studio code" autocomplete="current-password">
+      <button class="big alt" style="margin-top:12px" onclick="unlock()">Unlock with code</button>`;
+  }
+  document.getElementById('app').innerHTML=`<div class="gate">${head}${inner}</div>`;
+  const first=$('#otp')||$('#email');
+  if(first){ first.addEventListener('keydown',e=>{if(e.key==='Enter'){m==='code'?submitCode():sendCode();}});
+    setTimeout(()=>first.focus(),100); }
+  const c=$('#code'); if(c) c.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
 }
-function unlock(){CODE=$('#code').value.trim();localStorage.setItem('myset.admin',CODE);start();}
+function unlock(){CODE=($('#code').value||'').trim();localStorage.setItem('myset.admin',CODE);start();}
+async function sendCode(){
+  const em=(($('#email')||{}).value||'').trim();
+  if(!em){toast('Enter your email');return;}
+  GATE_EMAIL=em;
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'request',email:em})});
+  if(!d.ok){toast(d.error||'Could not send that');return;}
+  gate(null,'code');
+}
+async function submitCode(){
+  const code=(($('#otp')||{}).value||'').trim();
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'verify',email:GATE_EMAIL,code})});
+  if(!d.ok){toast(d.error||'Check the code and try again');return;}
+  TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
+  CODE=''; localStorage.removeItem('myset.admin');
+  toast(`Signed in as ${d.email}`); start();
+}
+function signOut(){
+  CODE='';TOKEN='';
+  localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token');
+  gate();
+}
 function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();}
-  if(t==='profile') loadProf();}
+  if(t==='profile') loadProf();
+  if(t==='settings') loadTeam();}
 /* Stripe is the source of truth for money, so this reads it directly rather than
    trusting the app's own ledger. Fetched on demand — never on the 4s live poll. */
 async function loadRev(force){
@@ -349,7 +399,9 @@ function render(){
         <div class="rk mono">${i+1}</div>
         <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="by">${esc(x.artist)}</div>`:''}
           <div class="s">${dstamp(x.at)}${x.replay?' · replay':''}</div></div>
-        <div class="cnt mono">${x.votes}</div></div>`).join('')||'<div class="row muted">No songs were started from the Studio during this show.</div>'}</div>
+        <div class="cnt mono">${x.votes}</div></div>`).join('')||`<div class="row muted">${
+          St.songsPlayed?`${St.songsPlayed} songs played, but the titles weren’t logged — the Studio wasn’t open that night.`
+                        :'No songs were started from the Studio during this show.'}</div>`}</div>
       ${(H.requested||[]).length?`<div class="sec"><span class="kick">Wanted but never played</span></div>
       <div class="list">${H.requested.slice(0,15).map(x=>`<div class="row done">
         <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="by">${esc(x.artist)}</div>`:''}</div>
@@ -509,10 +561,25 @@ function render(){
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fetch the words for your whole setlist once, before a gig. They’re stored on your own server after that, so a room full of people tapping “Lyrics” never hits the internet. Takes about half a minute.</p>
     <div class="wrap"><button class="big alt" id="lyrWarm" onclick="warmLyrics()">↓ Fetch lyrics for the whole setlist</button></div>
 
+    <div class="sec"><span class="kick">Who can sign in</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Emails that can sign in with a code instead of the studio code. Add your own so you never have to remember anything.</p>
+    ${TEAM&&TEAM.ok?`<div class="list">${TEAM.emails.map(e=>`<div class="row">
+        <div class="m"><div class="t">${esc(e.email)}</div>${e.name?`<div class="by">${esc(e.name)}</div>`:''}</div>
+        <button class="act warn" data-act="rmmail" data-id="${esc(e.email)}">✕</button></div>`).join('')
+      ||'<div class="row muted">Nobody yet — add your email below.</div>'}</div>
+      ${TEAM.emailReady?'':`<p class="muted" style="font-size:12px;padding:10px 18px 0">Email sending isn’t switched on yet, so codes can’t go out. Add <b>RESEND_API_KEY</b> in Netlify to turn it on.</p>`}`
+      :`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`}
+    <div class="field"><label>Add an email</label><div style="display:flex;gap:8px">
+      <input class="inp" id="teamEmail" type="email" inputmode="email" placeholder="you@email.com" style="flex:1">
+      <button class="act pri" style="min-width:64px" onclick="addTeam()">Add</button></div></div>
+    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="if(confirm('Sign every device out, including this one?'))revokeAll()">Sign all devices out</button></div>
+
     <div class="sec"><span class="kick">Your studio code</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Set something you\u2019ll actually remember \u2014 it works from any phone. The original code from Netlify keeps working as a backup, so you can never lock yourself out.</p>
     <div class="field"><label>New code</label><input class="inp" id="fCode" type="password" placeholder="At least 4 characters" autocomplete="new-password"></div>
     <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="saveCode()">Save new code</button></div>
+
+    <div class="wrap" style="margin-top:10px"><button class="big alt" onclick="signOut()">Sign out of this device</button></div>
 
     <div class="sec"><span class="kick">Show</span></div>
     <div class="wrap">
@@ -618,6 +685,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='mup') media('mediaMove',id,'up');
   if(b.dataset.act==='mdn') media('mediaMove',id,'down');
   if(b.dataset.act==='mrm') media('mediaRemove',id);
+  if(b.dataset.act==='rmmail') removeTeam(id);
 });
 async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'venue',venue:$('#fVenue').value})});
@@ -662,6 +730,29 @@ async function savePacks(){
   if(!d.ok){toast(d.error||'Could not save that');return;}
   toast('Prices saved'); load();
 }
+async function loadTeam(force){
+  if(TEAM&&!force)return;
+  TEAM=await api('/auth',{method:'POST',body:JSON.stringify({action:'list'})});
+  if(TAB==='settings'&&D)render();
+}
+async function addTeam(){
+  const el=$('#teamEmail'), em=(el.value||'').trim();
+  if(!em){toast('Enter an email');return;}
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'add',email:em})});
+  if(!d.ok){toast(d.error||'Could not add that');return;}
+  el.value=''; TEAM=d; render(); toast(`${em} can sign in now`);
+}
+async function removeTeam(email){
+  if(!confirm('Stop '+email+' signing in?'))return;
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'remove',email})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  TEAM=d; render(); toast('Removed');
+}
+async function revokeAll(){
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'revokeAll'})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  toast('Every device signed out'); signOut();
+}
 async function saveCode(){
   const el=$('#fCode'), v=(el.value||'').trim();
   if(v.length<4){toast('At least 4 characters');return;}
@@ -677,7 +768,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const when=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':Math.floor(m/60)+'h ago';};
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3000);}
 function start(){clearInterval(timer);load();timer=setInterval(()=>{if(!document.hidden&&TAB==='live')load()},4000);}
-if(CODE) start(); else gate();
+if(CODE||TOKEN) start(); else gate();
 </script>
 </body>
 </html>
