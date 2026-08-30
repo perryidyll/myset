@@ -5,6 +5,81 @@ import { archiveShow } from './_history.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
+import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, MAX_EVENTS } from './_events.mjs';
+
+/* The gig calendar. Events are their own document, so these short-circuit too.
+   Every write reindexes the artist's cities, which is what keeps the public
+   country/city feed correct without a job to run. */
+async function handleEvents(aid, action, body) {
+  if (action === 'eventList') {
+    const events = await readEvents(aid);
+    // Expanded here, never in the browser. One implementation of "when does this
+    // repeat" — the same reason rankSongs exists (INVARIANT 12b).
+    const from = /^\d{4}-\d{2}-\d{2}$/.test(body.from || '') ? body.from : null;
+    const to = /^\d{4}-\d{2}-\d{2}$/.test(body.to || '') ? body.to : null;
+    const occ = from && to ? occurrencesFor(events, from, to) : [];
+    // cancelled nights are hidden from the public feed but the artist must see
+    // them, so they are expanded separately and flagged
+    const cancelled = [];
+    for (const ev of events.list) {
+      for (const d of ev.skip || []) {
+        if (from && to && d >= from && d <= to)
+          cancelled.push({ eventId: ev.id, date: d, time: ev.time, venue: ev.venue,
+                           city: ev.city, country: ev.country, repeating: !!ev.repeat,
+                           cancelled: true });
+      }
+    }
+    return json({ ok: true, events: events.list,
+                  occurrences: [...occ, ...cancelled].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)) });
+  }
+
+  if (action === 'eventSave') {
+    const incoming = body.event || {};
+    const id = String(incoming.id || '').slice(0, 24) ||
+               'g' + Math.random().toString(36).slice(2, 10);   // outside the CAS
+    let full = false;
+    const ev = normEvent({ ...incoming, id });
+    if (!ev.date) return bad('Pick a date');
+    if (!ev.venue) return bad('Where is it?');
+    await mutateEvents(aid, (d) => {
+      const at = d.list.findIndex((x) => x.id === id);
+      if (at >= 0) d.list[at] = { ...ev, skip: d.list[at].skip || [], createdAt: d.list[at].createdAt };
+      else if (d.list.length >= MAX_EVENTS) { full = true; return false; }
+      else d.list.push(ev);
+      return true;
+    });
+    if (full) return bad('That is as many gigs as one calendar can hold');
+    const events = await readEvents(aid);
+    await reindexCities(aid, events);
+    return json({ ok: true, id, events: events.list });
+  }
+
+  if (action === 'eventDelete') {
+    await mutateEvents(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
+    const events = await readEvents(aid);
+    await reindexCities(aid, events);
+    return json({ ok: true, events: events.list });
+  }
+
+  // cancel or un-cancel a single night of a residency without touching the rule
+  if (action === 'eventSkip') {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date || '') ? body.date : null;
+    if (!date) return bad('bad date');
+    await mutateEvents(aid, (d) => {
+      const ev = d.list.find((x) => x.id === body.id);
+      if (!ev) return false;
+      ev.skip = Array.isArray(ev.skip) ? ev.skip : [];
+      const at = ev.skip.indexOf(date);
+      if (body.on === false) { if (at >= 0) ev.skip.splice(at, 1); }
+      else if (at < 0) ev.skip.push(date);
+      return true;
+    });
+    const events = await readEvents(aid);
+    return json({ ok: true, events: events.list });
+  }
+  return bad('unknown action', 400);
+}
+const EVENT_ACTIONS = new Set(['eventList', 'eventSave', 'eventDelete', 'eventSkip']);
 
 /* Lyrics live in their own flat docs, not on the show, so these short-circuit too. */
 async function handleLyrics(aid, action, body, show) {
@@ -120,6 +195,7 @@ export default async (req) => {
   const action = body.action;
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
+  if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
 
   let err = null, resetVotes = false, wipe = false;
 

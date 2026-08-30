@@ -112,6 +112,33 @@ If you are about to violate one, stop and say so rather than working around it.
     against a reserved list (`api`, `studio`, `vote`, `signup`, …) so an artist
     can never claim a route.
 
+## Gigs and the city feed
+
+0e. **Gigs are rules, not instances.** A weekly residency is one record. Expansion
+    happens **server-side only** (`_events.mjs`), and the Studio calendar asks the
+    server for occurrences rather than expanding them itself — the same
+    one-implementation rule as `rankSongs` (12b).
+
+0f. **A gig is a wall clock in a named place**, stored as `date` + `time` + IANA
+    `tz`, resolved to an instant on read by `_time.mjs`. Never store the instant:
+    a residency would shift by an hour at every DST change.
+
+0g. **Monthly recurrence is measured from the original date**, not from the
+    previous occurrence. Stepping month-to-month makes "the 31st" clamp to the
+    28th in February and stay there for good.
+
+0h. **A set that runs past midnight belongs to the night it started** and is
+    still "on" at 1am. `endsAt` decides what is live, not the calendar day —
+    this is the one thing todo.today gets wrong and the one we cannot.
+
+0i. **The city index is written when gigs change, never read with `list()`.**
+    `reindexCities` removes the artist from every city then re-adds the ones they
+    actually have gigs in, so deleting a gig cleans up after itself.
+
+0j. **Never invent gig data.** A listed gig sends a real person to a real bar on
+    a real night. Placeholder venues were once loaded to test the feed and had to
+    be deleted before they could be seen.
+
 ## Artist sign-in
 
 9g. **The audience never signs in.** Anonymous is why the app works in a bar.

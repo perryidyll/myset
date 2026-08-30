@@ -43,7 +43,10 @@ a{color:inherit;text-decoration:none}
 .head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.028em}
 
 .tabs{position:sticky;top:66px;z-index:29;display:flex;gap:5px;margin:14px 18px 0;padding:4px;
-  background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1)}
+  background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1);
+  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:0 0 auto}
 .tabs button{flex:1;padding:10px 4px;font-size:13px;font-weight:600;color:var(--muted);
   white-space:nowrap;letter-spacing:-.015em;
   border-radius:var(--pill);transition:background .25s var(--ease),color .2s var(--ease)}
@@ -112,6 +115,28 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 .chip:active{transform:scale(.93)}
 .chip.on{background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(255,55,95,.34)}
 
+.calhead{display:flex;align-items:center;justify-content:space-between;padding:6px 18px 12px}
+.calhead b{font-size:17px;font-weight:600;letter-spacing:-.02em}
+.calnav{display:flex;gap:6px}
+.calnav button{width:36px;height:36px;border-radius:50%;background:var(--surface);
+  box-shadow:var(--sh-1);font-size:16px;transition:transform .2s var(--spring)}
+.calnav button:active{transform:scale(.9)}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:0 14px}
+.cal .dow{text-align:center;font-size:11px;font-weight:600;color:var(--faint);padding:2px 0 6px}
+.cal .cell{aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:3px;font-size:14.5px;font-weight:500;background:transparent;
+  color:var(--ink-2);transition:background .2s var(--ease),transform .2s var(--spring)}
+.cal .cell:active{transform:scale(.9)}
+.cal .cell.out{color:var(--faint);opacity:.45}
+.cal .cell.today{box-shadow:inset 0 0 0 1.5px var(--accent);color:var(--accent);font-weight:700}
+.cal .cell.has{background:var(--surface-2)}
+.cal .cell .dots{display:flex;gap:2.5px;height:5px}
+.cal .cell .dots i{width:5px;height:5px;border-radius:50%;background:var(--accent);display:block}
+.gigrow .when{flex:0 0 auto;text-align:center;min-width:52px}
+.gigrow .when b{display:block;font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.gigrow .when span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.gigrow.off{opacity:.4}
+.gigrow.off .t{text-decoration:line-through}
 .warnbox{margin:16px 18px 0;padding:18px 20px;border-radius:var(--r-lg);background:var(--accent-soft);
   box-shadow:inset 0 0 0 1px rgba(255,69,110,.3)}
 .warnbox b{display:block;font-size:16.5px;font-weight:600;letter-spacing:-.015em;color:var(--accent)}
@@ -154,6 +179,7 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 <script>
 const $=s=>document.querySelector(s), API='/api';
 let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('myset.token')||'';
+let EVENTS=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 
@@ -173,6 +199,7 @@ async function load(){
   if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
   if(TAB==='profile'&&!PROF) loadProf();
   if(TAB==='settings'&&!TEAM) loadTeam();
+  if(TAB==='gigs'&&!EVENTS) loadGigs();
 }
 async function act(action,extra={}){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
@@ -246,13 +273,111 @@ function signOut(){
 function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();}
   if(t==='profile') loadProf();
-  if(t==='settings') loadTeam();}
+  if(t==='settings') loadTeam();
+  if(t==='gigs') loadGigs();}
 /* Stripe is the source of truth for money, so this reads it directly rather than
    trusting the app's own ledger. Fetched on demand — never on the 4s live poll. */
 async function loadRev(force){
   if(REV&&!force)return;
   REV=await api('/revenue');
   if(TAB==='money'&&D)render();
+}
+/* ---- gig calendar ---- */
+const pad=n=>String(n).padStart(2,'0');
+const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;};
+let CAL_MONTH=todayStr().slice(0,7);
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const monthName=m=>{const [Y,M]=m.split('-').map(Number);return `${MON[M-1]} ${Y}`;};
+const dayNum=d=>Number(d.slice(8,10));
+const monShort=d=>MON[Number(d.slice(5,7))-1].slice(0,3);
+const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOW[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
+function calCells(month){
+  const [Y,M]=month.split('-').map(Number);
+  const first=new Date(Date.UTC(Y,M-1,1)), lead=first.getUTCDay();
+  const out=[];
+  for(let i=0;i<42;i++){
+    const t=new Date(Date.UTC(Y,M-1,1-lead+i));
+    const date=`${t.getUTCFullYear()}-${pad(t.getUTCMonth()+1)}-${pad(t.getUTCDate())}`;
+    out.push({date,day:t.getUTCDate(),out:t.getUTCMonth()!==M-1});
+    if(i>=34&&t.getUTCMonth()!==M-1&&t.getUTCDate()>7)break;
+  }
+  return out;
+}
+function calWindow(){
+  const [Y,M]=CAL_MONTH.split('-').map(Number);
+  const from=`${Y}-${pad(M)}-01`;
+  const end=new Date(Date.UTC(Y,M+2,0));   // this month plus two, so "coming up" is full
+  return {from, to:`${end.getUTCFullYear()}-${pad(end.getUTCMonth()+1)}-${pad(end.getUTCDate())}`};
+}
+async function loadGigs(force){
+  if(EVENTS&&!force)return;
+  const w=calWindow();
+  EVENTS=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventList',from:w.from,to:w.to})});
+  if(TAB==='gigs'&&D)render();
+}
+function calMove(n){
+  const [Y,M]=CAL_MONTH.split('-').map(Number);
+  const t=new Date(Date.UTC(Y,M-1+n,1));
+  CAL_MONTH=`${t.getUTCFullYear()}-${pad(t.getUTCMonth()+1)}`;
+  loadGigs(true);
+}
+function openGig(id,onDate){
+  const ev=id?((EVENTS&&EVENTS.events)||[]).find(x=>x.id===id):null;
+  const tz=(ev&&ev.tz)||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
+  const last=((EVENTS&&EVENTS.events)||[])[0]||{};
+  const R=(ev&&ev.repeat)||null;
+  openSheet(`<h3>${ev?'Edit gig':'Add a gig'}</h3>
+    ${ev&&ev.repeat?`<p class="lede">This repeats — changes apply to every night in the run.</p>`:''}
+    <div class="field" style="padding-left:0;padding-right:0"><label>Venue</label>
+      <input class="inp" id="gV" maxlength="80" placeholder="The Ugly Duckling Irish Pub" value="${esc(ev?ev.venue:(last.venue||''))}"></div>
+    <div style="display:flex;gap:8px">
+      <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>City</label>
+        <input class="inp" id="gCity" maxlength="60" placeholder="Koh Phangan" value="${esc(ev?ev.city:(last.city||''))}"></div>
+      <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>Country</label>
+        <input class="inp" id="gCountry" maxlength="60" placeholder="Thailand" value="${esc(ev?ev.country:(last.country||''))}"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <div class="field" style="padding-left:0;padding-right:0;flex:1.3"><label>Date</label>
+        <input class="inp" id="gDate" type="date" value="${esc(ev?ev.date:(onDate||todayStr()))}"></div>
+      <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>Start</label>
+        <input class="inp" id="gTime" type="time" value="${esc(ev?ev.time:'20:00')}"></div>
+    </div>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Repeats</label>
+      <div class="chips">${[['','Just once'],['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['yearly','Yearly']]
+        .map(([k,l])=>`<button class="chip ${(R?R.freq:'')===k?'on':''}" data-act="grep" data-id="${k}">${l}</button>`).join('')}</div>
+      <input type="hidden" id="gRepeat" value="${esc(R?R.freq:'')}"></div>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Stop repeating on (optional)</label>
+      <input class="inp" id="gUntil" type="date" value="${esc(R&&R.until?R.until:'')}"></div>
+    <input type="hidden" id="gTz" value="${esc(tz)}">
+    <button class="big" style="margin-top:16px" data-act="gigsave" data-id="${esc(ev?ev.id:'')}">${ev?'Save changes':'Add it'}</button>
+    ${ev?`<button class="big alt" style="margin-top:10px" data-act="gigdel" data-id="${esc(ev.id)}">Delete this gig${ev.repeat?' and its whole run':''}</button>`:''}`);
+}
+async function saveGig2(id){
+  const v=x=>(($('#'+x)||{}).value||'').trim();
+  const freq=v('gRepeat');
+  const ev={id:id||undefined,venue:v('gV'),city:v('gCity'),country:v('gCountry'),
+    tz:v('gTz'),date:v('gDate'),time:v('gTime')||'20:00',
+    repeat:freq?{freq,until:v('gUntil')||null}:null};
+  if(!ev.venue){toast('Where is it?');return;}
+  if(!ev.date){toast('Pick a date');return;}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventSave',event:ev})});
+  if(!d.ok){toast(d.error||'Could not save');return;}
+  closeSheet(); await loadGigs(true); toast(id?'Gig updated':'Gig added');
+}
+async function delGig(id){
+  if(!confirm('Delete this gig? If it repeats, the whole run goes.'))return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventDelete',id})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  closeSheet(); await loadGigs(true); toast('Deleted');
+}
+async function skipGig(pair){
+  const [id,date]=pair.split('|');
+  const occ=((EVENTS&&EVENTS.occurrences)||[]).find(o=>o.eventId===id&&o.date===date);
+  const on=!(occ&&occ.cancelled);
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventSkip',id,date,on})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  await loadGigs(true); toast(on?'That night is cancelled':'Back on');
 }
 async function loadProf(force){
   if(PROF&&!force)return;
@@ -378,6 +503,48 @@ function render(){
       <button class="big alt" onclick="if(confirm('Add around 60 well-known covers to your setlist? Nothing you already have is touched.'))act('starterSetlist')">+ Add the starter pack</button>
       <button class="big alt" onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear the whole setlist</button>
     </div>`;
+  }
+
+  if(TAB==='gigs'){
+    if(!EVENTS) body=`<div class="sec"><span class="kick">Your gigs</span></div>
+      <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`;
+    else{
+      const occ=EVENTS.occurrences||[];
+      const byDate={}; occ.forEach(o=>{(byDate[o.date]||=[]).push(o);});
+      const up=occ.filter(o=>o.date>=todayStr()).slice(0,30);
+      body=`
+      <div class="wrap" style="padding-top:20px;padding-bottom:6px">
+        <button class="big bigplay" onclick="openGig()"><span>+</span><span style="flex:1">Add a gig</span></button>
+      </div>
+      <div class="calhead">
+        <b>${monthName(CAL_MONTH)}</b>
+        <div class="calnav">
+          <button onclick="calMove(-1)" aria-label="Previous month">‹</button>
+          <button onclick="calMove(1)" aria-label="Next month">›</button>
+        </div>
+      </div>
+      <div class="cal">
+        ${['S','M','T','W','T','F','S'].map(d=>`<div class="dow">${d}</div>`).join('')}
+        ${calCells(CAL_MONTH).map(c=>{
+          const n=(byDate[c.date]||[]).length;
+          return `<button class="cell ${c.out?'out':''} ${c.date===todayStr()?'today':''} ${n?'has':''}"
+            data-act="calday" data-id="${c.date}">
+            <span>${c.day}</span>
+            <span class="dots">${Array.from({length:Math.min(n,3)}).map(()=>'<i></i>').join('')}</span>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="sec"><span class="kick">Coming up</span><span class="kick">${up.length}</span></div>
+      <div class="list">${up.map(o=>`<div class="row gigrow ${o.cancelled?'off':''}">
+        <div class="when"><b>${dayNum(o.date)}</b><span>${monShort(o.date)}</span></div>
+        <div class="m"><div class="t">${esc(o.venue)}</div>
+          <div class="by">${esc([o.city,o.country].filter(Boolean).join(', '))}</div>
+          <div class="s">${dowName(o.date)} · ${o.time}${o.repeating?' · repeats':''}${o.cancelled?' · cancelled':''}</div></div>
+        <button class="act" data-act="gigedit" data-id="${o.eventId}">Edit</button>
+        <button class="act ${o.cancelled?'':'warn'}" data-act="gigskip" data-id="${o.eventId}|${o.date}">${o.cancelled?'Restore':'✕'}</button>
+      </div>`).join('')||'<div class="row muted">Nothing booked yet. Tap “Add a gig” — a weekly residency only needs entering once.</div>'}</div>
+      <p class="muted" style="font-size:12px;padding:14px 18px 0">These show on your page and in the city feed automatically. ✕ cancels one night; Edit changes the whole run.</p>`;
+    }
   }
 
   if(TAB==='money'){
@@ -625,6 +792,7 @@ function render(){
   <div class="tabs">
     <button class="${TAB==='live'?'on':''}" onclick="setTab('live')">Live</button>
     <button class="${TAB==='setlist'?'on':''}" onclick="setTab('setlist')">Setlist</button>
+    <button class="${TAB==='gigs'?'on':''}" onclick="setTab('gigs')">Gigs</button>
     <button class="${TAB==='money'?'on':''}" onclick="setTab('money')">Money</button>
     <button class="${TAB==='profile'?'on':''}" onclick="setTab('profile')">Profile</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
@@ -709,6 +877,13 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='mdn') media('mediaMove',id,'down');
   if(b.dataset.act==='mrm') media('mediaRemove',id);
   if(b.dataset.act==='rmmail') removeTeam(id);
+  if(b.dataset.act==='calday') openGig(null,id);
+  if(b.dataset.act==='gigedit') openGig(id);
+  if(b.dataset.act==='gigsave') saveGig2(id);
+  if(b.dataset.act==='gigdel') delGig(id);
+  if(b.dataset.act==='gigskip') skipGig(id);
+  if(b.dataset.act==='grep'){ const h=$('#gRepeat'); if(h){h.value=id;
+    document.querySelectorAll('[data-act="grep"]').forEach(x=>x.classList.toggle('on',x.getAttribute('data-id')===id));} }
 });
 async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'venue',venue:$('#fVenue').value})});

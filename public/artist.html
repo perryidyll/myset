@@ -79,6 +79,20 @@ body{padding-bottom:34px}
 .media .meta .p{font-size:12px;color:var(--faint);font-weight:500;flex:0 0 auto}
 .media .meta a{font-size:13px;color:var(--accent-ink);font-weight:600;flex:0 0 auto}
 .fineprint{padding:4px 22px 0;font-size:12.5px;color:var(--faint);line-height:1.45}
+.gigs{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
+.gigrow{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair)}
+.gigrow:first-child{border-top:none}
+.gigrow.live{background:var(--accent-soft)}
+.gigrow .d{flex:0 0 auto;text-align:center;min-width:44px}
+.gigrow .d b{display:block;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.gigrow .d span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.gigrow .m{flex:1;min-width:0}
+.gigrow .m .v{font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
+.gigrow .m .w{font-size:13.5px;color:var(--muted);margin-top:2px}
+.gigrow .tix{flex:0 0 auto;font-size:13px;font-weight:600;color:var(--accent-ink)}
+.onnow{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;font-size:10.5px;
+  font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:var(--pill);text-transform:uppercase;margin-bottom:3px}
+.onnow .dot{background:#fff;width:5px;height:5px}
 .empty{margin:0 18px;padding:26px 20px;text-align:center;color:var(--muted);font-size:14.5px;
   background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
 </style>
@@ -106,6 +120,12 @@ const VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const PROV={youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'};
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const dayNum=d=>+d.slice(8,10);
+const monShort=d=>MON[+d.slice(5,7)-1];
+const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOW[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
+const fmtTime=t=>{const p=t.split(':');let h=+p[0];const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
 
 const ICON={
   spotify:'<svg viewBox="0 0 24 24" fill="#1DB954"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm4.6 14.4a.6.6 0 01-.9.2c-2.4-1.5-5.4-1.8-9-1a.6.6 0 11-.3-1.2c3.9-.9 7.3-.5 10 1.1.3.2.4.6.2.9zm1.2-2.7a.8.8 0 01-1 .3c-2.7-1.7-6.9-2.2-10.1-1.2a.8.8 0 11-.4-1.5c3.7-1.1 8.3-.6 11.4 1.4.4.2.5.7.1 1zm.1-2.8C14.6 8.9 9.1 8.7 6 9.7a.9.9 0 11-.5-1.8c3.6-1.1 9.6-.9 13.4 1.4a.9.9 0 11-1 1.6z"/></svg>',
@@ -116,14 +136,15 @@ const ICON={
 };
 const LABEL={spotify:'Spotify',applemusic:'Apple Music',ytmusic:'YouTube Music',instagram:'Instagram',website:'Website'};
 
-let P=null,S=null;
+let P=null,S=null,G=null;
 
 async function boot(){
-  const [p,s]=await Promise.all([
+  const [p,s,g]=await Promise.all([
     fetch(`${API}/profile${AQ1}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
     fetch(`${API}/show?fan=profile${AQ}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+    fetch(`${API}/events?a=${encodeURIComponent(SLUG||'perryidyll')}&days=90`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
   ]);
-  P=p; S=s; render();
+  P=p; S=s; G=g; render();
 }
 
 function render(){
@@ -149,6 +170,21 @@ function render(){
   }
 
   if(P.bio) h+=`<div class="sect">About</div><div class="card"><p class="bio">${esc(P.bio)}</p></div>`;
+
+  const gigs=(G&&G.ok?G.gigs:[]).slice(0,12);
+  if(gigs.length){
+    h+=`<div class="sect">Upcoming shows</div><div class="gigs">`;
+    h+=gigs.map(g=>`<div class="gigrow${g.live?' live':''}">
+        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span></div>
+        <div class="m">
+          ${g.live?'<span class="onnow"><span class="dot"></span>On now</span>':''}
+          <div class="v">${esc(g.venue)}</div>
+          <div class="w">${esc(dowName(g.date))} · ${fmtTime(g.time)}${g.city?' · '+esc(g.city):''}</div>
+        </div>
+        ${g.ticketUrl?`<a class="tix" href="${esc(g.ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>`:''}
+      </div>`).join('');
+    h+=`</div>`;
+  }
 
   const links=Object.keys(LABEL).filter(k=>P.links&&P.links[k]);
   if(links.length){

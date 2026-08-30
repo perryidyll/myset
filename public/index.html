@@ -9,138 +9,216 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
-<meta name="description" content="Perry Idyll — live tonight. Vote on what he plays next." />
-<meta property="og:title" content="Perry Idyll — vote the setlist" />
-<meta property="og:description" content="Live tonight. You pick what gets played." />
-<meta property="og:image" content="/img/band.jpg" />
-<title>Perry Idyll — MySet</title>
+<meta name="description" content="Live music near you — and you pick what gets played." />
+<meta property="og:title" content="MySet — live music near you" />
+<meta property="og:description" content="Find tonight's gigs, then vote on what the band plays next." />
+<title>MySet — live music near you</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>" />
 <link rel="stylesheet" href="/app.css">
 <style>
-body{padding-bottom:26px}
-.brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+body{padding-bottom:34px}
+
+/* ── the opener ──────────────────────────────────────────
+   Sits ON TOP of a page that has already rendered, so it can never delay
+   anything. Shown once per session, and not at all if motion is unwelcome. */
+#intro{position:fixed;inset:0;z-index:90;background:var(--bg);display:grid;place-items:center;
+  animation:introOut .5s var(--ease) 1.15s both}
+#intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
+#intro .bars i{width:15px;border-radius:8px;background:var(--grad);display:block;height:18px;
+  transform-origin:bottom;animation:bar 1.05s var(--spring) both}
+#intro .bars i:nth-child(1){animation-delay:.02s}
+#intro .bars i:nth-child(2){animation-delay:.12s}
+#intro .bars i:nth-child(3){animation-delay:.22s}
+#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;
+  opacity:0;animation:fadeUp .5s var(--ease) .5s both}
+@keyframes bar{0%{height:18px}55%{height:76px}100%{height:var(--h,40px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes introOut{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){#intro{display:none}}
+
+.brandbar{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 6px}
 .mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
 .mark i{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;
   flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
 .mark i svg{width:14px;height:14px;fill:#fff;display:block}
-.nowchip{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);
-  max-width:52%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mark small{font-size:12px;color:var(--muted);font-weight:500}
 
-/* hero */
-.hero{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
-.hero img{width:100%;height:auto;aspect-ratio:5/4;object-fit:cover;object-position:center 32%}
-.hero .veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.72) 0%,rgba(0,0,0,.18) 42%,transparent 68%)}
-.hero .badge{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:.5px solid rgba(255,255,255,.35);color:#fff;font-size:12.5px;font-weight:600;
-  padding:8px 14px;border-radius:var(--pill)}
-.hero .badge .dot{background:#fff;box-shadow:0 0 0 0 rgba(255,255,255,.6)}
-.hero .cap{position:absolute;left:20px;right:20px;bottom:18px;color:#fff}
-.hero .cap h1{font-size:34px;font-weight:700;letter-spacing:-.035em;text-shadow:0 2px 20px rgba(0,0,0,.4)}
-.hero .cap p{margin:5px 0 0;font-size:14.5px;opacity:.92;font-weight:500}
+.hero{padding:20px 20px 4px}
+.hero h1{font-size:32px;font-weight:700;letter-spacing:-.04em;line-height:1.1;margin:0}
+.hero p{margin:9px 0 0;font-size:16px;color:var(--muted);line-height:1.45}
 
-/* gig card */
-.gig{margin:16px 18px 0;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-2);overflow:hidden}
-.gig .top{display:flex;align-items:center;gap:16px;padding:18px 20px}
-.gig .when{flex:0 0 auto;text-align:center;padding:12px 16px;border-radius:var(--r-sm);
-  background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(255,55,95,.3)}
-.gig .when b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1}
-.gig .when span{display:block;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;margin-top:5px;opacity:.92}
-.gig .where{flex:1;min-width:0}
-.gig .where b{display:block;font-size:17px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
-.gig .where span{font-size:14px;color:var(--muted)}
-.gig .cta{padding:0 20px 20px}
+.finder{margin:20px 18px 0;background:var(--surface);border-radius:var(--r-lg);
+  box-shadow:var(--sh-2);padding:18px 18px 20px}
+.finder label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 7px}
+.finder .sel{position:relative;margin-bottom:13px}
+.finder select{width:100%;min-height:52px;padding:14px 42px 14px 16px;font-size:16px;
+  background:var(--bg);border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);
+  color:var(--ink);appearance:none;-webkit-appearance:none}
+.finder select:disabled{opacity:.5}
+.finder select:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+.finder .sel::after{content:"";position:absolute;right:18px;top:22px;width:9px;height:9px;
+  border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);
+  transform:rotate(45deg);pointer-events:none}
 
-/* stats */
-.stat3{display:flex;gap:11px;margin:16px 18px 0}
-.stat3 .c{flex:1;background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1);padding:15px 12px;text-align:center}
-.stat3 b{display:block;font-size:24px;font-weight:700;letter-spacing:-.03em}
-.stat3 span{display:block;font-size:11.5px;color:var(--muted);margin-top:3px;font-weight:500}
+.dayhead{display:flex;align-items:baseline;justify-content:space-between;padding:26px 20px 9px}
+.dayhead b{font-size:21px;font-weight:700;letter-spacing:-.03em}
+.dayhead span{font-size:13px;color:var(--muted);font-weight:500}
 
-.sect{padding:26px 20px 8px;font-size:13px;font-weight:600;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--muted)}
-.steps{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
-.step{display:flex;gap:14px;padding:16px 18px;border-top:.5px solid var(--hair)}
-.step:first-child{border-top:none}
-.step .n{width:28px;height:28px;flex:0 0 auto;border-radius:50%;background:var(--accent-soft);
-  color:var(--accent);font-size:14px;font-weight:700;display:grid;place-items:center}
-.step .t{font-size:16px;font-weight:600;letter-spacing:-.012em}
-.step .d{font-size:14px;color:var(--muted);margin-top:2px;line-height:1.4}
-.artistlink{display:block;margin:26px 18px 0;padding:15px;text-align:center;font-size:14px;
+.gig{display:flex;gap:14px;align-items:flex-start;padding:15px 18px;background:var(--surface);
+  border-top:.5px solid var(--hair)}
+.gig:first-child{border-top:none}
+.giglist{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
+.gig .tm{flex:0 0 auto;min-width:62px}
+.gig .tm b{display:block;font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.gig .tm span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+.gig .m{flex:1;min-width:0}
+.gig .m .who{font-size:17px;font-weight:600;letter-spacing:-.018em;line-height:1.25}
+.gig .m .where{font-size:14px;color:var(--muted);margin-top:2px}
+.gig .m .note{font-size:13px;color:var(--faint);margin-top:3px}
+.gig .chev{flex:0 0 auto;align-self:center;font-size:20px;color:var(--faint)}
+.livepill{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;
+  font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:var(--pill);
+  margin-bottom:4px;text-transform:uppercase}
+.livepill .dot{background:#fff;width:6px;height:6px}
+
+.blank{margin:22px 18px 0;padding:30px 24px;text-align:center;background:var(--surface);
+  border-radius:var(--r-lg);box-shadow:var(--sh-1)}
+.blank b{display:block;font-size:18px;font-weight:600;letter-spacing:-.02em}
+.blank p{margin:8px 0 0;font-size:14.5px;color:var(--muted);line-height:1.5}
+.endcard{margin:22px 18px 0;padding:22px;text-align:center;background:var(--bg-2);
+  border-radius:var(--r);color:var(--muted);font-size:14px;line-height:1.5}
+.artistcta{display:block;margin:26px 18px 0;padding:16px;text-align:center;font-size:14px;
   color:var(--muted);background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)}
 </style>
 </head>
 <body>
-<div class="wrap">
 
+<div id="intro" aria-hidden="true">
+  <div>
+    <div class="bars"><i style="--h:38px"></i><i style="--h:64px"></i><i style="--h:28px"></i></div>
+    <div class="word">MySet</div>
+  </div>
+</div>
+
+<div class="wrap">
   <div class="brandbar">
     <span class="mark"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet</span>
-    <span class="nowchip" id="nowChip"></span>
+    <a class="mark" href="/studio" style="font-size:13px;color:var(--muted);font-weight:500">Artist? Sign in →</a>
   </div>
 
-  <div class="hero rise">
-    <img src="/img/band.jpg" alt="Perry Idyll and band playing live on the beach at sunset" width="1600" height="1000" fetchpriority="high">
-    <div class="veil"></div>
-    <span class="badge" id="heroBadge"><span class="dot"></span>Live tonight</span>
-    <div class="cap"><h1>Perry Idyll</h1><p>Live acoustic &amp; band · Koh Phangan</p></div>
+  <div class="hero">
+    <h1>Live music near you.<br>You pick what plays.</h1>
+    <p>Find a gig, open the link at the venue, and vote on the next song from your phone.</p>
   </div>
 
-  <div class="gig rise">
-    <div class="top">
-      <div class="when"><b id="gTime">8:00 PM</b><span>Tonight</span></div>
-      <div class="where"><b id="gVenue">The Ugly Duckling Irish Pub</b><span id="gCity">Koh Phangan, Thailand</span></div>
+  <div class="finder">
+    <div class="sel">
+      <label for="country">Choose your country</label>
+      <select id="country"><option value="">Loading…</option></select>
     </div>
-    <div class="cta"><a class="btn btn-pri btn-block" href="/vote.html">Vote the setlist</a></div>
+    <div class="sel">
+      <label for="city">Choose your city</label>
+      <select id="city" disabled><option value="">Pick a country first</option></select>
+    </div>
+    <button class="btn btn-pri btn-block" id="go" disabled>Search</button>
   </div>
 
-  <div class="stat3 stagger">
-    <div class="c"><b class="mono" id="sSongs">—</b><span>Songs</span></div>
-    <div class="c"><b class="mono" id="sVotes">—</b><span>Votes cast</span></div>
-    <div class="c"><b class="mono" id="sFree">—</b><span>Free votes</span></div>
-  </div>
-
-  <div class="sect">How it works</div>
-  <div class="steps">
-    <div class="step"><span class="n">1</span><div><div class="t">Open myset.vip</div><div class="d">No app, no sign-up. It just works.</div></div></div>
-    <div class="step"><span class="n">2</span><div><div class="t">Vote for what you want</div><div class="d">You get free votes every round — change your mind anytime.</div></div></div>
-    <div class="step"><span class="n">3</span><div><div class="t">Perry plays the winner</div><div class="d">Top-voted song is up next, then votes refresh.</div></div></div>
-  </div>
-
-  <a class="artistlink" href="/artist.html" style="margin-bottom:10px">About Perry · music, videos &amp; links →</a>
-  <a class="artistlink" href="/studio.html">Artist? Open your studio →</a>
+  <div id="out"></div>
   <div class="foot">MySet · myset.vip</div>
 </div>
 
 <script>
-/* count-up for the stat tiles — small delight, respects reduced motion */
-const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-function countTo(el,to){
-  if(!el)return; const n=Number(to);
-  if(!Number.isFinite(n)||reduce||n>999){el.textContent=to;return;}
-  const t0=performance.now(),dur=650;
-  (function step(t){
-    const p=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-p,3);
-    el.textContent=Math.round(n*e);
-    if(p<1)requestAnimationFrame(step);
-  })(t0);
+const $=s=>document.querySelector(s), API='/api';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+/* Once per session, never twice. */
+try{
+  if(sessionStorage.getItem('myset.seen')) document.getElementById('intro').remove();
+  else sessionStorage.setItem('myset.seen','1');
+}catch(e){}
+setTimeout(()=>{const i=document.getElementById('intro'); if(i)i.remove();},2200);
+
+let PLACES=null;
+const remember=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const recall=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}};
+
+async function boot(){
+  try{ PLACES=await fetch(`${API}/events?places=1`,{cache:'no-store'}).then(r=>r.json()); }catch(e){}
+  const cs=$('#country');
+  if(!PLACES||!PLACES.ok||!PLACES.countries.length){
+    cs.innerHTML='<option value="">Nothing listed yet</option>';
+    $('#out').innerHTML=`<div class="blank"><b>No gigs listed yet</b>
+      <p>MySet is brand new. If you play live, your gigs can be the first ones here.</p></div>
+      <a class="artistcta" href="/studio">Add your gigs →</a>`;
+    return;
+  }
+  cs.innerHTML='<option value="">Choose…</option>'+PLACES.countries
+    .map(c=>`<option value="${esc(c.country)}">${esc(c.country)} · ${c.gigs} gig${c.gigs===1?'':'s'}</option>`).join('');
+  cs.addEventListener('change',fillCities);
+  $('#city').addEventListener('change',()=>{ $('#go').disabled=!$('#city').value; });
+  $('#go').addEventListener('click',search);
+
+  // come back to where you were last time
+  const lc=recall('myset.country'), lt=recall('myset.city');
+  if(lc&&PLACES.countries.some(c=>c.country===lc)){
+    cs.value=lc; fillCities();
+    if(lt&&[...$('#city').options].some(o=>o.value===lt)){ $('#city').value=lt; $('#go').disabled=false; search(); }
+  }
 }
-fetch('/api/show?fan=home',{cache:'no-store'}).then(r=>r.json()).then(d=>{
-  if(!d.ok)return;
-  const set=(id,v)=>{const el=document.getElementById(id); if(el&&v!==undefined&&v!==null&&v!=='') el.textContent=v;};
-  set('gVenue',d.venue); set('gCity',d.city); set('gTime',d.showTime);
-  countTo(document.getElementById('sSongs'), d.songs.length+(d.nowPlaying?1:0)+d.played.length);
-  countTo(document.getElementById('sVotes'), d.totalVotes);
-  countTo(document.getElementById('sFree'), d.credits.total);
-  const badge=document.getElementById('heroBadge'), chip=document.getElementById('nowChip');
-  if(d.status==='ended'){ badge.innerHTML='That’s a wrap'; }
-  else if(d.status==='pre'){ badge.innerHTML='Doors soon'; }
-  // build with textContent so a song title can never inject markup
-  const setChip=(txt)=>{ chip.textContent=''; const dot=document.createElement('span'); dot.className='dot';
-    chip.append(dot, document.createTextNode(txt)); };
-  if(d.nowPlaying) setChip(d.nowPlaying.title);
-  else if(d.status==='live') setChip('Live now');
-}).catch(()=>{});
+
+function fillCities(){
+  const c=PLACES.countries.find(x=>x.country===$('#country').value);
+  const sel=$('#city');
+  if(!c){ sel.innerHTML='<option value="">Pick a country first</option>'; sel.disabled=true; $('#go').disabled=true; return; }
+  // the count sits next to every city, so nobody travels to a dead one by accident
+  sel.innerHTML='<option value="">Choose…</option>'+c.cities
+    .map(x=>`<option value="${esc(x.city)}">${esc(x.city)} · ${x.gigs} gig${x.gigs===1?'':'s'}</option>`).join('');
+  sel.disabled=false; $('#go').disabled=true;
+}
+
+async function search(){
+  const country=$('#country').value, city=$('#city').value;
+  if(!country||!city)return;
+  remember('myset.country',country); remember('myset.city',city);
+  $('#out').innerHTML=`<div class="blank"><b>Looking…</b></div>`;
+  let d=null;
+  try{ d=await fetch(`${API}/events?country=${encodeURIComponent(country)}&city=${encodeURIComponent(city)}`,
+    {cache:'no-store'}).then(r=>r.json()); }catch(e){}
+  if(!d||!d.ok){ $('#out').innerHTML=`<div class="blank"><b>Couldn’t load that</b><p>Try again in a moment.</p></div>`; return; }
+
+  if(!d.total){
+    $('#out').innerHTML=`<div class="blank"><b>Nothing on in ${esc(city)} this week</b>
+      <p>${d.artists?`${d.artists} artist${d.artists===1?'':'s'} play${d.artists===1?'s':''} here — nothing in the next seven days.`
+        :'No one has listed a gig here yet.'}</p></div>
+      <a class="artistcta" href="/studio">Play here? Add your gigs →</a>`;
+    return;
+  }
+
+  const fmt=(g)=>{
+    const t=g.time.split(':'); let h=+t[0]; const ap=h<12?'am':'pm'; h=h%12||12;
+    return `${h}:${t[1]}${ap}`;
+  };
+  $('#out').innerHTML=d.days.map(day=>`
+    <div class="dayhead"><b>${esc(day.label)}</b><span>${day.count} gig${day.count===1?'':'s'}</span></div>
+    <div class="giglist">${day.gigs.map(g=>`
+      <a class="gig" href="/${esc(g.slug)}">
+        <div class="tm"><b>${fmt(g)}</b><span>${esc(shortDate(g.date))}</span></div>
+        <div class="m">
+          ${g.live?'<span class="livepill"><span class="dot"></span>On now</span>':''}
+          <div class="who">${esc(g.artist)}</div>
+          <div class="where">${esc(g.venue)}</div>
+          ${g.note?`<div class="note">${esc(g.note)}</div>`:''}
+        </div>
+        <span class="chev">›</span>
+      </a>`).join('')}</div>`).join('')
+    + `<div class="endcard">That’s everything in ${esc(city)} for the next seven days.</div>`;
+}
+
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const shortDate=d=>`${+d.slice(8,10)} ${MON[+d.slice(5,7)-1]}`;
+
+boot();
 </script>
 </body>
 </html>
