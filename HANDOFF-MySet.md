@@ -465,3 +465,44 @@ cycle he had 3.2 credits left. Production deploys in that window across his four
 sites totalled **1,260 credits** (mysetvip 47, iohm 24, others 13). Traffic was a
 rounding error. Draft deploys cost 0 — use them for everything except the final
 push. `netlify deploy` (draft) vs `netlify deploy --prod`.
+
+### SESSION 3 — 2026-08-31 (multi-tenancy, signup, gig calendar, city feed)
+
+**All four foundation steps are LIVE on myset.vip.**
+
+**1. Multi-tenancy.** Storage is namespaced per artist via `KEY.*` in `_lib.mjs`
+(`show_<aid>`, `f0..f11_<aid>`, `meta_<aid>`, `profile_<aid>`, `ev_<aid>`,
+`hist_<aid>_<showId>`, `histidx_<aid>`, `lyr_<aid>_<songId>`). The only global
+docs are `artists` (the registry), `cityindex`, `authsecret` and `authc_*`.
+Live data was migrated by COPYING (21 keys) before any deploy. The artist id
+comes from `requireArtist(req)` (session) or `publicArtist(req)` (`?a=<slug>`) —
+never from a request body.
+
+**2. Routing.** `/perryidyll`, `/perryidyll/vote`, `/studio`, `/signup`. Real
+files still win, so `/vote.html` etc. keep working and fall back to the founding
+artist. NOTE: `/:slug` is a catch-all, so any unknown path renders `artist.html`,
+which detects `unknown artist` and shows a proper "No page here".
+
+**3. Self-serve signup.** One `start` action sends a code whether or not the
+address has an account; the account is created when the code comes back, using
+the name captured with the request. Still needs `RESEND_API_KEY`.
+
+**4. Gig calendar + city feed.** `_time.mjs` (wall clock in an IANA zone, no
+library), `_events.mjs` (rules expanded on read), `events.mjs` (public feed).
+Studio has a Gigs tab: month calendar, coming-up list, one sheet for one-offs and
+weekly/fortnightly/monthly/yearly runs, per-night cancellation. `myset.vip` is
+now a country/city finder; Perry's old landing page moved to `/perryidyll` and is
+backed up at `backups/index_perry-landing_2026-08-31.html`.
+
+**Placeholder gigs were loaded to test the feed and then DELETED.** Perry must
+enter his real schedule — see INVARIANT 0j.
+
+**Bugs found by testing, not reasoning:** a new artist inherited Perry's name,
+venue and 66 songs (`defaultShow()` was still his); monthly recurrence from the
+31st clamped to the 28th and stayed there; the city index split "Koh Phangan" on
+a space into a city called "Koh"; a literal NUL byte in `_events.mjs`; `.go`
+collided with app.css's checkout button and rendered the feed chevron as a
+full-width gradient bar.
+
+**Premium tier proposals** (three, not yet chosen) are in the session scratchpad
+as `tier-reach.md`, `tier-money.md`, `tier-craft.md`.
