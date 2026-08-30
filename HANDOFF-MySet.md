@@ -380,3 +380,25 @@ country/city homepage** → **community feed** → **lyrics**. Lyrics decision:
 **LRCLIB**, fetched once via a Netlify Function and cached permanently in Blobs
 (~300 KB for the whole setlist, zero API cost, no AI in the loop); originals
 typed in by hand; current-song-only and `noindex` for the licensing posture.
+
+### ⛔ BLOCKER at end of session — Netlify account usage
+`netlify deploy` returns **403 Forbidden** and Git-triggered builds fail with
+**"Skipped due to account credit usage exceeded"** on the `perryidyll` Personal
+account (no card on file). This blocks all four of his sites — `mysetvip`,
+`iohm`, `breathe-with-bastian`, `stunning-dolphin-d6f659` — though every one of
+them is still **serving fine** from its last good deploy.
+
+**myset.vip is live and healthy** on the deploy from 2026-08-30T17:34Z, which
+includes everything through show history. Two commits are pushed but NOT live:
+  - `cb7fa8a` artist profile page + leftover-vote choice
+  - `bc530c6` embed facade fixes + adaptive polling
+
+The likely cause is worth recording: `vote.html` polled `/api/show` every 3
+seconds per phone. Twenty people over a two-hour gig is ~24,000 function
+invocations; a handful of gigs exhausts the free tier. `bc530c6` eases the poll
+to 6s and then 12s when nothing changes. Load-testing during development
+(80 + 40 + 30 concurrent votes) and ~10 builds in one afternoon also contributed.
+
+**To resume:** Perry resolves the Netlify billing/credits, then
+`netlify deploy --prod` from `~/Docs/MySet` (or just push, the site auto-builds
+from GitHub). Verify `/artist.html` returns 200 and `/api/profile` returns JSON.
