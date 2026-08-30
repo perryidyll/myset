@@ -4,6 +4,57 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
 import { archiveShow } from './_history.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
+import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
+
+/* Lyrics live in their own flat docs, not on the show, so these short-circuit too. */
+async function handleLyrics(action, body, show) {
+  const song = show.songs.find((x) => x.id === body.song);
+  if (!song && action !== 'lyricsWarm') return bad('unknown song', 404);
+
+  if (action === 'lyricsGet') {
+    const d = await readLyrics(body.song);
+    return json({ ok: true, song: body.song, title: song.title, artist: song.artist || '',
+                  plain: (d && d.plain) || '', credit: (d && d.credit) || '',
+                  state: (d && d.state) || 'unfetched', owned: !!(d && d.owned) });
+  }
+
+  if (action === 'lyricsSet') {
+    const plain = String(body.plain || '').replace(/\r/g, '').slice(0, 20000).trim();
+    if (!plain) {                               // empty = take them down
+      await saveLyrics(body.song, { v: 1, songId: body.song, title: song.title,
+        artist: song.artist || '', plain: '', synced: '', credit: '',
+        state: 'blocked', fetchedAt: Date.now() });
+      return json({ ok: true, cleared: true });
+    }
+    await saveLyrics(body.song, {
+      v: 1, songId: body.song, title: song.title, artist: song.artist || '',
+      plain, synced: '', credit: String(body.credit || '').slice(0, 200),
+      state: 'ok', owned: !!body.owned,
+      source: body.owned ? 'artist' : 'lrclib', fetchedAt: Date.now(),
+    });
+    return json({ ok: true });
+  }
+
+  if (action === 'lyricsFetch') {              // pull this one from LRCLIB now
+    await saveLyrics(body.song, { v: 1, songId: body.song, state: 'unfetched', fetchedAt: 0 });
+    const d = await getLyrics(song);
+    return json({ ok: true, found: !!(d && d.state === 'ok' && d.plain),
+                  plain: (d && d.plain) || '', credit: (d && d.credit) || '' });
+  }
+
+  if (action === 'lyricsWarm') {               // whole setlist, once, before a gig
+    const todo = show.songs.filter((x) => x.active !== false);
+    let got = 0; const missing = [];
+    for (const sg of todo) {
+      const d = await getLyrics(sg);
+      if (d && d.state === 'ok' && d.plain) got++; else missing.push(sg.title);
+      await new Promise((r) => setTimeout(r, 350));   // LRCLIB asks for spacing
+    }
+    return json({ ok: true, fetched: got, total: todo.length, missing: missing.slice(0, 40) });
+  }
+  return bad('unknown action', 400);
+}
+const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyricsWarm']);
 
 /* Profile edits don't touch the show record at all, so they short-circuit before
    the show mutation below. */
@@ -66,6 +117,7 @@ export default async (req) => {
   try { body = await req.json(); } catch { return bad('bad json'); }
   const action = body.action;
   if (PROFILE_ACTIONS.has(action)) return handleProfile(action, body);
+  if (LYRICS_ACTIONS.has(action)) return handleLyrics(action, body, await getShow());
 
   let err = null, resetVotes = false, wipe = false;
 
@@ -149,8 +201,21 @@ export default async (req) => {
       case 'venue': show.venue = String(body.venue || '').slice(0, 80); break;
       case 'city': show.city = String(body.city || '').slice(0, 80); break;
       case 'showTime': show.showTime = String(body.showTime || '').slice(0, 40); break;
-      case 'freeCredits':
-        show.freeCredits = Math.max(0, Math.min(50, parseInt(body.n, 10) || 3)); break;
+      case 'freeCredits': {
+        const n = parseInt(body.n, 10);
+        show.freeCredits = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 3));
+        show.unlimited = false;               // picking a number turns unlimited off
+        break;
+      }
+      case 'unlimited': show.unlimited = !!body.on; break;
+      case 'unlimitedFan': {
+        const id = String(body.fan || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+        if (!id) { err = ['no device id', 400]; return false; }
+        const at = show.unlimitedFans.indexOf(id);
+        if (body.on && at < 0) show.unlimitedFans.push(id);
+        if (!body.on && at >= 0) show.unlimitedFans.splice(at, 1);
+        break;
+      }
       case 'toggleSong': {
         const s = show.songs.find((x) => x.id === body.song);
         if (s) s.active = s.active === false;
@@ -173,7 +238,7 @@ export default async (req) => {
         break;
       }
       case 'packs': {
-        show.packs = normPacks({ small: body.small, big: body.big });
+        show.packs = normPacks({ small: body.small, big: body.big, max: body.max });
         break;
       }
       case 'replayCost':

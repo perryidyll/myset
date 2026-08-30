@@ -29,7 +29,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-si
   line-height:1.45;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;padding-bottom:56px}
 button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer;padding:0}
-input,select{font-family:inherit}
+input,select,textarea{font-family:inherit;font-size:16px}
 a{color:inherit;text-decoration:none}
 :focus-visible{outline:2.5px solid var(--accent);outline-offset:3px;border-radius:6px}
 #app{max-width:var(--maxw);margin:0 auto;min-height:100vh}
@@ -69,6 +69,8 @@ a{color:inherit;text-decoration:none}
 .big:active{transform:scale(.97)}
 .big.alt{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
 .big:disabled{opacity:.42;transform:none}
+.bigplay{padding:20px 22px;font-size:17px;line-height:1.32;align-items:flex-start;margin-bottom:0}
+.bigplay span:first-child{flex:0 0 auto;padding-top:1px}
 .wrap{padding:0 18px}
 
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
@@ -118,6 +120,18 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 .gate{max-width:360px;margin:16vh auto;padding:0 24px}
 .gate h2{font-size:29px;font-weight:700;letter-spacing:-.03em;margin:0 0 8px}
 .tip{display:flex;justify-content:space-between;padding:12px 16px;border-top:.5px solid var(--hair);font-size:14.5px}
+.bg{position:fixed;inset:0;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;z-index:60;
+  transition:opacity .3s var(--ease);backdrop-filter:blur(3px)}
+.bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(102%);
+  width:100%;max-width:var(--maxw);max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;z-index:65;
+  padding:10px 20px calc(26px + env(safe-area-inset-bottom));box-shadow:0 -10px 50px rgba(0,0,0,.6);
+  transition:transform .46s var(--spring)}
+.sheet.on{transform:translateX(-50%) translateY(0)}
+.sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
+.sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto 6px}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
   width:calc(100% - 36px);max-width:calc(var(--maxw) - 36px);background:rgba(60,60,63,.94);color:#fff;
   backdrop-filter:blur(20px);font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
@@ -134,6 +148,8 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 </head>
 <body>
 <div id="app"></div>
+<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
 <script>
 const $=s=>document.querySelector(s), API='/api';
@@ -254,9 +270,9 @@ function render(){
       <div class="c"><b class="mono acc">$${D.tips.total.toFixed(2)}</b><span>Tips</span></div>
     </div>
     ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>${now.artist?`<div class="a">${esc(now.artist)}</div>`:''}</div>`:''}
-    <div class="wrap">
-      <button class="big" ${!top?'disabled':''} onclick="act('playTop')">
-        ▶ Start top voted${top?` — ${esc(top.title)} (${top.votes})`:' — nothing left'}</button>
+    <div class="wrap" style="padding-top:22px;padding-bottom:10px">
+      <button class="big bigplay" ${!top?'disabled':''} onclick="act('playTop')">
+        <span>▶</span><span style="flex:1;min-width:0">Start top voted${top?` — ${esc(top.title)} (${top.votes})`:' — nothing left'}</span></button>
     </div>
     <div class="sec"><span class="kick">Queue — tap ▶ to start</span><span class="kick">${pool.length}</span></div>
     <div class="list">${pool.slice(0,12).map((x,i)=>`<div class="row">
@@ -440,8 +456,16 @@ function render(){
     <div class="sec"><span class="kick">Free votes per person</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many votes each person gets. Refreshes every time you start a new song.</p>
     <div class="wrap"><div class="chips">
-      ${[1,2,3,5,10].map(n=>`<button class="chip ${s.freeCredits===n?'on':''}" onclick="act('freeCredits',{n:${n}})">${n}</button>`).join('')}
-    </div></div>
+      ${[1,2,3,5,10].map(n=>`<button class="chip ${!s.unlimited&&s.freeCredits===n?'on':''}" onclick="act('freeCredits',{n:${n}})">${n}</button>`).join('')}
+      <button class="chip ${s.unlimited?'on':''}" onclick="act('unlimited',{on:${!s.unlimited}})">∞ Unlimited</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
+      <input class="inp" id="fcCustom" type="number" inputmode="numeric" min="0" max="999" style="flex:1"
+        placeholder="Any other number" value="${!s.unlimited&&![1,2,3,5,10].includes(s.freeCredits)?s.freeCredits:''}">
+      <button class="act pri" style="min-width:64px" onclick="saveFreeCredits()">Set</button>
+    </div>
+    ${s.unlimited?`<p class="muted" style="font-size:12px;margin:9px 0 0">Everyone in the room can vote as much as they like. Nobody can buy votes while this is on.</p>`:''}
+    </div>
 
     <div class="sec"><span class="kick">Cost to replay a played song</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Songs you've already played stay votable, but cost this many votes to bring back.</p>
@@ -450,15 +474,12 @@ function render(){
     </div></div>
 
     <div class="sec"><span class="kick">Price of extra votes</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">What the audience pays for more votes. Both options show in their app. Changes apply to the next purchase.</p>
-    <div class="field"><label>Smaller pack</label><div style="display:flex;gap:8px;align-items:center">
-      <input class="inp" id="pSv" type="number" min="1" max="100" value="${s.packs.small.votes}" style="flex:1">
-      <span class="muted" style="font-size:13px">votes for $</span>
-      <input class="inp" id="pSc" type="number" min="1" max="500" step="0.5" value="${(s.packs.small.cents/100)}" style="flex:1"></div></div>
-    <div class="field"><label>Bigger pack</label><div style="display:flex;gap:8px;align-items:center">
-      <input class="inp" id="pBv" type="number" min="1" max="100" value="${s.packs.big.votes}" style="flex:1">
-      <span class="muted" style="font-size:13px">votes for $</span>
-      <input class="inp" id="pBc" type="number" min="1" max="500" step="0.5" value="${(s.packs.big.cents/100)}" style="flex:1"></div></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">What the audience pays for more votes. All three show in their app. Changes apply to the next purchase.</p>
+    ${[['small','Small','pS'],['big','Middle','pB'],['max','Big','pM']].map(([k,label,pre])=>
+      `<div class="field"><label>${label} pack</label><div style="display:flex;gap:8px;align-items:center">
+        <input class="inp" id="${pre}v" type="number" min="1" max="100" value="${s.packs[k].votes}" style="flex:1">
+        <span class="muted" style="font-size:13px">votes for $</span>
+        <input class="inp" id="${pre}c" type="number" min="1" max="500" step="0.5" value="${(s.packs[k].cents/100)}" style="flex:1"></div></div>`).join('')}
     <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="savePacks()">Save prices</button></div>
 
     <div class="sec"><span class="kick">Tonight's gig</span></div>
@@ -477,6 +498,16 @@ function render(){
     <div class="row"><div class="m"><div class="t">Card payments ${D.paymentsEnabled?'ON':'OFF'}</div>
       <div class="s">${D.paymentsEnabled?'Tips + extra votes are live via Stripe':'Set STRIPE_SECRET_KEY in Netlify to switch on'}</div></div>
       <span class="cnt" style="color:${D.paymentsEnabled?'var(--good)':'var(--muted)'}">${D.paymentsEnabled?'✓':'—'}</span></div>
+
+    <div class="sec"><span class="kick">This device</span></div>
+    <div class="row"><div class="m"><div class="t">Unlimited votes for me</div>
+      <div class="s">${(s.unlimitedFans||[]).includes(myFanId())?'This phone votes without limit':'Just for testing — nobody else gets this'}</div></div>
+      <div class="tog"><button class="${(s.unlimitedFans||[]).includes(myFanId())?'on':''}" onclick="act('unlimitedFan',{fan:myFanId(),on:true})">On</button>
+      <button class="${!(s.unlimitedFans||[]).includes(myFanId())?'on':''}" onclick="act('unlimitedFan',{fan:myFanId(),on:false})">Off</button></div></div>
+
+    <div class="sec"><span class="kick">Lyrics</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fetch the words for your whole setlist once, before a gig. They’re stored on your own server after that, so a room full of people tapping “Lyrics” never hits the internet. Takes about half a minute.</p>
+    <div class="wrap"><button class="big alt" id="lyrWarm" onclick="warmLyrics()">↓ Fetch lyrics for the whole setlist</button></div>
 
     <div class="sec"><span class="kick">Your studio code</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Set something you\u2019ll actually remember \u2014 it works from any phone. The original code from Netlify keeps working as a backup, so you can never lock yourself out.</p>
@@ -517,10 +548,58 @@ function addSong(){const el=$('#newSong'),ea=$('#newArtist');const t=el.value.tr
 /* Song titles/artists are user text — never interpolate them into an onclick.
    Look the song up from state by id instead. */
 function songById(id){ return (D&&D.songs||[]).find(x=>x.id===id); }
-function editArtist(id){
+function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}
+function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+
+async function editSong(id){
   const x=songById(id); if(!x)return;
-  const a=prompt('Artist for “'+x.title+'”:', x.artist||'');
-  if(a===null)return; act('editSong',{song:id,artist:a});
+  openSheet(`<h3>Edit song</h3><p class="lede">Loading lyrics…</p>`);
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsGet',song:id})});
+  const state=d.ok?d.state:'unfetched';
+  const note={ok:d.owned?'Your own words — these override anything found online.':'Found online. Shown as “Unofficial lyrics”.',
+              none:'Nothing found online for this one. Paste the words yourself.',
+              blocked:'Lyrics are turned off for this song.',
+              unfetched:'Not looked up yet.'}[state]||'';
+  openSheet(`<h3>Edit song</h3>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Title</label>
+      <input class="inp" id="esTitle" maxlength="80" value="${esc(x.title)}"></div>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Artist</label>
+      <input class="inp" id="esArtist" maxlength="60" value="${esc(x.artist||'')}"></div>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Lyrics</label>
+      <textarea class="inp" id="esLyrics" rows="9" placeholder="Paste the words, or tap Find online.">${esc(d.ok?d.plain:'')}</textarea>
+      <input type="hidden" id="esCredit" value="${esc(d.ok?(d.credit||''):'')}">
+      <input type="hidden" id="esOwned" value="${d.ok&&d.owned?'1':''}">
+      <p class="muted" style="font-size:12px;margin:7px 0 0">${esc(note)}</p></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="act" data-act="lyrfind" data-id="${id}">Find online</button>
+      <button class="act warn" data-act="lyrclear" data-id="${id}">Remove lyrics</button>
+    </div>
+    <button class="big" style="margin-top:16px" data-act="essave" data-id="${id}">Save song</button>`);
+}
+async function saveSongEdit(id){
+  const t=(($('#esTitle')||{}).value||'').trim(), a=(($('#esArtist')||{}).value||'').trim();
+  const ly=(($('#esLyrics')||{}).value||'');
+  if(!t){toast('A song needs a title');return;}
+  const r1=await api('/admin',{method:'POST',body:JSON.stringify({action:'editSong',song:id,title:t,artist:a})});
+  if(!r1.ok){toast(r1.error||'Could not save');return;}
+  await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsSet',song:id,plain:ly,
+    credit:(($('#esCredit')||{}).value||''), owned:!!(($('#esOwned')||{}).value)})});
+  closeSheet(); toast('Saved'); load();
+}
+async function findLyrics(id){
+  toast('Searching…');
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsFetch',song:id})});
+  if(!d.ok){toast('Search failed');return;}
+  if(!d.found){toast('Nothing found — paste them yourself');return;}
+  const el=$('#esLyrics'); if(el)el.value=d.plain;
+  const c=$('#esCredit'); if(c)c.value=d.credit||'';
+  const o=$('#esOwned'); if(o)o.value='';        // found online, not the artist's own
+  toast('Found — tap Save song to keep them');
+}
+async function clearLyrics(id){
+  const el=$('#esLyrics'); if(el)el.value='';
+  await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsSet',song:id,plain:''})});
+  toast('Lyrics removed for this song');
 }
 function removeSong(id){
   const x=songById(id); if(!x)return;
@@ -529,7 +608,10 @@ function removeSong(id){
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b)return;
   const id=b.getAttribute('data-id');
-  if(b.dataset.act==='edit') editArtist(id);
+  if(b.dataset.act==='edit') editSong(id);
+  if(b.dataset.act==='essave') saveSongEdit(id);
+  if(b.dataset.act==='lyrfind') findLyrics(id);
+  if(b.dataset.act==='lyrclear') clearLyrics(id);
   if(b.dataset.act==='del') removeSong(id);
   if(b.dataset.act==='show') openShow(id);
   if(b.dataset.act==='recon') reconcile(id);
@@ -543,12 +625,40 @@ async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'showTime',showTime:$('#fTime').value})});
   toast('Gig details saved'); load();
 }
+/* Same key the voting page uses, so flipping this on here affects the phone
+   you're actually voting from. */
+function myFanId(){
+  let v=null; try{v=localStorage.getItem('myset.fan')}catch(e){}
+  if(!v){ v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);
+    try{localStorage.setItem('myset.fan',v)}catch(e){} }
+  return v;
+}
+async function saveFreeCredits(){
+  const n=parseInt((($('#fcCustom')||{}).value||''),10);
+  if(!Number.isFinite(n)||n<0||n>999){toast('Pick a number from 0 to 999');return;}
+  act('freeCredits',{n});
+}
+async function warmLyrics(){
+  const b=$('#lyrWarm'); if(b){b.disabled=true;b.innerHTML='<span class="spin"></span> Fetching…';}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsWarm'})});
+  if(b){b.disabled=false;b.textContent='↓ Fetch lyrics for the whole setlist';}
+  if(!d.ok){toast(d.error||'Could not fetch');return;}
+  toast(`${d.fetched} of ${d.total} songs have lyrics now`);
+  if(d.missing&&d.missing.length)
+    openSheet(`<h3>${d.fetched} of ${d.total} found</h3>
+      <p class="lede">No lyrics online for these. Open each in the Setlist tab and paste them, or leave them — the button just won’t show.</p>
+      <div class="list">${d.missing.map(t=>`<div class="row"><div class="m"><div class="t">${esc(t)}</div></div></div>`).join('')}</div>
+      <button class="big" style="margin-top:14px" onclick="closeSheet()">Got it</button>`);
+}
 async function savePacks(){
   const n=id=>parseFloat(($('#'+id)||{}).value);
-  const S={votes:n('pSv'),cents:Math.round(n('pSc')*100)},B={votes:n('pBv'),cents:Math.round(n('pBc')*100)};
-  if(![S.votes,S.cents,B.votes,B.cents].every(v=>Number.isFinite(v)&&v>0)){toast('Fill in both packs');return;}
-  if(S.cents<100||B.cents<100){toast('Stripe\u2019s minimum charge is $1');return;}
-  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'packs',small:S,big:B})});
+  const S={votes:n('pSv'),cents:Math.round(n('pSc')*100)},
+        B={votes:n('pBv'),cents:Math.round(n('pBc')*100)},
+        M={votes:n('pMv'),cents:Math.round(n('pMc')*100)};
+  const all=[S,B,M];
+  if(!all.every(p=>Number.isFinite(p.votes)&&p.votes>0&&Number.isFinite(p.cents))){toast('Fill in all three packs');return;}
+  if(all.some(p=>p.cents<100)){toast('Stripe\u2019s minimum charge is $1');return;}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'packs',small:S,big:B,max:M})});
   if(!d.ok){toast(d.error||'Could not save that');return;}
   toast('Prices saved'); load();
 }

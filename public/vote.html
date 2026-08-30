@@ -74,6 +74,20 @@
   fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none}
 .search .clr{position:absolute;right:8px;top:8px;width:32px;height:32px;border-radius:50%;
   display:grid;place-items:center;color:var(--muted);font-size:17px;background:var(--bg)}
+/* ── lyrics ───────────────────────────────────────────── */
+.lyricsbtn{display:inline-flex;align-items:center;gap:8px;margin-top:15px;padding:10px 17px;
+  border-radius:var(--pill);background:rgba(255,255,255,.19);color:#fff;font-size:14px;font-weight:600;
+  letter-spacing:-.01em;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:.5px solid rgba(255,255,255,.3);transition:transform .22s var(--spring)}
+.lyricsbtn:active{transform:scale(.95)}
+.lyricsbtn svg{width:17px;height:17px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round}
+.lyr{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:4px -4px 0;padding:0 4px;
+  font-size:18px;line-height:1.72;white-space:pre-wrap;color:var(--ink-2);letter-spacing:-.005em;
+  -webkit-user-select:none;user-select:none}
+.lyrfoot{margin:16px 0 0;padding-top:13px;border-top:.5px solid var(--hair);
+  font-size:12px;color:var(--faint);line-height:1.5}
+.lyrfoot b{display:block;color:var(--muted);font-weight:600;font-size:12.5px;margin-bottom:2px}
+
 /* ── sort ─────────────────────────────────────────────── */
 .sortbar{display:flex;gap:4px;margin:10px 18px 2px;padding:4px;background:var(--bg-2);
   border-radius:var(--pill);box-shadow:inset 0 0 0 .5px var(--hair)}
@@ -209,18 +223,21 @@ function render(){
       <div class="sub">${ended?'That’s a wrap — thanks for coming'
         :`<span class="dot"></span>Live${d.venue?' · '+esc(d.venue):''}`}</div>
     </div>
-    <div class="credits ${c.remaining<=0?'low':''} mono" id="cr">${c.remaining}<small>/${c.total}</small></div>
+    <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞':`${c.remaining}<small>/${c.total}</small>`}</div>
   </div>`;
 
   h += d.nowPlaying
     ? `<div class="now"><div class="lab"><span class="dot"></span>Playing now</div>
         <div class="t">${esc(d.nowPlaying.title)}</div>${d.nowPlaying.artist?`<div class="by">${esc(d.nowPlaying.artist)}</div>`:''}
-        <div class="eq"><i></i><i></i><i></i><i></i></div></div>`
+        <div class="eq"><i></i><i></i><i></i><i></i></div>
+        <button class="lyricsbtn" onclick="openLyrics()">
+          <svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h13M4 16h8"/><circle cx="18.5" cy="15" r="2.6"/><path d="M21.1 15V8.4l-3.6.9"/></svg>
+          Lyrics</button></div>`
     : `<div class="now none"><div class="lab">Playing now</div><div class="t">${ended?'Show finished':'Starting soon…'}</div></div>`;
 
   if(!ended) h += `<div class="strip ${open?'':'shut'}">
       <span class="l"><span class="dot"></span>${open?'Voting open':'Voting paused'}</span>
-      <span class="r">${c.remaining} vote${c.remaining===1?'':'s'} left</span></div>`;
+      <span class="r">${c.unlimited?'Unlimited votes':`${c.remaining} vote${c.remaining===1?'':'s'} left`}</span></div>`;
 
   /* TIER 2 — always visible, even with nothing voted yet */
   h += `<div class="queue">
@@ -275,7 +292,7 @@ function render(){
   if(ended){ dock.hidden=true; }
   else{ dock.hidden=false;
     dock.innerHTML=`
-      <button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].map(k=>(d.packs&&d.packs[k]?d.packs[k].cents:300)))):'Ask Perry'}</small></button>
+      ${c.unlimited?'':`<button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big','max'].map(k=>(d.packs&&d.packs[k]?d.packs[k].cents:300)))):'Ask Perry'}</small></button>`}
       <button class="btn btn-pri" onclick="openTip()"><b>Tip ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Say thanks</small></button>`; }
 }
 function row(s,c,open,replay){
@@ -293,6 +310,31 @@ function setFilter(v){ FILTER=v; FOCUS=false; render(); }
 /* ── sheets ── */
 function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}
 function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+async function openLyrics(){
+  const np=ST&&ST.nowPlaying; if(!np)return;
+  openSheet(`<h3>${esc(np.title)}</h3>
+    <p class="lede">${esc(np.artist||'')}</p>
+    <div class="lyr" id="lyrBody"><span class="spin"></span> Finding the words…</div>`);
+  let d=null;
+  try{ d=await fetch(`${API}/lyrics?song=${encodeURIComponent(np.id)}`).then(r=>r.json()); }catch(e){}
+  const el=$('#lyrBody'); if(!el)return;
+  if(!d||!d.ok||!d.found){
+    el.innerHTML=`<p style="font-size:15px;color:var(--muted);white-space:normal">
+      No lyrics for this one yet — you’ll have to wing it. 🎤</p>`;
+    return;
+  }
+  el.textContent=d.plain;
+  const foot=document.createElement('div');
+  foot.className='lyrfoot';
+  // "Unofficial" is the honest label: this is a community-contributed database,
+  // not a licensed lyric feed, and it can be wrong.
+  const who=esc(d.credit||('Words & music: '+(d.artist||ST.artist||'')));
+  foot.innerHTML=`<b>Unofficial lyrics</b>${who} · ${d.owned
+    ? 'provided by the artist'
+    : 'community-contributed, may not be exact'}. For singing along in the room only.`;
+  el.after(foot);
+}
+
 function openLeftover(n){
   openSheet(`<h3>You\u2019ve got ${n} vote${n===1?'':'s'} left</h3>
     <p class="lede">${n===1?'That one':'Those'} you paid for and the night ended first. Your call \u2014 no charge either way.</p>
@@ -318,16 +360,18 @@ function openBuy(){
   if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab Perry between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.pack='small';
   // prices are whatever the artist set in his Studio — never hard-coded here
-  const P=ST.packs||{small:{votes:5,cents:300},big:{votes:15,cents:700}};
+  const P=ST.packs||{small:{votes:3,cents:300},big:{votes:9,cents:700},max:{votes:18,cents:1100}};
+  const KEYS=['small','big','max'].filter(k=>P[k]);
   openSheet(`<h3>Get more votes</h3><p class="lede">Extra votes for tonight’s setlist. Goes straight to ${esc(ST.artist||'the artist')}.</p>
     <div class="tiles">
-      ${['small','big'].map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
+      ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
         <b>${money(P[k].cents)}</b><span>${P[k].votes} votes</span></button>`).join('')}
     </div>
     <button class="go" id="goBuy" onclick="checkout('votes')">Continue to payment</button>
     <p class="fine">Secure checkout by Stripe · you’ll come right back</p>`);
 }
-function pickPack(p){sel.pack=p;buzz(8);['small','big'].forEach(k=>$('#p-'+k).classList.toggle('on',k===p));}
+function pickPack(p){sel.pack=p;buzz(8);
+  ['small','big','max'].forEach(k=>{const el=$('#p-'+k); if(el)el.classList.toggle('on',k===p);});}
 function openTip(){
   if(!ST.paymentsEnabled){openSheet(`<h3>Tip Perry</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.tip=10;

@@ -77,7 +77,27 @@ If you are about to violate one, stop and say so rather than working around it.
     subscriber is stuck on 30-second previews. Spotify and Apple heights are
     discrete widget states — never wrap them in an aspect-ratio box.
 
+## Lyrics
+
+9e. **Never call LRCLIB from the browser.** It asks clients to identify themselves
+    and browsers are forbidden from setting `User-Agent`; the documented
+    workaround (`Lrclib-Client` / `X-User-Agent`) only works server-side. Fetch
+    once through the function, then serve from the Blobs cache — a room tapping
+    "Lyrics" at the same moment must never become 40 calls to a free community API.
+
+9f. **Label them "Unofficial lyrics".** The source is an unlicensed
+    community-contributed corpus, not a licensed feed. Current song only, no
+    library, no search, no copy (`user-select:none`), songwriter credit shown, and
+    a one-tap removal per song in the Studio. Lyrics the artist typed himself are
+    labelled "provided by the artist" — never "community-contributed".
+
 ## Cost
+
+9d0. **Production deploys are the expensive thing, not traffic.** A production
+    deploy costs 15 Netlify credits; 10,000 web requests cost 2. On 2026-08-31 I
+    burned ~240 credits in one afternoon on 16 production deploys and blamed the
+    polling, which had cost about 5. **Iterate on `netlify deploy` (draft URL,
+    0 credits) and deploy to production once, at the end.**
 
 9d. **Every phone in the room polls.** At 3s, a two-hour gig with twenty people
     is ~24,000 function calls — enough to exhaust a month's free tier in a few

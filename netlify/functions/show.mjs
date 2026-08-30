@@ -1,5 +1,5 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
-         json, cleanFanId } from './_lib.mjs';
+         isUnlimited, json, cleanFanId } from './_lib.mjs';
 
 export default async (req) => {
   const fanId = cleanFanId(new URL(req.url).searchParams.get('fan'));
@@ -10,6 +10,7 @@ export default async (req) => {
   const mine = me.v || [];
   const total = show.freeCredits + (me.extra || 0);
   const used = creditsUsed(me, show);
+  const unl = isUnlimited(fanId, show);
 
   const shape = (s) => ({
     id: s.id, title: s.title, artist: s.artist || '',
@@ -42,7 +43,8 @@ export default async (req) => {
     replayCost: show.replayCost || 5,
     packs: show.packs,
     credits: {
-      remaining: Math.max(0, total - used), total, used, extra: me.extra || 0,
+      unlimited: unl,
+      remaining: unl ? null : Math.max(0, total - used), total: unl ? null : total, used, extra: me.extra || 0,
       paidLeft: unspentPaid(me, show),           // votes they bought and haven't spent
       decided: me.decided === show.showId,       // already chose what happens to them
     },

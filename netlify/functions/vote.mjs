@@ -1,4 +1,4 @@
-import { getShow, mutateFan, creditsUsed, costOf, json, bad, cleanFanId } from './_lib.mjs';
+import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, json, bad, cleanFanId } from './_lib.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -26,12 +26,13 @@ export default async (req) => {
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
       const at = me.v.indexOf(song);
       if (at >= 0) { me.v.splice(at, 1); delete me.ts[song]; want = false; outcome = { voted: false }; return true; }
+      const free = isUnlimited(fan, show);
       const total = show.freeCredits + (me.extra || 0);
-      if (creditsUsed(me, show) + cost > total) { err = ['no-credits', 402]; return false; }
+      if (!free && creditsUsed(me, show) + cost > total) { err = ['no-credits', 402]; return false; }
       me.v.push(song);
       me.ts[song] = Date.now();
       want = true;
-      outcome = { voted: true, cost, remaining: Math.max(0, total - creditsUsed(me, show)) };
+      outcome = { voted: true, cost, remaining: free ? null : Math.max(0, total - creditsUsed(me, show)) };
       return true;
     },
     // read back after writing: if the vote didn't stick, retry

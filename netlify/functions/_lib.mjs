@@ -100,6 +100,8 @@ export function defaultShow() {
     nowPlaying: null,
     played: [],
     freeCredits: 3,
+    unlimited: false,        // everyone votes without limit
+    unlimitedFans: [],       // specific devices that do — the artist's own, for testing
     replayCost: 5,
     packs: DEFAULT_PACKS(),
     songs: DEFAULT_SONGS.map(([t, a]) => ({ id: slug(t), title: t, artist: a, active: true })),
@@ -114,13 +116,15 @@ export function defaultShow() {
 
 /* What the audience can buy. Editable from the Studio; pay.mjs reads these and
    never trusts a price from the client. */
+export const PACK_KEYS = ['small', 'big', 'max'];
 export const DEFAULT_PACKS = () => ({
-  small: { votes: 5, cents: 300 },
-  big:   { votes: 15, cents: 700 },
+  small: { votes: 3,  cents: 300 },
+  big:   { votes: 9,  cents: 700 },
+  max:   { votes: 18, cents: 1100 },
 });
 export function normPacks(p) {
   const d = DEFAULT_PACKS(), out = {};
-  for (const k of ['small', 'big']) {
+  for (const k of PACK_KEYS) {
     const v = (p && p[k]) || {};
     out[k] = {
       votes: Math.max(1, Math.min(100, parseInt(v.votes, 10) || d[k].votes)),
@@ -196,6 +200,8 @@ function normShow(s) {
   if (typeof show.freeCredits !== 'number') show.freeCredits = 3;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
   if (!Array.isArray(show.log)) show.log = [];
+  show.unlimited = !!show.unlimited;
+  show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
   show.artistId ||= ARTIST_ID;
   // derived from stored data, so a CAS retry produces the identical value
@@ -293,6 +299,12 @@ export const mutateMeta = (fn) =>
   casDoc('meta', emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; return fn(m); });
 
 /* ---------- derived ---------- */
+/** Does this device vote without limit? Either the whole room is unlimited, or
+ *  this specific device was granted it from the Studio (the artist's own phone,
+ *  so he can test without eating the audience's credits). */
+export const isUnlimited = (fanId, show) =>
+  !!show.unlimited || (show.unlimitedFans || []).includes(fanId);
+
 /** A vote on an already-played song costs more (a "play it again" request). */
 export const costOf = (songId, show) =>
   show.played.includes(songId) ? (show.replayCost || 5) : 1;
