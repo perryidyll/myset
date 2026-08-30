@@ -85,6 +85,23 @@ If you are about to violate one, stop and say so rather than working around it.
     broke every song with an apostrophe and opened an injection hole. Use
     `data-` attributes and a delegated listener.
 
+## History
+
+17b. **The vote tally is destroyed every time a song starts.** `clearAllFanVotes()`
+    runs on `play`/`playTop`, so the number a song won with exists for about a
+    millisecond. `admin.mjs` snapshots **the whole round** — winner, everyone
+    else, the voter count — into `show.log` inside the same handler. Remove that
+    and show history becomes permanently unrecoverable, not merely wrong.
+
+17c. **Archive before you wipe.** `archiveShow()` must run before `wipeFans()` or
+    `clearAllFanVotes()`, in every path that ends a show (`newShow`,
+    `status:'ended'`). It is idempotent — re-archiving only refreshes the money.
+
+17d. **Money is attributed by `metadata.show`, never by timestamp.** Sessions
+    created before show tracking have no tag; they are reported as
+    `unattributed` and labelled as such. Guessing which show a payment belonged
+    to would put a fabricated number on his dashboard.
+
 ## Show behaviour
 
 13. **A fan can never spend more credits than they have.** Enforced server-side in
@@ -114,6 +131,12 @@ If you are about to violate one, stop and say so rather than working around it.
 
 16. **Nothing in the app may break the gig.** Every failure path degrades to "the
     setlist is still readable". No error state should block the page from rendering.
+
+17e. **A JS parse check is not a structure check.** `studio.html` is one big
+    `render()` with four `if(TAB===…)` blocks. A bad edit deleted two of them and
+    the file still parsed cleanly, because what was left was still valid
+    JavaScript. After any edit to it, assert every tab block and every top-level
+    function is present exactly once — the check is in the commit history.
 
 17. **Verify from outside after deploying.** Check the live `myset.vip` URLs and the
     API, not the local files.

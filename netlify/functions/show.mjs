@@ -39,6 +39,7 @@ export default async (req) => {
     nowPlaying: np ? { id: np.id, title: np.title, artist: np.artist || '' } : null,
     songs: ordered, played,
     replayCost: show.replayCost || 5,
+    packs: show.packs,
     credits: { remaining: Math.max(0, total - used), total, used, extra: me.extra || 0 },
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),
     paymentsEnabled: !!process.env.STRIPE_SECRET_KEY,

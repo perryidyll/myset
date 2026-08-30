@@ -74,6 +74,18 @@ export const DEFAULT_SONGS = [
   ['Follow The Sun','Xavier Rudd'],
 ];
 
+/* Stamped on every new record. Nothing is multi-artist yet, but a field costs
+   nothing now and is the difference between a rename and a rewrite later. */
+export const ARTIST_ID = 'perry-idyll';
+
+/* Must be generated OUTSIDE a CAS callback — a retry would otherwise produce a
+   different id on each attempt. */
+export function newShowId(now = Date.now()) {
+  const d = new Date(now), p = (n) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}` +
+         `-${p(d.getUTCHours())}${p(d.getUTCMinutes())}`;
+}
+
 export const slug = (t) =>
   t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
@@ -89,10 +101,39 @@ export function defaultShow() {
     played: [],
     freeCredits: 3,
     replayCost: 5,
+    packs: DEFAULT_PACKS(),
     songs: DEFAULT_SONGS.map(([t, a]) => ({ id: slug(t), title: t, artist: a, active: true })),
+    showId: null,
+    artistId: ARTIST_ID,
+    startedAt: null,
+    nowPlayingAt: null,
+    log: [],          // one entry per song started — see LOG note below
     updatedAt: Date.now(),
   };
 }
+
+/* What the audience can buy. Editable from the Studio; pay.mjs reads these and
+   never trusts a price from the client. */
+export const DEFAULT_PACKS = () => ({
+  small: { votes: 5, cents: 300 },
+  big:   { votes: 15, cents: 700 },
+});
+export function normPacks(p) {
+  const d = DEFAULT_PACKS(), out = {};
+  for (const k of ['small', 'big']) {
+    const v = (p && p[k]) || {};
+    out[k] = {
+      votes: Math.max(1, Math.min(100, parseInt(v.votes, 10) || d[k].votes)),
+      cents: Math.max(100, Math.min(50000, parseInt(v.cents, 10) || d[k].cents)),
+    };
+  }
+  return out;
+}
+
+/* LOG note — this is load-bearing.
+   `clearAllFanVotes()` runs every time a song is started, which DESTROYS the
+   tally that song won with. If it is not captured in the same handler, it is
+   gone forever and no show history can ever be reconstructed. */
 
 /* ============================================================
    STORAGE
@@ -113,7 +154,7 @@ export function shardOf(fanId) {
   return h % SHARDS;
 }
 
-async function readDoc(key, fallback) {
+export async function readDoc(key, fallback) {
   try {
     const r = await store().getWithMetadata(key, { type: 'json', consistency: 'strong' });
     if (r && r.data) return { data: r.data, etag: r.etag || null };
@@ -126,7 +167,7 @@ async function readDoc(key, fallback) {
  *  `verify(data)` (optional) is re-read AFTER the write — if it fails we retry,
  *  which protects against a conditional write that reports success but does not
  *  stick under heavy concurrency. */
-async function casDoc(key, fallback, fn, verify = null, tries = 40) {
+export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
   for (let i = 0; i < tries; i++) {
     const { data, etag } = await readDoc(key, fallback());
     const out = fn(data);
@@ -154,6 +195,12 @@ function normShow(s) {
   if (!Array.isArray(show.played)) show.played = [];
   if (typeof show.freeCredits !== 'number') show.freeCredits = 3;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
+  if (!Array.isArray(show.log)) show.log = [];
+  show.packs = normPacks(show.packs);
+  show.artistId ||= ARTIST_ID;
+  // derived from stored data, so a CAS retry produces the identical value
+  if (!show.showId) show.showId = 'show-' + (show.updatedAt || 0);
+  if (!show.startedAt) show.startedAt = show.updatedAt || Date.now();
   return show;
 }
 export async function getShow() {

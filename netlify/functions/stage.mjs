@@ -13,6 +13,7 @@ export default async (req) => {
       artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime, status: show.status,
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
       played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
+      packs: show.packs, showId: show.showId, startedAt: show.startedAt,
     },
     voters: Object.values(fans).filter((f) => (f.v || []).length).length,
     songs: rankSongs(

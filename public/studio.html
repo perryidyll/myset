@@ -135,7 +135,7 @@ a{color:inherit;text-decoration:none}
 <div class="toast" id="toast"></div>
 <script>
 const $=s=>document.querySelector(s), API='/api';
-let CODE=localStorage.getItem('myset.admin')||'', D=null, REV=null, timer=null;
+let CODE=localStorage.getItem('myset.admin')||'', D=null, REV=null, HIST=null, DETAIL=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 
 async function api(p,o={}){
@@ -146,7 +146,7 @@ async function load(){
   const d=await api('/stage');
   if(!d.ok){ if(d.error==='unauthorized'){CODE='';localStorage.removeItem('myset.admin');} gate(d.error); return; }
   D=d; render();
-  if(TAB==='money'&&!REV) loadRev();   // deep-link / reload straight into Money
+  if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
 }
 async function act(action,extra={}){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
@@ -165,13 +165,32 @@ function gate(err){
 }
 function unlock(){CODE=$('#code').value.trim();localStorage.setItem('myset.admin',CODE);start();}
 function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();
-  if(t==='money') loadRev();}
+  if(t==='money'){DETAIL=null;loadRev();loadHist();}}
 /* Stripe is the source of truth for money, so this reads it directly rather than
    trusting the app's own ledger. Fetched on demand — never on the 4s live poll. */
 async function loadRev(force){
   if(REV&&!force)return;
   REV=await api('/revenue');
   if(TAB==='money'&&D)render();
+}
+async function loadHist(force){
+  if(HIST&&!force)return;
+  HIST=await api('/history');
+  if(TAB==='money'&&D)render();
+}
+async function openShow(id){
+  DETAIL={loading:true}; render();
+  const d=await api('/history?show='+encodeURIComponent(id));
+  DETAIL=d.ok?d.show:null;
+  if(!d.ok)toast(d.error||'Could not open that show');
+  render();
+}
+function closeShow(){DETAIL=null;render();}
+async function reconcile(id){
+  toast('Re-checking Stripe\u2026');
+  const d=await api('/history',{method:'POST',body:JSON.stringify({action:'reconcile',show:id})});
+  if(!d.ok){toast(d.error||'Could not reach Stripe');return;}
+  DETAIL=d.show; await loadHist(true); render(); toast('Updated from Stripe');
 }
 async function recover(){
   toast('Checking Stripe\u2026');
@@ -246,35 +265,96 @@ function render(){
   }
 
   if(TAB==='money'){
-    const R=REV;
-    if(!R) body=`<div class="sec"><span class="kick">Money</span></div>
-      <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Reading Stripe\u2026</div></div>`;
-    else if(!R.ok) body=`<div class="sec"><span class="kick">Money</span></div>
-      <div class="list"><div class="row muted">Couldn\u2019t reach Stripe just now. Pull down to retry.</div></div>`;
-    else if(!R.enabled) body=`<div class="sec"><span class="kick">Money</span></div>
-      <div class="list"><div class="row muted">Card payments are off. Set STRIPE_SECRET_KEY in Netlify to switch them on.</div></div>`;
-    else{
-      const t=R.totals;
+    if(DETAIL&&DETAIL.loading){
+      body=`<div class="sec"><span class="kick">Loading…</span></div>
+        <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Opening that show</div></div>`;
+    }
+    else if(DETAIL){
+      const H=DETAIL,M=H.money||{},V=M.votes||{},T=M.tips||{},St=H.stats||{};
       body=`
-      <div class="stats">
-        <div class="c"><b class="mono acc">$${t.all.toFixed(2)}</b><span>All time</span></div>
-        <div class="c"><b class="mono">$${t.votes.toFixed(2)}</b><span>Extra votes</span></div>
-        <div class="c"><b class="mono">$${t.tips.toFixed(2)}</b><span>Tips</span></div>
+      <div class="wrap" style="padding-top:14px"><button class="act" onclick="closeShow()">← All shows</button></div>
+      <div class="np rise" style="background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)">
+        <div class="k" style="color:var(--muted)">${dstamp(H.endedAt||H.startedAt)}</div>
+        <div class="t">${esc(H.venue||'Untitled show')}</div>
+        <div class="a" style="color:var(--muted)">${esc(H.city||'')}${H.startedAt&&H.endedAt?' · '+dur(H.endedAt-H.startedAt):''}</div>
       </div>
-      ${R.unredeemed?`<div class="warnbox rise">
-        <b>${R.unredeemed} payment${R.unredeemed===1?' was':'s were'} never delivered</b>
-        <p>Someone paid and the app didn\u2019t hand over what they bought. This gives it to them \u2014 safe to tap twice.</p>
-        <button class="big" onclick="recover()">Deliver ${R.unredeemed===1?'it':'them'} now</button></div>`:''}
-      <div class="sec"><span class="kick">Every payment</span><span class="kick">${t.count}</span></div>
-      <div class="list">${R.payments.map(p=>`<div class="row">
-        <div class="m">
-          <div class="t">$${p.amount.toFixed(2)} \u00b7 ${p.kind==='tip'?'Tip':esc(p.votes+' extra votes')}</div>
-          <div class="by">${esc(p.email||'\u2014')}${p.note?' \u00b7 \u201c'+esc(p.note)+'\u201d':''}</div>
-          <div class="s">${dstamp(p.at)}${p.redeemed?'':' \u00b7 not delivered'}</div>
+      <div class="stats">
+        <div class="c"><b class="mono">${St.songsPlayed||0}</b><span>Songs played</span></div>
+        <div class="c"><b class="mono">${St.totalVotes||0}</b><span>Votes cast</span></div>
+        <div class="c"><b class="mono">${St.peakVoters||0}</b><span>People voting</span></div>
+      </div>
+      <div class="stats" style="margin-top:11px">
+        <div class="c"><b class="mono acc">$${(M.gross||0).toFixed(2)}</b><span>Taken</span></div>
+        <div class="c"><b class="mono">$${(V.amount||0).toFixed(2)}</b><span>${V.count||0} vote pack${V.count===1?'':'s'}</span></div>
+        <div class="c"><b class="mono">$${(T.amount||0).toFixed(2)}</b><span>${T.count||0} tip${T.count===1?'':'s'}</span></div>
+      </div>
+      ${M.source==='stripe-unreachable'?`<p class="muted" style="font-size:12px;padding:12px 18px 0">Couldn’t reach Stripe for this one — the money figures may be stale.</p>`:''}
+      ${M.unattributed?`<p class="muted" style="font-size:12px;padding:12px 18px 0">$${M.unattributed.toFixed(2)} came in during this window but isn’t tagged to a show — it predates show tracking.</p>`:''}
+      ${T.recent&&T.recent.length?`<div class="sec"><span class="kick">Tips</span></div>
+        ${T.recent.map(t=>`<div class="tip"><span>$${Number(t.amount).toFixed(2)}${t.note?' · “'+esc(t.note)+'”':''}</span><span class="muted">${dstamp(t.at)}</span></div>`).join('')}`:''}
+      <div class="sec"><span class="kick">What you played</span><span class="kick">${(H.played||[]).length}</span></div>
+      <div class="list">${(H.played||[]).map((x,i)=>`<div class="row">
+        <div class="rk mono">${i+1}</div>
+        <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="by">${esc(x.artist)}</div>`:''}
+          <div class="s">${dstamp(x.at)}${x.replay?' · replay':''}</div></div>
+        <div class="cnt mono">${x.votes}</div></div>`).join('')||'<div class="row muted">No songs were started from the Studio during this show.</div>'}</div>
+      ${(H.requested||[]).length?`<div class="sec"><span class="kick">Wanted but never played</span></div>
+      <div class="list">${H.requested.slice(0,15).map(x=>`<div class="row done">
+        <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="by">${esc(x.artist)}</div>`:''}</div>
+        <div class="cnt mono">${x.votes}</div></div>`).join('')}</div>`:''}
+      <div class="wrap" style="margin-top:18px"><button class="big alt" data-act="recon" data-id="${esc(H.showId)}">↺ Re-check the money in Stripe</button></div>`;
+    }
+    else{
+      const H=HIST,R=REV;
+      let head='';
+      if(!H) head=`<div class="sec"><span class="kick">Shows</span></div>
+        <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`;
+      else if(H.ok){
+        const L=H.live||{};
+        const done=L.status==='ended';
+        head=`<div class="sec"><span class="kick">${done?'Last show — finished':'Tonight so far'}</span></div>
+        <div class="stats">
+          <div class="c"><b class="mono">${L.songsPlayed||0}</b><span>Songs played</span></div>
+          <div class="c"><b class="mono">${L.totalVotes||0}</b><span>Votes</span></div>
+          <div class="c"><b class="mono acc">$${(L.gross||0).toFixed(2)}</b><span>Taken</span></div>
         </div>
-        <span class="cnt" style="font-size:15px;color:${p.redeemed?'var(--good)':'var(--accent)'}">${p.redeemed?'\u2713':'!'}</span>
-      </div>`).join('')||'<div class="row muted">No payments yet.</div>'}</div>
-      <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
+        ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
+        <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Tap “New show” in Settings when the next gig starts.':'Tonight gets filed away when you end the show or start a new one.'}</p>
+        <div class="sec"><span class="kick">Past shows</span><span class="kick">${H.shows.length}</span></div>
+        <div class="list">${H.shows.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
+          <div class="m"><div class="t">${esc(x.venue||'Untitled show')}</div>
+            <div class="by">${esc(x.city||'')}</div>
+            <div class="s">${dstamp(x.endedAt||x.startedAt)} · ${x.songsPlayed} song${x.songsPlayed===1?'':'s'} · ${x.totalVotes} votes · ${x.peakVoters} people</div></div>
+          <div class="cnt mono">$${Math.round(x.gross||0)}</div>
+          <button class="act" data-act="show" data-id="${x.showId}">Open</button></div>`).join('')
+          ||'<div class="row muted">No finished shows yet. End a show and it gets filed here.</div>'}</div>`;
+      }
+      let pays='';
+      if(!R) pays=`<div class="sec"><span class="kick">All payments</span></div>
+        <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Reading Stripe…</div></div>`;
+      else if(!R.ok) pays=`<div class="sec"><span class="kick">All payments</span></div>
+        <div class="list"><div class="row muted">Couldn’t reach Stripe just now.</div></div>`;
+      else if(!R.enabled) pays=`<div class="sec"><span class="kick">All payments</span></div>
+        <div class="list"><div class="row muted">Card payments are off. Set STRIPE_SECRET_KEY in Netlify to switch them on.</div></div>`;
+      else{
+        const t=R.totals;
+        pays=`
+        ${R.unredeemed?`<div class="warnbox rise">
+          <b>${R.unredeemed} payment${R.unredeemed===1?' was':'s were'} never delivered</b>
+          <p>Someone paid and the app didn’t hand over what they bought. This gives it to them — safe to tap twice.</p>
+          <button class="big" onclick="recover()">Deliver ${R.unredeemed===1?'it':'them'} now</button></div>`:''}
+        <div class="sec"><span class="kick">All payments, all time</span><span class="kick">$${t.all.toFixed(2)}</span></div>
+        <div class="list">${R.payments.map(p=>`<div class="row">
+          <div class="m">
+            <div class="t">$${p.amount.toFixed(2)} · ${p.kind==='tip'?'Tip':esc(p.votes+' extra votes')}</div>
+            <div class="by">${esc(p.email||'—')}${p.note?' · “'+esc(p.note)+'”':''}</div>
+            <div class="s">${dstamp(p.at)}${p.redeemed?'':' · not delivered'}</div>
+          </div>
+          <span class="cnt" style="font-size:15px;color:${p.redeemed?'var(--good)':'var(--accent)'}">${p.redeemed?'✓':'!'}</span>
+        </div>`).join('')||'<div class="row muted">No payments yet.</div>'}</div>
+        <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
+      }
+      body=head+pays;
     }
   }
 
@@ -291,6 +371,18 @@ function render(){
     <div class="wrap"><div class="chips">
       ${[2,3,5,8,10].map(n=>`<button class="chip ${(s.replayCost||5)===n?'on':''}" onclick="act('replayCost',{n:${n}})">${n}</button>`).join('')}
     </div></div>
+
+    <div class="sec"><span class="kick">Price of extra votes</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">What the audience pays for more votes. Both options show in their app. Changes apply to the next purchase.</p>
+    <div class="field"><label>Smaller pack</label><div style="display:flex;gap:8px;align-items:center">
+      <input class="inp" id="pSv" type="number" min="1" max="100" value="${s.packs.small.votes}" style="flex:1">
+      <span class="muted" style="font-size:13px">votes for $</span>
+      <input class="inp" id="pSc" type="number" min="1" max="500" step="0.5" value="${(s.packs.small.cents/100)}" style="flex:1"></div></div>
+    <div class="field"><label>Bigger pack</label><div style="display:flex;gap:8px;align-items:center">
+      <input class="inp" id="pBv" type="number" min="1" max="100" value="${s.packs.big.votes}" style="flex:1">
+      <span class="muted" style="font-size:13px">votes for $</span>
+      <input class="inp" id="pBc" type="number" min="1" max="500" step="0.5" value="${(s.packs.big.cents/100)}" style="flex:1"></div></div>
+    <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="savePacks()">Save prices</button></div>
 
     <div class="sec"><span class="kick">Tonight's gig</span></div>
     <div class="field"><label>Venue</label><input class="inp" id="fVenue" value="${esc(s.venue||'')}" placeholder="The Ugly Duckling Irish Pub"></div>
@@ -361,12 +453,23 @@ document.addEventListener('click',e=>{
   const id=b.getAttribute('data-id');
   if(b.dataset.act==='edit') editArtist(id);
   if(b.dataset.act==='del') removeSong(id);
+  if(b.dataset.act==='show') openShow(id);
+  if(b.dataset.act==='recon') reconcile(id);
 });
 async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'venue',venue:$('#fVenue').value})});
   await api('/admin',{method:'POST',body:JSON.stringify({action:'city',city:$('#fCity').value})});
   await api('/admin',{method:'POST',body:JSON.stringify({action:'showTime',showTime:$('#fTime').value})});
   toast('Gig details saved'); load();
+}
+async function savePacks(){
+  const n=id=>parseFloat(($('#'+id)||{}).value);
+  const S={votes:n('pSv'),cents:Math.round(n('pSc')*100)},B={votes:n('pBv'),cents:Math.round(n('pBc')*100)};
+  if(![S.votes,S.cents,B.votes,B.cents].every(v=>Number.isFinite(v)&&v>0)){toast('Fill in both packs');return;}
+  if(S.cents<100||B.cents<100){toast('Stripe\u2019s minimum charge is $1');return;}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'packs',small:S,big:B})});
+  if(!d.ok){toast(d.error||'Could not save that');return;}
+  toast('Prices saved'); load();
 }
 async function saveCode(){
   const el=$('#fCode'), v=(el.value||'').trim();
@@ -376,6 +479,7 @@ async function saveCode(){
   CODE=v; localStorage.setItem('myset.admin',v); el.value='';
   toast('Saved \u2014 that\u2019s your code from now on');
 }
+const dur=ms=>{const m=Math.round(ms/60000);return m<60?m+' min':Math.floor(m/60)+'h '+(m%60)+'m';};
 const dstamp=t=>{try{return new Date(t).toLocaleString(undefined,
   {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));

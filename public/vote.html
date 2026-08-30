@@ -272,8 +272,8 @@ function render(){
   if(ended){ dock.hidden=true; }
   else{ dock.hidden=false;
     dock.innerHTML=`
-      <button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From $3':'Ask Perry'}</small></button>
-      <button class="btn btn-pri" onclick="openTip()"><b>Tip Perry</b><small>Say thanks</small></button>`; }
+      <button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].map(k=>(d.packs&&d.packs[k]?d.packs[k].cents:300)))):'Ask Perry'}</small></button>
+      <button class="btn btn-pri" onclick="openTip()"><b>Tip ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Say thanks</small></button>`; }
 }
 function row(s,c,open,replay){
   const cost=s.cost||1;
@@ -293,10 +293,12 @@ function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remo
 function openBuy(){
   if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab Perry between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.pack='small';
-  openSheet(`<h3>Get more votes</h3><p class="lede">Extra votes for tonight’s setlist. Goes straight to Perry.</p>
+  // prices are whatever the artist set in his Studio — never hard-coded here
+  const P=ST.packs||{small:{votes:5,cents:300},big:{votes:15,cents:700}};
+  openSheet(`<h3>Get more votes</h3><p class="lede">Extra votes for tonight’s setlist. Goes straight to ${esc(ST.artist||'the artist')}.</p>
     <div class="tiles">
-      <button class="tile on" id="p-small" onclick="pickPack('small')"><b>$3</b><span>5 votes</span></button>
-      <button class="tile" id="p-big" onclick="pickPack('big')"><b>$7</b><span>15 votes</span></button>
+      ${['small','big'].map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
+        <b>${money(P[k].cents)}</b><span>${P[k].votes} votes</span></button>`).join('')}
     </div>
     <button class="go" id="goBuy" onclick="checkout('votes')">Continue to payment</button>
     <p class="fine">Secure checkout by Stripe · you’ll come right back</p>`);
@@ -387,6 +389,7 @@ async function handleReturn(){
     await redeem(p.id,false);
   }
 }
+const money=c=>{const n=(Number(c)||0)/100;return '$'+(n%1?n.toFixed(2):String(n));};
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3600);}
 
 (async function(){
