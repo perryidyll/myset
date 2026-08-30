@@ -260,3 +260,54 @@ python3 -m http.server 8940 -d "/Users/perryidyll/Docs/MySet"
 4. **Naming:** Product is "MySet" everywhere user-facing, but the code's design-system comments still say "ENCORE" and the state key is `encore.state.v3`. This is the intentional legacy naming the memory flags — not a bug.
 
 Everything else in the memory file matches the on-disk code (feature set, state shape, credits=10, rating tiers, filter categories, Concept-B live layout, git history, brand/aesthetic).
+
+---
+
+# 2026-08-17 — LIVE PRODUCT (MVP 2.1). Read this section first.
+
+MySet stopped being a prototype today. It is **live at https://myset.vip**, taking
+real money, and was built for Perry's gig at The Ugly Duckling Irish Pub,
+Koh Phangan, 8:00 PM.
+
+**Read `INVARIANTS.md` at the project root before changing anything.** It documents
+storage traps that cost hours to find and will silently lose votes if reintroduced.
+
+## Shape
+
+| | |
+|---|---|
+| Host | Netlify project **mysetvip** (`8f5c9f01-e1f1-47e3-add1-8dde39efd1d3`), repo `perryidyll/myset` |
+| Published | **only `./public`** — everything else stays private |
+| Pages | `index.html` (artist home) · `vote.html` (audience voting) · `studio.html` (artist control) · `stage.html` → redirects to studio |
+| API | `/api/show` `/api/vote` `/api/pay` `/api/confirm` `/api/stage` `/api/admin` |
+| Storage | Netlify Blobs: `show` (config) · `f0..f11` (sharded fan records) · `meta` (tips + payment markers) |
+| Deploy | `cd ~/Docs/MySet && netlify deploy --build --prod` |
+
+## Secrets (never in the repo)
+- `ADMIN_CODE` — the Studio passcode, Netlify env only.
+- `STRIPE_SECRET_KEY` — Perry set it himself; Claude never handles it.
+
+## Show model
+3 free votes per fan per round; starting a song refreshes everyone's votes.
+Already-played songs stay votable as **replay requests at `replayCost` (default 5)**.
+"Up next" shows only songs with votes, ordered by votes desc then **earliest vote first**.
+
+## Setlist
+67 songs, each with an artist (best-guess artists — Perry edits them in
+Studio → Setlist → Edit). Includes four Perry Idyll originals.
+
+## Design
+Rewritten 2026-08-17 from the flat "Modernist" look to a soft-depth Apple-style
+system in `public/app.css` — rounded corners, layered shadows, gradient accent
+(#FF375F→#FF6B45), spring easing, SF-family type. `studio.html` carries its own
+self-contained dark stylesheet and deliberately does not load `app.css`.
+
+## Regression before shipping
+Fire N simultaneous votes from N distinct fans; the tally must equal N exactly.
+Last run: **40/40 and 80/80, zero loss.**
+
+## Known gaps / next up
+- Stripe money flow not yet confirmed end-to-end by a real purchase (Perry to test).
+- Artist attributions are guesses; a few are low-confidence (`I Found You`).
+- Songs are alphabetical within the pool; no manual reordering.
+- Single-artist product — no multi-artist accounts or auth yet.

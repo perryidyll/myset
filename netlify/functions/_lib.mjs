@@ -176,8 +176,8 @@ export const mutateFan = (fanId, fn, verifyFan = null) =>
     shardKey(shardOf(fanId)),
     () => ({}),
     (bag) => {
-      const me = (bag[fanId] ||= { v: [], extra: 0 });
-      me.v ||= []; me.extra ||= 0;
+      const me = (bag[fanId] ||= { v: [], extra: 0, ts: {} });
+      me.v ||= []; me.extra ||= 0; me.ts ||= {};
       return fn(me, bag);
     },
     verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null
@@ -196,7 +196,7 @@ export async function clearAllFanVotes() {
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(n), () => ({}), (bag) => {
-        for (const id of Object.keys(bag)) bag[id].v = [];
+        for (const id of Object.keys(bag)) { bag[id].v = []; bag[id].ts = {}; }  // drop stale stamps too
         return true;
       }, null).catch(() => {})
     )
@@ -228,6 +228,19 @@ export const costOf = (songId, show) =>
 /** Credits a fan has spent, counting replay votes at their higher cost. */
 export const creditsUsed = (fan, show) =>
   (fan.v || []).reduce((sum, id) => sum + costOf(id, show), 0);
+
+/** Earliest moment each song received a vote — used to break ties fairly. */
+export function firstVotedAt(fans) {
+  const first = {};
+  for (const id of Object.keys(fans)) {
+    const ts = fans[id].ts || {};
+    for (const s of fans[id].v || []) {
+      const t = Number(ts[s]) || Number.MAX_SAFE_INTEGER;   // unstamped (legacy) sorts last
+      if (first[s] === undefined || t < first[s]) first[s] = t;
+    }
+  }
+  return first;
+}
 
 export function voteCounts(fans) {
   const counts = {};

@@ -20,12 +20,14 @@ export default async (req) => {
 
   try {
     await mutateFan(fan, (me) => {
+      me.ts ||= {};
       const at = me.v.indexOf(song);
-      if (at >= 0) { me.v.splice(at, 1); want = false; outcome = { voted: false }; return true; }
+      if (at >= 0) { me.v.splice(at, 1); delete me.ts[song]; want = false; outcome = { voted: false }; return true; }
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
       const total = show.freeCredits + (me.extra || 0);
       if (creditsUsed(me, show) + cost > total) { err = ['no-credits', 402]; return false; }
       me.v.push(song);
+      me.ts[song] = Date.now();
       want = true;
       outcome = { voted: true, cost, remaining: Math.max(0, total - creditsUsed(me, show)) };
       return true;
