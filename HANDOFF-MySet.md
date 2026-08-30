@@ -438,3 +438,30 @@ preview contexts — a draft URL can take real payments.
 credits, web requests = 2 per 10k, bandwidth = 20/GB, compute = 10/GB-hour.
 Draft/branch deploys = **0 credits**. Deploy cost dominates everything else for
 this project. Iterate on draft URLs; deploy to production once, at the end.
+
+### Artist sign-in (added 2026-08-31)
+
+Email + 6-digit code. `_auth.mjs` + `auth.mjs`; `checkAdmin` in `_lib.mjs` also
+accepts `Authorization: Bearer <token>`. The studio code still works alongside it.
+
+- Only allowlisted emails can sign in (`artists` blob). Managing the list needs
+  an existing session, so bootstrap with the studio code, then add your email in
+  **Settings -> Who can sign in**.
+- Session token = HMAC over `email|exp|rev`, signed with a secret generated once
+  into the `authsecret` blob. Bump `artists.rev` (Settings -> Sign all devices
+  out) to invalidate everything.
+- Codes: `authc_<hash>` blobs, 10 min, burned on use, 5 guesses, 5 sends/hour.
+- **Delivery needs `RESEND_API_KEY`** (and optionally `AUTH_FROM`). Until it is
+  set, `/api/auth` action `request` returns 503 for EVERY address — deliberately,
+  because answering differently for listed vs unlisted addresses is an
+  account-enumeration oracle (INVARIANT 9h; this shipped broken and was caught in
+  the same session).
+- **Untested end to end: the actual email send.** Everything either side of it is
+  verified.
+
+### Netlify credit reality, measured
+Perry is on **Personal ($9 / 1,000 credits)**, not Free. In the Aug 8 - Sep 8
+cycle he had 3.2 credits left. Production deploys in that window across his four
+sites totalled **1,260 credits** (mysetvip 47, iohm 24, others 13). Traffic was a
+rounding error. Draft deploys cost 0 — use them for everything except the final
+push. `netlify deploy` (draft) vs `netlify deploy --prod`.
