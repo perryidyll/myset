@@ -116,6 +116,13 @@ If you are about to violate one, stop and say so rather than working around it.
     polling, which had cost about 5. **Iterate on `netlify deploy` (draft URL,
     0 credits) and deploy to production once, at the end.**
 
+9d1. **Never downgrade to the Free plan.** Purchased credit packs survive
+    indefinitely *"as long as you remain on a paid plan"* — dropping to Free
+    forfeits them. Perry has real money sitting in packs.
+
+9d2. **Upgrading wipes unused monthly credits immediately.** If we ever move
+    Personal -> Pro, do it at the END of a billing cycle, not the start.
+
 9d. **Every phone in the room polls.** At 3s, a two-hour gig with twenty people
     is ~24,000 function calls — enough to exhaust a month's free tier in a few
     shows, which is exactly what happened on 2026-08-31. `vote.html` backs off
