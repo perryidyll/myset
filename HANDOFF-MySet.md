@@ -402,3 +402,39 @@ to 6s and then 12s when nothing changes. Load-testing during development
 **To resume:** Perry resolves the Netlify billing/credits, then
 `netlify deploy --prod` from `~/Docs/MySet` (or just push, the site auto-builds
 from GitHub). Verify `/artist.html` returns 200 and `/api/profile` returns JSON.
+
+### SESSION 2 — 2026-08-31 (lyrics, packs, unlimited votes, song editor)
+
+**Everything below is committed, pushed, and running on a free draft deploy at
+https://6a947437c6d91ace2d37a610--mysetvip.netlify.app — but NOT on myset.vip**, because the Netlify account credit limit is still
+blocking production deploys.
+
+- **Lyrics.** LRCLIB -> Blobs cache -> sheet under Playing Now. Must be fetched
+  server-side (browsers cannot set `User-Agent`; LRCLIB's documented workaround
+  is the `Lrclib-Client` header). Labelled **"Unofficial lyrics"**, current song
+  only, `user-select:none`, one-tap removal per song. Studio Settings has a
+  "Fetch lyrics for the whole setlist" warm button.
+- **Song editor** (Setlist -> Edit): title, artist, lyrics in one sheet, with
+  "Find online" and "Remove lyrics". `owned` distinguishes the artist's own words
+  (credited to him) from LRCLIB's (credited to LRCLIB, never claimed as his).
+- **Three vote packs**, defaults $3/3, $7/9, $11/18, artist-editable.
+- **Unlimited voting**: `show.unlimited` for the room, `show.unlimitedFans[]` for
+  one device (Settings -> This device -> Unlimited votes for me). The Studio and
+  the voting page share the `myset.fan` localStorage key, which is how the toggle
+  knows which device to grant.
+- **Free votes**: preset chips + any number 0-999 + Unlimited.
+- **Hiding a song was already permanent** across shows — confirmed, not changed.
+
+**Webhook: CONFIRMED WORKING.** `STRIPE_WEBHOOK_SECRET` is set and live;
+`/api/webhook` returns 400 "no signature" rather than 503, which proves the
+secret reaches the function.
+
+**Env var contexts matter.** `ADMIN_CODE` was production-only, so preview deploys
+could not unlock the Studio. Now also set for `deploy-preview` and
+`branch-deploy`. Note `STRIPE_SECRET_KEY` is the LIVE key and is available to
+preview contexts — a draft URL can take real payments.
+
+**Netlify credit reality (researched 2026-08-31):** production deploy = 15
+credits, web requests = 2 per 10k, bandwidth = 20/GB, compute = 10/GB-hour.
+Draft/branch deploys = **0 credits**. Deploy cost dominates everything else for
+this project. Iterate on draft URLs; deploy to production once, at the end.
