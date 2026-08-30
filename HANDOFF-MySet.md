@@ -311,3 +311,72 @@ Last run: **40/40 and 80/80, zero loss.**
 - Artist attributions are guesses; a few are low-confidence (`I Found You`).
 - Songs are alphabetical within the pool; no manual reordering.
 - Single-artist product — no multi-artist accounts or auth yet.
+
+---
+
+## SESSION LOG — 2026-08-31 (after the first real gig)
+
+Perry played the first live gig with MySet on **2026-08-30, The Ugly Duckling
+Irish Pub, Koh Phangan** — 8 people voting, 21 votes, one $3 purchase. Two
+things broke, both now fixed and verified on the live site.
+
+### 1. A paid customer got nothing
+`cari.helena88@gmail.com` bought the $3 / 5-vote pack at 20:35 and was never
+granted the votes. `/api/confirm` only runs if the buyer's browser returns to
+the site; hers didn't, and the `meta` ledger blob did not even exist afterwards.
+
+Three independent delivery paths now exist, all funnelling through
+`redeemSession()` in `_pay.mjs` so they cannot drift:
+  1. the return page (`/vote.html?paid=…`)
+  2. **`/api/webhook`** — Stripe-signed, fires regardless of the buyer's browser.
+     Needs `STRIPE_WEBHOOK_SECRET` in Netlify; **still unset as of this writing**,
+     so the webhook returns 503 and is inert. Set it and redeploy.
+  3. **`/api/revenue` POST** — the reconcile sweep, exposed as a button in the
+     Studio's Money tab.
+The buyer's phone also stores the pending session id and retries on next load.
+All paths proven replay-safe against the real payment (3 sweeps + a confirm
+replay left `extra` at 5, not 20).
+
+### 2. He could not log into his own Studio
+The passcode lived only in the Netlify `ADMIN_CODE` env var — nowhere he could
+read it — so he never started a single song from the dashboard. He can now set
+his own code in **Settings → Your studio code** (stored hashed in
+`show.codeHash`); `ADMIN_CODE` stays as the recovery key. `checkAdmin` is async
+now and still fails closed.
+
+### New in this session
+- **`/api/revenue`** (GET list / POST reconcile) — reads Stripe directly and
+  filters to sessions this app created (`metadata.kind` ∈ votes|tip).
+- **`/api/history`** + `_history.mjs` — per-show archive in flat `hist_<showId>`
+  docs plus a `hist_index` summary. Money is bounded to the show's window and
+  **auto-paged** (`sessions.list` does not paginate).
+- **`show.log`** — the load-bearing piece. `clearAllFanVotes()` destroys the
+  tally on every song start, so `admin.mjs` snapshots the whole round (winner +
+  everyone else + voter count) inside the same handler.
+- **Vote-pack pricing** is artist-set (`show.packs`), server-side, clamped.
+- Sort control on the voting page (Top voted / Song A–Z / Artist A–Z).
+- Removed `I Found You` — it was a mis-transcription of `Until I Found You`,
+  which was already present. **66 songs** now.
+
+### Live state at the end of this session
+- Show `2026-08-30-1731`, clean: 0 votes, 0 played, 66 songs, 3 free credits,
+  replay cost 5, packs $3/5 and $7/15, Stripe ON.
+- History holds exactly one real show: `hist_2026-08-30-1210` (his first gig).
+- **Cari's 5 purchased votes were delivered and then wiped** by a `newShow`
+  during testing. `newShow` clears purchased votes by design (the confirm dialog
+  says so). The honest resolution for her is a refund from the Stripe dashboard.
+- An unpaid $2 Checkout Session exists in Stripe from a pricing test. It expires
+  on its own and never appears in revenue (which filters on `payment_status`).
+
+### Open decisions for Perry
+- Should purchased votes survive a "New show" reset? Today they do not.
+- Artist attributions still unconfirmed, notably `Wagon Wheel → Darius Rucker`
+  (vs Old Crow Medicine Show) and `Hallelujah → Jeff Buckley` (vs Cohen).
+
+### Next phases (researched, not built)
+Full plan with storage shapes and traps is in the session scratchpad
+(`plan.md` + five research reports). Order: **artist profile** → **events +
+country/city homepage** → **community feed** → **lyrics**. Lyrics decision:
+**LRCLIB**, fetched once via a Netlify Function and cached permanently in Blobs
+(~300 KB for the whole setlist, zero API cost, no AI in the loop); originals
+typed in by hand; current-song-only and `noindex` for the licensing posture.
