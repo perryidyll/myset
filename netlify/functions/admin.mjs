@@ -19,16 +19,19 @@ export default async (req) => {
         const id = body.song;
         if (show.nowPlaying && show.nowPlaying !== id && !show.played.includes(show.nowPlaying))
           show.played.push(show.nowPlaying);
+        show.played = show.played.filter((p) => p !== id);   // replaying? take it back out
         show.nowPlaying = id || null;
         show.windowOpen = true; resetVotes = true;
         break;
       }
       case 'playTop': {
         const pool = show.songs
-          .filter((s) => s.active !== false && s.id !== show.nowPlaying && !show.played.includes(s.id))
+          .filter((s) => s.active !== false && s.id !== show.nowPlaying)
+          .filter((s) => !show.played.includes(s.id) || (counts[s.id] || 0) > 0)
           .sort((a, b) => (counts[b.id] || 0) - (counts[a.id] || 0));
         if (!pool.length) { err = ['nothing left in the pool', 409]; return false; }
         if (show.nowPlaying && !show.played.includes(show.nowPlaying)) show.played.push(show.nowPlaying);
+        show.played = show.played.filter((p) => p !== pool[0].id);
         show.nowPlaying = pool[0].id;
         show.windowOpen = true; resetVotes = true;
         break;
@@ -49,11 +52,21 @@ export default async (req) => {
       case 'addSong': {
         const title = String(body.title || '').trim().slice(0, 80);
         if (!title) { err = ['no title', 400]; return false; }
+        const artist = String(body.artist || '').trim().slice(0, 60);
         let id = slug(title);
         if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
-        show.songs.push({ id, title, active: true });
+        show.songs.push({ id, title, artist, active: true });
         break;
       }
+      case 'editSong': {
+        const sg = show.songs.find((x) => x.id === body.song);
+        if (!sg) { err = ['unknown song', 404]; return false; }
+        if (typeof body.title === 'string' && body.title.trim()) sg.title = body.title.trim().slice(0, 80);
+        if (typeof body.artist === 'string') sg.artist = body.artist.trim().slice(0, 60);
+        break;
+      }
+      case 'replayCost':
+        show.replayCost = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5)); break;
       case 'removeSong': show.songs = show.songs.filter((s) => s.id !== body.song); break;
       case 'unplay': show.played = show.played.filter((id) => id !== body.song); break;
       case 'resetVotes': resetVotes = true; break;

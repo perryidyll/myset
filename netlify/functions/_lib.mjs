@@ -4,13 +4,74 @@ export const store = () => getStore('myset');
 
 /* ---------- Perry's default set ---------- */
 export const DEFAULT_SONGS = [
-  'The Joker','Jack & Diane','Faith','Crazy Little Thing Called Love','Shape Of You',
-  'Amie','Hey Jude','Vienna','Best Part','Peaceful Easy Feeling / Brown Eyed Girl',
-  'Chicken Fried','Wagon Wheel','Margaritaville','Bar Song (Tipsy)','What I Got',
-  'Santeria','This Love','Sunday Morning','Better Together / Banana Pancakes',
-  'Yours / Hey Soul Sister','Drops Of Jupiter','Perfect','All Of Me','I Found You',
-  'Circles','Wish You Were Here','Sitting On The Dock Of The Bay','Feel It Still',
-  "Ain't No Rest For The Wicked",'Come Together','Sweet Home Alabama',
+  // [title, artist]  — artists are best guesses; edit any of them in the Studio
+  ['The Joker','Steve Miller Band'],
+  ['Jack & Diane','John Mellencamp'],
+  ['Faith','George Michael'],
+  ['Crazy Little Thing Called Love','Queen'],
+  ['Shape Of You','Ed Sheeran'],
+  ['Amie','Pure Prairie League'],
+  ['Hey Jude','The Beatles'],
+  ['Vienna','Billy Joel'],
+  ['Best Part','Daniel Caesar'],
+  ['Peaceful Easy Feeling','Eagles'],
+  ['Brown Eyed Girl','Van Morrison'],
+  ['Chicken Fried','Zac Brown Band'],
+  ['Wagon Wheel','Darius Rucker'],
+  ['Margaritaville','Jimmy Buffett'],
+  ['Bar Song (Tipsy)','Shaboozey'],
+  ['What I Got','Sublime'],
+  ['Santeria','Sublime'],
+  ['This Love','Maroon 5'],
+  ['Sunday Morning','Maroon 5'],
+  ['Better Together','Jack Johnson'],
+  ['Banana Pancakes','Jack Johnson'],
+  ["I'm Yours",'Jason Mraz'],
+  ['Hey Soul Sister','Train'],
+  ['Drops Of Jupiter','Train'],
+  ['Perfect','Ed Sheeran'],
+  ['All Of Me','John Legend'],
+  ['I Found You','Andy Grammer'],
+  ['Circles','Post Malone'],
+  ['Wish You Were Here','Pink Floyd'],
+  ['Sitting On The Dock Of The Bay','Otis Redding'],
+  ['Feel It Still','Portugal. The Man'],
+  ["Ain't No Rest For The Wicked",'Cage The Elephant'],
+  ['Come Together','The Beatles'],
+  ['Sweet Home Alabama','Lynyrd Skynyrd'],
+  ['Tennessee Whiskey','Chris Stapleton'],
+  ["Summer Of '69",'Bryan Adams'],
+  ['2009','Mac Miller'],
+  ['Something Like Olivia','John Mayer'],
+  ["Ain't No Sunshine",'Bill Withers'],
+  ['Stick Season','Noah Kahan'],
+  ['Do You Remember','Jack Johnson'],
+  ['Taylor','Jack Johnson'],
+  ['Like The Tides','Perry Idyll'],
+  ['All Or Nothing','Perry Idyll'],
+  ['Dissolve','Perry Idyll'],
+  ['Lost In Love','Perry Idyll'],
+  ['Fast Car','Tracy Chapman'],
+  ['3 AM','Matchbox Twenty'],
+  ['Landslide','Fleetwood Mac'],
+  ['Hey There Delilah',"Plain White T's"],
+  ['Fire And Rain','James Taylor'],
+  ['Hallelujah','Jeff Buckley'],
+  ['Have You Ever Seen The Rain','Creedence Clearwater Revival'],
+  ['Gravity','John Mayer'],
+  ['Why Georgia','John Mayer'],
+  ['Slow Dancing In A Burning Room','John Mayer'],
+  ['Who Says','John Mayer'],
+  ['Stop This Train','John Mayer'],
+  ['Edge Of Desire','John Mayer'],
+  ["Free Fallin'",'Tom Petty (John Mayer version)'],
+  ['I Will Follow You Into The Dark','Death Cab For Cutie'],
+  ['Catch & Release','Matt Simons'],
+  ['Simple Man','Lynyrd Skynyrd'],
+  ['Imagine','John Lennon'],
+  ['Until I Found You','Stephen Sanchez'],
+  ['Blackbird','The Beatles'],
+  ['Follow The Sun','Xavier Rudd'],
 ];
 
 export const slug = (t) =>
@@ -27,7 +88,8 @@ export function defaultShow() {
     nowPlaying: null,
     played: [],
     freeCredits: 3,
-    songs: DEFAULT_SONGS.map((t) => ({ id: slug(t), title: t, active: true })),
+    replayCost: 5,
+    songs: DEFAULT_SONGS.map(([t, a]) => ({ id: slug(t), title: t, artist: a, active: true })),
     updatedAt: Date.now(),
   };
 }
@@ -91,6 +153,7 @@ function normShow(s) {
   if (!Array.isArray(show.songs) || !show.songs.length) show.songs = d.songs;
   if (!Array.isArray(show.played)) show.played = [];
   if (typeof show.freeCredits !== 'number') show.freeCredits = 3;
+  if (typeof show.replayCost !== 'number') show.replayCost = 5;
   return show;
 }
 export async function getShow() {
@@ -159,6 +222,13 @@ export const mutateMeta = (fn) =>
   casDoc('meta', emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; return fn(m); });
 
 /* ---------- derived ---------- */
+/** A vote on an already-played song costs more (a "play it again" request). */
+export const costOf = (songId, show) =>
+  show.played.includes(songId) ? (show.replayCost || 5) : 1;
+/** Credits a fan has spent, counting replay votes at their higher cost. */
+export const creditsUsed = (fan, show) =>
+  (fan.v || []).reduce((sum, id) => sum + costOf(id, show), 0);
+
 export function voteCounts(fans) {
   const counts = {};
   for (const id of Object.keys(fans))

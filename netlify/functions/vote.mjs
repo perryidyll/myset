@@ -1,4 +1,4 @@
-import { getShow, mutateFan, json, bad, cleanFanId } from './_lib.mjs';
+import { getShow, mutateFan, creditsUsed, costOf, json, bad, cleanFanId } from './_lib.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -13,22 +13,21 @@ export default async (req) => {
   if (show.status === 'ended') return bad('The show has ended', 409);
   const s0 = show.songs.find((x) => x.id === song && x.active !== false);
   if (!s0) return bad('unknown song', 404);
-  if (show.nowPlaying === song || show.played.includes(song))
-    return bad('That one already played', 409);
+  if (show.nowPlaying === song) return bad('That one is playing right now', 409);
 
-  let err = null, outcome = null;
+  const cost = costOf(song, show);   // 1 normally, more to request a replay
+  let err = null, outcome = null, want = null;
+
   try {
-    // Only this fan's shard is touched -> minimal contention, CAS-safe.
-    let want = null;
     await mutateFan(fan, (me) => {
       const at = me.v.indexOf(song);
       if (at >= 0) { me.v.splice(at, 1); want = false; outcome = { voted: false }; return true; }
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
       const total = show.freeCredits + (me.extra || 0);
-      if (me.v.length >= total) { err = ['no-credits', 402]; return false; }
+      if (creditsUsed(me, show) + cost > total) { err = ['no-credits', 402]; return false; }
       me.v.push(song);
       want = true;
-      outcome = { voted: true, remaining: Math.max(0, total - me.v.length) };
+      outcome = { voted: true, cost, remaining: Math.max(0, total - creditsUsed(me, show)) };
       return true;
     },
     // read back after writing: if the vote didn't stick, retry

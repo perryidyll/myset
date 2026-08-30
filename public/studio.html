@@ -138,7 +138,7 @@ function render(){
     <div class="sec"><span class="kick">Queue — tap ▶ to start</span><span class="kick">${pool.length}</span></div>
     ${pool.slice(0,12).map((x,i)=>`<div class="row">
       <div class="rk ${i===0&&x.votes?'one':''} mono">${i+1}</div>
-      <div class="m"><div class="t">${esc(x.title)}</div></div>
+      <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="s" style="text-transform:none;letter-spacing:0;font-size:12px">${esc(x.artist)}</div>`:''}</div>
       <div class="cnt mono">${x.votes}</div>
       <button class="act" onclick="act('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}
     ${pool.length>12?`<div class="row muted" style="font-size:12px">+ ${pool.length-12} more in the Setlist tab</div>`:''}
@@ -155,15 +155,20 @@ function render(){
     const active=songs.filter(x=>x.active!==false).length;
     body=`
     <div class="sec"><span class="kick">Add a song</span></div>
-    <div class="wrap" style="display:flex;gap:8px">
-      <input class="inp" id="newSong" placeholder="Song title" style="flex:1">
-      <button class="act pri" style="min-width:64px" onclick="addSong()">Add</button>
+    <div class="wrap">
+      <input class="inp" id="newSong" placeholder="Song title">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="inp" id="newArtist" placeholder="Artist (optional)" style="flex:1">
+        <button class="act pri" style="min-width:64px" onclick="addSong()">Add</button>
+      </div>
     </div>
     <div class="sec"><span class="kick">Your setlist — ${active} of ${songs.length} live</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Turn a song OFF to hide it from the audience tonight. Remove deletes it for good.</p>
     ${songs.map(x=>`<div class="row ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
+        <div class="s" style="text-transform:none;letter-spacing:0;font-size:12px;color:var(--muted)">${esc(x.artist||'— no artist —')}</div>
         <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden':'In the pool'}${x.votes?' · '+x.votes+' votes':''}</div></div>
+      <button class="act" onclick="editArtist('${x.id}','${esc(x.title).replace(/'/g,'&#39;')}','${esc(x.artist||'').replace(/'/g,'&#39;')}')">Edit</button>
       <button class="act" onclick="act('toggleSong',{song:'${x.id}'})">${x.active===false?'Show':'Hide'}</button>
       <button class="act warn" onclick="if(confirm('Remove ${esc(x.title).replace(/'/g,'')} from your setlist?'))act('removeSong',{song:'${x.id}'})">✕</button>
     </div>`).join('')}
@@ -178,6 +183,12 @@ function render(){
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many votes each person gets. Refreshes every time you start a new song.</p>
     <div class="wrap"><div class="chips">
       ${[1,2,3,5,10].map(n=>`<button class="chip ${s.freeCredits===n?'on':''}" onclick="act('freeCredits',{n:${n}})">${n}</button>`).join('')}
+    </div></div>
+
+    <div class="sec"><span class="kick">Cost to replay a played song</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Songs you've already played stay votable, but cost this many votes to bring back.</p>
+    <div class="wrap"><div class="chips">
+      ${[2,3,5,8,10].map(n=>`<button class="chip ${(s.replayCost||5)===n?'on':''}" onclick="act('replayCost',{n:${n}})">${n}</button>`).join('')}
     </div></div>
 
     <div class="sec"><span class="kick">Tonight's gig</span></div>
@@ -224,7 +235,12 @@ function render(){
 
   const n=$('#newSong'); if(n) n.addEventListener('keydown',e=>{if(e.key==='Enter')addSong()});
 }
-function addSong(){const el=$('#newSong');const t=el.value.trim();if(!t)return;el.value='';act('addSong',{title:t});}
+function addSong(){const el=$('#newSong'),ea=$('#newArtist');const t=el.value.trim();if(!t)return;
+  const a=ea?ea.value.trim():'';el.value='';if(ea)ea.value='';act('addSong',{title:t,artist:a});}
+function editArtist(id,title,artist){
+  const a=prompt('Artist for “'+title+'”:',artist==='— no artist —'?'':artist);
+  if(a===null)return; act('editSong',{song:id,artist:a});
+}
 async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'venue',venue:$('#fVenue').value})});
   await api('/admin',{method:'POST',body:JSON.stringify({action:'city',city:$('#fCity').value})});

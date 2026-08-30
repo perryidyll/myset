@@ -22,7 +22,8 @@
 .now{background:var(--accent);color:#fff;padding:16px 14px;position:relative;overflow:hidden}
 .now .lab{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.95}
 .now .lab .dot{background:#fff}
-.now .t{font-size:26px;font-weight:800;letter-spacing:-.025em;margin-top:6px;line-height:1.1}
+.now .t{font-size:25px;font-weight:800;letter-spacing:-.025em;margin-top:6px;line-height:1.1}
+.now .by{font-size:13px;font-weight:600;opacity:.85;margin-top:3px}
 .now .eq{position:absolute;right:14px;bottom:16px;display:flex;gap:3px;align-items:flex-end;height:22px;opacity:.9}
 .now .eq i{width:4px;background:#fff;animation:eq .9s ease-in-out infinite}
 .now .eq i:nth-child(2){animation-delay:.2s}.now .eq i:nth-child(3){animation-delay:.4s}
@@ -44,6 +45,7 @@
 .qrow.lead .pos{background:var(--accent)}
 .qrow .m{flex:1;min-width:0}
 .qrow .t{font-size:15.5px;font-weight:700;line-height:1.25}
+.qrow .by{font-size:12px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .qrow .s{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 .qrow .cnt{text-align:right;flex:0 0 auto}
 .qrow .cnt b{font-size:16px;font-weight:800}
@@ -56,6 +58,7 @@
 .prow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--hair)}
 .prow .m{flex:1;min-width:0}
 .prow .t{font-size:15px;font-weight:600;line-height:1.25}
+.prow .by{font-size:12px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow .cnt{text-align:right;flex:0 0 auto;min-width:26px}
 .prow .cnt b{font-size:13px;font-weight:800;color:var(--muted)}
 .prow.hasv .cnt b{color:var(--ink)}
@@ -80,8 +83,19 @@
 .dock .btn small{font-size:9px;font-weight:600;letter-spacing:.03em;text-transform:none;color:var(--muted)}
 .dock .btn-pri small{color:rgba(255,255,255,.85)}
 
-.played{padding:0 14px}
-.played .p{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--hair);font-size:13px;color:var(--muted)}
+/* search */
+.search{padding:10px 14px 4px;position:relative}
+.search input{width:100%;min-height:44px;padding:11px 36px 11px 12px;font-size:16px;background:var(--surface);
+  border:2px solid var(--hair);color:var(--ink)}
+.search input:focus{border-color:var(--accent);outline:none}
+.search .clr{position:absolute;right:22px;top:20px;font-size:18px;color:var(--muted);line-height:1;padding:4px}
+.nores{padding:26px 14px;text-align:center;color:var(--muted);font-size:14px}
+
+/* replay pill */
+.costpill{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid var(--accent);color:var(--accent);padding:2px 6px;margin-left:6px;vertical-align:1px}
+.vb.cost{border-color:var(--accent);color:var(--accent)}
+.vb.cost.on{background:var(--accent-tint);border-color:transparent;color:var(--accent-tint-ink)}
 .backlink{display:block;padding:10px 14px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 </style>
 </head>
@@ -99,16 +113,18 @@ function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
   return v;}
 const FAN=fanId();
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-let ST=null,busy=new Set(),sel={};
+let ST=null,busy=new Set(),sel={},FILTER='',FOCUS=false;
 
 async function load(){
   try{const r=await fetch(`${API}/show?fan=${encodeURIComponent(FAN)}`,{cache:'no-store'});
-    const d=await r.json(); if(d.ok){ST=d;render();}}catch(e){}
+    const d=await r.json();
+    if(d.ok){ const el=document.activeElement; FOCUS=!!(el&&el.id==='q'); ST=d; render(); FOCUS=false; }
+  }catch(e){}
 }
 async function vote(id){
   if(busy.has(id))return; busy.add(id);
-  const s=ST&&ST.songs.find(x=>x.id===id);
-  if(s){s.mine=!s.mine;s.votes+=s.mine?1:-1;ST.credits.remaining+=s.mine?-1:1;render();}
+  const s=ST&&((ST.songs||[]).find(x=>x.id===id)||(ST.played||[]).find(x=>x.id===id));
+  if(s){const k=s.cost||1;s.mine=!s.mine;s.votes+=s.mine?1:-1;ST.credits.remaining+=s.mine?-k:k;render();}
   try{
     const r=await fetch(`${API}/vote`,{method:'POST',headers:{'content-type':'application/json'},
       body:JSON.stringify({fan:FAN,song:id})});
@@ -123,8 +139,14 @@ function render(){
   const d=ST,c=d.credits;
   const ended=d.status==='ended',pre=d.status==='pre';
   const open=d.windowOpen&&!ended&&!pre;
+  const q=(FILTER||'').trim().toLowerCase();
+  const match=s=>!q||s.title.toLowerCase().includes(q)||(s.artist||'').toLowerCase().includes(q);
+
   const queue=d.songs.slice(0,3);
-  const pool=d.songs.slice(3);
+  const rest=d.songs.slice(3).filter(match);
+  const replays=(d.played||[]).filter(match);
+
+  const by=a=>a?`<div class="by">${esc(a)}</div>`:'';
 
   /* header */
   let h=`<div class="head">
@@ -139,56 +161,68 @@ function render(){
   /* TIER 1 — now playing */
   h += d.nowPlaying
     ? `<div class="now"><div class="lab"><span class="dot"></span>Playing now</div>
-        <div class="t">${esc(d.nowPlaying.title)}</div>
+        <div class="t">${esc(d.nowPlaying.title)}</div>${d.nowPlaying.artist?`<div class="by">${esc(d.nowPlaying.artist)}</div>`:''}
         <div class="eq"><i></i><i></i><i></i></div></div>`
     : `<div class="now none"><div class="lab">Playing now</div><div class="t">${ended?'Show finished':'Starting soon…'}</div></div>`;
 
-  /* voting band */
   if(!ended) h += `<div class="band ${open?'':'shut'}">
       <span class="l">${open?'<span class="dot"></span>Voting open':'Voting paused'}</span>
       <span style="font-size:11px;font-weight:700">${c.remaining} vote${c.remaining===1?'':'s'} left</span></div>`;
 
-  /* TIER 2 — up next queue */
+  /* TIER 2 — up next */
   h += `<div class="queue">
     <div class="qh"><b>Up next</b><span>Top ${Math.min(3,queue.length)||''} by votes</span></div>
     ${queue.length?queue.map((s,i)=>`
       <div class="qrow ${i===0?'lead':''}">
         <span class="pos">${i+1}</span>
-        <div class="m"><div class="t">${esc(s.title)}</div>
+        <div class="m"><div class="t">${esc(s.title)}</div>${by(s.artist)}
           <div class="s">${i===0?'Winning — plays next':'In the queue'}${s.mine?' · you voted':''}</div></div>
         <div class="cnt"><b class="mono">${s.votes}</b><span>VOTES</span></div>
       </div>`).join('')
      :`<div class="qempty">No votes yet — be the first below.</div>`}
   </div>`;
 
-  /* TIER 3 — the pool */
-  h += `<div class="poolhead"><b>${open?'Vote for these':'The setlist'}</b><span class="kick">${pool.length} more</span></div>`;
-  h += pool.length? pool.map(s=>{
-      const dis=!open||(c.remaining<=0&&!s.mine);
-      return `<div class="prow ${s.votes?'hasv':''}">
-        <div class="m"><div class="t">${esc(s.title)}</div></div>
-        <div class="cnt"><b class="mono">${s.votes||''}</b></div>
-        <button class="vb ${s.mine?'on':''}" ${dis?'disabled':''} onclick="vote('${s.id}')">${s.mine?'Voted ✓':'Vote'}</button>
-      </div>`;}).join('')
-    : `<div class="empty" style="padding:24px"><b>That’s the whole list</b>Everything’s in the queue above.</div>`;
+  /* search */
+  h += `<div class="search">
+    <input id="q" type="search" inputmode="search" placeholder="Search song or artist…" value="${esc(FILTER)}" autocomplete="off">
+    ${FILTER?`<button class="clr" onclick="setFilter('')" aria-label="Clear search">×</button>`:''}
+  </div>`;
 
-  /* played */
-  if(d.played.length) h += `<div class="poolhead" style="padding-top:22px"><b>Already played (${d.played.length})</b></div>
-    <div class="played">${d.played.slice().reverse().map(p=>`<div class="p"><span>${esc(p.title)}</span><span>♪</span></div>`).join('')}</div>`;
+  /* TIER 3 — the pool */
+  h += `<div class="poolhead"><b>${open?'Vote for these':'The setlist'}</b><span class="kick">${rest.length} song${rest.length===1?'':'s'}</span></div>`;
+  h += rest.length? rest.map(s=>row(s,c,open,false)).join('')
+    : `<div class="nores">${q?`Nothing matches “${esc(FILTER)}”.`:'Everything’s in the queue above.'}</div>`;
+
+  /* TIER 4 — already played (costs more) */
+  if(replays.length) h += `<div class="poolhead" style="padding-top:24px">
+      <b>Already played</b><span class="kick">${d.replayCost} votes to hear again</span></div>
+    ${replays.map(s=>row(s,c,open,true)).join('')}`;
 
   h += `<a class="backlink" href="/">← Back to Perry’s page</a><div class="foot">MySet · myset.vip</div>`;
   $('#app').innerHTML=h;
 
-  /* sticky dock */
+  const qi=$('#q');
+  if(qi){ qi.addEventListener('input',e=>{FILTER=e.target.value;render();});
+    if(FOCUS){ qi.focus(); const v=qi.value; qi.setSelectionRange(v.length,v.length); } }
+
   const dock=$('#dock');
   if(ended){ dock.hidden=true; }
-  else{
-    dock.hidden=false;
+  else{ dock.hidden=false;
     dock.innerHTML=`
       <button class="btn" onclick="openBuy()">More votes<small>${d.paymentsEnabled?'From $3':'Ask Perry'}</small></button>
-      <button class="btn btn-pri" onclick="openTip()">Tip Perry<small>Say thanks</small></button>`;
-  }
+      <button class="btn btn-pri" onclick="openTip()">Tip Perry<small>Say thanks</small></button>`; }
 }
+function row(s,c,open,replay){
+  const cost=s.cost||1;
+  const dis=!open||(!s.mine&&c.remaining<cost);
+  return `<div class="prow ${s.votes?'hasv':''}">
+    <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>
+      ${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}</div>
+    <div class="cnt"><b class="mono">${s.votes||''}</b></div>
+    <button class="vb ${replay?'cost':''} ${s.mine?'on':''}" ${dis?'disabled':''} onclick="vote('${s.id}')">${s.mine?'Voted ✓':'Vote'}</button>
+  </div>`;
+}
+function setFilter(v){ FILTER=v; FOCUS=false; render(); }
 
 /* sheets */
 function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}

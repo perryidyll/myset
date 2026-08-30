@@ -11,7 +11,7 @@ export default async (req) => {
     show: {
       artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime, status: show.status,
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
-      played: show.played, freeCredits: show.freeCredits,
+      played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
     },
     voters: Object.values(fans).filter((f) => (f.v || []).length).length,
     songs: show.songs.map((x) => ({
