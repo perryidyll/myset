@@ -1066,3 +1066,157 @@ and costs nothing. Audited at the same time: **nothing secret in any published
 byte** (Stripe keys, webhook secrets, Resend keys, Netlify PATs, the studio
 passcode, private keys, bearer tokens, real email addresses — all absent), and no
 secret hard-coded in any function. The five env vars are the only source.
+
+---
+
+# SESSION LOG — 2026-09-01 (setlists, PWA, and the review that caught what they broke)
+
+**Two commits, both on `main` and deployed to production** (`myset.vip`, verified
+from outside):
+
+* `29e87fd` — custom setlists, songs-to-learn, genre auto-tagging, the PWA, and the
+  sheet/navigation polish Perry asked for.
+* `6515dcf` — the 13 confirmed findings from the independent review of `29e87fd`,
+  plus MySet's first test suite.
+
+## What was built
+
+**Setlists.** One library of songs; a setlist is a named subset of it, holding song
+IDS only, like a Spotify playlist — so renaming a song changes it everywhere. Two
+new documents, `lists_<aid>` and `learn_<aid>`. The Setlist tab's top row always
+says what the room can currently see. Per-gig selection, with the three states
+below.
+
+**Songs to learn.** `learn_<aid>`, deliberately NOT in the library, so the room can
+never vote for something that isn't playable yet. *Learned it* moves a row across
+in one action.
+
+**Genre auto-tagging.** `_genremap.mjs` — a 62-song curated map plus 76 artist-level
+fallbacks, built by an 11-agent adversarially-verified workflow. `tagAuto` only ever
+fills a song with NO genres, so running it twice is a no-op and hand-tagging always
+wins. `originals` is applied when a song's artist matches the artist's own name.
+
+**PWA.** `sw.js` plus a manifest per surface. Nothing under `/api` is ever cached —
+verified in a real browser, not assumed. Navigations are network-first, nothing is
+precached, so a bad deploy is fixed by the next deploy. Add-to-home-screen banner on
+the homepage with iPhone/Android tabs.
+
+**Polish.** Sheet ✕ moved down to 10px. ↗ on the Studio's MySet mark and on the
+artist name on the audience page. Collapsible gig list. White hairline round the
+six-tab pill with equal 18px word gaps (measured at 320/375/390/430).
+
+## What the review found — all 13, all fixed, all with a test
+
+The review pass on `29e87fd` was a 39-agent workflow with five fresh-context lenses
+and an adversarial refute stage: **34 raised, 13 confirmed, 21 refuted.** Every
+confirmed finding was one shape — *a setlist narrows what the room can vote for, and
+something else did not get the memo.*
+
+**The two that would have cost real money on stage:**
+
+1. **`askAccept` accepted a paid request into invisibility.** It added the song to
+   the LIBRARY only. With a setlist active, `playable()` excluded it, `/api/show`
+   never listed it, and `vote.mjs` answered *"that one isn't on tonight's list"* —
+   while the fan who had just paid three credits was told *"On the list — go vote
+   for it."* It now joins tonight's set. And if the plan's featured cap would land
+   it switched off instead, the accept is **refused**: the request stays pending, so
+   the credits are still attached to something the artist can honour or decline for
+   a refund.
+2. **`playTop` moved to `playable()` and stopped seeing replay votes**, so the
+   room's top-voted *play it again* could not win. Meanwhile the Studio kept the old
+   whole-library predicate, so *"Start top voted — X"* could name a song `playTop`
+   would not start. The `inSet` flag added for exactly this had **zero consumers**.
+
+**The fix for the family, not the instances.** Three places each computed "can the
+room vote for this". There is now one — `votable()` in `_lib.mjs`: in tonight's set,
+or already played. `vote.mjs` enforces it, `playTop` picks out of it, `show.mjs`
+filters the public payload through it, and `stage.mjs` hands the Studio the same
+flag so the client cannot drift. Callers may narrow it; none may widen or recompute
+it. **INVARIANT 0bc.**
+
+**The rest:**
+
+* **Un-voting is no longer gated by membership.** The guard sat ahead of the toggle,
+  so narrowing the set mid-round left a fan's credit spent on a song they could not
+  un-vote. INVARIANT 15 claimed otherwise; now it is true.
+* **A gig's `listId` has three states and they are not interchangeable:** `''` =
+  leave my pick alone · `'all'` = play the whole library · `<id>` = that set. A
+  truthiness test collapsed the first two, so "All songs" on a gig silently did
+  nothing — and `eventSave`'s unknown-id sanitiser *blanked* `'all'`, because it is
+  not a list id. (That second one my own test found; the review had not.) It now
+  also applies on **↺ New show**, and a gig pointing at a set the artist has since
+  deleted leaves their pick alone and says so.
+* **`refreshActive` ran off a hard-coded allow-list of actions**, with a comment
+  asking the next person to remember to add to it — and two handlers added in the
+  same change did not. `admin.mjs` now **compares the set of song ids across the
+  mutation**. A fact cannot be forgotten; a promise can. Its failure is also
+  surfaced as a note rather than swallowed.
+* **Everything in `/api/show` is now votable**, so tapping anything in it works. A
+  hidden-but-played song used to sit there answering "not on tonight's list".
+* **`shapeLists` returns two different numbers on purpose** — library membership
+  (the picker's ticks, so a hidden song keeps its tick instead of being dropped on
+  save) and in-play count (the same test `playable()` applies). They were the same
+  number, so "8 of your 40 songs are in play" counted songs the room could not see.
+* **`tagAuto`'s counters moved inside the CAS callback** — `casDoc` re-runs it on a
+  write conflict, and they reported double.
+* Setlist rows say **"Not in this set"**; gig rows name their set (including *all
+  songs* and *a deleted set*); the want-to-learn copy no longer claims a learned
+  song lands in the active setlist.
+
+**Found while verifying, not in the review:** `.tabs` stuck at a hard-coded
+`top:66px` under a header that is really **88px** tall, so the blurred sticky header
+sat over the top quarter of the app's main navigation on every scroll — in **both**
+studios. `fitTabs()` measures it into `--headh` now, because the header's height is
+content-driven and grows with the phone's text-size setting. **INVARIANT 0bb.**
+
+## MySet has a test suite now — `npm test`
+
+Four stages, **131 assertions**, no dev server, nothing that touches production:
+
+| Stage | What it proves |
+|---|---|
+| `test/syntax.mjs` | every page's inline script through `node --check`, every function `import()`ed |
+| `test/structure.mjs` | every `if(TAB===…)` block and top-level function exists exactly once — **and every flag the server produces has a consumer**, which is precisely how the Studio's queue drifted from `playTop` |
+| `test/unit.mjs` | the predicates: `playable`, `votable`, the `playTop` pool, the Studio's own filters, `shapeLists` |
+| `test/e2e.mjs` | whole request flows through the real handlers — one case per bug that has actually happened |
+
+**Why it does not use `netlify dev`:** its Blobs sandbox returns **no etag**, so
+`casDoc` falls back to `onlyIfNew`, every write after the first fails, and the second
+API call in any test returns `busy`. `test/blobs-fake.mjs` is an in-memory store that
+implements etags, injected by a module-resolution hook (`test/register.mjs`). Reads
+*do* work under `netlify dev`, so to eyeball the UI locally you can still run it and
+seed `.netlify/blobs-serve/entries/<siteId>/site:myset/` by hand — that is how the
+Studio screenshots in this session were taken.
+
+## Verified, and how
+
+* `npm test` — 131/131.
+* **In a real browser against a seeded local store:** the Live tab's queue holds
+  only votable songs and "Start top voted — Bravo" matches what `playTop` starts;
+  the Setlist tab labels the out-of-set song "Not in this set"; the gig sheet's
+  dropdown has all three states with every box empty; ✕ is 10px from the sheet top;
+  18px word gaps and 11px symmetric insets at 320/390/430 with zero body overflow;
+  header/tab overlap 0px when scrolled (was 22px); no console errors.
+* **Draft deploy, read-only against the real API** (a draft shares production
+  Blobs, so nothing was written): every route 200, every changed line present,
+  `/api/show` sane, service worker registers and caches no `/api`.
+* **Production from outside:** every route 200, all six changed markers present in
+  the live `studio.html`, `/api/show` 200, the audience page renders with no console
+  errors.
+
+## Still open
+
+* **Stripe Connect** — unchanged and still the platform blocker. Until it exists, a
+  second artist's money lands in Perry's Stripe account and the 10% platform cut does
+  not exist. Perry is doing this himself.
+* **A residual credit case, stated honestly:** if the artist narrows the set
+  mid-round, the API will always let a fan toggle their vote off, but the song
+  disappears from `/api/show`, so the *UI* has no button for it. Practical harm is
+  bounded — votes are wiped when the next song starts, which returns the credit
+  anyway — so it was left rather than adding a fan-wide write to sweep votes on
+  every `applyList`. Worth revisiting if a real gig hits it.
+* `MIN_VOUCHES` is 5, which may still be high for a small island.
+* The artist QR points at the profile page, so the room taps *Join live* once more
+  than before. One line to change if it matters in a busy bar.
+* Pro extras (press kit, branding, city promotion) are promised in the plan copy and
+  not built.
