@@ -112,6 +112,20 @@ If you are about to violate one, stop and say so rather than working around it.
     against a reserved list (`api`, `studio`, `vote`, `signup`, …) so an artist
     can never claim a route.
 
+## QR codes
+
+0u. **A QR that looks plausible but does not scan is worse than none** — these get
+    printed and stuck on tables. `_qr.mjs` is verified by DECODING, not by eye:
+    every URL the app generates is rendered and read back with an independent
+    decoder at 4, 6, 8, 12 and 20 px per module. My first version scanned as
+    nothing at all (the 15 format bits were written in reverse), and my first mask
+    penalty picked unreadable masks. On the fuzz set it now decodes 206/214 versus
+    a reference implementation's 205/214 on the same pipeline.
+
+0v. **`/api/qr` builds the URL, the caller only picks a kind.** A general
+    "encode this text" endpoint would make the site a free generator of QR codes
+    pointing anywhere, which is the shape of a phishing tool.
+
 ## Plans and money
 
 0r. **The 10% free-tier cut needs Stripe Connect and does not exist yet.** Today
@@ -120,6 +134,10 @@ If you are about to violate one, stop and say so rather than working around it.
     `PLANS[].cut` is defined and surfaced, but no fee is taken until each artist
     has their own connected account and charges carry `application_fee_amount`.
     **Do not onboard a second paying artist before Connect.**
+
+0s0. **The plan limits FEATURED songs, not the library.** Anyone may keep up to
+    2000; a plan caps how many are live to the audience at once. Over the cap, a
+    new song still saves — it just arrives switched off, and says so.
 
 0s. **A cap never deletes anything.** The free 50-song ceiling blocks adding a
     51st; it does not touch a setlist that is already larger.

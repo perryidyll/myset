@@ -10,6 +10,11 @@ export default async (req) => {
 
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
+  const { planForArtist } = await import('./_plan.mjs');
+  const { limits } = await planForArtist(aid);
+  // the audience never sees an upsell — the button simply isn't there
+  if (!limits.lyrics) return json({ ok: true, found: false });
+
   const show = await getShow(aid);
   const song = show.songs.find((s) => s.id === id);
   if (!song) return bad('unknown song', 404);

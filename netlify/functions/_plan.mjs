@@ -11,9 +11,10 @@ import { readArtists, mutateArtists } from './_auth.mjs';
 export const PLANS = {
   free: {
     label: 'Free', price: 0,
-    songs: 50,
+    featured: 50,       // how many can be live to the audience at once
     cut: 0.10,            // platform share of tips and vote sales
     seats: 1,
+    lyrics: false,        // the sing-along sheet
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
     presskit: false,
@@ -21,19 +22,23 @@ export const PLANS = {
   },
   plus: {
     label: 'Plus', price: 1000,
-    songs: Infinity,
+    featured: Infinity,
     cut: 0,
     seats: 1,
+    lyrics: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
     label: 'Pro', price: 2000,
-    songs: Infinity,
+    featured: Infinity,
     cut: 0,
     seats: 5,
+    lyrics: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };
+/** Everyone can KEEP this many songs; plans only limit how many are live. */
+export const MAX_LIBRARY = 2000;
 export const PLAN_KEYS = Object.keys(PLANS);
 
 /** The plan actually in force — a comped period that has run out falls back. */
@@ -101,8 +106,38 @@ export async function redeemPromo(aid, rawCode) {
     return true;
   });
 
+  const thanks = promo.pct >= 100 ? await rewardReferrer(aid) : null;
   return {
     ok: true, code, plan: promo.plan, pct: promo.pct, months: promo.months,
     comped: promo.pct >= 100, until: promo.pct >= 100 ? until : null,
+    thankedReferrer: thanks,
   };
+}
+
+/** One free month to whoever brought them, each time a referral goes paid.
+ *  Called from here now and from billing when it exists. */
+export async function rewardReferrer(aid) {
+  const reg = await readArtists();
+  const me = reg.byId[aid];
+  const refId = me && me.referredBy;
+  if (!refId || !reg.byId[refId]) return null;
+
+  let name = null;
+  await mutateArtists((r) => {
+    const ref = r.byId[refId];
+    const mine = r.byId[aid];
+    if (!ref || !mine) return false;
+    // don't pay twice for the same referral
+    mine.referralPaid = mine.referralPaid || [];
+    if (mine.referralPaid.includes('upgrade')) return false;
+    mine.referralPaid.push('upgrade');
+
+    const base = Math.max(Date.now(), Number(ref.planUntil) || 0);
+    ref.planUntil = base + 30 * 86400000;
+    if (planOf(ref) === 'free') ref.plan = 'plus';
+    ref.referralMonths = (ref.referralMonths || 0) + 1;
+    name = ref.name;
+    return true;
+  });
+  return name;
 }

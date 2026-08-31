@@ -33,17 +33,17 @@ body{padding-bottom:34px}
 .livepill .dot{background:#fff;width:7px;height:7px}
 
 /* portrait + cluster, overlapping the cover */
-.phead{display:flex;align-items:flex-end;gap:18px;margin:0 20px;position:relative;z-index:2}
-.cluster{margin-top:-46px}
-.cluster{position:relative;width:132px;height:132px;flex:0 0 auto}
-.cluster.solo{width:118px;height:118px}
-.pav{width:100%;height:100%;border-radius:30px;background-size:cover;background-position:center;
-  border:4px solid var(--bg);box-shadow:var(--sh-3)}
-.pth{position:absolute;width:50px;height:50px;border-radius:15px;background-size:cover;
-  background-position:center;border:3.5px solid var(--bg);box-shadow:var(--sh-2)}
-.pth.a{top:-12px;right:-16px}
-.pth.b{top:44px;right:-26px}
-.pth.c{bottom:-10px;right:2px}
+.phead{display:flex;align-items:flex-end;gap:16px;margin:0 20px;position:relative;z-index:2}
+/* The three extras sit in a column to the LEFT of the portrait — scattered
+   around it they collided with the name and the cover's own artwork. */
+.cluster{margin-top:-46px;display:flex;align-items:flex-end;gap:9px}
+.strip{display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
+.cluster{flex:0 0 auto}
+.pav{width:112px;height:112px;border-radius:26px;background-size:cover;background-position:center;
+  border:4px solid var(--bg);box-shadow:var(--sh-3);flex:0 0 auto}
+.cluster.solo .pav{width:120px;height:120px;border-radius:28px}
+.pth{width:40px;height:40px;border-radius:13px;background-size:cover;background-position:center;
+  border:3px solid var(--bg);box-shadow:var(--sh-2)}
 .pname{flex:1;min-width:0;padding-bottom:2px;display:flex;flex-direction:column;justify-content:flex-end;
   min-height:96px}
 .pname h1{font-size:28px;font-weight:700;letter-spacing:-.038em;line-height:1.08;margin:0;color:var(--ink)}
@@ -241,8 +241,8 @@ function render(){
 
   <div class="phead">
     <div class="cluster ${shots.length?'':'solo'}">
+      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" style="background-image:url('${esc(u)}')"></div>`).join('')}</div>`:''}
       <div class="pav" style="background-image:url('${esc(P.avatar||P.photo||'/img/band.jpg')}')"></div>
-      ${shots.map((u,i)=>`<div class="pth ${'abc'[i]}" style="background-image:url('${esc(u)}')"></div>`).join('')}
     </div>
     <div class="pname">
       <h1>${esc(P.name)}</h1>

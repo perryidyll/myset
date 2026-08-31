@@ -13,6 +13,7 @@ export default async (req) => {
   const total = show.freeCredits + (me.extra || 0);
   const used = creditsUsed(me, show);
   const unl = isUnlimited(fanId, show);
+  const { limits } = await (await import('./_plan.mjs')).planForArtist(aid);
 
   const shape = (s) => ({
     id: s.id, title: s.title, artist: s.artist || '',
@@ -44,6 +45,7 @@ export default async (req) => {
     songs: ordered, played,
     replayCost: show.replayCost || 5,
     packs: show.packs,
+    features: { lyrics: limits.lyrics },
     credits: {
       unlimited: unl,
       remaining: unl ? null : Math.max(0, total - used), total: unl ? null : total, used, extra: me.extra || 0,

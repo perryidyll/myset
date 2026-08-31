@@ -9,7 +9,7 @@ import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, end
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, redeemPromo,
-         readPromos, mutatePromos, cleanCode } from './_plan.mjs';
+         readPromos, mutatePromos, cleanCode, MAX_LIBRARY } from './_plan.mjs';
 
 /* Plans, entitlements and the codes Perry hands out. */
 async function handlePlan(aid, action, body) {
@@ -68,8 +68,9 @@ async function handlePlan(aid, action, body) {
 }
 const shapeLimits = (l) => ({
   label: l.label, price: l.price,
-  songs: l.songs === Infinity ? null : l.songs,
-  cut: l.cut, seats: l.seats,
+  featured: l.featured === Infinity ? null : l.featured,
+  library: MAX_LIBRARY,
+  cut: l.cut, seats: l.seats, lyrics: l.lyrics,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
 });
 const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke']);
@@ -332,7 +333,7 @@ export default async (req) => {
   if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
   if (PLAN_ACTIONS.has(action)) return handlePlan(aid, action, body);
 
-  let err = null, resetVotes = false, wipe = false;
+  let err = null, resetVotes = false, wipe = false, note = null;
 
   // Anything that starts a song needs the tally BEFORE it is wiped.
   let counts = null, firstAt = null, votersNow = 0;
@@ -351,11 +352,14 @@ export default async (req) => {
     } catch { /* never block ending a show on the archive */ }
   }
 
-  // the setlist ceiling for this artist's plan; null means unlimited
-  const songCap = ['addSong', 'starterSetlist'].includes(action)
-    ? (await planForArtist(aid)).limits.songs
-    : null;
-  const capped = songCap === Infinity ? null : songCap;
+  /* Two different ceilings, and the distinction matters: you can KEEP up to
+     MAX_LIBRARY songs on any plan; the plan only limits how many are live to the
+     audience at once. Going over just means the extras arrive switched off. */
+  let featureCap = null;
+  if (['addSong', 'starterSetlist', 'toggleSong'].includes(action)) {
+    const f = (await planForArtist(aid)).limits.featured;
+    featureCap = f === Infinity ? null : f;
+  }
 
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
   const prevShow = action === 'newShow' ? await getShow(aid) : null;   // read before it resets
@@ -436,20 +440,33 @@ export default async (req) => {
         break;
       }
       case 'toggleSong': {
-        const s = show.songs.find((x) => x.id === body.song);
-        if (s) s.active = s.active === false;
+        const sg = show.songs.find((x) => x.id === body.song);
+        if (!sg) break;
+        const turningOn = sg.active === false;
+        if (turningOn && featureCap !== null) {
+          const liveNow = show.songs.filter((x) => x.active !== false).length;
+          if (liveNow >= featureCap) {
+            err = [`Your plan features ${featureCap} songs at a time. Switch one off first, or upgrade.`, 402];
+            return false;
+          }
+        }
+        sg.active = turningOn;
         break;
       }
       case 'addSong': {
         const title = String(body.title || '').trim().slice(0, 80);
         if (!title) { err = ['no title', 400]; return false; }
-        if (capped !== null && show.songs.length >= capped) {
-          err = [`Your plan holds ${capped} songs. Upgrade for unlimited.`, 402]; return false;
+        // over the featured limit? it still gets added, just switched off
+        const liveNow = show.songs.filter((x) => x.active !== false).length;
+        const startsOff = featureCap !== null && liveNow >= featureCap;
+        if (show.songs.length >= MAX_LIBRARY) {
+          err = [`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402]; return false;
         }
         const artist = String(body.artist || '').trim().slice(0, 60);
         let id = slug(title);
         if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
-        show.songs.push({ id, title, artist, active: true });
+        show.songs.push({ id, title, artist, active: !startsOff });
+        if (startsOff) note = `Added, but switched off — your plan features ${featureCap} at a time.`;
         break;
       }
       case 'editSong': {
@@ -476,10 +493,14 @@ export default async (req) => {
       case 'resetVotes': resetVotes = true; break;
       case 'starterSetlist': {          // append the generic covers, never replace
         const have = new Set(show.songs.map((x) => x.id));
+        let live = show.songs.filter((x) => x.active !== false).length;
         for (const [t, a] of STARTER_SONGS) {
-          if (capped !== null && show.songs.length >= capped) break;
+          if (show.songs.length >= MAX_LIBRARY) break;
           const id = slug(t);
-          if (!have.has(id)) show.songs.push({ id, title: t, artist: a, active: true });
+          if (have.has(id)) continue;
+          const on = featureCap === null || live < featureCap;
+          show.songs.push({ id, title: t, artist: a, active: on });
+          if (on) live++;
         }
         break;
       }
@@ -506,5 +527,5 @@ export default async (req) => {
   // second round trip for every tap, which is most of why buttons felt slow.
   let stage = null;
   try { stage = await stagePayload(aid); } catch { /* the write still succeeded */ }
-  return json({ ok: true, stage });
+  return json({ ok: true, stage, note });
 };
