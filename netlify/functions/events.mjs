@@ -94,6 +94,7 @@ const shape = (o) => ({
   eventId: o.eventId, date: o.date, time: o.time, endTime: o.endTime, tz: o.tz,
   startsAt: o.startsAt, endsAt: o.endsAt,
   venue: o.venue, city: o.city, country: o.country,
+  address: o.address || '', maps: o.maps || null,
   note: o.note, ticketUrl: o.ticketUrl, repeating: o.repeating,
   live: Date.now() >= o.startsAt && Date.now() < o.endsAt,
 });

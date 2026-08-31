@@ -1,5 +1,6 @@
 import { casDoc, readDoc } from './_lib.mjs';
 import { wallClockToMs, validTz, addDays, addMonths, daysBetween, utcToDate } from './_time.mjs';
+import { normPlace, mapLinks } from './_maps.mjs';
 
 /* Gigs are stored as RULES, not as materialised instances.
 
@@ -56,6 +57,8 @@ export function normEvent(e) {
     time: /^\d{2}:\d{2}$/.test(e.time) ? e.time : '20:00',
     durationMin: durationFrom(e),
     note: str(e.note, 140),
+    // where exactly, so somebody reading the feed can actually get there
+    ...normPlace(e),
     ticketUrl: /^https:\/\//.test(e.ticketUrl || '') ? String(e.ticketUrl).slice(0, 300) : '',
     repeat: null,
     skip: Array.isArray(e.skip) ? e.skip.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(0, 200) : [],
@@ -89,6 +92,8 @@ export function expand(ev, fromDate, toDate) {
       endsAt: ms + ev.durationMin * 60000,
       venue: ev.venue, city: ev.city, country: ev.country, endTime: endTimeOf(ev),
       note: ev.note, ticketUrl: ev.ticketUrl, repeating: !!ev.repeat,
+      address: ev.address || '', mapUrl: ev.mapUrl || '',
+      maps: mapLinks(ev, ev.venue),
     });
   };
 

@@ -116,12 +116,34 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
   box-shadow:inset 0 0 0 2px rgba(255,255,255,.5)}
 .zoom{width:100%;margin:16px 0 0;accent-color:var(--accent)}
 .qrs{display:flex;gap:9px;margin:0 18px}
-.qrcard{flex:1;background:#fff;border-radius:14px;padding:9px 9px 11px;text-align:center;
+.qrcard{flex:1;display:block;background:#fff;border-radius:14px;padding:9px 9px 11px;text-align:center;
   box-shadow:var(--sh-1);transition:transform .2s var(--spring)}
 .qrcard:active{transform:scale(.96)}
 .qrcard img{width:100%;height:auto;display:block;border-radius:8px}
 .qrcard b{display:block;font-size:12px;font-weight:600;color:#1D1D1F;margin-top:7px;letter-spacing:-.01em}
 .qrcard span{display:block;font-size:10px;color:#6E6E73;margin-top:2px;line-height:1.3}
+/* Tapping a code brings it up in the middle of the screen, big enough to be
+   scanned straight off the phone and to screenshot for a print shop. The paper
+   is white whatever the theme is — a QR code inverted is a QR code that doesn't
+   scan on half the readers out there. */
+/* No backdrop-filter and no animation ON this element. `animation:rise` leaves
+   an identity transform behind, and a transformed element with a backdrop-filter
+   stops sampling the layer underneath — the white card vanished and the page
+   showed through. The card animates instead; the scrim is just opaque. */
+#qrbig{position:fixed;inset:0;z-index:75;display:none;place-items:center;padding:22px;
+  background:rgba(0,0,0,.9)}
+#qrbig.on{display:grid}
+#qrbig>div{animation:rise .3s var(--ease) both}
+.qrpaper{width:min(340px,86vw);background:#fff;border-radius:22px;padding:22px 22px 24px;
+  text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.qrpaper img{width:100%;height:auto;display:block;border-radius:10px}
+.qrpaper .cap{margin:16px 2px 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;
+  font-size:25px;font-weight:600;line-height:1.15;letter-spacing:-.022em;color:#111}
+.qrpaper .sub{margin:9px 0 0;font-size:12.5px;font-weight:600;letter-spacing:.02em;color:#8A8A8F}
+.qracts{display:flex;gap:9px;margin:16px auto 0;width:min(340px,86vw)}
+.qracts a,.qracts button{flex:1;padding:13px;border-radius:var(--pill);text-align:center;
+  font-size:14.5px;font-weight:600;background:var(--surface-2);color:var(--ink)}
+.qracts a{background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair-2);color:var(--ink-2)}
 .planbox{margin:0 18px;padding:16px 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
 .plangrid{display:flex;gap:8px;margin-top:14px}
 .pcard{flex:1;padding:12px 10px;border-radius:12px;background:var(--surface-2);text-align:center}
@@ -187,6 +209,19 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .warnbox b{display:block;font-size:16.5px;font-weight:600;letter-spacing:-.015em;color:var(--accent)}
 .warnbox p{margin:5px 0 14px;font-size:14px;color:var(--ink-2);line-height:1.4}
 .warnbox .big{margin:0}
+.askpanel{margin:16px 18px 0;border-radius:var(--r-lg);background:var(--surface);
+  box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-soft);overflow:hidden}
+.askpanel .ah{display:flex;align-items:baseline;justify-content:space-between;padding:15px 18px 11px}
+.askpanel .ah b{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.askpanel .ah span{font-size:12px;color:var(--muted)}
+.arow{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:.5px solid var(--hair)}
+.arow .m{flex:1;min-width:0}
+.arow .t{font-size:16px;font-weight:600;letter-spacing:-.014em;line-height:1.25}
+.arow .s{font-size:12px;color:var(--muted);margin-top:2px}
+.arow.done{opacity:.5}
+.arow.done .t{text-decoration:line-through}
+.bcake{flex:0 0 auto;width:34px;height:34px;border-radius:11px;background:var(--accent-soft);
+  display:grid;place-items:center;font-size:17px}
 .gate{max-width:360px;margin:16vh auto;padding:0 24px}
 .gate h2{font-size:29px;font-weight:700;letter-spacing:-.03em;margin:0 0 8px}
 .tip{display:flex;justify-content:space-between;padding:12px 16px;border-top:.5px solid var(--hair);font-size:14.5px}
@@ -233,6 +268,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 </head>
 <body>
 <div id="busy" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div></div>
+<div id="qrbig" onclick="qrHide(event)"></div>
 <div id="app"></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
@@ -240,7 +276,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <script>
 const $=s=>document.querySelector(s), API='/api';
 let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('myset.token')||'';
-let EVENTS=null, PLAN=null, PROMOS=null;
+let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 
@@ -434,6 +470,12 @@ function openGig(id,onDate){
       <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>Country</label>
         <input class="inp" id="gCountry" maxlength="60" placeholder="Thailand" value="${esc(ev?ev.country:(last.country||''))}"></div>
     </div>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Address <span class="muted" style="font-weight:400">— optional</span></label>
+      <input class="inp" id="gAddr" maxlength="160" placeholder="88 Baan Tai Beach Road" value="${esc(ev?(ev.address||''):(last.address||''))}"></div>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Or paste a maps link</label>
+      <input class="inp" id="gMap" type="url" inputmode="url" autocomplete="off" spellcheck="false"
+        placeholder="Paste from Google or Apple Maps" value="${esc(ev?(ev.mapUrl||''):(last.mapUrl||''))}"></div>
+    <p class="muted" style="font-size:12px;margin:2px 0 0">Either one gives the audience a <b>Directions</b> button that opens in whichever map app their phone uses — Google or Apple.</p>
     <div class="field" style="padding-left:0;padding-right:0"><label>Date</label>
       <input class="inp" id="gDate" type="date" value="${esc(ev?ev.date:(onDate||todayStr()))}"></div>
     <div style="display:flex;gap:8px">
@@ -459,14 +501,18 @@ async function saveGig2(id){
   const v=x=>(($('#'+x)||{}).value||'').trim();
   const freq=v('gRepeat');
   const ev={id:id||undefined,venue:v('gV'),city:v('gCity'),country:v('gCountry'),
+    address:v('gAddr'),mapUrl:v('gMap'),
     tz:v('gTz'),date:v('gDate'),time:v('gTime')||'20:00',endTime:v('gEnd')||'',
     repeat:freq?{freq,until:v('gUntil')||null}:null};
   if(!ev.venue){toast('Where is it?');return;}
   if(!ev.date){toast('Pick a date');return;}
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventSave',event:ev})});
   if(!d.ok){toast(d.error||'Could not save');return;}
+  const saved=(d.events||[]).find(x=>x.id===d.id);
   EVENTS=null;
-  closeSheet(); await loadGigs(true); toast(id?'Gig updated':'Gig added');
+  closeSheet(); await loadGigs(true);
+  if(ev.mapUrl&&saved&&!saved.mapUrl) toast('Gig saved — but that link wasn’t a Google or Apple Maps one');
+  else toast(id?'Gig updated':'Gig added');
   } finally { WRITING=false; }
 }
 async function delGig(id){
@@ -573,10 +619,11 @@ function render(){
     body=`
     <div class="stats">
       <div class="c"><b class="mono">${songs.reduce((a,b)=>a+b.votes,0)}</b><span>Votes now</span></div>
-      <div class="c"><b class="mono">${D.voters||0}</b><span>Voting</span></div>
+      <div class="c"><b class="mono">${D.voters||0}<span style="font-size:15px;color:var(--muted);font-weight:600">/${D.room||D.voters||0}</span></b><span>Voting · in room</span></div>
       <div class="c"><b class="mono acc">$${D.tips.total.toFixed(2)}</b><span>Tips</span></div>
     </div>
     ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>${now.artist?`<div class="a">${esc(now.artist)}</div>`:''}</div>`:''}
+    ${asksPanel()}
     ${s.status!=='live'?`
       <div class="wrap" style="padding-top:22px;padding-bottom:2px">
         <button class="big bigplay" onclick="act('status',{status:'live'})">
@@ -672,7 +719,7 @@ function render(){
       <div class="list">${up.map(o=>`<div class="row gigrow ${o.cancelled?'off':''}">
         <div class="when"><b>${dayNum(o.date)}</b><span>${monShort(o.date)}</span></div>
         <div class="m"><div class="t">${esc(o.venue)}</div>
-          <div class="by">${esc([o.city,o.country].filter(Boolean).join(', '))}</div>
+          <div class="by">${esc(o.address||[o.city,o.country].filter(Boolean).join(', '))}</div>
           <div class="s">${dowName(o.date)} · ${o.time}${o.endTime?'–'+o.endTime:''}${o.repeating?' · repeats':''}${o.cancelled?' · cancelled':''}</div></div>
         ${o.cancelled
           ? `<button class="act" data-act="gigskip" data-id="${o.eventId}|${o.date}">Restore</button>
@@ -865,6 +912,23 @@ function render(){
         <input class="inp" id="${pre}c" type="number" min="1" max="500" step="0.5" value="${(s.packs[k].cents/100)}" style="flex:1"></div></div>`).join('')}
     <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="savePacks()">Save prices</button></div>
 
+    <div class="sec"><span class="kick">Requests from the audience</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Let the room ask for something that isn't on your list. They pay in votes, not money, and you decide — turning one down refunds them automatically. Both are off until you switch them on.</p>
+    ${[['song','Request a song','A title you haven’t got listed',s.requests],
+       ['birthday','Happy birthday shout-out','With the name of whoever it’s for',s.birthdays]].map(([k,t,d,cfg])=>`
+      <div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div>
+        <div class="tog"><button class="${cfg.on?'on':''}" onclick="act('askSet',{kind:'${k}',on:true})">On</button>
+        <button class="${!cfg.on?'on':''}" onclick="act('askSet',{kind:'${k}',on:false})">Off</button></div></div>
+      ${cfg.on?`<div class="wrap" style="padding-top:10px;padding-bottom:4px"><div class="chips">
+        ${[1,2,3,5,10].map(n=>`<button class="chip ${cfg.cost===n?'on':''}" onclick="act('askSet',{kind:'${k}',cost:${n}})">${n}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
+        <input class="inp" id="ac${k}" type="number" inputmode="numeric" min="1" max="99" style="flex:1"
+          placeholder="Any other number of votes" value="${![1,2,3,5,10].includes(cfg.cost)?cfg.cost:''}">
+        <button class="act pri" style="min-width:64px" onclick="saveAskCost('${k}')">Set</button>
+      </div>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">Costs <b>${cfg.cost} vote${cfg.cost===1?'':'s'}</b>.</p></div>`:''}`).join('')}
+
     <div class="sec"><span class="kick">Tonight's gig</span></div>
     <div class="field"><label>Venue</label><input class="inp" id="fVenue" value="${esc(s.venue||'')}" placeholder="The Ugly Duckling Irish Pub"></div>
     <div class="field"><label>City</label><input class="inp" id="fCity" value="${esc(s.city||'')}" placeholder="Koh Phangan, Thailand"></div>
@@ -897,7 +961,7 @@ function render(){
       <div class="planbox">
         <div class="row" style="border:none;padding:0">
           <div class="m"><div class="t">${esc(PLAN.limits.label)}${PLAN.comped?' · comped':''}</div>
-            <div class="s">${PLAN.limits.songs===null?'Unlimited songs':PLAN.limits.songs+' songs'} ·
+            <div class="s">${PLAN.limits.featured===null?'Unlimited featured songs':PLAN.limits.featured+' featured songs'} ·
               ${PLAN.limits.cut?Math.round(PLAN.limits.cut*100)+'% cut on money taken':'no cut taken'} ·
               ${PLAN.limits.seats} sign-in${PLAN.limits.seats===1?'':'s'}</div>
             ${PLAN.until?`<div class="s">Until ${dstamp(PLAN.until)}</div>`:''}
@@ -907,7 +971,7 @@ function render(){
         <div class="plangrid">
           ${['free','plus','pro'].map(k=>{const L=PLAN.plans[k];return `<div class="pcard ${PLAN.plan===k?'on':''}">
             <b>${esc(L.label)}</b><span>${L.price?'$'+(L.price/100)+'/mo':'Free'}</span>
-            <em>${L.songs===null?'∞ songs':L.songs+' songs'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.analytics?'<br>+ analytics':''}${L.presskit?'<br>+ press kit':''}${L.branding?'<br>+ your branding':''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
+            <em>${L.featured===null?'∞ songs':L.featured+' featured'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.analytics?'<br>+ analytics':''}${L.presskit?'<br>+ press kit':''}${L.branding?'<br>+ your branding':''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
           </div>`;}).join('')}
         </div>
       </div>
@@ -931,7 +995,16 @@ function render(){
             <input class="inp" id="pcMonths" type="number" min="1" max="60" value="12" style="flex:1" placeholder="months">
             <input class="inp" id="pcMax" type="number" min="0" max="9999" value="0" style="flex:1" placeholder="max uses (0 = ∞)">
           </div>
-          <button class="big alt" style="margin-top:12px" onclick="createPromo()">Create code</button></div>`:''}`
+          <button class="big alt" style="margin-top:12px" onclick="createPromo()">Create code</button></div>
+
+        <div class="sec"><span class="kick">Venues</span></div>
+        <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Anyone can claim a venue page, and it stays an <b>unverified listing</b> until someone says otherwise. A venue with an email at its own website verifies itself instantly; the rest are your call.</p>
+        <div class="list">${(VENUES&&VENUES.venues||[]).map(v=>`<div class="row ${v.verified?'':'off'}">
+          <div class="m"><div class="t">${esc(v.name)}${v.verified?' ✓':''}</div>
+            <div class="s">myset.vip/v/${esc(v.slug)}${v.city?' · '+esc([v.city,v.country].filter(Boolean).join(', ')):''}${v.via?' · verified by '+esc(v.via):''}</div></div>
+          <a class="act" href="/v/${esc(v.slug)}" target="_blank">Look</a>
+          <button class="act ${v.verified?'warn':'pri'}" data-act="vverify" data-id="${esc(v.venueId)}">${v.verified?'Un-verify':'Verify'}</button>
+        </div>`).join('')||'<div class="row muted">No venues have signed up yet.</div>'}</div>`:''}`
       :`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`}
 
     <div class="sec"><span class="kick">Your public page</span></div>
@@ -945,15 +1018,13 @@ function render(){
 
     <div class="sec"><span class="kick">Codes to print</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">Stick these on tables, on the tip jar, or on your case. Tap one to open it full size, then save or print it.</p>
-    <div class="qrs">
-      ${[['vote','Vote the setlist','What the room scans during your show'],
-         ['profile','Your page','Bio, music, upcoming gigs'],
-         ['home','MySet','Find gigs anywhere']].map(([k,t,d])=>`
-        <a class="qrcard" href="/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((TEAM&&TEAM.slug)||'')}&s=12" target="_blank">
-          <img src="/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((TEAM&&TEAM.slug)||'')}&s=6" alt="${esc(t)} QR code" loading="lazy">
+    ${(TEAM&&TEAM.slug)?`<div class="qrs">
+      ${QRS.map(([k,t,d])=>`
+        <button class="qrcard" data-act="qrbig" data-id="${k}">
+          <img src="${qrSrc(k,6)}" alt="${esc(t)} QR code" loading="lazy">
           <b>${esc(t)}</b><span>${esc(d)}</span>
-        </a>`).join('')}
-    </div>
+        </button>`).join('')}
+    </div>`:`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading your codes…</div></div>`}
 
     <div class="sec"><span class="kick">Invite another musician</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Share this and they land on a signup that knows you sent them.${TEAM&&TEAM.invited?` <b>${TEAM.invited} so far.</b>`:''}</p>
@@ -1017,6 +1088,48 @@ function render(){
   const n=$('#newSong'); if(n) n.addEventListener('keydown',e=>{if(e.key==='Enter')addSong()});
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
 }
+/* What the room has asked for. Pending first, because a birthday is the one
+   thing on this screen that goes stale. */
+function asksPanel(){
+  const all=(D&&D.asks)||[];
+  if(!all.length) return '';
+  const waiting=all.filter(a=>a.status==='pending');
+  const rest=all.filter(a=>a.status!=='pending').slice(0,6);
+  const rows=[...waiting,...rest];
+  const cost=a=>a.cost?`${a.cost} vote${a.cost===1?'':'s'}`:'free';
+  const row=a=>{
+    const bday=a.kind==='birthday';
+    const open=a.status==='pending';
+    const label=a.status==='added'?'On the setlist':a.status==='played'?'Done'
+      :a.status==='declined'?'Declined — votes refunded':`Asked for · ${cost(a)}`;
+    return `<div class="arow ${open?'':'done'}">
+      ${bday?'<span class="bcake">🎂</span>':''}
+      <div class="m"><div class="t">${bday?esc(a.name):esc(a.title)}${!bday&&a.artist?` <span class="muted" style="font-weight:400">· ${esc(a.artist)}</span>`:''}</div>
+        <div class="s">${bday?'Happy birthday shout-out':'Song request'} · ${label} · ${when(a.at)}</div></div>
+      ${open?(bday
+        ? `<button class="act pri" data-act="askdone" data-id="${a.id}">Did it</button>
+           <button class="act warn" data-act="asknope" data-id="${a.id}">✕</button>`
+        : `<button class="act pri" data-act="askadd" data-id="${a.id}">+ Add</button>
+           <button class="act warn" data-act="asknope" data-id="${a.id}">✕</button>`)
+        :(a.status==='added'
+          ? `<button class="act" data-act="askdone" data-id="${a.id}">Played</button>`:'')}
+    </div>`;
+  };
+  return `<div class="askpanel rise">
+    <div class="ah"><b>${waiting.length?`${waiting.length} request${waiting.length===1?'':'s'} waiting`:'Requests tonight'}</b>
+      <span>✕ refunds their votes</span></div>
+    ${rows.map(row).join('')}</div>`;
+}
+async function askDo(action,id){
+  if(WRITING)return; WRITING=true;
+  try{
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action,id})});
+    if(!d.ok){toast(d.error||'Failed');return;}
+    if(d.stage&&d.stage.ok){ D=d.stage; render(); } else await load();
+    toast(action==='askAccept'?'Added — the room can vote for it now'
+      :action==='askDecline'?'Declined, votes refunded':'Marked done');
+  } finally { WRITING=false; }
+}
 function addSong(){const el=$('#newSong'),ea=$('#newArtist');const t=el.value.trim();if(!t)return;
   const a=ea?ea.value.trim():'';el.value='';if(ea)ea.value='';act('addSong',{title:t,artist:a});}
 /* Song titles/artists are user text — never interpolate them into an onclick.
@@ -1054,6 +1167,8 @@ function attachDrag(sh){
     window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
 }
 function closeSheet(){const sh=$('#sheet');sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
+  if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
 
 async function editSong(id){
   const x=songById(id); if(!x)return;
@@ -1125,6 +1240,11 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='rmmail') removeTeam(id);
   if(b.dataset.act==='photoclear'){ e.preventDefault(); clearPhoto(id); }
   if(b.dataset.act==='promotoggle') togglePromo(id);
+  if(b.dataset.act==='qrbig'){ e.preventDefault(); qrBig(id); }
+  if(b.dataset.act==='askadd') askDo('askAccept',id);
+  if(b.dataset.act==='askdone') askDo('askDone',id);
+  if(b.dataset.act==='asknope') askDo('askDecline',id);
+  if(b.dataset.act==='vverify') verifyVenue(id);
   if(b.dataset.act==='calday') openGig(null,id);
   if(b.dataset.act==='gigedit') openGig(id);
   if(b.dataset.act==='gigsave') saveGig2(id);
@@ -1140,6 +1260,35 @@ async function saveGig(){
   await api('/admin',{method:'POST',body:JSON.stringify({action:'showTime',showTime:$('#fTime').value})});
   toast('Gig details saved'); load();
 }
+/* The printable codes. Caption is what goes UNDER the code on the card, so it
+   has to make sense to somebody who has never heard of MySet. */
+const QRS=[
+  ['vote','Vote the setlist','What the room scans during your show','Vote your favorite song!'],
+  ['profile','Your page','Bio, music, upcoming gigs','Scan for my music & gigs'],
+  ['home','MySet','Find gigs anywhere','Find live music near you'],
+];
+const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((TEAM&&TEAM.slug)||'')}&s=${scale}`;
+const qrUrl=k=>k==='home'?'myset.vip'
+  :k==='vote'?`myset.vip/${(TEAM&&TEAM.slug)||''}/vote`:`myset.vip/${(TEAM&&TEAM.slug)||''}`;
+function qrBig(k){
+  const row=QRS.find(x=>x[0]===k); if(!row)return;
+  if(k!=='home'&&!(TEAM&&TEAM.slug)){ toast('Still loading your page address'); return; }
+  const el=$('#qrbig');
+  el.innerHTML=`<div onclick="event.stopPropagation()">
+    <div class="qrpaper">
+      <img src="${qrSrc(k,10)}" alt="${esc(row[1])} QR code">
+      <div class="cap">${esc(row[3])}</div>
+      <div class="sub">${esc(qrUrl(k))}</div>
+    </div>
+    <div class="qracts">
+      <a href="${qrSrc(k,20)}" target="_blank" rel="noopener">Full size ↗</a>
+      <button onclick="qrHide()">Done</button>
+    </div>
+  </div>`;
+  el.classList.add('on');
+}
+function qrHide(e){ if(e&&e.target&&e.target.id!=='qrbig')return; $('#qrbig').classList.remove('on'); }
+
 /* Same key the voting page uses, so flipping this on here affects the phone
    you're actually voting from. */
 function myFanId(){
@@ -1152,6 +1301,12 @@ async function saveFreeCredits(){
   const n=parseInt((($('#fcCustom')||{}).value||''),10);
   if(!Number.isFinite(n)||n<0||n>999){toast('Pick a number from 0 to 999');return;}
   act('freeCredits',{n});
+}
+async function saveAskCost(kind){
+  const el=$('#ac'+kind); const n=parseInt((el&&el.value)||'',10);
+  if(!Number.isFinite(n)||n<1){toast('Pick a number of votes');return;}
+  await act('askSet',{kind,cost:n});
+  toast(`Now ${n} vote${n===1?'':'s'}`);
 }
 async function saveReplayCost(){
   const n=parseInt((($('#rcCustom')||{}).value||''),10);
@@ -1186,6 +1341,7 @@ async function loadPlan(force){
   if(PLAN&&!force)return;
   PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'})});
   if(PLAN&&PLAN.owner&&!PROMOS) PROMOS=await api('/admin',{method:'POST',body:JSON.stringify({action:'promoList'})});
+  if(PLAN&&PLAN.owner&&!VENUES) VENUES=await api('/admin',{method:'POST',body:JSON.stringify({action:'venueList'})});
   if(TAB==='settings'&&D)render();
 }
 async function redeemPromo(){
@@ -1207,6 +1363,13 @@ async function togglePromo(code){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'promoRevoke',code})});
   if(!d.ok){toast(d.error||'Failed');return;}
   PROMOS=d; render();
+}
+async function verifyVenue(vid){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'venueVerify',venue:vid})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  VENUES=d; render();
+  const v=(d.venues||[]).find(x=>x.venueId===vid);
+  toast(v&&v.verified?'Verified':'No longer verified');
 }
 async function loadTeam(force){
   if(TEAM&&!force)return;

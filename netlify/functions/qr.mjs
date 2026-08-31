@@ -1,6 +1,7 @@
 import { bad } from './_lib.mjs';
 import { qrSvg } from './_qr.mjs';
 import { artistBySlug, cleanSlug, artistById } from './_auth.mjs';
+import { venueBySlug, venueById } from './_venues.mjs';
 
 /* Public QR codes — but only ever for MySet's own URLs.
 
@@ -13,7 +14,10 @@ const KINDS = {
   profile: (slug) => `https://myset.vip/${slug}`,
   vote:    (slug) => `https://myset.vip/${slug}/vote`,
   invite:  (slug) => `https://myset.vip/signup?ref=${slug}`,
+  venue:   (slug) => `https://myset.vip/v/${slug}`,
 };
+/** Which registry the slug has to exist in. `home` needs none. */
+const REALM = { profile: 'artist', vote: 'artist', invite: 'artist', venue: 'venue' };
 
 export default async (req) => {
   const q = new URL(req.url).searchParams;
@@ -21,13 +25,19 @@ export default async (req) => {
   if (!KINDS[kind]) return bad('unknown code', 404);
 
   let slug = '';
-  if (kind !== 'home') {
+  if (REALM[kind]) {
     slug = cleanSlug(q.get('a'));
-    if (!slug) return bad('which artist?', 400);
+    if (!slug) return bad('which page?', 400);
     // resolve so a made-up slug cannot be turned into a printable code
-    const aid = await artistBySlug(slug);
-    if (!aid) return bad('unknown artist', 404);
-    slug = (await artistById(aid)).slug;
+    if (REALM[kind] === 'venue') {
+      const vid = await venueBySlug(slug);
+      if (!vid) return bad('unknown venue', 404);
+      slug = (await venueById(vid)).slug;
+    } else {
+      const aid = await artistBySlug(slug);
+      if (!aid) return bad('unknown artist', 404);
+      slug = (await artistById(aid)).slug;
+    }
   }
 
   const scale = Math.max(2, Math.min(24, parseInt(q.get('s'), 10) || 8));

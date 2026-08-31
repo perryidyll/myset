@@ -8,20 +8,22 @@ export default async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
   const p = await getProfile(aid);
-  if (!p.name) {                                  // fall back to the registered name
-    const { artistById } = await import('./_auth.mjs');
-    const a = await artistById(aid);
-    p.name = (a && a.name) || '';
-  }
   // Real numbers only. No follower count, because there is no follow yet.
-  const [hist, show] = await Promise.all([readHistIndex(aid), getShow(aid)]);
+  const { artistById } = await import('./_auth.mjs');
+  const [hist, show, who] = await Promise.all([readHistIndex(aid), getShow(aid), artistById(aid)]);
   const shows = hist.shows.length;
   const votes = hist.shows.reduce((a, x) => a + (x.totalVotes || 0), 0);
-  const people = hist.shows.reduce((a, x) => a + (x.peakVoters || 0), 0);
+  /* Shows archived before the head-count existed only recorded how many people
+     VOTED. That is a floor on how many were there, never a ceiling, so using it
+     as the fallback under-states the number rather than inflating it. */
+  const people = hist.shows.reduce((a, x) => a + (x.room ?? x.peakVoters ?? 0), 0);
+  if (!p.name) p.name = (who && who.name) || '';       // fall back to the registered name
 
   return json({
     ok: true, artistId: aid,
-    stats: { shows, votes, people, songs: (show.songs || []).filter((x) => x.active !== false).length },
+    stats: { shows, votes, people,
+             songs: (show.songs || []).filter((x) => x.active !== false).length,
+             joined: (who && who.createdAt) || null },
     name: p.name, tagline: p.tagline, bio: p.bio, photo: p.photo,
     avatar: p.avatar || p.photo, photos: p.photos,
     links: p.links,

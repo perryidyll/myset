@@ -1,6 +1,7 @@
 import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
-         normPacks, newShowId, carryFans, STARTER_SONGS } from './_lib.mjs';
+         normPacks, normAsk, newShowId, carryFans, STARTER_SONGS } from './_lib.mjs';
+import { readRequests, shapeRequests, resolveRequest, attachSong } from './_requests.mjs';
 import { archiveShow } from './_history.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
@@ -56,6 +57,29 @@ async function handlePlan(aid, action, body) {
       maxUses: v.maxUses || 0, used: (v.usedBy || []).length, revoked: !!v.revoked })) });
   }
 
+  /* Verifying a venue is a judgement call, so it is Perry's alone. Any venue can
+     get itself verified instantly by proving it owns its website's domain; this
+     is for everyone else — see VERIFYING-A-VENUE.md. */
+  if (action === 'venueList' || action === 'venueVerify') {
+    const { readVenues, mutateVenues } = await import('./_venues.mjs');
+    if (action === 'venueVerify') {
+      const vid = String(body.venue || '').slice(0, 40);
+      await mutateVenues((r) => {
+        const v = r.byId[vid];
+        if (!v) return false;
+        v.verified = !v.verified;
+        v.verifiedVia = v.verified ? 'owner' : null;
+        v.verifiedAt = v.verified ? Date.now() : null;
+        return true;
+      });
+    }
+    const r = await readVenues();
+    return json({ ok: true, venues: Object.entries(r.byId).map(([vid, v]) => ({
+      venueId: vid, slug: v.slug, name: v.name, city: v.city, country: v.country,
+      verified: !!v.verified, via: v.verifiedVia || null, createdAt: v.createdAt || 0,
+    })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)) });
+  }
+
   if (action === 'promoRevoke') {
     const code = cleanCode(body.code);
     await mutatePromos((d) => { if (d.codes[code]) d.codes[code].revoked = !d.codes[code].revoked; return true; });
@@ -73,7 +97,8 @@ const shapeLimits = (l) => ({
   cut: l.cut, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
 });
-const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke']);
+const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke',
+                              'venueList', 'venueVerify']);
 
 /* The gig calendar. Events are their own document, so these short-circuit too.
    Every write reindexes the artist's cities, which is what keeps the public
@@ -96,6 +121,7 @@ async function handleEvents(aid, action, body) {
         if (from && to && d >= from && d <= to)
           cancelled.push({ eventId: ev.id, date: d, time: ev.time, endTime: endTimeOf(ev),
                            venue: ev.venue, city: ev.city, country: ev.country,
+                           address: ev.address || '',
                            repeating: !!ev.repeat, cancelled: true });
       }
     }
@@ -175,6 +201,58 @@ async function handleEvents(aid, action, body) {
   return bad('unknown action', 400);
 }
 const EVENT_ACTIONS = new Set(['eventList', 'eventSave', 'eventDelete', 'eventSkip', 'eventHide']);
+
+/* Requests live in their own document, so accepting or declining one never
+   rewrites the show — except for `askAccept`, which has to add a song. */
+async function handleAsks(aid, action, body) {
+  const show = await getShow(aid);
+
+  if (action === 'askList')
+    return json({ ok: true, asks: shapeRequests(await readRequests(aid), show) });
+
+  const id = String(body.id || '').slice(0, 24);
+  if (!id) return bad('which request?', 400);
+
+  if (action === 'askDone' || action === 'askDecline') {
+    const row = await resolveRequest(aid, id, action === 'askDone' ? 'played' : 'declined', show);
+    if (!row) return bad('That one has already been dealt with', 409);
+    return json({ ok: true, refunded: action === 'askDecline' ? row.cost : 0,
+                  asks: shapeRequests(await readRequests(aid), show), stage: await stagePayload(aid) });
+  }
+
+  if (action === 'askAccept') {
+    const d = await readRequests(aid);
+    const row = (d.list || []).find((x) => x.id === id);
+    if (!row) return bad('unknown request', 404);
+    if (row.kind !== 'song') return bad('Nothing to add for that one', 400);
+
+    const cap = (await planForArtist(aid)).limits.featured;
+    const featureCap = cap === Infinity ? null : cap;
+    let songId = null, full = false;
+    await mutateShow(aid, (sh) => {
+      if (sh.songs.length >= MAX_LIBRARY) { full = true; return false; }
+      let sid = slug(row.title);
+      if (sh.songs.some((x) => x.id === sid)) {
+        const had = sh.songs.find((x) => x.id === sid);
+        songId = had.id;
+        if (had.active === false) had.active = true;         // it was hidden — bring it back
+        return true;
+      }
+      const live = sh.songs.filter((x) => x.active !== false).length;
+      const on = featureCap === null || live < featureCap;
+      sh.songs.push({ id: sid, title: row.title, artist: row.artist || '', active: on,
+                      requested: true });
+      songId = sid;
+      return true;
+    });
+    if (full) return bad(`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402);
+    await attachSong(aid, id, songId);
+    return json({ ok: true, songId, asks: shapeRequests(await readRequests(aid), show),
+                  stage: await stagePayload(aid) });
+  }
+  return bad('unknown action', 400);
+}
+const ASK_ACTIONS = new Set(['askList', 'askAccept', 'askDone', 'askDecline']);
 
 /* Lyrics live in their own flat docs, not on the show, so these short-circuit too. */
 async function handleLyrics(aid, action, body, show) {
@@ -330,6 +408,7 @@ export default async (req) => {
   const action = body.action;
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
+  if (ASK_ACTIONS.has(action)) return handleAsks(aid, action, body);
   if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
   if (PLAN_ACTIONS.has(action)) return handlePlan(aid, action, body);
 
@@ -478,6 +557,15 @@ export default async (req) => {
       }
       case 'packs': {
         show.packs = normPacks({ small: body.small, big: body.big, max: body.max });
+        break;
+      }
+      case 'askSet': {
+        const which = body.kind === 'birthday' ? 'birthdays' : 'requests';
+        const cur = show[which];
+        show[which] = normAsk({
+          on: body.on === undefined ? cur.on : !!body.on,
+          cost: body.cost === undefined ? cur.cost : body.cost,
+        });
         break;
       }
       case 'replayCost':

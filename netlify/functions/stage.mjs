@@ -1,4 +1,6 @@
-import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad, requireArtist } from './_lib.mjs';
+import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad,
+         requireArtist, roomCounts } from './_lib.mjs';
+import { readRequests, shapeRequests } from './_requests.mjs';
 
 export default async (req) => {
   const me = await requireArtist(req);
@@ -8,11 +10,13 @@ export default async (req) => {
 
 /** Shared so a write can return the new state instead of forcing a second fetch. */
 export async function stagePayload(aid) {
-  const [show, fans, meta] = await Promise.all([getShow(aid), readFans(aid), readMeta(aid)]);
+  const [show, fans, meta, reqs] = await Promise.all([
+    getShow(aid), readFans(aid), readMeta(aid), readRequests(aid)]);
   const { artistById } = await import('./_auth.mjs');
   const who = await artistById(aid);
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);
+  const room = roomCounts(fans);
   const total = meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0);
 
   return {
@@ -24,8 +28,13 @@ export async function stagePayload(aid) {
       packs: show.packs, showId: show.showId, startedAt: show.startedAt,
       artistId: aid, slug: (who && who.slug) || '',
       unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],
+      requests: show.requests, birthdays: show.birthdays,
     },
     voters: Object.values(fans).filter((f) => (f.v || []).length).length,
+    // phones in the room tonight, not just phones that voted
+    room: room.phones,
+    nets: room.nets,
+    asks: shapeRequests(reqs, show),
     songs: rankSongs(
       show.songs.map((x) => ({
         ...x, votes: counts[x.id] || 0,

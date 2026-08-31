@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="MySet" />
+<meta name="format-detection" content="telephone=no" />
+<meta name="description" content="Live music, menu and what's on — on MySet." />
+<meta property="og:title" content="MySet" />
+<meta property="og:description" content="What's on here, and who's playing." />
+<title>MySet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>" />
+<link rel="stylesheet" href="/app.css">
+<style>
+body{padding-bottom:34px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+.mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
+.mark i{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;
+  flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
+.mark i svg{width:14px;height:14px;fill:#fff;display:block}
+.mark small{font-size:12px;color:var(--muted);font-weight:500}
+
+.vcover{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
+.vcover img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}
+.vcover .noimg{width:100%;aspect-ratio:16/10;background:var(--grad);display:grid;place-items:center;
+  color:#fff;font-size:44px;font-weight:700;letter-spacing:-.04em;opacity:.92}
+.vcover .veil{position:absolute;inset:0;
+  background:linear-gradient(to top,rgba(0,0,0,.5) 0%,rgba(0,0,0,.14) 40%,transparent 70%)}
+.onair{position:absolute;top:15px;left:15px;display:inline-flex;align-items:center;gap:8px;
+  background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:-.01em;
+  padding:9px 15px;border-radius:var(--pill);box-shadow:0 4px 16px rgba(255,55,95,.45)}
+.onair .dot{background:#fff;width:7px;height:7px}
+
+.vhead{padding:18px 20px 0}
+.vhead h1{margin:0;font-size:29px;font-weight:700;letter-spacing:-.04em;line-height:1.08}
+.vhead .tag{margin:7px 0 0;font-size:15px;color:var(--muted);font-weight:500;line-height:1.4}
+.vhead .place{margin:8px 0 0;font-size:14px;color:var(--faint)}
+.vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:4px 10px;
+  border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.01em;vertical-align:5px;
+  background:rgba(48,209,88,.14);color:#1B8E3C}
+.vbadge.no{background:var(--bg-2);color:var(--faint);font-weight:600}
+
+.vacts{display:flex;gap:9px;flex-wrap:wrap;margin:16px 20px 0}
+.vacts a{display:inline-flex;align-items:center;gap:8px;padding:13px 18px;border-radius:var(--pill);
+  font-size:14.5px;font-weight:600;letter-spacing:-.012em;background:var(--surface);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring)}
+.vacts a:active{transform:scale(.96)}
+.vacts a.pri{background:var(--accent);color:#fff;box-shadow:0 5px 18px rgba(255,55,95,.36)}
+.vacts a svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;
+  stroke-linejoin:round;flex:0 0 auto}
+
+.sect{padding:28px 20px 10px;font-size:13px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted)}
+.sect.tight{padding-top:22px}
+.card{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:18px 20px}
+.about{font-size:16px;line-height:1.55;color:var(--ink-2);white-space:pre-wrap;margin:0}
+
+.chipwrap{display:flex;flex-wrap:wrap;gap:8px;margin:0 18px}
+.am{padding:9px 14px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);
+  font-size:13.5px;font-weight:500;color:var(--ink-2)}
+
+.rows{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
+.r{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair);position:relative}
+.r:first-child{border-top:none}
+.r.live{background:var(--accent-soft)}
+.r .rowlink{position:absolute;inset:0;z-index:1}
+.r .d{flex:0 0 auto;text-align:center;min-width:44px}
+.r .d b{display:block;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.r .d span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+.r .m{flex:1;min-width:0}
+.r .m .v{font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
+.r .m .w{font-size:13.5px;color:var(--muted);margin-top:2px}
+.r .chev{flex:0 0 auto;font-size:20px;color:var(--faint);position:relative;z-index:2}
+.onnow{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;font-size:10.5px;
+  font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:var(--pill);text-transform:uppercase;margin-bottom:3px}
+.onnow .dot{background:#fff;width:5px;height:5px}
+.dayline{padding:20px 20px 8px;font-size:15px;font-weight:700;letter-spacing:-.02em}
+.dayline em{font-style:normal;font-weight:600;font-size:13px;color:var(--muted)}
+
+.offer{display:flex;gap:14px;align-items:flex-start;padding:15px 18px;border-top:.5px solid var(--hair)}
+.offer:first-child{border-top:none}
+.offer .tick{flex:0 0 auto;width:32px;height:32px;border-radius:11px;background:var(--grad);color:#fff;
+  display:grid;place-items:center;font-size:15px;box-shadow:0 3px 10px rgba(255,55,95,.3)}
+.offer .m b{display:block;font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.3}
+.offer .m span{display:block;font-size:13.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+.offer .m em{display:block;font-style:normal;font-size:12px;color:var(--accent-ink);font-weight:600;margin-top:4px}
+
+.msec{padding:14px 18px 4px;font-size:11.5px;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--faint)}
+.mi{display:flex;gap:12px;align-items:baseline;padding:9px 18px}
+.mi .n{flex:1;min-width:0;font-size:15.5px;font-weight:500;letter-spacing:-.012em}
+.mi .n small{display:block;font-size:12.5px;color:var(--muted);font-weight:400;margin-top:1px}
+.mi .p{flex:0 0 auto;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.mlink{display:block;padding:15px 18px;border-top:.5px solid var(--hair);font-size:14.5px;font-weight:600;
+  color:var(--accent-ink);text-align:center}
+
+.hrs{display:flex;justify-content:space-between;gap:12px;padding:11px 18px;border-top:.5px solid var(--hair);
+  font-size:14.5px}
+.hrs:first-child{border-top:none}
+.hrs.today{background:var(--accent-soft);font-weight:600}
+.hrs .t{font-variant-numeric:tabular-nums;color:var(--muted)}
+.hrs.today .t{color:var(--ink)}
+.hrs .t.shut{color:var(--faint)}
+
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 18px}
+.gal div{aspect-ratio:1;border-radius:14px;background-size:cover;background-position:center;box-shadow:var(--sh-1)}
+.links{display:flex;flex-wrap:wrap;gap:9px;margin:0 18px}
+.links a{display:inline-flex;align-items:center;gap:8px;padding:12px 17px;border-radius:var(--pill);
+  background:var(--surface);box-shadow:var(--sh-1);font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.fineprint{padding:14px 22px 0;font-size:12.5px;color:var(--faint);line-height:1.5}
+.empty{margin:0 18px;padding:26px 20px;text-align:center;color:var(--muted);font-size:14.5px;
+  background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
+.empty b{display:block;color:var(--ink);font-weight:600;font-size:16px;margin-bottom:5px}
+.cta{display:block;margin:26px 18px 0;padding:16px;text-align:center;font-size:14px;
+  color:var(--muted);background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brandbar">
+    <a class="mark" href="/"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet <small>· venue</small></a>
+  </div>
+  <div id="app"><div class="empty">Loading…</div></div>
+  <div class="foot">MySet · myset.vip</div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), API='/api';
+/* /v/<slug> — the second segment is the venue. */
+const SLUG=(()=>{const p=location.pathname.split('/').filter(Boolean);
+  return (p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';})();
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const dayNum=d=>+d.slice(8,10);
+const monShort=d=>MON[+d.slice(5,7)-1];
+const dayMonth=d=>`${+d.slice(8,10)}/${+d.slice(5,7)}`;
+const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOW[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
+const todayISO=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
+function whenWord(date){
+  const t=todayISO(); if(date===t) return 'Tonight';
+  const tm=new Date(Date.now()+86400000);const p=n=>String(n).padStart(2,'0');
+  if(date===`${tm.getFullYear()}-${p(tm.getMonth()+1)}-${p(tm.getDate())}`) return 'Tomorrow';
+  return dowName(date);
+}
+const fmtTime=t=>{const p=String(t||'').split(':');let h=+p[0];
+  if(!Number.isFinite(h))return '';const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
+/* No single link opens in whichever map app a phone actually uses, so the server
+   builds both and this picks. */
+const APPLE=/(iPhone|iPad|iPod|Macintosh|Mac OS X)/i.test(navigator.userAgent||'');
+const dirHref=m=>(m?((APPLE?m.apple:m.google)||m.google||m.apple):'')||'';
+const DAYKEY=['sun','mon','tue','wed','thu','fri','sat'];
+
+let V=null;
+async function boot(){
+  if(!SLUG){ notFound(); return; }
+  let d=null;
+  try{ d=await fetch(`${API}/venue?v=${encodeURIComponent(SLUG)}`,{cache:'no-store'}).then(r=>r.json()); }catch(e){}
+  V=d;
+  if(!d||!d.ok){ notFound(!d||d.error==='unknown venue'); return; }
+  render();
+}
+function notFound(gone){
+  $('#app').innerHTML=gone
+    ? `<div class="empty" style="padding:44px 24px"><b>No venue here</b>
+        <p style="margin:9px 0 20px">There's nothing at <b>myset.vip${esc(location.pathname)}</b>.</p>
+        <a class="btn btn-pri btn-block" href="/">Find live music near you</a></div>`
+    : `<div class="empty">Couldn’t load this page just now. Pull down to retry.</div>`;
+  document.title = gone ? 'Not found — MySet' : 'MySet';
+}
+
+function render(){
+  const v=V.venue, gigs=V.gigs||[];
+  const liveNow=gigs.find(g=>g.live)||null;
+  const next=gigs.find(g=>!g.live)||null;
+  const dh=dirHref(v.maps);
+  let h='';
+
+  h+=`<div class="vcover rise">
+    ${v.photo?`<img src="${esc(v.photo)}" alt="" width="1600" height="1000" fetchpriority="high">`
+             :`<div class="noimg">${esc((v.name||'?').slice(0,1).toUpperCase())}</div>`}
+    <div class="veil"></div>
+    ${liveNow?`<a class="onair" href="/${esc(liveNow.slug)}/vote"><span class="dot"></span>${esc(liveNow.artist)} — on now</a>`:''}
+  </div>
+
+  <div class="vhead">
+    <h1>${esc(v.name)}${v.verified
+      ? '<span class="vbadge">✓ Verified</span>'
+      : '<span class="vbadge no">Unverified listing</span>'}</h1>
+    ${v.tagline?`<p class="tag">${esc(v.tagline)}</p>`:''}
+    <p class="place">${esc(v.address||[v.city,v.country].filter(Boolean).join(', '))}</p>
+  </div>
+
+  <div class="vacts">
+    ${dh?`<a class="pri" href="${esc(dh)}" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
+      Directions</a>`:''}
+    ${v.phone?`<a href="tel:${esc(v.phone.replace(/[^0-9+]/g,''))}">
+      <svg viewBox="0 0 24 24"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A15 15 0 014 5a2 2 0 012-2z"/></svg>
+      Call</a>`:''}
+    ${v.whatsapp?`<a href="https://wa.me/${esc(v.whatsapp.replace(/[^0-9]/g,''))}" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 01-12.6 7.4L4 20l1.2-4.2A8.5 8.5 0 1121 11.5z"/></svg>
+      WhatsApp</a>`:''}
+    ${v.menu&&v.menu.url?`<a href="${esc(v.menu.url)}" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>
+      Menu</a>`:''}
+  </div>`;
+
+  if(liveNow||next){
+    const g=liveNow||next;
+    h+=`<div class="sect">${liveNow?'On stage now':'Next up'}</div>
+      <div class="rows"><div class="r ${liveNow?'live':''}">
+        <a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>
+        <div class="d"><b>${liveNow?'●':dayNum(g.date)}</b><span>${liveNow?'Now':monShort(g.date)}</span></div>
+        <div class="m">
+          ${liveNow?'<span class="onnow"><span class="dot"></span>On now</span>':''}
+          <div class="v">${esc(g.artist)}</div>
+          <div class="w">${esc(whenWord(g.date))} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}</div>
+        </div><span class="chev">›</span></div></div>`;
+  }
+
+  if(v.about) h+=`<div class="sect">About</div><div class="card"><p class="about">${esc(v.about)}</p></div>`;
+
+  /* Grouped by night, so "what's on this week" reads at a glance. */
+  const rest=gigs.filter(g=>g!==(liveNow||next));
+  if(rest.length){
+    const days=[];
+    for(const g of rest){
+      const d=days.find(x=>x.date===g.date);
+      if(d) d.gigs.push(g); else days.push({date:g.date,gigs:[g]});
+    }
+    h+=`<div class="sect">What’s on</div>`;
+    h+=days.slice(0,14).map(day=>`
+      <div class="dayline">${esc(whenWord(day.date))} <em>– ${dayMonth(day.date)}</em></div>
+      <div class="rows">${day.gigs.map(g=>`<div class="r">
+        <a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>
+        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span></div>
+        <div class="m"><div class="v">${esc(g.artist)}</div>
+          <div class="w">${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.repeating?' · every week':''}</div></div>
+        <span class="chev">›</span></div>`).join('')}</div>`).join('');
+    h+=`<p class="fineprint">Shows are listed by the artists themselves from their own MySet calendars. Times can change — check with the venue.</p>`;
+  } else if(!liveNow&&!next){
+    h+=`<div class="sect">What’s on</div>
+      <div class="empty"><b>Nothing listed yet</b>
+        <p style="margin:0">When an artist adds a gig here to their MySet calendar, it shows up on this page on its own.</p></div>`;
+  }
+
+  if((v.offers||[]).length){
+    h+=`<div class="sect">Offers</div><div class="rows">${v.offers.map(o=>`
+      <div class="offer"><span class="tick">%</span>
+        <div class="m"><b>${esc(o.title)}</b>
+          ${o.detail?`<span>${esc(o.detail)}</span>`:''}
+          ${o.when?`<em>${esc(o.when)}</em>`:''}</div></div>`).join('')}</div>`;
+  }
+
+  const items=(v.menu&&v.menu.items)||[];
+  if(items.length||(v.menu&&(v.menu.url||v.menu.note))){
+    h+=`<div class="sect">Menu</div><div class="rows">`;
+    if(v.menu.note) h+=`<div class="mi"><div class="n">${esc(v.menu.note)}</div></div>`;
+    let sec=null;
+    for(const it of items){
+      if((it.section||'')!==sec){ sec=it.section||''; if(sec) h+=`<div class="msec">${esc(sec)}</div>`; }
+      h+=`<div class="mi"><div class="n">${esc(it.name)}${it.note?`<small>${esc(it.note)}</small>`:''}</div>
+        ${it.price?`<div class="p">${esc(it.price)}</div>`:''}</div>`;
+    }
+    if(v.menu.url) h+=`<a class="mlink" href="${esc(v.menu.url)}" target="_blank" rel="noopener noreferrer">See the full menu ↗</a>`;
+    h+=`</div>`;
+  }
+
+  if((v.amenities||[]).length){
+    h+=`<div class="sect">Good to know</div><div class="chipwrap">${
+      v.amenities.map(a=>`<span class="am">${esc(a.label)}</span>`).join('')}</div>`;
+  }
+
+  const hrs=(v.hours||[]).filter(x=>x);
+  if(hrs.length&&hrs.some(x=>!x.closed)){
+    const todayKey=DAYKEY[new Date().getDay()];
+    h+=`<div class="sect">Opening hours</div><div class="rows">${hrs.map(x=>`
+      <div class="hrs ${x.day===todayKey?'today':''}"><span>${esc(x.label)}</span>
+        <span class="t ${x.closed?'shut':''}">${x.closed?'Closed':`${fmtTime(x.open)} – ${fmtTime(x.close)}`}</span></div>`).join('')}</div>`;
+  }
+
+  const shots=(v.photos||[]).filter(Boolean);
+  if(shots.length) h+=`<div class="sect">Photos</div><div class="gal">${
+    shots.map(u=>`<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>`;
+
+  const L=v.links||{};
+  const LB={website:'Website',instagram:'Instagram',facebook:'Facebook',google:'On the map'};
+  const keys=Object.keys(LB).filter(k=>L[k]);
+  if(keys.length) h+=`<div class="sect">Find them</div><div class="links">${
+    keys.map(k=>`<a href="${esc(L[k])}" target="_blank" rel="noopener noreferrer">${LB[k]} ↗</a>`).join('')}</div>`;
+
+  if((V.artists||[]).length>1){
+    h+=`<div class="sect">Who plays here</div><div class="chipwrap">${
+      V.artists.map(a=>`<a class="am" href="/${esc(a.slug)}">${esc(a.name)}</a>`).join('')}</div>`;
+  }
+
+  h+=`<a class="cta" href="/studio">Play here? Put your gigs on MySet →</a>`;
+  if(!v.verified) h+=`<p class="fineprint">This page hasn’t been verified yet, so treat the details as a guide. If it’s your venue, <a href="/venues" style="color:var(--accent-ink);font-weight:600">claim it</a>.</p>`;
+
+  $('#app').innerHTML=h;
+  document.title=`${v.name} — MySet`;
+}
+boot();
+</script>
+</body>
+</html>

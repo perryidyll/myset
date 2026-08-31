@@ -107,6 +107,10 @@ export function defaultShow() {
     unlimited: false,        // everyone votes without limit
     unlimitedFans: [],       // specific devices that do — the artist's own, for testing
     replayCost: 5,
+    /* Asking for something that isn't on the list. Off by default — an artist
+       who can't play requests should never be asked for them. */
+    requests:  { on: false, cost: 3 },
+    birthdays: { on: false, cost: 3 },
     packs: DEFAULT_PACKS(),
     songs: [],
     showId: null,
@@ -126,6 +130,15 @@ export const DEFAULT_PACKS = () => ({
   big:   { votes: 9,  cents: 700 },
   max:   { votes: 18, cents: 1100 },
 });
+/** The two ask-for-something switches. Cost is in VOTES, not money. */
+export function normAsk(a, dflt = 3) {
+  const v = a || {};
+  return {
+    on: !!v.on,
+    cost: Math.max(1, Math.min(99, parseInt(v.cost, 10) || dflt)),
+  };
+}
+
 export function normPacks(p) {
   const d = DEFAULT_PACKS(), out = {};
   for (const k of PACK_KEYS) {
@@ -165,6 +178,7 @@ export const KEY = {
   histIdx: (a) => `histidx_${a}`,
   hist:    (a, showId) => `hist_${a}_${showId}`,
   lyrics:  (a, songId) => `lyr_${a}_${songId}`,
+  reqs:    (a) => `req_${a}`,
 };
 /** Artist ids are used inside blob keys, so they must stay boring. */
 export const cleanArtistId = (v) =>
@@ -223,6 +237,8 @@ function normShow(s) {
   show.unlimited = !!show.unlimited;
   show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
+  show.requests = normAsk(show.requests);
+  show.birthdays = normAsk(show.birthdays);
   show.artistId ||= ARTIST_ID;
   // derived from stored data, so a CAS retry produces the identical value
   if (!show.showId) show.showId = 'show-' + (show.updatedAt || 0);
@@ -258,7 +274,7 @@ export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
     () => ({}),
     (bag) => {
       const me = (bag[fanId] ||= { v: [], extra: 0, ts: {} });
-      me.v ||= []; me.extra ||= 0; me.ts ||= {};
+      me.v ||= []; me.extra ||= 0; me.ts ||= {}; me.spent ||= 0;
       return fn(me, bag);
     },
     verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null
@@ -277,7 +293,9 @@ export async function clearAllFanVotes(aid) {
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
-        for (const id of Object.keys(bag)) { bag[id].v = []; bag[id].ts = {}; }  // drop stale stamps too
+        // drop stale stamps and the non-song spend too — free credits refresh
+        // here, so anything charged against them has to refresh with them
+        for (const id of Object.keys(bag)) { bag[id].v = []; bag[id].ts = {}; bag[id].spent = 0; }
         return true;
       }, null).catch(() => {})
     )
@@ -336,9 +354,68 @@ export const isUnlimited = (fanId, show) =>
 /** A vote on an already-played song costs more (a "play it again" request). */
 export const costOf = (songId, show) =>
   show.played.includes(songId) ? (show.replayCost || 5) : 1;
-/** Credits a fan has spent, counting replay votes at their higher cost. */
+/** Credits a fan has spent, counting replay votes at their higher cost.
+ *  `spent` is everything that isn't a vote on a listed song — a song request, a
+ *  birthday shout — because those have no song id to count. It resets with the
+ *  free credits, i.e. every time a new song starts. */
 export const creditsUsed = (fan, show) =>
-  (fan.v || []).reduce((sum, id) => sum + costOf(id, show), 0);
+  (fan.v || []).reduce((sum, id) => sum + costOf(id, show), 0) + (fan.spent || 0);
+
+/* ---------- who was in the room ----------
+   The honest count of people at a gig is not "devices that voted" — plenty of
+   people join, watch the queue move and never tap. So a device stamps itself
+   once per show when it opens the voting page.
+
+   HEADLINE = distinct PHONES, not distinct networks. Counting networks was the
+   first attempt and it is wrong in exactly the room this app is for: forty
+   people at a beach bar on the venue's wifi come out as 1. A phone is much
+   closer to a person than a network is — the worst it does is count someone
+   twice if they clear their storage mid-gig.
+
+   The network hash is kept alongside it, because it is the only defence against
+   one phone rotating its id to inflate the number, and because "40 phones on 3
+   networks" is a useful thing for an artist to be able to see.
+
+   The address itself is never stored. It is hashed with the artist id mixed in,
+   so the stored value is useless anywhere else and a table built for one
+   artist's gigs tells you nothing about another's. */
+export const clientIp = (req) =>
+  req.headers.get('x-nf-client-connection-ip') ||
+  (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() ||
+  req.headers.get('client-ip') || '';
+
+export const roomHash = (aid, ip) =>
+  ip ? sha(`myset-room|${aid}|${ip}`).slice(0, 16) : '';
+
+export function roomCounts(fans) {
+  const nets = new Set();
+  let phones = 0;
+  for (const f of Object.values(fans || {})) {
+    if (!f) continue;
+    // present = it stamped itself on the voting page, or it clearly took part
+    // (records from before presence existed still count as the person they were)
+    const here = !!f.seenShow || (f.v || []).length > 0 || f.extra > 0 || f.spent > 0;
+    if (!here) continue;
+    phones++;
+    if (f.ipH) nets.add(f.ipH);
+  }
+  return { phones, nets: nets.size };
+}
+export const uniqueRoom = (fans) => roomCounts(fans).phones;
+
+/** One write per device per show. Called only from the voting page, only while a
+ *  show is live, and skipped entirely once the stamp is already there. */
+export async function markPresence(aid, fanId, show, req) {
+  if (!fanId || !show || show.status !== 'live') return;
+  const ipH = roomHash(aid, clientIp(req));
+  try {
+    await mutateFan(aid, fanId, (me) => {
+      if (me.seenShow === show.showId && me.ipH === ipH) return false;   // already counted
+      me.ipH = ipH; me.seenShow = show.showId;
+      return true;
+    });
+  } catch { /* a missed head-count must never break the voting page */ }
+}
 
 /** Earliest moment each song received a vote — used to break ties fairly. */
 export function firstVotedAt(fans) {

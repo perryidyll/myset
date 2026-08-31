@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#161413" />
+<meta name="robots" content="noindex,nofollow" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Venue" />
+<title>Venue Studio — MySet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<style>
+:root{
+  --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
+  --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
+  --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
+  --accent:#FF456E; --accent-2:#FF7A45; --accent-soft:rgba(255,69,110,.16);
+  --grad:linear-gradient(135deg,#FF375F,#FF6B45);
+  --good:#30D158;
+  --r-sm:14px; --r:18px; --r-lg:24px; --pill:999px;
+  --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+  --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+  --spring:cubic-bezier(.34,1.4,.64,1); --ease:cubic-bezier(.4,0,.2,1);
+  --maxw:600px;
+  --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;
+  line-height:1.45;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;padding-bottom:56px}
+button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer;padding:0}
+input,select,textarea{font-family:inherit;font-size:16px}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:3px;border-radius:6px}
+#app{max-width:var(--maxw);margin:0 auto;min-height:100vh}
+.muted{color:var(--muted)}.mono{font-variant-numeric:tabular-nums}
+.kick{font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+
+.head{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:15px 18px;background:rgba(0,0,0,.72);
+  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+  border-bottom:.5px solid var(--hair)}
+.head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.028em}
+.pill{flex:0 0 auto;padding:6px 12px;border-radius:var(--pill);font-size:11.5px;font-weight:700}
+.pill.ok{background:rgba(48,209,88,.16);color:var(--good)}
+.pill.no{background:var(--surface-2);color:var(--muted)}
+
+.tabs{position:sticky;top:66px;z-index:29;display:flex;gap:5px;margin:14px 18px 0;padding:4px;
+  background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1);
+  overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:1;padding:10px 8px;font-size:13px;font-weight:600;color:var(--muted);
+  white-space:nowrap;letter-spacing:-.015em;border-radius:var(--pill);
+  transition:background .25s var(--ease),color .2s var(--ease)}
+.tabs button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
+
+.sec{display:flex;align-items:baseline;justify-content:space-between;padding:26px 20px 9px}
+.sec .kick{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.wrap{padding:0 18px}
+.field{padding:14px 18px 0}
+.field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px}
+.inp{width:100%;min-height:50px;padding:14px 16px;font-size:16px;background:var(--surface);
+  border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);
+  transition:box-shadow .2s var(--ease)}
+.inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+.inp::placeholder{color:var(--faint)}
+textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
+input[type="time"]{color-scheme:dark;-webkit-appearance:none;appearance:none}
+input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.55}
+
+.big{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:16px 20px;
+  background:var(--grad);color:#fff;font-weight:600;font-size:16.5px;letter-spacing:-.01em;
+  border-radius:var(--pill);margin:0 0 11px;box-shadow:0 6px 20px rgba(255,55,95,.3);
+  transition:transform .22s var(--spring)}
+.big:active{transform:scale(.97)}
+.big.alt{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
+.big:disabled{opacity:.42;transform:none}
+
+.list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
+.row:first-child{border-top:none}
+.row .m{flex:1;min-width:0}
+.row .t{font-size:16px;font-weight:500;letter-spacing:-.012em;line-height:1.25}
+.row .by{font-size:13px;color:var(--muted);margin-top:1px}
+.row .s{font-size:12px;color:var(--faint);margin-top:2px}
+.row.off{opacity:.45}
+.act{flex:0 0 auto;height:36px;padding:0 14px;border-radius:var(--pill);font-size:13.5px;font-weight:600;
+  background:var(--surface-2);color:var(--ink);transition:transform .2s var(--spring)}
+.act:active{transform:scale(.92)}
+.act.pri{background:var(--grad);color:#fff}
+.act.warn{color:var(--accent);background:var(--accent-soft)}
+.tog{display:flex;gap:3px;padding:3px;background:var(--surface);border-radius:var(--pill);flex:0 0 auto}
+.tog button{padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:var(--pill)}
+.tog button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{padding:10px 15px;border-radius:var(--pill);background:var(--surface);font-size:14px;font-weight:500;
+  box-shadow:var(--sh-1);transition:transform .2s var(--spring);text-align:left}
+.chip:active{transform:scale(.94)}
+.chip.on{background:var(--grad);color:#fff;font-weight:600;box-shadow:0 4px 14px rgba(255,55,95,.34)}
+
+.slots{display:flex;gap:9px}
+.slot{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);
+  box-shadow:0 0 0 1.5px var(--hair) inset;display:block;cursor:pointer}
+.slot.sq{flex:1;aspect-ratio:1}
+.slot.wide{width:100%;aspect-ratio:16/10}
+.slot img{width:100%;height:100%;object-fit:cover;display:block}
+.slot .ph{display:grid;place-items:center;width:100%;height:100%;gap:5px;color:var(--faint);
+  font-size:12px;font-weight:600;text-align:center;padding:8px}
+.slot .ph svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7}
+.slot .rm{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:50%;
+  background:rgba(0,0,0,.62);color:#fff;font-size:12px;display:grid;place-items:center;z-index:2}
+.slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.slot.busy{opacity:.5;pointer-events:none}
+
+.hrow{display:flex;flex-wrap:wrap;align-items:center;gap:9px 10px;padding:12px 16px;
+  border-top:.5px solid var(--hair)}
+.hrow:first-child{border-top:none}
+.hrow .d{flex:1;min-width:0;font-size:14.5px;font-weight:600}
+.hrow .times{flex:1 1 100%;display:flex;align-items:center;gap:10px}
+.hrow .times em{font-style:normal;color:var(--muted);font-size:13px}
+.hrow input[type=time]{flex:1;min-width:0;min-height:44px;padding:9px 12px;font-size:15px;
+  background:var(--surface-2);border:none;box-shadow:0 0 0 1.5px var(--hair) inset;
+  border-radius:10px;color:var(--ink)}
+.hrow.shut .times{opacity:.35;pointer-events:none}
+.hrow .sw{flex:0 0 auto;font-size:12.5px;font-weight:600;color:var(--muted);
+  padding:8px 13px;border-radius:var(--pill);background:var(--surface-2)}
+.hrow.shut .sw{color:var(--accent);background:var(--accent-soft)}
+
+.qrs{display:flex;gap:9px;margin:0 18px}
+.qrcard{flex:1;display:block;background:#fff;border-radius:14px;padding:9px 9px 11px;text-align:center;
+  box-shadow:var(--sh-1);transition:transform .2s var(--spring)}
+.qrcard:active{transform:scale(.96)}
+.qrcard img{width:100%;height:auto;display:block;border-radius:8px}
+.qrcard b{display:block;font-size:12px;font-weight:600;color:#1D1D1F;margin-top:7px}
+.qrcard span{display:block;font-size:10px;color:#6E6E73;margin-top:2px;line-height:1.3}
+/* Opaque scrim, no backdrop-filter: see the note in studio.html. */
+#qrbig{position:fixed;inset:0;z-index:75;display:none;place-items:center;padding:22px;
+  background:rgba(0,0,0,.9)}
+#qrbig.on{display:grid}
+.qrpaper{width:min(340px,86vw);background:#fff;border-radius:22px;padding:22px 22px 24px;
+  text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.qrpaper img{width:100%;height:auto;display:block;border-radius:10px}
+.qrpaper .cap{margin:16px 2px 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;
+  font-size:25px;font-weight:600;line-height:1.15;letter-spacing:-.022em;color:#111}
+.qrpaper .sub{margin:9px 0 0;font-size:12.5px;font-weight:600;letter-spacing:.02em;color:#8A8A8F}
+.qracts{display:flex;gap:9px;margin:16px auto 0;width:min(340px,86vw)}
+.qracts a,.qracts button{flex:1;padding:13px;border-radius:var(--pill);text-align:center;
+  font-size:14.5px;font-weight:600;background:var(--surface-2);color:var(--ink)}
+.qracts a{background:transparent;box-shadow:inset 0 0 0 1.5px var(--hair-2);color:var(--ink-2)}
+
+.gate{max-width:360px;margin:14vh auto;padding:0 24px}
+.gate h2{font-size:29px;font-weight:700;letter-spacing:-.03em;margin:0 0 8px}
+.note{margin:16px 18px 0;padding:16px 18px;border-radius:var(--r);background:var(--accent-soft);
+  box-shadow:inset 0 0 0 1px rgba(255,69,110,.28)}
+.note b{display:block;font-size:15.5px;font-weight:600;color:var(--accent)}
+.note p{margin:5px 0 0;font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.bg{position:fixed;inset:0;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;z-index:60;
+  transition:opacity .3s var(--ease)}
+.bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(102%);
+  width:100%;max-width:var(--maxw);max-height:92vh;overflow-y:auto;
+  background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;z-index:65;
+  padding:10px 20px calc(26px + env(safe-area-inset-bottom));box-shadow:0 -10px 50px rgba(0,0,0,.6);
+  transition:transform .46s var(--spring)}
+.sheet.on{transform:translateX(-50%) translateY(0)}
+.sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
+.sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px}
+.sheet .inp{background:var(--surface-2);box-shadow:0 0 0 1.5px var(--hair-2) inset}
+.grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
+#busy{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);
+  display:none;place-items:center;opacity:0;transition:opacity .18s var(--ease)}
+#busy.on{display:grid;opacity:1}
+#busy .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
+#busy .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
+  transform-origin:bottom;animation:bb .9s ease-in-out infinite}
+#busy .bars i:nth-child(2){animation-delay:.15s}#busy .bars i:nth-child(3){animation-delay:.3s}
+@keyframes bb{0%,100%{height:12px}50%{height:44px}}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
+  width:calc(100% - 36px);max-width:calc(var(--maxw) - 36px);background:rgba(60,60,63,.94);color:#fff;
+  backdrop-filter:blur(20px);font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
+  box-shadow:var(--sh-2);z-index:70;opacity:0;pointer-events:none;
+  transition:opacity .3s var(--ease),transform .42s var(--spring)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;
+  border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.cnt{float:right;font-weight:500;color:var(--faint);font-size:11.5px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div id="busy" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div></div>
+<div id="qrbig" onclick="qrHide(event)"></div>
+<div id="app"></div>
+<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s), API='/api';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+let TOKEN=localStorage.getItem('myset.vtoken')||'';
+let V=null, ME=null, SHOWS=null, AMEN=[];
+let TAB=localStorage.getItem('myset.vtab')||'page';
+
+let BUSY=0,BUSY_T=null;
+function busy(on){
+  BUSY=Math.max(0,BUSY+(on?1:-1));
+  clearTimeout(BUSY_T);
+  const el=$('#busy'); if(!el)return;
+  if(BUSY) BUSY_T=setTimeout(()=>{if(BUSY)el.classList.add('on')},140);
+  else el.classList.remove('on');
+}
+async function api(p,o={}){
+  const h={'content-type':'application/json',...(o.headers||{})};
+  if(TOKEN) h['authorization']='Bearer '+TOKEN;
+  if(!o.quiet) busy(true);
+  try{ const r=await fetch(API+p,{...o,headers:h}); return await r.json(); }
+  catch(e){ return {ok:false,error:'Connection hiccup — try again'}; }
+  finally{ if(!o.quiet) busy(false); }
+}
+const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
+
+/* ── the door ───────────────────────────────────────────── */
+let GATE_EMAIL='', TICKET='';
+function gate(err,mode){
+  const m=mode||'start';
+  let inner;
+  if(m==='code'){
+    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">We sent a 6-digit code to <b>${esc(GATE_EMAIL)}</b>. It works for ten minutes.</p>
+      <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+        placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:26px">
+      <button class="big" style="margin-top:12px" onclick="submitCode()">Sign in</button>
+      <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'start')">← Use a different email</button>`;
+  }else if(m==='name'){
+    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">You're in. What's the place called? This is the name people will see.</p>
+      <input class="inp" id="newName" maxlength="70" placeholder="The Ugly Duckling" autocomplete="off">
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="inp" id="newCity" maxlength="60" placeholder="City / island" style="flex:1">
+        <input class="inp" id="newCountry" maxlength="60" placeholder="Country" style="flex:1">
+      </div>
+      <button class="big" style="margin-top:12px" onclick="claim()">Create our page</button>
+      <p class="muted" style="font-size:12px;margin:12px 0 0">City and country are how artists' gigs find their way onto your page — put them exactly as they'd write them.</p>`;
+  }else{
+    inner=`<p class="muted" style="font-size:14px;margin:0 0 6px">${err==='unauthorized'?'That didn’t work — try again.'
+      :'A free page for your venue: what’s on, who’s playing, your menu and your offers.'}</p>
+      <p class="muted" style="font-size:13px;margin:0 0 16px">Artists keep their own gig calendars. Once your page is up, the shows fill themselves in.</p>
+      <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@yourbar.com">
+      <button class="big" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
+      <p class="muted" style="font-size:12.5px;margin:14px 0 0;text-align:center">New here? Same button — we'll set you up right after the code.</p>
+      <p class="muted" style="font-size:12.5px;margin:22px 0 0;text-align:center">
+        Musician, not a venue? <a href="/studio" style="color:var(--accent);font-weight:600">Artist Studio →</a></p>`;
+  }
+  $('#app').innerHTML=`<div class="gate"><h2>Venue Studio</h2>${inner}</div>`;
+  const first=$('#otp')||$('#newName')||$('#email');
+  if(first){ first.addEventListener('keydown',e=>{if(e.key==='Enter'){
+      m==='code'?submitCode():m==='name'?claim():sendCode();}});
+    setTimeout(()=>first.focus(),100); }
+}
+async function sendCode(){
+  const em=(($('#email')||{}).value||'').trim();
+  if(!em){toast('Enter your email');return;}
+  GATE_EMAIL=em;
+  const d=await post('/venueauth',{action:'start',email:em});
+  if(!d.ok){toast(d.error||'Could not send that');return;}
+  gate(null,'code');
+}
+async function submitCode(){
+  const code=(($('#otp')||{}).value||'').trim();
+  const d=await post('/venueauth',{action:'verify',email:GATE_EMAIL,code});
+  if(!d.ok){toast(d.error||'Check the code and try again');return;}
+  if(d.needName){ TICKET=d.ticket; gate(null,'name'); return; }
+  signedIn(d);
+}
+async function claim(){
+  const v=id=>(($('#'+id)||{}).value||'').trim();
+  if(!v('newName')){toast('What’s the place called?');return;}
+  const d=await post('/venueauth',{action:'claim',ticket:TICKET,name:v('newName'),
+    city:v('newCity'),country:v('newCountry')});
+  if(!d.ok){toast(d.error||'Could not create that');return;}
+  signedIn(d,`Welcome — your page is myset.vip/v/${d.slug}`);
+}
+function signedIn(d,msg){
+  TOKEN=d.token; localStorage.setItem('myset.vtoken',TOKEN);
+  toast(msg||`Signed in as ${d.email}`);
+  start();
+}
+function signOut(){ TOKEN=''; localStorage.removeItem('myset.vtoken'); V=null; ME=null; gate(); }
+
+/* ── loading ────────────────────────────────────────────── */
+async function start(){ await Promise.all([loadVenue(),loadMe()]); }
+async function loadVenue(){
+  const d=await post('/venueadmin',{action:'get'});
+  if(!d.ok){
+    if(d.error==='unauthorized'){ TOKEN=''; localStorage.removeItem('myset.vtoken'); }
+    gate(d.error); return;
+  }
+  V=d.venue; AMEN=d.amenities||[]; render();
+  if(TAB==='shows') loadShows();
+}
+async function loadMe(){ ME=await post('/venueauth',{action:'list'}); if(V)render(); }
+async function loadShows(force){
+  if(SHOWS&&!force)return;
+  if(!V||!V.slug)return;
+  try{ SHOWS=await fetch(`${API}/venue?v=${encodeURIComponent(V.slug)}`,{cache:'no-store'}).then(r=>r.json()); }
+  catch(e){ SHOWS={ok:false}; }
+  if(TAB==='shows'&&V)render();
+}
+function setTab(t){ TAB=t; localStorage.setItem('myset.vtab',t); render();
+  if(t==='shows') loadShows(); }
+
+let WRITING=false;
+async function save(body,msg){
+  if(WRITING)return; WRITING=true;
+  try{
+    const d=await post('/venueadmin',body);
+    if(!d.ok){toast(d.error||'Failed');return d;}
+    V=d.venue; AMEN=d.amenities||AMEN; render();
+    if(msg)toast(msg);
+    return d;
+  } finally{ WRITING=false; }
+}
+const val=id=>(($('#'+id)||{}).value||'').trim();
+
+async function savePage(){
+  const typedMap=val('fMap');
+  const d=await save({action:'set',
+    name:val('fName'),tagline:val('fTag'),about:val('fAbout'),
+    city:val('fCity'),country:val('fCountry'),address:val('fAddr'),mapUrl:val('fMap'),
+    phone:val('fPhone'),whatsapp:val('fWa'),
+    links:{website:val('lkWeb'),instagram:val('lkIg'),facebook:val('lkFb'),google:val('lkG')}},
+    'Page saved');
+  if(!d||!d.ok)return;
+  // a link that isn't a map link is dropped on the way in — say so rather than
+  // letting it look saved
+  if(typedMap&&!(V.maps&&V.maps.source)) toast('Saved — but that wasn’t a Google or Apple Maps link');
+  SHOWS=null; loadShows(true);          // city may have changed, so the diary changes
+  if(val('lkWeb')) checkDomain(true);
+}
+async function checkDomain(quiet){
+  const d=await post('/venueauth',{action:'checkDomain'});
+  if(!d.ok)return;
+  if(d.matched){ await loadVenue(); toast('Verified — your email matches your website 🎉'); }
+  else if(!quiet) toast(d.website
+    ? 'That email isn’t on your website’s domain, so this stays a listing for now'
+    : 'Add your website first, then try again');
+}
+
+/* ── render ─────────────────────────────────────────────── */
+function render(){
+  if(!V)return;
+  let body='';
+
+  if(TAB==='page'){
+    body=`
+    ${V.verified?'':`<div class="note"><b>Unverified listing</b>
+      <p>Your page is live either way. It says “unverified” until we can tell it’s really yours — the fastest way is an email at your own website’s domain (see Settings).</p></div>`}
+
+    <div class="sec"><span class="kick">Cover photo</span></div>
+    <div class="wrap"><div class="slots">${slotBox('cover',V.photo,'wide')}</div>
+      <p class="muted" style="font-size:12px;margin:9px 0 0">The wide shot at the top of your page. A busy night beats an empty room.</p></div>
+
+    <div class="sec"><span class="kick">The basics</span></div>
+    <div class="field"><label>Name</label>
+      <input class="inp" id="fName" maxlength="70" value="${esc(V.name)}" placeholder="The Ugly Duckling"></div>
+    <div class="field"><label>One line <span class="cnt" id="cTag"></span></label>
+      <input class="inp" id="fTag" maxlength="120" value="${esc(V.tagline)}" placeholder="Beach bar, live music, cold beer"></div>
+    <div class="field"><label>About <span class="cnt" id="cAbout"></span></label>
+      <textarea class="inp" id="fAbout" maxlength="900" placeholder="What the place is like on a good night.">${esc(V.about)}</textarea></div>
+
+    <div class="sec"><span class="kick">Where you are</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0">City and country have to match how artists write them, or their gigs won’t find your page.</p>
+    <div style="display:flex;gap:8px">
+      <div class="field" style="flex:1"><label>City / island</label>
+        <input class="inp" id="fCity" maxlength="60" value="${esc(V.city)}" placeholder="Koh Phangan"></div>
+      <div class="field" style="flex:1;padding-right:18px"><label>Country</label>
+        <input class="inp" id="fCountry" maxlength="60" value="${esc(V.country)}" placeholder="Thailand"></div>
+    </div>
+    <div class="field"><label>Address</label>
+      <input class="inp" id="fAddr" maxlength="160" value="${esc(V.address)}" placeholder="88 Baan Tai Beach Road"></div>
+    <div class="field"><label>Or paste a maps link</label>
+      <input class="inp" id="fMap" type="url" inputmode="url" spellcheck="false" value="${esc((V.maps&&V.maps.source)||'')}"
+        placeholder="Paste from Google or Apple Maps"></div>
+    <p class="muted" style="font-size:12px;padding:8px 20px 0;margin:0">Either one gives people a <b>Directions</b> button that opens in whichever map app their phone uses.</p>
+
+    <div class="sec"><span class="kick">Getting hold of you</span></div>
+    <div style="display:flex;gap:8px">
+      <div class="field" style="flex:1"><label>Phone</label>
+        <input class="inp" id="fPhone" inputmode="tel" maxlength="28" value="${esc(V.phone)}" placeholder="+66 …"></div>
+      <div class="field" style="flex:1;padding-right:18px"><label>WhatsApp</label>
+        <input class="inp" id="fWa" inputmode="tel" maxlength="28" value="${esc(V.whatsapp)}" placeholder="+66 …"></div>
+    </div>
+    ${[['lkWeb','Website','website','https://yourbar.com'],
+       ['lkIg','Instagram','instagram','https://instagram.com/yourbar'],
+       ['lkFb','Facebook','facebook','https://facebook.com/yourbar'],
+       ['lkG','Google Maps listing','google','https://maps.app.goo.gl/…']].map(([id,label,k,ph])=>
+      `<div class="field"><label>${label}</label>
+        <input class="inp" id="${id}" type="url" inputmode="url" spellcheck="false"
+          value="${esc((V.links||{})[k]||'')}" placeholder="${ph}"></div>`).join('')}
+
+    <div class="wrap" style="margin-top:16px"><button class="big" onclick="savePage()">Save everything above</button></div>
+
+    <div class="sec"><span class="kick">Good to know</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Tap what applies. <b>House PA / backline</b> is the one artists look for first.</p>
+    <div class="wrap"><div class="chips">${AMEN.map(a=>{
+      const on=(V.amenities||[]).some(x=>x.key===a.key);
+      return `<button class="chip ${on?'on':''}" data-act="amen" data-id="${esc(a.key)}">${esc(a.label)}</button>`;
+    }).join('')}</div></div>
+
+    <div class="sec"><span class="kick">Opening hours</span></div>
+    <div class="list">${(V.hours||[]).map(h=>`
+      <div class="hrow ${h.closed?'shut':''}">
+        <span class="d">${esc(h.label)}</span>
+        <button class="sw" data-act="shut" data-id="${h.day}">${h.closed?'Closed':'Open'}</button>
+        <span class="times">
+          <input type="time" value="${esc(h.open)}" data-hday="${h.day}" data-hfield="open" aria-label="${esc(h.label)} opens">
+          <em>–</em>
+          <input type="time" value="${esc(h.close)}" data-hday="${h.day}" data-hfield="close" aria-label="${esc(h.label)} closes">
+        </span>
+      </div>`).join('')}</div>
+    <p class="muted" style="font-size:12px;padding:10px 20px 0">Closing after midnight is fine — put the real time.</p>
+
+    <div class="sec"><span class="kick">Photos</span></div>
+    <div class="wrap"><div class="slots">
+      ${[0,1,2].map(i=>slotBox('p'+i,(V.photos||[])[i],'sq')).join('')}
+    </div></div>`;
+  }
+
+  if(TAB==='shows'){
+    const gigs=(SHOWS&&SHOWS.ok?SHOWS.gigs:null);
+    body=`
+    <div class="note"><b>These fill themselves in</b>
+      <p>Artists keep their own gig calendars in MySet. Any gig at a venue name matching <b>${esc(V.name||'yours')}</b> in ${esc([V.city,V.country].filter(Boolean).join(', ')||'your city')} appears here and on your public page automatically. Nothing for you to type.</p></div>
+    ${gigs===null?`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Looking…</div></div>`
+     :!gigs.length?`<div class="sec"><span class="kick">Nothing listed yet</span></div>
+      <div class="list"><div class="row muted">No gigs point here yet. Two things to check: your <b>name</b>, and your <b>city and country</b> — they have to match what the artists type.</div></div>
+      <div class="wrap" style="margin-top:16px"><button class="big alt" onclick="shareInvite()">Invite the acts who play here</button></div>`
+     :`<div class="sec"><span class="kick">Coming up</span><span class="kick">${gigs.length}</span></div>
+      <div class="list">${gigs.map(g=>`<div class="row">
+        <div class="m"><div class="t">${esc(g.artist)}${g.live?' · on now':''}</div>
+          <div class="by">${esc(dowName(g.date))} ${dayMonth(g.date)} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}</div>
+          <div class="s">Listed as “${esc(g.listedAs)}”${g.repeating?' · repeats':''}</div></div>
+        <a class="act" href="/${esc(g.slug)}" target="_blank">Page</a>
+      </div>`).join('')}</div>
+      <div class="wrap" style="margin-top:16px"><button class="big alt" onclick="shareInvite()">Invite more acts</button></div>`}
+    <p class="muted" style="font-size:12px;padding:16px 20px 0">Something listed here that isn’t yours? That’s an artist typing a name close to yours — tell us and we’ll sort it.</p>`;
+  }
+
+  if(TAB==='menu'){
+    const M=V.menu||{items:[]};
+    body=`
+    <div class="sec"><span class="kick">Menu</span></div>
+    <div class="field"><label>Link to the full menu</label>
+      <input class="inp" id="mUrl" type="url" inputmode="url" spellcheck="false" value="${esc(M.url)}"
+        placeholder="https://… (a PDF, a page, anything)"></div>
+    <div class="field"><label>One line about the food</label>
+      <input class="inp" id="mNote" maxlength="140" value="${esc(M.note)}" placeholder="Thai and wood-fired pizza until 11pm"></div>
+    <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="saveMenu()">Save</button></div>
+
+    <div class="sec"><span class="kick">Highlights</span><span class="kick">${(M.items||[]).length}/24</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">A handful of things worth ordering. This is what shows on your page — the full menu stays behind the link.</p>
+    <div class="list">${(M.items||[]).map((it,i)=>`<div class="row">
+      <div class="m"><div class="t">${esc(it.name)}${it.price?` · ${esc(it.price)}`:''}</div>
+        <div class="by">${esc([it.section,it.note].filter(Boolean).join(' · ')||'—')}</div></div>
+      <button class="act warn" data-act="mrm" data-id="${i}">✕</button>
+    </div>`).join('')||'<div class="row muted">Nothing yet.</div>'}</div>
+    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openMenuItem()">+ Add a highlight</button></div>
+
+    <div class="sec"><span class="kick">Offers</span><span class="kick">${(V.offers||[]).length}/6</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Happy hour, two-for-one, free shot for anyone who votes — whatever brings people in.</p>
+    <div class="list">${(V.offers||[]).map(o=>`<div class="row">
+      <div class="m"><div class="t">${esc(o.title)}</div>
+        <div class="by">${esc(o.detail||'—')}</div>
+        ${o.when?`<div class="s">${esc(o.when)}</div>`:''}</div>
+      <button class="act" data-act="oedit" data-id="${esc(o.id)}">Edit</button>
+      <button class="act warn" data-act="orm" data-id="${esc(o.id)}">✕</button>
+    </div>`).join('')||'<div class="row muted">Nothing yet.</div>'}</div>
+    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openOffer()">+ Add an offer</button></div>`;
+  }
+
+  if(TAB==='settings'){
+    body=`
+    <div class="sec"><span class="kick">Your public page</span></div>
+    <div class="field"><label>myset.vip/v/</label><div style="display:flex;gap:8px">
+      <input class="inp" id="slugIn" maxlength="32" value="${esc(V.slug||'')}" placeholder="yourbar" style="flex:1">
+      <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
+    ${V.slug?`<div class="wrap" style="margin-top:10px">
+      <a class="big alt" href="/v/${esc(V.slug)}" target="_blank">Open myset.vip/v/${esc(V.slug)} ↗</a></div>`:''}
+
+    <div class="sec"><span class="kick">Verification</span></div>
+    ${V.verified
+      ? `<div class="list"><div class="row"><div class="m"><div class="t">Verified ✓</div>
+          <div class="s">${V.verifiedVia==='domain'?'Matched your website’s domain':'Checked by MySet'}</div></div>
+          <span class="pill ok">✓</span></div></div>`
+      : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Fastest way: sign in with an email at your own website’s domain (like you@yourbar.com), add the website above, and tap below. Otherwise we’ll check it by hand — a page works fine either way, it just says “unverified listing”.</p>
+         <div class="wrap"><button class="big alt" onclick="checkDomain()">Check my email against my website</button></div>`}
+
+    <div class="sec"><span class="kick">Codes to print</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">On tables, on the bar, by the door. Tap one to bring it up full size.</p>
+    ${V.slug?`<div class="qrs">
+      ${QRS.map(([k,t,d])=>`<button class="qrcard" data-act="qrbig" data-id="${k}">
+        <img src="${qrSrc(k,6)}" alt="${esc(t)} QR code" loading="lazy">
+        <b>${esc(t)}</b><span>${esc(d)}</span></button>`).join('')}
+    </div>`:`<div class="list"><div class="row muted">Set your page address above first.</div></div>`}
+
+    <div class="sec"><span class="kick">Who can sign in</span></div>
+    ${ME&&ME.ok?`<div class="list">${(ME.emails||[]).map(e=>`<div class="row">
+        <div class="m"><div class="t">${esc(e.email)}</div><div class="s">${esc(e.role)}</div></div>
+        ${(ME.emails||[]).length>1?`<button class="act warn" data-act="rmmail" data-id="${esc(e.email)}">✕</button>`:''}
+      </div>`).join('')}</div>
+      ${ME.emailReady?'':`<p class="muted" style="font-size:12px;padding:10px 20px 0">Email sending isn’t switched on yet, so codes can’t go out.</p>`}`
+     :`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`}
+    <div class="field"><label>Add a manager or barman</label><div style="display:flex;gap:8px">
+      <input class="inp" id="addEmail" type="email" inputmode="email" placeholder="them@email.com" style="flex:1">
+      <button class="act pri" style="min-width:64px" onclick="addStaff()">Add</button></div></div>
+
+    <div class="wrap" style="margin-top:18px">
+      <button class="big alt" onclick="if(confirm('Sign every device out, including this one?'))revokeAll()">Sign all devices out</button>
+      <button class="big alt" onclick="signOut()">Sign out of this device</button>
+    </div>
+    <p class="muted" style="font-size:12px;padding:8px 20px 0">A venue page can’t reach an artist’s setlist, votes or money — different account, different door.</p>`;
+  }
+
+  $('#app').innerHTML=`
+  <div class="head">
+    <div style="min-width:0"><div class="kick">Venue Studio</div><h1>${esc(V.name||'Your venue')}</h1></div>
+    <span class="pill ${V.verified?'ok':'no'}">${V.verified?'✓ Verified':'Unverified'}</span>
+  </div>
+  <div class="tabs">
+    <button class="${TAB==='page'?'on':''}" onclick="setTab('page')">Page</button>
+    <button class="${TAB==='shows'?'on':''}" onclick="setTab('shows')">What’s on</button>
+    <button class="${TAB==='menu'?'on':''}" onclick="setTab('menu')">Menu &amp; offers</button>
+    <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
+  </div>${body}
+  <div class="wrap" style="padding-top:26px;padding-bottom:8px">
+    ${V.slug?`<a class="big alt" href="/v/${esc(V.slug)}" target="_blank">See your public page ↗</a>`:''}
+  </div>`;
+  wireCount('#fTag','#cTag',120); wireCount('#fAbout','#cAbout',900);
+  document.querySelectorAll('input[data-hday]').forEach(el=>
+    el.addEventListener('change',()=>save({action:'hours',day:el.dataset.hday,
+      [el.dataset.hfield]:el.value},'Hours saved')));
+}
+
+/* ── bits and pieces ───────────────────────────────────── */
+const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOWS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOWS[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
+const dayMonth=d=>`${+d.slice(8,10)}/${+d.slice(5,7)}`;
+const fmtTime=t=>{const p=String(t||'').split(':');let h=+p[0];
+  if(!Number.isFinite(h))return '';const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
+
+const QRS=[
+  ['venue','Our page','What’s on, menu, offers','Tonight’s music & menu'],
+  ['home','MySet','Find gigs anywhere','Find live music near you'],
+];
+const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((V&&V.slug)||'')}&s=${scale}`;
+const qrUrl=k=>k==='home'?'myset.vip':`myset.vip/v/${(V&&V.slug)||''}`;
+function qrBig(k){
+  const row=QRS.find(x=>x[0]===k); if(!row)return;
+  if(k!=='home'&&!(V&&V.slug)){ toast('Set your page address first'); return; }
+  $('#qrbig').innerHTML=`<div onclick="event.stopPropagation()">
+    <div class="qrpaper"><img src="${qrSrc(k,10)}" alt="${esc(row[1])} QR code">
+      <div class="cap">${esc(row[3])}</div><div class="sub">${esc(qrUrl(k))}</div></div>
+    <div class="qracts"><a href="${qrSrc(k,20)}" target="_blank" rel="noopener">Full size ↗</a>
+      <button onclick="qrHide()">Done</button></div></div>`;
+  $('#qrbig').classList.add('on');
+}
+function qrHide(e){ if(e&&e.target&&e.target.id!=='qrbig')return; $('#qrbig').classList.remove('on'); }
+
+function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}
+function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
+  if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
+
+function openMenuItem(){
+  openSheet(`<h3>Add a highlight</h3><p class="lede">One thing worth ordering.</p>
+    <input class="inp" id="miName" maxlength="60" placeholder="Wood-fired margherita">
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input class="inp" id="miPrice" maxlength="20" placeholder="฿220" style="flex:1">
+      <input class="inp" id="miSection" maxlength="30" placeholder="Section (Food, Drinks…)" style="flex:1.4">
+    </div>
+    <input class="inp" id="miNote" maxlength="60" placeholder="Note (optional)" style="margin-top:8px">
+    <button class="big" style="margin-top:16px" onclick="addMenuItem()">Add it</button>`);
+  setTimeout(()=>{const e=$('#miName');if(e)e.focus()},260);
+}
+async function addMenuItem(){
+  if(!val('miName')){toast('Give it a name');return;}
+  const d=await save({action:'menuAdd',name:val('miName'),price:val('miPrice'),
+    section:val('miSection'),note:val('miNote')});
+  if(d&&d.ok){ closeSheet(); toast('Added'); }
+}
+function openOffer(id){
+  const o=id?((V.offers||[]).find(x=>x.id===id)||{}):{};
+  openSheet(`<h3>${id?'Edit offer':'Add an offer'}</h3>
+    <p class="lede">Short and clear beats clever.</p>
+    <input class="inp" id="ofTitle" maxlength="60" placeholder="Happy hour" value="${esc(o.title||'')}">
+    <input class="inp" id="ofDetail" maxlength="140" placeholder="Two-for-one on all cocktails" value="${esc(o.detail||'')}" style="margin-top:8px">
+    <input class="inp" id="ofWhen" maxlength="60" placeholder="Every day, 5–7pm" value="${esc(o.when||'')}" style="margin-top:8px">
+    <button class="big" style="margin-top:16px" data-act="ofsave" data-id="${esc(id||'')}">${id?'Save':'Add it'}</button>`);
+  setTimeout(()=>{const e=$('#ofTitle');if(e)e.focus()},260);
+}
+async function saveOffer(id){
+  if(!val('ofTitle')){toast('An offer needs a title');return;}
+  const d=await save({action:'offerSave',id:id||undefined,title:val('ofTitle'),
+    detail:val('ofDetail'),when:val('ofWhen')});
+  if(d&&d.ok){ closeSheet(); toast('Saved'); }
+}
+async function saveMenu(){ await save({action:'menuSet',url:val('mUrl'),note:val('mNote')},'Saved'); }
+async function saveSlug(){
+  const d=await post('/venueauth',{action:'setSlug',slug:val('slugIn')});
+  if(!d.ok){toast(d.error||'Could not save that');return;}
+  ME=d; await loadVenue(); toast(`Your page is now myset.vip/v/${d.slug}`);
+}
+async function addStaff(){
+  const em=val('addEmail'); if(!em){toast('Enter an email');return;}
+  const d=await post('/venueauth',{action:'add',email:em});
+  if(!d.ok){toast(d.error||'Could not add that');return;}
+  ME=d; render(); toast(`${em} can sign in now`);
+}
+async function removeStaff(email){
+  if(!confirm('Stop '+email+' signing in?'))return;
+  const d=await post('/venueauth',{action:'remove',email});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  ME=d; render(); toast('Removed');
+}
+async function revokeAll(){
+  const d=await post('/venueauth',{action:'revokeAll'});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  signOut();
+}
+function shareInvite(){
+  const link='myset.vip/studio';
+  openSheet(`<h3>Invite the acts</h3>
+    <p class="lede">Send them this. They add their own gigs once and every night at your place shows up on your page from then on.</p>
+    <input class="inp" id="invLink" readonly value="${esc(link)}">
+    <button class="big" style="margin-top:12px" onclick="copyInv()">Copy the link</button>
+    <p class="muted" style="font-size:12.5px;margin:14px 0 0">Tell them to put the venue name as <b>${esc(V.name)}</b> and the city as <b>${esc(V.city||'—')}</b>, and it lands here automatically.</p>`);
+}
+function copyInv(){
+  const el=$('#invLink'); if(!el)return;
+  el.select();
+  try{ navigator.clipboard.writeText(el.value); }catch(e){ document.execCommand('copy'); }
+  toast('Copied');
+}
+
+/* Photos — the phone shrinks them before they go over the wire. A venue's cover
+   is a wide shot and the gallery is square, so each is cropped to its own shape
+   from the centre. */
+function slotBox(slot,url,shape){
+  return `<label class="slot ${shape}" data-slot="${slot}">
+    ${url?`<img src="${esc(url)}" alt="">
+           <button type="button" class="rm" data-act="photoclear" data-id="${slot}">✕</button>`
+        :`<span class="ph"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l4.5-4.5 3.5 3.5 3-3L20 17"/></svg>Add photo</span>`}
+    <input type="file" accept="image/*" data-slot="${slot}">
+  </label>`;
+}
+async function shrink(file,maxW,ratio){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{const i=new Image();
+      i.onload=()=>res(i);i.onerror=()=>rej(new Error('bad image'));i.src=url;});
+    const w=Math.min(maxW,img.naturalWidth||maxW);
+    const h=Math.round(w/ratio);
+    // cover-fit: fill the frame from the middle rather than squashing the picture
+    const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight);
+    const sw=w/scale, sh=h/scale;
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    const g=c.getContext('2d');
+    g.drawImage(img,(img.naturalWidth-sw)/2,(img.naturalHeight-sh)/2,sw,sh,0,0,w,h);
+    return c.toDataURL('image/jpeg',0.82);
+  } finally{ URL.revokeObjectURL(url); }
+}
+document.addEventListener('change',async e=>{
+  const inp=e.target.closest('input[type=file][data-slot]'); if(!inp)return;
+  const file=inp.files&&inp.files[0]; if(!file)return;
+  const slot=inp.dataset.slot;
+  const lab=inp.closest('.slot'); if(lab)lab.classList.add('busy');
+  try{
+    const data=await shrink(file,slot==='cover'?1400:800,slot==='cover'?1.6:1);
+    const d=await save({action:'photoUpload',slot,data},'Photo added');
+    if(!d||!d.ok)return;
+  }catch(err){ toast('Couldn’t read that photo'); }
+  finally{ inp.value=''; if(lab)lab.classList.remove('busy'); }
+});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]'); if(!b)return;
+  const id=b.getAttribute('data-id'), a=b.dataset.act;
+  if(a==='amen') save({action:'amenity',key:id});
+  if(a==='shut'){ const h=(V.hours||[]).find(x=>x.day===id);
+    save({action:'hours',day:id,closed:!(h&&h.closed)}); }
+  if(a==='mrm') save({action:'menuRemove',i:id},'Removed');
+  if(a==='orm') save({action:'offerRemove',id},'Removed');
+  if(a==='oedit') openOffer(id);
+  if(a==='ofsave') saveOffer(id);
+  if(a==='rmmail') removeStaff(id);
+  if(a==='qrbig'){ e.preventDefault(); qrBig(id); }
+  if(a==='photoclear'){ e.preventDefault(); save({action:'photoClear',slot:id},'Removed'); }
+});
+function wireCount(inSel,outSel,max){
+  const i=$(inSel),o=$(outSel); if(!i||!o)return;
+  const draw=()=>{o.textContent=`${i.value.length}/${max}`;
+    o.classList.toggle('near',i.value.length>max*0.9);};
+  i.addEventListener('input',draw); draw();
+}
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
+  clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
+
+if(TOKEN) start(); else gate();
+</script>
+</body>
+</html>

@@ -24,6 +24,7 @@ const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v);
 
 /* The signing secret is generated once and kept in Blobs — private to the site,
    same exposure as an env var, and one less thing to configure by hand. */
+export async function authSecret() { return secret(); }
 async function secret() {
   const { data } = await readDoc('authsecret', null);
   if (data && data.k) return data.k;
@@ -60,6 +61,7 @@ export const cleanSlug = (v) =>
   String(v || '').toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').slice(0, 32);
 
 const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','static','img',
+  'v','venue','venues','venuestudio',
   'assets','stage','about','help','support','login','signup','signin','terms','privacy',
   'settings','account','new','index','home','myset','null','undefined']);
 
@@ -77,10 +79,13 @@ export async function artistById(aid) {
 export function pickSlug(name, reg, wanted) {
   let base = cleanSlug(wanted || name) || 'artist';
   if (base.length < 3) base = base + 'live';
-  if (!RESERVED.has(base) && !reg.bySlug[base]) return base;
+  // also skip anything already used as an ID: a slug can be renamed away, but the
+  // id it was created from lives on in every blob key, so reusing it collides
+  const free = (v) => !RESERVED.has(v) && !reg.bySlug[v] && !reg.byId[v];
+  if (free(base)) return base;
   for (let i = 2; i < 500; i++) {
     const t = `${base}${i}`;
-    if (!RESERVED.has(t) && !reg.bySlug[t]) return t;
+    if (free(t)) return t;
   }
   return null;
 }
@@ -158,10 +163,10 @@ export async function verifyToken(token) {
 }
 
 /* ---------- one-time codes ---------- */
-const codeKey = (email) => `authc_${sha(email).slice(0, 32)}`;
+const codeKey = (email, realm) => `authc_${realm ? realm + '_' : ''}${sha(email).slice(0, 32)}`;
 
-export async function issueCode(email, pendingName) {
-  const key = codeKey(email);
+export async function issueCode(email, pendingName, realm) {
+  const key = codeKey(email, realm);
   const now = Date.now();
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
   const salt = await secret();
@@ -183,8 +188,8 @@ export async function issueCode(email, pendingName) {
 }
 
 /** Returns { ok, name } — name is whatever they typed when the code was sent. */
-export async function checkCode(email, given) {
-  const key = codeKey(email);
+export async function checkCode(email, given, realm) {
+  const key = codeKey(email, realm);
   const salt = await secret();
   const want = createHmac('sha256', salt).update(String(given || '')).digest('hex');
   let ok = false, name = null;
@@ -200,7 +205,7 @@ export async function checkCode(email, given) {
 }
 
 /* ---------- delivery ---------- */
-export async function sendCode(email, code, artistName) {
+export async function sendCode(email, code, artistName, which = 'Artist Studio') {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.AUTH_FROM || 'MySet <onboarding@resend.dev>';
   if (!key) return { ok: false, why: 'email-not-configured' };
@@ -214,7 +219,7 @@ export async function sendCode(email, code, artistName) {
         subject: `${code} is your MySet sign-in code`,
         text: `Your MySet sign-in code is ${code}\n\nIt works for ten minutes and once only.\nIf you didn't ask for it, you can ignore this — nobody can get in without it.`,
         html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:420px;margin:0 auto;padding:28px 8px">
-  <p style="font-size:15px;color:#6E6E73;margin:0 0 22px">Hi${artistName ? ' ' + escapeHtml(artistName) : ''}, here's your sign-in code for the MySet Artist Studio.</p>
+  <p style="font-size:15px;color:#6E6E73;margin:0 0 22px">Hi${artistName ? ' ' + escapeHtml(artistName) : ''}, here's your sign-in code for the MySet ${escapeHtml(which)}.</p>
   <div style="font-size:40px;font-weight:700;letter-spacing:.16em;text-align:center;padding:22px;border-radius:16px;background:#F5F5F7;color:#1D1D1F">${code}</div>
   <p style="font-size:14px;color:#6E6E73;margin:22px 0 0">It works for ten minutes, once. If you didn't ask for it, ignore this — nobody can get in without it.</p>
 </div>`,

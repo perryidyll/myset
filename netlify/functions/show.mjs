@@ -1,11 +1,19 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
-         isUnlimited, publicArtist, json, bad, cleanFanId } from './_lib.mjs';
+         isUnlimited, publicArtist, json, bad, cleanFanId, markPresence } from './_lib.mjs';
+import { readRequests, myRequests } from './_requests.mjs';
 
 export default async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
-  const fanId = cleanFanId(new URL(req.url).searchParams.get('fan'));
+  const url = new URL(req.url);
+  const fanId = cleanFanId(url.searchParams.get('fan'));
+  /* `in=1` means "this is a phone in the room", which is only ever sent by the
+     voting page. Profile views and the artist's own previews poll this endpoint
+     too, and counting them would inflate the head-count with people who were
+     never there. */
+  const inRoom = url.searchParams.get('in') === '1';
   const [show, fans] = await Promise.all([getShow(aid), readFans(aid)]);
+  if (inRoom && fanId) await markPresence(aid, fanId, show, req);
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);
   const me = fans[fanId] || { v: [], extra: 0 };
@@ -36,6 +44,12 @@ export default async (req) => {
 
   const np = show.songs.find((s) => s.id === show.nowPlaying) || null;
 
+  /* One extra blob read, and only when there is something to read. This endpoint
+     is polled by every phone in the room, so nothing goes on it unconditionally. */
+  const asking = show.requests.on || show.birthdays.on;
+  const myAsks = asking && fanId
+    ? myRequests(await readRequests(aid), fanId, show) : [];
+
   return json({
     ok: true,
     artistId: aid, artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
@@ -44,6 +58,13 @@ export default async (req) => {
     songs: ordered, played,
     replayCost: show.replayCost || 5,
     packs: show.packs,
+    /* Only advertised when it is actually on, so the page never renders a button
+       that leads to "sorry, not tonight". */
+    asks: {
+      song: show.requests.on ? { cost: show.requests.cost } : null,
+      birthday: show.birthdays.on ? { cost: show.birthdays.cost } : null,
+    },
+    myAsks,
     credits: {
       unlimited: unl,
       remaining: unl ? null : Math.max(0, total - used), total: unl ? null : total, used, extra: me.extra || 0,

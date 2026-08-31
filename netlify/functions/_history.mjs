@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { casDoc, readDoc, voteCounts, KEY } from './_lib.mjs';
+import { casDoc, readDoc, voteCounts, roomCounts, KEY } from './_lib.mjs';
 
 const HIST = KEY.hist;                  // flat key — INVARIANT 2
 const INDEX = KEY.histIdx;
@@ -88,6 +88,7 @@ export async function archiveShow(aid, show, fans) {
   const top = [...played].sort((a, b) => (b.votes || 0) - (a.votes || 0))[0] || requested[0] || null;
   const endedAt = Date.now();
 
+  const room = roomCounts(fans || {});
   const money = await moneyForShow(aid, showId, show.startedAt, endedAt);
 
   const doc = {
@@ -99,6 +100,9 @@ export async function archiveShow(aid, show, fans) {
       songsPlayed: played.length,
       totalVotes,
       peakVoters,
+      // phones that were in the room, not just phones that tapped
+      room: room.phones,
+      nets: room.nets,
       topSong: top ? { songId: top.songId, title: top.title, votes: top.votes || 0 } : null,
     },
     money,
@@ -118,7 +122,7 @@ export async function archiveShow(aid, show, fans) {
       showId, venue: doc.venue, city: doc.city,
       startedAt: doc.startedAt, endedAt,
       songsPlayed: doc.stats.songsPlayed, totalVotes: doc.stats.totalVotes,
-      peakVoters: doc.stats.peakVoters, gross: money.gross,
+      peakVoters: doc.stats.peakVoters, room: doc.stats.room, gross: money.gross,
     };
     const at = idx.shows.findIndex((x) => x.showId === showId);
     if (at >= 0) idx.shows[at] = row; else idx.shows.unshift(row);

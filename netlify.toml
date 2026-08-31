@@ -25,6 +25,19 @@
   status = 200
 
 [[redirects]]
+  from = "/venues"
+  to = "/venue-studio.html"
+  status = 200
+
+# Venue pages live under /v/ so the artist namespace stays a flat slug and
+# nothing has to move. `v` is reserved for artists, and so is any slug starting
+# with it, so the two can never shadow each other.
+[[redirects]]
+  from = "/v/:slug"
+  to = "/venue.html"
+  status = 200
+
+[[redirects]]
   from = "/:slug/vote"
   to = "/vote.html"
   status = 200

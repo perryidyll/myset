@@ -334,3 +334,77 @@ If you are about to violate one, stop and say so rather than working around it.
 
 17. **Verify from outside after deploying.** Check the live `myset.vip` URLs and the
     API, not the local files.
+
+## Venues
+
+0x. **A venue is a different account, not a role on an artist.** Separate registry
+    (`venues`), separate token tag (`v|…`), separate one-time-code realm. A bar has
+    opening hours and a menu and never runs a show; it must never be able to reach
+    an artist's setlist, votes, history or money. Making it a second registry makes
+    that structural instead of a permission check somebody forgets to write.
+    Verified: a venue token gets 401 from `/api/admin`, and the studio code gets
+    401 from `/api/venueadmin`.
+
+0y. **Nothing links a gig to a venue. The NAME does, inside the venue's own city.**
+    Artists type the venue by hand and type it differently every time ("The Ugly
+    Duckling", "Ugly Duckling Irish Pub ☘️🍻"), so `sameVenue()` compares
+    normalised words and accepts a containment match only when the shorter name is
+    **distinctive** — two words, or eight characters. Without that rule a venue
+    could register itself as "Beach" and claim every Beach Bar in town. An exact
+    match always counts, however short. Consequence worth keeping: a venue signing
+    up today already has its whole diary, with no backfill and no job to run.
+
+0z. **A page that isn't verified says so, and loses nothing else.** Asking for proof
+    before a page exists means no pages exist. Every venue page works fully; the
+    only difference is a grey `Unverified listing` chip instead of a green
+    `✓ Verified` one. See `VERIFYING-A-VENUE.md` — email-domain match and Perry's
+    own switch are built; artist vouching is the next one and the one that scales.
+
+0aa. **A venue's photos live under an owner key an artist can never hold.** Artist
+    ids and slugs are stripped to `[a-z0-9-]`, so the underscore in `v_<venueId>`
+    is unforgeable in either direction. `/api/img` branches on that pattern before
+    it does anything else.
+
+## Requests, and the room
+
+0ab. **Never charge money for a request.** Song requests and birthday shout-outs
+    cost VOTES. Charging cash to be played next is a different product with
+    different problems, and it breaks 0w (anything the room experiences stays
+    free).
+
+0ac. **Take the votes first, then write the request; refund if the write fails.**
+    The other order hands out free requests whenever the store is busy. Declining a
+    request refunds exactly once and clamps at zero, so a decline after the credits
+    have already refreshed cannot mint votes. Verified: a second decline returns
+    409 and the balance does not move.
+
+0ad. **A button the artist hasn't switched on is never shown.** Requests and
+    birthdays default OFF. A request the artist can't play is worse than no request
+    at all, and the audience must never tap something that leads to a shrug.
+
+0ae. **Count PHONES in the room, not networks.** The first version counted distinct
+    IP hashes, which is wrong in exactly the room this app is for: forty people at
+    a beach bar on the venue wifi came out as 1. A phone is much closer to a person
+    than a network is; the worst it does is count someone twice if they clear their
+    storage mid-gig. The network hash is kept alongside it as the defence against
+    one phone rotating its id, and is stored per show (`nets`).
+
+0af. **Presence is stamped once per device per show, only from the voting page.**
+    `/api/show` is polled by every phone in the room, so it must not write on the
+    poll. The stamp needs `in=1`, which only `vote.html` sends — a profile view or
+    the artist's own preview would otherwise inflate the head-count with people who
+    were never there. The IP is never stored, only a hash with the artist id mixed
+    in.
+
+## Addresses
+
+0ag. **There is no one link that opens in whichever map app a phone uses.** `geo:`
+    is the closest thing on paper and iOS Safari ignores it. So the server builds
+    BOTH an Apple and a Google URL from the stored address/coordinates, and the
+    page picks by platform. Nothing is guessed in the browser and no third party is
+    contacted to resolve a short link.
+
+0ah. **A bare venue name is not a location.** "The Ugly Duckling" on its own could
+    send somebody to Amsterdam, so `mapLinks()` returns null unless there are
+    coordinates, an address, or a name WITH a city — and the city and country always
+    go into the query. No Directions button is better than a wrong one.
