@@ -506,3 +506,28 @@ full-width gradient bar.
 
 **Premium tier proposals** (three, not yet chosen) are in the session scratchpad
 as `tier-reach.md`, `tier-money.md`, `tier-craft.md`.
+
+### SESSION 4 — 2026-08-31 (Studio responsiveness + polish)
+
+- **Duplicate gigs fixed at the root.** `act()`/gig writes take a `WRITING` lock,
+  `api()` shows a blocking busy overlay after 140ms, and `/api/admin` now returns
+  `stagePayload` so a tap is ONE round trip, not two. Perry's four duplicate
+  records were reset to the single weekly residency.
+- Gig **end times** (`endTime` in, `durationMin` stored; an end before the start
+  means past midnight). Sheet fields are visible against the sheet. The grab
+  handle drags to close. Selected tab pill gets the accent ring.
+- A cancelled night can be **hidden for good** (`eventHide`); the skip stays on
+  the rule so it cannot return, and restoring un-hides. Hiding a ONE-OFF deletes
+  it outright.
+- Replay cost takes any number. Tagline placeholder is "Make my set your set".
+- Homepage country/city are **comboboxes** (type to filter or tap to browse, gig
+  count on every option), replacing the selects.
+- **artist.html restored to the first build's layout**: cover + live pill, XL
+  portrait with up to 3 clustered photos (`profile.avatar`, `profile.photos[]`),
+  big name below, stats row with the red Join live button. Stats are real
+  (shows / people / songs) — no invented follower count.
+- Pricing tiers published as an Artifact:
+  https://claude.ai/code/artifact/13157da5-d358-4506-90cf-7612a4fe3645
+
+**Note:** tonight (2026-08-31) is marked CANCELLED on his residency — he tapped
+the ✕ while testing. Restore it from Studio → Gigs if that was accidental.

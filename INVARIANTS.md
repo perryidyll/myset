@@ -112,6 +112,17 @@ If you are about to violate one, stop and say so rather than working around it.
     against a reserved list (`api`, `studio`, `vote`, `signup`, …) so an artist
     can never claim a route.
 
+## Responsiveness
+
+0k. **A write blocks the screen and ignores a second tap.** Tapping "Add it" four
+    times because nothing appeared to happen created four gigs. `act()` and every
+    gig write take a `WRITING` lock, and `api()` raises a full-screen busy state
+    after 140ms (fast calls never flash it).
+
+0l. **A write returns the fresh state with it.** `/api/admin` includes the
+    `stagePayload`, so the Studio does one round trip per tap, not two. That
+    second fetch was most of the perceived lag.
+
 ## Gigs and the city feed
 
 0e. **Gigs are rules, not instances.** A weekly residency is one record. Expansion
