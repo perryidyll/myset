@@ -228,6 +228,20 @@ const LINK_HOSTS = {
   google: null,          // a Google Business / Maps listing — checked by safeMapUrl
   website: null,
 };
+/* `website` accepts any https host, so it is the only link field that could be
+   pointed at something on the reader's own network. A hostname that RESOLVES to a
+   private address is caught by the fetch guard in _verify.mjs; this catches the
+   literal ones on the way in, so nothing daft is ever stored or rendered. */
+const privateHost = (h) =>
+  h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local')
+  || h.endsWith('.internal') || h.endsWith('.home.arpa')
+  || /^(10|127|0)\./.test(h)
+  || /^169\.254\./.test(h)
+  || /^192\.168\./.test(h)
+  || /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+  || /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(h)
+  || h.includes(':');                       // a bare IPv6 literal is never a website
+
 function safeVLink(kind, raw) {
   const v = String(raw || '').trim();
   if (!v) return '';
@@ -236,6 +250,7 @@ function safeVLink(kind, raw) {
   try { u = new URL(v); } catch { return ''; }
   if (u.protocol !== 'https:') return '';
   const host = u.hostname.toLowerCase().replace(/\.$/, '');
+  if (privateHost(host)) return '';
   const allow = LINK_HOSTS[kind];
   if (allow && !allow.includes(host)) return '';
   u.hash = '';

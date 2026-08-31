@@ -5,3 +5,7 @@ node_modules/
 .netlify/
 archive/
 design-handoff/
+
+# Throwaway harnesses. Twice now one of these has ridden along in a commit
+# because `git add -A` is indiscriminate — the name is reserved so it can't again.
+_tmp_*
