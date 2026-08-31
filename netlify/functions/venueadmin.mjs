@@ -25,9 +25,17 @@ export default async (req) => {
   const vid = me.vid;
   const action = body.action;
 
-  const send = async () =>
-    json({ ok: true, venue: shapeVenue(await getVenueProfile(vid), await venueById(vid)),
-           amenities: AMENITIES.map(([key, label]) => ({ key, label })) });
+  /* The vouch count travels with every response, so the checklist can show the
+     real number the moment the tab opens — it used to read 0 until somebody
+     happened to run the website check. */
+  const send = async () => {
+    const [prof, reg, vouches] = await Promise.all([
+      getVenueProfile(vid), venueById(vid), readVouches(vid)]);
+    const names = Object.values(vouches.by || {}).map((x) => x.name).filter(Boolean);
+    return json({ ok: true, venue: shapeVenue(prof, reg),
+                  vouches: { count: names.length, need: MIN_VOUCHES, names: names.slice(0, 12) },
+                  amenities: AMENITIES.map(([key, label]) => ({ key, label })) });
+  };
 
   if (action === 'get') return send();
 

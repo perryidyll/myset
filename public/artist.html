@@ -33,23 +33,31 @@ body{padding-bottom:34px}
 .livepill .dot{background:#fff;width:7px;height:7px}
 
 /* portrait + cluster, overlapping the cover */
-.phead{display:flex;align-items:flex-end;gap:16px;margin:0 20px;position:relative;z-index:2}
+/* right margin matches .pcover's 18px so the text lines up with the cover's edge;
+   left stays at 20px, where the photo cluster wants to be */
+.phead{display:flex;align-items:flex-end;gap:16px;margin:0 18px 0 20px;position:relative;z-index:2}
 /* The three extras sit in a column to the LEFT of the portrait — scattered
    around it they collided with the name and the cover's own artwork. */
 .cluster{margin-top:-46px;display:flex;align-items:flex-end;gap:9px}
 .strip{display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
-/* Only the TOP one moves, and it moves with a transform — so the portrait, the
-   name and the other two photos stay exactly where they were. It slides right
-   far enough to sit over the portrait's top-left corner, which breaks the flat
-   column into a bit of motion. */
-.strip .pth:nth-child(1){transform:translateX(28px);position:relative;z-index:3}
+/* The small photos sit ON the portrait, not beside it.
+     · the bottom two stay put and poke about a third of their width over the
+       portrait's left edge
+     · the top one is nudged right so its CENTRE lands on the bottom two's right
+       edge, which is what turns the flat column into an arc
+   The portrait is pulled left with a negative margin rather than a negative gap
+   (there is no such thing), and the whole strip sits above it. */
+.strip .pth:nth-child(1){transform:translateX(20px)}
+.strip .pth{position:relative;z-index:3}
 .cluster{flex:0 0 auto}
 .pav{width:112px;height:112px;border-radius:26px;background-size:cover;background-position:center;
-  border:4px solid var(--bg);box-shadow:var(--sh-3);flex:0 0 auto}
+  border:4px solid var(--bg);box-shadow:var(--sh-3);flex:0 0 auto;position:relative;z-index:1}
+.cluster:not(.solo) .pav{margin-left:-22px}
 .cluster.solo .pav{width:120px;height:120px;border-radius:28px}
 .pth{width:40px;height:40px;border-radius:13px;background-size:cover;background-position:center;
   border:3px solid var(--bg);box-shadow:var(--sh-2)}
-.pname{flex:1;min-width:0;padding-bottom:2px;display:flex;flex-direction:column;justify-content:flex-end;
+/* padding-top so the name isn't jammed against the bottom of the cover */
+.pname{flex:1;min-width:0;padding:22px 0 2px;display:flex;flex-direction:column;justify-content:flex-end;
   min-height:96px}
 .pname h1{font-size:28px;font-weight:700;letter-spacing:-.038em;line-height:1.08;margin:0;color:var(--ink)}
 .pname p{margin:7px 0 0;font-size:14.5px;color:var(--muted);font-weight:500;line-height:1.4}
@@ -137,8 +145,8 @@ body{padding-bottom:34px}
 /* icon-only inside a row, where the words would cost the venue name its line */
 .dirs.ico{width:38px;height:38px;padding:0;border-radius:50%}
 .dirs.ico svg{width:17px;height:17px}
-.tonight .go{display:flex;padding:0 20px 18px}
-.tonight .go .dirs{flex:1}
+.tonight .dirsrow{display:flex;padding:0 20px 18px}
+.tonight .dirsrow .dirs{flex:1}
 .seemore{width:100%;padding:15px;border-top:.5px solid var(--hair);font-size:14.5px;font-weight:600;
   color:var(--accent-ink);background:none}
 .more[hidden]{display:none}
@@ -317,7 +325,7 @@ function render(){
         <div class="when"><b>${fmtTime(ng.time)}</b><span>${whenWord(ng.date)}</span></div>
         <div class="where"><b>${esc(ng.venue)}</b><span>${esc(ng.address||[ng.city,ng.country].filter(Boolean).join(', '))}</span></div>
       </div>
-      ${ng.maps?`<div class="go">${dirBtn(ng.maps)}</div>`:''}
+      ${ng.maps?`<div class="dirsrow">${dirBtn(ng.maps)}</div>`:''}
     </div>`;
   }
 

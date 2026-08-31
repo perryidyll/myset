@@ -2,6 +2,9 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS } from './_lib.mjs';
 import { readRequests, shapeRequests, resolveRequest, attachSong } from './_requests.mjs';
+import { readArtists, mutateArtists } from './_auth.mjs';
+import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
+import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
 import { archiveShow } from './_history.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
@@ -18,6 +21,7 @@ async function handlePlan(aid, action, body) {
 
   if (action === 'planGet') {
     return json({ ok: true, plan, limits: shapeLimits(limits),
+                  shareStats: !artist || artist.shareStats !== false,
                   until: (artist && artist.planUntil) || null,
                   comped: !!(artist && artist.compedBy),
                   discountPct: (artist && artist.discountPct) || 0,
@@ -26,6 +30,21 @@ async function handlePlan(aid, action, body) {
   }
 
   if (action === 'promoRedeem') return json(await redeemPromo(aid, body.code));
+
+  /* A venue seeing how many people turned up to a show IN THEIR OWN ROOM is the
+     single biggest reason a venue signs up — and it is still the artist's data.
+     Default on, because the ecosystem needs it; their switch, because it's
+     theirs. Money is never in that payload at all. */
+  if (action === 'shareStats') {
+    await mutateArtists((r) => {
+      const a = r.byId[aid];
+      if (!a) return false;
+      a.shareStats = body.on !== false;
+      return true;
+    });
+    const r = await readArtists();
+    return json({ ok: true, shareStats: (r.byId[aid] || {}).shareStats !== false });
+  }
 
   /* ---- owner only, from here ---- */
   if (!isPlatformOwner(aid)) return bad('unauthorized', 401);
@@ -98,7 +117,7 @@ const shapeLimits = (l) => ({
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
 });
 const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke',
-                              'venueList', 'venueVerify']);
+                              'venueList', 'venueVerify', 'shareStats']);
 
 /* The gig calendar. Events are their own document, so these short-circuit too.
    Every write reindexes the artist's cities, which is what keeps the public
@@ -201,6 +220,53 @@ async function handleEvents(aid, action, body) {
   return bad('unknown action', 400);
 }
 const EVENT_ACTIONS = new Set(['eventList', 'eventSave', 'eventDelete', 'eventSkip', 'eventHide']);
+
+/* An artist asking a venue for a spot, and an artist confirming they play at one.
+   Both need an artist session — that IS the feature. A venue gets a link to a
+   real page with real numbers on it instead of a bio and a promise, and a vouch
+   means somebody with their own account and their own gig history. */
+async function handleVenueSide(aid, action, body) {
+  const { venueBySlug, venueById, getVenueProfile, shapeVenue } = await import('./_venues.mjs');
+  const reg = await readArtists();
+  const me = reg.byId[aid] || {};
+
+  if (action === 'pitchList')
+    return json({ ok: true, pitches: await shapeForArtist(aid) });
+
+  const slug = String(body.venue || '').slice(0, 40);
+  if (!slug) return bad('which venue?', 400);
+  const vid = await venueBySlug(slug);
+  if (!vid) return bad('unknown venue', 404);
+  const venue = shapeVenue(await getVenueProfile(vid), await venueById(vid));
+
+  if (action === 'pitchStatus') {
+    const [d, vouches, canVouch] = await Promise.all([
+      readPitches(vid), readVouches(vid), artistPlaysAt(aid, venue)]);
+    const mine = (d.list || []).find((x) => x.aid === aid);
+    return json({ ok: true,
+      sent: !!mine, status: mine ? mine.status : null, message: mine ? mine.message : '',
+      canVouch, vouched: !!(vouches.by || {})[aid],
+      vouches: Object.keys(vouches.by || {}).length, need: MIN_VOUCHES,
+      venue: { name: venue.name, slug: venue.slug, verified: venue.verified } });
+  }
+
+  if (action === 'pitchSend') {
+    const r = await sendPitch({ vid, venueName: venue.name, venueSlug: venue.slug, aid,
+                                artist: { slug: me.slug || '', name: me.name || '' },
+                                message: body.message });
+    if (!r.ok) return bad(r.error);
+    return json({ ok: true, already: r.already, updated: r.updated,
+                  pitches: await shapeForArtist(aid) });
+  }
+
+  if (action === 'vouch') {
+    const r = await addVouch(vid, aid, { slug: me.slug || '', name: me.name || '' }, venue);
+    if (!r.ok) return bad(r.error);
+    return json({ ok: true, ...r });
+  }
+  return bad('unknown action', 400);
+}
+const VENUE_SIDE = new Set(['pitchList', 'pitchStatus', 'pitchSend', 'vouch']);
 
 /* Requests live in their own document, so accepting or declining one never
    rewrites the show — except for `askAccept`, which has to add a song. */
@@ -408,6 +474,7 @@ export default async (req) => {
   const action = body.action;
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
+  if (VENUE_SIDE.has(action)) return handleVenueSide(aid, action, body);
   if (ASK_ACTIONS.has(action)) return handleAsks(aid, action, body);
   if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
   if (PLAN_ACTIONS.has(action)) return handlePlan(aid, action, body);

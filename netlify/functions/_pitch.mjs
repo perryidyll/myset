@@ -41,14 +41,17 @@ export async function readSent(aid) {
 export async function sendPitch({ vid, venueName, venueSlug, aid, artist, message }) {
   const msg = clean(message, 400);
   const id = 'p' + Math.random().toString(36).slice(2, 10);      // outside the CAS
-  let already = false, full = false;
+  let already = false, full = false, changed = false;
 
   await casDoc(VK(vid), emptyPitches, (d) => {
     d.list = Array.isArray(d.list) ? d.list : [];
     const mine = d.list.find((x) => x.aid === aid);
     if (mine) {
       already = true;
-      if (msg && msg !== mine.message) { mine.message = msg; mine.at = Date.now(); return true; }
+      // resending the identical text is not a change, and must not say it was
+      if (msg && msg !== mine.message) {
+        mine.message = msg; mine.at = Date.now(); changed = true; return true;
+      }
       return false;
     }
     if (d.list.length >= MAX_PITCHES) { full = true; return false; }
@@ -68,7 +71,7 @@ export async function sendPitch({ vid, venueName, venueSlug, aid, artist, messag
     return true;
   }).catch(() => {});
 
-  return { ok: true, already, updated: already && !!msg };
+  return { ok: true, already, updated: changed };
 }
 
 export async function setPitchStatus(vid, id, status) {

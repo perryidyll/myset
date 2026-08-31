@@ -49,7 +49,7 @@ a{color:inherit;text-decoration:none}
   background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1);
   overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:1;padding:10px 8px;font-size:13px;font-weight:600;color:var(--muted);
+.tabs button{flex:0 0 auto;padding:10px 13px;font-size:13px;font-weight:600;color:var(--muted);
   white-space:nowrap;letter-spacing:-.015em;border-radius:var(--pill);
   transition:background .25s var(--ease),color .2s var(--ease)}
 .tabs button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
@@ -93,6 +93,17 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .tog button{padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:var(--pill)}
 .tog button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)}
 
+.stats{display:flex;gap:11px;margin:16px 18px 0}
+.stats .c{flex:1;background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1);padding:14px 12px}
+.stats b{display:block;font-size:23px;font-weight:700;letter-spacing:-.03em}
+.stats span{font-size:11.5px;color:var(--muted);font-weight:500;line-height:1.3;display:block;margin-top:2px}
+.cnt{flex:0 0 auto;min-width:30px;text-align:right}
+/* the headline number of the whole tab, so it looks like one */
+.avg{flex:0 0 auto;text-align:center;min-width:52px}
+.avg b{display:block;font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1;
+  color:var(--accent);font-variant-numeric:tabular-nums}
+.avg span{display:block;font-size:10px;color:var(--faint);font-weight:600;margin-top:3px;
+  letter-spacing:.03em}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{padding:10px 15px;border-radius:var(--pill);background:var(--surface);font-size:14px;font-weight:500;
   box-shadow:var(--sh-1);transition:transform .2s var(--spring);text-align:left}
@@ -153,7 +164,22 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .gate h2{font-size:29px;font-weight:700;letter-spacing:-.03em;margin:0 0 8px}
 .note{margin:16px 18px 0;padding:16px 18px;border-radius:var(--r);background:var(--accent-soft);
   box-shadow:inset 0 0 0 1px rgba(255,69,110,.28)}
-.note b{display:block;font-size:15.5px;font-weight:600;color:var(--accent)}
+.note>b{display:block;font-size:15.5px;font-weight:600;color:var(--accent)}
+.note p b{font-weight:600;color:var(--ink)}
+.note.ok{background:rgba(48,209,88,.12);box-shadow:inset 0 0 0 1px rgba(48,209,88,.3)}
+.note.ok>b{color:var(--good)}
+.note i{font-style:italic}
+.ck{display:flex;align-items:flex-start;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
+.ck:first-child{border-top:none}
+.ck .bx{flex:0 0 auto;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
+  background:var(--surface-2);box-shadow:inset 0 0 0 1.5px var(--hair-2);
+  font-size:13px;font-weight:700;color:var(--faint);margin-top:1px}
+.ck.on .bx{background:var(--good);color:#04220d;box-shadow:none}
+.ck .m{flex:1;min-width:0}
+.ck .m b{display:block;font-size:15px;font-weight:500;letter-spacing:-.012em;line-height:1.3}
+.ck.on .m b{color:var(--ink)}
+.ck .m span{display:block;font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.4;
+  word-break:break-word}
 .note p{margin:5px 0 0;font-size:13.5px;color:var(--ink-2);line-height:1.45}
 .bg{position:fixed;inset:0;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;z-index:60;
   transition:opacity .3s var(--ease)}
@@ -201,6 +227,7 @@ const $=s=>document.querySelector(s), API='/api';
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 let TOKEN=localStorage.getItem('myset.vtoken')||'';
 let V=null, ME=null, SHOWS=null, AMEN=[];
+let EVENTS=null, PITCHES=null, STATS=null, VERIFY=null, VOUCH=null;
 let TAB=localStorage.getItem('myset.vtab')||'page';
 
 let BUSY=0,BUSY_T=null;
@@ -295,8 +322,9 @@ async function loadVenue(){
     if(d.error==='unauthorized'){ TOKEN=''; localStorage.removeItem('myset.vtoken'); }
     gate(d.error); return;
   }
-  V=d.venue; AMEN=d.amenities||[]; render();
-  if(TAB==='shows') loadShows();
+  V=d.venue; AMEN=d.amenities||[]; VOUCH=d.vouches||VOUCH; render();
+  if(TAB==='shows'){ loadShows(); loadEvents(); loadPitches(); }
+  if(TAB==='numbers') loadStats();
 }
 async function loadMe(){ ME=await post('/venueauth',{action:'list'}); if(V)render(); }
 async function loadShows(force){
@@ -307,7 +335,28 @@ async function loadShows(force){
   if(TAB==='shows'&&V)render();
 }
 function setTab(t){ TAB=t; localStorage.setItem('myset.vtab',t); render();
-  if(t==='shows') loadShows(); }
+  if(t==='shows'){ loadShows(); loadEvents(); loadPitches(); }
+  if(t==='numbers') loadStats();
+  if(t==='page') loadVerify(); }
+
+async function loadEvents(force){
+  if(EVENTS&&!force)return;
+  EVENTS=await post('/venueadmin',{action:'eventList'});
+  if(TAB==='shows'&&V)render();
+}
+async function loadPitches(force){
+  if(PITCHES&&!force)return;
+  PITCHES=await post('/venueadmin',{action:'pitchList'});
+  if(TAB==='shows'&&V)render();
+}
+async function loadStats(force){
+  if(STATS&&!force)return;
+  STATS=await post('/venueadmin',{action:'stats'});
+  if(TAB==='numbers'&&V)render();
+}
+/* Deliberately NOT run on load: it fetches the venue's website, and doing that
+   on every page open would hammer a stranger's server. It runs when they ask. */
+async function loadVerify(){ if(VERIFY===null) VERIFY=undefined; }
 
 let WRITING=false;
 async function save(body,msg){
@@ -315,7 +364,7 @@ async function save(body,msg){
   try{
     const d=await post('/venueadmin',body);
     if(!d.ok){toast(d.error||'Failed');return d;}
-    V=d.venue; AMEN=d.amenities||AMEN; render();
+    V=d.venue; AMEN=d.amenities||AMEN; if(d.vouches) VOUCH=d.vouches; render();
     if(msg)toast(msg);
     return d;
   } finally{ WRITING=false; }
@@ -334,16 +383,18 @@ async function savePage(){
   // a link that isn't a map link is dropped on the way in — say so rather than
   // letting it look saved
   if(typedMap&&!(V.maps&&V.maps.source)) toast('Saved — but that wasn’t a Google or Apple Maps link');
-  SHOWS=null; loadShows(true);          // city may have changed, so the diary changes
-  if(val('lkWeb')) checkDomain(true);
+  SHOWS=null; EVENTS=null; STATS=null;   // the place changed, so everything derived does
+  loadShows(true); loadEvents(true);
+  if(val('lkWeb')) autoVerify();
 }
-async function checkDomain(quiet){
-  const d=await post('/venueauth',{action:'checkDomain'});
+/* Saving a website is the moment to check it, so verification can happen without
+   the venue ever having to look for a button. Quiet: it only speaks up on a win. */
+async function autoVerify(){
+  const d=await post('/venueadmin',{action:'verifyCheck'});
   if(!d.ok)return;
-  if(d.matched){ await loadVenue(); toast('Verified — your email matches your website 🎉'); }
-  else if(!quiet) toast(d.website
-    ? 'That email isn’t on your website’s domain, so this stays a listing for now'
-    : 'Add your website first, then try again');
+  VERIFY=d;
+  if(d.verified){ await loadVenue(); toast('Verified — your website checks out 🎉'); }
+  else render();
 }
 
 /* ── render ─────────────────────────────────────────────── */
@@ -353,8 +404,7 @@ function render(){
 
   if(TAB==='page'){
     body=`
-    ${V.verified?'':`<div class="note"><b>Unverified listing</b>
-      <p>Your page is live either way. It says “unverified” until we can tell it’s really yours — the fastest way is an email at your own website’s domain (see Settings).</p></div>`}
+    ${verifyBlock()}
 
     <div class="sec"><span class="kick">Cover photo</span></div>
     <div class="wrap"><div class="slots">${slotBox('cover',V.photo,'wide')}</div>
@@ -427,23 +477,92 @@ function render(){
   }
 
   if(TAB==='shows'){
-    const gigs=(SHOWS&&SHOWS.ok?SHOWS.gigs:null);
+    const music=(SHOWS&&SHOWS.ok?(SHOWS.gigs||[]).filter(g=>g.kind!=='event'):null);
+    const occ=(EVENTS&&EVENTS.ok?(EVENTS.occurrences||[]):null);
+    const rules=(EVENTS&&EVENTS.ok?(EVENTS.events||[]):[]);
+    const pitches=(PITCHES&&PITCHES.ok?(PITCHES.pitches||[]):null);
+    const waiting=(pitches||[]).filter(p=>p.status==='new');
+
     body=`
-    <div class="note"><b>These fill themselves in</b>
-      <p>Artists keep their own gig calendars in MySet. Any gig at a venue name matching <b>${esc(V.name||'yours')}</b> in ${esc([V.city,V.country].filter(Boolean).join(', ')||'your city')} appears here and on your public page automatically. Nothing for you to type.</p></div>
-    ${gigs===null?`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Looking…</div></div>`
-     :!gigs.length?`<div class="sec"><span class="kick">Nothing listed yet</span></div>
-      <div class="list"><div class="row muted">No gigs point here yet. Two things to check: your <b>name</b>, and your <b>city and country</b> — they have to match what the artists type.</div></div>
-      <div class="wrap" style="margin-top:16px"><button class="big alt" onclick="shareInvite()">Invite the acts who play here</button></div>`
-     :`<div class="sec"><span class="kick">Coming up</span><span class="kick">${gigs.length}</span></div>
-      <div class="list">${gigs.map(g=>`<div class="row">
+    <div class="note"><b>The music fills itself in</b>
+      <p>Artists keep their own gig calendars in MySet. Any gig at a venue name matching <b>${esc(V.name||'yours')}</b> in ${esc([V.city,V.country].filter(Boolean).join(', ')||'your city')} appears here and on your public page automatically. Nothing for you to type. Everything else — quiz night, a DJ, the football — you add below.</p></div>
+
+    <div class="sec"><span class="kick">Live music</span><span class="kick">${music?music.length:''}</span></div>
+    ${music===null?`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Looking…</div></div>`
+     :!music.length?`<div class="list"><div class="row muted">No gigs point here yet. Two things to check: your <b>name</b>, and your <b>city and country</b> — they have to match what the artists type.</div></div>`
+     :`<div class="list">${music.map(g=>`<div class="row">
         <div class="m"><div class="t">${esc(g.artist)}${g.live?' · on now':''}</div>
           <div class="by">${esc(dowName(g.date))} ${dayMonth(g.date)} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}</div>
           <div class="s">Listed as “${esc(g.listedAs)}”${g.repeating?' · repeats':''}</div></div>
         <a class="act" href="/${esc(g.slug)}" target="_blank">Page</a>
+      </div>`).join('')}</div>`}
+    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="shareInvite()">Invite acts to list their gigs here</button></div>
+
+    <div class="sec"><span class="kick">Your own events</span><span class="kick">${occ?occ.length:''}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Quiz night, a DJ, the football, a full-moon party. Enter a weekly one <b>once</b> — it repeats itself, shows on your page, and goes into the local “what’s on tonight” feed like a gig does.</p>
+    ${occ===null?`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`
+     :!occ.length?`<div class="list"><div class="row muted">Nothing yet. Tap below — a weekly quiz only needs entering once.</div></div>`
+     :`<div class="list">${occ.slice(0,40).map(o=>`<div class="row">
+        <div class="m"><div class="t">${esc(o.title||'Event')}${o.startsAt<=Date.now()&&o.endsAt>Date.now()?' · on now':''}</div>
+          <div class="by">${esc(dowName(o.date))} ${dayMonth(o.date)} · ${fmtTime(o.time)}${o.endTime?'–'+fmtTime(o.endTime):''}</div>
+          ${o.repeating?'<div class="s">Repeats</div>':''}</div>
+        <button class="act" data-act="evedit" data-id="${esc(o.eventId)}">Edit</button>
+        <button class="act warn" data-act="evskip" data-id="${esc(o.eventId)}|${o.date}">✕</button>
+      </div>`).join('')}</div>`}
+    <div class="wrap" style="margin-top:14px"><button class="big" onclick="openEvent()">+ Add an event</button></div>
+    ${rules.length?`<p class="muted" style="font-size:12px;padding:12px 20px 0">✕ cancels one night. Edit changes the whole run.</p>`:''}
+
+    <div class="sec"><span class="kick">Who wants to play here</span>${waiting.length?`<span class="kick" style="color:var(--accent)">${waiting.length} new</span>`:''}</div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Artists can ask for a spot from your public page. You get their MySet page and their real numbers — nights played, people in the room, votes cast — instead of a bio and a promise.</p>
+    ${pitches===null?`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`
+     :!pitches.length?`<div class="list"><div class="row muted">Nobody yet. The button is on your public page — the more acts see it, the more you’ll get.</div></div>`
+     :`<div class="list">${pitches.map(p=>`<div class="row ${p.status==='nope'?'off':''}">
+        <div class="m"><div class="t">${esc(p.name)}${p.status==='keen'?' · you said keen':p.status==='nope'?' · passed':''}</div>
+          <div class="by">${p.stats.nights} night${p.stats.nights===1?'':'s'} · ${p.stats.people} in the room · ${p.stats.votes} votes · ${p.stats.songs} songs</div>
+          ${p.message?`<div class="s">“${esc(p.message)}”</div>`:''}</div>
+        <a class="act" href="/${esc(p.slug)}" target="_blank">Page</a>
+        ${p.status==='new'?`<button class="act pri" data-act="pkeen" data-id="${esc(p.id)}">Keen</button>
+          <button class="act warn" data-act="pnope" data-id="${esc(p.id)}">✕</button>`
+         :`<button class="act" data-act="pnew" data-id="${esc(p.id)}">Undo</button>`}
+      </div>`).join('')}</div>`}
+    <p class="muted" style="font-size:12px;padding:16px 20px 0">Marking someone <b>Keen</b> shows on their own MySet studio, so they know to get in touch. Nobody’s email is shared either way.</p>`;
+  }
+
+  if(TAB==='numbers'){
+    const S=STATS;
+    body=!S?`<div class="list" style="margin-top:16px"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Adding it up…</div></div>`
+     :!S.totals.nights?`<div class="note"><b>Nothing to count yet</b>
+        <p>These numbers come from shows that actually ran at your place with MySet on. After the first one, this fills in — by night and by act.</p></div>
+        ${S.hidden?`<p class="muted" style="font-size:12px;padding:14px 20px 0">${S.hidden} act${S.hidden===1?'':'s'} here ${S.hidden===1?'has':'have'} switched sharing off.</p>`:''}`
+     :`
+      <div class="stats">
+        <div class="c"><b class="mono">${S.totals.people}</b><span>People in the room</span></div>
+        <div class="c"><b class="mono">${S.totals.votes}</b><span>Votes cast</span></div>
+        <div class="c"><b class="mono">${S.totals.nights}</b><span>Nights</span></div>
+      </div>
+      <p class="muted" style="font-size:12px;padding:12px 20px 0;margin:0">${S.totals.acts} act${S.totals.acts===1?'':'s'}${S.first?` · since ${dayMonth(S.first)}`:''}. Phones that opened the voting page in your room, not just people who tapped.${S.hidden?` ${S.hidden} act${S.hidden===1?'':'s'} switched sharing off.`:''}</p>
+      ${S.busiest?`<div class="note ok" style="margin-top:16px"><b>Busiest night: ${esc(S.busiest.artist)}</b>
+        <p>${dowName(S.busiest.date)} ${dayMonth(S.busiest.date)} — ${S.busiest.people} people, ${S.busiest.votes} votes.</p></div>`:''}
+
+      <div class="sec"><span class="kick">By act</span></div>
+      <div class="list">${S.byAct.map((a,i)=>`<div class="row">
+        <div class="m"><div class="t">${i+1}. ${esc(a.name)}</div>
+          <div class="by">${a.nights} night${a.nights===1?'':'s'} · ${a.people} people · ${a.votes} votes</div>
+          ${a.best?`<div class="s">Best: ${a.best.people} on ${dayMonth(a.best.date)}</div>`:''}</div>
+        <div class="avg"><b>${a.nights?Math.round(a.people/a.nights):0}</b><span>avg/night</span></div>
+        <a class="act" href="/${esc(a.slug)}" target="_blank">Page</a>
       </div>`).join('')}</div>
-      <div class="wrap" style="margin-top:16px"><button class="big alt" onclick="shareInvite()">Invite more acts</button></div>`}
-    <p class="muted" style="font-size:12px;padding:16px 20px 0">Something listed here that isn’t yours? That’s an artist typing a name close to yours — tell us and we’ll sort it.</p>`;
+      <p class="muted" style="font-size:12px;padding:10px 20px 0">The big number is the <b>average people per night</b> — that’s the one that tells you who fills the room.</p>
+
+      <div class="sec"><span class="kick">By night</span></div>
+      <div class="list">${S.byNight.slice(0,40).map(n=>`<div class="row">
+        <div class="m"><div class="t">${esc(n.artist)}</div>
+          <div class="by">${dowName(n.date)} ${dayMonth(n.date)}</div></div>
+        <div style="text-align:right;flex:0 0 auto">
+          <div class="t mono">${n.people}</div>
+          <div class="s">${n.votes} votes</div></div>
+      </div>`).join('')}</div>
+      <p class="muted" style="font-size:12px;padding:14px 20px 0">What each artist earned is <b>not</b> here and never will be — that’s their business. Any act can switch these numbers off from their own studio.</p>`;
   }
 
   if(TAB==='menu'){
@@ -490,10 +609,11 @@ function render(){
     <div class="sec"><span class="kick">Verification</span></div>
     ${V.verified
       ? `<div class="list"><div class="row"><div class="m"><div class="t">Verified ✓</div>
-          <div class="s">${V.verifiedVia==='domain'?'Matched your website’s domain':'Checked by MySet'}</div></div>
+          <div class="s">${V.verifiedVia==='website'?'Your email is on your website’s domain, and the site names your venue'
+            :V.verifiedVia==='artists'?'Ten artists who play here confirmed it':'Checked by MySet'}</div></div>
           <span class="pill ok">✓</span></div></div>`
-      : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Fastest way: sign in with an email at your own website’s domain (like you@yourbar.com), add the website above, and tap below. Otherwise we’ll check it by hand — a page works fine either way, it just says “unverified listing”.</p>
-         <div class="wrap"><button class="big alt" onclick="checkDomain()">Check my email against my website</button></div>`}
+      : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Your page says <b>Unverified listing</b> for now. There are two ways to change that and you only need one — the full checklist, with what’s missing, is at the top of the <b>Page</b> tab.</p>
+         <div class="wrap"><button class="big alt" onclick="setTab('page')">Show me the checklist</button></div>`}
 
     <div class="sec"><span class="kick">Codes to print</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">On tables, on the bar, by the door. Tap one to bring it up full size.</p>
@@ -529,7 +649,8 @@ function render(){
   <div class="tabs">
     <button class="${TAB==='page'?'on':''}" onclick="setTab('page')">Page</button>
     <button class="${TAB==='shows'?'on':''}" onclick="setTab('shows')">What’s on</button>
-    <button class="${TAB==='menu'?'on':''}" onclick="setTab('menu')">Menu &amp; offers</button>
+    <button class="${TAB==='numbers'?'on':''}" onclick="setTab('numbers')">Numbers</button>
+    <button class="${TAB==='menu'?'on':''}" onclick="setTab('menu')">Menu</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${body}
   <div class="wrap" style="padding-top:26px;padding-bottom:8px">
@@ -539,6 +660,72 @@ function render(){
   document.querySelectorAll('input[data-hday]').forEach(el=>
     el.addEventListener('change',()=>save({action:'hours',day:el.dataset.hday,
       [el.dataset.hfield]:el.value},'Hours saved')));
+}
+
+/* ── verification ───────────────────────────────────────
+   Shown as a CHECKLIST, not a yes/no, because "unverified" with no explanation
+   is just a shrug. Every line says exactly what is missing and what to do. */
+function verifyBlock(){
+  if(V.verified) return `<div class="note ok"><b>✓ Verified</b>
+    <p>${V.verifiedVia==='website'?'Your sign-in email is on your website’s domain, and the site names your venue.'
+      :V.verifiedVia==='artists'?'Ten artists who play here confirmed it.'
+      :'Checked by MySet.'} The green tick shows on your public page.</p></div>`;
+
+  const C=(VERIFY&&VERIFY.checks)||{};
+  const site=(V.links||{}).website||'';
+  const dom=site?(()=>{try{return new URL(site).hostname.replace(/^www\./,'')}catch(e){return ''}})():'';
+  // straight off the record, so it is right before any check has been run
+  const vouches=(VOUCH&&VOUCH.count)||0, need=(VOUCH&&VOUCH.need)||10;
+  const names=(VERIFY&&VERIFY.vouchedBy)||(VOUCH&&VOUCH.names)||[];
+  const line=(on,label,hint)=>`<div class="ck ${on?'on':''}">
+    <span class="bx">${on?'✓':''}</span>
+    <span class="m"><b>${label}</b>${hint?`<span>${hint}</span>`:''}</span></div>`;
+
+  return `<div class="note"><b>Unverified listing</b>
+    <p>Your page works completely either way — this only changes a grey chip to a
+       green tick, so people know the details came from you and not from a stranger.
+       There are two ways to get it, and you only need <b>one</b>.</p></div>
+
+  <div class="sec"><span class="kick">Way 1 — your website</span></div>
+  <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Both of these have to be true. Together they mean you control the venue’s domain <i>and</i> its website — that’s what makes it proof rather than a claim.</p>
+  <div class="list">
+    ${line(!!site,'Your website is on your page', site?esc(site):'Add it on this tab, under “Getting hold of you”')}
+    ${line(!!C.emailOnDomain,'You’re signed in with an email at that domain',
+      dom?`You’re <b>${esc((VERIFY&&VERIFY.email)||'')}</b> — needs to be <b>anything@${esc(dom)}</b>`
+         :'Add your website first')}
+    ${line(!!C.siteNamesVenue,'Your website names your venue',
+      VERIFY?(C.siteNamesVenue?`We found “${esc(V.name)}” on the page`
+        :(VERIFY.why?`Couldn’t read the site (${esc(VERIFY.why)})`:`We read the page and couldn’t find “${esc(V.name)}” on it`))
+        :'Not checked yet — tap below')}
+    ${VERIFY&&C.siteNamesTown?line(true,'…and your town','A bonus, not required'):''}
+  </div>
+  <div class="wrap" style="margin-top:14px">
+    <button class="big alt" onclick="runVerify()">${VERIFY?'Check again':'Check my website now'}</button>
+  </div>
+  ${VERIFY&&!VERIFY.passed&&VERIFY.why?`<p class="muted" style="font-size:12px;padding:10px 20px 0">
+    We fetch your homepage over https and look for your venue’s name in the text. If it’s
+    only in an image or loaded by a script we can’t see it — put the name in the page text,
+    or use Way 2.</p>`:''}
+  ${!site?`<p class="muted" style="font-size:12px;padding:10px 20px 0">No website? Way 2 is for you.</p>`:''}
+
+  <div class="sec"><span class="kick">Way 2 — the artists who play here</span></div>
+  <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">When <b>${need}</b> different artists who have a gig at your place in their own MySet calendar confirm it, you’re verified. They tap it on your public page. This is the one that works for a bar with no website — and it’s hard to fake, because each of them needs their own account and their own gig history.</p>
+  <div class="list"><div class="row">
+    <div class="m"><div class="t">${vouches} of ${need} confirmed</div>
+      <div class="s">${vouches?esc(names.join(', ')):'Nobody yet — send them your page'}</div></div>
+    <span class="pill ${vouches>=need?'ok':'no'}">${Math.round(vouches/need*100)}%</span>
+  </div></div>
+  <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="shareInvite()">Send artists your page</button></div>`;
+}
+async function runVerify(){
+  const d=await post('/venueadmin',{action:'verifyCheck'});
+  if(!d.ok){toast(d.error||'Could not run that check');return;}
+  VERIFY=d;
+  if(d.verified){ await loadVenue(); toast('Verified 🎉'); return; }
+  render();
+  toast(d.checks&&d.checks.siteNamesVenue&&!d.checks.emailOnDomain
+    ? 'Site checks out — now sign in with an email on that domain'
+    : d.why? 'Couldn’t read your website' : 'Not yet — see what’s missing above');
 }
 
 /* ── bits and pieces ───────────────────────────────────── */
@@ -572,6 +759,81 @@ function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#b
 function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
   if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
+
+/* A venue's own listing. Same recurrence machinery as an artist's gig, so a
+   weekly quiz is one record forever. The place is NOT asked for — the event is at
+   this venue by definition, and the server fills it in from the profile. */
+function openEvent(id){
+  const rules=(EVENTS&&EVENTS.events)||[];
+  const ev=id?rules.find(x=>x.id===id):null;
+  const editing=!!ev;
+  const tz=(ev&&ev.tz)||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
+  const R=(ev&&ev.repeat)||null;
+  openSheet(`<h3>${editing?'Edit event':'Add an event'}</h3>
+    ${editing&&ev.repeat?`<p class="lede">This repeats — changes apply to every one in the run.</p>`
+      :`<p class="lede">Anything that isn’t a MySet artist’s gig. It’ll show on your page and in the local what’s-on feed.</p>`}
+    <div class="field" style="padding:0"><label>What is it?</label>
+      <input class="inp" id="evTitle" maxlength="70" placeholder="Quiz Night" value="${esc(editing?(ev.title||''):'')}"></div>
+    <div class="field" style="padding:14px 0 0"><label>Date</label>
+      <input class="inp" id="evDate" type="date" value="${esc(editing?ev.date:todayStr())}"></div>
+    <div style="display:flex;gap:8px">
+      <div class="field" style="padding:14px 0 0;flex:1"><label>Starts</label>
+        <input class="inp" id="evTime" type="time" value="${esc(editing?ev.time:'20:00')}"></div>
+      <div class="field" style="padding:14px 0 0;flex:1"><label>Ends</label>
+        <input class="inp" id="evEnd" type="time" value="${esc(editing?endOf(ev):'23:00')}"></div>
+    </div>
+    <p class="muted" style="font-size:12px;margin:2px 0 0">Finishing after midnight is fine — put the real time.</p>
+    <div class="field" style="padding:14px 0 0"><label>Repeats</label>
+      <div class="chips">${[['','Just once'],['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['yearly','Yearly']]
+        .map(([k,l])=>`<button class="chip ${(R?R.freq:'')===k?'on':''}" data-act="evrep" data-id="${k}">${l}</button>`).join('')}</div>
+      <input type="hidden" id="evRepeat" value="${esc(R?R.freq:'')}"></div>
+    <div class="field" style="padding:14px 0 0"><label>One line about it (optional)</label>
+      <input class="inp" id="evNote" maxlength="140" placeholder="Teams of up to 6, free to enter" value="${esc(editing?(ev.note||''):'')}"></div>
+    <input type="hidden" id="evTz" value="${esc(tz)}">
+    <button class="big" style="margin-top:16px" data-act="evsave" data-id="${esc(id||'')}">${editing?'Save changes':'Add it'}</button>
+    ${editing?`<button class="big alt" style="margin-top:10px" data-act="evdel" data-id="${esc(id)}">Delete this event${ev.repeat?' and its whole run':''}</button>`:''}`);
+  setTimeout(()=>{const e=$('#evTitle');if(e)e.focus()},260);
+}
+const todayStr=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
+const endOf=ev=>{const m=/^(\d{2}):(\d{2})$/.exec(ev.time||'');if(!m)return '23:00';
+  const t=((+m[1]*60+ +m[2])+(ev.durationMin||180))%1440;const p=n=>String(n).padStart(2,'0');
+  return p(Math.floor(t/60))+':'+p(t%60);};
+
+async function saveEvent(id){
+  if(WRITING)return; WRITING=true;
+  try{
+    const freq=val('evRepeat');
+    const ev={id:id||undefined,title:val('evTitle'),date:val('evDate'),
+      time:val('evTime')||'20:00',endTime:val('evEnd')||'',note:val('evNote'),tz:val('evTz'),
+      repeat:freq?{freq,until:null}:null};
+    if(!ev.title){toast('What is it called?');return;}
+    if(!ev.date){toast('Pick a date');return;}
+    const d=await post('/venueadmin',{action:'eventSave',event:ev});
+    if(!d.ok){toast(d.error||'Could not save');return;}
+    closeSheet(); EVENTS=null; await loadEvents(true); render();
+    toast(id?'Event updated':'Event added');
+  } finally { WRITING=false; }
+}
+async function delEvent(id){
+  if(!confirm('Delete this event? If it repeats, the whole run goes.'))return;
+  const d=await post('/venueadmin',{action:'eventDelete',id});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  closeSheet(); EVENTS=null; await loadEvents(true); render(); toast('Deleted');
+}
+async function skipEvent(pair){
+  const [id,date]=pair.split('|');
+  if(!confirm('Cancel just that one?'))return;
+  const d=await post('/venueadmin',{action:'eventSkip',id,date,on:true});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  EVENTS=null; await loadEvents(true); render(); toast('That one is off');
+}
+async function setPitch(id,status){
+  const d=await post('/venueadmin',{action:'pitchSet',id,status});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  PITCHES=d; render();
+  toast(status==='keen'?'Marked keen — they’ll see it':status==='nope'?'Passed':'Back to new');
+}
 
 function openMenuItem(){
   openSheet(`<h3>Add a highlight</h3><p class="lede">One thing worth ordering.</p>
@@ -635,7 +897,8 @@ function shareInvite(){
     <p class="lede">Send them this. They add their own gigs once and every night at your place shows up on your page from then on.</p>
     <input class="inp" id="invLink" readonly value="${esc(link)}">
     <button class="big" style="margin-top:12px" onclick="copyInv()">Copy the link</button>
-    <p class="muted" style="font-size:12.5px;margin:14px 0 0">Tell them to put the venue name as <b>${esc(V.name)}</b> and the city as <b>${esc(V.city||'—')}</b>, and it lands here automatically.</p>`);
+    <p class="muted" style="font-size:12.5px;margin:14px 0 0">Tell them to put the venue name as <b>${esc(V.name)}</b> and the city as <b>${esc(V.city||'—')}</b>, and it lands here automatically.</p>
+    ${V.slug?`<p class="muted" style="font-size:12.5px;margin:12px 0 0">Your own page is <b>myset.vip/v/${esc(V.slug)}</b> — that’s where they tap “I play here” to help verify you, and where they can ask you for a spot.</p>`:''}`);
 }
 function copyInv(){
   const el=$('#invLink'); if(!el)return;
@@ -695,6 +958,15 @@ document.addEventListener('click',e=>{
   if(a==='ofsave') saveOffer(id);
   if(a==='rmmail') removeStaff(id);
   if(a==='qrbig'){ e.preventDefault(); qrBig(id); }
+  if(a==='evedit') openEvent(id);
+  if(a==='evsave') saveEvent(id);
+  if(a==='evdel') delEvent(id);
+  if(a==='evskip') skipEvent(id);
+  if(a==='evrep'){ const h=$('#evRepeat'); if(h){h.value=id;
+    document.querySelectorAll('[data-act="evrep"]').forEach(x=>x.classList.toggle('on',x.getAttribute('data-id')===id));} }
+  if(a==='pkeen') setPitch(id,'keen');
+  if(a==='pnope') setPitch(id,'nope');
+  if(a==='pnew') setPitch(id,'new');
   if(a==='photoclear'){ e.preventDefault(); save({action:'photoClear',slot:id},'Removed'); }
 });
 function wireCount(inSel,outSel,max){

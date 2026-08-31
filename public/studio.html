@@ -97,6 +97,20 @@ a{color:inherit;text-decoration:none}
 
 .sec{display:flex;align-items:baseline;justify-content:space-between;padding:26px 20px 9px}
 .sec .kick{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.find{position:relative;margin:0 18px}
+.find input{width:100%;min-height:46px;padding:12px 40px 12px 40px;font-size:16px;border:none;
+  background:var(--surface);box-shadow:var(--sh-1);border-radius:var(--pill);color:var(--ink)}
+.find input:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent),var(--sh-1)}
+.find .ic{position:absolute;left:15px;top:14px;width:18px;height:18px;stroke:var(--faint);
+  fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none}
+.find .clr{position:absolute;right:7px;top:7px;width:32px;height:32px;border-radius:50%;
+  display:grid;place-items:center;color:var(--muted);font-size:17px;background:var(--surface-2)}
+.sortbar{display:flex;gap:4px;margin:10px 18px 0;padding:4px;background:var(--surface);
+  border-radius:var(--pill);box-shadow:var(--sh-1)}
+.sortbar button{flex:1;min-height:34px;padding:7px 5px;font-size:13px;font-weight:600;
+  color:var(--muted);border-radius:var(--pill);letter-spacing:-.01em;
+  transition:background .26s var(--ease),color .2s var(--ease)}
+.sortbar button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
 .tog{display:flex;gap:3px;padding:3px;background:var(--surface);border-radius:var(--pill);flex:0 0 auto}
 .tog button{padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:var(--pill);
   transition:background .22s var(--ease),color .2s}
@@ -276,9 +290,23 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <script>
 const $=s=>document.querySelector(s), API='/api';
 let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('myset.token')||'';
-let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null;
+let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null, PITCHES=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
+/* The same search and the same three orders the audience has on the voting page,
+   so the two screens never disagree about where a song is. 'votes' keeps the
+   server's ranking (votes desc -> voted-first -> title). */
+let SETQ='', SETFOCUS=false;
+let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
+const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
+const collate=(a,b)=>String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base'});
+function setSort(v){ SETSORT=v; try{localStorage.setItem('myset.setsort',v)}catch(e){} render(); }
+function setQuery(v){ SETQ=v; SETFOCUS=false; render(); }
+function applySetSort(list){
+  if(SETSORT==='title')  return [...list].sort((a,b)=>collate(a.title,b.title));
+  if(SETSORT==='artist') return [...list].sort((a,b)=>collate(a.artist,b.artist)||collate(a.title,b.title));
+  return list;
+}
 
 let BUSY=0, BUSY_T=null;
 function busy(on){
@@ -311,7 +339,7 @@ async function load(opts){
   if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
   if(TAB==='profile'&&!PROF) loadProf();
   if(TAB==='settings'){ if(!TEAM)loadTeam(); if(!PLAN)loadPlan(); }
-  if(TAB==='gigs'&&!EVENTS) loadGigs();
+  if(TAB==='gigs'){ if(!EVENTS)loadGigs(); if(!PITCHES)loadPitches(); }
 }
 let WRITING=false;
 async function act(action,extra={}){
@@ -404,7 +432,12 @@ function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();
   if(t==='profile') loadProf();
   if(t==='setlist') loadPlan();
   if(t==='settings'){loadTeam();loadPlan();}
-  if(t==='gigs') loadGigs();}
+  if(t==='gigs'){ loadGigs(); loadPitches(); }}
+async function loadPitches(force){
+  if(PITCHES&&!force)return;
+  PITCHES=await api('/admin',{method:'POST',body:JSON.stringify({action:'pitchList'})});
+  if(TAB==='gigs'&&D)render();
+}
 /* Stripe is the source of truth for money, so this reads it directly rather than
    trusting the app's own ledger. Fetched on demand — never on the 4s live poll. */
 async function loadRev(force){
@@ -657,7 +690,20 @@ function render(){
 
   if(TAB==='setlist'){
     const active=songs.filter(x=>x.active!==false).length;
+    const q=SETQ.trim().toLowerCase();
+    const shown=applySetSort(songs.filter(x=>
+      !q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q)));
     body=`
+    <div class="wrap" style="padding-top:18px">
+      <a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}" target="_blank"
+         style="justify-content:center">See what the audience sees ↗</a>
+      <div style="display:flex;gap:9px">
+        <button class="big alt" style="flex:1;justify-content:center;margin:0"
+          onclick="if(confirm('Add around 60 well-known covers to your setlist? Nothing you already have is touched.'))act('starterSetlist')">+ Starter pack</button>
+        <button class="big alt" style="flex:1;justify-content:center;margin:0;color:var(--accent)"
+          onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear setlist</button>
+      </div>
+    </div>
     <div class="sec"><span class="kick">Add a song</span></div>
     <div class="wrap">
       <input class="inp" id="newSong" placeholder="Song title" style="margin-bottom:9px">
@@ -670,20 +716,26 @@ function render(){
       <b>${active} of ${PLAN.limits.featured}</b> featured. Keep as many as you like (up to ${PLAN.limits.library}) — your plan shows ${PLAN.limits.featured} to the audience at a time. The rest sit switched off.</p>`:''}
     ${songs.length?'':`<div class="sec"><span class="kick">No songs yet</span></div>
       <div class="list"><div class="row muted">Add your songs above, or tap <b>Add the starter pack</b> at the bottom for around 60 well-known covers to edit down.</div></div>`}
-    <div class="sec"><span class="kick">Your setlist — ${active} of ${songs.length} featured</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Turn a song OFF to hide it from the audience tonight. Remove deletes it for good.</p>
-    <div class="list">${songs.map(x=>`<div class="row ${x.active===false?'off':''}">
+    <div class="sec"><span class="kick">Your setlist — ${active} of ${songs.length} featured</span>${
+      SETQ?`<span class="kick">${shown.length} match${shown.length===1?'':'es'}</span>`:''}</div>
+    <div class="find">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
+      <input id="setq" type="search" inputmode="search" placeholder="Search song or artist"
+        value="${esc(SETQ)}" autocomplete="off">
+      ${SETQ?`<button class="clr" onclick="setQuery('')" aria-label="Clear search">✕</button>`:''}
+    </div>
+    <div class="sortbar" role="group" aria-label="Sort songs">${SETSORTS.map(([k,l])=>
+      `<button data-sort="${k}" class="${SETSORT===k?'on':''}" aria-pressed="${SETSORT===k}">${l}</button>`).join('')}</div>
+    <p class="muted" style="font-size:12px;padding:10px 14px 4px;margin:0">Turn a song OFF to hide it from the audience tonight. Remove deletes it for good.</p>
+    <div class="list">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
         <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden':'In the pool'}${x.votes?' · '+x.votes+' votes':''}</div></div>
       <button class="act" data-act="edit" data-id="${x.id}">Edit</button>
       <button class="act" onclick="act('toggleSong',{song:'${x.id}'})">${x.active===false?'Show':'Hide'}</button>
       <button class="act warn" data-act="del" data-id="${x.id}">✕</button>
-    </div>`).join('')}</div>
-    <div class="wrap" style="margin-top:18px">
-      <button class="big alt" onclick="if(confirm('Add around 60 well-known covers to your setlist? Nothing you already have is touched.'))act('starterSetlist')">+ Add the starter pack</button>
-      <button class="big alt" onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear the whole setlist</button>
-    </div>`;
+    </div>`).join(''):`<div class="row muted">Nothing matches “${esc(SETQ)}”</div>`}</div>
+    `;
   }
 
   if(TAB==='gigs'){
@@ -727,7 +779,8 @@ function render(){
           : `<button class="act" data-act="gigedit" data-id="${o.eventId}">Edit</button>
              <button class="act warn" data-act="gigskip" data-id="${o.eventId}|${o.date}">✕</button>`}
       </div>`).join('')||'<div class="row muted">Nothing booked yet. Tap “Add a gig” — a weekly residency only needs entering once.</div>'}</div>
-      <p class="muted" style="font-size:12px;padding:14px 18px 0">These show on your page and in the city feed automatically. ✕ cancels one night; Edit changes the whole run.</p>`;
+      <p class="muted" style="font-size:12px;padding:14px 18px 0">These show on your page and in the city feed automatically. ✕ cancels one night; Edit changes the whole run.</p>
+      ${pitchPanel()}`;
     }
   }
 
@@ -1007,6 +1060,14 @@ function render(){
         </div>`).join('')||'<div class="row muted">No venues have signed up yet.</div>'}</div>`:''}`
       :`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`}
 
+    <div class="sec"><span class="kick">What venues can see</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">A venue you play at can see how many people were in <b>their own room</b> and how many votes got cast — by night and by act. It’s the main reason a bar puts its page on MySet, and it’s how they work out who fills the place. <b>Your money is never included</b>, not even as a total.</p>
+    <div class="row"><div class="m"><div class="t">Show venues my numbers</div>
+      <div class="s">${PLAN&&PLAN.ok&&PLAN.shareStats===false?'Off — venues see nothing from your shows':'People and votes for shows at their venue'}</div></div>
+      <div class="tog">
+        <button class="${!PLAN||PLAN.shareStats!==false?'on':''}" onclick="setShare(true)">On</button>
+        <button class="${PLAN&&PLAN.shareStats===false?'on':''}" onclick="setShare(false)">Off</button></div></div>
+
     <div class="sec"><span class="kick">Your public page</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">This is the link you give people. Change it any time — the old one stops working.</p>
     <div class="field"><label>myset.vip/</label><div style="display:flex;gap:8px">
@@ -1080,16 +1141,43 @@ function render(){
     <button class="${TAB==='profile'?'on':''}" onclick="setTab('profile')">Profile</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${body}
-  <div class="wrap" style="padding-top:26px;padding-bottom:8px">
+  ${TAB==='setlist'?'':`<div class="wrap" style="padding-top:26px;padding-bottom:8px">
     <a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}" target="_blank"
        style="justify-content:center">See what the audience sees ↗</a>
-  </div>`;
+  </div>`}`;
 
   const n=$('#newSong'); if(n) n.addEventListener('keydown',e=>{if(e.key==='Enter')addSong()});
+  document.querySelectorAll('[data-sort]').forEach(b=>
+    b.addEventListener('click',()=>setSort(b.getAttribute('data-sort'))));
+  const sq=$('#setq');
+  if(sq){ sq.addEventListener('input',e=>{SETFOCUS=true;SETQ=e.target.value;render();});
+    if(SETFOCUS){ sq.focus(); const v=sq.value; sq.setSelectionRange(v.length,v.length); } }
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
 }
 /* What the room has asked for. Pending first, because a birthday is the one
    thing on this screen that goes stale. */
+/* Venues you've asked for a spot, and what they said. Sits on the Gigs tab
+   because that is where you think about where you're playing next. */
+function pitchPanel(){
+  const rows=(PITCHES&&PITCHES.ok?(PITCHES.pitches||[]):null);
+  if(rows===null||!rows.length) return `
+    <div class="sec"><span class="kick">Want more gigs?</span></div>
+    <div class="list"><div class="row muted">Venues on MySet have a
+      <b>“Want to perform here?”</b> button on their page. They see your real numbers —
+      nights played, people in the room, votes cast — not just a bio. Find them from the
+      <a href="/" target="_blank" style="color:var(--accent)">city feed</a>.</div></div>`;
+  const label={new:['Waiting to hear back','muted'],keen:['They’re keen — get in touch','acc'],
+               nope:['Not this time','faint']};
+  return `<div class="sec"><span class="kick">Venues you’ve asked</span><span class="kick">${rows.length}</span></div>
+    <div class="list">${rows.map(p=>{
+      const [txt,tone]=label[p.status]||label.new;
+      return `<div class="row ${p.status==='nope'?'off':''}">
+        <div class="m"><div class="t">${esc(p.name)}</div>
+          <div class="s" style="${tone==='acc'?'color:var(--accent);font-weight:600':''}">${txt} · ${when(p.at)}</div></div>
+        <a class="act" href="/v/${esc(p.slug)}" target="_blank">Open</a>
+      </div>`;}).join('')}</div>`;
+}
+
 function asksPanel(){
   const all=(D&&D.asks)||[];
   if(!all.length) return '';
@@ -1336,6 +1424,13 @@ async function savePacks(){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'packs',small:S,big:B,max:M})});
   if(!d.ok){toast(d.error||'Could not save that');return;}
   toast('Prices saved'); load();
+}
+async function setShare(on){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'shareStats',on})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  if(PLAN) PLAN.shareStats=d.shareStats;
+  render();
+  toast(d.shareStats?'Venues can see your numbers':'Venues can’t see your numbers');
 }
 async function loadPlan(force){
   if(PLAN&&!force)return;

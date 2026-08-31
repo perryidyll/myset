@@ -116,6 +116,52 @@ body{padding-bottom:34px}
 .empty b{display:block;color:var(--ink);font-weight:600;font-size:16px;margin-bottom:5px}
 .cta{display:block;margin:26px 18px 0;padding:16px;text-align:center;font-size:14px;
   color:var(--muted);background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)}
+.playcard{margin:26px 18px 0;padding:20px;background:var(--surface);border-radius:var(--r-lg);
+  box-shadow:var(--sh-2)}
+.playcard b{display:block;font-size:18px;font-weight:600;letter-spacing:-.02em}
+.playcard p{margin:7px 0 15px;font-size:14.5px;color:var(--muted);line-height:1.5}
+.playcard .btn2{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  padding:15px 18px;border-radius:var(--pill);background:var(--accent);color:#fff;
+  font-size:15.5px;font-weight:600;letter-spacing:-.015em;box-shadow:0 5px 18px rgba(255,55,95,.36);
+  transition:transform .22s var(--spring)}
+.playcard .btn2:active{transform:scale(.97)}
+.playcard .btn2.ghost{background:transparent;color:var(--accent-ink);
+  box-shadow:inset 0 0 0 1.5px var(--accent)}
+.playcard .btn2.done{background:var(--bg-2);color:var(--muted);box-shadow:none}
+.playcard .btn2+.btn2{margin-top:9px}
+.playcard .fine{margin:12px 0 0;font-size:12.5px;color:var(--faint);line-height:1.45;text-align:center}
+.vouchbar{margin:11px 0 0;height:6px;border-radius:3px;background:var(--bg-2);overflow:hidden}
+.vouchbar i{display:block;height:100%;background:var(--grad);border-radius:3px}
+.evtag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--accent-ink);background:var(--accent-soft);padding:2px 7px;border-radius:var(--pill);
+  margin-bottom:3px}
+.bg{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;z-index:60;
+  transition:opacity .3s var(--ease)}
+.bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(102%);
+  width:100%;max-width:var(--maxw);max-height:92vh;overflow-y:auto;background:var(--surface);
+  border-radius:var(--r-lg) var(--r-lg) 0 0;z-index:65;
+  padding:10px 20px calc(26px + env(safe-area-inset-bottom));box-shadow:0 -10px 50px rgba(0,0,0,.28);
+  transition:transform .46s var(--spring)}
+.sheet.on{transform:translateX(-50%) translateY(0)}
+.sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
+.sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px;line-height:1.5}
+.grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
+.inp{width:100%;min-height:50px;padding:14px 16px;font-size:16px;background:var(--bg);
+  border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink)}
+.inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
+.go{display:block;width:100%;padding:16px;margin-top:14px;border-radius:var(--pill);
+  background:var(--accent);color:#fff;font-size:16px;font-weight:600;text-align:center}
+.go:disabled{opacity:.5}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
+  width:calc(100% - 36px);max-width:calc(var(--maxw) - 36px);background:rgba(40,40,44,.95);color:#fff;
+  font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);z-index:70;
+  opacity:0;pointer-events:none;transition:opacity .3s var(--ease),transform .42s var(--spring)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;
+  border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -126,6 +172,9 @@ body{padding-bottom:34px}
   <div id="app"><div class="empty">Loading…</div></div>
   <div class="foot">MySet · myset.vip</div>
 </div>
+<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 const $=s=>document.querySelector(s), API='/api';
@@ -156,7 +205,12 @@ const APPLE=/(iPhone|iPad|iPod|Macintosh|Mac OS X)/i.test(navigator.userAgent||'
 const dirHref=m=>(m?((APPLE?m.apple:m.google)||m.google||m.apple):'')||'';
 const DAYKEY=['sun','mon','tue','wed','thu','fri','sat'];
 
-let V=null;
+let V=null, MINE=null;
+/* Same origin as the Studio, so an artist browsing a venue page is already
+   signed in — that is what lets this ask for a spot and confirm the place is
+   real without another login. */
+const ATOK=(()=>{try{return localStorage.getItem('myset.token')||''}catch(e){return ''}})();
+
 async function boot(){
   if(!SLUG){ notFound(); return; }
   let d=null;
@@ -164,6 +218,16 @@ async function boot(){
   V=d;
   if(!d||!d.ok){ notFound(!d||d.error==='unknown venue'); return; }
   render();
+  if(ATOK) loadMine();
+}
+async function loadMine(){
+  try{
+    const r=await fetch(`${API}/admin`,{method:'POST',
+      headers:{'content-type':'application/json',authorization:'Bearer '+ATOK},
+      body:JSON.stringify({action:'pitchStatus',venue:SLUG})});
+    const d=await r.json();
+    if(d.ok){ MINE=d; render(); }
+  }catch(e){}
 }
 function notFound(gone){
   $('#app').innerHTML=gone
@@ -185,7 +249,9 @@ function render(){
     ${v.photo?`<img src="${esc(v.photo)}" alt="" width="1600" height="1000" fetchpriority="high">`
              :`<div class="noimg">${esc((v.name||'?').slice(0,1).toUpperCase())}</div>`}
     <div class="veil"></div>
-    ${liveNow?`<a class="onair" href="/${esc(liveNow.slug)}/vote"><span class="dot"></span>${esc(liveNow.artist)} — on now</a>`:''}
+    ${liveNow?(liveNow.kind==='event'
+      ? `<span class="onair"><span class="dot"></span>${esc(liveNow.title||'On now')}</span>`
+      : `<a class="onair" href="/${esc(liveNow.slug)}/vote"><span class="dot"></span>${esc(liveNow.artist)} — on now</a>`):''}
   </div>
 
   <div class="vhead">
@@ -194,6 +260,8 @@ function render(){
       : '<span class="vbadge no">Unverified listing</span>'}</h1>
     ${v.tagline?`<p class="tag">${esc(v.tagline)}</p>`:''}
     <p class="place">${esc(v.address||[v.city,v.country].filter(Boolean).join(', '))}</p>
+    ${(V.vouches&&V.vouches.count)?`<p class="place" style="color:var(--accent-ink);font-weight:600">
+      ✓ Confirmed by ${V.vouches.count} artist${V.vouches.count===1?'':'s'} who play${V.vouches.count===1?'s':''} here</p>`:''}
   </div>
 
   <div class="vacts">
@@ -213,15 +281,16 @@ function render(){
 
   if(liveNow||next){
     const g=liveNow||next;
-    h+=`<div class="sect">${liveNow?'On stage now':'Next up'}</div>
+    const isEv=g.kind==='event';
+    h+=`<div class="sect">${liveNow?'On now':'Next up'}</div>
       <div class="rows"><div class="r ${liveNow?'live':''}">
-        <a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>
+        ${isEv?'':`<a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>`}
         <div class="d"><b>${liveNow?'●':dayNum(g.date)}</b><span>${liveNow?'Now':monShort(g.date)}</span></div>
         <div class="m">
-          ${liveNow?'<span class="onnow"><span class="dot"></span>On now</span>':''}
-          <div class="v">${esc(g.artist)}</div>
+          ${liveNow?'<span class="onnow"><span class="dot"></span>On now</span>':isEv?'<span class="evtag">At the venue</span>':''}
+          <div class="v">${esc(isEv?(g.title||'Event'):g.artist)}</div>
           <div class="w">${esc(whenWord(g.date))} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}</div>
-        </div><span class="chev">›</span></div></div>`;
+        </div>${isEv?'':'<span class="chev">›</span>'}</div></div>`;
   }
 
   if(v.about) h+=`<div class="sect">About</div><div class="card"><p class="about">${esc(v.about)}</p></div>`;
@@ -237,12 +306,15 @@ function render(){
     h+=`<div class="sect">What’s on</div>`;
     h+=days.slice(0,14).map(day=>`
       <div class="dayline">${esc(whenWord(day.date))} <em>– ${dayMonth(day.date)}</em></div>
-      <div class="rows">${day.gigs.map(g=>`<div class="r">
-        <a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>
+      <div class="rows">${day.gigs.map(g=>{
+        const isEv=g.kind==='event';
+        return `<div class="r">
+        ${isEv?'':`<a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>`}
         <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span></div>
-        <div class="m"><div class="v">${esc(g.artist)}</div>
-          <div class="w">${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.repeating?' · every week':''}</div></div>
-        <span class="chev">›</span></div>`).join('')}</div>`).join('');
+        <div class="m">${isEv?'<span class="evtag">At the venue</span>':''}
+          <div class="v">${esc(isEv?(g.title||'Event'):g.artist)}</div>
+          <div class="w">${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.repeating?' · every week':''}${g.note?' · '+esc(g.note):''}</div></div>
+        ${isEv?'':'<span class="chev">›</span>'}</div>`;}).join('')}</div>`).join('');
     h+=`<p class="fineprint">Shows are listed by the artists themselves from their own MySet calendars. Times can change — check with the venue.</p>`;
   } else if(!liveNow&&!next){
     h+=`<div class="sect">What’s on</div>
@@ -300,12 +372,112 @@ function render(){
       V.artists.map(a=>`<a class="am" href="/${esc(a.slug)}">${esc(a.name)}</a>`).join('')}</div>`;
   }
 
-  h+=`<a class="cta" href="/studio">Play here? Put your gigs on MySet →</a>`;
+  h+=playCard();
   if(!v.verified) h+=`<p class="fineprint">This page hasn’t been verified yet, so treat the details as a guide. If it’s your venue, <a href="/venues" style="color:var(--accent-ink);font-weight:600">claim it</a>.</p>`;
 
   $('#app').innerHTML=h;
   document.title=`${v.name} — MySet`;
 }
+/* ── "Want to perform here?" ─────────────────────────────
+   Only a signed-in artist can send one, deliberately. An open contact form is a
+   spam funnel, and it throws away the one thing that makes this worth more than
+   an email: the venue gets a real MySet page with real numbers on it. */
+function playCard(){
+  const v=V.venue;
+
+  if(!ATOK) return `<div class="playcard rise">
+    <b>Play live?</b>
+    <p>Ask ${esc(v.name)} for a spot straight from here. They’ll see your MySet page —
+       how many nights you’ve played, how many people were in the room, how many votes
+       they cast — instead of a bio and a promise.</p>
+    <a class="btn2" href="/studio">Get your MySet page — it’s free</a>
+    <p class="fine">Already have one? <a href="/studio" style="color:var(--accent-ink);font-weight:600">Sign in</a>, then come back to this page.</p>
+  </div>`;
+
+  if(!MINE) return `<div class="playcard rise"><b>Play live?</b>
+    <p><span class="spin"></span> Checking your MySet page…</p></div>`;
+
+  const st=MINE.status;
+  const askBtn = MINE.sent
+    ? (st==='keen'
+        ? `<span class="btn2 done" style="color:var(--accent-ink);font-weight:700">🎉 They’re keen — get in touch</span>`
+        : st==='nope'
+          ? `<span class="btn2 done">Not this time. Try again another season.</span>`
+          : `<span class="btn2 done">Asked — waiting to hear back</span>`)
+    : `<button class="btn2" onclick="openPitch()">Want to perform here?</button>`;
+
+  const canV=MINE.canVouch, did=MINE.vouched;
+  const n=MINE.vouches||0, need=MINE.need||10;
+  const vouchBit = v.verified ? '' : (canV ? `
+    <div style="margin-top:16px;padding-top:16px;border-top:.5px solid var(--hair)">
+      <b style="font-size:16px">You’ve got a gig here</b>
+      <p style="margin:6px 0 12px">Confirm it and you help them get their green tick.
+        ${need} artists who play here does it — no website needed.</p>
+      ${did?`<span class="btn2 done">✓ You’ve confirmed this one</span>`
+           :`<button class="btn2 ghost" onclick="doVouch()">Yes, I play here</button>`}
+      <div class="vouchbar"><i style="width:${Math.min(100,Math.round(n/need*100))}%"></i></div>
+      <p class="fine">${n} of ${need} artists confirmed</p>
+    </div>` : '');
+
+  return `<div class="playcard rise">
+    <b>${MINE.sent?'Your enquiry':'Play live?'}</b>
+    <p>${MINE.sent
+      ? `You asked ${esc(v.name)} about a spot. They can see your page and your numbers.`
+      : `Ask ${esc(v.name)} for a spot. They’ll see your MySet page and your real numbers — nights played, people in the room, votes cast.`}</p>
+    ${askBtn}
+    ${MINE.sent&&st==='new'?`<button class="btn2 ghost" style="margin-top:9px" onclick="openPitch()">Change my message</button>`:''}
+    ${vouchBit}
+  </div>`;
+}
+function openPitch(){
+  const v=V.venue;
+  openSheet(`<h3>${MINE&&MINE.sent?'Change your message':'Ask about a spot'}</h3>
+    <p class="lede">Goes to ${esc(v.name)} with a link to your MySet page. Keep it short —
+      what you play, and when you’re free. Nobody’s email is shared.</p>
+    <textarea class="inp" id="pitchMsg" maxlength="400"
+      placeholder="Hi — I play acoustic covers and originals, mostly 90s to now. Free most Thursdays. Happy to do a trial night.">${esc((MINE&&MINE.message)||'')}</textarea>
+    <button class="go" id="pitchGo" onclick="sendPitch()">${MINE&&MINE.sent?'Save it':'Send the enquiry'}</button>
+    <p class="fine" style="text-align:center;margin-top:12px;font-size:12.5px;color:var(--faint)">
+      You can only have one enquiry with a venue at a time — asking again just updates this.</p>`);
+  setTimeout(()=>{const e=$('#pitchMsg'); if(e)e.focus();},280);
+}
+let SENDING=false;
+async function sendPitch(){
+  if(SENDING)return; SENDING=true;
+  const btn=$('#pitchGo');
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Sending…';}
+  try{
+    const r=await fetch(`${API}/admin`,{method:'POST',
+      headers:{'content-type':'application/json',authorization:'Bearer '+ATOK},
+      body:JSON.stringify({action:'pitchSend',venue:SLUG,message:(($('#pitchMsg')||{}).value||'')})});
+    const d=await r.json();
+    if(!d.ok){toast(d.error||'Couldn’t send that');return;}
+    closeSheet(); toast(d.already?'Message updated':'Sent — they’ll see it in their studio');
+    await loadMine();
+  }catch(e){ toast('Connection hiccup — try again'); }
+  finally{ SENDING=false;
+    const b=$('#pitchGo'); if(b){b.disabled=false;b.textContent='Send the enquiry';} }
+}
+async function doVouch(){
+  try{
+    const r=await fetch(`${API}/admin`,{method:'POST',
+      headers:{'content-type':'application/json',authorization:'Bearer '+ATOK},
+      body:JSON.stringify({action:'vouch',venue:SLUG})});
+    const d=await r.json();
+    if(!d.ok){toast(d.error||'Couldn’t save that');return;}
+    toast(d.verified?'That did it — they’re verified 🎉'
+      :d.already?'Already confirmed':`Thanks — ${d.count} of ${d.need}`);
+    await Promise.all([loadMine(), boot()]);
+  }catch(e){ toast('Connection hiccup — try again'); }
+}
+
+function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;
+  $('#bg').classList.add('on');$('#sheet').classList.add('on');}
+function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet();});
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
+  clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3400);}
+
 boot();
 </script>
 </body>
