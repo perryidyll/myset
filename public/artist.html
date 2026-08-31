@@ -286,7 +286,7 @@ function render(){
         <div class="m">
           ${g.live?'<span class="onnow"><span class="dot"></span>On now</span>':''}
           <div class="v">${esc(g.venue)}</div>
-          <div class="w">${esc(dowName(g.date))} · ${fmtTime(g.time)}${g.city?' · '+esc(g.city):''}</div>
+          <div class="w">${esc(dowName(g.date))} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.city?' · '+esc(g.city):''}</div>
         </div>
         ${g.ticketUrl?`<a class="tix" href="${esc(g.ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>`:''}
       </div>`;

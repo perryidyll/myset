@@ -91,7 +91,7 @@ export default async (req) => {
 };
 
 const shape = (o) => ({
-  eventId: o.eventId, date: o.date, time: o.time, tz: o.tz,
+  eventId: o.eventId, date: o.date, time: o.time, endTime: o.endTime, tz: o.tz,
   startsAt: o.startsAt, endsAt: o.endsAt,
   venue: o.venue, city: o.city, country: o.country,
   note: o.note, ticketUrl: o.ticketUrl, repeating: o.repeating,
