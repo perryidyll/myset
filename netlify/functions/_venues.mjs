@@ -80,6 +80,17 @@ export async function createVenue({ email, name, slug, city, country }) {
     made = { venueId: vid, slug: s, name: nm };
     return true;
   });
+  if (made) {
+    // seed the profile from what they typed on the way in — otherwise the page
+    // exists with a blank name and no city, and `mapLinks` has nothing to
+    // work with until they happen to press Save
+    await mutateVenueProfile(made.venueId, (prof) => {
+      prof.name = nm;
+      prof.city = clean(city, 60);
+      prof.country = clean(country, 60);
+      return true;
+    }).catch(() => {});
+  }
   return made ? { ok: true, ...made } : { ok: false, error: err || 'failed' };
 }
 
@@ -312,12 +323,14 @@ export const mutateVenueProfile = (vid, fn) =>
 /** What the public page renders. */
 export function shapeVenue(p, reg) {
   const r = reg || {};
+  const name = p.name || r.name || '';
+  const place = { ...p, city: p.city || r.city || '', country: p.country || r.country || '' };
   return {
     venueId: p.venueId, slug: r.slug || '',
-    name: p.name || r.name || '', tagline: p.tagline, about: p.about,
-    city: p.city || r.city || '', country: p.country || r.country || '',
+    name, tagline: p.tagline, about: p.about,
+    city: place.city, country: place.country,
     address: p.address,
-    maps: mapLinks(p, p.name || r.name || ''),
+    maps: mapLinks(place, name),
     phone: p.phone, whatsapp: p.whatsapp,
     photo: p.photo, photos: p.photos,
     amenities: p.amenities.map((k) => ({ key: k, label: (AMENITIES.find(([x]) => x === k) || [, k])[1] })),

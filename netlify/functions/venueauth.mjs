@@ -147,6 +147,12 @@ export default async (req) => {
                   website: site || '' });
   }
 
+  /* Explicit, not a fall-through. Everything above either acted or returned, so
+     anything else is a typo — and silently answering "ok" to a typo'd action is
+     how a broken client looks like a working one. */
+  if (!['list', 'setSlug', 'add', 'remove', 'revokeAll'].includes(action))
+    return bad('unknown action');
+
   const reg = await readVenues();
   const mine = reg.byId[me.vid] || {};
   return json({ ok: true,
