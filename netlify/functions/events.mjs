@@ -1,7 +1,8 @@
 import { json, bad, publicArtist } from './_lib.mjs';
-import { readEvents, occurrencesFor, readCityIndex } from './_events.mjs';
+import { readEvents, occurrencesFor, readCityIndex, isVenueOwner, venueIdOf } from './_events.mjs';
 import { localDate, addDays, tzOffsetMs } from './_time.mjs';
 import { artistById } from './_auth.mjs';
+import { venueById } from './_venues.mjs';
 
 const WINDOW_DAYS = 7;
 
@@ -23,7 +24,9 @@ export default async (req) => {
         const n = await countUpcoming(ids);
         // never send someone to a city with nothing on — but keep it listed,
         // with the count, so the emptiness is visible before they commit
-        list.push({ city, artists: ids.length, gigs: n });
+        list.push({ city, gigs: n,
+                    artists: ids.filter((x) => !isVenueOwner(x)).length,
+                    venues: ids.filter(isVenueOwner).length });
       }
       list.sort((a, b) => b.gigs - a.gigs || a.city.localeCompare(b.city));
       countries.push({ country, cities: list, gigs: list.reduce((s, c) => s + c.gigs, 0) });
@@ -56,16 +59,28 @@ export default async (req) => {
   const ids = ((idx.countries || {})[country] || {})[city] || [];
   const now = Date.now();
 
+  /* Two kinds of thing are on tonight: a gig an ARTIST listed, and an event the
+     VENUE itself listed (quiz night, a DJ, the football). Both come out of the
+     same recurrence engine and go into the same feed, tagged so the page can
+     tell them apart. */
   const rows = [];
-  for (const aid of ids) {
-    const [events, who] = await Promise.all([readEvents(aid), artistById(aid)]);
+  for (const id of ids) {
+    const venueOwned = isVenueOwner(id);
+    const [events, who] = await Promise.all([
+      readEvents(id),
+      venueOwned ? venueById(venueIdOf(id)) : artistById(id),
+    ]);
     if (!who) continue;
     const tz = guessTz(events);
     const from = localDate(now, tz);
     for (const o of occurrencesFor(events, addDays(from, -1), addDays(from, WINDOW_DAYS))) {
       if (o.city !== city || o.country !== country) continue;
       if (o.endsAt <= now) continue;                       // finished
-      rows.push({ ...shape(o), artist: who.name, slug: who.slug });
+      rows.push(venueOwned
+        ? { ...shape(o), kind: 'event', title: o.title || 'Event',
+            artist: '', slug: '', venueSlug: who.slug || '', href: `/v/${who.slug || ''}` }
+        : { ...shape(o), kind: 'gig', artist: who.name, slug: who.slug,
+            href: `/${who.slug || ''}` });
     }
   }
   rows.sort((a, b) => a.startsAt - b.startsAt);
@@ -85,7 +100,9 @@ export default async (req) => {
   return json({
     ok: true, country, city,
     today, horizon: addDays(today, WINDOW_DAYS),
-    total: rows.length, artists: ids.length,
+    total: rows.length,
+    artists: ids.filter((x) => !isVenueOwner(x)).length,
+    venues: ids.filter(isVenueOwner).length,
     days,
   });
 };

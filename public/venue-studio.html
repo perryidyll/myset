@@ -545,7 +545,8 @@ function render(){
 const MONS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DOWS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOWS[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
-const dayMonth=d=>`${+d.slice(8,10)}/${+d.slice(5,7)}`;
+const MONFULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const dayMonth=d=>`${+d.slice(8,10)} ${MONFULL[+d.slice(5,7)-1]}`;
 const fmtTime=t=>{const p=String(t||'').split(':');let h=+p[0];
   if(!Number.isFinite(h))return '';const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
 

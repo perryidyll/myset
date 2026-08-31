@@ -458,23 +458,23 @@ function calMove(n){
 function openGig(id,onDate){
   const ev=id?((EVENTS&&EVENTS.events)||[]).find(x=>x.id===id):null;
   const tz=(ev&&ev.tz)||Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';
-  const last=((EVENTS&&EVENTS.events)||[])[0]||{};
+  const editing=!!ev;
   const R=(ev&&ev.repeat)||null;
   openSheet(`<h3>${ev?'Edit gig':'Add a gig'}</h3>
     ${ev&&ev.repeat?`<p class="lede">This repeats — changes apply to every night in the run.</p>`:''}
     <div class="field" style="padding-left:0;padding-right:0"><label>Venue</label>
-      <input class="inp" id="gV" maxlength="80" placeholder="The Ugly Duckling Irish Pub" value="${esc(ev?ev.venue:(last.venue||''))}"></div>
+      <input class="inp" id="gV" maxlength="80" placeholder="The Ugly Duckling Irish Pub" value="${esc(editing?ev.venue:'')}"></div>
     <div style="display:flex;gap:8px">
       <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>City</label>
-        <input class="inp" id="gCity" maxlength="60" placeholder="Koh Phangan" value="${esc(ev?ev.city:(last.city||''))}"></div>
+        <input class="inp" id="gCity" maxlength="60" placeholder="Koh Phangan" value="${esc(editing?ev.city:'')}"></div>
       <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>Country</label>
-        <input class="inp" id="gCountry" maxlength="60" placeholder="Thailand" value="${esc(ev?ev.country:(last.country||''))}"></div>
+        <input class="inp" id="gCountry" maxlength="60" placeholder="Thailand" value="${esc(editing?ev.country:'')}"></div>
     </div>
     <div class="field" style="padding-left:0;padding-right:0"><label>Address <span class="muted" style="font-weight:400">— optional</span></label>
-      <input class="inp" id="gAddr" maxlength="160" placeholder="88 Baan Tai Beach Road" value="${esc(ev?(ev.address||''):(last.address||''))}"></div>
+      <input class="inp" id="gAddr" maxlength="160" placeholder="88 Baan Tai Beach Road" value="${esc(editing?(ev.address||''):'')}"></div>
     <div class="field" style="padding-left:0;padding-right:0"><label>Or paste a maps link</label>
       <input class="inp" id="gMap" type="url" inputmode="url" autocomplete="off" spellcheck="false"
-        placeholder="Paste from Google or Apple Maps" value="${esc(ev?(ev.mapUrl||''):(last.mapUrl||''))}"></div>
+        placeholder="Paste from Google or Apple Maps" value="${esc(editing?(ev.mapUrl||''):'')}"></div>
     <p class="muted" style="font-size:12px;margin:2px 0 0">Either one gives the audience a <b>Directions</b> button that opens in whichever map app their phone uses — Google or Apple.</p>
     <div class="field" style="padding-left:0;padding-right:0"><label>Date</label>
       <input class="inp" id="gDate" type="date" value="${esc(ev?ev.date:(onDate||todayStr()))}"></div>
@@ -1263,8 +1263,8 @@ async function saveGig(){
 /* The printable codes. Caption is what goes UNDER the code on the card, so it
    has to make sense to somebody who has never heard of MySet. */
 const QRS=[
-  ['vote','Vote the setlist','What the room scans during your show','Vote your favorite song!'],
-  ['profile','Your page','Bio, music, upcoming gigs','Scan for my music & gigs'],
+  ['vote','Vote the setlist','What the room scans during your show','Scan to choose the next song!'],
+  ['profile','Your page','Bio, music, upcoming gigs','Hear more on MySet!'],
   ['home','MySet','Find gigs anywhere','Find live music near you'],
 ];
 const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((TEAM&&TEAM.slug)||'')}&s=${scale}`;

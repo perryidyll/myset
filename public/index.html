@@ -323,7 +323,8 @@ async function search(){
 
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const shortDate=d=>`${+d.slice(8,10)} ${MON[+d.slice(5,7)-1]}`;
-const dayMonth=d=>`${+d.slice(8,10)}/${+d.slice(5,7)}`;
+const MONFULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const dayMonth=d=>`${+d.slice(8,10)} ${MONFULL[+d.slice(5,7)-1]}`;
 /* No single link opens in whichever map app a phone actually uses, so the server
    builds both and this picks: Apple devices get Apple Maps, everyone else
    Google. */

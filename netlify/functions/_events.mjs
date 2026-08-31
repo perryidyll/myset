@@ -49,6 +49,9 @@ const FREQ = new Set(['weekly', 'biweekly', 'monthly', 'yearly']);
 export function normEvent(e) {
   const out = {
     id: str(e.id, 24),
+    /* Only a VENUE's own events have a title — a quiz night, a DJ, the football.
+       For an artist's gig the artist IS the title, so this stays empty. */
+    title: str(e.title, 70),
     venue: str(e.venue, 80),
     city: str(e.city, 60),
     country: str(e.country, 60),
@@ -90,6 +93,7 @@ export function expand(ev, fromDate, toDate) {
     out.push({
       eventId: ev.id, date: d, time: ev.time, tz: ev.tz, startsAt: ms,
       endsAt: ms + ev.durationMin * 60000,
+      title: ev.title || '',
       venue: ev.venue, city: ev.city, country: ev.country, endTime: endTimeOf(ev),
       note: ev.note, ticketUrl: ev.ticketUrl, repeating: !!ev.repeat,
       address: ev.address || '', mapUrl: ev.mapUrl || '',
@@ -143,7 +147,13 @@ export function nextOccurrence(events, nowMs) {
 /* ---------- the public city index ----------
    One global document, rewritten whenever an artist's gigs change, so the public
    feed reads exactly one known key — never list(), which lags minutes
-   (INVARIANT 1). */
+   (INVARIANT 1).
+
+   It holds VENUE owners too, as `v_<venueId>`. Artist ids are stripped to
+   [a-z0-9-] so the underscore can only ever mean a venue, and an existing array
+   of artist ids keeps working untouched — no migration. */
+export const isVenueOwner = (id) => String(id || '').startsWith('v_');
+export const venueIdOf = (id) => String(id || '').slice(2);
 export async function readCityIndex() {
   const { data } = await readDoc(CITY_INDEX, null);
   const d = data || { v: 1, countries: {} };

@@ -137,7 +137,8 @@ const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','De
 const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const dayNum=d=>+d.slice(8,10);
 const monShort=d=>MON[+d.slice(5,7)-1];
-const dayMonth=d=>`${+d.slice(8,10)}/${+d.slice(5,7)}`;
+const MONFULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const dayMonth=d=>`${+d.slice(8,10)} ${MONFULL[+d.slice(5,7)-1]}`;
 const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOW[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
 const todayISO=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};

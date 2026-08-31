@@ -2,6 +2,16 @@ import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
          mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU } from './_venues.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
+import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
+         endTimeOf, MAX_EVENTS } from './_events.mjs';
+import { readPitches, shapeForVenue, setPitchStatus } from './_pitch.mjs';
+import { venueStats } from './_vstats.mjs';
+import { checkWebsite, tryVerifyByWebsite, vouchCount, readVouches, MIN_VOUCHES } from './_verify.mjs';
+import { localDate, addDays } from './_time.mjs';
+
+/** A venue's own events live in the same store as artists' gigs, under an owner
+ *  id an artist can never hold — the underscore is stripped out of artist ids. */
+const evOwner = (vid) => `v_${vid}`;
 
 /* Everything a venue can change about its own page. A venue session can only
    ever reach its own records — the id comes from the token, never the body. */
@@ -21,6 +31,122 @@ export default async (req) => {
 
   if (action === 'get') return send();
 
+  /* ---------- the venue's own events ----------
+     Same recurrence engine as artists' gigs: one record for "every Tuesday", no
+     job to run, and it lands in the city feed and on the public page by itself.
+     Place is taken from the profile, never from the request — the event is AT
+     this venue by definition. */
+  if (action === 'eventList') {
+    const events = await readEvents(evOwner(vid));
+    const p = await getVenueProfile(vid);
+    const tz = ((events.list || []).find((x) => x.tz) || {}).tz || 'UTC';
+    const from = localDate(Date.now(), tz);
+    return json({ ok: true, events: events.list,
+      occurrences: occurrencesFor(events, addDays(from, -1), addDays(from, 90))
+        .map((o) => ({ ...o, endTime: o.endTime })),
+      place: { city: p.city, country: p.country, venue: p.name } });
+  }
+
+  if (action === 'eventSave') {
+    const p = await getVenueProfile(vid);
+    const reg = await venueById(vid);
+    const venueName = p.name || (reg && reg.name) || '';
+    const city = p.city || (reg && reg.city) || '';
+    const country = p.country || (reg && reg.country) || '';
+    if (!city || !country)
+      return bad('Add your city and country on the Page tab first — that is how events find their way into the local feed.');
+
+    const incoming = body.event || {};
+    const id = String(incoming.id || '').slice(0, 24) ||
+               'e' + Math.random().toString(36).slice(2, 10);        // outside the CAS
+    const ev = normEvent({ ...incoming, id, venue: venueName, city, country });
+    if (!ev.title) return bad('What is it called?');
+    if (!ev.date) return bad('Pick a date');
+
+    let full = false;
+    await mutateEvents(evOwner(vid), (d) => {
+      const at = d.list.findIndex((x) => x.id === id);
+      if (at >= 0) d.list[at] = { ...ev, skip: d.list[at].skip || [], hid: d.list[at].hid || [],
+                                  createdAt: d.list[at].createdAt };
+      else if (d.list.length >= MAX_EVENTS) { full = true; return false; }
+      else d.list.push(ev);
+      return true;
+    });
+    if (full) return bad('That is as many events as one calendar can hold');
+    const events = await readEvents(evOwner(vid));
+    await reindexCities(evOwner(vid), events);
+    return json({ ok: true, id, events: events.list });
+  }
+
+  if (action === 'eventDelete') {
+    await mutateEvents(evOwner(vid), (d) => {
+      d.list = d.list.filter((x) => x.id !== String(body.id || ''));
+      return true;
+    });
+    const events = await readEvents(evOwner(vid));
+    await reindexCities(evOwner(vid), events);
+    return json({ ok: true, events: events.list });
+  }
+
+  if (action === 'eventSkip') {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date || '') ? body.date : null;
+    if (!date) return bad('bad date');
+    await mutateEvents(evOwner(vid), (d) => {
+      const ev = d.list.find((x) => x.id === String(body.id || ''));
+      if (!ev) return false;
+      ev.skip = Array.isArray(ev.skip) ? ev.skip : [];
+      const at = ev.skip.indexOf(date);
+      if (body.on === false) { if (at >= 0) ev.skip.splice(at, 1); }
+      else if (at < 0) ev.skip.push(date);
+      return true;
+    });
+    const events = await readEvents(evOwner(vid));
+    return json({ ok: true, events: events.list });
+  }
+
+  /* ---------- who wants to play here ---------- */
+  if (action === 'pitchList')
+    return json({ ok: true, pitches: await shapeForVenue(await readPitches(vid)) });
+
+  if (action === 'pitchSet') {
+    const row = await setPitchStatus(vid, String(body.id || ''), String(body.status || ''));
+    if (!row) return bad('Could not update that');
+    return json({ ok: true, pitches: await shapeForVenue(await readPitches(vid)) });
+  }
+
+  /* ---------- what happened in the room ---------- */
+  if (action === 'stats') {
+    const p = await getVenueProfile(vid);
+    const reg = await venueById(vid);
+    return json(await venueStats(shapeVenue(p, reg)));
+  }
+
+  /* ---------- verification ----------
+     Reports every check separately so the studio can show a checklist instead of
+     a yes/no, and runs the real website fetch. */
+  if (action === 'verifyCheck') {
+    const p = await getVenueProfile(vid);
+    const reg = await venueById(vid);
+    const v = shapeVenue(p, reg);
+    const [res, vouches] = await Promise.all([
+      tryVerifyByWebsite(vid, me.email, v),
+      readVouches(vid),
+    ]);
+    const after = await venueById(vid);
+    const names = Object.values(vouches.by || {}).map((x) => x.name).filter(Boolean);
+    return json({ ok: true,
+      verified: !!(after && after.verified), via: (after && after.verifiedVia) || null,
+      passed: res.passed, checks: res.checks, why: res.why,
+      vouches: names.length, need: MIN_VOUCHES, vouchedBy: names.slice(0, 12),
+      email: me.email });
+  }
+
+  if (action === 'verifyPreview') {           // just look, don't verify
+    const p = await getVenueProfile(vid);
+    const reg = await venueById(vid);
+    return json({ ok: true, ...(await checkWebsite(shapeVenue(p, reg))) });
+  }
+
   if (action === 'set') {
     await mutateVenueProfile(vid, (p) => {
       for (const k of ['name', 'tagline', 'about', 'city', 'country', 'address',
@@ -30,6 +156,25 @@ export default async (req) => {
       if (Array.isArray(body.amenities)) p.amenities = body.amenities;
       return true;
     });
+    /* An event stores the place it is at, so changing the venue's city has to
+       rewrite them — otherwise they keep pointing at the old town and quietly
+       disappear from both feeds. */
+    if (typeof body.city === 'string' || typeof body.country === 'string'
+        || typeof body.name === 'string') {
+      const p = await getVenueProfile(vid);
+      const ev = await readEvents(evOwner(vid));
+      if ((ev.list || []).length) {
+        await mutateEvents(evOwner(vid), (d) => {
+          for (const e of d.list) {
+            if (p.name) e.venue = p.name;
+            if (p.city) e.city = p.city;
+            if (p.country) e.country = p.country;
+          }
+          return true;
+        }).catch(() => {});
+        await reindexCities(evOwner(vid), await readEvents(evOwner(vid))).catch(() => {});
+      }
+    }
     // the registry keeps its own copy of the name and place, because the public
     // directory and the city match read it without opening the profile
     if (typeof body.name === 'string' || typeof body.city === 'string') {

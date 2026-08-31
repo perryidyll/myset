@@ -3,6 +3,7 @@ import { venueBySlug, venueById, getVenueProfile, shapeVenue, sameVenue } from '
 import { readEvents, occurrencesFor, readCityIndex } from './_events.mjs';
 import { localDate, addDays } from './_time.mjs';
 import { artistById } from './_auth.mjs';
+import { readVouches, MIN_VOUCHES } from './_verify.mjs';
 
 /* Public. A venue page, and who is playing there.
 
@@ -25,15 +26,45 @@ export default async (req) => {
   const [reg, prof] = await Promise.all([venueById(vid), getVenueProfile(vid)]);
   const venue = shapeVenue(prof, reg);
 
-  const gigs = await gigsAt(venue);
+  const [gigs, own, vouches] = await Promise.all([
+    gigsAt(venue), ownEvents(vid, venue), readVouches(vid),
+  ]);
+
   const acts = [];
   for (const g of gigs) {
-    if (!acts.some((a) => a.slug === g.slug)) acts.push({ name: g.artist, slug: g.slug });
+    if (g.slug && !acts.some((a) => a.slug === g.slug)) acts.push({ name: g.artist, slug: g.slug });
   }
 
-  return json({ ok: true, venue, gigs, artists: acts.slice(0, 24),
-                truncated: gigs.length >= 200 });
+  // both kinds of thing on, in one time order
+  const whatsOn = [...gigs, ...own].sort((a, b) => a.startsAt - b.startsAt).slice(0, 200);
+  const names = Object.values(vouches.by || {}).map((x) => x.name).filter(Boolean);
+
+  return json({ ok: true, venue,
+                gigs: whatsOn, artists: acts.slice(0, 24),
+                vouches: { count: names.length, need: MIN_VOUCHES, names: names.slice(0, 12) },
+                truncated: whatsOn.length >= 200 });
 };
+
+/** The venue's own listings — a quiz night, a DJ, the football. Same engine. */
+async function ownEvents(vid, venue) {
+  const events = await readEvents(`v_${vid}`);
+  if (!(events.list || []).length) return [];
+  const tz = ((events.list || []).find((x) => x.tz) || {}).tz || 'UTC';
+  const now = Date.now();
+  const from = localDate(now, tz);
+  return occurrencesFor(events, addDays(from, -1), addDays(from, HORIZON))
+    .filter((o) => o.endsAt > now)
+    .map((o) => ({
+      kind: 'event',
+      date: o.date, time: o.time, endTime: o.endTime, tz: o.tz,
+      startsAt: o.startsAt, endsAt: o.endsAt,
+      title: o.title || 'Event',
+      artist: '', slug: '',
+      note: o.note, ticketUrl: o.ticketUrl, repeating: o.repeating,
+      live: now >= o.startsAt && now < o.endsAt,
+    }))
+    .slice(0, 120);
+}
 
 async function gigsAt(venue) {
   if (!venue.country || !venue.city || !venue.name) return [];
@@ -52,6 +83,7 @@ async function gigsAt(venue) {
       if (o.city !== venue.city || o.country !== venue.country) continue;
       if (!sameVenue(o.venue, venue.name)) continue;
       rows.push({
+        kind: 'gig',
         date: o.date, time: o.time, endTime: o.endTime, tz: o.tz,
         startsAt: o.startsAt, endsAt: o.endsAt,
         artist: who.name, slug: who.slug,
