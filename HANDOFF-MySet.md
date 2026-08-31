@@ -969,3 +969,100 @@ never touched because he was 40 minutes from going on stage.
 
 Verified: no horizontal overflow at 320 / 375 / 390 / 430 / 768 / 1024 / 1440, in
 light and dark, no broken images, no invisible content.
+
+---
+
+### SESSION 12 — 2026-08-31 (song sheet, navigation, verification tightened)
+
+Commit `fa6e1d2`. Live and verified on production at 20:22 local, eight minutes
+before Perry went on stage — he gave the go-ahead mid-session.
+
+#### THE SONG SHEET
+
+One sheet for adding and for editing, the same shape as the gig sheet. Replaces
+the two inline inputs on the Setlist tab and the old `editSong` sheet, both of
+which are gone.
+
+| Field | Detail |
+|---|---|
+| Title · Artist | as before |
+| **The key you play it in** | twelve root chips + a Major/Minor toggle, plus a free field for what you'd actually write ("Capo 2", "Drop D"). `song.key`, ≤14 chars. |
+| **Genres** | 15 built-in + up to 15 of your own at 20 chars. Max 6 per song. |
+| **Your chart** | words, chords, capo notes — fixed-width so chords stay over the right word. Its own blob, `chart_<aid>_<songId>`, ≤20 KB. |
+| Words for the room | the audience's lyrics, with Find online / Remove |
+
+* **The chart and the key are never in a public payload.** Verified against
+  `/api/show`: no `chart`, no `key`, no chart text.
+* The chart is one tap from the **Live tab's now-playing card** — which is where
+  you need it — with the key shown under the title.
+* `_chart.mjs` keeps charts out of the `show` document on purpose: a full chart is
+  kilobytes and `show` is the hot path every phone in the room polls.
+
+#### GENRES
+
+Built-in (code, not data): Originals · Rock · Pop · Acoustic · Country · Folk ·
+Indie · R&B/Soul · Blues · Reggae · Funk/Disco · Hip-hop · Jazz · Latin ·
+Sing-along. `singalong` is in there deliberately — for this product it is more
+useful than half the real genres.
+
+Their own live on `show.tags` as `{id,label}` with a `c-` prefix, so a custom id
+can never collide with a built-in. **A custom tag can never duplicate a built-in
+however it is spelled** ("Rock", "rock", "R&B / Soul" are all refused) — otherwise
+the filter row gets two identical chips that mean different things. Deleting one
+strips it off every song on the next write.
+
+**Both setlists filter by genre** — the audience's voting page and the artist's
+Setlist tab, same chips. Only genres actually ON a song are offered; a row of
+fifteen where twelve match nothing is worse than no row. The audience's genre
+choice is deliberately **not** remembered between visits: a filter you forgot you
+set, on a setlist you have never seen, makes it look like the artist knows four
+songs.
+
+#### NAVIGATION
+
+* **Sheets.** Dismissing one meant hitting a 20px strip. Now the whole top of the
+  sheet drags; you can also drag from the body while it is scrolled to the top and
+  not on a control; a short **flick** closes it as well as a long pull (velocity,
+  not just distance); and there is a visible **✕**, because a gesture must never be
+  the only way out of anything. Same code in both Studios.
+* **The MySet logo is top-left of both Studios** and goes to the homepage.
+* **Tapping your own name** opens your public page in a new tab.
+
+#### VERIFICATION — all four, not any one
+
+`MIN_VOUCHES` 10 → **5**, and it is an AND now, not an OR. The automatic tick needs
+*all* of: a website on the page · the page claimed by an email on that domain ·
+the site naming the venue · five artists confirmed.
+
+**Proven on production:** a venue whose email and website both check out — which
+verified on its own this morning — now returns `passed: false` with
+`artists: 0 of 5`. INVARIANT 0ak updated.
+
+Also: the website check now runs against the address that **claimed** the page
+(`ownerEmail()`), not whoever is signed in, so a barman added later cannot verify a
+venue with a personal address on some other domain. The studio says so when the
+two differ. Perry's manual switch stays, as an explicit override.
+
+#### QR CODES — three in the whole app
+
+| Code | Goes to | Caption |
+|---|---|---|
+| Artist | `myset.vip/<slug>` | *Choose the next song* |
+| Venue | `myset.vip/v/<slug>` | *Connect with our performers* |
+| MySet | `myset.vip` | *Find live music near you & choose which songs are played* |
+
+`vote` and `invite` still **resolve**, because codes printed earlier may be on
+somebody's table, but neither Studio offers them.
+
+**Worth knowing:** the artist code now points at the profile page rather than
+straight at voting, so during a gig the room taps *Join live* once more than
+before. Perry asked for "their page", so that is what it does — one line to change
+if the extra tap turns out to matter in a busy bar.
+
+#### Every published page now carries an ownership notice
+
+Not security — see the note in `MYSET.md` — but it removes the "no notice" excuse
+and costs nothing. Audited at the same time: **nothing secret in any published
+byte** (Stripe keys, webhook secrets, Resend keys, Netlify PATs, the studio
+passcode, private keys, bearer tokens, real email addresses — all absent), and no
+secret hard-coded in any function. The five env vars are the only source.
