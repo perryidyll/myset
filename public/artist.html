@@ -23,6 +23,9 @@
 <meta property="og:image" content="/img/band.jpg" />
 <title>MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>" />
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="/app.css">
 <style>
 body{padding-bottom:34px}
@@ -31,6 +34,9 @@ body{padding-bottom:34px}
 .mark i{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;
   flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
 .mark i svg{width:14px;height:14px;fill:#fff;display:block}
+/* the arrow says "this leaves the page", which a bare logo does not */
+.mark .up{font-size:12px;color:var(--faint);font-weight:600;margin-left:1px}
+.mark:active{opacity:.6}
 
 .pcover{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
 .pcover img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:center 30%}
@@ -169,7 +175,7 @@ body{padding-bottom:34px}
 <body>
 <div class="wrap">
   <div class="brandbar">
-    <a class="mark" href="/"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet</a>
+    <a class="mark" href="/" aria-label="MySet home"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet<span class="up">↗</span></a>
   </div>
   <div id="app"></div>
   <div class="foot">MySet · myset.vip</div>
@@ -439,6 +445,14 @@ document.addEventListener('click',e=>{
 });
 
 boot();
+</script>
+<script>
+/* Registered late and non-blocking, so it can never delay the first paint. The
+   worker itself never caches /api and always prefers the network for pages —
+   see public/sw.js. */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>

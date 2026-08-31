@@ -18,6 +18,9 @@
 <meta name="apple-mobile-web-app-title" content="Studio" />
 <title>Artist Studio — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<link rel="manifest" href="/manifest-studio.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{
   --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
@@ -62,12 +65,21 @@ a{color:inherit;text-decoration:none}
 .whoami span{font-size:12px;color:var(--faint);flex:0 0 auto}
 .whoami:active h1{opacity:.6}
 
-.tabs{position:sticky;top:66px;z-index:29;display:flex;gap:5px;margin:14px 18px 0;padding:4px;
-  background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1);
+.tabs{position:sticky;top:66px;z-index:29;display:flex;gap:0;margin:14px 18px 0;padding:4px;
+  background:var(--surface);border-radius:var(--pill);
+  /* a hairline around the pill so the six read as one object */
+  box-shadow:var(--sh-1),inset 0 0 0 1.5px rgba(255,255,255,.16);
+  /* `safe center` centres the six when they fit and falls back to flex-start when
+     they don't — plain `center` clips the first tab off the scrollable start. */
+  justify-content:safe center;
   overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:0 0 auto}
-.tabs button{flex:1;padding:10px 4px;font-size:13px;font-weight:600;color:var(--muted);
+/* `flex:1` gave every tab the SAME width, so a short label like "Live" floated in
+   a wide cell while "Settings" was squeezed — which is what made the gaps between
+   the words look uneven. Sized to content with equal padding instead, so the space
+   between any two labels is identical, and the pill's own 4px puts the two end
+   labels about half a gap from the border. */
+.tabs button{flex:0 0 auto;padding:10px 9px;font-size:13px;font-weight:600;color:var(--muted);
   white-space:nowrap;letter-spacing:-.015em;
   border-radius:var(--pill);transition:background .25s var(--ease),color .2s var(--ease)}
 .tabs button.on{background:var(--surface-2);color:var(--ink);
@@ -137,6 +149,45 @@ a{color:inherit;text-decoration:none}
   box-shadow:var(--sh-1);font-size:13.5px;font-weight:500;color:var(--muted);white-space:nowrap}
 .gbar button.on{background:var(--grad);color:#fff;font-weight:600;box-shadow:0 3px 10px rgba(255,55,95,.3)}
 .gbar button b{font-weight:600;opacity:.6;font-size:12px}
+/* the setlist chooser: what the room is looking at tonight */
+.setpick{display:flex;align-items:center;gap:11px;margin:16px 18px 0;padding:13px 15px;
+  background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
+.setpick.narrowed{box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-soft)}
+.setpick .ic{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:var(--surface-2);
+  display:grid;place-items:center;font-size:15px}
+.setpick.narrowed .ic{background:var(--grad);color:#fff}
+.setpick .m{flex:1;min-width:0}
+.setpick .m b{display:block;font-size:15.5px;font-weight:600;letter-spacing:-.014em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setpick .m span{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+.setpick .go2{flex:0 0 auto;padding:9px 14px;border-radius:var(--pill);background:var(--surface-2);
+  font-size:13.5px;font-weight:600;color:var(--ink)}
+.warnstrip{margin:10px 18px 0;padding:12px 15px;border-radius:var(--r-sm);background:var(--accent-soft);
+  font-size:13px;color:var(--ink-2);line-height:1.45}
+.warnstrip b{color:var(--accent)}
+.ghead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 20px 2px}
+.ghead .kick{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ghead button{flex:0 0 auto;padding:8px 14px;border-radius:var(--pill);background:var(--accent-soft);
+  color:var(--accent-ink);font-size:13px;font-weight:600;white-space:nowrap;
+  transition:transform .2s var(--spring)}
+.ghead button:active{transform:scale(.94)}
+.lrow{display:flex;align-items:center;gap:12px;padding:13px 0;border-top:.5px solid var(--hair)}
+.lrow:first-child{border-top:none}
+.lrow .m{flex:1;min-width:0}
+.lrow .m b{display:block;font-size:16px;font-weight:600;letter-spacing:-.014em}
+.lrow .m span{display:block;font-size:12.5px;color:var(--muted);margin-top:1px}
+.lrow .now{flex:0 0 auto;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:var(--pill)}
+.pickrow{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:.5px solid var(--hair)}
+.pickrow:first-child{border-top:none}
+.pickrow .m{flex:1;min-width:0}
+.pickrow .t{font-size:15.5px;font-weight:500;letter-spacing:-.012em}
+.pickrow .by{font-size:12.5px;color:var(--muted);margin-top:1px}
+.pickrow .box{flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:var(--surface-2);
+  box-shadow:inset 0 0 0 1.5px var(--hair-2);display:grid;place-items:center;
+  font-size:13px;font-weight:700;color:transparent}
+.pickrow.on .box{background:var(--grad);color:#fff;box-shadow:none}
+.picklist{max-height:50vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -2px;padding:0 2px}
 /* the song sheet */
 .keys{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .keys button{padding:11px 2px;border-radius:11px;background:var(--surface-2);font-size:14.5px;
@@ -274,6 +325,8 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .gigrow .when span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
 .gigrow.off{opacity:.4}
 .gigrow.off .t{text-decoration:line-through}
+.seemore{width:100%;padding:15px;border-top:.5px solid var(--hair);font-size:14.5px;font-weight:600;
+  color:var(--accent);background:none}
 .warnbox{margin:16px 18px 0;padding:18px 20px;border-radius:var(--r-lg);background:var(--accent-soft);
   box-shadow:inset 0 0 0 1px rgba(255,69,110,.3)}
 .warnbox b{display:block;font-size:16.5px;font-weight:600;letter-spacing:-.015em;color:var(--accent)}
@@ -309,7 +362,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .grabzone{position:relative;padding:12px 0 10px;margin:-10px 0 0;cursor:grab;touch-action:none}
 .grabzone:active{cursor:grabbing}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
-.sheetx{position:absolute;top:2px;right:-4px;width:34px;height:34px;border-radius:50%;
+.sheetx{position:absolute;top:10px;right:-4px;width:34px;height:34px;border-radius:50%;
   background:var(--surface-2);color:var(--muted);font-size:14px;display:grid;place-items:center;
   transition:transform .2s var(--spring)}
 .sheetx:active{transform:scale(.9)}
@@ -362,12 +415,259 @@ const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artis
 const collate=(a,b)=>String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base'});
 function setSort(v){ SETSORT=v; try{localStorage.setItem('myset.setsort',v)}catch(e){} render(); }
 let GENRE='';
+let GIGSALL=false;      // the gig list shows five, like the public page does
 function setGenre(id){ GENRE=(GENRE===id?'':id); render(); }
 const tagLabel=(id)=>{
   const v=(D&&D.tags)||{builtin:[],own:[]};
   const hit=[...v.builtin,...v.own].find(t=>t.id===id);
   return hit?hit.label:id;
 };
+/* ── setlists ────────────────────────────────────────────
+   One library of songs; a setlist is a named subset of it, like a playlist. The
+   row at the top of the Setlist tab is the only place that says what the room can
+   currently see, so it has to be unmissable and it has to be honest. */
+function setPick(){
+  const s=D.show, lists=(D&&D.lists)||[];
+  const on=lists.find(l=>l.id===s.listId);
+  const total=(D.songs||[]).filter(x=>x.active!==false).length;
+  return `<div class="setpick ${on?'narrowed':''}" onclick="openLists()">
+      <span class="ic">${on?'☰':'♾'}</span>
+      <div class="m">
+        <b>${on?esc(on.name):'All songs'}</b>
+        <span>${on?`${on.count} of your ${total} songs are in play`:`the whole library — ${total} songs`}</span>
+      </div>
+      <span class="go2">${lists.length?'Change':'Make a set'}</span>
+    </div>
+    ${D.listFellBack?`<div class="warnstrip"><b>Nothing votable in that set.</b>
+      The room is seeing your whole library instead, so the night still works —
+      but put some songs in it, or switch back to All songs.</div>`:''}`;
+}
+function openLists(){
+  const lists=(D&&D.lists)||[], s=D.show;
+  openSheet(`<h3>Your setlists</h3>
+    <p class="lede">A setlist is just a named handful of your songs — a beach set, a
+      late set, the one for the Irish pub. Pick one and the room only sees those.</p>
+    <div class="lrow" onclick="useList('')">
+      <div class="m"><b>All songs</b><span>everything you haven’t hidden</span></div>
+      ${!s.listId?'<span class="now">In play</span>':''}
+    </div>
+    ${lists.map(l=>`<div class="lrow">
+      <div class="m" onclick="openList('${esc(l.id)}')"><b>${esc(l.name)}</b>
+        <span>${l.count} song${l.count===1?'':'s'} · tap to edit</span></div>
+      ${l.active?'<span class="now">In play</span>'
+        :`<button class="act" data-act="luse" data-id="${esc(l.id)}">Use</button>`}
+    </div>`).join('')}
+    <button class="big" style="margin-top:18px" onclick="newList()">+ New setlist</button>
+    <p class="muted" style="font-size:12px;margin:12px 0 0">You can also pick a set per gig
+      on the <b>Gigs</b> tab — then tapping “Start the show” uses it automatically.</p>`);
+}
+async function newList(){
+  const name=(prompt('Name this setlist — “Beach set”, “Late set”, “Irish pub”')||'').trim();
+  if(!name)return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'listNew',name})});
+  if(!d.ok){toast(d.error||'Could not create that');return;}
+  if(D) D.lists=d.lists;
+  openList(d.id);
+  toast('Now put some songs in it');
+}
+async function useList(id){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'listUse',id:id||''})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  closeSheet(); await load();
+  toast(d.listName?`The room now sees “${d.listName}”`:'The room sees all your songs');
+}
+function openList(id){
+  const l=((D&&D.lists)||[]).find(x=>x.id===id);
+  if(!l){openLists();return;}
+  const mine=new Set(l.songs);
+  const songs=[...(D.songs||[])].filter(x=>mine.has(x.id))
+    .sort((a,b)=>a.title.localeCompare(b.title));
+  openSheet(`<h3>${esc(l.name)}</h3>
+    <p class="lede">${l.count} song${l.count===1?'':'s'}${l.active?' · in play right now':''}</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="act pri" data-act="lpick" data-id="${esc(id)}">+ Add songs</button>
+      <button class="act" data-act="lrename" data-id="${esc(id)}">Rename</button>
+      ${l.active?'':`<button class="act" data-act="luse" data-id="${esc(id)}">Use tonight</button>`}
+    </div>
+    ${songs.length?`<div class="picklist" style="margin-top:16px">${songs.map(x=>`
+      <div class="pickrow on">
+        <div class="m"><div class="t">${esc(x.title)}</div>
+          <div class="by">${esc(x.artist||'')}${x.key?' · '+esc(x.key):''}</div></div>
+        <button class="act warn" data-act="ltoggle" data-id="${esc(id)}|${esc(x.id)}">✕</button>
+      </div>`).join('')}</div>`
+      :`<p class="muted" style="font-size:15px;margin-top:18px">Nothing in it yet — tap
+        <b>+ Add songs</b>.</p>`}
+    <button class="big alt" style="margin-top:18px" data-act="ldel" data-id="${esc(id)}">Delete this setlist</button>`);
+}
+let PICK=null;
+function openListPicker(id){
+  const l=((D&&D.lists)||[]).find(x=>x.id===id);
+  if(!l)return;
+  PICK={id, chosen:new Set(l.songs), q:''};
+  drawPicker();
+}
+function drawPicker(){
+  const l=((D&&D.lists)||[]).find(x=>x.id===PICK.id)||{name:''};
+  const q=PICK.q.trim().toLowerCase();
+  const songs=[...(D.songs||[])]
+    .filter(x=>x.active!==false)
+    .filter(x=>!q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q))
+    .sort((a,b)=>a.title.localeCompare(b.title));
+  openSheet(`<h3>Add to “${esc(l.name)}”</h3>
+    <p class="lede">${PICK.chosen.size} chosen. Tap to add or remove.</p>
+    <input class="inp" id="pkq" placeholder="Search your songs" value="${esc(PICK.q)}" autocomplete="off">
+    <div class="picklist" style="margin-top:12px">${songs.length?songs.map(x=>`
+      <div class="pickrow ${PICK.chosen.has(x.id)?'on':''}" data-act="pktog" data-id="${esc(x.id)}">
+        <div class="m"><div class="t">${esc(x.title)}</div>
+          <div class="by">${esc(x.artist||'')}${(x.tags||[]).length?' · '+esc((x.tags||[]).map(tagLabel).join(', ')):''}</div></div>
+        <span class="box">✓</span>
+      </div>`).join(''):`<p class="muted" style="font-size:15px">Nothing matches that.</p>`}</div>
+    <button class="big" style="margin-top:16px" data-act="pksave" data-id="${esc(PICK.id)}">
+      Save ${PICK.chosen.size} song${PICK.chosen.size===1?'':'s'}</button>`);
+  const el=$('#pkq');
+  if(el){ el.addEventListener('input',e=>{ PICK.q=e.target.value; drawPicker();
+    const n=$('#pkq'); if(n){n.focus(); n.setSelectionRange(n.value.length,n.value.length);} }); }
+}
+function pickToggle(songId){
+  if(!PICK)return;
+  if(PICK.chosen.has(songId)) PICK.chosen.delete(songId); else PICK.chosen.add(songId);
+  drawPicker();
+}
+async function savePicker(id){
+  if(!PICK)return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'listSongs',id,songs:[...PICK.chosen]})});
+  if(!d.ok){toast(d.error||'Could not save');return;}
+  if(D) D.lists=d.lists;
+  await load(); openList(id); toast('Saved');
+}
+async function renameList(id){
+  const l=((D&&D.lists)||[]).find(x=>x.id===id);
+  const name=(prompt('Rename this setlist', l?l.name:'')||'').trim();
+  if(!name)return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'listRename',id,name})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  if(D) D.lists=d.lists;
+  await load(); openList(id);
+}
+async function deleteList(id){
+  const l=((D&&D.lists)||[]).find(x=>x.id===id);
+  if(!confirm(`Delete “${l?l.name:'this setlist'}”? Your songs are not touched.`))return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'listDelete',id})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  closeSheet(); await load(); toast('Setlist deleted');
+}
+async function toggleInList(pair){
+  const [id,song]=pair.split('|');
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'listToggle',id,song})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  if(D) D.lists=d.lists;
+  await load(); openList(id);
+}
+
+/* ── songs to learn ──────────────────────────────────────
+   Deliberately NOT in the song library: the room must never be able to vote for
+   something that isn't playable yet. "Learned it" moves the row across. */
+function learnSection(){
+  const rows=(D&&D.learn)||[];
+  return `<div class="sec"><span class="kick">Want to learn</span><span class="kick">${rows.length||''}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Songs you don’t play yet.
+      Nobody can vote for these — they’re a list for you. Tap <b>Learned it</b> and it moves
+      into your setlist.</p>
+    <div class="list">${rows.length?rows.map(x=>`<div class="row">
+      <div class="m"><div class="t">${esc(x.title)}</div>
+        <div class="by">${esc(x.artist||'— no artist —')}</div>
+        ${x.note?`<div class="s">${esc(x.note)}</div>`:''}</div>
+      <button class="act pri" data-act="wdone" data-id="${esc(x.id)}">Learned it</button>
+      <button class="act warn" data-act="wdel" data-id="${esc(x.id)}">✕</button>
+    </div>`).join(''):'<div class="row muted">Nothing on the list.</div>'}</div>
+    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openLearn()">+ Add a song to learn</button></div>`;
+}
+function openLearn(){
+  openSheet(`<h3>A song to learn</h3>
+    <p class="lede">Somebody asked for it, or you heard it and liked it. It stays out of
+      your setlist until you say you’ve learned it.</p>
+    <input class="inp" id="wTitle" maxlength="80" placeholder="Song title" autocomplete="off">
+    <input class="inp" id="wArtist" maxlength="60" placeholder="Who’s it by? (optional)"
+      style="margin-top:9px" autocomplete="off">
+    <input class="inp" id="wNote" maxlength="140" placeholder="A note to yourself (optional)"
+      style="margin-top:9px" autocomplete="off">
+    <button class="big" style="margin-top:16px" onclick="addLearn()">Add it</button>`);
+  setTimeout(()=>{const e=$('#wTitle'); if(e)e.focus();},260);
+}
+async function addLearn(){
+  const v=x=>(($('#'+x)||{}).value||'').trim();
+  if(!v('wTitle')){toast('What song?');return;}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'learnAdd',
+    title:v('wTitle'),artist:v('wArtist'),note:v('wNote')})});
+  if(!d.ok){toast(d.error||'Could not add that');return;}
+  if(D) D.learn=d.learn;
+  closeSheet(); render(); toast('On the list');
+}
+async function learnDone(id){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'learnDone',id})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  if(d.stage&&d.stage.ok) D=d.stage; else await load();
+  if(D) D.learn=d.learn;
+  render(); toast(d.note||'Nice — it’s in your setlist now');
+}
+async function learnRemove(id){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'learnRemove',id})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  if(D) D.learn=d.learn;
+  render();
+}
+
+/* ── auto-tag ────────────────────────────────────────────
+   Asks first, because it touches every song. It only ever fills in songs that have
+   NO genres, so it can never undo a choice they made by hand. */
+function confirmAutoTag(){
+  const songs=(D&&D.songs)||[];
+  const blank=songs.filter(x=>!(x.tags||[]).length).length;
+  if(!blank){
+    openSheet(`<h3>Already done</h3>
+      <p class="lede">Every one of your ${songs.length} songs already has genres on it.
+        Auto-tag only ever fills in blanks — it will never change something you chose
+        yourself.</p>
+      <button class="big" onclick="closeSheet()">Got it</button>`);
+    return;
+  }
+  openSheet(`<h3>Auto-tag your songs?</h3>
+    <p class="lede">This fills in genres for the <b>${blank}</b> song${blank===1?'':'s'} that
+      don’t have any, using how Spotify, Apple Music and Wikipedia actually classify them.</p>
+    <div class="list" style="margin:0">
+      <div class="row"><div class="m"><div class="t">It won’t touch your own choices</div>
+        <div class="s">Only songs with no genres get filled in. Run it as often as you like.</div></div></div>
+      <div class="row"><div class="m"><div class="t">Your own songs get “Originals”</div>
+        <div class="s">Anything credited to you is tagged that way automatically.</div></div></div>
+      <div class="row"><div class="m"><div class="t">Every tag stays editable</div>
+        <div class="s">Tap <b>Edit</b> on any song to change them.</div></div></div>
+    </div>
+    <p class="muted" style="font-size:12.5px;margin:14px 0 0">It usually takes a few seconds,
+      but with a big setlist give it up to a minute — don’t close the app while it runs.</p>
+    <button class="big" style="margin-top:14px" onclick="runAutoTag()">Tag ${blank} song${blank===1?'':'s'}</button>
+    <button class="big alt" style="margin-top:9px" onclick="closeSheet()">Not now</button>`);
+}
+async function runAutoTag(){
+  if(WRITING)return; WRITING=true;
+  openSheet(`<h3>Tagging…</h3><p class="lede"><span class="spin"></span>
+    Going through your setlist. This can take a moment.</p>`);
+  try{
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'tagAuto'})});
+    if(!d.ok){toast(d.error||'That didn’t work');closeSheet();return;}
+    if(d.stage&&d.stage.ok) D=d.stage; else await load();
+    render();
+    openSheet(`<h3>Done — ${d.filled} tagged</h3>
+      <p class="lede">${d.kept?`${d.kept} already had genres and were left alone. `:''}${
+        d.unknownCount?`${d.unknownCount} weren’t in the reference list, so they’re still blank.`
+                      :'Everything got at least one genre.'}</p>
+      ${d.unknownCount?`<div class="list" style="margin:0">${d.unknown.map(t=>
+        `<div class="row"><div class="m"><div class="t">${esc(t)}</div></div></div>`).join('')}</div>
+        <p class="muted" style="font-size:12.5px;margin:12px 0 0">Tap <b>Edit</b> on those and
+          pick their genres yourself.</p>`:''}
+      <button class="big" style="margin-top:16px" onclick="closeSheet()">Nice</button>`);
+  } finally { WRITING=false; }
+}
+
 /* Only genres that are actually ON a song. A row of fifteen chips where twelve
    match nothing is worse than no row at all. */
 function genreBar(songs){
@@ -604,6 +904,15 @@ function openGig(id,onDate){
       <input type="hidden" id="gRepeat" value="${esc(R?R.freq:'')}"></div>
     <div class="field" style="padding-left:0;padding-right:0"><label>Stop repeating on (optional)</label>
       <input class="inp" id="gUntil" type="date" value="${esc(R&&R.until?R.until:'')}"></div>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Setlist for this gig</label>
+      <select class="inp" id="gList">
+        <option value=""${!(ev&&ev.listId)?' selected':''}>All songs</option>
+        ${((D&&D.lists)||[]).map(l=>`<option value="${esc(l.id)}"${
+          ev&&ev.listId===l.id?' selected':''}>${esc(l.name)} · ${l.count} songs</option>`).join('')}
+      </select>
+      <p class="muted" style="font-size:12px;margin:7px 0 0">${((D&&D.lists)||[]).length
+        ? 'Tapping “Start the show” on the night switches to this automatically.'
+        : 'Make a setlist on the Setlist tab and it’ll show up here.'}</p></div>
     <input type="hidden" id="gTz" value="${esc(tz)}">
     <button class="big" style="margin-top:16px" data-act="gigsave" data-id="${esc(ev?ev.id:'')}">${ev?'Save changes':'Add it'}</button>
     ${ev?`<button class="big alt" style="margin-top:10px" data-act="gigdel" data-id="${esc(ev.id)}">Delete this gig${ev.repeat?' and its whole run':''}</button>`:''}`);
@@ -614,7 +923,7 @@ async function saveGig2(id){
   const v=x=>(($('#'+x)||{}).value||'').trim();
   const freq=v('gRepeat');
   const ev={id:id||undefined,venue:v('gV'),city:v('gCity'),country:v('gCountry'),
-    address:v('gAddr'),mapUrl:v('gMap'),
+    address:v('gAddr'),mapUrl:v('gMap'),listId:v('gList'),
     tz:v('gTz'),date:v('gDate'),time:v('gTime')||'20:00',endTime:v('gEnd')||'',
     repeat:freq?{freq,until:v('gUntil')||null}:null};
   if(!ev.venue){toast('Where is it?');return;}
@@ -788,6 +1097,7 @@ function render(){
           onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear setlist</button>
       </div>
     </div>
+    ${setPick()}
     <div class="wrap" style="padding-top:16px">
       <button class="big bigplay" style="margin:0" onclick="openSongSheet(null)">
         <span>+</span><span style="flex:1">Add a song</span></button>
@@ -806,6 +1116,8 @@ function render(){
     </div>
     <div class="sortbar" role="group" aria-label="Sort songs">${SETSORTS.map(([k,l])=>
       `<button data-sort="${k}" class="${SETSORT===k?'on':''}" aria-pressed="${SETSORT===k}">${l}</button>`).join('')}</div>
+    <div class="ghead"><span class="kick">Genres</span>
+      <button onclick="confirmAutoTag()">✨ Auto-tag songs</button></div>
     ${genreBar(songs)}
     <p class="muted" style="font-size:12px;padding:10px 14px 4px;margin:0">Turn a song OFF to hide it from the audience tonight. Remove deletes it for good.</p>
     <div class="list">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
@@ -819,6 +1131,7 @@ function render(){
       <button class="act" onclick="act('toggleSong',{song:'${x.id}'})">${x.active===false?'Show':'Hide'}</button>
       <button class="act warn" data-act="del" data-id="${x.id}">✕</button>
     </div>`).join(''):`<div class="row muted">Nothing matches “${esc(SETQ)}”</div>`}</div>
+    ${learnSection()}
     `;
   }
 
@@ -852,7 +1165,7 @@ function render(){
         }).join('')}
       </div>
       <div class="sec"><span class="kick">Coming up</span><span class="kick">${up.length}</span></div>
-      <div class="list">${up.map(o=>`<div class="row gigrow ${o.cancelled?'off':''}">
+      <div class="list">${(GIGSALL?up:up.slice(0,5)).map(o=>`<div class="row gigrow ${o.cancelled?'off':''}">
         <div class="when"><b>${dayNum(o.date)}</b><span>${monShort(o.date)}</span></div>
         <div class="m"><div class="t">${esc(o.venue)}</div>
           <div class="by">${esc(o.address||[o.city,o.country].filter(Boolean).join(', '))}</div>
@@ -862,7 +1175,9 @@ function render(){
              <button class="act warn" data-act="gighide" data-id="${o.eventId}|${o.date}">Hide</button>`
           : `<button class="act" data-act="gigedit" data-id="${o.eventId}">Edit</button>
              <button class="act warn" data-act="gigskip" data-id="${o.eventId}|${o.date}">✕</button>`}
-      </div>`).join('')||'<div class="row muted">Nothing booked yet. Tap “Add a gig” — a weekly residency only needs entering once.</div>'}</div>
+      </div>`).join('')||'<div class="row muted">Nothing booked yet. Tap “Add a gig” — a weekly residency only needs entering once.</div>'}
+      ${up.length>5?`<button class="seemore" onclick="GIGSALL=!GIGSALL;render()">${
+        GIGSALL?'Show fewer ▴':`See ${up.length-5} more ▾`}</button>`:''}</div>
       <p class="muted" style="font-size:12px;padding:14px 18px 0">These show on your page and in the city feed automatically. ✕ cancels one night; Edit changes the whole run.</p>
       ${pitchPanel()}`;
     }
@@ -1583,6 +1898,15 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='sgtagnew') addOwnTag();
   if(b.dataset.act==='chart') openChart(id);
   if(b.dataset.act==='gfilter') setGenre(id);
+  if(b.dataset.act==='luse') useList(id);
+  if(b.dataset.act==='lpick') openListPicker(id);
+  if(b.dataset.act==='lrename') renameList(id);
+  if(b.dataset.act==='ldel') deleteList(id);
+  if(b.dataset.act==='ltoggle') toggleInList(id);
+  if(b.dataset.act==='pktog') pickToggle(id);
+  if(b.dataset.act==='pksave') savePicker(id);
+  if(b.dataset.act==='wdone') learnDone(id);
+  if(b.dataset.act==='wdel') learnRemove(id);
   if(b.dataset.act==='lyrfind') findLyrics(id);
   if(b.dataset.act==='lyrclear') clearLyrics(id);
   if(b.dataset.act==='del') removeSong(id);
@@ -1621,7 +1945,7 @@ async function saveGig(){
    also get the music, the links and the next gigs. */
 const QRS=[
   ['profile','Your page','On the tables during your show','Choose the next song'],
-  ['home','MySet','Find gigs anywhere','Find live music near you & choose which songs are played'],
+  ['home','MySet','Find gigs anywhere','Find live music. Choose the songs they play.'],
 ];
 const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((TEAM&&TEAM.slug)||'')}&s=${scale}`;
 const qrUrl=k=>k==='home'?'myset.vip'
@@ -1935,6 +2259,14 @@ let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on
 function start(){clearInterval(timer);load();
   timer=setInterval(()=>{if(!document.hidden&&TAB==='live')load({quiet:true})},4000);}
 if(CODE||TOKEN) start(); else gate();
+</script>
+<script>
+/* Registered late and non-blocking, so it can never delay the first paint. The
+   worker itself never caches /api and always prefers the network for pages —
+   see public/sw.js. */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>

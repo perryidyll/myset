@@ -18,6 +18,9 @@
 <meta name="apple-mobile-web-app-title" content="Venue" />
 <title>Venue Studio — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<link rel="manifest" href="/manifest-venue.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 :root{
   --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
@@ -215,7 +218,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .grabzone{position:relative;padding:12px 0 10px;margin:-10px 0 0;cursor:grab;touch-action:none}
 .grabzone:active{cursor:grabbing}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
-.sheetx{position:absolute;top:2px;right:-4px;width:34px;height:34px;border-radius:50%;
+.sheetx{position:absolute;top:10px;right:-4px;width:34px;height:34px;border-radius:50%;
   background:var(--surface-2);color:var(--muted);font-size:14px;display:grid;place-items:center;
   transition:transform .2s var(--spring)}
 .sheetx:active{transform:scale(.9)}
@@ -778,7 +781,7 @@ const fmtTime=t=>{const p=String(t||'').split(':');let h=+p[0];
 
 const QRS=[
   ['venue','Our page','What’s on, menu, offers','Connect with our performers'],
-  ['home','MySet','Find gigs anywhere','Find live music near you & choose which songs are played'],
+  ['home','MySet','Find gigs anywhere','Find live music. Choose the songs they play.'],
 ];
 const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((V&&V.slug)||'')}&s=${scale}`;
 const qrUrl=k=>k==='home'?'myset.vip':`myset.vip/v/${(V&&V.slug)||''}`;
@@ -1080,6 +1083,14 @@ let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on
   clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
 
 if(TOKEN) start(); else gate();
+</script>
+<script>
+/* Registered late and non-blocking, so it can never delay the first paint. The
+   worker itself never caches /api and always prefers the network for pages —
+   see public/sw.js. */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
 </script>
 </body>
 </html>

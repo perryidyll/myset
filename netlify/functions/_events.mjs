@@ -60,6 +60,10 @@ export function normEvent(e) {
     time: /^\d{2}:\d{2}$/.test(e.time) ? e.time : '20:00',
     durationMin: durationFrom(e),
     note: str(e.note, 140),
+    /* Which setlist to play. '' means the whole library. Applied when the artist
+       taps Start the show, not before — a gig three weeks out must not change
+       what tonight's room sees. */
+    listId: String(e.listId || '').replace(/[^a-z0-9]/gi, '').slice(0, 12),
     // where exactly, so somebody reading the feed can actually get there
     ...normPlace(e),
     ticketUrl: /^https:\/\//.test(e.ticketUrl || '') ? String(e.ticketUrl).slice(0, 300) : '',
@@ -96,6 +100,7 @@ export function expand(ev, fromDate, toDate) {
       title: ev.title || '',
       venue: ev.venue, city: ev.city, country: ev.country, endTime: endTimeOf(ev),
       note: ev.note, ticketUrl: ev.ticketUrl, repeating: !!ev.repeat,
+      listId: ev.listId || '',
       address: ev.address || '', mapUrl: ev.mapUrl || '',
       maps: mapLinks(ev, ev.venue),
     });

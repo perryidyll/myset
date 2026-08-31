@@ -113,6 +113,11 @@ export function defaultShow() {
     birthdays: { on: false, cost: 3 },
     packs: DEFAULT_PACKS(),
     tags: [],                    // the artist's own genres, on top of the built-ins
+    /* Which setlist is in play. '' means the whole library. `listSongs` is a
+       PROJECTION of that list's ids, kept here so /api/show never has to read a
+       second document on the poll — see the note in _lists.mjs. Only
+       applyList() writes it, and normShow re-filters it below. */
+    listId: '', listName: '', listSongs: [],
     songs: [],
     showId: null,
     artistId: ARTIST_ID,
@@ -308,8 +313,14 @@ function normShow(s) {
   show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
   show.tags = normOwnTags(show.tags);
+  show.listId = String(show.listId || '').replace(/[^a-z0-9]/gi, '').slice(0, 12);
+  show.listName = String(show.listName || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  show.listSongs = Array.isArray(show.listSongs) ? show.listSongs : [];
   /* Songs carry a key and genre tags. Tags are filtered against what actually
      exists, so deleting a custom tag cleans itself up on the next read. */
+  const ids = new Set(show.songs.map((x) => x && x.id));
+  show.listSongs = [...new Set(show.listSongs.filter((x) => ids.has(x)))];
+  if (!show.listId) { show.listName = ''; show.listSongs = []; }
   const known = new Set([...GENRE_IDS, ...show.tags.map((t) => t.id)]);
   show.songs = show.songs.map((sg) => ({
     ...sg,
@@ -425,6 +436,32 @@ export const mutateMeta = (aid, fn) =>
   casDoc(KEY.meta(aid), emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; return fn(m); });
 
 /* ---------- derived ---------- */
+/* ---------- which songs are in play tonight ----------
+   A setlist narrows the library; `active !== false` hides a song for good. Both
+   apply, and the setlist is the narrower of the two.
+
+   FALLBACK, and it is deliberate: if the chosen setlist resolves to nothing the
+   room can vote for, the whole library is used instead. An empty voting page is a
+   broken gig (INVARIANT 16), and a silent empty list is exactly the kind of thing
+   that gets noticed on stage at 10pm. The Studio is told, so it can say so. */
+export function playable(show) {
+  const live = (show.songs || []).filter((s) => s.active !== false);
+  if (!show.listId) return { songs: live, fellBack: false };
+  /* A setlist that is SELECTED but resolves to nothing — emptied, or every song in
+     it hidden — still counts as a fallback. Reporting it as "no list" hid the
+     problem from the Studio, which is the one place it needs to be visible. */
+  const inList = new Set(show.listSongs || []);
+  const narrowed = live.filter((s) => inList.has(s.id));
+  return narrowed.length ? { songs: narrowed, fellBack: false }
+                         : { songs: live, fellBack: true };
+}
+/** Just the predicate, for callers that already have their own list. */
+export function inPlay(show) {
+  const { songs } = playable(show);
+  const ok = new Set(songs.map((s) => s.id));
+  return (id) => ok.has(id);
+}
+
 /** Does this device vote without limit? Either the whole room is unlimited, or
  *  this specific device was granted it from the Studio (the artist's own phone,
  *  so he can test without eating the audience's credits). */

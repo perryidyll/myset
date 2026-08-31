@@ -1,4 +1,5 @@
-import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, publicArtist, json, bad, cleanFanId } from './_lib.mjs';
+import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, publicArtist, json, bad,
+         cleanFanId, playable } from './_lib.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -13,8 +14,12 @@ export default async (req) => {
   if (!aid) return bad('unknown artist', 404);
   const show = await getShow(aid);
   if (show.status === 'ended') return bad('The show has ended', 409);
-  const s0 = show.songs.find((x) => x.id === song && x.active !== false);
-  if (!s0) return bad('unknown song', 404);
+  /* In tonight's setlist, or already played (a replay request is always fair).
+     Anything else is not on offer, whatever the browser thinks. */
+  const inPlay = new Set(playable(show).songs.map((x) => x.id));
+  const s0 = show.songs.find((x) => x.id === song && x.active !== false
+                                    && (inPlay.has(x.id) || show.played.includes(x.id)));
+  if (!s0) return bad('That one isn’t on tonight’s list', 404);
   if (show.nowPlaying === song) return bad('That one is playing right now', 409);
 
   const cost = costOf(song, show);   // 1 normally, more to request a replay

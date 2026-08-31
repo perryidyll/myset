@@ -1,6 +1,6 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
          isUnlimited, publicArtist, json, bad, cleanFanId, markPresence,
-         GENRES } from './_lib.mjs';
+         GENRES, playable } from './_lib.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
 
 export default async (req) => {
@@ -31,14 +31,16 @@ export default async (req) => {
     // the KEY and the artist's CHART are never in a public payload
   });
 
-  // songs still to play
-  const songsRaw = show.songs
-    .filter((s) => s.active !== false)
+  // songs still to play — narrowed to tonight's setlist, if one is chosen
+  const { songs: pool, fellBack } = playable(show);
+  const songsRaw = pool
     .filter((s) => s.id !== show.nowPlaying && !show.played.includes(s.id))
     .map(shape);
   const ordered = rankSongs(songsRaw, counts, firstAt);
 
-  // already played — still votable, at the higher replay cost
+  /* Already played — still votable at the higher replay cost. A song that has been
+     played stays votable even if it is not in tonight's list: the room heard it,
+     asking for it again is fair, and taking it away mid-show is confusing. */
   const played = show.played
     .map((id) => show.songs.find((s) => s.id === id))
     .filter(Boolean)
@@ -63,10 +65,10 @@ export default async (req) => {
     packs: show.packs,
     /* Only the genres actually used by a song the room can see — a filter row of
        fifteen chips where twelve match nothing is worse than no filter row. */
+    setlist: show.listId ? { name: show.listName } : null,
     tags: (() => {
       const used = new Set();
-      for (const s of show.songs) {
-        if (s.active === false) continue;
+      for (const s of pool) {
         for (const t of s.tags || []) used.add(t);
       }
       const labels = Object.fromEntries([...GENRES, ...show.tags.map((t) => [t.id, t.label])]);

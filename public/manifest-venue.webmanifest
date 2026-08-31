@@ -1,0 +1,37 @@
+{
+  "name": "MySet Venue Studio",
+  "short_name": "Venue",
+  "description": "What's on at your place, your menu, your offers and who wants to play.",
+  "id": "/venues",
+  "start_url": "/venues?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#161413",
+  "categories": [
+    "music",
+    "entertainment",
+    "lifestyle"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

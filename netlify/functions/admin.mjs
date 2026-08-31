@@ -2,8 +2,11 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, playable } from './_lib.mjs';
+import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
+         shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
+import { genresFor, MAP_SIZE } from './_genremap.mjs';
 import { readRequests, shapeRequests, resolveRequest, attachSong } from './_requests.mjs';
 import { readArtists, mutateArtists } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
@@ -12,7 +15,8 @@ import { archiveShow } from './_history.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
-import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf, MAX_EVENTS } from './_events.mjs';
+import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf,
+         nextOccurrence, MAX_EVENTS } from './_events.mjs';
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, redeemPromo,
@@ -159,6 +163,11 @@ async function handleEvents(aid, action, body) {
     const ev = normEvent({ ...incoming, id });
     if (!ev.date) return bad('Pick a date');
     if (!ev.venue) return bad('Where is it?');
+    // a setlist that no longer exists must not stick to a gig
+    if (ev.listId) {
+      const known = new Set((await readLists(aid)).lists.map((l) => l.id));
+      if (!known.has(ev.listId)) ev.listId = '';
+    }
     await mutateEvents(aid, (d) => {
       const at = d.list.findIndex((x) => x.id === id);
       if (at >= 0) d.list[at] = { ...ev, skip: d.list[at].skip || [], hid: d.list[at].hid || [],
@@ -305,7 +314,34 @@ async function handleSong(aid, action, body, show) {
   if (action === 'chartFlags')
     return json({ ok: true, flags: await chartFlags(aid, show.songs.map((x) => x.id)) });
 
-  if (action === 'tagList') return json({ ok: true, tags: vocab() });
+  if (action === 'tagList')
+    return json({ ok: true, tags: vocab(), untagged: show.songs.filter((x) => !(x.tags || []).length).length });
+
+  /* Fill in the genres, from a curated map of how streaming services actually
+     classify these songs. Only ever fills a song that has NONE — an artist's own
+     choice is never overwritten, so running it twice is safe and running it after
+     hand-tagging leaves the hand-tagging alone. */
+  if (action === 'tagAuto') {
+    const { artistById } = await import('./_auth.mjs');
+    const me = await artistById(aid);
+    const owner = (me && me.name) || '';
+    let filled = 0, kept = 0, unknown = [];
+    await mutateShow(aid, (sh) => {
+      const known = new Set([...GENRE_IDS, ...sh.tags.map((t) => t.id)]);
+      for (const sg of sh.songs) {
+        if ((sg.tags || []).length) { kept++; continue; }
+        const g = genresFor(sg.title, sg.artist, owner).filter((x) => known.has(x));
+        if (!g.length) { unknown.push(sg.title); continue; }
+        sg.tags = g.slice(0, MAX_SONG_TAGS);
+        filled++;
+      }
+      return filled > 0;
+    });
+    await refreshActive(aid).catch(() => {});
+    return json({ ok: true, filled, kept, unknown: unknown.slice(0, 40),
+                  unknownCount: unknown.length, mapSize: MAP_SIZE,
+                  stage: await stagePayload(aid) });
+  }
 
   if (action === 'tagAdd') {
     const label = cleanTagLabel(body.label);
@@ -343,7 +379,148 @@ async function handleSong(aid, action, body, show) {
   }
   return bad('unknown action', 400);
 }
-const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 'tagAdd', 'tagRemove']);
+const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 'tagAdd',
+                              'tagRemove', 'tagAuto']);
+
+/* SETLISTS and the to-learn list. Both live in their own documents, so none of
+   this touches the record the room polls — except `listUse`, which has to write
+   the projection (see the note in _lists.mjs). */
+async function handleLists(aid, action, body) {
+  const show = await getShow(aid);
+  const send = async (extra = {}) => {
+    const [d, sh] = [await readLists(aid), await getShow(aid)];
+    return json({ ok: true, lists: shapeLists(d, sh),
+                  listId: sh.listId, listName: sh.listName, ...extra });
+  };
+
+  if (action === 'listAll') return send();
+
+  if (action === 'listNew') {
+    const name = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, MAX_NAME);
+    if (!name) return bad('Give the set a name');
+    const id = 'l' + Math.random().toString(36).slice(2, 9);      // outside the CAS
+    let full = false;
+    await mutateLists(aid, (d) => {
+      if (d.lists.length >= MAX_LISTS) { full = true; return false; }
+      d.lists.push({ id, name, songs: Array.isArray(body.songs) ? body.songs : [], at: Date.now() });
+      return true;
+    });
+    if (full) return bad(`${MAX_LISTS} setlists is plenty — rename one instead.`);
+    return send({ id });
+  }
+
+  if (action === 'listRename') {
+    const name = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, MAX_NAME);
+    if (!name) return bad('It needs a name');
+    await mutateLists(aid, (d) => {
+      const l = d.lists.find((x) => x.id === body.id);
+      if (!l) return false;
+      l.name = name;
+      return true;
+    });
+    await refreshActive(aid);                 // the name is projected too
+    return send();
+  }
+
+  if (action === 'listDelete') {
+    await mutateLists(aid, (d) => { d.lists = d.lists.filter((x) => x.id !== body.id); return true; });
+    // if the one in play just went, fall back to the whole library
+    if (show.listId === body.id) await applyList(aid, '');
+    return send();
+  }
+
+  if (action === 'listSongs') {          // set the whole membership at once
+    const want = [...new Set((Array.isArray(body.songs) ? body.songs : [])
+      .filter((x) => typeof x === 'string'))];
+    const have = new Set(show.songs.map((x) => x.id));
+    const songs = want.filter((x) => have.has(x));
+    await mutateLists(aid, (d) => {
+      const l = d.lists.find((x) => x.id === body.id);
+      if (!l) return false;
+      l.songs = songs;
+      return true;
+    });
+    if (show.listId === body.id) await applyList(aid, body.id);
+    return send();
+  }
+
+  if (action === 'listToggle') {         // one song in or out
+    let now = null;
+    await mutateLists(aid, (d) => {
+      const l = d.lists.find((x) => x.id === body.id);
+      if (!l) return false;
+      const at = l.songs.indexOf(body.song);
+      if (at >= 0) { l.songs.splice(at, 1); now = false; } else { l.songs.push(body.song); now = true; }
+      return true;
+    });
+    if (now === null) return bad('unknown setlist', 404);
+    if (show.listId === body.id) await applyList(aid, body.id);
+    return send({ inList: now });
+  }
+
+  if (action === 'listUse') {
+    const r = await applyList(aid, body.id || '');
+    return send({ used: r });
+  }
+
+  /* ---------- songs to learn ---------- */
+  if (action === 'learnList') return json({ ok: true, learn: (await readLearn(aid)).list });
+
+  if (action === 'learnAdd') {
+    const title = String(body.title || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (!title) return bad('What song?');
+    const id = 'w' + Math.random().toString(36).slice(2, 9);
+    let full = false;
+    await mutateLearn(aid, (d) => {
+      if (d.list.length >= MAX_LEARN) { full = true; return false; }
+      d.list.push({ id, title, artist: String(body.artist || '').trim().slice(0, 60),
+                    note: String(body.note || '').trim().slice(0, 140), at: Date.now() });
+      return true;
+    });
+    if (full) return bad('That is a long list already — learn a few first.');
+    return json({ ok: true, learn: (await readLearn(aid)).list });
+  }
+
+  if (action === 'learnRemove') {
+    await mutateLearn(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
+    return json({ ok: true, learn: (await readLearn(aid)).list });
+  }
+
+  /* Learned it. Moves the row into the real library and drops it from the list —
+     one action, because doing it in two leaves a duplicate if the second fails. */
+  if (action === 'learnDone') {
+    const d0 = await readLearn(aid);
+    const row = d0.list.find((x) => x.id === body.id);
+    if (!row) return bad('unknown song', 404);
+    const cap = (await planForArtist(aid)).limits.featured;
+    const featureCap = cap === Infinity ? null : cap;
+    const { artistById } = await import('./_auth.mjs');
+    const ownerName = ((await artistById(aid)) || {}).name || '';
+    let sid = null, note = null;
+    await mutateShow(aid, (sh) => {
+      if (sh.songs.length >= MAX_LIBRARY) return false;
+      let id = slug(row.title);
+      if (sh.songs.some((x) => x.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
+      const live = sh.songs.filter((x) => x.active !== false).length;
+      const on = featureCap === null || live < featureCap;
+      if (!on) note = `Added, but switched off — your plan features ${featureCap} at a time.`;
+      // it arrives with genres already on, same as auto-tag would give it
+      const known = new Set([...GENRE_IDS, ...sh.tags.map((t) => t.id)]);
+      const tags = genresFor(row.title, row.artist, ownerName)
+        .filter((x) => known.has(x)).slice(0, MAX_SONG_TAGS);
+      sh.songs.push({ id, title: row.title, artist: row.artist || '', active: on, key: '', tags });
+      sid = id;
+      return true;
+    });
+    if (!sid) return bad(`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402);
+    await mutateLearn(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
+    return json({ ok: true, songId: sid, note,
+                  learn: (await readLearn(aid)).list, stage: await stagePayload(aid) });
+  }
+  return bad('unknown action', 400);
+}
+const LIST_ACTIONS = new Set(['listAll', 'listNew', 'listRename', 'listDelete', 'listSongs',
+  'listToggle', 'listUse', 'learnList', 'learnAdd', 'learnRemove', 'learnDone']);
 
 /* Requests live in their own document, so accepting or declining one never
    rewrites the show — except for `askAccept`, which has to add a song. */
@@ -551,6 +728,7 @@ export default async (req) => {
   const action = body.action;
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
+  if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);
   if (SONG_ACTIONS.has(action)) return handleSong(aid, action, body, await getShow(aid));
   if (VENUE_SIDE.has(action)) return handleVenueSide(aid, action, body);
   if (ASK_ACTIONS.has(action)) return handleAsks(aid, action, body);
@@ -585,6 +763,17 @@ export default async (req) => {
     featureCap = f === Infinity ? null : f;
   }
 
+  /* Going live picks up the setlist the artist chose for tonight's gig, if they
+     chose one. Resolved BEFORE the mutation, because it needs the calendar, and
+     applied after, because applyList writes the show record itself. */
+  let autoList = null;
+  if (action === 'status' && body.status === 'live') {
+    try {
+      const occ = nextOccurrence(await readEvents(aid), Date.now());
+      // only a gig that is on now or within the next few hours — not next Tuesday's
+      if (occ && occ.listId && occ.startsAt - Date.now() < 6 * 3600e3) autoList = occ.listId;
+    } catch { /* never block starting a show on the calendar */ }
+  }
   let newSongId = null;                       // so the sheet can keep editing it
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
   const prevShow = action === 'newShow' ? await getShow(aid) : null;   // read before it resets
@@ -629,9 +818,10 @@ export default async (req) => {
         break;
       }
       case 'playTop': {
+        // the same pool the audience is looking at, or the two screens disagree
         const pool = rankSongs(
-          show.songs
-            .filter((s) => s.active !== false && s.id !== show.nowPlaying)
+          playable(show).songs
+            .filter((s) => s.id !== show.nowPlaying)
             .filter((s) => !show.played.includes(s.id) || (counts[s.id] || 0) > 0),
           counts, firstAt);
         if (!pool.length) { err = ['nothing left in the pool', 409]; return false; }
@@ -763,6 +953,18 @@ export default async (req) => {
   });
 
   if (err) return bad(err[0], err[1]);
+  /* Anything that changed the library could have changed what is in the active
+     setlist, so the projection is refreshed. This is the "migrate every call site"
+     rule: if you add another way to add or remove a song, it belongs in this list. */
+  if (['addSong', 'removeSong', 'editSong', 'starterSetlist', 'clearSetlist',
+       'toggleSong'].includes(action)) await refreshActive(aid).catch(() => {});
+
+  if (autoList) {
+    try {
+      const r = await applyList(aid, autoList);
+      if (r.listName) note = `Playing your “${r.listName}” tonight — ${r.count} songs.`;
+    } catch { /* the show is live either way */ }
+  }
   // paid votes survive a reset — only a fan who gifted them loses them
   if (wipe) await carryFans(aid, prevShow || (await getShow(aid)));
   else if (resetVotes) await clearAllFanVotes(aid);
