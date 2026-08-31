@@ -634,3 +634,151 @@ is identical on every plan.
 
 Profile photos: the three small ones step inwards (15px / 6px / 0) so they arc
 round the portrait's top-left corner.
+
+---
+
+### SESSION 9 — 2026-08-31 (venue studio, audience requests, studio polish)
+
+Shipped to production and verified from outside. Commits `d6ca102`, `08c8ae2`,
+`2049f9a`.
+
+#### VENUES — a second kind of account
+
+A bar is not an artist, so it is not a role on one. Own registry (`venues` blob),
+own token tag (`v|email|exp|rev`), own one-time-code realm (`authc_v_…`).
+**Verified: a venue token gets 401 from `/api/admin`, and the studio code gets 401
+from `/api/venueadmin`.** INVARIANT 0x.
+
+| Thing | Where |
+|---|---|
+| Venue studio | `myset.vip/venues` → `public/venue-studio.html` (4 tabs: Page · What's on · Menu & offers · Settings) |
+| Public page | `myset.vip/v/<slug>` → `public/venue.html` |
+| Sign-in | `netlify/functions/venueauth.mjs` |
+| Writes | `netlify/functions/venueadmin.mjs` |
+| Public read | `netlify/functions/venue.mjs` |
+| Model | `netlify/functions/_venues.mjs` |
+
+Profile holds: cover + 3 photos, name, one-liner, about, city/country, address,
+pasted maps link, phone, WhatsApp, 22 amenities, 7 days of opening hours, a menu
+(link + note + up to 24 highlights with sections and prices), up to 6 offers, and
+website / Instagram / Facebook / Google links.
+
+**Nothing links a gig to a venue — the NAME does, inside the venue's own city.**
+`sameVenue()` normalises to words and accepts containment only when the shorter
+name is *distinctive* (two words, or eight characters), so nobody can register as
+"Beach" and claim every Beach Bar in town. An exact match always counts.
+Consequence worth keeping: **a venue signing up today already has its whole
+diary** — no backfill, no job, nothing for an artist to re-enter. Verified live:
+a venue named "The Ugly Duckling Irish Pub" in Koh Phangan picked up all 9 of
+Perry's residency nights with zero data entry. INVARIANT 0y.
+
+Venue photos live under owner key `v_<venueId>` — artist ids are stripped to
+`[a-z0-9-]`, so the underscore is unforgeable in either direction, and
+`/api/img` branches on that pattern first. INVARIANT 0aa.
+
+**Verification** — see `VERIFYING-A-VENUE.md`. Built: instant on an email at the
+venue's own website domain (free-mail domains rejected), plus an owner-only
+Verify switch in Perry's Settings → Venues. Everything else shows a grey
+`Unverified listing` chip and loses nothing else. Next and best: **artist
+vouching** (N artists with gigs listed there confirm it) — uses the network MySet
+already has, ~a day's work, no third party. Google Business Profile is the right
+long-term answer and the wrong near-term one (OAuth review + access-gated API).
+
+#### REQUESTS — the room can ask for something that isn't on the list
+
+`request.mjs` (public) + `_requests.mjs` (model) + `askSet` / `askAccept` /
+`askDone` / `askDecline` on `/api/admin`.
+
+* Two kinds: a **song** the artist hasn't got listed, and a **happy birthday
+  shout-out** with the name of whoever it's for.
+* Paid in **VOTES, never money** (INVARIANT 0ab — cash-to-be-played-next is a
+  different product and it breaks 0w).
+* Both default **OFF**, each with its own price the artist sets (Settings →
+  Requests from the audience). Currently ON at 3 votes each on Perry's account.
+* Votes are taken **before** the row is written and refunded if the write fails.
+  Declining refunds exactly once and clamps at zero. Verified: a second decline
+  returns 409 and the balance does not move. INVARIANT 0ac.
+* One pending request per kind per fan; 30 pending per show; 80 rows kept.
+* Studio Live tab shows them: **+ Add** puts the song in the setlist so the whole
+  room can vote for it, **Did it** clears a birthday, **✕** refunds.
+* The fan sees their own status on the voting page: waiting → on the list →
+  played, or "Not tonight — votes refunded".
+* `creditsUsed` now includes `fan.spent`, which resets with the free credits
+  (i.e. every time a song starts).
+
+#### THE HEAD-COUNT — phones, not IP addresses
+
+Perry asked for distinct IPs. **Built and then changed, deliberately:** forty
+people at a beach bar on the venue's wifi come out as **1**. A phone is much
+closer to a person; the worst it does is count someone twice if they clear their
+storage mid-gig. The network hash is kept alongside it (`nets`, stored per show)
+as the defence against one phone rotating its id. INVARIANT 0ae.
+
+Presence is stamped **once per device per show, only from the voting page** —
+`/api/show` is polled by every phone in the room, so it must not write on the
+poll. The stamp needs `in=1`, which only `vote.html` sends; a profile view would
+otherwise inflate the count with people who were never there. The IP is never
+stored, only `sha256('myset-room|<artistId>|<ip>')` truncated to 16 hex.
+INVARIANT 0af.
+
+#### ADDRESSES
+
+`_maps.mjs`. **There is no one link that opens in whichever map app a phone
+uses** — `geo:` is closest on paper and iOS Safari ignores it. So the server
+builds BOTH an Apple and a Google URL and the page picks by platform. Coordinates
+are extracted from a pasted Google/Apple/OSM link when they're in it; a
+`maps.app.goo.gl` short link keeps the link and falls back to the address (we do
+not fetch third parties on the artist's behalf). INVARIANT 0ag.
+
+**A bare venue name is not a location** — "The Ugly Duckling" could send somebody
+to Amsterdam. `mapLinks()` returns null unless there are coordinates, an address,
+or a name WITH a city, and the city/country always go into the query. Emoji and
+pipes are stripped from the query. INVARIANT 0ah.
+
+Gigs gained `address` + `mapUrl`; the gig sheet has both fields. Directions show
+on the artist page (pin icon in rows, full button on the "tonight" card), the
+homepage feed (pin icon) and the venue page (full button).
+
+#### STUDIO / PROFILE
+
+* **Tap a QR code** → it comes up in the middle of the screen, big, on white
+  paper, captioned in a serif. Vote code says **"Vote your favorite song!"**.
+  Every kind decoded with an independent decoder at 4/6/10/20 px per module —
+  all five URLs exact. New `venue` kind.
+* **Real bug found doing it:** `animation:rise` left an identity transform on the
+  overlay, and a transformed element with `backdrop-filter` stops sampling the
+  layer underneath — the white card vanished and the page showed through. Fixed
+  by animating the inner card and dropping the backdrop-filter. Add this to the
+  CSS-gotchas list alongside the mix-blend one.
+* **Profile metrics** are now Joined (Aug 2026) / Shows / Audience / Votes cast /
+  Songs, in a 3-across grid with the live button on its own row above. History
+  rows from before the head-count fall back to `peakVoters`, which under-states
+  rather than inflates.
+* **The three small profile photos** are back in a plain column; only the top one
+  moves, `translateX(28px)` + `z-index:3`, so it sits over the portrait's
+  top-left corner (measured: 19px across, 16px down) and nothing else shifts.
+* **Homepage:** "For artists" + "For venues" buttons; day headings carry the date
+  ("Tonight – 31/8"); both empty states offer both doors.
+* **Owner-only confirmed by test, not by reading:** a *second artist on the Pro
+  plan* gets 401 from `promoList` / `promoCreate` / `promoRevoke` / `venueList` /
+  `venueVerify`, and their Settings tab contains no "Codes you hand out", no
+  "Make a code", no venue list — while still showing their own QR codes, their
+  own requests settings, "Got a code?" and their invite link.
+* Fixed: the plan box read `PLAN.limits.songs`, which does not exist, and printed
+  "undefined songs". It's `featured`.
+* Fixed: venue opening-hours inputs clipped to "05:0" — a native time input needs
+  ~100px, so the times get their own line.
+* Fixed: QR cards rendered broken images before the slug had loaded.
+
+#### Still open
+
+* **Stripe Connect** — unchanged and still the blocker. Until it exists a second
+  artist's money lands in Perry's account and the 10% free-plan cut does not
+  exist. INVARIANT 0r.
+* Artist vouching for venue verification (see `VERIFYING-A-VENUE.md`).
+* A venue with one resident act renders one day-heading per night — 9 near
+  identical cards for a weekly residency. Cosmetic; a "every Monday" roll-up
+  would read better.
+* Venue cover photos are centre-cropped on upload, not interactively croppable
+  like the artist avatar.
+* SSD has not been mounted for several sessions — nothing mirrored there.
