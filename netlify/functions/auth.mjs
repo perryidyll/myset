@@ -1,6 +1,7 @@
 import { json, bad, requireArtist } from './_lib.mjs';
 import { normEmail, validEmail, issueCode, checkCode, sendCode, signToken, verifyToken,
-         readArtists, mutateArtists, createArtist, cleanSlug, RESERVED } from './_auth.mjs';
+         signTicket, readTicket, readArtists, mutateArtists, createArtist,
+         cleanSlug, RESERVED } from './_auth.mjs';
 
 /* Every response to an unauthenticated caller is deliberately identical whether
    or not the address is on the list — otherwise this becomes a way to find out
@@ -32,14 +33,15 @@ export default async (req) => {
     if (!process.env.RESEND_API_KEY)
       return bad('Email sign-in isn’t switched on yet.', 503);
 
+    /* Byte-identical for every valid address, account or not. An earlier version
+       returned `needName` only for unknown addresses, which turned this into a
+       way to discover who has an account. Whether a name is needed is answered
+       by `verify`, once they have proved they own the inbox. */
     const reg = await readArtists();
-    const known = !!reg.byEmail[email];
-    const name = String(body.name || '').trim().slice(0, 60);
-    if (!known && !name) return json({ ...SENT, needName: true });
-
-    const code = await issueCode(email, known ? null : name);
+    const link = reg.byEmail[email];
+    const code = await issueCode(email);
     if (!code) return json(SENT);                       // rate limited, silently
-    await sendCode(email, code, known ? reg.byId[reg.byEmail[email].artistId].name : name);
+    await sendCode(email, code, link ? (reg.byId[link.artistId] || {}).name : '');
     return json(SENT);
   }
 
@@ -52,20 +54,36 @@ export default async (req) => {
     const got = await checkCode(email, code);
     if (!got.ok) return bad('Check the code and try again', 401);
 
-    let reg = await readArtists();
+    const reg = await readArtists();
     if (!reg.byEmail[email]) {
-      // brand-new artist: the name came in with the code request
-      if (!got.name) return bad('No account for that address yet', 401);
-      const made = await createArtist({ email, name: got.name, slug: body.slug });
-      if (!made.ok) return bad(made.error === 'already' ? 'Check the code and try again'
-                                                       : 'Couldn’t create that page', 409);
-      reg = await readArtists();
+      // They own the inbox, so it is now safe to say there is no account here.
+      return json({ ok: true, needName: true, ticket: await signTicket(email) });
     }
     const link = reg.byEmail[email];
     const artist = reg.byId[link.artistId];
     const token = await signToken(email, reg.rev);
     return json({ ok: true, token, email, artistId: link.artistId,
                   slug: artist.slug, name: artist.name || '', isNew: !!got.name });
+  }
+
+  /* ---- finish signing up: ticket + the name they want ---- */
+  if (action === 'claim') {
+    const email = await readTicket(body.ticket);
+    if (!email) return bad('That took too long — ask for a new code', 401);
+    const name = String(body.name || '').trim().slice(0, 60);
+    if (!name) return bad('What should we call you?');
+
+    const reg0 = await readArtists();
+    if (!reg0.byEmail[email]) {
+      const made = await createArtist({ email, name, slug: body.slug, ref: body.ref });
+      if (!made.ok) return bad(made.error === 'already' ? 'That address already has a page'
+                                                       : 'Couldn’t create that page', 409);
+    }
+    const reg = await readArtists();
+    const link = reg.byEmail[email];
+    const artist = reg.byId[link.artistId];
+    return json({ ok: true, token: await signToken(email, reg.rev), email,
+                  artistId: link.artistId, slug: artist.slug, name: artist.name, isNew: true });
   }
 
   /* ---- managing who can sign in (artist-only) ---- */
@@ -77,6 +95,14 @@ export default async (req) => {
     if (action === 'add') {
       const email = normEmail(body.email);
       if (!validEmail(email)) return bad('That doesn’t look like an email address');
+      const { planForArtist } = await import('./_plan.mjs');
+      const { limits } = await planForArtist(me.aid);
+      const reg0 = await readArtists();
+      const mine = Object.entries(reg0.byEmail).filter(([, v]) => v.artistId === me.aid);
+      if (!mine.some(([e]) => e === email) && mine.length >= limits.seats)
+        return bad(limits.seats === 1
+          ? 'Your plan allows one sign-in. Pro allows five.'
+          : `Your plan allows ${limits.seats} sign-ins.`, 402);
       let taken = false;
       await mutateArtists((a) => {
         const cur = a.byEmail[email];
@@ -115,8 +141,11 @@ export default async (req) => {
 
     const a = await readArtists();
     const mine = a.byId[me.aid] || {};
+    const invited = Object.values(a.byId).filter((x) => x.referredBy === me.aid);
     return json({ ok: true,
       artistId: me.aid, slug: mine.slug || '', name: mine.name || '', plan: mine.plan || 'free',
+      invited: invited.length,
+      invitedNames: invited.slice(0, 20).map((x) => x.name),
       emails: Object.entries(a.byEmail)
         .filter(([, v]) => v.artistId === me.aid)
         .map(([e, v]) => ({ email: e, role: v.role || 'owner' })),

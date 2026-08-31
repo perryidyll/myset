@@ -279,7 +279,9 @@ function render(){
   if(replays.length) h += `<div class="sect"><b>Already played</b><span>${d.replayCost} votes to hear again</span></div>
     <div class="list">${replays.map(s=>row(s,c,open,true)).join('')}</div>`;
 
-  h += `<a class="backlink" href="${HOME}">← ${esc(d.artist||'Artist')}’s page</a><div class="foot">MySet · myset.vip</div>`;
+  h += `<a class="backlink" href="${HOME}">← ${esc(d.artist||'Artist')}’s page</a>
+    <a class="backlink" href="/signup" style="font-size:13px;color:var(--faint)">Play live yourself? Get your own page →</a>
+    <div class="foot">MySet · myset.vip</div>`;
   $('#app').innerHTML=h;
   if(!BOOTED){ $('#app').classList.add('rise'); BOOTED=true; }
 

@@ -108,6 +108,20 @@ a{color:inherit;text-decoration:none}
 .inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
 .inp::placeholder{color:var(--faint)}
 textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
+.cropframe{position:relative;overflow:hidden;border-radius:16px;background:#000;margin:14px auto 0;
+  touch-action:none;cursor:grab}
+.cropframe:active{cursor:grabbing}
+.cropframe img{position:absolute;top:0;left:0;user-select:none;-webkit-user-drag:none;max-width:none}
+.cropguide{position:absolute;inset:0;border-radius:16px;pointer-events:none;
+  box-shadow:inset 0 0 0 2px rgba(255,255,255,.5)}
+.zoom{width:100%;margin:16px 0 0;accent-color:var(--accent)}
+.planbox{margin:0 18px;padding:16px 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
+.plangrid{display:flex;gap:8px;margin-top:14px}
+.pcard{flex:1;padding:12px 10px;border-radius:12px;background:var(--surface-2);text-align:center}
+.pcard.on{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.pcard b{display:block;font-size:14px;font-weight:600}
+.pcard span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.pcard em{display:block;font-style:normal;font-size:11px;color:var(--faint);margin-top:7px;line-height:1.45}
 .slots{display:flex;gap:9px}
 .slot{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);
   box-shadow:0 0 0 1.5px var(--hair) inset;display:block;cursor:pointer}
@@ -219,7 +233,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <script>
 const $=s=>document.querySelector(s), API='/api';
 let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('myset.token')||'';
-let EVENTS=null;
+let EVENTS=null, PLAN=null, PROMOS=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 
@@ -253,7 +267,7 @@ async function load(opts){
   D=d; render();
   if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
   if(TAB==='profile'&&!PROF) loadProf();
-  if(TAB==='settings'&&!TEAM) loadTeam();
+  if(TAB==='settings'){ if(!TEAM)loadTeam(); if(!PLAN)loadPlan(); }
   if(TAB==='gigs'&&!EVENTS) loadGigs();
 }
 let WRITING=false;
@@ -280,18 +294,17 @@ function gate(err,mode){
         maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:26px">
       <button class="big" style="margin-top:12px" onclick="submitCode()">Sign in</button>
       <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'start')">← Use a different email</button>`;
-  }else if(m==='new'){
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">Set up your page. It takes about a minute and it’s free.</p>
-      <input class="inp" id="newName" maxlength="60" placeholder="Your artist or band name">
-      <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" style="margin-top:10px">
-      <button class="big" style="margin-top:12px" onclick="sendCode(true)">Create my page</button>
-      <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'start')">← I already have one</button>`;
+  }else if(m==='name'){
+    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">You're in. What should we call you? This is the name the audience sees.</p>
+      <input class="inp" id="newName" maxlength="60" placeholder="Your artist or band name" autocomplete="off">
+      <button class="big" style="margin-top:12px" onclick="claimAccount()">Create my page</button>`;
   }else{
     inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">${
       err==='unauthorized'?'That didn’t work — try again.':'Sign in to run your show.'}</p>
       <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
       <button class="big" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
-      <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'new')">New here? Create your page →</button>
+      <p class="muted" style="font-size:12.5px;margin:14px 0 0;text-align:center">
+        New here? Same button — we'll set you up right after the code.</p>
       <div style="display:flex;align-items:center;gap:12px;margin:22px 0 14px">
         <span style="flex:1;height:.5px;background:var(--hair)"></span>
         <span class="kick" style="font-size:12px">or</span>
@@ -301,27 +314,37 @@ function gate(err,mode){
       <button class="big alt" style="margin-top:12px" onclick="unlock()">Unlock with code</button>`;
   }
   document.getElementById('app').innerHTML=`<div class="gate">${head}${inner}</div>`;
-  const first=$('#otp')||$('#email');
-  if(first){ first.addEventListener('keydown',e=>{if(e.key==='Enter'){m==='code'?submitCode():sendCode();}});
+  const first=$('#otp')||$('#newName')||$('#email');
+  if(first){ first.addEventListener('keydown',e=>{if(e.key==='Enter'){
+      m==='code'?submitCode():m==='name'?claimAccount():sendCode();}});
     setTimeout(()=>first.focus(),100); }
   const c=$('#code'); if(c) c.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
 }
 function unlock(){CODE=($('#code').value||'').trim();localStorage.setItem('myset.admin',CODE);start();}
-async function sendCode(isNew){
+async function sendCode(){
   const em=(($('#email')||{}).value||'').trim();
-  const nm=(($('#newName')||{}).value||'').trim();
   if(!em){toast('Enter your email');return;}
-  if(isNew&&!nm){toast('What should we call you?');return;}
   GATE_EMAIL=em;
-  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'start',email:em,name:nm})});
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'start',email:em})});
   if(!d.ok){toast(d.error||'Could not send that');return;}
-  if(d.needName){ toast('Looks new — tell us your name'); gate(null,'new'); return; }
   gate(null,'code');
+}
+let TICKET='';
+async function claimAccount(){
+  const nm=(($('#newName')||{}).value||'').trim();
+  if(!nm){toast('What should we call you?');return;}
+  const ref=new URLSearchParams(location.search).get('ref')||'';
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'claim',ticket:TICKET,name:nm,ref})});
+  if(!d.ok){toast(d.error||'Could not create that');return;}
+  TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
+  CODE=''; localStorage.removeItem('myset.admin');
+  toast('Welcome \u2014 your page is myset.vip/'+d.slug); start();
 }
 async function submitCode(){
   const code=(($('#otp')||{}).value||'').trim();
   const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'verify',email:GATE_EMAIL,code})});
   if(!d.ok){toast(d.error||'Check the code and try again');return;}
+  if(d.needName){ TICKET=d.ticket; gate(null,'name'); return; }
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
   toast(d.isNew?`Welcome — your page is myset.vip/${d.slug}`:`Signed in as ${d.email}`);
@@ -335,7 +358,7 @@ function signOut(){
 function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();}
   if(t==='profile') loadProf();
-  if(t==='settings') loadTeam();
+  if(t==='settings'){loadTeam();loadPlan();}
   if(t==='gigs') loadGigs();}
 /* Stripe is the source of truth for money, so this reads it directly rather than
    trusting the app's own ledger. Fetched on demand — never on the 4s live poll. */
@@ -858,6 +881,48 @@ function render(){
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fetch the words for your whole setlist once, before a gig. They’re stored on your own server after that, so a room full of people tapping “Lyrics” never hits the internet. Takes about half a minute.</p>
     <div class="wrap"><button class="big alt" id="lyrWarm" onclick="warmLyrics()">↓ Fetch lyrics for the whole setlist</button></div>
 
+    <div class="sec"><span class="kick">Your plan</span></div>
+    ${PLAN&&PLAN.ok?`
+      <div class="planbox">
+        <div class="row" style="border:none;padding:0">
+          <div class="m"><div class="t">${esc(PLAN.limits.label)}${PLAN.comped?' · comped':''}</div>
+            <div class="s">${PLAN.limits.songs===null?'Unlimited songs':PLAN.limits.songs+' songs'} ·
+              ${PLAN.limits.cut?Math.round(PLAN.limits.cut*100)+'% cut on money taken':'no cut taken'} ·
+              ${PLAN.limits.seats} sign-in${PLAN.limits.seats===1?'':'s'}</div>
+            ${PLAN.until?`<div class="s">Until ${dstamp(PLAN.until)}</div>`:''}
+            ${PLAN.discountPct?`<div class="s" style="color:var(--accent)">${PLAN.discountPct}% off saved for when billing opens</div>`:''}
+          </div>
+        </div>
+        <div class="plangrid">
+          ${['free','plus','pro'].map(k=>{const L=PLAN.plans[k];return `<div class="pcard ${PLAN.plan===k?'on':''}">
+            <b>${esc(L.label)}</b><span>${L.price?'$'+(L.price/100)+'/mo':'Free'}</span>
+            <em>${L.songs===null?'∞ songs':L.songs+' songs'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.analytics?'<br>+ analytics':''}${L.presskit?'<br>+ press kit':''}${L.branding?'<br>+ your branding':''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
+          </div>`;}).join('')}
+        </div>
+      </div>
+      <div class="field"><label>Got a code?</label><div style="display:flex;gap:8px">
+        <input class="inp" id="promoIn" maxlength="24" placeholder="FRIENDS100" autocapitalize="characters" style="flex:1">
+        <button class="act pri" style="min-width:64px" onclick="redeemPromo()">Apply</button></div></div>
+      ${PLAN.owner?`
+        <div class="sec"><span class="kick">Codes you hand out</span></div>
+        <div class="list">${(PROMOS&&PROMOS.codes||[]).map(c=>`<div class="row ${c.revoked?'off':''}">
+          <div class="m"><div class="t mono">${esc(c.code)}</div>
+            <div class="s">${c.pct}% off ${esc(c.plan)} · ${c.months} months · used ${c.used}${c.maxUses?' of '+c.maxUses:''}</div></div>
+          <button class="act ${c.revoked?'':'warn'}" data-act="promotoggle" data-id="${esc(c.code)}">${c.revoked?'On':'Off'}</button>
+        </div>`).join('')||'<div class="row muted">None yet.</div>'}</div>
+        <div class="field"><label>Make a code</label>
+          <input class="inp" id="pcCode" maxlength="24" placeholder="CODE" autocapitalize="characters">
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <select class="inp" id="pcPct" style="flex:1"><option value="100">100% off</option><option value="50">50% off</option></select>
+            <select class="inp" id="pcPlan" style="flex:1"><option value="pro">Pro</option><option value="plus">Plus</option></select>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <input class="inp" id="pcMonths" type="number" min="1" max="60" value="12" style="flex:1" placeholder="months">
+            <input class="inp" id="pcMax" type="number" min="0" max="9999" value="0" style="flex:1" placeholder="max uses (0 = ∞)">
+          </div>
+          <button class="big alt" style="margin-top:12px" onclick="createPromo()">Create code</button></div>`:''}`
+      :`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`}
+
     <div class="sec"><span class="kick">Your public page</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">This is the link you give people. Change it any time — the old one stops working.</p>
     <div class="field"><label>myset.vip/</label><div style="display:flex;gap:8px">
@@ -866,6 +931,13 @@ function render(){
       <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
     ${TEAM&&TEAM.slug?`<div class="wrap" style="margin-top:10px">
       <a class="big alt" href="/${esc(TEAM.slug)}" target="_blank" style="justify-content:center">Open myset.vip/${esc(TEAM.slug)} ↗</a></div>`:''}
+
+    <div class="sec"><span class="kick">Invite another musician</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Share this and they land on a signup that knows you sent them.${TEAM&&TEAM.invited?` <b>${TEAM.invited} so far.</b>`:''}</p>
+    <div class="field"><div style="display:flex;gap:8px">
+      <input class="inp" id="refLink" readonly value="myset.vip/signup?ref=${esc((TEAM&&TEAM.slug)||'')}" style="flex:1">
+      <button class="act pri" style="min-width:64px" onclick="copyRef()">Copy</button></div></div>
+    ${TEAM&&TEAM.invitedNames&&TEAM.invitedNames.length?`<div class="list">${TEAM.invitedNames.map(n=>`<div class="row"><div class="m"><div class="t">${esc(n)}</div></div></div>`).join('')}</div>`:''}
 
     <div class="sec"><span class="kick">Who can sign in</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Emails that can sign in with a code instead of the studio code. Add your own so you never have to remember anything.</p>
@@ -1029,6 +1101,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='mrm') media('mediaRemove',id);
   if(b.dataset.act==='rmmail') removeTeam(id);
   if(b.dataset.act==='photoclear'){ e.preventDefault(); clearPhoto(id); }
+  if(b.dataset.act==='promotoggle') togglePromo(id);
   if(b.dataset.act==='calday') openGig(null,id);
   if(b.dataset.act==='gigedit') openGig(id);
   if(b.dataset.act==='gigsave') saveGig2(id);
@@ -1086,10 +1159,42 @@ async function savePacks(){
   if(!d.ok){toast(d.error||'Could not save that');return;}
   toast('Prices saved'); load();
 }
+async function loadPlan(force){
+  if(PLAN&&!force)return;
+  PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'})});
+  if(PLAN&&PLAN.owner&&!PROMOS) PROMOS=await api('/admin',{method:'POST',body:JSON.stringify({action:'promoList'})});
+  if(TAB==='settings'&&D)render();
+}
+async function redeemPromo(){
+  const code=(($('#promoIn')||{}).value||'').trim();
+  if(!code){toast('Enter a code');return;}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'promoRedeem',code})});
+  if(!d.ok){toast(d.error||'Could not apply that');return;}
+  PLAN=null; await loadPlan(true); render();
+  toast(d.comped?`You're on ${d.plan} for ${d.months} months`:`${d.pct}% off saved for billing`);
+}
+async function createPromo(){
+  const v=x=>(($('#'+x)||{}).value||'').trim();
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'promoCreate',
+    code:v('pcCode'),pct:v('pcPct'),plan:v('pcPlan'),months:v('pcMonths'),maxUses:v('pcMax')})});
+  if(!d.ok){toast(d.error||'Could not create that');return;}
+  PROMOS=d; $('#pcCode').value=''; render(); toast('Code created');
+}
+async function togglePromo(code){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'promoRevoke',code})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  PROMOS=d; render();
+}
 async function loadTeam(force){
   if(TEAM&&!force)return;
   TEAM=await api('/auth',{method:'POST',body:JSON.stringify({action:'list'})});
   if(TAB==='settings'&&D)render();
+}
+function copyRef(){
+  const el=$('#refLink'); if(!el)return;
+  el.select();
+  try{ navigator.clipboard.writeText(el.value); toast('Link copied'); }
+  catch(e){ document.execCommand('copy'); toast('Link copied'); }
 }
 async function saveSlug(){
   const v=(($('#slugIn')||{}).value||'').trim();
@@ -1155,17 +1260,105 @@ async function shrink(file,max,square){
     return c.toDataURL('image/jpeg',0.4);
   } finally { URL.revokeObjectURL(url); }
 }
-async function uploadPhoto(slot,file,box){
+/* Crop before upload. A phone photo is almost never framed for a square, and
+   letting the app centre-crop it silently cuts people's heads off. */
+let CROP=null;
+async function openCrop(slot,file){
+  const url=URL.createObjectURL(file);
+  let img;
+  try{
+    img=await new Promise((res,rej)=>{const i=new Image();
+      i.onload=()=>res(i); i.onerror=()=>rej(new Error('bad')); i.src=url;});
+  }catch(e){ URL.revokeObjectURL(url); toast('Could not read that photo'); return; }
+
+  const square=slot!=='cover';
+  const W=Math.min(300, Math.round(window.innerWidth-96));
+  const H=square?W:Math.round(W*10/16);
+  const base=Math.max(W/img.width,H/img.height);
+  CROP={slot,img,url,W,H,base,zoom:1,ox:(W-img.width*base)/2,oy:(H-img.height*base)/2};
+
+  openSheet(`<h3>Position your photo</h3>
+    <p class="lede">Drag to move, pinch or use the slider to zoom.</p>
+    <div class="cropframe" id="cropFrame" style="width:${W}px;height:${H}px">
+      <img id="cropImg" src="${url}" alt="" draggable="false">
+      ${square?'<div class="cropguide"></div>':''}
+    </div>
+    <input class="zoom" id="cropZoom" type="range" min="100" max="320" value="100">
+    <button class="big" style="margin-top:14px" onclick="confirmCrop()">Use this photo</button>
+    <button class="act" style="margin-top:10px;width:100%" onclick="cancelCrop()">Cancel</button>`);
+  paintCrop(); wireCrop();
+}
+function paintCrop(){
+  if(!CROP)return;
+  const el=document.getElementById('cropImg'); if(!el)return;
+  const s=CROP.base*CROP.zoom;
+  const dw=CROP.img.width*s, dh=CROP.img.height*s;
+  CROP.ox=Math.min(0,Math.max(CROP.W-dw,CROP.ox));
+  CROP.oy=Math.min(0,Math.max(CROP.H-dh,CROP.oy));
+  el.style.width=dw+'px'; el.style.height=dh+'px';
+  el.style.transform=`translate(${CROP.ox}px,${CROP.oy}px)`;
+}
+function wireCrop(){
+  const frame=document.getElementById('cropFrame'), z=document.getElementById('cropZoom');
+  if(!frame)return;
+  let px=null,py=null,pinch=null;
+  const pt=(e)=>e.touches?e.touches[0]:e;
+  const dist=(t)=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  frame.addEventListener('touchstart',(e)=>{
+    if(e.touches.length===2){ pinch={d:dist(e.touches),z:CROP.zoom}; return; }
+    px=pt(e).clientX; py=pt(e).clientY;
+  },{passive:true});
+  frame.addEventListener('touchmove',(e)=>{
+    if(!CROP)return;
+    if(e.touches.length===2&&pinch){
+      CROP.zoom=Math.min(3.2,Math.max(1,pinch.z*dist(e.touches)/pinch.d));
+      if(z)z.value=Math.round(CROP.zoom*100);
+      paintCrop(); e.preventDefault(); return;
+    }
+    if(px===null)return;
+    const p=pt(e);
+    CROP.ox+=p.clientX-px; CROP.oy+=p.clientY-py;
+    px=p.clientX; py=p.clientY; paintCrop(); e.preventDefault();
+  },{passive:false});
+  frame.addEventListener('touchend',()=>{px=py=null;pinch=null;});
+  frame.addEventListener('mousedown',(e)=>{
+    px=e.clientX; py=e.clientY;
+    const mm=(ev)=>{ if(px===null||!CROP)return;
+      CROP.ox+=ev.clientX-px; CROP.oy+=ev.clientY-py; px=ev.clientX; py=ev.clientY; paintCrop(); };
+    const mu=()=>{ px=py=null; window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu);
+  });
+  if(z) z.addEventListener('input',()=>{ CROP.zoom=z.value/100; paintCrop(); });
+}
+function cancelCrop(){ if(CROP&&CROP.url)URL.revokeObjectURL(CROP.url); CROP=null; closeSheet(); }
+async function confirmCrop(){
+  if(!CROP||WRITING)return;
+  WRITING=true;
+  const {slot,img,W,H,base,zoom,ox,oy}=CROP;
+  try{
+    const s=base*zoom;
+    // map the visible frame back onto the source pixels
+    const sx=-ox/s, sy=-oy/s, sw=W/s, sh=H/s;
+    const outW=slot==='cover'?1400:640;
+    const outH=Math.round(outW*H/W);
+    const c=document.createElement('canvas'); c.width=outW; c.height=outH;
+    c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
+    let data=null;
+    for(const q of [0.84,0.72,0.6,0.46]){
+      const d=c.toDataURL('image/jpeg',q);
+      if(d.length*0.75<850*1024){ data=d; break; }
+    }
+    if(!data) data=c.toDataURL('image/jpeg',0.4);
+    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'photoUpload',slot,data})});
+    if(!r.ok){toast(r.error||'Could not save that photo');return;}
+    cancelCrop(); PROF=null; await loadProf(true); render(); toast('Photo added');
+  }catch(e){ toast('Could not save that photo'); }
+  finally{ WRITING=false; }
+}
+async function uploadPhoto(slot,file){
   if(!file)return;
   if(!/^image\//.test(file.type)){toast('That needs to be a photo');return;}
-  if(box) box.classList.add('busy');
-  try{
-    const data=await shrink(file, slot==='cover'?1400:640, slot!=='cover');
-    const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'photoUpload',slot,data})});
-    if(!d.ok){toast(d.error||'Could not save that photo');return;}
-    PROF=null; await loadProf(true); render(); toast('Photo added');
-  }catch(e){ toast('Could not read that photo'); }
-  finally{ if(box) box.classList.remove('busy'); }
+  await openCrop(slot,file);
 }
 async function clearPhoto(slot){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'photoClear',slot})});
@@ -1174,7 +1367,7 @@ async function clearPhoto(slot){
 }
 document.addEventListener('change',(e)=>{
   const inp=e.target.closest('input[type=file][data-slot]'); if(!inp)return;
-  uploadPhoto(inp.getAttribute('data-slot'), inp.files&&inp.files[0], inp.closest('.slot'));
+  uploadPhoto(inp.getAttribute('data-slot'), inp.files&&inp.files[0]);
   inp.value='';
 });
 

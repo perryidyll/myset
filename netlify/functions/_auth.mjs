@@ -86,7 +86,7 @@ export function pickSlug(name, reg, wanted) {
 }
 
 /** Creates the artist AND their first login in one atomic write. */
-export async function createArtist({ email, name, slug }) {
+export async function createArtist({ email, name, slug, ref }) {
   const clean = String(name || '').trim().slice(0, 60) || 'New artist';
   let made = null, err = null;
   await mutateArtists((reg) => {
@@ -95,7 +95,11 @@ export async function createArtist({ email, name, slug }) {
     if (!s) { err = 'no-slug'; return false; }
     const aid = cleanArtistId(s) || s;
     if (reg.byId[aid]) { err = 'no-slug'; return false; }
-    reg.byId[aid] = { slug: s, name: clean, createdAt: Date.now(), plan: 'free' };
+    // who sent them, recorded at signup and never editable afterwards
+    const referrer = ref && reg.bySlug[cleanSlug(ref)] && reg.bySlug[cleanSlug(ref)] !== aid
+      ? reg.bySlug[cleanSlug(ref)] : null;
+    reg.byId[aid] = { slug: s, name: clean, createdAt: Date.now(), plan: 'free',
+                      referredBy: referrer };
     reg.bySlug[s] = aid;
     reg.byEmail[email] = { artistId: aid, role: 'owner' };
     made = { artistId: aid, slug: s, name: clean };
@@ -105,6 +109,28 @@ export async function createArtist({ email, name, slug }) {
 }
 
 export { RESERVED };
+
+/* A short-lived proof that someone just redeemed a code for this address.
+   Lets "you have no account yet, pick a name" be said AFTER they proved they own
+   the inbox — the only point at which it is safe to say it. */
+export async function signTicket(email) {
+  const exp = Date.now() + 15 * 60e3;
+  const body = `t|${email}|${exp}`;
+  const mac = createHmac('sha256', await secret()).update(body).digest('base64url');
+  return `${Buffer.from(body).toString('base64url')}.${mac}`;
+}
+export async function readTicket(t) {
+  if (typeof t !== 'string' || t.length > 400) return null;
+  const [b64, mac] = t.split('.');
+  if (!b64 || !mac) return null;
+  let body;
+  try { body = Buffer.from(b64, 'base64url').toString(); } catch { return null; }
+  const want = createHmac('sha256', await secret()).update(body).digest('base64url');
+  if (!eq(mac, want)) return null;
+  const [tag, email, exp] = body.split('|');
+  if (tag !== 't' || !email || Number(exp) < Date.now()) return null;
+  return email;
+}
 
 /* ---------- session tokens ---------- */
 export async function signToken(email, rev) {

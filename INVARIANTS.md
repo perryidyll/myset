@@ -112,6 +112,22 @@ If you are about to violate one, stop and say so rather than working around it.
     against a reserved list (`api`, `studio`, `vote`, `signup`, …) so an artist
     can never claim a route.
 
+## Plans and money
+
+0r. **The 10% free-tier cut needs Stripe Connect and does not exist yet.** Today
+    every artist's audience pays into the ONE `STRIPE_SECRET_KEY` — Perry's. That
+    is fine while he is the only artist and wrong the moment anyone else signs up.
+    `PLANS[].cut` is defined and surfaced, but no fee is taken until each artist
+    has their own connected account and charges carry `application_fee_amount`.
+    **Do not onboard a second paying artist before Connect.**
+
+0s. **A cap never deletes anything.** The free 50-song ceiling blocks adding a
+    51st; it does not touch a setlist that is already larger.
+
+0t. **Only the founding artist can mint promo codes** (`isPlatformOwner`). A 100%
+    code comps the plan outright; anything less is recorded as `discountPct` for
+    a future checkout, because there is no billing to halve yet.
+
 ## Photos
 
 0m. **Photos are shrunk on the phone, and the bytes are checked on the server.**

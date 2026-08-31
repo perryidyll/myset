@@ -8,6 +8,71 @@ import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf, MAX_EVENTS } from './_events.mjs';
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
+import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, redeemPromo,
+         readPromos, mutatePromos, cleanCode } from './_plan.mjs';
+
+/* Plans, entitlements and the codes Perry hands out. */
+async function handlePlan(aid, action, body) {
+  const { plan, limits, artist } = await planForArtist(aid);
+
+  if (action === 'planGet') {
+    return json({ ok: true, plan, limits: shapeLimits(limits),
+                  until: (artist && artist.planUntil) || null,
+                  comped: !!(artist && artist.compedBy),
+                  discountPct: (artist && artist.discountPct) || 0,
+                  plans: Object.fromEntries(PLAN_KEYS.map((k) => [k, shapeLimits(PLANS[k])])),
+                  owner: isPlatformOwner(aid) });
+  }
+
+  if (action === 'promoRedeem') return json(await redeemPromo(aid, body.code));
+
+  /* ---- owner only, from here ---- */
+  if (!isPlatformOwner(aid)) return bad('unauthorized', 401);
+
+  if (action === 'promoList') {
+    const d = await readPromos();
+    return json({ ok: true, codes: Object.entries(d.codes).map(([code, c]) => ({
+      code, plan: c.plan, pct: c.pct, months: c.months,
+      maxUses: c.maxUses || 0, used: (c.usedBy || []).length, revoked: !!c.revoked })) });
+  }
+
+  if (action === 'promoCreate') {
+    const code = cleanCode(body.code);
+    if (code.length < 4) return bad('A code needs at least 4 characters');
+    const pct = Math.max(1, Math.min(100, parseInt(body.pct, 10) || 100));
+    const planKey = PLAN_KEYS.includes(body.plan) ? body.plan : 'pro';
+    const months = Math.max(1, Math.min(60, parseInt(body.months, 10) || 12));
+    const maxUses = Math.max(0, Math.min(9999, parseInt(body.maxUses, 10) || 0));
+    let taken = false;
+    await mutatePromos((d) => {
+      if (d.codes[code]) { taken = true; return false; }
+      d.codes[code] = { plan: planKey, pct, months, maxUses, usedBy: [], createdAt: Date.now() };
+      return true;
+    });
+    if (taken) return bad('That code already exists');
+    const d = await readPromos();
+    return json({ ok: true, codes: Object.entries(d.codes).map(([c, v]) => ({
+      code: c, plan: v.plan, pct: v.pct, months: v.months,
+      maxUses: v.maxUses || 0, used: (v.usedBy || []).length, revoked: !!v.revoked })) });
+  }
+
+  if (action === 'promoRevoke') {
+    const code = cleanCode(body.code);
+    await mutatePromos((d) => { if (d.codes[code]) d.codes[code].revoked = !d.codes[code].revoked; return true; });
+    const d = await readPromos();
+    return json({ ok: true, codes: Object.entries(d.codes).map(([c, v]) => ({
+      code: c, plan: v.plan, pct: v.pct, months: v.months,
+      maxUses: v.maxUses || 0, used: (v.usedBy || []).length, revoked: !!v.revoked })) });
+  }
+  return bad('unknown action', 400);
+}
+const shapeLimits = (l) => ({
+  label: l.label, price: l.price,
+  songs: l.songs === Infinity ? null : l.songs,
+  cut: l.cut, seats: l.seats,
+  promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
+});
+const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke']);
 
 /* The gig calendar. Events are their own document, so these short-circuit too.
    Every write reindexes the artist's cities, which is what keeps the public
@@ -265,6 +330,7 @@ export default async (req) => {
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
+  if (PLAN_ACTIONS.has(action)) return handlePlan(aid, action, body);
 
   let err = null, resetVotes = false, wipe = false;
 
@@ -284,6 +350,12 @@ export default async (req) => {
       await archiveShow(aid, prev, fans);
     } catch { /* never block ending a show on the archive */ }
   }
+
+  // the setlist ceiling for this artist's plan; null means unlimited
+  const songCap = ['addSong', 'starterSetlist'].includes(action)
+    ? (await planForArtist(aid)).limits.songs
+    : null;
+  const capped = songCap === Infinity ? null : songCap;
 
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
   const prevShow = action === 'newShow' ? await getShow(aid) : null;   // read before it resets
@@ -371,6 +443,9 @@ export default async (req) => {
       case 'addSong': {
         const title = String(body.title || '').trim().slice(0, 80);
         if (!title) { err = ['no title', 400]; return false; }
+        if (capped !== null && show.songs.length >= capped) {
+          err = [`Your plan holds ${capped} songs. Upgrade for unlimited.`, 402]; return false;
+        }
         const artist = String(body.artist || '').trim().slice(0, 60);
         let id = slug(title);
         if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
@@ -402,6 +477,7 @@ export default async (req) => {
       case 'starterSetlist': {          // append the generic covers, never replace
         const have = new Set(show.songs.map((x) => x.id));
         for (const [t, a] of STARTER_SONGS) {
+          if (capped !== null && show.songs.length >= capped) break;
           const id = slug(t);
           if (!have.has(id)) show.songs.push({ id, title: t, artist: a, active: true });
         }
