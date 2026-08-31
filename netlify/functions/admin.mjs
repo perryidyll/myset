@@ -2,7 +2,7 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, playable } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -21,6 +21,19 @@ import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, redeemPromo,
          readPromos, mutatePromos, cleanCode, MAX_LIBRARY } from './_plan.mjs';
+
+/* Rebuilds the projection of the active setlist after the library changed.
+
+   It matters that this is the ADDITIVE half: `normShow()` can only ever subtract
+   from `show.listSongs` on read, so if this never runs, a song that belongs in
+   tonight's set stays missing from it until the next library change. That is worth
+   telling the artist about, which is why the failure comes back as a note rather
+   than being swallowed. */
+async function syncActive(aid) {
+  try { await refreshActive(aid); return null; }
+  catch { return 'Saved — but tonight’s setlist didn’t refresh. Reopen the Setlist tab.'; }
+}
+const join = (note, warn) => (warn ? (note ? `${note} ${warn}` : warn) : note);
 
 /* Plans, entitlements and the codes Perry hands out. */
 async function handlePlan(aid, action, body) {
@@ -163,8 +176,11 @@ async function handleEvents(aid, action, body) {
     const ev = normEvent({ ...incoming, id });
     if (!ev.date) return bad('Pick a date');
     if (!ev.venue) return bad('Where is it?');
-    // a setlist that no longer exists must not stick to a gig
-    if (ev.listId) {
+    /* A setlist that no longer exists must not stick to a gig — but 'all' is not a
+       setlist id, it is the sentinel for "play the whole library tonight", so it has
+       to survive this. Blanking it turned the artist's explicit "All songs" back
+       into "no opinion", which is a different instruction. */
+    if (ev.listId && ev.listId !== 'all') {
       const known = new Set((await readLists(aid)).lists.map((l) => l.id));
       if (!known.has(ev.listId)) ev.listId = '';
     }
@@ -327,6 +343,9 @@ async function handleSong(aid, action, body, show) {
     const owner = (me && me.name) || '';
     let filled = 0, kept = 0, unknown = [];
     await mutateShow(aid, (sh) => {
+      // reset: casDoc re-runs this callback on a write conflict, and counters that
+      // survive the retry report double what actually happened
+      filled = 0; kept = 0; unknown = [];
       const known = new Set([...GENRE_IDS, ...sh.tags.map((t) => t.id)]);
       for (const sg of sh.songs) {
         if ((sg.tags || []).length) { kept++; continue; }
@@ -337,9 +356,10 @@ async function handleSong(aid, action, body, show) {
       }
       return filled > 0;
     });
-    await refreshActive(aid).catch(() => {});
+    // tags don't change setlist membership, but they do change what normShow keeps
+    const warn = await syncActive(aid);
     return json({ ok: true, filled, kept, unknown: unknown.slice(0, 40),
-                  unknownCount: unknown.length, mapSize: MAP_SIZE,
+                  unknownCount: unknown.length, mapSize: MAP_SIZE, note: warn,
                   stage: await stagePayload(aid) });
   }
 
@@ -514,6 +534,9 @@ async function handleLists(aid, action, body) {
     });
     if (!sid) return bad(`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402);
     await mutateLearn(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
+    /* This is one of the ways a song id can APPEAR in the library — including an id
+       an old setlist still holds — so the projection has to be rebuilt. */
+    note = join(note, await syncActive(aid));
     return json({ ok: true, songId: sid, note,
                   learn: (await readLearn(aid)).list, stage: await stagePayload(aid) });
   }
@@ -548,26 +571,56 @@ async function handleAsks(aid, action, body) {
 
     const cap = (await planForArtist(aid)).limits.featured;
     const featureCap = cap === Infinity ? null : cap;
-    let songId = null, full = false;
+    const room = (sh) => featureCap === null
+      || sh.songs.filter((x) => x.active !== false).length < featureCap;
+    let songId = null, full = false, capped = false;
     await mutateShow(aid, (sh) => {
+      full = false; capped = false;
       if (sh.songs.length >= MAX_LIBRARY) { full = true; return false; }
       let sid = slug(row.title);
       if (sh.songs.some((x) => x.id === sid)) {
         const had = sh.songs.find((x) => x.id === sid);
+        if (had.active === false) {                          // it was hidden
+          if (!room(sh)) { capped = true; return false; }
+          had.active = true;                                 // bring it back
+        }
         songId = had.id;
-        if (had.active === false) had.active = true;         // it was hidden — bring it back
         return true;
       }
-      const live = sh.songs.filter((x) => x.active !== false).length;
-      const on = featureCap === null || live < featureCap;
-      sh.songs.push({ id: sid, title: row.title, artist: row.artist || '', active: on,
+      /* The plan's featured cap would add it switched OFF, which is the same
+         invisibility the setlist bug caused: the fan paid, was told "on the list",
+         and nobody can vote for it. Refuse instead — the request stays pending, so
+         their credits are still attached to something the artist can honour or
+         decline for a refund. */
+      if (!room(sh)) { capped = true; return false; }
+      sh.songs.push({ id: sid, title: row.title, artist: row.artist || '', active: true,
                       requested: true });
       songId = sid;
       return true;
     });
     if (full) return bad(`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402);
+    if (capped) return bad(`Your plan features ${featureCap} songs at a time. Switch one off first, then accept this — their votes stay put until you do.`, 402);
+
+    /* Adding it to the LIBRARY is not enough when a setlist is active: playable()
+       would exclude it, /api/show would never list it, and vote.mjs would answer
+       "that one isn't on tonight's list" — while the fan who paid three credits was
+       told "On the list — go vote for it". Accepting a request is an explicit
+       "yes, I'll play this tonight", so the song joins tonight's set. */
+    let note = null;
+    if (songId && show.listId) {
+      await mutateLists(aid, (d) => {
+        const l = d.lists.find((x) => x.id === show.listId);
+        if (!l || l.songs.includes(songId)) return false;
+        l.songs.push(songId);
+        return true;
+      });
+      try {
+        const r = await applyList(aid, show.listId);
+        note = `Added to “${r.listName}” too, so the room can vote for it.`;
+      } catch { note = 'Added — but check it landed in tonight’s set.'; }
+    }
     await attachSong(aid, id, songId);
-    return json({ ok: true, songId, asks: shapeRequests(await readRequests(aid), show),
+    return json({ ok: true, songId, note, asks: shapeRequests(await readRequests(aid), show),
                   stage: await stagePayload(aid) });
   }
   return bad('unknown action', 400);
@@ -765,20 +818,40 @@ export default async (req) => {
 
   /* Going live picks up the setlist the artist chose for tonight's gig, if they
      chose one. Resolved BEFORE the mutation, because it needs the calendar, and
-     applied after, because applyList writes the show record itself. */
+     applied after, because applyList writes the show record itself.
+
+     BOTH ways a night starts: "Start the show" and "New show". Only covering the
+     first meant the documented promise ("Tapping Start the show on the night
+     switches to this automatically") silently didn't hold for the artist who ends
+     one set and starts the next.
+
+     A gig's `listId` has three states, and the difference is the whole design:
+       ''     the artist left it on "Leave my current pick" — no opinion, don't touch
+       'all'  they chose All songs — clear whatever is selected
+       <id>   that setlist. If it has since been DELETED, leave their pick alone and
+              say so; blanking it silently is worse than doing nothing. */
   let autoList = null;
-  if (action === 'status' && body.status === 'live') {
+  if ((action === 'status' && body.status === 'live') || action === 'newShow') {
     try {
       const occ = nextOccurrence(await readEvents(aid), Date.now());
       // only a gig that is on now or within the next few hours — not next Tuesday's
       if (occ && occ.listId && occ.startsAt - Date.now() < 6 * 3600e3) autoList = occ.listId;
+      if (autoList && autoList !== 'all'
+          && !(await readLists(aid)).lists.some((l) => l.id === autoList)) {
+        autoList = null;
+        note = 'Tonight’s gig points at a setlist you’ve deleted, so nothing changed.';
+      }
     } catch { /* never block starting a show on the calendar */ }
   }
   let newSongId = null;                       // so the sheet can keep editing it
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
   const prevShow = action === 'newShow' ? await getShow(aid) : null;   // read before it resets
 
+  let libChanged = false;
   await mutateShow(aid, (show) => {
+    // which songs exist, before anything in the switch runs — see the compare at
+    // the bottom of this callback
+    const idsBefore = (show.songs || []).map((x) => x.id).join('\u0000');
     /* Records what a song won with, at the moment it is started. Without this the
        number is gone a millisecond later and no history is recoverable. */
     const logPlay = (id) => {
@@ -818,9 +891,14 @@ export default async (req) => {
         break;
       }
       case 'playTop': {
-        // the same pool the audience is looking at, or the two screens disagree
+        /* Exactly what the room can vote for (votable(), the one definition), then
+           playTop's own narrowing: an already-played song only re-enters the pool
+           if it is holding replay votes. Using playable() alone was wrong — it drops
+           every played song, so the room's top-voted "play it again" could not win. */
+        const canVote = votable(show);
         const pool = rankSongs(
-          playable(show).songs
+          show.songs
+            .filter(canVote)
             .filter((s) => s.id !== show.nowPlaying)
             .filter((s) => !show.played.includes(s.id) || (counts[s.id] || 0) > 0),
           counts, firstAt);
@@ -949,20 +1027,25 @@ export default async (req) => {
         break;
       default: err = ['unknown action', 400]; return false;
     }
+    /* MEASURED, not listed. The previous version kept an allow-list of actions that
+       touch the library, with a comment asking the next person to remember to add
+       to it — and two new handlers were added in the very same change that didn't.
+       Comparing the ids is a fact; an allow-list is a promise. Recomputed on every
+       CAS retry, so a conflict can't leave it stale. */
+    libChanged = (show.songs || []).map((x) => x.id).join('\u0000') !== idsBefore;
     return true;
   });
 
   if (err) return bad(err[0], err[1]);
-  /* Anything that changed the library could have changed what is in the active
-     setlist, so the projection is refreshed. This is the "migrate every call site"
-     rule: if you add another way to add or remove a song, it belongs in this list. */
-  if (['addSong', 'removeSong', 'editSong', 'starterSetlist', 'clearSetlist',
-       'toggleSong'].includes(action)) await refreshActive(aid).catch(() => {});
+  // the library changed => what's in the active setlist may have changed with it
+  if (libChanged) note = join(note, await syncActive(aid));
 
   if (autoList) {
     try {
       const r = await applyList(aid, autoList);
-      if (r.listName) note = `Playing your “${r.listName}” tonight — ${r.count} songs.`;
+      note = r.listName
+        ? `Playing your “${r.listName}” tonight — ${r.count} songs.`
+        : 'Playing all your songs tonight — that’s what this gig says.';
     } catch { /* the show is live either way */ }
   }
   // paid votes survive a reset — only a fan who gifted them loses them

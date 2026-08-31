@@ -462,6 +462,21 @@ export function inPlay(show) {
   return (id) => ok.has(id);
 }
 
+/* ---------- what the ROOM can vote for ----------
+   In play tonight, OR already played — a "play it again" is always fair, and a
+   song the room heard at 9pm stays in the payload for exactly that reason.
+
+   This is the ONE definition. `vote.mjs` enforces it, `playTop` picks out of it,
+   and the Studio renders a `votable` flag straight off it, so the button on stage
+   can never name a song the room could not have chosen. Callers may NARROW it
+   further — playTop also requires a played song to be holding replay votes — but
+   none of them may widen it. */
+export function votable(show) {
+  const ok = inPlay(show);
+  const heard = new Set(show.played || []);
+  return (s) => s.active !== false && (ok(s.id) || heard.has(s.id));
+}
+
 /** Does this device vote without limit? Either the whole room is unlimited, or
  *  this specific device was granted it from the Studio (the artist's own phone,
  *  so he can test without eating the audience's credits). */

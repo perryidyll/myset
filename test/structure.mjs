@@ -1,0 +1,44 @@
+/* Structure check. Both studio pages are one big render() of `if(TAB===…)` blocks,
+   and a bad edit once deleted two of them while leaving valid JavaScript behind —
+   so `node --check` passed and two tabs rendered blank.
+
+   Note the `\{\n`: `if(TAB==='gigs'){` also appears in load() as a lazy-load
+   trigger, on one line. Matching the brace-then-newline counts only the render
+   blocks. A case-sensitive innerText check has bitten this before too — CSS
+   `text-transform` means the DOM text is not what the source says. */
+import { readFileSync } from 'node:fs';
+let fail = 0;
+const check = (file, needles) => {
+  const s = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+  for (const [label, pat, want = 1] of needles) {
+    const n = (s.match(pat) || []).length;
+    if (n !== want) { fail++; console.log(`  ✗ ${file}: ${label} appears ${n}×, expected ${want}`); }
+    else console.log(`  ✓ ${file}: ${label}`);
+  }
+};
+check('public/studio.html', [
+  ["render: tab 'live'",     /if\(TAB==='live'\)\{\n/g],
+  ["render: tab 'setlist'",  /if\(TAB==='setlist'\)\{\n/g],
+  ["render: tab 'gigs'",     /if\(TAB==='gigs'\)\{\n/g],
+  ["render: tab 'money'",    /if\(TAB==='money'\)\{\n/g],
+  ["render: tab 'profile'",  /if\(TAB==='profile'\)\{\n/g],
+  ["render: tab 'settings'", /if\(TAB==='settings'\)\{\n/g],
+  ['function render',   /\nfunction render\(\)\{/g],
+  ['function fitTabs',  /\nfunction fitTabs\(\)\{/g],
+  ['function setPick',  /\nfunction setPick\(\)\{/g],
+  ['const setName',     /\nconst setName=/g],
+  // the flags the server produces must have a consumer — a producer with no
+  // consumer is how the Studio's queue drifted from playTop in the first place
+  ['consumes votable',        /x\.votable!==false/g],
+  ['consumes inSet (rows)',   /x\.inSet===false\?'Not in this set'/g],
+  ['consumes inSet (toast)',  /sg\.inSet===false/g],
+  ['sticky offset measured',  /top:var\(--headh/g],
+  ['gig setlist select',      /id="gList"/g],
+  ['gig "All songs" option',  /value="all"/g],
+]);
+check('public/venue-studio.html', [
+  ['function fitTabs',       /\nfunction fitTabs\(\)\{/g],
+  ['sticky offset measured', /top:var\(--headh/g],
+]);
+console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
+process.exit(fail ? 1 : 0);

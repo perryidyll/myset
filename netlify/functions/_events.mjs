@@ -60,9 +60,12 @@ export function normEvent(e) {
     time: /^\d{2}:\d{2}$/.test(e.time) ? e.time : '20:00',
     durationMin: durationFrom(e),
     note: str(e.note, 140),
-    /* Which setlist to play. '' means the whole library. Applied when the artist
-       taps Start the show, not before — a gig three weeks out must not change
-       what tonight's room sees. */
+    /* Which setlist to play, in THREE states — the difference is the whole design:
+         ''     no opinion. Leave whatever the artist has picked alone.
+         'all'  clear it: play the whole library tonight.
+         <id>   that setlist.
+       Applied when the artist taps Start the show (or New show), not before — a gig
+       three weeks out must not change what tonight's room sees. */
     listId: String(e.listId || '').replace(/[^a-z0-9]/gi, '').slice(0, 12),
     // where exactly, so somebody reading the feed can actually get there
     ...normPlace(e),

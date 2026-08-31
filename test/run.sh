@@ -1,0 +1,25 @@
+#!/bin/sh
+# The whole suite. Run it before every deploy.
+#
+# Both files run the REAL handlers against an in-memory blob store that
+# implements etags (test/blobs-fake.mjs), injected by a module-resolution hook.
+# Nothing touches production, and no dev server is needed.
+#
+# Why the fake store exists at all: `netlify dev --offline` runs Blobs in sandbox
+# mode, which returns no etag. casDoc's conditional write then always uses
+# `onlyIfNew`, so every write after the first fails and the second API call in any
+# test returns "busy". The fake is the smallest thing that makes the real code
+# behave the way production does.
+set -e
+cd "$(dirname "$0")/.."
+echo "── syntax ──"
+node --import ./test/register.mjs test/syntax.mjs
+echo
+echo "── structure ──"
+node test/structure.mjs
+echo
+echo "── unit ──"
+node test/unit.mjs
+echo
+echo "── end to end ──"
+node --import ./test/register.mjs test/e2e.mjs

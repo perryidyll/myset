@@ -1,5 +1,5 @@
 import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad,
-         requireArtist, roomCounts, GENRES, playable } from './_lib.mjs';
+         requireArtist, roomCounts, GENRES, playable, votable } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
 
@@ -47,11 +47,16 @@ export async function stagePayload(aid) {
     asks: shapeRequests(reqs, show),
     songs: (() => {
       const on = new Set(playable(show).songs.map((x) => x.id));
+      /* `votable` is the server's own answer to "could the room choose this right
+         now", handed to the Studio so its queue and its "Start top voted" label
+         cannot drift from playTop. See votable() in _lib.mjs. */
+      const canVote = votable(show);
       return rankSongs(
         show.songs.map((x) => ({
           ...x, votes: counts[x.id] || 0,
           played: show.played.includes(x.id), now: show.nowPlaying === x.id,
-          inSet: on.has(x.id),          // in play tonight
+          inSet: on.has(x.id),          // in tonight's setlist
+          votable: canVote(x),          // in the setlist, or already played
         })), counts, firstAt);
     })(),
     tips: { total: Math.round(total * 100) / 100, count: meta.tips.length, recent: meta.tips.slice(-15).reverse() },

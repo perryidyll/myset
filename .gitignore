@@ -9,3 +9,12 @@ design-handoff/
 # Throwaway harnesses. Twice now one of these has ridden along in a commit
 # because `git add -A` is indiscriminate — the name is reserved so it can't again.
 _tmp_*
+
+# the Browser-pane dev launcher, which points at an absolute local path
+.claude/launch.json
+
+# local-only dev env (never a real secret, but never committed either)
+.env
+
+# netlify dev drops this
+deno.lock

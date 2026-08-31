@@ -1,6 +1,6 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
          isUnlimited, publicArtist, json, bad, cleanFanId, markPresence,
-         GENRES, playable } from './_lib.mjs';
+         GENRES, playable, votable } from './_lib.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
 
 export default async (req) => {
@@ -40,10 +40,15 @@ export default async (req) => {
 
   /* Already played — still votable at the higher replay cost. A song that has been
      played stays votable even if it is not in tonight's list: the room heard it,
-     asking for it again is fair, and taking it away mid-show is confusing. */
+     asking for it again is fair, and taking it away mid-show is confusing.
+
+     Filtered through votable() so this payload and vote.mjs cannot disagree: a song
+     the artist has since HIDDEN drops off the list rather than sitting there
+     answering "that one isn't on tonight's list" when somebody taps it. */
+  const canVote = votable(show);
   const played = show.played
     .map((id) => show.songs.find((s) => s.id === id))
-    .filter(Boolean)
+    .filter((s) => s && canVote(s))
     .map(shape)
     .reverse();
 

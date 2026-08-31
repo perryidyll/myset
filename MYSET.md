@@ -160,11 +160,30 @@ list with Undo. Recent tips. And the **requests panel** — song requests and
 birthday shout-outs with *+ Add* / *Did it* / *✕ refunds them*.
 
 ### Setlist
-Search and the same three orders the audience has. Add a song (title + artist).
-Per-song **Edit** (title, artist, lyrics), **Hide** (permanent across shows until
-un-hidden), **✕ remove**. A starter pack of ~60 well-known covers, opt-in. Plans
-limit how many songs are **featured** (live to the audience), never how many you
-can keep.
+One **library** of songs, and **setlists** are named subsets of it — a beach set, a
+late set, the one for the Irish pub. The row at the top of the tab always says what
+the room can currently see. A setlist holds song IDS only, so renaming a song
+changes it everywhere at once.
+
+Search and the same three orders the audience has, plus a **genre filter** built
+from the same tags the room filters by. Add a song through a sheet: title, artist,
+the **key you play it in**, genres, and your own **chord chart** — the key and the
+chart never reach the audience. **Auto-tag songs** fills the genres from a curated
+map of how streaming services classify them, and only ever fills a song that has
+none, so it can't undo a choice you made by hand.
+
+Per-song **Edit**, **Hide** (permanent across shows until un-hidden), **✕ remove**.
+A row says whether it is in the pool, played, hidden, or **not in this set**. A
+starter pack of ~60 well-known covers, opt-in. Plans limit how many songs are
+**featured** (live to the audience), never how many you can keep.
+
+**Want to learn** sits at the bottom: songs you don't play yet. They are not in the
+library, so nobody can vote for them. *Learned it* moves one across in one action.
+
+**Which set plays tonight** can be set per gig, in three states that are not
+interchangeable: *leave whatever I've picked* (`''`), *All songs* (`'all'`), or a
+named set. Tapping **Start the show** — or **↺ New show** — applies it. A gig
+pointing at a set you have since deleted leaves your pick alone and tells you.
 
 ### Gigs
 A flippable month calendar with dots on the nights you play. Add a gig once for a
@@ -380,6 +399,9 @@ are global.
 | `histidx_<aid>` · `hist_<aid>_<showId>` | Show history index and per-show archives |
 | `lyr_<aid>_<songId>` | Cached lyrics |
 | `req_<aid>` | Song and birthday requests |
+| `lists_<aid>` | The artist's named setlists — song IDS only, never song data |
+| `learn_<aid>` | Songs they want to learn. **Deliberately NOT in the library**, so the room can't vote for something unplayable |
+| `chart_<aid>_<songId>` | The artist's own chord chart. Never in a public payload, and never on the `/api/show` read path |
 | `apitch_<aid>` | Which venues this artist has asked |
 | `vprofile_<vid>` | Venue page content |
 | `ev_v_<vid>` | A venue's own events — same engine, owner id `v_<vid>` |
@@ -456,6 +478,29 @@ Every Studio write takes a `WRITING` lock and raises a blocking overlay after
 round trip, not two. Before this, taps felt slow enough that Perry tapped "Add it"
 four times and got four gigs.
 
+## 5.8 · Installable, and the service worker
+
+`public/sw.js` plus a manifest per surface — `manifest.webmanifest` (the city
+feed), `manifest-studio.webmanifest`, `manifest-venue.webmanifest` — because
+`start_url` is the whole point of installing: an artist who puts the Studio on
+their home screen wants the Studio, not the city feed. Icons in `public/icons/`.
+
+The worker is deliberately the most conservative thing that still helps:
+
+* **Nothing under `/api` is ever cached.** A cached vote is a lost vote and a
+  cached payment is a support ticket. Verified in a real browser, not assumed:
+  after loading the app and calling the API, the only thing in the cache was
+  `/app.css`.
+* **Navigations are network-first**, with a cached fallback and an inline offline
+  page. The newest version of a page always wins, so a bad deploy is fixed by the
+  next deploy — not by asking somebody in a bar to clear their browser.
+* **Nothing is precached**, so there is no install-time cache to go stale.
+* Statics are stale-while-revalidate. Old caches are deleted on activate, and a
+  page can post `myset-unregister` to make the worker stand down entirely.
+
+The homepage also carries an **add-to-home-screen** banner and sheet, with iPhone
+and Android tabs (iPhone first, because Safari has no install prompt of its own).
+
 ---
 
 # 6 · Every endpoint
@@ -494,6 +539,11 @@ four times and got four gigs.
   `newShow` `setCode`
 * **setlist** `addSong` `editSong` `removeSong` `toggleSong` `unplay`
   `starterSetlist` `clearSetlist`
+* **the song sheet** `songGet` `chartSet` `chartFlags`
+* **genres** `tagList` `tagAdd` `tagRemove` `tagAuto`
+* **setlists** `listAll` `listNew` `listRename` `listDelete` `listSongs`
+  `listToggle` `listUse`
+* **want to learn** `learnList` `learnAdd` `learnRemove` `learnDone`
 * **requests** `askSet` `askList` `askAccept` `askDone` `askDecline`
 * **gigs** `eventList` `eventSave` `eventDelete` `eventSkip` `eventHide`
 * **lyrics** `lyricsGet` `lyricsSet` `lyricsFetch` `lyricsWarm`
@@ -628,20 +678,37 @@ site on the account**, so this is an uptime issue, not just a billing one.
 
 ## Before shipping anything
 
-1. `node --check` every page's script and `import()` every function.
-2. **Structure-check `studio.html` and `venue-studio.html`.** Both are one big
-   `render()` with `if(TAB===…)` blocks. A bad edit once deleted two of them and
-   the file still parsed cleanly, because what was left was still valid JavaScript.
-   Assert every tab block and top-level function exists exactly once.
-3. Deploy a **draft**, exercise it against the real API.
-4. Deploy `--prod`, then **verify from outside** — the live URLs and the live API,
+1. **`npm test`.** Four stages, 131 assertions, no dev server and nothing that
+   touches production:
+   * **syntax** — every page's inline script through `node --check`, every
+     function `import()`ed.
+   * **structure** — `studio.html` and `venue-studio.html` are one big `render()`
+     of `if(TAB===…)` blocks, and a bad edit once deleted two of them while leaving
+     valid JavaScript behind, so `node --check` passed and two tabs rendered blank.
+     Every tab block and top-level function must appear exactly once. It also
+     asserts that each flag the server produces has a CONSUMER — a producer with
+     none is how the Studio's queue drifted from `playTop`.
+   * **unit** — the predicates: `playable`, `votable`, the `playTop` pool, the
+     Studio's own filters, `shapeLists`.
+   * **end to end** — whole request flows through the real handlers against an
+     in-memory blob store. One case per bug that has actually happened, so a fix
+     cannot be quietly undone.
+2. Deploy a **draft**, exercise it against the real API.
+3. Deploy `--prod`, then **verify from outside** — the live URLs and the live API,
    not the local files.
+
+> `netlify dev --offline` cannot run the write paths: its Blobs sandbox returns no
+> etag, so `casDoc` falls back to `onlyIfNew`, every write after the first fails,
+> and the second call in any test returns "busy". That is why the suite injects its
+> own store rather than using the CLI. To eyeball the UI locally you can still run
+> `netlify dev` and seed `.netlify/blobs-serve/entries/<siteId>/site:myset/` by
+> hand — reads work fine.
 
 ---
 
 # 10 · The rules, in one breath
 
-`INVARIANTS.md` has all 78. These are the ones that will bite hardest if
+`INVARIANTS.md` has all 98. These are the ones that will bite hardest if
 forgotten:
 
 1. **Never `list()` for live data.** Strong reads on known keys only.

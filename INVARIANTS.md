@@ -306,7 +306,11 @@ If you are about to violate one, stop and say so rather than working around it.
     round is a fresh contest.
 
 15. **Voting is idempotent per (fan, song).** Voting twice toggles off and refunds
-    the credit; it must never double-count.
+    the credit; it must never double-count. **Un-voting is never gated by whether
+    the song is still on offer** — only casting is. The setlist guard was added
+    ahead of the toggle, which meant that narrowing the set mid-round left the
+    fan's credit spent on a song they could no longer un-vote. A fan must always be
+    able to undo what they paid for, whatever the artist has changed since.
 
 ## Live-show safety
 
@@ -460,3 +464,131 @@ If you are about to violate one, stop and say so rather than working around it.
     mid-sentence.** `.note b{display:block}` was meant for the note's heading and
     also hit every `<b>` in its body, so "you only need **one**." rendered on three
     lines. Scope heading styles to the direct child (`.note>b`).
+
+## Setlists
+
+0ap. **`playable(show)` is the ONE definition of which songs are in play.** A
+    setlist narrows the library; `active !== false` hides a song for good; both
+    apply. Every path goes through it — the audience payload, the vote guard,
+    `playTop`, and the Studio's own view — because the moment two of them disagree
+    the room is looking at a song the artist cannot start.
+
+0aq. **A chosen setlist that resolves to nothing falls back to the whole library,
+    and says so.** An empty voting page is a broken gig (INVARIANT 16), and a
+    silently empty setlist is exactly the thing that gets discovered on stage at
+    10pm. `playable()` reports `fellBack`, and the Studio shows a strip. This was
+    wrong once: the first version returned `fellBack: false` for a selected-but-
+    empty list, which hid the problem from the only place it needed to be visible.
+
+0ar. **The projection of the active setlist onto the show record is the one piece of
+    deliberate duplication in the store, and it is fenced.** `show.listSongs`
+    exists so `/api/show` — polled by every phone in the room — never reads a
+    second document. `applyList()` is the only writer; `normShow()` re-filters it
+    against the library on every read so a stale id cannot survive; and every
+    library mutation re-projects. **If you add another way to change a setlist or
+    the library, call `applyList`/`refreshActive` after it.**
+
+0as. **Songs the artist wants to LEARN are not in the library.** They live in
+    `learn_<aid>`, because the room must never be able to vote for something that
+    is not playable yet. "Learned it" moves the row across in one action — doing it
+    in two leaves a duplicate when the second half fails.
+
+0at. **A song's KEY and the artist's CHART never reach the audience.** The key is a
+    performance note and the chart is their working document. Both are stripped
+    from the public payload — verified, not assumed — and the chart lives in its own
+    blob so it is never even loaded on the hot path.
+
+0au. **Auto-tagging only ever fills a song that has NO genres.** It can therefore
+    never undo a choice made by hand, and running it twice is a no-op. `originals`
+    is never in the reference map; it is applied when a song's artist matches the
+    artist's own name, because only they know which songs are theirs.
+
+0av. **A custom genre can never duplicate a built-in, however it is spelled.** Two
+    chips reading "Rock" that mean different things is worse than no custom genres.
+
+## The service worker
+
+0aw. **NOTHING under `/api` is ever cached.** A cached vote is a lost vote and a
+    cached payment is a support ticket. Verified in a real browser, not assumed:
+    after loading the app and calling the API, the only thing in the cache was
+    `/app.css`.
+
+0ax. **Navigations are network-first, and nothing is precached.** The newest version
+    of a page always wins, so a bad deploy is fixed by the next deploy rather than
+    by asking somebody in a bar to clear their browser. Precaching a shell is what
+    makes a service worker ship a stale app; there is no install-time cache to get
+    out of step. Old caches are deleted on activate, and a page can post
+    `myset-unregister` to make the worker stand down entirely.
+
+0ay. **A manifest per surface.** `start_url` is the whole point of installing: an
+    artist who puts the Studio on their home screen wants the Studio, not the city
+    feed.
+
+## Layout
+
+0az. **`flex:1` on a row of tabs makes the spacing look wrong, not right.** Equal
+    cell widths mean a short label floats in a wide cell while a long one is
+    squeezed, so the gaps *between the words* — which is what the eye reads — come
+    out uneven. Size tabs to their content with equal padding instead. Measured:
+    identical gaps at 320/375/390/430.
+
+0ba. **Never pre-fill a "new record" form from the previous record.** The gig sheet
+    copied venue, city, address and map link from the last gig as a convenience;
+    half-right details silently attached themselves to the wrong gig while Perry was
+    entering a night's worth.
+
+0bb. **A sticky bar's offset is measured, not guessed.** `.tabs` stuck at a
+    hard-coded `top:66px` under a header that is really 88px tall, so the blurred
+    header sat over the top quarter of the app's main navigation on every scroll.
+    `fitTabs()` measures the header and sets `--headh`; the header's height is
+    content-driven and grows with the phone's text-size setting, so no constant can
+    be right for everyone.
+
+## Setlists, part two — what the review found
+
+0bc. **`votable(show)` is the ONE answer to "can the room choose this right now".**
+    In tonight's set, or already played (a replay is always fair). `vote.mjs`
+    enforces it, `playTop` picks out of it, `show.mjs` filters the public payload
+    through it, and `stage.mjs` hands the Studio the same flag so its queue cannot
+    drift. Callers may narrow it further — `playTop` also wants replay votes on a
+    played song — but **none of them may widen it, and none of them may recompute
+    it.** Every bug in this family was two places disagreeing: `playTop` moved to
+    `playable()` and stopped seeing replay votes, so the room's top-voted song
+    could not win; the Studio kept the old whole-library predicate, so the button
+    on stage named a song `playTop` would not start.
+
+0bd. **Everything in `/api/show` must be votable.** If the payload lists it, tapping
+    it must work. A hidden-but-played song used to sit there answering "that one
+    isn't on tonight's list".
+
+0be. **Accepting a request must make it votable, or refuse.** `askAccept` added the
+    song to the library only; with a setlist active the room could never vote for
+    it, while the fan who paid three credits was told "On the list — go vote for
+    it". It now joins tonight's set. If the plan's featured cap would land it
+    switched off instead, the accept is REFUSED — the request stays pending, so the
+    fan's credits are still attached to something the artist can honour or decline.
+
+0bf. **The projection refresh is measured, not an allow-list.** `refreshActive` used
+    to run for a hard-coded list of actions, with a comment asking the next person
+    to remember to add to it — and two handlers added in the same change did not.
+    `admin.mjs` now compares the set of song ids across the mutation. A fact cannot
+    be forgotten; a promise can.
+
+0bg. **A gig's `listId` has three states and they are not interchangeable.**
+    `''` = no opinion, leave the artist's pick alone. `'all'` = play the whole
+    library tonight. `<id>` = that set. A truthiness test collapsed the first two,
+    so "All songs" on a gig silently did nothing; and `eventSave` sanitising unknown
+    ids blanked `'all'` because it is not a list id. A gig pointing at a set the
+    artist has since deleted leaves their pick alone and says so — silently
+    blanking it is worse than doing nothing.
+
+0bh. **A count shown next to a name must mean what the name says.** `shapeLists`
+    returns two numbers on purpose: `songs` is library membership (the picker's
+    ticks, so a hidden song keeps its tick instead of being dropped on save) and
+    `count` is how many are in play (the same test `playable()` applies). They were
+    the same number, so "8 of your 40 songs are in play" counted songs the room
+    could not see.
+
+0bi. **Accumulators live INSIDE the CAS callback.** `casDoc` re-runs it on a write
+    conflict; `tagAuto`'s counters were declared outside and reported double what
+    they did.

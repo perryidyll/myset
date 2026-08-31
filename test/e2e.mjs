@@ -1,0 +1,207 @@
+/* End-to-end over the real handlers, in-process, against an in-memory blob store
+   with etag support (test/blobs-fake.mjs). Nothing touches production: the store is a
+   Map that dies with the process.
+
+   One case per confirmed review finding. */
+process.env.ADMIN_CODE = 'devlocal';
+
+const admin   = (await import('../netlify/functions/admin.mjs')).default;
+const showFn  = (await import('../netlify/functions/show.mjs')).default;
+const voteFn  = (await import('../netlify/functions/vote.mjs')).default;
+const reqFn   = (await import('../netlify/functions/request.mjs')).default;
+
+let pass = 0, fail = 0;
+const eq = (name, got, want) => {
+  const a = JSON.stringify(got), b = JSON.stringify(want);
+  if (a === b) { pass++; console.log('  ✓', name); }
+  else { fail++; console.log('  ✗', name, '\n      got  ' + a + '\n      want ' + b); }
+};
+const ok = (name, cond, detail) => {
+  if (cond) { pass++; console.log('  ✓', name); }
+  else { fail++; console.log('  ✗', name, detail === undefined ? '' : '\n      ' + JSON.stringify(detail)); }
+};
+
+const hit = async (h, url, body) => {
+  const r = await h(new Request(url, body === undefined ? {} : {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body) }));
+  const t = await r.text();
+  try { return { status: r.status, ...JSON.parse(t) }; } catch { return { status: r.status, raw: t }; }
+};
+const A       = (action, extra = {}) => hit(admin, 'https://x/api/admin?code=devlocal', { action, ...extra });
+const pubShow = (fan) => hit(showFn, `https://x/api/show${fan ? '?fan=' + fan : ''}`);
+const vote    = (fan, song) => hit(voteFn, 'https://x/api/vote', { fan, song });
+const ask     = (fan, title) => hit(reqFn, `https://x/api/request?fan=${fan}`, { kind: 'song', title });
+const st      = async () => (await A('window', { open: true })).stage;
+
+console.log('\nSETUP');
+for (const t of ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'])
+  await A('addSong', { title: t, artist: 'Test' });
+await A('freeCredits', { n: 40 });
+let S = await st();
+eq('five songs in the library', S.songs.length, 5);
+ok('all votable with no set active', S.songs.every((x) => x.votable === true));
+
+const lid = (await A('listNew', { name: 'Late set' })).id;
+ok('setlist created', !!lid);
+await A('listSongs', { id: lid, songs: ['alpha', 'bravo'] });
+await A('listUse', { id: lid });
+S = await st();
+eq('the set is active', S.show.listId, lid);
+eq('two songs in play', S.songs.filter((x) => x.inSet).map((x) => x.id).sort(), ['alpha', 'bravo']);
+
+/* ── FINDING 1 + 4 ─────────────────────────────────────────────── */
+console.log('\nFINDING 1+4  a paid request must be votable once accepted');
+await A('status', { status: 'live' });
+await A('askSet', { kind: 'song', on: true, cost: 3 });
+const r0 = await ask('fanA', 'Foxtrot');
+ok('the fan could pay for it', r0.ok, r0);
+const rid = (await A('askList')).asks[0].id;
+const acc = await A('askAccept', { id: rid });
+ok('accepted', acc.ok, acc);
+ok('and the artist is told where it landed', /Late set/.test(acc.note || ''), acc.note);
+const p1 = await pubShow('fanA');
+ok('THE BUG: the room can see it', p1.songs.some((x) => x.title === 'Foxtrot'),
+   p1.songs.map((x) => x.title));
+const v0 = await vote('fanA', 'foxtrot');
+ok('THE BUG: and can vote for it', v0.ok && v0.voted === true, v0);
+const mem = (await A('listAll')).lists.find((l) => l.id === lid).songs;
+ok('it really joined the set', mem.includes('foxtrot'), mem);
+await vote('fanA', 'foxtrot');
+
+/* ── FINDING 12 ────────────────────────────────────────────────── */
+console.log('\nFINDING 12  narrowing the set must not strand a fan\'s credit');
+const v1 = await vote('fanB', 'alpha');
+ok('a fan votes for a song in the set', v1.ok && v1.voted === true, v1);
+await A('listSongs', { id: lid, songs: ['bravo', 'foxtrot'] });     // alpha drops out
+const v2 = await vote('fanC', 'alpha');
+eq('a NEW vote for it is refused', [v2.status, v2.error], [404, 'That one isn’t on tonight’s list']);
+const v3 = await vote('fanB', 'alpha');
+ok('THE BUG: the holder can still toggle it off', v3.ok && v3.voted === false, v3);
+eq('and the credit came back', (await pubShow('fanB')).credits.used, 0);
+await A('listSongs', { id: lid, songs: ['alpha', 'bravo', 'foxtrot'] });
+
+/* ── FINDING 3 ─────────────────────────────────────────────────── */
+console.log('\nFINDING 3  the room\'s top-voted replay must be able to win');
+await A('play', { song: 'charlie' });                 // charlie is NOT in the set
+await A('play', { song: 'alpha' });                   // so charlie is now played
+S = await st();
+const ch = S.songs.find((x) => x.id === 'charlie');
+ok('charlie: played, outside the set, still votable',
+   ch.played === true && ch.inSet === false && ch.votable === true, ch);
+const rv = await vote('fanD', 'charlie');
+ok('the room asks for it again', rv.ok && rv.voted === true, rv);
+S = await st();
+const clientTop = S.songs.filter((x) => !x.now && x.active !== false && x.votable !== false
+                                        && (!x.played || x.votes > 0))[0];
+eq('the Studio names charlie', clientTop.id, 'charlie');
+eq('THE BUG: and playTop starts the same song', (await A('playTop')).stage.show.nowPlaying, 'charlie');
+
+/* ── FINDING 5 + 8 ─────────────────────────────────────────────── */
+console.log('\nFINDING 5+8  the gig decides the night — all three states');
+const soon = new Date(Date.now() + 90 * 60000);
+const p2 = (n) => String(n).padStart(2, '0');
+const gig = (listId) => A('eventSave', { event: {
+  id: 'gtest', venue: 'The Test Bar', city: 'Koh Phangan', country: 'Thailand', tz: 'UTC',
+  date: `${soon.getUTCFullYear()}-${p2(soon.getUTCMonth() + 1)}-${p2(soon.getUTCDate())}`,
+  time: `${p2(soon.getUTCHours())}:${p2(soon.getUTCMinutes())}`, listId } });
+
+await A('listUse', { id: lid });
+await gig('');
+eq('"leave my pick" changes nothing', (await A('status', { status: 'live' })).stage.show.listId, lid);
+
+await gig('all');
+let g = await A('status', { status: 'live' });
+eq('THE BUG: "All songs" actually clears it', g.stage.show.listId, '');
+ok('and says so', /all your songs/i.test(g.note || ''), g.note);
+
+await gig(lid);                                   // show currently has NO set
+g = await A('status', { status: 'live' });
+eq('a named set is applied', g.stage.show.listId, lid);
+ok('with its name and count', /Late set/.test(g.note || ''), g.note);
+
+await A('listUse', { id: '' });
+eq('THE BUG: ↺ New show applies it too', (await A('newShow')).stage.show.listId, lid);
+
+/* A gig pointing at a set the artist LATER deleted. eventSave sanitises on save,
+   so the only way to reach this state is to delete the list afterwards — which
+   listDelete deliberately does not chase through the calendar. */
+const doomed = (await A('listNew', { name: 'Doomed set' })).id;
+await gig(doomed);
+await A('listDelete', { id: doomed });
+await A('listUse', { id: lid });
+g = await A('status', { status: 'live' });
+eq('a deleted set leaves the artist\'s pick alone', g.stage.show.listId, lid);
+ok('and says what happened', /deleted/.test(g.note || ''), g.note);
+await A('eventDelete', { id: 'gtest' });
+
+/* ── FINDING 6 + 9 ─────────────────────────────────────────────── */
+console.log('\nFINDING 6+9  every way a song id appears re-projects the set');
+/* The state that matters: a list HOLDS an id whose song is not in the library.
+   listDelete/removeSong leave the list document alone deliberately, so this is
+   reachable in real use — delete a song, then bring the same title back. */
+await A('addSong', { title: 'Golf', artist: 'Test' });
+await A('listSongs', { id: lid, songs: ['alpha', 'bravo', 'golf'] });
+await A('removeSong', { song: 'golf' });
+S = await st();
+ok('golf is gone from the library, so out of play', !S.songs.some((x) => x.id === 'golf'));
+ok('but the list still holds its id',
+   (await A('listAll')).lists.find((l) => l.id === lid).songs.length === 2);   // filtered on read
+const wid = (await A('learnAdd', { title: 'Golf', artist: 'Test' })).learn.find((x) => x.title === 'Golf').id;
+const ld = await A('learnDone', { id: wid });
+ok('learned it', ld.ok, ld);
+S = await st();
+ok('THE BUG: learnDone put it back in the active set',
+   S.songs.find((x) => x.id === 'golf')?.inSet === true,
+   S.songs.filter((x) => x.inSet).map((x) => x.id));
+
+console.log('\n  the refresh is measured, not an allow-list to forget');
+await A('removeSong', { song: 'golf' });
+ok('removing it drops it from play', !(await st()).songs.some((x) => x.id === 'golf'));
+await A('addSong', { title: 'Golf', artist: 'Test' });
+ok('adding it back re-projects it', (await st()).songs.find((x) => x.id === 'golf')?.inSet === true);
+await A('editSong', { song: 'golf', artist: 'Renamed' });
+eq('an edit that changes no ids leaves the set alone', (await st()).show.listId, lid);
+await A('starterSetlist');
+ok('the starter pack re-projects too', (await st()).songs.length > 10);
+
+/* ── FINDING 10 + 11 ───────────────────────────────────────────── */
+console.log('\nFINDING 10+11  "N of your M songs are in play" must be true');
+await A('toggleSong', { song: 'bravo' });                        // hide bravo
+S = await st();
+const row = S.lists.find((l) => l.id === lid);
+eq('count == what is actually in play', row.count, S.songs.filter((x) => x.inSet).length);
+ok('but the picker still ticks the hidden song', row.songs.includes('bravo'), row.songs);
+await A('toggleSong', { song: 'bravo' });
+
+/* ── FINDING 13 ────────────────────────────────────────────────── */
+console.log('\nFINDING 13  tagAuto reports what it did, once');
+const t1 = await A('tagAuto');
+eq('filled + kept + unknown covers every song',
+   t1.filled + t1.kept + t1.unknownCount, (await st()).songs.length);
+ok('it filled something', t1.filled > 0, t1);
+eq('a second run fills nothing', (await A('tagAuto')).filled, 0);
+await A('tagAdd', { label: 'Beach' });
+const hand = (await A('tagList')).tags.own[0].id;
+await A('editSong', { song: 'alpha', tags: [hand] });
+await A('tagAuto');
+eq('a hand-made choice survives', (await st()).songs.find((x) => x.id === 'alpha').tags, [hand]);
+
+/* ── the payload can only hold votable songs ───────────────────── */
+console.log('\nEVERY song in the public payload must be votable');
+await A('listUse', { id: lid });
+await A('play', { song: 'alpha' });
+await A('play', { song: 'delta' });
+await A('toggleSong', { song: 'alpha' });               // hide one that was played
+const p9 = await pubShow('fanZ');
+const stuck = [];
+for (const s of [...p9.songs, ...p9.played]) {
+  const rr = await vote('probe-' + s.id, s.id);
+  if (!rr.ok && rr.status === 404) stuck.push(s.id);
+}
+eq('nothing in it answers "not on tonight\'s list"', stuck, []);
+ok('and the hidden played song is gone from it',
+   ![...p9.songs, ...p9.played].some((x) => x.id === 'alpha'));
+
+console.log(`\n${pass} passed, ${fail} failed`);
+process.exit(fail ? 1 : 0);

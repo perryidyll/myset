@@ -15,9 +15,16 @@ import { casDoc, readDoc, store } from './_lib.mjs';
    also projected onto the show record (`show.listSongs`). That is deliberate.
    `/api/show` is polled by every phone in the room, and making it read a second
    document on every poll to find out which songs are in play would cost more than
-   the projection does. `applyList()` is the ONLY thing that writes the projection,
-   and `normShow()` re-filters it against the library on every read, so a stale id
-   cannot survive. If you add another way to change a list, call applyList after it. */
+   the projection does.
+
+   There are exactly TWO writers, and they are not symmetrical — which is the part
+   that matters:
+     applyList()  the only writer that can ADD an id to the projection.
+     normShow()   on every read, drops ids that are no longer in the library.
+   So a stale id cannot survive a read, but a MISSING id is unrecoverable until
+   applyList runs again. If you add another way for a song id to appear in the
+   library, call `refreshActive()` after it — admin.mjs does this by comparing the
+   id set across the mutation rather than keeping a list of actions to remember. */
 
 export const MAX_LISTS = 20;
 export const MAX_NAME = 40;
@@ -70,6 +77,9 @@ export const mutateLearn = (aid, fn) =>
    that could change which songs are in the active list. */
 export async function applyList(aid, listId) {
   const { mutateShow, getShow } = await import('./_lib.mjs');
+  /* '' and 'all' both mean "no setlist, the whole library". They are the same thing
+     HERE and deliberately different on a GIG, where '' means "no opinion, leave
+     whatever is picked" and 'all' means "clear it". See admin.mjs autoList. */
   const wanted = String(listId || '');
   const d = await readLists(aid);
   const list = wanted && wanted !== 'all' ? d.lists.find((l) => l.id === wanted) : null;
@@ -94,14 +104,22 @@ export async function refreshActive(aid) {
   return applyList(aid, sh.listId);
 }
 
-/** What the Studio shows: every list, with how many of its songs still exist. */
+/** What the Studio shows for each list. The two numbers mean different things and
+ *  both are needed:
+ *    songs  every id still IN THE LIBRARY — these are the ticks in the picker, so a
+ *           switched-off song has to stay in here or saving the picker would quietly
+ *           drop it from the list.
+ *    count  how many are IN PLAY — the same test playable() applies, so the Setlist
+ *           tab's "8 of your 40 songs are in play" can't contradict what the room
+ *           actually sees. */
 export function shapeLists(d, show) {
   const have = new Set((show.songs || []).map((x) => x.id));
+  const live = new Set((show.songs || []).filter((x) => x.active !== false).map((x) => x.id));
   return d.lists
     .map((l) => ({
       id: l.id, name: l.name,
       songs: l.songs.filter((s) => have.has(s)),
-      count: l.songs.filter((s) => have.has(s)).length,
+      count: l.songs.filter((s) => live.has(s)).length,
       active: show.listId === l.id,
       at: l.at,
     }))

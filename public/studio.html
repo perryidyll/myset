@@ -65,7 +65,11 @@ a{color:inherit;text-decoration:none}
 .whoami span{font-size:12px;color:var(--faint);flex:0 0 auto}
 .whoami:active h1{opacity:.6}
 
-.tabs{position:sticky;top:66px;z-index:29;display:flex;gap:0;margin:14px 18px 0;padding:4px;
+/* Sticks directly under the header. `--headh` is MEASURED by fitTabs() — the
+   hard-coded guess was 66px against a real 88px, so the blurred header sat over
+   the top quarter of the pill on every scroll. The fallback matches today's
+   measurement so the first paint is right too. */
+.tabs{position:sticky;top:var(--headh,88px);z-index:29;display:flex;gap:0;margin:14px 18px 0;padding:4px;
   background:var(--surface);border-radius:var(--pill);
   /* a hairline around the pill so the six read as one object */
   box-shadow:var(--sh-1),inset 0 0 0 1.5px rgba(255,255,255,.16);
@@ -417,6 +421,11 @@ function setSort(v){ SETSORT=v; try{localStorage.setItem('myset.setsort',v)}catc
 let GENRE='';
 let GIGSALL=false;      // the gig list shows five, like the public page does
 function setGenre(id){ GENRE=(GENRE===id?'':id); render(); }
+/* What a gig's setlist choice is called. 'all' and a deleted id are both shown
+   plainly — a gig quietly pointing at a set that no longer exists is exactly the
+   kind of thing you want to see in the list, not discover at 10pm. */
+const setName=(id)=>id==='all'?'all songs'
+  :((((D&&D.lists)||[]).find(l=>l.id===id)||{}).name||'a deleted set');
 const tagLabel=(id)=>{
   const v=(D&&D.tags)||{builtin:[],own:[]};
   const hit=[...v.builtin,...v.own].find(t=>t.id===id);
@@ -571,8 +580,8 @@ function learnSection(){
   const rows=(D&&D.learn)||[];
   return `<div class="sec"><span class="kick">Want to learn</span><span class="kick">${rows.length||''}</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Songs you don’t play yet.
-      Nobody can vote for these — they’re a list for you. Tap <b>Learned it</b> and it moves
-      into your setlist.</p>
+      Nobody can vote for these — they’re a list for you. Tap <b>Learned it</b> and it joins
+      your songs, ready to add to whichever set you want.</p>
     <div class="list">${rows.length?rows.map(x=>`<div class="row">
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
@@ -608,7 +617,13 @@ async function learnDone(id){
   if(!d.ok){toast(d.error||'Failed');return;}
   if(d.stage&&d.stage.ok) D=d.stage; else await load();
   if(D) D.learn=d.learn;
-  render(); toast(d.note||'Nice — it’s in your setlist now');
+  render();
+  /* "In your setlist" was not quite true: learning a song puts it in the LIBRARY,
+     and with a named set active it isn't in play until it's added to that set. */
+  const sg=(D&&D.songs||[]).find(x=>x.id===d.songId);
+  toast(d.note||(sg&&sg.inSet===false
+    ? 'In your songs — add it to tonight’s set to play it'
+    : 'Nice — it’s in your songs now'));
 }
 async function learnRemove(id){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'learnRemove',id})});
@@ -906,12 +921,13 @@ function openGig(id,onDate){
       <input class="inp" id="gUntil" type="date" value="${esc(R&&R.until?R.until:'')}"></div>
     <div class="field" style="padding-left:0;padding-right:0"><label>Setlist for this gig</label>
       <select class="inp" id="gList">
-        <option value=""${!(ev&&ev.listId)?' selected':''}>All songs</option>
+        <option value=""${!(ev&&ev.listId)?' selected':''}>Leave whatever I’ve picked</option>
+        <option value="all"${ev&&ev.listId==='all'?' selected':''}>All songs</option>
         ${((D&&D.lists)||[]).map(l=>`<option value="${esc(l.id)}"${
           ev&&ev.listId===l.id?' selected':''}>${esc(l.name)} · ${l.count} songs</option>`).join('')}
       </select>
       <p class="muted" style="font-size:12px;margin:7px 0 0">${((D&&D.lists)||[]).length
-        ? 'Tapping “Start the show” on the night switches to this automatically.'
+        ? 'Tapping “Start the show” on the night switches to this automatically. Leave it on the first option and the gig won’t touch your pick.'
         : 'Make a setlist on the Setlist tab and it’ll show up here.'}</p></div>
     <input type="hidden" id="gTz" value="${esc(tz)}">
     <button class="big" style="margin-top:16px" data-act="gigsave" data-id="${esc(ev?ev.id:'')}">${ev?'Save changes':'Add it'}</button>
@@ -1031,9 +1047,15 @@ function render(){
   if(!D||!D.show)return;                 // data not in yet — never crash the page
   const s=D.show, songs=D.songs;
   const now=songs.find(x=>x.now);
-  const pool=songs.filter(x=>!x.played&&!x.now&&x.active!==false);
-  // must mirror admin.mjs playTop: unplayed songs PLUS played songs with replay votes
-  const startPool=songs.filter(x=>!x.now&&x.active!==false&&(!x.played||x.votes>0));
+  /* `votable` comes from the server (stage.mjs, off votable() in _lib.mjs) — the
+     same predicate admin.mjs playTop uses. Recomputing it here is how the button on
+     stage came to name a song playTop would not start: a setlist narrows what the
+     room can vote for, and the client had no idea. `!==false` so an older payload
+     without the flag degrades to the old behaviour instead of emptying the queue. */
+  const canVote=x=>x.active!==false&&x.votable!==false;
+  const pool=songs.filter(x=>!x.played&&!x.now&&canVote(x));
+  // same narrowing playTop applies: a played song needs replay votes to re-enter
+  const startPool=songs.filter(x=>!x.now&&canVote(x)&&(!x.played||x.votes>0));
   const top=startPool[0];
 
   let body='';
@@ -1123,7 +1145,8 @@ function render(){
     <div class="list">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
-        <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden':'In the pool'}${x.votes?' · '+x.votes+' votes':''}</div>
+        <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden'
+          :x.inSet===false?'Not in this set':'In the pool'}${x.votes?' · '+x.votes+' votes':''}</div>
         ${(x.key||(x.tags||[]).length)?`<div class="songmeta">
           ${x.key?`<span class="k">${esc(x.key)}</span>`:''}
           ${(x.tags||[]).map(t=>`<span>${esc(tagLabel(t))}</span>`).join('')}</div>`:''}</div>
@@ -1169,7 +1192,8 @@ function render(){
         <div class="when"><b>${dayNum(o.date)}</b><span>${monShort(o.date)}</span></div>
         <div class="m"><div class="t">${esc(o.venue)}</div>
           <div class="by">${esc(o.address||[o.city,o.country].filter(Boolean).join(', '))}</div>
-          <div class="s">${dowName(o.date)} · ${o.time}${o.endTime?'–'+o.endTime:''}${o.repeating?' · repeats':''}${o.cancelled?' · cancelled':''}</div></div>
+          <div class="s">${dowName(o.date)} · ${o.time}${o.endTime?'–'+o.endTime:''}${o.repeating?' · repeats':''}${o.cancelled?' · cancelled':''}${
+            o.listId?' · '+esc(setName(o.listId)):''}</div></div>
         ${o.cancelled
           ? `<button class="act" data-act="gigskip" data-id="${o.eventId}|${o.date}">Restore</button>
              <button class="act warn" data-act="gighide" data-id="${o.eventId}|${o.date}">Hide</button>`
@@ -1559,7 +1583,18 @@ function render(){
   if(sq){ sq.addEventListener('input',e=>{SETFOCUS=true;SETQ=e.target.value;render();});
     if(SETFOCUS){ sq.focus(); const v=sq.value; sq.setSelectionRange(v.length,v.length); } }
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
+  fitTabs();
 }
+/* The tab row sticks under the header, and the header's height is content-driven —
+   it grows with the phone's text-size setting. So it is measured rather than
+   guessed; a guess is how the header came to overlap the tabs. */
+function fitTabs(){
+  const h=document.querySelector('.head');
+  if(!h)return;
+  const px=Math.round(h.getBoundingClientRect().height);
+  if(px>0) document.documentElement.style.setProperty('--headh',px+'px');
+}
+addEventListener('resize',fitTabs);
 /* What the room has asked for. Pending first, because a birthday is the one
    thing on this screen that goes stale. */
 /* Venues you've asked for a spot, and what they said. Sits on the Gigs tab
@@ -1620,8 +1655,10 @@ async function askDo(action,id){
     const d=await api('/admin',{method:'POST',body:JSON.stringify({action,id})});
     if(!d.ok){toast(d.error||'Failed');return;}
     if(d.stage&&d.stage.ok){ D=d.stage; render(); } else await load();
-    toast(action==='askAccept'?'Added — the room can vote for it now'
-      :action==='askDecline'?'Declined, votes refunded':'Marked done');
+    // d.note carries the server's own wording when there's more to say — e.g.
+    // which setlist the accepted song was added to
+    toast(d.note||(action==='askAccept'?'Added — the room can vote for it now'
+      :action==='askDecline'?'Declined, votes refunded':'Marked done'));
   } finally { WRITING=false; }
 }
 /* Song titles/artists are user text — never interpolate them into an onclick.

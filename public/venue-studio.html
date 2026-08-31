@@ -67,7 +67,9 @@ a{color:inherit;text-decoration:none}
 .pill.ok{background:rgba(48,209,88,.16);color:var(--good)}
 .pill.no{background:var(--surface-2);color:var(--muted)}
 
-.tabs{position:sticky;top:66px;z-index:29;display:flex;gap:5px;margin:14px 18px 0;padding:4px;
+/* Sticks under the header, whose height is measured by fitTabs() — see the same
+   comment in studio.html. 66px was a guess against a real ~88px. */
+.tabs{position:sticky;top:var(--headh,88px);z-index:29;display:flex;gap:5px;margin:14px 18px 0;padding:4px;
   background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1);
   overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
@@ -695,7 +697,16 @@ function render(){
   document.querySelectorAll('input[data-hday]').forEach(el=>
     el.addEventListener('change',()=>save({action:'hours',day:el.dataset.hday,
       [el.dataset.hfield]:el.value},'Hours saved')));
+  fitTabs();
 }
+/* Measured, not guessed — see the same function in studio.html. */
+function fitTabs(){
+  const h=document.querySelector('.head');
+  if(!h)return;
+  const px=Math.round(h.getBoundingClientRect().height);
+  if(px>0) document.documentElement.style.setProperty('--headh',px+'px');
+}
+addEventListener('resize',fitTabs);
 
 /* ── verification ───────────────────────────────────────
    Shown as a CHECKLIST, not a yes/no, because "unverified" with no explanation

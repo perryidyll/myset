@@ -1,5 +1,5 @@
 import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, publicArtist, json, bad,
-         cleanFanId, playable } from './_lib.mjs';
+         cleanFanId, votable } from './_lib.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -14,12 +14,14 @@ export default async (req) => {
   if (!aid) return bad('unknown artist', 404);
   const show = await getShow(aid);
   if (show.status === 'ended') return bad('The show has ended', 409);
-  /* In tonight's setlist, or already played (a replay request is always fair).
-     Anything else is not on offer, whatever the browser thinks. */
-  const inPlay = new Set(playable(show).songs.map((x) => x.id));
-  const s0 = show.songs.find((x) => x.id === song && x.active !== false
-                                    && (inPlay.has(x.id) || show.played.includes(x.id)));
+  /* The song has to exist at all. Whether it is ON OFFER is checked on the cast
+     branch only, inside the mutation — because UN-voting has to work even after it
+     stopped being on offer. INVARIANT 15 says a second tap refunds the credit, and
+     the artist can narrow the setlist or hide a song mid-round; gating the toggle
+     here would strand the fan's credit with no way to get it back. */
+  const s0 = show.songs.find((x) => x.id === song);
   if (!s0) return bad('That one isn’t on tonight’s list', 404);
+  const offered = votable(show)(s0);
   if (show.nowPlaying === song) return bad('That one is playing right now', 409);
 
   const cost = costOf(song, show);   // 1 normally, more to request a replay
@@ -33,6 +35,8 @@ export default async (req) => {
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
       const at = me.v.indexOf(song);
       if (at >= 0) { me.v.splice(at, 1); delete me.ts[song]; want = false; outcome = { voted: false }; return true; }
+      // casting is where the setlist applies — see the note above
+      if (!offered) { err = ['That one isn’t on tonight’s list', 404]; return false; }
       const free = isUnlimited(fan, show);
       const total = show.freeCredits + (me.extra || 0);
       if (!free && creditsUsed(me, show) + cost > total) { err = ['no-credits', 402]; return false; }
