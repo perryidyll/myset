@@ -25,6 +25,24 @@ export const mutateEvents = (aid, fn) =>
   casDoc(EV(aid), emptyEvents, (d) => { d.list = Array.isArray(d.list) ? d.list : []; return fn(d); });
 
 const str = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+
+/* An end time is what a musician actually knows ("we finish at 1"), so the UI
+   asks for that and this turns it into a length. An end BEFORE the start means
+   the set runs past midnight — which is the normal case, not an error. */
+const mins = (t) => { const m = /^(\d{2}):(\d{2})$/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
+function durationFrom(e) {
+  const a = mins(e.time), b = mins(e.endTime);
+  if (a != null && b != null) {
+    let d = b - a; if (d <= 0) d += 1440;
+    return Math.max(15, Math.min(720, d));
+  }
+  return Math.max(15, Math.min(720, parseInt(e.durationMin, 10) || 180));
+}
+export const endTimeOf = (ev) => {
+  const a = mins(ev.time); if (a == null) return '';
+  const t = (a + (ev.durationMin || 180)) % 1440;
+  return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+};
 const FREQ = new Set(['weekly', 'biweekly', 'monthly', 'yearly']);
 
 export function normEvent(e) {
@@ -36,11 +54,14 @@ export function normEvent(e) {
     tz: validTz(e.tz) ? e.tz : 'UTC',
     date: /^\d{4}-\d{2}-\d{2}$/.test(e.date) ? e.date : null,
     time: /^\d{2}:\d{2}$/.test(e.time) ? e.time : '20:00',
-    durationMin: Math.max(15, Math.min(720, parseInt(e.durationMin, 10) || 180)),
+    durationMin: durationFrom(e),
     note: str(e.note, 140),
     ticketUrl: /^https:\/\//.test(e.ticketUrl || '') ? String(e.ticketUrl).slice(0, 300) : '',
     repeat: null,
     skip: Array.isArray(e.skip) ? e.skip.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(0, 200) : [],
+    // cancelled AND dismissed from the artist's list — the skip has to stay, or
+    // the night comes straight back
+    hid: Array.isArray(e.hid) ? e.hid.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).slice(0, 200) : [],
     createdAt: Number(e.createdAt) || Date.now(),
   };
   if (e.repeat && FREQ.has(e.repeat.freq)) {
@@ -66,7 +87,7 @@ export function expand(ev, fromDate, toDate) {
     out.push({
       eventId: ev.id, date: d, time: ev.time, tz: ev.tz, startsAt: ms,
       endsAt: ms + ev.durationMin * 60000,
-      venue: ev.venue, city: ev.city, country: ev.country,
+      venue: ev.venue, city: ev.city, country: ev.country, endTime: endTimeOf(ev),
       note: ev.note, ticketUrl: ev.ticketUrl, repeating: !!ev.repeat,
     });
   };

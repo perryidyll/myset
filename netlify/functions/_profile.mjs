@@ -8,6 +8,8 @@ export const defaultProfile = () => ({
   tagline: '',
   bio: '',
   photo: '/img/band.jpg',
+  avatar: '',            // the big square portrait
+  photos: [],            // up to 3 small ones clustered around it
   links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', website: '' },
   media: [],
   updatedAt: Date.now(),
@@ -47,6 +49,9 @@ export function normProfile(p) {
   out.tagline = clean(out.tagline, 120);
   out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 2000);   // newlines kept
   out.photo = String(out.photo || d.photo).slice(0, 300);
+  out.avatar = String(out.avatar || '').slice(0, 300);
+  out.photos = (Array.isArray(out.photos) ? out.photos : [])
+    .map((x) => String(x || '').slice(0, 300)).filter(Boolean).slice(0, 3);
   const L = out.links || {};
   out.links = {
     spotify: safeLink('spotify', L.spotify),

@@ -51,15 +51,33 @@ body{padding-bottom:34px}
 .finder{margin:20px 18px 0;background:var(--surface);border-radius:var(--r-lg);
   box-shadow:var(--sh-2);padding:18px 18px 20px}
 .finder label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 7px}
-.finder .sel{position:relative;margin-bottom:13px}
-.finder select{width:100%;min-height:52px;padding:14px 42px 14px 16px;font-size:16px;
+/* Type to narrow, or tap to browse the whole list. With three cities typing is
+   fastest; with three hundred a plain <select> stops being usable. */
+.combo{position:relative;margin-bottom:13px}
+.combo input{width:100%;min-height:52px;padding:14px 42px 14px 16px;font-size:16px;
   background:var(--bg);border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);
   color:var(--ink);appearance:none;-webkit-appearance:none}
-.finder select:disabled{opacity:.5}
-.finder select:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
-.finder .sel::after{content:"";position:absolute;right:18px;top:22px;width:9px;height:9px;
+.combo input:disabled{opacity:.5}
+.combo input:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+.combo::after{content:"";position:absolute;right:18px;top:calc(50% + 4px);width:9px;height:9px;
   border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);
-  transform:rotate(45deg);pointer-events:none}
+  transform:translateY(-50%) rotate(45deg);pointer-events:none;transition:transform .2s var(--ease)}
+.combo.open::after{transform:translateY(-50%) rotate(225deg)}
+.combo .clear{position:absolute;right:12px;top:calc(50% + 4px);transform:translateY(-50%);
+  width:30px;height:30px;border-radius:50%;background:var(--bg-2);color:var(--muted);
+  font-size:13px;display:none;place-items:center;z-index:2}
+.combo.filled .clear{display:grid}
+.combo.filled::after{display:none}
+.opts{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:20;max-height:240px;overflow-y:auto;
+  background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-3);padding:6px;
+  display:none;-webkit-overflow-scrolling:touch}
+.combo.open .opts{display:block}
+.opts button{display:flex;width:100%;align-items:baseline;justify-content:space-between;gap:10px;
+  padding:12px 14px;border-radius:10px;font-size:15.5px;font-weight:500;text-align:left;color:var(--ink)}
+.opts button:hover,.opts button.hi{background:var(--bg-2)}
+.opts button b{font-weight:500}
+.opts button span{font-size:12.5px;color:var(--muted);flex:0 0 auto}
+.opts .none{padding:14px;font-size:14px;color:var(--muted);text-align:center}
 
 .dayhead{display:flex;align-items:baseline;justify-content:space-between;padding:26px 20px 9px}
 .dayhead b{font-size:21px;font-weight:700;letter-spacing:-.03em}
@@ -113,13 +131,19 @@ body{padding-bottom:34px}
   </div>
 
   <div class="finder">
-    <div class="sel">
+    <div class="combo" id="cCountry">
       <label for="country">Choose your country</label>
-      <select id="country"><option value="">Loading…</option></select>
+      <input id="country" type="text" autocomplete="off" autocapitalize="words" spellcheck="false"
+        placeholder="Start typing, or tap to see the list" role="combobox" aria-expanded="false" aria-autocomplete="list">
+      <button class="clear" type="button" aria-label="Clear">✕</button>
+      <div class="opts" role="listbox"></div>
     </div>
-    <div class="sel">
+    <div class="combo" id="cCity">
       <label for="city">Choose your city</label>
-      <select id="city" disabled><option value="">Pick a country first</option></select>
+      <input id="city" type="text" autocomplete="off" autocapitalize="words" spellcheck="false"
+        placeholder="Pick a country first" role="combobox" aria-expanded="false" aria-autocomplete="list" disabled>
+      <button class="clear" type="button" aria-label="Clear">✕</button>
+      <div class="opts" role="listbox"></div>
     </div>
     <button class="btn btn-pri btn-block" id="go" disabled>Search</button>
   </div>
@@ -147,38 +171,96 @@ async function boot(){
   try{ PLACES=await fetch(`${API}/events?places=1`,{cache:'no-store'}).then(r=>r.json()); }catch(e){}
   const cs=$('#country');
   if(!PLACES||!PLACES.ok||!PLACES.countries.length){
-    cs.innerHTML='<option value="">Nothing listed yet</option>';
+    cs.placeholder='Nothing listed yet'; cs.disabled=true;
     $('#out').innerHTML=`<div class="blank"><b>No gigs listed yet</b>
       <p>MySet is brand new. If you play live, your gigs can be the first ones here.</p></div>
       <a class="artistcta" href="/studio">Add your gigs →</a>`;
     return;
   }
-  cs.innerHTML='<option value="">Choose…</option>'+PLACES.countries
-    .map(c=>`<option value="${esc(c.country)}">${esc(c.country)} · ${c.gigs} gig${c.gigs===1?'':'s'}</option>`).join('');
-  cs.addEventListener('change',fillCities);
-  $('#city').addEventListener('change',()=>{ $('#go').disabled=!$('#city').value; });
+  cs.placeholder='Start typing, or tap to see the list';
+  combo('#cCountry', ()=>PLACES.countries.map(c=>({v:c.country,n:c.gigs})), (v)=>{
+    CHOSEN.country=v; CHOSEN.city=''; setCombo('#cCity','');
+    const c=PLACES.countries.find(x=>x.country===v);
+    $('#city').disabled=!c;
+    $('#city').placeholder=c?'Start typing, or tap to see the list':'Pick a country first';
+    $('#go').disabled=true;
+  });
+  combo('#cCity', ()=>{
+    const c=PLACES.countries.find(x=>x.country===CHOSEN.country);
+    return c?c.cities.map(x=>({v:x.city,n:x.gigs})):[];
+  }, (v)=>{ CHOSEN.city=v; $('#go').disabled=!v; });
   $('#go').addEventListener('click',search);
 
   // come back to where you were last time
   const lc=recall('myset.country'), lt=recall('myset.city');
   if(lc&&PLACES.countries.some(c=>c.country===lc)){
-    cs.value=lc; fillCities();
-    if(lt&&[...$('#city').options].some(o=>o.value===lt)){ $('#city').value=lt; $('#go').disabled=false; search(); }
+    setCombo('#cCountry',lc); CHOSEN.country=lc;
+    $('#city').disabled=false; $('#city').placeholder='Start typing, or tap to see the list';
+    const c=PLACES.countries.find(x=>x.country===lc);
+    if(lt&&c&&c.cities.some(x=>x.city===lt)){
+      setCombo('#cCity',lt); CHOSEN.city=lt; $('#go').disabled=false; search();
+    }
   }
 }
 
-function fillCities(){
-  const c=PLACES.countries.find(x=>x.country===$('#country').value);
-  const sel=$('#city');
-  if(!c){ sel.innerHTML='<option value="">Pick a country first</option>'; sel.disabled=true; $('#go').disabled=true; return; }
-  // the count sits next to every city, so nobody travels to a dead one by accident
-  sel.innerHTML='<option value="">Choose…</option>'+c.cities
-    .map(x=>`<option value="${esc(x.city)}">${esc(x.city)} · ${x.gigs} gig${x.gigs===1?'':'s'}</option>`).join('');
-  sel.disabled=false; $('#go').disabled=true;
+const CHOSEN={country:'',city:''};
+function setCombo(sel,val){
+  const box=$(sel), input=box.querySelector('input');
+  input.value=val; box.classList.toggle('filled',!!val); box.classList.remove('open');
+  input.setAttribute('aria-expanded','false');
+}
+/* One combobox implementation, used for both fields. */
+function combo(sel, getItems, onPick){
+  const box=$(sel), input=box.querySelector('input'), list=box.querySelector('.opts');
+  const clear=box.querySelector('.clear');
+  let hi=-1;
+
+  const draw=()=>{
+    const q=input.value.trim().toLowerCase();
+    const items=getItems().filter(x=>!q||x.v.toLowerCase().includes(q));
+    hi=-1;
+    list.innerHTML=items.length
+      ? items.map((x,i)=>`<button type="button" role="option" data-v="${esc(x.v)}">
+          <b>${esc(x.v)}</b><span>${x.n} gig${x.n===1?'':'s'}</span></button>`).join('')
+      : `<div class="none">Nothing matching “${esc(input.value.trim())}”</div>`;
+  };
+  const open=()=>{ draw(); box.classList.add('open'); input.setAttribute('aria-expanded','true'); };
+  const shut=()=>{ box.classList.remove('open'); input.setAttribute('aria-expanded','false'); };
+  const pick=(v)=>{ setCombo(sel,v); onPick(v); };
+
+  input.addEventListener('focus',open);
+  input.addEventListener('input',()=>{
+    box.classList.toggle('filled',!!input.value);
+    open();
+    // typing invalidates a previous pick until they choose again
+    const exact=getItems().find(x=>x.v.toLowerCase()===input.value.trim().toLowerCase());
+    if(exact) pick(exact.v); else onPick('');
+  });
+  input.addEventListener('keydown',(e)=>{
+    const btns=[...list.querySelectorAll('button')];
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      e.preventDefault(); if(!btns.length)return;
+      hi=(hi+(e.key==='ArrowDown'?1:-1)+btns.length)%btns.length;
+      btns.forEach((b,i)=>b.classList.toggle('hi',i===hi));
+      btns[hi].scrollIntoView({block:'nearest'});
+    } else if(e.key==='Enter'){
+      e.preventDefault();
+      if(hi>=0&&btns[hi]) pick(btns[hi].getAttribute('data-v'));
+      else if(btns.length===1) pick(btns[0].getAttribute('data-v'));
+      shut();
+      if(CHOSEN.country&&CHOSEN.city) search();
+    } else if(e.key==='Escape'){ shut(); input.blur(); }
+  });
+  list.addEventListener('mousedown',(e)=>{
+    const b=e.target.closest('button[data-v]'); if(!b)return;
+    e.preventDefault(); pick(b.getAttribute('data-v')); shut();
+  });
+  clear.addEventListener('click',()=>{ pick(''); input.focus(); });
+  document.addEventListener('click',(e)=>{ if(!box.contains(e.target)) shut(); });
 }
 
 async function search(){
-  const country=$('#country').value, city=$('#city').value;
+  const country=CHOSEN.country, city=CHOSEN.city;
   if(!country||!city)return;
   remember('myset.country',country); remember('myset.city',city);
   $('#out').innerHTML=`<div class="blank"><b>Looking…</b></div>`;

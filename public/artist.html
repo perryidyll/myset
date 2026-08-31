@@ -23,19 +23,45 @@ body{padding-bottom:34px}
   flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
 .mark i svg{width:14px;height:14px;fill:#fff;display:block}
 
-.cover{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
-.cover img{width:100%;height:auto;aspect-ratio:5/4;object-fit:cover;object-position:center 32%}
-.cover .veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.74) 0%,rgba(0,0,0,.18) 44%,transparent 70%)}
-.cover .badge{position:absolute;top:16px;left:16px;display:inline-flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,.18);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  border:.5px solid rgba(255,255,255,.35);color:#fff;font-size:12.5px;font-weight:600;
-  padding:8px 14px;border-radius:var(--pill)}
-.cover .badge .dot{background:#fff}
-.cover .cap{position:absolute;left:20px;right:20px;bottom:18px;color:#fff}
-.cover .cap h1{font-size:34px;font-weight:700;letter-spacing:-.035em;text-shadow:0 2px 20px rgba(0,0,0,.4);margin:0}
-.cover .cap p{margin:5px 0 0;font-size:14.5px;opacity:.93;font-weight:500}
+.pcover{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
+.pcover img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:center 30%}
+.pcover .veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5) 0%,transparent 55%)}
+.livepill{position:absolute;top:15px;left:15px;display:inline-flex;align-items:center;gap:8px;
+  background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:-.01em;
+  padding:9px 15px;border-radius:var(--pill);box-shadow:0 4px 16px rgba(255,55,95,.45)}
+.livepill .dot{background:#fff;width:7px;height:7px}
 
-.tonight{margin:16px 18px 0;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-2);overflow:hidden}
+/* portrait + cluster, overlapping the cover */
+.phead{display:flex;align-items:flex-end;gap:18px;margin:-46px 20px 0;position:relative;z-index:2}
+.cluster{position:relative;width:132px;height:132px;flex:0 0 auto}
+.cluster.solo{width:118px;height:118px}
+.pav{width:100%;height:100%;border-radius:30px;background-size:cover;background-position:center;
+  border:4px solid var(--bg);box-shadow:var(--sh-3)}
+.pth{position:absolute;width:50px;height:50px;border-radius:15px;background-size:cover;
+  background-position:center;border:3.5px solid var(--bg);box-shadow:var(--sh-2)}
+.pth.a{top:-12px;right:-16px}
+.pth.b{top:44px;right:-26px}
+.pth.c{bottom:-10px;right:2px}
+.pname{flex:1;min-width:0;padding-bottom:6px}
+.pname h1{font-size:29px;font-weight:700;letter-spacing:-.038em;line-height:1.08;margin:0}
+.pname p{margin:5px 0 0;font-size:14.5px;color:var(--muted);font-weight:500;line-height:1.35}
+.pname p.loc{font-size:13.5px;color:var(--faint);margin-top:2px}
+
+.pstats{display:flex;align-items:center;gap:22px;margin:20px 22px 0;flex-wrap:wrap}
+.ps b{display:block;font-size:21px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.ps span{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
+.joinlive{margin-left:auto;display:inline-flex;align-items:center;gap:9px;padding:13px 22px;
+  border-radius:var(--pill);background:var(--accent);color:#fff;font-size:15.5px;font-weight:700;
+  letter-spacing:-.015em;box-shadow:0 5px 18px rgba(255,55,95,.4);
+  transition:transform .22s var(--spring)}
+.joinlive:active{transform:scale(.95)}
+.joinlive.off{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1);font-weight:600}
+.joinlive .lv{width:8px;height:8px;border-radius:50%;background:#fff;
+  box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:lvp 1.8s infinite}
+@keyframes lvp{70%{box-shadow:0 0 0 9px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+@media (prefers-reduced-motion:reduce){.joinlive .lv{animation:none}}
+
+.tonight{margin:22px 18px 0;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-2);overflow:hidden}
 .tonight .top{display:flex;align-items:center;gap:16px;padding:18px 20px}
 .tonight .when{flex:0 0 auto;text-align:center;padding:12px 16px;border-radius:var(--r-sm);
   background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(255,55,95,.3)}
@@ -161,22 +187,44 @@ function render(){
     return;
   }
   const live=S&&S.ok&&S.status==='live';
+  const st=P.stats||{shows:0,people:0,songs:0,votes:0};
   let h='';
 
-  h+=`<div class="cover rise">
-    <img src="${esc(P.photo||'/img/band.jpg')}" alt="${esc(P.name)}" width="1600" height="1000" fetchpriority="high">
+  /* The layout from the first build: cover, an XL portrait with a cluster of
+     smaller photos around it, the name big and below the cover Instagram-style,
+     then a stats row with the live button sitting right in it. */
+  const shots=(P.photos||[]).filter(Boolean).slice(0,3);
+  h+=`<div class="pcover rise">
+    <img src="${esc(P.photo||'/img/band.jpg')}" alt="" width="1600" height="1000" fetchpriority="high">
     <div class="veil"></div>
-    ${live?'<span class="badge"><span class="dot"></span>Playing tonight</span>':''}
-    <div class="cap"><h1>${esc(P.name)}</h1>${P.tagline?`<p>${esc(P.tagline)}</p>`:''}</div>
+    ${live?`<a class="livepill" href="${VOTEHREF}"><span class="dot"></span>Live now — vote the setlist</a>`:''}
+  </div>
+
+  <div class="phead">
+    <div class="cluster ${shots.length?'':'solo'}">
+      <div class="pav" style="background-image:url('${esc(P.avatar||P.photo||'/img/band.jpg')}')"></div>
+      ${shots.map((u,i)=>`<div class="pth ${'abc'[i]}" style="background-image:url('${esc(u)}')"></div>`).join('')}
+    </div>
+    <div class="pname">
+      <h1>${esc(P.name)}</h1>
+      ${P.tagline?`<p>${esc(P.tagline)}</p>`:''}
+      ${S&&S.ok&&S.city?`<p class="loc">${esc(S.city)}</p>`:''}
+    </div>
+  </div>
+
+  <div class="pstats">
+    ${[[st.shows,'Shows'],[st.people,'People'],[st.songs,'Songs']]
+      .filter(([n])=>n>0).map(([n,l])=>`<div class="ps"><b>${n}</b><span>${l}</span></div>`).join('')}
+    <a class="joinlive ${live?'':'off'}" href="${VOTEHREF}">
+      ${live?'<span class="lv"></span>Join live':'See the setlist'}</a>
   </div>`;
 
-  if(S&&S.ok&&S.status!=='ended'){
+  if(S&&S.ok&&S.status!=='ended'&&S.venue){
     h+=`<div class="tonight rise">
       <div class="top">
         <div class="when"><b>${esc(S.showTime||'Tonight')}</b><span>${live?'Live now':'Next up'}</span></div>
         <div class="where"><b>${esc(S.venue||'')}</b><span>${esc(S.city||'')}</span></div>
       </div>
-      <div class="cta"><a class="btn btn-pri btn-block" href="${VOTEHREF}">Vote the setlist</a></div>
     </div>`;
   }
 
@@ -229,10 +277,7 @@ function render(){
       h+=`<p class="fineprint">Spotify and Apple Music play a short preview unless you’re already signed in on this device — tap “Open ↗” for the full track.</p>`;
   }
 
-  h+=`<div class="sect">Tonight</div>
-    <div class="card" style="text-align:center">
-      <a class="btn btn-pri btn-block" href="${VOTEHREF}">${live?'Vote on what plays next':'See the setlist'}</a>
-    </div>`;
+
 
   $('#app').innerHTML=h;
   if(P.name) document.title = P.name + ' — MySet';

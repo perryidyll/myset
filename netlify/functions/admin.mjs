@@ -5,7 +5,8 @@ import { archiveShow } from './_history.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
-import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, MAX_EVENTS } from './_events.mjs';
+import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf, MAX_EVENTS } from './_events.mjs';
+import { stagePayload } from './stage.mjs';
 
 /* The gig calendar. Events are their own document, so these short-circuit too.
    Every write reindexes the artist's cities, which is what keeps the public
@@ -22,11 +23,13 @@ async function handleEvents(aid, action, body) {
     // them, so they are expanded separately and flagged
     const cancelled = [];
     for (const ev of events.list) {
+      const hid = new Set(ev.hid || []);
       for (const d of ev.skip || []) {
+        if (hid.has(d)) continue;                        // dismissed for good
         if (from && to && d >= from && d <= to)
-          cancelled.push({ eventId: ev.id, date: d, time: ev.time, venue: ev.venue,
-                           city: ev.city, country: ev.country, repeating: !!ev.repeat,
-                           cancelled: true });
+          cancelled.push({ eventId: ev.id, date: d, time: ev.time, endTime: endTimeOf(ev),
+                           venue: ev.venue, city: ev.city, country: ev.country,
+                           repeating: !!ev.repeat, cancelled: true });
       }
     }
     return json({ ok: true, events: events.list,
@@ -43,7 +46,8 @@ async function handleEvents(aid, action, body) {
     if (!ev.venue) return bad('Where is it?');
     await mutateEvents(aid, (d) => {
       const at = d.list.findIndex((x) => x.id === id);
-      if (at >= 0) d.list[at] = { ...ev, skip: d.list[at].skip || [], createdAt: d.list[at].createdAt };
+      if (at >= 0) d.list[at] = { ...ev, skip: d.list[at].skip || [], hid: d.list[at].hid || [],
+                                  createdAt: d.list[at].createdAt };
       else if (d.list.length >= MAX_EVENTS) { full = true; return false; }
       else d.list.push(ev);
       return true;
@@ -61,6 +65,27 @@ async function handleEvents(aid, action, body) {
     return json({ ok: true, events: events.list });
   }
 
+  // dismiss a cancelled night from the list for good. The skip stays on the rule
+  // (otherwise the night reappears); this only stops showing it.
+  if (action === 'eventHide') {
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date || '') ? body.date : null;
+    if (!date) return bad('bad date');
+    let gone = false;
+    await mutateEvents(aid, (d) => {
+      const ev = d.list.find((x) => x.id === body.id);
+      if (!ev) return false;
+      if (!ev.repeat) { d.list = d.list.filter((x) => x.id !== body.id); gone = true; return true; }
+      ev.skip = Array.isArray(ev.skip) ? ev.skip : [];
+      ev.hid = Array.isArray(ev.hid) ? ev.hid : [];
+      if (!ev.skip.includes(date)) ev.skip.push(date);
+      if (!ev.hid.includes(date)) ev.hid.push(date);
+      return true;
+    });
+    const events = await readEvents(aid);
+    if (gone) await reindexCities(aid, events);
+    return json({ ok: true, events: events.list });
+  }
+
   // cancel or un-cancel a single night of a residency without touching the rule
   if (action === 'eventSkip') {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date || '') ? body.date : null;
@@ -69,9 +94,12 @@ async function handleEvents(aid, action, body) {
       const ev = d.list.find((x) => x.id === body.id);
       if (!ev) return false;
       ev.skip = Array.isArray(ev.skip) ? ev.skip : [];
+      ev.hid = Array.isArray(ev.hid) ? ev.hid : [];
       const at = ev.skip.indexOf(date);
-      if (body.on === false) { if (at >= 0) ev.skip.splice(at, 1); }
-      else if (at < 0) ev.skip.push(date);
+      if (body.on === false) {
+        if (at >= 0) ev.skip.splice(at, 1);
+        ev.hid = ev.hid.filter((d) => d !== date);      // restoring un-hides too
+      } else if (at < 0) ev.skip.push(date);
       return true;
     });
     const events = await readEvents(aid);
@@ -79,7 +107,7 @@ async function handleEvents(aid, action, body) {
   }
   return bad('unknown action', 400);
 }
-const EVENT_ACTIONS = new Set(['eventList', 'eventSave', 'eventDelete', 'eventSkip']);
+const EVENT_ACTIONS = new Set(['eventList', 'eventSave', 'eventDelete', 'eventSkip', 'eventHide']);
 
 /* Lyrics live in their own flat docs, not on the show, so these short-circuit too. */
 async function handleLyrics(aid, action, body, show) {
@@ -136,8 +164,9 @@ const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyrics
 async function handleProfile(aid, action, body) {
   if (action === 'profileSet') {
     await mutateProfile(aid, (p) => {
-      for (const k of ['name', 'tagline', 'bio', 'photo'])
+      for (const k of ['name', 'tagline', 'bio', 'photo', 'avatar'])
         if (typeof body[k] === 'string') p[k] = body[k];
+      if (Array.isArray(body.photos)) p.photos = body.photos;
       if (body.links && typeof body.links === 'object')
         p.links = { ...p.links, ...body.links };
       return true;
@@ -356,5 +385,10 @@ export default async (req) => {
   // paid votes survive a reset — only a fan who gifted them loses them
   if (wipe) await carryFans(aid, prevShow || (await getShow(aid)));
   else if (resetVotes) await clearAllFanVotes(aid);
-  return json({ ok: true });
+
+  // Hand the fresh state back with the write. Without this the Studio does a
+  // second round trip for every tap, which is most of why buttons felt slow.
+  let stage = null;
+  try { stage = await stagePayload(aid); } catch { /* the write still succeeded */ }
+  return json({ ok: true, stage });
 };

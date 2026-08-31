@@ -50,7 +50,8 @@ a{color:inherit;text-decoration:none}
 .tabs button{flex:1;padding:10px 4px;font-size:13px;font-weight:600;color:var(--muted);
   white-space:nowrap;letter-spacing:-.015em;
   border-radius:var(--pill);transition:background .25s var(--ease),color .2s var(--ease)}
-.tabs button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)}
+.tabs button.on{background:var(--surface-2);color:var(--ink);
+  box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
 
 .stats{display:flex;gap:11px;margin:16px 18px 0}
 .stats .c{flex:1;background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1);padding:14px 12px}
@@ -107,6 +108,13 @@ a{color:inherit;text-decoration:none}
 .inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
 .inp::placeholder{color:var(--faint)}
 textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
+/* The sheet is var(--surface), and so were the fields on it — a date box looked
+   like empty background until you happened to tap it. */
+.sheet .inp{background:var(--surface-2);box-shadow:0 0 0 1.5px var(--hair-2) inset}
+.sheet .inp:focus{box-shadow:0 0 0 2.5px var(--accent) inset}
+input[type="date"],input[type="time"]{color-scheme:dark;-webkit-appearance:none;appearance:none}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.55}
 .field{padding:14px 18px 0}
 .field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px}
 .chips{display:flex;gap:9px;flex-wrap:wrap}
@@ -156,7 +164,22 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 .sheet.on{transform:translateX(-50%) translateY(0)}
 .sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
 .sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px}
-.grab{width:38px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto 6px}
+.grabzone{padding:10px 0 8px;margin:-10px 0 0;cursor:grab;touch-action:none}
+.grabzone:active{cursor:grabbing}
+.grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
+/* Blocks the whole screen while a write is in flight. Tapping "Add it" four
+   times because nothing appeared to happen once created four gigs. */
+#busy{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);
+  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+  display:none;place-items:center;opacity:0;transition:opacity .18s var(--ease)}
+#busy.on{display:grid;opacity:1}
+#busy .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
+#busy .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
+  transform-origin:bottom;animation:busybar .9s ease-in-out infinite}
+#busy .bars i:nth-child(2){animation-delay:.15s}
+#busy .bars i:nth-child(3){animation-delay:.3s}
+@keyframes busybar{0%,100%{height:12px}50%{height:44px}}
+@media (prefers-reduced-motion:reduce){#busy .bars i{animation:none;height:28px}}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
   width:calc(100% - 36px);max-width:calc(var(--maxw) - 36px);background:rgba(60,60,63,.94);color:#fff;
   backdrop-filter:blur(20px);font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
@@ -172,6 +195,7 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 </style>
 </head>
 <body>
+<div id="busy" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div></div>
 <div id="app"></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
@@ -183,12 +207,25 @@ let EVENTS=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 
+let BUSY=0, BUSY_T=null;
+function busy(on){
+  BUSY=Math.max(0,BUSY+(on?1:-1));
+  clearTimeout(BUSY_T);
+  const el=document.getElementById('busy');
+  if(!el)return;
+  if(BUSY){ BUSY_T=setTimeout(()=>{ if(BUSY) el.classList.add('on'); },140); }  // no flicker on fast calls
+  else el.classList.remove('on');
+}
 async function api(p,o={}){
   const h={'content-type':'application/json',...(o.headers||{})};
   if(CODE) h['x-admin-code']=CODE;
   if(TOKEN) h['authorization']='Bearer '+TOKEN;
-  const r=await fetch(API+p,{...o,headers:h});
-  return r.json();
+  busy(true);
+  try{
+    const r=await fetch(API+p,{...o,headers:h});
+    return await r.json();
+  }catch(e){ return {ok:false,error:'Connection hiccup — try again'}; }
+  finally{ busy(false); }
 }
 async function load(){
   const d=await api('/stage');
@@ -201,10 +238,17 @@ async function load(){
   if(TAB==='settings'&&!TEAM) loadTeam();
   if(TAB==='gigs'&&!EVENTS) loadGigs();
 }
+let WRITING=false;
 async function act(action,extra={}){
-  const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
-  if(!d.ok){toast(d.error||'Failed');return;}
-  await load();
+  if(WRITING)return;                       // a second tap is never a second action
+  WRITING=true;
+  try{
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
+    if(!d.ok){toast(d.error||'Failed');return;}
+    // the write already sent the fresh state back — no second round trip
+    if(d.stage&&d.stage.ok){ D=d.stage; render(); }
+    else await load();
+  } finally { WRITING=false; }
 }
 let GATE_EMAIL='';
 function gate(err,mode){
@@ -292,6 +336,9 @@ const monthName=m=>{const [Y,M]=m.split('-').map(Number);return `${MON[M-1]} ${Y
 const dayNum=d=>Number(d.slice(8,10));
 const monShort=d=>MON[Number(d.slice(5,7))-1].slice(0,3);
 const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOW[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
+const endOf=ev=>{const m=/^(\d{2}):(\d{2})$/.exec(ev.time||'');if(!m)return '23:00';
+  const t=((+m[1]*60+ +m[2])+(ev.durationMin||180))%1440;
+  return pad(Math.floor(t/60))+':'+pad(t%60);};
 function calCells(month){
   const [Y,M]=month.split('-').map(Number);
   const first=new Date(Date.UTC(Y,M-1,1)), lead=first.getUTCDay();
@@ -337,12 +384,15 @@ function openGig(id,onDate){
       <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>Country</label>
         <input class="inp" id="gCountry" maxlength="60" placeholder="Thailand" value="${esc(ev?ev.country:(last.country||''))}"></div>
     </div>
+    <div class="field" style="padding-left:0;padding-right:0"><label>Date</label>
+      <input class="inp" id="gDate" type="date" value="${esc(ev?ev.date:(onDate||todayStr()))}"></div>
     <div style="display:flex;gap:8px">
-      <div class="field" style="padding-left:0;padding-right:0;flex:1.3"><label>Date</label>
-        <input class="inp" id="gDate" type="date" value="${esc(ev?ev.date:(onDate||todayStr()))}"></div>
-      <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>Start</label>
+      <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>Starts</label>
         <input class="inp" id="gTime" type="time" value="${esc(ev?ev.time:'20:00')}"></div>
+      <div class="field" style="padding-left:0;padding-right:0;flex:1"><label>Ends</label>
+        <input class="inp" id="gEnd" type="time" value="${esc(ev?endOf(ev):'23:00')}"></div>
     </div>
+    <p class="muted" style="font-size:12px;margin:2px 0 0">Finishing after midnight is fine — put the real time.</p>
     <div class="field" style="padding-left:0;padding-right:0"><label>Repeats</label>
       <div class="chips">${[['','Just once'],['weekly','Weekly'],['biweekly','Every 2 weeks'],['monthly','Monthly'],['yearly','Yearly']]
         .map(([k,l])=>`<button class="chip ${(R?R.freq:'')===k?'on':''}" data-act="grep" data-id="${k}">${l}</button>`).join('')}</div>
@@ -354,30 +404,51 @@ function openGig(id,onDate){
     ${ev?`<button class="big alt" style="margin-top:10px" data-act="gigdel" data-id="${esc(ev.id)}">Delete this gig${ev.repeat?' and its whole run':''}</button>`:''}`);
 }
 async function saveGig2(id){
+  if(WRITING)return; WRITING=true;
+  try{
   const v=x=>(($('#'+x)||{}).value||'').trim();
   const freq=v('gRepeat');
   const ev={id:id||undefined,venue:v('gV'),city:v('gCity'),country:v('gCountry'),
-    tz:v('gTz'),date:v('gDate'),time:v('gTime')||'20:00',
+    tz:v('gTz'),date:v('gDate'),time:v('gTime')||'20:00',endTime:v('gEnd')||'',
     repeat:freq?{freq,until:v('gUntil')||null}:null};
   if(!ev.venue){toast('Where is it?');return;}
   if(!ev.date){toast('Pick a date');return;}
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventSave',event:ev})});
   if(!d.ok){toast(d.error||'Could not save');return;}
+  EVENTS=null;
   closeSheet(); await loadGigs(true); toast(id?'Gig updated':'Gig added');
+  } finally { WRITING=false; }
 }
 async function delGig(id){
+  if(WRITING)return;
   if(!confirm('Delete this gig? If it repeats, the whole run goes.'))return;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventDelete',id})});
   if(!d.ok){toast(d.error||'Failed');return;}
   closeSheet(); await loadGigs(true); toast('Deleted');
 }
 async function skipGig(pair){
+  if(WRITING)return; WRITING=true;
+  try{
   const [id,date]=pair.split('|');
   const occ=((EVENTS&&EVENTS.occurrences)||[]).find(o=>o.eventId===id&&o.date===date);
   const on=!(occ&&occ.cancelled);
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventSkip',id,date,on})});
   if(!d.ok){toast(d.error||'Failed');return;}
   await loadGigs(true); toast(on?'That night is cancelled':'Back on');
+  } finally { WRITING=false; }
+}
+/* A cancelled night stays visible so it can be restored. Hiding drops it from
+   the list for good — the skip stays on the rule, it just stops being shown. */
+async function hideGig(pair){
+  if(WRITING)return;
+  const [id,date]=pair.split('|');
+  if(!confirm('Remove that night from your list? The rest of the run is unaffected.'))return;
+  WRITING=true;
+  try{
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventHide',id,date})});
+    if(!d.ok){toast(d.error||'Failed');return;}
+    EVENTS=null; await loadGigs(true); toast('Gone from your list');
+  } finally { WRITING=false; }
 }
 async function loadProf(force){
   if(PROF&&!force)return;
@@ -390,7 +461,9 @@ async function saveProfile(){
   const typed={}; for(const k in IDS) typed[k]=v(IDS[k]);   // capture BEFORE the re-render
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'profileSet',
     name:v('pfName'),tagline:v('pfTag'),bio:(($('#pfBio')||{}).value||''),
-    photo:v('pfPhoto'),links:typed})});
+    photo:v('pfPhoto'),avatar:v('pfAvatar'),
+    photos:[v('pfPh0'),v('pfPh1'),v('pfPh2')].filter(Boolean),
+    links:typed})});
   if(!d.ok){toast(d.error||'Could not save');return;}
   PROF=null; await loadProf(true);
   const saved=(PROF&&PROF.links)||{};
@@ -539,9 +612,12 @@ function render(){
         <div class="when"><b>${dayNum(o.date)}</b><span>${monShort(o.date)}</span></div>
         <div class="m"><div class="t">${esc(o.venue)}</div>
           <div class="by">${esc([o.city,o.country].filter(Boolean).join(', '))}</div>
-          <div class="s">${dowName(o.date)} · ${o.time}${o.repeating?' · repeats':''}${o.cancelled?' · cancelled':''}</div></div>
-        <button class="act" data-act="gigedit" data-id="${o.eventId}">Edit</button>
-        <button class="act ${o.cancelled?'':'warn'}" data-act="gigskip" data-id="${o.eventId}|${o.date}">${o.cancelled?'Restore':'✕'}</button>
+          <div class="s">${dowName(o.date)} · ${o.time}${o.endTime?'–'+o.endTime:''}${o.repeating?' · repeats':''}${o.cancelled?' · cancelled':''}</div></div>
+        ${o.cancelled
+          ? `<button class="act" data-act="gigskip" data-id="${o.eventId}|${o.date}">Restore</button>
+             <button class="act warn" data-act="gighide" data-id="${o.eventId}|${o.date}">Hide</button>`
+          : `<button class="act" data-act="gigedit" data-id="${o.eventId}">Edit</button>
+             <button class="act warn" data-act="gigskip" data-id="${o.eventId}|${o.date}">✕</button>`}
       </div>`).join('')||'<div class="row muted">Nothing booked yet. Tap “Add a gig” — a weekly residency only needs entering once.</div>'}</div>
       <p class="muted" style="font-size:12px;padding:14px 18px 0">These show on your page and in the city feed automatically. ✕ cancels one night; Edit changes the whole run.</p>`;
     }
@@ -654,10 +730,13 @@ function render(){
 
       <div class="sec"><span class="kick">Who you are</span></div>
       <div class="field"><label>Name</label><input class="inp" id="pfName" maxlength="60" value="${esc(P.name||'')}"></div>
-      <div class="field"><label>One line under your name</label><input class="inp" id="pfTag" maxlength="120" value="${esc(P.tagline||'')}" placeholder="Live, and you pick the songs."></div>
+      <div class="field"><label>One line under your name</label><input class="inp" id="pfTag" maxlength="120" value="${esc(P.tagline||'')}" placeholder="Make my set your set"></div>
       <div class="field"><label>Bio</label><textarea class="inp" id="pfBio" rows="6" maxlength="2000" placeholder="A few lines about you and your music.">${esc(P.bio||'')}</textarea></div>
-      <div class="field"><label>Cover photo</label><input class="inp" id="pfPhoto" maxlength="300" value="${esc(P.photo||'')}" placeholder="/img/band.jpg">
-        <p class="muted" style="font-size:12px;margin:6px 0 0">Photos live in the site itself — send me a new one and I’ll add it. <b>/img/band.jpg</b> is the one you have now.</p></div>
+      <div class="field"><label>Cover photo</label><input class="inp" id="pfPhoto" maxlength="300" value="${esc(P.photo||'')}" placeholder="/img/band.jpg"></div>
+    <div class="field"><label>Portrait (the big square)</label><input class="inp" id="pfAvatar" maxlength="300" value="${esc(P.avatar===P.photo?'':(P.avatar||''))}" placeholder="Leave blank to reuse the cover"></div>
+    <div class="field"><label>Three small photos around it</label>
+      ${[0,1,2].map(i=>`<input class="inp" id="pfPh${i}" maxlength="300" style="margin-top:${i?8:0}px" value="${esc((P.photos||[])[i]||'')}" placeholder="Photo ${i+1} (optional)">`).join('')}
+      <p class="muted" style="font-size:12px;margin:7px 0 0">Photos live in the site itself — send me the files and I’ll add them. <b>/img/band.jpg</b> is the one you have now.</p></div>
 
       <div class="sec"><span class="kick">Listen &amp; follow</span></div>
       <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Paste the share link for each. Anything that isn’t a real link from that service is dropped rather than shown broken.</p>
@@ -704,6 +783,11 @@ function render(){
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Songs you've already played stay votable, but cost this many votes to bring back.</p>
     <div class="wrap"><div class="chips">
       ${[2,3,5,8,10].map(n=>`<button class="chip ${(s.replayCost||5)===n?'on':''}" onclick="act('replayCost',{n:${n}})">${n}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
+      <input class="inp" id="rcCustom" type="number" inputmode="numeric" min="1" max="99" style="flex:1"
+        placeholder="Any other number" value="${![2,3,5,8,10].includes(s.replayCost||5)?(s.replayCost||''):''}">
+      <button class="act pri" style="min-width:64px" onclick="saveReplayCost()">Set</button>
     </div></div>
 
     <div class="sec"><span class="kick">Price of extra votes</span></div>
@@ -806,8 +890,38 @@ function addSong(){const el=$('#newSong'),ea=$('#newArtist');const t=el.value.tr
 /* Song titles/artists are user text — never interpolate them into an onclick.
    Look the song up from state by id instead. */
 function songById(id){ return (D&&D.songs||[]).find(x=>x.id===id); }
-function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}
-function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+function openSheet(h){
+  const sh=$('#sheet');
+  sh.innerHTML=`<div class="grabzone"><div class="grab"></div></div>${h}`;
+  sh.style.transform=''; $('#bg').classList.add('on'); sh.classList.add('on');
+  attachDrag(sh);
+}
+/* Drag the handle down to dismiss — the bar is the universal affordance for it,
+   so it has to actually work. */
+function attachDrag(sh){
+  const zone=sh.querySelector('.grabzone'); if(!zone)return;
+  let y0=null, dy=0;
+  const start=(e)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; sh.style.transition='none'; };
+  const move=(e)=>{
+    if(y0===null)return;
+    dy=Math.max(0,((e.touches?e.touches[0]:e).clientY)-y0);
+    sh.style.transform=`translateX(-50%) translateY(${dy}px)`;
+    if(e.cancelable)e.preventDefault();
+  };
+  const end=()=>{
+    if(y0===null)return;
+    sh.style.transition='';
+    if(dy>90) closeSheet(); else sh.style.transform='translateX(-50%) translateY(0)';
+    y0=null;
+  };
+  zone.addEventListener('touchstart',start,{passive:true});
+  zone.addEventListener('touchmove',move,{passive:false});
+  zone.addEventListener('touchend',end);
+  zone.addEventListener('mousedown',(e)=>{ start(e);
+    const mm=(ev)=>move(ev), mu=()=>{ end(); window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
+}
+function closeSheet(){const sh=$('#sheet');sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
 
 async function editSong(id){
   const x=songById(id); if(!x)return;
@@ -882,6 +996,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='gigsave') saveGig2(id);
   if(b.dataset.act==='gigdel') delGig(id);
   if(b.dataset.act==='gigskip') skipGig(id);
+  if(b.dataset.act==='gighide') hideGig(id);
   if(b.dataset.act==='grep'){ const h=$('#gRepeat'); if(h){h.value=id;
     document.querySelectorAll('[data-act="grep"]').forEach(x=>x.classList.toggle('on',x.getAttribute('data-id')===id));} }
 });
@@ -903,6 +1018,11 @@ async function saveFreeCredits(){
   const n=parseInt((($('#fcCustom')||{}).value||''),10);
   if(!Number.isFinite(n)||n<0||n>999){toast('Pick a number from 0 to 999');return;}
   act('freeCredits',{n});
+}
+async function saveReplayCost(){
+  const n=parseInt((($('#rcCustom')||{}).value||''),10);
+  if(!Number.isFinite(n)||n<1||n>99){toast('Pick a number from 1 to 99');return;}
+  act('replayCost',{n});
 }
 async function warmLyrics(){
   const b=$('#lyrWarm'); if(b){b.disabled=true;b.innerHTML='<span class="spin"></span> Fetching…';}
