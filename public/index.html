@@ -59,11 +59,11 @@ body{padding-bottom:34px}
   color:var(--ink);appearance:none;-webkit-appearance:none}
 .combo input:disabled{opacity:.5}
 .combo input:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
-.combo::after{content:"";position:absolute;right:18px;top:calc(50% + 4px);width:9px;height:9px;
+.combo::after{content:"";position:absolute;right:19px;bottom:26px;width:9px;height:9px;
   border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);
-  transform:translateY(-50%) rotate(45deg);pointer-events:none;transition:transform .2s var(--ease)}
-.combo.open::after{transform:translateY(-50%) rotate(225deg)}
-.combo .clear{position:absolute;right:12px;top:calc(50% + 4px);transform:translateY(-50%);
+  transform:translateY(25%) rotate(45deg);pointer-events:none;transition:transform .2s var(--ease)}
+.combo.open::after{transform:translateY(75%) rotate(225deg)}
+.combo .clear{position:absolute;right:12px;bottom:26px;transform:translateY(50%);
   width:30px;height:30px;border-radius:50%;background:var(--bg-2);color:var(--muted);
   font-size:13px;display:none;place-items:center;z-index:2}
 .combo.filled .clear{display:grid}

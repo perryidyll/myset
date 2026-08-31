@@ -25,14 +25,16 @@ body{padding-bottom:34px}
 
 .pcover{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
 .pcover img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:center 30%}
-.pcover .veil{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.5) 0%,transparent 55%)}
+.pcover .veil{position:absolute;inset:0;
+  background:linear-gradient(to top,var(--ground) 0%,rgba(0,0,0,.34) 22%,transparent 62%)}
 .livepill{position:absolute;top:15px;left:15px;display:inline-flex;align-items:center;gap:8px;
   background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:-.01em;
   padding:9px 15px;border-radius:var(--pill);box-shadow:0 4px 16px rgba(255,55,95,.45)}
 .livepill .dot{background:#fff;width:7px;height:7px}
 
 /* portrait + cluster, overlapping the cover */
-.phead{display:flex;align-items:flex-end;gap:18px;margin:-46px 20px 0;position:relative;z-index:2}
+.phead{display:flex;align-items:flex-end;gap:18px;margin:0 20px;position:relative;z-index:2}
+.cluster{margin-top:-46px}
 .cluster{position:relative;width:132px;height:132px;flex:0 0 auto}
 .cluster.solo{width:118px;height:118px}
 .pav{width:100%;height:100%;border-radius:30px;background-size:cover;background-position:center;
@@ -42,10 +44,10 @@ body{padding-bottom:34px}
 .pth.a{top:-12px;right:-16px}
 .pth.b{top:44px;right:-26px}
 .pth.c{bottom:-10px;right:2px}
-.pname{flex:1;min-width:0;padding-bottom:6px}
-.pname h1{font-size:29px;font-weight:700;letter-spacing:-.038em;line-height:1.08;margin:0}
-.pname p{margin:5px 0 0;font-size:14.5px;color:var(--muted);font-weight:500;line-height:1.35}
-.pname p.loc{font-size:13.5px;color:var(--faint);margin-top:2px}
+.pname{flex:1;min-width:0;padding-bottom:2px;display:flex;flex-direction:column;justify-content:flex-end;
+  min-height:96px}
+.pname h1{font-size:28px;font-weight:700;letter-spacing:-.038em;line-height:1.08;margin:0;color:var(--ink)}
+.pname p{margin:7px 0 0;font-size:14.5px;color:var(--muted);font-weight:500;line-height:1.4}
 
 .pstats{display:flex;align-items:center;gap:22px;margin:20px 22px 0;flex-wrap:wrap}
 .ps b{display:block;font-size:21px;font-weight:700;letter-spacing:-.03em;line-height:1}
@@ -55,7 +57,8 @@ body{padding-bottom:34px}
   letter-spacing:-.015em;box-shadow:0 5px 18px rgba(255,55,95,.4);
   transition:transform .22s var(--spring)}
 .joinlive:active{transform:scale(.95)}
-.joinlive.off{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1);font-weight:600}
+.joinlive.off{background:transparent;color:var(--accent-ink);font-weight:600;
+  box-shadow:inset 0 0 0 1.5px var(--accent);font-variant-numeric:tabular-nums}
 .joinlive .lv{width:8px;height:8px;border-radius:50%;background:#fff;
   box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:lvp 1.8s infinite}
 @keyframes lvp{70%{box-shadow:0 0 0 9px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
@@ -116,6 +119,9 @@ body{padding-bottom:34px}
 .gigrow .m .v{font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
 .gigrow .m .w{font-size:13.5px;color:var(--muted);margin-top:2px}
 .gigrow .tix{flex:0 0 auto;font-size:13px;font-weight:600;color:var(--accent-ink)}
+.seemore{width:100%;padding:15px;border-top:.5px solid var(--hair);font-size:14.5px;font-weight:600;
+  color:var(--accent-ink);background:none}
+.more[hidden]{display:none}
 .onnow{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;font-size:10.5px;
   font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:var(--pill);text-transform:uppercase;margin-bottom:3px}
 .onnow .dot{background:#fff;width:5px;height:5px}
@@ -151,7 +157,40 @@ const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday
 const dayNum=d=>+d.slice(8,10);
 const monShort=d=>MON[+d.slice(5,7)-1];
 const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOW[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
+const todayISO=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
+function whenWord(date){
+  const t=todayISO();
+  if(date===t) return 'Tonight';
+  const tm=new Date(Date.now()+86400000);const p=n=>String(n).padStart(2,'0');
+  if(date===`${tm.getFullYear()}-${p(tm.getMonth()+1)}-${p(tm.getDate())}`) return 'Tomorrow';
+  return dowName(date);
+}
 const fmtTime=t=>{const p=t.split(':');let h=+p[0];const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
+/* Counts down to the next gig from the calendar. Red only means red. */
+function nextGig(){ return (G&&G.ok?G.gigs:[]).find(g=>g.endsAt>Date.now())||null; }
+function nextLabel(){
+  const g=nextGig(); if(!g) return 'See the setlist';
+  let ms=g.startsAt-Date.now();
+  if(ms<=0) return 'Starting now';
+  const d=Math.floor(ms/86400000); ms-=d*86400000;
+  const h=Math.floor(ms/3600000);  ms-=h*3600000;
+  const m=Math.floor(ms/60000);    const sec=Math.floor((ms-m*60000)/1000);
+  if(d>0) return `Live in ${d}d ${h}h ${m}m`;
+  if(h>0) return `Live in ${h}h ${m}m ${String(sec).padStart(2,'0')}s`;
+  return `Live in ${m}m ${String(sec).padStart(2,'0')}s`;
+}
+let TICK=null;
+function startTick(){
+  clearInterval(TICK);
+  if(!(S&&S.ok)||S.status==='live')return;
+  const b=document.getElementById('joinBtn'); if(!b||!nextGig())return;
+  TICK=setInterval(()=>{
+    const el=document.getElementById('joinBtn');
+    if(!el){clearInterval(TICK);return;}
+    el.textContent=nextLabel();
+  },1000);
+}
 
 const ICON={
   spotify:'<svg viewBox="0 0 24 24" fill="#1DB954"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm4.6 14.4a.6.6 0 01-.9.2c-2.4-1.5-5.4-1.8-9-1a.6.6 0 11-.3-1.2c3.9-.9 7.3-.5 10 1.1.3.2.4.6.2.9zm1.2-2.7a.8.8 0 01-1 .3c-2.7-1.7-6.9-2.2-10.1-1.2a.8.8 0 11-.4-1.5c3.7-1.1 8.3-.6 11.4 1.4.4.2.5.7.1 1zm.1-2.8C14.6 8.9 9.1 8.7 6 9.7a.9.9 0 11-.5-1.8c3.6-1.1 9.6-.9 13.4 1.4a.9.9 0 11-1 1.6z"/></svg>',
@@ -208,32 +247,41 @@ function render(){
     <div class="pname">
       <h1>${esc(P.name)}</h1>
       ${P.tagline?`<p>${esc(P.tagline)}</p>`:''}
-      ${S&&S.ok&&S.city?`<p class="loc">${esc(S.city)}</p>`:''}
+
     </div>
   </div>
 
   <div class="pstats">
     ${[[st.shows,'Shows'],[st.people,'People'],[st.songs,'Songs']]
       .filter(([n])=>n>0).map(([n,l])=>`<div class="ps"><b>${n}</b><span>${l}</span></div>`).join('')}
-    <a class="joinlive ${live?'':'off'}" href="${VOTEHREF}">
-      ${live?'<span class="lv"></span>Join live':'See the setlist'}</a>
+    <a class="joinlive ${live?'':'off'}" href="${VOTEHREF}" id="joinBtn">
+      ${live?'<span class="lv"></span>Join live':nextLabel()}</a>
   </div>`;
 
-  if(S&&S.ok&&S.status!=='ended'&&S.venue){
+  /* Driven by the calendar, not the old show.showTime placeholder — that said
+     8:00 PM while the actual gig was at 8:30. */
+  const ng=nextGig();
+  if(live&&S&&S.venue){
     h+=`<div class="tonight rise">
       <div class="top">
-        <div class="when"><b>${esc(S.showTime||'Tonight')}</b><span>${live?'Live now':'Next up'}</span></div>
-        <div class="where"><b>${esc(S.venue||'')}</b><span>${esc(S.city||'')}</span></div>
+        <div class="when"><b>Now</b><span>On stage</span></div>
+        <div class="where"><b>${esc(S.venue)}</b><span>${esc(S.city||'')}</span></div>
+      </div>
+    </div>`;
+  } else if(ng){
+    h+=`<div class="tonight rise">
+      <div class="top">
+        <div class="when"><b>${fmtTime(ng.time)}</b><span>${whenWord(ng.date)}</span></div>
+        <div class="where"><b>${esc(ng.venue)}</b><span>${esc([ng.city,ng.country].filter(Boolean).join(', '))}</span></div>
       </div>
     </div>`;
   }
 
   if(P.bio) h+=`<div class="sect">About</div><div class="card"><p class="bio">${esc(P.bio)}</p></div>`;
 
-  const gigs=(G&&G.ok?G.gigs:[]).slice(0,12);
+  const gigs=(G&&G.ok?G.gigs:[]).slice(0,24);
   if(gigs.length){
-    h+=`<div class="sect">Upcoming shows</div><div class="gigs">`;
-    h+=gigs.map(g=>`<div class="gigrow${g.live?' live':''}">
+    const row=(g)=>`<div class="gigrow${g.live?' live':''}">
         <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span></div>
         <div class="m">
           ${g.live?'<span class="onnow"><span class="dot"></span>On now</span>':''}
@@ -241,8 +289,13 @@ function render(){
           <div class="w">${esc(dowName(g.date))} · ${fmtTime(g.time)}${g.city?' · '+esc(g.city):''}</div>
         </div>
         ${g.ticketUrl?`<a class="tix" href="${esc(g.ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>`:''}
-      </div>`).join('');
-    h+=`</div>`;
+      </div>`;
+    const first=gigs.slice(0,3), rest=gigs.slice(3);
+    h+=`<div class="sect">Upcoming shows</div>
+      <div class="gigs">${first.map(row).join('')}
+        ${rest.length?`<div class="more" id="moreWrap" hidden>${rest.map(row).join('')}</div>
+          <button class="seemore" id="seeMore">See ${rest.length} more ▾</button>`:''}
+      </div>`;
   }
 
   const links=Object.keys(LABEL).filter(k=>P.links&&P.links[k]);
@@ -281,12 +334,17 @@ function render(){
 
   $('#app').innerHTML=h;
   if(P.name) document.title = P.name + ' — MySet';
+  startTick();
 }
 
 /* Click-to-load: nothing from a third party is fetched until someone asks for it.
    The iframe is built with createElement, never innerHTML, and its src comes from
    a literal template on the server (see _embeds.mjs). */
 document.addEventListener('click',e=>{
+  const sm=e.target.closest('#seeMore');
+  if(sm){ const w=document.getElementById('moreWrap');
+    const open=!w.hidden; w.hidden=open;
+    sm.textContent=open?`See ${w.children.length} more ▾`:'Show fewer ▴'; return; }
   const b=e.target.closest('.facade'); if(!b)return;
   const wrap=b.closest('.media'); const mid=b.getAttribute('data-mid');
   const m=(P&&P.media||[]).find(x=>x.mid===mid); if(!m)return;

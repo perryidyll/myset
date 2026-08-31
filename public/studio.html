@@ -108,6 +108,22 @@ a{color:inherit;text-decoration:none}
 .inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
 .inp::placeholder{color:var(--faint)}
 textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
+.slots{display:flex;gap:9px}
+.slot{position:relative;border-radius:14px;overflow:hidden;background:var(--surface-2);
+  box-shadow:0 0 0 1.5px var(--hair) inset;display:block;cursor:pointer}
+.slot.sq{flex:1;aspect-ratio:1}
+.slot.wide{width:100%;aspect-ratio:16/10}
+.slot img{width:100%;height:100%;object-fit:cover;display:block}
+.slot .ph{display:grid;place-items:center;width:100%;height:100%;gap:5px;
+  color:var(--faint);font-size:12px;font-weight:600;text-align:center;padding:8px}
+.slot .ph svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7}
+.slot .rm{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:50%;
+  background:rgba(0,0,0,.62);color:#fff;font-size:12px;display:grid;place-items:center;
+  backdrop-filter:blur(6px);z-index:2}
+.slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.slot.busy{opacity:.5;pointer-events:none}
+.cnt{float:right;font-weight:500;color:var(--faint);font-size:11.5px}
+.cnt.near{color:var(--accent)}
 /* The sheet is var(--surface), and so were the fields on it — a date box looked
    like empty background until you happened to tap it. */
 .sheet .inp{background:var(--surface-2);box-shadow:0 0 0 1.5px var(--hair-2) inset}
@@ -220,15 +236,17 @@ async function api(p,o={}){
   const h={'content-type':'application/json',...(o.headers||{})};
   if(CODE) h['x-admin-code']=CODE;
   if(TOKEN) h['authorization']='Bearer '+TOKEN;
-  busy(true);
+  // `quiet` for background refreshes — the live tab re-reads every few seconds,
+  // and flashing the overlay at it looked like something was wrong
+  if(!o.quiet) busy(true);
   try{
     const r=await fetch(API+p,{...o,headers:h});
     return await r.json();
   }catch(e){ return {ok:false,error:'Connection hiccup — try again'}; }
-  finally{ busy(false); }
+  finally{ if(!o.quiet) busy(false); }
 }
-async function load(){
-  const d=await api('/stage');
+async function load(opts){
+  const d=await api('/stage',opts||{});
   if(!d.ok){ if(d.error==='unauthorized'){
       CODE='';TOKEN='';localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token'); }
     gate(d.error); return; }
@@ -461,8 +479,6 @@ async function saveProfile(){
   const typed={}; for(const k in IDS) typed[k]=v(IDS[k]);   // capture BEFORE the re-render
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'profileSet',
     name:v('pfName'),tagline:v('pfTag'),bio:(($('#pfBio')||{}).value||''),
-    photo:v('pfPhoto'),avatar:v('pfAvatar'),
-    photos:[v('pfPh0'),v('pfPh1'),v('pfPh2')].filter(Boolean),
     links:typed})});
   if(!d.ok){toast(d.error||'Could not save');return;}
   PROF=null; await loadProf(true);
@@ -529,7 +545,18 @@ function render(){
       <div class="c"><b class="mono acc">$${D.tips.total.toFixed(2)}</b><span>Tips</span></div>
     </div>
     ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>${now.artist?`<div class="a">${esc(now.artist)}</div>`:''}</div>`:''}
-    <div class="wrap" style="padding-top:22px;padding-bottom:10px">
+    ${s.status!=='live'?`
+      <div class="wrap" style="padding-top:22px;padding-bottom:2px">
+        <button class="big bigplay" onclick="act('status',{status:'live'})">
+          <span>●</span><span style="flex:1">Start the show</span></button>
+      </div>
+      <p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to the audience until you tap this.</p>`
+    :`<div class="wrap" style="padding-top:22px;padding-bottom:2px">
+        <button class="big alt" onclick="if(confirm('End the show for the audience?'))act('status',{status:'ended'})"
+          style="justify-content:center">■ End the show</button>
+      </div>`}
+
+    <div class="wrap" style="padding-top:14px;padding-bottom:10px">
       <button class="big bigplay" ${!top?'disabled':''} onclick="act('playTop')">
         <span>▶</span><span style="flex:1;min-width:0">Start top voted${top?` — ${esc(top.title)} (${top.votes})`:' — nothing left'}</span></button>
     </div>
@@ -730,13 +757,18 @@ function render(){
 
       <div class="sec"><span class="kick">Who you are</span></div>
       <div class="field"><label>Name</label><input class="inp" id="pfName" maxlength="60" value="${esc(P.name||'')}"></div>
-      <div class="field"><label>One line under your name</label><input class="inp" id="pfTag" maxlength="120" value="${esc(P.tagline||'')}" placeholder="Make my set your set"></div>
-      <div class="field"><label>Bio</label><textarea class="inp" id="pfBio" rows="6" maxlength="2000" placeholder="A few lines about you and your music.">${esc(P.bio||'')}</textarea></div>
-      <div class="field"><label>Cover photo</label><input class="inp" id="pfPhoto" maxlength="300" value="${esc(P.photo||'')}" placeholder="/img/band.jpg"></div>
-    <div class="field"><label>Portrait (the big square)</label><input class="inp" id="pfAvatar" maxlength="300" value="${esc(P.avatar===P.photo?'':(P.avatar||''))}" placeholder="Leave blank to reuse the cover"></div>
-    <div class="field"><label>Three small photos around it</label>
-      ${[0,1,2].map(i=>`<input class="inp" id="pfPh${i}" maxlength="300" style="margin-top:${i?8:0}px" value="${esc((P.photos||[])[i]||'')}" placeholder="Photo ${i+1} (optional)">`).join('')}
-      <p class="muted" style="font-size:12px;margin:7px 0 0">Photos live in the site itself — send me the files and I’ll add them. <b>/img/band.jpg</b> is the one you have now.</p></div>
+      <div class="field"><label>One line under your name <span class="cnt" id="cTag"></span></label>
+        <input class="inp" id="pfTag" maxlength="120" value="${esc(P.tagline||'')}" placeholder="Make my set your set"></div>
+      <div class="field"><label>Bio <span class="cnt" id="cBio"></span></label>
+        <textarea class="inp" id="pfBio" rows="6" maxlength="700" placeholder="A few lines about you and your music.">${esc(P.bio||'')}</textarea></div>
+      <div class="field"><label>Cover photo</label>
+        ${slotBox('cover',P.photo,'wide')}</div>
+      <div class="field"><label>Portrait</label>
+        ${slotBox('avatar',P.avatar&&P.avatar!==P.photo?P.avatar:'','sq')}
+        <p class="muted" style="font-size:12px;margin:7px 0 0">Left blank, your cover is used.</p></div>
+      <div class="field"><label>Three small photos around it</label>
+        <div class="slots">${[0,1,2].map(i=>slotBox('p'+i,(P.photos||[])[i],'sq')).join('')}</div>
+        <p class="muted" style="font-size:12px;margin:7px 0 0">Straight from your camera roll. They’re shrunk on your phone before they upload.</p></div>
 
       <div class="sec"><span class="kick">Listen &amp; follow</span></div>
       <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Paste the share link for each. Anything that isn’t a real link from that service is dropped rather than shown broken.</p>
@@ -858,19 +890,20 @@ function render(){
     <div class="sec"><span class="kick">Show</span></div>
     <div class="wrap">
       <button class="big alt" onclick="if(confirm('Start a brand new show? Clears all votes, purchased votes and the played list.'))act('newShow')">↺ New show (reset everything)</button>
-      ${s.status==='ended'
-        ? `<button class="big" onclick="act('status',{status:'live'})">● Re-open the show</button>`
-        : `<button class="big alt" onclick="if(confirm('End the show for the audience?'))act('status',{status:'ended'})">■ End show</button>`}
+      <p class="muted" style="font-size:12px;margin:10px 0 0">Starting and ending a show lives on the <b>Live</b> tab.</p>
       <p class="muted" style="font-size:12px">Audience link: <b>myset.vip</b></p>
     </div>`;
   }
 
   document.getElementById('app').innerHTML=`
   <div class="head">
-    <div><div class="kick">Artist Studio</div><h1>${esc(s.artist)}</h1></div>
-    <div class="tog">
-      <button class="${s.windowOpen?'on':''}" onclick="act('window',{open:true})">Open</button>
-      <button class="${!s.windowOpen?'on':''}" onclick="act('window',{open:false})">Pause</button>
+    <div><div class="kick">${s.status==='live'?'● On stage':'Artist Studio'}</div><h1>${esc(s.artist)}</h1></div>
+    <div style="text-align:right;flex:0 0 auto">
+      <div class="kick" style="font-size:10.5px;margin-bottom:4px">Voting</div>
+      <div class="tog">
+        <button class="${s.windowOpen?'on':''}" onclick="act('window',{open:true})">Open</button>
+        <button class="${!s.windowOpen?'on':''}" onclick="act('window',{open:false})">Paused</button>
+      </div>
     </div>
   </div>
   <div class="tabs">
@@ -881,9 +914,13 @@ function render(){
     <button class="${TAB==='profile'?'on':''}" onclick="setTab('profile')">Profile</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${body}
-  <div style="padding:22px 14px;text-align:center"><a class="kick" href="/">← View the audience page</a></div>`;
+  <div class="wrap" style="padding-top:26px;padding-bottom:8px">
+    <a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}" target="_blank"
+       style="justify-content:center">See what the audience sees ↗</a>
+  </div>`;
 
   const n=$('#newSong'); if(n) n.addEventListener('keydown',e=>{if(e.key==='Enter')addSong()});
+  wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
 }
 function addSong(){const el=$('#newSong'),ea=$('#newArtist');const t=el.value.trim();if(!t)return;
   const a=ea?ea.value.trim():'';el.value='';if(ea)ea.value='';act('addSong',{title:t,artist:a});}
@@ -991,6 +1028,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='mdn') media('mediaMove',id,'down');
   if(b.dataset.act==='mrm') media('mediaRemove',id);
   if(b.dataset.act==='rmmail') removeTeam(id);
+  if(b.dataset.act==='photoclear'){ e.preventDefault(); clearPhoto(id); }
   if(b.dataset.act==='calday') openGig(null,id);
   if(b.dataset.act==='gigedit') openGig(id);
   if(b.dataset.act==='gigsave') saveGig2(id);
@@ -1085,13 +1123,75 @@ async function saveCode(){
   CODE=v; localStorage.setItem('myset.admin',v); el.value='';
   toast('Saved \u2014 that\u2019s your code from now on');
 }
+/* Photos ---------------------------------------------------------------
+   A camera file is 3-5MB and none of that detail survives being drawn 130px
+   wide, so the phone shrinks it before it ever goes over the wire. */
+function slotBox(slot,url,shape){
+  return `<label class="slot ${shape}" data-slot="${slot}">
+    ${url?`<img src="${esc(url)}" alt="">
+           <button type="button" class="rm" data-act="photoclear" data-id="${slot}">✕</button>`
+         :`<span class="ph">
+             <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l4.5-4.5 3.5 3.5 3-3L20 17"/></svg>
+             Add photo</span>`}
+    <input type="file" accept="image/*" data-slot="${slot}">
+  </label>`;
+}
+async function shrink(file,max,square){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{const i=new Image();
+      i.onload=()=>res(i); i.onerror=()=>rej(new Error('bad image')); i.src=url;});
+    let sx=0,sy=0,sw=img.width,sh=img.height;
+    if(square){ const side=Math.min(sw,sh); sx=(sw-side)/2; sy=(sh-side)/2; sw=sh=side; }
+    const scale=Math.min(1,max/Math.max(sw,sh));
+    const w=Math.round(sw*scale), h=Math.round(sh*scale);
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,w,h);
+    // step the quality down until it comfortably fits the server's limit
+    for(const q of [0.82,0.7,0.58,0.45]){
+      const d=c.toDataURL('image/jpeg',q);
+      if(d.length*0.75 < 850*1024) return d;
+    }
+    return c.toDataURL('image/jpeg',0.4);
+  } finally { URL.revokeObjectURL(url); }
+}
+async function uploadPhoto(slot,file,box){
+  if(!file)return;
+  if(!/^image\//.test(file.type)){toast('That needs to be a photo');return;}
+  if(box) box.classList.add('busy');
+  try{
+    const data=await shrink(file, slot==='cover'?1400:640, slot!=='cover');
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'photoUpload',slot,data})});
+    if(!d.ok){toast(d.error||'Could not save that photo');return;}
+    PROF=null; await loadProf(true); render(); toast('Photo added');
+  }catch(e){ toast('Could not read that photo'); }
+  finally{ if(box) box.classList.remove('busy'); }
+}
+async function clearPhoto(slot){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'photoClear',slot})});
+  if(!d.ok){toast(d.error||'Failed');return;}
+  PROF=null; await loadProf(true); render(); toast('Photo removed');
+}
+document.addEventListener('change',(e)=>{
+  const inp=e.target.closest('input[type=file][data-slot]'); if(!inp)return;
+  uploadPhoto(inp.getAttribute('data-slot'), inp.files&&inp.files[0], inp.closest('.slot'));
+  inp.value='';
+});
+
+function wireCount(inSel,outSel,max){
+  const i=$(inSel), o=$(outSel); if(!i||!o)return;
+  const upd=()=>{ const left=max-i.value.length;
+    o.textContent=left+' left'; o.classList.toggle('near',left<30); };
+  i.addEventListener('input',upd); upd();
+}
 const dur=ms=>{const m=Math.round(ms/60000);return m<60?m+' min':Math.floor(m/60)+'h '+(m%60)+'m';};
 const dstamp=t=>{try{return new Date(t).toLocaleString(undefined,
   {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const when=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':Math.floor(m/60)+'h ago';};
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3000);}
-function start(){clearInterval(timer);load();timer=setInterval(()=>{if(!document.hidden&&TAB==='live')load()},4000);}
+function start(){clearInterval(timer);load();
+  timer=setInterval(()=>{if(!document.hidden&&TAB==='live')load({quiet:true})},4000);}
 if(CODE||TOKEN) start(); else gate();
 </script>
 </body>

@@ -9,6 +9,8 @@ export default async (req) => {
 /** Shared so a write can return the new state instead of forcing a second fetch. */
 export async function stagePayload(aid) {
   const [show, fans, meta] = await Promise.all([getShow(aid), readFans(aid), readMeta(aid)]);
+  const { artistById } = await import('./_auth.mjs');
+  const who = await artistById(aid);
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);
   const total = meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0);
@@ -20,7 +22,8 @@ export async function stagePayload(aid) {
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
       played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
       packs: show.packs, showId: show.showId, startedAt: show.startedAt,
-      artistId: aid, unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],
+      artistId: aid, slug: (who && who.slug) || '',
+      unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],
     },
     voters: Object.values(fans).filter((f) => (f.v || []).length).length,
     songs: rankSongs(

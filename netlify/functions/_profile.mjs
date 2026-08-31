@@ -47,8 +47,8 @@ export function normProfile(p) {
   const out = { ...d, ...(p || {}) };
   out.name = clean(out.name, 60);
   out.tagline = clean(out.tagline, 120);
-  out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 2000);   // newlines kept
-  out.photo = String(out.photo || d.photo).slice(0, 300);
+  out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 700);    // newlines kept
+  out.photo = String(out.photo == null ? d.photo : out.photo).slice(0, 300);
   out.avatar = String(out.avatar || '').slice(0, 300);
   out.photos = (Array.isArray(out.photos) ? out.photos : [])
     .map((x) => String(x || '').slice(0, 300)).filter(Boolean).slice(0, 3);

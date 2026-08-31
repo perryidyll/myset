@@ -7,6 +7,7 @@ import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf, MAX_EVENTS } from './_events.mjs';
 import { stagePayload } from './stage.mjs';
+import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 
 /* The gig calendar. Events are their own document, so these short-circuit too.
    Every write reindexes the artist's cities, which is what keeps the public
@@ -195,6 +196,44 @@ async function handleProfile(aid, action, body) {
     return json({ ok: true, item: shapeMedia(added) });
   }
 
+  /* A photo straight off the phone. The browser has already shrunk it; this
+     checks the bytes really are an image and stores them against the artist. */
+  if (action === 'photoUpload') {
+    const slot = String(body.slot || '');
+    if (!SLOTS.has(slot)) return bad('unknown photo slot');
+    const dec = decodeDataUrl(body.data);
+    if (dec.error) return bad(dec.error);
+    const url = await putImage(aid, slot, dec.bytes, dec.type);
+    await mutateProfile(aid, (p) => {
+      if (slot === 'cover') p.photo = url;
+      else if (slot === 'avatar') p.avatar = url;
+      else {
+        const i = Number(slot.slice(1));
+        p.photos = Array.isArray(p.photos) ? p.photos : [];
+        while (p.photos.length <= i) p.photos.push('');
+        p.photos[i] = url;
+      }
+      return true;
+    });
+    return json({ ok: true, url, profile: await getProfile(aid) });
+  }
+
+  if (action === 'photoClear') {
+    const slot = String(body.slot || '');
+    if (!SLOTS.has(slot)) return bad('unknown photo slot');
+    await dropImage(aid, slot);
+    await mutateProfile(aid, (p) => {
+      if (slot === 'cover') p.photo = '';
+      else if (slot === 'avatar') p.avatar = '';
+      else {
+        const i = Number(slot.slice(1));
+        if (Array.isArray(p.photos) && p.photos[i]) p.photos[i] = '';
+      }
+      return true;
+    });
+    return json({ ok: true, profile: await getProfile(aid) });
+  }
+
   if (action === 'mediaRemove') {
     await mutateProfile(aid, (p) => { p.media = p.media.filter((x) => x.mid !== body.mid); return true; });
     return json({ ok: true });
@@ -212,7 +251,8 @@ async function handleProfile(aid, action, body) {
   }
   return bad('unknown action', 400);
 }
-const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove']);
+const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove',
+                                 'photoUpload', 'photoClear']);
 
 export default async (req) => {
   const me = await requireArtist(req);

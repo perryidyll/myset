@@ -97,7 +97,9 @@ export function defaultShow() {
     venue: '',
     city: '',
     showTime: '',
-    status: 'live',              // pre | live | ended
+    // 'pre' until the artist actually taps Start the show. Defaulting to 'live'
+    // meant every page claimed a gig was happening the moment an account existed.
+    status: 'pre',               // pre | live | ended
     windowOpen: true,
     nowPlaying: null,
     played: [],

@@ -112,6 +112,31 @@ If you are about to violate one, stop and say so rather than working around it.
     against a reserved list (`api`, `studio`, `vote`, `signup`, …) so an artist
     can never claim a route.
 
+## Photos
+
+0m. **Photos are shrunk on the phone, and the bytes are checked on the server.**
+    A camera file is 3-5MB and none of that survives being drawn 130px wide.
+    `_img.mjs` reads the actual file signature — an HTML file relabelled as a
+    JPEG is refused — and SVG is not accepted at all, because it can carry script.
+
+0n. **`/api/img` URLs carry a `?v=` stamp** that changes on every upload, so the
+    response can be cached for a year and still update instantly.
+
+## Live state
+
+0o. **A show is not live until the artist taps "Start the show".** `status`
+    defaults to `'pre'`, not `'live'` — the old default meant every page claimed
+    a gig was happening the moment an account existed. Red "Live now" and "Join
+    live" appear only for `status === 'live'`; otherwise the page shows an
+    outlined countdown to the next gig in the calendar.
+
+0p. **"Open / Paused" is the VOTING window, not the show.** It is labelled
+    "Voting" in the Studio header because it read as a show control.
+
+0q. **Times shown to the public come from the calendar, not `show.showTime`.**
+    That field is a legacy placeholder and said 8:00 PM while the real gig was
+    at 8:30.
+
 ## Responsiveness
 
 0k. **A write blocks the screen and ignores a second tap.** Tapping "Add it" four
