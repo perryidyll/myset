@@ -901,3 +901,71 @@ id `v_<venueId>`, so a weekly event is one record forever.
 * A venue with one resident act still renders one day-heading per night.
 * Venue cover photos are centre-cropped on upload, not interactively croppable.
 * SSD not mounted for several sessions — nothing mirrored there.
+
+---
+
+### SESSION 11 — 2026-08-31 (MYSET.md and the landing page)
+
+Commit `d03c033`. Live at **myset.vip/about**.
+
+**`MYSET.md`** — the master reference, 710 lines, twelve sections. What it is and
+the ambition; where everything lives; the night start to finish; every feature by
+audience (audience / city feed / artist / venue / the two sides meeting / QR /
+addresses); how it is built (storage, multi-tenancy, the calendar, the head-count,
+polling, perceived speed); every endpoint; money and the Connect gap; plans; how to
+run and deploy it; the 19 rules that matter most; what is left; and how it got
+here. It points at `INVARIANTS.md`, `GIG-NIGHT.md` and `VERIFYING-A-VENUE.md`
+rather than repeating them.
+
+**`/about`** — `public/about.html` + `public/about/*` (nine screenshots, 672 KB,
+all lazy below the fold). Route added to `netlify.toml`; `about` was already in
+`RESERVED`.
+
+Spine: promise → recognition → **try it** → the five beats → the transformation →
+proof you can hand a venue → venues → price → objections → one action.
+
+* The centrepiece is a **real working vote demo on the page** — tap a song, the
+  count moves, the queue reorders with a spring. Somebody who has done it once
+  already understands the product, which is why it sits above every screenshot.
+* Written to the **feelings**, each anchored to the mechanism that produces it:
+  ease / excitement / freedom for musicians, ease / confidence / pull for venues.
+* **Honest about what isn't finished** — card payments and the Pro extras are named
+  as in progress in the pricing block. Naming that is what buys belief in the rest.
+
+#### How the screenshots were taken (reusable)
+
+Headless Chrome over **DevTools Protocol**, driven from a small Node script using
+Node 24's built-in `WebSocket` — no puppeteer, nothing installed. It seeds
+`localStorage` on the origin, reloads, runs an after-script, and captures. Against
+a **throwaway artist and venue**, both deleted afterwards; Perry's own account was
+never touched because he was 40 minutes from going on stage.
+
+**Three traps worth keeping:**
+
+1. **`Runtime.evaluate` has no top-level `await`.** An expression starting with
+   `await` is a syntax error that fails *silently* — every scroll and every
+   sheet-open quietly did nothing until they were wrapped in
+   `(async () => { … })()` with `awaitPromise: true`.
+2. **Headless Chrome reports `prefers-color-scheme: dark` by default.** Two shots
+   came out light and seven dark before `Emulation.setEmulatedMedia` was set
+   explicitly. Check the actual pixels — sampling mean luminance is quicker than
+   opening nine files.
+3. **The Browser pane's screenshots are not proof.** Backgrounds and
+   opacity-transitioned content composite oddly, so a page looked ghosted and
+   photos looked missing when the DOM said `opacity: 1` and the images were 200s.
+   Verify layout by measuring (`getBoundingClientRect`, `scrollWidth`), and render
+   with headless Chrome when you need to *look*.
+
+#### Two judgement calls
+
+* **The lyrics screenshot was not published.** It was the best-looking shot of the
+  set — and it is fourteen lines of a copyrighted song on a public marketing page.
+  Beat 5 became "and afterwards, they can find you" instead.
+* **Nothing on the page depends on JavaScript to be VISIBLE.** The reveal animation
+  is scoped to a class an inline script adds, so if the script never runs the page
+  is simply visible; the demo has static fallback rows; and there is a no-IO
+  branch. A landing page that hides its own copy behind an observer is one bug
+  away from being blank.
+
+Verified: no horizontal overflow at 320 / 375 / 390 / 430 / 768 / 1024 / 1440, in
+light and dark, no broken images, no invisible content.
