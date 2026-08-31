@@ -531,3 +531,24 @@ as `tier-reach.md`, `tier-money.md`, `tier-craft.md`.
 
 **Note:** tonight (2026-08-31) is marked CANCELLED on his residency — he tapped
 the ✕ while testing. Restore it from Studio → Gigs if that was accidental.
+
+### SESSION 5 — 2026-08-31 (photos, live state, polish)
+
+- **Photo upload.** `_img.mjs` + `/api/img`. The browser crops/shrinks (cover
+  1400px, squares 640px, quality stepped down until under ~850KB) then posts a
+  data URL; the server checks the real file signature (HTML-as-JPEG refused,
+  SVG not accepted at all) and stores bytes in Blobs. URLs carry `?v=` so they
+  cache for a year and still update. Slots: cover, avatar, p0, p1, p2.
+- **Live state fixed.** `defaultShow().status` is now `'pre'`, not `'live'` —
+  the old default made every page claim a gig was on. Red "Live now"/"Join live"
+  only for `status==='live'`; otherwise an outlined ticking countdown to the next
+  calendar gig. **Start the show / End the show** live on the Studio's Live tab;
+  the header toggle is relabelled **Voting: Open / Paused**.
+- The next-up card comes from the calendar, not the legacy `show.showTime`
+  placeholder (which said 8:00 PM against a real 8:30 gig).
+- Live-tab poll uses `api(p,{quiet:true})` so it no longer flashes the overlay.
+- "See what the audience sees" is a button and goes to `/<slug>/vote`.
+- Artist page: 3 shows + "See more"; name sits on the page not the photo; cover
+  fades into the background; location line removed; tagline 120 / bio 700 with
+  live counters.
+- Combobox chevron anchored to the input.
