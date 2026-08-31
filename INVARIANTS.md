@@ -128,6 +128,13 @@ If you are about to violate one, stop and say so rather than working around it.
 
 ## Plans and money
 
+0w. **Anything the ROOM experiences stays free.** Lyrics were briefly gated to
+    Plus and put back deliberately: an audience that gets a sing-along at one
+    artist's gig and not the next learns that MySet is unreliable, which costs
+    more than a subscription is worth. Gate the artist's *back office* — never the
+    audience's night.
+
+
 0r. **The 10% free-tier cut needs Stripe Connect and does not exist yet.** Today
     every artist's audience pays into the ONE `STRIPE_SECRET_KEY` — Perry's. That
     is fine while he is the only artist and wrong the moment anyone else signs up.

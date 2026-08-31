@@ -240,9 +240,9 @@ function render(){
     ? `<div class="now"><div class="lab"><span class="dot"></span>Playing now</div>
         <div class="t">${esc(d.nowPlaying.title)}</div>${d.nowPlaying.artist?`<div class="by">${esc(d.nowPlaying.artist)}</div>`:''}
         <div class="eq"><i></i><i></i><i></i><i></i></div>
-        ${d.features&&d.features.lyrics?`<button class="lyricsbtn" onclick="openLyrics()">
+        <button class="lyricsbtn" onclick="openLyrics()">
           <svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h13M4 16h8"/><circle cx="18.5" cy="15" r="2.6"/><path d="M21.1 15V8.4l-3.6.9"/></svg>
-          Lyrics</button>`:''}</div>`
+          Lyrics</button></div>`
     : `<div class="now none"><div class="lab">Playing now</div><div class="t">${ended?'Show finished':'Starting soon…'}</div></div>`;
 
   if(!ended) h += `<div class="strip ${open?'':'shut'}">

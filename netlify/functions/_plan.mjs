@@ -6,7 +6,13 @@ import { readArtists, mutateArtists } from './_auth.mjs';
    The fundamentals are in every row: unlimited shows, unlimited voters, the
    whole Studio, the lyrics sheet, the gig calendar, the city feed. A free
    artist can run six nights a week forever. What free costs is a 10% cut on
-   money that comes through the app, and a ceiling on setlist size. */
+   money that comes through the app, and a ceiling on how many songs are
+   featured at once.
+
+   Lyrics were briefly a paid feature and were put back. An audience that gets a
+   sing-along at one artist's gig and not the next one learns that MySet is
+   unreliable, which costs more than the subscription is worth. Anything the
+   ROOM experiences stays free. */
 
 export const PLANS = {
   free: {
@@ -14,7 +20,6 @@ export const PLANS = {
     featured: 50,       // how many can be live to the audience at once
     cut: 0.10,            // platform share of tips and vote sales
     seats: 1,
-    lyrics: false,        // the sing-along sheet
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
     presskit: false,
@@ -25,7 +30,6 @@ export const PLANS = {
     featured: Infinity,
     cut: 0,
     seats: 1,
-    lyrics: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
@@ -33,7 +37,6 @@ export const PLANS = {
     featured: Infinity,
     cut: 0,
     seats: 5,
-    lyrics: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };

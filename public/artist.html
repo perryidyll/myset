@@ -38,6 +38,10 @@ body{padding-bottom:34px}
    around it they collided with the name and the cover's own artwork. */
 .cluster{margin-top:-46px;display:flex;align-items:flex-end;gap:9px}
 .strip{display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
+/* Stepped inwards towards the portrait so the three read as a gentle arc round
+   its top-left corner rather than a flat column. */
+.strip .pth:nth-child(1){margin-left:15px}
+.strip .pth:nth-child(2){margin-left:6px}
 .cluster{flex:0 0 auto}
 .pav{width:112px;height:112px;border-radius:26px;background-size:cover;background-position:center;
   border:4px solid var(--bg);box-shadow:var(--sh-3);flex:0 0 auto}

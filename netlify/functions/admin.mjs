@@ -70,7 +70,7 @@ const shapeLimits = (l) => ({
   label: l.label, price: l.price,
   featured: l.featured === Infinity ? null : l.featured,
   library: MAX_LIBRARY,
-  cut: l.cut, seats: l.seats, lyrics: l.lyrics,
+  cut: l.cut, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
 });
 const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke']);
