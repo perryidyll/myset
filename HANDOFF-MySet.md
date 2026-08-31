@@ -552,3 +552,35 @@ the ✕ while testing. Restore it from Studio → Gigs if that was accidental.
   fades into the background; location line removed; tagline 120 / bio 700 with
   live counters.
 - Combobox chevron anchored to the input.
+
+### SESSION 6 — 2026-08-31 (crop, plans, promo codes, referrals)
+
+- **RESEND_API_KEY is live.** Note: **env var changes need a redeploy** — the
+  running functions do NOT pick them up at runtime.
+- **Crop before upload.** `openCrop`/`confirmCrop` in studio.html: square (or
+  16:10) viewport, drag to pan, pinch/slider to zoom, drawn to canvas at 640px
+  (1400 for cover). Verified: committed file is exactly 640x640.
+- **Plans** in `_plan.mjs`: free (50 songs, 10% cut), plus $10 (unlimited, no
+  cut), pro $20 (+ promote, analytics, presskit, branding, 5 seats). Song cap and
+  seat limit enforced server-side. **A cap never deletes** — 66 existing songs
+  survive the free 50 ceiling.
+- **Promo codes**, owner-only (`isPlatformOwner` = founding artist).
+  **MYSETFREE** = 100% off Pro 12 months (comps outright).
+  **MYSETHALF** = 50% (recorded as `discountPct` for future billing).
+- **Referrals**: `artists.byId[aid].referredBy` set at signup from `?ref=<slug>`,
+  never editable after. Studio shows the invite link and who they brought.
+  vote.html carries a "Play live yourself?" line — the highest-volume channel and
+  it costs nothing.
+
+### ⚠️ THE 10% CUT IS NOT IMPLEMENTED — INVARIANT 0r
+`PLANS.free.cut = 0.10` is defined and displayed but **no fee is taken**. Every
+artist's audience currently pays into the single `STRIPE_SECRET_KEY`, which is
+**Perry's own account**. Fine while he is the only artist; wrong the moment
+anyone else takes money. **Stripe Connect is required before onboarding a second
+paying artist**: each artist connects their own account, charges are created with
+`stripe_account` + `application_fee_amount`, and the platform fee falls out of
+that. Perry must enable Connect on his Stripe account first.
+
+Also fixed: `start` returned `needName` only for unknown addresses — an
+enumeration oracle. Now byte-identical for all, with a signed 15-minute ticket
+issued by `verify` for brand-new accounts.
