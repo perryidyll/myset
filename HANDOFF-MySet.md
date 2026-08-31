@@ -584,3 +584,33 @@ that. Perry must enable Connect on his Stripe account first.
 Also fixed: `start` returned `needName` only for unknown addresses — an
 enumeration oracle. Now byte-identical for all, with a signed 15-minute ticket
 issued by `verify` for brand-new accounts.
+
+### SESSION 7 — 2026-08-31 (QR, featured cap, referrals)
+
+- **`_qr.mjs`** — own QR encoder (byte mode, level M, v1-10). **Verified by
+  DECODING**, not by eye. Two real bugs found that way: the 15 format bits were
+  written in reverse (scanned as nothing while looking plausible), and the mask
+  penalty was wrong (rules 3 and 4) and picked unreadable masks. Now 206/214 on a
+  fuzz set vs a reference's 205/214 on the same pipeline; every URL the app
+  generates decodes at 4-20 px per module. **Re-run
+  `scratchpad/qr-*.mjs` + opencv before touching this file.**
+- **`/api/qr?k=home|profile|vote|invite&a=<slug>&s=<scale>`** → SVG. It builds the
+  URL; the caller only picks a kind, so the site can never be used as a
+  general phishing-QR generator.
+- **Featured cap**: plans limit how many songs are LIVE (50 on free), not how many
+  you keep (`MAX_LIBRARY` 2000). Over the cap a song saves but arrives switched
+  off with a `note` the Studio toasts. Verified by flipping his account to free
+  and back.
+- **Lyrics are Plus-and-up.** `/api/show` exposes `features.lyrics`; vote.html
+  hides the button; `/api/lyrics` returns `found:false` rather than a paywall.
+- **Referral reward**: `rewardReferrer(aid)` in `_plan.mjs` gives the referrer one
+  free month each time a referral goes paid, once per referral. Called from
+  `redeemPromo` now, and must also be called from billing when that exists.
+- Homepage sign-in is a bordered button; the three small profile photos are a
+  column to the LEFT of the portrait.
+
+### NOT BUILT: venue studio
+Perry asked for venue accounts (profile, upcoming shows, menu, offers, amenities).
+Scoped but not started — it needs a second account type and a venue registry, and
+gigs currently store `venue` as free text, so matching gigs to venues needs a
+venue id on the event. See the response in that session for the plan.
