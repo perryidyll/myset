@@ -782,3 +782,122 @@ homepage feed (pin icon) and the venue page (full button).
 * Venue cover photos are centre-cropped on upload, not interactively croppable
   like the artist avatar.
 * SSD has not been mounted for several sessions — nothing mirrored there.
+
+---
+
+### SESSION 10 — 2026-08-31 (venue bookings, room numbers, venue events, real verification)
+
+Shipped to production and verified from outside. Commits `bdae1f2`, `b16226b`,
+`f70dbe1`.
+
+#### Shipped mid-session, because Perry was blocked on it
+
+**"Add a gig" opens EMPTY.** It used to copy venue, city, country, address and map
+link from the most recent gig. Meant as a convenience; in practice half-right
+details attached themselves to the wrong gig while he was entering a night's
+worth. Deployed on its own so he could carry on.
+
+#### VENUES — "Want to perform here?"
+
+`_pitch.mjs`, `pitchSend`/`pitchStatus`/`pitchList` on `/api/admin` (artist side),
+`pitchList`/`pitchSet` on `/api/venueadmin` (venue side), the card in `venue.html`.
+
+* **Only a signed-in artist can send one.** An open contact form is a spam funnel
+  and it throws away the point: the venue gets a link to a real MySet page with
+  real numbers on it, not a bio. A visitor with no session gets "Get your MySet
+  page — it's free".
+* The venue's What's-on tab lists each enquiry with the artist's **nights played,
+  people in the room, votes cast, songs**, their message, and Keen / ✕.
+* **No email is exchanged either way.** Keen shows in the artist's own studio (Gigs
+  tab → "Venues you've asked") and they take it from there. Verified: no `@`
+  anywhere in the payload. INVARIANT 0ai.
+* Idempotent per (artist, venue): asking twice updates the message; identical text
+  reports no change.
+
+#### VENUES — what happened in the room
+
+`_vstats.mjs`, action `stats`, the new **Numbers** tab.
+
+* People, votes, nights, acts; busiest night; **by act** (with average people per
+  night — the number that says who fills the room); **by night**.
+* Built entirely from show history that already exists. No new tracking, no extra
+  writes, nothing to backfill.
+* **MONEY IS NOT IN THE PAYLOAD**, not even as a total. INVARIANT 0aj.
+* It is still the artist's data: Artist Studio → Settings → **"Show venues my
+  numbers"**, default ON. Verified: off ⇒ the venue's view drops to zero nights and
+  reports one hidden act.
+
+#### VENUES — their own events
+
+Quiz night, a DJ, the football, a full moon party. Reuses `_events.mjs` under owner
+id `v_<venueId>`, so a weekly event is one record forever.
+
+* Lands on the venue page AND in the local country/city feed beside the music,
+  tagged `kind:'event'` so the page can tell them apart. `isVenueOwner()` /
+  `venueIdOf()` let the city index hold both kinds with no migration.
+* `normEvent` gained `title` — only venue events have one; for a gig the artist IS
+  the title.
+* The place comes from the profile, never the request. Changing the venue's city
+  **rewrites its events**, or they keep pointing at the old town and disappear from
+  both feeds. INVARIANT 0am.
+
+#### VENUES — verification that actually verifies
+
+`_verify.mjs`. Full write-up in **`VERIFYING-A-VENUE.md`**.
+
+* **Way 1 needs BOTH**: the sign-in email on the website's domain, AND the fetched
+  page naming the venue. Either alone is not proof — anyone can buy a domain, and
+  the website is just a URL somebody typed in. Free-mail domains refused outright.
+  INVARIANT 0ak.
+* **The fetch is the only place MySet requests a stranger's URL, and is guarded
+  like it**: https only; hostname resolved and refused if ANY address is loopback /
+  private / link-local (169.254, the metadata endpoint) / CGNAT / reserved;
+  `.local`/`.internal` by name; redirects manual, 3 hops, each re-checked; 8s
+  timeout; 512KB cap; html only. Literal private IPs also refused at storage time.
+  Verified against 13 targets. INVARIANT 0al.
+* **Way 2: ten artists** who have a gig there in their own calendar. An artist with
+  no gig listed cannot vouch (`artistPlaysAt()` checks server-side); nobody vouches
+  twice. `MIN_VOUCHES = 10` — worth lowering for a small island, it's one constant.
+* The studio shows a **checklist**, not a yes/no, with what's missing on each line.
+  Saving a website runs the check by itself.
+* Proven end-to-end on production: a venue named "Example Domain" with website
+  `example.com` and email `probe-venue@example.com` verified; the same email with a
+  site that does NOT name the venue correctly did **not**.
+
+#### ARTISTS
+
+* **Setlist tab has the audience's search and the same three orders** (Top voted /
+  Song A–Z / Artist A–Z). Focus and caret survive the re-render. Verified: 8 John
+  Mayer matches, both sorts correct, empty-state message.
+* **Starter pack / Clear setlist / See what the audience sees moved to the top** of
+  the Setlist tab, the audience one first. The global footer copy of that button is
+  suppressed on the Setlist tab so it isn't duplicated.
+* **QR captions**: "Scan to choose the next song!" and "Hear more on MySet!".
+* **Dates next to a weekday spell the month out** — "Tonight – 31 August".
+* **Profile head relaid out** to Perry's spec, measured: top small photo's centre
+  on the bottom two's right edge (both at x=60); bottom two overlapping the
+  portrait by 13px = 0.33 of their width; name and one-liner flush with the cover's
+  right edge (delta 0); 22px of air under the cover.
+
+#### Bugs found by verifying, not by reading
+
+* **`.go` collided with app.css's checkout button again** — second time in this
+  project — turning the tonight card's Directions pill into a full-width gradient
+  slab. Renamed to `.dirsrow`, and every page audited for other shared-class
+  collisions (the rest are deliberate). INVARIANT 0an.
+* **`.note b{display:block}`** hit every `<b>` in the note body, so "you only need
+  **one**." rendered on three lines. Scoped to `.note>b`. INVARIANT 0ao.
+* **The vouch count read 0** until somebody happened to run the website check; it
+  now travels with every venueadmin response.
+* **`venueauth` answered "ok" to any typo'd action** by falling through past every
+  handler.
+* **A private-IP URL could be stored as a venue website** and rendered as a link.
+* **A scratch harness rode along in a commit twice.** `_tmp_*` is now gitignored.
+
+#### Still open
+
+* **Stripe Connect** — unchanged, still the blocker. INVARIANT 0r.
+* `MIN_VOUCHES = 10` is probably too high for Koh Phangan.
+* A venue with one resident act still renders one day-heading per night.
+* Venue cover photos are centre-cropped on upload, not interactively croppable.
+* SSD not mounted for several sessions — nothing mirrored there.

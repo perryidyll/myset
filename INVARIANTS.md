@@ -408,3 +408,55 @@ If you are about to violate one, stop and say so rather than working around it.
     send somebody to Amsterdam, so `mapLinks()` returns null unless there are
     coordinates, an address, or a name WITH a city — and the city and country always
     go into the query. No Directions button is better than a wrong one.
+
+## Venues, part two
+
+0ai. **Only a signed-in ARTIST can ask a venue for a spot.** An open contact form
+    is a spam funnel, and it throws away the only thing that makes an enquiry
+    through MySet better than an email: the venue gets a link to a real page with
+    real numbers on it. Nobody's email address is exchanged in either direction —
+    the venue marks a pitch "keen", the artist sees that in their own studio, and
+    they take it from there through the links on each other's pages. Verified: no
+    `@` anywhere in the venue's pitch payload.
+
+0aj. **A venue never sees an artist's money.** The room numbers (people, votes,
+    songs, by night and by act) are the single biggest reason a bar signs up, and
+    what an artist took in tips and vote sales is nobody's business but theirs. It
+    is not in `venueStats()` at all, not even as a total. And it is still the
+    artist's data, so `shareStats` (default on) turns the whole thing off from
+    their own Settings. Verified: switching it off drops the venue's view to zero
+    nights and reports one hidden act.
+
+0ak. **Domain match alone is not proof of a venue.** Anyone can buy a domain and an
+    email on it, and the website is just a URL somebody typed into a form. So
+    verification needs BOTH: the sign-in email on the website's domain, AND the
+    fetched page actually naming the venue. Free-mail domains are refused outright.
+    Ten artists who each have a gig there in their own calendar is the other route,
+    and the one that works for a bar with no website.
+
+0al. **`_verify.mjs`'s fetch is the only place MySet requests a URL a stranger
+    typed in, and it is guarded like it.** https only; the hostname resolved and
+    refused if ANY address it answers with is loopback / private / link-local
+    (169.254 — the metadata endpoint) / CGNAT / reserved; `.local` and `.internal`
+    refused by name; redirects followed manually, 3 hops max, EACH hop re-checked;
+    8s timeout; 512KB cap; html only. A literal private IP is refused at storage
+    time too, so it can never be rendered as a link either. Verified against 13
+    targets. Never relax any of these to make a check "work" for one venue.
+
+0am. **A venue's own events go through the same engine as artists' gigs.** One
+    record for "every Tuesday", expanded on read, landing on the venue page and in
+    the local feed beside the music, tagged so a reader can tell them apart. The
+    place comes from the venue's profile, never from the request — and changing the
+    venue's city rewrites its events, or they keep pointing at the old town and
+    quietly vanish from both feeds.
+
+0an. **`.go` belongs to app.css.** It is the checkout button — a full-width
+    gradient slab. It has now been reached for by accident TWICE in this project
+    (the feed chevron, then the tonight card's Directions pill). Before naming any
+    class on a page that links app.css, check it isn't already taken; the audit is
+    a one-liner in the commit history.
+
+0ao. **`display:block` on a bare tag selector inside a card breaks bold words
+    mid-sentence.** `.note b{display:block}` was meant for the note's heading and
+    also hit every `<b>` in its body, so "you only need **one**." rendered on three
+    lines. Scope heading styles to the direct child (`.note>b`).
