@@ -614,3 +614,23 @@ Perry asked for venue accounts (profile, upcoming shows, menu, offers, amenities
 Scoped but not started — it needs a second account type and a venue registry, and
 gigs currently store `venue` as free text, so matching gigs to venues needs a
 venue id on the event. See the response in that session for the plan.
+
+### SESSION 8 — 2026-08-31 (lyrics free again)
+
+**Lyrics are NOT a paid feature.** Gated to Plus earlier the same day and
+reverted at Perry's call, with the reasoning recorded as INVARIANT 0w: an
+audience that gets a sing-along at one artist's gig and not the next learns that
+MySet is unreliable, which costs more than a subscription is worth. **Anything
+the ROOM experiences stays free — gate the artist's back office, never the
+audience's night.**
+
+Removed rather than left as an always-true flag: gone from `PLANS`, from the plan
+payload (`shapeLimits`), from `/api/lyrics`, and from `/api/show` (which no longer
+looks up a plan on the hot path at all). Verified by flipping the account between
+free and pro — lyrics resolve identically and no `features` flag is advertised.
+
+Free is now: 50 featured songs, 10% cut, 1 sign-in. Everything the audience sees
+is identical on every plan.
+
+Profile photos: the three small ones step inwards (15px / 6px / 0) so they arc
+round the portrait's top-left corner.
