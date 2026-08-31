@@ -40,7 +40,18 @@ a{color:inherit;text-decoration:none}
   gap:12px;padding:15px 18px;background:rgba(0,0,0,.72);
   backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
   border-bottom:.5px solid var(--hair)}
-.head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.028em}
+.head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.028em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Tap the logo to leave, tap your name to see your own page. Two exits that
+   were not there before, both where a thumb already is. */
+.homemark{flex:0 0 auto;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;
+  background:var(--grad);box-shadow:0 2px 8px rgba(255,55,95,.34);
+  transition:transform .2s var(--spring)}
+.homemark:active{transform:scale(.9)}
+.homemark svg{width:17px;height:17px;fill:#fff;display:block}
+.whoami{display:flex;align-items:center;gap:6px;min-width:0}
+.whoami span{font-size:12px;color:var(--faint);flex:0 0 auto}
+.whoami:active h1{opacity:.6}
 
 .tabs{position:sticky;top:66px;z-index:29;display:flex;gap:5px;margin:14px 18px 0;padding:4px;
   background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1);
@@ -111,6 +122,42 @@ a{color:inherit;text-decoration:none}
   color:var(--muted);border-radius:var(--pill);letter-spacing:-.01em;
   transition:background .26s var(--ease),color .2s var(--ease)}
 .sortbar button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
+.gbar{display:flex;gap:7px;margin:10px 18px 0;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.gbar::-webkit-scrollbar{display:none}
+.gbar button{flex:0 0 auto;padding:8px 14px;border-radius:var(--pill);background:var(--surface);
+  box-shadow:var(--sh-1);font-size:13.5px;font-weight:500;color:var(--muted);white-space:nowrap}
+.gbar button.on{background:var(--grad);color:#fff;font-weight:600;box-shadow:0 3px 10px rgba(255,55,95,.3)}
+.gbar button b{font-weight:600;opacity:.6;font-size:12px}
+/* the song sheet */
+.keys{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.keys button{padding:11px 2px;border-radius:11px;background:var(--surface-2);font-size:14.5px;
+  font-weight:600;color:var(--ink-2);transition:transform .18s var(--spring)}
+.keys button:active{transform:scale(.9)}
+.keys button.on{background:var(--grad);color:#fff}
+.minor{display:flex;gap:3px;padding:3px;background:var(--surface-2);border-radius:var(--pill);margin-top:8px}
+.minor button{flex:1;padding:9px;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:var(--pill)}
+.minor button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
+.tagwrap{display:flex;flex-wrap:wrap;gap:7px}
+.tg{padding:9px 14px;border-radius:var(--pill);background:var(--surface-2);font-size:13.5px;
+  font-weight:500;color:var(--ink-2);transition:transform .18s var(--spring);text-align:left}
+.tg:active{transform:scale(.94)}
+.tg.on{background:var(--grad);color:#fff;font-weight:600}
+.tg.own{box-shadow:inset 0 0 0 1px var(--hair-2)}
+.tg.add{color:var(--accent);background:var(--accent-soft);font-weight:600}
+.tgx{margin-left:6px;opacity:.6;font-size:11px}
+textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:14px;line-height:1.65;white-space:pre;overflow-wrap:normal;overflow-x:auto;
+  min-height:190px;tab-size:4}
+.songmeta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.songmeta span{font-size:11px;font-weight:600;letter-spacing:.01em;padding:2px 7px;border-radius:var(--pill);
+  background:var(--surface-2);color:var(--muted)}
+.songmeta span.k{background:var(--accent-soft);color:var(--accent)}
+.chartbtn{display:inline-flex;align-items:center;gap:7px;margin-top:14px;padding:9px 15px;
+  border-radius:var(--pill);background:rgba(255,255,255,.19);color:#fff;font-size:14px;font-weight:600;
+  backdrop-filter:blur(10px);border:.5px solid rgba(255,255,255,.3)}
+.chartview{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;
+  line-height:1.75;white-space:pre;overflow-x:auto;max-height:62vh;overflow-y:auto;
+  margin:6px -4px 0;padding:0 4px;color:var(--ink-2);-webkit-user-select:none;user-select:none}
 .tog{display:flex;gap:3px;padding:3px;background:var(--surface);border-radius:var(--pill);flex:0 0 auto}
 .tog button{padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:var(--pill);
   transition:background .22s var(--ease),color .2s}
@@ -250,9 +297,13 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .sheet.on{transform:translateX(-50%) translateY(0)}
 .sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
 .sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px}
-.grabzone{padding:10px 0 8px;margin:-10px 0 0;cursor:grab;touch-action:none}
+.grabzone{position:relative;padding:12px 0 10px;margin:-10px 0 0;cursor:grab;touch-action:none}
 .grabzone:active{cursor:grabbing}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
+.sheetx{position:absolute;top:2px;right:-4px;width:34px;height:34px;border-radius:50%;
+  background:var(--surface-2);color:var(--muted);font-size:14px;display:grid;place-items:center;
+  transition:transform .2s var(--spring)}
+.sheetx:active{transform:scale(.9)}
 /* Blocks the whole screen while a write is in flight. Tapping "Add it" four
    times because nothing appeared to happen once created four gigs. */
 #busy{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);
@@ -290,7 +341,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <script>
 const $=s=>document.querySelector(s), API='/api';
 let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('myset.token')||'';
-let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null, PITCHES=null;
+let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null, PITCHES=null, CHARTS=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
 /* The same search and the same three orders the audience has on the voting page,
@@ -301,6 +352,26 @@ let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catc
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
 const collate=(a,b)=>String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base'});
 function setSort(v){ SETSORT=v; try{localStorage.setItem('myset.setsort',v)}catch(e){} render(); }
+let GENRE='';
+function setGenre(id){ GENRE=(GENRE===id?'':id); render(); }
+const tagLabel=(id)=>{
+  const v=(D&&D.tags)||{builtin:[],own:[]};
+  const hit=[...v.builtin,...v.own].find(t=>t.id===id);
+  return hit?hit.label:id;
+};
+/* Only genres that are actually ON a song. A row of fifteen chips where twelve
+   match nothing is worse than no row at all. */
+function genreBar(songs){
+  const used=new Map();
+  for(const x of songs) for(const t of (x.tags||[])) used.set(t,(used.get(t)||0)+1);
+  if(!used.size) return '';
+  const items=[...used.entries()].map(([id,n])=>({id,n,label:tagLabel(id)}))
+    .sort((a,b)=>a.label.localeCompare(b.label));
+  return `<div class="gbar">
+    <button class="${GENRE?'':'on'}" data-act="gfilter" data-id="">All</button>
+    ${items.map(t=>`<button class="${GENRE===t.id?'on':''}" data-act="gfilter" data-id="${esc(t.id)}">${esc(t.label)} <b>${t.n}</b></button>`).join('')}
+  </div>`;
+}
 function setQuery(v){ SETQ=v; SETFOCUS=false; render(); }
 function applySetSort(list){
   if(SETSORT==='title')  return [...list].sort((a,b)=>collate(a.title,b.title));
@@ -655,7 +726,10 @@ function render(){
       <div class="c"><b class="mono">${D.voters||0}<span style="font-size:15px;color:var(--muted);font-weight:600">/${D.room||D.voters||0}</span></b><span>Voting · in room</span></div>
       <div class="c"><b class="mono acc">$${D.tips.total.toFixed(2)}</b><span>Tips</span></div>
     </div>
-    ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>${now.artist?`<div class="a">${esc(now.artist)}</div>`:''}</div>`:''}
+    ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>
+      ${now.artist?`<div class="a">${esc(now.artist)}</div>`:''}
+      ${now.key?`<div class="a" style="opacity:.82">Key of ${esc(now.key)}</div>`:''}
+      <button class="chartbtn" data-act="chart" data-id="${esc(now.id)}">☰ My chart</button></div>`:''}
     ${asksPanel()}
     ${s.status!=='live'?`
       <div class="wrap" style="padding-top:22px;padding-bottom:2px">
@@ -691,8 +765,9 @@ function render(){
   if(TAB==='setlist'){
     const active=songs.filter(x=>x.active!==false).length;
     const q=SETQ.trim().toLowerCase();
-    const shown=applySetSort(songs.filter(x=>
-      !q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q)));
+    const shown=applySetSort(songs
+      .filter(x=>!GENRE||(x.tags||[]).includes(GENRE))
+      .filter(x=>!q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q)));
     body=`
     <div class="wrap" style="padding-top:18px">
       <a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}" target="_blank"
@@ -704,13 +779,9 @@ function render(){
           onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear setlist</button>
       </div>
     </div>
-    <div class="sec"><span class="kick">Add a song</span></div>
-    <div class="wrap">
-      <input class="inp" id="newSong" placeholder="Song title" style="margin-bottom:9px">
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <input class="inp" id="newArtist" placeholder="Artist (optional)" style="flex:1">
-        <button class="act pri" style="min-width:64px" onclick="addSong()">Add</button>
-      </div>
+    <div class="wrap" style="padding-top:16px">
+      <button class="big bigplay" style="margin:0" onclick="openSongSheet(null)">
+        <span>+</span><span style="flex:1">Add a song</span></button>
     </div>
     ${PLAN&&PLAN.ok&&PLAN.limits.featured?`<p class="muted" style="font-size:12px;padding:0 20px;margin:0">
       <b>${active} of ${PLAN.limits.featured}</b> featured. Keep as many as you like (up to ${PLAN.limits.library}) — your plan shows ${PLAN.limits.featured} to the audience at a time. The rest sit switched off.</p>`:''}
@@ -726,11 +797,15 @@ function render(){
     </div>
     <div class="sortbar" role="group" aria-label="Sort songs">${SETSORTS.map(([k,l])=>
       `<button data-sort="${k}" class="${SETSORT===k?'on':''}" aria-pressed="${SETSORT===k}">${l}</button>`).join('')}</div>
+    ${genreBar(songs)}
     <p class="muted" style="font-size:12px;padding:10px 14px 4px;margin:0">Turn a song OFF to hide it from the audience tonight. Remove deletes it for good.</p>
     <div class="list">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
-        <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden':'In the pool'}${x.votes?' · '+x.votes+' votes':''}</div></div>
+        <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden':'In the pool'}${x.votes?' · '+x.votes+' votes':''}</div>
+        ${(x.key||(x.tags||[]).length)?`<div class="songmeta">
+          ${x.key?`<span class="k">${esc(x.key)}</span>`:''}
+          ${(x.tags||[]).map(t=>`<span>${esc(tagLabel(t))}</span>`).join('')}</div>`:''}</div>
       <button class="act" data-act="edit" data-id="${x.id}">Edit</button>
       <button class="act" onclick="act('toggleSong',{song:'${x.id}'})">${x.active===false?'Show':'Hide'}</button>
       <button class="act warn" data-act="del" data-id="${x.id}">✕</button>
@@ -1078,7 +1153,7 @@ function render(){
       <a class="big alt" href="/${esc(TEAM.slug)}" target="_blank" style="justify-content:center">Open myset.vip/${esc(TEAM.slug)} ↗</a></div>`:''}
 
     <div class="sec"><span class="kick">Codes to print</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">Stick these on tables, on the tip jar, or on your case. Tap one to open it full size, then save or print it.</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">Stick these on tables, on the tip jar, or on your case. Tap one to bring it up full size, then screenshot or print it.</p>
     ${(TEAM&&TEAM.slug)?`<div class="qrs">
       ${QRS.map(([k,t,d])=>`
         <button class="qrcard" data-act="qrbig" data-id="${k}">
@@ -1124,7 +1199,15 @@ function render(){
 
   document.getElementById('app').innerHTML=`
   <div class="head">
-    <div><div class="kick">${s.status==='live'?'● On stage':'Artist Studio'}</div><h1>${esc(s.artist)}</h1></div>
+    <a class="homemark" href="/" aria-label="MySet home">
+      <i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>
+    </a>
+    <div style="flex:1;min-width:0">
+      <div class="kick">${s.status==='live'?'● On stage':'Artist Studio'}</div>
+      ${s.slug
+        ? `<a class="whoami" href="/${esc(s.slug)}" target="_blank"><h1>${esc(s.artist)}</h1><span>↗</span></a>`
+        : `<h1>${esc(s.artist)}</h1>`}
+    </div>
     <div style="text-align:right;flex:0 0 auto">
       <div class="kick" style="font-size:10.5px;margin-bottom:4px">Voting</div>
       <div class="tog">
@@ -1146,7 +1229,6 @@ function render(){
        style="justify-content:center">See what the audience sees ↗</a>
   </div>`}`;
 
-  const n=$('#newSong'); if(n) n.addEventListener('keydown',e=>{if(e.key==='Enter')addSong()});
   document.querySelectorAll('[data-sort]').forEach(b=>
     b.addEventListener('click',()=>setSort(b.getAttribute('data-sort'))));
   const sq=$('#setq');
@@ -1218,93 +1300,262 @@ async function askDo(action,id){
       :action==='askDecline'?'Declined, votes refunded':'Marked done');
   } finally { WRITING=false; }
 }
-function addSong(){const el=$('#newSong'),ea=$('#newArtist');const t=el.value.trim();if(!t)return;
-  const a=ea?ea.value.trim():'';el.value='';if(ea)ea.value='';act('addSong',{title:t,artist:a});}
 /* Song titles/artists are user text — never interpolate them into an onclick.
    Look the song up from state by id instead. */
 function songById(id){ return (D&&D.songs||[]).find(x=>x.id===id); }
 function openSheet(h){
   const sh=$('#sheet');
-  sh.innerHTML=`<div class="grabzone"><div class="grab"></div></div>${h}`;
-  sh.style.transform=''; $('#bg').classList.add('on'); sh.classList.add('on');
+  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
+    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+  sh.style.transform=''; sh.scrollTop=0;
+  $('#bg').classList.add('on'); sh.classList.add('on');
   attachDrag(sh);
 }
-/* Drag the handle down to dismiss — the bar is the universal affordance for it,
-   so it has to actually work. */
+/* Dismissing a sheet used to mean hitting a 20px strip, which on a phone in a bar
+   is a coin toss. Now:
+     · the grab area is the whole top of the sheet, handle and all
+     · you can also drag from anywhere in the body, as long as the sheet is
+       scrolled to the top and you did not start on a control
+     · it closes on a short flick as well as a long drag (velocity, not just
+       distance), so a quick swipe works like everywhere else
+     · and there is a visible ✕, because a gesture should never be the only way
+       out of anything */
 function attachDrag(sh){
   const zone=sh.querySelector('.grabzone'); if(!zone)return;
-  let y0=null, dy=0;
-  const start=(e)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; sh.style.transition='none'; };
+  let y0=null, dy=0, t0=0, fromBody=false;
+  const CONTROL='input,textarea,select,button,a,[contenteditable]';
+
+  const start=(e,body)=>{
+    y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now(); fromBody=!!body;
+    sh.style.transition='none';
+  };
   const move=(e)=>{
     if(y0===null)return;
-    dy=Math.max(0,((e.touches?e.touches[0]:e).clientY)-y0);
+    dy=((e.touches?e.touches[0]:e).clientY)-y0;
+    if(dy<0){ dy=0; sh.style.transform='translateX(-50%) translateY(0)'; return; }
+    // dragging from the body only counts while the sheet is still at the top
+    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
     sh.style.transform=`translateX(-50%) translateY(${dy}px)`;
     if(e.cancelable)e.preventDefault();
   };
   const end=()=>{
     if(y0===null)return;
+    const speed=dy/Math.max(1,Date.now()-t0);       // px per ms
     sh.style.transition='';
-    if(dy>90) closeSheet(); else sh.style.transform='translateX(-50%) translateY(0)';
+    if(dy>70||speed>0.45) closeSheet();
+    else sh.style.transform='translateX(-50%) translateY(0)';
     y0=null;
   };
-  zone.addEventListener('touchstart',start,{passive:true});
+
+  zone.addEventListener('touchstart',(e)=>start(e,false),{passive:true});
   zone.addEventListener('touchmove',move,{passive:false});
   zone.addEventListener('touchend',end);
-  zone.addEventListener('mousedown',(e)=>{ start(e);
-    const mm=(ev)=>move(ev), mu=()=>{ end(); window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+  zone.addEventListener('touchcancel',end);
+  zone.addEventListener('mousedown',(e)=>{ start(e,false);
+    const mm=(ev)=>move(ev), mu=()=>{ end();
+      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
     window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
+
+  sh.addEventListener('touchstart',(e)=>{
+    if(e.target.closest('.grabzone'))return;              // the zone handles itself
+    if(e.target.closest(CONTROL))return;                  // never fight a control
+    if(sh.scrollTop>0)return;                             // they are reading, not dismissing
+    start(e,true);
+  },{passive:true});
+  sh.addEventListener('touchmove',move,{passive:false});
+  sh.addEventListener('touchend',end);
+  sh.addEventListener('touchcancel',end);
 }
 function closeSheet(){const sh=$('#sheet');sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
   if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
 
-async function editSong(id){
-  const x=songById(id); if(!x)return;
-  openSheet(`<h3>Edit song</h3><p class="lede">Loading lyrics…</p>`);
-  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsGet',song:id})});
-  const state=d.ok?d.state:'unfetched';
-  const note={ok:d.owned?'Your own words — these override anything found online.':'Found online. Shown as “Unofficial lyrics”.',
-              none:'Nothing found online for this one. Paste the words yourself.',
-              blocked:'Lyrics are turned off for this song.',
-              unfetched:'Not looked up yet.'}[state]||'';
-  openSheet(`<h3>Edit song</h3>
-    <div class="field" style="padding-left:0;padding-right:0"><label>Title</label>
-      <input class="inp" id="esTitle" maxlength="80" value="${esc(x.title)}"></div>
-    <div class="field" style="padding-left:0;padding-right:0"><label>Artist</label>
-      <input class="inp" id="esArtist" maxlength="60" value="${esc(x.artist||'')}"></div>
-    <div class="field" style="padding-left:0;padding-right:0"><label>Lyrics</label>
-      <textarea class="inp" id="esLyrics" rows="9" placeholder="Paste the words, or tap Find online.">${esc(d.ok?d.plain:'')}</textarea>
-      <input type="hidden" id="esCredit" value="${esc(d.ok?(d.credit||''):'')}">
-      <input type="hidden" id="esOwned" value="${d.ok&&d.owned?'1':''}">
-      <p class="muted" style="font-size:12px;margin:7px 0 0">${esc(note)}</p></div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="act" data-act="lyrfind" data-id="${id}">Find online</button>
-      <button class="act warn" data-act="lyrclear" data-id="${id}">Remove lyrics</button>
+/* One sheet for adding and for editing — the same fields either way, so there is
+   only one thing to learn and one thing to maintain. Everything a song has lives
+   here: title, artist, the key you play it in, its genres, your own chart, and
+   the words the room sees. */
+const ROOTS=['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+let SONG=null;   // { id, tags:Set, vocab, minor:bool }
+
+async function openSongSheet(id){
+  const existing=id?songById(id):null;
+  if(id&&!existing)return;
+  openSheet(`<h3>${id?'Edit song':'Add a song'}</h3><p class="lede"><span class="spin"></span> One moment…</p>`);
+
+  let song={title:'',artist:'',key:'',tags:[]}, chart='', lyr={plain:'',credit:'',state:'unfetched',owned:false};
+  let vocab=(D&&D.tags)?{builtin:D.tags.builtin,own:D.tags.own,maxPerSong:6}:{builtin:[],own:[],maxPerSong:6};
+  if(id){
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'songGet',song:id})});
+    if(!d.ok){toast(d.error||'Could not open that');closeSheet();return;}
+    song=d.song; chart=d.chart||''; lyr=d.lyrics||lyr; vocab=d.tags||vocab;
+  }else{
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'tagList'})});
+    if(d.ok) vocab=d.tags;
+  }
+  SONG={id, tags:new Set(song.tags||[]), vocab, minor:/m$/.test(song.key||'')};
+  drawSongSheet(song, chart, lyr);
+}
+
+function drawSongSheet(song, chart, lyr){
+  const note={ok:lyr.owned?'Your own words — these override anything found online.'
+                :'Found online. Shown to the room as “Unofficial lyrics”.',
+              none:'Nothing found online for this one.',
+              blocked:'Turned off for this song.',
+              unfetched:'Not looked up yet.'}[lyr.state]||'';
+  openSheet(`<h3>${SONG.id?'Edit song':'Add a song'}</h3>
+    <div class="field" style="padding:0"><label>Title</label>
+      <input class="inp" id="sgTitle" maxlength="80" placeholder="Wish You Were Here"
+        value="${esc(song.title||'')}" autocomplete="off"></div>
+    <div class="field" style="padding:14px 0 0"><label>Artist <span class="muted" style="font-weight:400">— optional</span></label>
+      <input class="inp" id="sgArtist" maxlength="60" placeholder="Pink Floyd"
+        value="${esc(song.artist||'')}" autocomplete="off"></div>
+
+    <div class="field" style="padding:18px 0 0"><label>The key you play it in</label>
+      <div class="keys">${ROOTS.map(r=>`<button class="${keyRoot()===r?'on':''}" data-act="sgroot" data-id="${r}">${r}</button>`).join('')}</div>
+      <div class="minor">
+        <button class="${SONG.minor?'':'on'}" data-act="sgmin" data-id="maj">Major</button>
+        <button class="${SONG.minor?'on':''}" data-act="sgmin" data-id="min">Minor</button>
+      </div>
+      <input class="inp" id="sgKey" maxlength="14" style="margin-top:9px"
+        placeholder="Or write it yourself — Capo 2, Drop D…" value="${esc(song.key||'')}">
     </div>
-    <button class="big" style="margin-top:16px" data-act="essave" data-id="${id}">Save song</button>`);
+
+    <div class="field" style="padding:18px 0 0"><label>Genres
+      <span class="cnt" id="cTags">${SONG.tags.size} of ${SONG.vocab.maxPerSong}</span></label>
+      <div class="tagwrap" id="tagwrap">${tagChips()}</div>
+    </div>
+
+    <div class="field" style="padding:18px 0 0"><label>Your chart
+      <span class="muted" style="font-weight:400">— only you ever see this</span></label>
+      <textarea class="inp chart" id="sgChart" maxlength="20000"
+        placeholder="G          D          Em         C&#10;Paste it however you like it —&#10;chords, capo, the bit you always forget.">${esc(chart)}</textarea>
+      <p class="muted" style="font-size:12px;margin:7px 0 0">Fixed-width, so chords stay over the right word.</p>
+    </div>
+
+    <div class="field" style="padding:18px 0 0"><label>Words for the room</label>
+      <textarea class="inp" id="sgLyrics" rows="7"
+        placeholder="What the audience sees when they tap Lyrics.">${esc(lyr.plain||'')}</textarea>
+      <input type="hidden" id="sgCredit" value="${esc(lyr.credit||'')}">
+      <input type="hidden" id="sgOwned" value="${lyr.owned?'1':''}">
+      <p class="muted" style="font-size:12px;margin:7px 0 0">${esc(note)}</p>
+      ${SONG.id?`<div style="display:flex;gap:8px;margin-top:10px">
+        <button class="act" data-act="lyrfind" data-id="${esc(SONG.id)}">Find online</button>
+        <button class="act warn" data-act="lyrclear" data-id="${esc(SONG.id)}">Remove words</button>
+      </div>`:''}
+    </div>
+
+    <button class="big" style="margin-top:20px" data-act="sgsave" data-id="${esc(SONG.id||'')}">
+      ${SONG.id?'Save song':'Add it to my setlist'}</button>
+    ${SONG.id?`<button class="big alt" style="margin-top:10px" data-act="del" data-id="${esc(SONG.id)}">Remove from my setlist</button>`:''}`);
+  wireCount('#sgChart','#cChart',20000);
+  setTimeout(()=>{const e=$('#sgTitle'); if(e&&!SONG.id)e.focus();},280);
 }
-async function saveSongEdit(id){
-  const t=(($('#esTitle')||{}).value||'').trim(), a=(($('#esArtist')||{}).value||'').trim();
-  const ly=(($('#esLyrics')||{}).value||'');
-  if(!t){toast('A song needs a title');return;}
-  const r1=await api('/admin',{method:'POST',body:JSON.stringify({action:'editSong',song:id,title:t,artist:a})});
-  if(!r1.ok){toast(r1.error||'Could not save');return;}
-  await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsSet',song:id,plain:ly,
-    credit:(($('#esCredit')||{}).value||''), owned:!!(($('#esOwned')||{}).value)})});
-  closeSheet(); toast('Saved'); load();
+function keyRoot(){
+  const v=(($('#sgKey')||{}).value)||'';
+  const m=/^([A-G][b#]?)m?$/.exec(v.trim());
+  return m?m[1]:null;
 }
+function tagChips(){
+  const all=[...SONG.vocab.builtin.map(t=>({...t,own:false})),
+             ...SONG.vocab.own.map(t=>({...t,own:true}))];
+  return all.map(t=>`<button class="tg ${t.own?'own':''} ${SONG.tags.has(t.id)?'on':''}"
+      data-act="sgtag" data-id="${esc(t.id)}">${esc(t.label)}</button>`).join('')
+    + (SONG.vocab.own.length<15?`<button class="tg add" data-act="sgtagnew">+ Your own</button>`:'');
+}
+function toggleSongTag(id){
+  if(SONG.tags.has(id)) SONG.tags.delete(id);
+  else{
+    if(SONG.tags.size>=SONG.vocab.maxPerSong){toast(`${SONG.vocab.maxPerSong} genres is plenty for one song`);return;}
+    SONG.tags.add(id);
+  }
+  // repaint just the chips, so nothing typed above is lost
+  const w=$('#tagwrap'); if(w) w.innerHTML=tagChips();
+  const c=$('#cTags'); if(c) c.textContent=`${SONG.tags.size} of ${SONG.vocab.maxPerSong}`;
+}
+async function addOwnTag(){
+  const label=(prompt('Name your genre — 20 characters')||'').trim();
+  if(!label)return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'tagAdd',label})});
+  if(!d.ok){toast(d.error||'Could not add that');return;}
+  SONG.vocab=d.tags;
+  const fresh=d.tags.own.find(t=>!SONG.tags.has(t.id)&&t.label===label);
+  if(fresh&&SONG.tags.size<SONG.vocab.maxPerSong) SONG.tags.add(fresh.id);
+  const w=$('#tagwrap'); if(w) w.innerHTML=tagChips();
+  const c=$('#cTags'); if(c) c.textContent=`${SONG.tags.size} of ${SONG.vocab.maxPerSong}`;
+  if(D) D.tags={builtin:d.tags.builtin,own:d.tags.own};
+  toast('Added — tap it on any song');
+}
+function setKeyRoot(r){
+  const el=$('#sgKey'); if(!el)return;
+  el.value=r+(SONG.minor?'m':'');
+  document.querySelectorAll('[data-act="sgroot"]').forEach(b=>
+    b.classList.toggle('on',b.getAttribute('data-id')===r));
+}
+function setKeyMinor(on){
+  SONG.minor=on;
+  const el=$('#sgKey'); if(!el)return;
+  const r=keyRoot();
+  if(r) el.value=r+(on?'m':'');
+  document.querySelectorAll('[data-act="sgmin"]').forEach(b=>
+    b.classList.toggle('on',(b.getAttribute('data-id')==='min')===on));
+}
+async function saveSongSheet(id){
+  if(WRITING)return; WRITING=true;
+  try{
+    const v=x=>(($('#'+x)||{}).value||'');
+    const title=v('sgTitle').trim();
+    if(!title){toast('It needs a title');return;}
+    const payload={title, artist:v('sgArtist').trim(), key:v('sgKey').trim(), tags:[...SONG.tags]};
+    let songId=id;
+    if(id){
+      const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'editSong',song:id,...payload})});
+      if(!d.ok){toast(d.error||'Could not save');return;}
+      if(d.stage&&d.stage.ok){D=d.stage;}
+    }else{
+      const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'addSong',...payload})});
+      if(!d.ok){toast(d.error||'Could not add that');return;}
+      songId=d.songId;
+      if(d.stage&&d.stage.ok){D=d.stage;}
+      if(d.note) toast(d.note);
+    }
+    if(songId){
+      await api('/admin',{method:'POST',body:JSON.stringify({action:'chartSet',song:songId,chart:v('sgChart')})});
+      const words=v('sgLyrics').trim();
+      const had=(SONG.hadLyrics||'');
+      if(words!==had)
+        await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsSet',song:songId,
+          plain:words, credit:v('sgCredit'), owned:!v('sgCredit')})});
+    }
+    CHARTS=null;
+    closeSheet(); await load(); toast(id?'Saved':'Added to your setlist');
+  } finally { WRITING=false; }
+}
+/* Read-only, big, fixed-width — for looking at mid-song, not editing. */
+async function openChart(id){
+  const x=songById(id); if(!x)return;
+  openSheet(`<h3>${esc(x.title)}</h3><p class="lede"><span class="spin"></span> Opening your chart…</p>`);
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'songGet',song:id})});
+  if(!d.ok){toast(d.error||'Could not open that');closeSheet();return;}
+  openSheet(`<h3>${esc(x.title)}</h3>
+    <p class="lede">${esc([x.artist,d.song.key&&('key of '+d.song.key)].filter(Boolean).join(' · '))}</p>
+    ${d.chart?`<div class="chartview">${esc(d.chart)}</div>`
+      :`<p class="muted" style="font-size:15px">No chart for this one yet.
+         Tap <b>Edit</b> on it in the Setlist and paste one in.</p>`}
+    <button class="big alt" style="margin-top:16px" data-act="edit" data-id="${esc(id)}">Edit this song</button>`);
+}
+
 async function findLyrics(id){
   toast('Searching…');
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsFetch',song:id})});
   if(!d.ok){toast('Search failed');return;}
   if(!d.found){toast('Nothing found — paste them yourself');return;}
-  const el=$('#esLyrics'); if(el)el.value=d.plain;
-  const c=$('#esCredit'); if(c)c.value=d.credit||'';
-  const o=$('#esOwned'); if(o)o.value='';        // found online, not the artist's own
+  const el=$('#sgLyrics'); if(el)el.value=d.plain;
+  const c=$('#sgCredit'); if(c)c.value=d.credit||'';
+  const o=$('#sgOwned'); if(o)o.value='';        // found online, not the artist's own
   toast('Found — tap Save song to keep them');
 }
 async function clearLyrics(id){
-  const el=$('#esLyrics'); if(el)el.value='';
+  const el=$('#sgLyrics'); if(el)el.value='';
   await api('/admin',{method:'POST',body:JSON.stringify({action:'lyricsSet',song:id,plain:''})});
   toast('Lyrics removed for this song');
 }
@@ -1315,8 +1566,14 @@ function removeSong(id){
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b)return;
   const id=b.getAttribute('data-id');
-  if(b.dataset.act==='edit') editSong(id);
-  if(b.dataset.act==='essave') saveSongEdit(id);
+  if(b.dataset.act==='edit') openSongSheet(id);
+  if(b.dataset.act==='sgsave') saveSongSheet(id||null);
+  if(b.dataset.act==='sgroot') setKeyRoot(id);
+  if(b.dataset.act==='sgmin') setKeyMinor(id==='min');
+  if(b.dataset.act==='sgtag') toggleSongTag(id);
+  if(b.dataset.act==='sgtagnew') addOwnTag();
+  if(b.dataset.act==='chart') openChart(id);
+  if(b.dataset.act==='gfilter') setGenre(id);
   if(b.dataset.act==='lyrfind') findLyrics(id);
   if(b.dataset.act==='lyrclear') clearLyrics(id);
   if(b.dataset.act==='del') removeSong(id);
@@ -1350,10 +1607,12 @@ async function saveGig(){
 }
 /* The printable codes. Caption is what goes UNDER the code on the card, so it
    has to make sense to somebody who has never heard of MySet. */
+/* Two codes here, one in the Venue Studio, three in the whole app. The artist's
+   code goes to their PAGE — from there the room taps through to voting, and they
+   also get the music, the links and the next gigs. */
 const QRS=[
-  ['vote','Vote the setlist','What the room scans during your show','Scan to choose the next song!'],
-  ['profile','Your page','Bio, music, upcoming gigs','Hear more on MySet!'],
-  ['home','MySet','Find gigs anywhere','Find live music near you'],
+  ['profile','Your page','On the tables during your show','Choose the next song'],
+  ['home','MySet','Find gigs anywhere','Find live music near you & choose which songs are played'],
 ];
 const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((TEAM&&TEAM.slug)||'')}&s=${scale}`;
 const qrUrl=k=>k==='home'?'myset.vip'

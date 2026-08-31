@@ -1,5 +1,6 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
-         isUnlimited, publicArtist, json, bad, cleanFanId, markPresence } from './_lib.mjs';
+         isUnlimited, publicArtist, json, bad, cleanFanId, markPresence,
+         GENRES } from './_lib.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
 
 export default async (req) => {
@@ -26,6 +27,8 @@ export default async (req) => {
     id: s.id, title: s.title, artist: s.artist || '',
     votes: counts[s.id] || 0, mine: mine.includes(s.id), cost: costOf(s.id, show),
     firstAt: firstAt[s.id] || null,
+    tags: s.tags || [],
+    // the KEY and the artist's CHART are never in a public payload
   });
 
   // songs still to play
@@ -58,6 +61,18 @@ export default async (req) => {
     songs: ordered, played,
     replayCost: show.replayCost || 5,
     packs: show.packs,
+    /* Only the genres actually used by a song the room can see — a filter row of
+       fifteen chips where twelve match nothing is worse than no filter row. */
+    tags: (() => {
+      const used = new Set();
+      for (const s of show.songs) {
+        if (s.active === false) continue;
+        for (const t of s.tags || []) used.add(t);
+      }
+      const labels = Object.fromEntries([...GENRES, ...show.tags.map((t) => [t.id, t.label])]);
+      return [...used].filter((id) => labels[id]).map((id) => ({ id, label: labels[id] }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+    })(),
     /* Only advertised when it is actually on, so the page never renders a button
        that leads to "sorry, not tonight". */
     asks: {

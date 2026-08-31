@@ -112,6 +112,7 @@ export function defaultShow() {
     requests:  { on: false, cost: 3 },
     birthdays: { on: false, cost: 3 },
     packs: DEFAULT_PACKS(),
+    tags: [],                    // the artist's own genres, on top of the built-ins
     songs: [],
     showId: null,
     artistId: ARTIST_ID,
@@ -121,6 +122,71 @@ export function defaultShow() {
     updatedAt: Date.now(),
   };
 }
+
+/* ---------- genres ----------
+   Fifteen that cover almost everything a working act plays, plus room for
+   fifteen of their own. `singalong` is in the built-in list on purpose: for this
+   product it is more useful than half the real genres. */
+export const GENRES = [
+  ['originals',  'Originals'],
+  ['rock',       'Rock'],
+  ['pop',        'Pop'],
+  ['acoustic',   'Acoustic'],
+  ['country',    'Country'],
+  ['folk',       'Folk'],
+  ['indie',      'Indie'],
+  ['rnb',        'R&B / Soul'],
+  ['blues',      'Blues'],
+  ['reggae',     'Reggae'],
+  ['funk',       'Funk / Disco'],
+  ['hiphop',     'Hip-hop'],
+  ['jazz',       'Jazz'],
+  ['latin',      'Latin'],
+  ['singalong',  'Sing-along'],
+];
+export const GENRE_IDS = new Set(GENRES.map(([id]) => id));
+export const MAX_OWN_TAGS = 15;      // how many they can invent
+export const MAX_TAG_LABEL = 20;     // characters, so a chip stays a chip
+export const MAX_SONG_TAGS = 6;      // per song, so the row stays readable
+
+/** A custom tag id can never collide with a built-in one: it is prefixed. */
+export const tagId = (label) =>
+  'c-' + String(label || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '').slice(0, 22);
+
+export const cleanTagLabel = (v) =>
+  String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, MAX_TAG_LABEL);
+
+const bareId = (label) =>
+  String(label || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+/* A built-in already called that, however they spell it. Otherwise "Rock" as a
+   custom tag sits next to the built-in "Rock" and the filter row has two
+   identical chips that mean different things. */
+const BUILTIN_LABELS = new Set(GENRES.flatMap(([id, label]) => [id, bareId(label)]));
+
+/** Their own tags, cleaned and de-duplicated. Built-ins are code, not data. */
+export function normOwnTags(list) {
+  const out = [], seen = new Set();
+  for (const t of Array.isArray(list) ? list : []) {
+    const label = cleanTagLabel(t && t.label);
+    if (!label) continue;
+    if (BUILTIN_LABELS.has(bareId(label))) continue;      // already a built-in
+    const id = tagId(label);
+    if (!id || id === 'c-' || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ id, label });
+    if (out.length >= MAX_OWN_TAGS) break;
+  }
+  return out;
+}
+/** Label for any tag id, built-in or their own. */
+export const tagLabels = (own) => Object.fromEntries(
+  [...GENRES, ...(own || []).map((t) => [t.id, t.label])]);
+
+/** The key a song is played in. Chips produce "G" / "Gm"; the field also takes
+ *  whatever the artist actually writes on their own charts ("Capo 2", "Drop D"). */
+export const cleanKey = (v) =>
+  String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, 14);
 
 /* What the audience can buy. Editable from the Studio; pay.mjs reads these and
    never trusts a price from the client. */
@@ -179,6 +245,10 @@ export const KEY = {
   hist:    (a, showId) => `hist_${a}_${showId}`,
   lyrics:  (a, songId) => `lyr_${a}_${songId}`,
   reqs:    (a) => `req_${a}`,
+  /* The artist's own chart — words, chords, capo notes, whatever they paste.
+     Its own document because a full chart is kilobytes and `show` is on the hot
+     read path that every phone in the room polls. */
+  chart:   (a, songId) => `chart_${a}_${songId}`,
 };
 /** Artist ids are used inside blob keys, so they must stay boring. */
 export const cleanArtistId = (v) =>
@@ -237,6 +307,16 @@ function normShow(s) {
   show.unlimited = !!show.unlimited;
   show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
+  show.tags = normOwnTags(show.tags);
+  /* Songs carry a key and genre tags. Tags are filtered against what actually
+     exists, so deleting a custom tag cleans itself up on the next read. */
+  const known = new Set([...GENRE_IDS, ...show.tags.map((t) => t.id)]);
+  show.songs = show.songs.map((sg) => ({
+    ...sg,
+    key: cleanKey(sg.key),
+    tags: [...new Set((Array.isArray(sg.tags) ? sg.tags : []).filter((t) => known.has(t)))]
+      .slice(0, MAX_SONG_TAGS),
+  }));
   show.requests = normAsk(show.requests);
   show.birthdays = normAsk(show.birthdays);
   show.artistId ||= ARTIST_ID;

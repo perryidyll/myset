@@ -4,20 +4,26 @@ import { venueKey, sameVenue, domainMatches, mutateVenues } from './_venues.mjs'
 
 /* Proving a venue page belongs to the venue.
 
-   Three independent signals, and a page needs TWO of the first two, or enough of
-   the third:
+   ALL THREE of these are required for the automatic tick:
 
      1. the sign-in email is on the website's own domain
-     2. the website itself actually names this venue and this town
-     3. ten different artists who have a gig listed there say they play there
+     2. the website itself actually names this venue
+     3. five different artists who have a gig listed there say they play there
 
-   (1) alone is weak — anyone can buy a domain and an email on it. (2) alone is
-   weak too: the website is whatever URL they typed in. Together they are strong,
-   because you have to control both the inbox and the site. (3) needs ten
-   accomplices who each have their own account and their own gig history, which is
-   a lot of work to steal a listing for a bar. */
+   Any one of them alone is a claim. (1) is weak because anyone can buy a domain
+   and an email on it. (2) is weak because the website is whatever URL they typed
+   into a form. (3) is weak on its own because five friendly accounts is not
+   impossible. All three together mean somebody controls the inbox AND the site
+   AND is known to five acts who really do play there.
 
-export const MIN_VOUCHES = 10;
+   Perry's manual switch in the Studio remains as an explicit override, for the
+   places a machine cannot judge — a bar with no website whose whole town knows it. */
+
+/* Five, and it is not an OR any more: a page needs the website checks AND five
+   artists. Perry asked for both to be mandatory — one signal is a claim, two
+   independent ones are proof. His own switch in the Studio stays, as an explicit
+   override for the cases a machine can't judge. */
+export const MIN_VOUCHES = 5;
 
 /* ---------- fetching a stranger's website safely ----------
    This is the one place MySet makes an outbound request to a URL somebody typed
@@ -170,25 +176,30 @@ export async function tryVerifyByWebsite(vid, email, venue) {
   const domain = domainMatches(email, site);
   const web = await checkWebsite(venue);
 
-  const passed = domain && web.ok && web.nameFound;
+  const vouches = Object.keys((await readVouches(vid)).by || {}).length;
+
+  const checks = {
+    website: !!site,
+    emailOnDomain: domain,
+    siteNamesVenue: !!(web.ok && web.nameFound),
+    siteNamesTown: !!(web.ok && web.placeFound),   // reported, never required
+    artists: vouches,
+    artistsNeeded: MIN_VOUCHES,
+    artistsDone: vouches >= MIN_VOUCHES,
+  };
+  // every one of them, not any one of them
+  const passed = checks.website && checks.emailOnDomain && checks.siteNamesVenue
+                 && checks.artistsDone;
+
   if (passed) {
     await mutateVenues((r) => {
       const v = r.byId[vid];
       if (!v || v.verified) return false;
-      v.verified = true; v.verifiedVia = 'website'; v.verifiedAt = Date.now();
+      v.verified = true; v.verifiedVia = 'website+artists'; v.verifiedAt = Date.now();
       return true;
     }).catch(() => {});
   }
-  return {
-    passed,
-    checks: {
-      website: !!site,
-      emailOnDomain: domain,
-      siteNamesVenue: !!web.nameFound,
-      siteNamesTown: !!web.placeFound,      // reported, not required — many sites omit it
-    },
-    why: web.ok ? null : web.why,
-  };
+  return { passed, checks, why: web.ok ? null : web.why };
 }
 
 /* ---------- artist vouching ---------- */
@@ -227,17 +238,34 @@ export async function addVouch(vid, aid, who, venue) {
   });
   if (already) return { ok: true, already: true, count, need: MIN_VOUCHES };
 
+  /* Reaching five does NOT verify on its own any more — the website checks have to
+     pass too. So the vouch is recorded and the whole verdict is re-run; if the
+     website side was already good, this is the thing that tips it over. */
   let verified = false;
   if (count >= MIN_VOUCHES) {
-    await mutateVenues((r) => {
-      const v = r.byId[vid];
-      if (!v || v.verified) return false;
-      v.verified = true; v.verifiedVia = 'artists'; v.verifiedAt = Date.now();
-      return true;
-    }).catch(() => {});
-    verified = true;
+    try { verified = (await recheck(vid)).passed; }
+    catch { /* a failed re-check just means "not yet", never an error to the artist */ }
   }
   return { ok: true, count, need: MIN_VOUCHES, verified };
 }
 
 export const vouchCount = async (vid) => Object.keys((await readVouches(vid)).by).length;
+
+/** Whoever claimed the page. Their address is the one that has to be on the
+ *  venue's own domain — a barman added later doesn't count for verification. */
+export async function ownerEmail(vid) {
+  const { readVenues } = await import('./_venues.mjs');
+  const reg = await readVenues();
+  const mine = Object.entries(reg.byEmail || {}).filter(([, v]) => v.venueId === vid);
+  const owner = mine.find(([, v]) => (v.role || 'owner') === 'owner') || mine[0];
+  return owner ? owner[0] : null;
+}
+
+/** Re-run the whole verdict from scratch: website checks plus the vouch count. */
+export async function recheck(vid) {
+  const { getVenueProfile, shapeVenue, venueById } = await import('./_venues.mjs');
+  const email = await ownerEmail(vid);
+  if (!email) return { passed: false, checks: null, why: 'no-owner' };
+  const venue = shapeVenue(await getVenueProfile(vid), await venueById(vid));
+  return tryVerifyByWebsite(vid, email, venue);
+}

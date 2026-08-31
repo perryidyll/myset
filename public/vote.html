@@ -117,6 +117,15 @@
   transition:background .26s var(--ease),color .2s var(--ease),transform .22s var(--spring)}
 .sortbar button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
 .sortbar button:active{transform:scale(.96)}
+/* Genres, and only the ones actually on a song the room can see. */
+.gbar{display:flex;gap:7px;margin:10px 18px 0;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;
+  -webkit-overflow-scrolling:touch}
+.gbar::-webkit-scrollbar{display:none}
+.gbar button{flex:0 0 auto;padding:8px 15px;border-radius:var(--pill);background:var(--surface);
+  box-shadow:var(--sh-1);font-size:13.5px;font-weight:500;color:var(--muted);white-space:nowrap;
+  transition:transform .2s var(--spring)}
+.gbar button:active{transform:scale(.95)}
+.gbar button.on{background:var(--grad);color:#fff;font-weight:600;box-shadow:var(--sh-accent)}
 
 /* ── TIER 3 · POOL ────────────────────────────────────── */
 .sect{display:flex;align-items:baseline;justify-content:space-between;padding:24px 20px 10px}
@@ -222,6 +231,19 @@ async function vote(id){
 
 let SORT=(()=>{try{return localStorage.getItem('myset.sort')||'votes'}catch(e){return 'votes'}})();
 function setSort(v){SORT=v;try{localStorage.setItem('myset.sort',v)}catch(e){}render();}
+/* Genre is deliberately NOT remembered between visits: a filter you forgot you
+   set, on a setlist you have never seen, looks like the artist only knows four
+   songs. */
+let GENRE='';
+function setGenre(id){ GENRE=(GENRE===id?'':id); render(); }
+function genreBar(d){
+  const tags=d.tags||[];
+  if(tags.length<2) return '';          // one genre is not a filter
+  return `<div class="gbar" role="group" aria-label="Filter by genre">
+    <button class="${GENRE?'':'on'}" data-genre="">All</button>
+    ${tags.map(t=>`<button class="${GENRE===t.id?'on':''}" data-genre="${esc(t.id)}">${esc(t.label)}</button>`).join('')}
+  </div>`;
+}
 const collate=(a,b)=>String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base'});
 /* 'votes' keeps the server's ranking (votes desc -> voted-first -> title) so the
    pool always agrees with Up next. The other two are pure browse orders. */
@@ -244,8 +266,9 @@ function render(){
   const voted=d.songs.filter(s=>s.votes>0);
   const queue=voted.slice(0,3);
   const queueIds=new Set(queue.map(s=>s.id));
-  const rest=applySort(d.songs.filter(s=>!queueIds.has(s.id)).filter(match));
-  const replays=applySort((d.played||[]).filter(match));
+  const inGenre=s=>!GENRE||(s.tags||[]).includes(GENRE);
+  const rest=applySort(d.songs.filter(s=>!queueIds.has(s.id)).filter(match).filter(inGenre));
+  const replays=applySort((d.played||[]).filter(match).filter(inGenre));
   const by=a=>a?`<div class="by">${esc(a)}</div>`:'';
 
   let h=`<div class="head">
@@ -293,11 +316,14 @@ function render(){
 
   h += `<div class="sortbar" role="group" aria-label="Sort songs">${SORTS.map(([k,l])=>
     `<button data-sort="${k}" class="${SORT===k?'on':''}" aria-pressed="${SORT===k}">${l}</button>`).join('')}</div>`;
+  h += genreBar(d);
 
-  h += `<div class="sect"><b>${open?'Vote for these':'The setlist'}</b><span>${rest.length} song${rest.length===1?'':'s'}</span></div>`;
+  h += `<div class="sect"><b>${open?'Vote for these':'The setlist'}</b><span>${rest.length} song${rest.length===1?'':'s'}${
+    GENRE?' · '+esc((d.tags||[]).find(t=>t.id===GENRE)?.label||''):''}</span></div>`;
   h += rest.length
     ? `<div class="list">${rest.map(s=>row(s,c,open,false)).join('')}</div>`
-    : `<div class="nores">${q?`Nothing matches “${esc(FILTER)}”`:'Everything’s in the queue above'}</div>`;
+    : `<div class="nores">${q?`Nothing matches “${esc(FILTER)}”`
+        :GENRE?`Nothing in that genre right now`:'Everything’s in the queue above'}</div>`;
 
   if(replays.length) h += `<div class="sect"><b>Already played</b><span>${d.replayCost} votes to hear again</span></div>
     <div class="list">${replays.map(s=>row(s,c,open,true)).join('')}</div>`;
@@ -310,6 +336,8 @@ function render(){
 
   $('#app').querySelectorAll('[data-sort]').forEach(b=>
     b.addEventListener('click',()=>setSort(b.getAttribute('data-sort'))));
+  $('#app').querySelectorAll('[data-genre]').forEach(b=>
+    b.addEventListener('click',()=>setGenre(b.getAttribute('data-genre'))));
 
   const qi=$('#q');
   if(qi){ qi.addEventListener('input',e=>{FILTER=e.target.value;render();});

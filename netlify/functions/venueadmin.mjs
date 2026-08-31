@@ -6,7 +6,7 @@ import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
          endTimeOf, MAX_EVENTS } from './_events.mjs';
 import { readPitches, shapeForVenue, setPitchStatus } from './_pitch.mjs';
 import { venueStats } from './_vstats.mjs';
-import { checkWebsite, tryVerifyByWebsite, vouchCount, readVouches, MIN_VOUCHES } from './_verify.mjs';
+import { checkWebsite, recheck, ownerEmail, readVouches, MIN_VOUCHES } from './_verify.mjs';
 import { localDate, addDays } from './_time.mjs';
 
 /** A venue's own events live in the same store as artists' gigs, under an owner
@@ -133,12 +133,11 @@ export default async (req) => {
      Reports every check separately so the studio can show a checklist instead of
      a yes/no, and runs the real website fetch. */
   if (action === 'verifyCheck') {
-    const p = await getVenueProfile(vid);
-    const reg = await venueById(vid);
-    const v = shapeVenue(p, reg);
-    const [res, vouches] = await Promise.all([
-      tryVerifyByWebsite(vid, me.email, v),
-      readVouches(vid),
+    /* Checked against the email that CLAIMED the page, not whoever happens to be
+       signed in — a barman added later must not be able to verify a venue by
+       having a personal address on some other domain. */
+    const [res, vouches, owner] = await Promise.all([
+      recheck(vid), readVouches(vid), ownerEmail(vid),
     ]);
     const after = await venueById(vid);
     const names = Object.values(vouches.by || {}).map((x) => x.name).filter(Boolean);
@@ -146,7 +145,7 @@ export default async (req) => {
       verified: !!(after && after.verified), via: (after && after.verifiedVia) || null,
       passed: res.passed, checks: res.checks, why: res.why,
       vouches: names.length, need: MIN_VOUCHES, vouchedBy: names.slice(0, 12),
-      email: me.email });
+      email: owner, youAre: me.email, isOwner: owner === me.email });
   }
 
   if (action === 'verifyPreview') {           // just look, don't verify

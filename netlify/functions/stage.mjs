@@ -1,5 +1,5 @@
 import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad,
-         requireArtist, roomCounts } from './_lib.mjs';
+         requireArtist, roomCounts, GENRES } from './_lib.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
 
 export default async (req) => {
@@ -30,6 +30,8 @@ export async function stagePayload(aid) {
       unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],
       requests: show.requests, birthdays: show.birthdays,
     },
+    // the genre vocabulary, so the Setlist tab can render chips and filter by them
+    tags: { builtin: GENRES.map(([id, label]) => ({ id, label })), own: show.tags },
     voters: Object.values(fans).filter((f) => (f.v || []).length).length,
     // phones in the room tonight, not just phones that voted
     room: room.phones,

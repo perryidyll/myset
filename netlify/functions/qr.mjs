@@ -9,6 +9,12 @@ import { venueBySlug, venueById } from './_venues.mjs';
    site a free generator of QR codes pointing anywhere, which is exactly the
    shape of a phishing tool. The caller picks a kind; the URL is built here. */
 
+/* THREE codes, and only three are offered anywhere:
+     profile  an artist's page   "Choose the next song"
+     venue    a venue's page     "Connect with our performers"
+     home     myset.vip          "Find live music near you..."
+   `vote` and `invite` still RESOLVE, because codes printed before this may be on
+   somebody's table — but neither Studio offers them any more. */
 const KINDS = {
   home:    () => 'https://myset.vip',
   profile: (slug) => `https://myset.vip/${slug}`,

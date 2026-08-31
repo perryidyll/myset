@@ -1,6 +1,9 @@
 import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
-         normPacks, normAsk, newShowId, carryFans, STARTER_SONGS } from './_lib.mjs';
+         normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
+         GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
+         MAX_OWN_TAGS, MAX_SONG_TAGS } from './_lib.mjs';
+import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
 import { readRequests, shapeRequests, resolveRequest, attachSong } from './_requests.mjs';
 import { readArtists, mutateArtists } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
@@ -268,6 +271,80 @@ async function handleVenueSide(aid, action, body) {
 }
 const VENUE_SIDE = new Set(['pitchList', 'pitchStatus', 'pitchSend', 'vouch']);
 
+/* Everything the song sheet needs, in one round trip: the song, its chart, its
+   audience lyrics, and the whole tag vocabulary. Charts live in their own
+   documents so this never touches the show record. */
+async function handleSong(aid, action, body, show) {
+  const vocab = () => ({
+    builtin: GENRES.map(([id, label]) => ({ id, label })),
+    own: show.tags, maxOwn: MAX_OWN_TAGS, maxPerSong: MAX_SONG_TAGS,
+  });
+
+  if (action === 'songGet') {
+    const song = show.songs.find((x) => x.id === body.song);
+    if (!song) return bad('unknown song', 404);
+    const [chart, lyr] = await Promise.all([
+      readChart(aid, song.id), readLyrics(aid, song.id),
+    ]);
+    return json({ ok: true, song: {
+      id: song.id, title: song.title, artist: song.artist || '',
+      key: song.key || '', tags: song.tags || [], active: song.active !== false,
+    }, chart, lyrics: {
+      plain: (lyr && lyr.plain) || '', credit: (lyr && lyr.credit) || '',
+      state: (lyr && lyr.state) || 'unfetched', owned: !!(lyr && lyr.owned),
+    }, tags: vocab() });
+  }
+
+  if (action === 'chartSet') {
+    const song = show.songs.find((x) => x.id === body.song);
+    if (!song) return bad('unknown song', 404);
+    await saveChart(aid, song.id, body.chart);
+    return json({ ok: true, chart: await readChart(aid, song.id) });
+  }
+
+  if (action === 'chartFlags')
+    return json({ ok: true, flags: await chartFlags(aid, show.songs.map((x) => x.id)) });
+
+  if (action === 'tagList') return json({ ok: true, tags: vocab() });
+
+  if (action === 'tagAdd') {
+    const label = cleanTagLabel(body.label);
+    if (!label) return bad('Give it a name');
+    let why = null;
+    await mutateShow(aid, (sh) => {
+      const next = normOwnTags([...(sh.tags || []), { label }]);
+      if (next.length === (sh.tags || []).length) {
+        why = (sh.tags || []).length >= MAX_OWN_TAGS
+          ? `That's ${MAX_OWN_TAGS} of your own genres — plenty. Rename one instead.`
+          : 'You’ve already got that one (or it’s one of the built-in genres).';
+        return false;
+      }
+      sh.tags = next;
+      return true;
+    });
+    if (why) return bad(why);
+    const fresh = await getShow(aid);
+    return json({ ok: true, tags: { builtin: GENRES.map(([id, label]) => ({ id, label })),
+      own: fresh.tags, maxOwn: MAX_OWN_TAGS, maxPerSong: MAX_SONG_TAGS } });
+  }
+
+  if (action === 'tagRemove') {
+    const id = String(body.id || '');
+    if (!id.startsWith('c-')) return bad('The built-in genres stay put');
+    await mutateShow(aid, (sh) => {
+      sh.tags = (sh.tags || []).filter((t) => t.id !== id);
+      // and off every song, so nothing points at a tag that no longer exists
+      sh.songs = sh.songs.map((x) => ({ ...x, tags: (x.tags || []).filter((t) => t !== id) }));
+      return true;
+    });
+    const fresh = await getShow(aid);
+    return json({ ok: true, tags: { builtin: GENRES.map(([id2, label]) => ({ id: id2, label })),
+      own: fresh.tags, maxOwn: MAX_OWN_TAGS, maxPerSong: MAX_SONG_TAGS } });
+  }
+  return bad('unknown action', 400);
+}
+const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 'tagAdd', 'tagRemove']);
+
 /* Requests live in their own document, so accepting or declining one never
    rewrites the show — except for `askAccept`, which has to add a song. */
 async function handleAsks(aid, action, body) {
@@ -474,6 +551,7 @@ export default async (req) => {
   const action = body.action;
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
+  if (SONG_ACTIONS.has(action)) return handleSong(aid, action, body, await getShow(aid));
   if (VENUE_SIDE.has(action)) return handleVenueSide(aid, action, body);
   if (ASK_ACTIONS.has(action)) return handleAsks(aid, action, body);
   if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
@@ -507,6 +585,7 @@ export default async (req) => {
     featureCap = f === Infinity ? null : f;
   }
 
+  let newSongId = null;                       // so the sheet can keep editing it
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
   const prevShow = action === 'newShow' ? await getShow(aid) : null;   // read before it resets
 
@@ -611,7 +690,12 @@ export default async (req) => {
         const artist = String(body.artist || '').trim().slice(0, 60);
         let id = slug(title);
         if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
-        show.songs.push({ id, title, artist, active: !startsOff });
+        const known = new Set([...GENRE_IDS, ...show.tags.map((t) => t.id)]);
+        show.songs.push({ id, title, artist, active: !startsOff,
+          key: cleanKey(body.key),
+          tags: [...new Set((Array.isArray(body.tags) ? body.tags : []).filter((t) => known.has(t)))]
+            .slice(0, MAX_SONG_TAGS) });
+        newSongId = id;
         if (startsOff) note = `Added, but switched off — your plan features ${featureCap} at a time.`;
         break;
       }
@@ -620,6 +704,11 @@ export default async (req) => {
         if (!sg) { err = ['unknown song', 404]; return false; }
         if (typeof body.title === 'string' && body.title.trim()) sg.title = body.title.trim().slice(0, 80);
         if (typeof body.artist === 'string') sg.artist = body.artist.trim().slice(0, 60);
+        if (typeof body.key === 'string') sg.key = cleanKey(body.key);
+        if (Array.isArray(body.tags)) {
+          const known = new Set([...GENRE_IDS, ...show.tags.map((t) => t.id)]);
+          sg.tags = [...new Set(body.tags.filter((t) => known.has(t)))].slice(0, MAX_SONG_TAGS);
+        }
         break;
       }
       case 'packs': {
@@ -682,5 +771,5 @@ export default async (req) => {
   // second round trip for every tap, which is most of why buttons felt slow.
   let stage = null;
   try { stage = await stagePayload(aid); } catch { /* the write still succeeded */ }
-  return json({ ok: true, stage, note });
+  return json({ ok: true, stage, note, songId: newSongId });
 };

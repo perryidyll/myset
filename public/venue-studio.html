@@ -40,7 +40,17 @@ a{color:inherit;text-decoration:none}
   gap:12px;padding:15px 18px;background:rgba(0,0,0,.72);
   backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
   border-bottom:.5px solid var(--hair)}
-.head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.028em}
+.head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.028em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Tap the logo to leave, tap the name to see the public page. */
+.homemark{flex:0 0 auto;display:grid;place-items:center;width:34px;height:34px;border-radius:10px;
+  background:var(--grad);box-shadow:0 2px 8px rgba(255,55,95,.34);
+  transition:transform .2s var(--spring)}
+.homemark:active{transform:scale(.9)}
+.homemark svg{width:17px;height:17px;fill:#fff;display:block}
+.whoami{display:flex;align-items:center;gap:6px;min-width:0}
+.whoami span{font-size:12px;color:var(--faint);flex:0 0 auto}
+.whoami:active h1{opacity:.6}
 .pill{flex:0 0 auto;padding:6px 12px;border-radius:var(--pill);font-size:11.5px;font-weight:700}
 .pill.ok{background:rgba(48,209,88,.16);color:var(--good)}
 .pill.no{background:var(--surface-2);color:var(--muted)}
@@ -193,7 +203,13 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
 .sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px}
 .sheet .inp{background:var(--surface-2);box-shadow:0 0 0 1.5px var(--hair-2) inset}
+.grabzone{position:relative;padding:12px 0 10px;margin:-10px 0 0;cursor:grab;touch-action:none}
+.grabzone:active{cursor:grabbing}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
+.sheetx{position:absolute;top:2px;right:-4px;width:34px;height:34px;border-radius:50%;
+  background:var(--surface-2);color:var(--muted);font-size:14px;display:grid;place-items:center;
+  transition:transform .2s var(--spring)}
+.sheetx:active{transform:scale(.9)}
 #busy{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);
   display:none;place-items:center;opacity:0;transition:opacity .18s var(--ease)}
 #busy.on{display:grid;opacity:1}
@@ -612,7 +628,7 @@ function render(){
           <div class="s">${V.verifiedVia==='website'?'Your email is on your website’s domain, and the site names your venue'
             :V.verifiedVia==='artists'?'Ten artists who play here confirmed it':'Checked by MySet'}</div></div>
           <span class="pill ok">✓</span></div></div>`
-      : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Your page says <b>Unverified listing</b> for now. There are two ways to change that and you only need one — the full checklist, with what’s missing, is at the top of the <b>Page</b> tab.</p>
+      : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Your page says <b>Unverified listing</b> for now. Four things are needed and they’re all needed — the checklist, with what’s missing, is at the top of the <b>Page</b> tab.</p>
          <div class="wrap"><button class="big alt" onclick="setTab('page')">Show me the checklist</button></div>`}
 
     <div class="sec"><span class="kick">Codes to print</span></div>
@@ -643,7 +659,14 @@ function render(){
 
   $('#app').innerHTML=`
   <div class="head">
-    <div style="min-width:0"><div class="kick">Venue Studio</div><h1>${esc(V.name||'Your venue')}</h1></div>
+    <a class="homemark" href="/" aria-label="MySet home">
+      <i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>
+    </a>
+    <div style="flex:1;min-width:0"><div class="kick">Venue Studio</div>
+      ${V.slug
+        ? `<a class="whoami" href="/v/${esc(V.slug)}" target="_blank"><h1>${esc(V.name||'Your venue')}</h1><span>↗</span></a>`
+        : `<h1>${esc(V.name||'Your venue')}</h1>`}
+    </div>
     <span class="pill ${V.verified?'ok':'no'}">${V.verified?'✓ Verified':'Unverified'}</span>
   </div>
   <div class="tabs">
@@ -667,9 +690,10 @@ function render(){
    is just a shrug. Every line says exactly what is missing and what to do. */
 function verifyBlock(){
   if(V.verified) return `<div class="note ok"><b>✓ Verified</b>
-    <p>${V.verifiedVia==='website'?'Your sign-in email is on your website’s domain, and the site names your venue.'
-      :V.verifiedVia==='artists'?'Ten artists who play here confirmed it.'
-      :'Checked by MySet.'} The green tick shows on your public page.</p></div>`;
+    <p>${V.verifiedVia==='website+artists'
+        ? 'Your website checks out and the artists who play here confirmed it.'
+        : V.verifiedVia==='owner' ? 'Checked by MySet by hand.'
+        : 'Checked by MySet.'} The green tick shows on your public page.</p></div>`;
 
   const C=(VERIFY&&VERIFY.checks)||{};
   const site=(V.links||{}).website||'';
@@ -681,41 +705,47 @@ function verifyBlock(){
     <span class="bx">${on?'✓':''}</span>
     <span class="m"><b>${label}</b>${hint?`<span>${hint}</span>`:''}</span></div>`;
 
-  return `<div class="note"><b>Unverified listing</b>
+  const done=[!!site,!!C.emailOnDomain,!!C.siteNamesVenue,vouches>=need].filter(Boolean).length;
+  return `<div class="note"><b>Unverified listing · ${done} of 4 done</b>
     <p>Your page works completely either way — this only changes a grey chip to a
        green tick, so people know the details came from you and not from a stranger.
-       There are two ways to get it, and you only need <b>one</b>.</p></div>
+       <b>All four</b> of the below are needed. Any one on its own is just a claim;
+       together they mean somebody controls the venue’s domain, its website, and is
+       known to the acts who really play here.</p></div>
 
-  <div class="sec"><span class="kick">Way 1 — your website</span></div>
-  <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Both of these have to be true. Together they mean you control the venue’s domain <i>and</i> its website — that’s what makes it proof rather than a claim.</p>
+  <div class="sec"><span class="kick">1 · Your website</span></div>
+  <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">We fetch your homepage over https and look for your venue’s name in the words on it.</p>
   <div class="list">
     ${line(!!site,'Your website is on your page', site?esc(site):'Add it on this tab, under “Getting hold of you”')}
-    ${line(!!C.emailOnDomain,'You’re signed in with an email at that domain',
-      dom?`You’re <b>${esc((VERIFY&&VERIFY.email)||'')}</b> — needs to be <b>anything@${esc(dom)}</b>`
+    ${line(!!C.emailOnDomain,'The page was claimed with an email at that domain',
+      dom?`Claimed by <b>${esc((VERIFY&&VERIFY.email)||'—')}</b> — needs to be <b>anything@${esc(dom)}</b>`
          :'Add your website first')}
     ${line(!!C.siteNamesVenue,'Your website names your venue',
       VERIFY?(C.siteNamesVenue?`We found “${esc(V.name)}” on the page`
-        :(VERIFY.why?`Couldn’t read the site (${esc(VERIFY.why)})`:`We read the page and couldn’t find “${esc(V.name)}” on it`))
+        :(VERIFY.why?`Couldn’t read the site (${esc(VERIFY.why)})`:`We read the page and couldn’t find “${esc(V.name)}” in its text`))
         :'Not checked yet — tap below')}
     ${VERIFY&&C.siteNamesTown?line(true,'…and your town','A bonus, not required'):''}
   </div>
   <div class="wrap" style="margin-top:14px">
-    <button class="big alt" onclick="runVerify()">${VERIFY?'Check again':'Check my website now'}</button>
+    <button class="big alt" onclick="runVerify()">${VERIFY?'Run the check again':'Run the check now'}</button>
   </div>
-  ${VERIFY&&!VERIFY.passed&&VERIFY.why?`<p class="muted" style="font-size:12px;padding:10px 20px 0">
-    We fetch your homepage over https and look for your venue’s name in the text. If it’s
-    only in an image or loaded by a script we can’t see it — put the name in the page text,
-    or use Way 2.</p>`:''}
-  ${!site?`<p class="muted" style="font-size:12px;padding:10px 20px 0">No website? Way 2 is for you.</p>`:''}
+  ${VERIFY&&!C.siteNamesVenue&&VERIFY.why?`<p class="muted" style="font-size:12px;padding:10px 20px 0">
+    If your name is only in an image or drawn by a script we can’t see it — put it in the
+    page text somewhere.</p>`:''}
+  ${VERIFY&&VERIFY.isOwner===false?`<p class="muted" style="font-size:12px;padding:10px 20px 0">
+    You’re signed in as <b>${esc(VERIFY.youAre||'')}</b>, but the check uses the address that
+    <b>claimed</b> the page. That’s deliberate — otherwise anyone added later could verify a
+    venue with an address on some other domain.</p>`:''}
 
-  <div class="sec"><span class="kick">Way 2 — the artists who play here</span></div>
-  <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">When <b>${need}</b> different artists who have a gig at your place in their own MySet calendar confirm it, you’re verified. They tap it on your public page. This is the one that works for a bar with no website — and it’s hard to fake, because each of them needs their own account and their own gig history.</p>
+  <div class="sec"><span class="kick">2 · The artists who play here</span></div>
+  <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px"><b>${need}</b> different artists who have a gig at your place in their own MySet calendar have to confirm it. They tap it on your public page. Hard to fake — each one needs their own account and their own gig history.</p>
   <div class="list"><div class="row">
     <div class="m"><div class="t">${vouches} of ${need} confirmed</div>
       <div class="s">${vouches?esc(names.join(', ')):'Nobody yet — send them your page'}</div></div>
-    <span class="pill ${vouches>=need?'ok':'no'}">${Math.round(vouches/need*100)}%</span>
+    <span class="pill ${vouches>=need?'ok':'no'}">${Math.min(100,Math.round(vouches/need*100))}%</span>
   </div></div>
-  <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="shareInvite()">Send artists your page</button></div>`;
+  <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="shareInvite()">Send artists your page</button></div>
+  <p class="muted" style="font-size:12px;padding:14px 20px 0">No website at all? Get to ${need} artists and message us — we check those by hand.</p>`;
 }
 async function runVerify(){
   const d=await post('/venueadmin',{action:'verifyCheck'});
@@ -738,8 +768,8 @@ const fmtTime=t=>{const p=String(t||'').split(':');let h=+p[0];
   if(!Number.isFinite(h))return '';const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
 
 const QRS=[
-  ['venue','Our page','What’s on, menu, offers','Tonight’s music & menu'],
-  ['home','MySet','Find gigs anywhere','Find live music near you'],
+  ['venue','Our page','What’s on, menu, offers','Connect with our performers'],
+  ['home','MySet','Find gigs anywhere','Find live music near you & choose which songs are played'],
 ];
 const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((V&&V.slug)||'')}&s=${scale}`;
 const qrUrl=k=>k==='home'?'myset.vip':`myset.vip/v/${(V&&V.slug)||''}`;
@@ -755,7 +785,69 @@ function qrBig(k){
 }
 function qrHide(e){ if(e&&e.target&&e.target.id!=='qrbig')return; $('#qrbig').classList.remove('on'); }
 
-function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}
+function openSheet(h){
+  const sh=$('#sheet');
+  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
+    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+  sh.style.transform=''; sh.scrollTop=0;
+  $('#bg').classList.add('on'); sh.classList.add('on');
+  attachDrag(sh);
+}
+/* Dismissing a sheet used to mean hitting a 20px strip, which on a phone in a bar
+   is a coin toss. Now:
+     · the grab area is the whole top of the sheet, handle and all
+     · you can also drag from anywhere in the body, as long as the sheet is
+       scrolled to the top and you did not start on a control
+     · it closes on a short flick as well as a long drag (velocity, not just
+       distance), so a quick swipe works like everywhere else
+     · and there is a visible ✕, because a gesture should never be the only way
+       out of anything */
+function attachDrag(sh){
+  const zone=sh.querySelector('.grabzone'); if(!zone)return;
+  let y0=null, dy=0, t0=0, fromBody=false;
+  const CONTROL='input,textarea,select,button,a,[contenteditable]';
+
+  const start=(e,body)=>{
+    y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now(); fromBody=!!body;
+    sh.style.transition='none';
+  };
+  const move=(e)=>{
+    if(y0===null)return;
+    dy=((e.touches?e.touches[0]:e).clientY)-y0;
+    if(dy<0){ dy=0; sh.style.transform='translateX(-50%) translateY(0)'; return; }
+    // dragging from the body only counts while the sheet is still at the top
+    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
+    sh.style.transform=`translateX(-50%) translateY(${dy}px)`;
+    if(e.cancelable)e.preventDefault();
+  };
+  const end=()=>{
+    if(y0===null)return;
+    const speed=dy/Math.max(1,Date.now()-t0);       // px per ms
+    sh.style.transition='';
+    if(dy>70||speed>0.45) closeSheet();
+    else sh.style.transform='translateX(-50%) translateY(0)';
+    y0=null;
+  };
+
+  zone.addEventListener('touchstart',(e)=>start(e,false),{passive:true});
+  zone.addEventListener('touchmove',move,{passive:false});
+  zone.addEventListener('touchend',end);
+  zone.addEventListener('touchcancel',end);
+  zone.addEventListener('mousedown',(e)=>{ start(e,false);
+    const mm=(ev)=>move(ev), mu=()=>{ end();
+      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
+
+  sh.addEventListener('touchstart',(e)=>{
+    if(e.target.closest('.grabzone'))return;              // the zone handles itself
+    if(e.target.closest(CONTROL))return;                  // never fight a control
+    if(sh.scrollTop>0)return;                             // they are reading, not dismissing
+    start(e,true);
+  },{passive:true});
+  sh.addEventListener('touchmove',move,{passive:false});
+  sh.addEventListener('touchend',end);
+  sh.addEventListener('touchcancel',end);
+}
 function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
   if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
