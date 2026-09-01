@@ -275,8 +275,35 @@ If you are about to violate one, stop and say so rather than working around it.
 9d2. **Upgrading wipes unused monthly credits immediately.** If we ever move
     Personal -> Pro, do it at the END of a billing cycle, not the start.
 
-9d5. **The cost numbers are MEASURED, from inside a live function. Do not re-derive
-    them from response times.** This has now been got wrong three times, twice by me.
+9d7. **READ THE BILL. 99% of it is deploys, not traffic.** Read off the Netlify
+    dashboard (Team -> Usage & billing -> Account usage insights) for the
+    2026-08-08 period, because four separate models had guessed instead:
+
+    | | measured | credits |
+    |---|---|---|
+    | Production deploys | 112 (all 4 sites) | **1,680** |
+    | Function compute | **0.53 GB-Hrs** | 5.3 |
+    | Web requests | **27K** | 5.4 |
+    | Bandwidth | **331 MB** | 6.6 |
+    | | | **1,697 — dashboard says 1.7K** |
+
+    That reconciliation is tight enough to confirm all four unit prices AND the
+    deploy count at once. **All metered traffic together is 1.0% of the bill.**
+    So the expensive thing really is deploys (9d0 was right, 9d3 more so), and the
+    polling panic was about a projection, not an invoice.
+
+    Two derived facts worth keeping. **Billed duration is ~71ms per web request**
+    (0.53 GB-Hrs / 27K, at the 1024MB default) — so 9d5's 155ms probe was ~2x high,
+    my original 200ms guess ~3x high, and the 424ms TTFB model ~6x high. And at a
+    genuinely busy artist (590k requests/month) the metered cost is **~263 credits =
+    $2.63/artist/month, 74% margin at $10**, falling to **~$1.20 and 88%** with the
+    two fixes shipped 2026-09-01. Nowhere near the 27% that the TTFB model implied.
+
+    The number that is still MODELLED, not measured, is 590,000 requests/artist/month.
+    27K for the whole team in a month is roughly one gig's worth, so the per-gig shape
+    looks right — but nobody has yet read the usage page after a real busy month.
+
+9d5. **Never re-derive the cost from response times.** This has now been got wrong three times, twice by me.
     The brief assumed 200ms at 128MB and reported 187 credits/artist/month (~81%
     margin). An audit lens measured TTFB, subtracted a static-file baseline, and
     reported a "263ms fixed per-invocation floor" and 726-847 credits (27-52% margin).
