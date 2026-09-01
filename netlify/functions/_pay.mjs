@@ -1,4 +1,30 @@
 import { mutateFan, mutateMeta, readMeta, cleanFanId } from './_lib.mjs';
+import { isPlatformOwner } from './_plan.mjs';
+
+/* ---------- CAN THIS ARTIST TAKE MONEY AT ALL? ----------
+   There is ONE Stripe account behind MySet: the founding artist's. Stripe Connect,
+   which would give each artist their own, is not built — grep the tree for
+   `application_fee_amount`, `transfer_data`, `stripeAccount`, `on_behalf_of` or
+   `accounts.create` and you will find nothing. INVARIANT 0r says so and says not to
+   onboard a second paying artist before it exists.
+
+   But nothing in the code ENFORCED that. A second artist's room got working Buy and
+   Tip buttons, and every payment landed in the founding artist's account — verified
+   findings C031, C054 and C067, which are all this. That is somebody else's money
+   sitting in your Stripe balance, which is a legal problem and not just an awkward
+   one.
+
+   So: until an artist can actually receive money, their audience is not asked for
+   any. A switched-off button with an honest label is a far better failure than a
+   silent misdirection of funds, and INVARIANT 9 already guarantees the whole app
+   works with payments off. INVARIANT 0w is untouched — everything the ROOM
+   experiences stays free either way.
+
+   When Connect lands, this becomes "has this artist finished payout onboarding?"
+   and the rest of the app needs no change. That is the whole point of putting it
+   here, in one function, rather than testing it at each call site. */
+export const canTakeMoney = (aid) =>
+  !!process.env.STRIPE_SECRET_KEY && isPlatformOwner(aid);
 
 /* ONE implementation of "grant what this payment bought".
    Used by the return page (/api/confirm), the Stripe webhook and the artist's

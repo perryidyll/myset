@@ -1,6 +1,7 @@
 import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad,
          requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
+import { canTakeMoney } from './_pay.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
 
 export default async (req) => {
@@ -60,7 +61,12 @@ export async function stagePayload(aid) {
         })), counts, firstAt);
     })(),
     tips: { total: Math.round(total * 100) / 100, count: meta.tips.length, recent: meta.tips.slice(-15).reverse() },
-    paymentsEnabled: !!process.env.STRIPE_SECRET_KEY,
+    paymentsEnabled: canTakeMoney(aid),
+    /* Why, if not. The artist should never have to guess where their money went. */
+    payoutsNote: canTakeMoney(aid) ? null
+      : (process.env.STRIPE_SECRET_KEY
+          ? 'Card payments are off for your room until your payout account is connected — so nothing can land in the wrong place. We’ll tell you the moment it’s ready.'
+          : 'Card payments aren’t switched on for MySet yet.'),
     /* Which blob store this deploy is reading. Artist-only, and only here so a
        preview's data isolation can be CHECKED from outside rather than trusted. */
     store: STORE_NAME,

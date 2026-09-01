@@ -2,6 +2,7 @@ import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, co
          isUnlimited, publicArtist, json, bad, cleanFanId, markPresence,
          GENRES, playable, votable } from './_lib.mjs';
 import { MARK } from './_canary.mjs';
+import { canTakeMoney } from './_pay.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
 
 export default async (req) => {
@@ -96,7 +97,8 @@ export default async (req) => {
       decided: me.decided === show.showId,       // already chose what happens to them
     },
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),
-    paymentsEnabled: !!process.env.STRIPE_SECRET_KEY,
+    // INVARIANT 0ad: never show the room a button that leads to a shrug
+    paymentsEnabled: canTakeMoney(aid),
     updatedAt: show.updatedAt,
   });
 };

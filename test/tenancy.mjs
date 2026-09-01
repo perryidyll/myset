@@ -206,6 +206,31 @@ reg = await readArtists();
 const TA4 = await signToken('ana@example.com', (await import('../netlify/functions/_auth.mjs')).revOf(reg, ana.artistId));
 ok('Ana can sign back in', (await stA(TA4)).ok);
 
+/* ── C031/C054/C067: nobody's audience pays into someone else's account ── */
+console.log('\nC031/C054/C067  the payment gate');
+const payFn = (await import('../netlify/functions/pay.mjs')).default;
+
+// with payments configured but no Connect, only the founding artist can receive
+process.env.STRIPE_SECRET_KEY = 'sk_test_not_a_real_key';
+const pPerry = await hit(showFn, 'https://x/api/show');
+const pAna   = await pub('ana-reyes');
+eq('the founding artist can take money', pPerry.paymentsEnabled, true);
+eq('THE BUG: Ana cannot, so her room is never offered it', pAna.paymentsEnabled, false);
+
+const buyAsAna = await hit(payFn, 'https://x/api/pay?a=ana-reyes',
+  { fan: 'phone9', kind: 'votes', pack: 'small' });
+eq('and the endpoint refuses too, not just the UI', buyAsAna.status, 503);
+const tipAsAna = await hit(payFn, 'https://x/api/pay?a=ana-reyes',
+  { fan: 'phone9', kind: 'tip', amount: 10 });
+eq('tips as well', tipAsAna.status, 503);
+
+// TA4, not TA2 — the C009 section above revoked Ana's earlier devices
+const sAna = await stA(TA4);
+ok('and Ana is told why, in her own Money tab',
+   /payout account/.test(sAna.payoutsNote || ''), sAna.payoutsNote);
+delete process.env.STRIPE_SECRET_KEY;
+eq('with no Stripe key at all, nobody is offered it', (await hit(showFn, 'https://x/api/show')).paymentsEnabled, false);
+
 /* ── INVARIANT 0x: a venue is not an artist ──────────────────────── */
 console.log('\nINVARIANT 0x  the venue boundary is structural, not a permission check');
 

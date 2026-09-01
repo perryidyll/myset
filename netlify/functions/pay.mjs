@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { json, bad, cleanFanId, getShow, publicArtist, sha } from './_lib.mjs';
+import { canTakeMoney } from './_pay.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -14,6 +15,9 @@ export default async (req) => {
 
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
+  /* Not this artist's money to take yet — see canTakeMoney in _pay.mjs. The page
+     should never have offered the button, so this is the backstop, not the UI. */
+  if (!canTakeMoney(aid)) return bad('payments-not-configured', 503);
   const show = await getShow(aid);
   const artist = show.artist || 'the artist';
   const origin = new URL(req.url).origin;
