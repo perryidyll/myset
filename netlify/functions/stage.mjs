@@ -1,5 +1,5 @@
 import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad,
-         requireArtist, roomCounts, GENRES, playable, votable } from './_lib.mjs';
+         requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
 
@@ -61,5 +61,8 @@ export async function stagePayload(aid) {
     })(),
     tips: { total: Math.round(total * 100) / 100, count: meta.tips.length, recent: meta.tips.slice(-15).reverse() },
     paymentsEnabled: !!process.env.STRIPE_SECRET_KEY,
+    /* Which blob store this deploy is reading. Artist-only, and only here so a
+       preview's data isolation can be CHECKED from outside rather than trusted. */
+    store: STORE_NAME,
   };
 }

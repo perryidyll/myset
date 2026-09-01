@@ -1,7 +1,29 @@
 import { getStore } from '@netlify/blobs';
 import { createHash, timingSafeEqual } from 'node:crypto';
 
-export const store = () => getStore('myset');
+/* ONE STORE PER DEPLOY CONTEXT.
+
+   A Netlify deploy preview shares the PRODUCTION blob store by default. That was
+   verified from outside, three ways: curl on a real preview URL returned
+   byte-identical live data (the venue, the 65 songs, the now-playing song); the
+   Stripe key was identical across contexts; and driving admin.mjs from a preview
+   host had addSong / play / newShow all ACCEPTED, after which production showed a
+   test song and a wiped vote tally. 44 such deploys already existed — they were
+   safe only because they were exercised read-only.
+
+   Every blob access in the app goes through this one function, which is the only
+   reason this is a one-line fix rather than an audit of forty call sites.
+
+   Belt and braces, not just this: the Stripe keys are unset for the deploy-preview
+   and branch-deploy contexts, so a preview cannot charge a real card either
+   (INVARIANT 9 — the app works fully with payments off).
+
+   If CONTEXT is absent we fall back to the production name. That is the pre-existing
+   behaviour, so this can never make things worse than they were — but it also means
+   the isolation MUST be verified on a real draft deploy rather than assumed. */
+const CONTEXT = process.env.CONTEXT || '';
+export const STORE_NAME = CONTEXT && CONTEXT !== 'production' ? `myset-${CONTEXT}` : 'myset';
+export const store = () => getStore(STORE_NAME);
 
 /* ---------- starter setlist offered to a new artist ---------- */
 export const STARTER_SONGS = [
