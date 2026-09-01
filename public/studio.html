@@ -722,11 +722,18 @@ async function api(p,o={}){
   try{
     const r=await fetch(API+p,{...o,headers:h});
     return await r.json();
-  }catch(e){ return {ok:false,error:'Connection hiccup — try again'}; }
+  // `offline` distinguishes "the network failed" from "the server said no".
+  // load() used to treat both as an auth failure and throw the artist out to the
+  // sign-in screen mid-gig, killing the refresh timer with it. INVARIANT 16.
+  }catch(e){ return {ok:false,offline:true,error:'Connection hiccup — try again'}; }
   finally{ if(!o.quiet) busy(false); }
 }
 async function load(opts){
   const d=await api('/stage',opts||{});
+  // A transport failure is not a sign-out. Keep the last good screen and let the
+  // interval retry — on bar wifi this fires constantly, and gating here used to
+  // end the gig. `&&D` because on the very first load there is nothing to keep.
+  if(!d.ok&&d.offline&&D) return;
   if(!d.ok){ if(d.error==='unauthorized'){
       CODE='';TOKEN='';localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token'); }
     gate(d.error); return; }

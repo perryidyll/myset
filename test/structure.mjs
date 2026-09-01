@@ -33,6 +33,11 @@ check('public/studio.html', [
   ['consumes inSet (rows)',   /x\.inSet===false\?'Not in this set'/g],
   ['consumes inSet (toast)',  /sg\.inSet===false/g],
   ['sticky offset measured',  /top:var\(--headh/g],
+  /* C001: a dropped poll must not gate the artist out mid-gig (INVARIANT 16).
+     Both halves are needed — the flag without the guard, or the guard without the
+     flag, silently restores the old behaviour. */
+  ['offline flag set in api()',      /offline:true/g],
+  ['offline guard in load()',        /if\(!d\.ok&&d\.offline&&D\) return;/g],
   ['gig setlist select',      /id="gList"/g],
   ['gig "All songs" option',  /value="all"/g],
 ]);

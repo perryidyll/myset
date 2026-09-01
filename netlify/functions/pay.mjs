@@ -71,14 +71,23 @@ export default async (req) => {
     ? { idempotencyKey: sha(`myset-pay|${aid}|${fan}|${body.kind}|${attempt}`).slice(0, 48) }
     : undefined;
 
+  /* Back to the page they came from, not to the founding artist's. success_url
+     hard-coded /vote.html, which drops the slug — so every registered artist's
+     paying fan landed on Perry's voting page, was written into HIS fan store, and
+     could vote in his live tally from a room they were not in. INVARIANT 5b still
+     holds: /:slug/vote serves vote.html, which is what calls /api/confirm. */
+  const { artistById } = await import('./_auth.mjs');
+  const who = await artistById(aid);
+  const back = who && who.slug ? `/${who.slug}/vote` : '/vote.html';
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       line_items: [line],
       metadata,
       // MUST be the page that calls /api/confirm — only vote.html redeems the session
-      success_url: `${origin}/vote.html?paid={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/vote.html?cancelled=1`,
+      success_url: `${origin}${back}?paid={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}${back}?cancelled=1`,
     }, opts);
     // the id goes back so the buyer's phone can re-try redemption if the
     // return trip fails (INVARIANT 5c)
