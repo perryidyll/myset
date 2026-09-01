@@ -275,6 +275,29 @@ If you are about to violate one, stop and say so rather than working around it.
 9d2. **Upgrading wipes unused monthly credits immediately.** If we ever move
     Personal -> Pro, do it at the END of a billing cycle, not the start.
 
+9d11. **THE ONLY REAL GIG WAS 8 VOTERS AND 21 VOTES.** 2026-08-30, The Ugly
+    Duckling, Koh Phangan. That is the entire observational base for every capacity
+    and cost number this project has produced. Two separateresearch passes have since
+    quoted "40 phones" as measured — it is not: that 40 is a SYNTHETIC security
+    probe with fabricated fan ids from the audit, and it landed in a doc where the
+    next reader took it for a room.
+    So every model in 9d5/9d7/9d8 is sized for a room three to five times larger
+    than anything ever observed, and the true numbers are almost certainly LOWER,
+    not higher. Do not quote a capacity figure without saying which of these it
+    rests on. One instrumented gig with a full room settles it.
+
+9d12. **SSE may be a DOWNGRADE for MySet, and the reason is counter-intuitive.**
+    `vote.html`'s `tick()` returns before fetching while `document.hidden`, so a
+    phone in a pocket costs literally NOTHING under polling. An SSE stream holds a
+    socket open for exactly that idle time — and on iOS, WebKit closes persistent
+    connections when Safari is backgrounded, so it churns reconnects instead.
+    MySet's audience keeps its phones in pockets most of a gig, which is the one
+    traffic shape where polling beats push. Measured limits, for when it IS worth
+    it: ~20.8 KB per idle connection through Node's `http`, but only ~2.8 KB
+    through raw `net` — a 7x lever, because the cost is the per-socket HTTP object
+    graph, not buffers. Fly's default `soft_limit` of 20 breaks at connection 21,
+    and its ~2,048-connections-per-edge-per-app cap bites long before memory does.
+
 9d7. **READ THE BILL. 99% of it is deploys, not traffic.** Read off the Netlify
     dashboard (Team -> Usage & billing -> Account usage insights) for the
     2026-08-08 period, because four separate models had guessed instead:
