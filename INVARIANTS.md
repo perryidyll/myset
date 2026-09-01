@@ -237,9 +237,36 @@ If you are about to violate one, stop and say so rather than working around it.
 
 9d0. **Production deploys are the expensive thing, not traffic.** A production
     deploy costs 15 Netlify credits; 10,000 web requests cost 2. On 2026-08-31 I
-    burned ~240 credits in one afternoon on 16 production deploys and blamed the
+    burned ~240 credits in one afternoon on production deploys and blamed the
     polling, which had cost about 5. **Iterate on `netlify deploy` (draft URL,
     0 credits) and deploy to production once, at the end.**
+    The count in that first diagnosis was itself wrong — see 9d3. It said 16; the
+    real number was more than twice that, because half the deploys were triggered
+    by `git push` and nobody was counting them.
+
+9d3. **`git push` IS the production deploy. Never also deploy from the CLI.**
+    `mysetvip` is connected to `github.com/perryidyll/myset` and builds `main`
+    automatically. For weeks it was ALSO being deployed with
+    `netlify deploy --build --prod`, so every shipped change bought two production
+    deploys at 15 credits each. Measured on 2026-09-01 for the 2026-08-08 period:
+    **77 production deploys on mysetvip — 40 from git, 37 from the CLI — ~555
+    credits of pure duplication**, a third of the whole account's burn.
+    It also multiplies per commit: two pushes for one change is two builds, so
+    push code and docs together.
+    Consequences to keep: production is verified from OUTSIDE after the build
+    lands (INVARIANT 17), not from a staged tree; `npm test` runs before the push,
+    not after; and `netlify deploy` with no `--prod` is still the free way to look
+    at something. An env-var change needs a rebuild to take effect —
+    `git commit --allow-empty` and push, or trigger it from the Netlify UI.
+
+9d4. **Only production deploys cost credits — and `credit-burn.sh` used to bill
+    the free ones.** It counted every `state == 'ready'` deploy at 15 credits,
+    drafts and deploy previews included, and asked for a single page of 200. On
+    2026-09-01 that made it report ~2,550 credits against a true 1,680, which
+    would have pushed Perry onto Pro on a false number — and 9d2 says upgrading at
+    the wrong moment forfeits the month's unused credits. It now filters on
+    `context == 'production'`, pages properly, and shows the git/CLI split so a
+    regression of 9d3 is visible in the one place anybody looks.
 
 9d1. **Never downgrade to the Free plan.** Purchased credit packs survive
     indefinitely *"as long as you remain on a paid plan"* — dropping to Free

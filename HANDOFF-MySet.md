@@ -281,7 +281,7 @@ storage traps that cost hours to find and will silently lose votes if reintroduc
 | Pages | `index.html` (artist home) · `vote.html` (audience voting) · `studio.html` (artist control) · `stage.html` → redirects to studio |
 | API | `/api/show` `/api/vote` `/api/pay` `/api/confirm` `/api/stage` `/api/admin` |
 | Storage | Netlify Blobs: `show` (config) · `f0..f11` (sharded fan records) · `meta` (tips + payment markers) |
-| Deploy | `cd ~/Docs/MySet && netlify deploy --build --prod` |
+| Deploy | **`git push`** — Netlify auto-builds `main`. Never `--prod` from the CLI (INVARIANT 9d3). |
 
 ## Secrets (never in the repo)
 - `ADMIN_CODE` — the Studio passcode, Netlify env only.

@@ -48,7 +48,7 @@ To switch them on, add your Stripe **secret key** yourself — I never see it:
 
 **Option A — one command (from `~/Docs/MySet`):**
 ```bash
-export PATH="$HOME/.local/node/bin:$PATH" && netlify env:set STRIPE_SECRET_KEY "PASTE_YOUR_KEY" --context production --secret && netlify deploy --build --prod
+export PATH="$HOME/.local/node/bin:$PATH" && netlify env:set STRIPE_SECRET_KEY "PASTE_YOUR_KEY" --context production --secret && git commit --allow-empty -m "Redeploy: Stripe key" && git push
 ```
 
 **Option B — in the browser:**

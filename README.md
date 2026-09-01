@@ -38,11 +38,16 @@ python3 -m http.server 8940
 
 ## Deploy
 
-Deploys to the Netlify project **mysetvip**:
+The Netlify project **mysetvip** builds `main` automatically, so **pushing is
+deploying**:
 
 ```bash
-cd ~/Docs/MySet && netlify deploy --build --prod
+cd ~/Docs/MySet && npm test && git push
 ```
+
+Do **not** also run `netlify deploy --prod` — that produces a second, duplicate
+production deploy for the same change (INVARIANT 9d3). `netlify deploy` with no
+`--prod` gives a free draft URL and is still the right way to preview.
 
 **The publish directory is `public/` and must stay that way** (see INVARIANT 10) — publishing the
 repo root once exposed docs, backups and the design handoff on the live domain.
