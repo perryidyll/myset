@@ -1,6 +1,7 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
          isUnlimited, publicArtist, json, bad, cleanFanId, markPresence,
          GENRES, playable, votable } from './_lib.mjs';
+import { MARK } from './_canary.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
 
 export default async (req) => {
@@ -62,6 +63,7 @@ export default async (req) => {
 
   return json({
     ok: true,
+    src: MARK,                                 // provenance — see _canary.mjs
     artistId: aid, artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
     status: show.status, windowOpen: !!show.windowOpen,
     nowPlaying: np ? { id: np.id, title: np.title, artist: np.artist || '' } : null,

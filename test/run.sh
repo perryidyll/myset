@@ -23,3 +23,6 @@ node test/unit.mjs
 echo
 echo "── end to end ──"
 node --import ./test/register.mjs test/e2e.mjs
+echo
+echo "── cross-tenant isolation ──"
+node --import ./test/register.mjs test/tenancy.mjs
