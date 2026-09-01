@@ -105,6 +105,11 @@ const eq = (a, b) => {
 };
 const TOKEN_TTL = 30 * 24 * 3600e3;
 
+/** This venue's own rev, falling back to the registry-wide one for records that
+ *  predate per-venue revs. See revOf() in _auth.mjs for why the fallback matters. */
+export const vRevOf = (reg, vid) =>
+  ((reg.byId || {})[vid] || {}).rev ?? reg.rev ?? 1;
+
 export async function signVenueToken(email, rev) {
   const body = `v|${email}|${Date.now() + TOKEN_TTL}|${rev}`;
   const mac = createHmac('sha256', await authSecret()).update(body).digest('base64url');
@@ -121,9 +126,10 @@ export async function verifyVenueToken(token) {
   const [tag, email, exp, rev] = body.split('|');
   if (tag !== 'v' || !email || Number(exp) < Date.now()) return null;
   const reg = await readVenues();
-  if (String(reg.rev) !== String(rev)) return null;
   const link = reg.byEmail[email];
   if (!link || !reg.byId[link.venueId]) return null;
+  // per-venue, same reasoning and same fallback as revOf() in _auth.mjs
+  if (String(vRevOf(reg, link.venueId)) !== String(rev)) return null;
   return { email, venueId: link.venueId, role: link.role, venue: reg.byId[link.venueId] };
 }
 

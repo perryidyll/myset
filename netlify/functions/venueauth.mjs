@@ -2,7 +2,7 @@ import { json, bad } from './_lib.mjs';
 import { normEmail, validEmail, issueCode, checkCode, sendCode,
          signTicket, readTicket, cleanSlug } from './_auth.mjs';
 import { readVenues, mutateVenues, createVenue, requireVenue, signVenueToken,
-         verifyVenueToken, getVenueProfile, domainMatches } from './_venues.mjs';
+         verifyVenueToken, getVenueProfile, domainMatches , vRevOf } from './_venues.mjs';
 
 /* Sign-in for VENUES. The same email-and-a-code flow as artists, in its own
    realm: separate registry, separate token tag, separate one-time-code key. The
@@ -54,7 +54,7 @@ export default async (req) => {
 
     const link = reg.byEmail[email];
     const venue = reg.byId[link.venueId];
-    return json({ ok: true, token: await signVenueToken(email, reg.rev), email,
+    return json({ ok: true, token: await signVenueToken(email, vRevOf(reg, reg.byEmail[email].venueId)), email,
                   venueId: link.venueId, slug: venue.slug, name: venue.name || '' });
   }
 
@@ -74,7 +74,7 @@ export default async (req) => {
     const reg = await readVenues();
     const link = reg.byEmail[email];
     const venue = reg.byId[link.venueId];
-    return json({ ok: true, token: await signVenueToken(email, reg.rev), email,
+    return json({ ok: true, token: await signVenueToken(email, vRevOf(reg, reg.byEmail[email].venueId)), email,
                   venueId: link.venueId, slug: venue.slug, name: venue.name, isNew: true });
   }
 
@@ -124,7 +124,13 @@ export default async (req) => {
   }
 
   if (action === 'revokeAll')
-    await mutateVenues((r) => { r.rev = (r.rev || 1) + 1; return true; });
+    // only THIS venue's devices — see vRevOf() in _venues.mjs
+    await mutateVenues((r) => {
+      const m = r.byId[me.vid];
+      if (!m) return false;
+      m.rev = (m.rev ?? r.rev ?? 1) + 1;
+      return true;
+    });
 
   /* Instant verification when the person who claimed it has an email at the
      venue's own website. Everything else stays an unverified listing until a

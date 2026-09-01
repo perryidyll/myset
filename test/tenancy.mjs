@@ -184,6 +184,28 @@ const TA2 = await signToken('ana@example.com', reg.rev);
 const afterRev2 = await hit(stageFn, 'https://x/api/stage', undefined, TA2);
 ok('and a freshly signed token works again', afterRev2.ok, afterRev2.status);
 
+/* ── C009: signing out is per-artist ─────────────────────────────── */
+console.log('\nC009  "Sign out every device" must mean MY devices');
+
+const authFn = (await import('../netlify/functions/auth.mjs')).default;
+reg = await readArtists();
+const TA3 = await signToken('ana@example.com', (await import('../netlify/functions/_auth.mjs')).revOf(reg, ana.artistId));
+const TB3 = await signToken('bo@example.com',  (await import('../netlify/functions/_auth.mjs')).revOf(reg, bo.artistId));
+ok('both are signed in to start', (await stA(TA3)).ok && (await stA(TB3)).ok);
+
+const rv = await hit(authFn, 'https://x/api/auth', { action: 'revokeAll' }, TA3);
+ok('Ana revokes her own devices', rv.ok !== false, rv);
+eq('Ana is signed out', (await stA(TA3)).status, 401);
+/* THE BUG: one global `reg.rev` meant this bumped everybody. Signup is open, so
+   any stranger could sign out every artist and every venue on the platform. */
+ok('THE BUG: Bo is still signed in', (await stA(TB3)).ok, (await stA(TB3)).status);
+const TVafter = await hit(vadminFn, 'https://x/api/venueadmin', { action: 'profile' }, TV);
+ok('and the venue is still signed in', TVafter.status !== 401, TVafter.status);
+
+reg = await readArtists();
+const TA4 = await signToken('ana@example.com', (await import('../netlify/functions/_auth.mjs')).revOf(reg, ana.artistId));
+ok('Ana can sign back in', (await stA(TA4)).ok);
+
 /* ── INVARIANT 0x: a venue is not an artist ──────────────────────── */
 console.log('\nINVARIANT 0x  the venue boundary is structural, not a permission check');
 
