@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { json, bad, cleanFanId, getShow, publicArtist } from './_lib.mjs';
+import { json, bad, cleanFanId, getShow, publicArtist, sha } from './_lib.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -55,6 +55,22 @@ export default async (req) => {
     return bad('unknown kind');
   }
 
+  /* One tap, one Checkout Session, however many times the request is retried.
+     The client mints `attempt` per TAP, so a retry of the same tap reuses the
+     session while a deliberate second purchase gets a new one.
+
+     Worth being honest about what this does and does not buy us. It is NOT what
+     stops a double charge — an abandoned session is never charged, and the money
+     path is already replay-safe through redeemSession (INVARIANT 7). It stops
+     duplicate session objects, and it is the habit that matters the moment we
+     ever create a charge or a refund server-side, where a retry DOES cost money.
+     No attempt id (an older cached page) means no key, rather than a made-up one
+     that could collide with somebody else's purchase. */
+  const attempt = String(body.attempt || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+  const opts = attempt
+    ? { idempotencyKey: sha(`myset-pay|${aid}|${fan}|${body.kind}|${attempt}`).slice(0, 48) }
+    : undefined;
+
   try {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -63,7 +79,7 @@ export default async (req) => {
       // MUST be the page that calls /api/confirm — only vote.html redeems the session
       success_url: `${origin}/vote.html?paid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/vote.html?cancelled=1`,
-    });
+    }, opts);
     // the id goes back so the buyer's phone can re-try redemption if the
     // return trip fails (INVARIANT 5c)
     return json({ ok: true, url: session.url, id: session.id });

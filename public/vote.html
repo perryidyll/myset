@@ -543,7 +543,9 @@ function openTip(){
 function pickTip(v){sel.tip=v;buzz(8);[5,10,20].forEach(k=>$('#t-'+k).classList.toggle('on',k===v));const a=$('#tipAmt');if(a)a.value='';}
 async function checkout(kind){
   const btn=kind==='votes'?$('#goBuy'):$('#goTip');
-  const body={fan:FAN,kind};
+  // one id per TAP, so a retried request reuses the session and a deliberate
+  // second purchase makes a new one — see the note in pay.mjs
+  const body={fan:FAN,kind,attempt:'t'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-5)};
   if(kind==='votes')body.pack=sel.pack||'small';
   else{const c=parseFloat(($('#tipAmt')||{}).value);
     body.amount=Number.isFinite(c)&&c>0?c:(sel.tip||10);
