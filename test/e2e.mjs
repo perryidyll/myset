@@ -253,6 +253,22 @@ ok('re-sending the SAME song is simply already done', dt3.ok, dt3);
 eq('still that song, played[] untouched', (await A('window', { open: true })).stage.show.nowPlaying, dIds[0]);
 process.env.MYSET_DOUBLE_TAP_MS = '0';           // back to machine speed
 
+/* ── the presence optimisation must not break the head-count ────── */
+console.log('\nhead-count survives skipping the redundant presence read');
+await A('newShow');
+await A('status', { status: 'live' });
+const roomOf = async () => (await A('window', { open: true })).stage.room;
+eq('empty room to start', await roomOf(), 0);
+await hit(showFn, 'https://x/api/show?fan=ph1&in=1');
+eq('one phone counted on its first poll', await roomOf(), 1);
+for (let i = 0; i < 5; i++) await hit(showFn, 'https://x/api/show?fan=ph1&in=1');
+eq('and still one after five more polls', await roomOf(), 1);
+await hit(showFn, 'https://x/api/show?fan=ph2&in=1');
+await hit(showFn, 'https://x/api/show?fan=ph3&in=1');
+eq('three phones', await roomOf(), 3);
+await hit(showFn, 'https://x/api/show?fan=ph4');            // no in=1
+eq('a profile view is NOT in the room (INVARIANT 0af)', await roomOf(), 3);
+
 console.log('\nEVERY song in the public payload must be votable');
 await A('listUse', { id: lid });
 await A('play', { song: 'alpha' });

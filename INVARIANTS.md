@@ -275,6 +275,40 @@ If you are about to violate one, stop and say so rather than working around it.
 9d2. **Upgrading wipes unused monthly credits immediately.** If we ever move
     Personal -> Pro, do it at the END of a billing cycle, not the start.
 
+9d5. **The cost numbers are MEASURED, from inside a live function. Do not re-derive
+    them from response times.** This has now been got wrong three times, twice by me.
+    The brief assumed 200ms at 128MB and reported 187 credits/artist/month (~81%
+    margin). An audit lens measured TTFB, subtracted a static-file baseline, and
+    reported a "263ms fixed per-invocation floor" and 726-847 credits (27-52% margin).
+    Both were wrong, in opposite directions, because **Netlify bills handler wall
+    clock, not time-to-first-byte** — the 285-350ms TTFB delta over a static file is
+    network and routing to the function region and is not billed at all.
+    Measured 2026-09-01 by deploying a probe to this account, n=10 per mode:
+    **noop handler 0ms · one strong blob read 42ms · 13 parallel reads 64ms · a whole
+    /api/show poll ~155ms.** There is no fixed floor. Actual JavaScript CPU is ~3ms —
+    the function is ~98% waiting, billed at 1GB-hour rates because **Functions default
+    to 1024MB and memory config is Pro-only**.
+    True cost: ~401 credits/artist/month at 5 gigs/week = **$4.01** at this account's
+    verified marginal price of **$0.01/credit** (`plan_auto_topup_per_unit_cost`, read
+    from the account API — not the Pro pack rate, which flatters every figure by a
+    third). **53% margin at $10/month, not 81%.**
+    Consequence worth keeping: at ~401 credits/artist, **two** artists at 5 gigs/week
+    already outspend a whole billing period's production deploys. Deploy discipline
+    (9d3) still matters, but it stops being the dominant line almost immediately.
+
+9d6. **Durable caching and Edge Functions are mutually exclusive, and caching wins.**
+    Netlify, verbatim: *"The durable cache is currently only compatible with Netlify
+    Function responses. The durable directive has no effect on responses from Netlify
+    Edge Functions."* The two land within $0.21/artist/month of each other, so take the
+    one that keeps the Node runtime, `_lib.mjs`, the whole test suite and has no 50ms
+    CPU cliff. Edge is the fallback, and both need the same `/api/show` payload split,
+    so that work is not wasted either way.
+    **And `Netlify-Vary` is silently ignored when a function is reached through the
+    `/api/* -> /.netlify/functions/:splat` rewrite** — measured: three requests
+    differing only in `fan=` all missed via `/api/`, but hit on the direct path. The
+    fix is to sidestep it: make the cacheable URL carry only `?a=<slug>` so every
+    phone requests an identical URL and no Vary is needed.
+
 9d. **Every phone in the room polls.** At 3s, a two-hour gig with twenty people
     is ~24,000 function calls — enough to exhaust a month's free tier in a few
     shows, which is exactly what happened on 2026-08-31. `vote.html` backs off

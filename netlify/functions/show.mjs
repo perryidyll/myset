@@ -1,6 +1,6 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
          isUnlimited, publicArtist, json, bad, cleanFanId, markPresence,
-         GENRES, playable, votable } from './_lib.mjs';
+         GENRES, playable, votable, roomHash, clientIp } from './_lib.mjs';
 import { MARK } from './_canary.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
@@ -16,7 +16,22 @@ export default async (req) => {
      never there. */
   const inRoom = url.searchParams.get('in') === '1';
   const [show, fans] = await Promise.all([getShow(aid), readFans(aid)]);
-  if (inRoom && fanId) await markPresence(aid, fanId, show, req);
+  /* Don't call markPresence when the stamp is already there. It goes mutateFan ->
+     casDoc -> readDoc of the SAME shard `readFans` merged microseconds earlier in
+     this very invocation, then returns false and writes nothing — so the answer is
+     already in `fans`. This is the same test markPresence applies internally; the
+     point is to reach it without paying for the read.
+
+     MEASURED from inside a live function on this account: one strong blob read is
+     42ms, and a whole poll bills ~155ms. So this removes ~27% of the billed duration
+     of ~99.9% of all polls, which is the largest saving per line of code in the app.
+     Presence is best-effort by design (INVARIANT 0af) so a miss is harmless. */
+  if (inRoom && fanId) {
+    const me0 = fans[fanId];
+    const already = me0 && me0.seenShow === show.showId
+      && me0.ipH === roomHash(aid, clientIp(req));
+    if (!already) await markPresence(aid, fanId, show, req);
+  }
   const counts = voteCounts(fans);
   const firstAt = firstVotedAt(fans);
   const me = fans[fanId] || { v: [], extra: 0 };

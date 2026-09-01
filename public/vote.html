@@ -634,7 +634,19 @@ function signature(){
 }
 function schedule(){
   clearTimeout(TIMER);
-  const wait = QUIET<5 ? 3000 : QUIET<12 ? 6000 : 12000;
+  /* 3s for the first few ticks after something changes, then 6s. The old ladder was
+     3/6/12, and the 12s rung was structurally dead code: reaching it needed
+     5x3 + 7x6 = 57 SECONDS of uninterrupted foreground polling, but tick() returns
+     early while document.hidden so QUIET never advances, and visibilitychange ->
+     wakeUp resets it to 0 on every screen-on. A bar patron's glance is shorter than
+     57 seconds — simulated over the real loop, only 1.8% of polls ever got there.
+     Settling at 6s instead cuts requests ~48%, and web requests are the one billed
+     line that caching can never touch.
+
+     This is NOT the fixed fast interval INVARIANT 9d forbids: 6s is the middle rung
+     that already shipped, and 3s still applies right after a change, which is when
+     the room is actually watching. */
+  const wait = QUIET<3 ? 3000 : 6000;
   TIMER=setTimeout(tick, wait);
 }
 async function tick(){
