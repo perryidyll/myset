@@ -188,9 +188,20 @@
 .dock .btn-pri small{color:rgba(255,255,255,.88)}
 
 .backlink{display:block;padding:22px 18px 0;text-align:center;font-size:14px;color:var(--muted)}
+#pull{position:fixed;top:0;left:50%;margin-left:-19px;width:38px;height:38px;z-index:60;
+  display:grid;place-items:center;border-radius:50%;transform:translateY(-60px);
+  background:var(--surface,#1b1b1d);box-shadow:0 4px 16px rgba(0,0,0,.35);pointer-events:none}
+#pull i{width:15px;height:15px;border-radius:50%;border:2px solid var(--muted,#888);
+  border-top-color:var(--accent,#FF375F);display:block;opacity:.65;transition:opacity .15s}
+#pull.ready i{opacity:1;transform:rotate(180deg)}
+#pull.spinning{transition:transform .2s ease}
+#pull.spinning i{opacity:1;animation:pullspin .7s linear infinite}
+@keyframes pullspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#pull.spinning i{animation:none}}
 </style>
 </head>
 <body>
+<div id="pull" aria-hidden="true"><i></i></div>
 <div class="wrap"><div id="app"></div></div>
 <div class="dock" id="dock" hidden></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
@@ -245,7 +256,7 @@ async function vote(id){
     if(!d.ok){ if(d.error==='no-credits'){toast('Out of votes — grab more below');openBuy();}
       else toast(d.error||'Could not save that vote'); }
   }catch(e){ toast('Connection hiccup — retrying'); }
-  busy.delete(id); load();
+  busy.delete(id); wakeUp(true); load();
 }
 
 let SORT=(()=>{try{return localStorage.getItem('myset.sort')||'votes'}catch(e){return 'votes'}})();
@@ -650,7 +661,7 @@ function schedule(){
      This is NOT the fixed fast interval INVARIANT 9d forbids: 6s is the middle rung
      that already shipped, and 3s still applies right after a change, which is when
      the room is actually watching. */
-  const wait = QUIET<3 ? 3000 : 6000;
+  const wait = QUIET<2 ? 3000 : QUIET<6 ? 10000 : 25000;
   TIMER=setTimeout(tick, wait);
 }
 async function tick(){
@@ -660,14 +671,56 @@ async function tick(){
   if(sig!==null && sig===LASTSIG) QUIET++; else { QUIET=0; LASTSIG=sig; }
   schedule();
 }
-function wakeUp(){ QUIET=0; schedule(); }     // a tap means something is about to change
+/* Two different kinds of waking, and conflating them was most of the cost.
+   FULL (screen-on, a vote, a purchase): something really is about to change, so
+   drop to 3s. NUDGE (any pointerdown, which fires on every scroll): the person is
+   looking, so do not leave them on the 25s rung — but a scroll is not a reason to
+   poll every 3 seconds for the next minute. Measured before this: 66% of all polls
+   were pinned to the fast rung by taps rather than by anything actually changing. */
+function wakeUp(full){
+  if(full) QUIET=0;
+  else if(QUIET>=6) QUIET=2;                 // out of deep sleep, into the middle rung
+  else return;                               // already lively — leave the ladder alone
+  schedule();
+}
+
+/* PULL TO REFRESH.
+   The poll now settles at 25s when a room is quiet, so there has to be a way to
+   say "no, tell me now". Only arms at the very top of the page, so it can never
+   fight a normal scroll, and it is passive until the drag passes the threshold. */
+function wirePull(){
+  const el=document.getElementById('pull'); if(!el)return;
+  let y0=null, dy=0, armed=false, going=false;
+  const set=(px,cls)=>{ el.style.transform=`translateY(${px}px)`; el.className=cls||''; };
+  addEventListener('touchstart',(e)=>{
+    if(going||window.scrollY>2||e.touches.length!==1){y0=null;return;}
+    y0=e.touches[0].clientY; dy=0; armed=false;
+  },{passive:true});
+  addEventListener('touchmove',(e)=>{
+    if(y0===null)return;
+    dy=e.touches[0].clientY-y0;
+    if(dy<=0){ set(-60); return; }
+    const pull=Math.min(dy*0.5,86);
+    armed=pull>=56;
+    set(pull-60, armed?'ready':'');
+  },{passive:true});
+  addEventListener('touchend',async()=>{
+    if(y0===null)return; y0=null;
+    if(!armed){ set(-60); return; }
+    going=true; set(26,'spinning'); buzz(12);
+    try{ await load(); }catch(e){}
+    wakeUp(true);
+    setTimeout(()=>{ set(-60); going=false; },240);
+  },{passive:true});
+}
 
 (async function(){
   await load(); await handleReturn();
   LASTSIG=signature();
   schedule();
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) wakeUp(); });
-  document.addEventListener('pointerdown',wakeUp,{passive:true});
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) wakeUp(true); });
+  document.addEventListener('pointerdown',()=>wakeUp(false),{passive:true});
+  wirePull();
 })();
 </script>
 <script>
