@@ -784,6 +784,40 @@ export default async (req) => {
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const action = body.action;
+
+  /* Read a PUBLIC Spotify playlist's tracks, returning them for the artist to
+     confirm — it writes nothing, so it must never sit inside a CAS callback.
+     Needs SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET (client-credentials flow,
+     no user login); without them it says so instead of pretending. */
+  if (action === 'spotifyPeek') {
+    const cid = process.env.SPOTIFY_CLIENT_ID, sec = process.env.SPOTIFY_CLIENT_SECRET;
+    if (!cid || !sec) return bad('Spotify import isn’t switched on yet — paste your songs as text instead', 503);
+    const m = String(body.url || '').match(/playlist[/:]([A-Za-z0-9]{10,34})/);
+    if (!m) return bad('That doesn’t look like a Spotify playlist link', 400);
+    try {
+      const tok = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded',
+                   authorization: 'Basic ' + Buffer.from(`${cid}:${sec}`).toString('base64') },
+        body: 'grant_type=client_credentials',
+      }).then((r) => r.json());
+      if (!tok.access_token) return bad('Spotify wouldn’t let us in — check the keys', 502);
+      const tracks = [];
+      let url = `https://api.spotify.com/v1/playlists/${m[1]}/tracks?limit=100&fields=items(track(name,artists(name))),next`;
+      for (let page = 0; page < 3 && url; page++) {          // 300 tracks is plenty
+        const r = await fetch(url, { headers: { authorization: `Bearer ${tok.access_token}` } });
+        if (r.status === 404) return bad('Spotify can’t see that playlist — is it public?', 404);
+        const d = await r.json();
+        for (const it of d.items || []) {
+          const t = it && it.track;
+          if (t && t.name) tracks.push({ title: t.name, artist: ((t.artists || [])[0] || {}).name || '' });
+        }
+        url = d.next;
+      }
+      return json({ ok: true, tracks });
+    } catch { return bad('Couldn’t reach Spotify — try again in a minute', 502); }
+  }
+
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);
@@ -816,7 +850,7 @@ export default async (req) => {
      MAX_LIBRARY songs on any plan; the plan only limits how many are live to the
      audience at once. Going over just means the extras arrive switched off. */
   let featureCap = null;
-  if (['addSong', 'starterSetlist', 'toggleSong'].includes(action)) {
+  if (['addSong', 'starterSetlist', 'toggleSong', 'importSongs'].includes(action)) {
     const f = (await planForArtist(aid)).limits.featured;
     featureCap = f === Infinity ? null : f;
   }
@@ -1032,6 +1066,37 @@ export default async (req) => {
             .slice(0, MAX_SONG_TAGS) });
         newSongId = id;
         if (startsOff) note = `Added, but switched off — your plan features ${featureCap} at a time.`;
+        break;
+      }
+      /* Bulk add — CSV upload, pasted text, or a Spotify playlist the client
+         already peeked. Same rules as addSong, applied per row: duplicates by
+         normalised title+artist are skipped rather than suffixed (a re-import
+         must be a no-op), the library cap refuses the remainder loudly, and rows
+         over the featured cap arrive switched off exactly like a single add. */
+      case 'importSongs': {
+        const rows = (Array.isArray(body.songs) ? body.songs : []).slice(0, 300)
+          .map((r) => ({ title: String((r && r.title) || '').trim().slice(0, 80),
+                         artist: String((r && r.artist) || '').trim().slice(0, 60) }))
+          .filter((r) => r.title);
+        if (!rows.length) { err = ['Nothing to import', 400]; return false; }
+        const have = new Set(show.songs.map((s) => `${slug(s.title)}|${slug(s.artist || '')}`));
+        let added = 0, dupes = 0, refused = 0, off = 0;
+        for (const r of rows) {
+          const sig = `${slug(r.title)}|${slug(r.artist)}`;
+          if (have.has(sig)) { dupes++; continue; }
+          if (show.songs.length >= MAX_LIBRARY) { refused++; continue; }
+          const liveNow = show.songs.filter((x) => x.active !== false).length;
+          const startsOff = featureCap !== null && liveNow >= featureCap;
+          let id = slug(r.title);
+          if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
+          show.songs.push({ id, title: r.title, artist: r.artist, active: !startsOff, key: '', tags: [] });
+          have.add(sig); added++; if (startsOff) off++;
+        }
+        if (!added && dupes) { err = ['All of those are already in your songs', 409]; return false; }
+        note = `Added ${added} song${added === 1 ? '' : 's'}`
+          + (dupes ? ` · skipped ${dupes} you already had` : '')
+          + (off ? ` · ${off} arrived switched off (your plan features ${featureCap} at a time)` : '')
+          + (refused ? ` · ${refused} refused — that’s the ${MAX_LIBRARY}-song ceiling` : '');
         break;
       }
       case 'editSong': {

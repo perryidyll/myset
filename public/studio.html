@@ -227,6 +227,10 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   transition:background .22s var(--ease),color .2s}
 .tog button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)}
 
+.bigfile{display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px;border:1.5px dashed var(--hair-2,rgba(128,128,128,.4));border-radius:12px;
+  font-weight:700;font-size:14px;cursor:pointer;margin:0 0 10px;user-select:none}
+.bigfile:active{opacity:.7}
 .inp{width:100%;min-height:50px;padding:14px 16px;font-size:16px;background:var(--surface);
   border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);
   transition:box-shadow .2s var(--ease)}
@@ -1138,6 +1142,7 @@ function render(){
     <div class="wrap" style="padding-top:16px">
       <button class="big bigplay" style="margin:0" onclick="openSongSheet(null)">
         <span>+</span><span style="flex:1">Add a song</span></button>
+      <button class="big alt" style="justify-content:center" onclick="openImport()">⇪ Import songs — CSV, text or Spotify</button>
     </div>
     ${PLAN&&PLAN.ok&&PLAN.limits.featured?`<p class="muted" style="font-size:12px;padding:0 20px;margin:0">
       <b>${active} of ${PLAN.limits.featured}</b> featured. Keep as many as you like (up to ${PLAN.limits.library}) — your plan shows ${PLAN.limits.featured} to the audience at a time. The rest sit switched off.</p>`:''}
@@ -2066,6 +2071,67 @@ async function warmLyrics(){
       <div class="list">${d.missing.map(t=>`<div class="row"><div class="m"><div class="t">${esc(t)}</div></div></div>`).join('')}</div>
       <button class="big" style="margin-top:14px" onclick="closeSheet()">Got it</button>`);
 }
+/* ---------- bulk import: CSV file, pasted text, or a Spotify playlist ----------
+   Parsing happens HERE so the artist sees exactly what will be added before
+   anything is written. The server (importSongs) re-validates everything anyway:
+   dupes are skipped, the library cap refuses loudly, over-cap rows arrive off. */
+let IMP=[];
+function openImport(){
+  IMP=[];
+  openSheet(`<h3>Import songs</h3>
+    <p class="lede">A CSV file, a pasted list, or a public Spotify playlist. One song per line — <b>Title, Artist</b> or <b>Title — Artist</b>. A header row is fine.</p>
+    <label class="bigfile"><input type="file" id="impFile" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="impFile(this)">⇪ Choose a CSV or text file</label>
+    <textarea class="inp" id="impText" rows="5" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" oninput="impParse(this.value)"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input class="inp" id="impSpot" style="flex:1;margin:0" placeholder="Spotify playlist link (public)">
+      <button class="big alt" style="margin:0;padding:12px 16px" onclick="impSpotify()">Fetch</button>
+    </div>
+    <p class="muted" id="impCount" style="font-size:13px;margin:12px 2px 0">Nothing to import yet.</p>
+    <button class="go" id="impGo" onclick="impSend()" disabled>Import</button>`);
+}
+function impParse(text){
+  const rows=[];
+  for(let line of String(text||'').split(/\r?\n/)){
+    line=line.trim(); if(!line)continue;
+    // split on the FIRST comma, em/en dash, hyphen-with-spaces, or tab
+    const m=line.match(/^"?(.*?)"?\s*(?:,|\t| [—–] | - )\s*"?(.*?)"?$/);
+    let title=m?m[1]:line, artist=m?m[2]:'';
+    title=title.trim(); artist=artist.trim();
+    if(!title)continue;
+    if(/^(title|song|track|name)$/i.test(title)&&/^artist/i.test(artist))continue;   // header row
+    rows.push({title:title.slice(0,80),artist:artist.slice(0,60)});
+    if(rows.length>=300)break;
+  }
+  IMP=rows; impShow();
+}
+function impShow(){
+  const c=$('#impCount'),g=$('#impGo');
+  if(c)c.textContent=IMP.length?`${IMP.length} song${IMP.length===1?'':'s'} ready — e.g. “${IMP[0].title}${IMP[0].artist?' — '+IMP[0].artist:''}”`:'Nothing to import yet.';
+  if(g)g.disabled=!IMP.length;
+}
+function impFile(inp){
+  const f=inp.files&&inp.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{const t=$('#impText'); if(t)t.value=String(r.result||'').slice(0,120000); impParse(r.result);};
+  r.readAsText(f);
+}
+async function impSpotify(){
+  const url=($('#impSpot')||{}).value||'';
+  if(!url.trim()){toast('Paste a playlist link first');return;}
+  const c=$('#impCount'); if(c)c.textContent='Asking Spotify…';
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'spotifyPeek',url})});
+  if(!d.ok){toast(d.error||'Couldn’t fetch that');impShow();return;}
+  IMP=(d.tracks||[]).slice(0,300); impShow();
+}
+async function impSend(){
+  if(!IMP.length)return;
+  const g=$('#impGo'); if(g){g.disabled=true;g.textContent='Importing…';}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'importSongs',songs:IMP})});
+  if(!d.ok){toast(d.error||'Import failed');if(g){g.disabled=false;g.textContent='Import';}return;}
+  if(d.stage&&d.stage.ok)D=d.stage;
+  closeSheet(); render(); toast(d.note||'Imported');
+}
+
 async function savePacks(){
   const n=id=>parseFloat(($('#'+id)||{}).value);
   const S={votes:n('pSv'),cents:Math.round(n('pSc')*100)},

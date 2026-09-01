@@ -288,6 +288,19 @@ await voteFn(new Request('https://x/api/vote', {
 const st2 = (await A('window', { open: true })).stage;
 ok('THE BUG: a vote-only fan still registers a network', (st2.nets || 0) >= 1, st2.nets);
 
+console.log('\nBULK IMPORT  dupes skipped, caps respected, a re-import is a no-op');
+const imp1 = await A('importSongs', { songs: [
+  { title: 'Import One', artist: 'Band A' },
+  { title: 'Import Two', artist: 'Band B' },
+  { title: 'Import One', artist: 'Band A' },          // dupe inside the batch
+] });
+ok('imported', imp1.ok, imp1);
+ok('says 2 added and 1 skipped', /Added 2/.test(imp1.note) && /skipped 1/.test(imp1.note), imp1.note);
+const imp2 = await A('importSongs', { songs: [{ title: 'Import One', artist: 'Band A' }] });
+eq('a full re-import is refused as already-have', imp2.status, 409);
+const impEmpty = await A('importSongs', { songs: [] });
+eq('an empty import is a 400, not a crash', impEmpty.status, 400);
+
 console.log('\nEVERY song in the public payload must be votable');
 await A('listUse', { id: lid });
 await A('play', { song: 'alpha' });
