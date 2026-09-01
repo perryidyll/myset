@@ -418,6 +418,7 @@ let TAB=localStorage.getItem('myset.tab')||'live';
    so the two screens never disagree about where a song is. 'votes' keeps the
    server's ranking (votes desc -> voted-first -> title). */
 let SETQ='', SETFOCUS=false;
+let HISTQ='', HISTFOCUS=false, HSHOWN=[];   // the Money tab's past-shows search
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
 const collate=(a,b)=>String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base'});
@@ -695,8 +696,12 @@ function genreBar(songs){
   if(!used.size) return '';
   const items=[...used.entries()].map(([id,n])=>({id,n,label:tagLabel(id)}))
     .sort((a,b)=>a.label.localeCompare(b.label));
+  /* '__hidden' is a pseudo-filter, not a tag: switched-off songs. Studio-only —
+     the audience never sees hidden songs, so the chip would be meaningless there. */
+  const hid=songs.filter(x=>x.active===false).length;
   return `<div class="gbar">
     <button class="${GENRE?'':'on'}" data-act="gfilter" data-id="">All</button>
+    ${hid?`<button class="${GENRE==='__hidden'?'on':''}" data-act="gfilter" data-id="__hidden">Hidden <b>${hid}</b></button>`:''}
     ${items.map(t=>`<button class="${GENRE===t.id?'on':''}" data-act="gfilter" data-id="${esc(t.id)}">${esc(t.label)} <b>${t.n}</b></button>`).join('')}
   </div>`;
 }
@@ -1125,7 +1130,7 @@ function render(){
     const active=songs.filter(x=>x.active!==false).length;
     const q=SETQ.trim().toLowerCase();
     const shown=applySetSort(songs
-      .filter(x=>!GENRE||(x.tags||[]).includes(GENRE))
+      .filter(x=>GENRE==='__hidden'?x.active===false:(!GENRE||(x.tags||[]).includes(GENRE)))
       .filter(x=>!q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q)));
     body=`
     <div class="wrap" style="padding-top:18px">
@@ -1285,14 +1290,30 @@ function render(){
         </div>
         ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
         <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Tap “New show” in Settings when the next gig starts.':'Tonight gets filed away when you end the show or start a new one.'}</p>
-        <div class="sec"><span class="kick">Past shows</span><span class="kick">${H.shows.length}</span></div>
-        <div class="list">${H.shows.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
+        ${(()=>{  /* filter by anything a night is remembered by: venue, city, date, weekday */
+          const hw=HISTQ.toLowerCase().split(/\s+/).filter(Boolean);
+          const hay=x=>{const d=new Date(x.endedAt||x.startedAt||0);
+            return [x.venue,x.city,dstamp(x.endedAt||x.startedAt),
+                    ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][d.getDay()]]
+              .filter(Boolean).join(' ').toLowerCase();};
+          HSHOWN=hw.length?H.shows.filter(x=>{const h=hay(x);return hw.every(w=>h.includes(w));}):H.shows;
+          return '';})()}
+        <div class="sec"><span class="kick">Past shows</span><span class="kick">${
+          HISTQ?`${HSHOWN.length} of ${H.shows.length}`:H.shows.length}</span></div>
+        ${H.shows.length>3?`<div class="find" style="margin-bottom:8px">
+          <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
+          <input id="histq" type="search" placeholder="Find a night — venue, city, “friday”, “12 Aug”…"
+            value="${esc(HISTQ)}" autocomplete="off">
+          ${HISTQ?`<button class="clr" onclick="HISTQ='';HISTFOCUS=false;render()" aria-label="Clear search">✕</button>`:''}
+        </div>`:''}
+        <div class="list">${HSHOWN.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
           <div class="m"><div class="t">${esc(x.venue||'Untitled show')}</div>
             <div class="by">${esc(x.city||'')}</div>
             <div class="s">${dstamp(x.endedAt||x.startedAt)} · ${x.songsPlayed} song${x.songsPlayed===1?'':'s'} · ${x.totalVotes} votes · ${x.peakVoters} people</div></div>
           <div class="cnt mono">$${Math.round(x.gross||0)}</div>
           <button class="act" data-act="show" data-id="${x.showId}">Open</button></div>`).join('')
-          ||'<div class="row muted">No finished shows yet. End a show and it gets filed here.</div>'}</div>`;
+          ||(HISTQ?`<div class="row muted">Nothing matches “${esc(HISTQ)}”. A venue, a city, a weekday or a date all work.</div>`
+                  :'<div class="row muted">No finished shows yet. End a show and it gets filed here.</div>')}</div>`;
       }
       let pays='';
       if(!R) pays=`<div class="sec"><span class="kick">All payments</span></div>
@@ -1308,7 +1329,7 @@ function render(){
           <b>${R.unredeemed} payment${R.unredeemed===1?' was':'s were'} never delivered</b>
           <p>Someone paid and the app didn’t hand over what they bought. This gives it to them — safe to tap twice.</p>
           <button class="big" onclick="recover()">Deliver ${R.unredeemed===1?'it':'them'} now</button></div>`:''}
-        <div class="sec"><span class="kick">All payments, all time</span><span class="kick">$${t.all.toFixed(2)}</span></div>
+        <div class="sec"><span class="kick">All payments · last 180 days</span><span class="kick">$${t.all.toFixed(2)}</span></div>
         <div class="list">${R.payments.map(p=>`<div class="row">
           <div class="m">
             <div class="t">$${p.amount.toFixed(2)} · ${p.kind==='tip'?'Tip':esc(p.votes+' extra votes')}</div>
@@ -1602,6 +1623,9 @@ function render(){
   const sq=$('#setq');
   if(sq){ sq.addEventListener('input',e=>{SETFOCUS=true;SETQ=e.target.value;render();});
     if(SETFOCUS){ sq.focus(); const v=sq.value; sq.setSelectionRange(v.length,v.length); } }
+  const hq=$('#histq');
+  if(hq){ hq.addEventListener('input',e=>{HISTFOCUS=true;HISTQ=e.target.value;render();});
+    if(HISTFOCUS){ hq.focus(); const v=hq.value; hq.setSelectionRange(v.length,v.length); } }
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
   fitTabs();
 }

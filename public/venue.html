@@ -174,9 +174,29 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;
   border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+
+/* Loading splash — the homepage's intro, reused as a real loading state: black
+   ground, the three bars, the wordmark. Hidden by hideIntro() on first render
+   rather than a timer, because this page has a fetch to wait for. */
+#intro{position:fixed;inset:0;z-index:90;background:#0D0B0C;display:grid;place-items:center}
+#intro.off{opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s .4s}
+#intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
+#intro .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;
+  background:linear-gradient(135deg,#FF375F,#FF7A45);animation:introbar 1.05s ease-in-out infinite alternate}
+#intro .bars i:nth-child(1){animation-delay:.02s;--h:38px}
+#intro .bars i:nth-child(2){animation-delay:.12s;--h:64px}
+#intro .bars i:nth-child(3){animation-delay:.22s;--h:28px}
+#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#fff}
+@keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
+@media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true"><div>
+  <div class="bars"><i></i><i></i><i></i></div>
+  <div class="word">MySet</div>
+</div></div>
+
 <div class="wrap">
   <div class="brandbar">
     <a class="mark" href="/"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet <small>· venue</small></a>
@@ -223,13 +243,15 @@ let V=null, MINE=null;
    real without another login. */
 const ATOK=(()=>{try{return localStorage.getItem('myset.token')||''}catch(e){return ''}})();
 
+function hideIntro(){const i=document.getElementById('intro');if(i)i.classList.add('off');}
 async function boot(){
-  if(!SLUG){ notFound(); return; }
+  if(!SLUG){ notFound(); hideIntro(); return; }
   let d=null;
   try{ d=await fetch(`${API}/venue?v=${encodeURIComponent(SLUG)}`,{cache:'no-store'}).then(r=>r.json()); }catch(e){}
   V=d;
-  if(!d||!d.ok){ notFound(!d||d.error==='unknown venue'); return; }
+  if(!d||!d.ok){ notFound(!d||d.error==='unknown venue'); hideIntro(); return; }
   render();
+  hideIntro();
   if(ATOK) loadMine();
 }
 async function loadMine(){

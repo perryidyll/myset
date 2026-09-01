@@ -293,10 +293,10 @@ function gate(err,mode){
     inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">You're in. What's the place called? This is the name people will see.</p>
       <input class="inp" id="newName" maxlength="70" placeholder="The Ugly Duckling" autocomplete="off">
       <div style="display:flex;gap:8px;margin-top:8px">
-        <input class="inp" id="newCity" maxlength="60" placeholder="City / island" style="flex:1">
+        <input class="inp" id="newCity" maxlength="60" placeholder="City" style="flex:1">
         <input class="inp" id="newCountry" maxlength="60" placeholder="Country" style="flex:1">
       </div>
-      <button class="big" style="margin-top:12px" onclick="claim()">Create our page</button>
+      <button class="big" style="margin-top:12px" onclick="claim()">Create your page</button>
       <p class="muted" style="font-size:12px;margin:12px 0 0">City and country are how artists' gigs find their way onto your page — put them exactly as they'd write them.</p>`;
   }else{
     inner=`<p class="muted" style="font-size:14px;margin:0 0 6px">${err==='unauthorized'?'That didn’t work — try again.'

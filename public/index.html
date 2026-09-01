@@ -203,6 +203,10 @@ body{padding-bottom:34px}
 .step2 div b{color:var(--ink);font-weight:600}
 .sheetfoot{margin:18px 0 0;padding-top:14px;border-top:.5px solid var(--hair);
   font-size:13px;color:var(--faint);line-height:1.5}
+.feedsearch{padding:4px 0 12px}
+.feedsearch .inp{width:100%;min-height:46px;padding:12px 16px;font-size:15.5px;border-radius:14px;
+  border:1.5px solid var(--hair,rgba(128,128,128,.25));background:var(--surface,rgba(255,255,255,.05));color:inherit}
+.feedsearch .inp:focus{outline:none;border-color:var(--accent,#FF375F)}
 </style>
 </head>
 <body>
@@ -393,7 +397,44 @@ async function search(){
     const t=g.time.split(':'); let h=+t[0]; const ap=h<12?'am':'pm'; h=h%12||12;
     return `${h}:${t[1]}${ap}`;
   };
-  $('#out').innerHTML=d.days.map(day=>`
+  /* Keep the fetched week so the search box can re-render it without another
+     request — filtering forty rows is the phone's job, not the server's. */
+  FEED={days:d.days,city,fmt};
+  renderFeed('');
+}
+let FEED=null;
+const DOWS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+/* Every word must land somewhere: the act or event title, the venue, the address,
+   the note, a day of the week ("tue"/"tuesday"), or a time ("8pm", "20:30"). */
+function gigMatches(g,day,words,fmt){
+  if(!words.length)return true;
+  const dow=DOWS[new Date(day.date+'T12:00:00').getDay()]||'';
+  /* "8pm" has to match a 20:00 gig, and fmt() renders that as "8:00pm" — not a
+     substring. So the haystack carries the compact hour form too. Found by
+     driving this with fake data before shipping, not by a user. */
+  const t=g.time.split(':'); let h=+t[0]; const ap=h<12?'am':'pm';
+  const compact=`${h%12||12}${ap}`;
+  const hay=[g.artist,g.title,g.venue,g.address,g.note,day.label,dow,dayMonth(day.date),
+             fmt(g),g.time,compact].filter(Boolean).join(' ').toLowerCase();
+  return words.every(w=>hay.includes(w));
+}
+function renderFeed(q){
+  if(!FEED)return;
+  const {days,city,fmt}=FEED;
+  const words=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
+  const shown=days.map(day=>({...day,gigs:day.gigs.filter(g=>gigMatches(g,day,words,fmt))}))
+                  .filter(day=>day.gigs.length);
+  const total=shown.reduce((a,day)=>a+day.gigs.length,0);
+  const box=`<div class="feedsearch"><input class="inp" id="feedQ" type="search" autocomplete="off"
+      placeholder="Search — a name, a bar, “tuesday”, “8pm”…" value="${esc(q)}"
+      oninput="renderFeed(this.value)"></div>`;
+  if(!shown.length){
+    $('#out').innerHTML=box+`<div class="blank"><b>Nothing matches “${esc(q)}”</b>
+      <p>Try a venue, an act, a day of the week, or a time.</p></div>`;
+    const i0=$('#feedQ'); if(i0){i0.focus();i0.setSelectionRange(q.length,q.length);}
+    return;
+  }
+  $('#out').innerHTML=box+shown.map(day=>`
     <div class="dayhead"><b>${esc(day.label)} <em>– ${dayMonth(day.date)}</em></b><span>${day.count} gig${day.count===1?'':'s'}</span></div>
     <div class="giglist">${day.gigs.map(g=>{
       /* Two kinds of thing are on tonight: a gig an artist listed, and something
@@ -414,7 +455,11 @@ async function search(){
         ${g.maps?dirBtn(g.maps):''}
         <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
-    + `<div class="endcard">That’s everything in ${esc(city)} for the next seven days.</div>`;
+    + `<div class="endcard">${words.length
+        ? `${total} match${total===1?'':'es'} for “${esc(q)}” in ${esc(city)}.`
+        : `That’s everything in ${esc(city)} for the next seven days.`}</div>`;
+  /* re-rendering replaces the input, so put the cursor back where it was */
+  const i=$('#feedQ'); if(i&&words.length!==undefined){i.focus();i.setSelectionRange(q.length,q.length);}
 }
 
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
