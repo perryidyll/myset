@@ -139,6 +139,22 @@ body{padding-bottom:34px}
   border-radius:var(--r);color:var(--muted);font-size:14px;line-height:1.5}
 .artistcta{display:block;margin:26px 18px 0;padding:16px;text-align:center;font-size:14px;
   color:var(--muted);background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)}
+/* The quiet third option under the two "add yours" cards. Not a card itself —
+   somebody who isn't ready to sign up should still have somewhere to go. */
+.learnmore{display:block;margin:12px 18px 0;text-align:center;font-size:13.5px;font-weight:600;
+  color:var(--accent-ink);padding:10px}
+
+/* ── footer nav ──────────────────────────────────────────
+   Two things that must be reachable from anywhere: what this actually is, and
+   how to install it. The install card above is dismissible forever; this is the
+   way back. --muted, not --faint: at 12.5px --faint is 2.4:1 on this background. */
+.footnav{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.footnav a,.footnav button{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;
+  font-size:13.5px;font-weight:600;letter-spacing:-.012em;color:var(--muted);border-radius:var(--pill);
+  transition:color .18s var(--ease),background .18s var(--ease)}
+.footnav a:hover,.footnav button:hover{color:var(--ink);background:var(--bg-2)}
+.footnav .sep{color:var(--hair-2);font-size:12px;user-select:none}
+.footline{font-size:12.5px;color:var(--muted)}
 
 /* ── save to home screen ────────────────────────────────
    Sits under the finder rather than over the content: a bar that covers what
@@ -187,6 +203,10 @@ body{padding-bottom:34px}
 .step2 div b{color:var(--ink);font-weight:600}
 .sheetfoot{margin:18px 0 0;padding-top:14px;border-top:.5px solid var(--hair);
   font-size:13px;color:var(--faint);line-height:1.5}
+.feedsearch{padding:4px 0 12px}
+.feedsearch .inp{width:100%;min-height:46px;padding:12px 16px;font-size:15.5px;border-radius:14px;
+  border:1.5px solid var(--hair,rgba(128,128,128,.25));background:var(--surface,rgba(255,255,255,.05));color:inherit}
+.feedsearch .inp:focus{outline:none;border-color:var(--accent,#FF375F)}
 </style>
 </head>
 <body>
@@ -232,7 +252,14 @@ body{padding-bottom:34px}
 
   <div id="a2hs"></div>
   <div id="out"></div>
-  <div class="foot">MySet · myset.vip</div>
+  <div class="foot">
+    <div class="footnav">
+      <a href="/about">How MySet works</a>
+      <span class="sep" id="footInstallSep" aria-hidden="true">·</span>
+      <button type="button" id="footInstall" onclick="openA2HS()">Add to home screen</button>
+    </div>
+    <div class="footline">MySet · myset.vip</div>
+  </div>
 </div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
@@ -260,7 +287,8 @@ async function boot(){
     $('#out').innerHTML=`<div class="blank"><b>No gigs listed yet</b>
       <p>MySet is brand new. If you play live — or you run a bar that does — yours can be the first ones here.</p></div>
       <a class="artistcta" href="/studio">I play live — add my gigs →</a>
-      <a class="artistcta" href="/venues" style="margin-top:9px">I run a venue — add my bar →</a>`;
+      <a class="artistcta" href="/venues" style="margin-top:9px">I run a venue — add my bar →</a>
+      <a class="learnmore" href="/about">Not sure yet? See how MySet works →</a>`;
     return;
   }
   cs.placeholder='Start typing, or tap to see the list';
@@ -360,7 +388,8 @@ async function search(){
       <p>${d.artists?`${d.artists} artist${d.artists===1?'':'s'} play${d.artists===1?'s':''} here — nothing in the next seven days.`
         :'No one has listed a gig here yet.'}</p></div>
       <a class="artistcta" href="/studio">Play here? Add your gigs →</a>
-      <a class="artistcta" href="/venues" style="margin-top:9px">Run a venue here? Add your bar →</a>`;
+      <a class="artistcta" href="/venues" style="margin-top:9px">Run a venue here? Add your bar →</a>
+      <a class="learnmore" href="/about">Not sure yet? See how MySet works →</a>`;
     return;
   }
 
@@ -368,7 +397,44 @@ async function search(){
     const t=g.time.split(':'); let h=+t[0]; const ap=h<12?'am':'pm'; h=h%12||12;
     return `${h}:${t[1]}${ap}`;
   };
-  $('#out').innerHTML=d.days.map(day=>`
+  /* Keep the fetched week so the search box can re-render it without another
+     request — filtering forty rows is the phone's job, not the server's. */
+  FEED={days:d.days,city,fmt};
+  renderFeed('');
+}
+let FEED=null;
+const DOWS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+/* Every word must land somewhere: the act or event title, the venue, the address,
+   the note, a day of the week ("tue"/"tuesday"), or a time ("8pm", "20:30"). */
+function gigMatches(g,day,words,fmt){
+  if(!words.length)return true;
+  const dow=DOWS[new Date(day.date+'T12:00:00').getDay()]||'';
+  /* "8pm" has to match a 20:00 gig, and fmt() renders that as "8:00pm" — not a
+     substring. So the haystack carries the compact hour form too. Found by
+     driving this with fake data before shipping, not by a user. */
+  const t=g.time.split(':'); let h=+t[0]; const ap=h<12?'am':'pm';
+  const compact=`${h%12||12}${ap}`;
+  const hay=[g.artist,g.title,g.venue,g.address,g.note,day.label,dow,dayMonth(day.date),
+             fmt(g),g.time,compact].filter(Boolean).join(' ').toLowerCase();
+  return words.every(w=>hay.includes(w));
+}
+function renderFeed(q){
+  if(!FEED)return;
+  const {days,city,fmt}=FEED;
+  const words=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
+  const shown=days.map(day=>({...day,gigs:day.gigs.filter(g=>gigMatches(g,day,words,fmt))}))
+                  .filter(day=>day.gigs.length);
+  const total=shown.reduce((a,day)=>a+day.gigs.length,0);
+  const box=`<div class="feedsearch"><input class="inp" id="feedQ" type="search" autocomplete="off"
+      placeholder="Search — a name, a bar, “tuesday”, “8pm”…" value="${esc(q)}"
+      oninput="renderFeed(this.value)"></div>`;
+  if(!shown.length){
+    $('#out').innerHTML=box+`<div class="blank"><b>Nothing matches “${esc(q)}”</b>
+      <p>Try a venue, an act, a day of the week, or a time.</p></div>`;
+    const i0=$('#feedQ'); if(i0){i0.focus();i0.setSelectionRange(q.length,q.length);}
+    return;
+  }
+  $('#out').innerHTML=box+shown.map(day=>`
     <div class="dayhead"><b>${esc(day.label)} <em>– ${dayMonth(day.date)}</em></b><span>${day.count} gig${day.count===1?'':'s'}</span></div>
     <div class="giglist">${day.gigs.map(g=>{
       /* Two kinds of thing are on tonight: a gig an artist listed, and something
@@ -389,7 +455,11 @@ async function search(){
         ${g.maps?dirBtn(g.maps):''}
         <span class="chev">›</span>
       </div>`;}).join('')}</div>`).join('')
-    + `<div class="endcard">That’s everything in ${esc(city)} for the next seven days.</div>`;
+    + `<div class="endcard">${words.length
+        ? `${total} match${total===1?'':'es'} for “${esc(q)}” in ${esc(city)}.`
+        : `That’s everything in ${esc(city)} for the next seven days.`}</div>`;
+  /* re-rendering replaces the input, so put the cursor back where it was */
+  const i=$('#feedQ'); if(i&&words.length!==undefined){i.focus();i.setSelectionRange(q.length,q.length);}
 }
 
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -411,7 +481,7 @@ const dirBtn=m=>{const h=(APPLE?m.apple:m.google)||m.google||m.apple||''; if(!h)
    one; iOS has no such API, so it gets instructions — which is the whole reason
    this is a sheet with tabs rather than a single button. */
 const A2HS_KEY='myset.a2hs';
-const INSTALLED = window.matchMedia('(display-mode: standalone)').matches
+let INSTALLED = window.matchMedia('(display-mode: standalone)').matches
   || window.navigator.standalone === true
   || new URLSearchParams(location.search).get('src')==='pwa';
 const IOSISH = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -420,7 +490,18 @@ let INSTALL_EVENT=null;
 addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); INSTALL_EVENT=e; drawA2HS(); });
 
 function dismissedA2HS(){ try{return localStorage.getItem(A2HS_KEY)==='no'}catch(e){return false} }
+
+/* The footer button is the way back once the card above has been dismissed, so
+   it is NOT gated on dismissedA2HS() — only on already being installed, where
+   the instructions would be nonsense. */
+function drawFootInstall(){
+  for (const id of ['footInstall','footInstallSep']) {
+    const n=document.getElementById(id);
+    if(n) n.hidden = INSTALLED;
+  }
+}
 function drawA2HS(){
+  drawFootInstall();
   const el=$('#a2hs'); if(!el)return;
   if(INSTALLED||dismissedA2HS()){ el.innerHTML=''; return; }
   el.innerHTML=`<div class="a2hs">
@@ -436,9 +517,12 @@ function hideA2HS(){ try{localStorage.setItem(A2HS_KEY,'no')}catch(e){} drawA2HS
 async function installA2HS(){
   if(!INSTALL_EVENT){ openA2HS(); return; }
   INSTALL_EVENT.prompt();
-  try{ const r=await INSTALL_EVENT.userChoice; if(r&&r.outcome==='accepted') hideA2HS(); }catch(e){}
+  try{ const r=await INSTALL_EVENT.userChoice; if(r&&r.outcome==='accepted'){ closeSheet(); hideA2HS(); } }catch(e){}
   INSTALL_EVENT=null;
 }
+/* INSTALLED is read once at load, so the footer button would otherwise sit there
+   offering to install an app that is now installed. */
+addEventListener('appinstalled',()=>{ INSTALLED=true; closeSheet(); drawA2HS(); });
 
 /* iPhone is the default, as asked — Android only when the user agent actually
    says Android, so an Android user isn't shown the wrong steps. */
@@ -470,6 +554,8 @@ function drawA2HSSheet(){
     <h3>Put MySet on your home screen</h3>
     <p class="lede">Then it opens like an app — full screen, one tap, and it remembers
       where you were.</p>
+    ${INSTALL_EVENT?`<button class="go" onclick="installA2HS()" style="margin:18px 0 0">Install MySet</button>
+    <p style="text-align:center;font-size:13px;color:var(--muted);margin:14px 0 -4px">or add it by hand</p>`:''}
     <div class="osTabs" role="group" aria-label="Choose your phone">
       <button class="${OS==='ios'?'on':''}" onclick="setOS('ios')">iPhone</button>
       <button class="${OS==='android'?'on':''}" onclick="setOS('android')">Android</button>

@@ -57,7 +57,7 @@ properly.
 | Repo | `github.com/perryidyll/myset` (private) |
 | Working copy | `~/Docs/MySet` |
 | Host | Netlify site `mysetvip`, id `8f5c9f01-e1f1-47e3-add1-8dde39efd1d3` |
-| Deploy | `cd ~/Docs/MySet && netlify deploy --build --prod` (node at `~/.local/node/bin`) |
+| Deploy | **`git push`** — Netlify builds `main` automatically. Never `--prod` from the CLI (INVARIANT 9d3). |
 | Published | **`./public` only.** Docs, functions source and backups are never served. |
 
 ### Public URLs
@@ -646,13 +646,26 @@ recorded at signup from `?ref=<slug>` and immutable afterwards.
 
 ## Deploy
 
+**Pushing to `main` IS the deploy.** The site is connected to
+`github.com/perryidyll/myset` and builds every push automatically.
+
 ```bash
-export PATH="$HOME/.local/node/bin:$PATH"
-cd ~/Docs/MySet && netlify deploy --build --prod
+cd ~/Docs/MySet && npm test && git push
 ```
+
+**Never run `netlify deploy --prod`.** For weeks that ran *alongside* the GitHub
+build the same push triggered, so every change bought two production deploys —
+~555 credits of duplication in one billing period (INVARIANT 9d3). Push code and
+docs in one go, too: two pushes is two builds.
 
 **Iterate on draft deploys.** `netlify deploy` (no `--prod`) gives a draft URL and
 costs **zero credits**. A production deploy costs **15**.
+
+**An env-var change needs a rebuild** to take effect:
+
+```bash
+git commit --allow-empty -m "Redeploy: env change" && git push
+```
 
 ## The credit model — measured, not guessed
 

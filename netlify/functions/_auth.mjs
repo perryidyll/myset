@@ -138,6 +138,11 @@ export async function readTicket(t) {
 }
 
 /* ---------- session tokens ---------- */
+/** The rev a token is signed against: this artist's own, falling back to the
+ *  registry-wide one for records that predate per-artist revs. One definition,
+ *  used by both the signer and the verifier, so they cannot drift. */
+export const revOf = (reg, aid) =>
+  ((reg.byId || {})[aid] || {}).rev ?? reg.rev ?? 1;
 export async function signToken(email, rev) {
   const exp = Date.now() + TOKEN_TTL;
   const body = `${email}|${exp}|${rev}`;
@@ -155,9 +160,16 @@ export async function verifyToken(token) {
   const [email, exp, rev] = body.split('|');
   if (!email || Number(exp) < Date.now()) return null;
   const reg = await readArtists();
-  if (String(reg.rev) !== String(rev)) return null;         // signed out everywhere
   const link = reg.byEmail[email];
   if (!link || !reg.byId[link.artistId]) return null;       // access removed
+  /* PER-ARTIST. `reg.rev` is one global counter, and "Sign out every device" bumped
+     it — so any artist (or any stranger who signed up, since signup is open) could
+     sign out every artist AND every venue on the platform, repeatably.
+     The `?? reg.rev` fallback matters as much as the fix: an artist record created
+     before this change has no `rev` of its own, and comparing against a bare
+     `undefined` would reject every token in existence — i.e. do the exact thing we
+     are fixing. It reads the global value until that artist first revokes. */
+  if (String(revOf(reg, link.artistId)) !== String(rev)) return null;   // signed out
   return { email, artistId: link.artistId, role: link.role,
            artist: reg.byId[link.artistId] };
 }

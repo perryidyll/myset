@@ -4,6 +4,7 @@ import { readEvents, occurrencesFor, readCityIndex } from './_events.mjs';
 import { localDate, addDays } from './_time.mjs';
 import { artistById } from './_auth.mjs';
 import { readVouches, MIN_VOUCHES } from './_verify.mjs';
+import { MARK } from './_canary.mjs';
 
 /* Public. A venue page, and who is playing there.
 
@@ -39,7 +40,7 @@ export default async (req) => {
   const whatsOn = [...gigs, ...own].sort((a, b) => a.startsAt - b.startsAt).slice(0, 200);
   const names = Object.values(vouches.by || {}).map((x) => x.name).filter(Boolean);
 
-  return json({ ok: true, venue,
+  return json({ ok: true, src: MARK, venue,
                 gigs: whatsOn, artists: acts.slice(0, 24),
                 vouches: { count: names.length, need: MIN_VOUCHES, names: names.slice(0, 12) },
                 truncated: whatsOn.length >= 200 });

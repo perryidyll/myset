@@ -4,11 +4,15 @@
 
    One case per confirmed review finding. */
 process.env.ADMIN_CODE = 'devlocal';
+// songs are started milliseconds apart here; the real 8s double-tap guard is
+// exercised deliberately in its own case below
+process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const admin   = (await import('../netlify/functions/admin.mjs')).default;
 const showFn  = (await import('../netlify/functions/show.mjs')).default;
 const voteFn  = (await import('../netlify/functions/vote.mjs')).default;
 const reqFn   = (await import('../netlify/functions/request.mjs')).default;
+const histFn  = (await import('../netlify/functions/history.mjs')).default;
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -188,6 +192,115 @@ await A('tagAuto');
 eq('a hand-made choice survives', (await st()).songs.find((x) => x.id === 'alpha').tags, [hand]);
 
 /* ── the payload can only hold votable songs ───────────────────── */
+/* ── C044 ──────────────────────────────────────────────────────── */
+console.log('\nC044  only claim a refund that actually happened');
+await A('newShow');
+await A('askSet', { kind: 'song', on: true, cost: 3 });
+await A('freeCredits', { n: 9 });
+const rq = await ask('fanR', 'Wanted Song');
+ok('the fan paid for it', rq.ok, rq);
+const rid2 = (await A('askList')).asks.find((x) => x.title === 'Wanted Song').id;
+const dec = await A('askDecline', { id: rid2 });
+eq('declined in this show refunds the real cost', dec.refunded, 3);
+
+const rq2 = await ask('fanS', 'Stale Song');
+ok('a second fan pays', rq2.ok, rq2);
+const rid3 = (await A('askList')).asks.find((x) => x.title === 'Stale Song').id;
+await A('newShow');                       // their credits have already refreshed
+const dec2 = await A('askDecline', { id: rid3 });
+eq('THE BUG: a stale request reports NO refund, not a fake one', dec2.refunded, 0);
+ok('and says why', /earlier show/.test(dec2.note || ''), dec2.note);
+
+/* ── C003 ──────────────────────────────────────────────────────── */
+console.log('\nC003  ending a show twice must not lose what came between');
+await A('newShow');
+/* The full LIBRARY, not /api/show — an earlier section leaves a setlist active, so
+   the public payload holds three songs and hIds[3] was undefined. The first draft of
+   this test failed for that reason and the code was right all along. */
+const hIds = (await A('window', { open: true })).stage.songs.map((x) => x.id);
+ok('enough songs to play five', hIds.length >= 5, hIds.length);
+await A('play', { song: hIds[0] });
+await A('play', { song: hIds[1] });
+const sid = (await A('window', { open: true })).stage.show.showId;
+await A('status', { status: 'ended' });      // the accidental end — 2 songs archived
+await A('status', { status: 'live' });       // carries on
+await A('play', { song: hIds[2] });
+await A('play', { song: hIds[3] });
+await A('play', { song: hIds[4] });
+await A('status', { status: 'ended' });      // ended again — 5 songs now
+const hist = await hit(histFn, `https://x/api/history?code=devlocal&show=${sid}`);
+ok('the show is in history', hist.ok, hist);
+ok('THE BUG: the later songs survived the re-archive',
+   (hist.show.played || []).length >= 5, (hist.show.played || []).length);
+
+/* ── C030/C043 ─────────────────────────────────────────────────── */
+console.log('\nC030/C043  a lost response must not burn a second song');
+await A('newShow');
+const dIds = (await A('window', { open: true })).stage.songs.map((x) => x.id);
+process.env.MYSET_DOUBLE_TAP_MS = '8000';        // the real production window
+const dt1 = await A('play', { song: dIds[0] });
+ok('the first start lands', dt1.ok && dt1.stage.show.nowPlaying === dIds[0], dt1.stage && dt1.stage.show.nowPlaying);
+
+/* THE BUG: the write landed, the response was lost, the Studio said "try again",
+   and the artist tapped again — burning the next song down and the round with it. */
+const dt2 = await A('playTop');
+eq('a playTop right after is refused, not a second song', dt2.status, 409);
+ok('and says why', /just started/.test(dt2.error || ''), dt2.error);
+eq('the same song is still playing', (await A('window', { open: true })).stage.show.nowPlaying, dIds[0]);
+
+const dt3 = await A('play', { song: dIds[0] });
+ok('re-sending the SAME song is simply already done', dt3.ok, dt3);
+eq('still that song, played[] untouched', (await A('window', { open: true })).stage.show.nowPlaying, dIds[0]);
+process.env.MYSET_DOUBLE_TAP_MS = '0';           // back to machine speed
+
+/* ── the presence optimisation must not break the head-count ────── */
+console.log('\nhead-count survives skipping the redundant presence read');
+await A('newShow');
+await A('status', { status: 'live' });
+const roomOf = async () => (await A('window', { open: true })).stage.room;
+eq('empty room to start', await roomOf(), 0);
+await hit(showFn, 'https://x/api/show?fan=ph1&in=1');
+eq('one phone counted on its first poll', await roomOf(), 1);
+for (let i = 0; i < 5; i++) await hit(showFn, 'https://x/api/show?fan=ph1&in=1');
+eq('and still one after five more polls', await roomOf(), 1);
+await hit(showFn, 'https://x/api/show?fan=ph2&in=1');
+await hit(showFn, 'https://x/api/show?fan=ph3&in=1');
+eq('three phones', await roomOf(), 3);
+await hit(showFn, 'https://x/api/show?fan=ph4');            // no in=1
+eq('a profile view is NOT in the room (INVARIANT 0af)', await roomOf(), 3);
+
+console.log('\nthe network signal covers voters, not just pollers');
+await A('newShow');
+await A('status', { status: 'live' });
+/* A setlist is still active from an earlier section, so pick a song the room can
+   actually vote for — stage.songs is the whole library and the first entry may not
+   be votable. That is what broke the first draft of this test. */
+const nIds = (await A('window', { open: true })).stage.songs
+  .filter((x) => x.votable !== false).map((x) => x.id);
+ok('there is something votable to vote for', nIds.length > 0, nIds.length);
+/* clientIp() reads x-nf-client-connection-ip, which Netlify sets and a bare test
+   Request does not — the first draft of this asserted on an empty hash. */
+await voteFn(new Request('https://x/api/vote', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', 'x-nf-client-connection-ip': '203.0.113.7' },
+  body: JSON.stringify({ fan: 'voter-only', song: nIds[0] }),
+}));                                               // never polled with in=1
+const st2 = (await A('window', { open: true })).stage;
+ok('THE BUG: a vote-only fan still registers a network', (st2.nets || 0) >= 1, st2.nets);
+
+console.log('\nBULK IMPORT  dupes skipped, caps respected, a re-import is a no-op');
+const imp1 = await A('importSongs', { songs: [
+  { title: 'Import One', artist: 'Band A' },
+  { title: 'Import Two', artist: 'Band B' },
+  { title: 'Import One', artist: 'Band A' },          // dupe inside the batch
+] });
+ok('imported', imp1.ok, imp1);
+ok('says 2 added and 1 skipped', /Added 2/.test(imp1.note) && /skipped 1/.test(imp1.note), imp1.note);
+const imp2 = await A('importSongs', { songs: [{ title: 'Import One', artist: 'Band A' }] });
+eq('a full re-import is refused as already-have', imp2.status, 409);
+const impEmpty = await A('importSongs', { songs: [] });
+eq('an empty import is a 400, not a crash', impEmpty.status, 400);
+
 console.log('\nEVERY song in the public payload must be votable');
 await A('listUse', { id: lid });
 await A('play', { song: 'alpha' });

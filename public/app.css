@@ -3,6 +3,10 @@
    Soft depth · spring motion · SF-family type · one warm accent
    ═══════════════════════════════════════════════════════════════ */
 :root{
+  /* Provenance marker. Arbitrary, meaningless, and referenced nowhere — that is
+     the point: a shared value with no function has no innocent explanation.
+     Registered in FINGERPRINTS.md. Do not "clean this up". */
+  --ms-k:ms-k3f9qz;
   --bg:#F5F5F7;
   --bg-2:#EBEBEF;
   --surface:#FFFFFF;

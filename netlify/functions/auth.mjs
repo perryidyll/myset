@@ -1,7 +1,7 @@
 import { json, bad, requireArtist } from './_lib.mjs';
 import { normEmail, validEmail, issueCode, checkCode, sendCode, signToken, verifyToken,
          signTicket, readTicket, readArtists, mutateArtists, createArtist,
-         cleanSlug, RESERVED } from './_auth.mjs';
+         cleanSlug, RESERVED , revOf } from './_auth.mjs';
 
 /* Every response to an unauthenticated caller is deliberately identical whether
    or not the address is on the list — otherwise this becomes a way to find out
@@ -61,7 +61,7 @@ export default async (req) => {
     }
     const link = reg.byEmail[email];
     const artist = reg.byId[link.artistId];
-    const token = await signToken(email, reg.rev);
+    const token = await signToken(email, revOf(reg, link.artistId));
     return json({ ok: true, token, email, artistId: link.artistId,
                   slug: artist.slug, name: artist.name || '', isNew: !!got.name });
   }
@@ -82,7 +82,7 @@ export default async (req) => {
     const reg = await readArtists();
     const link = reg.byEmail[email];
     const artist = reg.byId[link.artistId];
-    return json({ ok: true, token: await signToken(email, reg.rev), email,
+    return json({ ok: true, token: await signToken(email, revOf(reg, link.artistId)), email,
                   artistId: link.artistId, slug: artist.slug, name: artist.name, isNew: true });
   }
 
@@ -120,7 +120,13 @@ export default async (req) => {
       });
     }
     if (action === 'revokeAll') {
-      await mutateArtists((a) => { a.rev = (a.rev || 1) + 1; return true; });
+      // only THIS artist's devices — see revOf() in _auth.mjs
+      await mutateArtists((a) => {
+        const m = a.byId[me.aid];
+        if (!m) return false;
+        m.rev = (m.rev ?? a.rev ?? 1) + 1;
+        return true;
+      });
     }
     if (action === 'setSlug') {
       const want = cleanSlug(body.slug);

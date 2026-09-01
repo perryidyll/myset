@@ -1,8 +1,8 @@
-import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
+import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, votable } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable , gigMonthOf } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -132,6 +132,8 @@ async function handlePlan(aid, action, body) {
 const shapeLimits = (l) => ({
   label: l.label, price: l.price,
   featured: l.featured === Infinity ? null : l.featured,
+  gigs: l.gigs === Infinity ? null : (l.gigs || null),
+  pricing: !!l.pricing,
   library: MAX_LIBRARY,
   cut: l.cut, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
@@ -559,7 +561,12 @@ async function handleAsks(aid, action, body) {
   if (action === 'askDone' || action === 'askDecline') {
     const row = await resolveRequest(aid, id, action === 'askDone' ? 'played' : 'declined', show);
     if (!row) return bad('That one has already been dealt with', 409);
-    return json({ ok: true, refunded: action === 'askDecline' ? row.cost : 0,
+    /* `row.refunded` is what was really given back, not what it cost. A decline of
+       a request from an earlier show refunds nothing on purpose — those credits have
+       already refreshed, so refunding would mint votes (INVARIANT 0ac). */
+    const note = action === 'askDecline' && row.cost > 0 && !row.refunded
+      ? 'Declined. No votes to give back — that request was from an earlier show.' : null;
+    return json({ ok: true, refunded: row.refunded || 0, note,
                   asks: shapeRequests(await readRequests(aid), show), stage: await stagePayload(aid) });
   }
 
@@ -779,6 +786,40 @@ export default async (req) => {
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const action = body.action;
+
+  /* Read a PUBLIC Spotify playlist's tracks, returning them for the artist to
+     confirm — it writes nothing, so it must never sit inside a CAS callback.
+     Needs SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET (client-credentials flow,
+     no user login); without them it says so instead of pretending. */
+  if (action === 'spotifyPeek') {
+    const cid = process.env.SPOTIFY_CLIENT_ID, sec = process.env.SPOTIFY_CLIENT_SECRET;
+    if (!cid || !sec) return bad('Spotify import isn’t switched on yet — paste your songs as text instead', 503);
+    const m = String(body.url || '').match(/playlist[/:]([A-Za-z0-9]{10,34})/);
+    if (!m) return bad('That doesn’t look like a Spotify playlist link', 400);
+    try {
+      const tok = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded',
+                   authorization: 'Basic ' + Buffer.from(`${cid}:${sec}`).toString('base64') },
+        body: 'grant_type=client_credentials',
+      }).then((r) => r.json());
+      if (!tok.access_token) return bad('Spotify wouldn’t let us in — check the keys', 502);
+      const tracks = [];
+      let url = `https://api.spotify.com/v1/playlists/${m[1]}/tracks?limit=100&fields=items(track(name,artists(name))),next`;
+      for (let page = 0; page < 3 && url; page++) {          // 300 tracks is plenty
+        const r = await fetch(url, { headers: { authorization: `Bearer ${tok.access_token}` } });
+        if (r.status === 404) return bad('Spotify can’t see that playlist — is it public?', 404);
+        const d = await r.json();
+        for (const it of d.items || []) {
+          const t = it && it.track;
+          if (t && t.name) tracks.push({ title: t.name, artist: ((t.artists || [])[0] || {}).name || '' });
+        }
+        url = d.next;
+      }
+      return json({ ok: true, tracks });
+    } catch { return bad('Couldn’t reach Spotify — try again in a minute', 502); }
+  }
+
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);
@@ -811,10 +852,37 @@ export default async (req) => {
      MAX_LIBRARY songs on any plan; the plan only limits how many are live to the
      audience at once. Going over just means the extras arrive switched off. */
   let featureCap = null;
-  if (['addSong', 'starterSetlist', 'toggleSong'].includes(action)) {
+  if (['addSong', 'starterSetlist', 'toggleSong', 'importSongs'].includes(action)) {
     const f = (await planForArtist(aid)).limits.featured;
     featureCap = f === Infinity ? null : f;
   }
+
+  /* Setting your own prices is a paid feature: the free-vote count, the pack
+     prices, and what a replay / song request / birthday costs. The DEFAULTS are
+     free — a free artist runs on them, and everything the ROOM experiences works
+     identically (INVARIANT 0w is untouched; this gates the artist's back office).
+     The founding artist predates the registry, so planForArtist returns free for
+     him — the owner bypass is load-bearing, not a courtesy. */
+  /* THE GIG CAP. A gig starts in exactly two places: 'newShow', and 'status' going
+     to live from anything else. Counted per UTC calendar month on the show record,
+     because a show in progress is not in history yet and tonight has to count.
+     Refused BEFORE the mutation, never mid-show — once a night is running nothing
+     stops it (INVARIANT 16). */
+  let gigCap = null, gigsUsed = 0;
+  if (action === 'newShow' || action === 'status') {
+    const lim = (await planForArtist(aid)).limits.gigs;
+    gigCap = (isPlatformOwner(aid) || lim === Infinity || lim === undefined) ? null : lim;
+    if (gigCap !== null) {
+      const cur = await getShow(aid);
+      gigsUsed = cur.gigMonth === gigMonthOf() ? cur.gigCount : 0;
+    }
+  }
+
+  let canPrice = true;
+  if (['freeCredits', 'packs', 'replayCost', 'askSet'].includes(action)) {
+    canPrice = isPlatformOwner(aid) || (await planForArtist(aid)).limits.pricing === true;
+  }
+  const PRICE_LOCKED = ['Setting your own prices is a Plus feature — the defaults stay on for now.', 402];
 
   /* Going live picks up the setlist the artist chose for tonight's gig, if they
      chose one. Resolved BEFORE the mutation, because it needs the calendar, and
@@ -845,7 +913,27 @@ export default async (req) => {
   }
   let newSongId = null;                       // so the sheet can keep editing it
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
-  const prevShow = action === 'newShow' ? await getShow(aid) : null;   // read before it resets
+  /* Read before the mutation, for every action that will settle the paid-vote
+     ledger afterwards. `play` moves played[] before clearAllFanVotes runs, so the
+     post-mutation show prices a just-won replay at 1 instead of replayCost. */
+  /* Long enough to cover a slow round trip and a human re-tap, far shorter than any
+     real gap between two songs.
+
+     Read per request, and overridable, for one reason: the test suite starts songs
+     milliseconds apart, so a hard-coded window makes the whole play/playTop surface
+     untestable. Production never sets this — it is a tunable safety window, not a way
+     round the check, and there IS a test that sets it back up to prove the guard
+     fires. */
+  const DOUBLE_TAP_MS = Number(process.env.MYSET_DOUBLE_TAP_MS ?? 8000);
+  let droppedSong = null;
+  /* Every action that ends up settling the paid-vote ledger needs the PRE-mutation
+     show to price the round with. Missing 'freeCredits' here was the whole bug that
+     case was fixing: the reset then priced the old round at the NEW ceiling and
+     debited the fan's pack for credits they never took from it. The regression test
+     caught it, which is the only reason it is not still here. */
+  const RESETTERS = new Set(['newShow', 'play', 'playTop', 'resetVotes',
+                             'freeCredits', 'replayCost']);
+  const prevShow = RESETTERS.has(action) ? await getShow(aid) : null;   // read before it resets
 
   let libChanged = false;
   await mutateShow(aid, (show) => {
@@ -877,10 +965,26 @@ export default async (req) => {
       if (show.log.length > 200) show.log = show.log.slice(-200);
     };
 
+    /* Recomputed inside the CAS callback so a retry cannot double-count — the
+       accumulator rule, INVARIANT 0bi. */
+    const countGig = (sh) => {
+      const m = gigMonthOf();
+      if (sh.gigMonth !== m) { sh.gigMonth = m; sh.gigCount = 0; }
+      sh.gigCount += 1;
+    };
+
     switch (action) {
+      /* A DOUBLE START IS ALWAYS A MISTAKE. No musician starts two songs eight
+         seconds apart, but a lost response on bar wifi made it easy: the write
+         landed, the Studio showed "try again", the artist tapped again, and a second
+         song burned along with the round's votes. So the guard is on the physical
+         reality rather than on request ids, which cannot survive a human retry.
+         `play` names a song, so re-sending the SAME one is simply already done. */
       case 'play': {
         const id = body.song;
         if (!id) { err = ['no song', 400]; return false; }
+        if (show.nowPlaying === id && Date.now() - (show.nowPlayingAt || 0) < DOUBLE_TAP_MS)
+          return false;                                  // already playing it — no-op
         logPlay(id);                                          // before played[] moves
         if (show.nowPlaying && show.nowPlaying !== id && !show.played.includes(show.nowPlaying))
           show.played.push(show.nowPlaying);
@@ -891,6 +995,11 @@ export default async (req) => {
         break;
       }
       case 'playTop': {
+        /* playTop names no song, so a retry would pick the NEXT one down and start
+           that instead — the worst possible outcome. Refuse outright and say so. */
+        if (Date.now() - (show.nowPlayingAt || 0) < DOUBLE_TAP_MS) {
+          err = ['That one just started — give it a moment', 409]; return false;
+        }
         /* Exactly what the room can vote for (votable(), the one definition), then
            playTop's own narrowing: an already-played song only re-enters the pool
            if it is holding replay votes. Using playable() alone was wrong — it drops
@@ -912,14 +1021,41 @@ export default async (req) => {
         break;
       }
       case 'window': show.windowOpen = !!body.open; break;
-      case 'status':
-        show.status = ['pre','live','ended'].includes(body.status) ? body.status : show.status; break;
+      /* Deliberately NOT resetting the show here, and it took a wrong turn to see why.
+         Starting after an end is USUALLY a new night (C017/C041: Friday's played[] and
+         showId carried into Saturday, so Saturday's room paid replayCost for Friday's
+         whole set). But it is sometimes an accidental End mid-gig, and the server
+         cannot tell those apart — resetting broke the C003 case in the same commit.
+         So the choice is made explicitly in the Studio instead: after an end, the Live
+         tab offers "Start a new show" and "Resume last night" as two separate buttons.
+         No heuristic, nothing to mis-fire. */
+      case 'status': {
+        const want = ['pre','live','ended'].includes(body.status) ? body.status : show.status;
+        if (want === 'live' && show.status !== 'live') {
+          if (gigCap !== null && gigsUsed >= gigCap) {
+            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
+            return false;
+          }
+          countGig(show);
+        }
+        show.status = want;
+        break;
+      }
       case 'venue': show.venue = String(body.venue || '').slice(0, 80); break;
       case 'city': show.city = String(body.city || '').slice(0, 80); break;
       case 'showTime': show.showTime = String(body.showTime || '').slice(0, 40); break;
+      /* Changing the price starts a fresh contest. Votes already cast were priced
+         against the OLD numbers, and leaving them in place re-prices them
+         retroactively: a fan who spent 3 of 3 free credits would suddenly be 2 over
+         a new ceiling of 1, and the paid-vote ledger (13b) would then debit their
+         pack for credits they never took from it. The reset settles the old round at
+         the old prices first — prevShow is the pre-mutation snapshot. */
       case 'freeCredits': {
+        if (!canPrice) { err = PRICE_LOCKED; return false; }
         const n = parseInt(body.n, 10);
-        show.freeCredits = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 3));
+        const want = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 5));
+        if (want !== show.freeCredits) resetVotes = true;
+        show.freeCredits = want;
         show.unlimited = false;               // picking a number turns unlimited off
         break;
       }
@@ -967,6 +1103,37 @@ export default async (req) => {
         if (startsOff) note = `Added, but switched off — your plan features ${featureCap} at a time.`;
         break;
       }
+      /* Bulk add — CSV upload, pasted text, or a Spotify playlist the client
+         already peeked. Same rules as addSong, applied per row: duplicates by
+         normalised title+artist are skipped rather than suffixed (a re-import
+         must be a no-op), the library cap refuses the remainder loudly, and rows
+         over the featured cap arrive switched off exactly like a single add. */
+      case 'importSongs': {
+        const rows = (Array.isArray(body.songs) ? body.songs : []).slice(0, 300)
+          .map((r) => ({ title: String((r && r.title) || '').trim().slice(0, 80),
+                         artist: String((r && r.artist) || '').trim().slice(0, 60) }))
+          .filter((r) => r.title);
+        if (!rows.length) { err = ['Nothing to import', 400]; return false; }
+        const have = new Set(show.songs.map((s) => `${slug(s.title)}|${slug(s.artist || '')}`));
+        let added = 0, dupes = 0, refused = 0, off = 0;
+        for (const r of rows) {
+          const sig = `${slug(r.title)}|${slug(r.artist)}`;
+          if (have.has(sig)) { dupes++; continue; }
+          if (show.songs.length >= MAX_LIBRARY) { refused++; continue; }
+          const liveNow = show.songs.filter((x) => x.active !== false).length;
+          const startsOff = featureCap !== null && liveNow >= featureCap;
+          let id = slug(r.title);
+          if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
+          show.songs.push({ id, title: r.title, artist: r.artist, active: !startsOff, key: '', tags: [] });
+          have.add(sig); added++; if (startsOff) off++;
+        }
+        if (!added && dupes) { err = ['All of those are already in your songs', 409]; return false; }
+        note = `Added ${added} song${added === 1 ? '' : 's'}`
+          + (dupes ? ` · skipped ${dupes} you already had` : '')
+          + (off ? ` · ${off} arrived switched off (your plan features ${featureCap} at a time)` : '')
+          + (refused ? ` · ${refused} refused — that’s the ${MAX_LIBRARY}-song ceiling` : '');
+        break;
+      }
       case 'editSong': {
         const sg = show.songs.find((x) => x.id === body.song);
         if (!sg) { err = ['unknown song', 404]; return false; }
@@ -980,21 +1147,36 @@ export default async (req) => {
         break;
       }
       case 'packs': {
-        show.packs = normPacks({ small: body.small, big: body.big, max: body.max });
+        if (!canPrice) { err = PRICE_LOCKED; return false; }
+        show.packs = normPacks({ small: body.small, big: body.big });
         break;
       }
       case 'askSet': {
         const which = body.kind === 'birthday' ? 'birthdays' : 'requests';
         const cur = show[which];
+        /* Switching requests ON or OFF is free — that is running your show. What a
+           request COSTS is pricing, so changing it needs the plan. */
+        const wantCost = body.cost === undefined ? cur.cost : body.cost;
+        if (!canPrice && normAsk({ on: cur.on, cost: wantCost }).cost !== cur.cost) {
+          err = PRICE_LOCKED; return false;
+        }
         show[which] = normAsk({
           on: body.on === undefined ? cur.on : !!body.on,
-          cost: body.cost === undefined ? cur.cost : body.cost,
+          cost: wantCost,
         });
         break;
       }
-      case 'replayCost':
-        show.replayCost = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5)); break;
-      case 'removeSong': show.songs = show.songs.filter((s) => s.id !== body.song); break;
+      case 'replayCost': {
+        if (!canPrice) { err = PRICE_LOCKED; return false; }
+        const want = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5));
+        if (want !== show.replayCost) resetVotes = true;   // see freeCredits above
+        show.replayCost = want;
+        break;
+      }
+      case 'removeSong':
+        show.songs = show.songs.filter((s) => s.id !== body.song);
+        droppedSong = String(body.song || '');   // refund the votes held on it, below
+        break;
       case 'unplay': show.played = show.played.filter((id) => id !== body.song); break;
       case 'setCode': {
         const code = String(body.code || '');
@@ -1018,6 +1200,11 @@ export default async (req) => {
       }
       case 'clearSetlist': show.songs = []; break;
       case 'newShow':
+          if (gigCap !== null && gigsUsed >= gigCap) {
+            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
+            return false;
+          }
+        countGig(show);
         show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
         show.status = 'live'; show.windowOpen = true;
         show.log = [];
@@ -1050,7 +1237,9 @@ export default async (req) => {
   }
   // paid votes survive a reset — only a fan who gifted them loses them
   if (wipe) await carryFans(aid, prevShow || (await getShow(aid)));
-  else if (resetVotes) await clearAllFanVotes(aid);
+  else if (resetVotes) await clearAllFanVotes(aid, prevShow || (await getShow(aid)));
+  // a deleted song must not keep holding somebody's credit
+  else if (droppedSong) await dropSongVotes(aid, droppedSong);
 
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.

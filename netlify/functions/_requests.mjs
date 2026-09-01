@@ -150,8 +150,16 @@ export async function resolveRequest(aid, id, status, show) {
     return true;
   });
   if (!row) return null;
-  if (status === 'declined' && row.cost > 0 && show && row.showId === show.showId)
-    await refund(aid, row.fan, row.cost).catch(() => {});
+  /* Say what actually happened. This reported "votes refunded" to both the artist
+     and the fan whether or not a refund was possible — a request from an earlier
+     show is deliberately NOT refunded (its credits have already refreshed, so
+     refunding would mint votes, INVARIANT 0ac), and the write can fail. Both cases
+     used to be announced as a refund. */
+  row.refunded = 0;
+  if (status === 'declined' && row.cost > 0 && show && row.showId === show.showId) {
+    try { await refund(aid, row.fan, row.cost); row.refunded = row.cost; }
+    catch { row.refunded = 0; }
+  }
   return row;
 }
 

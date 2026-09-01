@@ -1,7 +1,47 @@
 import { getStore } from '@netlify/blobs';
 import { createHash, timingSafeEqual } from 'node:crypto';
 
-export const store = () => getStore('myset');
+/* ONE STORE PER DEPLOY CONTEXT.
+
+   A Netlify deploy preview shares the PRODUCTION blob store by default. That was
+   verified from outside, three ways: curl on a real preview URL returned
+   byte-identical live data (the venue, the 65 songs, the now-playing song); the
+   Stripe key was identical across contexts; and driving admin.mjs from a preview
+   host had addSong / play / newShow all ACCEPTED, after which production showed a
+   test song and a wiped vote tally. 44 such deploys already existed — they were
+   safe only because they were exercised read-only.
+
+   Every blob access in the app goes through this one function, which is the only
+   reason this is a one-line fix rather than an audit of forty call sites.
+
+   Belt and braces, not just this: the Stripe keys are unset for the deploy-preview
+   and branch-deploy contexts, so a preview cannot charge a real card either
+   (INVARIANT 9 — the app works fully with payments off).
+
+   AND IT CANNOT BE FIXED HERE. Measured on a real draft deploy 2026-09-01: NONE of
+   Netlify's deploy-context variables exist at function runtime. A diagnostic on
+   /api/show reported CONTEXT, DEPLOY_ID, DEPLOY_PRIME_URL, BRANCH, HEAD, NETLIFY,
+   NETLIFY_LOCAL and NETLIFY_DEV all null; only URL (identical on both) and SITE_NAME
+   are present. A `getStore(CONTEXT === 'production' ? … )` scheme therefore does
+   nothing at all, and the first version of this fix was exactly that — dead code
+   that read like protection, which is worse than none.
+
+   WHAT IS ACTUALLY IN PLACE. The money half is closed and verified from outside:
+   STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are unset for the deploy-preview and
+   branch-deploy contexts, so a preview reports paymentsEnabled:false and cannot
+   charge a card (INVARIANT 9). Confirmed by curl on a draft: payments off, while
+   production stayed live.
+
+   WHAT IS STILL TRUE. A preview READS AND WRITES PRODUCTION DATA. Use previews to
+   look at pages, never to exercise a write path. The real sandbox is `npm test` —
+   the real handlers against an in-memory store, no Netlify involved, which cannot
+   touch production at all. For a writable staging environment the honest answer is
+   a SEPARATE NETLIFY SITE, because a separate site is a separate blob store; doing
+   it in code would mean threading Netlify's v2 `context` argument (or the request
+   Host) down into every store() caller, which is the kind of half-finished refactor
+   this project has been bitten by before. */
+export const STORE_NAME = 'myset';
+export const store = () => getStore(STORE_NAME);
 
 /* ---------- starter setlist offered to a new artist ---------- */
 export const STARTER_SONGS = [
@@ -78,11 +118,22 @@ export const ARTIST_ID = 'perry-idyll';
 export const DEFAULT_ARTIST = 'perry-idyll';
 
 /* Must be generated OUTSIDE a CAS callback — a retry would otherwise produce a
-   different id on each attempt. */
-export function newShowId(now = Date.now()) {
+   different id on each attempt.
+
+   The suffix is not decoration. This used to be a UTC stamp to the MINUTE and
+   nothing else, so two 'New show' taps inside the same minute produced the SAME
+   id — the second show inherited the first's history row and money attribution.
+   Two different artists starting a show in the same minute collided too, which is
+   half of why moneyForShow now also filters on metadata.artist. Readable prefix,
+   unique tail. */
+/** UTC year-month, the bucket the free gig cap counts in. */
+export const gigMonthOf = (now = Date.now()) => new Date(now).toISOString().slice(0, 7);
+
+export function newShowId(now = Date.now(), rand = Math.random()) {
   const d = new Date(now), p = (n) => String(n).padStart(2, '0');
+  const tail = Math.floor(rand * 1679616).toString(36).padStart(4, '0');
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}` +
-         `-${p(d.getUTCHours())}${p(d.getUTCMinutes())}`;
+         `-${p(d.getUTCHours())}${p(d.getUTCMinutes())}-${tail}`;
 }
 
 export const slug = (t) =>
@@ -103,7 +154,7 @@ export function defaultShow() {
     windowOpen: true,
     nowPlaying: null,
     played: [],
-    freeCredits: 3,
+    freeCredits: 5,
     unlimited: false,        // everyone votes without limit
     unlimitedFans: [],       // specific devices that do — the artist's own, for testing
     replayCost: 5,
@@ -118,6 +169,10 @@ export function defaultShow() {
        second document on the poll — see the note in _lists.mjs. Only
        applyList() writes it, and normShow re-filters it below. */
     listId: '', listName: '', listSongs: [],
+    /* Shows started this calendar month, for the free plan's gig cap. Stored
+       rather than counted from history because a show in progress is not in
+       history yet, and the cap has to include tonight. */
+    gigMonth: '', gigCount: 0,
     songs: [],
     showId: null,
     artistId: ARTIST_ID,
@@ -148,6 +203,11 @@ export const GENRES = [
   ['jazz',       'Jazz'],
   ['latin',      'Latin'],
   ['singalong',  'Sing-along'],
+  /* Tempo, not genre — but the filter row doesn't care, and "something upbeat"
+     is how a real room actually asks. */
+  ['slow',       'Slow'],
+  ['midtempo',   'Mid-tempo'],
+  ['upbeat',     'Upbeat'],
 ];
 export const GENRE_IDS = new Set(GENRES.map(([id]) => id));
 export const MAX_OWN_TAGS = 15;      // how many they can invent
@@ -195,11 +255,13 @@ export const cleanKey = (v) =>
 
 /* What the audience can buy. Editable from the Studio; pay.mjs reads these and
    never trusts a price from the client. */
-export const PACK_KEYS = ['small', 'big', 'max'];
+/* Two tiers, not three. The $3 pack was brutally exposed to Stripe's fixed
+   per-transaction fee (~13% gone on a $3 charge); $5 as the floor keeps the fee
+   under 6%. normPacks drops a stored legacy 'max' on read. */
+export const PACK_KEYS = ['small', 'big'];
 export const DEFAULT_PACKS = () => ({
-  small: { votes: 3,  cents: 300 },
-  big:   { votes: 9,  cents: 700 },
-  max:   { votes: 18, cents: 1100 },
+  small: { votes: 5,  cents: 500 },
+  big:   { votes: 15, cents: 1000 },
 });
 /** The two ask-for-something switches. Cost is in VOTES, not money. */
 export function normAsk(a, dflt = 3) {
@@ -306,7 +368,7 @@ function normShow(s) {
   const show = { ...d, ...(s || {}) };
   if (!Array.isArray(show.songs)) show.songs = [];
   if (!Array.isArray(show.played)) show.played = [];
-  if (typeof show.freeCredits !== 'number') show.freeCredits = 3;
+  if (typeof show.freeCredits !== 'number') show.freeCredits = 5;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
   if (!Array.isArray(show.log)) show.log = [];
   show.unlimited = !!show.unlimited;
@@ -316,6 +378,8 @@ function normShow(s) {
   show.listId = String(show.listId || '').replace(/[^a-z0-9]/gi, '').slice(0, 12);
   show.listName = String(show.listName || '').replace(/\s+/g, ' ').trim().slice(0, 40);
   show.listSongs = Array.isArray(show.listSongs) ? show.listSongs : [];
+  show.gigMonth = String(show.gigMonth || '').slice(0, 7);
+  show.gigCount = Math.max(0, parseInt(show.gigCount, 10) || 0);
   /* Songs carry a key and genre tags. Tags are filtered against what actually
      exists, so deleting a custom tag cleans itself up on the next read. */
   const ids = new Set(show.songs.map((x) => x && x.id));
@@ -347,16 +411,25 @@ export async function getShow(aid) {
   }
   return show;
 }
-export const mutateShow = (aid, fn) =>
-  casDoc(KEY.show(aid), defaultShow, (s) => {
+/* INVARIANT 4 says a conditional write can report success without sticking under
+   concurrency, which is why every FAN write goes through a read-back verify. The
+   SHOW write never did — so an acked-but-lost write meant the artist's tap silently
+   did nothing while the Studio was handed a payload saying it had worked. `updatedAt`
+   is already stamped on every successful mutation, so it doubles as the receipt. */
+export const mutateShow = (aid, fn) => {
+  let stamp = null;
+  return casDoc(KEY.show(aid), defaultShow, (s) => {
     const show = normShow(s);
     show.artistId = aid;
     Object.keys(s || {}).forEach((k) => delete s[k]);
     Object.assign(s, show);
     const r = fn(s);
-    if (r !== false) s.updatedAt = Date.now();
+    if (r !== false) { s.updatedAt = Date.now(); stamp = s.updatedAt; }
     return r;
-  });
+  },
+  // stamp stays null when fn aborted, and casDoc never writes in that case
+  (d) => stamp === null || !!(d && d.updatedAt === stamp));
+};
 
 /* ---------- fan shards ---------- */
 export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
@@ -380,13 +453,42 @@ export async function readFans(aid) {
   for (const p of parts) Object.assign(fans, p.data || {});
   return fans;
 }
-export async function clearAllFanVotes(aid) {
+/* ---------- the paid-vote ledger ----------
+   FREE CREDITS ARE ALWAYS SPENT FIRST. Everything a fan spends beyond
+   `show.freeCredits` in the current round came out of the pack they bought, so the
+   paid portion of a round is derivable and needs no extra stored field.
+
+   This exists because for a long time it did not. `extra` was read as part of
+   `total = freeCredits + extra` in four places and decremented in exactly ONE
+   place in the whole codebase (gift.mjs), so a purchased pack never ran out:
+   measured, an 18-vote pack yielded 252 credits across 13 rounds and survived
+   `newShow` untouched, which made it a permanent boost at every future gig.
+   The same missing ledger also destroyed packs in the other direction — a fan
+   fully spent at the reset instant had `unspentPaid` return 0 and `carryFans`
+   delete their record. Both directions are this one function's fault. */
+export const paidUsed = (fan, show) =>
+  Math.max(0, creditsUsed(fan, show) - (show.freeCredits || 0));
+
+/* `costShow` must be the show as it was BEFORE the song started. `play` takes the
+   winning song back out of `played[]` first, so pricing a just-won replay vote
+   against the post-play show charges 1 instead of `replayCost` and silently
+   under-debits the pack. admin.mjs snapshots it before the mutation. */
+export async function clearAllFanVotes(aid, costShow) {
+  if (!costShow) throw new Error('clearAllFanVotes needs the pre-play show to price the round');
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
-        // drop stale stamps and the non-song spend too — free credits refresh
-        // here, so anything charged against them has to refresh with them
-        for (const id of Object.keys(bag)) { bag[id].v = []; bag[id].ts = {}; bag[id].spent = 0; }
+        for (const id of Object.keys(bag)) {
+          // settle the paid portion ONCE, here, before the evidence is wiped.
+          // Debiting at the moment of the cast instead double-charges, because
+          // creditsUsed already counts the vote while `total` would shrink — and
+          // it breaks INVARIANT 15, since un-voting would then burn a paid vote.
+          const paid = paidUsed(bag[id], costShow);
+          if (paid > 0) bag[id].extra = Math.max(0, (bag[id].extra || 0) - paid);
+          // drop stale stamps and the non-song spend too — free credits refresh
+          // here, so anything charged against them has to refresh with them
+          bag[id].v = []; bag[id].ts = {}; bag[id].spent = 0;
+        }
         return true;
       }, null).catch(() => {})
     )
@@ -394,23 +496,60 @@ export async function clearAllFanVotes(aid) {
 }
 /* Votes someone PAID for shouldn't evaporate because the artist tapped
    "New show". Unspent paid votes carry into the next show unless the fan chose
-   to gift them. Everything else — free credits, picks, timestamps — resets. */
+   to gift them. Everything else — free credits, picks, timestamps — resets.
+
+   Now that `extra` is a real balance, the only thing still owing at the end of a
+   show is whatever this last, unsettled round used. In-flight votes are charged
+   against FREE credits first, exactly as they are every other round, so holding a
+   vote when the artist ends the show costs the fan nothing — it used to cost them
+   the paid portion, which was the one and only way voting could lose you money. */
 export function unspentPaid(fan, show) {
   const extra = fan.extra || 0;
   if (extra <= 0) return 0;
-  const total = (show.freeCredits || 0) + extra;
-  return Math.max(0, Math.min(extra, total - creditsUsed(fan, show)));
+  return Math.max(0, extra - paidUsed(fan, show));
 }
 export async function carryFans(aid, show) {
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
         for (const id of Object.keys(bag)) {
-          const carry = unspentPaid(bag[id], show);
-          if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted: bag[id].gifted || 0 };
+          /* A fan who chose "let the artist keep it" pledged, rather than being
+             debited on the spot — see gift.mjs. THIS is the real end of the show, so
+             this is where the pledge is honoured. A restart in between quietly
+             cancels it, which is the point. */
+          const pledged = Math.max(0, bag[id].pledged || 0);
+          const carry = Math.max(0, unspentPaid(bag[id], show) - pledged);
+          const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show)) : 0);
+          if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted };
           else delete bag[id];          // nothing owed — don't keep the record
         }
         return true;
+      }, null).catch(() => {})
+    )
+  );
+}
+
+/* Deleting a song from the library used to strand every credit held on it:
+   `creditsUsed` counts each id in `fan.v` whether or not the song still exists, and
+   vote.mjs answers 404 before it reaches the un-vote toggle — so the fan could not
+   get the credit back, and had no row in the UI to tap even if they could.
+   Fixed at the source. Narrowing a setlist and hiding a song were NOT affected —
+   the song stays in show.songs, so the toggle works and refunds correctly; that was
+   measured, and the original report had it wrong. */
+export async function dropSongVotes(aid, songId) {
+  if (!songId) return;
+  await Promise.all(
+    Array.from({ length: SHARDS }, (_, n) =>
+      casDoc(shardKey(aid, n), () => ({}), (bag) => {
+        let touched = false;
+        for (const id of Object.keys(bag)) {
+          const at = (bag[id].v || []).indexOf(songId);
+          if (at < 0) continue;
+          bag[id].v.splice(at, 1);
+          if (bag[id].ts) delete bag[id].ts[songId];
+          touched = true;
+        }
+        return touched;                  // no write when this shard held none
       }, null).catch(() => {})
     )
   );

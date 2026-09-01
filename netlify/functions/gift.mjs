@@ -17,15 +17,23 @@ export default async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
   const show = await getShow(aid);
+  /* Only when the show is actually over. This endpoint was unguarded, and the sheet
+     it belongs to appears the instant the artist taps End — so an End tapped by
+     mistake mid-gig asked the whole room to give away votes they had paid for, while
+     the night carried on. */
+  if (show.status !== 'ended') return bad('The show is still going', 409);
+
   let votes = 0;
   try {
     await mutateFan(aid, fan, (me) => {
       votes = unspentPaid(me, show);
       me.decided = show.showId;
-      if (choice === 'gift' && votes > 0) {
-        me.extra = Math.max(0, (me.extra || 0) - votes);
-        me.gifted = (me.gifted || 0) + votes;
-      }
+      /* PLEDGE, don't debit. The credit is only actually given up at the real
+         end-of-show boundary, in carryFans — which runs on newShow. So if the artist
+         ends the show by accident and starts it again, the fan is silently made whole
+         and never knows; and if the night really is over, the artist still gets it. */
+      if (choice === 'gift' && votes > 0) me.pledged = votes;
+      else delete me.pledged;
       return true;
     }, (me) => me.decided === show.showId);
   } catch { return bad('busy', 503); }

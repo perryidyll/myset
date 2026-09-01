@@ -33,10 +33,22 @@ check('public/studio.html', [
   ['consumes inSet (rows)',   /x\.inSet===false\?'Not in this set'/g],
   ['consumes inSet (toast)',  /sg\.inSet===false/g],
   ['sticky offset measured',  /top:var\(--headh/g],
+  /* C001: a dropped poll must not gate the artist out mid-gig (INVARIANT 16).
+     Both halves are needed — the flag without the guard, or the guard without the
+     flag, silently restores the old behaviour. */
+  ['offline flag set in api()',      /offline:true/g],
+  ['offline guard in load()',        /if\(!d\.ok&&d\.offline&&D\) return;/g],
+  /* C017/C041: after an end, starting again must be an explicit choice between a new
+     show and resuming — the server cannot tell a deliberate end from a fat finger. */
+  ['start-a-new-show choice',        /Start a new show/g],
+  ['resume-it-instead escape',       /Resume it instead/g],
   ['gig setlist select',      /id="gList"/g],
   ['gig "All songs" option',  /value="all"/g],
 ]);
+/* A prose row must not be a flex container — see the .row.muted note in the CSS. */
+check('public/studio.html', [['prose rows opt out of flex', /\.row\.muted\{display:block\}/g]]);
 check('public/venue-studio.html', [
+  ['prose rows opt out of flex', /\.row\.muted\{display:block\}/g],
   ['function fitTabs',       /\nfunction fitTabs\(\)\{/g],
   ['sticky offset measured', /top:var\(--headh/g],
 ]);

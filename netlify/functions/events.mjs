@@ -3,6 +3,7 @@ import { readEvents, occurrencesFor, readCityIndex, isVenueOwner, venueIdOf } fr
 import { localDate, addDays, tzOffsetMs } from './_time.mjs';
 import { artistById } from './_auth.mjs';
 import { venueById } from './_venues.mjs';
+import { MARK } from './_canary.mjs';
 
 const WINDOW_DAYS = 7;
 
@@ -32,7 +33,7 @@ export default async (req) => {
       countries.push({ country, cities: list, gigs: list.reduce((s, c) => s + c.gigs, 0) });
     }
     countries.sort((a, b) => b.gigs - a.gigs || a.country.localeCompare(b.country));
-    return json({ ok: true, countries });
+    return json({ ok: true, src: MARK, countries });
   }
 
   /* ---- one artist's diary ---- */
@@ -47,7 +48,7 @@ export default async (req) => {
     const occ = occurrencesFor(events, addDays(from, -1), addDays(from, days))
       .filter((o) => o.endsAt > Date.now())
       .slice(0, 60);
-    return json({ ok: true, artistId: aid, gigs: occ.map(shape) });
+    return json({ ok: true, src: MARK, artistId: aid, gigs: occ.map(shape) });
   }
 
   /* ---- a city feed ---- */

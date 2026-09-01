@@ -237,9 +237,36 @@ If you are about to violate one, stop and say so rather than working around it.
 
 9d0. **Production deploys are the expensive thing, not traffic.** A production
     deploy costs 15 Netlify credits; 10,000 web requests cost 2. On 2026-08-31 I
-    burned ~240 credits in one afternoon on 16 production deploys and blamed the
+    burned ~240 credits in one afternoon on production deploys and blamed the
     polling, which had cost about 5. **Iterate on `netlify deploy` (draft URL,
     0 credits) and deploy to production once, at the end.**
+    The count in that first diagnosis was itself wrong — see 9d3. It said 16; the
+    real number was more than twice that, because half the deploys were triggered
+    by `git push` and nobody was counting them.
+
+9d3. **`git push` IS the production deploy. Never also deploy from the CLI.**
+    `mysetvip` is connected to `github.com/perryidyll/myset` and builds `main`
+    automatically. For weeks it was ALSO being deployed with
+    `netlify deploy --build --prod`, so every shipped change bought two production
+    deploys at 15 credits each. Measured on 2026-09-01 for the 2026-08-08 period:
+    **77 production deploys on mysetvip — 40 from git, 37 from the CLI — ~555
+    credits of pure duplication**, a third of the whole account's burn.
+    It also multiplies per commit: two pushes for one change is two builds, so
+    push code and docs together.
+    Consequences to keep: production is verified from OUTSIDE after the build
+    lands (INVARIANT 17), not from a staged tree; `npm test` runs before the push,
+    not after; and `netlify deploy` with no `--prod` is still the free way to look
+    at something. An env-var change needs a rebuild to take effect —
+    `git commit --allow-empty` and push, or trigger it from the Netlify UI.
+
+9d4. **Only production deploys cost credits — and `credit-burn.sh` used to bill
+    the free ones.** It counted every `state == 'ready'` deploy at 15 credits,
+    drafts and deploy previews included, and asked for a single page of 200. On
+    2026-09-01 that made it report ~2,550 credits against a true 1,680, which
+    would have pushed Perry onto Pro on a false number — and 9d2 says upgrading at
+    the wrong moment forfeits the month's unused credits. It now filters on
+    `context == 'production'`, pages properly, and shows the git/CLI split so a
+    regression of 9d3 is visible in the one place anybody looks.
 
 9d1. **Never downgrade to the Free plan.** Purchased credit packs survive
     indefinitely *"as long as you remain on a paid plan"* — dropping to Free
@@ -247,6 +274,106 @@ If you are about to violate one, stop and say so rather than working around it.
 
 9d2. **Upgrading wipes unused monthly credits immediately.** If we ever move
     Personal -> Pro, do it at the END of a billing cycle, not the start.
+
+9d7. **READ THE BILL. 99% of it is deploys, not traffic.** Read off the Netlify
+    dashboard (Team -> Usage & billing -> Account usage insights) for the
+    2026-08-08 period, because four separate models had guessed instead:
+
+    | | measured | credits |
+    |---|---|---|
+    | Production deploys | 112 (all 4 sites) | **1,680** |
+    | Function compute | **0.53 GB-Hrs** | 5.3 |
+    | Web requests | **27K** | 5.4 |
+    | Bandwidth | **331 MB** | 6.6 |
+    | | | **1,697 — dashboard says 1.7K** |
+
+    That reconciliation is tight enough to confirm all four unit prices AND the
+    deploy count at once. **All metered traffic together is 1.0% of the bill.**
+    So the expensive thing really is deploys (9d0 was right, 9d3 more so), and the
+    polling panic was about a projection, not an invoice.
+
+    **71ms is a LOWER BOUND, never a per-function figure.** It is 1,908 function-
+    seconds spread across ALL 27,000 requests including near-zero-compute static hits,
+    and a gig is ~99% function calls where the account-month was mostly static and
+    crawlers. Using it as the cost of an `/api/show` call understates it: at a more
+    realistic 110ms the same measured month implies ~17,300 function calls, which is
+    entirely consistent. Two models have already made this mistake.
+
+    Two derived facts worth keeping. **Billed duration is ~71ms per web request**
+    (0.53 GB-Hrs / 27K, at the 1024MB default) — so 9d5's 155ms probe was ~2x high,
+    my original 200ms guess ~3x high, and the 424ms TTFB model ~6x high. And at a
+    genuinely busy artist (590k requests/month) the metered cost is **~263 credits =
+    $2.63/artist/month, 74% margin at $10**, falling to **~$1.20 and 88%** with the
+    two fixes shipped 2026-09-01. Nowhere near the 27% that the TTFB model implied.
+
+    The number that is still MODELLED, not measured, is 590,000 requests/artist/month.
+    27K for the whole team in a month is roughly one gig's worth, so the per-gig shape
+    looks right — but nobody has yet read the usage page after a real busy month.
+
+9d5. **Never re-derive the cost from response times.** This has now been got wrong three times, twice by me.
+    The brief assumed 200ms at 128MB and reported 187 credits/artist/month (~81%
+    margin). An audit lens measured TTFB, subtracted a static-file baseline, and
+    reported a "263ms fixed per-invocation floor" and 726-847 credits (27-52% margin).
+    Both were wrong, in opposite directions, because **Netlify bills handler wall
+    clock, not time-to-first-byte** — the 285-350ms TTFB delta over a static file is
+    network and routing to the function region and is not billed at all.
+    Measured 2026-09-01 by deploying a probe to this account, n=10 per mode:
+    **noop handler 0ms · one strong blob read 42ms · 13 parallel reads 64ms · a whole
+    /api/show poll ~155ms.** There is no fixed floor. Actual JavaScript CPU is ~3ms —
+    the function is ~98% waiting, billed at 1GB-hour rates because **Functions default
+    to 1024MB and memory config is Pro-only**.
+    True cost: ~401 credits/artist/month at 5 gigs/week = **$4.01** at this account's
+    verified marginal price of **$0.01/credit** (`plan_auto_topup_per_unit_cost`, read
+    from the account API — not the Pro pack rate, which flatters every figure by a
+    third). **53% margin at $10/month, not 81%.**
+    Consequence worth keeping: at ~401 credits/artist, **two** artists at 5 gigs/week
+    already outspend a whole billing period's production deploys. Deploy discipline
+    (9d3) still matters, but it stops being the dominant line almost immediately.
+
+9d6. **Durable caching and Edge Functions are mutually exclusive, and caching wins.**
+    Netlify, verbatim: *"The durable cache is currently only compatible with Netlify
+    Function responses. The durable directive has no effect on responses from Netlify
+    Edge Functions."* The two land within $0.21/artist/month of each other, so take the
+    one that keeps the Node runtime, `_lib.mjs`, the whole test suite and has no 50ms
+    CPU cliff. Edge is the fallback, and both need the same `/api/show` payload split,
+    so that work is not wasted either way.
+    **And `Netlify-Vary` is silently ignored when a function is reached through the
+    `/api/* -> /.netlify/functions/:splat` rewrite** — measured: three requests
+    differing only in `fan=` all missed via `/api/`, but hit on the direct path. The
+    fix is to sidestep it: make the cacheable URL carry only `?a=<slug>` so every
+    phone requests an identical URL and no Vary is needed.
+
+9d8. **The artist's own Studio polls harder than the whole room, and 9d never
+    covered it.** `studio.html` runs a FIXED 4-second `setInterval` with no backoff and
+    no signature check, gated only on the tab being visible and on the Live tab. A
+    phone propped on a mic stand is visible for most of the night, so that is ~2,160
+    calls a gig from ONE device — modelled at **~19-21% of a gig's metered credits**,
+    equal to about 3.5 fan phones in calls and 8 in compute. `/api/stage` is also the
+    heaviest endpoint in the app: ~17 blob reads plus a serial `artistById` import
+    after the `Promise.all`.
+    9d says "do not reintroduce a fixed fast interval" and was written about the
+    audience. **It applies to the Studio too.** Any change here trades against
+    INVARIANT 0k/0l — the Studio has to feel instant on stage — so the fix is a
+    backoff that only engages when nothing has changed, never a slower fixed tick.
+
+9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Four
+    shows a calendar month; Plus and Pro unlimited. Every phone in the room polls
+    for the whole gig, so the bill tracks gigs PLAYED, not artists signed up — a
+    feature-based limit would punish the wrong people and save nothing. Enforced at
+    the two places a gig starts (`newShow`, and `status` -> live from not-live),
+    refused BEFORE the mutation and never mid-show (INVARIANT 16), counted per UTC
+    month on the show record because a show in progress is not in history yet.
+    The Studio warns at two shows left: a cap discovered on stage at 10pm is a bug,
+    not a business model. And nothing the ROOM experiences is ever capped (0w).
+
+9d10. **A tap is not a change.** `wakeUp()` used to reset the poll ladder to its
+    fastest rung on every `pointerdown` — which fires on every scroll — so 66% of
+    all polls were pinned fast by people looking at their phones rather than by
+    anything happening. It now separates a FULL wake (screen-on, a vote, a
+    purchase) from a NUDGE (a tap, which only lifts a phone out of the slowest
+    rung). Simulated over the real loop: 1,003 -> 580 polls per phone per gig, 42%.
+    The ladder itself was never the lever — measured, 3/6/12 and 3/6 were
+    identical — so do not "fix" this by widening rungs again.
 
 9d. **Every phone in the room polls.** At 3s, a two-hour gig with twenty people
     is ~24,000 function calls — enough to exhaust a month's free tier in a few
@@ -304,6 +431,25 @@ If you are about to violate one, stop and say so rather than working around it.
 
 14. **Starting a song refreshes everyone's votes** (`clearAllFanVotes`), so each
     round is a fresh contest.
+    **Free credits refresh. PAID ones do not** — see 13b.
+
+13b. **A bought pack is a stock, and free credits are spent first.** `extra` was
+    read as part of `total = freeCredits + extra` in four places and decremented in
+    exactly ONE place in the whole codebase (`gift.mjs`), so a purchased pack never
+    ran out. Measured: an 18-vote pack yielded **252 credits across 13 rounds** and
+    survived `newShow` untouched, making one $11 purchase a permanent advantage at
+    every future gig that artist played. Three lenses found it independently and
+    three verifiers reproduced it.
+    The paid portion of a round is `creditsUsed - freeCredits`, derived not stored,
+    and it is settled **once, at the round reset**, inside `clearAllFanVotes`.
+    Debiting at the moment of the cast is wrong twice over: `creditsUsed` already
+    counts the vote while `total` would shrink (double-charging), and it breaks
+    INVARIANT 15, because un-voting would then burn a paid vote.
+    `clearAllFanVotes` therefore **requires the pre-play show** to price the round:
+    `play` takes the winning song back out of `played[]` before the reset runs, so
+    pricing against the post-play show charges a just-won replay 1 instead of
+    `replayCost`. It throws if that snapshot is missing rather than silently
+    under-debiting.
 
 15. **Voting is idempotent per (fan, song).** Voting twice toggles off and refunds
     the credit; it must never double-count. **Un-voting is never gated by whether

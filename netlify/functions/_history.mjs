@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { casDoc, readDoc, voteCounts, roomCounts, KEY } from './_lib.mjs';
+import { casDoc, readDoc, voteCounts, roomCounts, KEY, DEFAULT_ARTIST } from './_lib.mjs';
 
 const HIST = KEY.hist;                  // flat key — INVARIANT 2
 const INDEX = KEY.histIdx;
@@ -32,6 +32,12 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
         if (s.payment_status !== 'paid') continue;
         const md = s.metadata || {};
         if (md.kind !== 'votes' && md.kind !== 'tip') continue;   // INVARIANT 5d
+        /* And it has to be THIS artist's. This was the one Stripe consumer of four
+           that did not check — so with a colliding showId (they used to collide;
+           see newShowId) another artist's takings were reported as yours. Untagged
+           sessions predate artist tagging and belong to the founding artist, the
+           same convention confirm.mjs, webhook.mjs and revenue.mjs use. */
+        if ((md.artist || DEFAULT_ARTIST) !== aid) continue;
         const amt = (s.amount_total || 0) / 100;
         if (md.show && md.show !== showId) continue;
         if (!md.show) { out.unattributed = round(out.unattributed + amt); continue; }
@@ -110,8 +116,19 @@ export async function archiveShow(aid, show, fans) {
   };
 
   await casDoc(HIST(aid, showId), () => ({}), (d) => {
-    if (d && d.showId) {           // already archived — only refresh the money
-      d.money = money; d.archivedAt = endedAt; return true;
+    if (d && d.showId) {
+      /* Already archived. The guard exists because re-archiving AFTER the tally was
+         wiped would overwrite a real night with zeroes (INVARIANT 17c) — but it was
+         absolute, so an artist who ended the show by accident, carried on for eight
+         more songs and ended again kept the FIVE-song snapshot forever, while the
+         index row got the thirteen-song stats. The detail and the index disagreed
+         and the later half of the night was gone.
+         So: replace when the new snapshot is strictly richer, refresh money only
+         when it is not. Both protections, no loss. */
+      const richer = (doc.played || []).length > (d.played || []).length
+        || (doc.stats.totalVotes || 0) > ((d.stats || {}).totalVotes || 0);
+      if (!richer) { d.money = money; d.archivedAt = endedAt; return true; }
+      Object.assign(d, doc); return true;
     }
     Object.assign(d, doc); return true;
   }).catch(() => {});
@@ -123,6 +140,11 @@ export async function archiveShow(aid, show, fans) {
       startedAt: doc.startedAt, endedAt,
       songsPlayed: doc.stats.songsPlayed, totalVotes: doc.stats.totalVotes,
       peakVoters: doc.stats.peakVoters, room: doc.stats.room, gross: money.gross,
+      /* INVARIANT 0ae calls the network count "the only defence against one phone
+         rotating its id", and it was missing from this row — which is the row
+         _vstats.mjs and _pitch.mjs read. So the number shown to a venue, and the
+         number an artist pitches with, had no sanity check available beside it. */
+      nets: doc.stats.nets,
     };
     const at = idx.shows.findIndex((x) => x.showId === showId);
     if (at >= 0) idx.shows[at] = row; else idx.shows.unshift(row);

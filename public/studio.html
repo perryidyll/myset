@@ -115,6 +115,12 @@ a{color:inherit;text-decoration:none}
 
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
 .row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
+/* A prose row is a SENTENCE, not a row of items. `.row` is a flex container, so
+   every <b> inside one becomes a flex ITEM and each run of text between them an
+   anonymous item — which stacked "your name, and your city and country" into
+   vertical columns. Same family as INVARIANT 0ao: a display rule reaching a <b>
+   it was never meant for. Prose rows opt out. */
+.row.muted{display:block}
 .row:first-child{border-top:none}
 .row .rk{width:26px;text-align:center;font-size:15px;font-weight:700;color:var(--muted);flex:0 0 auto}
 .row .rk.one{color:var(--accent)}
@@ -227,6 +233,10 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   transition:background .22s var(--ease),color .2s}
 .tog button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)}
 
+.bigfile{display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:13px;border:1.5px dashed var(--hair-2,rgba(128,128,128,.4));border-radius:12px;
+  font-weight:700;font-size:14px;cursor:pointer;margin:0 0 10px;user-select:none}
+.bigfile:active{opacity:.7}
 .inp{width:100%;min-height:50px;padding:14px 16px;font-size:16px;background:var(--surface);
   border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);
   transition:box-shadow .2s var(--ease)}
@@ -414,6 +424,7 @@ let TAB=localStorage.getItem('myset.tab')||'live';
    so the two screens never disagree about where a song is. 'votes' keeps the
    server's ranking (votes desc -> voted-first -> title). */
 let SETQ='', SETFOCUS=false;
+let HISTQ='', HISTFOCUS=false, HSHOWN=[];   // the Money tab's past-shows search
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
 const collate=(a,b)=>String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base'});
@@ -691,8 +702,12 @@ function genreBar(songs){
   if(!used.size) return '';
   const items=[...used.entries()].map(([id,n])=>({id,n,label:tagLabel(id)}))
     .sort((a,b)=>a.label.localeCompare(b.label));
+  /* '__hidden' is a pseudo-filter, not a tag: switched-off songs. Studio-only —
+     the audience never sees hidden songs, so the chip would be meaningless there. */
+  const hid=songs.filter(x=>x.active===false).length;
   return `<div class="gbar">
     <button class="${GENRE?'':'on'}" data-act="gfilter" data-id="">All</button>
+    ${hid?`<button class="${GENRE==='__hidden'?'on':''}" data-act="gfilter" data-id="__hidden">Hidden <b>${hid}</b></button>`:''}
     ${items.map(t=>`<button class="${GENRE===t.id?'on':''}" data-act="gfilter" data-id="${esc(t.id)}">${esc(t.label)} <b>${t.n}</b></button>`).join('')}
   </div>`;
 }
@@ -722,11 +737,18 @@ async function api(p,o={}){
   try{
     const r=await fetch(API+p,{...o,headers:h});
     return await r.json();
-  }catch(e){ return {ok:false,error:'Connection hiccup — try again'}; }
+  // `offline` distinguishes "the network failed" from "the server said no".
+  // load() used to treat both as an auth failure and throw the artist out to the
+  // sign-in screen mid-gig, killing the refresh timer with it. INVARIANT 16.
+  }catch(e){ return {ok:false,offline:true,error:'Connection hiccup — try again'}; }
   finally{ if(!o.quiet) busy(false); }
 }
 async function load(opts){
   const d=await api('/stage',opts||{});
+  // A transport failure is not a sign-out. Keep the last good screen and let the
+  // interval retry — on bar wifi this fires constantly, and gating here used to
+  // end the gig. `&&D` because on the very first load there is nothing to keep.
+  if(!d.ok&&d.offline&&D) return;
   if(!d.ok){ if(d.error==='unauthorized'){
       CODE='';TOKEN='';localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token'); }
     gate(d.error); return; }
@@ -1063,7 +1085,7 @@ function render(){
     body=`
     <div class="stats">
       <div class="c"><b class="mono">${songs.reduce((a,b)=>a+b.votes,0)}</b><span>Votes now</span></div>
-      <div class="c"><b class="mono">${D.voters||0}<span style="font-size:15px;color:var(--muted);font-weight:600">/${D.room||D.voters||0}</span></b><span>Voting · in room</span></div>
+      <div class="c"><b class="mono">${D.voters||0}<span style="font-size:15px;color:var(--muted);font-weight:600">/${D.room||D.voters||0}</span></b><span>Voting · in room${D.nets?` · ${D.nets} net${D.nets===1?'':'s'}`:''}</span></div>
       <div class="c"><b class="mono acc">$${D.tips.total.toFixed(2)}</b><span>Tips</span></div>
     </div>
     ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>
@@ -1073,10 +1095,31 @@ function render(){
     ${asksPanel()}
     ${s.status!=='live'?`
       <div class="wrap" style="padding-top:22px;padding-bottom:2px">
-        <button class="big bigplay" onclick="act('status',{status:'live'})">
-          <span>●</span><span style="flex:1">Start the show</span></button>
+        <button class="big bigplay" onclick="${s.status==='ended'&&(s.played||[]).length
+          ? `if(confirm('Start a brand new show? Last night’s numbers are saved in your history.'))act('newShow')`
+          : `act('status',{status:'live'})`}">
+          <span>●</span><span style="flex:1">${s.status==='ended'&&(s.played||[]).length?'Start a new show':'Start the show'}</span></button>
       </div>
-      <p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to the audience until you tap this.</p>`
+      ${(()=>{ /* Warn BEFORE the cap, never on stage. A free artist finding out at
+          10pm that they cannot start is the worst possible moment to learn it. */
+        const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
+        if(!cap||cap===null||!isFinite(cap))return '';
+        const m=new Date().toISOString().slice(0,7);
+        const used=s.gigMonth===m?(s.gigCount||0):0;
+        const left=Math.max(0,cap-used);
+        if(left>2)return '';
+        return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">
+          ${left===0
+            ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
+            : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
+      })()}
+      ${s.status==='ended'&&(s.played||[]).length?`
+      <p class="muted" style="font-size:12px;padding:8px 20px 0">
+        ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
+        <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
+           style="color:var(--accent);font-weight:700">Resume it instead</a>
+        — use that if you ended it by mistake.</p>`
+      :`<p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to the audience until you tap this.</p>`}`
     :`<div class="wrap" style="padding-top:22px;padding-bottom:2px">
         <button class="big alt" onclick="if(confirm('End the show for the audience?'))act('status',{status:'ended'})"
           style="justify-content:center">■ End the show</button>
@@ -1106,7 +1149,7 @@ function render(){
     const active=songs.filter(x=>x.active!==false).length;
     const q=SETQ.trim().toLowerCase();
     const shown=applySetSort(songs
-      .filter(x=>!GENRE||(x.tags||[]).includes(GENRE))
+      .filter(x=>GENRE==='__hidden'?x.active===false:(!GENRE||(x.tags||[]).includes(GENRE)))
       .filter(x=>!q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q)));
     body=`
     <div class="wrap" style="padding-top:18px">
@@ -1123,6 +1166,7 @@ function render(){
     <div class="wrap" style="padding-top:16px">
       <button class="big bigplay" style="margin:0" onclick="openSongSheet(null)">
         <span>+</span><span style="flex:1">Add a song</span></button>
+      <button class="big alt" style="justify-content:center" onclick="openImport()">⇪ Import songs — CSV, text or Spotify</button>
     </div>
     ${PLAN&&PLAN.ok&&PLAN.limits.featured?`<p class="muted" style="font-size:12px;padding:0 20px;margin:0">
       <b>${active} of ${PLAN.limits.featured}</b> featured. Keep as many as you like (up to ${PLAN.limits.library}) — your plan shows ${PLAN.limits.featured} to the audience at a time. The rest sit switched off.</p>`:''}
@@ -1265,14 +1309,30 @@ function render(){
         </div>
         ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
         <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Tap “New show” in Settings when the next gig starts.':'Tonight gets filed away when you end the show or start a new one.'}</p>
-        <div class="sec"><span class="kick">Past shows</span><span class="kick">${H.shows.length}</span></div>
-        <div class="list">${H.shows.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
+        ${(()=>{  /* filter by anything a night is remembered by: venue, city, date, weekday */
+          const hw=HISTQ.toLowerCase().split(/\s+/).filter(Boolean);
+          const hay=x=>{const d=new Date(x.endedAt||x.startedAt||0);
+            return [x.venue,x.city,dstamp(x.endedAt||x.startedAt),
+                    ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][d.getDay()]]
+              .filter(Boolean).join(' ').toLowerCase();};
+          HSHOWN=hw.length?H.shows.filter(x=>{const h=hay(x);return hw.every(w=>h.includes(w));}):H.shows;
+          return '';})()}
+        <div class="sec"><span class="kick">Past shows</span><span class="kick">${
+          HISTQ?`${HSHOWN.length} of ${H.shows.length}`:H.shows.length}</span></div>
+        ${H.shows.length>3?`<div class="find" style="margin-bottom:8px">
+          <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
+          <input id="histq" type="search" placeholder="Find a night — venue, city, “friday”, “12 Aug”…"
+            value="${esc(HISTQ)}" autocomplete="off">
+          ${HISTQ?`<button class="clr" onclick="HISTQ='';HISTFOCUS=false;render()" aria-label="Clear search">✕</button>`:''}
+        </div>`:''}
+        <div class="list">${HSHOWN.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
           <div class="m"><div class="t">${esc(x.venue||'Untitled show')}</div>
             <div class="by">${esc(x.city||'')}</div>
             <div class="s">${dstamp(x.endedAt||x.startedAt)} · ${x.songsPlayed} song${x.songsPlayed===1?'':'s'} · ${x.totalVotes} votes · ${x.peakVoters} people</div></div>
           <div class="cnt mono">$${Math.round(x.gross||0)}</div>
           <button class="act" data-act="show" data-id="${x.showId}">Open</button></div>`).join('')
-          ||'<div class="row muted">No finished shows yet. End a show and it gets filed here.</div>'}</div>`;
+          ||(HISTQ?`<div class="row muted">Nothing matches “${esc(HISTQ)}”. A venue, a city, a weekday or a date all work.</div>`
+                  :'<div class="row muted">No finished shows yet. End a show and it gets filed here.</div>')}</div>`;
       }
       let pays='';
       if(!R) pays=`<div class="sec"><span class="kick">All payments</span></div>
@@ -1288,7 +1348,7 @@ function render(){
           <b>${R.unredeemed} payment${R.unredeemed===1?' was':'s were'} never delivered</b>
           <p>Someone paid and the app didn’t hand over what they bought. This gives it to them — safe to tap twice.</p>
           <button class="big" onclick="recover()">Deliver ${R.unredeemed===1?'it':'them'} now</button></div>`:''}
-        <div class="sec"><span class="kick">All payments, all time</span><span class="kick">$${t.all.toFixed(2)}</span></div>
+        <div class="sec"><span class="kick">All payments · last 180 days</span><span class="kick">$${t.all.toFixed(2)}</span></div>
         <div class="list">${R.payments.map(p=>`<div class="row">
           <div class="m">
             <div class="t">$${p.amount.toFixed(2)} · ${p.kind==='tip'?'Tip':esc(p.votes+' extra votes')}</div>
@@ -1381,7 +1441,7 @@ function render(){
 
     <div class="sec"><span class="kick">Price of extra votes</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">What the audience pays for more votes. All three show in their app. Changes apply to the next purchase.</p>
-    ${[['small','Small','pS'],['big','Middle','pB'],['max','Big','pM']].map(([k,label,pre])=>
+    ${[['small','Small','pS'],['big','Big','pB']].map(([k,label,pre])=>
       `<div class="field"><label>${label} pack</label><div style="display:flex;gap:8px;align-items:center">
         <input class="inp" id="${pre}v" type="number" min="1" max="100" value="${s.packs[k].votes}" style="flex:1">
         <span class="muted" style="font-size:13px">votes for $</span>
@@ -1433,6 +1493,19 @@ function render(){
     <div class="wrap"><button class="big alt" id="lyrWarm" onclick="warmLyrics()">↓ Fetch lyrics for the whole setlist</button></div>
 
     <div class="sec"><span class="kick">Your plan</span></div>
+    <div class="note" style="margin-bottom:12px"><b>Why there's a limit at all</b>
+      <p>I'm a working musician — I play most nights, and I'd rather MySet were free
+      for everyone. Here's the honest reason it can't quite be.</p>
+      <p>While you're on stage, <b>every phone in the room is asking my server
+      "has the song changed yet?"</b> — a few times a minute, each, for the whole
+      gig. That's what makes the queue move live in front of people, and it's the
+      one part that genuinely costs money. A packed three-hour show is tens of
+      thousands of those little questions.</p>
+      <p>So the free plan is limited by <b>shows a month</b> rather than by
+      features. It's the only thing that actually tracks the cost, and it means a
+      hobbyist plays free forever while someone earning from it chips in. Nothing
+      your audience sees is ever cut back — the voting, the requests, the lyrics
+      and the sing-alongs are the same on every plan.</p></div>
     ${PLAN&&PLAN.ok?`
       <div class="planbox">
         <div class="row" style="border:none;padding:0">
@@ -1447,7 +1520,7 @@ function render(){
         <div class="plangrid">
           ${['free','plus','pro'].map(k=>{const L=PLAN.plans[k];return `<div class="pcard ${PLAN.plan===k?'on':''}">
             <b>${esc(L.label)}</b><span>${L.price?'$'+(L.price/100)+'/mo':'Free'}</span>
-            <em>${L.featured===null?'∞ songs':L.featured+' featured'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.analytics?'<br>+ analytics':''}${L.presskit?'<br>+ press kit':''}${L.branding?'<br>+ your branding':''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
+            <em>${L.gigs?L.gigs+' shows/month':'Unlimited shows'}<br>${L.featured===null?'∞ songs':L.featured+' featured'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.pricing?'<br>+ your own prices':''}${L.analytics?'<br>+ analytics':''}${L.presskit?'<br>+ press kit':''}${L.branding?'<br>+ your branding':''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
           </div>`;}).join('')}
         </div>
       </div>
@@ -1582,6 +1655,9 @@ function render(){
   const sq=$('#setq');
   if(sq){ sq.addEventListener('input',e=>{SETFOCUS=true;SETQ=e.target.value;render();});
     if(SETFOCUS){ sq.focus(); const v=sq.value; sq.setSelectionRange(v.length,v.length); } }
+  const hq=$('#histq');
+  if(hq){ hq.addEventListener('input',e=>{HISTFOCUS=true;HISTQ=e.target.value;render();});
+    if(HISTFOCUS){ hq.focus(); const v=hq.value; hq.setSelectionRange(v.length,v.length); } }
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
   fitTabs();
 }
@@ -1888,7 +1964,16 @@ async function saveSongSheet(id){
           plain:words, credit:v('sgCredit'), owned:!v('sgCredit')})});
     }
     CHARTS=null;
-    closeSheet(); await load(); toast(id?'Saved':'Added to your setlist');
+    closeSheet(); await load();
+    /* "Added to your setlist" was wrong twice: a new song joins the LIBRARY, and
+       with a setlist active the room cannot vote for it at all until it joins that
+       too. The two siblings of this bug (askAccept, learnDone) were already fixed.
+       Read the refreshed row rather than trusting the server note, because toast()
+       replaces the single toast element and this line always fires last. */
+    const sgNew=(D&&D.songs||[]).find(x=>x.id===songId);
+    toast(id?'Saved':(sgNew&&sgNew.inSet===false
+      ? 'In your songs — add it to tonight’s set so the room can vote'
+      : 'Added to your songs'));
   } finally { WRITING=false; }
 }
 /* Read-only, big, fixed-width — for looking at mid-song, not editing. */
@@ -2042,15 +2127,75 @@ async function warmLyrics(){
       <div class="list">${d.missing.map(t=>`<div class="row"><div class="m"><div class="t">${esc(t)}</div></div></div>`).join('')}</div>
       <button class="big" style="margin-top:14px" onclick="closeSheet()">Got it</button>`);
 }
+/* ---------- bulk import: CSV file, pasted text, or a Spotify playlist ----------
+   Parsing happens HERE so the artist sees exactly what will be added before
+   anything is written. The server (importSongs) re-validates everything anyway:
+   dupes are skipped, the library cap refuses loudly, over-cap rows arrive off. */
+let IMP=[];
+function openImport(){
+  IMP=[];
+  openSheet(`<h3>Import songs</h3>
+    <p class="lede">A CSV file, a pasted list, or a public Spotify playlist. One song per line — <b>Title, Artist</b> or <b>Title — Artist</b>. A header row is fine.</p>
+    <label class="bigfile"><input type="file" id="impFile" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="impFile(this)">⇪ Choose a CSV or text file</label>
+    <textarea class="inp" id="impText" rows="5" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" oninput="impParse(this.value)"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input class="inp" id="impSpot" style="flex:1;margin:0" placeholder="Spotify playlist link (public)">
+      <button class="big alt" style="margin:0;padding:12px 16px" onclick="impSpotify()">Fetch</button>
+    </div>
+    <p class="muted" id="impCount" style="font-size:13px;margin:12px 2px 0">Nothing to import yet.</p>
+    <button class="go" id="impGo" onclick="impSend()" disabled>Import</button>`);
+}
+function impParse(text){
+  const rows=[];
+  for(let line of String(text||'').split(/\r?\n/)){
+    line=line.trim(); if(!line)continue;
+    // split on the FIRST comma, em/en dash, hyphen-with-spaces, or tab
+    const m=line.match(/^"?(.*?)"?\s*(?:,|\t| [—–] | - )\s*"?(.*?)"?$/);
+    let title=m?m[1]:line, artist=m?m[2]:'';
+    title=title.trim(); artist=artist.trim();
+    if(!title)continue;
+    if(/^(title|song|track|name)$/i.test(title)&&/^artist/i.test(artist))continue;   // header row
+    rows.push({title:title.slice(0,80),artist:artist.slice(0,60)});
+    if(rows.length>=300)break;
+  }
+  IMP=rows; impShow();
+}
+function impShow(){
+  const c=$('#impCount'),g=$('#impGo');
+  if(c)c.textContent=IMP.length?`${IMP.length} song${IMP.length===1?'':'s'} ready — e.g. “${IMP[0].title}${IMP[0].artist?' — '+IMP[0].artist:''}”`:'Nothing to import yet.';
+  if(g)g.disabled=!IMP.length;
+}
+function impFile(inp){
+  const f=inp.files&&inp.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{const t=$('#impText'); if(t)t.value=String(r.result||'').slice(0,120000); impParse(r.result);};
+  r.readAsText(f);
+}
+async function impSpotify(){
+  const url=($('#impSpot')||{}).value||'';
+  if(!url.trim()){toast('Paste a playlist link first');return;}
+  const c=$('#impCount'); if(c)c.textContent='Asking Spotify…';
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'spotifyPeek',url})});
+  if(!d.ok){toast(d.error||'Couldn’t fetch that');impShow();return;}
+  IMP=(d.tracks||[]).slice(0,300); impShow();
+}
+async function impSend(){
+  if(!IMP.length)return;
+  const g=$('#impGo'); if(g){g.disabled=true;g.textContent='Importing…';}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'importSongs',songs:IMP})});
+  if(!d.ok){toast(d.error||'Import failed');if(g){g.disabled=false;g.textContent='Import';}return;}
+  if(d.stage&&d.stage.ok)D=d.stage;
+  closeSheet(); render(); toast(d.note||'Imported');
+}
+
 async function savePacks(){
   const n=id=>parseFloat(($('#'+id)||{}).value);
   const S={votes:n('pSv'),cents:Math.round(n('pSc')*100)},
-        B={votes:n('pBv'),cents:Math.round(n('pBc')*100)},
-        M={votes:n('pMv'),cents:Math.round(n('pMc')*100)};
-  const all=[S,B,M];
-  if(!all.every(p=>Number.isFinite(p.votes)&&p.votes>0&&Number.isFinite(p.cents))){toast('Fill in all three packs');return;}
+        B={votes:n('pBv'),cents:Math.round(n('pBc')*100)};
+  const all=[S,B];
+  if(!all.every(p=>Number.isFinite(p.votes)&&p.votes>0&&Number.isFinite(p.cents))){toast('Fill in both packs');return;}
   if(all.some(p=>p.cents<100)){toast('Stripe\u2019s minimum charge is $1');return;}
-  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'packs',small:S,big:B,max:M})});
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'packs',small:S,big:B})});
   if(!d.ok){toast(d.error||'Could not save that');return;}
   toast('Prices saved'); load();
 }

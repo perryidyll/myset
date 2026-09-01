@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { json, bad, requireArtist, readMeta } from './_lib.mjs';
+import { json, bad, requireArtist, readMeta, DEFAULT_ARTIST } from './_lib.mjs';
 import { redeemSession } from './_pay.mjs';
 
 /* Artist-only. Stripe is the source of truth for money; the app's own ledger can
@@ -13,11 +13,25 @@ export default async (req) => {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return json({ ok: true, enabled: false, payments: [], unredeemed: 0 });
 
+  /* PAGE it, and bound it by date. A bare list({limit:100}) is account-wide and
+     unfiltered, and both the paid test and the ours test run AFTER that truncation
+     — so 100 abandoned pay-taps (which create a session each) were enough to make
+     an artist's whole Money tab read $0.00 while the money sat in Stripe.
+     _history.mjs has always done this correctly; this is the same loop. */
   const stripe = new Stripe(key);
+  const WINDOW_DAYS = 180;
+  const gte = Math.floor(Date.now() / 1000) - WINDOW_DAYS * 86400;
   let sessions = [];
   try {
-    const r = await stripe.checkout.sessions.list({ limit: 100 });
-    sessions = r.data || [];
+    let after = null;
+    for (let page = 0; page < 20; page++) {
+      const r = await stripe.checkout.sessions.list({
+        limit: 100, created: { gte }, ...(after ? { starting_after: after } : {}),
+      });
+      sessions = sessions.concat(r.data || []);
+      if (!r.has_more || !(r.data || []).length) break;
+      after = r.data[r.data.length - 1].id;
+    }
   } catch (e) {
     return bad('could not reach Stripe', 502);
   }
@@ -28,8 +42,12 @@ export default async (req) => {
   const isOurs = (s) => {
     const md = s.metadata || {};
     if (md.kind !== 'votes' && md.kind !== 'tip') return false;
-    // once payments carry an artist, only this artist's are ever shown
-    return !md.artist || md.artist === aid;
+    /* An UNTAGGED session is the founding artist's, not "whoever is asking".
+       Sessions created before 2026-08-31 carry no `artist`, and treating them as
+       belonging to the caller showed a second artist Perry's payments AND his
+       buyers' email addresses, and let them redeem those into their own ledger.
+       Same convention as confirm.mjs and webhook.mjs, which already do this. */
+    return (md.artist || DEFAULT_ARTIST) === aid;
   };
   const paidSessions = sessions.filter((s) => s.payment_status === 'paid' && isOurs(s));
 

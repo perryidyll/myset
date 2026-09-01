@@ -1,4 +1,4 @@
-import { playable, votable, inPlay, rankSongs } from '../netlify/functions/_lib.mjs';
+import { playable, votable, inPlay, rankSongs, newShowId } from '../netlify/functions/_lib.mjs';
 import { shapeLists } from '../netlify/functions/_lists.mjs';
 
 let pass = 0, fail = 0;
@@ -106,6 +106,18 @@ console.log('\nshapeLists: two numbers that mean two different things');
   const sh2 = { songs: show.songs, listId: 'l1', listSongs: ['a','c'], played: [] };
   eq('and it agrees with playable()', playable(sh2).songs.length, l.count);
   eq('active flag', l.active, true);
+}
+
+console.log('\nC002  a show id is unique per tap, not per minute');
+{
+  const t = Date.UTC(2026, 8, 1, 14, 30, 0);
+  // THE BUG: minute granularity and nothing else, so two taps in the same minute
+  // gave the second show the first's history row and money attribution.
+  eq('two ids in the same minute differ', newShowId(t, 0.11) === newShowId(t, 0.87), false);
+  eq('the readable prefix survives', newShowId(t, 0.11).startsWith('2026-09-01-1430-'), true);
+  const many = new Set(Array.from({ length: 400 }, (_, i) => newShowId(t, i / 400)));
+  eq('400 draws, 400 distinct ids', many.size, 400);
+  eq('deterministic for a given draw', newShowId(t, 0.5), newShowId(t, 0.5));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
