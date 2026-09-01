@@ -18,11 +18,29 @@ import { createHash, timingSafeEqual } from 'node:crypto';
    and branch-deploy contexts, so a preview cannot charge a real card either
    (INVARIANT 9 — the app works fully with payments off).
 
-   If CONTEXT is absent we fall back to the production name. That is the pre-existing
-   behaviour, so this can never make things worse than they were — but it also means
-   the isolation MUST be verified on a real draft deploy rather than assumed. */
-const CONTEXT = process.env.CONTEXT || '';
-export const STORE_NAME = CONTEXT && CONTEXT !== 'production' ? `myset-${CONTEXT}` : 'myset';
+   AND IT CANNOT BE FIXED HERE. Measured on a real draft deploy 2026-09-01: NONE of
+   Netlify's deploy-context variables exist at function runtime. A diagnostic on
+   /api/show reported CONTEXT, DEPLOY_ID, DEPLOY_PRIME_URL, BRANCH, HEAD, NETLIFY,
+   NETLIFY_LOCAL and NETLIFY_DEV all null; only URL (identical on both) and SITE_NAME
+   are present. A `getStore(CONTEXT === 'production' ? … )` scheme therefore does
+   nothing at all, and the first version of this fix was exactly that — dead code
+   that read like protection, which is worse than none.
+
+   WHAT IS ACTUALLY IN PLACE. The money half is closed and verified from outside:
+   STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are unset for the deploy-preview and
+   branch-deploy contexts, so a preview reports paymentsEnabled:false and cannot
+   charge a card (INVARIANT 9). Confirmed by curl on a draft: payments off, while
+   production stayed live.
+
+   WHAT IS STILL TRUE. A preview READS AND WRITES PRODUCTION DATA. Use previews to
+   look at pages, never to exercise a write path. The real sandbox is `npm test` —
+   the real handlers against an in-memory store, no Netlify involved, which cannot
+   touch production at all. For a writable staging environment the honest answer is
+   a SEPARATE NETLIFY SITE, because a separate site is a separate blob store; doing
+   it in code would mean threading Netlify's v2 `context` argument (or the request
+   Host) down into every store() caller, which is the kind of half-finished refactor
+   this project has been bitten by before. */
+export const STORE_NAME = 'myset';
 export const store = () => getStore(STORE_NAME);
 
 /* ---------- starter setlist offered to a new artist ---------- */
