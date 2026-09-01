@@ -1,5 +1,5 @@
 import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, publicArtist, json, bad,
-         cleanFanId, votable } from './_lib.mjs';
+         cleanFanId, votable, roomHash, clientIp } from './_lib.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -30,6 +30,14 @@ export default async (req) => {
   try {
     await mutateFan(aid, fan, (me) => {
       me.ts ||= {};
+      /* Stamp the network hash here too. markPresence was the ONLY writer, and it
+         runs from the polling path only — so a fan record created purely by voting
+         had no network hash at all, and `nets` (which INVARIANT 0ae calls "the only
+         defence against one phone rotating its id") was blank for exactly the traffic
+         worth watching. The write is already happening, so this costs nothing.
+         `||=` on purpose: a device that changes network mid-gig keeps its first
+         stamp and so cannot inflate `nets` in the other direction either. */
+      me.ipH ||= roomHash(aid, clientIp(req));
       // window closed => no changes at all, in or out (an un-vote while paused
       // could not be re-cast and would silently drop the on-stage tally)
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }

@@ -269,6 +269,25 @@ eq('three phones', await roomOf(), 3);
 await hit(showFn, 'https://x/api/show?fan=ph4');            // no in=1
 eq('a profile view is NOT in the room (INVARIANT 0af)', await roomOf(), 3);
 
+console.log('\nthe network signal covers voters, not just pollers');
+await A('newShow');
+await A('status', { status: 'live' });
+/* A setlist is still active from an earlier section, so pick a song the room can
+   actually vote for — stage.songs is the whole library and the first entry may not
+   be votable. That is what broke the first draft of this test. */
+const nIds = (await A('window', { open: true })).stage.songs
+  .filter((x) => x.votable !== false).map((x) => x.id);
+ok('there is something votable to vote for', nIds.length > 0, nIds.length);
+/* clientIp() reads x-nf-client-connection-ip, which Netlify sets and a bare test
+   Request does not — the first draft of this asserted on an empty hash. */
+await voteFn(new Request('https://x/api/vote', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json', 'x-nf-client-connection-ip': '203.0.113.7' },
+  body: JSON.stringify({ fan: 'voter-only', song: nIds[0] }),
+}));                                               // never polled with in=1
+const st2 = (await A('window', { open: true })).stage;
+ok('THE BUG: a vote-only fan still registers a network', (st2.nets || 0) >= 1, st2.nets);
+
 console.log('\nEVERY song in the public payload must be votable');
 await A('listUse', { id: lid });
 await A('play', { song: 'alpha' });
