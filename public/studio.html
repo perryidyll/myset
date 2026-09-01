@@ -1070,7 +1070,7 @@ function render(){
     body=`
     <div class="stats">
       <div class="c"><b class="mono">${songs.reduce((a,b)=>a+b.votes,0)}</b><span>Votes now</span></div>
-      <div class="c"><b class="mono">${D.voters||0}<span style="font-size:15px;color:var(--muted);font-weight:600">/${D.room||D.voters||0}</span></b><span>Voting · in room</span></div>
+      <div class="c"><b class="mono">${D.voters||0}<span style="font-size:15px;color:var(--muted);font-weight:600">/${D.room||D.voters||0}</span></b><span>Voting · in room${D.nets?` · ${D.nets} net${D.nets===1?'':'s'}`:''}</span></div>
       <div class="c"><b class="mono acc">$${D.tips.total.toFixed(2)}</b><span>Tips</span></div>
     </div>
     ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>
@@ -1895,7 +1895,16 @@ async function saveSongSheet(id){
           plain:words, credit:v('sgCredit'), owned:!v('sgCredit')})});
     }
     CHARTS=null;
-    closeSheet(); await load(); toast(id?'Saved':'Added to your setlist');
+    closeSheet(); await load();
+    /* "Added to your setlist" was wrong twice: a new song joins the LIBRARY, and
+       with a setlist active the room cannot vote for it at all until it joins that
+       too. The two siblings of this bug (askAccept, learnDone) were already fixed.
+       Read the refreshed row rather than trusting the server note, because toast()
+       replaces the single toast element and this line always fires last. */
+    const sgNew=(D&&D.songs||[]).find(x=>x.id===songId);
+    toast(id?'Saved':(sgNew&&sgNew.inSet===false
+      ? 'In your songs — add it to tonight’s set so the room can vote'
+      : 'Added to your songs'));
   } finally { WRITING=false; }
 }
 /* Read-only, big, fixed-width — for looking at mid-song, not editing. */

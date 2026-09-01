@@ -130,5 +130,30 @@ for (let round = 0; round < 5; round++) {
 eq('1 free x5 rounds + a 3-vote pack = 8 casts, not 20', accepted, 8);
 eq('the pack is spent', await extraOf('hana'), 0);
 
+console.log('\nDELETING A SONG REFUNDS THE CREDIT HELD ON IT');
+/* creditsUsed counts every id in fan.v whether the song still exists or not, and
+   vote.mjs answers 404 before the un-vote toggle — so a hard delete used to strand
+   the credit with no row in the UI to tap. Narrowing a setlist and hiding a song
+   were never affected: the song stays in show.songs, so the toggle refunds. */
+await A('newShow');
+await A('freeCredits', { n: 3 });
+const doomed = (await A('addSong', { title: 'Doomed Song', artist: 'Test' })).songId;
+await vote('ivy', doomed);
+await vote('ivy', ids[1]);
+eq('two credits spent, one left', (await pub('ivy')).credits.remaining, 1);
+await A('removeSong', { song: doomed });
+eq('THE BUG: the credit came back when the song went', (await pub('ivy')).credits.remaining, 2);
+const fanIvy = (await readFans('perry-idyll')).ivy;
+ok('and the dead id is out of her picks', !(fanIvy.v || []).includes(doomed), fanIvy.v);
+ok('her other vote is untouched', (fanIvy.v || []).includes(ids[1]), fanIvy.v);
+
+console.log('\nHIDING A SONG IS NOT DELETING IT — THE TOGGLE STILL REFUNDS');
+const hideMe = (await A('addSong', { title: 'Hidden Song', artist: 'Test' })).songId;
+await vote('jo', hideMe);
+await A('toggleSong', { song: hideMe });
+const un = await vote('jo', hideMe);
+ok('un-voting a hidden song still works (INVARIANT 15)', un.ok && un.voted === false, un);
+eq('and the credit is back', (await pub('jo')).credits.remaining, 3);
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

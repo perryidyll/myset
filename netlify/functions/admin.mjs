@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, clearAllFanVotes, voteCounts,
+import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
@@ -848,6 +848,7 @@ export default async (req) => {
   /* Read before the mutation, for every action that will settle the paid-vote
      ledger afterwards. `play` moves played[] before clearAllFanVotes runs, so the
      post-mutation show prices a just-won replay at 1 instead of replayCost. */
+  let droppedSong = null;
   const RESETTERS = new Set(['newShow', 'play', 'playTop', 'resetVotes']);
   const prevShow = RESETTERS.has(action) ? await getShow(aid) : null;   // read before it resets
 
@@ -998,7 +999,10 @@ export default async (req) => {
       }
       case 'replayCost':
         show.replayCost = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5)); break;
-      case 'removeSong': show.songs = show.songs.filter((s) => s.id !== body.song); break;
+      case 'removeSong':
+        show.songs = show.songs.filter((s) => s.id !== body.song);
+        droppedSong = String(body.song || '');   // refund the votes held on it, below
+        break;
       case 'unplay': show.played = show.played.filter((id) => id !== body.song); break;
       case 'setCode': {
         const code = String(body.code || '');
@@ -1055,6 +1059,8 @@ export default async (req) => {
   // paid votes survive a reset — only a fan who gifted them loses them
   if (wipe) await carryFans(aid, prevShow || (await getShow(aid)));
   else if (resetVotes) await clearAllFanVotes(aid, prevShow || (await getShow(aid)));
+  // a deleted song must not keep holding somebody's credit
+  else if (droppedSong) await dropSongVotes(aid, droppedSong);
 
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.

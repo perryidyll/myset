@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { casDoc, readDoc, voteCounts, roomCounts, KEY } from './_lib.mjs';
+import { casDoc, readDoc, voteCounts, roomCounts, KEY, DEFAULT_ARTIST } from './_lib.mjs';
 
 const HIST = KEY.hist;                  // flat key — INVARIANT 2
 const INDEX = KEY.histIdx;
@@ -32,6 +32,12 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
         if (s.payment_status !== 'paid') continue;
         const md = s.metadata || {};
         if (md.kind !== 'votes' && md.kind !== 'tip') continue;   // INVARIANT 5d
+        /* And it has to be THIS artist's. This was the one Stripe consumer of four
+           that did not check — so with a colliding showId (they used to collide;
+           see newShowId) another artist's takings were reported as yours. Untagged
+           sessions predate artist tagging and belong to the founding artist, the
+           same convention confirm.mjs, webhook.mjs and revenue.mjs use. */
+        if ((md.artist || DEFAULT_ARTIST) !== aid) continue;
         const amt = (s.amount_total || 0) / 100;
         if (md.show && md.show !== showId) continue;
         if (!md.show) { out.unattributed = round(out.unattributed + amt); continue; }
@@ -123,6 +129,11 @@ export async function archiveShow(aid, show, fans) {
       startedAt: doc.startedAt, endedAt,
       songsPlayed: doc.stats.songsPlayed, totalVotes: doc.stats.totalVotes,
       peakVoters: doc.stats.peakVoters, room: doc.stats.room, gross: money.gross,
+      /* INVARIANT 0ae calls the network count "the only defence against one phone
+         rotating its id", and it was missing from this row — which is the row
+         _vstats.mjs and _pitch.mjs read. So the number shown to a venue, and the
+         number an artist pitches with, had no sanity check available beside it. */
+      nets: doc.stats.nets,
     };
     const at = idx.shows.findIndex((x) => x.showId === showId);
     if (at >= 0) idx.shows[at] = row; else idx.shows.unshift(row);

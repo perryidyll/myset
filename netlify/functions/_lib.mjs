@@ -78,11 +78,19 @@ export const ARTIST_ID = 'perry-idyll';
 export const DEFAULT_ARTIST = 'perry-idyll';
 
 /* Must be generated OUTSIDE a CAS callback — a retry would otherwise produce a
-   different id on each attempt. */
-export function newShowId(now = Date.now()) {
+   different id on each attempt.
+
+   The suffix is not decoration. This used to be a UTC stamp to the MINUTE and
+   nothing else, so two 'New show' taps inside the same minute produced the SAME
+   id — the second show inherited the first's history row and money attribution.
+   Two different artists starting a show in the same minute collided too, which is
+   half of why moneyForShow now also filters on metadata.artist. Readable prefix,
+   unique tail. */
+export function newShowId(now = Date.now(), rand = Math.random()) {
   const d = new Date(now), p = (n) => String(n).padStart(2, '0');
+  const tail = Math.floor(rand * 1679616).toString(36).padStart(4, '0');
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}` +
-         `-${p(d.getUTCHours())}${p(d.getUTCMinutes())}`;
+         `-${p(d.getUTCHours())}${p(d.getUTCMinutes())}-${tail}`;
 }
 
 export const slug = (t) =>
@@ -445,6 +453,32 @@ export async function carryFans(aid, show) {
           else delete bag[id];          // nothing owed — don't keep the record
         }
         return true;
+      }, null).catch(() => {})
+    )
+  );
+}
+
+/* Deleting a song from the library used to strand every credit held on it:
+   `creditsUsed` counts each id in `fan.v` whether or not the song still exists, and
+   vote.mjs answers 404 before it reaches the un-vote toggle — so the fan could not
+   get the credit back, and had no row in the UI to tap even if they could.
+   Fixed at the source. Narrowing a setlist and hiding a song were NOT affected —
+   the song stays in show.songs, so the toggle works and refunds correctly; that was
+   measured, and the original report had it wrong. */
+export async function dropSongVotes(aid, songId) {
+  if (!songId) return;
+  await Promise.all(
+    Array.from({ length: SHARDS }, (_, n) =>
+      casDoc(shardKey(aid, n), () => ({}), (bag) => {
+        let touched = false;
+        for (const id of Object.keys(bag)) {
+          const at = (bag[id].v || []).indexOf(songId);
+          if (at < 0) continue;
+          bag[id].v.splice(at, 1);
+          if (bag[id].ts) delete bag[id].ts[songId];
+          touched = true;
+        }
+        return touched;                  // no write when this shard held none
       }, null).catch(() => {})
     )
   );
