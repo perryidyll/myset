@@ -845,7 +845,11 @@ export default async (req) => {
   }
   let newSongId = null;                       // so the sheet can keep editing it
   const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
-  const prevShow = action === 'newShow' ? await getShow(aid) : null;   // read before it resets
+  /* Read before the mutation, for every action that will settle the paid-vote
+     ledger afterwards. `play` moves played[] before clearAllFanVotes runs, so the
+     post-mutation show prices a just-won replay at 1 instead of replayCost. */
+  const RESETTERS = new Set(['newShow', 'play', 'playTop', 'resetVotes']);
+  const prevShow = RESETTERS.has(action) ? await getShow(aid) : null;   // read before it resets
 
   let libChanged = false;
   await mutateShow(aid, (show) => {
@@ -1050,7 +1054,7 @@ export default async (req) => {
   }
   // paid votes survive a reset — only a fan who gifted them loses them
   if (wipe) await carryFans(aid, prevShow || (await getShow(aid)));
-  else if (resetVotes) await clearAllFanVotes(aid);
+  else if (resetVotes) await clearAllFanVotes(aid, prevShow || (await getShow(aid)));
 
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.

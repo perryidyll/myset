@@ -26,3 +26,6 @@ node --import ./test/register.mjs test/e2e.mjs
 echo
 echo "── cross-tenant isolation ──"
 node --import ./test/register.mjs test/tenancy.mjs
+echo
+echo "── the paid-vote ledger ──"
+node --import ./test/register.mjs test/credits.mjs

@@ -331,6 +331,25 @@ If you are about to violate one, stop and say so rather than working around it.
 
 14. **Starting a song refreshes everyone's votes** (`clearAllFanVotes`), so each
     round is a fresh contest.
+    **Free credits refresh. PAID ones do not** — see 13b.
+
+13b. **A bought pack is a stock, and free credits are spent first.** `extra` was
+    read as part of `total = freeCredits + extra` in four places and decremented in
+    exactly ONE place in the whole codebase (`gift.mjs`), so a purchased pack never
+    ran out. Measured: an 18-vote pack yielded **252 credits across 13 rounds** and
+    survived `newShow` untouched, making one $11 purchase a permanent advantage at
+    every future gig that artist played. Three lenses found it independently and
+    three verifiers reproduced it.
+    The paid portion of a round is `creditsUsed - freeCredits`, derived not stored,
+    and it is settled **once, at the round reset**, inside `clearAllFanVotes`.
+    Debiting at the moment of the cast is wrong twice over: `creditsUsed` already
+    counts the vote while `total` would shrink (double-charging), and it breaks
+    INVARIANT 15, because un-voting would then burn a paid vote.
+    `clearAllFanVotes` therefore **requires the pre-play show** to price the round:
+    `play` takes the winning song back out of `played[]` before the reset runs, so
+    pricing against the post-play show charges a just-won replay 1 instead of
+    `replayCost`. It throws if that snapshot is missing rather than silently
+    under-debiting.
 
 15. **Voting is idempotent per (fan, song).** Voting twice toggles off and refunds
     the credit; it must never double-count. **Un-voting is never gated by whether

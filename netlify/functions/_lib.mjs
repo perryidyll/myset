@@ -380,13 +380,42 @@ export async function readFans(aid) {
   for (const p of parts) Object.assign(fans, p.data || {});
   return fans;
 }
-export async function clearAllFanVotes(aid) {
+/* ---------- the paid-vote ledger ----------
+   FREE CREDITS ARE ALWAYS SPENT FIRST. Everything a fan spends beyond
+   `show.freeCredits` in the current round came out of the pack they bought, so the
+   paid portion of a round is derivable and needs no extra stored field.
+
+   This exists because for a long time it did not. `extra` was read as part of
+   `total = freeCredits + extra` in four places and decremented in exactly ONE
+   place in the whole codebase (gift.mjs), so a purchased pack never ran out:
+   measured, an 18-vote pack yielded 252 credits across 13 rounds and survived
+   `newShow` untouched, which made it a permanent boost at every future gig.
+   The same missing ledger also destroyed packs in the other direction — a fan
+   fully spent at the reset instant had `unspentPaid` return 0 and `carryFans`
+   delete their record. Both directions are this one function's fault. */
+export const paidUsed = (fan, show) =>
+  Math.max(0, creditsUsed(fan, show) - (show.freeCredits || 0));
+
+/* `costShow` must be the show as it was BEFORE the song started. `play` takes the
+   winning song back out of `played[]` first, so pricing a just-won replay vote
+   against the post-play show charges 1 instead of `replayCost` and silently
+   under-debits the pack. admin.mjs snapshots it before the mutation. */
+export async function clearAllFanVotes(aid, costShow) {
+  if (!costShow) throw new Error('clearAllFanVotes needs the pre-play show to price the round');
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
-        // drop stale stamps and the non-song spend too — free credits refresh
-        // here, so anything charged against them has to refresh with them
-        for (const id of Object.keys(bag)) { bag[id].v = []; bag[id].ts = {}; bag[id].spent = 0; }
+        for (const id of Object.keys(bag)) {
+          // settle the paid portion ONCE, here, before the evidence is wiped.
+          // Debiting at the moment of the cast instead double-charges, because
+          // creditsUsed already counts the vote while `total` would shrink — and
+          // it breaks INVARIANT 15, since un-voting would then burn a paid vote.
+          const paid = paidUsed(bag[id], costShow);
+          if (paid > 0) bag[id].extra = Math.max(0, (bag[id].extra || 0) - paid);
+          // drop stale stamps and the non-song spend too — free credits refresh
+          // here, so anything charged against them has to refresh with them
+          bag[id].v = []; bag[id].ts = {}; bag[id].spent = 0;
+        }
         return true;
       }, null).catch(() => {})
     )
@@ -394,12 +423,17 @@ export async function clearAllFanVotes(aid) {
 }
 /* Votes someone PAID for shouldn't evaporate because the artist tapped
    "New show". Unspent paid votes carry into the next show unless the fan chose
-   to gift them. Everything else — free credits, picks, timestamps — resets. */
+   to gift them. Everything else — free credits, picks, timestamps — resets.
+
+   Now that `extra` is a real balance, the only thing still owing at the end of a
+   show is whatever this last, unsettled round used. In-flight votes are charged
+   against FREE credits first, exactly as they are every other round, so holding a
+   vote when the artist ends the show costs the fan nothing — it used to cost them
+   the paid portion, which was the one and only way voting could lose you money. */
 export function unspentPaid(fan, show) {
   const extra = fan.extra || 0;
   if (extra <= 0) return 0;
-  const total = (show.freeCredits || 0) + extra;
-  return Math.max(0, Math.min(extra, total - creditsUsed(fan, show)));
+  return Math.max(0, extra - paidUsed(fan, show));
 }
 export async function carryFans(aid, show) {
   await Promise.all(

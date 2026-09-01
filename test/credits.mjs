@@ -1,0 +1,134 @@
+/* THE PAID-VOTE LEDGER.
+
+   `extra` — the votes a fan bought — was read as part of `total` in four places and
+   decremented in exactly ONE place in the whole codebase (gift.mjs). So a purchased
+   pack never ran out. Measured before the fix: an 18-vote pack yielded 252 credits
+   across 13 rounds, and survived `newShow` untouched, making one $11 purchase a
+   permanent voting advantage at every future gig that artist ever played.
+
+   The rule now: FREE CREDITS ARE SPENT FIRST, and the paid remainder of a round is
+   settled once, at the round reset, inside clearAllFanVotes. Every case below failed
+   or was meaningless before that change. */
+process.env.ADMIN_CODE = 'devlocal';
+
+const admin  = (await import('../netlify/functions/admin.mjs')).default;
+const showFn = (await import('../netlify/functions/show.mjs')).default;
+const voteFn = (await import('../netlify/functions/vote.mjs')).default;
+const reqFn  = (await import('../netlify/functions/request.mjs')).default;
+const { redeemSession } = await import('../netlify/functions/_pay.mjs');
+const { readFans } = await import('../netlify/functions/_lib.mjs');
+
+let pass = 0, fail = 0;
+const eq = (name, got, want) => {
+  if (JSON.stringify(got) === JSON.stringify(want)) { pass++; console.log('  ✓', name); }
+  else { fail++; console.log('  ✗', name, `\n      got  ${JSON.stringify(got)}\n      want ${JSON.stringify(want)}`); }
+};
+const ok = (name, c, d) => { if (c) { pass++; console.log('  ✓', name); } else { fail++; console.log('  ✗', name, d === undefined ? '' : '\n      ' + JSON.stringify(d)); } };
+
+const hit = async (h, url, body) => {
+  const r = await h(new Request(url, body === undefined ? {} : {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+  const t = await r.text();
+  try { return { status: r.status, ...JSON.parse(t) }; } catch { return { status: r.status, raw: t }; }
+};
+const A    = (action, extra = {}) => hit(admin, 'https://x/api/admin?code=devlocal', { action, ...extra });
+const pub  = (fan) => hit(showFn, `https://x/api/show?fan=${fan}`);
+const vote = (fan, song) => hit(voteFn, 'https://x/api/vote', { fan, song });
+const ask  = (fan, title) => hit(reqFn, `https://x/api/request?fan=${fan}`, { kind: 'song', title });
+const extraOf = async (fan) => ((await readFans('perry-idyll'))[fan] || {}).extra;
+
+/** Grant a pack through the REAL money path, so the test can't diverge from it. */
+const buy = (fan, votes, id) => redeemSession('perry-idyll', {
+  id, payment_status: 'paid', amount_total: 700, created: Math.floor(1756000000),
+  metadata: { fan, kind: 'votes', votes: String(votes) },
+});
+
+console.log('\nSETUP');
+const TITLES = Array.from({ length: 26 }, (_, i) => 'Song ' + String.fromCharCode(65 + i));
+for (const t of TITLES) await A('addSong', { title: t, artist: 'Test' });
+await A('freeCredits', { n: 3 });
+await A('replayCost', { n: 5 });
+await A('status', { status: 'live' });
+const ids = (await pub('setup')).songs.map((s) => s.id);
+eq('26 songs, 3 free credits', [ids.length, (await pub('setup')).credits.total], [26, 3]);
+
+console.log('\nA PACK IS A STOCK, NOT A PER-ROUND ALLOWANCE');
+await buy('alice', 9, 'cs_alice');
+eq('9 bought on top of 3 free', (await pub('alice')).credits.total, 12);
+for (let i = 0; i < 12; i++) await vote('alice', ids[i]);
+eq('she can spend all twelve', (await pub('alice')).credits.remaining, 0);
+await A('play', { song: ids[20] });
+eq('THE BUG: the pack is gone after the round', await extraOf('alice'), 0);
+eq('and she is back to three free', (await pub('alice')).credits.total, 3);
+
+console.log('\nA CONTROL FAN IS UNAFFECTED');
+await vote('bob', ids[0]); await vote('bob', ids[1]);
+await A('play', { song: ids[21] });
+eq('free credits still refresh in full', (await pub('bob')).credits.total, 3);
+eq('and bob never had a pack', await extraOf('bob'), 0);   // mutateFan seeds extra:0
+
+console.log('\nFREE CREDITS ARE SPENT FIRST');
+await buy('cara', 9, 'cs_cara');
+for (let i = 0; i < 3; i++) await vote('cara', ids[i]);
+await A('play', { song: ids[22] });
+eq('three votes come out of the free three, not the pack', await extraOf('cara'), 9);
+for (let i = 0; i < 5; i++) await vote('cara', ids[i]);
+await A('play', { song: ids[23] });
+eq('five votes debit exactly two from the pack', await extraOf('cara'), 7);
+
+console.log('\nUN-VOTING NEVER BURNS A PAID VOTE (INVARIANT 15)');
+await buy('dan', 9, 'cs_dan');
+for (let i = 0; i < 5; i++) await vote('dan', ids[i]);
+await vote('dan', ids[4]); await vote('dan', ids[3]);      // toggle two back off
+eq('three still cast', (await pub('dan')).credits.used, 3);
+await A('play', { song: ids[24] });
+eq('so nothing was taken from the pack', await extraOf('dan'), 9);
+
+console.log('\nA REPLAY VOTE IS PRICED AT replayCost, BEFORE played[] MOVES');
+/* `play` takes the winning song back OUT of played[], so settling the ledger against
+   the POST-play show prices a just-won replay at 1 instead of 5 and under-debits the
+   pack. admin.mjs snapshots the show before the mutation for exactly this. */
+await A('play', { song: ids[0] });                          // ids[0] is now played
+await A('play', { song: ids[1] });                          // ids[0] stays in played[]
+await buy('eve', 9, 'cs_eve');
+const rv = await vote('eve', ids[0]);
+eq('the replay cost her five', rv.cost, 5);
+await A('playTop');                                          // her replay wins, ids[0] leaves played[]
+eq('and the pack was debited two, not zero', await extraOf('eve'), 7);
+
+console.log('\nA SONG REQUEST SPENDS FROM THE SAME PURSE');
+await A('askSet', { kind: 'song', on: true, cost: 4 });
+await buy('finn', 9, 'cs_finn');
+const r1 = await ask('finn', 'Something Not On The List');
+ok('the request was taken', r1.ok, r1);
+await A('play', { song: ids[25] });
+eq('four spent, three free, so one off the pack', await extraOf('finn'), 8);
+
+console.log('\nWHAT CARRIES INTO THE NEXT SHOW');
+/* Fresh show first. Earlier sections left songs in played[], and a vote on a played
+   song costs replayCost — the first draft of this test asserted 5 credits used and
+   measured 12, which was the fixture lying, not the code. */
+await A('newShow');
+await A('freeCredits', { n: 3 });
+eq('nothing has been played yet', (await A('window', { open: true })).stage.show.played.length, 0);
+await buy('gus', 9, 'cs_gus');
+for (let i = 0; i < 5; i++) await vote('gus', ids[i]);
+eq('mid-round, five used at one credit each', (await pub('gus')).credits.used, 5);
+await A('newShow');
+eq('holding votes at the end costs nothing paid', await extraOf('gus'), 7);
+eq('and the balance is what the next show starts with', (await pub('gus')).credits.total, 10);
+
+console.log('\nA PACK RUNS OUT AND STAYS OUT');
+await A('newShow');
+await A('freeCredits', { n: 1 });
+await buy('hana', 3, 'cs_hana');
+let accepted = 0;
+for (let round = 0; round < 5; round++) {
+  for (let i = 0; i < 6; i++) { const v = await vote('hana', ids[i]); if (v.ok && v.voted) accepted++; }
+  await A('play', { song: ids[20 + (round % 5)] });
+}
+eq('1 free x5 rounds + a 3-vote pack = 8 casts, not 20', accepted, 8);
+eq('the pack is spent', await extraOf('hana'), 0);
+
+console.log(`\n${pass} passed, ${fail} failed\n`);
+process.exit(fail ? 1 : 0);
