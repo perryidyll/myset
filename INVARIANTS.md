@@ -292,6 +292,13 @@ If you are about to violate one, stop and say so rather than working around it.
     So the expensive thing really is deploys (9d0 was right, 9d3 more so), and the
     polling panic was about a projection, not an invoice.
 
+    **71ms is a LOWER BOUND, never a per-function figure.** It is 1,908 function-
+    seconds spread across ALL 27,000 requests including near-zero-compute static hits,
+    and a gig is ~99% function calls where the account-month was mostly static and
+    crawlers. Using it as the cost of an `/api/show` call understates it: at a more
+    realistic 110ms the same measured month implies ~17,300 function calls, which is
+    entirely consistent. Two models have already made this mistake.
+
     Two derived facts worth keeping. **Billed duration is ~71ms per web request**
     (0.53 GB-Hrs / 27K, at the 1024MB default) — so 9d5's 155ms probe was ~2x high,
     my original 200ms guess ~3x high, and the 424ms TTFB model ~6x high. And at a
@@ -335,6 +342,19 @@ If you are about to violate one, stop and say so rather than working around it.
     differing only in `fan=` all missed via `/api/`, but hit on the direct path. The
     fix is to sidestep it: make the cacheable URL carry only `?a=<slug>` so every
     phone requests an identical URL and no Vary is needed.
+
+9d8. **The artist's own Studio polls harder than the whole room, and 9d never
+    covered it.** `studio.html` runs a FIXED 4-second `setInterval` with no backoff and
+    no signature check, gated only on the tab being visible and on the Live tab. A
+    phone propped on a mic stand is visible for most of the night, so that is ~2,160
+    calls a gig from ONE device — modelled at **~19-21% of a gig's metered credits**,
+    equal to about 3.5 fan phones in calls and 8 in compute. `/api/stage` is also the
+    heaviest endpoint in the app: ~17 blob reads plus a serial `artistById` import
+    after the `Promise.all`.
+    9d says "do not reintroduce a fixed fast interval" and was written about the
+    audience. **It applies to the Studio too.** Any change here trades against
+    INVARIANT 0k/0l — the Studio has to feel instant on stage — so the fix is a
+    backoff that only engages when nothing has changed, never a slower fixed tick.
 
 9d. **Every phone in the room polls.** At 3s, a two-hour gig with twenty people
     is ~24,000 function calls — enough to exhaust a month's free tier in a few

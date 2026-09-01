@@ -139,6 +139,22 @@ body{padding-bottom:34px}
   border-radius:var(--r);color:var(--muted);font-size:14px;line-height:1.5}
 .artistcta{display:block;margin:26px 18px 0;padding:16px;text-align:center;font-size:14px;
   color:var(--muted);background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)}
+/* The quiet third option under the two "add yours" cards. Not a card itself —
+   somebody who isn't ready to sign up should still have somewhere to go. */
+.learnmore{display:block;margin:12px 18px 0;text-align:center;font-size:13.5px;font-weight:600;
+  color:var(--accent-ink);padding:10px}
+
+/* ── footer nav ──────────────────────────────────────────
+   Two things that must be reachable from anywhere: what this actually is, and
+   how to install it. The install card above is dismissible forever; this is the
+   way back. --muted, not --faint: at 12.5px --faint is 2.4:1 on this background. */
+.footnav{display:flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.footnav a,.footnav button{display:inline-flex;align-items:center;min-height:44px;padding:0 12px;
+  font-size:13.5px;font-weight:600;letter-spacing:-.012em;color:var(--muted);border-radius:var(--pill);
+  transition:color .18s var(--ease),background .18s var(--ease)}
+.footnav a:hover,.footnav button:hover{color:var(--ink);background:var(--bg-2)}
+.footnav .sep{color:var(--hair-2);font-size:12px;user-select:none}
+.footline{font-size:12.5px;color:var(--muted)}
 
 /* ── save to home screen ────────────────────────────────
    Sits under the finder rather than over the content: a bar that covers what
@@ -232,7 +248,14 @@ body{padding-bottom:34px}
 
   <div id="a2hs"></div>
   <div id="out"></div>
-  <div class="foot">MySet · myset.vip</div>
+  <div class="foot">
+    <div class="footnav">
+      <a href="/about">How MySet works</a>
+      <span class="sep" id="footInstallSep" aria-hidden="true">·</span>
+      <button type="button" id="footInstall" onclick="openA2HS()">Add to home screen</button>
+    </div>
+    <div class="footline">MySet · myset.vip</div>
+  </div>
 </div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
@@ -260,7 +283,8 @@ async function boot(){
     $('#out').innerHTML=`<div class="blank"><b>No gigs listed yet</b>
       <p>MySet is brand new. If you play live — or you run a bar that does — yours can be the first ones here.</p></div>
       <a class="artistcta" href="/studio">I play live — add my gigs →</a>
-      <a class="artistcta" href="/venues" style="margin-top:9px">I run a venue — add my bar →</a>`;
+      <a class="artistcta" href="/venues" style="margin-top:9px">I run a venue — add my bar →</a>
+      <a class="learnmore" href="/about">Not sure yet? See how MySet works →</a>`;
     return;
   }
   cs.placeholder='Start typing, or tap to see the list';
@@ -360,7 +384,8 @@ async function search(){
       <p>${d.artists?`${d.artists} artist${d.artists===1?'':'s'} play${d.artists===1?'s':''} here — nothing in the next seven days.`
         :'No one has listed a gig here yet.'}</p></div>
       <a class="artistcta" href="/studio">Play here? Add your gigs →</a>
-      <a class="artistcta" href="/venues" style="margin-top:9px">Run a venue here? Add your bar →</a>`;
+      <a class="artistcta" href="/venues" style="margin-top:9px">Run a venue here? Add your bar →</a>
+      <a class="learnmore" href="/about">Not sure yet? See how MySet works →</a>`;
     return;
   }
 
@@ -411,7 +436,7 @@ const dirBtn=m=>{const h=(APPLE?m.apple:m.google)||m.google||m.apple||''; if(!h)
    one; iOS has no such API, so it gets instructions — which is the whole reason
    this is a sheet with tabs rather than a single button. */
 const A2HS_KEY='myset.a2hs';
-const INSTALLED = window.matchMedia('(display-mode: standalone)').matches
+let INSTALLED = window.matchMedia('(display-mode: standalone)').matches
   || window.navigator.standalone === true
   || new URLSearchParams(location.search).get('src')==='pwa';
 const IOSISH = /iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -420,7 +445,18 @@ let INSTALL_EVENT=null;
 addEventListener('beforeinstallprompt',(e)=>{ e.preventDefault(); INSTALL_EVENT=e; drawA2HS(); });
 
 function dismissedA2HS(){ try{return localStorage.getItem(A2HS_KEY)==='no'}catch(e){return false} }
+
+/* The footer button is the way back once the card above has been dismissed, so
+   it is NOT gated on dismissedA2HS() — only on already being installed, where
+   the instructions would be nonsense. */
+function drawFootInstall(){
+  for (const id of ['footInstall','footInstallSep']) {
+    const n=document.getElementById(id);
+    if(n) n.hidden = INSTALLED;
+  }
+}
 function drawA2HS(){
+  drawFootInstall();
   const el=$('#a2hs'); if(!el)return;
   if(INSTALLED||dismissedA2HS()){ el.innerHTML=''; return; }
   el.innerHTML=`<div class="a2hs">
@@ -436,9 +472,12 @@ function hideA2HS(){ try{localStorage.setItem(A2HS_KEY,'no')}catch(e){} drawA2HS
 async function installA2HS(){
   if(!INSTALL_EVENT){ openA2HS(); return; }
   INSTALL_EVENT.prompt();
-  try{ const r=await INSTALL_EVENT.userChoice; if(r&&r.outcome==='accepted') hideA2HS(); }catch(e){}
+  try{ const r=await INSTALL_EVENT.userChoice; if(r&&r.outcome==='accepted'){ closeSheet(); hideA2HS(); } }catch(e){}
   INSTALL_EVENT=null;
 }
+/* INSTALLED is read once at load, so the footer button would otherwise sit there
+   offering to install an app that is now installed. */
+addEventListener('appinstalled',()=>{ INSTALLED=true; closeSheet(); drawA2HS(); });
 
 /* iPhone is the default, as asked — Android only when the user agent actually
    says Android, so an Android user isn't shown the wrong steps. */
@@ -470,6 +509,8 @@ function drawA2HSSheet(){
     <h3>Put MySet on your home screen</h3>
     <p class="lede">Then it opens like an app — full screen, one tap, and it remembers
       where you were.</p>
+    ${INSTALL_EVENT?`<button class="go" onclick="installA2HS()" style="margin:18px 0 0">Install MySet</button>
+    <p style="text-align:center;font-size:13px;color:var(--muted);margin:14px 0 -4px">or add it by hand</p>`:''}
     <div class="osTabs" role="group" aria-label="Choose your phone">
       <button class="${OS==='ios'?'on':''}" onclick="setOS('ios')">iPhone</button>
       <button class="${OS==='android'?'on':''}" onclick="setOS('android')">Android</button>

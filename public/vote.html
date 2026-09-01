@@ -640,8 +640,12 @@ function schedule(){
      early while document.hidden so QUIET never advances, and visibilitychange ->
      wakeUp resets it to 0 on every screen-on. A bar patron's glance is shorter than
      57 seconds — simulated over the real loop, only 1.8% of polls ever got there.
-     Settling at 6s instead cuts requests ~48%, and web requests are the one billed
-     line that caching can never touch.
+     Settling at 6s instead cuts requests by about 8-11%. NOT the ~48% first claimed
+     here — that figure was for replacing the ladder with a FLAT 6s, which is not what
+     this is. Worked over the same 57s window: old = 5x3s + 7x6s = 12 polls, new =
+     3x3s + 8x6s = 11 polls. A simulation over the real loop gives ~11%. Still worth
+     having, since web requests are the one billed line caching can never touch, but
+     it is a tenth of the saving, not a half.
 
      This is NOT the fixed fast interval INVARIANT 9d forbids: 6s is the middle rung
      that already shipped, and 3s still applies right after a change, which is when
