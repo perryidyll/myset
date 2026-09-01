@@ -126,6 +126,9 @@ export const DEFAULT_ARTIST = 'perry-idyll';
    Two different artists starting a show in the same minute collided too, which is
    half of why moneyForShow now also filters on metadata.artist. Readable prefix,
    unique tail. */
+/** UTC year-month, the bucket the free gig cap counts in. */
+export const gigMonthOf = (now = Date.now()) => new Date(now).toISOString().slice(0, 7);
+
 export function newShowId(now = Date.now(), rand = Math.random()) {
   const d = new Date(now), p = (n) => String(n).padStart(2, '0');
   const tail = Math.floor(rand * 1679616).toString(36).padStart(4, '0');
@@ -166,6 +169,10 @@ export function defaultShow() {
        second document on the poll — see the note in _lists.mjs. Only
        applyList() writes it, and normShow re-filters it below. */
     listId: '', listName: '', listSongs: [],
+    /* Shows started this calendar month, for the free plan's gig cap. Stored
+       rather than counted from history because a show in progress is not in
+       history yet, and the cap has to include tonight. */
+    gigMonth: '', gigCount: 0,
     songs: [],
     showId: null,
     artistId: ARTIST_ID,
@@ -371,6 +378,8 @@ function normShow(s) {
   show.listId = String(show.listId || '').replace(/[^a-z0-9]/gi, '').slice(0, 12);
   show.listName = String(show.listName || '').replace(/\s+/g, ' ').trim().slice(0, 40);
   show.listSongs = Array.isArray(show.listSongs) ? show.listSongs : [];
+  show.gigMonth = String(show.gigMonth || '').slice(0, 7);
+  show.gigCount = Math.max(0, parseInt(show.gigCount, 10) || 0);
   /* Songs carry a key and genre tags. Tags are filtered against what actually
      exists, so deleting a custom tag cleans itself up on the next read. */
   const ids = new Set(show.songs.map((x) => x && x.id));

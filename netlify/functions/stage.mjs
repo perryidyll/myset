@@ -33,6 +33,7 @@ export async function stagePayload(aid) {
       unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],
       requests: show.requests, birthdays: show.birthdays,
       listId: show.listId, listName: show.listName,
+      gigMonth: show.gigMonth, gigCount: show.gigCount,
     },
     // the genre vocabulary, so the Setlist tab can render chips and filter by them
     tags: { builtin: GENRES.map(([id, label]) => ({ id, label })), own: show.tags },

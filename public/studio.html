@@ -1100,6 +1100,19 @@ function render(){
           : `act('status',{status:'live'})`}">
           <span>●</span><span style="flex:1">${s.status==='ended'&&(s.played||[]).length?'Start a new show':'Start the show'}</span></button>
       </div>
+      ${(()=>{ /* Warn BEFORE the cap, never on stage. A free artist finding out at
+          10pm that they cannot start is the worst possible moment to learn it. */
+        const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
+        if(!cap||cap===null||!isFinite(cap))return '';
+        const m=new Date().toISOString().slice(0,7);
+        const used=s.gigMonth===m?(s.gigCount||0):0;
+        const left=Math.max(0,cap-used);
+        if(left>2)return '';
+        return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">
+          ${left===0
+            ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
+            : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
+      })()}
       ${s.status==='ended'&&(s.played||[]).length?`
       <p class="muted" style="font-size:12px;padding:8px 20px 0">
         ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.

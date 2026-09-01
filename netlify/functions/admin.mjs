@@ -2,7 +2,7 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCou
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, votable } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable , gigMonthOf } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -861,6 +861,21 @@ export default async (req) => {
      identically (INVARIANT 0w is untouched; this gates the artist's back office).
      The founding artist predates the registry, so planForArtist returns free for
      him — the owner bypass is load-bearing, not a courtesy. */
+  /* THE GIG CAP. A gig starts in exactly two places: 'newShow', and 'status' going
+     to live from anything else. Counted per UTC calendar month on the show record,
+     because a show in progress is not in history yet and tonight has to count.
+     Refused BEFORE the mutation, never mid-show — once a night is running nothing
+     stops it (INVARIANT 16). */
+  let gigCap = null, gigsUsed = 0;
+  if (action === 'newShow' || action === 'status') {
+    const lim = (await planForArtist(aid)).limits.gigs;
+    gigCap = (isPlatformOwner(aid) || lim === Infinity || lim === undefined) ? null : lim;
+    if (gigCap !== null) {
+      const cur = await getShow(aid);
+      gigsUsed = cur.gigMonth === gigMonthOf() ? cur.gigCount : 0;
+    }
+  }
+
   let canPrice = true;
   if (['freeCredits', 'packs', 'replayCost', 'askSet'].includes(action)) {
     canPrice = isPlatformOwner(aid) || (await planForArtist(aid)).limits.pricing === true;
@@ -948,6 +963,14 @@ export default async (req) => {
       if (show.log.length > 200) show.log = show.log.slice(-200);
     };
 
+    /* Recomputed inside the CAS callback so a retry cannot double-count — the
+       accumulator rule, INVARIANT 0bi. */
+    const countGig = (sh) => {
+      const m = gigMonthOf();
+      if (sh.gigMonth !== m) { sh.gigMonth = m; sh.gigCount = 0; }
+      sh.gigCount += 1;
+    };
+
     switch (action) {
       /* A DOUBLE START IS ALWAYS A MISTAKE. No musician starts two songs eight
          seconds apart, but a lost response on bar wifi made it easy: the write
@@ -1004,8 +1027,18 @@ export default async (req) => {
          So the choice is made explicitly in the Studio instead: after an end, the Live
          tab offers "Start a new show" and "Resume last night" as two separate buttons.
          No heuristic, nothing to mis-fire. */
-      case 'status':
-        show.status = ['pre','live','ended'].includes(body.status) ? body.status : show.status; break;
+      case 'status': {
+        const want = ['pre','live','ended'].includes(body.status) ? body.status : show.status;
+        if (want === 'live' && show.status !== 'live') {
+          if (gigCap !== null && gigsUsed >= gigCap) {
+            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
+            return false;
+          }
+          countGig(show);
+        }
+        show.status = want;
+        break;
+      }
       case 'venue': show.venue = String(body.venue || '').slice(0, 80); break;
       case 'city': show.city = String(body.city || '').slice(0, 80); break;
       case 'showTime': show.showTime = String(body.showTime || '').slice(0, 40); break;
@@ -1165,6 +1198,11 @@ export default async (req) => {
       }
       case 'clearSetlist': show.songs = []; break;
       case 'newShow':
+          if (gigCap !== null && gigsUsed >= gigCap) {
+            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
+            return false;
+          }
+        countGig(show);
         show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
         show.status = 'live'; show.windowOpen = true;
         show.log = [];

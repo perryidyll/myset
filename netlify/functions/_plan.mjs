@@ -18,6 +18,13 @@ export const PLANS = {
   free: {
     label: 'Free', price: 0,
     featured: 50,       // how many can be live to the audience at once
+    /* SHOWS PER CALENDAR MONTH. This is the one limit that tracks what MySet
+       actually costs to run: every phone in the room polls for the whole gig, so
+       the bill is driven by gigs played, not by artists signed up. Capping the
+       free tier on the real cost driver is what makes free survivable — a limit
+       on features would punish the wrong people and save nothing. Four a month is
+       a hobbyist; five is someone earning from it. */
+    gigs: 4,
     cut: 0.10,            // platform share of tips and vote sales
     seats: 1,
     pricing: false,       // change free-vote count, pack prices, replay/ask costs
@@ -29,6 +36,7 @@ export const PLANS = {
   plus: {
     label: 'Plus', price: 1000,
     featured: Infinity,
+    gigs: Infinity,
     cut: 0,
     seats: 1,
     pricing: true,
@@ -37,6 +45,7 @@ export const PLANS = {
   pro: {
     label: 'Pro', price: 2000,
     featured: Infinity,
+    gigs: Infinity,
     cut: 0,
     seats: 5,
     pricing: true,
