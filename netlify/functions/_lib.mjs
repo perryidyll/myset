@@ -151,7 +151,7 @@ export function defaultShow() {
     windowOpen: true,
     nowPlaying: null,
     played: [],
-    freeCredits: 3,
+    freeCredits: 5,
     unlimited: false,        // everyone votes without limit
     unlimitedFans: [],       // specific devices that do — the artist's own, for testing
     replayCost: 5,
@@ -196,6 +196,11 @@ export const GENRES = [
   ['jazz',       'Jazz'],
   ['latin',      'Latin'],
   ['singalong',  'Sing-along'],
+  /* Tempo, not genre — but the filter row doesn't care, and "something upbeat"
+     is how a real room actually asks. */
+  ['slow',       'Slow'],
+  ['midtempo',   'Mid-tempo'],
+  ['upbeat',     'Upbeat'],
 ];
 export const GENRE_IDS = new Set(GENRES.map(([id]) => id));
 export const MAX_OWN_TAGS = 15;      // how many they can invent
@@ -243,11 +248,13 @@ export const cleanKey = (v) =>
 
 /* What the audience can buy. Editable from the Studio; pay.mjs reads these and
    never trusts a price from the client. */
-export const PACK_KEYS = ['small', 'big', 'max'];
+/* Two tiers, not three. The $3 pack was brutally exposed to Stripe's fixed
+   per-transaction fee (~13% gone on a $3 charge); $5 as the floor keeps the fee
+   under 6%. normPacks drops a stored legacy 'max' on read. */
+export const PACK_KEYS = ['small', 'big'];
 export const DEFAULT_PACKS = () => ({
-  small: { votes: 3,  cents: 300 },
-  big:   { votes: 9,  cents: 700 },
-  max:   { votes: 18, cents: 1100 },
+  small: { votes: 5,  cents: 500 },
+  big:   { votes: 15, cents: 1000 },
 });
 /** The two ask-for-something switches. Cost is in VOTES, not money. */
 export function normAsk(a, dflt = 3) {
@@ -354,7 +361,7 @@ function normShow(s) {
   const show = { ...d, ...(s || {}) };
   if (!Array.isArray(show.songs)) show.songs = [];
   if (!Array.isArray(show.played)) show.played = [];
-  if (typeof show.freeCredits !== 'number') show.freeCredits = 3;
+  if (typeof show.freeCredits !== 'number') show.freeCredits = 5;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
   if (!Array.isArray(show.log)) show.log = [];
   show.unlimited = !!show.unlimited;

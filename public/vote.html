@@ -375,7 +375,7 @@ function render(){
   if(ended){ dock.hidden=true; }
   else{ dock.hidden=false;
     dock.innerHTML=`
-      ${c.unlimited?'':`<button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big','max'].map(k=>(d.packs&&d.packs[k]?d.packs[k].cents:300)))):'Ask Perry'}</small></button>`}
+      ${c.unlimited?'':`<button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask Perry'}</small></button>`}
       <button class="btn btn-pri" onclick="openTip()"><b>Tip ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Say thanks</small></button>`; }
 }
 function row(s,c,open,replay){
@@ -518,8 +518,8 @@ function openBuy(){
   if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab Perry between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.pack='small';
   // prices are whatever the artist set in his Studio — never hard-coded here
-  const P=ST.packs||{small:{votes:3,cents:300},big:{votes:9,cents:700},max:{votes:18,cents:1100}};
-  const KEYS=['small','big','max'].filter(k=>P[k]);
+  const P=ST.packs||{small:{votes:5,cents:500},big:{votes:15,cents:1000}};
+  const KEYS=['small','big'].filter(k=>P[k]);
   openSheet(`<h3>Get more votes</h3><p class="lede">Extra votes for tonight’s setlist. Goes straight to ${esc(ST.artist||'the artist')}.</p>
     <div class="tiles">
       ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
@@ -529,7 +529,7 @@ function openBuy(){
     <p class="fine">Secure checkout by Stripe · you’ll come right back</p>`);
 }
 function pickPack(p){sel.pack=p;buzz(8);
-  ['small','big','max'].forEach(k=>{const el=$('#p-'+k); if(el)el.classList.toggle('on',k===p);});}
+  ['small','big'].forEach(k=>{const el=$('#p-'+k); if(el)el.classList.toggle('on',k===p);});}
 function openTip(){
   if(!ST.paymentsEnabled){openSheet(`<h3>Tip Perry</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.tip=10;

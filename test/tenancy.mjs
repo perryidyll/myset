@@ -137,10 +137,10 @@ const boSong  = (await pub('bo-tran')).songs[0].id;
 
 const v1 = await vote('ana-reyes', 'phone1', anaSong);
 ok('the phone votes at Ana\'s gig', v1.ok && v1.voted === true, v1);
-eq('and spent one of its three credits there', v1.remaining, 2);
+eq('and spent one of its five default credits there', v1.remaining, 4);
 
 const pB2 = await pub('bo-tran', 'phone1');
-eq("the same phone still has all three credits at Bo's", pB2.credits.remaining, 3);
+eq("the same phone still has all five credits at Bo's", pB2.credits.remaining, 5);
 
 const pA2 = await pub('ana-reyes', 'phone1');
 eq("Ana's song shows the vote", pA2.songs.find((s) => s.id === anaSong).votes, 1);
@@ -233,6 +233,27 @@ ok('and Ana is told why, in her own Money tab',
    /payout account/.test(sAna.payoutsNote || ''), sAna.payoutsNote);
 delete process.env.STRIPE_SECRET_KEY;
 eq('with no Stripe key at all, nobody is offered it', (await hit(showFn, 'https://x/api/show')).paymentsEnabled, false);
+
+/* ── pricing is a paid feature ───────────────────────────────────── */
+console.log('\nPRICING  a free artist runs on the defaults');
+
+const priced = await A(TA4, 'freeCredits', { n: 20 });
+eq('changing the free-vote count -> 402', priced.status, 402);
+const packed = await A(TA4, 'packs', { small: { votes: 1, cents: 100 }, big: { votes: 2, cents: 200 } });
+eq('changing pack prices -> 402', packed.status, 402);
+const rc = await A(TA4, 'replayCost', { n: 9 });
+eq('changing the replay cost -> 402', rc.status, 402);
+ok('and the refusal says what to do about it', /Plus/.test(priced.error || ''), priced.error);
+
+const tog = await A(TA4, 'askSet', { kind: 'song', on: true });
+ok('but switching requests ON is free — that is running your show', tog.ok, tog);
+const cheeky = await A(TA4, 'askSet', { kind: 'song', on: true, cost: 9 });
+eq('while changing what a request COSTS is not', cheeky.status, 402);
+const same = await A(TA4, 'askSet', { kind: 'song', on: false, cost: 3 });
+ok('and re-sending the unchanged default cost is not a price change', same.ok, same);
+
+const owner = await hit(admin, 'https://x/api/admin?code=devlocal', { action: 'replayCost', n: 5 });
+ok('the founding artist is never locked out of pricing', owner.ok, owner);
 
 /* ── INVARIANT 0x: a venue is not an artist ──────────────────────── */
 console.log('\nINVARIANT 0x  the venue boundary is structural, not a permission check');

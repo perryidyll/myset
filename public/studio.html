@@ -1396,7 +1396,7 @@ function render(){
 
     <div class="sec"><span class="kick">Price of extra votes</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">What the audience pays for more votes. All three show in their app. Changes apply to the next purchase.</p>
-    ${[['small','Small','pS'],['big','Middle','pB'],['max','Big','pM']].map(([k,label,pre])=>
+    ${[['small','Small','pS'],['big','Big','pB']].map(([k,label,pre])=>
       `<div class="field"><label>${label} pack</label><div style="display:flex;gap:8px;align-items:center">
         <input class="inp" id="${pre}v" type="number" min="1" max="100" value="${s.packs[k].votes}" style="flex:1">
         <span class="muted" style="font-size:13px">votes for $</span>
@@ -2069,12 +2069,11 @@ async function warmLyrics(){
 async function savePacks(){
   const n=id=>parseFloat(($('#'+id)||{}).value);
   const S={votes:n('pSv'),cents:Math.round(n('pSc')*100)},
-        B={votes:n('pBv'),cents:Math.round(n('pBc')*100)},
-        M={votes:n('pMv'),cents:Math.round(n('pMc')*100)};
-  const all=[S,B,M];
-  if(!all.every(p=>Number.isFinite(p.votes)&&p.votes>0&&Number.isFinite(p.cents))){toast('Fill in all three packs');return;}
+        B={votes:n('pBv'),cents:Math.round(n('pBc')*100)};
+  const all=[S,B];
+  if(!all.every(p=>Number.isFinite(p.votes)&&p.votes>0&&Number.isFinite(p.cents))){toast('Fill in both packs');return;}
   if(all.some(p=>p.cents<100)){toast('Stripe\u2019s minimum charge is $1');return;}
-  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'packs',small:S,big:B,max:M})});
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'packs',small:S,big:B})});
   if(!d.ok){toast(d.error||'Could not save that');return;}
   toast('Prices saved'); load();
 }

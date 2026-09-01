@@ -20,6 +20,7 @@ export const PLANS = {
     featured: 50,       // how many can be live to the audience at once
     cut: 0.10,            // platform share of tips and vote sales
     seats: 1,
+    pricing: false,       // change free-vote count, pack prices, replay/ask costs
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
     presskit: false,
@@ -30,6 +31,7 @@ export const PLANS = {
     featured: Infinity,
     cut: 0,
     seats: 1,
+    pricing: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
@@ -37,6 +39,7 @@ export const PLANS = {
     featured: Infinity,
     cut: 0,
     seats: 5,
+    pricing: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };

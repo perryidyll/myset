@@ -821,6 +821,18 @@ export default async (req) => {
     featureCap = f === Infinity ? null : f;
   }
 
+  /* Setting your own prices is a paid feature: the free-vote count, the pack
+     prices, and what a replay / song request / birthday costs. The DEFAULTS are
+     free — a free artist runs on them, and everything the ROOM experiences works
+     identically (INVARIANT 0w is untouched; this gates the artist's back office).
+     The founding artist predates the registry, so planForArtist returns free for
+     him — the owner bypass is load-bearing, not a courtesy. */
+  let canPrice = true;
+  if (['freeCredits', 'packs', 'replayCost', 'askSet'].includes(action)) {
+    canPrice = isPlatformOwner(aid) || (await planForArtist(aid)).limits.pricing === true;
+  }
+  const PRICE_LOCKED = ['Setting your own prices is a Plus feature — the defaults stay on for now.', 402];
+
   /* Going live picks up the setlist the artist chose for tonight's gig, if they
      chose one. Resolved BEFORE the mutation, because it needs the calendar, and
      applied after, because applyList writes the show record itself.
@@ -970,8 +982,9 @@ export default async (req) => {
          pack for credits they never took from it. The reset settles the old round at
          the old prices first — prevShow is the pre-mutation snapshot. */
       case 'freeCredits': {
+        if (!canPrice) { err = PRICE_LOCKED; return false; }
         const n = parseInt(body.n, 10);
-        const want = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 3));
+        const want = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 5));
         if (want !== show.freeCredits) resetVotes = true;
         show.freeCredits = want;
         show.unlimited = false;               // picking a number turns unlimited off
@@ -1034,19 +1047,27 @@ export default async (req) => {
         break;
       }
       case 'packs': {
-        show.packs = normPacks({ small: body.small, big: body.big, max: body.max });
+        if (!canPrice) { err = PRICE_LOCKED; return false; }
+        show.packs = normPacks({ small: body.small, big: body.big });
         break;
       }
       case 'askSet': {
         const which = body.kind === 'birthday' ? 'birthdays' : 'requests';
         const cur = show[which];
+        /* Switching requests ON or OFF is free — that is running your show. What a
+           request COSTS is pricing, so changing it needs the plan. */
+        const wantCost = body.cost === undefined ? cur.cost : body.cost;
+        if (!canPrice && normAsk({ on: cur.on, cost: wantCost }).cost !== cur.cost) {
+          err = PRICE_LOCKED; return false;
+        }
         show[which] = normAsk({
           on: body.on === undefined ? cur.on : !!body.on,
-          cost: body.cost === undefined ? cur.cost : body.cost,
+          cost: wantCost,
         });
         break;
       }
       case 'replayCost': {
+        if (!canPrice) { err = PRICE_LOCKED; return false; }
         const want = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5));
         if (want !== show.replayCost) resetVotes = true;   // see freeCredits above
         show.replayCost = want;
