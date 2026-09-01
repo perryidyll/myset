@@ -356,6 +356,25 @@ If you are about to violate one, stop and say so rather than working around it.
     INVARIANT 0k/0l — the Studio has to feel instant on stage — so the fix is a
     backoff that only engages when nothing has changed, never a slower fixed tick.
 
+9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Four
+    shows a calendar month; Plus and Pro unlimited. Every phone in the room polls
+    for the whole gig, so the bill tracks gigs PLAYED, not artists signed up — a
+    feature-based limit would punish the wrong people and save nothing. Enforced at
+    the two places a gig starts (`newShow`, and `status` -> live from not-live),
+    refused BEFORE the mutation and never mid-show (INVARIANT 16), counted per UTC
+    month on the show record because a show in progress is not in history yet.
+    The Studio warns at two shows left: a cap discovered on stage at 10pm is a bug,
+    not a business model. And nothing the ROOM experiences is ever capped (0w).
+
+9d10. **A tap is not a change.** `wakeUp()` used to reset the poll ladder to its
+    fastest rung on every `pointerdown` — which fires on every scroll — so 66% of
+    all polls were pinned fast by people looking at their phones rather than by
+    anything happening. It now separates a FULL wake (screen-on, a vote, a
+    purchase) from a NUDGE (a tap, which only lifts a phone out of the slowest
+    rung). Simulated over the real loop: 1,003 -> 580 polls per phone per gig, 42%.
+    The ladder itself was never the lever — measured, 3/6/12 and 3/6 were
+    identical — so do not "fix" this by widening rungs again.
+
 9d. **Every phone in the room polls.** At 3s, a two-hour gig with twenty people
     is ~24,000 function calls — enough to exhaust a month's free tier in a few
     shows, which is exactly what happened on 2026-08-31. `vote.html` backs off

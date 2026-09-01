@@ -1493,6 +1493,19 @@ function render(){
     <div class="wrap"><button class="big alt" id="lyrWarm" onclick="warmLyrics()">↓ Fetch lyrics for the whole setlist</button></div>
 
     <div class="sec"><span class="kick">Your plan</span></div>
+    <div class="note" style="margin-bottom:12px"><b>Why there's a limit at all</b>
+      <p>I'm a working musician — I play most nights, and I'd rather MySet were free
+      for everyone. Here's the honest reason it can't quite be.</p>
+      <p>While you're on stage, <b>every phone in the room is asking my server
+      "has the song changed yet?"</b> — a few times a minute, each, for the whole
+      gig. That's what makes the queue move live in front of people, and it's the
+      one part that genuinely costs money. A packed three-hour show is tens of
+      thousands of those little questions.</p>
+      <p>So the free plan is limited by <b>shows a month</b> rather than by
+      features. It's the only thing that actually tracks the cost, and it means a
+      hobbyist plays free forever while someone earning from it chips in. Nothing
+      your audience sees is ever cut back — the voting, the requests, the lyrics
+      and the sing-alongs are the same on every plan.</p></div>
     ${PLAN&&PLAN.ok?`
       <div class="planbox">
         <div class="row" style="border:none;padding:0">
@@ -1507,7 +1520,7 @@ function render(){
         <div class="plangrid">
           ${['free','plus','pro'].map(k=>{const L=PLAN.plans[k];return `<div class="pcard ${PLAN.plan===k?'on':''}">
             <b>${esc(L.label)}</b><span>${L.price?'$'+(L.price/100)+'/mo':'Free'}</span>
-            <em>${L.featured===null?'∞ songs':L.featured+' featured'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.analytics?'<br>+ analytics':''}${L.presskit?'<br>+ press kit':''}${L.branding?'<br>+ your branding':''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
+            <em>${L.gigs?L.gigs+' shows/month':'Unlimited shows'}<br>${L.featured===null?'∞ songs':L.featured+' featured'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.pricing?'<br>+ your own prices':''}${L.analytics?'<br>+ analytics':''}${L.presskit?'<br>+ press kit':''}${L.branding?'<br>+ your branding':''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
           </div>`;}).join('')}
         </div>
       </div>

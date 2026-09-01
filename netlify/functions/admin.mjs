@@ -132,6 +132,8 @@ async function handlePlan(aid, action, body) {
 const shapeLimits = (l) => ({
   label: l.label, price: l.price,
   featured: l.featured === Infinity ? null : l.featured,
+  gigs: l.gigs === Infinity ? null : (l.gigs || null),
+  pricing: !!l.pricing,
   library: MAX_LIBRARY,
   cut: l.cut, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
