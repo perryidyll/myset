@@ -102,6 +102,12 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
 .row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
+/* A prose row is a SENTENCE, not a row of items. `.row` is a flex container, so
+   every <b> inside one becomes a flex ITEM and each run of text between them an
+   anonymous item — which stacked "your name, and your city and country" into
+   vertical columns. Same family as INVARIANT 0ao: a display rule reaching a <b>
+   it was never meant for. Prose rows opt out. */
+.row.muted{display:block}
 .row:first-child{border-top:none}
 .row .m{flex:1;min-width:0}
 .row .t{font-size:16px;font-weight:500;letter-spacing:-.012em;line-height:1.25}

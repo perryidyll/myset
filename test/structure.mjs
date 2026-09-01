@@ -45,7 +45,10 @@ check('public/studio.html', [
   ['gig setlist select',      /id="gList"/g],
   ['gig "All songs" option',  /value="all"/g],
 ]);
+/* A prose row must not be a flex container — see the .row.muted note in the CSS. */
+check('public/studio.html', [['prose rows opt out of flex', /\.row\.muted\{display:block\}/g]]);
 check('public/venue-studio.html', [
+  ['prose rows opt out of flex', /\.row\.muted\{display:block\}/g],
   ['function fitTabs',       /\nfunction fitTabs\(\)\{/g],
   ['sticky offset measured', /top:var\(--headh/g],
 ]);
