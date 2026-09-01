@@ -497,8 +497,14 @@ export async function carryFans(aid, show) {
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
         for (const id of Object.keys(bag)) {
-          const carry = unspentPaid(bag[id], show);
-          if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted: bag[id].gifted || 0 };
+          /* A fan who chose "let the artist keep it" pledged, rather than being
+             debited on the spot — see gift.mjs. THIS is the real end of the show, so
+             this is where the pledge is honoured. A restart in between quietly
+             cancels it, which is the point. */
+          const pledged = Math.max(0, bag[id].pledged || 0);
+          const carry = Math.max(0, unspentPaid(bag[id], show) - pledged);
+          const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show)) : 0);
+          if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted };
           else delete bag[id];          // nothing owed — don't keep the record
         }
         return true;

@@ -950,6 +950,14 @@ export default async (req) => {
         break;
       }
       case 'window': show.windowOpen = !!body.open; break;
+      /* Deliberately NOT resetting the show here, and it took a wrong turn to see why.
+         Starting after an end is USUALLY a new night (C017/C041: Friday's played[] and
+         showId carried into Saturday, so Saturday's room paid replayCost for Friday's
+         whole set). But it is sometimes an accidental End mid-gig, and the server
+         cannot tell those apart — resetting broke the C003 case in the same commit.
+         So the choice is made explicitly in the Studio instead: after an end, the Live
+         tab offers "Start a new show" and "Resume last night" as two separate buttons.
+         No heuristic, nothing to mis-fire. */
       case 'status':
         show.status = ['pre','live','ended'].includes(body.status) ? body.status : show.status; break;
       case 'venue': show.venue = String(body.venue || '').slice(0, 80); break;

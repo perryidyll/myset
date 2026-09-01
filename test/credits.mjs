@@ -173,5 +173,46 @@ eq('THE BUG: her pack was not raided by the price change', await extraOf('kit'),
 eq('and the round was refreshed, not re-priced', (await pub('kit')).credits.used, 0);
 eq('at the new ceiling', (await pub('kit')).credits.total, 10);
 
+console.log('\nC048  ENDING BY MISTAKE MUST NOT COST A FAN THEIR PAID VOTES');
+/* The "what happens to your votes" sheet appears the instant the artist taps End.
+   It used to debit `extra` immediately, so an End tapped by mistake asked the whole
+   room to give away votes they had paid for while the night carried on. The choice is
+   now a PLEDGE, honoured only at the real boundary (newShow). */
+const giftFn = (await import('../netlify/functions/gift.mjs')).default;
+const gift = (fan, choice) => hit(giftFn, 'https://x/api/gift', { fan, choice });
+
+await A('newShow');
+await A('freeCredits', { n: 3 });
+await A('status', { status: 'live' });
+await buy('lena', 9, 'cs_lena');
+eq('she has nine paid votes', await extraOf('lena'), 9);
+
+const tooEarly = await gift('lena', 'gift');
+eq('the endpoint refuses while the show is live', tooEarly.status, 409);
+
+await A('status', { status: 'ended' });
+const g1 = await gift('lena', 'gift');
+ok('now she can choose', g1.ok, g1);
+eq('THE BUG: her votes are NOT gone yet — only pledged', await extraOf('lena'), 9);
+
+await A('status', { status: 'live' });            // ended by mistake; carry on
+eq('so a restart leaves her whole', await extraOf('lena'), 9);
+const pAgain = await pub('lena');
+eq('and she can spend them again', pAgain.credits.total, 12);
+
+await A('status', { status: 'ended' });
+await gift('lena', 'gift');
+await A('newShow');                              // the real end of the night
+eq('at the real boundary the pledge is honoured', await extraOf('lena'), undefined);
+
+console.log('\n  and "keep them" still carries them over');
+await A('freeCredits', { n: 3 });
+await A('status', { status: 'live' });
+await buy('milo', 9, 'cs_milo');
+await A('status', { status: 'ended' });
+await gift('milo', 'keep');
+await A('newShow');
+eq('kept votes survive into the next show', await extraOf('milo'), 9);
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

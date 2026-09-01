@@ -1080,10 +1080,18 @@ function render(){
     ${asksPanel()}
     ${s.status!=='live'?`
       <div class="wrap" style="padding-top:22px;padding-bottom:2px">
-        <button class="big bigplay" onclick="act('status',{status:'live'})">
-          <span>●</span><span style="flex:1">Start the show</span></button>
+        <button class="big bigplay" onclick="${s.status==='ended'&&(s.played||[]).length
+          ? `if(confirm('Start a brand new show? Last night’s numbers are saved in your history.'))act('newShow')`
+          : `act('status',{status:'live'})`}">
+          <span>●</span><span style="flex:1">${s.status==='ended'&&(s.played||[]).length?'Start a new show':'Start the show'}</span></button>
       </div>
-      <p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to the audience until you tap this.</p>`
+      ${s.status==='ended'&&(s.played||[]).length?`
+      <p class="muted" style="font-size:12px;padding:8px 20px 0">
+        ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
+        <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
+           style="color:var(--accent);font-weight:700">Resume it instead</a>
+        — use that if you ended it by mistake.</p>`
+      :`<p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to the audience until you tap this.</p>`}`
     :`<div class="wrap" style="padding-top:22px;padding-bottom:2px">
         <button class="big alt" onclick="if(confirm('End the show for the audience?'))act('status',{status:'ended'})"
           style="justify-content:center">■ End the show</button>

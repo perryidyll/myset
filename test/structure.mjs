@@ -38,6 +38,10 @@ check('public/studio.html', [
      flag, silently restores the old behaviour. */
   ['offline flag set in api()',      /offline:true/g],
   ['offline guard in load()',        /if\(!d\.ok&&d\.offline&&D\) return;/g],
+  /* C017/C041: after an end, starting again must be an explicit choice between a new
+     show and resuming — the server cannot tell a deliberate end from a fat finger. */
+  ['start-a-new-show choice',        /Start a new show/g],
+  ['resume-it-instead escape',       /Resume it instead/g],
   ['gig setlist select',      /id="gList"/g],
   ['gig "All songs" option',  /value="all"/g],
 ]);
