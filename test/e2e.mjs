@@ -9,6 +9,7 @@ const admin   = (await import('../netlify/functions/admin.mjs')).default;
 const showFn  = (await import('../netlify/functions/show.mjs')).default;
 const voteFn  = (await import('../netlify/functions/vote.mjs')).default;
 const reqFn   = (await import('../netlify/functions/request.mjs')).default;
+const histFn  = (await import('../netlify/functions/history.mjs')).default;
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -188,6 +189,47 @@ await A('tagAuto');
 eq('a hand-made choice survives', (await st()).songs.find((x) => x.id === 'alpha').tags, [hand]);
 
 /* ── the payload can only hold votable songs ───────────────────── */
+/* ── C044 ──────────────────────────────────────────────────────── */
+console.log('\nC044  only claim a refund that actually happened');
+await A('newShow');
+await A('askSet', { kind: 'song', on: true, cost: 3 });
+await A('freeCredits', { n: 9 });
+const rq = await ask('fanR', 'Wanted Song');
+ok('the fan paid for it', rq.ok, rq);
+const rid2 = (await A('askList')).asks.find((x) => x.title === 'Wanted Song').id;
+const dec = await A('askDecline', { id: rid2 });
+eq('declined in this show refunds the real cost', dec.refunded, 3);
+
+const rq2 = await ask('fanS', 'Stale Song');
+ok('a second fan pays', rq2.ok, rq2);
+const rid3 = (await A('askList')).asks.find((x) => x.title === 'Stale Song').id;
+await A('newShow');                       // their credits have already refreshed
+const dec2 = await A('askDecline', { id: rid3 });
+eq('THE BUG: a stale request reports NO refund, not a fake one', dec2.refunded, 0);
+ok('and says why', /earlier show/.test(dec2.note || ''), dec2.note);
+
+/* ── C003 ──────────────────────────────────────────────────────── */
+console.log('\nC003  ending a show twice must not lose what came between');
+await A('newShow');
+/* The full LIBRARY, not /api/show — an earlier section leaves a setlist active, so
+   the public payload holds three songs and hIds[3] was undefined. The first draft of
+   this test failed for that reason and the code was right all along. */
+const hIds = (await A('window', { open: true })).stage.songs.map((x) => x.id);
+ok('enough songs to play five', hIds.length >= 5, hIds.length);
+await A('play', { song: hIds[0] });
+await A('play', { song: hIds[1] });
+const sid = (await A('window', { open: true })).stage.show.showId;
+await A('status', { status: 'ended' });      // the accidental end — 2 songs archived
+await A('status', { status: 'live' });       // carries on
+await A('play', { song: hIds[2] });
+await A('play', { song: hIds[3] });
+await A('play', { song: hIds[4] });
+await A('status', { status: 'ended' });      // ended again — 5 songs now
+const hist = await hit(histFn, `https://x/api/history?code=devlocal&show=${sid}`);
+ok('the show is in history', hist.ok, hist);
+ok('THE BUG: the later songs survived the re-archive',
+   (hist.show.played || []).length >= 5, (hist.show.played || []).length);
+
 console.log('\nEVERY song in the public payload must be votable');
 await A('listUse', { id: lid });
 await A('play', { song: 'alpha' });

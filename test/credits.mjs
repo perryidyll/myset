@@ -155,5 +155,20 @@ const un = await vote('jo', hideMe);
 ok('un-voting a hidden song still works (INVARIANT 15)', un.ok && un.voted === false, un);
 eq('and the credit is back', (await pub('jo')).credits.remaining, 3);
 
+console.log('\nCHANGING THE PRICE MUST NOT RE-PRICE VOTES ALREADY CAST');
+/* A fan spends 3 of 3 free credits. The artist then drops free credits to 1. Without
+   a reset the fan is suddenly 2 over the ceiling, and the ledger (13b) debits their
+   PACK for credits they never took from it. Changing the price resets the round, so
+   the old round settles at the old prices. */
+await A('newShow');
+await A('freeCredits', { n: 3 });
+await buy('kit', 9, 'cs_kit');
+for (let i = 0; i < 3; i++) await vote('kit', ids[i]);
+eq('three free credits spent, pack untouched so far', (await pub('kit')).credits.used, 3);
+await A('freeCredits', { n: 1 });
+eq('THE BUG: her pack was not raided by the price change', await extraOf('kit'), 9);
+eq('and the round was refreshed, not re-priced', (await pub('kit')).credits.used, 0);
+eq('at the new ceiling', (await pub('kit')).credits.total, 10);
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

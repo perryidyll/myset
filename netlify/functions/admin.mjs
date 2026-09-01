@@ -559,7 +559,12 @@ async function handleAsks(aid, action, body) {
   if (action === 'askDone' || action === 'askDecline') {
     const row = await resolveRequest(aid, id, action === 'askDone' ? 'played' : 'declined', show);
     if (!row) return bad('That one has already been dealt with', 409);
-    return json({ ok: true, refunded: action === 'askDecline' ? row.cost : 0,
+    /* `row.refunded` is what was really given back, not what it cost. A decline of
+       a request from an earlier show refunds nothing on purpose — those credits have
+       already refreshed, so refunding would mint votes (INVARIANT 0ac). */
+    const note = action === 'askDecline' && row.cost > 0 && !row.refunded
+      ? 'Declined. No votes to give back — that request was from an earlier show.' : null;
+    return json({ ok: true, refunded: row.refunded || 0, note,
                   asks: shapeRequests(await readRequests(aid), show), stage: await stagePayload(aid) });
   }
 
@@ -849,7 +854,13 @@ export default async (req) => {
      ledger afterwards. `play` moves played[] before clearAllFanVotes runs, so the
      post-mutation show prices a just-won replay at 1 instead of replayCost. */
   let droppedSong = null;
-  const RESETTERS = new Set(['newShow', 'play', 'playTop', 'resetVotes']);
+  /* Every action that ends up settling the paid-vote ledger needs the PRE-mutation
+     show to price the round with. Missing 'freeCredits' here was the whole bug that
+     case was fixing: the reset then priced the old round at the NEW ceiling and
+     debited the fan's pack for credits they never took from it. The regression test
+     caught it, which is the only reason it is not still here. */
+  const RESETTERS = new Set(['newShow', 'play', 'playTop', 'resetVotes',
+                             'freeCredits', 'replayCost']);
   const prevShow = RESETTERS.has(action) ? await getShow(aid) : null;   // read before it resets
 
   let libChanged = false;
@@ -922,9 +933,17 @@ export default async (req) => {
       case 'venue': show.venue = String(body.venue || '').slice(0, 80); break;
       case 'city': show.city = String(body.city || '').slice(0, 80); break;
       case 'showTime': show.showTime = String(body.showTime || '').slice(0, 40); break;
+      /* Changing the price starts a fresh contest. Votes already cast were priced
+         against the OLD numbers, and leaving them in place re-prices them
+         retroactively: a fan who spent 3 of 3 free credits would suddenly be 2 over
+         a new ceiling of 1, and the paid-vote ledger (13b) would then debit their
+         pack for credits they never took from it. The reset settles the old round at
+         the old prices first — prevShow is the pre-mutation snapshot. */
       case 'freeCredits': {
         const n = parseInt(body.n, 10);
-        show.freeCredits = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 3));
+        const want = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 3));
+        if (want !== show.freeCredits) resetVotes = true;
+        show.freeCredits = want;
         show.unlimited = false;               // picking a number turns unlimited off
         break;
       }
@@ -997,8 +1016,12 @@ export default async (req) => {
         });
         break;
       }
-      case 'replayCost':
-        show.replayCost = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5)); break;
+      case 'replayCost': {
+        const want = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5));
+        if (want !== show.replayCost) resetVotes = true;   // see freeCredits above
+        show.replayCost = want;
+        break;
+      }
       case 'removeSong':
         show.songs = show.songs.filter((s) => s.id !== body.song);
         droppedSong = String(body.song || '');   // refund the votes held on it, below

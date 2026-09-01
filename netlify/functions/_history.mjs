@@ -116,8 +116,19 @@ export async function archiveShow(aid, show, fans) {
   };
 
   await casDoc(HIST(aid, showId), () => ({}), (d) => {
-    if (d && d.showId) {           // already archived — only refresh the money
-      d.money = money; d.archivedAt = endedAt; return true;
+    if (d && d.showId) {
+      /* Already archived. The guard exists because re-archiving AFTER the tally was
+         wiped would overwrite a real night with zeroes (INVARIANT 17c) — but it was
+         absolute, so an artist who ended the show by accident, carried on for eight
+         more songs and ended again kept the FIVE-song snapshot forever, while the
+         index row got the thirteen-song stats. The detail and the index disagreed
+         and the later half of the night was gone.
+         So: replace when the new snapshot is strictly richer, refresh money only
+         when it is not. Both protections, no loss. */
+      const richer = (doc.played || []).length > (d.played || []).length
+        || (doc.stats.totalVotes || 0) > ((d.stats || {}).totalVotes || 0);
+      if (!richer) { d.money = money; d.archivedAt = endedAt; return true; }
+      Object.assign(d, doc); return true;
     }
     Object.assign(d, doc); return true;
   }).catch(() => {});
