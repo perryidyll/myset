@@ -10,6 +10,9 @@
    settled once, at the round reset, inside clearAllFanVotes. Every case below failed
    or was meaningless before that change. */
 process.env.ADMIN_CODE = 'devlocal';
+// songs are started milliseconds apart here; the real 8s double-tap guard is
+// exercised deliberately in its own case below
+process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const admin  = (await import('../netlify/functions/admin.mjs')).default;
 const showFn = (await import('../netlify/functions/show.mjs')).default;

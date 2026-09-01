@@ -4,6 +4,9 @@
 
    One case per confirmed review finding. */
 process.env.ADMIN_CODE = 'devlocal';
+// songs are started milliseconds apart here; the real 8s double-tap guard is
+// exercised deliberately in its own case below
+process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const admin   = (await import('../netlify/functions/admin.mjs')).default;
 const showFn  = (await import('../netlify/functions/show.mjs')).default;
@@ -229,6 +232,26 @@ const hist = await hit(histFn, `https://x/api/history?code=devlocal&show=${sid}`
 ok('the show is in history', hist.ok, hist);
 ok('THE BUG: the later songs survived the re-archive',
    (hist.show.played || []).length >= 5, (hist.show.played || []).length);
+
+/* ── C030/C043 ─────────────────────────────────────────────────── */
+console.log('\nC030/C043  a lost response must not burn a second song');
+await A('newShow');
+const dIds = (await A('window', { open: true })).stage.songs.map((x) => x.id);
+process.env.MYSET_DOUBLE_TAP_MS = '8000';        // the real production window
+const dt1 = await A('play', { song: dIds[0] });
+ok('the first start lands', dt1.ok && dt1.stage.show.nowPlaying === dIds[0], dt1.stage && dt1.stage.show.nowPlaying);
+
+/* THE BUG: the write landed, the response was lost, the Studio said "try again",
+   and the artist tapped again — burning the next song down and the round with it. */
+const dt2 = await A('playTop');
+eq('a playTop right after is refused, not a second song', dt2.status, 409);
+ok('and says why', /just started/.test(dt2.error || ''), dt2.error);
+eq('the same song is still playing', (await A('window', { open: true })).stage.show.nowPlaying, dIds[0]);
+
+const dt3 = await A('play', { song: dIds[0] });
+ok('re-sending the SAME song is simply already done', dt3.ok, dt3);
+eq('still that song, played[] untouched', (await A('window', { open: true })).stage.show.nowPlaying, dIds[0]);
+process.env.MYSET_DOUBLE_TAP_MS = '0';           // back to machine speed
 
 console.log('\nEVERY song in the public payload must be votable');
 await A('listUse', { id: lid });

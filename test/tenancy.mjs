@@ -12,6 +12,9 @@
 
    Everything below runs the REAL handlers against the in-memory blob store. */
 process.env.ADMIN_CODE = 'devlocal';
+// songs are started milliseconds apart here; the real 8s double-tap guard is
+// exercised deliberately in its own case below
+process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const admin    = (await import('../netlify/functions/admin.mjs')).default;
 const stageFn  = (await import('../netlify/functions/stage.mjs')).default;

@@ -395,16 +395,25 @@ export async function getShow(aid) {
   }
   return show;
 }
-export const mutateShow = (aid, fn) =>
-  casDoc(KEY.show(aid), defaultShow, (s) => {
+/* INVARIANT 4 says a conditional write can report success without sticking under
+   concurrency, which is why every FAN write goes through a read-back verify. The
+   SHOW write never did — so an acked-but-lost write meant the artist's tap silently
+   did nothing while the Studio was handed a payload saying it had worked. `updatedAt`
+   is already stamped on every successful mutation, so it doubles as the receipt. */
+export const mutateShow = (aid, fn) => {
+  let stamp = null;
+  return casDoc(KEY.show(aid), defaultShow, (s) => {
     const show = normShow(s);
     show.artistId = aid;
     Object.keys(s || {}).forEach((k) => delete s[k]);
     Object.assign(s, show);
     const r = fn(s);
-    if (r !== false) s.updatedAt = Date.now();
+    if (r !== false) { s.updatedAt = Date.now(); stamp = s.updatedAt; }
     return r;
-  });
+  },
+  // stamp stays null when fn aborted, and casDoc never writes in that case
+  (d) => stamp === null || !!(d && d.updatedAt === stamp));
+};
 
 /* ---------- fan shards ---------- */
 export const mutateFan = (aid, fanId, fn, verifyFan = null) =>

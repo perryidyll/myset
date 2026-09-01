@@ -853,6 +853,15 @@ export default async (req) => {
   /* Read before the mutation, for every action that will settle the paid-vote
      ledger afterwards. `play` moves played[] before clearAllFanVotes runs, so the
      post-mutation show prices a just-won replay at 1 instead of replayCost. */
+  /* Long enough to cover a slow round trip and a human re-tap, far shorter than any
+     real gap between two songs.
+
+     Read per request, and overridable, for one reason: the test suite starts songs
+     milliseconds apart, so a hard-coded window makes the whole play/playTop surface
+     untestable. Production never sets this — it is a tunable safety window, not a way
+     round the check, and there IS a test that sets it back up to prove the guard
+     fires. */
+  const DOUBLE_TAP_MS = Number(process.env.MYSET_DOUBLE_TAP_MS ?? 8000);
   let droppedSong = null;
   /* Every action that ends up settling the paid-vote ledger needs the PRE-mutation
      show to price the round with. Missing 'freeCredits' here was the whole bug that
@@ -894,9 +903,17 @@ export default async (req) => {
     };
 
     switch (action) {
+      /* A DOUBLE START IS ALWAYS A MISTAKE. No musician starts two songs eight
+         seconds apart, but a lost response on bar wifi made it easy: the write
+         landed, the Studio showed "try again", the artist tapped again, and a second
+         song burned along with the round's votes. So the guard is on the physical
+         reality rather than on request ids, which cannot survive a human retry.
+         `play` names a song, so re-sending the SAME one is simply already done. */
       case 'play': {
         const id = body.song;
         if (!id) { err = ['no song', 400]; return false; }
+        if (show.nowPlaying === id && Date.now() - (show.nowPlayingAt || 0) < DOUBLE_TAP_MS)
+          return false;                                  // already playing it — no-op
         logPlay(id);                                          // before played[] moves
         if (show.nowPlaying && show.nowPlaying !== id && !show.played.includes(show.nowPlaying))
           show.played.push(show.nowPlaying);
@@ -907,6 +924,11 @@ export default async (req) => {
         break;
       }
       case 'playTop': {
+        /* playTop names no song, so a retry would pick the NEXT one down and start
+           that instead — the worst possible outcome. Refuse outright and say so. */
+        if (Date.now() - (show.nowPlayingAt || 0) < DOUBLE_TAP_MS) {
+          err = ['That one just started — give it a moment', 409]; return false;
+        }
         /* Exactly what the room can vote for (votable(), the one definition), then
            playTop's own narrowing: an already-played song only re-enters the pool
            if it is holding replay votes. Using playable() alone was wrong — it drops
