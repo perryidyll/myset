@@ -1,4 +1,5 @@
 import { casDoc, readDoc, KEY, creditsUsed, isUnlimited, mutateFan } from './_lib.mjs';
+import { notify } from './_push.mjs';
 
 /* "Play something that isn't on the list."
 
@@ -119,6 +120,19 @@ export async function createRequest(aid, show, fanId, body) {
     if (!free) await refund(aid, fanId, cost).catch(() => {});
     return { ok: false, error: 'Couldn’t get that through — try again', status: 503 };
   }
+  /* Tell the artist, if they have installed the Studio and switched alerts on.
+     Deliberately AFTER the request is stored and read back — a notification is
+     never allowed to be the reason a paid request fails (INVARIANT 16) — and
+     never awaited into the response, so a slow push service cannot make the fan
+     wait. notify() swallows its own errors. */
+  notify(aid, {
+    title: kind === 'song' ? 'Song requested' : 'Birthday shout-out',
+    body: kind === 'song'
+      ? `${title}${artist ? ' — ' + artist : ''}${row.cost ? ` · ${row.cost} votes` : ''}`
+      : `For ${name}${row.cost ? ` · ${row.cost} votes` : ''}`,
+    url: '/studio', tag: 'ask',
+  }).catch(() => {});
+
   return { ok: true, request: row, charged: free ? 0 : cost };
 }
 

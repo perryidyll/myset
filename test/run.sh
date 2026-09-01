@@ -29,3 +29,6 @@ node --import ./test/register.mjs test/tenancy.mjs
 echo
 echo "── the paid-vote ledger ──"
 node --import ./test/register.mjs test/credits.mjs
+echo
+echo "── web push (RFC 8291 vector) ──"
+node --import ./test/register.mjs test/push.mjs

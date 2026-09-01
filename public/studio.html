@@ -755,7 +755,7 @@ async function load(opts){
   D=d; render();
   if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
   if(TAB==='profile'&&!PROF) loadProf();
-  if(TAB==='settings'){ if(!TEAM)loadTeam(); if(!PLAN)loadPlan(); }
+  if(TAB==='settings'){ if(!TEAM)loadTeam(); if(!PLAN)loadPlan(); drawPush(); }
   if(TAB==='gigs'){ if(!EVENTS)loadGigs(); if(!PITCHES)loadPitches(); }
 }
 let WRITING=false;
@@ -1414,6 +1414,9 @@ function render(){
 
   if(TAB==='settings'){
     body=`
+    <div class="sec"><span class="kick">Alerts on your phone</span></div>
+    <div id="pushBox"><div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div></div>
+
     <div class="sec"><span class="kick">Free votes per person</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many votes each person gets. Refreshes every time you start a new song.</p>
     <div class="wrap"><div class="chips">
@@ -2206,6 +2209,99 @@ async function setShare(on){
   render();
   toast(d.shareStats?'Venues can see your numbers':'Venues can’t see your numbers');
 }
+/* ---------- ALERTS ON YOUR PHONE ----------
+   Web Push. Works without an App Store, but iOS only allows it once the Studio has
+   been ADDED TO THE HOME SCREEN — so on an iPhone in a browser tab the honest
+   answer is instructions, not a button that would fail. The panel renders one of
+   four states and never pretends. */
+const PUSH_INSTALLED = matchMedia('(display-mode: standalone)').matches
+  || navigator.standalone === true
+  || new URLSearchParams(location.search).get('src')==='pwa';
+const PUSH_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+let PUSHKEY=null;
+
+const b64ToBytes=(s)=>{
+  const pad='='.repeat((4-s.length%4)%4);
+  const raw=atob((s+pad).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(raw, c=>c.charCodeAt(0));
+};
+
+async function pushState(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)) return {can:false,why:'browser'};
+  if(PUSH_IOS && !PUSH_INSTALLED) return {can:false,why:'ios-not-installed'};
+  const reg=await navigator.serviceWorker.ready.catch(()=>null);
+  if(!reg) return {can:false,why:'browser'};
+  const sub=await reg.pushManager.getSubscription().catch(()=>null);
+  return {can:true, on:!!sub, denied:Notification.permission==='denied', reg, sub};
+}
+
+async function drawPush(){
+  const box=$('#pushBox'); if(!box)return;
+  if(!PUSHKEY){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'pushKey'}),quiet:true});
+    PUSHKEY=d&&d.ok?d:{key:null,devices:0}; }
+  const st=await pushState();
+  const row=(t,s,btn)=>`<div class="list"><div class="row"><div class="m"><div class="t">${t}</div>
+    <div class="s">${s}</div></div>${btn||''}</div></div>`;
+
+  if(!PUSHKEY.key) return void(box.innerHTML=row('Not switched on yet',
+    'MySet needs its notification keys set before this works.'));
+  if(!st.can&&st.why==='browser') return void(box.innerHTML=row('This browser can’t do alerts',
+    'Chrome on Android, or the Studio added to your home screen on iPhone.'));
+  if(!st.can&&st.why==='ios-not-installed') return void(box.innerHTML=
+    row('Add the Studio to your home screen first','On iPhone, alerts only work once it’s installed.',
+      `<button class="act" onclick="openStudioInstall()">How</button>`));
+  if(st.denied) return void(box.innerHTML=row('Alerts are blocked',
+    'Your phone is blocking them. Turn them back on in Settings → Notifications → MySet.'));
+
+  box.innerHTML=row(st.on?'Alerts are on':'Get alerts on your phone',
+    st.on?`You'll be told when someone requests a song, even with the screen off.${PUSHKEY.devices>1?` · ${PUSHKEY.devices} devices`:''}`
+         :'Know the moment someone requests a song — no need to watch the screen.',
+    `<button class="act${st.on?'':' '}" onclick="togglePush(${st.on?'false':'true'})">${st.on?'Turn off':'Turn on'}</button>`);
+}
+
+async function togglePush(on){
+  const st=await pushState();
+  if(!st.can)return;
+  try{
+    if(on){
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted'){ drawPush(); return; }
+      const sub=await st.reg.pushManager.subscribe({userVisibleOnly:true,
+        applicationServerKey:b64ToBytes(PUSHKEY.key)});
+      const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'pushOn',sub:sub.toJSON()})});
+      if(!d.ok){ toast(d.error||'Could not switch alerts on'); await sub.unsubscribe().catch(()=>{}); }
+      else toast('Alerts on — check your notifications');
+    }else{
+      if(st.sub){ await api('/admin',{method:'POST',body:JSON.stringify({action:'pushOff',endpoint:st.sub.endpoint})});
+        await st.sub.unsubscribe().catch(()=>{}); }
+      toast('Alerts off');
+    }
+  }catch(e){ toast('Your phone wouldn’t allow that'); }
+  PUSHKEY=null; drawPush();
+}
+
+function openStudioInstall(){
+  const ios=PUSH_IOS;
+  const steps=ios
+    ? [['Tap <b>Share</b> in Safari','the square with an arrow pointing up'],
+       ['Scroll to <b>Add to Home Screen</b>',''],
+       ['Tap <b>Add</b>, top right',''],
+       ['Open the Studio from your home screen','then come back here and turn alerts on']]
+    : [['Tap the <b>⋮</b> menu, top right of Chrome',''],
+       ['Tap <b>Install app</b>','or <b>Add to Home screen</b>'],
+       ['Tap <b>Install</b>',''],
+       ['Open the Studio from your home screen','then come back here and turn alerts on']];
+  openSheet(`<h3>Put the Studio on your home screen</h3>
+    <p class="lede">Then it opens like an app — and on iPhone it's the only way alerts can work.</p>
+    <div class="list">${steps.map(([t,sub],i)=>`<div class="row"><div class="m">
+      <div class="t">${i+1}. ${t}</div>${sub?`<div class="s">${sub}</div>`:''}</div></div>`).join('')}</div>
+    <p class="muted" style="font-size:12px;padding:12px 4px 0">${ios
+      ? 'It has to be <b>Safari</b> — Chrome on iPhone can’t add to the home screen.'
+      : 'The wording moves around between Android versions.'}</p>
+    <button class="big" style="margin-top:14px" onclick="closeSheet()">Got it</button>`);
+}
+
 async function loadPlan(force){
   if(PLAN&&!force)return;
   PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'})});

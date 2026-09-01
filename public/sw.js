@@ -28,6 +28,40 @@ const STATIC = /\.(?:css|js|png|jpg|jpeg|webp|svg|woff2?|webmanifest)$/i;
 
 self.addEventListener('install', () => self.skipWaiting());
 
+/* ---------- push ----------
+   The artist's Studio, installed to their home screen, can be told things while
+   the screen is off — a song requested, a payment landed. The audience is never
+   pushed to: they never sign in (INVARIANT 9g) and would have to install first,
+   which is a non-starter in a bar.
+   Everything is defensive: a malformed payload must still produce a notification
+   rather than throwing inside the worker, where nobody would ever see the error. */
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch { d = {}; }
+  const title = d.title || 'MySet';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: d.body || '',
+    tag: d.tag || 'myset',
+    renotify: true,
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { url: d.url || '/studio' },
+  }));
+});
+
+/* Focus the Studio if it is already open rather than stacking a second copy. */
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/studio';
+  e.waitUntil((async () => {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of all) {
+      if (new URL(c.url).pathname.startsWith('/studio')) { await c.focus(); return; }
+    }
+    await self.clients.openWindow(url);
+  })());
+});
+
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     for (const k of await caches.keys()) if (k !== CACHE) await caches.delete(k);

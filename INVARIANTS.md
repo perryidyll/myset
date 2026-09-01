@@ -387,6 +387,14 @@ If you are about to violate one, stop and say so rather than working around it.
     the design handoff were all downloadable from the live domain. Netlify's
     secrets scanner caught it; do not widen the publish directory.
 
+11b. **No secret value ever appears in a CHAT WINDOW either, and that includes one
+    I generated myself.** On 2026-09-02 I generated a VAPID keypair and printed both
+    halves to the terminal to be helpful. The private key was in the transcript
+    before I finished the sentence. Generating a secret is not the same as being
+    allowed to handle one — `./vapid-keys.sh` exists so Perry runs it himself and
+    the value never crosses the boundary. The rule is the same as for
+    `STRIPE_SECRET_KEY`: name the variable, never the value.
+
 11. **No secret value ever appears in a repo file.** The stage passcode lives only
     in the Netlify `ADMIN_CODE` env var. Writing it into a doc broke the build —
     correctly.

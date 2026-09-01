@@ -12,6 +12,7 @@ import { readArtists, mutateArtists } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
 import { archiveShow } from './_history.mjs';
+import { readSubs, saveSub, dropSub, notify } from './_push.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
@@ -818,6 +819,25 @@ export default async (req) => {
       }
       return json({ ok: true, tracks });
     } catch { return bad('Couldn’t reach Spotify — try again in a minute', 502); }
+  }
+
+  /* Push subscriptions. Read/write one small document, never the show, so they
+     short-circuit before the show mutation like the other side-documents do. */
+  if (action === 'pushKey') {
+    return json({ ok: true, key: process.env.VAPID_PUBLIC_KEY || null,
+                  devices: (await readSubs(aid)).subs.length });
+  }
+  if (action === 'pushOn') {
+    if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY)
+      return bad('Alerts aren’t switched on for MySet yet', 503);
+    const saved = await saveSub(aid, body.sub);
+    if (!saved) return bad('That subscription looks wrong', 400);
+    await notify(aid, { title: 'Alerts are on', body: 'You’ll hear from MySet when it matters.', tag: 'setup' });
+    return json({ ok: true, devices: (await readSubs(aid)).subs.length });
+  }
+  if (action === 'pushOff') {
+    await dropSub(aid, String((body.sub && body.sub.endpoint) || body.endpoint || ''));
+    return json({ ok: true, devices: (await readSubs(aid)).subs.length });
   }
 
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);

@@ -259,3 +259,40 @@ before choosing 2.
 
 And tell me whether to build the safety gate (section 6, item 5) now. That one does
 not depend on any of the above.
+
+---
+
+# Appendix — switching on phone alerts
+
+Separate from Stripe, same rule about keys.
+
+**1. Generate your keys.** In Terminal:
+
+```
+cd ~/Docs/MySet && ./vapid-keys.sh
+```
+
+It prints three values. **Do not paste them to me** — not even the public one, so the
+habit stays simple.
+
+**2. Put them in Netlify.** Site configuration → Environment variables → Add, for the
+**production** context only:
+
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT` — `mailto:hello@myset.vip`
+
+**3. Redeploy** so they take effect:
+
+```
+cd ~/Docs/MySet && git commit --allow-empty -m "Redeploy: push keys" && git push
+```
+
+**4. Install the Studio on your phone.** On iPhone this is required — Apple only allows
+alerts for an app that is on your home screen. Safari → Share → Add to Home Screen.
+
+**5. Turn them on.** Open the Studio *from the home screen icon*, go to **Settings**, and
+the top panel says "Get alerts on your phone". Tap **Turn on** and accept the prompt.
+You'll get a test notification straight away.
+
+You'll then be told when someone requests a song, with your screen off.
