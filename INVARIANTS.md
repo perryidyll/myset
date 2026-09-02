@@ -614,6 +614,33 @@ If you are about to violate one, stop and say so rather than working around it.
    short deny-list, and the artist's own page name — which is the half of the
    credential anyone can already read.
 
+15j. **Votes are FINAL, and the release has to be automatic.** `voteFinal` defaults
+   ON as of 2026-09-02. The un-vote toggle was quietly the escape hatch for a
+   stranded credit: hide a song or narrow the setlist, and a fan holding a vote on
+   it could tap it off and get their credit back. With no toggle that credit is
+   stranded for the rest of the round, so `releaseUnvotable()` gives it back the
+   moment the playable set SHRINKS — which is a stronger promise than the old one,
+   because the fan need not notice or still be looking at their phone.
+
+   It is called from BOTH dispatch paths: the `mutateShow` switch (toggleSong) and
+   `handleLists` (listSongs / listUse / listToggle / listDelete), which
+   short-circuits before that block. One helper, two call sites, so neither can be
+   the one that forgets.
+
+   **A bare body on a song the fan already holds is REFUSED, not treated as more
+   votes.** An old cached page means "un-vote"; charging somebody who meant to take
+   a vote back is the worse of the two mistakes. Adding more needs an explicit
+   `op:'cast'`.
+
+15k. **Asking for feedback must never cost the gig.** The "Enjoying MySet?" prompt
+   waits for an HOUR of use accumulated only while the page is VISIBLE — a phone
+   face-down in a pocket for a whole set has not been using MySet — and then asks at
+   most once a week, never again once answered. It never opens over another sheet
+   and never mid-vote. Both limits are enforced on the SERVER too
+   (`_feedback.mjs`), because a localStorage rule is a suggestion. And it is not
+   write-only: the artist reads it in the Studio, with the notes and never a device
+   id.
+
 16. **Nothing in the app may break the gig.** Every failure path degrades to "the
     setlist is still readable". No error state should block the page from rendering.
 

@@ -728,21 +728,34 @@ function verifyBlock(){
   const site=(V.links||{}).website||'';
   const dom=site?(()=>{try{return new URL(site).hostname.replace(/^www\./,'')}catch(e){return ''}})():'';
   // straight off the record, so it is right before any check has been run
-  const vouches=(VOUCH&&VOUCH.count)||0, need=(VOUCH&&VOUCH.need)||10;
+  const vouches=(VOUCH&&VOUCH.count)||0, need=(VOUCH&&VOUCH.need)||3;
   const names=(VERIFY&&VERIFY.vouchedBy)||(VOUCH&&VOUCH.names)||[];
   const line=(on,label,hint)=>`<div class="ck ${on?'on':''}">
     <span class="bx">${on?'✓':''}</span>
     <span class="m"><b>${label}</b>${hint?`<span>${hint}</span>`:''}</span></div>`;
 
-  const done=[!!site,!!C.emailOnDomain,!!C.siteNamesVenue,vouches>=need].filter(Boolean).length;
-  return `<div class="note"><b>Unverified listing · ${done} of 4 done</b>
+  /* THE PLAN IS A STEP, AND IT IS SHOWN. It was added to the verdict without being
+     added here, so a venue could tick every box it was told about, read "4 of 4
+     done", and still be refused — a checklist that lies. Five now, and the plan is
+     first because it is the thing that gates the others being checked at all. */
+  const pro=!!(C.paidPlan||(V&&V.plan&&V.plan!=='free'));
+  const done=[pro,!!site,!!C.emailOnDomain,!!C.siteNamesVenue,vouches>=need].filter(Boolean).length;
+  return `<div class="note"><b>Unverified listing · ${done} of 5 done</b>
     <p>Your page works completely either way — this only changes a grey chip to a
        green tick, so people know the details came from you and not from a stranger.
-       <b>All four</b> of the below are needed. Any one on its own is just a claim;
+       <b>All five</b> of the below are needed. Any one on its own is just a claim;
        together they mean somebody controls the venue’s domain, its website, and is
        known to the acts who really play here.</p></div>
 
-  <div class="sec"><span class="kick">1 · Your website</span></div>
+  <div class="sec"><span class="kick">1 · MySet Pro</span></div>
+  <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">The green tick is part of Pro, along with your reviews, extra photos and tips. Paying doesn’t buy the tick — it opens the door to being checked, and the four steps below still have to pass.</p>
+  <div class="list">
+    ${line(pro,pro?'You’re on MySet Pro':'MySet Pro',
+      pro?'Thanks — the checks below are what earn the tick'
+         :'Not self-serve yet: message us and we’ll switch it on for your page')}
+  </div>
+
+  <div class="sec"><span class="kick">2 · Your website</span></div>
   <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">We fetch your homepage over https and look for your venue’s name in the words on it.</p>
   <div class="list">
     ${line(!!site,'Your website is on your page', site?esc(site):'Add it on this tab, under “Getting hold of you”')}
@@ -766,7 +779,7 @@ function verifyBlock(){
     <b>claimed</b> the page. That’s deliberate — otherwise anyone added later could verify a
     venue with an address on some other domain.</p>`:''}
 
-  <div class="sec"><span class="kick">2 · The artists who play here</span></div>
+  <div class="sec"><span class="kick">3 · The artists who play here</span></div>
   <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px"><b>${need}</b> different artists who have a gig at your place in their own MySet calendar have to confirm it. They tap it on your public page. Hard to fake — each one needs their own account and their own gig history.</p>
   <div class="list"><div class="row">
     <div class="m"><div class="t">${vouches} of ${need} confirmed</div>
@@ -782,9 +795,16 @@ async function runVerify(){
   VERIFY=d;
   if(d.verified){ await loadVenue(); toast('Verified 🎉'); return; }
   render();
-  toast(d.checks&&d.checks.siteNamesVenue&&!d.checks.emailOnDomain
-    ? 'Site checks out — now sign in with an email on that domain'
-    : d.why? 'Couldn’t read your website' : 'Not yet — see what’s missing above');
+  /* Name the blocker. "See what's missing above" sent a venue that had done
+     everything it was shown back to a list of ticks. */
+  const c=d.checks||{};
+  toast(!c.paidPlan ? 'The tick is part of MySet Pro — message us to switch it on'
+    : !c.website ? 'Add your website first, under “Getting hold of you”'
+    : d.why ? 'Couldn’t read your website'
+    : !c.siteNamesVenue ? 'We couldn’t find your venue’s name in your website’s text'
+    : !c.emailOnDomain ? 'Site checks out — now sign in with an email on that domain'
+    : !c.artistsDone ? `${d.vouches||0} of ${d.need||need} artists have confirmed you`
+    : 'Not yet — see what’s missing above');
 }
 
 /* ── bits and pieces ───────────────────────────────────── */

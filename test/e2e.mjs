@@ -80,9 +80,16 @@ ok('a fan votes for a song in the set', v1.ok && v1.voted === true, v1);
 await A('listSongs', { id: lid, songs: ['bravo', 'foxtrot'] });     // alpha drops out
 const v2 = await vote('fanC', 'alpha');
 eq('a NEW vote for it is refused', [v2.status, v2.error], [404, 'That one isn’t on tonight’s list']);
+/* This used to assert the holder could TOGGLE it off, which was the escape hatch
+   for a stranded credit. Votes are final since 2026-09-02, so there is no toggle —
+   and the credit therefore has to come back on its own, the moment the set narrows.
+   `releaseUnvotable` does that, which is a stronger guarantee than the old one: the
+   fan does not have to notice, or still be looking at their phone. */
+eq('THE CREDIT CAME BACK BY ITSELF, with no tap from the fan',
+   (await pubShow('fanB')).credits.used, 0);
 const v3 = await vote('fanB', 'alpha');
-ok('THE BUG: the holder can still toggle it off', v3.ok && v3.voted === false, v3);
-eq('and the credit came back', (await pubShow('fanB')).credits.used, 0);
+eq('and a fresh vote for it is refused like any other off-list song',
+   [v3.status, v3.error], [404, 'That one isn’t on tonight’s list']);
 await A('listSongs', { id: lid, songs: ['alpha', 'bravo', 'foxtrot'] });
 
 /* ── FINDING 3 ─────────────────────────────────────────────────── */

@@ -564,6 +564,49 @@ export async function carryFans(aid, show) {
    Fixed at the source. Narrowing a setlist and hiding a song were NOT affected —
    the song stays in show.songs, so the toggle works and refunds correctly; that was
    measured, and the original report had it wrong. */
+/* Give back every vote held on a song the room can no longer choose.
+
+   The un-vote toggle used to be the escape hatch for this: narrow the setlist or
+   hide a song, and a fan holding a vote on it could tap it off and get their credit
+   back. Under `voteFinal` there is no toggle, so without this the credit is stranded
+   until the next song starts — and INVARIANT 15's promise is that a fan can always
+   recover what they paid for, whatever the ARTIST has changed since.
+
+   It is a fan-wide write across every shard, which is why it was avoided before. It
+   only runs when the playable set actually SHRANK, which is a handful of times a
+   night at most, and it returns the ids it released so the artist can be told.
+
+   NOT called when a song is merely PLAYED — a played song stays votable at the
+   replay price, and the round reset returns those credits anyway. */
+export async function releaseUnvotable(aid, show) {
+  const canVote = votable(show);
+  const known = new Map((show.songs || []).map((x) => [x.id, x]));
+  const freed = new Set();
+  await Promise.all(
+    Array.from({ length: SHARDS }, (_, n) =>
+      casDoc(shardKey(aid, n), () => ({}), (bag) => {
+        let touched = false;
+        for (const id of Object.keys(bag)) {
+          const v = bag[id].v || [];
+          if (!v.length) continue;
+          const kept = v.filter((sid) => {
+            const song = known.get(sid);
+            const okNow = song ? canVote(song) : false;
+            if (!okNow) freed.add(sid);
+            return okNow;
+          });
+          if (kept.length === v.length) continue;
+          for (const sid of v) if (!kept.includes(sid) && bag[id].ts) delete bag[id].ts[sid];
+          bag[id].v = kept;
+          touched = true;
+        }
+        return touched;
+      }, null).catch(() => {})
+    )
+  );
+  return [...freed];
+}
+
 export async function dropSongVotes(aid, songId) {
   if (!songId) return;
   await Promise.all(

@@ -82,10 +82,20 @@ eq('five votes debit exactly two from the pack', await extraOf('cara'), 7);
 console.log('\nUN-VOTING NEVER BURNS A PAID VOTE (INVARIANT 15)');
 await buy('dan', 9, 'cs_dan');
 for (let i = 0; i < 5; i++) await vote('dan', ids[i]);
-await vote('dan', ids[4]); await vote('dan', ids[3]);      // toggle two back off
-eq('three still cast', (await pub('dan')).credits.used, 3);
+/* This used to toggle two votes back off and assert the pack was untouched. Votes
+   are final since 2026-09-02, so a second tap on a song you hold is no longer an
+   un-vote — the two extra casts land, and the pack settles the paid portion. The
+   INVARIANT 15 property being protected here has not changed: what is spent is
+   exactly what was cast, never more. */
+/* A BARE BODY on a song they already hold is REFUSED under finality, rather than
+   quietly becoming two more votes. That is deliberate: an old cached page means
+   "un-vote", and charging somebody who meant to take a vote back is the worse of
+   the two mistakes. Adding more requires an explicit op:'cast' from the new sheet. */
+const t1 = await vote('dan', ids[4]), t2 = await vote('dan', ids[3]);
+eq('both bare taps refused', [t1.status, t2.status], [409, 409]);
+eq('so five are cast, as before', (await pub('dan')).credits.used, 5);
 await A('play', { song: ids[24] });
-eq('so nothing was taken from the pack', await extraOf('dan'), 9);
+eq('three free, so two came off the pack', await extraOf('dan'), 7);
 
 console.log('\nA REPLAY VOTE IS PRICED AT replayCost, BEFORE played[] MOVES');
 /* `play` takes the winning song back OUT of played[], so settling the ledger against
@@ -135,9 +145,10 @@ eq('the pack is spent', await extraOf('hana'), 0);
 
 console.log('\nDELETING A SONG REFUNDS THE CREDIT HELD ON IT');
 /* creditsUsed counts every id in fan.v whether the song still exists or not, and
-   vote.mjs answers 404 before the un-vote toggle — so a hard delete used to strand
-   the credit with no row in the UI to tap. Narrowing a setlist and hiding a song
-   were never affected: the song stays in show.songs, so the toggle refunds. */
+   vote.mjs answers 404 before the un-vote path — so a hard delete used to strand
+   the credit with no row in the UI to tap. Hiding and narrowing are now handled the
+   same way, by releaseUnvotable, since finality removed the toggle that covered
+   them. */
 await A('newShow');
 await A('freeCredits', { n: 3 });
 const doomed = (await A('addSong', { title: 'Doomed Song', artist: 'Test' })).songId;
@@ -150,13 +161,19 @@ const fanIvy = (await readFans('perry-idyll')).ivy;
 ok('and the dead id is out of her picks', !(fanIvy.v || []).includes(doomed), fanIvy.v);
 ok('her other vote is untouched', (fanIvy.v || []).includes(ids[1]), fanIvy.v);
 
-console.log('\nHIDING A SONG IS NOT DELETING IT — THE TOGGLE STILL REFUNDS');
+console.log('\nHIDING A SONG RELEASES THE VOTES ON IT, WITHOUT THE FAN DOING ANYTHING');
+/* The un-vote toggle used to be the escape hatch: hide a song and the holder could
+   tap it off. With votes final there is no toggle, so the release has to be
+   automatic or the credit is stranded for the rest of the round — which is a
+   stronger guarantee than the old one, because the fan need not even notice. */
 const hideMe = (await A('addSong', { title: 'Hidden Song', artist: 'Test' })).songId;
 await vote('jo', hideMe);
-await A('toggleSong', { song: hideMe });
-const un = await vote('jo', hideMe);
-ok('un-voting a hidden song still works (INVARIANT 15)', un.ok && un.voted === false, un);
-eq('and the credit is back', (await pub('jo')).credits.remaining, 3);
+eq('one credit spent', (await pub('jo')).credits.remaining, 2);
+const hid = await A('toggleSong', { song: hideMe });
+eq('THE CREDIT CAME BACK BY ITSELF', (await pub('jo')).credits.remaining, 3);
+ok('and the artist is told it happened', /went back to the room/.test(hid.note || ''), hid.note);
+const gone = (await readFans('perry-idyll')).jo;
+ok('the hidden id is out of her picks', !(gone.v || []).includes(hideMe), gone.v);
 
 console.log('\nCHANGING THE PRICE MUST NOT RE-PRICE VOTES ALREADY CAST');
 /* A fan spends 3 of 3 free credits. The artist then drops free credits to 1. Without

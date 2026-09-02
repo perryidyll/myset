@@ -50,3 +50,6 @@ node --import ./test/register.mjs test/finality.mjs
 echo
 echo "── stripe connect, direct charges ──"
 node --import ./test/register.mjs test/connect.mjs
+echo
+echo "── the feedback prompt ──"
+node --import ./test/register.mjs test/feedback.mjs

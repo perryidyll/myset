@@ -26,9 +26,14 @@ import { casDoc, readDoc } from './_lib.mjs';
 
 export const FLAGS = {
   voteFinal: {
-    default: false,
-    what: 'Votes cannot be taken back once cast. OFF = a second tap removes them and refunds (INVARIANT 15).',
-    remove: 'When Perry has run a gig on each setting and picked one, delete the loser and this flag.',
+    /* ON as of 2026-09-02, at Perry's decision. Shipped as the DEFAULT rather than
+       written into the flags document, because the document lives in Blobs and the
+       default lives in code — so what production does is reviewable in the diff
+       instead of depending on somebody having run a one-off write. Turning it off
+       again is `flagSet {flag:'voteFinal', on:false}`, globally or per artist. */
+    default: true,
+    what: 'Votes cannot be taken back once cast. OFF = a second tap removes them and refunds (the pre-2026-09-02 behaviour).',
+    remove: 'If a gig proves the refund was better, flip the default back and delete the losing path. A flag that outlives its decision is dead code with extra steps.',
   },
 };
 

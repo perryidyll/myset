@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts,
+import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, releaseUnvotable, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
@@ -498,12 +498,35 @@ const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 't
 /* SETLISTS and the to-learn list. Both live in their own documents, so none of
    this touches the record the room polls — except `listUse`, which has to write
    the projection (see the note in _lists.mjs). */
+/* Votes on a song the room can no longer choose have to come back, and there are
+   TWO dispatch paths that can narrow the set: the mutateShow switch (toggleSong)
+   and handleLists (listSongs / listUse / listToggle / listDelete), which
+   short-circuits before that block. This is called from both, so neither can be
+   the one that forgets. See releaseUnvotable in _lib.mjs for why it matters now
+   that votes are final. */
+async function releaseNote(aid) {
+  try {
+    const after = await getShow(aid);
+    const freed = await releaseUnvotable(aid, after);
+    if (!freed.length) return null;
+    const titles = freed.map((id) => (after.songs.find((x) => x.id === id) || {}).title)
+      .filter(Boolean).slice(0, 3);
+    return titles.length
+      ? `Votes on ${titles.join(', ')} went back to the room.`
+      : 'Votes on the songs you took out went back to the room.';
+  } catch { return null; }        // the artist's change still succeeded
+}
+
 async function handleLists(aid, action, body) {
   const show = await getShow(aid);
   const send = async (extra = {}) => {
+    // narrowing the set is exactly what these actions do, so release before replying
+    const freed = action === 'listAll' ? null : await releaseNote(aid);
     const [d, sh] = [await readLists(aid), await getShow(aid)];
     return json({ ok: true, lists: shapeLists(d, sh),
-                  listId: sh.listId, listName: sh.listName, ...extra });
+                  listId: sh.listId, listName: sh.listName,
+                  ...extra,
+                  ...(freed ? { note: join(extra.note, freed) } : {}) });
   };
 
   if (action === 'listAll') return send();
@@ -1418,6 +1441,12 @@ export default async (req) => {
   else if (resetVotes) await clearAllFanVotes(aid, prevShow || (await getShow(aid)));
   // a deleted song must not keep holding somebody's credit
   else if (droppedSong) await dropSongVotes(aid, droppedSong);
+
+  /* ...and neither must a song the artist has HIDDEN or dropped from tonight's set.
+     With votes final there is no un-vote for the fan to fall back on, so the
+     release has to happen here or the credit is stranded for the rest of the round.
+     Only when the playable set actually shrank, and the artist is told. */
+  if (!wipe && !resetVotes && !droppedSong) note = join(note, await releaseNote(aid));
 
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.

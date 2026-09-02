@@ -7,9 +7,9 @@
    both work by counting entries, which is why multi-vote fell out of the existing
    shape instead of needing a new field.
 
-   Finality is NOT on yet. It is written as a flag with both answers real, so a gig
-   can be run each way before choosing. These cases hold the un-vote refund
-   (INVARIANT 15) in place until that decision is made. */
+   Finality SHIPPED ON on 2026-09-02, but it is still a flag with both answers real:
+   the section below switches it off explicitly to prove the un-vote refund still
+   works, because a flag whose other branch has rotted is not a switch. */
 process.env.ADMIN_CODE = 'devlocal';
 process.env.MYSET_DOUBLE_TAP_MS = '0';
 
@@ -80,9 +80,13 @@ ok('two replay votes are accepted', r2.ok, r2);
 eq('and cost six, not two', r2.cost, 6);
 eq('leaving four', (await pub('eve')).credits.remaining, 4);
 
-console.log('\nA SECOND TAP TAKES BACK EVERYTHING AND REFUNDS IT  (INVARIANT 15, flag off)');
-eq('finality is off by default', FLAGS.voteFinal.default, false);
-eq('and off in force', flagValue(await readFlags(), 'voteFinal', 'perry-idyll'), false);
+console.log('\nA SECOND TAP TAKES BACK EVERYTHING AND REFUNDS IT  (with finality OFF)');
+/* Finality ships ON since 2026-09-02, so this section switches it off explicitly
+   rather than relying on a default — which is what a flag is for, and is why both
+   answers have to keep working. */
+eq('finality now ships ON', FLAGS.voteFinal.default, true);
+await A('flagSet', { flag: 'voteFinal', on: false });
+eq('and this section turns it off', flagValue(await readFlags(), 'voteFinal', 'perry-idyll'), false);
 const undo = await cast('eve', 'delta');
 ok('the tap un-votes', undo.ok && undo.voted === false, undo);
 eq('it says how many it removed', undo.removed, 2);
@@ -115,8 +119,8 @@ eq('which the payload reflects', (await pub('x')).flags.voteFinal, false);
 const cleared = await A('flagSet', { flag: 'voteFinal', on: null, artistId: 'perry-idyll' });
 eq('clearing the override returns them to the global answer', cleared.inForce, true);
 await A('flagSet', { flag: 'voteFinal', on: null });
-eq('and clearing the global returns everyone to the default',
-   (await pub('x')).flags.voteFinal, false);
+eq('and clearing the global returns everyone to the default, which is now ON',
+   (await pub('x')).flags.voteFinal, true);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

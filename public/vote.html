@@ -234,6 +234,17 @@
   cursor:pointer;transition:transform .12s var(--spring)}
 .go2:active{transform:scale(.985)}
 .vqmax{text-align:center;font-size:12.5px;color:var(--muted);margin:-2px 0 14px}
+/* the feedback prompt */
+.fbrow{display:flex;justify-content:center;gap:6px;margin:2px 0 16px}
+.fbst{width:52px;height:52px;border:0;background:none;font-size:34px;line-height:1;
+  color:var(--hair-2);cursor:pointer;padding:0;transition:transform .12s var(--spring),color .12s}
+.fbst:active{transform:scale(.9)}
+.fbst.on{color:#FFB300}
+.fbnote{width:100%;box-sizing:border-box;padding:14px;border-radius:var(--r-sm);
+  border:1px solid var(--hair-2);background:var(--surface-2);color:var(--ink);
+  font-family:var(--f);font-size:15px;line-height:1.45;resize:none}
+.fbnote::placeholder{color:var(--faint)}
+.fbnote:focus{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 </head>
 <body>
@@ -298,6 +309,81 @@ async function load(){
    And the rules were never written down anywhere the fan could see them — the pill
    just went down, which is how "I was saving my votes" happened at the real gig
    when free votes had in fact refreshed twice already. */
+/* ---------- "enjoying MySet?" ----------
+   The iOS pattern, with the two rules that stop it being the reason somebody
+   closes the tab:
+
+     · never before an HOUR of actual use, accumulated across visits and counted
+       only while the page is VISIBLE — a phone face-down in a pocket for a whole
+       set has not been "using MySet" for three hours
+     · never more than once a week, and never again once they have answered
+
+   And never mid-action: not while another sheet is open, not while a vote is in
+   flight, and not while the artist is between songs, which is the one moment the
+   room is actually watching the screen. Nothing about this may get in the way of
+   the gig (INVARIANT 16). The server enforces the weekly limit too, because a
+   localStorage rule is a suggestion. */
+const FB_AFTER = 60 * 60e3;              // an hour of visible use
+const FB_EVERY = 7 * 24 * 3600e3;        // and at most weekly
+const fbGet = (k, d) => { try { return Number(localStorage.getItem(k)) || d; } catch (e) { return d; } };
+const fbSet = (k, v) => { try { localStorage.setItem(k, String(v)); } catch (e) {} };
+let FB_T0 = Date.now(), FB_SHOWN = false;
+/** Accumulate visible time, and bank it so it survives a reload. */
+function fbTick(){
+  const now = Date.now();
+  if (document.visibilityState === 'visible') {
+    fbSet('myset.fbMs', fbGet('myset.fbMs', 0) + Math.max(0, Math.min(now - FB_T0, 60e3)));
+  }
+  FB_T0 = now;
+}
+function fbDue(){
+  if (FB_SHOWN) return false;
+  if (fbGet('myset.fbDone', 0)) return false;                        // already answered
+  if (Date.now() - fbGet('myset.fbAsked', 0) < FB_EVERY) return false;
+  if (fbGet('myset.fbMs', 0) < FB_AFTER) return false;
+  if ($('#sheet').classList.contains('on')) return false;            // never over a sheet
+  if (busy.size) return false;                                       // never mid-vote
+  return true;
+}
+function fbMaybeAsk(){
+  fbTick();
+  if (!fbDue()) return;
+  FB_SHOWN = true;
+  fbSet('myset.fbAsked', Date.now());
+  FB_STARS = 0;
+  drawFeedback();
+}
+let FB_STARS = 0;
+function fbStar(n){ FB_STARS = n; buzz(8); drawFeedback(); }
+function drawFeedback(){
+  const star = (n) => `<button class="fbst ${FB_STARS >= n ? 'on' : ''}" onclick="fbStar(${n})"
+    aria-label="${n} star${n === 1 ? '' : 's'}">\u2605</button>`;
+  openSheet(`
+    <div class="kick">A quick favour</div>
+    <h3 style="margin:2px 0 2px">Enjoying MySet?</h3>
+    <p class="lede" style="margin-bottom:16px">We\u2019d appreciate your feedback \u2014 it takes ten seconds and it genuinely shapes what gets built next.</p>
+    <div class="fbrow">${[1,2,3,4,5].map(star).join('')}</div>
+    <textarea class="fbnote" id="fbNote" rows="3" maxlength="400"
+      placeholder="MySet makes live performances so much more fun!"></textarea>
+    <button class="go" onclick="fbSend()" ${FB_STARS ? '' : 'disabled'}>${FB_STARS ? 'Send it' : 'Pick a rating'}</button>
+    <button class="go2" onclick="fbLater()">Not now</button>`);
+}
+function fbLater(){ closeSheet(); }        // fbAsked is already stamped: a week off
+async function fbSend(){
+  if (!FB_STARS) return;
+  const note = (($('#fbNote') || {}).value || '').trim();
+  fbSet('myset.fbDone', Date.now());       // answered: never ask this device again
+  closeSheet();
+  toast('Thank you \u2014 that really helps');
+  try {
+    await fetch(`${API}/feedback${AQ1}`, { method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fan: FAN, stars: FB_STARS, note }) });
+  } catch (e) { /* their thank-you already happened; this is not worth a retry */ }
+}
+document.addEventListener('visibilitychange', fbTick);
+window.addEventListener('pagehide', fbTick);
+
 let VQ=1;                       // how many votes the sheet currently proposes
 let VMODE='cast';               // 'cast' or 'clear' — what Confirm will actually do
 function openVote(id){
@@ -849,8 +935,9 @@ function schedule(){
   TIMER=setTimeout(tick, wait);
 }
 async function tick(){
-  if(document.hidden){ schedule(); return; }
+  if(document.hidden){ fbTick(); schedule(); return; }
   await load();
+  fbMaybeAsk();                 // a natural pause: state has just refreshed
   const sig=signature();
   if(sig!==null && sig===LASTSIG) QUIET++; else { QUIET=0; LASTSIG=sig; }
   schedule();

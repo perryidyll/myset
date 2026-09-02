@@ -871,6 +871,26 @@ function signOut(){
   localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token');
   gate();
 }
+/* What the audience said when MySet asked them. Read-only, and deliberately shown
+   next to the money: a four-star night with a note about the queue is worth more to
+   an artist than either number alone. */
+function fbCard(){
+  const f=(D&&D.feedback)||null;
+  if(!f||!f.count) return '';
+  const stars=n=>'\u2605'.repeat(n)+'\u2606'.repeat(5-n);
+  return `<div class="sec"><span class="kick">What the room said</span></div>
+    <div class="list">
+      <div class="row"><div class="m">
+        <div class="t">${f.average} out of 5 <span class="muted" style="font-weight:400">\u00b7 ${f.count} ${f.count===1?'person':'people'}</span></div>
+        <div class="s muted">${esc(stars(Math.round(f.average)))}</div>
+      </div></div>
+      ${(f.recent||[]).slice(0,6).map(r=>`<div class="row"><div class="m">
+        <div class="s" style="color:var(--accent-ink)">${esc(stars(r.stars))}</div>
+        <div class="t" style="font-size:14px;font-weight:400">${esc(r.note)}</div>
+      </div></div>`).join('')}
+    </div>`;
+}
+
 /* ---------- getting paid ----------
    Stripe hosts the whole onboarding, so MySet never sees a bank detail. The card
    states who pays Stripe's own fee, because an artist who reads "2%" and then sees
@@ -1432,7 +1452,7 @@ function render(){
         </div>`).join('')||'<div class="row muted">No payments yet.</div>'}</div>
         <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
       }
-      body=payCard()+head+pays;   // the Get-paid card sits above tonight's numbers
+      body=payCard()+head+fbCard()+pays;   // Get-paid card, tonight, what the room said
     }
   }
 

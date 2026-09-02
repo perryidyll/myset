@@ -69,7 +69,8 @@ const reused = await send({ fan: 'ann', song: 'alpha', n: 1, op: 'cast', cast: I
 ok('the same id is a NEW cast now', reused.ok && !reused.replay, reused);
 eq('because the votes it referred to are gone', await votesOn('ann', 'alpha'), 1);
 
-console.log('\nA REPLAYED TAKE-BACK IS ALSO ONLY DONE ONCE');
+console.log('\nA REPLAYED TAKE-BACK IS ALSO ONLY DONE ONCE  (finality off for this bit)');
+await setFinal(false);            // there is no take-back to replay when it is on
 const ID3 = 'cast0000000000000003';
 await send({ fan: 'bob', song: 'bravo', n: 4, op: 'cast', cast: 'cast0000000000000004' });
 const clr = await send({ fan: 'bob', song: 'bravo', op: 'clear', cast: ID3 });
@@ -81,7 +82,7 @@ eq('and did not touch the votes she has since cast', await votesOn('bob', 'charl
 
 /* ── 2. FINALITY ITSELF ──────────────────────────────────────────────────── */
 console.log('\nWITH THE FLAG ON, A FAN CANNOT TAKE VOTES BACK');
-eq('the flag is off to start', (await pub('x')).flags.voteFinal, false);
+eq('it was turned off above', (await pub('x')).flags.voteFinal, false);
 await setFinal(true);
 eq('now on', (await pub('x')).flags.voteFinal, true);
 await send({ fan: 'cat', song: 'delta', n: 3, op: 'cast', cast: 'cast0000000000000006' });
@@ -136,7 +137,7 @@ eq('the round settles exactly the paid portion',
    ((await readFans('perry-idyll')).eve || {}).extra, 3);
 
 console.log('\nAND IT ALL GOES BACK  (the flag is a switch, not a migration)');
-await setFinal(false);
+await setFinal(false);   // finality is the SHIPPED default; this proves the other way still works
 eq('off again', (await pub('x')).flags.voteFinal, false);
 await send({ fan: 'fay', song: 'charlie', n: 2, op: 'cast', cast: 'cast0000000000000012' });
 const back = await send({ fan: 'fay', song: 'charlie', op: 'clear', cast: 'cast0000000000000013' });
