@@ -1365,3 +1365,60 @@ Full detail, all 25 findings and 12 verdicts on yesterday's unverified claims: *
 agents replay from cache. The sandbox and headless-Chrome instrument are at **`_tmp_audit/`** (gitignored,
 and deliberately inside the repo: an earlier copy under `/private/tmp` was erased mid-run by tmp cleanup).
 `_tmp_audit/harness/README.md` is the auditor briefing.
+
+---
+
+## SESSION 16 — 2026-09-02 (evening): finality, Connect, the tick, and feedback — ALL LIVE
+
+Merge `39eeba3` is live on myset.vip. **496 assertions**, zero failures. Everything
+below was built on `feat/voting-sheet-and-verification`, reviewed by five
+independent agents, fixed, then merged.
+
+### Live now
+
+* **The vote sheet.** Tapping a song opens a sheet that asks HOW MANY votes to cast
+  and states the rules, then Confirm. `fan.v` holds one entry PER VOTE.
+* **Votes are FINAL** (`voteFinal` defaults ON in `_flags.mjs` — in CODE, so what
+  production does is visible in the diff; `flagSet` still turns it off globally or
+  per artist). Every cast carries a **cast id**, because the un-vote toggle WAS the
+  idempotency mechanism (INVARIANT 15h). Narrowing the set or hiding a song now
+  **releases the votes automatically** (`releaseUnvotable`, INVARIANT 15j) — the
+  toggle used to be the escape hatch for that stranded credit.
+* **"Enjoying MySet?"** — audience feedback, 5 stars + optional note, after an hour
+  of VISIBLE use, at most weekly, never over a sheet or mid-vote, enforced
+  server-side too. Artist reads it in the Studio Money tab (INVARIANT 15k).
+* **Stripe Connect, DIRECT charges**, 10% free / 2% Plus / 0% Pro
+  (`PLANS[*].cut`, INVARIANT 0r0). Onboarding is Stripe-hosted Express. Perry's own
+  account still charges on the platform account and is unaffected.
+* **The verification tick is premium and not for sale.** Venues: Pro + domain + site
+  names venue + **3** artist vouches (was 5), shown as 5 visible steps. Artists:
+  paid plan + Connect ready + photo ID + Perry's approval, ID stored where
+  `img.mjs` refuses to serve it and **deleted on decision** (INVARIANT 0bk).
+* **A studio passcode that opens the right Studio** (slug + code, with a lockout).
+
+### ⚠️ READ THIS BEFORE THE NEXT GIG
+
+`REVIEW-2026-09-02-REMAINING.md` has 22 open findings, ordered. The ones that matter:
+
+1. **The ARTIST verification tick has NO UI.** Endpoints and tests exist; nothing in
+   `public/` calls `verifyStatus` / `idUpload` / `idQueue` / `idApprove`. An artist
+   cannot ask for it and Perry cannot review one. Same for a `voteFinal` switch —
+   flag changes need hand-made HTTP.
+2. **`redeemSession` claims before it delivers.** No marker separates "claimed" from
+   "delivered", so a lost grant write means money taken, nothing delivered, and all
+   three recovery paths answering `already: true`. This is the old C004 and it is
+   still real — the last live piece of the 2026-08-30 failure.
+3. **At 320px the vote sheet pushes Confirm below the fold.** Make the action block a
+   sticky footer inside the sheet.
+4. **`payStart` sends no country**, so a connected account is created in the
+   platform's country — and that is immutable. Ask for it before an artist outside
+   the US onboards.
+
+### Tooling
+
+* `_tmp_audit/harness/` — full-stack sandbox (real functions, in-memory store,
+  seeded). `./start.sh PORT --seed`. `_tmp_audit/chrome/shot.mjs` drives real pages.
+* `test/stripe-fake.mjs` — stubs `stripe` via the same hook that stubs Blobs, and
+  records the OPTIONS of every call, which is how a direct charge is proved direct.
+* `_tmp_audit/budget.py` — meters the 5-hour window. **My weighted formula
+  overestimates**: Perry's own usage panel read 62% when it said 26M. Trust the panel.
