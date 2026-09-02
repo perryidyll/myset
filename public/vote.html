@@ -18,8 +18,8 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
-<meta name="description" content="Vote on what Perry Idyll plays next." />
-<title>Vote the setlist — Perry Idyll</title>
+<meta name="description" content="Vote on what the band plays next, from your phone. No app, no account." />
+<title>Vote the setlist — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>" />
 <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>" />
 <link rel="manifest" href="/manifest.webmanifest">
@@ -228,6 +228,17 @@ const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
 let ST=null,busy=new Set(),sel={},FILTER='',FOCUS=false,POP=null,PREV=null,BOOTED=false,SHEETED=false;
 
+/* Whose room this is. Ten user-visible strings used to say "Perry" to every
+   audience on the platform, including the page <title>.
+
+   ST can genuinely still be null when these are called: boot is
+   `await load(); await handleReturn();`, and load() swallows both a thrown fetch
+   and a !d.ok response. So on flaky venue wifi redeem() runs with no ST — which
+   is exactly the path where a real payment is being granted. Both helpers fall
+   back rather than throw; do not "simplify" the guards away. */
+const artistName  = (fb='the artist') => (ST && String(ST.artist||'').trim()) || fb;
+const artistFirst = (fb='the artist') => { const n = artistName(''); return n ? n.split(' ')[0] : fb; };
+
 /* skeleton while the first load lands */
 $('#app').innerHTML=`<div class="head"><div><div class="sk" style="width:130px;height:21px"></div>
   <div class="sk" style="width:170px;height:13px;margin-top:7px"></div></div>
@@ -286,6 +297,12 @@ const SORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A
 
 function render(){
   const d=ST,c=d.credits;
+  /* The tab and the app switcher carry whoever is actually on stage. LINK
+     PREVIEWS DO NOT — iMessage, WhatsApp and Slack read the served HTML, so they
+     get the neutral static <title>. Fixing that needs the title rendered
+     server-side; this only fixes the live page. */
+  const who=artistName('');
+  if(who) document.title=`Vote the setlist — ${who}`;
   const ended=d.status==='ended',pre=d.status==='pre';
   const open=d.windowOpen&&!ended&&!pre;
   const q=(FILTER||'').trim().toLowerCase();
@@ -386,7 +403,7 @@ function render(){
   if(ended){ dock.hidden=true; }
   else{ dock.hidden=false;
     dock.innerHTML=`
-      ${c.unlimited?'':`<button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask Perry'}</small></button>`}
+      ${c.unlimited?'':`<button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>`}
       <button class="btn btn-pri" onclick="openTip()"><b>Tip ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Say thanks</small></button>`; }
 }
 function row(s,c,open,replay){
@@ -526,9 +543,9 @@ async function decideLeftover(choice){
   load();
 }
 function openBuy(){
-  if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab Perry between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
+  if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab ${esc(artistFirst())} between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.pack='small';
-  // prices are whatever the artist set in his Studio — never hard-coded here
+  // prices are whatever the artist set in their Studio — never hard-coded here
   const P=ST.packs||{small:{votes:5,cents:500},big:{votes:15,cents:1000}};
   const KEYS=['small','big'].filter(k=>P[k]);
   openSheet(`<h3>Get more votes</h3><p class="lede">Extra votes for tonight’s setlist. Goes straight to ${esc(ST.artist||'the artist')}.</p>
@@ -542,9 +559,9 @@ function openBuy(){
 function pickPack(p){sel.pack=p;buzz(8);
   ['small','big'].forEach(k=>{const el=$('#p-'+k); if(el)el.classList.toggle('on',k===p);});}
 function openTip(){
-  if(!ST.paymentsEnabled){openSheet(`<h3>Tip Perry</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
+  if(!ST.paymentsEnabled){openSheet(`<h3>Tip ${esc(artistFirst())}</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.tip=10;
-  openSheet(`<h3>Tip Perry</h3><p class="lede">100% goes to Perry. Add a note and he’ll see it on stage.</p>
+  openSheet(`<h3>Tip ${esc(artistFirst())}</h3><p class="lede">100% goes to ${esc(artistFirst('them'))}. Add a note and they’ll see it on stage.</p>
     <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
     <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
@@ -570,8 +587,8 @@ async function checkout(kind){
       // venue wifi, wallet app hijacks the redirect) the next page load redeems it.
       if(d.id) pendingSet({id:d.id,at:Date.now()});
       window.location.href=d.url;return;}
-    toast('Card payments aren’t working right now — grab Perry between songs');
-  }catch(e){toast('Card payments aren’t working right now — grab Perry between songs');}
+    toast(`Card payments aren’t working right now — grab ${artistFirst()} between songs`);
+  }catch(e){toast(`Card payments aren’t working right now — grab ${artistFirst()} between songs`);}
   if(btn){btn.disabled=false;btn.textContent='Continue to payment';}
 }
 function confetti(){
@@ -600,15 +617,15 @@ async function redeem(sid,loud){
     if(d.ok){
       pendingSet(null);
       if(!d.already){ confetti(); buzz([12,50,12]);
-        toast(d.kind==='tip'?`Thank you! Your $${d.amount} tip reached Perry`
+        toast(d.kind==='tip'?`Thank you! Your $${d.amount} tip reached ${artistFirst()}`
                             :`${d.granted||0} extra votes added — vote away!`); }
       else if(loud) toast('Already added — you\u2019re all set');
       load(); return true;
     }
     // 402 = not paid yet; keep it pending. A hard 4xx means it will never work.
     if(r.status>=400&&r.status!==402&&r.status<500) pendingSet(null);
-    if(loud) toast('Could not confirm that payment \u2014 show Perry your receipt');
-  }catch(e){ if(loud) toast('Could not confirm that payment \u2014 show Perry your receipt'); }
+    if(loud) toast(`Could not confirm that payment \u2014 show ${artistFirst()} your receipt`);
+  }catch(e){ if(loud) toast(`Could not confirm that payment \u2014 show ${artistFirst()} your receipt`); }
   return false;
 }
 

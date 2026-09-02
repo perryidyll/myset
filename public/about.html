@@ -149,6 +149,12 @@ h3{font-size:20px;font-weight:600;letter-spacing:-.024em;line-height:1.25}
 @media(min-width:820px){
   .beat{grid-template-columns:1fr 1fr;gap:56px}
   .beat:nth-child(even) .txt{order:2}
+  /* A beat with no screenshot beside it. One column, and the text centred, so
+     it reads as a deliberate full-width beat rather than a half column with a
+     hole where the phone should be. */
+  .beat.solo{grid-template-columns:1fr;justify-items:center;text-align:center}
+  .beat.solo .txt{max-width:52ch}
+  .beat.solo .num{margin-left:auto;margin-right:auto}
 }
 .beat .txt{max-width:44ch}
 .beat h3{font-size:clamp(22px,3vw,27px);letter-spacing:-.03em}
@@ -179,7 +185,12 @@ h3{font-size:20px;font-weight:600;letter-spacing:-.024em;line-height:1.25}
   padding:52px 26px;margin:0 auto}
 .venues .kicker{color:var(--accent-ink)}
 .vgrid{display:grid;gap:30px;align-items:center;margin-top:36px}
-@media(min-width:860px){.vgrid{grid-template-columns:1.1fr .9fr;gap:50px}}
+@media(min-width:860px){
+  .vgrid{grid-template-columns:1.1fr .9fr;gap:50px}
+  /* No screenshot alongside — the venue numbers shot was seeded demo data and
+     came out rather than contradict the one-real-gig figure further up. */
+  .vgrid.solo{grid-template-columns:1fr}
+}
 .vlist{margin-top:26px;display:grid;gap:2px}
 .vrow{display:flex;gap:14px;align-items:flex-start;padding:15px 0;border-top:.5px solid var(--hair)}
 .vrow:first-child{border-top:none}
@@ -204,6 +215,15 @@ h3{font-size:20px;font-weight:600;letter-spacing:-.024em;line-height:1.25}
 .plan li::before{content:"✓";position:absolute;left:0;color:var(--accent-ink);font-weight:700;font-size:13px}
 .plan li.no{color:var(--faint)}
 .plan li.no::before{content:"—";color:var(--faint)}
+/* The honest note says forthcoming Pro extras are "marked above". This is the
+   marking — without it that sentence is just untrue. The word lives in the
+   MARKUP, not in ::after content: a disclosure that vanishes in Reader view, in
+   copy-paste or in a text scrape is not a disclosure. */
+.plan li.soon{color:var(--muted)}
+.plan li.soon::before{content:"◦";color:var(--faint);font-weight:700}
+.plan .chip{display:inline-block;margin-left:5px;padding:2px 7px;border-radius:var(--pill);
+  background:var(--accent-soft);color:var(--accent-ink);font-size:10px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;vertical-align:1.5px}
 .honest{margin-top:26px;padding:18px 20px;border-radius:var(--r);background:var(--accent-soft);
   font-size:14.5px;color:var(--ink-2);line-height:1.6}
 .honest b{color:var(--accent-ink);font-weight:600}
@@ -341,7 +361,7 @@ details .a b{color:var(--ink-2);font-weight:600}
     </div>
 
     <div class="beats">
-      <div class="beat up">
+      <div class="beat solo up">
         <div class="txt">
           <span class="num">1</span>
           <h3>They scan, and they're in</h3>
@@ -350,8 +370,6 @@ details .a b{color:var(--ink-2);font-weight:600}
             patchy wifi.</p>
           <p class="body">Print it once. It's good forever.</p>
         </div>
-        <div><div class="phone tall"><img src="/about/qr.png" width="640" height="1231" loading="lazy"
-          alt="A printable QR code captioned Scan to choose the next song"></div></div>
       </div>
 
       <div class="beat up">
@@ -380,7 +398,7 @@ details .a b{color:var(--ink-2);font-weight:600}
           alt="The audience's card: request a song, or a birthday shout-out, three votes each"></div></div>
       </div>
 
-      <div class="beat up">
+      <div class="beat solo up">
         <div class="txt">
           <span class="num">4</span>
           <h3>Money happens without you asking</h3>
@@ -388,9 +406,11 @@ details .a b{color:var(--ink-2);font-weight:600}
             great night? There's a tip button with your name on it and a note you'll see on stage.</p>
           <p class="body">You never hold out a jar. You never interrupt a song to mention Venmo.
             It's just there, at the exact moment they want to use it.</p>
+          <p class="body" style="font-size:15px;color:var(--muted)">One caveat, up front: card
+            payments are the part still being built. They run on the founder's own gigs today and
+            switch on for everyone once the payouts plumbing is finished — the note under the plans
+            says exactly where that stands.</p>
         </div>
-        <div><div class="phone tall"><img src="/about/buy.png" width="640" height="1477" loading="lazy"
-          alt="The tip sheet: pick an amount, add a note the artist sees on stage"></div></div>
       </div>
 
       <div class="beat up">
@@ -451,17 +471,21 @@ details .a b{color:var(--ink-2);font-weight:600}
     <div class="proof up">
       <p class="kicker">The part that changes your year</p>
       <h2>Stop telling venues you draw a crowd.</h2>
-      <p class="lede">Every gig you play is counted. Not "it was packed, honestly" — actual numbers,
-        from the actual room, that you didn't type in yourself.</p>
+      <p class="lede">Every gig you play is counted from the first song. Not "it was packed,
+        honestly" — actual numbers, from the actual room, that you didn't type in yourself.</p>
+      <p class="body" style="margin-top:26px;max-width:52ch">Here is the whole of MySet's own track
+        record, and we're not going to dress it up. One night, one pub on Koh Phangan, a room that
+        had no idea any of this existed an hour earlier:</p>
       <div class="stat4">
-        <div><b data-to="34">0</b><span>people in the room, on average</span></div>
-        <div><b data-to="314">0</b><span>votes cast across three nights</span></div>
-        <div><b data-to="12">0</b><span>songs they wanted and didn't get</span></div>
-        <div><b data-to="100" data-suffix="%">0</b><span>of it from the room, not from you</span></div>
+        <div><b data-to="8">8</b><span>people voted</span></div>
+        <div><b data-to="21">21</b><span>votes cast</span></div>
+        <div><b data-to="1">1</b><span>night on the books</span></div>
+        <div><b data-to="100" data-suffix="%">100%</b><span>of it from the room, not from you</span></div>
       </div>
-      <p class="body" style="margin-top:32px;max-width:52ch">Walk into a bar with that and the
-        conversation is different. You're not asking for a favour any more — you're showing someone
-        what happens to their Tuesday when you're on.</p>
+      <p class="body" style="margin-top:32px;max-width:52ch">That's a small number and a true one,
+        which is the entire point — it came out of the room instead of out of somebody's mouth. Walk
+        into a bar with numbers like that and the conversation is different. You're not asking for a
+        favour any more; you're showing someone what happens to their Tuesday when you're on.</p>
       <p class="body" style="max-width:52ch">And you don't even have to walk in. Venues on MySet have
         a <b>Want to perform here?</b> button. Tap it and they get your page, with those numbers
         attached, instead of an email they'll never open.</p>
@@ -480,7 +504,7 @@ details .a b{color:var(--ink-2);font-weight:600}
         act actually fills a Tuesday. Field emails from musicians you've never heard of. Hope people
         find you.</p>
 
-      <div class="vgrid">
+      <div class="vgrid solo">
         <div>
           <div class="vlist">
             <div class="vrow"><span class="tick">✓</span><div>
@@ -514,14 +538,6 @@ details .a b{color:var(--ink-2);font-weight:600}
             </div></div>
           </div>
         </div>
-        <div>
-          <div class="phone tall"><img src="/about/numbers.png" width="640" height="944" loading="lazy"
-            alt="A venue's numbers: 101 people, 314 votes, 3 nights, and the average per night by act"></div>
-          <p class="phonecap">Which act fills your room, in one number.</p>
-          <div class="phone tall" style="margin-top:22px"><img src="/about/feed.jpg" width="640" height="1149" loading="lazy"
-            alt="The MySet homepage: what's on this week in Koh Phangan, with directions"></div>
-          <p class="phonecap">And how a local finds you on a quiet Tuesday.</p>
-        </div>
       </div>
 
       <div class="grid3" style="margin-top:44px">
@@ -547,8 +563,8 @@ details .a b{color:var(--ink-2);font-weight:600}
           <p class="body" style="margin-top:12px">This is the bit venues don't expect. Nothing links a
             gig to a venue in MySet — the <em>name</em> does, inside your own town. So the moment your
             page exists, every gig any artist has already listed at your place is on it.</p>
-          <p class="body">A venue that signed up this afternoon had nine nights on its page before it
-            finished writing its own description.</p>
+          <p class="body">Which means a venue can finish signing up and find its next month of live
+            music already listed, before it has written a word of its own description.</p>
           <div class="heroacts" style="margin-top:24px">
             <a class="big" href="/venues">Claim your venue — free</a>
           </div>
@@ -567,31 +583,38 @@ details .a b{color:var(--ink-2);font-weight:600}
     <div class="center up">
       <p class="kicker">What it costs</p>
       <h2>Everything the room sees is free. Always.</h2>
-      <p class="lede">Not free-for-now. The voting, the lyrics, the requests, the tipping, your page,
-        your gig listings — all of it, on every plan. What you pay for is your own back office.</p>
+      <p class="lede">Not free-for-now. The voting, the lyrics, the requests, your page, your gig
+        listings — all of it, on every plan, and none of it ever costs the room a penny. What you
+        pay for is your own back office.</p>
     </div>
 
     <div class="plans up">
       <div class="plan">
         <span class="tag">Free</span>
         <div class="amt">$0<small> / forever</small></div>
-        <p class="who">Enough to run six nights a week and never pay us anything.</p>
+        <p class="who">About a gig a week, run properly, and you never pay us anything.</p>
         <ul>
-          <li>Unlimited shows and unlimited voters</li>
+          <li>4 shows a month — unlimited voters at every one</li>
           <li>Everything your audience touches</li>
+          <li>Setlists, chord charts, keys and genres</li>
           <li>Your page, gig calendar and city listings</li>
           <li>Show history and your real numbers</li>
-          <li>50 songs live to the room at once</li>
+          <li>Keep 2,000 songs — 50 live to the room at once</li>
           <li class="no">10% of money taken through the app</li>
         </ul>
       </div>
       <div class="plan hot">
         <span class="tag">Plus · most artists</span>
         <div class="amt">$10<small> / month</small></div>
-        <p class="who">For when the setlist outgrows fifty and you'd rather keep the lot.</p>
+        <p class="who">For when you're playing more than once a week and want the night set up your
+          way.</p>
         <ul>
           <li>Everything in Free</li>
+          <li><b>Unlimited shows</b> — play as often as you like</li>
           <li>Unlimited songs live at once</li>
+          <li>Set your own vote rules — how many free votes each person gets, and what it costs
+            the room to replay a song you've already played</li>
+          <li>Price your own vote packs</li>
           <li><b>No cut</b> — tips and vote sales are all yours</li>
         </ul>
       </div>
@@ -601,21 +624,26 @@ details .a b{color:var(--ink-2);font-weight:600}
         <p class="who">For when you're working several towns and pitching properly.</p>
         <ul>
           <li>Everything in Plus</li>
-          <li>Earnings by venue, night and song</li>
-          <li>A one-page press kit that writes itself</li>
-          <li>Your colours and logo on the audience pages</li>
-          <li>List shows in cities you don't normally play</li>
           <li>Five sign-ins for your band</li>
+          <li class="soon">Earnings by venue, night and song <span class="chip">Soon</span></li>
+          <li class="soon">A one-page press kit that writes itself <span class="chip">Soon</span></li>
+          <li class="soon">Your colours and logo on the audience pages <span class="chip">Soon</span></li>
+          <li class="soon">List shows in cities you don't normally play <span class="chip">Soon</span></li>
         </ul>
       </div>
     </div>
 
     <div class="honest up">
-      <b>Two honest notes.</b> MySet is early — it has run real gigs, and it is still being built in
-      public. Card payments (extra votes and tips) are being switched on artist by artist while the
-      payouts plumbing is finished, so ask and you'll be next in the queue; everything else works the
-      moment you sign up. And the Pro extras marked above are on the way, not shipped — you'll see
-      them appear.
+      <p><b>Three honest notes,</b> because a page like this ought to say where the edges are.</p>
+      <p style="margin-top:11px"><b>1 · MySet is early.</b> It has run one real gig — the eight
+        people and twenty-one votes further up this page — and it is still being built in public.</p>
+      <p style="margin-top:11px"><b>2 · Card payments aren't on yet.</b> Tips and vote packs run on
+        the founder's own gigs while the payouts plumbing gets built. Until that's finished no other
+        artist can take money through MySet, which also means the 10% above currently applies to
+        nobody. Everything that doesn't involve a card works the moment you sign up.</p>
+      <p style="margin-top:11px"><b>3 · Plus and Pro can't be bought yet.</b> There's no checkout,
+        so nobody is being charged for anything. The four Pro extras marked <em>Soon</em> are on the
+        way, not shipped; everything else listed above is built and running today.</p>
     </div>
   </section>
 
@@ -649,9 +677,11 @@ details .a b{color:var(--ink-2);font-weight:600}
           is arguably better: you find out which of your own songs a room full of strangers actually
           reaches for.</div></details>
       <details><summary>Can people see my whole setlist? Is that a problem?</summary>
-        <div class="a">They see what you choose to show. Any song can be switched off — permanently, or
-          just for tonight — and hidden songs stay hidden across every future show until you bring them
-          back.</div></details>
+        <div class="a">They see what you choose to show. Any song can be hidden, and it stays hidden
+          across every future show until you bring it back. For one night only, build a
+          <b>setlist</b> instead — name it, put the songs you want in it, and the room sees just
+          those. You can keep twenty of them and attach one to a gig in your calendar, so it loads
+          itself when you start the show.</div></details>
       <details><summary>How long does setting up actually take?</summary>
         <div class="a">About two minutes to a working page: email, a six-digit code, your name. Adding
           songs takes as long as typing them, and there's a starter pack of around sixty well-known
