@@ -417,6 +417,10 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <script>
 const $=s=>document.querySelector(s), API='/api';
 let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('myset.token')||'';
+/* The page name that goes with a studio code. The code alone is only half the
+   credential now — see requireArtist. Blank means the founding artist, so every
+   link that worked before still works. */
+let ASLUG=localStorage.getItem('myset.aslug')||'';
 let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null, PITCHES=null, CHARTS=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'live';
@@ -729,7 +733,7 @@ function busy(on){
 }
 async function api(p,o={}){
   const h={'content-type':'application/json',...(o.headers||{})};
-  if(CODE) h['x-admin-code']=CODE;
+  if(CODE){ h['x-admin-code']=CODE; if(ASLUG) h['x-admin-artist']=ASLUG; }
   if(TOKEN) h['authorization']='Bearer '+TOKEN;
   // `quiet` for background refreshes — the live tab re-reads every few seconds,
   // and flashing the overlay at it looked like something was wrong
@@ -799,8 +803,10 @@ function gate(err,mode){
         <span class="kick" style="font-size:12px">or</span>
         <span style="flex:1;height:.5px;background:var(--hair)"></span>
       </div>
-      <input class="inp" id="code" type="password" placeholder="Studio code" autocomplete="current-password">
-      <button class="big alt" style="margin-top:12px" onclick="unlock()">Unlock with code</button>`;
+      <input class="inp" id="aslug" placeholder="Your page name (myset.vip/…)" autocomplete="username" value="${esc(ASLUG)}">
+      <input class="inp" id="code" type="password" placeholder="Studio code" autocomplete="current-password" style="margin-top:8px">
+      <button class="big alt" style="margin-top:12px" onclick="unlock()">Unlock with code</button>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">Your page name is the bit after myset.vip/ — leave it blank if you set your code before pages existed.</p>`;
   }
   document.getElementById('app').innerHTML=`<div class="gate">${head}${inner}</div>`;
   const first=$('#otp')||$('#newName')||$('#email');
@@ -809,7 +815,12 @@ function gate(err,mode){
     setTimeout(()=>first.focus(),100); }
   const c=$('#code'); if(c) c.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
 }
-function unlock(){CODE=($('#code').value||'').trim();localStorage.setItem('myset.admin',CODE);start();}
+function unlock(){
+  CODE=($('#code').value||'').trim();
+  ASLUG=(($('#aslug')||{}).value||'').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
+  localStorage.setItem('myset.admin',CODE); localStorage.setItem('myset.aslug',ASLUG);
+  start();
+}
 async function sendCode(){
   const em=(($('#email')||{}).value||'').trim();
   if(!em){toast('Enter your email');return;}

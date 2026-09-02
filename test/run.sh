@@ -35,3 +35,6 @@ node --import ./test/register.mjs test/push.mjs
 echo
 echo "── the 2026-09-02 audit fixes ──"
 node --import ./test/register.mjs test/audit-0902.mjs
+echo
+echo "── the studio-code door ──"
+node --import ./test/register.mjs test/studiocode.mjs

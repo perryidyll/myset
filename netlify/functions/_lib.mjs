@@ -769,6 +769,64 @@ const sameHash = (a, b) => {
  *  Returns { aid, email, role } or null. Every admin endpoint uses this — an
  *  artist can only ever reach their own records because the id comes from the
  *  session, never from the request body. */
+/* ---------- the studio-code door ----------
+
+   A passcode is HALF a credential. The other half is the artist's page name, and
+   the pair behaves exactly like a username and a password.
+
+   This used to check only `getShow(DEFAULT_ARTIST).codeHash`, so `setCode` wrote a
+   hash into the CALLING artist's own show record and nothing ever read it again:
+   every artist except the founder got a cheerful "that's your code from now on"
+   for a code that could never let them in, and when a session token expired
+   mid-gig their only door was email. That is INVARIANT 15d — the artist must be
+   able to get into his own Studio without a terminal — reintroduced for everyone
+   but Perry.
+
+   WHY NOT A GLOBAL sha(code) -> artistId INDEX, which is the obvious fix: two
+   artists who pick the same passcode collide, and refusing the second ("that code
+   is taken") is an ORACLE that confirms a working passcode exists. It would also
+   put a hot global blob on every Studio login, which is the scaling mistake this
+   audit found three other instances of.
+
+   The slug is public, so it grants nothing on its own — the SECRET still decides.
+   It only says which lock to try. This is the one place an artist id is taken from
+   the request rather than the session (INVARIANT 0b), and it is safe for exactly
+   that reason; the id is then used only after the secret has matched. */
+const LOCK_TRIES = 10;              // failures allowed
+const LOCK_WINDOW = 15 * 60e3;      // ...within this long
+const LOCK_FOR = 15 * 60e3;         // ...then refuse for this long
+
+/** True when this artist's code door is currently shut. */
+async function codeLocked(aid) {
+  const { data } = await readDoc(`lock_${aid}`, null);
+  return !!(data && data.until && data.until > Date.now());
+}
+async function noteCodeFailure(aid) {
+  await casDoc(`lock_${aid}`, () => ({}), (d) => {
+    const now = Date.now();
+    d.fails = (d.fails || []).filter((t) => now - t < LOCK_WINDOW);
+    d.fails.push(now);
+    if (d.fails.length >= LOCK_TRIES) { d.until = now + LOCK_FOR; d.fails = []; }
+    return true;
+  }).catch(() => {});
+}
+const clearCodeFailures = (aid) =>
+  casDoc(`lock_${aid}`, () => ({}), (d) => { d.fails = []; d.until = 0; return true; })
+    .catch(() => {});
+
+/** The shortest a self-set studio code may be. Four characters with no lockout is
+ *  a ten-thousand-guess space, and the audit found no lockout anywhere. */
+export const MIN_CODE = 8;
+/** Codes nobody may set, however much they want to. */
+export const weakCode = (code, slug) => {
+  const c = String(code || '').toLowerCase();
+  return c.length < MIN_CODE
+    || /^(.)\1+$/.test(c)
+    || ['password', '12345678', '123456789', 'qwertyui', 'letmein1', 'myset123']
+         .includes(c)
+    || (slug && c === String(slug).toLowerCase());
+};
+
 export async function requireArtist(req) {
   const auth = req.headers.get('authorization') || '';
   if (auth.startsWith('Bearer ')) {
@@ -777,17 +835,36 @@ export async function requireArtist(req) {
     if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner' };
   }
 
-  // The studio code predates accounts and belongs to the founding artist.
-  // Everyone else signs in with email.
   const url = new URL(req.url);
   const given = req.headers.get('x-admin-code') || url.searchParams.get('code') || '';
   if (!given) return null;
+
+  /* The recovery key. Only Perry and Netlify know it, it is not any artist's own
+     code, and it is checked first so a lockout can never shut the founder out of
+     his own platform. */
   const master = process.env.ADMIN_CODE;
   if (master && sameHash(sha(given), sha(master)))
     return { aid: DEFAULT_ARTIST, email: null, role: 'owner' };
-  const show = await getShow(DEFAULT_ARTIST);
-  if (show.codeHash && sameHash(sha(given), show.codeHash))
-    return { aid: DEFAULT_ARTIST, email: null, role: 'owner' };
+
+  /* Which lock are we trying? A named page, or the founding artist when no name is
+     given — which is what every existing link and bookmark does. */
+  const wanted = req.headers.get('x-admin-artist') || url.searchParams.get('a') || '';
+  let aid = DEFAULT_ARTIST;
+  if (wanted) {
+    const { artistBySlug } = await import('./_auth.mjs');
+    aid = await artistBySlug(wanted);
+    /* An unknown page name must look exactly like a wrong code, or this becomes a
+       way to enumerate which artists exist (INVARIANT 9h, applied to this door). */
+    if (!aid) return null;
+  }
+
+  if (await codeLocked(aid)) return null;      // same silence as a wrong code
+  const show = await getShow(aid);
+  if (show.codeHash && sameHash(sha(given), show.codeHash)) {
+    await clearCodeFailures(aid);
+    return { aid, email: null, role: 'owner' };
+  }
+  await noteCodeFailure(aid);
   return null;
 }
 

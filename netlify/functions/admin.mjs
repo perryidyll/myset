@@ -1,5 +1,6 @@
 import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
+         MIN_CODE, weakCode,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable , gigMonthOf } from './_lib.mjs';
@@ -1200,7 +1201,14 @@ export default async (req) => {
       case 'unplay': show.played = show.played.filter((id) => id !== body.song); break;
       case 'setCode': {
         const code = String(body.code || '');
-        if (code.length < 4) { err = ['Pick at least 4 characters', 400]; return false; }
+        /* Eight, not four. This code is now a real door for every artist (see
+           requireArtist), so it gets a real minimum and a deny-list — and the
+           artist's own page name is refused, because that is the half of the
+           credential anyone can already read. */
+        if (weakCode(code, show.slug)) {
+          err = [`Pick at least ${MIN_CODE} characters, and not your page name`, 400];
+          return false;
+        }
         show.codeHash = sha(code);          // stored hashed, never in plaintext
         break;
       }

@@ -521,6 +521,33 @@ If you are about to violate one, stop and say so rather than working around it.
    `show.codeHash`); `ADMIN_CODE` remains the recovery key so he cannot lock
    himself out. Never make env-var-only the sole way in.
 
+15e. **A studio code is half a credential; the page name is the other half.** The
+   code door used to check only `getShow(DEFAULT_ARTIST).codeHash`, while `setCode`
+   wrote into the CALLING artist's record — so every artist but the founder got a
+   confirmation for a code that could never work, and an expired token mid-gig left
+   them with no door at all. That is 15d for everyone except Perry.
+
+   `requireArtist` now resolves the artist from `?a=<slug>` / `x-admin-artist` and
+   checks THAT artist's hash. This is the one place an artist id comes from the
+   request rather than the session (INVARIANT 0b), and it is safe for a specific
+   reason: the slug is public and grants nothing alone — it only says which lock to
+   try — and the id is used only after the secret has matched. No slug still means
+   the founding artist, so every existing link keeps working, and `ADMIN_CODE` is
+   checked first so a lockout can never shut the founder out of his own platform.
+
+   **Do not replace this with a global `sha(code) -> artistId` index.** Two artists
+   who choose the same passcode collide, and refusing the second one ("that code is
+   taken") is an oracle that confirms a working passcode exists.
+
+15f. **The code door locks, and the lock is not an oracle.** Ten failures in fifteen
+   minutes shuts one artist's code door for fifteen minutes (`lock_<aid>`). A locked
+   door, a wrong code, and an unknown page name all return the SAME response —
+   otherwise the lock becomes a way to discover which codes and which artists are
+   real (INVARIANT 9h's rule, applied to this door). Codes are at least
+   `MIN_CODE` = 8 characters, and `weakCode()` also refuses a repeated character, a
+   short deny-list, and the artist's own page name — which is the half of the
+   credential anyone can already read.
+
 16. **Nothing in the app may break the gig.** Every failure path degrades to "the
     setlist is still readable". No error state should block the page from rendering.
 
