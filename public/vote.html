@@ -591,14 +591,19 @@ function render(){
     <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞':`${c.remaining}<small>/${c.total}</small>`}</div>
   </div>`;
 
-  h += d.nowPlaying
+  /* An ENDED show must not claim a song is playing. The header says "That's a wrap"
+     while the hero underneath said PLAYING NOW with dancing bars — the same
+     contradiction-on-one-screen this page has been cleaned of everywhere else.
+     nowPlaying survives the end of a show on purpose (the history needs it), so the
+     check belongs here, at the point of display. */
+  h += (d.nowPlaying && !ended)
     ? `<div class="now"><div class="lab"><span class="dot"></span>Playing now</div>
         <div class="t">${esc(d.nowPlaying.title)}</div>${d.nowPlaying.artist?`<div class="by">${esc(d.nowPlaying.artist)}</div>`:''}
         <div class="eq"><i></i><i></i><i></i><i></i></div>
         <button class="lyricsbtn" onclick="openLyrics()">
           <svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h13M4 16h8"/><circle cx="18.5" cy="15" r="2.6"/><path d="M21.1 15V8.4l-3.6.9"/></svg>
           Lyrics</button></div>`
-    : `<div class="now none"><div class="lab">Playing now</div><div class="t">${ended?'Show finished':'Starting soon…'}</div></div>`;
+    : `<div class="now none"><div class="lab">${ended?'Tonight':'Playing now'}</div><div class="t">${ended?'That’s all — see you next time':'Starting soon…'}</div></div>`;
 
   if(!ended) h += `<div class="strip ${open?'':'shut'}">
       <span class="l"><span class="dot"></span>${open?'Voting open':'Voting paused'}</span>

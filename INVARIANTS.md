@@ -460,6 +460,28 @@ If you are about to violate one, stop and say so rather than working around it.
     to 6s then 12s when nothing changes and snaps back on any change or tap.
     Do not reintroduce a fixed fast interval.
 
+9d13. **COUNT THE READS. `test/cost.mjs` is the ceiling, and it is a test.** Reads on
+   the audience poll are the mistake this project keeps making: the audit found the
+   global `artists` registry on that path three separate times, and then the
+   feature-flag work quietly put a SECOND global document there, taking the poll
+   from 15 strong reads to 16 — noticed only because somebody went looking. Nothing
+   was counting, so nothing could notice.
+
+   `blobs-fake.mjs` now logs operations (`__opsStart`/`__opsStop`) and `test/cost.mjs`
+   asserts ceilings: 15 reads per audience poll, ONE global document, 5 per vote, 22
+   per Studio poll. They are ceilings, not targets. Raising one is a decision to make
+   on purpose and say why in the commit, not something to discover on a bill.
+
+   Two things that fell out of it and are now rules:
+   * **`_flags.mjs` is cached in module scope for 60s.** Safe because flags are never
+     written during a show; the cost is that a flip takes up to a minute to reach
+     every warm instance, which is the right trade for a switch used between gigs.
+   * **`releaseUnvotable` only sweeps when the playable set actually SHRANK.** It
+     reads all twelve fan shards, and it was running on every list action — a rename
+     cost 12 strong reads it could never need. The check compares the playable id set
+     across the change: MEASURED, not an allow-list of action names, because this
+     codebase has already had exactly that promise forgotten twice.
+
 ## Secrets & publishing
 
 10. **Only `./public` is published.** `publish = "."` once meant docs, backups and

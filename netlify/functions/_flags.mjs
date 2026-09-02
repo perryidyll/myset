@@ -40,14 +40,33 @@ export const FLAGS = {
 const KEY = 'flags';
 const empty = () => ({ v: 1, global: {}, byArtist: {} });
 
+/* CACHED IN MODULE SCOPE, and this is the difference between a feature and a tax.
+
+   `/api/show` is polled by every phone in the room, and adding this document to it
+   took the poll from 15 strong blob reads to 16 — the exact anti-pattern the audit
+   found three times over (the `artists` registry on the same path). Netlify keeps a
+   function instance warm between invocations, so a short TTL removes the read from
+   almost every poll.
+
+   Safe because of a rule this module already states: flags are NEVER written during
+   a show. The cost of the cache is that flipping one takes up to TTL seconds to
+   reach every warm instance, which is the right trade for a switch that gets used
+   between gigs rather than during them. A write clears it locally at once. */
+const TTL = 60e3;
+let cached = null, cachedAt = 0;
+export const __flushFlags = () => { cached = null; cachedAt = 0; };
+
 export async function readFlags() {
+  if (cached && Date.now() - cachedAt < TTL) return cached;
   const { data } = await readDoc(KEY, null);
   const f = { ...empty(), ...(data || {}) };
   f.global ||= {}; f.byArtist ||= {};
+  cached = f; cachedAt = Date.now();
   return f;
 }
 export const mutateFlags = (fn) =>
-  casDoc(KEY, empty, (f) => { f.global ||= {}; f.byArtist ||= {}; return fn(f); });
+  casDoc(KEY, empty, (f) => { f.global ||= {}; f.byArtist ||= {}; return fn(f); })
+    .finally(__flushFlags);        // this instance sees its own write immediately
 
 /** The value in force for one artist. Unknown names are always false. */
 /* `FLAGS[name]` finds `toString`, `constructor` and friends on the prototype chain,

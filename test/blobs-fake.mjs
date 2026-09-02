@@ -15,9 +15,18 @@ export const __dump = () => new Map(mem);
 let failRe = null;
 export const __failWrites = (re) => { failRe = re; };
 
+/* An operation log, so a test can count what an endpoint actually costs instead of
+   reasoning about it. Reads on the hot path are the thing this project keeps getting
+   wrong, so they should be countable. */
+let ops = null;
+export const __opsStart = () => { ops = []; return ops; };
+export const __opsStop = () => { const o = ops || []; ops = null; return o; };
+const note = (kind, key) => { if (ops) ops.push(kind + ' ' + String(key)); };
+
 export function getStore() {
   return {
     async getWithMetadata(key, opts = {}) {
+      note('get', key);
       const e = mem.get(key);
       if (!e) return null;
       let data = e.body;
@@ -30,6 +39,7 @@ export function getStore() {
       return r ? r.data : null;
     },
     async set(key, body, opts = {}) {
+      note('set', key);
       if (failRe && failRe.test(key)) return { modified: false };   // acked, not stuck
       const cur = mem.get(key);
       if (opts.onlyIfNew && cur) return { modified: false };
@@ -38,7 +48,7 @@ export function getStore() {
       mem.set(key, { body: buf, etag: tag(buf), metadata: opts.metadata || {} });
       return { modified: true };
     },
-    async delete(key) { mem.delete(key); },
+    async delete(key) { note('del', key); mem.delete(key); },
     async list() { return { blobs: [...mem.keys()].map((key) => ({ key })) }; },
   };
 }

@@ -56,3 +56,6 @@ node --import ./test/register.mjs test/feedback.mjs
 echo
 echo "── a payment taken is a payment delivered ──"
 node --import ./test/register.mjs test/delivery.mjs
+echo
+echo "── what an endpoint costs ──"
+node --import ./test/register.mjs test/cost.mjs

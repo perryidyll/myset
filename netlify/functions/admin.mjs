@@ -3,7 +3,7 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, release
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, votable , gigMonthOf } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -545,9 +545,19 @@ const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 't
    short-circuits before that block. This is called from both, so neither can be
    the one that forgets. See releaseUnvotable in _lib.mjs for why it matters now
    that votes are final. */
-async function releaseNote(aid) {
+/* `before` is the set of ids the room could vote for BEFORE the change. Without it
+   this swept all twelve fan shards on every list action — a rename cost 12 strong
+   reads it could never need. MEASURED rather than listed by action name: an
+   allow-list of "actions that narrow the set" is the kind of promise this codebase
+   has already had forgotten twice (see the note on `libChanged`). */
+async function releaseNote(aid, before) {
   try {
     const after = await getShow(aid);
+    if (before) {
+      const now = new Set(playable(after).songs.map((x) => x.id));
+      // nothing left the playable set => nobody's vote can have been stranded
+      if (![...before].some((id) => !now.has(id))) return null;
+    }
     const freed = await releaseUnvotable(aid, after);
     if (!freed.length) return null;
     const titles = freed.map((id) => (after.songs.find((x) => x.id === id) || {}).title)
@@ -560,9 +570,13 @@ async function releaseNote(aid) {
 
 async function handleLists(aid, action, body) {
   const show = await getShow(aid);
+  /* Snapshot what the room can vote for, so `send()` can tell whether the change
+     actually took anything away. Two reads already in hand, versus twelve. */
+  const playableBefore = action === 'listAll'
+    ? null : new Set(playable(show).songs.map((x) => x.id));
   const send = async (extra = {}) => {
     // narrowing the set is exactly what these actions do, so release before replying
-    const freed = action === 'listAll' ? null : await releaseNote(aid);
+    const freed = action === 'listAll' ? null : await releaseNote(aid, playableBefore);
     const [d, sh] = [await readLists(aid), await getShow(aid)];
     return json({ ok: true, lists: shapeLists(d, sh),
                   listId: sh.listId, listName: sh.listName,
@@ -1497,7 +1511,12 @@ export default async (req) => {
      With votes final there is no un-vote for the fan to fall back on, so the
      release has to happen here or the credit is stranded for the rest of the round.
      Only when the playable set actually shrank, and the artist is told. */
-  if (!wipe && !resetVotes && !droppedSong) note = join(note, await releaseNote(aid));
+  if (!wipe && !resetVotes && !droppedSong) {
+    /* prevShow is only read for RESETTERS, so fall back to computing from the show
+       as it was before this handler's mutation where we have it. */
+    const beforeSet = prevShow ? new Set(playable(prevShow).songs.map((x) => x.id)) : null;
+    note = join(note, await releaseNote(aid, beforeSet));
+  }
 
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.
