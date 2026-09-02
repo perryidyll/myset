@@ -1422,3 +1422,23 @@ independent agents, fixed, then merged.
   records the OPTIONS of every call, which is how a direct charge is proved direct.
 * `_tmp_audit/budget.py` — meters the 5-hour window. **My weighted formula
   overestimates**: Perry's own usage panel read 62% when it said 26M. Trust the panel.
+
+### SESSION 16b — the review's open list (live in `da9b10c`, 561 assertions)
+
+All four priorities done, plus 15 of the 22. **INVARIANTS 7b, 7c, 0bm, 0bn.**
+
+* **7b — claimed is not delivered.** `redeemSession` claims with `delivered:false`,
+  the sweep treats an undelivered marker as outstanding, and the grant is idempotent
+  per (fan, session) via `me.gr` — without which the retry that fixes losing votes
+  would mint them. `test/delivery.mjs` reproduces the lost write with a store that
+  acks and drops (`__failWrites` in `blobs-fake.mjs` — reusable).
+* **7c — the Connect country is asked for**, validated against `PAYOUT_COUNTRIES`,
+  because an Express account's country is immutable and slicing a NAME to two
+  letters makes Germany "GE".
+* **The 320px sheet fold** — actions are a sticky footer; measured both on screen.
+* **The artist tick has UI** — checklist + ID upload in Settings, owner review
+  queue, and a real `voteFinal` switch.
+
+**Still open:** nothing renders the tick on a public artist page; the venue Pro plan
+has no self-serve route (owner sets it by hand); `PAYOUT_COUNTRIES` is 22 countries,
+not Stripe's full set. See `REVIEW-2026-09-02-REMAINING.md` § "Still open".

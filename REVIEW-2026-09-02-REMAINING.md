@@ -1,5 +1,12 @@
 # What the independent review left open
 
+> **UPDATE — all four priorities and 15 of the 22 are DONE, live in `da9b10c`.**
+> 561 assertions. Fixed: the four priorities (delivered-marker, Connect country,
+> the 320px sheet fold, and UI for the artist tick + a voteFinal switch), plus
+> L3-3, L3-5, L3-6, L3-7, L3-8, L3-9, L5-03, L5-04, L5-06, L5-07, L5-08, L2-3,
+> L4-4, L4-5/L2-1, L4-6, L4-7 and L4-9. **What is left is listed at the bottom
+> under "Still open after 2026-09-02".**
+
 Five reviewers with fresh context went at `feat/voting-sheet-and-verification` and
 returned **33 findings**. The two criticals and four highs are fixed (commit
 `9910371`), plus the two fan-facing mediums below. This is everything still open,
@@ -109,3 +116,33 @@ gap in this branch. The backends exist, are tested, and cannot be reached by a u
 4. `payStart` country (L5-01) — cheap now, immutable later.
 5. UI for the artist tick and a flag switch, or drop them from the branch.
 6. The rest.
+
+
+---
+
+# Still open after 2026-09-02
+
+Three items, all deliberate rather than forgotten.
+
+* **L2-2 — hiding or narrowing strands a fan's credits.** FIXED, and worth naming
+  because turning finality on is what made it urgent: `releaseUnvotable` now hands
+  the votes back the moment the playable set shrinks, from both dispatch paths
+  (INVARIANT 15j). Listed here only because the original finding is now stale.
+
+* **L5-05 / L3-4 — the artist tick has no UI.** FIXED for the artist and the owner.
+  What is still missing is that **nothing renders the tick on a public artist
+  page** — an artist can now earn it and nobody can see it. That is the next piece.
+
+* **L5-02 — no voteFinal switch.** FIXED (owner Settings). Note the switch writes to
+  the flags document, while the shipped DEFAULT lives in `_flags.mjs`; flipping it
+  off in the Studio overrides the default, which is the intended precedence.
+
+And two the review did not raise that this pass exposed:
+
+* **The venue Pro plan has no self-serve route.** The checklist now names it
+  honestly ("not self-serve yet: message us"), but `venuePlan` is owner-only. Until
+  venue billing exists, every venue tick needs Perry to switch the plan on by hand.
+* **`PAYOUT_COUNTRIES` is a 22-country allow-list**, not Stripe's full set. An
+  artist outside it cannot start Connect at all. Add to the list in `_connect.mjs`
+  when somebody needs one — deliberately an allow-list, because the alternative was
+  accepting any two letters and creating an immutable account in the wrong country.
