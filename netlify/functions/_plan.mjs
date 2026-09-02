@@ -37,7 +37,11 @@ export const PLANS = {
     label: 'Plus', price: 1000,
     featured: Infinity,
     gigs: Infinity,
-    cut: 0,
+    /* 2%, Perry's number. The ladder is 10% free / 2% Plus / 0% Pro, so the
+       subscription and the transaction fee trade off against each other and a new
+       artist never pays a subscription before they have earned anything. Taken as
+       a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
+    cut: 0.02,
     seats: 1,
     pricing: true,
     promote: false, analytics: false, presskit: false, branding: false,

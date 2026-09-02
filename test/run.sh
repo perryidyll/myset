@@ -47,3 +47,6 @@ node --import ./test/register.mjs test/voting-sheet.mjs
 echo
 echo "── vote finality and the cast id ──"
 node --import ./test/register.mjs test/finality.mjs
+echo
+echo "── stripe connect, direct charges ──"
+node --import ./test/register.mjs test/connect.mjs

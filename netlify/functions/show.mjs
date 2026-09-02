@@ -118,7 +118,7 @@ export default async (req) => {
     },
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),
     // INVARIANT 0ad: never show the room a button that leads to a shrug
-    paymentsEnabled: canTakeMoney(aid),
+    paymentsEnabled: canTakeMoney(aid, show),
     flags,
     updatedAt: show.updatedAt,
   });

@@ -135,6 +135,29 @@ If you are about to violate one, stop and say so rather than working around it.
     audience's night.
 
 
+0r0. **DIRECT CHARGES, and the fee is the plan's fee.** 0r below is now
+   implemented (`_connect.mjs`). The charge is created ON the artist's connected
+   account, so the money is legally theirs and MySet takes an
+   `application_fee_amount` off the top: **10% free, 2% Plus, 0% Pro** — Perry's
+   ladder, defined once in `PLANS[*].cut` so the pricing page cannot drift from what
+   is charged. Zero is OMITTED rather than sent as a fee of nothing.
+
+   Direct rather than destination charges on purpose: destination charges would make
+   MySet the merchant of record for every gig, holding the funds and answering the
+   chargeback for a night it did not play.
+
+   **Say who pays Stripe.** A direct charge puts Stripe's own ~2.9% + 30c on the
+   ARTIST. On a $5 pack a Plus artist pays roughly 45c to Stripe and 10c to MySet, so
+   "2% to MySet" is not "you keep 98%". The Studio card says this before they
+   onboard; an artist must never learn it from a payout.
+
+   **A session created on a connected account can only be RETRIEVED with that account
+   in scope.** `stripeFor(aid)` exists so the return page, the webhook and the
+   reconcile sweep all scope identically — getting this wrong reproduces the
+   2026-08-30 "paid customer got nothing" failure with a brand-new cause. On a
+   Connect webhook, `event.account` is the only clue, and `acctindex` maps it back to
+   an artist.
+
 0r. **The 10% free-tier cut needs Stripe Connect and does not exist yet.** Today
     every artist's audience pays into the ONE `STRIPE_SECRET_KEY` — Perry's. That
     is fine while he is the only artist and wrong the moment anyone else signs up.

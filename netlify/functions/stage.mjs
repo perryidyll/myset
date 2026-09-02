@@ -62,9 +62,9 @@ export async function stagePayload(aid) {
         })), counts, firstAt);
     })(),
     tips: { total: Math.round(total * 100) / 100, count: meta.tips.length, recent: meta.tips.slice(-15).reverse() },
-    paymentsEnabled: canTakeMoney(aid),
+    paymentsEnabled: canTakeMoney(aid, show),
     /* Why, if not. The artist should never have to guess where their money went. */
-    payoutsNote: canTakeMoney(aid) ? null
+    payoutsNote: canTakeMoney(aid, show) ? null
       : (process.env.STRIPE_SECRET_KEY
           ? 'Card payments are off for your room until your payout account is connected — so nothing can land in the wrong place. We’ll tell you the moment it’s ready.'
           : 'Card payments aren’t switched on for MySet yet.'),

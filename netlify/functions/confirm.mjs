@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { json, bad, cleanFanId, cleanArtistId, DEFAULT_ARTIST } from './_lib.mjs';
 import { redeemSession } from './_pay.mjs';
+import { stripeFor } from './_connect.mjs';
 
 /* The fast path: the buyer lands back on /vote.html?paid=<session id> and this
    verifies the payment with Stripe server-side, then grants. The webhook and the
@@ -14,9 +15,26 @@ export default async (req) => {
   const fallbackFan = cleanFanId(url.searchParams.get('fan'));
   if (!sessionId) return bad('missing session_id');
 
-  let session;
-  try { session = await new Stripe(key).checkout.sessions.retrieve(sessionId); }
-  catch { return bad('could not verify payment', 502); }
+  /* WHICH ACCOUNT to look on. A session created on a connected account (a direct
+     charge) does not exist on the platform account, so retrieving without
+     `stripeAccount` returns "no such session" and the buyer gets nothing — the exact
+     2026-08-30 failure with a new cause. The artist is in the query string because
+     the voting page knows it; the metadata is still what decides whose money it is. */
+  const hinted = cleanArtistId(url.searchParams.get('a') || '') ||
+                 cleanArtistId(url.searchParams.get('artist') || '');
+  let session = null;
+  for (const who of [hinted, DEFAULT_ARTIST].filter((v, i, a) => v && a.indexOf(v) === i)) {
+    const { stripe, opts } = await stripeFor(who);
+    if (!stripe) break;
+    try { session = await stripe.checkout.sessions.retrieve(sessionId, opts); break; }
+    catch { /* try the next scope */ }
+  }
+  /* Last resort: the platform account plainly, which is where the founder's own
+     charges live and where anything created before Connect still is. */
+  if (!session) {
+    try { session = await new Stripe(key).checkout.sessions.retrieve(sessionId); }
+    catch { return bad('could not verify payment', 502); }
+  }
   if (session.payment_status !== 'paid') return bad('not paid', 402);
 
   // whose money this is was decided when the session was created, not now

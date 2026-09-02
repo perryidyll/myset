@@ -777,7 +777,7 @@ const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyrics
 
 /* Profile edits don't touch the show record at all, so they short-circuit before
    the show mutation below. */
-async function handleProfile(aid, action, body) {
+async function handleProfile(aid, action, body, req, me) {
   if (action === 'profileSet') {
     await mutateProfile(aid, (p) => {
       for (const k of ['name', 'tagline', 'bio', 'photo', 'avatar'])
@@ -853,6 +853,34 @@ async function handleProfile(aid, action, body) {
      Premium plan + card payments actually set up + a photo ID that matches the
      account + Perry's eyes. See _verify.mjs for why the ID is never public and
      never kept. */
+  /* ---------- getting paid ----------
+     Onboarding is Stripe-hosted (Express), so MySet never sees a bank detail. The
+     artist's own money cannot flow until Stripe says charges_enabled — see
+     _connect.mjs and INVARIANT 0bl. */
+  if (action === 'payStatus') {
+    const { connectStatus, syncFromStripe } = await import('./_connect.mjs');
+    // a cheap refresh when they have started but Stripe has not called back yet
+    if (body.refresh) await syncFromStripe(aid).catch(() => {});
+    return json({ ok: true, pay: await connectStatus(aid) });
+  }
+
+  if (action === 'payStart') {
+    const { ensureAccount, onboardingLink, connectStatus } = await import('./_connect.mjs');
+    const origin = new URL(req.url).origin;
+    const made = await ensureAccount(aid, me.email || '', String(body.country || '').toUpperCase().slice(0, 2));
+    if (!made.ok) return bad(made.error || 'could not start', 502);
+    const link = await onboardingLink(aid, origin);
+    if (!link.ok) return bad(link.error || 'could not start', 502);
+    return json({ ok: true, url: link.url, pay: await connectStatus(aid) });
+  }
+
+  if (action === 'payDashboard') {
+    const { dashboardLink } = await import('./_connect.mjs');
+    const l = await dashboardLink(aid);
+    if (!l.ok) return bad(l.error || 'not available', 502);
+    return json({ ok: true, url: l.url });
+  }
+
   if (action === 'verifyStatus') {
     const { artistVerifyChecks } = await import('./_verify.mjs');
     return json({ ok: true, checks: await artistVerifyChecks(aid) });
@@ -898,7 +926,9 @@ async function handleProfile(aid, action, body) {
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove',
                                  'photoUpload', 'photoClear',
                                  // the artist's own verification tick
-                                 'verifyStatus', 'idUpload']);
+                                 'verifyStatus', 'idUpload',
+                                 // Stripe Connect onboarding and status
+                                 'payStatus', 'payStart', 'payDashboard']);
 
 export default async (req) => {
   const me = await requireArtist(req);
@@ -961,7 +991,7 @@ export default async (req) => {
     return json({ ok: true, devices: (await readSubs(aid)).subs.length });
   }
 
-  if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
+  if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body, req, me);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);
   if (SONG_ACTIONS.has(action)) return handleSong(aid, action, body, await getShow(aid));
