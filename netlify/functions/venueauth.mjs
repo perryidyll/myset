@@ -141,9 +141,16 @@ export default async (req) => {
   if (action === 'checkDomain') {
     const prof = await getVenueProfile(me.vid);
     const site = prof.links.website;
+    /* REPORT ONLY, and this is the second attempt at that. The first still called
+       tryVerifyByWebsite, which WRITES `verified` — so the action went on granting
+       the tick, just with more conditions attached. And it judged `me.email`, the
+       session that happened to be signed in, when a venue can add staff: a barman
+       added on Tuesday could verify the page off his own domain. `recheck()`
+       resolves the OWNER's address and shapes the profile the same way the Venue
+       Studio's own check does, so there is one verdict, computed one way. */
+    const { checksOnly } = await import('./_verify.mjs');
     const matched = !!(site && domainMatches(me.email, site));
-    const { tryVerifyByWebsite } = await import('./_verify.mjs');
-    const verdict = await tryVerifyByWebsite(me.vid, me.email, prof);
+    const verdict = await checksOnly(me.vid);
     const reg = await readVenues();
     return json({ ok: true, verified: !!(reg.byId[me.vid] || {}).verified,
                   matched, checks: verdict.checks, why: verdict.why,

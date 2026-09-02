@@ -20,8 +20,14 @@ export default async (req) => {
      `stripeAccount` returns "no such session" and the buyer gets nothing — the exact
      2026-08-30 failure with a new cause. The artist is in the query string because
      the voting page knows it; the metadata is still what decides whose money it is. */
-  const hinted = cleanArtistId(url.searchParams.get('a') || '') ||
-                 cleanArtistId(url.searchParams.get('artist') || '');
+  /* `?a=` is a SLUG, not an id — vote.html builds it from the page address, and
+     every other public endpoint resolves it with publicArtist(). Treating it as an
+     id meant the hint missed for any artist whose slug differs from their id, which
+     includes anyone who has renamed their page AND the founder himself
+     (perryidyll vs perry-idyll) — so the session could not be retrieved and the
+     buyer got nothing. */
+  const { publicArtist } = await import('./_lib.mjs');
+  const hinted = await publicArtist(req);
   let session = null;
   for (const who of [hinted, DEFAULT_ARTIST].filter((v, i, a) => v && a.indexOf(v) === i)) {
     const { stripe, opts } = await stripeFor(who);

@@ -18,7 +18,14 @@ export default async (req) => {
      — so 100 abandoned pay-taps (which create a session each) were enough to make
      an artist's whole Money tab read $0.00 while the money sat in Stripe.
      _history.mjs has always done this correctly; this is the same loop. */
-  const stripe = new Stripe(key);
+  /* SCOPED TO THE ARTIST'S OWN ACCOUNT. A direct charge lives on the connected
+     account, so an unscoped list() comes back empty — the Money tab read $0.00 with
+     real money in Stripe, and POST /api/revenue (INVARIANT 5c's THIRD delivery
+     path) recovered nothing. Same helper confirm.mjs and the webhook use, so all
+     four Stripe consumers scope identically and none can drift. */
+  const { stripeFor } = await import('./_connect.mjs');
+  const { stripe: scoped, opts: sOpts } = await stripeFor(aid);
+  const stripe = scoped || new Stripe(key);
   const WINDOW_DAYS = 180;
   const gte = Math.floor(Date.now() / 1000) - WINDOW_DAYS * 86400;
   let sessions = [];
@@ -27,7 +34,7 @@ export default async (req) => {
     for (let page = 0; page < 20; page++) {
       const r = await stripe.checkout.sessions.list({
         limit: 100, created: { gte }, ...(after ? { starting_after: after } : {}),
-      });
+      }, sOpts);
       sessions = sessions.concat(r.data || []);
       if (!r.has_more || !(r.data || []).length) break;
       after = r.data[r.data.length - 1].id;

@@ -84,6 +84,13 @@ export default async (req) => {
      session later — see stripeFor() in _connect.mjs. */
   const conn = await readConnect(aid);
   const direct = connectUsable(conn);
+  /* FAIL CLOSED. canTakeMoney reads the MIRROR on the show record; this reads the
+     connect document. When they disagree — a lost mirror write, a capability just
+     revoked — the old code quietly omitted stripeAccount and charged the PLATFORM
+     account with no fee, while metadata.artist still named the other artist. Money
+     in the wrong balance is worse than a button that says not yet. */
+  const { isPlatformOwner } = await import('./_plan.mjs');
+  if (!direct && !isPlatformOwner(aid)) return bad('payments-not-configured', 503);
   const opts = {
     ...(attempt
       ? { idempotencyKey: sha(`myset-pay|${aid}|${fan}|${body.kind}|${attempt}`).slice(0, 48) }

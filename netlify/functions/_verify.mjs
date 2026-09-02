@@ -274,6 +274,34 @@ export async function ownerEmail(vid) {
   return owner ? owner[0] : null;
 }
 
+/** The verdict WITHOUT writing it. Anything that merely wants to show a checklist
+ *  uses this; only `recheck()` is allowed to grant. Keeping the two apart is the
+ *  whole reason checkDomain could quietly hand out a tick twice over. */
+export async function checksOnly(vid) {
+  const { getVenueProfile, shapeVenue, venueById, readVenues } = await import('./_venues.mjs');
+  const email = await ownerEmail(vid);
+  if (!email) return { passed: false, checks: null, why: 'no-owner' };
+  const venue = shapeVenue(await getVenueProfile(vid), await venueById(vid));
+  const site = venue.links && venue.links.website;
+  const web = await checkWebsite(venue);
+  const vouches = Object.keys((await readVouches(vid)).by || {}).length;
+  const reg = await readVenues();
+  const { venuePaid } = await import('./_venues.mjs');
+  const checks = {
+    paidPlan: venuePaid(reg.byId[vid]),
+    website: !!site,
+    emailOnDomain: domainMatches(email, site),
+    siteNamesVenue: !!(web.ok && web.nameFound),
+    siteNamesTown: !!(web.ok && web.placeFound),
+    artists: vouches,
+    artistsNeeded: MIN_VOUCHES,
+    artistsDone: vouches >= MIN_VOUCHES,
+  };
+  const passed = checks.paidPlan && checks.website && checks.emailOnDomain
+                 && checks.siteNamesVenue && checks.artistsDone;
+  return { passed, checks, why: web.ok ? null : web.why };
+}
+
 /** Re-run the whole verdict from scratch: website checks plus the vouch count. */
 export async function recheck(vid) {
   const { getVenueProfile, shapeVenue, venueById } = await import('./_venues.mjs');

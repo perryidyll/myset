@@ -103,6 +103,17 @@ const addMore = await send({ fan: 'cat', song: 'delta', n: 2, op: 'cast', cast: 
 ok('she can add to her own votes', addMore.ok && addMore.voted === true, addMore);
 eq('five on the song', await votesOn('cat', 'delta'), 5);
 
+console.log('\nADDING MORE TO A SONG YOU ALREADY HOLD IS NOT TAKING ONE BACK');
+await setFinal(true);
+await send({ fan: 'gus', song: 'charlie', n: 1, op: 'cast', cast: 'cast0000000000000020' });
+eq('one cast', await votesOn('gus', 'charlie'), 1);
+const topUp = await send({ fan: 'gus', song: 'charlie', n: 4, op: 'cast', cast: 'cast0000000000000021' });
+ok('four more are accepted while final', topUp.ok && topUp.voted === true, topUp);
+eq('five in total', await votesOn('gus', 'charlie'), 5);
+eq('but the take-back is still refused',
+   (await send({ fan: 'gus', song: 'charlie', op: 'clear', cast: 'cast0000000000000022' })).status, 409);
+await setFinal(false);
+
 console.log('\nWHAT THE ARTIST DOES IS NOT WHAT THE FAN PROMISED');
 /* Finality is a promise the FAN cannot undo their own vote. It was never a promise
    that a song they voted for will still exist — so when the artist deletes it, the
@@ -143,10 +154,19 @@ ok('the cast id and the op both go to the server',
    /op:\s*op\s*\|\|\s*'cast'[\s,]*cast:/.test(page), 'body must carry op and cast');
 ok('the finality rule replaces the change-your-mind rule, not sits beside it',
    /fin\s*\?\s*'Once you confirm/.test(page));
-ok('a cast song offers no take-back affordance when final',
-   /fin&&s\.mine/.test(page.replace(/\s/g, '')) , 'row() must disable a held song under finality');
-ok('and the queue card shows a state, not a button',
-   /qvb on done/.test(page));
+/* These two used to assert that a held song was made INERT under finality. A
+   reviewer with fresh context showed that was wrong, and the reason is the point of
+   the whole sheet: finality means a fan cannot take a vote BACK, not that they
+   cannot add more. The server always allowed it (want = mine + n); only the page
+   blocked it, so a fan who confirmed at the default of 1 could never spend their
+   other four credits on the same song. */
+ok('a held song is still reachable under finality — it is the take-back that is refused',
+   /if\(s\.mine&&!finNow\)returnopenUnvote/.test(page.replace(/\s/g, '')),
+   'openVote must fall through to the cast sheet when final');
+ok('and the queue row stays a real button, not an inert state',
+   !/qvb on done/.test(page) && /class="qvb \$\{s\.mine\?'on':''\}"/.test(page));
+ok('the row is only disabled for affordability, never for holding votes',
+   /!\(s\.mine&&!fin\)/.test(page.replace(/\s/g, '')), 'row() dis rule');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
