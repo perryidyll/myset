@@ -1,5 +1,6 @@
 import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, publicArtist, json, bad,
          cleanFanId, votable, roomHash, clientIp } from './_lib.mjs';
+import { readFlags, flagValue } from './_flags.mjs';
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -14,9 +15,29 @@ export default async (req) => {
      a hand-made request turning one fan record into a million-element array. */
   const n = Math.max(1, Math.min(50, Math.floor(Number(body.n) || 1)));
 
+  /* ONE PRESS OF CONFIRM = ONE CAST ID, and it is what makes a cast idempotent.
+
+     This used to be free: voting toggled, so a lost response found the vote already
+     there and removed it — self-correcting, and never a double charge. That is the
+     mechanism INVARIANT 15's refund quietly WAS. Under `voteFinal` there is no
+     toggle to correct anything, so without an id a dropped response on bar wifi
+     casts a second time, at replay prices. The id is minted when Confirm is pressed
+     (not when the sheet opens, or stepping the quantity would reuse it) and the
+     outcome is remembered on the fan record, exactly like meta.paid[sid] makes a
+     payment replay-safe. INVARIANT 15h. */
+  const castId = typeof body.cast === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(body.cast)
+    ? body.cast : '';
+
+  /* What the fan MEANT, rather than inferring it from what they already hold.
+     With finality on, "cast again" and "take it back" are different intentions and
+     must not be guessed. An older cached page sends neither, and gets the toggle it
+     was written for — the flag decides, never the body. */
+  const op = body.op === 'cast' || body.op === 'clear' ? body.op : '';
+
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
-  const show = await getShow(aid);
+  const [show, flagDoc] = await Promise.all([getShow(aid), readFlags()]);
+  const final = flagValue(flagDoc, 'voteFinal', aid);
   if (show.status === 'ended') return bad('The show has ended', 409);
   /* The song has to exist at all. Whether it is ON OFFER is checked on the cast
      branch only, inside the mutation — because UN-voting has to work even after it
@@ -34,8 +55,9 @@ export default async (req) => {
      `fan.v` holds one entry PER VOTE, so the same id may appear several times;
      voteCounts and creditsUsed both work by counting entries, so multi-vote came
      out of the existing shape rather than a new field. */
-  let err = null, outcome = null, want = null;
+  let err = null, outcome = null, want = null, replayed = false;
   const held = (me) => (me.v || []).filter((x) => x === song).length;
+  const CASTS_KEPT = 20;
 
   try {
     await mutateFan(aid, fan, (me) => {
@@ -51,15 +73,27 @@ export default async (req) => {
       // window closed => no changes at all, in or out (an un-vote while paused
       // could not be re-cast and would silently drop the on-stage tally)
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
+      /* Already done this exact cast: hand back what it returned the first time
+         and write NOTHING. Checked inside the mutation so two racing retries cannot
+         both get past it. */
+      me.casts ||= [];
+      if (castId) {
+        const prior = me.casts.find((c) => c && c.id === castId);
+        if (prior) { outcome = { ...(prior.out || {}), replay: true }; replayed = true; return false; }
+      }
+
       const mine = held(me);
-      /* A tap on something they already hold takes ALL of it back and refunds the
-         lot — one clear undo rather than a decrement nobody can follow in a bar.
-         INVARIANT 15 still: a second tap refunds. */
-      if (mine > 0) {
+      /* Taking votes back. `op` says so explicitly; with neither op nor flag we fall
+         through to the historic toggle, so a cached page keeps working. */
+      const clearing = op === 'clear' || (op === '' && mine > 0);
+      if (clearing) {
+        if (final) { err = ['Those votes are cast — they stay with the song', 409]; return false; }
+        if (mine === 0) { err = ['You have no votes on that one', 409]; return false; }
         me.v = me.v.filter((x) => x !== song);
         delete me.ts[song];
         want = 0;
         outcome = { voted: false, removed: mine };
+        if (castId) { me.casts.push({ id: castId, at: Date.now(), out: outcome }); me.casts = me.casts.slice(-CASTS_KEPT); }
         return true;
       }
       // casting is where the setlist applies — see the note above
@@ -69,10 +103,11 @@ export default async (req) => {
       const need = cost * n;
       if (!free && creditsUsed(me, show) + need > total) { err = ['no-credits', 402]; return false; }
       for (let i = 0; i < n; i++) me.v.push(song);
-      me.ts[song] = Date.now();
-      want = n;
+      me.ts[song] ||= Date.now();          // keep the first stamp: ties are broken by it
+      want = mine + n;
       outcome = { voted: true, votes: n, cost: need,
                   remaining: free ? null : Math.max(0, total - creditsUsed(me, show)) };
+      if (castId) { me.casts.push({ id: castId, at: Date.now(), out: outcome }); me.casts = me.casts.slice(-CASTS_KEPT); }
       return true;
     },
     // read back after writing: if the votes didn't stick, retry
@@ -80,5 +115,5 @@ export default async (req) => {
   } catch { return bad('busy', 503); }
 
   if (err) return bad(err[0], err[1]);
-  return json({ ok: true, ...outcome });
+  return json({ ok: true, final, ...outcome });
 };

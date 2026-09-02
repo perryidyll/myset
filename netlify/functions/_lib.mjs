@@ -512,6 +512,10 @@ export async function clearAllFanVotes(aid, costShow) {
           // drop stale stamps and the non-song spend too — free credits refresh
           // here, so anything charged against them has to refresh with them
           bag[id].v = []; bag[id].ts = {}; bag[id].spent = 0;
+          /* The cast-id ring goes with them (INVARIANT 15h). A replayed id after the
+             reset is a NEW cast, because the votes it referred to no longer exist —
+             keeping the ring would silently swallow a fan's first vote of the round. */
+          bag[id].casts = [];
         }
         return true;
       }, null).catch(() => {})
@@ -567,9 +571,16 @@ export async function dropSongVotes(aid, songId) {
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
         let touched = false;
         for (const id of Object.keys(bag)) {
-          const at = (bag[id].v || []).indexOf(songId);
-          if (at < 0) continue;
-          bag[id].v.splice(at, 1);
+          const v = bag[id].v || [];
+          /* EVERY occurrence, not the first. This was indexOf + splice, written when
+             one fan could hold at most one vote per song. Now that a fan casts
+             several at once (INVARIANT 15i), removing one entry left the rest
+             pointing at a song that no longer exists: the tally was right but the
+             fan stayed charged for votes on nothing, with no way to get them back
+             once finality is on. */
+          const kept = v.filter((x) => x !== songId);
+          if (kept.length === v.length) continue;
+          bag[id].v = kept;
           if (bag[id].ts) delete bag[id].ts[songId];
           touched = true;
         }

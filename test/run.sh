@@ -44,3 +44,6 @@ node --import ./test/register.mjs test/verification.mjs
 echo
 echo "── the vote sheet and its flag ──"
 node --import ./test/register.mjs test/voting-sheet.mjs
+echo
+echo "── vote finality and the cast id ──"
+node --import ./test/register.mjs test/finality.mjs

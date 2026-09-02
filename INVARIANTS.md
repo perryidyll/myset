@@ -482,12 +482,29 @@ If you are about to violate one, stop and say so rather than working around it.
     `replayCost`. It throws if that snapshot is missing rather than silently
     under-debiting.
 
-15. **Voting is idempotent per (fan, song).** Voting twice toggles off and refunds
-    the credit; it must never double-count. **Un-voting is never gated by whether
-    the song is still on offer** — only casting is. The setlist guard was added
-    ahead of the toggle, which meant that narrowing the set mid-round left the
-    fan's credit spent on a song they could no longer un-vote. A fan must always be
-    able to undo what they paid for, whatever the artist has changed since.
+15. **A cast is idempotent BY CAST ID, not by state.** This used to read "voting is
+    idempotent per (fan, song)" — a second tap toggled off and refunded — and that
+    sentence hid the fact that the toggle *was* the idempotency mechanism: a lost
+    response found the vote already there and removed it, so a retry could never
+    double-charge. Under `voteFinal` there is no toggle, so every cast now carries
+    an id minted at the press of Confirm, and `vote.mjs` remembers the outcome
+    against it on the fan record (last 20, cleared with the round). A replay is
+    answered from memory and writes nothing. INVARIANT 15h says it plainly: do not
+    remove the toggle without this in place.
+
+    **Un-voting is never gated by whether the song is still on offer** — only casting
+    is. The setlist guard was once added ahead of the toggle, which left a fan's
+    credit spent on a song they could no longer un-vote.
+
+    **What finality does and does not promise.** With the flag on, a fan cannot undo
+    their own vote, and the page must offer no affordance suggesting otherwise —
+    the row is disabled and the queue tick is a `<span>`, not a button. It is NOT a
+    promise that the song will still exist: when the ARTIST deletes or hides it, the
+    votes go and the capacity comes back, because the alternative is an artist
+    pocketing a room's credits. `dropSongVotes` therefore removes EVERY occurrence
+    of the id, not the first — it predated multi-vote and removing one entry left a
+    fan charged for votes on a song that no longer existed, unrecoverable once
+    finality is on.
 
 13c. **An unlimited round is free, so it must debit nobody's pack.** `vote.mjs`
    skips the credit check entirely while `isUnlimited(fan, show)`, so nothing is
