@@ -32,3 +32,6 @@ node --import ./test/register.mjs test/credits.mjs
 echo
 echo "── web push (RFC 8291 vector) ──"
 node --import ./test/register.mjs test/push.mjs
+echo
+echo "── the 2026-09-02 audit fixes ──"
+node --import ./test/register.mjs test/audit-0902.mjs

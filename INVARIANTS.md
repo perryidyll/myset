@@ -489,6 +489,23 @@ If you are about to violate one, stop and say so rather than working around it.
     fan's credit spent on a song they could no longer un-vote. A fan must always be
     able to undo what they paid for, whatever the artist has changed since.
 
+13c. **An unlimited round is free, so it must debit nobody's pack.** `vote.mjs`
+   skips the credit check entirely while `isUnlimited(fan, show)`, so nothing is
+   ever owed for those votes — but `creditsUsed` still counts them. `paidUsed`
+   therefore takes the **fan id** and returns 0 for an unlimited device; without
+   it, `clearAllFanVotes` settles the round by debiting `extra` for votes the
+   server gave away, and a measured 12-credit pack vanished in ONE round. Both
+   callers have the id in hand: it is the shard bag's key. `unspentPaid` passes it
+   through for the same reason.
+
+13d. **`null` is not zero, and JavaScript disagrees.** The server sends
+   `credits.remaining: null` when a device votes without limit. `null < 1` is
+   **true**, so a client rule of `c.remaining < cost` disabled every Vote button in
+   the room while the pill showed ∞ — the one feature meant for a paid private
+   party broke voting for everyone. Any affordability test on the audience page
+   must short-circuit on `c.unlimited` FIRST. The ask-card rule always did; the
+   vote-button rule did not, which is how it survived.
+
 ## Live-show safety
 
 15b. **Voting paused means no changes at all** — a fan must not be able to remove
@@ -682,6 +699,18 @@ If you are about to violate one, stop and say so rather than working around it.
 
 0av. **A custom genre can never duplicate a built-in, however it is spelled.** Two
     chips reading "Rock" that mean different things is worse than no custom genres.
+
+0aw0. **A song id is never empty, whatever alphabet the title is in.** `slug()`
+   keeps only `[a-z0-9]`, so a title with no Latin letters or digits — Thai,
+   Japanese, Cyrillic, an emoji — slugged to the EMPTY STRING, and the song entered
+   the library with id `''`. No vote can name that: the room could not see it and
+   the artist could not see why. In a bar on Koh Phangan this is the normal case,
+   not the edge. `songId(title, artist)` in `_lib.mjs` is the ONE definition, used
+   by every mint site (addSong, importSongs, askAccept, starterSetlist), and falls
+   back to a hash of the title so the id stays stable and still derived from the
+   song. `songSig()` is its partner for import de-duplication — the old key
+   `slug(title)|slug(artist)` made every Thai title a duplicate of every other, so
+   a CSV of them imported exactly one row.
 
 ## The service worker
 

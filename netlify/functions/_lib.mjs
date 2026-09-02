@@ -139,6 +139,24 @@ export function newShowId(now = Date.now(), rand = Math.random()) {
 export const slug = (t) =>
   t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 
+/* THE song id. `slug()` keeps only [a-z0-9], so a title with no Latin letters or
+   digits — Thai, Japanese, Cyrillic, an emoji — slugged to the EMPTY STRING. The
+   song went into the library with id '', which no vote can ever name: the room
+   could not see it and the artist could not understand why. In a bar on Koh
+   Phangan that is not an edge case. Falls back to a hash of the title so the id
+   is still stable and still derived from the song.
+
+   ONE definition, used by every place that mints a song id — addSong, importSongs,
+   askAccept, starterSetlist — so they cannot disagree about what a song is called. */
+export const songId = (title, artist = '') =>
+  slug(String(title)) || 's' + sha(`${title}|${artist}`).slice(0, 8);
+
+/* The identity used to spot a duplicate on import. Same problem as songId: two
+   different Thai titles both slugged to '|' and the second was silently dropped
+   as a dupe of the first. */
+export const songSig = (title, artist = '') =>
+  `${slug(String(title)) || String(title).trim().toLowerCase()}|${slug(String(artist || ''))}`;
+
 /* Deliberately blank. A second artist signing up must never inherit the first
    artist's name, venue or setlist — `getShow` fills the name in from the
    registry, and the Studio offers the starter pack as an explicit choice. */
@@ -466,8 +484,14 @@ export async function readFans(aid) {
    The same missing ledger also destroyed packs in the other direction — a fan
    fully spent at the reset instant had `unspentPaid` return 0 and `carryFans`
    delete their record. Both directions are this one function's fault. */
-export const paidUsed = (fan, show) =>
-  Math.max(0, creditsUsed(fan, show) - (show.freeCredits || 0));
+/* `fanId` is not optional in spirit: without it an UNLIMITED round debits the
+   buyer's pack for votes the server handed out free. vote.mjs skips the credit
+   check when isUnlimited, so creditsUsed keeps counting the casts while nothing
+   was ever owed — measured, a 12-credit pack vanished in one round. Both callers
+   have the fan id in hand (it is the shard bag's key), so both pass it. */
+export const paidUsed = (fan, show, fanId) =>
+  isUnlimited(fanId, show) ? 0
+    : Math.max(0, creditsUsed(fan, show) - (show.freeCredits || 0));
 
 /* `costShow` must be the show as it was BEFORE the song started. `play` takes the
    winning song back out of `played[]` first, so pricing a just-won replay vote
@@ -483,7 +507,7 @@ export async function clearAllFanVotes(aid, costShow) {
           // Debiting at the moment of the cast instead double-charges, because
           // creditsUsed already counts the vote while `total` would shrink — and
           // it breaks INVARIANT 15, since un-voting would then burn a paid vote.
-          const paid = paidUsed(bag[id], costShow);
+          const paid = paidUsed(bag[id], costShow, id);
           if (paid > 0) bag[id].extra = Math.max(0, (bag[id].extra || 0) - paid);
           // drop stale stamps and the non-song spend too — free credits refresh
           // here, so anything charged against them has to refresh with them
@@ -503,10 +527,10 @@ export async function clearAllFanVotes(aid, costShow) {
    against FREE credits first, exactly as they are every other round, so holding a
    vote when the artist ends the show costs the fan nothing — it used to cost them
    the paid portion, which was the one and only way voting could lose you money. */
-export function unspentPaid(fan, show) {
+export function unspentPaid(fan, show, fanId) {
   const extra = fan.extra || 0;
   if (extra <= 0) return 0;
-  return Math.max(0, extra - paidUsed(fan, show));
+  return Math.max(0, extra - paidUsed(fan, show, fanId));
 }
 export async function carryFans(aid, show) {
   await Promise.all(
@@ -518,8 +542,8 @@ export async function carryFans(aid, show) {
              this is where the pledge is honoured. A restart in between quietly
              cancels it, which is the point. */
           const pledged = Math.max(0, bag[id].pledged || 0);
-          const carry = Math.max(0, unspentPaid(bag[id], show) - pledged);
-          const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show)) : 0);
+          const carry = Math.max(0, unspentPaid(bag[id], show, id) - pledged);
+          const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show, id)) : 0);
           if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted };
           else delete bag[id];          // nothing owed — don't keep the record
         }

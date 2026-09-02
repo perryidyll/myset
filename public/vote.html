@@ -408,7 +408,11 @@ function render(){
 }
 function row(s,c,open,replay){
   const cost=s.cost||1;
-  const dis=!open||(!s.mine&&c.remaining<cost);
+  /* `c.remaining` is null when this device votes without limit, and `null < 1`
+     is TRUE in JS — so every Vote button in the room rendered disabled while the
+     pill happily showed the infinity sign. The ask-card rule below already had
+     the `!c.unlimited` guard; this one did not. */
+  const dis=!open||(!s.mine&&!c.unlimited&&c.remaining<cost);
   return `<div class="prow ${s.votes?'hasv':''}">
     <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}</div>
     <div class="cnt mono">${s.votes||''}</div>
@@ -675,9 +679,10 @@ function schedule(){
      having, since web requests are the one billed line caching can never touch, but
      it is a tenth of the saving, not a half.
 
-     This is NOT the fixed fast interval INVARIANT 9d forbids: 6s is the middle rung
-     that already shipped, and 3s still applies right after a change, which is when
-     the room is actually watching. */
+     This is NOT the fixed fast interval INVARIANT 9d forbids: the rungs are
+     3s / 10s / 25s (below), and 3s still applies right after a change, which is
+     when the room is actually watching. An earlier version of this comment argued
+     for a 6s middle rung and called it shipped; the code has always said 10000. */
   const wait = QUIET<2 ? 3000 : QUIET<6 ? 10000 : 25000;
   TIMER=setTimeout(tick, wait);
 }

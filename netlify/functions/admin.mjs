@@ -1,5 +1,5 @@
 import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts,
-         firstVotedAt, rankSongs, json, bad, requireArtist, slug, sha,
+         firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable , gigMonthOf } from './_lib.mjs';
@@ -522,7 +522,7 @@ async function handleLists(aid, action, body) {
     let sid = null, note = null;
     await mutateShow(aid, (sh) => {
       if (sh.songs.length >= MAX_LIBRARY) return false;
-      let id = slug(row.title);
+      let id = songId(row.title, row.artist);
       if (sh.songs.some((x) => x.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
       const live = sh.songs.filter((x) => x.active !== false).length;
       const on = featureCap === null || live < featureCap;
@@ -1112,7 +1112,7 @@ export default async (req) => {
           err = [`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402]; return false;
         }
         const artist = String(body.artist || '').trim().slice(0, 60);
-        let id = slug(title);
+        let id = songId(title, artist);
         if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
         const known = new Set([...GENRE_IDS, ...show.tags.map((t) => t.id)]);
         show.songs.push({ id, title, artist, active: !startsOff,
@@ -1134,15 +1134,15 @@ export default async (req) => {
                          artist: String((r && r.artist) || '').trim().slice(0, 60) }))
           .filter((r) => r.title);
         if (!rows.length) { err = ['Nothing to import', 400]; return false; }
-        const have = new Set(show.songs.map((s) => `${slug(s.title)}|${slug(s.artist || '')}`));
+        const have = new Set(show.songs.map((s) => songSig(s.title, s.artist)));
         let added = 0, dupes = 0, refused = 0, off = 0;
         for (const r of rows) {
-          const sig = `${slug(r.title)}|${slug(r.artist)}`;
+          const sig = songSig(r.title, r.artist);
           if (have.has(sig)) { dupes++; continue; }
           if (show.songs.length >= MAX_LIBRARY) { refused++; continue; }
           const liveNow = show.songs.filter((x) => x.active !== false).length;
           const startsOff = featureCap !== null && liveNow >= featureCap;
-          let id = slug(r.title);
+          let id = songId(r.title, r.artist);
           if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
           show.songs.push({ id, title: r.title, artist: r.artist, active: !startsOff, key: '', tags: [] });
           have.add(sig); added++; if (startsOff) off++;
@@ -1210,7 +1210,7 @@ export default async (req) => {
         let live = show.songs.filter((x) => x.active !== false).length;
         for (const [t, a] of STARTER_SONGS) {
           if (show.songs.length >= MAX_LIBRARY) break;
-          const id = slug(t);
+          const id = songId(t, a);
           if (have.has(id)) continue;
           const on = featureCap === null || live < featureCap;
           show.songs.push({ id, title: t, artist: a, active: on });

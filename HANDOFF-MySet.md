@@ -1299,3 +1299,69 @@ project). See `HANDOFF-Idyll-Enterprises.md`. Source:
 `~/Docs/Idyll Enterprises/website/index.html` (commit 9858251, built + verified,
 not deployed). It quotes this project's live positioning verbatim — if the
 positioning here changes, update the umbrella page too.
+
+
+---
+
+## SESSION 15 — 2026-09-02 (the deep audit, parked deliberately, and four fixes shipped)
+
+**What was asked:** another full, deep audit — code organisation, every pixel, every feature however small,
+and the cascades a live show sets off — with the work delegated carefully so agents do not overload
+themselves; then push everything live.
+
+**What happened, honestly.** Three attempts. The first two commissioned 34 auditors in two waves of
+sixteen; both exhausted the account's five-hour usage window in about ten minutes (2.05M and 2.24M subagent
+tokens) and returned nothing. The third run was restructured to fifteen auditors in three sequential waves
+of five, each required to reproduce its own findings. It hit the same wall part-way, and this time the run
+was **parked on purpose**: agents stopped, sandboxes shut down, every completed result salvaged from the run
+journal. **Three of fifteen auditors finished** — and they were the three hardest slices.
+
+**The lesson, now measured rather than guessed:** `_tmp_audit/budget.py` meters the five-hour window from
+the on-disk transcripts. Calibrated against the two runs that died, the ceiling is **~25M cost-weighted
+units** (out×5 + cache_write×1.25 + cache_read×0.1 + in). Stop launching agents past ~20M. Sixteen-way
+parallelism is the thing that kills a window, because every agent writes its own long prompt to cache.
+
+### Fixed, tested, shipped
+
+1. **"∞ Unlimited" was comprehensively broken — two independent bugs in one feature.**
+   * It *destroyed every pack the room had bought*: `paidUsed()` had no notion of unlimited, so
+     `clearAllFanVotes` debited `extra` at the round's end for votes the server had given away free.
+     Measured: a 12-credit pack gone in one round. `paidUsed`/`unspentPaid` now take the fan id and return
+     0 for an unlimited device. **INVARIANT 13c.**
+   * It *disabled every Vote button in the room*: the server sends `remaining: null`, and `null < 1` is
+     `true` in JS, so every row rendered `disabled` under a pill showing ∞. **INVARIANT 13d.**
+   * Verified in a real browser after the fix: 58 buttons, 0 disabled, and a tap moved the tally 10 → 11.
+
+2. **A song titled in Thai could never be voted for.** `slug()` returned `''` for any title with no Latin
+   letters or digits, so the song got id `''` — invisible and unvotable. `importSongs` also de-duplicated on
+   that key, collapsing a CSV of Thai songs to one row. Now one `songId()` and one `songSig()` in `_lib.mjs`
+   used by all four mint sites; Latin titles unchanged. **INVARIANT 0aw0.**
+
+3. **A comment that argued for rungs the code does not have** — the poll ladder is 3/10/25s, not 3/6s.
+
+`npm test` is now **262 assertions** (was 237), with `test/audit-0902.mjs` covering each fix.
+
+### Confirmed, reproduced, NOT fixed — the next session's list
+
+* **A non-founding artist's Studio passcode is stored but never checked.** `requireArtist` only reads
+  `getShow(DEFAULT_ARTIST)`, so every artist except Perry gets a success toast for a code that cannot work.
+  This is the 2026-08-30 stage lockout (INVARIANT 15d) reintroduced for everyone else. Needs a
+  `sha(code) → aid` index; it is an auth change and deserves its own pass.
+* **No fetch has a timeout** in studio.html or vote.html — a stalled request wedges the Studio behind an
+  overlay nothing dismisses.
+* **The room can never see a paid play-it-again in Up next**, even when it is what playTop will start.
+* **Free credits are minted per client-chosen fan id** — a private tab is a fresh allocation, and there is
+  still no rate limit on `/api/vote`.
+* **The city feed does not survive success** — 1,241 sequential blob reads at 1,500 artists (~33s vs a 10s
+  timeout); 601 reads and 73MB egress for one 300-artist city.
+* **Every audience poll costs 14–15 strong blob reads**, twelve of them all fan shards, read even before a
+  show is live.
+
+Full detail, all 25 findings and 12 verdicts on yesterday's unverified claims: **`AUDIT-2026-09-02.md`**.
+
+### Resuming the other twelve auditors
+
+`Workflow({scriptPath: "<session>/scratchpad/audit2.js", resumeFromRunId: "wf_253c2b51-35f"})` — completed
+agents replay from cache. The sandbox and headless-Chrome instrument are at **`_tmp_audit/`** (gitignored,
+and deliberately inside the repo: an earlier copy under `/private/tmp` was erased mid-run by tmp cleanup).
+`_tmp_audit/harness/README.md` is the auditor briefing.
