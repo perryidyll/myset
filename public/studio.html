@@ -138,7 +138,12 @@ a{color:inherit;text-decoration:none}
 .act.warn{color:var(--accent);background:var(--accent-soft)}
 
 .sec{display:flex;align-items:baseline;justify-content:space-between;padding:26px 20px 9px}
-.sec .kick{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+/* The section headings were all --muted grey and ran together down the page.
+   --accent-2 is the warm end of the brand gradient and reads at ~7:1 on this
+   dark ground; it would be 2.6:1 on a light one, which is why the audience
+   page does not do this. */
+.sec .kick{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent-2)}
 .find{position:relative;margin:0 18px}
 .find input{width:100%;min-height:46px;padding:12px 40px 12px 40px;font-size:16px;border:none;
   background:var(--surface);box-shadow:var(--sh-1);border-radius:var(--pill);color:var(--ink)}
@@ -380,6 +385,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
   background:var(--surface-2);color:var(--muted);font-size:14px;display:grid;place-items:center;
   transition:transform .2s var(--spring)}
 .sheetx:active{transform:scale(.9)}
+.okmark{color:var(--accent-2);font-weight:700}
 /* Blocks the whole screen while a write is in flight. Tapping "Add it" four
    times because nothing appeared to happen once created four gigs. */
 #busy{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);
@@ -889,10 +895,10 @@ function tickCard(){
   if(!TICK){ loadTick(); return ''; }
   const t=TICK;
   const step=(on,label,hint)=>`<div class="row"><div class="m">
-    <div class="t">${on?'\u2713 ':''}${label}</div>${hint?`<div class="s muted">${hint}</div>`:''}</div></div>`;
+    <div class="t">${on?'<span class="okmark">\u2713</span> ':''}${label}</div>${hint?`<div class="s muted">${hint}</div>`:''}</div></div>`;
   if(t.state==='verified') return `<div class="sec"><span class="kick">Verified</span></div>
     <div class="list"><div class="row"><div class="m">
-      <div class="t">\u2713 Your page is verified</div>
+      <div class="t"><span class="okmark">\u2713</span> Your page is verified</div>
       <div class="s muted">People can see the details came from you.</div>
     </div></div></div>`;
   const body=t.state==='pending'
@@ -1041,7 +1047,7 @@ function payCard(){
   if(p.platformOwner) return '';          // the founding account predates Connect
   if(p.ready) return `<div class="sec"><span class="kick">Getting paid</span></div>
     <div class="list"><div class="row"><div class="m">
-      <div class="t">Card payments are on ✓</div>
+      <div class="t">Card payments are on <span class="okmark">✓</span></div>
       <div class="s muted">MySet takes ${p.cutPct}% of what comes through the app on your ${esc(p.plan)} plan. ${esc(p.stripeFeeNote)}</div>
     </div><button class="act" onclick="payDash()">Stripe ↗</button></div></div>`;
   const started=p.started;
@@ -1103,7 +1109,11 @@ function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')load
   if(t==='money'){DETAIL=null;loadRev();loadHist();}
   if(t==='profile') loadProf();
   if(t==='setlist') loadPlan();
-  if(t==='settings'){loadTeam();loadPlan();}
+  /* drawPush paints into a div that render() has just created, and switching INTO
+     the tab never called it — only a reload that landed here did. So the panel sat
+     on its "Checking…" placeholder for anyone who tapped their way to Settings,
+     which is everyone. */
+  if(t==='settings'){loadTeam();loadPlan();loadTick();drawPush();}
   if(t==='gigs'){ loadGigs(); loadPitches(); }}
 async function loadPitches(force){
   if(PITCHES&&!force)return;
@@ -1678,7 +1688,7 @@ function render(){
     ${idQueueCard()}
     ${flagCard()}
     <div class="sec"><span class="kick">Alerts on your phone</span></div>
-    <div id="pushBox"><div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div></div>
+    <div id="pushBox">${PUSHVIEW||`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div>`}</div>
 
     <div class="sec"><span class="kick">Free votes per person</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many votes each person gets. Refreshes every time you start a new song.</p>
@@ -2493,34 +2503,58 @@ const b64ToBytes=(s)=>{
 async function pushState(){
   if(!('serviceWorker' in navigator)||!('PushManager' in window)) return {can:false,why:'browser'};
   if(PUSH_IOS && !PUSH_INSTALLED) return {can:false,why:'ios-not-installed'};
-  const reg=await navigator.serviceWorker.ready.catch(()=>null);
-  if(!reg) return {can:false,why:'browser'};
+  /* `serviceWorker.ready` NEVER RESOLVES when there is no active worker for this
+     scope — a registration that failed, a first load where it has not activated
+     yet, or a browser that blocks it. This panel awaited it with no timeout, so it
+     sat on "Checking…" for ever and never got as far as saying why. A promise that
+     can hang forever needs a race, not optimism. */
+  const reg=await Promise.race([
+    navigator.serviceWorker.ready.catch(()=>null),
+    new Promise((r)=>setTimeout(()=>r(null),4000)),
+  ]);
+  if(!reg) return {can:false,why:'no-worker'};
   const sub=await reg.pushManager.getSubscription().catch(()=>null);
-  return {can:true, on:!!sub, denied:Notification.permission==='denied', reg, sub};
+  const denied=(typeof Notification!=='undefined')&&Notification.permission==='denied';
+  return {can:true, on:!!sub, denied, reg, sub};
 }
 
+let PUSHVIEW='';
+/* Alerts on the artist's phone: Web Push, so a song request reaches them with the
+   screen off and the Studio closed. Needs VAPID keys on the server, and on iPhone
+   needs the Studio added to the home screen — both of which this panel says out
+   loud when they are missing.
+
+   It writes through PUSHVIEW rather than straight into the box, because `render()`
+   recreates that div: loadTeam() and loadPlan() each finish and re-render, which
+   wiped the result and put the "Checking…" spinner back. A panel that reports an
+   async answer into a node the renderer owns has to survive being re-rendered. */
 async function drawPush(){
-  const box=$('#pushBox'); if(!box)return;
-  if(!PUSHKEY){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'pushKey'}),quiet:true});
-    PUSHKEY=d&&d.ok?d:{key:null,devices:0}; }
-  const st=await pushState();
+  const paint=(html)=>{ PUSHVIEW=html; const b=$('#pushBox'); if(b)b.innerHTML=html; };
   const row=(t,s,btn)=>`<div class="list"><div class="row"><div class="m"><div class="t">${t}</div>
     <div class="s">${s}</div></div>${btn||''}</div></div>`;
-
-  if(!PUSHKEY.key) return void(box.innerHTML=row('Not switched on yet',
-    'MySet needs its notification keys set before this works.'));
-  if(!st.can&&st.why==='browser') return void(box.innerHTML=row('This browser can’t do alerts',
+  if(!PUSHKEY){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'pushKey'}),quiet:true});
+    PUSHKEY=d&&d.ok?d:{key:null,devices:0}; }
+  /* Checked BEFORE anything that can wait. This used to sit below `await
+     pushState()`, so the one state we can always answer instantly was reported last
+     — behind a promise that could hang. */
+  if(!PUSHKEY.key) return paint(row('Not switched on yet',
+    'MySet’s notification keys aren’t set on the server, so nothing can be sent yet.'));
+  const st=await pushState();
+  if(!st.can&&st.why==='browser') return paint(row('This browser can’t do alerts',
     'Chrome on Android, or the Studio added to your home screen on iPhone.'));
-  if(!st.can&&st.why==='ios-not-installed') return void(box.innerHTML=
+  if(!st.can&&st.why==='no-worker') return paint(row('Couldn’t start alerts here',
+    'Reload the page and try again. If it keeps happening, this browser is blocking background workers.',
+    `<button class="act" onclick="PUSHKEY=null;drawPush()">Retry</button>`));
+  if(!st.can&&st.why==='ios-not-installed') return paint(
     row('Add the Studio to your home screen first','On iPhone, alerts only work once it’s installed.',
       `<button class="act" onclick="openStudioInstall()">How</button>`));
-  if(st.denied) return void(box.innerHTML=row('Alerts are blocked',
+  if(st.denied) return paint(row('Alerts are blocked',
     'Your phone is blocking them. Turn them back on in Settings → Notifications → MySet.'));
 
-  box.innerHTML=row(st.on?'Alerts are on':'Get alerts on your phone',
+  paint(row(st.on?'Alerts are on':'Get alerts on your phone',
     st.on?`You'll be told when someone requests a song, even with the screen off.${PUSHKEY.devices>1?` · ${PUSHKEY.devices} devices`:''}`
          :'Know the moment someone requests a song — no need to watch the screen.',
-    `<button class="act${st.on?'':' '}" onclick="togglePush(${st.on?'false':'true'})">${st.on?'Turn off':'Turn on'}</button>`);
+    `<button class="act${st.on?'':' '}" onclick="togglePush(${st.on?'false':'true'})">${st.on?'Turn off':'Turn on'}</button>`));
 }
 
 async function togglePush(on){

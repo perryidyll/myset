@@ -21,6 +21,7 @@ const { SLOTS, getImage } = await import('../netlify/functions/_img.mjs');
 const { createArtist, signToken, readArtists, revOf, mutateArtists } =
   await import('../netlify/functions/_auth.mjs');
 const { casDoc } = await import('../netlify/functions/_lib.mjs');
+const { readFileSync } = await import('node:fs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -173,6 +174,23 @@ eq('and a lingering flag could not render one either',
    V.shapeVenue(await V.getVenueProfile(ven.venueId),
                 { ...vreg.byId[ven.venueId], verified: true, plan: 'free' }).verified, false);
 eq('an unknown venue is a 404', (await OWNER('venuePlan', { venueId: 'nope', plan: 'pro' })).status, 404);
+
+console.log('\nTHE FLAG SWITCH IS PERRY\u2019S ALONE  (server-side, not just hidden in the UI)');
+/* Perry asked whether "Trying things out" is only on his account. It is, and the
+   guarantee has to be the SERVER's — a card hidden by `PLAN.owner` in the page is a
+   suggestion anyone can step around with curl. */
+const anaFlags = await AS(TA, 'flagList');
+eq('another artist cannot even list the flags', anaFlags.status, 401);
+const anaSet = await AS(TA, 'flagSet', { flag: 'voteFinal', on: false });
+eq('nor set one', anaSet.status, 401);
+const anaSetOther = await AS(TA, 'flagSet', { flag: 'voteFinal', on: false, artistId: 'perry-idyll' });
+eq('nor set one on somebody else', anaSetOther.status, 401);
+ok('while the founder can', (await OWNER('flagList')).ok);
+const { flagValue, readFlags } = await import('../netlify/functions/_flags.mjs');
+eq('and none of that changed the flag', flagValue(await readFlags(), 'voteFinal', 'perry-idyll'), true);
+const studioSrc = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
+ok('the card is also hidden for everyone else, as a courtesy',
+   /function flagCard\(\)\{[\s\S]{0,120}PLAN\.owner/.test(studioSrc), 'flagCard must gate on PLAN.owner');
 
 delete process.env.STRIPE_SECRET_KEY;
 console.log(`\n${pass} passed, ${fail} failed`);

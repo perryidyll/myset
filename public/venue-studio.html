@@ -79,7 +79,12 @@ a{color:inherit;text-decoration:none}
 .tabs button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
 
 .sec{display:flex;align-items:baseline;justify-content:space-between;padding:26px 20px 9px}
-.sec .kick{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+/* The section headings were all --muted grey and ran together down the page.
+   --accent-2 is the warm end of the brand gradient and reads at ~7:1 on this
+   dark ground; it would be 2.6:1 on a light one, which is why the audience
+   page does not do this. */
+.sec .kick{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent-2)}
 .wrap{padding:0 18px}
 .field{padding:14px 18px 0}
 .field label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:7px}
@@ -204,7 +209,9 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .ck .bx{flex:0 0 auto;width:24px;height:24px;border-radius:8px;display:grid;place-items:center;
   background:var(--surface-2);box-shadow:inset 0 0 0 1.5px var(--hair-2);
   font-size:13px;font-weight:700;color:var(--faint);margin-top:1px}
-.ck.on .bx{background:var(--good);color:#04220d;box-shadow:none}
+/* Warm accent rather than the system green — asked for, and it ties the checklist
+   to the brand instead of looking like an OS control. */
+.ck.on .bx{background:var(--accent-2);color:#2b1000;box-shadow:none}
 .ck .m{flex:1;min-width:0}
 .ck .m b{display:block;font-size:15px;font-weight:500;letter-spacing:-.012em;line-height:1.3}
 .ck.on .m b{color:var(--ink)}

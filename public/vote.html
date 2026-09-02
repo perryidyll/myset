@@ -231,6 +231,16 @@
    invisible on the smallest screen the app has to work on. The actions stick to the
    bottom of the sheet instead, and the sheet itself scrolls. */
 #sheet{max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+/* 44px, which is the smallest thing a thumb should be asked to hit. The bar itself
+   stays 5px — it is the affordance, not the target. */
+.grabzone{position:relative;min-height:44px;display:flex;align-items:center;
+  margin:-8px 0 4px;cursor:grab;touch-action:none}
+.grabzone:active{cursor:grabbing}
+.grabzone .grab{margin:0 auto}
+.sheetx{position:absolute;top:6px;right:0;width:38px;height:38px;border-radius:50%;
+  border:0;background:var(--bg-2);color:var(--muted);font-size:15px;display:grid;
+  place-items:center;cursor:pointer;transition:transform .2s var(--spring)}
+.sheetx:active{transform:scale(.9)}
 .sticky-act{position:sticky;bottom:0;padding:12px 0 4px;margin-top:4px;
   background:linear-gradient(to bottom,transparent,var(--surface) 22%)}
 .sticky-act .go{margin-top:6px}
@@ -771,8 +781,61 @@ async function sendAsk(kind){
 function setFilter(v){ FILTER=v; FOCUS=false; render(); }
 
 /* ── sheets ── */
-function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;$('#bg').classList.add('on');$('#sheet').classList.add('on');}
-function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+/* The audience sheet had a 5px-tall bar and nothing else: no way to drag it down and
+   no visible way out, so a fan who opened it by mistake was stuck reading. The
+   Studio's sheets already solved this, so this is that same solution — a grab ZONE
+   big enough for a thumb, an ✕ in the corner, and a real drag. */
+function openSheet(h){
+  const sh=$('#sheet');
+  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
+    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+  sh.style.transform=''; sh.scrollTop=0;
+  $('#bg').classList.add('on'); sh.classList.add('on');
+  attachDrag(sh);
+}
+function closeSheet(){const sh=$('#sheet');sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
+
+function attachDrag(sh){
+  const zone=sh.querySelector('.grabzone'); if(!zone)return;
+  let y0=null, dy=0, t0=0, fromBody=false;
+  const CONTROL='input,textarea,select,button,a,[contenteditable]';
+  const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
+    fromBody=!!body; sh.style.transition='none'; };
+  const move=(e)=>{
+    if(y0===null)return;
+    dy=((e.touches?e.touches[0]:e).clientY)-y0;
+    if(dy<0){ dy=0; sh.style.transform='translateY(0)'; return; }
+    // dragging from the body only counts while the sheet is still scrolled to the top
+    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
+    sh.style.transform=`translateY(${dy}px)`;
+    if(e.cancelable)e.preventDefault();
+  };
+  const end=()=>{
+    if(y0===null)return;
+    const speed=dy/Math.max(1,Date.now()-t0);
+    sh.style.transition='';
+    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform='translateY(0)';
+    y0=null;
+  };
+  zone.addEventListener('touchstart',(e)=>start(e,false),{passive:true});
+  zone.addEventListener('touchmove',move,{passive:false});
+  zone.addEventListener('touchend',end);
+  zone.addEventListener('touchcancel',end);
+  zone.addEventListener('mousedown',(e)=>{ start(e,false);
+    const mm=(ev)=>move(ev), mu=()=>{ end();
+      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
+  sh.addEventListener('touchstart',(e)=>{
+    if(e.target.closest('.grabzone'))return;
+    if(e.target.closest(CONTROL))return;
+    if(sh.scrollTop>0)return;
+    start(e,true);
+  },{passive:true});
+  sh.addEventListener('touchmove',move,{passive:false});
+  sh.addEventListener('touchend',end);
+  sh.addEventListener('touchcancel',end);
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 async function openLyrics(){
   const np=ST&&ST.nowPlaying; if(!np)return;
   openSheet(`<h3>${esc(np.title)}</h3>
