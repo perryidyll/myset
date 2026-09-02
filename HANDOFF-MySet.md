@@ -281,7 +281,7 @@ storage traps that cost hours to find and will silently lose votes if reintroduc
 | Pages | `index.html` (artist home) · `vote.html` (audience voting) · `studio.html` (artist control) · `stage.html` → redirects to studio |
 | API | `/api/show` `/api/vote` `/api/pay` `/api/confirm` `/api/stage` `/api/admin` |
 | Storage | Netlify Blobs: `show` (config) · `f0..f11` (sharded fan records) · `meta` (tips + payment markers) |
-| Deploy | **`git push`** — Netlify auto-builds `main`. Never `--prod` from the CLI (INVARIANT 9d3). |
+| Deploy | `cd ~/Docs/MySet && netlify deploy --build --prod` |
 
 ## Secrets (never in the repo)
 - `ADMIN_CODE` — the Studio passcode, Netlify env only.
@@ -313,6 +313,75 @@ Last run: **40/40 and 80/80, zero loss.**
 - Single-artist product — no multi-artist accounts or auth yet.
 
 ---
+
+---
+
+## SESSION LOG — 2026-09-02 (the landing-page honesty pass)
+
+**What this session was:** review ChatGPT/Atlas's two analyses of `myset.vip/about`,
+then act on the P0 findings. Commit `565bb21` on `main`, **committed but NOT pushed**.
+
+### Docs produced (all in `~/Docs/MySet/`)
+- `MYSET-LANDING-PAGE-REVIEW-OF-ANALYSIS.md` — 137 Atlas claims adjudicated
+  (122 CONFIRMED / 8 OVERSTATED / 5 WRONG), with what it missed.
+- `MYSET-LANDING-PAGE-REBUILD-PLAN.md` — 279-feature inventory (230 SHIPPED,
+  21 GATED, 11 FLAG-ONLY, 17 NOT BUILT) + 8 segmented work packets.
+
+### Landed
+- **`public/index.html`** — `/about` was an orphan (nothing in the product linked
+  to it). Added a footer "How MySet works" link, a "Not sure yet? See how MySet
+  works →" link under both empty-state CTA blocks, and a persistent "Add to home
+  screen" footer button (the install sheet already existed but was
+  dismissible-forever). **These went live inside commit `0b357b5`**, which another
+  session swept up along with its own work.
+- **`public/about.html`** — the honesty pass. Real proof numbers (8/21/1) replacing
+  the fabricated 34/314/12; Free corrected to "4 shows a month"; unlimited shows
+  moved to Plus where it is true; Plus given the vote-rule controls it actually
+  gates; four unshipped Pro extras marked `Soon` **in the markup**; honest note
+  rewritten (no fake "artist by artist queue", and the no-checkout fact disclosed);
+  the per-song "just for tonight" claim corrected to point at setlists.
+- **`public/vote.html`** — multi-tenancy fix. Ten user-visible strings said
+  "Perry" to every audience, including `<title>` and "100% goes to Perry" in the
+  tip sheet. Added `artistName`/`artistFirst`.
+- **Deleted 4 screenshots** (`qr.png` = the Settings tab not a QR; `feed.jpg` = an
+  empty search form; `numbers.png` = the fabricated 314/3-nights data;
+  `buy.png` = "Tip Perry" over Sam Cole's page).
+
+### Verified
+- Real headless Chrome at 320/390/800/1280, light + dark: no overflow, all reveals
+  resolve, 5 images all load, stats correct **with JS disabled**, no console errors.
+- `npm test` → **212 passed, 0 failed** across all 4 stages (was 131 assertions;
+  the suite has grown).
+- Every inline `<script>` in the three touched files parses.
+
+### Still open (highest value first)
+1. **Re-shoot the four deleted screenshots** against real data — a genuine printable
+   QR, a populated city feed, real venue numbers, and a tip sheet post-fix (it will
+   now correctly say "Tip <artist>"). Then re-place them.
+2. **`_plan.mjs:6-9`** still comments *"unlimited shows … six nights a week forever"*
+   eighteen lines above `gigs: 4`. That comment is what the old landing copy was
+   written from; it will cause the same drift again. Left alone only because
+   another session was active in that file.
+3. **`artist.html:293`** hardcodes `'perryidyll'` as a fetch fallback — same class
+   of leak as the vote.html one, and it disagrees with `DEFAULT_ARTIST`
+   (`'perry-idyll'`). One rename from breaking the legacy `/artist.html` gig list.
+4. Packets 3–8 of `MYSET-LANDING-PAGE-REBUILD-PLAN.md`: the new
+   setlists/charts/genres beat, proof rebuild, demo a11y, venue split, plumbing
+   (privacy/terms/contact, canonical, landscape `og:image`, real
+   `robots.txt`/`sitemap.xml`, point the referral `invite` link at `/about?ref=`).
+5. `/about` still has no link from `studio.html` or `venue-studio.html`.
+
+### Traps confirmed this session
+- **`main` is production.** `git push` deploys (INVARIANT 9d3). The branch flipped
+  from `fixes/audit-2026-09-01` to `main` mid-session without me noticing, and I
+  told Perry the wrong thing before catching it. Re-check `git rev-parse
+  --abbrev-ref HEAD` before every commit.
+- **Another session edits this repo concurrently.** `_plan.mjs` gained `gigs: 4`
+  and `pricing` under me, `vote.html` changed on disk, and my `index.html` edits
+  were committed by that session. Re-read files before editing.
+- A 1300ms wait after scrolling an 18,900px page is not enough for the 700ms
+  reveal transitions to settle — it produced a false "1 element still hidden".
+  Suspect the measurement first.
 
 ## SESSION LOG — 2026-08-31 (after the first real gig)
 
@@ -1220,3 +1289,13 @@ Studio screenshots in this session were taken.
   than before. One line to change if it matters in a busy bar.
 * Pro extras (press kit, branding, city promotion) are promised in the plan copy and
   not built.
+
+---
+
+## 2026-09-01 — Cross-ref: umbrella brand doc created
+
+An **Idyll Enterprises** umbrella landing page now exists (holding brand above this
+project). See `HANDOFF-Idyll-Enterprises.md`. Source:
+`~/Docs/Idyll Enterprises/website/index.html` (commit 9858251, built + verified,
+not deployed). It quotes this project's live positioning verbatim — if the
+positioning here changes, update the umbrella page too.
