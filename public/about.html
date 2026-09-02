@@ -743,7 +743,7 @@ function draw() {
   foot.innerHTML = left === 0
     ? 'Out of votes — in the room you could buy a few more, or wait: <b>the next song refreshes everyone</b>.'
     : mine.size
-      ? `<b>${esc(sorted[0].t)}</b> is winning, so that's what plays next — whenever you choose to take the next request. Change your mind: tap again to take it back.`
+      ? `<b>${esc(sorted[0].t)}</b> is winning, so that's what plays next — whenever the next request is taken.`
       : 'Everyone in the room gets a few free votes. <b>Starting a song gives everybody theirs back</b> — so every gap is a fresh contest.';
 }
 document.getElementById('dlist').addEventListener('click', (e) => {
