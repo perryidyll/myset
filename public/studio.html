@@ -405,6 +405,12 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .rise{animation:rise .45s var(--ease) both}
 @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* `.note` was used here and never defined in app.css or this page, so the
+   "Why there's a limit at all" block rendered full-bleed with no padding. */
+.note{background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-sm);
+  padding:12px 14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.note b{display:block;margin-bottom:4px;color:var(--ink)}
 </style>
 </head>
 <body>
