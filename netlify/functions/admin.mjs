@@ -1,6 +1,6 @@
 import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
-         MIN_CODE, weakCode,
+         MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable , gigMonthOf } from './_lib.mjs';
@@ -70,6 +70,91 @@ async function handlePlan(aid, action, body) {
 
   /* ---- owner only, from here ---- */
   if (!isPlatformOwner(aid)) return bad('unauthorized', 401);
+
+  /* Feature flags. Owner only, because a flag changes what every artist's room
+     does. Never written during a show — see _flags.mjs. */
+  if (action === 'flagList') {
+    const { FLAGS, readFlags, flagsFor } = await import('./_flags.mjs');
+    const f = await readFlags();
+    return json({ ok: true,
+      flags: Object.entries(FLAGS).map(([name, spec]) => ({
+        name, what: spec.what, remove: spec.remove, default: spec.default,
+        global: (f.global || {})[name], inForce: flagsFor(f, aid)[name] })),
+      byArtist: f.byArtist || {} });
+  }
+
+  if (action === 'flagSet') {
+    const { FLAGS, mutateFlags, readFlags, flagsFor } = await import('./_flags.mjs');
+    const name = String(body.flag || '');
+    if (!FLAGS[name]) return bad('unknown flag');
+    const who = body.artistId ? cleanArtistId(body.artistId) : '';
+    const on = body.on === null || body.on === undefined ? null : !!body.on;
+    await mutateFlags((f) => {
+      if (who) {
+        f.byArtist[who] ||= {};
+        if (on === null) delete f.byArtist[who][name];    // back to the global answer
+        else f.byArtist[who][name] = on;
+      } else if (on === null) delete f.global[name];
+      else f.global[name] = on;
+      return true;
+    });
+    const f = await readFlags();
+    return json({ ok: true, flag: name, scope: who || 'global',
+                  inForce: flagsFor(f, who || aid)[name] });
+  }
+
+  /* The ID review queue. Perry is the only person who ever sees one of these, and
+     the photo is deleted the moment he decides either way. */
+  if (action === 'idQueue') {
+    const { readIdQueue } = await import('./_verify.mjs');
+    const q = await readIdQueue();
+    const reg = await readArtists();
+    return json({ ok: true, queue: Object.entries(q.by)
+      .filter(([, r]) => r.state === 'pending')
+      .map(([id, r]) => ({ artistId: id, name: r.name || '',
+                           slug: (reg.byId[id] || {}).slug || '',
+                           account: (reg.byId[id] || {}).name || '', at: r.at })) });
+  }
+
+  if (action === 'idApprove' || action === 'idReject') {
+    const { mutateIdQueue, ID_SLOT } = await import('./_verify.mjs');
+    const who = cleanArtistId(body.artistId || '');
+    if (!who) return bad('which artist?');
+    const approve = action === 'idApprove';
+    if (approve) {
+      await mutateArtists((r) => {
+        if (!r.byId[who]) return false;
+        r.byId[who].verified = true;
+        r.byId[who].verifiedAt = Date.now();
+        return true;
+      });
+    }
+    await mutateIdQueue((q) => {
+      q.by[who] = { state: approve ? 'approved' : 'rejected', at: Date.now(),
+                    why: approve ? '' : String(body.why || '').slice(0, 140) };
+      return true;
+    });
+    /* The photo goes now, either way. Keeping a stranger's government ID after the
+       decision it was collected for is a liability nobody asked for. */
+    await dropImage(who, ID_SLOT).catch(() => {});
+    return json({ ok: true, artistId: who, approved: approve });
+  }
+
+  /* A venue's plan. There is no venue self-serve billing yet, so the owner sets it
+     — which is also how the tick gets unlocked for a venue. */
+  if (action === 'venuePlan') {
+    const { mutateVenues, VENUE_PLANS } = await import('./_venues.mjs');
+    const vid = String(body.venueId || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
+    const plan = String(body.plan || 'free');
+    if (!VENUE_PLANS[plan]) return bad('unknown plan');
+    let found = false;
+    await mutateVenues((r) => {
+      if (!r.byId[vid]) return false;
+      r.byId[vid].plan = plan; found = true; return true;
+    });
+    if (!found) return bad('unknown venue', 404);
+    return json({ ok: true, venueId: vid, plan });
+  }
 
   if (action === 'promoList') {
     const d = await readPromos();
@@ -141,7 +226,11 @@ const shapeLimits = (l) => ({
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
 });
 const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke',
-                              'venueList', 'venueVerify', 'shareStats']);
+                              'venueList', 'venueVerify', 'shareStats',
+                              // the ID review queue and a venue's plan — owner only,
+                              // enforced inside handlePlan, not by this set
+                              'idQueue', 'idApprove', 'idReject', 'venuePlan',
+                              'flagList', 'flagSet']);
 
 /* The gig calendar. Events are their own document, so these short-circuit too.
    Every write reindexes the artist's cities, which is what keeps the public
@@ -760,6 +849,35 @@ async function handleProfile(aid, action, body) {
     return json({ ok: true, profile: await getProfile(aid) });
   }
 
+  /* ---------- the verification tick, for an ARTIST ----------
+     Premium plan + card payments actually set up + a photo ID that matches the
+     account + Perry's eyes. See _verify.mjs for why the ID is never public and
+     never kept. */
+  if (action === 'verifyStatus') {
+    const { artistVerifyChecks } = await import('./_verify.mjs');
+    return json({ ok: true, checks: await artistVerifyChecks(aid) });
+  }
+
+  if (action === 'idUpload') {
+    const { artistVerifyChecks, ID_SLOT, mutateIdQueue } = await import('./_verify.mjs');
+    const pre = await artistVerifyChecks(aid);
+    /* Refuse BEFORE taking the photo. Asking a stranger for their ID and then
+       telling them it did not count would be the rude way round, and it would
+       leave an ID on disk for a check that was never going to pass. */
+    if (!pre.paidPlan) return bad('The tick is on the Plus and Pro plans', 402);
+    if (!pre.payments) return bad('Set up card payments first — the tick confirms who gets paid', 409);
+    if (pre.reviewed) return json({ ok: true, already: true, checks: pre });
+    const dec = decodeDataUrl(body.data);
+    if (dec.error) return bad(dec.error);
+    await putImage(aid, ID_SLOT, dec.bytes, dec.type);
+    const name = String(body.name || '').trim().slice(0, 80);
+    await mutateIdQueue((q) => {
+      q.by[aid] = { state: 'pending', at: Date.now(), name, why: '' };
+      return true;
+    });
+    return json({ ok: true, checks: await artistVerifyChecks(aid) });
+  }
+
   if (action === 'mediaRemove') {
     await mutateProfile(aid, (p) => { p.media = p.media.filter((x) => x.mid !== body.mid); return true; });
     return json({ ok: true });
@@ -778,7 +896,9 @@ async function handleProfile(aid, action, body) {
   return bad('unknown action', 400);
 }
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove',
-                                 'photoUpload', 'photoClear']);
+                                 'photoUpload', 'photoClear',
+                                 // the artist's own verification tick
+                                 'verifyStatus', 'idUpload']);
 
 export default async (req) => {
   const me = await requireArtist(req);

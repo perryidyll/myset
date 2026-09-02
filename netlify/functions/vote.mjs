@@ -9,6 +9,10 @@ export default async (req) => {
   const fan = cleanFanId(body.fan);
   const song = typeof body.song === 'string' ? body.song.slice(0, 60) : '';
   if (!fan || !song) return bad('missing fan or song');
+  /* How many votes to put on this one song. The sheet in vote.html asks; the
+     affordability check below is what actually bounds it, and this cap only stops
+     a hand-made request turning one fan record into a million-element array. */
+  const n = Math.max(1, Math.min(50, Math.floor(Number(body.n) || 1)));
 
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
@@ -25,7 +29,13 @@ export default async (req) => {
   if (show.nowPlaying === song) return bad('That one is playing right now', 409);
 
   const cost = costOf(song, show);   // 1 normally, more to request a replay
+  /* `want` is the number of votes this fan should hold on this song once the write
+     lands — an absolute count, because that is what the read-back can verify.
+     `fan.v` holds one entry PER VOTE, so the same id may appear several times;
+     voteCounts and creditsUsed both work by counting entries, so multi-vote came
+     out of the existing shape rather than a new field. */
   let err = null, outcome = null, want = null;
+  const held = (me) => (me.v || []).filter((x) => x === song).length;
 
   try {
     await mutateFan(aid, fan, (me) => {
@@ -41,21 +51,32 @@ export default async (req) => {
       // window closed => no changes at all, in or out (an un-vote while paused
       // could not be re-cast and would silently drop the on-stage tally)
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
-      const at = me.v.indexOf(song);
-      if (at >= 0) { me.v.splice(at, 1); delete me.ts[song]; want = false; outcome = { voted: false }; return true; }
+      const mine = held(me);
+      /* A tap on something they already hold takes ALL of it back and refunds the
+         lot — one clear undo rather than a decrement nobody can follow in a bar.
+         INVARIANT 15 still: a second tap refunds. */
+      if (mine > 0) {
+        me.v = me.v.filter((x) => x !== song);
+        delete me.ts[song];
+        want = 0;
+        outcome = { voted: false, removed: mine };
+        return true;
+      }
       // casting is where the setlist applies — see the note above
       if (!offered) { err = ['That one isn’t on tonight’s list', 404]; return false; }
       const free = isUnlimited(fan, show);
       const total = show.freeCredits + (me.extra || 0);
-      if (!free && creditsUsed(me, show) + cost > total) { err = ['no-credits', 402]; return false; }
-      me.v.push(song);
+      const need = cost * n;
+      if (!free && creditsUsed(me, show) + need > total) { err = ['no-credits', 402]; return false; }
+      for (let i = 0; i < n; i++) me.v.push(song);
       me.ts[song] = Date.now();
-      want = true;
-      outcome = { voted: true, cost, remaining: free ? null : Math.max(0, total - creditsUsed(me, show)) };
+      want = n;
+      outcome = { voted: true, votes: n, cost: need,
+                  remaining: free ? null : Math.max(0, total - creditsUsed(me, show)) };
       return true;
     },
-    // read back after writing: if the vote didn't stick, retry
-    (me) => want === null || (me.v || []).includes(song) === want);
+    // read back after writing: if the votes didn't stick, retry
+    (me) => want === null || held(me) === want);
   } catch { return bad('busy', 503); }
 
   if (err) return bad(err[0], err[1]);

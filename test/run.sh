@@ -38,3 +38,9 @@ node --import ./test/register.mjs test/audit-0902.mjs
 echo
 echo "── the studio-code door ──"
 node --import ./test/register.mjs test/studiocode.mjs
+echo
+echo "── the verification tick ──"
+node --import ./test/register.mjs test/verification.mjs
+echo
+echo "── the vote sheet and its flag ──"
+node --import ./test/register.mjs test/voting-sheet.mjs
