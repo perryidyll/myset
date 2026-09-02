@@ -424,8 +424,8 @@ details .a b{color:var(--ink-2);font-weight:600}
             your gigs land in a public what's-on feed for your town, so people looking for something to
             do tonight find <em>you</em>.</p>
         </div>
-        <div><div class="phone tall"><img src="/about/profile.jpg" width="640" height="1231" loading="lazy"
-          alt="An artist's public MySet page with photos, stats and upcoming shows"></div></div>
+        <div><div class="phone tall"><img src="/about/profile.jpg" width="780" height="1500" loading="lazy"
+          alt="An artist's public MySet page: band photo, bio, a live countdown to the next gig, show and vote counts, and tonight's venue with directions"></div></div>
       </div>
     </div>
   </section>
@@ -473,13 +473,13 @@ details .a b{color:var(--ink-2);font-weight:600}
       <h2>Stop telling venues you draw a crowd.</h2>
       <p class="lede">Every gig you play is counted from the first song. Not "it was packed,
         honestly" — actual numbers, from the actual room, that you didn't type in yourself.</p>
-      <p class="body" style="margin-top:26px;max-width:52ch">Here is the whole of MySet's own track
-        record, and we're not going to dress it up. One night, one pub on Koh Phangan, a room that
-        had no idea any of this existed an hour earlier:</p>
+      <p class="body" style="margin-top:26px;max-width:52ch">Here is MySet's own first night, and
+        we're not going to dress it up. One pub on Koh Phangan, a room that had no idea any of this
+        existed an hour earlier:</p>
       <div class="stat4">
         <div><b data-to="8">8</b><span>people voted</span></div>
         <div><b data-to="21">21</b><span>votes cast</span></div>
-        <div><b data-to="1">1</b><span>night on the books</span></div>
+        <div><b data-to="0">0</b><span>apps anybody had to install</span></div>
         <div><b data-to="100" data-suffix="%">100%</b><span>of it from the room, not from you</span></div>
       </div>
       <p class="body" style="margin-top:32px;max-width:52ch">That's a small number and a true one,
@@ -743,7 +743,7 @@ function draw() {
   foot.innerHTML = left === 0
     ? 'Out of votes — in the room you could buy a few more, or wait: <b>the next song refreshes everyone</b>.'
     : mine.size
-      ? `<b>${esc(sorted[0].t)}</b> is winning, so that's what plays next. Change your mind — tap again to take it back.`
+      ? `<b>${esc(sorted[0].t)}</b> is winning, so that's what plays next — whenever you choose to take the next request. Change your mind: tap again to take it back.`
       : 'Everyone in the room gets a few free votes. <b>Starting a song gives everybody theirs back</b> — so every gap is a fresh contest.';
 }
 document.getElementById('dlist').addEventListener('click', (e) => {
