@@ -66,6 +66,19 @@ export const feeCents = (amountCents, plan) => {
 };
 
 /* ---------- talking to Stripe on the right account ---------- */
+/* The countries MySet offers, as ISO-3166 alpha-2. An allow-list rather than "any
+   two letters", because the first version sliced whatever it was sent down to two
+   characters — which turns "Thailand" into TH by luck and "Germany" into GE, which
+   is not a country. And an Express account's country cannot be changed afterwards,
+   so a wrong guess is permanent. Add to this list when an artist needs one; Stripe
+   supports more than these. */
+export const PAYOUT_COUNTRIES = new Set(['TH','US','GB','AU','CA','NZ','IE','DE','FR',
+  'ES','IT','NL','PT','SE','DK','NO','FI','SG','MY','JP','MX','BR']);
+export const cleanCountry = (v) => {
+  const c = String(v || '').trim().toUpperCase();
+  return PAYOUT_COUNTRIES.has(c) ? c : '';
+};
+
 export const stripeClient = () => {
   const key = process.env.STRIPE_SECRET_KEY;
   return key ? new Stripe(key) : null;

@@ -369,7 +369,10 @@ export function shapeVenue(p, reg) {
     amenities: p.amenities.map((k) => ({ key: k, label: (AMENITIES.find(([x]) => x === k) || [, k])[1] })),
     hours: DAYS.map((d) => ({ day: d, label: DAY_LABEL[d], ...p.hours[d] })),
     menu: p.menu, offers: p.offers, links: p.links,
-    verified: !!r.verified, verifiedVia: r.verifiedVia || null,
+    /* AND on read: the tick is part of Pro, so a stored flag on a free page does
+       not show one. Belt and braces with the clear in `venuePlan` — this is the
+       half that cannot be missed by a code path that forgot. */
+    verified: !!r.verified && venuePaid(r), verifiedVia: r.verifiedVia || null,
     plan: venuePlanOf(r),
     since: r.createdAt || null,
     updatedAt: p.updatedAt,

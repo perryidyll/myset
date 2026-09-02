@@ -113,7 +113,8 @@ export default async (req) => {
     credits: {
       unlimited: unl,
       remaining: unl ? null : Math.max(0, total - used), total: unl ? null : total, used, extra: me.extra || 0,
-      paidLeft: unspentPaid(me, show),           // votes they bought and haven't spent
+      // the fan id matters: without it an UNLIMITED device's pack reads as spent
+    paidLeft: unspentPaid(me, show, fanId),
       decided: me.decided === show.showId,       // already chose what happens to them
     },
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),

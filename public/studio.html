@@ -765,7 +765,7 @@ async function load(opts){
   D=d; render();
   if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
   if(TAB==='profile'&&!PROF) loadProf();
-  if(TAB==='settings'){ if(!TEAM)loadTeam(); if(!PLAN)loadPlan(); drawPush(); }
+  if(TAB==='settings'){ if(!TEAM)loadTeam(); if(!PLAN)loadPlan(); loadTick(); drawPush(); }
   if(TAB==='gigs'){ if(!EVENTS)loadGigs(); if(!PITCHES)loadPitches(); }
 }
 let WRITING=false;
@@ -871,6 +871,138 @@ function signOut(){
   localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token');
   gate();
 }
+/* ---------- the verification tick, from the artist's side ----------
+   Built because the review found the whole feature was WRITE-ONLY: the endpoints
+   and their tests existed and nothing in the app called them, so an artist could
+   not ask for the tick and Perry could not review one.
+
+   The ID photo goes straight to the server and is deleted the moment a decision is
+   made (INVARIANT 0bk) — it is never rendered here, and never cached. */
+let TICK=null, TICKQ=false, IDQ=null;
+async function loadTick(){
+  if(TICKQ) return; TICKQ=true;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'verifyStatus'}),quiet:true});
+  TICKQ=false;
+  if(d&&d.ok){ TICK=d.checks; if(TAB==='settings'&&D) render(); }
+}
+function tickCard(){
+  if(!TICK){ loadTick(); return ''; }
+  const t=TICK;
+  const step=(on,label,hint)=>`<div class="row"><div class="m">
+    <div class="t">${on?'\u2713 ':''}${label}</div>${hint?`<div class="s muted">${hint}</div>`:''}</div></div>`;
+  if(t.state==='verified') return `<div class="sec"><span class="kick">Verified</span></div>
+    <div class="list"><div class="row"><div class="m">
+      <div class="t">\u2713 Your page is verified</div>
+      <div class="s muted">People can see the details came from you.</div>
+    </div></div></div>`;
+  const body=t.state==='pending'
+    ? `<div class="row"><div class="m"><div class="t">With MySet for review</div>
+        <div class="s muted">We\u2019ll look at it and let you know. Your ID is deleted either way, as soon as we decide.</div></div></div>`
+    : `${step(t.paidPlan,'On Plus or Pro',t.paidPlan?'':'The tick is part of a paid plan')}
+       ${step(t.payments,'Card payments set up',t.payments?'':'Set this up in the Money tab \u2014 the tick confirms who gets paid')}
+       ${step(false,'A photo of your ID',t.readyForReview?'Ready when you are':'The name on it has to match your account')}
+       ${t.rejectedWhy?`<div class="row"><div class="m"><div class="t">Not approved last time</div>
+         <div class="s muted">${esc(t.rejectedWhy)} \u2014 you can try again.</div></div></div>`:''}`;
+  return `<div class="sec"><span class="kick">Get verified</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">A green tick on your page, so people know the details came from you and not from somebody claiming to be you.</p>
+    <div class="list">${body}</div>
+    ${t.state==='pending'?'':`<div class="wrap" style="margin-top:12px">
+      ${t.readyForReview===false&&(!t.paidPlan||!t.payments)
+        ? `<button class="big alt" disabled>Finish the steps above first</button>`
+        : `<label class="bigfile"><input type="file" id="idFile" accept="image/*" style="display:none" onchange="idPick(this)">\u21ea Send a photo of your ID</label>`}
+      <p class="muted" style="font-size:12px;margin:10px 0 0">We look at it once and delete it. It is never shown on your page and never kept.</p>
+    </div>`}`;
+}
+async function idPick(el){
+  const f=el&&el.files&&el.files[0]; el.value='';
+  if(!f) return;
+  if(!/^image\//.test(f.type)){ toast('That needs to be a photo'); return; }
+  try{
+    /* Shrunk on the phone before it is sent, like every other upload here: a modern
+       camera photo is several megabytes and the server cap is under one. */
+    const data=await shrinkToDataUrl(f,1400,0.8);
+    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'idUpload',data})});
+    if(!r.ok){ toast(r.error||'Could not send that'); return; }
+    TICK=r.checks; render(); toast('Sent \u2014 we\u2019ll take a look');
+  }catch(e){ toast('Could not send that'); }
+}
+function shrinkToDataUrl(file,maxW,q){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{
+      const scale=Math.min(1,maxW/img.naturalWidth);
+      const c=document.createElement('canvas');
+      c.width=Math.round(img.naturalWidth*scale); c.height=Math.round(img.naturalHeight*scale);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      let out=null;
+      for(const qq of [q,0.7,0.55,0.4]){ const d=c.toDataURL('image/jpeg',qq);
+        if(d.length*0.75<850*1024){ out=d; break; } }
+      out?res(out):rej(new Error('too big'));
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('bad image')); };
+    img.src=url;
+  });
+}
+
+/* ---------- the flag switches ----------
+   Owner only. A flag with no switch can only be flipped with hand-made HTTP, which
+   makes "run a gig each way and pick one" a thing only its author can do. */
+let FLAGS_D=null;
+async function loadFlags(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'flagList'}),quiet:true});
+  FLAGS_D=(d&&d.ok)?(d.flags||[]):[];
+  if(D) render();
+}
+function flagCard(){
+  if(!PLAN||!PLAN.owner) return '';
+  if(FLAGS_D===null){ loadFlags(); return ''; }
+  if(!FLAGS_D.length) return '';
+  return `<div class="sec"><span class="kick">Trying things out</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Both answers work. Run a gig each way, keep the better one, then delete the loser.</p>
+    <div class="list">${FLAGS_D.map(f=>`<div class="row"><div class="m">
+      <div class="t">${esc(f.name)}</div>
+      <div class="s muted">${esc(f.what)}</div>
+    </div>
+    <button class="act" onclick="flagFlip('${esc(f.name)}',${f.inForce?'false':'true'})">${f.inForce?'On':'Off'}</button>
+    </div>`).join('')}</div>`;
+}
+async function flagFlip(name,on){
+  const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'flagSet',flag:name,on})});
+  if(!r||!r.ok){ toast((r&&r.error)||'Could not change that'); return; }
+  FLAGS_D=null; toast(`${name} is ${on?'on':'off'}`);
+}
+
+/* ---------- Perry's review queue ----------
+   Owner only, and the endpoint enforces that too. Deliberately plain: a name, the
+   page it belongs to, and two buttons. */
+async function loadIdQueue(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'idQueue'}),quiet:true});
+  IDQ=(d&&d.ok)?(d.queue||[]):[];
+  if(D) render();
+}
+function idQueueCard(){
+  if(!PLAN||!PLAN.owner) return '';
+  if(IDQ===null){ loadIdQueue(); return ''; }
+  if(!IDQ.length) return '';
+  return `<div class="sec"><span class="kick">Waiting for you \u00b7 ${IDQ.length}</span></div>
+    <div class="list">${IDQ.map(r=>`<div class="row"><div class="m">
+      <div class="t">${esc(r.name||r.account||r.artistId)}</div>
+      <div class="s muted">myset.vip/${esc(r.slug||'')} \u00b7 asked ${dstamp(r.at)}</div>
+    </div>
+    <button class="act" onclick="idDecide('${esc(r.artistId)}',true)">Approve</button>
+    <button class="act" onclick="idDecide('${esc(r.artistId)}',false)">No</button></div>`).join('')}</div>
+    <p class="muted" style="font-size:12px;padding:10px 14px 0">Open their page in another tab to see the ID \u2014 it is not shown here, and it is deleted the moment you decide.</p>`;
+}
+async function idDecide(who,yes){
+  let why='';
+  if(!yes){ why=prompt('Why not? They will see this.')||''; if(!why.trim()) return; }
+  const r=await api('/admin',{method:'POST',body:JSON.stringify({
+    action:yes?'idApprove':'idReject',artistId:who,why})});
+  if(!r||!r.ok){ toast((r&&r.error)||'Could not do that'); return; }
+  IDQ=null; toast(yes?'Verified':'Turned down');
+}
+
 /* What the audience said when MySet asked them. Read-only, and deliberately shown
    next to the money: a four-star night with a note about the queue is worth more to
    an artist than either number alone. */
@@ -920,15 +1052,45 @@ function payCard(){
         ? 'You started this but Stripe has not finished checking yet. Tipping and extra votes stay switched off in your room until it has — so nothing can land in the wrong account.'
         : 'Your audience can\u2019t tip or buy votes until this is done. Stripe handles it and MySet never sees your bank details.'}</p>
       <p class="s" style="margin:6px 0 0">On your <b>${esc(p.plan)}</b> plan MySet takes <b>${p.cutPct}%</b> of money through the app. ${esc(p.stripeFeeNote)}</p>
+      ${started?'':`<div class="field" style="margin-top:14px">
+        <label>Where is your bank account?</label>
+        <select class="inp" id="payCountry">${payCountries()}</select>
+        <p class="s muted" style="margin:6px 0 0">Stripe can\u2019t change this later, so it has to be right.</p>
+      </div>`}
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="big" style="flex:1;min-width:180px" onclick="payStart()">${started?'Finish with Stripe':'Start with Stripe'}</button>
         ${started?`<button class="act" onclick="loadPay(true)">Check again</button>`:''}
       </div>
     </div></div>`;
 }
+/* Stripe's own supported list is longer than this; these are the countries MySet
+   has artists or gigs in, plus the obvious neighbours, with the gig calendar's
+   country as the default because that is where they actually play. */
+const PAY_COUNTRIES=[['TH','Thailand'],['US','United States'],['GB','United Kingdom'],
+  ['AU','Australia'],['CA','Canada'],['NZ','New Zealand'],['IE','Ireland'],
+  ['DE','Germany'],['FR','France'],['ES','Spain'],['IT','Italy'],['NL','Netherlands'],
+  ['PT','Portugal'],['SE','Sweden'],['DK','Denmark'],['NO','Norway'],['FI','Finland'],
+  ['SG','Singapore'],['MY','Malaysia'],['JP','Japan'],['MX','Mexico'],['BR','Brazil']];
+function payGuessCountry(){
+  // whatever country their next gig is in — the best guess we actually have
+  const ev=(D&&D.events)||[];
+  for(const e of ev){ const c=(e.country||'').trim(); if(c){
+    const hit=PAY_COUNTRIES.find(([,name])=>name.toLowerCase()===c.toLowerCase());
+    if(hit) return hit[0]; } }
+  return '';
+}
+function payCountries(){
+  const guess=payGuessCountry();
+  return `<option value="">Choose\u2026</option>`+PAY_COUNTRIES
+    .map(([c,n])=>`<option value="${c}"${c===guess?' selected':''}>${esc(n)}</option>`).join('');
+}
 async function payStart(){
-  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'payStart'})});
+  const sel=$('#payCountry');
+  const country=sel?(sel.value||''):'';
+  if(sel&&!country){ toast('Pick where your bank account is first'); return; }
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'payStart',country})});
   if(d&&d.ok&&d.url){ PAY=d.pay; location.href=d.url; }
+  else if(d&&d.error==='need-country') toast('Pick where your bank account is first');
   else toast((d&&d.error)||'Could not start that');
 }
 async function payDash(){
@@ -1432,8 +1594,13 @@ function render(){
         <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Reading Stripe…</div></div>`;
       else if(!R.ok) pays=`<div class="sec"><span class="kick">All payments</span></div>
         <div class="list"><div class="row muted">Couldn’t reach Stripe just now.</div></div>`;
+      /* This used to print an environment-variable name at every artist, almost none
+         of whom have any way to set one. The founder is the only person for whom that
+         sentence is actionable. */
       else if(!R.enabled) pays=`<div class="sec"><span class="kick">All payments</span></div>
-        <div class="list"><div class="row muted">Card payments are off. Set STRIPE_SECRET_KEY in Netlify to switch them on.</div></div>`;
+        <div class="list"><div class="row muted">${PLAN&&PLAN.owner
+          ? 'Card payments are off for the whole platform — the Stripe key is not set in Netlify.'
+          : 'Card payments aren’t on for your page yet. Set them up under “Getting paid” above.'}</div></div>`;
       else{
         const t=R.totals;
         pays=`
@@ -1507,6 +1674,9 @@ function render(){
 
   if(TAB==='settings'){
     body=`
+    ${tickCard()}
+    ${idQueueCard()}
+    ${flagCard()}
     <div class="sec"><span class="kick">Alerts on your phone</span></div>
     <div id="pushBox"><div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div></div>
 

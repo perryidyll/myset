@@ -25,8 +25,13 @@ export default async (req) => {
      (not when the sheet opens, or stepping the quantity would reuse it) and the
      outcome is remembered on the fan record, exactly like meta.paid[sid] makes a
      payment replay-safe. INVARIANT 15h. */
-  const castId = typeof body.cast === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(body.cast)
-    ? body.cast : '';
+  const rawCast = body.cast === undefined || body.cast === null ? '' : String(body.cast);
+  const castId = /^[A-Za-z0-9_-]{8,64}$/.test(rawCast) ? rawCast : '';
+  /* A MALFORMED id is refused rather than treated as absent. Silently dropping it
+     left the request with no idempotency at all — which is the one thing the id
+     exists to provide, so failing quietly is worse than failing. An id that was
+     never sent is still fine: an older cached page has no concept of one. */
+  if (rawCast && !castId) return bad('bad cast id', 400);
 
   /* What the fan MEANT, rather than inferring it from what they already hold.
      With finality on, "cast again" and "take it back" are different intentions and

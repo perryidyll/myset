@@ -226,6 +226,14 @@
 .vrules li::before{content:"";position:absolute;left:4px;top:8px;width:5px;height:5px;
   border-radius:50%;background:var(--faint)}
 .vwarn{margin:10px 0 0;text-align:center;font-size:12.5px;color:var(--muted)}
+/* On a 320x568 phone the rules list pushed Confirm off the bottom — nine pixels of
+   it visible, and "Not yet" 83px below the viewport, so the deliberate way out was
+   invisible on the smallest screen the app has to work on. The actions stick to the
+   bottom of the sheet instead, and the sheet itself scrolls. */
+#sheet{max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sticky-act{position:sticky;bottom:0;padding:12px 0 4px;margin-top:4px;
+  background:linear-gradient(to bottom,transparent,var(--surface) 22%)}
+.sticky-act .go{margin-top:6px}
 /* The page had no secondary sheet button — its sheets are dismissed by the
    backdrop. A confirm step needs a visible way out, so this is that button, built
    from the same tokens as .go rather than a class borrowed from the Studio. */
@@ -452,9 +460,11 @@ function drawVoteSheet(s){
     </div>
     ${max>1?`<div class="vqmax">You can put up to ${max} on one song</div>`:'<div style="height:10px"></div>'}
     <ul class="vrules">${rules.map(r=>`<li>${r}</li>`).join('')}</ul>
-    <button class="go" onclick="confirmVote()">Confirm${total>1?` \u2014 ${total} vote${total===1?'':'s'}`:''}</button>
-    <p class="vwarn">${warn}</p>
-    <button class="go2" onclick="closeSheet()">Not yet</button>`);
+    <div class="sticky-act">
+      <button class="go" onclick="confirmVote()">Confirm${total>1?` \u2014 ${total} vote${total===1?'':'s'}`:''}</button>
+      <p class="vwarn">${warn}</p>
+      <button class="go2" onclick="closeSheet()">Not yet</button>
+    </div>`);
 }
 function openUnvote(s){
   const n=s.mineCount||1, cost=s.cost||1;
@@ -495,13 +505,21 @@ async function vote(id,n,op,castId){
     s.mine=!clearing; s.mineCount=clearing?0:held+q; s.votes+=delta;
     if(!ST.credits.unlimited) ST.credits.remaining-=delta*k;
     POP=id; buzz(clearing?10:18); render(); POP=null; }
-  try{
-    const r=await fetch(`${API}/vote${AQ1}`,{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({fan:FAN,song:id,n:q,op:op||'cast',cast:castId||''})});
-    const d=await r.json();
-    if(!d.ok){ if(d.error==='no-credits'){toast('Out of votes — grab more below');openBuy();}
-      else toast(d.error||'Could not save that vote'); }
-  }catch(e){ toast('Connection hiccup — retrying'); }
+  /* RETRY ONCE, with the SAME cast id — which is the entire point of having one.
+     Nothing used to reuse it, so the idempotency was real on the server and never
+     exercised: a dropped response on bar wifi just lost the vote. The server answers
+     a repeat from memory, so this cannot double-charge. */
+  const body=JSON.stringify({fan:FAN,song:id,n:q,op:op||'cast',cast:castId||''});
+  const post=()=>fetch(`${API}/vote${AQ1}`,{method:'POST',
+    headers:{'content-type':'application/json'},body}).then(r=>r.json());
+  let d=null;
+  try{ d=await post(); }
+  catch(e){
+    try{ await new Promise(r=>setTimeout(r,900)); d=await post(); }
+    catch(e2){ toast('Couldn’t reach the room — try again'); }
+  }
+  if(d&&!d.ok){ if(d.error==='no-credits'){toast('Out of votes — grab more below');openBuy();}
+    else toast(d.error||'Could not save that vote'); }
   busy.delete(id); wakeUp(true); load();
 }
 
@@ -584,7 +602,7 @@ function render(){
         <span class="pos">${i+1}</span>
         <div class="m"><div class="t">${esc(s.title)}</div>${by(s.artist)}
           ${i===0?'<div class="s">Winning — plays next</div>':''}
-          ${s.mine?`<div class="s mineline">Your ${(s.mineCount||1)===1?'vote':(s.mineCount)+' votes'}${(ST.flags&&ST.flags.voteFinal)?' — tap to add more':' — tap to change'}</div>`:''}</div>
+          ${s.mine?`<div class="s mineline">Your ${(s.mineCount||1)===1?'vote':(s.mineCount)+' votes'}${!open?'':(ST.flags&&ST.flags.voteFinal)?' — tap to add more':' — tap to change'}</div>`:''}</div>
         <div class="cnt"><b class="mono">${s.votes}</b><span>vote${s.votes===1?'':'s'}</span></div>
         ${open?(()=>{
            /* The same affordability rule as the list rows. Without it this button
@@ -595,7 +613,9 @@ function render(){
            return `<button class="qvb ${s.mine?'on':''}" ${qdis?'disabled':''} onclick="openVote('${s.id}')"
              aria-label="${s.mine?'Add to your votes on':'Vote for'} ${esc(s.title)}">+</button>`;})():''}
       </div>`).join('')
-     :`<div class="qempty"><b>No votes yet</b>Pick a song below and you’ll set the queue.</div>`}
+     :`<div class="qempty">${(d.songs||[]).length||(d.played||[]).length
+         ? `<b>No votes yet</b>Pick a song below and you’ll set the queue.`
+         : `<b>Nothing on the list yet</b>${esc(artistFirst())} is still putting tonight’s songs in.`}</div>`}
   </div>`;
 
   h += askCard(d, open);
@@ -614,8 +634,13 @@ function render(){
     GENRE?' · '+esc((d.tags||[]).find(t=>t.id===GENRE)?.label||''):''}</span></div>`;
   h += rest.length
     ? `<div class="list">${rest.map(s=>row(s,c,open,false)).join('')}</div>`
+    /* "Everything's in the queue above" was said even when there was no queue and no
+       library — a brand-new artist's room told the fan to pick a song below and that
+       everything was already above it, on the same screen. */
     : `<div class="nores">${q?`Nothing matches “${esc(FILTER)}”`
-        :GENRE?`Nothing in that genre right now`:'Everything’s in the queue above'}</div>`;
+        :GENRE?`Nothing in that genre right now`
+        :(queue.length?'Everything’s in the queue above'
+          :`${esc(artistFirst())} hasn’t put tonight’s songs in yet`)}</div>`;
 
   if(replays.length) h += `<div class="sect"><b>Already played</b><span>${d.replayCost} votes to hear again</span></div>
     <div class="list">${replays.map(s=>row(s,c,open,true)).join('')}</div>`;

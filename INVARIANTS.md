@@ -60,6 +60,39 @@ If you are about to violate one, stop and say so rather than working around it.
 9. **The app must work fully with payments switched off.** If `STRIPE_SECRET_KEY`
    is absent, voting still works and the paid buttons degrade gracefully.
 
+7b. **CLAIMED IS NOT DELIVERED.** `redeemSession` claims the Stripe session before
+   granting, so a double-tap and a webhook racing the return page cannot grant
+   twice. For a long time the claim was the ONLY marker — so a grant that failed
+   after it left the money taken, the votes ungranted, and all three recovery paths
+   answering `already`. That is the 2026-08-30 failure with a different cause.
+
+   The claim now carries `delivered:false` until the grant lands, `revenue.mjs`
+   counts an undelivered marker as OUTSTANDING so the sweep retries it, and the
+   grant itself is idempotent per (fan, session) via `me.gr` on the fan record —
+   because without that, the retry that fixes losing votes would start minting them.
+   `carryFans` preserves `gr` for the same reason. A marker with no `delivered` field
+   predates this and is treated as delivered, because those really were.
+
+7c. **A country is asked for, never guessed.** An Express account's country is
+   IMMUTABLE, and Stripe assigns the PLATFORM's when none is given — so an artist on
+   Koh Phangan would silently get a US account and could never be paid out.
+   `payStart` refuses with 428 until it has one, validated against
+   `PAYOUT_COUNTRIES`: slicing a country NAME to two letters turns Thailand into TH
+   by luck and Germany into GE, which is not a country.
+
+0bm. **Approving the tick RE-CHECKS, and a rejection can revoke it.** `idApprove`
+   used to verify any artist id outright — no ID on file, no plan, no Connect — so a
+   mistap approved somebody who had done none of it. It now re-runs
+   `artistVerifyChecks` and refuses with the reason. `idReject` un-verifies, because
+   a mistake that cannot be undone is a page wearing a tick it should not have. An
+   unknown target is a 404, not a cheerful ok. The ID delete is VERIFIED and its
+   failure reported rather than swallowed.
+
+0bn. **The tick goes when the plan goes.** A venue dropped to free loses `verified`
+   on the write AND `shapeVenue` refuses to report one for an unpaid page — belt and
+   braces, because the second half cannot be missed by a code path that forgot. A
+   purchased trust signal that outlives the purchase is worse than none.
+
 ## Profile & embeds
 
 9b. **A pasted URL is a parse input, never a record and never an iframe src.**

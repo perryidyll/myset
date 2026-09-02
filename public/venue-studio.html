@@ -645,8 +645,9 @@ function render(){
     <div class="sec"><span class="kick">Verification</span></div>
     ${V.verified
       ? `<div class="list"><div class="row"><div class="m"><div class="t">Verified ✓</div>
-          <div class="s">${V.verifiedVia==='website'?'Your email is on your website’s domain, and the site names your venue'
-            :V.verifiedVia==='artists'?'Ten artists who play here confirmed it':'Checked by MySet'}</div></div>
+          <div class="s">${V.verifiedVia==='website+artists'?'Your website checks out and the artists who play here confirmed it'
+            :V.verifiedVia==='owner'?'Checked by MySet by hand'
+            :'Your website, and the artists who play here'}</div></div>
           <span class="pill ok">✓</span></div></div>`
       : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Your page says <b>Unverified listing</b> for now. Four things are needed and they’re all needed — the checklist, with what’s missing, is at the top of the <b>Page</b> tab.</p>
          <div class="wrap"><button class="big alt" onclick="setTab('page')">Show me the checklist</button></div>`}

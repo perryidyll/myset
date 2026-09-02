@@ -295,7 +295,7 @@ function render(){
     ${v.tagline?`<p class="tag">${esc(v.tagline)}</p>`:''}
     <p class="place">${esc(v.address||[v.city,v.country].filter(Boolean).join(', '))}</p>
     ${(V.vouches&&V.vouches.count)?`<p class="place" style="color:var(--accent-ink);font-weight:600">
-      ✓ Confirmed by ${V.vouches.count} artist${V.vouches.count===1?'':'s'} who play${V.vouches.count===1?'s':''} here</p>`:''}
+      ${V.vouches.count} artist${V.vouches.count===1?'':'s'} who play${V.vouches.count===1?'s':''} here confirmed it${V.verified?'':' \u2014 one of the things the green tick needs'}</p>`:''}
   </div>
 
   <div class="vacts">

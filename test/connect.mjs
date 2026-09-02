@@ -83,6 +83,15 @@ eq('so her room is told payments are off', (await pub('ana-reyes', 'f1')).paymen
 const early = await buy('ana-reyes', 'f1', 'small');
 eq('and the endpoint refuses, not just the button', early.status, 503);
 
+/* An Express account's country is IMMUTABLE, and with no value Stripe assigns the
+   PLATFORM's — so an artist on Koh Phangan would silently get a US account and could
+   never be paid out. payStart refuses rather than letting Stripe pick. */
+const noCountry = await AS(TA, 'payStart', {});
+eq('starting with no country is refused', [noCountry.status, noCountry.error], [428, 'need-country']);
+eq('and no account was created', __stripe.accounts.size, 0);
+const badCountry = await AS(TA, 'payStart', { country: 'Thailand' });
+eq('a name is not a country code either', badCountry.status, 428);
+
 const start = await AS(TA, 'payStart', { country: 'US' });
 ok('onboarding starts', start.ok && /connect\.stripe\.test\/onboard/.test(start.url || ''), start);
 const acct = (lastCall('accounts.create') && __stripe.accounts.size) ? [...__stripe.accounts.keys()][0] : '';

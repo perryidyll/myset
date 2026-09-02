@@ -6,8 +6,14 @@ import { createHash } from 'node:crypto';
 const mem = new Map();                       // key -> { body: string|Buffer, etag, metadata }
 const tag = (b) => '"' + createHash('sha1').update(b).digest('hex').slice(0, 16) + '"';
 
-export const __reset = () => mem.clear();
+export const __reset = () => { mem.clear(); failRe = null; };
 export const __dump = () => new Map(mem);
+
+/* Make writes to matching keys report success-without-sticking — the acked-but-lost
+   write INVARIANT 4 exists for, and the only way to test a recovery path that is
+   supposed to survive one. Netlify Blobs really does this under concurrency. */
+let failRe = null;
+export const __failWrites = (re) => { failRe = re; };
 
 export function getStore() {
   return {
@@ -24,6 +30,7 @@ export function getStore() {
       return r ? r.data : null;
     },
     async set(key, body, opts = {}) {
+      if (failRe && failRe.test(key)) return { modified: false };   // acked, not stuck
       const cur = mem.get(key);
       if (opts.onlyIfNew && cur) return { modified: false };
       if (opts.onlyIfMatch && (!cur || cur.etag !== opts.onlyIfMatch)) return { modified: false };

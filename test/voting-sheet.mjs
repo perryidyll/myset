@@ -109,6 +109,16 @@ ok('every flag says what it does and how it gets removed',
    list.flags.every((f) => f.what && f.remove), list.flags);
 eq('a typo is not a flag', flagValue(await readFlags(), 'voetFinal', 'perry-idyll'), false);
 eq('setting an unknown flag is refused', (await A('flagSet', { flag: 'nope', on: true })).status, 400);
+/* `FLAGS['toString']` is truthy — it is on the prototype chain — so a plain
+   truthiness check let these through and PERSISTED them into the document. */
+for (const junk of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {
+  eq(`"${junk}" is not a flag`, (await A('flagSet', { flag: junk, on: true })).status, 400);
+  eq(`...and reads false`, flagValue(await readFlags(), junk, 'perry-idyll'), false);
+}
+const clean = await A('flagList');
+ok('and none of them got into the document',
+   !Object.keys((clean.byArtist || {})).length ||
+   !JSON.stringify(clean.byArtist).includes('toString'), clean.byArtist);
 const on = await A('flagSet', { flag: 'voteFinal', on: true });
 eq('it can be switched on globally', on.inForce, true);
 eq('and the room is told, so the sheet can change its words',

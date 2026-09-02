@@ -84,9 +84,10 @@ async function handlePlan(aid, action, body) {
   }
 
   if (action === 'flagSet') {
-    const { FLAGS, mutateFlags, readFlags, flagsFor } = await import('./_flags.mjs');
+    const { isFlag, mutateFlags, readFlags, flagsFor } = await import('./_flags.mjs');
     const name = String(body.flag || '');
-    if (!FLAGS[name]) return bad('unknown flag');
+    // own-property check: `FLAGS['toString']` is truthy and is not a flag
+    if (!isFlag(name)) return bad('unknown flag');
     const who = body.artistId ? cleanArtistId(body.artistId) : '';
     const on = body.on === null || body.on === undefined ? null : !!body.on;
     await mutateFlags((f) => {
@@ -117,27 +118,58 @@ async function handlePlan(aid, action, body) {
   }
 
   if (action === 'idApprove' || action === 'idReject') {
-    const { mutateIdQueue, ID_SLOT } = await import('./_verify.mjs');
+    const { mutateIdQueue, ID_SLOT, artistVerifyChecks } = await import('./_verify.mjs');
+    const { getImage } = await import('./_img.mjs');
     const who = cleanArtistId(body.artistId || '');
     if (!who) return bad('which artist?');
+    /* A target that does not exist is a 404, not a cheerful ok. This reported
+       success for any string, which made a typo look like a decision. */
+    const reg0 = await readArtists();
+    if (!reg0.byId[who]) return bad('unknown artist', 404);
     const approve = action === 'idApprove';
+
     if (approve) {
+      /* RE-CHECK, rather than trust the queue row. This used to verify any artist
+         id outright — no ID on file, no plan, no Connect — so a mistap approved
+         somebody who had done none of it. */
+      const now = await artistVerifyChecks(who);
+      if (!now.reviewed && !now.readyForReview) {
+        return bad(!now.paidPlan ? 'They are not on a paid plan'
+          : !now.payments ? 'Their card payments are not set up'
+          : 'There is no ID on file for them', 409);
+      }
       await mutateArtists((r) => {
         if (!r.byId[who]) return false;
         r.byId[who].verified = true;
         r.byId[who].verifiedAt = Date.now();
         return true;
       });
+    } else {
+      /* A rejection has to be able to UNDO an approval, or a mistake is permanent
+         and a page keeps a tick it should not have. */
+      await mutateArtists((r) => {
+        if (!r.byId[who] || !r.byId[who].verified) return false;
+        r.byId[who].verified = false;
+        r.byId[who].verifiedAt = null;
+        return true;
+      });
     }
+
     await mutateIdQueue((q) => {
       q.by[who] = { state: approve ? 'approved' : 'rejected', at: Date.now(),
                     why: approve ? '' : String(body.why || '').slice(0, 140) };
       return true;
     });
     /* The photo goes now, either way. Keeping a stranger's government ID after the
-       decision it was collected for is a liability nobody asked for. */
-    await dropImage(who, ID_SLOT).catch(() => {});
-    return json({ ok: true, artistId: who, approved: approve });
+       decision it was collected for is a liability nobody asked for — so the delete
+       is VERIFIED and reported rather than swallowed. INVARIANT 0bk. */
+    let idGone = true;
+    try {
+      await dropImage(who, ID_SLOT);
+      idGone = !(await getImage(who, ID_SLOT));
+    } catch { idGone = false; }
+    return json({ ok: true, artistId: who, approved: approve, idDeleted: idGone,
+      ...(idGone ? {} : { note: 'Their ID photo could not be deleted — try again.' }) });
   }
 
   /* A venue's plan. There is no venue self-serve billing yet, so the owner sets it
@@ -150,7 +182,16 @@ async function handlePlan(aid, action, body) {
     let found = false;
     await mutateVenues((r) => {
       if (!r.byId[vid]) return false;
-      r.byId[vid].plan = plan; found = true; return true;
+      r.byId[vid].plan = plan;
+      /* The tick is part of Pro, so it goes with Pro. Leaving it set meant a venue
+         kept a green tick on a free page for ever, which is a purchased trust
+         signal that stopped being purchased. */
+      if (plan === 'free' && r.byId[vid].verified) {
+        r.byId[vid].verified = false;
+        r.byId[vid].verifiedVia = null;
+        r.byId[vid].verifiedAt = null;
+      }
+      found = true; return true;
     });
     if (!found) return bad('unknown venue', 404);
     return json({ ok: true, venueId: vid, plan });
@@ -890,7 +931,17 @@ async function handleProfile(aid, action, body, req, me) {
   if (action === 'payStart') {
     const { ensureAccount, onboardingLink, connectStatus } = await import('./_connect.mjs');
     const origin = new URL(req.url).origin;
-    const made = await ensureAccount(aid, me.email || '', String(body.country || '').toUpperCase().slice(0, 2));
+    const { cleanCountry, readConnect } = await import('./_connect.mjs');
+    /* REFUSE rather than let Stripe pick. An Express account's country cannot be
+       changed afterwards, and with no value Stripe assigns the PLATFORM's — so an
+       artist on Koh Phangan would get a US account and could never be paid out
+       properly. Validated against a real list, because slicing a country NAME to two
+       letters turns Germany into GE. Only asked once: only the first call creates
+       the account. */
+    const country = cleanCountry(body.country);
+    const existing = await readConnect(aid);
+    if (!existing.acct && !country) return bad('need-country', 428);
+    const made = await ensureAccount(aid, me.email || '', country);
     if (!made.ok) return bad(made.error || 'could not start', 502);
     const link = await onboardingLink(aid, origin);
     if (!link.ok) return bad(link.error || 'could not start', 502);

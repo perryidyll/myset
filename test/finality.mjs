@@ -16,6 +16,7 @@ const showFn = (await import('../netlify/functions/show.mjs')).default;
 const voteFn = (await import('../netlify/functions/vote.mjs')).default;
 const { readFans } = await import('../netlify/functions/_lib.mjs');
 const { readFileSync } = await import('node:fs');
+const page0 = readFileSync(new URL('../public/vote.html', import.meta.url), 'utf8');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -68,6 +69,41 @@ eq('the round reset cleared her votes', await votesOn('ann', 'alpha'), 0);
 const reused = await send({ fan: 'ann', song: 'alpha', n: 1, op: 'cast', cast: ID1 });
 ok('the same id is a NEW cast now', reused.ok && !reused.replay, reused);
 eq('because the votes it referred to are gone', await votesOn('ann', 'alpha'), 1);
+
+console.log('\nAN ACKED-BUT-LOST WRITE CANNOT CAST TWICE  (INVARIANT 4 meets 15h)');
+/* The dangerous shape: the shard write lands but the read-back verify says it did
+   not, so casDoc re-runs the mutator. Without the cast-id ring being checked INSIDE
+   the mutator, the re-run would cast n votes a second time. */
+const { __failWrites } = await import('./blobs-fake.mjs');
+const IDR = 'castretry0000000001';
+await send({ fan: 'ret', song: 'charlie', n: 2, op: 'cast', cast: IDR });
+eq('two cast normally', await votesOn('ret', 'charlie'), 2);
+__failWrites(/^f\d+_/);                       // every fan write now acks without sticking
+const lost = await send({ fan: 'ret', song: 'charlie', n: 3, op: 'cast', cast: 'castretry0000000002' });
+__failWrites(null);
+eq('the lost write changed nothing', await votesOn('ret', 'charlie'), 2);
+const replayLost = await send({ fan: 'ret', song: 'charlie', n: 3, op: 'cast', cast: 'castretry0000000002' });
+ok('and retrying that id casts it exactly once', replayLost.ok, replayLost);
+eq('five now, not eight', await votesOn('ret', 'charlie'), 5);
+const replayAgain = await send({ fan: 'ret', song: 'charlie', n: 3, op: 'cast', cast: 'castretry0000000002' });
+eq('a third attempt is a replay', replayAgain.replay, true);
+eq('still five', await votesOn('ret', 'charlie'), 5);
+
+console.log('\nAND THE PAGE ACTUALLY REUSES THE ID  (otherwise it is nominal)');
+ok('vote() retries once with the same body',
+   /let d=null;[\s\S]{0,240}d=await post\(\);[\s\S]{0,240}d=await post\(\);/.test(page0),
+   'vote() must retry with the same cast id');
+
+console.log('\nA MALFORMED CAST ID IS REFUSED, NOT QUIETLY IGNORED');
+/* Dropping it silently left the request with no idempotency at all — the one thing
+   the id exists to provide, so failing quietly is worse than failing. */
+for (const bad of ['short', 'has spaces here', 'x'.repeat(80), '../../etc', '\u0000nul']) {
+  const r = await send({ fan: 'zed', song: 'charlie', n: 1, op: 'cast', cast: bad });
+  eq(`refused: ${JSON.stringify(bad).slice(0, 22)}`, [r.status, r.error], [400, 'bad cast id']);
+}
+eq('and nothing was cast', await votesOn('zed', 'charlie'), 0);
+ok('an absent id is still fine — an old page has no concept of one',
+   (await send({ fan: 'zed', song: 'charlie', n: 1, op: 'cast' })).ok);
 
 console.log('\nA REPLAYED TAKE-BACK IS ALSO ONLY DONE ONCE  (finality off for this bit)');
 await setFinal(false);            // there is no take-back to replay when it is on

@@ -50,9 +50,14 @@ export const mutateFlags = (fn) =>
   casDoc(KEY, empty, (f) => { f.global ||= {}; f.byArtist ||= {}; return fn(f); });
 
 /** The value in force for one artist. Unknown names are always false. */
+/* `FLAGS[name]` finds `toString`, `constructor` and friends on the prototype chain,
+   so an undeclared name could look declared and be persisted into the document.
+   Own-property only. */
+export const isFlag = (name) => Object.prototype.hasOwnProperty.call(FLAGS, String(name));
+
 export function flagValue(flags, name, aid) {
+  if (!isFlag(name)) return false;
   const spec = FLAGS[name];
-  if (!spec) return false;
   const mine = (flags.byArtist || {})[aid] || {};
   if (typeof mine[name] === 'boolean') return mine[name];
   const g = (flags.global || {})[name];
@@ -62,9 +67,9 @@ export function flagValue(flags, name, aid) {
 
 /** Everything in force for one artist, ready to put in a payload. */
 export function flagsFor(flags, aid) {
-  const out = {};
+  const out = Object.create(null);
   for (const name of Object.keys(FLAGS)) out[name] = flagValue(flags, name, aid);
-  return out;
+  return { ...out };
 }
 
 /** Convenience for a handler that needs one answer and has no flags doc yet. */

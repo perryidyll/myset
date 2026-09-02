@@ -53,3 +53,6 @@ node --import ./test/register.mjs test/connect.mjs
 echo
 echo "── the feedback prompt ──"
 node --import ./test/register.mjs test/feedback.mjs
+echo
+echo "── a payment taken is a payment delivered ──"
+node --import ./test/register.mjs test/delivery.mjs

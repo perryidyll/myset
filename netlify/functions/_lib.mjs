@@ -548,7 +548,8 @@ export async function carryFans(aid, show) {
           const pledged = Math.max(0, bag[id].pledged || 0);
           const carry = Math.max(0, unspentPaid(bag[id], show, id) - pledged);
           const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show, id)) : 0);
-          if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted };
+          // `gr` rides along: it is what makes a paid grant idempotent (_pay.mjs)
+          if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-20) };
           else delete bag[id];          // nothing owed — don't keep the record
         }
         return true;

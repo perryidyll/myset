@@ -140,6 +140,40 @@ const stB = await AS(TB, 'verifyStatus');
 eq('he is told he was rejected', stB.checks.state, 'rejected');
 eq('and why', stB.checks.rejectedWhy, 'name did not match');
 
+console.log('\nAPPROVING RE-CHECKS, RATHER THAN TRUSTING THE QUEUE ROW');
+const cy = await createArtist({ email: 'cy@example.com', name: 'Cy Lo', slug: 'cy-lo' });
+const blind = await OWNER('idApprove', { artistId: cy.artistId });
+eq('an artist who has done none of it is refused', blind.status, 409);
+ok('and told which step is missing', /paid plan/i.test(blind.error || ''), blind.error);
+reg = await readArtists();
+eq('so they are NOT verified', !!reg.byId[cy.artistId].verified, false);
+eq('a target that does not exist is a 404, not a cheerful ok',
+   (await OWNER('idApprove', { artistId: 'no-such-artist' })).status, 404);
+
+console.log('\nA REJECTION CAN UNDO AN APPROVAL  (a mistake must not be permanent)');
+reg = await readArtists();
+eq('Ana is verified from earlier', !!reg.byId[ana.artistId].verified, true);
+const undo = await OWNER('idReject', { artistId: ana.artistId, why: 'approved by mistake' });
+ok('the owner can take it back', undo.ok, undo);
+reg = await readArtists();
+eq('she is no longer verified', !!reg.byId[ana.artistId].verified, false);
+
+console.log('\nAND THE ID DELETE IS VERIFIED, NOT ASSUMED');
+ok('the decision reports it', undo.idDeleted === true, undo);
+
+console.log('\nA VENUE THAT STOPS PAYING STOPS BEING VERIFIED');
+await V.mutateVenues((r) => { r.byId[ven.venueId].verified = true;
+  r.byId[ven.venueId].verifiedVia = 'website+artists'; return true; });
+let vreg = await V.readVenues();
+eq('verified while on Pro', V.shapeVenue(await V.getVenueProfile(ven.venueId), vreg.byId[ven.venueId]).verified, true);
+ok('the owner drops them to free', (await OWNER('venuePlan', { venueId: ven.venueId, plan: 'free' })).ok);
+vreg = await V.readVenues();
+eq('the stored flag is cleared', !!vreg.byId[ven.venueId].verified, false);
+eq('and a lingering flag could not render one either',
+   V.shapeVenue(await V.getVenueProfile(ven.venueId),
+                { ...vreg.byId[ven.venueId], verified: true, plan: 'free' }).verified, false);
+eq('an unknown venue is a 404', (await OWNER('venuePlan', { venueId: 'nope', plan: 'pro' })).status, 404);
+
 delete process.env.STRIPE_SECRET_KEY;
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

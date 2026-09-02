@@ -64,7 +64,16 @@ export async function redeemSession(aid, session, fallbackFan = '') {
 
   const sid = session.id;
   const pre = await readMeta(aid);
-  if (pre.paid[sid]) return { ok: true, already: true, ...pre.paid[sid] };
+  /* CLAIMED IS NOT DELIVERED. The claim used to be the only marker, so a grant that
+     failed after it — a lost shard write, the function dying between the two — left
+     the money taken, the votes ungranted, and all three recovery paths answering
+     "already". That is the 2026-08-30 failure with a different cause, and it is why
+     `delivered` exists. A marker without it is a claim from before this change and
+     is treated as delivered, because those really were. */
+  if (pre.paid[sid] && pre.paid[sid].delivered !== false) {
+    return { ok: true, already: true, ...pre.paid[sid] };
+  }
+  const retrying = !!pre.paid[sid];        // claimed before, never delivered
 
   const md = session.metadata || {};
   const who = cleanFanId(md.fan) || cleanFanId(fallbackFan);
@@ -72,29 +81,57 @@ export async function redeemSession(aid, session, fallbackFan = '') {
   const at = (session.created ? session.created * 1000 : Date.now());
   let granted = 0, already = false;
 
-  // claim first so a double-tap / webhook race can't grant twice
-  await mutateMeta(aid, (m) => {
-    if (m.paid[sid]) { already = true; return false; }
-    if (md.kind === 'votes') granted = parseInt(md.votes, 10) || 0;
-    if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at });
-    m.paid[sid] = { kind: md.kind || 'unknown', amount, granted, fan: who, at };
-    return true;
-  });
-
-  if (already) {
-    const m = await readMeta(aid);
-    return { ok: true, already: true, ...(m.paid[sid] || {}) };
+  /* Claim first so a double-tap or a webhook race cannot grant twice — but claim it
+     as UNDELIVERED, so a failure below leaves work to be picked up rather than a
+     receipt for nothing. A tip needs no grant, so it is delivered on the spot. */
+  if (!retrying) {
+    await mutateMeta(aid, (m) => {
+      if (m.paid[sid] && m.paid[sid].delivered !== false) { already = true; return false; }
+      if (md.kind === 'votes') granted = parseInt(md.votes, 10) || 0;
+      if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at });
+      const needsGrant = md.kind === 'votes' && !!who && granted > 0;
+      m.paid[sid] = { kind: md.kind || 'unknown', amount, granted, fan: who, at,
+                      delivered: !needsGrant };
+      return true;
+    });
+    if (already) {
+      const m = await readMeta(aid);
+      return { ok: true, already: true, ...(m.paid[sid] || {}) };
+    }
+  } else {
+    granted = Number(pre.paid[sid].granted) || (md.kind === 'votes' ? parseInt(md.votes, 10) || 0 : 0);
   }
 
   if (md.kind === 'votes' && who && granted) {
-    // INVARIANT 4: the session is already claimed, so a silent write failure here
-    // would lose paid-for votes permanently. Verify by read-back and retry.
-    let target = null;
+    /* THE GRANT IS IDEMPOTENT PER (fan, session), recorded on the fan record itself.
+       Without that, a re-attempt after a lost `delivered` flip would hand out the
+       pack twice — so the retry that fixes losing votes would start minting them.
+       INVARIANT 4's read-back verify stays: a silently-dropped write here is exactly
+       what this whole two-phase dance is guarding against. */
+    let target = null, alreadyGranted = false;
     await mutateFan(
       aid, who,
-      (me) => { target = (me.extra || 0) + granted; me.extra = target; return true; },
-      (me) => target !== null && (me.extra || 0) >= target
+      (me) => {
+        me.gr ||= [];
+        if (me.gr.includes(sid)) { alreadyGranted = true; return false; }
+        me.gr.push(sid);
+        if (me.gr.length > 20) me.gr = me.gr.slice(-20);
+        target = (me.extra || 0) + granted;
+        me.extra = target;
+        return true;
+      },
+      (me) => alreadyGranted || (target !== null && (me.extra || 0) >= target
+              && (me.gr || []).includes(sid))
     );
+    /* Only now is it delivered. If this flip is lost the marker stays undelivered and
+       the sweep tries again — which is safe, because of the guard above. */
+    await mutateMeta(aid, (m) => {
+      if (!m.paid[sid] || m.paid[sid].delivered === true) return false;
+      m.paid[sid].delivered = true;
+      m.paid[sid].deliveredAt = Date.now();
+      return true;
+    }).catch(() => {});
   }
-  return { ok: true, kind: md.kind || 'unknown', amount, granted, fan: who, at };
+  return { ok: true, kind: md.kind || 'unknown', amount, granted, fan: who, at,
+           redelivered: retrying || undefined };
 }

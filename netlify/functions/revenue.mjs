@@ -80,7 +80,8 @@ export default async (req) => {
       fan: md.fan || '',
       note: md.note || '',
       email: (s.customer_details && s.customer_details.email) || '',
-      redeemed: !!meta.paid[s.id],
+      // claimed-but-undelivered is NOT redeemed — it is the case the sweep exists for
+      redeemed: !!(meta.paid[s.id] && meta.paid[s.id].delivered !== false),
     };
   }).sort((a, b) => b.at - a.at);
 
