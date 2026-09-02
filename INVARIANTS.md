@@ -521,6 +521,32 @@ If you are about to violate one, stop and say so rather than working around it.
    `show.codeHash`); `ADMIN_CODE` remains the recovery key so he cannot lock
    himself out. Never make env-var-only the sole way in.
 
+15g. **A feature flag is a question with two REAL answers.** `_flags.mjs` exists so
+   a change that is an opinion rather than a fix can be tried both ways without an
+   edit-deploy-undo cycle — and on this account a production deploy is the expensive
+   thing (INVARIANT 9d0), so "just try it" otherwise costs money and risks being
+   mid-undo when a show starts. Rules: a flag is never a way to ship something
+   half-finished (a flag that is off because the code behind it is broken is a lie
+   with a switch on it); every flag is declared in `FLAGS` with what it does, what
+   off means, and its REMOVAL PLAN; an undeclared name always reads false, so a typo
+   cannot enable anything; and the document is never written during a show, because
+   it is read on the hot audience poll.
+
+15h. **The un-vote toggle is what makes voting idempotent — do not remove it without
+   replacing that.** `vote.mjs` has no request id, so a lost response today finds the
+   vote already cast and removes it: annoying, self-correcting, never a double
+   charge. Under `voteFinal` the same lost response casts AGAIN, on bar wifi, at
+   replay prices. Finality therefore cannot ship before a per-confirmation cast id
+   does. `PLAN-vote-finality.md` has the sequence; step 1 is not optional.
+
+15i. **A vote is one entry in `fan.v`, and the same id may appear many times.** The
+   audience sheet casts several votes at once, and multiplicity lives in that array
+   rather than a new field, because `voteCounts` and `creditsUsed` both work by
+   counting entries. Anything that reasons about "did this fan vote for X" must count
+   occurrences, not test membership — `show.mjs` sends `mineCount` alongside `mine`
+   for exactly that reason. The quantity is bounded by affordability and hard-capped
+   at 50 so a hand-made request cannot make a million-element array.
+
 15e. **A studio code is half a credential; the page name is the other half.** The
    code door used to check only `getShow(DEFAULT_ARTIST).codeHash`, while `setCode`
    wrote into the CALLING artist's record — so every artist but the founder got a
@@ -685,6 +711,30 @@ If you are about to violate one, stop and say so rather than working around it.
     mid-sentence.** `.note b{display:block}` was meant for the note's heading and
     also hit every `<b>` in its body, so "you only need **one**." rendered on three
     lines. Scope heading styles to the direct child (`.note>b`).
+
+0bj. **The tick is premium, and still not for sale.** Paying opens the door to being
+   CHECKED; it never buys the badge. `/api/venueauth checkDomain` used to grant
+   `verified` on an email-domain match alone — buy a domain, put an email on it,
+   claim a bar you have never visited — which is exactly what INVARIANT 0ak says is
+   not proof. It now only REPORTS, and `tryVerifyByWebsite` is the only thing that
+   can set the flag: paid plan AND email on the site's domain AND the site naming
+   the venue AND `MIN_VOUCHES` (three) artists who have a gig listed there.
+
+0bk. **An ID photo is never public and never kept.** An artist proves identity with a
+   photo of an ID, so it is written to an image slot `img.mjs` refuses to serve —
+   that function tests `SLOTS` before it looks at anything, and `ID_SLOT` is
+   deliberately absent from it — and it is DELETED the moment the owner decides,
+   approved or rejected. Only the decision is kept. Holding a stranger's government
+   ID after the decision it was collected for is a liability nobody asked for, and
+   the refusal to upload happens BEFORE the photo is taken when a check cannot pass.
+
+0bl. **One gate for every money button, and Stripe answers it.** `connectReady(aid)`
+   in `_pay.mjs` reads what Stripe reports about that account, never a local "they
+   finished onboarding" flag. It returns false for everyone until Connect is built,
+   which is the correct answer rather than a placeholder: without it a second
+   artist's money lands in the founder's balance (INVARIANT 0r). Tips, packs and any
+   future charge read this one function, so INVARIANT 0ad holds — the room is never
+   shown a button that leads to a shrug.
 
 ## Setlists
 
