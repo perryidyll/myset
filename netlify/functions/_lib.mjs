@@ -512,6 +512,10 @@ export async function clearAllFanVotes(aid, costShow) {
           // drop stale stamps and the non-song spend too — free credits refresh
           // here, so anything charged against them has to refresh with them
           bag[id].v = []; bag[id].ts = {}; bag[id].spent = 0;
+          /* The cast-id ring goes with them (INVARIANT 15h). A replayed id after the
+             reset is a NEW cast, because the votes it referred to no longer exist —
+             keeping the ring would silently swallow a fan's first vote of the round. */
+          bag[id].casts = [];
         }
         return true;
       }, null).catch(() => {})
@@ -560,6 +564,49 @@ export async function carryFans(aid, show) {
    Fixed at the source. Narrowing a setlist and hiding a song were NOT affected —
    the song stays in show.songs, so the toggle works and refunds correctly; that was
    measured, and the original report had it wrong. */
+/* Give back every vote held on a song the room can no longer choose.
+
+   The un-vote toggle used to be the escape hatch for this: narrow the setlist or
+   hide a song, and a fan holding a vote on it could tap it off and get their credit
+   back. Under `voteFinal` there is no toggle, so without this the credit is stranded
+   until the next song starts — and INVARIANT 15's promise is that a fan can always
+   recover what they paid for, whatever the ARTIST has changed since.
+
+   It is a fan-wide write across every shard, which is why it was avoided before. It
+   only runs when the playable set actually SHRANK, which is a handful of times a
+   night at most, and it returns the ids it released so the artist can be told.
+
+   NOT called when a song is merely PLAYED — a played song stays votable at the
+   replay price, and the round reset returns those credits anyway. */
+export async function releaseUnvotable(aid, show) {
+  const canVote = votable(show);
+  const known = new Map((show.songs || []).map((x) => [x.id, x]));
+  const freed = new Set();
+  await Promise.all(
+    Array.from({ length: SHARDS }, (_, n) =>
+      casDoc(shardKey(aid, n), () => ({}), (bag) => {
+        let touched = false;
+        for (const id of Object.keys(bag)) {
+          const v = bag[id].v || [];
+          if (!v.length) continue;
+          const kept = v.filter((sid) => {
+            const song = known.get(sid);
+            const okNow = song ? canVote(song) : false;
+            if (!okNow) freed.add(sid);
+            return okNow;
+          });
+          if (kept.length === v.length) continue;
+          for (const sid of v) if (!kept.includes(sid) && bag[id].ts) delete bag[id].ts[sid];
+          bag[id].v = kept;
+          touched = true;
+        }
+        return touched;
+      }, null).catch(() => {})
+    )
+  );
+  return [...freed];
+}
+
 export async function dropSongVotes(aid, songId) {
   if (!songId) return;
   await Promise.all(
@@ -567,9 +614,16 @@ export async function dropSongVotes(aid, songId) {
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
         let touched = false;
         for (const id of Object.keys(bag)) {
-          const at = (bag[id].v || []).indexOf(songId);
-          if (at < 0) continue;
-          bag[id].v.splice(at, 1);
+          const v = bag[id].v || [];
+          /* EVERY occurrence, not the first. This was indexOf + splice, written when
+             one fan could hold at most one vote per song. Now that a fan casts
+             several at once (INVARIANT 15i), removing one entry left the rest
+             pointing at a song that no longer exists: the tally was right but the
+             fan stayed charged for votes on nothing, with no way to get them back
+             once finality is on. */
+          const kept = v.filter((x) => x !== songId);
+          if (kept.length === v.length) continue;
+          bag[id].v = kept;
           if (bag[id].ts) delete bag[id].ts[songId];
           touched = true;
         }

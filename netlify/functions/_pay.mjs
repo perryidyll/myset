@@ -1,4 +1,4 @@
-import { mutateFan, mutateMeta, readMeta, cleanFanId } from './_lib.mjs';
+import { mutateFan, mutateMeta, readMeta, cleanFanId, readDoc } from './_lib.mjs';
 import { isPlatformOwner } from './_plan.mjs';
 
 /* ---------- CAN THIS ARTIST TAKE MONEY AT ALL? ----------
@@ -23,8 +23,35 @@ import { isPlatformOwner } from './_plan.mjs';
    When Connect lands, this becomes "has this artist finished payout onboarding?"
    and the rest of the app needs no change. That is the whole point of putting it
    here, in one function, rather than testing it at each call site. */
-export const canTakeMoney = (aid) =>
-  !!process.env.STRIPE_SECRET_KEY && isPlatformOwner(aid);
+/* Has this account finished Stripe Connect onboarding, as STRIPE says — not as a
+   local "they clicked the button" flag? Stored per account by the Connect webhook /
+   onboarding return, read here so every money button in the app has ONE gate.
+
+   Returns false for everyone today because Connect is not built yet (INVARIANT 0r).
+   That is the correct answer, not a placeholder: until it exists, a second artist's
+   money would land in the founder's Stripe balance. */
+export async function connectReady(aid) {
+  if (!process.env.STRIPE_SECRET_KEY) return false;
+  if (isPlatformOwner(aid)) return true;          // the founder's own account
+  const { data } = await readDoc(`connect_${aid}`, null);
+  return !!(data && data.chargesEnabled);
+}
+
+/* Sync, because it is read on the hot audience poll. It answers "may this account
+   show a money button at all", and INVARIANT 0ad says never show the room a button
+   that leads to a shrug.
+
+   It stays synchronous by reading `show.pay`, which _connect.mjs mirrors from Stripe
+   and which every caller has already loaded — so gating on Connect costs ZERO extra
+   blob reads on the path the whole room hammers. Stripe is the authority; this is a
+   cache with exactly one writer.
+
+   The founder's clause is not a special case for its own sake: his account predates
+   Connect and charges on the platform account directly, so removing it would switch
+   off live payments at the next deploy. */
+export const canTakeMoney = (aid, show) =>
+  !!process.env.STRIPE_SECRET_KEY &&
+  (isPlatformOwner(aid) || !!(show && show.pay && show.pay.ready));
 
 /* ONE implementation of "grant what this payment bought".
    Used by the return page (/api/confirm), the Stripe webhook and the artist's

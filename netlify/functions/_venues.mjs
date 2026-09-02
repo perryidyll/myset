@@ -73,7 +73,7 @@ export async function createVenue({ email, name, slug, city, country }) {
     reg.byId[vid] = {
       slug: s, name: nm, createdAt: Date.now(),
       city: clean(city, 60), country: clean(country, 60),
-      verified: false, verifiedVia: null, verifiedAt: null,
+      verified: false, verifiedVia: null, verifiedAt: null, plan: 'free',
     };
     reg.bySlug[s] = vid;
     reg.byEmail[email] = { venueId: vid, role: 'owner' };
@@ -107,6 +107,18 @@ const TOKEN_TTL = 30 * 24 * 3600e3;
 
 /** This venue's own rev, falling back to the registry-wide one for records that
  *  predate per-venue revs. See revOf() in _auth.mjs for why the fallback matters. */
+/* Venue plans. Deliberately thinner than the artist ladder in _plan.mjs: a venue
+   pays for reach and trust, not for running a show. Everything the ROOM
+   experiences stays free either way (INVARIANT 0w). */
+export const VENUE_PLANS = {
+  free: { label: 'Free', price: 0, photos: 3, reviews: false, tick: false, tips: false, speakerVotes: false },
+  pro:  { label: 'Pro', price: 2000, photos: 12, reviews: true, tick: true, tips: true, speakerVotes: true },
+};
+export const venuePlanOf = (v) => (v && VENUE_PLANS[v.plan] ? v.plan : 'free');
+export const venueLimits = (v) => VENUE_PLANS[venuePlanOf(v)];
+/** Is this venue on a paid plan? The gate for the tick, reviews and extra photos. */
+export const venuePaid = (v) => venuePlanOf(v) !== 'free';
+
 export const vRevOf = (reg, vid) =>
   ((reg.byId || {})[vid] || {}).rev ?? reg.rev ?? 1;
 
@@ -358,6 +370,7 @@ export function shapeVenue(p, reg) {
     hours: DAYS.map((d) => ({ day: d, label: DAY_LABEL[d], ...p.hours[d] })),
     menu: p.menu, offers: p.offers, links: p.links,
     verified: !!r.verified, verifiedVia: r.verifiedVia || null,
+    plan: venuePlanOf(r),
     since: r.createdAt || null,
     updatedAt: p.updatedAt,
   };

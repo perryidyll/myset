@@ -132,24 +132,28 @@ export default async (req) => {
       return true;
     });
 
-  /* Instant verification when the person who claimed it has an email at the
-     venue's own website. Everything else stays an unverified listing until a
-     human says otherwise — see VERIFYING-A-VENUE.md. */
+  /* THIS USED TO GRANT THE TICK ON AN EMAIL-DOMAIN MATCH ALONE, which INVARIANT
+     0ak says is not proof: anyone can buy a domain, put an email on it, and claim
+     to be a bar they have never been to — and a wrong tick sends a real person to
+     the wrong place. It now only REPORTS whether the domain matches, and the single
+     verdict in _verify.mjs (paid plan + domain + the site naming the venue + three
+     artists who gig there) is the only thing that can set `verified`. */
   if (action === 'checkDomain') {
     const prof = await getVenueProfile(me.vid);
     const site = prof.links.website;
-    let ok = false;
-    if (site && domainMatches(me.email, site)) {
-      await mutateVenues((r) => {
-        const v = r.byId[me.vid];
-        if (!v || v.verified) return false;
-        v.verified = true; v.verifiedVia = 'domain'; v.verifiedAt = Date.now();
-        return true;
-      });
-      ok = true;
-    }
+    /* REPORT ONLY, and this is the second attempt at that. The first still called
+       tryVerifyByWebsite, which WRITES `verified` — so the action went on granting
+       the tick, just with more conditions attached. And it judged `me.email`, the
+       session that happened to be signed in, when a venue can add staff: a barman
+       added on Tuesday could verify the page off his own domain. `recheck()`
+       resolves the OWNER's address and shapes the profile the same way the Venue
+       Studio's own check does, so there is one verdict, computed one way. */
+    const { checksOnly } = await import('./_verify.mjs');
+    const matched = !!(site && domainMatches(me.email, site));
+    const verdict = await checksOnly(me.vid);
     const reg = await readVenues();
-    return json({ ok: true, verified: !!(reg.byId[me.vid] || {}).verified, matched: ok,
+    return json({ ok: true, verified: !!(reg.byId[me.vid] || {}).verified,
+                  matched, checks: verdict.checks, why: verdict.why,
                   website: site || '' });
   }
 

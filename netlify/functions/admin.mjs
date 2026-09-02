@@ -1,6 +1,6 @@
-import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts,
+import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, releaseUnvotable, voteCounts,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
-         MIN_CODE, weakCode,
+         MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable , gigMonthOf } from './_lib.mjs';
@@ -70,6 +70,91 @@ async function handlePlan(aid, action, body) {
 
   /* ---- owner only, from here ---- */
   if (!isPlatformOwner(aid)) return bad('unauthorized', 401);
+
+  /* Feature flags. Owner only, because a flag changes what every artist's room
+     does. Never written during a show — see _flags.mjs. */
+  if (action === 'flagList') {
+    const { FLAGS, readFlags, flagsFor } = await import('./_flags.mjs');
+    const f = await readFlags();
+    return json({ ok: true,
+      flags: Object.entries(FLAGS).map(([name, spec]) => ({
+        name, what: spec.what, remove: spec.remove, default: spec.default,
+        global: (f.global || {})[name], inForce: flagsFor(f, aid)[name] })),
+      byArtist: f.byArtist || {} });
+  }
+
+  if (action === 'flagSet') {
+    const { FLAGS, mutateFlags, readFlags, flagsFor } = await import('./_flags.mjs');
+    const name = String(body.flag || '');
+    if (!FLAGS[name]) return bad('unknown flag');
+    const who = body.artistId ? cleanArtistId(body.artistId) : '';
+    const on = body.on === null || body.on === undefined ? null : !!body.on;
+    await mutateFlags((f) => {
+      if (who) {
+        f.byArtist[who] ||= {};
+        if (on === null) delete f.byArtist[who][name];    // back to the global answer
+        else f.byArtist[who][name] = on;
+      } else if (on === null) delete f.global[name];
+      else f.global[name] = on;
+      return true;
+    });
+    const f = await readFlags();
+    return json({ ok: true, flag: name, scope: who || 'global',
+                  inForce: flagsFor(f, who || aid)[name] });
+  }
+
+  /* The ID review queue. Perry is the only person who ever sees one of these, and
+     the photo is deleted the moment he decides either way. */
+  if (action === 'idQueue') {
+    const { readIdQueue } = await import('./_verify.mjs');
+    const q = await readIdQueue();
+    const reg = await readArtists();
+    return json({ ok: true, queue: Object.entries(q.by)
+      .filter(([, r]) => r.state === 'pending')
+      .map(([id, r]) => ({ artistId: id, name: r.name || '',
+                           slug: (reg.byId[id] || {}).slug || '',
+                           account: (reg.byId[id] || {}).name || '', at: r.at })) });
+  }
+
+  if (action === 'idApprove' || action === 'idReject') {
+    const { mutateIdQueue, ID_SLOT } = await import('./_verify.mjs');
+    const who = cleanArtistId(body.artistId || '');
+    if (!who) return bad('which artist?');
+    const approve = action === 'idApprove';
+    if (approve) {
+      await mutateArtists((r) => {
+        if (!r.byId[who]) return false;
+        r.byId[who].verified = true;
+        r.byId[who].verifiedAt = Date.now();
+        return true;
+      });
+    }
+    await mutateIdQueue((q) => {
+      q.by[who] = { state: approve ? 'approved' : 'rejected', at: Date.now(),
+                    why: approve ? '' : String(body.why || '').slice(0, 140) };
+      return true;
+    });
+    /* The photo goes now, either way. Keeping a stranger's government ID after the
+       decision it was collected for is a liability nobody asked for. */
+    await dropImage(who, ID_SLOT).catch(() => {});
+    return json({ ok: true, artistId: who, approved: approve });
+  }
+
+  /* A venue's plan. There is no venue self-serve billing yet, so the owner sets it
+     — which is also how the tick gets unlocked for a venue. */
+  if (action === 'venuePlan') {
+    const { mutateVenues, VENUE_PLANS } = await import('./_venues.mjs');
+    const vid = String(body.venueId || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
+    const plan = String(body.plan || 'free');
+    if (!VENUE_PLANS[plan]) return bad('unknown plan');
+    let found = false;
+    await mutateVenues((r) => {
+      if (!r.byId[vid]) return false;
+      r.byId[vid].plan = plan; found = true; return true;
+    });
+    if (!found) return bad('unknown venue', 404);
+    return json({ ok: true, venueId: vid, plan });
+  }
 
   if (action === 'promoList') {
     const d = await readPromos();
@@ -141,7 +226,11 @@ const shapeLimits = (l) => ({
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
 });
 const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke',
-                              'venueList', 'venueVerify', 'shareStats']);
+                              'venueList', 'venueVerify', 'shareStats',
+                              // the ID review queue and a venue's plan — owner only,
+                              // enforced inside handlePlan, not by this set
+                              'idQueue', 'idApprove', 'idReject', 'venuePlan',
+                              'flagList', 'flagSet']);
 
 /* The gig calendar. Events are their own document, so these short-circuit too.
    Every write reindexes the artist's cities, which is what keeps the public
@@ -409,12 +498,35 @@ const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 't
 /* SETLISTS and the to-learn list. Both live in their own documents, so none of
    this touches the record the room polls — except `listUse`, which has to write
    the projection (see the note in _lists.mjs). */
+/* Votes on a song the room can no longer choose have to come back, and there are
+   TWO dispatch paths that can narrow the set: the mutateShow switch (toggleSong)
+   and handleLists (listSongs / listUse / listToggle / listDelete), which
+   short-circuits before that block. This is called from both, so neither can be
+   the one that forgets. See releaseUnvotable in _lib.mjs for why it matters now
+   that votes are final. */
+async function releaseNote(aid) {
+  try {
+    const after = await getShow(aid);
+    const freed = await releaseUnvotable(aid, after);
+    if (!freed.length) return null;
+    const titles = freed.map((id) => (after.songs.find((x) => x.id === id) || {}).title)
+      .filter(Boolean).slice(0, 3);
+    return titles.length
+      ? `Votes on ${titles.join(', ')} went back to the room.`
+      : 'Votes on the songs you took out went back to the room.';
+  } catch { return null; }        // the artist's change still succeeded
+}
+
 async function handleLists(aid, action, body) {
   const show = await getShow(aid);
   const send = async (extra = {}) => {
+    // narrowing the set is exactly what these actions do, so release before replying
+    const freed = action === 'listAll' ? null : await releaseNote(aid);
     const [d, sh] = [await readLists(aid), await getShow(aid)];
     return json({ ok: true, lists: shapeLists(d, sh),
-                  listId: sh.listId, listName: sh.listName, ...extra });
+                  listId: sh.listId, listName: sh.listName,
+                  ...extra,
+                  ...(freed ? { note: join(extra.note, freed) } : {}) });
   };
 
   if (action === 'listAll') return send();
@@ -688,7 +800,7 @@ const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyrics
 
 /* Profile edits don't touch the show record at all, so they short-circuit before
    the show mutation below. */
-async function handleProfile(aid, action, body) {
+async function handleProfile(aid, action, body, req, me) {
   if (action === 'profileSet') {
     await mutateProfile(aid, (p) => {
       for (const k of ['name', 'tagline', 'bio', 'photo', 'avatar'])
@@ -760,6 +872,63 @@ async function handleProfile(aid, action, body) {
     return json({ ok: true, profile: await getProfile(aid) });
   }
 
+  /* ---------- the verification tick, for an ARTIST ----------
+     Premium plan + card payments actually set up + a photo ID that matches the
+     account + Perry's eyes. See _verify.mjs for why the ID is never public and
+     never kept. */
+  /* ---------- getting paid ----------
+     Onboarding is Stripe-hosted (Express), so MySet never sees a bank detail. The
+     artist's own money cannot flow until Stripe says charges_enabled — see
+     _connect.mjs and INVARIANT 0bl. */
+  if (action === 'payStatus') {
+    const { connectStatus, syncFromStripe } = await import('./_connect.mjs');
+    // a cheap refresh when they have started but Stripe has not called back yet
+    if (body.refresh) await syncFromStripe(aid).catch(() => {});
+    return json({ ok: true, pay: await connectStatus(aid) });
+  }
+
+  if (action === 'payStart') {
+    const { ensureAccount, onboardingLink, connectStatus } = await import('./_connect.mjs');
+    const origin = new URL(req.url).origin;
+    const made = await ensureAccount(aid, me.email || '', String(body.country || '').toUpperCase().slice(0, 2));
+    if (!made.ok) return bad(made.error || 'could not start', 502);
+    const link = await onboardingLink(aid, origin);
+    if (!link.ok) return bad(link.error || 'could not start', 502);
+    return json({ ok: true, url: link.url, pay: await connectStatus(aid) });
+  }
+
+  if (action === 'payDashboard') {
+    const { dashboardLink } = await import('./_connect.mjs');
+    const l = await dashboardLink(aid);
+    if (!l.ok) return bad(l.error || 'not available', 502);
+    return json({ ok: true, url: l.url });
+  }
+
+  if (action === 'verifyStatus') {
+    const { artistVerifyChecks } = await import('./_verify.mjs');
+    return json({ ok: true, checks: await artistVerifyChecks(aid) });
+  }
+
+  if (action === 'idUpload') {
+    const { artistVerifyChecks, ID_SLOT, mutateIdQueue } = await import('./_verify.mjs');
+    const pre = await artistVerifyChecks(aid);
+    /* Refuse BEFORE taking the photo. Asking a stranger for their ID and then
+       telling them it did not count would be the rude way round, and it would
+       leave an ID on disk for a check that was never going to pass. */
+    if (!pre.paidPlan) return bad('The tick is on the Plus and Pro plans', 402);
+    if (!pre.payments) return bad('Set up card payments first — the tick confirms who gets paid', 409);
+    if (pre.reviewed) return json({ ok: true, already: true, checks: pre });
+    const dec = decodeDataUrl(body.data);
+    if (dec.error) return bad(dec.error);
+    await putImage(aid, ID_SLOT, dec.bytes, dec.type);
+    const name = String(body.name || '').trim().slice(0, 80);
+    await mutateIdQueue((q) => {
+      q.by[aid] = { state: 'pending', at: Date.now(), name, why: '' };
+      return true;
+    });
+    return json({ ok: true, checks: await artistVerifyChecks(aid) });
+  }
+
   if (action === 'mediaRemove') {
     await mutateProfile(aid, (p) => { p.media = p.media.filter((x) => x.mid !== body.mid); return true; });
     return json({ ok: true });
@@ -778,7 +947,11 @@ async function handleProfile(aid, action, body) {
   return bad('unknown action', 400);
 }
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove',
-                                 'photoUpload', 'photoClear']);
+                                 'photoUpload', 'photoClear',
+                                 // the artist's own verification tick
+                                 'verifyStatus', 'idUpload',
+                                 // Stripe Connect onboarding and status
+                                 'payStatus', 'payStart', 'payDashboard']);
 
 export default async (req) => {
   const me = await requireArtist(req);
@@ -841,7 +1014,7 @@ export default async (req) => {
     return json({ ok: true, devices: (await readSubs(aid)).subs.length });
   }
 
-  if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body);
+  if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body, req, me);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);
   if (SONG_ACTIONS.has(action)) return handleSong(aid, action, body, await getShow(aid));
@@ -1268,6 +1441,12 @@ export default async (req) => {
   else if (resetVotes) await clearAllFanVotes(aid, prevShow || (await getShow(aid)));
   // a deleted song must not keep holding somebody's credit
   else if (droppedSong) await dropSongVotes(aid, droppedSong);
+
+  /* ...and neither must a song the artist has HIDDEN or dropped from tonight's set.
+     With votes final there is no un-vote for the fan to fall back on, so the
+     release has to happen here or the credit is stranded for the rest of the round.
+     Only when the playable set actually shrank, and the artist is told. */
+  if (!wipe && !resetVotes && !droppedSong) note = join(note, await releaseNote(aid));
 
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.

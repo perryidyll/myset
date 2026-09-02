@@ -21,13 +21,18 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
 
   const gte = Math.floor((fromMs || 0) / 1000) - 300;          // 5 min of slack
   const lte = Math.floor((toMs || Date.now()) / 1000) + 3600;  // and an hour after
-  const stripe = new Stripe(key);
+  /* Scoped, for the same reason revenue.mjs is: without it a connected artist's
+     night was archived as gross 0 with source:'stripe' — claiming Stripe was asked
+     and reported nothing, rather than admitting we looked on the wrong account. */
+  const { stripeFor } = await import('./_connect.mjs');
+  const { stripe: scoped, opts: sOpts } = await stripeFor(aid);
+  const stripe = scoped || new Stripe(key);
   let after = null;
   try {
     for (let page = 0; page < 10; page++) {
       const r = await stripe.checkout.sessions.list({
         limit: 100, created: { gte, lte }, ...(after ? { starting_after: after } : {}),
-      });
+      }, sOpts);
       for (const s of r.data || []) {
         if (s.payment_status !== 'paid') continue;
         const md = s.metadata || {};

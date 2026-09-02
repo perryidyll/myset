@@ -4,6 +4,7 @@ import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, co
 import { MARK } from './_canary.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
+import { readFlags, flagsFor } from './_flags.mjs';
 
 export default async (req) => {
   const aid = await publicArtist(req);
@@ -15,7 +16,8 @@ export default async (req) => {
      too, and counting them would inflate the head-count with people who were
      never there. */
   const inRoom = url.searchParams.get('in') === '1';
-  const [show, fans] = await Promise.all([getShow(aid), readFans(aid)]);
+  const [show, fans, flagDoc] = await Promise.all([getShow(aid), readFans(aid), readFlags()]);
+  const flags = flagsFor(flagDoc, aid);
   /* Don't call markPresence when the stamp is already there. It goes mutateFan ->
      casDoc -> readDoc of the SAME shard `readFans` merged microseconds earlier in
      this very invocation, then returns false and writes nothing — so the answer is
@@ -42,7 +44,10 @@ export default async (req) => {
 
   const shape = (s) => ({
     id: s.id, title: s.title, artist: s.artist || '',
-    votes: counts[s.id] || 0, mine: mine.includes(s.id), cost: costOf(s.id, show),
+    votes: counts[s.id] || 0, mine: mine.includes(s.id),
+    // how many of THIS fan's votes sit on it — `mine` stays for older clients
+    mineCount: mine.filter((x) => x === s.id).length,
+    cost: costOf(s.id, show),
     firstAt: firstAt[s.id] || null,
     tags: s.tags || [],
     // the KEY and the artist's CHART are never in a public payload
@@ -113,7 +118,8 @@ export default async (req) => {
     },
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),
     // INVARIANT 0ad: never show the room a button that leads to a shrug
-    paymentsEnabled: canTakeMoney(aid),
+    paymentsEnabled: canTakeMoney(aid, show),
+    flags,
     updatedAt: show.updatedAt,
   });
 };

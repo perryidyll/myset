@@ -3,6 +3,7 @@ import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json,
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
+import { readFeedback, shapeFeedback } from './_feedback.mjs';
 
 export default async (req) => {
   const me = await requireArtist(req);
@@ -12,9 +13,9 @@ export default async (req) => {
 
 /** Shared so a write can return the new state instead of forcing a second fetch. */
 export async function stagePayload(aid) {
-  const [show, fans, meta, reqs, lists, learn] = await Promise.all([
+  const [show, fans, meta, reqs, lists, learn, fb] = await Promise.all([
     getShow(aid), readFans(aid), readMeta(aid), readRequests(aid),
-    readLists(aid), readLearn(aid)]);
+    readLists(aid), readLearn(aid), readFeedback(aid)]);
   const { artistById } = await import('./_auth.mjs');
   const who = await artistById(aid);
   const counts = voteCounts(fans);
@@ -62,9 +63,10 @@ export async function stagePayload(aid) {
         })), counts, firstAt);
     })(),
     tips: { total: Math.round(total * 100) / 100, count: meta.tips.length, recent: meta.tips.slice(-15).reverse() },
-    paymentsEnabled: canTakeMoney(aid),
+    feedback: shapeFeedback(fb),
+    paymentsEnabled: canTakeMoney(aid, show),
     /* Why, if not. The artist should never have to guess where their money went. */
-    payoutsNote: canTakeMoney(aid) ? null
+    payoutsNote: canTakeMoney(aid, show) ? null
       : (process.env.STRIPE_SECRET_KEY
           ? 'Card payments are off for your room until your payout account is connected — so nothing can land in the wrong place. We’ll tell you the moment it’s ready.'
           : 'Card payments aren’t switched on for MySet yet.'),

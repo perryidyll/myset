@@ -135,6 +135,29 @@ If you are about to violate one, stop and say so rather than working around it.
     audience's night.
 
 
+0r0. **DIRECT CHARGES, and the fee is the plan's fee.** 0r below is now
+   implemented (`_connect.mjs`). The charge is created ON the artist's connected
+   account, so the money is legally theirs and MySet takes an
+   `application_fee_amount` off the top: **10% free, 2% Plus, 0% Pro** — Perry's
+   ladder, defined once in `PLANS[*].cut` so the pricing page cannot drift from what
+   is charged. Zero is OMITTED rather than sent as a fee of nothing.
+
+   Direct rather than destination charges on purpose: destination charges would make
+   MySet the merchant of record for every gig, holding the funds and answering the
+   chargeback for a night it did not play.
+
+   **Say who pays Stripe.** A direct charge puts Stripe's own ~2.9% + 30c on the
+   ARTIST. On a $5 pack a Plus artist pays roughly 45c to Stripe and 10c to MySet, so
+   "2% to MySet" is not "you keep 98%". The Studio card says this before they
+   onboard; an artist must never learn it from a payout.
+
+   **A session created on a connected account can only be RETRIEVED with that account
+   in scope.** `stripeFor(aid)` exists so the return page, the webhook and the
+   reconcile sweep all scope identically — getting this wrong reproduces the
+   2026-08-30 "paid customer got nothing" failure with a brand-new cause. On a
+   Connect webhook, `event.account` is the only clue, and `acctindex` maps it back to
+   an artist.
+
 0r. **The 10% free-tier cut needs Stripe Connect and does not exist yet.** Today
     every artist's audience pays into the ONE `STRIPE_SECRET_KEY` — Perry's. That
     is fine while he is the only artist and wrong the moment anyone else signs up.
@@ -482,12 +505,29 @@ If you are about to violate one, stop and say so rather than working around it.
     `replayCost`. It throws if that snapshot is missing rather than silently
     under-debiting.
 
-15. **Voting is idempotent per (fan, song).** Voting twice toggles off and refunds
-    the credit; it must never double-count. **Un-voting is never gated by whether
-    the song is still on offer** — only casting is. The setlist guard was added
-    ahead of the toggle, which meant that narrowing the set mid-round left the
-    fan's credit spent on a song they could no longer un-vote. A fan must always be
-    able to undo what they paid for, whatever the artist has changed since.
+15. **A cast is idempotent BY CAST ID, not by state.** This used to read "voting is
+    idempotent per (fan, song)" — a second tap toggled off and refunded — and that
+    sentence hid the fact that the toggle *was* the idempotency mechanism: a lost
+    response found the vote already there and removed it, so a retry could never
+    double-charge. Under `voteFinal` there is no toggle, so every cast now carries
+    an id minted at the press of Confirm, and `vote.mjs` remembers the outcome
+    against it on the fan record (last 20, cleared with the round). A replay is
+    answered from memory and writes nothing. INVARIANT 15h says it plainly: do not
+    remove the toggle without this in place.
+
+    **Un-voting is never gated by whether the song is still on offer** — only casting
+    is. The setlist guard was once added ahead of the toggle, which left a fan's
+    credit spent on a song they could no longer un-vote.
+
+    **What finality does and does not promise.** With the flag on, a fan cannot undo
+    their own vote, and the page must offer no affordance suggesting otherwise —
+    the row is disabled and the queue tick is a `<span>`, not a button. It is NOT a
+    promise that the song will still exist: when the ARTIST deletes or hides it, the
+    votes go and the capacity comes back, because the alternative is an artist
+    pocketing a room's credits. `dropSongVotes` therefore removes EVERY occurrence
+    of the id, not the first — it predated multi-vote and removing one entry left a
+    fan charged for votes on a song that no longer existed, unrecoverable once
+    finality is on.
 
 13c. **An unlimited round is free, so it must debit nobody's pack.** `vote.mjs`
    skips the credit check entirely while `isUnlimited(fan, show)`, so nothing is
@@ -521,6 +561,32 @@ If you are about to violate one, stop and say so rather than working around it.
    `show.codeHash`); `ADMIN_CODE` remains the recovery key so he cannot lock
    himself out. Never make env-var-only the sole way in.
 
+15g. **A feature flag is a question with two REAL answers.** `_flags.mjs` exists so
+   a change that is an opinion rather than a fix can be tried both ways without an
+   edit-deploy-undo cycle — and on this account a production deploy is the expensive
+   thing (INVARIANT 9d0), so "just try it" otherwise costs money and risks being
+   mid-undo when a show starts. Rules: a flag is never a way to ship something
+   half-finished (a flag that is off because the code behind it is broken is a lie
+   with a switch on it); every flag is declared in `FLAGS` with what it does, what
+   off means, and its REMOVAL PLAN; an undeclared name always reads false, so a typo
+   cannot enable anything; and the document is never written during a show, because
+   it is read on the hot audience poll.
+
+15h. **The un-vote toggle is what makes voting idempotent — do not remove it without
+   replacing that.** `vote.mjs` has no request id, so a lost response today finds the
+   vote already cast and removes it: annoying, self-correcting, never a double
+   charge. Under `voteFinal` the same lost response casts AGAIN, on bar wifi, at
+   replay prices. Finality therefore cannot ship before a per-confirmation cast id
+   does. `PLAN-vote-finality.md` has the sequence; step 1 is not optional.
+
+15i. **A vote is one entry in `fan.v`, and the same id may appear many times.** The
+   audience sheet casts several votes at once, and multiplicity lives in that array
+   rather than a new field, because `voteCounts` and `creditsUsed` both work by
+   counting entries. Anything that reasons about "did this fan vote for X" must count
+   occurrences, not test membership — `show.mjs` sends `mineCount` alongside `mine`
+   for exactly that reason. The quantity is bounded by affordability and hard-capped
+   at 50 so a hand-made request cannot make a million-element array.
+
 15e. **A studio code is half a credential; the page name is the other half.** The
    code door used to check only `getShow(DEFAULT_ARTIST).codeHash`, while `setCode`
    wrote into the CALLING artist's record — so every artist but the founder got a
@@ -547,6 +613,33 @@ If you are about to violate one, stop and say so rather than working around it.
    `MIN_CODE` = 8 characters, and `weakCode()` also refuses a repeated character, a
    short deny-list, and the artist's own page name — which is the half of the
    credential anyone can already read.
+
+15j. **Votes are FINAL, and the release has to be automatic.** `voteFinal` defaults
+   ON as of 2026-09-02. The un-vote toggle was quietly the escape hatch for a
+   stranded credit: hide a song or narrow the setlist, and a fan holding a vote on
+   it could tap it off and get their credit back. With no toggle that credit is
+   stranded for the rest of the round, so `releaseUnvotable()` gives it back the
+   moment the playable set SHRINKS — which is a stronger promise than the old one,
+   because the fan need not notice or still be looking at their phone.
+
+   It is called from BOTH dispatch paths: the `mutateShow` switch (toggleSong) and
+   `handleLists` (listSongs / listUse / listToggle / listDelete), which
+   short-circuits before that block. One helper, two call sites, so neither can be
+   the one that forgets.
+
+   **A bare body on a song the fan already holds is REFUSED, not treated as more
+   votes.** An old cached page means "un-vote"; charging somebody who meant to take
+   a vote back is the worse of the two mistakes. Adding more needs an explicit
+   `op:'cast'`.
+
+15k. **Asking for feedback must never cost the gig.** The "Enjoying MySet?" prompt
+   waits for an HOUR of use accumulated only while the page is VISIBLE — a phone
+   face-down in a pocket for a whole set has not been using MySet — and then asks at
+   most once a week, never again once answered. It never opens over another sheet
+   and never mid-vote. Both limits are enforced on the SERVER too
+   (`_feedback.mjs`), because a localStorage rule is a suggestion. And it is not
+   write-only: the artist reads it in the Studio, with the notes and never a device
+   id.
 
 16. **Nothing in the app may break the gig.** Every failure path degrades to "the
     setlist is still readable". No error state should block the page from rendering.
@@ -685,6 +778,30 @@ If you are about to violate one, stop and say so rather than working around it.
     mid-sentence.** `.note b{display:block}` was meant for the note's heading and
     also hit every `<b>` in its body, so "you only need **one**." rendered on three
     lines. Scope heading styles to the direct child (`.note>b`).
+
+0bj. **The tick is premium, and still not for sale.** Paying opens the door to being
+   CHECKED; it never buys the badge. `/api/venueauth checkDomain` used to grant
+   `verified` on an email-domain match alone — buy a domain, put an email on it,
+   claim a bar you have never visited — which is exactly what INVARIANT 0ak says is
+   not proof. It now only REPORTS, and `tryVerifyByWebsite` is the only thing that
+   can set the flag: paid plan AND email on the site's domain AND the site naming
+   the venue AND `MIN_VOUCHES` (three) artists who have a gig listed there.
+
+0bk. **An ID photo is never public and never kept.** An artist proves identity with a
+   photo of an ID, so it is written to an image slot `img.mjs` refuses to serve —
+   that function tests `SLOTS` before it looks at anything, and `ID_SLOT` is
+   deliberately absent from it — and it is DELETED the moment the owner decides,
+   approved or rejected. Only the decision is kept. Holding a stranger's government
+   ID after the decision it was collected for is a liability nobody asked for, and
+   the refusal to upload happens BEFORE the photo is taken when a check cannot pass.
+
+0bl. **One gate for every money button, and Stripe answers it.** `connectReady(aid)`
+   in `_pay.mjs` reads what Stripe reports about that account, never a local "they
+   finished onboarding" flag. It returns false for everyone until Connect is built,
+   which is the correct answer rather than a placeholder: without it a second
+   artist's money lands in the founder's balance (INVARIANT 0r). Tips, packs and any
+   future charge read this one function, so INVARIANT 0ad holds — the room is never
+   shown a button that leads to a shrug.
 
 ## Setlists
 

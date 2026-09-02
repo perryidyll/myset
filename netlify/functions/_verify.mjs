@@ -8,22 +8,26 @@ import { venueKey, sameVenue, domainMatches, mutateVenues } from './_venues.mjs'
 
      1. the sign-in email is on the website's own domain
      2. the website itself actually names this venue
-     3. five different artists who have a gig listed there say they play there
+     3. three different artists who have a gig listed there say they play there
+
+   ...and the venue must be on a paid plan, because the tick is a premium feature.
+   The PROOF is never for sale — paying only opens the door to being checked.
 
    Any one of them alone is a claim. (1) is weak because anyone can buy a domain
    and an email on it. (2) is weak because the website is whatever URL they typed
-   into a form. (3) is weak on its own because five friendly accounts is not
+   into a form. (3) is weak on its own because three friendly accounts is not
    impossible. All three together mean somebody controls the inbox AND the site
-   AND is known to five acts who really do play there.
+   AND is known to three acts who really do play there.
 
    Perry's manual switch in the Studio remains as an explicit override, for the
    places a machine cannot judge — a bar with no website whose whole town knows it. */
 
-/* Five, and it is not an OR any more: a page needs the website checks AND five
+/* Three, not five, and it is not an OR: a page needs the website checks AND the
    artists. Perry asked for both to be mandatory — one signal is a claim, two
-   independent ones are proof. His own switch in the Studio stays, as an explicit
-   override for the cases a machine can't judge. */
-export const MIN_VOUCHES = 5;
+   independent ones are proof. Five was too high for a small island where an act
+   might only know three others who play the same bar. His own switch in the Studio
+   stays, as an explicit override for the cases a machine can't judge. */
+export const MIN_VOUCHES = 3;
 
 /* ---------- fetching a stranger's website safely ----------
    This is the one place MySet makes an outbound request to a URL somebody typed
@@ -178,7 +182,16 @@ export async function tryVerifyByWebsite(vid, email, venue) {
 
   const vouches = Object.keys((await readVouches(vid)).by || {}).length;
 
+  /* The tick is a premium feature, so a free page is not checked at all. Note the
+     order of the sentence: paying opens the door to being CHECKED, it does not buy
+     the tick. A purchasable trust signal is worth nothing, and a wrong tick on a
+     real bar sends a real person to the wrong place (INVARIANT 0ak). */
+  const { readVenues, venuePaid } = await import('./_venues.mjs');
+  const reg = await readVenues();
+  const paid = venuePaid(reg.byId[vid]);
+
   const checks = {
+    paidPlan: paid,
     website: !!site,
     emailOnDomain: domain,
     siteNamesVenue: !!(web.ok && web.nameFound),
@@ -188,8 +201,8 @@ export async function tryVerifyByWebsite(vid, email, venue) {
     artistsDone: vouches >= MIN_VOUCHES,
   };
   // every one of them, not any one of them
-  const passed = checks.website && checks.emailOnDomain && checks.siteNamesVenue
-                 && checks.artistsDone;
+  const passed = checks.paidPlan && checks.website && checks.emailOnDomain
+                 && checks.siteNamesVenue && checks.artistsDone;
 
   if (passed) {
     await mutateVenues((r) => {
@@ -261,6 +274,34 @@ export async function ownerEmail(vid) {
   return owner ? owner[0] : null;
 }
 
+/** The verdict WITHOUT writing it. Anything that merely wants to show a checklist
+ *  uses this; only `recheck()` is allowed to grant. Keeping the two apart is the
+ *  whole reason checkDomain could quietly hand out a tick twice over. */
+export async function checksOnly(vid) {
+  const { getVenueProfile, shapeVenue, venueById, readVenues } = await import('./_venues.mjs');
+  const email = await ownerEmail(vid);
+  if (!email) return { passed: false, checks: null, why: 'no-owner' };
+  const venue = shapeVenue(await getVenueProfile(vid), await venueById(vid));
+  const site = venue.links && venue.links.website;
+  const web = await checkWebsite(venue);
+  const vouches = Object.keys((await readVouches(vid)).by || {}).length;
+  const reg = await readVenues();
+  const { venuePaid } = await import('./_venues.mjs');
+  const checks = {
+    paidPlan: venuePaid(reg.byId[vid]),
+    website: !!site,
+    emailOnDomain: domainMatches(email, site),
+    siteNamesVenue: !!(web.ok && web.nameFound),
+    siteNamesTown: !!(web.ok && web.placeFound),
+    artists: vouches,
+    artistsNeeded: MIN_VOUCHES,
+    artistsDone: vouches >= MIN_VOUCHES,
+  };
+  const passed = checks.paidPlan && checks.website && checks.emailOnDomain
+                 && checks.siteNamesVenue && checks.artistsDone;
+  return { passed, checks, why: web.ok ? null : web.why };
+}
+
 /** Re-run the whole verdict from scratch: website checks plus the vouch count. */
 export async function recheck(vid) {
   const { getVenueProfile, shapeVenue, venueById } = await import('./_venues.mjs');
@@ -268,4 +309,53 @@ export async function recheck(vid) {
   if (!email) return { passed: false, checks: null, why: 'no-owner' };
   const venue = shapeVenue(await getVenueProfile(vid), await venueById(vid));
   return tryVerifyByWebsite(vid, email, venue);
+}
+
+/* ---------- proving an ARTIST is who they say they are ----------
+
+   A venue can be checked against a website it owns. An artist has no equivalent,
+   so the proof is different and deliberately ends with a human:
+
+     1. on a paid plan  — the tick is a premium feature
+     2. card payments actually set up (Stripe Connect reports usable)
+     3. a photo of an ID whose name matches the account
+     4. Perry looks at it and says yes
+
+   THE ID PHOTO IS NEVER PUBLIC AND NEVER KEPT. It is written to an image slot that
+   `img.mjs` refuses to serve — that function checks `SLOTS` before it looks at
+   anything, and this slot is deliberately not in it — and it is DELETED the moment
+   a decision is made, approved or not. Holding a stranger's government ID
+   indefinitely is a liability nobody asked for. Only the decision is kept. */
+export const ID_SLOT = 'idcheck';                 // intentionally absent from SLOTS
+const IDQ = 'idqueue';                            // one small global review queue
+
+export const readIdQueue = async () => {
+  const { data } = await readDoc(IDQ, null);
+  const q = { v: 1, by: {}, ...(data || {}) };
+  q.by ||= {};
+  return q;
+};
+export const mutateIdQueue = (fn) =>
+  casDoc(IDQ, () => ({ v: 1, by: {} }), (q) => { q.by ||= {}; return fn(q); });
+
+/** Everything that has to be true before the tick, and what is still missing. */
+export async function artistVerifyChecks(aid) {
+  const { planForArtist } = await import('./_plan.mjs');
+  const { connectReady } = await import('./_pay.mjs');
+  const { readArtists } = await import('./_auth.mjs');
+  const [{ plan }, reg, q] = await Promise.all([
+    planForArtist(aid), readArtists(), readIdQueue(),
+  ]);
+  const row = q.by[aid] || null;
+  const rec = reg.byId[aid] || {};
+  const checks = {
+    paidPlan: plan === 'plus' || plan === 'pro',
+    payments: await connectReady(aid),
+    idOnFile: !!(row && row.state === 'pending'),
+    reviewed: !!rec.verified,
+    state: rec.verified ? 'verified' : row ? row.state : 'none',
+    rejectedWhy: row && row.state === 'rejected' ? (row.why || '') : null,
+  };
+  checks.readyForReview = checks.paidPlan && checks.payments && checks.idOnFile;
+  return checks;
 }

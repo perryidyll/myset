@@ -405,6 +405,12 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .rise{animation:rise .45s var(--ease) both}
 @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* `.note` was used here and never defined in app.css or this page, so the
+   "Why there's a limit at all" block rendered full-bleed with no padding. */
+.note{background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-sm);
+  padding:12px 14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.note b{display:block;margin-bottom:4px;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -815,6 +821,16 @@ function gate(err,mode){
     setTimeout(()=>first.focus(),100); }
   const c=$('#code'); if(c) c.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
 }
+/* Stripe sends them back to /studio?connect=done. Ask Stripe for the real answer
+   rather than assuming the round trip means success — they can abandon it halfway. */
+(function(){
+  try{
+    const q=new URLSearchParams(location.search);
+    if(q.get('connect')){ TAB='money'; localStorage.setItem('myset.tab','money');
+      history.replaceState({},'',location.pathname);
+      setTimeout(()=>loadPay(true),400); }
+  }catch(e){}
+})();
 function unlock(){
   CODE=($('#code').value||'').trim();
   ASLUG=(($('#aslug')||{}).value||'').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
@@ -855,7 +871,73 @@ function signOut(){
   localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token');
   gate();
 }
-function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(D)render();
+/* What the audience said when MySet asked them. Read-only, and deliberately shown
+   next to the money: a four-star night with a note about the queue is worth more to
+   an artist than either number alone. */
+function fbCard(){
+  const f=(D&&D.feedback)||null;
+  if(!f||!f.count) return '';
+  const stars=n=>'\u2605'.repeat(n)+'\u2606'.repeat(5-n);
+  return `<div class="sec"><span class="kick">What the room said</span></div>
+    <div class="list">
+      <div class="row"><div class="m">
+        <div class="t">${f.average} out of 5 <span class="muted" style="font-weight:400">\u00b7 ${f.count} ${f.count===1?'person':'people'}</span></div>
+        <div class="s muted">${esc(stars(Math.round(f.average)))}</div>
+      </div></div>
+      ${(f.recent||[]).slice(0,6).map(r=>`<div class="row"><div class="m">
+        <div class="s" style="color:var(--accent-ink)">${esc(stars(r.stars))}</div>
+        <div class="t" style="font-size:14px;font-weight:400">${esc(r.note)}</div>
+      </div></div>`).join('')}
+    </div>`;
+}
+
+/* ---------- getting paid ----------
+   Stripe hosts the whole onboarding, so MySet never sees a bank detail. The card
+   states who pays Stripe's own fee, because an artist who reads "2%" and then sees
+   a $5 pack arrive as ~$4.45 will reasonably think they were misled — and they
+   should hear it here rather than from a payout. */
+let PAY=null, PAYQ=false;
+async function loadPay(refresh){
+  if(PAYQ) return; PAYQ=true;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'payStatus',refresh:!!refresh}),quiet:true});
+  PAYQ=false;
+  if(d&&d.ok){ PAY=d.pay; if(TAB==='money'&&D) render(); }
+}
+function payCard(){
+  if(!PAY){ loadPay(); return ''; }
+  const p=PAY;
+  if(p.platformOwner) return '';          // the founding account predates Connect
+  if(p.ready) return `<div class="sec"><span class="kick">Getting paid</span></div>
+    <div class="list"><div class="row"><div class="m">
+      <div class="t">Card payments are on ✓</div>
+      <div class="s muted">MySet takes ${p.cutPct}% of what comes through the app on your ${esc(p.plan)} plan. ${esc(p.stripeFeeNote)}</div>
+    </div><button class="act" onclick="payDash()">Stripe ↗</button></div></div>`;
+  const started=p.started;
+  return `<div class="sec"><span class="kick">Getting paid</span></div>
+    <div class="list"><div class="row muted" style="display:block">
+      <div class="t" style="color:var(--ink)">${started?'Stripe still needs a few details':'Set up card payments'}</div>
+      <p class="s" style="margin:6px 0 0">${started
+        ? 'You started this but Stripe has not finished checking yet. Tipping and extra votes stay switched off in your room until it has — so nothing can land in the wrong account.'
+        : 'Your audience can\u2019t tip or buy votes until this is done. Stripe handles it and MySet never sees your bank details.'}</p>
+      <p class="s" style="margin:6px 0 0">On your <b>${esc(p.plan)}</b> plan MySet takes <b>${p.cutPct}%</b> of money through the app. ${esc(p.stripeFeeNote)}</p>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="big" style="flex:1;min-width:180px" onclick="payStart()">${started?'Finish with Stripe':'Start with Stripe'}</button>
+        ${started?`<button class="act" onclick="loadPay(true)">Check again</button>`:''}
+      </div>
+    </div></div>`;
+}
+async function payStart(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'payStart'})});
+  if(d&&d.ok&&d.url){ PAY=d.pay; location.href=d.url; }
+  else toast((d&&d.error)||'Could not start that');
+}
+async function payDash(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'payDashboard'})});
+  if(d&&d.ok&&d.url) window.open(d.url,'_blank');
+  else toast((d&&d.error)||'Not available yet');
+}
+
+function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();}
   if(t==='profile') loadProf();
   if(t==='setlist') loadPlan();
@@ -1370,7 +1452,7 @@ function render(){
         </div>`).join('')||'<div class="row muted">No payments yet.</div>'}</div>
         <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
       }
-      body=head+pays;
+      body=payCard()+head+fbCard()+pays;   // Get-paid card, tonight, what the room said
     }
   }
 
