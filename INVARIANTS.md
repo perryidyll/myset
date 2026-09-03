@@ -1267,6 +1267,19 @@ If you are about to violate one, stop and say so rather than working around it.
     not a label, and still carrying the trail the function's own comment promised
     not to keep. Anything URL-shaped now returns empty.
 
+0cj. **Netlify blocks HTTP invocation of a scheduled function — measured, 403.**
+    `POST /.netlify/functions/sheetcron` against production on 2026-09-03 returned
+    403, not a sync. That is the answer, but it is Netlify's implementation detail,
+    so `sheetcron.mjs` keeps its own `MIN_GAP` rate limit as belt and braces. The
+    guard that matters is that neither of them can break the schedule: enforcing
+    the scheduler's `next_run` marker WOULD, silently, the day Netlify changed its
+    shape — so that marker is logged and never required.
+
+    Note also that `curl -o /dev/null -w %{http_code}` is useless for checking
+    whether a file deployed here: the `/:slug` redirect answers 200 with
+    `artist.html` for any missing path, so a missing `/pull.js` looked present.
+    **Check the CONTENT after a deploy, never the status code.**
+
 0ci. **The globals list in `test/cost.mjs` has to be kept current.** It is the
     guard 9d13 built to catch a second global document landing on the poll, and it
     did not include `sheetsync` on the day that shipped. Off every hot path, so no

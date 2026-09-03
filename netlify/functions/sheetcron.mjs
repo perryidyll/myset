@@ -10,11 +10,14 @@ import { readSyncState } from './_warehouse.mjs';
    and been archived, early enough that Perry's morning sheet is current. Not on
    the hour, because everybody's cron is on the hour.
 
-   IT IS STILL A PUBLIC URL. Every file in netlify/functions is reachable at
-   /.netlify/functions/<name> whatever the redirects say, and Netlify's own
-   refusal to invoke a scheduled function over HTTP is their implementation
-   detail, not a guarantee this file should lean on. So there are two guards, and
-   the important thing about them is that NEITHER CAN BREAK THE SCHEDULE:
+   IT IS A PUBLIC URL, and here is what was actually measured rather than assumed.
+   Every file in netlify/functions is reachable at /.netlify/functions/<name>
+   whatever the redirects say — but on 2026-09-03, against production, a direct
+   `POST /.netlify/functions/sheetcron` returned **403**: Netlify blocks HTTP
+   invocation of a scheduled function itself. Good. It is still their
+   implementation detail and not something this file leans on, so the two guards
+   below stay as belt and braces, and the important thing about them is that
+   NEITHER CAN BREAK THE SCHEDULE:
 
      · MIN_GAP. The sync already records `lastRunAt`, so a second call inside the
        hour is a no-op. That caps anybody hammering this at 24 syncs a day
