@@ -934,12 +934,15 @@ function signOut(){
 
    The ID photo goes straight to the server and is deleted the moment a decision is
    made (INVARIANT 0bk) — it is never rendered here, and never cached. */
-let TICK=null, TICKQ=false, IDQ=null;
+let TICK=null, TICKQ=false, IDQ=null, TICKWHY=null;
 async function loadTick(){
   if(TICKQ) return; TICKQ=true;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'verifyStatus'}),quiet:true});
   TICKQ=false;
-  if(d&&d.ok){ TICK=d.checks; if(TAB==='settings'&&D) render(); }
+  /* `autoWhy` is the server's own sentence about what the automatic check is still
+     waiting for. Showing it means an artist whose Stripe check is mid-flight sees
+     "waiting on Stripe" rather than a silent queue they assume nobody is reading. */
+  if(d&&d.ok){ TICK=d.checks; TICKWHY=d.autoWhy||null; if(TAB==='settings'&&D) render(); }
 }
 function tickCard(){
   if(!TICK){ loadTick(); return ''; }
@@ -952,15 +955,17 @@ function tickCard(){
       <div class="s muted">People can see the details came from you.</div>
     </div></div></div>`;
   const body=t.state==='pending'
-    ? `<div class="row"><div class="m"><div class="t">With MySet for review</div>
-        <div class="s muted">We\u2019ll look at it and let you know. Your ID is deleted either way, as soon as we decide.</div></div></div>`
+    ? `<div class="row"><div class="m"><div class="t">${TICKWHY?'Waiting on one more thing':'With MySet for review'}</div>
+        <div class="s muted">${TICKWHY
+          ? esc(TICKWHY)+'. We check again on its own — nothing more for you to do.'
+          : 'We\u2019ll look at it and let you know. Your ID is deleted either way, as soon as we decide.'}</div></div></div>`
     : `${step(t.paidPlan,'On Plus or Pro',t.paidPlan?'':'The tick is part of a paid plan')}
        ${step(t.payments,'Card payments set up',t.payments?'':'Set this up in the Money tab \u2014 the tick confirms who gets paid')}
        ${step(false,'A photo of your ID',t.readyForReview?'Ready when you are':'The name on it has to match your account')}
        ${t.rejectedWhy?`<div class="row"><div class="m"><div class="t">Not approved last time</div>
          <div class="s muted">${esc(t.rejectedWhy)} \u2014 you can try again.</div></div></div>`:''}`;
   return `<div class="sec"><span class="kick">Get verified</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">A green tick on your page, so people know the details came from you and not from somebody claiming to be you.</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">A green tick on your page, so people know the details came from you and not from somebody claiming to be you. Most of the time it happens by itself: if the name on your ID matches the name Stripe has already checked on your payout account, you're verified without anyone waiting on us.</p>
     <div class="list">${body}</div>
     ${t.state==='pending'?'':`<div class="wrap" style="margin-top:12px">
       ${t.readyForReview===false&&(!t.paidPlan||!t.payments)
@@ -977,9 +982,11 @@ async function idPick(el){
     /* Shrunk on the phone before it is sent, like every other upload here: a modern
        camera photo is several megabytes and the server cap is under one. */
     const data=await shrinkToDataUrl(f,1400,0.8);
-    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'idUpload',data})});
+    const nm=(($('#idName')||{}).value||'').trim();
+    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'idUpload',data,name:nm})});
     if(!r.ok){ toast(r.error||'Could not send that'); return; }
-    TICK=r.checks; render(); toast('Sent \u2014 we\u2019ll take a look');
+    TICK=r.checks; TICKWHY=r.autoWhy||null; render();
+    toast(r.autoVerified?'Verified \u2014 you\u2019re all set \u2713':'Sent \u2014 we\u2019ll take a look');
   }catch(e){ toast('Could not send that'); }
 }
 function shrinkToDataUrl(file,maxW,q){

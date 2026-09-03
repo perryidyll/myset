@@ -945,7 +945,12 @@ async function handleProfile(aid, action, body, req, me) {
   if (action === 'payStatus') {
     const { connectStatus, syncFromStripe } = await import('./_connect.mjs');
     // a cheap refresh when they have started but Stripe has not called back yet
-    if (body.refresh) await syncFromStripe(aid).catch(() => {});
+    if (body.refresh) {
+      await syncFromStripe(aid).catch(() => {});
+      // Stripe may have finished its identity check since they last looked
+      const { tryAutoVerify } = await import('./_verify.mjs');
+      await tryAutoVerify(aid).catch(() => {});
+    }
     return json({ ok: true, pay: await connectStatus(aid) });
   }
 
@@ -977,8 +982,13 @@ async function handleProfile(aid, action, body, req, me) {
   }
 
   if (action === 'verifyStatus') {
-    const { artistVerifyChecks } = await import('./_verify.mjs');
-    return json({ ok: true, checks: await artistVerifyChecks(aid) });
+    const { artistVerifyChecks, tryAutoVerify } = await import('./_verify.mjs');
+    /* Ask on every look. It is a handful of reads and it means an artist whose
+       Stripe check completed overnight finds the tick waiting rather than a queue
+       they have to be told about. */
+    const auto = await tryAutoVerify(aid).catch(() => null);
+    return json({ ok: true, checks: await artistVerifyChecks(aid),
+                  autoWhy: auto && !auto.verified ? auto.why : null });
   }
 
   if (action === 'idUpload') {
@@ -998,7 +1008,14 @@ async function handleProfile(aid, action, body, req, me) {
       q.by[aid] = { state: 'pending', at: Date.now(), name, why: '' };
       return true;
     });
-    return json({ ok: true, checks: await artistVerifyChecks(aid) });
+    /* The three moments this can succeed are: the ID arriving, Stripe finishing its
+       checks, and the artist asking. All three call the same function, so none of
+       them can drift into a different rule. */
+    const { tryAutoVerify } = await import('./_verify.mjs');
+    const auto = await tryAutoVerify(aid).catch(() => null);
+    return json({ ok: true, checks: await artistVerifyChecks(aid),
+                  autoVerified: !!(auto && auto.verified),
+                  autoWhy: auto && !auto.verified ? auto.why : null });
   }
 
   if (action === 'mediaRemove') {

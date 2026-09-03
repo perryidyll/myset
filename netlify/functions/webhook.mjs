@@ -42,6 +42,10 @@ export default async (req) => {
         return true;
       }).catch(() => {});
       await mirrorToShow(who, await readConnect(who));
+      /* The most likely moment of all: Stripe has just finished checking who they
+         are. Try the tick now rather than waiting for the artist to come looking. */
+      const { tryAutoVerify } = await import('./_verify.mjs');
+      await tryAutoVerify(who).catch(() => {});
     }
     return json({ received: true });
   }

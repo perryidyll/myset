@@ -359,3 +359,89 @@ export async function artistVerifyChecks(aid) {
   checks.readyForReview = checks.paidPlan && checks.payments && checks.idOnFile;
   return checks;
 }
+
+/* ---------- deciding the artist tick without waking a human ----------
+
+   The rule, and the reasoning behind each part:
+
+     1. a PAID PLAN, because the tick is a premium feature
+     2. CARD PAYMENTS live, as Stripe reports them
+     3. Stripe's own IDENTITY CHECK passed on the person behind the account
+     4. the name the artist gave MySet MATCHES the name Stripe verified, strongly
+
+   Why this is worth trusting: (3) is a real identity check, done by a regulated
+   company whose business is doing it, against documents and a liveness test. MySet
+   could not come close. (4) then ties that verified person to the account asking
+   for the badge.
+
+   WHAT THIS DOES NOT DO, said plainly so nobody mistakes it: **nothing here reads
+   the photo of the ID.** No text is extracted from it, and no face is compared. The
+   photo remains a thing a human looks at, and the automatic path leans on Stripe's
+   check rather than on the picture. An artist could upload a photo of their cat and
+   still pass this, if Stripe has verified them and the names line up — which is
+   fine, because the cat is not what proves anything here.
+
+   ANY doubt goes to a human. A weak name match is not a small pass, it is a
+   question: "Sam Idyll" against "Perry Idyll" shares a surname and must never be
+   waved through by a machine. */
+export async function tryAutoVerify(aid) {
+  const { readArtists, mutateArtists } = await import('./_auth.mjs');
+  const { accountIdentity } = await import('./_connect.mjs');
+  const { nameMatch, nameMatchIsStrong } = await import('./_names.mjs');
+
+  const checks = await artistVerifyChecks(aid);
+  if (checks.reviewed) return { ok: true, already: true, verified: true };
+
+  const q = await readIdQueue();
+  const row = q.by[aid] || null;
+  const claimed = (row && row.name) || '';
+
+  const need = (why) => ({ ok: true, verified: false, why, checks });
+  if (!checks.paidPlan) return need('not on a paid plan');
+  if (!checks.payments) return need('card payments are not set up');
+  if (!checks.idOnFile) return need('no ID on file');
+  if (!claimed) return need('no name was given with the ID');
+
+  const who = await accountIdentity(aid);
+  if (!who.ok) return need(who.error || 'could not read the payout account');
+  if (!who.name) return need('Stripe has no name on the payout account yet');
+  /* Asked in this order on purpose: a business account has no `individual`, so the
+     identity question has no answer for it and reported the wrong reason. */
+  if (who.kind !== 'individual') return need('the payout account is a business, so a person cannot be matched');
+  if (!who.idVerified) return need(`Stripe has not finished checking who they are (${who.verificationStatus})`);
+
+  const m = nameMatch(claimed, who.name);
+  if (!nameMatchIsStrong(m)) {
+    /* Recorded on the row so the human sees the comparison that failed rather than
+       having to redo it. The Stripe name is NOT stored — it is somebody's legal
+       name and it belongs to Stripe, not in MySet's queue for ever. */
+    await mutateIdQueue((d) => {
+      d.by[aid] = { ...(d.by[aid] || {}), match: m, matchedAt: Date.now() };
+      return true;
+    }).catch(() => {});
+    return need(m === 'weak'
+      ? 'the name given and the name on the payout account are close but not the same'
+      : 'the name given does not match the name on the payout account');
+  }
+
+  await mutateArtists((r) => {
+    if (!r.byId[aid]) return false;
+    r.byId[aid].verified = true;
+    r.byId[aid].verifiedAt = Date.now();
+    r.byId[aid].verifiedVia = 'auto';        // vs 'owner' for a hand-checked one
+    return true;
+  });
+  await mutateIdQueue((d) => {
+    d.by[aid] = { state: 'approved', at: Date.now(), why: '', match: m, auto: true };
+    return true;
+  }).catch(() => {});
+  /* Approved means decided, and a decision destroys the photo (INVARIANT 0bk) —
+     the automatic path is held to exactly the same rule as the human one. */
+  let idGone = true;
+  try {
+    const { dropImage, getImage } = await import('./_img.mjs');
+    await dropImage(aid, ID_SLOT);
+    idGone = !(await getImage(aid, ID_SLOT));
+  } catch { idGone = false; }
+  return { ok: true, verified: true, match: m, idDeleted: idGone };
+}

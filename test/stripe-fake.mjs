@@ -30,6 +30,11 @@ export default class Stripe {
         const id = `acct_test${state.nextAcct++}`;
         const a = { id, charges_enabled: false, payouts_enabled: false,
                     details_submitted: false, country: params.country || 'US',
+                    /* The identity Stripe holds after its own KYC. Tests set the name
+                       and the verification status to drive the auto-verify decision. */
+                    individual: { first_name: '', last_name: '',
+                                  verification: { status: 'unverified' } },
+                    business_profile: { name: '' },
                     metadata: params.metadata || {} };
         state.accounts.set(id, a);
         return a;

@@ -80,6 +80,29 @@ If you are about to violate one, stop and say so rather than working around it.
    `PAYOUT_COUNTRIES`: slicing a country NAME to two letters turns Thailand into TH
    by luck and Germany into GE, which is not a country.
 
+0bo. **A near-miss is a question, never a small yes.** The artist tick can be granted
+   automatically: paid plan + card payments live + STRIPE's own identity check passed
+   on the person + the name the artist gave matching the name Stripe verified. The
+   match must be `exact` or `strong` (the same names, or one plus a middle name).
+   `weak` — a shared surname, a shared first name — goes to a human with the
+   comparison recorded. "Sam Idyll" must never be waved through as "Perry Idyll".
+
+   **Nothing reads the photo.** No text is extracted and no face is compared. The
+   automatic path leans on Stripe's KYC, which is a real identity check by a
+   regulated company, and the photo stays a thing a person looks at. Say this plainly
+   wherever the feature is described; a badge that claims more than it checks is
+   worse than no badge.
+
+   **Name matching traps already hit, both by a test:** an apostrophe split O'Brien
+   and left a stray "o" that looked like a particle, so the same person on two
+   documents came out as a mismatch; and surname particles were stripped
+   unconditionally, which destroyed "Di Park", "Al Green", "Van Morrison" and "Le
+   Nguyen" — all real names beginning with a word that is elsewhere a particle. A
+   particle is only a particle in the middle of a name.
+
+   The automatic path is held to every rule the human one is, including that a
+   decision destroys the ID photo (INVARIANT 0bk).
+
 0bm. **Approving the tick RE-CHECKS, and a rejection can revoke it.** `idApprove`
    used to verify any artist id outright — no ID on file, no plan, no Connect — so a
    mistap approved somebody who had done none of it. It now re-runs

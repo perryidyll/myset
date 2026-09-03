@@ -172,6 +172,45 @@ export async function dashboardLink(aid) {
   }
 }
 
+/* ---------- who Stripe says this account belongs to ----------
+
+   An Express account has been through Stripe's own identity checks: documents,
+   liveness, the lot, done by a company that does it professionally and is regulated
+   for it. The name that comes out the other side is a far stronger fact than
+   anything MySet could squint at, so it is the thing worth comparing against.
+
+   `individual.verification.status` is Stripe's verdict on the PERSON. A company
+   account has no individual, so the business name is used instead and the caller is
+   told which it was — a business name matching a stage name proves less, and should
+   not carry the same weight. */
+export async function accountIdentity(aid) {
+  const stripe = stripeClient();
+  if (!stripe) return { ok: false, error: 'payments-not-configured' };
+  const c = await readConnect(aid);
+  if (!c.acct) return { ok: false, error: 'no account yet' };
+  let a;
+  try { a = await stripe.accounts.retrieve(c.acct); }
+  catch (e) { return { ok: false, error: e.message || 'could not read account' }; }
+
+  const ind = a.individual || null;
+  const person = ind ? [ind.first_name, ind.last_name].filter(Boolean).join(' ').trim() : '';
+  const business = (a.business_profile && a.business_profile.name)
+    || (a.company && a.company.name) || '';
+  return {
+    ok: true,
+    kind: person ? 'individual' : (business ? 'business' : 'none'),
+    name: person || business || '',
+    /* Stripe's own answer about the human, not about the account being able to take
+       money. An account can have charges_enabled while its identity check is still
+       pending, so these are two different questions and both get asked. */
+    idVerified: !!(ind && ind.verification && ind.verification.status === 'verified'),
+    verificationStatus: (ind && ind.verification && ind.verification.status) || 'unknown',
+    chargesEnabled: !!a.charges_enabled,
+    payoutsEnabled: !!a.payouts_enabled,
+    country: a.country || '',
+  };
+}
+
 /* ---------- status, and mirroring it where the hot path can see it ----------
    `canTakeMoney` is read on EVERY audience poll. It must not cost a blob read, so
    the answer is mirrored onto the show record — which every one of those callers

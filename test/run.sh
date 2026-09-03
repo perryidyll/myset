@@ -62,3 +62,6 @@ node --import ./test/register.mjs test/cost.mjs
 echo
 echo "── the free plan's limits ──"
 node --import ./test/register.mjs test/limits.mjs
+echo
+echo "── verifying an artist automatically ──"
+node --import ./test/register.mjs test/autoverify.mjs
