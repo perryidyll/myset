@@ -961,16 +961,26 @@ function tickCard(){
           : 'We\u2019ll look at it and let you know. Your ID is deleted either way, as soon as we decide.'}</div></div></div>`
     : `${step(t.paidPlan,'On Plus or Pro',t.paidPlan?'':'The tick is part of a paid plan')}
        ${step(t.payments,'Card payments set up',t.payments?'':'Set this up in the Money tab \u2014 the tick confirms who gets paid')}
-       ${step(false,'A photo of your ID',t.readyForReview?'Ready when you are':'The name on it has to match your account')}
+       ${step(false,'Your ID, legal name and date of birth',t.readyForReview?'Ready when you are':'Checked against your payout account')}
        ${t.rejectedWhy?`<div class="row"><div class="m"><div class="t">Not approved last time</div>
          <div class="s muted">${esc(t.rejectedWhy)} \u2014 you can try again.</div></div></div>`:''}`;
   return `<div class="sec"><span class="kick">Get verified</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">A green tick on your page, so people know the details came from you and not from somebody claiming to be you. Most of the time it happens by itself: if the name on your ID matches the name Stripe has already checked on your payout account, you're verified without anyone waiting on us.</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">A green tick on your page, so people know the details came from you and not from somebody claiming to be you. Most of the time it happens by itself: give the name and date of birth on your ID, and if they match what Stripe has already verified on your payout account, you're verified on the spot \u2014 no waiting on us.</p>
     <div class="list">${body}</div>
     ${t.state==='pending'?'':`<div class="wrap" style="margin-top:12px">
       ${t.readyForReview===false&&(!t.paidPlan||!t.payments)
         ? `<button class="big alt" disabled>Finish the steps above first</button>`
-        : `<label class="bigfile"><input type="file" id="idFile" accept="image/*" style="display:none" onchange="idPick(this)">\u21ea Send a photo of your ID</label>`}
+        : `<div class="field" style="margin-bottom:10px">
+             <label>Your full legal name</label>
+             <input class="inp" id="idName" placeholder="Exactly as it appears on the ID" autocomplete="name">
+             <p class="s muted" style="margin:6px 0 0">Not your stage name \u2014 the one on the document. They're often different, and that's fine.</p>
+           </div>
+           <div class="field" style="margin-bottom:10px">
+             <label>Date of birth</label>
+             <input class="inp" id="idDob" type="date">
+             <p class="s muted" style="margin:6px 0 0">Checked against your payout account once, then thrown away \u2014 we don't keep it.</p>
+           </div>
+           <label class="bigfile"><input type="file" id="idFile" accept="image/*" style="display:none" onchange="idPick(this)">\u21ea Send a photo of your ID</label>`}
       <p class="muted" style="font-size:12px;margin:10px 0 0">We look at it once and delete it. It is never shown on your page and never kept.</p>
     </div>`}`;
 }
@@ -983,7 +993,10 @@ async function idPick(el){
        camera photo is several megabytes and the server cap is under one. */
     const data=await shrinkToDataUrl(f,1400,0.8);
     const nm=(($('#idName')||{}).value||'').trim();
-    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'idUpload',data,name:nm})});
+    const dob=(($('#idDob')||{}).value||'').trim();
+    if(nm.split(/\s+/).filter(Boolean).length<2){ toast('Give your full legal name'); return; }
+    if(!dob){ toast('Add your date of birth'); return; }
+    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'idUpload',data,legalName:nm,dob})});
     if(!r.ok){ toast(r.error||'Could not send that'); return; }
     TICK=r.checks; TICKWHY=r.autoWhy||null; render();
     toast(r.autoVerified?'Verified \u2014 you\u2019re all set \u2713':'Sent \u2014 we\u2019ll take a look');
@@ -1050,8 +1063,9 @@ function idQueueCard(){
   if(!IDQ.length) return '';
   return `<div class="sec"><span class="kick">Waiting for you \u00b7 ${IDQ.length}</span></div>
     <div class="list">${IDQ.map(r=>`<div class="row"><div class="m">
-      <div class="t">${esc(r.name||r.account||r.artistId)}</div>
-      <div class="s muted">myset.vip/${esc(r.slug||'')} \u00b7 asked ${dstamp(r.at)}</div>
+      <div class="t">${esc(r.legalName||r.account||r.artistId)}</div>
+      <div class="s muted">myset.vip/${esc(r.slug||'')}${r.account&&r.legalName&&r.account!==r.legalName?` \u00b7 goes by ${esc(r.account)}`:''} \u00b7 asked ${dstamp(r.at)}</div>
+      <div class="s muted">name ${r.nameMatch?esc(r.nameMatch):'not compared'} \u00b7 date of birth ${r.dobMatch===true?'matches':r.dobMatch===false?'does NOT match':'not compared'}</div>
     </div>
     <button class="act" onclick="idDecide('${esc(r.artistId)}',true)">Approve</button>
     <button class="act" onclick="idDecide('${esc(r.artistId)}',false)">No</button></div>`).join('')}</div>

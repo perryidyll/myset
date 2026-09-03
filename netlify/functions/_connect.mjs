@@ -196,10 +196,19 @@ export async function accountIdentity(aid) {
   const person = ind ? [ind.first_name, ind.last_name].filter(Boolean).join(' ').trim() : '';
   const business = (a.business_profile && a.business_profile.name)
     || (a.company && a.company.name) || '';
+  /* The DOB Stripe holds after its own checks. A second independent fact about the
+     same person, which is what turns a name match from "plausible" into "checked" —
+     and it is the fact a stage name cannot fake. */
+  const dob = (ind && ind.dob && ind.dob.year) ? {
+    day: Number(ind.dob.day) || 0,
+    month: Number(ind.dob.month) || 0,
+    year: Number(ind.dob.year) || 0,
+  } : null;
   return {
     ok: true,
     kind: person ? 'individual' : (business ? 'business' : 'none'),
     name: person || business || '',
+    dob,
     /* Stripe's own answer about the human, not about the account being able to take
        money. An account can have charges_enabled while its identity check is still
        pending, so these are two different questions and both get asked. */

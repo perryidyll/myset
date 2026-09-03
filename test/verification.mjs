@@ -100,7 +100,9 @@ await casDoc(`connect_${ana.artistId}`, () => ({}), (d) => { d.chargesEnabled = 
 process.env.STRIPE_SECRET_KEY = 'sk_test_notreal_forlocaltestsonly';
 const st2 = await AS(TA, 'verifyStatus');
 eq('with Connect usable, payments pass', st2.checks.payments, true);
-const up2 = await AS(TA, 'idUpload', { data: 'data:image/png;base64,iVBORw0KGgo=', name: 'Ana Reyes' });
+/* The LEGAL name and date of birth, not the page name — a stage name is normal. */
+const up2 = await AS(TA, 'idUpload',
+  { data: 'data:image/png;base64,iVBORw0KGgo=', legalName: 'Ana Reyes', dob: '1990-06-05' });
 ok('now the ID is accepted', up2.ok, up2);
 eq('and it is waiting for a human', up2.checks.state, 'pending');
 eq('ready for review', up2.checks.readyForReview, true);
@@ -131,7 +133,8 @@ reg = await readArtists();
 const TB = await signToken('bo@example.com', revOf(reg, bo.artistId));
 await mutateArtists((r) => { r.byId[bo.artistId].plan = 'plus'; return true; });
 await casDoc(`connect_${bo.artistId}`, () => ({}), (d) => { d.chargesEnabled = true; return true; });
-ok('Bo gets an ID on file', (await AS(TB, 'idUpload', { data: 'data:image/png;base64,iVBORw0KGgo=' })).ok);
+ok('Bo gets an ID on file', (await AS(TB, 'idUpload',
+  { data: 'data:image/png;base64,iVBORw0KGgo=', legalName: 'Bo Tran', dob: '1988-02-29' })).ok);
 const rej = await OWNER('idReject', { artistId: bo.artistId, why: 'name did not match' });
 ok('the owner rejects', rej.ok && rej.approved === false, rej);
 reg = await readArtists();

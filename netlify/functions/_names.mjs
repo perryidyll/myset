@@ -97,3 +97,36 @@ export const nameMatchIsStrong = (m) => m === 'exact' || m === 'strong';
 /** A name for a human to read in the review queue, without shouting. */
 export const tidyName = (raw) =>
   String(raw || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+
+/* ---------- dates of birth ----------
+
+   The second fact. A name alone cannot be trusted here for a reason that only shows
+   up in this product: a great many artists trade under a stage name, so the name on
+   their MySet page is frequently NOT the name on their bank account. Perry's own is
+   the example — "Idyll" is the brand, the passport says something else. Asking for
+   the LEGAL name fixes that, and asking for a date of birth as well means a match is
+   two independent facts against a record Stripe has already verified, rather than
+   one guess.
+
+   A DOB is more sensitive than a name and is needed for exactly one comparison, so
+   it is compared and thrown away: never stored, never logged, never shown. */
+
+/** A typed date to {day, month, year}, or null if it is not a real date. */
+export function parseDob(raw) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(raw || '').trim());
+  if (!m) return null;
+  const year = +m[1], month = +m[2], day = +m[3];
+  const d = new Date(Date.UTC(year, month - 1, day));
+  // rejects the 31st of February rather than rolling it into March
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
+  const now = new Date();
+  const age = (now - d) / (365.2425 * 86400000);
+  /* Not a validation of who they are — just a sanity floor and ceiling, so a typo
+     like 2206 or 1806 is caught before it becomes a mismatch nobody can explain. */
+  if (age < 13 || age > 110) return null;
+  return { day, month, year };
+}
+
+/** Do these two dates of birth describe the same day? */
+export const dobMatch = (a, b) =>
+  !!(a && b && a.day === b.day && a.month === b.month && a.year === b.year);

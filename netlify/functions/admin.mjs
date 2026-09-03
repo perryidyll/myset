@@ -112,9 +112,16 @@ async function handlePlan(aid, action, body) {
     const reg = await readArtists();
     return json({ ok: true, queue: Object.entries(q.by)
       .filter(([, r]) => r.state === 'pending')
-      .map(([id, r]) => ({ artistId: id, name: r.name || '',
+      .map(([id, r]) => ({ artistId: id,
+                           /* what the ID says, per the artist, and what MySet knows
+                              them as — a stage name difference is normal and is not
+                              a red flag on its own */
+                           legalName: r.legalName || '',
                            slug: (reg.byId[id] || {}).slug || '',
-                           account: (reg.byId[id] || {}).name || '', at: r.at })) });
+                           account: (reg.byId[id] || {}).name || '',
+                           nameMatch: r.match || null,
+                           dobMatch: r.dobMatch === undefined ? null : r.dobMatch,
+                           at: r.at })) });
   }
 
   if (action === 'idApprove' || action === 'idReject') {
@@ -1000,12 +1007,36 @@ async function handleProfile(aid, action, body, req, me) {
     if (!pre.paidPlan) return bad('The tick is on the Plus and Pro plans', 402);
     if (!pre.payments) return bad('Set up card payments first — the tick confirms who gets paid', 409);
     if (pre.reviewed) return json({ ok: true, already: true, checks: pre });
+    /* THE LEGAL NAME AND THE DATE OF BIRTH, not the MySet name. Most artists trade
+       under a stage name, so their page name is usually not the name on the bank
+       account — see the reasoning in _verify.mjs. Both are required, because one
+       typed claim is a guess and two against a KYC'd record is a check. */
+    const { parseDob, tidyName } = await import('./_names.mjs');
+    const legalName = tidyName(body.legalName || body.name);
+    if (!legalName || legalName.split(/\s+/).length < 2)
+      return bad('Give the full name exactly as it appears on the ID', 400);
+    const dob = parseDob(body.dob);
+    if (!dob) return bad('That date of birth does not look right — use the date picker', 400);
+
     const dec = decodeDataUrl(body.data);
     if (dec.error) return bad(dec.error);
     await putImage(aid, ID_SLOT, dec.bytes, dec.type);
-    const name = String(body.name || '').trim().slice(0, 80);
+
+    /* Compare the date NOW and keep only the verdict. A date of birth is sensitive,
+       it answers exactly one question, and once answered there is no reason for
+       MySet to be holding it. `null` means Stripe had nothing to compare against
+       yet — a different thing from a mismatch, and it is asked again later. */
+    let dobMatch = null;
+    try {
+      const { accountIdentity } = await import('./_connect.mjs');
+      const { dobMatch: same } = await import('./_names.mjs');
+      const who = await accountIdentity(aid);
+      if (who.ok && who.dob) dobMatch = same(dob, who.dob);
+    } catch { dobMatch = null; }
+
     await mutateIdQueue((q) => {
-      q.by[aid] = { state: 'pending', at: Date.now(), name, why: '' };
+      q.by[aid] = { state: 'pending', at: Date.now(), legalName, why: '',
+                    dobGiven: true, dobMatch };
       return true;
     });
     /* The three moments this can succeed are: the ID arriving, Stripe finishing its

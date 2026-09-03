@@ -352,6 +352,8 @@ export async function artistVerifyChecks(aid) {
     paidPlan: plan === 'plus' || plan === 'pro',
     payments: await connectReady(aid),
     idOnFile: !!(row && row.state === 'pending'),
+    legalNameGiven: !!(row && row.legalName),
+    dobGiven: !!(row && row.dobGiven),
     reviewed: !!rec.verified,
     state: rec.verified ? 'verified' : row ? row.state : 'none',
     rejectedWhy: row && row.state === 'rejected' ? (row.why || '') : null,
@@ -367,7 +369,25 @@ export async function artistVerifyChecks(aid) {
      1. a PAID PLAN, because the tick is a premium feature
      2. CARD PAYMENTS live, as Stripe reports them
      3. Stripe's own IDENTITY CHECK passed on the person behind the account
-     4. the name the artist gave MySet MATCHES the name Stripe verified, strongly
+     4. the LEGAL NAME the artist typed matches the name Stripe verified, strongly
+     5. and the DATE OF BIRTH they typed matches the one Stripe verified, exactly
+
+   WHY THE LEGAL NAME AND NOT THEIR MYSET NAME. Most working artists trade under a
+   stage name, so their page name is frequently not the name on their bank account —
+   Perry's own is the example: "Idyll" is the brand, the passport says otherwise.
+   Matching the display name would have failed for roughly everybody it mattered for,
+   and quietly sent every real artist to a manual queue. So the artist is asked for
+   the name on the document, and that is what gets compared.
+
+   AND WHY A DATE OF BIRTH TOO. A legal name on its own is a single typed claim, and
+   somebody guessing a common name would sometimes land it. A date of birth is a
+   second independent fact, it is the one thing a stage name cannot dress up, and
+   Stripe already holds a verified copy. Two facts against a KYC'd record is the
+   difference between plausible and checked.
+
+   THE DATE OF BIRTH IS NEVER STORED. It is compared and discarded — only a boolean
+   survives. It is needed for exactly one question and keeping it would be collecting
+   sensitive data for no further purpose.
 
    Why this is worth trusting: (3) is a real identity check, done by a regulated
    company whose business is doing it, against documents and a liveness test. MySet
@@ -394,13 +414,14 @@ export async function tryAutoVerify(aid) {
 
   const q = await readIdQueue();
   const row = q.by[aid] || null;
-  const claimed = (row && row.name) || '';
+  const claimed = (row && row.legalName) || '';
 
   const need = (why) => ({ ok: true, verified: false, why, checks });
   if (!checks.paidPlan) return need('not on a paid plan');
   if (!checks.payments) return need('card payments are not set up');
   if (!checks.idOnFile) return need('no ID on file');
-  if (!claimed) return need('no name was given with the ID');
+  if (!claimed) return need('no legal name was given with the ID');
+  if (!row.dobGiven) return need('no date of birth was given with the ID');
 
   const who = await accountIdentity(aid);
   if (!who.ok) return need(who.error || 'could not read the payout account');
@@ -411,6 +432,16 @@ export async function tryAutoVerify(aid) {
   if (!who.idVerified) return need(`Stripe has not finished checking who they are (${who.verificationStatus})`);
 
   const m = nameMatch(claimed, who.name);
+  /* The DOB comparison happened when it was typed — the date itself is not kept, so
+     this reads the verdict rather than redoing it. If Stripe had no DOB then, it is
+     re-asked for here, because Stripe fills it in as KYC completes. */
+  let dobOk = row.dobMatch === true;
+  if (!dobOk && row.dobMatch === null) {
+    // Stripe had nothing to compare against last time; it may do now
+    return need('Stripe has not published a date of birth for the account yet');
+  }
+  if (!dobOk) return need('the date of birth given does not match the payout account');
+
   if (!nameMatchIsStrong(m)) {
     /* Recorded on the row so the human sees the comparison that failed rather than
        having to redo it. The Stripe name is NOT stored — it is somebody's legal
@@ -432,6 +463,9 @@ export async function tryAutoVerify(aid) {
     return true;
   });
   await mutateIdQueue((d) => {
+    /* The legal name goes with the decision. It was collected to answer one
+       question, that question is answered, and MySet is not a place legal names
+       live. Same reasoning as the photo. */
     d.by[aid] = { state: 'approved', at: Date.now(), why: '', match: m, auto: true };
     return true;
   }).catch(() => {});
@@ -443,5 +477,5 @@ export async function tryAutoVerify(aid) {
     await dropImage(aid, ID_SLOT);
     idGone = !(await getImage(aid, ID_SLOT));
   } catch { idGone = false; }
-  return { ok: true, verified: true, match: m, idDeleted: idGone };
+  return { ok: true, verified: true, match: m, dobMatched: true, idDeleted: idGone };
 }

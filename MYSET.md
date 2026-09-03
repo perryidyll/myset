@@ -434,7 +434,7 @@ listUse
 
 **Getting paid:** payStatus · payStart · payDashboard
 
-**Verification:** verifyStatus · idUpload
+**Verification:** verifyStatus · idUpload (legal name + date of birth, auto-verifies on a Stripe match)
 
 **Alerts:** pushKey · pushOn · pushOff
 
@@ -515,8 +515,33 @@ A recovery key exists in the server environment for the founding account only.
 email on that website's domain, the website naming the venue, and **3 different artists
 who have a gig listed there** confirming it. All five, shown as a checklist.
 
-**An artist** needs a paid plan, card payments actually set up, a photo of an ID
-matching the account, and Perry's approval.
+**An artist** needs a paid plan, card payments actually set up, and a photo of an ID
+— submitted together with their **full legal name and date of birth**.
+
+**Most artists are verified instantly, with no human involved.** Setting up card
+payments means Stripe has already run a real identity check on the person. So the
+upload compares the stated legal name and date of birth against the ones Stripe
+verified, and if the name matches (same names, or the same plus a middle name) and the
+birth date matches to the day, the tick is granted on the spot. Anything short of that
+— a shared surname, a shared first name, a mismatched date, a business account with no
+person on it, an identity check Stripe has not finished — goes to Perry with the
+comparison written on the row, saying which of the five checks failed.
+
+**It asks for the LEGAL name, not the page name.** Perry's page says Idyll; his
+passport says Murdaugh. He estimates half of artists are in the same position, so
+comparing display names would have failed for most real people and defeated the whole
+automatic path. The form says plainly that a stage name is normal.
+
+**The date of birth is compared once and thrown away.** Only the yes/no answer is
+kept. It is asked for because a name alone is weak — two Bo Trans exist — and a birth
+date is a second fact Stripe has already checked. A test asserts the stored row does
+not contain the date.
+
+**Nothing reads the photo.** No text is extracted from it, no face is compared. The
+automatic path leans entirely on Stripe's own KYC — a real identity check by a
+regulated company — and the photo stays a thing a person looks at when there is doubt.
+This is stated wherever the feature appears, because a badge that claims more than it
+checks is worse than no badge.
 
 **The ID photo is never public and never kept.** It goes to a slot the image endpoint
 refuses to serve, and is deleted the moment a decision is made either way.
@@ -524,6 +549,23 @@ refuses to serve, and is deleted the moment a decision is made either way.
 **Paying opens the door to being checked — it never buys the tick.** A purchasable
 trust signal is worth nothing, and a wrong tick on a real bar sends a real person to
 the wrong place.
+
+### Looking at production without a password
+
+`python3 tools/prod.py` prints a plain-language health report of the LIVE site: who
+has signed up, their plan, whether they have the tick, whether an ID is on file and
+how it compared, whether Stripe is connected, and how much of each kind of thing is
+stored. `tools/prod.py keys` lists every key; `tools/prod.py get <key>` prints one.
+
+It needs no password because the Netlify CLI on Perry's machine is already signed in
+as the site owner, and `netlify blobs:get` reads the production store directly. That
+is owner-level READ access to everything.
+
+**The recovery key cannot be read back, and that is correct.** Netlify marks
+`ADMIN_CODE` as a secret, so the API returns a mask instead of the value. A session
+once mistook that mask for the key, got a 401 from the admin door, and wrongly wrote
+down that the recovery key was broken. It is not broken — it is unreadable by design.
+Do not repeat that conclusion.
 
 ## 4.9 Everything else
 

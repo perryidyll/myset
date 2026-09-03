@@ -81,11 +81,29 @@ If you are about to violate one, stop and say so rather than working around it.
    by luck and Germany into GE, which is not a country.
 
 0bo. **A near-miss is a question, never a small yes.** The artist tick can be granted
-   automatically: paid plan + card payments live + STRIPE's own identity check passed
-   on the person + the name the artist gave matching the name Stripe verified. The
-   match must be `exact` or `strong` (the same names, or one plus a middle name).
-   `weak` — a shared surname, a shared first name — goes to a human with the
+   automatically, and it takes FIVE things: paid plan + card payments live + STRIPE's
+   own identity check passed on the person + the artist's stated LEGAL name matching
+   the name Stripe verified + the stated date of birth matching Stripe's to the day.
+   The name match must be `exact` or `strong` (the same names, or one plus a middle
+   name). `weak` — a shared surname, a shared first name — goes to a human with the
    comparison recorded. "Sam Idyll" must never be waved through as "Perry Idyll".
+
+   **Match the LEGAL name, never the page name.** Perry's own page says Idyll and his
+   passport says Murdaugh; the owner estimates half of artists will be in the same
+   position. Matching the display name would have failed for most real users and
+   quietly queued them all behind a human, which is exactly the outcome the automatic
+   path exists to avoid. So the upload form asks for the name on the document and
+   says out loud that a stage name is normal, and `_verify.mjs` reads `row.legalName`
+   — never `row.name`. If you ever find code comparing the display name here, that is
+   the bug.
+
+   **The date of birth is compared and then thrown away.** It is asked for because a
+   name alone is weak — two Bo Trans exist — and a birth date is a second independent
+   fact Stripe has already verified. Only the boolean verdict (`dobMatch`) is stored
+   on the queue row. The date itself must never be written to any document, and a
+   test asserts the row's JSON does not contain it. Adding a "keep it for the audit
+   trail" field turns a throwaway check into personal data we are then responsible
+   for; don't.
 
    **Nothing reads the photo.** No text is extracted and no face is compared. The
    automatic path leans on Stripe's KYC, which is a real identity check by a

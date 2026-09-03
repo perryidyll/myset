@@ -41,6 +41,12 @@ const hit = async (h, url, body, token, extra) => {
 };
 const SIG = { 'stripe-signature': 't=1,v1=x' };
 const PNG = 'data:image/png;base64,iVBORw0KGgo=';
+/* A stage name is the NORMAL case, not the exception — Perry's own page says Idyll
+   while his passport says otherwise — so the fixtures use a different legal name
+   from the account name everywhere, and the account name is never what is matched. */
+const DOB = '1985-04-12';
+const upload = (token, legalName, dob = DOB) =>
+  hit(admin, 'https://x/api/admin', { action: 'idUpload', data: PNG, legalName, dob }, token);
 
 console.log('\nTHE NAME RULES  the near-misses are the point');
 eq('the same name', nameMatch('Perry Idyll', 'PERRY IDYLL'), 'exact');
@@ -73,7 +79,7 @@ const mk = async (email, slug, name) => {
   const reg = await readArtists();
   return { ...a, token: await signToken(email, revOf(reg, a.artistId)) };
 };
-const onboard = async (t, aid, { legal, status, business }) => {
+const onboard = async (t, aid, { legal, status, business, dob }) => {
   await hit(admin, 'https://x/api/admin', { action: 'payStart', country: 'US' }, t);
   const acct = [...__stripe.accounts.keys()].find((k) =>
     __stripe.accounts.get(k).metadata.myset_artist === aid);
@@ -82,7 +88,9 @@ const onboard = async (t, aid, { legal, status, business }) => {
   if (business) { a.individual = null; a.business_profile = { name: business }; }
   else {
     const [f, ...r] = String(legal || '').split(' ');
+    const [dy, mo, yr] = (dob || DOB).split('-').reverse();
     a.individual = { first_name: f || '', last_name: r.join(' '),
+                     dob: { day: +dy, month: +mo, year: +yr },
                      verification: { status: status || 'unverified' } };
   }
   await hit(hookFn, 'https://x/api/webhook',
@@ -102,7 +110,7 @@ ok('now it is the payments', /card payments/.test(r.why || ''), r.why);
 await onboard(ana.token, ana.artistId, { legal: 'Ana Reyes', status: 'pending' });
 r = await tryAutoVerify(ana.artistId);
 ok('now it is the missing ID', /no ID on file/.test(r.why || ''), r.why);
-const up = await A('idUpload', { data: PNG, name: 'Ana Reyes' });
+const up = await upload(ana.token, 'Ana Reyes');
 ok('the ID uploads', up.ok, up);
 eq('but Stripe has not finished checking her', up.autoVerified, false);
 ok('and it says exactly that', /not finished checking/.test(up.autoWhy || ''), up.autoWhy);
@@ -130,7 +138,7 @@ console.log('\nA CLOSE NAME IS A QUESTION, NOT A YES');
 const bo = await mk('bo@example.com', 'bo-tran', 'Bo Tran');
 await mutateArtists((x) => { x.byId[bo.artistId].plan = 'plus'; return true; });
 await onboard(bo.token, bo.artistId, { legal: 'Sam Tran', status: 'verified' });
-await hit(admin, 'https://x/api/admin', { action: 'idUpload', data: PNG, name: 'Bo Tran' }, bo.token);
+await upload(bo.token, 'Bo Tran');
 r = await tryAutoVerify(bo.artistId);
 eq('a shared surname does not pass', r.verified, false);
 ok('and says the names are close but not the same', /close but not the same/.test(r.why || ''), r.why);
@@ -147,7 +155,7 @@ console.log('\nA BUSINESS ACCOUNT HAS NO PERSON TO MATCH');
 const cy = await mk('cy@example.com', 'cy-lo', 'Cy Lo');
 await mutateArtists((x) => { x.byId[cy.artistId].plan = 'pro'; return true; });
 await onboard(cy.token, cy.artistId, { business: 'Cy Lo Music Ltd' });
-await hit(admin, 'https://x/api/admin', { action: 'idUpload', data: PNG, name: 'Cy Lo' }, cy.token);
+await upload(cy.token, 'Cy Lo');
 r = await tryAutoVerify(cy.artistId);
 eq('it does not guess', r.verified, false);
 ok('and says why', /business/.test(r.why || ''), r.why);
@@ -156,12 +164,39 @@ console.log('\nA STRAIGHT MATCH GOES THROUGH ON UPLOAD');
 const di = await mk('di@example.com', 'di-park', 'Di Park');
 await mutateArtists((x) => { x.byId[di.artistId].plan = 'pro'; return true; });
 await onboard(di.token, di.artistId, { legal: 'Di Park', status: 'verified' });
-const up2 = await hit(admin, 'https://x/api/admin',
-  { action: 'idUpload', data: PNG, name: 'di park' }, di.token);
+const up2 = await upload(di.token, 'di park');
 eq('verified the moment the ID arrived', up2.autoVerified, true);
 reg = await readArtists();
 eq('and it stuck', !!reg.byId[di.artistId].verified, true);
 eq('photo destroyed', await getImage(di.artistId, ID_SLOT), null);
+
+console.log('\nA STAGE NAME IS THE NORMAL CASE, NOT A PROBLEM');
+/* The whole reason this uses the LEGAL name: Perry's page says Idyll and his
+   passport says something else. Matching the display name would have failed for
+   most real artists and quietly queued them all. */
+const ez = await mk('ez@example.com', 'ez-idyll', 'Ez Idyll');   // stage name
+await mutateArtists((x) => { x.byId[ez.artistId].plan = 'pro'; return true; });
+await onboard(ez.token, ez.artistId, { legal: 'Ez Murdaugh', status: 'verified' });
+const upEz = await upload(ez.token, 'Ez Murdaugh');              // the LEGAL name
+eq('verified on a legal name that differs from the stage name', upEz.autoVerified, true);
+reg = await readArtists();
+eq('and the page keeps the stage name', reg.byId[ez.artistId].name, 'Ez Idyll');
+
+console.log('\nBOTH FACTS ARE REQUIRED, AND NEITHER IS STORED');
+const fi = await mk('fi@example.com', 'fi-lane', 'Fi Lane');
+await mutateArtists((x) => { x.byId[fi.artistId].plan = 'pro'; return true; });
+await onboard(fi.token, fi.artistId, { legal: 'Fi Lane', status: 'verified' });
+const wrongDob = await upload(fi.token, 'Fi Lane', '1990-01-01');
+eq('a right name with a wrong date does NOT pass', wrongDob.autoVerified, false);
+ok('and says which one failed', /date of birth/.test(wrongDob.autoWhy || ''), wrongDob.autoWhy);
+const qf = await readIdQueue();
+eq('THE PRIVACY RULE: only the verdict is kept, never the date', qf.by[fi.artistId].dobMatch, false);
+ok('no date of birth is stored anywhere on the row',
+   !JSON.stringify(qf.by[fi.artistId]).includes('1990'), qf.by[fi.artistId]);
+ok('and a missing name or date is refused outright',
+   (await hit(admin, 'https://x/api/admin', { action: 'idUpload', data: PNG, legalName: 'Fi' }, fi.token)).status === 400);
+ok('...as is an impossible date',
+   (await upload(fi.token, 'Fi Lane', '1985-02-31')).status === 400);
 
 console.log('\nAND THE HONEST LIMIT IS WRITTEN DOWN');
 const src = readFileSync(new URL('../netlify/functions/_verify.mjs', import.meta.url), 'utf8');
