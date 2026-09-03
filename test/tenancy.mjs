@@ -256,21 +256,25 @@ const owner = await hit(admin, 'https://x/api/admin?code=devlocal', { action: 'r
 ok('the founding artist is never locked out of pricing', owner.ok, owner);
 
 /* ── the free plan's gig cap ─────────────────────────────────────── */
-console.log('\nGIG CAP  four free shows a month, counted where a gig starts');
+console.log('\nGIG CAP  two free shows a WEEK, counted where a gig starts');
 
 /* Ana is on the free plan. A gig starts on newShow, and on status->live from
    anything that is not already live. She has already used one earlier in this
    file, so read the counter rather than assuming — the first draft of this test
-   asserted 4 and measured 3 for exactly that reason. */
+   asserted a number and measured one fewer for exactly that reason. The cap moved
+   from 4 a month to 2 a WEEK on 2026-09-03, so it is read from the plan table here
+   rather than written down twice. */
+const { PLANS: PL } = await import('../netlify/functions/_plan.mjs');
+const CAP = PL.free.gigs;
 const used0 = (await stA(TA4)).show.gigCount || 0;
 ok('she has already used at least one show', used0 >= 1, used0);
 let started = 0;
-for (let i = 0; i < 4 - used0; i++) if ((await A(TA4, 'newShow')).ok) started++;
-eq('she can start exactly the rest of her four', started, 4 - used0);
+for (let i = 0; i < CAP - used0; i++) if ((await A(TA4, 'newShow')).ok) started++;
+eq(`she can start exactly the rest of her ${CAP}`, started, Math.max(0, CAP - used0));
 
-const fifth = await A(TA4, 'newShow');
-eq('the fifth is refused', fifth.status, 402);
-ok('and says when it resets', /resets on the 1st/.test(fifth.error || ''), fifth.error);
+const overCap = await A(TA4, 'newShow');
+eq('one past the cap is refused', overCap.status, 402);
+ok('and says when it resets', /resets Monday/i.test(overCap.error || ''), overCap.error);
 
 /* newShow leaves the show LIVE, and setting live when already live is a no-op —
    correctly uncapped. End it first, then the Start button is the capped path. */
@@ -280,7 +284,7 @@ eq('and Start the show is capped too, not just New show', goLive.status, 402);
 
 /* Nothing may stop a night that is already running — INVARIANT 16. */
 const sAna2 = await stA(TA4);
-eq('her counter sits exactly on the cap', sAna2.show.gigCount, 4);
+eq('her counter sits exactly on the cap', sAna2.show.gigCount, CAP);
 ok('and the songs she has are untouched', Array.isArray(sAna2.songs), typeof sAna2.songs);
 const ended = await A(TA4, 'status', { status: 'ended' });
 ok('ending is never capped', ended.ok, ended);

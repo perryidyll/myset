@@ -59,3 +59,6 @@ node --import ./test/register.mjs test/delivery.mjs
 echo
 echo "── what an endpoint costs ──"
 node --import ./test/register.mjs test/cost.mjs
+echo
+echo "── the free plan's limits ──"
+node --import ./test/register.mjs test/limits.mjs

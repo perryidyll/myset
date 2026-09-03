@@ -431,6 +431,20 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .note{background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-sm);
   padding:12px 14px;font-size:13px;line-height:1.5;color:var(--ink-2)}
 .note b{display:block;margin-bottom:4px;color:var(--ink)}
+/* The founder's note. Collapsed by default — it is long, and an artist reading the
+   plans should meet a question they can choose to open, not a wall of text. */
+.why{background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--r-sm);
+  margin-bottom:12px;overflow:hidden}
+.why summary{list-style:none;cursor:pointer;padding:14px;font-size:13.5px;font-weight:600;
+  color:var(--accent-2);line-height:1.4;display:flex;gap:10px;align-items:flex-start}
+.why summary::-webkit-details-marker{display:none}
+.why summary::after{content:'▾';margin-left:auto;color:var(--muted);font-size:12px;
+  transition:transform .2s var(--ease);flex:0 0 auto}
+.why[open] summary::after{transform:rotate(180deg)}
+.why summary:active{opacity:.7}
+.whybody{padding:0 14px 14px;font-size:13px;line-height:1.55;color:var(--ink-2)}
+.whybody p{margin:0 0 10px}
+.whybody p:last-child{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -1158,6 +1172,19 @@ async function loadRev(force){
 }
 /* ---- gig calendar ---- */
 const pad=n=>String(n).padStart(2,'0');
+/* The same ISO week the server counts in (gigWeekOf in _lib.mjs). Monday to Sunday,
+   Thursday decides the year. If these two ever disagree the artist is told a
+   different number from the one that is enforced, so they are kept identical. */
+function isoWeek(now=Date.now()){
+  const d=new Date(now);
+  const t=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+  const day=(new Date(t).getUTCDay()+6)%7;
+  const thu=t+(3-day)*86400000;
+  const y=new Date(thu).getUTCFullYear();
+  const jan4=Date.UTC(y,0,4), j4d=(new Date(jan4).getUTCDay()+6)%7;
+  const w1=jan4-j4d*86400000;
+  return `${y}-W${String(Math.round((thu-w1)/(7*86400000))+1).padStart(2,'0')}`;
+}
 const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;};
 let CAL_MONTH=todayStr().slice(0,7);
 const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1398,14 +1425,13 @@ function render(){
           10pm that they cannot start is the worst possible moment to learn it. */
         const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
         if(!cap||cap===null||!isFinite(cap))return '';
-        const m=new Date().toISOString().slice(0,7);
-        const used=s.gigMonth===m?(s.gigCount||0):0;
+        const used=s.gigWeek===isoWeek()?(s.gigCount||0):0;
         const left=Math.max(0,cap-used);
         if(left>2)return '';
         return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">
           ${left===0
-            ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
-            : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
+            ? `<b style="color:var(--accent)">That's your ${cap} free shows this week.</b> Your allowance resets Monday — or upgrade in Settings to play as often as you like.`
+            : `<b>${left} free show${left===1?'':'s'} left this week.</b> Resets Monday.`}</p>`;
       })()}
       ${s.status==='ended'&&(s.played||[]).length?`
       <p class="muted" style="font-size:12px;padding:8px 20px 0">
@@ -1798,19 +1824,30 @@ function render(){
     <div class="wrap"><button class="big alt" id="lyrWarm" onclick="warmLyrics()">↓ Fetch lyrics for the whole setlist</button></div>
 
     <div class="sec"><span class="kick">Your plan</span></div>
-    <div class="note" style="margin-bottom:12px"><b>Why there's a limit at all</b>
-      <p>I'm a working musician — I play most nights, and I'd rather MySet were free
-      for everyone. Here's the honest reason it can't quite be.</p>
-      <p>While you're on stage, <b>every phone in the room is asking my server
-      "has the song changed yet?"</b> — a few times a minute, each, for the whole
-      gig. That's what makes the queue move live in front of people, and it's the
-      one part that genuinely costs money. A packed three-hour show is tens of
-      thousands of those little questions.</p>
-      <p>So the free plan is limited by <b>shows a month</b> rather than by
-      features. It's the only thing that actually tracks the cost, and it means a
-      hobbyist plays free forever while someone earning from it chips in. Nothing
-      your audience sees is ever cut back — the voting, the requests, the lyrics
-      and the sing-alongs are the same on every plan.</p></div>
+    <details class="why"><summary>Why there's a limit at all — a message from the
+      founder, Perry Idyll</summary>
+      <div class="whybody">
+      <p>Hi! I'm a working musician — I play 6–7 nights a week and created MySet as a
+      way to interact more with my audiences.</p>
+      <p>I would really love to be able to make it free for everyone… But it's just
+      not feasible and I want to take a moment to explain why:</p>
+      <p>While you're on stage, every single phone in the room connected to the app is
+      essentially asking my server “has the song changed yet?” constantly for the
+      entire show.</p>
+      <p>So a packed 3-hour show produces tens of thousands of those little questions,
+      each of which costs credits ($$) on my server… and they add up fast — very
+      fast.</p>
+      <p>That's why the shows are limited to 2/week on the free plan, which basically
+      means a hobbyist gets to play for free — forever — while the musicians earning
+      money from it cover the costs, as well as their own.</p>
+      <p>Of course, I am also an entrepreneur and want to earn a living like everyone
+      else! So creating a basic business model out of it is certainly something I want
+      as well. But without some kind of monetization structure the app literally
+      couldn't run at all…</p>
+      <p>I hope this makes sense and you understand where I'm coming from. I'm
+      incredibly grateful that you've joined this community of artists and venues
+      helping to reshape the entire live music experience.</p>
+      </div></details>
     ${PLAN&&PLAN.ok?`
       <div class="planbox">
         <div class="row" style="border:none;padding:0">

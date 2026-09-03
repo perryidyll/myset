@@ -18,16 +18,23 @@ export const PLANS = {
   free: {
     label: 'Free', price: 0,
     featured: 50,       // how many can be live to the audience at once
-    /* SHOWS PER CALENDAR MONTH. This is the one limit that tracks what MySet
-       actually costs to run: every phone in the room polls for the whole gig, so
-       the bill is driven by gigs played, not by artists signed up. Capping the
-       free tier on the real cost driver is what makes free survivable — a limit
-       on features would punish the wrong people and save nothing. Four a month is
-       a hobbyist; five is someone earning from it. */
-    gigs: 4,
+    /* SHOWS PER ISO WEEK (Monday to Sunday — see gigWeekOf in _lib.mjs). This is
+       the one limit that tracks what MySet actually costs to run: every phone in
+       the room polls for the whole gig, so the bill is driven by gigs played, not
+       by artists signed up. Capping the free tier on the real cost driver is what
+       makes free survivable — a limit on features would punish the wrong people
+       and save nothing.
+
+       WEEKLY, not monthly. A working act plays in a weekly rhythm, and a monthly
+       bucket let somebody burn the whole allowance on one weekend and then sit
+       dark for three weeks. It is also a limit you can hold in your head: "two a
+       week" is a sentence; "four a month, resetting on the 1st" is arithmetic.
+       Two a week is a hobbyist; three is somebody earning from it. */
+    gigs: 2,
     cut: 0.10,            // platform share of tips and vote sales
     seats: 1,
     pricing: false,       // change free-vote count, pack prices, replay/ask costs
+    setlists: false,      // named subsets of the library, one active at a time
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
     presskit: false,
@@ -43,7 +50,7 @@ export const PLANS = {
        a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
     cut: 0.02,
     seats: 1,
-    pricing: true,
+    pricing: true, setlists: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
@@ -52,7 +59,7 @@ export const PLANS = {
     gigs: Infinity,
     cut: 0,
     seats: 5,
-    pricing: true,
+    pricing: true, setlists: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };

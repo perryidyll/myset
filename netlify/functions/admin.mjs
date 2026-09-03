@@ -3,7 +3,7 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, release
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigWeekOf } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -587,6 +587,12 @@ async function handleLists(aid, action, body) {
   if (action === 'listAll') return send();
 
   if (action === 'listNew') {
+    /* Making a NEW setlist is a Plus feature. Everything else about setlists keeps
+       working on free — an artist who downgrades can still use, rename and edit the
+       sets they already have, because a cap never deletes anything (INVARIANT 0s).
+       Only creating another one is gated. */
+    if (!isPlatformOwner(aid) && (await planForArtist(aid)).limits.setlists !== true)
+      return bad('Separate setlists are a Plus feature — everything you already have keeps working.', 402);
     const name = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, MAX_NAME);
     if (!name) return bad('Give the set a name');
     const id = 'l' + Math.random().toString(36).slice(2, 9);      // outside the CAS
@@ -1133,7 +1139,7 @@ export default async (req) => {
     gigCap = (isPlatformOwner(aid) || lim === Infinity || lim === undefined) ? null : lim;
     if (gigCap !== null) {
       const cur = await getShow(aid);
-      gigsUsed = cur.gigMonth === gigMonthOf() ? cur.gigCount : 0;
+      gigsUsed = cur.gigWeek === gigWeekOf() ? cur.gigCount : 0;
     }
   }
 
@@ -1227,8 +1233,8 @@ export default async (req) => {
     /* Recomputed inside the CAS callback so a retry cannot double-count — the
        accumulator rule, INVARIANT 0bi. */
     const countGig = (sh) => {
-      const m = gigMonthOf();
-      if (sh.gigMonth !== m) { sh.gigMonth = m; sh.gigCount = 0; }
+      const w = gigWeekOf();
+      if (sh.gigWeek !== w) { sh.gigWeek = w; sh.gigCount = 0; }
       sh.gigCount += 1;
     };
 
@@ -1292,7 +1298,7 @@ export default async (req) => {
         const want = ['pre','live','ended'].includes(body.status) ? body.status : show.status;
         if (want === 'live' && show.status !== 'live') {
           if (gigCap !== null && gigsUsed >= gigCap) {
-            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
+            err = [`That's your ${gigCap} free shows this week. Upgrade to keep playing — your allowance resets Monday.`, 402];
             return false;
           }
           countGig(show);
@@ -1467,7 +1473,7 @@ export default async (req) => {
       case 'clearSetlist': show.songs = []; break;
       case 'newShow':
           if (gigCap !== null && gigsUsed >= gigCap) {
-            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
+            err = [`That's your ${gigCap} free shows this week. Upgrade to keep playing — your allowance resets Monday.`, 402];
             return false;
           }
         countGig(show);

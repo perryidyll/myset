@@ -273,9 +273,10 @@ by **name within a city**, never by a stored link, so neither side can break the
 |---|---|---|---|
 | Price | $0 | **$10/month** | **$20/month** |
 | **MySet's cut of money through the app** | **10%** | **2%** | **0%** |
-| Shows per calendar month | **4** | unlimited | unlimited |
+| Shows per **week** (Mon–Sun) | **2** | unlimited | unlimited |
 | Songs live to the audience at once | 50 | unlimited | unlimited |
 | Team seats | 1 | 1 | 5 |
+| Separate setlists | — | ✓ | ✓ |
 | Set your own prices | — | ✓ | ✓ |
 | Verification tick | — | ✓ | ✓ |
 | Promote in other cities | — | — | ✓ |
@@ -288,8 +289,18 @@ limits how many are *live to the audience*, and it never deletes anything.
 
 **Why the free tier is capped by gigs and not features.** Every phone in the room polls
 for the whole gig, so what MySet costs to run is driven by gigs played, not artists
-signed up. Capping free on the real cost driver is what makes free survivable. Four
-shows a month is a hobbyist; five is somebody earning from it.
+signed up. Capping free on the real cost driver is what makes free survivable. Two
+shows a week is a hobbyist; three is somebody earning from it.
+
+**Weekly, not monthly.** A working act plays in a weekly rhythm, and a monthly bucket
+let somebody burn the whole allowance on one weekend and then sit dark for three. It is
+also a limit you can hold in your head. Counted in ISO weeks — Monday to Sunday, the
+same answer in every timezone — and stamped on the show record, so what the Studio
+shows and what the server enforces are computed the same way.
+
+**Creating a setlist is a Plus feature.** Only *creating* one: an artist who made sets
+on Plus and later drops to free keeps using, renaming, filling and deleting them,
+because a cap never deletes anything.
 
 **Anything the ROOM experiences stays free on every plan.** Lyrics were briefly behind
 a paywall and were put back: an audience that gets a sing-along at one gig and not the

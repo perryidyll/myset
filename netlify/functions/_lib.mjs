@@ -126,7 +126,29 @@ export const DEFAULT_ARTIST = 'perry-idyll';
    Two different artists starting a show in the same minute collided too, which is
    half of why moneyForShow now also filters on metadata.artist. Readable prefix,
    unique tail. */
-/** UTC year-month, the bucket the free gig cap counts in. */
+/* The bucket the free gig cap counts in: an ISO WEEK, starting Monday.
+
+   It was a calendar month, and a month is the wrong shape for this product — a
+   working act plays in weekly rhythm, and a monthly bucket lets somebody burn the
+   whole allowance on one weekend and then sit dark for three weeks. A week also
+   makes the limit legible: "two a week" is a sentence a musician can hold in their
+   head, "four a month, resetting on the 1st" is not.
+
+   ISO weeks, so it is the same answer everywhere and does not drift with local
+   time: Thursday decides the year, and weeks run Monday to Sunday. */
+export function gigWeekOf(now = Date.now()) {
+  const d = new Date(now);
+  const t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const day = (new Date(t).getUTCDay() + 6) % 7;          // Monday = 0
+  const thursday = t + (3 - day) * 86400000;              // the week's Thursday
+  const y = new Date(thursday).getUTCFullYear();
+  const jan4 = Date.UTC(y, 0, 4);
+  const jan4Day = (new Date(jan4).getUTCDay() + 6) % 7;
+  const week1Monday = jan4 - jan4Day * 86400000;
+  const week = Math.round((thursday - week1Monday) / (7 * 86400000)) + 1;
+  return `${y}-W${String(week).padStart(2, '0')}`;
+}
+/** Kept so an older stored value can still be recognised and cleared. */
 export const gigMonthOf = (now = Date.now()) => new Date(now).toISOString().slice(0, 7);
 
 export function newShowId(now = Date.now(), rand = Math.random()) {
@@ -190,7 +212,7 @@ export function defaultShow() {
     /* Shows started this calendar month, for the free plan's gig cap. Stored
        rather than counted from history because a show in progress is not in
        history yet, and the cap has to include tonight. */
-    gigMonth: '', gigCount: 0,
+    gigWeek: '', gigCount: 0,
     songs: [],
     showId: null,
     artistId: ARTIST_ID,
@@ -396,7 +418,12 @@ function normShow(s) {
   show.listId = String(show.listId || '').replace(/[^a-z0-9]/gi, '').slice(0, 12);
   show.listName = String(show.listName || '').replace(/\s+/g, ' ').trim().slice(0, 40);
   show.listSongs = Array.isArray(show.listSongs) ? show.listSongs : [];
-  show.gigMonth = String(show.gigMonth || '').slice(0, 7);
+  /* A record written before the cap became weekly carries `gigMonth`. It is not
+     migrated to a week — there is no honest way to know which week those shows fell
+     in — so it is dropped and the artist starts the week clean. A free artist
+     getting one generous week is the right side to err on. */
+  if (show.gigMonth !== undefined) { delete show.gigMonth; show.gigWeek = ''; show.gigCount = 0; }
+  show.gigWeek = String(show.gigWeek || '').slice(0, 8);
   show.gigCount = Math.max(0, parseInt(show.gigCount, 10) || 0);
   /* Songs carry a key and genre tags. Tags are filtered against what actually
      exists, so deleting a custom tag cleans itself up on the next read. */
