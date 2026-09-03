@@ -19,6 +19,13 @@
 <title>Artist Studio — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
 <link rel="manifest" href="/manifest-studio.webmanifest">
+<link rel="stylesheet" href="/lock.css">
+<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
+     from an inline script, and a deferred script runs AFTER all of those —
+     so `defer` here makes MySetPull undefined at the moment it is called and
+     the gesture silently never arms. 4KB, same origin, and the service worker
+     serves it from cache, so blocking costs nothing measurable. -->
+<script src="/pull.js"></script>
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -522,14 +529,12 @@ function openLists(){
       ${l.active?'<span class="now">In play</span>'
         :`<button class="act" data-act="luse" data-id="${esc(l.id)}">Use</button>`}
     </div>`).join('')}
-    ${(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.setlists===false&&!PLAN.owner)
-      /* Say it before the tap, not after. The server refuses this on free, and a
-         button that looks available and then apologises is the shrug INVARIANT 0ad
-         exists to prevent. The sets they already have keep working, which is why
-         this is the only thing greyed out on this screen. */
-      ? `<button class="big alt" style="margin-top:18px" onclick="setTab('settings')">+ New setlist — a Plus feature</button>
-         <p class="muted" style="font-size:12px;margin:10px 0 0">Separate setlists come with Plus. Everything you already have keeps working.</p>`
-      : `<button class="big" style="margin-top:18px" onclick="newList()">+ New setlist</button>`}
+    ${/* Say it before the tap, not after. The server refuses this on free, and a
+          button that looks available and then apologises is the shrug INVARIANT 0ad
+          exists to prevent. Sets they already have keep working. */''}
+    <div style="margin-top:18px">${lock('setlists',
+      `<button class="big" onclick="newList()">+ New setlist</button>`,
+      'Sets you already have keep working.')}</div>
     <p class="muted" style="font-size:12px;margin:12px 0 0">You can also pick a set per gig
       on the <b>Gigs</b> tab — then tapping “Start the show” uses it automatically.</p>`);
 }
@@ -814,9 +819,16 @@ async function load(opts){
      the load finishing early and then carrying on. On the FIRST load only, wait for
      them, so the screen we hand over is the finished one. Later polls never wait. */
   const jobs=[];
+  /* THE PLAN IS FETCHED ON EVERY FIRST LOAD, not just on the Settings tab.
+     `has()` treats an unknown plan as allowed — so there is no grey flash — which
+     meant the FIRST render of Settings or Setlist showed every locked control
+     fully live and tappable to a free artist, and the server answered 402. That is
+     INVARIANT 0ad narrowed to a window rather than closed. It is one small read on
+     a path that is already awaiting several. */
+  if(!PLAN) jobs.push(loadPlan());
   if(TAB==='money'){ if(!REV)jobs.push(loadRev()); if(!HIST)jobs.push(loadHist()); }
   if(TAB==='profile'&&!PROF) jobs.push(loadProf());
-  if(TAB==='settings'){ if(!TEAM)jobs.push(loadTeam()); if(!PLAN)jobs.push(loadPlan());
+  if(TAB==='settings'){ if(!TEAM)jobs.push(loadTeam());
     jobs.push(loadTick()); jobs.push(drawPush()); }
   if(TAB==='gigs'){ if(!EVENTS)jobs.push(loadGigs()); if(!PITCHES)jobs.push(loadPitches()); }
   if(!first) return;
@@ -902,11 +914,37 @@ async function sendCode(){
   gate(null,'code');
 }
 let TICKET='';
+/* FIRST TOUCH, remembered.
+   Signing up means leaving for an email inbox and coming back, and whatever
+   brought them here — ?ref= from another artist, ?src= off a poster QR — is gone
+   from the URL by then. So it is stashed on the FIRST visit and read at the end.
+   `ref` still prefers the live URL, so nothing about referrals changes; this only
+   rescues the case where it used to be silently lost. */
+function firstTouch(){
+  try{
+    const q=new URLSearchParams(location.search);
+    const ref=q.get('ref')||'';
+    const src=q.get('src')||q.get('utm_source')||q.get('utm_medium')||'';
+    if(ref&&!localStorage.getItem('myset.ref')) localStorage.setItem('myset.ref',ref);
+    if(!localStorage.getItem('myset.src')){
+      let from=src;
+      if(!from&&document.referrer){
+        try{ const h=new URL(document.referrer).host; if(h&&h!==location.host) from=h; }catch(e){}
+      }
+      if(from) localStorage.setItem('myset.src',from);
+    }
+  }catch(e){}
+}
+firstTouch();
 async function claimAccount(){
   const nm=(($('#newName')||{}).value||'').trim();
   if(!nm){toast('What should we call you?');return;}
-  const ref=new URLSearchParams(location.search).get('ref')||'';
-  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'claim',ticket:TICKET,name:nm,ref})});
+  let ref='',src='';
+  try{
+    ref=new URLSearchParams(location.search).get('ref')||localStorage.getItem('myset.ref')||'';
+    src=localStorage.getItem('myset.src')||'';
+  }catch(e){}
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'claim',ticket:TICKET,name:nm,ref,src})});
   if(!d.ok){toast(d.error||'Could not create that');return;}
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
@@ -921,6 +959,24 @@ async function submitCode(){
   CODE=''; localStorage.removeItem('myset.admin');
   toast(d.isNew?`Welcome — your page is myset.vip/${d.slug}`:`Signed in as ${d.email}`);
   start();
+}
+/* THE ESCAPE HATCH. sw.js has listened for 'myset-unregister' since it shipped —
+   it drops every cache and reloads every open copy — and there has never been a
+   way to send it. In an installed app with no address bar, that is the difference
+   between "reload it" and "delete the app and start again".
+
+   Sign-in is deliberately left alone: the token is in localStorage, not in a
+   cache, so this fixes a stale app without locking somebody out of their own
+   Studio mid-gig. If the worker is not there at all, a plain reload is still the
+   right thing to do rather than nothing. */
+async function hardReset(){
+  if(!confirm('Throw away the offline copy and start the app fresh? You stay signed in.')) return;
+  try{
+    if('caches' in window) for(const k of await caches.keys()) await caches.delete(k);
+    const reg='serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
+    if(reg&&reg.active){ reg.active.postMessage('myset-unregister'); await new Promise(r=>setTimeout(r,400)); }
+  }catch(e){}
+  location.reload();
 }
 function signOut(){
   CODE='';TOKEN='';
@@ -1047,6 +1103,139 @@ async function flagFlip(name,on){
   const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'flagSet',flag:name,on})});
   if(!r||!r.ok){ toast((r&&r.error)||'Could not change that'); return; }
   FLAGS_D=null; toast(`${name} is ${on?'on':'off'}`);
+}
+
+/* ---------- LOCKED FEATURES ----------
+   Perry's call: show what the paid plans do, greyed out, instead of hiding it —
+   and never show a control that looks live and then gets refused by the server.
+
+   ONE function decides availability and ONE draws the veil, so a feature cannot
+   be greyed in one place and live in another. Both read the plan payload; the
+   `soon` list in it names the flags that are DESIGNED AND NOT BUILT, which are
+   greyed for everybody including Perry, who is comped to Pro and would otherwise
+   be shown four dead ends as if they were his. */
+const LOCKICON='<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/></svg>';
+const isSoon=(flag)=>!!(PLAN&&PLAN.limits&&(PLAN.limits.soon||[]).includes(flag));
+function has(flag){
+  /* Unknown plan is treated as ALLOWED. A momentary grey flash on every load,
+     before planGet lands, would look like a downgrade. */
+  if(!PLAN||!PLAN.ok||!PLAN.limits) return true;
+  if(isSoon(flag)) return false;
+  if(PLAN.owner) return true;
+  const mine=PLAN.limits[flag];
+  /* A NUMERIC LIMIT IS NOT A YES/NO, and treating it as one was a real bug: a
+     venue's `photos` is 3 or 12 and an artist's `featured` is 50 or unlimited, so
+     `limits[flag]===true` was false for both and Pro showed a dash next to a
+     feature it fully had. "Has it" means "has as much as the top plan gives".
+     Unlimited arrives as null, because shapeLimits maps Infinity to null so it can
+     survive JSON. */
+  if(mine===null) return true;
+  if(typeof mine==='number'){
+    const top=(PLAN.plans&&PLAN.plans.pro)?PLAN.plans.pro[flag]:mine;
+    return top===mine;
+  }
+  return mine===true;
+}
+/** " (soon)" when a plan row names something that is designed and not built. */
+const soonTag=(L,flag)=>((L&&L.soon||[]).includes(flag)?' <i style="opacity:.7">(soon)</i>':'');
+/** The cheapest plan that actually turns this on — so the label never over-sells. */
+function needsPlan(flag){
+  const P=(PLAN&&PLAN.plans)||null;
+  if(P) for(const k of ['plus','pro']) if(P[k]&&P[k][flag]===true) return P[k].label;
+  return 'Pro';
+}
+/** Wraps `html` in a veil when the plan does not include `flag`. */
+function lock(flag,html,why){
+  if(has(flag)) return html;
+  const soon=isSoon(flag);
+  const cap=soon?'Coming soon':needsPlan(flag)+' feature';
+  const pill=`<b>${LOCKICON}${cap}</b>`;
+  /* The reason line sits UNDER the lock rather than inside the veil: a locked row
+     of chips is 43px tall and a caption inside it either overflows or gets
+     clipped mid-word. */
+  return `<div class="lock${soon?' soon':''}"><div class="lockin">${html}</div>`+
+    (soon?`<div class="lockveil">${pill}</div>`
+         :`<button type="button" class="lockveil" aria-label="${esc(cap)} \u2014 see the plans" onclick="showPlans()">${pill}</button>`)+
+    `</div>`+(why?`<p class="lockwhy">${esc(why)}</p>`:'');
+}
+/** Takes them to the plan cards, from wherever they tapped. */
+function showPlans(){
+  if(TAB!=='settings') setTab('settings');
+  setTimeout(()=>{const el=document.getElementById('planbox');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'center'});},60);
+}
+
+/* Previews of the four Pro features that are DESIGNED AND NOT BUILT. Showing
+   them was Perry's call; showing them as "coming soon" rather than "yours" is
+   what stops a Pro artist — Perry included — walking into a dead end. The list
+   they read from is NOT_BUILT in _plan.mjs, so the day one of these is built it
+   stops being greyed by deleting one word in one place. */
+function soonCard(flag,kick,lede,rows){
+  return `<div class="sec"><span class="kick">${kick}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">${lede}</p>
+    ${lock(flag,`<div class="list">${rows.map(([t,d])=>
+      `<div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div></div>`
+    ).join('')}</div>`)}`;
+}
+const analyticsCard=()=>soonCard('analytics','Your numbers',
+  'Which room pays, which night fills, which song earns. Built from nights you have already played.',
+  [['Earnings by venue','The Ugly Duckling · $184 over 6 nights'],
+   ['Best night of the week','Thursdays average 31 people'],
+   ['Your money songs','Wonderwall pulled 12% of all votes']]);
+const promoteCard=()=>soonCard('promote','Get booked somewhere new',
+  'Put yourself in the city feed for towns you do not play yet, so venues there can find you.',
+  [['Cities you can appear in','Anywhere, not just where you have gigs'],
+   ['Who saw you','Which venues opened your page'],
+   ['One tap to pitch','Sends them your numbers and your set']]);
+const presskitCard=()=>soonCard('presskit','Your press kit',
+  'One link a venue can open: who you are, what you play, and what happened last time you played a room like theirs.',
+  [['A page you can send','myset.vip/you/press'],
+   ['Real numbers on it','Average room, votes, nights played'],
+   ['A PDF too','For the bookers who still ask for one']]);
+const brandingCard=()=>soonCard('branding','Your colours on their phones',
+  'The voting page in your own colours and logo instead of MySet\u2019s.',
+  [['Your accent colour','Every button and highlight'],
+   ['Your logo at the top','Instead of the MySet mark'],
+   ['Your name in the tab','So it reads as yours']]);
+
+/* ---------- the Google Sheet ----------
+   Owner only. Two things a person needs: is it connected, and sync it now. The
+   status call is cheap; the sync is not, so it never runs on its own from here. */
+let SHEET=null, SHEETBUSY=false;
+async function loadSheet(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'sheetStatus'}),quiet:true});
+  SHEET=(d&&d.ok)?d:{on:false,reason:'Could not ask the server.'};
+  if(D) render();
+}
+function sheetCard(){
+  if(!PLAN||!PLAN.owner) return '';
+  if(SHEET===null){ loadSheet(); return ''; }
+  const S=SHEET;
+  const when=S.lastRunAt?dstamp(S.lastRunAt):'never';
+  return `<div class="sec"><span class="kick">Your Google Sheet</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">A copy of everything — who signed up, every night played, every song and what the room asked for. Nothing in MySet reads it, so you can slice it up however you like.</p>
+    ${S.on
+      ? `<div class="list">
+          <div class="row"><div class="m"><div class="t">${S.reachable?'Connected':'Set up, but Google said no'}</div>
+            <div class="s muted">${S.reachable?esc(S.title||'your sheet')+' · '+((S.present||[]).length)+' of '+((S.tabs||[]).length)+' tabs':esc(S.error||'')}</div></div>
+            <span class="now">${S.reachable?'✓':'!'}</span></div>
+          <div class="row"><div class="m"><div class="t">Last updated</div>
+            <div class="s muted">${esc(when)}${S.runs?' · '+S.runs+' time'+(S.runs===1?'':'s'):''} · updates itself nightly</div></div></div>
+         </div>
+         <div class="wrap" style="margin-top:12px"><button class="big${SHEETBUSY?' alt':''}" onclick="sheetSync()">${SHEETBUSY?'Working…':'Update the sheet now'}</button></div>`
+      : `<div class="list"><div class="row"><div class="m"><div class="t">Not connected yet</div>
+           <div class="s muted">${esc(S.reason||'')}</div></div></div></div>
+         <p class="muted" style="font-size:12px;padding:0 14px;margin:10px 0 0">Three settings in Netlify, then share the sheet with the address they give you. The full walk-through is in <b>MYSET.md</b>.</p>`}`;
+}
+async function sheetSync(){
+  if(SHEETBUSY) return;
+  SHEETBUSY=true; render();
+  const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'sheetSync'})});
+  SHEETBUSY=false;
+  if(!r||!r.ok){ toast((r&&r.error)||'Could not update the sheet'); SHEET=null; render(); return; }
+  const n=Object.values(r.counts||{}).reduce((a,b)=>a+(Number(b)||0),0);
+  toast(`Sheet updated — ${n} row${n===1?'':'s'}`);
+  SHEET=null; render();
 }
 
 /* ---------- Perry's review queue ----------
@@ -1586,7 +1775,8 @@ function render(){
       ${up.length>5?`<button class="seemore" onclick="GIGSALL=!GIGSALL;render()">${
         GIGSALL?'Show fewer ▴':`See ${up.length-5} more ▾`}</button>`:''}</div>
       <p class="muted" style="font-size:12px;padding:14px 18px 0">These show on your page and in the city feed automatically. ✕ cancels one night; Edit changes the whole run.</p>
-      ${pitchPanel()}`;
+      ${pitchPanel()}
+      ${promoteCard()}`;
     }
   }
 
@@ -1703,7 +1893,8 @@ function render(){
         </div>`).join('')||'<div class="row muted">No payments yet.</div>'}</div>
         <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
       }
-      body=payCard()+head+fbCard()+pays;   // Get-paid card, tonight, what the room said
+      // Get-paid card, tonight, what the room said, then the Pro numbers preview
+      body=payCard()+head+fbCard()+pays+analyticsCard();
     }
   }
 
@@ -1752,7 +1943,9 @@ function render(){
         <button class="act" data-act="mup" data-id="${esc(m.mid)}" ${i===0?'disabled style="opacity:.3"':''}>↑</button>
         <button class="act" data-act="mdn" data-id="${esc(m.mid)}" ${i===P.media.length-1?'disabled style="opacity:.3"':''}>↓</button>
         <button class="act warn" data-act="mrm" data-id="${esc(m.mid)}">✕</button>
-      </div>`).join('')||'<div class="row muted">Nothing yet. Paste a link above.</div>'}</div>`;
+      </div>`).join('')||'<div class="row muted">Nothing yet. Paste a link above.</div>'}</div>
+      ${presskitCard()}
+      ${brandingCard()}`;
     }
   }
 
@@ -1761,42 +1954,51 @@ function render(){
     ${tickCard()}
     ${idQueueCard()}
     ${flagCard()}
+    ${sheetCard()}
     <div class="sec"><span class="kick">Alerts on your phone</span></div>
     <div id="pushBox">${PUSHVIEW||`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div>`}</div>
 
     <div class="sec"><span class="kick">Free votes per person</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many votes each person gets. Refreshes every time you start a new song.</p>
-    <div class="wrap"><div class="chips">
+    ${/* THE UNLIMITED SWITCH IS NOT GATED, so it must not be greyed.
+          `canPrice` in admin.mjs covers freeCredits, packs, replayCost and askSet —
+          `unlimited` has no gate at all, deliberately: "everyone votes as much as
+          they like" is running your show, not pricing it. Wrapping the whole block
+          in one lock quietly took a working control off every free artist. */''}
+    ${lock('pricing',`<div class="wrap"><div class="chips">
       ${[1,2,3,5,10].map(n=>`<button class="chip ${!s.unlimited&&s.freeCredits===n?'on':''}" onclick="act('freeCredits',{n:${n}})">${n}</button>`).join('')}
-      <button class="chip ${s.unlimited?'on':''}" onclick="act('unlimited',{on:${!s.unlimited}})">∞ Unlimited</button>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
       <input class="inp" id="fcCustom" type="number" inputmode="numeric" min="0" max="999" style="flex:1"
         placeholder="Any other number" value="${!s.unlimited&&![1,2,3,5,10].includes(s.freeCredits)?s.freeCredits:''}">
       <button class="act pri" style="min-width:64px" onclick="saveFreeCredits()">Set</button>
+    </div></div>`,'Everyone gets '+s.freeCredits+' free votes a song until then.')}
+    <div class="wrap" style="margin-top:12px"><div class="chips">
+      <button class="chip ${s.unlimited?'on':''}" onclick="act('unlimited',{on:${!s.unlimited}})">∞ Unlimited votes for everyone</button>
     </div>
-    ${s.unlimited?`<p class="muted" style="font-size:12px;margin:9px 0 0">Everyone in the room can vote as much as they like. Nobody can buy votes while this is on.</p>`:''}
+    ${s.unlimited?`<p class="muted" style="font-size:12px;margin:9px 0 0">Everyone in the room can vote as much as they like. Nobody can buy votes while this is on.</p>`:`<p class="muted" style="font-size:12px;margin:9px 0 0">Free on every plan — it is your show, not a price.</p>`}
     </div>
 
     <div class="sec"><span class="kick">Cost to replay a played song</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Songs you've already played stay votable, but cost this many votes to bring back.</p>
-    <div class="wrap"><div class="chips">
+    ${lock('pricing',`<div class="wrap"><div class="chips">
       ${[2,3,5,8,10].map(n=>`<button class="chip ${(s.replayCost||5)===n?'on':''}" onclick="act('replayCost',{n:${n}})">${n}</button>`).join('')}
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
       <input class="inp" id="rcCustom" type="number" inputmode="numeric" min="1" max="99" style="flex:1"
         placeholder="Any other number" value="${![2,3,5,8,10].includes(s.replayCost||5)?(s.replayCost||''):''}">
       <button class="act pri" style="min-width:64px" onclick="saveReplayCost()">Set</button>
-    </div></div>
+    </div></div>`,'A replay costs '+(s.replayCost||5)+' votes until then.')}
 
     <div class="sec"><span class="kick">Price of extra votes</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">What the audience pays for more votes. All three show in their app. Changes apply to the next purchase.</p>
-    ${[['small','Small','pS'],['big','Big','pB']].map(([k,label,pre])=>
+    ${lock('pricing',`${[['small','Small','pS'],['big','Big','pB']].map(([k,label,pre])=>
       `<div class="field"><label>${label} pack</label><div style="display:flex;gap:8px;align-items:center">
         <input class="inp" id="${pre}v" type="number" min="1" max="100" value="${s.packs[k].votes}" style="flex:1">
         <span class="muted" style="font-size:13px">votes for $</span>
         <input class="inp" id="${pre}c" type="number" min="1" max="500" step="0.5" value="${(s.packs[k].cents/100)}" style="flex:1"></div></div>`).join('')}
-    <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="savePacks()">Save prices</button></div>
+    <div class="wrap" style="margin-top:12px"><button class="big alt" onclick="savePacks()">Save prices</button></div>`,
+      'The standard prices stay on, and the money is still yours.')}
 
     <div class="sec"><span class="kick">Requests from the audience</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Let the room ask for something that isn't on your list. They pay in votes, not money, and you decide — turning one down refunds them automatically. Both are off until you switch them on.</p>
@@ -1805,14 +2007,18 @@ function render(){
       <div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div>
         <div class="tog"><button class="${cfg.on?'on':''}" onclick="act('askSet',{kind:'${k}',on:true})">On</button>
         <button class="${!cfg.on?'on':''}" onclick="act('askSet',{kind:'${k}',on:false})">Off</button></div></div>
-      ${cfg.on?`<div class="wrap" style="padding-top:10px;padding-bottom:4px"><div class="chips">
+      ${cfg.on?`<div class="wrap" style="padding-top:10px;padding-bottom:4px">
+      ${/* Switching requests ON is free — that is running your show. What one COSTS
+            is pricing, so only the cost is greyed. The server draws the line in the
+            same place (see askSet in admin.mjs), which is why this can. */''}
+      ${lock('pricing',`<div class="chips">
         ${[1,2,3,5,10].map(n=>`<button class="chip ${cfg.cost===n?'on':''}" onclick="act('askSet',{kind:'${k}',cost:${n}})">${n}</button>`).join('')}
       </div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:11px">
         <input class="inp" id="ac${k}" type="number" inputmode="numeric" min="1" max="99" style="flex:1"
           placeholder="Any other number of votes" value="${![1,2,3,5,10].includes(cfg.cost)?cfg.cost:''}">
         <button class="act pri" style="min-width:64px" onclick="saveAskCost('${k}')">Set</button>
-      </div>
+      </div>`,'Asking still works — it just costs the standard '+cfg.cost+' votes.')}
       <p class="muted" style="font-size:12px;margin:8px 0 0">Costs <b>${cfg.cost} vote${cfg.cost===1?'':'s'}</b>.</p></div>`:''}`).join('')}
 
     <div class="sec"><span class="kick">Tonight's gig</span></div>
@@ -1868,7 +2074,7 @@ function render(){
       helping to reshape the entire live music experience.</p>
       </div></details>
     ${PLAN&&PLAN.ok?`
-      <div class="planbox">
+      <div class="planbox" id="planbox">
         <div class="row" style="border:none;padding:0">
           <div class="m"><div class="t">${esc(PLAN.limits.label)}${PLAN.comped?' · comped':''}</div>
             <div class="s">${PLAN.limits.featured===null?'Unlimited featured songs':PLAN.limits.featured+' featured songs'} ·
@@ -1881,7 +2087,11 @@ function render(){
         <div class="plangrid">
           ${['free','plus','pro'].map(k=>{const L=PLAN.plans[k];return `<div class="pcard ${PLAN.plan===k?'on':''}">
             <b>${esc(L.label)}</b><span>${L.price?'$'+(L.price/100)+'/mo':'Free'}</span>
-            <em>${L.gigs?L.gigs+' shows/month':'Unlimited shows'}<br>${L.featured===null?'∞ songs':L.featured+' featured'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.pricing?'<br>+ your own prices':''}${L.analytics?'<br>+ analytics':''}${L.presskit?'<br>+ press kit':''}${L.branding?'<br>+ your branding':''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
+            ${/* THE PLAN CARDS ARE WHERE SOMEBODY DECIDES TO PAY $20, and they were
+                  the one place still selling the four unbuilt Pro features as if
+                  they were included — the exact thing NOT_BUILT exists to prevent,
+                  skipped on the page that matters most. */''}
+            <em>${L.gigs?L.gigs+' shows/month':'Unlimited shows'}<br>${L.featured===null?'∞ songs':L.featured+' featured'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.pricing?'<br>+ your own prices'+soonTag(L,'pricing'):''}${L.analytics?'<br>+ analytics'+soonTag(L,'analytics'):''}${L.presskit?'<br>+ press kit'+soonTag(L,'presskit'):''}${L.branding?'<br>+ your branding'+soonTag(L,'branding'):''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
           </div>`;}).join('')}
         </div>
       </div>
@@ -1959,9 +2169,19 @@ function render(){
       ||'<div class="row muted">Nobody yet — add your email below.</div>'}</div>
       ${TEAM.emailReady?'':`<p class="muted" style="font-size:12px;padding:10px 18px 0">Email sending isn’t switched on yet, so codes can’t go out. Add <b>RESEND_API_KEY</b> in Netlify to turn it on.</p>`}`
       :`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`}
-    <div class="field"><label>Add an email</label><div style="display:flex;gap:8px">
-      <input class="inp" id="teamEmail" type="email" inputmode="email" placeholder="you@email.com" style="flex:1">
-      <button class="act pri" style="min-width:64px" onclick="addTeam()">Add</button></div></div>
+    ${/* SEATS: 1 on free AND Plus, 5 on Pro. The first seat is free on every plan,
+          so this greys only once the cap is reached — locking the whole control
+          would take away something free artists have. Before this, the button
+          looked live and the server answered 402. */''}
+    ${(TEAM&&TEAM.ok&&PLAN&&PLAN.ok&&PLAN.limits&&!PLAN.owner
+       && (TEAM.emails||[]).length>=(PLAN.limits.seats||1))
+      ? lock('seats',`<div class="field"><label>Add an email</label><div style="display:flex;gap:8px">
+          <input class="inp" type="email" placeholder="you@email.com" style="flex:1" disabled>
+          <button class="act pri" style="min-width:64px">Add</button></div></div>`,
+          'Your plan has '+PLAN.limits.seats+' sign-in'+(PLAN.limits.seats===1?'':'s')+'. Pro has '+(((PLAN.plans||{}).pro||{}).seats||5)+'.')
+      : `<div class="field"><label>Add an email</label><div style="display:flex;gap:8px">
+          <input class="inp" id="teamEmail" type="email" inputmode="email" placeholder="you@email.com" style="flex:1">
+          <button class="act pri" style="min-width:64px" onclick="addTeam()">Add</button></div></div>`}
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="if(confirm('Sign every device out, including this one?'))revokeAll()">Sign all devices out</button></div>
 
     <div class="sec"><span class="kick">Your studio code</span></div>
@@ -1976,6 +2196,21 @@ function render(){
       <button class="big alt" onclick="if(confirm('Start a brand new show? Clears all votes, purchased votes and the played list.'))act('newShow')">↺ New show (reset everything)</button>
       <p class="muted" style="font-size:12px;margin:10px 0 0">Starting and ending a show lives on the <b>Live</b> tab.</p>
       <p class="muted" style="font-size:12px">Audience link: <b>myset.vip</b></p>
+    </div>
+
+    ${/* IF SOMETHING LOOKS WRONG.
+          Installed to a home screen there is no address bar and no reload button,
+          so pulling down is the only refresh — and a pull is JavaScript, which
+          cannot rescue a page whose JavaScript is broken. These two can, and the
+          second one is the escape hatch sw.js has always had a handler for and
+          never had a button for. Nothing here touches a single piece of the
+          artist's data: not the setlist, not the votes, not the money. */''}
+    <div class="sec"><span class="kick">If something looks wrong</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Pull down anywhere to refresh. If that isn't enough, these are the bigger hammers — neither one touches your songs, your votes or your money.</p>
+    <div class="wrap">
+      <button class="big alt" onclick="location.reload()">↻ Reload the Studio</button>
+      <div style="margin-top:10px"><button class="big alt" onclick="hardReset()">Clear what's stored on this phone</button></div>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">The second one throws away the offline copy and starts the app fresh. You stay signed in.</p>
     </div>`;
   }
 
@@ -2689,7 +2924,8 @@ async function loadPlan(force){
   PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'}),quiet:true});
   if(PLAN&&PLAN.owner&&!PROMOS) PROMOS=await api('/admin',{method:'POST',body:JSON.stringify({action:'promoList'})});
   if(PLAN&&PLAN.owner&&!VENUES) VENUES=await api('/admin',{method:'POST',body:JSON.stringify({action:'venueList'})});
-  if(TAB==='settings'&&D)render();
+  /* Any tab can hold a lock now, not just Settings, so any tab needs the repaint. */
+  if(D)render();
 }
 async function redeemPromo(){
   const code=(($('#promoIn')||{}).value||'').trim();
@@ -2942,6 +3178,11 @@ function start(){clearInterval(timer);
   setTimeout(bootDone,6000);
   load();
   timer=setInterval(()=>{if(!document.hidden&&TAB==='live')load({quiet:true})},4000);}
+/* A pull refreshes the Studio's data rather than reloading the page — no white
+   flash, and the tab you were on stays the tab you are on. The installed Studio
+   has no address bar and no swipe-down of its own, so without this there is no
+   way at all to say "show me now". */
+MySetPull(async()=>{ try{ await load(); }catch(e){} });
 if(CODE||TOKEN){ bootCycle(); start(); } else gate();
 </script>
 <script>

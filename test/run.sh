@@ -65,3 +65,6 @@ node --import ./test/register.mjs test/limits.mjs
 echo
 echo "── verifying an artist automatically ──"
 node --import ./test/register.mjs test/autoverify.mjs
+echo
+echo "── the google sheet ──"
+node --import ./test/register.mjs test/sheets.mjs

@@ -55,6 +55,17 @@ const keys = generateVapidKeys();
 eq('public key is an uncompressed P-256 point (65 bytes)', u(keys.publicKey).length, 65);
 eq('and starts with 0x04', u(keys.publicKey)[0], 4);
 eq('private key is 32 bytes', u(keys.privateKey).length, 32);
+/* THIS ASSERTION USED TO BE A COIN FLIP. getPrivateKey() returns the MINIMAL
+   big-endian encoding, so a scalar with a zero top byte came back 31 bytes long —
+   about one key in 256 — and RFC 7518 6.2.2.1 says JWK `d` must be the full
+   coordinate size. It passed a hundred times and then failed once on 2026-09-03,
+   which is exactly how this class of bug reaches production. Generating a batch
+   makes the flake deterministic instead of waiting for it. */
+{
+  let short = 0;
+  for (let i = 0; i < 600; i++) if (u(generateVapidKeys().privateKey).length !== 32) short++;
+  eq('600 keys in a row are ALL 32 bytes, not just most of them', short, 0);
+}
 
 const h = await vapidHeaders('https://fcm.googleapis.com/fcm/send/abc', 'mailto:x@y.z',
   u(keys.publicKey), u(keys.privateKey));

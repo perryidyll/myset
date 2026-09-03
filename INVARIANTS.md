@@ -1038,3 +1038,237 @@ If you are about to violate one, stop and say so rather than working around it.
 0bi. **Accumulators live INSIDE the CAS callback.** `casDoc` re-runs it on a write
     conflict; `tagAuto`'s counters were declared outside and reported double what
     they did.
+
+## The Google Sheet
+
+0bp. **The sheet is a COPY and nothing in MySet ever reads it.** Delete the whole
+    spreadsheet and the app does not notice. That is what makes it a plain export
+    with no locking, no schema migration and no consistency worry — and it is why
+    a failed sync is a warning rather than an error an artist ever sees. The
+    moment anything starts reading it, all of that is gone.
+
+0bq. **Off until three env vars exist, and off is a CLEAN NO-OP WITH A REASON** —
+    the same shape as `STRIPE_SECRET_KEY` (INVARIANT 9). `sheetsOffReason()`
+    returns a sentence naming what is missing, never a throw, because "not set up
+    yet" is the normal state and must not read as a failure in a log.
+
+0br. **`GSHEET_KEY` never appears in a repo file, a log, a response or a chat
+    window** (11/11b). `sheetStatus` reports whether the key *parses*, never what
+    it is. `GSHEET_EMAIL` deliberately IS returned — it has to be pasted into
+    Google's own share dialog, and hiding it is what makes the setup fail.
+
+0bs. **THE WATERMARKS MOVE ONLY AFTER A SUCCESSFUL WRITE, AND PER TAB.** The sync
+    remembers per-artist how far it got (`showsUntil` / `reqsUntil` / `fbUntil`)
+    and each field is committed immediately after *its own* tab's append lands.
+    A run that dies halfway re-sends only what that tab was carrying: **a
+    duplicate row is a nuisance, a missing row is a hole nobody notices.**
+
+    They all committed together at the end for the first few hours, which meant a
+    failure on the LAST append re-sent every earlier tab next time — one night
+    appearing twice in Shows because a *rating* failed to write. A test now fails
+    only the Ratings append and asserts the Shows row does not come back.
+
+0bs2. **THE SONGS TALLY IS AN ACCUMULATOR, AND IT IS KEYED BY SHOW.** Songs is a
+    snapshot tab: cleared and rewritten every run. Its play and vote counts were
+    first built from the shows that were NEW since last time — so the morning
+    after a gig it read "played 1, votes 12" and the next sync rewrote the same
+    rows as **"played 0, votes 0"**, every night, under a column headed "Votes all
+    time". It cannot be recomputed either: the tally a song won is destroyed when
+    the next song starts (17b), so an archived show is the only record there will
+    ever be.
+
+    So `songstats_<aid>` stores **each show's own contribution**, not a running
+    total. Keyed by showId because of 17c's case: an artist who ends by accident,
+    plays eight more and ends again re-archives the same showId with a later
+    `endedAt` — which a timestamp-keyed accumulator counted twice. A re-archive
+    replaces its entry, and the answer is right however many times a night is
+    exported. Bounded to the same 100 shows `_history.mjs` itself keeps.
+
+0bt. **A sync makes no Stripe call and never runs on a hot path.** Each night's
+    money is read from the show's own archived record, so a sync cannot be slowed
+    or broken by Stripe, and Stripe stays the ledger (5d). `archiveShow` was
+    deliberately left untouched — ending a show is the most sacred path in the app
+    (16), and a sheet is not worth a risk to it. The sync is a button and a nightly
+    cron, both outside the gig.
+
+0bu. **No `list()`, and no audience device id.** The artist and venue registries
+    name every account, and each artist's own history index names every show, so
+    the whole store is walkable without the call INVARIANT 1 forbids. And phones
+    are counted, never named (9g) — there is no device id anywhere in the export,
+    which is the point of the audience never signing in.
+
+0bv. **Anything formula-shaped is escaped.** A song called `=1+1` and an artist
+    called `+Plus Band` are both real, and Sheets executes both. Cells starting
+    `= + - @` get a leading apostrophe. Google's "RAW" input option still guesses
+    at types; it is not an escape hatch.
+
+0bw. **A CAP DEFERS, IT NEVER DROPS — and it says so.** One sync reads 400
+    artists and 40 new nights each, and the Growth row's last column reports when
+    a cap bit. Two things had to be fixed before that sentence was true:
+
+    · **Take the OLDEST unsynced nights, not the newest.** The history index is
+      newest-first, so `.slice(0, 40)` took the newest forty and then set the
+      watermark to the newest of *those* — every older unsynced night was
+      instantly behind the mark and gone for good, while the code, the result
+      note and this very invariant all promised "the rest come next sync". A
+      review reproduced it with 45 nights: five lost permanently.
+    · **Stop taking artists; never trim rows at the end.** A `trim()` cut every
+      tab to 5,000 rows *after* the watermarks had been computed, so the dropped
+      rows were behind the mark and nothing reported it. The budget now decides
+      which artists a run covers: an artist has all their rows and their mark
+      moves, or has none and it does not.
+
+    A silent truncation is how a spreadsheet starts lying.
+
+0bw2. **ONE SYNC AT A TIME.** The 03:20 cron and Perry tapping "Sync now" a second
+    later would both walk the store and both append — the same night twice in a
+    tab the Guide calls safe to chart. `runningSince` in the sync doc is the lock,
+    stale after five minutes so a run that dies cannot wedge it shut. The Studio's
+    own busy flag is client-side and cannot help. Note that two calls in the same
+    process do **not** reproduce this: with an in-memory store the first finishes
+    in about a millisecond and releases the lock. The test holds the lock directly
+    instead — racing a scheduler is not a test.
+
+0bw3. **A SWALLOWED PER-ARTIST ERROR MUST BE LOUD.** `syncSheet` catches per
+    artist so one unreadable account cannot cost the other 399 their rows — and
+    that catch turned a plain `ReferenceError` in my own code into "some columns
+    are empty", which took a debugger to find. The reason now goes in the row
+    (full width — a short row silently shifts every column after it), in `broke[]`
+    on the result, and in the log.
+
+## Locked features, and the two traps under them
+
+0bx0. **THE PLAN CARDS ARE THE ONE PLACE THIS MATTERS MOST.** They are where
+    somebody decides to spend $20, and they were the last place still selling the
+    four unbuilt Pro features as if they were included — 0by applied everywhere
+    except the page it exists for. `soonTag()` marks them.
+
+0bx1. **LOCK ONLY WHAT THE SERVER ACTUALLY REFUSES, and only WHERE it refuses.**
+    Three near-misses, all found by review:
+    · `unlimited` has no plan gate at all — "everyone votes as much as they like"
+      is running your show, not pricing it — and wrapping the whole free-votes
+      block in one `lock('pricing')` quietly took a working control off every free
+      artist. Greying something that works is the same class of lie as showing
+      something that doesn't.
+    · `askSet` is gated only on a COST change, so the on/off toggle stays live and
+      only the cost chips are greyed.
+    · `seats` is 1 on free AND Plus, so the first seat is free everywhere; the
+      control greys at the cap, not before it.
+
+0bx2. **A LOCK THAT DOES NOT KNOW THE PLAN YET IS AN OPEN DOOR.** `has()` treats
+    an unknown plan as allowed, so there is no grey flash on load — which meant
+    the FIRST render of Settings or Setlist showed every locked control fully live
+    and tappable, and the server answered 402. 0ad narrowed to a window is not
+    0ad closed. `planGet` is now fetched on every first load, not only on the
+    Settings tab, and any tab repaints when it lands.
+
+0bx. **A locked feature is SHOWN, greyed out — never hidden, and never live-then-
+    refused.** Perry's call, 2026-09-03. It also fixed a real shrug: the Studio's
+    pricing controls were fully tappable on free and the server refused them with a
+    402, which is exactly what 0ad exists to prevent. `pointer-events: none` on the
+    greyed content is the lock; the opacity is only how it looks, and a lock that is
+    only opacity is not a lock.
+
+0by. **DESIGNED-BUT-NOT-BUILT IS GREYED FOR EVERYONE, INCLUDING PRO.** `promote`,
+    `analytics`, `presskit` and `branding` are in the plan table and nowhere else
+    in the code; `reviews`, `tips` and `speakerVotes` likewise on the venue side.
+    They are named in `NOT_BUILT` (`_plan.mjs`) and `VENUE_NOT_BUILT`
+    (`_venues.mjs`), which both Studios read so those rows say "Coming soon"
+    regardless of plan. **Perry is comped to Pro** — without those lists he would
+    open his own Studio, see four features presented as his, and find four dead
+    ends, and so would the first artist who ever pays. Deleting a name is the LAST
+    step of building the feature. `test/limits.mjs` asserts that anything *not* in
+    the list is genuinely enforced somewhere, so it cannot rot in either direction.
+
+0bz. **A shared set of valid NAMES is not a limit on anybody, and there are TWO
+    photo caps.** `SLOTS` in `_img.mjs` listed `p0..p2`, which was accidentally
+    doing double duty as the artist's cap. Widening it to `p0..p11` for venue Pro
+    removed a guard nobody had written down — and then a review found the mirror
+    image on the other side. Both halves are the same mistake:
+
+    · An **artist** could suddenly store nine images `normProfile` trimmed away on
+      every read: bytes in Blobs, referenced by nothing.
+    · A **venue on Pro** could upload photos 4 to 12, be told "Photo added", and
+      have them discarded by `normVenue`'s `.slice(0, 3)` on the very next read.
+      Worse than a 402, because it looked like it worked.
+
+    So the two caps live where the answer is known, and both are now written down:
+    **how many a record may HOLD** is a storage question — `MAX_PHOTOS` in
+    `_profile.mjs`, the highest of `VENUE_PLANS` in `normVenue`. **Who may WRITE
+    the fourth** is a permission question — `admin.mjs` for an artist, the venue's
+    plan in `venueadmin.mjs`. An earlier comment in `_img.mjs` named only the
+    second and called it "the cap that matters", which is how the first was missed.
+
+0bz2. **PHOTO SLOTS ARE ADDRESSES, so the blanks have to stay.** Both
+    normalisers ran `.filter(Boolean)`, which COMPACTED the array — so a venue
+    with p0 and p2 filled stored `["/zero","/two"]` and the Studio then drew p2's
+    picture in slot **p1**. Clearing one photo appeared to move another. Only
+    *trailing* blanks are dropped, so the array still stays short when it can.
+
+0ca. **A numeric limit is not a yes/no.** `photos` is 3 or 12 and `featured` is 50
+    or unlimited, so `limits[flag] === true` was false for both and a Pro venue saw
+    a dash beside twelve photo slots it fully had. "Has it" means "has as much as
+    the top plan gives". Unlimited arrives as `null`, because `shapeLimits` maps
+    `Infinity` to `null` so it survives JSON.
+
+0cb. **CSS FOR A PAGE HAS TO BE IN A FILE THAT PAGE ACTUALLY LOADS.** The
+    locked-feature rules were first written into `app.css`. It looked obviously
+    right and did nothing whatsoever: **neither Studio links `app.css`** — they are
+    self-contained pages with their own inline styles — and the Studios are the only
+    two pages with a lock. It was believed until computed styles were measured in a
+    real browser. `public/lock.css` is now linked by both, and the test checks the
+    `<link>` in both pages rather than the existence of the rules somewhere.
+    A `grep -l app.css public/*.html` hit does not mean a page loads it; a comment
+    mentioning the filename matches too. That is exactly how this was missed.
+
+0cc. **Both Studios are unconditionally dark.** Neither has a
+    `prefers-color-scheme` block anywhere. A veil that lightened itself for a light
+    system theme washed out a page that was still black. There is no light mode
+    here to serve.
+
+## Refreshing
+
+0cd. **AN INSTALLED APP HAS NO RELOAD, so it has to be given one.** No address
+    bar, no reload button, and on iOS no swipe-down gesture — a page showing
+    something stale had no way out except force-quitting. `public/pull.js` is ONE
+    implementation for all seven pages; `vote.html`'s own copy was deleted rather
+    than left beside it (12b).
+
+0ce. **A pull cannot rescue broken JavaScript**, which is the exact case somebody
+    most wants a reload. So it is not the only escape: `sw.js` serves navigations
+    network-first, and Settings has a plain reload plus `hardReset()`, which drops
+    every cache and sends the `myset-unregister` message `sw.js` has listened for
+    since it shipped and never had a button for. Neither touches songs, votes,
+    money or the sign-in token — a fix that signs somebody out mid-gig is not a fix.
+
+0cf. **The browser's own gesture is deliberately NOT suppressed.**
+    `overscroll-behavior-y: contain` would stop Chrome's native pull-to-refresh
+    double-firing with ours — and would also mean no refresh gesture at all if
+    `pull.js` failed to load. A tidier animation is not worth losing the fallback.
+    `pull.js` is therefore loaded **blocking, not deferred**: every page calls
+    `MySetPull()` from an inline script, and a deferred script runs after all of
+    those, so `defer` made the function undefined at the moment it was called and
+    the gesture silently never armed.
+
+## Keys
+
+0cg. **A JWK scalar is the FULL coordinate size, always.** `createECDH(...)
+    .getPrivateKey()` returns the minimal big-endian encoding, so a P-256 key whose
+    top byte is zero comes back 31 bytes — about one in 256 — and RFC 7518 6.2.2.1
+    requires `d` to be 32. Node may accept it, mangle it, or throw depending on
+    version, and the only symptom would be push quietly not working for whoever
+    generated that key. `pad32` is applied where a key is made AND where one made
+    elsewhere is read back. The test that caught it passed a hundred times and
+    failed once; it now generates 600 keys so the flake is deterministic.
+
+0ch. **A source label is REJECTED when it is wrong, never mangled into shape.**
+    `cleanSource` stripped the punctuation out of whatever arrived, so a pasted URL
+    became a 40-character run of host-plus-path-plus-query with the slashes gone —
+    not a label, and still carrying the trail the function's own comment promised
+    not to keep. Anything URL-shaped now returns empty.
+
+0ci. **The globals list in `test/cost.mjs` has to be kept current.** It is the
+    guard 9d13 built to catch a second global document landing on the poll, and it
+    did not include `sheetsync` on the day that shipped. Off every hot path, so no
+    ceiling moved — but the check that would have TOLD us was silent, which is the
+    only thing a guard is for.

@@ -27,6 +27,12 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="/app.css">
+<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
+     from an inline script, and a deferred script runs AFTER all of those —
+     so `defer` here makes MySetPull undefined at the moment it is called and
+     the gesture silently never arms. 4KB, same origin, and the service worker
+     serves it from cache, so blocking costs nothing measurable. -->
+<script src="/pull.js"></script>
 <script>document.documentElement.className='anim';</script>
 <style>
 :root{--maxw:1080px;--gut:22px}
@@ -801,6 +807,10 @@ document.querySelectorAll('.faq details').forEach((d) => {
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —
    see public/sw.js. */
+/* A pull reloads the page. This one is just content, so a real reload IS the
+   refresh — see /pull.js for why an installed app needs to be given one. */
+MySetPull();
+
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }

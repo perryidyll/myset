@@ -110,12 +110,78 @@ ok('and the 1st, not Monday', /resets on the 1st/i.test(page));
 ok('NOTHING weekly is left anywhere', !/this week|resets Monday|2\/week|isoWeek|gigWeek/.test(page));
 
 console.log('\nAND THE STUDIO SAYS SO BEFORE THE TAP, NOT AFTER  (INVARIANT 0ad)');
-ok('the plan payload carries the setlists flag',
-   /setlists: !!l\.setlists/.test(readFileSync(new URL('../netlify/functions/admin.mjs', import.meta.url), 'utf8')));
-ok('and the button is greyed with the reason on it',
-   /New setlist — a Plus feature/.test(page));
-ok('while still promising nothing is taken away',
-   /Everything you already have keeps working/.test(page));
+const adminSrc = readFileSync(new URL('../netlify/functions/admin.mjs', import.meta.url), 'utf8');
+ok('the plan payload carries the setlists flag', /setlists: !!l\.setlists/.test(adminSrc));
+/* This used to assert the exact sentence on a bespoke greyed-out button. Perry
+   asked on 2026-09-03 for EVERY unavailable feature to be shown greyed rather
+   than hidden, so that one-off was replaced by a shared `lock()` treatment — and
+   asserting the copy again would just break the next time the copy improves.
+   What has to hold is the behaviour: setlists go through the shared lock, and the
+   lock is a real lock rather than a bit of opacity. */
+ok('the new setlist button goes through the shared lock', /lock\('setlists'/.test(page));
+ok('with the promise that existing sets keep working',
+   /Sets you already have keep working/.test(page));
+ok('and the old one-off greyed button is gone', !/a Plus feature<\/button>/.test(page));
+
+console.log('\nA LOCK IS POINTER-EVENTS, NOT OPACITY  — AND IT HAS TO REACH THE PAGE');
+const css = readFileSync(new URL('../public/lock.css', import.meta.url), 'utf8');
+ok('the greyed content cannot be tapped through', /\.lock>\.lockin\{[^}]*pointer-events:none/.test(css));
+ok('and the veil sits above it', /\.lockveil\{[^}]*z-index:2/.test(css));
+/* THE BUG THIS BLOCK EXISTS FOR. These rules were first written into app.css,
+   which looked obviously right and did nothing whatsoever: NEITHER Studio links
+   app.css, and the Studios are the only two pages that have a lock. It was
+   believed until computed styles were measured in a real browser — reading the
+   diff would never have caught it. So this checks the LINK, in both pages, and
+   that the rules live in exactly one file. */
+const vpage = readFileSync(new URL('../public/venue-studio.html', import.meta.url), 'utf8');
+const appcss = readFileSync(new URL('../public/app.css', import.meta.url), 'utf8');
+ok('the Artist Studio links it', /<link rel="stylesheet" href="\/lock\.css">/.test(page));
+ok('the Venue Studio links it', /<link rel="stylesheet" href="\/lock\.css">/.test(vpage));
+ok('and there is exactly one copy of the rules',
+   !/\.lock>\.lockin/.test(page) && !/\.lock>\.lockin/.test(vpage) && !/\.lock>\.lockin/.test(appcss));
+
+console.log('\nDESIGNED BUT NOT BUILT IS SHOWN AS "COMING", NEVER AS "YOURS"');
+const { NOT_BUILT } = await import('../netlify/functions/_plan.mjs');
+const { VENUE_PLANS, VENUE_NOT_BUILT } = await import('../netlify/functions/_venues.mjs');
+eq('the four Pro features with no code behind them are named',
+   [...NOT_BUILT].sort(), ['analytics', 'branding', 'presskit', 'promote']);
+ok('every one of them is a real plan flag',
+   NOT_BUILT.every((f) => f in PLANS.pro), NOT_BUILT);
+ok('the plan payload ships the list, so the Studio can grey them', /soon: NOT_BUILT/.test(adminSrc));
+/* THE POINT OF THE LIST: Perry is comped to Pro. Without it he would open the
+   Studio, see four features presented as his, and find four dead ends. */
+ok('a Pro artist is still shown "coming soon" for them',
+   /if\(isSoon\(flag\)\) return false;[\s\S]{0,80}if\(PLAN\.owner\) return true;/.test(page));
+ok('and the two that ARE built are not in the list',
+   !NOT_BUILT.includes('pricing') && !NOT_BUILT.includes('setlists'));
+/* Both built flags have to be enforced somewhere, or "built" is a claim. */
+ok('pricing is refused server-side on free', /canPrice = isPlatformOwner/.test(adminSrc));
+ok('setlists are refused server-side on free', /limits\.setlists !== true/.test(adminSrc));
+
+eq('the three venue features with no code behind them are named',
+   [...VENUE_NOT_BUILT].sort(), ['reviews', 'speakerVotes', 'tips']);
+ok('every one is a real venue flag',
+   VENUE_NOT_BUILT.every((f) => f in VENUE_PLANS.pro), VENUE_NOT_BUILT);
+/* photos is NOT in that list, so it has to be genuinely enforced — and until
+   2026-09-03 it was not: VENUE_PLANS said 3 free / 12 Pro and photoUpload would
+   write p11 for anybody who asked. */
+const vadmin = readFileSync(new URL('../netlify/functions/venueadmin.mjs', import.meta.url), 'utf8');
+ok('the venue photo cap is actually enforced', /venueLimits\(await venueById\(vid\)\)\.photos/.test(vadmin));
+ok('and refused with a 402, like every other plan limit', /Extra photos come with Pro\.`, 402\)/.test(vadmin));
+
+console.log('\nA NUMERIC LIMIT IS NOT A YES/NO');
+/* `photos` is 3 or 12 and `featured` is 50 or unlimited, so the first version of
+   has() — `limits[flag]===true` — was false for both, and a Pro venue was shown a
+   dash beside twelve photo slots it fully had. Caught in a browser, not in review.
+   Both Studios carry the same fix and both are checked, because they are meant to
+   be a matched pair. */
+for (const [who, src] of [['the Artist Studio', page], ['the Venue Studio', vpage]]) {
+  ok(`${who} treats unlimited (null) as having it`, /if\(mine===null\) return true;/.test(src));
+  ok(`${who} compares a number against the top plan`, /return top===mine;/.test(src));
+  ok(`${who} still requires a literal true for a flag`, /return mine===true;/.test(src));
+}
+/* And the shape that makes it work: unlimited has to survive JSON as null. */
+ok('Infinity is sent as null, not dropped', /featured: l\.featured === Infinity \? null : l\.featured/.test(adminSrc));
 
 console.log('\nTHE FOUNDER\'S NOTE IS THERE, AND IT COLLAPSES');
 ok('it is a real disclosure element', /<details class="why">/.test(page));

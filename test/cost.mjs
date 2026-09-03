@@ -34,7 +34,11 @@ const count = async (fn) => {
     reads: log.filter((l) => l.startsWith('get')).length,
     writes: log.filter((l) => l.startsWith('set')).length,
     shardReads: log.filter((l) => /^get f\d+_/.test(l)).length,
-    globals: log.filter((l) => / (artists|flags|cityindex|acctindex|idqueue)$/.test(l)).length,
+    /* EVERY global document, and the list has to be kept current or the guard
+       INVARIANT 9d13 built goes blind exactly when a new global is added. It
+       missed `sheetsync` on the day it shipped — off every hot path, so no
+       ceiling moved, but the check that would have TOLD us was silent. */
+    globals: log.filter((l) => / (artists|promos|flags|cityindex|acctindex|idqueue|sheetsync)$/.test(l)).length,
   };
 };
 const under = (name, got, ceiling) =>

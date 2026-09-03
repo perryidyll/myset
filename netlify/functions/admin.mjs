@@ -14,7 +14,7 @@ import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
 import { archiveShow } from './_history.mjs';
 import { readSubs, saveSub, dropSub, notify } from './_push.mjs';
-import { mutateProfile, getProfile, shapeMedia, parseMedia } from './_profile.mjs';
+import { mutateProfile, getProfile, shapeMedia, parseMedia, MAX_PHOTOS } from './_profile.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf,
@@ -22,7 +22,7 @@ import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, end
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, redeemPromo,
-         readPromos, mutatePromos, cleanCode, MAX_LIBRARY } from './_plan.mjs';
+         readPromos, mutatePromos, cleanCode, MAX_LIBRARY, NOT_BUILT } from './_plan.mjs';
 
 /* Rebuilds the projection of the active setlist after the library changed.
 
@@ -102,6 +102,28 @@ async function handlePlan(aid, action, body) {
     const f = await readFlags();
     return json({ ok: true, flag: name, scope: who || 'global',
                   inForce: flagsFor(f, who || aid)[name] });
+  }
+
+  /* THE GOOGLE SHEET. Owner only, and owner only for a reason that is not about
+     trust: the sheet holds EVERY artist's rows, so it is platform data, not an
+     artist's own. An artist wanting their own numbers gets them in the Studio.
+
+     `sheetSync` can take a few seconds — it walks the store and makes a dozen
+     Google calls — so it is a button somebody taps, never something on a path a
+     room is waiting for. It cannot fail anything else: a broken sheet returns a
+     sentence, not a 500. */
+  if (action === 'sheetStatus') {
+    const { sheetStatus } = await import('./_warehouse.mjs');
+    return json(await sheetStatus());
+  }
+  if (action === 'sheetSync') {
+    const { syncSheet } = await import('./_warehouse.mjs');
+    try {
+      const r = await syncSheet({ dry: body.dry === true });
+      return json(r.ok ? r : { ...r, ok: false });
+    } catch (e) {
+      return json({ ok: false, error: String(e.message || e).slice(0, 500) });
+    }
   }
 
   /* The ID review queue. Perry is the only person who ever sees one of these, and
@@ -273,13 +295,18 @@ const shapeLimits = (l) => ({
   library: MAX_LIBRARY,
   cut: l.cut, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
+  /* Shipped on every plan row so the Studio can grey a designed-but-unbuilt
+     feature as "coming" rather than as "yours" — see NOT_BUILT in _plan.mjs. */
+  soon: NOT_BUILT,
 });
 const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke',
                               'venueList', 'venueVerify', 'shareStats',
                               // the ID review queue and a venue's plan — owner only,
                               // enforced inside handlePlan, not by this set
                               'idQueue', 'idApprove', 'idReject', 'venuePlan',
-                              'flagList', 'flagSet']);
+                              'flagList', 'flagSet',
+                              // the Google Sheet export — owner only, same as above
+                              'sheetStatus', 'sheetSync']);
 
 /* The gig calendar. Events are their own document, so these short-circuit too.
    Every write reindexes the artist's cities, which is what keeps the public
@@ -908,6 +935,14 @@ async function handleProfile(aid, action, body, req, me) {
   if (action === 'photoUpload') {
     const slot = String(body.slot || '');
     if (!SLOTS.has(slot)) return bad('unknown photo slot');
+    /* SLOTS is a list of valid NAMES, not a limit. It listed p0..p2 until venue
+       Pro needed twelve, and until then this line was accidentally the artist's
+       cap as well — so widening the set uncapped an endpoint that has always
+       been meant to hold three. normProfile trims the array on read either way,
+       which means the extra bytes would sit in Blobs forever, referenced by
+       nothing. */
+    const pi = /^p(\d+)$/.test(slot) ? Number(slot.slice(1)) : -1;
+    if (pi >= MAX_PHOTOS) return bad('unknown photo slot');
     const dec = decodeDataUrl(body.data);
     if (dec.error) return bad(dec.error);
     const url = await putImage(aid, slot, dec.bytes, dec.type);

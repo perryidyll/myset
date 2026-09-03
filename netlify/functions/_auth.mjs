@@ -91,7 +91,23 @@ export function pickSlug(name, reg, wanted) {
 }
 
 /** Creates the artist AND their first login in one atomic write. */
-export async function createArtist({ email, name, slug, ref }) {
+/* Where a signup came from, kept short and boring. It is a MARKETING fact, not
+   an identity: no full URL, no query string, no path — just the label the link
+   carried or the host that sent them, so the Growth sheet can answer "is the
+   about page working" without keeping a browsing trail on anybody. */
+export const cleanSource = (v) => {
+  const raw = String(v || '').trim().toLowerCase();
+  /* REJECT, don't mangle. Stripping the punctuation out of a pasted URL left a
+     40-character run of host-plus-path-plus-query with the slashes removed — which
+     is not a label, still carries the trail the comment above promises not to
+     keep, and would sit in the sheet forever. A source is a short handle or a
+     hostname; anything URL-shaped is somebody putting the wrong thing in the box. */
+  if (!raw || /[:/?#=&%\s]/.test(raw)) return '';
+  const out = raw.replace(/[^a-z0-9._-]/g, '');
+  return out.length > 40 ? '' : out;
+};
+
+export async function createArtist({ email, name, slug, ref, src }) {
   const clean = String(name || '').trim().slice(0, 60) || 'New artist';
   let made = null, err = null;
   await mutateArtists((reg) => {
@@ -104,7 +120,9 @@ export async function createArtist({ email, name, slug, ref }) {
     const referrer = ref && reg.bySlug[cleanSlug(ref)] && reg.bySlug[cleanSlug(ref)] !== aid
       ? reg.bySlug[cleanSlug(ref)] : null;
     reg.byId[aid] = { slug: s, name: clean, createdAt: Date.now(), plan: 'free',
-                      referredBy: referrer };
+                      referredBy: referrer,
+                      // first touch, recorded once and never edited afterwards
+                      src: cleanSource(src), refSlug: cleanSlug(ref || '') || '' };
     reg.bySlug[s] = aid;
     reg.byEmail[email] = { artistId: aid, role: 'owner' };
     made = { artistId: aid, slug: s, name: clean };

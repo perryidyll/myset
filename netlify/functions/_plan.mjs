@@ -63,6 +63,26 @@ export const PLANS = {
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };
+/* WHICH OF THOSE FLAGS IS A REAL FEATURE TODAY.
+
+   The rows above describe the ladder we sell. Four of the flags describe things
+   that are DESIGNED AND NOT BUILT — there is no code behind `promote`,
+   `analytics`, `presskit` or `branding` anywhere in this repo.
+
+   The Studio shows every locked feature rather than hiding it, which was Perry's
+   call and is the right one: an artist should be able to see what paying gets
+   them. But greying something as "Pro" implies that paying turns it on, and Perry
+   is himself comped to Pro — so without this list he would open the Studio, see
+   four features presented as his, and find four dead ends. Worse, so would the
+   first person who ever pays.
+
+   So a flag in here is shown as "coming", never as "yours", on every plan
+   including Pro. Deleting a name from this list is the last step of building the
+   feature, not the first — and `test/limits.mjs` asserts that anything NOT in
+   here is actually enforced somewhere, so the list cannot rot in the other
+   direction either. */
+export const NOT_BUILT = ['promote', 'analytics', 'presskit', 'branding'];
+
 /** Everyone can KEEP this many songs; plans only limit how many are live. */
 export const MAX_LIBRARY = 2000;
 export const PLAN_KEYS = Object.keys(PLANS);

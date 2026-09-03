@@ -1,6 +1,7 @@
 import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
-         mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU } from './_venues.mjs';
+         mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU,
+         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT } from './_venues.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
          endTimeOf, MAX_EVENTS } from './_events.mjs';
@@ -280,6 +281,20 @@ export default async (req) => {
   if (action === 'photoUpload') {
     const slot = String(body.slot || '');
     if (!SLOTS.has(slot)) return bad('unknown photo slot');
+    /* THE PHOTO CAP IS A PLAN LIMIT AND IT WAS NEVER ENFORCED. `VENUE_PLANS` has
+       said 3 free / 12 Pro since venues shipped, the Studio only ever drew three
+       boxes, and this endpoint would happily have written p11 for a free venue —
+       a limit that exists in a table and nowhere in the code is not a limit.
+       The cover photo is not counted: every venue gets one on any plan. */
+    /* requireVenue returns the SESSION (vid, email, role), not the record — so
+       the plan has to be read, not assumed off `me`. */
+    const cap = venueLimits(await venueById(vid)).photos;
+    const i = /^p(\d+)$/.exec(slot) ? Number(slot.slice(1)) : -1;
+    if (i >= cap) {
+      /* No `cap === 1` branch: every venue plan holds at least three, so that
+         message could never be reached and only read as if it could. */
+      return bad(`That is photo ${i + 1} — your plan holds ${cap}. Extra photos come with Pro.`, 402);
+    }
     const dec = decodeDataUrl(body.data);
     if (dec.error) return bad(dec.error);
     const url = await putImage(imgOwner(vid), slot, dec.bytes, dec.type);

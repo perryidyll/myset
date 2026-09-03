@@ -33,11 +33,24 @@ const rawToPublicKey = (raw) => {
   return createPublicKey({ key: { kty: 'EC', crv: 'P-256',
     x: b64u(b.subarray(1, 33)), y: b64u(b.subarray(33, 65)) }, format: 'jwk' });
 };
+/* A P-256 scalar IS 32 bytes, but every minimal big-endian encoding of one drops
+   its leading zeroes — so roughly one key in 256 comes out 31 bytes, one in 65,000
+   at 30, and so on. RFC 7518 6.2.2.1 requires JWK `d` to be the FULL coordinate
+   size, so a short one is out of spec and Node may take it, mangle it, or throw
+   depending on version. Left-padding is the whole fix, and it has to happen on
+   both sides: where a key is made, and where one that was made elsewhere (an env
+   var Perry pasted months ago) is read back. */
+const pad32 = (buf) => {
+  const b = Buffer.from(buf);
+  if (b.length === 32) return b;
+  if (b.length > 32) return b.subarray(b.length - 32);
+  return Buffer.concat([Buffer.alloc(32 - b.length), b]);
+};
 const rawToPrivateKey = (rawPriv, rawPub) => {
   const p = Buffer.from(rawPub);
   return createPrivateKey({ key: { kty: 'EC', crv: 'P-256',
     x: b64u(p.subarray(1, 33)), y: b64u(p.subarray(33, 65)),
-    d: b64u(Buffer.from(rawPriv)) }, format: 'jwk' });
+    d: b64u(pad32(rawPriv)) }, format: 'jwk' });
 };
 const publicKeyToRaw = (key) => {
   const j = key.export({ format: 'jwk' });
@@ -173,5 +186,9 @@ export async function notify(aid, { title, body, url = '/studio', tag = 'myset' 
  *  the private key must never be in the repo or pass through a chat window. */
 export function generateVapidKeys() {
   const ec = createECDH('prime256v1'); ec.generateKeys();
-  return { publicKey: b64u(ec.getPublicKey()), privateKey: b64u(ec.getPrivateKey()) };
+  /* pad32, because getPrivateKey() strips leading zeroes — see the note on
+     rawToPrivateKey. Without it about one generated key in 256 is 31 bytes, which
+     is an invalid JWK scalar, and the only symptom would be that push quietly
+     stopped working for whoever happened to generate that key. */
+  return { publicKey: b64u(ec.getPublicKey()), privateKey: b64u(pad32(ec.getPrivateKey())) };
 }

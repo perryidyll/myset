@@ -279,10 +279,21 @@ by **name within a city**, never by a stored link, so neither side can break the
 | Separate setlists | — | ✓ | ✓ |
 | Set your own prices | — | ✓ | ✓ |
 | Verification tick | — | ✓ | ✓ |
-| Promote in other cities | — | — | ✓ |
-| Earnings analytics | — | — | ✓ |
-| Press kit | — | — | ✓ |
-| Your own branding | — | — | ✓ |
+| Promote in other cities | — | — | *designed, not built* |
+| Earnings analytics | — | — | *designed, not built* |
+| Press kit | — | — | *designed, not built* |
+| Your own branding | — | — | *designed, not built* |
+
+**Four of those Pro rows are not implemented.** `promote`, `analytics`, `presskit` and
+`branding` exist in the plan table and nowhere else in the code. They are named in
+`NOT_BUILT` in `_plan.mjs`, which the Studio reads so it can grey them as **"Coming
+soon" on every plan including Pro** — Perry is comped to Pro, and without that list he
+would open the Studio, see four features presented as his, and find four dead ends.
+So would the first artist who ever pays.
+
+Deleting a name from `NOT_BUILT` is the *last* step of building the feature, and
+`test/limits.mjs` asserts that anything not in the list is genuinely enforced
+somewhere, so the list cannot rot in either direction.
 
 Everyone can keep up to **2,000 songs** in their library regardless of plan — the cap
 limits how many are *live to the audience*, and it never deletes anything.
@@ -305,19 +316,94 @@ because a cap never deletes anything.
 a paywall and were put back: an audience that gets a sing-along at one gig and not the
 next learns that MySet is unreliable, which costs more than the subscription is worth.
 
+### Locked features are SHOWN, greyed out — not hidden
+
+Perry's call, 2026-09-03. An artist on free should be able to see what paying gets
+them. It also fixed a real shrug: the Studio's pricing controls were fully tappable on
+free and the server refused them with a 402 — exactly what INVARIANT 0ad exists to
+prevent.
+
+The styling is `public/lock.css`, linked by **both** Studios and by nothing else.
+(It was first written into `app.css`, which looked right and did nothing whatsoever:
+neither Studio loads `app.css`, and the Studios are the only two pages with a lock.
+Caught by measuring computed styles in a browser.) Each Studio has a matching
+`has()` / `needsPlan()` / `lock()` trio reading its own plan payload.
+
+Two states, and the difference is honesty:
+
+* **`.lock`** — built, and a higher plan turns it on. The veil is a button; tapping it
+  scrolls to the plan cards. Reads *"Plus feature"* / *"Pro feature"*, naming the
+  cheapest plan that actually has it.
+* **`.lock.soon`** — designed and not built. Greyed on **every** plan, not tappable,
+  reads *"Coming soon"*.
+
+`pointer-events: none` on the greyed content is the lock; the opacity is only how it
+looks. A lock that is only opacity is not a lock, and there is a test for it.
+
+The reason line ("Everyone gets 5 free votes a song until then") sits *under* the lock
+rather than inside the veil — a locked row of chips is 43px tall, so a caption inside
+it was clipped to "Coming soo".
+
+**A numeric limit is not a yes/no.** `photos` is 3 or 12 and `featured` is 50 or
+unlimited, so the first `has()` — `limits[flag] === true` — was false for both, and a
+Pro venue saw a dash beside twelve photo slots it fully had. "Has it" means "has as
+much as the top plan gives"; unlimited arrives as `null`, because `shapeLimits` maps
+`Infinity` to `null` so it survives JSON.
+
+**Lock only what the server refuses, and only where it refuses.** An independent
+review found three near-misses in the first pass, all now invariants (0bx0–0bx2):
+
+* The **plan cards** — the page where somebody decides to spend $20 — were the last
+  place still selling the four unbuilt Pro features as included.
+* `unlimited` has **no plan gate at all** ("everyone votes as much as they like" is
+  running your show, not pricing it), and one `lock('pricing')` around the whole
+  free-votes block quietly took a working control off every free artist. Greying
+  something that works is the same class of lie as showing something that doesn't.
+* `has()` treats an **unknown plan as allowed**, so there is no grey flash — which
+  meant the first render of Settings showed every locked control live and tappable.
+  `planGet` is now fetched on every first load, not only on the Settings tab.
+
 ## 3.2 Venue plans
 
 | | **Free** | **Pro** |
 |---|---|---|
 | Price | $0 | **$20/month** |
 | Photos | 3 | 12 |
-| Google / Trustpilot reviews | — | ✓ |
 | Verification tick | — | ✓ |
-| Receive tips | — | ✓ |
-| Voting on the venue's own speaker music | — | ✓ |
+| Google / Trustpilot reviews | — | *designed, not built* |
+| Receive tips | — | *designed, not built* |
+| Voting on the venue's own speaker music | — | *designed, not built* |
 
 **Not self-serve yet.** There is no venue billing; Perry switches a venue to Pro by
 hand. The Venue Studio says so plainly rather than pretending otherwise.
+
+Same rule as the artist ladder: `reviews`, `tips` and `speakerVotes` are named in
+`VENUE_NOT_BUILT` in `_venues.mjs` and render as "Coming soon" on Pro too.
+
+**The photo cap was in the table and nowhere in the code until 2026-09-03.**
+`VENUE_PLANS` had said 3 free / 12 Pro since venues shipped, the Studio only ever drew
+three boxes, and `photoUpload` would happily have written `p11` for a free venue. It is
+now checked against the plan in `venueadmin.mjs` and refused with a 402.
+
+Widening the shared `SLOTS` set in `_img.mjs` from `p0..p2` to `p0..p11` to make room
+for that **broke its neighbour twice over**, and the second half was only found by
+review:
+
+* An **artist** could suddenly store nine images `normProfile` trimmed away on every
+  read — that set had been, by accident, the artist's cap too.
+* A **venue on Pro** could upload photos 4–12, be told "Photo added", and have them
+  discarded by `normVenue`'s `.slice(0, 3)` on the next read. Worse than a 402,
+  because it looked like it worked.
+
+There are **two** photo caps and they now live where the answer is known: how many a
+record may HOLD (`MAX_PHOTOS`; the highest of `VENUE_PLANS`) and who may WRITE the
+fourth (`admin.mjs`; the venue's plan in `venueadmin.mjs`). The slot set is a list of
+valid names; it is not a limit on anybody.
+
+**And photo slots are addresses.** Both normalisers ran `.filter(Boolean)`, which
+compacted the array — so a venue with slots 1 and 3 filled had slot 3's picture drawn
+in slot 2, and clearing one photo appeared to move another. Only trailing blanks are
+dropped now.
 
 ## 3.3 What the audience pays
 
@@ -443,7 +529,12 @@ listUse
 **Venues:** pitchStatus · pitchSend · pitchList · vouch
 
 **Owner only:** promoList · promoCreate · promoRevoke · venueList · venueVerify ·
-venuePlan · idQueue · idApprove · idReject · flagList · flagSet
+venuePlan · idQueue · idApprove · idReject · flagList · flagSet · sheetStatus ·
+sheetSync
+
+The two sheet actions are owner-only for a reason that is not about trust: the sheet
+holds **every** artist's rows, so it is platform data, not an artist's own. An artist
+wanting their own numbers gets them in the Studio.
 
 ## 4.4 Storage
 
@@ -596,6 +687,73 @@ deploy. `voteFinal` is the first, and it is **on**.
 as a date, a time and an IANA timezone. A set running past midnight belongs to the
 night it started.
 
+**Pull to refresh.** `public/pull.js`, one implementation, all seven pages. Installed
+to a home screen there is no address bar, no reload button and on iOS no swipe-down
+gesture — so a page showing something stale had no way out except force-quitting.
+`vote.html` had grown its own copy when the audience poll settled to 25s; that copy is
+deleted, not left beside it. The gesture only arms within 2px of the top of the page,
+every listener is passive, and the browser's own gesture is deliberately **not**
+suppressed — `overscroll-behavior-y: contain` would stop Chrome double-firing and would
+also mean no refresh gesture at all if the script failed to load.
+
+It is JavaScript, so it cannot rescue a page whose JavaScript is broken. That is what
+the two buttons under **Settings → If something looks wrong** are for: a plain reload,
+and `hardReset()`, which drops every cache and sends `sw.js` the `myset-unregister`
+message it has listened for since it shipped and never had a button for. Neither
+touches songs, votes, money or the sign-in token.
+
+### The Google Sheet
+
+An export of everything, for marketing and for working out which songs a room actually
+wants. **The full setup walk-through is `GOOGLE-SHEET-SETUP.md`** — that is the file to
+open, not this paragraph.
+
+* `_sheets.mjs` is the client: a service-account JWT signed with `node:crypto`, a token
+  cached per warm container, and the four Sheets API calls it needs.
+* `_warehouse.mjs` decides what goes in. Nine tabs: **Guide** (written once, in plain
+  words), **Artists / Songs / Gigs / Venues** (snapshots, rewritten each sync),
+  **Shows / Requests / Ratings** (logs, appended only), **Growth** (one row per sync —
+  the tab to chart).
+* Owner-only actions `sheetStatus` and `sheetSync`; a nightly `sheetcron.mjs` at 03:20
+  UTC that does nothing except call the same function.
+
+The rules that make it safe:
+
+1. **It is a copy, never the source.** Nothing in MySet reads it. Delete the
+   spreadsheet and the app does not notice.
+2. **Off until three env vars exist, and off is a clean no-op with a reason** — the
+   same shape as `STRIPE_SECRET_KEY` (INVARIANT 9).
+3. **`GSHEET_KEY` never appears in a repo file, a log, a response or a chat window**
+   (INVARIANT 11/11b). `sheetStatus` reports whether it *parses*, never what it is.
+4. **No `list()`.** Two registries name every artist and venue, and each artist's own
+   history index names every show — so the whole store is walkable without the call
+   INVARIANT 1 forbids.
+5. **Nothing on a hot path.** A sync is a button and a nightly job. `archiveShow` was
+   deliberately left untouched: ending a show is the most sacred path in the app
+   (INVARIANT 16).
+6. **No Stripe call.** Each night's money is read from the show's own archived record,
+   so a sync cannot be slowed or broken by Stripe. Stripe stays the ledger (5d).
+7. **No audience device id, ever.** Phones are counted, never named (9g).
+8. **Watermarks move only after a successful write, and per tab.** A run that dies
+   halfway re-sends only what *that* tab was carrying — a duplicate row is a nuisance,
+   a missing one is a hole nobody notices.
+9. **A cap defers; it never drops.** 400 artists and 40 new nights a sync, taken
+   oldest-first, and the run stops adding artists rather than trimming rows at the end.
+   The Growth row's last column reports when a cap bit.
+9b. **The Songs tally is an accumulator keyed by SHOW**, in `songstats_<aid>`. It has
+   to be: the tally a song won is destroyed when the next song starts (INVARIANT 17b),
+   and keying it by timestamp double-counted a night that was ended twice.
+9c. **One sync at a time**, so the nightly cron and the button cannot both append.
+10. **Formula-shaped text is escaped.** A song called `=1+1` and an artist called
+    `+Plus Band` are both real, and Sheets runs both. Anything starting `= + - @` gets
+    a leading apostrophe.
+
+One thing it also added: **where a signup came from**. `?src=`, `?utm_source=` or the
+referring host is stashed on the first visit and read at the end of the email
+round-trip, because signing up means leaving for an inbox and coming back with a clean
+URL. It is a short label, never a full URL or a browsing trail. The same fix rescues
+`?ref=`, which used to be silently lost the same way.
+
 ---
 
 # PART FIVE — RUNNING IT
@@ -631,10 +789,21 @@ Never in the repo, never in a chat window. All set by Perry directly in Netlify:
 
 `ADMIN_CODE` · `STRIPE_SECRET_KEY` · `STRIPE_WEBHOOK_SECRET` · `RESEND_API_KEY` ·
 `VAPID_PUBLIC_KEY` · `VAPID_PRIVATE_KEY` · `VAPID_SUBJECT` · `AUTH_FROM` ·
-`SPOTIFY_CLIENT_ID` · `SPOTIFY_CLIENT_SECRET`
+`SPOTIFY_CLIENT_ID` · `SPOTIFY_CLIENT_SECRET` · `GSHEET_ID` · `GSHEET_EMAIL` ·
+`GSHEET_KEY`
 
 Currently set in production: the Stripe pair and Resend. **The push keys are not set**,
-so alerts cannot send yet.
+so alerts cannot send yet. **The three `GSHEET_*` vars are not set either**, so the
+Google Sheet is off — see `GOOGLE-SHEET-SETUP.md`. `GSHEET_ID` and `GSHEET_EMAIL` are
+not really secrets (the address has to be pasted into Google's own share dialog, and
+`sheetStatus` shows it for exactly that reason); `GSHEET_KEY` is, and should be marked
+**Contains secret value** in Netlify.
+
+**A Netlify env var marked secret is unreadable through the API — it returns a
+placeholder, not the value.** That is correct behaviour and it has already caused one
+false diagnosis: a masked `ADMIN_CODE` was sent to the admin door, correctly refused,
+and reported as "the recovery key is broken". Tells are a fixed length, very few
+distinct characters, no letters, and byte-identical across all three contexts.
 
 ## 5.4 Testing
 

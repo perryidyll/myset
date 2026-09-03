@@ -1,6 +1,19 @@
 import { casDoc, readDoc, KEY } from './_lib.mjs';
 import { parseMedia, embedSrc, linkOut, embedShape } from './_embeds.mjs';
 
+/* HOW MANY SMALL PHOTOS AN ARTIST GETS, named rather than inlined as a 3.
+
+   It used to be enforced twice by accident: this file trimmed the array on read,
+   and the shared SLOTS set in _img.mjs only listed p0..p2 so the endpoint refused
+   anything higher. On 2026-09-03 SLOTS was widened to p0..p11 for venue Pro — and
+   that silently removed the second guard, so an artist could store nine extra
+   images that no page would ever show. The bytes would still be in Blobs.
+
+   So the cap lives here, once, and admin.mjs checks it explicitly. A VENUE's cap
+   is a plan limit and lives in VENUE_PLANS instead; the slot set is a list of
+   valid names, not a limit on anybody. */
+export const MAX_PHOTOS = 3;
+
 export const defaultProfile = () => ({
   v: 1,
   artistId: null,
@@ -9,7 +22,7 @@ export const defaultProfile = () => ({
   bio: '',
   photo: '/img/band.jpg',
   avatar: '',            // the big square portrait
-  photos: [],            // up to 3 small ones clustered around it
+  photos: [],            // up to MAX_PHOTOS small ones clustered around it
   links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', website: '' },
   media: [],
   updatedAt: Date.now(),
@@ -50,8 +63,13 @@ export function normProfile(p) {
   out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 700);    // newlines kept
   out.photo = String(out.photo == null ? d.photo : out.photo).slice(0, 300);
   out.avatar = String(out.avatar || '').slice(0, 300);
+  /* Positional, for the same reason as the venue's (see normVenue): `.filter`
+     compacted the array, so clearing photo 1 slid photo 2 into its slot. Only
+     trailing blanks are dropped, so the array stays short when it can. */
   out.photos = (Array.isArray(out.photos) ? out.photos : [])
-    .map((x) => String(x || '').slice(0, 300)).filter(Boolean).slice(0, 3);
+    .slice(0, MAX_PHOTOS)
+    .map((x) => String(x || '').slice(0, 300));
+  while (out.photos.length && !out.photos[out.photos.length - 1]) out.photos.pop();
   const L = out.links || {};
   out.links = {
     spotify: safeLink('spotify', L.spotify),

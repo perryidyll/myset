@@ -75,7 +75,8 @@ export default async (req) => {
 
     const reg0 = await readArtists();
     if (!reg0.byEmail[email]) {
-      const made = await createArtist({ email, name, slug: body.slug, ref: body.ref });
+      const made = await createArtist({ email, name, slug: body.slug, ref: body.ref,
+                                        src: body.src });
       if (!made.ok) return bad(made.error === 'already' ? 'That address already has a page'
                                                        : 'Couldn’t create that page', 409);
     }

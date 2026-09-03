@@ -7,7 +7,21 @@ import { store } from './_lib.mjs';
    arrives here is already a few hundred KB, and this refuses anything that
    isn't. */
 
-export const SLOTS = new Set(['cover', 'avatar', 'p0', 'p1', 'p2']);
+/* p0..p11 because a venue on Pro gets twelve (VENUE_PLANS in _venues.mjs).
+
+   THIS SET IS A LIST OF VALID NAMES. IT IS NOT A LIMIT ON ANYBODY. It listed
+   p0..p2 until venue Pro needed twelve, and while it did it was accidentally
+   serving as the artist's photo cap as well — so widening it uncapped an endpoint
+   that has always been meant to hold three (INVARIANT 0bz).
+
+   There are TWO caps and they live where the answer is known:
+     · how many a record may HOLD — normProfile / normVenue, the storage question
+     · who may WRITE the fourth   — admin.mjs (MAX_PHOTOS) and venueadmin.mjs
+                                    (the venue's plan), the permission question
+   An earlier version of this comment named only the second and called it "the cap
+   that matters", which is how the first one got missed. */
+export const SLOTS = new Set(['cover', 'avatar',
+  ...Array.from({ length: 12 }, (_, i) => 'p' + i)]);
 export const MAX_BYTES = 900 * 1024;
 const KEY = (aid, slot) => `img_${aid}_${slot}`;
 

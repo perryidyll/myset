@@ -1,0 +1,58 @@
+/* LOCKED FEATURES — shown, not hidden.
+   © 2026 Perry Idyll.
+
+   Perry's call, 2026-09-03: an artist or a venue on the free plan should be able
+   to SEE what the paid plans do, greyed out with a quiet word over it, rather
+   than find a control that looks live and then apologises. The old behaviour was
+   worse than hiding it — the Studio's pricing controls were fully tappable on
+   free and the server refused with a 402, which is exactly the shrug INVARIANT
+   0ad exists to prevent.
+
+   THIS IS ITS OWN FILE because the two Studios are the only pages with locks and
+   NEITHER of them loads app.css — they are self-contained pages with their own
+   inline styles. Putting these rules in app.css looked obviously right, and did
+   nothing at all: the greying never reached either Studio. Caught by measuring
+   computed styles in a browser, not by reading the diff.
+
+   TWO STATES, and the difference is honesty:
+     .lock          built, and a higher plan turns it on. Tappable — it opens the
+                    plans.
+     .lock.soon     designed and NOT built (NOT_BUILT in _plan.mjs,
+                    VENUE_NOT_BUILT in _venues.mjs). Greyed on every plan
+                    INCLUDING Pro, and not tappable, because there is nothing
+                    behind it to open. Perry is comped to Pro; without this he
+                    would be shown four dead ends as if they were his.
+
+   ALWAYS DARK, deliberately. Both Studios set a fixed dark palette and have no
+   `prefers-color-scheme` block anywhere — so a veil that lightened itself for a
+   light system theme washed out a page that was still black. There is no light
+   mode here to serve.
+
+   The veil sits ON TOP rather than replacing the content, so the real thing stays
+   visible at real size. `pointer-events` is the lock; the opacity is only how it
+   looks, and a lock that is only opacity is not a lock. */
+.lock{position:relative;isolation:isolate}
+.lock>.lockin{opacity:.32;filter:saturate(.2);pointer-events:none;user-select:none}
+.lockveil{position:absolute;inset:0;z-index:2;display:grid;place-items:center;
+  border-radius:var(--r-sm,14px);
+  background:linear-gradient(180deg,rgba(0,0,0,.34),rgba(0,0,0,.62));
+  cursor:pointer;border:0;width:100%;padding:0;margin:0;
+  font:inherit;color:inherit;text-align:center}
+.lock.soon>.lockveil{cursor:default}
+/* A pill, sized by its own text. It is `b` on a `button`, so the font has to be
+   restated — a button does not inherit one. */
+.lockveil b{display:inline-flex;align-items:center;gap:6px;
+  font-family:inherit;font-size:12.5px;font-weight:600;letter-spacing:-.01em;
+  background:var(--surface,#1C1C1E);color:var(--ink,#F5F5F7);
+  box-shadow:var(--sh-1,0 2px 8px rgba(0,0,0,.5));
+  border:.5px solid var(--hair-2,rgba(255,255,255,.16));
+  border-radius:var(--pill,999px);padding:7px 14px;white-space:nowrap}
+.lockveil b svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;flex:0 0 auto}
+.lock.soon .lockveil b{color:var(--muted,#98989D)}
+
+/* THE REASON GOES UNDER THE LOCK, NOT INSIDE IT.
+   It started inside the veil and was unreadable: a single row of chips is only
+   ~43px tall, so the caption either overflowed the greyed box or was clipped to
+   "Coming soo". Outside it, one line always fits and always reads. */
+.lockwhy{font-size:12px;color:var(--muted,#98989D);margin:9px 0 0;padding:0 18px;
+  line-height:1.35}

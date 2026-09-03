@@ -191,3 +191,9 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
     transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
+
+
+/* The locked-feature styling used to be pasted in here. It was moved to its own
+   public/lock.css because NEITHER Studio loads this file, so the rules never
+   reached the only two pages that have locks — verified in a browser on
+   2026-09-03, after they had already been written and believed. */

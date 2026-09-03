@@ -1442,3 +1442,286 @@ All four priorities done, plus 15 of the 22. **INVARIANTS 7b, 7c, 0bm, 0bn.**
 **Still open:** nothing renders the tick on a public artist page; the venue Pro plan
 has no self-serve route (owner sets it by hand); `PAYOUT_COUNTRIES` is 22 countries,
 not Stripe's full set. See `REVIEW-2026-09-02-REMAINING.md` § "Still open".
+
+---
+
+## Addendum — 2026-09-03 · Content engine + Instagram launch
+
+**New sibling project: `~/Docs/MySet-Content/`** (own git repo, 1 commit).
+
+Deliberately **outside** `~/Docs/MySet` — that repo is production, `main` is
+live, and another session edits it concurrently. Content work must not be able
+to reach it.
+
+### What it is
+A design-to-publish pipeline for MySet's Instagram, plus its first payload:
+**28 posts** covering four weeks (2026-09-08 → 2026-10-05), all static images
+and carousels. 45 images rendered. **None approved, none published.**
+
+```
+plan/calendar.mjs → plan/posts/*.json → out/media/*.jpg → review gate → Instagram
+npm run plan / render / review / publish -- --dry-run
+```
+
+### Key decisions
+- **Design tokens are lifted from the live app** (`public/app.css` design system
+  v2) into `brand/tokens.json`, injected as CSS custom properties at render
+  time. Templates cannot declare their own colours. The app stays upstream.
+- The `--ms-k` provenance fingerprint was **deliberately not copied** — it is
+  registered in `FINGERPRINTS.md` for the app, and duplicating it elsewhere
+  would weaken it as evidence.
+- Posts are **pure designed graphics** (Perry's call). This satisfies Strategy
+  v3 §7.4's "never a bare graphic" rule because §7.4 explicitly lists *the
+  MySet tally* as a qualifying live-performance signal — so the tally is the
+  hero visual, not decoration.
+- Funnel mix follows **Stage A weighting** (§7.3): 11 Attract, 9 Journey,
+  4 Expert, 4 Nurture, 0 hard Convert.
+
+### The evidence rule is enforced in code
+Every post carries `evidence: verified | opinion | confirm`. The publisher
+**refuses** to publish anything still marked `confirm`. This exists because the
+landing page previously shipped fabricated proof stats. The only hard numbers
+MySet owns: **one gig 2026-08-30, 8 voters, 21 votes, one $3 purchase.**
+
+### Instagram API facts (verified 2026-09-03, not from memory)
+- *Instagram API with Instagram Login* means **no Facebook Page is required** —
+  a Business/Creator account authenticates directly.
+- **JPEG only.** PNG is rejected outright.
+- Feed ratio must be between 4:5 and 1.91:1 → we render 1080×1350.
+- **Carousels cap at 10 slides via API** (20 is app-only).
+- 100 API posts / 24h; a carousel counts as 1. Free.
+- Images must be at a **public URL** — Instagram fetches server-side.
+- No reliable alt-text field on publish; alt is stored in JSON but must be
+  added by hand in-app.
+
+### Blocked on Perry (cannot be done for him)
+1. **Create the Instagram account** — does not exist yet. Handle shortlist,
+   bio and a rendered avatar (`out/avatar.jpg`) are in `docs/SETUP-INSTAGRAM.md`.
+2. Switch it to a Business/Creator account.
+3. Create the Meta app, grant `instagram_business_basic` +
+   `instagram_business_content_publish`, generate a long-lived token.
+4. Deploy `out/media/` to its own Netlify site for `MEDIA_BASE_URL`.
+5. **Approve posts** in the review sheet (`npm run review`, localhost:8799).
+
+### Open question flagged to Perry
+Strategy v3 §10.1 argues the correct order is Artists → Gigs → Footage →
+Content, and warns against launching a calendar first. A brand-foundation
+fortnight is compatible with that (it is the §10.5 "ten assets in the bank"
+preflight), but the 28 posts do **not** substitute for the outbound
+recruitment sprint in §10.2. Both need to run.
+
+> SSD mirror **not updated** — `/Volumes/IDYLL SSD 1` was not mounted on
+> 2026-09-03. Mirror `~/Docs/MySet-Content/` when it is next connected.
+
+### Addendum 2 — 2026-09-03 (later) · Reels pipeline + REEL 01
+
+**Reels are now first-class in `~/Docs/MySet-Content`** (commit `4fcb512`).
+
+- **No ffmpeg, no Homebrew on this Mac.** Solved natively: `reels/encode.swift`
+  is an AVFoundation frame-sequence → H.264 MP4 encoder, compiled once with
+  Xcode's `swiftc` to `reels/bin/encode`. Nothing downloaded.
+- **Animation is a pure function of time.** Each reel template exposes
+  `window.__seek(seconds)`; `reels/render.mjs` steps it at 30fps, screenshots
+  every frame at 2×, the encoder downsamples to 1080×1920. Deterministic, no
+  CSS animation, nothing ever caught mid-transition. `REEL_DEBUG_T=1.45`
+  dumps one still for inspection. ~15s per 6s reel.
+- **REEL 01 — The Lead Change** (`lead-change.mjs`): 6s. Votes tick in, #2
+  ties then overtakes #1 with an ease-out-back row swap, leader glow
+  transfers, headline "The room changed its mind." rises. Stable sort keeps an
+  incumbent on top during a tie. Scheduled 2026-09-13 as post 29 (draft).
+- Publisher handles `format:'reel'` via `media_type=REELS` + `cover_url`,
+  polling the container up to ~150s. Review sheet shows reels with a player.
+- Output lands in `out/media/reels/` so one Netlify deploy of `out/media`
+  covers images and video.
+
+**Seven reel concepts brainstormed, one built.** Remaining six, in priority
+order: The Room Lights Up (3s loop, crowd-as-dots), Scan → Vote → Move (12s
+mechanism), Stage & Room (10s, geometric performer + crowd figures), Save The
+Gig — Live (12s franchise), The Second Setlist (3s loop), The 9:40 Dip (10s
+energy curve). Each is one new file in `reels/templates/`.
+
+**Traps hit this pass, all real:** the identical `.row>*` specificity bug from
+the static tally (name children explicitly); a backtick inside a CSS comment
+inside a JS template literal; Chrome refusing `file://` media from an
+`about:blank` page (navigate to the MP4 URL itself); the +1 chip clipped by
+the row's `overflow:hidden` (clip bars in their own layer).
+
+**Open:** no audio track. IG has accepted silent video via API historically;
+if a REELS container ever errors on it, add a silent AAC track in the Swift
+encoder. Not blocking.
+
+### Addendum 3 — 2026-09-03 (evening) · Three more reel templates, nine reel posts
+
+**Built in `~/Docs/MySet-Content` (this session):** the three lowest-effort
+reels from `docs/REELS-PLAN.md`, plus the shared infrastructure the plan asked
+for before any second reel.
+
+- **Calendar is now reel-aware.** A post with `format:'reel'` names a template
+  in `reels/templates/` and the reel renderer reads `plan/posts/*.json` like
+  the static one does. Templates read the post's own slide, so copy is
+  authored once. Media names derive from the post id
+  (`<id>.mp4`, `<id>-cover.jpg`). The calendar **throws** if two posts share
+  a date — the 09-13 collision from the plan's §0 can't recur.
+- **§0 fixes applied:** REEL 01 moved to 2026-09-20; the duplicate static
+  `queue-lead-change` deleted. 28 posts again: 19 static (36 images) + 9 reels.
+- **`reels/lib/motion.mjs`** (clamp/lerp/seg/outCubic/inOutCubic/outBack/
+  outExpo/stagger/periodic/hash/mix — real exports + a serialised `MOTION_JS`
+  for the page) and **`reels/lib/chrome.mjs`** (9:16 shell, kicker, foot,
+  glow variants, `.grad` ground, `ambient(t, period)`).
+- **Loop verifier:** `meta.loop = true` → renderer screenshots t=0 and
+  t=duration, compares pixels in-page (canvas, no image lib), prints
+  mean/max diff, exits 2 on a seam. All eight loops: 0.000.
+- **`kinetic`** (4s, ×4 gradient statements): lines land with outBack(1.15)
+  at 0.15s stagger, white hairline wipes under the last line then retracts,
+  lines lift away; ground gradient drifts on a sine with period = duration.
+- **`one-has-to-go`** (6s, ×3 polls): pink scan band 0.35–1.55s locks cards
+  with STAYS/GOES chips; the `reel.data.gone` card blurs 16px, drifts 48px,
+  fades, and sheds 30 hashed particles; survivors re-centre with
+  outBack(1.25); rewind 5.0–5.75 via a `keep` factor so frame 0 = frame N.
+  Gone picks (one-number edits): Wonderwall / the 70s / Getting paid late.
+- **`second-setlist`** (6s, ×1): everything derives from a master phase u(t)
+  that runs 0→1 (1.2–2.7s) and back (5.15–5.85s). Played rows animate
+  height/font/opacity 124→70px; wanted rows rise staggered, bars cap at 76%
+  of row width so the leading edge never cuts through a vote number.
+- **`--stills 0.6,2.3`** flag renders stills only (fast QA, no video).
+- **Trap:** after `verify()` navigates a page to a `file://` MP4,
+  `setContent()` on that page never fires `load` → 30s timeout. One fresh
+  page per reel fixes it.
+- **Trap:** the review server started via the Browser pane keeps the
+  post list and routes from launch; restart it after changing `serve.mjs`
+  or it 404s new media while looking alive.
+
+**Next reels per plan §4:** 08 Save The Gig (franchise, 4 posts) → 05
+Prediction vs Room ★ → 07 The 9:40 Dip → 12 → 02 → 09 → 03 → 11.
+`lead-change.mjs` still carries its own chrome; fold it into
+`reels/lib/chrome.mjs` when next touched.
+
+> SSD mirror still **not updated** — `/Volumes/IDYLL SSD 1` not mounted.
+
+**Independent review pass (3 reviewer agents, one per template, ~10 min):**
+no blockers; every "should-fix" applied and re-rendered — kinetic underline
+now anchored to the type baseline (constant gap with or without descenders),
+gradient-ground kicker/handle raised to .95/.9 alpha (was 2.3:1 contrast; the
+same fix went into `brand/brand.css` so static grad cards match), kinetic
+duration now follows line count (`durationFor(post)`, 4.0–4.2s); second
+setlist's two kickers no longer dissolve on top of each other (sequential
+with a dead gap + 14px slide), the phase-1 label sits with its list, the
+"Example" note is 30px `--muted` and fades in with the pink rows; One Has To
+Go's doomed card is now identical to the others at rest (badge/border only
+turn pink as it locks), fade and blur move together, the scan band has soft
+masked ends and a shorter run-out, particles sit beneath the cards and drift
+down when the last card is the one that goes. Deferred nits: templates still
+hold a few rgba literals (add `--accent-rgb` to tokens when convenient).
+
+---
+
+### SESSION 17 — 2026-09-03: the Google Sheet, greyed-out premium, pull-to-refresh
+
+Three things Perry asked for in one message, plus two real bugs found on the way.
+**766 assertions across 17 suites, 0 failures.** Read `INVARIANTS.md` 0bp–0cg
+before touching any of it — every one of those was discovered by being broken.
+
+**1 · The Google Sheet** (`GOOGLE-SHEET-SETUP.md` is the file to open)
+
+New: `netlify/functions/_sheets.mjs` (service-account JWT + Sheets API v4),
+`_warehouse.mjs` (what goes in the nine tabs), `sheetcron.mjs` (03:20 UTC nightly),
+owner-only `sheetStatus` / `sheetSync`, a Studio card in Settings, `test/sheets.mjs`.
+
+Nine tabs. **Snapshots** rewritten each sync: Artists, Songs, Gigs, Venues.
+**Logs** appended only: Shows, Requests, Ratings. **Growth**: one row per sync, the
+tab to chart. **Guide**: written once, in plain words, for Perry.
+
+* It is a copy — nothing in MySet reads it (0bp). Off until three env vars exist,
+  and off is a clean no-op with a reason (0bq).
+* **Watermarks move only after a successful write** (0bs). A test kills Google
+  mid-sync and asserts the row it was carrying survives.
+* No Stripe call, no `list()`, no audience device id, nothing on a hot path.
+  `archiveShow` deliberately untouched (0bt, 0bu).
+* Formula-shaped text is escaped — `=1+1` is a real song title (0bv).
+* **UNVERIFIED:** the cron has never fired. Verified: the manual button, end to
+  end, against a stubbed Google with a real RS256-signed JWT. If the schedule turns
+  out not to work, the button still does everything.
+* Also added: first-touch signup source (`?src=`/`?utm_source=`/referring host),
+  stashed on the first visit and read after the email round-trip. The same fix
+  rescues `?ref=`, which used to be silently lost when the URL came back clean.
+
+**2 · Premium features shown greyed out, not hidden**
+
+`public/lock.css` (linked by both Studios, and by nothing else) plus a matching
+`has()` / `needsPlan()` / `lock()` trio in each. Two states: **"Plus/Pro feature"**
+(built, tappable, scrolls to the plans) and **"Coming soon"** (designed and not
+built — greyed on every plan including Pro, not tappable).
+
+Locked in the Artist Studio: free-vote count, replay cost, pack prices, request
+cost, new setlist. Previewed as coming: analytics (Money), promote (Gigs), press
+kit + branding (Profile). Venue Studio: photo slots 4–12, a plan box, and reviews /
+tips / speaker-votes previews.
+
+Three traps this walked into, all now invariants:
+
+* **`app.css` was the wrong file.** Neither Studio loads it, and the Studios are
+  the only pages with a lock — so the first version shipped rules that reached
+  nothing. Caught by measuring computed styles in a browser (0cb).
+* **A numeric limit is not a yes/no** — `photos` is 3 or 12, so `=== true` was
+  false and Pro showed a dash beside twelve slots it had (0ca).
+* **The Studios are unconditionally dark**, so a `prefers-color-scheme` veil
+  washed out a black page (0cc).
+
+Server side: the venue photo cap (3/12) is now actually enforced — it had lived in
+`VENUE_PLANS` and nowhere in the code since venues shipped.
+
+**3 · Pull to refresh** — `public/pull.js`, one implementation, seven pages
+
+`vote.html`'s own copy is deleted, not left beside it. Only arms within 2px of the
+top, all listeners passive, browser's own gesture deliberately not suppressed, and
+loaded **blocking not deferred** (0cd–0cf). Plus, in Settings → "If something looks
+wrong": a plain reload, and `hardReset()`, which finally sends `sw.js` the
+`myset-unregister` message it has listened for since it shipped.
+
+**Two bugs found on the way, both fixed:**
+
+* **VAPID keys.** `getPrivateKey()` strips leading zeroes, so ~1 key in 256 was 31
+  bytes — an invalid JWK scalar (RFC 7518 6.2.2.1). The assertion had passed a
+  hundred times and failed once. `pad32` on both sides; the test now makes 600 keys
+  so the flake is deterministic (0cg).
+* **Widening `SLOTS` broke its neighbour.** `p0..p2` had been doubling as the
+  artist's photo cap, so making room for venue Pro let an artist store nine images
+  no page renders. Artist cap is now `MAX_PHOTOS` in `_profile.mjs` (0bz).
+
+**The independent review earned its keep.** A fresh-context agent reviewed the
+diff and found **six real bugs the 138 tests had passed straight over**, because
+those tests asserted row *counts* and never row *values*. All six are fixed, all
+six now have a regression test, and every one is written up in `INVARIANTS.md`:
+
+* **The Songs tab zeroed itself every night.** Snapshot tab, counts built only
+  from shows that were new since last time — so the morning after a gig it read
+  "played 1, votes 12" and the next sync rewrote it as "played 0, votes 0", under
+  a column headed "Votes all time". Now an accumulator keyed by SHOW (0bs2), which
+  also fixes ending a show twice counting the night twice.
+* **Nights past the 40-per-artist cap were lost, not deferred.** The index is
+  newest-first, so taking the first forty took the NEWEST forty and moved the
+  watermark past everything older. Reproduced with 45 nights: five gone for good,
+  while three separate comments promised "the rest come next sync". Oldest-first
+  now (0bw).
+* **The 5,000-row trim dropped rows behind the watermark, silently.** The run now
+  stops taking artists instead of trimming at the end.
+* **A failure on the last tab duplicated the first tab's rows.** Marks commit per
+  tab now, right after that tab's own append (0bs).
+* **A venue on Pro could upload photos 4–12 and have them thrown away** by
+  `normVenue`'s `.slice(0, 3)` — the mirror image of the artist bug I had just
+  fixed, and worse, because it looked like it worked (0bz).
+* **The plan cards still sold the four unbuilt Pro features as included** — the
+  one page where somebody decides to spend $20 (0bx0).
+
+Plus: `unlimited` has no plan gate, so greying it took a working control off free
+artists; `has()` treated an unknown plan as allowed, so the first render of
+Settings was fully live; photo slots were being compacted so clearing one moved
+another; `cleanSource` mangled a pasted URL instead of rejecting it; the
+`test/cost.mjs` globals guard didn't know about `sheetsync`; and `syncSheet` had
+no lock, so the cron and the button could both append. **854 assertions, 0
+failures.**
+
+**Still open** (unchanged from Session 16b, plus): the pitch deck was never built;
+nothing renders the tick on a public artist page; venue Pro has no self-serve
+billing; `PAYOUT_COUNTRIES` is 22 countries. And the four artist / three venue
+"coming soon" features are exactly that — designed, not built.

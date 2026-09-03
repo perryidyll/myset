@@ -19,6 +19,13 @@
 <title>Venue Studio — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
 <link rel="manifest" href="/manifest-venue.webmanifest">
+<link rel="stylesheet" href="/lock.css">
+<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
+     from an inline script, and a deferred script runs AFTER all of those —
+     so `defer` here makes MySetPull undefined at the moment it is called and
+     the gesture silently never arms. 4KB, same origin, and the service worker
+     serves it from cache, so blocking costs nothing measurable. -->
+<script src="/pull.js"></script>
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -255,6 +262,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
   border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .cnt{float:right;font-weight:500;color:var(--faint);font-size:11.5px}
+
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -359,6 +367,14 @@ function signOut(){ TOKEN=''; localStorage.removeItem('myset.vtoken'); V=null; M
 
 /* ── loading ────────────────────────────────────────────── */
 async function start(){ await Promise.all([loadVenue(),loadMe()]); }
+/* A pull re-reads the page, and whichever tab's extra data the tab needs. See
+   /pull.js for why this exists at all in an installed app. */
+MySetPull(async()=>{
+  try{
+    await loadVenue();
+    if(TAB==='numbers'){ STATS=null; await loadStats(); }
+  }catch(e){}
+});
 async function loadVenue(){
   const d=await post('/venueadmin',{action:'get'});
   if(!d.ok){
@@ -440,6 +456,106 @@ async function autoVerify(){
   else render();
 }
 
+/* ── LOCKED FEATURES ────────────────────────────────────────
+   The styling is shared — /lock.css, linked by both Studios and by nothing else.
+   These three functions are the pair to the ones in public/studio.html: same
+   names, same rules, reading this page's payload instead of the artist's. Kept
+   as a pair rather than shared because each Studio is a self-contained page and
+   neither loads the other's script.
+
+   `V.limits.soon` names the venue flags that are DESIGNED AND NOT BUILT — those
+   are greyed on Pro too, so nobody pays for a dead end. */
+const LOCKICON='<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/></svg>';
+const isSoon=(flag)=>!!(V&&V.limits&&(V.limits.soon||[]).includes(flag));
+function has(flag){
+  if(!V||!V.limits) return true;              // don't grey before we know
+  if(isSoon(flag)) return false;
+  const mine=V.limits[flag];
+  /* A NUMERIC LIMIT IS NOT A YES/NO, and treating it as one was a real bug: a
+     venue's `photos` is 3 or 12 and an artist's `featured` is 50 or unlimited, so
+     `limits[flag]===true` was false for both and Pro showed a dash next to a
+     feature it fully had. "Has it" means "has as much as the top plan gives".
+     Unlimited arrives as null, because shapeLimits maps Infinity to null so it can
+     survive JSON. */
+  if(mine===null) return true;
+  if(typeof mine==='number'){
+    const top=(V.plans&&V.plans.pro)?V.plans.pro[flag]:mine;
+    return top===mine;
+  }
+  return mine===true;
+}
+function needsPlan(flag){
+  const P=(V&&V.plans)||null;
+  if(P&&P.pro&&P.pro[flag]===true) return P.pro.label;
+  return 'Pro';
+}
+function lock(flag,html,why){
+  if(has(flag)) return html;
+  const soon=isSoon(flag);
+  const cap=soon?'Coming soon':needsPlan(flag)+' feature';
+  const pill=`<b>${LOCKICON}${cap}</b>`;
+  /* The reason line sits UNDER the lock rather than inside the veil: a locked row
+     of chips is 43px tall and a caption inside it either overflows or gets
+     clipped mid-word. */
+  return `<div class="lock${soon?' soon':''}"><div class="lockin">${html}</div>`+
+    (soon?`<div class="lockveil">${pill}</div>`
+         :`<button type="button" class="lockveil" aria-label="${esc(cap)} \u2014 see the plans" onclick="showPlans()">${pill}</button>`)+
+    `</div>`+(why?`<p class="lockwhy">${esc(why)}</p>`:'');
+}
+function showPlans(){
+  if(TAB!=='settings') setTab('settings');
+  setTimeout(()=>{const el=$('#planbox'); if(el) el.scrollIntoView({behavior:'smooth',block:'center'});},60);
+}
+/* A preview of something that does not exist yet — the same shape the artist's
+   Studio uses, so the two read as one product. */
+function soonCard(flag,kick,lede,rows){
+  return `<div class="sec"><span class="kick">${kick}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">${lede}</p>
+    ${lock(flag,`<div class="list">${rows.map(([t,d])=>
+      `<div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div></div>`
+    ).join('')}</div>`)}`;
+}
+/* The venue plan card. Venue Pro is NOT self-serve — there is no billing behind
+   it and the verify checklist already says so in those words — so this states the
+   difference and tells them to ask, rather than showing a Buy button that leads
+   nowhere. */
+function planBox(){
+  if(!V||!V.plans) return '';
+  const rows=[['photos','Photos on your page',(p)=>p.photos+''],
+              ['tick','The green verified tick',(p)=>p.tick?'yes':'—'],
+              ['reviews','Reviews from the room',(p)=>p.reviews?'yes':'—'],
+              ['tips','Tips for your staff',(p)=>p.tips?'yes':'—'],
+              ['speakerVotes','Votes between the sets',(p)=>p.speakerVotes?'yes':'—']];
+  const F=V.plans.free,P=V.plans.pro,now=V.plan||'free';
+  return `<div class="sec"><span class="kick">Your plan</span></div>
+    <div class="list" id="planbox">
+      <div class="row"><div class="m"><div class="t">You're on ${esc((V.limits&&V.limits.label)||'Free')}</div>
+        <div class="s">${now==='free'?'Everything your page does for the public is free and stays free.':'Thanks — that is what keeps the lights on.'}</div></div>
+        <span class="pill ${now==='free'?'no':'ok'}">${now==='free'?'Free':'Pro'}</span></div>
+      ${rows.map(([k,label,val])=>`<div class="row">
+        <div class="m"><div class="t">${label}${(V.limits&&(V.limits.soon||[]).includes(k))?' <span class="s">· coming soon</span>':''}</div>
+          <div class="s">Free ${val(F)} · Pro ${val(P)}</div></div>
+        <span class="pill ${has(k)?'ok':'no'}">${has(k)?'✓':'—'}</span></div>`).join('')}
+    </div>
+    ${now==='free'?`<p class="muted" style="font-size:12px;padding:12px 20px 0">Pro is $${(P.price/100)}/month and isn't self-serve yet — message us and we'll switch it on for your page.</p>`:''}`;
+}
+
+const reviewsCard=()=>soonCard('reviews','Reviews from the room',
+  'People who were actually here — because they voted from a phone in your bar — get to say what the night was like.',
+  [['Only from real nights','No drive-by ratings from people who never came'],
+   ['On your public page','Under your photos, with the date'],
+   ['You get a reply','One per review, in your own words']]);
+const tipsCard=()=>soonCard('tips','Tips for your staff',
+  'A tip jar on your page that goes to your team, not to the act.',
+  [['Straight to your account','MySet never holds it'],
+   ['Split how you like','Whole team, or the bar'],
+   ['A thank-you on screen','So the tipper knows it landed']]);
+const speakerCard=()=>soonCard('speakerVotes','What plays between the sets',
+  'When there is no band on, the room votes for what comes out of your speakers.',
+  [['Your playlist, their choice','You put the songs in, they pick the order'],
+   ['Quiet nights get busy','The reason people stay for another'],
+   ['Off in one tap','Whenever the band is back on']]);
+
 /* ── render ─────────────────────────────────────────────── */
 function render(){
   if(!V)return;
@@ -514,9 +630,25 @@ function render(){
     <p class="muted" style="font-size:12px;padding:10px 20px 0">Closing after midnight is fine — put the real time.</p>
 
     <div class="sec"><span class="kick">Photos</span></div>
-    <div class="wrap"><div class="slots">
-      ${[0,1,2].map(i=>slotBox('p'+i,(V.photos||[])[i],'sq')).join('')}
-    </div></div>`;
+    ${/* THREE FREE, TWELVE ON PRO — and the extra nine are SHOWN, greyed, rather
+          than not existing. The server enforces the same cap (venueadmin.mjs), so
+          this is honest either way round: what looks locked is locked. */''}
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">${
+      (V.limits&&V.limits.photos)>3
+        ? 'Up to '+(V.limits.photos)+' on your page.'
+        : 'Three on the free plan. Pro holds twelve.'}</p>
+    <div class="wrap">
+      <div class="slots">${[0,1,2].map(i=>slotBox('p'+i,(V.photos||[])[i],'sq')).join('')}</div>
+      ${(()=>{const cap=(V.limits&&V.limits.photos)||3;
+        const rows=[];
+        for(let start=3;start<12;start+=3){
+          const box=`<div class="slots" style="margin-top:9px">${
+            [0,1,2].map(k=>slotBox('p'+(start+k),(V.photos||[])[start+k],'sq')).join('')}</div>`;
+          rows.push(start<cap?box:lock('photos',box,start===3?'Nine more photo slots come with Pro.':''));
+        }
+        return rows.join('');})()}
+    </div>
+    ${reviewsCard()}`;
   }
 
   if(TAB==='shows'){
@@ -568,7 +700,8 @@ function render(){
           <button class="act warn" data-act="pnope" data-id="${esc(p.id)}">✕</button>`
          :`<button class="act" data-act="pnew" data-id="${esc(p.id)}">Undo</button>`}
       </div>`).join('')}</div>`}
-    <p class="muted" style="font-size:12px;padding:16px 20px 0">Marking someone <b>Keen</b> shows on their own MySet studio, so they know to get in touch. Nobody’s email is shared either way.</p>`;
+    <p class="muted" style="font-size:12px;padding:16px 20px 0">Marking someone <b>Keen</b> shows on their own MySet studio, so they know to get in touch. Nobody’s email is shared either way.</p>
+    ${speakerCard()}`;
   }
 
   if(TAB==='numbers'){
@@ -605,7 +738,8 @@ function render(){
           <div class="t mono">${n.people}</div>
           <div class="s">${n.votes} votes</div></div>
       </div>`).join('')}</div>
-      <p class="muted" style="font-size:12px;padding:14px 20px 0">What each artist earned is <b>not</b> here and never will be — that’s their business. Any act can switch these numbers off from their own studio.</p>`;
+      <p class="muted" style="font-size:12px;padding:14px 20px 0">What each artist earned is <b>not</b> here and never will be — that’s their business. Any act can switch these numbers off from their own studio.</p>
+      ${tipsCard()}`;
   }
 
   if(TAB==='menu'){
@@ -642,6 +776,7 @@ function render(){
 
   if(TAB==='settings'){
     body=`
+    ${planBox()}
     <div class="sec"><span class="kick">Your public page</span></div>
     <div class="field"><label>myset.vip/v/</label><div style="display:flex;gap:8px">
       <input class="inp" id="slugIn" maxlength="32" value="${esc(V.slug||'')}" placeholder="yourbar" style="flex:1">
