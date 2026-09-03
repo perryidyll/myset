@@ -3,7 +3,7 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, release
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigWeekOf } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -262,6 +262,7 @@ const shapeLimits = (l) => ({
   featured: l.featured === Infinity ? null : l.featured,
   gigs: l.gigs === Infinity ? null : (l.gigs || null),
   pricing: !!l.pricing,
+  setlists: !!l.setlists,      // so the Studio can say so BEFORE the server refuses
   library: MAX_LIBRARY,
   cut: l.cut, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
@@ -1139,7 +1140,7 @@ export default async (req) => {
     gigCap = (isPlatformOwner(aid) || lim === Infinity || lim === undefined) ? null : lim;
     if (gigCap !== null) {
       const cur = await getShow(aid);
-      gigsUsed = cur.gigWeek === gigWeekOf() ? cur.gigCount : 0;
+      gigsUsed = cur.gigMonth === gigMonthOf() ? cur.gigCount : 0;
     }
   }
 
@@ -1233,8 +1234,8 @@ export default async (req) => {
     /* Recomputed inside the CAS callback so a retry cannot double-count — the
        accumulator rule, INVARIANT 0bi. */
     const countGig = (sh) => {
-      const w = gigWeekOf();
-      if (sh.gigWeek !== w) { sh.gigWeek = w; sh.gigCount = 0; }
+      const m = gigMonthOf();
+      if (sh.gigMonth !== m) { sh.gigMonth = m; sh.gigCount = 0; }
       sh.gigCount += 1;
     };
 
@@ -1298,7 +1299,7 @@ export default async (req) => {
         const want = ['pre','live','ended'].includes(body.status) ? body.status : show.status;
         if (want === 'live' && show.status !== 'live') {
           if (gigCap !== null && gigsUsed >= gigCap) {
-            err = [`That's your ${gigCap} free shows this week. Upgrade to keep playing — your allowance resets Monday.`, 402];
+            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
             return false;
           }
           countGig(show);
@@ -1473,7 +1474,7 @@ export default async (req) => {
       case 'clearSetlist': show.songs = []; break;
       case 'newShow':
           if (gigCap !== null && gigsUsed >= gigCap) {
-            err = [`That's your ${gigCap} free shows this week. Upgrade to keep playing — your allowance resets Monday.`, 402];
+            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
             return false;
           }
         countGig(show);

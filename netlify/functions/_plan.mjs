@@ -18,19 +18,19 @@ export const PLANS = {
   free: {
     label: 'Free', price: 0,
     featured: 50,       // how many can be live to the audience at once
-    /* SHOWS PER ISO WEEK (Monday to Sunday — see gigWeekOf in _lib.mjs). This is
-       the one limit that tracks what MySet actually costs to run: every phone in
-       the room polls for the whole gig, so the bill is driven by gigs played, not
-       by artists signed up. Capping the free tier on the real cost driver is what
-       makes free survivable — a limit on features would punish the wrong people
-       and save nothing.
+    /* SHOWS PER CALENDAR MONTH (UTC — see gigMonthOf in _lib.mjs). This is the one
+       limit that tracks what MySet actually costs to run: every phone in the room
+       polls for the whole gig, so the bill is driven by gigs played, not by artists
+       signed up. Capping the free tier on the real cost driver is what makes free
+       survivable — a limit on features would punish the wrong people and save
+       nothing. Four a month is a hobbyist; five is somebody earning from it.
 
-       WEEKLY, not monthly. A working act plays in a weekly rhythm, and a monthly
-       bucket let somebody burn the whole allowance on one weekend and then sit
-       dark for three weeks. It is also a limit you can hold in your head: "two a
-       week" is a sentence; "four a month, resetting on the 1st" is arithmetic.
-       Two a week is a hobbyist; three is somebody earning from it. */
-    gigs: 2,
+       It was briefly two a week (2026-09-03) and was changed straight back to four
+       a month at Perry's decision. If it ever moves again, the things that move
+       with it are: the copy in the Studio's Live-tab warning, the founder's note
+       under Your plan, both refusal messages in admin.mjs, and MYSET.md. The tests
+       read this number rather than repeating it. */
+    gigs: 4,
     cut: 0.10,            // platform share of tips and vote sales
     seats: 1,
     pricing: false,       // change free-vote count, pack prices, replay/ask costs

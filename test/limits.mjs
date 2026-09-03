@@ -1,9 +1,9 @@
 /* THE FREE PLAN'S TWO LIMITS, AND THAT THEY ARE REALLY ENFORCED.
 
-   Shows are capped at 2 per ISO WEEK (Monday to Sunday), not 4 a month — a working
-   act plays in a weekly rhythm, and a monthly bucket let somebody burn the whole
-   allowance on one weekend and then sit dark for three. It is also a limit you can
-   hold in your head.
+   Shows are capped per CALENDAR MONTH, UTC, resetting on the 1st. The number lives
+   in the plan table and is read from there rather than repeated here, because it
+   has already changed twice — four a month, briefly two a week, then back — and a
+   test that hard-codes it turns every pricing decision into a test edit.
 
    And CREATING a setlist is a Plus feature. Everything else about setlists keeps
    working on free, because a cap never deletes anything (INVARIANT 0s). */
@@ -11,7 +11,7 @@ process.env.ADMIN_CODE = 'devlocal';
 process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const admin = (await import('../netlify/functions/admin.mjs')).default;
-const { gigWeekOf, getShow } = await import('../netlify/functions/_lib.mjs');
+const { gigMonthOf, getShow } = await import('../netlify/functions/_lib.mjs');
 const { PLANS } = await import('../netlify/functions/_plan.mjs');
 const { createArtist, signToken, readArtists, revOf, mutateArtists } =
   await import('../netlify/functions/_auth.mjs');
@@ -32,17 +32,16 @@ const hit = async (h, url, body, token) => {
 };
 
 console.log('\nTHE NUMBERS ARE WHAT PERRY ASKED FOR');
-eq('two shows', PLANS.free.gigs, 2);
+eq('four shows a month', PLANS.free.gigs, 4);
 eq('and setlists are not on free', PLANS.free.setlists, false);
 eq('but are on Plus', PLANS.plus.setlists, true);
 eq('and on Pro', PLANS.pro.setlists, true);
 
-console.log('\nTHE WEEK RUNS MONDAY TO SUNDAY, AND DOES NOT DRIFT');
-eq('a Thursday', gigWeekOf(Date.parse('2026-09-03T12:00:00Z')), '2026-W36');
-eq('the Sunday after is the SAME week', gigWeekOf(Date.parse('2026-09-06T23:59:00Z')), '2026-W36');
-eq('the Monday after is a NEW week', gigWeekOf(Date.parse('2026-09-07T00:00:00Z')), '2026-W37');
-eq('1 Jan 2026 is week 1', gigWeekOf(Date.parse('2026-01-01T12:00:00Z')), '2026-W01');
-eq('3 Jan 2027 still belongs to 2026', gigWeekOf(Date.parse('2027-01-03T12:00:00Z')), '2026-W53');
+console.log('\nTHE BUCKET IS A CALENDAR MONTH, THE SAME ONE EVERYWHERE');
+eq('early September', gigMonthOf(Date.parse('2026-09-03T12:00:00Z')), '2026-09');
+eq('the last instant of the month is still it', gigMonthOf(Date.parse('2026-09-30T23:59:59Z')), '2026-09');
+eq('the 1st is a new one', gigMonthOf(Date.parse('2026-10-01T00:00:00Z')), '2026-10');
+eq('and it rolls over the year', gigMonthOf(Date.parse('2027-01-01T00:00:00Z')), '2027-01');
 
 console.log('\nSETUP  a free artist');
 const ana = await createArtist({ email: 'ana@example.com', name: 'Ana Reyes', slug: 'ana-reyes' });
@@ -52,31 +51,31 @@ const A = (action, extra = {}) => hit(admin, 'https://x/api/admin', { action, ..
 await A('addSong', { title: 'Valerie', artist: 'Amy Winehouse' });
 await A('addSong', { title: 'Dreams', artist: 'Fleetwood Mac' });
 
-console.log('\nTWO SHOWS A WEEK, THEN A REFUSAL THAT EXPLAINS ITSELF');
-ok('the first show starts', (await A('newShow')).ok);
-ok('and the second', (await A('newShow')).ok);
-const third = await A('newShow');
-eq('the third is refused', third.status, 402);
-ok('and says it is a WEEKLY allowance', /this week/i.test(third.error || ''), third.error);
-ok('and when it comes back', /Monday/i.test(third.error || ''), third.error);
+console.log(`\n${PLANS.free.gigs} SHOWS A MONTH, THEN A REFUSAL THAT EXPLAINS ITSELF`);
+const CAP = PLANS.free.gigs;
+for (let i = 0; i < CAP; i++) ok(`show ${i + 1} starts`, (await A('newShow')).ok);
+const over = await A('newShow');
+eq('one past the cap is refused', over.status, 402);
+ok('and says it is a MONTHLY allowance', /this month/i.test(over.error || ''), over.error);
+ok('and when it comes back', /on the 1st/i.test(over.error || ''), over.error);
 
 console.log('\nIT IS COUNTED ON THE RECORD, NOT GUESSED');
 const show = await getShow(ana.artistId);
-eq('the week is stamped', show.gigWeek, gigWeekOf());
-eq('and two are counted', show.gigCount, 2);
-ok('the old monthly field is gone', show.gigMonth === undefined, show.gigMonth);
+eq('the month is stamped', show.gigMonth, gigMonthOf());
+eq('and every show is counted', show.gigCount, CAP);
+ok('the short-lived weekly field is gone', show.gigWeek === undefined, show.gigWeek);
 
-console.log('\nA NEW WEEK GIVES THE ALLOWANCE BACK');
+console.log('\nA NEW MONTH GIVES THE ALLOWANCE BACK');
 const { mutateShow } = await import('../netlify/functions/_lib.mjs');
-await mutateShow(ana.artistId, (sh) => { sh.gigWeek = '2020-W01'; return true; });
+await mutateShow(ana.artistId, (sh) => { sh.gigMonth = '2020-01'; return true; });
 ok('a show starts again', (await A('newShow')).ok);
 const after = await getShow(ana.artistId);
 eq('and the counter restarted at one', after.gigCount, 1);
-eq('in the current week', after.gigWeek, gigWeekOf());
+eq('in the current month', after.gigMonth, gigMonthOf());
 
 console.log('\nPAYING LIFTS IT');
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'plus'; return true; });
-for (let i = 0; i < 4; i++) ok(`show ${i + 3} on Plus`, (await A('newShow')).ok);
+for (let i = 0; i < 4; i++) ok(`an extra show on Plus (${i + 1})`, (await A('newShow')).ok);
 
 console.log('\nCREATING A SETLIST IS A PLUS FEATURE');
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'free'; return true; });
@@ -102,18 +101,28 @@ ok('...and still delete it', (await A('listDelete', { id: made.id })).ok);
 
 console.log('\nTHE STUDIO SAYS THE SAME THING THE SERVER ENFORCES');
 const page = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
-ok('the Live warning counts by week', /s\.gigWeek===isoWeek\(\)/.test(page));
-ok('and the page computes the SAME week the server does', /function isoWeek\(/.test(page));
-ok('the wording says week, not month', /free shows this week/.test(page));
-ok('and Monday, not the 1st', /resets Monday/i.test(page));
-ok('no stale monthly copy is left', !/free shows this month/.test(page));
+ok('the Live warning counts by month', /s\.gigMonth===monthKey\(\)/.test(page));
+ok('and the page computes the SAME bucket the server does', /const monthKey=/.test(page));
+ok('the wording says month', /free shows this month/.test(page));
+ok('and the 1st, not Monday', /resets on the 1st/i.test(page));
+/* The copy has been wrong in both directions now. Nothing weekly may survive
+   anywhere in the Studio, including inside the founder's note. */
+ok('NOTHING weekly is left anywhere', !/this week|resets Monday|2\/week|isoWeek|gigWeek/.test(page));
+
+console.log('\nAND THE STUDIO SAYS SO BEFORE THE TAP, NOT AFTER  (INVARIANT 0ad)');
+ok('the plan payload carries the setlists flag',
+   /setlists: !!l\.setlists/.test(readFileSync(new URL('../netlify/functions/admin.mjs', import.meta.url), 'utf8')));
+ok('and the button is greyed with the reason on it',
+   /New setlist — a Plus feature/.test(page));
+ok('while still promising nothing is taken away',
+   /Everything you already have keeps working/.test(page));
 
 console.log('\nTHE FOUNDER\'S NOTE IS THERE, AND IT COLLAPSES');
 ok('it is a real disclosure element', /<details class="why">/.test(page));
 ok('the heading is the button', /<summary>Why there's a limit at all/.test(page));
 ok('it names him', /Perry Idyll<\/summary>/.test(page));
-ok('it carries his 2\/week line', /limited to 2\/week on the free plan/.test(page));
-ok('and the old monthly explainer is gone', !/shows a month<\/b> rather than by/.test(page));
+ok('and his line matches what is enforced', /limited to 4\/month on the free plan/.test(page));
+ok('and the old explainer is gone', !/shows a month<\/b> rather than by/.test(page));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

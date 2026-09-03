@@ -256,14 +256,14 @@ const owner = await hit(admin, 'https://x/api/admin?code=devlocal', { action: 'r
 ok('the founding artist is never locked out of pricing', owner.ok, owner);
 
 /* ── the free plan's gig cap ─────────────────────────────────────── */
-console.log('\nGIG CAP  two free shows a WEEK, counted where a gig starts');
+console.log('\nGIG CAP  four free shows a month, counted where a gig starts');
 
 /* Ana is on the free plan. A gig starts on newShow, and on status->live from
    anything that is not already live. She has already used one earlier in this
    file, so read the counter rather than assuming — the first draft of this test
-   asserted a number and measured one fewer for exactly that reason. The cap moved
-   from 4 a month to 2 a WEEK on 2026-09-03, so it is read from the plan table here
-   rather than written down twice. */
+   asserted a number and measured one fewer for exactly that reason. The cap has
+   already changed twice, so it is read from the plan table here rather than written
+   down twice. */
 const { PLANS: PL } = await import('../netlify/functions/_plan.mjs');
 const CAP = PL.free.gigs;
 const used0 = (await stA(TA4)).show.gigCount || 0;
@@ -274,7 +274,7 @@ eq(`she can start exactly the rest of her ${CAP}`, started, Math.max(0, CAP - us
 
 const overCap = await A(TA4, 'newShow');
 eq('one past the cap is refused', overCap.status, 402);
-ok('and says when it resets', /resets Monday/i.test(overCap.error || ''), overCap.error);
+ok('and says when it resets', /resets on the 1st/i.test(overCap.error || ''), overCap.error);
 
 /* newShow leaves the show LIVE, and setting live when already live is a no-op —
    correctly uncapped. End it first, then the Start button is the capped path. */
