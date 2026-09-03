@@ -397,6 +397,20 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
   transform-origin:bottom;animation:busybar .9s ease-in-out infinite}
 #busy .bars i:nth-child(2){animation-delay:.15s}
 #busy .bars i:nth-child(3){animation-delay:.3s}
+/* The boot screen. Painted with the HTML, so the first frame is already this
+   instead of a blank page, and removed once for good when the Studio renders —
+   never shown again, so it cannot flash mid-session. */
+#boot{position:fixed;inset:0;z-index:70;display:grid;place-items:center;gap:0;
+  background:var(--bg);transition:opacity .28s ease}
+#boot.gone{opacity:0;pointer-events:none}
+#boot .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
+#boot .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
+  animation:bb .9s ease-in-out infinite}
+#boot .bars i:nth-child(2){animation-delay:.15s}
+#boot .bars i:nth-child(3){animation-delay:.3s}
+#bootline{position:absolute;top:calc(50% + 46px);left:0;right:0;text-align:center;
+  font-size:13.5px;color:var(--muted);transition:opacity .3s ease}
+#bootline.fade{opacity:0}
 @keyframes busybar{0%,100%{height:12px}50%{height:44px}}
 @media (prefers-reduced-motion:reduce){#busy .bars i{animation:none;height:28px}}
 .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
@@ -422,6 +436,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <body>
 <div id="busy" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div></div>
 <div id="qrbig" onclick="qrHide(event)"></div>
+<div id="boot"><div class="bars"><i></i><i></i><i></i></div><div id="bootline">Warming up the room</div></div>
 <div id="app"></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
@@ -760,7 +775,10 @@ async function api(p,o={}){
   finally{ if(!o.quiet) busy(false); }
 }
 async function load(opts){
-  const d=await api('/stage',opts||{});
+  /* The very first load has nothing on screen to cover, so the overlay is pure
+     flash — and every background loader used to raise it again on top. One boot,
+     one paint. */
+  const d=await api('/stage',{quiet:!D, ...(opts||{})});
   // A transport failure is not a sign-out. Keep the last good screen and let the
   // interval retry — on bar wifi this fires constantly, and gating here used to
   // end the gig. `&&D` because on the very first load there is nothing to keep.
@@ -789,6 +807,7 @@ async function act(action,extra={}){
 }
 let GATE_EMAIL='';
 function gate(err,mode){
+  bootDone();
   clearInterval(timer);
   const m=mode||'start';
   const head=`<h2>Artist Studio</h2>`;
@@ -1117,14 +1136,14 @@ function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')load
   if(t==='gigs'){ loadGigs(); loadPitches(); }}
 async function loadPitches(force){
   if(PITCHES&&!force)return;
-  PITCHES=await api('/admin',{method:'POST',body:JSON.stringify({action:'pitchList'})});
+  PITCHES=await api('/admin',{method:'POST',body:JSON.stringify({action:'pitchList'}),quiet:true});
   if(TAB==='gigs'&&D)render();
 }
 /* Stripe is the source of truth for money, so this reads it directly rather than
    trusting the app's own ledger. Fetched on demand — never on the 4s live poll. */
 async function loadRev(force){
   if(REV&&!force)return;
-  REV=await api('/revenue');
+  REV=await api('/revenue',{quiet:true});
   if(TAB==='money'&&D)render();
 }
 /* ---- gig calendar ---- */
@@ -1161,7 +1180,7 @@ function calWindow(){
 async function loadGigs(force){
   if(EVENTS&&!force)return;
   const w=calWindow();
-  EVENTS=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventList',from:w.from,to:w.to})});
+  EVENTS=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventList',from:w.from,to:w.to}),quiet:true});
   if(TAB==='gigs'&&D)render();
 }
 function calMove(n){
@@ -1305,7 +1324,7 @@ async function media(action,mid,dir){
 }
 async function loadHist(force){
   if(HIST&&!force)return;
-  HIST=await api('/history');
+  HIST=await api('/history',{quiet:true});
   if(TAB==='money'&&D)render();
 }
 async function openShow(id){
@@ -1331,6 +1350,7 @@ async function recover(){
 }
 
 function render(){
+  bootDone();
   if(!D||!D.show)return;                 // data not in yet — never crash the page
   const s=D.show, songs=D.songs;
   const now=songs.find(x=>x.now);
@@ -2601,7 +2621,7 @@ function openStudioInstall(){
 
 async function loadPlan(force){
   if(PLAN&&!force)return;
-  PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'})});
+  PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'}),quiet:true});
   if(PLAN&&PLAN.owner&&!PROMOS) PROMOS=await api('/admin',{method:'POST',body:JSON.stringify({action:'promoList'})});
   if(PLAN&&PLAN.owner&&!VENUES) VENUES=await api('/admin',{method:'POST',body:JSON.stringify({action:'venueList'})});
   if(TAB==='settings'&&D)render();
@@ -2635,7 +2655,7 @@ async function verifyVenue(vid){
 }
 async function loadTeam(force){
   if(TEAM&&!force)return;
-  TEAM=await api('/auth',{method:'POST',body:JSON.stringify({action:'list'})});
+  TEAM=await api('/auth',{method:'POST',body:JSON.stringify({action:'list'}),quiet:true});
   if(TAB==='settings'&&D)render();
 }
 function copyRef(){
@@ -2831,9 +2851,29 @@ const dstamp=t=>{try{return new Date(t).toLocaleString(undefined,
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const when=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':Math.floor(m/60)+'h ago';};
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3000);}
+/* A line that changes while it waits. Not decoration: a screen that says nothing
+   feels broken after about a second, and this is the difference between "it's
+   stuck" and "it's working". Stops the moment the Studio is up. */
+const BOOTLINES=['Warming up the room','Tuning the setlist','Counting tonight\u2019s votes',
+  'Checking who\u2019s playing','Setting up the stage','Almost there'];
+let bootI=0, bootT=null;
+function bootCycle(){
+  bootT=setInterval(()=>{
+    const el=document.getElementById('bootline'); if(!el)return;
+    el.classList.add('fade');
+    setTimeout(()=>{ bootI=(bootI+1)%BOOTLINES.length; el.textContent=BOOTLINES[bootI];
+      el.classList.remove('fade'); },300);
+  },1400);
+}
+function bootDone(){
+  clearInterval(bootT);
+  const el=document.getElementById('boot'); if(!el)return;
+  el.classList.add('gone');
+  setTimeout(()=>el.remove(),320);        // gone for good: it can never flash again
+}
 function start(){clearInterval(timer);load();
   timer=setInterval(()=>{if(!document.hidden&&TAB==='live')load({quiet:true})},4000);}
-if(CODE||TOKEN) start(); else gate();
+if(CODE||TOKEN){ bootCycle(); start(); } else gate();
 </script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
