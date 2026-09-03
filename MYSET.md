@@ -1,790 +1,661 @@
-# MySet — the whole thing, in one place
+# MySet — the complete handover
 
-*Master reference, 2026-08-31. Live at **https://myset.vip**.*
+**Everything MySet is, does, charges for and depends on.** Written 2026-09-03 against
+the live code at commit `e4f763f`. If this document and the code ever disagree, the
+code is right and this file is stale — but it was accurate the day it was written, and
+every number in it was read out of the source rather than remembered.
 
-This is the single organised document for MySet: what it is, what it does, how it
-is built, what it costs to run, what has already gone wrong, and what is left.
+Companion documents, all in this folder:
 
-Four companion documents go deeper on their own subjects, and this one points at
-them rather than repeating them:
-
-| Document | What it is for |
+| File | What it is for |
 |---|---|
-| **`INVARIANTS.md`** | 78 numbered rules, every one of them written *after* something broke. Read before touching storage, money or auth. |
-| **`GIG-NIGHT.md`** | The run-the-show cheat sheet. What to tap, in order, on stage. |
-| **`VERIFYING-A-VENUE.md`** | How a venue proves it is real, what is built, and the honest answer on Google My Business. |
-| **`HANDOFF-MySet.md`** | The running session log — what changed when, and why. |
+| `INVARIANTS.md` | **Read before changing anything.** 133 properties that must survive every change. Most were discovered by being broken. |
+| `HANDOFF-MySet.md` | The running session log — what happened when, and why. |
+| `GIG-NIGHT.md` | The one-page cheat sheet for running a show. |
+| `REVIEW-2026-09-02-REMAINING.md` | Known open issues, in priority order. |
+| `AUDIT-2026-09-01.md`, `AUDIT-2026-09-02.md` | The two deep audits and their findings. |
+| `PLAN-vote-finality.md` | How vote finality was built, and what it broke on the way. |
+| `STRIPE-CONNECT.md` | The payments design, written before it was built. |
+| `VERIFYING-A-VENUE.md` | How a venue earns its tick. |
+| `README.md` | Short orientation for a developer arriving cold. |
 
 ---
 
-# 1 · What it is
+# PART ONE — THE MACRO VIEW
 
-**A live audience votes, from their own phones, on which song the musician plays
-next.** No app to install, no account to make, no wifi required beyond whatever
-data they already have. They scan a code on the table, they see the setlist, they
-vote, the top song plays next.
+## 1.1 What MySet is
 
-Around that sits everything a working musician needs to turn one good night into
-the next booking: a public page, a gig calendar, a city-wide what's-on feed, show
-history with real numbers, and a way to reach venues with those numbers attached.
+A live audience, in a bar, votes from their phones on which song the musician plays
+next. The musician sees the running tally on stage and plays the winner.
 
-And around *that* sits a second kind of account for the **venues** themselves.
+That is the whole product in one sentence, and everything else exists to make that
+sentence true in a real room: with bad wifi, with people who will not install an app,
+with a performer who has one hand free between songs.
 
-### The ambition, stated plainly
+Around that core it is also:
 
-This is not a personal tool. The intent is a **$10/month product used by
-thousands of musicians worldwide** as passive income. Every design decision is
-weighed against that: does it hold up with a thousand artists, or only one?
+* an **artist page** — profile, photos, links, gig calendar, embedded music
+* a **venue page** — what's on, hours, menu, offers, photos, directions
+* a **city gig finder** — what live music is on near you, tonight and this week
+* an **artist↔venue marketplace** — artists pitch for slots, venues post them
 
-Gross margin at that scale is roughly **95%** — the whole thing runs on static
-files plus serverless functions plus a key-value store.
+## 1.2 Who it is for
 
-### The two nights that shaped it
+**The audience.** Never signs in. Never installs anything. Scans a QR code or types
+`myset.vip`, and votes. This is the single most important design constraint in the
+product: anonymity is why it works in a bar (INVARIANT 9g).
 
-**2026-08-30, The Ugly Duckling Irish Pub, Koh Phangan.** First real gig. 8
-people voting, 21 votes, one $3 purchase. Two things broke — a paying customer got
-nothing, and Perry could not log into his own studio — and both are now
-invariants. The engagement in the room was the proof that this is worth building
-properly.
+**The artist.** A working musician. Runs the show from their own phone on stage, in
+low light, between songs, often one-handed. Every Studio decision is measured against
+that.
+
+**The venue.** A bar or restaurant that books live music. Wants to be found, wants
+its nights listed, wants to look legitimate.
+
+## 1.3 The ambition
+
+MySet is intended as a **$10/month product for thousands of musicians** — recurring
+income that does not depend on Perry playing gigs. Every design decision should be
+weighed against *"does this hold at a thousand artists, or only at one?"*
+
+That question has already killed several ideas and reshaped others: it is why the free
+tier is capped by **gigs played** rather than features, why the audience never signs
+in, and why blob reads on the audience poll are counted by a test.
+
+## 1.4 The one real data point
+
+**One real gig: 8 voters, 21 votes, one $3 purchase.** The Ugly Duckling, Koh Phangan,
+2026-08-30.
+
+That is the entire body of real-world evidence. A "40 phones" figure circulated in
+planning documents for a while and was a **synthetic security probe with fabricated
+fan ids**, not a real room — it misled one audit's capacity numbers by 3–5×. Treat
+every projection in any document as a projection (INVARIANT 9d11).
+
+## 1.5 The two nights that shaped the product
+
+**2026-08-30 — a paid customer got nothing.** A woman bought a $3 vote pack. Payment
+delivery depended on her browser returning to the site; it never did, so she was
+charged and received nothing. There are now **three independent delivery paths**, and
+a claimed-but-undelivered payment is tracked as still owed rather than settled.
+
+**The same night — Perry could not get into his own Studio.** The passcode existed
+only in a server environment variable he had no copy of. Artists now set their own
+code, and there is a recovery key.
+
+Almost every defensive rule in `INVARIANTS.md` traces back to one of those two
+failures, or to an audit finding that would have caused a third.
+
+## 1.6 Where everything lives
+
+| | |
+|---|---|
+| **Live site** | https://myset.vip |
+| **Code (Mac, source of truth)** | `~/Docs/MySet` |
+| **Mirror** | `/Volumes/IDYLL SSD 1/Docs/MySet` (docs only, no git) |
+| **GitHub** | `github.com/perryidyll/myset` (private) |
+| **Host** | Netlify, project `mysetvip`, id `8f5c9f01-e1f1-47e3-add1-8dde39efd1d3` |
+| **Deploy** | `git push` to `main` **is** the production deploy |
 
 ---
 
-# 2 · Where everything lives
+# PART TWO — EVERY SURFACE, EVERY FEATURE
 
-| Thing | Where |
-|---|---|
-| Live site | `https://myset.vip` |
-| Repo | `github.com/perryidyll/myset` (private) |
-| Working copy | `~/Docs/MySet` |
-| Host | Netlify site `mysetvip`, id `8f5c9f01-e1f1-47e3-add1-8dde39efd1d3` |
-| Deploy | **`git push`** — Netlify builds `main` automatically. Never `--prod` from the CLI (INVARIANT 9d3). |
-| Published | **`./public` only.** Docs, functions source and backups are never served. |
+## 2.1 The public routes
 
-### Public URLs
+Defined in `netlify.toml`. Real files always win, so `/vote.html` and `/studio.html`
+keep working; the pretty URLs only catch paths that are not files.
 
-| URL | Page | Who it is for |
+| URL | Serves | What it is |
 |---|---|---|
-| `/` | `index.html` | Anyone — pick a country and city, see what's on this week |
-| `/<slug>` | `artist.html` | An artist's public page (`/perryidyll`) |
-| `/<slug>/vote` | `vote.html` | The voting page — what the room scans |
+| `/` | `index.html` | City gig finder — the front door |
+| `/<slug>` | `artist.html` | An artist's public page |
+| `/<slug>/vote` | `vote.html` | The voting page — what the room uses |
+| `/studio` | `studio.html` | The Artist Studio |
+| `/signup` | `studio.html` | Same page, sign-up state |
+| `/about` | `about.html` | The landing / sales page |
+| `/venues` | `venue-studio.html` | The Venue Studio |
 | `/v/<slug>` | `venue.html` | A venue's public page |
-| `/studio` · `/signup` | `studio.html` | Artist Studio (sign-in gated) |
-| `/venues` | `venue-studio.html` | Venue Studio (sign-in gated) |
-| `/about` | `about.html` | The landing page |
+| `/api/*` | Netlify Functions | The whole API |
+| `/stage.html` | `stage.html` | Legacy stage control, `noindex` |
 
-`/:slug` is a catch-all, so an unknown path renders `artist.html`'s honest "No page
-here" state rather than a 404 from Netlify.
+`v` and any slug starting with it are reserved, so venue and artist namespaces can
+never shadow each other.
 
-### Secrets — none of these are ever in the repo
+## 2.2 The voting page — what the audience sees
 
-Set by Perry in Netlify's env, per context. **Changing one requires a redeploy** —
-running functions do not pick up env changes.
+The only surface most people will ever touch. No sign-in, ever.
 
-| Var | What it does | If unset |
-|---|---|---|
-| `ADMIN_CODE` | The recovery studio passcode | Studio auth fails closed |
-| `STRIPE_SECRET_KEY` | Card payments | App degrades gracefully, no payments offered |
-| `STRIPE_WEBHOOK_SECRET` | The webhook delivery path | Webhook returns 503, inert |
-| `RESEND_API_KEY` | Sign-in code emails | Email sign-in refuses with a clear message |
+**The top:** the artist's name (links to their page), whether the show is live, and a
+credits pill showing votes remaining — or ∞ when the artist has switched on unlimited.
 
-The session-signing secret is **not** an env var — it is generated once into the
-`authsecret` blob, so there is one less thing to configure by hand.
+**Playing now:** a large gradient card with the current song, its artist, animated
+bars, and a **Lyrics** button. When the show has ended this card says "Tonight —
+that's all, see you next time" rather than claiming a song is playing.
 
----
+**Voting status strip:** "Voting open" or "Voting paused", and votes left.
 
-# 3 · The night, start to finish
+**Up next:** the top three by votes, ranked, with the leader marked *"Winning — plays
+next"*. Ties are broken by whoever voted first. A song the fan has voted for shows
+*"Your 3 votes"* and stays tappable so they can add more.
 
-1. **Before.** Artist opens the Studio → Settings → *Fetch lyrics for the whole
-   setlist* (once, ~30s). Sets free votes per person, vote-pack prices, whether
-   requests and birthdays are on.
-2. **On arrival.** Live tab → **Start the show**. Nothing says "live" to the
-   audience until this is tapped.
-3. **The room.** People scan the QR on the table → the voting page. No install, no
-   sign-up. They get their free votes (3 by default).
-4. **They vote.** Up Next shows the top three by votes. Voting again on the same
-   song un-votes it and refunds the credit.
-5. **The artist plays.** *Start top voted* — or taps ▶ on any song. Starting a song
-   **refreshes everyone's votes**, so each round is a fresh contest.
-6. **They want more.** Buy more votes ($3/3, $7/9, $11/18 by default, artist-set)
-   or tip. Straight into Stripe Checkout, straight back.
-7. **They ask.** *Request a song* that isn't on the list, or a *birthday shout-out*
-   with a name — paid in votes, never money. The artist adds it to the setlist,
-   marks it done, or declines (which refunds automatically).
-8. **They sing.** *Lyrics* under Now Playing, for the current song only.
-9. **After.** End the show. Everything is archived — songs played with the votes
-   they won, what the room wanted and never got, how many people were there, and
-   the money, pulled from Stripe.
+**Voting itself.** Tapping a song opens a confirmation sheet:
+* a **stepper** to choose how many votes to cast, capped at what they can afford
+* the **rules in plain words**: how many votes they have, that free votes come back
+  when the next song starts, that bought votes are theirs to keep, that votes are
+  final once confirmed, and that if the artist drops a song the votes come back
+* a **Confirm** button showing the total cost
+* *"Are you sure? Votes can't be changed!"* beneath it
+* a **Not yet** button, an **✕** in the corner, and a full-width drag handle
 
----
+**Ask for something not on the list:** song requests and birthday shout-outs, each
+costing votes (never money), each shown only if the artist has switched it on. A
+declined request refunds the votes.
 
-# 4 · Everything it does
+**More votes / Tip:** Stripe checkout. Both hidden entirely when the artist cannot
+take card payments, so the room is never shown a button that leads to a shrug.
 
-## 4.1 · For the audience — all free, forever
+**Already played:** every played song stays votable at the higher replay cost.
 
-Anything the **room** experiences is free on every plan. An audience that gets a
-sing-along at one artist's gig and not the next learns that MySet is unreliable,
-which costs more than a subscription is worth (INVARIANT 0w).
+**Search and genre filters:** filter the list by title, artist or genre. Only genres
+that actually match a visible song are offered.
 
-| Feature | Detail |
-|---|---|
-| **Vote on the next song** | Free credits per person, refreshed every time a song starts. Toggle to un-vote. |
-| **Up Next** | Top three by votes, with the winner marked. Same ranking rule the Studio uses, so the two can never disagree. |
-| **Search & sort** | Search title or artist; Top voted / Song A–Z / Artist A–Z. |
-| **Play it again** | Already-played songs stay votable at a higher cost (5 votes by default). |
-| **Buy more votes** | Three packs, prices set by the artist, never trusted from the browser. |
-| **Tip** | Preset or custom amount, with a note the artist sees on stage. |
-| **Lyrics** | Current song only. Labelled *Unofficial lyrics* with the songwriter credit. |
-| **Request a song** | Something not on the list. Costs votes. Off until the artist turns it on. |
-| **Birthday shout-out** | With a name field. Costs votes. Off until turned on. |
-| **Leftover paid votes** | If the show ends with votes they paid for, they choose: keep for next time, or let the artist keep it as a tip. |
-| **No account, ever** | The audience never signs in. That is the whole reason it works in a bar. |
+**Pull to refresh**, and an **"Enjoying MySet?"** prompt — five stars and an optional
+note, shown after an hour of actual use, at most once a week, never over another sheet
+or mid-vote.
 
-## 4.2 · The city feed — `/`
+**Install banner:** add MySet to the home screen, with per-platform instructions.
 
-An animated opener, then two comboboxes: **country** and **city**, with live gig
-counts. Then what's on over the next seven days, grouped by night —
-*"Tonight – 31 August"* — with a **Directions** pin on each row.
+## 2.3 The Artist Studio — six tabs
 
-It carries two kinds of thing: **gigs** an artist listed, and **events** a venue
-listed (quiz night, a DJ, the football), tagged so a reader can tell them apart.
-
-A 10pm set that runs to 2am is still "on" at 1am, and belongs to the night it
-started — the thing most listings get wrong.
-
-## 4.3 · For artists — the Studio, six tabs
+`/studio`. Dark-only by design — it is used on a stage.
 
 ### Live
-Votes now · phones in the room · tips. Now Playing. **Start the show** / End it.
-**Start top voted** with the winner named. The queue with ▶ on every row. Played
-list with Undo. Recent tips. And the **requests panel** — song requests and
-birthday shout-outs with *+ Add* / *Did it* / *✕ refunds them*.
+The tab the artist watches during a gig.
+* three stat tiles: votes now, people in the room and networks, tips taken
+* **Now playing** card, and **My chart** — the artist's private notes for that song
+* **▶ Start top voted — <song> (n)** — the big button
+* the ranked queue, every row with its own ▶ Start
+* **Played** list with undo
+* **■ End the show**
+* song requests waiting, with accept / decline / done
+* the free-plan gig-cap warning when two shows or fewer remain
+* a link to see exactly what the audience sees
 
 ### Setlist
-One **library** of songs, and **setlists** are named subsets of it — a beach set, a
-late set, the one for the Irish pub. The row at the top of the tab always says what
-the room can currently see. A setlist holds song IDS only, so renaming a song
-changes it everywhere at once.
-
-Search and the same three orders the audience has, plus a **genre filter** built
-from the same tags the room filters by. Add a song through a sheet: title, artist,
-the **key you play it in**, genres, and your own **chord chart** — the key and the
-chart never reach the audience. **Auto-tag songs** fills the genres from a curated
-map of how streaming services classify them, and only ever fills a song that has
-none, so it can't undo a choice you made by hand.
-
-Per-song **Edit**, **Hide** (permanent across shows until un-hidden), **✕ remove**.
-A row says whether it is in the pool, played, hidden, or **not in this set**. A
-starter pack of ~60 well-known covers, opt-in. Plans limit how many songs are
-**featured** (live to the audience), never how many you can keep.
-
-**Want to learn** sits at the bottom: songs you don't play yet. They are not in the
-library, so nobody can vote for them. *Learned it* moves one across in one action.
-
-**Which set plays tonight** can be set per gig, in three states that are not
-interchangeable: *leave whatever I've picked* (`''`), *All songs* (`'all'`), or a
-named set. Tapping **Start the show** — or **↺ New show** — applies it. A gig
-pointing at a set you have since deleted leaves your pick alone and tells you.
+* the whole library with search, sort and genre chips
+* add a song; **import** many at once by pasting a list, uploading a CSV, or peeking at
+  a Spotify playlist
+* edit title, artist, key and genres; hide a song; remove it
+* the **song sheet**: musical key, private chart notes, genres, lyrics
+* **setlists** — named subsets, one active at a time, with "use tonight"
+* **songs to learn** — a wish list that is not in the library until learned
+* automatic genre tagging, which only ever fills a song that has none
 
 ### Gigs
-A flippable month calendar with dots on the nights you play. Add a gig once for a
-whole residency — **weekly / every 2 weeks / monthly / yearly**, with an optional
-stop date. Cancel a single night without touching the run. Address and/or a pasted
-Google or Apple Maps link. And **"Venues you've asked"** — the enquiries you have
-out, and what they said.
+* a calendar of gigs: venue, city, country, date, time, duration, timezone, address,
+  ticket link, notes
+* **repeats** — weekly, fortnightly, monthly, yearly, with an end date
+* cancel a single night, or hide it from the list
+* each gig can name which setlist to play, applied when the show starts
+* pitches sent to venues, and their replies
 
 ### Money
-Tonight's numbers, then every past show: songs played with the votes each won,
-what the room wanted and never got (summed across every round), money split
-between vote sales and tips, and every Stripe payment. **Stripe is the source of
-truth** — there is a *Re-check the money in Stripe* button that re-pulls it.
+* **Getting paid** — Stripe Connect status, what MySet takes, and what Stripe takes
+* tonight's numbers: songs played, votes, money taken
+* past shows, each with the songs played and the votes they won, what the room wanted
+  but never got, and the money split between vote packs and tips
+* every payment, and a **reconcile** button that sweeps Stripe for anything undelivered
+* **What the room said** — the audience star ratings and their notes
 
 ### Profile
-Cover photo, a croppable square portrait, three smaller photos. Name, one-liner,
-bio. Streaming links (Spotify / Apple Music / YouTube Music / Instagram /
-website). Embedded YouTube, Spotify and Apple Music, click-to-load so nothing
-third-party is fetched until someone asks.
+* name, bio, photos (cover, avatar, three more) with cropping
+* links: streaming, social, merch, anything
+* embedded music from YouTube, Spotify and Apple Music
+* the public page address (slug), changeable
 
 ### Settings
-Free votes per person (presets, any number, or unlimited) · replay cost · the
-three vote-pack prices · **requests and birthdays** on/off with their own prices ·
-tonight's venue · voting open/paused · unlimited votes for your own phone ·
-fetch-all-lyrics · your plan and a promo code box · **what venues can see** ·
-your public URL · **codes to print** (QR) · invite another musician · who can sign
-in · your own studio passcode · new show / reset.
+* **Get verified** — the checklist and ID upload
+* **Trying things out** — feature switches (owner only)
+* **Alerts on your phone** — push notifications for song requests
+* free votes per person, including ∞ unlimited
+* replay cost, vote pack prices, request and birthday costs
+* one device granted unlimited votes (the artist's own, for testing)
+* the Studio passcode
+* QR codes for the home page and the voting page
+* team members, sign out, sign out everywhere
+* plan, upgrade, promo codes, referral link
+* **owner only:** the ID review queue, venue plans, promo code minting, venue
+  verification, feature flags
 
-### The artist's public page — `/<slug>`
-Cover, portrait with three photos arced over its corner, name and one-liner. A
-**Join live** button that becomes a live countdown to the next calendar gig when
-you are not playing. Five numbers: **Joined · Shows · Audience · Votes cast ·
-Songs**. Tonight's gig with Directions. Bio. Upcoming shows. Links. Embedded
-media.
+## 2.4 The artist's public page
 
-## 4.4 · For venues — the Venue Studio, five tabs
+`/<slug>`. Cover photo, avatar, name, "Live now — vote the setlist" when a show is on,
+stats, upcoming gigs with dates and addresses, embedded music, links, and a **Join
+live** button.
 
-A venue is a **separate kind of account**, not a role on an artist: its own
-registry, its own session token, its own sign-in code realm. A bar has opening
-hours and a menu and never runs a show, and it must never be able to reach an
-artist's setlist, votes, history or money. Separate registries make that
-structural rather than a permission check somebody forgets to write.
+## 2.5 The city gig finder
 
-### Page
-Cover photo + three more. Name, one-liner, about. City, country, address, pasted
-maps link. Phone, WhatsApp. **22 amenities** — including *House PA / backline*,
-which is the first thing an artist looks for. Opening hours for all seven days
-(closing after midnight is fine). Website / Instagram / Facebook / Google links.
-And at the top, the **verification checklist**.
+`/`. Pick a country and city, see what is on tonight and this week — artist gigs and
+venue events together, with times in the venue's own local clock. Search, an install
+banner, and links for artists and venues.
 
-### What's on
-Three things:
-1. **Live music** — pulled from artists' own calendars, automatically. Nothing to
-   type.
-2. **Your own events** — quiz night, a DJ, the football, a full moon party. Enter a
-   weekly one once; it repeats itself, shows on your page, and goes into the local
-   what's-on feed like a gig does.
-3. **Who wants to play here** — enquiries from artists, each with their real
-   numbers.
+## 2.6 The Venue Studio — five tabs
 
-### Numbers
-People in the room · votes cast · nights · acts. Busiest night. **By act**, with
-*average people per night* as the headline — the number that answers "who fills my
-room". **By night**. All of it built from show history that already exists: no new
-tracking, no extra writes.
+`/venues`.
 
-**Money is not in that payload at all**, not even as a total. And it is the
-artist's data, so every artist has a switch (default on).
+* **Page** — name, tagline, about, address, map link, phone, WhatsApp, links, photos,
+  amenities (20 to choose from: house PA, sea view, pool table, dog friendly…)
+* **What's on** — the venue's own events (quiz nights, DJs, football), same calendar
+  engine as artist gigs
+* **Numbers** — how many people were in the room on live-music nights
+* **Menu & offers** — a menu link or items, plus happy-hour style offers
+* **Settings** — the verification checklist, the page address, team, sign out
 
-### Menu & offers
-A link to the full menu, a one-liner about the food, and up to **24 highlights**
-with sections and prices. Up to **6 offers** — happy hour, two-for-one, a free
-shot for anyone who votes — each with a title, detail and when it runs.
+## 2.7 The venue's public page
 
-### Settings
-Your public URL · verification state · **codes to print** ("Tonight's music &
-menu") · who can sign in · sign out.
+`/v/<slug>`. Photos, tagline, about, what's on, hours, offers, amenities, directions,
+and the verification badge if earned.
 
-### The venue's public page — `/v/<slug>`
-Cover (or a lettered gradient if there isn't one). Name with a **✓ Verified** or
-**Unverified listing** chip, and *"Confirmed by N artists who play here"* when it
-applies. Directions · Call · WhatsApp · Menu. On now / Next up. About. **What's
-on**, grouped by night, music and venue events together. Offers. Menu. Amenities.
-Opening hours with today highlighted. Photos. Links. Who plays here. And the
-**"Want to perform here?"** card.
+## 2.8 The two sides meeting
 
-## 4.5 · The two sides meeting
-
-### "Want to perform here?"
-An artist asks a venue for a spot from the venue's public page. **Only a signed-in
-artist can send one** — an open contact form is a spam funnel, and it throws away
-the only thing that makes this better than an email: the venue gets a link to a
-real page with real numbers on it instead of a bio and a promise.
-
-The venue marks it **Keen** or passes. **No email address is exchanged in either
-direction.** Keen shows up in the artist's own Studio and they take it from there
-through the links on each other's pages. One enquiry per artist per venue; asking
-again updates the message.
-
-### Matching gigs to venues — the good bit
-**Nothing is stored linking a gig to a venue. The NAME does it, inside the venue's
-own city.** Artists type venue names by hand and type them differently every time
-("The Ugly Duckling", "Ugly Duckling Irish Pub ☘️🍻"), so `sameVenue()` compares
-normalised words and accepts a containment match only when the shorter name is
-*distinctive* — two words, or eight characters. Without that rule a venue could
-register itself as "Beach" and claim every Beach Bar in town.
-
-The payoff: **a venue signing up today already has its whole diary.** No backfill,
-no job to run, nothing for an artist to re-enter. Proven live — a venue named "The
-Ugly Duckling Irish Pub" picked up all nine of Perry's residency nights with zero
-data entry.
-
-### Verification
-Three routes, any one of which earns the green tick. Full detail in
-`VERIFYING-A-VENUE.md`.
-
-1. **The website.** Two checks, *both* required: the sign-in email is on the
-   website's own domain (free-mail domains refused), **and** the fetched page
-   actually names the venue. Either alone is not proof — anyone can buy a domain,
-   and the website is just a URL somebody typed in.
-2. **Ten artists** who each have a gig at the venue in their own calendar confirm
-   it. An artist with no gig there cannot vouch. This is the route that works for a
-   bar with no website.
-3. **Perry's own switch**, owner-only, in his Studio's Settings.
-
-Unverified pages work completely. The chip is the whole difference.
-
-## 4.6 · QR codes
-
-Hand-written encoder (`_qr.mjs`) — Reed–Solomon over GF(256), byte mode, level M,
-versions 1–10, proper mask-penalty scoring. Tap a code in either Studio and it
-comes up **full screen on white paper with a serif caption**, ready to screenshot
-or print.
-
-| Code | Caption |
-|---|---|
-| Vote the setlist | *Scan to choose the next song!* |
-| Your page | *Hear more on MySet!* |
-| MySet | *Find live music near you* |
-| Venue page | *Tonight's music & menu* |
-
-`/api/qr` takes a **kind**, never arbitrary text — a general "encode this string"
-endpoint would make the site a free generator of QR codes pointing anywhere, which
-is exactly the shape of a phishing tool.
-
-Every code is verified by **decoding** it with an independent decoder, never by
-looking at it. Two bugs were found only that way: format bits written in reverse
-(scanned as nothing while looking perfectly plausible), and a wrong mask penalty
-that chose unreadable masks.
-
-## 4.7 · Addresses and directions
-
-There is **no single link that opens in whichever map app a phone actually uses**.
-`geo:` is the closest thing on paper and iOS Safari ignores it. So the server
-builds **both** an Apple and a Google URL and the page picks by platform.
-
-Coordinates are pulled out of a pasted Google / Apple / OpenStreetMap link when
-they are in it. A `maps.app.goo.gl` short link hides them behind a redirect, and we
-do not fetch third parties on the artist's behalf — so it keeps the link and falls
-back to the address.
-
-**A bare venue name is not a location.** "The Ugly Duckling" on its own could send
-somebody to Amsterdam, so there is no Directions button unless there are
-coordinates, an address, or a name *with* a city. No button beats a wrong one.
+Artists can **pitch a venue** for a slot — only signed-in artists, so a stranger cannot
+spam a bar. Venues see pitches in their Studio and reply. Gigs and venues are matched
+by **name within a city**, never by a stored link, so neither side can break the other.
 
 ---
 
-# 5 · How it is built
+# PART THREE — THE MONEY
 
-## 5.1 · The shape
+## 3.1 Artist plans
 
-```
-public/            static pages — the only thing published
-netlify/functions/ one file per endpoint, plus _-prefixed libraries
-Netlify Blobs      the whole database
-Stripe             money, and the source of truth for it
-Resend             sign-in code emails
-LRCLIB             lyrics
-```
+| | **Free** | **Plus** | **Pro** |
+|---|---|---|---|
+| Price | $0 | **$10/month** | **$20/month** |
+| **MySet's cut of money through the app** | **10%** | **2%** | **0%** |
+| Shows per calendar month | **4** | unlimited | unlimited |
+| Songs live to the audience at once | 50 | unlimited | unlimited |
+| Team seats | 1 | 1 | 5 |
+| Set your own prices | — | ✓ | ✓ |
+| Verification tick | — | ✓ | ✓ |
+| Promote in other cities | — | — | ✓ |
+| Earnings analytics | — | — | ✓ |
+| Press kit | — | — | ✓ |
+| Your own branding | — | — | ✓ |
 
-No build step, no framework, no bundler config beyond esbuild for the functions.
-Every page is one HTML file with its own styles and script; `app.css` carries the
-shared design tokens.
+Everyone can keep up to **2,000 songs** in their library regardless of plan — the cap
+limits how many are *live to the audience*, and it never deletes anything.
 
-## 5.2 · Storage — the hard-won part
+**Why the free tier is capped by gigs and not features.** Every phone in the room polls
+for the whole gig, so what MySet costs to run is driven by gigs played, not artists
+signed up. Capping free on the real cost driver is what makes free survivable. Four
+shows a month is a hobbyist; five is somebody earning from it.
 
-Netlify Blobs is a key-value store, and three things about it are load-bearing:
+**Anything the ROOM experiences stays free on every plan.** Lyrics were briefly behind
+a paywall and were put back: an audience that gets a sing-along at one gig and not the
+next learns that MySet is unreliable, which costs more than the subscription is worth.
 
-* **`list()` is eventually consistent and can lag MINUTES.** Never use it for live
-  data. Every read is `getWithMetadata(key, {consistency:'strong'})` against a key
-  we already know. `list({prefix})` also returns nothing when the prefix cuts
-  inside a nested `a/b/` path, which is why every key is flat.
-* **Conditional writes (`onlyIfMatch`) need @netlify/blobs v10+** — v8 silently
-  ignores them — and *even then* can report success without sticking under
-  concurrency. So every write is a compare-and-swap loop **verified by read-back
-  and retried**.
-* **Contention is the enemy.** Fan records are **sharded across 12 documents** so a
-  burst of voters spreads out instead of fighting over one. Load-tested at 80
-  simultaneous voters: zero lost votes.
+## 3.2 Venue plans
 
-### The keys
+| | **Free** | **Pro** |
+|---|---|---|
+| Price | $0 | **$20/month** |
+| Photos | 3 | 12 |
+| Google / Trustpilot reviews | — | ✓ |
+| Verification tick | — | ✓ |
+| Receive tips | — | ✓ |
+| Voting on the venue's own speaker music | — | ✓ |
 
-Everything that belongs to an owner is namespaced by their id. Only five documents
-are global.
+**Not self-serve yet.** There is no venue billing; Perry switches a venue to Pro by
+hand. The Venue Studio says so plainly rather than pretending otherwise.
 
-| Key | Holds |
-|---|---|
-| `show_<aid>` | An artist's show config and setlist. Written rarely. |
-| `f0…f11_<aid>` | Sharded fan records: votes, paid extras, spend, presence stamp |
-| `meta_<aid>` | Tips and payment markers. Written only on payment. |
-| `profile_<aid>` | Public page content |
-| `ev_<aid>` | Gig calendar — **rules, not instances** |
-| `histidx_<aid>` · `hist_<aid>_<showId>` | Show history index and per-show archives |
-| `lyr_<aid>_<songId>` | Cached lyrics |
-| `req_<aid>` | Song and birthday requests |
-| `lists_<aid>` | The artist's named setlists — song IDS only, never song data |
-| `learn_<aid>` | Songs they want to learn. **Deliberately NOT in the library**, so the room can't vote for something unplayable |
-| `chart_<aid>_<songId>` | The artist's own chord chart. Never in a public payload, and never on the `/api/show` read path |
-| `apitch_<aid>` | Which venues this artist has asked |
-| `vprofile_<vid>` | Venue page content |
-| `ev_v_<vid>` | A venue's own events — same engine, owner id `v_<vid>` |
-| `vpitch_<vid>` | A venue's enquiry inbox |
-| `vouch_<vid>` | Which artists have confirmed this venue |
-| `img_<owner>_<slot>` | Photo bytes |
-| **`artists`** | *global* — the artist registry: `byId` / `bySlug` / `byEmail` |
-| **`venues`** | *global* — the venue registry |
-| **`cityindex`** | *global* — country → city → owner ids, so the public feed reads one known key |
-| **`promos`** | *global* — discount codes |
-| **`authsecret`** | *global* — the session signing key |
+## 3.3 What the audience pays
 
-Artist ids and slugs are stripped to `[a-z0-9-]`, so **an underscore can only ever
-mean a venue**. That is what makes `v_<vid>` unforgeable in both directions and
-lets the city index and the image store hold both kinds with no migration.
+* **Vote packs**, artist-priced. Defaults: **5 votes for $5**, **15 votes for $10**.
+  Clamped server-side to $1–$500 and 1–100 votes.
+* **Tips** — any amount, straight to the artist.
+* **Song requests and birthday shout-outs cost VOTES, never money.**
 
-## 5.3 · Multi-tenancy
+Bought votes are a **stock**: they do not refresh with the free ones, they carry into
+the next show, and free credits are always spent first.
 
-The artist id comes from `requireArtist(req)` (session or the legacy studio code)
-or `publicArtist(req)` (`?a=<slug>`). **Never from a request body.** That single
-rule is why an artist can only ever reach their own records.
+## 3.4 How the money actually moves
 
-A venue session is tagged differently — the artist token body is
-`email|exp|rev`, the venue's is `v|email|exp|rev` — and each side rejects anything
-that is not its own shape. Verified: a venue token gets 401 from `/api/admin`, and
-the studio code gets 401 from `/api/venueadmin`.
+**Stripe Connect, direct charges.** The charge is created **on the artist's own Stripe
+account**. The money is legally theirs, and MySet takes a platform fee off the top.
 
-## 5.4 · The gig calendar
+This encodes an identity: *MySet is not selling the night — the artist is, and MySet
+provides the infrastructure.* The alternative (destination charges) would have made
+MySet the merchant of record for every gig, holding the funds and answering the
+chargeback for a night it did not play.
 
-Gigs are stored as **rules, expanded on read**. A weekly residency is one record,
-not 52. Editing "every Thursday at the Ugly Duckling" is one edit, a residency with
-no end date needs no maintenance, and there is no job to run.
+**The trade, stated plainly:** with direct charges Stripe's own processing fee
+(~2.9% + 30¢) is charged to **the artist**, not to MySet. On a $5 vote pack a Plus
+artist pays roughly 45¢ to Stripe and 10¢ to MySet. *"2% to MySet" is not "you keep
+98%."* The Studio says this before an artist onboards.
 
-Wall-clock time in an IANA zone is resolved to an instant on read, with no library
-(`_time.mjs`, an `Intl.DateTimeFormat` offset trick iterated twice to settle DST).
-Verified: London 28 March 20:00 → 20:00Z, and 29 March → 19:00Z.
+**Onboarding** is Stripe-hosted Express, so MySet never sees a bank detail. The
+country is asked for and validated — an Express account's country cannot be changed
+afterwards, and getting it wrong means an artist can never be paid out properly.
 
-Monthly recurrence is always measured from the **original** date. Stepping from the
-previous occurrence made "the 31st" clamp to the 28th in February and then stay
-there — the gig quietly walked backwards through the year.
+**Nobody takes money until Stripe says so.** The gate is Stripe's own
+`charges_enabled`, never a local "they clicked onboarding" flag. Started is not ready.
 
-## 5.5 · The head-count
+**Three delivery paths, because one was not enough:**
+1. the buyer's browser returning to the voting page
+2. a Stripe webhook, independent of the buyer's phone
+3. a reconcile sweep the artist can run from the Studio
 
-The honest count of people at a gig is not "devices that voted" — plenty of people
-join, watch the queue move and never tap. So a device stamps itself **once per
-device per show**, and only from the voting page (`in=1`), because `/api/show` is
-polled by every phone in the room and must not write on the poll.
+A payment is **claimed before it is granted** so a race cannot grant twice — but the
+claim is marked *undelivered* until the votes actually land, so a failure leaves the
+money owed rather than silently settled, and the sweep picks it up. The grant itself is
+recorded per buyer per purchase, so a retry can never hand out the pack twice.
 
-**It counts phones, not IP addresses.** Counting distinct networks was the first
-attempt and it is wrong in exactly the room this app is for: forty people at a
-beach bar on the venue's wifi come out as **1**. A phone is much closer to a
-person; the worst it does is count someone twice if they clear their storage
-mid-gig. The network hash is kept alongside it as the only defence against one
-phone rotating its id.
-
-The address itself is never stored — only `sha256('myset-room|<artistId>|<ip>')`
-truncated to 16 hex, so the stored value is useless anywhere else and a table built
-for one artist tells you nothing about another's.
-
-## 5.6 · Polling, and why it is cheap
-
-Every phone in the room hitting `/api/show` every 3 seconds is 24,000 function
-calls for a two-hour gig. So the voting page backs off adaptively: **3s while
-anything is moving, easing to 12s when the room goes quiet, and instantly back to
-3s on any change or any tap.** Nobody can perceive the difference; the bill can.
-
-Measured: a whole gig's traffic cost about **5 credits**. Sixteen production
-deploys in one afternoon cost **240**.
-
-## 5.7 · Perceived speed
-
-Every Studio write takes a `WRITING` lock and raises a blocking overlay after
-140ms, **and** `/api/admin` returns the fresh state with the write so a tap is one
-round trip, not two. Before this, taps felt slow enough that Perry tapped "Add it"
-four times and got four gigs.
-
-## 5.8 · Installable, and the service worker
-
-`public/sw.js` plus a manifest per surface — `manifest.webmanifest` (the city
-feed), `manifest-studio.webmanifest`, `manifest-venue.webmanifest` — because
-`start_url` is the whole point of installing: an artist who puts the Studio on
-their home screen wants the Studio, not the city feed. Icons in `public/icons/`.
-
-The worker is deliberately the most conservative thing that still helps:
-
-* **Nothing under `/api` is ever cached.** A cached vote is a lost vote and a
-  cached payment is a support ticket. Verified in a real browser, not assumed:
-  after loading the app and calling the API, the only thing in the cache was
-  `/app.css`.
-* **Navigations are network-first**, with a cached fallback and an inline offline
-  page. The newest version of a page always wins, so a bad deploy is fixed by the
-  next deploy — not by asking somebody in a bar to clear their browser.
-* **Nothing is precached**, so there is no install-time cache to go stale.
-* Statics are stale-while-revalidate. Old caches are deleted on activate, and a
-  page can post `myset-unregister` to make the worker stand down entirely.
-
-The homepage also carries an **add-to-home-screen** banner and sheet, with iPhone
-and Android tabs (iPhone first, because Safari has no install prompt of its own).
+**Money is attributed by tag, never by timestamp.** Perry's Stripe account holds
+unrelated charges; an early version reported $133 of somebody else's business as MySet
+revenue.
 
 ---
 
-# 6 · Every endpoint
+# PART FOUR — HOW IT IS BUILT
 
-## Public — no auth
+## 4.1 The shape
+
+Static HTML pages plus **Netlify Functions** on **Netlify Blobs**. No framework, no
+build step, no database. Every page is one self-contained file with its own styles and
+script; `app.css` carries the shared design tokens.
+
+* **Front end:** 8 pages in `public/`
+* **Back end:** 21 endpoints and 26 shared libraries in `netlify/functions/`
+* **Tests:** 578 assertions across 13 suites, run with `npm test`
+
+Two dependencies only: `@netlify/blobs` and `stripe`.
+
+## 4.2 Every endpoint
+
+**Public — no sign-in**
 
 | Endpoint | Does |
 |---|---|
-| `GET /api/show?fan=&a=&in=` | The whole voting-page payload. `in=1` marks a phone as in the room. |
-| `POST /api/vote?a=` | Cast or un-cast one vote. Read-back verified. |
-| `POST /api/request?a=` | A song request or a birthday shout-out. |
-| `POST /api/pay?a=` | Open a Stripe Checkout session for votes or a tip. |
-| `GET /api/confirm?session_id=&fan=&a=` | Redeem a payment on the return trip. |
-| `POST /api/webhook` | Stripe-signed redemption, independent of the buyer's browser. |
-| `POST /api/gift?a=` | What happens to votes they paid for when the show ended first. |
-| `GET /api/profile?a=` | An artist's public page data. |
-| `GET /api/events?places=1` | The country/city picker with live counts. |
-| `GET /api/events?country=&city=` | What's on there this week — gigs and venue events. |
-| `GET /api/events?a=&days=` | One artist's diary. |
-| `GET /api/lyrics?song=&a=` | Lyrics for the current song. |
-| `GET /api/venue?v=` | A venue's page, its what's-on, and its vouch count. |
-| `GET /api/img?a=&s=&v=` | Photo bytes. Cached a year, `?v=` busts it. |
-| `GET /api/qr?k=&a=&s=` | An SVG QR code for a known kind of URL. |
+| `GET /api/show` | The whole voting-page payload |
+| `POST /api/vote` | Cast or take back votes |
+| `POST /api/request` | A song request or birthday shout-out |
+| `POST /api/pay` | Open a Stripe checkout |
+| `GET /api/confirm` | Redeem a payment on the return trip |
+| `POST /api/webhook` | Stripe-signed redemption and account updates |
+| `POST /api/gift` | What happens to bought votes when the show ends |
+| `POST /api/feedback` | The star rating and note |
+| `GET /api/profile` | An artist's public page data |
+| `GET /api/events` | The city picker, a city's week, or one artist's diary |
+| `GET /api/lyrics` | Lyrics for the current song |
+| `GET /api/venue` | A venue's page |
+| `GET /api/img` | Photo bytes |
+| `GET /api/qr` | An SVG QR code |
 
-## Artist session — `Authorization: Bearer` or `x-admin-code`
+**Artist session** — `POST /api/admin` (88 actions), `GET /api/stage`,
+`POST /api/auth`, `GET|POST /api/revenue`, `GET|POST /api/history`
 
-`POST /api/auth` — `start` · `verify` · `claim` · `me` · `list` · `add` · `remove` ·
-`revokeAll` · `setSlug`
+**Venue session** — `POST /api/venueadmin` (20 actions), `POST /api/venueauth`
 
-`GET /api/stage` — the Studio payload.
+## 4.3 Every Studio action
 
-`POST /api/admin` — one endpoint, many actions:
+**The show:** play · playTop · window · status · newShow · resetVotes · venue · city ·
+showTime · freeCredits · unlimited · unlimitedFan · replayCost · packs · setCode
 
-* **show** `play` `playTop` `window` `status` `venue` `city` `showTime`
-  `freeCredits` `unlimited` `unlimitedFan` `replayCost` `packs` `resetVotes`
-  `newShow` `setCode`
-* **setlist** `addSong` `editSong` `removeSong` `toggleSong` `unplay`
-  `starterSetlist` `clearSetlist`
-* **the song sheet** `songGet` `chartSet` `chartFlags`
-* **genres** `tagList` `tagAdd` `tagRemove` `tagAuto`
-* **setlists** `listAll` `listNew` `listRename` `listDelete` `listSongs`
-  `listToggle` `listUse`
-* **want to learn** `learnList` `learnAdd` `learnRemove` `learnDone`
-* **requests** `askSet` `askList` `askAccept` `askDone` `askDecline`
-* **gigs** `eventList` `eventSave` `eventDelete` `eventSkip` `eventHide`
-* **lyrics** `lyricsGet` `lyricsSet` `lyricsFetch` `lyricsWarm`
-* **profile** `profileSet` `mediaAdd` `mediaRemove` `mediaMove` `photoUpload`
-  `photoClear`
-* **plan** `planGet` `promoRedeem` `shareStats`
-* **venues** `pitchStatus` `pitchSend` `pitchList` `vouch`
-* **owner only** `promoList` `promoCreate` `promoRevoke` `venueList` `venueVerify`
+**The library:** addSong · importSongs · editSong · removeSong · toggleSong · unplay ·
+starterSetlist · clearSetlist · spotifyPeek
 
-`GET /api/revenue` · `POST /api/revenue` (the reconcile sweep) ·
-`GET|POST /api/history`
+**The song sheet:** songGet · chartSet · chartFlags
 
-## Venue session — `Authorization: Bearer` (venue-tagged)
+**Genres:** tagList · tagAdd · tagRemove · tagAuto
 
-`POST /api/venueauth` — `start` · `verify` · `claim` · `me` · `list` · `add` ·
-`remove` · `revokeAll` · `setSlug` · `checkDomain`
+**Setlists:** listAll · listNew · listRename · listDelete · listSongs · listToggle ·
+listUse
 
-`POST /api/venueadmin` — `get` · `set` · `amenity` · `hours` · `menuSet` ·
-`menuAdd` · `menuRemove` · `offerSave` · `offerRemove` · `photoUpload` ·
-`photoClear` · `eventList` · `eventSave` · `eventDelete` · `eventSkip` ·
-`pitchList` · `pitchSet` · `stats` · `verifyCheck` · `verifyPreview`
+**Songs to learn:** learnList · learnAdd · learnRemove · learnDone
+
+**Requests:** askSet · askList · askAccept · askDone · askDecline
+
+**Gigs:** eventList · eventSave · eventDelete · eventSkip · eventHide
+
+**Lyrics:** lyricsGet · lyricsSet · lyricsFetch · lyricsWarm
+
+**Profile:** profileSet · mediaAdd · mediaRemove · mediaMove · photoUpload · photoClear
+
+**Getting paid:** payStatus · payStart · payDashboard
+
+**Verification:** verifyStatus · idUpload
+
+**Alerts:** pushKey · pushOn · pushOff
+
+**Plan:** planGet · promoRedeem · shareStats
+
+**Venues:** pitchStatus · pitchSend · pitchList · vouch
+
+**Owner only:** promoList · promoCreate · promoRevoke · venueList · venueVerify ·
+venuePlan · idQueue · idApprove · idReject · flagList · flagSet
+
+## 4.4 Storage
+
+Netlify Blobs, one store, everything namespaced per artist or venue.
+
+**Per artist:** `show_` · `f0…f11_` (fan records, sharded) · `meta_` (payments and
+tips) · `hist_` and `histidx_` (past shows) · `ev_` (gigs) · `lists_` · `learn_` ·
+`req_` (requests) · `profile_` · `img_` (photos) · `chart_` · `lyr_` · `push_` ·
+`connect_` · `fb_` (feedback) · `lock_` (passcode lockout) · `apitch_`
+
+**Per venue:** `v_` · `vprofile_` · `vouch_` · `vpitch_`
+
+**Global — the only shared documents:** `artists` (the registry) · `venues` ·
+`cityindex` · `acctindex` · `flags` · `idqueue` · `promos` · `authsecret` · `authc_`
+
+### The hard-won storage rules
+
+1. **Never use `list()` for live data.** It is eventually consistent and has been
+   measured lagging by *minutes*. Vote counts read that way showed zero while the
+   writes had already landed.
+2. **Conditional writes need `@netlify/blobs` v10+.** Version 8 accepted them and
+   silently ignored them, and votes were lost.
+3. **Compare-and-swap alone is not enough.** Even on v10 a conditional write can report
+   success without sticking. Every fan write is **re-read after writing** and retried.
+4. **Fan records are sharded across 12 documents** so a burst of voters does not
+   contend on one key. Load-tested: 80 simultaneous voters, zero lost votes.
+
+## 4.5 What an endpoint costs
+
+Counted by a test, because reads on the audience poll are the mistake this project
+keeps making — the global registry got onto that path three separate times.
+
+| | Ceiling |
+|---|---|
+| Audience poll | **15** reads, **1** global document |
+| A vote | 5 reads, 2 writes |
+| Studio poll | 22 reads |
+| A setlist rename | 12 reads, and **no** fan-shard reads |
+
+These are ceilings, not targets. Raising one is a decision somebody makes on purpose
+and explains, not something discovered on a bill.
+
+## 4.6 Polling
+
+The audience page polls every **3 seconds**, backing off to **10** then **25** when
+nothing is changing, and stops entirely when the phone is asleep or the tab is hidden —
+so a pocketed phone costs nothing. The Studio's Live tab polls every **4 seconds**.
+
+## 4.7 Sign-in
+
+**The audience never signs in.** That is why the app works in a bar.
+
+**Artists** sign in with **email and a 6-digit code** — not Google, because OAuth needs
+a cloud project, a consent screen and a verification review, and Perry found Google
+sign-in too hard on a previous product. Codes last ten minutes, are burned on use, and
+allow five wrong guesses and five sends per hour.
+
+Artists may also set a **Studio passcode**, used together with their page name — the
+pair behaves like a username and password. At least 8 characters, with a deny-list, and
+the door locks for 15 minutes after 10 failures. A locked door, a wrong code and an
+unknown page name all give the same answer, so the lock cannot be used to discover
+which codes or artists are real.
+
+A recovery key exists in the server environment for the founding account only.
+
+## 4.8 Verification
+
+**A venue** needs five things: a **paid plan**, a website on its page, the sign-in
+email on that website's domain, the website naming the venue, and **3 different artists
+who have a gig listed there** confirming it. All five, shown as a checklist.
+
+**An artist** needs a paid plan, card payments actually set up, a photo of an ID
+matching the account, and Perry's approval.
+
+**The ID photo is never public and never kept.** It goes to a slot the image endpoint
+refuses to serve, and is deleted the moment a decision is made either way.
+
+**Paying opens the door to being checked — it never buys the tick.** A purchasable
+trust signal is worth nothing, and a wrong tick on a real bar sends a real person to
+the wrong place.
+
+## 4.9 Everything else
+
+**Lyrics** come from LRCLIB — free, no key, no AI — fetched by the server (never the
+browser, which cannot set the header LRCLIB requires) and cached permanently. Labelled
+"Unofficial lyrics", current song only, one-tap removal.
+
+**Photos** are shrunk on the phone before upload and checked on the server.
+
+**QR codes** are generated as SVG for the home page and the voting page.
+
+**Embeds** accept YouTube, Spotify and Apple Music only. A pasted URL is a parse input,
+never stored raw and never used directly as a frame source.
+
+**Push alerts** tell the artist when someone requests a song, even with the screen off.
+Written from the specification by hand with no new dependency, and checked against the
+specification's own published test vector. Needs keys set on the server — **they are
+not set yet**, and the Studio says so.
+
+**Installable.** Three separate manifests (audience, Studio, venue) so each surface
+opens where it should. The service worker **never caches anything under `/api`** — a
+cached vote is a lost vote — and never precaches, so the newest version always wins.
+
+**Feature flags** let a question with two real answers be tried both ways without a
+deploy. `voteFinal` is the first, and it is **on**.
+
+**Time** is handled without a library: a gig is a wall clock in a named place, stored
+as a date, a time and an IANA timezone. A set running past midnight belongs to the
+night it started.
 
 ---
 
-# 7 · Money
+# PART FIVE — RUNNING IT
 
-## Three delivery paths, one function
-
-On 2026-08-30 a customer paid $3 and got nothing. `/api/confirm` only runs if the
-buyer's browser returns to the site; hers didn't. **A payment must never depend on
-one delivery path.** There are now three, all funnelling through
-`redeemSession()` in `_pay.mjs` so they cannot drift:
-
-1. **The return page** — `/vote.html?paid=…`
-2. **The Stripe webhook** — `/api/webhook`, signed, fires regardless of the
-   browser
-3. **The reconcile sweep** — `POST /api/revenue`, a button in the Studio's Money
-   tab
-
-The buyer's phone also stores the pending session id and retries on the next load.
-All paths are replay-safe: proven against the real payment with three sweeps plus a
-confirm replay, which left the granted total at 5, not 20.
-
-## Stripe is the source of truth
-
-Not the app's own ledger. `/api/revenue` reads Stripe directly, paginates properly
-(`sessions.list()` does **not** paginate on its own, and a busy month would
-silently truncate), and filters to `metadata.kind ∈ {votes, tip}` — Perry's Stripe
-account holds unrelated charges, and the first version reported $133 of somebody
-else's business as MySet income.
-
-Money is attributed by `metadata.show`, never by timestamp. Untagged payments are
-reported as `unattributed` rather than guessed into a total.
-
-## ⚠️ The open gap — Stripe Connect
-
-**Every artist's audience currently pays into the single `STRIPE_SECRET_KEY` —
-which is Perry's own account.**
-
-Stripe Connect is **mandatory before a second artist takes money**: each artist
-connects their own Stripe account, and charges carry `application_fee_amount` so
-the platform share is taken automatically. Until that exists:
-
-* a second artist's money lands in Perry's account
-* the 10% free-plan cut does not exist
-
-This is INVARIANT 0r and it is the single biggest thing left.
-
----
-
-# 8 · Plans
-
-| | **Free** | **Plus — $10/mo** | **Pro — $20/mo** |
-|---|---|---|---|
-| Everything the audience sees | ✓ | ✓ | ✓ |
-| Songs you can keep | 2,000 | 2,000 | 2,000 |
-| Songs **featured** at once | 50 | ∞ | ∞ |
-| Cut on money through the app | 10% | none | none |
-| Sign-ins | 1 | 1 | 5 |
-| Earnings by venue / night / song | — | — | ✓ |
-| One-page press kit that writes itself | — | — | ✓ |
-| Your colours and logo on the audience pages | — | — | ✓ |
-| Promote shows in cities you don't normally play | — | — | ✓ |
-
-Caps are enforced **on add only** and never delete anything. Over the featured
-limit, a song still saves — it just arrives switched off, and the API returns a
-note the Studio shows.
-
-Data is **viewable in a properly formatted way but not exportable as a
-spreadsheet**, deliberately: a spreadsheet can be faked, and the whole value of
-showing a venue your numbers is that they came from us.
-
-**Promo codes** are owner-only. `MYSETFREE` (100% off Pro, 12 months) and
-`MYSETHALF` (50%) exist. **Referrals**: one free month per referral who goes paid,
-recorded at signup from `?ref=<slug>` and immutable afterwards.
-
----
-
-# 9 · Running it
-
-## Deploy
-
-**Pushing to `main` IS the deploy.** The site is connected to
-`github.com/perryidyll/myset` and builds every push automatically.
+## 5.1 Deploying
 
 ```bash
 cd ~/Docs/MySet && npm test && git push
 ```
 
-**Never run `netlify deploy --prod`.** For weeks that ran *alongside* the GitHub
-build the same push triggered, so every change bought two production deploys —
-~555 credits of duplication in one billing period (INVARIANT 9d3). Push code and
-docs in one go, too: two pushes is two builds.
+`git push` to `main` **is** the production deploy. Never also run `netlify deploy
+--prod` — that bills a second deploy for the same change and races over what is
+actually live.
 
-**Iterate on draft deploys.** `netlify deploy` (no `--prod`) gives a draft URL and
-costs **zero credits**. A production deploy costs **15**.
+Only `public/` is published. Publishing the repo root once exposed docs and backups on
+the live domain.
 
-**An env-var change needs a rebuild** to take effect:
+## 5.2 What it costs to run
+
+**Production deploys are the expensive thing, not traffic.** A production deploy costs
+15 credits; web requests cost 2 per 10,000. Measured over three weeks: **1,697 credits,
+99% of it deploys, 17 credits of traffic.** Draft and branch deploys are free.
+
+Perry is on Netlify Personal ($9, 1,000 credits/month) and buys non-expiring 500-credit
+packs at $5. **Never drop to the Free plan — purchased packs are forfeited.** At zero
+credits Netlify pauses every site on the account, so this is an uptime issue.
+
+**Never re-derive cost from response times.** That has been got wrong three times.
+
+## 5.3 Secrets
+
+Never in the repo, never in a chat window. All set by Perry directly in Netlify:
+
+`ADMIN_CODE` · `STRIPE_SECRET_KEY` · `STRIPE_WEBHOOK_SECRET` · `RESEND_API_KEY` ·
+`VAPID_PUBLIC_KEY` · `VAPID_PRIVATE_KEY` · `VAPID_SUBJECT` · `AUTH_FROM` ·
+`SPOTIFY_CLIENT_ID` · `SPOTIFY_CLIENT_SECRET`
+
+Currently set in production: the Stripe pair and Resend. **The push keys are not set**,
+so alerts cannot send yet.
+
+## 5.4 Testing
 
 ```bash
-git commit --allow-empty -m "Redeploy: env change" && git push
+npm test        # 578 assertions, 13 suites, no dev server, nothing touches production
 ```
 
-## The credit model — measured, not guessed
+The suites run the **real handlers** against an in-memory store that implements the
+same behaviour as the real one, injected by a module hook. Stripe is stubbed the same
+way, and the stub records the options of every call — which is how a direct charge is
+proved to be direct.
 
-| | Cost |
-|---|---|
-| Production deploy | **15 credits** |
-| Draft / branch deploy | **0** |
-| Web requests | 2 per 10,000 |
-| Bandwidth | 20 per GB |
-| Compute | 10 per GB-hour |
+**`netlify dev` cannot run the write paths.** Its storage sandbox returns no version
+tag, so every write after the first fails as busy. Use `npm test`, or the full sandbox
+in `_tmp_audit/harness` which serves the real pages against the real functions on a
+local port.
 
-Perry is on **Personal ($9 / 1,000 credits per month)** and buys **non-expiring
-500-credit packs at $5**. Break-even against **Pro ($20 / 3,000, no rollover below
-the 5,000 tier)** is about **2,100 credits/month**.
+## 5.5 Before shipping anything
 
-`./credit-burn.sh` reports the current period's deploy burn across all four sites
-and says which side of that line he is on.
-
-**Two traps:** dropping to the Free plan **forfeits purchased packs**, and
-upgrading **wipes unused monthly credits immediately** — so any Personal→Pro move
-belongs at the *end* of a billing cycle. And at zero credits Netlify **pauses every
-site on the account**, so this is an uptime issue, not just a billing one.
-
-## Before shipping anything
-
-1. **`npm test`.** Four stages, 131 assertions, no dev server and nothing that
-   touches production:
-   * **syntax** — every page's inline script through `node --check`, every
-     function `import()`ed.
-   * **structure** — `studio.html` and `venue-studio.html` are one big `render()`
-     of `if(TAB===…)` blocks, and a bad edit once deleted two of them while leaving
-     valid JavaScript behind, so `node --check` passed and two tabs rendered blank.
-     Every tab block and top-level function must appear exactly once. It also
-     asserts that each flag the server produces has a CONSUMER — a producer with
-     none is how the Studio's queue drifted from `playTop`.
-   * **unit** — the predicates: `playable`, `votable`, the `playTop` pool, the
-     Studio's own filters, `shapeLists`.
-   * **end to end** — whole request flows through the real handlers against an
-     in-memory blob store. One case per bug that has actually happened, so a fix
-     cannot be quietly undone.
-2. Deploy a **draft**, exercise it against the real API.
-3. Deploy `--prod`, then **verify from outside** — the live URLs and the live API,
-   not the local files.
-
-> `netlify dev --offline` cannot run the write paths: its Blobs sandbox returns no
-> etag, so `casDoc` falls back to `onlyIfNew`, every write after the first fails,
-> and the second call in any test returns "busy". That is why the suite injects its
-> own store rather than using the CLI. To eyeball the UI locally you can still run
-> `netlify dev` and seed `.netlify/blobs-serve/entries/<siteId>/site:myset/` by
-> hand — reads work fine.
+1. Read the invariants for whatever you are touching.
+2. `npm test`.
+3. Look at it in a real browser — the sandbox and the headless-Chrome tool in
+   `_tmp_audit/` exist for exactly this. Several defects this month were invisible to
+   the tests and obvious on screen.
+4. Push, then **verify from outside** — check the live URLs, not the local files.
 
 ---
 
-# 10 · The rules, in one breath
+# PART SIX — THE RULES, IN ONE BREATH
 
-`INVARIANTS.md` has all 98. These are the ones that will bite hardest if
-forgotten:
+The full list is `INVARIANTS.md`. These are the ones that matter most.
 
-1. **Never `list()` for live data.** Strong reads on known keys only.
-2. **Every write is CAS + read-back verified.** Fan records are sharded 12 ways.
-3. **`clearAllFanVotes()` destroys the tally on every song start.** The number a
-   song won with lives for about a millisecond, so `admin.mjs` snapshots the whole
-   round into `show.log` in the same handler. Archive before any wipe.
-4. **A payment must never depend on one delivery path.** Three, all replay-safe.
-5. **Stripe is the source of truth for money.** Filter by `metadata.kind`.
-6. **The artist id comes from the session, never the request body.**
-7. **A venue is a different account, not a role.** Separate registry, separate
-   token tag, separate code realm.
-8. **The audience never signs in.** That is why it works in a bar.
-9. **Anything the room experiences stays free.** Gate the back office, never the
-   night.
-10. **Never charge money for a request.** Requests cost votes.
-11. **`status` defaults to `'pre'`, never `'live'`.** A show is live when the artist
-    taps Start.
-12. **Never invent gig data.** A listed gig sends a real person to a real bar.
-13. **A JS parse check is not a structure check.**
-14. **QR codes are verified by decoding, never by eye.**
-15. **`_verify.mjs`'s fetch is the only place we request a stranger's URL** — and it
-    is guarded like it. Never relax a guard to make one venue's check pass.
-16. **A bare venue name is not a location.**
-17. **Never pre-fill a "new record" form from the previous record.**
-18. **`.go` belongs to app.css.** It has been reached for by accident twice.
-19. **Nothing costs the artist their own data.** Money is never in a venue's
-    payload, and the artist has the switch.
+* **Nothing may break the gig.** Every failure degrades to "the room can still vote".
+* **The audience never signs in.**
+* **Never show the room a button that leads to a shrug.**
+* **A payment must have more than one path to delivery**, and claimed is not delivered.
+* **Never grant anything from a client claim** — the payment is verified server-side.
+* **A fan can never spend more than they have**, enforced on the server.
+* **A bought pack is a stock**, and free credits are spent first.
+* **Votes are final**, but a song the artist removes gives its votes back.
+* **A cast is idempotent by its own id**, not by state.
+* **The artist id comes from the session, never from the request body.**
+* **Nothing in the store is global except the registry.**
+* **Never invent gig data** — a listed gig sends a real person to a real bar.
+* **The tick is premium and still not for sale.**
+* **An ID photo is never public and never kept.**
+* **Archive before you wipe** — the vote tally is destroyed every time a song starts.
+* **Only `public/` is published**, and no secret ever appears in a file or a chat.
+* **Count the reads.** Ceilings are tests, not memory.
 
 ---
 
-# 11 · What is left
+# PART SEVEN — WHAT IS NOT DONE
 
-| | |
-|---|---|
-| **Stripe Connect** | The blocker. Until it exists, a second artist's money lands in Perry's account and the 10% cut does not exist. |
-| **Self-serve subscriptions** | Plans exist and are enforced; there is no billing to charge them. Needs Connect first. |
-| `MIN_VOUCHES = 10` | Probably too high for an island where a bar hosts four or five acts. One constant. |
-| Booking follow-through | An enquiry marked *Keen* stops there. No thread, no calendar hold. |
-| Venue analytics for artists | The venue sees which acts fill their room; the artist can't see which venues fill theirs. |
-| Press kit | Promised on Pro, not built. |
-| Branding | Promised on Pro, not built. |
-| Promote in other cities | Promised on Pro, not built. |
-| Community feed | Scoped in an early session, never built. |
-| Venue cover crop | Centre-cropped on upload, not interactively croppable like the artist portrait. |
-| Residency roll-up | A weekly resident act renders one day-heading per night on the venue page. |
-| Artist attributions | `Wagon Wheel → Darius Rucker` (vs Old Crow) and `Hallelujah → Jeff Buckley` (vs Cohen) are still unconfirmed. |
-| SSD mirror | Not mounted for several sessions. Nothing mirrored. |
+Full list with priorities: `REVIEW-2026-09-02-REMAINING.md`.
 
----
-
-# 12 · How it got here
-
-46 commits, all on 2026-08-31 except the earlier prototype work.
-
-| | |
-|---|---|
-| **2026-07-22** | Started as a single-file HTML prototype. Named *Encore*, renamed **MySet** the same day. |
-| **2026-08-06** | Live page redesigned around a now-playing hero and a pool-first queue. |
-| **2026-08-17** | Full redesign to the "Modernist" system, then **shipped as a real product** — static pages + Netlify Functions + Blobs + Stripe. |
-| **2026-08-30** | **First real gig.** 8 voters, 21 votes, one $3 purchase. Two failures. |
-| **2026-08-31** | Everything else. Payment delivery fixed three ways. Lyrics. Magic-link sign-in. Multi-tenancy. Gig calendar and the city feed. Photos, plans, promo codes, referrals, QR codes. Requests and birthday shout-outs. Addresses and directions. The whole **venue studio** — profiles, events, bookings, room numbers, verification. |
+* **The verification tick is not rendered on a public artist page.** An artist can earn
+  it and nobody can see it. Next obvious piece of work.
+* **Venue billing does not exist.** Venue Pro is switched on by hand.
+* **Push alerts cannot send** — the keys are not set on the server.
+* **Payout countries are a 22-country list**, not Stripe's full set. An artist outside
+  it cannot start onboarding. Deliberate: the alternative was accepting any two letters
+  and creating an account in the wrong country, permanently.
+* **Pro extras — press kit, branding, city promotion — are promised in the plan copy
+  and not built.**
+* **Reviews from Google and Trustpilot** for venues: specified, not built.
+* **Voting on a venue's own speaker music:** specified, not built. Phase one is a push
+  to staff; Spotify's queue API is possible but needs Premium, OAuth, an active device,
+  and a careful read of their terms on competing jukebox services.
+* **A deploy preview shares production data.** The money half is closed — Stripe keys
+  are unset for preview contexts — but a preview can still write real data. Use
+  previews to look at pages, never to exercise a write path.
 
 ---
 
-*Everything in this document was verified against the live site, not remembered.*
+*Written 2026-09-03 against commit `e4f763f`. 578 assertions passing.*
