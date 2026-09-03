@@ -786,11 +786,21 @@ async function load(opts){
   if(!d.ok){ if(d.error==='unauthorized'){
       CODE='';TOKEN='';localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token'); }
     gate(d.error); return; }
+  const first=!D;
   D=d; render();
-  if(TAB==='money'){ if(!REV)loadRev(); if(!HIST)loadHist(); }   // reload straight into Money
-  if(TAB==='profile'&&!PROF) loadProf();
-  if(TAB==='settings'){ if(!TEAM)loadTeam(); if(!PLAN)loadPlan(); loadTick(); drawPush(); }
-  if(TAB==='gigs'){ if(!EVENTS)loadGigs(); if(!PITCHES)loadPitches(); }
+  /* The tab's OWN data arrives after the shell. These were fire-and-forget, so the
+     boot screen came down while the page was still filling in — which looked like
+     the load finishing early and then carrying on. On the FIRST load only, wait for
+     them, so the screen we hand over is the finished one. Later polls never wait. */
+  const jobs=[];
+  if(TAB==='money'){ if(!REV)jobs.push(loadRev()); if(!HIST)jobs.push(loadHist()); }
+  if(TAB==='profile'&&!PROF) jobs.push(loadProf());
+  if(TAB==='settings'){ if(!TEAM)jobs.push(loadTeam()); if(!PLAN)jobs.push(loadPlan());
+    jobs.push(loadTick()); jobs.push(drawPush()); }
+  if(TAB==='gigs'){ if(!EVENTS)jobs.push(loadGigs()); if(!PITCHES)jobs.push(loadPitches()); }
+  if(!first) return;
+  try{ await Promise.all(jobs.map(j=>Promise.resolve(j).catch(()=>null))); }catch(e){}
+  bootDone();
 }
 let WRITING=false;
 async function act(action,extra={}){
@@ -1350,7 +1360,6 @@ async function recover(){
 }
 
 function render(){
-  bootDone();
   if(!D||!D.show)return;                 // data not in yet — never crash the page
   const s=D.show, songs=D.songs;
   const now=songs.find(x=>x.now);
@@ -2871,7 +2880,11 @@ function bootDone(){
   el.classList.add('gone');
   setTimeout(()=>el.remove(),320);        // gone for good: it can never flash again
 }
-function start(){clearInterval(timer);load();
+function start(){clearInterval(timer);
+  /* Whatever happens, the boot screen goes. A hung request must never leave somebody
+     staring at bars — better a half-filled Studio they can use. */
+  setTimeout(bootDone,6000);
+  load();
   timer=setInterval(()=>{if(!document.hidden&&TAB==='live')load({quiet:true})},4000);}
 if(CODE||TOKEN){ bootCycle(); start(); } else gate();
 </script>
