@@ -1,4 +1,4 @@
-import { readSched, emptySched, SCHED, sweep } from './_auto.mjs';
+import { readSched, emptySched, SCHED, sweep, heal, HEAL_EVERY_MS } from './_auto.mjs';
 import { casDoc } from './_lib.mjs';
 
 /* SHOWS THAT START AND END THEMSELVES — the bell.
@@ -52,6 +52,11 @@ export default async (req) => {
   if (!mine) { console.log('autocron: lost the lock'); return new Response('busy', { status: 200 }); }
 
   try {
+    // once a day, re-point every artist from their own calendar — see heal()
+    if (now - (Number(state.healedAt) || 0) > HEAL_EVERY_MS) {
+      const h = await heal({ now });
+      console.log(`autocron: heal looked at ${h.looked} of ${h.of}${h.complete ? '' : ' (continues next ring)'}`);
+    }
     const r = await sweep({ now, log: (l) => console.log(l) });
     console.log(`autocron: ok — ${r.checked} checked, ${r.results.filter((x) => x.did).length} acted`,
                 marker ? `(scheduled for ${marker})` : '(no scheduler marker)');

@@ -158,6 +158,15 @@ await mutateArtists((r) => { r.byId[leo.artistId].plan = 'plus'; return true; })
 ok('a cancelled night is un-indexed', (await AS(TL, 'eventSkip', { id: 'gleo', date: ymd(T0), on: true })).ok);
 eq('so nothing is due for him', (await readSched()).byArtist[leo.artistId], undefined);
 
+console.log('\nTHE HEAL  a calendar the index never saw is found once a day');
+await casDoc(SCHED, () => ({ v: 1, byArtist: {} }), (d) => { delete d.byArtist[mia.artistId]; d.healedAt = 0; return true; });
+eq('mia is missing from the index', (await readSched()).byArtist[mia.artistId], undefined);
+const { heal } = await import('../netlify/functions/_auto.mjs');
+const h = await heal({ now: T0 - 5 * H });
+ok('the heal walks the registry', h.looked >= 2 && h.complete, h);
+ok('and finds her gig again', !!(await readSched()).byArtist[mia.artistId], (await readSched()).byArtist);
+ok('and stamps the pass', (await readSched()).healedAt > 0);
+
 console.log('\nVENUES  a venue’s own events are never shows');
 r = await autoTick('v_somebar', { now: T0 });
 eq('a venue owner is skipped', r.why, 'venue');

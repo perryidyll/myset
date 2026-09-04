@@ -1,4 +1,5 @@
 import { getShow, readDoc, casDoc } from './_lib.mjs';
+import { readArtists } from './_auth.mjs';
 import { readEvents, occurrencesFor, isVenueOwner } from './_events.mjs';
 import { utcToDate } from './_time.mjs';
 import { startShow, endShow } from './_lifecycle.mjs';
@@ -47,7 +48,36 @@ export function nextWindow(events, now) {
   return o ? { s: o.startsAt, e: o.endsAt, k: occKey(o) } : null;
 }
 
-export const emptySched = () => ({ v: 1, byArtist: {}, lastRunAt: 0, runningSince: 0 });
+export const emptySched = () => ({ v: 1, byArtist: {}, lastRunAt: 0, runningSince: 0, healedAt: 0, healCursor: 0 });
+export const HEAL_EVERY_MS = 24 * 3600e3;
+export const HEAL_BATCH = 300;
+
+/**
+ * THE HEAL. The index is written by calendar writes — but gigs saved before the
+ * index existed, and any entry a lost write dropped, would never be found. So once
+ * a day the cron walks the registry (one global read) and re-points every artist
+ * from their own calendar (one read each), in batches with a cursor so a big
+ * registry is covered over consecutive days rather than dropped (0bw). Never
+ * `list()` (1). Returns how many it looked at.
+ */
+export async function heal({ now = Date.now(), limit = HEAL_BATCH } = {}) {
+  const reg = await readArtists();
+  const ids = Object.keys(reg.byId || {}).filter((id) => !isVenueOwner(id)).sort();
+  const sched = await readSched();
+  const start = ids.length ? (Number(sched.healCursor) || 0) % ids.length : 0;
+  const slice = ids.slice(start, start + limit);
+  for (const aid of slice) {
+    try { await reindexSched(aid, await readEvents(aid), now); }
+    catch (e) { console.error(`autocron heal: ${aid} failed:`, String((e && e.message) || e)); }
+  }
+  const next = start + slice.length;
+  await casDoc(SCHED, emptySched, (d) => {
+    d.healCursor = next >= ids.length ? 0 : next;
+    if (next >= ids.length) d.healedAt = now;        // a full pass is what counts as healed
+    return true;
+  }).catch(() => {});
+  return { looked: slice.length, of: ids.length, complete: next >= ids.length };
+}
 export async function readSched() {
   const { data } = await readDoc(SCHED, null);
   const d = { ...emptySched(), ...(data || {}) };
