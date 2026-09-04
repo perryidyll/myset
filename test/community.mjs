@@ -245,7 +245,8 @@ eq('a venue slug that is not a venue is a 404', (await GET('?v=nobody')).status,
 
 console.log('\nWHAT IT COSTS  (INVARIANT 9d13)');
 const g = await count(() => GET('?a=ana-reyes&fan=phone1'));
-under('the page, reads', g.reads, 8);
+/* +1 since the picker reads the calendar (ev_) as well as the archive */
+under('the page, reads', g.reads, 9);
 /* the registry three times here: the slug, the plan, and getShow's name lookup because
    the fixture's show record has no artist name. Production is two. */
 under('and global documents', g.globals, 3);

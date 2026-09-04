@@ -3,6 +3,33 @@ import { cleanSlug } from './_auth.mjs';
 import { getProfile } from './_profile.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
 import { readHistIndex } from './_history.mjs';
+import { readEvents, occurrencesFor } from './_events.mjs';
+import { utcToDate, localDate } from './_time.mjs';
+
+/* WHICH NIGHTS A FAN CAN PICK. The calendar, not the archive: an artist's gigs are
+   on their calendar whether or not a show was run for them, and the archive only
+   knows nights where MySet was used (and it can hold two rows for one night — a show
+   started by hand, then again by the schedule). So: every calendar gig from the last
+   120 days up to tonight, one per venue-and-date, newest first, with the archived
+   showId attached when one exists. The key a post stores is `<eventId>@<date>`, or
+   the showId for an older post. */
+export async function pickableNights(aid, now = Date.now()) {
+  const [events, hist] = await Promise.all([readEvents(aid).catch(() => ({ list: [] })), readHistIndex(aid)]);
+  const occs = occurrencesFor(events, utcToDate(now - 120 * 86400000), utcToDate(now)).filter((o) => o.startsAt <= now);
+  const byDate = new Map();
+  for (const o of occs) {
+    const date = localDate(o.startsAt, o.tz);
+    const k = `${(o.venue || '').toLowerCase()}|${date}`;
+    if (!byDate.has(k)) byDate.set(k, { key: `${o.eventId}@${o.date}`, label: `${o.venue || 'A show'} · ${date}`, venue: o.venue || '', date, at: o.startsAt });
+  }
+  // archived nights the calendar never had (older than the calendar, or entered by hand)
+  for (const s of hist.shows || []) {
+    const date = new Date(s.endedAt || s.startedAt || 0).toISOString().slice(0, 10);
+    const k = `${(s.venue || '').toLowerCase()}|${date}`;
+    if (!byDate.has(k)) byDate.set(k, { key: s.showId, label: `${s.venue || 'A show'} · ${date}`, venue: s.venue || '', date, at: s.startedAt || 0 });
+  }
+  return [...byDate.values()].sort((a, b) => b.at - a.at).slice(0, 40);
+}
 import { readPosts, readLikes, shapePosts, addPost, likePost, reportPost } from './_community.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { venueBySlug, getVenueProfile, shapeVenue } from './_venues.mjs';
@@ -52,17 +79,12 @@ export default async (req) => {
 
   if (req.method === 'GET') {
     const fan = cleanFanId(new URL(req.url).searchParams.get('fan'));
-    const [posts, likes, hist] = await Promise.all([
+    const [posts, likes, nights] = await Promise.all([
       readPosts(o.owner),
       fan ? readLikes(o.owner) : null,
-      o.kind === 'artist' ? readHistIndex(o.id) : { shows: [] },
+      o.kind === 'artist' ? pickableNights(o.id) : [],
     ]);
-    /* The show picker offers only nights that actually happened, from the archive
-       (17d). Label: where and when, in UTC — good enough to recognise a night. */
-    const shows = (hist.shows || []).slice(0, 30).map((s) => ({
-      showId: s.showId,
-      label: `${s.venue || 'A show'} · ${new Date(s.endedAt || s.startedAt || 0).toISOString().slice(0, 10)}`,
-    }));
+    const shows = nights.map((n) => ({ showId: n.key, label: n.label }));
     const { fan: _f, ...pub } = o;
     return json({ ok: true, ...pub, posts: shapePosts(posts, likes, fan), shows,
                   limits: { text: 500, photos: 3, perDay: 3 } });
@@ -78,10 +100,9 @@ export default async (req) => {
     let showLabel = '';
     const show = String(body.show || '').slice(0, 40);
     if (show && o.kind === 'artist') {
-      const hist = await readHistIndex(o.id);
-      const row = (hist.shows || []).find((s) => s.showId === show);
+      const row = (await pickableNights(o.id)).find((n) => n.key === show);
       if (!row) return bad('Pick a night from the list.');
-      showLabel = `${row.venue || 'A show'} · ${new Date(row.endedAt || row.startedAt || 0).toISOString().slice(0, 10)}`;
+      showLabel = row.label;
     }
     const r = await addPost(o.owner, {
       fan, ip: clientIp(req), name: body.name, text: body.text, stars: body.stars,

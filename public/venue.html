@@ -25,13 +25,16 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/app.css">
-<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
-     from an inline script, and a deferred script runs AFTER all of those —
-     so `defer` here makes MySetPull undefined at the moment it is called and
-     the gesture silently never arms. 4KB, same origin, and the service worker
-     serves it from cache, so blocking costs nothing measurable. -->
-<script src="/pull.js"></script>
+<!-- FIRST PAINT IS BLACK, AND THE SPLASH NEEDS NOTHING FROM THE NETWORK. This
+     inline block comes before any external stylesheet, so the black ground and the
+     three bars are painted from the first frame instead of after app.css arrives —
+     which on a phone opening a new tab was a white screen. app.css is swapped in
+     without blocking rendering; the splash hides everything until first render. -->
+<style>html{background:#0D0B0C}
+</style>
+<link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/app.css"></noscript>
+
 <style>
 body{padding-bottom:34px}
 .brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
@@ -237,6 +240,8 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
 
+<!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
+<script src="/pull.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
 /* /v/<slug> — the second segment is the venue. */

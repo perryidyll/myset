@@ -10,9 +10,27 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
-<link rel="stylesheet" href="/app.css">
-<!-- blocking on purpose: MySetPull() is called inline below (INVARIANT 0cf) -->
-<script src="/pull.js"></script>
+<!-- FIRST PAINT IS BLACK, AND THE SPLASH NEEDS NOTHING FROM THE NETWORK. This
+     inline block comes before any external stylesheet, so the black ground and the
+     three bars are painted from the first frame instead of after app.css arrives —
+     which on a phone opening a new tab was a white screen. app.css is swapped in
+     without blocking rendering; the splash hides everything until first render. -->
+<style>html{background:#0D0B0C}
+#intro{position:fixed;inset:0;z-index:90;background:#0D0B0C;display:grid;place-items:center}
+#intro.off{opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s .4s}
+#intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
+#intro .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;
+  background:linear-gradient(135deg,#FF375F,#FF7A45);animation:introbar 1.05s ease-in-out infinite alternate}
+#intro .bars i:nth-child(1){animation-delay:.02s;--h:38px}
+#intro .bars i:nth-child(2){animation-delay:.12s;--h:64px}
+#intro .bars i:nth-child(3){animation-delay:.22s;--h:28px}
+#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#fff}
+@keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
+@media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
+</style>
+<link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/app.css"></noscript>
+
 <style>
 body{padding-bottom:34px}
 .brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
@@ -104,6 +122,7 @@ body{padding-bottom:34px}
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true"><div><div class="bars"><i></i><i></i><i></i></div><div class="word">MySet</div></div></div>
 <div class="wrap">
   <div class="brandbar">
     <a class="mark" href="/" aria-label="MySet home"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet<span class="up">↗</span></a>
@@ -123,6 +142,8 @@ body{padding-bottom:34px}
 <div class="lb" id="lb" onclick="this.classList.remove('on')"><img id="lbimg" alt=""></div>
 <div class="toast" id="toast"></div>
 
+<!-- blocking on purpose, after the splash; MySetPull() is called below (INVARIANT 0cf) -->
+<script src="/pull.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
 /* /<slug>/community  or  /v/<slug>/community */
@@ -159,6 +180,7 @@ async function load(){
     if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b><br>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
     D=d; render();
   }catch(e){ $('#app').innerHTML=`<div class="empty">Couldn’t load this page just now. Pull down to retry.</div>`; }
+  finally{ const i=document.getElementById('intro'); if(i) i.classList.add('off'); }
 }
 
 function render(){

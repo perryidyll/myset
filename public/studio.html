@@ -19,13 +19,7 @@
 <title>Artist Studio — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
 <link rel="manifest" href="/manifest-studio.webmanifest">
-<link rel="stylesheet" href="/lock.css">
-<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
-     from an inline script, and a deferred script runs AFTER all of those —
-     so `defer` here makes MySetPull undefined at the moment it is called and
-     the gesture silently never arms. 4KB, same origin, and the service worker
-     serves it from cache, so blocking costs nothing measurable. -->
-<script src="/pull.js"></script>
+<style>html{background:#000}</style>
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -471,6 +465,9 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <div id="busy" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div></div>
 <div id="qrbig" onclick="qrHide(event)"></div>
 <div id="boot"><div class="bars"><i></i><i></i><i></i></div><div id="bootline">Warming up the room</div></div>
+<!-- Both blocking on purpose, and here rather than in <head> so the black boot screen above paints before they arrive. pull.js must stay before MySetPull() (INVARIANT 0cf). -->
+<link rel="stylesheet" href="/lock.css">
+<script src="/pull.js"></script>
 <div id="app"></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
@@ -2221,6 +2218,12 @@ function render(){
 
     <div class="wrap" style="margin-top:10px"><button class="big alt" onclick="signOut()">Sign out of this device</button></div>
 
+    <div class="sec"><span class="kick">Starting by itself</span></div>
+    <div class="row"><div class="m"><div class="t">Start shows from my calendar</div>
+      <div class="s">${s.autoStart!==false?'A gig on your calendar starts its show at its start time if you haven’t.':'Off — only you start a show. Ending by itself still applies.'}</div></div>
+      <div class="tog"><button class="${s.autoStart!==false?'on':''}" onclick="act('autoStart',{on:true})">On</button>
+      <button class="${s.autoStart===false?'on':''}" onclick="act('autoStart',{on:false})">Off</button></div></div>
+
     <div class="sec"><span class="kick">Show</span></div>
     <div class="wrap">
       <button class="big alt" onclick="if(confirm('Start a brand new show? Clears all votes, purchased votes and the played list.'))act('newShow')">↺ New show (reset everything)</button>
@@ -3252,14 +3255,14 @@ async function confirmCrop(){
     const s=base*zoom;
     // map the visible frame back onto the source pixels
     const sx=-ox/s, sy=-oy/s, sw=W/s, sh=H/s;
-    const outW=slot==='cover'?1400:640;
+    const outW=slot==='cover'?1200:640;   // 1200 is plenty on a phone; half the bytes of 1400
     const outH=Math.round(outW*H/W);
     const c=document.createElement('canvas'); c.width=outW; c.height=outH;
     c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
     let data=null;
     for(const q of [0.84,0.72,0.6,0.46]){
       const d=c.toDataURL('image/jpeg',q);
-      if(d.length*0.75<850*1024){ data=d; break; }
+      if(d.length*0.75<450*1024){ data=d; break; }
     }
     if(!data) data=c.toDataURL('image/jpeg',0.4);
     /* a merch item's picture: the slot IS the item id */

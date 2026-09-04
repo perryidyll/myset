@@ -26,13 +26,16 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/app.css">
-<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
-     from an inline script, and a deferred script runs AFTER all of those —
-     so `defer` here makes MySetPull undefined at the moment it is called and
-     the gesture silently never arms. 4KB, same origin, and the service worker
-     serves it from cache, so blocking costs nothing measurable. -->
-<script src="/pull.js"></script>
+<!-- FIRST PAINT IS BLACK, AND THE SPLASH NEEDS NOTHING FROM THE NETWORK. This
+     inline block comes before any external stylesheet, so the black ground and the
+     three bars are painted from the first frame instead of after app.css arrives —
+     which on a phone opening a new tab was a white screen. app.css is swapped in
+     without blocking rendering; the splash hides everything until first render. -->
+<style>html{background:#0D0B0C}
+</style>
+<link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/app.css"></noscript>
+
 <style>
 body{padding-bottom:34px}
 .brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
@@ -85,8 +88,8 @@ body{padding-bottom:34px}
 /* The tick. Same chip as the venue page, same glyph, same size — one trust mark
    across both kinds of page. The green is the only green in the product; the dark
    override is new, because #1B8E3C on black was 2.6:1. */
-.vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:4px 10px;
-  border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.01em;vertical-align:5px;
+.vbadge{display:inline-flex;align-items:center;gap:5px;margin:7px 0 0;padding:4px 10px;
+  border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.01em;
   background:rgba(48,209,88,.14);color:#1B8E3C}
 @media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
 
@@ -119,7 +122,7 @@ body{padding-bottom:34px}
 /* Five numbers don't fit on a phone alongside a button, so the button gets its
    own line and the numbers get a three-across grid that wraps to 3 + 2. */
 .pcta{display:flex;margin:20px 20px 0}
-.pstats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px 10px;margin:20px 22px 0}
+.pstats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px 10px;margin:20px 22px 0;text-align:center}
 .ps{min-width:0}
 .ps b{display:block;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -247,6 +250,8 @@ body{padding-bottom:34px}
   <div class="foot">MySet · myset.vip</div>
 </div>
 
+<!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
+<script src="/pull.js"></script>
 <script>
 function hideIntro(){const i=document.getElementById('intro');if(i)i.classList.add('off');}
 const $=s=>document.querySelector(s), API='/api';
@@ -273,6 +278,10 @@ const COMMHREF=SLUG?'/'+SLUG+'/community':'/community.html';
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const PROV={youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+/* Photos go through Netlify's Image CDN: resized to what the slot needs, served as
+   WebP/AVIF, cached at the edge. A same-origin path is allowed by default. If the
+   transform ever fails the <img> falls back to the original (onerror). */
+const cdn=(u,w)=>u&&u.startsWith('/')?`/.netlify/images?url=${encodeURIComponent(u)}&w=${w}&q=72`:u;
 const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const dayNum=d=>+d.slice(8,10);
 const monShort=d=>MON[+d.slice(5,7)-1];
@@ -375,7 +384,7 @@ function render(){
      then a stats row with the live button sitting right in it. */
   const shots=(P.photos||[]).filter(Boolean).slice(0,3);
   h+=`<div class="pcover rise">
-    <img src="${esc(P.photo||'/img/band.jpg')}" alt="" width="1600" height="1000" fetchpriority="high">
+    <img src="${esc(cdn(P.photo||'/img/band.jpg',1200))}" data-raw="${esc(P.photo||'/img/band.jpg')}" onerror="if(this.src!==this.dataset.raw)this.src=this.dataset.raw" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
     <div class="veil"></div>
     ${live?`<a class="livepill" href="${VOTEHREF}"><span class="dot"></span>Live now — vote the setlist</a>`:''}
   </div>
@@ -383,10 +392,11 @@ function render(){
   <div class="phead">
     <div class="cluster ${shots.length?'':'solo'}">
       ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" style="background-image:url('${esc(u)}')"></div>`).join('')}</div>`:''}
-      <div class="pav" style="background-image:url('${esc(P.avatar||P.photo||'/img/band.jpg')}')"></div>
+      <div class="pav" style="background-image:url('${esc(cdn(P.avatar||P.photo||'/img/band.jpg',320))}'),url('${esc(P.avatar||P.photo||'/img/band.jpg')}')"></div>
     </div>
     <div class="pname">
-      <h1>${esc(P.name)}${P.verified?'<span class="vbadge" title="MySet checked this is really them">✓ Verified</span>':''}</h1>
+      <h1>${esc(P.name)}</h1>
+      ${P.verified?'<div><span class="vbadge" title="MySet checked this is really them">✓ Verified</span></div>':''}
       ${P.tagline?`<p>${esc(P.tagline)}</p>`:''}
 
     </div>

@@ -113,6 +113,7 @@ export async function autoTick(aid, { now = Date.now() } = {}) {
 
   if (now < occ.endsAt) {
     if (show.status === 'live') return { did: null, key, why: 'already live' };
+    if (show.autoStart === false) return { did: null, key, why: 'auto-start is off for this artist' };
     if (show.autoKey === key) return { did: null, key, why: 'this gig was already started once' };
     /* The artist started a show for this night by hand and then ended it. That was
        a decision; the schedule does not overrule it. (A show that ended before the

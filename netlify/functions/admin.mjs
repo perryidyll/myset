@@ -1422,6 +1422,9 @@ export default async (req) => {
         break;
       }
       case 'window': show.windowOpen = !!body.open; break;
+      // Settings → "Start shows from my calendar". Off means the schedule never
+      // starts one; ending by itself still applies to a show that is live.
+      case 'autoStart': show.autoStart = body.on !== false; break;
       /* 'live' and 'ended' never reach here — see the delegation to _lifecycle.mjs
          above, and its header for why a resume deliberately does not reset. */
       case 'status': {

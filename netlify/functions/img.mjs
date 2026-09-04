@@ -34,8 +34,12 @@ const photo = (img) => new Response(img.bytes, {
   headers: {
     'content-type': img.type,
     'content-length': String(img.bytes.length),
-    // the ?v= stamp makes this safe to cache for a year
+    // the ?v= stamp makes this safe to cache for a year — in the browser AND at
+    // Netlify's edge (durable), so a photo is read out of Blobs by a function
+    // once per version, not once per viewer. Netlify-Vary is ignored through the
+    // /api/* rewrite (9d6), which is fine: the URL alone is the key.
     'cache-control': 'public, max-age=31536000, immutable',
+    'netlify-cdn-cache-control': 'public, durable, max-age=31536000, immutable',
     'access-control-allow-origin': '*',
   },
 });

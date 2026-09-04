@@ -19,13 +19,7 @@
 <title>Venue Studio — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
 <link rel="manifest" href="/manifest-venue.webmanifest">
-<link rel="stylesheet" href="/lock.css">
-<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
-     from an inline script, and a deferred script runs AFTER all of those —
-     so `defer` here makes MySetPull undefined at the moment it is called and
-     the gesture silently never arms. 4KB, same origin, and the service worker
-     serves it from cache, so blocking costs nothing measurable. -->
-<script src="/pull.js"></script>
+<style>html{background:#000}</style>
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -273,6 +267,9 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
+<!-- Both blocking on purpose, and here rather than in <head> so the black boot screen above paints before they arrive. pull.js must stay before MySetPull() (INVARIANT 0cf). -->
+<link rel="stylesheet" href="/lock.css">
+<script src="/pull.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));

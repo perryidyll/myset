@@ -49,7 +49,7 @@ export async function stagePayload(aid) {
       gigMonth: show.gigMonth, gigCount: show.gigCount,
       // who flipped it — 'artist' or 'schedule' — so the Live tab can say so
       startedBy: show.startedBy || null, endedBy: show.endedBy || null,
-      sched,
+      sched, autoStart: show.autoStart !== false,
     },
     // the genre vocabulary, so the Setlist tab can render chips and filter by them
     tags: { builtin: GENRES.map(([id, label]) => ({ id, label })), own: show.tags },
