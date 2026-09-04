@@ -4,6 +4,8 @@ import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readRequests, shapeRequests } from './_requests.mjs';
 import { readFeedback, shapeFeedback } from './_feedback.mjs';
+import { readEvents, nextOccurrence } from './_events.mjs';
+import { localTime } from './_time.mjs';
 
 export default async (req) => {
   const me = await requireArtist(req);
@@ -13,9 +15,19 @@ export default async (req) => {
 
 /** Shared so a write can return the new state instead of forcing a second fetch. */
 export async function stagePayload(aid) {
-  const [show, fans, meta, reqs, lists, learn, fb] = await Promise.all([
+  const [show, fans, meta, reqs, lists, learn, fb, events] = await Promise.all([
     getShow(aid), readFans(aid), readMeta(aid), readRequests(aid),
-    readLists(aid), readLearn(aid), readFeedback(aid)]);
+    readLists(aid), readLearn(aid), readFeedback(aid), readEvents(aid).catch(() => ({ list: [] }))]);
+  /* Tonight's gig, if there is one on the calendar within the next few hours or
+     running now — ONE extra read on the Studio poll (21 of the 22 ceiling), so the
+     Live tab can say when the show will start by itself (_auto.mjs). */
+  let sched = null;
+  try {
+    const occ = nextOccurrence(events, Date.now());
+    if (occ && occ.startsAt - Date.now() < 12 * 3600e3)
+      sched = { startsAt: occ.startsAt, endsAt: occ.endsAt, venue: occ.venue || '',
+                time: localTime(occ.startsAt, occ.tz), endTime: localTime(occ.endsAt, occ.tz) };
+  } catch { sched = null; }
   const { artistById } = await import('./_auth.mjs');
   const who = await artistById(aid);
   const counts = voteCounts(fans);
@@ -35,6 +47,9 @@ export async function stagePayload(aid) {
       requests: show.requests, birthdays: show.birthdays,
       listId: show.listId, listName: show.listName,
       gigMonth: show.gigMonth, gigCount: show.gigCount,
+      // who flipped it — 'artist' or 'schedule' — so the Live tab can say so
+      startedBy: show.startedBy || null, endedBy: show.endedBy || null,
+      sched,
     },
     // the genre vocabulary, so the Setlist tab can render chips and filter by them
     tags: { builtin: GENRES.map(([id, label]) => ({ id, label })), own: show.tags },

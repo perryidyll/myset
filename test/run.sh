@@ -18,6 +18,9 @@ echo
 echo "── structure ──"
 node test/structure.mjs
 echo
+echo "── what the public reads ──"
+node test/copy.mjs
+echo
 echo "── unit ──"
 node test/unit.mjs
 echo
@@ -68,3 +71,9 @@ node --import ./test/register.mjs test/autoverify.mjs
 echo
 echo "── the google sheet ──"
 node --import ./test/register.mjs test/sheets.mjs
+echo
+echo "── shows that start and end themselves ──"
+node --import ./test/register.mjs test/autoshow.mjs
+echo
+echo "── the community page and the shop ──"
+node --import ./test/register.mjs test/community.mjs

@@ -63,7 +63,8 @@ export const cleanSlug = (v) =>
 const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','static','img',
   'v','venue','venues','venuestudio',
   'assets','stage','about','help','support','login','signup','signin','terms','privacy',
-  'settings','account','new','index','home','myset','null','undefined']);
+  'settings','account','new','index','home','myset','null','undefined',
+  'community','merch','shop','store','orders','c']);
 
 export async function artistBySlug(slug) {
   const a = await readArtists();

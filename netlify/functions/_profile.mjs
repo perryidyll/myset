@@ -14,6 +14,33 @@ import { parseMedia, embedSrc, linkOut, embedShape } from './_embeds.mjs';
    valid names, not a limit on anybody. */
 export const MAX_PHOTOS = 3;
 
+/* MERCH. Up to a dozen things an artist (or venue) sells, kept ON the profile record
+   so the community page reads nothing extra to show them. The picture's slot is
+   the item's own id (`m` + six base36), so a picture can never outlive its item
+   by name. Price is cents, never below zero and never above $500 — the same
+   ceiling as a tip. A link is where it sells if not through MySet; it goes
+   through safeLink like every pasted URL (9b). `ship` decides whether Stripe asks
+   the buyer for an address: a T-shirt handed over at the bar needs none. */
+export const MAX_MERCH = 12;
+export const MERCH_ID = /^m[a-z0-9]{6}$/;
+export function normMerch(list) {
+  return (Array.isArray(list) ? list : [])
+    .filter((m) => m && typeof m === 'object')
+    .map((m) => ({
+      id: String(m.id || '').replace(/[^a-z0-9]/g, '').slice(0, 7),
+      title: clean(m.title, 60),
+      blurb: clean(m.blurb, 160),
+      cents: Math.max(0, Math.min(50000, parseInt(m.cents, 10) || 0)),
+      img: String(m.img || '').slice(0, 300),
+      link: safeLink('website', m.link),
+      ship: m.ship === 'ship' ? 'ship' : 'pickup',
+      on: m.on !== false,
+      at: Number(m.at) || 0,
+    }))
+    .filter((m) => MERCH_ID.test(m.id) && m.title)
+    .slice(0, MAX_MERCH);
+}
+
 export const defaultProfile = () => ({
   v: 1,
   artistId: null,
@@ -25,6 +52,7 @@ export const defaultProfile = () => ({
   photos: [],            // up to MAX_PHOTOS small ones clustered around it
   links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', website: '' },
   media: [],
+  merch: [],
   updatedAt: Date.now(),
 });
 
@@ -84,6 +112,7 @@ export function normProfile(p) {
     .filter((m) => m && typeof m === 'object' && embedSrc(m))
     .map((m) => ({ ...m, title: clean(m.title, 120), thumb: String(m.thumb || '').slice(0, 300) }))
     .slice(0, 24);
+  out.merch = normMerch(out.merch);
   return out;
 }
 

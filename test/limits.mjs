@@ -145,6 +145,13 @@ const { NOT_BUILT } = await import('../netlify/functions/_plan.mjs');
 const { VENUE_PLANS, VENUE_NOT_BUILT } = await import('../netlify/functions/_venues.mjs');
 eq('the four Pro features with no code behind them are named',
    [...NOT_BUILT].sort(), ['analytics', 'branding', 'presskit', 'promote']);
+/* merch is BUILT (2026-09-04): sold on Plus and Pro, refused with a 402 on free in
+   admin.mjs (merchSave / merchPhoto), and on venue Free in venueadmin.mjs. */
+ok('merch is a real flag on every row', 'merch' in PLANS.free && PLANS.plus.merch === true && PLANS.pro.merch === true);
+ok('and is not in the coming-soon list', !NOT_BUILT.includes('merch'));
+ok('merch is refused server-side on free', /merchAllowed\(aid/.test(adminSrc));
+ok('with the plan named', /Merch on your page is a Plus feature/.test(adminSrc));
+ok('and forwarded to the Studio', /merch: !!l\.merch/.test(adminSrc));
 ok('every one of them is a real plan flag',
    NOT_BUILT.every((f) => f in PLANS.pro), NOT_BUILT);
 ok('the plan payload ships the list, so the Studio can grey them', /soon: NOT_BUILT/.test(adminSrc));
@@ -159,7 +166,10 @@ ok('pricing is refused server-side on free', /canPrice = isPlatformOwner/.test(a
 ok('setlists are refused server-side on free', /limits\.setlists !== true/.test(adminSrc));
 
 eq('the three venue features with no code behind them are named',
-   [...VENUE_NOT_BUILT].sort(), ['reviews', 'speakerVotes', 'tips']);
+   [...VENUE_NOT_BUILT].sort(), ['speakerVotes', 'tips']);
+/* `reviews` became the community page on 2026-09-04 and is free on both rows (0w). */
+ok('venue reviews are free on both plans', VENUE_PLANS.free.reviews === true && VENUE_PLANS.pro.reviews === true);
+ok('venue merch is Pro', VENUE_PLANS.free.merch === false && VENUE_PLANS.pro.merch === true);
 ok('every one is a real venue flag',
    VENUE_NOT_BUILT.every((f) => f in VENUE_PLANS.pro), VENUE_NOT_BUILT);
 /* photos is NOT in that list, so it has to be genuinely enforced — and until

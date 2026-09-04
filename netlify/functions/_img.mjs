@@ -22,6 +22,13 @@ import { store } from './_lib.mjs';
    that matters", which is how the first one got missed. */
 export const SLOTS = new Set(['cover', 'avatar',
   ...Array.from({ length: 12 }, (_, i) => 'p' + i)]);
+/* Two more families, named by pattern because their count is the record's business:
+     m<id>      a merch item's picture — the slot IS the item id (see normMerch)
+     c<id>_<n>  a photo on a community post, up to three per post
+   Neither is `idcheck` and neither can be, so the ID photo stays unservable (0bk). */
+export const MERCH_SLOT = /^m[a-z0-9]{6}$/;
+export const POST_SLOT = /^c[a-z0-9]{8}_[0-2]$/;
+export const isSlot = (name) => SLOTS.has(name) || MERCH_SLOT.test(name) || POST_SLOT.test(name);
 export const MAX_BYTES = 900 * 1024;
 const KEY = (aid, slot) => `img_${aid}_${slot}`;
 

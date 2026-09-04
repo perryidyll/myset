@@ -2,7 +2,16 @@ import Stripe from 'stripe';
 import { json, bad, cleanFanId, getShow, publicArtist, sha } from './_lib.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readConnect, connectUsable, feeCents } from './_connect.mjs';
-import { planForArtist } from './_plan.mjs';
+import { planForArtist, merchAllowed } from './_plan.mjs';
+import { getProfile } from './_profile.mjs';
+import { PAYOUT_COUNTRIES } from './_connect.mjs';
+
+/* Where a shipped item can go. Stripe needs an explicit list; this is the payout
+   list plus the countries a touring musician's fans actually write from. Widen it
+   when somebody needs one — a missing country is a refused checkout, never a
+   wrong one. */
+const SHIP_COUNTRIES = [...new Set([...PAYOUT_COUNTRIES, 'AT','BE','CH','CZ','GR','HU','PL','RO','SK','SI',
+  'HR','BG','LT','LV','EE','LU','IS','IL','AE','SA','ZA','KR','TW','HK','PH','ID','VN','IN','AR','CL','CO','PE'])];
 
 /** What this checkout is worth, in cents — the base the platform fee comes off. */
 const amountCents = (line) =>
@@ -29,7 +38,7 @@ export default async (req) => {
   const origin = new URL(req.url).origin;
   const stripe = new Stripe(key);
 
-  let line, metadata;
+  let line, metadata, shipping = false;
   if (body.kind === 'votes') {
     // price is whatever the artist set — never what the client claims
     const pack = show.packs && show.packs[body.pack];
@@ -61,6 +70,30 @@ export default async (req) => {
     };
     metadata = { fan, kind: 'tip', note: String(body.note || '').slice(0, 120),
                  show: show.showId || '', artist: aid };
+  } else if (body.kind === 'merch') {
+    /* THE ITEM IS THE ARTIST'S RECORD, never the request: price, name, and whether
+       it ships all come from the profile. A Plus feature, so a lapsed plan means
+       the item is not on the page and cannot be bought (same AND-on-read as the
+       page itself). */
+    const { limits } = await planForArtist(aid);
+    if (!merchAllowed(aid, limits)) return bad('Merch isn’t on this page right now', 404);
+    const prof = await getProfile(aid);
+    const item = (prof.merch || []).find((m) => m.id === String(body.item || '') && m.on);
+    if (!item) return bad('That item isn’t for sale right now', 404);
+    if (item.cents < 100) return bad('That one isn’t sold through MySet — ask at the merch table', 400);
+    const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
+    line = {
+      quantity: qty,
+      price_data: {
+        currency: 'usd',
+        unit_amount: item.cents,
+        product_data: { name: `${item.title} — ${artist}`,
+                        description: item.blurb || (item.ship === 'ship' ? 'Shipped to you' : 'Pick it up at the show') },
+      },
+    };
+    metadata = { fan, kind: 'merch', item: item.id, title: item.title.slice(0, 60), qty: String(qty),
+                 ship: item.ship, show: show.showId || '', artist: aid };
+    shipping = item.ship === 'ship';
   } else {
     return bad('unknown kind');
   }
@@ -112,7 +145,11 @@ export default async (req) => {
      holds: /:slug/vote serves vote.html, which is what calls /api/confirm. */
   const { artistById } = await import('./_auth.mjs');
   const who = await artistById(aid);
-  const back = who && who.slug ? `/${who.slug}/vote` : '/vote.html';
+  /* Merch returns to the community page, which redeems the session exactly as
+     vote.html does — the two pages that call /api/confirm (INVARIANT 5b). */
+  const back = body.kind === 'merch'
+    ? (who && who.slug ? `/${who.slug}/community` : '/community.html')
+    : (who && who.slug ? `/${who.slug}/vote` : '/vote.html');
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -120,7 +157,9 @@ export default async (req) => {
       line_items: [line],
       metadata,
       ...(fee > 0 ? { payment_intent_data: { application_fee_amount: fee } } : {}),
-      // MUST be the page that calls /api/confirm — only vote.html redeems the session
+      // only a SHIPPED item asks for an address — a T-shirt handed over at the bar needs none
+      ...(shipping ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES } } : {}),
+      // MUST be a page that calls /api/confirm — vote.html and community.html redeem the session
       success_url: `${origin}${back}?paid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}${back}?cancelled=1`,
     }, opts);

@@ -130,7 +130,7 @@ const GUIDE = [
   ['Shows', 'One row per finished gig: where, how many people, how many votes, what it took.', 'Added to, never changed. Safe to chart.'],
   ['Songs', "Every song in everyone's library, with how often it was played and how many votes it pulled across the nights still in their history.", 'Rewritten every sync.'],
   ['Requests', 'Songs the room asked for that were not on the list. The best answer to "what should I learn next".', 'Added to, never changed.'],
-  ['Ratings', 'What the audience thought of MySet itself — stars out of five and their own words.', 'Added to, never changed.'],
+  ['Ratings', 'What fans thought of MySet itself — stars out of five and their own words.', 'Added to, never changed.'],
   ['Gigs', 'The calendar: every gig booked, past and future, and where in the world it is.', 'Rewritten every sync.'],
   ['Venues', 'Bars and venues that have signed up, their plan and whether they are verified.', 'Rewritten every sync.'],
   ['Growth', 'One row each time this syncs: the running totals. This is the tab to chart.', 'One new row per sync.'],
@@ -138,7 +138,7 @@ const GUIDE = [
   ['A few things worth knowing', '', ''],
   ['This sheet is a copy.', 'Nothing in MySet ever reads it. Editing or deleting anything here cannot break the app or lose real data.', ''],
   ['Money comes from the night, not from Stripe.', 'Each show row carries what that night took. Stripe is still the real ledger for anything that has to balance.', ''],
-  ['No audience member is identified.', 'Phones are counted, never named. There is no device id anywhere in this file.', ''],
+  ['No fan is identified.', 'Phones are counted, never named. There is no device id anywhere in this file.', ''],
   ['Blank money means Stripe was switched off', 'for that night, not that the night earned nothing. The Shows tab has a column that says which.', ''],
 ];
 

@@ -1732,3 +1732,38 @@ failures.**
 nothing renders the tick on a public artist page; venue Pro has no self-serve
 billing; `PAYOUT_COUNTRIES` is 22 countries. And the four artist / three venue
 "coming soon" features are exactly that — designed, not built.
+
+## SESSION LOG — 2026-09-04 (new account: the product batch)
+
+Perry's list, all shipped in one push (his decisions inline):
+
+* **The tick on the public artist page** — `profile.mjs` exposes `verified` AND-gated
+  on a paid plan (0bn's artist half, read side); `artist.html` renders the venue's
+  green chip, with a dark override both pages now share.
+* **Menu icon** top-right on artist and venue pages → Artist Studio / Venue Studio;
+  whether you have one is read from this phone's token, never asked of the server.
+* **"Audience" → "Fans"** everywhere a stranger reads (`test/copy.mjs` pins it).
+  The Community button sits in the artist page's stats grid, sixth cell.
+* **The community page** (`community.html`, `/api/community`, `_community.mjs`):
+  500-char posts, stars, the night from history, three photos, video links, hearts,
+  reports, owner reply/pin/hide/delete. Free on every plan. Limits inside the CAS.
+* **Merch** on the profile record: a Plus feature for artists (Stripe direct charge,
+  pickup or posted, orders in the Money and Merch tabs, buyer details fetched from
+  Stripe and never stored); Pro for venues, link-only (no venue Connect). `reviews`
+  left VENUE_NOT_BUILT and is free on both venue rows.
+* **Shows start and end themselves** — `_lifecycle.mjs` (start/end extracted out of
+  admin.mjs's switch, one implementation), `_auto.mjs` (decides), `autocron.mjs`
+  (every two minutes, one read when idle, `gigsched` index). Empty nights are no
+  longer archived. INVARIANT 0o rewritten at Perry's direction.
+* **The Voting box** at the top of the Live tab only, orange ring, big orange word,
+  orange "on" half; header and Settings copies removed.
+* **Boot**: planGet runs beside /stage; the owner's two lists are off the critical
+  path and quiet; drawPush is not awaited; `@keyframes bb` finally defined so the
+  boot bars animate; `--accent-ink` defined.
+* **Housekeeping**: the false "two failures" story removed from every doc and memory
+  (see 2026-09-04 correction above); fuzzy icons removed at Perry's request and every
+  reference repointed at the 512s; content engine pushed to a private GitHub repo.
+
+1,055 assertions across 22 suites. Not built, said in the UI: venue checkout, video
+uploads, a per-gig opt-out of scheduled starts. Perry to set `AUTH_FROM` once the
+myset.vip domain is verified in Resend.

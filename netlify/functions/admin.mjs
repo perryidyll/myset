@@ -1,7 +1,7 @@
-import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, releaseUnvotable, voteCounts,
+import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
-         normPacks, normAsk, newShowId, carryFans, STARTER_SONGS,
+         normPacks, normAsk, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
@@ -12,16 +12,18 @@ import { readRequests, shapeRequests, resolveRequest, attachSong } from './_requ
 import { readArtists, mutateArtists } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
-import { archiveShow } from './_history.mjs';
 import { readSubs, saveSub, dropSub, notify } from './_push.mjs';
-import { mutateProfile, getProfile, shapeMedia, parseMedia, MAX_PHOTOS } from './_profile.mjs';
+import { mutateProfile, getProfile, shapeMedia, parseMedia, MAX_PHOTOS, MAX_MERCH, MERCH_ID, normMerch } from './_profile.mjs';
+import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf,
-         nextOccurrence, MAX_EVENTS } from './_events.mjs';
+         MAX_EVENTS } from './_events.mjs';
+import { reindexSched } from './_auto.mjs';
+import { startShow, endShow, releaseNote } from './_lifecycle.mjs';
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
-import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, redeemPromo,
+import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, redeemPromo,
          readPromos, mutatePromos, cleanCode, MAX_LIBRARY, NOT_BUILT } from './_plan.mjs';
 
 /* Rebuilds the projection of the active setlist after the library changed.
@@ -292,6 +294,7 @@ const shapeLimits = (l) => ({
   gigs: l.gigs === Infinity ? null : (l.gigs || null),
   pricing: !!l.pricing,
   setlists: !!l.setlists,      // so the Studio can say so BEFORE the server refuses
+  merch: !!l.merch,
   library: MAX_LIBRARY,
   cut: l.cut, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
@@ -363,14 +366,14 @@ async function handleEvents(aid, action, body) {
     });
     if (full) return bad('That is as many gigs as one calendar can hold');
     const events = await readEvents(aid);
-    await reindexCities(aid, events);
+    await Promise.all([reindexCities(aid, events), reindexSched(aid, events)]);
     return json({ ok: true, id, events: events.list });
   }
 
   if (action === 'eventDelete') {
     await mutateEvents(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
     const events = await readEvents(aid);
-    await reindexCities(aid, events);
+    await Promise.all([reindexCities(aid, events), reindexSched(aid, events)]);
     return json({ ok: true, events: events.list });
   }
 
@@ -392,6 +395,7 @@ async function handleEvents(aid, action, body) {
     });
     const events = await readEvents(aid);
     if (gone) await reindexCities(aid, events);
+    await reindexSched(aid, events);          // a hidden night is a skipped night
     return json({ ok: true, events: events.list });
   }
 
@@ -412,6 +416,7 @@ async function handleEvents(aid, action, body) {
       return true;
     });
     const events = await readEvents(aid);
+    await reindexSched(aid, events);          // a cancelled night must not start itself
     return json({ ok: true, events: events.list });
   }
   return bad('unknown action', 400);
@@ -580,28 +585,9 @@ const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 't
    short-circuits before that block. This is called from both, so neither can be
    the one that forgets. See releaseUnvotable in _lib.mjs for why it matters now
    that votes are final. */
-/* `before` is the set of ids the room could vote for BEFORE the change. Without it
-   this swept all twelve fan shards on every list action — a rename cost 12 strong
-   reads it could never need. MEASURED rather than listed by action name: an
-   allow-list of "actions that narrow the set" is the kind of promise this codebase
-   has already had forgotten twice (see the note on `libChanged`). */
-async function releaseNote(aid, before) {
-  try {
-    const after = await getShow(aid);
-    if (before) {
-      const now = new Set(playable(after).songs.map((x) => x.id));
-      // nothing left the playable set => nobody's vote can have been stranded
-      if (![...before].some((id) => !now.has(id))) return null;
-    }
-    const freed = await releaseUnvotable(aid, after);
-    if (!freed.length) return null;
-    const titles = freed.map((id) => (after.songs.find((x) => x.id === id) || {}).title)
-      .filter(Boolean).slice(0, 3);
-    return titles.length
-      ? `Votes on ${titles.join(', ')} went back to the room.`
-      : 'Votes on the songs you took out went back to the room.';
-  } catch { return null; }        // the artist's change still succeeded
-}
+/* releaseNote(aid, before) — votes stranded on songs the room can no longer
+   choose go back to the room. Lives in _lifecycle.mjs since ending a show can
+   happen without a request; imported above. */
 
 async function handleLists(aid, action, body) {
   const show = await getShow(aid);
@@ -1101,6 +1087,117 @@ async function handleProfile(aid, action, body, req, me) {
   }
   return bad('unknown action', 400);
 }
+
+/* THE SHOP AND THE COMMUNITY PAGE — the artist's side.
+
+   Merch is a Plus feature (Perry, 2026-09-04): creating or editing an item, and
+   putting a picture on it, is refused with a 402 on free in the same words the
+   Studio shows before the tap (0ad). REMOVING is never gated — a cap never
+   deletes anything and a lapsed artist must still be able to take an item down
+   (0s). The community page itself is free on every plan (0w): moderating it is
+   running your page, not pricing it.
+
+   Orders are the ONE place a buyer's details appear, and they are fetched from
+   Stripe when the artist opens an order — never stored (0bu's posture). */
+async function handleShop(aid, action, body) {
+  const merchLocked = ['Merch on your page is a Plus feature — anything you already added stays.', 402];
+  const canMerch = async () => merchAllowed(aid, (await planForArtist(aid)).limits);
+
+  if (action === 'merchList') {
+    const p = await getProfile(aid);
+    return json({ ok: true, merch: p.merch, max: MAX_MERCH, allowed: await canMerch() });
+  }
+  if (action === 'merchSave') {
+    if (!(await canMerch())) return bad(merchLocked[0], merchLocked[1]);
+    const incoming = body.item || {};
+    const id = MERCH_ID.test(String(incoming.id || '')) ? String(incoming.id)
+             : 'm' + Math.random().toString(36).slice(2, 8).padEnd(6, '0').slice(0, 6);   // outside the CAS
+    let full = false, bad_ = null;
+    await mutateProfile(aid, (p) => {
+      p.merch = Array.isArray(p.merch) ? p.merch : [];
+      const at = p.merch.findIndex((m) => m.id === id);
+      const prev = at >= 0 ? p.merch[at] : null;
+      const row = normMerch([{ ...(prev || {}), ...incoming, id, img: (prev && prev.img) || '', at: (prev && prev.at) || Date.now() }])[0];
+      if (!row) { bad_ = 'Give it a name'; return false; }
+      if (at >= 0) p.merch[at] = row;
+      else if (p.merch.length >= MAX_MERCH) { full = true; return false; }
+      else p.merch.push(row);
+      return true;
+    });
+    if (bad_) return bad(bad_);
+    if (full) return bad(`${MAX_MERCH} items is the most a page holds — edit one of those.`);
+    return json({ ok: true, id, merch: (await getProfile(aid)).merch });
+  }
+  if (action === 'merchRemove') {
+    const id = String(body.id || '');
+    await mutateProfile(aid, (p) => { p.merch = (p.merch || []).filter((m) => m.id !== id); return true; });
+    if (MERCH_ID.test(id)) await dropImage(aid, id);
+    return json({ ok: true, merch: (await getProfile(aid)).merch });
+  }
+  if (action === 'merchPhoto') {
+    if (!(await canMerch())) return bad(merchLocked[0], merchLocked[1]);
+    const id = String(body.id || '');
+    if (!MERCH_ID.test(id)) return bad('unknown item');
+    const p0 = await getProfile(aid);
+    if (!p0.merch.some((m) => m.id === id)) return bad('unknown item', 404);
+    const dec = decodeDataUrl(body.data);
+    if (dec.error) return bad(dec.error);
+    const url = await putImage(aid, id, dec.bytes, dec.type);      // the slot IS the item id
+    await mutateProfile(aid, (p) => { const m = (p.merch || []).find((x) => x.id === id); if (!m) return false; m.img = url; return true; });
+    return json({ ok: true, url, merch: (await getProfile(aid)).merch });
+  }
+  if (action === 'merchPhotoClear') {
+    const id = String(body.id || '');
+    if (!MERCH_ID.test(id)) return bad('unknown item');
+    await dropImage(aid, id);
+    await mutateProfile(aid, (p) => { const m = (p.merch || []).find((x) => x.id === id); if (!m) return false; m.img = ''; return true; });
+    return json({ ok: true, merch: (await getProfile(aid)).merch });
+  }
+
+  // the community page — moderation, free on every plan
+  if (action === 'postList') {
+    return json({ ok: true, posts: shapeForOwner(await readPosts(aid)) });
+  }
+  if (['postHide', 'postPin', 'postReply', 'postDelete'].includes(action)) {
+    const r = await moderate(aid, { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
+    if (!r.ok) return bad(r.error, 404);
+    return json({ ok: true, posts: shapeForOwner(await readPosts(aid)) });
+  }
+
+  // orders
+  if (action === 'orderList') {
+    const m = await readMeta(aid);
+    return json({ ok: true, orders: (m.orders || []).slice().reverse() });
+  }
+  if (action === 'orderDone') {
+    const sid = String(body.sid || '').slice(0, 120);
+    await mutateMeta(aid, (m) => { const o = (m.orders || []).find((x) => x.sid === sid); if (!o) return false; o.status = body.done === false ? 'new' : 'done'; return true; });
+    return json({ ok: true, orders: (await readMeta(aid)).orders.slice().reverse() });
+  }
+  if (action === 'orderDetail') {
+    /* Fetched, shown, forgotten. Both shipping shapes are read because which one
+       Stripe returns depends on the account's API version. */
+    const sid = String(body.sid || '').slice(0, 120);
+    const mine = (await readMeta(aid)).orders.find((x) => x.sid === sid);
+    if (!mine) return bad('unknown order', 404);
+    const { stripeFor } = await import('./_connect.mjs');
+    const { stripe, opts } = await stripeFor(aid);
+    if (!stripe) return bad('Card payments aren’t switched on', 503);
+    let s;
+    try { s = await stripe.checkout.sessions.retrieve(sid, opts); } catch { return bad('Couldn’t reach Stripe just now', 502); }
+    const cd = s.customer_details || {};
+    const sh = (s.collected_information && s.collected_information.shipping_details) || s.shipping_details || null;
+    const addr = sh && sh.address ? sh.address : null;
+    return json({ ok: true, order: mine, buyer: { name: cd.name || (sh && sh.name) || '', email: cd.email || '' },
+                  shipping: addr ? { name: (sh && sh.name) || '', line1: addr.line1 || '', line2: addr.line2 || '',
+                                     city: addr.city || '', state: addr.state || '', postal: addr.postal_code || '', country: addr.country || '' } : null });
+  }
+  return bad('unknown action', 400);
+}
+const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear',
+                              'postList', 'postHide', 'postPin', 'postReply', 'postDelete',
+                              'orderList', 'orderDone', 'orderDetail']);
+
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove',
                                  'photoUpload', 'photoClear',
                                  // the artist's own verification tick
@@ -1170,6 +1267,7 @@ export default async (req) => {
   }
 
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body, req, me);
+  if (SHOP_ACTIONS.has(action)) return handleShop(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);
   if (SONG_ACTIONS.has(action)) return handleSong(aid, action, body, await getShow(aid));
@@ -1178,7 +1276,21 @@ export default async (req) => {
   if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
   if (PLAN_ACTIONS.has(action)) return handlePlan(aid, action, body);
 
-  let err = null, resetVotes = false, wipe = false, note = null;
+  /* STARTING AND ENDING A NIGHT live in _lifecycle.mjs, because the calendar can
+     now do both without a request behind it (_auto.mjs). One implementation: a tap
+     and the schedule take the identical path — cap, archive, setlist, paid-vote
+     carry. Only `status: 'pre'` still falls through to the switch below. */
+  if (action === 'newShow' || (action === 'status' && (body.status === 'live' || body.status === 'ended'))) {
+    const r = (action === 'status' && body.status === 'ended')
+      ? await endShow(aid, { by: 'artist' })
+      : await startShow(aid, { fresh: action === 'newShow', by: 'artist' });
+    if (r.err) return bad(r.err[0], r.err[1]);
+    let stage = null;
+    try { stage = await stagePayload(aid); } catch { /* the write still succeeded */ }
+    return json({ ok: true, stage, note: r.note || null, songId: null });
+  }
+
+  let err = null, resetVotes = false, note = null;
 
   // Anything that starts a song needs the tally BEFORE it is wiped.
   let counts = null, firstAt = null, votersNow = 0;
@@ -1186,15 +1298,6 @@ export default async (req) => {
     const f = await readFans(aid);
     counts = voteCounts(f); firstAt = firstVotedAt(f);
     votersNow = Object.values(f).filter((x) => (x.v || []).length).length;
-  }
-
-  // A finished show must be snapshotted BEFORE anything wipes the tally —
-  // clearAllFanVotes()/wipeFans() destroy the only copy.
-  if (action === 'newShow' || (action === 'status' && body.status === 'ended')) {
-    try {
-      const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
-      await archiveShow(aid, prev, fans);
-    } catch { /* never block ending a show on the archive */ }
   }
 
   /* Two different ceilings, and the distinction matters: you can KEEP up to
@@ -1212,56 +1315,13 @@ export default async (req) => {
      identically (INVARIANT 0w is untouched; this gates the artist's back office).
      The founding artist predates the registry, so planForArtist returns free for
      him — the owner bypass is load-bearing, not a courtesy. */
-  /* THE GIG CAP. A gig starts in exactly two places: 'newShow', and 'status' going
-     to live from anything else. Counted per UTC calendar month on the show record,
-     because a show in progress is not in history yet and tonight has to count.
-     Refused BEFORE the mutation, never mid-show — once a night is running nothing
-     stops it (INVARIANT 16). */
-  let gigCap = null, gigsUsed = 0;
-  if (action === 'newShow' || action === 'status') {
-    const lim = (await planForArtist(aid)).limits.gigs;
-    gigCap = (isPlatformOwner(aid) || lim === Infinity || lim === undefined) ? null : lim;
-    if (gigCap !== null) {
-      const cur = await getShow(aid);
-      gigsUsed = cur.gigMonth === gigMonthOf() ? cur.gigCount : 0;
-    }
-  }
-
   let canPrice = true;
   if (['freeCredits', 'packs', 'replayCost', 'askSet'].includes(action)) {
     canPrice = isPlatformOwner(aid) || (await planForArtist(aid)).limits.pricing === true;
   }
   const PRICE_LOCKED = ['Setting your own prices is a Plus feature — the defaults stay on for now.', 402];
 
-  /* Going live picks up the setlist the artist chose for tonight's gig, if they
-     chose one. Resolved BEFORE the mutation, because it needs the calendar, and
-     applied after, because applyList writes the show record itself.
-
-     BOTH ways a night starts: "Start the show" and "New show". Only covering the
-     first meant the documented promise ("Tapping Start the show on the night
-     switches to this automatically") silently didn't hold for the artist who ends
-     one set and starts the next.
-
-     A gig's `listId` has three states, and the difference is the whole design:
-       ''     the artist left it on "Leave my current pick" — no opinion, don't touch
-       'all'  they chose All songs — clear whatever is selected
-       <id>   that setlist. If it has since been DELETED, leave their pick alone and
-              say so; blanking it silently is worse than doing nothing. */
-  let autoList = null;
-  if ((action === 'status' && body.status === 'live') || action === 'newShow') {
-    try {
-      const occ = nextOccurrence(await readEvents(aid), Date.now());
-      // only a gig that is on now or within the next few hours — not next Tuesday's
-      if (occ && occ.listId && occ.startsAt - Date.now() < 6 * 3600e3) autoList = occ.listId;
-      if (autoList && autoList !== 'all'
-          && !(await readLists(aid)).lists.some((l) => l.id === autoList)) {
-        autoList = null;
-        note = 'Tonight’s gig points at a setlist you’ve deleted, so nothing changed.';
-      }
-    } catch { /* never block starting a show on the calendar */ }
-  }
   let newSongId = null;                       // so the sheet can keep editing it
-  const freshId = action === 'newShow' ? newShowId() : null;   // outside the CAS
   /* Read before the mutation, for every action that will settle the paid-vote
      ledger afterwards. `play` moves played[] before clearAllFanVotes runs, so the
      post-mutation show prices a just-won replay at 1 instead of replayCost. */
@@ -1280,7 +1340,7 @@ export default async (req) => {
      case was fixing: the reset then priced the old round at the NEW ceiling and
      debited the fan's pack for credits they never took from it. The regression test
      caught it, which is the only reason it is not still here. */
-  const RESETTERS = new Set(['newShow', 'play', 'playTop', 'resetVotes',
+  const RESETTERS = new Set(['play', 'playTop', 'resetVotes',
                              'freeCredits', 'replayCost']);
   const prevShow = RESETTERS.has(action) ? await getShow(aid) : null;   // read before it resets
 
@@ -1312,14 +1372,6 @@ export default async (req) => {
         replay: show.played.includes(id), at: Date.now(),
       });
       if (show.log.length > 200) show.log = show.log.slice(-200);
-    };
-
-    /* Recomputed inside the CAS callback so a retry cannot double-count — the
-       accumulator rule, INVARIANT 0bi. */
-    const countGig = (sh) => {
-      const m = gigMonthOf();
-      if (sh.gigMonth !== m) { sh.gigMonth = m; sh.gigCount = 0; }
-      sh.gigCount += 1;
     };
 
     switch (action) {
@@ -1370,24 +1422,10 @@ export default async (req) => {
         break;
       }
       case 'window': show.windowOpen = !!body.open; break;
-      /* Deliberately NOT resetting the show here, and it took a wrong turn to see why.
-         Starting after an end is USUALLY a new night (C017/C041: Friday's played[] and
-         showId carried into Saturday, so Saturday's room paid replayCost for Friday's
-         whole set). But it is sometimes an accidental End mid-gig, and the server
-         cannot tell those apart — resetting broke the C003 case in the same commit.
-         So the choice is made explicitly in the Studio instead: after an end, the Live
-         tab offers "Start a new show" and "Resume last night" as two separate buttons.
-         No heuristic, nothing to mis-fire. */
+      /* 'live' and 'ended' never reach here — see the delegation to _lifecycle.mjs
+         above, and its header for why a resume deliberately does not reset. */
       case 'status': {
-        const want = ['pre','live','ended'].includes(body.status) ? body.status : show.status;
-        if (want === 'live' && show.status !== 'live') {
-          if (gigCap !== null && gigsUsed >= gigCap) {
-            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
-            return false;
-          }
-          countGig(show);
-        }
-        show.status = want;
+        if (body.status === 'pre') show.status = 'pre';
         break;
       }
       case 'venue': show.venue = String(body.venue || '').slice(0, 80); break;
@@ -1555,19 +1593,6 @@ export default async (req) => {
         break;
       }
       case 'clearSetlist': show.songs = []; break;
-      case 'newShow':
-          if (gigCap !== null && gigsUsed >= gigCap) {
-            err = [`That's your ${gigCap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`, 402];
-            return false;
-          }
-        countGig(show);
-        show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
-        show.status = 'live'; show.windowOpen = true;
-        show.log = [];
-        show.showId = freshId;
-        show.startedAt = Date.now();
-        wipe = true;
-        break;
       default: err = ['unknown action', 400]; return false;
     }
     /* MEASURED, not listed. The previous version kept an allow-list of actions that
@@ -1583,17 +1608,7 @@ export default async (req) => {
   // the library changed => what's in the active setlist may have changed with it
   if (libChanged) note = join(note, await syncActive(aid));
 
-  if (autoList) {
-    try {
-      const r = await applyList(aid, autoList);
-      note = r.listName
-        ? `Playing your “${r.listName}” tonight — ${r.count} songs.`
-        : 'Playing all your songs tonight — that’s what this gig says.';
-    } catch { /* the show is live either way */ }
-  }
-  // paid votes survive a reset — only a fan who gifted them loses them
-  if (wipe) await carryFans(aid, prevShow || (await getShow(aid)));
-  else if (resetVotes) await clearAllFanVotes(aid, prevShow || (await getShow(aid)));
+  if (resetVotes) await clearAllFanVotes(aid, prevShow || (await getShow(aid)));
   // a deleted song must not keep holding somebody's credit
   else if (droppedSong) await dropSongVotes(aid, droppedSong);
 
@@ -1601,7 +1616,7 @@ export default async (req) => {
      With votes final there is no un-vote for the fan to fall back on, so the
      release has to happen here or the credit is stranded for the rest of the round.
      Only when the playable set actually shrank, and the artist is told. */
-  if (!wipe && !resetVotes && !droppedSong) {
+  if (!resetVotes && !droppedSong) {
     /* prevShow is only read for RESETTERS, so fall back to computing from the show
        as it was before this handler's mutation where we have it. */
     const beforeSet = prevShow ? new Set(playable(prevShow).songs.map((x) => x.id)) : null;

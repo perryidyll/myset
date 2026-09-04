@@ -1,7 +1,9 @@
 import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
          mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU,
-         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT } from './_venues.mjs';
+         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH } from './_venues.mjs';
+import { normMerch } from './_profile.mjs';
+import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
          endTimeOf, MAX_EVENTS } from './_events.mjs';
@@ -324,6 +326,71 @@ export default async (req) => {
       return true;
     });
     return send();
+  }
+
+  /* ---------- merch and the community page ----------
+     Merch on a venue's page is a Pro feature (there is no $10 venue tier — venue
+     plans are free and Pro, owner-set). Items sell through a LINK only: a venue has
+     no payout account, so buying through MySet would put its money in the wrong
+     balance (0r, 0x). Removing is never gated (0s). The community page and its
+     moderation are free (0w). */
+  if (action === 'merchList') {
+    const p = await getVenueProfile(vid);
+    return json({ ok: true, merch: p.merch, max: VMAX_MERCH, allowed: !!venueLimits(await venueById(vid)).merch });
+  }
+  if (action === 'merchSave') {
+    if (!venueLimits(await venueById(vid)).merch) return bad('Merch on your page comes with Pro — anything you already added stays.', 402);
+    const incoming = body.item || {};
+    const id = /^m[a-z0-9]{6}$/.test(String(incoming.id || '')) ? String(incoming.id)
+             : 'm' + Math.random().toString(36).slice(2, 8).padEnd(6, '0').slice(0, 6);
+    let full = false, why = null;
+    await mutateVenueProfile(vid, (p) => {
+      p.merch = Array.isArray(p.merch) ? p.merch : [];
+      const at = p.merch.findIndex((m) => m.id === id);
+      const prev = at >= 0 ? p.merch[at] : null;
+      const row = normMerch([{ ...(prev || {}), ...incoming, id, img: (prev && prev.img) || '', at: (prev && prev.at) || Date.now() }])[0];
+      if (!row) { why = 'Give it a name'; return false; }
+      if (!row.link) { why = 'Buying through MySet needs a payout account, which venues don’t have yet — add a link to where it sells.'; return false; }
+      if (at >= 0) p.merch[at] = row;
+      else if (p.merch.length >= VMAX_MERCH) { full = true; return false; }
+      else p.merch.push(row);
+      return true;
+    });
+    if (why) return bad(why);
+    if (full) return bad(`${VMAX_MERCH} items is the most a page holds — edit one of those.`);
+    return send();
+  }
+  if (action === 'merchRemove') {
+    const id = String(body.id || '');
+    await mutateVenueProfile(vid, (p) => { p.merch = (p.merch || []).filter((m) => m.id !== id); return true; });
+    if (/^m[a-z0-9]{6}$/.test(id)) await dropImage(imgOwner(vid), id);
+    return send();
+  }
+  if (action === 'merchPhoto') {
+    if (!venueLimits(await venueById(vid)).merch) return bad('Merch on your page comes with Pro — anything you already added stays.', 402);
+    const id = String(body.id || '');
+    if (!/^m[a-z0-9]{6}$/.test(id)) return bad('unknown item');
+    if (!(await getVenueProfile(vid)).merch.some((m) => m.id === id)) return bad('unknown item', 404);
+    const dec = decodeDataUrl(body.data);
+    if (dec.error) return bad(dec.error);
+    const url = await putImage(imgOwner(vid), id, dec.bytes, dec.type);
+    await mutateVenueProfile(vid, (p) => { const m = (p.merch || []).find((x) => x.id === id); if (!m) return false; m.img = url; return true; });
+    return send();
+  }
+  if (action === 'merchPhotoClear') {
+    const id = String(body.id || '');
+    if (!/^m[a-z0-9]{6}$/.test(id)) return bad('unknown item');
+    await dropImage(imgOwner(vid), id);
+    await mutateVenueProfile(vid, (p) => { const m = (p.merch || []).find((x) => x.id === id); if (!m) return false; m.img = ''; return true; });
+    return send();
+  }
+  if (action === 'postList') {
+    return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid))) });
+  }
+  if (['postHide', 'postPin', 'postReply', 'postDelete'].includes(action)) {
+    const r = await moderate(imgOwner(vid), { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
+    if (!r.ok) return bad(r.error, 404);
+    return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid))) });
   }
 
   return bad('unknown action');

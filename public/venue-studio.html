@@ -396,6 +396,7 @@ async function loadShows(force){
 function setTab(t){ TAB=t; localStorage.setItem('myset.vtab',t); render();
   if(t==='shows'){ loadShows(); loadEvents(); loadPitches(); }
   if(t==='numbers') loadStats();
+  if(t==='merch') loadVComm();
   if(t==='page') loadVerify(); }
 
 async function loadEvents(force){
@@ -523,7 +524,8 @@ function planBox(){
   if(!V||!V.plans) return '';
   const rows=[['photos','Photos on your page',(p)=>p.photos+''],
               ['tick','The green verified tick',(p)=>p.tick?'yes':'—'],
-              ['reviews','Reviews from the room',(p)=>p.reviews?'yes':'—'],
+              ['reviews','A community page — fans post about the night',(p)=>'yes'],
+              ['merch','Merch on your page (sold through your own link)',(p)=>p.merch?'yes':'—'],
               ['tips','Tips for your staff',(p)=>p.tips?'yes':'—'],
               ['speakerVotes','Votes between the sets',(p)=>p.speakerVotes?'yes':'—']];
   const F=V.plans.free,P=V.plans.pro,now=V.plan||'free';
@@ -540,11 +542,6 @@ function planBox(){
     ${now==='free'?`<p class="muted" style="font-size:12px;padding:12px 20px 0">Pro is $${(P.price/100)}/month and isn't self-serve yet — message us and we'll switch it on for your page.</p>`:''}`;
 }
 
-const reviewsCard=()=>soonCard('reviews','Reviews from the room',
-  'People who were actually here — because they voted from a phone in your bar — get to say what the night was like.',
-  [['Only from real nights','No drive-by ratings from people who never came'],
-   ['On your public page','Under your photos, with the date'],
-   ['You get a reply','One per review, in your own words']]);
 const tipsCard=()=>soonCard('tips','Tips for your staff',
   'A tip jar on your page that goes to your team, not to the act.',
   [['Straight to your account','MySet never holds it'],
@@ -555,6 +552,69 @@ const speakerCard=()=>soonCard('speakerVotes','What plays between the sets',
   [['Your playlist, their choice','You put the songs in, they pick the order'],
    ['Quiet nights get busy','The reason people stay for another'],
    ['Off in one tap','Whenever the band is back on']]);
+
+
+/* ---------- merch (Pro) and the community page ----------
+   A venue has no payout account, so an item sells through its own LINK — the
+   server refuses one without (0r, 0x). Moderating the community page is free. */
+let VCOMM=null, vmcOn=true;
+async function loadVComm(force){ if(VCOMM&&!force)return; const d=await post('/venueadmin',{action:'postList'}); if(d&&d.ok){VCOMM=d.posts; if(TAB==='merch'&&V)render();} }
+const vmoney=c=>'$'+(c/100).toFixed(c%100?2:0);
+function vMerchTab(){
+  const items=V.merch||[], stored=V.merchStored||0;
+  const list=`<div class="sec"><span class="kick">Your merch</span><span class="kick">${items.length}/12</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Shows on your community page. Buying through MySet needs a payout account, which venues don’t have yet, so each item links to where it sells.</p>
+    <div class="list">${items.map(m=>`<div class="row">
+        <div class="m"><div class="t">${esc(m.title)}${m.on===false?' <span class="s">· off</span>':''}</div>
+          <div class="s">${m.cents?vmoney(m.cents):'No price'} · ${esc((m.link||'').replace(/^https?:\/\//,'').slice(0,40))}</div></div>
+        <button class="act" onclick="openVMerch('${esc(m.id)}')">Edit</button>
+        <button class="act warn" onclick="rmVMerch('${esc(m.id)}')">✕</button></div>`).join('')||`<div class="row muted">${stored?'Your items are saved and come back with Pro.':'Nothing yet.'}</div>`}</div>
+    <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openVMerch('')">+ Add an item</button></div>`;
+  const posts=VCOMM||[];
+  return `<div class="wrap" style="padding-top:14px"></div>
+    ${lock('merch', list, 'Merch on your page comes with Pro. Anything you add stays saved.')}
+    <div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one, hide anything, or delete it. <a href="/v/${esc(V.slug)}/community" target="_blank" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
+    <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
+      <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · ${p.reports} report${p.reports===1?'':'s'}`:''}</div>
+        <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}</div>
+        ${p.reply?`<div class="s" style="color:var(--accent-2)">You: ${esc(p.reply.text)}</div>`:''}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px">
+        <button class="act" onclick="vReply('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
+        <button class="act" onclick="vComm('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
+        <button class="act" onclick="vComm('postHide','${esc(p.id)}',${p.hidden?'false':'true'})">${p.hidden?'Show':'Hide'}</button>
+        <button class="act warn" onclick="if(confirm('Delete this post for good?'))vComm('postDelete','${esc(p.id)}')">✕</button></div>
+    </div>`).join('')||'<div class="row muted">Nothing posted yet.</div>'}</div>`;
+}
+function openVMerch(id){
+  const m=(V.merch||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',on:true,img:''};
+  vmcOn=m.on!==false;
+  openSheet(`<h3>${id?'Edit item':'Add an item'}</h3>
+    ${id?`<div class="slots" style="margin:6px 0 10px">${slotBox(id,m.img,'sq')}</div>`:'<p class="lede">Save it first, then add a picture.</p>'}
+    <div class="field"><label>Name</label><input class="inp" id="vmTitle" maxlength="60" value="${esc(m.title)}" placeholder="House cap"></div>
+    <div class="field"><label>A line about it</label><input class="inp" id="vmBlurb" maxlength="160" value="${esc(m.blurb)}"></div>
+    <div class="field"><label>Price shown (USD, optional)</label><input class="inp" id="vmPrice" inputmode="decimal" value="${m.cents?(m.cents/100):''}" placeholder="12"></div>
+    <div class="field"><label>Link to where it sells</label><input class="inp" id="vmLink" value="${esc(m.link)}" placeholder="https://…"></div>
+    <div class="row"><div class="m"><div class="t">On the page</div></div>
+      <div class="tog"><button id="vmOn" class="${m.on!==false?'on':''}" onclick="vmcOn=true;this.classList.add('on');document.getElementById('vmOff').classList.remove('on')">On</button>
+      <button id="vmOff" class="${m.on===false?'on':''}" onclick="vmcOn=false;this.classList.add('on');document.getElementById('vmOn').classList.remove('on')">Off</button></div></div>
+    <button class="big" style="margin-top:14px" onclick="saveVMerch('${esc(id)}')">Save</button>`);
+}
+async function saveVMerch(id){
+  const v=k=>(document.getElementById(k)||{}).value||'';
+  const cents=Math.round(parseFloat(v('vmPrice'))*100)||0;
+  const d=await save({action:'merchSave',item:{id:id||undefined,title:v('vmTitle'),blurb:v('vmBlurb'),cents,link:v('vmLink'),on:vmcOn}},'Saved');
+  if(d&&d.ok){ closeSheet(); if(!id){ const m=(V.merch||[]).slice(-1)[0]; if(m) setTimeout(()=>openVMerch(m.id),350); } }
+}
+async function rmVMerch(id){ if(!confirm('Remove this item?'))return; await save({action:'merchRemove',id},'Removed'); }
+async function vComm(action,id,on){ const d=await post('/venueadmin',{action,id,on}); if(d&&d.ok){VCOMM=d.posts;render();} else toast((d&&d.error)||'Couldn’t do that'); }
+function vReply(id){
+  const p=(VCOMM||[]).find(x=>x.id===id)||{};
+  openSheet(`<h3>Reply</h3><p class="lede">${esc((p.text||'').slice(0,160))}</p>
+    <textarea class="inp" id="vrTxt" maxlength="500" style="min-height:110px">${esc(p.reply?p.reply.text:'')}</textarea>
+    <button class="big" style="margin-top:14px" onclick="vReplySave('${esc(id)}')">Save</button>`);
+}
+async function vReplySave(id){ const t=(document.getElementById('vrTxt')||{}).value||''; const d=await post('/venueadmin',{action:'postReply',id,text:t}); if(d&&d.ok){VCOMM=d.posts;closeSheet();render();toast('Replied');} else toast((d&&d.error)||'Couldn’t reply'); }
 
 /* ── render ─────────────────────────────────────────────── */
 function render(){
@@ -648,7 +708,8 @@ function render(){
         }
         return rows.join('');})()}
     </div>
-    ${reviewsCard()}`;
+    <div class="sec"><span class="kick">Your community page</span></div>
+    <div class="row muted">Fans rate a night and post photos on <a href="/v/${esc(V.slug)}/community" target="_blank" style="color:var(--accent);font-weight:600">your community page ↗</a>. Read and moderate it on the <b>Merch</b> tab.</div>`;
   }
 
   if(TAB==='shows'){
@@ -820,6 +881,10 @@ function render(){
     <p class="muted" style="font-size:12px;padding:8px 20px 0">A venue page can’t reach an artist’s setlist, votes or money — different account, different door.</p>`;
   }
 
+  if(TAB==='merch'){
+    body=vMerchTab();
+  }
+
   $('#app').innerHTML=`
   <div class="head">
     <a class="homemark" href="/" aria-label="MySet home">
@@ -837,6 +902,7 @@ function render(){
     <button class="${TAB==='shows'?'on':''}" onclick="setTab('shows')">What’s on</button>
     <button class="${TAB==='numbers'?'on':''}" onclick="setTab('numbers')">Numbers</button>
     <button class="${TAB==='menu'?'on':''}" onclick="setTab('menu')">Menu</button>
+    <button class="${TAB==='merch'?'on':''}" onclick="setTab('merch')">Merch</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${body}
   <div class="wrap" style="padding-top:26px;padding-bottom:8px">
@@ -1225,7 +1291,7 @@ document.addEventListener('change',async e=>{
   const lab=inp.closest('.slot'); if(lab)lab.classList.add('busy');
   try{
     const data=await shrink(file,slot==='cover'?1400:800,slot==='cover'?1.6:1);
-    const d=await save({action:'photoUpload',slot,data},'Photo added');
+    const d=await save(/^m[a-z0-9]{6}$/.test(slot)?{action:'merchPhoto',id:slot,data}:{action:'photoUpload',slot,data},'Photo added');
     if(!d||!d.ok)return;
   }catch(err){ toast('Couldn’t read that photo'); }
   finally{ inp.value=''; if(lab)lab.classList.remove('busy'); }

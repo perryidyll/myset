@@ -60,6 +60,22 @@ body{padding-bottom:34px}
   border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.01em;vertical-align:5px;
   background:rgba(48,209,88,.14);color:#1B8E3C}
 .vbadge.no{background:var(--bg-2);color:var(--faint);font-weight:600}
+@media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
+
+.menu{position:relative}
+.menu summary{list-style:none;cursor:pointer;width:36px;height:36px;border-radius:12px;display:grid;
+  place-items:center;background:var(--surface);box-shadow:var(--sh-1);color:var(--ink)}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.menu[open] summary{background:var(--surface-2)}
+.menu .pop{position:absolute;right:0;top:44px;min-width:200px;background:var(--surface);border-radius:var(--r);
+  box-shadow:var(--sh-3);padding:6px;z-index:20}
+.menu .pop a{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-xs);
+  font-size:15px;font-weight:600;color:var(--ink)}
+.menu .pop a:active{background:var(--surface-2)}
+.menu .pop a small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.menu .pop a i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;
+  background:var(--accent-soft);color:var(--accent-ink);font-style:normal;font-size:14px}
 
 .vacts{display:flex;gap:9px;flex-wrap:wrap;margin:16px 20px 0}
 .vacts a{display:inline-flex;align-items:center;gap:8px;padding:13px 18px;border-radius:var(--pill);
@@ -206,6 +222,13 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
 <div class="wrap">
   <div class="brandbar">
     <a class="mark" href="/"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet <small>· venue</small></a>
+    <details class="menu" id="menu">
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <div class="pop">
+        <a id="mArtist" href="/signup"><i>♪</i><span>Artist Studio<small id="mArtistS">Set one up — it’s free</small></span></a>
+        <a id="mVenue" href="/venues"><i>⌂</i><span>Venue Studio<small id="mVenueS">Set one up — it’s free</small></span></a>
+      </div>
+    </details>
   </div>
   <div id="app"><div class="empty">Loading…</div></div>
   <div class="foot">MySet · myset.vip</div>
@@ -223,6 +246,12 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;'
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const dayNum=d=>+d.slice(8,10);
+(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
+  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
+  if(A){ A.href=a?'/studio':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
+  if(V){ V.href='/venues'; document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
+})();
 const monShort=d=>MON[+d.slice(5,7)-1];
 const MONFULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const dayMonth=d=>`${+d.slice(8,10)} ${MONFULL[+d.slice(5,7)-1]}`;
@@ -308,6 +337,7 @@ function render(){
     ${dh?`<a class="pri" href="${esc(dh)}" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
       Directions</a>`:''}
+    <a href="/v/${esc(SLUG)}/community"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/></svg>Community</a>
     ${v.phone?`<a href="tel:${esc(v.phone.replace(/[^0-9+]/g,''))}">
       <svg viewBox="0 0 24 24"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A15 15 0 014 5a2 2 0 012-2z"/></svg>
       Call</a>`:''}

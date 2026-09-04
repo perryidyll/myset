@@ -1,7 +1,8 @@
 # MySet — the complete handover
 
 **Everything MySet is, does, charges for and depends on.** Written 2026-09-03 and
-re-verified against the live code on **2026-09-04 at commit `0e26935`** — every number
+re-verified against the live code on **2026-09-04 (the community/merch/auto-show
+batch)** — every number
 below was read out of the source or measured by running it, not remembered. If this
 document and the code ever disagree, the code is right and this file is stale.
 
@@ -158,12 +159,17 @@ or mid-vote.
 
 **Install banner:** add MySet to the home screen, with per-platform instructions.
 
-## 2.3 The Artist Studio — six tabs
+## 2.3 The Artist Studio — seven tabs
 
 `/studio`. Dark-only by design — it is used on a stage.
 
 ### Live
 The tab the artist watches during a gig.
+* **the Voting box** at the very top — a thin orange ring, the word *Voting* large and
+  orange, and an Open / Paused switch whose "on" half is orange. It lives here and
+  nowhere else (it used to sit in the header and again in Settings). It is the
+  voting window, not a show control (INVARIANT 0p)
+* a line saying when the show started or ended by itself (see 4.9)
 * three stat tiles: votes now, people in the room and networks, tips taken
 * **Now playing** card, and **My chart** — the artist's private notes for that song
 * **▶ Start top voted — <song> (n)** — the big button
@@ -200,7 +206,14 @@ The tab the artist watches during a gig.
 * every payment, and a **reconcile** button that sweeps Stripe for anything undelivered
 * **What the room said** — the audience star ratings and their notes
 
+### Merch
+* up to 12 items — name, a line, a price in USD, pickup or posted, on/off, a picture —
+  shown on the community page; a **Plus** feature, greyed on free (3.1)
+* **orders** — what fans bought, mark as done, and a Details sheet that fetches the
+  buyer's name and address from Stripe at that moment and keeps nothing
+
 ### Profile
+* **Your community page** — the posts fans left, with reply / pin / hide / delete
 * name, bio, photos (cover, avatar, three more) with cropping
 * links: streaming, social, merch, anything
 * embedded music from YouTube, Spotify and Apple Music
@@ -222,9 +235,15 @@ The tab the artist watches during a gig.
 
 ## 2.4 The artist's public page
 
-`/<slug>`. Cover photo, avatar, name, "Live now — vote the setlist" when a show is on,
-stats, upcoming gigs with dates and addresses, embedded music, links, and a **Join
-live** button.
+`/<slug>`. Cover photo, avatar, name — with the green **✓ Verified** chip when the
+artist has earned the tick and is on a paid plan — "Live now — vote the setlist" when
+a show is on, stats (Joined · Shows · **Fans** · Votes cast · Songs), a **Community**
+button in the stats grid, upcoming gigs with dates and addresses, embedded music,
+links, and a **Join live** button. A menu icon top-right opens two doors: Artist
+Studio and Venue Studio (each goes to sign-up when this phone has no Studio yet).
+"Fans" counts phones that were in the room across archived shows; there is no
+follow. The page makes two requests, not three — the profile payload carries the
+live status, so it no longer pays a 15-read audience poll per view.
 
 ## 2.5 The city gig finder
 
@@ -232,7 +251,7 @@ live** button.
 venue events together, with times in the venue's own local clock. Search, an install
 banner, and links for artists and venues.
 
-## 2.6 The Venue Studio — five tabs
+## 2.6 The Venue Studio — six tabs
 
 `/venues`.
 
@@ -242,18 +261,40 @@ banner, and links for artists and venues.
   engine as artist gigs
 * **Numbers** — how many people were in the room on live-music nights
 * **Menu & offers** — a menu link or items, plus happy-hour style offers
+* **Merch** — items that sell through the venue's own link (a venue has no payout
+  account, so nothing is bought through MySet); a **Pro** feature, greyed on free.
+  The same tab moderates the venue's community page
 * **Settings** — the verification checklist, the page address, team, sign out
 
 ## 2.7 The venue's public page
 
 `/v/<slug>`. Photos, tagline, about, what's on, hours, offers, amenities, directions,
-and the verification badge if earned.
+the verification badge if earned, a **Community** pill and the same top-right menu.
 
 ## 2.8 The two sides meeting
 
 Artists can **pitch a venue** for a slot — only signed-in artists, so a stranger cannot
 spam a bar. Venues see pitches in their Studio and reply. Gigs and venues are matched
 by **name within a city**, never by a stored link, so neither side can break the other.
+
+## 2.9 The community page
+
+`/<slug>/community` and `/v/<slug>/community`. One page, one request, no sign-in.
+
+* **Merch rail** at the top — only when there is something to sell. A card shows a
+  picture, a name, a price and ONE of: **Buy** (Stripe, when the artist can take card
+  payments), **Get it ↗** (the item's own link), or "Ask at the show".
+* **Say something** — up to 500 characters, 1–5 stars, which night (a real archived
+  show, from the artist's own history), an optional name, up to three photos (shrunk
+  on the phone), and a video **link** — YouTube embeds, Instagram and TikTok show as
+  links. Three posts a day per phone, one per show per phone.
+* **The feed** — pinned first, newest first; a heart per phone; a report button; the
+  artist's reply under a post. Hidden posts vanish for the public and stay for the
+  owner. A device id is stored with a post and never shown to anyone.
+* After a show ends, the voting page's wrap-up screen links here with the night
+  pre-selected — "Say something about tonight".
+* Paying for merch returns here, and the page redeems the session the way the voting
+  page does (INVARIANT 5b names both pages).
 
 ---
 
@@ -269,6 +310,7 @@ by **name within a city**, never by a stored link, so neither side can break the
 | Songs live to the audience at once | 50 | unlimited | unlimited |
 | Team seats | 1 | 1 | 5 |
 | Separate setlists | — | ✓ | ✓ |
+| Merch on your community page | — | ✓ | ✓ |
 | Set your own prices | — | ✓ | ✓ |
 | Verification tick | — | ✓ | ✓ |
 | Promote in other cities | — | — | *designed, not built* |
@@ -362,15 +404,19 @@ review found three near-misses in the first pass, all now invariants (0bx0–0bx
 | Price | $0 | **$20/month** |
 | Photos | 3 | 12 |
 | Verification tick | — | ✓ |
-| Google / Trustpilot reviews | — | *designed, not built* |
+| Community page (fans post about the night) | ✓ | ✓ |
+| Merch on the community page (via the venue's own link) | — | ✓ |
 | Receive tips | — | *designed, not built* |
 | Voting on the venue's own speaker music | — | *designed, not built* |
 
 **Not self-serve yet.** There is no venue billing; Perry switches a venue to Pro by
 hand. The Venue Studio says so plainly rather than pretending otherwise.
 
-Same rule as the artist ladder: `reviews`, `tips` and `speakerVotes` are named in
-`VENUE_NOT_BUILT` in `_venues.mjs` and render as "Coming soon" on Pro too.
+Same rule as the artist ladder: `tips` and `speakerVotes` are named in
+`VENUE_NOT_BUILT` in `_venues.mjs` and render as "Coming soon" on Pro too. `reviews`
+left that list on 2026-09-04 — the community page IS reviews — and is free on both
+rows, because what the room reads cannot be Pro-only. There is no $10 venue tier, so
+venue merch sits on Pro.
 
 **The photo cap was in the table and nowhere in the code until 2026-09-03.**
 `VENUE_PLANS` had said 3 free / 12 Pro since venues shipped, the Studio only ever drew
@@ -453,10 +499,10 @@ Static HTML pages plus **Netlify Functions** on **Netlify Blobs**. No framework,
 build step, no database. Every page is one self-contained file with its own styles and
 script; `app.css` carries the shared design tokens.
 
-* **Front end:** 8 pages in `public/`
-* **Back end:** 21 HTTP endpoints plus one nightly job (22 files), and 29 shared
+* **Front end:** 9 pages in `public/`
+* **Back end:** 22 HTTP endpoints plus two scheduled jobs (24 files), and 32 shared
   libraries, in `netlify/functions/`
-* **Tests:** 854 assertions across 19 suites, run with `npm test`
+* **Tests:** 1,055 assertions across 22 suites, run with `npm test`
 
 Two dependencies only: `@netlify/blobs` and `stripe`.
 
@@ -480,11 +526,14 @@ Two dependencies only: `@netlify/blobs` and `stripe`.
 | `GET /api/venue` | A venue's page |
 | `GET /api/img` | Photo bytes |
 | `GET /api/qr` | An SVG QR code |
+| `GET\|POST /api/community` | The community page — feed, merch, shows; post, like, report |
 
-**Artist session** — `POST /api/admin` (90 actions), `GET /api/stage`,
+**Artist session** — `POST /api/admin` (103 actions), `GET /api/stage`,
 `POST /api/auth`, `GET|POST /api/revenue`, `GET|POST /api/history`
 
-**Venue session** — `POST /api/venueadmin` (20 actions), `POST /api/venueauth`
+**Venue session** — `POST /api/venueadmin` (30 actions), `POST /api/venueauth`
+
+**Scheduled** — `sheetcron` (03:20 UTC) and `autocron` (every two minutes; 4.9)
 
 ## 4.3 Every Studio action
 
@@ -521,6 +570,12 @@ listUse
 
 **Venues:** pitchStatus · pitchSend · pitchList · vouch
 
+**The shop:** merchList · merchSave · merchRemove · merchPhoto · merchPhotoClear
+
+**The community page:** postList · postHide · postPin · postReply · postDelete
+
+**Orders:** orderList · orderDone · orderDetail
+
 **Owner only:** promoList · promoCreate · promoRevoke · venueList · venueVerify ·
 venuePlan · idQueue · idApprove · idReject · flagList · flagSet · sheetStatus ·
 sheetSync
@@ -537,13 +592,15 @@ Netlify Blobs, one store, everything namespaced per artist or venue.
 tips) · `hist_` and `histidx_` (past shows) · `ev_` (gigs) · `lists_` · `learn_` ·
 `req_` (requests) · `profile_` · `img_` (photos) · `chart_` · `lyr_` · `push_` ·
 `connect_` · `fb_` (feedback) · `lock_` (passcode lockout) · `apitch_` ·
-`songstats_` (the Sheet's per-show song accumulator — see 9b under the Google Sheet)
+`songstats_` (the Sheet's per-show song accumulator — see 9b under the Google Sheet) ·
+`posts_` and `likes_` (the community page). Merch lives ON `profile_`; orders ON `meta_`.
 
-**Per venue:** `v_` · `vprofile_` · `vouch_` · `vpitch_`
+**Per venue:** `v_` · `vprofile_` (merch on it) · `vouch_` · `vpitch_` · `posts_v_` · `likes_v_`
 
 **Global — the only shared documents:** `artists` (the registry) · `venues` ·
 `cityindex` · `acctindex` · `flags` · `idqueue` · `promos` · `authsecret` · `authc_` ·
-`sheetsync` (the Sheet's watermarks and its one-at-a-time lock)
+`sheetsync` (the Sheet's watermarks and its one-at-a-time lock) · `gigsched` (which
+artists have a gig due — the schedule's one read)
 
 ### The hard-won storage rules
 
@@ -696,6 +753,26 @@ the two buttons under **Settings → If something looks wrong** are for: a plain
 and `hardReset()`, which drops every cache and sends `sw.js` the `myset-unregister`
 message it has listened for since it shipped and never had a button for. Neither
 touches songs, votes, money or the sign-in token.
+
+### Shows that start and end themselves
+
+Perry's rule, 2026-09-04. A gig on the calendar **starts its show at the gig's start
+time** if the artist hasn't already, and **ends it three hours after the gig's
+scheduled end** if the artist hasn't already. `_lifecycle.mjs` is the one
+implementation of starting and ending — the Studio's buttons and the schedule call
+the same two functions, so the gig cap, the archive, tonight's setlist and the
+paid-vote carry happen identically whoever asked. `_auto.mjs` decides; `autocron.mjs`
+rings every two minutes and reads ONE global document, `gigsched`, that every calendar
+write keeps current — so a quiet ring costs one read, and the audience poll is never
+touched.
+
+What it will not do: start the same gig twice; restart a night the artist ended
+themselves; start a show with no songs switched on; end a show while a song started
+in the last 45 minutes; start a venue's own event; retry a cap refusal all night. The
+Studio says "Started by itself for the gig on your calendar" and, after, "ended by
+itself, three hours after your gig's scheduled end". A night where nothing happened
+— no song, no vote, no phone — is not archived, so an empty scheduled start never
+becomes "Shows: 1".
 
 ### The Google Sheet
 
@@ -872,8 +949,12 @@ The full list is `INVARIANTS.md`. These are the ones that matter most.
 
 Full list with priorities: `REVIEW-2026-09-02-REMAINING.md`.
 
-* **The verification tick is not rendered on a public artist page.** An artist can earn
-  it and nobody can see it. Next obvious piece of work.
+* **Venue merch cannot be bought through MySet** — venues have no payout account, so
+  items sell through the venue's own link. Said in the Venue Studio.
+* **Videos on community posts are links, not uploads** — a function body tops out
+  near 6MB. Said in the composer.
+* **No off-switch for scheduled starts.** A gig on the calendar starts its show;
+  the artist can end it. A per-gig "don't start by itself" is the obvious next knob.
 * **Venue billing does not exist.** Venue Pro is switched on by hand.
 * **Push alerts cannot send** — the keys are not set on the server.
 * **Payout countries are a 22-country list**, not Stripe's full set. An artist outside
@@ -896,5 +977,6 @@ Full list with priorities: `REVIEW-2026-09-02-REMAINING.md`.
 
 ---
 
-*Written 2026-09-03. Re-verified 2026-09-04 against commit `0e26935`, with the test
-suite run rather than quoted: 854 assertions, 0 failures.*
+*Written 2026-09-03. Extended 2026-09-04 with the community page, merch, scheduled
+shows, the tick, the menu and the Voting box — test suite run rather than quoted:
+1,055 assertions, 0 failures.*

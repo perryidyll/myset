@@ -650,15 +650,15 @@ export async function wipeFans(aid) {
 }
 
 /* ---------- meta (tips / payment markers) ---------- */
-export const emptyMeta = () => ({ tips: [], paid: {}, gifts: [] });
+export const emptyMeta = () => ({ tips: [], paid: {}, gifts: [], orders: [] });
 export async function readMeta(aid) {
   const { data } = await readDoc(KEY.meta(aid), null);
   const m = data || emptyMeta();
-  m.tips ||= []; m.paid ||= {}; m.gifts ||= [];
+  m.tips ||= []; m.paid ||= {}; m.gifts ||= []; m.orders ||= [];
   return m;
 }
 export const mutateMeta = (aid, fn) =>
-  casDoc(KEY.meta(aid), emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; return fn(m); });
+  casDoc(KEY.meta(aid), emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; m.orders ||= []; return fn(m); });
 
 /* ---------- derived ---------- */
 /* ---------- which songs are in play tonight ----------

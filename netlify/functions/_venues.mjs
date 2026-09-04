@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { casDoc, readDoc } from './_lib.mjs';
 import { authSecret, cleanSlug, normEmail } from './_auth.mjs';
 import { normPlace, mapLinks, safeMapUrl, clean } from './_maps.mjs';
+import { normMerch } from './_profile.mjs';
 
 /* VENUES.
 
@@ -38,7 +39,8 @@ export const mutateVenues = (fn) =>
   });
 
 const VRESERVED = new Set(['api', 'new', 'index', 'home', 'admin', 'studio', 'venue', 'venues',
-  'about', 'help', 'support', 'login', 'signup', 'terms', 'privacy', 'settings', 'null', 'undefined']);
+  'about', 'help', 'support', 'login', 'signup', 'terms', 'privacy', 'settings', 'null', 'undefined',
+  'community', 'merch', 'shop', 'store', 'orders', 'c']);
 
 export async function venueBySlug(slug) {
   const r = await readVenues();
@@ -110,17 +112,23 @@ const TOKEN_TTL = 30 * 24 * 3600e3;
 /* Venue plans. Deliberately thinner than the artist ladder in _plan.mjs: a venue
    pays for reach and trust, not for running a show. Everything the ROOM
    experiences stays free either way (INVARIANT 0w). */
+/* `reviews` became the community page on 2026-09-04 and it is FREE on both rows:
+   it is something the ROOM experiences (0w), and a feed the public reads cannot
+   be a thing a bar has to pay for. `merch` is the shop on that page — a Pro
+   feature for venues, because there is no $10 venue tier (the artist ladder's
+   Plus has no venue equivalent; venue plans are free and Pro, owner-set). */
 export const VENUE_PLANS = {
-  free: { label: 'Free', price: 0, photos: 3, reviews: false, tick: false, tips: false, speakerVotes: false },
-  pro:  { label: 'Pro', price: 2000, photos: 12, reviews: true, tick: true, tips: true, speakerVotes: true },
+  free: { label: 'Free', price: 0, photos: 3, reviews: true, tick: false, merch: false, tips: false, speakerVotes: false },
+  pro:  { label: 'Pro', price: 2000, photos: 12, reviews: true, tick: true, merch: true, tips: true, speakerVotes: true },
 };
 /* Which of those venue flags is a real feature today. Same rule, same reason as
    NOT_BUILT in _plan.mjs: the Venue Studio SHOWS every locked feature rather than
    hiding it, so a flag with no code behind it has to be greyed as "coming" and
-   never as "yours" — otherwise the first venue that pays for Pro finds three dead
-   ends. `photos` and `tick` are real and enforced; these three are not.
-   Deleting a name from here is the last step of building it. */
-export const VENUE_NOT_BUILT = ['reviews', 'tips', 'speakerVotes'];
+   never as "yours" — otherwise the first venue that pays for Pro finds dead ends.
+   `photos`, `tick`, `reviews` and `merch` are real and enforced; these two are
+   not. Deleting a name from here is the last step of building it. */
+export const VENUE_NOT_BUILT = ['tips', 'speakerVotes'];
+export const VMAX_MERCH = 12;
 
 export const venuePlanOf = (v) => (v && VENUE_PLANS[v.plan] ? v.plan : 'free');
 export const venueLimits = (v) => VENUE_PLANS[venuePlanOf(v)];
@@ -244,6 +252,7 @@ export const defaultVenue = () => ({
   hours: Object.fromEntries(DAYS.map((d) => [d, { closed: false, open: '17:00', close: '01:00' }])),
   menu: { url: '', note: '', items: [] },
   offers: [],
+  merch: [],
   links: { website: '', instagram: '', facebook: '', google: '' },
   updatedAt: Date.now(),
 });
@@ -346,6 +355,7 @@ export function normVenue(p) {
     detail: clean(of && of.detail, 140),
     when: clean(of && of.when, 60),
   })).filter((of) => of.title).slice(0, VMAX_OFFERS);
+  o.merch = normMerch(o.merch);
 
   const L = o.links || {};
   o.links = {
@@ -393,6 +403,10 @@ export function shapeVenue(p, reg) {
     amenities: p.amenities.map((k) => ({ key: k, label: (AMENITIES.find(([x]) => x === k) || [, k])[1] })),
     hours: DAYS.map((d) => ({ day: d, label: DAY_LABEL[d], ...p.hours[d] })),
     menu: p.menu, offers: p.offers, links: p.links,
+    /* Merch shows only while the plan has it — never deleted when a plan lapses,
+       just not shown (0s). Same AND-on-read as the tick below. */
+    merch: venueLimits(r).merch ? p.merch : [],
+    merchStored: p.merch.length,
     /* AND on read: the tick is part of Pro, so a stored flag on a free page does
        not show one. Belt and braces with the clear in `venuePlan` — this is the
        half that cannot be missed by a code path that forgot. */

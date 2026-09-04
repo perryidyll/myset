@@ -82,6 +82,39 @@ body{padding-bottom:34px}
   min-height:96px}
 .pname h1{font-size:28px;font-weight:700;letter-spacing:-.038em;line-height:1.08;margin:0;color:var(--ink)}
 .pname p{margin:7px 0 0;font-size:14.5px;color:var(--muted);font-weight:500;line-height:1.4}
+/* The tick. Same chip as the venue page, same glyph, same size — one trust mark
+   across both kinds of page. The green is the only green in the product; the dark
+   override is new, because #1B8E3C on black was 2.6:1. */
+.vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:4px 10px;
+  border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.01em;vertical-align:5px;
+  background:rgba(48,209,88,.14);color:#1B8E3C}
+@media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
+
+/* Top-right menu: two doors, nothing else. A native <details> so it needs no
+   script to open, and closes itself when you tap elsewhere (see the listener). */
+.menu{position:relative}
+.menu summary{list-style:none;cursor:pointer;width:36px;height:36px;border-radius:12px;display:grid;
+  place-items:center;background:var(--surface);box-shadow:var(--sh-1);color:var(--ink)}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.menu[open] summary{background:var(--surface-2)}
+.menu .pop{position:absolute;right:0;top:44px;min-width:200px;background:var(--surface);border-radius:var(--r);
+  box-shadow:var(--sh-3);padding:6px;z-index:20}
+.menu .pop a{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-xs);
+  font-size:15px;font-weight:600;color:var(--ink)}
+.menu .pop a:active{background:var(--surface-2)}
+.menu .pop a small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.menu .pop a i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;
+  background:var(--accent-soft);color:var(--accent-ink);font-style:normal;font-size:14px}
+
+/* The Community button sits in the stats grid as a sixth cell — on a phone that
+   is the empty slot beneath the fans count and to the right of the songs count. */
+.ps.cta{align-self:end}
+.ps.cta a{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;
+  padding:9px 10px;border-radius:var(--pill);font-size:13px;font-weight:700;letter-spacing:-.01em;
+  color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent);transition:transform .22s var(--spring)}
+.ps.cta a:active{transform:scale(.95)}
+.ps.cta a svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
 /* Five numbers don't fit on a phone alongside a button, so the button gets its
    own line and the numbers get a three-across grid that wraps to 3 + 2. */
@@ -202,6 +235,13 @@ body{padding-bottom:34px}
 <div class="wrap">
   <div class="brandbar">
     <a class="mark" href="/" aria-label="MySet home"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet<span class="up">↗</span></a>
+    <details class="menu" id="menu">
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <div class="pop">
+        <a id="mArtist" href="/signup"><i>♪</i><span>Artist Studio<small id="mArtistS">Set one up — it’s free</small></span></a>
+        <a id="mVenue" href="/venues"><i>⌂</i><span>Venue Studio<small id="mVenueS">Set one up — it’s free</small></span></a>
+      </div>
+    </details>
   </div>
   <div id="app"></div>
   <div class="foot">MySet · myset.vip</div>
@@ -219,6 +259,16 @@ const AQ=SLUG?'&a='+encodeURIComponent(SLUG):'';
 const AQ1=SLUG?'?a='+encodeURIComponent(SLUG):'';
 const HOME=SLUG?'/'+SLUG:'/';
 const VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
+const COMMHREF=SLUG?'/'+SLUG+'/community':'/community.html';
+/* The menu's two doors. Whether somebody has a Studio is a local fact — the token
+   in this browser — never a question asked of the server from a public page
+   (INVARIANT 9h). A venue is a different account with its own token (0x). */
+(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
+  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
+  if(A){ A.href=a?'/studio':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
+  if(V){ V.href='/venues'; document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
+})();
 
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const PROV={youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'};
@@ -293,12 +343,13 @@ const LABEL={spotify:'Spotify',applemusic:'Apple Music',ytmusic:'YouTube Music',
 let P=null,S=null,G=null;
 
 async function boot(){
-  const [p,s,g]=await Promise.all([
+  /* Two fetches, not three: /api/profile now carries live/venue/city, so the page
+     no longer pays a full 15-read audience poll just to draw the Live pill. */
+  const [p,g]=await Promise.all([
     fetch(`${API}/profile${AQ1}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
-    fetch(`${API}/show?fan=profile${AQ}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
     fetch(`${API}/events?a=${encodeURIComponent(SLUG||'perryidyll')}&days=90`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
   ]);
-  P=p; S=s; G=g; render();
+  P=p; S=null; G=g; render();
   hideIntro();
 }
 
@@ -315,7 +366,7 @@ function render(){
     document.title = gone ? 'Not found — MySet' : 'MySet';
     return;
   }
-  const live=S&&S.ok&&S.status==='live';
+  const live=!!P.live;
   const st=P.stats||{shows:0,people:0,songs:0,votes:0};
   let h='';
 
@@ -335,7 +386,7 @@ function render(){
       <div class="pav" style="background-image:url('${esc(P.avatar||P.photo||'/img/band.jpg')}')"></div>
     </div>
     <div class="pname">
-      <h1>${esc(P.name)}</h1>
+      <h1>${esc(P.name)}${P.verified?'<span class="vbadge" title="MySet checked this is really them">✓ Verified</span>':''}</h1>
       ${P.tagline?`<p>${esc(P.tagline)}</p>`:''}
 
     </div>
@@ -347,19 +398,20 @@ function render(){
   </div>
   <div class="pstats">
     ${[[joinedWord(st.joined),'Joined'],[compact(st.shows),'Shows'],
-       [compact(st.people),'Audience'],[compact(st.votes),'Votes cast'],
+       [compact(st.people),'Fans'],[compact(st.votes),'Votes cast'],
        [compact(st.songs),'Songs']]
       .filter(([v])=>v).map(([v,l])=>`<div class="ps"><b>${esc(v)}</b><span>${l}</span></div>`).join('')}
+    <div class="ps cta"><a href="${COMMHREF}"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/></svg>Community</a></div>
   </div>`;
 
   /* Driven by the calendar, not the old show.showTime placeholder — that said
      8:00 PM while the actual gig was at 8:30. */
   const ng=nextGig();
-  if(live&&S&&S.venue){
+  if(live&&S&&P.venue){
     h+=`<div class="tonight rise">
       <div class="top">
         <div class="when"><b>Now</b><span>On stage</span></div>
-        <div class="where"><b>${esc(S.venue)}</b><span>${esc(S.city||'')}</span></div>
+        <div class="where"><b>${esc(P.venue)}</b><span>${esc(P.city||'')}</span></div>
       </div>
     </div>`;
   } else if(ng){

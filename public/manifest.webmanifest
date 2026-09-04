@@ -1,7 +1,7 @@
 {
   "name": "MySet — the room picks the next song",
   "short_name": "MySet",
-  "description": "Your audience votes from their phones on what you play next.",
+  "description": "Your fans vote from their phones on what you play next.",
   "id": "/",
   "start_url": "/?src=pwa",
   "scope": "/",

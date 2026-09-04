@@ -1,5 +1,5 @@
 import { bad, cleanArtistId } from './_lib.mjs';
-import { getImage, SLOTS } from './_img.mjs';
+import { getImage, isSlot } from './_img.mjs';
 import { artistBySlug } from './_auth.mjs';
 
 /* Public. Serves an artist's uploaded photo. The URL carries a ?v= stamp that
@@ -7,7 +7,7 @@ import { artistBySlug } from './_auth.mjs';
 export default async (req) => {
   const q = new URL(req.url).searchParams;
   const slot = q.get('s') || '';
-  if (!SLOTS.has(slot)) return bad('unknown photo', 404);
+  if (!isSlot(slot)) return bad('unknown photo', 404);
 
   const raw = q.get('a') || '';
   /* A venue's photos live under `v_<id>`. Artist ids and slugs are stripped to

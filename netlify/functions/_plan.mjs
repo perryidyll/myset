@@ -35,6 +35,7 @@ export const PLANS = {
     seats: 1,
     pricing: false,       // change free-vote count, pack prices, replay/ask costs
     setlists: false,      // named subsets of the library, one active at a time
+    merch: false,         // sell things from the community page (Perry: a Plus feature)
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
     presskit: false,
@@ -50,7 +51,7 @@ export const PLANS = {
        a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
     cut: 0.02,
     seats: 1,
-    pricing: true, setlists: true,
+    pricing: true, setlists: true, merch: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
@@ -59,7 +60,7 @@ export const PLANS = {
     gigs: Infinity,
     cut: 0,
     seats: 5,
-    pricing: true, setlists: true,
+    pricing: true, setlists: true, merch: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };
@@ -106,6 +107,10 @@ export async function planForArtist(aid) {
 
 /** Only the founding artist can mint or revoke codes. */
 export const isPlatformOwner = (aid) => aid === DEFAULT_ARTIST;
+/** May this artist sell merch? ONE answer for the Studio, the checkout and the page —
+ *  the founder predates the registry (planForArtist says free for him), so the owner
+ *  bypass is load-bearing here exactly as it is for pricing. */
+export const merchAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.merch === true);
 
 /* ---------- promo codes ---------- */
 const PROMOS = 'promos';

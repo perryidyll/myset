@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Community — MySet</title>
+<meta name="description" content="What fans said about the nights, and what's for sale.">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-512.png">
+<link rel="stylesheet" href="/app.css">
+<!-- blocking on purpose: MySetPull() is called inline below (INVARIANT 0cf) -->
+<script src="/pull.js"></script>
+<style>
+body{padding-bottom:34px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+.mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
+.mark i{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
+.mark i svg{width:14px;height:14px;fill:#fff;display:block}
+.mark .up{font-size:12px;color:var(--faint);font-weight:600;margin-left:1px}
+.menu{position:relative}
+.menu summary{list-style:none;cursor:pointer;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--surface);box-shadow:var(--sh-1);color:var(--ink)}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.menu[open] summary{background:var(--surface-2)}
+.menu .pop{position:absolute;right:0;top:44px;min-width:200px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-3);padding:6px;z-index:20}
+.menu .pop a{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-xs);font-size:15px;font-weight:600;color:var(--ink)}
+.menu .pop a small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.menu .pop a i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-soft);color:var(--accent-ink);font-style:normal;font-size:14px}
+
+.owner{display:flex;align-items:center;gap:12px;margin:4px 18px 0}
+.owner .av{width:48px;height:48px;border-radius:15px;background:var(--bg-2) center/cover;flex:0 0 auto;box-shadow:var(--sh-1)}
+.owner .n{flex:1;min-width:0}
+.owner h1{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.owner .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 9px;border-radius:var(--pill);font-size:11px;font-weight:700;letter-spacing:.01em;vertical-align:3px;background:rgba(48,209,88,.14);color:#1B8E3C}
+@media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
+.share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600}
+.sect{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:26px 20px 10px}
+
+/* the merch rail */
+.rail{display:flex;gap:12px;overflow-x:auto;padding:2px 18px 6px;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.rail::-webkit-scrollbar{display:none}
+.mcard{flex:0 0 156px;scroll-snap-align:start;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
+.mcard .pic{width:100%;aspect-ratio:1;background:var(--bg-2) center/cover;display:grid;place-items:center;font-size:34px;font-weight:700;color:var(--faint)}
+.mcard .b{padding:10px 12px 12px}
+.mcard .t{font-size:14px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em}
+.mcard .p{font-size:13px;color:var(--muted);margin-top:3px}
+.mcard .buy{display:block;width:100%;margin-top:9px;padding:9px 0;border-radius:var(--pill);text-align:center;font-size:13px;font-weight:700;background:var(--accent);color:#fff}
+.mcard .buy.ext{background:transparent;color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.mcard .buy.ask{background:var(--bg-2);color:var(--muted);font-weight:600}
+.fineprint{font-size:12.5px;color:var(--faint);margin:10px 20px 0;line-height:1.4}
+
+/* the composer */
+.comp{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:14px 14px 12px}
+.comp .stars{display:flex;gap:4px;margin:0 0 6px}
+.comp .stars button{font-size:28px;line-height:1;color:var(--faint);padding:2px 3px;transition:transform .2s var(--spring)}
+.comp .stars button.on{color:var(--accent-2)}
+.comp .stars button:active{transform:scale(1.2)}
+.comp textarea{width:100%;min-height:96px;resize:vertical;padding:12px 14px;font-size:16px;line-height:1.4;background:var(--bg);border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);margin-top:6px}
+.comp textarea:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+.comp .cnt{font-size:12px;color:var(--faint);text-align:right;margin-top:4px}
+.comp .cnt.hot{color:var(--accent-2);font-weight:600}
+.comp .inp{margin-top:8px;min-height:44px;padding:11px 14px;font-size:15px}
+.comp select.inp{appearance:none;-webkit-appearance:none}
+.comp .row2{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.comp .chip{padding:9px 13px;border-radius:var(--pill);font-size:13px;font-weight:600;background:var(--bg);box-shadow:0 0 0 1.5px var(--hair) inset;color:var(--ink-2)}
+.comp .thumbs{display:flex;gap:8px;margin-top:8px}
+.comp .thumbs div{width:58px;height:58px;border-radius:12px;background:center/cover;position:relative}
+.comp .thumbs div b{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:11px;display:grid;place-items:center;cursor:pointer}
+.comp .go{margin-top:12px;padding:14px;font-size:16px}
+.comp .go:disabled{opacity:.45}
+
+/* the feed */
+.post{margin:12px 18px 0;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:14px 14px 10px}
+.post .top{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.post .top b{color:var(--ink);font-weight:700}
+.post .st{color:var(--accent-2);letter-spacing:1px;font-size:13px}
+.post .evtag{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent-ink);padding:3px 8px;border-radius:var(--pill)}
+.post .pin{font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--bg-2);color:var(--muted);padding:3px 8px;border-radius:var(--pill)}
+.post .tx{margin:8px 0 0;font-size:15.5px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word}
+.post .pics{display:grid;gap:6px;margin-top:10px;grid-template-columns:repeat(3,1fr)}
+.post .pics.n1{grid-template-columns:1fr}.post .pics.n2{grid-template-columns:1fr 1fr}
+.post .pics img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;cursor:zoom-in}
+.post .pics.n1 img{aspect-ratio:4/3}
+.post .vid{margin-top:10px;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:16/9}
+.post .vid iframe{width:100%;height:100%;border:0;display:block}
+.post .vlink{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 14px;border-radius:var(--pill);background:var(--bg);font-size:14px;font-weight:600}
+.post .rep{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:14px;line-height:1.4}
+.post .rep b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-ink);margin-bottom:3px}
+.post .ft{display:flex;align-items:center;gap:14px;margin-top:10px;font-size:13px;color:var(--muted)}
+.post .ft .heart{display:inline-flex;align-items:center;gap:5px;font-weight:700;font-size:14px;color:var(--muted);padding:6px 10px;margin-left:-10px;border-radius:var(--pill);transition:transform .2s var(--spring)}
+.post .ft .heart.on{color:var(--accent)}
+.post .ft .heart:active{transform:scale(1.15)}
+.post .ft .more{margin-left:auto;padding:6px 10px;font-weight:700;letter-spacing:1px}
+.empty{margin:14px 18px 0;padding:26px 20px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);text-align:center;color:var(--muted);font-size:14.5px}
+.foot{padding:32px 18px 40px;text-align:center;font-size:12.5px;color:var(--faint)}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:80;display:none;place-items:center;padding:20px}
+.lb.on{display:grid}.lb img{max-width:100%;max-height:100%;border-radius:8px}
+.receipt{margin:14px 18px 0;padding:16px;border-radius:var(--r);background:var(--accent-soft);color:var(--ink);font-size:15px;line-height:1.4}
+.receipt b{display:block;color:var(--accent-ink);margin-bottom:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brandbar">
+    <a class="mark" href="/" aria-label="MySet home"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet<span class="up">↗</span></a>
+    <details class="menu" id="menu">
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <div class="pop">
+        <a id="mArtist" href="/signup"><i>♪</i><span>Artist Studio<small id="mArtistS">Set one up — it’s free</small></span></a>
+        <a id="mVenue" href="/venues"><i>⌂</i><span>Venue Studio<small id="mVenueS">Set one up — it’s free</small></span></a>
+      </div>
+    </details>
+  </div>
+  <div id="app"><div class="empty">Loading…</div></div>
+  <div class="foot">MySet · myset.vip</div>
+</div>
+<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet"></div>
+<div class="lb" id="lb" onclick="this.classList.remove('on')"><img id="lbimg" alt=""></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), API='/api';
+/* /<slug>/community  or  /v/<slug>/community */
+const P=location.pathname.split('/').filter(Boolean);
+const VENUE=P[0]==='v';
+const SLUG=VENUE?(P[1]||''):(P[0]&&P[0]!=='community.html'?P[0]:'');
+const Q=VENUE?'?v='+encodeURIComponent(SLUG):(SLUG?'?a='+encodeURIComponent(SLUG):'?');
+const HOME=VENUE?'/v/'+SLUG:'/'+SLUG;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+/* the same device id the voting page uses — copied from vote.html, deliberately
+   not shared: that page's payment-return path is not touched by this one */
+function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
+  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
+  return v;}
+const FAN=fanId();
+(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
+  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
+  if(A){ A.href=a?'/studio':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
+  if(V){ document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
+})();
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
+function openSheet(h){$('#sheet').innerHTML='<div class="grab"></div>'+h;$('#sheet').classList.add('on');$('#bg').classList.add('on');}
+function closeSheet(){$('#sheet').classList.remove('on');$('#bg').classList.remove('on');}
+const money=c=>'$'+(c/100).toFixed(c%100?2:0);
+const ago=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
+
+let D=null, DRAFT={stars:0,photos:[],show:''}, SHOWPRE=(new URLSearchParams(location.search).get('show')||'');
+
+async function load(){
+  try{
+    const r=await fetch(`${API}/community${Q}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store'});
+    const d=await r.json();
+    if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b><br>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
+    D=d; render();
+  }catch(e){ $('#app').innerHTML=`<div class="empty">Couldn’t load this page just now. Pull down to retry.</div>`; }
+}
+
+function render(){
+  const d=D, who=VENUE?'The venue':'The artist';
+  let h=`<div class="owner rise">
+    <div class="av" style="background-image:url('${esc(d.avatar||'/img/band.jpg')}')"></div>
+    <div class="n"><div class="k">Community</div>
+      <h1><a href="${esc(HOME)}">${esc(d.name)}</a>${d.verified?'<span class="vbadge">✓ Verified</span>':''}</h1></div>
+    <button class="share" onclick="share()">Share</button>
+  </div>`;
+
+  if((d.merch||[]).length){
+    h+=`<div class="sect">Merch</div><div class="rail">${d.merch.map(m=>`
+      <div class="mcard">
+        <div class="pic" ${m.img?`style="background-image:url('${esc(m.img)}')"`:''}>${m.img?'':esc((m.title||'?').slice(0,1).toUpperCase())}</div>
+        <div class="b"><div class="t">${esc(m.title)}</div>
+          <div class="p">${m.cents?money(m.cents):'No price listed'}${m.blurb?' · '+esc(m.blurb):''}</div>
+          ${d.canBuy&&m.cents>=100?`<button class="buy" data-buy="${esc(m.id)}">Buy · ${money(m.cents)}</button>`
+            :m.link?`<a class="buy ext" href="${esc(m.link)}" target="_blank" rel="noopener noreferrer">Get it ↗</a>`
+            :`<span class="buy ask">Ask at the show</span>`}</div>
+      </div>`).join('')}</div>
+      ${d.canBuy?`<p class="fineprint">Paid to ${esc(d.name)} directly. Pickup items are handed over at a show.</p>`:''}`;
+  }
+
+  // the composer
+  const showOpts=(d.shows||[]);
+  h+=`<div class="sect">Say something</div>
+  <div class="comp">
+    <div class="stars">${[1,2,3,4,5].map(n=>`<button data-star="${n}" class="${DRAFT.stars>=n?'on':''}" aria-label="${n} stars">★</button>`).join('')}</div>
+    <textarea id="txt" maxlength="500" placeholder="How was the night?">${esc(DRAFT.text||'')}</textarea>
+    <div class="cnt" id="cnt">0/500</div>
+    ${showOpts.length?`<select class="inp" id="showSel"><option value="">Just in general</option>${showOpts.map(s=>`<option value="${esc(s.showId)}" ${(DRAFT.show||SHOWPRE)===s.showId?'selected':''}>${esc(s.label)}</option>`).join('')}</select>`:''}
+    <input class="inp" id="nm" maxlength="30" placeholder="Your name (optional)" value="${esc(DRAFT.name||'')}">
+    <input class="inp" id="vid" placeholder="Paste a video link — YouTube, Instagram or TikTok" value="${esc(DRAFT.video||'')}">
+    <div class="row2">
+      <label class="chip" style="cursor:pointer">＋ Add photos<input type="file" accept="image/*" multiple id="pf" style="display:none"></label>
+      <span class="muted" style="font-size:12px">Up to three</span>
+    </div>
+    <div class="thumbs" id="thumbs">${DRAFT.photos.map((p,i)=>`<div style="background-image:url('${p}')"><b data-rm="${i}">✕</b></div>`).join('')}</div>
+    <button class="go" id="postBtn" disabled>Post</button>
+    <p class="fineprint" style="margin:10px 0 0">Three posts a day per phone. You won’t get a notification — come back and look.</p>
+  </div>`;
+
+  // the feed
+  const posts=d.posts||[];
+  h+=`<div class="sect">What fans said${posts.length?` · ${posts.length}`:''}</div>`;
+  if(!posts.length) h+=`<div class="empty">Nothing here yet — say something about a night.</div>`;
+  for(const p of posts){
+    const n=p.photos.length;
+    h+=`<div class="post" data-post="${esc(p.id)}">
+      <div class="top"><b>${esc(p.name||'Someone')}</b>${p.mine?' <span class="muted">(you)</span>':''}
+        ${p.stars?`<span class="st">${'★'.repeat(p.stars)}<span style="color:var(--hair-2)">${'★'.repeat(5-p.stars)}</span></span>`:''}
+        ${p.showLabel?`<span class="evtag">${esc(p.showLabel)}</span>`:''}${p.pinned?'<span class="pin">Pinned</span>':''}</div>
+      ${p.text?`<p class="tx">${esc(p.text)}</p>`:''}
+      ${n?`<div class="pics n${n}">${p.photos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy" data-zoom="${esc(u)}">`).join('')}</div>`:''}
+      ${p.video?(p.video.src?`<div class="vid"><iframe src="${esc(p.video.src)}" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`
+        :`<a class="vlink" href="${esc(p.video.href)}" target="_blank" rel="noopener noreferrer">▶ Watch on ${p.video.provider==='tiktok'?'TikTok':'Instagram'} ↗</a>`):''}
+      ${p.reply?`<div class="rep"><b>${who}</b>${esc(p.reply.text)}</div>`:''}
+      <div class="ft"><button class="heart ${p.liked?'on':''}" data-like="${esc(p.id)}">${p.liked?'♥':'♡'} <span>${p.likes||''}</span></button>
+        <span>${ago(p.at)}</span><button class="more" data-more="${esc(p.id)}" aria-label="More">⋯</button></div>
+    </div>`;
+  }
+  h+=`<p class="fineprint" style="margin-top:16px">Posts come straight from fans’ phones and aren’t checked first. ${who} can hide anything.</p>`;
+  $('#app').innerHTML=h;
+  wire();
+}
+
+function wire(){
+  const txt=$('#txt'), cnt=$('#cnt'), btn=$('#postBtn');
+  const upd=()=>{ if(!txt)return; const n=txt.value.length; cnt.textContent=`${n}/500`; cnt.classList.toggle('hot',n>=480);
+    btn.disabled=!(txt.value.trim()||DRAFT.stars||DRAFT.photos.length||($('#vid')&&$('#vid').value.trim())); };
+  if(txt){ txt.addEventListener('input',()=>{DRAFT.text=txt.value;upd();}); upd(); }
+  const vid=$('#vid'); if(vid) vid.addEventListener('input',()=>{DRAFT.video=vid.value;upd();});
+  const nm=$('#nm'); if(nm) nm.addEventListener('input',()=>DRAFT.name=nm.value);
+  const sel=$('#showSel'); if(sel) sel.addEventListener('change',()=>DRAFT.show=sel.value);
+  document.querySelectorAll('[data-star]').forEach(b=>b.addEventListener('click',()=>{ const n=+b.getAttribute('data-star'); DRAFT.stars=DRAFT.stars===n?0:n; render(); }));
+  document.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{ DRAFT.photos.splice(+b.getAttribute('data-rm'),1); render(); }));
+  const pf=$('#pf'); if(pf) pf.addEventListener('change',async()=>{ for(const f of [...pf.files].slice(0,3-DRAFT.photos.length)){ try{ DRAFT.photos.push(await shrink(f)); }catch(e){ toast('Couldn’t read that photo'); } } render(); });
+  if(btn) btn.addEventListener('click',post);
+  document.querySelectorAll('[data-like]').forEach(b=>b.addEventListener('click',()=>like(b)));
+  document.querySelectorAll('[data-more]').forEach(b=>b.addEventListener('click',()=>more(b.getAttribute('data-more'))));
+  document.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>buySheet(b.getAttribute('data-buy'))));
+  document.querySelectorAll('[data-zoom]').forEach(i=>i.addEventListener('click',()=>{ $('#lbimg').src=i.getAttribute('data-zoom'); $('#lb').classList.add('on'); }));
+}
+
+/* shrink on the phone, like every other upload: 1024px longest side, JPEG stepped
+   down until it is under ~400KB */
+function shrink(file){ return new Promise((res,rej)=>{ const img=new Image(); const url=URL.createObjectURL(file);
+  img.onload=()=>{ const max=1024, r=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement('canvas');
+    c.width=Math.round(img.width*r); c.height=Math.round(img.height*r); c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(url); let d=null; for(const q of [0.82,0.7,0.58,0.5]){ d=c.toDataURL('image/jpeg',q); if(d.length*0.75<400*1024) break; } res(d); };
+  img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('bad image'));}; img.src=url; }); }
+
+async function post(){
+  const btn=$('#postBtn'); btn.disabled=true; btn.textContent='Posting…';
+  try{
+    const body={action:'post',fan:FAN,text:($('#txt')||{}).value||'',stars:DRAFT.stars||null,name:($('#nm')||{}).value||'',
+      show:($('#showSel')||{}).value||'',video:($('#vid')||{}).value||'',photos:DRAFT.photos};
+    const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(!d.ok){ toast(d.error||'Couldn’t post'); btn.disabled=false; btn.textContent='Post'; return; }
+    D.posts=d.posts; DRAFT={stars:0,photos:[],show:''}; SHOWPRE=''; render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
+  }catch(e){ toast('Connection hiccup — try again'); btn.disabled=false; btn.textContent='Post'; }
+}
+async function like(b){
+  const id=b.getAttribute('data-like'), on=!b.classList.contains('on');
+  b.classList.toggle('on',on); const sp=b.querySelector('span'); const before=+(sp.textContent||0); sp.textContent=Math.max(0,before+(on?1:-1))||''; b.firstChild.textContent=on?'♥ ':'♡ ';
+  try{ const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:on?'like':'unlike',fan:FAN,id})});
+    const d=await r.json(); if(d.ok){ sp.textContent=d.likes||''; } else throw new Error(d.error); }
+  catch(e){ b.classList.toggle('on',!on); sp.textContent=before||''; b.firstChild.textContent=on?'♡ ':'♥ '; toast('Couldn’t do that just now'); }
+}
+function more(id){
+  openSheet(`<h3>This post</h3><p class="lede">Something wrong with it?</p>
+    <button class="btn btn-block" style="margin-top:14px" onclick="report('${esc(id)}')">Report it</button>
+    <button class="btn btn-block btn-ghost" style="margin-top:10px" onclick="closeSheet()">Never mind</button>`);
+}
+async function report(id){
+  closeSheet();
+  try{ const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'report',fan:FAN,id})});
+    const d=await r.json(); toast(d.ok?'Reported — thanks':(d.error||'Couldn’t report')); }catch(e){ toast('Connection hiccup — try again'); }
+}
+function share(){ const url=location.href.split('?')[0]; if(navigator.share){ navigator.share({title:`${D.name} — Community`,url}).catch(()=>{}); } else { try{ navigator.clipboard.writeText(url); toast('Link copied'); }catch(e){ toast(url); } } }
+
+/* ---------- buying ---------- */
+let QTY=1;
+function buySheet(id){
+  const m=(D.merch||[]).find(x=>x.id===id); if(!m) return; QTY=1;
+  const paint=()=>{ $('#qty').textContent=QTY; $('#buyGo').textContent=`Pay ${money(m.cents*QTY)}`; };
+  openSheet(`<h3>${esc(m.title)}</h3><p class="lede">${m.ship==='ship'?'Posted to you — you’ll give an address at checkout.':'Pick it up at a show.'}</p>
+    <div class="tiles" style="align-items:center"><button class="tile" style="flex:0 0 64px;text-align:center" onclick="QTY=Math.max(1,QTY-1);(${paint.toString()})()">−</button>
+      <b id="qty" style="flex:1;text-align:center;font-size:26px">1</b>
+      <button class="tile" style="flex:0 0 64px;text-align:center" onclick="QTY=Math.min(5,QTY+1);(${paint.toString()})()">＋</button></div>
+    <button class="go" id="buyGo" onclick="buy('${esc(id)}')">Pay ${money(m.cents)}</button>
+    <p class="fine">Paid to ${esc(D.name)} through Stripe. MySet never sees your card.</p>`);
+}
+const PEND='myset.pending.merch';
+async function buy(id){
+  const b=$('#buyGo'); b.disabled=true; b.textContent='Opening checkout…';
+  const attempt=Math.random().toString(36).slice(2,14);
+  try{
+    const r=await fetch(`${API}/pay${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({fan:FAN,kind:'merch',item:id,qty:QTY,attempt})});
+    const d=await r.json();
+    if(!d.ok||!d.url){ toast('Couldn’t open checkout — try again in a moment'); b.disabled=false; return; }
+    try{ localStorage.setItem(PEND,JSON.stringify({id:d.id,at:Date.now()})); }catch(e){}
+    location.href=d.url;
+  }catch(e){ toast('Couldn’t open checkout — try again in a moment'); b.disabled=false; }
+}
+/* the return trip: verify with the server, never trust the URL (INVARIANT 6); a
+   stale pending session from a lost return is retried too (5c) */
+async function redeem(sid){
+  try{
+    const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}${Q==='?'?'':'&'+Q.slice(1)}`);
+    const d=await r.json();
+    if(d.ok){ try{ localStorage.removeItem(PEND); }catch(e){}
+      const app=$('#app'); const card=document.createElement('div'); card.className='receipt';
+      card.innerHTML=`<b>Paid — thank you</b>${d.already?'That order was already in.':`${esc(D.name)} has your order${d.kind==='merch'?'':''}.`} ${d.redelivered?'':''}`;
+      app.insertBefore(card,app.firstChild); return true; }
+    if(d.error==='not paid') return false;
+  }catch(e){}
+  return false;
+}
+async function handleReturn(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('cancelled')){ toast('Payment cancelled'); history.replaceState(null,'',location.pathname); }
+  const sid=q.get('paid');
+  if(sid){ await redeem(sid); history.replaceState(null,'',location.pathname); return; }
+  let p=null; try{ p=JSON.parse(localStorage.getItem(PEND)||'null'); }catch(e){}
+  if(p&&p.id&&Date.now()-p.at<86400000){ const ok=await redeem(p.id); if(!ok){ try{ localStorage.removeItem(PEND); }catch(e){} } }
+}
+
+MySetPull(async()=>{ try{ await load(); }catch(e){} });
+(async()=>{ await load(); if(D) await handleReturn(); })();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

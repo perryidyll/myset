@@ -38,8 +38,18 @@
 # nothing has to move. `v` is reserved for artists, and so is any slug starting
 # with it, so the two can never shadow each other.
 [[redirects]]
+  from = "/v/:slug/community"
+  to = "/community.html"
+  status = 200
+
+[[redirects]]
   from = "/v/:slug"
   to = "/venue.html"
+  status = 200
+
+[[redirects]]
+  from = "/:slug/community"
+  to = "/community.html"
   status = 200
 
 [[redirects]]

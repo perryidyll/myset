@@ -600,7 +600,8 @@ function render(){
         <button class="lyricsbtn" onclick="openLyrics()">
           <svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h13M4 16h8"/><circle cx="18.5" cy="15" r="2.6"/><path d="M21.1 15V8.4l-3.6.9"/></svg>
           Lyrics</button></div>`
-    : `<div class="now none"><div class="lab">${ended?'Tonight':'Playing now'}</div><div class="t">${ended?'That’s all — see you next time':'Starting soon…'}</div></div>`;
+    : `<div class="now none"><div class="lab">${ended?'Tonight':'Playing now'}</div><div class="t">${ended?'That’s all — see you next time':'Starting soon…'}</div>
+        ${ended?`<a class="lyricsbtn" href="${SLUG?'/'+esc(SLUG)+'/community':'/community.html'}${d.showId?'?show='+encodeURIComponent(d.showId):''}" style="margin-top:12px;display:inline-flex">Say something about tonight →</a>`:''}</div>`;
 
   if(!ended) h += `<div class="strip ${open?'':'shut'}">
       <span class="l"><span class="dot"></span>${open?'Voting open':'Voting paused'}</span>

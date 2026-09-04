@@ -87,6 +87,7 @@ export default async (req) => {
     src: MARK,                                 // provenance — see _canary.mjs
     artistId: aid, artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
     status: show.status, windowOpen: !!show.windowOpen,
+    showId: show.showId || '',                // so "say something about tonight" can name the night
     nowPlaying: np ? { id: np.id, title: np.title, artist: np.artist || '' } : null,
     songs: ordered, played,
     replayCost: show.replayCost || 5,

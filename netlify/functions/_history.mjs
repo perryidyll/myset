@@ -94,6 +94,14 @@ export async function archiveShow(aid, show, fans) {
   const nowVoters = Object.values(fans || {}).filter((f) => (f.v || []).length).length;
   const peakVoters = Math.max(nowVoters, ...played.map((p) => p.voters || 0), 0);
   const leftover = Object.values(counts).reduce((a, b) => a + b, 0);
+  /* A NIGHT WHERE NOTHING HAPPENED IS NOT A NIGHT. A show that never went live, or
+     went live and had no song started, no vote cast and no phone in the room, would
+     otherwise land in the history as a row of zeros — and on the public page as
+     "Shows: 1". That was always possible on a first "New show"; now that a gig on
+     the calendar can start a show by itself (_auto.mjs), a night the artist never
+     turned up to would do it routinely. Nothing to archive means nothing archived. */
+  const phones = roomCounts(fans || {}).phones;
+  if (show.status === 'pre' || (!played.length && !leftover && !phones)) return null;
   // roundVotes counts every vote in that round; older entries only have the winner's
   const totalVotes = played.reduce((a, p) => a + (p.roundVotes ?? p.votes ?? 0), 0) + leftover;
   const top = [...played].sort((a, b) => (b.votes || 0) - (a.votes || 0))[0] || requested[0] || null;

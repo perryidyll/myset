@@ -31,9 +31,12 @@ If you are about to violate one, stop and say so rather than working around it.
 
 ## Money
 
-5b. **Stripe's `success_url` must point at the page that calls `/api/confirm`.**
-   It is `/vote.html`. Pointing it anywhere else takes the money and grants
-   nothing — that shipped once and was caught in review, not by a user.
+5b. **Stripe's `success_url` must point at a page that calls `/api/confirm`.**
+   Two do: `/vote.html` (votes and tips) and `/community.html` (merch). Each
+   redeems on the return trip with its own copy of the pending/retry logic — copied
+   on purpose, so the voting page's payment-return path is never touched by shop
+   work. Pointing a session anywhere else takes the money and grants nothing — that
+   shipped once and was caught in review, not by a user.
 
 5c. **A payment must have more than one path to delivery.** The return trip
    through `/vote.html` is not enough — in a bar a buyer locks the screen and
@@ -265,11 +268,15 @@ If you are about to violate one, stop and say so rather than working around it.
 
 ## Live state
 
-0o. **A show is not live until the artist taps "Start the show".** `status`
-    defaults to `'pre'`, not `'live'` — the old default meant every page claimed
-    a gig was happening the moment an account existed. Red "Live now" and "Join
-    live" appear only for `status === 'live'`; otherwise the page shows an
-    outlined countdown to the next gig in the calendar.
+0o. **A show goes live in three ways, and the room is told which.** The artist taps
+   "Start the show" or "New show" — or a gig on their calendar reaches its start
+   time (`_auto.mjs`, Perry's decision 2026-09-04, replacing the older rule that only
+   a tap could do it). `status` still defaults to `pre`, so a page never claims a
+   gig is on because a calendar entry exists: the schedule STARTS the show, through
+   the same `startShow` a tap uses, and stamps `startedBy: 'schedule'`. A show ends
+   by a tap, or by itself three hours after the gig's scheduled end — never while a
+   song started in the last 45 minutes (16). The occurrence key is stamped on the
+   show, so one gig starts once, and a night the artist ended stays ended.
 
 0p. **"Open / Paused" is the VOTING window, not the show.** It is labelled
     "Voting" in the Studio header because it read as a show control.
@@ -479,15 +486,13 @@ If you are about to violate one, stop and say so rather than working around it.
     INVARIANT 0k/0l — the Studio has to feel instant on stage — so the fix is a
     backoff that only engages when nothing has changed, never a slower fixed tick.
 
-9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Four
-    shows a calendar month; Plus and Pro unlimited. Every phone in the room polls
-    for the whole gig, so the bill tracks gigs PLAYED, not artists signed up — a
-    feature-based limit would punish the wrong people and save nothing. Enforced at
-    the two places a gig starts (`newShow`, and `status` -> live from not-live),
-    refused BEFORE the mutation and never mid-show (INVARIANT 16), counted per UTC
-    month on the show record because a show in progress is not in history yet.
-    The Studio warns at two shows left: a cap discovered on stage at 10pm is a bug,
-    not a business model. And nothing the ROOM experiences is ever capped (0w).
+9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Four a
+   month (UTC), read from `PLANS.free.gigs` — enforced in ONE place, `startShow` in
+   `_lifecycle.mjs`, which every start path calls: "Start the show", "New show" and
+   the schedule. Refused BEFORE the mutation with the same words, counted INSIDE the
+   CAS (0bi), never mid-show (16). A scheduled start that is refused is remembered on
+   the index entry so it is not retried every two minutes; the Studio's own warning
+   at two shows left is unchanged. Nothing the ROOM experiences is capped (0w).
 
 9d10. **A tap is not a change.** `wakeUp()` used to reset the poll ladder to its
     fastest rung on every `pointerdown` — which fires on every scroll — so 66% of
@@ -567,9 +572,13 @@ If you are about to violate one, stop and say so rather than working around it.
     else, the voter count — into `show.log` inside the same handler. Remove that
     and show history becomes permanently unrecoverable, not merely wrong.
 
-17c. **Archive before you wipe.** `archiveShow()` must run before `wipeFans()` or
-    `clearAllFanVotes()`, in every path that ends a show (`newShow`,
-    `status:'ended'`). It is idempotent — re-archiving only refreshes the money.
+17c. **Archive before you wipe.** `archiveShow()` runs before anything destroys the
+   tally — in `startShow(fresh)` and `endShow()`, the only two places a night ends,
+   whoever called them (a tap or the schedule). It is idempotent. And a night where
+   nothing happened is not a night: a show that never went live, or had no song
+   started, no vote cast and no phone present, is NOT archived — a scheduled start
+   the artist never turned up to would otherwise be a row of zeros and "Shows: 1"
+   on their public page.
 
 17d. **Money is attributed by `metadata.show`, never by timestamp.** Sessions
     created before show tracking have no tag; they are reported as
@@ -1288,3 +1297,54 @@ If you are about to violate one, stop and say so rather than working around it.
     did not include `sheetsync` on the day that shipped. Off every hot path, so no
     ceiling moved — but the check that would have TOLD us was silent, which is the
     only thing a guard is for.
+
+## The community page, the shop, and shows that start themselves (2026-09-04)
+
+0ck. **The community page is free on every plan, and the room writes it.** Posting,
+    rating, photos, video links, likes and reports need no sign-in (9g) and cost
+    nothing (0w). A post carries the device id and nothing else, and the device id
+    never leaves the server: the public shape and the owner's shape both strip it
+    (0bu). Limits are enforced inside the CAS, never only in the page (15k): three
+    posts a day per phone, one per show per phone, a per-network ceiling wide
+    enough that a whole bar on one wifi never hits it.
+
+0cl. **Video is a link, never an upload.** A function body tops out around 6MB and a
+    phone video does not. YouTube embeds through the profile's exact-host parser
+    (9b); Instagram and TikTok are shown as links, because framing them would need
+    the CSP widened and MySet never fetches a stranger's URL (0al). Anything else is
+    refused with the three names.
+
+0cm. **Merch is priced from the record, never the request.** `kind: 'merch'` in
+    `pay.mjs` reads the item off the profile; a fake price in the body changes
+    nothing. A pickup item asks Stripe for no address; a posted one does. The
+    charge is a direct charge with the plan's cut, like a tip (0r0). Redeeming it
+    writes an ORDER inside the same claim, so a session can never be claimed
+    without one — the order is the delivery, `delivered: true`. **No buyer name,
+    email or address is stored**: `orderDetail` fetches them from Stripe when the
+    artist opens an order, reading both shipping shapes, and keeps nothing.
+
+0cn. **Merch is a Plus feature for artists and Pro for venues; removing is never
+    gated.** `merchAllowed(aid, limits)` is the one rule (founder included, as with
+    pricing); `merchSave` and `merchPhoto` refuse with "Merch on your page is a Plus
+    feature — anything you already added stays." A lapsed plan HIDES the rail on
+    the page and keeps the items (0s). A venue item must carry a link — a venue has
+    no payout account, so buying through MySet would put its money in the wrong
+    balance (0r, 0x). `reviews` left `VENUE_NOT_BUILT` the day the feed shipped and
+    is true on both venue rows: what the room reads cannot be Pro-only.
+
+0co. **A merch picture's slot is the item's own id; a post's photos are
+    `<postId>_<n>`.** Two more slot families in `_img.mjs`, by pattern, so a picture
+    can never outlive its record by name; deleting the record deletes the bytes.
+    `idcheck` matches neither, so the ID photo stays unservable (0bk).
+
+0cp. **The schedule reads one document to learn who is due.** `gigsched` is a global
+    index rewritten by every calendar write (the `cityindex` pattern, 0i) and
+    re-pointed by the sweep after it acts; it is in `test/cost.mjs`'s globals list
+    (0ci). A ring with nothing due is one read. The sweep is bounded per run and
+    defers the rest (0bw); it never `list()`s (1); the audience poll is untouched —
+    nothing flips on a fan's GET, ever (0af, 0bt). One run at a time, MIN_GAP,
+    logged marker, never thrown — the `sheetcron` discipline (0cj, 0bw2).
+
+0cq. **"Fans" counts phones that were in the room.** The artist page's `Fans` is the
+    sum over archived shows of phones present (or peak voters for older nights).
+    Nothing anywhere says "follow"; there is no follower count (0bh, 9g).

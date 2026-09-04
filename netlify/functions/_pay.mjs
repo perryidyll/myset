@@ -89,6 +89,17 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       if (m.paid[sid] && m.paid[sid].delivered !== false) { already = true; return false; }
       if (md.kind === 'votes') granted = parseInt(md.votes, 10) || 0;
       if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at });
+      /* MERCH. What the buyer bought is an ORDER the artist fulfils by hand, so the
+         order record IS the delivery — written inside this same claim, so a session
+         can never be claimed without it. Nothing about the buyer is stored: their
+         name and address stay on Stripe and are fetched when the artist opens the
+         order (orderDetail), never kept in Blobs (0bu's posture). */
+      if (md.kind === 'merch') {
+        m.orders ||= [];
+        m.orders.push({ sid, item: String(md.item || '').slice(0, 8), title: String(md.title || '').slice(0, 60),
+                        qty: Math.max(1, Math.min(9, parseInt(md.qty, 10) || 1)), amount, fan: who, at,
+                        ship: md.ship === 'ship' ? 'ship' : 'pickup', status: 'new' });
+      }
       const needsGrant = md.kind === 'votes' && !!who && granted > 0;
       m.paid[sid] = { kind: md.kind || 'unknown', amount, granted, fan: who, at,
                       delivered: !needsGrant };
