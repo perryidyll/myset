@@ -1,6 +1,7 @@
 import { casDoc, readDoc, sha } from './_lib.mjs';
 import { parseYouTube, embedSrc } from './_embeds.mjs';
 import { decodeDataUrl, putImage, dropImage, POST_SLOT } from './_img.mjs';
+import { getClip, dropClip, clearPending, CLIP_ID } from './_video.mjs';
 
 /* THE COMMUNITY PAGE — what fans say about a night, and the shop above it.
 
@@ -9,10 +10,15 @@ import { decodeDataUrl, putImage, dropImage, POST_SLOT } from './_img.mjs';
    uses, is all a post carries — and it never leaves the server (0bu). What a post
    holds: up to 500 characters, a star rating, which show they were at (a real
    archived night, picked from the artist's own history — never guessed, 17d),
-   up to three photos, and a video LINK. Video is a link and not an upload because
-   a function body tops out around 6MB and a phone video does not (the honest
-   limit, said out loud). YouTube links embed through the same exact-host parser
-   the profile uses (9b); Instagram and TikTok links are shown as links.
+   up to three photos, ONE 30-SECOND CLIP, and a video LINK.
+
+   The clip and the link are two different things and both are kept. A link is
+   free, works on any phone and needs no upload; a clip is a moment from the room
+   that was never going to be on YouTube. The clip is uploaded on its own, BEFORE
+   the post (a function body tops out around 6MB and three photos already spend
+   most of it — see _video.mjs), so a post carries only its id. YouTube links
+   embed through the same exact-host parser the profile uses (9b); Instagram and
+   TikTok links are shown as links.
 
    What keeps it a room and not a wall:
      · limits are enforced HERE, inside the CAS, never only in the page (15k):
@@ -92,19 +98,37 @@ export function shapeVideo(vd) {
 
 export const newPostId = () => 'c' + Math.random().toString(36).slice(2, 10).padEnd(8, '0').slice(0, 8);
 
+/* What the page gets for an uploaded clip: the two URLs, built from a literal
+   template on every read rather than stored, so a stored record can never become
+   a link to somewhere else. `poster` is a normal photo slot, so it is already
+   cached for a year by /api/img. */
+export const shapeClip = (owner, clip) => (CLIP_ID.test(String(clip || '')) ? {
+  src: `/api/vid?a=${encodeURIComponent(owner)}&c=${clip}`,
+  poster: `/api/img?a=${encodeURIComponent(owner)}&s=${clip}`,
+} : null);
+
 /**
  * Add a post. `photos` are data URLs, already shrunk on the phone; they are written
  * before the CAS (their names come from the post id, minted outside it) and dropped
  * again if the post is refused. Returns { ok, error, id }.
  */
-export async function addPost(owner, { fan, ip, name, text, stars, show, showLabel, photos, video }) {
+export async function addPost(owner, { fan, ip, name, text, stars, show, showLabel, photos, video, clip }) {
   if (!fan) return { ok: false, error: 'no device' };
   const body = String(text || '').replace(/\r/g, '').trim().slice(0, MAX_TEXT);
   const n = stars == null || stars === '' ? null : Math.round(Number(stars));
   if (n !== null && (!Number.isFinite(n) || n < 1 || n > 5)) return { ok: false, error: 'Stars are 1 to 5.' };
-  if (!body && n === null && !(photos || []).length && !video) return { ok: false, error: 'Say something, rate it, or add a photo.' };
+  const clipId = CLIP_ID.test(String(clip || '')) ? String(clip) : '';
+  if (clip && !clipId) return { ok: false, error: 'That clip didn’t finish uploading. Try again.' };
+  if (!body && n === null && !(photos || []).length && !video && !clipId)
+    return { ok: false, error: 'Say something, rate it, or add a photo.' };
   let vid = null;
   if (video) { vid = parseVideo(video); if (vid && vid.error) return { ok: false, error: vid.error }; }
+  /* THE CLIP HAS TO REALLY BE THERE. A post is allowed to name a clip id, so
+     without this check a hand-made request could hang a player on every phone
+     that opens the page, pointed at nothing. Cheap: one read, and only when a
+     clip was named. */
+  if (clipId && !(await getClip(owner, clipId)))
+    return { ok: false, error: 'That clip didn’t finish uploading. Try again.' };
 
   const id = newPostId();
   const urls = [];
@@ -129,13 +153,17 @@ export async function addPost(owner, { fan, ip, name, text, stars, show, showLab
     if (d.recent.length > 400) d.recent = d.recent.slice(-400);
     d.list.push({ id, fan, name: clean(name, MAX_NAME), text: body, stars: n,
                   show: String(show || '').slice(0, 40), showLabel: clean(showLabel, 60),
-                  photos: urls, video: vid, at: now, likes: 0, reply: null,
+                  photos: urls, video: vid, clip: clipId || null, at: now, likes: 0, reply: null,
                   hidden: false, pinned: false, reports: 0, rep: [] });
     d.n = (d.n || 0) + 1;
     if (d.list.length > MAX_POSTS) d.list = d.list.slice(-MAX_POSTS);
     return true;
   });
   if (refused) { for (let i = 0; i < urls.length; i++) await dropImage(owner, `${id}_${i}`); return { ok: false, error: refused }; }
+  /* The clip now belongs to a post, so it is no longer an orphan waiting to be
+     swept. Best-effort on purpose: if this write is lost the sweep deletes a clip
+     that IS posted, which would be wrong — so sweepPending checks the feed too. */
+  if (clipId) await clearPending(owner, clipId);
   return { ok: true, id };
 }
 
@@ -186,17 +214,18 @@ export async function reportPost(owner, fan, id) {
 /* ---------- the owner's side ---------- */
 export async function moderate(owner, { action, id, text, on }) {
   if (!id) return { ok: false, error: 'which post?' };
-  let found = false, photos = [];
+  let found = false, photos = [], clip = '';
   if (action === 'postDelete') {
     await casDoc(KEY(owner), empty, (d) => {
       const p = (d.list || []).find((x) => x && x.id === id);
       if (!p) return false;
-      found = true; photos = p.photos || [];
+      found = true; photos = p.photos || []; clip = p.clip || '';
       d.list = d.list.filter((x) => x !== p);
       return true;
     });
     if (found) {
       for (let i = 0; i < photos.length; i++) await dropImage(owner, `${id}_${i}`);
+      if (clip) await dropClip(owner, clip);
       await casDoc(LKEY(owner), emptyLikes, (d) => { if (!d.by || !d.by[id]) return false; delete d.by[id]; return true; }).catch(() => {});
     }
     return found ? { ok: true } : { ok: false, error: 'That post is gone.' };
@@ -218,7 +247,7 @@ export async function moderate(owner, { action, id, text, on }) {
 
 /* ---------- what the page gets ---------- */
 /** Public shape: never a device id, never a hidden post; pinned first, newest first. */
-export function shapePosts(d, likes, fan) {
+export function shapePosts(d, likes, fan, owner) {
   const f = fan ? h10(fan) : null;
   return d.list
     .filter((p) => p && !p.hidden)
@@ -226,21 +255,21 @@ export function shapePosts(d, likes, fan) {
     .map((p) => ({
       id: p.id, name: p.name || '', text: p.text || '', stars: p.stars || null,
       show: p.show || '', showLabel: p.showLabel || '',
-      photos: p.photos || [], video: shapeVideo(p.video),
+      photos: p.photos || [], video: shapeVideo(p.video), clip: shapeClip(owner, p.clip),
       at: p.at, likes: p.likes || 0, reply: p.reply || null, pinned: !!p.pinned,
       mine: !!(fan && p.fan === fan),
       liked: !!(f && likes && likes.by && likes.by[p.id] && likes.by[p.id][f]),
     }));
 }
 /** The owner's shape: hidden posts too, and how many reports — still no device id. */
-export function shapeForOwner(d) {
+export function shapeForOwner(d, owner) {
   return d.list
     .slice()
     .sort((a, b) => (b.pinned - a.pinned) || (b.at - a.at))
     .map((p) => ({
       id: p.id, name: p.name || '', text: p.text || '', stars: p.stars || null,
       show: p.show || '', showLabel: p.showLabel || '',
-      photos: p.photos || [], video: shapeVideo(p.video),
+      photos: p.photos || [], video: shapeVideo(p.video), clip: shapeClip(owner, p.clip),
       at: p.at, likes: p.likes || 0, reply: p.reply || null,
       pinned: !!p.pinned, hidden: !!p.hidden, reports: p.reports || 0,
     }));

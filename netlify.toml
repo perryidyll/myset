@@ -67,12 +67,52 @@
   [headers.values]
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    # Only these three can ever be framed. A stored media record that somehow
-    # produced a different host would be blocked by the browser as well as by
-    # the parser in _embeds.mjs.
-    Content-Security-Policy = "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com https://embed.music.apple.com; object-src 'none'; base-uri 'self'"
+    # Stop the browser guessing a file's type. Without it a stored upload that
+    # sniffs as HTML can be served back as HTML from our own origin, which is a
+    # cross-site scripting hole that no amount of escaping in the pages can close.
+    X-Content-Type-Options = "nosniff"
+    # A year, every subdomain, and on the preload list — so a phone that has never
+    # visited before still refuses to talk to myset.vip over plain HTTP. Bar wifi is
+    # exactly the network where that matters.
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    # Nothing here needs a camera, a microphone or a location, so nothing here may
+    # ask. This is what makes a compromised third-party embed unable to escalate.
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    # A page opened from ours cannot reach back through window.opener.
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+    #
+    # THE CONTENT SECURITY POLICY, and what each line is actually stopping.
+    #
+    # `default-src 'self'` is the one that matters: everything not named below can
+    # only come from myset.vip. The site loads NO external script, font or
+    # stylesheet — verified, not assumed — so this costs nothing and closes the
+    # whole class of "an injected tag pulls code from somewhere else".
+    #
+    # `script-src` still needs 'unsafe-inline': every page is one file with its
+    # script inline and its buttons wired with onclick, which is a deliberate
+    # choice (one request, no build step) and not something to undo for a header.
+    # It is worth saying plainly what that costs: this policy does NOT stop an
+    # injected inline <script>. What it does stop is that script LOADING anything,
+    # or sending what it found anywhere — connect-src is 'self', so a stolen token
+    # has nowhere to go. Moving to hashes is in SECURITY.md as the next real step.
+    #
+    # `img-src` needs data: for the photo previews the phone draws before upload,
+    # and `media-src` needs blob: for the clip preview in the composer.
+    # `frame-src` is the same four hosts as before: a stored media record that
+    # somehow produced a different host is blocked by the browser as well as by
+    # the exact-host parser in _embeds.mjs.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; worker-src 'self'; manifest-src 'self'; form-action 'self'; frame-ancestors 'self'; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com https://embed.music.apple.com; object-src 'none'; base-uri 'self'"
 
 [[headers]]
   for = "/stage.html"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
+
+# A published address for reporting a security problem. RFC 9116. It costs
+# nothing and it is the difference between a finder emailing us and a finder
+# posting it — the single cheapest security control there is.
+[[headers]]
+  for = "/.well-known/security.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "public, max-age=86400"

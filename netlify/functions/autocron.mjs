@@ -69,6 +69,17 @@ export default async (req) => {
         if (p.purged.length) console.log('autocron: purged', p.purged.join(','));
       } catch (e) { console.error('autocron: purge failed', String((e && e.message) || e)); }
     }
+    /* CLIPS UPLOADED AND NEVER POSTED. Two hours old, one owner a ring, on the
+       same hourly watermark as the purge — a 3MB blob nothing points at is worth
+       collecting, and nothing about it is urgent. */
+    if (now - (Number(state.vidsweptAt) || 0) > 3600e3) {
+      await casDoc(SCHED, emptySched, (d) => { d.vidsweptAt = now; return true; }).catch(() => {});
+      try {
+        const { sweepQueue } = await import('./_video.mjs');
+        const v = await sweepQueue(now, 1);
+        if (v.deleted) console.log(`autocron: dropped ${v.deleted} unposted clip(s)`);
+      } catch (e) { console.error('autocron: clip sweep failed', String((e && e.message) || e)); }
+    }
     const r = await sweep({ now, log: (l) => console.log(l) });
     console.log(`autocron: ok — ${r.checked} checked, ${r.results.filter((x) => x.did).length} acted`,
                 marker ? `(scheduled for ${marker})` : '(no scheduler marker)');

@@ -78,8 +78,17 @@ echo
 echo "── the community page and the shop ──"
 node --import ./test/register.mjs test/community.mjs
 echo
+echo "── clips on a community post ──"
+node --import ./test/register.mjs test/clips.mjs
+echo
 echo "── the account system ──"
 node --import ./test/register.mjs test/accounts.mjs
+echo
+echo "── passkeys ──"
+node --import ./test/register.mjs test/passkeys.mjs
+echo
+echo "── the books ──"
+node --import ./test/register.mjs test/books.mjs
 echo
 echo "── billing, the account, and a venue that takes money ──"
 node --import ./test/register.mjs test/billing.mjs

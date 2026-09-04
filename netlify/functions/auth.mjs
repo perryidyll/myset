@@ -5,6 +5,8 @@ import { normEmail, validEmail, issueCode, checkCode, sendCode, signToken, verif
 import { newSid, addSession, touchSession, readSessions, killSessions, killEverything,
          deviceLabel, note, readLog, makeRecovery, recoveryStatus, useRecovery,
          sidsFor, can } from './_session.mjs';
+import { newChallenge, register as pkRegister, assert as pkAssert, listKeys as pkList,
+         forget as pkForget, hasPasskey } from './_passkey.mjs';
 
 /* Every response to an unauthenticated caller is deliberately identical whether
    or not the address is on the list — otherwise this becomes a way to find out
@@ -110,6 +112,52 @@ export default async (req) => {
   }
 
   /* ---- the recovery door: unauthenticated, and it must not become an oracle ---- */
+  /* ---------- PASSKEYS ----------------------------------------------------
+     Two doors here, and only the second one is public.
+
+     `passkeyStart` / `passkeyFinish` ADD a key to an account somebody is already
+     signed in to. A passkey can never create an account: the first proof of who
+     you are is still an email you can receive, because that is also the thing
+     that gets you back in when the phone is lost.
+
+     `passkeySignInStart` / `passkeySignInFinish` are the fast door, keyed by the
+     page's PUBLIC address the same way the recovery door is — and answering
+     identically for an unknown page, so neither becomes a way to find out which
+     pages exist (INVARIANT 9h).
+
+     WHERE. The origin and the domain are taken from the request, never from the
+     body: they are the anti-phishing property, and a client that gets to name its
+     own origin has thrown it away. */
+  const WHERE = () => { const u = new URL(req.url); return { origin: u.origin, rpId: u.hostname }; };
+
+  if (action === 'passkeySignInStart') {
+    const aid = await artistBySlug(String(body.slug || ''));
+    /* An unknown page and a page with no passkey answer the same: a challenge and
+       an empty list. The phone then finds nothing to offer and says so locally. */
+    if (!aid || !(await hasPasskey(aid)))
+      return json({ ok: true, challenge: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url'),
+                    rpId: WHERE().rpId, keys: [] });
+    return json({ ok: true, challenge: await newChallenge(aid, 'get'), rpId: WHERE().rpId,
+                  keys: (await pkList(aid)).map((k) => k.id) });
+  }
+
+  if (action === 'passkeySignInFinish') {
+    const aid = await artistBySlug(String(body.slug || ''));
+    const nope = () => bad('That didn’t work — sign in with a code instead', 401);
+    if (!aid) return nope();
+    const r = await pkAssert(aid, body, WHERE());
+    if (!r.ok) return nope();
+    const reg = await readArtists();
+    /* The OWNER's address, the same rule the recovery door uses — a passkey is
+       registered by whoever is signed in, and today only the owner may add one. */
+    const row = Object.entries(reg.byEmail)
+      .find(([, v]) => v.artistId === aid && v.role !== 'member' && v.role !== 'crew');
+    if (!row) return nope();
+    const token = await open(req, body, aid, row[0], revOf(reg, aid));
+    note(aid, 'signin.passkey', r.label || '');
+    return json({ ok: true, token, artist: aid, slug: (reg.byId[aid] || {}).slug || '' });
+  }
+
   if (action === 'recoverySignIn') {
     const aid = await artistBySlug(String(body.slug || ''));
     const given = String(body.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16);
@@ -149,7 +197,8 @@ export default async (req) => {
   /* ---- signed in from here ---- */
   if (['list','add','remove','revokeAll','setSlug','sessions','sessionRevoke','signOut',
        'signOutOthers','recoveryStatus','recoveryMake','activity','emailChangeStart',
-       'emailChangeFinish','roleSet'].includes(action)) {
+       'emailChangeFinish','roleSet',
+       'passkeyList','passkeyStart','passkeyFinish','passkeyForget'].includes(action)) {
     const me = await requireArtist(req);
     if (!me) return bad('unauthorized', 401);
     const aid = me.aid, role = me.role || 'owner';
@@ -159,7 +208,11 @@ export default async (req) => {
        a member on a five-seat Pro page could delete the OWNER's sign-in address and
        take the account, or rename the public page address that is printed on every
        QR code on every table in the bar. Both are one POST. */
-    const OWNER_ONLY = ['add','remove','revokeAll','setSlug','recoveryMake','emailChangeStart','emailChangeFinish','roleSet'];
+    const OWNER_ONLY = ['add','remove','revokeAll','setSlug','recoveryMake','emailChangeStart','emailChangeFinish','roleSet',
+      /* A passkey signs the OWNER in (passkeySignInFinish opens the owner's
+         session), so letting a band mate on a Pro seat add one would hand them the
+         owner's account with a thumbprint. */
+      'passkeyStart','passkeyFinish','passkeyList','passkeyForget'];
     if (OWNER_ONLY.includes(action) && role !== 'owner')
       return bad('Only the account owner can change this', 403);
     if (action === 'activity' && !can(role, 'audit')) return bad('Not for this sign-in', 403);
@@ -168,6 +221,36 @@ export default async (req) => {
        putting the touch there would have meant a `seen` that never advanced and a
        row that quietly lied about it. At most one write an hour. */
     if ((action === 'sessions' || action === 'list') && me.sid) touchSession(aid, me.sid).catch(() => {});
+
+    /* ---- passkeys on THIS account ---- */
+    if (action === 'passkeyList')
+      return json({ ok: true, keys: await pkList(aid), can: true });
+    if (action === 'passkeyStart') {
+      const { origin, rpId } = WHERE();
+      return json({ ok: true, rpId, origin,
+                    challenge: await newChallenge(aid, 'create'),
+                    /* The user handle must be STABLE and must not be an email —
+                       it is stored on the phone and shown in its passkey list, and
+                       an email there would follow somebody around after they
+                       changed it. The artist id is stable and means nothing
+                       outside MySet. */
+                    userId: Buffer.from(aid).toString('base64url'),
+                    userName: (await readArtists()).byId[aid]?.slug || aid,
+                    displayName: (await readArtists()).byId[aid]?.name || 'MySet',
+                    have: (await pkList(aid)).map((k) => k.id) });
+    }
+    if (action === 'passkeyFinish') {
+      const r = await pkRegister(aid, body, WHERE());
+      if (!r.ok) return bad(r.error, 400);
+      note(aid, 'passkey.add', me.email || 'code');
+      return json({ ok: true, keys: await pkList(aid) });
+    }
+    if (action === 'passkeyForget') {
+      const r = await pkForget(aid, String(body.id || ''));
+      if (!r.ok) return bad(r.error, 404);
+      note(aid, 'passkey.remove', me.email || 'code');
+      return json({ ok: true, keys: await pkList(aid) });
+    }
 
     /* ---- where you are signed in ---- */
     if (action === 'sessions') return json({ ok: true, ...(await readSessions(aid, me.sid)) });

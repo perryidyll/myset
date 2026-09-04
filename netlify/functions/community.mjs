@@ -30,7 +30,11 @@ export async function pickableNights(aid, now = Date.now()) {
   }
   return [...byDate.values()].sort((a, b) => b.at - a.at).slice(0, 40);
 }
-import { readPosts, readLikes, shapePosts, addPost, likePost, reportPost } from './_community.mjs';
+import { readPosts, readLikes, shapePosts, addPost, likePost, reportPost,
+         PER_DEVICE_PER_DAY, DAY } from './_community.mjs';
+import { decodeVideoDataUrl, putClip, notePending, newClipId,
+         MAX_SECONDS, MAX_VIDEO_BYTES } from './_video.mjs';
+import { decodeDataUrl, putImage } from './_img.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { venueBySlug, getVenueProfile, shapeVenue } from './_venues.mjs';
 
@@ -86,8 +90,9 @@ export default async (req) => {
     ]);
     const shows = nights.map((n) => ({ showId: n.key, label: n.label }));
     const { fan: _f, ...pub } = o;
-    return json({ ok: true, ...pub, posts: shapePosts(posts, likes, fan), shows,
-                  limits: { text: 500, photos: 3, perDay: 3 } });
+    return json({ ok: true, ...pub, posts: shapePosts(posts, likes, fan, o.owner), shows,
+                  limits: { text: 500, photos: 3, perDay: PER_DEVICE_PER_DAY,
+                            clipSeconds: MAX_SECONDS, clipBytes: MAX_VIDEO_BYTES } });
   }
 
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -95,6 +100,34 @@ export default async (req) => {
   try { body = await req.json(); } catch { return bad('bad json'); }
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
+
+  /* A CLIP GOES UP ON ITS OWN, BEFORE THE POST — see _video.mjs for why.
+     The daily limit is checked HERE as well as in addPost, because this is the
+     expensive door: without it a device that will never post could upload 3MB
+     as often as it liked. It is a read-only check of the same counter addPost
+     enforces inside its CAS, so the two can disagree only by being generous. */
+  if (body.action === 'clip') {
+    const posts = await readPosts(o.owner);
+    const now = Date.now();
+    const { sha } = await import('./_lib.mjs');
+    const me = sha(String(fan)).slice(0, 10);
+    const mine = (posts.recent || []).filter((r) => r && now - r.at < DAY && r.f === me);
+    if (mine.length >= PER_DEVICE_PER_DAY)
+      return bad('That’s three posts today from this phone — come back tomorrow.', 429);
+
+    const dec = decodeVideoDataUrl(body.data);
+    if (dec.error) return bad(dec.error, 400);
+    const clip = newClipId();
+    await putClip(o.owner, clip, dec.bytes, dec.type);
+    /* The poster frame, grabbed on the phone. Optional: a clip with no poster
+       still plays, it just shows a dark box until it is tapped. */
+    if (body.poster) {
+      const pd = decodeDataUrl(body.poster);
+      if (!pd.error) await putImage(o.owner, clip, pd.bytes, pd.type);
+    }
+    await notePending(o.owner, clip);
+    return json({ ok: true, clip, seconds: dec.seconds, bytes: dec.bytes.length });
+  }
 
   if (body.action === 'post') {
     let showLabel = '';
@@ -107,10 +140,11 @@ export default async (req) => {
     const r = await addPost(o.owner, {
       fan, ip: clientIp(req), name: body.name, text: body.text, stars: body.stars,
       show: o.kind === 'artist' ? show : '', showLabel, photos: body.photos, video: body.video,
+      clip: body.clip,
     });
     if (!r.ok) return bad(r.error, 400);
     const [posts, likes] = await Promise.all([readPosts(o.owner), readLikes(o.owner)]);
-    return json({ ok: true, id: r.id, posts: shapePosts(posts, likes, fan) });
+    return json({ ok: true, id: r.id, posts: shapePosts(posts, likes, fan, o.owner) });
   }
   if (body.action === 'like' || body.action === 'unlike') {
     const r = await likePost(o.owner, fan, String(body.id || '').slice(0, 12), body.action === 'like');

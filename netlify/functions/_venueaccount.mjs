@@ -2,6 +2,7 @@ import { store, readDoc, casDoc } from './_lib.mjs';
 import { readVenues, mutateVenues, getVenueProfile } from './_venues.mjs';
 import { readEvents } from './_events.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
+import { readPending } from './_video.mjs';
 
 /* A VENUE'S ACCOUNT — take it with you, or leave.
 
@@ -34,7 +35,7 @@ export async function exportVenue(vid) {
                  .map(([e, v]) => ({ email: e, role: v.role || 'owner' })) },
     profile: prof,
     gigs: events.list,
-    community: shapeForOwner(posts),
+    community: shapeForOwner(posts, OWNER(vid)),
     /* The buyer's device id never leaves, the same rule tips and orders follow on
        the artist side: fans are counted, never named (INVARIANT 0bu). */
     orders: (m.orders || []).map(({ fan, ...o }) => o),
@@ -46,12 +47,16 @@ export async function keysForVenue(vid) {
   const o = OWNER(vid);
   const keys = [`vprofile_${vid}`, `vouch_${vid}`, `ev_${o}`, `posts_${o}`, `likes_${o}`,
     `meta_${o}`, `billing_${o}`, `connect_${o}`, `sess_${o}`, `log_${o}`, `rec_${o}`,
-    `apitch_${o}`, `lock_${o}`];
-  const [prof, posts] = await Promise.all([getVenueProfile(vid), readPosts(o)]);
+    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`];
+  const [prof, posts, pend] = await Promise.all([getVenueProfile(vid), readPosts(o), readPending(o)]);
   for (const slot of ['cover', 'avatar', 'idcheck', ...Array.from({ length: 12 }, (_, i) => 'p' + i)])
     keys.push(IMG(vid, slot));
   for (const it of prof.merch || []) keys.push(IMG(vid, it.id));
   for (const p of posts.list || []) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(vid, `${p.id}_${i}`));
+  /* Clips: the ones a post claims AND the ones still waiting to be claimed, or a
+     venue that left would leave 3MB behind per unattached upload for ever. */
+  for (const p of posts.list || []) if (p && p.clip) { keys.push(`vid_${o}_${p.clip}`); keys.push(IMG(vid, p.clip)); }
+  for (const c of Object.keys(pend.by || {})) { keys.push(`vid_${o}_${c}`); keys.push(IMG(vid, c)); }
   return [...new Set(keys)];
 }
 

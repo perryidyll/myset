@@ -5,6 +5,7 @@ import { readEvents, mutateEvents, reindexCities } from './_events.mjs';
 import { readLists, readLearn } from './_lists.mjs';
 import { readHistIndex } from './_history.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
+import { readPending } from './_video.mjs';
 import { readFeedback, shapeFeedback } from './_feedback.mjs';
 import { readMeta } from './_lib.mjs';
 
@@ -41,7 +42,7 @@ export async function exportArtist(aid) {
     setlists: lists.lists, songsToLearn: learn.list,
     shows: hist.shows,
     money: { tips: (meta.tips || []).map(({ fan, ...t }) => t), orders: (meta.orders || []).map(({ fan, ...o }) => o) },
-    community: shapeForOwner(posts),
+    community: shapeForOwner(posts, aid),
     feedback: shapeFeedback(fb),
   };
 }
@@ -51,11 +52,12 @@ export async function keysFor(aid) {
   const keys = [KEY.show(aid), KEY.meta(aid), KEY.profile(aid), KEY.histIdx(aid), `req_${aid}`,
     `ev_${aid}`, `lists_${aid}`, `learn_${aid}`, `push_${aid}`, `connect_${aid}`, `fb_${aid}`,
     `lock_${aid}`, `apitch_${aid}`, `songstats_${aid}`, `posts_${aid}`, `likes_${aid}`, `billing_${aid}`,
-    `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`];
+    `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
+    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`];
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
-  const [hist, show, profile, posts, ids] = await Promise.all([
+  const [hist, show, profile, posts, ids, pend] = await Promise.all([
     readHistIndex(aid), readDoc(KEY.show(aid), null), getProfile(aid), readPosts(aid),
-    readDoc(`histids_${aid}`, null)]);
+    readDoc(`histids_${aid}`, null), readPending(aid)]);
   /* THE INDEX IS CAPPED; THIS LIST IS NOT. Past 400 nights the index drops its
      oldest rows while the detail documents stay on disk, so building the key list
      from the index alone left a deleted artist's oldest gigs behind for ever and
@@ -66,6 +68,11 @@ export async function keysFor(aid) {
   for (const slot of ['cover', 'avatar', 'p0', 'p1', 'p2', 'idcheck']) keys.push(IMG(aid, slot));
   for (const m of profile.merch || []) keys.push(IMG(aid, m.id));
   for (const p of posts.list || []) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(aid, `${p.id}_${i}`));
+  /* Clips, and their poster frames. Both the ones a post claims and the ones
+     still pending, because an upload that was never posted is 3MB nothing else
+     can ever find (`list()` is banned — INVARIANT 1). */
+  for (const p of posts.list || []) if (p && p.clip) { keys.push(`vid_${aid}_${p.clip}`); keys.push(IMG(aid, p.clip)); }
+  for (const c of Object.keys(pend.by || {})) { keys.push(`vid_${aid}_${c}`); keys.push(IMG(aid, c)); }
   return [...new Set(keys)];
 }
 

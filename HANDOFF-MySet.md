@@ -1914,3 +1914,69 @@ than security, and they cannot be verified without a device in hand.
 rendered in headless Chrome at phone size and read back; the venue sheet bug was
 reproduced and then proved fixed. Production read with `tools/prod.py` before
 anything was changed.
+
+---
+
+# SESSION LOG — 2026-09-05 (clips, the books, passkeys, the cost audit, a security pass)
+
+Round four of Perry's list. Full detail in
+`docs/sessions/2026-09-05-clips-books-passkeys-cost-audit.md`.
+
+## What shipped
+
+**1. Clips on community posts.** Thirty seconds, re-encoded on the phone to 480p,
+capped at 3MB by the server. `_video.mjs` + `vid.mjs` (**with HTTP Range support** —
+iOS Safari refuses a 200 for a video), `action:'clip'` uploads before the post
+because a 6MB function body minus three photos leaves four watchable seconds. Poster
+frame + `preload="none"` so the feed costs nothing until somebody taps. Orphans
+swept by the cron from a `vidqueue` global, and the sweep reads the feed first so a
+posted clip is never taken away. 44 assertions.
+
+**2. The books (`_ledger.mjs`, `ACCOUNTING.md`).** Perry meant *accounting*, not
+*accounts*. Stripe holds the transactions; MySet produces the statements. Every
+figure comes from Stripe's **balance transactions** and is only bucketed, never
+recomputed. Artists and venues get a twelve-month statement + CSV for tax; Perry
+gets a real P&L with hand-entered costs. Monthly close: a finished month is computed
+once and cached. Two traps pinned — Stripe's fee comes from `fee_details` not
+`bt.fee`, and a payout is not an expense. 43 assertions.
+
+**3. Passkeys (`_passkey.mjs`), no npm dependency.** Face ID instead of a code from
+email. `test/passkeys.mjs` *acts as a real authenticator* — real P-256 keys, real
+CBOR, real signatures — and defeats each of the five WebAuthn checks on purpose,
+which is how this got verified without a physical device. ACCOUNTS.md §9 carries the
+full "what would a real account system take" rundown Perry asked for, including why
+passwords are strictly worse and why an identity provider is $2,000–5,000/mo at
+scale. 30 assertions.
+
+**4. The server-cost audit.** `tools/loadsim.py` runs the real polling ladder.
+Report: https://claude.ai/code/artifact/11ac87fe-57f6-439f-9459-99836b76e7f5
+(also `docs/reports/2026-09-05-server-cost-audit.html`).
+
+**5. Security (`SECURITY.md`).** A real CSP (`default-src 'self'` — it was
+`frame-src` only, so an injected external script would have run), nosniff, HSTS
+preload, Permissions-Policy, COOP, zero npm vulnerabilities, and a published
+`security.txt`.
+
+## The three numbers that matter
+
+| | |
+|---|---|
+| **One 3-hour gig, 20 people** | **2.8¢**, and 5.6% of revenue at every scale |
+| **Deploys vs gigs** | 104 deploys = 1,560 credits; every gig Perry played = 84. **29× more expensive to ship code than to serve the audience**, and ~570 credits of that is the same change deployed twice |
+| **Moving to Cloudflare** | would be **1.7× worse** — KV bills per read and MySet does 90,450 reads a gig. The platform is not the cost driver; **15 reads per poll** is |
+
+## Perry's to-do
+
+1. **Stripe:** add `charge.updated` to the webhook (carried over from 2026-09-04).
+2. **Netlify:** stop the double deploy (CLI + the GitHub build the same push
+   triggers), then move to Pro — $20/3,000 credits beats $9 + top-ups at the
+   current 2,475/month.
+3. **2FA** on Google, GitHub, Netlify and Stripe. Twenty minutes, and the
+   highest-value item in SECURITY.md by a wide margin.
+4. **Try the passkey** and say whether it is actually faster on stage.
+
+## State
+
+- **28 suites, 1,350 assertions, 0 failed.**
+- New docs: `SECURITY.md`, `ACCOUNTING.md`, `docs/reports/`, `tools/loadsim.py`.
+- INVARIANTS 0dq–0dw.

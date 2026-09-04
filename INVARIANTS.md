@@ -1521,3 +1521,62 @@ If you are about to violate one, stop and say so rather than working around it.
     so dragging a sheet closed also reloaded the page behind it. A sheet's
     `closeSheet` must clear the inline transform its own drag left, or the sheet
     sticks halfway and the ✕ looks dead.
+
+0dq. **A clip is uploaded on its own, before the post, and is bounded by BYTES.** A
+    function body tops out around 6MB and three photos already spend most of it, so
+    a video in the same request could only ever be four watchable seconds. The clip
+    goes up first (`action:'clip'`), the post names its id, and the server checks
+    the bytes really exist before storing that id — a post must never be able to
+    hang a player on every phone in the room, pointed at nothing. The 3MB cap is
+    the load-bearing limit because it cannot be argued with; the 30-second cap is a
+    second belt, read out of the MP4's own `mvhd` box. Bytes are trusted over
+    labels: `ftyp` for MP4, the EBML magic for WebM, never the declared type.
+
+0dr. **`/api/vid` answers a Range with a 206.** iOS Safari asks for `bytes=0-1`
+    first and refuses to play if it gets a 200, so without this the whole feature is
+    a black box on most of the phones in a bar. A suffix range means the LAST bytes;
+    a range past the end is 416, never an empty 206 the player waits on for ever.
+
+0ds. **An unposted clip is swept, a posted one never is.** `list()` is banned (1),
+    so nothing could otherwise find 3MB that no post points at: `vidpend_<owner>`
+    notes every upload, the post clears it, and the cron drops what is left after
+    two hours — one owner a ring, from the `vidqueue` global, the same shape as
+    `delqueue`. The sweep READS THE FEED FIRST, because clearing is best-effort and
+    deleting on the timestamp alone would take a video off a real post.
+
+0dt. **Every money figure comes from Stripe's balance transactions and is only
+    added up, never recomputed.** 5d says Stripe is the truth; `_ledger.mjs` is
+    what makes that structural for reporting. Stripe's own fee is read from
+    `fee_details[stripe_fee]` and never from `bt.fee`, which on a direct charge also
+    contains ours (the same trap as 0do). A payout is not an expense — it is
+    reported on its own line, because money reaching a bank account does not un-earn
+    it. `net` is already after Stripe's fee, so a profit line must subtract costs
+    only, never the fee a second time. A closed month is computed once and cached;
+    only the current month is ever re-read.
+
+0du. **A statement is owner-only, on the server.** Every figure about somebody's
+    livelihood in one payload, so a member on one of five Pro seats is refused by
+    `OWNER_ONLY` in both admin surfaces, not merely not shown the button (15k).
+    MySet's own books need the founder AND the platform account — never
+    `stripeFor(aid)`, which would scope the call to a connected account and report
+    an artist's takings as the company's revenue.
+
+0dv. **A passkey is added to an account, never a way to create one.** The first
+    proof of identity stays an inbox, because that is also what gets somebody back
+    in when the phone is lost. All five WebAuthn checks are mandatory — ceremony
+    type, challenge, origin, rpIdHash, signature — and the challenge is spent ONCE,
+    including when the answer was wrong, or it becomes a live nonce an attacker can
+    keep guessing at. The origin and the rpId come from the request, never the body:
+    a client that names its own origin has thrown away the anti-phishing property
+    that is the entire reason for the feature. A signature counter going backwards
+    is a clone and is refused; a counter that is zero on both sides is a synced
+    iCloud or Google passkey and is fine — refusing on "not greater" would lock out
+    exactly the devices this exists for. Attestation is deliberately not verified.
+
+0dw. **The front end is public, so nothing in it may be secret.** Minifying is not a
+    control. Every limit is enforced inside the write that changes the data, and
+    `netlify.toml` publishes `public/` only. The CSP is `default-src 'self'` with a
+    named allow-list; `script-src` still needs `'unsafe-inline'` because every page
+    is one file with its script inline, and the honest consequence — it does not
+    stop an injected inline script, only stops that script loading or sending
+    anything — is written down in SECURITY.md rather than glossed.

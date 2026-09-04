@@ -58,3 +58,15 @@ Required environment variables (Netlify, never in the repo):
 ---
 
 > Single-artist product today: no multi-artist accounts or auth, and no audio playback.
+
+## The documents worth knowing about
+
+| File | What it answers |
+|---|---|
+| `INVARIANTS.md` | Every rule the tests enforce, and why it exists |
+| `ACCOUNTS.md` | Sessions, roles, recovery, leaving — and §9, passkeys and the login rundown |
+| `ACCOUNTING.md` | How money is tracked, and what is deliberately not built |
+| `SECURITY.md` | Where MySet stands, the threat model, and the road to a grown-up posture |
+| `docs/reports/` | The server-cost audit (2026-09-05) — what one gig costs, and at what scale |
+| `tools/loadsim.py` | Reproduce every figure in that report: `python3 tools/loadsim.py` |
+| `credit-burn.sh` | What is actually eating Netlify credits this billing period |

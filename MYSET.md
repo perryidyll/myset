@@ -303,7 +303,39 @@ by **name within a city**, never by a stored link, so neither side can break the
 
 ---
 
+
+### Clips (added 2026-09-05)
+
+A post can carry **one thirty-second clip** as well as up to three photos and a
+video link. The clip is re-encoded on the phone to 480p (~600kbps) before anything
+leaves it, capped at **3MB** by the server, and uploaded on its own *before* the
+post is written — a function body tops out around 6MB and three photos already spend
+most of it. Every clip gets a poster frame, so the feed shows a still and the video
+only downloads when somebody taps play. Clips are served by `/api/vid` with byte-range
+support, which is what iOS Safari requires before it will play anything at all.
+
+A clip uploaded and never posted is swept after two hours by the cron; the sweep
+reads the feed first so a posted clip is never taken away. See INVARIANTS 0dq–0ds.
+
 # PART THREE — THE MONEY
+
+
+## 3.0 The books (added 2026-09-05)
+
+**Stripe holds the transactions; MySet produces the statements.** Every figure in
+every statement comes from Stripe's *balance transactions* — the list Stripe itself
+reconciles to the bank — and is only bucketed, never recomputed.
+
+- **Artists** — Studio → Money → *Your earnings*. Twelve months, gross / fees / net,
+  plus a CSV for their tax return.
+- **Venues** — Venue Studio → Merch → *Your earnings*. The same, scoped to the
+  venue's own Stripe account. Venues had nothing before this.
+- **Perry only** — Studio → Money → *MySet's books*. A real P&L: revenue read from
+  Stripe, costs typed in by hand, profit = net − spend.
+
+A finished month is computed once and cached, so a year's statement costs one Stripe
+page. Owner-only on the server, not merely hidden in the page. Full reasoning and the
+two traps it avoids: `ACCOUNTING.md`. INVARIANTS 0dt–0du.
 
 ## 3.1 Artist plans
 

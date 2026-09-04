@@ -1,0 +1,39 @@
+What one gig actually costs on Netlify.
+
+ONE GIG
+
+  as the ladder actually behaves (20 phones, 3 hours)
+    20 phones x 3h -> 6,030 polls (302 each, one every 36s of gig)
+    6,200 web requests | 16.3 MB | 15.8 function-minutes
+    = 4.198 credits  = $0.0420 (Personal) / $0.0280 (Pro)
+
+  if everyone stares at it (60% screen-on)
+    20 phones x 3h -> 15,508 polls (775 each, one every 14s of gig)
+    15,678 web requests | 40.3 MB | 40.3 function-minutes
+    = 10.654 credits  = $0.1065 (Personal) / $0.0710 (Pro)
+
+  absolute worst case: every screen on the whole gig, very busy room
+    20 phones x 3h -> 27,372 polls (1369 each, one every 8s of gig)
+    27,652 web requests | 70.4 MB | 71.4 function-minutes
+    = 18.839 credits  = $0.1884 (Personal) / $0.1256 (Pro)
+
+WHAT A MONTH LOOKS LIKE
+
+  Perry alone, ~5 gigs a week             20 gigs =        84 credits  = $     0.56/mo of gig traffic
+  10 artists                             200 gigs =       840 credits  = $     5.60/mo of gig traffic
+  100 artists                          2,000 gigs =     8,396 credits  = $    55.97/mo of gig traffic
+  1,000 artists                       20,000 gigs =    83,958 credits  = $   559.75/mo of gig traffic
+  10,000 artists — the $10/mo SaaS   200,000 gigs =   839,576 credits  = $ 5,597.45/mo of gig traffic
+
+  For scale: 104 production deploys in the last billing period = 1,560 credits.
+  That is 372 gigs' worth of audience traffic, spent on shipping code.
+
+THE SAME GIG SOMEWHERE ELSE  (and why the host is not the point)
+
+  Netlify (today)                $0.0280 per gig   $     5,597/mo at 10,000 artists
+  Cloudflare Workers + KV        $0.0483 per gig   $     9,658/mo at 10,000 artists
+  Cloudflare Durable Objects     $0.0021 per gig   $       427/mo at 10,000 artists
+  Netlify, poll fixed            $0.0153 per gig   $     3,056/mo at 10,000 artists
+
+  90,450 blob reads per gig — 15 per poll (test/cost.mjs).
+  That, not the logo on the invoice, is what a bill at scale is made of.

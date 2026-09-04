@@ -1,0 +1,7 @@
+# If you have found a security problem in MySet, please tell us before you tell
+# anyone else. We will answer, we will not send lawyers, and we will credit you
+# if you want to be credited.
+Contact: mailto:security@myset.vip
+Preferred-Languages: en
+Canonical: https://myset.vip/.well-known/security.txt
+Expires: 2027-09-05T00:00:00.000Z

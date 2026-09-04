@@ -28,7 +28,13 @@ export const SLOTS = new Set(['cover', 'avatar',
    Neither is `idcheck` and neither can be, so the ID photo stays unservable (0bk). */
 export const MERCH_SLOT = /^m[a-z0-9]{6}$/;
 export const POST_SLOT = /^c[a-z0-9]{8}_[0-2]$/;
-export const isSlot = (name) => SLOTS.has(name) || MERCH_SLOT.test(name) || POST_SLOT.test(name);
+/* A clip's POSTER frame. Named after the clip rather than the post, because the
+   clip is uploaded before the post exists (see _video.mjs). Keeping it in this
+   family means the poster is served, cached and deleted by the code that already
+   does all three for photos — and it is still not `idcheck`, so 0bk holds. */
+export const CLIP_SLOT = /^k[a-z0-9]{10}$/;
+export const isSlot = (name) => SLOTS.has(name) || MERCH_SLOT.test(name)
+  || POST_SLOT.test(name) || CLIP_SLOT.test(name);
 export const MAX_BYTES = 900 * 1024;
 const KEY = (aid, slot) => `img_${aid}_${slot}`;
 

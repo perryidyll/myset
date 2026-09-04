@@ -556,6 +556,7 @@ let SESS=null, REC=null;                  // where you're signed in, and your re
    server's ranking (votes desc -> voted-first -> title). */
 let SETQ='', SETFOCUS=false;
 let HISTQ='', HISTFOCUS=false, HSHOWN=[];   // the Money tab's past-shows search
+let LEDGER=null, BOOKS=null, BOOKMONTH='';  // the statement and (for the founder) the P&L
 let LASTSHOW='', LASTSTATUS='';            // when the night changes, the Money cache dies
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
@@ -864,6 +865,14 @@ function busy(on){
   if(BUSY){ BUSY_T=setTimeout(()=>{ if(BUSY) el.classList.add('on'); },140); }  // no flicker on fast calls
   else el.classList.remove('on');
 }
+/* The same headers `api` builds, for the two calls that come back as a FILE rather
+   than as JSON. api() ends in `r.json()`, so a CSV download cannot go through it. */
+function hdrs(){
+  const h={'content-type':'application/json'};
+  if(CODE){ h['x-admin-code']=CODE; if(ASLUG) h['x-admin-artist']=ASLUG; }
+  if(TOKEN) h['authorization']='Bearer '+TOKEN;
+  return h;
+}
 async function api(p,o={}){
   const h={'content-type':'application/json',...(o.headers||{})};
   if(CODE){ h['x-admin-code']=CODE; if(ASLUG) h['x-admin-artist']=ASLUG; }
@@ -920,7 +929,7 @@ async function load(opts){
      INVARIANT 0ad narrowed to a window rather than closed. It is one small read on
      a path that is already awaiting several. */
   if(planJob) jobs.push(planJob); else if(!PLAN) jobs.push(loadPlan());
-  if(TAB==='money'){ if(!REV)jobs.push(loadRev()); if(!HIST)jobs.push(loadHist()); }
+  if(TAB==='money'){ if(!REV)jobs.push(loadRev()); if(!HIST)jobs.push(loadHist()); if(!LEDGER)jobs.push(loadLedger()); }
   if(TAB==='profile'&&!PROF) jobs.push(loadProf());
   /* drawPush is NOT awaited: it races serviceWorker.ready for up to four seconds,
      and a boot screen held for a worker that may never come is a boot screen
@@ -965,8 +974,15 @@ function gate(err,mode){
   }else{
     inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">${
       err==='unauthorized'?'That didn’t work — try again.':'Sign in to run your show.'}</p>
+      ${PKSUPPORTED&&(localStorage.getItem('myset.slug')||ASLUG)?`<button class="big" onclick="passkeySignIn()">Sign in with Face ID</button>
+      <input type="hidden" id="pkslug" value="${esc(localStorage.getItem('myset.slug')||ASLUG)}">
+      <div style="display:flex;align-items:center;gap:12px;margin:18px 0 14px">
+        <span style="flex:1;height:.5px;background:var(--hair)"></span>
+        <span class="kick" style="font-size:12px">or</span>
+        <span style="flex:1;height:.5px;background:var(--hair)"></span>
+      </div>`:''}
       <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
-      <button class="big" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
+      <button class="big${PKSUPPORTED&&(localStorage.getItem('myset.slug')||ASLUG)?' alt':''}" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
       <p class="muted" style="font-size:12.5px;margin:14px 0 0;text-align:center">
         New here? Same button — we'll set you up right after the code.<br>
         No password to forget — we email you a code each time.</p>
@@ -1497,7 +1513,7 @@ async function payDash(){
   else toast((d&&d.error)||'Not available yet');
 }
 
-function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='settings')loadRecovery();if(D)render();
+function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='settings'){loadRecovery();loadPasskeys();}if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();loadOrders();}
   if(t==='profile'){ loadProf(); loadComm(); }
   if(t==='merch'){ loadPlan(); loadMerch(); loadOrders(); }
@@ -2049,7 +2065,7 @@ function render(){
         <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
       }
       // Get-paid card, tonight, what the room said, then the Pro numbers preview
-      body=payCard()+head+fbCard()+pays+ordersSection()+analyticsCard();
+      body=payCard()+head+fbCard()+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard();
     }
   }
 
@@ -2333,6 +2349,12 @@ function render(){
     <div class="list">
       <div class="row"><div class="m"><div class="t">Password</div>
         <div class="s">You don\u2019t have one. MySet emails you a fresh six-digit code every time \u2014 nothing to remember, nothing to leak.</div></div></div>
+      ${PKSUPPORTED?`<div class="row"><div class="m"><div class="t">Face ID or fingerprint${PKEYS?(PKEYS.length?' \u00b7 '+PKEYS.length+' device'+(PKEYS.length===1?'':'s'):' \u00b7 not set up'):''}</div>
+        <div class="s">Sign in with a look instead of a code from your email. The key stays on the phone; MySet only keeps the half that can check it. Your code still works if you lose the phone.</div></div>
+        <button class="act" onclick="addPasskey()">${PKEYS&&PKEYS.length?'Add another':'Set it up'}</button></div>
+      ${(PKEYS||[]).map(k=>`<div class="row"><div class="m"><div class="t">${esc(k.label)}</div>
+        <div class="s">Added ${daystamp(k.at)}${k.lastAt?' \u00b7 last used '+daystamp(k.lastAt):' \u00b7 not used yet'}</div></div>
+        <button class="act" onclick="dropPasskey('${esc(k.id)}')">Remove</button></div>`).join('')}`:''}
       <div class="row"><div class="m"><div class="t">Studio code${TEAM&&TEAM.ok?(TEAM.codeSet?' \u00b7 on':' \u00b7 not set'):''}</div>
         <div class="s">A code for this page, so you can get in from any phone even when email is slow. At least 8 characters, and not your page name.</div></div>
         <button class="act" onclick="openCodeSheet()">${TEAM&&TEAM.codeSet?'Change':'Set one'}</button></div>
@@ -2802,6 +2824,7 @@ function removeSong(id){
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b)return;
   const id=b.getAttribute('data-id');
+  if(b.dataset.act==='bookmonth') costSheet(id);
   if(b.dataset.act==='edit') openSongSheet(id);
   if(b.dataset.act==='sgsave') saveSongSheet(id||null);
   if(b.dataset.act==='sgroot') setKeyRoot(id);
@@ -3141,6 +3164,132 @@ function merchTab(){
     ${ordersSection()}
     <div class="wrap" style="padding-top:22px"><a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="justify-content:center">See your community page ↗</a></div>`;
 }
+/* ---------- THE BOOKS -------------------------------------------------------
+   Two cards. "Your earnings" is every artist's and every venue's; "MySet's books"
+   is the founder's only and is a real P&L — what came in, minus what Perry types
+   in for hosting and email, because a profit line with no costs in it is a number
+   that makes you feel good rather than a number you can act on.
+
+   Every figure here comes from Stripe's balance transactions and is only added up,
+   never worked out (see _ledger.mjs). So the page never has an opinion about what a
+   payment was worth; if Stripe says 47¢, this says 47¢. */
+async function loadLedger(force){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'ledger',months:12,force:!!force}),quiet:true});
+  if(d){ LEDGER=d; if(TAB==='money'&&D)render(); }
+  if(PLAN&&PLAN.owner&&!BOOKS) loadBooks(force);
+}
+async function loadBooks(force){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'books',months:12,force:!!force}),quiet:true});
+  if(d&&d.ok){ BOOKS=d; if(TAB==='money'&&D)render(); }
+}
+const m$=(c)=>{const n=(Number(c)||0)/100;const s=n<0?'-':'';const a=Math.abs(n);
+  return s+'$'+a.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});};
+const mlabel=(k)=>{const d=new Date(Date.UTC(+k.slice(0,4),+k.slice(5,7)-1,1));
+  return d.toLocaleDateString(undefined,{month:'short',year:'numeric',timeZone:'UTC'});};
+
+function earningsCard(){
+  const L=LEDGER;
+  if(!L) return `<div class="sec"><span class="kick">Your earnings</span></div>
+    <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Adding it up…</div></div>`;
+  if(!L.ok||!L.enabled) return `<div class="sec"><span class="kick">Your earnings</span></div>
+    <div class="list"><div class="row muted">Nothing to add up yet — this fills in once card payments are on and somebody has paid.</div></div>`;
+  const rows=(L.months||[]).filter(m=>m.count||m.gross||m.payouts);
+  const t=L.total||{};
+  return `
+  <div class="sec"><span class="kick">Your earnings · last 12 months</span><span class="kick">${m$(t.net)}</span></div>
+  <div class="stats">
+    <div class="c"><b class="mono">${m$(t.gross)}</b><span>Fans paid</span></div>
+    <div class="c"><b class="mono">${m$(-(t.stripeFee||0)-(t.platformFee||0))}</b><span>Fees</span></div>
+    <div class="c"><b class="mono acc">${m$(t.net)}</b><span>Yours</span></div>
+  </div>
+  ${rows.length?`<div class="list">${rows.map(m=>`<div class="row">
+    <div class="m"><div class="t">${mlabel(m.month)}</div>
+      <div class="s">${m.count} payment${m.count===1?'':'s'} · ${m$(m.gross)} taken · ${m$(m.stripeFee)} Stripe${m.platformFee?` · ${m$(m.platformFee)} MySet`:''}${m.payouts?` · ${m$(-m.payouts)} paid out`:''}</div></div>
+    <div class="cnt mono">${m$(m.net)}</div></div>`).join('')}</div>`
+   :`<div class="list"><div class="row muted">No payments in the last twelve months.</div></div>`}
+  <div class="wrap" style="margin-top:12px">
+    <button class="big alt" onclick="downloadLedger()">Download it as a spreadsheet</button>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">Every figure comes straight from Stripe — the same numbers your bank sees. “Yours” is after both fees. Hand the file to whoever does your tax.</p>
+    <button class="act" style="margin-top:10px" onclick="loadLedger(true)">↺ Check again</button>
+  </div>`;
+}
+
+async function downloadLedger(){
+  try{
+    const r=await fetch(`${API}/admin`,{method:'POST',headers:hdrs(),
+      body:JSON.stringify({action:'ledgerCsv',months:12})});
+    if(!r.ok){ toast('Couldn’t build that just now'); return; }
+    const blob=await r.blob(), u=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=u; a.download='myset-earnings.csv'; document.body.appendChild(a); a.click();
+    a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000);
+  }catch(e){ toast('Couldn’t build that just now'); }
+}
+
+/* THE FOUNDER'S P&L. Not shown to anybody else, and the server refuses it as well
+   as the page hiding it (admin.mjs OWNER_ONLY + the founder check) — INVARIANT 15k:
+   a limit that only the page enforces is not a limit. */
+function booksCard(){
+  if(!PLAN||!PLAN.owner) return '';
+  const B=BOOKS;
+  if(!B) return `<div class="sec"><span class="kick">MySet’s books</span></div>
+    <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Reading the balance…</div></div>`;
+  if(!B.enabled) return `<div class="sec"><span class="kick">MySet’s books</span></div>
+    <div class="list"><div class="row muted">The Stripe key isn’t set in Netlify, so there is nothing to read.</div></div>`;
+  const rows=B.months||[], t=B.total||{};
+  const KIND={hosting:'Hosting',email:'Email',domain:'Domain',software:'Software',contractor:'People',other:'Other'};
+  return `
+  <div class="sec"><span class="kick">MySet’s books · last 12 months</span><span class="kick">${m$(t.profit)}</span></div>
+  <div class="stats">
+    <div class="c"><b class="mono">${m$(t.net)}</b><span>Came in</span></div>
+    <div class="c"><b class="mono">${m$(t.spend)}</b><span>Went out</span></div>
+    <div class="c"><b class="mono ${(t.profit||0)>=0?'acc':''}">${m$(t.profit)}</b><span>Kept</span></div>
+  </div>
+  <div class="list">${rows.map(m=>`<div class="row" data-act="bookmonth" data-id="${m.month}" style="cursor:pointer">
+    <div class="m"><div class="t">${mlabel(m.month)}</div>
+      <div class="s">${m$(m.gross)} in · ${m$(m.stripeFee)} to Stripe · ${m$(m.spend)} costs${
+        Object.keys(m.costs||{}).length?' ('+Object.keys(m.costs).map(k=>KIND[k]||k).join(', ')+')':' — none recorded'}</div></div>
+    <div class="cnt mono" style="color:${(m.profit||0)>=0?'var(--good)':'var(--accent)'}">${m$(m.profit)}</div>
+    <button class="act" data-act="bookmonth" data-id="${m.month}">Costs</button></div>`).join('')}</div>
+  <div class="wrap" style="margin-top:12px">
+    <p class="muted" style="font-size:12px;margin:0 0 10px">“Came in” is subscriptions plus MySet’s cut of what fans paid artists, after Stripe’s own fee — read from Stripe’s balance, so it is what actually landed. “Went out” is what you type in below, because nothing can read your Netlify bill for you.</p>
+    <button class="big alt" onclick="booksCsv()">Download the books</button>
+    <button class="act" style="margin-top:10px" onclick="loadBooks(true)">↺ Check again</button>
+  </div>`;
+}
+
+async function booksCsv(){
+  try{
+    const r=await fetch(`${API}/admin`,{method:'POST',headers:hdrs(),
+      body:JSON.stringify({action:'books',months:12,csv:true})});
+    if(!r.ok){ toast('Couldn’t build that just now'); return; }
+    const blob=await r.blob(), u=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=u; a.download='myset-books.csv'; document.body.appendChild(a); a.click();
+    a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000);
+  }catch(e){ toast('Couldn’t build that just now'); }
+}
+
+function costSheet(month){
+  const m=((BOOKS&&BOOKS.months)||[]).find(x=>x.month===month)||{costs:{}};
+  const KIND={hosting:'Hosting (Netlify)',email:'Email (Resend)',domain:'Domain',
+              software:'Software',contractor:'People you paid',other:'Anything else'};
+  openSheet(`<h3>What ${mlabel(month)} cost</h3>
+    <p class="lede">Whole dollars or cents, whichever you have. Leave one blank to remove it.</p>
+    ${Object.keys(KIND).map(k=>`<div class="field"><label>${KIND[k]}</label>
+      <input class="inp" id="ck_${k}" inputmode="decimal" placeholder="0.00"
+        value="${(m.costs&&m.costs[k])?((m.costs[k].cents/100).toFixed(2)):''}"></div>`).join('')}
+    <button class="big" style="margin-top:14px" onclick="saveCosts('${month}')">Save</button>
+    <button class="big alt" style="margin-top:10px" onclick="closeSheet()">Cancel</button>`);
+}
+async function saveCosts(month){
+  const kinds=['hosting','email','domain','software','contractor','other'];
+  for(const k of kinds){
+    const el=document.getElementById('ck_'+k); if(!el) continue;
+    const cents=Math.round((parseFloat(el.value)||0)*100);
+    await api('/admin',{method:'POST',body:JSON.stringify({action:'bookCost',month,kind:k,cents}),quiet:true});
+  }
+  closeSheet(); BOOKS=null; await loadBooks(); toast('Saved');
+}
+
 function ordersSection(){
   const o=ORDERS||[]; const open=o.filter(x=>x.status!=='done');
   return `<div class="sec"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
@@ -3582,6 +3731,106 @@ async function signOutOthers(){
 }
 
 /* ---------- recovery codes ---------- */
+/* ---------- PASSKEYS -------------------------------------------------------
+   Face ID / Touch ID / Windows Hello instead of a code from an email.
+
+   Everything here is a browser API and a base64url conversion; the checking is on
+   the server (_passkey.mjs), which is the only place it can honestly be done. The
+   page never decides anybody is signed in — it hands a signature over and is told.
+
+   THE CONVERSIONS ARE THE WHOLE FIDDLY PART. WebAuthn speaks ArrayBuffer and the
+   wire speaks base64url, and the two are converted in opposite directions on the
+   way out and the way back. Getting one of them wrong produces a signature that
+   fails to verify with no useful message anywhere, so they live in two named
+   functions rather than being inlined six times. */
+const PKSUPPORTED = typeof PublicKeyCredential !== 'undefined'
+  && !!(navigator.credentials && navigator.credentials.create);
+let PKEYS=null;
+const ab2u = (b)=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const u2ab = (s)=>{ const t=String(s).replace(/-/g,'+').replace(/_/g,'/'); const b=atob(t+'==='.slice((t.length+3)%4));
+  const out=new Uint8Array(b.length); for(let i=0;i<b.length;i++) out[i]=b.charCodeAt(i); return out.buffer; };
+
+async function loadPasskeys(force){
+  if(!PKSUPPORTED) return;
+  /* Remember the page address, because the Face ID door needs to know WHICH page
+     before it can ask the phone — a passkey belongs to a page, and the sign-in
+     screen has no idea who you are yet. Written here rather than at sign-in
+     because this is the one place that runs only when somebody is really in. */
+  try{ if(TEAM&&TEAM.slug) localStorage.setItem('myset.slug',TEAM.slug); }catch(e){}
+  if(PKEYS&&!force) return;
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'passkeyList'}),quiet:true});
+  if(d&&d.ok){ PKEYS=d.keys||[]; if(TAB==='settings'&&D)render(); }
+}
+
+async function addPasskey(){
+  if(!PKSUPPORTED){ toast('This browser can’t do that yet'); return; }
+  const o=await api('/auth',{method:'POST',body:JSON.stringify({action:'passkeyStart'})});
+  if(!o||!o.ok){ toast((o&&o.error)||'Couldn’t start that'); return; }
+  let cred;
+  try{
+    cred=await navigator.credentials.create({publicKey:{
+      challenge:u2ab(o.challenge),
+      rp:{id:o.rpId,name:'MySet'},
+      user:{id:u2ab(o.userId),name:o.userName,displayName:o.displayName},
+      pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],
+      /* `platform` because the point is the phone already in their hand, and
+         `required` user verification because a passkey with no face and no thumb
+         behind it is just a cookie. */
+      authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'preferred'},
+      timeout:60000, attestation:'none',
+      excludeCredentials:(o.have||[]).map(id=>({type:'public-key',id:u2ab(id)})),
+    }});
+  }catch(e){
+    toast(e&&e.name==='InvalidStateError'?'That device is already set up':'Cancelled');
+    return;
+  }
+  if(!cred){ toast('Cancelled'); return; }
+  const label=(navigator.userAgent.match(/iPhone|iPad|Android|Macintosh|Windows/)||['This device'])[0]
+    .replace('Macintosh','Mac').replace('Windows','PC');
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'passkeyFinish',
+    id:cred.id, label,
+    clientDataJSON:ab2u(cred.response.clientDataJSON),
+    attestationObject:ab2u(cred.response.attestationObject)})});
+  if(!d.ok){ toast(d.error||'That didn’t take'); return; }
+  PKEYS=d.keys; toast('Set up — try signing out and back in'); render();
+}
+
+async function dropPasskey(id){
+  if(!confirm('Remove this device? You can always add it again.'))return;
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'passkeyForget',id})});
+  if(!d.ok){ toast(d.error||'Couldn’t remove that'); return; }
+  PKEYS=d.keys; render();
+}
+
+/* The fast door on the sign-in screen. Needs the page address, exactly like the
+   recovery door, because a passkey belongs to a page and the gate does not yet
+   know which page you are. Remembered after the first time, so it is one tap. */
+async function passkeySignIn(){
+  const slug=(document.getElementById('pkslug')||{}).value
+    ||localStorage.getItem('myset.slug')||'';
+  if(!slug){ toast('Type your page address first'); return; }
+  const o=await api('/auth',{method:'POST',body:JSON.stringify({action:'passkeySignInStart',slug})});
+  if(!o||!o.ok){ toast('Couldn’t start that'); return; }
+  if(!(o.keys||[]).length){ toast('No Face ID set up for that page yet — use a code'); return; }
+  let cred;
+  try{
+    cred=await navigator.credentials.get({publicKey:{
+      challenge:u2ab(o.challenge), rpId:o.rpId, userVerification:'required', timeout:60000,
+      allowCredentials:(o.keys||[]).map(id=>({type:'public-key',id:u2ab(id)})),
+    }});
+  }catch(e){ toast('Cancelled'); return; }
+  if(!cred){ toast('Cancelled'); return; }
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'passkeySignInFinish', slug,
+    id:cred.id,
+    clientDataJSON:ab2u(cred.response.clientDataJSON),
+    authenticatorData:ab2u(cred.response.authenticatorData),
+    signature:ab2u(cred.response.signature)})});
+  if(!d||!d.ok){ toast((d&&d.error)||'That didn’t work — use a code'); return; }
+  TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
+  if(d.slug) localStorage.setItem('myset.slug',d.slug);
+  location.reload();
+}
+
 async function loadRecovery(force){
   if(REC&&!force)return;
   const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'recoveryStatus'}),quiet:true});

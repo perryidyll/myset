@@ -537,12 +537,35 @@ export default async (req) => {
     return send();
   }
   if (action === 'postList') {
-    return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid))) });
+    return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid)), imgOwner(vid)) });
   }
   if (['postHide', 'postPin', 'postReply', 'postDelete'].includes(action)) {
     const r = await moderate(imgOwner(vid), { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
     if (!r.ok) return bad(r.error, 404);
-    return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid))) });
+    return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid)), imgOwner(vid)) });
+  }
+
+  /* A VENUE'S OWN BOOKS. Owner only (it is not on CREW_OK or MANAGER_OK, and
+     anything not on those lists is owner-only by construction). Same reporting
+     layer the artist side uses, scoped to the venue's connected account — see
+     _ledger.mjs. A venue that takes tips and sells merch through MySet needs a
+     year-end statement exactly as much as an artist does, and had nothing. */
+  if (action === 'ledger' || action === 'ledgerCsv') {
+    const { statement, toCsv } = await import('./_ledger.mjs');
+    const { stripeFor } = await import('./_connect.mjs');
+    const owner = imgOwner(vid);
+    const { stripe, opts } = await stripeFor(owner);
+    if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
+    const st = await statement(owner, stripe, opts,
+      { months: Math.min(60, Math.max(1, Number(body.months) || 12)), force: !!body.force });
+    if (action === 'ledgerCsv') {
+      const name = ((await venueById(vid)) || {}).name || vid;
+      return new Response(toCsv(st, { who: name }), { status: 200, headers: {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': `attachment; filename="myset-earnings-${vid}.csv"`,
+        'cache-control': 'no-store' } });
+    }
+    return json({ ok: true, enabled: true, ...st });
   }
 
   return bad('unknown action');

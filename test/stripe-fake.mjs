@@ -116,7 +116,22 @@ export default class Stripe {
     };
   }
   get balanceTransactions() {
-    return { retrieve: async (id, opts) => { note('balanceTransactions.retrieve', { id }, opts);
+    return {
+      /* Scoped like everything else: a connected account's balance is invisible
+         from the platform and the platform's is invisible from a connected
+         account. An accounting report that ignored this would add an artist's
+         gross into MySet's own revenue, which is the whole point of the test. */
+      list: async (params, opts) => { note('balanceTransactions.list', params, opts);
+        const acct = (opts && opts.stripeAccount) || '';
+        const g = (params.created || {}).gte || 0, l = (params.created || {}).lte || 9e12;
+        const rows = [...state.bts.values()]
+          .filter((b) => (b.__account || '') === acct && b.created >= g && b.created <= l)
+          .sort((a, b) => a.created - b.created);
+        const start = params.starting_after
+          ? rows.findIndex((r) => r.id === params.starting_after) + 1 : 0;
+        const page = rows.slice(start, start + (params.limit || 100));
+        return { data: page, has_more: start + page.length < rows.length }; },
+      retrieve: async (id, opts) => { note('balanceTransactions.retrieve', { id }, opts);
       const bt = state.bts.get(id);
       if (!bt) throw new Error('No such balance transaction');
       /* THE SCOPE MATTERS AS MUCH AS THE NUMBER. A balance transaction on a direct

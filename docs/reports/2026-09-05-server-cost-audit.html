@@ -1,0 +1,641 @@
+<title>What One Gig Costs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+  /* ── tokens ─────────────────────────────────────────────────────────────
+     Light is the base. Dark redefines only these, twice: once for the
+     un-stamped system-dark viewer, once for an explicit toggle. */
+  :root {
+    --ground:   #eef0f3;
+    --surface:  #ffffff;
+    --sunken:   #e4e7ec;
+    --ink:      #151a21;
+    --ink-soft: #3c4552;
+    --muted:    #6b7684;
+    --rule:     #d3d8e0;
+    --rule-firm:#b9c1cc;
+
+    --amber:    #d9691f;   /* the audience — MySet's own accent, dialled down for paper */
+    --amber-lo: #fbe9dc;
+    --teal:     #16706c;   /* the engineering answer */
+    --teal-lo:  #dcecea;
+    --good:     #23794f;
+    --bad:      #b23a30;
+
+    --shadow:   0 1px 2px rgba(21,26,33,.06), 0 8px 24px -12px rgba(21,26,33,.18);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #0e1116;
+      --surface:  #161b22;
+      --sunken:   #1c222b;
+      --ink:      #e6e9ee;
+      --ink-soft: #c0c7d1;
+      --muted:    #8b95a3;
+      --rule:     #262e39;
+      --rule-firm:#3a4453;
+      --amber:    #ff9552;
+      --amber-lo: #2d1d12;
+      --teal:     #4fc4bb;
+      --teal-lo:  #10262a;
+      --good:     #57c98a;
+      --bad:      #e97a6e;
+      --shadow:   0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #0e1116;
+    --surface:  #161b22;
+    --sunken:   #1c222b;
+    --ink:      #e6e9ee;
+    --ink-soft: #c0c7d1;
+    --muted:    #8b95a3;
+    --rule:     #262e39;
+    --rule-firm:#3a4453;
+    --amber:    #ff9552;
+    --amber-lo: #2d1d12;
+    --teal:     #4fc4bb;
+    --teal-lo:  #10262a;
+    --good:     #57c98a;
+    --bad:      #e97a6e;
+    --shadow:   0 1px 2px rgba(0,0,0,.5), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Newsreader", Georgia, "Times New Roman", serif;
+    font-size: 17.5px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1080px; margin: 0 auto; padding: 0 24px 96px; }
+  .col  { max-width: 640px; }               /* ~66 characters of Newsreader */
+
+  h1, h2, h3, .fig, .eyebrow, th, .btn, .tag {
+    font-family: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    font-variation-settings: "wdth" 112;
+  }
+  .mono, td.n, th.n, .unit, .k { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  .eyebrow {
+    font-size: 11.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--amber); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(38px, 6vw, 62px); font-weight: 700; line-height: 1.02;
+       letter-spacing: -.022em; margin: 0 0 18px; text-wrap: balance; }
+  h2 { font-size: clamp(25px, 3.4vw, 33px); font-weight: 600; line-height: 1.12;
+       letter-spacing: -.015em; margin: 0 0 14px; text-wrap: balance; }
+  h3 { font-size: 17px; font-weight: 600; letter-spacing: -.005em; margin: 0 0 6px; }
+  p  { margin: 0 0 17px; }
+  a  { color: var(--amber); }
+  strong { font-weight: 600; color: var(--ink); }
+  em { font-style: italic; }
+  .lede { font-size: 21px; line-height: 1.5; color: var(--ink-soft); }
+  .small { font-size: 14.5px; line-height: 1.55; color: var(--muted); }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 3px; }
+
+  /* ── masthead ───────────────────────────────────────────────── */
+  header.mast { padding: 74px 0 0; }
+  .mast .rule { height: 3px; background: var(--ink); margin: 0 0 26px; }
+  .stampline {
+    display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: baseline;
+    font-family: "JetBrains Mono", monospace; font-size: 11.5px;
+    letter-spacing: .04em; color: var(--muted); margin-bottom: 26px;
+  }
+  .stampline b { color: var(--ink-soft); font-weight: 500; }
+
+  /* ── the answer, up top ─────────────────────────────────────── */
+  .answer {
+    margin: 34px 0 0; background: var(--surface); border: 1px solid var(--rule);
+    border-top: 3px solid var(--amber); border-radius: 3px; box-shadow: var(--shadow);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+  }
+  .answer > div { padding: 22px 24px; border-right: 1px solid var(--rule); }
+  .answer > div:last-child { border-right: 0; }
+  .fig { font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: -.03em;
+         font-variant-numeric: tabular-nums; margin-bottom: 7px; }
+  .fig.acc { color: var(--amber); }
+  .fig.ok  { color: var(--good); }
+  .fig .unit { font-size: 15px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+  .answer .cap { font-size: 13px; line-height: 1.4; color: var(--muted); }
+
+  section { margin-top: 66px; }
+  .kicker {
+    display: flex; align-items: baseline; gap: 14px;
+    border-bottom: 1px solid var(--rule-firm); padding-bottom: 9px; margin-bottom: 26px;
+  }
+  .kicker .k { font-size: 11.5px; font-weight: 700; letter-spacing: .1em;
+               color: var(--muted); white-space: nowrap; }
+  .kicker h2 { margin: 0; }
+
+  /* ── panels ─────────────────────────────────────────────────── */
+  .panel {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 3px;
+    padding: 24px; margin: 26px 0; box-shadow: var(--shadow);
+  }
+  .panel > :last-child { margin-bottom: 0; }
+  .panel h3 { margin-bottom: 12px; }
+  .scroll { overflow-x: auto; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 460px; }
+  caption { text-align: left; font-size: 13px; color: var(--muted); padding-bottom: 10px; }
+  th {
+    text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--muted);
+    padding: 0 12px 8px 0; border-bottom: 1px solid var(--rule-firm); white-space: nowrap;
+  }
+  td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule);
+       vertical-align: baseline; color: var(--ink-soft); }
+  tr:last-child td { border-bottom: 0; }
+  .n { text-align: right; font-variant-numeric: tabular-nums; padding-right: 0; }
+  td.n { color: var(--ink); font-weight: 500; font-size: 14px; }
+  td.name { color: var(--ink); font-family: "Archivo", sans-serif; font-weight: 500; font-size: 14.5px; }
+  tr.hi td { background: var(--amber-lo); }
+  tr.fix td { background: var(--teal-lo); }
+  tr.fix td.n { color: var(--teal); font-weight: 700; }
+
+  /* ── the split bar ──────────────────────────────────────────── */
+  .split { display: flex; height: 46px; border-radius: 3px; overflow: hidden;
+           border: 1px solid var(--rule-firm); margin: 6px 0 14px; }
+  .split div { display: grid; place-content: center; font-family: "JetBrains Mono", monospace;
+               font-size: 12px; font-weight: 700; color: #fff; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 13.5px; color: var(--muted); }
+  .legend span { display: flex; align-items: center; gap: 7px; }
+  .sw { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+
+  /* ── the ladder ─────────────────────────────────────────────── */
+  .rungs { display: grid; gap: 0; margin: 4px 0 16px; }
+  .rung { display: grid; grid-template-columns: 76px 1fr; gap: 8px 16px; align-items: center;
+          padding: 13px 0; border-bottom: 1px solid var(--rule); }
+  .rung:last-child { border-bottom: 0; }
+  .rung .k { font-size: 13px; font-weight: 700; color: var(--ink); text-align: right;
+             font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", monospace; }
+  .rung .bar { height: 14px; border-radius: 2px; background: var(--amber); min-width: 6px; }
+  .rung .bar.off { background: repeating-linear-gradient(135deg, var(--rule-firm) 0 4px, transparent 4px 8px);
+                   border: 1px solid var(--rule-firm); }
+  .rung .note { grid-column: 2; font-size: 14px; line-height: 1.45; color: var(--muted); }
+
+  /* ── scale chart ────────────────────────────────────────────── */
+  .scale { display: grid; gap: 14px; }
+  .scale .row { display: grid; grid-template-columns: 1fr; gap: 5px; }
+  .scale .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .scale .who { font-family: "Archivo", sans-serif; font-weight: 500; font-size: 15px; color: var(--ink); }
+  .scale .amt { font-family: "JetBrains Mono", monospace; font-size: 14px; font-weight: 500;
+                color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .track { height: 10px; background: var(--sunken); border-radius: 2px; overflow: hidden; }
+  .track i { display: block; height: 100%; background: var(--amber); }
+  .track i.rev { background: var(--rule-firm); }
+  .scale .sub { font-size: 13px; color: var(--muted); }
+
+  /* ── callouts ───────────────────────────────────────────────── */
+  .flag {
+    border-left: 3px solid var(--amber); background: var(--amber-lo);
+    padding: 18px 22px; margin: 26px 0; border-radius: 0 3px 3px 0;
+  }
+  .flag.fix { border-left-color: var(--teal); background: var(--teal-lo); }
+  .flag > :last-child { margin-bottom: 0; }
+  .flag h3 { color: var(--ink); }
+
+  .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 0; }
+  .steps li { display: grid; grid-template-columns: 30px 1fr; gap: 16px;
+              padding: 16px 0; border-bottom: 1px solid var(--rule); }
+  .steps li:last-child { border-bottom: 0; }
+  .steps .num { font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700;
+                color: var(--amber); padding-top: 2px; }
+  .steps h3 { margin-bottom: 3px; }
+  .steps p { margin: 0; font-size: 15.5px; color: var(--ink-soft); }
+  .steps .win { display: inline-block; font-family: "JetBrains Mono", monospace; font-size: 12px;
+                font-weight: 700; color: var(--teal); background: var(--teal-lo);
+                padding: 2px 7px; border-radius: 2px; margin-top: 7px; }
+
+  footer { margin-top: 74px; border-top: 1px solid var(--rule-firm); padding-top: 22px; }
+
+  @media (max-width: 640px) {
+    body { font-size: 16.5px; }
+    .page { padding: 0 18px 72px; }
+    .answer > div { border-right: 0; border-bottom: 1px solid var(--rule); }
+    .answer > div:last-child { border-bottom: 0; }
+    .kicker { flex-direction: column; gap: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="page">
+
+<header class="mast">
+  <div class="rule"></div>
+  <div class="stampline">
+    <span>MYSET &middot; <b>SERVER COST AUDIT</b></span>
+    <span>5 SEPTEMBER 2026</span>
+    <span>MEASURED AGAINST <b>PRODUCTION</b></span>
+    <span>REPRODUCE: <b>tools/loadsim.py</b></span>
+  </div>
+  <div class="col">
+    <p class="eyebrow">The question</p>
+    <h1>If MySet goes viral, does the server bill eat the business?</h1>
+    <p class="lede">No. A three&#8209;hour bar set with twenty people voting costs
+      <strong>two point eight cents</strong> to serve. At ten thousand artists paying $10 a month,
+      audience traffic is about 5% of revenue.</p>
+    <p class="small">What <em>is</em> currently over budget is shipping code: 104 deploys last month cost
+      372 gigs&rsquo; worth of traffic. Everything below is measured — the payload with
+      <span class="mono">curl</span> against the live site, the blob reads by the test suite, the deploys
+      from Netlify&rsquo;s own API. The polling behaviour is simulated because it has to be; the simulator
+      is in the repo and runs the same ladder the app runs.</p>
+  </div>
+
+  <div class="answer">
+    <div>
+      <div class="fig acc">2.8<span class="unit">¢</span></div>
+      <div class="cap">One 3&#8209;hour gig, 20 phones, on Netlify Pro rates</div>
+    </div>
+    <div>
+      <div class="fig">6,030</div>
+      <div class="cap">Polls in that gig — one every 36 seconds per phone, not every 3</div>
+    </div>
+    <div>
+      <div class="fig">$5,597<span class="unit">/mo</span></div>
+      <div class="cap">Traffic for 200,000 gigs — the 10,000&#8209;artist business</div>
+    </div>
+    <div>
+      <div class="fig ok">5.6<span class="unit">%</span></div>
+      <div class="cap">Of the $100,000/mo that business would bill</div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="kicker"><span class="k">MECHANISM</span><h2>What actually creates a request</h2></div>
+  <div class="col">
+    <p>Nothing in MySet pushes. There is no websocket and no server&#8209;sent stream — every phone in the
+      room <em>asks</em>, and each ask is one billable request plus a slice of function time. So the
+      whole cost question reduces to a single number: <strong>how often does a phone ask?</strong></p>
+    <p>The obvious answer is wrong by more than a factor of ten. The voting page does not poll on a fixed
+      interval. It walks a ladder, and it stops entirely when the screen goes off:</p>
+  </div>
+
+  <div class="panel">
+    <h3>The polling ladder, as <span class="mono">public/vote.html</span> runs it</h3>
+    <div class="rungs">
+      <div class="rung">
+        <span class="k">every 3s</span><span class="bar" style="width:100%"></span>
+        <span class="note">For the first two ticks after anything changes — a vote from anyone in the room,
+          a song change, the window opening. This is when people are actually watching.</span>
+      </div>
+      <div class="rung">
+        <span class="k">every 10s</span><span class="bar" style="width:30%"></span>
+        <span class="note">Four ticks with nothing new. Still comfortably live.</span>
+      </div>
+      <div class="rung">
+        <span class="k">every 25s</span><span class="bar" style="width:12%"></span>
+        <span class="note">A quiet room, between songs. Pulling down refreshes instantly, so nobody is stuck
+          waiting for it.</span>
+      </div>
+      <div class="rung">
+        <span class="k">never</span><span class="bar off" style="width:12%"></span>
+        <span class="note">Screen off, or another app in front: <strong>no request at all</strong>. The timer
+          keeps running; the fetch does not happen. Turning the screen back on drops straight to 3 seconds.</span>
+      </div>
+    </div>
+    <p class="small" style="margin:0">A scroll or a tap only lifts a phone out of the deepest rung — it does
+      not pin it to 3 seconds. That one distinction was worth about two thirds of all polls: before it,
+      66% were held on the fast rung by fingers rather than by anything actually changing.</p>
+  </div>
+
+  <div class="col">
+    <p>Simulated over a three&#8209;hour set with twenty phones and a plausible amount of looking at them —
+      about a fifth of the gig, in glances — the ladder produces <strong>6,030 polls</strong>. That is
+      302 per phone: one every 36 seconds of wall clock. The naive figure, twenty phones every three
+      seconds for three hours, is 72,000. The ladder is a <strong>12&times;</strong> reduction, and nobody
+      in the room can perceive it.</p>
+  </div>
+
+  <div class="panel scroll">
+    <table>
+      <caption>Everything one phone costs across a whole gig</caption>
+      <thead><tr><th>What happens</th><th class="n">Count</th><th class="n">Function?</th><th class="n">Bytes each</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Opening the page</td><td class="n">6 files</td><td class="n">no — CDN</td><td class="n">48 KB total</td></tr>
+        <tr class="hi"><td class="name">Polling <span class="mono">/api/show</span></td><td class="n">302</td><td class="n">yes, 155 ms</td><td class="n">2,530</td></tr>
+        <tr><td class="name">Casting a vote</td><td class="n">2–3</td><td class="n">yes, ~260 ms</td><td class="n">1,200</td></tr>
+        <tr><td class="name">Photos on a profile</td><td class="n">0–4</td><td class="n">once per year</td><td class="n">edge&#8209;cached</td></tr>
+      </tbody>
+    </table>
+    <p class="small" style="margin:12px 0 0">The 2,530 bytes is real: <span class="mono">curl</span> against
+      <span class="mono">myset.vip/api/show</span> on 5 September, compressed, as a phone receives it.
+      The 155&nbsp;ms is measured from inside a live function. Photos are served with a version stamp and a
+      year&#8209;long durable cache, so a photo is read out of storage once per <em>version</em>, not once
+      per viewer.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><span class="k">THE METER</span><h2>How Netlify charges now</h2></div>
+  <div class="col">
+    <p>Netlify moved to <strong>credits</strong>. There is no free bucket of invocations any more and no
+      per&#8209;GB bandwidth price — everything draws on one pool, and you buy more when it runs out.
+      Your account is on Personal: <strong>1,000 credits for $9</strong>, top&#8209;ups at 500 for $5.</p>
+  </div>
+
+  <div class="panel scroll">
+    <table>
+      <caption>The rates that matter to MySet, read from Netlify&rsquo;s docs on 5 September 2026</caption>
+      <thead><tr><th>Metered thing</th><th class="n">Credits</th><th class="n">Per gig</th><th class="n">Share</th></tr></thead>
+      <tbody>
+        <tr class="hi"><td class="name">Function compute</td><td class="n">10 per GB&#8209;hour</td><td class="n">2.63</td><td class="n">63%</td></tr>
+        <tr><td class="name">Web requests</td><td class="n">2 per 10,000</td><td class="n">1.24</td><td class="n">30%</td></tr>
+        <tr><td class="name">Bandwidth</td><td class="n">20 per GB</td><td class="n">0.33</td><td class="n">8%</td></tr>
+        <tr><td class="name">Production deploy</td><td class="n">15 each</td><td class="n">—</td><td class="n">—</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:20px">
+      <div class="split">
+        <div style="width:62.7%;background:var(--amber)">COMPUTE 63%</div>
+        <div style="width:29.5%;background:var(--teal)">REQUESTS 30%</div>
+        <div style="width:7.8%;background:var(--rule-firm);color:var(--ink)">8%</div>
+      </div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--amber)"></i>Time the function spends running</span>
+        <span><i class="sw" style="background:var(--teal)"></i>Simply being asked</span>
+        <span><i class="sw" style="background:var(--rule-firm)"></i>Bytes on the wire</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <p><strong>Compute is nearly two thirds of the bill, and compute is not the code.</strong> The poll
+      spends its 155&nbsp;milliseconds mostly waiting: it does <strong>fifteen reads</strong> from Netlify
+      Blobs, in parallel, at roughly 40&nbsp;ms each. That number is not an estimate — the test suite
+      counts it on every run and fails the build if it goes above fifteen.</p>
+    <p>Bandwidth is almost nothing today because the payload is small and photos are cached at the edge.
+      That changes the moment video takes off, which is the one line worth watching.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><span class="k">TODAY&rsquo;S BILL</span><h2>The gigs are not the problem</h2></div>
+  <div class="col">
+    <p>Here is the whole account for the billing period that ends on 8 September, pulled from Netlify&rsquo;s
+      API rather than remembered.</p>
+  </div>
+
+  <div class="panel scroll">
+    <table>
+      <caption>Credits used, 8 August – 5 September 2026 &middot; the plan grants 1,000</caption>
+      <thead><tr><th>Where it went</th><th class="n">Credits</th><th class="n">As a share of the grant</th></tr></thead>
+      <tbody>
+        <tr class="hi"><td class="name">Deploying <span class="mono">mysetvip</span> (104 times)</td><td class="n">1,560</td><td class="n">156%</td></tr>
+        <tr><td class="name">Deploying the four other sites</td><td class="n">915</td><td class="n">92%</td></tr>
+        <tr><td class="name">Every gig Perry played</td><td class="n">≈84</td><td class="n">8%</td></tr>
+      </tbody>
+    </table>
+    <p class="small" style="margin:12px 0 0">Deploy previews and drafts are free; only production deploys
+      are charged, and these are only the production ones.</p>
+  </div>
+
+  <div class="flag">
+    <h3>The finding</h3>
+    <p style="margin-bottom:10px">Shipping code costs <strong>29&times; more than serving the audience.</strong>
+      One deploy is 15 credits; a whole three&#8209;hour gig is 4.2. And 38 of last month&rsquo;s deploys
+      look like the same change shipped twice — once from the command line and once by the GitHub build
+      that the same push triggered. That is about <strong>570 credits of pure duplication</strong>,
+      more than half a month&rsquo;s grant, spent shipping nothing new.</p>
+    <p style="margin:0"><strong>Fix that first.</strong> It is worth more than every optimisation in the next
+      section combined, and it takes an afternoon: pick one deploy path, turn the other off.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><span class="k">SCALE</span><h2>What happens if it does go viral</h2></div>
+  <div class="col">
+    <p>Traffic is the honest thing to project, because it is the only line that grows with users. Deploys
+      do not; a thousand artists need the same number of releases as one.</p>
+  </div>
+
+  <div class="panel">
+    <p class="small" style="margin:0 0 18px">Each bar is a ten&#8209;fold step, not a linear one — the top row
+      is a thousandth of the bottom row, and drawn to scale it would be invisible.</p>
+    <div class="scale">
+      <div class="row">
+        <div class="top"><span class="who">Perry alone &middot; 20 gigs/mo</span><span class="amt">$0.56</span></div>
+        <div class="track"><i style="width:1.2%"></i></div>
+        <div class="sub">84 credits. Less than a tenth of the plan you already pay for.</div>
+      </div>
+      <div class="row">
+        <div class="top"><span class="who">10 artists &middot; 200 gigs/mo</span><span class="amt">$5.60</span></div>
+        <div class="track"><i style="width:25.9%"></i></div>
+        <div class="sub">840 credits. Still inside a $20 Pro plan with room to spare.</div>
+      </div>
+      <div class="row">
+        <div class="top"><span class="who">100 artists &middot; 2,000 gigs/mo</span><span class="amt">$55.97</span></div>
+        <div class="track"><i style="width:50.6%"></i></div>
+        <div class="sub">Against roughly $1,000/mo of subscriptions. <strong>5.6%.</strong></div>
+      </div>
+      <div class="row">
+        <div class="top"><span class="who">1,000 artists &middot; 20,000 gigs/mo</span><span class="amt">$559.75</span></div>
+        <div class="track"><i style="width:75.3%"></i></div>
+        <div class="sub">Against roughly $10,000/mo. <strong>5.6%.</strong></div>
+      </div>
+      <div class="row">
+        <div class="top"><span class="who">10,000 artists &middot; 200,000 gigs/mo</span><span class="amt">$5,597</span></div>
+        <div class="track"><i style="width:100%"></i></div>
+        <div class="sub">Against $100,000/mo. <strong>Still 5.6%</strong> — the ratio does not move, because
+          both sides scale with the same thing.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <p>That last row is the answer to the fear. Serving 200,000 gigs a month is a rounding error against
+      $100,000 of revenue, and Stripe&rsquo;s 2.9% + 30&cent; on every transaction is a bigger line than
+      the servers by a wide margin.</p>
+    <p><strong>The ratio is fixed, and that is the important structural fact.</strong> Cost per gig is
+      constant; revenue per artist is constant; artists play a roughly constant number of gigs. There is no
+      point on the curve where traffic overtakes the subscription — unlike, say, an AI feature, where cost
+      per user rises with how much they use it.</p>
+  </div>
+
+  <div class="panel scroll">
+    <table>
+      <caption>The same gig under worse assumptions — the ladder run again with people staring at their phones</caption>
+      <thead><tr><th>Assumption</th><th class="n">Polls</th><th class="n">Per gig</th><th class="n">At 200,000 gigs</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Realistic — 22% screen&#8209;on, in glances</td><td class="n">6,030</td><td class="n">$0.028</td><td class="n">$5,597</td></tr>
+        <tr><td class="name">Heavy — 60% screen&#8209;on all night</td><td class="n">15,508</td><td class="n">$0.071</td><td class="n">$14,205</td></tr>
+        <tr class="hi"><td class="name">Impossible — every screen on, every second, very busy room</td><td class="n">27,372</td><td class="n">$0.126</td><td class="n">$25,119</td></tr>
+      </tbody>
+    </table>
+    <p class="small" style="margin:12px 0 0">Even the impossible case is 25% of revenue at that scale — bad,
+      but not fatal, and it cannot happen: it requires twenty people to hold an unlocked phone on one page
+      for three hours without looking up.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><span class="k">LEVERS</span><h2>Every way to make it cheaper, ranked</h2></div>
+  <div class="col">
+    <p>Ordered by what they actually save, not by how interesting they are. The first two need no code.</p>
+  </div>
+
+  <div class="panel">
+    <ol class="steps">
+      <li>
+        <span class="num">01</span>
+        <div>
+          <h3>Stop double&#8209;deploying</h3>
+          <p>Turn off either the command&#8209;line deploy or the GitHub build, so one push ships once.
+            Nothing about the product changes.</p>
+          <span class="win">≈570 credits/month &middot; 6.8× all your gig traffic</span>
+        </div>
+      </li>
+      <li>
+        <span class="num">02</span>
+        <div>
+          <h3>Batch releases</h3>
+          <p>104 production deploys in a month is roughly four a day. Shipping twice a day instead of four
+            times halves the largest line on the bill and changes nothing a user sees.</p>
+          <span class="win">≈750 credits/month</span>
+        </div>
+      </li>
+      <li>
+        <span class="num">03</span>
+        <div>
+          <h3>Split the poll payload</h3>
+          <p>Every poll returns the whole song list, which changes a handful of times a night. Send a version
+            number and let the phone skip the list when it has not moved — fewer bytes, and the storage
+            reads behind them can be skipped too.</p>
+          <span class="win">−60% bytes, −40% compute</span>
+        </div>
+      </li>
+      <li>
+        <span class="num">04</span>
+        <div>
+          <h3>A three&#8209;second edge cache on the poll</h3>
+          <p>Twenty phones in one room ask the same question within the same second. Caching the answer for
+            three seconds at the CDN turns twenty function calls into one, and three seconds is inside the
+            fastest rung — nobody could tell.</p>
+          <span class="win">up to −80% compute in a full room</span>
+        </div>
+      </li>
+      <li>
+        <span class="num">05</span>
+        <div>
+          <h3>Fewer than fifteen reads</h3>
+          <p>The poll reads fifteen documents. Several — the setlist, the songs to learn, the feedback
+            state — change once a night, not once every three seconds. Read them only when the show&rsquo;s
+            timestamp has moved.</p>
+          <span class="win">−4 reads/poll ≈ −25% compute</span>
+        </div>
+      </li>
+      <li>
+        <span class="num">06</span>
+        <div>
+          <h3>Keep the show in memory</h3>
+          <p>The real fix, and the largest. One object per live show, holding the state in memory, answering
+            polls without reading storage at all. This is what Cloudflare&rsquo;s Durable Objects are for and
+            it is the only change that makes the reads <em>structurally</em> disappear rather than fewer.
+            It is also a rewrite of the hot path, so it is a decision for a thousand artists, not for now.</p>
+          <span class="win">$0.028 → $0.002 per gig &middot; 13×</span>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><span class="k">ALTERNATIVES</span><h2>Would a cheaper host help?</h2></div>
+  <div class="col">
+    <p>This is the part worth reading twice, because the intuitive answer is wrong.</p>
+  </div>
+
+  <div class="panel scroll">
+    <table>
+      <caption>The same 20&#8209;person, 3&#8209;hour gig, priced on each platform&rsquo;s published rates</caption>
+      <thead><tr><th>Where it runs</th><th class="n">Per gig</th><th class="n">At 200,000 gigs/mo</th><th class="n">vs today</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Netlify, as built today</td><td class="n">$0.0280</td><td class="n">$5,597</td><td class="n">—</td></tr>
+        <tr class="hi"><td class="name">Cloudflare Workers + KV</td><td class="n">$0.0483</td><td class="n">$9,658</td><td class="n">1.7× worse</td></tr>
+        <tr class="fix"><td class="name">Netlify, with levers 3–5</td><td class="n">$0.0153</td><td class="n">$3,056</td><td class="n">1.8× better</td></tr>
+        <tr class="fix"><td class="name">Cloudflare Durable Objects</td><td class="n">$0.0021</td><td class="n">$427</td><td class="n">13× better</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="flag fix">
+    <h3>Moving hosts would make it worse</h3>
+    <p style="margin-bottom:10px">Cloudflare bills nothing for bandwidth and very little per request, which
+      is why everyone assumes it is cheaper. But it charges <strong>$0.50 per million key reads</strong>,
+      and MySet does fifteen reads on every poll — <strong>90,450 reads in a single gig</strong>. Itemised,
+      those reads cost more than Netlify charges for the whole invocation.</p>
+    <p style="margin:0">The platform is not the cost driver. <strong>Fifteen reads per poll is.</strong>
+      Fix that and every platform is cheap; do not fix it and no platform is. The only reason Durable
+      Objects wins is that it deletes the reads rather than repricing them.</p>
+  </div>
+
+  <div class="col">
+    <p>Two more that were considered and are not worth it. <strong>Running your own server</strong> —
+      a $12/month box would serve all of this and more, but it introduces a machine to patch, a database to
+      back up, and a thing that can be down at 10pm on a Saturday; the saving is real and the cost is your
+      weekends. <strong>Websockets instead of polling</strong> would cut requests to near zero, but neither
+      Netlify nor a serverless function can hold a connection open for three hours, so it means the same
+      always&#8209;on server, with the same trade.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><span class="k">THE ONE RISK</span><h2>Video is the line that can move</h2></div>
+  <div class="col">
+    <p>Everything above holds because MySet moves tiny amounts of data. Clips on community posts break that
+      assumption, and they are the only feature that can.</p>
+    <p>A 3&nbsp;MB clip watched a hundred thousand times is <strong>300&nbsp;GB</strong> — about 6,000
+      credits, roughly $40 — from one post. That is more than a month of everything else. Three things keep
+      it bounded, and all three are already in the code: clips are re&#8209;encoded on the phone and capped
+      at 3&nbsp;MB by the server; every clip has a poster frame so the feed loads a still and the video only
+      downloads when somebody actually taps play; and each clip is cached at the edge for a year.</p>
+    <p>Worth a note in the calendar: if clips get popular, bandwidth moves from 8% of the bill to most of it,
+      and that is the moment to put them behind object storage with free egress rather than serve them from
+      a function.</p>
+  </div>
+</section>
+
+<section>
+  <div class="kicker"><span class="k">VERDICT</span><h2>What to do, in order</h2></div>
+  <div class="col">
+    <p><strong>Now.</strong> Stop the double deploys and move to Netlify Pro. You are at 2,475 credits
+      against a 1,000&#8209;credit grant, and $20 for 3,000 is cheaper than $9 plus top&#8209;ups. That is a
+      today decision regardless of anything else here.</p>
+    <p><strong>Before beta.</strong> Levers 3, 4 and 5 — the payload split, the three&#8209;second edge cache
+      and the read trimming. Together they take a gig from 2.8&cent; to about 1.5&cent; and, more usefully,
+      they halve how long the poll takes on bar wifi.</p>
+    <p><strong>At a thousand artists.</strong> Revisit lever 6. Not before: it is a rewrite of the one path
+      that must never break, and at $560 a month it is not yet buying anything worth the risk.</p>
+    <p><strong>Never, on this evidence.</strong> Move hosts to save money. The numbers say it would cost more.</p>
+  </div>
+
+  <div class="flag">
+    <p style="margin:0"><strong>The short version.</strong> The business model is safe. Serving the audience
+      costs about 5% of what the audience&rsquo;s artist pays you, at every scale that matters, and the
+      structure of the app is why. The thing quietly costing you money right now is not the app at all —
+      it is deploying it four times a day.</p>
+  </div>
+</section>
+
+<footer>
+  <p class="small" style="margin:0">
+    <strong>How to check any of this.</strong> Run <span class="mono">python3 tools/loadsim.py</span> in the
+    MySet repo to reproduce every per&#8209;gig figure, with different room sizes and set lengths;
+    <span class="mono">./credit-burn.sh</span> pulls the live deploy count from Netlify;
+    <span class="mono">node --import ./test/register.mjs test/cost.mjs</span> prints the reads per poll and
+    fails if they grow. The payload size came from
+    <span class="mono">curl</span> against production on 5 September 2026, the 155&nbsp;ms from a timing
+    measurement inside a live function, and the credit rates from Netlify&rsquo;s and Cloudflare&rsquo;s
+    published pricing on the same day. The polling behaviour is the only modelled input; the model is the
+    ladder in <span class="mono">public/vote.html</span>, and it is stated in the simulator&rsquo;s header
+    so it can be argued with.
+  </p>
+</footer>
+
+</div>

@@ -105,7 +105,15 @@ body{padding-bottom:34px}
 .post .pics.n1 img{aspect-ratio:4/3}
 .post .vid{margin-top:10px;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:16/9}
 .post .vid iframe{width:100%;height:100%;border:0;display:block}
-.post .vlink{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 14px;border-radius:var(--pill);background:var(--bg);font-size:14px;font-weight:600}
+.post .clip{margin-top:10px;border-radius:14px;overflow:hidden;background:#000}
+.clip video{width:100%;display:block;max-height:70vh;background:#000}
+.clipdone{margin-top:10px;position:relative}
+.clipdone video{width:100%;display:block;border-radius:14px;background:#000;max-height:44vh}
+.clipdone .chip{margin-top:8px}
+.prog{margin-top:10px;height:26px;border-radius:13px;background:var(--hair-2,rgba(255,255,255,.09));position:relative;overflow:hidden}
+.prog i{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent,#ff8a3d);transition:width .25s ease;display:block}
+.prog span{position:relative;display:block;line-height:26px;text-align:center;font-size:12px;font-weight:600}
+.vlink{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:10px 14px;border-radius:var(--pill);background:var(--bg);font-size:14px;font-weight:600}
 .post .rep{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--accent-soft);font-size:14px;line-height:1.4}
 .post .rep b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-ink);margin-bottom:3px}
 .post .ft{display:flex;align-items:center;gap:14px;margin-top:10px;font-size:13px;color:var(--muted)}
@@ -171,7 +179,7 @@ function closeSheet(){$('#sheet').classList.remove('on');$('#bg').classList.remo
 const money=c=>'$'+(c/100).toFixed(c%100?2:0);
 const ago=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
 
-let D=null, DRAFT={stars:0,photos:[],show:''}, SHOWPRE=(new URLSearchParams(location.search).get('show')||'');
+let D=null, DRAFT={stars:0,photos:[],show:'',clip:null}, SHOWPRE=(new URLSearchParams(location.search).get('show')||'');
 
 async function load(){
   try{
@@ -220,6 +228,12 @@ function render(){
       <span class="muted" style="font-size:12px">Up to three</span>
     </div>
     <div class="thumbs" id="thumbs">${DRAFT.photos.map((p,i)=>`<div style="background-image:url('${p}')"><b data-rm="${i}">✕</b></div>`).join('')}</div>
+    <div class="row2">
+      <label class="chip" style="cursor:pointer">＋ Add a clip<input type="file" accept="video/*" id="cf" style="display:none"></label>
+      <span class="muted" style="font-size:12px">${CLIP_SECS} seconds, one per post</span>
+    </div>
+    <div id="clipBox">${DRAFT.clip?`<div class="clipdone"><video src="${esc(DRAFT.clip.src)}" poster="${esc(DRAFT.clip.poster||'')}" preload="none" playsinline controls></video><button class="chip" id="clipRm">Remove clip</button></div>`:''}</div>
+    <div class="prog" id="clipProg" hidden><i></i><span></span></div>
     <button class="go" id="postBtn" disabled>Post</button>
     <p class="fineprint" style="margin:10px 0 0">Three posts a day per phone. You won’t get a notification — come back and look.</p>
   </div>`;
@@ -236,6 +250,7 @@ function render(){
         ${p.showLabel?`<span class="evtag">${esc(p.showLabel)}</span>`:''}${p.pinned?'<span class="pin">Pinned</span>':''}</div>
       ${p.text?`<p class="tx">${esc(p.text)}</p>`:''}
       ${n?`<div class="pics n${n}">${p.photos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy" data-zoom="${esc(u)}">`).join('')}</div>`:''}
+      ${p.clip?`<div class="clip"><video src="${esc(p.clip.src)}"${p.clip.poster?` poster="${esc(p.clip.poster)}"`:''} preload="none" playsinline controls></video></div>`:''}
       ${p.video?(p.video.src?`<div class="vid"><iframe src="${esc(p.video.src)}" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`
         :`<a class="vlink" href="${esc(p.video.href)}" target="_blank" rel="noopener noreferrer">▶ Watch on ${p.video.provider==='tiktok'?'TikTok':'Instagram'} ↗</a>`):''}
       ${p.reply?`<div class="rep"><b>${who}</b>${esc(p.reply.text)}</div>`:''}
@@ -251,7 +266,7 @@ function render(){
 function wire(){
   const txt=$('#txt'), cnt=$('#cnt'), btn=$('#postBtn');
   const upd=()=>{ if(!txt)return; const n=txt.value.length; cnt.textContent=`${n}/500`; cnt.classList.toggle('hot',n>=480);
-    btn.disabled=!(txt.value.trim()||DRAFT.stars||DRAFT.photos.length||($('#vid')&&$('#vid').value.trim())); };
+    btn.disabled=!(txt.value.trim()||DRAFT.stars||DRAFT.photos.length||DRAFT.clip||($('#vid')&&$('#vid').value.trim())); };
   if(txt){ txt.addEventListener('input',()=>{DRAFT.text=txt.value;upd();}); upd(); }
   const vid=$('#vid'); if(vid) vid.addEventListener('input',()=>{DRAFT.video=vid.value;upd();});
   const nm=$('#nm'); if(nm) nm.addEventListener('input',()=>DRAFT.name=nm.value);
@@ -259,11 +274,178 @@ function wire(){
   document.querySelectorAll('[data-star]').forEach(b=>b.addEventListener('click',()=>{ const n=+b.getAttribute('data-star'); DRAFT.stars=DRAFT.stars===n?0:n; render(); }));
   document.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{ DRAFT.photos.splice(+b.getAttribute('data-rm'),1); render(); }));
   const pf=$('#pf'); if(pf) pf.addEventListener('change',async()=>{ for(const f of [...pf.files].slice(0,3-DRAFT.photos.length)){ try{ DRAFT.photos.push(await shrink(f)); }catch(e){ toast('Couldn’t read that photo'); } } render(); });
+  const cf=$('#cf'); if(cf) cf.addEventListener('change',()=>{ if(cf.files&&cf.files[0]) addClip(cf.files[0]); cf.value=''; });
+  const crm=$('#clipRm'); if(crm) crm.addEventListener('click',()=>{ DRAFT.clip=null; render(); });
   if(btn) btn.addEventListener('click',post);
   document.querySelectorAll('[data-like]').forEach(b=>b.addEventListener('click',()=>like(b)));
   document.querySelectorAll('[data-more]').forEach(b=>b.addEventListener('click',()=>more(b.getAttribute('data-more'))));
   document.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>buySheet(b.getAttribute('data-buy'))));
   document.querySelectorAll('[data-zoom]').forEach(i=>i.addEventListener('click',()=>{ $('#lbimg').src=i.getAttribute('data-zoom'); $('#lb').classList.add('on'); }));
+}
+
+/* ---------- CLIPS ----------------------------------------------------------
+   Thirty seconds of the room, re-encoded ON THE PHONE before anything is sent.
+
+   WHY THE PHONE DOES THE WORK. A 30-second clip straight off an iPhone is 6-12MB;
+   a Netlify function body tops out around 6MB and MySet's own limit is 3MB. There
+   is no server to transcode on (that is a container and a queue and a bill), and
+   there is no npm package that can do it in a page without shipping several MB of
+   WebAssembly to every fan who opens a community page. The browser already has a
+   video encoder — MediaRecorder — so the phone uses it.
+
+   THE COST OF THAT: encoding is REAL TIME. A 30-second clip takes 30 seconds,
+   because MediaRecorder records a canvas as it is painted and cannot be hurried.
+   So there is a progress bar, it says what it is doing, and the upload happens
+   while the person is still typing rather than when they press Post.
+
+   WHAT DEGRADES, AND HOW. Audio is taken from the element's own captureStream,
+   which not every browser implements; if it is missing the clip is silent rather
+   than absent. If MediaRecorder is missing entirely, a file that already fits is
+   sent untouched and anything bigger gets a sentence explaining why, not a spinner
+   that never ends. Every one of those paths ends with the person knowing what
+   happened. */
+const CLIP_SECS = 30, CLIP_MAX = 3 * 1024 * 1024;
+const CLIP_TYPES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4',
+                    'video/webm;codecs=vp8,opus', 'video/webm'];
+const canRecord = () => typeof MediaRecorder !== 'undefined'
+  && !!document.createElement('canvas').captureStream
+  && CLIP_TYPES.some(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } });
+
+function clipProgress(pct, label){
+  const box=$('#clipProg'); if(!box) return;
+  box.hidden = pct==null;
+  if(pct==null) return;
+  box.querySelector('i').style.width = Math.round(Math.max(0,Math.min(1,pct))*100)+'%';
+  box.querySelector('span').textContent = label||'';
+}
+
+/** Load a file into a <video> and wait for its dimensions. */
+function loadVideo(file){
+  return new Promise((res,rej)=>{
+    const v=document.createElement('video');
+    v.preload='auto'; v.playsInline=true; v.muted=true;
+    v.setAttribute('playsinline',''); v.setAttribute('muted','');
+    v.onloadedmetadata=()=>res(v);
+    v.onerror=()=>rej(new Error('bad video'));
+    v.src=URL.createObjectURL(file);
+  });
+}
+
+/** A still from about a second in, as a JPEG data URL. Small on purpose — it is
+    what the feed shows before anybody taps, so it has to be cheap. */
+function posterFrom(v){
+  return new Promise((res)=>{
+    const done=()=>{
+      try{
+        const max=640, r=Math.min(1,max/Math.max(v.videoWidth||1,v.videoHeight||1));
+        const c=document.createElement('canvas');
+        c.width=Math.max(2,Math.round((v.videoWidth||2)*r));
+        c.height=Math.max(2,Math.round((v.videoHeight||2)*r));
+        c.getContext('2d').drawImage(v,0,0,c.width,c.height);
+        res(c.toDataURL('image/jpeg',0.7));
+      }catch(e){ res(''); }
+    };
+    try{
+      v.onseeked=done;
+      v.currentTime=Math.min(1, (v.duration||2)/3);
+      setTimeout(()=>{ if(v.onseeked){ v.onseeked=null; done(); } }, 1500);
+    }catch(e){ done(); }
+  });
+}
+
+/** Re-encode to a 480px short side at ~600kbps. Resolves to a Blob. */
+function reencode(v, seconds, onPct){
+  return new Promise((res,rej)=>{
+    const short=Math.min(v.videoWidth,v.videoHeight)||480;
+    const r=Math.min(1, 480/short);
+    const c=document.createElement('canvas');
+    // even dimensions: some H.264 encoders refuse an odd width or height
+    c.width =Math.max(2, Math.round(v.videoWidth  * r / 2) * 2);
+    c.height=Math.max(2, Math.round(v.videoHeight * r / 2) * 2);
+    const ctx=c.getContext('2d');
+    const out=c.captureStream(24);
+    try{
+      const el=v.captureStream ? v.captureStream() : (v.mozCaptureStream ? v.mozCaptureStream() : null);
+      if(el) el.getAudioTracks().forEach(t=>out.addTrack(t));
+    }catch(e){}
+    const mime=CLIP_TYPES.find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } });
+    let rec;
+    try{ rec=new MediaRecorder(out,{mimeType:mime, videoBitsPerSecond:600000, audioBitsPerSecond:64000}); }
+    catch(e){ return rej(e); }
+    const chunks=[]; let stopped=false;
+    rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    rec.onerror=()=>{ if(!stopped){ stopped=true; rej(new Error('encoder')); } };
+    rec.onstop=()=>{ if(!stopped){ stopped=true; res(new Blob(chunks,{type:(mime||'video/webm').split(';')[0]})); } };
+    const finish=()=>{ try{ if(rec.state!=='inactive') rec.stop(); }catch(e){} };
+    const draw=()=>{
+      if(v.paused||v.ended) return finish();
+      try{ ctx.drawImage(v,0,0,c.width,c.height); }catch(e){}
+      onPct(v.currentTime/seconds);
+      if(v.currentTime>=seconds){ try{ v.pause(); }catch(e){} return finish(); }
+      requestAnimationFrame(draw);
+    };
+    v.onended=finish;
+    /* A hard backstop. If the element stalls — bar wifi, a codec the decoder gives
+       up on — nothing above ever fires again and the person watches a bar that
+       never moves. Two seconds of slack per second of clip, then take what we have. */
+    setTimeout(finish, (seconds+2)*2000);
+    v.currentTime=0;
+    v.play().then(()=>{ try{ rec.start(400); }catch(e){ rej(e); } draw(); }).catch(rej);
+  });
+}
+
+const blobToDataUrl = (b) => new Promise((res,rej)=>{ const f=new FileReader();
+  f.onload=()=>res(f.result); f.onerror=()=>rej(new Error('read')); f.readAsDataURL(b); });
+
+async function addClip(file){
+  if(DRAFT.clip){ toast('One clip per post'); return; }
+  let v;
+  clipProgress(0.02,'Reading the clip…');
+  try{ v=await loadVideo(file); }
+  catch(e){ clipProgress(null); toast('Couldn’t read that video'); return; }
+  const seconds=Math.min(v.duration||CLIP_SECS, CLIP_SECS);
+  if((v.duration||0) > CLIP_SECS + 0.5) toast(`Using the first ${CLIP_SECS} seconds`);
+
+  let blob=null;
+  try{
+    if(file.size<=CLIP_MAX && (v.duration||0)<=CLIP_SECS+0.5 && /mp4|webm/i.test(file.type||'')){
+      // already small enough and short enough — send it as it is, audio and all
+      clipProgress(0.5,'Ready…'); blob=file;
+    } else if(canRecord()){
+      clipProgress(0.03,'Shrinking on your phone — about '+Math.round(seconds)+' seconds');
+      blob=await reencode(v, seconds, (p)=>clipProgress(0.03+p*0.62,'Shrinking… '+Math.round(p*100)+'%'));
+    } else {
+      clipProgress(null); URL.revokeObjectURL(v.src);
+      toast('This browser can’t shrink video. Try a shorter clip, or paste a link.');
+      return;
+    }
+  }catch(e){
+    clipProgress(null); URL.revokeObjectURL(v.src);
+    toast('Couldn’t shrink that one. Try a shorter clip, or paste a link.');
+    return;
+  }
+  if(!blob || !blob.size){ clipProgress(null); toast('That came out empty — try again'); return; }
+  if(blob.size>CLIP_MAX){
+    clipProgress(null); URL.revokeObjectURL(v.src);
+    toast('Still too big after shrinking. Try a shorter clip.'); return;
+  }
+
+  clipProgress(0.7,'Grabbing a still…');
+  let poster='';
+  try{ poster=await posterFrom(v); }catch(e){}
+  URL.revokeObjectURL(v.src);
+
+  clipProgress(0.78,'Uploading…');
+  try{
+    const data=await blobToDataUrl(blob);
+    const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({action:'clip',fan:FAN,data,poster})});
+    const d=await r.json();
+    if(!d.ok){ clipProgress(null); toast(d.error||'Couldn’t upload that clip'); return; }
+    DRAFT.clip={id:d.clip, src:URL.createObjectURL(blob), poster};
+    clipProgress(1,'Added'); setTimeout(()=>clipProgress(null),700);
+    render();
+  }catch(e){ clipProgress(null); toast('Upload didn’t go through — try again'); }
 }
 
 /* shrink on the phone, like every other upload: 1024px longest side, JPEG stepped
@@ -278,11 +460,12 @@ async function post(){
   const btn=$('#postBtn'); btn.disabled=true; btn.textContent='Posting…';
   try{
     const body={action:'post',fan:FAN,text:($('#txt')||{}).value||'',stars:DRAFT.stars||null,name:($('#nm')||{}).value||'',
-      show:($('#showSel')||{}).value||'',video:($('#vid')||{}).value||'',photos:DRAFT.photos};
+      show:($('#showSel')||{}).value||'',video:($('#vid')||{}).value||'',photos:DRAFT.photos,
+      clip:DRAFT.clip?DRAFT.clip.id:''};
     const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){ toast(d.error||'Couldn’t post'); btn.disabled=false; btn.textContent='Post'; return; }
-    D.posts=d.posts; DRAFT={stars:0,photos:[],show:''}; SHOWPRE=''; render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
+    D.posts=d.posts; DRAFT={stars:0,photos:[],show:'',clip:null}; SHOWPRE=''; render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
   }catch(e){ toast('Connection hiccup — try again'); btn.disabled=false; btn.textContent='Post'; }
 }
 async function like(b){

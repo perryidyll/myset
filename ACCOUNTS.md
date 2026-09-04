@@ -223,21 +223,115 @@ On a $12 cap on Pro, MySet's fee is 24¢ and Stripe's is about 65¢: MySet gives
 
 ---
 
-## 9. Passkeys — not built, and why
+## 9. Passkeys — built, and the answer to "what would a real account system take"
 
-Perry's words were *"passkeys (only if not complicated)"*, which is permission to say no.
+### 9a. What was actually asked
 
-The verdict is that they are buildable — `AuthenticatorAttestationResponse.getPublicKey()` returns an SPKI DER key that `node:crypto` verifies directly, so no CBOR library and no npm dependency are needed — and that the real win here is **speed, not security**: one tap instead of switching to an email app on bar wifi. Sign-in is already a one-time code to a verified inbox, which is a factor.
+Perry, 2026-09-05: *"the email they get to create an artist or venue page is just a
+link right? hm... how much extra load will creating an actual account system add? it
+can't remain a browser-memory based system only forever... give me a concise run down
+on exactly what that would take, what the path would look like, the pros and cons,
+and when you'd recommend starting that process. when you do your research, please
+implement the best option only for me."*
 
-What stops it shipping today is that it cannot be verified from here. WebAuthn needs a stable `rpId`, a real user gesture, and a physical device, and the interesting failures are all on a second phone, on Android, and inside an installed PWA. Shipping unverifiable authentication code to production is the wrong trade, and INVARIANT 15d exists because of a night when something that had never been tried on the real thing was assumed to work.
+The first thing to correct is the premise, because it changes the answer.
 
-So: the design is written down, the key name is reserved (`pkeys_<owner>`, already in `keysFor`), and it is a half-day with a phone in hand. Recovery codes carry the "I can't get into my email" case that passkeys would otherwise have been asked to carry.
+**It is not a link, and it is not browser-memory.** Signing in emails a **six-digit
+code**, which is checked on the server, times out in ten minutes, locks out after
+repeated failures, and is exchanged for an **HMAC-signed token** carrying an account
+id, an expiry, a revocation counter and a session id. The server can kill any single
+session or all of them. That is not a magic link and it is not localStorage
+pretending to be auth — the browser only *stores* the token, the way it would store
+a cookie. The nearest thing in the industry is Slack's email sign-in or Notion's
+login code, and both are used by companies far past $100M.
+
+So the honest framing is not "we have no account system". It is: **the account system
+is one factor — an inbox — and it is slow to use on stage.**
+
+### 9b. The four options, and the pros and cons
+
+| Option | What it adds | Cost to build | Cost to the person | Verdict |
+|---|---|---|---|---|
+| **Passwords** | A second thing to steal. Requires hashing, a reset flow, a breach-list check, and a "forgot" path that is *itself* an email code — so it lands you back where you started, plus a liability | ~2 days | Something to forget | **No.** It is strictly worse than what exists. The reset flow proves it: the email code is the real credential either way. |
+| **Passkeys** | Face ID / Touch ID / Windows Hello. Phishing-proof by construction — the browser refuses to sign for the wrong domain | ~1 day | Nothing. One look | **Yes — built.** |
+| **Social sign-in** (Google/Apple) | One tap, familiar | ~1 day per provider, plus OAuth callbacks and account-linking edge cases | Hands your customer list to a third party, and breaks for anyone who signed up with a different address | **Later, maybe.** Apple's is worth it when there is an iOS app. |
+| **A full identity provider** (Auth0, Clerk, WorkOS) | SSO, SAML, MFA, an admin console | ~2 days to integrate, then $0.02–$0.05 per active user per month, for ever | A redirect to somebody else's domain | **No, not yet.** At 10,000 artists that is $2,000–5,000/mo to replace something that works, and it makes sign-in depend on a third party being up during a gig. Revisit only when a venue *group* demands SAML. |
+
+### 9c. What was built, and how much load it added
+
+Passkeys, in `netlify/functions/_passkey.mjs`, **with no npm dependency**. WebAuthn
+verification is four things Node already does: SHA-256, an ECDSA or RSA signature
+check, base64url, and enough CBOR to read two maps. The libraries are convenience,
+not capability, and a dependency in the sign-in path is a dependency that can be
+taken over.
+
+The load it added, precisely:
+
+- **271 lines** of server code, one new blob key (`pkeys_<owner>`, already reserved
+  in `keysFor` since 2026-09-04, so export and deletion already covered it).
+- **Zero cost on any hot path.** Nothing here runs during a gig; the audience never
+  signs in at all (`INVARIANT 9g`), so `test/cost.mjs` is untouched.
+- **Two new doors**, both rate-limited by the same rules the existing ones use, and
+  both answering identically for an unknown page so neither becomes a way to
+  enumerate accounts (`INVARIANT 9h`).
+- **No new failure mode for anybody who does not use it.** The code sign-in, the
+  studio code and the recovery codes are all unchanged. A passkey is *added to* an
+  account, never a way to create one — the first proof of identity is still an inbox,
+  because that is also what gets you back in when the phone is lost.
+
+### 9d. The five checks, and why each is in the test
+
+WebAuthn is only worth having if all five hold. `test/passkeys.mjs` generates a real
+P-256 key pair, builds real authenticator data, CBOR-encodes a real attestation
+object and signs with the real algorithm — then **defeats each check on purpose** to
+prove it fires. That is what makes it verifiable without a physical device, which is
+the objection that stopped this shipping on 2026-09-04.
+
+1. **Ceremony type** — a registration replayed as a sign-in is refused.
+2. **Challenge** — ours, under five minutes old, and **spent once**. Spent even when
+   the answer was *wrong*, or an attacker gets unlimited attempts at a live nonce.
+3. **Origin** — exactly ours. This is the anti-phishing property; without it a
+   passkey is no better than a password.
+4. **rpIdHash** — the authenticator's own view of the domain must agree.
+5. **Signature** — over `authData || SHA-256(clientDataJSON)`, no exceptions.
+
+Plus the counter rule, which is subtler than it looks: a signature counter going
+*backwards* means a cloned key and is refused — but iCloud and Google passkeys report
+**zero for ever**, so refusing on "not greater" would lock out exactly the devices
+this feature exists for. Both cases are pinned.
+
+**Deliberately not verified: attestation.** Passkeys are created with
+`attestation: "none"` because MySet does not care which brand of authenticator a
+musician owns, only that the same one comes back. Checking a vendor certificate chain
+would add real complexity to reject nothing we want to reject.
+
+### 9e. Rolled out to Perry first, on purpose
+
+The Settings row appears for anybody whose browser supports it, and the **Face ID
+button on the sign-in screen only appears once that browser has signed in at least
+once** — it needs to know *which page* before it can ask the phone, exactly like the
+recovery door. In practice that means Perry sees it now, on his own account, and
+nobody signing up for the first time is shown a door they cannot open.
+
+Only the **owner** may add one, and a passkey opens the owner's session — so a band
+mate on one of five Pro seats cannot register a thumbprint and take the account.
+
+### 9f. When to do the rest
+
+- **Now:** use it. Sign out, sign back in with Face ID, and see whether it is
+  actually faster on stage than a code. That is the only test that matters.
+- **Before the beta:** turn on the Settings row for everyone (it already is — the
+  gate is browser support, not a flag) and add the same thing to the Venue Studio,
+  which shares none of this code yet.
+- **When somebody asks:** Sign in with Apple, once there is an iOS app to hang it on.
+- **When a venue group demands SAML:** and not one day before, look at WorkOS.
+- **Never:** passwords.
 
 ---
 
 ## 10. What is next (not built, in order of value)
 
-1. **Passkeys** — see §9. Needs a device, not a decision.
+1. **Passkeys in the Venue Studio** — the artist side is built (§9); the venue side shares none of that code yet.
 2. **Owner transfer** — the person who signed up leaves the band. Ten lines: a code to the owner's own inbox, and one `mutateArtists` that swaps two roles.
 3. **A studio-code reset from the sign-in screen** — the change flow exists inside Settings; the "I'm locked out" version needs the same two-code shape as an email change.
 4. **The Studio's own view of the fee split** — the corrections are recorded per charge in `meta_<owner>.fees`; the Orders list does not show them yet.

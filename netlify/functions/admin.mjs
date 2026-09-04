@@ -3,7 +3,7 @@ import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCou
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf, DEFAULT_ARTIST } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -1274,12 +1274,12 @@ async function handleShop(aid, action, body) {
 
   // the community page — moderation, free on every plan
   if (action === 'postList') {
-    return json({ ok: true, posts: shapeForOwner(await readPosts(aid)) });
+    return json({ ok: true, posts: shapeForOwner(await readPosts(aid), aid) });
   }
   if (['postHide', 'postPin', 'postReply', 'postDelete'].includes(action)) {
     const r = await moderate(aid, { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
     if (!r.ok) return bad(r.error, 404);
-    return json({ ok: true, posts: shapeForOwner(await readPosts(aid)) });
+    return json({ ok: true, posts: shapeForOwner(await readPosts(aid), aid) });
   }
 
   // orders
@@ -1312,6 +1312,59 @@ async function handleShop(aid, action, body) {
   }
   return bad('unknown action', 400);
 }
+
+/* ---------- the books ------------------------------------------------------ */
+/* Read-only, every figure straight out of Stripe's balance transactions. See the
+   header of _ledger.mjs for why this is a reporting layer and not a second ledger. */
+async function handleBooks(req, aid, body, action, isFounder) {
+  const { statement, books, toCsv, setCost, COST_KINDS } = await import('./_ledger.mjs');
+  const { stripeFor } = await import('./_connect.mjs');
+
+  if (action === 'ledger' || action === 'ledgerCsv') {
+    const { stripe, opts } = await stripeFor(aid);
+    if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
+    const st = await statement(aid, stripe, opts,
+      { months: Math.min(60, Math.max(1, Number(body.months) || 12)), force: !!body.force });
+    if (action === 'ledgerCsv') {
+      const { getProfile } = await import('./_profile.mjs');
+      const who = (await getProfile(aid)).name || aid;
+      return new Response(toCsv(st, { who }), { status: 200, headers: {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': `attachment; filename="myset-earnings-${aid}.csv"`,
+        'cache-control': 'no-store' } });
+    }
+    return json({ ok: true, enabled: true, ...st });
+  }
+
+  if (!isFounder) return bad('That’s not something this account can do', 403);
+
+  if (action === 'books') {
+    /* MySet's OWN money, so never `stripeFor(aid)` — that would scope the call to
+       the founder's connected account if he ever had one and quietly report an
+       artist's takings as the company's revenue. The platform account is the one
+       with no `stripeAccount` in scope, always. */
+    const { stripeClient } = await import('./_connect.mjs');
+    const stripe = stripeClient();
+    if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
+    const b = await books(stripe, {},
+      { months: Math.min(60, Math.max(1, Number(body.months) || 12)), force: !!body.force });
+    if (body.csv) {
+      return new Response(toCsv(b, { who: 'MySet', kind: 'books' }), { status: 200, headers: {
+        'content-type': 'text/csv; charset=utf-8',
+        'content-disposition': 'attachment; filename="myset-books.csv"',
+        'cache-control': 'no-store' } });
+    }
+    return json({ ok: true, enabled: true, kinds: COST_KINDS, ...b });
+  }
+
+  if (action === 'bookCost') {
+    const r = await setCost(body.month, body.kind, body.cents, body.note);
+    return r.ok ? json({ ok: true }) : bad(r.error, 400);
+  }
+  return bad('unknown action', 400);
+}
+const BOOK_ACTIONS = new Set(['ledger', 'ledgerCsv', 'books', 'bookCost']);
+
 const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear',
                               'postList', 'postHide', 'postPin', 'postReply', 'postDelete',
                               'orderList', 'orderDone', 'orderDetail']);
@@ -1336,7 +1389,11 @@ export default async (req) => {
      able to get in — to change their mind, and to take their data with them — but
      nothing else should still be running. Everything not on this list answers with
      the same sentence, which also tells them the way back. */
-  const LEAVING_OK = new Set(['planGet', 'accountUndelete', 'accountExport', 'accountFreeSlug', 'planPortal']);
+  /* `ledger` and `ledgerCsv` are here on purpose: somebody on their way out has
+     thirty days to take their records with them, and a tax statement is exactly
+     the kind of thing they come back for. Reading cannot hurt anything. */
+  const LEAVING_OK = new Set(['planGet', 'accountUndelete', 'accountExport', 'accountFreeSlug',
+                              'planPortal', 'ledger', 'ledgerCsv']);
   if (!LEAVING_OK.has(action)) {
     const { deletionOf } = await import('./_lib.mjs');
     const del = await deletionOf(aid);
@@ -1358,7 +1415,11 @@ export default async (req) => {
   const OWNER_ONLY = new Set(['planCheckout', 'planFinish', 'planChange', 'planRetain',
     'planRetainOffered', 'planPortal', 'planSync', 'planInvoices', 'promoRedeem',
     'accountExport', 'accountDelete', 'accountUndelete', 'accountFreeSlug',
-    'payStart', 'payDashboard', 'idUpload', 'shareStats', 'setCode']);
+    'payStart', 'payDashboard', 'idUpload', 'shareStats', 'setCode',
+    /* THE BOOKS ARE THE OWNER'S. A statement is every figure about somebody's
+       livelihood in one payload; a band mate on one of five Pro seats has no
+       business with it, and `books`/`bookCost` are MySet's own P&L. */
+    'ledger', 'ledgerCsv', 'books', 'bookCost']);
   if (OWNER_ONLY.has(action) && (me.role || 'owner') !== 'owner')
     return bad('Only the account owner can do that', 403);
 
@@ -1425,6 +1486,7 @@ export default async (req) => {
   }
 
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body, req, me);
+  if (BOOK_ACTIONS.has(action)) return handleBooks(req, aid, body, action, aid === DEFAULT_ARTIST);
   if (SHOP_ACTIONS.has(action)) return handleShop(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);

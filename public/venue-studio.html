@@ -879,7 +879,54 @@ async function handleReturns(){
    Direct charges land in the venue's own Stripe account; MySet's transaction fee
    comes off the top, reduced by half of Stripe's card fee (see _connect.mjs). */
 let PAY=null, VORDERS=null;
-async function loadPay(force){ const d=await post('/venueadmin',{action:'payStatus',refresh:!!force}); if(d&&d.ok){ PAY=d.pay; if(TAB==='merch') render(); if(PAY.ready&&VORDERS===null) loadOrders(); } }
+async function loadPay(force){ const d=await post('/venueadmin',{action:'payStatus',refresh:!!force}); if(d&&d.ok){ PAY=d.pay; if(TAB==='merch') render(); if(PAY.ready&&VORDERS===null){ loadOrders(); loadVLedger(); } } }
+
+/* A VENUE'S OWN EARNINGS. The same reporting layer the artist Studio uses, scoped
+   to this venue's Stripe account (_ledger.mjs). A bar that takes tips and sells
+   merch through MySet needs a year-end statement exactly as much as a musician
+   does, and until now had nothing but a list of orders. */
+let VLEDGER=null;
+async function loadVLedger(force){
+  const d=await post('/venueadmin',{action:'ledger',months:12,force:!!force});
+  if(d){ VLEDGER=d; if(TAB==='merch'&&V) render(); }
+}
+const vm$=(c)=>{const n=(Number(c)||0)/100;const s=n<0?'-':'';
+  return s+'$'+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});};
+const vmlabel=(k)=>new Date(Date.UTC(+k.slice(0,4),+k.slice(5,7)-1,1))
+  .toLocaleDateString(undefined,{month:'short',year:'numeric',timeZone:'UTC'});
+function vEarnings(){
+  const L=VLEDGER;
+  if(!L) return `<div class="sec"><span class="kick">Your earnings</span></div>
+    <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Adding it up…</div></div>`;
+  if(!L.ok||!L.enabled) return '';
+  const rows=(L.months||[]).filter(m=>m.count||m.gross||m.payouts), t=L.total||{};
+  return `<div class="sec"><span class="kick">Your earnings · last 12 months</span><span class="kick">${vm$(t.net)}</span></div>
+  <div class="stats">
+    <div class="c"><b class="mono">${vm$(t.gross)}</b><span>Paid to you</span></div>
+    <div class="c"><b class="mono">${vm$(-(t.stripeFee||0)-(t.platformFee||0))}</b><span>Fees</span></div>
+    <div class="c"><b class="mono acc">${vm$(t.net)}</b><span>Yours</span></div>
+  </div>
+  ${rows.length?`<div class="list">${rows.map(m=>`<div class="row">
+    <div class="m"><div class="t">${vmlabel(m.month)}</div>
+      <div class="s">${m.count} payment${m.count===1?'':'s'} · ${vm$(m.gross)} taken · ${vm$(m.stripeFee)} Stripe${m.platformFee?` · ${vm$(m.platformFee)} MySet`:''}</div></div>
+    <div class="cnt mono">${vm$(m.net)}</div></div>`).join('')}</div>`
+   :`<div class="list"><div class="row muted">No payments in the last twelve months.</div></div>`}
+  <div class="wrap" style="margin-top:12px">
+    <button class="big alt" onclick="vLedgerCsv()">Download it as a spreadsheet</button>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">Straight from Stripe — the same numbers your bank sees. Hand the file to whoever does your books.</p>
+  </div>`;
+}
+async function vLedgerCsv(){
+  try{
+    const h={'content-type':'application/json'}; if(TOKEN) h["authorization"]="Bearer "+TOKEN;
+    const r=await fetch(`${API}/venueadmin`,{method:'POST',headers:h,
+      body:JSON.stringify({action:'ledgerCsv',months:12})});
+    if(!r.ok){ toast('Couldn’t build that just now'); return; }
+    const b=await r.blob(), u=URL.createObjectURL(b), a=document.createElement('a');
+    a.href=u; a.download='myset-venue-earnings.csv'; document.body.appendChild(a); a.click();
+    a.remove(); setTimeout(()=>URL.revokeObjectURL(u),4000);
+  }catch(e){ toast('Couldn’t build that just now'); }
+}
 async function loadOrders(){ const d=await post('/venueadmin',{action:'orderList'}); if(d&&d.ok){ VORDERS=d.orders; if(TAB==='merch') render(); } }
 const PAY_COUNTRIES=[['TH','Thailand'],['US','United States'],['GB','United Kingdom'],
   ['AU','Australia'],['CA','Canada'],['NZ','New Zealand'],['IE','Ireland'],
@@ -986,6 +1033,7 @@ function vMerchTab(){
     ${lock('merch', list, 'Merch on your page comes with Pro. Anything you add stays saved.')}
     ${payCard()}
     ${PAY&&PAY.ready?ordersSection():''}
+    ${PAY&&PAY.ready?vEarnings():''}
     <div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one, hide anything, or delete it. <a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
