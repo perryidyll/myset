@@ -502,7 +502,7 @@ script; `app.css` carries the shared design tokens.
 * **Front end:** 9 pages in `public/`
 * **Back end:** 22 HTTP endpoints plus two scheduled jobs (24 files), and 32 shared
   libraries, in `netlify/functions/`
-* **Tests:** 1,055 assertions across 22 suites, run with `npm test`
+* **Tests:** 1,059 assertions across 22 suites, run with `npm test`
 
 Two dependencies only: `@netlify/blobs` and `stripe`.
 
@@ -979,4 +979,4 @@ Full list with priorities: `REVIEW-2026-09-02-REMAINING.md`.
 
 *Written 2026-09-03. Extended 2026-09-04 with the community page, merch, scheduled
 shows, the tick, the menu and the Voting box — test suite run rather than quoted:
-1,055 assertions, 0 failures.*
+1,059 assertions, 0 failures.*

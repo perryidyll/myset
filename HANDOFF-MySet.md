@@ -1764,6 +1764,6 @@ Perry's list, all shipped in one push (his decisions inline):
   (see 2026-09-04 correction above); fuzzy icons removed at Perry's request and every
   reference repointed at the 512s; content engine pushed to a private GitHub repo.
 
-1,055 assertions across 22 suites. Not built, said in the UI: venue checkout, video
+1,059 assertions across 22 suites. Not built, said in the UI: venue checkout, video
 uploads, a per-gig opt-out of scheduled starts. Perry to set `AUTH_FROM` once the
 myset.vip domain is verified in Resend.
