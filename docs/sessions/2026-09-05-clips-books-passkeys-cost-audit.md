@@ -169,3 +169,20 @@ Changed: `_community.mjs` `community.mjs` `_img.mjs` `_account.mjs`
    SECURITY.md.
 4. **Try the passkey.** Sign out, sign back in with Face ID, and tell me whether it
    is actually faster on stage.
+
+---
+
+## Follow-up, same day: the founder's earnings card
+
+Caught after the first deploy. `stripeFor(DEFAULT_ARTIST)` correctly returns **no
+connected account** — Perry's vote packs and tips were taken on the platform account,
+before Connect existed. So the same Stripe balance holds his gig takings *and* every
+artist's subscription, and a "Your earnings" card built on it would read other
+people's subscription payments back to him as his own income.
+
+There is no honest way to split that, so it does not try: for the founder with no
+connected account the card says so and points at the books, which are the right view
+of that balance. Everybody else is unaffected — an ordinary artist's money is on their
+own connected account and separates cleanly.
+
+Pinned in `test/books.mjs`.

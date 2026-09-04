@@ -1321,8 +1321,17 @@ async function handleBooks(req, aid, body, action, isFounder) {
   const { stripeFor } = await import('./_connect.mjs');
 
   if (action === 'ledger' || action === 'ledgerCsv') {
-    const { stripe, opts } = await stripeFor(aid);
+    const { stripe, opts, acct } = await stripeFor(aid);
     if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
+    /* THE FOUNDER'S OWN GIG MONEY IS NOT SEPARABLE FROM MYSET'S.
+       Perry's vote packs and tips were taken on the PLATFORM account, before Connect
+       existed, and `stripeFor` correctly returns no connected account for him. So the
+       same balance holds his gig takings AND every artist's subscription — and an
+       "earnings" card built on it would read other people's subscriptions back to him
+       as his own income. There is no honest way to split that here, so it says so
+       and points at the books, which are the right view of that balance. */
+    if (isFounder && !acct)
+      return json({ ok: true, enabled: false, mixed: true, months: [], total: null });
     const st = await statement(aid, stripe, opts,
       { months: Math.min(60, Math.max(1, Number(body.months) || 12)), force: !!body.force });
     if (action === 'ledgerCsv') {

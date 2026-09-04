@@ -178,6 +178,14 @@ console.log('\nWHO MAY LOOK');
     return true;
   });
   const ftok = await signToken('founder-books@example.com', revOf(await readArtists(), DEFAULT_ARTIST));
+  /* The founder's own gig money was taken on the PLATFORM account, so the same
+     balance holds every artist's subscription. An "earnings" card built on it would
+     read other people's subscriptions back to him as his own income — so it refuses
+     and points at the books instead. */
+  const fl = await jget(await admin(post(ftok, { action: 'ledger' })));
+  ok('the founder is told his own earnings cannot be separated from MySet’s',
+    fl.ok && fl.mixed === true && fl.enabled === false, fl);
+
   const fr = await admin(post(ftok, { action: 'books', months: 3 }));
   const fd = await jget(fr);
   ok('the founder can', fr.status === 200 && fd.ok && Array.isArray(fd.months), fd);

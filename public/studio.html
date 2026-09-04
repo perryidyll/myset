@@ -3191,6 +3191,8 @@ function earningsCard(){
   const L=LEDGER;
   if(!L) return `<div class="sec"><span class="kick">Your earnings</span></div>
     <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Adding it up…</div></div>`;
+  if(L.mixed) return `<div class="sec"><span class="kick">Your earnings</span></div>
+    <div class="list"><div class="row muted">Your gig money and MySet’s money are in the same Stripe account — the one you had before Connect existed — so there is no honest way to show them apart here. <b>MySet’s books</b>, below, is the right view of that balance.</div></div>`;
   if(!L.ok||!L.enabled) return `<div class="sec"><span class="kick">Your earnings</span></div>
     <div class="list"><div class="row muted">Nothing to add up yet — this fills in once card payments are on and somebody has paid.</div></div>`;
   const rows=(L.months||[]).filter(m=>m.count||m.gross||m.payouts);
