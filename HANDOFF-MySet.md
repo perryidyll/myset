@@ -1808,3 +1808,109 @@ both headers in both states against `netlify dev --offline` (needs
 `ADMIN_CODE=devlocal` or the owner code is refused). Not built, written down in
 `ACCOUNTS.md` §6: change-my-email, exact fee split by post-charge transfer, in-app
 invoices, passkeys, "sign out everywhere", venue members, dunning banner.
+
+---
+
+## SESSION LOG — 2026-09-05, pass three: an account somebody can own
+
+Commit **`931d18d`**, live at myset.vip and verified by content ~45s after the push.
+Full narrative in `docs/sessions/2026-09-05-account-system.md`; the design is
+`ACCOUNTS.md` §6–§9; the rules are INVARIANTS **0db–0dp**.
+
+### The two holes this closed, and they were holes, not gaps
+
+* **A member could take the account.** `add` / `remove` / `revokeAll` / `setSlug` in
+  `auth.mjs` checked "are you signed in" and nothing else, though `verifyToken` has
+  always returned the role. A member on a five-seat Pro page could delete the
+  OWNER's sign-in address, or rename the public page that every printed QR code
+  points at. One POST each. `venueauth.mjs` / `venueadmin.mjs` were identical, and
+  wrote a `staff` role that nothing anywhere read.
+* **Sign out did not sign you out.** It cleared `localStorage`. The token is an HMAC
+  with a thirty-day life, so a copy off a borrowed phone kept working for a month.
+
+### Built
+
+* **Sessions.** `email|exp|rev|sid`, parsed from the END so nothing inside an address
+  can shift the fields (`normEmail` strips `|` too). Revocation is a normally-ABSENT
+  `dead` map on the registry row the verifier already holds — zero extra reads and
+  zero extra writes on every request, and no growth for an account that never
+  revokes. Past 12 entries it bumps `rev`, which signs everything out: fails closed.
+* **The list** (`sess_<owner>`) is cold, read only when the sessions screen opens.
+  Device CLASS, never a raw User-Agent, never an IP. "Last opened Settings", written
+  at most hourly from actions the Studio already calls — labelled honestly.
+* **Roles** `owner` / `member` / `crew`, one table (`can()` in `_session.mjs`), one
+  gate per endpoint. Unknown role → `crew`. Own-property lookup, because
+  `CAN['toString']` is a truthy inherited Function with no `.has`.
+* **Recovery codes.** Eight, one-time, Crockford-ish alphabet, hashed with the site
+  secret, shown once. The door takes the PUBLIC page name plus a code and answers a
+  wrong code, an unknown page and a lockout identically (9h). Using one bumps `rev`,
+  mints a fresh session for that device, and emails everyone on the account.
+* **Change my email.** Codes to BOTH inboxes; a notice to the old address at REQUEST
+  time; the swap and the session kill in one `mutateArtists`; only the moved
+  address's devices die; one change a day.
+* **Activity log** `log_<owner>`, 100 entries, best-effort — logging must never be
+  why a musician cannot start a show.
+* **Soft delete, thirty days, NOT ONE DOCUMENT MOVES.** Two screens plus the typed
+  word. Day one: page dark (`publicArtist` / `venueBySlug` refuse a marked row →
+  every public endpoint 404s at once), billing cancelled, calendar un-indexed.
+  Sessions are NOT killed — soft delete locks the account DOWN, never the owner OUT.
+  Everything but undo/export/plan/portal answers **423**. The slug is HELD (it is
+  printed on bar tables) with a deliberate "free it now" link. Purge is one account
+  per cron ring on an hourly watermark, `delqueue` entry removed LAST so it is
+  re-runnable. `deleteArtist` is unchanged — it stopped being the button and became
+  the calendar.
+* **Venues** get all of it, keyed `v_<vid>`, on a new `keysForVenue()` in
+  `_venueaccount.mjs` — until now a venue could sign up, take money and pay for Pro
+  and had no way to take its data or leave.
+* **A renamed page keeps answering at its old address** (`oldSlug`), because the QR
+  code on the table outlives the rename.
+
+### Perry's missing shows — and it was NOT the legacy keys
+
+The stranded `hist_2026-08-30-1855` is a 151-second night with nothing in it, which
+today's archive would refuse anyway. The real cause is in the data: `2026-08-30-1928`
+started 30 Aug and ended **4 Sept**, and Perry has six weekly recurring gigs. Two
+lines did it — `autoTick`'s start branch answered a flat `already live`, and `sweep`
+re-pointed a deferred end at the NEXT gig, so tonight was never due again. Five
+nights at five venues were appended to one show. **Nothing was lost by the archive;
+the nights were never separate, and no code can separate them now.**
+
+Nine more loss paths closed: `moneyForShow`'s Stripe setup sat OUTSIDE its own try
+(a payments hiccup threw past `archiveShow` into an empty catch and the gig vanished
+silently); the index row was rebuilt from the NEW snapshot even when the detail kept
+the richer one (13 songs on the page, 5 in the row); `.catch(() => {})` on both
+writes; the `status === 'pre'` guard; the 100-row cap that hid nights from export
+AND delete (now 400 plus append-only `histids_`); `history.mjs` hiding the row unless
+status was exactly `ended`; an unbounded Stripe window when `startedAt` was null;
+`unattributed` missing from the row; and a browser `HIST` cache nothing ever cleared.
+`healHistory` + a "Look for missing shows" button rebuild from every id that can be
+NAMED, and obey the same "nothing happened is not a night" rule the archive does.
+
+### Also
+
+Plan sheet 2–3px up with `[bold thing, plain description]`; the Settings plan button
+in the same soft green as the tag above it with the date beneath and a line that is
+never blank (a comped account has no Stripe customer, which is exactly why Perry
+could not find the receipts link); invoices; a three-state card-failed banner
+(suppressed on stage, INVARIANT 16); `unpaid` added to the already-subscribed
+refusal — without it a failing card could create TWO live subscriptions; `?billing=back`
+so a fixed card is not still reported as failed for six hours; the exact fee split
+(`_feesplit.mjs`, `charge.updated`, fee refund not transfer, honest that it floors to
+zero under ~$29); the venue sheet that stuck because `closeSheet` never cleared its
+own drag transform and `attachDrag` re-bound listeners on every open; pull-to-refresh
+standing down behind a sheet; and no white page anywhere while something loads.
+
+**Passkeys are designed and NOT built** (`ACCOUNTS.md` §9): the win is speed rather
+than security, and they cannot be verified without a device in hand.
+
+### Perry, once, in Stripe
+
+1. `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+2. Customer Portal → save the default configuration **in live mode**
+3. **New:** `charge.updated` — turns on the exact fee split. Without it the estimate
+   stands and nothing breaks.
+
+**1,233 assertions across 23 suites.** New suite `test/accounts.mjs`. Every new screen
+rendered in headless Chrome at phone size and read back; the venue sheet bug was
+reproduced and then proved fixed. Production read with `tools/prod.py` before
+anything was changed.
