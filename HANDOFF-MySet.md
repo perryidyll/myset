@@ -1962,7 +1962,7 @@ preload, Permissions-Policy, COOP, zero npm vulnerabilities, and a published
 | | |
 |---|---|
 | **One 3-hour gig, 20 people** | **2.8¢**, and 5.6% of revenue at every scale |
-| **Deploys vs gigs** | 104 deploys = 1,560 credits; every gig Perry played = 84. **29× more expensive to ship code than to serve the audience**, and ~570 credits of that is the same change deployed twice |
+| **Deploys vs gigs** | 104 deploys of mysetvip = 1,560 credits; every gig Perry played = 84 — **19×**. Across all five sites deploys were 2,475, **29×**. About 570 credits of that is the same change shipped twice |
 | **Moving to Cloudflare** | would be **1.7× worse** — KV bills per read and MySet does 90,450 reads a gig. The platform is not the cost driver; **15 reads per poll** is |
 
 ## Perry's to-do

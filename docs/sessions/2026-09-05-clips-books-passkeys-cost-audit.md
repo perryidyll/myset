@@ -101,9 +101,9 @@ page and the sign-in screen does not yet know which page you are. INVARIANT 0dv.
 $5,597/mo against $100,000/mo of revenue — **5.6%, and the ratio does not move with
 scale**, because both sides scale with the same thing.
 
-**The finding Perry did not ask for and needs most:** deploys are 29× the cost of
-gigs. 104 production deploys of `mysetvip` last month = 1,560 credits; every gig he
-played = 84. The account burned 2,475 credits against a 1,000 grant, and ~570 of
+**The finding Perry did not ask for and needs most:** deploying costs far more than
+serving anybody. 104 production deploys of `mysetvip` = 1,560 credits, **19× every
+gig he played** (84); across all five sites deploys were 2,475, which is **29×**. The account burned 2,475 credits against a 1,000 grant, and ~570 of
 those are the same change shipped twice (CLI + the GitHub build the same push
 triggers — INVARIANT 9d3).
 
