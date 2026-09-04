@@ -17,13 +17,16 @@ const state = {
   prices: new Map(),            // price_x -> price
   coupons: new Map(),
   subs: new Map(),              // sub_x -> subscription
+  bts: new Map(),               // txn_x -> balance transaction, tagged with its account
+  fees: new Map(),              // fee_x -> application fee (platform side)
+  feeRefunds: new Map(),        // idempotency key -> fee refund
   links: [],
   calls: [],                    // every call, with its options
   nextAcct: 1, nextSession: 1, nextCus: 1, nextPrice: 1, nextSub: 1, nextProd: 1,
 };
 export const __stripe = state;
 export const __resetStripe = () => {
-  for (const m of [state.accounts, state.sessions, state.customers, state.products, state.prices, state.coupons, state.subs]) m.clear();
+  for (const m of [state.accounts, state.sessions, state.customers, state.products, state.prices, state.coupons, state.subs, state.bts, state.fees, state.feeRefunds]) m.clear();
   state.links.length = 0; state.calls.length = 0;
   state.nextAcct = 1; state.nextSession = 1; state.nextCus = 1; state.nextPrice = 1; state.nextSub = 1; state.nextProd = 1;
 };
@@ -111,6 +114,56 @@ export default class Stripe {
       cancel: async (id, opts) => { note('subscriptions.cancel', { id }, opts);
         const s = state.subs.get(id); if (!s) throw new Error('No such subscription'); s.status = 'canceled'; return shape(s); },
     };
+  }
+  get balanceTransactions() {
+    return { retrieve: async (id, opts) => { note('balanceTransactions.retrieve', { id }, opts);
+      const bt = state.bts.get(id);
+      if (!bt) throw new Error('No such balance transaction');
+      /* THE SCOPE MATTERS AS MUCH AS THE NUMBER. A balance transaction on a direct
+         charge lives in the CONNECTED account's balance and is invisible from the
+         platform, so a stub that ignored the second argument would let the exact
+         bug this code was written to avoid straight through. */
+      if ((bt.__account || '') !== ((opts && opts.stripeAccount) || '')) throw new Error('No such balance transaction');
+      return bt; } };
+  }
+  get applicationFees() {
+    return {
+      retrieve: async (id, opts) => { note('applicationFees.retrieve', { id }, opts);
+        const f = state.fees.get(id); if (!f) throw new Error('No such application fee');
+        // and this one is the PLATFORM's: asking with an account in scope must miss
+        if (opts && opts.stripeAccount) throw new Error('No such application fee');
+        return f; },
+      list: async (params, opts) => { note('applicationFees.list', params, opts);
+        if (opts && opts.stripeAccount) return { data: [] };
+        return { data: [...state.fees.values()].filter((f) => f.charge === params.charge) }; },
+      createRefund: async (id, params, opts) => { note('applicationFees.createRefund', { id, ...params }, opts);
+        const f = state.fees.get(id); if (!f) throw new Error('No such application fee');
+        const room = f.amount - (f.amount_refunded || 0);
+        if (params.amount > room) throw new Error('Can refund only up to the remaining unrefunded amount');
+        // idempotency: the same key returns the same refund rather than a second one
+        const k = (opts && opts.idempotencyKey) || '';
+        if (k && state.feeRefunds.has(k)) return state.feeRefunds.get(k);
+        f.amount_refunded = (f.amount_refunded || 0) + params.amount;
+        const r = { id: `fr_test${state.feeRefunds.size + 1}`, fee: id, amount: params.amount };
+        if (k) state.feeRefunds.set(k, r);
+        return r; },
+    };
+  }
+  get invoices() {
+    return { list: async (params, opts) => { note('invoices.list', params, opts);
+      /* One paid invoice per subscription on this customer, which is what a month
+         of a live subscription actually leaves behind. Enough to prove the Studio
+         lists them, links them and never invents one for a customer with none. */
+      const out = [];
+      for (const s of state.subs.values()) {
+        if (s.customer !== params.customer) continue;
+        out.push({ id: `in_${s.id}`, number: `MYSET-${s.id.slice(-4)}`, status: 'paid',
+                   total: 1000, amount_paid: 1000, amount_due: 1000, currency: 'usd',
+                   created: NOW() - 86400,
+                   hosted_invoice_url: `https://invoice.stripe.test/${s.id}`,
+                   invoice_pdf: `https://invoice.stripe.test/${s.id}.pdf` });
+      }
+      return { data: out.slice(0, params.limit || 10) }; } };
   }
   get billingPortal() {
     return { sessions: { create: async (params, opts) => { note('billingPortal.sessions.create', params, opts);

@@ -1404,3 +1404,120 @@ If you are about to violate one, stop and say so rather than working around it.
     architecture (empty it and the section disappears; placeholders are labelled).
     Top right of both Studios: `Upgrade ↗` on free, a green tag with the plan's
     name and the same arrow when paid. Settings holds one big green button.
+
+---
+
+## An account somebody can actually own (2026-09-05, pass three)
+
+0db. **A role is checked, not just stored.** `byEmail[email].role` has always been
+    written and, outside four hand-written checks, was never read — so a member on
+    a five-seat Pro page could delete the owner's sign-in address or rename the
+    public page every printed QR code points at, with one POST each. The venue side
+    had the identical hole. `can(role, capability)` in `_session.mjs` is the one
+    table; `admin.mjs` and `venueadmin.mjs` each gate once, by name. An UNKNOWN role
+    falls back to `crew`, the least it could be — and the lookup is an own-property
+    check, because `CAN['toString']` is a truthy inherited Function with no `.has`.
+
+0dc. **Money and the account are the owner's.** Checkout, plan changes, the
+    retention offer, the Stripe portal, invoices, payout onboarding, export and
+    deletion are owner-only on both sides. `planGet` stays open to every role —
+    a member needs the limits or every locked control renders live on first paint
+    (0bx2) — and the renewal date, the portal flag and the card's state are
+    stripped from that payload for anyone but the owner.
+
+0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
+    popped from the END so nothing inside an address can shift the fields — and
+    `normEmail` strips `|`). Revocation is a normally-ABSENT `dead` map on the
+    registry row the verifier already holds: zero extra reads, zero extra writes,
+    and no growth for an account that never revokes. Past twelve entries it bumps
+    `rev` instead — more revocation than was asked for is the safe way to fail.
+    Before this, "Sign out" cleared localStorage and the token stayed valid for the
+    rest of its thirty days.
+
+0de. **The session list is cold and it never lies.** `sess_<owner>` is read only
+    when the sessions screen opens. It holds a device CLASS ("iPhone · Safari"),
+    never a raw User-Agent and never an IP. "Last opened Settings" is written at
+    most once an hour, from actions the Studio already calls — it is labelled that
+    way because a "last used" built from that number would be false.
+
+0df. **There is a way back in.** Eight one-time recovery codes, hashed with the
+    site secret, shown once. The door takes the PUBLIC page name plus a code, reuses
+    the existing `lock_<aid>` lockout, and answers a wrong code, an unknown page and
+    a locked-out page identically (9h). Using one bumps `rev`, then mints a fresh
+    session for the device that used it, and emails every address on the account.
+
+0dg. **Changing your sign-in address needs BOTH inboxes.** A code to the new one
+    proves nothing on its own — the attacker owns it. The old address is also mailed
+    a notice at REQUEST time, so an owner hears about a stolen session while there
+    is still something they can do. The swap and the session kill are ONE
+    `mutateArtists`; only the moved address's devices die, so a bandmate running the
+    screen at 11pm is left signed in. One change per 24 hours.
+
+0dh. **Delete keeps everything for thirty days, and the data never moves.** Two
+    screens plus the typed word. Day one: the page goes dark (`publicArtist` and
+    `venueBySlug` refuse a marked row, which 404s every public endpoint at once),
+    billing is cancelled, the calendar is un-indexed. Sessions are NOT killed and
+    `rev` is NOT bumped — soft delete locks the account DOWN, never the owner OUT.
+    Everything but undo, export, the plan and the portal answers 423. The purge is
+    one account per cron ring, hourly watermark, after the show sweep; the
+    `delqueue` entry is removed LAST, so purge is re-runnable by construction.
+
+0di. **A held slug, and an old slug that keeps answering.** A page name is printed
+    on QR codes stuck to bar tables. Deleting holds it for the whole window (freeing
+    it would make Undo a promise the system cannot keep, and would land a room full
+    of people on a stranger's setlist); renaming keeps the old one resolving through
+    `oldSlug`. Neither is claimable while it is there — `pickSlug` and `setSlug`
+    both refuse a name already in `bySlug`.
+
+0dj. **Last night's show must not swallow tonight.** `autoTick`'s start branch
+    answered a flat "already live", so once a show failed to end itself every
+    following gig did nothing and five nights were appended to one. A live show that
+    began before tonight's window is not tonight's show: end it, file it, carry on.
+    And a deferred end is TRIED AGAIN — `sweep` used to re-point the entry at the
+    next gig, so tonight was never due again — with a six-hour backstop, because a
+    `nowPlayingAt` that stale means somebody walked away from the tablet.
+
+0dk. **An index row never goes down, and a night on disk is findable.** The detail
+    write already refused a poorer snapshot; the index write did not, so a night
+    ended twice kept thirteen songs on the detail page and a row that said five.
+    Every field is now a max against what is there. `histids_<owner>` is
+    append-only and is what export and delete enumerate, because the index is capped
+    at 400. `healHistory` rebuilds rows from ids named in the index, in
+    `histids_`, in `histpend_` (an index write that failed) and in the pre-multi-
+    tenancy flat keys — and it obeys the same "a night where nothing happened is
+    not a night" rule the archive does, so the two can never disagree.
+
+0dl. **Money must never be able to lose a night.** `moneyForShow`'s Stripe setup sat
+    OUTSIDE its own try, so a payments hiccup threw past `archiveShow` into an empty
+    catch and the whole gig was never archived and never logged. It is inside now,
+    the caller catches too, and a show with no `startedAt` is not priced at all
+    rather than asking Stripe for everything since the epoch.
+
+0dm. **The card that didn't go through is said out loud, once, and never on stage.**
+    `billingStatus` carries `pastDue` and `graceUntil`, so the banner costs no extra
+    call. It is suppressed over a live show except in Settings (16). `unpaid` counts
+    as subscribed for the already-subscribed refusal — without it a failing card
+    could produce TWO live subscriptions — and does not count as paid.
+
+0dn. **Coming back from the Stripe portal re-reads Stripe.** `maybeSync` waits six
+    hours; somebody who has just fixed their card must not still be told it failed.
+    The portal returns with `?billing=back` and the Studio calls `planSync`.
+
+0do. **The exact fee split pays the venue and never bills them.** `charge.updated`
+    (not `succeeded` — with async capture the balance transaction is null there);
+    the balance transaction read WITH the connected account in scope and the
+    application fee WITHOUT it; Stripe's own fee from `fee_details[stripe_fee]`,
+    never `bt.fee`, which on a direct charge also contains ours; converted with the
+    balance transaction's own rate or recorded as unconvertible, never guessed;
+    settled with `applicationFees.createRefund`, never `transfers.create`, which
+    Stripe refuses cross-border and MySet's venues are Thai. Claimed is not
+    delivered (7b), keyed by charge id in `meta_<owner>.fees`, with a Stripe
+    idempotency key over the same id.
+
+0dp. **Nothing in MySet is white while it loads.** Every page paints black from its
+    first frame, both Studios carry the same three-bar splash, and an internal link
+    paints it before the browser starts tearing the document down. The pull-to-
+    refresh gesture stands down while a sheet is open — both handlers used to fire,
+    so dragging a sheet closed also reloaded the page behind it. A sheet's
+    `closeSheet` must clear the inline transform its own drag left, or the sheet
+    sticks halfway and the ✕ looks dead.

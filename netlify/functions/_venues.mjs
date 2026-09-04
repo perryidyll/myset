@@ -44,7 +44,12 @@ const VRESERVED = new Set(['api', 'new', 'index', 'home', 'admin', 'studio', 've
 
 export async function venueBySlug(slug) {
   const r = await readVenues();
-  return r.bySlug[cleanSlug(slug)] || null;
+  const vid = r.bySlug[cleanSlug(slug)] || null;
+  /* A venue on its way out goes dark the day it asks, and is only erased thirty
+     days later — so the public page has to stop answering now. See startDeletion
+     in _account.mjs for why the data does not move. */
+  if (!vid || (r.byId[vid] || {}).del) return null;
+  return vid;
 }
 export async function venueById(vid) {
   const r = await readVenues();
@@ -143,8 +148,8 @@ export const venuePaid = (v) => venuePlanOf(v) !== 'free';
 export const vRevOf = (reg, vid) =>
   ((reg.byId || {})[vid] || {}).rev ?? reg.rev ?? 1;
 
-export async function signVenueToken(email, rev) {
-  const body = `v|${email}|${Date.now() + TOKEN_TTL}|${rev}`;
+export async function signVenueToken(email, rev, sid) {
+  const body = `v|${email}|${Date.now() + TOKEN_TTL}|${rev}` + (sid ? `|${sid}` : '');
   const mac = createHmac('sha256', await authSecret()).update(body).digest('base64url');
   return `${Buffer.from(body).toString('base64url')}.${mac}`;
 }
@@ -156,14 +161,24 @@ export async function verifyVenueToken(token) {
   try { body = Buffer.from(b64, 'base64url').toString(); } catch { return null; }
   const want = createHmac('sha256', await authSecret()).update(body).digest('base64url');
   if (!eq(mac, want)) return null;
-  const [tag, email, exp, rev] = body.split('|');
+  /* Popped from the end, for the same reason the artist token is (see normEmail in
+     _auth.mjs): the fixed fields must not be movable by anything inside an
+     address. `v|` still leads, so the tag is read off the front. */
+  const parts = body.split('|');
+  const tag = parts.shift();
+  const sid = parts.length >= 4 ? parts.pop() : null;
+  const rev = parts.pop();
+  const exp = parts.pop();
+  const email = parts.join('|');
   if (tag !== 'v' || !email || Number(exp) < Date.now()) return null;
   const reg = await readVenues();
   const link = reg.byEmail[email];
   if (!link || !reg.byId[link.venueId]) return null;
   // per-venue, same reasoning and same fallback as revOf() in _auth.mjs
   if (String(vRevOf(reg, link.venueId)) !== String(rev)) return null;
-  return { email, venueId: link.venueId, role: link.role, venue: reg.byId[link.venueId] };
+  const row = reg.byId[link.venueId] || {};
+  if (sid && row.dead && Number(row.dead[sid]) > Date.now()) return null;   // signed out
+  return { email, venueId: link.venueId, role: link.role || 'owner', sid, venue: reg.byId[link.venueId] };
 }
 
 /** Who is making this request, and which venue do they run? */
@@ -171,7 +186,7 @@ export async function requireVenue(req) {
   const auth = req.headers.get('authorization') || '';
   if (!auth.startsWith('Bearer ')) return null;
   const me = await verifyVenueToken(auth.slice(7));
-  return me ? { vid: me.venueId, email: me.email, role: me.role || 'owner' } : null;
+  return me ? { vid: me.venueId, email: me.email, role: me.role || 'owner', sid: me.sid || null } : null;
 }
 
 /* ---------- matching a typed venue name to a venue page ----------
@@ -427,6 +442,8 @@ export function shapeVenue(p, reg) {
     plans: Object.fromEntries(Object.entries(VENUE_PLANS)
       .map(([k, v]) => [k, { ...v, soon: VENUE_NOT_BUILT }])),
     since: r.createdAt || null,
+    // the Studio's leaving banner, and the reason everything else is read-only
+    del: r.del || null,
     updatedAt: p.updatedAt,
   };
 }

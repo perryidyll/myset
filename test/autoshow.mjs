@@ -194,5 +194,88 @@ const busy = await count(() => sweep({ now: T0 + 86400000 + 60e3 }));
 under('a ring that starts one show, reads', busy.reads, 60);
 eq('and it did start it', (await getShow(mia.artistId)).status, 'live');
 
+console.log('\nLAST NIGHT’S SHOW MUST NOT SWALLOW TONIGHT');
+/* THE BUG PERRY REPORTED as "I'm not seeing all of my past shows". Once a show
+   failed to end itself, `autoTick`'s start branch answered a flat "already live"
+   for every following gig — so five nights at five venues were appended to one
+   show that had started on 30 August, and the Money tab correctly showed one row.
+   Nothing was lost by the archive; the nights were never separate. */
+{
+  const zoe = await createArtist({ email: 'zoe@example.com', name: 'Zoe', slug: 'zoe' });
+  const TZ = await signToken('zoe@example.com', revOf(await readArtists(), zoe.artistId));
+  await mutateArtists((a2) => { a2.byId[zoe.artistId].plan = 'pro'; a2.byId[zoe.artistId].planUntil = Date.now() + 30 * 86400e3; return true; });
+  ok('she has songs', (await AS(TZ, 'addSong', { title: 'Wires', artist: 'Z' })).ok);
+  const D1 = T0, D2 = T0 + 86400000;
+  ok('two nights on the calendar', (await AS(TZ, 'eventSave', { event: { id: 'gz1', venue: 'Bar One', city: 'Koh Phangan', country: 'Thailand',
+    tz: 'UTC', date: ymd(D1), time: hm(D1), endTime: hm(D1 + 3 * 3600e3) } })).ok);
+  ok('and the second', (await AS(TZ, 'eventSave', { event: { id: 'gz2', venue: 'Bar Two', city: 'Koh Phangan', country: 'Thailand',
+    tz: 'UTC', date: ymd(D2), time: hm(D2), endTime: hm(D2 + 3 * 3600e3) } })).ok);
+  let z = await autoTick(zoe.artistId, { now: D1 + 60e3 });
+  eq('night one starts', z.did, 'start');
+  const night1 = (await getShow(zoe.artistId)).showId;
+  // a night with something in it, so the archive has something worth filing
+  await mutateShow(zoe.artistId, (sh2) => {
+    sh2.log = [{ songId: 'wires', title: 'Wires', votes: 4, roundVotes: 6, voters: 5, at: D1 + 120e3 }];
+    return true;
+  });
+  /* Now simulate the failure that started it all: the end never happened, so the
+     show is still live when the next night comes round. */
+  z = await autoTick(zoe.artistId, { now: D2 + 60e3 });
+  eq('THE BUG: night two used to answer "already live" and do nothing', z.did, 'start');
+  const night2 = (await getShow(zoe.artistId)).showId;
+  ok('so it is a different night, not a continuation', night1 !== night2, { night1, night2 });
+  const h = await readHistIndex(zoe.artistId);
+  ok('and night one is filed on its own', h.shows.some((x) => x.showId === night1), h.shows.map((x) => x.showId));
+
+  console.log('\nA DEFERRED END IS TRIED AGAIN, NOT FORGOTTEN');
+  /* `sweep` re-pointed the artist's entry at their NEXT gig after a "still
+     playing" deferral, so tonight was never due again and the show stayed live
+     for ever. That is the loop that produced the bug above. */
+  await mutateShow(zoe.artistId, (sh2) => { sh2.nowPlayingAt = D2 + 3 * 3600e3 + END_GRACE_MS - 60e3; return true; });
+  const before = (await readSched()).byArtist[zoe.artistId];
+  await sweep({ now: D2 + 3 * 3600e3 + END_GRACE_MS });
+  const after = (await readSched()).byArtist[zoe.artistId];
+  eq('the entry still points at tonight, so the next ring tries again', after && after.k, before && before.k);
+  eq('and the show is still live, correctly — somebody is playing', (await getShow(zoe.artistId)).status, 'live');
+  /* Six hours of a stale nowPlayingAt is not "still playing", it is somebody who
+     walked away from the tablet. */
+  await sweep({ now: D2 + 3 * 3600e3 + END_GRACE_MS + 7 * 3600e3 });
+  eq('but hours later the backstop files it anyway', (await getShow(zoe.artistId)).status, 'ended');
+}
+
+console.log('\nTHE HEAL  a night on disk with no row pointing at it');
+{
+  const { healHistory } = await import('../netlify/functions/_history.mjs');
+  const { casDoc: cas, KEY } = await import('../netlify/functions/_lib.mjs');
+  const lost = await createArtist({ email: 'lost@example.com', name: 'Lost', slug: 'lost' });
+  const aid = lost.artistId;
+  // a real night, written the way archiveShow writes one, with no index row
+  await cas(KEY.hist(aid, 'n1'), () => ({}), (d) => {
+    Object.assign(d, { v: 1, showId: 'n1', artistId: aid, venue: 'The Ugly Duckling', city: 'Koh Phangan',
+      startedAt: 1, endedAt: 2, played: [], requested: [],
+      stats: { songsPlayed: 9, totalVotes: 40, peakVoters: 12, room: 20, nets: 6, topSong: null },
+      money: { gross: 0, unattributed: 3 } });
+    return true;
+  });
+  await cas('histids_' + aid, () => ({ v: 1, ids: [] }), (d) => { d.ids = ['n1']; return true; });
+  eq('the Studio cannot see it', (await readHistIndex(aid)).shows.length, 0);
+  const heal = await healHistory(aid, { force: true });
+  eq('the heal finds it', heal.added, 1);
+  const rows = (await readHistIndex(aid)).shows;
+  eq('and files it with its real numbers', rows[0] && rows[0].songsPlayed, 9);
+  eq('including the money that carried no show tag', rows[0] && rows[0].unattributed, 3);
+  eq('running it again adds nothing', (await healHistory(aid, { force: true })).added, 0);
+  /* And the heal obeys the same rule the archive does: a 151-second show with no
+     song, no vote and nobody in the room is not a night, whenever it happened. */
+  await cas(KEY.hist(aid, 'n2'), () => ({}), (d) => {
+    Object.assign(d, { v: 1, showId: 'n2', artistId: aid, venue: 'Empty', startedAt: 1, endedAt: 2,
+      stats: { songsPlayed: 0, totalVotes: 0, peakVoters: 0, room: 0 }, money: {} });
+    return true;
+  });
+  await cas('histids_' + aid, () => ({ v: 1, ids: [] }), (d) => { d.ids = ['n1', 'n2']; return true; });
+  await healHistory(aid, { force: true });
+  eq('a night where nothing happened is still not a night', (await readHistIndex(aid)).shows.length, 1);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

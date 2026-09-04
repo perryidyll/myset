@@ -23,6 +23,7 @@
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
+html{background:#000}
 :root{
   --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
   --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
@@ -131,11 +132,23 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .upg{color:var(--accent-2);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
 .plantag{background:rgba(48,209,88,.16);color:var(--good)}
 .upg span,.plantag span{font-size:11px;opacity:.75}
-.bigup{width:100%;padding:17px;border-radius:var(--pill);font-size:17px;font-weight:700;background:var(--good);color:#04110a;display:flex;align-items:center;justify-content:center;gap:8px}
+.planwhen{margin:10px 0 0;text-align:center;font-size:13.5px;color:var(--ink)}
+.planwhen a{color:var(--accent);font-weight:600}
+/* NOT a red alarm: a card that needs updating is a calm sentence. */
+.paybar{margin:14px 18px 0;padding:16px 18px;border-radius:var(--r);background:var(--surface);
+  box-shadow:inset 0 0 0 1.5px var(--accent)}
+.paybar b{display:block;font-size:16px;letter-spacing:-.02em;margin-bottom:6px}
+.paybar p{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+.paybar a{color:var(--accent);font-weight:600}
+.paybar .big{margin:0}
+.bigup{width:100%;padding:16px;border-radius:var(--pill);font-size:16.5px;font-weight:700;
+  background:rgba(48,209,88,.16);color:var(--good);display:flex;align-items:center;justify-content:center;gap:8px}
+.bigup span{font-size:12px;opacity:.75}
 .tier{border:1.5px solid var(--accent-2);border-radius:var(--r);overflow:hidden;margin-top:14px;background:var(--surface)}
-.tier .hd{background:var(--accent-2);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:baseline;font-weight:800;font-size:18px;letter-spacing:-.02em}
-.tier .hd small{font-size:14px;font-weight:700;opacity:.95}
-.tier ol{margin:0;padding:12px 16px 12px 34px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.tier .hd{background:var(--accent-2);color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:baseline;font-weight:800;font-size:21px;letter-spacing:-.02em}
+.tier .hd small{font-size:16px;font-weight:700;opacity:.95}
+.tier ol{margin:0;padding:13px 16px 13px 34px;font-size:16.5px;line-height:1.5;color:var(--ink-2)}
+.tier ol li b{color:var(--ink);font-weight:700}
 .tier ol li{padding:2px 0}
 .tier .fee{color:var(--accent-2);font-weight:700}
 .tier .cta{margin:2px 14px 14px}
@@ -147,6 +160,13 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .tcard .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
 .tcard .who i{width:38px;height:38px;border-radius:12px;background:var(--grad) center/cover;display:grid;place-items:center;font-style:normal;font-weight:800;color:#fff}
 .tcard .who b{display:block;font-size:14px}.tcard .who span{font-size:12px;color:var(--muted)}
+.plansheet h3{font-size:25px}
+.plansheet .lede{font-size:16.5px}
+/* `.fine` is used on the plan sheet and is defined in app.css, which neither
+   Studio loads — the same trap `.note` fell into on this page. Defined here. */
+.fine{font-size:12.5px;color:var(--faint);margin-top:14px;text-align:center}
+.plansheet .fine{font-size:14.5px}
+.plansheet .sec .kick{font-size:14px}
 .tcard p{margin:0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
 .dg .big.no{background:var(--accent-2);color:#fff;box-shadow:none}
 .dg .big.yes{background:var(--surface-2);color:var(--muted);box-shadow:none;opacity:.7}
@@ -247,7 +267,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .bg{position:fixed;inset:0;background:rgba(0,0,0,.62);opacity:0;pointer-events:none;z-index:60;
   transition:opacity .3s var(--ease)}
 .bg.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(102%);
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(102%);overscroll-behavior:contain;
   width:100%;max-width:var(--maxw);max-height:92vh;overflow-y:auto;
   background:var(--surface);border-radius:var(--r-lg) var(--r-lg) 0 0;z-index:65;
   padding:10px 20px calc(26px + env(safe-area-inset-bottom));box-shadow:0 -10px 50px rgba(0,0,0,.6);
@@ -256,6 +276,37 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
 .sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px}
 .sheet .inp{background:var(--surface-2);box-shadow:0 0 0 1.5px var(--hair-2) inset}
+/* THE BOOT SCREEN. The Venue Studio never had one: it painted an empty page
+   until the first render arrived, which on a phone is a white flash then a jump.
+   Same three bars as the Artist Studio, painted with the HTML so the first frame
+   is already this, and removed for good once the page renders. */
+#boot{position:fixed;inset:0;z-index:70;display:grid;place-items:center;
+  background:var(--bg);transition:opacity .28s ease}
+#boot.gone{opacity:0;pointer-events:none}
+#boot .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
+#boot .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
+  animation:bb .9s ease-in-out infinite}
+#boot .bars i:nth-child(2){animation-delay:.15s}
+#boot .bars i:nth-child(3){animation-delay:.3s}
+#bootline{position:absolute;top:calc(50% + 46px);left:0;right:0;text-align:center;
+  font-size:13.5px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){#boot .bars i{animation:none;height:28px}}
+/* LEAVING, AND ARRIVING, IN BLACK. Perry: "there's still a white blank page
+   showing for 1-2 seconds before the normal black loading screen appears when i
+   click on the artist name". The white belonged to the BROWSER: a tap on a link
+   tore this document down and the next one had not painted yet, and a link that
+   opened a new tab handed him an empty white tab first. So MySet paints its own
+   splash before it goes, and internal links stay in this window (goTo below). */
+#leave{position:fixed;inset:0;z-index:95;display:none;place-items:center;background:var(--bg)}
+#leave.on{display:grid}
+#leave .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
+#leave .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
+  animation:bb .9s ease-in-out infinite}
+#leave .bars i:nth-child(2){animation-delay:.15s}
+#leave .bars i:nth-child(3){animation-delay:.3s}
+#leave p{position:absolute;top:calc(50% + 46px);left:0;right:0;text-align:center;
+  font-size:13.5px;color:var(--muted);margin:0}
+@media (prefers-reduced-motion:reduce){#leave .bars i{animation:none;height:28px}}
 .grabzone{position:relative;padding:12px 0 10px;margin:-10px 0 0;cursor:grab;touch-action:none}
 .grabzone:active{cursor:grabbing}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
@@ -289,6 +340,8 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 <div id="busy" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div></div>
 <div id="qrbig" onclick="qrHide(event)"></div>
 <div id="app"></div>
+<div id="boot"><div class="bars"><i></i><i></i><i></i></div><div id="bootline">Opening the venue</div></div>
+<div id="leave" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div><p id="leaveline">Opening…</p></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
@@ -324,6 +377,10 @@ const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
 /* ── the door ───────────────────────────────────────────── */
 let GATE_EMAIL='', TICKET='';
 function gate(err,mode){
+  /* WHATEVER HAPPENS, THE BOOT SCREEN GOES. Without this a visitor with no token
+     never reaches start(), so the three bars would spin over the sign-in screen
+     for ever — the exact thing a boot screen is supposed to prevent. */
+  bootDone();
   const m=mode||'start';
   let inner;
   if(m==='code'){
@@ -385,10 +442,158 @@ function signedIn(d,msg){
   toast(msg||`Signed in as ${d.email}`);
   start();
 }
-function signOut(){ TOKEN=''; localStorage.removeItem('myset.vtoken'); V=null; ME=null; gate(); }
+/* The local clear happens whatever the network does — somebody who presses Sign
+   out has to be signed out on this device regardless of what comes back. The
+   server call is what makes the token itself stop working, which it never did. */
+async function signOut(){
+  try{ await post('/venueauth',{action:'signOut'}); }catch(e){}
+  TOKEN=''; localStorage.removeItem('myset.vtoken'); V=null; ME=null; gate();
+}
+function signOutEverywhere(){
+  if(!confirm('Sign every device out, including this one? You’ll need a code to get back in.'))return;
+  revokeAll();
+}
+let VSESS=null;
+async function openSessions(){
+  openSheet(`<h3>Where you’re signed in</h3><p class="lede"><span class="spin"></span> Looking…</p>`);
+  VSESS=await post('/venueauth',{action:'sessions'});
+  drawSessions();
+}
+function drawSessions(){
+  if(!VSESS||!VSESS.ok){ openSheet(`<h3>Where you’re signed in</h3><p class="lede">Couldn’t read that just now.</p>`); return; }
+  const when=t=>{ if(!t)return ''; const d=Math.floor((Date.now()-t)/86400000);
+    return d<=0?'today':d===1?'yesterday':d<30?d+' days ago':vdate(t); };
+  openSheet(`<h3>Where you’re signed in</h3>
+    <p class="lede">Every phone and tablet with a live sign-in. Signing one out is instant.</p>
+    <div class="list">${VSESS.list.map(x=>`<div class="row">
+      <div class="m"><div class="t">${x.current?'This device':esc(x.label)}</div>
+        <div class="s">${x.current?esc(x.label)+' · ':''}signed in ${when(x.at)}${x.email?' · '+esc(x.email):''}</div></div>
+      ${x.current?`<button class="act" onclick="closeSheet();signOut()">Sign out</button>`
+                :`<button class="act warn" onclick="revokeSession('${esc(x.sid)}')">Sign out</button>`}</div>`).join('')
+      ||'<div class="row muted">Nothing to show yet.</div>'}
+      ${VSESS.legacy?`<div class="row muted"><div class="m"><div class="t">An older sign-in</div>
+        <div class="s">This one started before MySet kept a list, so we can’t tell which device it is. Signing out everywhere clears it.</div></div></div>`:''}</div>
+    <button class="big alt" style="margin-top:14px" onclick="signOutOthers()">Sign out our other devices</button>`);
+}
+async function revokeSession(sid){
+  const d=await post('/venueauth',{action:'sessionRevoke',sid});
+  if(!d||!d.ok){toast((d&&d.error)||'Couldn’t do that');return;}
+  VSESS=d; drawSessions(); toast('Signed out');
+}
+async function signOutOthers(){
+  const d=await post('/venueauth',{action:'signOutOthers'});
+  if(!d||!d.ok){toast((d&&d.error)||'Couldn’t do that');return;}
+  VSESS=d; drawSessions(); toast(d.gone?`${d.gone} device${d.gone===1?'':'s'} signed out`:'Nothing else was signed in');
+}
+async function exportAccount(){
+  const d=await post('/venueadmin',{action:'accountExport'});
+  if(!d||!d.ok){toast((d&&d.error)||'Couldn’t export');return;}
+  const blob=new Blob([JSON.stringify(d.data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`myset-venue-${(V&&V.slug)||'page'}-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+async function openInvoices(){
+  openSheet(`<h3>Invoices and receipts</h3><p class="lede"><span class="spin"></span> Reading Stripe…</p>`);
+  const d=await post('/venueadmin',{action:'planInvoices'});
+  if(!d||!d.ok){ openSheet(`<h3>Invoices and receipts</h3><p class="lede">${esc((d&&d.error)||'Couldn’t reach Stripe just now.')}</p>`); return; }
+  const money=(c,cur)=>(cur==='USD'?'$':'')+(c/100).toFixed(2);
+  openSheet(`<h3>Invoices and receipts</h3>
+    <p class="lede">Every payment made to MySet. Stripe keeps them; we just show them.</p>
+    <div class="list">${d.list.map(i=>`<div class="row">
+      <div class="m"><div class="t">${money(i.total,i.currency)} · ${esc(i.status)}</div>
+        <div class="s">${vdate(i.at)}${i.number?' · '+esc(i.number):''}</div></div>
+      ${i.url?`<a class="act" href="${esc(i.url)}" target="_blank" rel="noopener">Open ↗</a>`:''}</div>`).join('')
+      ||'<div class="row muted">Nothing yet — this fills up after your first payment.</div>'}</div>`);
+}
+/* Two screens, then thirty days. Nothing is erased on the first tap. */
+function deleteAccount(){
+  openSheet(`<h3>Delete this venue page?</h3>
+    <p class="lede">It goes offline straight away. We keep everything for 30 days in case you change your mind, then it’s gone for good.</p>
+    <button class="big alt" style="margin-top:16px" onclick="closeSheet()">Keep our page</button>
+    <button class="big" style="margin-top:10px;background:var(--accent-2);color:#fff" onclick="deleteAccountConfirm()">Yes, delete it</button>`);
+}
+function deleteAccountConfirm(){
+  openSheet(`<h3>Last check.</h3>
+    <p class="lede">Your page, photos, what’s on, your numbers and your community posts. Any plan is cancelled today, so you won’t be charged again.</p>
+    <div class="field"><label>Type DELETE to confirm</label><input class="inp" id="delWord" autocapitalize="characters" autocomplete="off" placeholder="DELETE"></div>
+    <button class="big" style="margin-top:14px;background:var(--accent)" onclick="deleteAccountNow()">Delete for good</button>
+    <button class="big alt" style="margin-top:10px" onclick="closeSheet()">Keep our page</button>`);
+}
+async function deleteAccountNow(){
+  const w=(document.getElementById('delWord')||{}).value||'';
+  const d=await post('/venueadmin',{action:'accountDelete',confirm:w});
+  if(!d||!d.ok){toast((d&&d.error)||'Couldn’t delete');return;}
+  closeSheet(); await loadVenue(true); render();
+  toast('Your page is offline. You have until '+vdate(d.purgeAt)+' to change your mind.');
+}
+async function undelete(){
+  const d=await post('/venueadmin',{action:'accountUndelete'});
+  if(!d||!d.ok){toast((d&&d.error)||'Couldn’t undo that');return;}
+  await loadVenue(true); render(); toast('Your page is back.');
+}
+function leavingBar(){
+  const del=V&&V.del;
+  if(!del)return '';
+  return `<div class="paybar">
+    <b>This page is being deleted on ${vdate(del.purgeAt)}</b>
+    <p>Everything is still here — your photos, what’s on, your numbers and your posts. Nothing has been erased.</p>
+    <button class="big" style="margin-top:12px" onclick="undelete()">Undo, keep our page</button></div>`;
+}
+function cardTrouble(){
+  const B=(VPLAN&&VPLAN.billing)||{};
+  if(!B.pastDue)return '';
+  const ends=Number(B.graceUntil||0);
+  const fix=B.subscribed?`onclick="openPortal()"`:`onclick="startCheckout()"`;
+  return `<div class="paybar">
+    <b>Your card didn’t go through</b>
+    <p>We couldn’t take this month’s payment for Pro. It’s almost always an expired card or a bank asking a question — nothing on your page has changed.</p>
+    <button class="big" style="margin-top:12px" ${fix}>Update our card</button>
+    ${ends?`<p style="margin-top:8px">Everything keeps working until ${vdate(ends)}.</p>`:''}</div>`;
+}
 
 /* ── loading ────────────────────────────────────────────── */
-async function start(){ await Promise.all([loadVenue(),loadMe()]); loadPlan(); handleReturns(); }
+/* ---------- never a white page ----------
+   goTo() paints the splash, waits for it to actually be on screen (two frames),
+   and only then navigates. The delegated handler applies it to every internal
+   link on the page, so nothing has to remember to call it.
+   /api/ is left alone: those are files (the QR png), not pages, and a new tab is
+   the right place for a file. */
+function goTo(url,label){
+  const el=document.getElementById('leave');
+  if(!el){ location.href=url; return false; }
+  const p=document.getElementById('leaveline');
+  if(p) p.textContent=label||'Opening…';
+  el.classList.add('on');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ location.href=url; }));
+  // coming back from the back button restores this page, splash and all
+  addEventListener('pageshow',()=>el.classList.remove('on'));
+  setTimeout(()=>el.classList.remove('on'),8000);   // a navigation that never happened
+  return false;
+}
+document.addEventListener('click',(e)=>{
+  if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;
+  const a=e.target.closest&&e.target.closest('a[href]');
+  if(!a||a.hasAttribute('download')||a.dataset.nosplash!==undefined)return;
+  let u; try{ u=new URL(a.getAttribute('href'),location.href); }catch(x){ return; }
+  if(u.origin!==location.origin)return;                    // Stripe, Connect, anywhere else
+  if(u.pathname.startsWith('/api/'))return;                // a file, not a page
+  if(u.pathname===location.pathname&&u.hash)return;        // an anchor on this page
+  e.preventDefault();
+  goTo(u.pathname+u.search+u.hash,a.dataset.leaving||'Opening…');
+});
+/* Whatever happens, the boot screen goes: a hung request must never leave
+   somebody staring at three bars for ever. */
+function bootDone(){
+  const el=document.getElementById('boot'); if(!el)return;
+  el.classList.add('gone');
+  setTimeout(()=>el.remove(),320);        // gone for good: it can never flash again
+}
+async function start(){
+  setTimeout(bootDone,7000);
+  try{ await Promise.all([loadVenue(),loadMe()]); }finally{ bootDone(); }
+  loadPlan(); handleReturns();
+}
 /* A pull re-reads the page, and whichever tab's extra data the tab needs. See
    /pull.js for why this exists at all in an installed app. */
 MySetPull(async()=>{
@@ -547,11 +752,21 @@ function planBox(){
   const now=V.plan||'free', B=VPLAN&&VPLAN.billing;
   return `<div class="sec"><span class="kick">Your plan</span></div>
     <div class="list" id="planbox" style="padding:14px 16px">
-      <div class="m" style="padding-bottom:10px"><div class="t">You’re on ${esc((V.limits&&V.limits.label)||'Free')}</div>
-        <div class="s">${VPLAN&&VPLAN.until?((B&&B.cancelAtPeriodEnd)?'Ends ':'Renews ')+vdate(VPLAN.until):(now==='free'?'Everything your page does for the public is free and stays free.':'Thanks — that is what keeps the lights on.')}</div></div>
-      <button class="bigup" onclick="openPlans()">${now==='pro'?'Pro membership':'Upgrade your plan'} <span style="font-size:13px;opacity:.75">↗</span></button>
-      ${B&&B.portal?`<p class="muted" style="font-size:12px;margin:10px 0 0;text-align:center"><a href="#" onclick="event.preventDefault();openPortal()" style="color:var(--accent);font-weight:600">Card, invoices and receipts ↗</a></p>`:''}
+      <button class="bigup" onclick="openPlans()">${now==='pro'?'Pro membership':'Upgrade your plan'} <span>↗</span></button>
+      <p class="planwhen">${vPlanWhen()}</p>
     </div>`;
+}
+/* The line under the button. Never blank: a free or comped venue has no Stripe
+   customer, so the receipts link cannot be shown, and a section that silently
+   disappears is exactly what sent Perry looking for one that was not there. */
+function vPlanWhen(){
+  const B=(VPLAN&&VPLAN.billing)||{}, now=(V&&V.plan)||'free';
+  const label=esc((V&&V.limits&&V.limits.label)||'Free');
+  const link=B.portal?` · <a href="#" onclick="event.preventDefault();openPortal()">Card, invoices and receipts ↗</a>`:'';
+  if(now==='free') return 'Everything your page does for the public is free, and stays free.';
+  const when=B.renewsAt||(VPLAN&&VPLAN.until);
+  if(when) return `${B.cancelAtPeriodEnd?'Ends':'Renews'} ${vdate(when)}${link}`;
+  return `${label} · Active${link}`;
 }
 function vdate(iso){ try{ return new Date(iso).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; } }
 
@@ -560,29 +775,32 @@ function vdate(iso){ try{ return new Date(iso).toLocaleDateString(undefined,{day
    Pro opens Stripe Checkout; leaving it asks twice and offers a month at half price, once. */
 let VPLAN=null;
 async function loadPlan(force){ if(VPLAN&&!force) return VPLAN; const d=await post('/venueadmin',{action:'planGet'}); if(d&&d.ok){ VPLAN=d; if(V){ V.plan=d.plan; V.limits=d.limits; V.plans=d.plans; render(); } } return VPLAN; }
+const vTierList=(k)=>VTIER_COPY[k].items.map(x=>Array.isArray(x)
+  ?`<li><b>${x[0]}</b>${x[1]||''}</li>`:`<li>${x}</li>`).join('');
+/* [the thing, what it means] — the first half bold, the second not. */
 const VTIER_COPY={
   free:{name:'Free',price:'$0',items:[
-    'Your page on myset.vip — address, hours, what’s on, how to get there',
-    'Three photos on your page',
-    'Every artist who plays here linked to your page, and you to theirs',
-    'Your nights listed in your city, and artists pitching to play',
-    'A community page — fans rate the night and post photos, you reply',
-    'Codes to print for tables, the bar and the door',
-    'Your numbers: who voted, what got played, night by night',
-    'Verification, once your website and your artists check out',
-    '<span class="fee">Transaction fee: 10%</span> on merch sold through the app, with Stripe’s card fee shared']},
+    ['Your page on myset.vip',' — address, hours, what’s on, how to get there'],
+    ['Three photos',' on your page'],
+    ['Every artist who plays here',' linked to your page, and you to theirs'],
+    ['Your nights listed in your city',', and artists pitching to play'],
+    ['A community page',' — fans rate the night and post photos, you reply'],
+    ['Codes to print',' for tables, the bar and the door'],
+    ['Your numbers',': who voted, what got played, night by night'],
+    ['Verification',', once your website and your artists check out'],
+    ['<span class="fee">Transaction fee: 10%</span>',' on merch sold through the app, with Stripe’s card fee shared']]},
   pro:{name:'Pro',price:'$20 / month',items:[
-    'Your page on myset.vip — address, hours, what’s on, how to get there',
-    'Twelve photos on your page',
-    'Every artist who plays here linked to your page, and you to theirs',
-    'Your nights listed in your city, and artists pitching to play',
-    'A community page — fans rate the night and post photos, you reply',
-    'Merch on your community page, paid straight to your Stripe account',
-    'The green verified tick beside your name',
-    'Codes to print for tables, the bar and the door',
-    'Your numbers: who voted, what got played, night by night',
-    'Coming soon, included: tips for your staff, and votes for what plays between the sets',
-    '<span class="fee">Transaction fee: 2%</span> on merch sold through the app, with Stripe’s card fee shared']},
+    ['Your page on myset.vip',' — address, hours, what’s on, how to get there'],
+    ['Twelve photos',' on your page'],
+    ['Every artist who plays here',' linked to your page, and you to theirs'],
+    ['Your nights listed in your city',', and artists pitching to play'],
+    ['A community page',' — fans rate the night and post photos, you reply'],
+    ['Merch on your community page',', paid straight to your Stripe account'],
+    ['The green verified tick',' beside your name'],
+    ['Codes to print',' for tables, the bar and the door'],
+    ['Your numbers',': who voted, what got played, night by night'],
+    ['Coming soon, included',': tips for your staff, and votes for what plays between the sets'],
+    ['<span class="fee">Transaction fee: 2%</span>',' on merch sold through the app, with Stripe’s card fee shared']]},
 };
 /* PLACEHOLDERS — the layout is approved first, then these come down until real
    ones are submitted by venues. Nothing here is a real quote. */
@@ -601,14 +819,14 @@ function openPlans(){
     if(comped) return `<button class="big now" disabled>Comped${VPLAN.until?' until '+vdate(VPLAN.until):''}</button>`;
     return `<button class="big alt" onclick="confirmDowngrade()">Switch to Free</button>`;
   };
-  openSheet(`<h3>Plans</h3><p class="muted" style="font-size:14px;margin:0 0 6px">Everything in each plan, listed in full. Change any time.</p>
+  openSheet(`<div class="plansheet"><h3>Plans</h3><p class="lede">Everything in each plan, listed in full. Change any time.</p>
     ${['free','pro'].map(k=>`<div class="tier">
       <div class="hd"><span>${VTIER_COPY[k].name}</span><small>${VTIER_COPY[k].price}</small></div>
-      <ol>${VTIER_COPY[k].items.map(x=>`<li>${x}</li>`).join('')}</ol>
+      <ol>${vTierList(k)}</ol>
       <div class="cta">${cta(k)}</div></div>`).join('')}
-    ${VTESTIMONIALS.length?`<div class="sec" style="padding-left:0;margin-top:18px"><span class="kick">From venues</span></div>
+    ${VTESTIMONIALS.length?`<div class="sec" style="padding-left:0;margin-top:18px"><span class="kick">What MySet members have to say</span></div>
     <div class="testi">${VTESTIMONIALS.map(t=>`<div class="tcard"><div class="who"><i>${esc(t.name.slice(0,1))}</i><div><b>${esc(t.name)}</b><span>${esc(t.where)}</span></div></div><p>${esc(t.text.slice(0,180))}</p></div>`).join('')}</div>`:''}
-    <p class="muted" style="font-size:12px;margin:14px 0 0">Stripe handles the card. Cancel any time; a paid month is always yours to the end.</p>`);
+    <p class="fine">Stripe handles the card. Cancel any time; a paid month is always yours to the end.</p></div>`);
 }
 async function startCheckout(){
   const d=await post('/venueadmin',{action:'planCheckout'});
@@ -769,7 +987,7 @@ function vMerchTab(){
     ${payCard()}
     ${PAY&&PAY.ready?ordersSection():''}
     <div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one, hide anything, or delete it. <a href="/v/${esc(V.slug)}/community" target="_blank" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one, hide anything, or delete it. <a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
       <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · ${p.reports} report${p.reports===1?'':'s'}`:''}</div>
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}</div>
@@ -904,7 +1122,7 @@ function render(){
         return rows.join('');})()}
     </div>
     <div class="sec"><span class="kick">Your community page</span></div>
-    <div class="row muted">Fans rate a night and post photos on <a href="/v/${esc(V.slug)}/community" target="_blank" style="color:var(--accent);font-weight:600">your community page ↗</a>. Read and moderate it on the <b>Merch</b> tab.</div>`;
+    <div class="row muted">Fans rate a night and post photos on <a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">your community page ↗</a>. Read and moderate it on the <b>Merch</b> tab.</div>`;
   }
 
   if(TAB==='shows'){
@@ -925,7 +1143,7 @@ function render(){
         <div class="m"><div class="t">${esc(g.artist)}${g.live?' · on now':''}</div>
           <div class="by">${esc(dowName(g.date))} ${dayMonth(g.date)} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}</div>
           <div class="s">Listed as “${esc(g.listedAs)}”${g.repeating?' · repeats':''}</div></div>
-        <a class="act" href="/${esc(g.slug)}" target="_blank">Page</a>
+        <a class="act" href="/${esc(g.slug)}">Page</a>
       </div>`).join('')}</div>`}
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="shareInvite()">Invite acts to list their gigs here</button></div>
 
@@ -951,7 +1169,7 @@ function render(){
         <div class="m"><div class="t">${esc(p.name)}${p.status==='keen'?' · you said keen':p.status==='nope'?' · passed':''}</div>
           <div class="by">${p.stats.nights} night${p.stats.nights===1?'':'s'} · ${p.stats.people} in the room · ${p.stats.votes} votes · ${p.stats.songs} songs</div>
           ${p.message?`<div class="s">“${esc(p.message)}”</div>`:''}</div>
-        <a class="act" href="/${esc(p.slug)}" target="_blank">Page</a>
+        <a class="act" href="/${esc(p.slug)}">Page</a>
         ${p.status==='new'?`<button class="act pri" data-act="pkeen" data-id="${esc(p.id)}">Keen</button>
           <button class="act warn" data-act="pnope" data-id="${esc(p.id)}">✕</button>`
          :`<button class="act" data-act="pnew" data-id="${esc(p.id)}">Undo</button>`}
@@ -982,7 +1200,7 @@ function render(){
           <div class="by">${a.nights} night${a.nights===1?'':'s'} · ${a.people} people · ${a.votes} votes</div>
           ${a.best?`<div class="s">Best: ${a.best.people} on ${dayMonth(a.best.date)}</div>`:''}</div>
         <div class="avg"><b>${a.nights?Math.round(a.people/a.nights):0}</b><span>avg/night</span></div>
-        <a class="act" href="/${esc(a.slug)}" target="_blank">Page</a>
+        <a class="act" href="/${esc(a.slug)}">Page</a>
       </div>`).join('')}</div>
       <p class="muted" style="font-size:12px;padding:10px 20px 0">The big number is the <b>average people per night</b> — that’s the one that tells you who fills the room.</p>
 
@@ -1038,7 +1256,7 @@ function render(){
       <input class="inp" id="slugIn" maxlength="32" value="${esc(V.slug||'')}" placeholder="yourbar" style="flex:1">
       <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
     ${V.slug?`<div class="wrap" style="margin-top:10px">
-      <a class="big alt" href="/v/${esc(V.slug)}" target="_blank">Open myset.vip/v/${esc(V.slug)} ↗</a></div>`:''}
+      <a class="big alt" href="/v/${esc(V.slug)}">Open myset.vip/v/${esc(V.slug)} ↗</a></div>`:''}
 
     <div class="sec"><span class="kick">Verification</span></div>
     ${V.verified
@@ -1069,11 +1287,36 @@ function render(){
       <input class="inp" id="addEmail" type="email" inputmode="email" placeholder="them@email.com" style="flex:1">
       <button class="act pri" style="min-width:64px" onclick="addStaff()">Add</button></div></div>
 
-    <div class="wrap" style="margin-top:18px">
-      <button class="big alt" onclick="if(confirm('Sign every device out, including this one?'))revokeAll()">Sign all devices out</button>
-      <button class="big alt" onclick="signOut()">Sign out of this device</button>
+    <p class="muted" style="font-size:12px;padding:8px 20px 0">A venue page can’t reach an artist’s setlist, votes or money — different account, different door.</p>
+
+    ${/* A venue could sign up, put a page up, take money and pay for Pro, and had no
+          way to take its data or to leave. ACCOUNTS.md said a user who can delete
+          themselves must first be able to take everything with them; venues were
+          simply never given either half. */''}
+    <div class="sec"><span class="kick">Your account</span></div>
+    <div class="list">
+      <div class="row"><div class="m"><div class="t">${esc((ME&&ME.email)||'Signed in')}</div>
+        <div class="s">Sign-in address${ME&&ME.emails?` · ${ME.emails.length} sign-in${ME.emails.length===1?'':'s'} on this page`:''}</div></div></div>
+      <div class="row"><div class="m"><div class="t">Where you’re signed in</div>
+        <div class="s">Every phone and tablet with a live sign-in.</div></div>
+        <button class="act" onclick="openSessions()">See them</button></div>
+      <div class="row"><div class="m"><div class="t">Download our data</div>
+        <div class="s">Everything MySet holds about this venue, as one file. Never a customer’s device.</div></div>
+        <button class="act" onclick="exportAccount()">Download</button></div>
+      ${VPLAN&&VPLAN.billing&&VPLAN.billing.portal?`<div class="row"><div class="m"><div class="t">Invoices and receipts</div>
+        <div class="s">Every payment made to MySet.</div></div>
+        <button class="act" onclick="openInvoices()">Open</button></div>`:''}
     </div>
-    <p class="muted" style="font-size:12px;padding:8px 20px 0">A venue page can’t reach an artist’s setlist, votes or money — different account, different door.</p>`;
+    <div class="wrap" style="margin-top:14px">
+      <button class="big alt" onclick="signOut()">Sign out of this device</button>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 0;text-align:center">
+        <a href="#" onclick="event.preventDefault();signOutEverywhere()" style="color:var(--accent);font-weight:600">Sign out everywhere, including this one</a></p>
+    </div>
+    <div class="list" style="margin-top:14px">
+      <div class="row"><div class="m"><div class="t">Delete this venue page</div>
+        <div class="s">The page goes offline today. We keep everything for 30 days, then it’s gone.</div></div>
+        <button class="act warn" onclick="deleteAccount()">Delete</button></div>
+    </div>`;
   }
 
   if(TAB==='merch'){
@@ -1087,7 +1330,7 @@ function render(){
     </a>
     <div style="flex:1;min-width:0"><div class="kick">Venue Studio</div>
       ${V.slug
-        ? `<a class="whoami" href="/v/${esc(V.slug)}" target="_blank"><h1>${esc(V.name||'Your venue')}</h1><span>↗</span></a>`
+        ? `<a class="whoami" href="/v/${esc(V.slug)}"><h1>${esc(V.name||'Your venue')}</h1><span>↗</span></a>`
         : `<h1>${esc(V.name||'Your venue')}</h1>`}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px">
@@ -1104,9 +1347,9 @@ function render(){
     <button class="${TAB==='menu'?'on':''}" onclick="setTab('menu')">Menu</button>
     <button class="${TAB==='merch'?'on':''}" onclick="setTab('merch')">Merch</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
-  </div>${body}
+  </div>${leavingBar()}${cardTrouble()}${body}
   <div class="wrap" style="padding-top:26px;padding-bottom:8px">
-    ${V.slug?`<a class="big alt" href="/v/${esc(V.slug)}" target="_blank">See your public page ↗</a>`:''}
+    ${V.slug?`<a class="big alt" href="/v/${esc(V.slug)}">See your public page ↗</a>`:''}
   </div>`;
   wireCount('#fTag','#cTag',120); wireCount('#fAbout','#cAbout',900);
   document.querySelectorAll('input[data-hday]').forEach(el=>
@@ -1261,9 +1504,17 @@ function openSheet(h){
      · and there is a visible ✕, because a gesture should never be the only way
        out of anything */
 function attachDrag(sh){
-  const zone=sh.querySelector('.grabzone'); if(!zone)return;
+  /* ONE set of listeners for the life of the page. This used to bind a fresh pair
+     on every openSheet: the .grabzone was replaced each time so its listeners went
+     with it, but the ones on the sheet itself piled up, and each stale closure kept
+     its own y0 and raced the live one at the end of a drag. That is the "sometimes
+     gets stuck halfway down". Everything is delegated from the sheet now, so the
+     grabzone needs no listeners of its own. */
+  if(sh.__drag)return;
+  sh.__drag=true;
   let y0=null, dy=0, t0=0, fromBody=false;
   const CONTROL='input,textarea,select,button,a,[contenteditable]';
+  const HSCROLL='.testi,[data-hscroll]';
 
   const start=(e,body)=>{
     y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now(); fromBody=!!body;
@@ -1281,32 +1532,36 @@ function attachDrag(sh){
   const end=()=>{
     if(y0===null)return;
     const speed=dy/Math.max(1,Date.now()-t0);       // px per ms
+    y0=null;
     sh.style.transition='';
     if(dy>70||speed>0.45) closeSheet();
     else sh.style.transform='translateX(-50%) translateY(0)';
-    y0=null;
+  };
+  /* The ✕ sits inside the grab zone and is a button, so it is skipped here — a
+     drag that began on it was calling preventDefault on the way and eating the
+     tap, which is why the close button looked broken. */
+  const begin=(e)=>{
+    const t=e.target;
+    if(!t||!t.closest)return;
+    if(t.closest(CONTROL))return;                   // never fight a control
+    if(t.closest(HSCROLL))return;                   // a sideways carousel is not a dismiss
+    const inZone=!!t.closest('.grabzone');
+    if(!inZone&&sh.scrollTop>0)return;              // they are reading, not dismissing
+    start(e,!inZone);
   };
 
-  zone.addEventListener('touchstart',(e)=>start(e,false),{passive:true});
-  zone.addEventListener('touchmove',move,{passive:false});
-  zone.addEventListener('touchend',end);
-  zone.addEventListener('touchcancel',end);
-  zone.addEventListener('mousedown',(e)=>{ start(e,false);
-    const mm=(ev)=>move(ev), mu=()=>{ end();
-      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
-    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
-
-  sh.addEventListener('touchstart',(e)=>{
-    if(e.target.closest('.grabzone'))return;              // the zone handles itself
-    if(e.target.closest(CONTROL))return;                  // never fight a control
-    if(sh.scrollTop>0)return;                             // they are reading, not dismissing
-    start(e,true);
-  },{passive:true});
+  sh.addEventListener('touchstart',begin,{passive:true});
   sh.addEventListener('touchmove',move,{passive:false});
   sh.addEventListener('touchend',end);
   sh.addEventListener('touchcancel',end);
+  sh.addEventListener('mousedown',(e)=>{
+    if(!e.target.closest('.grabzone')||e.target.closest(CONTROL))return;
+    start(e,false);
+    const mm=(ev)=>move(ev), mu=()=>{ end();
+      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
 }
-function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+function closeSheet(){const sh=$('#sheet');sh.style.transition='';sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
   if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
 

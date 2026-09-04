@@ -650,15 +650,15 @@ export async function wipeFans(aid) {
 }
 
 /* ---------- meta (tips / payment markers) ---------- */
-export const emptyMeta = () => ({ tips: [], paid: {}, gifts: [], orders: [] });
+export const emptyMeta = () => ({ tips: [], paid: {}, gifts: [], orders: [], fees: {} });
 export async function readMeta(aid) {
   const { data } = await readDoc(KEY.meta(aid), null);
   const m = data || emptyMeta();
-  m.tips ||= []; m.paid ||= {}; m.gifts ||= []; m.orders ||= [];
+  m.tips ||= []; m.paid ||= {}; m.gifts ||= []; m.orders ||= []; m.fees ||= {};
   return m;
 }
 export const mutateMeta = (aid, fn) =>
-  casDoc(KEY.meta(aid), emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; m.orders ||= []; return fn(m); });
+  casDoc(KEY.meta(aid), emptyMeta, (m) => { m.tips ||= []; m.paid ||= {}; m.gifts ||= []; m.orders ||= []; m.fees ||= {}; return fn(m); });
 
 /* ---------- derived ---------- */
 /* ---------- which songs are in play tonight ----------
@@ -859,11 +859,11 @@ const LOCK_WINDOW = 15 * 60e3;      // ...within this long
 const LOCK_FOR = 15 * 60e3;         // ...then refuse for this long
 
 /** True when this artist's code door is currently shut. */
-async function codeLocked(aid) {
+export async function codeLocked(aid) {
   const { data } = await readDoc(`lock_${aid}`, null);
   return !!(data && data.until && data.until > Date.now());
 }
-async function noteCodeFailure(aid) {
+export async function noteCodeFailure(aid) {
   await casDoc(`lock_${aid}`, () => ({}), (d) => {
     const now = Date.now();
     d.fails = (d.fails || []).filter((t) => now - t < LOCK_WINDOW);
@@ -872,7 +872,7 @@ async function noteCodeFailure(aid) {
     return true;
   }).catch(() => {});
 }
-const clearCodeFailures = (aid) =>
+export const clearCodeFailures = (aid) =>
   casDoc(`lock_${aid}`, () => ({}), (d) => { d.fails = []; d.until = 0; return true; })
     .catch(() => {});
 
@@ -894,7 +894,8 @@ export async function requireArtist(req) {
   if (auth.startsWith('Bearer ')) {
     const { verifyToken } = await import('./_auth.mjs');
     const me = await verifyToken(auth.slice(7));
-    if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner' };
+    // `sid` says WHICH device, so "sign out" can mean this one and not all of them
+    if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner', sid: me.sid || null };
   }
 
   const url = new URL(req.url);
@@ -906,7 +907,7 @@ export async function requireArtist(req) {
      his own platform. */
   const master = process.env.ADMIN_CODE;
   if (master && sameHash(sha(given), sha(master)))
-    return { aid: DEFAULT_ARTIST, email: null, role: 'owner' };
+    return { aid: DEFAULT_ARTIST, email: null, role: 'owner', by: 'recovery-key' };
 
   /* Which lock are we trying? A named page, or the founding artist when no name is
      given — which is what every existing link and bookmark does. */
@@ -924,18 +925,41 @@ export async function requireArtist(req) {
   const show = await getShow(aid);
   if (show.codeHash && sameHash(sha(given), show.codeHash)) {
     await clearCodeFailures(aid);
-    return { aid, email: null, role: 'owner' };
+    return { aid, email: null, role: 'owner', by: 'studio-code' };
   }
   await noteCodeFailure(aid);
   return null;
 }
 
 /** Which artist is a PUBLIC request about? From ?a=<slug>. */
+/* ONE LINE TURNS A PAGE OFF. An account asked for deletion goes dark on the day
+   it is asked, and is only actually erased thirty days later — so this has to
+   answer "no such artist" the whole time. Every public endpoint already does
+   `if (!aid) return bad('unknown artist', 404)`, so refusing here 404s the show,
+   the profile, voting, paying, the community page, requests, lyrics and the rest
+   at once. The Studio does NOT go through here, because the owner still has to be
+   able to change their mind. */
 export async function publicArtist(req) {
   const slug = new URL(req.url).searchParams.get('a') || '';
-  if (!slug) return DEFAULT_ARTIST;          // bare myset.vip still means Perry
-  const { artistBySlug } = await import('./_auth.mjs');
-  return await artistBySlug(slug);
+  /* The founding page cannot be deleted, so the bare address needs no lookup at
+     all — and must not grow one: this runs on every phone in the room, and
+     test/cost.mjs holds an audience poll to ONE global document. The slug path
+     resolves and checks the deletion mark from the SAME single read that
+     artistBySlug would have done on its own. */
+  if (!slug) return DEFAULT_ARTIST;
+  const { readArtists, cleanSlug } = await import('./_auth.mjs');
+  const reg = await readArtists();
+  const want = cleanSlug(slug);
+  const aid = reg.bySlug[want] || ((reg.oldSlug || {})[want] || {}).aid || null;
+  if (!aid) return null;
+  if ((reg.byId[aid] || {}).del) return null;
+  return aid;
+}
+/** Is this account on its way out? The Studio needs to know; the public does not. */
+export async function deletionOf(aid) {
+  const { readArtists } = await import('./_auth.mjs');
+  const row = (await readArtists()).byId[aid] || {};
+  return row.del || null;
 }
 export const cleanFanId = (v) =>
   typeof v === 'string' ? v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) : '';

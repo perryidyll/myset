@@ -112,7 +112,24 @@ export async function autoTick(aid, { now = Date.now() } = {}) {
   const show = await getShow(aid);
 
   if (now < occ.endsAt) {
-    if (show.status === 'live') return { did: null, key, why: 'already live' };
+    /* LAST NIGHT'S SHOW MUST NOT SWALLOW TONIGHT. This was a flat "already live",
+       and that one line is why Perry's Money tab was missing nights. Once a show
+       failed to end itself — see the deferred-end bug below — it stayed live, and
+       every following gig hit this branch and did nothing. Five nights at five
+       venues were appended to one show that had started on 30 August, and the
+       Studio showed one row for the lot, correctly, because that is genuinely what
+       was recorded. Nothing was lost by the archive; the nights were never separate
+       in the first place.
+       So: a live show that began before tonight's window is not tonight's show. End
+       it, file it, and carry on into the start below. Two hours of slack, the same
+       figure the "the artist ended it themselves" test uses, so an artist who
+       starts early is never interrupted. */
+    if (show.status === 'live') {
+      if ((show.startedAt || 0) >= occ.startsAt - 2 * 3600e3)
+        return { did: null, key, why: 'already live' };
+      await endShow(aid, { by: 'schedule' });
+      console.log('autocron: filed a show left running from a previous gig for', aid);
+    }
     if (show.autoStart === false) return { did: null, key, why: 'auto-start is off for this artist' };
     if (show.autoKey === key) return { did: null, key, why: 'this gig was already started once' };
     /* The artist started a show for this night by hand and then ended it. That was
@@ -132,9 +149,18 @@ export async function autoTick(aid, { now = Date.now() } = {}) {
   if (now >= occ.endsAt + END_GRACE_MS && show.status === 'live') {
     // a show started AFTER the gig's grace is a different night — leave it alone
     if ((show.startedAt || 0) >= occ.endsAt + END_GRACE_MS) return { did: null, key, why: 'a later show' };
-    if ((show.nowPlayingAt || 0) > now - IDLE_MS) return { did: null, key, why: 'still playing' };
+    /* STILL PLAYING MEANS TRY AGAIN, NOT FORGET. This returned without `keep`, and
+       sweep() then re-pointed the artist's entry at their NEXT gig (or deleted it
+       when there wasn't one), so tonight was never due again: the show stayed live
+       for ever and the next night's songs were merged into it. That is how one gig
+       swallows another and two nights become one row.
+       The six-hour backstop is the other half: a nowPlayingAt that stale means the
+       artist walked away from the tablet, not that the set is still going. */
+    const stale = now > occ.endsAt + END_GRACE_MS + 6 * 3600e3;
+    if (!stale && (show.nowPlayingAt || 0) > now - IDLE_MS)
+      return { did: null, key, keep: true, why: 'still playing' };
     await endShow(aid, { by: 'schedule' });
-    return { did: 'end', key };
+    return { did: 'end', key, why: stale ? 'ended late — nothing had played for hours' : '' };
   }
   return { did: null, key, why: 'nothing due' };
 }
@@ -157,7 +183,8 @@ export async function sweep({ now = Date.now(), limit = 40, log = () => {} } = {
       const r = await autoTick(aid, { now });
       results.push({ aid, ...r });
       log(`autocron: ${aid} — ${r.did || 'nothing'}${r.why ? ' (' + r.why + ')' : ''}`);
-      const next = nextWindow(await readEvents(aid), now);
+      // `keep` leaves the entry pointing at tonight so the next ring tries again
+      const next = r.keep ? w : nextWindow(await readEvents(aid), now);
       if (next && r.refused && next.k === w.k) next.skip = w.k;
       updates[aid] = next;
     } catch (e) {

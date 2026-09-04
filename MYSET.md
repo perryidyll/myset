@@ -226,9 +226,14 @@ The tab the artist watches during a gig.
 * free votes per person, including ∞ unlimited
 * replay cost, vote pack prices, request and birthday costs
 * one device granted unlimited votes (the artist's own, for testing)
-* the Studio passcode
+* **Signing in** — the plain truth that there is no password, the studio code, and
+  eight one-time recovery codes
+* **Starting by itself** — shows that start from the calendar, on or off
 * QR codes for the home page and the voting page
-* team members, sign out, sign out everywhere
+* team members and their roles
+* **Your account** — your sign-in address (and moving it), where you're signed in,
+  download my data, invoices, sign out of this device, sign out everywhere, delete
+  (two screens, then thirty days you can undo)
 * plan, upgrade, promo codes, referral link
 * **owner only:** the ID review queue, venue plans, promo code minting, venue
   verification, feature flags
@@ -551,7 +556,7 @@ script; `app.css` carries the shared design tokens.
 * **Front end:** 9 pages in `public/`
 * **Back end:** 22 HTTP endpoints plus two scheduled jobs (24 files), and 32 shared
   libraries, in `netlify/functions/`
-* **Tests:** 1,059 assertions across 22 suites, run with `npm test`
+* **Tests:** 1,233 assertions across 23 suites, run with `npm test`
 
 Two dependencies only: `@netlify/blobs` and `stripe`.
 
@@ -708,10 +713,27 @@ which codes or artists are real.
 
 A recovery key exists in the server environment for the founding account only.
 
-Sessions carry the account's **revision**; removing a sign-in address bumps it and
-every older token dies at once, so there is no session list to clean up. Everything an
-account can do to itself — pay, change plan, leave, export, delete — is in
-`ACCOUNTS.md`.
+**Roles.** `owner` runs everything. `member` runs the page and the show and never
+touches money or access. `crew` runs tonight and nothing else — the sound engineer
+working the screen while the artist plays. An unknown role falls back to `crew`, so a
+role string the table has never heard of can never be an escalation. Venues have the
+same three, named owner / manager / crew.
+
+**Sessions.** Every token carries a session id, so one phone can be signed out without
+signing out the band. Revocation lives on the registry row the verifier is already
+reading, and is normally absent, so it costs nothing on any request. Settings shows
+where you are signed in, and sign-out now actually tells the server — before
+2026-09-05 it cleared the browser and the token stayed live for the rest of its month.
+
+**When the inbox is gone.** Eight one-time recovery codes, shown once. The door takes
+the public page name and a code, and answers a wrong code, an unknown page and a
+locked-out page identically.
+
+**MySet has no password**, and Settings says so rather than leaving somebody hunting.
+The studio code is the password-equivalent and can be changed there.
+
+Everything an account can do to itself — pay, change plan, move address, recover,
+leave (thirty days, undoable), export, delete — is in `ACCOUNTS.md`.
 
 ## 4.8 Verification
 

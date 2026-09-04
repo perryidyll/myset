@@ -121,6 +121,18 @@ export async function readSyncState() {
   return d;
 }
 
+/* Wind one artist's watermark back. Only healHistory calls this, and only when it
+   restores a night older than what the sheet has already exported — otherwise that
+   night is correct in the Studio and permanently missing from the sheet, which is
+   the same trap the comment above `waiting` was written about. */
+export async function mutateWarehouseState(aid, fn) {
+  return casDoc(SYNC, emptySync, (d) => {
+    d.byArtist ||= {};
+    d.byArtist[aid] ||= {};
+    return fn(d.byArtist[aid]);
+  });
+}
+
 /* ---------- the guide ----------
    Written once, in the same plain language Perry asks for in a report, because
    the person opening this spreadsheet in six months is him and not an engineer. */

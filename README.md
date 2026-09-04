@@ -9,7 +9,7 @@ and revenue (streaming/social links, music sales, merch, tour dates, ticketing, 
 This repository is the **live product** running at **https://myset.vip** — static pages in `public/`
 plus Netlify Functions in `netlify/functions/` backed by Netlify Blobs, taking real payments via Stripe.
 
-> **Read [`INVARIANTS.md`](INVARIANTS.md) before changing anything.** Plans, billing, venue payouts, export and delete are designed in [`ACCOUNTS.md`](ACCOUNTS.md); every session's work is recorded under `docs/sessions/`. It records storage behaviour
+> **Read [`INVARIANTS.md`](INVARIANTS.md) before changing anything.** Sign-in, roles, sessions, recovery, plans, billing, venue payouts, export and delete are designed in [`ACCOUNTS.md`](ACCOUNTS.md); every session's work is recorded under `docs/sessions/`. It records storage behaviour
 > that will silently lose votes if you reintroduce it, plus the money and publishing rules.
 
 ## What it actually does

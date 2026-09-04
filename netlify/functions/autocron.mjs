@@ -57,6 +57,18 @@ export default async (req) => {
       const h = await heal({ now });
       console.log(`autocron: heal looked at ${h.looked} of ${h.of}${h.complete ? '' : ' (continues next ring)'}`);
     }
+    /* ACCOUNTS THAT ASKED TO LEAVE, THIRTY DAYS AGO. One per ring, on an hourly
+       watermark, so this costs 24 reads a day rather than 720 and can never eat a
+       ring that a show was waiting on. A purge date does not need two-minute
+       precision. */
+    if (now - (Number(state.purgedAt) || 0) > 3600e3) {
+      await casDoc(SCHED, emptySched, (d) => { d.purgedAt = now; return true; }).catch(() => {});
+      try {
+        const { purgeDue } = await import('./_account.mjs');
+        const p = await purgeDue(now, 1);
+        if (p.purged.length) console.log('autocron: purged', p.purged.join(','));
+      } catch (e) { console.error('autocron: purge failed', String((e && e.message) || e)); }
+    }
     const r = await sweep({ now, log: (l) => console.log(l) });
     console.log(`autocron: ok — ${r.checked} checked, ${r.results.filter((x) => x.did).length} acted`,
                 marker ? `(scheduled for ${marker})` : '(no scheduler marker)');

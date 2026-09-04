@@ -12,6 +12,18 @@ import { readVenues, mutateVenues, createVenue, requireVenue, signVenueToken,
 const REALM = 'v';
 const SENT = { ok: true, sent: true };
 
+/* One place that opens a venue session, so the two sign-in doors cannot drift.
+   See the artist twin in auth.mjs and _session.mjs for why this exists at all. */
+async function openV(req, body, vid, email, rev) {
+  const { newSid, addSession, deviceLabel } = await import('./_session.mjs');
+  const sid = newSid();
+  const token = await signVenueToken(email, rev, sid);
+  await addSession('v_' + vid, { sid, email,
+    label: deviceLabel(req.headers.get('user-agent'), body.standalone),
+    tz: String(body.tz || '').slice(0, 40), at: Date.now() }).catch(() => {});
+  return token;
+}
+
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
@@ -54,7 +66,7 @@ export default async (req) => {
 
     const link = reg.byEmail[email];
     const venue = reg.byId[link.venueId];
-    return json({ ok: true, token: await signVenueToken(email, vRevOf(reg, reg.byEmail[email].venueId)), email,
+    return json({ ok: true, token: await openV(req, body, reg.byEmail[email].venueId, email, vRevOf(reg, reg.byEmail[email].venueId)), email,
                   venueId: link.venueId, slug: venue.slug, name: venue.name || '' });
   }
 
@@ -74,13 +86,54 @@ export default async (req) => {
     const reg = await readVenues();
     const link = reg.byEmail[email];
     const venue = reg.byId[link.venueId];
-    return json({ ok: true, token: await signVenueToken(email, vRevOf(reg, reg.byEmail[email].venueId)), email,
+    return json({ ok: true, token: await openV(req, body, reg.byEmail[email].venueId, email, vRevOf(reg, reg.byEmail[email].venueId)), email,
                   venueId: link.venueId, slug: venue.slug, name: venue.name, isNew: true });
   }
 
   /* ---- signed in, from here ---- */
   const me = await requireVenue(req);
   if (!me) return bad('unauthorized', 401);
+
+  /* THE MISSING CHECK, the same one the artist side was missing. Everything below
+     changes who can get in or what the public page is called, and all of it ran on
+     "are you signed in" alone. */
+  if (['setSlug', 'add', 'remove', 'revokeAll', 'roleSet'].includes(action) && me.role !== 'owner')
+    return bad('Only the venue owner can change this', 403);
+
+  const { newSid, killSessions, killEverything, readSessions, sidsFor, note } = await import('./_session.mjs');
+  const owner = 'v_' + me.vid;
+
+  if (action === 'sessions') return json({ ok: true, ...(await readSessions(owner, me.sid)) });
+  if (action === 'sessionRevoke') {
+    await killSessions(owner, [String(body.sid || '').slice(0, 24)].filter(Boolean));
+    note(owner, 'session.revoke', me.email || '');
+    return json({ ok: true, ...(await readSessions(owner, me.sid)) });
+  }
+  if (action === 'signOut') {
+    if (me.sid) await killSessions(owner, [me.sid]);
+    note(owner, 'signout', me.email || '');
+    return json({ ok: true });
+  }
+  if (action === 'signOutOthers') {
+    const { list } = await readSessions(owner, me.sid);
+    const others = list.filter((x) => !x.current).map((x) => x.sid);
+    if (others.length) await killSessions(owner, others);
+    return json({ ok: true, gone: others.length, ...(await readSessions(owner, me.sid)) });
+  }
+  if (action === 'roleSet') {
+    const email = normEmail(body.email);
+    const want = ['manager', 'crew'].includes(body.role) ? body.role : null;
+    if (!want) return bad('unknown role');
+    if (email === me.email) return bad('You can’t change your own role');
+    let hit = false;
+    await mutateVenues((r) => {
+      const cur = r.byEmail[email];
+      if (!cur || cur.venueId !== me.vid || cur.role === 'owner') return false;
+      cur.role = want; hit = true; return true;
+    });
+    if (!hit) return bad('That address isn’t on this page');
+    note(owner, 'role.change', me.email || '', `${email} → ${want}`);
+  }
 
   if (action === 'setSlug') {
     const want = cleanSlug(body.slug);
@@ -107,10 +160,15 @@ export default async (req) => {
       if (cur && cur.venueId !== me.vid) { taken = true; return false; }
       const mine = Object.entries(r.byEmail).filter(([, v]) => v.venueId === me.vid);
       if (mine.length >= 5 && !mine.some(([e]) => e === email)) { taken = true; return false; }
-      r.byEmail[email] = { venueId: me.vid, role: 'staff' };
+      /* 'staff' was a role name nothing ever read. A manager runs the page; crew
+         works tonight and touches neither money nor access. */
+      r.byEmail[email] = { venueId: me.vid,
+        role: (cur && cur.role === 'owner') ? 'owner'
+            : (['manager', 'crew'].includes(body.role) ? body.role : 'crew') };
       return true;
     });
     if (taken) return bad('Couldn’t add that address');
+    note(owner, 'seat.add', me.email || '', email);
   }
 
   if (action === 'remove') {
@@ -118,19 +176,21 @@ export default async (req) => {
     await mutateVenues((r) => {
       const mine = Object.entries(r.byEmail).filter(([, v]) => v.venueId === me.vid);
       if (mine.length <= 1) return false;                 // never lock the venue out
-      if (r.byEmail[email] && r.byEmail[email].venueId === me.vid) delete r.byEmail[email];
+      const cur = r.byEmail[email];
+      if (!cur || cur.venueId !== me.vid) return false;
+      if (cur.role === 'owner' && email !== me.email) return false;   // never the owner's row
+      delete r.byEmail[email];
       return true;
     });
+    await killSessions(owner, await sidsFor(owner, email)).catch(() => {});
+    note(owner, 'seat.remove', me.email || '', email);
   }
 
-  if (action === 'revokeAll')
+  if (action === 'revokeAll') {
     // only THIS venue's devices — see vRevOf() in _venues.mjs
-    await mutateVenues((r) => {
-      const m = r.byId[me.vid];
-      if (!m) return false;
-      m.rev = (m.rev ?? r.rev ?? 1) + 1;
-      return true;
-    });
+    await killEverything(owner);
+    note(owner, 'session.revokeAll', me.email || '');
+  }
 
   /* THIS USED TO GRANT THE TICK ON AN EMAIL-DOMAIN MATCH ALONE, which INVARIANT
      0ak says is not proof: anyone can buy a domain, put an email on it, and claim

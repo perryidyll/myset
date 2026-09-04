@@ -228,7 +228,7 @@
    it visible, and "Not yet" 83px below the viewport, so the deliberate way out was
    invisible on the smallest screen the app has to work on. The actions stick to the
    bottom of the sheet instead, and the sheet itself scrolls. */
-#sheet{max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#sheet{max-height:88vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 /* 44px, which is the smallest thing a thumb should be asked to hit. The bar itself
    stays 5px — it is the affordance, not the target. */
 .grabzone{position:relative;min-height:44px;display:flex;align-items:center;
@@ -796,10 +796,18 @@ function openSheet(h){
   $('#bg').classList.add('on'); sh.classList.add('on');
   attachDrag(sh);
 }
-function closeSheet(){const sh=$('#sheet');sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
+function closeSheet(){const sh=$('#sheet');sh.style.transition='';sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
 
 function attachDrag(sh){
-  const zone=sh.querySelector('.grabzone'); if(!zone)return;
+  /* ONE set of listeners for the life of the page. This used to bind a fresh pair
+     on every openSheet: the .grabzone was replaced each time so its listeners went
+     with it, but the ones on the sheet itself piled up, and each stale closure kept
+     its own y0 and raced the live one at the end of a drag \u2014 which is how a sheet
+     ends up stuck halfway down. Everything is delegated from the sheet now.
+     The \u2715 is a button inside the grab zone, so it is skipped: a drag that began
+     on it called preventDefault and ate the tap. */
+  if(sh.__drag)return;
+  sh.__drag=true;
   let y0=null, dy=0, t0=0, fromBody=false;
   const CONTROL='input,textarea,select,button,a,[contenteditable]';
   const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
@@ -816,27 +824,28 @@ function attachDrag(sh){
   const end=()=>{
     if(y0===null)return;
     const speed=dy/Math.max(1,Date.now()-t0);
+    y0=null;
     sh.style.transition='';
     if(dy>70||speed>0.45) closeSheet(); else sh.style.transform='translateY(0)';
-    y0=null;
   };
-  zone.addEventListener('touchstart',(e)=>start(e,false),{passive:true});
-  zone.addEventListener('touchmove',move,{passive:false});
-  zone.addEventListener('touchend',end);
-  zone.addEventListener('touchcancel',end);
-  zone.addEventListener('mousedown',(e)=>{ start(e,false);
-    const mm=(ev)=>move(ev), mu=()=>{ end();
-      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
-    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
-  sh.addEventListener('touchstart',(e)=>{
-    if(e.target.closest('.grabzone'))return;
-    if(e.target.closest(CONTROL))return;
-    if(sh.scrollTop>0)return;
-    start(e,true);
-  },{passive:true});
+  const begin=(e)=>{
+    const t=e.target;
+    if(!t||!t.closest)return;
+    if(t.closest(CONTROL))return;
+    const inZone=!!t.closest('.grabzone');
+    if(!inZone&&sh.scrollTop>0)return;
+    start(e,!inZone);
+  };
+  sh.addEventListener('touchstart',begin,{passive:true});
   sh.addEventListener('touchmove',move,{passive:false});
   sh.addEventListener('touchend',end);
   sh.addEventListener('touchcancel',end);
+  sh.addEventListener('mousedown',(e)=>{
+    if(!e.target.closest('.grabzone')||e.target.closest(CONTROL))return;
+    start(e,false);
+    const mm=(ev)=>move(ev), mu=()=>{ end();
+      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 async function openLyrics(){

@@ -25,7 +25,9 @@
    double-firing with this one — and would also mean that if this script fails to
    load, the page has no refresh gesture at all. On Android the two can both fire
    and the page simply reloads, which is what the person asked for anyway. Losing
-   the browser's own is not worth a tidier animation. */
+   the browser's own is not worth a tidier animation. A SHEET is different: it is
+   its own scroller with its own dismiss gesture, so `covered()` below stands this
+   whole mechanism down while one is open. */
 (function () {
   var CSS = '#msPull{position:fixed;top:0;left:50%;margin-left:-19px;width:38px;height:38px;' +
     'z-index:60;display:grid;place-items:center;border-radius:50%;transform:translateY(-60px);' +
@@ -67,8 +69,21 @@
     /* Only ever arms within 2px of the top of the page, so it can never fight a
        normal scroll, and every listener is passive so it cannot make scrolling
        janky on a cheap phone in a dark bar. */
+    /* A SHEET IS NOT THE PAGE. Perry: "when i drag down on the top of the pop up
+       page, the page closes which is great but the page behind it is also getting
+       dragged down and it gets refreshed". Both handlers were listening: the
+       sheet's own drag closed it, and this one — which only ever checked that the
+       PAGE was scrolled to the top, which it always is behind a modal — armed and
+       reloaded. So while anything is over the page, or the touch begins inside
+       one, this gesture is not ours to take. */
+    var covered = function (t) {
+      if (document.querySelector('.sheet.on, .bg.on, #qrbig.on')) return true;
+      return !!(t && t.closest && t.closest('.sheet,.bg,[data-nopull]'));
+    };
+
     addEventListener('touchstart', function (e) {
       if (going || window.scrollY > 2 || e.touches.length !== 1) { y0 = null; return; }
+      if (covered(e.target)) { y0 = null; return; }
       y0 = e.touches[0].clientY; armed = false;
     }, { passive: true });
 

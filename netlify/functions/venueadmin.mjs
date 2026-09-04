@@ -28,6 +28,26 @@ export default async (req) => {
   const vid = me.vid;
   const action = body.action;
 
+  /* WHO MAY DO WHAT, ON THE VENUE SIDE. `byEmail[email].role` was written as
+     'staff' by venueauth's `add` and then read by absolutely nothing, so a barman
+     added on Tuesday could rename the venue page, link the payout account, change
+     the plan or sign the owner out. A bar shares one iPad; this is not a theory.
+     Anything not on this list is OWNER ONLY, which is the safe way round: a new
+     action is locked until somebody decides it should not be. */
+  const CREW_OK = new Set(['get', 'stats', 'eventList', 'pitchList', 'postList', 'postReply',
+                           'orderList', 'orderDone', 'orderDetail', 'planGet']);
+  const MANAGER_OK = new Set([...CREW_OK, 'eventSave', 'eventDelete', 'eventSkip', 'pitchSet',
+                              'set', 'amenity', 'hours', 'menuSet', 'menuAdd', 'menuRemove',
+                              'offerSave', 'offerRemove', 'photoUpload', 'photoClear',
+                              'merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear',
+                              'postHide', 'postDelete', 'accountExport']);
+  const role = me.role === 'owner' ? 'owner' : (me.role === 'manager' ? 'manager' : 'crew');
+  if (role !== 'owner') {
+    const allowed = role === 'manager' ? MANAGER_OK : CREW_OK;
+    if (!allowed.has(action))
+      return bad('That’s not something this sign-in can do — ask whoever owns the page', 403);
+  }
+
   /* The vouch count travels with every response, so the checklist can show the
      real number the moment the tab opens — it used to read 0 until somebody
      happened to run the website check. */
@@ -39,6 +59,34 @@ export default async (req) => {
                   vouches: { count: names.length, need: MIN_VOUCHES, names: names.slice(0, 12) },
                   amenities: AMENITIES.map(([key, label]) => ({ key, label })) });
   };
+
+  /* AN ACCOUNT ON ITS WAY OUT IS READ-ONLY, NOT LOCKED OUT — the artist twin is in
+     admin.mjs and the reasoning is the same: the owner has to be able to undo. */
+  const LEAVING_OK = new Set(['get', 'planGet', 'accountUndelete', 'accountExport', 'planPortal']);
+  if (!LEAVING_OK.has(action)) {
+    const vrow = await venueById(vid);
+    if (vrow && vrow.del)
+      return bad('Your venue page is being deleted. Undo that in Settings and everything comes straight back.', 423);
+  }
+
+  /* ---------- take it with you, or leave ---------- */
+  if (action === 'accountExport') {
+    const { exportVenue } = await import('./_venueaccount.mjs');
+    return json({ ok: true, data: await exportVenue(vid) });
+  }
+  if (action === 'accountDelete') {
+    if (String(body.confirm || '') !== 'DELETE') return bad('Type DELETE to confirm', 400);
+    const { startVenueDeletion } = await import('./_venueaccount.mjs');
+    const r = await startVenueDeletion(vid, me.email || '');
+    if (!r.ok) return bad(r.error || 'Couldn’t delete', 400);
+    return json({ ok: true, purgeAt: r.purgeAt });
+  }
+  if (action === 'accountUndelete') {
+    const { cancelVenueDeletion } = await import('./_venueaccount.mjs');
+    const r = await cancelVenueDeletion(vid);
+    if (!r.ok) return bad(r.error || 'Nothing to undo', 400);
+    return json({ ok: true });
+  }
 
   if (action === 'get') return send();
 
@@ -390,6 +438,12 @@ export default async (req) => {
     const r = await B.applyRetention(owner);
     if (!r.ok) return bad(r.error || 'Couldn’t apply that', 400);
     return json({ ok: true, plan: r.plan, renewsAt: r.periodEnd });
+  }
+  if (action === 'planInvoices') {
+    const B = await import('./_billing.mjs');
+    const r = await B.invoices(owner);
+    if (!r.ok) return bad(r.error || 'Couldn’t read your invoices', 400);
+    return json({ ok: true, list: r.list });
   }
   if (action === 'planPortal') {
     const B = await import('./_billing.mjs');

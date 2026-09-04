@@ -11,9 +11,11 @@
        one-time 50% coupon and can be used once
      · a webhook event syncs the same way; a comp is never overwritten by Stripe
      · the portal needs a customer; planGet carries the billing status
-     · export contains what the artist owns and never a device id; delete removes
-       every key and the registry rows and cancels the subscription; the founder
-       cannot be deleted
+     · export contains what the artist owns and never a device id
+     · delete takes the page dark and stops the billing on the day it is asked, and
+       keeps EVERYTHING for thirty days: the owner can still sign in, still export,
+       and one tap undoes it. The purge is the cron's job, and only then is every
+       key and registry row gone. The founder cannot be deleted at all
      · a venue onboards to Connect under `v_<vid>`, its page gains a Buy button,
        and the fee is the venue plan's cut minus half of Stripe's estimated fee */
 process.env.ADMIN_CODE = 'devlocal';
@@ -32,7 +34,7 @@ const { __dump } = await import('./blobs-fake.mjs');
 const { readBilling, TIERS } = await import('../netlify/functions/_billing.mjs');
 const { feeCents, stripeFeeEstimate } = await import('../netlify/functions/_connect.mjs');
 const { PLANS } = await import('../netlify/functions/_plan.mjs');
-const { readDoc } = await import('../netlify/functions/_lib.mjs');
+const { readDoc, publicArtist } = await import('../netlify/functions/_lib.mjs');
 const { __stripe } = await import('./stripe-fake.mjs');
 
 let pass = 0, fail = 0;
@@ -142,8 +144,32 @@ ok('with her songs', r.data.show.songs.some((s) => s.title === 'Valerie'));
 ok('and never a device id', !JSON.stringify(r.data).includes('"fan"'));
 eq('delete needs the word', (await AS(TA, 'accountDelete', { confirm: 'yes' })).status, 400);
 r = await AS(TA, 'accountDelete', { confirm: 'DELETE' });
-ok('she is deleted', r.ok && r.deleted > 10, r);
-eq('her subscription was cancelled first', __stripe.subs.get(b.subId).status, 'canceled');
+ok('the first delete only starts the clock', r.ok && r.purgeAt > Date.now() + 29 * 86400e3, r);
+eq('her subscription was cancelled the same day', __stripe.subs.get(b.subId).status, 'canceled');
+
+/* LEAVING IS NOT LOSING. Everything she has is still on disk for thirty days, her
+   page is dark to the public, and one tap brings it all back. */
+{ const reg0 = await readArtists();
+  ok('everything is still in the registry', !!reg0.byId[ana.artistId] && reg0.bySlug['ana-reyes'] === ana.artistId);
+  ok('and marked as leaving, with the date', !!reg0.byId[ana.artistId].del.purgeAt); }
+ok('her songs are still on disk', !!(await readDoc('show_' + ana.artistId, null)).data);
+ok('she can still sign in — she has to be able to undo', (await AS(TA, 'planGet')).ok);
+eq('but the page is read-only until she decides', (await AS(TA, 'addSong', { title: 'Nope', artist: 'X' })).status, 423);
+ok('and she can still take her data with her', (await AS(TA, 'accountExport')).ok);
+{ const pub = await publicArtist(new Request('https://x/api/show?a=ana-reyes'));
+  eq('the public page is dark', pub, null); }
+r = await AS(TA, 'accountUndelete');
+ok('undo brings it back', r.ok, r);
+{ const pub = await publicArtist(new Request('https://x/api/show?a=ana-reyes'));
+  eq('and the page answers again', pub, ana.artistId); }
+ok('and she can work again', (await AS(TA, 'addSong', { title: 'Back', artist: 'X' })).ok);
+
+console.log('\nAND THEN, THIRTY DAYS LATER');
+r = await AS(TA, 'accountDelete', { confirm: 'DELETE' });
+ok('she asks again', r.ok, r);
+const { purgeDue } = await import('../netlify/functions/_account.mjs');
+eq('nothing is purged before the date', (await purgeDue(Date.now())).purged.length, 0);
+ok('and on the day it is', (await purgeDue(Date.now() + 31 * 86400e3)).purged.includes(ana.artistId));
 const reg = await readArtists();
 ok('gone from the registry, the slug and the sign-in list', !reg.byId[ana.artistId] && !reg.bySlug['ana-reyes'] && !reg.byEmail['ana@example.com']);
 eq('her show document is gone', (await readDoc('show_' + ana.artistId, null)).data, null);
@@ -188,6 +214,59 @@ eq('artists are not split (their table says so)', feeCents(1200, 'plus'), Math.f
 ok('and returns to the venue’s community page', /\/v\/.*\/community\?paid=/.test(created.args.success_url));
 r = await VS(TV, 'planGet');
 ok('the venue plan payload carries billing', r.ok && 'billing' in r && r.plan === 'pro', r);
+
+console.log('\nHALF OF STRIPE’S CARD FEE, EXACTLY  (once Stripe knows what it was)');
+/* At checkout the fee can only be estimated, so `feeCents` subtracts half of
+   2.9%+30c. This is the correction, and it runs one way only: it pays the venue
+   and never bills them. Set up a $50 basket so MySet's 2% (100c) is actually big
+   enough to have something to give back. */
+{
+  const { settleSplit } = await import('../netlify/functions/_feesplit.mjs');
+  const { readMeta } = await import('../netlify/functions/_lib.mjs');
+  const owner = 'v_' + bar.venueId;
+  const amount = 5000;
+  const charged = feeCents(amount, 'pro', 'venue');          // what was taken at checkout
+  __stripe.fees.set('fee_1', { id: 'fee_1', charge: 'ch_1', amount: charged, amount_refunded: 0 });
+  /* THB, because MySet's first venues are Thai and the settlement currency is not
+     the charge currency. 1 USD cent = 35 THB satang here. */
+  __stripe.bts.set('txn_1', { id: 'txn_1', currency: 'thb', exchange_rate: 35,
+    fee: 99999, fee_details: [{ type: 'stripe_fee', amount: 6300 }, { type: 'application_fee', amount: 4000 }],
+    __account: acct });
+  const ch = { id: 'ch_1', amount, currency: 'usd', balance_transaction: 'txn_1',
+               application_fee: 'fee_1', payment_intent: 'pi_1' };
+  r = await settleSplit(owner, acct, ch);
+  const realFee = Math.round(6300 / 35);                     // 180c, the true Stripe fee in USD
+  const estHalf = Math.round(stripeFeeEstimate(amount) / 2);
+  const give = Math.max(0, Math.min(Math.round(realFee / 2) - estHalf, charged));
+  ok('the correction is paid', r.ok && r.give === give, { r, give });
+  ok('THE TRAP: it reads the balance transaction on the VENUE’s account, not ours',
+     lastCall('balanceTransactions.retrieve').opts.stripeAccount === acct);
+  ok('THE OTHER TRAP: and the application fee on OURS, not the venue’s',
+     !lastCall('applicationFees.retrieve').opts.stripeAccount);
+  eq('Stripe’s own fee is taken from fee_details, never from bt.fee', (await readMeta(owner)).fees.ch_1.stripeFee, realFee);
+  eq('and it really moved', __stripe.fees.get('fee_1').amount_refunded, give);
+  eq('the row says done', (await readMeta(owner)).fees.ch_1.state, 'done');
+  const before = __stripe.fees.get('fee_1').amount_refunded;
+  r = await settleSplit(owner, acct, ch);
+  ok('a duplicate webhook changes nothing', r.already === true, r);
+  eq('and pays nothing twice', __stripe.fees.get('fee_1').amount_refunded, before);
+
+  /* The floor, said honestly: on a small basket MySet's fee is already zero at
+     checkout, so there is nothing to give back and nothing to correct. */
+  eq('a $12 cap on Pro takes no fee in the first place', feeCents(1200, 'pro', 'venue'), 0);
+  __stripe.bts.set('txn_2', { id: 'txn_2', currency: 'usd', fee: 65,
+    fee_details: [{ type: 'stripe_fee', amount: 65 }], __account: acct });
+  r = await settleSplit(owner, acct, { id: 'ch_2', amount: 1200, currency: 'usd',
+    balance_transaction: 'txn_2', payment_intent: 'pi_2' });
+  eq('so the correction records it and stops', (await readMeta(owner)).fees.ch_2.state, 'nothing');
+
+  /* Never guess a rate. A settlement currency with no exchange rate is recorded
+     and left alone rather than halved as if it were dollars. */
+  __stripe.bts.set('txn_3', { id: 'txn_3', currency: 'thb', exchange_rate: null, fee: 100,
+    fee_details: [{ type: 'stripe_fee', amount: 6300 }], __account: acct });
+  await settleSplit(owner, acct, { id: 'ch_3', amount: 5000, currency: 'usd', balance_transaction: 'txn_3' });
+  eq('an unconvertible currency is recorded, not guessed at', (await readMeta(owner)).fees.ch_3.state, 'unconvertible');
+}
 
 delete process.env.STRIPE_SECRET_KEY;
 console.log(`\n${pass} passed, ${fail} failed`);

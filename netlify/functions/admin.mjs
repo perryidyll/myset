@@ -49,15 +49,30 @@ async function handlePlan(aid, action, body, req, me) {
   const origin = req ? new URL(req.url).origin : '';
 
   if (action === 'planGet') {
+    const mine = (me && me.role || 'owner') === 'owner';
+    const b = await B.billingStatus(aid);
     return json({ ok: true, plan, limits: shapeLimits(limits),
                   shareStats: !artist || artist.shareStats !== false,
-                  until: (artist && artist.planUntil) || null,
+                  /* A member gets the LIMITS, because every lock in the Studio is
+                     drawn from them and hiding them makes locks fail open. They do
+                     not get the renewal date, the portal or the card's state. */
+                  until: mine ? ((artist && artist.planUntil) || null) : null,
                   comped: !!(artist && artist.compedBy),
-                  discountPct: (artist && artist.discountPct) || 0,
+                  discountPct: mine ? ((artist && artist.discountPct) || 0) : 0,
                   plans: Object.fromEntries(PLAN_KEYS.map((k) => [k, shapeLimits(PLANS[k])])),
-                  billing: await B.billingStatus(aid),
+                  billing: mine ? b : { subscribed: b.subscribed, plan: b.plan, portal: false, pastDue: false },
+                  role: (me && me.role) || 'owner',
+                  // the Studio's leaving banner, and the reason everything else is read-only
+                  del: (artist && artist.del) || null,
                   email: (me && me.email) || null,
                   owner: isPlatformOwner(aid) });
+  }
+  /* Straight back from the Stripe portal. maybeSync waits up to six hours, and
+     somebody who has just put a new card on must not still be told it failed. */
+  if (action === 'planSync') {
+    await B.syncSubscription(aid).catch(() => null);
+    const fresh = await planForArtist(aid);
+    return json({ ok: true, plan: fresh.plan, billing: await B.billingStatus(aid) });
   }
 
   /* ---- billing: Stripe subscriptions (see _billing.mjs) ---- */
@@ -86,6 +101,11 @@ async function handlePlan(aid, action, body, req, me) {
     if (!r.ok) return bad(r.error || 'Couldn’t apply that', 400);
     return json({ ok: true, plan: r.plan, renewsAt: r.periodEnd });
   }
+  if (action === 'planInvoices') {
+    const r = await B.invoices(aid);
+    if (!r.ok) return bad(r.error || 'Couldn’t read your invoices', 400);
+    return json({ ok: true, list: r.list });
+  }
   if (action === 'planPortal') {
     const r = await B.portalLink(aid, origin, '/studio');
     if (!r.ok) return bad(r.error === 'no-billing' ? 'Nothing to manage yet.' : (r.error || 'Couldn’t open billing'), 400);
@@ -97,13 +117,42 @@ async function handlePlan(aid, action, body, req, me) {
     const { exportArtist } = await import('./_account.mjs');
     return json({ ok: true, data: await exportArtist(aid) });
   }
+  /* LEAVING TAKES TWO SCREENS AND THEN THIRTY DAYS. `accountDelete` used to erase
+     everything inside one request, from one sheet, with no undo. Now it marks the
+     account, takes the page offline and stops the billing on the spot; the cron
+     erases it a month later, and until then one tap brings it all back. */
   if (action === 'accountDelete') {
     if (String(body.confirm || '') !== 'DELETE') return bad('Type DELETE to confirm', 400);
-    if ((me && me.role) === 'member') return bad('Only the account owner can delete it', 403);
-    const { deleteArtist } = await import('./_account.mjs');
-    const r = await deleteArtist(aid);
+    if ((me && me.role) !== 'owner') return bad('Only the account owner can delete it', 403);
+    const { startDeletion } = await import('./_account.mjs');
+    const r = await startDeletion(aid, (me && me.email) || 'studio code');
     if (!r.ok) return bad(r.error || 'Couldn’t delete', 400);
-    return json({ ok: true, deleted: r.deleted });
+    const { note } = await import('./_session.mjs');
+    note(aid, 'delete.start', (me && me.email) || 'code');
+    const { sendNotice, readArtists: RA } = await import('./_auth.mjs');
+    const reg = await RA();
+    const nm = (reg.byId[aid] || {}).name || '';
+    const when = new Date(r.purgeAt).toISOString().slice(0, 10);
+    for (const [e, v] of Object.entries(reg.byEmail)) if (v.artistId === aid)
+      sendNotice(e, 'Your MySet page is being deleted',
+        [`${nm || 'Your page'} is offline from today.`,
+         `Everything is kept until ${when}. Until then you can bring it back from Settings in your Studio, and nothing is lost.`,
+         'Your plan has been cancelled, so you won’t be charged again.'], nm).catch(() => {});
+    return json({ ok: true, purgeAt: r.purgeAt });
+  }
+  if (action === 'accountUndelete') {
+    if ((me && me.role) !== 'owner') return bad('Only the account owner can do that', 403);
+    const { cancelDeletion } = await import('./_account.mjs');
+    const r = await cancelDeletion(aid);
+    if (!r.ok) return bad(r.error || 'Nothing to undo', 400);
+    const { note } = await import('./_session.mjs');
+    note(aid, 'delete.cancel', (me && me.email) || 'code');
+    return json({ ok: true, slugLost: !!r.slugLost });
+  }
+  if (action === 'accountFreeSlug') {
+    if ((me && me.role) !== 'owner') return bad('Only the account owner can do that', 403);
+    const { freeSlug } = await import('./_account.mjs');
+    return json({ ok: true, ...(await freeSlug(aid)) });
   }
 
   if (action === 'promoRedeem') return json(await redeemPromo(aid, body.code));
@@ -355,7 +404,23 @@ const shapeLimits = (l) => ({
      feature as "coming" rather than as "yours" — see NOT_BUILT in _plan.mjs. */
   soon: NOT_BUILT,
 });
-const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'planCheckout', 'planFinish', 'planChange', 'planRetainOffered', 'planRetain', 'planPortal', 'accountExport', 'accountDelete', 'promoList', 'promoCreate', 'promoRevoke',
+/* An action NOT in this table needs no capability beyond being signed in — every
+   money, plan and access action is already refused by name inside handlePlan or by
+   `isPlatformOwner`. What is listed here is the everyday work of running a page,
+   and the only thing it takes away is from `crew`: the sound engineer running the
+   screen tonight can work the show and the requests, and cannot rewrite the
+   library, the profile, the calendar or the shop. */
+const CAPABILITY = {
+  addSong: 'library', editSong: 'library', removeSong: 'library', importSongs: 'library',
+  songSet: 'library', bulkSongs: 'library', setChart: 'library', setLyrics: 'library',
+  listSave: 'library', listDelete: 'library', listApply: 'library', learnAdd: 'library', learnRemove: 'library',
+  eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventUnskip: 'gigs',
+  profileSave: 'profile', merchSave: 'profile', merchDelete: 'profile', imgSave: 'profile', imgDelete: 'profile',
+  postReply: 'community', postHide: 'community', postDelete: 'community',
+  accountExport: 'export',
+};
+
+const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'planCheckout', 'planFinish', 'planChange', 'planRetainOffered', 'planRetain', 'planPortal', 'planSync', 'planInvoices', 'accountExport', 'accountDelete', 'accountUndelete', 'accountFreeSlug', 'promoList', 'promoCreate', 'promoRevoke',
                               'venueList', 'venueVerify', 'shareStats',
                               // the ID review queue and a venue's plan — owner only,
                               // enforced inside handlePlan, not by this set
@@ -1266,6 +1331,46 @@ export default async (req) => {
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const action = body.action;
+
+  /* AN ACCOUNT ON ITS WAY OUT IS READ-ONLY, NOT LOCKED OUT. The owner has to be
+     able to get in — to change their mind, and to take their data with them — but
+     nothing else should still be running. Everything not on this list answers with
+     the same sentence, which also tells them the way back. */
+  const LEAVING_OK = new Set(['planGet', 'accountUndelete', 'accountExport', 'accountFreeSlug', 'planPortal']);
+  if (!LEAVING_OK.has(action)) {
+    const { deletionOf } = await import('./_lib.mjs');
+    const del = await deletionOf(aid);
+    if (del) return bad('Your account is being deleted. Undo that in Settings and everything comes straight back.', 423);
+  }
+
+  /* MONEY AND THE ACCOUNT ARE THE OWNER'S. A Pro page carries five sign-in seats,
+     so "signed in" is a long way from "allowed to see the card". ACCOUNTS.md §4 has
+     claimed this since the day it was written and only accountDelete ever did it —
+     which meant a band mate could open the owner's Stripe portal (card, invoices,
+     Cancel), burn the once-ever retention offer, downgrade the plan, or create the
+     payout account with the WRONG COUNTRY, which Stripe will not let anyone change
+     afterwards (INVARIANT 7c). Listed in one place, because the single action that
+     did check was checked inside its own handler, where the next one added would
+     never have seen it.
+     `planGet` is deliberately NOT here: a member needs the plan's limits or every
+     locked control renders live on first paint (INVARIANT 0bx2). The sensitive half
+     of that payload is stripped inside handlePlan instead. */
+  const OWNER_ONLY = new Set(['planCheckout', 'planFinish', 'planChange', 'planRetain',
+    'planRetainOffered', 'planPortal', 'planSync', 'planInvoices', 'promoRedeem',
+    'accountExport', 'accountDelete', 'accountUndelete', 'accountFreeSlug',
+    'payStart', 'payDashboard', 'idUpload', 'shareStats', 'setCode']);
+  if (OWNER_ONLY.has(action) && (me.role || 'owner') !== 'owner')
+    return bad('Only the account owner can do that', 403);
+
+  /* WHO MAY DO WHAT ELSE. `byEmail[email].role` has always been stored and, outside a
+     handful of hand-written checks, never read — so a member could do anything an
+     owner could. One table now, in _session.mjs, and one gate here. */
+  {
+    const { can } = await import('./_session.mjs');
+    const need = CAPABILITY[action];
+    if (need && !can(me.role || 'owner', need))
+      return bad('That’s not something this sign-in can do', 403);
+  }
 
   /* Read a PUBLIC Spotify playlist's tracks, returning them for the artist to
      confirm — it writes nothing, so it must never sit inside a CAS callback.

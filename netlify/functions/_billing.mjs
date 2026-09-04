@@ -127,7 +127,13 @@ export async function startCheckout({ owner, plan, email, name, origin, back }) 
   const rec = await readOwner(owner);
   if (!rec) return { ok: false, error: 'unknown account' };
   const b = await readBilling(owner);
-  if (b.subId && ['active', 'trialing', 'past_due'].includes(b.status))
+  /* `unpaid` BELONGS IN THIS LIST. Without it, an artist whose card kept failing
+     until Stripe gave up could run Checkout again and end up with TWO live
+     subscriptions on one account, billed twice, with the registry pointing at
+     whichever synced last. It does NOT belong in `paidStatus` below: an unpaid
+     subscription is genuinely not paid, and pretending otherwise gives away the
+     product. Two lists, two different questions. */
+  if (b.subId && ['active', 'trialing', 'past_due', 'unpaid'].includes(b.status))
     return { ok: false, error: 'already-subscribed' };       // change the plan instead
   const customer = await ensureCustomer(stripe, owner, email, rec.name);
   const discounts = [];
@@ -275,7 +281,10 @@ export async function portalLink(owner, origin, back) {
   const b = await readBilling(owner);
   if (!b.customerId) return { ok: false, error: 'no-billing' };
   try {
-    const s = await stripe.billingPortal.sessions.create({ customer: b.customerId, return_url: `${origin}${back}` });
+    /* Coming back marked, so the Studio can re-read Stripe on the spot. Without it
+       `maybeSync` waits up to six hours, and somebody who has just fixed their card
+       keeps being told their card did not go through. */
+    const s = await stripe.billingPortal.sessions.create({ customer: b.customerId, return_url: `${origin}${back}?billing=back` });
     return { ok: true, url: s.url };
   } catch (e) { return { ok: false, error: e.message || 'stripe error' }; }
 }
@@ -288,17 +297,45 @@ export async function cancelForDeletion(owner) {
   return true;
 }
 
+/** The receipts. Stripe keeps them; we just list them, and only when the Studio
+ *  asks — never on a page load, because it is a network call to Stripe and the
+ *  answer changes once a month. */
+export async function invoices(owner, limit = 12) {
+  const stripe = stripeClient();
+  if (!stripe) return { ok: false, error: 'payments-not-configured' };
+  const b = await readBilling(owner);
+  if (!b.customerId) return { ok: true, list: [] };
+  try {
+    const r = await stripe.invoices.list({ customer: b.customerId, limit: Math.min(24, limit) });
+    return { ok: true, list: (r.data || []).map((i) => ({
+      id: i.id, number: i.number || '', status: i.status || '',
+      total: i.total ?? i.amount_due ?? 0, paid: i.amount_paid || 0,
+      currency: (i.currency || 'usd').toUpperCase(),
+      at: (i.created || 0) * 1000,
+      url: i.hosted_invoice_url || '', pdf: i.invoice_pdf || '',
+    })) };
+  } catch (e) { return { ok: false, error: e.message || 'stripe error' }; }
+}
+
 /** What the Studio shows. Never the raw ids. */
 export async function billingStatus(owner) {
   const b = await readBilling(owner);
+  /* THE CARD THAT DIDN'T GO THROUGH. Stripe marks the subscription `past_due` and
+     retries on its own schedule; syncSubscription keeps the plan alive for the
+     period end plus three days, so nothing is taken away while that is happening.
+     What was missing is that nobody was TOLD. `graceUntil` is the date the Studio
+     puts in the sentence, so the warning names a day rather than a threat. */
+  const pastDue = b.status === 'past_due' || b.status === 'unpaid';
   return {
-    subscribed: !!b.subId && ['active', 'trialing', 'past_due'].includes(b.status),
+    subscribed: !!b.subId && ['active', 'trialing', 'past_due', 'unpaid'].includes(b.status),
     status: b.status || '',
     plan: (planFromPriceKey(b.priceKey) || {}).plan || null,
     renewsAt: b.currentPeriodEnd || null,
     cancelAtPeriodEnd: !!b.cancelAtPeriodEnd,
     retentionUsed: !!(b.retention && b.retention.acceptedAt),
     portal: !!b.customerId,
+    pastDue,
+    graceUntil: pastDue ? (b.currentPeriodEnd || 0) + 3 * 86400e3 : 0,
   };
 }
 

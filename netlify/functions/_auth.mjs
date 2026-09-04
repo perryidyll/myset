@@ -18,8 +18,13 @@ const eq = (a, b) => {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   try { return timingSafeEqual(Buffer.from(a), Buffer.from(b)); } catch { return false; }
 };
+/* THE PIPE IS RESERVED. The token body is `email|exp|rev|sid`, and `|` matches
+   validEmail's `[^\s@]`, so `a|b@x.com` was a legal address that shifted every
+   field one place to the left when the token was read back. It failed closed by
+   luck rather than by design; now it cannot be entered at all, and the token is
+   parsed from the END so a stray pipe could not shift anything even if it were. */
 export const normEmail = (v) =>
-  String(v || '').trim().toLowerCase().slice(0, 160);
+  String(v || '').trim().toLowerCase().replace(/\|/g, '').slice(0, 160);
 const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v);
 
 /* The signing secret is generated once and kept in Blobs — private to the site,
@@ -68,7 +73,13 @@ const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','st
 
 export async function artistBySlug(slug) {
   const a = await readArtists();
-  return a.bySlug[cleanSlug(slug)] || null;
+  const want = cleanSlug(slug);
+  /* A RENAMED PAGE KEEPS ANSWERING AT ITS OLD ADDRESS. MySet's page name is
+     printed on QR codes stuck to bar tables and pasted into Instagram bios; a
+     rename used to delete the old name outright, so every one of those stopped
+     resolving and a room full of people got "unknown artist" mid-gig. The old
+     name is kept pointing here and is not claimable by anybody else while it is. */
+  return a.bySlug[want] || ((a.oldSlug || {})[want] || {}).aid || null;
 }
 export async function artistById(aid) {
   const a = await readArtists();
@@ -162,12 +173,16 @@ export async function readTicket(t) {
  *  used by both the signer and the verifier, so they cannot drift. */
 export const revOf = (reg, aid) =>
   ((reg.byId || {})[aid] || {}).rev ?? reg.rev ?? 1;
-export async function signToken(email, rev) {
+/** `sid` names the device this token belongs to, so one phone can be signed out
+ *  without signing out the band. Omitted, the body is the old three-field one and
+ *  every token minted before this change keeps working. */
+export async function signToken(email, rev, sid) {
   const exp = Date.now() + TOKEN_TTL;
-  const body = `${email}|${exp}|${rev}`;
+  const body = sid ? `${email}|${exp}|${rev}|${sid}` : `${email}|${exp}|${rev}`;
   const mac = createHmac('sha256', await secret()).update(body).digest('base64url');
   return `${Buffer.from(body).toString('base64url')}.${mac}`;
 }
+export const TOKEN_LIFE = TOKEN_TTL;
 export async function verifyToken(token) {
   if (typeof token !== 'string' || token.length > 500) return null;
   const [b64, mac] = token.split('.');
@@ -176,7 +191,13 @@ export async function verifyToken(token) {
   try { body = Buffer.from(b64, 'base64url').toString(); } catch { return null; }
   const want = createHmac('sha256', await secret()).update(body).digest('base64url');
   if (!eq(mac, want)) return null;
-  const [email, exp, rev] = body.split('|');
+  /* POPPED FROM THE END, never destructured from the front: the fixed fields are
+     the last two or three, so nothing an address could contain can move them. */
+  const parts = body.split('|');
+  const sid = parts.length >= 4 ? parts.pop() : null;
+  const rev = parts.pop();
+  const exp = parts.pop();
+  const email = parts.join('|');
   if (!email || Number(exp) < Date.now()) return null;
   const reg = await readArtists();
   const link = reg.byEmail[email];
@@ -189,7 +210,13 @@ export async function verifyToken(token) {
      `undefined` would reject every token in existence — i.e. do the exact thing we
      are fixing. It reads the global value until that artist first revokes. */
   if (String(revOf(reg, link.artistId)) !== String(rev)) return null;   // signed out
-  return { email, artistId: link.artistId, role: link.role,
+  /* ONE DEVICE, SIGNED OUT. The registry row is already in our hands, so this
+     costs nothing; and an account that has never revoked anything has no `dead`
+     key at all, so the document every poll reads does not grow for them. An entry
+     whose time has passed guards a token that has expired anyway. */
+  const row = reg.byId[link.artistId] || {};
+  if (sid && row.dead && Number(row.dead[sid]) > Date.now()) return null;
+  return { email, artistId: link.artistId, role: link.role || 'owner', sid,
            artist: reg.byId[link.artistId] };
 }
 
@@ -262,6 +289,32 @@ export async function sendCode(email, code, artistName, which = 'Artist Studio')
     return { ok: false, why: 'send-failed' };
   }
 }
+/* A PLAIN NOTICE, NOT A CODE. `sendCode` was being handed an empty string to send
+   "your address was changed" mail, which produced an email whose whole design is a
+   giant empty box where a code should be. Security notices get their own shape. */
+export async function sendNotice(email, subject, lines, who) {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.AUTH_FROM || 'MySet <onboarding@resend.dev>';
+  if (!key) return { ok: false, why: 'email-not-configured' };
+  const body = (Array.isArray(lines) ? lines : [lines]).filter(Boolean);
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from, to: [email], subject,
+        text: body.join('\n\n'),
+        html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:440px;margin:0 auto;padding:28px 8px">
+  ${who ? `<p style="font-size:15px;color:#6E6E73;margin:0 0 18px">Hi ${escapeHtml(who)},</p>` : ''}
+  ${body.map((l) => `<p style="font-size:15px;color:#1D1D1F;line-height:1.5;margin:0 0 14px">${escapeHtml(l)}</p>`).join('')}
+  <p style="font-size:13px;color:#6E6E73;margin:22px 0 0">If this wasn’t you, sign out everywhere from Settings in your MySet Studio straight away.</p>
+</div>`,
+      }),
+    });
+    return r.ok ? { ok: true } : { ok: false, why: 'send-failed' };
+  } catch { return { ok: false, why: 'send-failed' }; }
+}
+
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 

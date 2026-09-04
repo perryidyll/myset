@@ -1,6 +1,6 @@
 # ACCOUNTS.md — the account system
 
-*Written 2026-09-04. What an account IS on MySet, what it can do, how it is paid for, and how it leaves. Read this before touching sign-in, plans, billing or deletion. The rules that must never break are in `INVARIANTS.md` (0cr–0cz).*
+*Written 2026-09-04, rewritten 2026-09-05. What an account IS on MySet, what it can do, who may do what with it, how it is paid for, how it is recovered, and how it leaves. Read this before touching sign-in, roles, sessions, plans, billing or deletion. The rules that must never break are in `INVARIANTS.md` (0cr–0dp).*
 
 ---
 
@@ -108,16 +108,137 @@ Two honest limits, both written into the Studio copy:
 
 1. **Webhook events** — on the existing endpoint add: `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, `checkout.session.completed` (already present for payments; it now also handles subscription mode).
 2. **Customer Portal** — Settings → Billing → Customer portal → save the default configuration **in live mode** (the API refuses to open a portal session until a configuration exists).
-3. Nothing else: prices, coupons and products are created by the app on first use.
+3. **`charge.updated`** on the same endpoint — this is what makes the exact fee split (§8) run. Without it the estimate stands and nothing breaks; with it, MySet's share is corrected to the cent.
+4. Nothing else: prices, coupons and products are created by the app on first use.
 
 ---
 
-## 6. What is next (not built, in order of value)
+---
 
-1. **Change my email** — a second code sent to the *new* address, then a swap in `byEmail`; today the workaround is add-then-remove on Pro (members), or ask Perry.
-2. **Exact fee split** via post-charge transfer (see §3).
-3. **Invoices in the Studio** — the portal shows them today; an in-app list is a `invoices.list` call away.
-4. **Two-factor** — passwordless codes to email are already a factor; a second (passkey) is the natural next one and Stripe-style *recovery codes* should come with it.
-5. **Session list / "sign out everywhere"** — a button that bumps the revision; the mechanism exists (`revOf`), only the button is missing.
-6. **Venue members** — venues have one sign-in today.
-7. **Dunning copy** — on `past_due` the plan stays for the 3-day grace; a Studio banner ("your card didn't go through") would be kind.
+## 6. The account system (2026-09-05)
+
+Everything in §5 of the old version of this document — the "what is next" list — is now built, apart from passkeys. What follows is the shape of it, and the five holes it closed.
+
+### 6.1 The holes, said plainly
+
+Two of these were not gaps. They were ways to lose an account.
+
+| | What was true | What it cost |
+|---|---|---|
+| **A member could take the account** | `add` / `remove` / `revokeAll` / `setSlug` in `auth.mjs` checked "are you signed in" and nothing else, though `verifyToken` has always returned the role | A band mate on a five-seat Pro page could delete the OWNER's sign-in address, or rename the public page that every printed QR code points at. One POST each. The venue side had the identical hole, plus a `staff` role that nothing read |
+| **Sign out did not sign you out** | It cleared `localStorage` and told the server nothing | The token is an HMAC with a thirty-day life. A copy off a borrowed phone kept working for a month after the person believed they had left |
+| **No recovery** | Two doors: a code to an address in `byEmail`, and the per-page studio code, which most artists never set. `ADMIN_CODE` resolves to the founder alone | Lose the inbox and the account was unrecoverable by anything the app offered |
+| **No way to change your address** | The documented workaround was add-then-remove, which needs Pro seats *and* ran through the unguarded pair above | On Free and Plus there was literally no way to do it |
+| **Delete was instant and final** | One sheet, one typed word, everything erased inside one request | No undo, and nothing kept |
+
+### 6.2 Sessions, and why they cost nothing
+
+A token now carries a **session id**: `email|exp|rev|sid`, parsed by popping the fixed fields off the END so nothing an address could contain can shift them (`normEmail` also strips `|` now — `a|b@x.com` used to be a valid address to this code). A three-field body is a token minted before this and still works.
+
+Revocation lives on the **registry row the verifier is already holding**: `byId[aid].dead = { sid: whenThatTokenExpires }`. Two things fall out for free — an entry whose time has passed guards a token that has expired anyway, and pruning is a filter on a number. An account that has never revoked anything has no `dead` key at all, so the one document every poll reads does not grow for them. **Zero extra reads, zero extra writes, on every authenticated request.** Past twelve entries it bumps `rev` instead, which signs everything out: more revocation than was asked for is the safe way to fail.
+
+The list a person looks at is a cold document, `sess_<owner>`, read only when the sessions screen opens. It holds a device CLASS ("iPhone · Safari"), never the raw User-Agent, and never an IP. "Last opened Settings" is written at most once an hour from the two settings actions the Studio already calls — it is labelled that way because printing "last used two hours ago" from a number that only moves when somebody opens Settings would be a number that lies.
+
+### 6.3 Roles
+
+`byEmail[email].role` always existed and carried a string. `_session.mjs` is now the one table that says what it means.
+
+| | Can |
+|---|---|
+| **owner** | Everything. Money, plan, payouts, access, the page address, recovery codes, export, deletion |
+| **member** | The page and the show: library, setlist, gigs, profile, community, requests, stats, export |
+| **crew** | Tonight only: run the show, see the queue and the requests |
+
+**An unknown role falls back to `crew`, the least it could be.** Default-deny, so a role string this table has never heard of can never be an escalation — and `CAN['toString']` is an inherited Function, truthy with no `.has`, which is why the lookup is an own-property check and not a truthiness one.
+
+Venues get the same three, named owner / manager / crew, and the orphan `staff` retires into `crew`.
+
+### 6.4 Recovery, and what "forgot password" means here
+
+MySet has no password. Settings says so, in a row that is always visible:
+
+> **Password** · You don't have one. MySet emails you a fresh six-digit code every time.
+> **Studio code** · on / not set. A code for this page, so you can get in from any phone even when email is slow.
+> **Recovery codes** · 6 of 8 unused / not set up yet.
+
+**Recovery codes** are eight one-time codes in a Crockford-ish alphabet (no 0/O, no 1/I/L, because these get written on the back of a setlist in a dark room), hashed with the same site secret the six-digit codes use, shown once and never again. The door is `recoverySignIn { slug, code }`: the page name is public so it grants nothing on its own, it only says which lock to try. A wrong code, an unknown page and a locked-out page answer identically, so this cannot be used to find out who has an account. Using one bumps `rev` — a recovery code means something went wrong, so everything else goes out — then this device gets a fresh session, and everyone on the account is emailed.
+
+The **studio code** was the other bug: the client asked for 4 characters and the server has always refused under 8, so somebody who did exactly what the box told them got an error. One number now, and the "the original code from Netlify keeps working as a backup" line is shown only to the founder, for whom it is true.
+
+### 6.5 Moving your sign-in address
+
+Two proofs, never one. `emailChangeStart` sends a code to the NEW address and a code to the OLD one, and mails the old address a notice **at request time** — if a stolen session is trying to walk off with the account, the owner hears about it while there is still something they can do. `emailChangeFinish` takes both; the second may be a recovery code instead, which is the answer for "I can't get into the old inbox any more". The swap and the session kill happen in ONE `mutateArtists`, so there is never an instant where the address has moved and the old sessions are still alive. Only the moved address's devices die: a bandmate on their own address on a five-seat page is left alone, because this might be happening at 11pm while they are running the screen. One change per 24 hours.
+
+### 6.6 Leaving, with thirty days to change your mind
+
+Perry's words: *"a 2-step double confirmation they have to click twice before their account is deleted (but still keep all the data stored somewhere)."*
+
+**The data does not move. Not one document.** Copying forty-odd blobs into an archive namespace is forty writes that can half-fail, and a half-archived account is the precise opposite of what a grace period is for. Instead the row is marked, `publicArtist` refuses it, and every public endpoint 404s for free.
+
+On day one: the page, the voting screen and the community page go dark; billing is cancelled immediately (never keep charging somebody who has left); any running show is filed; the calendar comes out of the city and schedule indexes. **Sessions are not killed and `rev` is not bumped** — the owner has to be able to get back in to undo. Soft delete locks the account DOWN; it must never lock the owner OUT. Every action except undo, export, the plan and the portal answers 423 with the sentence that tells them the way back.
+
+**The slug is held for the whole window.** MySet page names are printed on QR codes stuck to bar tables. Freeing it would let a stranger take it, and every one of those codes would land a room full of people on somebody else's setlist — and Undo would be a promise the system could not keep. There is a link in the banner to free it deliberately, which is a decision rather than a surprise.
+
+Thirty days later `autocron` purges one account per ring, on an hourly watermark, after the show sweep so it can never delay a gig starting. The queue entry (`delqueue`) is removed LAST, so a crash halfway simply retries — purge is re-runnable by construction. `deleteArtist` itself is unchanged: it stopped being what the button does and became what the calendar does.
+
+Venues get all of this too, keyed `v_<vid>`, on a new `keysForVenue()` — until this pass a venue could sign up, put a page up, take money and pay for Pro, and had no way to take its data or to leave.
+
+### 6.7 The activity log
+
+`log_<owner>`, capped at 100 entries, written best-effort with `.catch(() => {})`: **a logging failure must never be the reason a musician cannot start a show.** Sign-ins, code sends, seats added and removed, roles changed, the studio code set, recovery codes made and used, the address moved, deletion started and cancelled. Never an IP, never a fan id (INVARIANT 0bu), never an amount.
+
+---
+
+## 7. Invoices, and the card that didn't go through
+
+`invoices.list` on demand — never on a page load, because it is a network call to Stripe and the answer changes once a month. Rows show the amount, the status, the date and a link to Stripe's own hosted invoice.
+
+The **dunning banner** costs no extra call at all: `billingStatus` already ships on every Studio boot and now carries `pastDue` and `graceUntil`. Three states, in Perry's voice, none of them shaming: while there is grace left, on the last day (naming every real consequence, built from the plan table so it cannot drift), and after it has run out. It is suppressed over a live show except in Settings — a bar about a card at 11pm on stage is the wrong pixel at the wrong moment, and three days of grace mean it can wait until the set is over (INVARIANT 16).
+
+Two bugs went with it. `unpaid` was missing from the already-subscribed refusal in `startCheckout`, so an artist whose card kept failing could run Checkout again and end up with **two live subscriptions** billed side by side. And the portal returned with no marker, so somebody who had just fixed their card kept being told it had failed for up to six hours; the return URL now carries `?billing=back` and the Studio re-reads Stripe on the spot.
+
+---
+
+## 8. The exact fee split (`_feesplit.mjs`)
+
+At checkout Stripe's card fee can only be ESTIMATED, because the real number depends on the card and the country and does not exist yet. `feeCents` subtracts half the estimate. This is the correction, and **it runs one way only: it pays the venue and never bills them.** If the real fee lands lower than the estimate, MySet has under-charged itself and eats the difference rather than clawing cents back from a bar.
+
+Five things that are easy to get backwards, all load-bearing:
+
+1. The event is **`charge.updated`**, not `charge.succeeded`. With Stripe's default async capture, `balance_transaction` and `application_fee` are both null on succeeded.
+2. The balance transaction is the **connected account's** and must be read with that account in scope. The application fee is the **platform's** and must be read without it.
+3. Stripe's fee is `fee_details[type === 'stripe_fee']`, **never `bt.fee`** — on a direct charge `bt.fee` also contains MySet's own application fee, so halving it would hand the venue a share of our own cut.
+4. **Currency.** The charge is in USD; a Thai venue settles in THB, so the fee comes back in THB and is converted with the balance transaction's own exchange rate before it is halved. No rate, no guess: it records `unconvertible` and stops.
+5. The mechanism is **`applicationFees.createRefund`, not `transfers.create`.** A platform-to-Thailand transfer is a cross-border transfer Stripe refuses outright, and MySet's first venues are Thai. A fee refund reverses money that arrived from this very charge, needs no platform balance, reconciles in Stripe's own reports, and Stripe itself enforces the never-below-zero rule.
+
+Exactly-once is two layers: a claim in `meta_<owner>.fees` keyed by charge id (claimed is not delivered — INVARIANT 7b), and a Stripe idempotency key derived from the charge id.
+
+**How small the numbers are, said plainly.** Venue merch is a Pro feature, so every venue sale runs the 2% row, and half of Stripe's fee exceeds 2% of anything under about $29. Below that MySet's fee is already zero at checkout, there is nothing to refund, and the correction records `nothing` and stops. It is built so the arithmetic is right when the baskets get bigger, not because it moves money today.
+
+The honest sentence for the Studio and for anyone reading this:
+
+> MySet pays half of Stripe's card fee, up to the whole of MySet's own fee. On small items that means MySet takes nothing and the venue still carries the rest of Stripe's fee.
+
+On a $12 cap on Pro, MySet's fee is 24¢ and Stripe's is about 65¢: MySet gives up all 24¢ and the venue carries about 41¢. That is not an even split and is never called one.
+
+---
+
+## 9. Passkeys — not built, and why
+
+Perry's words were *"passkeys (only if not complicated)"*, which is permission to say no.
+
+The verdict is that they are buildable — `AuthenticatorAttestationResponse.getPublicKey()` returns an SPKI DER key that `node:crypto` verifies directly, so no CBOR library and no npm dependency are needed — and that the real win here is **speed, not security**: one tap instead of switching to an email app on bar wifi. Sign-in is already a one-time code to a verified inbox, which is a factor.
+
+What stops it shipping today is that it cannot be verified from here. WebAuthn needs a stable `rpId`, a real user gesture, and a physical device, and the interesting failures are all on a second phone, on Android, and inside an installed PWA. Shipping unverifiable authentication code to production is the wrong trade, and INVARIANT 15d exists because of a night when something that had never been tried on the real thing was assumed to work.
+
+So: the design is written down, the key name is reserved (`pkeys_<owner>`, already in `keysFor`), and it is a half-day with a phone in hand. Recovery codes carry the "I can't get into my email" case that passkeys would otherwise have been asked to carry.
+
+---
+
+## 10. What is next (not built, in order of value)
+
+1. **Passkeys** — see §9. Needs a device, not a decision.
+2. **Owner transfer** — the person who signed up leaves the band. Ten lines: a code to the owner's own inbox, and one `mutateArtists` that swaps two roles.
+3. **A studio-code reset from the sign-in screen** — the change flow exists inside Settings; the "I'm locked out" version needs the same two-code shape as an email change.
+4. **The Studio's own view of the fee split** — the corrections are recorded per charge in `meta_<owner>.fees`; the Orders list does not show them yet.
+5. **`transfers.create` for the over-the-floor case** — only needed if MySet ever decides to pay a venue MORE than its whole fee, which is out of scope by design.

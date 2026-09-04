@@ -26,6 +26,20 @@ export default async (req) => {
     return bad('bad signature', 400);    // never trust an unsigned payload
   }
 
+  /* THE EXACT HALF OF STRIPE'S CARD FEE, once Stripe knows what it actually was.
+     `event.account` is present only on a Connect event, which is exactly the
+     charges this applies to. Never throws — the webhook always answers 200, or
+     Stripe starts retrying an event that will never succeed. See _feesplit.mjs. */
+  if (event.type === 'charge.updated' && event.account) {
+    const owner = await artistForAccount(event.account);
+    const ch = event.data.object || {};
+    if (owner && ch.balance_transaction) {
+      const { settleSplit } = await import('./_feesplit.mjs');
+      await settleSplit(owner, event.account, ch).catch((e) => console.error('feesplit:', e && e.message));
+    }
+    return json({ received: true });
+  }
+
   /* An account finished (or lost) onboarding. This is the ONE writer that flips a
      room's money buttons on, so it also mirrors the answer onto the show record
      where the audience poll can read it for free. */
