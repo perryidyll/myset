@@ -1348,3 +1348,59 @@ If you are about to violate one, stop and say so rather than working around it.
 0cq. **"Fans" counts phones that were in the room.** The artist page's `Fans` is the
     sum over archived shows of phones present (or peak voters for older nights).
     Nothing anywhere says "follow"; there is no follower count (0bh, 9g).
+
+## Plans that are paid for, venues that are paid, and accounts that can leave (2026-09-04, pass two)
+
+0cr. **Stripe is the source of truth for a paid plan; the registry is a mirror.**
+    `billing_<owner>` holds pointers (customer, subscription, price key, period end),
+    never amounts. The plan on the registry row is written only by
+    `syncSubscription`, `finishCheckout`, a comp, or a webhook — and every reader
+    (`planForArtist`, `venuePlanOf`) is unchanged, which is why nothing else had to
+    move. `ACCOUNTS.md` §2.
+
+0cs. **Two ways to learn the truth, neither trusted alone.** Webhooks update the
+    plan; the return trip (`planFinish`) reads the Checkout session *from Stripe by
+    id* and checks `metadata.owner`; `maybeSync` re-reads the subscription at most
+    every six hours. `?sub=done` in a URL changes nothing by itself. A dropped
+    webhook costs at most six hours, never a plan.
+
+0ct. **Leaving a paid plan never takes back a paid month.** Downgrade to free is
+    `cancel_at_period_end`; paid → paid is a price swap with proration. The plan on
+    the row keeps a three-day grace after the period end for a late renewal.
+
+0cu. **The retention offer is once, ever, and Stripe bills it.** 50% off one month
+    is a coupon applied to the live subscription (`myset_stay_50`), recorded as
+    offered and as used on the billing doc, and refused server-side the second time.
+    The app never "remembers to charge less" itself.
+
+0cv. **Prices by lookup key, never by `price_…` id.** `myset_plus_monthly`,
+    `myset_pro_monthly`, `myset_venue_pro_monthly`, created on first use from the
+    `PLANS` / `VENUE_PLANS` amounts. A price changed in the Stripe dashboard moves
+    with its lookup key.
+
+0cw. **One owner string, two kinds.** Billing and Connect take an artist id or
+    `v_<venueId>`; `isVenueOwner()` is the only place the difference is decided.
+    Venue Connect is the artist flow keyed differently, not a fork (0r, 0x still
+    hold: a fan's money goes to a real account or nowhere).
+
+0cx. **The fee split is arithmetic on the application fee, and it floors at zero.**
+    For a plan row with `splitFee`, `feeCents = max(0, floor(amount × cut) −
+    round(stripeEstimate / 2))`, `stripeEstimate = round(amount × 0.029 + 30)`.
+    Venues split, artists do not. It is an estimate at checkout and the Studio
+    says so; an exact split would be a post-charge transfer (`ACCOUNTS.md` §3).
+
+0cy. **Every per-artist key is enumerated in one place.** `keysFor(aid)` in
+    `_account.mjs` is the list; delete walks it, never `list()` (1). A new
+    per-artist document or image slot must be added there, and `test/billing.mjs`
+    fails if any key still carries a deleted artist's id.
+
+0cz. **Export never names a fan; delete never touches the founder.** Device ids are
+    stripped from tips and orders before export (0bu). `accountDelete` needs the
+    word `DELETE`, refuses members (403) and refuses `DEFAULT_ARTIST`. The registry
+    rows go last, so a token presented mid-delete finds nothing left to act on.
+
+0da. **The plan sheet lists every tier in full.** Never "everything in Plus"; the
+    fee line reads "Transaction fee: N%" in orange; the testimonials array is the
+    architecture (empty it and the section disappears; placeholders are labelled).
+    Top right of both Studios: `Upgrade ↗` on free, a green tag with the plan's
+    name and the same arrow when paid. Settings holds one big green button.

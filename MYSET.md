@@ -316,6 +316,13 @@ by **name within a city**, never by a stored link, so neither side can break the
 | Promote in other cities | — | — | *designed, not built* |
 | Earnings analytics | — | — | *designed, not built* |
 | Press kit | — | — | *designed, not built* |
+
+**Self-serve since 2026-09-04.** Plus and Pro are Stripe Billing subscriptions started
+from the plan sheet in the Studio (top right: `Upgrade ↗`, or a green tag with the
+plan's name once paid). Downgrades run to the end of the paid month; leaving Pro is
+asked twice and offered one month at half price, once ever. The whole system is in
+`ACCOUNTS.md`; the rules in INVARIANTS 0cr–0da. Comps and promo codes still work
+exactly as before — a comp is simply a row with no subscription behind it.
 | Your own branding | — | — | *designed, not built* |
 
 **Four of those Pro rows are not implemented.** `promote`, `analytics`, `presskit` and
@@ -405,12 +412,19 @@ review found three near-misses in the first pass, all now invariants (0bx0–0bx
 | Photos | 3 | 12 |
 | Verification tick | — | ✓ |
 | Community page (fans post about the night) | ✓ | ✓ |
-| Merch on the community page (via the venue's own link) | — | ✓ |
+| Merch on the community page (sold through MySet once Stripe Connect is on, or via the venue's own link) | — | ✓ |
 | Receive tips | — | *designed, not built* |
 | Voting on the venue's own speaker music | — | *designed, not built* |
 
-**Not self-serve yet.** There is no venue billing; Perry switches a venue to Pro by
-hand. The Venue Studio says so plainly rather than pretending otherwise.
+**Self-serve since 2026-09-04.** Venue Pro is a Stripe Billing subscription
+(`myset_venue_pro_monthly`), started from the same plan sheet as artists (two tiers).
+Perry can still comp a venue by hand from the Studio's owner section.
+
+**Venues get paid the way artists do.** Stripe Connect Express keyed `v_<venueId>`,
+direct charges on the venue's own account; the Venue Studio's Merch tab carries the
+"Getting paid" card and the orders list. The transaction fee is 10% on Free and 2%
+on Pro, **reduced by half of Stripe's estimated card fee** — Perry's rule that
+Stripe's fee is shared evenly (3.4).
 
 Same rule as the artist ladder: `tips` and `speakerVotes` are named in
 `VENUE_NOT_BUILT` in `_venues.mjs` and render as "Coming soon" on Pro too. `reviews`
@@ -475,6 +489,15 @@ afterwards, and getting it wrong means an artist can never be paid out properly.
 **Nobody takes money until Stripe says so.** The gate is Stripe's own
 `charges_enabled`, never a local "they clicked onboarding" flag. Started is not ready.
 
+**Venues are the same flow with a different key** (`v_<venueId>`), with one
+difference Perry asked for: Stripe's card fee is **shared evenly**. On any plan row
+with `splitFee` (both venue rows) the application fee is
+`max(0, floor(amount × cut) − round((amount × 0.029 + 30) / 2))`. A $50 item on
+venue Free sends MySet 412¢ instead of 500¢; on venue Pro 12¢ instead of 100¢; a
+$12 cap on Pro sends nothing at all, because the fee floors at zero. It is an
+estimate at checkout and the Studio says so; an exact split would need a post-charge
+transfer (`ACCOUNTS.md` §3). Artists are not split.
+
 **Three delivery paths, because one was not enough:**
 1. the buyer's browser returning to the voting page
 2. a Stripe webhook, independent of the buyer's phone
@@ -488,6 +511,32 @@ recorded per buyer per purchase, so a retry can never hand out the pack twice.
 **Money is attributed by tag, never by timestamp.** Perry's Stripe account holds
 unrelated charges; an early version reported $133 of somebody else's business as MySet
 revenue.
+
+## 3.5 Paying for a plan
+
+**Stripe Billing holds the subscription; the registry holds a mirror.** `_billing.mjs`
+keeps one `billing_<owner>` document of pointers (customer, subscription, price key,
+period end, whether the retention month was used) and writes the *plan* onto the
+registry row so every existing reader is unchanged. Prices are found by **lookup key**
+and created on first use — never a hard-coded `price_…` id.
+
+**Two ways to learn the truth.** Stripe's webhooks (`customer.subscription.updated` /
+`.deleted`, `invoice.payment_failed`, `checkout.session.completed`) and a belt: the
+return trip from Checkout (`planFinish`) reads the session from Stripe by id and checks
+it belongs to the owner, and `maybeSync` re-reads the subscription at most every six
+hours. A URL saying `?sub=done` changes nothing by itself.
+
+**Leaving is gentle.** Paid → free is `cancel_at_period_end`; paid → paid is a price
+swap with proration; the plan keeps three days' grace after the period end. The
+**retention offer** — 50% off one more month — is a coupon on the live subscription
+(Stripe bills it), recorded as offered and used, and refused server-side the second
+time.
+
+**The account can leave too.** `accountExport` returns everything MySet holds about an
+artist as one JSON file (never a fan's device id); `accountDelete` (owner only, the
+word `DELETE` typed) cancels the subscription, un-indexes the calendar and the
+schedule, and deletes every key from the one enumerated list in `_account.mjs`. The
+founder cannot be deleted from the app. `ACCOUNTS.md` is the full design.
 
 ---
 
@@ -528,10 +577,10 @@ Two dependencies only: `@netlify/blobs` and `stripe`.
 | `GET /api/qr` | An SVG QR code |
 | `GET\|POST /api/community` | The community page — feed, merch, shows; post, like, report |
 
-**Artist session** — `POST /api/admin` (103 actions), `GET /api/stage`,
+**Artist session** — `POST /api/admin` (111 actions), `GET /api/stage`,
 `POST /api/auth`, `GET|POST /api/revenue`, `GET|POST /api/history`
 
-**Venue session** — `POST /api/venueadmin` (30 actions), `POST /api/venueauth`
+**Venue session** — `POST /api/venueadmin` (39 actions), `POST /api/venueauth`
 
 **Scheduled** — `sheetcron` (03:20 UTC) and `autocron` (every two minutes; 4.9)
 
@@ -575,6 +624,13 @@ listUse
 **The community page:** postList · postHide · postPin · postReply · postDelete
 
 **Orders:** orderList · orderDone · orderDetail
+
+**Plans and billing (3.5):** planGet · planCheckout · planFinish · planChange ·
+planRetainOffered · planRetain · planPortal — the same seven exist on
+`/api/venueadmin`, beside payStatus · payStart · payDashboard · orderList ·
+orderDone · orderDetail for a venue that takes money.
+
+**The account:** accountExport · accountDelete (owner only; members get 403)
 
 **Owner only:** promoList · promoCreate · promoRevoke · venueList · venueVerify ·
 venuePlan · idQueue · idApprove · idReject · flagList · flagSet · sheetStatus ·
@@ -651,6 +707,11 @@ unknown page name all give the same answer, so the lock cannot be used to discov
 which codes or artists are real.
 
 A recovery key exists in the server environment for the founding account only.
+
+Sessions carry the account's **revision**; removing a sign-in address bumps it and
+every older token dies at once, so there is no session list to clean up. Everything an
+account can do to itself — pay, change plan, leave, export, delete — is in
+`ACCOUNTS.md`.
 
 ## 4.8 Verification
 
@@ -883,6 +944,13 @@ Everything else is unset, and each one degrades honestly rather than failing:
   `MySet <onboarding@resend.dev>` rather than a myset.vip address. It works today; it
   is a deliverability and trust liability the first time somebody who is not Perry
   signs up, and it is the cheapest of all of these to fix.
+
+**Two things Perry does once in the Stripe dashboard** for billing to be whole: add
+`customer.subscription.updated`, `customer.subscription.deleted` and
+`invoice.payment_failed` to the webhook endpoint (`checkout.session.completed` is
+already there and now also carries subscription checkouts), and save the **Customer
+Portal**'s default configuration in live mode — the API refuses to open a portal
+session until one exists. Products, prices and coupons are created by the app.
 
 `GSHEET_ID` and `GSHEET_EMAIL` are not really secrets (the address has to be pasted
 into Google's own share dialog, and `sheetStatus` shows it for exactly that reason);

@@ -27,7 +27,14 @@ export default async (req) => {
      (perryidyll vs perry-idyll) — so the session could not be retrieved and the
      buyer got nothing. */
   const { publicArtist } = await import('./_lib.mjs');
-  const hinted = await publicArtist(req);
+  let hinted = await publicArtist(req);
+  const vq = url.searchParams.get('v');
+  if (vq) {
+    const { venueBySlug } = await import('./_venues.mjs');
+    const { cleanSlug } = await import('./_auth.mjs');
+    const vid = await venueBySlug(cleanSlug(vq));
+    hinted = vid ? `v_${vid}` : hinted;
+  }
   let session = null;
   for (const who of [hinted, DEFAULT_ARTIST].filter((v, i, a) => v && a.indexOf(v) === i)) {
     const { stripe, opts } = await stripeFor(who);

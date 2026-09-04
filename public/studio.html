@@ -249,6 +249,31 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .votebox .tog{background:var(--surface-2)}
 .votebox .tog button.on{background:var(--accent-2);color:#fff;box-shadow:none}
 .slotmini{width:44px;height:44px;border-radius:11px;background:var(--surface-2) center/cover;display:grid;place-items:center;color:var(--muted);flex:0 0 auto;margin-right:10px}
+/* the plan, top right: an orange-ringed Upgrade on free, a green tag with the plan's
+   name otherwise — both tappable, both with the same arrow the name carries */
+.upg,.plantag{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:var(--pill);font-size:13px;font-weight:700;flex:0 0 auto;white-space:nowrap}
+.upg{color:var(--accent-2);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+.plantag{background:rgba(48,209,88,.16);color:var(--good)}
+.upg span,.plantag span{font-size:11px;opacity:.75}
+.bigup{width:100%;padding:17px;border-radius:var(--pill);font-size:17px;font-weight:700;background:var(--good);color:#04110a;display:flex;align-items:center;justify-content:center;gap:8px}
+.tier{border:1.5px solid var(--accent-2);border-radius:var(--r);overflow:hidden;margin-top:14px;background:var(--surface)}
+.tier .hd{background:var(--accent-2);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:baseline;font-weight:800;font-size:18px;letter-spacing:-.02em}
+.tier .hd small{font-size:14px;font-weight:700;opacity:.95}
+.tier ol{margin:0;padding:12px 16px 12px 34px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.tier ol li{padding:2px 0}
+.tier .fee{color:var(--accent-2);font-weight:700}
+.tier .cta{margin:2px 14px 14px}
+.tier .cta .big{margin:0}
+.tier .cta .big.now{background:var(--surface-2);color:var(--muted);box-shadow:none;cursor:default}
+.testi{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 8px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.testi::-webkit-scrollbar{display:none}
+.tcard{flex:0 0 250px;scroll-snap-align:start;background:var(--surface-2);border-radius:var(--r);padding:14px}
+.tcard .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tcard .who i{width:38px;height:38px;border-radius:12px;background:var(--grad) center/cover;display:grid;place-items:center;font-style:normal;font-weight:800;color:#fff}
+.tcard .who b{display:block;font-size:14px}.tcard .who span{font-size:12px;color:var(--muted)}
+.tcard p{margin:0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.dg .big.no{background:var(--accent-2);color:#fff}
+.dg .big.yes{background:var(--surface-2);color:var(--muted);box-shadow:none;opacity:.7}
 
 .bigfile{display:flex;align-items:center;justify-content:center;gap:8px;
   padding:13px;border:1.5px dashed var(--hair-2,rgba(128,128,128,.4));border-radius:12px;
@@ -2102,25 +2127,12 @@ function render(){
       </div></details>
     ${PLAN&&PLAN.ok?`
       <div class="planbox" id="planbox">
-        <div class="row" style="border:none;padding:0">
-          <div class="m"><div class="t">${esc(PLAN.limits.label)}${PLAN.comped?' · comped':''}</div>
-            <div class="s">${PLAN.limits.featured===null?'Unlimited featured songs':PLAN.limits.featured+' featured songs'} ·
-              ${PLAN.limits.cut?Math.round(PLAN.limits.cut*100)+'% cut on money taken':'no cut taken'} ·
-              ${PLAN.limits.seats} sign-in${PLAN.limits.seats===1?'':'s'}</div>
-            ${PLAN.until?`<div class="s">Until ${dstamp(PLAN.until)}</div>`:''}
-            ${PLAN.discountPct?`<div class="s" style="color:var(--accent)">${PLAN.discountPct}% off saved for when billing opens</div>`:''}
-          </div>
+        <div class="row" style="border:none;padding:0 0 10px">
+          <div class="m"><div class="t">You’re on ${esc(PLAN.limits.label)}${PLAN.comped?' · comped':''}</div>
+            <div class="s">${PLAN.until?(PLAN.billing&&PLAN.billing.cancelAtPeriodEnd?'Ends ':'Renews ')+dstamp(PLAN.until):(PLAN.plan==='free'?'Free, forever':'Active')}${PLAN.discountPct?` · ${PLAN.discountPct}% off your first month`:''}</div></div>
         </div>
-        <div class="plangrid">
-          ${['free','plus','pro'].map(k=>{const L=PLAN.plans[k];return `<div class="pcard ${PLAN.plan===k?'on':''}">
-            <b>${esc(L.label)}</b><span>${L.price?'$'+(L.price/100)+'/mo':'Free'}</span>
-            ${/* THE PLAN CARDS ARE WHERE SOMEBODY DECIDES TO PAY $20, and they were
-                  the one place still selling the four unbuilt Pro features as if
-                  they were included — the exact thing NOT_BUILT exists to prevent,
-                  skipped on the page that matters most. */''}
-            <em>${L.gigs?L.gigs+' shows/month':'Unlimited shows'}<br>${L.featured===null?'∞ songs':L.featured+' featured'}<br>${L.cut?Math.round(L.cut*100)+'% cut':'no cut'}${L.pricing?'<br>+ your own prices'+soonTag(L,'pricing'):''}${L.merch?'<br>+ merch on your page':''}${L.analytics?'<br>+ analytics'+soonTag(L,'analytics'):''}${L.presskit?'<br>+ press kit'+soonTag(L,'presskit'):''}${L.branding?'<br>+ your branding'+soonTag(L,'branding'):''}${L.seats>1?'<br>'+L.seats+' logins':''}</em>
-          </div>`;}).join('')}
-        </div>
+        <button class="bigup" onclick="openPlans()">${PLAN.plan==='pro'?'Pro membership':'Upgrade your plan'} <span style="font-size:13px;opacity:.75">↗</span></button>
+        ${PLAN.billing&&PLAN.billing.portal?`<p class="muted" style="font-size:12px;margin:10px 0 0;text-align:center"><a href="#" onclick="event.preventDefault();openPortal()" style="color:var(--accent);font-weight:600">Card, invoices and receipts ↗</a></p>`:''}
       </div>
       <div class="field"><label>Got a code?</label><div style="display:flex;gap:8px">
         <input class="inp" id="promoIn" maxlength="24" placeholder="FRIENDS100" autocapitalize="characters" style="flex:1">
@@ -2238,6 +2250,15 @@ function render(){
           second one is the escape hatch sw.js has always had a handler for and
           never had a button for. Nothing here touches a single piece of the
           artist's data: not the setlist, not the votes, not the money. */''}
+    <div class="sec"><span class="kick">Your account</span></div>
+    <div class="list">
+      <div class="row"><div class="m"><div class="t">${esc((PLAN&&PLAN.email)||'Signed in with the Studio code')}</div><div class="s">${PLAN&&PLAN.email?'Sign-in address':'No email on this sign-in'}${TEAM&&TEAM.emails?` · ${TEAM.emails.length} sign-in${TEAM.emails.length===1?'':'s'} on this page`:''}</div></div></div>
+      <div class="row"><div class="m"><div class="t">Download my data</div><div class="s">Everything MySet holds about you, as one file. Never a fan’s device.</div></div>
+        <button class="act" onclick="exportAccount()">Download</button></div>
+      <div class="row"><div class="m"><div class="t">Delete my account</div><div class="s">Gone means gone — your page, songs, history, photos and billing.</div></div>
+        <button class="act warn" onclick="deleteAccount()">Delete</button></div>
+    </div>
+
     <div class="sec"><span class="kick">If something looks wrong</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Pull down anywhere to refresh. If that isn't enough, these are the bigger hammers — neither one touches your songs, your votes or your money.</p>
     <div class="wrap">
@@ -2262,6 +2283,9 @@ function render(){
         ? `<a class="whoami" href="/${esc(s.slug)}" target="_blank"><h1>${esc(s.artist)}</h1><span>↗</span></a>`
         : `<h1>${esc(s.artist)}</h1>`}
     </div>
+    ${PLAN&&PLAN.ok?(PLAN.plan==='free'
+      ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
+      :`<button class="plantag" onclick="openPlans()">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}
   </div>
   <div class="tabs">
     <button class="${TAB==='live'?'on':''}" onclick="setTab('live')">Live</button>
@@ -3058,6 +3082,144 @@ function replyPost(id){
     <button class="big" style="margin-top:14px" onclick="commAct('postReply','${esc(id)}',undefined,(document.getElementById('rpTxt')||{}).value||'')">Save</button>`);
 }
 
+
+/* ---------- plans, billing, the account ----------
+   The sheet lists every tier in full, every time — never "everything in Plus". The
+   transaction fee is in orange, and called that. Upgrading opens Stripe Checkout;
+   changing a paid plan happens on the live subscription; leaving a paid plan asks
+   twice and offers one month at half price, once. */
+const TIER_COPY={
+  free:{name:'Free',price:'$0',items:[
+    '4 shows a month — unlimited voters at every one',
+    'Everything fans touch: voting, requests, birthday shout-outs, lyrics',
+    'The song sheet: chord charts, keys and genres',
+    'Your page, gig calendar and city listings',
+    'A community page — fans rate the night and post photos, you reply',
+    'Show history and your real numbers',
+    'Keep 2,000 songs — 50 live to the room at once',
+    'One sign-in',
+    '<span class="fee">Transaction fee: 10%</span> on money taken through the app']},
+  plus:{name:'Plus',price:'$10 / month',items:[
+    'Unlimited shows — play as often as you like',
+    'Unlimited songs live to the room at once',
+    'Separate setlists, one active per night, applied from your calendar',
+    'Set your own vote rules — free votes per person, the cost of a replay',
+    'Price your own vote packs, requests and shout-outs',
+    'Merch on your community page, paid straight to you',
+    'The verification tick, once you’re checked',
+    'Everything fans touch, the song sheet, your page, calendar, community page and history',
+    'Shows that start and end themselves from your calendar',
+    'One sign-in',
+    '<span class="fee">Transaction fee: 2%</span> on money taken through the app']},
+  pro:{name:'Pro',price:'$20 / month',items:[
+    'Unlimited shows — play as often as you like',
+    'Unlimited songs live to the room at once',
+    'Separate setlists, one active per night, applied from your calendar',
+    'Set your own vote rules — free votes per person, the cost of a replay',
+    'Price your own vote packs, requests and shout-outs',
+    'Merch on your community page, paid straight to you',
+    'The verification tick, once you’re checked',
+    'Everything fans touch, the song sheet, your page, calendar, community page and history',
+    'Shows that start and end themselves from your calendar',
+    'Five sign-ins for your band',
+    'Coming soon, included: earnings by venue and night, a press kit, your branding, promotion in other cities',
+    '<span class="fee">Transaction fee: 0%</span> — nothing taken on money through the app']},
+};
+/* PLACEHOLDERS — Perry approves the layout, then these come down until real ones
+   are submitted by artists. Nothing here is a real quote. */
+const TESTIMONIALS=[
+  {name:'Sample artist',where:'Koh Phangan',text:'The room picked the last three songs and I’ve never had a crowd that loud at the end of a set. (placeholder)'},
+  {name:'Sample duo',where:'Bangkok',text:'Requests stopped being shouted at us and started showing up on the screen, ranked. (placeholder)'},
+  {name:'Sample band',where:'Melbourne',text:'We got rebooked because the bar could see how many people voted. Numbers, not vibes. (placeholder)'},
+];
+const RANK={free:0,plus:1,pro:2};
+function openPlans(){
+  if(!PLAN||!PLAN.ok){toast('One moment…');loadPlan(true);return;}
+  const cur=PLAN.plan, sub=PLAN.billing&&PLAN.billing.subscribed, comped=PLAN.comped;
+  const cta=(k)=>{
+    if(k===cur) return `<button class="big now" disabled>Your plan</button>`;
+    if(RANK[k]>RANK[cur]) return sub?`<button class="big" onclick="changePlan('${k}')">Move to ${TIER_COPY[k].name}</button>`
+                                     :`<button class="big" onclick="startCheckout('${k}')">Upgrade to ${TIER_COPY[k].name}</button>`;
+    if(comped&&!sub) return `<button class="big now" disabled>Comped until ${dstamp(PLAN.until)}</button>`;
+    return sub?`<button class="big alt" onclick="confirmDowngrade('${k}')">Switch to ${TIER_COPY[k].name}</button>`
+              :`<button class="big now" disabled>${TIER_COPY[k].name}</button>`;
+  };
+  openSheet(`<h3>Plans</h3><p class="lede">Everything in each plan, listed in full. Change any time.</p>
+    ${['free','plus','pro'].map(k=>`<div class="tier">
+      <div class="hd"><span>${TIER_COPY[k].name}</span><small>${TIER_COPY[k].price}</small></div>
+      <ol>${TIER_COPY[k].items.map(x=>`<li>${x}</li>`).join('')}</ol>
+      <div class="cta">${cta(k)}</div></div>`).join('')}
+    ${TESTIMONIALS.length?`<div class="sec" style="padding-left:0;margin-top:18px"><span class="kick">From artists</span></div>
+    <div class="testi">${TESTIMONIALS.map(t=>`<div class="tcard"><div class="who"><i>${esc(t.name.slice(0,1))}</i><div><b>${esc(t.name)}</b><span>${esc(t.where)}</span></div></div><p>${esc(t.text.slice(0,180))}</p></div>`).join('')}</div>`:''}
+    <p class="fine">Stripe handles the card. Cancel any time; a paid month is always yours to the end.</p>`);
+}
+async function startCheckout(plan){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'planCheckout',plan})});
+  if(!d.ok||!d.url){toast(d.error||'Couldn’t open checkout');return;}
+  location.href=d.url;
+}
+async function changePlan(plan){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'planChange',plan})});
+  if(!d.ok){toast(d.error||'Couldn’t change that');return;}
+  closeSheet(); await loadPlan(true); toast(plan==='free'?'Done — your plan runs to the end of the month you paid for':'Done — you’re on '+TIER_COPY[plan].name);
+}
+function confirmDowngrade(plan){
+  const cur=TIER_COPY[PLAN.plan].name;
+  openSheet(`<div class="dg"><h3>Are you sure you want to lose your ${cur} membership benefits?</h3>
+    <p class="lede">You’d be switching to ${TIER_COPY[plan].name}.</p>
+    <button class="big no" style="margin-top:16px" onclick="closeSheet()">No, keep ${cur}</button>
+    <button class="big yes" style="margin-top:10px" onclick="retentionOffer('${plan}')">Yes, switch to ${TIER_COPY[plan].name}</button></div>`);
+}
+async function retentionOffer(plan){
+  if(PLAN.billing&&PLAN.billing.retentionUsed){ changePlan(plan); return; }
+  api('/admin',{method:'POST',body:JSON.stringify({action:'planRetainOffered'}),quiet:true});
+  openSheet(`<div class="dg"><h3>We’re sad to see you go…</h3>
+    <p class="lede">Would you like to keep your plan for <b>50% off</b> for 1 more month?</p>
+    <button class="big no" style="margin-top:16px" onclick="keepPlan()">Yes — keep it, half price this month</button>
+    <button class="big yes" style="margin-top:10px" onclick="changePlan('${plan}')">No thanks, switch to ${TIER_COPY[plan].name}</button></div>`);
+}
+async function keepPlan(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'planRetain'})});
+  if(!d.ok){toast(d.error||'Couldn’t apply that');return;}
+  closeSheet(); await loadPlan(true); toast('Kept — this month is half price');
+}
+async function openPortal(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'planPortal'})});
+  if(!d.ok||!d.url){toast(d.error||'Couldn’t open billing');return;}
+  location.href=d.url;
+}
+/* back from Stripe Checkout: confirm on the server, never trust the URL */
+async function handleSubReturn(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('sub')==='cancelled'){ toast('No change made'); history.replaceState(null,'',location.pathname); return; }
+  if(q.get('sub')==='done'&&q.get('cs')){
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'planFinish',cs:q.get('cs')}),quiet:true});
+    history.replaceState(null,'',location.pathname);
+    if(d.ok){ PLAN=null; await loadPlan(true); toast('Welcome to '+(TIER_COPY[d.plan]||{}).name); }
+    else toast(d.error||'Couldn’t confirm the payment — it may still land in a minute');
+  }
+}
+async function exportAccount(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'accountExport'})});
+  if(!d.ok){toast(d.error||'Couldn’t export');return;}
+  const blob=new Blob([JSON.stringify(d.data,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`myset-${(D&&D.show&&D.show.slug)||'account'}-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+function deleteAccount(){
+  openSheet(`<h3>Delete your account?</h3><p class="lede">Your page, songs, history, photos, community posts and billing — all of it, for good. There is no undo.</p>
+    <div class="field"><label>Type DELETE to confirm</label><input class="inp" id="delWord" autocapitalize="characters" placeholder="DELETE"></div>
+    <button class="big" style="margin-top:14px;background:var(--accent)" onclick="deleteAccountNow()">Delete everything</button>
+    <button class="big alt" style="margin-top:10px" onclick="closeSheet()">Keep my account</button>`);
+}
+async function deleteAccountNow(){
+  const w=(document.getElementById('delWord')||{}).value||'';
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'accountDelete',confirm:w})});
+  if(!d.ok){toast(d.error||'Couldn’t delete');return;}
+  try{localStorage.clear();}catch(e){}
+  location.href='/about';
+}
+
 async function loadPlan(force){
   if(PLAN&&!force)return;
   PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'}),quiet:true});
@@ -3326,6 +3488,7 @@ function bootDone(){
   setTimeout(()=>el.remove(),320);        // gone for good: it can never flash again
 }
 function start(){clearInterval(timer);
+  handleSubReturn();
   /* Whatever happens, the boot screen goes. A hung request must never leave somebody
      staring at bars — better a half-filled Studio they can use. */
   setTimeout(bootDone,6000);

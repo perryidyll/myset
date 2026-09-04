@@ -1,6 +1,13 @@
 import Stripe from 'stripe';
 import { casDoc, readDoc, mutateShow } from './_lib.mjs';
 import { planForArtist, PLANS, isPlatformOwner } from './_plan.mjs';
+import { VENUE_PLANS } from './_venues.mjs';
+
+/* OWNERS. Everything here is keyed by an OWNER id: an artist id, or `v_<vid>` for a
+   venue (2026-09-04 — venues take money for their merch the same way, on their own
+   Express account, with MySet's fee off the top). Artist ids are stripped to
+   [a-z0-9-], so the underscore can only ever mean a venue. */
+export const isVenueOwner = (o) => String(o || '').startsWith('v_');
 
 /* STRIPE CONNECT — DIRECT CHARGES.
 
@@ -33,7 +40,7 @@ import { planForArtist, PLANS, isPlatformOwner } from './_plan.mjs';
    them can drift into looking on the platform account and finding nothing. */
 
 const CK = (aid) => `connect_${aid}`;
-const ACCT_INDEX = 'acctindex';          // acct_xxx -> artistId, for webhooks
+const ACCT_INDEX = 'acctindex';          // acct_xxx -> owner id, for webhooks
 
 export const emptyConnect = () => ({
   v: 1, acct: '', chargesEnabled: false, payoutsEnabled: false,
@@ -53,16 +60,28 @@ export const connectUsable = (c) => !!(c && c.acct && c.chargesEnabled);
    Basis points, from the plan table, so there is ONE definition of the cut and the
    pricing page cannot drift from what is charged. Perry set these:
      free  10%   ·   plus ($10/mo)  2%   ·   pro ($20/mo)  0% */
-export const cutOf = (plan) => {
-  const p = PLANS[plan] || PLANS.free;
-  const c = Number(p.cut);
+const planRow = (plan, kind) =>
+  (kind === 'venue' ? (VENUE_PLANS[plan] || VENUE_PLANS.free) : (PLANS[plan] || PLANS.free));
+export const cutOf = (plan, kind = 'artist') => {
+  const c = Number(planRow(plan, kind).cut);
   return Number.isFinite(c) && c > 0 ? c : 0;
 };
-/** The fee in cents. Rounded down, so MySet never takes more than its stated share. */
-export const feeCents = (amountCents, plan) => {
-  const cut = cutOf(plan);
+/* STRIPE'S OWN FEE, ESTIMATED. Card processing is about 2.9% + 30¢ in the US and
+   differs by country and card; the true figure is only known after the charge, on
+   the balance transaction. So "split evenly" can only be an estimate at checkout —
+   said plainly here and in the Studio. An exact split would need a second transfer
+   after each charge, from the real balance-transaction fee; noted in ACCOUNTS.md. */
+export const stripeFeeEstimate = (amountCents) => Math.round(amountCents * 0.029 + 30);
+/** The fee in cents. Rounded down, so MySet never takes more than its stated share;
+ *  when the plan row says `splitFee`, half of Stripe's estimated fee comes off it,
+ *  never below zero. */
+export const feeCents = (amountCents, plan, kind = 'artist') => {
+  const row = planRow(plan, kind);
+  const cut = cutOf(plan, kind);
   if (!cut) return 0;
-  return Math.max(0, Math.min(amountCents, Math.floor(amountCents * cut)));
+  let fee = Math.floor(amountCents * cut);
+  if (row.splitFee) fee -= Math.round(stripeFeeEstimate(amountCents) / 2);
+  return Math.max(0, Math.min(amountCents, fee));
 };
 
 /* ---------- talking to Stripe on the right account ---------- */
@@ -124,12 +143,14 @@ export async function ensureAccount(aid, email, country) {
       type: 'express',
       email: email || undefined,
       country: country || undefined,
-      business_type: 'individual',
+      // a bar is a business; Stripe asks the venue which kind during onboarding
+      ...(isVenueOwner(aid) ? {} : { business_type: 'individual' }),
       capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
       /* The fee is taken from the artist's balance, so the artist is the one who
          pays Stripe's processing fee too. Said out loud in the Studio. */
       settings: { payouts: { schedule: { interval: 'daily' } } },
-      metadata: { myset_artist: aid },
+      metadata: { myset_owner: aid, myset_kind: isVenueOwner(aid) ? 'venue' : 'artist',
+                  ...(isVenueOwner(aid) ? {} : { myset_artist: aid }) },
     });
   } catch (e) {
     return { ok: false, error: e.message || 'could not create account' };
@@ -140,7 +161,7 @@ export async function ensureAccount(aid, email, country) {
 }
 
 /** A fresh onboarding link. They expire quickly, so this is generated on demand. */
-export async function onboardingLink(aid, origin) {
+export async function onboardingLink(aid, origin, back = '/studio') {
   const stripe = stripeClient();
   if (!stripe) return { ok: false, error: 'payments-not-configured' };
   const c = await readConnect(aid);
@@ -149,8 +170,8 @@ export async function onboardingLink(aid, origin) {
     const link = await stripe.accountLinks.create({
       account: c.acct,
       type: 'account_onboarding',
-      refresh_url: `${origin}/studio?connect=retry`,
-      return_url: `${origin}/studio?connect=done`,
+      refresh_url: `${origin}${back}?connect=retry`,
+      return_url: `${origin}${back}?connect=done`,
     });
     return { ok: true, url: link.url };
   } catch (e) {
@@ -245,10 +266,21 @@ export async function syncFromStripe(aid) {
   return { ok: true, connect: { ...c, ...next } };
 }
 
-/** The one writer of `show.pay`. Keep the shape tiny — it rides on every poll. */
-export async function mirrorToShow(aid, c) {
+/** The one writer of `show.pay` (artist) or `vprofile.pay` (venue). Keep the shape
+ *  tiny — the artist's rides on every poll. */
+export async function mirrorToShow(owner, c) {
   const ready = connectUsable(c);
-  await mutateShow(aid, (sh) => {
+  if (isVenueOwner(owner)) {
+    const { mutateVenueProfile } = await import('./_venues.mjs');
+    await mutateVenueProfile(owner.slice(2), (p) => {
+      const was = p.pay || {};
+      if (!!was.ready === ready && was.acct === (c.acct || '')) return false;
+      p.pay = { ready, acct: c.acct || '' };
+      return true;
+    }).catch(() => {});
+    return;
+  }
+  await mutateShow(owner, (sh) => {
     const was = sh.pay || {};
     if (!!was.ready === ready && was.acct === (c.acct || '')) return false;
     sh.pay = { ready, acct: c.acct || '' };
@@ -260,9 +292,16 @@ export async function mirrorToShow(aid, c) {
  *  note about who pays Stripe's own fee. */
 export async function connectStatus(aid) {
   const c = await readConnect(aid);
-  const { plan } = await planForArtist(aid);
-  const cut = cutOf(plan);
+  const kind = isVenueOwner(aid) ? 'venue' : 'artist';
+  let plan = 'free';
+  if (kind === 'venue') {
+    const { venueById, venuePlanOf } = await import('./_venues.mjs');
+    plan = venuePlanOf(await venueById(aid.slice(2)));
+  } else plan = (await planForArtist(aid)).plan;
+  const cut = cutOf(plan, kind);
+  const split = !!planRow(plan, kind).splitFee;
   return {
+    kind, splitFee: split,
     acct: c.acct ? c.acct.slice(0, 8) + '…' : '',     // never the whole id to a client
     started: !!c.acct,
     detailsSubmitted: !!c.detailsSubmitted,
@@ -275,7 +314,9 @@ export async function connectStatus(aid) {
     /* Not decoration. An artist who reads "2%" and then sees a $5 pack land as
        ~$4.45 will think they have been lied to. Direct charges put Stripe's fee on
        them, and they should hear it from us first. */
-    stripeFeeNote: 'Stripe’s own card fee (about 2.9% + 30¢) comes out of your side too, because the payment is yours.',
+    stripeFeeNote: split
+      ? 'Stripe’s own card fee (about 2.9% + 30¢) is shared: MySet’s fee is reduced by half of it, estimated at checkout. The payment is yours, so Stripe takes its fee from your side.'
+      : 'Stripe’s own card fee (about 2.9% + 30¢) comes out of your side too, because the payment is yours.',
     /* The founder's own account predates Connect and charges on the platform
        account, so the Studio should not nag him to onboard. */
     platformOwner: isPlatformOwner(aid),

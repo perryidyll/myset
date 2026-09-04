@@ -117,9 +117,14 @@ const TOKEN_TTL = 30 * 24 * 3600e3;
    be a thing a bar has to pay for. `merch` is the shop on that page — a Pro
    feature for venues, because there is no $10 venue tier (the artist ladder's
    Plus has no venue equivalent; venue plans are free and Pro, owner-set). */
+/* `cut` is MySet's transaction fee on money a venue takes through the app (its
+   merch), taken as an application fee on a direct charge exactly as for artists.
+   `splitFee` is Perry's ask (2026-09-04): Stripe's own processing fee is shared
+   evenly — MySet's fee is reduced by half of Stripe's estimated fee, never below
+   zero. See feeCents in _connect.mjs for the arithmetic and its honest limits. */
 export const VENUE_PLANS = {
-  free: { label: 'Free', price: 0, photos: 3, reviews: true, tick: false, merch: false, tips: false, speakerVotes: false },
-  pro:  { label: 'Pro', price: 2000, photos: 12, reviews: true, tick: true, merch: true, tips: true, speakerVotes: true },
+  free: { label: 'Free', price: 0, photos: 3, reviews: true, tick: false, merch: false, tips: false, speakerVotes: false, cut: 0.10, splitFee: true },
+  pro:  { label: 'Pro', price: 2000, photos: 12, reviews: true, tick: true, merch: true, tips: true, speakerVotes: true, cut: 0.02, splitFee: true },
 };
 /* Which of those venue flags is a real feature today. Same rule, same reason as
    NOT_BUILT in _plan.mjs: the Venue Studio SHOWS every locked feature rather than
@@ -253,6 +258,7 @@ export const defaultVenue = () => ({
   menu: { url: '', note: '', items: [] },
   offers: [],
   merch: [],
+  pay: { ready: false, acct: '' },        // mirrored from Stripe Connect, one writer
   links: { website: '', instagram: '', facebook: '', google: '' },
   updatedAt: Date.now(),
 });
@@ -356,6 +362,7 @@ export function normVenue(p) {
     when: clean(of && of.when, 60),
   })).filter((of) => of.title).slice(0, VMAX_OFFERS);
   o.merch = normMerch(o.merch);
+  o.pay = { ready: !!(o.pay && o.pay.ready), acct: String((o.pay && o.pay.acct) || '').slice(0, 40) };
 
   const L = o.links || {};
   o.links = {
@@ -407,6 +414,8 @@ export function shapeVenue(p, reg) {
        just not shown (0s). Same AND-on-read as the tick below. */
     merch: venueLimits(r).merch ? p.merch : [],
     merchStored: p.merch.length,
+    // ONE money gate for a venue's page, mirrored from Stripe like show.pay (0bl)
+    paymentsEnabled: !!process.env.STRIPE_SECRET_KEY && !!(p.pay && p.pay.ready),
     /* AND on read: the tick is part of Pro, so a stored flag on a free page does
        not show one. Belt and braces with the clear in `venuePlan` — this is the
        half that cannot be missed by a code path that forgot. */

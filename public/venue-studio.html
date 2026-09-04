@@ -125,6 +125,31 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .act:active{transform:scale(.92)}
 .act.pri{background:var(--grad);color:#fff}
 .act.warn{color:var(--accent);background:var(--accent-soft)}
+/* the plan, top right: an orange-ringed Upgrade on free, a green tag with the plan's
+   name otherwise — both tappable, both with the same arrow the name carries */
+.upg,.plantag{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:var(--pill);font-size:13px;font-weight:700;flex:0 0 auto;white-space:nowrap}
+.upg{color:var(--accent-2);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+.plantag{background:rgba(48,209,88,.16);color:var(--good)}
+.upg span,.plantag span{font-size:11px;opacity:.75}
+.bigup{width:100%;padding:17px;border-radius:var(--pill);font-size:17px;font-weight:700;background:var(--good);color:#04110a;display:flex;align-items:center;justify-content:center;gap:8px}
+.tier{border:1.5px solid var(--accent-2);border-radius:var(--r);overflow:hidden;margin-top:14px;background:var(--surface)}
+.tier .hd{background:var(--accent-2);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:baseline;font-weight:800;font-size:18px;letter-spacing:-.02em}
+.tier .hd small{font-size:14px;font-weight:700;opacity:.95}
+.tier ol{margin:0;padding:12px 16px 12px 34px;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.tier ol li{padding:2px 0}
+.tier .fee{color:var(--accent-2);font-weight:700}
+.tier .cta{margin:2px 14px 14px}
+.tier .cta .big{margin:0}
+.tier .cta .big.now{background:var(--surface-2);color:var(--muted);box-shadow:none;cursor:default}
+.testi{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 8px;scroll-snap-type:x mandatory;scrollbar-width:none}
+.testi::-webkit-scrollbar{display:none}
+.tcard{flex:0 0 250px;scroll-snap-align:start;background:var(--surface-2);border-radius:var(--r);padding:14px}
+.tcard .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tcard .who i{width:38px;height:38px;border-radius:12px;background:var(--grad) center/cover;display:grid;place-items:center;font-style:normal;font-weight:800;color:#fff}
+.tcard .who b{display:block;font-size:14px}.tcard .who span{font-size:12px;color:var(--muted)}
+.tcard p{margin:0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
+.dg .big.no{background:var(--accent-2);color:#fff;box-shadow:none}
+.dg .big.yes{background:var(--surface-2);color:var(--muted);box-shadow:none;opacity:.7}
 .tog{display:flex;gap:3px;padding:3px;background:var(--surface);border-radius:var(--pill);flex:0 0 auto}
 .tog button{padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:var(--pill)}
 .tog button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)}
@@ -363,7 +388,7 @@ function signedIn(d,msg){
 function signOut(){ TOKEN=''; localStorage.removeItem('myset.vtoken'); V=null; ME=null; gate(); }
 
 /* ── loading ────────────────────────────────────────────── */
-async function start(){ await Promise.all([loadVenue(),loadMe()]); }
+async function start(){ await Promise.all([loadVenue(),loadMe()]); loadPlan(); handleReturns(); }
 /* A pull re-reads the page, and whichever tab's extra data the tab needs. See
    /pull.js for why this exists at all in an installed app. */
 MySetPull(async()=>{
@@ -519,24 +544,195 @@ function soonCard(flag,kick,lede,rows){
    nowhere. */
 function planBox(){
   if(!V||!V.plans) return '';
-  const rows=[['photos','Photos on your page',(p)=>p.photos+''],
-              ['tick','The green verified tick',(p)=>p.tick?'yes':'—'],
-              ['reviews','A community page — fans post about the night',(p)=>'yes'],
-              ['merch','Merch on your page (sold through your own link)',(p)=>p.merch?'yes':'—'],
-              ['tips','Tips for your staff',(p)=>p.tips?'yes':'—'],
-              ['speakerVotes','Votes between the sets',(p)=>p.speakerVotes?'yes':'—']];
-  const F=V.plans.free,P=V.plans.pro,now=V.plan||'free';
+  const now=V.plan||'free', B=VPLAN&&VPLAN.billing;
   return `<div class="sec"><span class="kick">Your plan</span></div>
-    <div class="list" id="planbox">
-      <div class="row"><div class="m"><div class="t">You're on ${esc((V.limits&&V.limits.label)||'Free')}</div>
-        <div class="s">${now==='free'?'Everything your page does for the public is free and stays free.':'Thanks — that is what keeps the lights on.'}</div></div>
-        <span class="pill ${now==='free'?'no':'ok'}">${now==='free'?'Free':'Pro'}</span></div>
-      ${rows.map(([k,label,val])=>`<div class="row">
-        <div class="m"><div class="t">${label}${(V.limits&&(V.limits.soon||[]).includes(k))?' <span class="s">· coming soon</span>':''}</div>
-          <div class="s">Free ${val(F)} · Pro ${val(P)}</div></div>
-        <span class="pill ${has(k)?'ok':'no'}">${has(k)?'✓':'—'}</span></div>`).join('')}
-    </div>
-    ${now==='free'?`<p class="muted" style="font-size:12px;padding:12px 20px 0">Pro is $${(P.price/100)}/month and isn't self-serve yet — message us and we'll switch it on for your page.</p>`:''}`;
+    <div class="list" id="planbox" style="padding:14px 16px">
+      <div class="m" style="padding-bottom:10px"><div class="t">You’re on ${esc((V.limits&&V.limits.label)||'Free')}</div>
+        <div class="s">${VPLAN&&VPLAN.until?((B&&B.cancelAtPeriodEnd)?'Ends ':'Renews ')+vdate(VPLAN.until):(now==='free'?'Everything your page does for the public is free and stays free.':'Thanks — that is what keeps the lights on.')}</div></div>
+      <button class="bigup" onclick="openPlans()">${now==='pro'?'Pro membership':'Upgrade your plan'} <span style="font-size:13px;opacity:.75">↗</span></button>
+      ${B&&B.portal?`<p class="muted" style="font-size:12px;margin:10px 0 0;text-align:center"><a href="#" onclick="event.preventDefault();openPortal()" style="color:var(--accent);font-weight:600">Card, invoices and receipts ↗</a></p>`:''}
+    </div>`;
+}
+function vdate(iso){ try{ return new Date(iso).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; } }
+
+/* ---------- plans and billing (see _billing.mjs) ----------
+   Both tiers listed in full, every time. The transaction fee in orange, called that.
+   Pro opens Stripe Checkout; leaving it asks twice and offers a month at half price, once. */
+let VPLAN=null;
+async function loadPlan(force){ if(VPLAN&&!force) return VPLAN; const d=await post('/venueadmin',{action:'planGet'}); if(d&&d.ok){ VPLAN=d; if(V){ V.plan=d.plan; V.limits=d.limits; V.plans=d.plans; render(); } } return VPLAN; }
+const VTIER_COPY={
+  free:{name:'Free',price:'$0',items:[
+    'Your page on myset.vip — address, hours, what’s on, how to get there',
+    'Three photos on your page',
+    'Every artist who plays here linked to your page, and you to theirs',
+    'Your nights listed in your city, and artists pitching to play',
+    'A community page — fans rate the night and post photos, you reply',
+    'Codes to print for tables, the bar and the door',
+    'Your numbers: who voted, what got played, night by night',
+    'Verification, once your website and your artists check out',
+    '<span class="fee">Transaction fee: 10%</span> on merch sold through the app, with Stripe’s card fee shared']},
+  pro:{name:'Pro',price:'$20 / month',items:[
+    'Your page on myset.vip — address, hours, what’s on, how to get there',
+    'Twelve photos on your page',
+    'Every artist who plays here linked to your page, and you to theirs',
+    'Your nights listed in your city, and artists pitching to play',
+    'A community page — fans rate the night and post photos, you reply',
+    'Merch on your community page, paid straight to your Stripe account',
+    'The green verified tick beside your name',
+    'Codes to print for tables, the bar and the door',
+    'Your numbers: who voted, what got played, night by night',
+    'Coming soon, included: tips for your staff, and votes for what plays between the sets',
+    '<span class="fee">Transaction fee: 2%</span> on merch sold through the app, with Stripe’s card fee shared']},
+};
+/* PLACEHOLDERS — the layout is approved first, then these come down until real
+   ones are submitted by venues. Nothing here is a real quote. */
+const VTESTIMONIALS=[
+  {name:'Sample bar',where:'Koh Phangan',text:'Thursday used to empty out at eleven. Now people stay to see if their song wins. (placeholder)'},
+  {name:'Sample pub',where:'Chiang Mai',text:'We can finally see which acts actually pull a crowd, in numbers, the next morning. (placeholder)'},
+  {name:'Sample café',where:'Bali',text:'The community page did our marketing for us — photos from the night, posted by the people in them. (placeholder)'},
+];
+function openPlans(){
+  if(!V) return;
+  if(!VPLAN){ loadPlan().then(openPlans); return; }
+  const cur=V.plan||'free', sub=VPLAN.billing&&VPLAN.billing.subscribed, comped=cur!=='free'&&!sub;
+  const cta=(k)=>{
+    if(k===cur) return `<button class="big now" disabled>Your plan</button>`;
+    if(k==='pro') return `<button class="big" onclick="startCheckout()">Upgrade to Pro</button>`;
+    if(comped) return `<button class="big now" disabled>Comped${VPLAN.until?' until '+vdate(VPLAN.until):''}</button>`;
+    return `<button class="big alt" onclick="confirmDowngrade()">Switch to Free</button>`;
+  };
+  openSheet(`<h3>Plans</h3><p class="muted" style="font-size:14px;margin:0 0 6px">Everything in each plan, listed in full. Change any time.</p>
+    ${['free','pro'].map(k=>`<div class="tier">
+      <div class="hd"><span>${VTIER_COPY[k].name}</span><small>${VTIER_COPY[k].price}</small></div>
+      <ol>${VTIER_COPY[k].items.map(x=>`<li>${x}</li>`).join('')}</ol>
+      <div class="cta">${cta(k)}</div></div>`).join('')}
+    ${VTESTIMONIALS.length?`<div class="sec" style="padding-left:0;margin-top:18px"><span class="kick">From venues</span></div>
+    <div class="testi">${VTESTIMONIALS.map(t=>`<div class="tcard"><div class="who"><i>${esc(t.name.slice(0,1))}</i><div><b>${esc(t.name)}</b><span>${esc(t.where)}</span></div></div><p>${esc(t.text.slice(0,180))}</p></div>`).join('')}</div>`:''}
+    <p class="muted" style="font-size:12px;margin:14px 0 0">Stripe handles the card. Cancel any time; a paid month is always yours to the end.</p>`);
+}
+async function startCheckout(){
+  const d=await post('/venueadmin',{action:'planCheckout'});
+  if(!d.ok||!d.url){toast(d.error||'Couldn’t open checkout');return;}
+  location.href=d.url;
+}
+async function changePlan(plan){
+  const d=await post('/venueadmin',{action:'planChange',plan});
+  if(!d.ok){toast(d.error||'Couldn’t change that');return;}
+  closeSheet(); await loadPlan(true); await loadVenue(); toast(plan==='free'?'Done — Pro runs to the end of the month you paid for':'Done');
+}
+function confirmDowngrade(){
+  openSheet(`<div class="dg"><h3>Are you sure you want to lose your Pro membership benefits?</h3>
+    <p class="muted" style="font-size:14px">Merch, the tick and twelve photos go with it. Your items stay saved.</p>
+    <button class="big no" style="margin-top:16px" onclick="closeSheet()">No, keep Pro</button>
+    <button class="big yes" style="margin-top:10px" onclick="retentionOffer()">Yes, switch to Free</button></div>`);
+}
+function retentionOffer(){
+  if(VPLAN.billing&&VPLAN.billing.retentionUsed){ changePlan('free'); return; }
+  post('/venueadmin',{action:'planRetainOffered'});
+  openSheet(`<div class="dg"><h3>We’re sad to see you go…</h3>
+    <p class="muted" style="font-size:14px">Would you like to keep your plan for <b>50% off</b> for 1 more month?</p>
+    <button class="big no" style="margin-top:16px" onclick="keepPlan()">Yes — keep it, half price this month</button>
+    <button class="big yes" style="margin-top:10px" onclick="changePlan('free')">No thanks, switch to Free</button></div>`);
+}
+async function keepPlan(){
+  const d=await post('/venueadmin',{action:'planRetain'});
+  if(!d.ok){toast(d.error||'Couldn’t apply that');return;}
+  closeSheet(); await loadPlan(true); toast('Kept — this month is half price');
+}
+async function openPortal(){
+  const d=await post('/venueadmin',{action:'planPortal'});
+  if(!d.ok||!d.url){toast(d.error||'Couldn’t open billing');return;}
+  location.href=d.url;
+}
+/* back from Stripe: confirm on the server, never trust the URL */
+async function handleReturns(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('connect')){ TAB='merch'; history.replaceState(null,'',location.pathname); setTimeout(()=>loadPay(true),400); return; }
+  if(q.get('sub')==='cancelled'){ toast('No change made'); history.replaceState(null,'',location.pathname); return; }
+  if(q.get('sub')==='done'&&q.get('cs')){
+    const d=await post('/venueadmin',{action:'planFinish',cs:q.get('cs')});
+    history.replaceState(null,'',location.pathname);
+    if(d.ok){ await loadPlan(true); await loadVenue(); toast('Welcome to Pro'); }
+    else toast(d.error||'Couldn’t confirm the payment — it may still land in a minute');
+  }
+}
+
+/* ---------- getting paid: Stripe Connect, the same as an artist ----------
+   Direct charges land in the venue's own Stripe account; MySet's transaction fee
+   comes off the top, reduced by half of Stripe's card fee (see _connect.mjs). */
+let PAY=null, VORDERS=null;
+async function loadPay(force){ const d=await post('/venueadmin',{action:'payStatus',refresh:!!force}); if(d&&d.ok){ PAY=d.pay; if(TAB==='merch') render(); if(PAY.ready&&VORDERS===null) loadOrders(); } }
+async function loadOrders(){ const d=await post('/venueadmin',{action:'orderList'}); if(d&&d.ok){ VORDERS=d.orders; if(TAB==='merch') render(); } }
+const PAY_COUNTRIES=[['TH','Thailand'],['US','United States'],['GB','United Kingdom'],
+  ['AU','Australia'],['CA','Canada'],['NZ','New Zealand'],['IE','Ireland'],
+  ['DE','Germany'],['FR','France'],['ES','Spain'],['IT','Italy'],['NL','Netherlands'],
+  ['PT','Portugal'],['SE','Sweden'],['DK','Denmark'],['NO','Norway'],['FI','Finland'],
+  ['SG','Singapore'],['MY','Malaysia'],['JP','Japan'],['MX','Mexico'],['BR','Brazil']];
+function payCountries(){
+  const c=((V&&V.country)||'').toLowerCase();
+  const guess=(PAY_COUNTRIES.find(([,n])=>n.toLowerCase()===c)||[''])[0];
+  return `<option value="">Choose…</option>`+PAY_COUNTRIES.map(([k,n])=>`<option value="${k}"${k===guess?' selected':''}>${esc(n)}</option>`).join('');
+}
+function payCard(){
+  if(!PAY){ loadPay(); return ''; }
+  const p=PAY;
+  if(p.ready) return `<div class="sec"><span class="kick">Getting paid</span></div>
+    <div class="list"><div class="row"><div class="m">
+      <div class="t">Card payments are on <span style="color:var(--good)">✓</span></div>
+      <div class="s muted">MySet’s transaction fee is ${p.cutPct}% on your ${esc(p.plan)} plan. ${esc(p.stripeFeeNote)}</div>
+    </div><button class="act" onclick="payDash()">Stripe ↗</button></div></div>`;
+  const started=p.started;
+  return `<div class="sec"><span class="kick">Getting paid</span></div>
+    <div class="list"><div class="row muted" style="display:block">
+      <div class="t" style="color:var(--ink)">${started?'Stripe still needs a few details':'Set up card payments'}</div>
+      <p class="s" style="margin:6px 0 0">${started
+        ?'You started this but Stripe has not finished checking yet. Until it has, your merch sells through its own links — so nothing can land in the wrong account.'
+        :'Merch can be bought right on your community page, and the money goes straight to you. Stripe handles it and MySet never sees your bank details.'}</p>
+      <p class="s" style="margin:6px 0 0">On your <b>${esc(p.plan)}</b> plan MySet’s transaction fee is <b>${p.cutPct}%</b>. ${esc(p.stripeFeeNote)}</p>
+      ${started?'':`<div class="field" style="margin-top:14px;padding:0">
+        <label>Where is your bank account?</label>
+        <select class="inp" id="payCountry">${payCountries()}</select>
+        <p class="s muted" style="margin:6px 0 0">Stripe can’t change this later, so it has to be right.</p>
+      </div>`}
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="big" style="flex:1;min-width:180px;margin:0" onclick="payStart()">${started?'Finish with Stripe':'Start with Stripe'}</button>
+        ${started?`<button class="act" onclick="loadPay(true)">Check again</button>`:''}
+      </div>
+    </div></div>`;
+}
+async function payStart(){
+  const sel=$('#payCountry'); const country=sel?(sel.value||''):'';
+  if(sel&&!country){ toast('Pick where your bank account is first'); return; }
+  const d=await post('/venueadmin',{action:'payStart',country});
+  if(d&&d.ok&&d.url){ PAY=d.pay; location.href=d.url; }
+  else if(d&&d.error==='need-country') toast('Pick where your bank account is first');
+  else toast((d&&d.error)||'Could not start that');
+}
+async function payDash(){
+  const d=await post('/venueadmin',{action:'payDashboard'});
+  if(d&&d.ok&&d.url) window.open(d.url,'_blank'); else toast((d&&d.error)||'Not available yet');
+}
+function ordersSection(){
+  const o=VORDERS||[]; const open=o.filter(x=>x.status!=='done');
+  return `<div class="sec"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
+    <div class="list">${o.slice(0,40).map(x=>`<div class="row ${x.status==='done'?'muted':''}">
+      <div class="m"><div class="t">${esc(x.title)}${x.qty>1?' × '+x.qty:''} · $${Number(x.amount||0).toFixed(2)}</div>
+        <div class="s">${x.ship==='ship'?'Posted':'Pickup'} · ${vdate(x.at)}${x.status==='done'?' · done':''}</div></div>
+      <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
+      <button class="act" onclick="orderDone('${esc(x.sid)}',${x.status==='done'?'false':'true'})">${x.status==='done'?'Undo':'Done'}</button></div>`).join('')
+      ||'<div class="row muted">No orders yet. They land here the moment somebody pays.</div>'}</div>`;
+}
+async function orderDone(sid,done){ const d=await post('/venueadmin',{action:'orderDone',sid,done}); if(d&&d.ok){ VORDERS=null; loadOrders(); } else toast((d&&d.error)||'Couldn’t update that'); }
+async function orderDetail(sid){
+  const d=await post('/venueadmin',{action:'orderDetail',sid});
+  if(!d||!d.ok){ toast((d&&d.error)||'Not found'); return; }
+  const o=d.order||{}; const sh=o.shipping||null;
+  const addr=sh?[sh.name,sh.line1,sh.line2,sh.city,sh.state,sh.postal,sh.country].filter(Boolean).join(', '):'';
+  openSheet(`<h3>${esc(o.title||'Order')}</h3>
+    <div class="list" style="margin:0"><div class="row"><div class="m"><div class="t">$${Number(o.amount||0).toFixed(2)}${o.qty>1?' · × '+o.qty:''}</div><div class="s">${vdate(o.at)} · ${o.ship==='ship'?'To be posted':'Pickup at the show'}</div></div></div>
+      ${o.email?`<div class="row"><div class="m"><div class="t">${esc(o.email)}</div><div class="s">Buyer’s email, from Stripe</div></div></div>`:''}
+      ${addr?`<div class="row"><div class="m"><div class="t">${esc(addr)}</div><div class="s">Post it here</div></div></div>`:''}</div>
+    <button class="big alt" style="margin-top:14px" onclick="closeSheet()">Close</button>`);
 }
 
 const tipsCard=()=>soonCard('tips','Tips for your staff',
@@ -560,7 +756,7 @@ const vmoney=c=>'$'+(c/100).toFixed(c%100?2:0);
 function vMerchTab(){
   const items=V.merch||[], stored=V.merchStored||0;
   const list=`<div class="sec"><span class="kick">Your merch</span><span class="kick">${items.length}/12</span></div>
-    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Shows on your community page. Buying through MySet needs a payout account, which venues don’t have yet, so each item links to where it sells.</p>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Shows on your community page. ${PAY&&PAY.ready?'Fans buy right there and the money lands in your Stripe account.':'Until card payments are on (below), each item links to where it sells.'}</p>
     <div class="list">${items.map(m=>`<div class="row">
         <div class="m"><div class="t">${esc(m.title)}${m.on===false?' <span class="s">· off</span>':''}</div>
           <div class="s">${m.cents?vmoney(m.cents):'No price'} · ${esc((m.link||'').replace(/^https?:\/\//,'').slice(0,40))}</div></div>
@@ -570,6 +766,8 @@ function vMerchTab(){
   const posts=VCOMM||[];
   return `<div class="wrap" style="padding-top:14px"></div>
     ${lock('merch', list, 'Merch on your page comes with Pro. Anything you add stays saved.')}
+    ${payCard()}
+    ${PAY&&PAY.ready?ordersSection():''}
     <div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one, hide anything, or delete it. <a href="/v/${esc(V.slug)}/community" target="_blank" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
@@ -591,7 +789,7 @@ function openVMerch(id){
     <div class="field"><label>Name</label><input class="inp" id="vmTitle" maxlength="60" value="${esc(m.title)}" placeholder="House cap"></div>
     <div class="field"><label>A line about it</label><input class="inp" id="vmBlurb" maxlength="160" value="${esc(m.blurb)}"></div>
     <div class="field"><label>Price shown (USD, optional)</label><input class="inp" id="vmPrice" inputmode="decimal" value="${m.cents?(m.cents/100):''}" placeholder="12"></div>
-    <div class="field"><label>Link to where it sells</label><input class="inp" id="vmLink" value="${esc(m.link)}" placeholder="https://…"></div>
+    <div class="field"><label>${PAY&&PAY.ready?'Link to where it sells (optional — fans can buy right here)':'Link to where it sells'}</label><input class="inp" id="vmLink" value="${esc(m.link)}" placeholder="https://…"></div>
     <div class="row"><div class="m"><div class="t">On the page</div></div>
       <div class="tog"><button id="vmOn" class="${m.on!==false?'on':''}" onclick="vmcOn=true;this.classList.add('on');document.getElementById('vmOff').classList.remove('on')">On</button>
       <button id="vmOff" class="${m.on===false?'on':''}" onclick="vmcOn=false;this.classList.add('on');document.getElementById('vmOn').classList.remove('on')">Off</button></div></div>
@@ -892,7 +1090,12 @@ function render(){
         ? `<a class="whoami" href="/v/${esc(V.slug)}" target="_blank"><h1>${esc(V.name||'Your venue')}</h1><span>↗</span></a>`
         : `<h1>${esc(V.name||'Your venue')}</h1>`}
     </div>
-    <span class="pill ${V.verified?'ok':'no'}">${V.verified?'✓ Verified':'Unverified'}</span>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px">
+      ${(V.plan||'free')==='free'
+        ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
+        :`<button class="plantag" onclick="openPlans()">${esc((V.limits&&V.limits.label)||'Pro')} <span>↗</span></button>`}
+      <span class="pill ${V.verified?'ok':'no'}">${V.verified?'✓ Verified':'Unverified'}</span>
+    </div>
   </div>
   <div class="tabs">
     <button class="${TAB==='page'?'on':''}" onclick="setTab('page')">Page</button>

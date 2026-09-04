@@ -57,7 +57,7 @@ async function resolveOwner(req) {
     const prof = await getVenueProfile(vid);
     const v = shapeVenue(prof, reg);
     return { kind: 'venue', id: vid, owner: `v_${vid}`, slug: reg.slug || slug, name: v.name,
-             avatar: v.photo || '', verified: !!v.verified, merch: v.merch, canBuy: false, live: false, showId: '' };
+             avatar: v.photo || '', verified: !!v.verified, merch: (v.merch || []).filter((m) => m.on), canBuy: !!v.paymentsEnabled, live: false, showId: '' };
   }
   const aid = await publicArtist(req);
   if (!aid) return null;

@@ -77,3 +77,6 @@ node --import ./test/register.mjs test/autoshow.mjs
 echo
 echo "── the community page and the shop ──"
 node --import ./test/register.mjs test/community.mjs
+echo
+echo "── billing, the account, and a venue that takes money ──"
+node --import ./test/register.mjs test/billing.mjs

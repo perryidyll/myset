@@ -24,9 +24,50 @@ export default async (req) => {
 
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
+  const origin = new URL(req.url).origin;
+  const stripe = new Stripe(key);
 
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
+
+  /* A VENUE'S MERCH. The owner is `v_<vid>`; the charge is a direct charge on the
+     venue's connected account with the venue plan's fee (and Stripe's fee shared —
+     see feeCents). Only merch: a venue has no votes or tips to sell. */
+  const vq = new URL(req.url).searchParams.get('v');
+  if (vq) {
+    if (body.kind !== 'merch') return bad('unknown kind');
+    const { venueBySlug, getVenueProfile, venueById, venuePlanOf } = await import('./_venues.mjs');
+    const { cleanSlug } = await import('./_auth.mjs');
+    const vid = await venueBySlug(cleanSlug(vq));
+    if (!vid) return bad('unknown venue', 404);
+    const owner = `v_${vid}`;
+    const [prof, reg] = await Promise.all([getVenueProfile(vid), venueById(vid)]);
+    const { VENUE_PLANS } = await import('./_venues.mjs');
+    if (!VENUE_PLANS[venuePlanOf(reg)].merch) return bad('Merch isn’t on this page right now', 404);
+    const item = (prof.merch || []).find((m) => m.id === String(body.item || '') && m.on);
+    if (!item) return bad('That item isn’t for sale right now', 404);
+    if (item.cents < 100) return bad('That one isn’t sold through MySet — ask at the bar', 400);
+    const conn = await readConnect(owner);
+    if (!connectUsable(conn) || !(prof.pay && prof.pay.ready)) return bad('payments-not-configured', 503);
+    const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
+    const vname = prof.name || (reg && reg.name) || 'the venue';
+    const vline = { quantity: qty, price_data: { currency: 'usd', unit_amount: item.cents,
+      product_data: { name: `${item.title} — ${vname}`, description: item.blurb || (item.ship === 'ship' ? 'Shipped to you' : 'Pick it up at the bar') } } };
+    const attempt = String(body.attempt || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+    const fee = feeCents(amountCents(vline), venuePlanOf(reg), 'venue');
+    const back = `/v/${reg.slug}/community`;
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment', line_items: [vline],
+        metadata: { fan, kind: 'merch', item: item.id, title: item.title.slice(0, 60), qty: String(qty), ship: item.ship, artist: owner },
+        ...(fee > 0 ? { payment_intent_data: { application_fee_amount: fee } } : {}),
+        ...(item.ship === 'ship' ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES } } : {}),
+        success_url: `${origin}${back}?paid={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}${back}?cancelled=1`,
+      }, { ...(attempt ? { idempotencyKey: sha(`myset-pay|${owner}|${fan}|merch|${attempt}`).slice(0, 48) } : {}), stripeAccount: conn.acct });
+      return json({ ok: true, url: session.url, id: session.id });
+    } catch (e) { return bad(e.message || 'stripe error', 502); }
+  }
 
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
@@ -35,8 +76,6 @@ export default async (req) => {
   const show = await getShow(aid);
   if (!canTakeMoney(aid, show)) return bad('payments-not-configured', 503);
   const artist = show.artist || 'the artist';
-  const origin = new URL(req.url).origin;
-  const stripe = new Stripe(key);
 
   let line, metadata, shipping = false;
   if (body.kind === 'votes') {

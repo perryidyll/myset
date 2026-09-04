@@ -44,9 +44,21 @@ export default async (req) => {
       await mirrorToShow(who, await readConnect(who));
       /* The most likely moment of all: Stripe has just finished checking who they
          are. Try the tick now rather than waiting for the artist to come looking. */
-      const { tryAutoVerify } = await import('./_verify.mjs');
-      await tryAutoVerify(who).catch(() => {});
+      if (!String(who).startsWith('v_')) {
+        const { tryAutoVerify } = await import('./_verify.mjs');
+        await tryAutoVerify(who).catch(() => {});
+      }
     }
+    return json({ received: true });
+  }
+
+  /* Subscriptions (Plus / Pro / venue Pro) — see _billing.mjs. A subscription-mode
+     checkout is billing, not a purchase to redeem. */
+  if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted'
+      || event.type === 'invoice.payment_failed'
+      || (event.type === 'checkout.session.completed' && (event.data.object || {}).mode === 'subscription')) {
+    const { handleBillingEvent } = await import('./_billing.mjs');
+    try { await handleBillingEvent(event); } catch { /* Stripe will retry */ }
     return json({ received: true });
   }
 

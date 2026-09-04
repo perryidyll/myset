@@ -1,7 +1,7 @@
 import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
          mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU,
-         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH } from './_venues.mjs';
+         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH, venuePlanOf } from './_venues.mjs';
 import { normMerch } from './_profile.mjs';
 import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
@@ -328,6 +328,103 @@ export default async (req) => {
     return send();
   }
 
+
+  /* ---------- getting paid: Stripe Connect for the venue (owner `v_<vid>`) ---------- */
+  const owner = `v_${vid}`;
+  if (action === 'payStatus') {
+    const { connectStatus, syncFromStripe } = await import('./_connect.mjs');
+    if (body.refresh) await syncFromStripe(owner).catch(() => {});
+    return json({ ok: true, pay: await connectStatus(owner) });
+  }
+  if (action === 'payStart') {
+    const { ensureAccount, onboardingLink, connectStatus, cleanCountry, readConnect } = await import('./_connect.mjs');
+    const origin = new URL(req.url).origin;
+    const country = cleanCountry(body.country);
+    const existing = await readConnect(owner);
+    if (!existing.acct && !country) return bad('need-country', 428);
+    const made = await ensureAccount(owner, me.email || '', country);
+    if (!made.ok) return bad(made.error || 'could not start', 502);
+    const link = await onboardingLink(owner, origin, '/venues');
+    if (!link.ok) return bad(link.error || 'could not start', 502);
+    return json({ ok: true, url: link.url, pay: await connectStatus(owner) });
+  }
+  if (action === 'payDashboard') {
+    const { dashboardLink } = await import('./_connect.mjs');
+    const l = await dashboardLink(owner);
+    if (!l.ok) return bad(l.error || 'not available', 502);
+    return json({ ok: true, url: l.url });
+  }
+
+  /* ---------- the plan: Pro as a Stripe subscription (see _billing.mjs) ---------- */
+  if (action === 'planGet') {
+    const B = await import('./_billing.mjs');
+    await B.maybeSync(owner);
+    const reg = await venueById(vid);
+    return json({ ok: true, plan: venuePlanOf(reg), limits: { ...venueLimits(reg), soon: VENUE_NOT_BUILT },
+                  plans: Object.fromEntries(Object.entries(VENUE_PLANS).map(([k, v]) => [k, { ...v, soon: VENUE_NOT_BUILT }])),
+                  until: reg.planUntil || null, billing: await B.billingStatus(owner), email: me.email || null });
+  }
+  if (action === 'planCheckout') {
+    const B = await import('./_billing.mjs');
+    const r = await B.startCheckout({ owner, plan: 'pro', email: me.email || '', origin: new URL(req.url).origin, back: '/venues' });
+    if (!r.ok) return bad(r.error === 'already-subscribed' ? 'You already have a subscription.' : (r.error || 'Couldn’t open checkout'), r.error === 'payments-not-configured' ? 503 : 400);
+    return json({ ok: true, url: r.url });
+  }
+  if (action === 'planFinish') {
+    const B = await import('./_billing.mjs');
+    const r = await B.finishCheckout(owner, body.cs);
+    if (!r.ok) return bad(r.error || 'Couldn’t confirm that', 400);
+    return json({ ok: true, plan: r.plan, renewsAt: r.periodEnd });
+  }
+  if (action === 'planChange') {
+    const B = await import('./_billing.mjs');
+    const want = ['free', 'pro'].includes(body.plan) ? body.plan : null;
+    if (!want) return bad('unknown plan');
+    const r = await B.changePlan(owner, want);
+    if (!r.ok) return bad(r.error === 'no-subscription' ? 'There’s no subscription to change.' : (r.error || 'Couldn’t change that'), 400);
+    return json({ ok: true, plan: r.plan, cancelAtPeriodEnd: r.cancelAtPeriodEnd, renewsAt: r.periodEnd });
+  }
+  if (action === 'planRetainOffered') { const B = await import('./_billing.mjs'); await B.noteRetentionOffered(owner); return json({ ok: true }); }
+  if (action === 'planRetain') {
+    const B = await import('./_billing.mjs');
+    const r = await B.applyRetention(owner);
+    if (!r.ok) return bad(r.error || 'Couldn’t apply that', 400);
+    return json({ ok: true, plan: r.plan, renewsAt: r.periodEnd });
+  }
+  if (action === 'planPortal') {
+    const B = await import('./_billing.mjs');
+    const r = await B.portalLink(owner, new URL(req.url).origin, '/venues');
+    if (!r.ok) return bad(r.error === 'no-billing' ? 'Nothing to manage yet.' : (r.error || 'Couldn’t open billing'), 400);
+    return json({ ok: true, url: r.url });
+  }
+  if (action === 'orderList') {
+    const { readMeta } = await import('./_lib.mjs');
+    return json({ ok: true, orders: ((await readMeta(owner)).orders || []).slice().reverse() });
+  }
+  if (action === 'orderDone') {
+    const { mutateMeta, readMeta } = await import('./_lib.mjs');
+    const sid = String(body.sid || '').slice(0, 120);
+    await mutateMeta(owner, (m) => { const o = (m.orders || []).find((x) => x.sid === sid); if (!o) return false; o.status = body.done === false ? 'new' : 'done'; return true; });
+    return json({ ok: true, orders: (await readMeta(owner)).orders.slice().reverse() });
+  }
+  if (action === 'orderDetail') {
+    const { readMeta } = await import('./_lib.mjs');
+    const sid = String(body.sid || '').slice(0, 120);
+    const mine = ((await readMeta(owner)).orders || []).find((x) => x.sid === sid);
+    if (!mine) return bad('unknown order', 404);
+    const { stripeFor } = await import('./_connect.mjs');
+    const { stripe, opts } = await stripeFor(owner);
+    if (!stripe) return bad('Card payments aren’t switched on', 503);
+    let s;
+    try { s = await stripe.checkout.sessions.retrieve(sid, opts); } catch { return bad('Couldn’t reach Stripe just now', 502); }
+    const cd = s.customer_details || {};
+    const sh = (s.collected_information && s.collected_information.shipping_details) || s.shipping_details || null;
+    const addr = sh && sh.address ? sh.address : null;
+    return json({ ok: true, order: mine, buyer: { name: cd.name || (sh && sh.name) || '', email: cd.email || '' },
+                  shipping: addr ? { name: (sh && sh.name) || '', line1: addr.line1 || '', line2: addr.line2 || '', city: addr.city || '',
+                                     state: addr.state || '', postal: addr.postal_code || '', country: addr.country || '' } : null });
+  }
+
   /* ---------- merch and the community page ----------
      Merch on a venue's page is a Pro feature (there is no $10 venue tier — venue
      plans are free and Pro, owner-set). Items sell through a LINK only: a venue has
@@ -340,6 +437,7 @@ export default async (req) => {
   }
   if (action === 'merchSave') {
     if (!venueLimits(await venueById(vid)).merch) return bad('Merch on your page comes with Pro — anything you already added stays.', 402);
+    const payReady = !!(((await getVenueProfile(vid)).pay || {}).ready);
     const incoming = body.item || {};
     const id = /^m[a-z0-9]{6}$/.test(String(incoming.id || '')) ? String(incoming.id)
              : 'm' + Math.random().toString(36).slice(2, 8).padEnd(6, '0').slice(0, 6);
@@ -350,7 +448,7 @@ export default async (req) => {
       const prev = at >= 0 ? p.merch[at] : null;
       const row = normMerch([{ ...(prev || {}), ...incoming, id, img: (prev && prev.img) || '', at: (prev && prev.at) || Date.now() }])[0];
       if (!row) { why = 'Give it a name'; return false; }
-      if (!row.link) { why = 'Buying through MySet needs a payout account, which venues don’t have yet — add a link to where it sells.'; return false; }
+      if (!row.link && !payReady) { why = 'Set up card payments (Merch tab → Getting paid) so fans can buy through MySet, or add a link to where it sells.'; return false; }
       if (at >= 0) p.merch[at] = row;
       else if (p.merch.length >= VMAX_MERCH) { full = true; return false; }
       else p.merch.push(row);

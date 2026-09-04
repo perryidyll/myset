@@ -1767,3 +1767,44 @@ Perry's list, all shipped in one push (his decisions inline):
 1,059 assertions across 22 suites. Not built, said in the UI: venue checkout, video
 uploads, a per-gig opt-out of scheduled starts. Perry to set `AUTH_FROM` once the
 myset.vip domain is verified in Resend.
+
+## SESSION LOG — 2026-09-04, pass two (plans, billing, accounts, venue Connect)
+
+Same session as the product batch above. Deployed from `main`. Record of the work:
+`docs/sessions/2026-09-04-product-batch.md` (pass two section); design: `ACCOUNTS.md`;
+rules: INVARIANTS 0cr–0da.
+
+* **Top right of both Studios:** `Upgrade ↗` (orange outline) on free; a green tag
+  with the plan's name and the same arrow when paid. Both open the plan sheet.
+* **The plan sheet:** every tier in an orange-bordered box, name + price bold white
+  on an orange banner, a numbered list of *everything* in the tier (never "everything
+  in Plus"), "Transaction fee: N%" in orange, a placeholder testimonials carousel
+  (the array is the architecture). Three tiers for artists, two for venues.
+* **Settings → Your plan:** one big green button ("Upgrade your plan" / "Pro
+  membership") and a "Card, invoices and receipts ↗" portal link when subscribed.
+* **Leaving Pro:** "Are you sure you want to lose your Pro membership benefits?" (No
+  in orange, Yes greyed) → "We're sad to see you go… 50% off for 1 more month?" →
+  a Stripe coupon on the live subscription, once ever, server-enforced.
+* **Billing** (`_billing.mjs`): Stripe Billing subscriptions on the platform
+  account, prices by lookup key created on first use, customer per owner, Checkout
+  in subscription mode, Customer Portal, webhooks + return-trip + 6-hour sync.
+  `planUntil` = period end + 3 days' grace.
+* **Accounts** (`_account.mjs`): export everything (never a fan's device id);
+  delete everything from ONE enumerated key list (`keysFor`), owner-only, typed
+  `DELETE`, founder refused. The billing suite asserts no key still carries a
+  deleted artist's id.
+* **Venues get paid:** Stripe Connect keyed `v_<vid>`; "Getting paid" card + orders
+  on the Venue Studio's Merch tab; venue merch checkout is a direct charge on the
+  venue's account; `?connect=done` / `?sub=done` handled on `/venues`.
+* **The fee split** (Perry's rule): for plan rows with `splitFee` (both venue rows)
+  the application fee is the cut minus half of Stripe's estimated card fee, floored
+  at zero. Artists are not split. Written into the Studio copy and INVARIANT 0cx.
+* **Perry, once, in Stripe:** add `customer.subscription.updated/deleted` and
+  `invoice.payment_failed` to the webhook; save the Customer Portal's default
+  configuration in live mode.
+
+1,123 assertions across 22 suites. Headless-Chrome renders of every new sheet and
+both headers in both states against `netlify dev --offline` (needs
+`ADMIN_CODE=devlocal` or the owner code is refused). Not built, written down in
+`ACCOUNTS.md` §6: change-my-email, exact fee split by post-charge transfer, in-app
+invoices, passkeys, "sign out everywhere", venue members, dunning banner.

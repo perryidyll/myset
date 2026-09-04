@@ -39,9 +39,14 @@ async function syncActive(aid) {
 }
 const join = (note, warn) => (warn ? (note ? `${note} ${warn}` : warn) : note);
 
-/* Plans, entitlements and the codes Perry hands out. */
-async function handlePlan(aid, action, body) {
+/* Plans, entitlements, billing, the account, and the codes Perry hands out. */
+async function handlePlan(aid, action, body, req, me) {
+  const B = await import('./_billing.mjs');
+  // a subscribed artist is re-synced from Stripe every six hours — the belt for a
+  // webhook that may not be configured
+  if (action === 'planGet') await B.maybeSync(aid);
   const { plan, limits, artist } = await planForArtist(aid);
+  const origin = req ? new URL(req.url).origin : '';
 
   if (action === 'planGet') {
     return json({ ok: true, plan, limits: shapeLimits(limits),
@@ -50,7 +55,55 @@ async function handlePlan(aid, action, body) {
                   comped: !!(artist && artist.compedBy),
                   discountPct: (artist && artist.discountPct) || 0,
                   plans: Object.fromEntries(PLAN_KEYS.map((k) => [k, shapeLimits(PLANS[k])])),
+                  billing: await B.billingStatus(aid),
+                  email: (me && me.email) || null,
                   owner: isPlatformOwner(aid) });
+  }
+
+  /* ---- billing: Stripe subscriptions (see _billing.mjs) ---- */
+  if (action === 'planCheckout') {
+    const want = ['plus', 'pro'].includes(body.plan) ? body.plan : null;
+    if (!want) return bad('unknown plan');
+    const r = await B.startCheckout({ owner: aid, plan: want, email: (me && me.email) || '', origin, back: '/studio' });
+    if (!r.ok) return bad(r.error === 'already-subscribed' ? 'You already have a subscription — change it below instead.' : (r.error || 'Couldn’t open checkout'), r.error === 'payments-not-configured' ? 503 : 400);
+    return json({ ok: true, url: r.url });
+  }
+  if (action === 'planFinish') {
+    const r = await B.finishCheckout(aid, body.cs);
+    if (!r.ok) return bad(r.error || 'Couldn’t confirm that', 400);
+    return json({ ok: true, plan: r.plan, renewsAt: r.periodEnd });
+  }
+  if (action === 'planChange') {
+    const want = ['free', 'plus', 'pro'].includes(body.plan) ? body.plan : null;
+    if (!want) return bad('unknown plan');
+    const r = await B.changePlan(aid, want);
+    if (!r.ok) return bad(r.error === 'no-subscription' ? 'There’s no subscription to change — upgrade first.' : (r.error || 'Couldn’t change that'), 400);
+    return json({ ok: true, plan: r.plan, cancelAtPeriodEnd: r.cancelAtPeriodEnd, renewsAt: r.periodEnd });
+  }
+  if (action === 'planRetainOffered') { await B.noteRetentionOffered(aid); return json({ ok: true }); }
+  if (action === 'planRetain') {
+    const r = await B.applyRetention(aid);
+    if (!r.ok) return bad(r.error || 'Couldn’t apply that', 400);
+    return json({ ok: true, plan: r.plan, renewsAt: r.periodEnd });
+  }
+  if (action === 'planPortal') {
+    const r = await B.portalLink(aid, origin, '/studio');
+    if (!r.ok) return bad(r.error === 'no-billing' ? 'Nothing to manage yet.' : (r.error || 'Couldn’t open billing'), 400);
+    return json({ ok: true, url: r.url });
+  }
+
+  /* ---- the account: take it with you, or leave (see _account.mjs) ---- */
+  if (action === 'accountExport') {
+    const { exportArtist } = await import('./_account.mjs');
+    return json({ ok: true, data: await exportArtist(aid) });
+  }
+  if (action === 'accountDelete') {
+    if (String(body.confirm || '') !== 'DELETE') return bad('Type DELETE to confirm', 400);
+    if ((me && me.role) === 'member') return bad('Only the account owner can delete it', 403);
+    const { deleteArtist } = await import('./_account.mjs');
+    const r = await deleteArtist(aid);
+    if (!r.ok) return bad(r.error || 'Couldn’t delete', 400);
+    return json({ ok: true, deleted: r.deleted });
   }
 
   if (action === 'promoRedeem') return json(await redeemPromo(aid, body.code));
@@ -302,7 +355,7 @@ const shapeLimits = (l) => ({
      feature as "coming" rather than as "yours" — see NOT_BUILT in _plan.mjs. */
   soon: NOT_BUILT,
 });
-const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'promoList', 'promoCreate', 'promoRevoke',
+const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'planCheckout', 'planFinish', 'planChange', 'planRetainOffered', 'planRetain', 'planPortal', 'accountExport', 'accountDelete', 'promoList', 'promoCreate', 'promoRevoke',
                               'venueList', 'venueVerify', 'shareStats',
                               // the ID review queue and a venue's plan — owner only,
                               // enforced inside handlePlan, not by this set
@@ -1274,7 +1327,7 @@ export default async (req) => {
   if (VENUE_SIDE.has(action)) return handleVenueSide(aid, action, body);
   if (ASK_ACTIONS.has(action)) return handleAsks(aid, action, body);
   if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
-  if (PLAN_ACTIONS.has(action)) return handlePlan(aid, action, body);
+  if (PLAN_ACTIONS.has(action)) return handlePlan(aid, action, body, req, me);
 
   /* STARTING AND ENDING A NIGHT live in _lifecycle.mjs, because the calendar can
      now do both without a request behind it (_auto.mjs). One implementation: a tap
