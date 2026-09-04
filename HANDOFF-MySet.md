@@ -1770,7 +1770,7 @@ myset.vip domain is verified in Resend.
 
 ## SESSION LOG — 2026-09-04, pass two (plans, billing, accounts, venue Connect)
 
-Same session as the product batch above. Deployed from `main`. Record of the work:
+Same session as the product batch above. Commit `6fae274`, pushed to `main` 23:44 and verified live by content 20 s later (both Studios carry the new sheet; unauthenticated `planCheckout` / `payStatus` answer 401, not 500). Record of the work:
 `docs/sessions/2026-09-04-product-batch.md` (pass two section); design: `ACCOUNTS.md`;
 rules: INVARIANTS 0cr–0da.
 

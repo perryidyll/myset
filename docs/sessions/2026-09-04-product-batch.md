@@ -219,7 +219,7 @@ expectation kept (`myset_artist` stays in account metadata beside `myset_owner`)
   retention offer, Settings plan button in both states, the account section, the
   delete sheet; Venue Studio sheet (2 tiers), header on free and Pro with the
   Verified pill beneath, Settings button, the Getting-paid card.
-* Live content checks after deploy (see the handoff log for the commit).
+* Commit `6fae274` → `main` → live in ~20 s; checked by content: `/studio` carries `.upg`, `.plantag`, the sheet, the downgrade copy and the account section; `/venues` carries the two-tier sheet and the Getting-paid card; unauthenticated `planCheckout` and `payStatus` return 401 (the functions deployed and fail closed).
 
 ## Decisions taken without Perry, and why
 * **Stripe Billing, not a home-made ledger.** Renewal dates, failed cards and
