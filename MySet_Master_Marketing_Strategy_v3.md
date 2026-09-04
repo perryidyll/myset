@@ -1082,7 +1082,7 @@ As of this document, MySet's total real-world evidence is:
 - **8 voters**
 - **21 votes**
 - **1 purchase, $3**
-- Two real failures discovered: a paid customer did not receive purchased votes, and the founder was locked out of Studio by the original passcode setup
+- No customer-facing failures: the one purchase was delivered and played, and the founder ran the show from his own phone (an earlier draft here claimed otherwise — corrected 2026-09-04)
 - 578 passing automated assertions
 
 The previously circulated "40 phones" result was a synthetic security test using fabricated fan IDs. It is not evidence and must never appear in marketing.

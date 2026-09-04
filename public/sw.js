@@ -43,8 +43,8 @@ self.addEventListener('push', (e) => {
     body: d.body || '',
     tag: d.tag || 'myset',
     renotify: true,
-    icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    icon: '/icons/icon-512.png',
+    badge: '/icons/icon-512.png',
     data: { url: d.url || '/studio' },
   }));
 });

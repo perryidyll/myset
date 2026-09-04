@@ -386,13 +386,21 @@ then act on the P0 findings. Commit `565bb21` on `main`, **committed but NOT pus
 ## SESSION LOG — 2026-08-31 (after the first real gig)
 
 Perry played the first live gig with MySet on **2026-08-30, The Ugly Duckling
-Irish Pub, Koh Phangan** — 8 people voting, 21 votes, one $3 purchase. Two
-things broke, both now fixed and verified on the live site.
+Irish Pub, Koh Phangan** — 8 people voting, 21 votes, one $3 purchase.
 
-### 1. A paid customer got nothing
-`cari.helena88@gmail.com` bought the $3 / 5-vote pack at 20:35 and was never
-granted the votes. `/api/confirm` only runs if the buyer's browser returns to
-the site; hers didn't, and the `meta` ledger blob did not even exist afterwards.
+> **CORRECTION — 2026-09-04, from Perry.** This session's log originally described
+> two failures at that gig: a paid customer who never received her votes, and Perry
+> being unable to sign in to his own Studio. **Neither happened.** The buyer got her
+> votes, used them, and he played the songs; he ran the show from his phone. The
+> session had misread what he told it. The two pieces of work below were built and
+> are good hardening — but they were not fixes for anything that broke, and every
+> document that said otherwise has been corrected. The buyer's email address, which
+> was recorded here, has been removed.
+
+### 1. Payment delivery no longer depends on the buyer's browser
+`/api/confirm` only runs if the buyer's browser returns to the site after Stripe.
+In a bar that is not guaranteed — the phone gets locked and pocketed — so this
+session made delivery independent of it.
 
 Three independent delivery paths now exist, all funnelling through
 `redeemSession()` in `_pay.mjs` so they cannot drift:
@@ -406,12 +414,11 @@ The buyer's phone also stores the pending session id and retries on next load.
 All paths proven replay-safe against the real payment (3 sweeps + a confirm
 replay left `extra` at 5, not 20).
 
-### 2. He could not log into his own Studio
-The passcode lived only in the Netlify `ADMIN_CODE` env var — nowhere he could
-read it — so he never started a single song from the dashboard. He can now set
-his own code in **Settings → Your studio code** (stored hashed in
+### 2. Artists set their own Studio passcode
+The passcode had lived only in the Netlify `ADMIN_CODE` env var. An artist can now
+set their own in **Settings → Your studio code** (stored hashed in
 `show.codeHash`); `ADMIN_CODE` stays as the recovery key. `checkAdmin` is async
-now and still fails closed.
+now and still fails closed. (Perry was never locked out — see the correction above.)
 
 ### New in this session
 - **`/api/revenue`** (GET list / POST reconcile) — reads Stripe directly and

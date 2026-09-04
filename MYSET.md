@@ -1,15 +1,15 @@
 # MySet — the complete handover
 
-**Everything MySet is, does, charges for and depends on.** Written 2026-09-03 against
-the live code at commit `e4f763f`. If this document and the code ever disagree, the
-code is right and this file is stale — but it was accurate the day it was written, and
-every number in it was read out of the source rather than remembered.
+**Everything MySet is, does, charges for and depends on.** Written 2026-09-03 and
+re-verified against the live code on **2026-09-04 at commit `0e26935`** — every number
+below was read out of the source or measured by running it, not remembered. If this
+document and the code ever disagree, the code is right and this file is stale.
 
 Companion documents, all in this folder:
 
 | File | What it is for |
 |---|---|
-| `INVARIANTS.md` | **Read before changing anything.** 133 properties that must survive every change. Most were discovered by being broken. |
+| `INVARIANTS.md` | **Read before changing anything.** 162 properties that must survive every change. Most were discovered by being broken. |
 | `HANDOFF-MySet.md` | The running session log — what happened when, and why. |
 | `GIG-NIGHT.md` | The one-page cheat sheet for running a show. |
 | `REVIEW-2026-09-02-REMAINING.md` | Known open issues, in priority order. |
@@ -72,19 +72,11 @@ planning documents for a while and was a **synthetic security probe with fabrica
 fan ids**, not a real room — it misled one audit's capacity numbers by 3–5×. Treat
 every projection in any document as a projection (INVARIANT 9d11).
 
-## 1.5 The two nights that shaped the product
-
-**2026-08-30 — a paid customer got nothing.** A woman bought a $3 vote pack. Payment
-delivery depended on her browser returning to the site; it never did, so she was
-charged and received nothing. There are now **three independent delivery paths**, and
-a claimed-but-undelivered payment is tracked as still owed rather than settled.
-
-**The same night — Perry could not get into his own Studio.** The passcode existed
-only in a server environment variable he had no copy of. Artists now set their own
-code, and there is a recovery key.
-
-Almost every defensive rule in `INVARIANTS.md` traces back to one of those two
-failures, or to an audit finding that would have caused a third.
+**And nothing went wrong that night.** The $3 purchase was delivered, used, and the
+songs were played; Perry ran the show from his own phone. Earlier versions of this
+and several other documents described two failures at that gig. They were wrong —
+corrected by Perry on 2026-09-04 — and the payment-delivery and passcode machinery
+they were credited with is hardening, not incident response.
 
 ## 1.6 Where everything lives
 
@@ -245,7 +237,7 @@ banner, and links for artists and venues.
 `/venues`.
 
 * **Page** — name, tagline, about, address, map link, phone, WhatsApp, links, photos,
-  amenities (20 to choose from: house PA, sea view, pool table, dog friendly…)
+  amenities (22 to choose from: house PA, sea view, pool table, dog friendly…)
 * **What's on** — the venue's own events (quiz nights, DJs, football), same calendar
   engine as artist gigs
 * **Numbers** — how many people were in the room on live-music nights
@@ -462,8 +454,9 @@ build step, no database. Every page is one self-contained file with its own styl
 script; `app.css` carries the shared design tokens.
 
 * **Front end:** 8 pages in `public/`
-* **Back end:** 21 endpoints and 26 shared libraries in `netlify/functions/`
-* **Tests:** 578 assertions across 13 suites, run with `npm test`
+* **Back end:** 21 HTTP endpoints plus one nightly job (22 files), and 29 shared
+  libraries, in `netlify/functions/`
+* **Tests:** 854 assertions across 19 suites, run with `npm test`
 
 Two dependencies only: `@netlify/blobs` and `stripe`.
 
@@ -488,7 +481,7 @@ Two dependencies only: `@netlify/blobs` and `stripe`.
 | `GET /api/img` | Photo bytes |
 | `GET /api/qr` | An SVG QR code |
 
-**Artist session** — `POST /api/admin` (88 actions), `GET /api/stage`,
+**Artist session** — `POST /api/admin` (90 actions), `GET /api/stage`,
 `POST /api/auth`, `GET|POST /api/revenue`, `GET|POST /api/history`
 
 **Venue session** — `POST /api/venueadmin` (20 actions), `POST /api/venueauth`
@@ -543,12 +536,14 @@ Netlify Blobs, one store, everything namespaced per artist or venue.
 **Per artist:** `show_` · `f0…f11_` (fan records, sharded) · `meta_` (payments and
 tips) · `hist_` and `histidx_` (past shows) · `ev_` (gigs) · `lists_` · `learn_` ·
 `req_` (requests) · `profile_` · `img_` (photos) · `chart_` · `lyr_` · `push_` ·
-`connect_` · `fb_` (feedback) · `lock_` (passcode lockout) · `apitch_`
+`connect_` · `fb_` (feedback) · `lock_` (passcode lockout) · `apitch_` ·
+`songstats_` (the Sheet's per-show song accumulator — see 9b under the Google Sheet)
 
 **Per venue:** `v_` · `vprofile_` · `vouch_` · `vpitch_`
 
 **Global — the only shared documents:** `artists` (the registry) · `venues` ·
-`cityindex` · `acctindex` · `flags` · `idqueue` · `promos` · `authsecret` · `authc_`
+`cityindex` · `acctindex` · `flags` · `idqueue` · `promos` · `authsecret` · `authc_` ·
+`sheetsync` (the Sheet's watermarks and its one-at-a-time lock)
 
 ### The hard-won storage rules
 
@@ -792,12 +787,29 @@ Never in the repo, never in a chat window. All set by Perry directly in Netlify:
 `SPOTIFY_CLIENT_ID` · `SPOTIFY_CLIENT_SECRET` · `GSHEET_ID` · `GSHEET_EMAIL` ·
 `GSHEET_KEY`
 
-Currently set in production: the Stripe pair and Resend. **The push keys are not set**,
-so alerts cannot send yet. **The three `GSHEET_*` vars are not set either**, so the
-Google Sheet is off — see `GOOGLE-SHEET-SETUP.md`. `GSHEET_ID` and `GSHEET_EMAIL` are
-not really secrets (the address has to be pasted into Google's own share dialog, and
-`sheetStatus` shows it for exactly that reason); `GSHEET_KEY` is, and should be marked
-**Contains secret value** in Netlify.
+**Measured 2026-09-04 with `netlify env:list --context production`.** Four are set in
+production: `ADMIN_CODE`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`.
+The deploy-preview and branch-deploy contexts carry only `ADMIN_CODE` and Resend — which
+is the half of the preview-safety story that is closed (see PART SEVEN).
+
+Everything else is unset, and each one degrades honestly rather than failing:
+
+* **The push keys are not set**, so alerts cannot send yet, and the Studio says so.
+* **The three `GSHEET_*` vars are not set**, so the Google Sheet is off — see
+  `GOOGLE-SHEET-SETUP.md`.
+* **`SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` are not set**, so the "peek at a
+  Spotify playlist" half of song import answers *"Spotify import isn't switched on yet
+  — paste your songs as text instead"* with a 503. CSV and pasted-text import are
+  unaffected. The Studio button is still offered, so this is the one place the room —
+  well, the artist — is shown a control that leads to a message rather than a result.
+* **`AUTH_FROM` is not set**, so every sign-in code goes out from Resend's shared
+  `MySet <onboarding@resend.dev>` rather than a myset.vip address. It works today; it
+  is a deliverability and trust liability the first time somebody who is not Perry
+  signs up, and it is the cheapest of all of these to fix.
+
+`GSHEET_ID` and `GSHEET_EMAIL` are not really secrets (the address has to be pasted
+into Google's own share dialog, and `sheetStatus` shows it for exactly that reason);
+`GSHEET_KEY` is, and should be marked **Contains secret value** in Netlify.
 
 **A Netlify env var marked secret is unreadable through the API — it returns a
 placeholder, not the value.** That is correct behaviour and it has already caused one
@@ -808,7 +820,7 @@ distinct characters, no letters, and byte-identical across all three contexts.
 ## 5.4 Testing
 
 ```bash
-npm test        # 578 assertions, 13 suites, no dev server, nothing touches production
+npm test        # 854 assertions, 19 suites, no dev server, nothing touches production
 ```
 
 The suites run the **real handlers** against an in-memory store that implements the
@@ -869,6 +881,11 @@ Full list with priorities: `REVIEW-2026-09-02-REMAINING.md`.
   and creating an account in the wrong country, permanently.
 * **Pro extras — press kit, branding, city promotion — are promised in the plan copy
   and not built.**
+* **Spotify playlist import cannot run** — `SPOTIFY_CLIENT_ID` and
+  `SPOTIFY_CLIENT_SECRET` are not set on the server. The button is in the Studio and
+  answers with an honest 503. CSV and pasted text work.
+* **Sign-in email still comes from `onboarding@resend.dev`** because `AUTH_FROM` is
+  unset. Fine for Perry, wrong for the first stranger who signs up.
 * **Reviews from Google and Trustpilot** for venues: specified, not built.
 * **Voting on a venue's own speaker music:** specified, not built. Phase one is a push
   to staff; Spotify's queue API is possible but needs Premium, OAuth, an active device,
@@ -879,4 +896,5 @@ Full list with priorities: `REVIEW-2026-09-02-REMAINING.md`.
 
 ---
 
-*Written 2026-09-03 against commit `e4f763f`. 578 assertions passing.*
+*Written 2026-09-03. Re-verified 2026-09-04 against commit `0e26935`, with the test
+suite run rather than quoted: 854 assertions, 0 failures.*

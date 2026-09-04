@@ -36,9 +36,12 @@ If you are about to violate one, stop and say so rather than working around it.
    nothing — that shipped once and was caught in review, not by a user.
 
 5c. **A payment must have more than one path to delivery.** The return trip
-   through `/vote.html` is not enough — on 2026-08-30 a real $3 purchase was
-   charged and never granted because the buyer's browser never came back.
-   Three independent paths now grant it, all funnelling through `redeemSession()`
+   through `/vote.html` is not enough — in a bar a buyer locks the screen and
+   pockets the phone the moment Stripe says "paid", so a browser that never comes
+   back must still mean votes delivered. (An earlier note here blamed a real
+   undelivered $3 purchase on 2026-08-30; Perry confirmed on 2026-09-04 that the
+   purchase was delivered and played. This is hardening, not an incident.)
+   Three independent paths grant it, all funnelling through `redeemSession()`
    in `_pay.mjs` so none can drift: the return page, the Stripe **webhook**, and
    the artist's **reconcile sweep** in the Money tab. All three are replay-safe.
 
@@ -227,8 +230,8 @@ If you are about to violate one, stop and say so rather than working around it.
 
    **A session created on a connected account can only be RETRIEVED with that account
    in scope.** `stripeFor(aid)` exists so the return page, the webhook and the
-   reconcile sweep all scope identically — getting this wrong reproduces the
-   2026-08-30 "paid customer got nothing" failure with a brand-new cause. On a
+   reconcile sweep all scope identically — getting this wrong takes money and delivers
+   nothing, with a brand-new cause. On a
    Connect webhook, `event.account` is the only clue, and `acctindex` maps it back to
    an artist.
 
