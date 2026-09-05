@@ -826,14 +826,18 @@ export function countInRoom(fans, show) {
    so internal read traffic is (people / interval) x (bag size) — it grows with the
    SQUARE of the room. Holding that roughly flat as the room grows is the entire job:
 
-     people   bag     interval   blob traffic
-        200   30 KB      3s        2 MB/s
-      1,000  152 KB      5s       30 MB/s
-      3,000  457 KB     10s       46 MB/s
-     10,000  1.5 MB     20s       76 MB/s
+     people   bag     interval   throttled    on a fixed 3s ladder
+        200   30 KB      3s         2 MB/s        2 MB/s
+      1,000  152 KB      5s        30 MB/s       51 MB/s
+      2,000  305 KB     10s        61 MB/s      203 MB/s
+     10,000  1.5 MB     20s       762 MB/s    5,077 MB/s
 
-   Without the dial, 10,000 phones is 5.1 GB/s and the room simply does not work.
-   With it, the same room is in the same order of magnitude as a busy small one.
+   Read the right-hand column as the reason the dial exists and the left-hand one as
+   the reason it is not enough on its own: it buys between 1.7x at a club and 6.7x at
+   an arena, and 762 MB/s is still far past anything this architecture serves. Which
+   is why the tier numbers below stop at 2,000 — around 61 MB/s, in the same
+   neighbourhood as the busiest room MySet is known to work in — rather than at the
+   largest number the margin would allow.
 
    THIS IS A HOLDING MEASURE, NOT THE FIX. The real fix is to stop re-reading the
    whole audience for every poll — one shared snapshot rendered per change and

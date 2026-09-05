@@ -78,15 +78,19 @@ fastest interval a room may use; `show.mjs` sends it as `nextPollMs`; `vote.html
 builds all three rungs off it. At the default floor the numbers are exactly the
 3s/10s/25s they have always been — an ordinary gig feels identical.
 
-| people | interval | board | resulting blob traffic |
-|---|---|---|---|
-| ≤200 | 3s | everything | 2 MB/s |
-| ≤1,000 | 5s | top 40 | 30 MB/s |
-| ≤3,000 | 10s | top 25 | 46 MB/s |
-| 3,000+ | 20s | top 15 | 76 MB/s |
+| people | interval | board | throttled | on a fixed 3s ladder |
+|---|---|---|---|---|
+| ≤200 | 3s | everything | 2 MB/s | 2 MB/s |
+| ≤1,000 | 5s | top 40 | 30 MB/s | 51 MB/s |
+| ≤2,000 | 10s | top 25 | 61 MB/s | 203 MB/s |
+| 10,000 | 20s | top 15 | 762 MB/s | 5,077 MB/s |
 
-Without the dial, 10,000 phones is 5.1 GB/s and the room does not work. With it, the
-same room is in the same order of magnitude as a busy small one.
+**Corrected after first writing.** This table originally said 46 MB/s at 3,000 and
+76 MB/s at 10,000 — both wrong by a factor of the head count, because the interval
+had been divided out without multiplying the number of phones back in. The dial buys
+1.7x at a club and 6.7x at an arena; it does not make an arena work. That correction
+is also why the Pro number came down from 3,000 (137 MB/s) to 2,000 (61 MB/s):
+2,000 is in the same neighbourhood as the busiest room MySet is known to serve.
 
 **The board shortens, and says so.** `boardLimitFor(heads)` — YouTube's "Top chat"
 default. Anything this fan voted for is concatenated back on regardless of rank: a
@@ -94,7 +98,7 @@ song that silently vanishes does not read as a shorter list, it reads as a lost 
 `vote.html` labels it: *"Big room tonight — showing the top 15. Songs you voted for
 stay on your list wherever they are."*
 
-**The caps, soft.** `PLANS.*.audience` = 200 / 1,000 / 3,000, stamped onto the show
+**The caps, soft.** `PLANS.*.audience` = 200 / 1,000 / 2,000, stamped onto the show
 when the night starts (`show.roomCap`) so an artist who upgrades mid-set does not
 have the room change size underneath them, and a show that started before caps
 existed is never capped mid-gig. There is no head-count check in `vote.mjs` and no

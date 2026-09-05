@@ -95,10 +95,15 @@ export const PLANS = {
     featured: Infinity,
     gigs: Infinity,
     cut: 0,
-    /* A theatre or a festival tent. Worst single night: $10.43. Servable only
-       because the poll interval widens with the room (pollFloorFor); at the old
-       fixed 3-second ladder this number would not have stood up. */
-    audience: 3000,
+    /* A theatre or a festival tent. Worst single night: under $7, and less than
+       that in practice because the interval widens with the room.
+
+       2,000 AND NOT 3,000, WHICH IS A DELIBERATE CLIMBDOWN. 3,000 was the first
+       number here and the arithmetic behind it was wrong: it puts internal read
+       traffic at 137 MB/s, nearly three times the busiest room MySet is actually
+       known to serve. 2,000 lands at 61 MB/s, which is the same neighbourhood.
+       Sell what the app can do, not what the margin could afford. */
+    audience: 2000,
     seats: 5,
     pricing: true, setlists: true, merch: true, moderate: true,
     promote: true, analytics: true, presskit: true, branding: true,
