@@ -2272,3 +2272,80 @@ Full detail in `docs/sessions/2026-09-05-featured-shows-and-round-five.md`.
 - INVARIANTS 0dx–0eb.
 - Perry's to-do unchanged: `charge.updated` on the webhook, stop the double deploy
   and move to Netlify Pro, 2FA everywhere, try the passkey.
+
+
+---
+
+# SESSION LOG — 2026-09-05 (the Money Model: interactive projections dashboard)
+
+Full detail in `docs/sessions/2026-09-05-money-model.md`. Perry asked for a dedicated
+session on the business model with "an insanely high level of care".
+
+## Built
+- **`finance/model.html`** — one self-contained file. Every variable is a typed cell
+  AND a slider: artists, plan mix (% Plus / % Pro, free = rest) and prices, gigs per
+  artist (free cap 4 applied), people / hours / screen-on share / actions per person
+  / other pages / installed share (no cost effect, explained) / Studio Live-tab
+  share, room money per gig by tier and MySet’s cut (10 / 2 / 0), featured shows (%
+  of gigs, price, refunds), Stripe (US preset — the account IS US — plus a Thai
+  preset; Billing 0.7%, international 1.5%, Express $2/account + 0.25% + 25¢/payout,
+  disputes, refunds, bad debt), 9 host cost models with every rate editable, fixed
+  costs list, support time, tax on profit, growth timeline, the four show sizes, a
+  Real-shows panel. Outputs: 8 KPI tiles; line (36 months), area (cumulative),
+  100%-stacked bar (where each dollar goes at 10 → 10,000 artists), two donuts
+  (revenue mix, cost mix), bar (server bill as a share of what the room spends, per
+  show size); the formula line by line; the four shows on every host with a
+  holds / at-the-edge / breaks verdict; same-month-every-host; scale ladder;
+  month-by-month. Scenarios: save with a label, 6-bullet auto summary (revenue,
+  costs, profit, margin, artists, gigs, server share, break-even, host), up to 20,
+  first 4 shown + "Show N more", drag the grip to reorder, Compare-all table,
+  Export/Import JSON.
+- **Published artifact (private, shared storage across Perry’s devices):**
+  https://claude.ai/code/artifact/6f41159d-b117-4847-81ee-a76289b96398 — scenarios
+  live in its db (`scenarios/<id>`), real numbers in `actuals/current` (seeded).
+- **`tools/actuals.py`** — pulls every archived night out of production (read-only),
+  keeps nights that actually happened (≥ 30 min, ≤ 12 h, somebody there), prints the
+  JSON the dashboard’s Real-shows panel understands + this period’s deploy rate.
+  `--write` saves `finance/actuals.json`. Today: 2 real nights (30 Aug: 8 voters,
+  2.2 h, $3; 4 Sep: 1 phone), 116 deploys/month.
+- **`finance/model-test.mjs`** — the engine (extracted from the HTML) vs
+  `tools/loadsim.py` at 8 room sizes (worst 2.9%), an independent re-computation of
+  the month, the 10k-artist audit figure, KV/DO ordering, free cap, break-even,
+  sizes, the big-room brake, the 3-second cache, calibration. All pass.
+- `finance/README.md`.
+
+## What the 20-agent research panel corrected (5 lenses × 3 skeptics)
+- **At 10,000 phones today’s code does not get expensive — it stops working.**
+  Every poll reads all 12 fan shards (poll cost O(fans²)), the ladder never backs
+  off in a big room, and votes stampede into "busy". 300 phones is fine. The
+  dashboard models the per-person poll weight and shows holds / edge / breaks.
+- **Perry’s Stripe account is in the US** (USD) — earlier notes saying Thailand
+  were wrong. **Express account + payout fees are MySet’s**, and `_connect.mjs` pays
+  artists **daily** (~25¢ a night per busy artist) — consider weekly.
+- **155 ms/poll was a probe before a fix**; the bill implies 70–110 (default 120).
+- **Durable Objects are ~1.3× cheaper, not 13×** — the audit omitted the
+  duration charge. Cloudflare KV is still worse than Netlify.
+- **Netlify auto-recharge is already ON** (500 credits/$5); no spending cap exists.
+- **Installing as a web app changes nothing the server is charged for.** Nudge
+  installs after a show (iPhone storage partition), never attach money to it.
+- **Ranked tidal-wave defenses** (in the dashboard): watchdog on recharge → booked,
+  prepaid Arena/Festival tier → terms → server-driven poll floor → kill switch
+  that stops reads → 3-second edge cache (arena ≈ $9, festival ≈ $530) →
+  big-room mode + phone cap → edge rate limits → queued votes → in-memory show
+  object. Do the first three this week (no code).
+
+## Perry’s to-do from this session
+1. After next week’s shows: `python3 tools/actuals.py --write`, paste the JSON into
+   the dashboard’s Real-shows panel, switch on "Use real shows". Read one night’s
+   function count from the Netlify dashboard to calibrate the screen-on dial.
+2. Decide the Arena/Festival booking policy and put it in the terms.
+3. Ask Stripe whether cross-border direct charges onto Thai Express accounts are OK
+   from the US platform; consider a weekly payout schedule.
+4. Consider Pro at the end of the billing cycle (8 Sep).
+
+## State
+- Verification: engine tests pass; page loads clean in light/dark/mobile; a
+  four-lens headless-Chrome review ran at the end of the session — results and any
+  fixes are in the session doc §6.
+- Nothing pushed. New files only (finance/, tools/actuals.py, docs/sessions/…);
+  the other session’s uncommitted edits were left untouched.

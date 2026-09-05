@@ -105,7 +105,26 @@ body{padding-bottom:34px}
 .post .pics.n1 img{aspect-ratio:4/3}
 .post .vid{margin-top:10px;border-radius:12px;overflow:hidden;background:#000;aspect-ratio:16/9}
 .post .vid iframe{width:100%;height:100%;border:0;display:block}
-.post .clip{margin-top:10px;border-radius:14px;overflow:hidden;background:#000}
+.post /* THE WAIT IS REAL, SO IT HAS TO BE VISIBLE. A clip is up to a couple of MB and
+   the first person to tap it waits for a function to wake up and read it before a
+   single byte moves; after that the edge has it. Without a sign, that pause looks
+   exactly like a broken video and people scroll past. Same three bars as the boot
+   splash, so it reads as MySet thinking rather than as an error. */
+.clip{margin-top:10px;border-radius:14px;overflow:hidden;background:#000;position:relative}
+.clipwait{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;
+  background:rgba(13,11,12,.45);z-index:2}
+.clipwait[hidden]{display:none}
+/* One grid cell holding a flex row, so the three bars sit side by side and grow
+   from a shared baseline — a bare grid made each bar its own row. */
+.clipwait b{display:flex;align-items:flex-end;gap:6px;height:44px}
+.clipwait i{width:9px;border-radius:5px;height:11px;flex:none;
+  background:linear-gradient(135deg,#FF375F,#FF7A45);
+  animation:clipbar .95s ease-in-out infinite alternate}
+.clipwait i:nth-child(1){animation-delay:.02s;--h:26px}
+.clipwait i:nth-child(2){animation-delay:.12s;--h:42px}
+.clipwait i:nth-child(3){animation-delay:.22s;--h:19px}
+@keyframes clipbar{from{height:11px}to{height:var(--h,26px)}}
+@media (prefers-reduced-motion:reduce){.clipwait i{animation:none;height:var(--h,26px)}}
 .clip video{width:100%;display:block;max-height:70vh;background:#000}
 .clipdone{margin-top:10px;position:relative}
 .clipdone video{width:100%;display:block;border-radius:14px;background:#000;max-height:44vh}
@@ -250,7 +269,8 @@ function render(){
         ${p.showLabel?`<span class="evtag">${esc(p.showLabel)}</span>`:''}${p.pinned?'<span class="pin">Pinned</span>':''}</div>
       ${p.text?`<p class="tx">${esc(p.text)}</p>`:''}
       ${n?`<div class="pics n${n}">${p.photos.map(u=>`<img src="${esc(u)}" alt="" loading="lazy" data-zoom="${esc(u)}">`).join('')}</div>`:''}
-      ${p.clip?`<div class="clip"><video src="${esc(p.clip.src)}"${p.clip.poster?` poster="${esc(p.clip.poster)}"`:''} preload="none" playsinline controls></video></div>`:''}
+      ${p.clip?`<div class="clip"><video src="${esc(p.clip.src)}"${p.clip.poster?` poster="${esc(p.clip.poster)}"`:''} preload="none" playsinline controls
+          data-clip="1"></video><span class="clipwait" hidden><b><i></i><i></i><i></i></b></span></div>`:''}
       ${p.video?(p.video.src?`<div class="vid"><iframe src="${esc(p.video.src)}" loading="lazy" allow="encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>`
         :`<a class="vlink" href="${esc(p.video.href)}" target="_blank" rel="noopener noreferrer">▶ Watch on ${p.video.provider==='tiktok'?'TikTok':'Instagram'} ↗</a>`):''}
       ${p.reply?`<div class="rep"><b>${who}</b>${esc(p.reply.text)}</div>`:''}
@@ -281,6 +301,7 @@ function wire(){
   document.querySelectorAll('[data-more]').forEach(b=>b.addEventListener('click',()=>more(b.getAttribute('data-more'))));
   document.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>buySheet(b.getAttribute('data-buy'))));
   document.querySelectorAll('[data-zoom]').forEach(i=>i.addEventListener('click',()=>{ $('#lbimg').src=i.getAttribute('data-zoom'); $('#lb').classList.add('on'); }));
+  wireClips();
 }
 
 /* ---------- CLIPS ----------------------------------------------------------
@@ -355,11 +376,25 @@ function loadVideo(file){
    If the browser refuses to play an unmuted video without a fresh tap, the caller
    falls back to muted (video only) and SAYS the clip will be silent, rather than
    producing a quiet file and letting somebody find out later. */
-function audioFor(v){
+/* THE ORDER OF THESE FOUR LINES IS THE WHOLE BUG.
+   An AudioContext made without a fresh tap starts SUSPENDED on iOS and on Chrome's
+   autoplay policy. Wiring a <video> into a suspended context with
+   createMediaElementSource takes the element's audio away from it and gives it to a
+   graph that is not running — and the element then does not advance. play() still
+   resolves, currentTime stays at 0, the progress bar sits at nothing, and a minute
+   later the stall backstop fires. That is exactly what happened to the first clip
+   anybody tried to post after the audio "fix".
+   And it cannot be undone: createMediaElementSource may be called once per element,
+   for the life of that element.
+   So the context is made, resumed, and CHECKED — and only an actually running
+   context is ever allowed near the video. */
+async function audioFor(v){
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
     if(!AC) return null;
     const ac=new AC();
+    try{ if(ac.state!=='running') await ac.resume(); }catch(e){}
+    if(ac.state!=='running'){ try{ await ac.close(); }catch(e){} return null; }
     const src=ac.createMediaElementSource(v);
     const dest=ac.createMediaStreamDestination();
     src.connect(dest);
@@ -389,30 +424,32 @@ function posterFrom(v){
   });
 }
 
-/** Re-encode to a 480px short side at ~600kbps. Resolves to a Blob. */
-function reencode(v, seconds, onPct, onAudio){
+/** Re-encode small. `wantAudio` false skips the graph entirely — that is the path
+    that has always worked, and the one the caller falls back to. Resolves to a Blob;
+    rejects with `stalled` if the element stops advancing, so the caller can retry. */
+async function reencode(v, seconds, onPct, onAudio, wantAudio){
+  const au = wantAudio ? await audioFor(v) : null;
   return new Promise((res,rej)=>{
-    const short=Math.min(v.videoWidth,v.videoHeight)||480;
-    const r=Math.min(1, 480/short);
+    const short=Math.min(v.videoWidth,v.videoHeight)||400;
+    const r=Math.min(1, 400/short);
     const c=document.createElement('canvas');
     // even dimensions: some H.264 encoders refuse an odd width or height
     c.width =Math.max(2, Math.round(v.videoWidth  * r / 2) * 2);
     c.height=Math.max(2, Math.round(v.videoHeight * r / 2) * 2);
     const ctx=c.getContext('2d');
     const out=c.captureStream(24);
-    const au=audioFor(v);
-    /* NO GRAPH, NO SOUND OUT LOUD. The element is left unmuted so the graph can tap
-       it; if there is no graph (an old browser, a blocked AudioContext) an unmuted
-       element plays the clip through the phone's speaker — in a bar, during
-       somebody else's set. Muting costs the audio we could not have captured anyway. */
-    if(!au) v.muted=true;
+    /* NO GRAPH, NO SOUND OUT LOUD. With a graph the element stays unmuted so the
+       graph can tap it and nothing reaches the speaker. Without one, an unmuted
+       element would play the clip through the phone — in a bar, during somebody
+       else's set — so it is muted, which costs audio we could not have captured. */
+    v.muted = !au;
     /* The tracks go on BEFORE the recorder is built — a MediaRecorder records the
        tracks the stream had when it was constructed, so adding one afterwards
        records nothing. */
     if(au) au.tracks.forEach(t=>out.addTrack(t));
     const mime=CLIP_TYPES.find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } });
     let rec;
-    try{ rec=new MediaRecorder(out,{mimeType:mime, videoBitsPerSecond:600000, audioBitsPerSecond:64000}); }
+    try{ rec=new MediaRecorder(out,{mimeType:mime, videoBitsPerSecond:450000, audioBitsPerSecond:64000}); }
     catch(e){ return rej(e); }
     const chunks=[]; let stopped=false;
     rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
@@ -422,11 +459,23 @@ function reencode(v, seconds, onPct, onAudio){
        clip leaks them until the tab is closed, and phones cap how many exist. */
     const closeAudio=()=>{ try{ if(au&&au.ac&&au.ac.state!=='closed') au.ac.close(); }catch(e){} };
     const finish=()=>{ try{ if(rec.state!=='inactive') rec.stop(); }catch(e){} };
+    /* A STALL DETECTOR, not just a total timeout. If the element is not advancing
+       there is no point drawing for another minute — give up in three seconds so
+       the caller can start again on the path that works, while the person is still
+       looking at the screen. */
+    let lastT=-1, lastMoved=Date.now();
     const draw=()=>{
       if(v.paused||v.ended) return finish();
       try{ ctx.drawImage(v,0,0,c.width,c.height); }catch(e){}
-      onPct(v.currentTime/seconds);
-      if(v.currentTime>=seconds){ try{ v.pause(); }catch(e){} return finish(); }
+      const t=v.currentTime;
+      if(t>lastT+0.01){ lastT=t; lastMoved=Date.now(); }
+      else if(Date.now()-lastMoved>3000){
+        if(!stopped){ stopped=true; closeAudio(); try{ v.pause(); }catch(e){}
+          return rej(new Error('stalled')); }
+        return;
+      }
+      onPct(t/seconds);
+      if(t>=seconds){ try{ v.pause(); }catch(e){} return finish(); }
       requestAnimationFrame(draw);
     };
     v.onended=finish;
@@ -436,15 +485,14 @@ function reencode(v, seconds, onPct, onAudio){
        IT HAS TO COVER THE WHOLE PATH. `finish()` only settles the promise by way of
        rec.onstop, so a hang BEFORE the recorder ever started left the progress bar
        up for ever with no error and no way back. */
+    let started=false;
     setTimeout(()=>{
       if(started) return finish();
       if(!stopped){ stopped=true; closeAudio(); rej(new Error('stalled')); }
     }, (seconds+2)*2000);
-    let started=false;
     const go=()=>{ try{ rec.start(400); started=true; }catch(e){ closeAudio(); return rej(e); } draw(); };
     v.currentTime=0;
     Promise.resolve()
-      .then(()=>au&&au.ac.state==='suspended'?au.ac.resume():null)
       .then(()=>v.play())
       .then(()=>{ onAudio(!!au); go(); })
       .catch(()=>{
@@ -475,9 +523,30 @@ async function addClip(file){
       // already small enough and short enough — send it as it is, audio and all
       clipProgress(0.5,'Ready…'); blob=file;
     } else if(canRecord()){
-      clipProgress(0.03,'Shrinking on your phone — about '+Math.round(seconds)+' seconds');
-      blob=await reencode(v, seconds, (p)=>clipProgress(0.03+p*0.62,'Shrinking… '+Math.round(p*100)+'%'),
-                          (on)=>{ gotAudio=on; });
+      /* TWO ATTEMPTS, AND THE SECOND ONE ALWAYS WORKS.
+         Sound needs a Web Audio graph, and a graph needs a running AudioContext,
+         which a browser may simply refuse this far from the person's tap. If that
+         attempt stalls, the element is finished — createMediaElementSource can only
+         be called once on it — so the retry starts from a FRESH element with no
+         audio at all, which is the path that has always worked. The person gets a
+         clip either way, and is told when it is silent. */
+      const attempt = async (el, withAudio) => {
+        clipProgress(0.03, withAudio
+          ? 'Shrinking on your phone — about '+Math.round(seconds)+' seconds'
+          : 'Shrinking (no sound) — about '+Math.round(seconds)+' seconds');
+        return reencode(el, seconds,
+          (p)=>clipProgress(0.03+p*0.62,'Shrinking… '+Math.round(p*100)+'%'),
+          (on)=>{ gotAudio=on; }, withAudio);
+      };
+      try{
+        blob=await attempt(v, true);
+      }catch(e){
+        if(String(e&&e.message)!=='stalled') throw e;
+        try{ URL.revokeObjectURL(v.src); }catch(e2){}
+        v=await loadVideo(file);          // a clean element; the old one is spent
+        gotAudio=false;
+        blob=await attempt(v, false);
+      }
     } else {
       clipProgress(null); URL.revokeObjectURL(v.src);
       toast('This browser can’t shrink video. Try a shorter clip, or paste a link.');
@@ -511,6 +580,37 @@ async function addClip(file){
     clipProgress(1,'Added'); setTimeout(()=>clipProgress(null),700);
     render();
   }catch(e){ clipProgress(null); toast('Upload didn’t go through — try again'); }
+}
+
+/* The bars go up when a clip starts fetching and come down the moment it can play —
+   or the moment it gives up, because a spinner that never stops is worse than no
+   spinner. `preload="none"` means nothing is fetched until somebody taps, so this
+   only ever runs for a clip somebody actually wants. */
+function wireClips(){
+  document.querySelectorAll('video[data-clip]').forEach(v=>{
+    if(v.__wired) return; v.__wired=1;
+    const wait=v.parentElement.querySelector('.clipwait');
+    const show=()=>{ if(wait) wait.hidden=false; };
+    const hide=()=>{ if(wait) wait.hidden=true; };
+    /* WHICH EVENTS MEAN WHAT, because two of these look right and are wrong.
+       `suspend` fires the instant a preload="none" video is touched — it means "not
+       fetching right now", not "gave up", and hiding on it made the bars vanish
+       before a single frame of the animation ran. `stalled` means data has STOPPED
+       arriving, which is precisely when somebody most needs to see that MySet is
+       still trying. Neither hides anything. */
+    v.addEventListener('loadstart',show);
+    v.addEventListener('waiting',show);
+    v.addEventListener('seeking',show);
+    v.addEventListener('canplay',hide);
+    v.addEventListener('playing',hide);
+    v.addEventListener('error',hide);
+    v.addEventListener('abort',hide);
+    /* And a backstop, because bars that never stop are worse than no bars: after
+       twenty-five seconds, step out of the way and let the player say what it says. */
+    let t=null;
+    v.addEventListener('loadstart',()=>{ clearTimeout(t); t=setTimeout(hide,25000); });
+    v.addEventListener('canplay',()=>clearTimeout(t));
+  });
 }
 
 /* shrink on the phone, like every other upload: 1024px longest side, JPEG stepped

@@ -1646,6 +1646,18 @@ If you are about to violate one, stop and say so rather than working around it.
     sessions list. What must NEVER be sent is `application_fee_amount: 0` — Stripe
     treats a zero fee differently from no fee.
 
+0eb1. **An AudioContext is checked BEFORE it is wired to the video, never after.**
+    A context created without a fresh tap starts SUSPENDED, and
+    `createMediaElementSource` on a suspended context takes the element's audio away
+    and gives it to a graph that is not running — the element then stops advancing.
+    `play()` still resolves, `currentTime` stays at 0, the progress bar sits at
+    nothing, and the only sign is a timeout a minute later. It cannot be undone:
+    `createMediaElementSource` may be called once per element, ever. So the context
+    is created, resumed, and its state checked, and only a RUNNING one is allowed
+    near the video. There is also a three-second stall detector — not just a total
+    timeout — and a retry from a FRESH element with no audio at all, because the old
+    element is spent. A clip always gets made; only the sound is ever in doubt.
+
 0eb. **A clip's audio comes through a Web Audio graph, never `captureStream()` on a
     muted element.** Muting was how the element was made to autoplay, and muted
     output is silence — so the first clips recorded a perfectly good silent audio
@@ -1653,3 +1665,10 @@ If you are about to violate one, stop and say so rather than working around it.
     the recorder's destination (never to `ac.destination`) keeps the element
     unmuted without playing it out loud. If the browser refuses unmuted playback
     the clip is still made, silent, and the person is TOLD.
+    AND A CLIP THAT IS LOADING SAYS SO. `preload="none"` means nothing is fetched
+    until somebody taps, so the first tap waits for a function to wake and read a
+    couple of MB — which looks exactly like a broken video. The boot splash's three
+    bars sit over it until it can play. `suspend` and `stalled` must NOT hide them:
+    `suspend` fires the instant a preload="none" video is touched and means "not
+    fetching right now", and `stalled` means data has stopped arriving, which is
+    when somebody most needs to see that MySet is still trying.

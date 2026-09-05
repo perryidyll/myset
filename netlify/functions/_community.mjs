@@ -132,7 +132,7 @@ export async function addPost(owner, { fan, ip, name, text, stars, show, showLab
      without this check a hand-made request could hang a player on every phone
      that opens the page, pointed at nothing. Cheap: one read, and only when a
      clip was named. */
-  if (clipId && !(await getClip(owner, clipId)))
+  if (clipId && !(await getClip(owner, clipId, { strong: true })))
     return { ok: false, error: 'That clip didn’t finish uploading. Try again.' };
 
   const id = newPostId();

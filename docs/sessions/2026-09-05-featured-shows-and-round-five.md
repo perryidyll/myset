@@ -169,3 +169,51 @@ for the wrong reason.**
 
 Unchanged from this morning: `charge.updated` on the Stripe webhook, stop the
 double deploy and move to Netlify Pro, 2FA everywhere, and try the passkey.
+
+---
+
+## Same-day follow-up: the clip feature was broken, and it was my fault
+
+Perry: *"the clip feature isn't working... the little progress bar didn't move and
+after a while i got an error message."*
+
+**The audio "fix" broke uploading.** An `AudioContext` created without a fresh tap
+starts **suspended** on iOS and under Chrome's autoplay policy. Wiring a `<video>`
+into a suspended context with `createMediaElementSource` takes the element's audio
+away and hands it to a graph that is not running — and **the element then stops
+advancing.** `play()` still resolves, `currentTime` stays at 0, the progress bar sits
+at nothing, and the only sign is the stall backstop firing a minute later. And it
+cannot be undone: `createMediaElementSource` may be called once per element, ever.
+
+Three changes:
+
+1. **The context is created, resumed and CHECKED before it goes near the video.**
+   Only a context in state `running` is ever wired up. Anything else is closed and
+   the element is muted — silent, but working.
+2. **A three-second stall detector**, not just a total timeout. If the element is not
+   advancing there is no point drawing for another minute.
+3. **A retry from a fresh element with no audio**, which is the path that has always
+   worked. The old element is spent, so the retry cannot reuse it. A clip always gets
+   made; only the sound is ever in doubt, and the person is told when it is silent.
+
+**The clip already posted is silent for ever.** Those bytes were recorded silent;
+nothing can add sound to them afterwards. It has to be re-posted.
+
+**Clips now say they are loading.** `preload="none"` means nothing is fetched until
+somebody taps, so the first tap waits for a function to wake and read a couple of MB —
+which looks exactly like a broken video. The boot splash's three bars now sit over the
+clip until it can play. Two events that look like "done" are deliberately NOT wired to
+hide them: `suspend` fires the instant a `preload="none"` video is touched and means
+"not fetching right now" (wiring it hid the bars before a single frame of the
+animation ran), and `stalled` means data has stopped arriving — exactly when somebody
+most needs to see that MySet is still trying. A twenty-five second backstop steps out
+of the way, because bars that never stop are worse than no bars.
+
+**And they load faster.** 450kbps at a 400px short side instead of 600kbps at 480px —
+about 1.7MB for thirty seconds instead of 2.25MB. Serving a clip also no longer asks
+for a strongly-consistent read: a clip id is minted once and its bytes never change,
+so there is nothing to be consistent about on the one path a person is sitting and
+waiting on. The existence check inside `addPost` still asks for strong, because it
+runs seconds after the upload and has to see a write that has only just landed.
+
+INVARIANT 0eb1.

@@ -129,10 +129,19 @@ export async function putClip(owner, clip, bytes, type) {
   await store().set(KEY(owner, clip), bytes, { metadata: { type, n: bytes.length } });
 }
 
-export async function getClip(owner, clip) {
+/**
+ * `strong` only where it is actually needed.
+ *
+ * A clip id is minted once and never reused, and the bytes behind it never change —
+ * so SERVING one has nothing to be consistent about, and a strong read is a slower
+ * trip for no benefit on the one path a person is sitting and waiting on. The
+ * existence check inside addPost is the exception: it runs seconds after the upload
+ * and has to see a write that has only just landed, so it asks for strong.
+ */
+export async function getClip(owner, clip, { strong = false } = {}) {
   try {
     const r = await store().getWithMetadata(KEY(owner, clip),
-      { type: 'arrayBuffer', consistency: 'strong' });
+      { type: 'arrayBuffer', ...(strong ? { consistency: 'strong' } : {}) });
     if (!r || !r.data) return null;
     return { bytes: Buffer.from(r.data), type: (r.metadata && r.metadata.type) || 'video/mp4' };
   } catch { return null; }
