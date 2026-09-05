@@ -237,25 +237,25 @@ footer{
   <div class="byline">
     <span>Measured against production</span>
     <span>Simulator: tools/loadsim.py</span>
-    <span>4 of 11 systems studied</span>
+    <span>11 systems studied · 4 claims fact-checked</span>
   </div>
 </header>
 
 <div class="figures">
   <div class="fig hot">
-    <span class="k">Honest ceiling today</span>
-    <span class="v">~1,000</span>
-    <span class="n">people in one room before the reads outrun the store</span>
+    <span class="k">Honest ceiling now</span>
+    <span class="v">~2,500</span>
+    <span class="n">people in one room before the reads outrun the store — was ~1,000 this morning</span>
   </div>
   <div class="fig warm">
-    <span class="k">What breaks first</span>
-    <span class="v">Reads</span>
-    <span class="n">not cost, and not the write path — which is already sharded</span>
+    <span class="k">A 10,000-phone night</span>
+    <span class="v">$4.29</span>
+    <span class="n">down from $36.40, for about twenty lines of code</span>
   </div>
   <div class="fig cool">
     <span class="k">An ordinary 3-hour gig</span>
-    <span class="v">2.8¢</span>
-    <span class="n">20 phones, all in. Money was never the constraint.</span>
+    <span class="v">2.7¢</span>
+    <span class="n">20 phones, all in. Unchanged — which was the point.</span>
   </div>
 </div>
 
@@ -306,7 +306,7 @@ footer{
 
         <polyline points="187.6,388.5 348.4,308.8 470.0,250.7 591.6,191.9 662.8,157.3 752.4,113.8 874.0,54.9"
                   fill="none" stroke="var(--crimson)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"></polyline>
-        <polyline points="187.6,388.5 348.4,329.5 470.0,273.2 591.6,243.0 662.8,208.6 752.4,194.7 874.0,135.6"
+        <polyline points="187.6,407.9 348.4,370.1 470.0,311.1 591.6,272.9 662.8,238.4 752.4,215.8 874.0,156.8"
                   fill="none" stroke="var(--slate)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"></polyline>
 
         <g fill="var(--crimson)">
@@ -316,13 +316,14 @@ footer{
           <circle cx="874" cy="54.9" r="3.6"></circle>
         </g>
         <g fill="var(--slate)">
-          <circle cx="348.4" cy="329.5" r="3"></circle><circle cx="470" cy="273.2" r="3"></circle>
-          <circle cx="591.6" cy="243" r="3"></circle><circle cx="662.8" cy="208.6" r="3"></circle>
-          <circle cx="752.4" cy="194.7" r="3"></circle><circle cx="874" cy="135.6" r="3.6"></circle>
+          <circle cx="187.6" cy="407.9" r="3"></circle><circle cx="348.4" cy="370.1" r="3"></circle>
+          <circle cx="470" cy="311.1" r="3"></circle><circle cx="591.6" cy="272.9" r="3"></circle>
+          <circle cx="662.8" cy="238.4" r="3"></circle><circle cx="752.4" cy="215.8" r="3"></circle>
+          <circle cx="874" cy="156.8" r="3.6"></circle>
         </g>
 
         <text x="866" y="46" fill="var(--crimson)" font-family="IBM Plex Mono, monospace" font-size="11.5" text-anchor="end">5,077 MB/s — fixed 3s</text>
-        <text x="866" y="127" fill="var(--slate)" font-family="IBM Plex Mono, monospace" font-size="11.5" text-anchor="end">762 MB/s — throttled</text>
+        <text x="866" y="148" fill="var(--slate)" font-family="IBM Plex Mono, monospace" font-size="11.5" text-anchor="end">463 MB/s — shipped today</text>
 
         <g fill="var(--muted)" font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="middle">
           <text x="66" y="438">100</text>
@@ -338,10 +339,10 @@ footer{
     </div>
     <div class="legend">
       <span><i class="swatch" style="background:var(--crimson)"></i> Fixed 3-second ladder (before)</span>
-      <span><i class="swatch" style="background:var(--slate)"></i> Server-set interval (shipped)</span>
+      <span><i class="swatch" style="background:var(--slate)"></i> Shipped today: server-set interval + the ladder fix</span>
       <span><i class="swatch" style="background:var(--amber);height:9px;border-radius:1px"></i> Band MySet is known to serve</span>
     </div>
-    <p class="figcap">Read the gap between the two lines as what the dial bought — and the height of the lower one as why it is not the cure. At 10,000 people the throttle still leaves 762&nbsp;MB/s.</p>
+    <p class="figcap">Both curves are the busy case, measured over the real polling loop. The gap is an order of magnitude and it cost about twenty lines. The height of the lower line is why that is still not the cure: the shape is unchanged, and only a shared board changes the shape.</p>
   </div>
 
   <div class="panel">
@@ -349,19 +350,19 @@ footer{
     <div class="scroll">
       <table>
         <thead>
-          <tr><th>People in the room</th><th>Audience re-read per poll</th><th>Polls / sec</th><th>Read traffic</th><th>Cost of the night</th></tr>
+          <tr><th>People in the room</th><th>Audience re-read per poll</th><th>Read traffic before</th><th>Read traffic now</th><th>Cost before</th><th>Cost now</th></tr>
         </thead>
         <tbody>
-          <tr><td>100</td><td class="num">15 KB</td><td class="num">33</td><td class="num ok">0.5 MB/s</td><td class="num">$0.16</td></tr>
-          <tr><td>500</td><td class="num">76 KB</td><td class="num">167</td><td class="num ok">13 MB/s</td><td class="num">$1.14</td></tr>
-          <tr class="edge"><td>1,000</td><td class="num">152 KB</td><td class="num">333</td><td class="num warm">51 MB/s</td><td class="num">$2.76</td></tr>
-          <tr><td>2,500</td><td class="num">381 KB</td><td class="num">833</td><td class="num hot">318 MB/s</td><td class="num">$8.69</td></tr>
-          <tr><td>5,000</td><td class="num">762 KB</td><td class="num">1,667</td><td class="num hot">1,270 MB/s</td><td class="num">$18.17</td></tr>
-          <tr><td>10,000</td><td class="num">1,523 KB</td><td class="num">3,333</td><td class="num hot">5,077 MB/s</td><td class="num">$36.40</td></tr>
+          <tr><td>200</td><td class="num">30 KB</td><td class="num ok">2 MB/s</td><td class="num ok">1.3 MB/s</td><td class="num">$0.32</td><td class="num">$0.36</td></tr>
+          <tr><td>500</td><td class="num">76 KB</td><td class="num ok">13 MB/s</td><td class="num ok">3.1 MB/s</td><td class="num">$1.14</td><td class="num">$0.49</td></tr>
+          <tr><td>1,000</td><td class="num">152 KB</td><td class="num warm">51 MB/s</td><td class="num ok">12.3 MB/s</td><td class="num">$2.76</td><td class="num">$0.98</td></tr>
+          <tr><td>2,000</td><td class="num">305 KB</td><td class="num hot">203 MB/s</td><td class="num ok">30.3 MB/s</td><td class="num">$6.60</td><td class="num">$1.28</td></tr>
+          <tr class="edge"><td>3,000</td><td class="num">457 KB</td><td class="num hot">457 MB/s</td><td class="num warm">68 MB/s</td><td class="num">$11.20</td><td class="num">$1.92</td></tr>
+          <tr><td>10,000</td><td class="num">1,523 KB</td><td class="num hot">5,077 MB/s</td><td class="num hot">463 MB/s</td><td class="num">$36.40</td><td class="num">$4.29</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="figcap">Cost is real and survivable at every line. Read traffic is not. The shaded row is roughly where the two part company — which is why the ceiling is a reading problem wearing a pricing problem’s clothes.</p>
+    <p class="figcap">Cost was survivable at every line even before. Read traffic was not, and still isn’t past the shaded row — which is where the honest ceiling now sits. A 200-person room costs four cents more than it did, because the terminal rung and the jitter cost a little where there was nothing to save; every line below it costs a third to a ninth of what it did.</p>
   </div>
 </section>
 
@@ -369,7 +370,7 @@ footer{
   <div class="mark">What four systems said</div>
   <div class="col">
     <h2>Two of them overturned the thing I had already built</h2>
-    <p class="lede">A twenty-agent study was launched across eleven real systems. It hit the session usage limit after four. Those four happened to cover the ground that mattered, and they agreed with each other more than they agreed with me.</p>
+    <p class="lede">Eleven real systems studied, four architectures designed, and four load-bearing claims handed to adversarial fact-checkers whose only job was to refute them. <strong>All four claims came back wrong</strong> — including two of mine.</p>
     <p>The first version of this work was a hard door: person 501 at a Plus gig becomes a read-only watcher. That is now deleted, and there are tests whose only job is to stop it coming back.</p>
   </div>
 
@@ -397,6 +398,38 @@ footer{
   </div>
 
   <p class="pull">Polling is not the embarrassing shortcut here. It is what the biggest live-chat system on earth does.</p>
+
+  <div class="panel">
+    <div class="panel-head"><b>What the fact-checkers killed</b><span>four claims, four refutations</span></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>The claim</th><th>Verdict</th><th>What is actually true</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Cloudflare is 13× cheaper — no, 1.3×</td>
+            <td class="num hot">Both wrong</td>
+            <td>$3.81 a gig keeping polling (<strong>9.6×</strong>), $0.065 on hibernating WebSockets (<strong>~500×</strong>). Our simulator priced it with the Workers CPU-time rate, which is not a Durable Objects billing dimension at all. The real blocker is capacity, not money: <strong>1,000 requests/second per object</strong>, and polling needs 736–3,198.</td>
+          </tr>
+          <tr>
+            <td>A cache header collapses 3,300 origin requests into ~1</td>
+            <td class="num hot">Wrong — 0%</td>
+            <td>The poll URL carries <code>fan=&lt;id&gt;</code> and production returns <code>netlify-vary: query</code>, so 10,000 phones make <strong>10,000 cache keys</strong>. Netlify also bills a web request for a cache <em>hit</em>. Caching removes compute only — 63% at absolute best, and nothing at all as the endpoint stands.</td>
+          </tr>
+          <tr>
+            <td>Every vote is a CAS write on one document</td>
+            <td class="num warm">Premise false</td>
+            <td>It has been <strong>12 shards since the first commit</strong>. The write wall is ~11,000–12,000 concurrent voters — five times further out than the read wall. But the shard count is a <em>shared</em> knob: raising it to 256 lifts writes 235→5,985/sec and lifts blob reads per poll 15→259.</td>
+          </tr>
+          <tr>
+            <td>The market has settled on capping the audience</td>
+            <td class="num warm">Overstated</td>
+            <td>Four of five cap; the largest does not. Mentimeter sells <strong>unlimited participants at $11.99</strong>. Slido: free 100, $12.50→200, $50→1,000, $150→5,000. Kahoot: $19→50 up to $79→5,000. So MySet at $10 for 1,000 is five times cheaper than Slido on the same capacity — the caps are an engineering necessity, not a market convention.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="figcap">Two of these were my own working assumptions, and one of them — the cache header — was the fix recommended in the first version of this page. It would have been a day spent for nothing.</p>
+  </div>
 </section>
 
 <section>
@@ -404,6 +437,9 @@ footer{
   <div class="col">
     <h2>The server sets the pace, and the room slows itself down</h2>
     <p class="lede">An ordinary pub gig is untouched — the same three seconds it has always been. A packed room quietly widens its own interval and shows the top of the board instead of all of it, and says so on screen.</p>
+    <p>Then the research found the single line that mattered most, and it was already in the file. <code>signature()</code> included the running tally, so <strong>any vote by anyone reset every phone in the room to the fastest rung</strong>. In a busy room somebody is always voting — so the 10-second and 25-second rungs were unreachable, and what looked like a ladder was a fixed 3-second poll wearing a ladder’s clothes.</p>
+    <p>There are two signatures now. Below the size where the server widens the interval, nothing changes at all: at eight people the tally jumping the instant somebody votes <em>is</em> the product, and it costs a fraction of a cent. Above it, only the artist’s actions and your own credits wake the room; the board still redraws, it just stops accelerating everybody. That last part is not what the research recommended — it recommended dropping crowd-acceleration everywhere — and the difference is deliberate.</p>
+    <p>Two more things went in the same commit, both cheap and both impossible to retrofit mid-show: <strong>±20% jitter</strong> on every scheduled poll, because the server hands every phone the same interval and without it they all fire on the same tick; and a <strong>terminal rung</strong>, so a phone left face-up with nobody looking at it settles at a minute instead of retrying for ever.</p>
   </div>
 
   <div class="panel">
@@ -414,14 +450,14 @@ footer{
           <tr><th>Room size</th><th>Checks every</th><th>Board shows</th><th>Read traffic</th><th>Same room, old ladder</th></tr>
         </thead>
         <tbody>
-          <tr><td>up to 200</td><td class="num">3 s</td><td>everything</td><td class="num ok">2 MB/s</td><td class="num">2 MB/s</td></tr>
-          <tr><td>up to 1,000</td><td class="num">5 s</td><td>top 40</td><td class="num ok">30 MB/s</td><td class="num warm">51 MB/s</td></tr>
-          <tr><td>up to 2,000</td><td class="num">10 s</td><td>top 25</td><td class="num warm">61 MB/s</td><td class="num hot">203 MB/s</td></tr>
-          <tr><td>10,000</td><td class="num">20 s</td><td>top 15</td><td class="num hot">762 MB/s</td><td class="num hot">5,077 MB/s</td></tr>
+          <tr><td>up to 200</td><td class="num">3 s</td><td>everything</td><td class="num ok">1.3 MB/s</td><td class="num">2 MB/s</td></tr>
+          <tr><td>up to 1,000</td><td class="num">5 s</td><td>top 40</td><td class="num ok">12.3 MB/s</td><td class="num warm">51 MB/s</td></tr>
+          <tr><td>up to 2,000</td><td class="num">10 s</td><td>top 25</td><td class="num ok">30.3 MB/s</td><td class="num hot">203 MB/s</td></tr>
+          <tr><td>10,000</td><td class="num">20 s</td><td>top 15</td><td class="num hot">463 MB/s</td><td class="num hot">5,077 MB/s</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="figcap">Worth 1.7× at a club and 6.7× at an arena. Real, and not enough on its own — which is the argument for the snapshot rather than for a bigger number on a plan card.</p>
+    <p class="figcap">The interval widening and the ladder fix together are worth about 4× at a club and 11× at an arena. Real, and still not enough — 463 MB/s is far past what this serves, which is the argument for the shared board rather than for a bigger number on a plan card.</p>
   </div>
 
   <div class="panel">
@@ -430,17 +466,17 @@ footer{
       <table>
         <thead><tr><th>Plan</th><th>Price</th><th>Room holds</th><th>Worst single night costs</th><th>What happens past it</th></tr></thead>
         <tbody>
-          <tr><td>Free</td><td class="num">$0</td><td class="num">200</td><td class="num">$0.32</td><td>Nothing stops</td></tr>
-          <tr><td>Plus</td><td class="num">$10 / mo</td><td class="num">1,000</td><td class="num">$2.76</td><td>Nothing stops</td></tr>
-          <tr><td>Pro</td><td class="num">$20 / mo</td><td class="num">2,000</td><td class="num">$6.60</td><td>Nothing stops</td></tr>
+          <tr><td>Free</td><td class="num">$0</td><td class="num">200</td><td class="num">$0.36</td><td>Nothing stops</td></tr>
+          <tr><td>Plus</td><td class="num">$10 / mo</td><td class="num">1,000</td><td class="num">$0.98</td><td>Nothing stops</td></tr>
+          <tr><td>Pro</td><td class="num">$20 / mo</td><td class="num">2,000</td><td class="num">$1.28</td><td>Nothing stops</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="figcap">Stamped onto the show when the night starts, so an upgrade mid-set never resizes the room underneath anyone. Nobody is refused, no vote is rejected, and there is no spectator state anywhere in the code.</p>
+    <p class="figcap">Stamped onto the show when the night starts, so an upgrade mid-set never resizes the room underneath anyone. Nobody is refused, no vote is rejected, and there is no spectator state anywhere in the code. The research recommended dropping Plus to 500 on cost grounds — that was reasoning against the old ladder, and after the fix a full Plus room costs 98 cents rather than $2.76.</p>
   </div>
 
   <div class="note">
-    <b>A correction, kept in the record.</b> Pro was first set at 3,000. The arithmetic behind it was wrong — the interval had been divided out without multiplying the phones back in, which reported 46&nbsp;MB/s where the answer is 137. At 3,000 the room sits nearly three times past anything MySet is known to serve; 2,000 lands at 61&nbsp;MB/s, in the same neighbourhood as a busy club night. Sell what the app can do, not what the margin could afford.
+    <b>Two corrections, kept in the record.</b> Pro was first set at 3,000 on arithmetic that had divided out the interval without multiplying the phones back in — 46&nbsp;MB/s reported where the answer was 137. It came down to 2,000. Then the ladder fix landed and 2,000 turned out to sit at 30&nbsp;MB/s, so the number is now conservative rather than marginal. It stays at 2,000 until the shared board makes a bigger one honest.
   </div>
 </section>
 
@@ -465,8 +501,8 @@ footer{
       <span class="rank">2</span>
       <div>
         <h3>A one-off big-night pass, off the ladder</h3>
-        <p>Not a fourth tier. An arena night is an event, not a subscription level — so it gets priced as one, bought in advance for that date.</p>
-        <p class="why">Mentimeter’s answer to exactly this is $350 and $750 conference passes, one month, sitting entirely outside their $11.99 / $24.99 per-seat ladder. One such pass covers MySet’s measured $36.40 about ten times over.</p>
+        <p>Not a fourth tier. An arena night is an event, not a subscription level — so it gets priced as one, booked in advance for that date. <strong>$99 up to 5,000, $249 up to 15,000.</strong></p>
+        <p class="why">Slido charges $250 for one 1,000-person event and $700 for 5,000; Mentimeter’s conference passes are $350 and $750. At $99 for 5,000 you are seven times under Slido and still roughly ninety times your own cost. And the real thing being sold is the notice — you find out the arena show is coming <em>before</em> it starts.</p>
       </div>
     </div>
     <div class="move">
@@ -485,31 +521,54 @@ footer{
 </section>
 
 <section>
+  <div class="mark">The road</div>
+  <div class="col">
+    <h2>Four stages, and the signal that says build the next one</h2>
+    <p class="lede">The 100,000 answer is not on this list as work. Nobody in this market serves it: Kahoot’s shipping client tops out at a 5,000 flag, Figma caps a live file at 500 editors, and Epic could not get 200 players onto one server. The answer to the arena is a contact form and a date.</p>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><b>Staged</b><span>build on the signal, not on the fear</span></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Room</th><th>Costs</th><th>Work</th><th>Build it when</th></tr></thead>
+        <tbody>
+          <tr><td>up to 200</td><td class="num">$0.36</td><td>Done</td><td>Covers every gig MySet has ever played</td></tr>
+          <tr><td>up to 2,000</td><td class="num">$1.28</td><td>Done today</td><td>Shipped — the dial and the ladder fix</td></tr>
+          <tr><td>up to 10,000</td><td class="num">~$2.20</td><td>~5 days</td><td>A booked show over 2,000, with a date and a deposit</td></tr>
+          <tr><td>100,000</td><td class="num">$0.065</td><td>~12 days + a second platform</td><td>A signed booking, a named artist, two weeks’ notice</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="figcap">The 10,000 stage is the shared board: split the poll into one response that is byte-identical for every phone (no <code>fan=</code> in the URL, so it can genuinely cache) and a tiny personal one called about eight times a gig instead of eight hundred. Blob reads fall from 13 million a gig to roughly 300,000, and the curve stops being quadratic. The 100,000 stage is Durable Objects with hibernating WebSockets — and a relay tier above ~8,000 phones, because one object is capped at 1,000 requests a second.</p>
+  </div>
+</section>
+
+<section>
   <div class="mark">Still open</div>
   <div class="col">
     <h2>What would change the answer</h2>
-    <p class="lede">Seven of the eleven studies, all four architecture designs and all four adversarial fact-checks never ran. They are re-running now, replaying the finished work from cache.</p>
+    <p class="lede">Three of these are measurements nobody has taken, and each is an hour or less. They are worth taking before the next stage, not during it.</p>
   </div>
   <div class="open">
     <div class="q">
-      <span class="tag">Unresolved · factor of ten</span>
-      <h3>Is Cloudflare 13× cheaper, or 1.3×?</h3>
-      <p>MySet’s own simulator says a 10,000-person gig costs $2.80 on Durable Objects against $36.40 on Netlify. A previous research panel put the gap at 1.3×, not 13×. One of those is wrong, and it decides a lot.</p>
+      <span class="tag">One hour · changes the plan</span>
+      <h3>Does Netlify bill a cache hit?</h3>
+      <p>Their docs count “content hosted on your project” with no exclusion for cached responses, so the pessimistic reading was used throughout. If hits are free, the shared board’s floor drops from about $2.20 a gig to $0.30 and the case for ever leaving Netlify mostly disappears. Deploy a cached function, hit it ten thousand times, read the meter tomorrow.</p>
     </div>
     <div class="q">
-      <span class="tag">The actual cure</span>
-      <h3>The snapshot</h3>
-      <p>Work out the room’s state once when something changes, and hand the same answer to everyone. Read cost stops growing with the crowd and starts growing with the votes. About a week, and not a rewrite — it is what raises every number on the plan cards.</p>
+      <span class="tag">Two curl calls · day two</span>
+      <h3>Does the durable cache survive the /api rewrite?</h3>
+      <p>An existing invariant already records that <code>Netlify-Vary</code> is silently ignored on that path — measured, not theorised. If <code>durable</code> is ignored too, the board must be served from the function URL directly, which changes the shape and one line of the security policy. Recoverable on day two, painful on day five.</p>
+    </div>
+    <div class="q">
+      <span class="tag">Never measured</span>
+      <h3>How fast can one shard actually be written?</h3>
+      <p>The write ceiling of ~24 writes a second per shard is derived from a measured 40&nbsp;ms <em>read</em>, not from a measured write. If the real figure is a quarter of that, the write wall arrives at 4,000 people rather than 11,000. Write the script that hammers one shard before selling any room over 2,000.</p>
     </div>
     <div class="q">
       <span class="tag">Deliberately not built</span>
-      <h3>Websockets</h3>
-      <p>On Netlify a held connection bills as compute rather than as requests — the wrong side of the price sheet. And one publish to N subscribers bills as N+1 messages on Ably: roughly $270 an event at 10,000 people, against $36.40 on polling.</p>
-    </div>
-    <div class="q">
-      <span class="tag">Next, free</span>
-      <h3>Wake only the people watching</h3>
-      <p>Discord’s 90% win. A change somebody else caused should not drop a pocketed phone to the fast rung. The server-set floor covers the same ground more bluntly, which is why it went first.</p>
+      <h3>Websockets on Netlify</h3>
+      <p>A held connection bills as compute rather than as requests — the wrong side of the price sheet. And one publish to N subscribers bills as N+1 messages on Ably: roughly $270 an event at 10,000 people. Websockets are the right answer only on Cloudflare, where outbound messages are free.</p>
     </div>
   </div>
 </section>
@@ -518,7 +577,7 @@ footer{
   <span class="bars"><i></i><i></i><i></i></span>
   <span>MySet · myset.vip</span>
   <span>Measured 5 September 2026</span>
-  <span>INVARIANTS 0ej–0em · test/roomsize.mjs</span>
+  <span>INVARIANTS 0ej–0ep · test/roomsize.mjs</span>
 </footer>
 
 </div>

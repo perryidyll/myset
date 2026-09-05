@@ -146,3 +146,86 @@ tables, the ranked pricing recommendation, and the four open questions.
 
 The chart's coordinates are computed from the same measured figures as
 `pollFloorFor` — if those rungs change, the polyline points in that file are stale.
+
+---
+
+## The research, finished — and it refuted all four claims
+
+The workflow resumed after the usage limit reset and completed 20/20 agents: 11 systems,
+4 architectures, 4 adversarial fact-checks. **Every one of the four claims came back
+wrong**, two of them mine.
+
+### 1. Cloudflare is neither 13× nor 1.3× cheaper
+
+`$3.81` a gig keeping HTTP polling (**9.6×**), `$0.065` on WebSockets with the
+Hibernation API (**~500×**), priced from Cloudflare's own published rates and verified
+against their worked hibernation example, which the verifier reproduced exactly.
+
+`tools/loadsim.py` line 147 prices Durable Objects with `polls*10/1e6*0.02` — the
+**Workers CPU-time rate**, which is not a Durable Objects billing dimension. It omits DO
+duration entirely and omits the fronting Worker that a DO cannot be addressed without.
+The 1.3× figure is not reproducible from published rates for any sane architecture.
+
+The conceptual point both sides missed: **duration is billed per OBJECT, not per request
+and not per connection.** One room = one object = one 128 MB allocation whether 8 phones
+or 100,000 are attached. The free monthly allocation alone is 289 three-hour gigs.
+
+**The real blocker is capacity, not price.** A single Durable Object has a published soft
+limit of **1,000 requests/second**; the polling design needs 736/s at baseline and
+3,198/s in the busy case. A relay tier is mandatory above ~8,000 phones.
+
+### 2. A cache header on `/api/show` saves nothing
+
+The poll URL carries `fan=<id>` and production returns `netlify-vary: query`, so 10,000
+phones make **10,000 cache keys**. Netlify also bills a web request for a cache *hit* —
+its docs count "content hosted on your project" with no exclusion for cached responses.
+Caching removes compute only: 63% at best, **0% as the endpoint stands**.
+
+This was the fix recommended in the first version of the report. It would have been a day
+spent for nothing. `INVARIANTS.md` 0ep.
+
+### 3. The write path was never one CAS document
+
+`SHARDS = 12` since the file's first commit; `vote.mjs` never writes the show document.
+The write wall is ~11,000–12,000 concurrent voters — five times further out than the read
+wall. But `SHARDS` is a **shared knob**: 12 → 256 raises writes 235/s → 5,985/s and
+raises blob reads per poll 15 → 259. The write path cannot be fixed without changing the
+read path first.
+
+*Unmeasured, and worth measuring:* the ~24 writes/sec per shard is derived from a measured
+40 ms **read**, not from a measured write. If it is a quarter of that, the write wall
+arrives at 4,000 people. Hammer one shard before selling a room over 2,000.
+
+### 4. The market has not settled on caps
+
+Slido free 100 · $12.50→200 · $50→1,000 · $150→5,000. Kahoot 360 $19→50 up to $79→5,000.
+Poll Everywhere $10→700. **Mentimeter sells unlimited participants at $11.99.** Four of
+five cap, the largest does not. MySet at $10 for 1,000 is five times cheaper than Slido on
+the same capacity — so the caps are an engineering necessity, not a market convention, and
+should be described that way.
+
+## What the research made me ship
+
+`signature()` in `public/vote.html` included `d.totalVotes`, so any cast by anyone reset
+`QUIET` to 0 on every phone. The 10s and 25s rungs were unreachable in any busy room.
+Split into `stageSig()` / `signature()`, with the room deciding which drives the ladder —
+below the server's widening point nothing changes at all, because at eight people the
+tally jumping the instant somebody votes IS the product. Plus ±20% jitter and a terminal
+rung. `INVARIANTS.md` 0en, 0eo.
+
+Measured over the real loop, a 3-hour gig:
+
+| people | before | after | blob reads |
+|---|---|---|---|
+| 20 | 2.8¢ | 2.7¢ | unchanged |
+| 1,000 | $2.76 | $0.98 | |
+| 2,000 | $6.60 | $1.28 | |
+| 10,000 | $36.40 | **$4.29** | 119.2M → 13.2M |
+
+Busy-room read traffic at 10,000: 5,077 MB/s → 463 MB/s. **The honest ceiling moved from
+~1,000 people to ~2,500**, which vindicates the tier numbers rather than changing them —
+the research recommended dropping Plus to 500 on cost grounds, but that was reasoning
+against the old ladder and a full Plus room now costs 98 cents.
+
+`tools/loadsim.py` mirrors the new ladder, floor and jitter; its docstring says keep them
+in step and this does.
