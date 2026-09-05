@@ -822,7 +822,11 @@ async function addClip(file){
   const seconds=Math.min(v.duration||CLIP_SECS, CLIP_SECS);
   if((v.duration||0) > CLIP_SECS + 0.5) toast(`Using the first ${CLIP_SECS} seconds`);
 
-  let blob=null, gotAudio=true, silentWhy='';
+  /* `hadSound` and not `sound`: the sound object lives inside the re-encode branch,
+     and the message that reads it lives outside — reaching for it there threw a
+     ReferenceError, which fired ONLY on the path where a clip came out silent. That
+     is, the exact moment somebody most needs to be told what happened. */
+  let blob=null, gotAudio=true, silentWhy='', hadSound=false;
   try{
     if(file.size<=CLIP_MAX && (v.duration||0)<=CLIP_SECS+0.5 && /mp4|webm/i.test(file.type||'')){
       // already small enough and short enough — send it as it is, audio and all
@@ -853,10 +857,11 @@ async function addClip(file){
         if(got === 'empty'){
           silentWhy='that video doesn’t have any sound in it';
         } else if(got){
-          sound = got;
+          sound = got; hadSound = true;
         } else {
           sound = elementSound(v);
-          if(!sound) silentWhy='we couldn’t get at the sound in that file';
+          if(sound) hadSound = true;
+          else silentWhy='we couldn’t get at the sound in that file';
         }
       }
 
@@ -937,7 +942,7 @@ async function addClip(file){
      the element route it is what the analyser actually heard while it ran. So if a
      soundtrack was in hand the whole time and nothing came through it, that is not a
      failure to explain away: it is a measurement, and it says the video was quiet. */
-  if(!gotAudio && !silentWhy && sound) silentWhy='there was no sound in that video';
+  if(!gotAudio && !silentWhy && hadSound) silentWhy='there was no sound in that video';
   if(!gotAudio) toast('That one came out silent — '
     + (silentWhy || 'no sound came through while it was being made'));
   clipProgress(0.7,'Grabbing a still…');

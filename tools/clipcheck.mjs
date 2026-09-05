@@ -25,7 +25,11 @@ const srv = http.createServer((req,res)=>{
   res.writeHead(200,{'content-type':TYPES[path.extname(p)]||'application/octet-stream'});
   fs.createReadStream(p).pipe(res);
 });
-await new Promise(r=>srv.listen(8901,'127.0.0.1',r));
+/* PORT 0, NOT A FIXED ONE. A previous run that did not shut down cleanly leaves the
+   port held, and the next run dies with EADDRINUSE before a single check executes —
+   which reads exactly like a broken feature. Let the OS pick. */
+await new Promise(r=>srv.listen(0,'127.0.0.1',r));
+const PORT = srv.address().port;
 
 const browser = await puppeteer.launch({
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -35,7 +39,7 @@ const browser = await puppeteer.launch({
 });
 const page = await browser.newPage();
 page.on('pageerror', e => console.log('PAGEERROR:', String(e).slice(0,200)));
-await page.goto('http://127.0.0.1:8901/community.html?a=demo', {waitUntil:'domcontentloaded'});
+await page.goto(`http://127.0.0.1:${PORT}/community.html?a=demo`, {waitUntil:'domcontentloaded'});
 await new Promise(r=>setTimeout(r,900));
 
 const out = await page.evaluate(async () => {
@@ -201,7 +205,7 @@ const out = await page.evaluate(async () => {
     .catch(e=>R.push('  ✗ quiet addClip: '+e.message));
   ok('a silent video still becomes a clip', !!DRAFT.clip);
   ok('and it is told WHY it is silent, not blamed on the phone',
-     toasts.some(t=>/doesn.t have any sound|no sound came through|couldn.t get at the sound/.test(t)),
+     toasts.some(t=>/no sound in that video|doesn.t have any sound|no sound came through|couldn.t get at the sound/.test(t)),
      toasts.join(' | ')||'no toasts');
 
   return R.join('\n');

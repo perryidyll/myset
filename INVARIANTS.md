@@ -1821,3 +1821,29 @@ If you are about to violate one, stop and say so rather than working around it.
     the URL, which cuts the number of requests as well as their cost. Anyone
     reaching for `cache-control: public` on the existing endpoint is about to spend
     a day for nothing.
+
+0eq. **There are TWO ways to get a clip's sound and both are checked, because "it
+    has an audio track" and "it has sound in it" are different facts.** The sound is
+    separate from the picture for one reason: MySet shrinks a clip by re-filming it
+    onto a canvas, and a film of a canvas has no sound, so the audio must be sourced
+    and mixed back in. Route one decodes the soundtrack out of the file and proves
+    there is signal in it (`hasSignal`) before a frame is recorded. Route two — for
+    Safari, which routinely refuses `decodeAudioData` a whole MP4 with a video track
+    in it — taps the playing element with a `MediaElementAudioSourceNode` and rides
+    an `AnalyserNode` along for the whole recording, so at the end the app reports
+    what it actually heard rather than what it hoped. The first clips ever posted had
+    a perfectly good, perfectly empty audio track and nothing anywhere said so; every
+    claim about sound in this file is now measured, and the message names which of
+    the seven reasons applies.
+
+0er. **The element route needs the video UNMUTED, and only that route.** A
+    `MediaElementAudioSourceNode` carries silence from a muted element — that is the
+    original bug — so `reencode` leaves the element unmuted when, and only when, the
+    sound is coming off it. Nothing is heard out loud either way: the node takes the
+    audio before the speakers and is wired only to the recorder, never to
+    `ac.destination`. A phone refusing to play an unmuted clip is ordinary and is
+    reported as `noplay`, which drops the sound and retries rather than failing the
+    clip; a phone refusing to play a MUTED one is something retrying cannot fix.
+    `createMediaElementSource` also commits an element for life, which is why the
+    sound object carries `perElement` and the retry rebuilds it against the fresh
+    element instead of reusing a spent one.
