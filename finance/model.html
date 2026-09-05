@@ -226,7 +226,10 @@
     the server “anything new?” — not a vote. Polls are what the server bill is made of.</p>
 </header>
 
+<div class="kicker" style="margin-top:30px;border-bottom-width:0;padding-bottom:0"><span class="k">A SCENARIO, NOT A REPORT — <span id="kpiWhat">1,000 artists</span>. MySet has <b id="kpiToday">1</b> today.</span>
+  <span class="actions"><button class="btn small ghost" id="presetBench">Benchmark case</button><button class="btn small ghost" id="presetHope">If it all works</button></span></div>
 <section class="kpis" id="kpis" aria-live="polite"></section>
+<p class="small" id="kpiBand" style="margin:8px 0 0"></p>
 
 <section class="block" id="scenarios">
   <div class="kicker"><h2>Scenarios</h2><span class="k"><span id="scenCount">0</span> OF 20 SAVED · DRAG A CARD TO REORDER</span></div>
@@ -256,7 +259,7 @@
     </div>
     <div class="panel">
       <h3>Money in the bank, cumulative</h3>
-      <div class="sub">Profit added up month by month — where the line crosses zero is when the model has paid for itself.</div>
+      <div class="sub">Profit added up month by month, after acquisition cost (and after tax when that dial is set) — where the line crosses zero is when the model has paid for itself.</div>
       <div class="chart"><canvas id="cCum"></canvas></div>
     </div>
     <div class="panel">
@@ -275,16 +278,22 @@
       <div class="chart short"><canvas id="cCostMix"></canvas></div>
     </div>
     <div class="panel wide">
-      <h3>What one show costs the server, against what the room spends</h3>
-      <div class="sub">For each show size on the selected host: the server bill as a share of the money the room might spend on tips and votes. Big rooms cost more per head because every vote wakes every phone — and the bill per person is in the tooltip.</div>
+      <h3>What one show earns MySet, against what it costs</h3>
+      <div class="sub">For each size on the selected host: the server bill as a share of <b>MySet’s own revenue</b> from that show — the plan’s cut of the room’s money, not the artist’s takings. Bars past 100% are shows that lose money. Switch the tier in “Show sizes” on the left: the same arena is worth 10% of the room on free, 2% on Plus and nothing on Pro.</div>
       <div class="chart short"><canvas id="cSizes"></canvas></div>
     </div>
   </div>
 
   <div class="panel">
     <div class="kicker" style="border-bottom-width:0;margin-bottom:6px"><h3>The four shows Perry asked about</h3><span class="k">EDIT THE SIZES IN “SHOW SIZES” ON THE LEFT</span></div>
-    <div class="sub">One show of each size, on every host. Marginal cost of the show only — no plan base fee. Netlify priced at Pro top-up rates. * Your own servers cost the same whether or not a show happens; see the monthly table.</div>
+    <div class="sub" id="sizesCap"></div>
     <div class="scroll"><table id="sizesTable"></table></div>
+  </div>
+
+  <div class="panel">
+    <h3>What one artist is worth, by tier</h3>
+    <div class="sub" id="tierCap"></div>
+    <div class="scroll"><table id="tierTable"></table></div>
   </div>
 
   <div class="panel">
@@ -318,7 +327,7 @@
     </div>
     <div class="note warn" id="noteWave">
       <h3>If a big artist shows up: the tidal wave</h3>
-      <p><b>First, the honest part: at 10,000 phones today’s code does not get expensive, it stops working.</b> Every poll reads every fan record in the room, so a poll gets heavier as the crowd grows (the “extra poll time per person” dial), and in a big room every vote wakes every phone, so the ladder never backs off. A 300-person concert is fine (about 12 polls a second). An arena is hundreds of function calls running at once and thousands of document reads a second against the same handful of keys, plus a vote stampede every time a song ends. The “Today’s code” column in the size table says which is which. The 50,000 festival is not a bill; it is an outage. No real night has had more than 8 voters (short demos aside), so every line above that is simulation.</p>
+      <p><b>First, the honest part: at 10,000 phones today’s code does not get expensive, it stops working.</b> Every poll reads every fan record in the room, so a poll gets heavier as the crowd grows (the “extra poll time per person” dial), and in a big room every vote wakes every phone, so the ladder never backs off. A 300-person concert is fine (about 12 polls a second). An arena is hundreds of function calls running at once and thousands of document reads a second against the same handful of keys, plus a vote stampede every time a song ends. The “On this host” column in the size table says which is which — for today’s Netlify setup, and for each other host in the list. The 50,000 festival is not a bill; it is an outage. No real night has had more than 8 voters (short demos aside), so every line above that is simulation.</p>
       <p>Ranked by what they protect against, cheapest first. The first three need almost no code.</p>
       <ol id="waveList">
         <li><b>Auto-recharge is already on. Add a burn watchdog.</b> At zero credits Netlify pauses <em>every</em> site on the account (iohm.io and idyllenterprises.com too). Auto top-ups turn that outage into a bill, but Netlify has no spending cap and its alerts only watch the monthly allotment. A five-minute check of credits during a live show that flips the brake below is the only real ceiling. Half a day of scripting.</li>
@@ -337,11 +346,11 @@
     <div class="note" id="noteAssume">
       <h3>What is measured, what is published, what is guessed</h3>
       <ul>
-        <li><span class="tag meas">measured</span> Bytes per poll (2,530, from production), reads per call (15 per poll, 4 per vote, about 17 per Studio poll — counted through the real code on 5 Sep 2026), 42 ms per document read. The 155 ms per poll was a probe before a fix; the account’s own bill implies 70–110 ms, so 120 is the default here.</li>
+        <li><span class="tag meas">measured</span> Bytes per poll (2,530, from production), reads per call (15 per poll, 4 per vote, 21 per Studio poll — counted through the real code on 5 Sep 2026), 42 ms per document read. The 155 ms per poll was a probe before a fix; the account’s own bill implies 70–110 ms, so 120 is the default here.</li>
         <li><span class="tag guess">simulated</span> The 20-phone, 3-hour gig (<span id="liveGig">about 5,900 polls, 4.8 credits</span> on this page; the repo’s simulator says 6,030 and 4.2 because it runs at 155 ms with no Studio and no extra poll per action) is the polling ladder run against a model of how people glance at phones — reproducible, but no real night has had more than 8 voters (short demos aside). Every crowd figure above that is simulation from measured inputs.</li>
         <li><span class="tag meas">published</span> Netlify credit rates and plan prices; Cloudflare, Vercel rates; Stripe’s card, Billing, Connect and dispute fees — all read from the providers’ own pages on 5 Sep 2026 (links in the footer).</li>
         <li><span class="tag guess">guess</span> How many artists, on which plans, playing how often to how many people; what a room spends; how many gigs get promoted; fixed costs. These are the dials. Turn on “Use real shows” when the numbers exist.</li>
-        <li><b>Whose Stripe fee is whose.</b> Tips and vote packs are charged on the <em>artist’s</em> connected account, so Stripe’s card fee on them is the artist’s cost, not MySet’s; MySet’s cut arrives with no extra Stripe fee on it. Subscriptions and featured shows are charged on MySet’s own account (a US account, checked 5 Sep 2026 — so US rates, with most cards international), so their card fee, the 0.7% Billing fee, disputes and refunds are MySet’s. Express account and payout fees are charged to the platform — and the code pays artists out <em>daily</em>, so a busy artist can cost 25¢ a night in payout fees; the dial defaults to 8 payouts a month and a weekly schedule would cut it. Uncollectable negative balances on artists’ accounts also land on MySet, hence the small bad-debt line.</li>
+        <li><b>Whose Stripe fee is whose.</b> Tips and vote packs are charged on the <em>artist’s</em> connected account, so Stripe’s card fee on them is the artist’s cost, not MySet’s; MySet’s cut arrives with no extra Stripe fee on it. Subscriptions and featured shows are charged on MySet’s own account (a US account, checked 5 Sep 2026 — so US rates, with about one card in eight international so far — measured on the account’s own charges, so artists’ cards may run higher), so their card fee, the 0.7% Billing fee, disputes and refunds are MySet’s. Express account and payout fees are charged to the platform — and the code pays artists out <em>daily</em>, so a busy artist can cost 25¢ a night in payout fees; the dial defaults to 8 payouts a month and a weekly schedule would cut it. Uncollectable negative balances on artists’ accounts also land on MySet, hence the small bad-debt line.</li>
         <li><b>Two things the code promises that the money does not yet do.</b> The referral “free month” only moves a date in the registry; a paying referrer keeps being billed. And the founder’s own gigs cost server credits but produce no platform revenue. Neither is modelled as a separate line.</li>
         <li><b>The free tier’s four-gig cap</b> is applied: a free artist who wants six nights gets four. The refused nights are shown as a line in the formula.</li>
       </ul>
@@ -488,7 +497,7 @@ const ENGINE = (() => {
       const c = netlifyCredits(T2, deploys, h);
       const d = netlifyDollars(c.total, h);
       const per = d.usd / Math.max(c.total, 1e-9);
-      return { usd: d.usd, credits: c.total, plan: d.plan, label: h.name, lines: [
+      return { usd: d.usd, credits: c.total, plan: d.plan, packs: d.packs, label: h.name, lines: [
         ['Function compute', c.cmp * per], ['Web requests', c.req * per], ['Bandwidth', c.bw * per], ['Production deploys', c.dep * per]] };
     }
     if (h.kind === 'cf-kv') {
@@ -511,7 +520,11 @@ const ENGINE = (() => {
       const mem = Math.max(0, T.fnMs / 3600e3 * h.memGB - h.memGBhrIncl) * h.memGBhrUsd;
       const bw = Math.max(0, T.bytes / 1e9 - h.gbIncl) * h.gbUsd;
       const edge = Math.max(0, T.requests - h.edgeIncl) / M * h.edgeUsd;
-      return { usd: h.base + inv + cpu + mem + bw + edge, label: h.name, lines: [['Base plan', h.base], ['Invocations', inv], ['Active CPU', cpu], ['Provisioned memory', mem], ['Data transfer', bw], ['Edge requests', edge]] };
+      /* Pro has no included allowances — it carries a monthly usage credit instead
+         (the figures that look like allowances belong to the Hobby column). */
+      const used = inv + cpu + mem + bw + edge;
+      const credit = Math.min(used, h.creditUsd || 0);
+      return { usd: h.base + used - credit, label: h.name, lines: [['Base plan', h.base], ['Invocations', inv], ['Active CPU', cpu], ['Provisioned memory', mem], ['Data transfer', bw], ['Edge requests', edge], ['Usage credit', -credit]] };
     }
     if (h.kind === 'vps') {
       const boxes = h.reqPerBoxMonth > 0 ? Math.max(1, Math.ceil(T.requests / h.reqPerBoxMonth)) : 1;
@@ -558,7 +571,12 @@ const ENGINE = (() => {
     const subCount = (nPlus + nPro) * paying + p.venuePro;
     const refundsLost = subs * (p.stripe.refundPct / 100);                       // money given back; Stripe keeps its fee on it
     const subsNet = subs - refundsLost;
-    const gmv = { free: G.free * p.roomFree, plus: G.plus * p.roomPlus, pro: G.pro * p.roomPro };
+    /* ROOM MONEY SCALES WITH THE CROWD. It used to be a flat $/gig, so a 10,000-person
+       arena earned exactly what a 20-person bar earned and every extra phone was pure
+       cost — the model could only ever answer "no" to a big show. The dials are now
+       $ per person per gig, and the show-size panel uses the same rule, so there is one
+       theory of what a room spends instead of two. */
+    const gmv = { free: G.free * p.fans * p.roomFree, plus: G.plus * p.fans * p.roomPlus, pro: G.pro * p.fans * p.roomPro };
     const cuts = { free: gmv.free * p.cutFree / 100, plus: gmv.plus * p.cutPlus / 100, pro: gmv.pro * p.cutPro / 100 };
     const cutRev = cuts.free + cuts.plus + cuts.pro;
     const featCount = gigs * p.featPct / 100;
@@ -578,7 +596,11 @@ const ENGINE = (() => {
     /* the code pays out daily, so an artist cannot have more payouts than nights played */
     const payouts = (nFree * Math.min(s.payoutsPerMonth, gigsFree) + (nPlus + nPro) * Math.min(s.payoutsPerMonth, gigsPaid)) * (p.activePayoutPct / 100);
     const express = s.expressOn ? earning * s.expressAcct + paidOut * s.payoutPct / 100 + payouts * s.payoutFixed : 0;
-    const badDebt = paidOut * (s.lossPct / 100);                                 // Express negative balances land on the platform after 180 days
+    /* Gated by the SAME switch as the account fees: whether MySet carries Express losses
+       is the same Stripe Connect setting that decides whether MySet pays the account fee.
+       Before, flipping the switch left this line standing and the page still claimed
+       "Express losses land on the platform". */
+    const badDebt = s.expressOn ? paidOut * (s.lossPct / 100) : 0;
     const stripe = feeSubs + feeFeat + disputes + express + badDebt;
 
     /* fixed */
@@ -589,10 +611,50 @@ const ENGINE = (() => {
     const costs = bill.usd + stripe + fixed;
     const profit = revenue - costs;
     const tax = profit > 0 ? profit * (p.taxPct / 100) : 0;
+
+    /* WHAT ONE ARTIST OF EACH TIER IS WORTH, per month, before fixed costs.
+       This is the line that answers "should I keep the free tier" and "is pushing
+       everyone to Plus right" — questions the headline profit cannot answer, because
+       raising the Plus share always raises profit when the plan change is bundled with
+       a behaviour change. Server is charged at the month's own cost per gig. */
+    const serverPerGig = gigs > 0 ? bill.usd / gigs : 0;
+    const perTier = ['free', 'plus', 'pro'].map((t) => {
+      const g = t === 'free' ? gigsFree : gigsPaid;
+      const price = t === 'free' ? 0 : t === 'plus' ? p.plusPrice : p.proPrice;
+      const cutPct = t === 'free' ? p.cutFree : t === 'plus' ? p.cutPlus : p.cutPro;
+      const sub = price * paying;
+      const room = g * p.fans * (t === 'free' ? p.roomFree : t === 'plus' ? p.roomPlus : p.roomPro);
+      const cut = room * cutPct / 100;
+      const featRev = g * (p.featPct / 100) * p.featPrice * (1 - p.featRefundPct / 100);
+      const rev = sub + cut + featRev;
+      const server = g * serverPerGig;
+      const cardOnSub = cardFee(sub, sub > 0 ? paying : 0, s) + sub * s.billingPct / 100;
+      const featN = g * (p.featPct / 100), refundT = sub * (s.refundPct / 100);
+      const cardOnFeat = cardFee(featN * p.featPrice, featN, s);
+      const disputesT = ((sub > 0 ? paying : 0) + featN) * (s.disputePct / 100) * s.disputeFee;
+      const out = Math.max(0, room - cut);
+      const pays = (p.activePayoutPct / 100);
+      const expressT = s.expressOn
+        ? pays * s.expressAcct + out * s.payoutPct / 100 + Math.min(s.payoutsPerMonth, g) * pays * s.payoutFixed + out * (s.lossPct / 100)
+        : 0;
+      const stripeT = cardOnSub + cardOnFeat + disputesT + expressT;
+      return { tier: t, gigs: g, sub, room, cut, featRev, rev: rev - refundT, server, stripe: stripeT, net: rev - refundT - server - stripeT };
+    });
+    /* Above this much room money a month, MySet earns MORE from a free artist's 10% cut
+       than from that artist's Plus subscription. Five independent dials decide it and
+       nothing on the page related them before. */
+    const plusNet = p.plusPrice * paying - (cardFee(p.plusPrice * paying, paying, s) + p.plusPrice * paying * s.billingPct / 100);
+    /* …and the free plan can only play min(freeCap, gigsPaid) of the nights a Plus artist plays, so the free cut
+       reaches only that share of the same artist's room money; featured spots scale with nights the same way. */
+    const capShare = Math.min(p.freeCap, p.gigsPaid) / Math.max(p.gigsPaid, 1e-9);
+    const featPer = (g) => g * (p.featPct / 100) * p.featPrice * (1 - p.featRefundPct / 100);
+    const cutGap = (p.cutFree / 100) * capShare - p.cutPlus / 100;
+    const plusCrossover = cutGap > 0 ? (plusNet + featPer(p.gigsPaid) - featPer(Math.min(p.freeCap, p.gigsPaid))) / cutGap : Infinity;
     return {
       artists: A, nFree, nPlus, nPro, gigs, G, gigsCapped, one, T, bill,
       subs, subsNet, refundsLost, subsPlus, subsPro, subsVenue, subCount, gmv, cuts, cutRev, featCount, featGross, featRefunds, feat, revenue,
       feeSubs, feeFeat, disputes, earning, paidOut, payouts, express, badDebt, stripe, fixedLines, support, fixed,
+      perTier, plusCrossover, serverPerGig,
       costs, profit, tax, afterTax: profit - tax, margin: revenue > 0 ? profit / revenue : NaN,
       serverPct: revenue > 0 ? bill.usd / revenue : NaN,
       costPerGig: gigs > 0 ? bill.usd / gigs : 0,
@@ -607,17 +669,37 @@ const ENGINE = (() => {
     while (month(p, hi).profit < 0 && hi < 5e6) hi *= 2;
     if (hi >= 5e6) return Infinity;
     for (let i = 0; i < 40; i++) { const mid = (lo + hi) / 2; if (month(p, mid).profit < 0) lo = mid; else hi = mid; }
-    return Math.ceil(hi);
+    let be = Math.ceil(hi);
+    /* THE BISECTION ALONE IS NOT ENOUGH. Netlify's plan-and-pack pricing is a step
+       function, so profit dips every time the platform crosses onto a bigger plan and
+       is not monotone in artists — bisection assumes one sign change and can land past
+       the true first crossing (measured: it returned 115 where the answer was 113).
+       Walk back down to the real first profitable count. */
+    for (let a = be - 1, guard = 0; a >= 0 && guard < 4000; a--, guard++) {
+      if (month(p, a).profit >= 0) be = a; else if (be - a > 200) break;
+    }
+    return be;
   }
 
   /** Month-by-month path from today's artist count towards the scenario's size. */
   function timeline(p) {
     const rows = [];
-    let a = p.startArtists, cum = 0;
+    let a = p.startArtists, cum = 0, prev = p.startArtists;
     for (let m = 0; m <= p.months; m++) {
-      const r = month(p, Math.min(a, p.artists));
-      cum += r.profit;
-      rows.push({ m, artists: Math.min(a, p.artists), revenue: r.revenue, costs: r.costs, profit: r.profit, cum, server: r.bill.usd, stripe: r.stripe, fixed: r.fixed });
+      const now = Math.min(a, p.artists);
+      const r = month(p, now);
+      /* SIGNING ARTISTS IS NOT FREE. growthPct is net of churn, so the artists actually
+         signed in a month are the net gain PLUS the ones who left. Nothing charged for
+         either before, and the cumulative chart is the one a founder uses to decide
+         whether he can keep going. */
+      const churned = now * (p.churnPct / 100);
+      const grossAdds = Math.max(0, now - prev) + (m === 0 ? 0 : churned);
+      const acq = grossAdds * p.cacUsd;
+      const profit = (p.taxPct > 0 ? r.afterTax : r.profit) - acq;   // tax only when the dial is set, and only on profitable months
+      cum += profit;
+      rows.push({ m, artists: now, revenue: r.revenue, costs: r.costs + acq, acq, profit, cum,
+                  server: r.bill.usd, stripe: r.stripe, fixed: r.fixed, acq, grossAdds });
+      prev = now;
       a = a * (1 + p.growthPct / 100);
     }
     return rows;
@@ -643,12 +725,44 @@ const ENGINE = (() => {
         }
       }
       const credits = netlifyCredits(T, 0, p.hosts.netlifyPro).total;
-      const earn = sz.fans * p.roomPerHead;                   // what the room might spend on tips/packs
-      /* Feasibility, not just cost. Netlify publishes no concurrency figure; ~125 running at once is
-         the unverified number people quote, and Blobs has no published read-rate limit. */
-      const status = one.concurrent < 40 && one.readsPerSec < 2000 ? 'ok' : one.concurrent < 125 && one.readsPerSec < 6000 ? 'risky' : 'breaks';
-      return { ...sz, days, polls: T.polls, perPhone: one.perPhone, requests: T.requests, gb: T.bytes / 1e9, fnHours: T.fnMs / 3600e3, credits, onHost, earn,
-               pollMs: one.pollMs, pollsPerSec: one.pollsPerSec, concurrent: one.concurrent, readsPerSec: one.readsPerSec, floorS: one.floorS, status };
+      /* THE ROOM'S MONEY, on the same per-head rule the monthly model uses, for the whole
+         run. And then the part that is MySet's: the plan's cut. The chart used to divide
+         the server bill by the ARTIST's gross, which made a 10,000-person arena look like
+         it cost 2% of the value in the room — when on a Pro artist (0% cut) MySet earns
+         nothing from it at all and pays the whole bill. */
+      const tier = p.sizeTier || 'free';
+      const perHead = tier === 'plus' ? p.roomPlus : tier === 'pro' ? p.roomPro : p.roomFree;
+      const cutPct = tier === 'plus' ? p.cutPlus : tier === 'pro' ? p.cutPro : p.cutFree;
+      const earn = sz.fans * perHead * days;                  // the artist's money, over the whole run
+      const mysetRev = earn * cutPct / 100;                   // the part that is MySet's
+      const server = onHost[p.host] || 0;
+      const mysetNet = mysetRev - server;
+      /* What MySet would have to charge for this show to contribute at the platform's own
+         margin. The tidal-wave note tells Perry to sell a booking "priced off these
+         numbers"; this is that number. */
+      /* the booking is charged on MySet's own account, so Stripe's card fee comes off it: solve for the fee-inclusive price */
+      const feeRate = p.stripe.pct / 100 + (p.stripe.intlShare / 100) * (p.stripe.intlPct / 100) + (p.stripe.fxShare / 100) * (p.stripe.fxPct / 100);
+      const bookingAt = (margin) => Math.max(0, (server + p.stripe.fixed - mysetRev * (1 - margin)) / Math.max(1 - feeRate - margin, 0.01));
+
+      /* FEASIBILITY, and it depends on the host. A 3-second cache collapses a room of any
+         size to one call every 3 s, and an in-memory object deletes the reads — so the
+         verdict has to move when the host does, or the page tells Perry to pick the cache
+         and then still says "breaks". Netlify publishes no concurrency figure; ~125 at
+         once is the unverified number people quote, and Blobs has no published read-rate
+         limit, so these two thresholds are judgement, not fact. */
+      const h = p.hosts[p.host] || {};
+      const cached = !!h.cached;
+      const inMemory = h.kind === 'cf-do';
+      const alwaysOn = h.kind === 'vps';
+      const effConcurrent = cached ? (one.pollMs / 1000) / 3 : one.concurrent;
+      const effReads = inMemory ? 0 : cached ? p.readsPerPoll / 3 : one.readsPerSec;   // one call every 3 s does readsPerPoll reads
+      const status = alwaysOn || inMemory ? (one.pollsPerSec > 5000 ? 'risky' : 'ok')
+        : effConcurrent < 40 && effReads < 2000 ? 'ok'
+        : effConcurrent < 125 && effReads < 6000 ? 'risky' : 'breaks';
+      return { ...sz, days, polls: T.polls, perPhone: one.perPhone, requests: T.requests, gb: T.bytes / 1e9, fnHours: T.fnMs / 3600e3, credits, onHost,
+               earn, tier, perHead, cutPct, mysetRev, server, mysetNet, bookingAt,
+               pollMs: one.pollMs, pollsPerSec: one.pollsPerSec, concurrent: one.concurrent, readsPerSec: one.readsPerSec,
+               effConcurrent, effReads, floorS: one.floorS, status };
     });
   }
 
@@ -674,7 +788,7 @@ const HOSTS0 = {
   netlifyCache: { kind: 'netlify', name: 'Netlify + 3-second cache on the poll', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, cached: 1, planLock: 'auto', usdPerCredit: 10 / 1500 },
   cfKv:         { kind: 'cf-kv', name: 'Cloudflare Workers + KV', base: 5, reqIncl: 10e6, reqUsd: 0.30, cpuIncl: 30e6, cpuUsd: 0.02, readIncl: 10e6, readUsd: 0.50, writeIncl: 1e6, writeUsd: 5 },
   cfDo:         { kind: 'cf-do', name: 'Cloudflare Durable Objects (rewrite)', base: 5, reqIncl: 10e6, reqUsd: 0.30, doReqIncl: 1e6, doReqUsd: 0.15, doGBsIncl: 400e3, doGBsUsd: 12.5, cpuIncl: 30e6, cpuUsd: 0.02 },
-  vercel:       { kind: 'vercel', name: 'Vercel Pro (Fluid compute)', base: 20, invIncl: 1e6, invUsd: 0.60, cpuHrIncl: 4, cpuHrUsd: 0.128, memGB: 1, memGBhrIncl: 360, memGBhrUsd: 0.0106, gbIncl: 1000, gbUsd: 0.15, edgeIncl: 10e6, edgeUsd: 2 },
+  vercel:       { kind: 'vercel', name: 'Vercel Pro (Fluid compute)', base: 20, invIncl: 0, invUsd: 0.60, cpuHrIncl: 0, cpuHrUsd: 0.128, memGB: 1, memGBhrIncl: 0, memGBhrUsd: 0.0106, gbIncl: 0, gbUsd: 0.15, edgeIncl: 0, edgeUsd: 2, creditUsd: 20 },
   vps:          { kind: 'vps', name: 'Own always-on servers (VPS)', base: 15, reqPerBoxMonth: 200e6, dbUsd: 15, opsHours: 6, opsRate: 25 },
   custom:       { kind: 'custom', name: 'Custom host (type your own rates)', base: 0, reqUsd: 0.30, readUsd: 0, writeUsd: 0, gbUsd: 0.10, memGB: 1, gbHrUsd: 0.07, deployUsd: 0 },
 };
@@ -694,31 +808,32 @@ const STRIPE_PRESETS = {
   th: { pct: 3.65, fixed: 0.31, intlPct: 1.1, fxPct: 2.0, disputeFee: 15.5, label: 'Thailand account (converted to USD at ฿32)' },
 };
 const P0 = {
+  v: 2,                       // schema: room money became $ per PERSON per gig at v2
   artists: 1000, plusPct: 30, proPct: 10, plusPrice: 10, proPrice: 20, compedPct: 8, venuePro: 0, venuePrice: 20,
   gigsFree: 3, freeCap: 4, gigsPaid: 8,
   fans: 20, hours: 3, lookShare: 22, interactions: 2.5, changeShare: 90, installedPct: 15, extraViews: 0.5,
   studioOn: true, studioShare: 60,
-  pollBytes: 2530, pollMs: 120, pollMsPerFan: 0.08, readsPerPoll: 15, cpuMsPerPoll: 10,
+  pollBytes: 2530, pollMs: 120, pollMsPerFan: 0.006, readsPerPoll: 15, cpuMsPerPoll: 10,
   bigRoomOn: false, bigRoomFrom: 500, bigRoomFloor: 15,
   cronRequests: 22000, cronMs: 80,
   writeBytes: 1200, writeMs: 260, readsPerWrite: 4, writesPerWrite: 1, cpuMsPerWrite: 15,
-  studioBytes: 4000, studioMs: 180, studioReads: 17,
+  studioBytes: 4000, studioMs: 180, studioReads: 21,
   viewBytes: 3000, viewMs: 120, viewReads: 7,
   pageReqs: 6, pageBytes: 48000,
-  deploys: 60,
+  deploys: 176,
   host: 'netlifyPro', hosts: JSON.parse(JSON.stringify(HOSTS0)),
-  roomFree: 5, roomPlus: 15, roomPro: 25, cutFree: 10, cutPlus: 2, cutPro: 0, roomPerHead: 0.5, activePayoutPct: 40,
+  roomFree: 0.4, roomPlus: 0.4, roomPro: 0.4, cutFree: 10, cutPlus: 2, cutPro: 0, activePayoutPct: 40, sizeTier: 'free',
   featPct: 5, featPrice: 10, featRefundPct: 1,
-  stripe: { preset: 'us', pct: 2.9, fixed: 0.30, intlShare: 70, intlPct: 1.5, fxShare: 0, fxPct: 1.0, billingPct: 0.7, disputePct: 0.1, disputeFee: 15, refundPct: 1, expressOn: true, expressAcct: 2, payoutPct: 0.25, payoutFixed: 0.25, payoutsPerMonth: 8, lossPct: 0.1 },
+  stripe: { preset: 'us', pct: 2.9, fixed: 0.30, intlShare: 13, intlPct: 1.5, fxShare: 0, fxPct: 1.0, billingPct: 0.7, disputePct: 0.1, disputeFee: 15, refundPct: 1, expressOn: true, expressAcct: 2, payoutPct: 0.25, payoutFixed: 0.25, payoutsPerMonth: 8, lossPct: 0.1 },
   fixed: [{ name: 'Domain (myset.vip)', usd: 1 }, { name: 'Email delivery (Resend)', usd: 20 }, { name: 'Accounting & tax filing', usd: 80 }, { name: 'Company, legal, insurance', usd: 40 }, { name: 'Claude Code & dev tools (MySet’s share)', usd: 50 }, { name: 'Monitoring & misc', usd: 10 }],
   supportHours: 6, supportRate: 25, supportMinPerArtist: 2, taxPct: 0,
-  startArtists: 2, growthPct: 20, months: 36,
+  startArtists: 1, growthPct: 20, months: 36, cacUsd: 0, churnPct: 4,
   sizes: [{ name: 'Bar set', fans: 20, hours: 3, days: 1 }, { name: 'Concert', fans: 300, hours: 3, days: 1 }, { name: 'Arena show', fans: 10000, hours: 2, days: 1 }, { name: 'Festival', fans: 50000, hours: 8, days: 3 }],
   useActuals: false,
 };
 let P = JSON.parse(JSON.stringify(P0));
 let ACT = null;           // real-show numbers, when imported
-const SEED_ACT = { asOf: '2026-09-05', source: 'tools/actuals.py (seed)', shows: 2, people: 4.5, hours: 2.61, roomFree: null, roomPlus: null, deploys: 116, pollsPerPhoneHour: null, creditsPerShow: null, note: 'Two real nights so far, both Perry’s (30 Aug: 8 voters, 21 votes, one $3 pack, 2.2 h · 4 Sep: 1 phone, 3 h). Too few to calibrate — next week’s shows will replace this. Run tools/actuals.py for the latest.' };
+const SEED_ACT = { asOf: '2026-09-05', source: 'tools/actuals.py (seed)', shows: 1, people: 8, hours: 2.19, roomPerHead: 0.375, roomFree: null, roomPlus: null, roomPro: 0.375, deploys: 176, pollsPerPhoneHour: null, creditsPerShow: null, note: 'One countable night so far (30 Aug, Ugly Duckling): 8 voters, 21 votes, one $3 vote pack, 2.19 h — $0.375 a head, the only room-money figure MySet has ever observed. Not counted: a 4 Sep show with one phone and no votes, a 30 Aug show that ran 107.9 h because it was never ended, and three 31/44/26-phone bursts on 31 Aug that were all on one network for six minutes — the load-test script, not people. Deploys are account-wide, trailing 30 days (all five sites share the credit grant). Run tools/actuals.py for the latest.' };
 
 /* ───────────────────────────── dials spec ───────────────────────────── */
 const DIALS = [
@@ -727,8 +842,8 @@ const DIALS = [
   { key: 'plusPct', label: 'On Plus', unit: '% of artists', min: 0, max: 100, step: 1 },
   { key: 'proPct', label: 'On Pro', unit: '% of artists', min: 0, max: 100, step: 1 },
   { key: 'mixbar' },
-  { key: 'plusPrice', label: 'Plus price', unit: '$ / month', min: 0, max: 50, step: 1 },
-  { key: 'proPrice', label: 'Pro price', unit: '$ / month', min: 0, max: 100, step: 1 },
+  { key: 'plusPrice', label: 'Plus price', unit: '$ / month — the mix above does NOT respond to this', min: 0, max: 50, step: 1 },
+  { key: 'proPrice', label: 'Pro price', unit: '$ / month — same: read it as “what if the same share paid more”', min: 0, max: 100, step: 1 },
   { key: 'compedPct', label: 'Paid artists not paying this month', unit: '% (comps, referral months, failed cards)', min: 0, max: 50, step: 1 },
   { key: 'venuePro', label: 'Venues on Venue Pro', unit: 'venues', min: 0, max: 2000, step: 1 },
   { key: 'venuePrice', label: 'Venue Pro price', unit: '$ / month', min: 0, max: 100, step: 1 },
@@ -744,15 +859,14 @@ const DIALS = [
   { key: 'extraViews', label: 'Other pages viewed per person', unit: 'profile, community, city feed', min: 0, max: 10, step: 0.5 },
   { key: 'installedPct', label: 'Installed as an app', unit: '% of the room (no cost effect — see note)', min: 0, max: 100, step: 5 },
   { key: 'studioShare', label: 'Studio Live tab open', unit: '% of the gig (one device, polls every 4 s)', min: 0, max: 100, step: 5 },
-  { group: 'Money from the room', help: 'Tips and vote packs are charged on the artist’s own Stripe account. MySet’s cut is the plan’s transaction fee. What a room spends is a guess until the shows say otherwise.' },
-  { key: 'roomFree', label: 'Room money per gig · free artist', unit: '$ tips + packs', min: 0, max: 200, step: 1, real: 'roomFree' },
-  { key: 'roomPlus', label: 'Room money per gig · Plus artist', unit: '$ tips + packs', min: 0, max: 300, step: 1, real: 'roomPlus' },
-  { key: 'roomPro', label: 'Room money per gig · Pro artist', unit: '$ tips + packs', min: 0, max: 500, step: 1 },
+  { group: 'Money from the room', help: 'Tips and vote packs are charged on the artist’s own Stripe account; MySet’s cut is the plan’s transaction fee. These are PER PERSON, so a bigger room earns more as well as costing more — the show-size panel uses the same rule. The only figure ever observed is $0.375 a head (30 Aug: $3.00 from 8 people), which is what real nights will fill in; the dials start at a rounder $0.40 until then. Raise them per tier when the nights say so.' },
+  { key: 'roomFree', label: 'Room money per person · free artist', unit: '$ tips + packs, per person per gig', min: 0, max: 20, step: 0.05, real: 'roomFree' },
+  { key: 'roomPlus', label: 'Room money per person · Plus artist', unit: '$ per person per gig', min: 0, max: 20, step: 0.05, real: 'roomPlus' },
+  { key: 'roomPro', label: 'Room money per person · Pro artist', unit: '$ per person per gig', min: 0, max: 20, step: 0.05, real: 'roomPro' },
   { key: 'cutFree', label: 'MySet’s cut · free', unit: '% (plan rule)', min: 0, max: 30, step: 0.5 },
   { key: 'cutPlus', label: 'MySet’s cut · Plus', unit: '% (plan rule)', min: 0, max: 30, step: 0.5 },
   { key: 'cutPro', label: 'MySet’s cut · Pro', unit: '% (plan rule)', min: 0, max: 30, step: 0.5 },
-  { key: 'activePayoutPct', label: 'Artists paid out this month', unit: '% with a Stripe payout (drives Express fees)', min: 0, max: 100, step: 5 },
-  { key: 'roomPerHead', label: 'Big-show spend per attendee', unit: '$ (for the show-size table only)', min: 0, max: 10, step: 0.1 },
+  { key: 'activePayoutPct', label: 'Artists who get any payout in a month', unit: '% of artists — room money above is the AVERAGE over every gig, dry nights included, so the two agree', min: 0, max: 100, step: 5 },
   { group: 'Featured shows', help: 'A featured spot ($10 today) puts a gig at the top of its city for one night. Three spots per city per night, first come first served. Paid to MySet directly.' },
   { key: 'featPct', label: 'Gigs promoted', unit: '% of all gigs', min: 0, max: 100, step: 1 },
   { key: 'featPrice', label: 'Price of a featured spot', unit: '$ per night', min: 0, max: 100, step: 1 },
@@ -761,7 +875,7 @@ const DIALS = [
   { key: 'stripePreset' },
   { key: 'stripe.pct', label: 'Card fee', unit: '% of each charge', min: 0, max: 6, step: 0.05 },
   { key: 'stripe.fixed', label: 'Card fee, fixed part', unit: '$ per charge', min: 0, max: 1, step: 0.01 },
-  { key: 'stripe.intlShare', label: 'Cards from another country', unit: '% of charges', min: 0, max: 100, step: 5 },
+  { key: 'stripe.intlShare', label: 'International cards', unit: '% of MySet’s own charges — measured on the account’s test charges; artists’ cards may run higher', min: 0, max: 100, step: 5 },
   { key: 'stripe.intlPct', label: 'International surcharge', unit: '% extra', min: 0, max: 5, step: 0.1 },
   { key: 'stripe.fxShare', label: 'Charges needing conversion', unit: '% (0 while MySet bills in USD)', min: 0, max: 100, step: 5 },
   { key: 'stripe.fxPct', label: 'Conversion surcharge', unit: '% extra', min: 0, max: 5, step: 0.1 },
@@ -769,7 +883,7 @@ const DIALS = [
   { key: 'stripe.disputePct', label: 'Disputes', unit: '% of MySet’s charges', min: 0, max: 3, step: 0.05 },
   { key: 'stripe.disputeFee', label: 'Dispute fee', unit: '$ each', min: 0, max: 50, step: 1 },
   { key: 'stripe.refundPct', label: 'Subscriptions refunded', unit: '% of subscription revenue', min: 0, max: 10, step: 0.5 },
-  { key: 'stripe.expressOn', label: 'MySet pays Express account fees', switch: true },
+  { key: 'stripe.expressOn', label: 'MySet pays Stripe’s Express fees (Stripe’s docs say the platform does for Express accounts; confirm in Connect › Settings)', switch: true },
   { key: 'stripe.expressAcct', label: 'Active connected account', unit: '$ per account-month', min: 0, max: 5, step: 0.5 },
   { key: 'stripe.payoutPct', label: 'Payout fee', unit: '% of volume paid out', min: 0, max: 2, step: 0.05 },
   { key: 'stripe.payoutFixed', label: 'Payout fee, fixed part', unit: '$ per payout', min: 0, max: 2, step: 0.05 },
@@ -777,10 +891,10 @@ const DIALS = [
   { key: 'stripe.lossPct', label: 'Bad debt on artists’ balances', unit: '% of room money (Express liability)', min: 0, max: 2, step: 0.05 },
   { group: 'Server & host', help: 'Pick where MySet runs. The per-call numbers are measured through the real code; change them if the code changes. Netlify bills in credits (about 0.7¢ each on Pro). ms = thousandths of a second of server work; bytes = data sent; a GB-hour = a gigabyte of memory held for an hour.' },
   { key: 'hostSel' },
-  { key: 'deploys', label: 'Production deploys', unit: 'per month (15 credits each on Netlify)', min: 0, max: 200, step: 1, real: 'deploys' },
+  { key: 'deploys', label: 'Production deploys', unit: 'per month, ALL sites on the account (15 credits each)', min: 0, max: 400, step: 1, real: 'deploys' },
   { key: 'readsPerPoll', label: 'Reads per poll', unit: 'documents (measured 15)', min: 0, max: 30, step: 1 },
   { key: 'pollMs', label: 'Function time per poll', unit: 'ms (probe 155; the bill implies 70–110; 120 leaves headroom)', min: 0, max: 1000, step: 5 },
-  { key: 'pollMsPerFan', label: 'Extra poll time per person in the room', unit: 'ms — every poll reads every fan record', min: 0, max: 1, step: 0.01 },
+  { key: 'pollMsPerFan', label: 'Extra poll time per person in the room', unit: 'ms per person — DERIVED, not measured on the real server (0.004–0.010)', min: 0, max: 1, step: 0.001 },
   { key: 'bigRoomOn', label: 'Big-room brake (not built yet — see the tidal-wave note)', switch: true },
   { key: 'bigRoomFrom', label: 'Brake kicks in above', unit: 'phones', min: 0, max: 5000, step: 50 },
   { key: 'bigRoomFloor', label: 'Slowest poll in a big room', unit: 'seconds between polls', min: 3, max: 120, step: 1 },
@@ -800,10 +914,13 @@ const DIALS = [
   { key: 'supportRate', label: 'Value of an hour', unit: '$ per hour', min: 0, max: 200, step: 5 },
   { key: 'taxPct', label: 'Tax on profit', unit: '% (0 until the accountant says)', min: 0, max: 50, step: 1 },
   { group: 'Growth over time', help: 'For the month-by-month charts: start from today’s artists and grow toward this scenario’s size.' },
-  { key: 'startArtists', label: 'Artists today', unit: 'artists', min: 0, max: 500, step: 1 },
+  { key: 'startArtists', label: 'Artists today', unit: 'artists (really 1 — you)', min: 0, max: 500, step: 1 },
   { key: 'growthPct', label: 'Monthly growth', unit: '% per month, net of churn', min: 0, max: 100, step: 1 },
+  { key: 'churnPct', label: 'Artists leaving', unit: '% per month (only used to count how many you must sign)', min: 0, max: 30, step: 0.5 },
+  { key: 'cacUsd', label: 'Cost to sign one artist', unit: '$ — set this before trusting the cumulative chart', min: 0, max: 200, step: 1 },
   { key: 'months', label: 'Months to chart', unit: 'months', min: 6, max: 60, step: 1 },
-  { group: 'Show sizes', help: 'The four shows in the table on the right. Change them freely.' },
+  { group: 'Show sizes', help: 'The four shows in the table on the right. Change them freely. The tier matters: MySet takes 10% of a free artist’s room, 2% on Plus and nothing on Pro — so the same arena is worth three different amounts.' },
+  { key: 'sizeTier' },
   { key: 'sizes' },
   { group: 'Real shows', help: 'When the numbers from real gigs exist, paste them here (tools/actuals.py prints them). Switch on to let them replace the guesses above.' },
   { key: 'actuals' },
@@ -815,8 +932,8 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const getPath = (o, k) => k.split('.').reduce((a, b) => (a == null ? undefined : a[b]), o);
 const setPath = (o, k, v) => { const ks = k.split('.'); const last = ks.pop(); const t = ks.reduce((a, b) => a[b], o); t[last] = v; };
 const fmt = {
-  usd: (v, d) => { if (!isFinite(v)) return '∞'; const neg = v < 0; v = Math.abs(v); let s; if (v >= 1e6) s = '$' + (v / 1e6).toFixed(2) + 'M'; else if (v >= 1e4) s = '$' + (v / 1e3).toFixed(1) + 'k'; else if (v >= 100) s = '$' + v.toFixed(0); else s = '$' + v.toFixed(d == null ? 2 : d); return neg ? '−' + s : s; },
-  usdFull: (v) => (v < 0 ? '−' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  usd: (v, d) => { if (!isFinite(v)) return '∞'; const neg = v <= -(v > -100 ? 0.005 : 0.5); v = Math.abs(v); let s; if (v >= 1e6) s = '$' + (v / 1e6).toFixed(2) + 'M'; else if (v >= 1e4) s = '$' + (v / 1e3).toFixed(1) + 'k'; else if (v >= 100) s = '$' + v.toFixed(0); else s = '$' + v.toFixed(d == null ? 2 : d); return neg ? '−' + s : s; },
+  usdFull: (v) => (v <= -0.005 ? '−' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
   cents: (v) => v < 0.01 ? (v * 100).toFixed(3) + '¢' : v < 1 ? (v * 100).toFixed(1) + '¢' : '$' + v.toFixed(2),
   pct: (v, d = 1) => isFinite(v) ? (v * 100).toFixed(d) + '%' : '—',
   int: (v) => Math.round(v).toLocaleString('en-US'),
@@ -844,13 +961,14 @@ function buildDials() {
     if (d.key === 'hostSel') { el.className = 'hostSel'; el.id = 'hostSel'; body.appendChild(el); continue; }
     if (d.key === 'hostRates') { el.innerHTML = `<details class="more"><summary>Host rates (advanced)</summary><div id="hostRates" style="display:grid;gap:12px;margin-top:6px"></div></details>`; body.appendChild(el); continue; }
     if (d.key === 'fixedList') { el.className = 'fixedList'; el.id = 'fixedList'; body.appendChild(el); const add = document.createElement('button'); add.className = 'btn small ghost'; add.textContent = '+ Add a cost line'; add.onclick = () => { P.fixed.push({ name: 'New cost', usd: 0 }); renderFixed(); recalc(); }; body.appendChild(add); continue; }
+    if (d.key === 'sizeTier') { el.className = 'dial'; el.innerHTML = `<div class="lab"><span>Price these shows as</span></div><select id="sizeTierSel"><option value="free">a free artist (MySet takes ${P.cutFree}%)</option><option value="plus">a Plus artist (${P.cutPlus}%)</option><option value="pro">a Pro artist (${P.cutPro}% — MySet earns nothing)</option></select>`; body.appendChild(el); $('#sizeTierSel', el).value = P.sizeTier || 'free'; $('#sizeTierSel', el).addEventListener('change', (e) => { P.sizeTier = e.target.value; recalc(); }); continue; }
     if (d.key === 'sizes') { el.id = 'sizesEdit'; body.appendChild(el); continue; }
     if (d.key === 'actuals') { el.id = 'actualsBox'; body.appendChild(el); continue; }
     if (d.switch) { el.className = 'switch'; el.innerHTML = `<input type="checkbox" id="sw_${d.key.replace('.', '_')}" data-key="${d.key}"><label for="sw_${d.key.replace('.', '_')}">${d.label}</label>`; body.appendChild(el); $('input', el).addEventListener('change', (e) => { setPath(P, d.key, e.target.checked); recalc(); }); continue; }
     el.className = 'dial'; el.dataset.key = d.key;
     const id = 'in_' + d.key.replace('.', '_');
     el.innerHTML = `<div class="lab"><label for="${id}">${d.label}</label><span class="unit">${d.unit || ''}</span></div>
-      <div class="ctl"><input type="range" min="${d.min}" max="${d.max}" step="${d.step}" aria-label="${d.label} slider"><input type="number" id="${id}" step="${d.step}" min="${d.min != null ? d.min : 0}"></div>
+      <div class="ctl"><input type="range" min="${d.min}" max="${d.max}" step="any" aria-label="${d.label} slider"><input type="number" id="${id}" step="${d.step}" min="${d.min != null ? d.min : 0}"></div>
       <div class="from" hidden></div>`;
     const range = $('input[type=range]', el), num = $('input[type=number]', el);
     const onChange = (v, fromRange) => {
@@ -863,6 +981,8 @@ function buildDials() {
       if (fromRange || x !== Number(v)) num.value = x;          // a clamped value is written back
       if (!fromRange || x !== Number(v)) range.value = x;
       if (d.real && P.useActuals) { P.useActuals = false; $('#useActuals').checked = false; markReal(); toast('Real-show numbers switched off — you changed one by hand'); }
+      /* the screen-on dial was solved from real polls with THESE two dials as inputs; move them and it is re-solved, not left stale */
+      if (P.useActuals && ACT && ACT.pollsPerPhoneHour != null && (d.key === 'interactions' || d.key === 'changeShare')) { P.lookShare = ENGINE.calibrateLook(P, ACT.pollsPerPhoneHour); syncInputs(); }
       recalc();
     };
     range.addEventListener('input', (e) => onChange(e.target.value, true));
@@ -887,9 +1007,11 @@ function markReal() {
   for (const d of DIALS) {
     if (!d.real) continue;
     const el = $(`.dial[data-key="${d.key}"]`); if (!el) continue;
-    const on = P.useActuals && ACT && ACT[d.real] != null;
+    /* a room-money dial with no figure of its own is filled from roomPerHead (all plans), and says so */
+    const viaAll = /^room/.test(d.real) && ACT && ACT[d.real] == null && ACT.roomPerHead != null;
+    const on = P.useActuals && ACT && (ACT[d.real] != null || viaAll);
     el.classList.toggle('real', on);
-    const f = $('.from', el); f.hidden = !on; if (on) f.textContent = `from ${ACT.shows} real show${ACT.shows === 1 ? '' : 's'} (as of ${ACT.asOf})`;
+    const f = $('.from', el); f.hidden = !on; if (on) f.textContent = `from ${ACT.shows} real show${ACT.shows === 1 ? '' : 's'}${viaAll ? ', all plans together' : ''} (as of ${ACT.asOf})`;
   }
   const cs = $('#calibStamp');
   cs.innerHTML = P.useActuals && ACT ? `REAL SHOWS <b>${ACT.shows} used · ${ACT.asOf}</b>` : `REAL SHOWS <b>${ACT ? ACT.shows + ' on file, not used' : 'none yet'}</b>`;
@@ -942,12 +1064,17 @@ function renderActuals() {
   box.innerHTML = `
     <div class="switch"><input type="checkbox" id="useActuals" ${P.useActuals ? 'checked' : ''}><label for="useActuals"><b>Use real shows</b> to replace the guesses</label></div>
     <div class="help" id="actSummary"></div>
-    <textarea id="actJson" placeholder='Paste the JSON that tools/actuals.py prints, e.g. {"shows":5,"people":24,"hours":3.1,"roomFree":6,"deploys":40,"asOf":"2026-09-12"}'></textarea>
+    <textarea id="actJson" placeholder='Paste the JSON that tools/actuals.py prints, e.g. {"shows":5,"people":24,"hours":3.1,"roomPerHead":0.4,"deploys":170,"pollsPerPhoneHour":95,"asOf":"2026-09-12"}'></textarea>
     <div class="row" style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" id="actApply">Save these real numbers</button><button class="btn small ghost" id="actClear">Forget them</button></div>
-    <div class="help">Fields: <b>shows</b> (nights counted), <b>people</b> (average phones per night), <b>hours</b> (average length), <b>roomFree</b> / <b>roomPlus</b> ($ per night the room spent), <b>deploys</b> (per month), <b>pollsPerPhoneHour</b> (from Netlify’s function count ÷ phones ÷ hours — calibrates the screen-on dial), <b>creditsPerShow</b> (optional check), <b>asOf</b>.</div>`;
-  $('#useActuals').addEventListener('change', (e) => { P.useActuals = e.target.checked; applyActuals(); syncInputs(); recalc(); });
-  $('#actApply').addEventListener('click', () => { try { const j = JSON.parse($('#actJson').value); if (!j || typeof j !== 'object') throw 0; ACT = { ...j }; store.saveActuals(ACT); P.useActuals = true; $('#useActuals').checked = true; applyActuals(); syncInputs(); recalc(); renderActSummary(); toast('Real numbers saved and switched on'); } catch (e) { toast('That is not valid JSON — copy exactly what the script prints'); } });
-  $('#actClear').addEventListener('click', () => { ACT = null; store.saveActuals(null); P.useActuals = false; $('#useActuals').checked = false; syncInputs(); recalc(); renderActSummary(); });
+    <div class="help">Fields: <b>shows</b> (nights counted), <b>people</b> (average phones per night), <b>hours</b> (average length), <b>roomFree</b> / <b>roomPlus</b> / <b>roomPro</b> ($ the room spent <em>per person per night</em>, by the artist’s plan) and <b>roomPerHead</b> (the same across every plan — it fills any tier that has no figure of its own), <b>deploys</b> (per month, account-wide), <b>pollsPerPhoneHour</b> (AUDIENCE polls only, ÷ phones ÷ hours. Do NOT use Netlify’s raw function count: it includes the Studio’s own tick, page loads and votes, and at a small gig that is ~70% too high. The script measures it from the account’s bandwidth counter when you run <code>actuals.py --mark</code> before and after a night; otherwise leave it out and the screen-on dial stays a guess), <b>creditsPerShow</b> (optional check), <b>asOf</b>. What the tracker can fill: people, hours, room money per head, deploys, screen-on (via polls). What it cannot: the plan mix, prices, featured shows, fixed costs — those stay yours to set.</div>`;
+  $('#useActuals').addEventListener('change', (e) => {
+    P.useActuals = e.target.checked;
+    if (P.useActuals) applyActuals();
+    else if (PRE_ACT) { Object.assign(P, PRE_ACT); PRE_ACT = null; }   // put the guesses back
+    store.saveUse(P.useActuals); syncInputs(); recalc();
+  });
+  $('#actApply').addEventListener('click', () => { try { const j = JSON.parse($('#actJson').value); if (!j || typeof j !== 'object') throw 0; ACT = { ...j }; store.saveActuals(ACT); P.useActuals = true; store.saveUse(true); $('#useActuals').checked = true; applyActuals(); syncInputs(); recalc(); renderActSummary(); toast('Real numbers saved and switched on'); } catch (e) { toast('That is not valid JSON — copy exactly what the script prints'); } });
+  $('#actClear').addEventListener('click', () => { ACT = null; store.saveActuals(null); P.useActuals = false; store.saveUse(false); if (PRE_ACT) { Object.assign(P, PRE_ACT); PRE_ACT = null; } $('#useActuals').checked = false; syncInputs(); recalc(); renderActSummary(); });
   renderActSummary();
 }
 function renderActSummary() {
@@ -957,15 +1084,23 @@ function renderActSummary() {
   if (ACT.people != null) parts.push(`${ACT.people} people/night`); if (ACT.hours != null) parts.push(`${ACT.hours} h`);
   if (ACT.roomFree != null) parts.push(`$${ACT.roomFree}/night from the room`); if (ACT.deploys != null) parts.push(`${ACT.deploys} deploys/mo`);
   if (ACT.pollsPerPhoneHour != null) parts.push(`${ACT.pollsPerPhoneHour} polls/phone-hour`);
-  if (ACT.creditsPerShow != null && window.__LAST) parts.push(`${ACT.creditsPerShow} credits/show real vs ${fmt.num(window.__LAST.sizes[0].credits, 1)} modelled`);
+  /* Compared against the gig the DIALS describe, not the show-size editor's first row —
+     which the user can retype to any size, silently changing what the check compares. */
+  if (ACT.creditsPerShow != null) { try { const m = ENGINE.netlifyCredits(ENGINE.gigTraffic(P, P.fans, P.hours), 0, P.hosts.netlifyPro).total; parts.push(`${ACT.creditsPerShow} credits/show real vs ${fmt.num(m, 2)} modelled`); } catch (e) {} }
   s.innerHTML = `<b>On file:</b> ${parts.join(' · ')}${ACT.note ? `<br>${ACT.note}` : ''}`;
 }
+let PRE_ACT = null;             // the guesses, stashed while real numbers are in force
 function applyActuals() {
   if (!P.useActuals || !ACT) return;
+  if (!PRE_ACT) PRE_ACT = { fans: P.fans, hours: P.hours, roomFree: P.roomFree, roomPlus: P.roomPlus, roomPro: P.roomPro, deploys: P.deploys, lookShare: P.lookShare };
   if (ACT.people != null) P.fans = ACT.people;
   if (ACT.hours != null) P.hours = ACT.hours;
   if (ACT.roomFree != null) P.roomFree = ACT.roomFree;
   if (ACT.roomPlus != null) P.roomPlus = ACT.roomPlus;
+  if (ACT.roomPro != null) P.roomPro = ACT.roomPro;
+  /* One per-head figure covers every tier when only one artist has ever played, which
+     is the situation for as long as Perry is the only one on the platform. */
+  if (ACT.roomPerHead != null) { if (ACT.roomFree == null) P.roomFree = ACT.roomPerHead; if (ACT.roomPlus == null) P.roomPlus = ACT.roomPerHead; if (ACT.roomPro == null) P.roomPro = ACT.roomPerHead; }
   if (ACT.deploys != null) P.deploys = ACT.deploys;
   if (ACT.pollsPerPhoneHour != null) P.lookShare = ENGINE.calibrateLook(P, ACT.pollsPerPhoneHour);
 }
@@ -1007,16 +1142,24 @@ function render() {
 
   /* KPIs */
   const k = [
-    ['Revenue / month', fmt.usd(R.revenue), `${fmt.usd(R.subs)} subs · ${fmt.usd(R.cutRev)} cuts · ${fmt.usd(R.feat)} featured`, ''],
+    ['Revenue / month', fmt.usd(R.revenue), `${fmt.usd(R.subsNet)} subs after refunds · ${fmt.usd(R.cutRev)} cuts · ${fmt.usd(R.feat)} featured`, ''],
     ['Costs / month', fmt.usd(R.costs), `${fmt.usd(R.bill.usd)} server · ${fmt.usd(R.feeSubs + R.feeFeat + R.disputes)} card fees · ${fmt.usd(R.express + R.badDebt)} artist payout fees · ${fmt.usd(R.fixed)} fixed`, ''],
-    ['Profit / month', fmt.usd(R.profit), `margin ${fmt.pct(R.margin)}`, R.profit >= 0 ? 'good' : 'bad'],
+    ['Profit / month', fmt.usd(R.profit), `margin ${fmt.pct(R.margin)}${P.taxPct > 0 ? ` · ${fmt.usd(R.afterTax)} after ${P.taxPct}% tax` : ''}`, R.profit >= 0 ? 'good' : 'bad'],
     ['Server ÷ revenue', fmt.pct(R.serverPct), `${fmt.cents(R.costPerGig)} per gig · ${fmt.int(R.gigs)} gigs`, ''],
     ['Paying subscribers', fmt.int(R.subCount), `of ${fmt.int(R.artists)} artists${P.venuePro ? ' + ' + fmt.int(P.venuePro) + ' venues' : ''} · ${fmt.usd(R.revPerArtist)} revenue per artist`, ''],
-    ['Break-even', isFinite(be) ? fmt.int(be) + ' artists' : 'never', isFinite(be) ? (R.artists >= be ? 'you are past it' : `${fmt.int(be - R.artists)} to go`) : 'costs exceed revenue at every size', isFinite(be) && R.artists >= be ? 'good' : 'bad'],
-    ['Server plan', R.bill.plan || R.bill.label, R.bill.credits != null ? `${fmt.big(R.bill.credits)} credits/mo` : R.bill.label, ''],
+    /* Compared against TODAY's artist count, not the scenario's. It used to read
+       "59 artists · you are past it" in green while MySet had one artist, him. */
+    ['Break-even', isFinite(be) ? fmt.int(be) + ' artists' : 'never',
+      isFinite(be) ? (P.startArtists >= be ? `you are past it — ${fmt.int(P.startArtists)} today` : `${fmt.int(Math.max(0, be - P.startArtists))} to go from today’s ${fmt.int(P.startArtists)}`) : 'costs exceed revenue at every size',
+      isFinite(be) && P.startArtists >= be ? 'good' : ''],
+    ['Server plan', R.bill.plan || R.bill.label, R.bill.credits != null ? `${fmt.big(R.bill.credits)} credits/mo${R.bill.packs ? ` · plan + ${R.bill.packs} top-up pack${R.bill.packs === 1 ? '' : 's'}` : ''}` : R.bill.label, ''],
     ['Polls per gig', fmt.int(R.one.polls), `${fmt.num(R.one.perPhone, 0)} per phone · one every ${fmt.num(P.hours * 3600 / Math.max(R.one.perPhone, 1), 0)} s`, ''],
   ];
   $('#kpis').innerHTML = k.map(([l, v, s, c]) => `<div class="kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
+  $('#kpiWhat').textContent = `${fmt.int(P.artists)} artists, ${P.plusPct}% Plus, ${P.proPct}% Pro`;
+  $('#kpiToday').textContent = fmt.int(P.startArtists);
+  /* The three dials doing most of the work, named, with what nobody has observed yet. */
+  $('#kpiBand').innerHTML = `<b>What is carrying these numbers:</b> the plan mix (${P.plusPct}% Plus + ${P.proPct}% Pro = ${(P.plusPct + P.proPct)}% paying — published freemium medians are 2–8%), the room spending ${Math.min(P.roomFree, P.roomPlus, P.roomPro) === Math.max(P.roomFree, P.roomPlus, P.roomPro) ? '$' + fmt.num(P.roomFree, 2) : '$' + fmt.num(Math.min(P.roomFree, P.roomPlus, P.roomPro), 2) + '–$' + fmt.num(Math.max(P.roomFree, P.roomPlus, P.roomPro), 2)} a head (one night observed, at $0.375), and ${P.featPct}% of gigs promoted (never sold one). Nobody has paid for a plan yet. Press <b>Benchmark case</b> to see the same engine on published industry figures.`;
   /* live copy: numbers the notes quote must be the numbers the page shows */
   const lg = $('#liveGig'); if (lg) { const c0 = ENGINE.netlifyCredits(R.one, 0, P.hosts.netlifyPro).total; lg.textContent = `${fmt.int(R.one.polls)} polls, ${fmt.num(c0, 1)} credits`; }
   const ld = $('#liveDo'); if (ld && sizes[0].onHost.cfDo > 0) ld.textContent = `about ${(sizes[0].onHost.netlifyPro / sizes[0].onHost.cfDo).toFixed(1)}×`;
@@ -1037,26 +1180,39 @@ function render() {
 
   const ladderRows = [...LADDER, P.artists].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).map(a => ({ a, r: ENGINE.month(P, a) }));
   const pctOf = (r, v) => r.revenue > 0 ? Math.max(0, v / r.revenue * 100) : 0;
+  /* one deep-loss row (10 artists on the benchmark case is 2,250%) must not squash the rows that matter: cap the axis and print the true figure on the clipped bar */
+  const ladderTot = ladderRows.map(x => pctOf(x.r, x.r.bill.usd) + pctOf(x.r, x.r.stripe) + pctOf(x.r, x.r.fixed) + (x.r.revenue > 0 ? Math.max(0, x.r.profit / x.r.revenue * 100) : 0));
+  const ladderMax = Math.max(...ladderTot) > 250 ? 250 : undefined;
   mk('cLadder', { type: 'bar', data: { labels: ladderRows.map(x => (x.a >= 1000 ? fmt.big(x.a) : fmt.int(x.a)) + (x.a === P.artists ? ' ◂ now' : '')), datasets: [
     { label: 'Server', data: ladderRows.map(x => pctOf(x.r, x.r.bill.usd)), backgroundColor: t.server },
     { label: 'Stripe', data: ladderRows.map(x => pctOf(x.r, x.r.stripe)), backgroundColor: t.stripe },
     { label: 'Fixed', data: ladderRows.map(x => pctOf(x.r, x.r.fixed)), backgroundColor: t.fixed },
     { label: 'Profit', data: ladderRows.map(x => x.r.revenue > 0 ? Math.max(0, x.r.profit / x.r.revenue * 100) : 0), backgroundColor: t.profit }] },
-    options: { ...baseOpts(t, { indexAxis: 'y' }), scales: { x: { stacked: true, min: 0, grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => v + '%' } }, y: { stacked: true, grid: { display: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 } } } }, plugins: { ...baseOpts(t).plugins, tooltip: { ...baseOpts(t).plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.x.toFixed(1)}% of revenue`, footer: (items) => { const r = ladderRows[items[0].dataIndex].r; return r.profit < 0 ? `a loss: costs are ${(r.costs / Math.max(r.revenue, 1e-9) * 100).toFixed(0)}% of revenue` : ''; } } } }, datasets: { bar: { borderWidth: 0, barPercentage: .6, categoryPercentage: .8, borderSkipped: false } } } });
+    options: { ...baseOpts(t, { indexAxis: 'y' }), scales: { x: { stacked: true, min: 0, max: ladderMax, grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => v + '%' } }, y: { stacked: true, grid: { display: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 } } } }, plugins: { ...baseOpts(t).plugins, tooltip: { ...baseOpts(t).plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.x.toFixed(1)}% of revenue`, footer: (items) => { const r = ladderRows[items[0].dataIndex].r; return r.profit < 0 ? `a loss: costs are ${(r.costs / Math.max(r.revenue, 1e-9) * 100).toFixed(0)}% of revenue` : ''; } } } }, datasets: { bar: { borderWidth: 0, barPercentage: .6, categoryPercentage: .8, borderSkipped: false } } }, plugins: [{ id: 'over', afterDatasetsDraw(c) { if (!ladderMax) return; const { ctx, chartArea: a } = c, m = c.getDatasetMeta(0); ctx.save(); ctx.font = '11px "JetBrains Mono", monospace'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ladderTot.forEach((tot, i) => { if (tot <= ladderMax) return; const txt = `costs ${fmt.int(tot)}% of revenue ▸`, w = ctx.measureText(txt).width; ctx.fillStyle = t.surface; ctx.globalAlpha = .88; ctx.fillRect(a.right - w - 10, m.data[i].y - 8, w + 8, 16); ctx.globalAlpha = 1; ctx.fillStyle = t.loss; ctx.fillText(txt, a.right - 6, m.data[i].y); }); ctx.restore(); } }] });
   const centre = (big, small) => ({ id: 'centre', afterDraw(c) { const { ctx, chartArea: a } = c; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = t.ink; ctx.font = '700 18px "JetBrains Mono", monospace'; ctx.fillText(big, (a.left + a.right) / 2, (a.top + a.bottom) / 2 - 8); ctx.font = '11px Archivo, sans-serif'; ctx.fillStyle = t.muted; ctx.fillText(small, (a.left + a.right) / 2, (a.top + a.bottom) / 2 + 12); ctx.restore(); } });
   const dough = (id, labs, data, cols, total, big, small) => mk(id, { type: 'doughnut', data: { labels: labs, datasets: [{ data, backgroundColor: cols, borderColor: t.surface, borderWidth: 2, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, cutout: '62%', plugins: { legend: { position: 'right', labels: { color: t.ink, boxWidth: 10, boxHeight: 10, font: { family: 'Archivo', size: 12 } } }, tooltip: { backgroundColor: t.ink, titleColor: t.surface, bodyColor: t.surface, callbacks: { label: (c) => ` ${c.label}: ${fmt.usd(c.parsed)} (${total > 0 ? (c.parsed / total * 100).toFixed(1) : 0}%)` } } } }, plugins: [centre(big, small)] });
   dough('cRevMix', ['Subscriptions', 'Cut of room money', 'Featured shows'], [R.subsNet, R.cutRev, R.feat], [t.subs, t.cuts, t.feat], R.revenue, fmt.usd(R.revenue), 'revenue / mo');
   dough('cCostMix', ['Server', 'Card fees', 'Artist payout fees', 'Fixed'], [R.bill.usd, R.feeSubs + R.feeFeat + R.disputes, R.express + R.badDebt, R.fixed], [t.server, t.stripe, t.cuts, t.fixed], R.costs, fmt.pct(R.margin), 'margin');
-  const sharePct = (s) => s.earn > 0 ? Math.min(100, s.onHost[P.host] / (s.earn * s.days) * 100) : 0;
-  mk('cSizes', { type: 'bar', data: { labels: sizes.map(s => `${s.name} · ${fmt.int(s.fans)} × ${s.hours}h${s.days > 1 ? ' × ' + s.days + 'd' : ''}`), datasets: [{ label: 'Server bill as a share of the room’s spend', data: sizes.map(sharePct), backgroundColor: sizes.map(s => s.status === 'breaks' ? t.loss : t.server) }] },
-    options: { ...baseOpts(t, { indexAxis: 'y' }), layout: { padding: { left: 4, right: 64, top: 4, bottom: 0 } }, scales: { x: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, min: 0, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => v + '%' } }, y: { grid: { display: false }, border: { color: t.axis }, ticks: { color: t.ink, font: { family: 'Archivo', size: 12 } } } }, plugins: { ...baseOpts(t).plugins, legend: { display: false }, tooltip: { ...baseOpts(t).plugins.tooltip, callbacks: { label: (c) => { const s = sizes[c.dataIndex]; return [` server ${fmt.usd(s.onHost[P.host])} · room might spend ${fmt.usd(s.earn * s.days)} → ${sharePct(s).toFixed(1)}%`, ` ${fmt.cents(s.onHost[P.host] / Math.max(s.fans, 1))} per person · today’s code ${s.status === 'ok' ? 'holds' : s.status === 'risky' ? 'is at the edge' : 'breaks'}`]; } } } }, datasets: { bar: { borderWidth: 0, barPercentage: .55, categoryPercentage: .8 } } },
-    plugins: [{ id: 'vals', afterDatasetsDraw(c) { const { ctx } = c, m = c.getDatasetMeta(0); ctx.save(); ctx.font = '11px "JetBrains Mono", monospace'; ctx.fillStyle = t.ink; ctx.textBaseline = 'middle'; m.data.forEach((b, i) => ctx.fillText(sharePct(sizes[i]).toFixed(2) + '% · ' + fmt.usd(sizes[i].onHost[P.host]), b.x + 6, b.y)); ctx.restore(); } }] });
+  /* The server bill as a share of MYSET's revenue from the show. Uncapped, because a
+     show that costs more than it earns is exactly the thing worth seeing. */
+  const sharePct = (s) => s.mysetRev > 0 ? s.server / s.mysetRev * 100 : 0;   // no revenue: the label carries the loss in dollars
+  mk('cSizes', { type: 'bar', data: { labels: sizes.map(s => `${s.name} · ${fmt.int(s.fans)} × ${s.hours}h${s.days > 1 ? ' × ' + s.days + 'd' : ''}`), datasets: [{ label: 'Server bill as a share of MySet’s revenue', data: sizes.map(sharePct), backgroundColor: sizes.map(s => s.mysetNet < 0 ? t.loss : t.server) }] },
+    options: { ...baseOpts(t, { indexAxis: 'y' }), layout: { padding: { left: 4, right: 64, top: 4, bottom: 0 } }, scales: { x: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, min: 0, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => v + '%' } }, y: { grid: { display: false }, border: { color: t.axis }, ticks: { color: t.ink, font: { family: 'Archivo', size: 12 } } } }, plugins: { ...baseOpts(t).plugins, legend: { display: false }, tooltip: { ...baseOpts(t).plugins.tooltip, callbacks: { label: (c) => { const s = sizes[c.dataIndex]; return [` MySet earns ${fmt.usd(s.mysetRev)} (${s.cutPct}% of the room’s ${fmt.usd(s.earn)}) · server ${fmt.usd(s.server)}`, ` MySet keeps ${fmt.usd(s.mysetNet)} · ${fmt.cents(s.server / Math.max(s.fans, 1))} of server per person`, ` on this host it ${s.status === 'ok' ? 'holds' : s.status === 'risky' ? 'is at the edge' : 'breaks'}`]; } } } }, datasets: { bar: { borderWidth: 0, barPercentage: .55, categoryPercentage: .8 } } },
+    plugins: [{ id: 'vals', afterDatasetsDraw(c) { const { ctx } = c, m = c.getDatasetMeta(0); ctx.save(); ctx.font = '11px "JetBrains Mono", monospace'; ctx.fillStyle = t.ink; ctx.textBaseline = 'middle'; m.data.forEach((b, i) => { const txt = (sizes[i].mysetRev > 0 ? sharePct(sizes[i]).toFixed(0) + '%' : 'no revenue') + ' · keeps ' + fmt.usd(sizes[i].mysetNet), w = ctx.measureText(txt).width; if (b.x + 6 + w > c.width - 2 && b.x - 6 - w > c.chartArea.left) { ctx.textAlign = 'right'; ctx.fillStyle = t.surface; ctx.fillText(txt, b.x - 6, b.y); ctx.fillStyle = t.ink; ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.fillText(txt, b.x - 6 - w, b.y); } else ctx.fillText(txt, b.x + 6, b.y); }); ctx.restore(); } }] });
 
   /* sizes table */
   const hostKeys = Object.keys(P.hosts).filter(k => k !== 'custom' || P.hosts.custom.base || P.hosts.custom.reqUsd);
   const shortHost = (k) => P.hosts[k].name.split(' (')[0].replace('Netlify, poll optimised', 'Netlify optimised').replace('Netlify + 3-second cache on the poll', 'Netlify + cache').replace('Own always-on servers', 'Own servers').replace('Cloudflare ', 'CF ');
   const pill = (st) => st === 'ok' ? '<span class="tag" style="border-color:var(--good);color:var(--good)">holds</span>' : st === 'risky' ? '<span class="tag" style="border-color:var(--warn);color:var(--warn)">at the edge</span>' : '<span class="tag" style="border-color:var(--bad);color:var(--bad)">breaks</span>';
-  $('#sizesTable').innerHTML = `<thead><tr><th>Show</th><th class="n">Phones</th><th class="n">Hours</th><th class="n">Polls</th><th class="n">Per phone</th><th class="n">Polls / s</th><th class="n">Running at once</th><th class="n">Reads / s</th><th>Today’s code</th><th class="n">Credits</th>${hostKeys.map(k => `<th class="n">${shortHost(k)}</th>`).join('')}<th class="n">Room might spend</th></tr></thead><tbody>${sizes.map(s => `<tr${s.status === 'breaks' ? ' class="hi"' : ''}><td class="name">${s.name}${s.days > 1 ? ` <span class="muted">× ${s.days} days</span>` : ''}${s.floorS > 3 ? ` <span class="muted">· brake ${s.floorS} s</span>` : ''}</td><td class="n">${fmt.int(s.fans)}</td><td class="n">${s.hours * s.days}</td><td class="n">${fmt.big(s.polls)}</td><td class="n">${fmt.int(s.perPhone)}</td><td class="n">${fmt.num(s.pollsPerSec, 1)}</td><td class="n">${fmt.num(s.concurrent, 1)}</td><td class="n">${fmt.int(s.readsPerSec)}</td><td>${pill(s.status)}</td><td class="n">${fmt.num(s.credits, 1)}</td>${hostKeys.map(k => `<td class="n${k === P.host ? ' pos' : ''}">${P.hosts[k].kind === 'vps' ? '≈ $0*' : fmt.usd(s.onHost[k])}</td>`).join('')}<td class="n">${fmt.usd(s.earn)}</td></tr>`).join('')}</tbody>`;
+  const tierName = { free: 'free', plus: 'Plus', pro: 'Pro' }[P.sizeTier] || 'free';
+  const mTarget = isFinite(R.margin) && R.margin > 0 ? R.margin : 0.5;   // price bookings at the platform's margin, or a 50% target while it is losing money
+  $('#sizesTable').innerHTML = `<thead><tr><th>Show</th><th class="n">Phones</th><th class="n">Hours</th><th class="n">Polls</th><th class="n">Per phone</th><th class="n">Running at once</th><th class="n">Reads / s</th><th>On this host</th><th class="n">Room spends</th><th class="n">MySet earns</th><th class="n">Server</th><th class="n">MySet keeps</th><th class="n">Charge to book</th>${hostKeys.map(k => `<th class="n">${shortHost(k)}</th>`).join('')}</tr></thead><tbody>${sizes.map(s => `<tr${s.mysetNet < 0 ? ' class="hi"' : ''}><td class="name">${s.name}${s.days > 1 ? ` <span class="muted">× ${s.days} days</span>` : ''}${s.floorS > 3 ? ` <span class="muted">· brake ${s.floorS} s</span>` : ''}</td><td class="n">${fmt.int(s.fans)}</td><td class="n">${s.hours * s.days}</td><td class="n">${fmt.big(s.polls)}</td><td class="n">${fmt.int(s.perPhone)}</td><td class="n">${fmt.num(s.effConcurrent, 1)}</td><td class="n">${fmt.int(s.effReads)}</td><td>${pill(s.status)}</td><td class="n muted">${fmt.usd(s.earn)}</td><td class="n">${fmt.usd(s.mysetRev)}</td><td class="n">${fmt.usd(s.server)}</td><td class="n ${s.mysetNet >= 0 ? 'pos' : 'neg'}">${fmt.usd(s.mysetNet)}</td><td class="n">${fmt.usd(s.bookingAt(mTarget))}</td>${hostKeys.map(k => `<td class="n${k === P.host ? ' pos' : ''}">${P.hosts[k].kind === 'vps' ? '≈ $0*' : fmt.usd(s.onHost[k])}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  $('#sizesCap').innerHTML = `Priced for a <b>${tierName}</b> artist — MySet takes ${sizes[0].cutPct}% of the room. “Charge to book” is what MySet would have to bill for the show on top of its cut for it to earn ${isFinite(R.margin) && R.margin > 0 ? 'the platform’s current ' + fmt.pct(R.margin) : 'a 50% target'} margin after Stripe’s card fee on the booking${isFinite(R.margin) && R.margin > 0 ? '' : ' (the platform is at ' + fmt.pct(R.margin) + ' right now)'}. * Your own servers cost the same whether or not a show happens.`;
+
+  /* per-tier contribution */
+  const TN = { free: 'Free artist', plus: 'Plus artist', pro: 'Pro artist' };
+  $('#tierTable').innerHTML = `<thead><tr><th>Per artist, per month</th><th class="n">Gigs</th><th class="n">Subscription</th><th class="n">Room spends</th><th class="n">MySet’s cut</th><th class="n">Featured</th><th class="n">Revenue</th><th class="n">Server</th><th class="n">Stripe</th><th class="n">Net to MySet</th></tr></thead><tbody>${R.perTier.map(x => `<tr><td class="name">${TN[x.tier]}</td><td class="n">${fmt.num(x.gigs, 1)}</td><td class="n">${fmt.usdFull(x.sub)}</td><td class="n muted">${fmt.usdFull(x.room)}</td><td class="n">${fmt.usdFull(x.cut)}</td><td class="n">${fmt.usdFull(x.featRev)}</td><td class="n">${fmt.usdFull(x.rev)}</td><td class="n">${fmt.usdFull(x.server)}</td><td class="n">${fmt.usdFull(x.stripe)}</td><td class="n ${x.net >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.net)}</td></tr>`).join('')}</tbody>`;
+  $('#tierCap').innerHTML = `Before fixed costs, at this scenario’s room size and gig rate. This is the line that answers “is the free tier worth keeping” and “should I push everyone to Plus”. <b>Plus stops paying for MySet above ${isFinite(R.plusCrossover) ? fmt.usdFull(R.plusCrossover) : '—'} of room money a month per artist</b> (a Plus artist's ${P.gigsPaid} nights against the free plan's ${Math.min(P.freeCap, P.gigsPaid)}-night cap) — above that, the ${P.cutFree}% cut on a free artist is worth more than the subscription. This scenario has a Plus artist's room spending ${fmt.usdFull(R.perTier[1].room)} a month.`;
 
   /* formula table */
   const rows = [];
@@ -1066,8 +1222,8 @@ function render() {
   g('One gig’s traffic'); r('Polls per phone', fmt.num(R.one.perPhone, 0), 'polls', `the ladder simulated: ${P.fans} phones, ${P.hours} h, ${P.lookShare}% screen-on, ${P.interactions} actions each (+1 poll per action)`); r('Polls in the room', fmt.int(R.one.polls), 'polls / gig', 'per phone × phones'); r('Function time per poll', fmt.num(R.one.pollMs, 0) + ' ms', '', `${P.pollMs} ms + ${P.fans} people × ${P.pollMsPerFan} ms (every poll reads every fan record)`); r('Actions (writes)', fmt.int(R.one.writes), 'calls / gig', 'actions per person × phones'); r('Studio polls', fmt.int(R.one.studioPolls), 'calls / gig', `${P.hours} h × 3600 ÷ 4 s × ${P.studioShare}%`); r('Requests', fmt.int(R.one.requests), 'requests / gig', 'polls + actions + Studio + other pages + page files'); r('Bytes', fmt.num(R.one.bytes / 1e6, 1) + ' MB', 'per gig', 'each call × its measured size'); r('Function time', fmt.num(R.one.fnMs / 60000, 1) + ' min', 'per gig', `polls × ${fmt.num(R.one.pollMs, 1)} ms + actions × ${P.writeMs} ms + …`); r('Document reads', fmt.int(R.one.reads), 'per gig', `polls × ${P.readsPerPoll} + actions × ${P.readsPerWrite} + Studio × ${P.studioReads}`);
   g('The month’s traffic'); r('Requests', fmt.big(R.T.requests), 'per month', 'one gig × all gigs'); r('Bandwidth', fmt.num(R.T.bytes / 1e9, 1) + ' GB', 'per month', ''); r('Function compute', fmt.num(R.T.fnMs / 3600e3, 0) + ' GB-hours', 'per month', '1 GB of memory × wall time'); r('Background jobs', fmt.big(P.cronRequests) + ' calls', 'per month', `the gig scheduler every 2 min + nightly syncs, ${P.cronMs} ms each — runs with nobody playing`); r('Document reads', fmt.big(R.T.reads), 'per month', 'the number every other host prices');
   g('Server bill · ' + R.bill.label); for (const [n, v] of R.bill.lines) r(n, fmt.usdFull(v), '$ / month', ''); if (R.bill.credits != null) r('Credits needed', fmt.int(R.bill.credits), 'credits / month', `→ ${R.bill.plan}`); r('Server total', fmt.usdFull(R.bill.usd), '$ / month', '', 'sum');
-  g('Revenue'); r('Plus subscriptions', fmt.usdFull(R.subsPlus), '$ / month', `${fmt.int(R.nPlus)} × $${P.plusPrice} × (1 − ${P.compedPct}% not paying)`); r('Pro subscriptions', fmt.usdFull(R.subsPro), '$ / month', `${fmt.int(R.nPro)} × $${P.proPrice} × (1 − ${P.compedPct}%)`); if (P.venuePro) r('Venue Pro subscriptions', fmt.usdFull(R.subsVenue), '$ / month', `${P.venuePro} × $${P.venuePrice}`); r('Room money (all artists)', fmt.usdFull(R.gmv.free + R.gmv.plus + R.gmv.pro), '$ / month', `gigs × $ per gig by tier ($${P.roomFree} · $${P.roomPlus} · $${P.roomPro}) — the artists’ money, not MySet’s`); r('MySet’s cut · free', fmt.usdFull(R.cuts.free), '$ / month', `${fmt.usd(R.gmv.free)} × ${P.cutFree}%`); r('MySet’s cut · Plus', fmt.usdFull(R.cuts.plus), '$ / month', `${fmt.usd(R.gmv.plus)} × ${P.cutPlus}%`); r('MySet’s cut · Pro', fmt.usdFull(R.cuts.pro), '$ / month', `${fmt.usd(R.gmv.pro)} × ${P.cutPro}%`); r('Subscription refunds', '−' + fmt.usdFull(R.refundsLost), '$ / month', `${P.stripe.refundPct}% of subscriptions given back (Stripe keeps its fee on them)`, 'neg'); r('Featured shows', fmt.usdFull(R.feat), '$ / month', `${fmt.int(R.gigs)} gigs × ${P.featPct}% × $${P.featPrice} − ${P.featRefundPct}% refunded`); r('Revenue', fmt.usdFull(R.revenue), '$ / month', 'subscriptions − refunds + cuts + featured', 'sum');
-  g('Stripe (MySet’s own charges only)'); r('Card fee on subscriptions', fmt.usdFull(R.feeSubs - R.subs * P.stripe.billingPct / 100), '$ / month', `${P.stripe.pct}% + $${P.stripe.fixed} each, +${P.stripe.intlPct}% on the ${P.stripe.intlShare}% from abroad`); r('Stripe Billing fee', fmt.usdFull(R.subs * P.stripe.billingPct / 100), '$ / month', `${P.stripe.billingPct}% of subscription volume`); r('Card fee on featured shows', fmt.usdFull(R.feeFeat), '$ / month', 'same card rates'); r('Disputes', fmt.usdFull(R.disputes), '$ / month', `${fmt.int(R.subCount + R.featCount)} charges × ${P.stripe.disputePct}% × $${P.stripe.disputeFee}`); r('Express account & payout fees', fmt.usdFull(R.express), '$ / month', P.stripe.expressOn ? `${fmt.int(R.earning)} paid-out artists × $${P.stripe.expressAcct} + ${P.stripe.payoutPct}% of the ${fmt.usd(R.paidOut)} paid out + ${fmt.int(R.payouts)} payouts × $${P.stripe.payoutFixed} (capped at nights played)` : 'switched off'); r('Bad debt on artists’ balances', fmt.usdFull(R.badDebt), '$ / month', `${P.stripe.lossPct}% of the money paid out — Express losses land on the platform`); r('Stripe total', fmt.usdFull(R.stripe), '$ / month', '', 'sum');
+  g('Revenue'); r('Plus subscriptions', fmt.usdFull(R.subsPlus), '$ / month', `${fmt.int(R.nPlus)} × $${P.plusPrice} × (1 − ${P.compedPct}% not paying)`); r('Pro subscriptions', fmt.usdFull(R.subsPro), '$ / month', `${fmt.int(R.nPro)} × $${P.proPrice} × (1 − ${P.compedPct}%)`); if (P.venuePro) r('Venue Pro subscriptions', fmt.usdFull(R.subsVenue), '$ / month', `${P.venuePro} × $${P.venuePrice}`); r('Room money (all artists)', fmt.usdFull(R.gmv.free + R.gmv.plus + R.gmv.pro), '$ / month', `gigs × ${P.fans} people × $ per person by tier ($${P.roomFree} · $${P.roomPlus} · $${P.roomPro}) — the artists’ money, not MySet’s`); r('MySet’s cut · free', fmt.usdFull(R.cuts.free), '$ / month', `${fmt.usd(R.gmv.free)} × ${P.cutFree}%`); r('MySet’s cut · Plus', fmt.usdFull(R.cuts.plus), '$ / month', `${fmt.usd(R.gmv.plus)} × ${P.cutPlus}%`); r('MySet’s cut · Pro', fmt.usdFull(R.cuts.pro), '$ / month', `${fmt.usd(R.gmv.pro)} × ${P.cutPro}%`); r('Subscription refunds', '−' + fmt.usdFull(R.refundsLost), '$ / month', `${P.stripe.refundPct}% of subscriptions given back (Stripe keeps its fee on them)`, 'neg'); r('Featured shows', fmt.usdFull(R.feat), '$ / month', `${fmt.int(R.gigs)} gigs × ${P.featPct}% × $${P.featPrice} − ${P.featRefundPct}% refunded`); r('Revenue', fmt.usdFull(R.revenue), '$ / month', 'subscriptions − refunds + cuts + featured', 'sum');
+  g('Stripe (MySet’s own charges only)'); r('Card fee on subscriptions', fmt.usdFull(R.feeSubs - R.subs * P.stripe.billingPct / 100), '$ / month', `${P.stripe.pct}% + $${P.stripe.fixed} each, +${P.stripe.intlPct}% on the ${P.stripe.intlShare}% from abroad`); r('Stripe Billing fee', fmt.usdFull(R.subs * P.stripe.billingPct / 100), '$ / month', `${P.stripe.billingPct}% of subscription volume`); r('Card fee on featured shows', fmt.usdFull(R.feeFeat), '$ / month', 'same card rates'); r('Disputes', fmt.usdFull(R.disputes), '$ / month', `${fmt.int(R.subCount + R.featCount)} charges × ${P.stripe.disputePct}% × $${P.stripe.disputeFee}`); r('Express account & payout fees', fmt.usdFull(R.express), '$ / month', P.stripe.expressOn ? `${fmt.int(R.earning)} paid-out artists × $${P.stripe.expressAcct} + ${P.stripe.payoutPct}% of the ${fmt.usd(R.paidOut)} paid out + ${fmt.int(R.payouts)} payouts × $${P.stripe.payoutFixed} (capped at nights played)` : 'switched off'); r('Bad debt on artists’ balances', fmt.usdFull(R.badDebt), '$ / month', `${P.stripe.lossPct}% of the money paid out — only if MySet is the loss collector for its Express accounts (per Stripe’s docs for Express accounts; confirm in Connect › Settings)`); r('Stripe total', fmt.usdFull(R.stripe), '$ / month', '', 'sum');
   g('Fixed'); for (const [n, v] of R.fixedLines) r(n, fmt.usdFull(v), '$ / month', ''); r('Support & admin time', fmt.usdFull(R.support), '$ / month', `${P.supportHours} h flat + ${fmt.int(R.subCount)} paying × ${P.supportMinPerArtist} min, at $${P.supportRate}/h`); r('Fixed total', fmt.usdFull(R.fixed), '$ / month', '', 'sum');
   g('Result'); r('Costs', fmt.usdFull(R.costs), '$ / month', 'server + Stripe + fixed', 'sum'); r('Profit', fmt.usdFull(R.profit), '$ / month', 'revenue − costs', R.profit >= 0 ? 'sum pos' : 'sum neg'); if (P.taxPct) { r('Tax on profit', fmt.usdFull(R.tax), '$ / month', `${P.taxPct}% of profit when positive`); r('Profit after tax', fmt.usdFull(R.afterTax), '$ / month', '', R.afterTax >= 0 ? 'sum pos' : 'sum neg'); } r('Margin', fmt.pct(R.margin), '', 'profit ÷ revenue'); r('Server as share of revenue', fmt.pct(R.serverPct), '', ''); r('Server cost per gig', fmt.cents(R.costPerGig), '', 'server ÷ gigs'); r('Revenue per artist', fmt.usdFull(R.revPerArtist), '$ / month', ''); r('Break-even', isFinite(be) ? fmt.int(be) + ' artists' : 'never at this mix', '', 'the smallest platform where profit ≥ 0');
   $('#formulaTable').innerHTML = `<thead><tr><th>Quantity</th><th class="n">Value</th><th>Unit</th><th>How</th></tr></thead><tbody>${rows.map(x => x.group ? `<tr class="group"><td colspan="4">${x.group}</td></tr>` : `<tr class="${x.cls && x.cls.includes('sum') ? 'sum' : ''}"><td class="name">${x.name}</td><td class="n ${x.cls || ''}">${x.val}</td><td class="muted">${x.unit}</td><td class="how">${x.how}</td></tr>`).join('')}</tbody>`;
@@ -1079,7 +1235,7 @@ function render() {
   $('#ladderTable').innerHTML = `<thead><tr><th class="n">Artists</th><th class="n">Gigs / mo</th><th class="n">Revenue</th><th class="n">Server</th><th class="n">Stripe</th><th class="n">Fixed</th><th class="n">Profit</th><th class="n">Margin</th><th class="n">Server % rev</th><th>Plan</th></tr></thead><tbody>${ladderRows.map(x => `<tr${x.a === P.artists ? ' class="hi"' : ''}><td class="n">${fmt.int(x.a)}</td><td class="n">${fmt.int(x.r.gigs)}</td><td class="n">${fmt.usdFull(x.r.revenue)}</td><td class="n">${fmt.usdFull(x.r.bill.usd)}</td><td class="n">${fmt.usdFull(x.r.stripe)}</td><td class="n">${fmt.usdFull(x.r.fixed)}</td><td class="n ${x.r.profit >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.r.profit)}</td><td class="n">${fmt.pct(x.r.margin)}</td><td class="n">${fmt.pct(x.r.serverPct)}</td><td class="muted">${x.r.bill.plan || x.r.bill.label}</td></tr>`).join('')}</tbody>`;
 
   /* timeline table */
-  $('#tlTable').innerHTML = `<thead><tr><th class="n">Month</th><th class="n">Artists</th><th class="n">Revenue</th><th class="n">Server</th><th class="n">Stripe</th><th class="n">Fixed</th><th class="n">Costs</th><th class="n">Profit</th><th class="n">Cumulative</th></tr></thead><tbody>${tl.map(x => `<tr><td class="n">${x.m}</td><td class="n">${fmt.int(x.artists)}</td><td class="n">${fmt.usdFull(x.revenue)}</td><td class="n">${fmt.usdFull(x.server)}</td><td class="n">${fmt.usdFull(x.stripe)}</td><td class="n">${fmt.usdFull(x.fixed)}</td><td class="n">${fmt.usdFull(x.costs)}</td><td class="n ${x.profit >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.profit)}</td><td class="n ${x.cum >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.cum)}</td></tr>`).join('')}</tbody>`;
+  $('#tlTable').innerHTML = `<thead><tr><th class="n">Month</th><th class="n">Artists</th><th class="n">Revenue</th><th class="n">Server</th><th class="n">Stripe</th><th class="n">Fixed</th><th class="n">Acquisition</th><th class="n">Costs</th><th class="n">Profit</th><th class="n">Cumulative</th></tr></thead><tbody>${tl.map(x => `<tr><td class="n">${x.m}</td><td class="n">${fmt.int(x.artists)}</td><td class="n">${fmt.usdFull(x.revenue)}</td><td class="n">${fmt.usdFull(x.server)}</td><td class="n">${fmt.usdFull(x.stripe)}</td><td class="n">${fmt.usdFull(x.fixed)}</td><td class="n">${fmt.usdFull(x.acq || 0)}</td><td class="n">${fmt.usdFull(x.costs)}</td><td class="n ${x.profit >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.profit)}</td><td class="n ${x.cum >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.cum)}</td></tr>`).join('')}</tbody>`;
 
   renderCards();
 }
@@ -1093,7 +1249,7 @@ function summarize(p) {
   return {
     revenue: R.revenue, costs: R.costs, profit: R.profit, margin: R.margin, artists: R.artists, gigs: R.gigs, server: R.bill.usd, stripe: R.stripe, fixed: R.fixed, serverPct: R.serverPct, costPerGig: R.costPerGig, breakEven: isFinite(be) ? be : null, host: R.bill.label, plan: R.bill.plan || '', paying: R.subCount,
     bullets: [
-      `<b>Revenue ${fmt.usd(R.revenue)}/mo</b> — ${fmt.usd(R.subs)} subscriptions, ${fmt.usd(R.cutRev)} cuts, ${fmt.usd(R.feat)} featured`,
+      `<b>Revenue ${fmt.usd(R.revenue)}/mo</b> — ${fmt.usd(R.subsNet)} subscriptions after refunds, ${fmt.usd(R.cutRev)} cuts, ${fmt.usd(R.feat)} featured`,
       `<b>Costs ${fmt.usd(R.costs)}/mo</b> — server ${fmt.usd(R.bill.usd)}, Stripe ${fmt.usd(R.stripe)}, fixed ${fmt.usd(R.fixed)}`,
       `<b>Profit ${fmt.usd(R.profit)}/mo</b> · margin ${fmt.pct(R.margin)}`,
       `${fmt.int(R.artists)} artists (${fmt.int(R.nFree)} free · ${fmt.int(R.nPlus)} Plus · ${fmt.int(R.nPro)} Pro), ${fmt.int(R.gigs)} gigs/mo, ${p.fans} people × ${p.hours} h`,
@@ -1181,18 +1337,33 @@ const store = {
       try { SCEN = JSON.parse(localStorage.getItem('myset.model.scenarios') || '[]').slice(0, MAX_SCEN); SCEN.forEach(s => { s.params = withDefaults(s.params); }); } catch (e) { SCEN = []; }
       try { ACT = JSON.parse(localStorage.getItem('myset.model.actuals') || 'null'); } catch (e) { ACT = null; }
     }
-    if (!ACT) ACT = SEED_ACT;
+    /* Did he leave the switch on last time? The real numbers used to be loaded and then
+       silently ignored on every reload, so the page opened on the guesses while a badge
+       in 11px type said "on file, not used". */
+    try { this.wasOn = localStorage.getItem('myset.model.useActuals') === '1'; } catch (e) { this.wasOn = false; }
+    if (!ACT) { ACT = SEED_ACT; this.wasOn = false; }
   },
   async save(s) { s.order = SCEN.findIndex(x => x.id === s.id); if (this.db) { try { await this.db.doc('scenarios/' + s.id).set(strip(s)); } catch (e) { toast('Could not save to the shared store'); } } this.local(); },
   async remove(id) { if (this.db) { try { await this.db.doc('scenarios/' + id).delete(); } catch (e) {} } this.local(); },
   async saveOrder() { SCEN.forEach((s, i) => s.order = i); if (this.db) { for (const s of SCEN) { try { await this.db.doc('scenarios/' + s.id).update({ order: s.order }); } catch (e) {} } } this.local(); },
+  saveUse(v) { try { localStorage.setItem('myset.model.useActuals', v ? '1' : '0'); } catch (e) {} },
   async saveActuals(a) { if (this.db) { try { if (a) await this.db.doc('actuals/current').set(a); else await this.db.doc('actuals/current').delete(); } catch (e) {} } try { localStorage.setItem('myset.model.actuals', JSON.stringify(a)); } catch (e) {} },
   local() { try { localStorage.setItem('myset.model.scenarios', JSON.stringify(SCEN)); } catch (e) {} },
 };
 const strip = (s) => { const { id, ...rest } = s; return JSON.parse(JSON.stringify(rest)); };
 /* a scenario saved before a dial existed still loads: its params are laid over today's defaults */
 const deepMerge = (a, b) => { for (const k of Object.keys(b || {})) a[k] = b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) ? deepMerge(a[k] && typeof a[k] === 'object' ? a[k] : {}, b[k]) : b[k]; return a; };
-const withDefaults = (params) => deepMerge(JSON.parse(JSON.stringify(P0)), params);
+const withDefaults = (params) => {
+  const q = deepMerge(JSON.parse(JSON.stringify(P0)), params);
+  /* Room money was $ per GIG before v2 and is $ per PERSON now. A scenario saved under
+     the old meaning would silently read 20× too high, so convert it once. */
+  if (!(params && params.v >= 2)) {
+    const base = (params && params.fans) || 20;
+    for (const k of ['roomFree', 'roomPlus', 'roomPro']) if (params && params[k] != null) q[k] = params[k] / Math.max(base, 1);
+    q.v = 2;
+  }
+  return q;
+};
 
 /* ───────────────────────────── wiring ───────────────────────────── */
 $('#scenSave').addEventListener('click', async () => {
@@ -1201,6 +1372,17 @@ $('#scenSave').addEventListener('click', async () => {
   const s = { id: uid(), name: name.slice(0, 48), params: JSON.parse(JSON.stringify(P)), summary: summarize(P), at: Date.now(), order: SCEN.length };
   SCEN.push(s); ACTIVE = s.id; await store.save(s); $('#scenName').value = ''; renderCards(); toast(`Saved “${s.name}”`);
 });
+/* Two presets, so the range is one click away rather than something to construct.
+   Benchmark = published freemium conversion medians and the one room-spend figure
+   MySet has actually observed. */
+const PRESETS = {
+  bench: { plusPct: 4, proPct: 1, featPct: 1, roomFree: 0.375, roomPlus: 0.375, roomPro: 0.375, fans: 8, gigsPaid: 3, gigsFree: 3, churnPct: 5, compedPct: 8 },
+  hope:  { plusPct: 30, proPct: 10, featPct: 5, roomFree: 1.5, roomPlus: 2, roomPro: 3, fans: 40, gigsPaid: 8, gigsFree: 3, churnPct: 2, compedPct: 5 },
+};
+const applyPreset = (which) => { Object.assign(P, PRESETS[which]); P.useActuals = false; buildDials(); recalc();
+  toast(which === 'bench' ? 'Benchmark case — published medians and the one night we measured' : 'If it all works — an optimistic but not absurd world'); };
+$('#presetBench').addEventListener('click', () => applyPreset('bench'));
+$('#presetHope').addEventListener('click', () => applyPreset('hope'));
 $('#scenReset').addEventListener('click', () => { P = JSON.parse(JSON.stringify(P0)); ACTIVE = null; buildDials(); recalc(); toast('Dials reset'); });
 $('#scenCompare').addEventListener('click', () => { const w = $('#compareWrap'); w.hidden = !w.hidden; if (!w.hidden) renderCompare(); $('#scenCompare').textContent = w.hidden ? 'Compare all' : 'Hide comparison'; });
 $('#scenExport').addEventListener('click', async () => { const txt = JSON.stringify({ scenarios: SCEN, actuals: ACT }, null, 1); try { await navigator.clipboard.writeText(txt); toast('Copied all scenarios to the clipboard as JSON'); } catch (e) { prompt('Copy this', txt); } });
@@ -1208,7 +1390,11 @@ $('#scenImport').addEventListener('click', async () => { const txt = prompt('Pas
 
 $('#stampDate').textContent = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
 buildDials(); recalc();
-(async () => { await store.init(); await store.loadAll(); renderActSummary(); markReal(); renderCards(); })();
+(async () => {
+  await store.init(); await store.loadAll();
+  if (store.wasOn && ACT) { P.useActuals = true; applyActuals(); buildDials(); }
+  renderActSummary(); markReal(); recalc(); renderCards();
+})();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recalc);
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { charts = Object.fromEntries(Object.entries(charts).map(([k, c]) => (c.destroy(), [k, null]))); recalc(); });
 new MutationObserver(recalc).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });

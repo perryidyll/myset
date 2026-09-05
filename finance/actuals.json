@@ -1,33 +1,30 @@
 {
  "asOf": "2026-09-05",
  "source": "tools/actuals.py against production",
- "shows": 2,
- "people": 4.5,
- "hours": 2.61,
+ "shows": 1,
+ "people": 8.0,
+ "hours": 2.19,
  "roomFree": null,
  "roomPlus": null,
- "deploys": 116,
+ "roomPro": 0.375,
+ "roomPerHead": 0.375,
+ "deploys": 176,
+ "deploysThisPeriod": 171,
+ "billingPeriodStart": "2026-08-08",
  "pollsPerPhoneHour": null,
  "creditsPerShow": null,
- "note": "2 night(s) with people in them, across 1 artist(s). Votes per night: 10.5. Founder's own gigs are included; the founder is comped Pro so his room money sits under whichever plan the registry says.",
+ "note": "1 night(s) that really happened, across 1 artist(s); 1 with money known (per-person figures use only those). Votes per night: 21.0. No night is bracketed by two bandwidth marks yet, so polls per phone-hour is still the model's guess. Deploys are account-wide (all five sites share the credit grant): 176 in the last 30 days, 171 this billing period.",
  "nights": [
-  {
-   "key": "hist_perry-idyll_2026-09-04-1150-svmm",
-   "artist": "perry-idyll",
-   "plan": "pro",
-   "people": 1,
-   "votes": 0,
-   "hours": 3.03,
-   "gross": 0.0
-  },
   {
    "key": "hist_perry-idyll_2026-08-30-1210",
    "artist": "perry-idyll",
    "plan": "pro",
    "people": 8,
+   "nets": null,
    "votes": 21,
    "hours": 2.19,
-   "gross": 3.0
+   "gross": 3.0,
+   "moneyKnown": true
   }
  ],
  "notCounted": [
@@ -36,9 +33,11 @@
    "artist": "perry-idyll",
    "plan": "pro",
    "people": 0,
+   "nets": null,
    "votes": 0,
    "hours": 0.04,
    "gross": 0.0,
+   "moneyKnown": true,
    "skipped": "nobody there"
   },
   {
@@ -46,40 +45,62 @@
    "artist": "perry-idyll",
    "plan": "pro",
    "people": 3,
+   "nets": 2,
    "votes": 6,
    "hours": 107.9,
-   "gross": 0.0,
+   "gross": null,
+   "moneyKnown": false,
    "skipped": "longer than 12 h \u2014 a show that failed to end itself; not a night"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-04-1150-svmm",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 1,
+   "nets": 1,
+   "votes": 0,
+   "hours": 3.03,
+   "gross": null,
+   "moneyKnown": false,
+   "skipped": "one phone and no votes \u2014 a test"
   },
   {
    "key": "hist_samcole_2026-08-31-1227",
    "artist": "samcole",
-   "plan": "free",
+   "plan": "unknown",
    "people": 31,
+   "nets": 1,
    "votes": 125,
    "hours": 0.07,
    "gross": 0.0,
-   "skipped": "shorter than 30 minutes \u2014 a test or a demo"
+   "moneyKnown": true,
+   "skipped": "31 phones all on one network \u2014 a load test from one machine, not a room"
   },
   {
    "key": "hist_samcole_2026-08-31-1231",
    "artist": "samcole",
-   "plan": "free",
+   "plan": "unknown",
    "people": 44,
+   "nets": 1,
    "votes": 168,
    "hours": 0.1,
    "gross": 0.0,
-   "skipped": "shorter than 30 minutes \u2014 a test or a demo"
+   "moneyKnown": true,
+   "skipped": "44 phones all on one network \u2014 a load test from one machine, not a room"
   },
   {
    "key": "hist_samcole_show-1788179016366",
    "artist": "samcole",
-   "plan": "free",
+   "plan": "unknown",
    "people": 26,
+   "nets": 1,
    "votes": 21,
    "hours": 0.07,
    "gross": 0.0,
-   "skipped": "shorter than 30 minutes \u2014 a test or a demo"
+   "moneyKnown": true,
+   "skipped": "26 phones all on one network \u2014 a load test from one machine, not a room"
   }
- ]
+ ],
+ "pollsByNight": [],
+ "marksOnFile": 1
 }

@@ -27,30 +27,81 @@ ok('compute is the biggest share (audit: 63%)', cr.cmp > cr.req && cr.cmp > cr.b
 console.log('THE MONTH, independent re-computation');
 const R = ENGINE.month(P0, P0.artists);
 const nFree = 1000 * .6, nPlus = 300, nPro = 100;
-const gigs = nFree * Math.min(3, 4) + (nPlus + nPro) * 8;
+const gigsFreeRun = Math.min(P0.gigsFree, P0.freeCap);
+const gigs = nFree * gigsFreeRun + (nPlus + nPro) * P0.gigsPaid;
 ok('gigs = ' + gigs, Math.abs(R.gigs - gigs) < 1e-6, R.gigs);
-const subs = (nPlus * 10 + nPro * 20) * (1 - .08);
-ok('subscriptions = $' + subs, Math.abs(R.subs - subs) < 1e-6, R.subs);
-const gmvFree = nFree * 3 * 5, gmvPlus = nPlus * 8 * 15, gmvPro = nPro * 8 * 25;
-const cutRev = gmvFree * .10 + gmvPlus * .02;
-ok('cut revenue = $' + cutRev, Math.abs(R.cutRev - cutRev) < 1e-6, R.cutRev);
-const feat = gigs * .05 * 10 * (1 - .01);
-ok('featured = $' + feat.toFixed(2), Math.abs(R.feat - feat) < 1e-6, R.feat);
-const refunds = subs * .01;
+const paying = 1 - P0.compedPct / 100;
+const subs = (nPlus * P0.plusPrice + nPro * P0.proPrice) * paying;
+ok('subscriptions = $' + subs.toFixed(2), Math.abs(R.subs - subs) < 1e-6, R.subs);
+const refunds = subs * P0.stripe.refundPct / 100;
 ok('subscriptions net of refunds', Math.abs(R.subsNet - (subs - refunds)) < 1e-6, R.subsNet);
-ok('revenue = subs − refunds + cuts + featured', Math.abs(R.revenue - (subs - refunds + cutRev + feat)) < 1e-6);
-const subCount = (nPlus + nPro) * .92; const featCount = gigs * .05;
-const card = (amt, n) => amt * (.029 + .7 * .015) + n * .30;
+/* room money is PER PERSON now, so it scales with the crowd */
+const gmvFree = nFree * gigsFreeRun * P0.fans * P0.roomFree;
+const gmvPlus = nPlus * P0.gigsPaid * P0.fans * P0.roomPlus;
+const gmvPro  = nPro  * P0.gigsPaid * P0.fans * P0.roomPro;
 const gmvAll = gmvFree + gmvPlus + gmvPro;
+const cutRev = gmvFree * P0.cutFree / 100 + gmvPlus * P0.cutPlus / 100 + gmvPro * P0.cutPro / 100;
+ok('cut revenue = $' + cutRev.toFixed(2), Math.abs(R.cutRev - cutRev) < 1e-6, R.cutRev);
+const featCount = gigs * P0.featPct / 100;
+const feat = featCount * P0.featPrice * (1 - P0.featRefundPct / 100);
+ok('featured = $' + feat.toFixed(2), Math.abs(R.feat - feat) < 1e-6, R.feat);
+ok('revenue = subs - refunds + cuts + featured', Math.abs(R.revenue - (subs - refunds + cutRev + feat)) < 1e-6);
+const subCount = (nPlus + nPro) * paying;
+const S = P0.stripe;
+const card = (amt, n) => amt * (S.pct / 100 + (S.intlShare / 100) * (S.intlPct / 100) + (S.fxShare / 100) * (S.fxPct / 100)) + n * S.fixed;
 const paidOut = gmvAll - cutRev;
-const payouts = (600 * Math.min(8, 3) + 400 * Math.min(8, 8)) * .4;          // daily payouts cannot exceed nights played
-const stripe = card(subs, subCount) + subs * .007 + card(gigs * .05 * 10, featCount) + (subCount + featCount) * .001 * 15
-  + (1000 * .4) * 2 + paidOut * .0025 + payouts * .25 + paidOut * .001;
+const payouts = (nFree * Math.min(S.payoutsPerMonth, gigsFreeRun) + (nPlus + nPro) * Math.min(S.payoutsPerMonth, P0.gigsPaid)) * (P0.activePayoutPct / 100);
+const earning = 1000 * P0.activePayoutPct / 100;
+const stripe = card(subs, subCount) + subs * S.billingPct / 100 + card(featCount * P0.featPrice, featCount)
+  + (subCount + featCount) * (S.disputePct / 100) * S.disputeFee
+  + earning * S.expressAcct + paidOut * S.payoutPct / 100 + payouts * S.payoutFixed + paidOut * S.lossPct / 100;
 ok('stripe total = $' + stripe.toFixed(2), Math.abs(R.stripe - stripe) < 1e-6, R.stripe);
-const fixed = 1 + 20 + 80 + 40 + 50 + 10 + 6 * 25 + subCount * 2 / 60 * 25;
-ok('fixed = $' + fixed, Math.abs(R.fixed - fixed) < 1e-6, R.fixed);
-ok('profit = revenue − server − stripe − fixed', Math.abs(R.profit - (R.revenue - R.bill.usd - R.stripe - R.fixed)) < 1e-6);
-console.log('   revenue $' + R.revenue.toFixed(0), 'server $' + R.bill.usd.toFixed(0) + ' (' + R.bill.plan + ')', 'stripe $' + R.stripe.toFixed(0), 'fixed $' + R.fixed, 'profit $' + R.profit.toFixed(0), 'margin ' + (R.margin*100).toFixed(1) + '%', 'server%rev ' + (R.serverPct*100).toFixed(1) + '%', 'cost/gig ' + (R.costPerGig*100).toFixed(2) + '¢');
+const fixed = P0.fixed.reduce((n, f) => n + f.usd, 0) + P0.supportHours * P0.supportRate + subCount * P0.supportMinPerArtist / 60 * P0.supportRate;
+ok('fixed = $' + fixed.toFixed(2), Math.abs(R.fixed - fixed) < 1e-6, R.fixed);
+ok('profit = revenue - server - stripe - fixed', Math.abs(R.profit - (R.revenue - R.bill.usd - R.stripe - R.fixed)) < 1e-6);
+console.log('   revenue $' + R.revenue.toFixed(0), 'server $' + R.bill.usd.toFixed(0) + ' (' + R.bill.plan + ')', 'stripe $' + R.stripe.toFixed(0), 'fixed $' + R.fixed.toFixed(0), 'profit $' + R.profit.toFixed(0), 'margin ' + (R.margin*100).toFixed(1) + '%', 'server%rev ' + (R.serverPct*100).toFixed(1) + '%');
+
+console.log('THE AUDIT FIXES');
+/* a bigger room now earns as well as costs */
+const small = ENGINE.month({ ...P0, fans: 20 }, 1000), bigRoom = ENGINE.month({ ...P0, fans: 300 }, 1000);
+console.log('   20 people: revenue $' + small.revenue.toFixed(0) + ' profit $' + small.profit.toFixed(0) + '  |  300 people: revenue $' + bigRoom.revenue.toFixed(0) + ' profit $' + bigRoom.profit.toFixed(0));
+ok('room money scales with the crowd (revenue rises 15x with 15x the people)', Math.abs(bigRoom.gmv.free / small.gmv.free - 15) < 1e-9, bigRoom.gmv.free / small.gmv.free);
+ok('and a bigger room is no longer pure cost — revenue rises with it', bigRoom.revenue > small.revenue * 2);
+/* the Express switch governs bad debt too */
+const noExp = ENGINE.month({ ...P0, stripe: { ...P0.stripe, expressOn: false } }, 1000);
+ok('turning Express off removes the bad-debt line as well', noExp.express === 0 && noExp.badDebt === 0, [noExp.express, noExp.badDebt]);
+/* break-even is the true smallest integer even where the plan steps make profit dip */
+for (const q of [P0, { ...P0, fans: 300, plusPct: 25 }, { ...P0, plusPct: 6, proPct: 2 }]) {
+  const be = ENGINE.breakEven(q);
+  if (!isFinite(be)) { ok('break-even infinite case handled', true); continue; }
+  let brute = null;
+  for (let a = 0; a <= be + 5; a++) if (ENGINE.month(q, a).profit >= 0) { brute = a; break; }
+  ok(`break-even ${be} is the true first profitable count (brute force ${brute})`, be === brute, { be, brute });
+}
+/* the feasibility verdict follows the host */
+const arenaPlain = ENGINE.showSizes(P0)[2];
+const arenaCache = ENGINE.showSizes({ ...P0, host: 'netlifyCache' })[2];
+console.log('   arena verdict — plain Netlify: ' + arenaPlain.status + ' · with the 3-second cache: ' + arenaCache.status);
+ok('the cache the page recommends actually changes the verdict', arenaPlain.status === 'breaks' && arenaCache.status !== 'breaks');
+/* the show-size panel prices MySet's own money, and the tier changes the answer */
+const onFree = ENGINE.showSizes({ ...P0, sizeTier: 'free' })[2], onPro = ENGINE.showSizes({ ...P0, sizeTier: 'pro' })[2];
+console.log('   arena on a free artist: MySet earns $' + onFree.mysetRev.toFixed(0) + ', keeps $' + onFree.mysetNet.toFixed(0) + '  |  on Pro: earns $' + onPro.mysetRev.toFixed(0) + ', keeps $' + onPro.mysetNet.toFixed(0));
+ok('a Pro artist\'s arena earns MySet nothing and shows a loss', onPro.mysetRev === 0 && onPro.mysetNet < 0);
+ok('a free artist\'s arena earns MySet the 10% cut', Math.abs(onFree.mysetRev - onFree.earn * P0.cutFree / 100) < 1e-9);
+ok('the booking price covers the server and the margin', onPro.bookingAt(0.5) > onPro.server);
+/* the whole run, not one day of it */
+const fest = ENGINE.showSizes(P0)[3];
+ok('a 3-day festival counts three days of room money', Math.abs(fest.earn - fest.fans * P0.roomFree * 3) < 1e-9, fest.earn);
+/* acquisition cost reaches the cumulative line */
+const tlFree = ENGINE.timeline(P0), tlPaid = ENGINE.timeline({ ...P0, cacUsd: 20 });
+console.log('   36 months cumulative: $0 to sign an artist -> $' + tlFree[tlFree.length-1].cum.toFixed(0) + '  |  $20 each -> $' + tlPaid[tlPaid.length-1].cum.toFixed(0));
+ok('paying to sign artists lowers the cumulative line', tlPaid[tlPaid.length-1].cum < tlFree[tlFree.length-1].cum);
+ok('and nothing is charged in month 0', tlPaid[0].acq === 0);
+/* per-tier contribution and the Plus crossover */
+const [tf, tp, tr] = R.perTier;
+console.log('   per artist per month — free $' + tf.net.toFixed(2) + ' · Plus $' + tp.net.toFixed(2) + ' · Pro $' + tr.net.toFixed(2) + '  | Plus stops paying above $' + R.plusCrossover.toFixed(2) + ' of room money');
+ok('every tier reports a net figure', [tf, tp, tr].every(x => isFinite(x.net)));
+ok('the Plus crossover is the subscription divided by the cut it gives up', isFinite(R.plusCrossover) && R.plusCrossover > 0);
 
 console.log('SCALE');
 const big = ENGINE.month({ ...P0, studioOn: false, extraViews: 0, changeShare: 100, plusPct: 100, proPct: 0, gigsPaid: 20, deploys: 0, compedPct: 0, pollMs: 155, pollMsPerFan: 0, cronRequests: 0 }, 10000);
@@ -89,7 +140,24 @@ ok('the big-room brake cuts arena polls by at least 3×', arenaOff.polls / arena
 ok('the bar set is untouched by the brake (below the threshold)', Math.abs(ENGINE.showSizes({ ...P0, bigRoomOn: true })[0].polls - ENGINE.showSizes(P0)[0].polls) < 1e-6);
 const cached = ENGINE.showSizes(P0)[2].onHost.netlifyCache, plain = ENGINE.showSizes(P0)[2].onHost.netlifyPro;
 console.log('   arena on Netlify: plain $' + plain.toFixed(2) + ' · with the 3-second cache $' + cached.toFixed(2));
-ok('the 3-second cache makes the arena far cheaper (compute gone, requests remain)', cached < plain / 3 && cached > 2);
+ok('the 3-second cache makes the arena much cheaper (compute gone, requests remain)', cached < plain * 0.45 && cached > 2, [plain, cached]);
 ok('today’s code holds a bar set and breaks at arena size', ENGINE.showSizes(P0)[0].status === 'ok' && arenaOff.status === 'breaks');
+console.log('TRACKING');
+/* tools/actuals.py solves polls out of the bandwidth counter with its own copy of the
+   byte constants; if either side changes without the other, the calibration is wrong. */
+const py = fs.readFileSync(new URL('../tools/actuals.py', import.meta.url), 'utf8');
+const pyBytes = Object.fromEntries([...py.match(/BYTES = \{([^}]*)\}/)[1].matchAll(/'(\w+)': (\d+)/g)].map(m => [m[1], +m[2]]));
+ok('actuals.py byte constants match the model defaults', pyBytes.poll === P0.pollBytes && pyBytes.write === P0.writeBytes && pyBytes.studio === P0.studioBytes && pyBytes.view === P0.viewBytes && pyBytes.page === P0.pageBytes, [pyBytes, P0.pollBytes, P0.writeBytes, P0.studioBytes, P0.viewBytes, P0.pageBytes]);
+ok('actuals.py Studio tick and extra-views match the model', /STUDIO_POLLS_PER_HOUR = 3600 \/ 4\b/.test(py) && +py.match(/EXTRA_VIEWS_PER_PHONE = ([\d.]+)/)[1] === P0.extraViews);
+/* the bandwidth arithmetic, done the model's way: a night's bytes minus everything that is not a poll, ÷ bytes per poll, gives the polls back */
+const nt = ENGINE.gigTraffic(P0, P0.fans, P0.hours);
+const other = nt.studioPolls * P0.studioBytes + P0.fans * P0.pageBytes + nt.writes * P0.writeBytes + nt.extraViews * P0.viewBytes;
+ok('bytes − (Studio + page loads + votes + views) ÷ 2,530 = the polls (the method the marks use)', Math.abs((nt.bytes - other) / P0.pollBytes - nt.polls) < 1e-6);
+console.log('   at the default gig the Studio tab is ' + Math.round(100 * nt.studioPolls * P0.studioBytes / nt.bytes) + '% of the bytes — leave it open the whole night or the solve is off by that much');
+const tierSum = R.perTier.reduce((n, t, i) => n + t.net * [R.nFree, R.nPlus, R.nPro][i], 0);
+ok('per-tier nets summed over the platform equal revenue − server − Stripe (venues aside)', Math.abs(tierSum - (R.revenue - R.bill.usd - R.stripe)) < 1.5, [tierSum, R.revenue - R.bill.usd - R.stripe]);
+ok('actuals.py assumes the same Studio share as the model when no minutes were recorded', +py.match(/STUDIO_SHARE = ([\d.]+)/)[1] === P0.studioShare / 100);
+const bookFree = ENGINE.showSizes(P0)[2].bookingAt(0.5);
+ok('the booking price covers Stripe’s card fee on itself (grossed up, not net)', bookFree > ENGINE.showSizes(P0)[2].server / 0.5 - ENGINE.showSizes(P0)[2].mysetRev, bookFree);
 console.log(fails ? `\n${fails} FAILED` : '\nall passed');
 process.exit(fails ? 1 : 0);

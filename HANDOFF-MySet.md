@@ -2443,3 +2443,24 @@ Chrome and puppeteer-core, which live outside this repo.
 - Perry still owes himself: `charge.updated` on the Stripe webhook, stop the double
   deploy and move to Netlify Pro, 2FA on Google/GitHub/Netlify/Stripe, and try the
   passkey on stage.
+
+## Update, 5 Sep evening — the two audits, the tracker, and the gig-week method
+
+- Perry asked for "one last extensive, comprehensive audit". Two workflows ran (15 agents,
+  then 7 lenses + skeptics, the second stopped at 91% of the usage window). Full record:
+  `docs/sessions/2026-09-05-money-model.md` §7–8. Headlines: room money is now PER
+  PERSON everywhere; the show-size table prices MySet's own money over the whole run
+  with a tier selector and a grossed-up booking price; `pollMsPerFan` 0.08 → 0.006;
+  Express fees kept but labelled per Stripe's docs; Plus crossover $107 → $352 (the
+  free cap); tax and acquisition reach the tiles and the timeline.
+- `tools/actuals.py` rewritten: per-person room money by plan + `roomPerHead`,
+  account-wide trailing-30-day deploys, the night rules (INVARIANT 0ef — the three
+  31/44/26-"person" rooms were one-network load tests, not people), and `--mark`
+  bandwidth capture that solves audience polls per phone-hour out of Netlify's account
+  counter (INVARIANT 0ee; `--studio-min` on the AFTER mark). First mark taken 5 Sep
+  09:11 UTC. Gig-week procedure is in `finance/README.md`.
+- Deferred app bug found by the audit: `_feesplit.mjs` refunds part of MySet's cut on
+  ARTIST accounts (it should only run for venue plans with `splitFee`). Fix in the app
+  session, with an artist-owner case in `test/billing.mjs`.
+- Live: myset.vip/financialmodel (passcode 2068) and the artifact both carry the
+  post-audit build. `node finance/model-test.mjs` 49 checks; `npm test` all stages green.
