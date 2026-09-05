@@ -1672,3 +1672,19 @@ If you are about to violate one, stop and say so rather than working around it.
     `suspend` fires the instant a preload="none" video is touched and means "not
     fetching right now", and `stalled` means data has stopped arriving, which is
     when somebody most needs to see that MySet is still trying.
+
+0ec. **The money model is served by a function and never leaves the server without
+    the passcode.** `finance/model.html` lives OUTSIDE `public/` (netlify.toml
+    publishes `public/` only) and is bundled into `financialmodel.mjs` with
+    `[functions.financialmodel] included_files`. `myset.vip/financialmodel` is a
+    redirect to that function placed ABOVE the `/:slug` catch-all — move it below
+    and the artist page swallows it. A passcode checked in the browser is not a
+    passcode (the file is on the phone before the prompt), so the check is server
+    side, remembered in an HttpOnly cookie for thirty days. The code is
+    `FINMODEL_CODE` if set, else the one Perry gave (2068 — a courtesy lock, not a
+    vault: anything that would ruin the business if seen does not belong behind
+    four digits). The site's CSP (`default-src 'self'`) is kept: the chart library
+    and the two typefaces are self-hosted under `public/vendor/` and the function
+    rewrites the CDN links on the way out; the published artifact keeps the CDN
+    links because that host allows only those. Test: `finance/model-test.mjs`
+    (the engine) and the gate checks in `docs/sessions/2026-09-05-money-model.md`.

@@ -2349,3 +2349,22 @@ session on the business model with "an insanely high level of care".
   fixes are in the session doc §6.
 - Nothing pushed. New files only (finance/, tools/actuals.py, docs/sessions/…);
   the other session’s uncommitted edits were left untouched.
+
+
+## Update, later the same day — live at myset.vip/financialmodel (passcode 2068)
+
+- Perry: "push it live to myset.vip/financialmodel with a simple passcode … 2068".
+  Built as a Netlify FUNCTION (`netlify/functions/financialmodel.mjs`) that serves
+  `finance/model.html` from OUTSIDE the published folder, so nothing leaves the
+  server without the code; the code is remembered in an HttpOnly cookie for 30
+  days; `FINMODEL_CODE` env var overrides the default; `?signout=1` forgets it.
+  INVARIANT 0ec. The site’s strict CSP is untouched: Chart.js and the two typefaces
+  are self-hosted under `public/vendor/` and the function rewrites the CDN links.
+- Route `/financialmodel` sits ABOVE the `/:slug` catch-all in netlify.toml.
+- Verified on a free draft deploy, then pushed. `npm test` green.
+- The four-lens review of the dashboard came back and every real finding was fixed
+  (payout fees capped at nights played, old scenarios load over defaults, clamp
+  write-back, chart caps and colours, mobile tables, contrast, copy that now renders
+  its numbers live). Details: `docs/sessions/2026-09-05-money-model.md` §6.
+- A 4-digit code is a courtesy lock, not a vault. Anything that would ruin the
+  business if seen does not belong behind it.

@@ -7,9 +7,21 @@
 [functions]
   node_bundler = "esbuild"
 
+# The money model is served by a function from OUTSIDE the published folder, so
+# it never leaves the server without the passcode (see financialmodel.mjs).
+[functions.financialmodel]
+  included_files = ["finance/model.html"]
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+# myset.vip/financialmodel — the passcode-gated money model. Must sit above the
+# /:slug catch-all, which would otherwise render it as an artist page.
+[[redirects]]
+  from = "/financialmodel"
+  to = "/.netlify/functions/financialmodel"
   status = 200
 
 # Pretty URLs. Real files always win over these, so /vote.html and /studio.html

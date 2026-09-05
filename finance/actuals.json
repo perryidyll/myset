@@ -1,0 +1,85 @@
+{
+ "asOf": "2026-09-05",
+ "source": "tools/actuals.py against production",
+ "shows": 2,
+ "people": 4.5,
+ "hours": 2.61,
+ "roomFree": null,
+ "roomPlus": null,
+ "deploys": 116,
+ "pollsPerPhoneHour": null,
+ "creditsPerShow": null,
+ "note": "2 night(s) with people in them, across 1 artist(s). Votes per night: 10.5. Founder's own gigs are included; the founder is comped Pro so his room money sits under whichever plan the registry says.",
+ "nights": [
+  {
+   "key": "hist_perry-idyll_2026-09-04-1150-svmm",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 1,
+   "votes": 0,
+   "hours": 3.03,
+   "gross": 0.0
+  },
+  {
+   "key": "hist_perry-idyll_2026-08-30-1210",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 8,
+   "votes": 21,
+   "hours": 2.19,
+   "gross": 3.0
+  }
+ ],
+ "notCounted": [
+  {
+   "key": "hist_perry-idyll_2026-08-30-1855",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 0,
+   "votes": 0,
+   "hours": 0.04,
+   "gross": 0.0,
+   "skipped": "nobody there"
+  },
+  {
+   "key": "hist_perry-idyll_2026-08-30-1928",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 3,
+   "votes": 6,
+   "hours": 107.9,
+   "gross": 0.0,
+   "skipped": "longer than 12 h \u2014 a show that failed to end itself; not a night"
+  },
+  {
+   "key": "hist_samcole_2026-08-31-1227",
+   "artist": "samcole",
+   "plan": "free",
+   "people": 31,
+   "votes": 125,
+   "hours": 0.07,
+   "gross": 0.0,
+   "skipped": "shorter than 30 minutes \u2014 a test or a demo"
+  },
+  {
+   "key": "hist_samcole_2026-08-31-1231",
+   "artist": "samcole",
+   "plan": "free",
+   "people": 44,
+   "votes": 168,
+   "hours": 0.1,
+   "gross": 0.0,
+   "skipped": "shorter than 30 minutes \u2014 a test or a demo"
+  },
+  {
+   "key": "hist_samcole_show-1788179016366",
+   "artist": "samcole",
+   "plan": "free",
+   "people": 26,
+   "votes": 21,
+   "hours": 0.07,
+   "gross": 0.0,
+   "skipped": "shorter than 30 minutes \u2014 a test or a demo"
+  }
+ ]
+}
