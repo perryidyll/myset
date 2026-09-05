@@ -1688,3 +1688,65 @@ If you are about to violate one, stop and say so rather than working around it.
     rewrites the CDN links on the way out; the published artifact keeps the CDN
     links because that host allows only those. Test: `finance/model-test.mjs`
     (the engine) and the gate checks in `docs/sessions/2026-09-05-money-model.md`.
+
+0ed. **Room money is per person, everywhere, and a saved scenario says which unit it
+    is in.** Since model v2 `roomFree` / `roomPlus` / `roomPro` are $ per person per
+    gig (a 10,000-person arena has to earn as well as cost, or the model can only
+    ever say "no" to a big show). Scenarios without `v: 2` are migrated on load by
+    dividing their per-gig figure by their own `fans`. `tools/actuals.py` emits the
+    same unit (gross ÷ phones, weighted by phones) — never per night.
+
+0ee. **The bandwidth method's byte constants live in two places and a test keeps
+    them equal.** `tools/actuals.py` solves audience polls out of Netlify's
+    account-wide bandwidth counter with its own copy of bytes-per-poll (2,530),
+    per vote (1,200), per Studio tick (4,000), per extra view (3,000) and per page
+    load (48,000). `finance/model-test.mjs` reads the script and fails if they
+    differ from `P0`. Change one, change both — or the screen-on calibration is
+    silently wrong. The Studio tab is ~30% of a night's bytes, so the solve assumes
+    it was open all night; a night with the tab closed reads as more polls than
+    there were.
+
+0ef. **A night is evidence only if the rules at the top of `tools/actuals.py` say
+    so, and every refusal is printed with its reason.** Nobody there; one phone and
+    no votes; ten or more phones ALL on one network (the load-test script — the
+    31/44/26-"person" rooms of 31 Aug were this, not people; the earlier audit that
+    called them real rooms was wrong); shorter than 30 minutes; longer than 12
+    hours (never ended). A night whose Stripe lookup failed counts for people and
+    hours but not for money. Weaken a rule and a test show moves a dial.
+
+0eg. **Nothing on the clip path may await something that can wait for ever, and
+    `AudioContext.resume()` is that thing.** A phone only lets a page start making
+    sound during a tap. A context built at any other moment is born suspended, and
+    on iPhone Safari `resume()` returns a promise that never settles — it waits for
+    a tap that already happened and is gone. `await`ing it froze a real upload at
+    3% with no error and no timeout, twice. So the context is woken inside the tap
+    that opens the file picker (`unlockAudio`), its state is only ever READ
+    afterwards (`audioReady`), and it is kept for the life of the page — closing it
+    throws away the one tap that could have woken it. Every other step on that path
+    carries its own clock, and `withDeadline` sits over the whole job as well,
+    because the freeze happened precisely in the one place no clock had been put.
+
+0eh. **`MediaRecorder.isTypeSupported` is a belief, not a fact — and a codec check
+    fed silence proves nothing.** Chrome answers `true` for
+    `video/mp4;codecs=avc1.42E01E,mp4a.40.2` and then fails an *EncodingError* a
+    quarter of a second into a real recording — but only when there is genuine
+    sound to encode, which is why it went unnoticed while every clip was silent and
+    broke the moment they were not. So: plain `video/mp4` is asked for first and the
+    spelled-out codec string is last; `probeMime` actually records, at the real
+    frame size and with a real tone playing, before a format is used; and a format
+    that fails mid-clip is struck off (`blameMime`) so the retry cannot pick it
+    again. The first version of that probe used a 32-pixel canvas and an empty
+    audio channel, passed everything, and was worse than no check at all.
+
+0ei. **A clip's sound comes out of the FILE, never out of the video element.**
+    `captureStream()` captures what an element outputs, and an element must be muted
+    before a phone will play it without being tapped — muted output is silence, which
+    is how the first clips arrived with an audio track and nothing in it. A
+    MediaElementAudioSourceNode fixes the silence and breaks the playing: it needs the
+    element unmuted, which a phone refuses, and it commits the element permanently so
+    the attempt cannot even be retried. So the soundtrack is decoded from the file
+    (`soundFor`) and the element is muted from birth and only ever supplies pictures.
+    The decoded buffer hands out one player per attempt (`take()`) so a retry keeps
+    the sound; and because a decoded minute is ~23MB, a source longer than
+    `SOUND_MAX_SECS` is left silent on purpose — with a sentence saying why, never
+    quietly.

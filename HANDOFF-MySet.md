@@ -2361,10 +2361,85 @@ session on the business model with "an insanely high level of care".
   INVARIANT 0ec. The site’s strict CSP is untouched: Chart.js and the two typefaces
   are self-hosted under `public/vendor/` and the function rewrites the CDN links.
 - Route `/financialmodel` sits ABOVE the `/:slug` catch-all in netlify.toml.
-- Verified on a free draft deploy, then pushed. `npm test` green.
+- Verified on a free draft deploy, then pushed: commit `ebb7479` on main, Netlify build `6a9bb789a62aa90007fe0430` published 2026-09-05; live check by content (gate, wrong code, right code, the model with `/vendor/` links, charts painting in headless Chrome). `npm test` green.
 - The four-lens review of the dashboard came back and every real finding was fixed
   (payout fees capped at nights played, old scenarios load over defaults, clamp
   write-back, chart caps and colours, mobile tables, contrast, copy that now renders
   its numbers live). Details: `docs/sessions/2026-09-05-money-model.md` §6.
 - A 4-digit code is a courtesy lock, not a vault. Anything that would ruin the
   business if seen does not belong behind it.
+
+---
+
+# SESSION LOG — 2026-09-05 (the clip that froze at 3%, and why it was silent)
+
+Perry, on his iPhone, three times running: *"there was still no sound"*, then
+*"the progress bar didn't move and after a while I got an error message"*, then —
+after my fix — *"it's getting stuck on this page and isn't even timing out
+anymore"*, with a screenshot of the bar at 3% under "Shrinking on your phone —
+about 27 seconds".
+
+## The freeze was mine
+
+`reencode()` did `const au = wantAudio ? await audioFor(v) : null` — one line ABOVE
+the promise that held every timeout in the file. Inside it, `await ac.resume()`.
+On iPhone Safari a suspended `AudioContext`'s `resume()` **never settles** when the
+browser wants a fresher tap; it waits for a tap that already happened and is gone.
+So the label was set, 3% was drawn, and nothing ever fired again. My previous "fix"
+had moved the hang *earlier*, into the one place with no clock over it.
+
+Now: the context is woken inside the tap on "Add a clip" (`unlockAudio`, on that
+label's `pointerdown`/`click`), its state is afterwards only READ (`audioReady()`),
+never awaited, and it is kept for the life of the page. `withDeadline` sits over the
+whole job as well as the parts.
+
+## The sound now comes out of the FILE, not the video element
+
+`captureStream()` captures what an element outputs, and an element must be muted or
+a phone will not play it — muted output is silence, which is why the first clips had
+an audio track with nothing in it. A `MediaElementAudioSourceNode` fixes the silence
+and breaks the playing (needs an unmuted element, which a phone refuses) and commits
+the element permanently so the attempt cannot be retried.
+
+So `soundFor()` decodes the soundtrack out of the file on the already-running
+context; the element is **muted from birth** and only supplies pictures. Nothing is
+ever heard out loud. The decoded buffer hands out one player per attempt (`take()`)
+so a retry keeps the sound. A source longer than 150s is left silent on purpose
+(a decoded minute is ~23MB) — but a duration of `Infinity`, which every
+MediaRecorder-made file reports, is NOT treated as too long.
+
+## Fixing the sound exposed a third bug: the browser lies
+
+`MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.42E01E,mp4a.40.2')` → `true`;
+recording it for real → `EncodingError` after 273ms. **Only when there is genuine
+sound to encode** — which is why it hid for as long as clips were silent. That
+string was first in `CLIP_TYPES`. Now plain `video/mp4` is first, `probeMime`
+actually records at the real frame size with a real tone before a format is used,
+and a format that fails mid-clip is struck off so the retry cannot re-pick it. The
+retry keeps the sound; only a stalled element drops it.
+
+Two smaller things that made it look broken: `draw()` never checked whether it had
+already stopped (so a failed encode kept painting and fought the retry's progress
+bar), and the upload used `fetch`, which cannot report progress — it is XHR now and
+the bar moves 78 → 98% as the bytes go.
+
+## The real lesson
+
+`test/` runs in node, and node has no MediaRecorder, no canvas captureStream and no
+AudioContext — so the entire reason clips broke twice was **invisible to the suite**.
+`tools/clipcheck.mjs` now drives `public/community.html` in headless Chrome, builds
+a source video with a 440Hz tone in it, and decodes the finished clip to measure its
+RMS. 22 checks, ~40 seconds, run by hand (`node tools/clipcheck.mjs`) — it needs
+Chrome and puppeteer-core, which live outside this repo.
+
+## State
+
+- `INVARIANTS.md` 0eg (never await `resume()`), 0eh (`isTypeSupported` is a belief,
+  and a codec check fed silence proves nothing), 0ei (a clip's sound comes out of
+  the file).
+- `docs/sessions/2026-09-05-clip-sound-and-the-frozen-bar.md` has the full story
+  including the codec sweep that isolated it.
+- `sh test/run.sh` green, exit 0. `node tools/clipcheck.mjs` 22/22.
+- Perry still owes himself: `charge.updated` on the Stripe webhook, stop the double
+  deploy and move to Netlify Pro, 2FA on Google/GitHub/Netlify/Stripe, and try the
+  passkey on stage.

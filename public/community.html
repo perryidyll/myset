@@ -248,7 +248,7 @@ function render(){
     </div>
     <div class="thumbs" id="thumbs">${DRAFT.photos.map((p,i)=>`<div style="background-image:url('${p}')"><b data-rm="${i}">✕</b></div>`).join('')}</div>
     <div class="row2">
-      <label class="chip" style="cursor:pointer">＋ Add a clip<input type="file" accept="video/*" id="cf" style="display:none"></label>
+      <label class="chip" id="clipLab" style="cursor:pointer">＋ Add a clip<input type="file" accept="video/*" id="cf" style="display:none"></label>
       <span class="muted" style="font-size:12px">${CLIP_SECS} seconds, one per post</span>
     </div>
     <div id="clipBox">${DRAFT.clip?`<div class="clipdone"><video src="${esc(DRAFT.clip.src)}" poster="${esc(DRAFT.clip.poster||'')}" preload="none" playsinline controls></video><button class="chip" id="clipRm">Remove clip</button></div>`:''}</div>
@@ -295,6 +295,10 @@ function wire(){
   document.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{ DRAFT.photos.splice(+b.getAttribute('data-rm'),1); render(); }));
   const pf=$('#pf'); if(pf) pf.addEventListener('change',async()=>{ for(const f of [...pf.files].slice(0,3-DRAFT.photos.length)){ try{ DRAFT.photos.push(await shrink(f)); }catch(e){ toast('Couldn’t read that photo'); } } render(); });
   const cf=$('#cf'); if(cf) cf.addEventListener('change',()=>{ if(cf.files&&cf.files[0]) addClip(cf.files[0]); cf.value=''; });
+  /* The tap that opens the file picker is the ONLY moment a phone will let the page
+     wake its sound up — see unlockAudio. By the time a file comes back the tap is
+     spent, so this cannot be left until the clip is being encoded. */
+  const cl=$('#clipLab'); if(cl){ cl.addEventListener('pointerdown',unlockAudio); cl.addEventListener('click',unlockAudio); }
   const crm=$('#clipRm'); if(crm) crm.addEventListener('click',()=>{ DRAFT.clip=null; render(); });
   if(btn) btn.addEventListener('click',post);
   document.querySelectorAll('[data-like]').forEach(b=>b.addEventListener('click',()=>like(b)));
@@ -326,8 +330,16 @@ function wire(){
    that never ends. Every one of those paths ends with the person knowing what
    happened. */
 const CLIP_SECS = 30, CLIP_MAX = 3 * 1024 * 1024;
-const CLIP_TYPES = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4',
-                    'video/webm;codecs=vp8,opus', 'video/webm'];
+/* ORDER MATTERS, AND THE OBVIOUS FIRST CHOICE IS LAST ON PURPOSE.
+   'video/mp4;codecs=avc1.42E01E,mp4a.40.2' names the exact codecs, which reads like
+   the careful thing to ask for. Chrome says yes to it and then fails a quarter of a
+   second into a real recording — but ONLY when there is genuine sound to encode,
+   which is why it went unnoticed while clips were silent and broke the moment they
+   were not. Plain 'video/mp4' gets the same H.264 and AAC out of every browser that
+   has them, and works. The spelled-out version stays at the back for anything that
+   will only accept a full codec string. */
+const CLIP_TYPES = ['video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm',
+                    'video/mp4;codecs=avc1.42E01E,mp4a.40.2'];
 const canRecord = () => typeof MediaRecorder !== 'undefined'
   && !!document.createElement('canvas').captureStream
   && CLIP_TYPES.some(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } });
@@ -340,65 +352,128 @@ function clipProgress(pct, label){
   box.querySelector('span').textContent = label||'';
 }
 
-/** Load a file into a <video> and wait for its dimensions. */
+/** Load a file into a <video> and wait for its dimensions. Never waits for ever:
+    a file the decoder quietly refuses fires neither event, and that used to be a
+    progress bar with no end to it. */
 function loadVideo(file){
   return new Promise((res,rej)=>{
     const v=document.createElement('video');
-    /* NOT muted. This element is the audio source for the re-encode, and a muted
-       element feeds silence into both captureStream() and the Web Audio graph —
-       which is exactly why the first clips came back with no sound. Nothing is
-       heard anyway, because the audio is routed to the recorder instead of to the
-       speakers (see audioFor). */
-    v.preload='auto'; v.playsInline=true; v.muted=false; v.volume=1;
+    const bail=setTimeout(()=>rej(new Error('bad video')), 20000);
+    /* MUTED FROM BIRTH. This element is only ever a source of pictures — the
+       sound comes from the file's decoded soundtrack (see soundFor), never from
+       here. Being muted is what makes a phone willing to play it without being
+       tapped, which is the whole reason the clip gets made at all. */
+    v.preload='auto'; v.playsInline=true; v.muted=true; v.volume=0;
     v.setAttribute('playsinline','');
-    v.onloadedmetadata=()=>res(v);
-    v.onerror=()=>rej(new Error('bad video'));
+    v.onloadedmetadata=()=>{ clearTimeout(bail); res(v); };
+    v.onerror=()=>{ clearTimeout(bail); rej(new Error('bad video')); };
     v.src=URL.createObjectURL(file);
   });
 }
 
-/* THE SOUND, AND WHY IT NEEDS WEB AUDIO RATHER THAN captureStream().
+/* THE SOUND. THREE WAYS TO GET IT, TWO OF WHICH DO NOT WORK ON A PHONE.
 
-   The first version took the audio track from `video.captureStream()`. That looks
-   right and produces a clip with an audio track in it — a SILENT one, because the
-   element was muted so that it would autoplay, and captureStream captures what the
-   element outputs. Muted output is silence. The clip played, the waveform was flat,
-   and nothing anywhere said so.
+   1. `video.captureStream()` — captures what the element OUTPUTS. The element has
+      to be muted or a phone will not let it play at all, and muted output is
+      silence. This is why the very first clips came back with a flat waveform: the
+      file had an audio track in it and there was nothing in the track.
 
-   A MediaElementAudioSourceNode taps the audio BEFORE the speakers, so:
-     · the element stays unmuted, which is what makes the signal exist at all
-     · the node is connected ONLY to the recorder's destination, never to
-       `ac.destination`, so the person does not hear their own clip blaring out of
-       the phone while it encodes
-   One element, one source node — createMediaElementSource can only be called once
-   per element, and a fresh element is made for every clip.
+   2. A MediaElementAudioSourceNode — taps the element BEFORE the speakers, so it
+      can stay unmuted and still not blare out of somebody's phone in a bar. Correct
+      on a laptop, useless on an iPhone: the element must be unmuted for the tap to
+      carry signal, and an unmuted video will not start playing unless the person
+      taps play at that exact moment. It also permanently commits the element — the
+      node can only be made once, so a failed attempt cannot be retried.
 
-   If the browser refuses to play an unmuted video without a fresh tap, the caller
-   falls back to muted (video only) and SAYS the clip will be silent, rather than
-   producing a quiet file and letting somebody find out later. */
-/* THE ORDER OF THESE FOUR LINES IS THE WHOLE BUG.
-   An AudioContext made without a fresh tap starts SUSPENDED on iOS and on Chrome's
-   autoplay policy. Wiring a <video> into a suspended context with
-   createMediaElementSource takes the element's audio away from it and gives it to a
-   graph that is not running — and the element then does not advance. play() still
-   resolves, currentTime stays at 0, the progress bar sits at nothing, and a minute
-   later the stall backstop fires. That is exactly what happened to the first clip
-   anybody tried to post after the audio "fix".
-   And it cannot be undone: createMediaElementSource may be called once per element,
-   for the life of that element.
-   So the context is made, resumed, and CHECKED — and only an actually running
-   context is ever allowed near the video. */
-async function audioFor(v){
+   3. DECODE THE SOUNDTRACK STRAIGHT OUT OF THE FILE, which is what this does.
+      The video element is then MUTED — always allowed, everywhere — and plays only
+      to give the canvas its pictures, while the sound comes from memory and is
+      piped into the recorder. Nothing depends on a phone permitting audible
+      playback, because nothing is ever played out loud.
+
+   Cost: the soundtrack is decoded whole, and a decoded minute is about 23MB, so a
+   long source is left silent rather than risking an out-of-memory crash on an old
+   phone for the sake of 30 seconds. */
+
+/* AND WHY THE CONTEXT IS WOKEN ON THE TAP — THE FROZEN BAR.
+
+   A phone only lets a page start making sound during a tap. An AudioContext built
+   at any other moment is born `suspended`, and the way to wake it is `resume()` —
+   which on iPhone Safari returns a promise that DOES NOT SETTLE. It is not slow and
+   it does not fail; it waits for a tap, for ever, and the tap it is waiting for
+   already happened and is gone. Awaiting it froze the upload at 3% with no error,
+   no timeout and no way back. That is the bug Perry hit twice.
+
+   So the context is woken during the tap that opens the file picker, which is a
+   real tap and always works. By the time a file comes back it is either running or
+   it never will be, and nothing downstream ever awaits `resume()` again — the state
+   is simply read. It is kept for the life of the page rather than closed after each
+   clip, because closing it throws away the one thing that tap bought us and there
+   is no second tap to wake a new one with. */
+let AUDIO_CTX = null;
+function unlockAudio(){
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC) return null;
-    const ac=new AC();
-    try{ if(ac.state!=='running') await ac.resume(); }catch(e){}
-    if(ac.state!=='running'){ try{ await ac.close(); }catch(e){} return null; }
-    const src=ac.createMediaElementSource(v);
-    const dest=ac.createMediaStreamDestination();
-    src.connect(dest);
-    return {ac,tracks:dest.stream.getAudioTracks()};
+    if(!AC) return;
+    if(!AUDIO_CTX) AUDIO_CTX=new AC();
+    if(AUDIO_CTX.state!=='running'){
+      // fire and forget, ON PURPOSE — see above, this promise may never settle
+      const p=AUDIO_CTX.resume(); if(p&&p.catch) p.catch(()=>{});
+    }
+  }catch(e){ AUDIO_CTX=null; }
+}
+const audioReady = () => { try{ return !!AUDIO_CTX && AUDIO_CTX.state==='running'; }catch(e){ return false; } };
+
+/* Decoded audio is about 23MB a minute. Thirty seconds is all that is ever used,
+   but decoding cannot be asked for a part of a file, so a long source is left
+   silent instead of gambling with an old phone's memory. */
+const SOUND_MAX_SECS = 150;
+
+const fileBytes = (f) => f.arrayBuffer ? f.arrayBuffer()
+  : new Promise((res,rej)=>{ const r=new FileReader();
+      r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('read')); r.readAsArrayBuffer(f); });
+
+/** The file's soundtrack, decoded and ready to be piped into the recorder — or null,
+    which means the clip will be silent and the person is told so before it starts.
+    Awaits only things that finish: no `resume()`, and a clock over the decode. */
+async function soundFor(file, sourceSecs, playSecs){
+  if(!audioReady()) return null;
+  /* A LENGTH THAT IS NOT A NUMBER. Plenty of recorders — every Android screen
+     recorder, anything MediaRecorder made — write a file whose length reads back as
+     Infinity until it has been played to the end. Treating that as "too long" would
+     take the sound off exactly the clips people record on their phones, so when the
+     length is unknown the FILE SIZE stands in for it. */
+  if(Number.isFinite(sourceSecs)){ if(sourceSecs > SOUND_MAX_SECS) return null; }
+  else if(file.size > 80*1024*1024) return null;
+  try{
+    const bytes = await withDeadline(fileBytes(file), 20000, 'read');
+    /* Older Safari only has the callback form and returns nothing; newer browsers
+       return a promise as well. Accepting both is two lines and saves a whole
+       class of phone from silence. */
+    const audio = await withDeadline(new Promise((res,rej)=>{
+      let p; try{ p=AUDIO_CTX.decodeAudioData(bytes, res, ()=>rej(new Error('decode'))); }
+      catch(e){ return rej(e); }
+      if(p && p.then) p.then(res, ()=>rej(new Error('decode')));
+    }), 25000, 'decode');
+    if(!audio || !audio.duration) return null;
+    /* The decoded soundtrack is handed out one PLAYER at a time. A buffer can only
+       be started once, so an attempt that has to be made again would otherwise get a
+       spent one and come out silent — and the whole point of decoding was that the
+       sound survives a retry. Decoding again would cost the memory twice; this costs
+       nothing. */
+    const secs = Math.min(playSecs, audio.duration);
+    return { take(){
+      const dest=AUDIO_CTX.createMediaStreamDestination();
+      const src=AUDIO_CTX.createBufferSource();
+      src.buffer=audio; src.connect(dest);
+      return {
+        tracks: dest.stream.getAudioTracks(),
+        start: ()=>{ try{ src.start(0, 0, secs); }catch(e){} },
+        stop:  ()=>{ try{ src.stop(); }catch(e){}
+                     try{ src.disconnect(); }catch(e){}
+                     try{ dest.stream.getAudioTracks().forEach(t=>{ try{ t.stop(); }catch(e2){} }); }catch(e){} }
+      };
+    } };
   }catch(e){ return null; }
 }
 
@@ -424,30 +499,121 @@ function posterFrom(v){
   });
 }
 
-/** Re-encode small. `wantAudio` false skips the graph entirely — that is the path
-    that has always worked, and the one the caller falls back to. Resolves to a Blob;
-    rejects with `stalled` if the element stops advancing, so the caller can retry. */
-async function reencode(v, seconds, onPct, onAudio, wantAudio){
-  const au = wantAudio ? await audioFor(v) : null;
+/* isTypeSupported LIES, AND IT LIES ABOUT THE FORMAT MYSET ASKS FOR FIRST.
+
+   Chrome answers `true` for 'video/mp4;codecs=avc1.42E01E,mp4a.40.2' and then, on
+   a machine whose H.264 encoder is not actually there, fails the moment recording
+   starts — an EncodingError arriving seconds later, by which time the person has
+   watched a bar move and then break. Asking a browser what it supports is asking it
+   what it believes; the only honest answer comes from recording something.
+
+   So each format is TRIED, on a 32-pixel canvas for a quarter of a second, and the
+   first one that really produces bytes is the one a clip is made with. It costs a
+   third of a second, once per page, and it is the difference between a clip and an
+   error message on any phone whose codec list is aspirational.
+
+   Video-only and with-sound are remembered separately: a format can manage one and
+   not the other, and which of the two is being asked for is not knowable up front. */
+/** The size a clip is encoded at — the short side down to 400, both sides even
+    because some H.264 encoders refuse an odd one. Shared, because the format check
+    below has to record at exactly the size the real clip will use. */
+function clipSize(v){
+  const short=Math.min(v.videoWidth,v.videoHeight)||400;
+  const r=Math.min(1, 400/short);
+  return { w: Math.max(2, Math.round((v.videoWidth ||400) * r / 2) * 2),
+           h: Math.max(2, Math.round((v.videoHeight||400) * r / 2) * 2) };
+}
+
+const MIME_OK = {}, MIME_BAD = {};
+function probeMime(t, withAudio, w, h){
+  return new Promise((res)=>{
+    if(MIME_BAD[t]) return res(false);
+    let supported=false; try{ supported=MediaRecorder.isTypeSupported(t); }catch(e){}
+    if(!supported) return res(false);
+    let st=null, rec=null, done=false, bytes=0, probeOsc=null;
+    const clean=()=>{ try{ if(rec&&rec.state!=='inactive') rec.stop(); }catch(e){}
+                      try{ if(probeOsc){ probeOsc.stop(); probeOsc.disconnect(); } }catch(e){}
+                      try{ if(st) st.getTracks().forEach(x=>{ try{ x.stop(); }catch(e2){} }); }catch(e){} };
+    const finish=(v)=>{ if(done) return; done=true; clean(); res(v); };
+    let ctx;
+    try{
+      /* AT THE REAL SIZE, FOR LONG ENOUGH. A first attempt at this recorded 32
+         pixels for a quarter of a second, passed, and the actual clip then failed
+         at full size six hundred milliseconds in — so the check was reassuring and
+         wrong, which is worse than no check. It now records exactly what a clip
+         records, for longer than the failure took to show up. */
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      ctx=c.getContext('2d'); ctx.fillRect(0,0,w,h);
+      st=c.captureStream(24);
+      if(withAudio && audioReady()){
+        /* REAL SOUND, NOT AN EMPTY CHANNEL. The first version of this check handed
+           the recorder a destination with nothing connected to it — silence — and
+           every format passed, including the one that fails the instant it is given
+           something to encode. A check that only passes is not a check. Nobody hears
+           this: it goes to the recorder, never to the speaker. */
+        const d=AUDIO_CTX.createMediaStreamDestination();
+        const osc=AUDIO_CTX.createOscillator(), g=AUDIO_CTX.createGain();
+        g.gain.value=0.2; osc.frequency.value=440;
+        osc.connect(g); g.connect(d); try{ osc.start(); }catch(e){}
+        probeOsc=osc;
+        d.stream.getAudioTracks().forEach(x=>st.addTrack(x));
+      }
+      rec=new MediaRecorder(st,{mimeType:t,videoBitsPerSecond:450000,audioBitsPerSecond:64000});
+    }catch(e){ return finish(false); }
+    rec.ondataavailable=e=>{ if(e.data) bytes+=e.data.size; };
+    rec.onerror=()=>finish(false);
+    rec.onstop=()=>finish(bytes>0);
+    try{ rec.start(80); }catch(e){ return finish(false); }
+    const t0=Date.now();
+    const draw=()=>{
+      if(done) return;
+      ctx.fillStyle=(Date.now()-t0)%80<40?'#fff':'#000'; ctx.fillRect(0,0,w,h);
+      if(Date.now()-t0>900){ try{ rec.stop(); }catch(e){} return; }
+      requestAnimationFrame(draw);
+    };
+    draw();
+    setTimeout(()=>finish(bytes>0), 3000);   // never waits for ever, like everything else here
+  });
+}
+async function pickMime(withAudio, w, h){
+  const key = (withAudio?'sound':'silent')+'@'+w+'x'+h;
+  if(MIME_OK[key] !== undefined) return MIME_OK[key];
+  for(const t of CLIP_TYPES){
+    if(await probeMime(t, withAudio, w, h)){ MIME_OK[key]=t; return t; }
+  }
+  MIME_OK[key]=null; return null;
+}
+/** A format that broke in the middle of a real clip is never offered again — not to
+    the retry, and not to the next clip. Without this the retry re-picks the format
+    that just failed and fails the same way. */
+function blameMime(t){ if(t){ MIME_BAD[t]=1; Object.keys(MIME_OK).forEach(k=>delete MIME_OK[k]); } }
+
+/** Re-encode small. `au` is the decoded soundtrack from soundFor, or null for a
+    silent clip. Resolves to a Blob; rejects with `stalled` if the element stops
+    advancing, so the caller can start again from a clean one. */
+function reencode(v, seconds, onPct, onAudio, au, mime){
   return new Promise((res,rej)=>{
-    const short=Math.min(v.videoWidth,v.videoHeight)||400;
-    const r=Math.min(1, 400/short);
+    const size=clipSize(v);
     const c=document.createElement('canvas');
-    // even dimensions: some H.264 encoders refuse an odd width or height
-    c.width =Math.max(2, Math.round(v.videoWidth  * r / 2) * 2);
-    c.height=Math.max(2, Math.round(v.videoHeight * r / 2) * 2);
+    c.width=size.w; c.height=size.h;
     const ctx=c.getContext('2d');
+    /* PAINT ONE FRAME BEFORE ANYONE IS WATCHING. A canvas that has never been drawn
+       on hands its first frame to the recorder late and, on some encoders, that is
+       enough to fail the whole recording a quarter of a second in — which is exactly
+       what a phone reported as "couldn't shrink that one". */
+    ctx.fillStyle='#000'; ctx.fillRect(0,0,c.width,c.height);
+    try{ ctx.drawImage(v,0,0,c.width,c.height); }catch(e){}
     const out=c.captureStream(24);
-    /* NO GRAPH, NO SOUND OUT LOUD. With a graph the element stays unmuted so the
-       graph can tap it and nothing reaches the speaker. Without one, an unmuted
-       element would play the clip through the phone — in a bar, during somebody
-       else's set — so it is muted, which costs audio we could not have captured. */
-    v.muted = !au;
+    /* ALWAYS MUTED, EVEN WHEN THERE IS SOUND. The soundtrack comes from memory,
+       not from this element, so muting costs nothing — and it buys the two things
+       that were breaking: a muted video is allowed to play on every phone without
+       being tapped, and nobody's clip blares out of their pocket in a bar during
+       somebody else's set. */
+    v.muted = true; v.volume = 0;
     /* The tracks go on BEFORE the recorder is built — a MediaRecorder records the
        tracks the stream had when it was constructed, so adding one afterwards
        records nothing. */
     if(au) au.tracks.forEach(t=>out.addTrack(t));
-    const mime=CLIP_TYPES.find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } });
     let rec;
     try{ rec=new MediaRecorder(out,{mimeType:mime, videoBitsPerSecond:450000, audioBitsPerSecond:64000}); }
     catch(e){ return rej(e); }
@@ -455,9 +621,9 @@ async function reencode(v, seconds, onPct, onAudio, wantAudio){
     rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
     rec.onerror=()=>{ if(!stopped){ stopped=true; closeAudio(); rej(new Error('encoder')); } };
     rec.onstop=()=>{ if(!stopped){ stopped=true; closeAudio(); res(new Blob(chunks,{type:(mime||'video/webm').split(';')[0]})); } };
-    /* An AudioContext is a real audio pipeline, not an object — leaving one open per
-       clip leaks them until the tab is closed, and phones cap how many exist. */
-    const closeAudio=()=>{ try{ if(au&&au.ac&&au.ac.state!=='closed') au.ac.close(); }catch(e){} };
+    /* Let go of this clip's wiring but NEVER close the context — it is the page's
+       one woken-up context and there is no tap left to make another. */
+    const closeAudio=()=>{ try{ if(au) au.stop(); }catch(e){} };
     const finish=()=>{ try{ if(rec.state!=='inactive') rec.stop(); }catch(e){} };
     /* A STALL DETECTOR, not just a total timeout. If the element is not advancing
        there is no point drawing for another minute — give up in three seconds so
@@ -465,6 +631,12 @@ async function reencode(v, seconds, onPct, onAudio, wantAudio){
        looking at the screen. */
     let lastT=-1, lastMoved=Date.now();
     const draw=()=>{
+      /* THE FIRST THING, AND IT WAS MISSING. When the recorder failed, this promise
+         was settled but the loop kept painting until the video happened to end —
+         burning the phone and, worse, driving the SAME progress bar as the retry
+         that had already started, so the bar jumped backwards and forwards between
+         two encodes at once. */
+      if(stopped) return;
       if(v.paused||v.ended) return finish();
       try{ ctx.drawImage(v,0,0,c.width,c.height); }catch(e){}
       const t=v.currentTime;
@@ -490,23 +662,59 @@ async function reencode(v, seconds, onPct, onAudio, wantAudio){
       if(started) return finish();
       if(!stopped){ stopped=true; closeAudio(); rej(new Error('stalled')); }
     }, (seconds+2)*2000);
-    const go=()=>{ try{ rec.start(400); started=true; }catch(e){ closeAudio(); return rej(e); } draw(); };
+    /* The sound starts in the same breath as the recorder, not when the video
+       element started — the recorder ignores everything before rec.start(), so
+       starting the audio any earlier loses that much off the front of it. */
+    const go=()=>{ try{ rec.start(400); started=true; if(au) au.start(); }catch(e){ closeAudio(); return rej(e); } draw(); };
     v.currentTime=0;
     Promise.resolve()
       .then(()=>v.play())
       .then(()=>{ onAudio(!!au); go(); })
-      .catch(()=>{
-        /* Unmuted playback refused (a browser wanting a fresher tap). Muting is
-           always allowed, so the clip is still made — it is just silent, and the
-           caller is told so it can say so out loud. */
-        v.muted=true;
-        v.play().then(()=>{ onAudio(false); go(); }).catch(rej);
-      });
+      /* There is no second attempt here any more. The element is muted, and a muted
+         video is allowed to play everywhere — if even that is refused, something is
+         wrong that trying again cannot fix, and the clock upstairs is what stops the
+         bar rather than a retry that would hang beside it. */
+      .catch((e)=>{ closeAudio(); rej(e); });
   });
 }
 
 const blobToDataUrl = (b) => new Promise((res,rej)=>{ const f=new FileReader();
   f.onload=()=>res(f.result); f.onerror=()=>rej(new Error('read')); f.readAsDataURL(b); });
+
+/* THE LAST LINE OF DEFENCE. Every step below has its own guard, but a guard is a
+   piece of code somebody wrote, and the frozen bar happened precisely because one
+   step ran where no guard had been written yet. So the whole job is put behind a
+   clock as well: whatever goes wrong, and wherever, the bar comes down and the
+   person is told something. */
+function withDeadline(p, ms, why){
+  return new Promise((res,rej)=>{
+    let done=false;
+    const t=setTimeout(()=>{ if(!done){ done=true; rej(new Error(why||'stalled')); } }, ms);
+    Promise.resolve(p).then(
+      v=>{ if(!done){ done=true; clearTimeout(t); res(v); } },
+      e=>{ if(!done){ done=true; clearTimeout(t); rej(e); } });
+  });
+}
+
+/* WHY THIS IS NOT `fetch`. A clip is a few megabytes going up a bar's wifi, which
+   can take a minute, and fetch cannot tell you how far it has got — so the bar sat
+   at 78% the entire time and looked exactly like the thing that was actually broken.
+   XMLHttpRequest still reports upload progress, and still has a timeout, so the bar
+   moves the whole way and a dead connection ends in a sentence instead of silence. */
+function uploadClip(body, onPct){
+  return new Promise((res,rej)=>{
+    let x; try{ x=new XMLHttpRequest(); }catch(e){ return rej(new Error('upload')); }
+    x.open('POST', `${API}/community${Q}`, true);
+    x.setRequestHeader('content-type','application/json');
+    x.timeout = 180000;
+    if(x.upload) x.upload.onprogress = (e)=>{ if(e.lengthComputable && onPct) onPct(e.loaded/e.total); };
+    x.onload = ()=>{ try{ res(JSON.parse(x.responseText||'{}')); }catch(e){ rej(new Error('upload')); } };
+    x.onerror = ()=>rej(new Error('upload'));
+    x.ontimeout = ()=>rej(new Error('upload'));
+    x.onabort = ()=>rej(new Error('upload'));
+    try{ x.send(body); }catch(e){ rej(new Error('upload')); }
+  });
+}
 
 async function addClip(file){
   if(DRAFT.clip){ toast('One clip per post'); return; }
@@ -517,36 +725,76 @@ async function addClip(file){
   const seconds=Math.min(v.duration||CLIP_SECS, CLIP_SECS);
   if((v.duration||0) > CLIP_SECS + 0.5) toast(`Using the first ${CLIP_SECS} seconds`);
 
-  let blob=null, gotAudio=true;
+  let blob=null, gotAudio=true, silentWhy='';
   try{
     if(file.size<=CLIP_MAX && (v.duration||0)<=CLIP_SECS+0.5 && /mp4|webm/i.test(file.type||'')){
       // already small enough and short enough — send it as it is, audio and all
       clipProgress(0.5,'Ready…'); blob=file;
     } else if(canRecord()){
-      /* TWO ATTEMPTS, AND THE SECOND ONE ALWAYS WORKS.
-         Sound needs a Web Audio graph, and a graph needs a running AudioContext,
-         which a browser may simply refuse this far from the person's tap. If that
-         attempt stalls, the element is finished — createMediaElementSource can only
-         be called once on it — so the retry starts from a FRESH element with no
-         audio at all, which is the path that has always worked. The person gets a
-         clip either way, and is told when it is silent. */
-      const attempt = async (el, withAudio) => {
-        clipProgress(0.03, withAudio
+      /* WHETHER THERE WILL BE SOUND IS ALREADY DECIDED BY NOW. The tap on "Add a
+         clip" either woke the phone's sound up or it did not, and asking again here
+         is exactly what used to hang. So the label on the bar tells the truth from
+         its first second instead of promising sound and quietly dropping it. */
+      let sound=null;
+      const srcSecs = Number.isFinite(v.duration) ? v.duration : 0;   // see soundFor
+      if(!audioReady()){
+        silentWhy='your phone wouldn’t let the sound through';
+      } else if(srcSecs > SOUND_MAX_SECS){
+        silentWhy='that video is too long to keep its sound — trim it first and try again';
+      } else {
+        clipProgress(0.03,'Getting the sound ready…');
+        try{ sound = await soundFor(file, Number.isFinite(v.duration) ? v.duration : NaN, seconds); }
+        catch(e){ sound=null; }
+        if(!sound) silentWhy='we couldn’t read the sound in that file';
+      }
+
+      let usedMime=null;
+      const attempt = async (el, au) => {
+        const size = clipSize(el);
+        /* The format check records for a second before the real work starts, so the
+           bar says what is happening rather than sitting on the last thing it said. */
+        clipProgress(0.03,'Getting ready…');
+        usedMime = await withDeadline(pickMime(!!au, size.w, size.h), 20000, 'stalled');
+        if(!usedMime) throw new Error('encoder');
+        clipProgress(0.03, au
           ? 'Shrinking on your phone — about '+Math.round(seconds)+' seconds'
           : 'Shrinking (no sound) — about '+Math.round(seconds)+' seconds');
-        return reencode(el, seconds,
+        return withDeadline(reencode(el, seconds,
           (p)=>clipProgress(0.03+p*0.62,'Shrinking… '+Math.round(p*100)+'%'),
-          (on)=>{ gotAudio=on; }, withAudio);
+          (on)=>{ gotAudio=on; }, au, usedMime), (seconds+8)*2000, 'stalled');
       };
-      try{
-        blob=await attempt(v, true);
-      }catch(e){
-        if(String(e&&e.message)!=='stalled') throw e;
-        try{ URL.revokeObjectURL(v.src); }catch(e2){}
-        v=await loadVideo(file);          // a clean element; the old one is spent
-        gotAudio=false;
-        blob=await attempt(v, false);
+
+      /* THREE GOES, AND THEY FAIL FOR DIFFERENT REASONS ON PURPOSE.
+
+         A format that broke — the browser said it could record it and then could
+         not — is blamed and never offered again, so the next go picks a different
+         one and KEEPS THE SOUND. That is why the soundtrack hands out a fresh
+         player each time rather than being spent on the first attempt.
+
+         An element that stalled is finished; the next go starts from a clean one
+         and drops the sound, which is the plainest path there is and the one that
+         has never failed. Either way the person ends up with a clip, and is told
+         which kind they got. */
+      let why='';
+      for(let go=0; go<3 && !blob; go++){
+        if(go){
+          try{ v.pause(); }catch(e){}
+          try{ URL.revokeObjectURL(v.src); }catch(e){}
+          v=await loadVideo(file);
+          if(why==='stalled'){ sound=null; silentWhy='it had to be made a second time to get through'; }
+        }
+        const au = sound ? sound.take() : null;
+        gotAudio = !!au;
+        try{
+          blob = await attempt(v, au);
+        }catch(e){
+          try{ if(au) au.stop(); }catch(e2){}
+          why = String(e && e.message);
+          if(why !== 'stalled' && why !== 'encoder') throw e;
+          if(why === 'encoder') blameMime(usedMime);
+        }
       }
+      if(!blob) throw new Error(why||'encoder');
     } else {
       clipProgress(null); URL.revokeObjectURL(v.src);
       toast('This browser can’t shrink video. Try a shorter clip, or paste a link.');
@@ -563,18 +811,18 @@ async function addClip(file){
     toast('Still too big after shrinking. Try a shorter clip.'); return;
   }
 
-  if(!gotAudio) toast('That one came out silent — your browser wouldn’t let the sound through');
+  if(!gotAudio) toast('That one came out silent — '+(silentWhy||'the sound wouldn’t come through'));
   clipProgress(0.7,'Grabbing a still…');
   let poster='';
   try{ poster=await posterFrom(v); }catch(e){}
   URL.revokeObjectURL(v.src);
 
-  clipProgress(0.78,'Uploading…');
+  clipProgress(0.78,'Uploading… 0%');
   try{
-    const data=await blobToDataUrl(blob);
-    const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},
-      body:JSON.stringify({action:'clip',fan:FAN,data,poster})});
-    const d=await r.json();
+    const data=await withDeadline(blobToDataUrl(blob), 30000, 'read');
+    const d=await uploadClip(
+      JSON.stringify({action:'clip',fan:FAN,data,poster}),
+      (p)=>clipProgress(0.78+p*0.20,'Uploading… '+Math.round(p*100)+'%'));
     if(!d.ok){ clipProgress(null); toast(d.error||'Couldn’t upload that clip'); return; }
     DRAFT.clip={id:d.clip, src:URL.createObjectURL(blob), poster};
     clipProgress(1,'Added'); setTimeout(()=>clipProgress(null),700);
