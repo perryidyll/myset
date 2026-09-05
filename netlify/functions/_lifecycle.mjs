@@ -42,6 +42,20 @@ export async function gigCapFor(aid) {
   return (isPlatformOwner(aid) || lim === Infinity || lim === undefined) ? null : lim;
 }
 
+/** How many phones this artist's room holds tonight. null means no ceiling.
+
+    Read ONCE, when the show starts, and stamped onto the show — see startShow.
+    The polling path must never look this up: it would add a blob read to the one
+    request MySet makes millions of, to answer a question that cannot change
+    during a gig. Stamping it also means an artist who upgrades mid-set does not
+    have the room silently change size underneath them; it applies from the next
+    show, which is the predictable behaviour. */
+export async function roomCapFor(aid) {
+  const lim = (await planForArtist(aid)).limits.audience;
+  return (isPlatformOwner(aid) || lim === Infinity || lim === undefined || !(lim > 0))
+    ? null : lim;
+}
+
 /* Votes stranded on songs the room can no longer choose go back to the room.
    `before` is the playable set before a change; null means "sweep regardless" —
    the way ending or resuming a show has always behaved. Never throws: the change
@@ -97,7 +111,7 @@ async function resolveAutoList(aid, now) {
  */
 export async function startShow(aid, { fresh = false, by = 'artist', occKey = null, eventId = null } = {}) {
   const now = Date.now();
-  const gigCap = await gigCapFor(aid);
+  const [gigCap, roomCap] = await Promise.all([gigCapFor(aid), roomCapFor(aid)]);
 
   // A finished show must be snapshotted BEFORE anything wipes the tally —
   // carryFans() destroys the only copy.
@@ -126,6 +140,11 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
       show.startedAt = now;
       show.windowOpen = true;
     }
+    /* Tonight's ceiling, fixed for the night. A show started before room caps
+       existed has no `roomCap` and is uncapped — nothing that is already running
+       changes size underneath the people standing in it. Every show from here on
+       carries its number. */
+    show.roomCap = roomCap;
     show.status = 'live';
     show.startedBy = by;
     show.endedBy = null;

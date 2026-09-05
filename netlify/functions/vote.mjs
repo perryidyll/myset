@@ -78,6 +78,18 @@ export default async (req) => {
       // window closed => no changes at all, in or out (an un-vote while paused
       // could not be re-cast and would silently drop the on-stage tally)
       if (!show.windowOpen) { err = ['Voting is closed right now', 409]; return false; }
+      /* THERE IS DELIBERATELY NO HEAD-COUNT CHECK HERE, and that is a decision,
+         not an omission. A room that is over its plan's size does not stop taking
+         votes: it slows down and shows a shorter board (see show.mjs), and the
+         artist is told afterwards. Nobody standing in front of a musician is ever
+         told the gig is full.
+
+         This is the market's own answer, not an invention. Mentimeter — the closest
+         comparable product — publishes it as policy: participants may exceed the
+         limit during a live session without interruption, with an 8-hour grace
+         period, and the cap bites on the NEXT one. A mid-song lockout costs the
+         artist relationship, which is the whole business; one oversized night costs
+         cents. */
       /* Already done this exact cast: hand back what it returned the first time
          and write NOTHING. Checked inside the mutation so two racing retries cannot
          both get past it. */

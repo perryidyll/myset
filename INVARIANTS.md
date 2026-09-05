@@ -1750,3 +1750,39 @@ If you are about to violate one, stop and say so rather than working around it.
     the sound; and because a decoded minute is ~23MB, a source longer than
     `SOUND_MAX_SECS` is left silent on purpose — with a sentence saying why, never
     quietly.
+
+0ej. **A plan's `audience` number is a billing line, not a turnstile — a room is
+    never closed and a vote is never refused for being over it.** Going over the
+    number makes the room slow down (`pollFloorFor`) and shorten its board
+    (`boardLimitFor`); the artist is told afterwards. There is deliberately no
+    head-count check in `vote.mjs` and no spectator state in `show.mjs`, and
+    `test/roomsize.mjs` is what should stop anyone adding one. This is the market's
+    own answer as well as the kind one: Mentimeter publishes the same policy —
+    participants may exceed the limit during a live session without interruption,
+    and the cap bites on the next one. One oversized night costs cents; a fan locked
+    out mid-song in front of the artist costs the artist, which is the business.
+
+0ek. **The server sets the polling interval, and the page obeys it.** The ladder
+    used to be three constants in `public/vote.html`, which meant the only way to
+    slow a room down was to ship a deploy every phone had to reload to receive — no
+    way at all during the one event where it matters. `show.mjs` now returns
+    `nextPollMs` from the real head count and `vote.html` builds all three rungs off
+    it (clamped 1–60s; an absent value keeps the 3s every gig has always had). This
+    is what makes the audience numbers safe: internal read traffic is
+    (people ÷ interval) × (audience bag size), so it grows with the SQUARE of the
+    room — 5.1 GB/s of blob reads at 10,000 phones on a fixed 3-second ladder.
+    Widening the interval as the room grows is what holds that roughly flat.
+
+0el. **The board may be shortened but a fan's own votes never leave it, and the
+    shortening is always said out loud.** Past a few hundred phones `show.mjs` sends
+    the top of the chart instead of all of it, and anything this fan voted for is
+    concatenated back on regardless of rank. In a voting app, a song that silently
+    vanishes does not read as a shorter list — it reads as a lost vote, which is a
+    trust failure rather than a cosmetic one. `vote.html` labels it.
+
+0em. **The audience dials are a holding measure, not the fix.** The real fix is to
+    stop re-reading the whole audience bag on every poll: one shared snapshot
+    rendered when something changes and served from cache, which turns read cost
+    from O(people) into O(votes). Until that lands, `pollFloorFor` is what keeps a
+    big night standing up, and the tier numbers must stay at what MySet can actually
+    serve rather than at what the margin could afford.

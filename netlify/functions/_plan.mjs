@@ -3,7 +3,7 @@ import { readArtists, mutateArtists } from './_auth.mjs';
 
 /* What each plan gets.
 
-   The fundamentals are in every row: unlimited shows, unlimited voters, the
+   The fundamentals are in every row: unlimited shows, the
    whole Studio, the lyrics sheet, the gig calendar, the city feed. A free
    artist can run six nights a week forever. What free costs is a 10% cut on
    money that comes through the app, and a ceiling on how many songs are
@@ -31,6 +31,36 @@ export const PLANS = {
        under Your plan, both refusal messages in admin.mjs, and MYSET.md. The tests
        read this number rather than repeating it. */
     gigs: 4,
+    /* HOW MANY PHONES CAN BE IN ONE ROOM AT ONCE.
+
+       This is the OTHER half of the cost driver, and until now it was infinite.
+       `gigs` bounds how many nights a free artist plays; nothing bounded how many
+       people showed up to one of them — so a single night could cost more than a
+       year of the subscription, and there was no ceiling on it at all.
+
+       WHAT A PERSON IN THE ROOM COSTS, measured by tools/loadsim.py walking the
+       real polling ladder over a 3-hour gig:
+
+           20 people  $0.028/gig   $0.0014 each
+          100         $0.159       $0.0016
+          500         $1.137       $0.0023
+        1,000         $2.759       $0.0028
+        5,000        $18.17        $0.0036   <- per-person cost has SATURATED here
+       10,000        $36.40        $0.0036
+
+       So the money is survivable. What is not survivable is the READ PATH: every
+       poll re-reads the whole audience bag, so 100x the people is 10,000x the
+       internal traffic — 50 MB/s of blob reads at 1,000 people and 5.1 GB/s at
+       10,000. The room stops working long before the bill does, which is why these
+       numbers are set below what MySet can serve rather than at what it can afford.
+
+       RAISING THEM IS GATED ON THE SNAPSHOT FIX (one shared cached room state
+       instead of a full read per phone), not on money. Do not raise them first.
+
+       Four numbers, one place. The Studio copy, the plans cards and the tests all
+       read these rather than repeating them. `Infinity` means no ceiling and is
+       reserved for the founder. */
+    audience: 200,        // a pub. Worst case: 4 gigs x 200 = $1.28 a month.
     cut: 0.10,            // platform share of tips and vote sales
     seats: 1,
     pricing: false,       // change free-vote count, pack prices, replay/ask costs
@@ -55,6 +85,7 @@ export const PLANS = {
        artist never pays a subscription before they have earned anything. Taken as
        a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
     cut: 0.02,
+    audience: 1000,       // a club. Worst single night: $2.76.
     seats: 1,
     pricing: true, setlists: true, merch: true, moderate: true,
     promote: false, analytics: false, presskit: false, branding: false,
@@ -64,6 +95,10 @@ export const PLANS = {
     featured: Infinity,
     gigs: Infinity,
     cut: 0,
+    /* A theatre or a festival tent. Worst single night: $10.43. Servable only
+       because the poll interval widens with the room (pollFloorFor); at the old
+       fixed 3-second ladder this number would not have stood up. */
+    audience: 3000,
     seats: 5,
     pricing: true, setlists: true, merch: true, moderate: true,
     promote: true, analytics: true, presskit: true, branding: true,

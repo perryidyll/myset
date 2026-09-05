@@ -3497,10 +3497,17 @@ function replyPost(id){
    changing a paid plan happens on the live subscription; leaving a paid plan asks
    twice and offers one month at half price, once. */
 /* Every item is [the thing, what it means]. The first half is bold, the second
-   is not — Perry's note: "4 shows a month" bold, "unlimited voters at each" not. */
+   is not — Perry's note: "4 shows a month" bold, the rest not.
+
+   THE ROOM SIZE IS SAID PLAINLY ON EVERY CARD. It used to say "unlimited voters at
+   each", which stopped being true the day audience caps landed, and a plan card
+   that overpromises is the one place a lie costs the most. The wording is careful
+   about what the number IS: the night is never cut off when more people turn up —
+   it slows down and shortens the board — so the card says the room size and the
+   next line says what happens past it, rather than implying a locked door. */
 const TIER_COPY={
   free:{name:'Free',price:'$0',items:[
-    ['4 shows a month',' \u2014 unlimited voters at each'],
+    ['4 shows a month',' \u2014 up to 200 in the room at each'],
     ['Everything fans touch',': voting, requests, birthday shout-outs, lyrics'],
     ['The song sheet',': chord charts, keys and genres'],
     ['Your page',', gig calendar and city listings'],
@@ -3512,6 +3519,7 @@ const TIER_COPY={
     ['<span class="fee">Transaction fee: 10%</span>',' on money taken through the app']]},
   plus:{name:'Plus',price:'$10 / month',items:[
     ['Unlimited shows',' \u2014 play as often as you like'],
+    ['Rooms up to 1,000',' \u2014 a bigger night still runs, just a little calmer'],
     ['Unlimited songs',' live to the room at once'],
     ['Separate setlists',', one active per night, applied from your calendar'],
     ['Set your own vote rules',' \u2014 free votes per person, the cost of a replay'],
@@ -3525,6 +3533,7 @@ const TIER_COPY={
     ['<span class="fee">Transaction fee: 2%</span>',' on money taken through the app']]},
   pro:{name:'Pro',price:'$20 / month',items:[
     ['Unlimited shows',' \u2014 play as often as you like'],
+    ['Rooms up to 3,000',' \u2014 a bigger night still runs, just a little calmer'],
     ['Unlimited songs',' live to the room at once'],
     ['Separate setlists',', one active per night, applied from your calendar'],
     ['Set your own vote rules',' \u2014 free votes per person, the cost of a replay'],

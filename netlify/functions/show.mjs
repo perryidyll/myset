@@ -1,5 +1,6 @@
 import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
-         isUnlimited, publicArtist, json, bad, cleanFanId, markPresence,
+         isUnlimited, publicArtist, json, bad, cleanFanId, markPresence, countInRoom,
+         pollFloorFor, boardLimitFor,
          GENRES, playable, votable, roomHash, clientIp } from './_lib.mjs';
 import { MARK } from './_canary.mjs';
 import { canTakeMoney } from './_pay.mjs';
@@ -28,6 +29,22 @@ export default async (req) => {
      42ms, and a whole poll bills ~155ms. So this removes ~27% of the billed duration
      of ~99.9% of all polls, which is the largest saving per line of code in the app.
      Presence is best-effort by design (INVARIANT 0af) so a miss is harmless. */
+  /* HOW BIG THE ROOM IS TONIGHT — and NOBODY IS EVER TURNED AWAY.
+
+     A plan's `audience` number is a BILLING line, not a turnstile. Going over it
+     does not close the door, refuse a vote, or interrupt anybody: the room slows
+     down, the board shortens, and the artist is told afterwards. That is the
+     market's own answer — Mentimeter publishes it as policy, and it is the humane
+     one as well as the cheap one. A single oversized night costs cents; a fan
+     locked out mid-song in front of the artist costs the artist.
+
+     The count is free: the bag was read a line ago. It is not atomic either — a
+     burst of arrivals inside one polling interval all read the same number — and
+     that is fine, because nothing hinges on the exact value. */
+  const roomCap = Number(show.roomCap) > 0 ? Number(show.roomCap) : null;
+  const live = show.status === 'live';
+  const heads = live ? countInRoom(fans, show) : 0;
+
   if (inRoom && fanId) {
     const me0 = fans[fanId];
     const already = me0 && me0.seenShow === show.showId
@@ -58,7 +75,20 @@ export default async (req) => {
   const songsRaw = pool
     .filter((s) => s.id !== show.nowPlaying && !show.played.includes(s.id))
     .map(shape);
-  const ordered = rankSongs(songsRaw, counts, firstAt);
+  const orderedAll = rankSongs(songsRaw, counts, firstAt);
+  /* THE SHORT BOARD, AND THE ONE THING IT MUST NEVER DROP.
+
+     Past a few hundred phones the response carries the top of the chart instead of
+     all of it. What survives the cut regardless of position is ANYTHING THIS FAN
+     VOTED FOR — a person who casts a vote and then cannot find their song has been
+     given every reason to believe MySet lost it. Their own song stays on their own
+     board even when it is 90th. */
+  const boardMax = boardLimitFor(heads);
+  const ordered = boardMax === null ? orderedAll : (() => {
+    const top = orderedAll.slice(0, boardMax);
+    const shown = new Set(top.map((s) => s.id));
+    return top.concat(orderedAll.filter((s) => s.mineCount > 0 && !shown.has(s.id)));
+  })();
 
   /* Already played — still votable at the higher replay cost. A song that has been
      played stays votable even if it is not in tonight's list: the room heard it,
@@ -118,6 +148,26 @@ export default async (req) => {
     paidLeft: unspentPaid(me, show, fanId),
       decided: me.decided === show.showId,       // already chose what happens to them
     },
+    /* THE THROTTLE DIAL, AND WHY IT IS SERVER-SIDE.
+
+       The polling ladder used to live entirely in public/vote.html, which meant the
+       only way to slow a room down was to ship a deploy that every phone in it had
+       to reload to receive — i.e. no way at all, during the one event where it
+       matters. Every large system that survives this hands the interval back with
+       the data: YouTube live chat stamps `timeoutMs` on every response and its
+       clients sleep exactly that long, at streams past eight million viewers.
+
+       So the SERVER decides the floor now, from the real head count, and the page
+       obeys it. One integer, and it is the difference between watching a room melt
+       and turning it down mid-song.
+
+       `board` is the same idea applied to bytes: past a few hundred phones the
+       response carries the top of the chart rather than all of it, which is what
+       YouTube's "Top chat" default is. It is labelled on the page — a fan who
+       cannot see their song must never be left wondering whether the vote counted. */
+    room: { cap: roomCap, in: heads, over: !!(roomCap && heads > roomCap) },
+    nextPollMs: pollFloorFor(heads),
+    board: boardLimitFor(heads),
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),
     // INVARIANT 0ad: never show the room a button that leads to a shrug
     paymentsEnabled: canTakeMoney(aid, show),

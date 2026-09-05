@@ -90,6 +90,8 @@
 .qvb:active{transform:scale(.92)}
 .qvb.on{background:var(--grad);border-color:transparent;color:#fff;box-shadow:var(--sh-accent)}
 .qvb.done{cursor:default;display:flex;align-items:center;justify-content:center}
+.bigroom{margin:0 14px 8px;padding:9px 12px;border-radius:10px;background:var(--card,#151515);
+  border:.5px solid var(--hair);color:var(--muted);font-size:13px;line-height:1.45}
 .qempty{padding:26px 18px 30px;text-align:center;color:var(--muted);font-size:14.5px;border-top:.5px solid var(--hair)}
 .qempty b{display:block;color:var(--ink);font-weight:600;font-size:15.5px;margin-bottom:4px}
 
@@ -313,7 +315,13 @@ async function load(){
   try{
     const r=await fetch(`${API}/show?fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'});
     const d=await r.json();
-    if(d.ok){ const el=document.activeElement; FOCUS=!!(el&&el.id==='q'); ST=d; render(); FOCUS=false; }
+    if(d.ok){ const el=document.activeElement; FOCUS=!!(el&&el.id==='q'); ST=d;
+      /* THE SERVER SETS THE PACE NOW. See pollFloorFor in _lib.mjs: the interval
+         widens with the size of the room, so a packed night slows itself down
+         instead of melting. Clamped here because a page is not obliged to trust a
+         number, and an older server that sends nothing keeps the 3s it always had. */
+      if(Number(d.nextPollMs)>0) FLOOR=Math.max(1000,Math.min(60000,Math.round(d.nextPollMs)));
+      render(); FOCUS=false; }
   }catch(e){}
 }
 /* Tapping a song no longer casts a vote. It opens a sheet that does two jobs: it
@@ -570,6 +578,12 @@ function render(){
 
   /* UP NEXT = only songs that actually have votes (server already ordered them:
      votes desc, then whoever was voted for first) */
+  /* SAY WHEN THE BOARD IS SHORT. In a room past a few hundred phones the server
+     sends the top of the chart instead of all of it (boardLimitFor). A fan who
+     cannot find their song has to be told why — in a voting app, silence about
+     that reads as "my vote didn't count", which is a trust failure, not a
+     cosmetic one. Their OWN votes are always on the board regardless of rank. */
+  const shortBoard = Number(d.board)>0;
   const voted=d.songs.filter(s=>s.votes>0);
   const queue=voted.slice(0,3);
   const queueIds=new Set(queue.map(s=>s.id));
@@ -645,6 +659,12 @@ function render(){
 
   h += `<div class="sect"><b>${open?'Vote for these':'The setlist'}</b><span>${rest.length} song${rest.length===1?'':'s'}${
     GENRE?' · '+esc((d.tags||[]).find(t=>t.id===GENRE)?.label||''):''}</span></div>`;
+  /* Said out loud, never implied. When the room is big enough that the server sends
+     the top of the chart instead of all of it, the person is told so — including
+     that their own votes are still on the board. Anything less and a fan whose song
+     is 90th concludes MySet lost their vote. */
+  if(shortBoard) h += `<div class="bigroom">Big room tonight — showing the top ${d.board}.
+    Songs you voted for stay on your list wherever they are.</div>`;
   h += rest.length
     ? `<div class="list">${rest.map(s=>row(s,c,open,false)).join('')}</div>`
     /* "Everything's in the queue above" was said even when there was no queue and no
@@ -1006,6 +1026,23 @@ let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on
    to 12s when the room has gone quiet, and instantly back to 3s on any change
    or any tap. Nobody can perceive the difference; the bill can. */
 let TIMER=null, QUIET=0, LASTSIG=null;
+/* The fastest this page will ever ask, in milliseconds. 3s is what every ordinary
+   gig has always felt like and what it still feels like; the SERVER raises it when
+   the room is big enough that it matters (show.mjs sends nextPollMs). The whole
+   ladder is built off this number, so raising it stretches all three rungs at once.
+
+   Why the server and not the page: the ladder used to be three constants in this
+   file, which meant the only way to slow a room down was to ship a deploy that
+   every phone in it had to reload to receive — no help at all during the one event
+   where it matters. YouTube's live chat, at streams past eight million viewers,
+   hands its clients the interval on every single response for exactly this reason.
+
+   NEXT STEP, NOT YET BUILT: Discord found ~90% of listeners in a big room are
+   passive, and only waking the ones who have actually touched the screen made
+   fanout 90% cheaper. Here that means a change caused by SOMEBODY ELSE should not
+   drop a pocketed phone to the fast rung. The floor below covers the same ground
+   more bluntly and is server-controlled, which is why it came first. */
+let FLOOR=3000;
 function signature(){
   const d=ST; if(!d)return null;
   return [d.updatedAt,d.totalVotes,d.nowPlaying&&d.nowPlaying.id,d.status,d.windowOpen,
@@ -1031,7 +1068,10 @@ function schedule(){
      3s / 10s / 25s (below), and 3s still applies right after a change, which is
      when the room is actually watching. An earlier version of this comment argued
      for a 6s middle rung and called it shipped; the code has always said 10000. */
-  const wait = QUIET<2 ? 3000 : QUIET<6 ? 10000 : 25000;
+  /* The rungs are the same 3 / 10 / 25 shape they have always been, expressed as
+     multiples of the floor so that a big room stretches all of them together.
+     At the default floor this is exactly 3000 / 10000 / 25000 — unchanged. */
+  const wait = QUIET<2 ? FLOOR : QUIET<6 ? Math.round(FLOOR*10/3) : Math.round(FLOOR*25/3);
   TIMER=setTimeout(tick, wait);
 }
 async function tick(){

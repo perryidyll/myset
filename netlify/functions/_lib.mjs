@@ -797,6 +797,70 @@ export function rankSongs(list, counts, first) {
     a.title.localeCompare(b.title));
 }
 
+/** How many phones are in the room for THIS show.
+
+    Presence is stamped by markPresence as `seenShow`, so this is a count of the
+    stamps that match tonight — a fan carried over from last night does not count.
+    It costs nothing extra: every caller already holds the merged bag.
+
+    Deliberately NOT a stored counter. A counter means a compare-and-swap write on
+    one document per arrival, and arrivals are exactly the moment a room is busiest
+    — 10,000 people through one CAS door is the queue that breaks. Counting a bag
+    that has already been read is free. */
+export function countInRoom(fans, show) {
+  if (!show || !show.showId) return 0;
+  let n = 0;
+  for (const id of Object.keys(fans)) if (fans[id].seenShow === show.showId) n++;
+  return n;
+}
+
+/* THE TWO DIALS A BIG ROOM TURNS BY ITSELF.
+
+   Both are pure functions of the head count, so every phone in a room gets the
+   same answer, no state is stored, and nothing has to be decided by a human at
+   11pm. They are what makes the audience caps SOFT: a room over its plan's number
+   is not refused, it is slowed and shortened, and the artist hears about it after
+   the encore rather than during it.
+
+   The rungs are set from measured cost. Every poll re-reads the whole audience bag,
+   so internal read traffic is (people / interval) x (bag size) — it grows with the
+   SQUARE of the room. Holding that roughly flat as the room grows is the entire job:
+
+     people   bag     interval   blob traffic
+        200   30 KB      3s        2 MB/s
+      1,000  152 KB      5s       30 MB/s
+      3,000  457 KB     10s       46 MB/s
+     10,000  1.5 MB     20s       76 MB/s
+
+   Without the dial, 10,000 phones is 5.1 GB/s and the room simply does not work.
+   With it, the same room is in the same order of magnitude as a busy small one.
+
+   THIS IS A HOLDING MEASURE, NOT THE FIX. The real fix is to stop re-reading the
+   whole audience for every poll — one shared snapshot rendered per change and
+   served from cache, which turns read cost from O(people) into O(votes). Until
+   that lands, these rungs are what keeps a big night standing up. */
+export function pollFloorFor(heads) {
+  const n = Number(heads) || 0;
+  if (n <= 200) return 3000;        // unchanged: what every gig has always felt like
+  if (n <= 1000) return 5000;
+  if (n <= 3000) return 10000;
+  return 20000;
+}
+
+/** How many songs the board carries. null means all of them.
+
+    YouTube's chat defaults to "Top chat" for the same reason: past a certain size
+    the full list is neither affordable nor useful. The page LABELS it — a fan who
+    cannot find their song must never be left wondering whether the vote counted,
+    which in a voting app is a trust failure rather than a cosmetic one. */
+export function boardLimitFor(heads) {
+  const n = Number(heads) || 0;
+  if (n <= 200) return null;
+  if (n <= 1000) return 40;
+  if (n <= 3000) return 25;
+  return 15;
+}
+
 export function voteCounts(fans) {
   const counts = {};
   for (const id of Object.keys(fans))
