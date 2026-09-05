@@ -3460,7 +3460,7 @@ async function orderDetail(sid){
 function commSection(){
   const s=D.show, posts=COMM||[];
   return `<div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post, pin one, and hide anything on any plan — hiding is instant and undoable. Deleting for good is a Plus feature. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post, pin one, and hide anything on any plan — hiding takes it off your page at once and deletes its photos and clip, and the words can be un-hidden. Deleting the whole record for good is a Plus feature. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
       <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · <span style="color:var(--accent)">${p.reports} report${p.reports===1?'':'s'}</span>`:''}</div>
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}${p.showLabel?' · '+esc(p.showLabel):''}</div>
@@ -3468,7 +3468,8 @@ function commSection(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px">
         <button class="act" onclick="replyPost('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
         <button class="act" onclick="commAct('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
-        <button class="act" onclick="commAct('postHide','${esc(p.id)}',${p.hidden?'false':'true'})">${p.hidden?'Show':'Hide'}</button>
+        <button class="act" onclick="${p.hidden?`commAct('postHide','${esc(p.id)}',false)`
+          :`if(confirm(${JSON.stringify((p.photos.length||p.clip)?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}))commAct('postHide','${esc(p.id)}',true)`}">${p.hidden?'Show':'Hide'}</button>
         ${/* Greyed rather than hidden — Perry's rule for a locked feature: show it,
              say what it needs, never pretend it isn't there. The server refuses it
              too, so this is the sign and not the lock (15k). */''}

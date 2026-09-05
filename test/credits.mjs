@@ -40,9 +40,15 @@ const vote = (fan, song) => hit(voteFn, 'https://x/api/vote', { fan, song });
 const ask  = (fan, title) => hit(reqFn, `https://x/api/request?fan=${fan}`, { kind: 'song', title });
 const extraOf = async (fan) => ((await readFans('perry-idyll'))[fan] || {}).extra;
 
+/* A REALISTIC CREATION TIME. These were a fixed 2025 timestamp, which only worked
+   because the Stripe test double ignored the `created` window. It no longer does —
+   and neither does Stripe — so a session dated last year now falls outside
+   revenue.mjs's 180-day window exactly as a real one would. */
+const RECENT = Math.floor(Date.now() / 1000) - 3600;
+
 /** Grant a pack through the REAL money path, so the test can't diverge from it. */
 const buy = (fan, votes, id) => redeemSession('perry-idyll', {
-  id, payment_status: 'paid', amount_total: 700, created: Math.floor(1756000000),
+  id, payment_status: 'paid', amount_total: 700, created: RECENT,
   metadata: { fan, kind: 'votes', votes: String(votes) },
 });
 

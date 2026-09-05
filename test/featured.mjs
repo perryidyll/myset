@@ -252,6 +252,16 @@ console.log('\nTHREE TABS, ONE NIGHT — the section is a listing, not one act t
      spot. This is the branch that revives a payment whose hold was replaced. */
   eq('and it still knows which gig, so the city feed can draw it', rows[0].eventId, 'ev3tabs');
 
+  /* THE TOMBSTONE HAS TO OUTLIVE THE HOLD. Both settle paths run — the browser's
+     return trip and the Stripe webhook — and they can be an hour apart if somebody
+     leaves the tab open. Without a marker that survives the twenty-minute hold
+     clock, the second path grants a spot for a payment the first path refunded. */
+  const wayLater = Date.now() + F.HOLD_MS * 4;
+  const again = await F.markPaid(KEY, D4, taps[1].hold, { aid, today: TODAY, now: wayLater });
+  ok('an hour later, the refunded payment still cannot be granted a spot',
+    !again.ok && again.refundedAlready, again);
+  eq('and the night still has exactly one', ((await F.featuredFor(KEY, TODAY, wayLater))[D4] || []).length, 1);
+
   const refunds = __stripe.calls.filter((c) => c.method === 'refunds.create');
   ok('each refund is keyed by its own session, so a webhook retry cannot double it',
     new Set(refunds.map((c) => (c.opts || {}).idempotencyKey)).size === refunds.length, refunds.length);

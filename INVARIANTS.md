@@ -1610,6 +1610,17 @@ If you are about to violate one, stop and say so rather than working around it.
     past everywhere on earth. A local date is fine for deciding what to SHOW and
     never for deciding what to remove.
 
+0dy1. **Hiding a post deletes its photos and its clip.** `/api/img` and `/api/vid`
+    serve by URL and know nothing about whether the post they belong to is hidden —
+    and checking would mean a blob read on every image request, on the one path that
+    exists to be edge-cached. So a hidden post used to leave its media publicly
+    fetchable for ever, and the moment permanent deletion became a paid feature that
+    left a FREE artist with no way at all to take something offensive off their page.
+    Nobody hides a post and expects the photo to keep loading. The bytes go, the
+    words stay and can be un-hidden, the record stops pointing at what is gone, and
+    the Studio says all of that before the tap. The bytes are dropped AFTER the
+    record is written, so a refused write leaves them intact.
+
 0dy. **Nothing on a community post may be changed by anyone but the person who
     wrote it, and only for a day.** Ownership is compared INSIDE the write against
     the stored device id; an id in a request body proves nothing. Editing closes

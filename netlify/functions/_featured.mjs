@@ -83,8 +83,14 @@ function prune(d, today, now) {
   let changed = false;
   for (const [date, rows] of Object.entries(d.byDate)) {
     if (date < floor) { delete d.byDate[date]; changed = true; continue; }
+    /* A TOMBSTONE OUTLIVES A HOLD. It is `paid:false`, so the hold clock would have
+       swept it after twenty minutes — and then the OTHER settle path (the webhook
+       and the browser return trip both run) could grant a spot for a payment that
+       had already been refunded. The two paths can be minutes apart, or an hour if
+       somebody leaves the tab open. A tombstone therefore lives as long as the
+       night does; it costs one small row and it never occupies a spot. */
     const keep = (Array.isArray(rows) ? rows : [])
-      .filter((r) => r && (r.paid || now - Number(r.at || 0) < HOLD_MS));
+      .filter((r) => r && (r.paid || r.refunded || now - Number(r.at || 0) < HOLD_MS));
     if (keep.length !== (rows || []).length) changed = true;
     if (keep.length) d.byDate[date] = keep; else { delete d.byDate[date]; changed = true; }
   }

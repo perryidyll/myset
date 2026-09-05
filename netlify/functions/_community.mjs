@@ -261,9 +261,18 @@ export async function reportPost(owner, fan, id) {
 }
 
 /* ---------- the owner's side ---------- */
+/* HIDING TAKES THE PICTURES DOWN TOO, and that is not a nicety.
+   A photo and a clip are served by URL — /api/img and /api/vid know nothing about
+   whether the post they belong to is hidden, and checking would mean a blob read on
+   every image request on a path that exists to be edge-cached. So hiding a post
+   used to leave its media publicly fetchable for ever, and once deleting for good
+   became a paid feature that left a FREE artist with no way at all to take
+   something offensive off their page. Nobody hides a post and expects the photo to
+   keep loading. So: hide removes the bytes, the words stay, and un-hiding brings
+   back what it can. Said out loud in the Studio before the tap. */
 export async function moderate(owner, { action, id, text, on }) {
   if (!id) return { ok: false, error: 'which post?' };
-  let found = false, photos = [], clip = '';
+  let found = false, photos = [], clip = '', stripped = null;
   if (action === 'postDelete') {
     await casDoc(KEY(owner), empty, (d) => {
       const p = (d.list || []).find((x) => x && x.id === id);
@@ -283,7 +292,15 @@ export async function moderate(owner, { action, id, text, on }) {
     const p = (d.list || []).find((x) => x && x.id === id);
     if (!p) return false;
     found = true;
-    if (action === 'postHide') p.hidden = on !== false;
+    if (action === 'postHide') {
+      p.hidden = on !== false;
+      /* Only on the way IN. Un-hiding must not try to delete anything, and there is
+         nothing left to delete by then anyway. */
+      if (p.hidden && ((p.photos || []).length || p.clip)) {
+        stripped = { photos: p.photos || [], clip: p.clip || '' };
+        p.photos = []; p.clip = null;
+      }
+    }
     else if (action === 'postPin') p.pinned = on !== false;
     else if (action === 'postReply') {
       const t = String(text || '').replace(/\r/g, '').trim().slice(0, MAX_REPLY);
@@ -291,7 +308,14 @@ export async function moderate(owner, { action, id, text, on }) {
     } else return false;
     return true;
   });
-  return found ? { ok: true } : { ok: false, error: 'That post is gone.' };
+  /* AFTER the record is written, never before: if the write is refused the bytes
+     must still be there. The same order addPost uses for the opposite reason. */
+  if (found && stripped) {
+    for (let i = 0; i < stripped.photos.length; i++) await dropImage(owner, `${id}_${i}`);
+    if (stripped.clip) await dropClip(owner, stripped.clip);
+  }
+  return found ? { ok: true, stripped: stripped ? (stripped.photos.length + (stripped.clip ? 1 : 0)) : 0 }
+               : { ok: false, error: 'That post is gone.' };
 }
 
 /* ---------- what the page gets ---------- */

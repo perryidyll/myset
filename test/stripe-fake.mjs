@@ -227,7 +227,7 @@ export default class Stripe {
           session = {
             id, url: `https://checkout.stripe.test/${id}`, mode: 'payment',
             payment_status: 'paid', amount_total: amount,
-            created: 1756000000, metadata: params.metadata || {},
+            created: NOW(), metadata: params.metadata || {},
             payment_intent: pi,
             payment_intent_data: params.payment_intent_data || null,
           };
@@ -249,8 +249,16 @@ export default class Stripe {
       list: async (params, opts) => {
         note('checkout.sessions.list', params, opts);
         const asked = (opts && opts.stripeAccount) || '';
+        /* THE DATE FILTER IS HONOURED, and it has to be. Ignoring `created` made
+           every session visible in every window, so a test could never catch code
+           that only looks back one month — which is exactly how a refund of an
+           older charge gets booked against the wrong side of the books. */
+        const g = ((params || {}).created || {}).gte ?? 0;
+        const l = ((params || {}).created || {}).lte ?? 9e12;
         return { data: [...state.sessions.values()]
-          .filter((r) => r.onAccount === asked && r.session.mode !== 'subscription').map((r) => r.session) };
+          .filter((r) => r.onAccount === asked && r.session.mode !== 'subscription'
+                      && (r.session.created ?? 0) >= g && (r.session.created ?? 0) <= l)
+          .map((r) => r.session) };
       },
     } };
   }

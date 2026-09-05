@@ -33,8 +33,14 @@ const A = (action, extra = {}) => (async () => {
     body: JSON.stringify({ action, ...extra }) }));
   return r.json();
 })();
+
+/* A REALISTIC CREATION TIME. These were a fixed 2025 timestamp, which only worked
+   because the Stripe test double ignored the `created` window. It no longer does —
+   and neither does Stripe — so a session dated last year now falls outside
+   revenue.mjs's 180-day window exactly as a real one would. */
+const RECENT = Math.floor(Date.now() / 1000) - 3600;
 const sess = (id, fan, votes) => ({
-  id, payment_status: 'paid', amount_total: 500, created: 1756000000,
+  id, payment_status: 'paid', amount_total: 500, created: RECENT,
   metadata: { fan, kind: 'votes', votes: String(votes) },
 });
 const extraOf = async (fan) => ((await readFans('perry-idyll'))[fan] || {}).extra || 0;
@@ -103,7 +109,7 @@ ok('her grant history records the session once',
 
 console.log('\nA TIP NEEDS NO GRANT, SO IT IS DELIVERED ON THE SPOT');
 const tip = await redeemSession('perry-idyll', { id: 'cs_tip', payment_status: 'paid',
-  amount_total: 2000, created: 1756000000, metadata: { fan: 'dan', kind: 'tip', note: 'great set' } });
+  amount_total: 2000, created: RECENT, metadata: { fan: 'dan', kind: 'tip', note: 'great set' } });
 ok('accepted', tip.ok, tip);
 eq('delivered immediately', (await marker('cs_tip')).delivered, true);
 eq('and it reached the tips ledger', (await readMeta('perry-idyll')).tips.slice(-1)[0].amount, 20);

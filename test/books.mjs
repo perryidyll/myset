@@ -176,6 +176,8 @@ console.log('\nTHE FOUNDER\u2019S GIGS, SPLIT OUT OF MYSET\u2019S REVENUE');
   __stripe.sessions.set('cs_gig1', { onAccount: '', session: { id: 'cs_gig1', mode: 'payment',
     payment_status: 'paid', created: at(LAST, 12), payment_intent: 'pi_gig1',
     metadata: { kind: 'votes', artist: DEFAULT_ARTIST } } });
+  /* The fake now honours `created`, so this proves the widened session window
+     rather than relying on the fake handing back everything. */
   bt({ __account: '', created: at(LAST, 12), type: 'charge', amount: 700, fee: 50, net: 650,
        source: { id: 'ch_gig1', object: 'charge', payment_intent: 'pi_gig1', metadata: {} },
        fee_details: [{ type: 'stripe_fee', amount: 50 }] });
@@ -202,6 +204,10 @@ console.log('\nTHE FOUNDER\u2019S GIGS, SPLIT OUT OF MYSET\u2019S REVENUE');
   const rb = Object.fromEntries(sr.books.months.map((m) => [m.month, m]));
   eq('the refund is taken off HIS side', rm[THIS].refunds, -700);
   eq('and not off the company\u2019s', rb[THIS].refunds, 0);
+  ok('and the session lookup really did reach back past the transaction window',
+    (() => { const c = [...__stripe.calls].reverse()
+        .find((x) => x.method === 'checkout.sessions.list');
+      return !!c && c.args.created.gte < at(THIS, 1); })());
 
   /* A charge that labels ITSELF needs no session at all — which is what
      payment_intent_data.metadata buys from here on. */

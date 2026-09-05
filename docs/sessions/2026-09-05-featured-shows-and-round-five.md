@@ -121,8 +121,8 @@ INVARIANT 0dx.
 
 Featured shows takes money, so it got a 5-lens multi-agent review — concurrency,
 authorisation, accounting, browser code, and invariant compliance — with every
-finding then attacked by three skeptics told to default to "refuted". Twelve
-findings survived. Every one is fixed; the ones that mattered:
+finding then attacked by three skeptics told to default to "refuted". Twenty-six findings were raised and six survived all three skeptics; several more
+were fixed on the way through. Every one is closed. The ones that mattered:
 
 | | What it would have done |
 |---|---|
@@ -138,15 +138,30 @@ findings survived. Every one is fixed; the ones that mattered:
 | **A hang before recording started never ended** | The stall backstop only settled the promise through `rec.onstop`, so a stall before the recorder started left the progress bar up for ever. |
 | **Editing a post silently did nothing on bar wifi** | No try/catch: a dropped connection threw inside an onclick and the button did nothing at all — no toast, no clue. |
 | **Deleting for good was free on the venue endpoint** | The identical action on the identical feed, one endpoint along, with no plan gate. Closed, and added to the venue plan cards. |
+| **A hidden post kept serving its photos** | `/api/img` and `/api/vid` serve by URL and know nothing about a post being hidden — and checking would cost a blob read on the one path that exists to be edge-cached. So hiding left the media publicly fetchable, and the moment deleting became a paid feature that left a free artist with **no way at all** to take something offensive off their page. Hiding now deletes the bytes; the words stay and can be un-hidden; the Studio says so before the tap. |
+| **A refunded payment could still be granted an hour later** | The tombstone that stops the second settle path was unpaid, so the twenty-minute hold clock swept it. The two paths can be an hour apart if somebody leaves the tab open. A tombstone now lives as long as the night. |
 
 Plus one I found myself before the review returned, and the worst of the lot:
 **the garbage collector pruned on the calling artist's local date** inside a shared
 city table, so an artist in Bangkok could have deleted a London artist's PAID row
 for a night London had not reached. The delete floor is now two days behind UTC.
 
+## One more thing the review changed: the test double
+
+The Stripe fake's `checkout.sessions.list` ignored the `created` window, so every
+session was visible in every query. That is why no test could catch a lookup that
+only reaches back one month — the exact shape of the refund bug above. The fake now
+honours the window, which immediately failed four suites whose fixtures were dated
+August 2025 and therefore outside `revenue.mjs`'s real 180-day window. Those
+fixtures now carry a realistic timestamp, and the fake defaults `created` to now,
+the way Stripe does.
+
+**A test double that is more permissive than the real thing is a test that passes
+for the wrong reason.**
+
 ## Tests
 
-**28 suites, 1,446 assertions, 0 failed.** New: `test/featured.mjs` (65).
+**28 suites, 1,456 assertions, 0 failed.** New: `test/featured.mjs` (65).
 `test/clips.mjs` +17 (editing, self-delete, the plan gate), `test/books.mjs` +11
 (the join-month floor, the founder split).
 

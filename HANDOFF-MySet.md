@@ -2262,10 +2262,13 @@ Full detail in `docs/sessions/2026-09-05-featured-shows-and-round-five.md`.
   shared city table — so an artist in Bangkok could have deleted a London artist's
   PAID row for a night London had not reached. The delete floor is now two days
   behind UTC.
+- **A hidden post kept serving its photos and clip** — and once deleting became a
+  paid feature that left a free artist unable to take anything down at all. Hiding
+  now deletes the media; the words stay and can be un-hidden.
 
 ## State
 
-- **28 suites, 1,446 assertions, 0 failed.** New: `test/featured.mjs`.
+- **28 suites, 1,456 assertions, 0 failed.** New: `test/featured.mjs`.
 - INVARIANTS 0dx–0eb.
 - Perry's to-do unchanged: `charge.updated` on the webhook, stop the double deploy
   and move to Netlify Pro, 2FA everywhere, try the passkey.

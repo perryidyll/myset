@@ -1045,7 +1045,8 @@ function vMerchTab(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px">
         <button class="act" onclick="vReply('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
         <button class="act" onclick="vComm('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
-        <button class="act" onclick="vComm('postHide','${esc(p.id)}',${p.hidden?'false':'true'})">${p.hidden?'Show':'Hide'}</button>
+        <button class="act" onclick="${p.hidden?`vComm('postHide','${esc(p.id)}',false)`
+  :`if(confirm(${JSON.stringify((p.photos&&p.photos.length)||p.clip?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}))vComm('postHide','${esc(p.id)}',true)`}">${p.hidden?'Show':'Hide'}</button>
         <button class="act warn" onclick="if(confirm('Delete this post for good?'))vComm('postDelete','${esc(p.id)}')">✕</button></div>
     </div>`).join('')||'<div class="row muted">Nothing posted yet.</div>'}</div>`;
 }

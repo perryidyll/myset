@@ -163,8 +163,14 @@ eq('and the fan has their credits back', (await pub('dan')).credits.used, 0);
 
 console.log('\nAND THE PAID LEDGER IS UNCHANGED BY ANY OF THIS  (INVARIANT 13b)');
 const { redeemSession } = await import('../netlify/functions/_pay.mjs');
+
+/* A REALISTIC CREATION TIME. These were a fixed 2025 timestamp, which only worked
+   because the Stripe test double ignored the `created` window. It no longer does —
+   and neither does Stripe — so a session dated last year now falls outside
+   revenue.mjs's 180-day window exactly as a real one would. */
+const RECENT = Math.floor(Date.now() / 1000) - 3600;
 await redeemSession('perry-idyll', { id: 'cs_fin', payment_status: 'paid', amount_total: 500,
-  created: 1756000000, metadata: { fan: 'eve', kind: 'votes', votes: '5' } });
+  created: RECENT, metadata: { fan: 'eve', kind: 'votes', votes: '5' } });
 eq('eve bought five', (await pub('eve')).credits.paidLeft, 5);
 await send({ fan: 'eve', song: 'charlie', n: 12, op: 'cast', cast: 'cast0000000000000011' });
 eq('she spends ten free plus two bought', (await pub('eve')).credits.used, 12);

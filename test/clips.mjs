@@ -233,6 +233,34 @@ console.log('\nA FAN\u2019S OWN POST: CHANGE IT FOR A DAY, TAKE IT BACK FOR EVER
   ok('deleting it twice says so rather than pretending', !(await removeOwnPost(aid, F1, pid)).ok);
 }
 
+console.log('\nHIDING TAKES THE PICTURES DOWN TOO');
+{
+  /* FOUND BY AN ADVERSARIAL REVIEW. /api/img and /api/vid serve by URL and know
+     nothing about whether a post is hidden — so hiding used to leave the bytes
+     publicly fetchable, and once deleting for good became a paid feature that left
+     a FREE artist with no way at all to take something offensive off their page. */
+  const F2 = 'fanmedia0001';
+  const clipR = await jget(await commFn(post(`https://x/api/community?a=${slug}`,
+    { action: 'clip', fan: F2, data: asData(fakeMp4(6)), poster: JPEG })));
+  const made = await jget(await commFn(post(`https://x/api/community?a=${slug}`,
+    { action: 'post', fan: F2, text: 'with media', photos: [JPEG], clip: clipR.clip })));
+  const pid = made.id;
+  ok('the photo is served while the post is up',
+    (await imgFn(new Request(`https://x/api/img?a=${aid}&s=${pid}_0`))).status === 200);
+  ok('and so is the clip', (await vidFn(new Request(`https://x/api/vid?a=${aid}&c=${clipR.clip}`))).status === 200);
+
+  await moderate(aid, { action: 'postHide', id: pid, on: true });
+  eq2('hiding takes the photo down for good', (await imgFn(new Request(`https://x/api/img?a=${aid}&s=${pid}_0`))).status, 404);
+  eq2('and the clip', (await vidFn(new Request(`https://x/api/vid?a=${aid}&c=${clipR.clip}`))).status, 404);
+
+  const rec = (await readPosts(aid)).list.find((p) => p.id === pid);
+  ok('the record stops pointing at bytes that are gone', !(rec.photos || []).length && !rec.clip, rec);
+  ok('but the words are still there to un-hide', rec.text === 'with media' && rec.hidden === true);
+
+  await moderate(aid, { action: 'postHide', id: pid, on: false });
+  ok('un-hiding brings the words back', !(await readPosts(aid)).list.find((p) => p.id === pid).hidden);
+}
+
 console.log('\nDELETING FOR GOOD IS A PAID FEATURE; HIDING IS NOT');
 {
   const adminFn = (await import('../netlify/functions/admin.mjs')).default;
