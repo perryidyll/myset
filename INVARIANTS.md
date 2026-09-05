@@ -1786,3 +1786,35 @@ If you are about to violate one, stop and say so rather than working around it.
     from O(people) into O(votes). Until that lands, `pollFloorFor` is what keeps a
     big night standing up, and the tier numbers must stay at what MySet can actually
     serve rather than at what the margin could afford.
+
+0en. **A stranger's vote must not accelerate a big room, and `totalVotes` is what
+    made it.** `signature()` in `public/vote.html` included the running tally, so any
+    cast by anyone reset `QUIET` to 0 on every phone — which means in any busy room
+    the 10s and 25s rungs were unreachable and the ladder was a fixed 3-second poll
+    wearing a ladder's clothes. It is now two signatures: `stageSig()` (the artist's
+    actions plus this phone's own credits) and `signature()` (that plus the tally).
+    Below the point where the server widens the interval, `signature()` still drives
+    the ladder and nothing about a pub gig changes — the tally jumping the instant
+    somebody votes IS the product at eight people, and it costs a fraction of a cent.
+    Above it, `stageSig()` drives it: the board still redraws, it just stops
+    accelerating the room. Measured over the real loop this took a 10,000-person gig
+    from $36.40 to $4.29 and from 119M blob reads to 13M. `tools/loadsim.py` walks
+    the same ladder and its docstring must be kept in step with the page.
+
+0eo. **Every scheduled poll is jittered ±20%, and the ladder has a terminal rung.**
+    The server hands every phone in a room the same interval, so without jitter they
+    fire on the same tick and arrive as a spike rather than a stream. And a phone
+    left face-up with nobody looking at it used to sit on the 25s rung for ever;
+    after twenty unchanged ticks it now settles at twenty times the floor. Any tap
+    wakes it instantly, so nothing is lost.
+
+0ep. **A public cache header on `/api/show` saves nothing, and this was checked
+    rather than assumed.** The poll URL carries `fan=<id>` and production returns
+    `netlify-vary: query`, so ten thousand phones make ten thousand cache keys and
+    nothing collapses. Netlify also bills a web request for a cache HIT — its docs
+    count "content hosted on your project" with no exclusion for cached responses —
+    so caching only ever removes compute, which is 63% of the bill and not the shape
+    of the curve. The fix that does work is a shared board with NO fan parameter in
+    the URL, which cuts the number of requests as well as their cost. Anyone
+    reaching for `cache-control: public` on the existing endpoint is about to spend
+    a day for nothing.

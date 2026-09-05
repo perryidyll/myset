@@ -14,11 +14,24 @@ number is to run the ladder the page actually runs, against a model of what a
 person in a bar actually does with their phone.
 
 THE LADDER, COPIED FROM public/vote.html (keep these in step):
-    wait = 3000 if QUIET < 2 else 10000 if QUIET < 6 else 25000
+    FLOOR   = pollFloorFor(heads) -- the SERVER sends it, the page obeys it:
+              3000ms up to 200 people, 5000 to 1,000, 10000 to 3,000, else 20000
+    base    = FLOOR if QUIET < 2 else FLOOR*10/3 if QUIET < 6
+              else FLOOR*25/3 if QUIET < 20 else FLOOR*20   (the terminal rung)
+    wait    = base * (0.8 + random()*0.4)                   (+/-20% jitter)
     tick(): if document.hidden -> no request, just reschedule
             else -> request; QUIET++ if the signature is unchanged, else QUIET=0
     visibilitychange (screen on) -> wakeUp(full=True)  -> QUIET = 0
     pointerdown (any tap/scroll) -> wakeUp(full=False) -> QUIET = 2 only if QUIET >= 6
+
+WHICH SIGNATURE RESETS THE LADDER, WHICH IS THE WHOLE COST CURVE:
+    In a small room (FLOOR == 3000) it is `signature()` -- the tally included, so a
+    vote by ANYONE resets EVERY phone. That is the product, and at eight people it
+    costs nothing.
+    In a bigger room it is `stageSig()` -- the artist's actions and this phone's own
+    credits only. The board still redraws; it stops accelerating the room. Without
+    this the upper rungs are unreachable in any busy room and the ladder is a fixed
+    3-second poll wearing a ladder's clothes.
 
 CREDIT RATES — Netlify credit-based pricing, read 2026-09-05:
     web requests      2 credits / 10,000
@@ -60,7 +73,15 @@ def credits(reqs, byte_count, fn_ms):
             + byte_count / 1e9 * CR_BW_PER_GB
             + fn_ms / 1000 / 3600 * FN_MEM_GB * CR_COMPUTE_GBHR)
 
-def one_phone(hours, rng, look_share, votes, activity_per_min):
+def poll_floor(heads):
+    """Mirrors pollFloorFor in netlify/functions/_lib.mjs. Keep in step."""
+    if heads <= 200:  return 3.0
+    if heads <= 1000: return 5.0
+    if heads <= 3000: return 10.0
+    return 20.0
+
+
+def one_phone(hours, rng, look_share, votes, activity_per_min, floor=3.0):
     """Walk the real ladder for one person for the whole gig.
 
     look_share       fraction of the gig their screen is on and MySet is in front
@@ -72,7 +93,11 @@ def one_phone(hours, rng, look_share, votes, activity_per_min):
     looking = False
     next_flip = rng.expovariate(1 / 25.0)          # glances average ~25s
     while t < total_s:
-        wait = 3.0 if quiet < 2 else 10.0 if quiet < 6 else 25.0
+        base = (floor if quiet < 2
+                else floor * 10 / 3 if quiet < 6
+                else floor * 25 / 3 if quiet < 20
+                else floor * 20)
+        wait = base * (0.8 + rng.random() * 0.4)          # jitter, as the page does
         t += wait
         # screen on/off flips independently of the timer
         while next_flip < t:
@@ -98,11 +123,20 @@ def one_phone(hours, rng, look_share, votes, activity_per_min):
 
 def gig(fans=20, hours=3.0, look_share=0.22, votes_each=2.5, seed=7):
     rng = random.Random(seed)
-    # how lively the room is: every cast by anyone changes the signature for everyone
-    activity_per_min = fans * votes_each / (hours * 60)
+    floor = poll_floor(fans)
+    if floor <= 3.0:
+        # SMALL ROOM: every cast by anyone changes the signature for everyone. This
+        # is the product working, and at these sizes it costs a fraction of a cent.
+        activity_per_min = fans * votes_each / (hours * 60)
+    else:
+        # BIG ROOM: only the artist's actions and this phone's OWN casts reset the
+        # ladder (stageSig). A song change every four minutes, plus this one fan's
+        # votes spread over the night. Everyone else's votes redraw the board
+        # without waking anybody.
+        activity_per_min = 0.25 + votes_each / (hours * 60)
     polls = 0
     for _ in range(fans):
-        p, _ = one_phone(hours, rng, look_share, votes_each, activity_per_min)
+        p, _ = one_phone(hours, rng, look_share, votes_each, activity_per_min, floor)
         polls += p
     votes = int(round(fans * votes_each))
     reqs  = polls + votes + fans * PAGE_REQS

@@ -826,18 +826,24 @@ export function countInRoom(fans, show) {
    so internal read traffic is (people / interval) x (bag size) — it grows with the
    SQUARE of the room. Holding that roughly flat as the room grows is the entire job:
 
-     people   bag     interval   throttled    on a fixed 3s ladder
-        200   30 KB      3s         2 MB/s        2 MB/s
-      1,000  152 KB      5s        30 MB/s       51 MB/s
-      2,000  305 KB     10s        61 MB/s      203 MB/s
-     10,000  1.5 MB     20s       762 MB/s    5,077 MB/s
+     people   bag    interval   busy room    on the old fixed 3s ladder
+        200   30 KB     3s         1.3 MB/s        2 MB/s
+      1,000  152 KB     5s        12.3 MB/s       51 MB/s
+      2,000  305 KB    10s        30.3 MB/s      203 MB/s
+     10,000  1.5 MB    20s       463.1 MB/s    5,077 MB/s
 
-   Read the right-hand column as the reason the dial exists and the left-hand one as
-   the reason it is not enough on its own: it buys between 1.7x at a club and 6.7x at
-   an arena, and 762 MB/s is still far past anything this architecture serves. Which
-   is why the tier numbers below stop at 2,000 — around 61 MB/s, in the same
-   neighbourhood as the busiest room MySet is known to work in — rather than at the
-   largest number the margin would allow.
+   The right-hand column is the reason the dial exists. The left-hand one is measured
+   with the ladder AS IT NOW BEHAVES — since a vote by a stranger stopped resetting
+   every phone in a big room (see stageSig in public/vote.html), the upper rungs are
+   reachable for the first time and the whole curve dropped by roughly an order of
+   magnitude. tools/loadsim.py walks the same ladder and prices the same night at
+   $4.29 for 10,000 people, down from $36.40.
+
+   That is why the tiers stop at 2,000 and not lower: 30 MB/s in a busy room is
+   comfortably inside what MySet is known to serve. It is also why they do not stop
+   HIGHER — 463 MB/s at 10,000 is still far past it. The dial and the ladder together
+   bought an order of magnitude; the shape is still quadratic, and only the shared
+   board fixes the shape.
 
    THIS IS A HOLDING MEASURE, NOT THE FIX. The real fix is to stop re-reading the
    whole audience for every poll — one shared snapshot rendered per change and

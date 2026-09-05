@@ -1043,11 +1043,35 @@ let TIMER=null, QUIET=0, LASTSIG=null;
    drop a pocketed phone to the fast rung. The floor below covers the same ground
    more bluntly and is server-controlled, which is why it came first. */
 let FLOOR=3000;
-function signature(){
+/* TWO SIGNATURES, AND THE ROOM DECIDES WHICH ONE DRIVES THE LADDER.
+
+   `totalVotes` used to sit in the one signature, which meant ANY vote by ANYONE
+   pushed every phone in the room back to the fastest rung. In a room where somebody
+   is always voting the ladder therefore never climbs at all — the 10s and 25s rungs
+   are unreachable, and one person's tap becomes maximum work from everybody. That
+   single field is most of why 10,000 phones would produce ~7.9 million polls in
+   three hours. Discord found the same thing from the other end: ~90% of listeners
+   in a big room are passive, and not waking them made fanout 90% cheaper.
+
+   THE PART THAT IS NOT DISCORD'S ANSWER. Dropping crowd-acceleration everywhere
+   would also drop it in a pub with eight people — where the tally jumping the
+   instant somebody votes IS the product, and where it costs a fraction of a cent.
+   So the room decides: below the point where the server starts widening the
+   interval, nothing changes at all and the page behaves exactly as it always has.
+   Above it, only the artist's actions and your own credits wake everybody; the
+   board still redraws when the counts move, it just stops accelerating the room.
+
+   stageSig  what the ARTIST did, plus what is true only of this phone.
+   boardSig  all of that, plus the running tally. */
+function stageSig(){
   const d=ST; if(!d)return null;
-  return [d.updatedAt,d.totalVotes,d.nowPlaying&&d.nowPlaying.id,d.status,d.windowOpen,
+  return [d.updatedAt,d.nowPlaying&&d.nowPlaying.id,d.status,d.windowOpen,
           d.credits&&d.credits.remaining,
           (d.myAsks||[]).map(a=>a.id+a.status).join(',')].join('|');
+}
+function signature(){
+  const d=ST; if(!d)return null;
+  return stageSig()+'|'+d.totalVotes;
 }
 function schedule(){
   clearTimeout(TIMER);
@@ -1071,14 +1095,31 @@ function schedule(){
   /* The rungs are the same 3 / 10 / 25 shape they have always been, expressed as
      multiples of the floor so that a big room stretches all of them together.
      At the default floor this is exactly 3000 / 10000 / 25000 — unchanged. */
-  const wait = QUIET<2 ? FLOOR : QUIET<6 ? Math.round(FLOOR*10/3) : Math.round(FLOOR*25/3);
+  const base = QUIET<2 ? FLOOR
+             : QUIET<6 ? Math.round(FLOOR*10/3)
+             : QUIET<20 ? Math.round(FLOOR*25/3)
+             /* A TERMINAL RUNG. A phone left face-up on a table with nobody looking
+                at it used to sit on the 25s rung for ever. After twenty unchanged
+                ticks it settles at a minute — Slido's ladder ends the same way, with
+                its last step repeating. Nothing is lost: any tap wakes it instantly. */
+             : FLOOR*20;
+  /* JITTER, WHICH ONLY MATTERS IN A CROWD. Every phone in the room is handed the
+     same interval by the same server, so without this they all fire on the same
+     tick and the load arrives as a spike rather than a stream — ten thousand
+     requests in one instant instead of spread over three seconds. +/-20% is enough
+     to smear them out and small enough that nobody perceives it. Discord ships
+     jitter on the first heartbeat for exactly this reason. */
+  const wait = Math.round(base * (0.8 + Math.random() * 0.4));
   TIMER=setTimeout(tick, wait);
 }
 async function tick(){
   if(document.hidden){ fbTick(); schedule(); return; }
   await load();
   fbMaybeAsk();                 // a natural pause: state has just refreshed
-  const sig=signature();
+  /* In a room the server has decided is big (it has raised the floor above the
+     ordinary three seconds), the tally moving is not a reason to speed everybody
+     up. Below that, this is the signature the page has always used. */
+  const sig = FLOOR > 3000 ? stageSig() : signature();
   if(sig!==null && sig===LASTSIG) QUIET++; else { QUIET=0; LASTSIG=sig; }
   schedule();
 }
