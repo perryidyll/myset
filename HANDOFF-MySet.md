@@ -2482,3 +2482,53 @@ Chrome and puppeteer-core, which live outside this repo.
   labelled as the only invented path on the page. Nothing deleted.
 - Gate tests 12/12; `node finance/model-test.mjs` all passed; headless checks on the
   new hero, the collapsed section, mobile and dark all pass.
+
+---
+
+# SESSION LOG — 2026-09-06 (why the sound is separate, and the second route)
+
+Perry, after a clip uploaded but came back silent: *"i'm a little confused why the
+sound is being treated as something separate to be added at all..?"*
+
+## The answer, because it explains three rounds of failure
+
+**MySet does not send the video. It re-films it.** A 30-second phone clip is ~50MB
+against a 3MB ceiling, there is no server to transcode on, and no in-browser
+transcoder that does not mean shipping megabytes of WebAssembly to every fan. So the
+file is played onto an invisible canvas and the canvas is recorded. A canvas is
+pixels — **a film of a canvas has no sound** — so the audio has to be fetched
+separately and added as its own track. Not a design choice; a consequence. And it is
+why every failure so far has been a sound failure while the picture was perfect.
+
+## What was actually wrong
+
+`decodeAudioData` is specified for AUDIO files. Given a whole MP4 with a video track,
+Chrome digs the soundtrack out and **Safari routinely refuses**. There was only one
+route to the sound, and an iPhone hits the one that fails.
+
+## Shipped
+
+- **A second route.** `elementSound()` taps the playing element with a
+  `MediaElementAudioSourceNode` — the route the first version used, which failed then
+  because the audio context was asleep and could not be woken with a spent tap. The
+  tap now wakes it before the file picker opens, so its one requirement is guaranteed.
+  Needs the element unmuted (a muted element feeds the node silence — the original
+  bug), so `reencode` unmutes on that path only. Nothing is heard out loud either way.
+- **Both routes are checked, not assumed.** Route one scans the decoded buffer
+  (`hasSignal`); route two rides an `AnalyserNode` for the whole recording and reports
+  what it heard. "Has an audio track" ≠ "has sound in it".
+- **Seven named reasons** instead of one vague message, so the next report is precise.
+- **`noplay`**: a phone refusing to play unmuted drops the sound and retries rather
+  than failing the clip.
+- **A real crash found by the new test** — the message read `sound` from outside the
+  scope it is declared in, throwing a ReferenceError *only* on the silent path, i.e.
+  exactly when somebody needs to be told what happened.
+
+`tools/clipcheck.mjs` 26/26, including Safari's refusal simulated end to end
+(rms 0.4159 out the other side). `INVARIANTS.md` 0eq, 0er.
+`docs/sessions/2026-09-06-why-the-sound-is-separate.md`.
+
+## Parked, at Perry's word: "let's come back to this later this week"
+
+The scale work. Read `docs/reports/room-ceiling.html` and the 2026-09-05 session doc
+first. Three measurements nobody has taken are listed there and each is under an hour.
