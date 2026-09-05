@@ -255,7 +255,7 @@ function render(){
         :`<a class="vlink" href="${esc(p.video.href)}" target="_blank" rel="noopener noreferrer">▶ Watch on ${p.video.provider==='tiktok'?'TikTok':'Instagram'} ↗</a>`):''}
       ${p.reply?`<div class="rep"><b>${who}</b>${esc(p.reply.text)}</div>`:''}
       <div class="ft"><button class="heart ${p.liked?'on':''}" data-like="${esc(p.id)}">${p.liked?'♥':'♡'} <span>${p.likes||''}</span></button>
-        <span>${ago(p.at)}</span><button class="more" data-more="${esc(p.id)}" aria-label="More">⋯</button></div>
+        <span>${ago(p.at)}${p.edited?' · edited':''}</span><button class="more" data-more="${esc(p.id)}" aria-label="More">⋯</button></div>
     </div>`;
   }
   h+=`<p class="fineprint" style="margin-top:16px">Posts come straight from fans’ phones and aren’t checked first. ${who} can hide anything.</p>`;
@@ -323,12 +323,48 @@ function clipProgress(pct, label){
 function loadVideo(file){
   return new Promise((res,rej)=>{
     const v=document.createElement('video');
-    v.preload='auto'; v.playsInline=true; v.muted=true;
-    v.setAttribute('playsinline',''); v.setAttribute('muted','');
+    /* NOT muted. This element is the audio source for the re-encode, and a muted
+       element feeds silence into both captureStream() and the Web Audio graph —
+       which is exactly why the first clips came back with no sound. Nothing is
+       heard anyway, because the audio is routed to the recorder instead of to the
+       speakers (see audioFor). */
+    v.preload='auto'; v.playsInline=true; v.muted=false; v.volume=1;
+    v.setAttribute('playsinline','');
     v.onloadedmetadata=()=>res(v);
     v.onerror=()=>rej(new Error('bad video'));
     v.src=URL.createObjectURL(file);
   });
+}
+
+/* THE SOUND, AND WHY IT NEEDS WEB AUDIO RATHER THAN captureStream().
+
+   The first version took the audio track from `video.captureStream()`. That looks
+   right and produces a clip with an audio track in it — a SILENT one, because the
+   element was muted so that it would autoplay, and captureStream captures what the
+   element outputs. Muted output is silence. The clip played, the waveform was flat,
+   and nothing anywhere said so.
+
+   A MediaElementAudioSourceNode taps the audio BEFORE the speakers, so:
+     · the element stays unmuted, which is what makes the signal exist at all
+     · the node is connected ONLY to the recorder's destination, never to
+       `ac.destination`, so the person does not hear their own clip blaring out of
+       the phone while it encodes
+   One element, one source node — createMediaElementSource can only be called once
+   per element, and a fresh element is made for every clip.
+
+   If the browser refuses to play an unmuted video without a fresh tap, the caller
+   falls back to muted (video only) and SAYS the clip will be silent, rather than
+   producing a quiet file and letting somebody find out later. */
+function audioFor(v){
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC) return null;
+    const ac=new AC();
+    const src=ac.createMediaElementSource(v);
+    const dest=ac.createMediaStreamDestination();
+    src.connect(dest);
+    return {ac,tracks:dest.stream.getAudioTracks()};
+  }catch(e){ return null; }
 }
 
 /** A still from about a second in, as a JPEG data URL. Small on purpose — it is
@@ -354,7 +390,7 @@ function posterFrom(v){
 }
 
 /** Re-encode to a 480px short side at ~600kbps. Resolves to a Blob. */
-function reencode(v, seconds, onPct){
+function reencode(v, seconds, onPct, onAudio){
   return new Promise((res,rej)=>{
     const short=Math.min(v.videoWidth,v.videoHeight)||480;
     const r=Math.min(1, 480/short);
@@ -364,18 +400,27 @@ function reencode(v, seconds, onPct){
     c.height=Math.max(2, Math.round(v.videoHeight * r / 2) * 2);
     const ctx=c.getContext('2d');
     const out=c.captureStream(24);
-    try{
-      const el=v.captureStream ? v.captureStream() : (v.mozCaptureStream ? v.mozCaptureStream() : null);
-      if(el) el.getAudioTracks().forEach(t=>out.addTrack(t));
-    }catch(e){}
+    const au=audioFor(v);
+    /* NO GRAPH, NO SOUND OUT LOUD. The element is left unmuted so the graph can tap
+       it; if there is no graph (an old browser, a blocked AudioContext) an unmuted
+       element plays the clip through the phone's speaker — in a bar, during
+       somebody else's set. Muting costs the audio we could not have captured anyway. */
+    if(!au) v.muted=true;
+    /* The tracks go on BEFORE the recorder is built — a MediaRecorder records the
+       tracks the stream had when it was constructed, so adding one afterwards
+       records nothing. */
+    if(au) au.tracks.forEach(t=>out.addTrack(t));
     const mime=CLIP_TYPES.find(t=>{ try{ return MediaRecorder.isTypeSupported(t); }catch(e){ return false; } });
     let rec;
     try{ rec=new MediaRecorder(out,{mimeType:mime, videoBitsPerSecond:600000, audioBitsPerSecond:64000}); }
     catch(e){ return rej(e); }
     const chunks=[]; let stopped=false;
     rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
-    rec.onerror=()=>{ if(!stopped){ stopped=true; rej(new Error('encoder')); } };
-    rec.onstop=()=>{ if(!stopped){ stopped=true; res(new Blob(chunks,{type:(mime||'video/webm').split(';')[0]})); } };
+    rec.onerror=()=>{ if(!stopped){ stopped=true; closeAudio(); rej(new Error('encoder')); } };
+    rec.onstop=()=>{ if(!stopped){ stopped=true; closeAudio(); res(new Blob(chunks,{type:(mime||'video/webm').split(';')[0]})); } };
+    /* An AudioContext is a real audio pipeline, not an object — leaving one open per
+       clip leaks them until the tab is closed, and phones cap how many exist. */
+    const closeAudio=()=>{ try{ if(au&&au.ac&&au.ac.state!=='closed') au.ac.close(); }catch(e){} };
     const finish=()=>{ try{ if(rec.state!=='inactive') rec.stop(); }catch(e){} };
     const draw=()=>{
       if(v.paused||v.ended) return finish();
@@ -387,10 +432,28 @@ function reencode(v, seconds, onPct){
     v.onended=finish;
     /* A hard backstop. If the element stalls — bar wifi, a codec the decoder gives
        up on — nothing above ever fires again and the person watches a bar that
-       never moves. Two seconds of slack per second of clip, then take what we have. */
-    setTimeout(finish, (seconds+2)*2000);
+       never moves. Two seconds of slack per second of clip, then take what we have.
+       IT HAS TO COVER THE WHOLE PATH. `finish()` only settles the promise by way of
+       rec.onstop, so a hang BEFORE the recorder ever started left the progress bar
+       up for ever with no error and no way back. */
+    setTimeout(()=>{
+      if(started) return finish();
+      if(!stopped){ stopped=true; closeAudio(); rej(new Error('stalled')); }
+    }, (seconds+2)*2000);
+    let started=false;
+    const go=()=>{ try{ rec.start(400); started=true; }catch(e){ closeAudio(); return rej(e); } draw(); };
     v.currentTime=0;
-    v.play().then(()=>{ try{ rec.start(400); }catch(e){ rej(e); } draw(); }).catch(rej);
+    Promise.resolve()
+      .then(()=>au&&au.ac.state==='suspended'?au.ac.resume():null)
+      .then(()=>v.play())
+      .then(()=>{ onAudio(!!au); go(); })
+      .catch(()=>{
+        /* Unmuted playback refused (a browser wanting a fresher tap). Muting is
+           always allowed, so the clip is still made — it is just silent, and the
+           caller is told so it can say so out loud. */
+        v.muted=true;
+        v.play().then(()=>{ onAudio(false); go(); }).catch(rej);
+      });
   });
 }
 
@@ -406,14 +469,15 @@ async function addClip(file){
   const seconds=Math.min(v.duration||CLIP_SECS, CLIP_SECS);
   if((v.duration||0) > CLIP_SECS + 0.5) toast(`Using the first ${CLIP_SECS} seconds`);
 
-  let blob=null;
+  let blob=null, gotAudio=true;
   try{
     if(file.size<=CLIP_MAX && (v.duration||0)<=CLIP_SECS+0.5 && /mp4|webm/i.test(file.type||'')){
       // already small enough and short enough — send it as it is, audio and all
       clipProgress(0.5,'Ready…'); blob=file;
     } else if(canRecord()){
       clipProgress(0.03,'Shrinking on your phone — about '+Math.round(seconds)+' seconds');
-      blob=await reencode(v, seconds, (p)=>clipProgress(0.03+p*0.62,'Shrinking… '+Math.round(p*100)+'%'));
+      blob=await reencode(v, seconds, (p)=>clipProgress(0.03+p*0.62,'Shrinking… '+Math.round(p*100)+'%'),
+                          (on)=>{ gotAudio=on; });
     } else {
       clipProgress(null); URL.revokeObjectURL(v.src);
       toast('This browser can’t shrink video. Try a shorter clip, or paste a link.');
@@ -430,6 +494,7 @@ async function addClip(file){
     toast('Still too big after shrinking. Try a shorter clip.'); return;
   }
 
+  if(!gotAudio) toast('That one came out silent — your browser wouldn’t let the sound through');
   clipProgress(0.7,'Grabbing a still…');
   let poster='';
   try{ poster=await posterFrom(v); }catch(e){}
@@ -475,10 +540,69 @@ async function like(b){
     const d=await r.json(); if(d.ok){ sp.textContent=d.likes||''; } else throw new Error(d.error); }
   catch(e){ b.classList.toggle('on',!on); sp.textContent=before||''; b.firstChild.textContent=on?'♡ ':'♥ '; toast('Couldn’t do that just now'); }
 }
+/* THE ⋯ MENU IS TWO DIFFERENT MENUS. On somebody else's post it is "report it";
+   on your own it is your own words to change or take back. The Edit button only
+   appears inside the window the SERVER also enforces — the page never decides. */
 function more(id){
+  const p=((D&&D.posts)||[]).find(x=>x.id===id);
+  if(p&&p.mine){
+    openSheet(`<h3>Your post</h3>
+      <p class="lede">${p.editable
+        ? `You can change what you wrote for ${D.limits&&D.limits.editHours?D.limits.editHours:24} hours after posting.`
+        : 'The day for changing this one has passed — you can still take it down.'}</p>
+      ${p.editable?`<button class="btn btn-block" style="margin-top:14px" onclick="editPost('${esc(id)}')">Edit it</button>`:''}
+      <button class="btn btn-block" style="margin-top:10px;color:var(--accent)" onclick="removePost('${esc(id)}')">Delete it</button>
+      <button class="btn btn-block btn-ghost" style="margin-top:10px" onclick="closeSheet()">Never mind</button>`);
+    return;
+  }
   openSheet(`<h3>This post</h3><p class="lede">Something wrong with it?</p>
     <button class="btn btn-block" style="margin-top:14px" onclick="report('${esc(id)}')">Report it</button>
     <button class="btn btn-block btn-ghost" style="margin-top:10px" onclick="closeSheet()">Never mind</button>`);
+}
+
+function editPost(id){
+  const p=((D&&D.posts)||[]).find(x=>x.id===id); if(!p)return;
+  openSheet(`<h3>Change what you wrote</h3>
+    <p class="lede">Photos and clips stay as they are.</p>
+    <div class="stars" id="edStars" style="margin:12px 0">${[1,2,3,4,5].map(n=>
+      `<button data-edstar="${n}" class="${(p.stars||0)>=n?'on':''}" aria-label="${n} stars">★</button>`).join('')}</div>
+    <textarea class="inp" id="edText" maxlength="500" rows="5">${esc(p.text||'')}</textarea>
+    <button class="btn btn-block" style="margin-top:14px" onclick="saveEdit('${esc(id)}')">Save</button>
+    <button class="btn btn-block btn-ghost" style="margin-top:10px" onclick="closeSheet()">Cancel</button>`);
+  /* Keyed by the post, so opening one sheet, closing it, and editing a DIFFERENT
+     post cannot carry the first one's stars across. A bare global did exactly that. */
+  let stars=p.stars||0;
+  document.querySelectorAll('[data-edstar]').forEach(b=>b.addEventListener('click',()=>{
+    const n=+b.getAttribute('data-edstar'); stars=stars===n?0:n;
+    document.querySelectorAll('[data-edstar]').forEach(x=>
+      x.classList.toggle('on',+x.getAttribute('data-edstar')<=stars));
+  }));
+  window.__edStars=(forId)=>(forId===id?stars:null);
+}
+async function saveEdit(id){
+  const text=(document.getElementById('edText')||{}).value||'';
+  const stars=window.__edStars?window.__edStars(id):null;
+  /* Wrapped, because this runs on bar wifi. Without it a dropped connection threw
+     inside an onclick and the button simply did nothing — no toast, no sheet, no
+     clue. INVARIANT 16: the network failing and the server saying no are different
+     things and both have to be said out loud. */
+  try{
+    const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({action:'postEdit',fan:FAN,id,text,stars:stars||null})});
+    const d=await r.json();
+    if(!d.ok){ toast(d.error||'Couldn’t save that'); return; }
+    D.posts=d.posts; closeSheet(); render(); toast('Changed');
+  }catch(e){ toast('Connection hiccup — try again'); }
+}
+async function removePost(id){
+  if(!confirm('Delete your post? This can’t be undone.'))return;
+  try{
+    const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({action:'postRemove',fan:FAN,id})});
+    const d=await r.json();
+    if(!d.ok){ toast(d.error||'Couldn’t delete that'); return; }
+    D.posts=d.posts; closeSheet(); render(); toast('Deleted');
+  }catch(e){ toast('Connection hiccup — try again'); }
 }
 async function report(id){
   closeSheet();

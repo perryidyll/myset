@@ -84,6 +84,9 @@ echo
 echo "── the account system ──"
 node --import ./test/register.mjs test/accounts.mjs
 echo
+echo "── featured shows ──"
+node --import ./test/register.mjs test/featured.mjs
+echo
 echo "── passkeys ──"
 node --import ./test/register.mjs test/passkeys.mjs
 echo

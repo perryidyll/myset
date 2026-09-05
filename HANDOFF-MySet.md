@@ -1980,3 +1980,292 @@ preload, Permissions-Policy, COOP, zero npm vulnerabilities, and a published
 - **28 suites, 1,350 assertions, 0 failed.**
 - New docs: `SECURITY.md`, `ACCOUNTING.md`, `docs/reports/`, `tools/loadsim.py`.
 - INVARIANTS 0dq–0dw.
+
+---
+
+## 2026-09-04 — Batch 3 · 2nd Drafts: Perry's review and the Atlas critique applied
+
+Repo: `~/Docs/MySet-Content` (the content engine, deliberately separate from the
+product repo). Ten performer shorts, 10-06 → 10-15, rebuilt from two documents and
+re-rendered from scratch. Commits **8498145** (the work) and **b851836** (recording that
+hash in `plan/versions.json`, which is how a past round can be rebuilt). Nothing is
+approved and nothing is published — the review gate is untouched.
+
+### What Perry's review said
+
+He watched the ten first drafts and gave five notes that apply to every reel. They are
+now **rules 25–28** in `docs/RULES.md`.
+
+1. **No pixel without a purpose.** *"There should never be a single pixel on the page
+   that does not serve some kind of purpose in driving the overall message home."* The
+   little eyebrow tags at the top of every frame — *Playing to a room*, *Read the room*,
+   *Getting paid* — were our own internal filing labels shown to the viewer. They are
+   gone from all ten reels, and from seven of the ten companion still cards (the other
+   three are listed under unrequested changes below). That slot is now
+   a **secondary headline**: an open question, a stake, or the line that kills the
+   objection (*No app. No account.*). Six words at most, at most one per beat, and not
+   on every beat — silence is a choice too.
+2. **Emphasise the decisive words.** Key words are now italic and in the accent colour.
+   His own picks were used exactly and nowhere else. His note in capitals matters as
+   much as the picks: *"I did not choose too many words — everything is emphasised,
+   nothing is emphasised."* One phrase in most lines; several lines carry none.
+3. **One MySet character.** *"Get rid of this stick figure with a strange bar attached
+   to its waist and a 3rd leg like a tripod… create a simple yet unique, cute,
+   recognisable character."* He is built once, called **Bo**: a round head with the
+   three bars growing out of his crown as his hair, so the logo and the character teach
+   each other. He replaces every person in every reel that draws one.
+4. **Money looks like money, and example numbers are allowed.** A tip jar with TIPS
+   written on it, one sad coin crying inside it when it is empty, coins and bills with
+   happy faces when it fills, dollar signs floating inside a fill and vanishing as it
+   drains. And: *"please greatly reduce your strictness on only using real numbers —
+   I'll tell you if anything is out of line."* Realistic example figures (270 votes ·
+   45 people · $90 earned) may now sit on screen, as long as nothing frames them as
+   MySet's own result or ties them to the one real gig.
+5. **Leave everything else alone.** He praised most of the pictures. The only visuals
+   changed are the ones a truth rule or a labelling rule forced.
+
+He also gave per-reel notes, all applied: **reel 7** — a real tip jar instead of what
+looked like an empty whiskey glass, dollar signs inside the fee bar, the same jar in
+three scenes, happy money in the final fill; **reel 8** — more space under the second
+half of the opening line, dollar signs in the two pay meters, scene 2 redrawn as the
+literal situation (the room going wild, the flat fee not moving) because *"I don't
+understand the animation in scene 2"*, dollar signs in the delivered part of the graph,
+the same character on both stages; **reel 9** — the word *request* on every flying
+interruption, the character losing balance with each hit and back on his feet rocking
+out when MySet rebuilds the path, a clock reading 7pm · 8pm · 9pm · 10pm instead of a
+stopwatch; **reel 10** — the three form boxes moved up under the headline and sliding
+down as the numbers appear, with 270 votes · 45 people · $90 earned on screen.
+
+### What the outside critique added
+
+`docs/critiques/2026-09-04-03-atlas-on-the-eleven-scripts.txt`. Its verdict: *"a good
+creative director's treatment contaminated by some very bad marketing claims."* It gave
+four corrections and four commands, and both are now doctrine (**rules 19–24**).
+
+- **It still mistakes metaphor for clarity.** Question marks drifting like smoke,
+  snapping threads, wallpaper waveforms, closed-loop circuits, a coupling pipe. *"Clever
+  visualisation creates the same cognitive-load problem as clever copy."*
+- **The whole document was DJ-coded** — decks, BPM, cue, tracks, "the floor". *"Claude
+  accidentally narrowed your market through its art direction."* The customer is a
+  singer or guitarist with a mic, a stage, a phone and a crowd.
+- **"One scene per beat, no exceptions" was wrong.** PEACE is the reasoning under the
+  video, not the edit. Every beat must be communicated; no beat is owed its own scene.
+- **No product-truth audit had been done.** Six of the eleven source chains carried
+  claims the product cannot back, and the scripts had simply made them prettier.
+
+Its four commands are now run **before a single visual is revised**: product truth,
+avatar, clarity, causality. And the instruction that governs all four: *"preserve the
+best visual ideas; rewrite the claims, not the aesthetics."* So the praised pictures
+stayed and the claims came out — the floor-occupancy graph, the interruption counter,
+the energy-to-earnings coupling, "the next song is already chosen", "one vote each",
+"every single night", "requests ranked by the room itself", "who showed up for you".
+
+### The ten reels, one line each
+
+| Reel | What changed |
+|---|---|
+| **10-06 guess-vs-vote** (22.5s) | Eyebrow tag gone, three secondary headlines added, his four emphasis picks applied; the artist's choice is now drawn as a real tap on their own Start button. No person is drawn — flagged for him. |
+| **10-07 watching-to-playing** (26.3s) | Tag gone from the reel *and* the still; the Answer beat now shows a literal vote landing — twenty people raise a phone instead of all 120, and three named people's votes ride their own threads into the queue. |
+| **10-08 one-vote-each** (26.0s) | The casting beat that drew "one vote each" and "the whole room votes" is gone (both are false); the list is labelled the app's own way; the loud song visibly lands fourth. |
+| **10-09 paper-to-live** (26.6s) | The queue's starting order is now real data, so votes actually cause the re-rank; the app's own Start button proves "without losing control"; phones in the crowd give "No app. No account." something to point at. |
+| **10-10 wallpaper-forward** (25.0s) | Bo replaces the stick figure and grows clearer as the room turns; the card is labelled with the app's real "Up next" and "Winning — plays next"; the fake countdown and dead-air flip are cut for a real overtake. |
+| **10-11 already-chosen** (26.4s) | The two pictures that were claims — a floor graph and a five-nights montage — and the locked "already chosen" card are gone; the artist picks, and the payoff is the room enjoying the song, not more votes. |
+| **10-12 tip-jar** (27.7s) | The Answer now says what MySet *is* before what else it can do; a real checkout step sits between the tap and the money; the jar, the coins and the bills come from the shared money kit and carry faces. |
+| **10-13 flat-fee** (28.8s) | Scene 2 redrawn as the literal night; one constant now governs both money pictures so the reel cannot state two ratios; the strike no longer crosses the band labelled "Your fee". One word of Perry's own last line changed — see below. |
+| **10-14 unbroken-ribbon** (27.6s) | The interruptions counter is cut (a counter asserts a count); twelve hits instead of four so the picture agrees with "every 4 minutes"; requests rise from phones instead of being caught mid-air. |
+| **10-15 book-on-numbers** (26.8s) | "Prove" became "show a venue" (Past shows is a record, not a proof); the three field labels now say what MySet actually keeps; the forward calendar fill is one new night, not a run of bookings. |
+
+### Unrequested changes — Perry's to veto
+
+These were **not** asked for. Each was made for truth, clarity or a rule, and each is
+cheap to undo. This is the list to read first.
+
+**Across the batch.** Two lines Perry saw whole are now split in two (reel 2, at *when*
+and at *not just*) — the words are untouched. Several captions were extended to carry an
+honesty clause the screen dropped. The eyebrow tag was also taken off **seven of the ten
+companion still cards** — gone entirely on 10-06, 10-07 and 10-12, replaced by the reel's
+own secondary headline on 10-09, 10-10, 10-14 and 10-15 — which goes beyond the reels he
+pointed at. Three stills still carry the old series label (10-08 and 10-11 *"Read the
+room"*, 10-13 *"Getting paid"*), so the batch is currently inconsistent on that point and
+needs one decision made once for all stills.
+
+**10-06** — one phrase tightened in the alt text; the caption softened where the screen
+keeps his line ("the crowd helps shape the set"); no person is drawn, and the natural
+place for Bo would be beat 4 — his call.
+**10-07** — the two splits above; runtime grew 23.4s → 26.3s; the Answer beat runs 5.2s,
+over the 3.5–5s window; two new data fields (which three people vote first, and how many
+raise a phone); at the flood every dot lights and at the end every dot carries a thread —
+kept, because light means access and a thread means reach, not a vote.
+**10-08** — the jagged mark now sits behind the song title rather than over it; neither
+split lands on a true turn (both are his own words, flagged not changed); timings nudged
+0.4s so the split gap fits the grammar; the caption carries a required honesty clause
+about free votes.
+**10-09** — the song list is now written in its pre-vote order (otherwise nothing ever
+re-ranked); the app's Start button added; phones added to the crowd; "the club" became
+"the hotel bar"; the Empathy and Change lines split; "in real time" became "while you're
+playing"; the hook lost its emphasis mark; the still's kicker "Read the room" became
+the reel's own "Written yesterday. Played tonight." 
+**10-10** — line 2 reworded; the Change beat is *not* split (the earlier draft split a
+three-item list at no turn); the "Playing next" label corrected to the app's real words;
+a two-row panel instead of one; the countdown, dead air and flip cut; motion trails cut;
+the crowd's totality capped so only about half ever lift a phone.
+**10-11** — the Change line now ends on a full stop and the End Result opens capitalised;
+the Empathy halves reversed and the whole script pulled 0.4s earlier; a third late vote
+added; the played row physically travels into Now playing.
+**10-12** — the Answer names voting before tipping; "lands in your own account" became
+"tip you from the same screen"; "No app. No cash." became "No app. No account."; four
+emphasis marks removed; the queue came back inside the phone; a checkout frame added;
+the jar and character positions restated against the template's real boxes.
+**10-13** — **one word of Perry's own closing line changed**: "a room on fire *means*
+your pay is on fire too" → "*can pay like one*", because "means" asserts exactly the
+energy-to-pay coupling the product cannot make. His imperative shape and the carry-on
+survive. Also: one constant now drives both money pictures; SHOWED UP and its strike
+moved off the fee band; the Empathy split moved to 2.5s; the Empathy secondary headline
+and emphasis both moved; a real wallet replaces a character reading a chart; eight event
+chips at the app's real prices summing to a labelled "+$80".
+**10-14** — the interruptions counter cut outright; four hits became twelve; the crowd
+dims once instead of stepping darker per hit; "As a performer," cut from line 1; the
+Change line's absolute removed; the closing line rewritten (MySet cannot stop anyone
+shouting, but it can let the room ask without stopping the song); the request songs
+changed; a third request left unhandled at the end.
+**10-15** — line 1 rewritten to his own soundbite wording; "prove" → "show a venue"; the
+Answer reworded to what Past shows actually does; "We help you become" → "You will
+become"; the closing line rewritten to carry on from the line above; all three field
+labels changed; British spelling on screen ("favours"); beat 1 shortened 3.8s → 2.8s;
+the End Result's calendar fill reduced to one new night.
+
+### The doctrine that went in with it
+
+- **`docs/LENS.md`** — what the seven strategy documents say when read together for this
+  product: the hero and the one-liner, the problem stack, the guide's honest authority,
+  the plan and the ask, PEACE as reasoning, the three buckets × four missions, the hook
+  and the dopamine ladder, the four audits, why truth is structural, and how conflicts
+  resolve (truth beats everything; Perry's rules beat the frameworks; the reading that
+  lowers cognitive load wins; frameworks stay invisible).
+- **`docs/CLAIMS.md`** — the product-truth ledger. What MySet can honestly say today,
+  the table of things it may never say and what to say instead, and the app's real
+  controls word for word so nothing on screen is invented.
+- **Rules 19–28** in `docs/RULES.md` — product truth before a frame; the avatar is a
+  working live musician; literal beats metaphor on screen too; causality; PEACE is the
+  reasoning not the edit; the queue only where ranking is the mechanism; no pixel
+  without a purpose; italic accent emphasis; one MySet character; money looks like money
+  and demonstrative numbers are allowed.
+- **The copy lint** (`reels/lib/copylint.mjs`) gained three checks that stop a render:
+  **claims** (phrases the product cannot back — no allowance, they are false rather than
+  rhetorical), **absolutes** (outcome guarantees, allowed per post only with the reason
+  written beside them), and **avatar** (DJ words, unless a piece is deliberately for
+  DJs). The **numbers** check no longer fails anything — it lists every figure on screen
+  so the review sheet sees them, which is Perry's relaxation written into code.
+- The strategy sources are filed in `docs/strategy/` and the three critiques in
+  `docs/critiques/`.
+
+### New shared code
+
+- **`reels/lib/character.mjs`** — Bo. Fifteen flat shapes on six groups; every pose is a
+  number rather than a drawing; three tones keep him legible; three orange pieces and no
+  more; his crest is measured exactly like the logo (38 : 64 : 28) and doubles as his
+  energy meter, so the logo does the emotional work. He is judged at 80px and as a 52px
+  silhouette in `brand/character/review.jpg` (`node brand/character/build-review.mjs`).
+- **`reels/lib/money.mjs`** — jars with TIPS on them, coins and bills with faces, and
+  dollar signs that float inside a fill and vanish with it.
+- **`reels/lib/script.mjs`** — extended with `sub` (the secondary headline, one per beat
+  at most; a second one throws at build time) and `*word*` emphasis in italic accent ink.
+- Review sheets kept on purpose: `reels/lib/_character-candidates/` (the round and bars
+  explorations) and `reels/lib/_money-test.*`.
+
+### Where the drafts are
+
+`~/Docs/MySet Social Media/Videos/Batch 3/2nd Drafts/` — ten MP4s, a `Covers/` folder
+and `ABOUT THIS DRAFT.txt` (which names commit 8498145). **Batch 3 · 1st Drafts is
+untouched** — verified byte-for-byte before and after the export — as is every other
+batch: the exporter writes exactly one folder and its delete is scoped to it. The same
+folders are on the SSD, and the repo is mirrored to
+`/Volumes/IDYLL SSD 1/Docs/MySet-Content/`.
+
+### What to check first
+
+1. The **flat-fee closing line** — one word of Perry's own writing changed, for a reason
+   he should get to overrule.
+2. The **unrequested list above**, reel by reel.
+3. **Whether Bo should appear in the six reels that draw no person** (10-06, 10-07,
+   10-08, 10-09, 10-11, 10-15). He is in the four that previously had the stick figure —
+   10-10, 10-12, 10-13, 10-14. Adding him elsewhere is a composition change, not a data
+   change: three of those six are seen from above or from the stage, where a figure has
+   nowhere to stand, and in 10-07 the people are 18px crowd dots by design.
+4. **Bo's crest at small sizes** on the wallpaper-forward sheet — at about 175px it is
+   close to reading as a small crown rather than the three bars.
+5. Two beats that run long against the shared timing grammar: watching-to-playing's
+   Answer (5.2s) and guess-vs-vote's Change (about 3s).
+
+### Still open
+
+- **Nothing is approved.** None of the 38 posts carries an approval, and the publisher
+  refuses anything that is not approved. Perry has to sit with `npm run review`.
+- **A product honesty fix, not a content one:** the live tip sheet in
+  `~/Docs/MySet/public/vote.html` (`openTip()`) says *"100% goes to <artist>"*. That
+  contradicts the real split — MySet takes 10% on Free, 2% on Plus, 0% on Pro, and
+  Stripe takes its own fee. The reel deliberately omits the sentence; the app may need
+  the same fix.
+- **One batch-2 reel fails the new avatar check**: `2026-09-14 · wedding-last-song` says
+  "The floor's still full". The check did not exist when that reel was built and its MP4
+  has already shipped, so it was left alone rather than silently reworded. The fix is one
+  word ("The room's still full") plus a re-render.
+- **Two rows crossing in the shared tally** briefly hide the row being overtaken (about
+  0.15s). It affects every reel with a queue and needs one fix in `reels/lib/tally.mjs`.
+- **The remote is behind.** `origin` is `github.com/perryidyll/myset-content.git` and it
+  is several commits behind local `main`; nothing leaves this Mac until someone pushes or
+  runs `npm run mirror`.
+- **The stills are half-converted.** Rule 25 was written about the reels' eyebrow slot;
+  seven of the ten companion still cards followed it anyway and three did not. Perry
+  should say once whether the rule covers stills, and then all ten should match.
+- **Housekeeping:** `reels/templates/the-dip.mjs` is no longer used by any post and
+  belongs in `reels/parked/`; a few empty frame folders from interrupted runs are sitting
+  in `out/media/reels/` (that folder is gitignored, so they are only clutter).
+
+---
+
+# SESSION LOG — 2026-09-05 (round five: featured shows, comment editing, the clip audio)
+
+Full detail in `docs/sessions/2026-09-05-featured-shows-and-round-five.md`.
+
+## Shipped
+
+1. **Statements start at the join month** — `lastMonths` takes a floor from
+   `createdAt`. A page six weeks old no longer shows eleven rows of zero.
+2. **The founder's own gig earnings, split out of MySet's revenue.** It turned out
+   to be separable: a payment MySet sold on his behalf carries `kind` + `artist`.
+   `platformSplit()` buckets one pull of platform balance transactions into his half
+   and the company's. From now on every charge labels itself, via
+   `payment_intent_data.metadata`.
+3. **"See what fans see" → the public page** everywhere except the Live tab, where
+   it still means the voting screen.
+4. **The clip audio bug, fixed.** The re-encoder took audio from a MUTED element, so
+   every clip had a perfectly good silent audio track. Now a Web Audio graph taps
+   the sound before the speakers. If a browser refuses unmuted playback the clip is
+   silent AND the person is told.
+5. **Fans can edit their own post for 24h and delete it for ever.** Ownership is
+   checked inside the write against the stored device id.
+6. **Artists: hide on any plan, delete for good on Plus.** Added to the plan cards
+   in the Studio and on /about.
+7. **Featured shows.** $10, three spots per city per night, first come first served,
+   behind the `featuredShows` flag. A twenty-minute HOLD before the charge, keyed by
+   an id carried through Stripe's metadata — so the spot is never unclaimed while
+   somebody is paying for it, and nobody is charged for a spot they did not get.
+
+## Three bugs caught by re-reading, not by a user
+
+- The first version released the hold and re-claimed it under Stripe's session id,
+  opening a window in which the spot being paid for was free for anyone to take.
+- "One spot per artist per night" blocked on the artist's OWN abandoned hold, so
+  backing out of checkout locked them out of retrying for twenty minutes.
+- **The garbage collector pruned on the CALLING artist's local date** inside a
+  shared city table — so an artist in Bangkok could have deleted a London artist's
+  PAID row for a night London had not reached. The delete floor is now two days
+  behind UTC.
+
+## State
+
+- **28 suites, 1,446 assertions, 0 failed.** New: `test/featured.mjs`.
+- INVARIANTS 0dx–0eb.
+- Perry's to-do unchanged: `charge.updated` on the webhook, stop the double deploy
+  and move to Netlify Pro, 2FA everywhere, try the passkey.

@@ -86,6 +86,31 @@ than being a correction somebody has to remember.
 includes MySet's own cut — so reporting it as "Stripe's fee" overstates Stripe and
 hides us. The fee always comes from `fee_details`, and `test/books.mjs` pins it.
 
+### One Stripe account, two businesses (2026-09-05)
+
+Perry's own vote packs and tips were taken on the **platform** account, before
+Connect existed — so the same balance holds his gig takings *and* every artist's
+subscription. It is separable, and exactly: a payment MySet sold on his behalf is a
+charge whose Checkout session was tagged `kind` ∈ {votes, tip, merch} and `artist`,
+the same test `revenue.mjs` has always used.
+
+`platformSplit()` does one pull of balance transactions with their source expanded
+and buckets each into **his gigs** or **the company**. Three details that are not
+optional:
+
+- Every charge from now on also carries that label on
+  `payment_intent_data.metadata`, so nothing has to join back through the sessions
+  list. What must never be sent is `application_fee_amount: 0` — Stripe treats a
+  zero fee differently from no fee.
+- **The session window reaches four months further back than the transaction
+  window.** A refund lands in the month it settles but the charge may be months
+  older, and a refund object carries no `kind` of its own — without the wider window
+  a refund of Perry's own gig money is booked as a loss against the company.
+- The company's books live in their own document (`ledger_platform`), never in
+  `ledger_<founder>`. That key is a CONNECTED account's statement, and the day Perry
+  links a Stripe account of his own the two would have overwritten each other under
+  two incompatible meanings.
+
 ### A payout is not an expense
 
 Money moving to a bank account does not un-earn it. Payouts are reported on their own

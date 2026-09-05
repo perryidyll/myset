@@ -30,8 +30,8 @@ export async function pickableNights(aid, now = Date.now()) {
   }
   return [...byDate.values()].sort((a, b) => b.at - a.at).slice(0, 40);
 }
-import { readPosts, readLikes, shapePosts, addPost, likePost, reportPost,
-         PER_DEVICE_PER_DAY, DAY } from './_community.mjs';
+import { readPosts, readLikes, shapePosts, addPost, likePost, reportPost, editPost,
+         removeOwnPost, PER_DEVICE_PER_DAY, DAY, EDIT_WINDOW } from './_community.mjs';
 import { decodeVideoDataUrl, putClip, notePending, newClipId,
          MAX_SECONDS, MAX_VIDEO_BYTES } from './_video.mjs';
 import { decodeDataUrl, putImage } from './_img.mjs';
@@ -92,7 +92,8 @@ export default async (req) => {
     const { fan: _f, ...pub } = o;
     return json({ ok: true, ...pub, posts: shapePosts(posts, likes, fan, o.owner), shows,
                   limits: { text: 500, photos: 3, perDay: PER_DEVICE_PER_DAY,
-                            clipSeconds: MAX_SECONDS, clipBytes: MAX_VIDEO_BYTES } });
+                            clipSeconds: MAX_SECONDS, clipBytes: MAX_VIDEO_BYTES,
+                            editHours: Math.round(EDIT_WINDOW / 3600e3) } });
   }
 
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -146,6 +147,18 @@ export default async (req) => {
     const [posts, likes] = await Promise.all([readPosts(o.owner), readLikes(o.owner)]);
     return json({ ok: true, id: r.id, posts: shapePosts(posts, likes, fan, o.owner) });
   }
+  /* CHANGING AND TAKING BACK YOUR OWN POST. Both prove ownership inside the write
+     against the stored device id — the id in the body proves nothing by itself. */
+  if (body.action === 'postEdit' || body.action === 'postRemove') {
+    const id = String(body.id || '').slice(0, 12);
+    const r = body.action === 'postEdit'
+      ? await editPost(o.owner, fan, id, { text: body.text, stars: body.stars })
+      : await removeOwnPost(o.owner, fan, id);
+    if (!r.ok) return bad(r.error, /gone/.test(r.error) ? 404 : 403);
+    const [posts, likes] = await Promise.all([readPosts(o.owner), readLikes(o.owner)]);
+    return json({ ok: true, posts: shapePosts(posts, likes, fan, o.owner) });
+  }
+
   if (body.action === 'like' || body.action === 'unlike') {
     const r = await likePost(o.owner, fan, String(body.id || '').slice(0, 12), body.action === 'like');
     return r.ok ? json(r) : bad(r.error, 404);

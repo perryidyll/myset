@@ -33,6 +33,7 @@ const ok = (name, cond, detail) => {
 const post = (url, body) => new Request(url, { method: 'POST',
   headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const jget = async (r) => { try { return await r.json(); } catch { return {}; } };
+const eq2 = (name, got, want) => ok(name, got === want, { got, want });
 
 /* A real-enough MP4: an `ftyp` box, then a `moov` holding an `mvhd` that says how
    long it is. Nothing decodes it; the point is that the parser and the signature
@@ -189,6 +190,71 @@ console.log('\nTHE DAILY LIMIT IS ON THE UPLOAD DOOR TOO');
   const r = await commFn(post(`https://x/api/community?a=${slug}`,
     { action: 'clip', fan: F, data: asData(fakeMp4(4)) }));
   ok('a phone that used its three posts cannot still upload 3MB', r.status === 429, r.status);
+}
+
+console.log('\nA FAN\u2019S OWN POST: CHANGE IT FOR A DAY, TAKE IT BACK FOR EVER');
+{
+  const { editPost, removeOwnPost, EDIT_WINDOW } = await import('../netlify/functions/_community.mjs');
+  const F1 = 'faneditor001';
+  const made = await jget(await commFn(post(`https://x/api/community?a=${slug}`,
+    { action: 'post', fan: F1, text: 'grate show', stars: 4 })));
+  const pid = made.id;
+
+  const bad1 = await commFn(post(`https://x/api/community?a=${slug}`,
+    { action: 'postEdit', fan: 'somebodyelse99', id: pid, text: 'mine now' }));
+  ok('somebody else cannot edit it', bad1.status === 403, bad1.status);
+  ok('and the words are untouched',
+    (await readPosts(aid)).list.find((p) => p.id === pid).text === 'grate show');
+
+  const good = await jget(await commFn(post(`https://x/api/community?a=${slug}`,
+    { action: 'postEdit', fan: F1, id: pid, text: 'great show', stars: 5 })));
+  ok('the person who wrote it can', good.ok, good);
+  const now = (await readPosts(aid)).list.find((p) => p.id === pid);
+  eq2('the typo is fixed', now.text, 'great show');
+  eq2('and the stars moved', now.stars, 5);
+  ok('the feed says it was edited', (good.posts || []).find((p) => p.id === pid).edited === true);
+
+  /* THE WINDOW IS REAL, and it is enforced in the write rather than by the page —
+     a five-star review must not be able to become a one-star one months later,
+     under a reply the artist already wrote. */
+  await (await import('../netlify/functions/_lib.mjs')).casDoc(`posts_${aid}`, () => ({ v: 1, list: [] }),
+    (d) => { const p = d.list.find((x) => x.id === pid); p.at = Date.now() - EDIT_WINDOW - 1000; return true; });
+  const late = await editPost(aid, F1, pid, { text: 'one star, terrible' });
+  ok('a day later it cannot be edited', !late.ok && /day/.test(late.error), late);
+  ok('and the words still stand',
+    (await readPosts(aid)).list.find((p) => p.id === pid).text === 'great show');
+
+  const shown = await jget(await commFn(new Request(`https://x/api/community?a=${slug}&fan=${F1}`)));
+  const row = (shown.posts || []).find((p) => p.id === pid);
+  ok('the page is told the edit button is gone', row && row.mine === true && row.editable === false, row);
+
+  ok('but deleting your own words has no window', (await removeOwnPost(aid, F1, pid)).ok);
+  ok('and it is really gone', !(await readPosts(aid)).list.some((p) => p.id === pid));
+  ok('deleting it twice says so rather than pretending', !(await removeOwnPost(aid, F1, pid)).ok);
+}
+
+console.log('\nDELETING FOR GOOD IS A PAID FEATURE; HIDING IS NOT');
+{
+  const adminFn = (await import('../netlify/functions/admin.mjs')).default;
+  const { signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
+  const P = await createArtist({ email: 'freeartist@example.com', name: 'Free Artist' });
+  const ftok = await signToken('freeartist@example.com', revOf(await readArtists(), P.artistId));
+  const call = (b, t) => adminFn(new Request('https://x/api/admin', { method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${t}` }, body: JSON.stringify(b) }));
+  const made = await jget(await commFn(post(`https://x/api/community?a=${P.slug}`,
+    { action: 'post', fan: 'somefan0001', text: 'hello' })));
+
+  const hide = await call({ action: 'postHide', id: made.id, on: true }, ftok);
+  ok('a FREE artist can hide a post — instantly, on any plan', hide.status === 200, hide.status);
+  const del = await call({ action: 'postDelete', id: made.id }, ftok);
+  eq2('but not delete it for good', del.status, 402);
+  ok('and the post is still there to un-hide',
+    (await readPosts(P.artistId)).list.some((p) => p.id === made.id));
+
+  await mutateArtists((reg) => { reg.byId[P.artistId].plan = 'plus'; return true; });
+  const paid = await call({ action: 'postDelete', id: made.id }, ftok);
+  eq2('on Plus it goes', paid.status, 200);
+  ok('for good', !(await readPosts(P.artistId)).list.some((p) => p.id === made.id));
 }
 
 console.log('\nLEAVING TAKES THE CLIPS WITH IT');

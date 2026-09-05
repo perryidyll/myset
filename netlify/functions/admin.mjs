@@ -397,6 +397,7 @@ const shapeLimits = (l) => ({
   pricing: !!l.pricing,
   setlists: !!l.setlists,      // so the Studio can say so BEFORE the server refuses
   merch: !!l.merch,
+  moderate: !!l.moderate,      // permanently deleting a fan's post; hiding stays free
   library: MAX_LIBRARY,
   cut: l.cut, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
@@ -415,6 +416,7 @@ const CAPABILITY = {
   songSet: 'library', bulkSongs: 'library', setChart: 'library', setLyrics: 'library',
   listSave: 'library', listDelete: 'library', listApply: 'library', learnAdd: 'library', learnRemove: 'library',
   eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventUnskip: 'gigs',
+  featureList: 'gigs',
   profileSave: 'profile', merchSave: 'profile', merchDelete: 'profile', imgSave: 'profile', imgDelete: 'profile',
   postReply: 'community', postHide: 'community', postDelete: 'community',
   accountExport: 'export',
@@ -1277,6 +1279,17 @@ async function handleShop(aid, action, body) {
     return json({ ok: true, posts: shapeForOwner(await readPosts(aid), aid) });
   }
   if (['postHide', 'postPin', 'postReply', 'postDelete'].includes(action)) {
+    /* DELETING FOR GOOD IS A PAID FEATURE; HIDING IS NOT, and never will be. An
+       artist on any plan must be able to take something offensive off their page
+       the second they see it — hiding does that instantly and can be undone. What
+       Plus and Pro buy is erasing it. Refused here as well as greyed in the Studio,
+       because a limit only the page enforces is not a limit (15k). */
+    if (action === 'postDelete') {
+      const { planForArtist, moderateAllowed } = await import('./_plan.mjs');
+      const { limits } = await planForArtist(aid);
+      if (!moderateAllowed(aid, limits))
+        return bad('Deleting a post for good is a Plus feature — you can hide it on any plan, and hiding is instant and undoable.', 402);
+    }
     const r = await moderate(aid, { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
     if (!r.ok) return bad(r.error, 404);
     return json({ ok: true, posts: shapeForOwner(await readPosts(aid), aid) });
@@ -1323,17 +1336,21 @@ async function handleBooks(req, aid, body, action, isFounder) {
   if (action === 'ledger' || action === 'ledgerCsv') {
     const { stripe, opts, acct } = await stripeFor(aid);
     if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
-    /* THE FOUNDER'S OWN GIG MONEY IS NOT SEPARABLE FROM MYSET'S.
+    /* NEVER FURTHER BACK THAN THE DAY THEY JOINED. Twelve rows of zero before an
+       account existed is not a statement, it is a page that looks like a bad year. */
+    const since = Number(((await readArtists()).byId[aid] || {}).createdAt) || 0;
+    const want = { months: Math.min(60, Math.max(1, Number(body.months) || 12)),
+                   force: !!body.force, since };
+    /* THE FOUNDER'S OWN GIG MONEY SHARES A STRIPE ACCOUNT WITH MYSET'S.
        Perry's vote packs and tips were taken on the PLATFORM account, before Connect
-       existed, and `stripeFor` correctly returns no connected account for him. So the
-       same balance holds his gig takings AND every artist's subscription — and an
-       "earnings" card built on it would read other people's subscriptions back to him
-       as his own income. There is no honest way to split that here, so it says so
-       and points at the books, which are the right view of that balance. */
-    if (isFounder && !acct)
-      return json({ ok: true, enabled: false, mixed: true, months: [], total: null });
-    const st = await statement(aid, stripe, opts,
-      { months: Math.min(60, Math.max(1, Number(body.months) || 12)), force: !!body.force });
+       existed, so the same balance holds his takings AND every artist's subscription.
+       It IS separable — a payment MySet sold on his behalf carries `kind` and
+       `artist`, the same test revenue.mjs uses — so platformSplit does the split and
+       this returns his half. See _ledger.mjs. */
+    const { platformSplit } = await import('./_ledger.mjs');
+    const st = (isFounder && !acct)
+      ? (await platformSplit(aid, stripe, want)).mine
+      : await statement(aid, stripe, opts, want);
     if (action === 'ledgerCsv') {
       const { getProfile } = await import('./_profile.mjs');
       const who = (await getProfile(aid)).name || aid;
@@ -1355,6 +1372,9 @@ async function handleBooks(req, aid, body, action, isFounder) {
     const { stripeClient } = await import('./_connect.mjs');
     const stripe = stripeClient();
     if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
+    /* NOT clamped by the founder's registry row. The company's revenue is older
+       than any artist record — clamping the P&L to when `perry-idyll` happened to be
+       written into the registry would quietly cut months off MySet's own books. */
     const b = await books(stripe, {},
       { months: Math.min(60, Math.max(1, Number(body.months) || 12)), force: !!body.force });
     if (body.csv) {
@@ -1373,6 +1393,140 @@ async function handleBooks(req, aid, body, action, isFounder) {
   return bad('unknown action', 400);
 }
 const BOOK_ACTIONS = new Set(['ledger', 'ledgerCsv', 'books', 'bookCost']);
+
+/* ---------- PROMOTING A GIG ------------------------------------------------
+   Three paid spots at the top of a city's night, $10, first come first served.
+   The whole design and the reason it is a hold rather than a charge-then-claim is
+   in the header of _featured.mjs. This file is the door: it decides which gigs are
+   offerable, takes the hold, opens the checkout, and settles the return trip. */
+const FEATURE_ACTIONS = new Set(['featureList', 'featureStart', 'featureFinish']);
+
+async function handleFeature(req, aid, body, action) {
+  const { flagValue, readFlags } = await import('./_flags.mjs');
+  /* THE SAME VALUE THE CITY FEED READS — globally, with no per-artist override.
+     A spot is only worth $10 because a city renders it, and events.mjs reads the
+     global flag; if this read a personal override the two could disagree and an
+     artist could be sold a spot nobody would ever see. */
+  const on = flagValue(await readFlags(), 'featuredShows', '');
+  const F = await import('./_featured.mjs');
+  const { readEvents, occurrencesFor } = await import('./_events.mjs');
+  const { localDate, addDays, utcToDate } = await import('./_time.mjs');
+
+  /* OFF MEANS OFF, INCLUDING THE MONEY. With the flag down nothing may be bought —
+     but what has already been bought is still listed, because switching a flag must
+     never look like a refund somebody did not get. */
+  const events = await readEvents(aid);
+  const tz = ((events.list || []).find((e) => e.tz) || {}).tz || 'UTC';
+  const today = localDate(Date.now(), tz);
+  const mine = await F.upcomingMine(aid, today);
+
+  if (action === 'featureList') {
+    if (!on) return json({ ok: true, enabled: false, price: F.FEAT_PRICE, slots: F.SLOTS, gigs: [], mine });
+    /* Only nights that have not happened, that have a city, and that this artist
+       has not already promoted. A gig with no city cannot be featured anywhere. */
+    const occ = occurrencesFor(events, utcToDate(Date.now()), addDays(today, 60))
+      .filter((o) => o.endsAt > Date.now() && o.city && o.country)
+      .slice(0, 40);
+    const bought = new Set(mine.map((m) => `${m.eventId}@${m.date}`));
+    const byKey = new Map();
+    for (const o of occ) {
+      const key = F.cityKey(o.country, o.city);
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(o);
+    }
+    const left = {};
+    for (const [key, list] of byKey) {
+      const free = await F.freeSlots(key, [...new Set(list.map((o) => o.date))], today, Date.now(), aid);
+      for (const [d, n] of Object.entries(free)) left[`${key}|${d}`] = n;
+    }
+    return json({ ok: true, enabled: true, price: F.FEAT_PRICE, slots: F.SLOTS, mine,
+      gigs: occ.map((o) => {
+        const key = F.cityKey(o.country, o.city);
+        return { eventId: o.eventId, date: o.date, time: o.time, venue: o.venue,
+                 city: o.city, country: o.country,
+                 left: left[`${key}|${o.date}`] ?? F.SLOTS,
+                 already: bought.has(`${o.eventId}@${o.date}`) };
+      }) });
+  }
+
+  if (action === 'featureStart') {
+    if (!on) return bad('Promoting a gig isn’t switched on right now', 503);
+    const key0 = process.env.STRIPE_SECRET_KEY;
+    if (!key0) return bad('Card payments aren’t switched on', 503);
+    const eventId = String(body.eventId || '').slice(0, 40);
+    const date = String(body.date || '').slice(0, 10);
+    if (!eventId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return bad('Pick a gig');
+    if (date < today) return bad('That night has already been');
+
+    const occ = occurrencesFor(events, utcToDate(Date.now()), addDays(today, 60))
+      .find((o) => o.eventId === eventId && o.date === date && o.endsAt > Date.now());
+    if (!occ) return bad('That gig isn’t on your calendar any more', 404);
+    if (!occ.city || !occ.country) return bad('Add a city to that gig first — a featured spot lives in a city’s list');
+
+    const key = F.cityKey(occ.country, occ.city);
+    /* The session id is not known until Stripe answers, so the hold is keyed by an
+       id WE mint and hand to Stripe as the idempotency key — a double tap finds its
+       own hold and its own session instead of taking a second spot. */
+    const sid = `pf_${sha(`${aid}|${eventId}|${date}|${Math.floor(Date.now() / 60000)}`).slice(0, 24)}`;
+    const claim = await F.claimSlot(key, date, { aid, eventId, sid, today });
+    if (!claim.ok) {
+      if (claim.mine) return bad('You’ve already got a spot that night');
+      return bad(`All ${F.SLOTS} featured spots for that night are taken — first come, first served.`, 409);
+    }
+
+    const origin = new URL(req.url).origin;
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(key0);
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        line_items: [{ quantity: 1, price_data: { currency: 'usd', unit_amount: F.FEAT_PRICE,
+          product_data: { name: `Featured show — ${occ.venue || 'your gig'}, ${occ.city}`,
+                          description: `Top of the ${occ.city} listing on ${date}. One of ${F.SLOTS} spots.` } } }],
+        /* `hold` is the id the slot was claimed under, carried through Stripe and
+           back. Settling by it means the hold never has to be re-keyed once the
+           session exists — see the note in settleFeature. */
+        metadata: { kind: 'feature', artist: aid, eventId, date, key, hold: sid,
+                    city: String(occ.city).slice(0, 60), country: String(occ.country).slice(0, 60),
+                    venue: String(occ.venue || '').slice(0, 80) },
+        payment_intent_data: { metadata: { kind: 'feature', artist: aid } },
+        success_url: `${origin}/studio?promoted={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/studio?promocancel=1`,
+      }, { idempotencyKey: `myset-feature-${sid}` });
+      return json({ ok: true, url: session.url, id: session.id, hold: sid });
+    } catch (e) {
+      await F.releaseSlot(key, date, sid);
+      return bad(e.message || 'Couldn’t open checkout', 502);
+    }
+  }
+
+  if (action === 'featureFinish') {
+    const key0 = process.env.STRIPE_SECRET_KEY;
+    if (!key0) return bad('Card payments aren’t switched on', 503);
+    const sessionId = String(body.session || '').slice(0, 120);
+    if (!sessionId) return bad('which payment?');
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(key0);
+    let session;
+    try { session = await stripe.checkout.sessions.retrieve(sessionId); }
+    catch { return bad('Couldn’t reach Stripe just now', 502); }
+    /* WHOSE PAYMENT THIS IS was decided when the session was made. Without this a
+       signed-in artist could settle somebody else's session into their own name. */
+    if ((session.metadata || {}).artist !== aid) return bad('That payment isn’t yours', 403);
+    const r = await F.settleFeature(stripe, session, { today });
+    if (!r.ok && r.duplicate)
+      return bad(r.refunded
+        ? 'You had already promoted that night, so this second payment has been refunded in full.'
+        : 'You had already promoted that night. This second payment is being returned — tell Perry if it does not arrive.', 409);
+    if (!r.ok && r.full)
+      return bad(r.refunded
+        ? 'That night filled up before the payment landed, so it has been refunded in full.'
+        : 'That night filled up before the payment landed. Your money is being returned — tell Perry if it does not arrive.', 409);
+    if (!r.ok) return bad(r.error || 'Couldn’t finish that', 400);
+    return json({ ok: true, mine: await F.upcomingMine(aid, today) });
+  }
+  return bad('unknown action', 400);
+}
 
 const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear',
                               'postList', 'postHide', 'postPin', 'postReply', 'postDelete',
@@ -1428,7 +1582,10 @@ export default async (req) => {
     /* THE BOOKS ARE THE OWNER'S. A statement is every figure about somebody's
        livelihood in one payload; a band mate on one of five Pro seats has no
        business with it, and `books`/`bookCost` are MySet's own P&L. */
-    'ledger', 'ledgerCsv', 'books', 'bookCost']);
+    'ledger', 'ledgerCsv', 'books', 'bookCost',
+    /* Promoting a gig spends $10 of the owner's money, so it is the owner's to
+       spend. `featureList` is NOT here — a band mate may look at what is booked. */
+    'featureStart', 'featureFinish']);
   if (OWNER_ONLY.has(action) && (me.role || 'owner') !== 'owner')
     return bad('Only the account owner can do that', 403);
 
@@ -1496,6 +1653,7 @@ export default async (req) => {
 
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body, req, me);
   if (BOOK_ACTIONS.has(action)) return handleBooks(req, aid, body, action, aid === DEFAULT_ARTIST);
+  if (FEATURE_ACTIONS.has(action)) return handleFeature(req, aid, body, action);
   if (SHOP_ACTIONS.has(action)) return handleShop(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);

@@ -930,6 +930,7 @@ async function load(opts){
      a path that is already awaiting several. */
   if(planJob) jobs.push(planJob); else if(!PLAN) jobs.push(loadPlan());
   if(TAB==='money'){ if(!REV)jobs.push(loadRev()); if(!HIST)jobs.push(loadHist()); if(!LEDGER)jobs.push(loadLedger()); }
+  if(TAB==='gigs'&&!FEAT)jobs.push(loadFeature());
   if(TAB==='profile'&&!PROF) jobs.push(loadProf());
   /* drawPush is NOT awaited: it races serviceWorker.ready for up to four seconds,
      and a boot screen held for a worker that may never come is a boot screen
@@ -1020,6 +1021,13 @@ function gate(err,mode){
     if(q.get('connect')){ TAB='money'; localStorage.setItem('myset.tab','money');
       history.replaceState({},'',location.pathname);
       setTimeout(()=>loadPay(true),400); }
+    /* Back from a promoted-gig checkout. Settled here as the fast path; the Stripe
+       webhook is the backstop, so closing the tab still gets the spot. */
+    if(q.get('promoted')){ TAB='gigs'; localStorage.setItem('myset.tab','gigs');
+      setTimeout(()=>finishPromote(q.get('promoted')),500); }
+    if(q.get('promocancel')){ TAB='gigs'; localStorage.setItem('myset.tab','gigs');
+      history.replaceState({},'',location.pathname);
+      setTimeout(()=>toast('Nothing charged — the spot is free again'),600); }
   }catch(e){}
 })();
 /* The way back in when the inbox is gone. The page name is public, so it grants
@@ -1330,6 +1338,97 @@ const analyticsCard=()=>soonCard('analytics','Your numbers',
   [['Earnings by venue','The Ugly Duckling · $184 over 6 nights'],
    ['Best night of the week','Thursdays average 31 people'],
    ['Your money songs','Wonderwall pulled 12% of all votes']]);
+/* ---------- PROMOTE A GIG --------------------------------------------------
+   Three paid spots at the top of a city's night, $10 each, first come first
+   served. The whole design — and why it is a hold rather than charge-then-claim —
+   is in netlify/functions/_featured.mjs. This is the button and the sheet.
+
+   Behind a flag (`featuredShows`). With it off, `FEAT.enabled` is false and this
+   whole card is not drawn — but anything already bought is still listed, because a
+   switch moving must never look like a refund somebody did not get. */
+let FEAT=null;
+async function loadFeature(force){
+  if(FEAT&&!force)return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'featureList'}),quiet:true});
+  if(d&&d.ok){ FEAT=d; if(TAB==='gigs'&&D)render(); }
+}
+const money$=(c)=>'$'+((Number(c)||0)/100).toFixed(2).replace(/\.00$/,'');
+
+function featureCard(){
+  const F=FEAT;
+  if(!F) return '';
+  const mine=F.mine||[];
+  if(!F.enabled) return mine.length?`<div class="sec"><span class="kick">Featured</span></div>
+    <div class="list">${mine.map(m=>`<div class="row"><div class="m"><div class="t">${esc(m.venue||'Your gig')}</div>
+      <div class="s">${esc(m.city||'')} · ${daystamp(new Date(m.date+'T12:00:00').getTime())}</div></div></div>`).join('')}</div>`:'';
+  return `
+  <div class="wrap" style="padding-top:16px">
+    <button class="big bigplay" onclick="openPromote()"><span>★</span><span style="flex:1">Promote a gig</span></button>
+    <p class="muted" style="font-size:12px;margin:9px 0 0">${money$(F.price)} puts one of your gigs at the top of that city's list for that night. ${F.slots} spots a night, first come first served.</p>
+  </div>
+  ${mine.length?`<div class="sec"><span class="kick">Featured</span><span class="kick">${mine.length}</span></div>
+    <div class="list">${mine.map(m=>m.owed
+      ? `<div class="row"><div class="m">
+          <div class="t">${esc(m.venue||'Your gig')} — refund owed</div>
+          <div class="s">That night was already taken, and giving the ${money$(m.cents)} back didn’t go through. Perry can see this too — tell him if it hasn’t arrived in a few days.</div></div>
+          <span class="cnt" style="color:var(--accent);font-size:15px">!</span></div>`
+      : `<div class="row"><div class="m">
+          <div class="t">${esc(m.venue||'Your gig')}</div>
+          <div class="s">Top of ${esc(m.city||'the list')} on ${daystamp(new Date(m.date+'T12:00:00').getTime())} · ${money$(m.cents)}</div></div>
+          <span class="cnt" style="color:var(--accent-2);font-size:15px">★</span></div>`).join('')}</div>`:''}`;
+}
+
+function openPromote(){
+  const F=FEAT;
+  if(!F||!F.enabled){ toast('Not switched on right now'); return; }
+  const gigs=(F.gigs||[]);
+  if(!gigs.length){
+    openSheet(`<h3>Promote a gig</h3>
+      <p class="lede">Nothing to promote yet. A gig needs a date in the future and a city — a featured spot lives in a city's list.</p>
+      <button class="big alt" style="margin-top:14px" onclick="closeSheet()">Close</button>`);
+    return;
+  }
+  const row=(g)=>{
+    const full=g.left<=0, had=g.already;
+    const label=`${esc(g.venue||'Gig')} · ${esc(g.city)}`;
+    const when=daystamp(new Date(g.date+'T12:00:00').getTime());
+    return `<button class="row" style="width:100%;text-align:left;border:0;background:none;padding:12px 14px;${full||had?'opacity:.5':''}"
+        ${full||had?'disabled':`onclick="payPromote('${esc(g.eventId)}','${esc(g.date)}')"`}>
+      <div class="m"><div class="t">${label}</div>
+        <div class="s">${when}${g.time?' · '+esc(g.time):''} · ${
+          had?'already featured' : full?'no spots left that night' : `${g.left} of ${F.slots} spots left`}</div></div>
+      ${full||had?'':'<span class="cnt" style="color:var(--accent-2)">★</span>'}</button>`;
+  };
+  openSheet(`<h3>Promote a gig</h3>
+    <p class="lede">${money$(F.price)} puts it at the top of that city's list for that night, with an orange border. Only ${F.slots} shows can be featured each night — first come, first served.</p>
+    <div class="list" style="margin-top:12px">${gigs.map(row).join('')}</div>
+    <p class="fine">Paid once, for that night only. If you cancel the gig afterwards the spot is used up, so promote a night you are sure of.</p>
+    <button class="big alt" style="margin-top:12px" onclick="closeSheet()">Never mind</button>`);
+}
+
+async function payPromote(eventId,date){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'featureStart',eventId,date})});
+  if(!d||!d.ok||!d.url){ toast((d&&d.error)||'Couldn’t open checkout'); return; }
+  location.href=d.url;
+}
+
+/* Back from Stripe. Settling here is the fast path; the webhook is the backstop,
+   so a person who closes the tab still gets the spot they paid for. */
+async function finishPromote(session){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'featureFinish',session})});
+  FEAT=null; await loadFeature(true);
+  if(d&&d.ok){
+    toast('You’re featured');
+    history.replaceState({},'',location.pathname);
+    return;
+  }
+  /* THE URL IS THE RETRY. `?promoted=<session>` is the only thing that can settle
+     this payment from the phone — the webhook is the other path, and if both are
+     having a bad minute, wiping it leaves somebody who has paid with nothing to
+     tap. So it stays until it works, and the message says to pull down. */
+  toast((d&&d.error)||'Couldn’t confirm that yet — pull down to try again');
+}
+
 const promoteCard=()=>soonCard('promote','Get booked somewhere new',
   'Put yourself in the city feed for towns you do not play yet, so venues there can find you.',
   [['Cities you can appear in','Anywhere, not just where you have gigs'],
@@ -1513,7 +1612,7 @@ async function payDash(){
   else toast((d&&d.error)||'Not available yet');
 }
 
-function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='settings'){loadRecovery();loadPasskeys();}if(D)render();
+function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();loadOrders();}
   if(t==='profile'){ loadProf(); loadComm(); }
   if(t==='merch'){ loadPlan(); loadMerch(); loadOrders(); }
@@ -1942,6 +2041,7 @@ function render(){
       ${up.length>5?`<button class="seemore" onclick="GIGSALL=!GIGSALL;render()">${
         GIGSALL?'Show fewer ▴':`See ${up.length-5} more ▾`}</button>`:''}</div>
       <p class="muted" style="font-size:12px;padding:14px 18px 0">These show on your page and in the city feed automatically. ✕ cancels one night; Edit changes the whole run.</p>
+      ${featureCard()}
       ${pitchPanel()}
       ${promoteCard()}`;
     }
@@ -2446,8 +2546,18 @@ function render(){
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${leavingBar()}${cardTrouble(s)}${body}
   ${TAB==='setlist'?'':`<div class="wrap" style="padding-top:26px;padding-bottom:8px">
-    <a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
-       style="justify-content:center">See what fans see ↗</a>
+    ${/* WHAT "what fans see" MEANS DEPENDS ON THE TAB. On Live it is the voting
+         screen — the thing the room is holding right now. Everywhere else (and
+         Perry asked about Settings) it is the public PAGE: the profile a stranger
+         lands on from a QR code or a city listing, which is what you actually want
+         to check after editing your bio, your merch or your gigs. Two labels,
+         because one button that goes to two different places without saying so is
+         worse than two honest ones. */''}
+    ${TAB==='live'
+      ? `<a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
+           style="justify-content:center">See what fans see ↗</a>`
+      : `<a class="big alt" href="${s.slug?'/'+esc(s.slug):'/artist.html'}"
+           style="justify-content:center">See your page ↗</a>`}
   </div>`}`;
 
   document.querySelectorAll('[data-sort]').forEach(b=>
@@ -3191,8 +3301,6 @@ function earningsCard(){
   const L=LEDGER;
   if(!L) return `<div class="sec"><span class="kick">Your earnings</span></div>
     <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Adding it up…</div></div>`;
-  if(L.mixed) return `<div class="sec"><span class="kick">Your earnings</span></div>
-    <div class="list"><div class="row muted">Your gig money and MySet’s money are in the same Stripe account — the one you had before Connect existed — so there is no honest way to show them apart here. <b>MySet’s books</b>, below, is the right view of that balance.</div></div>`;
   if(!L.ok||!L.enabled) return `<div class="sec"><span class="kick">Your earnings</span></div>
     <div class="list"><div class="row muted">Nothing to add up yet — this fills in once card payments are on and somebody has paid.</div></div>`;
   const rows=(L.months||[]).filter(m=>m.count||m.gross||m.payouts);
@@ -3211,7 +3319,7 @@ function earningsCard(){
    :`<div class="list"><div class="row muted">No payments in the last twelve months.</div></div>`}
   <div class="wrap" style="margin-top:12px">
     <button class="big alt" onclick="downloadLedger()">Download it as a spreadsheet</button>
-    <p class="muted" style="font-size:12px;margin:8px 0 0">Every figure comes straight from Stripe — the same numbers your bank sees. “Yours” is after both fees. Hand the file to whoever does your tax.</p>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">Every figure comes straight from Stripe — the same numbers your bank sees. “Yours” is after both fees. Hand the file to whoever does your tax.${PLAN&&PLAN.owner?' <b>Your gigs only</b> — subscriptions other artists pay MySet are kept out of this and live in the books below.':''}</p>
     <button class="act" style="margin-top:10px" onclick="loadLedger(true)">↺ Check again</button>
   </div>`;
 }
@@ -3352,7 +3460,7 @@ async function orderDetail(sid){
 function commSection(){
   const s=D.show, posts=COMM||[];
   return `<div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post, pin one, hide anything, or delete it. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post, pin one, and hide anything on any plan — hiding is instant and undoable. Deleting for good is a Plus feature. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
       <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · <span style="color:var(--accent)">${p.reports} report${p.reports===1?'':'s'}</span>`:''}</div>
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}${p.showLabel?' · '+esc(p.showLabel):''}</div>
@@ -3361,9 +3469,18 @@ function commSection(){
         <button class="act" onclick="replyPost('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
         <button class="act" onclick="commAct('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
         <button class="act" onclick="commAct('postHide','${esc(p.id)}',${p.hidden?'false':'true'})">${p.hidden?'Show':'Hide'}</button>
-        <button class="act warn" onclick="if(confirm('Delete this post for good?'))commAct('postDelete','${esc(p.id)}')">✕</button></div>
+        ${/* Greyed rather than hidden — Perry's rule for a locked feature: show it,
+             say what it needs, never pretend it isn't there. The server refuses it
+             too, so this is the sign and not the lock (15k). */''}
+        ${canDelete()
+          ? `<button class="act warn" onclick="if(confirm('Delete this post for good? Hiding it is undoable; this is not.'))commAct('postDelete','${esc(p.id)}')">✕</button>`
+          : `<button class="act" style="opacity:.5" onclick="toast('Deleting for good is a Plus feature — hide it instead, which is instant and undoable');openPlans()">✕ Plus</button>`}</div>
     </div>`).join('')||'<div class="row muted">Nothing posted yet.</div>'}</div>`;
 }
+/* One answer for "may this artist delete a post", read from the plan the server
+   also reads. The founder bypass lives on the server (moderateAllowed); PLAN.owner
+   mirrors it so the founder never sees his own feature greyed. */
+const canDelete=()=>!!(PLAN&&(PLAN.owner||(PLAN.limits&&PLAN.limits.moderate)));
 async function commAct(action,id,on,text){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action,id,on,text})}); if(d.ok){COMM=d.posts;closeSheet();render();} else toast(d.error||'Couldn’t do that'); }
 function replyPost(id){
   const p=(COMM||[]).find(x=>x.id===id)||{};
@@ -3387,6 +3504,7 @@ const TIER_COPY={
     ['The song sheet',': chord charts, keys and genres'],
     ['Your page',', gig calendar and city listings'],
     ['A community page',' \u2014 fans rate the night and post photos, you reply'],
+    ['Hide any post',' \u2014 instantly, and undo it'],
     ['Show history',' and your real numbers'],
     ['Keep 2,000 songs',' \u2014 50 live to the room at once'],
     ['One sign-in',''],
@@ -3398,6 +3516,7 @@ const TIER_COPY={
     ['Set your own vote rules',' \u2014 free votes per person, the cost of a replay'],
     ['Price your own vote packs',', requests and shout-outs'],
     ['Merch on your community page',', paid straight to you'],
+    ['Delete a post for good',' \u2014 hiding is free on every plan'],
     ['The verification tick',', once you\u2019re checked'],
     ['Everything fans touch',', the song sheet, your page, calendar, community page and history'],
     ['Shows that start and end themselves',' from your calendar'],
@@ -3410,6 +3529,7 @@ const TIER_COPY={
     ['Set your own vote rules',' \u2014 free votes per person, the cost of a replay'],
     ['Price your own vote packs',', requests and shout-outs'],
     ['Merch on your community page',', paid straight to you'],
+    ['Delete a post for good',' \u2014 hiding is free on every plan'],
     ['The verification tick',', once you\u2019re checked'],
     ['Everything fans touch',', the song sheet, your page, calendar, community page and history'],
     ['Shows that start and end themselves',' from your calendar'],

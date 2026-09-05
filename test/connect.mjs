@@ -133,8 +133,15 @@ eq('on Plus it is 2%', lastCall('checkout.sessions.create').args.payment_intent_
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'pro'; return true; });
 await buy('ana-reyes', 'f3', 'small');
 const proCall = lastCall('checkout.sessions.create');
+/* `payment_intent_data` is now ALWAYS sent, because the charge carries its own
+   `kind` and `artist` so the books can read the balance without joining back
+   through the sessions list. What must never be sent is a fee — an
+   `application_fee_amount` of 0 is not the same as no fee, and Stripe treats it
+   differently. So the assertion moved from the envelope to the thing inside it. */
 ok('on Pro no fee is sent at all, rather than a fee of zero',
-   !proCall.args.payment_intent_data, proCall.args.payment_intent_data);
+   proCall.args.payment_intent_data.application_fee_amount === undefined, proCall.args.payment_intent_data);
+ok('and the charge still labels itself for the books',
+   proCall.args.payment_intent_data.metadata.kind === 'votes', proCall.args.payment_intent_data);
 
 console.log('\nHER BUYER STILL GETS THEIR VOTES  (the redemption path knows the account)');
 const before = ((await readFans(ana.artistId)).f1 || {}).extra || 0;
@@ -176,7 +183,7 @@ ok('and his checkout still opens', his.ok, his);
 const hisCall = lastCall('checkout.sessions.create');
 eq('on the platform account, as before', hisCall.opts.stripeAccount, undefined);
 ok('with no application fee — there is nobody to take one from',
-   !hisCall.args.payment_intent_data, hisCall.args.payment_intent_data);
+   hisCall.args.payment_intent_data.application_fee_amount === undefined, hisCall.args.payment_intent_data);
 
 console.log('\nAND THE HONEST NOTE ABOUT WHO PAYS STRIPE');
 const s2 = await AS(TA, 'payStatus');

@@ -36,6 +36,11 @@ export const PLANS = {
     pricing: false,       // change free-vote count, pack prices, replay/ask costs
     setlists: false,      // named subsets of the library, one active at a time
     merch: false,         // sell things from the community page (Perry: a Plus feature)
+    /* PERMANENTLY DELETING a fan's post. HIDING one is free and always will be —
+       every artist must be able to take something offensive off their page the
+       moment they see it, and hiding does that instantly and reversibly. What a
+       paid plan buys is erasing it for good. Perry's call, 2026-09-05. */
+    moderate: false,
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
     presskit: false,
@@ -51,7 +56,7 @@ export const PLANS = {
        a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
     cut: 0.02,
     seats: 1,
-    pricing: true, setlists: true, merch: true,
+    pricing: true, setlists: true, merch: true, moderate: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
@@ -60,7 +65,7 @@ export const PLANS = {
     gigs: Infinity,
     cut: 0,
     seats: 5,
-    pricing: true, setlists: true, merch: true,
+    pricing: true, setlists: true, merch: true, moderate: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };
@@ -111,6 +116,9 @@ export const isPlatformOwner = (aid) => aid === DEFAULT_ARTIST;
  *  the founder predates the registry (planForArtist says free for him), so the owner
  *  bypass is load-bearing here exactly as it is for pricing. */
 export const merchAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.merch === true);
+/** May this artist DELETE a fan's post outright? Hiding is free for everyone; this
+ *  is the permanent one. Same owner bypass and the same one-answer rule as merch. */
+export const moderateAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.moderate === true);
 
 /* ---------- promo codes ---------- */
 const PROMOS = 'promos';

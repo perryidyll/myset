@@ -35,6 +35,18 @@ export const FLAGS = {
     what: 'Votes cannot be taken back once cast. OFF = a second tap removes them and refunds (the pre-2026-09-02 behaviour).',
     remove: 'If a gig proves the refund was better, flip the default back and delete the losing path. A flag that outlives its decision is dead code with extra steps.',
   },
+  featuredShows: {
+    /* Perry, 2026-09-05: "maybe you can build this as a feature flag that can
+       easily be flipped on and off? it's just an idea i'd like to test out."
+       ON as the default so it can actually be tested, and OFF is a real answer,
+       not a half-built one: with it off the Promote button is not offered, the
+       endpoint refuses (so nobody can be charged), and any spot ALREADY PAID FOR
+       keeps its record and reappears the moment it is switched back on. Nobody
+       loses money by the switch moving. */
+    default: true,
+    what: 'Artists can pay $10 to put a gig in a city\'s three Featured shows spots for that night. OFF = no Promote button, the endpoint refuses, and the Featured section is not rendered.',
+    remove: 'After a month of it being live: if artists buy spots and cities look better for it, delete the flag and keep the feature. If nobody buys, delete the flag AND the feature — a paid feature nobody pays for is a menu item that makes the menu worse.',
+  },
 };
 
 const KEY = 'flags';

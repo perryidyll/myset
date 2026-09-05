@@ -79,9 +79,9 @@ export default async (req) => {
       if (o.endsAt <= now) continue;                       // finished
       rows.push(venueOwned
         ? { ...shape(o), kind: 'event', title: o.title || 'Event',
-            artist: '', slug: '', venueSlug: who.slug || '', href: `/v/${who.slug || ''}` }
+            artist: '', slug: '', venueSlug: who.slug || '', href: `/v/${who.slug || ''}`, _owner: id }
         : { ...shape(o), kind: 'gig', artist: who.name, slug: who.slug,
-            href: `/${who.slug || ''}` });
+            href: `/${who.slug || ''}`, _owner: id });
     }
   }
   rows.sort((a, b) => a.startsAt - b.startsAt);
@@ -96,7 +96,50 @@ export default async (req) => {
     if (d) d.gigs.push(r);
     else days.push({ date: r.date, label: dayLabel(r.date, today), gigs: [r] });
   }
-  days.forEach((d) => { d.count = d.gigs.length; });
+  /* FEATURED SHOWS — up to three paid spots at the top of each night.
+
+     One extra blob read for the whole city feed (this is not the audience poll),
+     and only when the flag is on. A featured row is MOVED out of `gigs` rather than
+     copied, so nobody appears twice; a spot whose gig has since been cancelled
+     simply finds nothing and is skipped, which is why the Promote sheet warns that
+     cancelling spends the spot. */
+  /* READ GLOBALLY, and so is the selling side (handleFeature). A per-artist
+     override here would be meaningless — this feed is one city's list, not one
+     artist's page — and if the two sides could disagree, an artist with a personal
+     override could be sold a $10 spot that no city would ever draw. */
+  let featuredOn = false;
+  try {
+    const { readFlags, flagValue } = await import('./_flags.mjs');
+    featuredOn = flagValue(await readFlags(), 'featuredShows', '');
+  } catch { featuredOn = false; }
+  if (featuredOn) {
+    const { cityKey, featuredFor } = await import('./_featured.mjs');
+    const picked = await featuredFor(cityKey(country, city), today).catch(() => ({}));
+    for (const d of days) {
+      const want = picked[d.date] || [];
+      if (!want.length) continue;
+      const out = [];
+      for (const w of want) {
+        /* MATCHED ON THE OWNER AS WELL AS THE GIG ID, and that is not a detail.
+           Event ids are chosen by the client (`eventSave` takes `event.id` from the
+           body) and every gig's id is public in this very feed — so matching on the
+           id alone let ANY artist in the city put a gig with somebody else's event
+           id on their calendar and be rendered in the spot that artist had paid $10
+           for. Found by an adversarial review, not by a user. */
+        const i = d.gigs.findIndex((g) => g.eventId === w.eventId && g._owner === w.aid && g.date === d.date);
+        if (i < 0) continue;                       // the gig has gone; the spot is spent
+        out.push({ ...d.gigs[i], featured: true });
+        d.gigs.splice(i, 1);
+      }
+      if (out.length) d.featured = out;
+    }
+  }
+
+  days.forEach((d) => { d.count = d.gigs.length + ((d.featured || []).length); });
+  /* `_owner` was only ever for matching a paid spot to the artist who bought it.
+     It does not go out: the public feed names artists by slug, and an internal id
+     in a payload is a thing somebody will eventually depend on by accident. */
+  for (const d of days) for (const g of [...d.gigs, ...(d.featured || [])]) delete g._owner;
 
   return json({
     ok: true, country, city,

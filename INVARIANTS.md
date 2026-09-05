@@ -1580,3 +1580,65 @@ If you are about to violate one, stop and say so rather than working around it.
     is one file with its script inline, and the honest consequence — it does not
     stop an injected inline script, only stops that script loading or sending
     anything — is written down in SECURITY.md rather than glossed.
+
+0dx1. **A paid featured spot is matched by OWNER as well as gig id.** Event ids are
+    chosen by the client (`eventSave` takes `event.id` from the body) and every
+    gig's id is public in the city feed — so matching on the id alone let any artist
+    in the city put a gig with a rival's event id on their calendar and be drawn in
+    the spot the rival paid for. The owner tag used to do it is internal and is
+    stripped before the payload leaves. The `featuredShows` flag is read GLOBALLY on
+    both sides, because a spot is only worth $10 if a city renders it and a
+    per-artist override on the selling side could sell one no city would draw.
+
+0dx. **A featured spot is HELD before it is charged, and the hold never moves.**
+    Three spots per city per night, first come first served, decided inside the
+    compare-and-set — not by whose request reached which instance. Charging first
+    and claiming after means owing refunds; claiming with no expiry means anybody
+    can fill a city's night for free. So: a twenty-minute hold, keyed by an id
+    MySet mints and carries through Stripe's metadata and back. It is never
+    re-keyed to the session id afterwards — doing that opened a window in which the
+    spot somebody was about to pay for was free for anyone else to take. An
+    artist's own UNPAID hold is replaced by their next attempt rather than
+    refusing them (it told somebody who backed out of checkout that they already
+    had a spot they had not bought); a PAID one blocks a second spot that night.
+    A payment landing after its hold died is honoured when there is room and
+    REFUNDED when there is not — once, keyed by the session id.
+    AND NOTHING IS DELETED ON THE CALLER'S LOCAL DATE. The city table is shared;
+    the garbage collector runs inside the same write, so pruning on the claiming
+    artist's `today` would let somebody in Bangkok delete a London artist's PAID row
+    for a night London had not reached. The delete floor is two days behind UTC —
+    past everywhere on earth. A local date is fine for deciding what to SHOW and
+    never for deciding what to remove.
+
+0dy. **Nothing on a community post may be changed by anyone but the person who
+    wrote it, and only for a day.** Ownership is compared INSIDE the write against
+    the stored device id; an id in a request body proves nothing. Editing closes
+    after 24 hours so a five-star review cannot quietly become a one-star one
+    under a reply the artist already wrote; deleting your own words has no window.
+    An artist may HIDE any post on any plan — instantly and reversibly, because
+    every artist must be able to take something offensive off their page the second
+    they see it. Deleting for good is a paid feature, refused by the server and not
+    merely greyed in the Studio (15k).
+
+0dz. **A statement never begins before the account did.** `lastMonths` takes a
+    floor from the registry's `createdAt`. Twelve rows of zero before somebody
+    existed is not a statement, it is a page that looks like a bad year — and it
+    costs real Stripe pages to fetch a window in which nothing can have happened.
+
+0ea. **The founder's own gig money is separable from MySet's, and is separated.**
+    Both live in one platform Stripe balance. A payment MySet sold on an artist's
+    behalf is a charge whose Checkout session was tagged `kind` ∈ {votes, tip,
+    merch} and `artist` — the same test revenue.mjs, confirm.mjs and webhook.mjs
+    already use, so all four agree. `platformSplit` buckets one pull of balance
+    transactions into both halves; every charge from now on also carries that label
+    on `payment_intent_data.metadata`, so nothing has to join back through the
+    sessions list. What must NEVER be sent is `application_fee_amount: 0` — Stripe
+    treats a zero fee differently from no fee.
+
+0eb. **A clip's audio comes through a Web Audio graph, never `captureStream()` on a
+    muted element.** Muting was how the element was made to autoplay, and muted
+    output is silence — so the first clips recorded a perfectly good silent audio
+    track and nothing said so. A `MediaElementAudioSourceNode` connected only to
+    the recorder's destination (never to `ac.destination`) keeps the element
+    unmuted without playing it out loud. If the browser refuses unmuted playback
+    the clip is still made, silent, and the person is TOLD.

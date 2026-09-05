@@ -85,6 +85,18 @@ export default async (req) => {
     if (session.payment_status !== 'paid') {
       try { session = await stripe.checkout.sessions.retrieve(session.id, evOpts); } catch { session = null; }
     }
+    /* A PROMOTED GIG IS NOT A FAN BUYING SOMETHING, so it does not go through
+       redeemSession — which knows about votes, tips and merch and would write a
+       claim marker for a kind it cannot grant. Same replay-safety, its own path. */
+    if (session && session.payment_status === 'paid'
+        && (session.metadata || {}).kind === 'feature') {
+      try {
+        const { settleFeature } = await import('./_featured.mjs');
+        const { localDate } = await import('./_time.mjs');
+        await settleFeature(stripe, session, { today: localDate(Date.now(), 'UTC') });
+      } catch (e) { console.error('feature settle failed', e && e.message); }
+      return json({ received: true });
+    }
     // redeemSession is replay-safe, so a webhook retry racing the return page is fine
     if (session && session.payment_status === 'paid') {
       const aid = cleanArtistId((session.metadata || {}).artist)

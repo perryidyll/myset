@@ -22,7 +22,7 @@ const { createArtist, signToken, readArtists, revOf, mutateArtists } = await imp
 const { createVenue, signVenueToken, readVenues, vRevOf } = await import('../netlify/functions/_venues.mjs');
 const { DEFAULT_ARTIST } = await import('../netlify/functions/_lib.mjs');
 const { statement, books, foldTx, toCsv, setCost, readLedger, lastMonths,
-        monthKey } = await import('../netlify/functions/_ledger.mjs');
+        monthKey, platformSplit } = await import('../netlify/functions/_ledger.mjs');
 const { mutateConnect } = await import('../netlify/functions/_connect.mjs');
 const ready = (owner, acct) => mutateConnect(owner, (c) => { c.acct = acct; c.chargesEnabled = true; c.payoutsEnabled = true; return true; });
 const { __stripe } = await import('./stripe-fake.mjs');
@@ -146,6 +146,74 @@ console.log('\nCOSTS, AND A PROFIT LINE THAT COUNTS STRIPE ONCE');
     m[THIS].costs.email === undefined, m[THIS].costs);
 }
 
+console.log('\nNEVER FURTHER BACK THAN THE DAY THEY JOINED');
+{
+  const joined = Date.UTC(2026, 6, 20);                 // 20 July 2026
+  eq('twelve months asked for, three delivered',
+    lastMonths(12, NOW, joined).length, 3);
+  eq('and the oldest is the month they joined', lastMonths(12, NOW, joined).pop(), '2026-07');
+  eq('with no floor it is still twelve', lastMonths(12, NOW, 0).length, 12);
+  ok('a page opened this month gets one row, not eleven of zero',
+    lastMonths(12, NOW, NOW).length === 1);
+
+  /* And through the endpoint, which reads createdAt off the registry. */
+  const J = await createArtist({ email: 'joinedlate@example.com', name: 'New' });
+  await mutateArtists((reg) => { reg.byId[J.artistId].createdAt = Date.now() - 40 * 86400e3; return true; });
+  const jt = await signToken('joinedlate@example.com', revOf(await readArtists(), J.artistId));
+  const d = await jget(await admin(post(jt, { action: 'ledger', months: 12 })));
+  /* Forty days back can touch three CALENDAR months (late July -> September), so
+     three is the honest ceiling here, not two. What matters is that it is nowhere
+     near twelve. */
+  ok('a page six weeks old shows three months, not twelve',
+    !d.months || d.months.length <= 3, (d.months || []).map((m) => m.month));
+}
+
+console.log('\nTHE FOUNDER\u2019S GIGS, SPLIT OUT OF MYSET\u2019S REVENUE');
+{
+  /* Both live in the same platform balance. A payment MySet sold on his behalf is
+     a charge whose session was tagged kind+artist; everything else is the company's. */
+  const stripe = new (await import('stripe')).default('sk');
+  __stripe.sessions.set('cs_gig1', { onAccount: '', session: { id: 'cs_gig1', mode: 'payment',
+    payment_status: 'paid', created: at(LAST, 12), payment_intent: 'pi_gig1',
+    metadata: { kind: 'votes', artist: DEFAULT_ARTIST } } });
+  bt({ __account: '', created: at(LAST, 12), type: 'charge', amount: 700, fee: 50, net: 650,
+       source: { id: 'ch_gig1', object: 'charge', payment_intent: 'pi_gig1', metadata: {} },
+       fee_details: [{ type: 'stripe_fee', amount: 50 }] });
+  bt({ __account: '', created: at(LAST, 14), type: 'charge', amount: 2000, fee: 88, net: 1912,
+       source: { id: 'ch_sub9', object: 'charge', payment_intent: 'pi_sub9', metadata: {} },
+       fee_details: [{ type: 'stripe_fee', amount: 88 }] });
+
+  const split = await platformSplit(DEFAULT_ARTIST, stripe, { months: 3, now: NOW, force: true });
+  const mine = Object.fromEntries(split.mine.months.map((m) => [m.month, m]));
+  const bk = Object.fromEntries(split.books.months.map((m) => [m.month, m]));
+  eq('his own gig money is his', mine[LAST].gross, 700);
+  ok('and the subscription is not', mine[LAST].gross !== 2700, mine[LAST]);
+  ok('the company keeps the subscription', bk[LAST].gross >= 2000, bk[LAST]);
+  ok('and not his gig takings', bk[LAST].gross < 2700, bk[LAST]);
+
+  /* A REFUND OF HIS OWN GIG MONEY IS HIS LOSS, NOT THE COMPANY'S. A refund lands
+     in the month it settles but the charge may be months older, and a refund object
+     carries no kind/artist of its own — so the session window has to reach back
+     past the transaction window or this is booked against MySet. */
+  bt({ __account: '', created: at(THIS, 5), type: 'refund', amount: -700, fee: 0, net: -700,
+       source: { id: 're_1', object: 'refund', payment_intent: 'pi_gig1', metadata: {} } });
+  const sr = await platformSplit(DEFAULT_ARTIST, stripe, { months: 3, now: NOW, force: true });
+  const rm = Object.fromEntries(sr.mine.months.map((m) => [m.month, m]));
+  const rb = Object.fromEntries(sr.books.months.map((m) => [m.month, m]));
+  eq('the refund is taken off HIS side', rm[THIS].refunds, -700);
+  eq('and not off the company\u2019s', rb[THIS].refunds, 0);
+
+  /* A charge that labels ITSELF needs no session at all — which is what
+     payment_intent_data.metadata buys from here on. */
+  bt({ __account: '', created: at(THIS, 2), type: 'charge', amount: 300, fee: 39, net: 261,
+       source: { id: 'ch_self', object: 'charge', payment_intent: 'pi_self',
+                 metadata: { kind: 'tip', artist: DEFAULT_ARTIST } },
+       fee_details: [{ type: 'stripe_fee', amount: 39 }] });
+  const s2 = await platformSplit(DEFAULT_ARTIST, stripe, { months: 3, now: NOW, force: true });
+  const m2 = Object.fromEntries(s2.mine.months.map((m) => [m.month, m]));
+  eq('a self-labelled charge lands on his side with no session lookup', m2[THIS].gross, 300);
+}
+
 console.log('\nTHE FILE YOU HAND AN ACCOUNTANT');
 {
   const st = await statement(aid, new (await import('stripe')).default('sk'), { stripeAccount: 'acct_artist1' }, { months: 3, now: NOW });
@@ -178,13 +246,12 @@ console.log('\nWHO MAY LOOK');
     return true;
   });
   const ftok = await signToken('founder-books@example.com', revOf(await readArtists(), DEFAULT_ARTIST));
-  /* The founder's own gig money was taken on the PLATFORM account, so the same
-     balance holds every artist's subscription. An "earnings" card built on it would
-     read other people's subscriptions back to him as his own income — so it refuses
-     and points at the books instead. */
+  /* The founder's own gig money shares the platform balance with every artist's
+     subscription — and IS separable, because a payment MySet sold on his behalf
+     carries kind+artist. He gets his own half, not a refusal. */
   const fl = await jget(await admin(post(ftok, { action: 'ledger' })));
-  ok('the founder is told his own earnings cannot be separated from MySet’s',
-    fl.ok && fl.mixed === true && fl.enabled === false, fl);
+  ok('the founder gets his OWN earnings, split out of the company’s',
+    fl.ok && fl.enabled === true && Array.isArray(fl.months), fl);
 
   const fr = await admin(post(ftok, { action: 'books', months: 3 }));
   const fd = await jget(fr);
@@ -199,6 +266,10 @@ console.log('\nWHO MAY LOOK');
 console.log('\nA VENUE HAS BOOKS TOO');
 {
   const V = await createVenue({ email: 'vbooks@example.com', name: 'The Bar', city: 'Koh Phangan', country: 'TH' });
+  /* Backdated, because the statement now refuses to reach back past the day the
+     venue joined — and a venue created a second ago genuinely has no last month. */
+  await (await import('../netlify/functions/_venues.mjs')).mutateVenues((reg) => {
+    reg.byId[V.venueId].createdAt = Date.UTC(2026, 0, 1); return true; });
   const vtok = await signVenueToken('vbooks@example.com', vRevOf(await readVenues(), V.venueId));
   await ready(`v_${V.venueId}`, 'acct_venue1');
   /* LAST month, not this one: the handler uses the real clock (it takes no `now`),

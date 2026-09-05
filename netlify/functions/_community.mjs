@@ -46,6 +46,11 @@ export const DAY = 24 * 3600e3;
 export const PER_DEVICE_PER_DAY = 3;
 export const PER_NETWORK_PER_DAY = 150;
 export const MAX_LIKERS = 500;          // hashes kept per post for idempotency
+/* HOW LONG SOMEBODY MAY EDIT WHAT THEY WROTE. Perry's number. Long enough to fix a
+   typo or a name the morning after; short enough that a five-star review cannot
+   quietly become a one-star one months later, under a reply the artist already
+   wrote. Deleting has no window — taking your own words back is always allowed. */
+export const EDIT_WINDOW = 24 * 3600e3;
 
 const empty = () => ({ v: 1, list: [], recent: [], n: 0 });
 const emptyLikes = () => ({ v: 1, by: {} });
@@ -167,6 +172,50 @@ export async function addPost(owner, { fan, ip, name, text, stars, show, showLab
   return { ok: true, id };
 }
 
+/** Change what you wrote, for 24 hours. Only your own post, and only the words and
+ *  the stars — photos and the clip are left alone, because re-uploading them is a
+ *  different job and an edit that silently dropped them would be a trap. */
+export async function editPost(owner, fan, id, { text, stars }) {
+  if (!fan || !id) return { ok: false, error: 'no device' };
+  const body = String(text || '').replace(/\r/g, '').trim().slice(0, MAX_TEXT);
+  const n = stars == null || stars === '' ? null : Math.round(Number(stars));
+  if (n !== null && (!Number.isFinite(n) || n < 1 || n > 5)) return { ok: false, error: 'Stars are 1 to 5.' };
+  let err = null;
+  await casDoc(KEY(owner), empty, (d) => {
+    const p = (d.list || []).find((x) => x && x.id === id);
+    if (!p) { err = 'That post is gone.'; return false; }
+    /* The device is compared INSIDE the write, against the stored value — the id
+       arrives from a phone and proves nothing on its own. Same rule as a like. */
+    if (p.fan !== fan) { err = 'That isn’t your post.'; return false; }
+    if (Date.now() - (p.at || 0) > EDIT_WINDOW) { err = 'Posts can be changed for a day. After that you can delete it.'; return false; }
+    if (!body && n === null && !(p.photos || []).length && !p.clip && !p.video) {
+      err = 'Say something, or rate it.'; return false;
+    }
+    p.text = body; p.stars = n; p.editedAt = Date.now();
+    return true;
+  });
+  return err ? { ok: false, error: err } : { ok: true };
+}
+
+/** Take your own post back. No window — your words are yours. */
+export async function removeOwnPost(owner, fan, id) {
+  if (!fan || !id) return { ok: false, error: 'no device' };
+  let err = null, photos = [], clip = '';
+  await casDoc(KEY(owner), empty, (d) => {
+    const p = (d.list || []).find((x) => x && x.id === id);
+    if (!p) { err = 'That post is gone.'; return false; }
+    if (p.fan !== fan) { err = 'That isn’t your post.'; return false; }
+    photos = p.photos || []; clip = p.clip || '';
+    d.list = d.list.filter((x) => x !== p);
+    return true;
+  });
+  if (err) return { ok: false, error: err };
+  for (let i = 0; i < photos.length; i++) await dropImage(owner, `${id}_${i}`);
+  if (clip) await dropClip(owner, clip);
+  await casDoc(LKEY(owner), emptyLikes, (d) => { if (!d.by || !d.by[id]) return false; delete d.by[id]; return true; }).catch(() => {});
+  return { ok: true };
+}
+
 /** One heart per device per post, idempotent by hash. Returns { ok, likes, liked }. */
 export async function likePost(owner, fan, id, on = true) {
   if (!fan || !id) return { ok: false, error: 'no device' };
@@ -257,7 +306,12 @@ export function shapePosts(d, likes, fan, owner) {
       show: p.show || '', showLabel: p.showLabel || '',
       photos: p.photos || [], video: shapeVideo(p.video), clip: shapeClip(owner, p.clip),
       at: p.at, likes: p.likes || 0, reply: p.reply || null, pinned: !!p.pinned,
+      edited: !!p.editedAt,
       mine: !!(fan && p.fan === fan),
+      /* Whether the EDIT button is drawn. editPost checks the same window inside
+         its own write, so this is what the page shows, never what it is allowed
+         to do (15k). */
+      editable: !!(fan && p.fan === fan && Date.now() - (p.at || 0) <= EDIT_WINDOW),
       liked: !!(f && likes && likes.by && likes.by[p.id] && likes.by[p.id][f]),
     }));
 }
@@ -270,7 +324,7 @@ export function shapeForOwner(d, owner) {
       id: p.id, name: p.name || '', text: p.text || '', stars: p.stars || null,
       show: p.show || '', showLabel: p.showLabel || '',
       photos: p.photos || [], video: shapeVideo(p.video), clip: shapeClip(owner, p.clip),
-      at: p.at, likes: p.likes || 0, reply: p.reply || null,
+      at: p.at, likes: p.likes || 0, reply: p.reply || null, edited: !!p.editedAt,
       pinned: !!p.pinned, hidden: !!p.hidden, reports: p.reports || 0,
     }));
 }

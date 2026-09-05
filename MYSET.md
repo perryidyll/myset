@@ -317,6 +317,31 @@ support, which is what iOS Safari requires before it will play anything at all.
 A clip uploaded and never posted is swept after two hours by the cron; the sweep
 reads the feed first so a posted clip is never taken away. See INVARIANTS 0dq–0ds.
 
+
+### Featured shows (added 2026-09-05)
+
+An artist can pay **$10** to put one of their gigs at the top of that city's list
+for that night — an orange border and its own **Featured shows** heading. **Three
+spots per city per night, first come first served.** The button sits under the gig
+list in the Studio's Gigs tab.
+
+Behind the `featuredShows` flag. With it off there is no button, the endpoint
+refuses (so nobody can be charged) and the section is not drawn — but anything
+already bought keeps its record and reappears when it is switched back on.
+
+The spot is **held** for twenty minutes before the checkout opens, so nobody is ever
+charged for a spot they did not get, and an abandoned checkout frees it by itself. A
+payment that lands after the hold died is honoured if there is room and refunded
+automatically if there is not. If the gig is cancelled afterwards the spot is spent,
+and the sheet says so before anybody pays. INVARIANT 0dx.
+
+### Editing and deleting a post (added 2026-09-05)
+
+A fan can change their own post for **24 hours** and delete it for ever. An artist
+can **hide** any post on **any plan** — instantly and reversibly — and **delete for
+good on Plus and above**. Every artist must be able to take something offensive off
+their page the second they see it; what a paid plan buys is erasing it. INVARIANT 0dy.
+
 # PART THREE — THE MONEY
 
 

@@ -54,16 +54,34 @@ import { readDoc, casDoc, DEFAULT_ARTIST } from './_lib.mjs';
      · a fan's device id or email — INVARIANT 0bu holds here too. */
 
 export const LEDGER = (owner) => `ledger_${owner}`;
+/* THE COMPANY'S BOOKS ARE NOT AN ARTIST'S STATEMENT, so they do not share a
+   document with one. `platformSplit` used to write into `ledger_<founder>` — the
+   very key `statement()` uses for a CONNECTED account — which meant the day Perry
+   linked a Stripe account of his own, his connected-account takings and MySet's
+   company revenue would overwrite each other in the same `months` field, under two
+   incompatible meanings. One key, one meaning. */
+export const PLATFORM_LEDGER = 'ledger_platform';
 export const COSTS = 'costs';
 const MAX_PAGES = 12;                 // 1,200 balance transactions per refresh
 
 export const monthKey = (ms) => new Date(ms).toISOString().slice(0, 7);
 export const monthStart = (key) => Date.UTC(+key.slice(0, 4), +key.slice(5, 7) - 1, 1);
 export const monthEnd = (key) => Date.UTC(+key.slice(0, 4), +key.slice(5, 7), 1);
-export function lastMonths(n, now = Date.now()) {
+/** The last `n` months, newest first — never reaching back past `since`.
+ *
+ *  WHY `since` MATTERS. Twelve months of a statement that begins before the artist
+ *  existed is eleven rows of zero, and it made a page somebody joined last week
+ *  look like a business that had a terrible year. It also costs real Stripe pages
+ *  to fetch a window in which nothing can possibly have happened. */
+export function lastMonths(n, now = Date.now(), since = 0) {
+  const floor = since ? monthKey(since) : '';
   const out = [];
   const d = new Date(now);
-  for (let i = 0; i < n; i++) out.push(monthKey(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - i, 1)));
+  for (let i = 0; i < n; i++) {
+    const k = monthKey(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - i, 1));
+    if (floor && k < floor) break;
+    out.push(k);
+  }
   return out;
 }
 
@@ -131,7 +149,7 @@ export function foldTx(m, bt) {
 /** Every balance transaction in a window, paged, in whatever account `opts` names. */
 async function pull(stripe, opts, gte, lte) {
   const out = [];
-  let after = null;
+  let after = null, truncated = false;
   for (let page = 0; page < MAX_PAGES; page++) {
     const r = await stripe.balanceTransactions.list({
       limit: 100, created: { gte: Math.floor(gte / 1000), lte: Math.floor(lte / 1000) },
@@ -141,14 +159,17 @@ async function pull(stripe, opts, gte, lte) {
     out.push(...rows);
     if (!r.has_more || !rows.length) break;
     after = rows[rows.length - 1].id;
+    if (page === MAX_PAGES - 1) truncated = true;
   }
+  out.truncated = truncated;
   return out;
 }
 
-export async function readLedger(owner) {
-  const { data } = await readDoc(LEDGER(owner), null);
-  const d = { v: 1, months: {}, at: 0, ...(data || {}) };
+export async function readLedger(owner, key) {
+  const { data } = await readDoc(key || LEDGER(owner), null);
+  const d = { v: 1, months: {}, mine: {}, at: 0, ...(data || {}) };
   d.months = d.months && typeof d.months === 'object' ? d.months : {};
+  d.mine = d.mine && typeof d.mine === 'object' ? d.mine : {};
   return d;
 }
 
@@ -162,8 +183,8 @@ export async function readLedger(owner) {
  * `force` refresh recomputes everything, which is the button for the day somebody
  * genuinely doubts a figure.
  */
-export async function statement(owner, stripe, opts, { months = 12, now = Date.now(), force = false } = {}) {
-  const want = lastMonths(months, now);
+export async function statement(owner, stripe, opts, { months = 12, now = Date.now(), force = false, since = 0 } = {}) {
+  const want = lastMonths(months, now, since);
   const cache = await readLedger(owner);
   const thisMonth = monthKey(now);
 
@@ -177,6 +198,9 @@ export async function statement(owner, stripe, opts, { months = 12, now = Date.n
     let rows = [];
     try { rows = await pull(stripe, opts, gte, lte); }
     catch (e) { return { ...shape(cache, want), error: 'Stripe wouldn’t answer just now', at: cache.at }; }
+    /* A pull that ran out of pages is USED but never CACHED — a closed month is
+       never re-read, so remembering an understated one freezes it for ever. */
+    const partial = !!rows.truncated;
 
     const fresh = {};
     for (const k of missing) fresh[k] = emptyMonth();
@@ -184,7 +208,7 @@ export async function statement(owner, stripe, opts, { months = 12, now = Date.n
       const k = monthKey(Number(bt.created) * 1000);
       if (fresh[k]) foldTx(fresh[k], bt);
     }
-    await casDoc(LEDGER(owner), () => ({ v: 1, months: {}, at: 0 }), (d) => {
+    if (!partial) await casDoc(LEDGER(owner), () => ({ v: 1, months: {}, at: 0 }), (d) => {
       d.months ||= {};
       for (const [k, v] of Object.entries(fresh)) d.months[k] = v;
       /* Bounded: five years of months is 60 rows of nine numbers. A statement
@@ -209,6 +233,136 @@ function shape(cache, want) {
     refunds: a.refunds + m.refunds, count: a.count + m.count,
   }), { gross: 0, stripeFee: 0, platformFee: 0, net: 0, refunds: 0, count: 0 });
   return { months, currency, total, at: cache.at || 0 };
+}
+
+/* ---------- ONE ACCOUNT, TWO BUSINESSES ------------------------------------
+   Perry's own vote packs and tips were taken on the PLATFORM account, before
+   Connect existed — so the same Stripe balance holds his gig takings AND every
+   artist's subscription. An earnings card built on that balance reads other
+   people's subscriptions back to him as his own income, which is why the first
+   version refused to show one at all.
+
+   It is separable, though, and exactly:
+
+     · a payment MySet sold on his behalf is a `charge` whose Checkout session was
+       tagged `kind` = votes / tip / merch and `artist` = him. `revenue.mjs` has
+       always used that test; this reuses it rather than inventing a second one.
+     · everything else on the platform — subscription charges, `application_fee`
+       entries, and the `application_fee_refund` the fee split gives back — is
+       MySet's own revenue.
+
+   ONE pull answers both. The balance transactions come back with their source
+   expanded, so a charge's own metadata is right there; for charges taken before
+   `payment_intent_data.metadata` was set (which is all of Perry's history, and the
+   numbers he actually wants to talk about) the Checkout sessions for the same
+   window are pulled once and matched by payment intent. Both halves are cached in
+   the same document — `months` for the company, `mine` for the artist. */
+async function pullSessions(stripe, gte, lte) {
+  const out = [];
+  let after = null;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const r = await stripe.checkout.sessions.list({
+      limit: 100, created: { gte: Math.floor(gte / 1000), lte: Math.floor(lte / 1000) },
+      ...(after ? { starting_after: after } : {}),
+    });
+    const rows = r.data || [];
+    out.push(...rows);
+    if (!r.has_more || !rows.length) break;
+    after = rows[rows.length - 1].id;
+  }
+  return out;
+}
+
+const APP_KINDS = new Set(['votes', 'tip', 'merch']);
+const piOf = (v) => (typeof v === 'string' ? v : (v && v.id) || '');
+
+export async function platformSplit(aid, stripe, { months = 12, now = Date.now(), force = false, since = 0 } = {}) {
+  const want = lastMonths(months, now, since);
+  const cache = await readLedger(aid, PLATFORM_LEDGER);
+  cache.mine = cache.mine && typeof cache.mine === 'object' ? cache.mine : {};
+  const thisMonth = monthKey(now);
+  const missing = want.filter((k) => force || k === thisMonth || !cache.months[k] || !cache.mine[k]);
+
+  if (stripe && missing.length) {
+    const gte = Math.min(...missing.map(monthStart));
+    const lte = Math.min(now + 3600e3, Math.max(...missing.map(monthEnd)));
+    let rows = [], sessions = [], truncated = false;
+    try {
+      [rows, sessions] = await Promise.all([
+        (async () => {
+          const out = [];
+          let after = null;
+          for (let page = 0; page < MAX_PAGES; page++) {
+            const r = await stripe.balanceTransactions.list({
+              limit: 100, created: { gte: Math.floor(gte / 1000), lte: Math.floor(lte / 1000) },
+              expand: ['data.source'], ...(after ? { starting_after: after } : {}),
+            });
+            const d = r.data || [];
+            out.push(...d);
+            if (!r.has_more || !d.length) break;
+            after = d[d.length - 1].id;
+            /* RAN OUT OF PAGES. Caching what we have would freeze an understated
+               month in place for ever, because a closed month is never re-read. */
+            if (page === MAX_PAGES - 1) truncated = true;
+          }
+          return out;
+        })(),
+        /* THE SESSION WINDOW REACHES FURTHER BACK THAN THE TRANSACTIONS.
+           A refund lands in the month it settles, but the CHARGE it refunds may be
+           months older — and a refund's own object carries no `kind` or `artist`.
+           So the payment intents we can recognise have to cover the older charges
+           too, or a refund of the founder's own gig money is booked as a loss
+           against the company. Four months back is well past Stripe's own dispute
+           window and costs a page or two on a full refresh of one account. */
+        pullSessions(stripe, gte - 120 * 86400e3, lte).catch(() => []),
+      ]);
+    } catch (e) {
+      return { books: shape(cache, want), mine: shape({ months: cache.mine, at: cache.at }, want),
+               error: 'Stripe wouldn’t answer just now' };
+    }
+
+    /* Which payment intents MySet sold on this artist's behalf. Untagged sessions
+       predate the `artist` field and belong to the founder — the same convention
+       confirm.mjs, webhook.mjs and revenue.mjs already use, so all four agree. */
+    const ours = new Set();
+    for (const s0 of sessions) {
+      const md = s0.metadata || {};
+      if (!APP_KINDS.has(md.kind)) continue;
+      if ((md.artist || DEFAULT_ARTIST) !== aid) continue;
+      const pi = piOf(s0.payment_intent);
+      if (pi) ours.add(pi);
+    }
+
+    const freshBooks = {}, freshMine = {};
+    for (const k of missing) { freshBooks[k] = emptyMonth(); freshMine[k] = emptyMonth(); }
+    for (const bt of rows) {
+      const k = monthKey(Number(bt.created) * 1000);
+      if (!freshBooks[k]) continue;
+      const src = bt.source && typeof bt.source === 'object' ? bt.source : null;
+      const md = (src && src.metadata) || {};
+      const tagged = APP_KINDS.has(md.kind) && (md.artist || DEFAULT_ARTIST) === aid;
+      const byPi = !!(src && ours.has(piOf(src.payment_intent)));
+      foldTx(tagged || byPi ? freshMine[k] : freshBooks[k], bt);
+    }
+
+    /* A truncated pull is returned but never written: better to recompute a slow
+       month every time than to remember a wrong one for ever. */
+    if (!truncated) await casDoc(PLATFORM_LEDGER, () => ({ v: 1, months: {}, mine: {}, at: 0 }), (d) => {
+      d.months ||= {}; d.mine ||= {};
+      for (const [k, v] of Object.entries(freshBooks)) d.months[k] = v;
+      for (const [k, v] of Object.entries(freshMine)) d.mine[k] = v;
+      for (const field of ['months', 'mine']) {
+        const keys = Object.keys(d[field]).sort();
+        if (keys.length > 60) for (const k of keys.slice(0, keys.length - 60)) delete d[field][k];
+      }
+      d.at = now;
+      return true;
+    }).catch(() => {});
+    for (const [k, v] of Object.entries(freshBooks)) cache.months[k] = v;
+    for (const [k, v] of Object.entries(freshMine)) cache.mine[k] = v;
+    cache.at = now;
+  }
+  return { books: shape(cache, want), mine: shape({ months: cache.mine, at: cache.at }, want) };
 }
 
 /* ---------- what Stripe cannot know: what it costs to run ---------- */
@@ -241,11 +395,12 @@ export async function setCost(month, kind, cents, note) {
 }
 
 /** MySet's own P&L: what Stripe paid in, minus what Perry typed in. */
-export async function books(stripe, opts, { months = 12, now = Date.now(), force = false } = {}) {
-  const [st, costs] = await Promise.all([
-    statement(DEFAULT_ARTIST, stripe, opts, { months, now, force }),
+export async function books(stripe, opts, { months = 12, now = Date.now(), force = false, since = 0 } = {}) {
+  const [split, costs] = await Promise.all([
+    platformSplit(DEFAULT_ARTIST, stripe, { months, now, force, since }),
     readCosts(),
   ]);
+  const st = split.books;
   const rows = st.months.map((m) => {
     const c = costs.by[m.month] || {};
     const spend = Object.values(c).reduce((s, x) => s + (Number(x.cents) || 0), 0);

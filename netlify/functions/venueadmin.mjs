@@ -1,7 +1,7 @@
 import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
          mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU,
-         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH, venuePlanOf } from './_venues.mjs';
+         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH, venuePlanOf, venuePaid } from './_venues.mjs';
 import { normMerch } from './_profile.mjs';
 import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
@@ -540,6 +540,13 @@ export default async (req) => {
     return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid)), imgOwner(vid)) });
   }
   if (['postHide', 'postPin', 'postReply', 'postDelete'].includes(action)) {
+    /* THE SAME GATE THE ARTIST SIDE HAS. Permanent deletion was gated in admin.mjs
+       and free here — the identical action, on the identical community feed, one
+       endpoint along. Hiding stays free on every plan for both, because every owner
+       must be able to take something offensive off their page the second they see
+       it; what a paid plan buys is erasing it. */
+    if (action === 'postDelete' && !venuePaid(await venueById(vid)))
+      return bad('Deleting a post for good is a Pro feature — you can hide it on any plan, and hiding is instant and undoable.', 402);
     const r = await moderate(imgOwner(vid), { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
     if (!r.ok) return bad(r.error, 404);
     return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid)), imgOwner(vid)) });
@@ -556,8 +563,10 @@ export default async (req) => {
     const owner = imgOwner(vid);
     const { stripe, opts } = await stripeFor(owner);
     if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
+    /* Never further back than the day the venue joined — see _ledger.mjs. */
+    const since = Number(((await venueById(vid)) || {}).createdAt) || 0;
     const st = await statement(owner, stripe, opts,
-      { months: Math.min(60, Math.max(1, Number(body.months) || 12)), force: !!body.force });
+      { months: Math.min(60, Math.max(1, Number(body.months) || 12)), force: !!body.force, since });
     if (action === 'ledgerCsv') {
       const name = ((await venueById(vid)) || {}).name || vid;
       return new Response(toCsv(st, { who: name }), { status: 200, headers: {

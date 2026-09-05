@@ -53,7 +53,8 @@ export async function keysFor(aid) {
     `ev_${aid}`, `lists_${aid}`, `learn_${aid}`, `push_${aid}`, `connect_${aid}`, `fb_${aid}`,
     `lock_${aid}`, `apitch_${aid}`, `songstats_${aid}`, `posts_${aid}`, `likes_${aid}`, `billing_${aid}`,
     `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
-    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`];
+    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`];
+  /* `ledger_platform` is the COMPANY's, not this artist's, and is never deleted here. */
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
   const [hist, show, profile, posts, ids, pend] = await Promise.all([
     readHistIndex(aid), readDoc(KEY.show(aid), null), getProfile(aid), readPosts(aid),
@@ -201,6 +202,10 @@ export async function deleteArtist(aid) {
     if (c.acct) { const { casDoc } = await import('./_lib.mjs'); await casDoc('acctindex', () => ({ v: 1, by: {} }), (d) => { if (!d.by || !d.by[c.acct]) return false; delete d.by[c.acct]; return true; }); }
   } catch {}
   try { const { mutateIdQueue } = await import('./_verify.mjs'); await mutateIdQueue((q) => { if (!q.by || !q.by[aid]) return false; delete q.by[aid]; return true; }); } catch {}
+  /* Featured spots live in per-CITY documents this artist's key list cannot name,
+     so they are released from the artist's own receipt list before it is deleted —
+     otherwise a gone artist keeps a paid spot at the top of a city's night for ever. */
+  try { const { dropAllFor } = await import('./_featured.mjs'); await dropAllFor(aid); } catch {}
   const keys = await keysFor(aid);
   let gone = 0;
   for (const k of keys) { try { await store().delete(k); gone++; } catch {} }

@@ -60,7 +60,10 @@ export default async (req) => {
       const session = await stripe.checkout.sessions.create({
         mode: 'payment', line_items: [vline],
         metadata: { fan, kind: 'merch', item: item.id, title: item.title.slice(0, 60), qty: String(qty), ship: item.ship, artist: owner },
-        ...(fee > 0 ? { payment_intent_data: { application_fee_amount: fee } } : {}),
+        payment_intent_data: {
+          ...(fee > 0 ? { application_fee_amount: fee } : {}),
+          metadata: { kind: 'merch', artist: owner },
+        },
         ...(item.ship === 'ship' ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES } } : {}),
         success_url: `${origin}${back}?paid={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}${back}?cancelled=1`,
@@ -195,7 +198,17 @@ export default async (req) => {
       mode: 'payment',
       line_items: [line],
       metadata,
-      ...(fee > 0 ? { payment_intent_data: { application_fee_amount: fee } } : {}),
+      /* THE CHARGE CARRIES ITS OWN LABEL, not just the session.
+         Session metadata does NOT propagate to the charge, so anything reading the
+         balance later — the earnings statement, an accountant, Stripe's own export —
+         sees an untagged payment and has to join back through the sessions list to
+         find out what it was. Two fields here make every future charge explain
+         itself. Kept to `kind` and `artist` on purpose: a charge's metadata is
+         visible on a receipt, so nothing about the buyer goes in it (0bu). */
+      payment_intent_data: {
+        ...(fee > 0 ? { application_fee_amount: fee } : {}),
+        metadata: { kind: metadata.kind || '', artist: aid },
+      },
       // only a SHIPPED item asks for an address — a T-shirt handed over at the bar needs none
       ...(shipping ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES } } : {}),
       // MUST be a page that calls /api/confirm — vote.html and community.html redeem the session

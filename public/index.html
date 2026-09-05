@@ -111,6 +111,20 @@ body{padding-bottom:34px}
 /* The whole row is tappable, but it can't be one big <a> any more — there is a
    Directions link inside it now, and an anchor inside an anchor is not a thing.
    So the row link is stretched across the row underneath everything else. */
+/* ORANGE, which is --accent-2 — Perry's colour for the audience. --accent is the
+   pink/red used for warnings and destructive things, and a paid listing must not
+   wear it. */
+.feathead{font-size:11.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--accent-2);padding:15px 2px 7px}
+.gig.feat{border:1.5px solid var(--accent-2);border-radius:12px;margin:8px 0;
+  box-shadow:0 0 0 3px rgba(255,122,69,.14)}
+/* `.gig:first-child{border-top:none}` is what separates ordinary rows in a list, and
+   it was quietly eating the top edge of a featured row — three orange sides and a
+   grey one. Caught by reading the computed style, not by looking at a screenshot. */
+.gig.feat:first-child{border-top:1.5px solid var(--accent-2)}
+/* The featured rows are their own cards, so the list they sit in must not also be
+   one — otherwise a grey rounded panel peeks out from behind three orange ones. */
+.giglist.feats{background:none;border-radius:0;overflow:visible}
 .gig{position:relative;display:flex;gap:14px;align-items:flex-start;padding:15px 18px;
   background:var(--surface);border-top:.5px solid var(--hair)}
 .gig .rowlink{position:absolute;inset:0;z-index:1}
@@ -428,9 +442,11 @@ function renderFeed(q){
   if(!FEED)return;
   const {days,city,fmt}=FEED;
   const words=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
-  const shown=days.map(day=>({...day,gigs:day.gigs.filter(g=>gigMatches(g,day,words,fmt))}))
-                  .filter(day=>day.gigs.length);
-  const total=shown.reduce((a,day)=>a+day.gigs.length,0);
+  const shown=days.map(day=>({...day,
+                    featured:(day.featured||[]).filter(g=>gigMatches(g,day,words,fmt)),
+                    gigs:day.gigs.filter(g=>gigMatches(g,day,words,fmt))}))
+                  .filter(day=>day.gigs.length||day.featured.length);
+  const total=shown.reduce((a,day)=>a+day.gigs.length+day.featured.length,0);
   const box=`<div class="feedsearch"><input class="inp" id="feedQ" type="search" autocomplete="off"
       placeholder="Search — a name, a bar, “tuesday”, “8pm”…" value="${esc(q)}"
       oninput="renderFeed(this.value)"></div>`;
@@ -440,14 +456,14 @@ function renderFeed(q){
     const i0=$('#feedQ'); if(i0){i0.focus();i0.setSelectionRange(q.length,q.length);}
     return;
   }
-  $('#out').innerHTML=box+shown.map(day=>`
-    <div class="dayhead"><b>${esc(day.label)} <em>– ${dayMonth(day.date)}</em></b><span>${day.count} gig${day.count===1?'':'s'}</span></div>
-    <div class="giglist">${day.gigs.map(g=>{
+  /* One row, drawn the same way in both lists — a featured gig is the same gig,
+     with a border and a place at the top, not a different kind of thing. */
+  const row=(g,feat)=>{
       /* Two kinds of thing are on tonight: a gig an artist listed, and something
          the venue itself put on. Same row, different headline. */
       const ev=g.kind==='event';
       const href=g.href||(ev?'/':'/'+g.slug);
-      return `<div class="gig">
+      return `<div class="gig${feat?' feat':''}">
         <a class="rowlink" href="${esc(href)}" aria-label="${esc(ev?(g.title||'Event'):g.artist)} at ${esc(g.venue)}"></a>
         <div class="tm"><b>${fmt(g)}</b><span>${esc(shortDate(g.date))}</span></div>
         <div class="m">
@@ -460,7 +476,15 @@ function renderFeed(q){
         </div>
         ${g.maps?dirBtn(g.maps):''}
         <span class="chev">›</span>
-      </div>`;}).join('')}</div>`).join('')
+      </div>`;};
+  $('#out').innerHTML=box+shown.map(day=>`
+    <div class="dayhead"><b>${esc(day.label)} <em>– ${dayMonth(day.date)}</em></b><span>${day.count} gig${day.count===1?'':'s'}</span></div>
+    ${/* The heading appears only when something is actually featured, and never
+         draws an empty slot — one featured show is one row, not one row and two
+         gaps. Perry was explicit about that. */''}
+    ${(day.featured||[]).length?`<div class="feathead">Featured shows</div>
+      <div class="giglist feats">${day.featured.map(g=>row(g,true)).join('')}</div>`:''}
+    ${day.gigs.length?`<div class="giglist">${day.gigs.map(g=>row(g,false)).join('')}</div>`:''}`).join('')
     + `<div class="endcard">${words.length
         ? `${total} match${total===1?'':'es'} for “${esc(q)}” in ${esc(city)}.`
         : `That’s everything in ${esc(city)} for the next seven days.`}</div>`;

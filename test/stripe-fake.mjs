@@ -20,13 +20,14 @@ const state = {
   bts: new Map(),               // txn_x -> balance transaction, tagged with its account
   fees: new Map(),              // fee_x -> application fee (platform side)
   feeRefunds: new Map(),        // idempotency key -> fee refund
+  refunds: new Map(),           // idempotency key -> refund
   links: [],
   calls: [],                    // every call, with its options
   nextAcct: 1, nextSession: 1, nextCus: 1, nextPrice: 1, nextSub: 1, nextProd: 1,
 };
 export const __stripe = state;
 export const __resetStripe = () => {
-  for (const m of [state.accounts, state.sessions, state.customers, state.products, state.prices, state.coupons, state.subs, state.bts, state.fees, state.feeRefunds]) m.clear();
+  for (const m of [state.accounts, state.sessions, state.customers, state.products, state.prices, state.coupons, state.subs, state.bts, state.fees, state.feeRefunds, state.refunds]) m.clear();
   state.links.length = 0; state.calls.length = 0;
   state.nextAcct = 1; state.nextSession = 1; state.nextCus = 1; state.nextPrice = 1; state.nextSub = 1; state.nextProd = 1;
 };
@@ -164,6 +165,16 @@ export default class Stripe {
         return r; },
     };
   }
+  get refunds() {
+    /* Idempotent by key, like the real thing: a webhook retry that refunds the same
+       payment twice is the bug this exists to make visible. */
+    return { create: async (params, opts) => { note('refunds.create', params, opts);
+      const k = (opts && opts.idempotencyKey) || '';
+      if (k && state.refunds.has(k)) return state.refunds.get(k);
+      const r = { id: `re_test${state.refunds.size + 1}`, ...params, status: 'succeeded' };
+      if (k) state.refunds.set(k, r);
+      return r; } };
+  }
   get invoices() {
     return { list: async (params, opts) => { note('invoices.list', params, opts);
       /* One paid invoice per subscription on this customer, which is what a month
@@ -207,11 +218,18 @@ export default class Stripe {
         } else {
           const amount = (params.line_items || []).reduce((sum, l) =>
             sum + Number((l.price_data || {}).unit_amount || 0) * Number(l.quantity || 1), 0);
+          /* A REAL payment intent ID, not the params object. Stripe returns an id
+             (or an expanded object with one); handing back the request params meant
+             every refund path in every test silently did nothing, because there was
+             no id to refund against. The params are kept alongside so tests can
+             still assert on application_fee_amount and metadata. */
+          const pi = `pi_${id.replace(/^cs_/, '')}`;
           session = {
             id, url: `https://checkout.stripe.test/${id}`, mode: 'payment',
             payment_status: 'paid', amount_total: amount,
             created: 1756000000, metadata: params.metadata || {},
-            payment_intent: params.payment_intent_data || null,
+            payment_intent: pi,
+            payment_intent_data: params.payment_intent_data || null,
           };
         }
         state.sessions.set(id, { session, onAccount: (opts && opts.stripeAccount) || '' });
