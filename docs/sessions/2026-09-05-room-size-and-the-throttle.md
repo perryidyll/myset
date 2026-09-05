@@ -130,3 +130,19 @@ and its vote is still taken, and there is no spectator state to find.
 `subagents/workflows/wf_fef43a0b-35e/journal.jsonl` — 4 of 11 studies completed
 before the usage limit; the remaining 7 studies, 4 designs and 4 verifications never
 ran and are worth resuming.*
+
+---
+
+## The report
+
+Published as an artifact for Perry: **The Room Ceiling** —
+https://claude.ai/code/artifact/d85142a3-242a-415d-8f91-962e1cd2e942
+
+Source kept in the repo at `docs/reports/room-ceiling.html` so it survives independently
+of the artifact. It carries the log-log chart of internal read traffic against room
+size (both the fixed-3s curve and the throttled one, with the band MySet is known to
+serve), the four research quotes and what each one changed, the shipped dial and tier
+tables, the ranked pricing recommendation, and the four open questions.
+
+The chart's coordinates are computed from the same measured figures as
+`pollFloorFor` — if those rungs change, the polyline points in that file are stale.
