@@ -228,6 +228,8 @@ always-on servers (fixed $ + ops hours) · custom. Supabase Realtime was researc
   replaces the ambiguous "paying artists … revenue each".
 
 ### Live at myset.vip/financialmodel (passcode 2068)
+> **Superseded 6 Sep:** the address is now `myset.vip/moneymodel` and the function
+> is `moneymodel.mjs`; `/financialmodel` 301s to it. See §9. Everything else here stands.
 - `netlify/functions/financialmodel.mjs` serves the model from OUTSIDE the
   published folder: GET without a valid cookie → a small passcode page; POST with
   the code → an HttpOnly, Secure, 30-day cookie and a redirect; GET with the cookie
@@ -409,3 +411,46 @@ except the four listed as deferred.
 
 **Shipped:** artifact republished (label "After the two audits"); commit + Netlify
 production deploy recorded below.
+
+## 9. 6 Sep — the address, and a hero that is not a projection
+
+Two asks from Perry, both taken as read.
+
+**`/financialmodel` → `/moneymodel`.** `netlify/functions/financialmodel.mjs` is now
+`moneymodel.mjs`; `[functions.moneymodel] included_files` and the 200-rewrite follow
+it, and the old address 301s to the new one from above the `/:slug` catch-all (an open
+tab or a saved link still lands). While renaming, the two hard-coded `/financialmodel`
+strings inside the gate — the form's action and the cookie's `Path` — became
+`url.pathname`, so the next rename is a routing change and nothing else. Perry's
+30-day cookie was scoped to the old path and will not be sent to the new one: he types
+2068 once more. `FINMODEL_CODE` keeps its name (an env var nobody reads).
+Gate tests: 12 of 12, run against the renamed module.
+
+**The hero chart.** Perry: *"where is this growth curve coming from … I don't really
+see the point in including a growth curve that is based on arbitrary projections… I
+just want to see what the key business metrics look like based on how I set the
+variables. I think a simple bar graph would be the best hero visual."* He is right,
+and it was the one place the page still led with a made-up number after two audits
+spent themselves removing exactly that.
+
+- The hero is now **"The money, at the dials as they stand"**: three stacked bars on
+  one scale — Revenue split into subscriptions after refunds / cut of the room's money
+  / featured shows; Costs split into server / Stripe / fixed; Profit (green, or red as
+  "Loss"). Totals are drawn at each bar's end, the margin rides in the Profit tooltip,
+  and zero-height segments are filtered out of the hover. Every figure comes straight
+  from `month(P, P.artists)` — no time axis, no growth assumption.
+- The 36-month line chart, the cumulative chart and the month-by-month table now live
+  together in one collapsed section titled **"If it grew to this size over 36 months —
+  the only invented path on the page"**, with a paragraph saying plainly that the
+  growth rate is a guess and nothing outside the box depends on it. Nothing was
+  deleted: the growth dials still work, they are just no longer the first thing read.
+  A `toggle` handler resizes the two charts the first time it opens (a canvas inside a
+  closed `<details>` is built at zero size).
+- The scale-ladder panel became full width so the grid still pairs cleanly.
+
+Verified headless: hero segments sum to the KPI tiles exactly ($4,554 + $1,824 +
+$2,475 = $8,853 revenue; $175 + $1,880 + $658 = $2,713 costs; $6,140 profit); all
+three bars follow the artists dial; the growth section is closed on load and both its
+charts paint at full size when opened; 37 rows in the month table; no page errors; no
+horizontal scroll at 390 px; dark mode paints. `node finance/model-test.mjs` all
+passed.

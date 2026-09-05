@@ -8,8 +8,8 @@
   node_bundler = "esbuild"
 
 # The money model is served by a function from OUTSIDE the published folder, so
-# it never leaves the server without the passcode (see financialmodel.mjs).
-[functions.financialmodel]
+# it never leaves the server without the passcode (see moneymodel.mjs).
+[functions.moneymodel]
   included_files = ["finance/model.html"]
 
 [[redirects]]
@@ -17,12 +17,19 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
-# myset.vip/financialmodel — the passcode-gated money model. Must sit above the
+# myset.vip/moneymodel — the passcode-gated money model. Must sit above the
 # /:slug catch-all, which would otherwise render it as an artist page.
 [[redirects]]
-  from = "/financialmodel"
-  to = "/.netlify/functions/financialmodel"
+  from = "/moneymodel"
+  to = "/.netlify/functions/moneymodel"
   status = 200
+
+# The address it launched on, 5 Sep. Kept so an open tab or a saved link lands,
+# and above the catch-all for the same reason as the rule before it.
+[[redirects]]
+  from = "/financialmodel"
+  to = "/moneymodel"
+  status = 301
 
 # Pretty URLs. Real files always win over these, so /vote.html and /studio.html
 # keep working; the slug rules only catch paths that aren't files.

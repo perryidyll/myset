@@ -6,7 +6,7 @@ Stripe take, and what is left. Built 2026-09-05.
 
 | File | What it is |
 |---|---|
-| `model.html` | The dashboard — **live at myset.vip/financialmodel behind a passcode** (served by `netlify/functions/financialmodel.mjs`, INVARIANT 0ec) and published as a private artifact. One self-contained file: dials (typed cells + sliders), KPI tiles, five charts, the formula line by line, the four show sizes on every host, the scale ladder, month-by-month, up to 20 saved scenarios with automatic summaries. Open it locally (double-click, or serve the folder) or use the published artifact. |
+| `model.html` | The dashboard — **live at myset.vip/moneymodel behind a passcode** (served by `netlify/functions/moneymodel.mjs`, INVARIANT 0ec) and published as a private artifact. One self-contained file: dials (typed cells + sliders), KPI tiles, five charts, the formula line by line, the four show sizes on every host, the scale ladder, month-by-month, up to 20 saved scenarios with automatic summaries. Open it locally (double-click, or serve the folder) or use the published artifact. |
 | `actuals.json` | The latest real-show numbers, written by `tools/actuals.py --write`. Paste its contents into the dashboard's **Real shows** panel and switch on "Use real shows". |
 | `marks.json` | Bandwidth readings taken with `tools/actuals.py --mark`, before and after each gig; the script solves the polls per phone-hour out of them. |
 | `model-test.mjs` | The engine's test suite (`node finance/model-test.mjs`). |

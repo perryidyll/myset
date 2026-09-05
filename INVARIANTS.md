@@ -1675,10 +1675,13 @@ If you are about to violate one, stop and say so rather than working around it.
 
 0ec. **The money model is served by a function and never leaves the server without
     the passcode.** `finance/model.html` lives OUTSIDE `public/` (netlify.toml
-    publishes `public/` only) and is bundled into `financialmodel.mjs` with
-    `[functions.financialmodel] included_files`. `myset.vip/financialmodel` is a
+    publishes `public/` only) and is bundled into `moneymodel.mjs` with
+    `[functions.moneymodel] included_files`. `myset.vip/moneymodel` is a
     redirect to that function placed ABOVE the `/:slug` catch-all — move it below
-    and the artist page swallows it. A passcode checked in the browser is not a
+    and the artist page swallows it; `/financialmodel`, the address it launched on,
+    301s to it from above the catch-all for the same reason. The gate reads the
+    form action and the cookie scope off the request path instead of writing them
+    down, so renaming the route again is a netlify.toml change and nothing else. A passcode checked in the browser is not a
     passcode (the file is on the phone before the prompt), so the check is server
     side, remembered in an HttpOnly cookie for thirty days. The code is
     `FINMODEL_CODE` if set, else the one Perry gave (2068 — a courtesy lock, not a

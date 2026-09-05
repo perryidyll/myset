@@ -167,6 +167,43 @@ const out = await page.evaluate(async () => {
   ok('THE RECOVERED CLIP HAS SOUND IN IT', !m4.err && m4.rms>0.01, m4.err||'rms '+m4.rms.toFixed(4));
   window.reencode = realReencode;
 
+  // ---------- 5. SAFARI'S FAILURE, SIMULATED: the decoder refuses the file ----------
+  /* This is Perry's iPhone. decodeAudioData is specified for audio files and Safari
+     routinely refuses a whole MP4 with a video track in it, which arrives as "that
+     one came out silent" while the picture is perfect. Route two has to save it. */
+  const realSoundFor = soundFor;
+  window.soundFor = () => Promise.resolve(null);
+  toasts.length = 0; sent = null; DRAFT.clip = null;
+  await Promise.race([ addClip(file), new Promise((_,rj)=>setTimeout(()=>rj(new Error('HUNG')),60000)) ])
+    .catch(e=>R.push('  ✗ safari addClip: '+e.message));
+  ok('a refused decoder still ends in a clip', !!DRAFT.clip);
+  ok('and it is NOT reported silent', !toasts.some(t=>/silent/.test(t)), toasts.join(' | ')||'no toasts');
+  const m5 = sent ? await measure(await (await fetch(sent.data)).blob()) : {err:'nothing sent'};
+  ok('THE ELEMENT ROUTE CARRIED THE SOUND', !m5.err && m5.rms>0.01, m5.err||'rms '+m5.rms.toFixed(4));
+
+  // ---------- 6. a video that genuinely has no sound says so ----------
+  async function makeSilent(secs){
+    const c=document.createElement('canvas'); c.width=320;c.height=240;
+    const ctx=c.getContext('2d'); const st=c.captureStream(24);
+    const mime=['video/webm;codecs=vp8,opus','video/webm'].find(t=>MediaRecorder.isTypeSupported(t));
+    const r=new MediaRecorder(st,{mimeType:mime}); const ch=[];
+    r.ondataavailable=e=>{ if(e.data&&e.data.size) ch.push(e.data); };
+    const done=new Promise(z=>r.onstop=z); r.start(200); const t0=performance.now();
+    await new Promise(z=>{ const d=()=>{ const e=performance.now()-t0;
+      ctx.fillStyle='hsl('+((e/10)%360)+',80%,50%)'; ctx.fillRect(0,0,320,240);
+      if(e>secs*1000){ r.stop(); return z(); } requestAnimationFrame(d); }; d(); });
+    await done; return new File([new Blob(ch,{type:'video/webm'})],'quiet.webm',{type:'video/webm'});
+  }
+  window.soundFor = realSoundFor;
+  const quiet = await makeSilent(3);
+  toasts.length = 0; sent = null; DRAFT.clip = null;
+  await Promise.race([ addClip(quiet), new Promise((_,rj)=>setTimeout(()=>rj(new Error('HUNG')),60000)) ])
+    .catch(e=>R.push('  ✗ quiet addClip: '+e.message));
+  ok('a silent video still becomes a clip', !!DRAFT.clip);
+  ok('and it is told WHY it is silent, not blamed on the phone',
+     toasts.some(t=>/doesn.t have any sound|no sound came through|couldn.t get at the sound/.test(t)),
+     toasts.join(' | ')||'no toasts');
+
   return R.join('\n');
 });
 console.log(out);

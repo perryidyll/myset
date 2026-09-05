@@ -2353,6 +2353,9 @@ session on the business model with "an insanely high level of care".
 
 ## Update, later the same day — live at myset.vip/financialmodel (passcode 2068)
 
+> **Superseded 6 Sep: the address is now `myset.vip/moneymodel`** (`/financialmodel`
+> 301s to it) and the function is `moneymodel.mjs`. The rest of this entry stands.
+
 - Perry: "push it live to myset.vip/financialmodel with a simple passcode … 2068".
   Built as a Netlify FUNCTION (`netlify/functions/financialmodel.mjs`) that serves
   `finance/model.html` from OUTSIDE the published folder, so nothing leaves the
@@ -2464,3 +2467,18 @@ Chrome and puppeteer-core, which live outside this repo.
   session, with an artist-owner case in `test/billing.mjs`.
 - Live: myset.vip/financialmodel (passcode 2068) and the artifact both carry the
   post-audit build. `node finance/model-test.mjs` 49 checks; `npm test` all stages green.
+
+## Update, 6 Sep — /moneymodel, and a hero chart with no projection in it
+
+- **The route is now `myset.vip/moneymodel`** (passcode 2068). The function was renamed
+  to match, and `/financialmodel` 301s to it. The gate no longer hard-codes its own
+  path — the form action and the cookie scope come off the request — so the next rename
+  is one line of routing. The old cookie was scoped to the old path, so the passcode is
+  asked for once more. INVARIANT 0ec updated; route table in MYSET.md updated.
+- **The 36-month line chart is no longer the hero.** Perry: a growth curve built on an
+  arbitrary growth rate is not what he wants to look at first. The hero is now three
+  stacked bars — revenue by source, costs by category, profit — all at the dials as
+  they stand. The growth charts and the month table moved into one collapsed section
+  labelled as the only invented path on the page. Nothing deleted.
+- Gate tests 12/12; `node finance/model-test.mjs` all passed; headless checks on the
+  new hero, the collapsed section, mobile and dark all pass.

@@ -253,16 +253,11 @@
 <main class="out">
   <div class="charts">
     <div class="panel wide">
-      <h3>The next <span id="tlMonths">36</span> months</h3>
-      <div class="sub">Artists grow from today’s count toward this scenario’s size. Revenue, costs and profit per month.</div>
-      <div class="chart tall"><canvas id="cTimeline"></canvas></div>
+      <h3>The money, at the dials as they stand</h3>
+      <div class="sub">One month at this scenario’s size. Nothing here is projected forward: revenue split by where it comes from, costs by where they go, and what is left. Move a dial and all three bars move with it.</div>
+      <div class="chart tall"><canvas id="cMoney"></canvas></div>
     </div>
-    <div class="panel">
-      <h3>Money in the bank, cumulative</h3>
-      <div class="sub">Profit added up month by month, after acquisition cost (and after tax when that dial is set) — where the line crosses zero is when the model has paid for itself.</div>
-      <div class="chart"><canvas id="cCum"></canvas></div>
-    </div>
-    <div class="panel">
+    <div class="panel wide">
       <h3>Where each dollar goes, at every scale</h3>
       <div class="sub">Of every dollar of revenue: server, Stripe, fixed costs, profit. Ten artists to ten thousand.</div>
       <div class="chart"><canvas id="cLadder"></canvas></div>
@@ -314,8 +309,21 @@
     <div class="scroll"><table id="ladderTable"></table></div>
   </div>
 
-  <details class="more"><summary>Month-by-month table</summary>
-    <div class="panel scroll" style="margin-top:8px"><table id="tlTable"></table></div>
+  <details class="more" id="growthWrap"><summary>If it grew to this size over <span id="tlMonths">36</span> months — the only invented path on the page</summary>
+    <p class="small" style="margin:6px 0 10px">Everything above is one month at the dials as they stand. This section is not: it makes up a path from today’s artist count to this scenario’s size at the growth rate in <b>Growth over time</b>, and charges the cost of signing each new artist and losing some of them along the way. Useful for “when would this have paid for itself”. Not a forecast — the growth rate is a guess, and nothing outside this box depends on it.</p>
+    <div class="charts">
+      <div class="panel">
+        <h3>Revenue, costs and profit, month by month</h3>
+        <div class="sub">Artists grow from today’s count toward this scenario’s size.</div>
+        <div class="chart"><canvas id="cTimeline"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Money in the bank, cumulative</h3>
+        <div class="sub">Profit added up month by month, after the cost of signing artists (and after tax when that dial is set) — where the line crosses zero is when the model has paid for itself.</div>
+        <div class="chart"><canvas id="cCum"></canvas></div>
+      </div>
+    </div>
+    <div class="panel scroll" style="margin-top:12px"><table id="tlTable"></table></div>
   </details>
 
   <section class="notes" id="notes">
@@ -1076,6 +1084,10 @@ function renderActuals() {
   $('#actApply').addEventListener('click', () => { try { const j = JSON.parse($('#actJson').value); if (!j || typeof j !== 'object') throw 0; ACT = { ...j }; store.saveActuals(ACT); P.useActuals = true; store.saveUse(true); $('#useActuals').checked = true; applyActuals(); syncInputs(); recalc(); renderActSummary(); toast('Real numbers saved and switched on'); } catch (e) { toast('That is not valid JSON — copy exactly what the script prints'); } });
   $('#actClear').addEventListener('click', () => { ACT = null; store.saveActuals(null); P.useActuals = false; store.saveUse(false); if (PRE_ACT) { Object.assign(P, PRE_ACT); PRE_ACT = null; } $('#useActuals').checked = false; syncInputs(); recalc(); renderActSummary(); });
   renderActSummary();
+  /* the two growth charts are built inside a closed <details>, where a canvas has no
+     size; give them one the first time it opens */
+  const gw = $('#growthWrap');
+  if (gw) gw.addEventListener('toggle', () => { if (gw.open) for (const k of ['cTimeline', 'cCum']) if (charts[k]) charts[k].resize(); });
 }
 function renderActSummary() {
   const s = $('#actSummary'); if (!s) return;
@@ -1171,6 +1183,40 @@ function render() {
 
   /* charts */
   $('#tlMonths').textContent = P.months;
+
+  /* THE HERO — the money at this scenario, straight off the dials. Three bars on one
+     scale: what comes in, split by source; what goes out, split by category; what is
+     left. No time axis and no growth assumption, because every one of those is a guess
+     and this chart is the one people read first. */
+  const bo = baseOpts(t);
+  const moneyTotals = [R.revenue, R.costs, R.profit];
+  const moneyBars = [
+    { label: 'Subscriptions', data: [R.subsNet, 0, 0], backgroundColor: t.subs },
+    { label: 'Cut of room money', data: [R.cutRev, 0, 0], backgroundColor: t.cuts },
+    { label: 'Featured shows', data: [R.feat, 0, 0], backgroundColor: t.feat },
+    { label: 'Server', data: [0, R.bill.usd, 0], backgroundColor: t.server },
+    { label: 'Stripe', data: [0, R.stripe, 0], backgroundColor: t.stripe },
+    { label: 'Fixed costs', data: [0, R.fixed, 0], backgroundColor: t.fixed },
+    { label: R.profit >= 0 ? 'Profit' : 'Loss', data: [0, 0, R.profit], backgroundColor: R.profit >= 0 ? t.profit : t.loss },
+  ].map(d => ({ ...d, borderColor: t.surface, borderWidth: 2, borderSkipped: false }));
+  mk('cMoney', { type: 'bar', data: { labels: ['Revenue', 'Costs', 'Profit'], datasets: moneyBars }, options: {
+      ...bo, layout: { padding: { left: 4, right: 12, top: 26, bottom: 0 } },
+      scales: { x: { stacked: true, grid: { display: false }, border: { color: t.axis }, ticks: { color: t.ink, font: { family: 'Archivo', size: 13, weight: '600' } } },
+                y: { stacked: true, beginAtZero: true, grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => fmt.usd(v, 0) } } },
+      plugins: { ...bo.plugins, tooltip: { ...bo.plugins.tooltip, filter: (c) => c.parsed.y !== 0,
+        callbacks: { ...bo.plugins.tooltip.callbacks, footer: (items) => { const i = items[0].dataIndex; return ['Revenue', 'Costs', 'Profit'][i] + ': ' + fmt.usdFull(moneyTotals[i]) + (i === 2 && isFinite(R.margin) ? `  (${fmt.pct(R.margin)} margin)` : ''); } } } },
+      datasets: { bar: { barPercentage: .62, categoryPercentage: .82 } } },
+    plugins: [{ id: 'moneyTotals', afterDatasetsDraw(c) {
+      const { ctx, chartArea: a, scales } = c; ctx.save();
+      ctx.font = '700 13px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+      moneyTotals.forEach((v, i) => {
+        const x = scales.x.getPixelForValue(i);
+        ctx.fillStyle = i === 2 ? (v >= 0 ? t.profit : t.loss) : t.ink;
+        if (v >= 0) { ctx.textBaseline = 'bottom'; ctx.fillText(fmt.usd(v), x, Math.max(a.top + 12, scales.y.getPixelForValue(v) - 6)); }
+        else { ctx.textBaseline = 'top'; ctx.fillText(fmt.usd(v), x, Math.min(a.bottom - 4, scales.y.getPixelForValue(v) + 6)); }
+      });
+      ctx.restore(); } }] });
+
   const labels = tl.map(r => 'M' + r.m);
   mk('cTimeline', { type: 'line', data: { labels, datasets: [
     { label: 'Revenue', data: tl.map(r => r.revenue), borderColor: t.rev, backgroundColor: t.rev, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .25 },

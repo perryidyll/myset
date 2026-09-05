@@ -108,7 +108,8 @@ keep working; the pretty URLs only catch paths that are not files.
 | `/signup` | `studio.html` | Same page, sign-up state |
 | `/about` | `about.html` | The landing / sales page |
 | `/venues` | `venue-studio.html` | The Venue Studio |
-| `/financialmodel` | function `financialmodel.mjs` | The money model (finance/model.html, outside the published folder), behind a passcode — see §5.1 |
+| `/moneymodel` | function `moneymodel.mjs` | The money model (finance/model.html, outside the published folder), behind a passcode — see §5.1 |
+| `/financialmodel` | 301 → `/moneymodel` | The address the model launched on, 5 Sep. Kept so saved links land |
 | `/v/<slug>` | `venue.html` | A venue's public page |
 | `/api/*` | Netlify Functions | The whole API |
 | `/stage.html` | `stage.html` | Legacy stage control, `noindex` |

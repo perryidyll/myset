@@ -298,7 +298,13 @@ function wire(){
   /* The tap that opens the file picker is the ONLY moment a phone will let the page
      wake its sound up — see unlockAudio. By the time a file comes back the tap is
      spent, so this cannot be left until the clip is being encoded. */
-  const cl=$('#clipLab'); if(cl){ cl.addEventListener('pointerdown',unlockAudio); cl.addEventListener('click',unlockAudio); }
+  const cl=$('#clipLab');
+  if(cl){ ['pointerdown','touchstart','touchend','click'].forEach(e=>cl.addEventListener(e,unlockAudio,{passive:true})); }
+  /* And a net under it. iPhones are inconsistent about which event in a tap counts
+     as "the person did something", and a sound system that never wakes up is the
+     difference between a clip with sound and a clip without. The first touch
+     anywhere on the page arms it, once, and costs nothing after that. */
+  ['pointerdown','touchend'].forEach(e=>document.addEventListener(e,unlockAudio,{passive:true,once:true}));
   const crm=$('#clipRm'); if(crm) crm.addEventListener('click',()=>{ DRAFT.clip=null; render(); });
   if(btn) btn.addEventListener('click',post);
   document.querySelectorAll('[data-like]').forEach(b=>b.addEventListener('click',()=>like(b)));
@@ -433,6 +439,25 @@ const fileBytes = (f) => f.arrayBuffer ? f.arrayBuffer()
   : new Promise((res,rej)=>{ const r=new FileReader();
       r.onload=()=>res(r.result); r.onerror=()=>rej(new Error('read')); r.readAsArrayBuffer(f); });
 
+/** Is there anything in this soundtrack, or is it a track full of nothing?
+
+    Worth asking because "the file has an audio track" and "the file has sound in it"
+    are different facts, and confusing them is the whole history of this feature: the
+    very first clips shipped with a perfectly good, perfectly empty audio track and
+    nothing anywhere said so. Sampling ~200 evenly spaced windows across the buffer
+    catches a quiet intro without reading every sample of a 30-second clip. */
+function hasSignal(buf){
+  try{
+    const d = buf.getChannelData(0);
+    const step = Math.max(1, Math.floor(d.length / 200));
+    for(let i = 0; i < d.length; i += step){
+      const end = Math.min(d.length, i + 128);
+      for(let j = i; j < end; j++) if(Math.abs(d[j]) > 0.004) return true;
+    }
+    return false;
+  }catch(e){ return true; }   // unreadable is not the same as empty — assume sound
+}
+
 /** The file's soundtrack, decoded and ready to be piped into the recorder — or null,
     which means the clip will be silent and the person is told so before it starts.
     Awaits only things that finish: no `resume()`, and a clock over the decode. */
@@ -456,18 +481,23 @@ async function soundFor(file, sourceSecs, playSecs){
       if(p && p.then) p.then(res, ()=>rej(new Error('decode')));
     }), 25000, 'decode');
     if(!audio || !audio.duration) return null;
+    /* A file whose sound really is silence is not a failure to route around — it is
+       an answer, and the person should be told THAT rather than being told their
+       phone would not let the sound through. */
+    if(!hasSignal(audio)) return 'empty';
     /* The decoded soundtrack is handed out one PLAYER at a time. A buffer can only
        be started once, so an attempt that has to be made again would otherwise get a
        spent one and come out silent — and the whole point of decoding was that the
        sound survives a retry. Decoding again would cost the memory twice; this costs
        nothing. */
     const secs = Math.min(playSecs, audio.duration);
-    return { take(){
+    return { perElement: false, take(){
       const dest=AUDIO_CTX.createMediaStreamDestination();
       const src=AUDIO_CTX.createBufferSource();
       src.buffer=audio; src.connect(dest);
       return {
         tracks: dest.stream.getAudioTracks(),
+        observed: () => true,          // hasSignal already proved it, above
         start: ()=>{ try{ src.start(0, 0, secs); }catch(e){} },
         stop:  ()=>{ try{ src.stop(); }catch(e){}
                      try{ src.disconnect(); }catch(e){}
@@ -588,6 +618,62 @@ async function pickMime(withAudio, w, h){
     that just failed and fails the same way. */
 function blameMime(t){ if(t){ MIME_BAD[t]=1; Object.keys(MIME_OK).forEach(k=>delete MIME_OK[k]); } }
 
+/* ROUTE TWO, FOR WHEN THE DECODER WILL NOT TAKE A WHOLE VIDEO FILE.
+
+   decodeAudioData is specified for audio files. Handed a 50MB MP4 with a video track
+   in it, Chrome digs the sound out and Safari frequently refuses — which is exactly
+   the "that one came out silent" an iPhone reports while the picture arrives fine.
+
+   So: take the sound off the element as it plays, which is what a
+   MediaElementAudioSourceNode is for. This is the route the very first version used
+   and it failed then for a reason that no longer exists — the context it needed was
+   asleep, and could not be woken because the tap was already spent. The tap now
+   wakes it before the file picker even opens, so the one thing this route requires
+   is the one thing that is now guaranteed.
+
+   TWO PROPERTIES WORTH KNOWING. It only carries signal while the element is UNMUTED,
+   so reencode leaves it unmuted on this path — nothing is heard out loud regardless,
+   because the node takes the audio before the speakers and it is wired only to the
+   recorder. And createMediaElementSource commits an element for life, which is why
+   the object says `perElement: true` and the retry rebuilds it against the new one.
+
+   AND IT LISTENS TO ITSELF. An analyser rides along for the whole recording, so at
+   the end the app knows whether sound actually came through rather than assuming it
+   did. Assuming it did is the original bug of this entire feature. */
+function elementSound(v){
+  if(!audioReady()) return null;
+  let src, dest, an;
+  try{
+    src  = AUDIO_CTX.createMediaElementSource(v);
+    dest = AUDIO_CTX.createMediaStreamDestination();
+    an   = AUDIO_CTX.createAnalyser(); an.fftSize = 512;
+    src.connect(an); an.connect(dest);
+  }catch(e){ return null; }
+  return { perElement: true, take(){
+    const probe = new Uint8Array(an.fftSize);
+    let heard = false, timer = null;
+    return {
+      fromElement: true,
+      tracks: dest.stream.getAudioTracks(),
+      observed: () => heard,
+      start(){
+        timer = setInterval(()=>{
+          if(heard) return;
+          an.getByteTimeDomainData(probe);
+          /* 128 is silence in a byte-domain reading. Anything three steps off it is
+             real signal and not rounding. */
+          for(let i=0;i<probe.length;i++) if(Math.abs(probe[i]-128) > 2){ heard = true; return; }
+        }, 200);
+      },
+      stop(){
+        try{ clearInterval(timer); }catch(e){}
+        try{ src.disconnect(); an.disconnect(); }catch(e){}
+        try{ dest.stream.getAudioTracks().forEach(t=>{ try{ t.stop(); }catch(e2){} }); }catch(e){}
+      }
+    };
+  } };
+}
+
 /** Re-encode small. `au` is the decoded soundtrack from soundFor, or null for a
     silent clip. Resolves to a Blob; rejects with `stalled` if the element stops
     advancing, so the caller can start again from a clean one. */
@@ -604,12 +690,16 @@ function reencode(v, seconds, onPct, onAudio, au, mime){
     ctx.fillStyle='#000'; ctx.fillRect(0,0,c.width,c.height);
     try{ ctx.drawImage(v,0,0,c.width,c.height); }catch(e){}
     const out=c.captureStream(24);
-    /* ALWAYS MUTED, EVEN WHEN THERE IS SOUND. The soundtrack comes from memory,
-       not from this element, so muting costs nothing — and it buys the two things
-       that were breaking: a muted video is allowed to play on every phone without
-       being tapped, and nobody's clip blares out of their pocket in a bar during
-       somebody else's set. */
-    v.muted = true; v.volume = 0;
+    /* MUTED UNLESS THE SOUND IS COMING OFF THIS VERY ELEMENT.
+
+       On the decoded route the soundtrack comes from memory, so muting costs nothing
+       and buys everything: a muted video is allowed to play on any phone without
+       being tapped. On the element route the mute IS the signal path — muted output
+       is silence, which is how the first clips came back empty — so it stays
+       unmuted, and nothing is heard out loud anyway because the node takes the audio
+       before the speakers and is wired only to the recorder. */
+    const live = !!(au && au.fromElement);
+    v.muted = !live; v.volume = live ? 1 : 0;
     /* The tracks go on BEFORE the recorder is built — a MediaRecorder records the
        tracks the stream had when it was constructed, so adding one afterwards
        records nothing. */
@@ -620,7 +710,13 @@ function reencode(v, seconds, onPct, onAudio, au, mime){
     const chunks=[]; let stopped=false;
     rec.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
     rec.onerror=()=>{ if(!stopped){ stopped=true; closeAudio(); rej(new Error('encoder')); } };
-    rec.onstop=()=>{ if(!stopped){ stopped=true; closeAudio(); res(new Blob(chunks,{type:(mime||'video/webm').split(';')[0]})); } };
+    rec.onstop=()=>{ if(!stopped){ stopped=true;
+      /* THE HONEST ANSWER, AND IT IS ONLY KNOWN NOW. onAudio was called optimistically
+         when playback began so the bar could say what it was doing; this is the same
+         question asked again after the recording, when there is an actual answer.
+         On the element route it is what the analyser heard. */
+      try{ onAudio(!!au && (au.observed ? au.observed() : true)); }catch(e){}
+      closeAudio(); res(new Blob(chunks,{type:(mime||'video/webm').split(';')[0]})); } };
     /* Let go of this clip's wiring but NEVER close the context — it is the page's
        one woken-up context and there is no tap left to make another. */
     const closeAudio=()=>{ try{ if(au) au.stop(); }catch(e){} };
@@ -670,11 +766,12 @@ function reencode(v, seconds, onPct, onAudio, au, mime){
     Promise.resolve()
       .then(()=>v.play())
       .then(()=>{ onAudio(!!au); go(); })
-      /* There is no second attempt here any more. The element is muted, and a muted
-         video is allowed to play everywhere — if even that is refused, something is
-         wrong that trying again cannot fix, and the clock upstairs is what stops the
-         bar rather than a retry that would hang beside it. */
-      .catch((e)=>{ closeAudio(); rej(e); });
+      /* A refusal to play UNMUTED is ordinary and recoverable — a phone declining to
+         make noise is not a broken phone. It is reported as its own kind of failure
+         so the caller can drop the sound and try again rather than giving up on the
+         clip. A refusal to play MUTED is something else entirely, and trying again
+         would not fix it. */
+      .catch((e)=>{ closeAudio(); rej(new Error(live ? 'noplay' : String(e && e.message) || 'play')); });
   });
 }
 
@@ -737,15 +834,30 @@ async function addClip(file){
          its first second instead of promising sound and quietly dropping it. */
       let sound=null;
       const srcSecs = Number.isFinite(v.duration) ? v.duration : 0;   // see soundFor
+      /* TWO WAYS TO GET THE SOUND, TRIED IN ORDER, BECAUSE THE FIRST IS THE
+         VERIFIABLE ONE. Decoding the file proves there is signal in it before a
+         single frame is recorded (hasSignal), so when that works the app KNOWS
+         rather than hopes. When the decoder refuses a whole video file — which
+         Safari routinely does, and which is very likely what an iPhone reporting a
+         silent clip has just hit — the second route takes the sound off the element
+         as it plays and listens to itself to find out whether it worked. */
       if(!audioReady()){
         silentWhy='your phone wouldn’t let the sound through';
       } else if(srcSecs > SOUND_MAX_SECS){
         silentWhy='that video is too long to keep its sound — trim it first and try again';
       } else {
         clipProgress(0.03,'Getting the sound ready…');
-        try{ sound = await soundFor(file, Number.isFinite(v.duration) ? v.duration : NaN, seconds); }
-        catch(e){ sound=null; }
-        if(!sound) silentWhy='we couldn’t read the sound in that file';
+        let got=null;
+        try{ got = await soundFor(file, Number.isFinite(v.duration) ? v.duration : NaN, seconds); }
+        catch(e){ got=null; }
+        if(got === 'empty'){
+          silentWhy='that video doesn’t have any sound in it';
+        } else if(got){
+          sound = got;
+        } else {
+          sound = elementSound(v);
+          if(!sound) silentWhy='we couldn’t get at the sound in that file';
+        }
       }
 
       let usedMime=null;
@@ -781,7 +893,17 @@ async function addClip(file){
           try{ v.pause(); }catch(e){}
           try{ URL.revokeObjectURL(v.src); }catch(e){}
           v=await loadVideo(file);
-          if(why==='stalled'){ sound=null; silentWhy='it had to be made a second time to get through'; }
+          if(why==='stalled'){
+            sound=null; silentWhy='it had to be made a second time to get through';
+          } else if(why==='noplay'){
+            /* The phone declined to play the clip with its sound on. That is a
+               refusal, not a fault — take the sound off and it will play. */
+            sound=null; silentWhy='your phone wouldn’t play the clip with its sound on';
+          } else if(sound && sound.perElement){
+            /* The old element is spent for audio, so the sound has to be taken again
+               from the new one or the retry comes out silent. */
+            sound = elementSound(v);
+          }
         }
         const au = sound ? sound.take() : null;
         gotAudio = !!au;
@@ -790,7 +912,7 @@ async function addClip(file){
         }catch(e){
           try{ if(au) au.stop(); }catch(e2){}
           why = String(e && e.message);
-          if(why !== 'stalled' && why !== 'encoder') throw e;
+          if(why !== 'stalled' && why !== 'encoder' && why !== 'noplay') throw e;
           if(why === 'encoder') blameMime(usedMime);
         }
       }
@@ -811,7 +933,13 @@ async function addClip(file){
     toast('Still too big after shrinking. Try a shorter clip.'); return;
   }
 
-  if(!gotAudio) toast('That one came out silent — '+(silentWhy||'the sound wouldn’t come through'));
+  /* gotAudio is what the RECORDING concluded, not what was hoped at the start — on
+     the element route it is what the analyser actually heard while it ran. So if a
+     soundtrack was in hand the whole time and nothing came through it, that is not a
+     failure to explain away: it is a measurement, and it says the video was quiet. */
+  if(!gotAudio && !silentWhy && sound) silentWhy='there was no sound in that video';
+  if(!gotAudio) toast('That one came out silent — '
+    + (silentWhy || 'no sound came through while it was being made'));
   clipProgress(0.7,'Grabbing a still…');
   let poster='';
   try{ poster=await posterFrom(v); }catch(e){}

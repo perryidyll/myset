@@ -3,10 +3,14 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/* THE MONEY MODEL, BEHIND A PASSCODE — myset.vip/financialmodel
+/* THE MONEY MODEL, BEHIND A PASSCODE — myset.vip/moneymodel
 
    Perry, 2026-09-05: "push it live to myset.vip/financialmodel with a simple
-   passcode to view it that is 2068."
+   passcode to view it that is 2068." Renamed to /moneymodel on his ask the next
+   day; the old address 301s to the new one in netlify.toml so a saved link still
+   lands. The form action and the cookie scope are taken from the request path
+   rather than written down, so the next rename is a routing change and nothing
+   else — the hard-coded /financialmodel in both was the whole cost of this one.
 
    WHY A FUNCTION AND NOT A STATIC FILE. A passcode checked in the browser is not a
    passcode: the file is already on the phone before the prompt appears. So the
@@ -51,7 +55,7 @@ function pageHtml() {
     resolve(here, '../finance/model.html'),
   ];
   for (const p of candidates) { try { if (existsSync(p)) return readFileSync(p, 'utf8'); } catch {} }
-  throw new Error('finance/model.html is not in the bundle — check [functions.financialmodel] included_files in netlify.toml');
+  throw new Error('finance/model.html is not in the bundle — check [functions.moneymodel] included_files in netlify.toml');
 }
 const CDN_CHART = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
 const FONT_LINK = /<link rel="stylesheet" href="https:\/\/fonts\.googleapis\.com[^>]*>/;
@@ -75,7 +79,7 @@ const baseHeaders = {
   'referrer-policy': 'strict-origin-when-cross-origin',
 };
 
-const gate = (wrong) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>MySet Money Model</title>
+const gate = (wrong, action) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>MySet Money Model</title>
 <style>
   :root { color-scheme: light dark; --ground:#f2f1ee; --surface:#fff; --ink:#131312; --muted:#6d6c67; --rule:#b9b7b0; --accent:#ec3013; }
   @media (prefers-color-scheme: dark) { :root { --ground:#0f0f0e; --surface:#171716; --ink:#ecebe7; --muted:#9b9a93; --rule:#3f3e3a; --accent:#ff5236; } }
@@ -88,7 +92,7 @@ const gate = (wrong) => `<!doctype html><html lang="en"><head><meta charset="utf
   button { margin-top:12px; width:100%; font:600 15px/1 inherit; padding:13px; background:var(--accent); color:#fff; border:2px solid var(--accent); cursor:pointer; }
   .no { color:var(--accent); font-weight:600; margin:10px 0 0; }
 </style></head><body>
-<form method="post" action="/financialmodel" autocomplete="off">
+<form method="post" action="${action}" autocomplete="off">
   <div class="k">MySet · Money Model</div>
   <h1>Enter the passcode</h1>
   <p>This page is not public. Ask Perry if you need it.</p>
@@ -116,16 +120,16 @@ export default async (req) => {
     code = code.trim();
     if (code && code === CODE()) {
       return new Response(null, { status: 303, headers: { ...baseHeaders, location: url.pathname,
-        'set-cookie': `${COOKIE}=${stamp(code)}; Path=/financialmodel; Max-Age=${MAX_AGE}; HttpOnly; Secure; SameSite=Lax` } });
+        'set-cookie': `${COOKIE}=${stamp(code)}; Path=${url.pathname}; Max-Age=${MAX_AGE}; HttpOnly; Secure; SameSite=Lax` } });
     }
-    return new Response(gate(true), { status: 200, headers: baseHeaders });
+    return new Response(gate(true, url.pathname), { status: 200, headers: baseHeaders });
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('GET or POST', { status: 405, headers: baseHeaders });
   if (url.searchParams.get('signout') === '1') {
     return new Response(null, { status: 303, headers: { ...baseHeaders, location: url.pathname,
-      'set-cookie': `${COOKIE}=; Path=/financialmodel; Max-Age=0; HttpOnly; Secure; SameSite=Lax` } });
+      'set-cookie': `${COOKIE}=; Path=${url.pathname}; Max-Age=0; HttpOnly; Secure; SameSite=Lax` } });
   }
-  if (!allowed(req)) return new Response(gate(false), { status: 200, headers: baseHeaders });
+  if (!allowed(req)) return new Response(gate(false, url.pathname), { status: 200, headers: baseHeaders });
   let html;
   try { html = localised(pageHtml()); }
   catch (e) { return new Response('The model is not in this deploy: ' + e.message, { status: 500, headers: { ...baseHeaders, 'content-type': 'text/plain; charset=utf-8' } }); }
