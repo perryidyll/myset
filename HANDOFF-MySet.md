@@ -2532,3 +2532,54 @@ route to the sound, and an iPhone hits the one that fails.
 
 The scale work. Read `docs/reports/room-ceiling.html` and the 2026-09-05 session doc
 first. Three measurements nobody has taken are listed there and each is under an hour.
+
+---
+
+# SESSION LOG — 2026-09-06b (clips go up as they are; the shrinking is deleted)
+
+Perry, after the third silent clip: *"please start from scratch on this. just let the
+video be uploaded normally for now – how can we store it so that it loads quickly and
+is also as cost efficient as possible?"*
+
+## Why three fixes all failed
+
+A clip travelled as base64 in a JSON body → ~6MB Netlify body limit → 3MB ceiling →
+**every clip had to be shrunk on the phone** → the only browser way to shrink video is
+to record a canvas → **a canvas has no sound** → the audio had to be sourced separately.
+All three failures (muted-element silence, a never-settling `AudioContext.resume()` on
+iPhone Safari, `decodeAudioData` refusing a whole MP4) were *sound* bugs caused by a
+*size* constraint. Removing the constraint removes all three.
+
+## Shipped
+
+~600 lines deleted; `community.html` 1,151 → 705. New `clipup.mjs`: raw bytes (not
+base64, −33%) in pieces, three steps (`begin` / `i=n` / `end`). **3MB → 25MB.**
+Validation runs once on the joined file. Nothing can be orphaned — the clip id is
+pending before the first byte and the manifest holds the piece count. Each piece
+retries three times. Nothing trims, so oversize/overlong is **refused with its actual
+number**, before a byte is sent.
+
+Verified end-to-end against production: 40,148 bytes up, identical SHA back,
+`video/mp4`, range → 206 with the correct slice.
+
+## The cost answer, which is the uncomfortable half
+
+`vid.mjs` was always right (ranges, year-long immutable cache, poster +
+`preload="none"`), so **loading fast is done**. But Netlify bills ~$0.134/GB and **a
+cache hit is billed like anything else** — caching saves compute, never bytes.
+
+| 25MB clip | 30 views | 100 views | 1,000 views |
+|---|---|---|---|
+| cost | $0.10 | $0.33 | $3.27 |
+
+A whole 3-hour gig with 20 phones is 2.7¢. **One clip watched 100 times costs more
+than ten gigs.** Clips are now the most expensive thing in MySet.
+
+**The real fix, not built:** object storage with no egress charge. Cloudflare R2 is
+$0.015/GB-month and **$0 to serve** — 1,000 clips = $0.38/month, served a million
+times for nothing. Needs Perry's own Cloudflare setup; MySet's side is small because
+`putClip`/`getClip` are the only two places that touch clip bytes.
+**Trigger: ~100GB/month of clip traffic (~$13) — then it pays for itself in month one.**
+
+`INVARIANTS.md` 0es–0ev · `docs/sessions/2026-09-06-clips-as-they-are.md` ·
+test/clips.mjs 86 · `node tools/clipcheck.mjs` 15.
