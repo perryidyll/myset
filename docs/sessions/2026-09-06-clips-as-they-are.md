@@ -123,3 +123,74 @@ month.** Until then this is a note, not a task.
   **AND THE SOUND IS STILL IN IT** (rms 0.4227 out the far end).
 
 *`INVARIANTS.md` 0es–0ev.*
+
+---
+
+## Later the same day — the trimmer
+
+Perry sent the file he could not upload: `IMG_7426.MOV`, 27.5 seconds, **63.9MB**. An
+iPhone shooting 1080p HEVC put **2.3MB into every second**, so the 25MB limit bought
+him ten seconds. He asked for a trim screen shaped like the one iOS shows.
+
+### The only way to build it that does not reopen the silent-clip bug
+
+An MP4 is an **index plus a bag of samples**. `moov` says where every sample lives and
+when it plays; `mdat` is the bytes. So trimming is a library problem, not a video
+problem: choose the samples inside the window, copy those bytes untouched, write a new
+index pointing at their new positions. **The picture and the sound come out
+bit-identical, because nothing decodes them.**
+
+`public/mp4trim.js` — no dependencies, and the whole file is never read: box headers
+are found a few bytes at a time, only `moov` is read in full, and the trim reads only
+the ranges it keeps. A 500MB source costs about as much memory as the clip it makes.
+
+Three things that are each a bug if missed:
+
+- **The start snaps back to a keyframe.** Cutting anywhere else hands the decoder
+  samples that reference a frame it does not have — the smeared opening everyone has
+  seen. `snapStart` reports where it really landed so the screen can be honest.
+- **Samples are written in original file order**, preserving the camera's
+  interleaving. Grouping by track would still play, and would stall while streaming.
+- **One picture track and one sound track, nothing else.** Perry's file has **six
+  traks**: video, two audio (the second is Apple's spatial mix), and three timed
+  metadata. A metadata track can hold a single sample spanning the whole video, which
+  is what dragged an early build's output back to the full original length.
+
+The output also puts `moov` **before** `mdat` — faststart, free here because the index
+is being rewritten anyway, and the source almost never has it.
+
+### The screen
+
+Shaped like the one iOS shows, because that is the one people know. One addition:
+**the size, live and exact.** Nobody can guess megabytes from seconds, and finding out
+after a two-minute upload is the worst possible moment. It opens on a window that
+already fits rather than handing somebody an invalid state to puzzle out; over the
+limit the frame and the figure go red and *Use this* is disabled.
+
+`MAX_VIDEO_BYTES` went **25MB → 50MB**. At 25 his video gave 10 seconds; at 50 it gives
+19.1. The number being visible while somebody chooses is what makes a higher ceiling
+honest rather than reckless. The cost stands as written above: 50MB × 100 views is
+$0.65, against 2.7¢ for a whole three-hour gig. **R2 is still the answer if clips take
+off**, and it is what would make a bigger number free instead of expensive.
+
+### Tested on the actual file, all the way to production
+
+| step | result |
+|---|---|
+| trim screen opens, pre-set | 19.1 seconds · 46.6MB of 50MB |
+| uploaded to **production** | 12 pieces, 23.1 seconds |
+| server read the length | 19.1367s, out of the container |
+| served back | 46.5MB, **byte-identical** |
+| plays | 19.14s, sound rms 0.199 |
+| decoded by macOS AVFoundation | a frame of the gig, from the file production served |
+
+That last row is the one that matters most: `qlmanage` renders a real frame out of the
+finished clip, and AVFoundation is the same stack an iPhone uses.
+
+`test/trim.mjs` — 26 assertions, in `sh test/run.sh`. The fixture's sample *n* is a run
+of the byte *n*, so a trim is checked **at the byte**: following the new index into the
+new file proves both that the right samples were chosen and that the offsets point
+where the bytes actually are. `bytesFor` is asserted **exact**, and is byte-exact
+against the real 64MB `.MOV` across three different windows.
+
+*`INVARIANTS.md` 0ew–0ez.*

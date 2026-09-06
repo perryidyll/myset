@@ -2583,3 +2583,34 @@ times for nothing. Needs Perry's own Cloudflare setup; MySet's side is small bec
 
 `INVARIANTS.md` 0es–0ev · `docs/sessions/2026-09-06-clips-as-they-are.md` ·
 test/clips.mjs 86 · `node tools/clipcheck.mjs` 15.
+
+---
+
+# SESSION LOG — 2026-09-06c (trimming, without re-encoding)
+
+Perry sent the file he could not upload: `IMG_7426.MOV`, 27.5s, **63.9MB** — an iPhone
+putting 2.3MB into every second, so the 25MB cap bought ten seconds. He asked for an
+iOS-shaped trim screen.
+
+**The one approach that does not reopen the silent-clip bug:** an MP4 is an index plus
+a bag of samples, so trimming is a library problem. Pick the samples in the window,
+copy those bytes untouched, rewrite the index. Picture and sound come out
+bit-identical because nothing decodes them. `public/mp4trim.js`, no dependencies,
+never reads the whole file.
+
+Three non-optional details: the start snaps **back to a keyframe**; samples keep their
+**original file order** (the camera's interleaving); and only **one video + one audio**
+track survive — his file has six traks and a metadata track spanning the whole video
+dragged an early build's duration back to full length. Output is faststart.
+
+**The screen** shows the size **live and exact** and opens on a window that already
+fits. `MAX_VIDEO_BYTES` 25 → **50MB** (his video: 19.1s fits).
+
+**Verified end to end against production:** 12 pieces in 23.1s, server read 19.1367s
+out of the container, served back byte-identical, plays with sound, and `qlmanage`
+decodes a frame of the gig out of it — AVFoundation being the same stack an iPhone
+uses.
+
+`test/trim.mjs` 26 assertions (fixture sample *n* = a run of byte *n*, so trims are
+checked at the byte). `INVARIANTS.md` 0ew–0ez.
+`docs/sessions/2026-09-06-clips-as-they-are.md`.
