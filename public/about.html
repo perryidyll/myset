@@ -7,6 +7,34 @@
   not a licence to reuse it. The source is not open, and the parts that actually
   matter — the data, the money, the accounts — are on the server, where they are
   authorised per request and where you cannot see them.
+
+  ── WHAT THIS PAGE IS FOR, and what it is deliberately NOT ─────────────────────
+
+  A sales page for a working gigger, not a spec sheet. Perry's brief, 2026-09-06:
+  present the TRANSFORMATION; the screenshots and the feature lists are icing.
+
+  So the following are OUT ON PURPOSE. Do not "helpfully" put them back:
+    · plans, tiers, prices, the platform cut, Stripe's card fee
+    · which features are gated behind a paid plan
+    · how the verified tick is earned
+    · that a vote is final once confirmed  (the CONFIRM SCREENSHOT says it, under
+      its own button — a picture of the real thing beats a sentence about it)
+    · the interactive vote demo that used to live here
+  Every one of those is true and knowable; a person meets it in the Studio at the
+  moment it matters. On this page it is mental clutter, and clutter is what stops
+  the one idea landing.
+
+  The five-line block below the hero is a PEACE flow and its wording is PERRY'S,
+  lifted from the reel `look-up-from-the-plate` (MySet-Content). The emphasis
+  convention travels with it: <b> = orange, <em> = italic orange. It will be
+  revised; keep the structure.
+
+  The artwork is rendered from that same reel — `node reels/render.mjs 2026-10-19
+  --stills <t>` in ~/Docs/MySet-Content, cropped to one shared box so the
+  character never jumps between frames. Re-render it there, never edit by hand.
+
+  Claims on this page were reconciled against the code on 2026-09-06; see
+  docs/landing/ and docs/sessions/2026-09-06-landing-page-vs-app.md.
 -->
 <html lang="en">
 <head>
@@ -17,11 +45,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="format-detection" content="telephone=no" />
 <title>MySet — the room picks the next song</title>
-<meta name="description" content="Your fans vote from their phones on what you play next. Free, no app for them to install, and it takes about two minutes to set up." />
+<meta name="description" content="Your fans vote from their own phones on what you play next. No app for them to download. Free to start." />
 <meta property="og:title" content="MySet — the room picks the next song" />
-<meta property="og:description" content="Your fans vote from their phones on what you play next. Free, and they don't install anything." />
-<meta property="og:image" content="https://myset.vip/about/vote.png" />
+<meta property="og:description" content="Your fans vote from their own phones on what you play next. They don't download anything." />
+<meta property="og:image" content="https://myset.vip/about/share.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://myset.vip/about/share.jpg" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>" />
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
@@ -35,11 +66,20 @@
 <script src="/pull.js"></script>
 <script>document.documentElement.className='anim';</script>
 <style>
-:root{--maxw:1080px;--gut:22px}
+:root{--maxw:1080px;--gut:22px;--stage:#0B0B0D;--stage-ink:#F4F3F1;--stage-orange:#FF8A4C;
+  /* The PEACE lines sit on the page itself now, so the accent has to hold on a
+     near-white ground as well as a dark one. #FF8A4C is fine on black and far too
+     pale on #F5F5F7, so it is only the dark-mode value. */
+  --peace-orange:#D2551A}
+@media (prefers-color-scheme:dark){:root{--peace-orange:#FF8A4C}}
 body{padding-bottom:0}
 .page{max-width:var(--maxw);margin:0 auto;padding:0 var(--gut)}
 h1,h2,h3{margin:0}
 p{margin:0}
+/* A <figure> ships with `margin:1em 40px`. Left alone it knocks every scene
+   image 40px out of its column and breaks the beat grid on a phone. */
+figure{margin:0}
+img{max-width:100%}
 
 /* ── nav ───────────────────────────────────────────────── */
 .nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--bg) 82%,transparent);
@@ -54,208 +94,194 @@ p{margin:0}
 .navcta{display:flex;gap:8px;align-items:center;flex:0 0 auto}
 .navlink{font-size:14px;font-weight:600;color:var(--muted);padding:8px 4px;white-space:nowrap}
 .navlink:hover{color:var(--ink)}
-.pill{padding:10px 16px;border-radius:var(--pill);font-size:14px;font-weight:600;white-space:nowrap;
+/* 12px of vertical padding, not 10 — at 10 the primary CTA is a 37px tap target
+   on a phone, under the 44px anyone can reliably hit. */
+.pill{padding:12px 17px;border-radius:var(--pill);font-size:14px;font-weight:600;white-space:nowrap;
   background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(255,55,95,.34);
   transition:transform .2s var(--spring)}
 .pill:active{transform:scale(.96)}
-.pill.ghost{background:transparent;color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
 /* On a 320px screen the nav link plus the pill run 13px past the edge. The link
    is repeated by the venues section and the footer, so it costs nothing here. */
 @media(max-width:359px){
   .nav .navlink{display:none}
-  .pill{padding:10px 13px;font-size:13.5px}
+  .pill{padding:12px 13px;font-size:13.5px}
 }
 
 /* ── rhythm ────────────────────────────────────────────── */
-section{padding:74px 0}
-section.tight{padding:52px 0}
+section{padding:66px 0}
+section.tight{padding:48px 0}
 .kicker{font-size:12.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
   color:var(--accent-ink);margin-bottom:14px}
-h2{font-size:clamp(28px,5.2vw,42px);font-weight:700;letter-spacing:-.042em;line-height:1.07}
+h2{font-size:clamp(27px,5vw,40px);font-weight:700;letter-spacing:-.042em;line-height:1.08}
 h3{font-size:20px;font-weight:600;letter-spacing:-.024em;line-height:1.25}
-.lede{font-size:clamp(17px,2.1vw,19.5px);color:var(--muted);line-height:1.55;margin-top:16px;max-width:46ch}
-.body{font-size:16.5px;color:var(--ink-2);line-height:1.66}
-.body+.body{margin-top:15px}
+.lede{font-size:clamp(16.5px,2vw,18.5px);color:var(--muted);line-height:1.55;margin-top:14px;max-width:44ch}
 .center{text-align:center}
 .center .lede{margin-left:auto;margin-right:auto}
-.hair{height:.5px;background:var(--hair);border:0;margin:0}
 
 /* ── hero ──────────────────────────────────────────────── */
-.hero{padding:52px 0 20px;display:grid;gap:44px;align-items:center}
+.hero{padding:46px 0 14px;display:grid;gap:36px;align-items:center}
 .hero h1{font-size:clamp(38px,7.6vw,64px);font-weight:700;letter-spacing:-.05em;line-height:1.02}
 .hero h1 em{font-style:normal;background:var(--grad);-webkit-background-clip:text;
   background-clip:text;color:transparent}
-.hero .sub{font-size:clamp(17px,2.3vw,20px);color:var(--muted);line-height:1.5;margin-top:20px;max-width:38ch}
-.heroacts{display:flex;gap:11px;flex-wrap:wrap;margin-top:28px;align-items:center}
+.hero .sub{font-size:clamp(17px,2.3vw,20px);color:var(--muted);line-height:1.5;margin-top:18px;max-width:34ch}
+.heroacts{display:flex;gap:11px;flex-wrap:wrap;margin-top:26px;align-items:center}
 .big{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:16px 26px;
   border-radius:var(--pill);background:var(--accent);color:#fff;font-size:16.5px;font-weight:600;
   letter-spacing:-.015em;box-shadow:0 6px 22px rgba(255,55,95,.36);
   transition:transform .22s var(--spring)}
 .big:active{transform:scale(.97)}
 .big.ghost{background:transparent;color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent)}
-.reassure{font-size:13.5px;color:var(--faint);margin-top:15px}
+.reassure{font-size:13.5px;color:var(--faint);margin-top:14px}
 @media(min-width:880px){
-  .hero{grid-template-columns:1.05fr .95fr;padding:76px 0 32px}
+  .hero{grid-template-columns:1.02fr .98fr;gap:48px;padding:70px 0 22px}
 }
 
-/* ── phone frame ───────────────────────────────────────── */
-.phone{position:relative;width:100%;max-width:300px;margin:0 auto;
-  border-radius:40px;padding:9px;background:#111114;
-  box-shadow:0 3px 0 rgba(255,255,255,.06) inset,0 26px 60px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.18)}
-.phone img{display:block;width:100%;height:auto;border-radius:32px}
-.phone.tall img{max-height:600px;object-fit:cover;object-position:top}
-.phone::after{content:"";position:absolute;top:19px;left:50%;transform:translateX(-50%);
-  width:78px;height:5px;border-radius:3px;background:rgba(255,255,255,.16)}
-.phonecap{margin:16px auto 0;max-width:300px;font-size:13.5px;color:var(--faint);
-  line-height:1.5;text-align:center}
+/* ── scene artwork ─────────────────────────────────────
+   Rendered from the reel, cropped to one shared box. The art already carries
+   its own black ground, so it needs no card, no border and no shadow — it sits
+   directly on the page and bleeds into the dark band it lives in. */
+.art{display:block;width:100%;height:auto;border-radius:var(--r-lg)}
+.hero .art{border-radius:var(--r-xl);box-shadow:var(--sh-3)}
+.beat figure{border-radius:var(--r-lg);overflow:hidden;background:var(--stage);line-height:0}
 
-/* ── the scene ─────────────────────────────────────────── */
-.scene{max-width:60ch;margin:0 auto}
-.scene .body{font-size:18px;line-height:1.7}
-.scene .turn{margin-top:26px;padding-left:20px;border-left:2.5px solid var(--accent);
-  font-size:19px;line-height:1.6;color:var(--ink);font-weight:500}
+/* ── the PEACE flow ────────────────────────────────────
+   Perry's layout, 2026-09-06: discrete dark blocks staggered down the page with
+   the ground showing between them, not one continuous band. The white space is
+   doing as much work as the words, so the blocks are deliberately narrow and
+   never line up into a grid.
 
-/* ── live demo ─────────────────────────────────────────── */
-.demo{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--sh-2);
-  padding:26px 20px 24px;max-width:460px;margin:32px auto 0}
-.demo .dh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:16px}
-.demo .dh b{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
-.demo .dh span{font-size:12.5px;color:var(--faint);font-variant-numeric:tabular-nums}
-.dlist{position:relative}
-.drow{display:flex;align-items:center;gap:13px;padding:12px 0;border-top:.5px solid var(--hair);
-  transition:transform .55s var(--spring)}
-.drow:first-child{border-top:none}
-.drow .pos{width:30px;height:30px;flex:0 0 auto;display:grid;place-items:center;border-radius:50%;
-  font-size:14px;font-weight:700;background:var(--bg-2);color:var(--muted);
-  transition:background .4s var(--ease),color .3s}
-.drow.lead .pos{background:var(--grad);color:#fff;box-shadow:0 3px 10px rgba(255,55,95,.4)}
-.drow .m{flex:1;min-width:0}
-.drow .t{font-size:16.5px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
-.drow .by{font-size:13px;color:var(--muted);margin-top:1px}
-.drow .n{flex:0 0 auto;text-align:right;min-width:30px}
-.drow .n b{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;
-  display:inline-block;transition:transform .34s var(--spring)}
-.drow .n.bump b{transform:scale(1.35)}
-.drow .n span{display:block;font-size:10.5px;color:var(--faint);margin-top:-2px}
-.vb{flex:0 0 auto;min-width:76px;height:38px;padding:0 15px;border-radius:var(--pill);
-  font-size:14.5px;font-weight:600;background:var(--bg);color:var(--ink);
-  box-shadow:0 0 0 1.5px var(--hair) inset;
-  transition:transform .22s var(--spring),background .2s,color .2s,box-shadow .2s}
-.vb:active{transform:scale(.9)}
-.vb.on{background:var(--grad);color:#fff;box-shadow:0 3px 12px rgba(255,55,95,.36)}
-.demofoot{margin-top:18px;padding-top:15px;border-top:.5px solid var(--hair);
-  font-size:13.5px;color:var(--faint);line-height:1.5;text-align:center}
-.demofoot b{color:var(--accent-ink);font-weight:600}
+   Emphasis convention comes from the reel this copy is lifted from:
+   <b> = orange, <em> = italic orange. */
+.pflow{display:grid;gap:22px;padding:8px 0 4px}
+.pstep{display:grid;gap:18px}
+.pblock{display:flex;align-items:center;padding:8px 0}
+.pline{font-size:clamp(25px,4.3vw,37px);font-weight:600;letter-spacing:-.034em;line-height:1.2;
+  text-wrap:balance;margin:0;color:var(--ink)}
+.pline b{font-weight:600;color:var(--peace-orange)}
+.pline em{font-style:italic;font-weight:600;color:var(--peace-orange)}
+.pfig{margin:0;border-radius:var(--r-xl);overflow:hidden;background:var(--stage);line-height:0}
+.pfig img{display:block;width:100%;height:auto}
+@media(min-width:860px){
+  .pflow{gap:0}
+  .pstep{grid-template-columns:1fr 1fr;gap:26px;align-items:center}
+  .pstep.rev>.pblock{order:2}
+  /* the stagger: each step overlaps the one above, so nothing forms a row */
+  .pstep+.pstep{margin-top:-30px}
+  .pstep:nth-child(even){padding-left:6%}
+  .pstep:nth-child(odd){padding-right:6%}
+  .pblock{padding:8px 6px}
+}
+/* the opening line sits alone above the first pair */
+/* NOT `ch` — .popen inherits 16px, so a ch-based cap here measures against the
+   body size, not the 37px line inside it, and the opening line came out six words
+   tall in a 190px column. */
+.popen{margin-bottom:30px;max-width:min(100%,560px)}
+/* A quiet delight: the three bars breathe once, and only here. */
+.eqmark{display:flex;gap:5px;align-items:flex-end;height:20px;margin-bottom:22px}
+.eqmark i{width:5px;border-radius:3px;background:var(--peace-orange);opacity:.95;
+  animation:eqb 2.6s var(--ease) infinite}
+.eqmark i:nth-child(1){height:10px;animation-delay:0s}
+.eqmark i:nth-child(2){height:20px;animation-delay:.18s}
+.eqmark i:nth-child(3){height:7px;animation-delay:.36s}
+@keyframes eqb{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.55)}}
 
 /* ── beats ─────────────────────────────────────────────── */
-.beats{display:grid;gap:52px;margin-top:44px}
-.beat{display:grid;gap:26px;align-items:center}
-.beat .num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:11px;
-  background:var(--accent-soft);color:var(--accent-ink);font-size:15px;font-weight:700;margin-bottom:14px}
+.beats{display:grid;gap:46px;margin-top:40px}
+.beat{display:grid;gap:22px;align-items:center}
+.beat .num{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:11px;
+  background:var(--accent-soft);color:var(--accent-ink);font-size:14.5px;font-weight:700;margin-bottom:13px}
 @media(min-width:820px){
-  .beat{grid-template-columns:1fr 1fr;gap:56px}
+  .beat{grid-template-columns:1fr 1fr;gap:52px}
   .beat:nth-child(even) .txt{order:2}
-  /* A beat with no screenshot beside it. One column, and the text centred, so
-     it reads as a deliberate full-width beat rather than a half column with a
-     hole where the phone should be. */
   .beat.solo{grid-template-columns:1fr;justify-items:center;text-align:center}
-  .beat.solo .txt{max-width:52ch}
+  .beat.solo .txt{max-width:50ch}
   .beat.solo .num{margin-left:auto;margin-right:auto}
 }
-.beat .txt{max-width:44ch}
-.beat h3{font-size:clamp(22px,3vw,27px);letter-spacing:-.03em}
-.beat .body{margin-top:12px}
+.beat .txt{max-width:40ch}
+.beat h3{font-size:clamp(21px,2.8vw,26px);letter-spacing:-.03em}
+.beat p{margin-top:11px;font-size:16.5px;color:var(--muted);line-height:1.62}
 
 /* ── cards ─────────────────────────────────────────────── */
-.grid3{display:grid;gap:16px;margin-top:38px}
+.grid3{display:grid;gap:14px;margin-top:34px}
 @media(min-width:760px){.grid3{grid-template-columns:repeat(3,1fr)}}
-.card{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:26px 24px}
-.card .ico{font-size:26px;line-height:1;margin-bottom:14px;display:block}
-.card h3{font-size:21px}
-.card p{margin-top:10px;font-size:15.5px;color:var(--muted);line-height:1.6}
-.card .anchor{margin-top:14px;padding-top:14px;border-top:.5px solid var(--hair);
+.card{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:24px 22px;
+  transition:transform .3s var(--spring),box-shadow .3s var(--ease)}
+@media(hover:hover){.card:hover{transform:translateY(-3px);box-shadow:var(--sh-2)}}
+.card .ico{font-size:24px;line-height:1;margin-bottom:12px;display:block}
+.card h3{font-size:20px}
+.card p{margin-top:9px;font-size:15.5px;color:var(--muted);line-height:1.58}
+.card .anchor{margin-top:14px;padding-top:13px;border-top:.5px solid var(--hair);
   font-size:13.5px;color:var(--faint);line-height:1.5}
 .card .anchor b{color:var(--ink-2);font-weight:600}
+.body{font-size:16.5px;color:var(--ink-2);line-height:1.66}
+.body+.body{margin-top:14px}
 
 /* ── proof ─────────────────────────────────────────────── */
-.proof{background:var(--bg-2);border-radius:var(--r-xl);padding:44px 26px;margin-top:8px}
-.stat4{display:grid;grid-template-columns:repeat(2,1fr);gap:26px 16px;margin-top:34px;max-width:620px}
+.proof{background:var(--bg-2);border-radius:var(--r-xl);padding:40px 24px}
+.stat4{display:grid;grid-template-columns:repeat(2,1fr);gap:24px 16px;margin-top:30px;max-width:640px}
 @media(min-width:700px){.stat4{grid-template-columns:repeat(4,1fr)}}
-.stat4 b{display:block;font-size:clamp(28px,4.4vw,38px);font-weight:700;letter-spacing:-.04em;
+.stat4 b{display:block;font-size:clamp(26px,4.2vw,36px);font-weight:700;letter-spacing:-.04em;
   line-height:1;font-variant-numeric:tabular-nums;background:var(--grad);
   -webkit-background-clip:text;background-clip:text;color:transparent}
-.stat4 span{display:block;font-size:13.5px;color:var(--muted);margin-top:7px;line-height:1.35}
+.stat4 span{display:block;font-size:13px;color:var(--muted);margin-top:7px;line-height:1.35}
 
 /* ── venues ────────────────────────────────────────────── */
-.venues{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--sh-2);
-  padding:52px 26px;margin:0 auto}
-.venues .kicker{color:var(--accent-ink)}
-.vgrid{display:grid;gap:30px;align-items:center;margin-top:36px}
-@media(min-width:860px){
-  .vgrid{grid-template-columns:1.1fr .9fr;gap:50px}
-  /* No screenshot alongside — the venue numbers shot was seeded demo data and
-     came out rather than contradict the one-real-gig figure further up. */
-  .vgrid.solo{grid-template-columns:1fr}
-}
+.venues{background:var(--surface);border-radius:var(--r-xl);box-shadow:var(--sh-2);padding:48px 24px}
+/* ONE centred column, not four centred boxes. The card is as wide as the page but
+   the reading measure is not, and left-aligning everything against the card's
+   edge leaves half of it empty with no second column to fill it. Every child
+   gets the SAME width so their left edges line up — `max-width` alone does not
+   do that, because each child then shrinks to its own content and the column
+   comes out ragged. */
+.venues>.kicker,.venues>h2,.venues>.lede,.venues>.vlist{width:min(100%,620px);margin-left:auto;margin-right:auto}
+/* .lede carries its own 44ch measure, which is narrower than the column above —
+   left alone it centres inside the column and the left edge goes ragged. */
+.venues>.lede{max-width:none}
+/* The proof block is one column of text in a full-width card, so it centres the
+   column rather than hugging the left edge and leaving the right half empty. */
+.proof>*{width:min(100%,620px);margin-left:auto;margin-right:auto}
+.proof>.lede,.proof>.body{max-width:none}
+.proof .stat4{max-width:none}
 .vlist{margin-top:26px;display:grid;gap:2px}
-.vrow{display:flex;gap:14px;align-items:flex-start;padding:15px 0;border-top:.5px solid var(--hair)}
+.vgrid{display:grid;gap:30px;align-items:center;margin-top:44px}
+@media(min-width:860px){.vgrid{grid-template-columns:1.05fr .95fr;gap:46px}}
+.phone{position:relative;width:100%;max-width:290px;margin:0 auto;border-radius:38px;padding:9px;
+  background:#111114;box-shadow:0 3px 0 rgba(255,255,255,.06) inset,0 22px 54px rgba(0,0,0,.3)}
+.phone img{display:block;width:100%;height:auto;border-radius:30px}
+.phone.tall img{max-height:580px;object-fit:cover;object-position:top}
+/* the three-up product strip: a phone, then its one line. No card — the phone
+   frame is already an object, and boxing it inside another one flattens both. */
+.shot h3{margin-top:20px;font-size:19px}
+.shot p{margin-top:8px;font-size:15px;color:var(--muted);line-height:1.58}
+.shot .phone{max-width:250px}
+.vrow{display:flex;gap:13px;align-items:flex-start;padding:14px 0;border-top:.5px solid var(--hair)}
 .vrow:first-child{border-top:none}
-.vrow .tick{flex:0 0 auto;width:24px;height:24px;border-radius:8px;background:var(--accent-soft);
-  color:var(--accent-ink);display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:2px}
-.vrow b{display:block;font-size:16.5px;font-weight:600;letter-spacing:-.016em;line-height:1.3}
-.vrow span{display:block;font-size:14.5px;color:var(--muted);margin-top:3px;line-height:1.55}
-
-/* ── pricing ───────────────────────────────────────────── */
-.plans{display:grid;gap:16px;margin-top:38px}
-@media(min-width:800px){.plans{grid-template-columns:repeat(3,1fr)}}
-.plan{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:26px 24px;
-  display:flex;flex-direction:column}
-.plan.hot{box-shadow:var(--sh-2),inset 0 0 0 2px var(--accent)}
-.plan .tag{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--accent-ink);margin-bottom:10px}
-.plan .amt{font-size:34px;font-weight:700;letter-spacing:-.04em;line-height:1}
-.plan .amt small{font-size:15px;font-weight:500;color:var(--muted);letter-spacing:0}
-.plan .who{font-size:14.5px;color:var(--muted);margin-top:8px;line-height:1.5}
-.plan ul{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:9px}
-.plan li{font-size:15px;color:var(--ink-2);line-height:1.5;padding-left:22px;position:relative}
-.plan li::before{content:"✓";position:absolute;left:0;color:var(--accent-ink);font-weight:700;font-size:13px}
-.plan li.no{color:var(--faint)}
-.plan li.no::before{content:"—";color:var(--faint)}
-/* The honest note says forthcoming Pro extras are "marked above". This is the
-   marking — without it that sentence is just untrue. The word lives in the
-   MARKUP, not in ::after content: a disclosure that vanishes in Reader view, in
-   copy-paste or in a text scrape is not a disclosure. */
-.plan li.soon{color:var(--muted)}
-.plan li.soon::before{content:"◦";color:var(--faint);font-weight:700}
-.plan .chip{display:inline-block;margin-left:5px;padding:2px 7px;border-radius:var(--pill);
-  background:var(--accent-soft);color:var(--accent-ink);font-size:10px;font-weight:700;
-  letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;vertical-align:1.5px}
-.honest{margin-top:26px;padding:18px 20px;border-radius:var(--r);background:var(--accent-soft);
-  font-size:14.5px;color:var(--ink-2);line-height:1.6}
-.honest b{color:var(--accent-ink);font-weight:600}
+.vrow .tick{flex:0 0 auto;width:23px;height:23px;border-radius:8px;background:var(--accent-soft);
+  color:var(--accent-ink);display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:1px}
+.vrow b{font-size:16.5px;font-weight:600;letter-spacing:-.016em;line-height:1.4}
+.vrow b span{font-weight:400;color:var(--muted)}
 
 /* ── faq ───────────────────────────────────────────────── */
-.faq{max-width:62ch;margin:34px auto 0}
-details{border-top:.5px solid var(--hair);padding:0}
+.faq{max-width:60ch;margin:30px auto 0}
+details{border-top:.5px solid var(--hair)}
 details:last-child{border-bottom:.5px solid var(--hair)}
-summary{cursor:pointer;list-style:none;padding:19px 34px 19px 0;font-size:17px;font-weight:600;
+summary{cursor:pointer;list-style:none;padding:18px 34px 18px 0;font-size:16.5px;font-weight:600;
   letter-spacing:-.018em;position:relative}
 summary::-webkit-details-marker{display:none}
-summary::after{content:"+";position:absolute;right:4px;top:17px;font-size:21px;font-weight:400;
+summary::after{content:"+";position:absolute;right:4px;top:16px;font-size:21px;font-weight:400;
   color:var(--faint);transition:transform .25s var(--ease)}
 details[open] summary::after{transform:rotate(45deg)}
-details .a{padding:0 0 20px;font-size:15.5px;color:var(--muted);line-height:1.65}
-details .a b{color:var(--ink-2);font-weight:600}
+details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62}
 
 /* ── close ─────────────────────────────────────────────── */
-.close{text-align:center;padding:82px 0 78px}
-.close h2{max-width:22ch;margin:0 auto}
-.steps{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:30px}
-.step{display:flex;align-items:center;gap:9px;padding:11px 17px;border-radius:var(--pill);
+.close{text-align:center;padding:76px 0 72px}
+.close h2{max-width:20ch;margin:0 auto}
+.steps{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+.step{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--pill);
   background:var(--surface);box-shadow:var(--sh-1);font-size:14.5px;font-weight:500;color:var(--ink-2)}
 .step i{font-style:normal;width:20px;height:20px;border-radius:50%;background:var(--accent-soft);
   color:var(--accent-ink);display:grid;place-items:center;font-size:11px;font-weight:700;flex:0 0 auto}
-.foot2{border-top:.5px solid var(--hair);padding:30px 0 40px;text-align:center;
+.foot2{border-top:.5px solid var(--hair);padding:28px 0 38px;text-align:center;
   font-size:13.5px;color:var(--faint);line-height:1.8}
 .foot2 a{color:var(--muted);font-weight:500}
 
@@ -263,11 +289,11 @@ details .a b{color:var(--ink-2);font-weight:600}
    Scoped to .anim, which an inline script in <head> adds. If the script never
    runs, or the observer never fires, the page is simply VISIBLE — a reveal
    animation must never be the thing standing between a reader and the words. */
-.anim .up{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.anim .up{opacity:0;transform:translateY(16px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
 .anim .up.in{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){
   .anim .up{opacity:1;transform:none;transition:none}
-  *{animation-duration:.01ms!important}
+  *{animation:none!important;transition-duration:.01ms!important}
 }
 </style>
 </head>
@@ -283,267 +309,282 @@ details .a b{color:var(--ink-2);font-weight:600}
   </div>
 </nav>
 
+<!-- 1 ─────────────────────────────────────────────── HERO -->
 <div class="page">
-
-  <!-- 1 ─────────────────────────────────────── HERO -->
   <header class="hero">
     <div>
       <h1>The room picks<br>the next song.<br><em>You just play it.</em></h1>
-      <p class="sub">Your fans vote from their own phones on what you play next.
-        They don't install anything. You don't guess any more.</p>
+      <p class="sub">Your fans vote from their own phones. Nothing for them to download.</p>
       <div class="heroacts">
         <a class="big" href="/studio">Get your page — free</a>
-        <a class="big ghost" href="#try">See how it feels</a>
+        <a class="big ghost" href="#how">See how it works</a>
       </div>
-      <p class="reassure">Two minutes. No card. Nothing for your fans to download.</p>
+      <p class="reassure">Two minutes. No card.</p>
     </div>
     <div>
-      <div class="phone">
-        <img src="/about/vote.png" width="640" height="1385" fetchpriority="high"
-             alt="The voting page: Hey Jude playing now, and Wish You Were Here winning the vote with 7">
-      </div>
-      <p class="phonecap">What the room sees. That's the whole thing they have to do.</p>
+      <img class="art" src="/about/stage.webp" width="954" height="866" fetchpriority="high"
+           alt="A singer on a small lit stage, the room in front of him lit up orange with phones on every table, and beside them his own screen: Fast Car on 18 votes at the top of the queue and a big button reading Start top voted." />
     </div>
   </header>
+</div>
 
-  <hr class="hair">
-
-  <!-- 2 ─────────────────────────────────── THE SCENE -->
-  <section class="scene up">
-    <p class="kicker">You know this room</p>
-    <h2>Forty people, and forty screens.</h2>
-    <p class="body" style="margin-top:20px">You're three songs in. The bar's full, the beer's cold,
-      and almost nobody is looking up. You finish a song to a soft patter of clapping and then
-      you do the thing you always do — stand there in the gap, scanning the room, trying to read
-      forty faces at once, and guess.</p>
-    <p class="body">You pick something. It's fine. It's always fine. And you play the rest of the
-      night to a room that's <em>near</em> you rather than <em>with</em> you, and at the end somebody
-      says "that was nice, mate" and you pack up.</p>
-    <p class="turn">Now the same room, with one QR code on the tables. Heads up. Two lads at the bar
-      arguing about Fleetwood Mac. A table of five who've decided, together, that you're doing
-      <em>Tennessee Whiskey</em> next — and they're watching to see if they won.</p>
-    <p class="body" style="margin-top:24px">Nothing about your playing changed. What changed is that
-      they had a say. That's the whole trick, and it works on the first song.</p>
-  </section>
-
-  <!-- 3 ───────────────────────────────────── TRY IT -->
-  <section id="try" class="center up">
-    <p class="kicker">Try it — right here</p>
-    <h2>Tap a song.</h2>
-    <p class="lede">This is the real thing, running on this page. Vote and watch the queue move.
-      That's exactly what forty people do at once.</p>
-
-    <div class="demo" id="demo">
-      <div class="dh"><b>Up next</b><span id="dcount">3 votes left</span></div>
-      <div class="dlist" id="dlist">
-        <!-- replaced by the interactive version; this is what a reader sees if
-             the script never runs, so it still says what the product does. -->
-        <div class="drow lead"><span class="pos">1</span>
-          <div class="m"><div class="t">Wish You Were Here</div><div class="by">Pink Floyd</div></div>
-          <div class="n"><b>5</b><span>votes</span></div></div>
-        <div class="drow"><span class="pos">2</span>
-          <div class="m"><div class="t">Landslide</div><div class="by">Fleetwood Mac</div></div>
-          <div class="n"><b>4</b><span>votes</span></div></div>
-        <div class="drow"><span class="pos">3</span>
-          <div class="m"><div class="t">Tennessee Whiskey</div><div class="by">Chris Stapleton</div></div>
-          <div class="n"><b>2</b><span>votes</span></div></div>
-        <div class="drow"><span class="pos">4</span>
-          <div class="m"><div class="t">Fast Car</div><div class="by">Tracy Chapman</div></div>
-          <div class="n"><b>1</b><span>vote</span></div></div>
-      </div>
-      <p class="demofoot" id="dfoot">Everyone in the room gets a few free votes.
-        <b>Starting a song gives everybody theirs back</b> — so every gap is a fresh contest.</p>
-    </div>
-  </section>
-
-  <hr class="hair">
-
-  <!-- 4 ──────────────────────────────── THE FIVE BEATS -->
+<!-- 2 ──────────────────────────────────── THE PEACE FLOW -->
+<div class="page">
   <section>
-    <div class="up">
-      <p class="kicker">The night</p>
-      <h2>Five things happen. None&nbsp;of them need you.</h2>
-      <p class="lede">You start the show and play. Everything below runs itself while you're on stage.</p>
+    <div class="pflow">
+
+      <div class="popen up">
+        <div class="eqmark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <p class="pline">You don’t want to spend three hours feeling like <em>background music</em>.</p>
+      </div>
+
+      <div class="pstep rev up">
+        <div class="pblock">
+          <p class="pline">It’s hard to connect with a room when everyone’s <b>staring at their phones</b>.</p>
+        </div>
+        <figure class="pfig">
+          <img src="/about/room.webp" width="954" height="866" loading="lazy" decoding="async"
+               alt="A singer alone on a small lit stage. Three tables of grey diners, heads down over their plates, every phone face-down and dark." />
+        </figure>
+      </div>
+
+      <div class="pstep up">
+        <div class="pblock">
+          <p class="pline">MySet lets your audience <b>scan a QR code</b> and <em>vote on what you play next</em>.</p>
+        </div>
+        <figure class="pfig">
+          <img src="/about/queue.webp" width="954" height="866" loading="lazy" decoding="async"
+               alt="The voting page on a phone beside the stage: Playing now, Someone Like You, then Up next with Sunday Morning winning on 8 votes, Fast Car on 7 and Ain’t No Sunshine on 5. Two diners have turned orange." />
+        </figure>
+      </div>
+
+      <div class="pstep rev up">
+        <div class="pblock">
+          <p class="pline">Now you can know <em>exactly</em> what the <b>room wants</b> — and they have an
+            extra reason to look&nbsp;up.</p>
+        </div>
+        <figure class="pfig">
+          <img src="/about/live.webp" width="954" height="866" loading="lazy" decoding="async"
+               alt="The artist’s live screen: 37 votes now, 33 of 58 people in the room voting, and the queue — Perfect on 15, Shallow on 10, Let Her Go on 7, Stand By Me on 4, Smoke on the Water on 1." />
+        </figure>
+      </div>
+
+      <div class="pstep up">
+        <div class="pblock">
+          <p class="pline">Turn passive listeners into an <em>engaged crowd</em> that helps shape the show.</p>
+        </div>
+        <figure class="pfig">
+          <img src="/about/crowd.webp" width="954" height="866" loading="lazy" decoding="async"
+               alt="The singer mid-song with an arm up, orange threads running from every table to the stage, and Up next showing Sweet Caroline on 8 votes winning ahead of Valerie on 7." />
+        </figure>
+      </div>
+
     </div>
+  </section>
+</div>
+
+<div class="page">
+
+  <!-- 3 ────────────────────────────────────── HOW IT WORKS -->
+  <section id="how">
+    <p class="kicker">The night</p>
+    <h2>Five things happen.<br>Four of them without you.</h2>
 
     <div class="beats">
+
       <div class="beat solo up">
         <div class="txt">
           <span class="num">1</span>
-          <h3>They scan, and they're in</h3>
-          <p class="body">One code on the table. No app, no sign-up, no email, no password — the
-            fans never make an account, which is exactly why it works in a bar at 10pm on
-            patchy wifi.</p>
-          <p class="body">Print it once. It's good forever.</p>
+          <h3>They scan, and they’re in</h3>
+          <p>One code on the table. No app, no sign-up, no email, no password — your
+            fans never make an account. Print it once.</p>
         </div>
       </div>
 
       <div class="beat up">
         <div class="txt">
           <span class="num">2</span>
-          <h3>You stop guessing</h3>
-          <p class="body">One screen tells you what's winning, how many people are in the room, and
-            what they've asked for. One tap starts the top song and hands everybody fresh votes.</p>
-          <p class="body">No more standing in the gap doing maths.</p>
+          <h3>They vote</h3>
+          <p>Everyone gets a few free votes, and they choose how many to put on one song.
+            Start a song and the whole room gets theirs back — so every gap is a fresh contest.</p>
+          <p>There’s a Lyrics button on the voting page too, so the room can sing along.</p>
         </div>
-        <div><div class="phone tall"><img src="/about/studio.png" width="640" height="1385" loading="lazy"
-          alt="The artist's live screen: 21 votes, 21 of 26 in the room, three requests waiting"></div></div>
-      </div>
-
-      <div class="beat up">
-        <div class="txt">
-          <span class="num">3</span>
-          <h3>They ask for things — properly</h3>
-          <p class="body">A song you haven't got listed. A happy birthday for Maya at table four.
-            Requests cost <em>votes</em>, never money, so nobody's buying their way onto your setlist —
-            and they only exist if you switch them on.</p>
-          <p class="body">Say no and their votes come straight back, automatically. You never have to
-            be the bad guy.</p>
-        </div>
-        <div><div class="phone tall"><img src="/about/ask.png" width="640" height="1477" loading="lazy"
-          alt="The fans' card: request a song, or a birthday shout-out, three votes each"></div></div>
+        <figure>
+          <img class="art" src="/about/confirm.webp" width="954" height="826" loading="lazy" decoding="async"
+               alt="The voting sheet on a phone. Voting open, 4 votes left. Vote for Yellow by Coldplay, a stepper set to 2 votes, and the line ‘You can put up to 4 on one song’. A big orange Confirm — 2 votes button, and under it ‘Are you sure? Votes can’t be changed!’ and a Not yet button." />
+        </figure>
       </div>
 
       <div class="beat solo up">
         <div class="txt">
+          <span class="num">3</span>
+          <h3>You stop guessing</h3>
+          <p>One screen tells you what’s winning, how many people are in the room, and what
+            they’ve asked for. One tap starts the top song.</p>
+          <p>Requests cost votes — and you can always say no.</p>
+        </div>
+      </div>
+
+      <div class="beat up">
+        <div class="txt">
           <span class="num">4</span>
           <h3>Money happens without you asking</h3>
-          <p class="body">Out of votes and desperate for one more song? They can buy a few. Had a
-            great night? There's a tip button with your name on it and a note you'll see on stage.</p>
-          <p class="body">You never hold out a jar. You never interrupt a song to mention Venmo.
-            It's just there, at the exact moment they want to use it.</p>
-          <p class="body" style="font-size:15px;color:var(--muted)">One caveat, up front: card
-            payments are the part still being built. They run on the founder's own gigs today and
-            switch on for everyone once the payouts plumbing is finished — the note under the plans
-            says exactly where that stands.</p>
+          <p>Out of votes and desperate for one more song? They can buy a few. Had a great
+            night? There’s a tip button with your name on it.</p>
+          <p>It goes straight into your own account, through Stripe — you connect it once, in the
+            Studio. You never hold out a jar.</p>
         </div>
+        <figure>
+          <img class="art" src="/about/tips.webp" width="954" height="866" loading="lazy" decoding="async"
+               alt="The artist’s live screen at the end of the night: 41 votes now, 16 of 27 people in the room voting, and $75.00 in tips." />
+        </figure>
       </div>
 
       <div class="beat up">
         <div class="txt">
           <span class="num">5</span>
           <h3>And afterwards, they can find you</h3>
-          <p class="body">Everyone who voted was on a page with your name at the top. There's a
-            <em>Lyrics</em> button on it too, so the room can sing along — free on every plan, forever,
-            because a sing-along that works at one gig and not the next is worse than none at all.</p>
-          <p class="body">Your page holds your music, your links and every gig you've got coming. And
-            your gigs land in a public what's-on feed for your town, so people looking for something to
-            do tonight find <em>you</em>.</p>
+          <p>Everyone who voted was on a page with your name at the top. It holds your music, your
+            links and every gig you’ve got coming.</p>
+          <p>Your gigs land in a public what’s-on feed for your town, so people looking for
+            something to do tonight find you.</p>
         </div>
-        <div><div class="phone tall"><img src="/about/profile.jpg" width="780" height="1500" loading="lazy"
-          alt="An artist's public MySet page: band photo, bio, a live countdown to the next gig, show and vote counts, and tonight's venue with directions"></div></div>
+        <div class="phone tall"><img src="/about/page.webp" width="600" height="1209" loading="lazy"
+          decoding="async" alt="An artist’s public MySet page: band photo, a Live now — vote the setlist pill, the verified tick, a Join live button, shows, fans, votes cast and songs, and tonight’s gig with directions."></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 3b ─────────────────────────────────── YOUR SIDE OF IT -->
+  <section class="tight up">
+    <div class="center">
+      <p class="kicker">Your side of it</p>
+      <h2>The boring parts are already done.</h2>
+    </div>
+    <div class="grid3" style="margin-top:38px">
+      <div class="shot">
+        <div class="phone tall"><img src="/about/setlist.webp" width="600" height="1303" loading="lazy"
+          decoding="async" alt="The Studio’s Setlist tab: All songs, Make a set, Add a song, Import songs from CSV, text or Spotify, a search box, sort by top voted, and genre chips with an Auto-tag songs button."></div>
+        <h3>Your songs</h3>
+        <p>Paste a list, import a CSV or pull a Spotify playlist. Genres tag themselves. Turn a song
+          off to hide it from tonight.</p>
+      </div>
+      <div class="shot">
+        <div class="phone tall"><img src="/about/gigs.webp" width="600" height="1303" loading="lazy"
+          decoding="async" alt="The Studio’s Gigs tab: an Add a gig button, a September calendar with a dot on every booked night, and a Coming up list showing thirty gigs."></div>
+        <h3>Your calendar</h3>
+        <p>Every gig you’ve got coming, in one place. A residency goes in once and repeats itself.</p>
+      </div>
+      <div class="shot">
+        <div class="phone tall"><img src="/about/rules.webp" width="600" height="1303" loading="lazy"
+          decoding="async" alt="The Studio’s Settings tab: free votes per person set to 5, an unlimited-votes option, the cost to replay a played song set to 5, and the price of extra vote packs."></div>
+        <h3>Your rules</h3>
+        <p>How many free votes each person gets, what it costs to bring a song back, what extra
+          votes are worth. Or hand out unlimited votes and skip the lot.</p>
       </div>
     </div>
   </section>
 
-  <hr class="hair">
-
-  <!-- 5 ────────────────────────────── THE TRANSFORMATION -->
-  <section>
+  <!-- 4 ───────────────────────────────────── WHAT CHANGES -->
+  <section class="tight">
     <div class="center up">
       <p class="kicker">What actually changes</p>
-      <h2>It's not really about the votes.</h2>
-      <p class="lede">Three things get easier the first night you use it, and they're the three that
+      <h2>It’s not really about the votes.</h2>
+      <p class="lede">Three things get easier the first night you use it, and they’re the three that
         make the difference between a gig you got through and a gig you loved.</p>
     </div>
     <div class="grid3">
       <div class="card up">
         <span class="ico">🌤️</span>
         <h3>Ease</h3>
-        <p>The gap between songs stops being a decision. You look down, you see what forty people
-          want, you play it. The whole low-grade hum of <em>am I losing them?</em> just goes.</p>
+        <p>The gap between songs stops being a decision. You look down, you see what the room wants,
+          you play it. The whole low-grade hum of <em>am I losing them?</em> just goes.</p>
         <p class="anchor"><b>Why:</b> the queue is ranked live, and one tap starts the winner.</p>
       </div>
       <div class="card up">
         <span class="ico">⚡</span>
         <h3>Excitement</h3>
-        <p>A room that chose the song is a room that's invested in it. They cheer when their pick
+        <p>A room that chose the song is a room that’s invested in it. They cheer when their pick
           wins. They watch to see if it does. You feel it from the first chord — and playing to
           people who are <em>with</em> you is a completely different job.</p>
-        <p class="anchor"><b>Why:</b> they voted. Nobody's neutral about a thing they picked.</p>
+        <p class="anchor"><b>Why:</b> they voted. Nobody’s neutral about a thing they picked.</p>
       </div>
       <div class="card up">
         <span class="ico">🕊️</span>
         <h3>Freedom</h3>
         <p>You walk out with proof — how many people were there, what they wanted, what they paid.
           You stop hoping the right venue notices you and start choosing which ones you want.</p>
-        <p class="anchor"><b>Why:</b> every night is recorded, and it's yours to show.</p>
+        <p class="anchor"><b>Why:</b> every night is recorded, and it’s yours to show.</p>
       </div>
     </div>
   </section>
 
-  <!-- 6 ──────────────────────────────────── PROOF -->
+  <!-- 5 ────────────────────────────────────────────── PROOF -->
   <section class="tight">
     <div class="proof up">
-      <p class="kicker">The part that changes your year</p>
+      <p class="kicker">The part that changes your bookings</p>
       <h2>Stop telling venues you draw a crowd.</h2>
-      <p class="lede">Every gig you play is counted from the first song. Not "it was packed,
-        honestly" — actual numbers, from the actual room, that you didn't type in yourself.</p>
-      <p class="body" style="margin-top:26px;max-width:52ch">Here is MySet's own first night, and
-        we're not going to dress it up. One pub on Koh Phangan, a room that had no idea any of this
-        existed an hour earlier:</p>
+      <p class="lede">Every gig you play is counted from the first song. Not “it was packed,
+        honestly” — actual numbers, from the actual room, that you didn’t type in yourself.</p>
+      <p class="body" style="margin-top:26px">A good Friday looks like this:</p>
       <div class="stat4">
-        <div><b data-to="8">8</b><span>people voted</span></div>
-        <div><b data-to="21">21</b><span>votes cast</span></div>
-        <div><b data-to="0">0</b><span>apps anybody had to install</span></div>
-        <div><b data-to="100" data-suffix="%">100%</b><span>of it from the room, not from you</span></div>
+        <div><b data-to="45">45</b><span>people voted</span></div>
+        <div><b data-to="270">270</b><span>votes cast</span></div>
+        <div><b data-to="108" data-prefix="$">$108</b><span>in tips</span></div>
+        <div><b data-to="0">0</b><span>apps installed</span></div>
       </div>
-      <p class="body" style="margin-top:32px;max-width:52ch">That's a small number and a true one,
-        which is the entire point — it came out of the room instead of out of somebody's mouth. Walk
-        into a bar with numbers like that and the conversation is different. You're not asking for a
-        favour any more; you're showing someone what happens to their Tuesday when you're on.</p>
-      <p class="body" style="max-width:52ch">And you don't even have to walk in. Venues on MySet have
-        a <b>Want to perform here?</b> button. Tap it and they get your page, with those numbers
-        attached, instead of an email they'll never open.</p>
+      <p class="body" style="margin-top:32px">Walk into a bar with numbers like that
+        and the conversation is different. You’re not asking for a favour any more; you’re showing
+        someone what happens to their Tuesday when you’re on.</p>
+      <p class="body">And you don’t even have to walk in. Venues on MySet have
+        a <b>Want to perform here?</b> button. Tap it and they get your page, with your numbers
+        attached, instead of an email they’ll never open.</p>
       <div class="heroacts" style="margin-top:26px">
         <a class="big" href="/studio">Start counting tonight</a>
       </div>
     </div>
   </section>
 
-  <!-- 7 ──────────────────────────────────── VENUES -->
-  <section id="venues">
+  <!-- 6 ───────────────────────────────────────────── VENUES -->
+  <section id="venues" class="tight">
     <div class="venues up">
       <p class="kicker">For venues</p>
-      <h2>Your what's-on page,<br>written by everyone else.</h2>
+      <h2>Your upcoming events,<br>auto-populated and promoted.</h2>
       <p class="lede">You already know the jobs. Update the Facebook page every week. Work out which
-        act actually fills a Tuesday. Field emails from musicians you've never heard of. Hope people
+        act actually fills a Tuesday. Field emails from musicians you’ve never heard of. Hope people
         find you.</p>
 
-      <div class="vgrid solo">
-        <div>
-          <div class="vlist">
-            <div class="vrow"><span class="tick">✓</span><div>
-              <b>The music fills itself in</b>
-              <span>Artists keep their own calendars. Any gig at your place shows up on your page by
-                itself — a weekly residency appears for the whole run, and you never type a word of it.</span>
-            </div></div>
-            <div class="vrow"><span class="tick">✓</span><div>
-              <b>Everything else, entered once</b>
-              <span>Quiz night, a DJ, the football, a full moon party. Add "every Tuesday" one time and
-                it repeats forever — on your page and in the local what's-on feed.</span>
-            </div></div>
-            <div class="vrow"><span class="tick">✓</span><div>
-              <b>People searching "what's on tonight" find you</b>
-              <span>Pick a country and a city and MySet shows the week. Your bar is in it, with
-                directions, your menu and your offers one tap away.</span>
-            </div></div>
-            <div class="vrow"><span class="tick">✓</span><div>
-              <b>You learn who fills the room</b>
-              <span>People, votes and nights — by night and by act, with the average per night. You stop
-                booking on a feeling and start booking on what happened.</span>
-            </div></div>
-            <div class="vrow"><span class="tick">✓</span><div>
-              <b>Acts come to you, with receipts</b>
-              <span>Musicians ask for a spot from your page and arrive with real numbers attached, not
-                a bio. Say keen or pass. Nobody gets your email address either way.</span>
-            </div></div>
-            <div class="vrow"><span class="tick">✓</span><div>
-              <b>One code on the tables</b>
-              <span>Tonight's music, your menu and your offers. Print it once.</span>
-            </div></div>
-          </div>
-        </div>
+      <div class="vlist">
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>The music fills itself in</b>
+          <span>Artists keep their own calendars. Any gig at your place shows up on your page by
+            itself — a weekly residency appears for the whole run, and you never type a word of it.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Everything else, entered once</b>
+          <span>Quiz night, a DJ, the football, a full moon party. Add “every Tuesday” one time and
+            it repeats forever — on your page and in the local what’s-on feed.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>People searching “what’s on tonight” find you</b>
+          <span>Pick a country and a city and MySet shows the week. Your bar is in it, with
+            directions, your menu and your offers one tap away.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>You learn who fills the room</b>
+          <span>People, votes and nights — by night and by act, with the average per night. You stop
+            booking on a feeling and start booking on what happened.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Acts come to you, with receipts</b>
+          <span>Musicians ask for a spot from your page and arrive with real numbers attached, not
+            a bio. Say keen or pass. Nobody gets your email address either way.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>One code on the tables</b>
+          <span>Tonight’s music, your menu and your offers. Print it once.</span>
+        </div></div>
       </div>
 
       <div class="grid3" style="margin-top:44px">
@@ -558,15 +599,15 @@ details .a b{color:var(--ink-2);font-weight:600}
         </div>
         <div class="card">
           <span class="ico">🧲</span><h3>Pull</h3>
-          <p>Musicians start asking you instead of the other way round — and locals who'd never heard
+          <p>Musicians start asking you instead of the other way round — and locals who’d never heard
             of you find you looking for something to do.</p>
         </div>
       </div>
 
-      <div class="vgrid" style="margin-top:44px">
+      <div class="vgrid">
         <div>
           <h3 style="font-size:22px">And it fills in from day one</h3>
-          <p class="body" style="margin-top:12px">This is the bit venues don't expect. Nothing links a
+          <p class="body" style="margin-top:12px">This is the bit venues don’t expect. Nothing links a
             gig to a venue in MySet — the <em>name</em> does, inside your own town. So the moment your
             page exists, every gig any artist has already listed at your place is on it.</p>
           <p class="body">Which means a venue can finish signing up and find its next month of live
@@ -578,145 +619,69 @@ details .a b{color:var(--ink-2);font-weight:600}
         </div>
         <div>
           <div class="phone tall"><img src="/about/fills.png" width="640" height="968" loading="lazy"
-            alt="A venue's what's-on tab, filled automatically with a weekly residency"></div>
+            decoding="async" alt="A venue’s what’s-on tab in the Venue Studio, filled automatically with a weekly residency it never typed."></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- 8 ──────────────────────────────────── PRICING -->
-  <section>
-    <div class="center up">
-      <p class="kicker">What it costs</p>
-      <h2>Everything the room sees is free. Always.</h2>
-      <p class="lede">Not free-for-now. The voting, the lyrics, the requests, your page, your gig
-        listings — all of it, on every plan, and none of it ever costs the room a penny. What you
-        pay for is your own back office.</p>
-    </div>
 
-    <div class="plans up">
-      <div class="plan">
-        <span class="tag">Free</span>
-        <div class="amt">$0<small> / forever</small></div>
-        <p class="who">About a gig a week, run properly, and you never pay us anything.</p>
-        <ul>
-          <li>4 shows a month — up to 200 people in the room at each</li>
-          <li>Hide any post on your community page — instantly, and undo it</li>
-          <li>Everything your fans touch</li>
-          <li>Setlists, chord charts, keys and genres</li>
-          <li>Your page, gig calendar and city listings</li>
-          <li>Show history and your real numbers</li>
-          <li>A community page — fans rate the night, post photos, and you reply</li>
-          <li>Keep 2,000 songs — 50 live to the room at once</li>
-          <li class="no">10% of money taken through the app</li>
-        </ul>
-      </div>
-      <div class="plan hot">
-        <span class="tag">Plus · most artists</span>
-        <div class="amt">$10<small> / month</small></div>
-        <p class="who">For when you're playing more than once a week and want the night set up your
-          way.</p>
-        <ul>
-          <li>Everything in Free</li>
-          <li><b>Unlimited shows</b> — play as often as you like</li>
-          <li><b>Rooms up to 1,000</b> — and if more turn up the night still runs; it just
-            refreshes a little slower and shows the top of the board</li>
-          <li>Unlimited songs live at once</li>
-          <li>Set your own vote rules — how many free votes each person gets, and what it costs
-            the room to replay a song you've already played</li>
-          <li>Price your own vote packs</li>
-          <li><b>Merch on your page</b> — sell your tees, prints and stickers from your community page, paid straight to you</li>
-          <li><b>Delete a post for good</b> — hiding one is free on every plan</li>
-          <li><b>2% cut</b> instead of 10% — tips, vote sales and merch stay yours</li>
-        </ul>
-      </div>
-      <div class="plan">
-        <span class="tag">Pro</span>
-        <div class="amt">$20<small> / month</small></div>
-        <p class="who">For when you're working several towns and pitching properly.</p>
-        <ul>
-          <li>Everything in Plus</li>
-          <li><b>Rooms up to 2,000</b> — a theatre or a festival tent</li>
-          <li><b>No cut at all</b> — 0% on everything through the app</li>
-          <li>Five sign-ins for your band</li>
-          <li class="soon">Earnings by venue, night and song <span class="chip">Soon</span></li>
-          <li class="soon">A one-page press kit that writes itself <span class="chip">Soon</span></li>
-          <li class="soon">Your colours and logo on the fan pages <span class="chip">Soon</span></li>
-          <li class="soon">List shows in cities you don't normally play <span class="chip">Soon</span></li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="honest up">
-      <p><b>Three honest notes,</b> because a page like this ought to say where the edges are.</p>
-      <p style="margin-top:11px"><b>1 · MySet is early.</b> It has run one real gig — the eight
-        people and twenty-one votes further up this page — and it is still being built in public.</p>
-      <p style="margin-top:11px"><b>2 · Card payments aren't on yet.</b> Tips and vote packs run on
-        the founder's own gigs while the payouts plumbing gets built. Until that's finished no other
-        artist can take money through MySet, which also means the 10% above currently applies to
-        nobody. Everything that doesn't involve a card works the moment you sign up.</p>
-      <p style="margin-top:11px"><b>3 · Plus and Pro can't be bought yet.</b> There's no checkout,
-        so nobody is being charged for anything. The four Pro extras marked <em>Soon</em> are on the
-        way, not shipped; everything else listed above is built and running today.</p>
-    </div>
-  </section>
-
-  <!-- 9 ──────────────────────────────────── FAQ -->
-  <section class="tight">
-    <div class="center up">
+  <!-- 7 ──────────────────────────────────────────────── FAQ -->
+  <section class="tight up">
+    <div class="center">
       <p class="kicker">Straight answers</p>
-      <h2>The things you're actually wondering.</h2>
+      <h2>The things you’re actually wondering.</h2>
     </div>
-    <div class="faq up">
-      <details><summary>Do my fans have to download anything?</summary>
-        <div class="a">No — and they never will. They scan a code, a web page opens, they vote. No app,
-          no account, no email, no password. <b>That is the single most important design decision in
-          MySet</b>, because anything more than "scan and tap" doesn't happen in a bar.</div></details>
-      <details><summary>What if nobody votes?</summary>
-        <div class="a">Then you play what you were going to play anyway and nothing is worse than before.
-          In practice one table starts, the rest see them doing it, and it spreads. On the first real
-          gig it ran, eight people voted twenty-one times in a room that had no idea it existed an hour
-          earlier.</div></details>
-      <details><summary>What if they request something I can't play?</summary>
-        <div class="a">Requests are <b>off until you turn them on</b>, and they cost votes rather than
-          money. When one comes in you can add it to your setlist, mark it done, or decline — and
-          declining refunds them automatically, so you're never the villain and nobody's out of pocket.</div></details>
-      <details><summary>Will it work on the venue's terrible wifi?</summary>
-        <div class="a">Everyone's on their own phone and their own data, so you're not sharing one
-          connection. The page is tiny, it backs off politely when the room goes quiet, and if a phone
-          drops out it picks up where it left off. Your own screen is the only one that matters, and
-          it's one page.</div></details>
-      <details><summary>I play originals. Is this only for covers?</summary>
-        <div class="a">It's your setlist — originals, covers, whatever you've got. Voting on originals
-          is arguably better: you find out which of your own songs a room full of strangers actually
-          reaches for.</div></details>
-      <details><summary>Can people see my whole setlist? Is that a problem?</summary>
-        <div class="a">They see what you choose to show. Any song can be hidden, and it stays hidden
-          across every future show until you bring it back. For one night only, build a
-          <b>setlist</b> instead — name it, put the songs you want in it, and the room sees just
-          those. You can keep twenty of them and attach one to a gig in your calendar, so it loads
-          itself when you start the show.</div></details>
-      <details><summary>How long does setting up actually take?</summary>
-        <div class="a">About two minutes to a working page: email, a six-digit code, your name. Adding
-          songs takes as long as typing them, and there's a starter pack of around sixty well-known
-          covers you can add in one tap and edit down.</div></details>
+    <div class="faq">
+      <details>
+        <summary>Do my fans have to download anything?</summary>
+        <div class="a">No — and they never will. They scan a code, a web page opens, they vote.
+          No app, no account, no email, no password. Anything more than “scan and tap” doesn’t
+          happen in a bar.</div>
+      </details>
+      <details>
+        <summary>What if nobody votes?</summary>
+        <div class="a">Then you play what you were going to play anyway, and nothing is worse than
+          before. In practice one table starts, the rest see them doing it, and it spreads.</div>
+      </details>
+      <details>
+        <summary>What if they request something I can’t play?</summary>
+        <div class="a">Requests are off until you turn them on, and they cost votes. When one comes in you
+          can add it, mark it done, or decline it — so you’re never the villain.</div>
+      </details>
+      <details>
+        <summary>Will it work on the venue’s terrible wifi?</summary>
+        <div class="a">Everyone votes from their own phone. The page is tiny, it backs off politely when the room goes quiet, and if a
+          phone drops out it picks up where it left off.</div>
+      </details>
+      <details>
+        <summary>I play originals. Is this only for covers?</summary>
+        <div class="a">It’s your setlist — originals, covers, whatever you’ve got. Voting on
+          originals is arguably better: you find out which of your own songs a room full of
+          strangers actually reaches for.</div>
+      </details>
+      <details>
+        <summary>How long does setting up actually take?</summary>
+        <div class="a">About two minutes to a working page: your email, a six-digit code, your
+          name. Adding songs takes as long as typing them, and there’s a starter pack of
+          well-known covers you can add in one tap and edit down.</div>
+      </details>
     </div>
   </section>
 
-  <!-- 10 ──────────────────────────────────── CLOSE -->
+  <!-- 8 ────────────────────────────────────────────── CLOSE -->
   <section class="close up">
     <h2>Your next gig could be the first one they choose.</h2>
-    <p class="lede" style="margin-top:18px">No card, no trial to remember to cancel, nothing for your
-      fans to install.</p>
     <div class="steps">
       <span class="step"><i>1</i> Your email</span>
       <span class="step"><i>2</i> A six-digit code</span>
       <span class="step"><i>3</i> Your name</span>
     </div>
-    <div class="heroacts" style="justify-content:center;margin-top:30px">
+    <div class="heroacts" style="justify-content:center">
       <a class="big" href="/studio">Get your page — free</a>
       <a class="big ghost" href="/venues">I run a venue</a>
     </div>
+    <p class="reassure">Start free. No card. Nothing for your fans to install.</p>
   </section>
 
   <div class="foot2">
@@ -724,85 +689,36 @@ details .a b{color:var(--ink-2);font-weight:600}
     <a href="/venues">Venue Studio</a><br>
     MySet · myset.vip · built on Koh Phangan
   </div>
+
 </div>
 
 <script>
-/* ── the live demo ─────────────────────────────────────────
-   The real interaction, not a video: tap a song, the count moves, the queue
-   reorders with a spring. Somebody who has done it once already understands the
-   product, which is why this sits above every screenshot on the page. */
-const SEED = [
-  { id: 'a', t: 'Wish You Were Here', by: 'Pink Floyd',      n: 5 },
-  { id: 'b', t: 'Landslide',          by: 'Fleetwood Mac',   n: 4 },
-  { id: 'c', t: 'Tennessee Whiskey',  by: 'Chris Stapleton', n: 2 },
-  { id: 'd', t: 'Fast Car',           by: 'Tracy Chapman',   n: 1 },
-];
-let rows = SEED.map((s) => ({ ...s })), mine = new Set(), left = 3, bump = null;
-const esc = (s) => String(s).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-
-function draw() {
-  const list = document.getElementById('dlist');
-  const sorted = [...rows].sort((x, y) => y.n - x.n || x.t.localeCompare(y.t));
-  list.innerHTML = sorted.map((s, i) => `
-    <div class="drow ${i === 0 ? 'lead' : ''}">
-      <span class="pos">${i + 1}</span>
-      <div class="m"><div class="t">${esc(s.t)}</div><div class="by">${esc(s.by)}</div></div>
-      <div class="n ${bump === s.id ? 'bump' : ''}"><b>${s.n}</b><span>vote${s.n === 1 ? '' : 's'}</span></div>
-      <button class="vb ${mine.has(s.id) ? 'on' : ''}" data-id="${s.id}"
-        ${!mine.has(s.id) && left <= 0 ? 'disabled' : ''}>${mine.has(s.id) ? 'Voted' : 'Vote'}</button>
-    </div>`).join('');
-  document.getElementById('dcount').textContent =
-    left === 0 ? 'No votes left' : `${left} vote${left === 1 ? '' : 's'} left`;
-  const foot = document.getElementById('dfoot');
-  foot.innerHTML = left === 0
-    ? 'Out of votes — in the room you could buy a few more, or wait: <b>the next song refreshes everyone</b>.'
-    : mine.size
-      ? `<b>${esc(sorted[0].t)}</b> is winning, so that's what plays next — whenever the next request is taken.`
-      : 'Everyone in the room gets a few free votes. <b>Starting a song gives everybody theirs back</b> — so every gap is a fresh contest.';
-}
-document.getElementById('dlist').addEventListener('click', (e) => {
-  const b = e.target.closest('.vb[data-id]');
-  if (!b) return;
-  const id = b.getAttribute('data-id');
-  const row = rows.find((r) => r.id === id);
-  if (mine.has(id)) { mine.delete(id); row.n--; left++; }
-  else { if (left <= 0) return; mine.add(id); row.n++; left--; }
-  bump = id;
-  draw();
-  setTimeout(() => { bump = null; draw(); }, 380);
-  try { navigator.vibrate && navigator.vibrate(14); } catch (err) {}
-});
-draw();
-
-/* ── reveal on scroll, and the proof numbers counting up ── */
+/* Reveal on scroll, and the proof numbers counting up. Everything here is an
+   enhancement: without it the page is already fully readable (see .anim above). */
 if (!('IntersectionObserver' in window)) {
-  document.querySelectorAll('.up').forEach((el) => {
-    el.classList.add('in');
-    el.querySelectorAll('[data-to]').forEach((n) => { n.textContent = n.dataset.to + (n.dataset.suffix || ''); });
-  });
+  document.querySelectorAll('.up').forEach((el) => el.classList.add('in'));
+} else {
+  const io = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      e.target.classList.add('in');
+      e.target.querySelectorAll('[data-to]').forEach(count);
+      io.unobserve(e.target);
+    }
+  }, { rootMargin: '0px 0px -10% 0px' });
+  document.querySelectorAll('.up').forEach((el) => io.observe(el));
 }
-const io = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
-  for (const e of entries) {
-    if (!e.isIntersecting) continue;
-    e.target.classList.add('in');
-    e.target.querySelectorAll('[data-to]').forEach(count);
-    io.unobserve(e.target);
-  }
-}, { rootMargin: '0px 0px -12% 0px' }) : null;
-if (io) document.querySelectorAll('.up').forEach((el) => io.observe(el));
-
 function count(el) {
-  const to = Number(el.dataset.to) || 0, suffix = el.dataset.suffix || '';
-  const dur = 1100, t0 = performance.now();
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const to = Number(el.dataset.to) || 0, pre = el.dataset.prefix || '';
+  const dur = 900, t0 = performance.now();
   const tick = (t) => {
     const p = Math.min(1, (t - t0) / dur);
-    const eased = 1 - Math.pow(1 - p, 3);
-    el.textContent = Math.round(to * eased) + suffix;
+    el.textContent = pre + Math.round(to * (1 - Math.pow(1 - p, 3)));
     if (p < 1) requestAnimationFrame(tick);
   };
   requestAnimationFrame(tick);
 }
-
 /* Only one FAQ answer open at a time — less to hold in your head. */
 document.querySelectorAll('.faq details').forEach((d) => {
   d.addEventListener('toggle', () => {
@@ -810,15 +726,9 @@ document.querySelectorAll('.faq details').forEach((d) => {
     document.querySelectorAll('.faq details').forEach((o) => { if (o !== d) o.open = false; });
   });
 });
-</script>
-<script>
-/* Registered late and non-blocking, so it can never delay the first paint. The
-   worker itself never caches /api and always prefers the network for pages —
-   see public/sw.js. */
 /* A pull reloads the page. This one is just content, so a real reload IS the
    refresh — see /pull.js for why an installed app needs to be given one. */
 MySetPull();
-
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
