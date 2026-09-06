@@ -146,6 +146,42 @@ body{padding-bottom:34px}
 .lb.on{display:grid}.lb img{max-width:100%;max-height:100%;border-radius:8px}
 .receipt{margin:14px 18px 0;padding:16px;border-radius:var(--r);background:var(--accent-soft);color:var(--ink);font-size:15px;line-height:1.4}
 .receipt b{display:block;color:var(--accent-ink);margin-bottom:3px}
+
+/* ---------- THE TRIMMER ----------
+   iOS's own trim screen is the thing people already know, so this is shaped like it:
+   the clip on top, a filmstrip along the bottom, and a bright frame you drag over
+   the part you want. The one addition is the SIZE, live, because the limit here is
+   about what a clip costs to serve and a person cannot guess that from seconds. */
+.trim{position:fixed;inset:0;z-index:80;background:#000;color:#fff;display:none;
+  flex-direction:column;touch-action:none}
+.trim.on{display:flex}
+.trim .tbar{display:flex;align-items:center;justify-content:space-between;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 18px 12px;font-size:17px;font-weight:600}
+.trim .tbar button{background:none;border:0;color:#fff;font:inherit;padding:6px 2px;cursor:pointer}
+.trim .tbar button[disabled]{opacity:.35}
+.trim .tbar .use{color:var(--accent-ink,#ff7a45)}
+.trim .stage{flex:1;min-height:0;display:grid;place-items:center;padding:0 10px}
+.trim .stage video{max-width:100%;max-height:100%;border-radius:10px;background:#000}
+.trim .meta{text-align:center;font-size:13px;color:#9a9a9a;padding:10px 18px 4px;
+  font-variant-numeric:tabular-nums}
+.trim .meta b{color:#fff;font-weight:600}
+.trim .meta.over b{color:#ff6a5a}
+.trim .strip{position:relative;height:64px;margin:12px 18px calc(env(safe-area-inset-bottom,0px) + 22px);
+  border-radius:8px;overflow:hidden;background:#141414}
+.trim .frames{position:absolute;inset:0;display:flex}
+.trim .frames div{flex:1;background:#1c1c1c center/cover;min-width:0}
+/* everything outside the chosen window is dimmed, exactly as iOS does it */
+.trim .veil{position:absolute;top:0;bottom:0;background:rgba(0,0,0,.62);pointer-events:none}
+.trim .win{position:absolute;top:0;bottom:0;border:3px solid #fff;border-radius:7px;
+  box-sizing:border-box;cursor:grab}
+.trim .win.bad{border-color:#ff6a5a}
+.trim .win i{position:absolute;top:0;bottom:0;width:26px;display:grid;place-items:center;
+  cursor:ew-resize;font-style:normal;color:#111;font-size:15px;font-weight:800}
+.trim .win i.l{left:-3px;background:#fff;border-radius:7px 0 0 7px}
+.trim .win i.r{right:-3px;background:#fff;border-radius:0 7px 7px 0}
+.trim.on .win.bad i{background:#ff6a5a}
+.trim .hint{text-align:center;font-size:12.5px;color:#7a7a7a;padding:0 18px 2px}
+
 </style>
 </head>
 <body>
@@ -170,7 +206,19 @@ body{padding-bottom:34px}
 <div class="toast" id="toast"></div>
 
 <!-- blocking on purpose, after the splash; MySetPull() is called below (INVARIANT 0cf) -->
+<div class="trim" id="trim" aria-hidden="true">
+  <div class="tbar"><button id="trimBack">Back</button><button class="use" id="trimUse">Use this</button></div>
+  <div class="stage"><video id="trimVid" playsinline muted></video></div>
+  <div class="meta" id="trimMeta"></div>
+  <div class="hint">Drag the ends to choose. Sound is kept.</div>
+  <div class="strip" id="trimStrip">
+    <div class="frames" id="trimFrames"></div>
+    <div class="veil" id="veilL"></div><div class="veil" id="veilR"></div>
+    <div class="win" id="trimWin"><i class="l">‹</i><i class="r">›</i></div>
+  </div>
+</div>
 <script src="/pull.js"></script>
+<script src="/mp4trim.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
 /* /<slug>/community  or  /v/<slug>/community */
@@ -339,7 +387,7 @@ function wire(){
    long is REFUSED, with its actual size and what to do about it. That is a worse
    answer than shrinking it would have been if shrinking had ever worked. It never
    did. */
-const CLIP_SECS = 30, CLIP_MAX = 25 * 1024 * 1024;
+const CLIP_SECS = 30, CLIP_MAX = 50 * 1024 * 1024;
 const mb = (n) => (n / 1048576).toFixed(1);
 
 function clipProgress(pct, label){
@@ -458,31 +506,173 @@ async function uploadClip(file, poster, onPct){
   return end;
 }
 
+/* ---------- THE TRIM SCREEN ----------
+
+   Shaped like the one iOS already shows, because that is the one people know: the
+   clip on top, a filmstrip along the bottom, a bright frame you drag over the part
+   you want. Two things are different, and both are because MySet's limit is not
+   about seconds:
+
+   · THE SIZE IS SHOWN LIVE, and it is exact rather than an estimate — mp4trim has
+     the real sample table, so it can add up precisely which bytes the selection
+     would send. Nobody can guess megabytes from seconds, and being told after a
+     two-minute upload is the worst possible moment to find out.
+   · IT OPENS ON A SELECTION THAT ALREADY FITS. Handing somebody an invalid state
+     and asking them to fix it is a puzzle; handing them a working one they can
+     adjust is a choice.
+
+   The start always lands on a keyframe (mp4trim.snapStart), which is why the clip
+   sometimes begins a fraction earlier than the frame suggests. Cutting anywhere
+   else would open on smeared garbage. */
+function trimSheet(file, mp4, maxSecs, maxBytes){
+  return new Promise((resolve)=>{
+    const el=$('#trim'), vid=$('#trimVid'), strip=$('#trimStrip'), win=$('#trimWin'),
+          frames=$('#trimFrames'), vL=$('#veilL'), vR=$('#veilR'), meta=$('#trimMeta'),
+          use=$('#trimUse'), back=$('#trimBack');
+    const total = mp4.duration;
+    const url = URL.createObjectURL(file);
+    let a = 0, b = Math.min(total, maxSecs);
+    /* Walk the end back until the selection fits. Bitrate is not constant, so this
+       cannot be solved arithmetically — but a dozen steps settles it instantly. */
+    for(let i=0; i<40 && b-a>0.6 && mp4.bytesFor(a,b)>maxBytes; i++) b -= Math.max(0.2,(b-a)*0.07);
+    b = Math.max(Math.min(a+0.6, total), b);
+
+    const rect = () => strip.getBoundingClientRect();
+    const tAt  = (clientX) => { const r=rect(); return Math.max(0, Math.min(total, ((clientX-r.left)/r.width)*total)); };
+    const pxOf = (t) => (t/total) * rect().width;
+
+    function paint(){
+      const L=pxOf(a), R=pxOf(b);
+      win.style.left=L+'px'; win.style.width=Math.max(34,R-L)+'px';
+      vL.style.left='0px'; vL.style.width=Math.max(0,L)+'px';
+      vR.style.left=R+'px'; vR.style.width=Math.max(0,rect().width-R)+'px';
+      const bytes = mp4.bytesFor(a,b), over = bytes > maxBytes;
+      win.classList.toggle('bad', over);
+      meta.classList.toggle('over', over);
+      meta.innerHTML = `<b>${(b-a).toFixed(1)} seconds · ${mb(bytes)}MB</b>`
+        + (over ? ` — too big, shorten it` : ` of ${maxBytes/1048576}MB`);
+      use.disabled = over || (b-a) < 0.6;
+    }
+
+    let drag=null;
+    const down=(e)=>{
+      const cl=e.target.classList;
+      drag={ mode: cl.contains('l')?'l':cl.contains('r')?'r':'move', x:e.clientX, a, b };
+      e.preventDefault();
+    };
+    const move=(e)=>{
+      if(!drag) return;
+      const d = tAt(e.clientX) - tAt(drag.x);
+      if(drag.mode==='move'){
+        const len = drag.b - drag.a;
+        a = Math.max(0, Math.min(total-len, drag.a + d));
+        b = a + len;
+      } else if(drag.mode==='l'){
+        a = Math.max(0, Math.min(drag.b - 0.6, drag.a + d));
+        if(b - a > maxSecs) a = b - maxSecs;
+      } else {
+        b = Math.min(total, Math.max(drag.a + 0.6, drag.b + d));
+        if(b - a > maxSecs) b = a + maxSecs;
+      }
+      paint();
+    };
+    const up=()=>{ if(!drag) return; drag=null; playWindow(); };
+
+    function playWindow(){ try{ vid.currentTime=a; vid.play().catch(()=>{}); }catch(e){} }
+    const loop=()=>{ if(vid.currentTime >= b-0.04 || vid.currentTime < a-0.4){ try{ vid.currentTime=a; }catch(e){} } };
+
+    /* THE FILMSTRIP. Ten frames from across the whole clip, drawn by seeking a
+       throwaway element — the same trick as the poster. They fill in as they arrive
+       rather than holding the screen: a 4K clip on a phone takes a moment per seek,
+       and a person can already drag the frame while it happens. */
+    async function buildStrip(){
+      const n=10;
+      frames.innerHTML = Array.from({length:n},()=>'<div></div>').join('');
+      const cells = frames.children;
+      const tv=document.createElement('video');
+      tv.muted=true; tv.playsInline=true; tv.preload='auto'; tv.src=url;
+      const ready = await new Promise(r=>{ tv.onloadeddata=()=>r(true); tv.onerror=()=>r(false); setTimeout(()=>r(false),10000); });
+      if(!ready) return;
+      const c=document.createElement('canvas');
+      for(let i=0;i<n;i++){
+        const at=(i+0.5)/n*total;
+        const seeked=await new Promise(r=>{ tv.onseeked=()=>r(true); setTimeout(()=>r(false),3000);
+          try{ tv.currentTime=at; }catch(e){ r(false); } });
+        if(!seeked || !tv.videoWidth) continue;
+        const H=128, W=Math.max(2, Math.round(tv.videoWidth/tv.videoHeight*H));
+        c.width=W; c.height=H;
+        try{
+          c.getContext('2d').drawImage(tv,0,0,W,H);
+          cells[i].style.backgroundImage = `url('${c.toDataURL('image/jpeg',0.5)}')`;
+        }catch(e){}
+      }
+      try{ tv.removeAttribute('src'); tv.load(); }catch(e){}
+    }
+
+    function finish(v){
+      el.classList.remove('on'); el.setAttribute('aria-hidden','true');
+      win.removeEventListener('pointerdown',down);
+      document.removeEventListener('pointermove',move);
+      document.removeEventListener('pointerup',up);
+      document.removeEventListener('pointercancel',up);
+      vid.removeEventListener('timeupdate',loop);
+      try{ vid.pause(); vid.removeAttribute('src'); vid.load(); }catch(e){}
+      URL.revokeObjectURL(url);
+      resolve(v);
+    }
+
+    win.addEventListener('pointerdown',down);
+    document.addEventListener('pointermove',move);
+    document.addEventListener('pointerup',up);
+    document.addEventListener('pointercancel',up);
+    vid.addEventListener('timeupdate',loop);
+    back.onclick=()=>finish(null);
+    use.onclick=()=>{ if(!use.disabled) finish({a,b}); };
+
+    vid.src=url;
+    el.classList.add('on'); el.setAttribute('aria-hidden','false');
+    paint(); playWindow(); buildStrip();
+  });
+}
+
 async function addClip(file){
   if(DRAFT.clip){ toast('One clip per post'); return; }
   if(!file || !file.size){ toast('That file came through empty'); return; }
-  /* SIZE FIRST, BEFORE A SINGLE BYTE IS READ. Nobody should watch a bar crawl up a
-     phone's uplink for a minute to be told the file was never going to be accepted. */
-  if(file.size > CLIP_MAX){
-    toast(`That clip is ${mb(file.size)}MB and the limit is ${CLIP_MAX / 1048576}MB. `
-        + 'Trim it shorter, or record at a lower quality.');
-    return;
-  }
 
   clipProgress(0.02,'Reading the clip…');
   let v;
   try{ v = await withDeadline(loadVideo(file), 25000, 'read'); }
   catch(e){ clipProgress(null); toast('Couldn’t read that video'); return; }
 
-  /* LENGTH. Nothing trims any more — that was the re-encoder's job and the
-     re-encoder is gone — so a long clip is refused with its actual length, and the
-     phone's own photo app is where it gets trimmed. A length that reads back as
-     Infinity (every MediaRecorder file, most Android screen recorders) is left to
-     the server, which reads it out of the file's own header. */
-  if(Number.isFinite(v.duration) && v.duration > CLIP_SECS + 0.5){
-    clipProgress(null); try{ URL.revokeObjectURL(v.src); }catch(e){}
-    toast(`Clips are up to ${CLIP_SECS} seconds — that one is ${Math.round(v.duration)}. Trim it and try again.`);
-    return;
+  /* TOO LONG OR TOO BIG IS NOT A REFUSAL ANY MORE — IT IS A TRIM SCREEN.
+
+     Both limits land here. Length is obvious; size is the one people cannot see
+     coming, because a phone's camera can put 2.3MB into every second and 30 seconds
+     of that is 70MB. The trim screen answers both at once: it shows the exact size
+     of the selection as it is dragged, and it opens on a window that already fits.
+
+     A file mp4trim cannot open — a WebM, a fragmented MP4, something with an index
+     it does not understand — falls back to being told plainly, because producing a
+     broken clip would be worse than producing none. */
+  const tooLong = Number.isFinite(v.duration) && v.duration > CLIP_SECS + 0.5;
+  const tooBig  = file.size > CLIP_MAX;
+  if(tooLong || tooBig){
+    try{ URL.revokeObjectURL(v.src); }catch(e){}
+    clipProgress(null);
+    const mp4 = window.MySetTrim ? await MySetTrim.open(file) : { ok:false, why:'no-trimmer' };
+    if(!mp4.ok){
+      toast(tooBig
+        ? `That clip is ${mb(file.size)}MB and the limit is ${CLIP_MAX/1048576}MB — trim it in your photos app first.`
+        : `Clips are up to ${CLIP_SECS} seconds — that one is ${Math.round(v.duration)}. Trim it first.`);
+      return;
+    }
+    const sel = await trimSheet(file, mp4, CLIP_SECS, CLIP_MAX);
+    if(!sel) return;                                  // they backed out; nothing happened
+    clipProgress(0.03,'Trimming…');
+    try{ file = await mp4.trim(sel.a, sel.b); }
+    catch(e){ clipProgress(null); toast('Couldn’t trim that one'); return; }
+    try{ v = await withDeadline(loadVideo(file), 25000, 'read'); }
+    catch(e){ clipProgress(null); toast('The trimmed clip wouldn’t open'); return; }
   }
 
   /* The still the feed shows before anybody taps. Cheap, and it is what makes a

@@ -34,7 +34,7 @@ import { store, readDoc, casDoc } from './_lib.mjs';
    is an append-only note of clips uploaded but not yet attached; addPost removes
    the entry, and the cron drops anything older than PENDING_TTL. */
 
-/* 25MB, AND WHY IT MOVED FROM 3.
+/* 50MB, AND WHY IT MOVED FROM 3.
 
    3MB was the size a whole clip had to fit into because it travelled as base64
    inside a JSON body, and a Netlify function body tops out around 6MB. That
@@ -48,19 +48,26 @@ import { store, readDoc, casDoc } from './_lib.mjs';
    request approaches the body limit. Nothing on the phone touches the video, so
    the sound is simply never at risk.
 
-   WHAT 25MB COSTS, because this is the expensive end of MySet. Netlify bills
+   WHY 50 AND NOT 25. Measured on the real file Perry could not upload: an iPhone
+   shooting 1080p HEVC put 2.3MB into every second, so 25MB bought TEN SECONDS of
+   it. A limit that turns a thirty-second clip into ten is a limit that makes the
+   feature feel broken, and the trim screen makes the number visible while somebody
+   chooses rather than after they have waited — so the honest ceiling can be higher.
+
+   WHAT IT COSTS, because this is the expensive end of MySet. Netlify bills
    20 credits/GB of bandwidth, about $0.134/GB, and a cache HIT is billed like
    any other request — caching saves compute, never bytes. So one clip:
 
-       25MB x   30 views = 0.73 GB = $0.10
-       25MB x  100 views = 2.44 GB = $0.33
-       25MB x 1000 views = 24.4 GB = $3.27
+       50MB x   30 views = 1.46 GB = $0.20
+       50MB x  100 views = 4.88 GB = $0.65
+       50MB x 1000 views = 48.8 GB = $6.54
 
    For scale, a whole 3-hour gig with 20 phones voting costs 2.7c. One popular
-   clip can cost more than a hundred gigs. If clips take off, moving the BYTES
+   clip can cost more than two hundred gigs. If clips take off, moving the BYTES
    (not the app) to a store with no egress charge is the single biggest saving
-   available anywhere in MySet — see docs/sessions/2026-09-06-clips-as-they-are.md. */
-export const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
+   available anywhere in MySet — see docs/sessions/2026-09-06-clips-as-they-are.md.
+   That move is what makes a bigger number here free rather than expensive. */
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 /* Comfortably under Netlify's ~6MB request body, with room for headers. */
 export const CHUNK_BYTES = 4 * 1024 * 1024;
 export const MAX_SECONDS = 30;

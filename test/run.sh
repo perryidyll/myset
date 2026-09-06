@@ -27,6 +27,9 @@ echo
 echo "── end to end ──"
 node --import ./test/register.mjs test/e2e.mjs
 echo
+echo "── trimming an mp4 without re-encoding it ──"
+node test/trim.mjs
+echo
 echo "── how big a room can get ──"
 node --import ./test/register.mjs test/roomsize.mjs
 echo

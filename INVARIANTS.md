@@ -1887,3 +1887,32 @@ If you are about to violate one, stop and say so rather than working around it.
     app) to a store with no egress charge is the largest single saving available
     anywhere in MySet. Raising `MAX_VIDEO_BYTES` without that move multiplies the
     one line of the bill that nothing else can bring down.
+
+0ew. **The trimmer rewrites the index; it never re-encodes the video.** An MP4 is an
+    index (`moov`) plus a bag of samples (`mdat`), so trimming is a library problem:
+    choose the samples inside the window, copy those bytes untouched, write a new
+    index pointing at their new positions. The picture and the sound come out
+    bit-identical to the source because nothing decodes them — which is the only way
+    to trim that does not reopen INVARIANT 0es. `public/mp4trim.js`. Anything that
+    proposes a canvas, a MediaRecorder or a WebCodecs pipeline here is proposing the
+    silent-clip bug again.
+
+0ex. **A cut always lands on a keyframe, and the trimmer says where.** Starting
+    anywhere else hands the decoder samples that reference a frame it does not have,
+    which is the smeared opening everyone has seen. `snapStart` moves the start BACK
+    to the nearest sync sample and returns it, so the screen can show what was really
+    chosen. Only the start snaps; the end can fall anywhere.
+
+0ey. **`bytesFor` is exact, not an estimate, and `test/trim.mjs` demands equality.**
+    The number is shown to somebody before they commit to an upload that can take a
+    minute, so "close" is how a person ends up watching a bar fill and then fail. It
+    counts the real run-length tables rather than assuming a worst case — an earlier
+    version added 8 bytes per SAMPLE for a table that collapses to one entry per
+    track. Verified byte-exact against a real 64MB iPhone .MOV across three windows.
+
+0ez. **One picture track, one sound track, nothing else.** An iPhone .MOV carries
+    timed-metadata tracks and often a second audio track (the spatial mix); the file
+    Perry could not upload had six traks. They are useless in a clip, and one of them
+    broke the trim outright — a metadata track can hold a single sample spanning the
+    whole video, so it was always "inside" the window and dragged the finished clip's
+    duration back to the full original length.
