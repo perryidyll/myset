@@ -34,7 +34,35 @@ import { store, readDoc, casDoc } from './_lib.mjs';
    is an append-only note of clips uploaded but not yet attached; addPost removes
    the entry, and the cron drops anything older than PENDING_TTL. */
 
-export const MAX_VIDEO_BYTES = 3 * 1024 * 1024;   // 3MB — see the comment above
+/* 25MB, AND WHY IT MOVED FROM 3.
+
+   3MB was the size a whole clip had to fit into because it travelled as base64
+   inside a JSON body, and a Netlify function body tops out around 6MB. That
+   forced the phone to shrink every clip by re-filming it onto a canvas — which
+   is the reason clips arrived silent three releases running: a canvas has no
+   sound, so the audio had to be found and mixed back separately, and on Safari
+   that kept failing. Perry called it: upload the file as it is.
+
+   Two changes make 25MB fit. The bytes go up RAW instead of base64, which alone
+   removes the 33% inflation; and they go up in pieces (CHUNK_BYTES) so no single
+   request approaches the body limit. Nothing on the phone touches the video, so
+   the sound is simply never at risk.
+
+   WHAT 25MB COSTS, because this is the expensive end of MySet. Netlify bills
+   20 credits/GB of bandwidth, about $0.134/GB, and a cache HIT is billed like
+   any other request — caching saves compute, never bytes. So one clip:
+
+       25MB x   30 views = 0.73 GB = $0.10
+       25MB x  100 views = 2.44 GB = $0.33
+       25MB x 1000 views = 24.4 GB = $3.27
+
+   For scale, a whole 3-hour gig with 20 phones voting costs 2.7c. One popular
+   clip can cost more than a hundred gigs. If clips take off, moving the BYTES
+   (not the app) to a store with no egress charge is the single biggest saving
+   available anywhere in MySet — see docs/sessions/2026-09-06-clips-as-they-are.md. */
+export const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
+/* Comfortably under Netlify's ~6MB request body, with room for headers. */
+export const CHUNK_BYTES = 4 * 1024 * 1024;
 export const MAX_SECONDS = 30;
 export const PENDING_TTL = 2 * 3600e3;            // an unattached clip lives 2 hours
 export const PEND = (owner) => `vidpend_${owner}`;
@@ -44,6 +72,13 @@ export const PEND = (owner) => `vidpend_${owner}`;
    never read by the audience poll. */
 export const VIDQ = 'vidqueue';
 const KEY = (owner, clip) => `vid_${owner}_${clip}`;
+/* THE PIECES OF AN UPLOAD IN FLIGHT, keyed by the CLIP id rather than by an
+   upload id of their own. That is the whole trick: the clip id is minted and
+   noted as pending before the first byte arrives, so an abandoned upload is
+   already something the existing sweep knows about and nothing new has to be
+   remembered or enumerated. `list()` stays banned. */
+const CHUNK = (owner, clip, i) => `vidchunk_${owner}_${clip}_${i}`;
+const UPKEY = (owner, clip) => `vidup_${owner}_${clip}`;
 
 /* A clip id, and the poster's image slot are derived from it: `k<10>` is a slot
    name /api/img already serves (isSlot in _img.mjs), so the poster needs no new
@@ -101,28 +136,75 @@ export function mp4Seconds(buf) {
 
 /** Accepts a data: URL, returns { bytes, type, seconds } or an { error }.
  *  Every message here is one a person can act on, because it is shown as-is. */
+/** Everything that must be true of a clip's BYTES, whatever brought them here.
+ *  Factored out so the chunked upload and the old data-URL path cannot drift into
+ *  disagreeing about what a valid clip is. Every message is shown to a person
+ *  as-is, so every message says what to do about it. */
+export function checkVideo(bytes) {
+  if (!bytes || !bytes.length) return { error: 'That clip came through empty.' };
+  if (bytes.length > MAX_VIDEO_BYTES)
+    return { error: `That clip is ${(bytes.length / 1048576).toFixed(1)}MB and the limit is ${MAX_VIDEO_BYTES / 1048576}MB. Trim it shorter and try again.` };
+  /* Trust the bytes, not the label. An MP4 has `ftyp` at offset 4; a WebM
+     (Matroska) starts with the EBML magic. */
+  const isMp4 = bytes.length > 12 && bytes.toString('latin1', 4, 8) === 'ftyp';
+  const isWebm = bytes.length > 4 && bytes[0] === 0x1a && bytes[1] === 0x45
+    && bytes[2] === 0xdf && bytes[3] === 0xa3;
+  if (!isMp4 && !isWebm) return { error: 'That file isn’t really a video.' };
+  const seconds = isMp4 ? mp4Seconds(bytes) : null;
+  if (seconds !== null && seconds > MAX_SECONDS + 1.5)
+    return { error: `Clips are up to ${MAX_SECONDS} seconds. That one is ${Math.round(seconds)}.` };
+  return { bytes, type: isMp4 ? 'video/mp4' : 'video/webm', seconds };
+}
+
+/* ---------- a clip that arrives in pieces ----------
+
+   THREE STEPS, AND THE MIDDLE ONE REPEATS. `begin` mints the clip id and writes a
+   manifest saying how many pieces to expect; each piece is POSTed raw; `end`
+   reads them back in order, joins them, and only then does the file get checked
+   and stored. Nothing is validated piece by piece because a video's magic bytes
+   and its duration are properties of the whole file, and half an MP4 is not a
+   small MP4.
+
+   An abandoned upload costs nothing to find: the manifest says how many pieces
+   there are, so dropClip can delete every one of them by computing its key. */
+/* Plain text and not setJSON/`type:'json'`: the manifest is a handful of numbers,
+   and set/get are the two calls every blob backing — including the test fake —
+   is guaranteed to have. */
+export async function beginUpload(owner, clip, { size, parts, type }) {
+  await store().set(UPKEY(owner, clip), JSON.stringify({ size, parts, type, at: Date.now() }));
+}
+export async function readUpload(owner, clip) {
+  try {
+    const raw = await store().get(UPKEY(owner, clip), { type: 'text' });
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+export async function putChunk(owner, clip, i, bytes) {
+  await store().set(CHUNK(owner, clip, i), bytes);
+}
+/** All the pieces, in order, as one buffer — or null if any of them never came. */
+export async function joinChunks(owner, clip, parts) {
+  const got = await Promise.all(Array.from({ length: parts }, (_, i) =>
+    store().get(CHUNK(owner, clip, i), { type: 'arrayBuffer' }).catch(() => null)));
+  if (got.some((g) => !g)) return null;
+  return Buffer.concat(got.map((g) => Buffer.from(g)));
+}
+export async function dropUpload(owner, clip, parts) {
+  for (let i = 0; i < parts; i++) {
+    try { await store().delete(CHUNK(owner, clip, i)); } catch { /* already gone */ }
+  }
+  try { await store().delete(UPKEY(owner, clip)); } catch { /* already gone */ }
+}
+
 export function decodeVideoDataUrl(dataUrl) {
   const m = /^data:(video\/(?:mp4|webm|quicktime));base64,([A-Za-z0-9+/=]+)$/
     .exec(String(dataUrl || '').trim());
   if (!m) return { error: 'That has to be an MP4 or WebM video.' };
   let bytes;
   try { bytes = Buffer.from(m[2], 'base64'); } catch { return { error: 'Could not read that clip.' }; }
-  if (!bytes.length) return { error: 'That clip came through empty.' };
-  if (bytes.length > MAX_VIDEO_BYTES)
-    return { error: `That clip is too big — ${MAX_VIDEO_BYTES / 1024 / 1024}MB is the limit. Try a shorter one.` };
-
-  /* Trust the bytes, not the label — the same rule as decodeDataUrl. An MP4 has
-     `ftyp` at offset 4; a WebM (Matroska) starts with the EBML magic. */
-  const isMp4 = bytes.length > 12 && bytes.toString('latin1', 4, 8) === 'ftyp';
-  const isWebm = bytes.length > 4 && bytes[0] === 0x1a && bytes[1] === 0x45
-    && bytes[2] === 0xdf && bytes[3] === 0xa3;
-  if (!isMp4 && !isWebm) return { error: 'That file isn’t really a video.' };
-
-  const seconds = isMp4 ? mp4Seconds(bytes) : null;
-  if (seconds !== null && seconds > MAX_SECONDS + 1.5)
-    return { error: `Clips are up to ${MAX_SECONDS} seconds. That one is ${Math.round(seconds)}.` };
-
-  return { bytes, type: isMp4 ? 'video/mp4' : 'video/webm', seconds };
+  /* Every rule about the bytes themselves lives in ONE place, so this path and the
+     chunked one cannot drift into disagreeing about what a valid clip is. */
+  return checkVideo(bytes);
 }
 
 export async function putClip(owner, clip, bytes, type) {
@@ -148,8 +230,16 @@ export async function getClip(owner, clip, { strong = false } = {}) {
 }
 
 export async function dropClip(owner, clip) {
-  try { await store().delete(KEY(owner, clip)); } catch {}
-  try { const { dropImage } = await import('./_img.mjs'); await dropImage(owner, clip); } catch {}
+  try { await store().delete(KEY(owner, clip)); } catch { /* already gone */ }
+  try { const { dropImage } = await import('./_img.mjs'); await dropImage(owner, clip); } catch { /* no poster */ }
+  /* AND ANY PIECES THAT NEVER BECAME A CLIP. An upload abandoned halfway leaves
+     chunks behind; the manifest says how many, so every key can be computed and
+     none of them needs `list()` to be found. Reading it costs one get, and only on
+     the two rare paths that delete a clip at all. */
+  try {
+    const up = await readUpload(owner, clip);
+    if (up && up.parts > 0) await dropUpload(owner, clip, up.parts);
+  } catch { /* nothing in flight */ }
 }
 
 /* ---------- the pending list, so nothing can be orphaned ---------- */

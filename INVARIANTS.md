@@ -1847,3 +1847,43 @@ If you are about to violate one, stop and say so rather than working around it.
     `createMediaElementSource` also commits an element for life, which is why the
     sound object carries `perElement` and the retry rebuilds it against the fresh
     element instead of reusing a spent one.
+
+0es. **A clip is uploaded exactly as the phone recorded it. Nothing re-encodes it,
+    and that is why the sound cannot go missing.** Clips used to travel as base64 in
+    a JSON body, capping them at 3MB — and 3MB forced the phone to shrink every clip
+    by playing it onto a canvas and recording the canvas. A canvas has no sound, so
+    the audio had to be sourced separately and mixed back in, and on Safari that kept
+    failing: three releases running, a perfect picture and nothing to hear. About six
+    hundred lines were deleted (a canvas re-encoder, two routes to the soundtrack, a
+    codec prober, a format blacklist, an audio-context unlocker, a stall detector).
+    Anything that proposes shrinking video in the browser again is proposing this
+    bug. The two changes that made a real file fit: the bytes go up RAW rather than
+    base64 (−33% before anything else), and they go up in pieces so no single request
+    approaches Netlify's ~6MB body limit — see `clipup.mjs`.
+
+0et. **A clip that is too big or too long is REFUSED, with its actual number and
+    what to do, before a single byte is sent.** Nothing trims and nothing shrinks any
+    more, so the honest answer is a refusal — and it has to arrive before somebody
+    watches a bar crawl up a phone's uplink for a minute. `addClip` checks the size
+    against `CLIP_MAX` before reading the file, and the length against `CLIP_SECS`
+    the moment the metadata loads. A length that reads back as `Infinity` (every
+    MediaRecorder file, most Android screen recorders) is left to the server, which
+    reads it out of the container's own header.
+
+0eu. **An upload in pieces is validated ONCE, on the whole file, and can never be
+    orphaned.** Half an MP4 is not a small MP4: magic bytes and duration are
+    properties of the complete file, so `checkVideo` runs after the join and nowhere
+    else — and it is the single place both the chunked path and the legacy data-URL
+    path agree about what a valid clip is. The clip id is minted at `begin` and noted
+    as pending before any byte arrives, so an abandoned upload is already something
+    the existing two-hour sweep knows about; its manifest records how many pieces
+    exist, so `dropClip` can compute every key. `list()` stays banned (INVARIANT 1).
+
+0ev. **Clips are the expensive end of MySet, and the size limit is the lever.**
+    Netlify bills ~$0.134/GB of bandwidth and a cache HIT is billed like anything
+    else — the year-long immutable cache on `/api/vid` saves compute, never bytes. So
+    a 25MB clip watched 100 times costs $0.33, which is more than ten entire
+    three-hour gigs at 2.7c each. If clips become popular, moving the BYTES (not the
+    app) to a store with no egress charge is the largest single saving available
+    anywhere in MySet. Raising `MAX_VIDEO_BYTES` without that move multiplies the
+    one line of the bill that nothing else can bring down.

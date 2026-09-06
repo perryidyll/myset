@@ -20,7 +20,8 @@ const imgFn  = (await import('../netlify/functions/img.mjs')).default;
 const { createArtist } = await import('../netlify/functions/_auth.mjs');
 const { decodeVideoDataUrl, mp4Seconds, MAX_VIDEO_BYTES, MAX_SECONDS,
         readPending, sweepPending, sweepQueue, getClip, PENDING_TTL,
-        notePending } = await import('../netlify/functions/_video.mjs');
+        notePending, CHUNK_BYTES, readUpload } = await import('../netlify/functions/_video.mjs');
+const clipupFn = (await import('../netlify/functions/clipup.mjs')).default;
 const { readPosts, moderate } = await import('../netlify/functions/_community.mjs');
 const { keysFor } = await import('../netlify/functions/_account.mjs');
 const { getImage } = await import('../netlify/functions/_img.mjs');
@@ -78,8 +79,13 @@ console.log('\nTHE DOOR — bytes, not labels');
   ok('a GIF is refused before it is even decoded',
     !!decodeVideoDataUrl('data:image/gif;base64,R0lGOD').error);
   ok('empty is refused', !!decodeVideoDataUrl('data:video/mp4;base64,').error);
-  ok(`over ${MAX_VIDEO_BYTES / 1024 / 1024}MB is refused, by bytes`,
-    /too big/.test(decodeVideoDataUrl(asData(fakeMp4(5, MAX_VIDEO_BYTES + 5000))).error || ''));
+  {
+    const err = decodeVideoDataUrl(asData(fakeMp4(5, MAX_VIDEO_BYTES + 5000))).error || '';
+    /* The message carries the ACTUAL size and what to do about it, because it is
+       shown to a person as-is. "Too big" told somebody nothing they could act on. */
+    ok(`over ${MAX_VIDEO_BYTES / 1048576}MB is refused, by bytes`, /limit is/.test(err), err);
+    ok('and the refusal says how big it actually is', /\d+\.\dMB/.test(err), err);
+  }
   ok(`a clip longer than ${MAX_SECONDS}s is refused even when it is small`,
     /seconds/.test(decodeVideoDataUrl(asData(fakeMp4(120))).error || ''),
     decodeVideoDataUrl(asData(fakeMp4(120))));
@@ -296,6 +302,78 @@ console.log('\nLEAVING TAKES THE CLIPS WITH IT');
   await moderate(aid, { action: 'postDelete', id: before.id });
   ok('deleting the post deletes the clip', !(await getClip(aid, clipId)));
   ok('and its poster', !(await getImage(aid, clipId)));
+}
+
+console.log('\nA CLIP THAT ARRIVES IN PIECES  (clipup.mjs)');
+/* THE WHOLE POINT OF THIS ENDPOINT. A clip used to travel as base64 inside a JSON
+   body, which capped it at 3MB — and 3MB is why the phone had to shrink every clip
+   by re-filming it onto a canvas, which is why clips kept arriving silent. Nothing
+   here touches the video, so the sound cannot go missing. What has to be pinned is
+   that a file broken into pieces comes back out byte-for-byte identical. */
+{
+  const BIG = fakeMp4(9, CHUNK_BYTES + 20000);          // two pieces, comfortably
+  const B = await createArtist({ email: 'chunky@example.com', name: 'Chunky' });
+  const bid = B.artistId, bslug = B.slug;
+  const F = 'fanchunk001';
+  const call = (qs, body, raw) => clipupFn(new Request(`https://x/api/clipup?a=${bslug}&${qs}`, {
+    method: 'POST',
+    headers: { 'content-type': raw ? 'application/octet-stream' : 'application/json' },
+    body: raw ? body : JSON.stringify(body),
+  }));
+
+  const tooBig = await jget(await call('begin=1', { fan: F, size: MAX_VIDEO_BYTES + 1 }));
+  ok('a file over the limit is refused BEFORE a byte is sent', tooBig.ok === false, tooBig);
+  ok('and the refusal names the size and the limit',
+    /\d+\.\dMB and the limit is/.test(tooBig.error || ''), tooBig.error);
+
+  const b = await jget(await call('begin=1', { fan: F, size: BIG.length, type: 'video/mp4' }));
+  ok('begin mints a clip id', b.ok && /^k[a-z0-9]{10}$/.test(b.clip || ''), b);
+  ok('and says how many pieces to expect', b.parts === Math.ceil(BIG.length / CHUNK_BYTES), b);
+  ok('it is pending from the very first moment, so it can never be orphaned',
+    !!(await readPending(bid)).by[b.clip]);
+
+  const strayPiece = await call(`clip=${b.clip}&i=${b.parts + 5}`, BIG.subarray(0, 10), true);
+  ok('a piece outside the agreed count is refused', strayPiece.status === 400, strayPiece.status);
+
+  const early = await jget(await call(`clip=${b.clip}&end=1`, { poster: JPEG }));
+  ok('finishing with pieces missing is refused, and says so',
+    early.ok === false && /didn.t arrive/.test(early.error || ''), early);
+  ok('and nothing is stored for it', !(await getClip(bid, b.clip)));
+
+  /* OUT OF ORDER ON PURPOSE. Pieces are sent one after another by the page, but
+     nothing about the protocol requires it, and a retry can arrive late. */
+  const pieces = [];
+  for (let i = 0; i < b.parts; i++) pieces.push(i);
+  for (const i of pieces.reverse()) {
+    const piece = BIG.subarray(i * CHUNK_BYTES, Math.min(BIG.length, (i + 1) * CHUNK_BYTES));
+    const r = await call(`clip=${b.clip}&i=${i}`, piece, true);
+    if (r.status !== 200) ok('piece ' + i + ' accepted', false, r.status);
+  }
+
+  const done = await jget(await call(`clip=${b.clip}&end=1`, { poster: JPEG }));
+  ok('the pieces become a clip', done.ok === true && done.clip === b.clip, done);
+  eq2('and the server read its real length out of the container', done.seconds, 9);
+
+  const stored = await getClip(bid, b.clip);
+  ok('THE BYTES COME BACK EXACTLY AS THEY WENT UP',
+    !!stored && stored.bytes.length === BIG.length && stored.bytes.equals(BIG),
+    stored ? { got: stored.bytes.length, want: BIG.length } : 'nothing stored');
+  eq2('and it is stored as an mp4', stored && stored.type, 'video/mp4');
+  ok('the poster came with it', !!(await getImage(bid, b.clip)));
+  ok('and the pieces are cleaned up the moment they are not needed',
+    !(await readUpload(bid, b.clip)));
+
+  /* A file that is a video by name only must not survive being reassembled — the
+     check runs on the WHOLE file, because half an MP4 is not a small MP4. */
+  const junk = Buffer.alloc(2000, 9);
+  const j = await jget(await call('begin=1', { fan: F, size: junk.length }));
+  await call(`clip=${j.clip}&i=0`, junk, true);
+  const jr = await jget(await call(`clip=${j.clip}&end=1`, {}));
+  ok('reassembled junk is still refused', jr.ok === false && /really a video/.test(jr.error || ''), jr);
+  ok('and its pieces are cleared away with it', !(await readUpload(bid, j.clip)));
+
+  const ghost = await call('clip=kzzzzzzzzzz&i=0', junk, true);
+  ok('a piece for an upload nobody started is refused', ghost.status === 409, ghost.status);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
