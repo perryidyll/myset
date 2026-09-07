@@ -282,7 +282,7 @@ function render(){
      here to say the night was good should not have to scroll past a shop to do
      something about it. */
   if(!VENUE) h+=`<div class="tipbar"><button onclick="openTip()">
-    <b>Tip ${esc(firstName())}</b><small>${d.canBuy?'100% goes to them':'Card tips aren’t on yet — say hi at the show'}</small></button></div>`;
+    <b>Tip ${esc(firstName())}</b><small>${d.canBuy?'Say thanks':'Card tips aren’t on yet — say hi at the show'}</small></button></div>`;
 
   if((d.merch||[]).length){
     h+=`<div class="sect">Merch</div><div class="rail">${d.merch.map(m=>`
@@ -870,7 +870,7 @@ function openTip(){
     <button class="go" onclick="closeSheet()">Got it</button>`); return; }
   TIP=10;
   openSheet(`<h3>Tip ${esc(firstName())}</h3>
-    <p class="lede">100% goes to ${esc(firstName())}. Add a note and they’ll see it.</p>
+    <p class="lede">Goes straight to ${esc(firstName())}. Add a note and they’ll see it.</p>
     <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
     <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
