@@ -1824,6 +1824,18 @@ async function healHist(){
   await loadHist(true); render();
   toast(d.added?`Found ${d.added} more show${d.added===1?'':'s'}`:'Everything is already here');
 }
+/* Every night before today was filed with whatever single venue was in Settings
+   at the time, so an artist with a few residencies has a history that names one of
+   them over and over. This asks the server to look each night up on the calendar.
+   See placeShows in _history.mjs — it only renames a night a gig was actually
+   running for. */
+async function placeHist(){
+  const d=await api('/history',{method:'POST',body:JSON.stringify({action:'place'})});
+  if(!d||!d.ok){toast((d&&d.error)||'Couldn\u2019t check just now');return;}
+  await loadHist(true); render();
+  toast(d.placed?`Renamed ${d.placed} night${d.placed===1?'':'s'}`
+                :'Every night already matches your calendar');
+}
 async function loadHist(force){
   if(HIST&&!force)return;
   HIST=await api('/history',{quiet:true});
@@ -2132,7 +2144,9 @@ function render(){
                   :'<div class="row muted">No finished shows yet. End a show and it gets filed here.</div>')}</div>
         ${HISTQ?'':`<div class="wrap" style="margin-top:12px">
           <button class="big alt" onclick="healHist()">Look for missing shows</button>
-          <p class="muted" style="font-size:12px;margin:8px 0 0">A night is filed when you end the show. If one is missing this goes back through the records and puts it where it belongs.</p></div>`}`;
+          <p class="muted" style="font-size:12px;margin:8px 0 0">A night is filed when you end the show. If one is missing this goes back through the records and puts it where it belongs.</p>
+          <button class="big alt" style="margin-top:10px" onclick="placeHist()">Name these from my calendar</button>
+          <p class="muted" style="font-size:12px;margin:8px 0 0">Older nights were all filed under the one venue in Settings. This renames each one from the gig that was on your calendar that night — nothing else about them changes.</p></div>`}`;
       }
       let pays='';
       if(!R) pays=`<div class="sec"><span class="kick">All payments</span></div>

@@ -301,8 +301,17 @@ function applyFormat(m, version, mask) {
   for (let i = 0; i <= 5; i++) m[8][i] = get(i);
   m[8][7] = get(6); m[8][8] = get(7); m[7][8] = get(8);
   for (let i = 9; i <= 14; i++) m[14 - i][8] = get(i);
-  for (let i = 0; i <= 7; i++) m[n - 1 - i][8] = get(i);
-  for (let i = 8; i <= 14; i++) m[8][n - 15 + i] = get(i);
+  /* THE SECOND COPY IS 7 + 8, NOT 8 + 7. Bits 0-6 run up the left edge from the
+     bottom; bit 7 begins the run along the top right. The module between them —
+     (n-8, 8) — is the "dark module", which is always black and is not a format
+     bit at all. Writing bit 7 there instead cost the code its dark module and
+     shifted the whole right-hand run by one: the top-left copy was still correct,
+     so most readers fell back to it and the codes scanned anyway, which is how
+     this survived a module-for-module review. One URL in a forty-length sweep did
+     not scan at all. */
+  for (let i = 0; i <= 6; i++) m[n - 1 - i][8] = get(i);
+  m[n - 8][8] = 1;
+  for (let i = 7; i <= 14; i++) m[8][n - 15 + i] = get(i);
   if (version >= 7) {
     const vb = VERSION_BITS[version];
     for (let i = 0; i < 18; i++) {
@@ -336,23 +345,69 @@ export function qrMatrix(text, forceMask = null) {
   return best;
 }
 
-/** A standalone SVG. `quiet` is the mandatory 4-module light border. */
-export function qrSvg(text, { scale = 8, quiet = 4, dark = '#000000', light = '#FFFFFF' } = {}) {
+/* THE MYSET MARK, IN THE MIDDLE.
+
+   A QR code at level M can lose about 15% of its modules and still read, because
+   Reed-Solomon rebuilds what is missing — that is the whole point of the error
+   correction, and it is why a logo in the middle is normal rather than a trick.
+   The badge here covers a square 17% of the code’s width, which is under 3% of the
+   modules: comfortably inside the budget, with the rest of it left for the real
+   world (a crease in the paper, a thumb, bad light on a bar table).
+
+   The modules under the badge are CLEARED rather than drawn over. A scanner that
+   sees clean white behind the mark finds nothing ambiguous there; leaving black
+   modules half-covered gives it edges that belong to neither the code nor the
+   logo. */
+const LOGO_FRACTION = 0.17;
+
+/** The square of modules the badge sits on: [first, count], centred and odd. */
+function logoBox(n) {
+  let count = Math.round(n * LOGO_FRACTION);
+  if (count % 2 !== n % 2) count++;          // keep it centred on whole modules
+  return [(n - count) / 2, count];
+}
+
+/** The badge itself, in module units, drawn at `scale` with the code's quiet zone. */
+function logoSvg(first, count, quiet, scale) {
+  const x = (first + quiet) * scale, w = count * scale;
+  const pad = w * 0.085;                     // white breathing room around the tile
+  const tx = x + pad, tw = w - pad * 2;
+  const bar = (bx, by, bh) =>
+    `<rect x="${(tx + tw * bx).toFixed(2)}" y="${(tx + tw * by).toFixed(2)}" `
+    + `width="${(tw * 0.11).toFixed(2)}" height="${(tw * bh).toFixed(2)}" `
+    + `rx="${(tw * 0.055).toFixed(2)}" fill="#fff"/>`;
+  return `<rect x="${x}" y="${x}" width="${w}" height="${w}" rx="${(w * 0.22).toFixed(2)}" fill="#FFFFFF"/>`
+    + `<rect x="${tx.toFixed(2)}" y="${tx.toFixed(2)}" width="${tw.toFixed(2)}" height="${tw.toFixed(2)}" `
+    + `rx="${(tw * 0.24).toFixed(2)}" fill="url(#msg)"/>`
+    + bar(0.26, 0.42, 0.32) + bar(0.44, 0.26, 0.48) + bar(0.62, 0.52, 0.22);
+}
+
+/** A standalone SVG. `quiet` is the mandatory 4-module light border.
+    `logo:false` gives the plain code back, for anywhere the mark would be too
+    small to read — below about 120px across it is a smudge, not a logo. */
+export function qrSvg(text, { scale = 8, quiet = 4, dark = '#000000', light = '#FFFFFF', logo = true } = {}) {
   const m = qrMatrix(text);
   if (!m) return null;
   const n = m.length, dim = (n + quiet * 2) * scale;
+  const [first, count] = logoBox(n);
+  const last = first + count - 1;
+  const under = (r, c) => logo && r >= first && r <= last && c >= first && c <= last;
   let path = '';
   for (let r = 0; r < n; r++) {
     let c = 0;
     while (c < n) {
-      if (!m[r][c]) { c++; continue; }
+      if (!m[r][c] || under(r, c)) { c++; continue; }
       let w = 1;
-      while (c + w < n && m[r][c + w]) w++;
+      while (c + w < n && m[r][c + w] && !under(r, c + w)) w++;
       path += `M${(c + quiet) * scale} ${(r + quiet) * scale}h${w * scale}v${scale}h-${w * scale}z`;
       c += w;
     }
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${dim}" height="${dim}" viewBox="0 0 ${dim} ${dim}" shape-rendering="crispEdges" role="img" aria-label="QR code">`
+    + (logo ? `<defs><linearGradient id="msg" x1="0" y1="0" x2="1" y2="1">`
+            + `<stop offset="0" stop-color="#FF375F"/><stop offset="1" stop-color="#FF6B45"/>`
+            + `</linearGradient></defs>` : '')
     + `<rect width="${dim}" height="${dim}" fill="${light}"/>`
-    + `<path d="${path}" fill="${dark}"/></svg>`;
+    + `<path d="${path}" fill="${dark}"/>`
+    + (logo ? logoSvg(first, count, quiet, scale) : '') + `</svg>`;
 }

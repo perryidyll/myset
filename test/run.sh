@@ -30,6 +30,9 @@ echo
 echo "── trimming an mp4 without re-encoding it ──"
 node test/trim.mjs
 echo
+echo "── the printed QR codes ──"
+node test/qr.mjs
+echo
 echo "── how big a room can get ──"
 node --import ./test/register.mjs test/roomsize.mjs
 echo
@@ -80,6 +83,9 @@ node --import ./test/register.mjs test/sheets.mjs
 echo
 echo "── shows that start and end themselves ──"
 node --import ./test/register.mjs test/autoshow.mjs
+echo
+echo "── where a night happened ──"
+node --import ./test/register.mjs test/place.mjs
 echo
 echo "── the community page and the shop ──"
 node --import ./test/register.mjs test/community.mjs

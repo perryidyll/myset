@@ -287,9 +287,9 @@ function render(){
     <div class="stars">${[1,2,3,4,5].map(n=>`<button data-star="${n}" class="${DRAFT.stars>=n?'on':''}" aria-label="${n} stars">★</button>`).join('')}</div>
     <textarea id="txt" maxlength="500" placeholder="How was the night?">${esc(DRAFT.text||'')}</textarea>
     <div class="cnt" id="cnt">0/500</div>
-    ${showOpts.length?`<select class="inp" id="showSel"><option value="">Just in general</option>${showOpts.map(s=>`<option value="${esc(s.showId)}" ${(DRAFT.show||SHOWPRE)===s.showId?'selected':''}>${esc(s.label)}</option>`).join('')}</select>`:''}
+    ${showOpts.length?`<select class="inp" id="showSel"><option value="">Where did you see them?</option>${showOpts.map(s=>`<option value="${esc(s.showId)}" ${(DRAFT.show||SHOWPRE)===s.showId?'selected':''}>${esc(s.label)}</option>`).join('')}</select>`:''}
     <input class="inp" id="nm" maxlength="30" placeholder="Your name (optional)" value="${esc(DRAFT.name||'')}">
-    <input class="inp" id="vid" placeholder="Paste a video link — YouTube, Instagram or TikTok" value="${esc(DRAFT.video||'')}">
+    <input class="inp" id="vid" placeholder="Paste a video link" value="${esc(DRAFT.video||'')}">
     <div class="row2">
       <label class="chip" style="cursor:pointer">＋ Add photos<input type="file" accept="image/*" multiple id="pf" style="display:none"></label>
       <span class="muted" style="font-size:12px">Up to three</span>
@@ -297,7 +297,7 @@ function render(){
     <div class="thumbs" id="thumbs">${DRAFT.photos.map((p,i)=>`<div style="background-image:url('${p}')"><b data-rm="${i}">✕</b></div>`).join('')}</div>
     <div class="row2">
       <label class="chip" id="clipLab" style="cursor:pointer">＋ Add a clip<input type="file" accept="video/*" id="cf" style="display:none"></label>
-      <span class="muted" style="font-size:12px">Up to ${CLIP_SECS} seconds, one per post — with its sound</span>
+      <span class="muted" style="font-size:12px">Up to ${CLIP_MAX/1048576}MB, one per post</span>
     </div>
     <div id="clipBox">${DRAFT.clip?`<div class="clipdone"><video src="${esc(DRAFT.clip.src)}" poster="${esc(DRAFT.clip.poster||'')}" preload="none" playsinline controls></video><button class="chip" id="clipRm">Remove clip</button></div>`:''}</div>
     <div class="prog" id="clipProg" hidden><i></i><span></span></div>
@@ -387,7 +387,7 @@ function wire(){
    long is REFUSED, with its actual size and what to do about it. That is a worse
    answer than shrinking it would have been if shrinking had ever worked. It never
    did. */
-const CLIP_SECS = 30, CLIP_MAX = 50 * 1024 * 1024;
+const CLIP_SECS = 30, CLIP_MAX = 75 * 1024 * 1024;
 const mb = (n) => (n / 1048576).toFixed(1);
 
 function clipProgress(pct, label){

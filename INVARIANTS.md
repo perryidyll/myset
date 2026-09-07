@@ -1916,3 +1916,41 @@ If you are about to violate one, stop and say so rather than working around it.
     broke the trim outright — a metadata track can hold a single sample spanning the
     whole video, so it was always "inside" the window and dragged the finished clip's
     duration back to the full original length.
+
+0f0. **A sheet's transform must carry `translateX(-50%)`, always.** The sheet is
+    centred by transform, not by geometry, so any code that writes `style.transform`
+    and forgets that term moves the sheet half its own width to the right. That is
+    what a fan saw when they touched the lyrics: the window appeared to come loose
+    and slide sideways. `tools/sheetcheck.mjs` asserts the term survives a drag.
+
+0f1. **Nothing that scrolls on its own is a place to start dragging a sheet from.**
+    The lyrics pane is a scroller inside a sheet that is itself draggable, and the
+    drag handler claimed the touch first — so reading the words pulled the whole
+    sheet down instead. The handler now refuses to begin inside `.lyr`, and the
+    handle is the grab zone, the title and the line beneath it.
+
+0f2. **A sheet freezes the page behind it.** `body.sheeting` is `position:fixed` at
+    the offset the page was at, restored on close. Without it iOS scrolls the page
+    under the sheet, which is indistinguishable from having grabbed the wrong thing.
+
+0f3. **The dark module is not a format bit.** Every QR code has one permanently
+    black module at `(4×version + 9, 8)`. The writer here put format bit 7 there and
+    shifted the top-right run of the second format copy by one. The top-left copy was
+    still correct, so almost every code scanned anyway and the fault survived a
+    module-for-module review; one URL in a forty-length sweep would not scan at all.
+    `test/qr.mjs` now checks the dark module and that the two copies agree.
+
+0f4. **The mark in a QR code clears modules, and stays under 6% of them.** Level M
+    rebuilds about 15%, and the rest of that budget belongs to the real world — a
+    crease, a thumb, bad light on a bar table. The badge is 17% of the code's width
+    (under 3% of its modules): at 21% it measurably lost margin under blur, at 17% it
+    matched a plain code. It never reaches a finder or the timing line.
+
+0f5. **A night is named by the calendar, not by one field in Settings.** `show.venue`
+    is a single value that every filed night copies, so an artist with residencies at
+    three venues gets a history that names one of them three times. Starting a show
+    takes the venue and city from the gig that is running (the same occurrence that
+    already supplies the setlist), only on a fresh night, only from a gig on now or
+    within six hours, and it SAYS SO in the note. `placeShows` does the same for
+    nights already filed — but only where a gig was actually running when that night
+    started, because a confidently wrong venue is worse than an out-of-date one.

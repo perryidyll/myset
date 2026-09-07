@@ -112,7 +112,12 @@
   border:.5px solid rgba(255,255,255,.3);transition:transform .22s var(--spring)}
 .lyricsbtn:active{transform:scale(.95)}
 .lyricsbtn svg{width:17px;height:17px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round}
-.lyr{max-height:62vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:4px -4px 0;padding:0 4px;
+/* ITS OWN SCROLLER, AND NOTHING ELSE'S. `overscroll-behavior:contain` is what
+   stops a flick that reaches the end of the words from carrying on into the page
+   behind; `touch-action:pan-y` tells the browser this is a vertical scroller
+   before any JS runs, so the first frame of a swipe is never stolen. */
+.lyr{max-height:62vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+  -webkit-overflow-scrolling:touch;margin:4px -4px 0;padding:0 4px;
   font-size:18px;line-height:1.72;white-space:pre-wrap;color:var(--ink-2);letter-spacing:-.005em;
   -webkit-user-select:none;user-select:none}
 .lyrfoot{margin:16px 0 0;padding-top:13px;border-top:.5px solid var(--hair);
@@ -233,8 +238,17 @@
 #sheet{max-height:88vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 /* 44px, which is the smallest thing a thumb should be asked to hit. The bar itself
    stays 5px — it is the affordance, not the target. */
-.grabzone{position:relative;min-height:44px;display:flex;align-items:center;
+.grabzone{position:relative;min-height:56px;display:flex;align-items:center;
   margin:-8px 0 4px;cursor:grab;touch-action:none}
+/* The title and the line under it drag the sheet too. On a sheet whose body is a
+   scroller — the lyrics — the bar is otherwise the ONLY place a thumb can pull
+   from, and a 56px strip at the top of a phone is a small thing to find in a
+   dark room. Neither is text anyone selects. */
+.sheet h3,.sheet .lede{touch-action:none;-webkit-user-select:none;user-select:none}
+/* While a sheet is open the page behind it is frozen and untouchable. Without
+   this the body scrolls under the sheet on iOS, which is what made tapping the
+   lyrics feel like the wrong thing had been grabbed. */
+body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .grabzone:active{cursor:grabbing}
 .grabzone .grab{margin:0 auto}
 .sheetx{position:absolute;top:6px;right:0;width:38px;height:38px;border-radius:50%;
@@ -808,15 +822,28 @@ function setFilter(v){ FILTER=v; FOCUS=false; render(); }
    no visible way out, so a fan who opened it by mistake was stuck reading. The
    Studio's sheets already solved this, so this is that same solution — a grab ZONE
    big enough for a thumb, an ✕ in the corner, and a real drag. */
+let SHEETY=0;                    // where the page was before it was frozen
 function openSheet(h){
   const sh=$('#sheet');
+  if(!document.body.classList.contains('sheeting')){
+    SHEETY=window.scrollY||0;
+    document.body.style.top=`-${SHEETY}px`;
+    document.body.classList.add('sheeting');
+  }
   sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
     <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
   sh.style.transform=''; sh.scrollTop=0;
   $('#bg').classList.add('on'); sh.classList.add('on');
   attachDrag(sh);
 }
-function closeSheet(){const sh=$('#sheet');sh.style.transition='';sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
+function closeSheet(){
+  const sh=$('#sheet');sh.style.transition='';sh.style.transform='';
+  $('#bg').classList.remove('on');sh.classList.remove('on');
+  if(document.body.classList.contains('sheeting')){
+    document.body.classList.remove('sheeting'); document.body.style.top='';
+    window.scrollTo(0,SHEETY);
+  }
+}
 
 function attachDrag(sh){
   /* ONE set of listeners for the life of the page. This used to bind a fresh pair
@@ -830,15 +857,25 @@ function attachDrag(sh){
   sh.__drag=true;
   let y0=null, dy=0, t0=0, fromBody=false;
   const CONTROL='input,textarea,select,button,a,[contenteditable]';
+  /* THE SHEET IS CENTRED WITH translateX(-50%), so every transform written here
+     has to carry it. Dropping it moved the sheet half its own width to the right
+     the instant a finger touched it — which looked like the sheet had come loose
+     rather than like a missing term in one string. */
+  const SHIFT='translateX(-50%) ';
+  const HANDLE='.grabzone,h3,.lede';
+  /* Anything that scrolls on its own — the lyrics — is NOT a place to start
+     dragging the sheet from. Otherwise reading the words pulls the whole sheet
+     down instead of moving the text. */
+  const SCROLLER='.lyr';
   const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
     fromBody=!!body; sh.style.transition='none'; };
   const move=(e)=>{
     if(y0===null)return;
     dy=((e.touches?e.touches[0]:e).clientY)-y0;
-    if(dy<0){ dy=0; sh.style.transform='translateY(0)'; return; }
+    if(dy<0){ dy=0; sh.style.transform=SHIFT+'translateY(0)'; return; }
     // dragging from the body only counts while the sheet is still scrolled to the top
     if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
-    sh.style.transform=`translateY(${dy}px)`;
+    sh.style.transform=SHIFT+`translateY(${dy}px)`;
     if(e.cancelable)e.preventDefault();
   };
   const end=()=>{
@@ -846,13 +883,14 @@ function attachDrag(sh){
     const speed=dy/Math.max(1,Date.now()-t0);
     y0=null;
     sh.style.transition='';
-    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform='translateY(0)';
+    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform=SHIFT+'translateY(0)';
   };
   const begin=(e)=>{
     const t=e.target;
     if(!t||!t.closest)return;
     if(t.closest(CONTROL))return;
-    const inZone=!!t.closest('.grabzone');
+    if(t.closest(SCROLLER))return;
+    const inZone=!!t.closest(HANDLE);
     if(!inZone&&sh.scrollTop>0)return;
     start(e,!inZone);
   };
@@ -861,7 +899,7 @@ function attachDrag(sh){
   sh.addEventListener('touchend',end);
   sh.addEventListener('touchcancel',end);
   sh.addEventListener('mousedown',(e)=>{
-    if(!e.target.closest('.grabzone')||e.target.closest(CONTROL))return;
+    if(!e.target.closest(HANDLE)||e.target.closest(CONTROL))return;
     start(e,false);
     const mm=(ev)=>move(ev), mu=()=>{ end();
       window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };

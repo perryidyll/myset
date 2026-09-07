@@ -67,7 +67,7 @@ import { store, readDoc, casDoc } from './_lib.mjs';
    (not the app) to a store with no egress charge is the single biggest saving
    available anywhere in MySet — see docs/sessions/2026-09-06-clips-as-they-are.md.
    That move is what makes a bigger number here free rather than expensive. */
-export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 75 * 1024 * 1024;
 /* Comfortably under Netlify's ~6MB request body, with room for headers. */
 export const CHUNK_BYTES = 4 * 1024 * 1024;
 export const MAX_SECONDS = 30;

@@ -1,5 +1,5 @@
 import { json, bad, requireArtist, getShow, readFans, voteCounts } from './_lib.mjs';
-import { readHistIndex, readHistShow, reconcileShow, moneyForShow, healHistory } from './_history.mjs';
+import { readHistIndex, readHistShow, reconcileShow, moneyForShow, healHistory, placeShows } from './_history.mjs';
 
 /* Artist-only. GET lists past shows (or one in detail); POST re-pulls Stripe for
    a single show. The show currently running is included as a live preview so the
@@ -16,6 +16,8 @@ export default async (req) => {
     /* "Find my missing shows" in the Studio. Forced, so it runs again even after
        the automatic one has stamped the index — the artist asked. */
     if (body.action === 'heal') return json({ ok: true, ...(await healHistory(aid, { force: true })) });
+    /* "Name these from my calendar" in the Studio — see placeShows. */
+    if (body.action === 'place') return json({ ok: true, ...(await placeShows(aid)) });
     if (body.action !== 'reconcile') return bad('unknown action');
     const d = await reconcileShow(aid, String(body.show || ''));
     if (!d) return bad('unknown show', 404);

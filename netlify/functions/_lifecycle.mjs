@@ -81,13 +81,26 @@ export async function releaseNote(aid, before) {
    chose one. A gig's `listId` has three states: '' no opinion, 'all' clear the
    pick, <id> that setlist — and a deleted setlist is reported, never silently
    blanked. Resolved before the mutation (it needs the calendar), applied after
-   (applyList writes the show record itself). */
-async function resolveAutoList(aid, now) {
-  const out = { listId: null, note: null };
+   (applyList writes the show record itself).
+
+   AND THE PLACE. `show.venue` is one field, set once in Settings, and every night
+   that gets filed copies whatever it says — so an artist who plays three venues a
+   week ends up with a history where every show happened at the first one they ever
+   typed in. Perry's did: five filed nights, three different venues on the
+   calendar, one name on all five. The calendar already knows where tonight is, and
+   it is the same occurrence this function is already holding. */
+async function resolveTonight(aid, now) {
+  const out = { listId: null, note: null, venue: '', city: '' };
   try {
     const occ = nextOccurrence(await readEvents(aid), now);
     // only a gig that is on now or within the next few hours — not next Tuesday's
-    if (occ && occ.listId && occ.startsAt - now < 6 * 3600e3) out.listId = occ.listId;
+    if (occ && occ.startsAt - now < 6 * 3600e3) {
+      if (occ.listId) out.listId = occ.listId;
+      /* The city too, because they travel together: a night filed with the right
+         venue and the wrong city is no better than before. Only ever taken from a
+         gig that is on now or within a few hours — never from next Tuesday's. */
+      if (occ.venue) { out.venue = occ.venue; out.city = [occ.city, occ.country].filter(Boolean).join(', '); }
+    }
     if (out.listId && out.listId !== 'all'
         && !(await readLists(aid)).lists.some((l) => l.id === out.listId)) {
       out.listId = null;
@@ -122,12 +135,12 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
     } catch { /* never block starting a show on the archive */ }
   }
 
-  const auto = await resolveAutoList(aid, now);
+  const auto = await resolveTonight(aid, now);
   let note = auto.note;
   const freshId = fresh ? newShowId() : null;            // outside the CAS
   const prevShow = fresh ? await getShow(aid) : null;    // read before it resets
 
-  let err = null, already = false;
+  let err = null, already = false, placed = null;
   await mutateShow(aid, (show) => {
     if (!fresh && show.status === 'live') { already = true; return false; }
     const used = show.gigMonth === gigMonthOf() ? show.gigCount : 0;
@@ -139,6 +152,14 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
       show.showId = freshId;
       show.startedAt = now;
       show.windowOpen = true;
+      /* Only on a fresh night, and only when the calendar actually has one. A
+         RESUME must not relabel a night that is already under way, and an artist
+         with an empty calendar keeps exactly what they typed in Settings. */
+      if (auto.venue && auto.venue !== show.venue) {
+        placed = [show.venue, auto.venue];
+        show.venue = auto.venue;
+        if (auto.city) show.city = auto.city;
+      }
     }
     /* Tonight's ceiling, fixed for the night. A show started before room caps
        existed has no `roomCap` and is uncapped — nothing that is already running
@@ -156,6 +177,10 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
   /* Already live is not an error and not a gig — but the calendar's setlist is
      still applied and stranded votes still swept, exactly as a second tap on
      "Start the show" has always behaved. The test suite leans on that. */
+
+  /* Said out loud rather than done silently. Changing the name on a night without
+     telling anyone is how an artist stops trusting the numbers underneath it. */
+  if (placed) note = joinNote(note, `Filed under ${placed[1]} — that’s tonight’s gig on your calendar.`);
 
   if (auto.listId) {
     try {

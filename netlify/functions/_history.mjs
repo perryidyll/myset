@@ -368,6 +368,76 @@ export async function healHistory(aid, { force = false } = {}) {
   return { ok: true, added, fixed, copied, total: rows.length, legacy: legacy.length };
 }
 
+/* NAMING THE NIGHTS THAT ARE ALREADY FILED.
+
+   `show.venue` is a single field in Settings. Every night copies it as it is filed,
+   and nothing ever went back and changed it — so an artist who plays three places a
+   week gets a history where every show happened at whichever one they typed first.
+   Perry's Money tab said "The Ugly Duckling Irish Pub" five times over, for nights
+   at three different venues that were sitting on his own calendar the whole time.
+
+   Starting a show now takes the place from the calendar (see _lifecycle.mjs), which
+   fixes it from here on. This is the other half: the nights already filed.
+
+   IT ONLY RENAMES WHAT IT CAN PROVE. A night is renamed when a gig on the calendar
+   was actually RUNNING when that night started — not the nearest one, not the same
+   weekday, running. Anything else is left exactly as the artist typed it, because a
+   confidently wrong venue is worse than an out-of-date one. Nothing but the name and
+   the city is touched: no money, no counts, no times. */
+export async function placeShows(aid) {
+  const [{ readEvents, occurrencesFor }, { utcToDate }] =
+    await Promise.all([import('./_events.mjs'), import('./_time.mjs')]);
+  const idx = await readDoc(INDEX(aid), { shows: [] });
+  const rows = (idx.data && idx.data.shows) || [];
+  if (!rows.length) return { ok: true, placed: 0, looked: 0 };
+
+  const times = rows.map((r) => r.startedAt || r.endedAt || 0).filter(Boolean);
+  if (!times.length) return { ok: true, placed: 0, looked: rows.length };
+  const events = await readEvents(aid);
+  /* A day of margin at each end so an occurrence that straddles midnight in the
+     gig's own timezone is still in the expansion window. */
+  const occs = occurrencesFor(events,
+    utcToDate(Math.min(...times) - 86400000), utcToDate(Math.max(...times) + 86400000));
+  if (!occs.length) return { ok: true, placed: 0, looked: rows.length };
+
+  /* Half an hour of grace before the start, because a set that begins at 8:30 is a
+     show somebody opened at 8:20. Nothing after the gig's own end. */
+  const GRACE = 30 * 60000;
+  const placeOf = (t) => occs.find((o) => o.venue && t >= o.startsAt - GRACE && t <= o.endsAt) || null;
+
+  const changes = [];
+  for (const r of rows) {
+    const t = r.startedAt || r.endedAt || 0;
+    const o = t ? placeOf(t) : null;
+    if (!o || o.venue === r.venue) continue;
+    changes.push([r.showId, o.venue, [o.city, o.country].filter(Boolean).join(', ')]);
+  }
+  if (!changes.length) return { ok: true, placed: 0, looked: rows.length };
+
+  /* The detail document first, then the row. If the second write fails the two
+     disagree until the next archive, which is the same way every other repair in
+     this file leans — the detail is the record, the row is the summary of it. */
+  for (const [showId, venue, city] of changes) {
+    await casDoc(HIST(aid, showId), () => ({}), (d) => {
+      if (!d || !d.showId || d.venue === venue) return false;
+      d.venue = venue; if (city) d.city = city;
+      return true;
+    }).catch(() => {});
+  }
+  const want = new Map(changes.map(([id, venue, city]) => [id, { venue, city }]));
+  await casDoc(INDEX(aid), () => ({ shows: [] }), (d) => {
+    let touched = false;
+    for (const r of (d.shows || [])) {
+      const w = want.get(r.showId);
+      if (!w || r.venue === w.venue) continue;
+      r.venue = w.venue; if (w.city) r.city = w.city;
+      touched = true;
+    }
+    return touched;
+  }).catch(() => {});
+  return { ok: true, placed: changes.length, looked: rows.length };
+}
+
 export async function readHistIndex(aid) {
   const { data } = await readDoc(INDEX(aid), { shows: [] });
   return { shows: (data && data.shows) || [] };
