@@ -1,4 +1,4 @@
-import { getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
+import { COUNTDOWN_MS, getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
          isUnlimited, publicArtist, json, bad, cleanFanId, markPresence, countInRoom,
          pollFloorFor, boardLimitFor,
          GENRES, playable, votable, roomHash, clientIp } from './_lib.mjs';
@@ -69,12 +69,35 @@ export default async (req) => {
     tags: s.tags || [],
     // the KEY and the artist's CHART are never in a public payload
   });
+  /* The same song with the night taken off it. A separate function rather than a
+     flag inside `shape`, because every one of these fields is a fact about a show
+     that is not happening, and zeroing them in one place is what makes that legible.
+     `cost` is 1 because nothing has been played yet — pricing a replay off the last
+     night's played[] would quote 5 for a song the room can have for 1. */
+  const blank = (s) => ({
+    id: s.id, title: s.title, artist: s.artist || '',
+    votes: 0, mine: false, mineCount: 0, cost: 1, firstAt: null, tags: s.tags || [],
+  });
+
+  /* BETWEEN SHOWS, THE ROOM IS DARK.
+
+     A fan who opens the page when no show is running was seeing the LAST one: its
+     votes, its running order, the songs it had already played missing from the list,
+     and "Playing now" pointing at whatever ended the night. All of it true of a night
+     that is over, and all of it wrong for the person holding the phone. Perry, 2026-09-07.
+
+     What they get instead is the setlist, whole and quiet — every song back in the
+     list (nothing has been played in a show that has not started), no votes on it,
+     and nothing claiming to be playing. Nothing is DELETED to do this: the show
+     record is untouched, so "Resume it instead" still finds the night exactly as the
+     artist left it. This is display, and only display. */
+  const dark = show.status !== 'live';
 
   // songs still to play — narrowed to tonight's setlist, if one is chosen
   const { songs: pool, fellBack } = playable(show);
   const songsRaw = pool
-    .filter((s) => s.id !== show.nowPlaying && !show.played.includes(s.id))
-    .map(shape);
+    .filter((s) => dark || (s.id !== show.nowPlaying && !show.played.includes(s.id)))
+    .map(dark ? blank : shape);
   const orderedAll = rankSongs(songsRaw, counts, firstAt);
   /* THE SHORT BOARD, AND THE ONE THING IT MUST NEVER DROP.
 
@@ -98,13 +121,13 @@ export default async (req) => {
      the artist has since HIDDEN drops off the list rather than sitting there
      answering "that one isn't on tonight's list" when somebody taps it. */
   const canVote = votable(show);
-  const played = show.played
+  const played = dark ? [] : show.played
     .map((id) => show.songs.find((s) => s.id === id))
     .filter((s) => s && canVote(s))
     .map(shape)
     .reverse();
 
-  const np = show.songs.find((s) => s.id === show.nowPlaying) || null;
+  const np = dark ? null : (show.songs.find((s) => s.id === show.nowPlaying) || null);
 
   /* One extra blob read, and only when there is something to read. This endpoint
      is polled by every phone in the room, so nothing goes on it unconditionally. */
@@ -117,6 +140,12 @@ export default async (req) => {
     src: MARK,                                 // provenance — see _canary.mjs
     artistId: aid, artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
     status: show.status, windowOpen: !!show.windowOpen,
+    /* MILLISECONDS LEFT, not the moment it ends — see the `countdown` action in
+       admin.mjs. Absent unless one is actually running. */
+    countdownIn: (() => {
+      const left = (show.countdownAt || 0) - Date.now();
+      return (!dark && left > 0 && left <= COUNTDOWN_MS) ? left : 0;
+    })(),
     showId: show.showId || '',                // so "say something about tonight" can name the night
     nowPlaying: np ? { id: np.id, title: np.title, artist: np.artist || '' } : null,
     songs: ordered, played,

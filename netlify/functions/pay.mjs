@@ -189,7 +189,13 @@ export default async (req) => {
   const who = await artistById(aid);
   /* Merch returns to the community page, which redeems the session exactly as
      vote.html does — the two pages that call /api/confirm (INVARIANT 5b). */
-  const back = body.kind === 'merch'
+  /* A TIP CAN NOW START FROM THE COMMUNITY PAGE TOO (Perry, 2026-09-07: the tip
+     button must always be there, including at the top of that page), and somebody
+     who taps it there has to come back there. `from` chooses between two paths this
+     server builds — it is never used AS a url, because a caller-supplied redirect is
+     an open redirect however innocent the caller looks. */
+  const home = body.from === 'community' || body.kind === 'merch';
+  const back = home
     ? (who && who.slug ? `/${who.slug}/community` : '/community.html')
     : (who && who.slug ? `/${who.slug}/vote` : '/vote.html');
 

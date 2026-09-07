@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
+import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, STARTER_SONGS,
@@ -1811,6 +1811,22 @@ export default async (req) => {
         break;
       }
       case 'window': show.windowOpen = !!body.open; break;
+      /* LAST CALL. The artist taps it when they are about to start the next song,
+         and every phone in the room gets a ten-second box at the top of the page.
+
+         It is a NUDGE, not a lock: voting stays open, because there is already a
+         switch for closing it and a countdown that silently did two things would be
+         the harder one to explain on stage. What it changes is the room's attention.
+
+         Stored as an END TIME so it survives a poll landing anywhere inside the ten
+         seconds; the payload sends the milliseconds LEFT rather than the timestamp,
+         because a phone's clock is not the server's and a fan four minutes fast would
+         otherwise see nothing at all. */
+      case 'countdown': {
+        if (show.status !== 'live') { err = ['Start the show first', 409]; return false; }
+        show.countdownAt = Date.now() + COUNTDOWN_MS;
+        break;
+      }
       // Settings → "Start shows from my calendar". Off means the schedule never
       // starts one; ending by itself still applies to a show that is live.
       case 'autoStart': show.autoStart = body.on !== false; break;

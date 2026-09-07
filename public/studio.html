@@ -248,6 +248,16 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .votebox .vs{display:block;font-size:12px;color:var(--muted);margin-top:3px}
 .votebox .tog{background:var(--surface-2)}
 .votebox .tog button.on{background:var(--accent-2);color:#fff;box-shadow:none}
+/* LAST CALL. Orange ring rather than a solid fill: it is a nudge the artist reaches
+   for between songs, not the button that starts one, and it must never compete with
+   the big play button a few inches below it. */
+.lastcall{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  padding:13px 16px;border-radius:var(--r);background:var(--surface);color:var(--ink);
+  box-shadow:inset 0 0 0 1.5px var(--accent);transition:transform .18s var(--spring),opacity .2s}
+.lastcall:active{transform:scale(.985)}
+.lastcall[disabled]{opacity:.5}
+.lastcall b{font-size:16px;font-weight:700;letter-spacing:-.015em;color:var(--accent)}
+.lastcall small{font-size:12px;color:var(--muted);font-weight:400}
 .slotmini{width:44px;height:44px;border-radius:11px;background:var(--surface-2) center/cover;display:grid;place-items:center;color:var(--muted);flex:0 0 auto;margin-right:10px}
 /* the plan, top right: an orange-ringed Upgrade on free, a green tag with the plan's
    name otherwise — both tappable, both with the same arrow the name carries */
@@ -1825,6 +1835,22 @@ function clearBoardAsk(){
   if(!confirm('Clear every vote off the board?\n\nNobody gets their votes back \u2014 they were spent when they were cast. The room starts from nothing.'))return;
   act('resetVotes');
 }
+/* Ten seconds, counted on the button itself so the artist can see it running and
+   cannot fire a second one over the top of the first. The countdown the ROOM sees is
+   the server's — this is only the local echo of it. */
+function lastCall(){
+  const b=$('#lastCall'); if(!b||b.disabled)return;
+  act('countdown');
+  let left=10;
+  b.disabled=true;
+  const t=setInterval(()=>{
+    left--;
+    if(left<=0){ clearInterval(t); b.disabled=false;
+      b.innerHTML='<b>Last call</b><small>Ten seconds on every phone in the room</small>'; return; }
+    b.innerHTML=`<b>Last call \u00b7 ${left}</b><small>Counting down on every phone in the room</small>`;
+  },1000);
+  b.innerHTML='<b>Last call \u00b7 10</b><small>Counting down on every phone in the room</small>';
+}
 async function healHist(){
   const d=await api('/history',{method:'POST',body:JSON.stringify({action:'heal'})});
   if(!d||!d.ok){toast((d&&d.error)||'Couldn\u2019t check just now');return;}
@@ -1896,6 +1922,10 @@ function render(){
         <button class="${!s.windowOpen?'on':''}" onclick="act('window',{open:false})">Paused</button>
       </div>
     </div>
+    ${s.status==='live'?`<div class="wrap" style="padding-top:10px;padding-bottom:0">
+      <button class="lastcall" id="lastCall" onclick="lastCall()">
+        <b>Last call</b><small>Ten seconds on every phone in the room</small></button>
+    </div>`:''}
     <div class="stats">
       <div class="c"><b class="mono">${songs.reduce((a,b)=>a+b.votes,0)}</b><span>Votes now</span></div>
       <div class="c"><b class="mono">${D.voters||0}<span style="font-size:15px;color:var(--muted);font-weight:600">/${D.room||D.voters||0}</span></b><span>Voting · in room${D.nets?` · ${D.nets} net${D.nets===1?'':'s'}`:''}</span></div>
@@ -2216,10 +2246,12 @@ function render(){
 
       <div class="sec"><span class="kick">Listen &amp; follow</span></div>
       <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 4px">Paste the share link for each. Anything that isn’t a real link from that service is dropped rather than shown broken.</p>
+      <!-- same order the public page shows them in, so what an artist fills in top
+           to bottom is what a fan reads left to right -->
+      <div class="field"><label>Instagram</label><input class="inp" id="lkIg" value="${esc(L.instagram||'')}" placeholder="https://instagram.com/…"></div>
       <div class="field"><label>Spotify</label><input class="inp" id="lkSpotify" value="${esc(L.spotify||'')}" placeholder="https://open.spotify.com/artist/…"></div>
       <div class="field"><label>Apple Music</label><input class="inp" id="lkApple" value="${esc(L.applemusic||'')}" placeholder="https://music.apple.com/…"></div>
       <div class="field"><label>YouTube Music</label><input class="inp" id="lkYtm" value="${esc(L.ytmusic||'')}" placeholder="https://music.youtube.com/…"></div>
-      <div class="field"><label>Instagram</label><input class="inp" id="lkIg" value="${esc(L.instagram||'')}" placeholder="https://instagram.com/…"></div>
       <div class="field"><label>Website</label><input class="inp" id="lkWeb" value="${esc(L.website||'')}" placeholder="https://…"></div>
       <div class="wrap" style="margin-top:14px"><button class="big" onclick="saveProfile()">Save profile</button></div>
 

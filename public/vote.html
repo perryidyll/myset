@@ -105,6 +105,24 @@
   fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none}
 .search .clr{position:absolute;right:8px;top:8px;width:32px;height:32px;border-radius:50%;
   display:grid;place-items:center;color:var(--muted);font-size:17px;background:var(--bg)}
+/* ── last call ────────────────────────────────────────────
+   Pinned to the top of the screen rather than dropped into the page, because it has
+   ten seconds to be noticed by somebody who is looking at a stage, not a phone. It
+   sits under the header and pushes nothing around — a box that reflows the whole
+   board for ten seconds and then reflows it back is worse than no box. */
+.lastcall{position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-120%);
+  width:100%;max-width:var(--maxw);z-index:70;padding:14px 18px calc(14px + env(safe-area-inset-top));
+  display:flex;align-items:center;gap:14px;
+  background:linear-gradient(115deg,var(--accent),var(--accent-2));color:#fff;
+  border-radius:0 0 var(--r-lg) var(--r-lg);box-shadow:var(--sh-3);
+  transition:transform .34s var(--spring)}
+.lastcall.on{transform:translateX(-50%) translateY(0)}
+.lastcall .n{font-family:var(--f-mono,var(--f));font-size:38px;font-weight:800;line-height:1;
+  letter-spacing:-.03em;min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+.lastcall .m b{display:block;font-size:16px;font-weight:700;letter-spacing:-.015em}
+.lastcall .m span{display:block;font-size:12.5px;opacity:.9;margin-top:2px;line-height:1.35}
+@media (prefers-reduced-motion:reduce){.lastcall{transition:none}}
+
 /* ── lyrics ───────────────────────────────────────────── */
 .lyricsbtn{display:inline-flex;align-items:center;gap:8px;margin-top:15px;padding:10px 17px;
   border-radius:var(--pill);background:rgba(255,255,255,.19);color:#fff;font-size:14px;font-weight:600;
@@ -210,6 +228,11 @@
 .dock .btn b{font-size:15px;font-weight:600;letter-spacing:-.01em}
 .dock .btn small{font-size:12px;font-weight:400;color:var(--muted)}
 .dock .btn-pri small{color:rgba(255,255,255,.88)}
+/* "More votes" wears an orange ring (Perry, 2026-09-07). It sits next to the solid
+   gradient of Tip, so a second solid fill would make the pair read as two equal
+   demands; the ring says "this one costs money too" without shouting over it. */
+.dock .btn-buy{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.dock .btn-buy b{color:var(--accent)}
 
 .backlink{display:block;padding:22px 18px 0;text-align:center;font-size:14px;color:var(--muted)}
 /* The pull-to-refresh indicator lives in /pull.js now — one implementation for
@@ -284,6 +307,10 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 <div class="dock" id="dock" hidden></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
+<div class="lastcall" id="lastcall" aria-live="assertive">
+  <div class="n" id="lcN">10</div>
+  <div class="m"><b>Last call</b><span>Get your votes in — the next song is about to start.</span></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -335,6 +362,7 @@ async function load(){
          instead of melting. Clamped here because a page is not obliged to trust a
          number, and an older server that sends nothing keeps the 3s it always had. */
       if(Number(d.nextPollMs)>0) FLOOR=Math.max(1000,Math.min(60000,Math.round(d.nextPollMs)));
+      lastCall(Number(d.countdownIn)||0);
       render(); FOCUS=false; }
   }catch(e){}
 }
@@ -529,6 +557,37 @@ async function vote(id,n,castId){
   busy.delete(id); wakeUp(true); load();
 }
 
+/* LAST CALL, counted from a DEADLINE THIS PHONE WORKS OUT ITSELF.
+
+   The server sends the milliseconds left, never the moment it ends: a phone whose
+   clock is four minutes fast would otherwise decide every countdown was already over.
+   Turning that into a local deadline on arrival means the box keeps ticking smoothly
+   between polls instead of jumping whenever one lands.
+
+   It is honest about what polling can do. A poll every few seconds means somebody may
+   see "7" rather than "10", and in a big room — where the poll floor is longer on
+   purpose — some phones will not see it at all. That is the cost of not opening a
+   socket per person, and a countdown is a nudge, not a promise. */
+let LC_UNTIL=0, LC_TIMER=null;
+function lastCall(msLeft){
+  const box=$('#lastcall');
+  if(!(msLeft>0)){ if(!LC_UNTIL) return; }
+  else{
+    const until=Date.now()+msLeft;
+    // never let a later poll SHORTEN a countdown already running on this phone
+    if(until>LC_UNTIL+250) buzz(20);
+    LC_UNTIL=Math.max(LC_UNTIL,until);
+  }
+  if(LC_TIMER) return;
+  const tick=()=>{
+    const left=LC_UNTIL-Date.now();
+    if(left<=0){ LC_UNTIL=0; clearInterval(LC_TIMER); LC_TIMER=null; box.classList.remove('on'); return; }
+    $('#lcN').textContent=Math.ceil(left/1000);
+    box.classList.add('on');
+  };
+  tick(); LC_TIMER=setInterval(tick,200);
+}
+
 let SORT=(()=>{try{return localStorage.getItem('myset.sort')||'votes'}catch(e){return 'votes'}})();
 function setSort(v){SORT=v;try{localStorage.setItem('myset.sort',v)}catch(e){}render();}
 /* Genre is deliberately NOT remembered between visits: a filter you forgot you
@@ -692,12 +751,17 @@ function render(){
   // they paid for votes the night ended before they could spend — their call
   if(ended&&c.paidLeft>0&&!c.decided&&!SHEETED){ SHEETED=true; setTimeout(()=>openLeftover(c.paidLeft),700); }
 
+  /* THE TIP BUTTON IS ALWAYS THERE. Perry, 2026-09-07 — and he is right: the whole
+     dock used to disappear the moment a show ended, which is exactly the minute
+     somebody has decided the night was worth something. Between shows there are no
+     votes to buy, so it is the tip alone, across the full width. */
   const dock=$('#dock');
-  if(ended){ dock.hidden=true; }
-  else{ dock.hidden=false;
-    dock.innerHTML=`
-      ${c.unlimited?'':`<button class="btn" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>`}
-      <button class="btn btn-pri" onclick="openTip()"><b>Tip ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Say thanks</small></button>`; }
+  dock.hidden=false;
+  const tipBtn=`<button class="btn btn-pri" onclick="openTip()"><b>Tip ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Say thanks</small></button>`;
+  dock.innerHTML=(ended||c.unlimited)
+    ? tipBtn
+    : `<button class="btn btn-buy" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>${tipBtn}`;
+  dock.style.gridTemplateColumns=(ended||c.unlimited)?'1fr':'';
 }
 function row(s,c,open,replay){
   const cost=s.cost||1;

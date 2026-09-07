@@ -90,6 +90,9 @@ echo
 echo "── where a night happened ──"
 node --import ./test/register.mjs test/place.mjs
 echo
+echo "── a dark room, and the last call ──"
+node --import ./test/register.mjs test/darkroom.mjs
+echo
 echo "── the community page and the shop ──"
 node --import ./test/register.mjs test/community.mjs
 echo

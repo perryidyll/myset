@@ -341,6 +341,12 @@ export const KEY = {
 export const cleanArtistId = (v) =>
   String(v || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
 
+/* LAST CALL — ten seconds, in one place, so the Studio's button, the server and the
+   audience page cannot drift apart. It lives here rather than in admin.mjs because
+   show.mjs is the endpoint every phone in the room polls, and it must not import a
+   handler to read a number. */
+export const COUNTDOWN_MS = 10000;
+
 export const SHARDS = 12;
 const shardKey = (a, n) => KEY.fan(a, n);
 export function shardOf(fanId) {

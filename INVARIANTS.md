@@ -1983,3 +1983,34 @@ If you are about to violate one, stop and say so rather than working around it.
     within six hours, and it SAYS SO in the note. `placeShows` does the same for
     nights already filed — but only where a gig was actually running when that night
     started, because a confidently wrong venue is worse than an out-of-date one.
+
+0f6. **A countdown is sent as TIME LEFT, never as the moment it ends.** `show.countdownAt`
+    is a server timestamp; the payload carries `countdownIn` in milliseconds, and the
+    phone turns that into its own local deadline. A device whose clock is four minutes
+    fast would read an end time as long past and show nothing at all. The page also
+    never lets a later poll SHORTEN a countdown already running on it — polls arrive
+    at unpredictable moments and a box that jumps backwards reads as broken.
+    It is a nudge and nothing else: voting stays open (there is already a switch for
+    closing it), and `test/darkroom.mjs` pins that. Ten seconds lives once, as
+    `COUNTDOWN_MS` in `_lib.mjs` — not in admin.mjs, because show.mjs is the endpoint
+    every phone polls and must not import a handler to read a number.
+
+0f7. **Between shows the room is DARK, and nothing is deleted to make it so.** A fan
+    opening the page with no show running was shown the LAST one — its votes, its
+    running order, its "Playing now", and the songs it had played missing from the
+    list. `show.mjs` now presents the setlist whole and quiet when `status !== 'live'`:
+    every song back in the list, no votes, no `played`, no `nowPlaying`, and every
+    song priced at 1 rather than at last night's replay cost. **This is display and
+    only display** — the show record is untouched, so "Resume it instead" still finds
+    the night exactly as the artist left it. The Studio reads `stage.mjs`, not this,
+    so the artist always sees the truth.
+
+0f8. **The tip button is always on the page.** The whole audience dock used to vanish
+    when a show ended — the exact minute somebody decides the night was worth
+    something. It never hides now: between shows it is the tip alone, full width,
+    because there are no votes left to buy. It is also the first thing under the name
+    on the community page (artist pages only — tipping a venue is not a thing).
+    A tip started from the community page posts `from:'community'` so the return trip
+    lands back there; `from` selects between two paths the SERVER builds and is never
+    used as a url, because a caller-supplied redirect is an open redirect however
+    innocent the caller looks.

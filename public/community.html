@@ -56,6 +56,17 @@ body{padding-bottom:34px}
 .vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 9px;border-radius:var(--pill);font-size:11px;font-weight:700;letter-spacing:.01em;vertical-align:3px;background:rgba(48,209,88,.14);color:#1B8E3C}
 @media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
 .share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600}
+/* THE TIP BUTTON, AT THE TOP (Perry, 2026-09-07). Full width and solid, because on
+   this page it is the only thing anyone can hand the artist — there are no votes
+   here to buy. Only ever on an ARTIST's page: tipping a venue is not a thing. */
+.tipbar{margin:14px 18px 0}
+.tipbar button{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  padding:14px 17px;border-radius:var(--r-sm);background:var(--grad);color:#fff;
+  box-shadow:var(--sh-accent);transition:transform .18s var(--spring)}
+.tipbar button:active{transform:scale(.985)}
+.tipbar b{font-size:16px;font-weight:700;letter-spacing:-.015em}
+.tipbar small{font-size:12.5px;font-weight:400;color:rgba(255,255,255,.9)}
+.tipbar .off{background:var(--surface);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--hair-2)}
 .sect{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:26px 20px 10px}
 
 /* the merch rail */
@@ -266,6 +277,12 @@ function render(){
       <h1><a href="${esc(HOME)}">${esc(d.name)}</a>${d.verified?'<span class="vbadge">✓ Verified</span>':''}</h1></div>
     <button class="share" onclick="share()">Share</button>
   </div>`;
+
+  /* Straight under the name, before anything else on the page. Somebody who came
+     here to say the night was good should not have to scroll past a shop to do
+     something about it. */
+  if(!VENUE) h+=`<div class="tipbar"><button onclick="openTip()">
+    <b>Tip ${esc(firstName())}</b><small>${d.canBuy?'100% goes to them':'Card tips aren’t on yet — say hi at the show'}</small></button></div>`;
 
   if((d.merch||[]).length){
     h+=`<div class="sect">Merch</div><div class="rail">${d.merch.map(m=>`
@@ -842,6 +859,43 @@ function buySheet(id){
     <button class="go" id="buyGo" onclick="buy('${esc(id)}')">Pay ${money(m.cents)}</button>
     <p class="fine">Paid to ${esc(D.name)} through Stripe. MySet never sees your card.</p>`);
 }
+const firstName=()=>String(D&&D.name||'the artist').split(' ')[0]||'the artist';
+let TIP=10;
+/* The same sheet the voting page offers, on the page people actually come back to
+   after a gig. It posts `from:'community'` so the return trip lands here rather than
+   on the voting page — see the note in pay.mjs. */
+function openTip(){
+  if(!D||!D.canBuy){ openSheet(`<h3>Tip ${esc(firstName())}</h3>
+    <p class="lede">Card tips aren’t switched on for this page yet — say hi at the next show.</p>
+    <button class="go" onclick="closeSheet()">Got it</button>`); return; }
+  TIP=10;
+  openSheet(`<h3>Tip ${esc(firstName())}</h3>
+    <p class="lede">100% goes to ${esc(firstName())}. Add a note and they’ll see it.</p>
+    <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
+    <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
+    <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
+    <button class="go" id="goTip" onclick="sendTip()">Continue to payment</button>
+    <p class="fineprint" style="margin-top:10px">Secure checkout by Stripe · you’ll come right back</p>`);
+}
+function pickTip(v){TIP=v;[5,10,20].forEach(k=>{const el=$('#t-'+k);if(el)el.classList.toggle('on',k===v);});
+  const a=$('#tipAmt'); if(a)a.value='';}
+async function sendTip(){
+  const b=$('#goTip'); if(b){b.disabled=true;b.textContent='Opening checkout…';}
+  const c=parseFloat(($('#tipAmt')||{}).value);
+  const body={fan:FAN,kind:'tip',from:'community',
+    amount:Number.isFinite(c)&&c>0?c:TIP,
+    note:(($('#tipNote')||{}).value||'').slice(0,120),
+    attempt:'t'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-5)};
+  try{
+    const r=await fetch(`${API}/pay${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(!d.ok||!d.url){ toast('Couldn’t open checkout — try again in a moment'); if(b){b.disabled=false;b.textContent='Continue to payment';} return; }
+    // remembered BEFORE leaving, so a lost return trip is still redeemed next load
+    try{ localStorage.setItem(PEND,JSON.stringify({id:d.id,at:Date.now()})); }catch(e){}
+    location.href=d.url;
+  }catch(e){ toast('Couldn’t open checkout — try again in a moment');
+    if(b){b.disabled=false;b.textContent='Continue to payment';} }
+}
 const PEND='myset.pending.merch';
 async function buy(id){
   const b=$('#buyGo'); b.disabled=true; b.textContent='Opening checkout…';
@@ -862,7 +916,9 @@ async function redeem(sid){
     const d=await r.json();
     if(d.ok){ try{ localStorage.removeItem(PEND); }catch(e){}
       const app=$('#app'); const card=document.createElement('div'); card.className='receipt';
-      card.innerHTML=`<b>Paid — thank you</b>${d.already?'That order was already in.':`${esc(D.name)} has your order${d.kind==='merch'?'':''}.`} ${d.redelivered?'':''}`;
+      card.innerHTML=`<b>Paid — thank you</b>${d.kind==='tip'
+        ? (d.already?'That tip was already in.':`${esc(firstName())} has your tip.`)
+        : (d.already?'That order was already in.':`${esc(D.name)} has your order.`)}`;
       app.insertBefore(card,app.firstChild); return true; }
     if(d.error==='not paid') return false;
   }catch(e){}
