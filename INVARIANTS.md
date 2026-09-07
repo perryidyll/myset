@@ -591,60 +591,89 @@ If you are about to violate one, stop and say so rather than working around it.
     `vote.mjs`, not in the UI. Replay votes cost `show.replayCost` (default 5) and
     the check is weighted accordingly.
 
-14. **Starting a song refreshes everyone's votes** (`clearAllFanVotes`), so each
-    round is a fresh contest.
-    **Free credits refresh. PAID ones do not** — see 13b.
+14. **A VOTE STAYS ON THE SONG IT WAS CAST FOR, and it never comes back.** Perry,
+    2026-09-07: *"the votes do NOT go back to the audience members whose songs were
+    not chosen. They stay attached to the song you voted for, and that song stays in
+    the queue until it is played or the show is over. If they paid for votes and their
+    song doesn't get played, they lose the money and the votes — that's the whole
+    game. But they don't really lose, because they're tipping the artist, and that's
+    the point."*
+    This invariant used to say the exact opposite — *"starting a song refreshes
+    everyone's votes, so each round is a fresh contest"* — and one function did it:
+    `clearAllFanVotes`, deleted. Starting a song now takes only THAT song's votes off
+    the board (`consumePlayedVotes`); every other vote stands until its own song is
+    played or the night ends.
+    **Consequences, all deliberate:** free credits are an allowance for the NIGHT, not
+    per song (there is no round to refresh with); the queue accumulates all evening,
+    so votes cast at 9pm and at midnight are in the same contest; and there is no
+    refund on any path — not a song losing, not the artist hiding it, dropping it from
+    tonight's list, or deleting it outright. The only thing that gives votes back is
+    a song REQUEST the artist DECLINES, because nothing was ever put on the board for
+    it (`request.mjs`).
+    **The fan is told before they commit**, in his words, on the vote sheet: *"Once
+    you confirm, it's final! Votes **can't be changed** once cast and ***don't come
+    back***."* That sentence is the feature. `test/votesstay.mjs` checks it ships.
 
-13b. **A bought pack is a stock, and free credits are spent first.** `extra` was
-    read as part of `total = freeCredits + extra` in four places and decremented in
-    exactly ONE place in the whole codebase (`gift.mjs`), so a purchased pack never
-    ran out. Measured: an 18-vote pack yielded **252 credits across 13 rounds** and
-    survived `newShow` untouched, making one $11 purchase a permanent advantage at
-    every future gig that artist played. Three lenses found it independently and
-    three verifiers reproduced it.
-    The paid portion of a round is `creditsUsed - freeCredits`, derived not stored,
-    and it is settled **once, at the round reset**, inside `clearAllFanVotes`.
-    Debiting at the moment of the cast is wrong twice over: `creditsUsed` already
-    counts the vote while `total` would shrink (double-charging), and it breaks
-    INVARIANT 15, because un-voting would then burn a paid vote.
-    `clearAllFanVotes` therefore **requires the pre-play show** to price the round:
-    `play` takes the winning song back out of `played[]` before the reset runs, so
-    pricing against the post-play show charges a just-won replay 1 instead of
-    `replayCost`. It throws if that snapshot is missing rather than silently
-    under-debiting.
+14b. **There is no way to un-vote, and no flag that brings one back.** `voteFinal`
+    shipped as a flag on 2026-09-02 with both answers working, and stopped being a
+    question on 2026-09-07. The flag, the un-vote path in `vote.mjs`, `openUnvote` in
+    the page and `releaseUnvotable` in `_lib.mjs` are all deleted. A page cached from
+    before still sends `op:'clear'`; it gets a 409 and a sentence, never a silent
+    second charge — INVARIANT 15h's cast id is what makes that safe.
+
+13b. **A bought pack is a stock, free credits are spent first, and a vote is charged
+    AT THE CAST.** `extra` was once read as part of `total = freeCredits + extra` in
+    four places and decremented in exactly ONE (`gift.mjs`), so a purchased pack never
+    ran out: measured, an 18-vote pack yielded **252 credits across 13 rounds** and
+    survived `newShow` untouched.
+    **Spend is stored, not derived.** It used to be counted out of `fan.v`, which was
+    correct only while `v` held every vote a fan still had. A played song now takes
+    its votes out of `v`, so a derived count would hand the credits back at the exact
+    moment rule 14 says it must not. Two fields, both monotonic:
+    `used` (every credit spent tonight) and `freeUsed` (how much of it came out of the
+    free allowance). The paid portion is `used - freeUsed`.
+    **`freeUsed` is stamped as it is spent, never worked out afterwards.** The artist
+    can change `show.freeCredits` mid-show; computing the free portion against
+    whatever number happens to be set at the end would re-price votes already cast and
+    debit a fan's pack for credits they took from the free allowance. That was a real
+    bug on the old round-reset path, and stamping makes it unreachable.
+    Settlement at the round reset is gone with the round reset; `clearAllFanVotes`
+    (and its requirement for the pre-play show, and the replay-priced-at-1 trap that
+    came with it) no longer exist.
 
 15. **A cast is idempotent BY CAST ID, not by state.** This used to read "voting is
     idempotent per (fan, song)" — a second tap toggled off and refunded — and that
     sentence hid the fact that the toggle *was* the idempotency mechanism: a lost
     response found the vote already there and removed it, so a retry could never
-    double-charge. Under `voteFinal` there is no toggle, so every cast now carries
-    an id minted at the press of Confirm, and `vote.mjs` remembers the outcome
-    against it on the fan record (last 20, cleared with the round). A replay is
-    answered from memory and writes nothing. INVARIANT 15h says it plainly: do not
-    remove the toggle without this in place.
+    double-charge. There is no toggle, so every cast carries an id minted at the
+    press of Confirm, and `vote.mjs` remembers the outcome against it on the fan
+    record (last 20). A replay is answered from memory and writes nothing.
+    INVARIANT 15h says it plainly: do not remove the toggle without this in place.
+    The ring used to be cleared at the round reset; with no rounds it lives as long
+    as the fan record, which is what a retry should find however late it arrives.
 
-    **Un-voting is never gated by whether the song is still on offer** — only casting
-    is. The setlist guard was once added ahead of the toggle, which left a fan's
-    credit spent on a song they could no longer un-vote.
-
-    **What finality does and does not promise.** With the flag on, a fan cannot undo
-    their own vote, and the page must offer no affordance suggesting otherwise —
-    the row is disabled and the queue tick is a `<span>`, not a button. It is NOT a
-    promise that the song will still exist: when the ARTIST deletes or hides it, the
-    votes go and the capacity comes back, because the alternative is an artist
-    pocketing a room's credits. `dropSongVotes` therefore removes EVERY occurrence
-    of the id, not the first — it predated multi-vote and removing one entry left a
-    fan charged for votes on a song that no longer existed, unrecoverable once
-    finality is on.
+    **What finality does and does not promise.** A fan cannot undo their own vote,
+    and the page must offer no affordance suggesting otherwise. What changed on
+    2026-09-07 is the second half: it used NOT to be a promise that the song would
+    still exist, so an artist deleting or hiding it gave the capacity back. It does
+    not any more — a vote is spent when it is cast, whoever takes the song away.
+    **Worth knowing what that costs:** an artist who deletes a song their room paid
+    to hear keeps the money, and nothing in the code stops them. Perry's call,
+    written down here rather than left to be found. `dropSongVotes` still removes
+    EVERY occurrence of the id, not the first — it predated multi-vote and removing
+    one entry left a fan's votes on a song that no longer existed.
 
 13c. **An unlimited round is free, so it must debit nobody's pack.** `vote.mjs`
    skips the credit check entirely while `isUnlimited(fan, show)`, so nothing is
    ever owed for those votes — but `creditsUsed` still counts them. `paidUsed`
    therefore takes the **fan id** and returns 0 for an unlimited device; without
-   it, `clearAllFanVotes` settles the round by debiting `extra` for votes the
-   server gave away, and a measured 12-credit pack vanished in ONE round. Both
-   callers have the id in hand: it is the shard bag's key. `unspentPaid` passes it
-   through for the same reason.
+   it the ledger charged `extra` for votes the server gave away, and a measured
+   12-credit pack vanished in ONE round. Both callers have the id in hand: it is the
+   shard bag's key. `unspentPaid` passes it through for the same reason. Since
+   2026-09-07 `chargeFan` is also called for an unlimited device with a need of
+   **zero** — it charges nothing but stamps `used`/`freeUsed`, so a device that has
+   unlimited switched off mid-show does not suddenly start paying for votes it was
+   given free.
 
 13d. **`null` is not zero, and JavaScript disagrees.** The server sends
    `credits.remaining: null` when a device votes without limit. `null < 1` is

@@ -1818,6 +1818,13 @@ async function media(action,mid,dir){
 /* Perry could not see every night he had played. Two of them were real: one was
    archived before MySet had more than one artist and still sits under the old flat
    key, and the index row for another never landed. See healHistory in _history.mjs. */
+/* Emptying the board does NOT give anybody their votes back — a vote is spent when
+   it is cast, and the artist reaching for this button does not change that. Said out
+   loud before it happens, because the room cannot be told afterwards. */
+function clearBoardAsk(){
+  if(!confirm('Clear every vote off the board?\n\nNobody gets their votes back \u2014 they were spent when they were cast. The room starts from nothing.'))return;
+  act('resetVotes');
+}
 async function healHist(){
   const d=await api('/history',{method:'POST',body:JSON.stringify({action:'heal'})});
   if(!d||!d.ok){toast((d&&d.error)||'Couldn\u2019t check just now');return;}
@@ -1943,7 +1950,7 @@ function render(){
       <button class="act" onclick="act('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div>
     ${pool.length>12?`<div class="row muted" style="font-size:12px">+ ${pool.length-12} more in the Setlist tab</div>`:''}
 
-    <div class="sec"><span class="kick">Played (${s.played.length})</span>${s.played.length?`<button class="kick" style="color:var(--accent)" onclick="act('resetVotes')">Reset votes</button>`:''}</div>
+    <div class="sec"><span class="kick">Played (${s.played.length})</span>${s.played.length?`<button class="kick" style="color:var(--accent)" onclick="clearBoardAsk()">Clear the board</button>`:''}</div>
     <div class="list">${songs.filter(x=>x.played).map(x=>`<div class="row done"><div class="rk">♪</div>
       <div class="m"><div class="t">${esc(x.title)}</div></div>
       <button class="act" onclick="act('unplay',{song:'${x.id}'})">Undo</button></div>`).join('')||'<div class="row muted">Nothing yet.</div>'}</div>

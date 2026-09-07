@@ -1,5 +1,4 @@
-import { getShow, mutateShow, readFans, carryFans, releaseUnvotable, newShowId, gigMonthOf,
-         playable } from './_lib.mjs';
+import { getShow, mutateShow, readFans, carryFans, newShowId, gigMonthOf } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
 import { readEvents, nextOccurrence } from './_events.mjs';
@@ -56,27 +55,6 @@ export async function roomCapFor(aid) {
     ? null : lim;
 }
 
-/* Votes stranded on songs the room can no longer choose go back to the room.
-   `before` is the playable set before a change; null means "sweep regardless" —
-   the way ending or resuming a show has always behaved. Never throws: the change
-   that called it already succeeded. */
-export async function releaseNote(aid, before) {
-  try {
-    const after = await getShow(aid);
-    if (before) {
-      const now = new Set(playable(after).songs.map((x) => x.id));
-      if (![...before].some((id) => !now.has(id))) return null;
-    }
-    const freed = await releaseUnvotable(aid, after);
-    if (!freed.length) return null;
-    const titles = freed.map((id) => (after.songs.find((x) => x.id === id) || {}).title)
-      .filter(Boolean).slice(0, 3);
-    return titles.length
-      ? `Votes on ${titles.join(', ')} went back to the room.`
-      : 'Votes on the songs you took out went back to the room.';
-  } catch { return null; }
-}
-
 /* Going live picks up the setlist the artist chose for tonight's gig, if they
    chose one. A gig's `listId` has three states: '' no opinion, 'all' clear the
    pick, <id> that setlist — and a deleted setlist is reported, never silently
@@ -109,6 +87,12 @@ async function resolveTonight(aid, now) {
   } catch { /* never block starting a show on the calendar */ }
   return out;
 }
+
+/* `releaseNote` lived here: votes stranded on songs the room could no longer
+   choose went back to the room, and ending or resuming a show swept for them.
+   Deleted 2026-09-07. A vote is spent when it is cast and stays with its song until
+   that song is played or the night ends — see the ledger header in _lib.mjs. There
+   is nothing left to sweep and nothing left to announce. */
 
 /**
  * Start a show.
@@ -192,8 +176,6 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
   }
   // paid votes survive a reset — only a fan who gifted them loses them
   if (fresh) await carryFans(aid, prevShow || (await getShow(aid)));
-  // a resume sweeps for stranded votes, as it always has
-  else note = joinNote(note, await releaseNote(aid, null));
   return { ok: true, err: null, note, already };
 }
 
@@ -212,8 +194,7 @@ export async function endShow(aid, { by = 'artist' } = {}) {
     show.endedAt = Date.now();
     return true;
   });
-  const note = await releaseNote(aid, null);
-  return { ok: true, err: null, note };
+  return { ok: true, err: null, note: null };
 }
 
 const joinNote = (note, warn) => (warn ? (note ? `${note} ${warn}` : warn) : note);

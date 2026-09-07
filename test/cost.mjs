@@ -57,6 +57,14 @@ await A('listSongs', { id: lid, songs: ['alpha', 'bravo'] });
 await hit(voteFn, 'https://x/api/vote', { fan: 'f1', song: 'alpha', n: 1, op: 'cast', cast: 'costtest00000001' });
 ok('a show with a setlist and a vote in it', true);
 
+/* WARM THE FLAG CACHE ON PURPOSE. The flags document is cached in module scope
+   precisely because the poll is the hottest path in the app, and in production the
+   instance stays warm between invocations — so the honest number to measure is the
+   warm one. This used to be warmed by accident, because /api/vote read the flags
+   too; it does not any more (finality stopped being a flag), and the first poll in
+   this file started paying for a read that no phone in a real room pays. */
+await hit(showFn, 'https://x/api/show?fan=warm');
+
 console.log('\nTHE AUDIENCE POLL  (every phone in the room, every few seconds)');
 const poll = await count(() => hit(showFn, 'https://x/api/show?fan=f1&in=1'));
 under('reads per poll', poll.reads, 15);
@@ -71,23 +79,21 @@ under('reads per vote', v.reads, 5);
 under('writes per vote', v.writes, 2);
 
 console.log('\nA LIST ACTION THAT TAKES NOTHING AWAY MUST NOT SWEEP THE SHARDS');
-/* releaseUnvotable reads all twelve fan shards. It has to run when the room loses a
-   song, and it must not run when nothing changed — a rename cost 12 strong reads it
-   could never need, mid-gig. */
+/* This pair used to guard `releaseUnvotable`, which read all twelve fan shards to
+   give back credits held on songs the room had just lost. It must not run when
+   nothing changed — a rename cost 12 strong reads it could never need, mid-gig. */
 const rename = await count(() => A('listRename', { id: lid, name: 'Set B' }));
 under('reads for a rename', rename.reads, 12);
 ok(`no shard reads at all — ${rename.shardReads}`, rename.shardReads === 0, rename);
 
-console.log('\n...AND ONE THAT DOES TAKE SOMETHING AWAY MUST SWEEP IT');
-/* The set has to be ACTIVE first. Without listUse, `playable()` returns the whole
-   library before and after, nothing leaves it, and the sweep correctly does not
-   run — which is the fixture lying, not the code. That has now happened three times
-   in this suite, so: when a "nothing happened" result looks like a bug, check the
-   fixture before the implementation. */
+console.log('\n...AND SINCE 2026-09-07, NEITHER DOES ONE THAT DOES');
+/* `releaseUnvotable` is deleted. A vote is spent when it is cast, so narrowing the
+   set takes songs off the board and gives nothing back — which means the twelve-shard
+   sweep that used to run a handful of times a night does not run at all. This
+   assertion is the old one inverted, and it is a saving, not a loss. */
 await A('listUse', { id: lid });
 const narrow = await count(() => A('listSongs', { id: lid, songs: ['bravo'] }));
-ok(`narrowing reads the shards — ${narrow.shardReads}`, narrow.shardReads >= 12, narrow);
-ok('and writes back the ones that held a released vote', narrow.writes >= 1, narrow);
+ok(`narrowing no longer sweeps the shards — ${narrow.shardReads}`, narrow.shardReads === 0, narrow);
 
 console.log('\nTHE STUDIO POLL  (one device, but it polls harder — INVARIANT 9d8)');
 const stageFn = (await import('../netlify/functions/stage.mjs')).default;

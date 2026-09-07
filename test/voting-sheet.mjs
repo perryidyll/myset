@@ -1,4 +1,4 @@
-/* CASTING SEVERAL VOTES AT ONCE, AND THE FLAG THAT WILL LATER MAKE THEM FINAL.
+/* CASTING SEVERAL VOTES AT ONCE, AND THE RULE THAT THEY ARE FINAL.
 
    The audience page now opens a sheet instead of casting on tap: it asks how many
    votes to put on the song and states the rules before the fan commits. Server
@@ -7,9 +7,11 @@
    both work by counting entries, which is why multi-vote fell out of the existing
    shape instead of needing a new field.
 
-   Finality SHIPPED ON on 2026-09-02, but it is still a flag with both answers real:
-   the section below switches it off explicitly to prove the un-vote refund still
-   works, because a flag whose other branch has rotted is not a switch. */
+   Finality shipped as a flag on 2026-09-02 and stopped being a question on
+   2026-09-07: a vote stays on the song it was cast for until that song is played or
+   the night ends, and it never comes back. The flag is deleted, the un-vote path
+   with it, and the section that used to switch finality off to prove the refund
+   still worked now proves the opposite — that there is no way back. */
 process.env.ADMIN_CODE = 'devlocal';
 process.env.MYSET_DOUBLE_TAP_MS = '0';
 
@@ -72,7 +74,10 @@ eq('leaving nothing', (await pub('dan')).credits.remaining, 0);
 
 console.log('\nREPLAYS ARE PRICED PER VOTE');
 await A('play', { song: 'delta' });        // delta is now played; replayCost is 3
-await A('play', { song: 'alpha' });        // ...and a new round, so credits refresh
+await A('play', { song: 'alpha' });
+/* `eve` has not voted yet, so she still holds all ten. Starting a song no longer
+   refreshes anybody — that was the point of 2026-09-07 — so this fixture leans on a
+   fresh fan rather than on a round reset. */
 const rep = await songOf('eve', 'delta');
 eq('a replay costs three', rep.cost, 3);
 const r2 = await cast('eve', 'delta', 2);
@@ -80,20 +85,33 @@ ok('two replay votes are accepted', r2.ok, r2);
 eq('and cost six, not two', r2.cost, 6);
 eq('leaving four', (await pub('eve')).credits.remaining, 4);
 
-console.log('\nA SECOND TAP TAKES BACK EVERYTHING AND REFUNDS IT  (with finality OFF)');
-/* Finality ships ON since 2026-09-02, so this section switches it off explicitly
-   rather than relying on a default — which is what a flag is for, and is why both
-   answers have to keep working. */
-eq('finality now ships ON', FLAGS.voteFinal.default, true);
-await A('flagSet', { flag: 'voteFinal', on: false });
-eq('and this section turns it off', flagValue(await readFlags(), 'voteFinal', 'perry-idyll'), false);
-const undo = await cast('eve', 'delta');
-ok('the tap un-votes', undo.ok && undo.voted === false, undo);
-eq('it says how many it removed', undo.removed, 2);
-eq('all six credits came back', (await pub('eve')).credits.remaining, 10);
-eq('and the song lost both votes', (await songOf('eve', 'delta')).votes, 0);
-eq('the shard has no entries left for it',
+console.log('\nTHERE IS NO WAY BACK  (Perry, 2026-09-07)');
+/* This section used to switch the finality flag OFF and assert that a second tap
+   took the votes back and refunded all six credits. That is the behaviour that has
+   been deleted. What is pinned now is that neither shape of request can undo a
+   cast: not a bare tap, and not an explicit take-it-back from a page cached before
+   the change. */
+const bare = await hit(voteFn, 'https://x/api/vote', { fan: 'eve', song: 'delta' });
+ok('a bare tap on a song she holds is another CAST, not an undo',
+   bare.ok && bare.voted === true, bare);
+eq('so the song now has three of her votes', (await songOf('eve', 'delta')).mineCount, 3);
+eq('and it cost her another three credits', (await pub('eve')).credits.remaining, 1);
+const undo = await hit(voteFn, 'https://x/api/vote', { fan: 'eve', song: 'delta', op: 'clear' });
+eq('an explicit take-it-back is refused, in words a person can act on',
+   [undo.status, undo.error], [409, 'Those votes are cast — they stay with the song']);
+eq('nothing came back', (await pub('eve')).credits.remaining, 1);
+eq('and the song kept every vote', (await songOf('eve', 'delta')).votes, 3);
+eq('the shard agrees',
+   ((await readFans('perry-idyll')).eve.v || []).filter((x) => x === 'delta').length, 3);
+
+console.log('\nAND A SONG BEING PLAYED TAKES ITS VOTES, NOT HER CREDITS');
+await A('play', { song: 'delta' });
+/* Read from the shard, not the payload: delta is now the song PLAYING, and the
+   public payload carries the one playing separately from the board. */
+eq('her votes on it are gone from the shard',
    ((await readFans('perry-idyll')).eve.v || []).filter((x) => x === 'delta').length, 0);
+eq('but she is no better off for it', (await pub('eve')).credits.remaining, 1);
+eq('nine of her ten are spent, and stay spent', (await pub('eve')).credits.used, 9);
 
 console.log('\nA HAND-MADE REQUEST CANNOT BLOW UP A FAN RECORD');
 await A('unlimited', { on: true });
@@ -102,12 +120,18 @@ ok('an absurd quantity is accepted but capped', huge.ok, huge);
 ok('at fifty or fewer', huge.votes <= 50, huge.votes);
 await A('unlimited', { on: false });
 
-console.log('\nTHE FLAG IS REAL, SCOPED, AND FAILS CLOSED ON A TYPO');
+console.log('\nTHE FLAG MACHINERY IS REAL, SCOPED, AND FAILS CLOSED ON A TYPO');
+/* `voteFinal` was the flag these cases were written against. It is gone — the
+   question had one answer left, and a flag sitting on its winning answer is dead
+   code with a switch on it. `featuredShows` stands in, because what is being tested
+   here is the machinery, not the opinion. */
 const list = await A('flagList');
-ok('the owner can list flags', list.ok && list.flags.some((f) => f.name === 'voteFinal'), list);
+ok('the owner can list flags', list.ok && list.flags.some((f) => f.name === 'featuredShows'), list);
 ok('every flag says what it does and how it gets removed',
    list.flags.every((f) => f.what && f.remove), list.flags);
-eq('a typo is not a flag', flagValue(await readFlags(), 'voetFinal', 'perry-idyll'), false);
+ok('and the retired one really is gone',
+   !list.flags.some((f) => f.name === 'voteFinal'), list.flags.map((f) => f.name));
+eq('a typo is not a flag', flagValue(await readFlags(), 'featuredShow', 'perry-idyll'), false);
 eq('setting an unknown flag is refused', (await A('flagSet', { flag: 'nope', on: true })).status, 400);
 /* `FLAGS['toString']` is truthy — it is on the prototype chain — so a plain
    truthiness check let these through and PERSISTED them into the document. */
@@ -119,18 +143,17 @@ const clean = await A('flagList');
 ok('and none of them got into the document',
    !Object.keys((clean.byArtist || {})).length ||
    !JSON.stringify(clean.byArtist).includes('toString'), clean.byArtist);
-const on = await A('flagSet', { flag: 'voteFinal', on: true });
+const on = await A('flagSet', { flag: 'featuredShows', on: true });
 eq('it can be switched on globally', on.inForce, true);
-eq('and the room is told, so the sheet can change its words',
-   (await pub('x')).flags.voteFinal, true);
-const off = await A('flagSet', { flag: 'voteFinal', on: false, artistId: 'perry-idyll' });
+const off = await A('flagSet', { flag: 'featuredShows', on: false, artistId: 'perry-idyll' });
 eq('one artist can be pinned back to off', off.inForce, false);
-eq('which the payload reflects', (await pub('x')).flags.voteFinal, false);
-const cleared = await A('flagSet', { flag: 'voteFinal', on: null, artistId: 'perry-idyll' });
+const cleared = await A('flagSet', { flag: 'featuredShows', on: null, artistId: 'perry-idyll' });
 eq('clearing the override returns them to the global answer', cleared.inForce, true);
-await A('flagSet', { flag: 'voteFinal', on: null });
-eq('and clearing the global returns everyone to the default, which is now ON',
-   (await pub('x')).flags.voteFinal, true);
+await A('flagSet', { flag: 'featuredShows', on: null });
+eq('and clearing the global returns everyone to the default',
+   flagValue(await readFlags(), 'featuredShows', 'perry-idyll'), true);
+ok('nothing in the room payload still advertises a finality switch',
+   (await pub('x')).flags.voteFinal === undefined, (await pub('x')).flags);
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

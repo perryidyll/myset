@@ -57,6 +57,9 @@ echo
 echo "── the vote sheet and its flag ──"
 node --import ./test/register.mjs test/voting-sheet.mjs
 echo
+echo "── a vote stays on its song ──"
+node --import ./test/register.mjs test/votesstay.mjs
+echo
 echo "── vote finality and the cast id ──"
 node --import ./test/register.mjs test/finality.mjs
 echo

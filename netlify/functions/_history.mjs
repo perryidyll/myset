@@ -121,7 +121,13 @@ export async function archiveShow(aid, show, fans) {
     console.log('archive: nothing to file for', aid, showId);
     return null;
   }
-  // roundVotes counts every vote in that round; older entries only have the winner's
+  /* `roundVotes` is the votes THAT SONG collected, and `leftover` is everything
+     still standing on the board when the night was filed — so every vote is counted
+     exactly once. Until 2026-09-07 roundVotes was the whole board's total, which was
+     the same thing back when starting a song wiped every vote in the room. Rows
+     archived before that carry the old meaning and are left alone: re-deriving them
+     would need the votes, and the votes are gone. Older rows still only have the
+     winner's own count, which is why the fallback chain is three deep. */
   const totalVotes = played.reduce((a, p) => a + (p.roundVotes ?? p.votes ?? 0), 0) + leftover;
   const top = [...played].sort((a, b) => (b.votes || 0) - (a.votes || 0))[0] || requested[0] || null;
   const endedAt = Date.now();

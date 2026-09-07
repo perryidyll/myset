@@ -74,11 +74,17 @@ eq('and a second unlimited round too', await extraOf('zoe'), 12);
 await A('unlimited', { on: false });
 eq('with unlimited off she still has all twelve', (await pub('zoe')).credits.paidLeft, 12);
 
-console.log('\nAND A NORMAL ROUND STILL SETTLES THE PACK (the 13b ledger is intact)');
+console.log('\nAND PAYING FOR THEM STILL SETTLES THE PACK (the 13b ledger is intact)');
+/* Her seven unlimited votes are still on the board — nothing takes votes off it any
+   more except the song being played — but they cost her nothing and must go on
+   costing her nothing. `used` counts from zero because `chargeFan` stamped her
+   ledger at zero while she was unlimited, which is the whole point of stamping it.
+   The settlement moved from the round reset to the cast on 2026-09-07, so `extra`
+   (the pack as bought) no longer moves during the show; `paidLeft` is what she has
+   left of it. */
 for (let i = 0; i < 6; i++) await vote('zoe', ids[i]);
 eq('three free plus three paid spent', (await pub('zoe')).credits.used, 6);
-await A('play', { song: ids[9] });
-eq('exactly the paid portion came off', await extraOf('zoe'), 9);
+eq('exactly the paid portion came off', (await pub('zoe')).credits.paidLeft, 9);
 
 /* ── 2. A NON-LATIN TITLE MUST STILL GET A USABLE ID ───────────────────────── */
 console.log('\nA TITLE IN ANY ALPHABET IS STILL A SONG THE ROOM CAN VOTE FOR');

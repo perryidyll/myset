@@ -304,9 +304,10 @@ export function normPacks(p) {
 }
 
 /* LOG note — this is load-bearing.
-   `clearAllFanVotes()` runs every time a song is started, which DESTROYS the
-   tally that song won with. If it is not captured in the same handler, it is
-   gone forever and no show history can ever be reconstructed. */
+   `consumePlayedVotes()` runs when a song is started and takes that song's votes
+   off the board, which DESTROYS the tally it won with. If it is not captured in
+   the same handler, it is gone forever and no show history can ever be
+   reconstructed. */
 
 /* ============================================================
    STORAGE
@@ -479,9 +480,36 @@ export async function readFans(aid) {
   return fans;
 }
 /* ---------- the paid-vote ledger ----------
-   FREE CREDITS ARE ALWAYS SPENT FIRST. Everything a fan spends beyond
-   `show.freeCredits` in the current round came out of the pack they bought, so the
-   paid portion of a round is derivable and needs no extra stored field.
+
+   A VOTE IS SPENT THE MOMENT IT IS CAST, AND IT NEVER COMES BACK. Perry, 2026-09-07:
+   "the votes do NOT go back to the audience members whose song(s) were not chosen —
+   they stay attached to the song you voted for, and that song stays in the queue
+   until it is played or the show is over. If they paid for votes and their song
+   doesn't get played, they lose the money and the votes. That's the whole game. But
+   they don't really lose, because they're tipping the artist, and that's the point."
+
+   Everything below used to work the other way, and the mechanism was one line:
+   `clearAllFanVotes` wiped every fan's votes each time a song started, so the board
+   reset to zero every round and free credits appeared to refresh. That is gone. A
+   night is now ONE round.
+
+   WHICH MEANS SPEND CANNOT BE DERIVED FROM `v` ANY MORE. It used to be: `v` held
+   every vote a fan still had, so counting it gave what they had spent. Now a song
+   that gets PLAYED takes its votes out of `v` — and if spend were still derived, the
+   fan's credits would silently come back at the exact moment the rule says they must
+   not. So spend is stored, and it only ever goes up:
+
+     used      every credit this fan has spent tonight
+     freeUsed  how much of that came out of the free allowance
+     paid      = used - freeUsed, derived, and never re-priced by a later change
+
+   `freeUsed` is stamped as it is spent rather than worked out afterwards, because
+   the artist can change `show.freeCredits` mid-show: computing the free portion
+   against the number that happens to be there at the end would re-price votes that
+   were already cast, and debit a fan's pack for credits they took from the free
+   allowance. That was a real bug on the old round-reset path.
+
+   FREE CREDITS ARE STILL SPENT FIRST — that part is unchanged.
 
    This exists because for a long time it did not. `extra` was read as part of
    `total = freeCredits + extra` in four places and decremented in exactly ONE
@@ -496,39 +524,47 @@ export async function readFans(aid) {
    check when isUnlimited, so creditsUsed keeps counting the casts while nothing
    was ever owed — measured, a 12-credit pack vanished in one round. Both callers
    have the fan id in hand (it is the shard bag's key), so both pass it. */
-export const paidUsed = (fan, show, fanId) =>
-  isUnlimited(fanId, show) ? 0
-    : Math.max(0, creditsUsed(fan, show) - (show.freeCredits || 0));
+export const paidUsed = (fan, show, fanId) => {
+  if (isUnlimited(fanId, show)) return 0;
+  const used = creditsUsed(fan, show);
+  /* The stamped free portion when there is one; otherwise the old derivation, for
+     a record written before this existed. */
+  return Math.max(0, used - (typeof fan.freeUsed === 'number'
+    ? fan.freeUsed : Math.min(show.freeCredits || 0, used)));
+};
 
-/* `costShow` must be the show as it was BEFORE the song started. `play` takes the
-   winning song back out of `played[]` first, so pricing a just-won replay vote
-   against the post-play show charges 1 instead of `replayCost` and silently
-   under-debits the pack. admin.mjs snapshots it before the mutation. */
-export async function clearAllFanVotes(aid, costShow) {
-  if (!costShow) throw new Error('clearAllFanVotes needs the pre-play show to price the round');
+/* THE SONG THAT JUST STARTED HAS COLLECTED ITS VOTES, so they come off the board.
+   They are not refunded and they are not returned: `used` does not move, which is
+   the whole rule. The votes for every OTHER song stay exactly where their fans put
+   them, and stay in the running until they are played or the night ends.
+
+   This replaced `clearAllFanVotes`, which wiped every fan's votes on every song at
+   the start of each song and settled the paid ledger there. That function needed
+   the pre-play show to price the round with, threw without it, and was the reason
+   free credits appeared to refresh — none of which has anything to answer any more,
+   because a night is one round. See the ledger header above. */
+export const consumePlayedVotes = (aid, songId) => dropSongVotes(aid, songId);
+
+/* "Clear the votes" in the Studio — the board goes back to zero for every song at
+   once. NOBODY IS REFUNDED: a vote is spent when it is cast, and the artist
+   reaching for this button does not change that. It is the only remaining way to
+   empty the board by hand, and the Studio says what it does. */
+export async function wipeBoard(aid) {
   await Promise.all(
     Array.from({ length: SHARDS }, (_, n) =>
       casDoc(shardKey(aid, n), () => ({}), (bag) => {
+        let touched = false;
         for (const id of Object.keys(bag)) {
-          // settle the paid portion ONCE, here, before the evidence is wiped.
-          // Debiting at the moment of the cast instead double-charges, because
-          // creditsUsed already counts the vote while `total` would shrink — and
-          // it breaks INVARIANT 15, since un-voting would then burn a paid vote.
-          const paid = paidUsed(bag[id], costShow, id);
-          if (paid > 0) bag[id].extra = Math.max(0, (bag[id].extra || 0) - paid);
-          // drop stale stamps and the non-song spend too — free credits refresh
-          // here, so anything charged against them has to refresh with them
-          bag[id].v = []; bag[id].ts = {}; bag[id].spent = 0;
-          /* The cast-id ring goes with them (INVARIANT 15h). A replayed id after the
-             reset is a NEW cast, because the votes it referred to no longer exist —
-             keeping the ring would silently swallow a fan's first vote of the round. */
-          bag[id].casts = [];
+          if (!(bag[id].v || []).length) continue;
+          bag[id].v = []; bag[id].ts = {};
+          touched = true;
         }
-        return true;
+        return touched;
       }, null).catch(() => {})
     )
   );
 }
+
 /* Votes someone PAID for shouldn't evaporate because the artist tapped
    "New show". Unspent paid votes carry into the next show unless the fan chose
    to gift them. Everything else — free credits, picks, timestamps — resets.
@@ -566,54 +602,16 @@ export async function carryFans(aid, show) {
 }
 
 /* Deleting a song from the library used to strand every credit held on it:
-   `creditsUsed` counts each id in `fan.v` whether or not the song still exists, and
-   vote.mjs answers 404 before it reaches the un-vote toggle — so the fan could not
-   get the credit back, and had no row in the UI to tap even if they could.
-   Fixed at the source. Narrowing a setlist and hiding a song were NOT affected —
-   the song stays in show.songs, so the toggle works and refunds correctly; that was
-   measured, and the original report had it wrong. */
-/* Give back every vote held on a song the room can no longer choose.
+   `creditsUsed` counted each id in `fan.v` whether or not the song still existed,
+   and vote.mjs answered 404 before it reached the un-vote toggle — so the fan could
+   not get the credit back. Now that spend is STORED rather than counted out of `v`,
+   removing a song cannot strand anything: it takes the votes off the board and the
+   fan's ledger does not move, which is the same answer the rule gives everywhere
+   else. A vote is spent when it is cast.
 
-   The un-vote toggle used to be the escape hatch for this: narrow the setlist or
-   hide a song, and a fan holding a vote on it could tap it off and get their credit
-   back. Under `voteFinal` there is no toggle, so without this the credit is stranded
-   until the next song starts — and INVARIANT 15's promise is that a fan can always
-   recover what they paid for, whatever the ARTIST has changed since.
-
-   It is a fan-wide write across every shard, which is why it was avoided before. It
-   only runs when the playable set actually SHRANK, which is a handful of times a
-   night at most, and it returns the ids it released so the artist can be told.
-
-   NOT called when a song is merely PLAYED — a played song stays votable at the
-   replay price, and the round reset returns those credits anyway. */
-export async function releaseUnvotable(aid, show) {
-  const canVote = votable(show);
-  const known = new Map((show.songs || []).map((x) => [x.id, x]));
-  const freed = new Set();
-  await Promise.all(
-    Array.from({ length: SHARDS }, (_, n) =>
-      casDoc(shardKey(aid, n), () => ({}), (bag) => {
-        let touched = false;
-        for (const id of Object.keys(bag)) {
-          const v = bag[id].v || [];
-          if (!v.length) continue;
-          const kept = v.filter((sid) => {
-            const song = known.get(sid);
-            const okNow = song ? canVote(song) : false;
-            if (!okNow) freed.add(sid);
-            return okNow;
-          });
-          if (kept.length === v.length) continue;
-          for (const sid of v) if (!kept.includes(sid) && bag[id].ts) delete bag[id].ts[sid];
-          bag[id].v = kept;
-          touched = true;
-        }
-        return touched;
-      }, null).catch(() => {})
-    )
-  );
-  return [...freed];
-}
+   `releaseUnvotable` used to live here and did the opposite — it handed a fan back
+   every credit held on a song the room could no longer choose. Deleted 2026-09-07
+   with the rest of the give-it-back machinery. */
 
 export async function dropSongVotes(aid, songId) {
   if (!songId) return;
@@ -711,12 +709,28 @@ export const isUnlimited = (fanId, show) =>
 /** A vote on an already-played song costs more (a "play it again" request). */
 export const costOf = (songId, show) =>
   show.played.includes(songId) ? (show.replayCost || 5) : 1;
-/** Credits a fan has spent, counting replay votes at their higher cost.
- *  `spent` is everything that isn't a vote on a listed song — a song request, a
- *  birthday shout — because those have no song id to count. It resets with the
- *  free credits, i.e. every time a new song starts. */
+/** What `used` would have been under the old derive-from-`v` rule. Only ever
+ *  reached by a fan record written before 2026-09-07 — a phone that was already
+ *  holding votes when this deployed. Their spend is read out of `v` once, and from
+ *  their next cast it is stored like everyone else's. */
+const derivedSpend = (fan, show) =>
+  (fan.v || []).reduce((sum, id) => sum + costOf(id, show), 0);
+
+/** Credits a fan has spent tonight. Stored, monotonic, and NOT recoverable by a
+ *  song being played or removed. `spent` is everything that isn't a vote on a
+ *  listed song — a song request, a birthday shout — because those have no song id. */
 export const creditsUsed = (fan, show) =>
-  (fan.v || []).reduce((sum, id) => sum + costOf(id, show), 0) + (fan.spent || 0);
+  (typeof fan.used === 'number' ? fan.used : derivedSpend(fan, show)) + (fan.spent || 0);
+
+/** Charge a fan for `need` credits, free allowance first. The one place `used` and
+ *  `freeUsed` move, so the two can never drift apart. */
+export function chargeFan(fan, show, need) {
+  if (typeof fan.used !== 'number') fan.used = derivedSpend(fan, show);
+  if (typeof fan.freeUsed !== 'number') fan.freeUsed = Math.min(show.freeCredits || 0, fan.used + (fan.spent || 0));
+  const freeLeft = Math.max(0, (show.freeCredits || 0) - fan.freeUsed);
+  fan.freeUsed += Math.min(need, freeLeft);
+  fan.used += need;
+}
 
 /* ---------- who was in the room ----------
    The honest count of people at a gig is not "devices that voted" — plenty of

@@ -1,6 +1,11 @@
-import { getShow, mutateFan, creditsUsed, costOf, isUnlimited, publicArtist, json, bad,
+import { getShow, mutateFan, creditsUsed, chargeFan, costOf, isUnlimited, publicArtist, json, bad,
          cleanFanId, votable, roomHash, clientIp } from './_lib.mjs';
-import { readFlags, flagValue } from './_flags.mjs';
+
+/* A VOTE IS FINAL. It stays on the song it was cast for until that song is played
+   or the night ends, and it never comes back — see the ledger header in _lib.mjs
+   for Perry's own words on why. This used to be the `voteFinal` feature flag, with
+   a working take-it-back path behind the off switch; the flag and that path were
+   both deleted on 2026-09-07 when the question stopped having two answers. */
 
 export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -19,8 +24,8 @@ export default async (req) => {
 
      This used to be free: voting toggled, so a lost response found the vote already
      there and removed it — self-correcting, and never a double charge. That is the
-     mechanism INVARIANT 15's refund quietly WAS. Under `voteFinal` there is no
-     toggle to correct anything, so without an id a dropped response on bar wifi
+     mechanism INVARIANT 15's refund quietly WAS. There is no toggle to correct
+     anything any more, so without an id a dropped response on bar wifi
      casts a second time, at replay prices. The id is minted when Confirm is pressed
      (not when the sheet opens, or stepping the quantity would reuse it) and the
      outcome is remembered on the fan record, exactly like meta.paid[sid] makes a
@@ -33,22 +38,16 @@ export default async (req) => {
      never sent is still fine: an older cached page has no concept of one. */
   if (rawCast && !castId) return bad('bad cast id', 400);
 
-  /* What the fan MEANT, rather than inferring it from what they already hold.
-     With finality on, "cast again" and "take it back" are different intentions and
-     must not be guessed. An older cached page sends neither, and gets the toggle it
-     was written for — the flag decides, never the body. */
+  /* A page cached from before finality still sends `op:'clear'` when somebody taps
+     a song they already hold votes on. It is answered honestly rather than ignored
+     — silently treating it as a fresh cast would charge them again for a tap that
+     meant the opposite. */
   const op = body.op === 'cast' || body.op === 'clear' ? body.op : '';
 
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
-  const [show, flagDoc] = await Promise.all([getShow(aid), readFlags()]);
-  const final = flagValue(flagDoc, 'voteFinal', aid);
+  const show = await getShow(aid);
   if (show.status === 'ended') return bad('The show has ended', 409);
-  /* The song has to exist at all. Whether it is ON OFFER is checked on the cast
-     branch only, inside the mutation — because UN-voting has to work even after it
-     stopped being on offer. INVARIANT 15 says a second tap refunds the credit, and
-     the artist can narrow the setlist or hide a song mid-round; gating the toggle
-     here would strand the fan's credit with no way to get it back. */
   const s0 = show.songs.find((x) => x.id === song);
   if (!s0) return bad('That one isn’t on tonight’s list', 404);
   const offered = votable(show)(s0);
@@ -100,25 +99,24 @@ export default async (req) => {
       }
 
       const mine = held(me);
-      /* Taking votes back. `op` says so explicitly; with neither op nor flag we fall
-         through to the historic toggle, so a cached page keeps working. */
-      const clearing = op === 'clear' || (op === '' && mine > 0);
-      if (clearing) {
-        if (final) { err = ['Those votes are cast — they stay with the song', 409]; return false; }
-        if (mine === 0) { err = ['You have no votes on that one', 409]; return false; }
-        me.v = me.v.filter((x) => x !== song);
-        delete me.ts[song];
-        want = 0;
-        outcome = { voted: false, removed: mine };
-        if (castId) { me.casts.push({ id: castId, at: Date.now(), out: outcome }); me.casts = me.casts.slice(-CASTS_KEPT); }
-        return true;
-      }
+      /* There is no way back. An old page asking for one is told why, in the words
+         a person can act on, rather than being quietly charged again. */
+      if (op === 'clear') { err = ['Those votes are cast — they stay with the song', 409]; return false; }
       // casting is where the setlist applies — see the note above
       if (!offered) { err = ['That one isn’t on tonight’s list', 404]; return false; }
       const free = isUnlimited(fan, show);
       const total = show.freeCredits + (me.extra || 0);
       const need = cost * n;
       if (!free && creditsUsed(me, show) + need > total) { err = ['no-credits', 402]; return false; }
+      /* Charged HERE, at the cast, and never again. The old code deliberately did
+         not do this — it settled the paid portion once, at the round reset, because
+         un-voting would otherwise have burned a paid vote. With no un-vote and no
+         round reset, the moment of the cast is the only honest moment left. */
+      /* An unlimited device is charged NOTHING but still has its ledger stamped, so
+         `used` stays the honest number if the artist turns unlimited off mid-show —
+         otherwise their spend would fall back to being counted out of `v` and the
+         votes they were given free would start costing them. */
+      chargeFan(me, show, free ? 0 : need);
       for (let i = 0; i < n; i++) me.v.push(song);
       me.ts[song] ||= Date.now();          // keep the first stamp: ties are broken by it
       want = mine + n;
@@ -132,5 +130,5 @@ export default async (req) => {
   } catch { return bad('busy', 503); }
 
   if (err) return bad(err[0], err[1]);
-  return json({ ok: true, final, ...outcome });
+  return json({ ok: true, final: true, ...outcome });
 };

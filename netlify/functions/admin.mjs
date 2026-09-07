@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, clearAllFanVotes, dropSongVotes, voteCounts, readMeta, mutateMeta,
+import { getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, STARTER_SONGS,
@@ -20,7 +20,7 @@ import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf,
          MAX_EVENTS } from './_events.mjs';
 import { reindexSched } from './_auto.mjs';
-import { startShow, endShow, releaseNote } from './_lifecycle.mjs';
+import { startShow, endShow } from './_lifecycle.mjs';
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, redeemPromo,
@@ -699,30 +699,21 @@ const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 't
 /* SETLISTS and the to-learn list. Both live in their own documents, so none of
    this touches the record the room polls — except `listUse`, which has to write
    the projection (see the note in _lists.mjs). */
-/* Votes on a song the room can no longer choose have to come back, and there are
-   TWO dispatch paths that can narrow the set: the mutateShow switch (toggleSong)
-   and handleLists (listSongs / listUse / listToggle / listDelete), which
-   short-circuits before that block. This is called from both, so neither can be
-   the one that forgets. See releaseUnvotable in _lib.mjs for why it matters now
-   that votes are final. */
-/* releaseNote(aid, before) — votes stranded on songs the room can no longer
-   choose go back to the room. Lives in _lifecycle.mjs since ending a show can
-   happen without a request; imported above. */
+/* Narrowing tonight's list used to hand every credit held on the dropped songs back
+   to the room, from here and from the mutateShow switch, so that neither path could
+   be the one that forgot. Both are gone: a vote is spent when it is cast (see the
+   ledger header in _lib.mjs), so there is nothing to give back and nothing to
+   announce. What the artist IS still told is which songs came off the list, which
+   `send()` already had in hand. */
 
 async function handleLists(aid, action, body) {
   const show = await getShow(aid);
   /* Snapshot what the room can vote for, so `send()` can tell whether the change
      actually took anything away. Two reads already in hand, versus twelve. */
-  const playableBefore = action === 'listAll'
-    ? null : new Set(playable(show).songs.map((x) => x.id));
   const send = async (extra = {}) => {
-    // narrowing the set is exactly what these actions do, so release before replying
-    const freed = action === 'listAll' ? null : await releaseNote(aid, playableBefore);
     const [d, sh] = [await readLists(aid), await getShow(aid)];
     return json({ ok: true, lists: shapeLists(d, sh),
-                  listId: sh.listId, listName: sh.listName,
-                  ...extra,
-                  ...(freed ? { note: join(extra.note, freed) } : {}) });
+                  listId: sh.listId, listName: sh.listName, ...extra });
   };
 
   if (action === 'listAll') return send();
@@ -1677,7 +1668,7 @@ export default async (req) => {
     return json({ ok: true, stage, note: r.note || null, songId: null });
   }
 
-  let err = null, resetVotes = false, note = null;
+  let err = null, playedNow = null, clearBoard = false, note = null;
 
   // Anything that starts a song needs the tally BEFORE it is wiped.
   let counts = null, firstAt = null, votersNow = 0;
@@ -1722,14 +1713,13 @@ export default async (req) => {
      fires. */
   const DOUBLE_TAP_MS = Number(process.env.MYSET_DOUBLE_TAP_MS ?? 8000);
   let droppedSong = null;
-  /* Every action that ends up settling the paid-vote ledger needs the PRE-mutation
-     show to price the round with. Missing 'freeCredits' here was the whole bug that
-     case was fixing: the reset then priced the old round at the NEW ceiling and
-     debited the fan's pack for credits they never took from it. The regression test
-     caught it, which is the only reason it is not still here. */
-  const RESETTERS = new Set(['play', 'playTop', 'resetVotes',
-                             'freeCredits', 'replayCost']);
-  const prevShow = RESETTERS.has(action) ? await getShow(aid) : null;   // read before it resets
+  /* `prevShow` used to exist so the round reset could price the round it was
+     wiping. There is no round reset any more (a night is one round) and a vote is
+     charged at the moment it is cast, so nothing needs the old prices — but `play`
+     still wants the pre-mutation show for `logPlay`, and the release note below
+     compares the playable set before and after. */
+  const NEEDS_BEFORE = new Set(['play', 'playTop', 'freeCredits', 'replayCost']);
+  const prevShow = NEEDS_BEFORE.has(action) ? await getShow(aid) : null;
 
   let libChanged = false;
   await mutateShow(aid, (show) => {
@@ -1754,7 +1744,19 @@ export default async (req) => {
       show.log.push({
         songId: id, title: sg.title || id, artist: sg.artist || '',
         votes: c[id] || 0, voters: votersNow,
-        roundVotes: Object.values(c).reduce((a, b) => a + b, 0),
+        /* THE VOTES THIS SONG COLLECTED, not the whole board's.
+
+           It was the whole board's, and that was right while starting a song wiped
+           every vote in the room: each round's votes were a separate set, so summing
+           them counted every vote exactly once — which is what `_history.mjs` does to
+           get a night's total. Votes stopped being wiped on 2026-09-07. A vote cast
+           for a song that has not come up yet is still standing when the NEXT song
+           starts, so the old sum counted it again at every play, and a quiet night
+           would have reported thousands of votes.
+
+           One vote, counted once: here when its song plays, or in `leftover` at the
+           end if it never does. */
+        roundVotes: c[id] || 0,
         round,
         replay: show.played.includes(id), at: Date.now(),
       });
@@ -1779,7 +1781,7 @@ export default async (req) => {
         show.played = show.played.filter((p) => p !== id);   // replaying? take it back out
         show.nowPlaying = id || null;
         show.nowPlayingAt = Date.now();
-        show.windowOpen = true; resetVotes = true;
+        show.windowOpen = true; playedNow = id;
         break;
       }
       case 'playTop': {
@@ -1805,7 +1807,7 @@ export default async (req) => {
         show.played = show.played.filter((p) => p !== pool[0].id);
         show.nowPlaying = pool[0].id;
         show.nowPlayingAt = Date.now();
-        show.windowOpen = true; resetVotes = true;
+        show.windowOpen = true; playedNow = pool[0].id;
         break;
       }
       case 'window': show.windowOpen = !!body.open; break;
@@ -1831,7 +1833,6 @@ export default async (req) => {
         if (!canPrice) { err = PRICE_LOCKED; return false; }
         const n = parseInt(body.n, 10);
         const want = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 5));
-        if (want !== show.freeCredits) resetVotes = true;
         show.freeCredits = want;
         show.unlimited = false;               // picking a number turns unlimited off
         break;
@@ -1946,7 +1947,6 @@ export default async (req) => {
       case 'replayCost': {
         if (!canPrice) { err = PRICE_LOCKED; return false; }
         const want = Math.max(1, Math.min(20, parseInt(body.n, 10) || 5));
-        if (want !== show.replayCost) resetVotes = true;   // see freeCredits above
         show.replayCost = want;
         break;
       }
@@ -1968,7 +1968,12 @@ export default async (req) => {
         show.codeHash = sha(code);          // stored hashed, never in plaintext
         break;
       }
-      case 'resetVotes': resetVotes = true; break;
+      /* "Clear the votes" in the Studio. It wipes the BOARD — every fan's votes on
+         every song — and it is now the only thing that does. It does NOT give the
+         credits back: a vote is spent when it is cast, whatever happens to it
+         afterwards, and the artist reaching for this button does not change that.
+         The Studio says so on the button. */
+      case 'resetVotes': clearBoard = true; break;
       case 'starterSetlist': {          // append the generic covers, never replace
         const have = new Set(show.songs.map((x) => x.id));
         let live = show.songs.filter((x) => x.active !== false).length;
@@ -1998,20 +2003,12 @@ export default async (req) => {
   // the library changed => what's in the active setlist may have changed with it
   if (libChanged) note = join(note, await syncActive(aid));
 
-  if (resetVotes) await clearAllFanVotes(aid, prevShow || (await getShow(aid)));
-  // a deleted song must not keep holding somebody's credit
+  /* The song that just started has collected its votes, so they come off the board.
+     Nothing is refunded — see the ledger header in _lib.mjs. */
+  if (playedNow) await consumePlayedVotes(aid, playedNow);
+  else if (clearBoard) await wipeBoard(aid);
+  // a deleted song's votes must not go on being counted for a song nobody can see
   else if (droppedSong) await dropSongVotes(aid, droppedSong);
-
-  /* ...and neither must a song the artist has HIDDEN or dropped from tonight's set.
-     With votes final there is no un-vote for the fan to fall back on, so the
-     release has to happen here or the credit is stranded for the rest of the round.
-     Only when the playable set actually shrank, and the artist is told. */
-  if (!resetVotes && !droppedSong) {
-    /* prevShow is only read for RESETTERS, so fall back to computing from the show
-       as it was before this handler's mutation where we have it. */
-    const beforeSet = prevShow ? new Set(playable(prevShow).songs.map((x) => x.id)) : null;
-    note = join(note, await releaseNote(aid, beforeSet));
-  }
 
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.

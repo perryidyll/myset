@@ -422,19 +422,17 @@ document.addEventListener('visibilitychange', fbTick);
 window.addEventListener('pagehide', fbTick);
 
 let VQ=1;                       // how many votes the sheet currently proposes
-let VMODE='cast';               // 'cast' or 'clear' — what Confirm will actually do
+/* `VMODE` lived here and said whether Confirm would cast or take back. There is
+   only one answer now. */
 function openVote(id){
   const s=(ST.songs||[]).find(x=>x.id===id)||(ST.played||[]).find(x=>x.id===id);
   if(!s) return;
-  const c=ST.credits||{};
-  /* Already holding votes here: with the toggle available the sheet becomes the way
-     to take them back. Under finality it must still OPEN — a fan who confirmed at
-     the default of 1 has to be able to put their other credits on the same song,
-     and the server allows exactly that (want = mine + n). Blocking it made the
-     stepper pointless for anyone who tapped once. */
-  const finNow=!!(ST.flags&&ST.flags.voteFinal);
-  if(s.mine&&!finNow) return openUnvote(s);
-  VQ=1; VMODE='cast'; buzz(8); drawVoteSheet(s);
+  /* A song they already hold votes on still opens the ordinary sheet — a fan who
+     confirmed at the default of 1 has to be able to put the rest of their votes on
+     the same song, and the server allows exactly that (want = mine + n). There is
+     no other sheet any more: `openUnvote` and the take-it-back path went with the
+     rule on 2026-09-07. */
+  VQ=1; buzz(8); drawVoteSheet(s);
 }
 function voteMax(s){
   const c=ST.credits||{}, cost=s.cost||1;
@@ -450,33 +448,23 @@ let VSONG=null;
 function drawVoteSheet(s){
   VSONG=s.id;
   const c=ST.credits||{}, cost=s.cost||1, max=voteMax(s), total=cost*VQ;
-  const free=ST.freeCredits||(c.total||0);
-  const fin=!!(ST.flags&&ST.flags.voteFinal);
+  /* PERRY'S OWN WORDS, 2026-09-07, emphasis included. Three lines, and the middle
+     one is the whole game: a vote stays on the song it was cast for until that song
+     is played or the night ends, and it does not come back either way. Nothing here
+     is softened and nothing is left to be discovered afterwards — a fan who was not
+     told would reasonably think they had been robbed. */
   const rules=[
     c.unlimited
       ? 'Tonight you can vote as much as you like.'
       : `You have <b>${c.remaining}</b> vote${c.remaining===1?'':'s'} right now.`,
-    'Your free votes come back every time a new song starts.',
     (c.paidLeft>0?`You also have <b>${c.paidLeft}</b> vote${c.paidLeft===1?'':'s'} you bought \u2014 those are yours to keep until you spend them.`:''),
-    fin
-      ? 'Once you confirm, that\u2019s final \u2014 votes can\u2019t be taken back.'
-      : 'Changed your mind? Tap the song again before it starts and your votes come straight back.',
-    /* Said out loud rather than left as a surprise: the artist can narrow tonight's
-       list, and a song that drops out takes any votes on it with it until the next
-       song starts. It is bounded — the round reset returns everything — but a fan
-       who was not told would reasonably think they had been robbed. */
-    (fin?'If ' + esc(artistFirst()) + ' drops a song from tonight\u2019s list, votes on it come back when the next song starts.':''),
-    'The list updates itself every few seconds. Pull down to refresh if you want it right now.',
+    'Once you confirm, it\u2019s final! Votes <b>can\u2019t be changed</b> once cast and <b><i>don\u2019t come back</i></b>.',
+    'The list should update itself, but <b>please pull down on your screen</b> to refresh the page if you want to <b>see the current list now</b>.',
   ].filter(Boolean);
-  /* The line under Confirm has to match what the code will actually do. With
-     finality off, "votes can't be changed" would contradict the rule three lines
-     above it on the same screen — so it says the true thing until the flag is on. */
-  const warn=(ST.flags&&ST.flags.voteFinal)
-    ? 'Are you sure? Votes can\u2019t be changed!'
-    /* `total`, not VQ. On a replay at 5 credits this read "That puts 1 of your
-       votes on this song" directly under "Confirm — 5 votes" — in the one sentence
-       whose whole job is to say what the button will do. */
-    : `That puts ${total} of your votes on this song.`;   // "of your votes" is the pool — always plural
+  /* `total`, not VQ. On a replay at 5 credits this read "That puts 1 of your
+     votes on this song" directly under "Confirm — 5 votes" — in the one sentence
+     whose whole job is to say what the button will do. */
+  const warn='Are you sure? Votes can\u2019t be changed!';
   openSheet(`
     <div class="kick">Vote for</div>
     <h3 style="margin:2px 0 2px">${esc(s.title)}</h3>
@@ -495,19 +483,10 @@ function drawVoteSheet(s){
       <button class="go2" onclick="closeSheet()">Not yet</button>
     </div>`);
 }
-function openUnvote(s){
-  const n=s.mineCount||1, cost=s.cost||1;
-  VSONG=s.id; VMODE='clear';
-  openSheet(`
-    <div class="kick">Your vote${n===1?'':'s'}</div>
-    <h3 style="margin:2px 0 2px">${esc(s.title)}</h3>
-    <p class="lede" style="margin-bottom:14px">You have ${n} vote${n===1?'':'s'} on this one.</p>
-    ${ST.flags&&ST.flags.voteFinal
-      ? `<p class="lede">These are cast \u2014 they stay with the song.</p>
-         <button class="go" onclick="closeSheet()">Close</button>`
-      : `<button class="go" onclick="confirmVote()">Take ${n===1?'it':'them'} back \u2014 ${n*cost} vote${n*cost===1?'':'s'} returned</button>
-         <button class="go2" onclick="closeSheet()">Leave ${n===1?'it':'them'} there</button>`}`);
-}
+/* `openUnvote` lived here — the sheet a fan got when they tapped a song they were
+   already holding votes on, offering to give them back. Deleted 2026-09-07. Tapping
+   such a song now opens the ordinary sheet so they can add more. */
+
 /* ONE id per press of Confirm. Minted here rather than when the sheet opens, or a
    fan who steps the quantity and confirms again would reuse it and their second,
    larger cast would be swallowed as a replay of the first. The server remembers the
@@ -518,27 +497,25 @@ function newCastId(){
   return 'c'+Math.random().toString(36).slice(2,12)+Date.now().toString(36);
 }
 function confirmVote(){
-  const id=VSONG, op=(VMODE==='clear'?'clear':'cast'), q=VQ;
+  const id=VSONG, q=VQ;
   closeSheet();
-  if(id) vote(id,q,op,newCastId());
+  if(id) vote(id,q,newCastId());
 }
 
-async function vote(id,n,op,castId){
+async function vote(id,n,castId){
   if(busy.has(id))return; busy.add(id);
   const s=(ST.songs||[]).find(x=>x.id===id)||(ST.played||[]).find(x=>x.id===id);
   const q=Math.max(1,Number(n)||1);
-  const clearing=op==='clear';
   if(s){ const k=s.cost||1;
     const held=s.mineCount||(s.mine?1:0);
-    const delta=clearing?-held:q;
-    s.mine=!clearing; s.mineCount=clearing?0:held+q; s.votes+=delta;
-    if(!ST.credits.unlimited) ST.credits.remaining-=delta*k;
-    POP=id; buzz(clearing?10:18); render(); POP=null; }
+    s.mine=true; s.mineCount=held+q; s.votes+=q;
+    if(!ST.credits.unlimited) ST.credits.remaining-=q*k;
+    POP=id; buzz(18); render(); POP=null; }
   /* RETRY ONCE, with the SAME cast id — which is the entire point of having one.
      Nothing used to reuse it, so the idempotency was real on the server and never
      exercised: a dropped response on bar wifi just lost the vote. The server answers
      a repeat from memory, so this cannot double-charge. */
-  const body=JSON.stringify({fan:FAN,song:id,n:q,op:op||'cast',cast:castId||''});
+  const body=JSON.stringify({fan:FAN,song:id,n:q,op:'cast',cast:castId||''});
   const post=()=>fetch(`${API}/vote${AQ1}`,{method:'POST',
     headers:{'content-type':'application/json'},body}).then(r=>r.json());
   let d=null;
@@ -643,7 +620,7 @@ function render(){
         <span class="pos">${i+1}</span>
         <div class="m"><div class="t">${esc(s.title)}</div>${by(s.artist)}
           ${i===0?'<div class="s">Winning — plays next</div>':''}
-          ${s.mine?`<div class="s mineline">Your ${(s.mineCount||1)===1?'vote':(s.mineCount)+' votes'}${!open?'':(ST.flags&&ST.flags.voteFinal)?' — tap to add more':' — tap to change'}</div>`:''}</div>
+          ${s.mine?`<div class="s mineline">Your ${(s.mineCount||1)===1?'vote':(s.mineCount)+' votes'}${!open?'':' — tap to add more'}</div>`:''}</div>
         <div class="cnt"><b class="mono">${s.votes}</b><span>vote${s.votes===1?'':'s'}</span></div>
         ${open?(()=>{
            /* The same affordability rule as the list rows. Without it this button
@@ -728,10 +705,10 @@ function row(s,c,open,replay){
      is TRUE in JS — so every Vote button in the room rendered disabled while the
      pill happily showed the infinity sign. The ask-card rule below already had
      the `!c.unlimited` guard; this one did not. */
-  const fin=!!(ST.flags&&ST.flags.voteFinal);
-  /* Voting is never a dead end: under finality a held song can still be added to,
-     it just cannot be taken back. Affordability is the only reason to disable. */
-  const dis=!open||(!c.unlimited&&c.remaining<cost&&!(s.mine&&!fin));
+  /* Voting is never a dead end: a song they already hold votes on can still be
+     added to, it just cannot be taken back. Affordability is the only reason to
+     disable the button. */
+  const dis=!open||(!c.unlimited&&c.remaining<cost);
   const n=s.mineCount||(s.mine?1:0);
   return `<div class="prow ${s.votes?'hasv':''}">
     <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}</div>

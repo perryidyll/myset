@@ -184,13 +184,13 @@ console.log('\nTHE FLAG SWITCH IS PERRY\u2019S ALONE  (server-side, not just hid
    suggestion anyone can step around with curl. */
 const anaFlags = await AS(TA, 'flagList');
 eq('another artist cannot even list the flags', anaFlags.status, 401);
-const anaSet = await AS(TA, 'flagSet', { flag: 'voteFinal', on: false });
+const anaSet = await AS(TA, 'flagSet', { flag: 'featuredShows', on: false });
 eq('nor set one', anaSet.status, 401);
-const anaSetOther = await AS(TA, 'flagSet', { flag: 'voteFinal', on: false, artistId: 'perry-idyll' });
+const anaSetOther = await AS(TA, 'flagSet', { flag: 'featuredShows', on: false, artistId: 'perry-idyll' });
 eq('nor set one on somebody else', anaSetOther.status, 401);
 ok('while the founder can', (await OWNER('flagList')).ok);
 const { flagValue, readFlags } = await import('../netlify/functions/_flags.mjs');
-eq('and none of that changed the flag', flagValue(await readFlags(), 'voteFinal', 'perry-idyll'), true);
+eq('and none of that changed the flag', flagValue(await readFlags(), 'featuredShows', 'perry-idyll'), true);
 const studioSrc = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
 ok('the card is also hidden for everyone else, as a courtesy',
    /function flagCard\(\)\{[\s\S]{0,120}PLAN\.owner/.test(studioSrc), 'flagCard must gate on PLAN.owner');

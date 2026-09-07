@@ -34,7 +34,7 @@ const hit = async (h, url, body) => {
 };
 const A       = (action, extra = {}) => hit(admin, 'https://x/api/admin?code=devlocal', { action, ...extra });
 const pubShow = (fan) => hit(showFn, `https://x/api/show${fan ? '?fan=' + fan : ''}`);
-const vote    = (fan, song) => hit(voteFn, 'https://x/api/vote', { fan, song });
+const vote    = (fan, song, n) => hit(voteFn, 'https://x/api/vote', { fan, song, ...(n ? { n } : {}) });
 const ask     = (fan, title) => hit(reqFn, `https://x/api/request?fan=${fan}`, { kind: 'song', title });
 const st      = async () => (await A('window', { open: true })).stage;
 
@@ -74,19 +74,20 @@ ok('it really joined the set', mem.includes('foxtrot'), mem);
 await vote('fanA', 'foxtrot');
 
 /* ── FINDING 12 ────────────────────────────────────────────────── */
-console.log('\nFINDING 12  narrowing the set must not strand a fan\'s credit');
+console.log('\nFINDING 12  narrowing the set takes the song away, not the spend');
 const v1 = await vote('fanB', 'alpha');
 ok('a fan votes for a song in the set', v1.ok && v1.voted === true, v1);
 await A('listSongs', { id: lid, songs: ['bravo', 'foxtrot'] });     // alpha drops out
 const v2 = await vote('fanC', 'alpha');
 eq('a NEW vote for it is refused', [v2.status, v2.error], [404, 'That one isn’t on tonight’s list']);
-/* This used to assert the holder could TOGGLE it off, which was the escape hatch
-   for a stranded credit. Votes are final since 2026-09-02, so there is no toggle —
-   and the credit therefore has to come back on its own, the moment the set narrows.
-   `releaseUnvotable` does that, which is a stronger guarantee than the old one: the
-   fan does not have to notice, or still be looking at their phone. */
-eq('THE CREDIT CAME BACK BY ITSELF, with no tap from the fan',
-   (await pubShow('fanB')).credits.used, 0);
+/* This assertion has been round the houses. It first checked the holder could
+   toggle the vote off; then, when votes became final, that the credit came back on
+   its own the moment the set narrowed. Perry settled it on 2026-09-07: a vote is
+   spent when it is cast, and nothing gives it back — not the song losing, not the
+   artist dropping it from the list. The fan is told exactly that before they
+   confirm, which is what makes it fair rather than a surprise. */
+eq('THE SPEND STAYS SPENT when the artist narrows the set',
+   (await pubShow('fanB')).credits.used, 1);
 const v3 = await vote('fanB', 'alpha');
 eq('and a fresh vote for it is refused like any other off-list song',
    [v3.status, v3.error], [404, 'That one isn’t on tonight’s list']);
@@ -100,7 +101,11 @@ S = await st();
 const ch = S.songs.find((x) => x.id === 'charlie');
 ok('charlie: played, outside the set, still votable',
    ch.played === true && ch.inSet === false && ch.votable === true, ch);
-const rv = await vote('fanD', 'charlie');
+/* THREE votes, because the board no longer resets when a song starts: fanA's two
+   votes on foxtrot are still standing from the case above, exactly as the rule now
+   says they should be. A replay wins by being wanted MORE, not by being the only
+   thing left after a wipe. */
+const rv = await vote('fanD', 'charlie', 3);
 ok('the room asks for it again', rv.ok && rv.voted === true, rv);
 S = await st();
 const clientTop = S.songs.filter((x) => !x.now && x.active !== false && x.votable !== false

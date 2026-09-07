@@ -25,16 +25,11 @@ import { casDoc, readDoc } from './_lib.mjs';
    Precedence: this artist's own setting, else the global setting, else the default. */
 
 export const FLAGS = {
-  voteFinal: {
-    /* ON as of 2026-09-02, at Perry's decision. Shipped as the DEFAULT rather than
-       written into the flags document, because the document lives in Blobs and the
-       default lives in code — so what production does is reviewable in the diff
-       instead of depending on somebody having run a one-off write. Turning it off
-       again is `flagSet {flag:'voteFinal', on:false}`, globally or per artist. */
-    default: true,
-    what: 'Votes cannot be taken back once cast. OFF = a second tap removes them and refunds (the pre-2026-09-02 behaviour).',
-    remove: 'If a gig proves the refund was better, flip the default back and delete the losing path. A flag that outlives its decision is dead code with extra steps.',
-  },
+  /* `voteFinal` lived here from 2026-09-02 to 2026-09-07, and it is the flag system
+     working exactly as intended: two real answers, both shipped, one chosen. Perry
+     chose. Votes are final, always, and there is no longer a question to switch —
+     so the flag is gone rather than left sitting on its winning answer. What it
+     used to turn off is described in the ledger header in _lib.mjs. */
   featuredShows: {
     /* Perry, 2026-09-05: "maybe you can build this as a feature flag that can
        easily be flipped on and off? it's just an idea i'd like to test out."
