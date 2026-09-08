@@ -51,12 +51,14 @@ Read these before you touch anything. Most were learned by breaking something.
 
 | # | Read | For |
 |---|---|---|
-| 1 | **This file, Parts 1 and 2** | The rules of voting, and exactly what free and paid differ on |
-| 2 | **`INVARIANTS.md`** | Every property that must survive a change, each with the story of how it was found (the count is in §2.1). **Read the relevant section before any change to money, storage or access.** |
-| 3 | **`docs/decisions/`** | Why each decision went the way it did, with the options that lost |
-| 4 | **This file, Parts 3–6** | Every surface, the money, the architecture, how it runs |
-| 5 | **`docs/sessions/`** | The running narrative: what happened on which day and what broke |
-| 6 | **`ACCOUNTS.md`, `ACCOUNTING.md`, `SECURITY.md`** | Sign-in, the books, and the threat model — each is the full design for its area |
+| 0 | **`AGENTS.md`** | How to work in this repo. Loaded automatically by every agent that is not Claude Code; Claude reaches it through `CLAUDE.md`. |
+| 1 | **`IMPLEMENTATION_STATUS.md`** | What is being worked on **right now**, what is blocked, what is next |
+| 2 | **This file, Parts 1 and 2** | The rules of voting, and exactly what free and paid differ on |
+| 3 | **`INVARIANTS.md`** | Every property that must survive a change, each with the story of how it was found (the count is in §2.1). **Read the relevant section before any change to money, storage or access.** |
+| 4 | **`docs/decisions/`** | Why each decision went the way it did, with the options that lost |
+| 5 | **This file, Parts 3–6** | Every surface, the money, the architecture, how it runs |
+| 6 | **`docs/sessions/`** | The running narrative: what happened on which day and what broke |
+| 7 | **`ACCOUNTS.md`, `ACCOUNTING.md`, `SECURITY.md`** | Sign-in, the books, and the threat model — each is the full design for its area |
 
 ### How to check anything this document says
 
@@ -472,7 +474,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 243 (last: 0f8) |
 | Test suites | 34 |
 | Assertions | **1,716**, 0 failing, last run 2026-09-08 |
-| Decision records | 12 |
+| Decision records | 13 |
 
 ### Feature flags in force
 
@@ -1453,7 +1455,11 @@ blob reads on the audience poll are counted by a test.
 
 | File | What it answers |
 |---|---|
-| **`INVARIANTS.md`** | **Read first.** Every property that must survive a change, most with the story of how it was found. Count in §2.1 |
+| **`AGENTS.md`** | **The front door.** How to work here — read automatically by Codex, Cursor and the Gemini CLI. `CLAUDE.md` is a one-line shim pointing at it. |
+| **`IMPLEMENTATION_STATUS.md`** | The living ledger: current focus, next work item, evidence, blockers, risks. **Chat is scratch paper; this is memory.** |
+| `VISION.md` | What MySet is for, what it will never be, and what would make it worth stopping |
+| `IMPLEMENTATION_PLAN.md` | The phased roadmap, with exit criteria per item |
+| **`INVARIANTS.md`** | **Read first before changing storage, money or access.** Every property that must survive a change, most with the story of how it was found. Count in §2.1 |
 | `docs/decisions/` | Why each decision went the way it did, and what would reverse it |
 | `docs/sessions/` | The running narrative, one file per working session |
 | `ACCOUNTS.md` | Sessions, roles, recovery, leaving, passkeys, the login rundown |
@@ -1464,7 +1470,7 @@ blob reads on the audience poll are counted by a test.
 | `GIG-NIGHT.md` | The one-page cheat sheet for running a show |
 | `VERIFYING-A-VENUE.md` | How a venue earns its tick |
 | `HANDOFF-MySet.md` | The long-form session log |
-| `docs/reports/open-line.md` | What an open line to the room would cost, on real published rates |
+| `docs/reports/open-line.html` | **The realtime report** — how Cloudflare works and costs, the scaling stress tests, error tracking, and the build order. `open-line.md` is the one-screen version |
 | `docs/reports/room-ceiling.html` | The load-and-pricing report, with the log-log chart |
 | `docs/landing/` | The landing-page audit: 568 claims against 791 features, and the 69 contradictions |
 | `AUDIT-2026-09-01.md`, `AUDIT-2026-09-02.md` | The two deep audits |

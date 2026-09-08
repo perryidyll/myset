@@ -1,0 +1,661 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Open Line</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --ground:#FAF7F1;
+  --panel:#F2ECE1;
+  --panel-2:#EAE2D4;
+  --ink:#191410;
+  --ink-soft:#3C332B;
+  --muted:#6B6058;
+  --hair:#DDD3C3;
+  --hair-strong:#C7BAA6;
+  --amber:#B8862A;
+  --coral:#C9551F;
+  --crimson:#A62A22;
+  --slate:#4E7290;
+  --moss:#4A7A55;
+  --band:rgba(184,134,42,.13);
+  --band-cool:rgba(78,114,144,.12);
+  --shadow:0 1px 2px rgba(30,20,10,.05), 0 8px 26px -18px rgba(30,20,10,.35);
+  --display:"Instrument Serif", Georgia, "Times New Roman", serif;
+  --body:"IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#14100C; --panel:#1D1813; --panel-2:#251E17;
+    --ink:#F0E7DA; --ink-soft:#D6CABA; --muted:#9C9086;
+    --hair:#2E2720; --hair-strong:#463C31;
+    --amber:#D9A441; --coral:#E2703A; --crimson:#D9483C; --slate:#7793AB; --moss:#6FA87C;
+    --band:rgba(217,164,65,.11); --band-cool:rgba(119,147,171,.12);
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -20px rgba(0,0,0,.9);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#14100C; --panel:#1D1813; --panel-2:#251E17;
+  --ink:#F0E7DA; --ink-soft:#D6CABA; --muted:#9C9086;
+  --hair:#2E2720; --hair-strong:#463C31;
+  --amber:#D9A441; --coral:#E2703A; --crimson:#D9483C; --slate:#7793AB; --moss:#6FA87C;
+  --band:rgba(217,164,65,.11); --band-cool:rgba(119,147,171,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px -20px rgba(0,0,0,.9);
+}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.62;-webkit-font-smoothing:antialiased}
+.page{max-width:1080px;margin:0 auto;padding:0 22px 96px}
+.col{max-width:680px}
+h1,h2,h3,h4{text-wrap:balance;margin:0}
+p{margin:0}
+a{color:var(--coral)}
+code{font-family:var(--mono);font-size:.9em;background:var(--panel-2);padding:1px 5px;border-radius:3px}
+
+.bars{display:inline-flex;align-items:flex-end;gap:2.5px;height:14px;vertical-align:-1px}
+.bars i{width:3.5px;border-radius:1px;display:block}
+.bars i:nth-child(1){height:7px;background:var(--amber)}
+.bars i:nth-child(2){height:14px;background:var(--coral)}
+.bars i:nth-child(3){height:10px;background:var(--crimson)}
+
+header{padding:64px 0 0}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(52px,9.5vw,92px);line-height:.94;letter-spacing:-.015em;margin:22px 0 0}
+h1 em{font-style:italic;color:var(--coral)}
+.deck{font-family:var(--display);font-size:clamp(20px,2.7vw,25px);line-height:1.42;color:var(--ink-soft);margin-top:20px;max-width:620px}
+.byline{margin-top:26px;padding-top:14px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 20px}
+
+.figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;margin:44px 0 0;background:var(--hair);border:1px solid var(--hair);border-radius:3px;overflow:hidden}
+.fig{background:var(--panel);padding:22px 20px 20px;display:flex;flex-direction:column;gap:5px}
+.fig .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.fig .v{font-family:var(--display);font-size:40px;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.fig .n{font-size:13.5px;color:var(--muted);line-height:1.45}
+.fig.hot .v{color:var(--crimson)}
+.fig.warm .v{color:var(--coral)}
+.fig.cool .v{color:var(--slate)}
+.fig.good .v{color:var(--moss)}
+
+nav.toc{margin-top:52px;border:1px solid var(--hair);border-radius:4px;background:var(--panel);padding:20px 22px}
+nav.toc .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:12px}
+nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:34px;font-size:14.5px;line-height:1.9}
+nav.toc a{text-decoration:none;color:var(--ink-soft);border-bottom:1px solid transparent}
+nav.toc a:hover{border-bottom-color:var(--coral);color:var(--coral)}
+@media (max-width:640px){nav.toc ol{columns:1}}
+
+section{margin-top:82px;scroll-margin-top:24px}
+.mark{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.mark::after{content:"";flex:1;height:1px;background:var(--hair)}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(32px,4.6vw,44px);line-height:1.06;letter-spacing:-.012em;margin:18px 0 0}
+h3{font-family:var(--display);font-weight:400;font-size:26px;line-height:1.2;margin:38px 0 0}
+h4{font-family:var(--body);font-weight:600;font-size:16px;margin:26px 0 0;color:var(--ink)}
+.lede{font-size:19px;line-height:1.55;color:var(--ink-soft);margin-top:16px;max-width:660px}
+section p{margin-top:16px}
+.col p + p{margin-top:16px}
+strong{font-weight:600}
+ul,ol.body{margin:16px 0 0;padding-left:22px;max-width:660px}
+li{margin-top:9px;line-height:1.6}
+.pull{font-family:var(--display);font-size:26px;line-height:1.34;color:var(--ink);border-left:2px solid var(--coral);padding-left:22px;margin:34px 0 0;max-width:620px}
+
+.panel{margin-top:34px;background:var(--panel);border:1px solid var(--hair);border-radius:4px;box-shadow:var(--shadow);overflow:hidden}
+.panel-head{padding:14px 18px;border-bottom:1px solid var(--hair);display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.panel-head b{color:var(--ink);font-weight:500;letter-spacing:.14em}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{padding:11px 18px;text-align:right;font-variant-numeric:tabular-nums;vertical-align:top}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);font-weight:400;border-bottom:1px solid var(--hair-strong);white-space:nowrap}
+tbody td{border-bottom:1px solid var(--hair);font-size:14.5px}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:var(--mono);font-size:14px}
+td.hot{color:var(--crimson);font-weight:500}
+td.warm{color:var(--coral)}
+td.ok{color:var(--amber)}
+td.good{color:var(--moss);font-weight:500}
+td.wide{text-align:left;font-size:14px;color:var(--ink-soft)}
+tr.edge td{background:var(--panel-2)}
+.figcap{padding:13px 18px;border-top:1px solid var(--hair);font-size:13px;color:var(--muted);line-height:1.5}
+
+.chart{padding:8px 6px 0}
+.chart svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:18px;padding:4px 18px 16px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.swatch{width:16px;height:2.5px;border-radius:2px;display:block}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-top:34px}
+.card{background:var(--panel);border:1px solid var(--hair);border-radius:4px;padding:22px 20px;display:flex;flex-direction:column;gap:12px}
+.card .src{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--coral)}
+.card q{font-family:var(--display);font-size:19.5px;line-height:1.42;color:var(--ink);quotes:"\201C" "\201D"}
+.card .took{font-size:14px;color:var(--muted);line-height:1.5;margin-top:auto;padding-top:4px}
+.card .took b{color:var(--ink-soft);font-weight:600}
+
+.moves{display:flex;flex-direction:column;gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:4px;margin-top:32px;overflow:hidden}
+.move{background:var(--panel);padding:24px 22px;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start}
+.rank{font-family:var(--mono);font-size:12px;color:var(--ground);background:var(--coral);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:500;flex:none}
+.move:nth-child(2) .rank{background:var(--amber)}
+.move:nth-child(3) .rank{background:var(--slate)}
+.move:nth-child(4) .rank{background:var(--muted)}
+.move:nth-child(5) .rank{background:var(--muted)}
+.move h3{font-family:var(--display);font-size:25px;font-weight:400;line-height:1.2;margin:0}
+.move p{margin-top:9px;font-size:15.5px;color:var(--ink-soft)}
+.move .why{margin-top:10px;font-size:13.5px;color:var(--muted);font-family:var(--mono);line-height:1.6}
+
+.qa{margin-top:34px;display:flex;flex-direction:column;gap:1px;background:var(--hair);border:1px solid var(--hair);border-radius:4px;overflow:hidden}
+.qa > div{background:var(--panel);padding:26px 24px}
+.qa .ask{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--slate);display:block;margin-bottom:10px}
+.qa h3{font-family:var(--display);font-size:24px;line-height:1.22;margin:0}
+.qa p{margin-top:14px;font-size:15.5px;color:var(--ink-soft)}
+.qa ul{margin-top:14px}
+.qa li{font-size:15px}
+.verdict{margin-top:18px;padding:14px 16px;border-left:2px solid var(--moss);background:var(--band-cool);font-size:15px;line-height:1.55}
+.verdict b{color:var(--ink)}
+.verdict.warn{border-left-color:var(--crimson);background:var(--band)}
+
+.open{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px;margin-top:30px}
+.q{border-top:2px solid var(--hair-strong);padding-top:16px}
+.q h3{font-family:var(--body);font-size:15px;font-weight:600;line-height:1.35;margin:0}
+.q p{margin-top:8px;font-size:14px;color:var(--muted);line-height:1.55}
+.q .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--slate);display:block;margin-bottom:9px}
+
+.note{margin-top:34px;padding:18px 20px;border:1px dashed var(--hair-strong);border-radius:4px;font-size:14.5px;color:var(--muted);line-height:1.6;max-width:680px}
+.note b{color:var(--ink-soft);font-weight:600}
+
+footer{margin-top:84px;padding-top:22px;border-top:1px solid var(--hair);font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 22px}
+@media (max-width:560px){.move{grid-template-columns:1fr;gap:12px}th,td{padding:10px 13px}}
+</style>
+
+<div class="page">
+
+<header>
+  <div class="eyebrow"><span class="bars"><i></i><i></i><i></i></span> MySet · realtime architecture · 8 September 2026</div>
+  <h1>The Open<br><em>Line</em></h1>
+  <p class="deck">What it would take to hold a live connection to every phone in the room — priced from published rates, and stress-tested against the questions a real engineer asked.</p>
+  <div class="byline">
+    <span>Rates re-checked 8 Sep 2026</span>
+    <span>Baseline measured: tools/loadsim.py</span>
+    <span>Nothing here has been built</span>
+  </div>
+</header>
+
+<div class="figures">
+  <div class="fig good">
+    <span class="k">A 10,000-phone gig, on Cloudflare</span>
+    <span class="v">1.9¢</span>
+    <span class="n">against <b>$4.29</b> today — and $0 inside the monthly free allowance</span>
+  </div>
+  <div class="fig cool">
+    <span class="k">Cost from 200 people upward</span>
+    <span class="v">flat</span>
+    <span class="n">about 1.8¢ a gig whether 200 or 10,000 turn up. Billed per <em>room</em>, not per person</span>
+  </div>
+  <div class="fig hot">
+    <span class="k">A hosted realtime service</span>
+    <span class="v">$29</span>
+    <span class="n">six times worse than today, because they charge for delivery</span>
+  </div>
+  <div class="fig warm">
+    <span class="k">Error history today</span>
+    <span class="v">24h</span>
+    <span class="n">Netlify's function logs. A bug reported the morning after is already unprovable</span>
+  </div>
+</div>
+
+<nav class="toc">
+  <span class="k">What is in here</span>
+  <ol>
+    <li><a href="#why">Why this came up</a></li>
+    <li><a href="#netlify">Why Netlify cannot do it</a></li>
+    <li><a href="#cloudflare">How Cloudflare actually works</a></li>
+    <li><a href="#money">What it costs, line by line</a></li>
+    <li><a href="#ceilings">The real ceilings</a></li>
+    <li><a href="#code">What changes in the code</a></li>
+    <li><a href="#alternatives">Every architecture considered</a></li>
+    <li><a href="#trailheads">Chris's questions, answered</a></li>
+    <li><a href="#errors">Error logs — the cheapest fix on this page</a></li>
+    <li><a href="#plan">The plan, in order</a></li>
+    <li><a href="#open">Still open</a></li>
+  </ol>
+</nav>
+
+<section id="why">
+  <div class="mark">Why this came up</div>
+  <div class="col">
+    <h2>A ten-second countdown made the limit visible</h2>
+    <p class="lede">The artist taps <em>Last call</em>. A box appears at the top of every phone in the room counting down from ten. Except it does not — it appears on a phone the next time that phone happens to check in.</p>
+    <p>In a small room that is every three seconds, so nearly everyone sees it. In a big room the interval is deliberately longer, so some phones never see it at all. The countdown is a nudge and does not have to reach everyone to do its job — but it is the first feature where <em>the app knew something the room did not</em>, and had no way to say so.</p>
+    <p>That is what an open line fixes. Instead of ten thousand phones asking <em>"anything new?"</em> every few seconds, the server says <em>"here"</em> once, and everybody has it.</p>
+    <p class="pull">Server work stops being <em>people × time</em> and becomes <em>events</em>.</p>
+  </div>
+</section>
+
+<section id="netlify">
+  <div class="mark">The blocker</div>
+  <div class="col">
+    <h2>Netlify cannot hold a line open, and it is not a setting</h2>
+    <p class="lede">A Netlify Function is: request in, response out, gone. There is no process left alive afterwards to hold a socket.</p>
+    <p>This is true of serverless hosting generally, not a Netlify shortcoming — their own writing on realtime points you at a third party for exactly this reason. There is no plan, no flag and no configuration that changes it.</p>
+    <p><strong>So an open line means a second platform running alongside Netlify.</strong> That is the real cost of this feature, and it is not measured in dollars. It is a second place things can break, a second deploy pipeline, a second bill, a second set of credentials, and a fallback path that has to be maintained forever because it will be used.</p>
+  </div>
+</section>
+
+<section id="cloudflare">
+  <div class="mark">The mechanism</div>
+  <div class="col">
+    <h2>How Cloudflare actually works, in plain words</h2>
+    <p class="lede">The thing that makes Cloudflare right for MySet is not that it is cheap. It is that its billing shape happens to match the product's shape exactly.</p>
+
+    <h3>A Durable Object is a tiny computer per show</h3>
+    <p>Normally, serverless code has no memory — every request starts from nothing and has to look everything up. A <strong>Durable Object</strong> is the opposite: it is a small program that stays alive at a known address, holds things in memory, and has its own private database attached.</p>
+    <p>You address one by name. Name it after the show — <code>gig:perry:2026-09-14</code> — and Cloudflare guarantees that <strong>exactly one</strong> of those exists in the world, in one place, and every phone at that gig talks to that same one. Two people voting at the same instant are talking to the same little computer, so there is nothing to reconcile afterwards.</p>
+    <p>Every gig is a different object. A different program, on a different machine, with a different database. <strong>That is the isolation Chris is asking about, and it comes free with the model rather than being bolted on.</strong></p>
+
+    <h3>Hibernation is the part that makes it nearly free</h3>
+    <p>The obvious worry with a program that stays alive is that you pay for it staying alive. Cloudflare's answer is the <strong>WebSocket Hibernation API</strong>, and it is the single most important fact on this page.</p>
+    <p>When nothing has happened for a short while, Cloudflare <em>evicts the object from memory</em> — but <strong>the phones stay connected.</strong> Their connections are held by Cloudflare's network, not by your program. The keep-alive pings that stop a connection dropping are answered by Cloudflare itself and do not wake anything.</p>
+    <p>Then somebody votes, the object is rebuilt in milliseconds, does its work, broadcasts, and goes back to sleep. In Cloudflare's own words: <em>"Billable Duration charges do not accrue during hibernation."</em></p>
+    <div class="note">
+      <b>The catch, stated plainly.</b> Waking up is a fresh start — anything the program was holding in memory is gone and its constructor runs again. Anything that must survive has to be written down, either into the object's own database or attached to each connection (a per-connection attachment, capped at 16,384 bytes). This is not difficult, but it is the kind of thing that works perfectly in testing and then loses a board at a real gig if it is got wrong. <b>Assume every message may arrive at a program that has just woken up with no memory.</b>
+    </div>
+
+    <h3>The three things you are billed for</h3>
+    <div class="panel">
+      <div class="panel-head"><b>Durable Objects billing</b><span>Workers Paid · rates as published 8 Sep 2026</span></div>
+      <div class="scroll">
+      <table>
+        <thead><tr><th>What</th><th>Included each month</th><th>After that</th><th>What it means here</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>Duration</b><br><span style="color:var(--muted);font-size:13px">time the program is awake</span></td>
+            <td class="num">400,000 GB-s</td>
+            <td class="num">$12.50 / million GB-s</td>
+            <td class="wide">Charged per <b>object</b>, not per person. One room awake for three hours costs the same whether 8 or 8,000 phones are attached. <b>Nothing accrues while hibernating.</b></td>
+          </tr>
+          <tr>
+            <td><b>Requests</b><br><span style="color:var(--muted);font-size:13px">things arriving</span></td>
+            <td class="num">1,000,000</td>
+            <td class="num">$0.15 / million</td>
+            <td class="wide">A phone connecting is one request. <b>Incoming messages are counted 20 to 1</b> — a hundred votes bill as five requests.</td>
+          </tr>
+          <tr class="edge">
+            <td><b>Messages out</b></td>
+            <td class="good" colspan="2" style="text-align:center">free, unlimited</td>
+            <td class="wide">Broadcasting the board to ten thousand phones costs <b>nothing</b>. This one line is why the whole thing works.</td>
+          </tr>
+          <tr>
+            <td><b>Storage</b><br><span style="color:var(--muted);font-size:13px">the object's own database</span></td>
+            <td class="num">25bn rows read<br>50M rows written<br>5 GB stored</td>
+            <td class="num">$0.001 / M read<br>$1.00 / M written<br>$0.20 / GB-month</td>
+            <td class="wide">MySet would write a handful of rows per vote. The included allowance is roughly <b>fifty million writes a month</b> — far beyond anything a gig calendar can produce.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="figcap">There is also a <b>$5/month</b> Workers Paid base fee. Everything above is inside that until the allowances run out.</div>
+    </div>
+
+    <h3>Why "messages out are free" is the whole story</h3>
+    <p>MySet is <strong>broadcast-shaped</strong>: one board, watched by everybody. Every time the board changes, that change has to reach every phone in the room.</p>
+    <p>A hosted realtime service prices exactly that — per message <em>delivered</em>. So a room twice the size costs twice as much, forever. Cloudflare prices the <em>room</em> and gives delivery away. For a product shaped like MySet the two are three orders of magnitude apart, and it is not because one company is better than the other. It is the shape of the product meeting the shape of the price list.</p>
+  </div>
+</section>
+
+<section id="money">
+  <div class="mark">The money</div>
+  <div class="col">
+    <h2>What a night actually costs</h2>
+    <p class="lede">Worked from the published rates against MySet's own measured traffic. Assumes each person casts about five votes across a three-hour gig.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><b>One 3-hour gig</b><span>Netlify today vs. Cloudflare Durable Objects</span></div>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>People in the room</th><th>Netlify today</th><th>Cloudflare</th><th>Difference</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="num">20</td><td class="num">2.7¢</td><td class="num good">0.2¢</td><td class="num">14× cheaper</td><td class="wide">Quiet enough to hibernate between votes — you pay only for the seconds it is awake</td></tr>
+        <tr><td class="num">200</td><td class="num">15.9¢</td><td class="num good">1.7¢</td><td class="num">9× cheaper</td><td class="wide">Busy enough to stay awake; from here the duration bill stops moving</td></tr>
+        <tr><td class="num">1,000</td><td class="num">98¢</td><td class="num good">1.8¢</td><td class="num">55× cheaper</td><td class="wide">Same room, same object. Only the connection count grows, and connections are almost free</td></tr>
+        <tr><td class="num">2,000</td><td class="num">$1.28</td><td class="num good">1.8¢</td><td class="num">71× cheaper</td><td class="wide">—</td></tr>
+        <tr class="edge"><td class="num"><b>10,000</b></td><td class="num hot">$4.29</td><td class="num good"><b>1.9¢</b></td><td class="num"><b>226× cheaper</b></td><td class="wide">The extra tenth of a penny is ten thousand phones connecting</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="figcap"><b>Read the third column downward, not across.</b> From 200 people upward it barely moves. That is the finding — on Netlify the bill tracks how many people came; on Cloudflare it tracks how long the gig lasted.</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><b>Inside the free allowance</b><span>how many gigs before a bill starts</span></div>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Allowance</th><th>Included</th><th>One 10,000-person gig uses</th><th>Gigs per month before charges</th></tr></thead>
+      <tbody>
+        <tr><td>Duration</td><td class="num">400,000 GB-s</td><td class="num">1,382 GB-s</td><td class="num good">289</td></tr>
+        <tr><td>Requests</td><td class="num">1,000,000</td><td class="num">12,500</td><td class="num good">80</td></tr>
+        <tr class="edge"><td>Storage writes</td><td class="num">50,000,000 rows</td><td class="num">~50,000</td><td class="num good">1,000</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="figcap">For rooms the size MySet actually plays, a gig uses about <b>25 requests</b> and hibernates most of the night — so the practical answer is <b>thousands of gigs a month inside $5</b>. The 80-gig figure is the arena case, and it is the one that binds first if MySet ever gets there.</div>
+  </div>
+</section>
+
+<section id="ceilings">
+  <div class="mark">The limits</div>
+  <div class="col">
+    <h2>Where it stops working</h2>
+    <p class="lede">Cheap is easy to check. Ceilings are what decide whether a booked show is safe to say yes to.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><b>Published limits</b><span>per Durable Object</span></div>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Limit</th><th>Value</th><th>Hard or soft</th><th>What it means for a gig</th></tr></thead>
+      <tbody>
+        <tr class="edge"><td><b>Requests per second</b></td><td class="num hot">~1,000</td><td>soft</td><td class="wide"><b>The binding one.</b> Broadcasts are not requests, so sending is unconstrained — it is <em>arrivals</em> that bite. Ten thousand people opening the page in ten seconds is exactly 1,000 a second. Over it, requests queue and then error.</td></tr>
+        <tr><td>Hibernated connections</td><td class="num">32,768</td><td>hard</td><td class="wide">One object could in principle hold a stadium. Practical advice from the field is far lower for broadcast work — hundreds to low thousands per object.</td></tr>
+        <tr><td>Memory</td><td class="num">128 MB</td><td>hard</td><td class="wide">A board is kilobytes. Not a constraint unless something is being kept that should not be.</td></tr>
+        <tr><td>CPU per request</td><td class="num">30s, up to 5 min</td><td>configurable</td><td class="wide">A vote is milliseconds. Irrelevant here.</td></tr>
+        <tr><td>Storage per object</td><td class="num">10 GB</td><td>hard</td><td class="wide">A night's votes are kilobytes. Irrelevant.</td></tr>
+        <tr><td>Objects per account</td><td class="good">unlimited</td><td>—</td><td class="wide">One per gig forever is fine. The class count is capped at 500, which is a count of <em>kinds</em>, not instances.</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="figcap">Every number above is from Cloudflare's own limits page, checked 8 September 2026.</div>
+  </div>
+
+  <div class="col">
+    <h3>The one that is not on any limits page</h3>
+    <p><strong>A Durable Object lives in exactly one data centre</strong> — the one nearest whoever connected first — and Cloudflare's documentation does not promise automatic failover if that data centre goes away. Relocating a live object is described as planned, not shipped.</p>
+    <p class="pull">A Durable Object is a single point of failure by design. That is the price of "exactly one of these exists in the world".</p>
+    <p>This matters more than the cost table, and it is the honest answer to the redundancy question below: <strong>you do not get resilience from the open line. You get it from what the open line falls back to.</strong></p>
+  </div>
+</section>
+
+<section id="code">
+  <div class="mark">The work</div>
+  <div class="col">
+    <h2>What changes, and what does not</h2>
+
+    <h3>Voting barely moves</h3>
+    <p>A vote still goes to Netlify. It needs the storage, the credit ledger, Stripe, the invariants — none of that should move, and moving it would be a rewrite rather than a feature. One line gets added at the end: <em>after the write lands, tell the room the board changed.</em></p>
+
+    <h3>Watching changes completely</h3>
+    <p>Today every phone asks <em>"what is the board?"</em> every few seconds, and the server works out the answer <strong>once per phone, per ask</strong>. That is the whole scaling problem — it is why ten thousand phones is thirteen million reads a night. With an open line the board is worked out <strong>once, when something changes</strong>, and handed to everyone.</p>
+
+    <h3>Three rules that are not optional</h3>
+    <ol class="body">
+      <li><strong>The line is a hint; the API is the truth.</strong> Every message carries a version number, and a phone that spots a gap re-fetches once through the ordinary endpoint. Without this, one dropped message means a phone quietly showing a wrong board all night — <em>worse</em> than polling, not better.</li>
+      <li><strong>Polling stays.</strong> Café wifi, captive portals, corporate networks, old browsers, backgrounded tabs. The open line is an addition, and the fallback has to be tested as carefully as the main path because it is the one that runs when things are already going wrong.</li>
+      <li><strong>Reconnection storms.</strong> Ten thousand phones coming back after a wifi blip all reconnect at the same instant — straight into the 1,000-a-second ceiling. The same jitter and backoff the polling ladder already learned, applied to reconnects.</li>
+    </ol>
+
+    <h3>What it would not fix</h3>
+    <p>Every vote still does its reads and writes on the way in. The open line removes the <em>watching</em> cost, which is the one that grows badly. <strong>It does not make a vote cheaper.</strong></p>
+  </div>
+</section>
+
+<section id="alternatives">
+  <div class="mark">The comparison</div>
+  <div class="col">
+    <h2>Every architecture that was considered</h2>
+    <p class="lede">Including the ones that lost, because a list with only the winner in it is a justification rather than a decision.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><b>Six routes</b><span>cost per 10,000-person gig · new moving parts · verdict</span></div>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Approach</th><th>Cost / gig</th><th>New moving parts</th><th>Verdict</th></tr></thead>
+      <tbody>
+        <tr><td><b>Stay on polling</b><br><span style="color:var(--muted);font-size:13px">what runs today</span></td><td class="num">$4.29</td><td class="num">none</td><td class="wide">Works to about 2,500 people. Not embarrassing — it is the right answer for the rooms MySet actually plays.</td></tr>
+        <tr class="edge"><td><b>Shared-board split</b><br><span style="color:var(--muted);font-size:13px">one cached board + a tiny per-fan call</span></td><td class="num warm">~$0.55 <span style="font-size:12px">(est.)</span></td><td class="num good">one endpoint</td><td class="wide"><b>Do this first.</b> Removes the same quadratic without a second vendor, a second deploy or a fallback to maintain. Roughly five days. <em>The figure is an estimate, not a measurement.</em></td></tr>
+        <tr><td><b>Cloudflare Durable Objects</b></td><td class="num good">1.9¢</td><td class="num hot">a platform</td><td class="wide">The right end state. Billed per room, delivery free, one object per gig. Needs Perry's own Cloudflare account — the same blocker as the R2 plan for clips.</td></tr>
+        <tr><td><b>Hosted realtime</b><br><span style="color:var(--muted);font-size:13px">Ably, Pusher, PubNub</span></td><td class="num hot">~$29</td><td class="num">a vendor</td><td class="wide"><b>Rejected.</b> Six times worse than doing nothing. They charge per message delivered; MySet delivers one board to everybody.</td></tr>
+        <tr><td><b>Run our own socket servers</b><br><span style="color:var(--muted);font-size:13px">a VPS, Fly.io, Railway</span></td><td class="num">~$5–20/mo</td><td class="num hot">everything</td><td class="wide"><b>Rejected for a solo founder.</b> The bill is small; the job is not. You now own uptime, certificates, deploys, restarts, scaling and a 3am pager, for a product whose whole promise is that nothing breaks the gig.</td></tr>
+        <tr><td><b>A real database with change notifications</b><br><span style="color:var(--muted);font-size:13px">Postgres <code>LISTEN/NOTIFY</code>, Supabase</span></td><td class="num">~$25/mo</td><td class="num hot">a database</td><td class="wide"><b>Rejected.</b> Adds the one thing MySet has deliberately never had. The storage model is not the problem; the read pattern is.</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <div class="figcap">Netlify figures are measured by <code>tools/loadsim.py</code> walking the real polling ladder. Cloudflare figures are computed from published rates. <b>Nothing here has been benchmarked on real hardware.</b></div>
+  </div>
+</section>
+
+<section id="trailheads">
+  <div class="mark">Chris's questions</div>
+  <div class="col">
+    <h2>The scaling trailheads, answered one at a time</h2>
+    <p class="lede">These came from a working engineer and they are the right questions. Several of them have better answers than expected, and one has a worse one.</p>
+  </div>
+
+  <div class="qa">
+
+    <div>
+      <span class="ask">Question 01</span>
+      <h3>Fallback servers — how do we get redundancy?</h3>
+      <p>The instinct is a second copy of the same thing, ready to take over. For MySet that is the wrong shape, and the right shape already exists.</p>
+      <p><strong>The fallback is not a mirror. It is a slower, dumber path that always works.</strong> If a room's Durable Object is unreachable — its data centre is down, the connection will not open, Cloudflare is having a bad day — the phone falls back to <em>polling Netlify</em>, exactly as it does today. The board updates every few seconds instead of instantly. The gig continues.</p>
+      <p>This costs nothing extra to build, because it is the system that runs now. It only costs something to <em>keep</em>: the polling path must stay maintained and tested forever, even once almost nobody uses it.</p>
+      <div class="verdict"><b>Recommendation:</b> treat the polling API as the permanent floor, not as legacy. Write it into the invariants: <em>the open line may never be the only way to see the board.</em> A second Durable Object mirroring the first would cost more and protect less, because both would fail on the same Cloudflare outage.</div>
+    </div>
+
+    <div>
+      <span class="ask">Question 02</span>
+      <h3>Concurrent usage — what actually happens at scale?</h3>
+      <p>Two ceilings, in the order they arrive:</p>
+      <ul>
+        <li><strong>1,000 requests a second, per object.</strong> Broadcasting is free and unlimited, so the pressure is entirely on <em>arrivals</em> — people opening the page. Ten thousand people arriving over ten seconds sits exactly on the line. Over ten minutes it is nothing.</li>
+        <li><strong>32,768 connections held, per object.</strong> A hard ceiling, and far above anything MySet will meet before the first one bites.</li>
+      </ul>
+      <p>The fix for both is <strong>sharding the room</strong>: instead of one object per gig, one <em>coordinator</em> holding the board plus N <em>fan-out</em> objects, each holding a slice of the audience. The coordinator tells the fan-outs; the fan-outs tell the phones. A known pattern, and real work — call it a week on its own.</p>
+      <div class="verdict"><b>Recommendation:</b> build the single-object version first and shard only when a booked show requires it. Sharding multiplies the duration bill by the number of objects, so it is not free — and a room under a few thousand does not need it.</div>
+    </div>
+
+    <div>
+      <span class="ask">Question 03</span>
+      <h3>Should every feature get its own server — microservices?</h3>
+      <p>The goal Chris names is exactly right: <em>one part failing should not take the rest down.</em> The surprise is that <strong>MySet already has this, and got it for free.</strong></p>
+      <p>Every endpoint is its own isolated function. <code>vote</code> and <code>show</code> and <code>community</code> do not share a process, a machine or a memory space. If the community page throws on every request, voting is untouched. That is the isolation microservices exist to provide, without a service mesh, without network calls between services, without distributed tracing, and without twenty-five things to deploy.</p>
+      <p><strong>What is genuinely shared is the datastore.</strong> Every function reads the same Netlify Blobs. If Blobs is down, everything is down. Splitting into microservices would not fix that — it would require a separate datastore per feature, and a vote needs the show record <em>and</em> the fan record in one consistent breath. Splitting them would trade an outage risk for a correctness risk, which is a bad trade in a product that takes money.</p>
+      <div class="verdict"><b>Recommendation:</b> do not build microservices. Do isolate the <b>one</b> component whose failure mode is genuinely different: <b>clips</b>. Video is the only thing in MySet that can run away with the bill on its own, and bandwidth trouble there currently competes with the same account balance that keeps the gigs running. Moving clip bytes to Cloudflare R2 <em>is</em> the microservice split worth doing, and it was already on the list for cost reasons.</div>
+    </div>
+
+    <div>
+      <span class="ask">Question 04</span>
+      <h3>Can fallback capacity switch itself on at a certain number of users?</h3>
+      <p>MySet already does the safe half of this. <code>pollFloorFor(heads)</code> reads the head count and changes the room's behaviour automatically — slower polling, a shorter board — with no human involved and nobody refused entry.</p>
+      <p>The other half is different in kind. <strong>Automatically adding capacity means automatically spending money</strong>, and the one line item that can run away in this product is exactly the kind a threshold would trigger.</p>
+      <p class="pull">Auto-degrade, never auto-spend.</p>
+      <p>Degrading is reversible, bounded and invisible to the artist. Spending is none of those. The failure mode of an automatic capacity rule is a bill nobody chose, arriving after the night it was incurred — and on this account, running out of credit <strong>pauses every site</strong>, not just MySet.</p>
+      <div class="verdict"><b>Recommendation:</b> keep automatic behaviour on the degradation side. For anything that costs money, put a hard ceiling in code and alert rather than scale. Auto-sharding a room is the one exception worth considering later, and even then it should have a maximum shard count that a human raises.</div>
+    </div>
+
+    <div>
+      <span class="ask">Question 05</span>
+      <h3>Should the database have one table per show?</h3>
+      <p>Yes — and MySet already does it, which is worth knowing before changing anything.</p>
+      <p>There is no shared table of votes. Each show is its own document (<code>show_&lt;artist&gt;</code>) with its own audience spread across twelve shards. One artist's gig cannot slow another's, because they do not touch the same keys.</p>
+      <p><strong>Durable Objects make this more true rather than less.</strong> One object per gig means one program, one machine and <em>one private SQLite database</em> per show. A 10,000-person night and a 20-person night are not neighbours in any sense.</p>
+      <div class="verdict"><b>Recommendation:</b> keep the per-show boundary as the fundamental unit, and name objects after the show rather than the artist — <code>gig:&lt;artist&gt;:&lt;date&gt;</code>. Naming them after the artist would put every night that artist ever plays through one object, which quietly re-creates the shared-table problem the current design already avoids.</div>
+    </div>
+
+    <div>
+      <span class="ask">Question 06 · stress test</span>
+      <h3>If one gig is massive, what happens to every other gig?</h3>
+      <p>On the compute side: <strong>almost nothing</strong>, and that is worth stating plainly. Functions scale per request and blob storage is per key, so a huge gig produces many independent invocations that do not queue behind anybody else's.</p>
+      <p>Three things <em>are</em> genuinely shared, and only one of them is dangerous:</p>
+      <ul>
+        <li><strong>The artist registry</strong> — one global document. This is why keeping it off the audience poll has had to be enforced three separate times. It stays off.</li>
+        <li><strong>Platform rate limits</strong> — an account-wide concern, not currently near any edge.</li>
+        <li><strong>The credit balance</strong> — and this is the real one. A runaway night burns credits from the same pot as every other site on the account. <b>At zero credits Netlify pauses every site</b>, so in the worst case a huge MySet gig could take iohm.io down with it.</li>
+      </ul>
+      <div class="verdict warn"><b>This is the most under-appreciated risk in the whole system, and it is not a MySet risk — it is a portfolio risk.</b> The mitigation is not architectural: keep a credit buffer, watch the balance, and know that a booked show over a few thousand people should be preceded by topping it up. Worth an alert long before it is worth an architecture.</div>
+    </div>
+
+    <div>
+      <span class="ask">Question 07 · stress test</span>
+      <h3>What if one person starts spamming votes?</h3>
+      <p>The strongest defence is already there and it is not technical: <strong>they cannot spend what they do not have.</strong> The server refuses a cast beyond the credit balance, and votes cost either the free allowance or real money. Spamming either gets refused or gets paid for.</p>
+      <p>Alongside that: each press of Confirm carries an id, so retries cannot double-charge; a single cast is capped at 50 votes; and a fan id that rotates to dodge limits is visible through the network fingerprint the room already records.</p>
+      <p><strong>What is missing is a rate limit on the requests themselves.</strong> A script can hammer the vote endpoint and be refused ten thousand times, and each refusal still costs reads. That is not a denial of service — the gig keeps working — but it is a <em>denial of wallet</em>, and there is nothing in the way of it today.</p>
+      <div class="verdict"><b>Recommendation:</b> add a small token bucket to the fan record — something like thirty casts a minute — checked inside the write that already happens, so it costs nothing extra. On Durable Objects this becomes almost free, because the object holds per-room state in memory and can simply drop an abusive connection. <b>Worth doing before the open line, not after.</b></div>
+    </div>
+
+    <div>
+      <span class="ask">Question 08</span>
+      <h3>Where are the plans, the statuses and the vision written down?</h3>
+      <p>As of today, in the repository rather than in anybody's head:</p>
+      <ul>
+        <li><code>VISION.md</code> — what MySet is for, what it will never be, and what would make it worth stopping.</li>
+        <li><code>IMPLEMENTATION_PLAN.md</code> — the phased roadmap, with exit criteria per item.</li>
+        <li><code>IMPLEMENTATION_STATUS.md</code> — the living ledger: current focus, next work item, evidence, blockers, risks.</li>
+        <li><code>docs/decisions/</code> — one record per decision, with every option that was on the table, what it costs, what it makes harder and what would reverse it.</li>
+        <li><code>AGENTS.md</code> — how to work in the repo, read automatically by every agent that is not Claude.</li>
+        <li><code>INVARIANTS.md</code> — the properties that must survive every change, most discovered by being broken.</li>
+      </ul>
+      <div class="verdict"><b>Scaffolded from Chris's own <code>project-management</code> skills</b>, so the shape is one he already knows. MySet scored <b>64/100 — Partial</b> against his rubric before this work; the two gaps it named were <code>AGENTS.md</code> and a status ledger, and both now exist.</div>
+    </div>
+
+  </div>
+</section>
+
+<section id="errors">
+  <div class="mark">The gap nobody had noticed</div>
+  <div class="col">
+    <h2>If a fan reports a bug, there is nothing to look at</h2>
+    <p class="lede">This was the last question on Chris's list and it turned out to be the most urgent thing on the page.</p>
+    <p><strong>Netlify keeps function logs for 24 hours</strong> — seven days on higher plans. Log Drains, which forward them somewhere permanent, are an Enterprise feature. So the situation today is: a fan messages Perry the morning after a gig saying something did not work, and the evidence is already gone or about to be. There is no error history, no way to see how often something happened, and no alert when something starts failing.</p>
+    <p class="pull">A bug you cannot reproduce and cannot look up is a bug you cannot fix.</p>
+
+    <div class="panel">
+      <div class="panel-head"><b>What error tracking would cost</b><span>checked 8 Sep 2026</span></div>
+      <div class="scroll">
+      <table>
+        <thead><tr><th>Option</th><th>Price</th><th>Keeps</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td>Netlify function logs</td><td class="num">included</td><td class="num hot">24 hours</td><td class="wide">What exists now. Fine for debugging live, useless the next morning.</td></tr>
+          <tr><td>Netlify Log Drains</td><td class="num hot">Enterprise</td><td class="num">as long as you like</td><td class="wide">Out of reach and out of proportion.</td></tr>
+          <tr class="edge"><td><b>Sentry, free tier</b></td><td class="num good">$0</td><td class="num good">30 days · 5,000 errors/mo</td><td class="wide"><b>The recommendation.</b> One user, which is exactly the number of people who would look at it. Groups identical errors, so one bug hitting a hundred phones is one entry, not a hundred.</td></tr>
+          <tr><td>Sentry Team</td><td class="num">$26/mo</td><td class="num">50,000 errors/mo</td><td class="wide">Only if the free allowance is genuinely exhausted, which would itself be information.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="figcap">Sentry has no first-party Netlify log-drain integration today — but none is needed. Errors are reported from inside the code, not scraped from logs.</div>
+    </div>
+
+    <h3>How to add it without breaking the two-dependency rule</h3>
+    <p>MySet has exactly two dependencies and that is deliberate. The usual way to add Sentry is its SDK, which would make it three — in the path that handles money and sign-ins.</p>
+    <p><strong>It does not need the SDK.</strong> Reporting an error is one HTTPS POST of a small JSON envelope to an address Sentry gives you. That is perhaps forty lines of plain code with no new package — the same choice already made twice in this codebase, for the sign-in security keys and for the QR encoder, and for the same reason: <em>a dependency in a critical path is a dependency that can be taken over.</em></p>
+    <p>Three rules for it, all of which follow from the existing invariants:</p>
+    <ol class="body">
+      <li><strong>It may never break a gig.</strong> The report is fire-and-forget; a failure to report is swallowed. Error tracking that can throw is worse than none.</li>
+      <li><strong>No secrets, no fan device ids, no personal data</strong> in the envelope. The message and the stack, not the payload.</li>
+      <li><strong>Off without its key</strong>, and off is a clean no-op — the same shape as Stripe and the Google Sheet.</li>
+    </ol>
+    <div class="verdict"><b>This is the cheapest item on the page and it closes a gate nothing else closes.</b> It is worth doing before the shared-board split, because the split is the first change big enough that you would want to know if it quietly broke something at a real gig.</div>
+  </div>
+</section>
+
+<section id="plan">
+  <div class="mark">The order</div>
+  <div class="col">
+    <h2>What to build first</h2>
+    <p class="lede">Ranked by what each one buys divided by what it costs to own afterwards.</p>
+  </div>
+
+  <div class="moves">
+    <div class="move">
+      <span class="rank">1</span>
+      <div>
+        <h3>Error tracking</h3>
+        <p>Forty lines, no new dependency, free tier. Turns "a fan said something broke" from an unanswerable message into a stack trace with a count next to it.</p>
+        <p class="why">~1 day · no new vendor to operate · closes GATE-004</p>
+      </div>
+    </div>
+    <div class="move">
+      <span class="rank">2</span>
+      <div>
+        <h3>A rate limit on casting</h3>
+        <p>A token bucket on the fan record that is already being written. Closes the denial-of-wallet hole before there is more surface to defend.</p>
+        <p class="why">~half a day · no new moving parts</p>
+      </div>
+    </div>
+    <div class="move">
+      <span class="rank">3</span>
+      <div>
+        <h3>The shared-board split</h3>
+        <p>One cacheable board with no fan id in the address, plus a tiny per-fan call. Removes the same quadratic the open line removes, on the platform that already runs everything.</p>
+        <p class="why">~5 days · no new vendor · <b>gates the plan room sizes</b></p>
+      </div>
+    </div>
+    <div class="move">
+      <span class="rank">4</span>
+      <div>
+        <h3>Clips onto Cloudflare R2</h3>
+        <p>Opens the Cloudflare account, and isolates the one component that can run away with the bill. Storage costs pennies and serving is free.</p>
+        <p class="why">~2 days · needs Perry's own Cloudflare account · trigger: ~100GB of clip traffic a month</p>
+      </div>
+    </div>
+    <div class="move">
+      <span class="rank">5</span>
+      <div>
+        <h3>The open line</h3>
+        <p>Durable Objects, one per gig, hibernating between votes, with polling kept as the permanent floor beneath it.</p>
+        <p class="why">1.5–2 weeks on top of the split · <b>trigger: a booked show over 2,000 people, with a date and a deposit</b></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>Why the open line is fifth and not first.</b> It is the best end state and nothing above contradicts it — items 3 and 4 are both steps toward it. But it adds a platform, and a platform is not a one-off cost. It is a second thing to deploy, a second thing to watch, a second bill, a second outage page to read at a gig, and a fallback that has to be kept alive forever. The four items above buy most of the same headroom without any of that, and item 4 opens the Cloudflare account anyway — so by the time the open line is worth building, the account, the credentials and the habit already exist.
+  </div>
+</section>
+
+<section id="open">
+  <div class="mark">Still open</div>
+  <div class="col"><h2>What this page does not know</h2></div>
+  <div class="open">
+    <div class="q">
+      <span class="tag">Unmeasured</span>
+      <h3>The shared-board estimate is arithmetic, not a benchmark</h3>
+      <p>~$0.55 for a 10,000-person gig assumes the board becomes a single cached read. It has not been built or measured, and caching on Netlify has already surprised this project once.</p>
+    </div>
+    <div class="q">
+      <span class="tag">Unmeasured</span>
+      <h3>The write wall is derived from a read</h3>
+      <p>The ~11,000-voter write ceiling comes from a measured 40ms <em>read</em>, never from a measured write. If a write is four times slower, the wall arrives at 4,000 people. Hammer one shard before selling a room over 2,000.</p>
+    </div>
+    <div class="q">
+      <span class="tag">Untested</span>
+      <h3>Nothing here has been run</h3>
+      <p>Every Cloudflare figure is list price applied to MySet's own measured traffic. No object has been created, no connection opened, no message sent. The first real number should come from a throwaway test, not from a gig.</p>
+    </div>
+    <div class="q">
+      <span class="tag">Unknown</span>
+      <h3>What a real reconnection storm does</h3>
+      <p>Ten thousand phones reconnecting after a wifi blip is the scenario most likely to hit the 1,000-a-second ceiling, and it is the one that cannot be reasoned about — it has to be simulated.</p>
+    </div>
+    <div class="q">
+      <span class="tag">Unknown</span>
+      <h3>Failover behaviour in practice</h3>
+      <p>Cloudflare documents no automatic relocation for a live object. What actually happens to a room when its data centre has a bad day is not written down anywhere public.</p>
+    </div>
+    <div class="q">
+      <span class="tag">Decision</span>
+      <h3>Whether a room over 2,000 is ever sold</h3>
+      <p>Everything above item 3 is optional until a real booking exists. The trigger has been the same since September 5th: <b>a date and a deposit.</b></p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span><span class="bars"><i></i><i></i><i></i></span> MySet</span>
+  <span>docs/reports/open-line.html</span>
+  <span>Sources: Cloudflare Durable Objects pricing &amp; limits · Cloudflare WebSocket Hibernation · Ably pricing · Netlify function logs · Sentry pricing</span>
+  <span>Baseline: tools/loadsim.py</span>
+  <span>8 September 2026</span>
+</footer>
+
+</div>

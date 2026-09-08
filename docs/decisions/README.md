@@ -22,12 +22,15 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0010](0010-last-call-is-a-nudge-not-a-lock.md) | The ten-second countdown nudges the room; it does not close voting | 2026-09-07 | ui | decided | claude |
 | [0011](0011-clips-go-up-as-they-are.md) | A clip is uploaded exactly as it was filmed; nothing on the phone re-encodes it | 2026-09-06 | media | decided | perry |
 | [0012](0012-an-open-line-to-the-room-is-not-next.md) | An open line to the room is the right end state, and not the next thing built | 2026-09-07 | scale | decided | claude |
+| [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) | Errors are reported to a service that outlives the night | 2026-09-08 | ops | proposed | claude |
 
 ## By area
 
 **media** — [0011](0011-clips-go-up-as-they-are.md)
 
 **money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md)
+
+**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md)
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md)
 
