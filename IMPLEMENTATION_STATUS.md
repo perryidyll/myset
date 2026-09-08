@@ -10,7 +10,7 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-08
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** ⚠️ **LIVE ISSUE — the Stripe secret key in Netlify is invalid, so no fan can buy votes or tip.** Waiting on a new key; nothing in the code needs changing
+**Current focus:** Phase 3. The 2026-09-08 payments outage is **resolved** — a new Stripe secret key was installed by the user and a live checkout session was created successfully at 2026-09-08. Back to the shared-board split
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
@@ -49,7 +49,8 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 | P3-003 | Clip bytes onto Cloudflare R2 | deferred | Session doc 2026-09-06 | Trigger: ~100GB of clip traffic a month (~$13). Needs Perry's own Cloudflare account |
 | P3-004 | **Error tracking that outlives the night** | not_started | — | Netlify's function logs are gone in 24h. Sentry's free tier is 5,000 errors/month, 30-day retention. Nothing can be diagnosed after the fact today |
 | P3-005 | Fan-shard write ceiling actually measured | not_started | Derived from a measured 40ms *read*, never from a write | Hammer one shard before selling a room over 2,000 |
-| P3-008 | **A payments health check that runs off the hot path** | not_started | — | This outage was invisible until a fan tapped. A key can be valid-looking and dead |
+| P3-008 | **A payments health check that runs off the hot path** | not_started | — | The 2026-09-08 outage was invisible until a fan tapped. A key can be valid-looking and dead |
+| P3-009 | `/api/pay` throws when a caller sends no `attempt` | not_started | Reproduced live 2026-09-08: 502 `Stripe: Unknown arguments` | `opts` is `{}` for a platform-owner charge with no `attempt`, and stripe-node rejects an empty options object. **No fan is affected** — `vote.html` and `community.html` always send `attempt`. One-line fix: pass `opts` only when non-empty |
 | P3-006 | `AGENTS.md` + this ledger on every project, not just MySet | in_progress | MySet done 2026-09-08 | iOhm landing, Idyll Mastery, Idyll Enterprises, Clients |
 
 ### Perry's own list (not code — these need his hands)
@@ -62,7 +63,7 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 | PER-004 | Set `AUTH_FROM` and the Resend domain | not_started | Sign-in mail still comes from a shared address; fine for Perry, wrong for the first stranger |
 | PER-005 | Press **"Name these from my calendar"** in Money → Past shows | not_started | Five filed nights are still named after one venue |
 | PER-006 | Try the passkey on stage | not_started | Is Face ID actually faster mid-set? |
-| **PER-007** | **Replace `STRIPE_SECRET_KEY` in Netlify** | **blocked — Perry only** | **Payments are down until this is done.** Stripe is rejecting the stored key. Roll a new one in Stripe, paste it into Netlify, redeploy |
+| PER-007 | Replace `STRIPE_SECRET_KEY` in Netlify | done | Done by the user 2026-09-08. Verified live: `POST /api/pay` (kind `votes`, pack `small`, with `attempt`) returned 200 and a `cs_live_` checkout url |
 
 ---
 
@@ -85,6 +86,7 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 | Date | Check | Result |
 | --- | --- | --- |
 | 2026-09-08 | `sh test/run.sh` | 1,716 assertions, 0 failures |
+| 2026-09-08 | Live `POST /api/pay` after the key swap | 200, `cs_live_` session created — payments restored |
 | 2026-09-08 | `node tools/overview.mjs --check` | current |
 | 2026-09-08 | Git hooks fire on a throwaway branch | pre-commit refreshed and staged; post-commit wrote `PENDING.md` |
 | 2026-09-07 | 40 QR lengths × {with mark, without}, decoded | 80/80 |
@@ -123,7 +125,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- |
 | **Perry's own accounts are phished** | Total — Google, GitHub, Netlify, Stripe. No line of MySet's code is involved | 2FA on all four. PER-003 | **Active, unmitigated** |
-| **⚠️ Card payments are DOWN in production** | Nobody can buy votes or tip. `/api/pay` returns 502 `Invalid API Key provided: ****HAsL` | **The key in Netlify must be replaced — Perry only.** PER-007 | **ACTIVE, LIVE** |
+| Card payments down on a bad Stripe key | Nobody can buy votes or tip | Key replaced 2026-09-08; live checkout verified. The gap that let it go unnoticed is still open — P3-008 | Resolved 2026-09-08 |
 | **Nothing detects a dead Stripe key** | `paymentsEnabled` checks the key EXISTS, never that it WORKS, so the room is shown a buy button that fails on tap | P3-008 | **Active, unmitigated** |
 | **A bug cannot be diagnosed after the night** | A fan reports something, the logs are already gone | P3-004 | **Active, unmitigated** |
 | Nobody has tested a restore | Data loss would be discovered during recovery | — | Active |
