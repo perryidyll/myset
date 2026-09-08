@@ -52,7 +52,7 @@ Read these before you touch anything. Most were learned by breaking something.
 | # | Read | For |
 |---|---|---|
 | 1 | **This file, Parts 1 and 2** | The rules of voting, and exactly what free and paid differ on |
-| 2 | **`INVARIANTS.md`** | 243 properties that must survive every change, each with the story of how it was found. **Read the relevant section before any change to money, storage or access.** |
+| 2 | **`INVARIANTS.md`** | Every property that must survive a change, each with the story of how it was found (the count is in §2.1). **Read the relevant section before any change to money, storage or access.** |
 | 3 | **`docs/decisions/`** | Why each decision went the way it did, with the options that lost |
 | 4 | **This file, Parts 3–6** | Every surface, the money, the architecture, how it runs |
 | 5 | **`docs/sessions/`** | The running narrative: what happened on which day and what broke |
@@ -1352,7 +1352,7 @@ records, never the index.**
 - **It cannot write the reasoning for you.** The hook can tell you a record is owed; only
   the person who made the decision knows what the other options were.
 - **The seeded records are the important dozen, not all of them.** Everything before
-  2026-09-08 lives in `INVARIANTS.md` (243 properties, most with the story of how they were
+  2026-09-08 lives in `INVARIANTS.md` (every property, most with the story of how it was
   found) and `docs/sessions/`. The decision folder is complete **from 2026-09-08 forward**.
 
 ---
@@ -1453,7 +1453,7 @@ blob reads on the audience poll are counted by a test.
 
 | File | What it answers |
 |---|---|
-| **`INVARIANTS.md`** | **Read first.** 243 properties that must survive every change, most with the story of how they were found |
+| **`INVARIANTS.md`** | **Read first.** Every property that must survive a change, most with the story of how it was found. Count in §2.1 |
 | `docs/decisions/` | Why each decision went the way it did, and what would reverse it |
 | `docs/sessions/` | The running narrative, one file per working session |
 | `ACCOUNTS.md` | Sessions, roles, recovery, leaving, passkeys, the login rundown |
