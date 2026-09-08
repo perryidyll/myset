@@ -1,0 +1,43 @@
+#!/bin/sh
+# MySet pre-commit — keeps the master overview true, and never blocks a commit.
+#
+# Installed by ./tools/hooks/install.sh. Git hooks are not versioned, so the copy
+# in tools/hooks/ is the source and the one in .git/hooks/ is the installed copy.
+#
+# WHY IT DOES NOT BLOCK. `main` is production and this repo gets edited between
+# sets. A hook that refuses a commit at 11pm because a document is out of date is
+# a hook somebody disables with --no-verify and never re-enables. So it FIXES what
+# it can fix by itself, SAYS what it cannot, and gets out of the way.
+
+set -e
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+command -v node >/dev/null 2>&1 || exit 0
+
+# ---- 1. regenerate the numbers, and carry them into this commit ----
+if node tools/overview.mjs >/dev/null 2>&1; then
+  for f in MYSET-MASTER-OVERVIEW.md docs/decisions/README.md; do
+    if [ -n "$(git diff --name-only -- "$f")" ]; then
+      git add "$f"
+      echo "overview: refreshed $f from the code"
+    fi
+  done
+else
+  echo "overview: could not regenerate (continuing) — run 'node tools/overview.mjs' yourself"
+fi
+
+# ---- 2. did this change the product without saying why? ----
+STAGED=$(git diff --cached --name-only)
+TOUCHES_SERVER=$(echo "$STAGED" | grep -E '^netlify/functions/' || true)
+HAS_DECISION=$(echo "$STAGED" | grep -E '^docs/decisions/[0-9]{4}-' || true)
+
+if [ -n "$TOUCHES_SERVER" ] && [ -z "$HAS_DECISION" ]; then
+  printf '\033[33m%s\033[0m\n' "overview: this commit changes the server and carries no decision record."
+  echo "          If it could have gone another way, write one:"
+  echo "              ./tools/decide.sh \"what is now true\""
+  echo "          If it is a refactor, a copy fix or a test, ignore this."
+  echo "          Either way it will be listed in docs/decisions/PENDING.md."
+fi
+
+exit 0

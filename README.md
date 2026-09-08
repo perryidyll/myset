@@ -42,8 +42,13 @@ The Netlify project **mysetvip** builds `main` automatically, so **pushing is
 deploying**:
 
 ```bash
-cd ~/Docs/MySet && npm test && git push
+cd ~/Docs/MySet && sh test/run.sh && git push
 ```
+
+Run `./tools/hooks/install.sh` once per clone. It installs a pre-commit hook that
+refreshes the generated numbers in `MYSET-MASTER-OVERVIEW.md`, and a post-commit hook
+that lists any server change shipped without a decision record in
+`docs/decisions/PENDING.md`. Neither hook ever blocks a commit.
 
 Do **not** also run `netlify deploy --prod` — that produces a second, duplicate
 production deploy for the same change (INVARIANT 9d3). `netlify deploy` with no
@@ -63,6 +68,8 @@ Required environment variables (Netlify, never in the repo):
 
 | File | What it answers |
 |---|---|
+| **`MYSET-MASTER-OVERVIEW.md`** | **Start here.** Everything MySet is, does and charges for — the rules of voting, the plan ladder, the architecture, and why each decision went the way it did. Its numbers are generated from the code by `tools/overview.mjs` |
+| `docs/decisions/` | One record per engineering decision: the options that were weighed, what each would have cost, and what would reverse it. New one: `./tools/decide.sh "what is now true"` |
 | `INVARIANTS.md` | Every rule the tests enforce, and why it exists |
 | `ACCOUNTS.md` | Sessions, roles, recovery, leaving — and §9, passkeys and the login rundown |
 | `ACCOUNTING.md` | How money is tracked, and what is deliberately not built |

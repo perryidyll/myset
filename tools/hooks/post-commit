@@ -1,0 +1,41 @@
+#!/bin/sh
+# MySet post-commit — records anything that changed the server without a decision
+# record, so it can be written up later instead of being lost.
+#
+# It runs AFTER the commit because that is the first moment the hash and the
+# subject line exist. It leaves docs/decisions/PENDING.md modified in the working
+# tree; the next commit carries it. It never amends, never blocks and never fails.
+
+set -e
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+
+FILES=$(git show --pretty=format: --name-only HEAD | grep -v '^$' || true)
+echo "$FILES" | grep -qE '^netlify/functions/' || exit 0
+echo "$FILES" | grep -qE '^docs/decisions/[0-9]{4}-' && exit 0
+
+PENDING=docs/decisions/PENDING.md
+HASH=$(git rev-parse --short HEAD)
+DATE=$(git log -1 --format=%ad --date=short)
+SUBJ=$(git log -1 --format=%s)
+TOUCHED=$(echo "$FILES" | grep -E '^netlify/functions/' | sed 's|netlify/functions/||' | tr '\n' ' ')
+
+if [ ! -f "$PENDING" ]; then
+  cat > "$PENDING" <<'HEAD'
+# Decisions not yet written up
+
+Commits that changed the server and shipped without a decision record. The
+post-commit hook writes this list; nothing else does.
+
+A row here is not an accusation — plenty of server commits are refactors, copy or
+tests and owe nothing. It is a backlog: **a decision nobody wrote down is one
+nobody can revisit.** Clear a row by writing the record (`./tools/decide.sh`) and
+deleting the line.
+
+| commit | date | what shipped | files |
+|---|---|---|---|
+HEAD
+fi
+
+printf '| `%s` | %s | %s | %s |\n' "$HASH" "$DATE" "$SUBJ" "$TOUCHED" >> "$PENDING"
+exit 0

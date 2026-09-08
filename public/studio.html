@@ -1482,7 +1482,7 @@ function sheetCard(){
          <div class="wrap" style="margin-top:12px"><button class="big${SHEETBUSY?' alt':''}" onclick="sheetSync()">${SHEETBUSY?'Working…':'Update the sheet now'}</button></div>`
       : `<div class="list"><div class="row"><div class="m"><div class="t">Not connected yet</div>
            <div class="s muted">${esc(S.reason||'')}</div></div></div></div>
-         <p class="muted" style="font-size:12px;padding:0 14px;margin:10px 0 0">Three settings in Netlify, then share the sheet with the address they give you. The full walk-through is in <b>MYSET.md</b>.</p>`}`;
+         <p class="muted" style="font-size:12px;padding:0 14px;margin:10px 0 0">Three settings in Netlify, then share the sheet with the address they give you. The full walk-through is in <b>GOOGLE-SHEET-SETUP.md</b>.</p>`}`;
 }
 async function sheetSync(){
   if(SHEETBUSY) return;
