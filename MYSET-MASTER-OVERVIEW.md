@@ -1468,7 +1468,6 @@ blob reads on the audience poll are counted by a test.
 | `docs/reports/room-ceiling.html` | The load-and-pricing report, with the log-log chart |
 | `docs/landing/` | The landing-page audit: 568 claims against 791 features, and the 69 contradictions |
 | `AUDIT-2026-09-01.md`, `AUDIT-2026-09-02.md` | The two deep audits |
-| `GEMINI.md` | The instruction sheet handed to a non-Claude AI working in this repo |
 | `README.md` | Short orientation for a developer arriving cold |
 
 ## 9.5 The tools
@@ -1484,7 +1483,6 @@ blob reads on the audience poll are counted by a test.
 | `tools/sheetcheck.mjs` | Bottom-sheet touch behaviour, real TouchEvents |
 | `tools/uicheck.mjs` | Rendered layout in a real browser |
 | `tools/clipcheck.mjs` | That a clip's bytes and sound survive the round trip |
-| `tools/ai-handoff.sh` | Safely hand a bounded slice of this repo to another AI |
 | `credit-burn.sh` | What is actually eating Netlify credits this billing period |
 
 ---

@@ -19,6 +19,3 @@ _tmp_*
 # netlify dev drops this
 deno.lock
 metrics/
-
-# AI-handoff bundles: built for pasting into another assistant, never committed
-tmp/ai-handoff/
