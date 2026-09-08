@@ -8,9 +8,9 @@ documents own: `MYSET-MASTER-OVERVIEW.md` is what MySet is, `INVARIANTS.md` is w
 never break, `docs/decisions/` is why a design is the way it is, and `docs/sessions/` is
 what happened on a given day.
 
-**Last reviewed:** 2026-09-08
+**Last reviewed:** 2026-09-09
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** Phase 3. The 2026-09-08 payments outage is **resolved** — a new Stripe secret key was installed by the user and a live checkout session was created successfully at 2026-09-08. Back to the shared-board split
+**Current focus:** The voting-default migration and the profile/Studio UI cleanup are fully verified as one production batch; the next phase item remains the shared-board split
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
@@ -85,9 +85,16 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 
 | Date | Check | Result |
 | --- | --- | --- |
-| 2026-09-08 | `sh test/run.sh` | 1,716 assertions, 0 failures |
+| 2026-09-09 | Netlify draft deploy `6aa04e5930bf024ac5cfb479` | One live profile CTA; retired voting-sheet sentence and duplicate Settings controls absent; existing room still returns 3/3, 3/$5 and 15/$20 |
+| 2026-09-09 | `node tools/uicheck.mjs` | Phone-width vote, live profile and Settings layouts all passed, including exact section order and no duplicate CTA |
+| 2026-09-09 | `sh test/run.sh` + `node tools/overview.mjs --tests` | 1,737 assertions, 0 failures |
+| 2026-09-09 | Netlify draft deploy `6aa041448e6b1e3af49326be` | Existing stored room now returns 3/3 free votes, 3/$5 and 15/$20; Settings still allows paid customization |
+| 2026-09-09 | `sh test/run.sh` | 1,735 assertions, 0 failures, including raw legacy-document migration and paid customization |
+| 2026-09-08 | Netlify draft deploy `6aa03c5c4e14a64f2722db68` | Internal preview live; served content contains the new counter, empty-wallet purchase action and pack defaults |
+| 2026-09-08 | `sh test/run.sh` | 1,721 assertions, 0 failures |
+| 2026-09-08 | `node tools/uicheck.mjs` | Phone-width `3/3 votes` counter and empty-wallet “Buy more votes” sheet rendered; all checks passed |
+| 2026-09-08 | `node tools/overview.mjs --check` | Current; voting defaults generated from source |
 | 2026-09-08 | Live `POST /api/pay` after the key swap | 200, `cs_live_` session created — payments restored |
-| 2026-09-08 | `node tools/overview.mjs --check` | current |
 | 2026-09-08 | Git hooks fire on a throwaway branch | pre-commit refreshed and staged; post-commit wrote `PENDING.md` |
 | 2026-09-07 | 40 QR lengths × {with mark, without}, decoded | 80/80 |
 | 2026-09-07 | Production content check after deploy | new copy live, old copy absent |
@@ -112,6 +119,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 
 | Date | Decision | Record |
 | --- | --- | --- |
+| 2026-09-08 | Three free votes; default packs are 3 for $5 and 15 for $20 | `0014` |
 | 2026-09-07 | A vote never comes back | `0001` |
 | 2026-09-07 | The countdown is a nudge, not a lock | `0010` |
 | 2026-09-07 | The open line is not next | `0012` |

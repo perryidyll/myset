@@ -39,6 +39,9 @@ echo
 echo "── cross-tenant isolation ──"
 node --import ./test/register.mjs test/tenancy.mjs
 echo
+echo "── voting defaults and legacy rooms ──"
+node --import ./test/register.mjs test/defaults.mjs
+echo
 echo "── the paid-vote ledger ──"
 node --import ./test/register.mjs test/credits.mjs
 echo

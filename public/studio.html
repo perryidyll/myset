@@ -2183,7 +2183,7 @@ function render(){
           <button class="big alt" onclick="healHist()">Look for missing shows</button>
           <p class="muted" style="font-size:12px;margin:8px 0 0">A night is filed when you end the show. If one is missing this goes back through the records and puts it where it belongs.</p>
           <button class="big alt" style="margin-top:10px" onclick="placeHist()">Name these from my calendar</button>
-          <p class="muted" style="font-size:12px;margin:8px 0 0">Older nights were all filed under the one venue in Settings. This renames each one from the gig that was on your calendar that night — nothing else about them changes.</p></div>`}`;
+          <p class="muted" style="font-size:12px;margin:8px 0 0">Older nights were all filed under the same venue. This renames each one from the gig that was on your calendar that night — nothing else about them changes.</p></div>`}`;
       }
       let pays='';
       if(!R) pays=`<div class="sec"><span class="kick">All payments</span></div>
@@ -2284,7 +2284,7 @@ function render(){
     <div id="pushBox">${PUSHVIEW||`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div>`}</div>
 
     <div class="sec"><span class="kick">Free votes per person</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many votes each person gets. Refreshes every time you start a new song.</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many free votes each person gets for the night.</p>
     ${/* THE UNLIMITED SWITCH IS NOT GATED, so it must not be greyed.
           `canPrice` in admin.mjs covers freeCredits, packs, replayCost and askSet —
           `unlimited` has no gate at all, deliberately: "everyone votes as much as
@@ -2297,7 +2297,7 @@ function render(){
       <input class="inp" id="fcCustom" type="number" inputmode="numeric" min="0" max="999" style="flex:1"
         placeholder="Any other number" value="${!s.unlimited&&![1,2,3,5,10].includes(s.freeCredits)?s.freeCredits:''}">
       <button class="act pri" style="min-width:64px" onclick="saveFreeCredits()">Set</button>
-    </div></div>`,'Everyone gets '+s.freeCredits+' free votes a song until then.')}
+    </div></div>`,'Everyone gets '+s.freeCredits+' free votes for the night until then.')}
     <div class="wrap" style="margin-top:12px"><div class="chips">
       <button class="chip ${s.unlimited?'on':''}" onclick="act('unlimited',{on:${!s.unlimited}})">∞ Unlimited votes for everyone</button>
     </div>
@@ -2346,14 +2346,11 @@ function render(){
       </div>`,'Asking still works — it just costs the standard '+cfg.cost+' votes.')}
       <p class="muted" style="font-size:12px;margin:8px 0 0">Costs <b>${cfg.cost} vote${cfg.cost===1?'':'s'}</b>.</p></div>`:''}`).join('')}
 
-    <div class="sec"><span class="kick">Tonight's gig</span></div>
-    <div class="field"><label>Venue</label><input class="inp" id="fVenue" value="${esc(s.venue||'')}" placeholder="The Ugly Duckling Irish Pub"></div>
-    <div class="field"><label>City</label><input class="inp" id="fCity" value="${esc(s.city||'')}" placeholder="Koh Phangan, Thailand"></div>
-    <div class="field"><label>Start time</label><input class="inp" id="fTime" value="${esc(s.showTime||'')}" placeholder="8:00 PM"></div>
-    <div class="wrap" style="margin-top:12px"><button class="big" onclick="saveGig()">Save gig details</button></div>
-
-    <div class="sec"><span class="kick">Voting</span></div>
-    <div class="row muted">Open and pause voting from the top of the <b>Live</b> tab.</div>
+    <div class="sec"><span class="kick">Starting by itself</span></div>
+    <div class="row"><div class="m"><div class="t">Start shows from my calendar</div>
+      <div class="s">${s.autoStart!==false?'A gig on your calendar starts its show at its start time if you haven’t.':'Off — only you start a show. Ending by itself still applies.'}</div></div>
+      <div class="tog"><button class="${s.autoStart!==false?'on':''}" onclick="act('autoStart',{on:true})">On</button>
+      <button class="${s.autoStart===false?'on':''}" onclick="act('autoStart',{on:false})">Off</button></div></div>
 
     <div class="sec"><span class="kick">Payments</span></div>
     <div class="row"><div class="m"><div class="t">Card payments ${D.paymentsEnabled?'ON':'OFF'}</div>
@@ -2514,19 +2511,6 @@ function render(){
       <div class="row"><div class="m"><div class="t">Recovery codes${REC?(REC.made?' \u00b7 '+REC.left+' of '+REC.of+' unused':' \u00b7 not set up yet'):''}</div>
         <div class="s">Eight one-time codes for the day you can\u2019t get into your email. Keep them somewhere that isn\u2019t your phone.</div></div>
         <button class="act" onclick="makeRecovery()">${REC&&REC.made?'New codes':'Make codes'}</button></div>
-    </div>
-
-    <div class="sec"><span class="kick">Starting by itself</span></div>
-    <div class="row"><div class="m"><div class="t">Start shows from my calendar</div>
-      <div class="s">${s.autoStart!==false?'A gig on your calendar starts its show at its start time if you haven’t.':'Off — only you start a show. Ending by itself still applies.'}</div></div>
-      <div class="tog"><button class="${s.autoStart!==false?'on':''}" onclick="act('autoStart',{on:true})">On</button>
-      <button class="${s.autoStart===false?'on':''}" onclick="act('autoStart',{on:false})">Off</button></div></div>
-
-    <div class="sec"><span class="kick">Show</span></div>
-    <div class="wrap">
-      <button class="big alt" onclick="if(confirm('Start a brand new show? Clears all votes, purchased votes and the played list.'))act('newShow')">↺ New show (reset everything)</button>
-      <p class="muted" style="font-size:12px;margin:10px 0 0">Starting and ending a show lives on the <b>Live</b> tab.</p>
-      <p class="muted" style="font-size:12px">Fan link: <b>myset.vip</b></p>
     </div>
 
     ${/* IF SOMETHING LOOKS WRONG.
@@ -3030,12 +3014,6 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='grep'){ const h=$('#gRepeat'); if(h){h.value=id;
     document.querySelectorAll('[data-act="grep"]').forEach(x=>x.classList.toggle('on',x.getAttribute('data-id')===id));} }
 });
-async function saveGig(){
-  await api('/admin',{method:'POST',body:JSON.stringify({action:'venue',venue:$('#fVenue').value})});
-  await api('/admin',{method:'POST',body:JSON.stringify({action:'city',city:$('#fCity').value})});
-  await api('/admin',{method:'POST',body:JSON.stringify({action:'showTime',showTime:$('#fTime').value})});
-  toast('Gig details saved'); load();
-}
 /* The printable codes. Caption is what goes UNDER the code on the card, so it
    has to make sense to somebody who has never heard of MySet. */
 /* Two codes here, one in the Venue Studio, three in the whole app. The artist's

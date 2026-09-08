@@ -64,8 +64,8 @@ await pg.evaluate(()=>{ const b=document.querySelector('#lastcall'); b.classList
 const D=await pg.evaluate(async ()=>{
   const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
   const draw=(ended,unl)=>{
-    ST={artist:'Perry Idyll',paymentsEnabled:true,packs:{small:{cents:500,votes:5}},
-        status:ended?'ended':'live',credits:{remaining:6,total:10,used:4,paidLeft:0,unlimited:!!unl},
+    ST={artist:'Test Artist',paymentsEnabled:true,packs:{small:{cents:500,votes:3}},
+        status:ended?'ended':'live',credits:{remaining:3,total:3,freeRemaining:3,freeTotal:3,used:0,paidLeft:0,unlimited:!!unl},
         songs:[],played:[],flags:{},windowOpen:!ended,tags:[],asks:{},myAsks:[]};
     render();
   };
@@ -75,10 +75,19 @@ const D=await pg.evaluate(async ()=>{
   const buy=dock.querySelector('.btn-buy');
   const cs=getComputedStyle(buy);
   ok('and "More votes" has an orange ring', /rgb\(255,\s*55,\s*95\)|inset/.test(cs.boxShadow), cs.boxShadow);
+  const creditText=document.querySelector('#cr').textContent.replace(/\s+/g,' ').trim();
+  ok('the header labels the free-vote allowance', creditText==='3/3 votes', creditText);
+  ST.credits={remaining:0,total:3,freeRemaining:0,freeTotal:3,used:3,paidLeft:0,unlimited:false};
+  ST.songs=[{id:'alpha',title:'Alpha',artist:'T',votes:0,cost:1,tags:[]}];
+  render(); openVote('alpha');
+  ok('an empty wallet can open the voting sheet', document.querySelector('#sheet').classList.contains('on'));
+  ok('and the sheet offers “Buy more votes”', /Buy more votes/.test(document.querySelector('#sheet').innerText),
+     document.querySelector('#sheet').innerText.replace(/\n/g,' | '));
+  closeSheet();
   draw(true,false);
   ok('ended: the dock is STILL there', !dock.hidden);
   ok('and it is the tip, on its own', dock.querySelectorAll('button').length===1 &&
-     /Tip Perry/.test(dock.innerText), dock.innerText.replace(/\n/g,' | '));
+     /Tip Test/.test(dock.innerText), dock.innerText.replace(/\n/g,' | '));
   ok('across the full width', dock.querySelector('button').getBoundingClientRect().width>330,
      String(Math.round(dock.querySelector('button').getBoundingClientRect().width)));
   return out.join('\n');
@@ -112,7 +121,7 @@ await pg.goto(`http://127.0.0.1:${PORT}/artist.html?a=demo`,{waitUntil:'domconte
 await new Promise(r=>setTimeout(r,600));
 const PR=await pg.evaluate(async ()=>{
   const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
-  P={ok:true,name:'Perry Idyll',tagline:'Live looping & soul',avatar:'/img/band.jpg',photo:'/img/band.jpg',
+  P={ok:true,name:'Test Artist',live:true,tagline:'Live looping & soul',avatar:'/img/band.jpg',photo:'/img/band.jpg',
      photos:[],verified:true,bio:'Plays every Thursday.',venue:'Seaflower Bungalows',city:'Koh Phangan',
      links:{website:'https://x.test',ytmusic:'https://music.youtube.com/x',applemusic:'https://music.apple.com/x',
             spotify:'https://open.spotify.com/x',instagram:'https://instagram.com/x'},
@@ -123,6 +132,10 @@ const PR=await pg.evaluate(async ()=>{
   await new Promise(r=>setTimeout(r,60));
   if(!document.querySelector('.links')){ out.push('  ✗ no .links; app len '+document.querySelector('#app').innerHTML.length); return out.join('\n'); }
   const app=document.querySelector('#app');
+  const cta=app.querySelector('#joinBtn');
+  ok('the live profile has one voting CTA', !!cta && cta.textContent.trim()==='TAP TO VOTE THE SETLIST',
+     cta?cta.textContent.trim():'missing');
+  ok('and no duplicate button sits over the cover', !app.querySelector('.livepill'));
   const order=[...app.querySelectorAll('.links a')].map(a=>a.textContent.trim());
   ok('Instagram first, then Spotify, Apple Music, YouTube Music',
      JSON.stringify(order.slice(0,4))===JSON.stringify(['Instagram','Spotify','Apple Music','YouTube Music']),
@@ -137,5 +150,33 @@ const PR=await pg.evaluate(async ()=>{
   return out.join('\n');
 });
 console.log('\nPROFILE PAGE\n'+PR);
+
+// ---------- Settings: retired show controls + autoshow placement ----------
+await pg.goto(`http://127.0.0.1:${PORT}/studio.html`,{waitUntil:'domcontentloaded'});
+await new Promise(r=>setTimeout(r,500));
+const SETTINGS=await pg.evaluate(async ()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  TAB='settings';
+  D={ok:true,paymentsEnabled:true,songs:[],tags:{builtin:[],own:[]},show:{
+    status:'pre',windowOpen:true,freeCredits:3,unlimited:false,replayCost:5,
+    packs:{small:{votes:3,cents:500},big:{votes:15,cents:2000}},
+    requests:{on:false,cost:3},birthdays:{on:false,cost:3},unlimitedFans:[],autoStart:true
+  }};
+  PLAN={ok:true,owner:false,plan:'plus',email:'artist@test.invalid',shareStats:true,
+    billing:{},limits:{pricing:true,seats:1,soon:[]},plans:{pro:{seats:5}}};
+  TEAM={ok:true,slug:'demo',emails:['artist@test.invalid'],emailReady:true,codeSet:false};
+  TICK={state:'verified'};
+  try{ render(); }catch(e){ out.push('  ✗ Settings render threw: '+e.message); return out.join('\n'); }
+  const text=document.querySelector('#app').innerText;
+  ok('Settings omits Tonight’s gig', !/Tonight['’]s gig/.test(text));
+  ok('Settings omits its duplicate Voting section', !/^Voting$/m.test(text));
+  ok('Settings omits New show (reset everything)', !/New show \(reset everything\)/.test(text));
+  const sections=[...document.querySelectorAll('#app .sec .kick')].map(x=>x.textContent.trim());
+  const requests=sections.indexOf('Requests from fans'), autoshow=sections.indexOf('Starting by itself');
+  ok('Starting by itself is directly after Requests from fans', autoshow===requests+1,
+     sections.slice(Math.max(0,requests),autoshow+2).join(' > '));
+  return out.join('\n');
+});
+console.log('\nSTUDIO SETTINGS\n'+SETTINGS);
 
 await b.close(); srv.close();

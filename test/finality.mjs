@@ -191,15 +191,13 @@ ok('and it is minted at Confirm, not when the sheet opens',
 ok('the cast id goes to the server, and the op is always a cast',
    /op:'cast',cast:castId\|\|''/.test(page.replace(/\s/g, '')), 'body must carry op:cast and the id');
 
-/* PERRY'S OWN WORDS, 2026-09-07, checked as SHIPPED TEXT rather than as a rule the
+/* The approved wording, checked as SHIPPED TEXT rather than as a rule the
    code happens to follow. A fan agreeing to something they were not told is the
    only way this design is unfair, so the sentence is the feature. */
 ok('the sheet says a vote cannot be changed',
    /can.{0,6}t be changed<\/b>/.test(page), 'the "can-t be changed" line');
 ok('and that it does not come back',
    /don.{0,6}t come back<\/i><\/b>/.test(page), 'the "don-t come back" line');
-ok('and it tells them how to see the list right now',
-   /pull down on your screen<\/b>/.test(page) && /see the current list now<\/b>/.test(page));
 /* One "come straight back" is allowed to stand, and only one: a song REQUEST the
    artist DECLINES really is refunded, because nothing was ever put on the board for
    it. That is a different thing from a vote losing, and request.mjs really does it. */
@@ -218,8 +216,9 @@ ok('a held song opens the ordinary sheet, so more can be added',
    'openUnvote must be gone, not just unreachable');
 ok('and the queue row stays a real button, not an inert state',
    !/qvb on done/.test(page) && /class="qvb \$\{s\.mine\?'on':''\}"/.test(page));
-ok('the row is only disabled for affordability, never for holding votes',
-   /constdis=!open\|\|\(!c\.unlimited&&c\.remaining<cost\)/.test(page.replace(/\s/g, '')), 'row() dis rule');
+ok('the row is disabled only for affordability, except when an empty wallet can buy more',
+   /constdis=!open\|\|\(!c\.unlimited&&c\.remaining<cost&&\!\(c\.remaining<=0&&ST\.paymentsEnabled\)\)/
+     .test(page.replace(/\s/g, '')), 'row() dis rule');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

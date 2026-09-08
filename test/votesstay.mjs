@@ -102,14 +102,13 @@ await A('status', { status: 'ended' });
 eq('and ending the show gives nothing back', await spent('dee'), 6);
 
 console.log('\nWHAT A FAN IS OWED IS BEING TOLD, AND THEY ARE');
-/* The design is only fair if nobody finds out afterwards. These are Perry's own
-   words, checked as text that actually ships. */
+/* The design is only fair if nobody finds out afterwards. Check the approved
+   wording as text that actually ships. */
 const { readFileSync } = await import('node:fs');
 const page = readFileSync(new URL('../public/vote.html', import.meta.url), 'utf8');
 ok('the sheet says how many they have right now', /vote\$\{c\.remaining===1\?'':'s'\} right now/.test(page));
 ok('that a vote cannot be changed', /can.{0,6}t be changed<\/b>/.test(page));
 ok('that it does not come back', /don.{0,6}t come back<\/i><\/b>/.test(page));
-ok('and how to see the list as it stands', /pull down on your screen<\/b>/.test(page));
 ok('the warning under Confirm agrees with all of it',
    /Votes can.{0,6}t be changed!/.test(page));
 

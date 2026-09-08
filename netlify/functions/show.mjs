@@ -57,6 +57,8 @@ export default async (req) => {
   const mine = me.v || [];
   const total = show.freeCredits + (me.extra || 0);
   const used = creditsUsed(me, show);
+  const freeUsed = typeof me.freeUsed === 'number'
+    ? me.freeUsed : Math.min(show.freeCredits || 0, used);
   const unl = isUnlimited(fanId, show);
 
   const shape = (s) => ({
@@ -173,6 +175,8 @@ export default async (req) => {
     credits: {
       unlimited: unl,
       remaining: unl ? null : Math.max(0, total - used), total: unl ? null : total, used, extra: me.extra || 0,
+      freeRemaining: unl ? null : Math.max(0, (show.freeCredits || 0) - freeUsed),
+      freeTotal: unl ? null : Math.max(0, show.freeCredits || 0),
       // the fan id matters: without it an UNLIMITED device's pack reads as spent
     paidLeft: unspentPaid(me, show, fanId),
       decided: me.decided === show.showId,       // already chose what happens to them

@@ -476,8 +476,9 @@ let VSONG=null;
 function drawVoteSheet(s){
   VSONG=s.id;
   const c=ST.credits||{}, cost=s.cost||1, max=voteMax(s), total=cost*VQ;
-  /* PERRY'S OWN WORDS, 2026-09-07, emphasis included. Three lines, and the middle
-     one is the whole game: a vote stays on the song it was cast for until that song
+  const out=!c.unlimited&&(c.remaining||0)<=0;
+  /* Approved wording, emphasis included. The finality line is the whole game:
+     a vote stays on the song it was cast for until that song
      is played or the night ends, and it does not come back either way. Nothing here
      is softened and nothing is left to be discovered afterwards — a fan who was not
      told would reasonably think they had been robbed. */
@@ -487,7 +488,6 @@ function drawVoteSheet(s){
       : `You have <b>${c.remaining}</b> vote${c.remaining===1?'':'s'} right now.`,
     (c.paidLeft>0?`You also have <b>${c.paidLeft}</b> vote${c.paidLeft===1?'':'s'} you bought \u2014 those are yours to keep until you spend them.`:''),
     'Once you confirm, it\u2019s final! Votes <b>can\u2019t be changed</b> once cast and <b><i>don\u2019t come back</i></b>.',
-    'The list should update itself, but <b>please pull down on your screen</b> to refresh the page if you want to <b>see the current list now</b>.',
   ].filter(Boolean);
   /* `total`, not VQ. On a replay at 5 credits this read "That puts 1 of your
      votes on this song" directly under "Confirm — 5 votes" — in the one sentence
@@ -498,18 +498,24 @@ function drawVoteSheet(s){
     <h3 style="margin:2px 0 2px">${esc(s.title)}</h3>
     ${s.artist?`<p class="lede" style="margin-bottom:14px">${esc(s.artist)}</p>`:'<div style="height:8px"></div>'}
     ${cost>1?`<p class="lede" style="margin-bottom:12px">Already played, so hearing it again costs <b>${cost} votes</b> each.</p>`:''}
-    <div class="vqrow">
-      <button class="vqb" onclick="vq(-1)" ${VQ<=1?'disabled':''} aria-label="one fewer">\u2212</button>
-      <div class="vqn"><b class="mono">${VQ}</b><small>vote${VQ===1?'':'s'}</small></div>
-      <button class="vqb" onclick="vq(1)" ${VQ>=max?'disabled':''} aria-label="one more">+</button>
-    </div>
-    ${max>1?`<div class="vqmax">You can put up to ${max} on one song</div>`:'<div style="height:10px"></div>'}
-    <ul class="vrules">${rules.map(r=>`<li>${r}</li>`).join('')}</ul>
-    <div class="sticky-act">
-      <button class="go" onclick="confirmVote()">Confirm${total>1?` \u2014 ${total} vote${total===1?'':'s'}`:''}</button>
-      <p class="vwarn">${warn}</p>
-      <button class="go2" onclick="closeSheet()">Not yet</button>
-    </div>`);
+    ${out?`
+      <p class="lede" style="margin-top:14px">You’re out of votes for tonight.</p>
+      <div class="sticky-act">
+        <button class="go" onclick="openBuy()">Buy more votes</button>
+        <button class="go2" onclick="closeSheet()">Not yet</button>
+      </div>`:`
+      <div class="vqrow">
+        <button class="vqb" onclick="vq(-1)" ${VQ<=1?'disabled':''} aria-label="one fewer">\u2212</button>
+        <div class="vqn"><b class="mono">${VQ}</b><small>vote${VQ===1?'':'s'}</small></div>
+        <button class="vqb" onclick="vq(1)" ${VQ>=max?'disabled':''} aria-label="one more">+</button>
+      </div>
+      ${max>1?`<div class="vqmax">You can put up to ${max} on one song</div>`:'<div style="height:10px"></div>'}
+      <ul class="vrules">${rules.map(r=>`<li>${r}</li>`).join('')}</ul>
+      <div class="sticky-act">
+        <button class="go" onclick="confirmVote()">Confirm${total>1?` \u2014 ${total} vote${total===1?'':'s'}`:''}</button>
+        <p class="vwarn">${warn}</p>
+        <button class="go2" onclick="closeSheet()">Not yet</button>
+      </div>`}`);
 }
 /* `openUnvote` lived here — the sheet a fan got when they tapped a song they were
    already holding votes on, offering to give them back. Deleted 2026-09-07. Tapping
@@ -641,6 +647,8 @@ function render(){
   const rest=applySort(d.songs.filter(s=>!queueIds.has(s.id)).filter(match).filter(inGenre));
   const replays=applySort((d.played||[]).filter(match).filter(inGenre));
   const by=a=>a?`<div class="by">${esc(a)}</div>`:'';
+  const freeTotal=Number.isFinite(c.freeTotal)?c.freeTotal:Math.max(0,(c.total||0)-(c.extra||0));
+  const freeRemaining=Number.isFinite(c.freeRemaining)?c.freeRemaining:Math.max(0,(c.remaining||0)-(c.paidLeft||0));
 
   let h=`<div class="head">
     <div style="min-width:0">
@@ -649,7 +657,7 @@ function render(){
         :`<span class="dot"></span>Live${d.venue?' · '+esc(d.venue):''}`}${
         d.setlist?` · ${esc(d.setlist.name)}`:''}</div>
     </div>
-    <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞':`${c.remaining}<small>/${c.total}</small>`}</div>
+    <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞ votes':`${freeRemaining}<small>/${freeTotal} votes</small>`}</div>
   </div>`;
 
   /* An ENDED show must not claim a song is playing. The header says "That's a wrap"
@@ -686,7 +694,8 @@ function render(){
               opened a sheet to a fan with nothing left, who then got a 402 and a
               shrug — INVARIANT 0ad, never show the room a button that leads to one. */
            const qc=d.credits||{}, qcost=s.cost||1;
-           const qdis=!qc.unlimited&&(qc.remaining||0)<qcost&&!s.mine;
+           const qdis=!qc.unlimited&&(qc.remaining||0)<qcost&&!s.mine&&
+             !((qc.remaining||0)<=0&&d.paymentsEnabled);
            return `<button class="qvb ${s.mine?'on':''}" ${qdis?'disabled':''} onclick="openVote('${s.id}')"
              aria-label="${s.mine?'Add to your votes on':'Vote for'} ${esc(s.title)}">+</button>`;})():''}
       </div>`).join('')
@@ -772,7 +781,7 @@ function row(s,c,open,replay){
   /* Voting is never a dead end: a song they already hold votes on can still be
      added to, it just cannot be taken back. Affordability is the only reason to
      disable the button. */
-  const dis=!open||(!c.unlimited&&c.remaining<cost);
+  const dis=!open||(!c.unlimited&&c.remaining<cost&&!(c.remaining<=0&&ST.paymentsEnabled));
   const n=s.mineCount||(s.mine?1:0);
   return `<div class="prow ${s.votes?'hasv':''}">
     <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}</div>
@@ -997,7 +1006,7 @@ function openBuy(){
   if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab ${esc(artistFirst())} between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.pack='small';
   // prices are whatever the artist set in their Studio — never hard-coded here
-  const P=ST.packs||{small:{votes:5,cents:500},big:{votes:15,cents:1000}};
+  const P=ST.packs||{small:{votes:3,cents:500},big:{votes:15,cents:2000}};
   const KEYS=['small','big'].filter(k=>P[k]);
   openSheet(`<h3>Get more votes</h3><p class="lede">Extra votes for tonight’s setlist. Goes straight to ${esc(ST.artist||'the artist')}.</p>
     <div class="tiles">

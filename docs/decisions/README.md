@@ -23,6 +23,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0011](0011-clips-go-up-as-they-are.md) | A clip is uploaded exactly as it was filmed; nothing on the phone re-encodes it | 2026-09-06 | media | decided | perry |
 | [0012](0012-an-open-line-to-the-room-is-not-next.md) | An open line to the room is the right end state, and not the next thing built | 2026-09-07 | scale | decided | claude |
 | [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) | Errors are reported to a service that outlives the night | 2026-09-08 | ops | proposed | claude |
+| [0014](0014-three-free-votes-and-two-new-default-packs.md) | Every room on the former voting defaults moves to three free votes and the two new packs | 2026-09-08 | voting | decided | user |
+| [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) | The artist profile has one live voting call to action, and show controls are not duplicated in Settings | 2026-09-09 | ui | decided | user |
 
 ## By area
 
@@ -38,9 +40,9 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **storage** — [0008](0008-never-list-blobs-for-live-data.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md)
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md)
 
-**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md)
+**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md)
 
 ## What counts as a decision
 

@@ -51,11 +51,6 @@ body{padding-bottom:34px}
 .pcover img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:center 30%}
 .pcover .veil{position:absolute;inset:0;
   background:linear-gradient(to top,var(--ground) 0%,rgba(0,0,0,.34) 22%,transparent 62%)}
-.livepill{position:absolute;top:15px;left:15px;display:inline-flex;align-items:center;gap:8px;
-  background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:-.01em;
-  padding:9px 15px;border-radius:var(--pill);box-shadow:0 4px 16px rgba(255,55,95,.45)}
-.livepill .dot{background:#fff;width:7px;height:7px}
-
 /* portrait + cluster, overlapping the cover */
 /* right margin matches .pcover's 18px so the text lines up with the cover's edge;
    left stays at 20px, where the photo cluster wants to be */
@@ -390,7 +385,6 @@ function render(){
   h+=`<div class="pcover rise">
     <img src="${esc(cdn(P.photo||'/img/band.jpg',1200))}" data-raw="${esc(P.photo||'/img/band.jpg')}" onerror="if(this.src!==this.dataset.raw)this.src=this.dataset.raw" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
     <div class="veil"></div>
-    ${live?`<a class="livepill" href="${VOTEHREF}"><span class="dot"></span>Live now — vote the setlist</a>`:''}
   </div>
 
   <div class="phead">
@@ -408,7 +402,7 @@ function render(){
 
   <div class="pcta">
     <a class="joinlive ${live?'':'off'}" href="${VOTEHREF}" id="joinBtn">
-      ${live?'<span class="lv"></span>Join live':nextLabel()}</a>
+      ${live?'<span class="lv"></span>TAP TO VOTE THE SETLIST':nextLabel()}</a>
   </div>
   <div class="pstats">
     ${[[joinedWord(st.joined),'Joined'],[compact(st.shows),'Shows'],

@@ -151,7 +151,7 @@ await cast('bob', 'wonderwall');
 await AS(P.token, 'play', { song: 'wonderwall' });
 
 await AS(P.token, 'askSet', { kind: 'song', on: true });
-await hit(reqFn, 'https://x/api/request?a=' + P.slug, { fan: 'ann', kind: 'song', title: 'Zombie', artist: 'Cranberries' });
+await hit(reqFn, 'https://x/api/request?a=' + P.slug, { fan: 'cara', kind: 'song', title: 'Zombie', artist: 'Cranberries' });
 await hit(fbFn, 'https://x/api/feedback?a=' + P.slug, { fan: 'ann', stars: 5, note: 'brilliant idea' });
 await AS(P.token, 'eventSave', { event: { venue: 'The Ugly Duckling', city: 'Koh Phangan',
                                  country: 'Thailand', date: isoIn(7), time: '20:00',

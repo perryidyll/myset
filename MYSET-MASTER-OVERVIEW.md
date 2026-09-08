@@ -259,7 +259,7 @@ show, not pricing it.
 ## 1.10 What the fan is told, word for word
 
 This design is only fair if nobody finds out afterwards. So the confirmation sheet says
-it, in Perry's own words and with his emphasis, **before** anybody confirms:
+it in the approved wording and emphasis **before** anybody confirms:
 
 > You have **6** votes right now.
 >
@@ -268,9 +268,6 @@ it, in Perry's own words and with his emphasis, **before** anybody confirms:
 >
 > Once you confirm, it's final! Votes **can't be changed** once cast and ***don't come
 > back***.
->
-> The list should update itself, but **please pull down on your screen** to refresh the
-> page if you want to **see the current list now**.
 
 Under the Confirm button: *"Are you sure? Votes can't be changed!"*
 
@@ -439,10 +436,10 @@ Up to **12** merch items. Not built: `tips`, `speakerVotes`.
 
 | | Value | Where it lives |
 |---|---|---|
-| Free votes per person, per NIGHT (default) | 5 | `show.freeCredits`, artist-settable in the Studio |
+| Free votes per person, per NIGHT (default) | 3 | `show.freeCredits`, artist-settable in the Studio |
 | Cost of a vote on a song not yet played | 1 | `costOf()` in `_lib.mjs` |
 | Cost of a vote on an already-played song (default) | 5 | `show.replayCost`, artist-settable |
-| Vote packs (default) | 5 for $5 · 15 for $10 | `DEFAULT_PACKS()`, artist-settable, clamped $1–$500 and 1–100 votes |
+| Vote packs (default) | 3 for $5 · 15 for $20 | `DEFAULT_PACKS()`, artist-settable, clamped $1–$500 and 1–100 votes |
 | Song request / birthday shout-out | costs VOTES, never money | `show.requests`, `show.birthdays`, off by default |
 | Most votes one press of Confirm may cast | 50 | `vote.mjs` |
 | Last call countdown | 10 seconds | `COUNTDOWN_MS` in `_lib.mjs` |
@@ -472,9 +469,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Fan-record shards | 12 |
 | Largest clip accepted | 75 MB |
 | Invariants | 243 (last: 0f8) |
-| Test suites | 34 |
-| Assertions | **1,716**, 0 failing, last run 2026-09-08 |
-| Decision records | 13 |
+| Test suites | 35 |
+| Assertions | **1,737**, 0 failing, last run 2026-09-08 |
+| Decision records | 15 |
 
 ### Feature flags in force
 
@@ -718,7 +715,8 @@ review queue, venue plans, promo minting, venue verification, feature flags, she
 ## 3.4 The artist's public page
 
 `/<slug>`. Cover photo, avatar, name — with the green **✓ Verified** chip when earned and
-on a paid plan — *"Live now — vote the setlist"* when a show is on, and a stats row
+on a paid plan — one primary **TAP TO VOTE THE SETLIST** button when a show is on, and a
+stats row
 (Joined · Shows · **Fans** · Votes cast · Songs) with a **Community** button in it.
 
 **Listen & follow sits directly under the stats**, in the order **Instagram → Spotify →
@@ -728,7 +726,7 @@ wants to do. The Studio's link fields were reordered to match, so what an artist
 top to bottom is what a fan reads left to right. The YouTube **videos** stay at the
 bottom.
 
-Then upcoming gigs with dates and addresses, and a **Join live** button. A menu icon
+Then upcoming gigs with dates and addresses. A menu icon
 top-right opens two doors: Artist Studio and Venue Studio.
 
 "Fans" counts phones that were in the room across archived shows; **there is no follow**.

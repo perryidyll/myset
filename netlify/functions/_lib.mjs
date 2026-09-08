@@ -161,6 +161,8 @@ export const songSig = (title, artist = '') =>
 /* Deliberately blank. A second artist signing up must never inherit the first
    artist's name, venue or setlist — `getShow` fills the name in from the
    registry, and the Studio offers the starter pack as an explicit choice. */
+export const DEFAULT_FREE_CREDITS = 3;
+export const VOTE_DEFAULTS_VERSION = 2;
 export function defaultShow() {
   return {
     artist: '',
@@ -173,7 +175,8 @@ export function defaultShow() {
     windowOpen: true,
     nowPlaying: null,
     played: [],
-    freeCredits: 5,
+    freeCredits: DEFAULT_FREE_CREDITS,
+    voteDefaultsVersion: VOTE_DEFAULTS_VERSION,
     unlimited: false,        // everyone votes without limit
     unlimitedFans: [],       // specific devices that do — the artist's own, for testing
     replayCost: 5,
@@ -279,8 +282,8 @@ export const cleanKey = (v) =>
    under 6%. normPacks drops a stored legacy 'max' on read. */
 export const PACK_KEYS = ['small', 'big'];
 export const DEFAULT_PACKS = () => ({
-  small: { votes: 5,  cents: 500 },
-  big:   { votes: 15, cents: 1000 },
+  small: { votes: 3,  cents: 500 },
+  big:   { votes: 15, cents: 2000 },
 });
 /** The two ask-for-something switches. Cost is in VOTES, not money. */
 export function normAsk(a, dflt = 3) {
@@ -392,14 +395,37 @@ export async function casDoc(key, fallback, fn, verify = null, tries = 40) {
 function normShow(s) {
   const d = defaultShow();
   const show = { ...d, ...(s || {}) };
+  const legacyVoteDefaults = !!s && Number(s.voteDefaultsVersion || 0) < VOTE_DEFAULTS_VERSION;
   if (!Array.isArray(show.songs)) show.songs = [];
   if (!Array.isArray(show.played)) show.played = [];
-  if (typeof show.freeCredits !== 'number') show.freeCredits = 5;
+  if (typeof show.freeCredits !== 'number') show.freeCredits = DEFAULT_FREE_CREDITS;
   if (typeof show.replayCost !== 'number') show.replayCost = 5;
   if (!Array.isArray(show.log)) show.log = [];
   show.unlimited = !!show.unlimited;
   show.unlimitedFans = (Array.isArray(show.unlimitedFans) ? show.unlimitedFans : []).slice(0, 20);
   show.packs = normPacks(show.packs);
+  /* VERSIONED DEFAULT MIGRATION.
+
+     Defaults are stored on every show, so changing defaultShow() alone only affects
+     a brand-new artist. Existing rooms keep returning the old values for ever — the
+     exact bug that made a preview built with a 3-vote default still hand out 5.
+
+     Migrate only values equal to the former defaults. A paid artist's non-default
+     choice survives. The version is copied into the stored document by the next
+     ordinary mutateShow(), so choosing 5 again afterwards is a real choice and is
+     never mistaken for legacy data. Existing fan.freeUsed stamps keep bought-vote
+     balances from being re-priced when the allowance falls (INVARIANT 13b). */
+  if (legacyVoteDefaults) {
+    if (s.freeCredits === 5) show.freeCredits = DEFAULT_FREE_CREDITS;
+    const oldSmall = s.packs && s.packs.small;
+    const oldBig = s.packs && s.packs.big;
+    const next = DEFAULT_PACKS();
+    if (oldSmall && Number(oldSmall.votes) === 5 && Number(oldSmall.cents) === 500)
+      show.packs.small = next.small;
+    if (oldBig && Number(oldBig.votes) === 15 && Number(oldBig.cents) === 1000)
+      show.packs.big = next.big;
+    show.voteDefaultsVersion = VOTE_DEFAULTS_VERSION;
+  }
   show.tags = normOwnTags(show.tags);
   show.listId = String(show.listId || '').replace(/[^a-z0-9]/gi, '').slice(0, 12);
   show.listName = String(show.listName || '').replace(/\s+/g, ' ').trim().slice(0, 40);

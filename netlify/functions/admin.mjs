@@ -3,7 +3,8 @@ import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSo
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf, DEFAULT_ARTIST } from './_lib.mjs';
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf, DEFAULT_ARTIST,
+         DEFAULT_FREE_CREDITS } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -1848,7 +1849,7 @@ export default async (req) => {
       case 'freeCredits': {
         if (!canPrice) { err = PRICE_LOCKED; return false; }
         const n = parseInt(body.n, 10);
-        const want = Math.max(0, Math.min(999, Number.isFinite(n) ? n : 5));
+        const want = Math.max(0, Math.min(999, Number.isFinite(n) ? n : DEFAULT_FREE_CREDITS));
         show.freeCredits = want;
         show.unlimited = false;               // picking a number turns unlimited off
         break;

@@ -105,7 +105,7 @@ async function facts() {
       shards: lib.SHARDS,
       countdownMs: lib.COUNTDOWN_MS,
       maxVideoBytes: video.MAX_VIDEO_BYTES,
-      defaultFreeCredits: 5,
+      defaultFreeCredits: lib.DEFAULT_FREE_CREDITS,
       defaultReplayCost: 5,
       defaultPacks: lib.DEFAULT_PACKS(),
       ladder: heads.map((n) => ({ heads: n, pollMs: lib.pollFloorFor(n), board: lib.boardLimitFor(n) })),

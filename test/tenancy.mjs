@@ -137,13 +137,19 @@ const boSong  = (await pub('bo-tran')).songs[0].id;
 
 const v1 = await vote('ana-reyes', 'phone1', anaSong);
 ok('the phone votes at Ana\'s gig', v1.ok && v1.voted === true, v1);
-eq('and spent one of its five default credits there', v1.remaining, 4);
+eq('and spent one of its three default votes there', v1.remaining, 2);
 
 const pB2 = await pub('bo-tran', 'phone1');
-eq("the same phone still has all five credits at Bo's", pB2.credits.remaining, 5);
+eq("the same phone still has all three votes at Bo's", pB2.credits.remaining, 3);
+eq('the audience payload separates the free allowance from bought votes',
+   [pB2.credits.freeRemaining, pB2.credits.freeTotal], [3, 3]);
+eq('the default packs are 3 for $5 and 15 for $20',
+   pB2.packs, { small: { votes: 3, cents: 500 }, big: { votes: 15, cents: 2000 } });
 
 const pA2 = await pub('ana-reyes', 'phone1');
 eq("Ana's song shows the vote", pA2.songs.find((s) => s.id === anaSong).votes, 1);
+eq('and the free-vote counter has moved from 3/3 to 2/3',
+   [pA2.credits.freeRemaining, pA2.credits.freeTotal], [2, 3]);
 const pB3 = await pub('bo-tran', 'phone1');
 eq("no vote leaked into Bo's tally", pB3.songs.reduce((n, s) => n + s.votes, 0), 0);
 
@@ -254,6 +260,13 @@ ok('and re-sending the unchanged default cost is not a price change', same.ok, s
 
 const owner = await hit(admin, 'https://x/api/admin?code=devlocal', { action: 'replayCost', n: 5 });
 ok('the founding artist is never locked out of pricing', owner.ok, owner);
+
+await mutateArtists((r) => { r.byId[ana.artistId].plan = 'plus'; return true; });
+const paidChoice = await A(TA4, 'freeCredits', { n: 7 });
+ok('a paid artist can choose a different free allowance', paidChoice.ok, paidChoice);
+eq('and the chosen allowance reaches the room', (await pub('ana-reyes')).credits.freeTotal, 7);
+await A(TA4, 'freeCredits', { n: 3 });
+await mutateArtists((r) => { r.byId[ana.artistId].plan = 'free'; return true; });
 
 /* ── the free plan's gig cap ─────────────────────────────────────── */
 console.log('\nGIG CAP  four free shows a month, counted where a gig starts');

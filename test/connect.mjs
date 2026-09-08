@@ -149,7 +149,7 @@ const conf = await hit(confirmFn,
   `https://myset.vip/api/confirm?session_id=${sale.id}&fan=f1&a=${ana.artistId}`);
 ok('the return trip redeems', conf.ok, conf);
 const got = ((await readFans(ana.artistId)).f1 || {}).extra || 0;
-eq('five votes granted', got - before, 5);
+eq('three votes granted from the default small pack', got - before, 3);
 const retr = lastCall('checkout.sessions.retrieve');
 eq('because it retrieved WITH her account in scope', retr.opts.stripeAccount, acct);
 const twice = await hit(confirmFn,
