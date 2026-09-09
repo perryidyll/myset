@@ -648,7 +648,7 @@ const ENGINE = (() => {
       const stripeT = cardOnSub + cardOnFeat + disputesT + expressT;
       return { tier: t, gigs: g, sub, room, cut, featRev, rev: rev - refundT, server, stripe: stripeT, net: rev - refundT - server - stripeT };
     });
-    /* Above this much room money a month, MySet earns MORE from a free artist's 10% cut
+    /* Above this much room money a month, MySet earns MORE from a free artist's plan cut
        than from that artist's Plus subscription. Five independent dials decide it and
        nothing on the page related them before. */
     const plusNet = p.plusPrice * paying - (cardFee(p.plusPrice * paying, paying, s) + p.plusPrice * paying * s.billingPct / 100);
@@ -736,7 +736,7 @@ const ENGINE = (() => {
       /* THE ROOM'S MONEY, on the same per-head rule the monthly model uses, for the whole
          run. And then the part that is MySet's: the plan's cut. The chart used to divide
          the server bill by the ARTIST's gross, which made a 10,000-person arena look like
-         it cost 2% of the value in the room — when on a Pro artist (0% cut) MySet earns
+         it cost the tier's share of the value in the room — even on Pro MySet earns
          nothing from it at all and pays the whole bill. */
       const tier = p.sizeTier || 'free';
       const perHead = tier === 'plus' ? p.roomPlus : tier === 'pro' ? p.roomPro : p.roomFree;
@@ -830,7 +830,7 @@ const P0 = {
   pageReqs: 6, pageBytes: 48000,
   deploys: 176,
   host: 'netlifyPro', hosts: JSON.parse(JSON.stringify(HOSTS0)),
-  roomFree: 0.4, roomPlus: 0.4, roomPro: 0.4, cutFree: 10, cutPlus: 2, cutPro: 0, activePayoutPct: 40, sizeTier: 'free',
+  roomFree: 0.4, roomPlus: 0.4, roomPro: 0.4, cutFree: 25, cutPlus: 10, cutPro: 2.5, activePayoutPct: 40, sizeTier: 'free',
   featPct: 5, featPrice: 10, featRefundPct: 1,
   stripe: { preset: 'us', pct: 2.9, fixed: 0.30, intlShare: 13, intlPct: 1.5, fxShare: 0, fxPct: 1.0, billingPct: 0.7, disputePct: 0.1, disputeFee: 15, refundPct: 1, expressOn: true, expressAcct: 2, payoutPct: 0.25, payoutFixed: 0.25, payoutsPerMonth: 8, lossPct: 0.1 },
   fixed: [{ name: 'Domain (myset.vip)', usd: 1 }, { name: 'Email delivery (Resend)', usd: 20 }, { name: 'Accounting & tax filing', usd: 80 }, { name: 'Company, legal, insurance', usd: 40 }, { name: 'Claude Code & dev tools (MySet’s share)', usd: 50 }, { name: 'Monitoring & misc', usd: 10 }],
@@ -969,7 +969,7 @@ function buildDials() {
     if (d.key === 'hostSel') { el.className = 'hostSel'; el.id = 'hostSel'; body.appendChild(el); continue; }
     if (d.key === 'hostRates') { el.innerHTML = `<details class="more"><summary>Host rates (advanced)</summary><div id="hostRates" style="display:grid;gap:12px;margin-top:6px"></div></details>`; body.appendChild(el); continue; }
     if (d.key === 'fixedList') { el.className = 'fixedList'; el.id = 'fixedList'; body.appendChild(el); const add = document.createElement('button'); add.className = 'btn small ghost'; add.textContent = '+ Add a cost line'; add.onclick = () => { P.fixed.push({ name: 'New cost', usd: 0 }); renderFixed(); recalc(); }; body.appendChild(add); continue; }
-    if (d.key === 'sizeTier') { el.className = 'dial'; el.innerHTML = `<div class="lab"><span>Price these shows as</span></div><select id="sizeTierSel"><option value="free">a free artist (MySet takes ${P.cutFree}%)</option><option value="plus">a Plus artist (${P.cutPlus}%)</option><option value="pro">a Pro artist (${P.cutPro}% — MySet earns nothing)</option></select>`; body.appendChild(el); $('#sizeTierSel', el).value = P.sizeTier || 'free'; $('#sizeTierSel', el).addEventListener('change', (e) => { P.sizeTier = e.target.value; recalc(); }); continue; }
+    if (d.key === 'sizeTier') { el.className = 'dial'; el.innerHTML = `<div class="lab"><span>Price these shows as</span></div><select id="sizeTierSel"><option value="free">a free artist (MySet takes ${P.cutFree}%)</option><option value="plus">a Plus artist (${P.cutPlus}%)</option><option value="pro">a Pro artist (${P.cutPro}%)</option></select>`; body.appendChild(el); $('#sizeTierSel', el).value = P.sizeTier || 'free'; $('#sizeTierSel', el).addEventListener('change', (e) => { P.sizeTier = e.target.value; recalc(); }); continue; }
     if (d.key === 'sizes') { el.id = 'sizesEdit'; body.appendChild(el); continue; }
     if (d.key === 'actuals') { el.id = 'actualsBox'; body.appendChild(el); continue; }
     if (d.switch) { el.className = 'switch'; el.innerHTML = `<input type="checkbox" id="sw_${d.key.replace('.', '_')}" data-key="${d.key}"><label for="sw_${d.key.replace('.', '_')}">${d.label}</label>`; body.appendChild(el); $('input', el).addEventListener('change', (e) => { setPath(P, d.key, e.target.checked); recalc(); }); continue; }

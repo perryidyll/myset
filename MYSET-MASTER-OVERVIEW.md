@@ -131,11 +131,12 @@ song up the tie order.
 |---|---|---|
 | A song not yet played tonight | **1 credit** | fixed |
 | A song already played tonight (a "play it again") | **the replay cost**, default 5 | the artist, in Settings |
-| A song request (something not on the list) | costs **votes**, default 3 | the artist; **off by default** |
+| A song request (something not on the list) | **3 votes by default**, plus an optional whole-dollar offer at $1 = 1 paid vote | the artist; **off by default** |
 | A birthday shout-out | costs **votes**, default 3 | the artist; **off by default** |
 
-**Requests and birthdays cost votes, never money.** That is deliberate and it has never
-changed.
+Every request has a vote-only path. Birthday shout-outs remain vote-only; an off-setlist
+song request may add an optional card authorization that is captured only after the
+artist plays and finishes the song.
 
 Every default is generated into §2.1 straight from the source.
 
@@ -401,7 +402,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 | | Free | Plus | Pro |
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
-| MySet's cut of money taken through the app | **10%** | **2%** | **0%** |
+| MySet's cut of money taken through the app | **25%** | **10%** | **2.5%** |
 | Shows per calendar month (UTC) | 4 | unlimited | unlimited |
 | Songs live to the audience at once | 50 | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 200 | 1,000 | 2,000 |
@@ -447,7 +448,7 @@ Up to **12** merch items. Not built: `tips`, `speakerVotes`.
 | Cost of a vote on a song not yet played | 1 | `costOf()` in `_lib.mjs` |
 | Cost of a vote on an already-played song (default) | 5 | `show.replayCost`, artist-settable |
 | Vote packs (default) | 3 for $5 · 15 for $20 | `DEFAULT_PACKS()`, artist-settable, clamped $1–$500 and 1–100 votes |
-| Song request / birthday shout-out | costs VOTES, never money | `show.requests`, `show.birthdays`, off by default |
+| Song request / birthday shout-out | 3 votes by default; song requests may add an optional $1-per-paid-vote offer | `show.requests`, `show.birthdays`, `request_hold`; off by default |
 | Most votes one press of Confirm may cast | 50 | `vote.mjs` |
 | Last call countdown | 10 seconds | `COUNTDOWN_MS` in `_lib.mjs` |
 
@@ -471,14 +472,14 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | HTTP functions | 25 — `admin`, `auth`, `clipup`, `community`, `confirm`, `events`, `feedback`, `gift`, `history`, `img`, `lyrics`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
 | Shared libraries | 41 |
-| Artist Studio actions | 122 |
+| Artist Studio actions | 123 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
 | Largest clip accepted | 75 MB |
-| Invariants | 243 (last: 0f8) |
-| Test suites | 36 |
-| Assertions | **1,762**, 0 failing, last run 2026-09-09 |
-| Decision records | 16 |
+| Invariants | 244 (last: 0f8) |
+| Test suites | 37 |
+| Assertions | **1,808**, 0 failing, last run 2026-09-09 |
+| Decision records | 18 |
 
 ### Feature flags in force
 
@@ -644,7 +645,9 @@ The only surface most people will ever touch. No sign-in, ever.
   Perry's words (§1.10), a Confirm showing the total cost, a **Not yet**, an ✕, and a
   full-width drag handle.
 - **Ask for something not on the list** — song requests and birthday shout-outs, each
-  costing votes, each shown only if the artist has switched it on.
+  costing votes and shown only if the artist has switched it on. A song request may
+  optionally carry a whole-dollar offer; its card authorization is released if the
+  artist declines and captured only after the song is finished.
 - **The dock** — **More votes** (orange ring) and **Tip** (solid gradient). **It never
   hides.** Between shows it is the tip alone, full width. Card buttons disappear
   entirely only when the artist cannot take card payments, so the room is never shown a
@@ -824,8 +827,10 @@ Fixed in both directions:
 
 ## 4.1 What the audience pays
 
-Vote packs and tips (both Stripe), and nothing else. **Song requests and birthday
-shout-outs cost votes, never money.**
+Vote packs, tips, direct paid replay votes and optional off-setlist song-request offers
+use Stripe. Every request still has a vote-only path, and birthday shout-outs remain
+vote-only. A request offer is authorized at submission, captured only after the artist
+finishes the song, and released on decline or an uncompleted show end.
 
 ## 4.2 How the money moves
 
@@ -836,7 +841,7 @@ the infrastructure.*
 
 **The trade, stated plainly:** with direct charges, Stripe's own processing fee
 (~2.9% + 30¢) is charged to **the artist**, not to MySet. On a $5 vote pack a Plus artist
-pays roughly 45¢ to Stripe and 10¢ to MySet. ***"2% to MySet" is not "you keep 98%."***
+pays roughly 45¢ to Stripe and 50¢ to MySet. ***"10% to MySet" is not "you keep 90%."***
 The Studio says this before an artist onboards.
 
 **Onboarding** is Stripe-hosted Express, so MySet never sees a bank detail. The country is

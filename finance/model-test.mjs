@@ -86,9 +86,10 @@ ok('the cache the page recommends actually changes the verdict', arenaPlain.stat
 /* the show-size panel prices MySet's own money, and the tier changes the answer */
 const onFree = ENGINE.showSizes({ ...P0, sizeTier: 'free' })[2], onPro = ENGINE.showSizes({ ...P0, sizeTier: 'pro' })[2];
 console.log('   arena on a free artist: MySet earns $' + onFree.mysetRev.toFixed(0) + ', keeps $' + onFree.mysetNet.toFixed(0) + '  |  on Pro: earns $' + onPro.mysetRev.toFixed(0) + ', keeps $' + onPro.mysetNet.toFixed(0));
-ok('a Pro artist\'s arena earns MySet nothing and shows a loss', onPro.mysetRev === 0 && onPro.mysetNet < 0);
-ok('a free artist\'s arena earns MySet the 10% cut', Math.abs(onFree.mysetRev - onFree.earn * P0.cutFree / 100) < 1e-9);
-ok('the booking price covers the server and the margin', onPro.bookingAt(0.5) > onPro.server);
+ok('a Pro artist\'s arena earns the plan cut and covers its server cost',
+   Math.abs(onPro.mysetRev - onPro.earn * P0.cutPro / 100) < 1e-9 && onPro.mysetNet > 0);
+ok('a free artist\'s arena earns MySet the plan cut', Math.abs(onFree.mysetRev - onFree.earn * P0.cutFree / 100) < 1e-9);
+ok('no booking surcharge is needed when the plan cut already covers the target margin', onPro.bookingAt(0.5) === 0);
 /* the whole run, not one day of it */
 const fest = ENGINE.showSizes(P0)[3];
 ok('a 3-day festival counts three days of room money', Math.abs(fest.earn - fest.fans * P0.roomFree * 3) < 1e-9, fest.earn);

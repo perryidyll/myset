@@ -5,7 +5,7 @@ import { readArtists, mutateArtists } from './_auth.mjs';
 
    The fundamentals are in every row: unlimited shows, the
    whole Studio, the lyrics sheet, the gig calendar, the city feed. A free
-   artist can run six nights a week forever. What free costs is a 10% cut on
+   artist can run six nights a week forever. What free costs is a 25% cut on
    money that comes through the app, and a ceiling on how many songs are
    featured at once.
 
@@ -62,7 +62,7 @@ export const PLANS = {
        read these rather than repeating them. `Infinity` means no ceiling and is
        reserved for the founder. */
     audience: 200,        // a pub. Worst case: 4 gigs x 200 = $1.28 a month.
-    cut: 0.10,            // platform share of tips and vote sales
+    cut: 0.25,            // platform share of tips and vote sales
     seats: 1,
     pricing: false,       // change free-vote count, pack prices, replay/ask costs
     setlists: false,      // named subsets of the library, one active at a time
@@ -81,11 +81,11 @@ export const PLANS = {
     label: 'Plus', price: 1000,
     featured: Infinity,
     gigs: Infinity,
-    /* 2%, Perry's number. The ladder is 10% free / 2% Plus / 0% Pro, so the
+    /* The ladder is 25% free / 10% Plus / 2.5% Pro, so the
        subscription and the transaction fee trade off against each other and a new
        artist never pays a subscription before they have earned anything. Taken as
        a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
-    cut: 0.02,
+    cut: 0.10,
     audience: 1000,       // a club. Worst single night: $2.76.
     seats: 1,
     pricing: true, setlists: true, merch: true, moderate: true,
@@ -95,7 +95,7 @@ export const PLANS = {
     label: 'Pro', price: 2000,
     featured: Infinity,
     gigs: Infinity,
-    cut: 0,
+    cut: 0.025,
     /* A theatre or a festival tent. Worst single night: under $7, and less than
        that in practice because the interval widens with the room.
 

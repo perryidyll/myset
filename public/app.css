@@ -51,7 +51,7 @@
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;touch-action:manipulation}
 body{
   background:var(--bg);color:var(--ink);font-family:var(--f);
   font-size:16px;line-height:1.45;letter-spacing:-.011em;

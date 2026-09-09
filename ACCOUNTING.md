@@ -91,7 +91,8 @@ hides us. The fee always comes from `fee_details`, and `test/books.mjs` pins it.
 Perry's own vote packs and tips were taken on the **platform** account, before
 Connect existed — so the same balance holds his gig takings *and* every artist's
 subscription. It is separable, and exactly: a payment MySet sold on his behalf is a
-charge whose Checkout session was tagged `kind` ∈ {votes, tip, merch} and `artist`,
+charge whose Checkout session was tagged `kind` ∈ {votes, song_votes,
+request_hold, tip, merch} and `artist`,
 the same test `revenue.mjs` has always used.
 
 `platformSplit()` does one pull of balance transactions with their source expanded

@@ -114,6 +114,11 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
   // carryFans() destroys the only copy.
   if (fresh) {
     try {
+      const { completeSongRequests, cancelOpenPledges } = await import('./_requests.mjs');
+      await completeSongRequests(aid, '');
+      await cancelOpenPledges(aid);
+    } catch { /* an expiring authorization must never block a new show */ }
+    try {
       const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
       await archiveShow(aid, prev, fans);
     } catch { /* never block starting a show on the archive */ }
@@ -184,6 +189,13 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
  * the archive and changes nothing else). `by` is stamped for the Studio.
  */
 export async function endShow(aid, { by = 'artist' } = {}) {
+  /* Ending the night is not the same as finishing the current song. Anything the
+     artist never explicitly completed is released, never charged. */
+  try {
+    const { completeSongRequests, cancelOpenPledges } = await import('./_requests.mjs');
+    await completeSongRequests(aid, '');
+    await cancelOpenPledges(aid);
+  } catch { /* Stripe will release an uncaptured authorization at expiry */ }
   try {
     const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
     await archiveShow(aid, prev, fans);

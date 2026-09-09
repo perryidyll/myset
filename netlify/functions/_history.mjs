@@ -47,7 +47,7 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
       for (const s of r.data || []) {
         if (s.payment_status !== 'paid') continue;
         const md = s.metadata || {};
-        if (md.kind !== 'votes' && md.kind !== 'tip') continue;   // INVARIANT 5d
+        if (!['votes', 'song_votes', 'request_hold', 'tip'].includes(md.kind)) continue;   // INVARIANT 5d
         /* And it has to be THIS artist's. This was the one Stripe consumer of four
            that did not check — so with a colliding showId (they used to collide;
            see newShowId) another artist's takings were reported as yours. Untagged
@@ -58,7 +58,7 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
         if (md.show && md.show !== showId) continue;
         if (!md.show) { out.unattributed = round(out.unattributed + amt); continue; }
         out.gross = round(out.gross + amt);
-        if (md.kind === 'votes') {
+        if (['votes', 'song_votes', 'request_hold'].includes(md.kind)) {
           out.votes.amount = round(out.votes.amount + amt);
           out.votes.count += 1;
         } else {

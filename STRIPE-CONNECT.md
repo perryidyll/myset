@@ -2,6 +2,17 @@
 
 Plain language, every step. Nothing here needs code knowledge.
 
+> **Status, 2026-09-09:** Stripe Connect is implemented with direct charges. The
+> current artist fee ladder is 25% Free, 10% Plus and 2.5% Pro, with the
+> platform-owner account exempt. The planning sections below are retained as the
+> historical setup record, not as current instructions.
+
+> **Request-offer lifecycle:** an optional off-setlist song-request offer uses a
+> manual-capture card authorization on the artist's connected account. Acceptance
+> shows and attributes the offer as $1-per-paid-vote but does not charge it. The card
+> is captured only when the artist finishes the song, and is canceled on decline or
+> if the show ends first. Birthday requests remain vote-only.
+
 ---
 
 ## 1 · What we are trying to do, in one picture
@@ -14,7 +25,8 @@ That is wrong. It is their money. You would have to pay them by hand, and you wo
 be holding cash that isn't yours — which is a legal problem, not just an awkward one.
 
 **What we want:** the fan taps buy. The money goes **straight into that artist's own
-Stripe account**. MySet takes a small slice on the way past (10% on the free plan).
+Stripe account**. MySet takes its plan fee on the way past (25% Free, 10% Plus,
+2.5% Pro; the platform-owner account is exempt).
 Nobody has to move money by hand. Ever.
 
 The tool for this is called **Stripe Connect**. Think of it like this:

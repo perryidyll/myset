@@ -19,7 +19,7 @@ When a fan buys votes or tips, whose money is it on the way through?
 
 | Option | What it does | What it costs | New moving parts | Risk if it goes wrong |
 |---|---|---|---|---|
-| **A — chosen. Direct charges on the artist's connected account** | Money is legally the artist's; MySet takes a platform fee off the top | Stripe's own ~2.9% + 30¢ is charged to the **artist**, not to MySet | Stripe Connect Express onboarding, per-artist account keys | An artist reads "2% to MySet" as "you keep 98%" |
+| **A — chosen. Direct charges on the artist's connected account** | Money is legally the artist's; MySet takes a platform fee off the top | Stripe's own ~2.9% + 30¢ is charged to the **artist**, not to MySet | Stripe Connect Express onboarding, per-artist account keys | An artist mistakes the platform fee for the whole cost of taking a card |
 | B — destination charges | MySet is merchant of record, holds the funds, pays out | MySet answers the chargeback for a night it did not play, and holds other people's money | payout scheduling, float, disputes | A regulatory and reputational surface MySet cannot staff |
 | C — no payments | Simplest | The product has no revenue and the artist has no tip jar | none | No business |
 
@@ -30,7 +30,7 @@ MySet provides the infrastructure.**
 
 **The trade, stated plainly:** on a $5 vote pack a Plus artist pays roughly 45¢ to
 Stripe and 10¢ to MySet. The Studio says this before an artist onboards, because
-*"2% to MySet" is not "you keep 98%."*
+*The platform fee is not the whole cost of taking a card.*
 
 **Nobody takes money until Stripe says so.** The gate is Stripe's own `charges_enabled`,
 never a local "they clicked onboarding" flag. Started is not ready.

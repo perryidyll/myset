@@ -85,6 +85,19 @@ export default async (req) => {
     if (session.payment_status !== 'paid') {
       try { session = await stripe.checkout.sessions.retrieve(session.id, evOpts); } catch { session = null; }
     }
+    /* A song-request offer is deliberately NOT paid here. Checkout has authorized
+       it for manual capture; create the request now, then the artist's later
+       play-completion action is the only code allowed to capture it. */
+    if (session && (session.metadata || {}).kind === 'request_hold') {
+      const aid = cleanArtistId((session.metadata || {}).artist)
+                  || (event.account ? await artistForAccount(event.account) : '')
+                  || DEFAULT_ARTIST;
+      try {
+        const { authorizeRequestSession } = await import('./_requests.mjs');
+        await authorizeRequestSession(aid, session, '', stripe, evOpts);
+      } catch (e) { console.error('request authorization failed', e && e.message); }
+      return json({ received: true });
+    }
     /* A PROMOTED GIG IS NOT A FAN BUYING SOMETHING, so it does not go through
        redeemSession — which knows about votes, tips and merch and would write a
        claim marker for a kind it cannot grant. Same replay-safety, its own path. */

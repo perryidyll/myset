@@ -39,6 +39,7 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 const ls = (p) => { try { return readdirSync(join(ROOT, p)); } catch { return []; } };
 const sh = (cmd, args) => { try { return execFileSync(cmd, args, { cwd: ROOT, encoding: 'utf8' }).trim(); } catch { return ''; } };
 const money = (c) => (c === 0 ? '$0' : `$${(c / 100).toFixed(0)}`);
+const pct = (n) => Number((Number(n || 0) * 100).toFixed(2)).toString() + '%';
 const cap = (v) => (v === Infinity || v === null ? 'unlimited' : String(v));
 const yes = (v) => (v === true ? 'yes' : v === false ? '—' : String(v));
 
@@ -107,6 +108,7 @@ async function facts() {
       maxVideoBytes: video.MAX_VIDEO_BYTES,
       defaultFreeCredits: lib.DEFAULT_FREE_CREDITS,
       defaultReplayCost: 5,
+      defaultAskCost: lib.DEFAULT_ASK_COST,
       defaultPacks: lib.DEFAULT_PACKS(),
       ladder: heads.map((n) => ({ heads: n, pollMs: lib.pollFloorFor(n), board: lib.boardLimitFor(n) })),
     },
@@ -227,7 +229,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 | | Free | Plus | Pro |
 |---|---|---|---|
 | Price per month | ${money(p.free.price)} | **${money(p.plus.price)}** | **${money(p.pro.price)}** |
-| MySet's cut of money taken through the app | **${(p.free.cut * 100).toFixed(0)}%** | **${(p.plus.cut * 100).toFixed(0)}%** | **${(p.pro.cut * 100).toFixed(0)}%** |
+| MySet's cut of money taken through the app | **${pct(p.free.cut)}** | **${pct(p.plus.cut)}** | **${pct(p.pro.cut)}** |
 | Shows per calendar month (UTC) | ${cap(p.free.gigs)} | ${cap(p.plus.gigs)} | ${cap(p.pro.gigs)} |
 | Songs live to the audience at once | ${cap(p.free.featured)} | ${cap(p.plus.featured)} | ${cap(p.pro.featured)} |
 | People in one room (soft — nobody is refused) | ${p.free.audience.toLocaleString()} | ${p.plus.audience.toLocaleString()} | ${p.pro.audience.toLocaleString()} |
@@ -247,7 +249,7 @@ Deleting a name from that list is the last step of building the feature, and
 | | Free | Pro |
 |---|---|---|
 | Price per month | ${money(v.free.price)} | **${money(v.pro.price)}** |
-| MySet's cut | ${(v.free.cut * 100).toFixed(0)}% | ${(v.pro.cut * 100).toFixed(0)}% |
+| MySet's cut | ${pct(v.free.cut)} | ${pct(v.pro.cut)} |
 | Stripe's card fee shared evenly with MySet | ${yes(v.free.splitFee)} | ${yes(v.pro.splitFee)} |
 | Photos | ${v.free.photos} | ${v.pro.photos} |
 | Verification tick | ${yes(v.free.tick)} | ${yes(v.pro.tick)} |
@@ -266,7 +268,7 @@ Up to **${f.venuePlans.maxMerch}** merch items. Not built: ${f.venuePlans.notBui
 | Cost of a vote on a song not yet played | 1 | \`costOf()\` in \`_lib.mjs\` |
 | Cost of a vote on an already-played song (default) | ${f.constants.defaultReplayCost} | \`show.replayCost\`, artist-settable |
 | Vote packs (default) | ${Object.entries(f.constants.defaultPacks).map(([k, x]) => `${x.votes} for ${money(x.cents)}`).join(' · ')} | \`DEFAULT_PACKS()\`, artist-settable, clamped $1–$500 and 1–100 votes |
-| Song request / birthday shout-out | costs VOTES, never money | \`show.requests\`, \`show.birthdays\`, off by default |
+| Song request / birthday shout-out | ${f.constants.defaultAskCost} votes by default; song requests may add an optional $1-per-paid-vote offer | \`show.requests\`, \`show.birthdays\`, \`request_hold\`; off by default |
 | Most votes one press of Confirm may cast | 50 | \`vote.mjs\` |
 | Last call countdown | ${f.constants.countdownMs / 1000} seconds | \`COUNTDOWN_MS\` in \`_lib.mjs\` |
 

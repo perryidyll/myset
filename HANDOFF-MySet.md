@@ -767,16 +767,19 @@ long-term answer and the wrong near-term one (OAuth review + access-gated API).
 
 * Two kinds: a **song** the artist hasn't got listed, and a **happy birthday
   shout-out** with the name of whoever it's for.
-* Paid in **VOTES, never money** (INVARIANT 0ab — cash-to-be-played-next is a
-  different product and it breaks 0w).
+* Both kinds cost votes. A song request may also carry an optional whole-dollar
+  offer at $1 = 1 paid vote; a birthday never carries money. The card is authorized
+  at submission, captured only after the artist finishes the song, and released on
+  decline or show end (INVARIANTS 0ab–0ab1).
 * Both default **OFF**, each with its own price the artist sets (Settings →
   Requests from the audience). Currently ON at 3 votes each on Perry's account.
 * Votes are taken **before** the row is written and refunded if the write fails.
   Declining refunds exactly once and clamps at zero. Verified: a second decline
   returns 409 and the balance does not move. INVARIANT 0ac.
 * One pending request per kind per fan; 30 pending per show; 80 rows kept.
-* Studio Live tab shows them: **+ Add** puts the song in the setlist so the whole
-  room can vote for it, **Did it** clears a birthday, **✕** refunds.
+* Studio Live shows any dollar offer. **+ Add** puts the song in the setlist and
+  attributes the paid votes; ending that song or starting another captures once.
+  **Did it** clears a birthday; **✕** refunds votes and cancels any card hold.
 * The fan sees their own status on the voting page: waiting → on the list →
   played, or "Not tonight — votes refunded".
 * `creditsUsed` now includes `fan.spent`, which resets with the free credits

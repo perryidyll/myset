@@ -2,13 +2,13 @@
 
    This closes INVARIANT 0r, which has been an open note since multi-tenancy
    shipped: a second artist's audience paid into the FOUNDER's Stripe balance, and
-   the "10% platform cut" existed only as a number in a plan table.
+   the platform cut existed only as a number in a plan table.
 
    The cases that matter are not "does a session get created". They are:
      · nobody can take money until STRIPE says charges_enabled — not when a local
        flag says onboarding was started
      · the charge is created ON the artist's account, or it is not their money
-     · the fee is the plan's fee: 10% free, 2% Plus, 0% Pro (Perry's ladder)
+     · the fee is the plan's fee: 25% free, 10% Plus, 2.5% Pro
      · a session created on a connected account can still be REDEEMED, which needs
        that account in scope — getting this wrong is the 2026-08-30 failure with a
        new cause
@@ -59,14 +59,14 @@ const completeOnboarding = async (acct) => {
     { type: 'account.updated', account: acct, data: { object: a } }, null, SIG);
 };
 
-console.log('\nPERRY\'S LADDER IS THE ONE DEFINITION OF THE CUT');
-eq('free takes 10%', PLANS.free.cut, 0.10);
-eq('Plus takes 2%', PLANS.plus.cut, 0.02);
-eq('Pro takes nothing', PLANS.pro.cut, 0);
-eq('a $5 pack on free', C.feeCents(500, 'free'), 50);
-eq('a $5 pack on Plus', C.feeCents(500, 'plus'), 10);
-eq('a $5 pack on Pro', C.feeCents(500, 'pro'), 0);
-eq('rounding never favours the platform', C.feeCents(499, 'plus'), 9);
+console.log('\nTHE PLAN TABLE IS THE ONE DEFINITION OF THE CUT');
+eq('free takes 25%', PLANS.free.cut, 0.25);
+eq('Plus takes 10%', PLANS.plus.cut, 0.10);
+eq('Pro takes 2.5%', PLANS.pro.cut, 0.025);
+eq('a $5 pack on free', C.feeCents(500, 'free'), 125);
+eq('a $5 pack on Plus', C.feeCents(500, 'plus'), 50);
+eq('a $5 pack on Pro', C.feeCents(500, 'pro'), 12);
+eq('rounding never favours the platform', C.feeCents(499, 'plus'), 49);
 
 console.log('\nSETUP  a second artist with a room of her own');
 const ana = await createArtist({ email: 'ana@example.com', name: 'Ana Reyes', slug: 'ana-reyes' });
@@ -126,20 +126,15 @@ eq('so the money is hers', __stripe.sessions.get(sale.id).onAccount, acct);
 eq('and the session is tagged with her id', created.args.metadata.artist, ana.artistId);
 
 console.log('\nAND MYSET TAKES EXACTLY THE PLAN\'S SHARE');
-eq('a free artist pays 10% of $5', created.args.payment_intent_data.application_fee_amount, 50);
+eq('a free artist pays 25% of $5', created.args.payment_intent_data.application_fee_amount, 125);
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'plus'; return true; });
 const sale2 = await buy('ana-reyes', 'f2', 'small');
-eq('on Plus it is 2%', lastCall('checkout.sessions.create').args.payment_intent_data.application_fee_amount, 10);
+eq('on Plus it is 10%', lastCall('checkout.sessions.create').args.payment_intent_data.application_fee_amount, 50);
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'pro'; return true; });
 await buy('ana-reyes', 'f3', 'small');
 const proCall = lastCall('checkout.sessions.create');
-/* `payment_intent_data` is now ALWAYS sent, because the charge carries its own
-   `kind` and `artist` so the books can read the balance without joining back
-   through the sessions list. What must never be sent is a fee — an
-   `application_fee_amount` of 0 is not the same as no fee, and Stripe treats it
-   differently. So the assertion moved from the envelope to the thing inside it. */
-ok('on Pro no fee is sent at all, rather than a fee of zero',
-   proCall.args.payment_intent_data.application_fee_amount === undefined, proCall.args.payment_intent_data);
+eq('on Pro it is 2.5%, rounded down',
+   proCall.args.payment_intent_data.application_fee_amount, 12);
 ok('and the charge still labels itself for the books',
    proCall.args.payment_intent_data.metadata.kind === 'votes', proCall.args.payment_intent_data);
 
@@ -166,6 +161,29 @@ ok('the webhook is accepted', wh.received, wh);
 eq('and f9 got their votes without ever returning',
    ((await readFans(ana.artistId)).f9 || {}).extra, 15);
 
+console.log('\nA HELD REQUEST STAYS ON THE SAME CONNECTED ACCOUNT');
+await AS(TA, 'askSet', { kind: 'song', on: true, cost: 3 });
+const offer = await hit(payFn, 'https://myset.vip/api/pay?a=ana-reyes',
+  { fan: 'holdfan', kind: 'request_hold', title: 'A New Song', amount: 5, attempt: 'hold-one' });
+ok('the authorization checkout opens', offer.ok, offer);
+const offerSession = __stripe.sessions.get(offer.id).session;
+eq('it is held on her account',
+  [__stripe.sessions.get(offer.id).onAccount, offerSession.payment_status], [acct, 'unpaid']);
+const held = await hit(confirmFn,
+  `https://myset.vip/api/confirm?session_id=${offer.id}&fan=holdfan&a=ana-reyes`);
+ok('the held request returns through her account', held.ok, held);
+const askRow = (await AS(TA, 'askList')).asks.find((r) => r.title === 'A New Song');
+const added = await AS(TA, 'askAccept', { id: askRow.id });
+const heldSong = added.stage.songs.find((s) => s.title === 'A New Song');
+eq('acceptance creates five paid votes without capture',
+  [heldSong.votes, heldSong.paidVotes,
+   __stripe.paymentIntents.get(offerSession.payment_intent).intent.status],
+  [5, 5, 'requires_capture']);
+await AS(TA, 'play', { song: heldSong.id });
+await AS(TA, 'endSong');
+eq('finishing captures it on that same account',
+  lastCall('paymentIntents.capture').opts.stripeAccount, acct);
+
 console.log('\nLOSING A CAPABILITY CLOSES THE ROOM AGAIN');
 const a = __stripe.accounts.get(acct);
 a.charges_enabled = false;
@@ -184,12 +202,14 @@ const hisCall = lastCall('checkout.sessions.create');
 eq('on the platform account, as before', hisCall.opts.stripeAccount, undefined);
 ok('with no application fee — there is nobody to take one from',
    hisCall.args.payment_intent_data.application_fee_amount === undefined, hisCall.args.payment_intent_data);
+const ownStatus = await hit(admin, 'https://myset.vip/api/admin?code=devlocal', { action: 'payStatus' });
+eq('and the Studio reports the same exemption', ownStatus.pay.cutPct, 0);
 
 console.log('\nAND THE HONEST NOTE ABOUT WHO PAYS STRIPE');
 const s2 = await AS(TA, 'payStatus');
 ok('the status says Stripe\'s own fee comes off the artist',
    /2\.9%/.test(s2.pay.stripeFeeNote || ''), s2.pay.stripeFeeNote);
-eq('and reports the cut as a percentage the Studio can print', s2.pay.cutPct, 0);
+eq('and reports the cut as a percentage the Studio can print', s2.pay.cutPct, 2.5);
 
 delete process.env.STRIPE_SECRET_KEY;
 delete process.env.STRIPE_WEBHOOK_SECRET;

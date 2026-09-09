@@ -81,6 +81,7 @@ body{padding-bottom:34px}
 .mcard .buy.ext{background:transparent;color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .mcard .buy.ask{background:var(--bg-2);color:var(--muted);font-weight:600}
 .fineprint{font-size:12.5px;color:var(--faint);margin:10px 20px 0;line-height:1.4}
+.checkoutcopy{color:var(--accent-2)!important}
 
 /* the composer */
 .comp{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:14px 14px 12px}
@@ -870,12 +871,12 @@ function openTip(){
     <button class="go" onclick="closeSheet()">Got it</button>`); return; }
   TIP=10;
   openSheet(`<h3>Tip ${esc(firstName())}</h3>
-    <p class="lede">Goes straight to ${esc(firstName())}. Add a note and they’ll see it.</p>
+    <p class="lede checkoutcopy">goes straight to ${esc(firstName())}</p>
     <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
     <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
     <button class="go" id="goTip" onclick="sendTip()">Continue to payment</button>
-    <p class="fineprint" style="margin-top:10px">Secure checkout by Stripe · you’ll come right back</p>`);
+    <p class="fineprint checkoutcopy" style="margin-top:10px">Secure checkout by Stripe · you’ll come right back</p>`);
 }
 function pickTip(v){TIP=v;[5,10,20].forEach(k=>{const el=$('#t-'+k);if(el)el.classList.toggle('on',k===v);});
   const a=$('#tipAmt'); if(a)a.value='';}

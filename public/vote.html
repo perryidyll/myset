@@ -79,6 +79,7 @@
 .qrow .cnt{text-align:right;flex:0 0 auto}
 .qrow .cnt b{font-size:19px;font-weight:700;letter-spacing:-.02em}
 .qrow .cnt span{display:block;font-size:10.5px;color:var(--faint);font-weight:500;margin-top:-1px}
+.qrow.played .m,.qrow.played .cnt{opacity:.48}
 /* The top three used to be display-only, so a fan who voted a song INTO the top
    three had no button left to tap — while the vote sheet promised they could tap
    it again to take the votes back. The promise and the page have to agree. */
@@ -465,7 +466,7 @@ function openVote(id){
      the same song, and the server allows exactly that (want = mine + n). There is
      no other sheet any more: `openUnvote` and the take-it-back path went with the
      rule on 2026-09-07. */
-  VQ=1; buzz(8); drawVoteSheet(s);
+  VQ=1; if((s.cost||1)>1)sel.songVotes=5; buzz(8); drawVoteSheet(s);
 }
 function voteMax(s){
   const c=ST.credits||{}, cost=s.cost||1;
@@ -481,7 +482,8 @@ let VSONG=null;
 function drawVoteSheet(s){
   VSONG=s.id;
   const c=ST.credits||{}, cost=s.cost||1, max=voteMax(s), total=cost*VQ;
-  const out=!c.unlimited&&(c.remaining||0)<=0;
+  const replay=cost>1;
+  const out=!c.unlimited&&(c.remaining||0)<cost;
   /* Approved wording, emphasis included. The finality line is the whole game:
      a vote stays on the song it was cast for until that song
      is played or the night ends, and the fan cannot take it back. The artist's
@@ -500,10 +502,11 @@ function drawVoteSheet(s){
      whose whole job is to say what the button will do. */
   const warn='Are you sure? Votes can\u2019t be changed!';
   openSheet(`
-    <div class="kick">Vote for</div>
-    <h3 style="margin:2px 0 2px">${esc(s.title)}</h3>
+    <div class="kick">${replay?'Play it again':'Vote for'}</div>
+    <h3 style="margin:2px 0 2px">${replay?'how badly do you want to hear this again?':esc(s.title)}</h3>
+    ${replay?`<p class="lede" style="margin-bottom:5px">${esc(s.title)}</p>`:''}
     ${s.artist?`<p class="lede" style="margin-bottom:14px">${esc(s.artist)}</p>`:'<div style="height:8px"></div>'}
-    ${cost>1?`<p class="lede" style="margin-bottom:12px">Already played, so hearing it again costs <b>${cost} votes</b> each.</p>`:''}
+    ${replay?`<p class="lede" style="margin-bottom:12px">Replays start at <b>${cost} votes</b>.</p>`:''}
     ${out?`
       <p class="lede" style="margin-top:14px">You’re out of votes for tonight.</p>
       <div class="sticky-act">
@@ -512,7 +515,7 @@ function drawVoteSheet(s){
       </div>`:`
       <div class="vqrow">
         <button class="vqb" onclick="vq(-1)" ${VQ<=1?'disabled':''} aria-label="one fewer">\u2212</button>
-        <div class="vqn"><b class="mono">${VQ}</b><small>vote${VQ===1?'':'s'}</small></div>
+        <div class="vqn"><b class="mono">${replay?total:VQ}</b><small>vote${(replay?total:VQ)===1?'':'s'}</small></div>
         <button class="vqb" onclick="vq(1)" ${VQ>=max?'disabled':''} aria-label="one more">+</button>
       </div>
       ${max>1?`<div class="vqmax">You can put up to ${max} on one song</div>`:'<div style="height:10px"></div>'}
@@ -521,7 +524,17 @@ function drawVoteSheet(s){
         <button class="go" onclick="confirmVote()">Confirm${total>1?` \u2014 ${total} vote${total===1?'':'s'}`:''}</button>
         <p class="vwarn">${warn}</p>
         <button class="go2" onclick="closeSheet()">Not yet</button>
-      </div>`}`);
+      </div>`}
+    ${replay&&ST.paymentsEnabled?`
+      <div style="margin-top:18px;padding-top:18px;border-top:.5px solid var(--hair)">
+        <div class="kick">Or pay for this replay</div>
+        <div class="tiles" style="margin-top:10px">
+          ${[5,10].map(v=>`<button class="tile ${v===5?'on':''}" id="sv-${v}" onclick="pickSongVotes(${v})"><b>$${v}</b><span>${v} paid votes</span></button>`).join('')}
+        </div>
+        <input class="inp" id="songVoteAmt" type="number" inputmode="numeric" min="1" max="500" step="1" placeholder="Custom amount ($)">
+        <button class="go" id="goSongVotes" onclick="checkout('song_votes')">Continue to payment</button>
+        <p class="fine secure-votes">$1 = 1 vote · Secure checkout by Stripe</p>
+      </div>`:''}`);
 }
 /* `openUnvote` lived here — the sheet a fan got when they tapped a song they were
    already holding votes on, offering to give them back. Deleted 2026-09-07. Tapping
@@ -646,12 +659,15 @@ function render(){
      that reads as "my vote didn't count", which is a trust failure, not a
      cosmetic one. Their OWN votes are always on the board regardless of rank. */
   const shortBoard = Number(d.board)>0;
-  const voted=d.songs.filter(s=>s.votes>0);
+  const replayIds=new Set((d.played||[]).map(s=>s.id));
+  const all=[...(d.songs||[]),...(d.played||[])];
+  const rank=list=>[...list].sort((a,b)=>(b.votes||0)-(a.votes||0)||
+    (a.firstAt||Number.MAX_SAFE_INTEGER)-(b.firstAt||Number.MAX_SAFE_INTEGER)||collate(a.title,b.title));
+  const voted=rank(all.filter(s=>s.votes>0));
   const queue=voted.slice(0,3);
   const queueIds=new Set(queue.map(s=>s.id));
   const inGenre=s=>!GENRE||(s.tags||[]).includes(GENRE);
-  const rest=applySort(d.songs.filter(s=>!queueIds.has(s.id)).filter(match).filter(inGenre));
-  const replays=applySort((d.played||[]).filter(match).filter(inGenre));
+  const rest=applySort((SORT==='votes'?rank(all):all).filter(s=>!queueIds.has(s.id)).filter(match).filter(inGenre));
   const by=a=>a?`<div class="by">${esc(a)}</div>`:'';
   const freeTotal=Number.isFinite(c.freeTotal)?c.freeTotal:Math.max(0,(c.total||0)-(c.extra||0));
   const freeRemaining=Number.isFinite(c.freeRemaining)?c.freeRemaining:Math.max(0,(c.remaining||0)-(c.paidLeft||0));
@@ -688,11 +704,11 @@ function render(){
   /* TIER 2 — always visible, even with nothing voted yet */
   h += `<div class="queue">
     <div class="qh"><b>Up next</b><span>${queue.length?'Top '+queue.length+' by votes':'Nothing yet'}</span></div>
-    ${queue.length?queue.map((s,i)=>`
-      <div class="qrow ${i===0?'lead':''}" data-id="${s.id}">
+    ${queue.length?queue.map((s,i)=>{const replay=replayIds.has(s.id);return `
+      <div class="qrow ${i===0?'lead':''} ${replay?'played':''}" data-id="${s.id}">
         <span class="pos">${i+1}</span>
         <div class="m"><div class="t">${esc(s.title)}</div>${by(s.artist)}
-          ${i===0?'<div class="s">Winning — plays next</div>':''}
+          ${i===0?'<div class="s">Winning — plays next</div>':''}${replay?'<div class="playednote">already played (pay to request again)</div>':''}
           ${s.mine?`<div class="s mineline">Your ${(s.mineCount||1)===1?'vote':(s.mineCount)+' votes'}${!open?'':' — tap to add more'}</div>`:''}</div>
         <div class="cnt"><b class="mono">${s.votes}</b><span>vote${s.votes===1?'':'s'}</span></div>
         ${open?(()=>{
@@ -704,7 +720,7 @@ function render(){
              !((qc.remaining||0)<=0&&d.paymentsEnabled);
            return `<button class="qvb ${s.mine?'on':''}" ${qdis?'disabled':''} onclick="openVote('${s.id}')"
              aria-label="${s.mine?'Add to your votes on':'Vote for'} ${esc(s.title)}">+</button>`;})():''}
-      </div>`).join('')
+      </div>`}).join('')
      :`<div class="qempty">${(d.songs||[]).length||(d.played||[]).length
          ? `<b>No votes yet</b>Pick a song below and you’ll set the queue.`
          : `<b>Nothing on the list yet</b>${esc(artistFirst())} is still putting tonight’s songs in.`}</div>`}
@@ -731,7 +747,7 @@ function render(){
   if(shortBoard) h += `<div class="bigroom">Big room tonight — showing the top ${d.board}.
     Songs you voted for stay on your list wherever they are.</div>`;
   h += rest.length
-    ? `<div class="list votelist">${rest.map(s=>row(s,c,open,false)).join('')}</div>`
+    ? `<div class="list votelist">${rest.map(s=>row(s,c,open,replayIds.has(s.id))).join('')}</div>`
     /* "Everything's in the queue above" was said even when there was no queue and no
        library — a brand-new artist's room told the fan to pick a song below and that
        everything was already above it, on the same screen. */
@@ -739,9 +755,6 @@ function render(){
         :GENRE?`Nothing in that genre right now`
         :(queue.length?'Everything’s in the queue above'
           :`${esc(artistFirst())} hasn’t put tonight’s songs in yet`)}</div>`;
-
-  if(replays.length) h += `<div class="sect"><b>Already played</b><span>${d.replayCost} votes to hear again</span></div>
-    <div class="list">${replays.map(s=>row(s,c,open,true)).join('')}</div>`;
 
   h += `<a class="backlink" href="${HOME}">← ${esc(d.artist||'Artist')}’s page</a>
     <a class="backlink" href="/signup" style="font-size:13px;color:var(--faint)">Play live yourself? Get your own page →</a>
@@ -826,12 +839,23 @@ function askCard(d,open){
 }
 function openAskSong(){
   const a=(ST.asks||{}).song; if(!a)return;
+  sel.askOffer=5;
   openSheet(`<h3>Request a song</h3>
     <p class="lede">Something ${esc(ST.artist||'they')} hasn’t got listed. Costs ${a.cost} vote${a.cost===1?'':'s'} —
       refunded if it’s a no.</p>
     <input class="inp" id="askTitle" maxlength="80" placeholder="Song title" autocomplete="off">
     <input class="inp" id="askArtist" maxlength="60" placeholder="Who's it by? (optional)" autocomplete="off">
-    <button class="go" id="askGo" onclick="sendAsk('song')">Send the request</button>
+    <button class="go2" id="askGo" onclick="sendAsk('song')">Send with ${a.cost} votes only</button>
+    ${ST.paymentsEnabled?`
+      <div style="margin-top:18px;padding-top:18px;border-top:.5px solid var(--hair)">
+        <div class="kick">Add a payment offer</div>
+        <div class="tiles" style="margin-top:10px">
+          ${[5,10].map(v=>`<button class="tile ${v===5?'on':''}" id="ao-${v}" onclick="pickAskOffer(${v})"><b>$${v}</b><span>${v} paid votes</span></button>`).join('')}
+        </div>
+        <input class="inp" id="askOfferAmt" type="number" inputmode="numeric" min="1" max="500" step="1" placeholder="Custom amount ($)">
+        <button class="go" id="askPayGo" onclick="sendAsk('song',true)">Authorize payment & send request</button>
+        <p class="fine secure-votes">$1 = 1 paid vote. Stripe places a temporary card hold. Make ${esc(artistFirst('the artist'))} more inclined to accept — you’re only charged if they play and finish it. If they decline, the hold is released and your ${a.cost} vote${a.cost===1?'':'s'} come back.</p>
+      </div>`:''}
     <p class="fine">Requests go straight to the stage. Be kind — they might not know it.</p>`);
   setTimeout(()=>{const el=$('#askTitle'); if(el)el.focus();},260);
 }
@@ -845,24 +869,42 @@ function openAskBday(){
   setTimeout(()=>{const el=$('#askName'); if(el)el.focus();},260);
 }
 let ASKING=false;
-async function sendAsk(kind){
+function pickAskOffer(v){sel.askOffer=v;buzz(8);[5,10].forEach(k=>$('#ao-'+k).classList.toggle('on',k===v));const a=$('#askOfferAmt');if(a)a.value='';}
+async function sendAsk(kind,withOffer=false){
   if(ASKING)return;                                  // a second tap is not a second request
   const v=id=>(($('#'+id)||{}).value||'').trim();
   const body={fan:FAN,kind,title:v('askTitle'),artist:v('askArtist'),name:v('askName')};
   if(kind==='song'&&!body.title){toast('What song?');return;}
   if(kind==='birthday'&&!body.name){toast('Whose birthday is it?');return;}
+  let offer=null;
+  if(withOffer){
+    const raw=v('askOfferAmt'), custom=raw?Number(raw):NaN;
+    if(raw&&(!Number.isInteger(custom)||custom<1||custom>500)){toast('Choose a whole-dollar amount from $1 to $500');return;}
+    offer=raw?custom:(sel.askOffer||5);
+  }
   ASKING=true;
-  const btn=$('#askGo');
+  const btn=withOffer?$('#askPayGo'):$('#askGo');
   if(btn){btn.disabled=true;btn.innerHTML='<span class="spin"></span> Sending…';}
   try{
-    const r=await fetch(`${API}/request${AQ1}`,{method:'POST',
+    let path='/request';
+    if(withOffer){
+      body.kind='request_hold';
+      body.amount=offer;
+      body.attempt='r'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-5);
+      path='/pay';
+    }
+    const r=await fetch(`${API}${path}${AQ1}`,{method:'POST',
       headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){
       if(d.error==='no-credits'){closeSheet();toast('Not enough votes — grab more below');openBuy();}
       else toast(d.error||'Couldn’t send that');
-      if(btn){btn.disabled=false;btn.textContent=kind==='song'?'Send the request':'Send it up';}
+      if(btn){btn.disabled=false;btn.textContent=withOffer?'Authorize payment & send request':kind==='song'?`Send with ${((ST.asks||{}).song||{}).cost||3} votes only`:'Send it up';}
       return;
+    }
+    if(withOffer&&d.url){
+      if(d.id)pendingSet({id:d.id,at:Date.now()});
+      window.location.href=d.url;return;
     }
     closeSheet(); buzz([10,40,10]);
     toast(kind==='birthday'?'Sent up — 🎂':'Request sent');
@@ -1027,20 +1069,27 @@ function pickPack(p){sel.pack=p;buzz(8);
 function openTip(){
   if(!ST.paymentsEnabled){openSheet(`<h3>Tip ${esc(artistFirst())}</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.tip=10;
-  openSheet(`<h3>Tip ${esc(artistFirst())}</h3><p class="lede">Goes straight to ${esc(artistFirst('them'))}. Add a note and they’ll see it on stage.</p>
+  openSheet(`<h3>Tip ${esc(artistFirst())}</h3><p class="lede buyline">goes straight to ${esc(artistFirst('them'))}</p>
     <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
     <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
     <button class="go" id="goTip" onclick="checkout('tip')">Continue to payment</button>
-    <p class="fine">Secure checkout by Stripe · you’ll come right back</p>`);
+    <p class="fine secure-votes">Secure checkout by Stripe · you’ll come right back</p>`);
 }
 function pickTip(v){sel.tip=v;buzz(8);[5,10,20].forEach(k=>$('#t-'+k).classList.toggle('on',k===v));const a=$('#tipAmt');if(a)a.value='';}
+function pickSongVotes(v){sel.songVotes=v;buzz(8);[5,10].forEach(k=>$('#sv-'+k).classList.toggle('on',k===v));const a=$('#songVoteAmt');if(a)a.value='';}
 async function checkout(kind){
-  const btn=kind==='votes'?$('#goBuy'):$('#goTip');
+  const btn=kind==='votes'?$('#goBuy'):kind==='song_votes'?$('#goSongVotes'):$('#goTip');
   // one id per TAP, so a retried request reuses the session and a deliberate
   // second purchase makes a new one — see the note in pay.mjs
   const body={fan:FAN,kind,attempt:'t'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-5)};
   if(kind==='votes')body.pack=sel.pack||'small';
+  else if(kind==='song_votes'){
+    const raw=(($('#songVoteAmt')||{}).value||''), c=raw?Number(raw):NaN;
+    if(raw&&(!Number.isInteger(c)||c<1||c>500)){toast('Choose a whole-dollar amount from $1 to $500');return;}
+    body.amount=raw?c:(sel.songVotes||5);
+    body.song=VSONG;
+  }
   else{const c=parseFloat(($('#tipAmt')||{}).value);
     body.amount=Number.isFinite(c)&&c>0?c:(sel.tip||10);
     body.note=(($('#tipNote')||{}).value||'').slice(0,120);}
@@ -1082,9 +1131,12 @@ async function redeem(sid,loud){
     const d=await r.json();
     if(d.ok){
       pendingSet(null);
-      if(!d.already){ confetti(); buzz([12,50,12]);
+      if(!d.already){
+        if(d.kind!=='request_hold')confetti(); buzz([12,50,12]);
         toast(d.kind==='tip'?`Thank you! Your $${d.amount} tip reached ${artistFirst()}`
-                            :`${d.granted||0} extra votes added — vote away!`); }
+          :d.kind==='request_hold'?`Request sent — $${d.amount} is held, not charged`
+          :d.kind==='song_votes'?`${d.granted||0} paid votes added to that song`
+          :`${d.granted||0} extra votes added — vote away!`); }
       else if(loud) toast('Already added — you\u2019re all set');
       load(); return true;
     }

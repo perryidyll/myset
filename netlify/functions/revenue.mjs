@@ -48,7 +48,7 @@ export default async (req) => {
   // them would pollute the ledger with payments MySet never sold.
   const isOurs = (s) => {
     const md = s.metadata || {};
-    if (md.kind !== 'votes' && md.kind !== 'tip' && md.kind !== 'merch') return false;
+    if (!['votes', 'song_votes', 'request_hold', 'tip', 'merch'].includes(md.kind)) return false;
     /* An UNTAGGED session is the founding artist's, not "whoever is asking".
        Sessions created before 2026-08-31 carry no `artist`, and treating them as
        belonging to the caller showed a second artist Perry's payments AND his
@@ -95,7 +95,7 @@ export default async (req) => {
     totals: {
       all: sum(() => true),
       tips: sum((p) => p.kind === 'tip'),
-      votes: sum((p) => p.kind === 'votes'),
+      votes: sum((p) => ['votes', 'song_votes', 'request_hold'].includes(p.kind)),
       merch: sum((p) => p.kind === 'merch'),
       count: payments.length,
     },

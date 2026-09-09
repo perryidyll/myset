@@ -72,6 +72,9 @@ echo
 echo "── stripe connect, direct charges ──"
 node --import ./test/register.mjs test/connect.mjs
 echo
+echo "── paid replay votes and held request payments ──"
+node --import ./test/register.mjs test/request-payments.mjs
+echo
 echo "── the feedback prompt ──"
 node --import ./test/register.mjs test/feedback.mjs
 echo

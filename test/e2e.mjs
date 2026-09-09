@@ -264,6 +264,11 @@ const dt3 = await A('play', { song: dIds[0] });
 ok('re-sending the SAME song is simply already done', dt3.ok, dt3);
 eq('still that song, played[] untouched', (await A('window', { open: true })).stage.show.nowPlaying, dIds[0]);
 process.env.MYSET_DOUBLE_TAP_MS = '0';           // back to machine speed
+const endedSong = await A('endSong');
+eq('end current song clears now playing', endedSong.stage.show.nowPlaying, null);
+ok('and keeps it in the played list', endedSong.stage.show.played.includes(dIds[0]), endedSong.stage.show.played);
+eq('ending when nothing is playing is refused', (await A('endSong')).status, 409);
+eq('start top voted refuses a zero-vote fallback', (await A('playTop')).status, 409);
 
 /* ── the presence optimisation must not break the head-count ────── */
 console.log('\nhead-count survives skipping the redundant presence read');

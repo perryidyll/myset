@@ -35,23 +35,37 @@ export default async (req) => {
     const vid = await venueBySlug(cleanSlug(vq));
     hinted = vid ? `v_${vid}` : hinted;
   }
-  let session = null;
+  let session = null, sessionStripe = null, sessionOpts = {};
   for (const who of [hinted, DEFAULT_ARTIST].filter((v, i, a) => v && a.indexOf(v) === i)) {
     const { stripe, opts } = await stripeFor(who);
     if (!stripe) break;
-    try { session = await stripe.checkout.sessions.retrieve(sessionId, opts); break; }
+    try {
+      session = await stripe.checkout.sessions.retrieve(sessionId, opts);
+      sessionStripe = stripe; sessionOpts = opts; break;
+    }
     catch { /* try the next scope */ }
   }
   /* Last resort: the platform account plainly, which is where the founder's own
      charges live and where anything created before Connect still is. */
   if (!session) {
-    try { session = await new Stripe(key).checkout.sessions.retrieve(sessionId); }
+    try {
+      sessionStripe = new Stripe(key); sessionOpts = {};
+      session = await sessionStripe.checkout.sessions.retrieve(sessionId);
+    }
     catch { return bad('could not verify payment', 502); }
   }
-  if (session.payment_status !== 'paid') return bad('not paid', 402);
 
   // whose money this is was decided when the session was created, not now
   const aid = cleanArtistId((session.metadata || {}).artist) || DEFAULT_ARTIST;
+  if ((session.metadata || {}).kind === 'request_hold') {
+    const { authorizeRequestSession } = await import('./_requests.mjs');
+    const held = await authorizeRequestSession(
+      aid, session, fallbackFan, sessionStripe, sessionOpts);
+    if (!held.ok) return bad(held.error || 'could not authorize request', held.status || 409);
+    return json(held);
+  }
+  if (session.payment_status !== 'paid') return bad('not paid', 402);
+
   const r = await redeemSession(aid, session, fallbackFan);
   if (!r.ok) return bad(r.error || 'could not grant', 409);
   return json(r);

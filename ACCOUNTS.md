@@ -83,7 +83,7 @@ fee = max(0, floor(amount × cut) − round((amount × 0.029 + 30) / 2))
 | $50 merch, venue on Free | 10% | 500¢ | 175¢ | **412¢** |
 | $50 merch, venue on Pro | 2% | 100¢ | 175¢ | **12¢** |
 | $12 cap, venue on Pro | 2% | 24¢ | 65¢ | **0¢** (floored) |
-| $50 vote pack, artist on Plus | 2% | 100¢ | — | **100¢** (artists are not split) |
+| $50 vote pack, artist on Plus | 10% | 500¢ | — | **500¢** (artists are not split) |
 
 Two honest limits, both written into the Studio copy:
 - It is an **estimate at checkout**. Stripe's real fee depends on card type and country. An *exact* split would need a post-charge `transfers.create` from the platform back to the venue after `charge.succeeded` reports the real `balance_transaction.fee`. That is the next step if the estimate ever matters at scale; today the amounts are cents.

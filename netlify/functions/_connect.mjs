@@ -30,8 +30,8 @@ export const isVenueOwner = (o) => String(o || '').startsWith('v_');
 
    THE TRADE, STATED PLAINLY SO NOBODY IS SURPRISED: with direct charges, Stripe's
    own processing fee (~2.9% + 30c) is charged to the ARTIST, not to MySet. On a $5
-   vote pack a Plus artist pays roughly 45c to Stripe and 10c to MySet. "2% to
-   MySet" is therefore not the same as "you keep 98%", and the Studio copy has to
+   vote pack a Plus artist pays roughly 45c to Stripe and 50c to MySet. "10% to
+   MySet" is therefore not the same as "you keep 90%", and the Studio copy has to
    say so rather than let an artist discover it from a payout.
 
    ONE MORE THING THAT BITES: a session created on a connected account can only be
@@ -58,8 +58,8 @@ export const connectUsable = (c) => !!(c && c.acct && c.chargesEnabled);
 
 /* ---------- the platform's share ----------
    Basis points, from the plan table, so there is ONE definition of the cut and the
-   pricing page cannot drift from what is charged. Perry set these:
-     free  10%   ·   plus ($10/mo)  2%   ·   pro ($20/mo)  0% */
+   pricing page cannot drift from what is charged:
+     free  25%   ·   plus ($10/mo)  10%   ·   pro ($20/mo)  2.5% */
 const planRow = (plan, kind) =>
   (kind === 'venue' ? (VENUE_PLANS[plan] || VENUE_PLANS.free) : (PLANS[plan] || PLANS.free));
 export const cutOf = (plan, kind = 'artist') => {
@@ -298,7 +298,9 @@ export async function connectStatus(aid) {
     const { venueById, venuePlanOf } = await import('./_venues.mjs');
     plan = venuePlanOf(await venueById(aid.slice(2)));
   } else plan = (await planForArtist(aid)).plan;
-  const cut = cutOf(plan, kind);
+  /* The platform-owner account is deliberately exempt even if it later connects
+     a payout account. Keep the customer-facing number identical to the charge. */
+  const cut = isPlatformOwner(aid) ? 0 : cutOf(plan, kind);
   const split = !!planRow(plan, kind).splitFee;
   return {
     kind, splitFee: split,
@@ -311,8 +313,8 @@ export async function connectStatus(aid) {
     country: c.country || '',
     plan,
     cutPct: Math.round(cut * 1000) / 10,
-    /* Not decoration. An artist who reads "2%" and then sees a $5 pack land as
-       ~$4.45 will think they have been lied to. Direct charges put Stripe's fee on
+    /* Not decoration. An artist who reads "10%" and then sees a $5 pack land as
+       ~$4.05 will think they have been lied to. Direct charges put Stripe's fee on
        them, and they should hear it from us first. */
     stripeFeeNote: split
       ? 'Stripe’s own card fee (about 2.9% + 30¢) is shared: MySet’s fee is reduced by half of it, estimated at checkout. The payment is yours, so Stripe takes its fee from your side.'

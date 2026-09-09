@@ -286,7 +286,8 @@ export const DEFAULT_PACKS = () => ({
   big:   { votes: 15, cents: 2000 },
 });
 /** The two ask-for-something switches. Cost is in VOTES, not money. */
-export function normAsk(a, dflt = 3) {
+export const DEFAULT_ASK_COST = 3;
+export function normAsk(a, dflt = DEFAULT_ASK_COST) {
   const v = a || {};
   return {
     on: !!v.on,
@@ -802,6 +803,40 @@ export function paidVoteCounts(fans) {
     }
   }
   return counts;
+}
+
+/** Cash bought FOR one song is already a vote, not a wallet credit. Keep it in the
+ *  ordinary ballot so ranking, history and the artist's paid-vote pill all use the
+ *  same source of truth. `grantId` makes return-page/webhook/reconcile races safe. */
+export async function grantPaidSongVotes(aid, fanId, songId, count, grantId) {
+  const n = Math.max(1, Math.min(500, parseInt(count, 10) || 1));
+  const marker = String(grantId || '').slice(0, 120);
+  let target = null, already = false;
+  await mutateFan(aid, fanId, (me) => {
+    me.gr ||= [];
+    if (marker && me.gr.includes(marker)) { already = true; return false; }
+    const held = (me.v || []).filter((x) => x === songId).length;
+    me.va ||= {};
+    const rows = (me.va[songId] ||= []);
+    /* [0, 1]: this vote consumed no wallet credits, but it is a paid vote. The
+       refund path clamps its refundable credit value to the first field, so a
+       later setlist correction can remove it without minting a free credit. */
+    for (let i = 0; i < n; i++) {
+      me.v.push(songId);
+      rows.push([0, 1]);
+    }
+    me.ts ||= {};
+    me.ts[songId] ||= Date.now();
+    if (marker) {
+      me.gr.push(marker);
+      if (me.gr.length > 40) me.gr = me.gr.slice(-40);
+    }
+    target = held + n;
+    return true;
+  }, (me) => already || (target !== null
+    && (me.v || []).filter((x) => x === songId).length >= target
+    && (!marker || (me.gr || []).includes(marker))));
+  return { granted: n, already };
 }
 
 /** Artist-only exception to vote finality: decline one song and restore all of its

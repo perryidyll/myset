@@ -1,4 +1,4 @@
-import { mutateFan, mutateMeta, readMeta, cleanFanId, readDoc } from './_lib.mjs';
+import { mutateFan, mutateMeta, readMeta, cleanFanId, readDoc, grantPaidSongVotes } from './_lib.mjs';
 import { isPlatformOwner } from './_plan.mjs';
 
 /* ---------- CAN THIS ARTIST TAKE MONEY AT ALL? ----------
@@ -88,6 +88,7 @@ export async function redeemSession(aid, session, fallbackFan = '') {
     await mutateMeta(aid, (m) => {
       if (m.paid[sid] && m.paid[sid].delivered !== false) { already = true; return false; }
       if (md.kind === 'votes') granted = parseInt(md.votes, 10) || 0;
+      if (md.kind === 'song_votes') granted = parseInt(md.votes, 10) || 0;
       if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at });
       /* MERCH. What the buyer bought is an ORDER the artist fulfils by hand, so the
          order record IS the delivery — written inside this same claim, so a session
@@ -100,9 +101,9 @@ export async function redeemSession(aid, session, fallbackFan = '') {
                         qty: Math.max(1, Math.min(9, parseInt(md.qty, 10) || 1)), amount, fan: who, at,
                         ship: md.ship === 'ship' ? 'ship' : 'pickup', status: 'new' });
       }
-      const needsGrant = md.kind === 'votes' && !!who && granted > 0;
+      const needsGrant = (md.kind === 'votes' || md.kind === 'song_votes') && !!who && granted > 0;
       m.paid[sid] = { kind: md.kind || 'unknown', amount, granted, fan: who, at,
-                      delivered: !needsGrant };
+                      song: md.song || '', delivered: !needsGrant };
       return true;
     });
     if (already) {
@@ -110,7 +111,8 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       return { ok: true, already: true, ...(m.paid[sid] || {}) };
     }
   } else {
-    granted = Number(pre.paid[sid].granted) || (md.kind === 'votes' ? parseInt(md.votes, 10) || 0 : 0);
+    granted = Number(pre.paid[sid].granted)
+      || (md.kind === 'votes' || md.kind === 'song_votes' ? parseInt(md.votes, 10) || 0 : 0);
   }
 
   if (md.kind === 'votes' && who && granted) {
@@ -143,6 +145,18 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       return true;
     }).catch(() => {});
   }
-  return { ok: true, kind: md.kind || 'unknown', amount, granted, fan: who, at,
+  if (md.kind === 'song_votes' && who && granted && md.song) {
+    /* These dollars were offered for one specific replay. They become ballot
+       entries directly, with paid attribution, rather than wallet credits the fan
+       would still have to remember to cast after returning from Stripe. */
+    await grantPaidSongVotes(aid, who, String(md.song).slice(0, 60), granted, sid);
+    await mutateMeta(aid, (m) => {
+      if (!m.paid[sid] || m.paid[sid].delivered === true) return false;
+      m.paid[sid].delivered = true;
+      m.paid[sid].deliveredAt = Date.now();
+      return true;
+    }).catch(() => {});
+  }
+  return { ok: true, kind: md.kind || 'unknown', amount, granted, song: md.song || '', fan: who, at,
            redelivered: retrying || undefined };
 }

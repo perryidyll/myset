@@ -321,7 +321,7 @@ async function artistRows(aid, artist, state, dry) {
     plan, limits.label,
     artist.compedBy ? 'comped: ' + artist.compedBy : '',
     artist.planUntil ? day(artist.planUntil) : '',
-    Math.round((limits.cut || 0) * 100),
+    Math.round((limits.cut || 0) * 1000) / 10,
     artist.verified ? 'yes' : '',
     day(artist.createdAt),
     artist.createdAt ? Math.floor((Date.now() - artist.createdAt) / 86400000) : '',

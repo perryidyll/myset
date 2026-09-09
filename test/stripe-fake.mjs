@@ -12,6 +12,7 @@
 const state = {
   accounts: new Map(),          // acct_x -> account object
   sessions: new Map(),          // cs_x   -> { session, onAccount }
+  paymentIntents: new Map(),    // pi_x   -> { intent, onAccount }
   customers: new Map(),
   products: new Map(),
   prices: new Map(),            // price_x -> price
@@ -27,7 +28,7 @@ const state = {
 };
 export const __stripe = state;
 export const __resetStripe = () => {
-  for (const m of [state.accounts, state.sessions, state.customers, state.products, state.prices, state.coupons, state.subs, state.bts, state.fees, state.feeRefunds, state.refunds]) m.clear();
+  for (const m of [state.accounts, state.sessions, state.paymentIntents, state.customers, state.products, state.prices, state.coupons, state.subs, state.bts, state.fees, state.feeRefunds, state.refunds]) m.clear();
   state.links.length = 0; state.calls.length = 0;
   state.nextAcct = 1; state.nextSession = 1; state.nextCus = 1; state.nextPrice = 1; state.nextSub = 1; state.nextProd = 1;
 };
@@ -175,6 +176,37 @@ export default class Stripe {
       if (k) state.refunds.set(k, r);
       return r; } };
   }
+  get paymentIntents() {
+    const find = (id, opts) => {
+      const rec = state.paymentIntents.get(id);
+      if (!rec || rec.onAccount !== ((opts && opts.stripeAccount) || ''))
+        throw new Error('No such payment_intent');
+      return rec;
+    };
+    return {
+      retrieve: async (id, opts) => {
+        note('paymentIntents.retrieve', { id }, opts);
+        return { ...find(id, opts).intent };
+      },
+      capture: async (id, params, opts) => {
+        note('paymentIntents.capture', { id, ...(params || {}) }, opts);
+        const rec = find(id, opts);
+        if (rec.intent.status === 'canceled') throw new Error('PaymentIntent is canceled');
+        rec.intent.status = 'succeeded';
+        for (const row of state.sessions.values()) {
+          if (row.session.payment_intent === id) row.session.payment_status = 'paid';
+        }
+        return { ...rec.intent };
+      },
+      cancel: async (id, params, opts) => {
+        note('paymentIntents.cancel', { id, ...(params || {}) }, opts);
+        const rec = find(id, opts);
+        if (rec.intent.status === 'succeeded') throw new Error('PaymentIntent already succeeded');
+        rec.intent.status = 'canceled';
+        return { ...rec.intent };
+      },
+    };
+  }
   get invoices() {
     return { list: async (params, opts) => { note('invoices.list', params, opts);
       /* One paid invoice per subscription on this customer, which is what a month
@@ -224,9 +256,13 @@ export default class Stripe {
              no id to refund against. The params are kept alongside so tests can
              still assert on application_fee_amount and metadata. */
           const pi = `pi_${id.replace(/^cs_/, '')}`;
+          const manual = (params.payment_intent_data || {}).capture_method === 'manual';
+          state.paymentIntents.set(pi, { onAccount: (opts && opts.stripeAccount) || '',
+            intent: { id: pi, amount, status: manual ? 'requires_capture' : 'succeeded',
+              capture_method: manual ? 'manual' : 'automatic_async' } });
           session = {
             id, url: `https://checkout.stripe.test/${id}`, mode: 'payment',
-            payment_status: 'paid', amount_total: amount,
+            payment_status: manual ? 'unpaid' : 'paid', amount_total: amount,
             created: NOW(), metadata: params.metadata || {},
             payment_intent: pi,
             payment_intent_data: params.payment_intent_data || null,

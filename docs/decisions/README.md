@@ -26,12 +26,14 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0014](0014-three-free-votes-and-two-new-default-packs.md) | Every room on the former voting defaults moves to three free votes and the two new packs | 2026-09-08 | voting | decided | user |
 | [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) | The artist profile has one live voting call to action, and show controls are not duplicated in Settings | 2026-09-09 | ui | decided | user |
 | [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) | An artist-declined unplayed song returns its votes | 2026-09-09 | voting | decided | user |
+| [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) | Artist transaction fees are 25%, 10%, and 2.5%, with the platform-owner account exempt | 2026-09-09 | money | decided | user |
+| [0018](0018-song-request-offers-are-authorized-now-and-capture.md) | song request offers are authorized now and captured only after the song finishes | 2026-09-09 | money | decided | user |
 
 ## By area
 
 **media** — [0011](0011-clips-go-up-as-they-are.md)
 
-**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md)
+**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md)
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md)
 

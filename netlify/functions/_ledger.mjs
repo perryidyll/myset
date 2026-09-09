@@ -273,7 +273,7 @@ async function pullSessions(stripe, gte, lte) {
   return out;
 }
 
-const APP_KINDS = new Set(['votes', 'tip', 'merch']);
+const APP_KINDS = new Set(['votes', 'song_votes', 'request_hold', 'tip', 'merch']);
 const piOf = (v) => (typeof v === 'string' ? v : (v && v.id) || '');
 
 export async function platformSplit(aid, stripe, { months = 12, now = Date.now(), force = false, since = 0 } = {}) {

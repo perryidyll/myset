@@ -208,27 +208,29 @@ If you are about to violate one, stop and say so rather than working around it.
 
 ## Plans and money
 
-0w. **Anything the ROOM experiences stays free.** Lyrics were briefly gated to
-    Plus and put back deliberately: an audience that gets a sing-along at one
-    artist's gig and not the next learns that MySet is unreliable, which costs
-    more than a subscription is worth. Gate the artist's *back office* — never the
-    audience's night.
+0w. **The core ROOM experience never requires payment.** Lyrics were briefly gated
+    to Plus and put back deliberately: an audience that gets a sing-along at one
+    artist's gig and not the next learns that MySet is unreliable, which costs more
+    than a subscription is worth. Optional vote purchases, tips and request offers
+    may enhance a fan's participation, but voting and every enabled request remain
+    usable with the night's free credits. Gate the artist's *back office* — never
+    the audience's night.
 
 
 0r0. **DIRECT CHARGES, and the fee is the plan's fee.** 0r below is now
    implemented (`_connect.mjs`). The charge is created ON the artist's connected
    account, so the money is legally theirs and MySet takes an
-   `application_fee_amount` off the top: **10% free, 2% Plus, 0% Pro** — Perry's
-   ladder, defined once in `PLANS[*].cut` so the pricing page cannot drift from what
-   is charged. Zero is OMITTED rather than sent as a fee of nothing.
+   `application_fee_amount` off the top: **25% free, 10% Plus, 2.5% Pro**,
+   defined once in `PLANS[*].cut` so the pricing page cannot drift from what is
+   charged. The platform-owner account is explicitly exempt.
 
    Direct rather than destination charges on purpose: destination charges would make
    MySet the merchant of record for every gig, holding the funds and answering the
    chargeback for a night it did not play.
 
    **Say who pays Stripe.** A direct charge puts Stripe's own ~2.9% + 30c on the
-   ARTIST. On a $5 pack a Plus artist pays roughly 45c to Stripe and 10c to MySet, so
-   "2% to MySet" is not "you keep 98%". The Studio card says this before they
+   ARTIST. On a $5 pack a Plus artist pays roughly 45c to Stripe and 50c to MySet, so
+   "10% to MySet" is not "you keep 90%". The Studio card says this before they
    onboard; an artist must never learn it from a payout.
 
    **A session created on a connected account can only be RETRIEVED with that account
@@ -238,12 +240,10 @@ If you are about to violate one, stop and say so rather than working around it.
    Connect webhook, `event.account` is the only clue, and `acctindex` maps it back to
    an artist.
 
-0r. **The 10% free-tier cut needs Stripe Connect and does not exist yet.** Today
-    every artist's audience pays into the ONE `STRIPE_SECRET_KEY` — Perry's. That
-    is fine while he is the only artist and wrong the moment anyone else signs up.
-    `PLANS[].cut` is defined and surfaced, but no fee is taken until each artist
-    has their own connected account and charges carry `application_fee_amount`.
-    **Do not onboard a second paying artist before Connect.**
+0r. **Historical: the free-tier cut required Stripe Connect.** This is now closed
+    by 0r0. Registered artists take direct charges in their own connected accounts;
+    the platform-owner account remains on the platform balance and pays no platform
+    fee to itself.
 
 0s0. **The plan limits FEATURED songs, not the library.** Anyone may keep up to
     2000; a plan caps how many are live to the audience at once. Over the cap, a
@@ -485,6 +485,8 @@ If you are about to violate one, stop and say so rather than working around it.
     audience. **It applies to the Studio too.** Any change here trades against
     INVARIANT 0k/0l — the Studio has to feel instant on stage — so the fix is a
     backoff that only engages when nothing has changed, never a slower fixed tick.
+    When no show is live, it does not poll at all: there is no board to keep current,
+    and the previous show's numbers belong in Money → Past shows rather than Live.
 
 9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Four a
    month (UTC), read from `PLANS.free.gigs` — enforced in ONE place, `startShow` in
@@ -830,10 +832,19 @@ If you are about to violate one, stop and say so rather than working around it.
 
 ## Requests, and the room
 
-0ab. **Never charge money for a request.** Song requests and birthday shout-outs
-    cost VOTES. Charging cash to be played next is a different product with
-    different problems, and it breaks 0w (anything the room experiences stays
-    free).
+0ab. **Every request has a vote-only path; a song request may add an optional
+     offer.** Song requests and birthday shout-outs cost three votes by default.
+     Birthdays never carry money. An off-setlist song request may also authorize a
+     whole-dollar offer at $1 = 1 paid vote. Accepting adds those paid votes to the
+     requested song, but does not capture the card. Declining returns the ordinary
+     votes exactly once and cancels the authorization.
+
+0ab1. **Accepting a paid request is not completing it.** Stripe uses manual capture
+      and the request stores both the PaymentIntent and the connected-account scope.
+      Capture happens only when the artist ends that song or starts another song
+      after it. Ending the show releases any uncompleted authorization. Checkout
+      return and webhook delivery are both idempotent, so neither can create or
+      capture the request twice.
 
 0ac. **Take the votes first, then write the request; refund if the write fails.**
     The other order hands out free requests whenever the store is busy. Declining a
@@ -1047,7 +1058,9 @@ If you are about to violate one, stop and say so rather than working around it.
     through it, and `stage.mjs` hands the Studio the same flag so its queue cannot
     drift. Callers may narrow it further — `playTop` also wants replay votes on a
     played song — but **none of them may widen it, and none of them may recompute
-    it.** Every bug in this family was two places disagreeing: `playTop` moved to
+    it. `playTop` additionally requires a positive tally; zero votes means there is
+    no top-voted song and the client shows no top-voted action.** Every bug in this
+    family was two places disagreeing: `playTop` moved to
     `playable()` and stopped seeing replay votes, so the room's top-voted song
     could not win; the Studio kept the old whole-library predicate, so the button
     on stage named a song `playTop` would not start.

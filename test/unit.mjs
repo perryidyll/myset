@@ -45,12 +45,14 @@ console.log('\nplayTop pool: votable(), then its own replay narrowing');
 const playTopPool = (sh, counts) => rankSongs(
   sh.songs.filter(votable(sh))
     .filter((s) => s.id !== sh.nowPlaying)
-    .filter((s) => !sh.played.includes(s.id) || (counts[s.id] || 0) > 0),
+    .filter((s) => !sh.played.includes(s.id) || (counts[s.id] || 0) > 0)
+    .filter((s) => (counts[s.id] || 0) > 0),
   counts, {}).map(x => x.id);
 {
   const sh = base({ listId: 'l1', listSongs: ['a','b'], played: ['c'] });
-  eq('THE BUG: a replay vote outside the set can win', playTopPool(sh, { c: 9, a: 1 }), ['c','a','b']);
-  eq('with no replay votes, c stays out', playTopPool(sh, { a: 1 }), ['a','b']);
+  eq('THE BUG: a replay vote outside the set can win', playTopPool(sh, { c: 9, a: 1 }), ['c','a']);
+  eq('with no replay votes, c stays out', playTopPool(sh, { a: 1 }), ['a']);
+  eq('with no votes, nothing is called top voted', playTopPool(sh, {}), []);
   const old = rankSongs(playable(sh).songs
     .filter((s) => s.id !== sh.nowPlaying)
     .filter((s) => !sh.played.includes(s.id) || ({ c: 9, a: 1 }[s.id] || 0) > 0), { c: 9, a: 1 }, {}).map(x => x.id);
@@ -74,10 +76,10 @@ console.log('\nStudio client pools mirror the server flag');
   })), counts, {});
   // the exact expressions from studio.html render()
   const canVote = x => x.active !== false && x.votable !== false;
-  const startPool = songs.filter(x => !x.now && canVote(x) && (!x.played || x.votes > 0));
+  const startPool = songs.filter(x => !x.now && canVote(x) && (!x.played || x.votes > 0) && x.votes > 0);
   eq('client "Start top voted" == server playTop', startPool[0].id, playTopPool(sh, counts)[0]);
-  const pool = songs.filter(x => !x.played && !x.now && canVote(x));
-  eq('client queue holds only votable songs', pool.map(x => x.id), ['a','b']);
+  const pool = songs.filter(x => !x.now && canVote(x) && (!x.played || x.votes > 0));
+  eq('client queue holds votable songs plus a voted replay', pool.map(x => x.id), ['c','a','b']);
   eq('an out-of-set song is labelled', songs.find(x => x.id === 'c').inSet, false);
 }
 {

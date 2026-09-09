@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
-import { json, bad, cleanFanId, getShow, publicArtist, sha } from './_lib.mjs';
+import { json, bad, cleanFanId, getShow, publicArtist, sha,
+         readFans, creditsUsed, isUnlimited } from './_lib.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { readConnect, connectUsable, feeCents } from './_connect.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
@@ -98,6 +99,56 @@ export default async (req) => {
     };
     metadata = { fan, kind: 'votes', votes: String(pack.votes), pack: String(body.pack),
                  show: show.showId || '', artist: aid };
+  } else if (body.kind === 'song_votes') {
+    const dollars = Number(body.amount);
+    const cents = Math.round(dollars * 100);
+    const songId = String(body.song || '').slice(0, 60);
+    const song = show.songs.find((s) => s.id === songId);
+    if (!Number.isInteger(dollars) || cents < 100 || cents > 50000)
+      return bad('Paid song votes must be whole dollars between $1 and $500');
+    if (show.status !== 'live' || !show.windowOpen) return bad('Voting is closed right now', 409);
+    if (!song || !show.played.includes(songId) || show.nowPlaying === songId)
+      return bad('That replay is not available right now', 409);
+    line = {
+      quantity: 1,
+      price_data: {
+        currency: 'usd', unit_amount: cents,
+        product_data: { name: `${dollars} paid votes for ${song.title}`,
+                        description: `$1 = 1 vote · ${artist}` },
+      },
+    };
+    metadata = { fan, kind: 'song_votes', song: songId, votes: String(dollars),
+                 show: show.showId || '', artist: aid };
+  } else if (body.kind === 'request_hold') {
+    const dollars = Number(body.amount);
+    const cents = Math.round(dollars * 100);
+    const title = String(body.title || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    const songArtist = String(body.artist || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!Number.isInteger(dollars) || cents < 100 || cents > 50000)
+      return bad('The request offer must be whole dollars between $1 and $500');
+    if (!title) return bad('What song?', 400);
+    if (show.status !== 'live' || !show.windowOpen || !show.requests || !show.requests.on)
+      return bad('Requests are off right now', 409);
+    const [fans, requestDoc] = await Promise.all([
+      readFans(aid), (await import('./_requests.mjs')).readRequests(aid),
+    ]);
+    const me = fans[fan] || { v: [], extra: 0 };
+    if (!isUnlimited(fan, show)
+        && creditsUsed(me, show) + show.requests.cost > show.freeCredits + (me.extra || 0))
+      return bad('no-credits', 402);
+    if ((requestDoc.list || []).some((r) =>
+      r.fan === fan && r.kind === 'song' && r.status === 'pending' && r.showId === show.showId))
+      return bad('You’ve already got a request in — wait for that one first', 409);
+    line = {
+      quantity: 1,
+      price_data: {
+        currency: 'usd', unit_amount: cents,
+        product_data: { name: `$${dollars} offer for “${title}”`,
+                        description: `Authorized now · charged only if ${artist} plays and finishes it` },
+      },
+    };
+    metadata = { fan, kind: 'request_hold', title, songArtist,
+                 requestCost: String(show.requests.cost), show: show.showId || '', artist: aid };
   } else if (body.kind === 'tip') {
     const cents = Math.round(Number(body.amount) * 100);
     if (!Number.isFinite(cents) || cents < 100 || cents > 50000)
@@ -174,11 +225,11 @@ export default async (req) => {
   };
 
   /* The platform's share, from the plan table so there is one definition of the cut
-     (10% free / 2% Plus / 0% Pro). Zero is omitted rather than sent as 0 — an
+     (25% free / 10% Plus / 2.5% Pro). Zero is omitted rather than sent as 0 — an
      application fee of nothing is not a fee. Never applied to the founder's own
      platform charges, where there is nobody to take a fee from. */
   const { plan } = await planForArtist(aid);
-  const fee = direct ? feeCents(amountCents(line), plan) : 0;
+  const fee = direct && !isPlatformOwner(aid) ? feeCents(amountCents(line), plan) : 0;
 
   /* Back to the page they came from, not to the founding artist's. success_url
      hard-coded /vote.html, which drops the slug — so every registered artist's
@@ -213,8 +264,10 @@ export default async (req) => {
          visible on a receipt, so nothing about the buyer goes in it (0bu). */
       payment_intent_data: {
         ...(fee > 0 ? { application_fee_amount: fee } : {}),
+        ...(metadata.kind === 'request_hold' ? { capture_method: 'manual' } : {}),
         metadata: { kind: metadata.kind || '', artist: aid },
       },
+      ...(metadata.kind === 'request_hold' ? { payment_method_types: ['card'] } : {}),
       // only a SHIPPED item asks for an address — a T-shirt handed over at the bar needs none
       ...(shipping ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES } } : {}),
       // MUST be a page that calls /api/confirm — vote.html and community.html redeem the session

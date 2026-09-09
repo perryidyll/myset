@@ -1,5 +1,5 @@
 import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, refundSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
-         firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
+         firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId as makeSongId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, STARTER_SONGS,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
@@ -9,7 +9,8 @@ import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActiv
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
 import { genresFor, MAP_SIZE } from './_genremap.mjs';
-import { readRequests, shapeRequests, resolveRequest, attachSong } from './_requests.mjs';
+import { readRequests, shapeRequests, resolveRequest, attachSong,
+         completeSongRequests, declineRequestsForSong } from './_requests.mjs';
 import { readArtists, mutateArtists } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
@@ -400,7 +401,7 @@ const shapeLimits = (l) => ({
   merch: !!l.merch,
   moderate: !!l.moderate,      // permanently deleting a fan's post; hiding stays free
   library: MAX_LIBRARY,
-  cut: l.cut, seats: l.seats,
+  cut: l.cut, cutPct: Math.round((Number(l.cut)||0)*1000)/10, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
   /* Shipped on every plan row so the Studio can grey a designed-but-unbuilt
      feature as "coming" rather than as "yours" — see NOT_BUILT in _plan.mjs. */
@@ -829,7 +830,7 @@ async function handleLists(aid, action, body) {
     let sid = null, note = null;
     await mutateShow(aid, (sh) => {
       if (sh.songs.length >= MAX_LIBRARY) return false;
-      let id = songId(row.title, row.artist);
+      let id = makeSongId(row.title, row.artist);
       if (sh.songs.some((x) => x.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
       const live = sh.songs.filter((x) => x.active !== false).length;
       const on = featureCap === null || live < featureCap;
@@ -867,6 +868,11 @@ async function handleAsks(aid, action, body) {
   if (!id) return bad('which request?', 400);
 
   if (action === 'askDone' || action === 'askDecline') {
+    if (action === 'askDone') {
+      const held = (await readRequests(aid)).list.find((r) => r.id === id);
+      if (held && held.paymentIntent && held.status === 'added')
+        return bad('Finish this song from Live — that is what releases its card payment.', 409);
+    }
     const row = await resolveRequest(aid, id, action === 'askDone' ? 'played' : 'declined', show);
     if (!row) return bad('That one has already been dealt with', 409);
     /* `row.refunded` is what was really given back, not what it cost. A decline of
@@ -892,7 +898,7 @@ async function handleAsks(aid, action, body) {
     await mutateShow(aid, (sh) => {
       full = false; capped = false;
       if (sh.songs.length >= MAX_LIBRARY) { full = true; return false; }
-      let sid = slug(row.title);
+      let sid = makeSongId(row.title, row.artist || '');
       if (sh.songs.some((x) => x.id === sid)) {
         const had = sh.songs.find((x) => x.id === sid);
         if (had.active === false) {                          // it was hidden
@@ -1713,7 +1719,7 @@ export default async (req) => {
      round the check, and there IS a test that sets it back up to prove the guard
      fires. */
   const DOUBLE_TAP_MS = Number(process.env.MYSET_DOUBLE_TAP_MS ?? 8000);
-  let droppedSong = null, refundSong = null;
+  let droppedSong = null, refundSong = null, completedSong = null;
   /* `prevShow` used to exist so the round reset could price the round it was
      wiping. There is no round reset any more (a night is one round) and a vote is
      charged at the moment it is cast, so nothing needs the old prices — but `play`
@@ -1777,6 +1783,7 @@ export default async (req) => {
         if (show.nowPlaying === id && Date.now() - (show.nowPlayingAt || 0) < DOUBLE_TAP_MS)
           return false;                                  // already playing it — no-op
         logPlay(id);                                          // before played[] moves
+        if (show.nowPlaying && show.nowPlaying !== id) completedSong = show.nowPlaying;
         if (show.nowPlaying && show.nowPlaying !== id && !show.played.includes(show.nowPlaying))
           show.played.push(show.nowPlaying);
         show.played = show.played.filter((p) => p !== id);   // replaying? take it back out
@@ -1800,15 +1807,25 @@ export default async (req) => {
           show.songs
             .filter(canVote)
             .filter((s) => s.id !== show.nowPlaying)
-            .filter((s) => !show.played.includes(s.id) || (counts[s.id] || 0) > 0),
+            .filter((s) => !show.played.includes(s.id) || (counts[s.id] || 0) > 0)
+            .filter((s) => (counts[s.id] || 0) > 0),
           counts, firstAt);
         if (!pool.length) { err = ['nothing left in the pool', 409]; return false; }
         logPlay(pool[0].id);                                  // before played[] moves
+        if (show.nowPlaying && show.nowPlaying !== pool[0].id) completedSong = show.nowPlaying;
         if (show.nowPlaying && !show.played.includes(show.nowPlaying)) show.played.push(show.nowPlaying);
         show.played = show.played.filter((p) => p !== pool[0].id);
         show.nowPlaying = pool[0].id;
         show.nowPlayingAt = Date.now();
         show.windowOpen = true; playedNow = pool[0].id;
+        break;
+      }
+      case 'endSong': {
+        if (!show.nowPlaying) { err = ['Nothing is playing right now', 409]; return false; }
+        completedSong = show.nowPlaying;
+        if (!show.played.includes(show.nowPlaying)) show.played.push(show.nowPlaying);
+        show.nowPlaying = null;
+        show.nowPlayingAt = null;
         break;
       }
       case 'window': show.windowOpen = !!body.open; break;
@@ -1887,7 +1904,7 @@ export default async (req) => {
           err = [`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402]; return false;
         }
         const artist = String(body.artist || '').trim().slice(0, 60);
-        let id = songId(title, artist);
+        let id = makeSongId(title, artist);
         if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
         const known = new Set([...GENRE_IDS, ...show.tags.map((t) => t.id)]);
         show.songs.push({ id, title, artist, active: !startsOff,
@@ -1917,7 +1934,7 @@ export default async (req) => {
           if (show.songs.length >= MAX_LIBRARY) { refused++; continue; }
           const liveNow = show.songs.filter((x) => x.active !== false).length;
           const startsOff = featureCap !== null && liveNow >= featureCap;
-          let id = songId(r.title, r.artist);
+          let id = makeSongId(r.title, r.artist);
           if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
           show.songs.push({ id, title: r.title, artist: r.artist, active: !startsOff, key: '', tags: [] });
           have.add(sig); added++; if (startsOff) off++;
@@ -2005,7 +2022,7 @@ export default async (req) => {
         let live = show.songs.filter((x) => x.active !== false).length;
         for (const [t, a] of STARTER_SONGS) {
           if (show.songs.length >= MAX_LIBRARY) break;
-          const id = songId(t, a);
+          const id = makeSongId(t, a);
           if (have.has(id)) continue;
           const on = featureCap === null || live < featureCap;
           show.songs.push({ id, title: t, artist: a, active: on });
@@ -2032,10 +2049,16 @@ export default async (req) => {
   /* The song that just started has collected its votes, so they come off the board.
      Nothing is refunded — see the ledger header in _lib.mjs. */
   if (playedNow) await consumePlayedVotes(aid, playedNow);
-  else if (clearBoard) await wipeBoard(aid);
+  if (completedSong) {
+    const settled = await completeSongRequests(aid, completedSong);
+    if (settled.pending) note = join(note,
+      'The song ended, but its card authorization still needs another Stripe attempt. It has not been charged twice.');
+  }
+  if (clearBoard) await wipeBoard(aid);
   else if (refundSong) {
     try { await refundSongVotes(aid, refundSong, await getShow(aid)); }
     catch { return bad('Song hidden, but the vote return is still finishing — tap “Decline + refund” again.', 503); }
+    await declineRequestsForSong(aid, refundSong, await getShow(aid));
   }
   // a deleted song's votes must not go on being counted for a song nobody can see
   else if (droppedSong) await dropSongVotes(aid, droppedSong);

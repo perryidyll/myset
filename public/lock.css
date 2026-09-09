@@ -31,6 +31,7 @@
    The veil sits ON TOP rather than replacing the content, so the real thing stays
    visible at real size. `pointer-events` is the lock; the opacity is only how it
    looks, and a lock that is only opacity is not a lock. */
+html{touch-action:manipulation}
 .lock{position:relative;isolation:isolate}
 .lock>.lockin{opacity:.32;filter:saturate(.2);pointer-events:none;user-select:none}
 .lockveil{position:absolute;inset:0;z-index:2;display:grid;place-items:center;

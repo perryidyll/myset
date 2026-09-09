@@ -210,7 +210,7 @@ eq('for the venue owner', created.args.metadata.artist, 'v_' + bar.venueId);
 const expectFee = feeCents(1200, 'pro', 'venue');
 eq('with the venue plan’s fee minus half of Stripe’s (0 → no fee field at all)', ((created.args.payment_intent_data||{}).application_fee_amount)||0, expectFee);
 eq('which is 2% minus half of (2.9% + 30¢)', expectFee, Math.max(0, Math.floor(1200 * 0.02) - Math.round(stripeFeeEstimate(1200) / 2)));
-eq('artists are not split (their table says so)', feeCents(1200, 'plus'), Math.floor(1200 * 0.02));
+eq('artists are not split (their table says so)', feeCents(1200, 'plus'), Math.floor(1200 * 0.10));
 ok('and returns to the venue’s community page', /\/v\/.*\/community\?paid=/.test(created.args.success_url));
 r = await VS(TV, 'planGet');
 ok('the venue plan payload carries billing', r.ok && 'billing' in r && r.plan === 'pro', r);

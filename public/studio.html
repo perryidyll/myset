@@ -112,6 +112,10 @@ a{color:inherit;text-decoration:none}
 .big:disabled{opacity:.42;transform:none}
 .bigplay{padding:20px 22px;font-size:17px;line-height:1.32;align-items:flex-start;margin-bottom:0}
 .bigplay>span:first-child{flex:0 0 auto;padding-top:1px}
+.liveactions{display:flex;gap:10px;align-items:stretch}
+.liveactions .big{flex:1;margin:0;min-width:0}
+.liveactions .endnow{justify-content:center;background:var(--surface);color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+@media(max-width:430px){.liveactions{flex-direction:column}}
 .wrap{padding:0 18px}
 
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
@@ -571,7 +575,7 @@ let SESS=null, REC=null;                  // where you're signed in, and your re
    so the two screens never disagree about where a song is. 'votes' keeps the
    server's ranking (votes desc -> voted-first -> title). */
 let SETQ='', SETFOCUS=false;
-let HISTQ='', HISTFOCUS=false, HSHOWN=[];   // the Money tab's past-shows search
+let HISTQ='', HISTFOCUS=false, HSHOWN=[], HROWS=[], HISTALL=false; // past-shows search/collapse
 let LEDGER=null, BOOKS=null, BOOKMONTH='';  // the statement and (for the founder) the P&L
 let LASTSHOW='', LASTSTATUS='';            // when the night changes, the Money cache dies
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
@@ -930,7 +934,7 @@ async function load(opts){
      round of work was about. The show's own id and status are already on every
      poll, so the cache dies exactly when the night changes and no more often. */
   const idNow=(d.show&&d.show.showId)||'', stNow=(d.show&&d.show.status)||'';
-  if(D&&(idNow!==LASTSHOW||stNow!==LASTSTATUS)){ HIST=null; REV=null; }
+  if(D&&(idNow!==LASTSHOW||stNow!==LASTSTATUS)){ HIST=null; REV=null; HISTALL=false; }
   LASTSHOW=idNow; LASTSTATUS=stNow;
   D=d; render();
   /* The tab's OWN data arrives after the shell. These were fire-and-forget, so the
@@ -1912,14 +1916,41 @@ function render(){
      room can vote for, and the client had no idea. `!==false` so an older payload
      without the flag degrades to the old behaviour instead of emptying the queue. */
   const canVote=x=>x.active!==false&&x.votable!==false;
-  const pool=songs.filter(x=>!x.played&&!x.now&&canVote(x));
+  const pool=songs.filter(x=>!x.now&&canVote(x)&&(!x.played||x.votes>0));
   // same narrowing playTop applies: a played song needs replay votes to re-enter
   const startPool=songs.filter(x=>!x.now&&canVote(x)&&(!x.played||x.votes>0));
-  const top=startPool[0];
+  const top=startPool.find(x=>x.votes>0);
   const paidPill=x=>x&&x.paidVotes>0?`<span class="paidtag">(${x.paidVotes}) paid votes</span>`:'';
 
   let body='';
   if(TAB==='live'){
+  if(s.status!=='live'){
+    body=`<div class="wrap" style="padding-top:22px;padding-bottom:2px">
+      <button class="big bigplay" onclick="${s.status==='ended'&&(s.played||[]).length
+        ? `if(confirm('Start a brand new show? Last night’s numbers are saved in your history.'))act('newShow')`
+        : `act('status',{status:'live'})`}">
+        <span>●</span><span style="flex:1">${s.status==='ended'&&(s.played||[]).length?'Start a new show':'Start the show'}</span></button>
+    </div>
+    ${(()=>{
+      const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
+      if(!cap||cap===null||!isFinite(cap))return '';
+      const used=s.gigMonth===monthKey()?(s.gigCount||0):0;
+      const left=Math.max(0,cap-used);
+      if(left>2)return '';
+      return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">${left===0
+        ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
+        : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
+    })()}
+    ${s.status==='ended'&&(s.played||[]).length?`
+      <p class="muted" style="font-size:12px;padding:8px 20px 0">
+        ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
+        <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
+           style="color:var(--accent);font-weight:700">Resume it instead</a>
+        — use that if you ended it by mistake.${s.endedBy==='schedule'?' This one was ended by itself, three hours after your gig’s scheduled end.':''}</p>`
+      :`<p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to fans until you tap this — or until a gig on your calendar reaches its start time.</p>`}`;
+  }
+
+  if(s.status==='live'){
     body=`
     <div class="votebox">
       <div><span class="vt">Voting</span>
@@ -1935,7 +1966,7 @@ function render(){
     </div>`:''}
     <div class="stats">
       <div class="c"><b class="mono">${songs.reduce((a,b)=>a+b.votes,0)}</b><span>Votes now</span></div>
-      <div class="c"><b class="mono">${D.voters||0}<span style="font-size:15px;color:var(--muted);font-weight:600">/${D.room||D.voters||0}</span></b><span>Voting · in room${D.nets?` · ${D.nets} net${D.nets===1?'':'s'}`:''}</span></div>
+      <div class="c"><b class="mono">${D.voters||0} voting</b><span>${D.room||D.voters||0} in room${D.nets?` · ${D.nets} network${D.nets===1?'':'s'}`:''}</span></div>
       <div class="c"><b class="mono acc">$${D.tips.total.toFixed(2)}</b><span>Tips</span></div>
     </div>
     ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>
@@ -1943,41 +1974,16 @@ function render(){
       ${now.key?`<div class="a" style="opacity:.82">Key of ${esc(now.key)}</div>`:''}
       <button class="chartbtn" data-act="chart" data-id="${esc(now.id)}">☰ My chart</button></div>`:''}
     ${asksPanel()}
-    ${s.status!=='live'?`
-      <div class="wrap" style="padding-top:22px;padding-bottom:2px">
-        <button class="big bigplay" onclick="${s.status==='ended'&&(s.played||[]).length
-          ? `if(confirm('Start a brand new show? Last night’s numbers are saved in your history.'))act('newShow')`
-          : `act('status',{status:'live'})`}">
-          <span>●</span><span style="flex:1">${s.status==='ended'&&(s.played||[]).length?'Start a new show':'Start the show'}</span></button>
-      </div>
-      ${(()=>{ /* Warn BEFORE the cap, never on stage. A free artist finding out at
-          10pm that they cannot start is the worst possible moment to learn it. */
-        const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
-        if(!cap||cap===null||!isFinite(cap))return '';
-        const used=s.gigMonth===monthKey()?(s.gigCount||0):0;
-        const left=Math.max(0,cap-used);
-        if(left>2)return '';
-        return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">
-          ${left===0
-            ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
-            : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
-      })()}
-      ${s.status==='ended'&&(s.played||[]).length?`
-      <p class="muted" style="font-size:12px;padding:8px 20px 0">
-        ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
-        <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
-           style="color:var(--accent);font-weight:700">Resume it instead</a>
-        — use that if you ended it by mistake.${s.endedBy==='schedule'?' This one was ended by itself, three hours after your gig’s scheduled end.':''}</p>`
-      :`<p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to fans until you tap this — or until a gig on your calendar reaches its start time.</p>`}`
-    :`<div class="wrap" style="padding-top:22px;padding-bottom:2px">
-        <button class="big alt" onclick="if(confirm('End the show for fans?'))act('status',{status:'ended'})"
-          style="justify-content:center">■ End the show</button>
-      </div>
-      ${s.startedBy==='schedule'?`<p class="muted" style="font-size:12px;padding:6px 20px 0">Started by itself for the gig on your calendar. It ends by itself three hours after that gig’s end time, unless you end it first.</p>`:''}`}
+    <div class="wrap" style="padding-top:22px;padding-bottom:2px">
+      <button class="big alt" onclick="if(confirm('End the show for fans?'))act('status',{status:'ended'})"
+        style="justify-content:center">■ End the show</button>
+    </div>
+    ${s.startedBy==='schedule'?`<p class="muted" style="font-size:12px;padding:6px 20px 0">Started by itself for the gig on your calendar. It ends by itself three hours after that gig’s end time, unless you end it first.</p>`:''}
 
-    <div class="wrap" style="padding-top:14px;padding-bottom:10px">
-      <button class="big bigplay" ${!top?'disabled':''} onclick="act('playTop')">
-        <span>▶</span><span style="flex:1;min-width:0">Start top voted${top?` — ${esc(top.title)} (${top.votes} votes total) ${paidPill(top)}`:' — nothing left'}</span></button>
+    <div class="wrap liveactions" style="padding-top:14px;padding-bottom:10px">
+      ${top?`<button class="big bigplay" onclick="act('playTop')">
+        <span>▶</span><span style="flex:1;min-width:0">Start top voted — ${esc(top.title)} (${top.votes} votes total) ${paidPill(top)}</span></button>`:''}
+      ${now?`<button class="big endnow" onclick="act('endSong')">■ End current song</button>`:''}
     </div>
     <div class="sec"><span class="kick">Queue — tap ▶ to start</span><span class="kick">${pool.length}</span></div>
     <div class="list">${pool.slice(0,12).map((x,i)=>`<div class="row">
@@ -1994,6 +2000,7 @@ function render(){
       <button class="act" onclick="act('unplay',{song:'${x.id}'})">Undo</button></div>`).join('')||'<div class="row muted">Nothing yet.</div>'}</div>
     ${D.tips.recent.length?`<div class="sec"><span class="kick">Recent tips</span></div>
       ${D.tips.recent.map(t=>`<div class="tip"><span>$${Number(t.amount).toFixed(2)}${t.note?' · '+esc(t.note):''}</span><span class="muted">${when(t.at)}</span></div>`).join('')}`:''}`;
+  }
   }
 
   if(TAB==='setlist'){
@@ -2170,6 +2177,7 @@ function render(){
                     ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][d.getDay()]]
               .filter(Boolean).join(' ').toLowerCase();};
           HSHOWN=hw.length?H.shows.filter(x=>{const h=hay(x);return hw.every(w=>h.includes(w));}):H.shows;
+          HROWS=(HISTQ||HISTALL)?HSHOWN:HSHOWN.slice(0,3);
           return '';})()}
         <div class="sec"><span class="kick">Past shows</span><span class="kick">${
           HISTQ?`${HSHOWN.length} of ${H.shows.length}`:H.shows.length}</span></div>
@@ -2179,7 +2187,7 @@ function render(){
             value="${esc(HISTQ)}" autocomplete="off">
           ${HISTQ?`<button class="clr" onclick="HISTQ='';HISTFOCUS=false;render()" aria-label="Clear search">✕</button>`:''}
         </div>`:''}
-        <div class="list">${HSHOWN.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
+        <div class="list">${HROWS.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
           <div class="m"><div class="t">${esc(x.venue||'Untitled show')}</div>
             <div class="by">${esc(x.city||'')}</div>
             <div class="s">${dstamp(x.endedAt||x.startedAt)} · ${x.songsPlayed} song${x.songsPlayed===1?'':'s'} · ${x.totalVotes} votes · ${x.peakVoters} people${
@@ -2188,6 +2196,7 @@ function render(){
           <button class="act" data-act="show" data-id="${x.showId}">Open</button></div>`).join('')
           ||(HISTQ?`<div class="row muted">Nothing matches “${esc(HISTQ)}”. A venue, a city, a weekday or a date all work.</div>`
                   :'<div class="row muted">No finished shows yet. End a show and it gets filed here.</div>')}</div>
+        ${!HISTQ&&HSHOWN.length>3?`<button class="seemore" onclick="HISTALL=!HISTALL;render()">${HISTALL?'Show fewer ▴':`See ${HSHOWN.length-3} more ▾`}</button>`:''}
         ${HISTQ?'':`<div class="wrap" style="margin-top:12px">
           <button class="big alt" onclick="healHist()">Look for missing shows</button>
           <p class="muted" style="font-size:12px;margin:8px 0 0">A night is filed when you end the show. If one is missing this goes back through the records and puts it where it belongs.</p>
@@ -2661,24 +2670,27 @@ function asksPanel(){
   const row=a=>{
     const bday=a.kind==='birthday';
     const open=a.status==='pending';
+    const offer=a.pledgeCents?`$${(a.pledgeCents/100).toFixed(a.pledgeCents%100?2:0)} offered`:'';
+    const held=a.pledgeVotes>0&&['authorized','capture_pending'].includes(a.pledgeState)
+      ?` <span class="paidtag">${a.pledgeVotes} paid votes</span>`:'';
     const label=a.status==='added'?'On the setlist':a.status==='played'?'Done'
       :a.status==='declined'?'Declined — votes refunded':`Asked for · ${cost(a)}`;
     return `<div class="arow ${open?'':'done'}">
       ${bday?'<span class="bcake">🎂</span>':''}
-      <div class="m"><div class="t">${bday?esc(a.name):esc(a.title)}${!bday&&a.artist?` <span class="muted" style="font-weight:400">· ${esc(a.artist)}</span>`:''}</div>
-        <div class="s">${bday?'Happy birthday shout-out':'Song request'} · ${label} · ${when(a.at)}</div></div>
+      <div class="m"><div class="t">${bday?esc(a.name):esc(a.title)}${!bday&&a.artist?` <span class="muted" style="font-weight:400">· ${esc(a.artist)}</span>`:''}${held}</div>
+        <div class="s">${bday?'Happy birthday shout-out':'Song request'} · ${label}${offer?` · ${offer}${a.status==='added'?' · charged when you finish the song':''}`:''} · ${when(a.at)}</div></div>
       ${open?(bday
         ? `<button class="act pri" data-act="askdone" data-id="${a.id}">Did it</button>
            <button class="act warn" data-act="asknope" data-id="${a.id}">✕</button>`
         : `<button class="act pri" data-act="askadd" data-id="${a.id}">+ Add</button>
            <button class="act warn" data-act="asknope" data-id="${a.id}">✕</button>`)
-        :(a.status==='added'
+        :(a.status==='added'&&!a.pledgeCents
           ? `<button class="act" data-act="askdone" data-id="${a.id}">Played</button>`:'')}
     </div>`;
   };
   return `<div class="askpanel rise">
     <div class="ah"><b>${waiting.length?`${waiting.length} request${waiting.length===1?'':'s'} waiting`:'Requests tonight'}</b>
-      <span>✕ refunds their votes</span></div>
+      <span>✕ refunds votes${all.some(a=>a.pledgeCents&&a.status==='pending')?' + releases card hold':''}</span></div>
     ${rows.map(row).join('')}</div>`;
 }
 async function askDo(action,id){
@@ -3561,7 +3573,7 @@ const TIER_COPY={
     ['Show history',' and your real numbers'],
     ['Keep 2,000 songs',' \u2014 50 live to the room at once'],
     ['One sign-in',''],
-    ['<span class="fee">Transaction fee: 10%</span>',' on money taken through the app']]},
+    ['<span class="fee">Transaction fee: 25%</span>',' on money taken through the app']]},
   plus:{name:'Plus',price:'$10 / month',items:[
     ['Unlimited shows',' \u2014 play as often as you like'],
     ['Rooms up to 1,000',' \u2014 a bigger night still runs, just a little calmer'],
@@ -3575,7 +3587,7 @@ const TIER_COPY={
     ['Everything fans touch',', the song sheet, your page, calendar, community page and history'],
     ['Shows that start and end themselves',' from your calendar'],
     ['One sign-in',''],
-    ['<span class="fee">Transaction fee: 2%</span>',' on money taken through the app']]},
+    ['<span class="fee">Transaction fee: 10%</span>',' on money taken through the app']]},
   pro:{name:'Pro',price:'$20 / month',items:[
     ['Unlimited shows',' \u2014 play as often as you like'],
     ['Rooms up to 2,000',' \u2014 a bigger night still runs, just a little calmer'],
@@ -3590,7 +3602,7 @@ const TIER_COPY={
     ['Shows that start and end themselves',' from your calendar'],
     ['Five sign-ins',' for your band'],
     ['Coming soon, included',': earnings by venue and night, a press kit, your branding, promotion in other cities'],
-    ['<span class="fee">Transaction fee: 0%</span>',' \u2014 nothing taken on money through the app']]},
+    ['<span class="fee">Transaction fee: 2.5%</span>',' on money taken through the app']]},
 };
 /* PLACEHOLDERS \u2014 Perry approves the layout, then these come down until real ones
    are submitted by artists. Nothing here is a real quote. */
@@ -3599,7 +3611,11 @@ const TESTIMONIALS=[
   {name:'Sample duo',where:'Bangkok',text:'Requests stopped being shouted at us and started showing up on the screen, ranked. (placeholder)'},
   {name:'Sample band',where:'Melbourne',text:'We got rebooked because the bar could see how many people voted. Numbers, not vibes. (placeholder)'},
 ];
-const tierList=(k)=>TIER_COPY[k].items.map(x=>`<li><b>${x[0]}</b>${x[1]||''}</li>`).join('');
+const tierList=(k)=>TIER_COPY[k].items.map(x=>{
+  const y=PLAN&&PLAN.owner&&k===PLAN.plan&&String(x[0]).includes('Transaction fee:')
+    ? ['<span class="fee">Transaction fee: 0%</span>',' for this account'] : x;
+  return `<li><b>${y[0]}</b>${y[1]||''}</li>`;
+}).join('');
 const RANK={free:0,plus:1,pro:2};
 function openPlans(){
   if(!PLAN||!PLAN.ok){toast('One moment…');loadPlan(true);return;}
@@ -3747,7 +3763,7 @@ function cardTrouble(s){
     <p style="margin-top:8px">Everything keeps working until ${daystamp(ends)}.</p></div>`;
   if(days>=0) return `<div class="paybar">
     <b>Your card still hasn’t gone through</b>
-    <p>If it isn’t sorted by tomorrow your page goes back to Free. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.gigsPerMonth:4} shows a month, merch comes off your community page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:10}%, and you couldn’t make new setlists or set your own prices.</p>
+    <p>If it isn’t sorted by tomorrow your page goes back to Free. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.gigsPerMonth:4} shows a month, merch comes off your community page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
     <button class="big" style="margin-top:12px" ${fix}>Update my card</button></div>`;
   return `<div class="paybar">
     <b>You’re on Free for now</b>
@@ -4288,7 +4304,7 @@ function start(){clearInterval(timer);
      staring at bars — better a half-filled Studio they can use. */
   setTimeout(bootDone,6000);
   load();
-  timer=setInterval(()=>{if(!document.hidden&&TAB==='live')load({quiet:true})},4000);}
+  timer=setInterval(()=>{if(!document.hidden&&TAB==='live'&&D&&D.show&&D.show.status==='live')load({quiet:true})},4000);}
 /* A pull refreshes the Studio's data rather than reloading the page — no white
    flash, and the tab you were on stays the tab you are on. The installed Studio
    has no address bar and no swipe-down of its own, so without this there is no

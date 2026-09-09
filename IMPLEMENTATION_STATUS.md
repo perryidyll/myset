@@ -10,7 +10,11 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-09
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The audience styling, paid-vote attribution, played-song replay state and artist decline/refund batch is the verified 2026-09-09 production release
+**Current focus:** Paid replay votes and optional off-setlist request offers are
+implemented and verified in the working tree. Request offers authorize at submission,
+show the artist the amount, capture only after song completion, and cancel/refund on
+decline. The complete 1,808-assertion gate is green and the user explicitly authorized
+an immediate production push of this working tree.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
@@ -85,6 +89,9 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-09 | `node tools/overview.mjs --tests` + rendered UI/touch checks | 1,808 assertions, 0 failures; paid replay votes, conditional request authorization/capture, three-vote birthdays, mobile layout and sheet behavior all green |
+| 2026-09-09 | `sh test/run.sh` | Every suite section passed with the new show controls, positive-vote guard and fee ladder |
+| 2026-09-09 | `node tools/uicheck.mjs` | Phone-width unified replay list, five-vote minimum, tip copy, live controls, inactive Live state and no overflow all passed |
 | 2026-09-09 | Netlify draft deploy `6aa0db9c42570c274fbd5c1e` | Requested audience and Studio content served from the preview; read-only `/api/show` succeeded; no preview write path exercised |
 | 2026-09-09 | `sh test/run.sh` + `node tools/overview.mjs --tests` | Full suite green; overview stamped 1,762 assertions, 0 failures |
 | 2026-09-09 | `node tools/uicheck.mjs` | Phone-width orange borders/copy, played-song state, repeat voting, paid-vote pills and decline action all rendered without horizontal overflow |

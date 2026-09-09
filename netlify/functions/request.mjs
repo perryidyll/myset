@@ -2,7 +2,8 @@ import { getShow, publicArtist, json, bad, cleanFanId } from './_lib.mjs';
 import { createRequest, readRequests, myRequests } from './_requests.mjs';
 
 /* Public. Asking for a song that isn't on the list, or a birthday shout-out.
-   Costs votes, never money. The artist has to have switched it on. */
+   Both cost votes; a song request may carry a manually captured offer. The
+   artist has to have switched the request type on. */
 export default async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
