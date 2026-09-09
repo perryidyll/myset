@@ -18,5 +18,6 @@
   expanded the mood list to twenty, revised sharing/rating/event controls, moved Save
   Profile, matched the supplied QR wording, and restored normal setlist ordering with
   plain Vote buttons and labeled counts.
-- Draft deploy `6aa19ec36c2f1a326fc70982` verified by served content.
-- Production unchanged; working tree remains uncommitted pending visual approval.
+- Draft deploy `6aa19ec36c2f1a326fc70982` was approved after served-content verification.
+- Production release `831081d` was pushed to `main` and verified by served content on
+  the audience vote, community and Studio pages.

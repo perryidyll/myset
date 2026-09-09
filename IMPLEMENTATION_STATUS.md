@@ -10,11 +10,11 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-10
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The final scroll-window/UI refinement batch is complete in the working
-tree: inset scroll thumbs, isolated mood scrolling with twenty choices, profile-sharing
-controls, revised QR artwork, lower Profile save action, and stable audience setlist
-ordering/button labels. The 1,815-assertion gate is green. Draft deploy
-`6aa19ec36c2f1a326fc70982` is ready for inspection; production has not been changed.
+**Current focus:** The final scroll-window/UI refinement batch shipped to production in
+`831081d`: inset scroll thumbs, isolated mood scrolling with twenty choices,
+profile-sharing controls, revised QR artwork, lower Profile save action, and stable
+audience setlist ordering/button labels. The 1,815-assertion gate is green and the
+production pages were verified by served content.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
