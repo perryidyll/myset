@@ -8,13 +8,13 @@ documents own: `MYSET-MASTER-OVERVIEW.md` is what MySet is, `INVARIANTS.md` is w
 never break, `docs/decisions/` is why a design is the way it is, and `docs/sessions/` is
 what happened on a given day.
 
-**Last reviewed:** 2026-09-09
+**Last reviewed:** 2026-09-10
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** Paid replay votes and optional off-setlist request offers are
-implemented and verified in the working tree. Request offers authorize at submission,
-show the artist the amount, capture only after song completion, and cancel/refund on
-decline. The complete 1,808-assertion gate is green and the user explicitly authorized
-an immediate production push of this working tree.
+**Current focus:** The final scroll-window/UI refinement batch is complete in the working
+tree: inset scroll thumbs, isolated mood scrolling with twenty choices, profile-sharing
+controls, revised QR artwork, lower Profile save action, and stable audience setlist
+ordering/button labels. The 1,815-assertion gate is green. Draft deploy
+`6aa19ec36c2f1a326fc70982` is ready for inspection; production has not been changed.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.

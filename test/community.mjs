@@ -243,6 +243,14 @@ ok('a fan posts on a venue page', (await POST(`?v=${bar.slug}`, { action: 'post'
 ok('the venue moderates it', (await VS(TV, 'postList')).posts.length === 1);
 eq('a venue slug that is not a venue is a 404', (await GET('?v=nobody')).status, 404);
 
+console.log('\nARTISTS DO NOT COMMENT ON THEIR OWN PAGE');
+r = await hit(commFn, 'https://x/api/community?a=ana-reyes&fan=ana-phone', undefined, TA);
+eq('the signed-in owner is told the composer is unavailable', r.canPost, false);
+r = await hit(commFn, 'https://x/api/community?a=ana-reyes', { action: 'post', fan: 'ana-phone', text: 'my own comment' }, TA);
+eq('the server refuses a self-comment', r.status, 403);
+r = await hit(commFn, 'https://x/api/community?code=devlocal', { action: 'post', fan: 'founder-phone', text: 'founder exception' });
+ok('the founding account keeps the explicit exception', r.ok, r);
+
 console.log('\nWHAT IT COSTS  (INVARIANT 9d13)');
 const g = await count(() => GET('?a=ana-reyes&fan=phone1'));
 /* +1 since the picker reads the calendar (ev_) as well as the archive */

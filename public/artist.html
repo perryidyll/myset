@@ -127,12 +127,17 @@ body{padding-bottom:34px}
   letter-spacing:-.015em;box-shadow:0 5px 18px rgba(255,55,95,.4);
   transition:transform .22s var(--spring)}
 .joinlive:active{transform:scale(.95)}
+.joinlive.liveglow{animation:emberGlow 4.2s ease-in-out infinite}
+@keyframes emberGlow{
+  0%,100%{filter:drop-shadow(0 0 5px rgba(255,122,69,.22))}
+  50%{filter:drop-shadow(0 0 13px rgba(255,122,69,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}
+}
 .joinlive.off{background:transparent;color:var(--accent-ink);font-weight:600;
   box-shadow:inset 0 0 0 1.5px var(--accent);font-variant-numeric:tabular-nums}
 .joinlive .lv{width:8px;height:8px;border-radius:50%;background:#fff;
   box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:lvp 1.8s infinite}
 @keyframes lvp{70%{box-shadow:0 0 0 9px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
-@media (prefers-reduced-motion:reduce){.joinlive .lv{animation:none}}
+@media (prefers-reduced-motion:reduce){.joinlive .lv,.joinlive.liveglow{animation:none}}
 
 .tonight{margin:22px 18px 0;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-2);overflow:hidden}
 .tonight .top{display:flex;align-items:center;gap:16px;padding:18px 20px}
@@ -401,7 +406,7 @@ function render(){
   </div>
 
   <div class="pcta">
-    <a class="joinlive ${live?'':'off'}" href="${VOTEHREF}" id="joinBtn">
+    <a class="joinlive ${live?'liveglow':'off'}" href="${VOTEHREF}" id="joinBtn">
       ${live?'<span class="lv"></span>TAP TO VOTE THE SETLIST':nextLabel()}</a>
   </div>
   <div class="pstats">
@@ -443,6 +448,7 @@ function render(){
     </div>`;
   }
 
+  if(P.management) h+=`<div class="sect">Label / management</div><div class="card"><p class="bio">${esc(P.management)}</p></div>`;
   if(P.bio) h+=`<div class="sect">About</div><div class="card"><p class="bio">${esc(P.bio)}</p></div>`;
 
   const gigs=(G&&G.ok?G.gigs:[]).slice(0,24);
@@ -474,7 +480,7 @@ function render(){
       // so a 450px Apple album card doesn't sit there as an empty slab first
       const style=m.height?`height:${Math.min(m.height,168)}px`:'';
       const art=m.thumb
-        ? `<img src="${esc(m.thumb)}" alt="" loading="lazy">`
+        ? `<img src="${esc(m.thumb)}" ${m.thumbFallback?`data-fallback="${esc(m.thumbFallback)}" onerror="if(this.src!==this.dataset.fallback)this.src=this.dataset.fallback"`:''} alt="" loading="lazy">`
         : `<span class="noart">${esc(PROV[m.provider]||'Play')}</span>`;
       return `<div class="media rise" data-mid="${esc(m.mid)}">
         <button class="facade ${shape}" style="${shape?'':style}" data-mid="${esc(m.mid)}"

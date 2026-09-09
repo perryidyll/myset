@@ -1003,7 +1003,7 @@ const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyrics
 async function handleProfile(aid, action, body, req, me) {
   if (action === 'profileSet') {
     await mutateProfile(aid, (p) => {
-      for (const k of ['name', 'tagline', 'bio', 'photo', 'avatar'])
+      for (const k of ['name', 'tagline', 'management', 'bio', 'photo', 'avatar'])
         if (typeof body[k] === 'string') p[k] = body[k];
       if (Array.isArray(body.photos)) p.photos = body.photos;
       if (body.links && typeof body.links === 'object')

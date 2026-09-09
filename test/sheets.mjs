@@ -452,6 +452,9 @@ eq('trailing blanks are still dropped',
 const { normProfile } = await import('../netlify/functions/_profile.mjs');
 eq('the artist side is positional too',
    normProfile({ photos: ['/a', '', '/c'] }).photos, ['/a', '', '/c']);
+eq('an artist label or management company survives profile normalization',
+   normProfile({ management: 'Independent Artists Management' }).management,
+   'Independent Artists Management');
 
 /* ---------- the nightly job is a public URL ---------- */
 console.log('\nTHE CRON IS REACHABLE OVER HTTP, SO IT RATE-LIMITS ITSELF');

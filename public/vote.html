@@ -34,6 +34,9 @@
 <script src="/pull.js"></script>
 <style>
 #app{padding-bottom:150px}
+.credits,.credits.low{background:rgba(48,209,88,.16);color:#1B8E3C;box-shadow:none}
+.credits small{color:currentColor;opacity:.82}
+@media (prefers-color-scheme:dark){.credits,.credits.low{color:#4CD964}}
 
 /* ── TIER 1 · NOW PLAYING ─────────────────────────────── */
 .now{position:relative;overflow:hidden;margin:14px 18px 0;padding:22px;border-radius:var(--r-lg);
@@ -63,9 +66,17 @@
 .strip.shut .dot{background:var(--faint);animation:none;box-shadow:none}
 
 /* ── TIER 2 · UP NEXT ─────────────────────────────────── */
-.queue{margin:18px 18px 0;border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh-2);overflow:hidden}
+.queue{position:relative;margin:18px 55px 0 18px;border-radius:var(--r-lg);background:var(--surface);
+  border:1.5px solid var(--accent-2);box-shadow:var(--sh-2);overflow:hidden;
+  animation:edgeGlow 4.8s ease-in-out infinite}
+.queue-scroll{max-height:266px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.queue-scroll,.list.votelist{scrollbar-color:rgba(142,142,147,.7) transparent}
+.queue-scroll::-webkit-scrollbar,.list.votelist::-webkit-scrollbar{width:7px}
+.queue-scroll::-webkit-scrollbar-track,.list.votelist::-webkit-scrollbar-track{background:transparent;margin-block:10px}
+.queue-scroll::-webkit-scrollbar-thumb,.list.votelist::-webkit-scrollbar-thumb{background:rgba(142,142,147,.7);border:2px solid transparent;background-clip:content-box;border-radius:999px}
 .qh{display:flex;align-items:center;justify-content:space-between;padding:15px 18px 12px}
-.qh b{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.qh b{font-size:15px;font-weight:700;letter-spacing:.065em;text-transform:uppercase;color:var(--accent-2)}
 .qh span{font-size:12px;color:var(--faint)}
 .qrow{display:flex;align-items:center;gap:13px;padding:13px 18px;border-top:.5px solid var(--hair);
   transition:transform .5s var(--spring),opacity .3s var(--ease)}
@@ -195,7 +206,9 @@
 .sect.votehead b{color:var(--accent-2)}
 .sect span{font-size:12.5px;color:var(--faint)}
 .list{margin:0 18px;border-radius:var(--r);background:var(--surface);box-shadow:var(--sh-1);overflow:hidden}
-.list.votelist{box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-2)}
+.list.votelist{margin-right:55px;max-height:660px;overflow-y:auto;overscroll-behavior:contain;
+  touch-action:pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:thin;
+  border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);animation:edgeGlow 4.8s ease-in-out infinite}
 .prow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
 .prow:first-child{border-top:none}
 .prow .m{flex:1;min-width:0}
@@ -204,8 +217,14 @@
 .prow .cnt{flex:0 0 auto;min-width:22px;text-align:right;font-size:15px;font-weight:700;color:var(--faint)}
 .prow.hasv .cnt{color:var(--ink)}
 .prow.played .m,.prow.played .cnt{opacity:.48}
+.prow.inqueue .m,.prow.inqueue .cnt{opacity:.48}
+.queuednote{font-size:11.5px;color:var(--accent-2);font-weight:650;margin-top:3px}
 .playednote{font-size:11.5px;font-weight:700;color:var(--accent-2);margin-top:4px;line-height:1.3}
 .buyline,.secure-votes{color:var(--accent-2)!important}
+@keyframes edgeGlow{
+  0%,100%{filter:drop-shadow(7px 0 7px rgba(255,122,69,.18)) drop-shadow(14px 0 15px rgba(255,69,110,.08))}
+  50%{filter:drop-shadow(10px 0 11px rgba(255,122,69,.46)) drop-shadow(20px 0 24px rgba(255,69,110,.2))}
+}
 
 /* vote button */
 .vb{flex:0 0 auto;min-width:74px;height:40px;padding:0 16px;border-radius:var(--pill);
@@ -234,6 +253,12 @@
 .dock .btn b{font-size:15px;font-weight:600;letter-spacing:-.01em}
 .dock .btn small{font-size:12px;font-weight:400;color:var(--muted)}
 .dock .btn-pri small{color:rgba(255,255,255,.88)}
+.dock .btn{animation:emberGlow 4.2s ease-in-out infinite}
+@keyframes emberGlow{
+  0%,100%{filter:drop-shadow(0 0 5px rgba(255,122,69,.22))}
+  50%{filter:drop-shadow(0 0 13px rgba(255,122,69,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}
+}
+@media (prefers-reduced-motion:reduce){.queue,.list.votelist,.dock .btn{animation:none}}
 /* "More votes" wears an orange ring (Perry, 2026-09-07). It sits next to the solid
    gradient of Tip, so a second solid fill would make the pair read as two equal
    demands; the ring says "this one costs money too" without shouting over it. */
@@ -260,6 +285,10 @@
 .vrules li::before{content:"";position:absolute;left:4px;top:8px;width:5px;height:5px;
   border-radius:50%;background:var(--faint)}
 .vwarn{margin:10px 0 0;text-align:center;font-size:12.5px;color:var(--muted)}
+.vibe-scroll{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;margin-top:14px}
+.vibe-scroll::-webkit-scrollbar{display:none}.vibe-row{display:flex;gap:10px;width:max-content;padding:1px 1px 5px}
+.vibe-row .tile{flex:0 0 148px;width:148px;min-height:104px}
 /* On a 320x568 phone the rules list pushed Confirm off the bottom — nine pixels of
    it visible, and "Not yet" 83px below the viewport, so the deliberate way out was
    invisible on the smallest screen the app has to work on. The actions stick to the
@@ -613,7 +642,7 @@ function lastCall(msLeft){
   tick(); LC_TIMER=setInterval(tick,200);
 }
 
-let SORT=(()=>{try{return localStorage.getItem('myset.sort')||'votes'}catch(e){return 'votes'}})();
+let SORT=(()=>{try{return localStorage.getItem('myset.sort')||'title'}catch(e){return 'title'}})();
 function setSort(v){SORT=v;try{localStorage.setItem('myset.sort',v)}catch(e){}render();}
 /* Genre is deliberately NOT remembered between visits: a filter you forgot you
    set, on a setlist you have never seen, looks like the artist only knows four
@@ -664,10 +693,10 @@ function render(){
   const rank=list=>[...list].sort((a,b)=>(b.votes||0)-(a.votes||0)||
     (a.firstAt||Number.MAX_SAFE_INTEGER)-(b.firstAt||Number.MAX_SAFE_INTEGER)||collate(a.title,b.title));
   const voted=rank(all.filter(s=>s.votes>0));
-  const queue=voted.slice(0,3);
+  const queue=voted;
   const queueIds=new Set(queue.map(s=>s.id));
   const inGenre=s=>!GENRE||(s.tags||[]).includes(GENRE);
-  const rest=applySort((SORT==='votes'?rank(all):all).filter(s=>!queueIds.has(s.id)).filter(match).filter(inGenre));
+  const rest=applySort((SORT==='votes'?rank(all):all).filter(match).filter(inGenre));
   const by=a=>a?`<div class="by">${esc(a)}</div>`:'';
   const freeTotal=Number.isFinite(c.freeTotal)?c.freeTotal:Math.max(0,(c.total||0)-(c.extra||0));
   const freeRemaining=Number.isFinite(c.freeRemaining)?c.freeRemaining:Math.max(0,(c.remaining||0)-(c.paidLeft||0));
@@ -704,7 +733,7 @@ function render(){
   /* TIER 2 — always visible, even with nothing voted yet */
   h += `<div class="queue">
     <div class="qh"><b>Up next</b><span>${queue.length?'Top '+queue.length+' by votes':'Nothing yet'}</span></div>
-    ${queue.length?queue.map((s,i)=>{const replay=replayIds.has(s.id);return `
+    <div class="queue-scroll">${queue.length?queue.map((s,i)=>{const replay=replayIds.has(s.id);return `
       <div class="qrow ${i===0?'lead':''} ${replay?'played':''}" data-id="${s.id}">
         <span class="pos">${i+1}</span>
         <div class="m"><div class="t">${esc(s.title)}</div>${by(s.artist)}
@@ -717,13 +746,13 @@ function render(){
               shrug — INVARIANT 0ad, never show the room a button that leads to one. */
            const qc=d.credits||{}, qcost=s.cost||1;
            const qdis=!qc.unlimited&&(qc.remaining||0)<qcost&&
-             !((qc.remaining||0)<=0&&d.paymentsEnabled);
+             !(replay&&d.paymentsEnabled)&&!((qc.remaining||0)<=0&&d.paymentsEnabled);
            return `<button class="qvb ${s.mine?'on':''}" ${qdis?'disabled':''} onclick="openVote('${s.id}')"
              aria-label="${s.mine?'Add to your votes on':'Vote for'} ${esc(s.title)}">+</button>`;})():''}
       </div>`}).join('')
      :`<div class="qempty">${(d.songs||[]).length||(d.played||[]).length
          ? `<b>No votes yet</b>Pick a song below and you’ll set the queue.`
-         : `<b>Nothing on the list yet</b>${esc(artistFirst())} is still putting tonight’s songs in.`}</div>`}
+         : `<b>Nothing on the list yet</b>${esc(artistFirst())} is still putting tonight’s songs in.`}</div>`}</div>
   </div>`;
 
   h += askCard(d, open);
@@ -747,7 +776,7 @@ function render(){
   if(shortBoard) h += `<div class="bigroom">Big room tonight — showing the top ${d.board}.
     Songs you voted for stay on your list wherever they are.</div>`;
   h += rest.length
-    ? `<div class="list votelist">${rest.map(s=>row(s,c,open,replayIds.has(s.id))).join('')}</div>`
+    ? `<div class="list votelist">${rest.map(s=>row(s,c,open,replayIds.has(s.id),queueIds.has(s.id))).join('')}</div>`
     /* "Everything's in the queue above" was said even when there was no queue and no
        library — a brand-new artist's room told the fan to pick a song below and that
        everything was already above it, on the same screen. */
@@ -791,7 +820,7 @@ function render(){
     : `<button class="btn btn-buy" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>${tipBtn}`;
   dock.style.gridTemplateColumns=(ended||c.unlimited)?'1fr':'';
 }
-function row(s,c,open,replay){
+function row(s,c,open,replay,inQueue){
   const cost=s.cost||1;
   /* `c.remaining` is null when this device votes without limit, and `null < 1`
      is TRUE in JS — so every Vote button in the room rendered disabled while the
@@ -800,20 +829,19 @@ function row(s,c,open,replay){
   /* Voting is never a dead end: a song they already hold votes on can still be
      added to, it just cannot be taken back. Affordability is the only reason to
      disable the button. */
-  const dis=!open||(!c.unlimited&&c.remaining<cost&&!(c.remaining<=0&&ST.paymentsEnabled));
-  const n=s.mineCount||(s.mine?1:0);
-  return `<div class="prow ${s.votes?'hasv':''} ${replay?'played':''}">
-    <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}${replay?`<div class="playednote">already played (pay to request again)</div>`:''}</div>
-    <div class="cnt mono">${s.votes||''}</div>
-    <button class="vb ${replay?'cost':''} ${s.mine?'on':''} ${POP===s.id?'pop':''}" ${dis?'disabled':''}
-      onclick="openVote('${s.id}')">${s.mine?(n>1?'Voted \u00d7'+n:'Voted'):'Vote'}</button>
+  const dis=!open||(!c.unlimited&&c.remaining<cost&&!(replay&&ST.paymentsEnabled)&&!(c.remaining<=0&&ST.paymentsEnabled));
+  return `<div class="prow ${s.votes?'hasv':''} ${replay?'played':''} ${inQueue?'inqueue':''}">
+    <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}${replay?`<div class="playednote">already played (pay to request again)</div>`:inQueue?`<div class="queuednote">already voted in queue</div>`:''}</div>
+    <div class="cnt mono">${s.votes?`${s.votes} vote${s.votes===1?'':'s'}`:''}</div>
+    <button class="vb ${replay?'cost':''} ${POP===s.id?'pop':''}" ${dis?'disabled':''}
+      onclick="openVote('${s.id}')">Vote</button>
   </div>`;
 }
 /* Only rendered when the artist has actually switched it on. A button that leads
    to "sorry, not tonight" is worse than no button at all. */
 function askCard(d,open){
   const A=d.asks||{}, mine=d.myAsks||[];
-  if(!A.song&&!A.birthday&&!mine.length) return '';
+  if(!A.song&&!A.birthday&&!A.vibe&&!mine.length) return '';
   const c=d.credits, short=k=>!c.unlimited&&c.remaining<k;
   const vv=n=>`${n} vote${n===1?'':'s'}`;
   const status={pending:['wait','Waiting on '+esc((d.artist||'the artist').split(' ')[0])],
@@ -822,10 +850,12 @@ function askCard(d,open){
                 declined:['gone','Not tonight — votes refunded']};
   return `<div class="askbox">
     <div class="ah">Not on the list?</div>
-    <p class="ap">${A.song||A.birthday
+    <p class="ap">${A.song||A.birthday||A.vibe
       ? 'Ask for it with your votes. '+esc((d.artist||'The artist').split(' ')[0])+' decides — if it’s a no, your votes come straight back.'
       : 'Requests are closed now, but here’s what you asked for.'}</p>
-    ${A.song||A.birthday?`<div class="askbtns">
+    ${A.song||A.birthday||A.vibe?`<div class="askbtns">
+      ${A.vibe?`<button class="askbtn" ${!open?'disabled':''} onclick="openVibe()">
+        <b>✨ Vibe vote</b><small>${!open?'Voting is paused':'Free · artist picks the song'}</small></button>`:''}
       ${A.song?`<button class="askbtn" ${(!open||short(A.song.cost))?'disabled':''} onclick="openAskSong()">
         <b>Request a song</b><small>${!open?'Voting is paused':short(A.song.cost)?`Needs ${vv(A.song.cost)}`:vv(A.song.cost)}</small></button>`:''}
       ${A.birthday?`<button class="askbtn" ${(!open||short(A.birthday.cost))?'disabled':''} onclick="openAskBday()">
@@ -833,7 +863,7 @@ function askCard(d,open){
     </div>`:''}
     ${mine.length?`<div class="mine">${mine.map(r=>{
       const st=status[r.status]||['wait',r.status];
-      const what=r.kind==='birthday'?`🎂 ${esc(r.name)}`:esc(r.title);
+      const what=r.kind==='birthday'?`🎂 ${esc(r.name)}`:r.kind==='vibe'?`✨ ${esc(r.title)}`:esc(r.title);
       return `<div class="mr"><b>${what}</b><span class="${st[0]}">${st[1]}</span></div>`;}).join('')}</div>`:''}
   </div>`;
 }
@@ -868,14 +898,25 @@ function openAskBday(){
     <p class="fine">${esc((ST.artist||'They').split(' ')[0])} will see the name on stage.</p>`);
   setTimeout(()=>{const el=$('#askName'); if(el)el.focus();},260);
 }
+let VIBE_PICK='';
+function openVibe(){
+  const a=(ST.asks||{}).vibe;if(!a)return;VIBE_PICK='';
+  openSheet(`<h3>What should the next song feel like?</h3>
+    <p class="lede">Choose a vibe for free. ${esc(artistFirst('The artist'))} picks whatever song feels right.</p>
+    <div class="vibe-scroll"><div class="vibe-row">${(a.options||[]).map((v,i)=>`<button class="tile" data-vibe="${esc(v)}" onclick="pickVibe(${i})"><b>${esc(v)}</b><span>0 votes</span></button>`).join('')}</div></div>
+    <button class="go" id="vibeGo" onclick="sendAsk('vibe')" disabled>Send vibe</button>`);
+}
+function pickVibe(i){const a=(ST.asks||{}).vibe||{},v=(a.options||[])[i];if(!v)return;VIBE_PICK=v;
+  document.querySelectorAll('[data-vibe]').forEach(b=>b.classList.toggle('on',b.getAttribute('data-vibe')===v));$('#vibeGo').disabled=false;buzz(8);}
 let ASKING=false;
 function pickAskOffer(v){sel.askOffer=v;buzz(8);[5,10].forEach(k=>$('#ao-'+k).classList.toggle('on',k===v));const a=$('#askOfferAmt');if(a)a.value='';}
 async function sendAsk(kind,withOffer=false){
   if(ASKING)return;                                  // a second tap is not a second request
   const v=id=>(($('#'+id)||{}).value||'').trim();
-  const body={fan:FAN,kind,title:v('askTitle'),artist:v('askArtist'),name:v('askName')};
+  const body={fan:FAN,kind,title:kind==='vibe'?VIBE_PICK:v('askTitle'),artist:v('askArtist'),name:v('askName')};
   if(kind==='song'&&!body.title){toast('What song?');return;}
   if(kind==='birthday'&&!body.name){toast('Whose birthday is it?');return;}
+  if(kind==='vibe'&&!body.title){toast('Pick a vibe');return;}
   let offer=null;
   if(withOffer){
     const raw=v('askOfferAmt'), custom=raw?Number(raw):NaN;
@@ -907,7 +948,7 @@ async function sendAsk(kind,withOffer=false){
       window.location.href=d.url;return;
     }
     closeSheet(); buzz([10,40,10]);
-    toast(kind==='birthday'?'Sent up — 🎂':'Request sent');
+    toast(kind==='birthday'?'Sent up — 🎂':kind==='vibe'?'Vibe sent — ✨':'Request sent');
     await load();
   }catch(e){ toast('Connection hiccup — try again');
     if(btn){btn.disabled=false;btn.textContent='Send';} }

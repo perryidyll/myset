@@ -55,7 +55,7 @@ body{padding-bottom:34px}
 .owner .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
 .vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 9px;border-radius:var(--pill);font-size:11px;font-weight:700;letter-spacing:.01em;vertical-align:3px;background:rgba(48,209,88,.14);color:#1B8E3C}
 @media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
-.share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600}
+.share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-2);font-size:13px;font-weight:600}
 /* THE TIP BUTTON, AT THE TOP (Perry, 2026-09-07). Full width and solid, because on
    this page it is the only thing anyone can hand the artist — there are no votes
    here to buy. Only ever on an ARTIST's page: tipping a venue is not a thing. */
@@ -64,9 +64,15 @@ body{padding-bottom:34px}
   padding:14px 17px;border-radius:var(--r-sm);background:var(--grad);color:#fff;
   box-shadow:var(--sh-accent);transition:transform .18s var(--spring)}
 .tipbar button:active{transform:scale(.985)}
+.tipbar button{animation:emberGlow 4.2s ease-in-out infinite}
+@keyframes emberGlow{
+  0%,100%{filter:drop-shadow(0 0 5px rgba(255,122,69,.22))}
+  50%{filter:drop-shadow(0 0 13px rgba(255,122,69,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}
+}
 .tipbar b{font-size:16px;font-weight:700;letter-spacing:-.015em}
 .tipbar small{font-size:12.5px;font-weight:400;color:rgba(255,255,255,.9)}
 .tipbar .off{background:var(--surface);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--hair-2)}
+@media (prefers-reduced-motion:reduce){.tipbar button{animation:none}}
 .sect{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:26px 20px 10px}
 
 /* the merch rail */
@@ -86,8 +92,8 @@ body{padding-bottom:34px}
 /* the composer */
 .comp{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:14px 14px 12px}
 .comp .stars{display:flex;gap:4px;margin:0 0 6px}
-.comp .stars button{font-size:28px;line-height:1;color:var(--faint);padding:2px 3px;transition:transform .2s var(--spring)}
-.comp .stars button.on{color:var(--accent-2)}
+.comp .stars button{font-size:28px;line-height:1;color:transparent;-webkit-text-stroke:1.25px var(--accent-2);padding:2px 3px;transition:transform .2s var(--spring)}
+.comp .stars button.on{color:var(--accent-2);-webkit-text-stroke-color:var(--accent-2)}
 .comp .stars button:active{transform:scale(1.2)}
 .comp textarea{width:100%;min-height:96px;resize:vertical;padding:12px 14px;font-size:16px;line-height:1.4;background:var(--bg);border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);margin-top:6px}
 .comp textarea:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
@@ -246,6 +252,8 @@ function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
   if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
   return v;}
 const FAN=fanId();
+const ARTIST_TOKEN=(()=>{try{return localStorage.getItem('myset.token')||localStorage.getItem('myset.admin')||''}catch(e){return ''}})();
+const authHeaders=(json=false)=>({...json?{'content-type':'application/json'}:{},...(ARTIST_TOKEN?{authorization:'Bearer '+ARTIST_TOKEN}:{})});
 (()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
   const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
   if(A){ A.href=a?'/studio':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
@@ -262,7 +270,7 @@ let D=null, DRAFT={stars:0,photos:[],show:'',clip:null}, SHOWPRE=(new URLSearchP
 
 async function load(){
   try{
-    const r=await fetch(`${API}/community${Q}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store'});
+    const r=await fetch(`${API}/community${Q}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store',headers:authHeaders()});
     const d=await r.json();
     if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b><br>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
     D=d; render();
@@ -300,12 +308,13 @@ function render(){
 
   // the composer
   const showOpts=(d.shows||[]);
-  h+=`<div class="sect">Say something</div>
+  if(d.canPost===false) h+=`<div class="sect">Community posts</div><div class="empty">Artists can’t comment on their own pages.</div>`;
+  else h+=`<div class="sect">Say something</div>
   <div class="comp">
     <div class="stars">${[1,2,3,4,5].map(n=>`<button data-star="${n}" class="${DRAFT.stars>=n?'on':''}" aria-label="${n} stars">★</button>`).join('')}</div>
     <textarea id="txt" maxlength="500" placeholder="How was the night?">${esc(DRAFT.text||'')}</textarea>
     <div class="cnt" id="cnt">0/500</div>
-    ${showOpts.length?`<select class="inp" id="showSel"><option value="">Where did you see them?</option>${showOpts.map(s=>`<option value="${esc(s.showId)}" ${(DRAFT.show||SHOWPRE)===s.showId?'selected':''}>${esc(s.label)}</option>`).join('')}</select>`:''}
+    ${showOpts.length?`<select class="inp" id="showSel"><option value="">Where did you see them? (select)</option>${showOpts.map(s=>`<option value="${esc(s.showId)}" ${(DRAFT.show||SHOWPRE)===s.showId?'selected':''}>${esc(s.label)}</option>`).join('')}</select>`:''}
     <input class="inp" id="nm" maxlength="30" placeholder="Your name (optional)" value="${esc(DRAFT.name||'')}">
     <input class="inp" id="vid" placeholder="Paste a video link" value="${esc(DRAFT.video||'')}">
     <div class="row2">
@@ -727,7 +736,8 @@ function wireClips(){
   document.querySelectorAll('video[data-clip]').forEach(v=>{
     if(v.__wired) return; v.__wired=1;
     const wait=v.parentElement.querySelector('.clipwait');
-    const show=()=>{ if(wait) wait.hidden=false; };
+    let wanted=false;
+    const show=()=>{ if(wait&&wanted&&!v.paused) wait.hidden=false; };
     const hide=()=>{ if(wait) wait.hidden=true; };
     /* WHICH EVENTS MEAN WHAT, because two of these look right and are wrong.
        `suspend` fires the instant a preload="none" video is touched — it means "not
@@ -735,11 +745,14 @@ function wireClips(){
        before a single frame of the animation ran. `stalled` means data has STOPPED
        arriving, which is precisely when somebody most needs to see that MySet is
        still trying. Neither hides anything. */
+    v.addEventListener('play',()=>{wanted=true;if(v.readyState<3)show();});
     v.addEventListener('loadstart',show);
     v.addEventListener('waiting',show);
     v.addEventListener('seeking',show);
     v.addEventListener('canplay',hide);
     v.addEventListener('playing',hide);
+    v.addEventListener('pause',hide);
+    v.addEventListener('ended',()=>{wanted=false;hide();});
     v.addEventListener('error',hide);
     v.addEventListener('abort',hide);
     /* And a backstop, because bars that never stop are worse than no bars: after
@@ -764,7 +777,7 @@ async function post(){
     const body={action:'post',fan:FAN,text:($('#txt')||{}).value||'',stars:DRAFT.stars||null,name:($('#nm')||{}).value||'',
       show:($('#showSel')||{}).value||'',video:($('#vid')||{}).value||'',photos:DRAFT.photos,
       clip:DRAFT.clip?DRAFT.clip.id:''};
-    const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:authHeaders(true),body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){ toast(d.error||'Couldn’t post'); btn.disabled=false; btn.textContent='Post'; return; }
     D.posts=d.posts; DRAFT={stars:0,photos:[],show:'',clip:null}; SHOWPRE=''; render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
@@ -846,7 +859,7 @@ async function report(id){
   try{ const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'report',fan:FAN,id})});
     const d=await r.json(); toast(d.ok?'Reported — thanks':(d.error||'Couldn’t report')); }catch(e){ toast('Connection hiccup — try again'); }
 }
-function share(){ const url=location.href.split('?')[0]; if(navigator.share){ navigator.share({title:`${D.name} — Community`,url}).catch(()=>{}); } else { try{ navigator.clipboard.writeText(url); toast('Link copied'); }catch(e){ toast(url); } } }
+function share(){ const url=new URL(HOME,location.origin).href; if(navigator.share){ navigator.share({title:`${D.name} — MySet`,url}).catch(()=>{}); } else { try{ navigator.clipboard.writeText(url); toast('Profile link copied'); }catch(e){ toast(url); } } }
 
 /* ---------- buying ---------- */
 let QTY=1;

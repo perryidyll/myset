@@ -4,7 +4,7 @@ import { COUNTDOWN_MS, getShow, readFans, voteCounts, firstVotedAt, rankSongs, c
          GENRES, playable, votable, roomHash, clientIp } from './_lib.mjs';
 import { MARK } from './_canary.mjs';
 import { canTakeMoney } from './_pay.mjs';
-import { readRequests, myRequests } from './_requests.mjs';
+import { readRequests, myRequests, VIBE_OPTIONS } from './_requests.mjs';
 import { readFlags, flagsFor } from './_flags.mjs';
 
 export default async (req) => {
@@ -170,6 +170,7 @@ export default async (req) => {
     asks: {
       song: show.requests.on ? { cost: show.requests.cost } : null,
       birthday: show.birthdays.on ? { cost: show.birthdays.cost } : null,
+      vibe: { cost: 0, options: VIBE_OPTIONS },
     },
     myAsks,
     credits: {

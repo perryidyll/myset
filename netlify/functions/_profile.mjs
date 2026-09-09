@@ -46,6 +46,7 @@ export const defaultProfile = () => ({
   artistId: null,
   name: '',
   tagline: '',
+  management: '',
   bio: '',
   photo: '/img/band.jpg',
   avatar: '',            // the big square portrait
@@ -88,6 +89,7 @@ export function normProfile(p) {
   const out = { ...d, ...(p || {}) };
   out.name = clean(out.name, 60);
   out.tagline = clean(out.tagline, 120);
+  out.management = clean(out.management, 120);
   out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 700);    // newlines kept
   out.photo = String(out.photo == null ? d.photo : out.photo).slice(0, 300);
   out.avatar = String(out.avatar || '').slice(0, 300);
@@ -142,7 +144,9 @@ export function shapeMedia(m) {
   const src = embedSrc(m);
   if (!src) return null;
   return {
-    mid: m.mid, provider: m.provider, title: m.title || '', thumb: m.thumb || '',
+    mid: m.mid, provider: m.provider, title: m.title || '',
+    thumb: m.thumb || (m.provider === 'youtube' && m.id ? `https://i.ytimg.com/vi/${encodeURIComponent(m.id)}/hqdefault.jpg` : ''),
+    thumbFallback: m.provider === 'youtube' && m.id ? `https://i.ytimg.com/vi/${encodeURIComponent(m.id)}/hqdefault.jpg` : '',
     src, href: linkOut(m), ...embedShape(m),
   };
 }

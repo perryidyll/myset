@@ -28,8 +28,12 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) | An artist-declined unplayed song returns its votes | 2026-09-09 | voting | decided | user |
 | [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) | Artist transaction fees are 25%, 10%, and 2.5%, with the platform-owner account exempt | 2026-09-09 | money | decided | user |
 | [0018](0018-song-request-offers-are-authorized-now-and-capture.md) | song request offers are authorized now and captured only after the song finishes | 2026-09-09 | money | decided | user |
+| [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) | Mood votes are free requests that let the artist choose the song | 2026-09-10 | voting | decided | perry |
+| [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) | Artists cannot publish public posts on their own artist page except the founding account | 2026-09-10 | auth | decided | perry |
 
 ## By area
+
+**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md)
 
 **media** — [0011](0011-clips-go-up-as-they-are.md)
 
@@ -45,7 +49,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md)
 
-**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md)
+**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 
 ## What counts as a decision
 

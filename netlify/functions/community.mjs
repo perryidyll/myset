@@ -1,4 +1,4 @@
-import { json, bad, publicArtist, getShow, cleanFanId, clientIp } from './_lib.mjs';
+import { json, bad, publicArtist, getShow, cleanFanId, clientIp, requireArtist, DEFAULT_ARTIST } from './_lib.mjs';
 import { cleanSlug } from './_auth.mjs';
 import { getProfile } from './_profile.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
@@ -80,6 +80,8 @@ async function resolveOwner(req) {
 export default async (req) => {
   const o = await resolveOwner(req);
   if (!o) return bad('unknown page', 404);
+  const signedArtist = o.kind === 'artist' ? await requireArtist(req) : null;
+  const ownArtistPage = !!(signedArtist && signedArtist.aid === o.id && o.id !== DEFAULT_ARTIST);
 
   if (req.method === 'GET') {
     const fan = cleanFanId(new URL(req.url).searchParams.get('fan'));
@@ -90,7 +92,8 @@ export default async (req) => {
     ]);
     const shows = nights.map((n) => ({ showId: n.key, label: n.label }));
     const { fan: _f, ...pub } = o;
-    return json({ ok: true, ...pub, posts: shapePosts(posts, likes, fan, o.owner), shows,
+    return json({ ok: true, ...pub, canPost: !ownArtistPage,
+                  posts: shapePosts(posts, likes, fan, o.owner), shows,
                   limits: { text: 500, photos: 3, perDay: PER_DEVICE_PER_DAY,
                             clipSeconds: MAX_SECONDS, clipBytes: MAX_VIDEO_BYTES,
                             editHours: Math.round(EDIT_WINDOW / 3600e3) } });
@@ -99,6 +102,8 @@ export default async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
+  if (ownArtistPage && ['post', 'clip'].includes(body.action))
+    return bad('Artists can’t post on their own community page.', 403);
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
 

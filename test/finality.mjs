@@ -216,8 +216,8 @@ ok('a held song opens the ordinary sheet, so more can be added',
    'openUnvote must be gone, not just unreachable');
 ok('and the queue row stays a real button, not an inert state',
    !/qvb on done/.test(page) && /class="qvb \$\{s\.mine\?'on':''\}"/.test(page));
-ok('the row is disabled only for affordability, except when an empty wallet can buy more',
-   /constdis=!open\|\|\(!c\.unlimited&&c\.remaining<cost&&\!\(c\.remaining<=0&&ST\.paymentsEnabled\)\)/
+ok('the row is disabled only for affordability, except when replay or an empty wallet can buy more',
+   /constdis=!open\|\|\(!c\.unlimited&&c\.remaining<cost&&!\(replay&&ST\.paymentsEnabled\)&&!\(c\.remaining<=0&&ST\.paymentsEnabled\)\)/
      .test(page.replace(/\s/g, '')), 'row() dis rule');
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -68,6 +68,7 @@ a{color:inherit;text-decoration:none}
 .pill{flex:0 0 auto;padding:6px 12px;border-radius:var(--pill);font-size:11.5px;font-weight:700}
 .pill.ok{background:rgba(48,209,88,.16);color:var(--good)}
 .pill.no{background:var(--surface-2);color:var(--muted)}
+.orange-outline{box-shadow:inset 0 0 0 1.5px var(--accent-2)!important}
 
 /* Sticks under the header, whose height is measured by fitTabs() — see the same
    comment in studio.html. 66px was a guess against a real ~88px. */
@@ -230,12 +231,13 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 #qrbig{position:fixed;inset:0;z-index:75;display:none;place-items:center;padding:22px;
   background:rgba(0,0,0,.9)}
 #qrbig.on{display:grid}
-.qrpaper{width:min(340px,86vw);background:#fff;border-radius:22px;padding:22px 22px 24px;
-  text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6)}
-.qrpaper img{width:100%;height:auto;display:block;border-radius:10px}
+.qrpaper{width:min(390px,90vw);aspect-ratio:1;background:#fff;border-radius:22px;padding:24px;
+  text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6);display:flex;flex-direction:column;justify-content:center}
+.qrpaper img{width:74%;height:auto;display:block;border-radius:10px;margin:0 auto}
 .qrpaper .cap{margin:16px 2px 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;
   font-size:25px;font-weight:600;line-height:1.15;letter-spacing:-.022em;color:#111}
-.qrpaper .sub{margin:9px 0 0;font-size:12.5px;font-weight:600;letter-spacing:.02em;color:#8A8A8F}
+.qrpaper .cap2{margin:7px 0 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:17px;font-weight:700;letter-spacing:.05em;color:#ff4058}
+.qrpaper .sub{margin:8px 0 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:13px;font-weight:600;letter-spacing:.08em;color:#ff4058}
 .qracts{display:flex;gap:9px;margin:16px auto 0;width:min(340px,86vw)}
 .qracts a,.qracts button{flex:1;padding:13px;border-radius:var(--pill);text-align:center;
   font-size:14.5px;font-weight:600;background:var(--surface-2);color:var(--ink)}
@@ -1087,6 +1089,7 @@ function render(){
 
   if(TAB==='page'){
     body=`
+    ${V.slug?`<div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="/v/${esc(V.slug)}">View your page ↗</a></div>`:''}
     ${verifyBlock()}
 
     <div class="sec"><span class="kick">Cover photo</span></div>
@@ -1400,7 +1403,7 @@ function render(){
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${leavingBar()}${cardTrouble()}${body}
   <div class="wrap" style="padding-top:26px;padding-bottom:8px">
-    ${V.slug?`<a class="big alt" href="/v/${esc(V.slug)}">See your public page ↗</a>`:''}
+    ${V.slug?`<a class="big alt ${TAB==='page'?'orange-outline':''}" href="/v/${esc(V.slug)}">See your public page ↗</a>`:''}
   </div>`;
   wireCount('#fTag','#cTag',120); wireCount('#fAbout','#cAbout',900);
   document.querySelectorAll('input[data-hday]').forEach(el=>
@@ -1525,17 +1528,33 @@ const QRS=[
 ];
 const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((V&&V.slug)||'')}&s=${scale}`;
 const qrUrl=k=>k==='home'?'myset.vip':`myset.vip/v/${(V&&V.slug)||''}`;
+const qrCopy=k=>k==='home'
+  ? {head:'FIND LIVE MUSIC NEAR YOU',line:'VOTE on which songs play next',url:'www.MySet.VIP'}
+  : {head:'CONNECT WITH OUR PERFORMERS',line:'See what’s on and meet the acts',url:qrUrl(k)};
 function qrBig(k){
   const row=QRS.find(x=>x[0]===k); if(!row)return;
   if(k!=='home'&&!(V&&V.slug)){ toast('Set your page address first'); return; }
+  const copy=qrCopy(k);
   $('#qrbig').innerHTML=`<div onclick="event.stopPropagation()">
     <div class="qrpaper"><img src="${qrSrc(k,10)}" alt="${esc(row[1])} QR code">
-      <div class="cap">${esc(row[3])}</div><div class="sub">${esc(qrUrl(k))}</div></div>
-    <div class="qracts"><a href="${qrSrc(k,20)}" target="_blank" rel="noopener">Full size ↗</a>
+      <div class="cap">${esc(copy.head)}</div><div class="cap2">${esc(copy.line)}</div><div class="sub">${esc(copy.url)}</div></div>
+    <div class="qracts"><button onclick="qrDownload('${k}')">Download print-ready</button>
       <button onclick="qrHide()">Done</button></div></div>`;
   $('#qrbig').classList.add('on');
 }
 function qrHide(e){ if(e&&e.target&&e.target.id!=='qrbig')return; $('#qrbig').classList.remove('on'); }
+function qrDownload(k){
+  const row=QRS.find(x=>x[0]===k); if(!row)return;
+  const img=new Image(); img.onload=()=>{
+    const c=document.createElement('canvas'),z=1800,ctx=c.getContext('2d'),copy=qrCopy(k); c.width=z;c.height=z;
+    const fit=(txt,max,size,weight='700')=>{do{ctx.font=`${weight} ${size}px Georgia, serif`;size-=2;}while(ctx.measureText(txt).width>max&&size>24)};
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,z,z);ctx.drawImage(img,300,90,1200,1200);ctx.textAlign='center';
+    ctx.fillStyle='#111';fit(copy.head,1640,82);ctx.fillText(copy.head,z/2,1435);
+    ctx.fillStyle='#ff4058';fit(copy.line,1580,60);ctx.fillText(copy.line,z/2,1535);
+    fit(copy.url,1100,46,'600');ctx.fillText(copy.url,z/2,1650);
+    const a=document.createElement('a');a.download=`myset-${k}-qr.png`;a.href=c.toDataURL('image/png');a.click();
+  }; img.onerror=()=>toast('Couldn’t prepare that QR code'); img.src=qrSrc(k,20);
+}
 
 function openSheet(h){
   const sh=$('#sheet');

@@ -84,7 +84,7 @@ ok('played songs carry the exact replay note', /already played \(pay to request 
 ok('the search, sort control, and voting list use the orange border',
   /search input[\s\S]{0,220}accent-2/.test(votePage) &&
   /\.sortbar[\s\S]{0,180}accent-2/.test(votePage) &&
-  /\.list\.votelist[\s\S]{0,120}accent-2/.test(votePage));
+  /\.list\.votelist[\s\S]{0,320}accent-2/.test(votePage));
 ok('the vote-pack sheet uses first-name-only orange copy',
   /lede buyline[^>]*>goes straight to \$\{esc\(artistFirst/.test(votePage) && /fine secure-votes/.test(votePage));
 ok('the Studio renders paid-vote pills and the decline action',

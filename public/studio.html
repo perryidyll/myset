@@ -119,6 +119,19 @@ a{color:inherit;text-decoration:none}
 .wrap{padding:0 18px}
 
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
+.scroll-window{margin-right:55px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin;
+  border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);animation:edgeGlow 4.8s ease-in-out infinite}
+.scroll-window{scrollbar-color:rgba(142,142,147,.7) transparent}
+.scroll-window::-webkit-scrollbar{width:7px}.scroll-window::-webkit-scrollbar-track{background:transparent;margin-block:10px}
+.scroll-window::-webkit-scrollbar-thumb{background:rgba(142,142,147,.7);border:2px solid transparent;background-clip:content-box;border-radius:999px}
+.orange-outline{box-shadow:inset 0 0 0 1.5px var(--accent-2)!important}
+.queue-window{max-height:294px}.setlist-window{max-height:720px}
+.sec.upnext .kick:first-child{font-size:15px;font-weight:750;color:var(--accent-2)}
+@keyframes edgeGlow{
+  0%,100%{filter:drop-shadow(7px 0 7px rgba(255,122,69,.18)) drop-shadow(14px 0 15px rgba(255,69,110,.08))}
+  50%{filter:drop-shadow(10px 0 11px rgba(255,122,69,.46)) drop-shadow(20px 0 24px rgba(255,69,110,.2))}
+}
 .row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
 /* A prose row is a SENTENCE, not a row of items. `.row` is a flex container, so
    every <b> inside one becomes a flex ITEM and each run of text between them an
@@ -356,12 +369,13 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
   background:rgba(0,0,0,.9)}
 #qrbig.on{display:grid}
 #qrbig>div{animation:rise .3s var(--ease) both}
-.qrpaper{width:min(340px,86vw);background:#fff;border-radius:22px;padding:22px 22px 24px;
-  text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6)}
-.qrpaper img{width:100%;height:auto;display:block;border-radius:10px}
+.qrpaper{width:min(390px,90vw);aspect-ratio:1;background:#fff;border-radius:22px;padding:24px;
+  text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6);display:flex;flex-direction:column;justify-content:center}
+.qrpaper img{width:74%;height:auto;display:block;border-radius:10px;margin:0 auto}
 .qrpaper .cap{margin:16px 2px 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;
   font-size:25px;font-weight:600;line-height:1.15;letter-spacing:-.022em;color:#111}
-.qrpaper .sub{margin:9px 0 0;font-size:12.5px;font-weight:600;letter-spacing:.02em;color:#8A8A8F}
+.qrpaper .cap2{margin:7px 0 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:17px;font-weight:700;letter-spacing:.05em;color:#ff4058}
+.qrpaper .sub{margin:8px 0 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:13px;font-weight:600;letter-spacing:.08em;color:#ff4058}
 .qracts{display:flex;gap:9px;margin:16px auto 0;width:min(340px,86vw)}
 .qracts a,.qracts button{flex:1;padding:13px;border-radius:var(--pill);text-align:center;
   font-size:14.5px;font-weight:600;background:var(--surface-2);color:var(--ink)}
@@ -524,7 +538,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 @keyframes sp{to{transform:rotate(360deg)}}
 .rise{animation:rise .45s var(--ease) both}
 @keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}.scroll-window{animation:none}}
 
 /* `.note` was used here and never defined in app.css or this page, so the
    "Why there's a limit at all" block rendered full-bleed with no padding. */
@@ -609,7 +623,7 @@ function setPick(){
         <b>${on?esc(on.name):'All songs'}</b>
         <span>${on?`${on.count} of your ${total} songs are in play`:`the whole library — ${total} songs`}</span>
       </div>
-      <span class="go2">${lists.length?'Change':'Make a set'}</span>
+      <span class="go2 ${lists.length?'':'orange-outline'}">${lists.length?'Change':'Make a set'}</span>
     </div>
     ${D.listFellBack?`<div class="warnstrip"><b>Nothing votable in that set.</b>
       The room is seeing your whole library instead, so the night still works —
@@ -1813,7 +1827,7 @@ async function saveProfile(){
   const IDS={spotify:'lkSpotify',applemusic:'lkApple',ytmusic:'lkYtm',instagram:'lkIg',website:'lkWeb'};
   const typed={}; for(const k in IDS) typed[k]=v(IDS[k]);   // capture BEFORE the re-render
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'profileSet',
-    name:v('pfName'),tagline:v('pfTag'),bio:(($('#pfBio')||{}).value||''),
+    name:v('pfName'),tagline:v('pfTag'),management:v('pfManagement'),bio:(($('#pfBio')||{}).value||''),
     links:typed})});
   if(!d.ok){toast(d.error||'Could not save');return;}
   PROF=null; await loadProf(true);
@@ -1985,14 +1999,13 @@ function render(){
         <span>▶</span><span style="flex:1;min-width:0">Start top voted — ${esc(top.title)} (${top.votes} votes total) ${paidPill(top)}</span></button>`:''}
       ${now?`<button class="big endnow" onclick="act('endSong')">■ End current song</button>`:''}
     </div>
-    <div class="sec"><span class="kick">Queue — tap ▶ to start</span><span class="kick">${pool.length}</span></div>
-    <div class="list">${pool.slice(0,12).map((x,i)=>`<div class="row">
+    <div class="sec upnext"><span class="kick">Up next</span><span class="kick">Tap ▶ to start · ${pool.length}</span></div>
+    <div class="list scroll-window queue-window">${pool.map((x,i)=>`<div class="row">
       <div class="rk ${i===0&&x.votes?'one':''} mono">${i+1}</div>
       <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="by">${esc(x.artist)}</div>`:''}
         <div class="songvotes"><span class="mono">${x.votes} votes total</span>${paidPill(x)}</div>
         ${x.votes?`<button class="refundlink" onclick="declineSong('${x.id}')">Decline + refund votes</button>`:''}</div>
       <button class="act" onclick="act('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div>
-    ${pool.length>12?`<div class="row muted" style="font-size:12px">+ ${pool.length-12} more in the Setlist tab</div>`:''}
 
     <div class="sec"><span class="kick">Played (${s.played.length})</span>${s.played.length?`<button class="kick" style="color:var(--accent)" onclick="clearBoardAsk()">Clear the board</button>`:''}</div>
     <div class="list">${songs.filter(x=>x.played).map(x=>`<div class="row done"><div class="rk">♪</div>
@@ -2011,7 +2024,7 @@ function render(){
       .filter(x=>!q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q)));
     body=`
     <div class="wrap" style="padding-top:18px">
-      <a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
+      <a class="big alt orange-outline" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
          style="justify-content:center">See what fans see ↗</a>
       <div style="display:flex;gap:9px">
         <button class="big alt" style="flex:1;justify-content:center;margin:0"
@@ -2024,7 +2037,7 @@ function render(){
     <div class="wrap" style="padding-top:16px">
       <button class="big bigplay" style="margin:0" onclick="openSongSheet(null)">
         <span>+</span><span style="flex:1">Add a song</span></button>
-      <button class="big alt" style="justify-content:center" onclick="openImport()">⇪ Import songs — CSV, text or Spotify</button>
+      <button class="big alt" style="justify-content:center" onclick="openImport()">⇪ Import songs — CSV or text</button>
     </div>
     ${PLAN&&PLAN.ok&&PLAN.limits.featured?`<p class="muted" style="font-size:12px;padding:0 20px;margin:0">
       <b>${active} of ${PLAN.limits.featured}</b> featured. Keep as many as you like (up to ${PLAN.limits.library}) — your plan shows ${PLAN.limits.featured} to fans at a time. The rest sit switched off.</p>`:''}
@@ -2044,7 +2057,7 @@ function render(){
       <button onclick="confirmAutoTag()">✨ Auto-tag songs</button></div>
     ${genreBar(songs)}
     <p class="muted" style="font-size:12px;padding:10px 14px 4px;margin:0">Turn a song OFF to hide it from fans tonight. Remove deletes it for good.</p>
-    <div class="list">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
+    <div class="list scroll-window setlist-window">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
         <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden'
@@ -2245,12 +2258,14 @@ function render(){
     else{
       const L=P.links||{};
       body=`
-      <div class="wrap" style="padding-top:14px"><a class="big alt" href="/artist.html" style="justify-content:center">View your page ↗</a></div>
+      <div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="/artist.html" style="justify-content:center">View your page ↗</a></div>
 
       <div class="sec"><span class="kick">Who you are</span></div>
       <div class="field"><label>Name</label><input class="inp" id="pfName" maxlength="60" value="${esc(P.name||'')}"></div>
       <div class="field"><label>One line under your name <span class="cnt" id="cTag"></span></label>
         <input class="inp" id="pfTag" maxlength="120" value="${esc(P.tagline||'')}" placeholder="Make my set your set"></div>
+      <div class="field"><label>Label / management company</label>
+        <input class="inp" id="pfManagement" maxlength="120" value="${esc(P.management||'')}" placeholder="Independent, label or management company"></div>
       <div class="field"><label>Bio <span class="cnt" id="cBio"></span></label>
         <textarea class="inp" id="pfBio" rows="6" maxlength="700" placeholder="A few lines about you and your music.">${esc(P.bio||'')}</textarea></div>
       <div class="field"><label>Cover photo</label>
@@ -2271,7 +2286,6 @@ function render(){
       <div class="field"><label>Apple Music</label><input class="inp" id="lkApple" value="${esc(L.applemusic||'')}" placeholder="https://music.apple.com/…"></div>
       <div class="field"><label>YouTube Music</label><input class="inp" id="lkYtm" value="${esc(L.ytmusic||'')}" placeholder="https://music.youtube.com/…"></div>
       <div class="field"><label>Website</label><input class="inp" id="lkWeb" value="${esc(L.website||'')}" placeholder="https://…"></div>
-      <div class="wrap" style="margin-top:14px"><button class="big" onclick="saveProfile()">Save profile</button></div>
 
       <div class="sec"><span class="kick">Videos &amp; music</span><span class="kick">${P.media.length}/24</span></div>
       <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Paste a YouTube, Spotify or Apple Music link. I check it exists before it goes on your page.</p>
@@ -2286,6 +2300,7 @@ function render(){
         <button class="act" data-act="mdn" data-id="${esc(m.mid)}" ${i===P.media.length-1?'disabled style="opacity:.3"':''}>↓</button>
         <button class="act warn" data-act="mrm" data-id="${esc(m.mid)}">✕</button>
       </div>`).join('')||'<div class="row muted">Nothing yet. Paste a link above.</div>'}</div>
+      <div class="wrap" style="margin-top:14px"><button class="big" onclick="saveProfile()">Save profile</button></div>
       ${commSection()}
       ${presskitCard()}
       ${brandingCard()}`;
@@ -2609,9 +2624,9 @@ function render(){
          because one button that goes to two different places without saying so is
          worse than two honest ones. */''}
     ${TAB==='live'
-      ? `<a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
+      ? `<a class="big alt orange-outline" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
            style="justify-content:center">See what fans see ↗</a>`
-      : `<a class="big alt" href="${s.slug?'/'+esc(s.slug):'/artist.html'}"
+      : `<a class="big alt ${TAB==='profile'?'orange-outline':''}" href="${s.slug?'/'+esc(s.slug):'/artist.html'}"
            style="justify-content:center">See your page ↗</a>`}
   </div>`}`;
 
@@ -2669,6 +2684,7 @@ function asksPanel(){
   const cost=a=>a.cost?`${a.cost} vote${a.cost===1?'':'s'}`:'free';
   const row=a=>{
     const bday=a.kind==='birthday';
+    const vibe=a.kind==='vibe';
     const open=a.status==='pending';
     const offer=a.pledgeCents?`$${(a.pledgeCents/100).toFixed(a.pledgeCents%100?2:0)} offered`:'';
     const held=a.pledgeVotes>0&&['authorized','capture_pending'].includes(a.pledgeState)
@@ -2676,10 +2692,10 @@ function asksPanel(){
     const label=a.status==='added'?'On the setlist':a.status==='played'?'Done'
       :a.status==='declined'?'Declined — votes refunded':`Asked for · ${cost(a)}`;
     return `<div class="arow ${open?'':'done'}">
-      ${bday?'<span class="bcake">🎂</span>':''}
-      <div class="m"><div class="t">${bday?esc(a.name):esc(a.title)}${!bday&&a.artist?` <span class="muted" style="font-weight:400">· ${esc(a.artist)}</span>`:''}${held}</div>
-        <div class="s">${bday?'Happy birthday shout-out':'Song request'} · ${label}${offer?` · ${offer}${a.status==='added'?' · charged when you finish the song':''}`:''} · ${when(a.at)}</div></div>
-      ${open?(bday
+      ${bday?'<span class="bcake">🎂</span>':vibe?'<span class="bcake">✨</span>':''}
+      <div class="m"><div class="t">${bday?esc(a.name):esc(a.title)}${!bday&&!vibe&&a.artist?` <span class="muted" style="font-weight:400">· ${esc(a.artist)}</span>`:''}${held}</div>
+        <div class="s">${bday?'Happy birthday shout-out':vibe?'Mood vote':'Song request'} · ${vibe&&open?'Artist picks the song':label}${offer?` · ${offer}${a.status==='added'?' · charged when you finish the song':''}`:''} · ${when(a.at)}</div></div>
+      ${open?(bday||vibe
         ? `<button class="act pri" data-act="askdone" data-id="${a.id}">Did it</button>
            <button class="act warn" data-act="asknope" data-id="${a.id}">✕</button>`
         : `<button class="act pri" data-act="askadd" data-id="${a.id}">+ Add</button>
@@ -3052,24 +3068,40 @@ const QRS=[
 const qrSrc=(k,scale)=>`/api/qr?k=${k}${k==='home'?'':'&a='+encodeURIComponent((TEAM&&TEAM.slug)||'')}&s=${scale}`;
 const qrUrl=k=>k==='home'?'myset.vip'
   :k==='vote'?`myset.vip/${(TEAM&&TEAM.slug)||''}/vote`:`myset.vip/${(TEAM&&TEAM.slug)||''}`;
+function qrCopy(k){return k==='home'
+  ? {head:'FIND LIVE MUSIC NEAR YOU',line:'VOTE on which songs play next',url:'www.MySet.VIP'}
+  : {head:String((PROF&&PROF.name)||((D&&D.show)||{}).artist||'Artist').toUpperCase(),line:'VOTE on which songs I play next',url:'www.MySet.VIP'};}
 function qrBig(k){
   const row=QRS.find(x=>x[0]===k); if(!row)return;
   if(k!=='home'&&!(TEAM&&TEAM.slug)){ toast('Still loading your page address'); return; }
   const el=$('#qrbig');
+  const copy=qrCopy(k);
   el.innerHTML=`<div onclick="event.stopPropagation()">
     <div class="qrpaper">
       <img src="${qrSrc(k,10)}" alt="${esc(row[1])} QR code">
-      <div class="cap">${esc(row[3])}</div>
-      <div class="sub">${esc(qrUrl(k))}</div>
+      <div class="cap">${esc(copy.head)}</div><div class="cap2">${esc(copy.line)}</div>
+      <div class="sub">${esc(copy.url)}</div>
     </div>
     <div class="qracts">
-      <a href="${qrSrc(k,20)}" target="_blank" rel="noopener">Full size ↗</a>
+      <button onclick="qrDownload('${k}')">Download print-ready</button>
       <button onclick="qrHide()">Done</button>
     </div>
   </div>`;
   el.classList.add('on');
 }
 function qrHide(e){ if(e&&e.target&&e.target.id!=='qrbig')return; $('#qrbig').classList.remove('on'); }
+function qrDownload(k){
+  const row=QRS.find(x=>x[0]===k); if(!row)return;
+  const img=new Image(); img.onload=()=>{
+    const c=document.createElement('canvas'),z=1800,ctx=c.getContext('2d'),copy=qrCopy(k); c.width=z;c.height=z;
+    const fit=(txt,max,size,weight='700')=>{do{ctx.font=`${weight} ${size}px Georgia, serif`;size-=2;}while(ctx.measureText(txt).width>max&&size>24)};
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,z,z);ctx.drawImage(img,300,90,1200,1200);ctx.textAlign='center';
+    ctx.fillStyle='#111';fit(copy.head,1640,82);ctx.fillText(copy.head,z/2,1435);
+    ctx.fillStyle='#ff4058';fit(copy.line,1580,60);ctx.fillText(copy.line,z/2,1535);
+    fit(copy.url,1100,46,'600');ctx.fillText(copy.url,z/2,1650);
+    const a=document.createElement('a');a.download=`myset-${k}-qr.png`;a.href=c.toDataURL('image/png');a.click();
+  }; img.onerror=()=>toast('Couldn’t prepare that QR code'); img.src=qrSrc(k,20);
+}
 
 /* Same key the voting page uses, so flipping this on here affects the phone
    you're actually voting from. */
@@ -3107,7 +3139,7 @@ async function warmLyrics(){
       <div class="list">${d.missing.map(t=>`<div class="row"><div class="m"><div class="t">${esc(t)}</div></div></div>`).join('')}</div>
       <button class="big" style="margin-top:14px" onclick="closeSheet()">Got it</button>`);
 }
-/* ---------- bulk import: CSV file, pasted text, or a Spotify playlist ----------
+/* ---------- bulk import: CSV file or pasted text ----------
    Parsing happens HERE so the artist sees exactly what will be added before
    anything is written. The server (importSongs) re-validates everything anyway:
    dupes are skipped, the library cap refuses loudly, over-cap rows arrive off. */
@@ -3115,13 +3147,9 @@ let IMP=[];
 function openImport(){
   IMP=[];
   openSheet(`<h3>Import songs</h3>
-    <p class="lede">A CSV file, a pasted list, or a public Spotify playlist. One song per line — <b>Title, Artist</b> or <b>Title — Artist</b>. A header row is fine.</p>
+    <p class="lede">A CSV file or pasted list. One song per line — <b>Title, Artist</b> or <b>Title — Artist</b>. A header row is fine.</p>
     <label class="bigfile"><input type="file" id="impFile" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="impFile(this)">⇪ Choose a CSV or text file</label>
     <textarea class="inp" id="impText" rows="5" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" oninput="impParse(this.value)"></textarea>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <input class="inp" id="impSpot" style="flex:1;margin:0" placeholder="Spotify playlist link (public)">
-      <button class="big alt" style="margin:0;padding:12px 16px" onclick="impSpotify()">Fetch</button>
-    </div>
     <p class="muted" id="impCount" style="font-size:13px;margin:12px 2px 0">Nothing to import yet.</p>
     <button class="go" id="impGo" onclick="impSend()" disabled>Import</button>`);
 }
@@ -3150,14 +3178,6 @@ function impFile(inp){
   const r=new FileReader();
   r.onload=()=>{const t=$('#impText'); if(t)t.value=String(r.result||'').slice(0,120000); impParse(r.result);};
   r.readAsText(f);
-}
-async function impSpotify(){
-  const url=($('#impSpot')||{}).value||'';
-  if(!url.trim()){toast('Paste a playlist link first');return;}
-  const c=$('#impCount'); if(c)c.textContent='Asking Spotify…';
-  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'spotifyPeek',url})});
-  if(!d.ok){toast(d.error||'Couldn’t fetch that');impShow();return;}
-  IMP=(d.tracks||[]).slice(0,300); impShow();
 }
 async function impSend(){
   if(!IMP.length)return;

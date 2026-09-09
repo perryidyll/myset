@@ -5,11 +5,12 @@ import { notify } from './_push.mjs';
 
 /* "Play something that isn't on the list."
 
-   Two shapes, one mechanism:
+   Three shapes, one mechanism:
      song      — a title the artist doesn't have. Accepting it adds it to the
                  setlist, so the whole room can then vote for it.
      birthday  — a name. Nothing is added to the setlist; the artist just needs
                  to know, and to know who it's for.
+     vibe      — a free mood vote. The artist chooses whichever song fits it.
 
    Both cost VOTES and both are off until the artist switches them on. A song
    request may ALSO carry a Stripe authorization: it is captured only after the
@@ -18,7 +19,8 @@ import { notify } from './_push.mjs';
 
 export const MAX_KEPT = 80;          // total rows retained, oldest resolved first
 export const MAX_PENDING = 30;       // how many can be waiting at once
-const KINDS = new Set(['song', 'birthday']);
+export const VIBE_OPTIONS = ['Energetic','Chill','Romantic','Upbeat','Melancholy','Funky','Acoustic','Rowdy','Nostalgic','Dark','Groovy','Mellow','Anthemic','Intimate','Hypnotic','Uplifting','Soulful','Wild','Dreamy','Heavy'];
+const KINDS = new Set(['song', 'birthday', 'vibe']);
 const OPEN = 'pending';
 
 export const emptyRequests = () => ({ v: 1, list: [] });
@@ -69,7 +71,7 @@ export function myRequests(d, fanId, show) {
    back — the other order would let a failed write hand out free requests. */
 export async function createRequest(aid, show, fanId, body) {
   const kind = KINDS.has(body.kind) ? body.kind : 'song';
-  const cfg = kind === 'song' ? show.requests : show.birthdays;
+  const cfg = kind === 'song' ? show.requests : kind === 'birthday' ? show.birthdays : { on: true, cost: 0 };
   if (!cfg || !cfg.on)
     return { ok: false, error: kind === 'song'
       ? 'Requests are off tonight' : 'Birthday shout-outs are off tonight', status: 409 };
@@ -81,6 +83,7 @@ export async function createRequest(aid, show, fanId, body) {
   const name = clean(body.name, 40);
   if (kind === 'song' && !title) return { ok: false, error: 'What song?', status: 400 };
   if (kind === 'birthday' && !name) return { ok: false, error: 'Whose birthday is it?', status: 400 };
+  if (kind === 'vibe' && !VIBE_OPTIONS.includes(title)) return { ok: false, error: 'Pick one of the vibes shown', status: 400 };
 
   const existing = await readRequests(aid);
   const requestedId = String(body.requestId || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
@@ -167,10 +170,10 @@ export async function createRequest(aid, show, fanId, body) {
      never awaited into the response, so a slow push service cannot make the fan
      wait. notify() swallows its own errors. */
   if (inserted) notify(aid, {
-    title: kind === 'song' ? 'Song requested' : 'Birthday shout-out',
+    title: kind === 'song' ? 'Song requested' : kind === 'vibe' ? 'Mood vote' : 'Birthday shout-out',
     body: kind === 'song'
       ? `${title}${artist ? ' — ' + artist : ''}${row.cost ? ` · ${row.cost} votes` : ''}${row.pledgeCents ? ` · $${row.pledgeCents / 100} offered` : ''}`
-      : `For ${name}${row.cost ? ` · ${row.cost} votes` : ''}`,
+      : kind === 'vibe' ? title : `For ${name}${row.cost ? ` · ${row.cost} votes` : ''}`,
     url: '/studio', tag: 'ask',
   }).catch(() => {});
 

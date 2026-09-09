@@ -140,6 +140,13 @@ const r1 = await ask('finn', 'Something Not On The List');
 ok('the request was taken', r1.ok, r1);
 eq('four spent, three free, so one off the pack', await packLeft('finn'), 8);
 
+console.log('\nA VIBE VOTE IS FREE');
+const vibeBefore = (await pub('finn')).credits.used;
+const vibe = await hit(reqFn, 'https://x/api/request?fan=finn', { kind: 'vibe', title: 'Groovy' });
+ok('the mood reaches the artist', vibe.ok && vibe.mine.some((x) => x.kind === 'vibe' && x.title === 'Groovy'), vibe);
+eq('and costs no votes', (await pub('finn')).credits.used, vibeBefore);
+eq('an invented mood is refused', (await hit(reqFn, 'https://x/api/request?fan=zoe', { kind: 'vibe', title: 'Hacky' })).status, 400);
+
 console.log('\nWHAT CARRIES INTO THE NEXT SHOW');
 /* Fresh show first. Earlier sections left songs in played[], and a vote on a played
    song costs replayCost — the first draft of this test asserted 5 credits used and

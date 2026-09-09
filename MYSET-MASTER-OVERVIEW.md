@@ -478,8 +478,8 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | Invariants | 244 (last: 0f8) |
 | Test suites | 37 |
-| Assertions | **1,808**, 0 failing, last run 2026-09-09 |
-| Decision records | 18 |
+| Assertions | **1,815**, 0 failing, last run 2026-09-09 |
+| Decision records | 20 |
 
 ### Feature flags in force
 
