@@ -591,7 +591,8 @@ If you are about to violate one, stop and say so rather than working around it.
     `vote.mjs`, not in the UI. Replay votes cost `show.replayCost` (default 5) and
     the check is weighted accordingly.
 
-14. **A VOTE STAYS ON THE SONG IT WAS CAST FOR, and it never comes back.** Perry,
+14. **A VOTE STAYS ON THE SONG IT WAS CAST FOR, unless the artist explicitly
+    declines that unplayed song.** Perry,
     2026-09-07: *"the votes do NOT go back to the audience members whose songs were
     not chosen. They stay attached to the song you voted for, and that song stays in
     the queue until it is played or the show is over. If they paid for votes and their
@@ -606,10 +607,12 @@ If you are about to violate one, stop and say so rather than working around it.
     **Consequences, all deliberate:** free credits are an allowance for the NIGHT, not
     per song (there is no round to refresh with); the queue accumulates all evening,
     so votes cast at 9pm and at midnight are in the same contest; and there is no
-    refund on any path — not a song losing, not the artist hiding it, dropping it from
-    tonight's list, or deleting it outright. The only thing that gives votes back is
-    a song REQUEST the artist DECLINES, because nothing was ever put on the board for
-    it (`request.mjs`).
+    refund when a song loses, plays, is hidden, is deleted, the board is cleared, or
+    the show ends. There are exactly two explicit returns: a song REQUEST the artist
+    declines before it reaches the board (`_requests.mjs`), and **Decline + refund
+    votes** on an ordinary, unplayed setlist song (`refundSongVotes`). The latter
+    hides that song first, then restores each fan's attached free/paid credits. It is
+    not available for already-played replay votes.
     **The fan is told before they commit**, in his words, on the vote sheet: *"Once
     you confirm, it's final! Votes **can't be changed** once cast and ***don't come
     back***."* That sentence is the feature. `test/votesstay.mjs` checks it ships.
@@ -629,9 +632,12 @@ If you are about to violate one, stop and say so rather than working around it.
     **Spend is stored, not derived.** It used to be counted out of `fan.v`, which was
     correct only while `v` held every vote a fan still had. A played song now takes
     its votes out of `v`, so a derived count would hand the credits back at the exact
-    moment rule 14 says it must not. Two fields, both monotonic:
+    moment rule 14 says it must not. Two fields, normally monotonic:
     `used` (every credit spent tonight) and `freeUsed` (how much of it came out of the
-    free allowance). The paid portion is `used - freeUsed`.
+    free allowance). The paid portion is `used - freeUsed`. The one deliberate
+    decrement is an artist-declined unplayed song. `fan.va[songId]` stores one
+    `[cost, paidCredits]` tuple per held vote so that exception restores the exact
+    source without re-pricing anything else.
     **`freeUsed` is stamped as it is spent, never worked out afterwards.** The artist
     can change `show.freeCredits` mid-show; computing the free portion against
     whatever number happens to be set at the end would re-price votes already cast and
@@ -656,7 +662,9 @@ If you are about to violate one, stop and say so rather than working around it.
     and the page must offer no affordance suggesting otherwise. What changed on
     2026-09-07 is the second half: it used NOT to be a promise that the song would
     still exist, so an artist deleting or hiding it gave the capacity back. It does
-    not any more — a vote is spent when it is cast, whoever takes the song away.
+    not any more for generic Hide or Delete — a vote is spent when it is cast. The
+    one named exception is the artist's **Decline + refund votes** action, which
+    exists specifically to say that different financial consequence out loud.
     **Worth knowing what that costs:** an artist who deletes a song their room paid
     to hear keeps the money, and nothing in the code stops them. Perry's call,
     written down here rather than left to be found. `dropSongVotes` still removes

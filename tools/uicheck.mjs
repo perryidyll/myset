@@ -94,6 +94,41 @@ const D=await pg.evaluate(async ()=>{
 });
 console.log('\nTHE DOCK\n'+D);
 
+const VOTING_UI=await pg.evaluate(()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  ST={artist:'Test Artist',paymentsEnabled:true,packs:{small:{cents:500,votes:3},big:{cents:2000,votes:15}},
+    status:'live',windowOpen:true,replayCost:5,credits:{remaining:5,total:5,freeRemaining:3,freeTotal:3,used:0,paidLeft:2,unlimited:false},
+    songs:[{id:'alpha',title:'Alpha',artist:'T',votes:4,mine:true,mineCount:1,cost:1,tags:[]},
+      {id:'bravo',title:'Bravo',artist:'T',votes:0,cost:1,tags:[]},
+      {id:'charlie',title:'Charlie',artist:'T',votes:0,cost:1,tags:[]},
+      {id:'delta',title:'Delta',artist:'T',votes:0,cost:1,tags:[]}],
+    played:[{id:'echo',title:'Echo',artist:'T',votes:0,cost:5,tags:[]}],
+    flags:{},tags:[],asks:{},myAsks:[]};
+  render();
+  const orange=/rgb\(255,\s*122,\s*69\)/;
+  const search=getComputedStyle(document.querySelector('.search input')).boxShadow;
+  const sort=getComputedStyle(document.querySelector('.sortbar')).boxShadow;
+  const list=getComputedStyle(document.querySelector('.votelist')).boxShadow;
+  ok('search has a thin orange border', orange.test(search), search);
+  ok('sort buttons have a thin orange border', orange.test(sort), sort);
+  ok('the voting list has a thin orange border', orange.test(list), list);
+  const head=document.querySelector('.votehead b');
+  ok('the voting-list heading has the requested orange copy', head&&head.textContent==='Vote your favorite songs below'&&orange.test(getComputedStyle(head).color), head&&head.textContent);
+  const replay=document.querySelector('.prow.played');
+  ok('played songs are greyed but still have a vote button', replay&&getComputedStyle(replay.querySelector('.m')).opacity<'1'&&!replay.querySelector('.vb').disabled);
+  ok('played songs carry the explicit replay line', replay&&/already played \(pay to request again\)/.test(replay.innerText));
+  const queueVote=document.querySelector('.qrow .qvb');
+  ok('a song already voted on still offers add-more', queueVote&&!queueVote.disabled&&/Add to your votes/.test(queueVote.getAttribute('aria-label')));
+  openBuy();
+  const sheet=document.querySelector('#sheet');
+  const straight=sheet.querySelector('.buyline'), secure=sheet.querySelector('.secure-votes');
+  ok('the pack sheet names only the artist’s first name', straight&&straight.textContent.trim()==='goes straight to Test', straight&&straight.textContent.trim());
+  ok('both requested pack-sheet lines are orange', straight&&secure&&orange.test(getComputedStyle(straight).color)&&orange.test(getComputedStyle(secure).color));
+  closeSheet();
+  return out.join('\n');
+});
+console.log('\nVOTING DETAILS\n'+VOTING_UI);
+
 
 // ---------- 2: community tip ----------
 await pg.goto(`http://127.0.0.1:${PORT}/community.html?a=demo`,{waitUntil:'domcontentloaded'});
@@ -178,5 +213,30 @@ const SETTINGS=await pg.evaluate(async ()=>{
   return out.join('\n');
 });
 console.log('\nSTUDIO SETTINGS\n'+SETTINGS);
+
+const STUDIO_VOTES=await pg.evaluate(()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  TAB='live';
+  D={ok:true,paymentsEnabled:true,voters:2,room:2,nets:1,asks:[],feedback:{},
+    tips:{total:0,count:0,recent:[]},songs:[
+      {id:'alpha',title:'Alpha',artist:'T',votes:4,paidVotes:2,active:true,votable:true,inSet:true,played:false,now:false},
+      {id:'bravo',title:'Bravo',artist:'T',votes:1,paidVotes:0,active:true,votable:true,inSet:true,played:false,now:false}],
+    show:{status:'live',windowOpen:true,played:[],nowPlaying:null,slug:'demo',freeCredits:3,
+      unlimited:false,replayCost:5,packs:{small:{votes:3,cents:500},big:{votes:15,cents:2000}},
+      requests:{on:false,cost:3},birthdays:{on:false,cost:3},unlimitedFans:[],autoStart:true}};
+  PLAN={ok:true,owner:false,plan:'pro',limits:{}};
+  try{render();}catch(e){out.push('  ✗ Live render threw — '+e.message);return out.join('\n');}
+  const top=document.querySelector('.bigplay');
+  ok('top-voted action shows the total in words', top&&/\(4 votes total\)/.test(top.innerText), top&&top.innerText.replace(/\n/g,' | '));
+  ok('top-voted action carries the green paid-vote pill', top&&/\(2\) paid votes/.test(top.innerText)&&getComputedStyle(top.querySelector('.paidtag')).color==='rgb(48, 209, 88)');
+  const row=document.querySelector('.list .row');
+  ok('the queue repeats total and paid counts', row&&/4 votes total/.test(row.innerText)&&/\(2\) paid votes/.test(row.innerText));
+  ok('a voted unplayed song offers decline + refund', row&&/Decline \+ refund votes/.test(row.innerText));
+  ok('the phone layout has no horizontal overflow', document.documentElement.scrollWidth<=innerWidth, `${document.documentElement.scrollWidth}/${innerWidth}`);
+  TAB='setlist'; render();
+  ok('the Setlist tab also shows paid attribution', /4 votes total/.test(document.querySelector('#app').innerText)&&/\(2\) paid votes/.test(document.querySelector('#app').innerText));
+  return out.join('\n');
+});
+console.log('\nSTUDIO PAID VOTES\n'+STUDIO_VOTES);
 
 await b.close(); srv.close();

@@ -86,8 +86,9 @@ in a generated number, fix the generator — a number that drifted once will dri
 
 ## 1.1 The one rule
 
-> **A vote is spent the moment it is cast. It stays on the song it was cast for until
-> that song is played or the night ends, and it never comes back.**
+> **A vote is spent the moment it is cast. It stays on that song until it is played
+> or the night ends. The sole setlist exception is an artist explicitly declining an
+> unplayed song, which returns every attached vote.**
 
 Perry, 2026-09-07, settling it:
 
@@ -97,8 +98,10 @@ Perry, 2026-09-07, settling it:
 > get played, they lose the money and the votes… that's the whole game. but they don't
 > really lose because they're tipping the artist and that's the whole point."*
 
-Everything below follows from that sentence. Decision record:
-[`0001-a-vote-never-comes-back.md`](docs/decisions/0001-a-vote-never-comes-back.md).
+Everything below follows from that rule. Decision records:
+[`0001-a-vote-never-comes-back.md`](docs/decisions/0001-a-vote-never-comes-back.md) and
+its narrow successor,
+[`0016-an-artist-declined-unplayed-song-returns-its-votes.md`](docs/decisions/0016-an-artist-declined-unplayed-song-returns-its-votes.md).
 
 **Before 2026-09-07 this was not true**, and any document, comment or model memory
 describing a board that resets between songs is describing the old product. The
@@ -111,7 +114,7 @@ function that did it (`clearAllFanVotes`) is deleted, not disabled.
 | **A show** | One night. Has a status (`pre` → `live` → `ended`), a setlist, a played list, a now-playing, and every price the artist has set | one document, `show_<artistId>` |
 | **A song** | Title, artist, key, genres, and whether it is switched on | inside the show document |
 | **A fan** | One phone. A random id in that phone's own storage. **Never a person, never an account** | sharded across `f0…f11_<artistId>` |
-| **A vote** | One entry in that fan's `v` array, holding a song id | on the fan record |
+| **A vote** | One song id in `v`, plus its `[cost, paidCredits]` source tuple in `va[songId]` | on the fan record |
 | **The board** | The tally, computed by counting every fan's `v` | never stored — always derived |
 
 A fan holding three votes on one song has that song id in `v` three times. `voteCounts`
@@ -138,13 +141,14 @@ Every default is generated into §2.1 straight from the source.
 
 ## 1.4 The credit ledger
 
-Each fan record carries three numbers for the night:
+Each fan record carries these ledger fields for the night:
 
 | Field | Meaning | Behaviour |
 |---|---|---|
-| `used` | every credit spent tonight | **monotonic — only ever goes up** |
-| `freeUsed` | how much of `used` came out of the free allowance | monotonic; **stamped as it is spent** |
+| `used` | every credit spent tonight | rises at spend; decreases only for an explicit artist decline/refund |
+| `freeUsed` | how much of `used` came out of the free allowance | stamped at spend; its matching portion is restored on decline |
 | `extra` | credits bought with money, a real balance | carries between shows |
+| `va` | `[cost, paidCredits]` for each held vote, grouped by song | makes paid counts and exact decline refunds derivable |
 
 **Paid spend is `used − freeUsed`.** Free credits are always spent first.
 
@@ -181,7 +185,8 @@ once, on its next cast, and stored like everyone else's from then on.
    - `op:'clear'` from a cached page → *"Those votes are cast — they stay with the
      song"*, 409
    - not affordable → 402 `no-credits`
-   - **charge, then push.** `chargeFan()` moves `used` and `freeUsed`; then `n` entries
+   - **charge, attribute, then push.** `chargeVotes()` moves `used` and `freeUsed`
+     while appending each vote's `[cost, paidCredits]` source tuple; then `n` song ids
      go into `v`; then `ts[song]` is stamped if absent
 5. **Read back after writing.** If the votes did not stick, retry. Compare-and-swap
    alone is not enough on this store (INVARIANT 4).
@@ -204,6 +209,7 @@ request.
 |---|---|---|
 | **The song is played** | taken off the board (`consumePlayedVotes`) | **No.** `used` does not move |
 | **The artist hides or removes the song** | taken off the board | **No** |
+| **The artist taps Decline + refund votes on an unplayed song** | song is hidden; votes are removed | **Yes — exact free/paid credits are restored** |
 | **The artist clears the board** | every song's votes go, all at once | **No.** The Studio says so before the tap |
 | **The show ends** | the board is gone with the night | **No** |
 | **A new show starts** | fan records are rebuilt; only **unspent bought credits** survive | Only bought credits, and only if unspent |
@@ -217,15 +223,15 @@ request.
 | The artist deleted the song you voted for | **No** |
 | The artist cleared the board | **No** |
 | You tapped by mistake | **No.** There is no un-vote |
-| The artist declined your **song request** | **Yes** — the only refund left in the product |
+| The artist declined your **song request** | **Yes** |
+| The artist explicitly declined an **unplayed setlist song** | **Yes — its attached votes return** |
 | You **bought** credits and never spent them, and the show ended | They **carry to the next show**, unless you choose to gift them |
 | The artist ended the show by accident and restarted it | Your gift pledge is quietly cancelled and you are made whole |
 | An artist deletes a song the room paid to hear | They keep the money. Nothing in the code stops them (INVARIANT 15) |
 
-The request refund exists because **nothing was ever put on the board for it** — a
-declined request never became a vote on a song. `request.mjs` refunds it, the ask card
-says so, and a test pins that this is the *only* "you get it back" sentence left on the
-voting page.
+The request refund exists because **nothing was ever put on the board for it**. The
+setlist-song refund is different: `refundSongVotes` removes votes that were on the
+board and restores the exact free/paid split recorded when each vote was cast.
 
 ## 1.8 Buying votes
 
@@ -351,6 +357,7 @@ at the top with a big number ticking to zero.
 | **Undo a played song** | it goes back in the list; its votes are already gone |
 | **Pause voting** | no votes in or out; the tally is untouched |
 | **Hide or remove a song** | its votes come off the board; nobody is refunded |
+| **Decline + refund an unplayed song** | it is hidden; every attached vote and its exact free/paid credit source return |
 | **Clear the board** | every song's votes go at once; **nobody is refunded**, and the confirm says so |
 | **Change the free-vote number mid-show** | applies to future casts only — already-stamped `freeUsed` is never re-priced |
 | **End the show** | the board goes with the night; unspent **bought** credits survive |
@@ -464,14 +471,14 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | HTTP functions | 25 — `admin`, `auth`, `clipup`, `community`, `confirm`, `events`, `feedback`, `gift`, `history`, `img`, `lyrics`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
 | Shared libraries | 41 |
-| Artist Studio actions | 121 |
+| Artist Studio actions | 122 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
 | Largest clip accepted | 75 MB |
 | Invariants | 243 (last: 0f8) |
-| Test suites | 35 |
-| Assertions | **1,737**, 0 failing, last run 2026-09-08 |
-| Decision records | 15 |
+| Test suites | 36 |
+| Assertions | **1,762**, 0 failing, last run 2026-09-09 |
+| Decision records | 16 |
 
 ### Feature flags in force
 

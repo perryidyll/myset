@@ -1,10 +1,10 @@
-import { getShow, mutateFan, creditsUsed, chargeFan, costOf, isUnlimited, publicArtist, json, bad,
+import { getShow, mutateFan, creditsUsed, chargeVotes, costOf, isUnlimited, publicArtist, json, bad,
          cleanFanId, votable, roomHash, clientIp } from './_lib.mjs';
 
-/* A VOTE IS FINAL. It stays on the song it was cast for until that song is played
-   or the night ends, and it never comes back — see the ledger header in _lib.mjs
-   for Perry's own words on why. This used to be the `voteFinal` feature flag, with
-   a working take-it-back path behind the off switch; the flag and that path were
+/* A FAN CANNOT REVERSE A VOTE. It stays on the song it was cast for until that
+   song is played or the night ends. The artist's explicit decline/refund action is
+   the only setlist exception — see the ledger header in _lib.mjs. This used to be
+   the `voteFinal` feature flag, with a working take-it-back path; the flag and path were
    both deleted on 2026-09-07 when the question stopped having two answers. */
 
 export default async (req) => {
@@ -116,7 +116,7 @@ export default async (req) => {
          `used` stays the honest number if the artist turns unlimited off mid-show —
          otherwise their spend would fall back to being counted out of `v` and the
          votes they were given free would start costing them. */
-      chargeFan(me, show, free ? 0 : need);
+      chargeVotes(me, show, song, cost, n, free);
       for (let i = 0; i < n; i++) me.v.push(song);
       me.ts[song] ||= Date.now();          // keep the first stamp: ties are broken by it
       want = mine + n;

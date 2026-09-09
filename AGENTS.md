@@ -62,8 +62,9 @@ need one that is not in §2.1, add it to `tools/overview.mjs`.
 4. **Never claim what you have not run.** Say "verified" only about things you executed
    and can quote the output of. Everything else is "not checked". An honest gap beats a
    confident guess.
-5. **A vote is spent when it is cast and never comes back.** See
-   `docs/decisions/0001-a-vote-never-comes-back.md`. Do not propose a refund mechanic.
+5. **A fan cannot undo a cast vote.** Play, hide, delete, clear and end do not refund.
+   The one setlist exception is the artist's explicit decline of an unplayed song,
+   which returns its attached votes. See decisions `0001` and `0016`.
 6. **Never use Netlify Blobs `list()` for live data.** Every key must be computable.
    INVARIANT 1.
 

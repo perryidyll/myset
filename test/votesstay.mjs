@@ -83,7 +83,7 @@ eq('and cat’s', await votesOn('cat', 'foxtrot'), 0);
 eq('but ann is no better off for it', (await pub('ann')).credits.remaining, 6);
 eq('and neither is bob', (await pub('bob')).credits.remaining, 7);
 
-console.log('\nNOTHING GIVES A CREDIT BACK. NOTHING.');
+console.log('\nNONE OF THE ORDINARY EXIT PATHS GIVE A CREDIT BACK');
 await A('newShow');
 await A('freeCredits', { n: 10 });
 await A('status', { status: 'live' });

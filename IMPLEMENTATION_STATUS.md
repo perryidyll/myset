@@ -10,7 +10,7 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-09
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The voting-default migration and the profile/Studio UI cleanup are fully verified as one production batch; the next phase item remains the shared-board split
+**Current focus:** The audience styling, paid-vote attribution, played-song replay state and artist decline/refund batch is the verified 2026-09-09 production release
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
@@ -85,6 +85,10 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-09 | Netlify draft deploy `6aa0db9c42570c274fbd5c1e` | Requested audience and Studio content served from the preview; read-only `/api/show` succeeded; no preview write path exercised |
+| 2026-09-09 | `sh test/run.sh` + `node tools/overview.mjs --tests` | Full suite green; overview stamped 1,762 assertions, 0 failures |
+| 2026-09-09 | `node tools/uicheck.mjs` | Phone-width orange borders/copy, played-song state, repeat voting, paid-vote pills and decline action all rendered without horizontal overflow |
+| 2026-09-09 | `node --import ./test/register.mjs test/decline.mjs` | Exact free/paid refunds, unrelated-song isolation, hidden-song lockout and retry idempotency all passed |
 | 2026-09-09 | Netlify draft deploy `6aa04e5930bf024ac5cfb479` | One live profile CTA; retired voting-sheet sentence and duplicate Settings controls absent; existing room still returns 3/3, 3/$5 and 15/$20 |
 | 2026-09-09 | `node tools/uicheck.mjs` | Phone-width vote, live profile and Settings layouts all passed, including exact section order and no duplicate CTA |
 | 2026-09-09 | `sh test/run.sh` + `node tools/overview.mjs --tests` | 1,737 assertions, 0 failures |
@@ -108,6 +112,7 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 | 2026-09-05 | A hard cap on room size | A soft cap: the room slows and shortens, nobody is refused | The research said a mid-song lockout costs the artist relationship, which is the whole business | Decision `0006` |
 | 2026-09-06 | Shrink clips on the phone | Upload them untouched, with a trimmer | Three rounds of silent-audio bugs, all caused by the size constraint | Decision `0011` |
 | 2026-09-07 | Votes return between songs | A vote never comes back | Perry's rule, stated as final | Decision `0001` |
+| 2026-09-09 | No setlist vote ever returns | An artist may explicitly decline an unplayed song and return its votes | The queue needs a fair correction when a song cannot be played | Decision `0016` |
 
 ---
 
@@ -119,6 +124,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 
 | Date | Decision | Record |
 | --- | --- | --- |
+| 2026-09-09 | An artist-declined unplayed song returns its votes | `0016` |
 | 2026-09-08 | Three free votes; default packs are 3 for $5 and 15 for $20 | `0014` |
 | 2026-09-07 | A vote never comes back | `0001` |
 | 2026-09-07 | The countdown is a nudge, not a lock | `0010` |
@@ -133,6 +139,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- |
 | **Perry's own accounts are phished** | Total — Google, GitHub, Netlify, Stripe. No line of MySet's code is involved | 2FA on all four. PER-003 | **Active, unmitigated** |
+| **Pre-attribution active votes cannot be split exactly by song** | A paid-vote pill or decline refund on a vote cast before this batch may not know its original source | New votes are exact; legacy decline uses a fan-favouring paid-first fallback | **Known transition risk** |
 | Card payments down on a bad Stripe key | Nobody can buy votes or tip | Key replaced 2026-09-08; live checkout verified. The gap that let it go unnoticed is still open — P3-008 | Resolved 2026-09-08 |
 | **Nothing detects a dead Stripe key** | `paymentsEnabled` checks the key EXISTS, never that it WORKS, so the room is shown a buy button that fails on tap | P3-008 | **Active, unmitigated** |
 | **A bug cannot be diagnosed after the night** | A fan reports something, the logs are already gone | P3-004 | **Active, unmitigated** |

@@ -1,4 +1,4 @@
-import { getShow, readFans, readMeta, voteCounts, firstVotedAt, rankSongs, json, bad,
+import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, firstVotedAt, rankSongs, json, bad,
          requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
@@ -31,6 +31,7 @@ export async function stagePayload(aid) {
   const { artistById } = await import('./_auth.mjs');
   const who = await artistById(aid);
   const counts = voteCounts(fans);
+  const paidCounts = paidVoteCounts(fans);
   const firstAt = firstVotedAt(fans);
   const room = roomCounts(fans);
   const total = meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0);
@@ -71,7 +72,7 @@ export async function stagePayload(aid) {
       const canVote = votable(show);
       return rankSongs(
         show.songs.map((x) => ({
-          ...x, votes: counts[x.id] || 0,
+          ...x, votes: counts[x.id] || 0, paidVotes: paidCounts[x.id] || 0,
           played: show.played.includes(x.id), now: show.nowPlaying === x.id,
           inSet: on.has(x.id),          // in tonight's setlist
           votable: canVote(x),          // in the setlist, or already played

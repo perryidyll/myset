@@ -496,7 +496,7 @@ export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
     () => ({}),
     (bag) => {
       const me = (bag[fanId] ||= { v: [], extra: 0, ts: {} });
-      me.v ||= []; me.extra ||= 0; me.ts ||= {}; me.spent ||= 0;
+      me.v ||= []; me.extra ||= 0; me.ts ||= {}; me.spent ||= 0; me.va ||= {};
       return fn(me, bag);
     },
     verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null
@@ -513,7 +513,7 @@ export async function readFans(aid) {
 }
 /* ---------- the paid-vote ledger ----------
 
-   A VOTE IS SPENT THE MOMENT IT IS CAST, AND IT NEVER COMES BACK. Perry, 2026-09-07:
+   A VOTE IS SPENT THE MOMENT IT IS CAST, AND NORMALLY NEVER COMES BACK. Perry, 2026-09-07:
    "the votes do NOT go back to the audience members whose song(s) were not chosen —
    they stay attached to the song you voted for, and that song stays in the queue
    until it is played or the show is over. If they paid for votes and their song
@@ -534,6 +534,11 @@ export async function readFans(aid) {
      used      every credit this fan has spent tonight
      freeUsed  how much of that came out of the free allowance
      paid      = used - freeUsed, derived, and never re-priced by a later change
+
+   There is one explicit exception: an artist may DECLINE an unplayed song and
+   return every vote attached to it. `va` records [cost, paidCredits] for each vote,
+   by song, so that narrow refund can restore the exact free/paid balances without
+   changing the finality of played, hidden, deleted, cleared, or ended votes.
 
    `freeUsed` is stamped as it is spent rather than worked out afterwards, because
    the artist can change `show.freeCredits` mid-show: computing the free portion
@@ -588,7 +593,7 @@ export async function wipeBoard(aid) {
         let touched = false;
         for (const id of Object.keys(bag)) {
           if (!(bag[id].v || []).length) continue;
-          bag[id].v = []; bag[id].ts = {};
+          bag[id].v = []; bag[id].ts = {}; bag[id].va = {};
           touched = true;
         }
         return touched;
@@ -624,7 +629,7 @@ export async function carryFans(aid, show) {
           const carry = Math.max(0, unspentPaid(bag[id], show, id) - pledged);
           const gifted = (bag[id].gifted || 0) + (pledged ? Math.min(pledged, unspentPaid(bag[id], show, id)) : 0);
           // `gr` rides along: it is what makes a paid grant idempotent (_pay.mjs)
-          if (carry > 0) bag[id] = { v: [], ts: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-20) };
+          if (carry > 0) bag[id] = { v: [], ts: {}, va: {}, extra: carry, gifted, gr: (bag[id].gr || []).slice(-20) };
           else delete bag[id];          // nothing owed — don't keep the record
         }
         return true;
@@ -663,6 +668,7 @@ export async function dropSongVotes(aid, songId) {
           if (kept.length === v.length) continue;
           bag[id].v = kept;
           if (bag[id].ts) delete bag[id].ts[songId];
+          if (bag[id].va) delete bag[id].va[songId];
           touched = true;
         }
         return touched;                  // no write when this shard held none
@@ -748,9 +754,10 @@ export const costOf = (songId, show) =>
 const derivedSpend = (fan, show) =>
   (fan.v || []).reduce((sum, id) => sum + costOf(id, show), 0);
 
-/** Credits a fan has spent tonight. Stored, monotonic, and NOT recoverable by a
- *  song being played or removed. `spent` is everything that isn't a vote on a
- *  listed song — a song request, a birthday shout — because those have no song id. */
+/** Credits a fan has spent tonight. Stored, normally monotonic, and NOT recovered
+ *  by play/hide/delete/clear/end. An explicit artist decline uses its separate,
+ *  attributed refund path. `spent` is everything that isn't a vote on a listed
+ *  song — a song request, a birthday shout — because those have no song id. */
 export const creditsUsed = (fan, show) =>
   (typeof fan.used === 'number' ? fan.used : derivedSpend(fan, show)) + (fan.spent || 0);
 
@@ -762,6 +769,88 @@ export function chargeFan(fan, show, need) {
   const freeLeft = Math.max(0, (show.freeCredits || 0) - fan.freeUsed);
   fan.freeUsed += Math.min(need, freeLeft);
   fan.used += need;
+}
+
+/** Charge a group of votes and preserve the source of every individual vote.
+ *  Each compact tuple is [credit cost, paid-credit portion]. A replay can cost
+ *  several credits and straddle the free/paid boundary, so a boolean is not enough. */
+export function chargeVotes(fan, show, songId, cost, count, unlimited = false) {
+  chargeFan(fan, show, 0);                    // normalize legacy ledger fields first
+  fan.va ||= {};
+  const rows = (fan.va[songId] ||= []);
+  let freeLeft = Math.max(0, (show.freeCredits || 0) - fan.freeUsed);
+  for (let i = 0; i < count; i++) {
+    const price = unlimited ? 0 : cost;
+    const fromFree = Math.min(price, freeLeft);
+    freeLeft -= fromFree;
+    rows.push([price, price - fromFree]);
+  }
+  chargeFan(fan, show, unlimited ? 0 : cost * count);
+}
+
+/** The number of vote instances on each song that used at least one paid credit. */
+export function paidVoteCounts(fans) {
+  const counts = {};
+  for (const id of Object.keys(fans)) {
+    const fan = fans[id] || {};
+    const held = {};
+    for (const song of fan.v || []) held[song] = (held[song] || 0) + 1;
+    for (const [song, raw] of Object.entries(fan.va || {})) {
+      const rows = Array.isArray(raw) ? raw.slice(0, held[song] || 0) : [];
+      for (const row of rows)
+        if (Array.isArray(row) && Number(row[1]) > 0) counts[song] = (counts[song] || 0) + 1;
+    }
+  }
+  return counts;
+}
+
+/** Artist-only exception to vote finality: decline one song and restore all of its
+ *  credits. The shard mutation is retry-safe; a second pass finds no matching votes.
+ *  Pre-attribution votes use a fan-favouring paid-first fallback, while all votes
+ *  cast after this field shipped are restored from their exact recorded split. */
+export async function refundSongVotes(aid, songId, show) {
+  if (!songId) return;
+  await Promise.all(
+    Array.from({ length: SHARDS }, (_, n) =>
+      casDoc(shardKey(aid, n), () => ({}), (bag) => {
+        let touched = false;
+        for (const id of Object.keys(bag)) {
+          const fan = bag[id];
+          const held = (fan.v || []).filter((x) => x === songId).length;
+          if (!held) continue;
+
+          chargeFan(fan, show, 0);
+          const rows = Array.isArray(fan.va && fan.va[songId])
+            ? fan.va[songId].slice(0, held) : [];
+          let exactCredits = 0, exactPaid = 0;
+          for (const row of rows) {
+            if (!Array.isArray(row)) continue;
+            const price = Math.max(0, Number(row[0]) || 0);
+            exactCredits += price;
+            exactPaid += Math.min(price, Math.max(0, Number(row[1]) || 0));
+          }
+          const legacyCredits = Math.max(0, held - rows.length) * costOf(songId, show);
+          const refundable = Math.min(fan.used, exactCredits + legacyCredits);
+          const paidCapacity = Math.max(0, fan.used - fan.freeUsed);
+          const desiredPaid = Math.min(refundable,
+            exactPaid + Math.min(legacyCredits, Math.max(0, paidCapacity - exactPaid)));
+          let paidRefund = Math.min(desiredPaid, paidCapacity);
+          let freeRefund = Math.min(refundable - paidRefund, fan.freeUsed);
+          paidRefund += Math.min(refundable - paidRefund - freeRefund,
+            Math.max(0, paidCapacity - paidRefund));
+
+          fan.used = Math.max(0, fan.used - refundable);
+          fan.freeUsed = Math.max(0, fan.freeUsed - freeRefund);
+          fan.v = (fan.v || []).filter((x) => x !== songId);
+          if (fan.ts) delete fan.ts[songId];
+          if (fan.va) delete fan.va[songId];
+          touched = true;
+        }
+        return touched;
+      }, (bag) => Object.values(bag || {}).every(
+        (fan) => !(fan.v || []).includes(songId) && !(fan.va && fan.va[songId])))
+    )
+  );
 }
 
 /* ---------- who was in the room ----------

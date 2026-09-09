@@ -10,7 +10,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 | # | Decision | Date | Area | Status | Decided by |
 |---|---|---|---|---|---|
-| [0001](0001-a-vote-never-comes-back.md) | A vote never comes back | 2026-09-07 | voting | decided | perry |
+| [0001](0001-a-vote-never-comes-back.md) | A vote never comes back | 2026-09-07 | voting | superseded | perry |
 | [0002](0002-free-votes-are-an-allowance-for-the-night.md) | Free votes are an allowance for the night, not for each song | 2026-09-07 | voting | decided | claude |
 | [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) | The free tier is capped by gigs played, not by features | 2026-09-03 | plans | decided | perry |
 | [0004](0004-locked-features-are-shown-greyed-not-hidden.md) | A feature you have not paid for is shown, greyed out — never hidden | 2026-09-03 | plans | decided | perry |
@@ -25,6 +25,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) | Errors are reported to a service that outlives the night | 2026-09-08 | ops | proposed | claude |
 | [0014](0014-three-free-votes-and-two-new-default-packs.md) | Every room on the former voting defaults moves to three free votes and the two new packs | 2026-09-08 | voting | decided | user |
 | [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) | The artist profile has one live voting call to action, and show controls are not duplicated in Settings | 2026-09-09 | ui | decided | user |
+| [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) | An artist-declined unplayed song returns its votes | 2026-09-09 | voting | decided | user |
 
 ## By area
 
@@ -42,7 +43,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md)
 
-**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md)
+**voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md)
 
 ## What counts as a decision
 

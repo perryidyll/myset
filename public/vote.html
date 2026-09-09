@@ -98,9 +98,9 @@
 /* ── search ───────────────────────────────────────────── */
 .search{position:relative;margin:22px 18px 6px}
 .search input{width:100%;min-height:48px;padding:13px 42px 13px 42px;font-size:16px;border:none;
-  background:var(--surface);box-shadow:var(--sh-1);border-radius:var(--pill);color:var(--ink);
+  background:var(--surface);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-2);border-radius:var(--pill);color:var(--ink);
   transition:box-shadow .22s var(--ease)}
-.search input:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent),var(--sh-1)}
+.search input:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent-2),var(--sh-1)}
 .search .ic{position:absolute;left:16px;top:15px;width:18px;height:18px;stroke:var(--faint);
   fill:none;stroke-width:2.2;stroke-linecap:round;pointer-events:none}
 .search .clr{position:absolute;right:8px;top:8px;width:32px;height:32px;border-radius:50%;
@@ -172,7 +172,7 @@
 
 /* ── sort ─────────────────────────────────────────────── */
 .sortbar{display:flex;gap:4px;margin:10px 18px 2px;padding:4px;background:var(--bg-2);
-  border-radius:var(--pill);box-shadow:inset 0 0 0 .5px var(--hair)}
+  border-radius:var(--pill);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
 .sortbar button{flex:1;min-height:36px;padding:8px 6px;font-size:13.5px;font-weight:600;
   color:var(--muted);border-radius:var(--pill);letter-spacing:-.01em;
   transition:background .26s var(--ease),color .2s var(--ease),transform .22s var(--spring)}
@@ -191,8 +191,10 @@
 /* ── TIER 3 · POOL ────────────────────────────────────── */
 .sect{display:flex;align-items:baseline;justify-content:space-between;padding:24px 20px 10px}
 .sect b{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sect.votehead b{color:var(--accent-2)}
 .sect span{font-size:12.5px;color:var(--faint)}
 .list{margin:0 18px;border-radius:var(--r);background:var(--surface);box-shadow:var(--sh-1);overflow:hidden}
+.list.votelist{box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-2)}
 .prow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
 .prow:first-child{border-top:none}
 .prow .m{flex:1;min-width:0}
@@ -200,6 +202,9 @@
 .prow .by{font-size:13px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow .cnt{flex:0 0 auto;min-width:22px;text-align:right;font-size:15px;font-weight:700;color:var(--faint)}
 .prow.hasv .cnt{color:var(--ink)}
+.prow.played .m,.prow.played .cnt{opacity:.48}
+.playednote{font-size:11.5px;font-weight:700;color:var(--accent-2);margin-top:4px;line-height:1.3}
+.buyline,.secure-votes{color:var(--accent-2)!important}
 
 /* vote button */
 .vb{flex:0 0 auto;min-width:74px;height:40px;padding:0 16px;border-radius:var(--pill);
@@ -479,8 +484,9 @@ function drawVoteSheet(s){
   const out=!c.unlimited&&(c.remaining||0)<=0;
   /* Approved wording, emphasis included. The finality line is the whole game:
      a vote stays on the song it was cast for until that song
-     is played or the night ends, and it does not come back either way. Nothing here
-     is softened and nothing is left to be discovered afterwards — a fan who was not
+     is played or the night ends, and the fan cannot take it back. The artist's
+     explicit decline/refund action is the only setlist exception. Nothing here is
+     softened and nothing is left to be discovered afterwards — a fan who was not
      told would reasonably think they had been robbed. */
   const rules=[
     c.unlimited
@@ -694,7 +700,7 @@ function render(){
               opened a sheet to a fan with nothing left, who then got a 402 and a
               shrug — INVARIANT 0ad, never show the room a button that leads to one. */
            const qc=d.credits||{}, qcost=s.cost||1;
-           const qdis=!qc.unlimited&&(qc.remaining||0)<qcost&&!s.mine&&
+           const qdis=!qc.unlimited&&(qc.remaining||0)<qcost&&
              !((qc.remaining||0)<=0&&d.paymentsEnabled);
            return `<button class="qvb ${s.mine?'on':''}" ${qdis?'disabled':''} onclick="openVote('${s.id}')"
              aria-label="${s.mine?'Add to your votes on':'Vote for'} ${esc(s.title)}">+</button>`;})():''}
@@ -716,7 +722,7 @@ function render(){
     `<button data-sort="${k}" class="${SORT===k?'on':''}" aria-pressed="${SORT===k}">${l}</button>`).join('')}</div>`;
   h += genreBar(d);
 
-  h += `<div class="sect"><b>${open?'Vote for these':'The setlist'}</b><span>${rest.length} song${rest.length===1?'':'s'}${
+  h += `<div class="sect ${open?'votehead':''}"><b>${open?'Vote your favorite songs below':'The setlist'}</b><span>${rest.length} song${rest.length===1?'':'s'}${
     GENRE?' · '+esc((d.tags||[]).find(t=>t.id===GENRE)?.label||''):''}</span></div>`;
   /* Said out loud, never implied. When the room is big enough that the server sends
      the top of the chart instead of all of it, the person is told so — including
@@ -725,7 +731,7 @@ function render(){
   if(shortBoard) h += `<div class="bigroom">Big room tonight — showing the top ${d.board}.
     Songs you voted for stay on your list wherever they are.</div>`;
   h += rest.length
-    ? `<div class="list">${rest.map(s=>row(s,c,open,false)).join('')}</div>`
+    ? `<div class="list votelist">${rest.map(s=>row(s,c,open,false)).join('')}</div>`
     /* "Everything's in the queue above" was said even when there was no queue and no
        library — a brand-new artist's room told the fan to pick a song below and that
        everything was already above it, on the same screen. */
@@ -783,8 +789,8 @@ function row(s,c,open,replay){
      disable the button. */
   const dis=!open||(!c.unlimited&&c.remaining<cost&&!(c.remaining<=0&&ST.paymentsEnabled));
   const n=s.mineCount||(s.mine?1:0);
-  return `<div class="prow ${s.votes?'hasv':''}">
-    <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}</div>
+  return `<div class="prow ${s.votes?'hasv':''} ${replay?'played':''}">
+    <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}${replay?`<div class="playednote">already played (pay to request again)</div>`:''}</div>
     <div class="cnt mono">${s.votes||''}</div>
     <button class="vb ${replay?'cost':''} ${s.mine?'on':''} ${POP===s.id?'pop':''}" ${dis?'disabled':''}
       onclick="openVote('${s.id}')">${s.mine?(n>1?'Voted \u00d7'+n:'Voted'):'Vote'}</button>
@@ -1008,13 +1014,13 @@ function openBuy(){
   // prices are whatever the artist set in their Studio — never hard-coded here
   const P=ST.packs||{small:{votes:3,cents:500},big:{votes:15,cents:2000}};
   const KEYS=['small','big'].filter(k=>P[k]);
-  openSheet(`<h3>Get more votes</h3><p class="lede">Extra votes for tonight’s setlist. Goes straight to ${esc(ST.artist||'the artist')}.</p>
+  openSheet(`<h3>Get more votes</h3><p class="lede buyline">goes straight to ${esc(artistFirst('the artist'))}</p>
     <div class="tiles">
       ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
         <b>${money(P[k].cents)}</b><span>${P[k].votes} votes</span></button>`).join('')}
     </div>
     <button class="go" id="goBuy" onclick="checkout('votes')">Continue to payment</button>
-    <p class="fine">Secure checkout by Stripe · you’ll come right back</p>`);
+    <p class="fine secure-votes">Secure checkout by Stripe · you’ll come right back</p>`);
 }
 function pickPack(p){sel.pack=p;buzz(8);
   ['small','big'].forEach(k=>{const el=$('#p-'+k); if(el)el.classList.toggle('on',k===p);});}

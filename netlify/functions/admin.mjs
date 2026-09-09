@@ -1,4 +1,4 @@
-import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
+import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, refundSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk, STARTER_SONGS,
@@ -1713,7 +1713,7 @@ export default async (req) => {
      round the check, and there IS a test that sets it back up to prove the guard
      fires. */
   const DOUBLE_TAP_MS = Number(process.env.MYSET_DOUBLE_TAP_MS ?? 8000);
-  let droppedSong = null;
+  let droppedSong = null, refundSong = null;
   /* `prevShow` used to exist so the round reset could price the round it was
      wiping. There is no round reset any more (a night is one round) and a vote is
      charged at the moment it is cast, so nothing needs the old prices — but `play`
@@ -1969,8 +1969,17 @@ export default async (req) => {
       }
       case 'removeSong':
         show.songs = show.songs.filter((s) => s.id !== body.song);
-        droppedSong = String(body.song || '');   // refund the votes held on it, below
+        droppedSong = String(body.song || '');   // remove standing votes; do not refund
         break;
+      case 'declineSong': {
+        const sg = show.songs.find((s) => s.id === body.song);
+        if (!sg) { err = ['That song is no longer in the setlist', 404]; return false; }
+        if (show.nowPlaying === sg.id) { err = ['That song is playing now', 409]; return false; }
+        if (show.played.includes(sg.id)) { err = ['Played songs can’t be declined as ordinary votes', 409]; return false; }
+        sg.active = false;
+        refundSong = sg.id;
+        break;
+      }
       case 'unplay': show.played = show.played.filter((id) => id !== body.song); break;
       case 'setCode': {
         const code = String(body.code || '');
@@ -2024,6 +2033,10 @@ export default async (req) => {
      Nothing is refunded — see the ledger header in _lib.mjs. */
   if (playedNow) await consumePlayedVotes(aid, playedNow);
   else if (clearBoard) await wipeBoard(aid);
+  else if (refundSong) {
+    try { await refundSongVotes(aid, refundSong, await getShow(aid)); }
+    catch { return bad('Song hidden, but the vote return is still finishing — tap “Decline + refund” again.', 503); }
+  }
   // a deleted song's votes must not go on being counted for a song nobody can see
   else if (droppedSong) await dropSongVotes(aid, droppedSong);
 

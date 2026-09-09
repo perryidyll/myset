@@ -2,16 +2,22 @@
 id: 0001
 title: A vote never comes back
 date: 2026-09-07
-status: decided
+status: superseded
 decided_by: perry
 area: voting
 reverses: 
-superseded_by: 
+superseded_by: 0016
 invariants: [14, 14b, 15, 15h, 0f6]
 commits: [5b2f516]
 tests: [test/votesstay.mjs, test/credits.mjs, test/finality.mjs, test/voting-sheet.mjs]
 files: [netlify/functions/_lib.mjs, netlify/functions/vote.mjs, netlify/functions/admin.mjs, public/vote.html, public/about.html]
 ---
+
+## Superseded in part
+
+Decision `0016` keeps fan-side finality and every ordinary non-refund path, but adds
+one explicit exception: an artist may decline an unplayed setlist song and return its
+attached votes.
 
 ## The question
 
