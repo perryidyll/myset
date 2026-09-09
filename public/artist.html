@@ -270,7 +270,7 @@ const COMMHREF=SLUG?'/'+SLUG+'/community':'/community.html';
   document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
 })();
 
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&','<':'<','>':'>','"':'"',"'":'&#39;'}[m]));
 const PROV={youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 /* Photos go through Netlify's Image CDN: resized to what the slot needs, served as
@@ -419,7 +419,7 @@ function render(){
      staying a while. */
   const links=Object.keys(LABEL).filter(k=>P.links&&P.links[k]);
   if(links.length){
-    h+=`<div class="sect">Listen &amp; follow</div><div class="links">${links.map(k=>
+    h+=`<div class="sect">Listen & follow</div><div class="links">${links.map(k=>
       `<a href="${esc(P.links[k])}" target="_blank" rel="noopener noreferrer">${ICON[k]}${LABEL[k]}</a>`).join('')}</div>`;
   }
 
@@ -467,7 +467,7 @@ function render(){
   }
 
   if(P.media.length){
-    h+=`<div class="sect">Watch &amp; listen</div>`;
+    h+=`<div class="sect">Watch & listen</div>`;
     h+=P.media.map(m=>{
       const shape=m.ratio?`r${m.ratio}`:'';
       // the facade is just a poster — the widget takes its real height on load,
