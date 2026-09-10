@@ -68,4 +68,7 @@ recognition provider and must remain visibly labelled unofficial.
 - On the real draft, the transformed cover returned in about 0.70 seconds at 23,418
   bytes; all three current community poster URLs returned in about 0.99–1.99 seconds.
 - Draft `6aa26ced57a49b09eddb933e`; 1,834 assertions, zero failures; rendered UI and
-  served-content checks pass. Production remains unchanged pending approval.
+  served-content checks pass.
+- Approved and shipped to production in commit `b70c54e`. The live Studio, install
+  prompt, responsive profile imagery and clip poster behavior were verified by served
+  content, and the read-only production health scan completed successfully.

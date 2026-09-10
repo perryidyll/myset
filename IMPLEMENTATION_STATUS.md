@@ -15,8 +15,8 @@ for a supported licensed feed or recording-derived analysis; see decision `0022`
 The install prompt has the requested orange copy and pulse. Profile imagery now uses
 responsive Netlify transforms with tiny immediate placeholders, and community videos
 prioritize their upload-time global posters without competing metadata requests. All
-1,834 assertions and rendered UI checks are green; draft
-`6aa26ced57a49b09eddb933e` awaits visual approval.
+1,834 assertions and rendered UI checks are green. Production commit `b70c54e` was
+content-verified on `myset.vip` and the live read-only health scan passed.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
