@@ -142,3 +142,6 @@ recognition provider and must remain visibly labelled unofficial.
   serves the complete batch; production remains at `b70c54e`.
 - Local handoff files were refreshed. The SSD mirror was attempted and stopped safely
   because the drive is not mounted; rerun it after reconnecting the drive.
+- Approved and shipped in commit `33d7429`. Netlify production deploy
+  `6aa2bf1185cb7d000874ed54` reached ready state, and live served-content checks confirmed
+  the Studio Feature action, promotion bullets, artist directory and shared theme asset.

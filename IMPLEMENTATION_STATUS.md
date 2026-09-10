@@ -15,8 +15,9 @@ directly, and the promotion sheet explains it in prominent orange bullets. Artis
 venue signup email now requires a verified sender and reports provider rejection instead
 of falsely claiming a code was sent. The production Resend key exists, but `AUTH_FROM`
 is not configured, so public email signup is honestly unavailable until that final
-operator step is completed. All 1,863 assertions and rendered mobile checks pass; draft
-`6aa2af9b3a81cc0488b757c9` awaits visual approval. Production remains at `b70c54e`.
+operator step is completed. All 1,863 assertions and rendered mobile checks pass. The
+complete batch is live in production at `33d7429`; deploy `6aa2bf1185cb7d000874ed54`
+was verified by served content.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
@@ -92,6 +93,7 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-10 | Production commit `33d7429`, Netlify deploy `6aa2bf1185cb7d000874ed54` | Deploy ready; live Studio serves gig-level Feature and orange promotion bullets, and live directory/theme assets match the approved batch |
 | 2026-09-10 | `sh test/run.sh` + `node tools/overview.mjs --tests` | 1,863 assertions, 0 failures, including verified-sender readiness, provider rejection, both signup doors and Featured-show settlement |
 | 2026-09-10 | `node tools/uicheck.mjs` | Gig-level Feature/Edit/cancel order, 320px fit, scoped three-bullet orange promotion sheet and all existing rendered checks pass |
 | 2026-09-10 | Netlify draft `6aa2af9b3a81cc0488b757c9` | Updated Studio, auth function, global theme and directory assets served; no preview write path exercised; production unchanged |

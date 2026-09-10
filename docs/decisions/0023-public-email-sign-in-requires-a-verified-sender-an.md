@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [33d7429]
 tests: [test/email.mjs, test/accounts.mjs]
 files: [netlify/functions/_auth.mjs, netlify/functions/auth.mjs, netlify/functions/venueauth.mjs]
 ---
