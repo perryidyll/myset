@@ -15,7 +15,7 @@
     { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Artist Studio", "short_name": "Studio", "url": "/studio",
+    { "name": "Artist Studio", "short_name": "Studio", "url": "/studio?tab=setlist",
       "icons": [{ "src": "/icons/icon-512.png", "sizes": "512x512" }] },
     { "name": "What's on near me", "short_name": "What's on", "url": "/",
       "icons": [{ "src": "/icons/icon-512.png", "sizes": "512x512" }] }

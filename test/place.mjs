@@ -71,15 +71,26 @@ console.log('\nSTARTING A SHOW TAKES THE PLACE FROM THE CALENDAR');
 
 console.log('\nBUT ONLY WHEN THE CALENDAR ACTUALLY SAYS SO');
 {
-  /* An artist with nothing on the calendar keeps exactly what they typed. This is
-     the common case — most artists never open the calendar at all. */
+  /* A fresh manual show has no presumed venue. Settings-era text and a gig more
+     than an hour away must not tell the room the artist is already there. */
   const zed = await createArtist({ email: 'zed@example.com', name: 'Zed', slug: 'zed' });
   const TZ = await signToken('zed@example.com', revOf(await readArtists(), zed.artistId));
   await mutateArtists((r) => { r.byId[zed.artistId].plan = 'plus'; return true; });
   await mutateShow(zed.artistId, (s) => { s.venue = 'My Living Room'; return true; });
   await AS(TZ, 'addSong', { title: 'Valerie', artist: 'Amy Winehouse' });
   await AS(TZ, 'newShow');
-  eq('an empty calendar changes nothing', (await getShow(zed.artistId)).venue, 'My Living Room');
+  eq('an empty calendar leaves a fresh manual show blank', (await getShow(zed.artistId)).venue, '');
+}
+{
+  const far = await createArtist({ email: 'far@example.com', name: 'Far', slug: 'far' });
+  const TF = await signToken('far@example.com', revOf(await readArtists(), far.artistId));
+  await mutateArtists((r) => { r.byId[far.artistId].plan = 'plus'; return true; });
+  await AS(TF, 'addSong', { title: 'Valerie', artist: 'Amy Winehouse' });
+  const later=NOW+2*H;
+  await AS(TF, 'eventSave', { event: { id:'gfar', venue:'Later Hall', city:'Bangkok', country:'Thailand',
+    tz:'UTC', date:ymd(later), time:hm(later), endTime:hm(later+2*H) } });
+  await AS(TF, 'newShow');
+  eq('a gig two hours away does not label a manual show', (await getShow(far.artistId)).venue, '');
 }
 {
   /* And a RESUME must not relabel a night that is already under way — the artist

@@ -38,6 +38,16 @@ ok('the live profile has one vote CTA with the requested label',
    /TAP TO VOTE THE SETLIST/.test(artist) && !/Live now — vote the setlist/.test(artist) && !/>Join live</.test(artist));
 
 const studio = read('public/studio.html');
+ok('the Artist Studio defaults to Setlist', /getItem\('myset\.tab'\)\|\|'setlist'/.test(studio));
+ok('the live song offers the delegated Lyrics action', /data-act="lyrics"[\s\S]{0,240}>Lyrics</.test(studio));
+ok('Lyrics, Auto chords and My chart remain separate ordered actions',
+   /data-act="lyrics"[\s\S]{0,500}data-act="autochords"[\s\S]{0,220}data-act="chart"/.test(studio));
+ok('the request promise covers votes and cards', /your votes come straight back and your card is never charged/.test(read('public/vote.html')));
+const home = read('public/index.html');
+ok('the install bar subtext is orange and the bar pulses',
+   /\.a2hs \.m span\{[^}]*color:var\(--accent-ink\)/.test(home)&&/\.a2hs\{[^}]*animation:a2hsGlow/.test(home));
+ok('Auto chords prefers Ultimate Guitar without scraping it into MySet',
+   /ultimate-guitar\.com\/search\.php/.test(studio)&&/MySet will show aligned chords here when a reliable licensed source is available/.test(studio));
 const requestsAt = studio.indexOf('<span class="kick">Requests from fans</span>');
 const autoAt = studio.indexOf('<span class="kick">Starting by itself</span>');
 const paymentsAt = studio.indexOf('<span class="kick">Payments</span>');

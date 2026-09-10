@@ -164,7 +164,7 @@
 /* ── ask for something ────────────────────────────────── */
 .askbox{margin:16px 18px 0;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-1);
   padding:16px 18px 18px;border:1.5px solid var(--accent-2)}
-.askbox .ah{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.askbox .ah{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-2)}
 .askbox .ap{font-size:14px;color:var(--muted);margin:6px 0 13px;line-height:1.45}
 .askbtns{display:flex;gap:9px;flex-wrap:wrap}
 .askbtn{flex:1 1 44%;min-width:150px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
@@ -877,7 +877,7 @@ function askCard(d,open){
   return `<div class="askbox">
     <div class="ah">Not on the list?</div>
     <p class="ap">${A.song||A.birthday||A.vibe
-      ? 'Ask for it with your votes. '+esc((d.artist||'The artist').split(' ')[0])+' decides — if it’s a no, your votes come straight back.'
+      ? 'Ask for it with your votes and/or cash. '+esc((d.artist||'The artist').split(' ')[0])+' decides — if it’s a no, your votes come straight back and your card is never charged.'
       : 'Requests are closed now, but here’s what you asked for.'}</p>
     ${A.song||A.birthday||A.vibe?`<div class="askbtns">
       ${A.vibe?`<button class="askbtn" ${!open?'disabled':''} onclick="openVibe()">

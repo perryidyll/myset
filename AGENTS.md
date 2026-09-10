@@ -117,6 +117,12 @@ files that do not exist. Fetch the page and grep for the thing you changed.
 
 ## Session workflow
 
+### Default working mode
+
+Use the repository's **Efficient Mode** workflow by default for ordinary MySet batches:
+sequential targeted inspection, surgical edits, focused checks, one full gate, and one
+preview. Switch to a deep investigation only when the user asks or the risk demands it.
+
 ### At session start
 
 Read `IMPLEMENTATION_STATUS.md` — current focus, next work item, blockers, deviations.

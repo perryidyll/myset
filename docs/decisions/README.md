@@ -31,12 +31,13 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) | Mood votes are free requests that let the artist choose the song | 2026-09-10 | voting | decided | perry |
 | [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) | Artists cannot publish public posts on their own artist page except the founding account | 2026-09-10 | auth | decided | perry |
 | [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) | Live shows end after three hours without artist or audience voting activity and are filed with a dated title | 2026-09-10 | ops | decided | perry |
+| [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) | Automatic chords require a licensed feed or recording-derived analysis | 2026-09-10 | media | decided | user-confirmed |
 
 ## By area
 
 **auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md)
 
-**media** — [0011](0011-clips-go-up-as-they-are.md)
+**media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md)
 
 **money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md)
 

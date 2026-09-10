@@ -1002,8 +1002,12 @@ const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyrics
    the show mutation below. */
 async function handleProfile(aid, action, body, req, me) {
   if (action === 'profileSet') {
+    const management = String(body.management || '').trim();
+    const managementUrl = String(body.managementUrl || '').trim();
+    if (!!management !== !!managementUrl)
+      return bad('Add both the label or management name and its website, or leave both blank.', 400);
     await mutateProfile(aid, (p) => {
-      for (const k of ['name', 'tagline', 'management', 'bio', 'photo', 'avatar'])
+      for (const k of ['name', 'tagline', 'management', 'managementUrl', 'bio', 'photo', 'avatar'])
         if (typeof body[k] === 'string') p[k] = body[k];
       if (Array.isArray(body.photos)) p.photos = body.photos;
       if (body.links && typeof body.links === 'object')

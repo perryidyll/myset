@@ -455,6 +455,11 @@ eq('the artist side is positional too',
 eq('an artist label or management company survives profile normalization',
    normProfile({ management: 'Independent Artists Management' }).management,
    'Independent Artists Management');
+eq('a valid management website survives profile normalization',
+   normProfile({ managementUrl: 'https://example.com/team?utm_source=test#people' }).managementUrl,
+   'https://example.com/team');
+eq('an unsafe management website is discarded',
+   normProfile({ managementUrl: 'javascript:alert(1)' }).managementUrl, '');
 
 /* ---------- the nightly job is a public URL ---------- */
 console.log('\nTHE CRON IS REACHABLE OVER HTTP, SO IT RATE-LIMITS ITSELF');

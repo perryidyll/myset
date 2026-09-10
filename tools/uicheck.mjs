@@ -230,7 +230,7 @@ await pg.goto(`http://127.0.0.1:${PORT}/artist.html?a=demo`,{waitUntil:'domconte
 await new Promise(r=>setTimeout(r,600));
 const PR=await pg.evaluate(async ()=>{
   const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
-  P={ok:true,name:'Test Artist',live:true,tagline:'Live looping & soul',management:'Independent Artists Management',avatar:'/img/band.jpg',photo:'/img/band.jpg',
+  P={ok:true,name:'Test Artist',live:true,tagline:'Live looping & soul',management:'Independent Artists Management',managementUrl:'https://management.test',avatar:'/img/band.jpg',photo:'/img/band.jpg',
      photos:[],verified:true,bio:'Plays every Thursday.',venue:'Seaflower Bungalows',city:'Koh Phangan',
      links:{website:'https://x.test',ytmusic:'https://music.youtube.com/x',applemusic:'https://music.apple.com/x',
             spotify:'https://open.spotify.com/x',instagram:'https://instagram.com/x'},
@@ -246,8 +246,8 @@ const PR=await pg.evaluate(async ()=>{
      cta?cta.textContent.trim():'missing');
   ok('and no duplicate button sits over the cover', !app.querySelector('.livepill'));
   ok('the live CTA carries the gentle orange pulse', getComputedStyle(cta).animationName==='emberGlow', getComputedStyle(cta).animationName);
-  ok('label or management has its own profile section',
-    [...app.querySelectorAll('.sect')].some(s=>s.textContent.trim()==='Label / management')&&app.innerText.includes('Independent Artists Management'));
+  ok('label or management is the last Listen & follow button',
+    [...app.querySelectorAll('.links a')].at(-1)?.textContent.includes('Independent Artists Management'));
   const order=[...app.querySelectorAll('.links a')].map(a=>a.textContent.trim());
   ok('Instagram first, then Spotify, Apple Music, YouTube Music',
      JSON.stringify(order.slice(0,4))===JSON.stringify(['Instagram','Spotify','Apple Music','YouTube Music']),
@@ -292,7 +292,7 @@ const SETTINGS=await pg.evaluate(async ()=>{
 });
 console.log('\nSTUDIO SETTINGS\n'+SETTINGS);
 
-const STUDIO_VOTES=await pg.evaluate(()=>{
+const STUDIO_VOTES=await pg.evaluate(async ()=>{
   const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
   TAB='live';
   D={ok:true,paymentsEnabled:true,voters:2,room:2,nets:1,asks:[
@@ -325,6 +325,21 @@ const STUDIO_VOTES=await pg.evaluate(()=>{
   ok('the artist sees the held dollar offer and its paid-vote value',
     requestRow&&/\$5 offered/.test(requestRow.innerText)&&/5 paid votes/.test(requestRow.innerText), requestRow&&requestRow.innerText);
   ok('the phone layout has no horizontal overflow', document.documentElement.scrollWidth<=innerWidth, `${document.documentElement.scrollWidth}/${innerWidth}`);
+  const liveButtons=[...document.querySelectorAll('.stage-song-actions button')].map(b=>b.innerText.trim());
+  ok('the playing song orders Lyrics, Auto chords, then My chart',
+    liveButtons.join('|')==='Lyrics|♬ Auto chords|☰ My chart',liveButtons.join(' | '));
+  const lyricsButton=document.querySelector('[data-act="lyrics"]'),hit=lyricsButton.getBoundingClientRect();
+  ok('the decorative Now Playing shine cannot swallow real taps',
+    document.elementFromPoint(hit.left+hit.width/2,hit.top+hit.height/2)?.closest('[data-act="lyrics"]')===lyricsButton);
+  const nativeFetch=window.fetch;
+  window.fetch=async u=>String(u).includes('/api/lyrics?')
+    ? {json:async()=>({ok:true,found:true,plain:'Test lyric line',credit:'Test source'})}
+    : nativeFetch(u);
+  document.querySelector('[data-act="lyrics"]').click();
+  await new Promise(r=>setTimeout(r,20));
+  ok('the Studio Lyrics button uses the audience lyrics reader',
+    document.querySelector('#stageLyrics')?.textContent==='Test lyric line');
+  closeSheet();window.fetch=nativeFetch;
   D.songs=D.songs.map(x=>({...x,votes:0,paidVotes:0})); render();
   ok('zero votes means no start-top-voted button', !document.querySelector('.liveactions .bigplay'));
   D.show.status='ended'; render();

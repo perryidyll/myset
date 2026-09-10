@@ -366,7 +366,7 @@ function busy(on){
   clearTimeout(BUSY_T);
   const el=$('#busy'); if(!el)return;
   if(BUSY){BUSY_PENDING=LAST_PRESS;if(BUSY_PENDING)BUSY_PENDING.classList.add('pending');
-    BUSY_T=setTimeout(()=>{if(BUSY_PENDING)BUSY_PENDING.classList.remove('pending');if(BUSY)el.classList.add('on')},110);
+    BUSY_T=setTimeout(()=>{if(BUSY_PENDING)BUSY_PENDING.classList.remove('pending');if(BUSY)el.classList.add('on')},55);
   }else{if(BUSY_PENDING)BUSY_PENDING.classList.remove('pending');BUSY_PENDING=null;el.classList.remove('on');}
 }
 async function api(p,o={}){
@@ -411,7 +411,7 @@ function gate(err,mode){
       <button class="big" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
       <p class="muted" style="font-size:12.5px;margin:14px 0 0;text-align:center">New here? Same button — we'll set you up right after the code.</p>
       <p class="muted" style="font-size:12.5px;margin:22px 0 0;text-align:center">
-        Musician, not a venue? <a href="/studio" style="color:var(--accent);font-weight:600">Artist Studio →</a></p>`;
+        Musician, not a venue? <a href="/studio?tab=setlist" style="color:var(--accent);font-weight:600">Artist Studio →</a></p>`;
   }
   $('#app').innerHTML=`<div class="gate"><h2>Venue Studio</h2>${inner}</div>`;
   const first=$('#otp')||$('#newName')||$('#email');
@@ -571,7 +571,7 @@ function goTo(url,label){
   if(p) p.textContent=label||'Opening…';
   const pressed=LAST_PRESS;if(pressed)pressed.classList.add('pending');
   setTimeout(()=>{if(pressed)pressed.classList.remove('pending');el.classList.add('on');
-    requestAnimationFrame(()=>{ location.href=url; });},110);
+    requestAnimationFrame(()=>{ location.href=url; });},40);
   // coming back from the back button restores this page, splash and all
   addEventListener('pageshow',()=>el.classList.remove('on'));
   setTimeout(()=>el.classList.remove('on'),8000);   // a navigation that never happened

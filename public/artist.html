@@ -151,7 +151,7 @@ body{padding-bottom:34px}
 .tonight .cta{padding:0 20px 20px}
 
 .sect{padding:28px 20px 10px;font-size:13px;font-weight:600;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--muted)}
+  text-transform:uppercase;color:var(--accent-ink)}
 .card{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:18px 20px}
 .bio{font-size:16px;line-height:1.55;color:var(--ink-2);white-space:pre-wrap;margin:0}
 
@@ -270,7 +270,7 @@ const COMMHREF=SLUG?'/'+SLUG+'/community':'/community.html';
    (INVARIANT 9h). A venue is a different account with its own token (0x). */
 (()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
   const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
-  if(A){ A.href=a?'/studio':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
+  if(A){ A.href=a?'/studio?tab=setlist':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
   if(V){ V.href='/venues'; document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
   document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
 })();
@@ -387,15 +387,16 @@ function render(){
      smaller photos around it, the name big and below the cover Instagram-style,
      then a stats row with the live button sitting right in it. */
   const shots=(P.photos||[]).filter(Boolean).slice(0,3);
-  h+=`<div class="pcover rise">
-    <img src="${esc(cdn(P.photo||'/img/band.jpg',1200))}" data-raw="${esc(P.photo||'/img/band.jpg')}" onerror="if(this.src!==this.dataset.raw)this.src=this.dataset.raw" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
+  const cover=P.photo||'/img/band.jpg', avatar=P.avatar||cover;
+  h+=`<div class="pcover rise" style="background-image:url('${esc(cdn(cover,48))}');background-size:cover;background-position:center">
+    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw)this.src=this.dataset.raw" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
     <div class="veil"></div>
   </div>
 
   <div class="phead">
     <div class="cluster ${shots.length?'':'solo'}">
-      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" style="background-image:url('${esc(u)}')"></div>`).join('')}</div>`:''}
-      <div class="pav" style="background-image:url('${esc(cdn(P.avatar||P.photo||'/img/band.jpg',320))}'),url('${esc(P.avatar||P.photo||'/img/band.jpg')}')"></div>
+      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" style="background-image:url('${esc(cdn(u,220))}'),url('${esc(u)}')"></div>`).join('')}</div>`:''}
+      <div class="pav" style="background-image:url('${esc(cdn(avatar,320))}'),url('${esc(cdn(avatar,48))}'),url('${esc(avatar)}')"></div>
     </div>
     <div class="pname">
       <h1>${esc(P.name)}</h1>
@@ -423,9 +424,10 @@ function render(){
      stay at the bottom where they were — those are for people who are already
      staying a while. */
   const links=Object.keys(LABEL).filter(k=>P.links&&P.links[k]);
+  if(P.management&&P.managementUrl)links.push('management');
   if(links.length){
     h+=`<div class="sect">Listen &amp; follow</div><div class="links">${links.map(k=>
-      `<a href="${esc(P.links[k])}" target="_blank" rel="noopener noreferrer">${ICON[k]}${LABEL[k]}</a>`).join('')}</div>`;
+      `<a href="${esc(k==='management'?P.managementUrl:P.links[k])}" target="_blank" rel="noopener noreferrer">${k==='management'?'↗ ':ICON[k]}${k==='management'?P.management:LABEL[k]}</a>`).join('')}</div>`;
   }
 
   /* Driven by the calendar, not the old show.showTime placeholder — that said
@@ -448,7 +450,6 @@ function render(){
     </div>`;
   }
 
-  if(P.management) h+=`<div class="sect">Label / management</div><div class="card"><p class="bio">${esc(P.management)}</p></div>`;
   if(P.bio) h+=`<div class="sect">About</div><div class="card"><p class="bio">${esc(P.bio)}</p></div>`;
 
   const gigs=(G&&G.ok?G.gigs:[]).slice(0,24);

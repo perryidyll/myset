@@ -74,11 +74,12 @@ export async function roomCapFor(aid) {
    calendar, one name on all five. The calendar already knows where tonight is, and
    it is the same occurrence this function is already holding. */
 async function resolveTonight(aid, now) {
-  const out = { listId: null, note: null, venue: '', city: '' };
+  const out = { listId: null, note: null, venue: '', city: '', startsAt: null };
   try {
     const occ = nextOccurrence(await readEvents(aid), now);
     // only a gig that is on now or within the next few hours — not next Tuesday's
     if (occ && occ.startsAt - now < 6 * 3600e3) {
+      out.startsAt = occ.startsAt;
       if (occ.listId) out.listId = occ.listId;
       /* The city too, because they travel together: a night filed with the right
          venue and the wrong city is no better than before. Only ever taken from a
@@ -150,7 +151,9 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
       /* Only on a fresh night, and only when the calendar actually has one. A
          RESUME must not relabel a night that is already under way, and an artist
          with an empty calendar keeps exactly what they typed in Settings. */
-      if (auto.venue && auto.venue !== show.venue) {
+      const nearManualGig = by === 'artist' && auto.startsAt !== null && auto.startsAt - now <= 3600e3;
+      if (fresh && by === 'artist' && !nearManualGig) { show.venue = ''; show.city = ''; }
+      if (auto.venue && (by === 'schedule' || nearManualGig) && auto.venue !== show.venue) {
         placed = [show.venue, auto.venue];
         show.venue = auto.venue;
         if (auto.city) show.city = auto.city;

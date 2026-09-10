@@ -10,12 +10,13 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-10
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The current preview batch now includes durable nested/page scroll
-positions, outlined audience request controls, repaired YouTube and legacy clip
-thumbnails, explicit Save/Discard/Keep-running show endings, and continuous pressed-to-
-loading feedback. Manual starts remain fresh and audience ordering remains stable. The
-1,825-assertion gate is green; draft `6aa23a296298ae8f23f69f11` was approved and this
-working tree is the authorized production release.
+**Current focus:** Auto chords now prefers an Ultimate Guitar search while MySet waits
+for a supported licensed feed or recording-derived analysis; see decision `0022`.
+The install prompt has the requested orange copy and pulse. Profile imagery now uses
+responsive Netlify transforms with tiny immediate placeholders, and community videos
+prioritize their upload-time global posters without competing metadata requests. All
+1,834 assertions and rendered UI checks are green; draft
+`6aa26ced57a49b09eddb933e` awaits visual approval.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.

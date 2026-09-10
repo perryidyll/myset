@@ -90,7 +90,7 @@ body{padding-bottom:34px}
   stroke-linejoin:round;flex:0 0 auto}
 
 .sect{padding:28px 20px 10px;font-size:13px;font-weight:600;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--muted)}
+  text-transform:uppercase;color:var(--accent-ink)}
 .sect.tight{padding-top:22px}
 .card{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:18px 20px}
 .about{font-size:16px;line-height:1.55;color:var(--ink-2);white-space:pre-wrap;margin:0}
@@ -253,7 +253,7 @@ const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday
 const dayNum=d=>+d.slice(8,10);
 (()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
   const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
-  if(A){ A.href=a?'/studio':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
+  if(A){ A.href=a?'/studio?tab=setlist':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
   if(V){ V.href='/venues'; document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
   document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
 })();

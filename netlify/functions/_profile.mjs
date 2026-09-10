@@ -47,6 +47,7 @@ export const defaultProfile = () => ({
   name: '',
   tagline: '',
   management: '',
+  managementUrl: '',
   bio: '',
   photo: '/img/band.jpg',
   avatar: '',            // the big square portrait
@@ -90,6 +91,7 @@ export function normProfile(p) {
   out.name = clean(out.name, 60);
   out.tagline = clean(out.tagline, 120);
   out.management = clean(out.management, 120);
+  out.managementUrl = safeLink('website', out.managementUrl);
   out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 700);    // newlines kept
   out.photo = String(out.photo == null ? d.photo : out.photo).slice(0, 300);
   out.avatar = String(out.avatar || '').slice(0, 300);
