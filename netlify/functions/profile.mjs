@@ -40,6 +40,7 @@ export default async (req) => {
     merch: (p.merch || []).filter((m) => m.on).length,
     name: p.name, tagline: p.tagline, bio: p.bio, photo: p.photo,
     avatar: p.avatar || p.photo, photos: p.photos,
+    management: p.management, managementUrl: p.managementUrl,
     links: p.links,
     media: p.media.map(shapeMedia).filter(Boolean),
     updatedAt: p.updatedAt,

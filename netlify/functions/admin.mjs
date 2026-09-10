@@ -19,6 +19,7 @@ import { mutateProfile, getProfile, shapeMedia, parseMedia, MAX_PHOTOS, MAX_MERC
 import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
+import { resolveUltimateGuitar } from './_chords.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf,
          MAX_EVENTS } from './_events.mjs';
 import { reindexSched } from './_auto.mjs';
@@ -626,6 +627,12 @@ async function handleSong(aid, action, body, show) {
   if (action === 'chartFlags')
     return json({ ok: true, flags: await chartFlags(aid, show.songs.map((x) => x.id)) });
 
+  if (action === 'chordsLink') {
+    const song = show.songs.find((x) => x.id === body.song);
+    if (!song) return bad('unknown song', 404);
+    return json({ ok: true, ...(await resolveUltimateGuitar(song.title, song.artist || '')) });
+  }
+
   if (action === 'tagList')
     return json({ ok: true, tags: vocab(), untagged: show.songs.filter((x) => !(x.tags || []).length).length });
 
@@ -695,7 +702,7 @@ async function handleSong(aid, action, body, show) {
   }
   return bad('unknown action', 400);
 }
-const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'tagList', 'tagAdd',
+const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'chordsLink', 'tagList', 'tagAdd',
                               'tagRemove', 'tagAuto']);
 
 /* SETLISTS and the to-learn list. Both live in their own documents, so none of

@@ -468,18 +468,18 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 
 | | |
 |---|---|
-| Public pages | 9 — about.html, artist.html, community.html, index.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 25 — `admin`, `auth`, `clipup`, `community`, `confirm`, `events`, `feedback`, `gift`, `history`, `img`, `lyrics`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
+| Public pages | 10 — about.html, artist.html, artists.html, community.html, index.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
+| HTTP functions | 26 — `admin`, `artists`, `auth`, `clipup`, `community`, `confirm`, `events`, `feedback`, `gift`, `history`, `img`, `lyrics`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
-| Shared libraries | 41 |
-| Artist Studio actions | 123 |
+| Shared libraries | 42 |
+| Artist Studio actions | 124 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
 | Largest clip accepted | 75 MB |
 | Invariants | 244 (last: 0f8) |
-| Test suites | 37 |
-| Assertions | **1,834**, 0 failing, last run 2026-09-10 |
-| Decision records | 22 |
+| Test suites | 39 |
+| Assertions | **1,863**, 0 failing, last run 2026-09-10 |
+| Decision records | 23 |
 
 ### Feature flags in force
 
@@ -938,6 +938,18 @@ Two of the bugs an adversarial review found here are worth carrying to any simil
   for a night London had not reached. The delete floor is now two days behind UTC. **A
   local date is fine for deciding what to show and never for deciding what to remove.**
 
+## 4.7 Artist discovery and one global theme
+
+Home links to a public `/artists` directory. It searches names and profile copy, filters
+by country/city using upcoming public gigs, and can narrow to artists with upcoming shows
+or released music. Released music means a public Spotify, Apple Music or YouTube Music
+link, or linked label/management attribution. The directory never exports registry email,
+role or billing fields and its API is explicitly `no-store`.
+
+Light/dark is one persisted browser choice across public pages, Artist Studio and Venue
+Studio. Each page exposes the same compact control; the shared script owns its state and
+both Studios provide explicit light palettes rather than assuming a dark stage screen.
+
 ---
 
 # PART 5 — HOW IT IS BUILT
@@ -1235,7 +1247,8 @@ Never in the repo, never in a chat window. All set by Perry directly in Netlify:
 **Four are set in production**: `ADMIN_CODE`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 `RESEND_API_KEY`. Everything else is unset, and each **degrades honestly rather than
 failing** — push alerts say they cannot send, the Sheet is off, Spotify import answers an
-honest 503, and sign-in mail comes from Resend's shared address.
+honest 503, and sign-in refuses to claim success until `AUTH_FROM` names a verified,
+non-sandbox sender.
 
 **A Netlify env var marked secret is unreadable through the API** — it returns a
 placeholder, not the value. That is correct behaviour and it has already caused one false
@@ -1385,9 +1398,10 @@ records, never the index.**
 - **Spotify playlist import cannot run** — `SPOTIFY_CLIENT_ID` / `_SECRET` are not set. The
   button is offered and answers an honest 503. **This is the one place the artist is shown a
   control that leads to a message rather than a result.**
-- **Sign-in email still comes from `onboarding@resend.dev`** because `AUTH_FROM` is unset.
-  Fine for Perry, wrong for the first stranger who signs up, and the cheapest of all of
-  these to fix.
+- **Public sign-in email is unavailable** because `AUTH_FROM` is unset. Resend's former
+  `onboarding@resend.dev` fallback can send only to the Resend account owner, so MySet now
+  fails closed instead of telling a stranger that an undeliverable code was sent. Verify
+  the MySet domain in Resend and configure a sender on it.
 - **Payout countries are a 22-country list**, not Stripe's full set. Deliberate: the
   alternative was accepting any two letters and creating an account in the wrong country,
   permanently.

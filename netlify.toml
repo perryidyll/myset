@@ -49,6 +49,11 @@
   status = 200
 
 [[redirects]]
+  from = "/artists"
+  to = "/artists.html"
+  status = 200
+
+[[redirects]]
   from = "/venues"
   to = "/venue-studio.html"
   status = 200

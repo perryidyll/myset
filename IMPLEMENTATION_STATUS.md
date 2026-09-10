@@ -10,13 +10,13 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-10
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** Auto chords now prefers an Ultimate Guitar search while MySet waits
-for a supported licensed feed or recording-derived analysis; see decision `0022`.
-The install prompt has the requested orange copy and pulse. Profile imagery now uses
-responsive Netlify transforms with tiny immediate placeholders, and community videos
-prioritize their upload-time global posters without competing metadata requests. All
-1,834 assertions and rendered UI checks are green. Production commit `b70c54e` was
-content-verified on `myset.vip` and the live read-only health scan passed.
+**Current focus:** Upcoming gigs now expose their fixed-price Featured-show action
+directly, and the promotion sheet explains it in prominent orange bullets. Artist and
+venue signup email now requires a verified sender and reports provider rejection instead
+of falsely claiming a code was sent. The production Resend key exists, but `AUTH_FROM`
+is not configured, so public email signup is honestly unavailable until that final
+operator step is completed. All 1,863 assertions and rendered mobile checks pass; draft
+`6aa2af9b3a81cc0488b757c9` awaits visual approval. Production remains at `b70c54e`.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
@@ -57,6 +57,7 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 | P3-005 | Fan-shard write ceiling actually measured | not_started | Derived from a measured 40ms *read*, never from a write | Hammer one shard before selling a room over 2,000 |
 | P3-008 | **A payments health check that runs off the hot path** | not_started | — | The 2026-09-08 outage was invisible until a fan tapped. A key can be valid-looking and dead |
 | P3-009 | `/api/pay` throws when a caller sends no `attempt` | not_started | Reproduced live 2026-09-08: 502 `Stripe: Unknown arguments` | `opts` is `{}` for a platform-owner charge with no `attempt`, and stripe-node rejects an empty options object. **No fan is affected** — `vote.html` and `community.html` always send `attempt`. One-line fix: pass `opts` only when non-empty |
+| P3-010 | Featured-show bidding | deferred | Fixed-price Featured shows are live; user chose to file bidding for later on 2026-09-10 | Revisit only after real demand shows the fixed-price, first-come inventory is regularly full |
 | P3-006 | `AGENTS.md` + this ledger on every project, not just MySet | in_progress | MySet done 2026-09-08 | iOhm landing, Idyll Mastery, Idyll Enterprises, Clients |
 
 ### Perry's own list (not code — these need his hands)
@@ -66,7 +67,7 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 | PER-001 | Add `charge.updated` to the Stripe webhook | not_started | Without it the fee estimate stands; with it MySet's share is exact to the cent |
 | PER-002 | Stop the double deploy; move Netlify to Pro | not_started | ~570 credits a month are the same change shipped twice |
 | PER-003 | **2FA on Google, GitHub, Netlify and Stripe** | not_started | Twenty minutes, and the highest-value item in `SECURITY.md` — the ranked #1 threat is these accounts being phished, not the code |
-| PER-004 | Set `AUTH_FROM` and the Resend domain | not_started | Sign-in mail still comes from a shared address; fine for Perry, wrong for the first stranger |
+| PER-004 | Set `AUTH_FROM` to a verified MySet sender | not_started | `RESEND_API_KEY` exists and the domain has a public DKIM record, but `AUTH_FROM` is absent. Confirm the domain is Verified in Resend, then add a sender such as `MySet <sign-in@myset.vip>` in Netlify and rebuild |
 | PER-005 | Press **"Name these from my calendar"** in Money → Past shows | not_started | Five filed nights are still named after one venue |
 | PER-006 | Try the passkey on stage | not_started | Is Face ID actually faster mid-set? |
 | PER-007 | Replace `STRIPE_SECRET_KEY` in Netlify | done | Done by the user 2026-09-08. Verified live: `POST /api/pay` (kind `votes`, pack `small`, with `attempt`) returned 200 and a `cs_live_` checkout url |
@@ -91,6 +92,12 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-10 | `sh test/run.sh` + `node tools/overview.mjs --tests` | 1,863 assertions, 0 failures, including verified-sender readiness, provider rejection, both signup doors and Featured-show settlement |
+| 2026-09-10 | `node tools/uicheck.mjs` | Gig-level Feature/Edit/cancel order, 320px fit, scoped three-bullet orange promotion sheet and all existing rendered checks pass |
+| 2026-09-10 | Netlify draft `6aa2af9b3a81cc0488b757c9` | Updated Studio, auth function, global theme and directory assets served; no preview write path exercised; production unchanged |
+| 2026-09-10 | `sh test/run.sh` + `node tools/overview.mjs --tests` | 1,852 assertions, 0 failures, including Featured shows settlement and public artist-directory privacy/filter behavior |
+| 2026-09-10 | `node tools/uicheck.mjs` | Global Studio/public theme palettes, red Live label source, directory filters and 320px layout all green |
+| 2026-09-10 | Netlify draft `6aa2a605960074ede64f0f3a` | Home, `/artists`, both Studios, voting page, theme asset and no-cache directory API all served successfully; production unchanged |
 | 2026-09-09 | `node tools/overview.mjs --tests` + rendered UI/touch checks | 1,808 assertions, 0 failures; paid replay votes, conditional request authorization/capture, three-vote birthdays, mobile layout and sheet behavior all green |
 | 2026-09-09 | `sh test/run.sh` | Every suite section passed with the new show controls, positive-vote guard and fee ladder |
 | 2026-09-09 | `node tools/uicheck.mjs` | Phone-width unified replay list, five-vote minimum, tip copy, live controls, inactive Live state and no overflow all passed |
@@ -122,6 +129,7 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 | 2026-09-06 | Shrink clips on the phone | Upload them untouched, with a trimmer | Three rounds of silent-audio bugs, all caused by the size constraint | Decision `0011` |
 | 2026-09-07 | Votes return between songs | A vote never comes back | Perry's rule, stated as final | Decision `0001` |
 | 2026-09-09 | No setlist vote ever returns | An artist may explicitly decline an unplayed song and return its votes | The queue needs a fair correction when a song cannot be played | Decision `0016` |
+| 2026-09-10 | Refresh the external SSD mirror | Mirror script stopped without writing because the SSD is not mounted | Preserve the local handoffs and rerun when the drive is connected | `~/Docs/Project Handoffs/mirror-to-ssd.sh` |
 
 ---
 

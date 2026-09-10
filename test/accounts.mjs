@@ -19,6 +19,12 @@
    code from BOTH inboxes; delete keeps everything for thirty days and undoes. */
 process.env.ADMIN_CODE = 'devlocal';
 process.env.MYSET_DOUBLE_TAP_MS = '0';
+process.env.RESEND_API_KEY = 're_test';
+process.env.AUTH_FROM = 'MySet <sign-in@myset.vip>';
+const nativeFetch = globalThis.fetch;
+globalThis.fetch = (url, opts) => String(url).startsWith('https://api.resend.com/')
+  ? Promise.resolve(new Response('{}', { status: 202 }))
+  : nativeFetch(url, opts);
 
 const authFn  = (await import('../netlify/functions/auth.mjs')).default;
 const admin   = (await import('../netlify/functions/admin.mjs')).default;

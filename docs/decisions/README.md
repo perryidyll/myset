@@ -32,10 +32,11 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) | Artists cannot publish public posts on their own artist page except the founding account | 2026-09-10 | auth | decided | perry |
 | [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) | Live shows end after three hours without artist or audience voting activity and are filed with a dated title | 2026-09-10 | ops | decided | perry |
 | [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) | Automatic chords require a licensed feed or recording-derived analysis | 2026-09-10 | media | decided | user-confirmed |
+| [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) | Public email sign-in requires a verified sender and confirmed delivery | 2026-09-10 | auth | decided | claude |
 
 ## By area
 
-**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md)
+**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md)
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md)
 

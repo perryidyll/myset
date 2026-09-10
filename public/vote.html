@@ -14,6 +14,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+<script>try{const t=localStorage.getItem('myset.theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)}}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
@@ -34,9 +35,12 @@
 <script src="/pull.js"></script>
 <style>
 #app{padding-bottom:150px}
+.headtools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 .credits,.credits.low{background:rgba(48,209,88,.16);color:#1B8E3C;box-shadow:none}
 .credits small{color:currentColor;opacity:.82}
 @media (prefers-color-scheme:dark){.credits,.credits.low{color:#4CD964}}
+:root[data-theme=light] .credits,:root[data-theme=light] .credits.low{color:#187A32}
+:root[data-theme=dark] .credits,:root[data-theme=dark] .credits.low{color:#4CD964}
 
 /* ── TIER 1 · NOW PLAYING ─────────────────────────────── */
 .now{position:relative;overflow:hidden;margin:14px 18px 0;padding:22px;border-radius:var(--r-lg);
@@ -148,7 +152,8 @@
    before any JS runs, so the first frame of a swipe is never stolen. */
 .lyr{max-height:62vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
   -webkit-overflow-scrolling:touch;margin:4px -4px 0;padding:0 4px;
-  font-size:18px;line-height:1.72;white-space:pre-wrap;color:var(--ink-2);letter-spacing:-.005em;
+  font-size:18px;line-height:1.72;white-space:pre-wrap;overflow-x:hidden;overflow-wrap:anywhere;
+  word-break:break-word;max-width:100%;min-width:0;color:var(--ink-2);letter-spacing:-.005em;
   -webkit-user-select:none;user-select:none}
 .lyrfoot{margin:16px 0 0;padding-top:13px;border-top:.5px solid var(--hair);
   font-size:12px;color:var(--faint);line-height:1.5}
@@ -353,6 +358,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="/theme.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
@@ -387,7 +393,8 @@ const artistFirst = (fb='the artist') => { const n = artistName(''); return n ? 
 /* skeleton while the first load lands */
 $('#app').innerHTML=`<div class="head"><div><div class="sk" style="width:130px;height:21px"></div>
   <div class="sk" style="width:170px;height:13px;margin-top:7px"></div></div>
-  <div class="sk" style="width:64px;height:38px;border-radius:999px"></div></div>
+  <div class="headtools"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+  <div class="sk" style="width:64px;height:38px;border-radius:999px"></div></div></div>
   <div class="sk" style="height:132px;margin:14px 18px 0;border-radius:24px"></div>
   <div class="sk" style="height:48px;margin:14px 18px 0;border-radius:999px"></div>
   <div class="sk" style="height:210px;margin:18px 18px 0;border-radius:24px"></div>`;
@@ -725,7 +732,8 @@ function render(){
         :`<span class="dot"></span>Live${d.venue?' · '+esc(d.venue):''}`}${
         d.setlist?` · ${esc(d.setlist.name)}`:''}</div>
     </div>
-    <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞ votes':`${freeRemaining}<small>/${freeTotal} votes</small>`}</div>
+    <div class="headtools"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+    <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞ votes':`${freeRemaining}<small>/${freeTotal} votes</small>`}</div></div>
   </div>`;
 
   /* An ENDED show must not claim a song is playing. The header says "That's a wrap"

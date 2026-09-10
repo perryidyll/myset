@@ -12,6 +12,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<script>try{const t=localStorage.getItem('myset.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<script src="/theme.js"></script>
 <meta name="theme-color" content="#161413" />
 <meta name="robots" content="noindex,nofollow" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -37,11 +39,23 @@
   --maxw:600px;
   --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",system-ui,sans-serif;
 }
+:root[data-theme=light]{color-scheme:light;
+  --bg:#F5F5F7;--surface:#FFFFFF;--surface-2:#EBEBEF;
+  --ink:#1D1D1F;--ink-2:#3A3A3C;--muted:#6E6E73;--faint:#8E8E93;
+  --hair:rgba(0,0,0,.08);--hair-2:rgba(0,0,0,.14);
+  --accent:#FF375F;--accent-soft:rgba(255,55,95,.10);--good:#187A32;--accent-ink:#D6003C;
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09)}
+html[data-theme=light]{background:var(--bg)}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;
   line-height:1.45;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;padding-bottom:56px}
 button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer;padding:0}
+.themebtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;
+  background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:17px;
+  transition:transform .2s var(--spring),background .2s var(--ease)}
+.themebtn:active{transform:scale(.9)}
 input,select,textarea{font-family:inherit;font-size:16px}
 a{color:inherit;text-decoration:none}
 :focus-visible{outline:2.5px solid var(--accent);outline-offset:3px;border-radius:6px}
@@ -50,7 +64,7 @@ a{color:inherit;text-decoration:none}
 .kick{font-size:12.5px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
 
 .head{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
-  gap:12px;padding:15px 18px;background:rgba(0,0,0,.72);
+  gap:12px;padding:15px 18px;background:color-mix(in srgb,var(--bg) 78%,transparent);
   backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
   border-bottom:.5px solid var(--hair)}
 .head h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.028em;
@@ -65,6 +79,7 @@ a{color:inherit;text-decoration:none}
 .whoami{display:flex;align-items:center;gap:6px;min-width:0}
 .whoami span{font-size:12px;color:var(--faint);flex:0 0 auto}
 .whoami:active h1{opacity:.6}
+.headactions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 
 /* Sticks directly under the header. `--headh` is MEASURED by fitTabs() — the
    hard-coded guess was 66px against a real 88px, so the blurred header sat over
@@ -89,6 +104,8 @@ a{color:inherit;text-decoration:none}
   border-radius:var(--pill);transition:background .25s var(--ease),color .2s var(--ease)}
 .tabs button.on{background:var(--surface-2);color:var(--ink);
   box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
+.tabs button[data-tab-live]{color:#FF375F}
+.tabs button[data-tab-live].on{color:#FF375F}
 
 .stats{display:flex;gap:11px;margin:16px 18px 0}
 .stats .c{flex:1;background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1);padding:14px 12px}
@@ -119,9 +136,12 @@ a{color:inherit;text-decoration:none}
 .wrap{padding:0 18px}
 
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
-.scroll-window{margin-right:55px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;overflow-anchor:none;
-  -webkit-overflow-scrolling:touch;scrollbar-width:thin;
-  border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);animation:edgeGlow 4.8s ease-in-out infinite}
+.scroll-shell{position:relative;margin:0 55px 0 18px;border-radius:var(--r);background:var(--surface);
+  border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);overflow:hidden;
+  animation:edgeGlow 4.8s ease-in-out infinite}
+.scroll-shell>.scroll-window{margin:0;border:0;border-radius:0;box-shadow:none;animation:none;width:100%}
+.scroll-window{overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;overflow-anchor:none;
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .scroll-window{scrollbar-color:rgba(142,142,147,.7) transparent}
 .scroll-window::-webkit-scrollbar{width:7px}.scroll-window::-webkit-scrollbar-track{background:transparent;margin-block:10px}
 .scroll-window::-webkit-scrollbar-thumb{background:rgba(142,142,147,.7);border:2px solid transparent;background-clip:content-box;border-radius:999px}
@@ -259,6 +279,8 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .chartview{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;
   line-height:1.75;white-space:pre;overflow-x:auto;max-height:62vh;overflow-y:auto;
   margin:6px -4px 0;padding:0 4px;color:var(--ink-2);-webkit-user-select:none;user-select:none}
+.chartview.stage-lyrics{white-space:pre-wrap;overflow-x:hidden;overflow-wrap:anywhere;word-break:break-word;
+  max-width:100%;min-width:0}
 .tog{display:flex;gap:3px;padding:3px;background:var(--surface);border-radius:var(--pill);flex:0 0 auto}
 .tog button{padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:var(--pill);
   transition:background .22s var(--ease),color .2s}
@@ -410,6 +432,7 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 .sheet .inp{background:var(--surface-2);box-shadow:0 0 0 1.5px var(--hair-2) inset}
 .sheet .inp:focus{box-shadow:0 0 0 2.5px var(--accent) inset}
 input[type="date"],input[type="time"]{color-scheme:dark;-webkit-appearance:none;appearance:none}
+:root[data-theme=light] input[type="date"],:root[data-theme=light] input[type="time"]{color-scheme:light}
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.55}
 .field{padding:14px 18px 0}
@@ -476,6 +499,9 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .sheet.on{transform:translateX(-50%) translateY(0)}
 .sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
 .sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px}
+.promotelede{margin:8px 0 16px;padding-left:22px;color:var(--accent-2);font-size:16px;
+  font-weight:650;line-height:1.45}
+.promotelede li+li{margin-top:7px}
 .grabzone{position:relative;padding:12px 0 10px;margin:-10px 0 0;cursor:grab;touch-action:none}
 .grabzone:active{cursor:grabbing}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
@@ -1408,8 +1434,9 @@ function featureCard(){
     <div class="list">${mine.map(m=>`<div class="row"><div class="m"><div class="t">${esc(m.venue||'Your gig')}</div>
       <div class="s">${esc(m.city||'')} · ${daystamp(new Date(m.date+'T12:00:00').getTime())}</div></div></div>`).join('')}</div>`:'';
   return `
+  <div class="sec"><span class="kick">Featured shows</span></div>
   <div class="wrap" style="padding-top:16px">
-    <button class="big bigplay" onclick="openPromote()"><span>★</span><span style="flex:1">Promote a gig</span></button>
+    <button class="big bigplay" onclick="openPromote()"><span>★</span><span style="flex:1">Feature a show</span></button>
     <p class="muted" style="font-size:12px;margin:9px 0 0">${money$(F.price)} puts one of your gigs at the top of that city's list for that night. ${F.slots} spots a night, first come first served.</p>
   </div>
   ${mine.length?`<div class="sec"><span class="kick">Featured</span><span class="kick">${mine.length}</span></div>
@@ -1424,13 +1451,15 @@ function featureCard(){
           <span class="cnt" style="color:var(--accent-2);font-size:15px">★</span></div>`).join('')}</div>`:''}`;
 }
 
-function openPromote(){
+async function openPromote(eventId,date){
+  if(!FEAT) await loadFeature(true);
   const F=FEAT;
   if(!F||!F.enabled){ toast('Not switched on right now'); return; }
-  const gigs=(F.gigs||[]);
+  const all=(F.gigs||[]);
+  const gigs=eventId?all.filter(g=>g.eventId===eventId&&g.date===date):all;
   if(!gigs.length){
     openSheet(`<h3>Promote a gig</h3>
-      <p class="lede">Nothing to promote yet. A gig needs a date in the future and a city — a featured spot lives in a city's list.</p>
+      <p class="lede">${eventId?'This show cannot be featured yet.':'Nothing to promote yet.'} A gig needs a date in the future and a city — a featured spot lives in a city's list.</p>
       <button class="big alt" style="margin-top:14px" onclick="closeSheet()">Close</button>`);
     return;
   }
@@ -1446,7 +1475,11 @@ function openPromote(){
       ${full||had?'':'<span class="cnt" style="color:var(--accent-2)">★</span>'}</button>`;
   };
   openSheet(`<h3>Promote a gig</h3>
-    <p class="lede">${money$(F.price)} puts it at the top of that city's list for that night, with an orange border. Only ${F.slots} shows can be featured each night — first come, first served.</p>
+    <ul class="promotelede">
+      <li>${money$(F.price)} puts the show at the top of its city's list for that night.</li>
+      <li>It appears in the Featured shows box with an orange border.</li>
+      <li>Only ${F.slots} spots are available per city and night — first come, first served.</li>
+    </ul>
     <div class="list" style="margin-top:12px">${gigs.map(row).join('')}</div>
     <p class="fine">Paid once, for that night only. If you cancel the gig afterwards the spot is used up, so promote a night you are sure of.</p>
     <button class="big alt" style="margin-top:12px" onclick="closeSheet()">Never mind</button>`);
@@ -2015,12 +2048,12 @@ function render(){
       ${now?`<button class="big endnow" onclick="act('endSong')">■ End current song</button>`:''}
     </div>
     <div class="sec upnext"><span class="kick">Up next</span><span class="kick">Tap ▶ to start · ${pool.length}</span></div>
-    <div class="list scroll-window queue-window">${pool.map((x,i)=>`<div class="row">
+    <div class="scroll-shell queue-shell"><div class="list scroll-window queue-window">${pool.map((x,i)=>`<div class="row">
       <div class="rk ${i===0&&x.votes?'one':''} mono">${i+1}</div>
       <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="by">${esc(x.artist)}</div>`:''}
         <div class="songvotes"><span class="mono">${x.votes} votes total</span>${paidPill(x)}</div>
         ${x.votes?`<button class="refundlink" onclick="declineSong('${x.id}')">Decline + refund votes</button>`:''}</div>
-      <button class="act" onclick="act('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div>
+      <button class="act" onclick="act('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div></div>
     <div class="wrap" style="padding-top:14px;padding-bottom:2px">
       <button class="big alt orange-outline" onclick="openEndShow()" style="justify-content:center">■ End the show</button>
     </div>
@@ -2075,7 +2108,7 @@ function render(){
       <button onclick="confirmAutoTag()">✨ Auto-tag songs</button></div>
     ${genreBar(songs)}
     <p class="muted" style="font-size:12px;padding:10px 14px 4px;margin:0">Turn a song OFF to hide it from fans tonight. Remove deletes it for good.</p>
-    <div class="list scroll-window setlist-window">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
+    <div class="scroll-shell setlist-shell"><div class="list scroll-window setlist-window">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
         <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden'
@@ -2087,7 +2120,7 @@ function render(){
       <button class="act" data-act="edit" data-id="${x.id}">Edit</button>
       <button class="act" onclick="act('toggleSong',{song:'${x.id}'})">${x.active===false?'Show':'Hide'}</button>
       <button class="act warn" data-act="del" data-id="${x.id}">✕</button>
-    </div>`).join(''):`<div class="row muted">Nothing matches “${esc(SETQ)}”</div>`}</div>
+    </div>`).join(''):`<div class="row muted">Nothing matches “${esc(SETQ)}”</div>`}</div></div>
     ${learnSection()}
     `;
   }
@@ -2131,7 +2164,8 @@ function render(){
         ${o.cancelled
           ? `<button class="act" data-act="gigskip" data-id="${o.eventId}|${o.date}">Restore</button>
              <button class="act warn" data-act="gighide" data-id="${o.eventId}|${o.date}">Hide</button>`
-          : `<button class="act" data-act="gigedit" data-id="${o.eventId}">Edit</button>
+          : `<button class="act" onclick="openPromote('${esc(o.eventId)}','${esc(o.date)}')">Feature</button>
+             <button class="act" data-act="gigedit" data-id="${o.eventId}">Edit</button>
              <button class="act warn" data-act="gigskip" data-id="${o.eventId}|${o.date}">✕</button>`}
       </div>`).join('')||'<div class="row muted">Nothing booked yet. Tap “Add a gig” — a weekly residency only needs entering once.</div>'}
       ${up.length>5?`<button class="seemore" onclick="GIGSALL=!GIGSALL;render()">${
@@ -2527,7 +2561,7 @@ function render(){
         <div class="m"><div class="t">${esc(e.email)}</div>${e.name?`<div class="by">${esc(e.name)}</div>`:''}</div>
         <button class="act warn" data-act="rmmail" data-id="${esc(e.email)}">✕</button></div>`).join('')
       ||'<div class="row muted">Nobody yet — add your email below.</div>'}</div>
-      ${TEAM.emailReady?'':`<p class="muted" style="font-size:12px;padding:10px 18px 0">Email sending isn’t switched on yet, so codes can’t go out. Add <b>RESEND_API_KEY</b> in Netlify to turn it on.</p>`}`
+      ${TEAM.emailReady?'':`<p class="muted" style="font-size:12px;padding:10px 18px 0">Email sending isn’t ready yet. Verify a sending domain in Resend, then set <b>AUTH_FROM</b> and <b>RESEND_API_KEY</b> in Netlify.</p>`}`
       :`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`}
     ${/* SEATS: 1 on free AND Plus, 5 on Pro. The first seat is free on every plan,
           so this greys only once the cap is reached — locking the whole control
@@ -2622,12 +2656,13 @@ function render(){
         ? `<a class="whoami" href="/${esc(s.slug)}"><h1>${esc(s.artist)}</h1><span>↗</span></a>`
         : `<h1>${esc(s.artist)}</h1>`}
     </div>
+    <div class="headactions"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
     ${PLAN&&PLAN.ok?(PLAN.plan==='free'
       ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
-      :`<button class="plantag" onclick="openPlans()">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}
+      :`<button class="plantag" onclick="openPlans()">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}</div>
   </div>
   <div class="tabs">
-    <button class="${TAB==='live'?'on':''}" onclick="setTab('live')">Live</button>
+    <button data-tab-live class="${TAB==='live'?'on':''}" onclick="setTab('live')">Live</button>
     <button class="${TAB==='setlist'?'on':''}" onclick="setTab('setlist')">Setlist</button>
     <button class="${TAB==='gigs'?'on':''}" onclick="setTab('gigs')">Gigs</button>
     <button class="${TAB==='money'?'on':''}" onclick="setTab('money')">Money</button>
@@ -3018,7 +3053,7 @@ async function openChart(id){
 async function openStageLyrics(id){
   const x=songById(id); if(!x)return;
   openSheet(`<h3>${esc(x.title)}</h3><p class="lede">${esc(x.artist||'')}</p>
-    <div class="chartview" id="stageLyrics"><span class="spin"></span> Finding the words…</div>`);
+    <div class="chartview stage-lyrics" id="stageLyrics"><span class="spin"></span> Finding the words…</div>`);
   let d=null;
   const aq=ASLUG?'&a='+encodeURIComponent(ASLUG):'';
   try{d=await fetch(`${API}/lyrics?song=${encodeURIComponent(id)}${aq}`).then(r=>r.json());}catch(e){}
@@ -3029,12 +3064,22 @@ async function openStageLyrics(id){
   foot.textContent='Unofficial lyrics · '+(d.credit||'community-contributed, may not be exact');el.after(foot);
 }
 
-function openAutoChords(id){
+async function openAutoChords(id){
   const x=songById(id);if(!x)return;
   const q=encodeURIComponent([x.title,x.artist].filter(Boolean).join(' '));
-  openSheet(`<h3>${esc(x.title)}</h3><p class="lede">Find a community-made chord sheet on Ultimate Guitar.</p>
-    <a class="big" target="_blank" rel="noopener noreferrer" href="https://www.ultimate-guitar.com/search.php?search_type=title&amp;value=${q}" style="justify-content:center">♬ Find on Ultimate Guitar ↗</a>
-    <p class="muted" style="font-size:12px;margin-top:14px">Unofficial — check the key and changes before relying on them live. MySet will show aligned chords here when a reliable licensed source is available.</p>`);
+  const fallback=`https://www.ultimate-guitar.com/search.php?search_type=title&value=${q}`;
+  /* Open synchronously inside the tap so iOS cannot classify the later navigation
+     as an unwanted popup. The direct tab replaces this tiny holding page. */
+  const tab=window.open('','_blank');
+  if(tab){tab.opener=null;tab.document.title='Finding chords…';tab.document.body.textContent='Finding the best chord chart…';}
+  openSheet(`<h3>${esc(x.title)}</h3><p class="lede"><span class="spin"></span> Finding the best matching chord chart…</p>`);
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'chordsLink',song:id})});
+  const url=d&&d.ok&&d.url?d.url:fallback;
+  if(d&&d.ok&&d.direct&&tab){tab.location.replace(url);closeSheet();return;}
+  if(tab)tab.close();
+  openSheet(`<h3>${esc(x.title)}</h3><p class="lede">${d&&d.direct?'Best matching community chord sheet':'I couldn’t safely identify one exact chart. Here are the filtered results instead.'}</p>
+    <a class="big" target="_blank" rel="noopener noreferrer" href="${esc(url)}" style="justify-content:center">♬ ${d&&d.direct?'Open the chord chart':'Search Ultimate Guitar'} ↗</a>
+    <p class="muted" style="font-size:12px;margin-top:14px">Unofficial — check the key and changes before relying on them live. MySet never copies or republishes the chart.</p>`);
 }
 
 async function findLyrics(id){

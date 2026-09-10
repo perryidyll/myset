@@ -1,5 +1,6 @@
 import { playable, votable, inPlay, rankSongs, newShowId } from '../netlify/functions/_lib.mjs';
 import { shapeLists } from '../netlify/functions/_lists.mjs';
+import { findUltimateGuitarLink, ultimateGuitarSearch } from '../netlify/functions/_chords.mjs';
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -120,6 +121,18 @@ console.log('\nC002  a show id is unique per tap, not per minute');
   const many = new Set(Array.from({ length: 400 }, (_, i) => newShowId(t, i / 400)));
   eq('400 draws, 400 distinct ids', many.size, 400);
   eq('deterministic for a given draw', newShowId(t, 0.5), newShowId(t, 0.5));
+}
+
+console.log('\nUltimate Guitar direct-link resolver');
+{
+  const html = `&quot;song_name&quot;:&quot;Blackbird&quot;,&quot;artist_name&quot;:&quot;The Beatles&quot;,&quot;type&quot;:&quot;Chords&quot;,&quot;tab_url&quot;:&quot;https://tabs.ultimate-guitar.com/tab/the-beatles/blackbird-chords-168749&quot;`;
+  eq('an exact title and artist resolve to the direct Chords page',
+    findUltimateGuitarLink(`{&quot;id&quot;:1,${html}}`, 'Blackbird', 'Beatles'),
+    'https://tabs.ultimate-guitar.com/tab/the-beatles/blackbird-chords-168749');
+  eq('a different artist is never guessed',
+    findUltimateGuitarLink(`{&quot;id&quot;:1,${html}}`, 'Blackbird', 'Sarah McLachlan'), null);
+  eq('the fallback stays a filtered provider search',
+    ultimateGuitarSearch('Blackbird', 'The Beatles').includes('search_type=title&value=Blackbird%20The%20Beatles'), true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

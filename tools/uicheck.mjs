@@ -14,7 +14,12 @@ import http from 'node:http'; import fs from 'node:fs'; import path from 'node:p
 import puppeteer from '/Users/perryidyll/Docs/MySet-Content/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
 const ROOT='/Users/perryidyll/Docs/MySet/public';
 const T={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
-const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');const p=path.join(ROOT,u.pathname);
+const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');
+ if(u.pathname==='/api/artists'){rs.writeHead(200,{'content-type':'application/json'});return rs.end(JSON.stringify({ok:true,artists:[
+   {slug:'demo',name:'Demo Artist',tagline:'Songs for the room',avatar:'',management:'Independent',musicReleased:true,upcomingShows:1,locations:[{country:'Thailand',city:'Bangkok'}],nextShow:{date:'2099-01-01',city:'Bangkok',country:'Thailand'}},
+   {slug:'quiet',name:'Quiet Band',tagline:'Acoustic songs',avatar:'',management:'',musicReleased:false,upcomingShows:0,locations:[],nextShow:null}
+ ]}))}
+ const p=path.join(ROOT,u.pathname);
  if(!fs.existsSync(p)||fs.statSync(p).isDirectory()){rs.writeHead(404);return rs.end('no');}
  rs.writeHead(200,{'content-type':T[path.extname(p)]||'application/octet-stream'});fs.createReadStream(p).pipe(rs);});
 await new Promise(r=>srv.listen(0,'127.0.0.1',r)); const PORT=srv.address().port;
@@ -313,11 +318,17 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   const row=document.querySelector('.list .row');
   ok('the queue repeats total and paid counts', row&&/4 votes total/.test(row.innerText)&&/\(2\) paid votes/.test(row.innerText));
   const studioQueue=document.querySelector('.queue-window');
+  const studioQueueShell=document.querySelector('.queue-shell');
   ok('the artist Up next window is orange, indented, and internally scrollable',
-    studioQueue&&studioQueue.scrollHeight>studioQueue.clientHeight&&innerWidth-studioQueue.getBoundingClientRect().right>=54
-      &&/255,\s*122,\s*69/.test(getComputedStyle(studioQueue).borderColor)
+    studioQueue&&studioQueueShell&&studioQueue.scrollHeight>studioQueue.clientHeight&&innerWidth-studioQueueShell.getBoundingClientRect().right>=54
+      &&/255,\s*122,\s*69/.test(getComputedStyle(studioQueueShell).borderColor)
       &&/up next/i.test(document.querySelector('.sec.upnext').innerText),
-    studioQueue&&`${studioQueue.clientHeight}/${studioQueue.scrollHeight}; gap ${Math.round(innerWidth-studioQueue.getBoundingClientRect().right)}; ${getComputedStyle(studioQueue).boxShadow}; ${document.querySelector('.sec.upnext')&&document.querySelector('.sec.upnext').innerText}`);
+    studioQueue&&`${studioQueue.clientHeight}/${studioQueue.scrollHeight}; gap ${Math.round(innerWidth-studioQueueShell.getBoundingClientRect().right)}; ${getComputedStyle(studioQueueShell).boxShadow}; ${document.querySelector('.sec.upnext')&&document.querySelector('.sec.upnext').innerText}`);
+  ok('the Studio scrollbar is clipped inside the rounded orange frame',
+    studioQueueShell&&getComputedStyle(studioQueueShell).overflow==='hidden'&&
+      studioQueue.getBoundingClientRect().top>=studioQueueShell.getBoundingClientRect().top&&
+      studioQueue.getBoundingClientRect().bottom<=studioQueueShell.getBoundingClientRect().bottom,
+    studioQueueShell&&getComputedStyle(studioQueueShell).overflow);
   ok('a voted unplayed song offers decline + refund', row&&/Decline \+ refund votes/.test(row.innerText));
   ok('end current song sits beside start top voted', !!document.querySelector('.liveactions .bigplay')&&!!document.querySelector('.liveactions .endnow'));
   ok('the audience stats no longer look like a vote allowance', /2 voting/.test(document.querySelector('.stats').innerText)&&/2 in room · 1 network/.test(document.querySelector('.stats').innerText));
@@ -332,13 +343,18 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   ok('the decorative Now Playing shine cannot swallow real taps',
     document.elementFromPoint(hit.left+hit.width/2,hit.top+hit.height/2)?.closest('[data-act="lyrics"]')===lyricsButton);
   const nativeFetch=window.fetch;
+  const longLyric='ThisIsOneVeryLongLyricTokenThatMustStillWrapInsideThePopupInsteadOfMakingTheArtistScrollSideways'.repeat(5);
   window.fetch=async u=>String(u).includes('/api/lyrics?')
-    ? {json:async()=>({ok:true,found:true,plain:'Test lyric line',credit:'Test source'})}
+    ? {json:async()=>({ok:true,found:true,plain:longLyric,credit:'Test source'})}
     : nativeFetch(u);
   document.querySelector('[data-act="lyrics"]').click();
   await new Promise(r=>setTimeout(r,20));
   ok('the Studio Lyrics button uses the audience lyrics reader',
-    document.querySelector('#stageLyrics')?.textContent==='Test lyric line');
+    document.querySelector('#stageLyrics')?.textContent===longLyric);
+  const stageLyrics=document.querySelector('#stageLyrics');
+  ok('long lyrics wrap inside the Studio sheet instead of scrolling sideways',
+    stageLyrics&&stageLyrics.scrollWidth<=stageLyrics.clientWidth&&getComputedStyle(stageLyrics).overflowX==='hidden',
+    stageLyrics&&`${stageLyrics.clientWidth}/${stageLyrics.scrollWidth}`);
   closeSheet();window.fetch=nativeFetch;
   D.songs=D.songs.map(x=>({...x,votes:0,paidVotes:0})); render();
   ok('zero votes means no start-top-voted button', !document.querySelector('.liveactions .bigplay'));
@@ -348,12 +364,72 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   TAB='setlist'; render();
   ok('the Setlist tab also shows paid attribution', /4 votes total/.test(document.querySelector('#app').innerText)&&/\(2\) paid votes/.test(document.querySelector('#app').innerText));
   const studioSet=document.querySelector('.setlist-window');
+  const studioSetShell=document.querySelector('.setlist-shell');
   ok('the artist setlist is capped at ten rows with the same thumb lane and glow',
-    studioSet&&studioSet.scrollHeight>studioSet.clientHeight&&studioSet.clientHeight<=721
-      &&innerWidth-studioSet.getBoundingClientRect().right>=54&&getComputedStyle(studioSet).animationName==='edgeGlow',
+    studioSet&&studioSetShell&&studioSet.scrollHeight>studioSet.clientHeight&&studioSet.clientHeight<=721
+      &&innerWidth-studioSetShell.getBoundingClientRect().right>=54&&getComputedStyle(studioSetShell).animationName==='edgeGlow',
     studioSet&&`${studioSet.clientHeight}/${studioSet.scrollHeight}`);
+  const themeButton=document.querySelector('[data-theme-toggle]'),beforeTheme=getComputedStyle(document.body).backgroundColor;
+  themeButton&&themeButton.click();
+  const afterTheme=getComputedStyle(document.body).backgroundColor;
+  ok('the Studio theme control changes the whole Studio palette',themeButton&&beforeTheme!==afterTheme,
+    `${beforeTheme} -> ${afterTheme}`);
   return out.join('\n');
 });
 console.log('\nSTUDIO PAID VOTES\n'+STUDIO_VOTES);
+
+// ---------- Coming up: one-tap Featured show action ----------
+await pg.setViewport({width:320,height:700,isMobile:true,hasTouch:true,deviceScaleFactor:2});
+const GIG_FEATURE=await pg.evaluate(async ()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  TAB='gigs';
+  EVENTS={occurrences:[{eventId:'gig-one',date:'2099-01-12',venue:'Small Jazz Room',city:'Bangkok',country:'Thailand',time:'20:00',address:'12 Music Road'}]};
+  FEAT={ok:true,enabled:true,price:1000,slots:3,mine:[],gigs:[{eventId:'gig-one',date:'2099-01-12',venue:'Small Jazz Room',city:'Bangkok',country:'Thailand',time:'20:00',left:3,already:false}]};
+  render();
+  const gig=document.querySelector('.gigrow');
+  const actions=[...gig.querySelectorAll('button')].map(x=>x.textContent.trim());
+  ok('Coming up orders Feature, Edit, then cancel',actions.join('|')==='Feature|Edit|✕',actions.join(' | '));
+  ok('all three gig actions fit a 320px phone',document.documentElement.scrollWidth<=innerWidth,`${document.documentElement.scrollWidth}/${innerWidth}`);
+  gig.querySelector('button').click();await new Promise(r=>setTimeout(r,20));
+  const lead=document.querySelector('.promotelede'),style=lead&&getComputedStyle(lead);
+  ok('the promotion sheet opens scoped to that gig with three large orange bullets',
+    lead&&lead.querySelectorAll('li').length===3&&parseFloat(style.fontSize)>=16&&/255,\s*122,\s*69/.test(style.color)
+      &&/Small Jazz Room/.test(document.querySelector('#sheet').innerText),
+    lead&&`${lead.querySelectorAll('li').length} · ${style.fontSize} · ${style.color}`);
+  closeSheet();
+  return out.join('\n');
+});
+console.log('\nGIG FEATURE ACTION\n'+GIG_FEATURE);
+
+// ---------- 5: the restored fan-side light/dark switch ----------
+await pg.goto(`http://127.0.0.1:${PORT}/index.html`,{waitUntil:'domcontentloaded'});
+await pg.evaluate(()=>localStorage.setItem('myset.theme','dark'));
+await pg.reload({waitUntil:'domcontentloaded'});
+const THEME=await pg.evaluate(()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  const before=getComputedStyle(document.body).backgroundColor;
+  document.querySelector('#themeBtn').click();
+  const after=getComputedStyle(document.body).backgroundColor;
+  ok('the home page restores the light-mode switch',document.documentElement.dataset.theme==='light'&&localStorage.getItem('myset.theme')==='light');
+  ok('the switch changes the rendered palette',before==='rgb(0, 0, 0)'&&after==='rgb(245, 245, 247)',`${before} -> ${after}`);
+  ok('the three header controls fit a 320px phone',document.documentElement.scrollWidth<=innerWidth,`${document.documentElement.scrollWidth}/${innerWidth}`);
+  return out.join('\n');
+});
+console.log('\nPUBLIC THEME\n'+THEME);
+
+// ---------- 6: the searchable artist directory ----------
+await pg.goto(`http://127.0.0.1:${PORT}/artists.html`,{waitUntil:'networkidle0'});
+const DIRECTORY=await pg.evaluate(()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  ok('the artist directory renders every artist',document.querySelectorAll('.artistcard').length===2,String(document.querySelectorAll('.artistcard').length));
+  document.querySelector('#upcoming').click();
+  ok('the upcoming-show filter narrows the directory',document.querySelectorAll('.artistcard').length===1&&/Demo Artist/.test(document.querySelector('#artists').innerText));
+  document.querySelector('#upcoming').click();document.querySelector('#music').click();
+  ok('the released-music filter uses its public signal',document.querySelectorAll('.artistcard').length===1&&/Music released/.test(document.querySelector('#artists').innerText));
+  ok('the directory fits a 320px phone',document.documentElement.scrollWidth<=innerWidth,`${document.documentElement.scrollWidth}/${innerWidth}`);
+  ok('the directory has the same global theme control',!!document.querySelector('[data-theme-toggle]'));
+  return out.join('\n');
+});
+console.log('\nARTIST DIRECTORY\n'+DIRECTORY);
 
 await b.close(); srv.close();

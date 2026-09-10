@@ -42,6 +42,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+<script>try{const t=localStorage.getItem('myset.theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)}}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="format-detection" content="telephone=no" />
 <title>MySet — the room picks the next song</title>
@@ -72,6 +73,7 @@
      pale on #F5F5F7, so it is only the dark-mode value. */
   --peace-orange:#D2551A}
 @media (prefers-color-scheme:dark){:root{--peace-orange:#FF8A4C}}
+:root[data-theme=light]{--peace-orange:#D2551A}:root[data-theme=dark]{--peace-orange:#FF8A4C}
 body{padding-bottom:0}
 .page{max-width:var(--maxw);margin:0 auto;padding:0 var(--gut)}
 h1,h2,h3{margin:0}
@@ -303,6 +305,7 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
   <div class="in">
     <a class="mark" href="/"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet</a>
     <span class="navcta">
+      <button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
       <a class="navlink" href="#venues">For venues</a>
       <a class="pill" href="/studio">Get your page</a>
     </span>
@@ -693,6 +696,7 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
 
 </div>
 
+<script src="/theme.js"></script>
 <script>
 /* Reveal on scroll, and the proof numbers counting up. Everything here is an
    enhancement: without it the page is already fully readable (see .anim above). */

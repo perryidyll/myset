@@ -26,7 +26,7 @@ option list with only the winner in it is a justification, not a decision record
 
 | Option | What it does | What it costs | New moving parts | Risk if it goes wrong |
 |---|---|---|---|---|
-| **A — chosen** | Keep the in-app chart surface ready; use a provider search until a licensed feed or recording analysis exists | One external handoff | Provider link | Provider can change its URL |
+| **A — chosen** | Keep the in-app chart surface ready; resolve a provider's exact result URL from search metadata until a licensed feed or recording analysis exists | One external handoff | Provider link resolver | Provider can change its result markup or URL |
 | B | Scrape an existing chord site into MySet | Low initial work, permanent maintenance | Scraper and parser | Bot blocks, wrong matches, and content-rights exposure |
 | C — do nothing | Keep only artist-entered My chart | No cost | None | Misses a valuable live feature |
 
@@ -38,7 +38,9 @@ in-app generated chart or silently republish another site's chart.
 
 ## What this makes harder
 
-Auto chords remain an external step today, so the musician leaves the live sheet.
+Auto chords remain an external step today, so the musician leaves the live sheet. MySet
+may read the provider's search-result metadata to bypass a broken mobile results handoff,
+but it must never fetch, parse, store or display the chart itself.
 
 ## What would reverse it
 
@@ -48,6 +50,6 @@ sheet without changing artist-authored My chart.
 
 ## How it was verified
 
-`test/copy.mjs` pins the provider boundary and `tools/uicheck.mjs` pins the three
-separate controls and their physical hit targets. The full gate reported 1,834
-assertions and zero failures. No third-party chord chart was copied or scraped.
+`test/copy.mjs` pins the provider boundary, `test/unit.mjs` pins exact-match URL
+resolution, and `tools/uicheck.mjs` pins the three separate controls and their physical
+hit targets. No third-party chord chart is copied or scraped into MySet.

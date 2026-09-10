@@ -14,6 +14,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+<script>try{const t=localStorage.getItem('myset.theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)}}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -39,6 +40,7 @@
 <style>
 body{padding-bottom:34px}
 .brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+.baractions{display:flex;align-items:center;gap:8px}
 .mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
 .mark i{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;
   flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
@@ -87,6 +89,8 @@ body{padding-bottom:34px}
   border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.01em;
   background:rgba(48,209,88,.14);color:#1B8E3C}
 @media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
+:root[data-theme=light] .vbadge{background:rgba(40,167,69,.12);color:#187A32}
+:root[data-theme=dark] .vbadge{background:rgba(48,209,88,.18);color:#4CD964}
 
 /* Top-right menu: two doors, nothing else. A native <details> so it needs no
    script to open, and closes itself when you tap elsewhere (see the listener). */
@@ -238,19 +242,21 @@ body{padding-bottom:34px}
 <div class="wrap">
   <div class="brandbar">
     <a class="mark" href="/" aria-label="MySet home"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet<span class="up">↗</span></a>
+    <div class="baractions"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
     <details class="menu" id="menu">
       <summary aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
       <div class="pop">
         <a id="mArtist" href="/signup"><i>♪</i><span>Artist Studio<small id="mArtistS">Set one up — it’s free</small></span></a>
         <a id="mVenue" href="/venues"><i>⌂</i><span>Venue Studio<small id="mVenueS">Set one up — it’s free</small></span></a>
       </div>
-    </details>
+    </details></div>
   </div>
   <div id="app"></div>
   <div class="foot">MySet · myset.vip</div>
 </div>
 
 <!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
+<script src="/theme.js"></script>
 <script src="/pull.js"></script>
 <script>
 function hideIntro(){const i=document.getElementById('intro');if(i)i.classList.add('off');}

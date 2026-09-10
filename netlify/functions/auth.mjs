@@ -1,7 +1,7 @@
 import { json, bad, requireArtist } from './_lib.mjs';
 import { normEmail, validEmail, issueCode, checkCode, sendCode, signToken, verifyToken,
          signTicket, readTicket, readArtists, mutateArtists, createArtist,
-         cleanSlug, RESERVED , revOf, artistBySlug, sendNotice } from './_auth.mjs';
+         cleanSlug, RESERVED , revOf, artistBySlug, sendNotice, emailReady } from './_auth.mjs';
 import { newSid, addSession, touchSession, readSessions, killSessions, killEverything,
          deviceLabel, note, readLog, makeRecovery, recoveryStatus, useRecovery,
          sidsFor, can } from './_session.mjs';
@@ -51,7 +51,7 @@ export default async (req) => {
   if (action === 'start' || action === 'request') {
     const email = normEmail(body.email);
     if (!validEmail(email)) return bad('That doesn’t look like an email address');
-    if (!process.env.RESEND_API_KEY)
+    if (!emailReady())
       return bad('Email sign-in isn’t switched on yet.', 503);
 
     /* Byte-identical for every valid address, account or not. An earlier version
@@ -62,7 +62,8 @@ export default async (req) => {
     const link = reg.byEmail[email];
     const code = await issueCode(email);
     if (!code) return json(SENT);                       // rate limited, silently
-    await sendCode(email, code, link ? (reg.byId[link.artistId] || {}).name : '');
+    const sent = await sendCode(email, code, link ? (reg.byId[link.artistId] || {}).name : '');
+    if (!sent.ok) return bad('We couldn’t send that email right now. Please try again shortly.', 502);
     return json(SENT);
   }
 
@@ -296,6 +297,7 @@ export default async (req) => {
       if (!validEmail(to)) return bad('That doesn’t look like an email address');
       if (!me.email) return bad('Sign in with your email first — this door needs an inbox to move.');
       if (to === me.email) return bad('That’s already your address');
+      if (!emailReady()) return bad('Email sign-in isn’t switched on yet.', 503);
       const reg = await readArtists();
       const row = reg.byId[aid] || {};
       if (Date.now() - (Number(row.emailAt) || 0) < 24 * 3600e3)
@@ -305,8 +307,13 @@ export default async (req) => {
       if (reg.byEmail[to]) return bad('We couldn’t move your account to that address');
       const a = await issueCode(to, null, `c-${aid}`);
       const b = await issueCode(me.email, null, `o-${aid}`);
-      if (a) await sendCode(to, a, row.name || '', 'new sign-in address');
-      if (b) await sendCode(me.email, b, row.name || '', 'moving your account');
+      if (!a || !b) return bad('Too many codes were requested. Try again in an hour.', 429);
+      const [newSent, oldSent] = await Promise.all([
+        sendCode(to, a, row.name || '', 'new sign-in address'),
+        sendCode(me.email, b, row.name || '', 'moving your account'),
+      ]);
+      if (!newSent.ok || !oldSent.ok)
+        return bad('We couldn’t send both emails right now. Please try again shortly.', 502);
       /* THE OLD INBOX IS TOLD AT REQUEST TIME, not at the end. If a stolen session
          is trying to walk off with the account, the owner hears about it while
          there is still something they can do. */
@@ -474,7 +481,7 @@ export default async (req) => {
       emails: Object.entries(a.byEmail)
         .filter(([, v]) => v.artistId === me.aid)
         .map(([e, v]) => ({ email: e, role: v.role || 'owner', me: e === me.email })),
-      emailReady: !!process.env.RESEND_API_KEY });
+      emailReady: emailReady() });
   }
 
   return bad('unknown action');

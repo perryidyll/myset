@@ -111,8 +111,14 @@ echo
 echo "── the account system ──"
 node --import ./test/register.mjs test/accounts.mjs
 echo
+echo "── sign-in email delivery ──"
+node --import ./test/register.mjs test/email.mjs
+echo
 echo "── featured shows ──"
 node --import ./test/register.mjs test/featured.mjs
+echo
+echo "── the artist directory ──"
+node --import ./test/register.mjs test/artists.mjs
 echo
 echo "── passkeys ──"
 node --import ./test/register.mjs test/passkeys.mjs

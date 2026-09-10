@@ -263,10 +263,23 @@ export async function checkCode(email, given, realm) {
 }
 
 /* ---------- delivery ---------- */
+/* Resend's shared onboarding@resend.dev sender only delivers to the address that
+   owns the Resend account. It is useful for a first smoke test, but advertising
+   sign-in as ready with that sender makes every stranger's signup fail while the
+   UI still says a code was sent. Public sign-in therefore needs both a key and a
+   verified, explicitly configured sender. */
+export function emailReady() {
+  const key = String(process.env.RESEND_API_KEY || '').trim();
+  const from = String(process.env.AUTH_FROM || '').trim();
+  const match = from.match(/<([^<>]+)>/) || from.match(/^([^<>\s]+@[^<>\s]+)$/);
+  return !!(key && match && validEmail(normEmail(match[1])) &&
+    !normEmail(match[1]).endsWith('@resend.dev'));
+}
+
 export async function sendCode(email, code, artistName, which = 'Artist Studio') {
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.AUTH_FROM || 'MySet <onboarding@resend.dev>';
-  if (!key) return { ok: false, why: 'email-not-configured' };
+  const from = process.env.AUTH_FROM;
+  if (!emailReady()) return { ok: false, why: 'email-not-configured' };
   try {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -283,7 +296,7 @@ export async function sendCode(email, code, artistName, which = 'Artist Studio')
 </div>`,
       }),
     });
-    if (!r.ok) return { ok: false, why: 'send-failed' };
+    if (!r.ok) return { ok: false, why: r.status === 403 ? 'sender-not-verified' : 'send-failed' };
     return { ok: true };
   } catch {
     return { ok: false, why: 'send-failed' };
@@ -294,8 +307,8 @@ export async function sendCode(email, code, artistName, which = 'Artist Studio')
    giant empty box where a code should be. Security notices get their own shape. */
 export async function sendNotice(email, subject, lines, who) {
   const key = process.env.RESEND_API_KEY;
-  const from = process.env.AUTH_FROM || 'MySet <onboarding@resend.dev>';
-  if (!key) return { ok: false, why: 'email-not-configured' };
+  const from = process.env.AUTH_FROM;
+  if (!emailReady()) return { ok: false, why: 'email-not-configured' };
   const body = (Array.isArray(lines) ? lines : [lines]).filter(Boolean);
   try {
     const r = await fetch('https://api.resend.com/emails', {
@@ -311,7 +324,7 @@ export async function sendNotice(email, subject, lines, who) {
 </div>`,
       }),
     });
-    return r.ok ? { ok: true } : { ok: false, why: 'send-failed' };
+    return r.ok ? { ok: true } : { ok: false, why: r.status === 403 ? 'sender-not-verified' : 'send-failed' };
   } catch { return { ok: false, why: 'send-failed' }; }
 }
 

@@ -20,6 +20,8 @@ const read = (rel) => readFileSync(new URL('../' + rel, import.meta.url), 'utf8'
 
 console.log('\nFIXED LABELS  the strings other things lean on');
 const venue = read('public/venue.html'), artist = read('public/artist.html'), vote = read('public/vote.html');
+const home = read('public/index.html'), theme = read('public/app.css');
+const directory = read('public/artists.html');
 ok('the venue tick reads "✓ Verified"', /✓ Verified/.test(venue));
 ok('and its absence "Unverified listing"', /Unverified listing/.test(venue));
 ok('the artist tick reads "✓ Verified" too', /✓ Verified/.test(artist));
@@ -43,11 +45,34 @@ ok('the live song offers the delegated Lyrics action', /data-act="lyrics"[\s\S]{
 ok('Lyrics, Auto chords and My chart remain separate ordered actions',
    /data-act="lyrics"[\s\S]{0,500}data-act="autochords"[\s\S]{0,220}data-act="chart"/.test(studio));
 ok('the request promise covers votes and cards', /your votes come straight back and your card is never charged/.test(read('public/vote.html')));
-const home = read('public/index.html');
 ok('the install bar subtext is orange and the bar pulses',
    /\.a2hs \.m span\{[^}]*color:var\(--accent-ink\)/.test(home)&&/\.a2hs\{[^}]*animation:a2hsGlow/.test(home));
-ok('Auto chords prefers Ultimate Guitar without scraping it into MySet',
-   /ultimate-guitar\.com\/search\.php/.test(studio)&&/MySet will show aligned chords here when a reliable licensed source is available/.test(studio));
+ok('Auto chords resolves a direct Ultimate Guitar chart without copying it into MySet',
+   /action:'chordsLink'/.test(studio)&&/tab\.location\.replace\(url\)/.test(studio)&&/MySet never copies or republishes the chart/.test(studio));
+ok('lyrics wrap inside both audience and Studio sheets',
+   /\.lyr\{[^}]*white-space:pre-wrap[^}]*overflow-wrap:anywhere/.test(vote)&&
+   /\.chartview\.stage-lyrics\{[^}]*white-space:pre-wrap[^}]*overflow-wrap:anywhere/.test(studio));
+ok('the home-page light mode switch persists across every public page',
+   /id="themeBtn"[^>]*data-theme-toggle/.test(home)&&
+   /localStorage\.setItem\('myset\.theme', next\)/.test(read('public/theme.js'))&&
+   /:root\[data-theme=light\]/.test(theme)&&
+   ['index.html','artist.html','artists.html','community.html','vote.html','venue.html','about.html','studio.html','venue-studio.html']
+     .every(x=>read(`public/${x}`).includes('/theme.js')));
+ok('the Studio scrolling windows use a clipping shell around the native scrollbar',
+   /class="scroll-shell queue-shell"><div class="list scroll-window queue-window"/.test(studio)&&
+   /class="scroll-shell setlist-shell"><div class="list scroll-window setlist-window"/.test(studio));
+ok('the Studio Live tab label is red',
+   /button\[data-tab-live\]\{color:#FF375F\}/.test(studio)&&/button data-tab-live/.test(studio));
+ok('the home page links to the artist directory and its requested filters',
+   /href="\/artists">Search for artists/.test(home)&&
+   /Upcoming shows/.test(directory)&&/Music released/.test(directory)&&/All countries/.test(directory)&&/All cities/.test(directory));
+ok('Featured shows remain a $10 first-come city promotion',
+   /Featured shows/.test(home)&&/featureStart/.test(studio)&&/\$10/.test(studio)&&/first come, first served/i.test(studio));
+ok('each upcoming gig offers Feature before Edit and cancel',
+   /openPromote\('\$\{esc\(o\.eventId\)\}','\$\{esc\(o\.date\)\}'\)">Feature<\/button>[\s\S]{0,180}>Edit<\/button>[\s\S]{0,180}>✕<\/button>/.test(studio));
+ok('the promotion sheet leads with larger orange bullet points',
+   /\.promotelede\{[^}]*color:var\(--accent-2\)[^}]*font-size:16px/.test(studio)&&
+   /<ul class="promotelede">[\s\S]{0,500}<li>Only \$\{F\.slots\} spots/.test(studio));
 const requestsAt = studio.indexOf('<span class="kick">Requests from fans</span>');
 const autoAt = studio.indexOf('<span class="kick">Starting by itself</span>');
 const paymentsAt = studio.indexOf('<span class="kick">Payments</span>');

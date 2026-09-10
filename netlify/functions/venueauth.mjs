@@ -1,5 +1,5 @@
 import { json, bad } from './_lib.mjs';
-import { normEmail, validEmail, issueCode, checkCode, sendCode,
+import { normEmail, validEmail, issueCode, checkCode, sendCode, emailReady,
          signTicket, readTicket, cleanSlug } from './_auth.mjs';
 import { readVenues, mutateVenues, createVenue, requireVenue, signVenueToken,
          verifyVenueToken, getVenueProfile, domainMatches , vRevOf } from './_venues.mjs';
@@ -43,12 +43,13 @@ export default async (req) => {
   if (action === 'start') {
     const email = normEmail(body.email);
     if (!validEmail(email)) return bad('That doesn’t look like an email address');
-    if (!process.env.RESEND_API_KEY) return bad('Email sign-in isn’t switched on yet.', 503);
+    if (!emailReady()) return bad('Email sign-in isn’t switched on yet.', 503);
     const reg = await readVenues();
     const link = reg.byEmail[email];
     const code = await issueCode(email, null, REALM);
     if (!code) return json(SENT);                                  // rate limited, silently
-    await sendCode(email, code, link ? (reg.byId[link.venueId] || {}).name : '', 'Venue Studio');
+    const sent = await sendCode(email, code, link ? (reg.byId[link.venueId] || {}).name : '', 'Venue Studio');
+    if (!sent.ok) return bad('We couldn’t send that email right now. Please try again shortly.', 502);
     return json(SENT);
   }
 
@@ -231,5 +232,5 @@ export default async (req) => {
     emails: Object.entries(reg.byEmail)
       .filter(([, v]) => v.venueId === me.vid)
       .map(([e, v]) => ({ email: e, role: v.role || 'owner' })),
-    emailReady: !!process.env.RESEND_API_KEY });
+    emailReady: emailReady() });
 };
