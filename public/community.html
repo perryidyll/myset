@@ -760,7 +760,24 @@ function wireClips(){
     let t=null;
     v.addEventListener('loadstart',()=>{ clearTimeout(t); t=setTimeout(hide,25000); });
     v.addEventListener('canplay',()=>clearTimeout(t));
+    repairDarkPoster(v);
   });
+}
+
+/* A few early uploads have valid poster files whose captured frame is effectively
+   black. Detect only that case, then ask the same-origin video for a frame one
+   second in. Normal posters still keep preload="none" and cost no clip bytes. */
+function repairDarkPoster(v){
+  if(!v.poster)return;
+  const img=new Image();img.onload=()=>{try{
+    const c=document.createElement('canvas');c.width=24;c.height=14;
+    const x=c.getContext('2d');x.drawImage(img,0,0,c.width,c.height);
+    const p=x.getImageData(0,0,c.width,c.height).data;let light=0;
+    for(let i=0;i<p.length;i+=4)light+=(p[i]+p[i+1]+p[i+2])/3;
+    if(light/(p.length/4)>18)return;
+    v.removeAttribute('poster');v.preload='metadata';
+    v.addEventListener('loadedmetadata',()=>{try{v.currentTime=Math.min(1,Math.max(.1,(v.duration||1)/8));}catch(e){}},{once:true});
+  }catch(e){}};img.src=v.poster;
 }
 
 /* shrink on the phone, like every other upload: 1024px longest side, JPEG stepped

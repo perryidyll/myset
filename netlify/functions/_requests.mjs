@@ -106,7 +106,8 @@ export async function createRequest(aid, show, fanId, body) {
   let short = false, debitAlready = false, debited = false;
   await mutateFan(aid, fanId, (me) => {
     short = false; debitAlready = false; debited = false;
-    if (free) return false;                                   // nothing to charge
+    me.lastAt = Date.now();
+    if (free) return true;                                    // activity, nothing to charge
     me.rq ||= [];
     if (debitMarker && me.rq.includes(debitMarker)) {
       debitAlready = true; return false;

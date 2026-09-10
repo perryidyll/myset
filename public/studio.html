@@ -119,7 +119,7 @@ a{color:inherit;text-decoration:none}
 .wrap{padding:0 18px}
 
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
-.scroll-window{margin-right:55px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+.scroll-window{margin-right:55px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;overflow-anchor:none;
   -webkit-overflow-scrolling:touch;scrollbar-width:thin;
   border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);animation:edgeGlow 4.8s ease-in-out infinite}
 .scroll-window{scrollbar-color:rgba(142,142,147,.7) transparent}
@@ -129,8 +129,8 @@ a{color:inherit;text-decoration:none}
 .queue-window{max-height:294px}.setlist-window{max-height:720px}
 .sec.upnext .kick:first-child{font-size:15px;font-weight:750;color:var(--accent-2)}
 @keyframes edgeGlow{
-  0%,100%{filter:drop-shadow(7px 0 7px rgba(255,122,69,.18)) drop-shadow(14px 0 15px rgba(255,69,110,.08))}
-  50%{filter:drop-shadow(10px 0 11px rgba(255,122,69,.46)) drop-shadow(20px 0 24px rgba(255,69,110,.2))}
+  0%,100%{box-shadow:var(--sh-1),7px 0 9px rgba(255,122,69,.18),18px 0 24px rgba(255,69,110,.07)}
+  50%{box-shadow:var(--sh-1),10px 0 15px rgba(255,122,69,.43),25px 0 34px rgba(255,69,110,.16)}
 }
 .row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
 /* A prose row is a SENTENCE, not a row of items. `.row` is a flex container, so
@@ -369,12 +369,12 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
   background:rgba(0,0,0,.9)}
 #qrbig.on{display:grid}
 #qrbig>div{animation:rise .3s var(--ease) both}
-.qrpaper{width:min(390px,90vw);aspect-ratio:1;background:#fff;border-radius:22px;padding:24px;
+.qrpaper{width:min(430px,92vw);aspect-ratio:1;background:#fff;border-radius:22px;padding:18px 20px;
   text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6);display:flex;flex-direction:column;justify-content:center}
-.qrpaper img{width:74%;height:auto;display:block;border-radius:10px;margin:0 auto}
-.qrpaper .cap{margin:16px 2px 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;
-  font-size:25px;font-weight:600;line-height:1.15;letter-spacing:-.022em;color:#111}
-.qrpaper .cap2{margin:7px 0 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:17px;font-weight:700;letter-spacing:.05em;color:#ff4058}
+.qrpaper img{width:80%;height:auto;display:block;border-radius:10px;margin:0 auto}
+.qrpaper .cap{margin:10px 0 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;
+  font-size:22px;font-weight:600;line-height:1.08;letter-spacing:-.025em;color:#111;white-space:nowrap}
+.qrpaper .cap2{margin:5px -12px 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:15px;font-weight:700;letter-spacing:.025em;color:#ff4058;white-space:nowrap}
 .qrpaper .sub{margin:8px 0 0;font-family:ui-serif,Georgia,"Iowan Old Style","Palatino Linotype",serif;font-size:13px;font-weight:600;letter-spacing:.08em;color:#ff4058}
 .qracts{display:flex;gap:9px;margin:16px auto 0;width:min(340px,86vw)}
 .qracts a,.qracts button{flex:1;padding:13px;border-radius:var(--pill);text-align:center;
@@ -488,6 +488,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
   backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
   display:none;place-items:center;opacity:0;transition:opacity .18s var(--ease)}
 #busy.on{display:grid;opacity:1}
+button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 #busy .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
 #busy .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
   transform-origin:bottom;animation:busybar .9s ease-in-out infinite}
@@ -890,14 +891,19 @@ function applySetSort(list){
   return list;
 }
 
-let BUSY=0, BUSY_T=null;
+let BUSY=0, BUSY_T=null, LAST_PRESS=null, BUSY_PENDING=null;
+document.addEventListener('pointerdown',e=>{LAST_PRESS=e.target.closest&&e.target.closest('button,a')},{passive:true});
 function busy(on){
   BUSY=Math.max(0,BUSY+(on?1:-1));
   clearTimeout(BUSY_T);
   const el=document.getElementById('busy');
   if(!el)return;
-  if(BUSY){ BUSY_T=setTimeout(()=>{ if(BUSY) el.classList.add('on'); },140); }  // no flicker on fast calls
-  else el.classList.remove('on');
+  if(BUSY){
+    BUSY_PENDING=LAST_PRESS;if(BUSY_PENDING)BUSY_PENDING.classList.add('pending');
+    BUSY_T=setTimeout(()=>{if(BUSY_PENDING)BUSY_PENDING.classList.remove('pending');if(BUSY)el.classList.add('on')},110);
+  }else{
+    if(BUSY_PENDING)BUSY_PENDING.classList.remove('pending');BUSY_PENDING=null;el.classList.remove('on');
+  }
 }
 /* The same headers `api` builds, for the two calls that come back as a FILE rather
    than as JSON. api() ends in `r.json()`, so a CSV download cannot go through it. */
@@ -1920,8 +1926,13 @@ async function recover(){
   await loadRev(true); await load();
 }
 
+const PANEL_SCROLL={queue:0,setlist:0};
 function render(){
   if(!D||!D.show)return;                 // data not in yet — never crash the page
+  const pageY=window.scrollY;
+  const oldQueue=$('.queue-window'),oldSetlist=$('.setlist-window');
+  if(oldQueue)PANEL_SCROLL.queue=oldQueue.scrollTop;
+  if(oldSetlist)PANEL_SCROLL.setlist=oldSetlist.scrollTop;
   const s=D.show, songs=D.songs;
   const now=songs.find(x=>x.now);
   /* `votable` comes from the server (stage.mjs, off votable() in _lib.mjs) — the
@@ -1940,9 +1951,7 @@ function render(){
   if(TAB==='live'){
   if(s.status!=='live'){
     body=`<div class="wrap" style="padding-top:22px;padding-bottom:2px">
-      <button class="big bigplay" onclick="${s.status==='ended'&&(s.played||[]).length
-        ? `if(confirm('Start a brand new show? Last night’s numbers are saved in your history.'))act('newShow')`
-        : `act('status',{status:'live'})`}">
+      <button class="big bigplay" onclick="if(confirm('Start a fresh show? The previous show is saved and tonight starts with a clean vote board.'))act('newShow')">
         <span>●</span><span style="flex:1">${s.status==='ended'&&(s.played||[]).length?'Start a new show':'Start the show'}</span></button>
     </div>
     ${(()=>{
@@ -1960,7 +1969,7 @@ function render(){
         ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
         <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
            style="color:var(--accent);font-weight:700">Resume it instead</a>
-        — use that if you ended it by mistake.${s.endedBy==='schedule'?' This one was ended by itself, three hours after your gig’s scheduled end.':''}</p>`
+        — use that if you ended it by mistake.${s.endedBy==='schedule'?' This one was ended by itself, three hours after your gig’s scheduled end.':s.endedBy==='inactivity'?' This one was saved automatically after three hours without activity.':''}</p>`
       :`<p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to fans until you tap this — or until a gig on your calendar reaches its start time.</p>`}`;
   }
 
@@ -1989,7 +1998,7 @@ function render(){
       <button class="chartbtn" data-act="chart" data-id="${esc(now.id)}">☰ My chart</button></div>`:''}
     ${asksPanel()}
     <div class="wrap" style="padding-top:22px;padding-bottom:2px">
-      <button class="big alt" onclick="if(confirm('End the show for fans?'))act('status',{status:'ended'})"
+      <button class="big alt" onclick="openEndShow()"
         style="justify-content:center">■ End the show</button>
     </div>
     ${s.startedBy==='schedule'?`<p class="muted" style="font-size:12px;padding:6px 20px 0">Started by itself for the gig on your calendar. It ends by itself three hours after that gig’s end time, unless you end it first.</p>`:''}
@@ -2136,7 +2145,7 @@ function render(){
       <div class="wrap" style="padding-top:14px"><button class="act" onclick="closeShow()">← All shows</button></div>
       <div class="np rise" style="background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)">
         <div class="k" style="color:var(--muted)">${dstamp(H.endedAt||H.startedAt)}</div>
-        <div class="t">${esc(H.venue||'Untitled show')}</div>
+        <div class="t">${esc(H.title||H.venue||'Untitled show')}</div>
         <div class="a" style="color:var(--muted)">${esc(H.city||'')}${H.startedAt&&H.endedAt?' · '+dur(H.endedAt-H.startedAt):''}</div>
       </div>
       <div class="stats">
@@ -2201,7 +2210,7 @@ function render(){
           ${HISTQ?`<button class="clr" onclick="HISTQ='';HISTFOCUS=false;render()" aria-label="Clear search">✕</button>`:''}
         </div>`:''}
         <div class="list">${HROWS.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
-          <div class="m"><div class="t">${esc(x.venue||'Untitled show')}</div>
+          <div class="m"><div class="t">${esc(x.title||x.venue||'Untitled show')}</div>
             <div class="by">${esc(x.city||'')}</div>
             <div class="s">${dstamp(x.endedAt||x.startedAt)} · ${x.songsPlayed} song${x.songsPlayed===1?'':'s'} · ${x.totalVotes} votes · ${x.peakVoters} people${
               x.unattributed?` · $${x.unattributed.toFixed(2)} untagged`:''}</div></div>
@@ -2640,6 +2649,15 @@ function render(){
     if(HISTFOCUS){ hq.focus(); const v=hq.value; hq.setSelectionRange(v.length,v.length); } }
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
   fitTabs();
+  const restoreScroll=()=>{
+    const q=$('.queue-window'),l=$('.setlist-window');
+    if(q)q.scrollTop=PANEL_SCROLL.queue;if(l)l.scrollTop=PANEL_SCROLL.setlist;
+    if(Math.abs(window.scrollY-pageY)>1)window.scrollTo(0,pageY);
+  };
+  const qNow=$('.queue-window'),lNow=$('.setlist-window');
+  if(qNow)qNow.addEventListener('scroll',()=>{PANEL_SCROLL.queue=qNow.scrollTop},{passive:true});
+  if(lNow)lNow.addEventListener('scroll',()=>{PANEL_SCROLL.setlist=lNow.scrollTop},{passive:true});
+  restoreScroll();requestAnimationFrame(()=>requestAnimationFrame(restoreScroll));
 }
 /* The tab row sticks under the header, and the header's height is content-driven —
    it grows with the phone's text-size setting. So it is measured rather than
@@ -3083,7 +3101,7 @@ function qrBig(k){
       <div class="sub">${esc(copy.url)}</div>
     </div>
     <div class="qracts">
-      <button onclick="qrDownload('${k}')">Download print-ready</button>
+      <button onclick="qrDownload('${k}')">Download</button>
       <button onclick="qrHide()">Done</button>
     </div>
   </div>`;
@@ -3095,12 +3113,33 @@ function qrDownload(k){
   const img=new Image(); img.onload=()=>{
     const c=document.createElement('canvas'),z=1800,ctx=c.getContext('2d'),copy=qrCopy(k); c.width=z;c.height=z;
     const fit=(txt,max,size,weight='700')=>{do{ctx.font=`${weight} ${size}px Georgia, serif`;size-=2;}while(ctx.measureText(txt).width>max&&size>24)};
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,z,z);ctx.drawImage(img,300,90,1200,1200);ctx.textAlign='center';
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,z,z);ctx.drawImage(img,250,45,1300,1300);ctx.textAlign='center';
     ctx.fillStyle='#111';fit(copy.head,1640,82);ctx.fillText(copy.head,z/2,1435);
     ctx.fillStyle='#ff4058';fit(copy.line,1580,60);ctx.fillText(copy.line,z/2,1535);
     fit(copy.url,1100,46,'600');ctx.fillText(copy.url,z/2,1650);
-    const a=document.createElement('a');a.download=`myset-${k}-qr.png`;a.href=c.toDataURL('image/png');a.click();
+    c.toBlob(blob=>{if(!blob){toast('Couldn’t prepare that QR code');return;}
+      const url=URL.createObjectURL(blob),a=document.createElement('a');a.download=`myset-${k}-qr.png`;a.href=url;
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    },'image/png');
   }; img.onerror=()=>toast('Couldn’t prepare that QR code'); img.src=qrSrc(k,20);
+}
+
+function openEndShow(){
+  const today=new Date().toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+  openSheet(`<h3>Save this show</h3><p class="lede">Give the night a title for your records, or leave the suggested title as-is.</p>
+    <input class="inp" id="endShowTitle" maxlength="100" value="Untitled show – ${esc(today)}" aria-label="Show title">
+    <button class="big" style="margin-top:16px" onclick="saveEndedShow()">Save + end show</button>
+    <button class="big alt" style="color:var(--accent)" onclick="discardEndedShow()">Discard + end show</button>
+    <button class="big alt" onclick="closeSheet()">Keep show running</button>`);
+}
+async function saveEndedShow(){
+  const title=((($('#endShowTitle')||{}).value)||'').trim();
+  if(!title){toast('Give this show a title');return;}
+  closeSheet();await act('status',{status:'ended',title});
+}
+async function discardEndedShow(){
+  if(!confirm('End this show without saving it to Past shows?'))return;
+  closeSheet();await act('status',{status:'ended',discard:true});
 }
 
 /* Same key the voting page uses, so flipping this on here affects the phone
@@ -4294,8 +4333,9 @@ function goTo(url,label){
   if(!el){ location.href=url; return false; }
   const p=document.getElementById('leaveline');
   if(p) p.textContent=label||'Opening…';
-  el.classList.add('on');
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{ location.href=url; }));
+  const pressed=LAST_PRESS;if(pressed)pressed.classList.add('pending');
+  setTimeout(()=>{if(pressed)pressed.classList.remove('pending');el.classList.add('on');
+    requestAnimationFrame(()=>{ location.href=url; });},110);
   // coming back from the back button restores this page, splash and all
   addEventListener('pageshow',()=>el.classList.remove('on'));
   setTimeout(()=>el.classList.remove('on'),8000);   // a navigation that never happened

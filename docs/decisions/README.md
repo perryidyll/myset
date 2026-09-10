@@ -30,6 +30,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0018](0018-song-request-offers-are-authorized-now-and-capture.md) | song request offers are authorized now and captured only after the song finishes | 2026-09-09 | money | decided | user |
 | [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) | Mood votes are free requests that let the artist choose the song | 2026-09-10 | voting | decided | perry |
 | [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) | Artists cannot publish public posts on their own artist page except the founding account | 2026-09-10 | auth | decided | perry |
+| [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) | Live shows end after three hours without artist or audience voting activity and are filed with a dated title | 2026-09-10 | ops | decided | perry |
 
 ## By area
 
@@ -39,7 +40,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md)
 
-**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md)
+**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md)
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md)
 

@@ -1,4 +1,4 @@
-import { readSched, emptySched, SCHED, sweep, heal, HEAL_EVERY_MS } from './_auto.mjs';
+import { readSched, emptySched, SCHED, sweep, sweepIdle, heal, HEAL_EVERY_MS } from './_auto.mjs';
 import { casDoc } from './_lib.mjs';
 
 /* SHOWS THAT START AND END THEMSELVES — the bell.
@@ -81,8 +81,9 @@ export default async (req) => {
       } catch (e) { console.error('autocron: clip sweep failed', String((e && e.message) || e)); }
     }
     const r = await sweep({ now, log: (l) => console.log(l) });
+    const idle = await sweepIdle({ now, log: (l) => console.log(l) });
     console.log(`autocron: ok — ${r.checked} checked, ${r.results.filter((x) => x.did).length} acted`,
-                marker ? `(scheduled for ${marker})` : '(no scheduler marker)');
+                `${idle.ended} idle ended`, marker ? `(scheduled for ${marker})` : '(no scheduler marker)');
     return new Response('ok', { status: 200 });
   } catch (e) {
     console.error('autocron failed:', String((e && e.message) || e));

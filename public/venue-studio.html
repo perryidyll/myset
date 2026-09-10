@@ -319,6 +319,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 #busy{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);backdrop-filter:blur(2px);
   display:none;place-items:center;opacity:0;transition:opacity .18s var(--ease)}
 #busy.on{display:grid;opacity:1}
+button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 #busy .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
 #busy .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
   transform-origin:bottom;animation:bb .9s ease-in-out infinite}
@@ -358,13 +359,15 @@ let V=null, ME=null, SHOWS=null, AMEN=[];
 let EVENTS=null, PITCHES=null, STATS=null, VERIFY=null, VOUCH=null;
 let TAB=localStorage.getItem('myset.vtab')||'page';
 
-let BUSY=0,BUSY_T=null;
+let BUSY=0,BUSY_T=null,LAST_PRESS=null,BUSY_PENDING=null;
+document.addEventListener('pointerdown',e=>{LAST_PRESS=e.target.closest&&e.target.closest('button,a')},{passive:true});
 function busy(on){
   BUSY=Math.max(0,BUSY+(on?1:-1));
   clearTimeout(BUSY_T);
   const el=$('#busy'); if(!el)return;
-  if(BUSY) BUSY_T=setTimeout(()=>{if(BUSY)el.classList.add('on')},140);
-  else el.classList.remove('on');
+  if(BUSY){BUSY_PENDING=LAST_PRESS;if(BUSY_PENDING)BUSY_PENDING.classList.add('pending');
+    BUSY_T=setTimeout(()=>{if(BUSY_PENDING)BUSY_PENDING.classList.remove('pending');if(BUSY)el.classList.add('on')},110);
+  }else{if(BUSY_PENDING)BUSY_PENDING.classList.remove('pending');BUSY_PENDING=null;el.classList.remove('on');}
 }
 async function api(p,o={}){
   const h={'content-type':'application/json',...(o.headers||{})};
@@ -566,8 +569,9 @@ function goTo(url,label){
   if(!el){ location.href=url; return false; }
   const p=document.getElementById('leaveline');
   if(p) p.textContent=label||'Opening…';
-  el.classList.add('on');
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{ location.href=url; }));
+  const pressed=LAST_PRESS;if(pressed)pressed.classList.add('pending');
+  setTimeout(()=>{if(pressed)pressed.classList.remove('pending');el.classList.add('on');
+    requestAnimationFrame(()=>{ location.href=url; });},110);
   // coming back from the back button restores this page, splash and all
   addEventListener('pageshow',()=>el.classList.remove('on'));
   setTimeout(()=>el.classList.remove('on'),8000);   // a navigation that never happened

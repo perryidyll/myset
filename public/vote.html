@@ -70,7 +70,7 @@
   border:1.5px solid var(--accent-2);box-shadow:var(--sh-2);overflow:hidden;
   animation:edgeGlow 4.8s ease-in-out infinite}
 .queue-scroll{max-height:266px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
-  -webkit-overflow-scrolling:touch;scrollbar-width:thin}
+  -webkit-overflow-scrolling:touch;scrollbar-width:thin;overflow-anchor:none}
 .queue-scroll,.list.votelist{scrollbar-color:rgba(142,142,147,.7) transparent}
 .queue-scroll::-webkit-scrollbar,.list.votelist::-webkit-scrollbar{width:7px}
 .queue-scroll::-webkit-scrollbar-track,.list.votelist::-webkit-scrollbar-track{background:transparent;margin-block:10px}
@@ -163,13 +163,13 @@
 
 /* ── ask for something ────────────────────────────────── */
 .askbox{margin:16px 18px 0;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-1);
-  padding:16px 18px 18px}
+  padding:16px 18px 18px;border:1.5px solid var(--accent-2)}
 .askbox .ah{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .askbox .ap{font-size:14px;color:var(--muted);margin:6px 0 13px;line-height:1.45}
 .askbtns{display:flex;gap:9px;flex-wrap:wrap}
 .askbtn{flex:1 1 44%;min-width:150px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;
   padding:13px 15px;border-radius:var(--r-sm);background:var(--bg-2);
-  box-shadow:inset 0 0 0 1.5px var(--hair);transition:transform .22s var(--spring)}
+  box-shadow:inset 0 0 0 1.5px var(--accent-2);transition:transform .22s var(--spring)}
 .askbtn:active{transform:scale(.96)}
 .askbtn:disabled{opacity:.45}
 .askbtn b{font-size:15px;font-weight:600;letter-spacing:-.012em}
@@ -206,7 +206,7 @@
 .sect.votehead b{color:var(--accent-2)}
 .sect span{font-size:12.5px;color:var(--faint)}
 .list{margin:0 18px;border-radius:var(--r);background:var(--surface);box-shadow:var(--sh-1);overflow:hidden}
-.list.votelist{margin-right:55px;max-height:660px;overflow-y:auto;overscroll-behavior:contain;
+.list.votelist{margin-right:55px;max-height:660px;overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;
   touch-action:pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:thin;
   border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);animation:edgeGlow 4.8s ease-in-out infinite}
 .prow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
@@ -230,13 +230,18 @@
 .vb{flex:0 0 auto;min-width:74px;height:40px;padding:0 16px;border-radius:var(--pill);
   font-size:14.5px;font-weight:600;letter-spacing:-.01em;
   background:var(--bg);color:var(--ink);box-shadow:0 0 0 1.5px var(--hair) inset;
-  transition:transform .24s var(--spring),background .2s var(--ease),color .2s var(--ease),box-shadow .2s}
+  transition:transform .24s var(--spring),background .2s var(--ease),color .2s var(--ease),box-shadow .2s;
+  animation:voteGlow 4.2s ease-in-out infinite}
 .vb:active{transform:scale(.9)}
 .vb.on{background:var(--grad);color:#fff;box-shadow:0 3px 12px rgba(255,55,95,.36)}
 .vb.cost{color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
 .vb.cost.on{background:var(--grad);color:#fff}
 .vb:disabled{opacity:.4}
 .vb.pop{animation:pop .42s var(--spring)}
+@keyframes voteGlow{
+  0%,100%{filter:drop-shadow(0 0 4px rgba(255,122,69,.22))}
+  50%{filter:drop-shadow(0 0 10px rgba(255,122,69,.68)) drop-shadow(0 0 18px rgba(255,69,110,.2))}
+}
 @keyframes pop{0%{transform:scale(1)}42%{transform:scale(1.16)}100%{transform:scale(1)}}
 
 .costpill{display:inline-block;font-size:11px;font-weight:600;color:var(--accent);
@@ -258,7 +263,7 @@
   0%,100%{filter:drop-shadow(0 0 5px rgba(255,122,69,.22))}
   50%{filter:drop-shadow(0 0 13px rgba(255,122,69,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}
 }
-@media (prefers-reduced-motion:reduce){.queue,.list.votelist,.dock .btn{animation:none}}
+@media (prefers-reduced-motion:reduce){.queue,.list.votelist,.dock .btn,.vb{animation:none}}
 /* "More votes" wears an orange ring (Perry, 2026-09-07). It sits next to the solid
    gradient of Tip, so a second solid fill would make the pair read as two equal
    demands; the ring says "this one costs money too" without shouting over it. */
@@ -642,7 +647,15 @@ function lastCall(msLeft){
   tick(); LC_TIMER=setInterval(tick,200);
 }
 
-let SORT=(()=>{try{return localStorage.getItem('myset.sort')||'title'}catch(e){return 'title'}})();
+let SORT=(()=>{try{
+  /* `votes` used to be the default, so old phones still silently re-ranked a song
+     the instant they voted. Migrate that inherited default once; Top voted remains
+     available when somebody deliberately taps it afterward. */
+  if(!localStorage.getItem('myset.sort-order-v2')){
+    localStorage.setItem('myset.sort-order-v2','1');localStorage.setItem('myset.sort','title');return 'title';
+  }
+  return localStorage.getItem('myset.sort')||'title';
+}catch(e){return 'title'}})();
 function setSort(v){SORT=v;try{localStorage.setItem('myset.sort',v)}catch(e){}render();}
 /* Genre is deliberately NOT remembered between visits: a filter you forgot you
    set, on a setlist you have never seen, looks like the artist only knows four
@@ -666,9 +679,13 @@ function applySort(list){
   return list;
 }
 const SORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
+const SCROLLPOS={queue:0,list:0};
 
 function render(){
   const d=ST,c=d.credits;
+  const pageY=window.scrollY;
+  const oldQueue=$('.queue-scroll'),oldList=$('.votelist');
+  if(oldQueue)SCROLLPOS.queue=oldQueue.scrollTop;if(oldList)SCROLLPOS.list=oldList.scrollTop;
   /* The tab and the app switcher carry whoever is actually on stage. LINK
      PREVIEWS DO NOT — iMessage, WhatsApp and Slack read the served HTML, so they
      get the neutral static <title>. Fixing that needs the title rendered
@@ -755,8 +772,6 @@ function render(){
          : `<b>Nothing on the list yet</b>${esc(artistFirst())} is still putting tonight’s songs in.`}</div>`}</div>
   </div>`;
 
-  h += askCard(d, open);
-
   h += `<div class="search">
     <svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
     <input id="q" type="search" inputmode="search" placeholder="Search song or artist" value="${esc(FILTER)}" autocomplete="off">
@@ -785,10 +800,21 @@ function render(){
         :(queue.length?'Everything’s in the queue above'
           :`${esc(artistFirst())} hasn’t put tonight’s songs in yet`)}</div>`;
 
+  h += askCard(d, open);
+
   h += `<a class="backlink" href="${HOME}">← ${esc(d.artist||'Artist')}’s page</a>
     <a class="backlink" href="/signup" style="font-size:13px;color:var(--faint)">Play live yourself? Get your own page →</a>
     <div class="foot">MySet · myset.vip</div>`;
   $('#app').innerHTML=h;
+  const restoreScroll=()=>{
+    const queue=$('.queue-scroll'),list=$('.votelist');
+    if(queue)queue.scrollTop=SCROLLPOS.queue;if(list)list.scrollTop=SCROLLPOS.list;
+    if(Math.abs(window.scrollY-pageY)>1)window.scrollTo(0,pageY);
+  };
+  const queueNow=$('.queue-scroll'),listNow=$('.votelist');
+  if(queueNow)queueNow.addEventListener('scroll',()=>{SCROLLPOS.queue=queueNow.scrollTop},{passive:true});
+  if(listNow)listNow.addEventListener('scroll',()=>{SCROLLPOS.list=listNow.scrollTop},{passive:true});
+  restoreScroll();requestAnimationFrame(()=>requestAnimationFrame(restoreScroll));
   if(!BOOTED){ $('#app').classList.add('rise'); BOOTED=true; }
 
   $('#app').querySelectorAll('[data-sort]').forEach(b=>

@@ -120,7 +120,7 @@
     # `frame-src` is the same four hosts as before: a stored media record that
     # somehow produced a different host is blocked by the browser as well as by
     # the exact-host parser in _embeds.mjs.
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; worker-src 'self'; manifest-src 'self'; form-action 'self'; frame-ancestors 'self'; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com https://embed.music.apple.com; object-src 'none'; base-uri 'self'"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://i.ytimg.com https://img.youtube.com; media-src 'self' blob:; connect-src 'self'; font-src 'self'; worker-src 'self'; manifest-src 'self'; form-action 'self'; frame-ancestors 'self'; frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com https://open.spotify.com https://embed.music.apple.com; object-src 'none'; base-uri 'self'"
 
 [[headers]]
   for = "/stage.html"

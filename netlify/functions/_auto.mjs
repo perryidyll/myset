@@ -1,4 +1,4 @@
-import { getShow, readDoc, casDoc } from './_lib.mjs';
+import { getShow, readDoc, casDoc, readFans } from './_lib.mjs';
 import { readArtists } from './_auth.mjs';
 import { readEvents, occurrencesFor, isVenueOwner } from './_events.mjs';
 import { utcToDate } from './_time.mjs';
@@ -48,7 +48,8 @@ export function nextWindow(events, now) {
   return o ? { s: o.startsAt, e: o.endsAt, k: occKey(o) } : null;
 }
 
-export const emptySched = () => ({ v: 1, byArtist: {}, lastRunAt: 0, runningSince: 0, healedAt: 0, healCursor: 0 });
+export const emptySched = () => ({ v: 1, byArtist: {}, live: {}, lastRunAt: 0, runningSince: 0, healedAt: 0, healCursor: 0 });
+export const SHOW_IDLE_MS = 3 * 3600e3;
 export const HEAL_EVERY_MS = 24 * 3600e3;
 export const HEAL_BATCH = 300;
 
@@ -82,6 +83,7 @@ export async function readSched() {
   const { data } = await readDoc(SCHED, null);
   const d = { ...emptySched(), ...(data || {}) };
   d.byArtist ||= {};
+  d.live ||= {};
   return d;
 }
 
@@ -201,4 +203,27 @@ export async function sweep({ now = Date.now(), limit = 40, log = () => {} } = {
     }).catch(() => {});
   }
   return { checked: due.length, deferred: Math.max(0, Object.keys(sched.byArtist).length - due.length), results };
+}
+
+/** End any live show with no artist action or audience vote for three hours. */
+export async function sweepIdle({ now = Date.now(), limit = 40, log = () => {} } = {}) {
+  const sched = await readSched();
+  const entries = Object.entries(sched.live || {}).slice(0, limit);
+  const remove = [];
+  let ended = 0;
+  for (const [aid, started] of entries) {
+    try {
+      const [show, fans] = await Promise.all([getShow(aid), readFans(aid)]);
+      if (show.status !== 'live') { remove.push(aid); continue; }
+      const fanAt = Math.max(0, ...Object.values(fans || {}).map((f) => Number(f.lastAt) || 0));
+      const last = Math.max(Number(started) || 0, Number(show.updatedAt) || 0, fanAt);
+      if (now - last < SHOW_IDLE_MS) continue;
+      await endShow(aid, { by: 'inactivity' });
+      remove.push(aid); ended += 1; log(`autocron: ${aid} — ended after three idle hours`);
+    } catch (e) { console.error(`autocron idle: ${aid} failed:`, String((e && e.message) || e)); }
+  }
+  if (remove.length) await casDoc(SCHED, emptySched, (d) => {
+    d.live ||= {}; for (const aid of remove) delete d.live[aid]; return true;
+  }).catch(() => {});
+  return { checked: entries.length, ended };
 }

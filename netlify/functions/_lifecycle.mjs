@@ -1,8 +1,14 @@
-import { getShow, mutateShow, readFans, carryFans, newShowId, gigMonthOf } from './_lib.mjs';
+import { getShow, mutateShow, readFans, carryFans, newShowId, gigMonthOf, casDoc } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
 import { readEvents, nextOccurrence } from './_events.mjs';
 import { planForArtist, isPlatformOwner } from './_plan.mjs';
+
+const AUTO_INDEX = 'gigsched';
+const markLive = (aid, at = Date.now()) => casDoc(AUTO_INDEX,
+  () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; d.live[aid] = at; return true; }).catch(() => {});
+const unmarkLive = (aid) => casDoc(AUTO_INDEX,
+  () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; delete d.live[aid]; return true; }).catch(() => {});
 
 /* STARTING AND ENDING A SHOW — the one implementation.
 
@@ -181,6 +187,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
   }
   // paid votes survive a reset — only a fan who gifted them loses them
   if (fresh) await carryFans(aid, prevShow || (await getShow(aid)));
+  await markLive(aid, now);
   return { ok: true, err: null, note, already };
 }
 
@@ -188,7 +195,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
  * End a show. Archives first, always; idempotent (ending an ended show refreshes
  * the archive and changes nothing else). `by` is stamped for the Studio.
  */
-export async function endShow(aid, { by = 'artist' } = {}) {
+export async function endShow(aid, { by = 'artist', title = '', discard = false } = {}) {
   /* Ending the night is not the same as finishing the current song. Anything the
      artist never explicitly completed is released, never charged. */
   try {
@@ -196,9 +203,10 @@ export async function endShow(aid, { by = 'artist' } = {}) {
     await completeSongRequests(aid, '');
     await cancelOpenPledges(aid);
   } catch { /* Stripe will release an uncaptured authorization at expiry */ }
-  try {
+  if (!discard) try {
     const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
-    await archiveShow(aid, prev, fans);
+    const fallback = `Untitled show – ${new Date().toISOString().slice(0, 10)}`;
+    await archiveShow(aid, { ...prev, archiveTitle: String(title || fallback).slice(0, 100) }, fans);
   } catch { /* never block ending a show on the archive */ }
   await mutateShow(aid, (show) => {
     show.status = 'ended';
@@ -206,6 +214,7 @@ export async function endShow(aid, { by = 'artist' } = {}) {
     show.endedAt = Date.now();
     return true;
   });
+  await unmarkLive(aid);
   return { ok: true, err: null, note: null };
 }
 

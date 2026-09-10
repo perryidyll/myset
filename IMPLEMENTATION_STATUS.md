@@ -10,11 +10,12 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-10
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The final scroll-window/UI refinement batch shipped to production in
-`831081d`: inset scroll thumbs, isolated mood scrolling with twenty choices,
-profile-sharing controls, revised QR artwork, lower Profile save action, and stable
-audience setlist ordering/button labels. The 1,815-assertion gate is green and the
-production pages were verified by served content.
+**Current focus:** The current preview batch now includes durable nested/page scroll
+positions, outlined audience request controls, repaired YouTube and legacy clip
+thumbnails, explicit Save/Discard/Keep-running show endings, and continuous pressed-to-
+loading feedback. Manual starts remain fresh and audience ordering remains stable. The
+1,825-assertion gate is green; draft `6aa23a296298ae8f23f69f11` was approved and this
+working tree is the authorized production release.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.

@@ -17,7 +17,7 @@ process.env.MYSET_DOUBLE_TAP_MS = '0';
 const admin  = (await import('../netlify/functions/admin.mjs')).default;
 const stageFn = (await import('../netlify/functions/stage.mjs')).default;
 const cron   = await import('../netlify/functions/autocron.mjs');
-const { autoTick, sweep, readSched, currentOccurrence, nextWindow, END_GRACE_MS, IDLE_MS, SCHED }
+const { autoTick, sweep, sweepIdle, readSched, currentOccurrence, nextWindow, END_GRACE_MS, IDLE_MS, SHOW_IDLE_MS, SCHED }
   = await import('../netlify/functions/_auto.mjs');
 const { createArtist, signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
 const { PLANS } = await import('../netlify/functions/_plan.mjs');
@@ -101,6 +101,31 @@ r = await autoTick(mia.artistId, { now: T0 + 30 * 60e3 });
 eq('the schedule leaves it ended', r.did, null);
 eq('the show stays ended', (await getShow(mia.artistId)).status, 'ended');
 ok('and says why', /already started|ended/.test(r.why || ''), r.why);
+
+console.log('\nMANUAL AND IDLE ENDINGS  save a useful title');
+{
+  const manual = await createArtist({ email: 'manual@example.com', name: 'Manual', slug: 'manual' });
+  const TMan = await signToken('manual@example.com', revOf(await readArtists(), manual.artistId));
+  ok('a manual show starts', (await AS(TMan, 'status', { status: 'live' })).ok);
+  await mutateShow(manual.artistId, (s) => { s.log = [{ songId: 'one', title: 'One', roundVotes: 1, at: Date.now() }]; return true; });
+  ok('and ends with its chosen title', (await AS(TMan, 'status', { status: 'ended', title: 'Sunday at The Corner' })).ok);
+  eq('the chosen title is in history', ((await readHistIndex(manual.artistId)).shows[0] || {}).title, 'Sunday at The Corner');
+  ok('another manual show starts clean', (await AS(TMan, 'newShow')).ok);
+  await mutateShow(manual.artistId, (s) => { s.log = [{ songId: 'two', title: 'Two', roundVotes: 1, at: Date.now() }]; return true; });
+  ok('it can be discarded when ended', (await AS(TMan, 'status', { status: 'ended', discard: true })).ok);
+  eq('discard adds no Past show', (await readHistIndex(manual.artistId)).shows.length, 1);
+
+  const idleArtist = await createArtist({ email: 'idle@example.com', name: 'Idle', slug: 'idle' });
+  const TIdle = await signToken('idle@example.com', revOf(await readArtists(), idleArtist.artistId));
+  ok('an unscheduled show starts', (await AS(TIdle, 'status', { status: 'live' })).ok);
+  await mutateShow(idleArtist.artistId, (s) => { s.log = [{ songId: 'one', title: 'One', roundVotes: 1, at: Date.now() }]; return true; });
+  const swept = await sweepIdle({ now: Date.now() + SHOW_IDLE_MS + 1000 });
+  eq('three idle hours end it', swept.ended, 1);
+  const idleShow = await getShow(idleArtist.artistId);
+  eq('the reason is recorded', idleShow.endedBy, 'inactivity');
+  const idleHist = await readHistIndex(idleArtist.artistId);
+  ok('and it files an automatic dated title', /^Untitled show – \d{4}-\d{2}-\d{2}$/.test((idleHist.shows[0] || {}).title || ''), idleHist.shows[0]);
+}
 
 console.log('\nENDING  three hours after the scheduled end, and never mid-song');
 ok('she starts it again by hand', (await AS(TM, 'status', { status: 'live' })).ok);

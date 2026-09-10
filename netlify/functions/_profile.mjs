@@ -146,7 +146,7 @@ export function shapeMedia(m) {
   return {
     mid: m.mid, provider: m.provider, title: m.title || '',
     thumb: m.thumb || (m.provider === 'youtube' && m.id ? `https://i.ytimg.com/vi/${encodeURIComponent(m.id)}/hqdefault.jpg` : ''),
-    thumbFallback: m.provider === 'youtube' && m.id ? `https://i.ytimg.com/vi/${encodeURIComponent(m.id)}/hqdefault.jpg` : '',
+    thumbFallback: m.provider === 'youtube' && m.id ? `https://img.youtube.com/vi/${encodeURIComponent(m.id)}/0.jpg` : '',
     src, href: linkOut(m), ...embedShape(m),
   };
 }

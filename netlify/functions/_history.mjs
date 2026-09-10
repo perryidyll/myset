@@ -137,6 +137,7 @@ export async function archiveShow(aid, show, fans) {
 
   const doc = {
     v: 1, showId, artistId: aid,
+    title: show.archiveTitle || '',
     venue: show.venue || '', city: show.city || '', showTime: show.showTime || '',
     startedAt: show.startedAt || null, endedAt,
     played, requested,
@@ -190,6 +191,7 @@ export async function archiveShow(aid, show, fans) {
     const up = (a, b) => Math.max(Number(a) || 0, Number(b) || 0);
     const row = {
       showId,
+      title: (kept && kept.title) || doc.title || was.title || '',
       venue: (kept && kept.venue) || doc.venue || was.venue || '',
       city: (kept && kept.city) || doc.city || was.city || '',
       startedAt: Math.min(...[was.startedAt, doc.startedAt].filter(Boolean).concat(endedAt)),

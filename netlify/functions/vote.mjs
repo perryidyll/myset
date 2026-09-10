@@ -117,6 +117,7 @@ export default async (req) => {
          otherwise their spend would fall back to being counted out of `v` and the
          votes they were given free would start costing them. */
       chargeVotes(me, show, song, cost, n, free);
+      me.lastAt = Date.now();
       for (let i = 0; i < n; i++) me.v.push(song);
       me.ts[song] ||= Date.now();          // keep the first stamp: ties are broken by it
       want = mine + n;
