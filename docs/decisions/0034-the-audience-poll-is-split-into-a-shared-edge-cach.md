@@ -109,6 +109,31 @@ from three reads to two and is a separate decision (P3-014); the roomsize suite 
 exercises the legacy door (its negative assertions were added to `test/split.mjs` on the
 new path).
 
+## What the deploy taught, the same evening
+
+Pushed as `c3d0a4d`. Live, the new page and both endpoints answered correctly at once —
+and the shared board was **not** being shared: every request said `"Netlify Durable";
+fwd=bypass` and rendered afresh. Two free draft deploys with a header switch found
+why: **Netlify's durable cache ignores a lifetime under 10 seconds.** Every spelling of
+3 through 9 (`max-age`, `s-maxage`, with and without `stale-while-revalidate`) was
+bypassed; 10 and 60 were hits with a ttl. Under 10 the copy still lives on each edge
+node on its own — a 3-second copy was `"Netlify Edge"; hit; ttl=2` on the same
+connection and a miss from the next node, on the draft and on production alike.
+
+So the middle rung of `pollFloorFor` changed from 5 s to 10 s: up to 200 phones the
+interval stays 3 s and the copy is per node (cheap either way, and the tally stays live
+in a pub); from 201 phones it is 10 s and the copy is shared by the whole room. For a
+mid-sized room that is the same worst-case delay for seeing what the artist did — one
+interval, as a 5 s poll against a 10 s copy would have given — for half the requests; a
+phone's own vote is shown at once regardless. A 5 s rung would have quietly put every
+phone in a 500-person room back on its own render, and `tools/loadsim.py --ceiling`
+shows that case as *worse* than before the split (178 MB/s against 164 at 1,000). The
+1,000-phone gig now costs $0.56 (was $0.98) and moves 9 MB/s (was 164). The
+simulator's small-room figures are printed as a range — best case one render per
+interval, worst case every poll — because how many edge nodes a bar's phones land on
+is not known. Reversing the rung is one number in `pollFloorFor`, but then the board's
+lifetime must be decoupled from the interval or the split stops working for those rooms.
+
 ## How it was verified
 
 - `test/split.mjs` — 80 assertions: the board carries nothing personal and is
@@ -134,10 +159,11 @@ new path).
   "Your vote" stable across polls; `/api/me` returning 500 — board still updates with
   other phones' votes, a cast still lands and is shown as mine with the right credits;
   `/api/board` returning 500 — the page keeps its board; no page errors.
-- Live, read-only: `/api/img` on myset.vip, which carries the same `durable` directive
-  through the same `/api/*` rewrite, answered `cache-status: "Netlify Durable"; hit` on
-  the second request with an `age` header. **The three-second TTL and the stale window
-  have not been watched live** — first thing to check after the deploy.
+- Live, read-only, before the deploy: `/api/img` on myset.vip, which carries the same
+  `durable` directive through the same `/api/*` rewrite, answered `cache-status:
+  "Netlify Durable"; hit` on the second request with an `age` header. After the deploy:
+  the durable minimum and the per-node 3 s copy, measured as described above, on two
+  draft deploys and on production.
 - `tools/loadsim.py --ceiling` reproduces the room-ceiling report's column to the decimal
   at the record size the report assumed (152 bytes a fan), and then does the same sum at
   the record size the vote path writes today — measured on 2026-09-11: 101 bytes for a

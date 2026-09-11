@@ -110,3 +110,36 @@ the legacy door (its negative assertions were added on the new path in `split.mj
 3 s copy); read the personal call's duration off the log; P3-013; R2 when the user has
 clicked the R2 subscription; then the open line on his word — he said not to wait for a
 2,000-person booking.
+
+---
+
+## Later the same evening — committed, pushed, and what the live edge taught
+
+The user said the word. Staged the split, the docs and his burst-20 change; left the
+other session's artists-page map (`public/artists.html`, `netlify.toml`, `test/copy.mjs`)
+uncommitted on purpose — undocumented, and its rendered check fails. `sh test/run.sh` on a
+clean checkout of the commit: 2,017/2,017. Pushed `c3d0a4d`; the new page was live in
+40 s and both endpoints answered correctly. (The R2 session pushed `a4e3657` right
+after, from its worktree; its copy of the master overview predated this session's prose
+in §5.3 and §6.2, which is why those passages were re-applied in the correction commit.)
+
+**But the shared board was not being shared.** Every live request said
+`"Netlify Durable"; fwd=bypass` and rendered afresh. Two free draft deploys with a
+header switch (never committed) found the rule: **the durable cache ignores a lifetime
+under 10 seconds** — 3 through 9 bypassed in every spelling (`max-age`, `s-maxage`, with
+and without `stale-while-revalidate`), 10 and 60 hit with a ttl. Under 10 the copy still
+lives on each edge node: a 3 s copy was `"Netlify Edge"; hit; ttl=2` on the same
+connection and a miss from the next node, on the draft and on production.
+
+**Fix:** the middle rung of `pollFloorFor` is 10 s, not 5 s (rooms of 201–3,000). Pubs
+keep 3 s with a per-node copy — cheap either way, tally live. Same worst-case delay for a
+mid room as a 5 s poll against a 10 s copy, half the requests. `test/roomsize.mjs` now
+asserts the rung is at least the durable minimum from 201; `tools/loadsim.py` mirrors
+the new rung, keeps the old one for `--legacy` and the `before` column, and prints
+small-room costs as a range (best: one render per interval; worst: every poll renders).
+1,000 phones: $0.98 → $0.56, 164 → 9 MB/s. 20 phones: 2.7¢ → 3.0–4.0¢. Decision `0034`
+carries the story; INVARIANT 0fi the rule.
+
+**What is still a simulation:** the honest ceiling (~2,500 busiest case at today's record
+weight) and the personal call's ~50 ms. Read the function log after the first busy room.
+

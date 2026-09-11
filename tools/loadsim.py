@@ -25,7 +25,8 @@ person in a bar actually does with their phone.
 
 THE LADDER, COPIED FROM public/vote.html (keep these in step):
     FLOOR   = pollFloorFor(heads) -- the SERVER sends it, the page obeys it:
-              3000ms up to 200 people, 5000 to 1,000, 10000 to 3,000, else 20000
+              3000ms up to 200 people, 10000 to 3,000, else 20000 (the 5s rung for
+              201-1,000 became 10s on 2026-09-11: the durable cache needs 10)
     base    = FLOOR if QUIET < 2 else FLOOR*10/3 if QUIET < 6
               else FLOOR*25/3 if QUIET < 20 else FLOOR*20   (the terminal rung)
     wait    = base * (0.8 + random()*0.4)                   (+/-20% jitter)
@@ -112,6 +113,13 @@ REC_BASE     = 101           # measured: a phone that only watched
 REC_PER_CAST = 240           # measured: what each cast adds (a fit to 412/864/2010 at 1/3/8)
 SHARDS       = 12            # a personal poll reads ONE of these
 KNOWN_OK_MBS = 50.0          # the band MySet is known to serve; where the ceiling is drawn
+# MEASURED 2026-09-11 on draft deploys and then on production: Netlify's DURABLE cache
+# (the one every edge node shares) ignores a lifetime under 10 seconds — 3..9 were all
+# `fwd=bypass`, 10 and up were hits. Below that the copy lives on each edge node
+# separately (a 3 s copy was a hit on the same connection, a miss from the next node).
+# So a room whose interval is under 10 s does NOT get one render per interval; it gets
+# one per interval PER NODE, and nobody knows how many nodes a bar's phones land on.
+DURABLE_MIN_S = 10
 # the one-off cost of arriving: HTML + css + js + sw, gzipped, all from the CDN
 # (web requests + bandwidth, NO function compute), then one profile-ish call
 PAGE_REQS    = 6
@@ -125,10 +133,13 @@ def credits(reqs, byte_count, fn_ms):
             + byte_count / 1e9 * CR_BW_PER_GB
             + fn_ms / 1000 / 3600 * FN_MEM_GB * CR_COMPUTE_GBHR)
 
-def poll_floor(heads):
-    """Mirrors pollFloorFor in netlify/functions/_lib.mjs. Keep in step."""
+def poll_floor(heads, legacy=False):
+    """Mirrors pollFloorFor in netlify/functions/_lib.mjs. Keep in step.
+    `legacy` is the ladder as it was BEFORE the split (a 5 s rung for 201-1,000),
+    so that --legacy and the 'before' column of --ceiling describe what actually
+    shipped then, not the old poll on today's rungs."""
     if heads <= 200:  return 3.0
-    if heads <= 1000: return 5.0
+    if legacy and heads <= 1000: return 5.0
     if heads <= 3000: return 10.0
     return 20.0
 
@@ -176,11 +187,17 @@ def one_phone(hours, rng, look_share, votes, activity_per_min, floor=3.0, times=
             quiet = 2
     return polls, votes
 
-def board_renders(times, ttl):
-    """How often the board is actually RENDERED: the first request after the edge
-    copy expires goes to the function, everything inside the interval is a hit.
-    With stale-while-revalidate that is one render per interval while anybody is
-    polling at all, which for any room bigger than a table is every interval."""
+def board_renders(times, ttl, collapse=True):
+    """How often the board is actually RENDERED: the first request after the copy
+    expires goes to the function, everything inside the interval is a hit. With an
+    interval of DURABLE_MIN_S or more that is one render per interval for the whole
+    room (the durable cache, measured). Under it the copy is per edge node, and the
+    honest answer is a RANGE: `collapse=True` is the best case (as if one node),
+    `collapse=False` the worst (every poll renders, as if no two phones share a
+    node). The truth for a bar is somewhere between, and closer to the best the
+    fuller the room."""
+    if ttl < DURABLE_MIN_S and not collapse:
+        return len(times)
     times.sort()
     renders, last = 0, -1e9
     for t in times:
@@ -193,9 +210,9 @@ def record_bytes(votes_each):
     which is the heaviest honest reading of `votes_each`."""
     return REC_BASE + REC_PER_CAST * votes_each
 
-def gig(fans=20, hours=3.0, look_share=0.22, votes_each=2.5, seed=7, split=True, fan_bytes=None):
+def gig(fans=20, hours=3.0, look_share=0.22, votes_each=2.5, seed=7, split=True, fan_bytes=None, collapse=True):
     rng = random.Random(seed)
-    floor = poll_floor(fans)
+    floor = poll_floor(fans, legacy=not split)
     if floor <= 3.0:
         # SMALL ROOM: every cast by anyone changes the signature for everyone. This
         # is the product working, and at these sizes it costs a fraction of a cent.
@@ -216,7 +233,7 @@ def gig(fans=20, hours=3.0, look_share=0.22, votes_each=2.5, seed=7, split=True,
     if split:
         # two requests a tick: the board (a hit unless the edge copy has expired,
         # then one render for the whole room) and the small personal call
-        renders = board_renders(times, floor)
+        renders = board_renders(times, floor, collapse)
         reqs  = 2 * polls + votes + fans * PAGE_REQS
         byts  = polls * (BOARD_BYTES + ME_BYTES) + votes * VOTE_BYTES + fans * PAGE_BYTES
         fn_ms = renders * POLL_MS + polls * ME_MS + votes * VOTE_MS
@@ -231,7 +248,8 @@ def gig(fans=20, hours=3.0, look_share=0.22, votes_each=2.5, seed=7, split=True,
         read_b = polls * bag                          # the ceiling report's own sum
     return dict(polls=polls, renders=renders, votes=votes, reqs=reqs, bytes=byts, fn_ms=fn_ms,
                 credits=credits(reqs, byts, fn_ms), fans=fans, hours=hours,
-                read_mbs=read_b / secs / 1e6, split=split)
+                read_mbs=read_b / secs / 1e6, split=split, floor=floor,
+                look_share=look_share, votes_each=votes_each, fan_bytes=fan_bytes)
 
 def show(g, label):
     c = g['credits']
@@ -245,6 +263,14 @@ def show(g, label):
           f"{g['fn_ms']/1000/60:.1f} function-minutes | store moves {g['read_mbs']:.2f} MB/s")
     print(f"    = {c:.3f} credits  = ${c*USD_PER_CREDIT['personal']:.4f} (Personal) "
           f"/ ${c*USD_PER_CREDIT['pro']:.4f} (Pro)")
+    if g['split'] and g['floor'] < DURABLE_MIN_S:
+        # under the durable minimum the copy is per edge node: show the other end of the range
+        w = gig(g['fans'], g['hours'], g['look_share'], g['votes_each'], split=True,
+                fan_bytes=g['fan_bytes'], collapse=False)
+        print(f"    ...that is the best case: the interval ({g['floor']:g}s) is under the durable cache's "
+              f"{DURABLE_MIN_S}s minimum, so the copy is per edge node. Worst case, no phone shares a node:")
+        print(f"    {w['renders']:,} renders | {w['fn_ms']/1000/60:.1f} function-minutes | "
+              f"store moves {w['read_mbs']:.2f} MB/s = {w['credits']:.3f} credits = ${w['credits']*USD_PER_CREDIT['pro']:.4f} (Pro)")
     print()
 
 def ceiling_walk(hours=3.0):
@@ -264,7 +290,10 @@ def ceiling_walk(hours=3.0):
         first_over = {'before': None, 'after': None}
         for n in sizes:
             b = gig(n, hours, look_share=1.0, votes_each=8, split=False, fan_bytes=fan_bytes)
-            a = gig(n, hours, look_share=1.0, votes_each=8, split=True, fan_bytes=fan_bytes)
+            # WORST case for the after column: under the durable minimum every poll renders.
+            # The real number is between this and one render per interval; above 1,000
+            # phones the interval is 10 s or more and the durable cache makes it exact.
+            a = gig(n, hours, look_share=1.0, votes_each=8, split=True, fan_bytes=fan_bytes, collapse=False)
             flag_b = ' !' if b['read_mbs'] > KNOWN_OK_MBS else '  '
             flag_a = ' !' if a['read_mbs'] > KNOWN_OK_MBS else '  '
             if b['read_mbs'] > KNOWN_OK_MBS and first_over['before'] is None: first_over['before'] = n
@@ -272,7 +301,9 @@ def ceiling_walk(hours=3.0):
             print(f"  {n:>7,}  {n*fan_bytes/1e6:>6.1f}MB  {b['read_mbs']:>10.1f} MB/s{flag_b}"
                   f"  {a['read_mbs']:>9.1f} MB/s{flag_a}  ${b['credits']*USD_PER_CREDIT['pro']:>8.2f}  ${a['credits']*USD_PER_CREDIT['pro']:>7.2f}")
         print()
-        print(f"  '!' = past the {KNOWN_OK_MBS:.0f} MB/s the store is known to serve.")
+        print(f"  '!' = past the {KNOWN_OK_MBS:.0f} MB/s the store is known to serve. 'after' is the WORST case under")
+        print(f"  {DURABLE_MIN_S} s intervals (up to 200 phones): every poll renders. From 201 phones the interval is")
+        print(f"  {DURABLE_MIN_S} s or more and the durable cache makes it one render per interval — measured.")
         for k, v in first_over.items():
             print(f"  {k}: first size over the line is {v:,}" if v else f"  {k}: never over the line up to {sizes[-1]:,}")
         print()

@@ -44,7 +44,11 @@ console.log('\nTHE THROTTLE WIDENS WITH THE ROOM, AND NEVER NARROWS');
 eq('an ordinary gig is unchanged at 3 seconds', pollFloorFor(8), 3000);
 eq('and still is at 200', pollFloorFor(200), 3000);
 ok('201 is slower than 200', pollFloorFor(201) > pollFloorFor(200));
-ok('1,001 is slower than 1,000', pollFloorFor(1001) > pollFloorFor(1000));
+/* No rung under ten seconds past 200 phones: Netlify's durable cache ignores a
+   lifetime under 10 s (measured 2026-09-11, INVARIANT 0fi), and the shared board's
+   copy lives exactly as long as this interval. A 5 s rung here would quietly put
+   every phone in a mid-sized room back on its own render. */
+ok('and from 201 the interval is at least the durable cache\'s minimum', pollFloorFor(201) >= 10000 && pollFloorFor(1000) >= 10000);
 ok('3,001 is slower than 3,000', pollFloorFor(3001) > pollFloorFor(3000));
 ok('it is monotonic all the way up', (() => {
   let last = 0;

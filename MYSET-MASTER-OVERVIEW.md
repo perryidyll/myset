@@ -487,7 +487,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 |---|---|---|
 | 20 | 3s | all of them |
 | 200 | 3s | all of them |
-| 1,000 | 5s | top 40 |
+| 1,000 | 10s | top 40 |
 | 3,000 | 10s | top 25 |
 | 10,000 | 20s | top 15 |
 
@@ -1033,13 +1033,18 @@ keeps making — the global registry got onto that path three separate times.
 
 | | Ceiling |
 |---|---|
-| Audience poll | **15** reads, **1** global document |
+| The shared board (`/api/board`) — rendered **once per polling interval for the whole room** from 201 phones, served from the edge in between | **15** reads, **1** global document |
+| The personal call (`/api/me`) — every phone, every tick | **3** reads, **one** fan shard, no global document on the founding page, **no write** once present |
+| The old audience poll (`/api/show`, kept for pages opened before the split) | 15 reads, 1 global document |
 | A vote | 5 reads, 2 writes |
 | Studio poll | 22 reads |
 | A setlist rename | 12 reads, and **no** fan-shard reads |
 
 These are ceilings, not targets. Raising one is a decision somebody makes on purpose and
-explains, **not something discovered on a bill**.
+explains, **not something discovered on a bill**. Since 2026-09-11 the audience poll is
+two calls (decision [`0034`](docs/decisions/0034-the-audience-poll-is-split-into-a-shared-edge-cach.md)):
+the expensive half is paid once per interval for everybody, and the half every phone pays
+reads a twelfth of the room instead of all of it.
 
 ## 5.4 Polling
 
@@ -1255,11 +1260,24 @@ the GitHub build the same push triggers).
 - **Moving to Cloudflare Workers + KV would be worse**, not better, because KV bills per
   read and MySet does ~90,000 reads a gig. The platform is not the cost driver; **fifteen
   reads per poll is**.
-- **A cache header on `/api/show` saves nothing today.** The poll URL carries `fan=<id>`
+- **A cache header on `/api/show` saves nothing.** The poll URL carries `fan=<id>`
   and production returns `netlify-vary: query`, so 10,000 phones make 10,000 cache keys —
   and **Netlify bills a web request for a cache hit**. Caching would remove compute only:
-  63% at best, **0% as the endpoint stands**. This was the recommendation in the first
-  version of the cost report and would have been a day spent for nothing.
+  63% at best, **0% as that endpoint stands**. This was the recommendation in the first
+  version of the cost report and would have been a day spent for nothing. **The split
+  (live 2026-09-11) is the version that works**: `/api/board` has no fan id and is held at
+  the edge for the polling interval, `/api/me` is tiny and never cached. Money barely
+  moves — a 20-person gig goes from 2.7¢ to 3–4¢ because every tick is now two requests
+  and a cache hit is still a request; 1,000 phones go from $0.98 to $0.56, 10,000 from
+  $4.29 to $3.76 — but the store's read traffic per phone is a twelfth of what it was.
+  At the record size the room-ceiling report assumed, the busiest case at 10,000 falls
+  from 462 MB/s to 40 MB/s; at the record size the vote path actually writes today
+  (~2 KB for a fan who cast eight times), the busiest-case wall moves from
+  **~700–1,000 people to ~2,500** (`tools/loadsim.py --ceiling`). Reads were the wall,
+  not money — and the old ~2,500 was already optimistic, because a voter's record has
+  grown since it was written. One rule the live edge taught: **Netlify's durable cache
+  ignores a lifetime under 10 seconds**, so the polling dial has no 5-second rung any
+  more — pubs keep 3 s with a per-node copy, and from 201 phones it is 10 s, shared.
 
 The one thing that can move the bill on its own is **clips** (§3.7). Cloudflare R2 —
 $0.015/GB-month to store, **$0 to serve** — is the answer when they take off. **Trigger:
@@ -1437,9 +1455,12 @@ records, never the index.**
 - **A deploy preview shares production data.** The money half is closed — Stripe keys are
   unset for preview contexts — but a preview can still **write** real data. Use previews to
   look at pages, never to exercise a write path.
-- **The shared-board split is scoped and not built** (~5 days): one cacheable board with no
-  `fan=` plus a tiny per-fan endpoint. **This is the next scaling work**, and the plan's
-  audience numbers are gated on it.
+- **The shared-board split is live** (2026-09-11, `c3d0a4d`): one cacheable board with no
+  `fan=` plus a tiny per-fan call — decision
+  [`0034`](docs/decisions/0034-the-audience-poll-is-split-into-a-shared-edge-cach.md).
+  The plan's audience numbers are **not** raised: the ceiling moved in a simulator, the
+  write wall has never been measured, and a fan's record turned out to weigh ~2 KB after
+  eight casts (the cast receipts), which the earlier ceiling did not know.
 - **An open line to the room is researched and deliberately not next** — decision
   [`0012`](docs/decisions/0012-an-open-line-to-the-room-is-not-next.md).
 - **Cloudflare R2 for clip bytes** — designed, not built, needs Perry's own Cloudflare

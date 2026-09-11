@@ -2139,11 +2139,19 @@ If you are about to violate one, stop and say so rather than working around it.
     browser gets `max-age=0, must-revalidate`: the ladder decides when to look, not
     the browser's cache. The address must carry ONLY `?a=` — `Netlify-Vary` is
     ignored through the `/api/*` rewrite (9d6), so the URL is the whole key, and a
-    fan id in it would put every phone back on its own copy (0ep). The mechanism was
-    verified live on 2026-09-11 against `/api/img` (`cache-status: "Netlify Durable";
-    hit`); the three-second TTL itself has not been watched live yet. And the page's
+    fan id in it would put every phone back on its own copy (0ep). And the page's
     board fetch is deliberately NOT `cache:'no-store'` — that mode sends
     `Cache-Control: no-cache`, which an edge may take as "skip the cache".
+    **The durable cache needs a lifetime of at least 10 seconds.** Measured on draft
+    deploys and on production the day this shipped: 3 to 9 seconds are
+    `"Netlify Durable"; fwd=bypass` in every spelling; 10 and up are hits with a ttl.
+    Under 10 the copy lives on each edge node on its own (a 3s copy is a hit on the
+    same connection and a miss from the next node), so the room renders once per
+    node per interval, and nobody knows how many nodes a bar's phones land on. That
+    is why `pollFloorFor` has no 5s rung any more: up to 200 phones it is 3s and the
+    copy is per node — cheap either way, and the tally stays live for a pub; from
+    201 it is 10s, shared by the whole room. A rung under 10s for a big room would
+    quietly put every phone back on its own render.
 
 0fj. **The personal poll reads one shard and the show record — plus, for a slug, the
     registry it has always read to become an id.** `/api/me` costs two strong reads

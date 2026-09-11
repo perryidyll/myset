@@ -35,11 +35,17 @@ const main = async (req) => {
      `durable` puts the copy in the cache every edge node shares, so the audience bag
      is read once per interval for the whole room rather than once per node — and
      INVARIANT 9d6 is the finding that the durable cache works for Functions (and not
-     for Edge Functions, which is why this is one). VERIFIED on the live site on
-     2026-09-11 against /api/img, which carries the same directive through the same
-     /api/* rewrite: the second request answered `cache-status: "Netlify Durable"; hit`
-     with an `age` header. The short TTL and the stale window have NOT been watched
-     live yet — that is the first thing to check after this deploys (P3-001 notes).
+     for Edge Functions, which is why this is one).
+
+     MEASURED on draft deploys and then on production, 2026-09-11: the durable cache
+     ignores a lifetime under 10 seconds — 3 to 9 all answered `"Netlify Durable";
+     fwd=bypass`, 10 and 60 answered `hit` with a ttl, in every spelling (max-age,
+     s-maxage, with or without stale-while-revalidate). Under 10 the copy still lives
+     on each edge node: a 3s copy was `"Netlify Edge"; hit; ttl=2` on the same
+     connection and a miss from the next node. That is why the middle rung of
+     pollFloorFor is 10s and not 5s (see _lib.mjs): a room over 200 phones gets one
+     render per interval for everybody; a pub at 3s gets per-node copies, which at
+     that size costs cents either way and keeps the tally live.
 
      The browser is told `max-age=0, must-revalidate`: it may not keep a copy of its
      own, because the page's ladder decides when to look, not the browser's cache.

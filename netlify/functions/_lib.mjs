@@ -1018,7 +1018,7 @@ export function countInRoom(fans, show) {
 
      people   bag    interval   busy room    on the old fixed 3s ladder
         200   30 KB     3s         1.3 MB/s        2 MB/s
-      1,000  152 KB     5s        12.3 MB/s       51 MB/s
+      1,000  152 KB     5s        12.3 MB/s       51 MB/s   (the 5s rung became 10s on 2026-09-11 — below)
       2,000  305 KB    10s        30.3 MB/s      203 MB/s
      10,000  1.5 MB    20s       463.1 MB/s    5,077 MB/s
 
@@ -1043,11 +1043,22 @@ export function countInRoom(fans, show) {
    below is two things at once — how long a phone waits, and how long the room
    shares one copy. The curve is a twelfth as steep, not flat: a shard still holds a
    twelfth of the room. tools/loadsim.py --ceiling draws both lines. */
+/* WHY THE MIDDLE RUNG IS 10 AND NOT 5 (2026-09-11, measured on the live edge). The
+   shared board's copy lives in Netlify's DURABLE cache — the one every edge node
+   shares — only when its lifetime is at least 10 seconds; 3 to 9 are bypassed, and
+   the copy then lives on each edge node separately, so a room whose phones are
+   spread over several nodes renders once per node per interval instead of once.
+   Under 200 phones that is fine: the render is cheap and the tally moving the
+   instant somebody votes IS the product in a pub. Past 200 it is the difference
+   between the split working and not — so from 201 phones the interval is 10s, the
+   copy is shared by the whole room, and the worst-case delay for seeing what the
+   artist did (one interval) is the same as if the phones polled every 5s against a
+   10s copy, for half the requests. A phone's own vote is shown at once regardless
+   (mergeBoard in vote.html). Decision 0034. */
 export function pollFloorFor(heads) {
   const n = Number(heads) || 0;
   if (n <= 200) return 3000;        // unchanged: what every gig has always felt like
-  if (n <= 1000) return 5000;
-  if (n <= 3000) return 10000;
+  if (n <= 3000) return 10000;      // the durable cache's minimum — see above
   return 20000;
 }
 
