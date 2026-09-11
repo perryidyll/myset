@@ -17,7 +17,7 @@ cached); `/api/show` stays for open tabs. **Clip bytes on Cloudflare R2 (P3-003)
 commit after it: `/api/vid` answers a 302 to a presigned link on the private bucket; every
 clip from before stays in Blobs and serves as before; every R2 failure falls back so the
 room can still vote (decision `0033`, INVARIANT 0fd). Both were reviewed fresh-context and
-their findings fixed. The open line (P3-002) is being built in its own session.
+their findings fixed. The open line (P3-002) was **measured** the same evening in its own session: a throwaway Durable Object on `workers.dev` held 4,000 sockets, hibernated between votes and woke in ~10 ms (decision `0035`). No production code yet.
 
 **Next work item (pick up here):** The board was watched from outside the same evening,
 and the edge taught one rule: **Netlify's durable cache ignores a lifetime under 10
@@ -29,7 +29,9 @@ from outside: upload one clip on a community page and `curl -sI` its `/api/vid`
 on a real iPhone; try a large (~75MB) clip once, because the PUT's fit inside the function
 budget is unmeasured (session `2026-09-11-clips-to-r2.md` § "The order to deploy in").
 Then P3-013 (trim the cast receipts that make a voter's record ~2 KB). The open line
-(P3-002) runs **on the user's word — he said not to wait for a 2,000-person booking**.
+(P3-002) runs **on the user's word — he said not to wait for a 2,000-person booking**; the
+numbers to design from are in decision `0035`, and the first design question is the
+hostname (cross-origin `workers.dev` now, `line.myset.vip` delegated later).
 
 **Fresh-agent one-liner:** `Read AGENTS.md, then IMPLEMENTATION_STATUS.md; the split and R2 are on main — start from "Next work item".`
 
@@ -67,7 +69,7 @@ Then P3-013 (trim the cast receipts that make a voter's record ~2 KB). The open 
 | ID | Work item | Status | Evidence | Blocker / next action |
 | --- | --- | --- | --- | --- |
 | P3-001 | **Shared-board split** — one cached board, tiny per-fan endpoint | done | Live 2026-09-11, `c3d0a4d` + the rung correction: `_board.mjs`, `board.mjs`, `me.mjs`, `show.mjs` (composes from the same builders), `vote.mjs` (`at`), `_lib.mjs` (`getShow(aid,{withName:false})`, `pollFloorFor` middle rung 10 s), `public/vote.html` (`load`, `mergeBoard`, `applyCast`, `SHOWN`/`CAST_AT`), `test/split.mjs` 80/80, `test/cost.mjs` board ≤15 / personal ≤3, `tools/loadsim.py --ceiling`, INVARIANTS 0fh–0fk, decision `0034`, fresh-context review with seven fixes taken; real-browser check of both halves failing in turn; the durable minimum and the per-node 3 s copy measured on drafts and production | Read the personal call's billed duration off the function log after the first busy room (estimated ~50 ms, never measured) |
-| P3-002 | Open line to the room (Cloudflare Durable Objects) | deferred | `docs/reports/open-line.html`, decision `0012` | After P3-001 and P3-003. **Trigger changed 2026-09-11 by the user: do not wait for a 2,000 booking — remind him the moment the split and R2 are done, and build it on his word** |
+| P3-002 | Open line to the room (Cloudflare Durable Objects) | in_progress | 2026-09-11: **measured, not modelled** — throwaway `cloudflare/probe/` deployed to `workers.dev` (own `package.json`; the repo root still has two dependencies). One object held 4,000 sockets and every broadcast reached the last phone in ≤ 552 ms; hibernates within 15–20 s even with 1,000 sockets attached; wake ≈ 10 ms empty, 40–70 ms with 1,000 attached; 3,000 opened at once, 0 failures; decision-`0030` bucket verified over the socket. DO analytics: 24,473 billed requests for 12,202 connections (**two per connection**, open + close), 13.65 s billable duration all afternoon, 35,839 free outbound messages, $0 on Workers Free; the "errors" column counts disconnects, not faults. Session `2026-09-11-open-line-probe.md`, decision `0035` | **Trigger withdrawn by the user 2026-09-11** (reverses `0012`'s trigger). Next: design the production Worker on top of `/api/board` (`c3d0a4d`). DNS is at Netlify, not Cloudflare, so the line is cross-origin on `workers.dev` and `netlify.toml` `connect-src` gains one `wss://` host. Still unmeasured: the 1,000/s ceiling (needs more than one machine), iOS background Safari (9d12). The probe Worker is still deployed and public; `npm run delete` removes it |
 | P3-003 | **Clip bytes onto Cloudflare R2** | done | `netlify/functions/_r2.mjs` (SigV4 by hand), `_video.mjs`, `vid.mjs` (302 to a presigned link); `test/r2-fake.mjs`; `test/clips.mjs` 163/163, full suite 2,004/2,004 (stamped); independent fresh-context review, findings fixed; decision `0033`; INVARIANT 0fd; session `2026-09-11-clips-to-r2.md` | Rebased onto the split (`c3d0a4d`) and pushed to `main` 2026-09-11. Pre-R2 clips stay in Blobs and serve as before. Not run against the real bucket yet — the first deploy is the measurement (75MB PUT inside the function budget; playback through the 302 on a real iPhone) |
 | P3-004 | **Error tracking that outlives the night** | done | Durable capped hourly error documents, guarded handlers, fan report endpoint and Studio reader; 42/42 focused assertions | Retained in MySet's existing blob store; no third-party telemetry account required |
 | P3-005 | Fan-shard write ceiling actually measured | not_started | Derived from a measured 40ms *read*, never from a write | **Now the next wall after reads.** Hammer one shard before selling a room over 2,000 |

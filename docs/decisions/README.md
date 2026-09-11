@@ -44,6 +44,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) | A Stripe options object is passed only when it has something in it | 2026-09-11 | money | decided | claude |
 | [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md) | A clip's bytes live on Cloudflare R2 and the phone is sent there by a signed link | 2026-09-11 | media | decided | user-confirmed |
 | [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) | The audience poll is split into a shared, edge-cached board and a tiny personal call | 2026-09-11 | scale | decided | claude |
+| [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) | The open line is built now, after the split lands, from measured numbers rather than list prices | 2026-09-11 | scale | decided | user-confirmed |
 
 ## By area
 
@@ -57,7 +58,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md)
 
 **storage** — [0008](0008-never-list-blobs-for-live-data.md)
 
