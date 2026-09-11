@@ -34,7 +34,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) | Automatic chords require a licensed feed or recording-derived analysis | 2026-09-10 | media | decided | user-confirmed |
 | [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) | Public email sign-in requires a verified sender and confirmed delivery | 2026-09-10 | auth | decided | claude |
 | [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) | Artist directory cards derive public discovery tags and counts from existing profile, calendar, history and visible community data | 2026-09-11 | ui | decided | user |
-| [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) | Filtered event maps use a static image and existing exact directions links | 2026-09-11 | ui | decided | user |
+| [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) | Filtered event maps use a static image and existing exact directions links | 2026-09-11 | ui | superseded | user |
 | [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) | The $20 artist plan takes a 2 percent transaction fee | 2026-09-11 | money | decided | user |
 | [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) | Light is the first-visit default and loading screens follow the active theme | 2026-09-11 | ui | decided | user |
 | [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md) | Find artists lists only effectively verified artist profiles | 2026-09-11 | trust | decided | user |
@@ -45,6 +45,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md) | A clip's bytes live on Cloudflare R2 and the phone is sent there by a signed link | 2026-09-11 | media | decided | user-confirmed |
 | [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) | The audience poll is split into a shared, edge-cached board and a tiny personal call | 2026-09-11 | scale | decided | claude |
 | [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) | The open line is built now, after the split lands, from measured numbers rather than list prices | 2026-09-11 | scale | decided | user-confirmed |
+| [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) | the artist event map is interactive and asks the browser for location only when opened | 2026-09-12 | ui | decided | user |
 
 ## By area
 
@@ -64,7 +65,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md)
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md)
 
 **voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 

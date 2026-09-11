@@ -97,8 +97,8 @@ ok('the home page links to the artist directory and its requested filters',
    /class="artistactions"[\s\S]{0,240}href="\/artists\?map=1">⌖ View on map<\/a>[\s\S]{0,120}href="\/artists">Search for artists/.test(home)&&
    /MySet shows in next 30 days/.test(directory)&&/Music released/.test(directory)&&/Signed/.test(directory)&&
    /All countries/.test(directory)&&/All cities/.test(directory)&&/All styles/.test(directory)&&/Any rating/.test(directory));
-ok('the artist directory map is readiness-gated and the CSP permits only its image host',
-   /id="mapBtn"[^>]*hidden/.test(directory)&&/api\/mapconfig/.test(directory)&&
+ok('the artist directory map is readiness-gated and the CSP permits its Google services',
+   /id="mapBtn"[^>]*hidden/.test(directory)&&/api\/mapconfig/.test(directory)&&/maps\/api\/js/.test(directory)&&/navigator\.geolocation/.test(directory)&&
    /URLSearchParams\(location\.search\)\.get\('map'\)==='1'/.test(directory)&&
    /https:\/\/maps\.googleapis\.com/.test(read('netlify.toml')));
 ok('Featured shows remain a $10 first-come city promotion',

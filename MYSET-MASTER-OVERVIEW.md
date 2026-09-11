@@ -430,7 +430,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
-| Shows per calendar month (UTC) | 4 | unlimited | unlimited |
+| Shows per calendar month (UTC) | 10 | unlimited | unlimited |
 | Songs live to the audience at once | 50 | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 200 | 1,000 | 2,000 |
 | Team seats | 1 | 1 | 5 |

@@ -2,11 +2,11 @@
 id: 0025
 title: Filtered event maps use a static image and existing exact directions links
 date: 2026-09-11
-status: decided
+status: superseded
 decided_by: user
 area: ui
 reverses:
-superseded_by:
+superseded_by: 0036
 invariants: [0ag, 0ah, 0al]
 commits: []
 tests: [test/artists.mjs, test/copy.mjs, tools/uicheck.mjs]
