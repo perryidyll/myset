@@ -10,18 +10,15 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-11
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The requested Find artists card/filter batch is live in production at
-`02169fa`. The working tree and draft `6aa3bcce9fd9709b3a45eb9c` add the filtered event
-map, verified-only directory/event/map discovery, stricter Signed eligibility, the 2%
-Pro fee everywhere, light-first themed loading, a one-time verification notice, and a
-plans sheet without placeholder testimonials. All 1,882 assertions and rendered mobile
-checks pass. The map remains hidden because no restricted Google Maps browser key is
-configured. None of this combined draft is in production.
+**Current focus:** The combined discovery and miscellaneous batch is live in production
+at `d1a6531`. It adds the filtered event map, verified-only
+directory/event/map discovery, stricter Signed eligibility, the 2% Pro fee everywhere,
+light-first themed loading, a one-time verification notice, and a plans sheet without
+placeholder testimonials. All 1,882 assertions and rendered mobile checks pass. Google
+billing, Static Maps, referrer/API restrictions and the Netlify production secret are
+configured; the live config and a real restricted PNG request were verified.
 
-**Next work item (pick up here):** Add a website/referrer- and Static-Maps-restricted
-`GOOGLE_MAPS_BROWSER_KEY` in Netlify, verify the actual image in a fresh draft, then ship
-the combined map/miscellaneous batch when explicitly authorized. After that, return to
-the **shared-board split**.
+**Next work item (pick up here):** Return to the **shared-board split**.
 
 **Fresh-agent one-liner:** `Read AGENTS.md, then finish the readiness-gated Find artists event map per IMPLEMENTATION_STATUS.md; it needs a restricted Google browser key before production.`
 
@@ -50,9 +47,9 @@ the **shared-board split**.
 
 | ID | Work item | Status | Evidence | Blocker / next action |
 | --- | --- | --- | --- | --- |
-| UX-001 | Filtered thirty-day event map on Find artists | blocked | Decision `0025`; combined draft `6aa3bcce9fd9709b3a45eb9c`; 1,882/1,882 | Add restricted `GOOGLE_MAPS_BROWSER_KEY`, verify a real tile, then production approval |
-| UX-002 | Signed eligibility, Pro fee, light default and themed loading screens | done | Decisions `0024`, `0026`, `0027`; draft `6aa3bcce9fd9709b3a45eb9c`; 1,882/1,882 | Ship with UX-001 when its key is verified and production is explicitly authorized |
-| UX-003 | Verified-only artist discovery, first-Settings notice and plans-testimonial cleanup | done | Decision `0028`; draft `6aa3bcce9fd9709b3a45eb9c`; served directory contains one qualifying profile; 1,882/1,882 | Ship with the combined batch after map-key verification and explicit production approval |
+| UX-001 | Filtered thirty-day event map on Find artists | done | Decision `0025`; production `d1a6531`; restricted live PNG verified; 1,882/1,882 | — |
+| UX-002 | Signed eligibility, Pro fee, light default and themed loading screens | done | Decisions `0024`, `0026`, `0027`; production `d1a6531`; 1,882/1,882 | — |
+| UX-003 | Verified-only artist discovery, first-Settings notice and plans-testimonial cleanup | done | Decision `0028`; production `d1a6531`; served directory contains one qualifying profile; 1,882/1,882 | — |
 
 ### Phase 3 — scale preparation
 
@@ -100,6 +97,7 @@ the **shared-board split**.
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-11 | Production commit `d1a6531` and live HTTP/config checks | Combined discovery/miscellaneous batch deployed successfully at `myset.vip`; map remains correctly hidden while provider config reports disabled |
 | 2026-09-11 | Draft `6aa3bcce9fd9709b3a45eb9c`, verified-only directory tests, rendered first-Settings notice and full gate | Served Studio has 2% Pro copy, verified-only explanation and no placeholder testimonials; directory endpoint returns only the qualifying profile; notice colors/persistence and mobile fit pass; 1,882 assertions, zero failures; production unchanged |
 | 2026-09-11 | Draft `6aa3b8e8eedd9a5d7e4e5391`, focused directory/fee/theme checks, rendered UI, `sh test/run.sh`, and overview stamp | Signed requires both label fields; Pro is 2%; first visit and loading screens are light while saved dark remains dark; map remains safely hidden without its key; 1,876 assertions, zero failures; production unchanged |
 | 2026-09-11 | Draft `6aa3ab8413b61425b33b9fcb`, focused map/copy checks, `node tools/uicheck.mjs`, `sh test/run.sh`, and overview stamp | Map popup, exact pin, existing directions link, filters, failure fallback and 320px fit pass; 1,872 assertions, zero failures; served config is honestly disabled without a key; production unchanged |
@@ -174,7 +172,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 
 | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- |
-| Google Maps key is absent or misrestricted | Event-map image cannot render | Button is hidden while absent; preserve the full show list/directions on image failure; verify a real draft before production | **Blocked before production** |
+| Google Maps key is absent or misrestricted | Event-map image cannot render | Button is hidden while absent; full show list/directions survive image failure; key is restricted to MySet production/previews and Static Maps only | Resolved 2026-09-11 |
 | **Perry's own accounts are phished** | Total — Google, GitHub, Netlify, Stripe. No line of MySet's code is involved | 2FA on all four. PER-003 | **Active, unmitigated** |
 | **Pre-attribution active votes cannot be split exactly by song** | A paid-vote pill or decline refund on a vote cast before this batch may not know its original source | New votes are exact; legacy decline uses a fan-favouring paid-first fallback | **Known transition risk** |
 | Card payments down on a bad Stripe key | Nobody can buy votes or tip | Key replaced 2026-09-08; live checkout verified. The gap that let it go unnoticed is still open — P3-008 | Resolved 2026-09-08 |

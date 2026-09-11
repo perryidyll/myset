@@ -26,9 +26,11 @@
   plan copy and the existing mobile interface all passed.
 - Full suite and overview stamp: 1,882 assertions, 0 failures.
 
-## Deployment state
+## Production release
 
-Draft `6aa3bcce9fd9709b3a45eb9c` serves the updated Studio and a directory payload
-containing only the qualifying profile. Map configuration remains safely disabled until
-its restricted browser key exists. The combined batch is uncommitted; production is
-unchanged.
+The complete combined batch shipped in production commit `d1a6531` on 2026-09-11.
+Netlify completed successfully and `myset.vip` returned HTTP 200. Google billing uses
+the confirmed US profile; Maps Static API is enabled; the browser key is restricted to
+MySet production/previews and Static Maps only; and the secret is configured in Netlify
+production, deploy-preview and branch-deploy contexts. The live config endpoint reports
+enabled and a referrer-valid production request returned a 50,325-byte PNG.

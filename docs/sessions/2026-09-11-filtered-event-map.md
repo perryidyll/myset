@@ -31,9 +31,10 @@ simple implementation of a popup map showing the actual locations of all events.
 - Combined draft `6aa3b8e8eedd9a5d7e4e5391` serves the later plan/theme/eligibility
   refinements while keeping the same honest disabled state.
 
-## Remaining before production
+## Production release
 
-Create a Google Maps browser key with billing and Maps Static API enabled. Restrict it
-to that API and the `https://myset.vip/*` website referrer, add it in Netlify as
-`GOOGLE_MAPS_BROWSER_KEY`, then verify a real rendered image in a draft before pushing.
-The map batch is intentionally uncommitted and not in production.
+The map shipped in production commit `d1a6531`. Google billing and Maps Static API are
+active. The browser key is limited to Static Maps and the `https://myset.vip/*` plus
+`https://*.mysetvip.netlify.app/*` referrers, and Netlify stores it as a secret in all
+hosted contexts. Production reports the map enabled, and a referrer-valid request
+returned a real 50,325-byte PNG.
