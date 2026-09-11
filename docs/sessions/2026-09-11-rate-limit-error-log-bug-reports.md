@@ -9,7 +9,7 @@ bug" feature that stores the report with the function logs from the hours before
 the latest artist-discovery map entry point and plan-copy corrections, at the user's
 request to publish all recent changes. The supporting documentation is in `af3c603`.
 
-- `netlify/functions/_lib.mjs` — `takeCastToken`, `CAST_BURST = 30`, `CAST_PER_MIN = 30`.
+- `netlify/functions/_lib.mjs` — `takeCastToken`, `CAST_BURST = 20` (30 at first; the user lowered it the same day), `CAST_PER_MIN = 30`.
 - `netlify/functions/vote.mjs` — the bucket is checked inside the mutation, after the
   credit check; a refused cast is a 429 in plain words and writes nothing.
 - `netlify/functions/_errlog.mjs` — `logErr`, `recentErrs`, `guard`, `readBugs`,

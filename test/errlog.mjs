@@ -1,6 +1,6 @@
 /* THE RATE LIMIT ON CASTING, AND WHAT BROKE KEPT PAST THE NIGHT.
 
-   A token bucket on the fan record: thirty casts in a row, then thirty a minute,
+   A token bucket on the fan record: twenty casts in a row, then thirty a minute,
    checked inside the write that already happens (decision 0030). And an error log
    in the blob store, one document per hour, that a fan's bug report gathers up —
    because Netlify's own logs are gone in 24 hours (decision 0029). */
@@ -103,7 +103,7 @@ console.log('\nTHE PAGES');
   ok('and remembers what it saw fail, in memory only', vote.includes('noteFail(') && !vote.includes("localStorage.setItem('myset.recent"));
   const studio = readFileSync('public/studio.html', 'utf8');
   ok('the Studio can read the reports', studio.includes("action:'bugList'"));
-  for (const f of ['vote', 'show', 'pay', 'stage', 'community', 'request', 'gift', 'feedback', 'webhook', 'admin', 'auth', 'clipup', 'confirm']) {
+  for (const f of ['vote', 'show', 'board', 'me', 'pay', 'stage', 'community', 'request', 'gift', 'feedback', 'webhook', 'admin', 'auth', 'clipup', 'confirm']) {
     const src = readFileSync(`netlify/functions/${f}.mjs`, 'utf8');
     ok(`${f} is guarded`, src.includes(`export default guard('${f}', main)`));
   }

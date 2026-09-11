@@ -459,11 +459,14 @@ function normShow(s) {
   if (!show.startedAt) show.startedAt = show.updatedAt || Date.now();
   return show;
 }
-export async function getShow(aid) {
+/* `withName: false` skips the registry read that fills in the artist's name. Only
+   for a caller that never shows the name — /api/me, which every phone in the room
+   polls and which must stay at two or three reads. Everything else keeps the name. */
+export async function getShow(aid, { withName = true } = {}) {
   const { data } = await readDoc(KEY.show(aid), null);
   const show = normShow(data);
   show.artistId = aid;
-  if (!show.artist) {                      // the name lives in the registry
+  if (!show.artist && withName) {          // the name lives in the registry
     const { artistById } = await import('./_auth.mjs');
     const a = await artistById(aid);
     show.artist = (a && a.name) || '';
@@ -781,7 +784,7 @@ export function chargeFan(fan, show, need) {
    Checked inside the mutation, so it costs no extra read and no extra write — and a
    refused cast writes nothing at all, which is the point: the hole this closes is a
    script running up the write bill, not a fan voting too enthusiastically. */
-export const CAST_BURST = 30;
+export const CAST_BURST = 20;
 export const CAST_PER_MIN = 30;
 export function takeCastToken(me, now = Date.now()) {
   const b = (me.rl && typeof me.rl.t === 'number') ? me.rl : { t: CAST_BURST, at: now };
@@ -1032,10 +1035,14 @@ export function countInRoom(fans, show) {
    bought an order of magnitude; the shape is still quadratic, and only the shared
    board fixes the shape.
 
-   THIS IS A HOLDING MEASURE, NOT THE FIX. The real fix is to stop re-reading the
-   whole audience for every poll — one shared snapshot rendered per change and
-   served from cache, which turns read cost from O(people) into O(votes). Until
-   that lands, these rungs are what keeps a big night standing up. */
+   THIS WAS A HOLDING MEASURE, AND SINCE 2026-09-11 IT IS ALSO THE CACHE TTL. The
+   fix it was holding the door for is the shared-board split (_board.mjs, decision
+   0034): every phone now reads one shard and the show record, and the whole
+   audience is read once per interval for the room, because board.mjs tells the
+   edge to keep the shared board for exactly `pollFloorFor(heads)`. So the interval
+   below is two things at once — how long a phone waits, and how long the room
+   shares one copy. The curve is a twelfth as steep, not flat: a shard still holds a
+   twelfth of the room. tools/loadsim.py --ceiling draws both lines. */
 export function pollFloorFor(heads) {
   const n = Number(heads) || 0;
   if (n <= 200) return 3000;        // unchanged: what every gig has always felt like

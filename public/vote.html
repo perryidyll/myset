@@ -383,8 +383,8 @@ let ST=null,busy=new Set(),sel={},FILTER='',FOCUS=false,POP=null,PREV=null,BOOTE
    audience on the platform, including the page <title>.
 
    ST can genuinely still be null when these are called: boot is
-   `await load(); await handleReturn();`, and load() swallows both a thrown fetch
-   and a !d.ok response. So on flaky venue wifi redeem() runs with no ST — which
+   `await load(); await handleReturn();`, and load() swallows a thrown fetch, a
+   !ok response and a render that throws. So on flaky venue wifi redeem() runs with no ST — which
    is exactly the path where a real payment is being granted. Both helpers fall
    back rather than throw; do not "simplify" the guards away. */
 const artistName  = (fb='the artist') => (ST && String(ST.artist||'').trim()) || fb;
@@ -399,19 +399,98 @@ $('#app').innerHTML=`<div class="head"><div><div class="sk" style="width:130px;h
   <div class="sk" style="height:48px;margin:14px 18px 0;border-radius:999px"></div>
   <div class="sk" style="height:210px;margin:18px 18px 0;border-radius:24px"></div>`;
 
+/* TWO CALLS, ONE BOARD. Every phone used to poll /api/show?fan=<id>, which carried
+   the whole room's board and this phone's own credits in one payload — and because
+   the fan id was in the address, no two phones ever asked for the same thing and
+   nothing could be cached (INVARIANT 0ep). Now the board is /api/board with NO fan
+   id, identical for every phone and served from Netlify's edge for the length of
+   the polling interval, and what is personal is /api/me — credits, own votes, paid
+   pack, request statuses — tiny and never cached. They are fetched together and
+   put back together here (mergeBoard), so nothing below this line had to change.
+
+   EACH HALF FAILS ON ITS OWN. If /api/me is unreachable the board still renders,
+   with the last personal state this phone saw — or, on a first load, the fresh-phone
+   numbers the board carries (freeCredits): the only thing the page can know, and a
+   fan who has in fact spent everything will be told so by the server when they tap,
+   not by the page. That is rule 3 traded for rule 1, on purpose. If /api/board is
+   unreachable the page keeps the board it has. Either way the room can still vote:
+   a tap goes to /api/vote, which is the truth about credits regardless of what is
+   on screen. */
+let BOARD=null, ME=null, CAST_AT=0;
 async function load(){
+  /* The board fetch is NOT `cache:'no-store'` on purpose: that mode makes the
+     browser send `Cache-Control: no-cache`, which some edges honour as "skip the
+     cache", and the cache is the whole point. The server's own `max-age=0,
+     must-revalidate` already stops the browser keeping a copy. The `Age` header is
+     how old the edge's copy is, and the countdown is corrected by it. */
+  const [b,m]=await Promise.all([
+    fetch(`${API}/board${AQ1}`).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null),
+    fetch(`${API}/me?fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+  ]);
+  /* A personal reply can have left the server before this phone's last cast landed
+     (it was already in flight when the tap happened), so its `lastAt` may be older
+     than a vote this phone has already been told about. The vote's own clock wins. */
+  if(m&&m.ok){ ME=m; ME.lastAt=Math.max(Number(ME.lastAt)||0,CAST_AT); }
+  const fresh=!!(b&&b.d&&b.d.ok);
+  if(fresh){ BOARD=b.d; BOARD.age=b.age; }
+  if(!BOARD) return;
   try{
-    const r=await fetch(`${API}/show?fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'});
-    const d=await r.json();
-    if(d.ok){ const el=document.activeElement; FOCUS=!!(el&&el.id==='q'); ST=d;
-      /* THE SERVER SETS THE PACE NOW. See pollFloorFor in _lib.mjs: the interval
-         widens with the size of the room, so a packed night slows itself down
-         instead of melting. Clamped here because a page is not obliged to trust a
-         number, and an older server that sends nothing keeps the 3s it always had. */
-      if(Number(d.nextPollMs)>0) FLOOR=Math.max(1000,Math.min(60000,Math.round(d.nextPollMs)));
-      lastCall(Number(d.countdownIn)||0);
-      render(); FOCUS=false; }
-  }catch(e){}
+    const el=document.activeElement; FOCUS=!!(el&&el.id==='q');
+    const d=ST=mergeBoard(BOARD,ME);
+    /* THE SERVER SETS THE PACE NOW. See pollFloorFor in _lib.mjs: the interval
+       widens with the size of the room, so a packed night slows itself down
+       instead of melting. Clamped here because a page is not obliged to trust a
+       number, and an older server that sends nothing keeps the 3s it always had. */
+    if(Number(d.nextPollMs)>0) FLOOR=Math.max(1000,Math.min(60000,Math.round(d.nextPollMs)));
+    /* Only a board that actually arrived may feed the countdown. A kept board would
+       hand lastCall() the same milliseconds-left every poll, and lastCall never
+       shortens a deadline — so during a board outage a countdown would never end. */
+    if(fresh) lastCall(Number(d.countdownIn)||0);
+    render();
+  }catch(e){ noteFail('render: '+(e&&e.message)); }
+  FOCUS=false;
+}
+/* A COPY OF mergeForOne IN netlify/functions/_board.mjs. It has to be a copy — the
+   merge happens on the phone — and test/split.mjs runs this one against that one on
+   the same fixtures, so change both or the test says so.
+
+   Three things happen here. Every song on the board gets `mine`/`mineCount` from
+   the personal votes map. Any song this phone voted for that fell below a
+   shortened board's cut is put back (INVARIANT 0el): its tally from the board's
+   tail, its title from the personal `held` list. And the cached board may be a few
+   seconds older than this phone's own last vote — `SHOWN` holds what this phone
+   showed itself when it cast, and the board can only raise that number, never
+   lower it, until a board rendered AFTER the cast arrives (server clocks on both
+   sides, so no skew). Without that, a vote would visibly land, vanish for a poll,
+   and come back — which reads as "MySet lost my vote". */
+let SHOWN={}, SHOWN_T=0;
+function mergeBoard(b,m){
+  // a personal state from a different night is no state at all (same song ids, new show)
+  if(m&&m.showId&&b.showId&&m.showId!==b.showId) m=null;
+  const cnt=(m&&m.votes)||{};
+  /* a board rendered after this phone's last cast already counts it. With no
+     personal state at all there is nothing to compare, so the phone trusts its own
+     eyes until the safety valve — four intervals — lets go. */
+  const lastAt=m?(Number(m.lastAt)||0):Infinity;
+  if(lastAt<=Number(b.at)||Date.now()-SHOWN_T>FLOOR*4) SHOWN={};
+  const own=s=>{ const n=cnt[s.id]||0, p=SHOWN[s.id];
+    return {...s, votes:p?Math.max(s.votes||0,p.votes):(s.votes||0),
+            mine:n>0||!!(p&&p.mine>0), mineCount:p?Math.max(n,p.mine):n}; };
+  const songs=(b.songs||[]).map(own);
+  const shown=new Set(songs.map(s=>s.id));
+  const held={}; for(const h of (m&&m.held)||[]) held[h.id]=h;
+  for(const [id,votes,firstAt] of b.tail||[]){
+    if(!(cnt[id]>0)||shown.has(id)||!held[id]) continue;
+    songs.push(own({...held[id],votes,firstAt:firstAt||null})); shown.add(id);
+  }
+  const {tail,age,...rest}=b;
+  const free=Math.max(0,Number(b.freeCredits)||0);
+  return {...rest, songs, played:(b.played||[]).map(own),
+    myAsks:(m&&m.myAsks)||[],
+    credits:(m&&m.credits)||{unlimited:false,remaining:free,total:free,used:0,extra:0,
+                             freeRemaining:free,freeTotal:free,paidLeft:0,decided:false},
+    // a copy from the edge is late by its age; a countdown must not be
+    countdownIn:Math.max(0,(Number(b.countdownIn)||0)-(Number(age)||0)*1000)};
 }
 /* Tapping a song no longer casts a vote. It opens a sheet that does two jobs: it
    asks HOW MANY votes to put on this song, and it says plainly what happens next.
@@ -634,6 +713,8 @@ async function vote(id,n,castId){
     const held=s.mineCount||(s.mine?1:0);
     s.mine=true; s.mineCount=held+q; s.votes+=q;
     if(!ST.credits.unlimited) ST.credits.remaining-=q*k;
+    // what this phone just showed itself — a cached board may not know yet (mergeBoard)
+    SHOWN[id]={votes:s.votes,mine:s.mineCount}; SHOWN_T=Date.now();
     POP=id; buzz(18); render(); POP=null; }
   /* RETRY ONCE, with the SAME cast id — which is the entire point of having one.
      Nothing used to reuse it, so the idempotency was real on the server and never
@@ -650,7 +731,33 @@ async function vote(id,n,castId){
   }
   if(d&&!d.ok){ noteFail('vote: '+d.error); if(d.error==='no-credits'){toast('Out of votes — grab more below');openBuy();}
     else toast(d.error||'Could not save that vote'); }
+  if(d&&d.ok) applyCast(id,q,s,d);
+  else delete SHOWN[id];       // refused or unreachable: the board's number is the truth again
   busy.delete(id); wakeUp(true); load();
+}
+/* A CAST, WRITTEN INTO THE PERSONAL STATE THIS PHONE HOLDS. Normally the very next
+   /api/me replaces all of this with the server's word a moment later. But if that
+   call cannot be reached — the half of the split that is allowed to fail — the page
+   would otherwise keep showing the credits and the "Your vote" marks from BEFORE the
+   tap, for as long as the outage lasts. So the vote's own answer is applied here:
+   the server's `remaining` and its clock as they are, the free-first charge exactly
+   as chargeFan does it, and the song added to what this phone holds. A replayed
+   cast (the retry after a dropped response) is applied too — the page never saw the
+   first answer, so nothing was applied the first time. */
+function applyCast(id,q,s,d){
+  if(!ME){ const free=ST&&Number(ST.freeCredits)||0;
+    ME={ok:true,at:0,lastAt:0,votes:{},held:[],myAsks:[],credits:{unlimited:false,remaining:free,total:free,used:0,extra:0,freeRemaining:free,freeTotal:free,paidLeft:0,decided:false}}; }
+  CAST_AT=Math.max(CAST_AT,Number(d.at)||0);
+  ME.lastAt=Math.max(Number(ME.lastAt)||0,CAST_AT);
+  ME.votes=ME.votes||{}; ME.votes[id]=(ME.votes[id]||0)+q;
+  if(s&&!(ME.held||[]).some(h=>h.id===id)) (ME.held=ME.held||[]).push({id:s.id,title:s.title,artist:s.artist||'',cost:s.cost||1,tags:s.tags||[]});
+  const c=ME.credits;
+  if(c&&!c.unlimited&&typeof d.remaining==='number'){
+    const need=q*((s&&s.cost)||1), fromFree=Math.min(Number(c.freeRemaining)||0,need);
+    c.freeRemaining=Math.max(0,(Number(c.freeRemaining)||0)-fromFree);
+    c.paidLeft=Math.max(0,(Number(c.paidLeft)||0)-(need-fromFree));
+    c.used=(Number(c.used)||0)+need; c.remaining=d.remaining;
+  }
 }
 
 /* LAST CALL, counted from a DEADLINE THIS PHONE WORKS OUT ITSELF.
@@ -1272,15 +1379,17 @@ async function handleReturn(){
 const money=c=>{const n=(Number(c)||0)/100;return '$'+(n%1?n.toFixed(2):String(n));};
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3600);}
 
-/* Adaptive polling. Every phone in the room hitting /api/show every 3 seconds
+/* Adaptive polling. Every phone in the room hitting the server every 3 seconds
    is 24,000 function calls for a two-hour gig — enough to burn a month's free
    tier in a handful of shows. So: 3s while anything is actually moving, easing
    to 12s when the room has gone quiet, and instantly back to 3s on any change
-   or any tap. Nobody can perceive the difference; the bill can. */
+   or any tap. Nobody can perceive the difference; the bill can. Since the split
+   (load(), above) each tick is two requests — the shared board, usually answered
+   from the edge, and the small personal one — and the ladder is unchanged. */
 let TIMER=null, QUIET=0, LASTSIG=null;
 /* The fastest this page will ever ask, in milliseconds. 3s is what every ordinary
    gig has always felt like and what it still feels like; the SERVER raises it when
-   the room is big enough that it matters (show.mjs sends nextPollMs). The whole
+   the room is big enough that it matters (board.mjs sends nextPollMs). The whole
    ladder is built off this number, so raising it stretches all three rungs at once.
 
    Why the server and not the page: the ladder used to be three constants in this

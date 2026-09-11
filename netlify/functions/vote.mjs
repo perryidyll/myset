@@ -135,6 +135,9 @@ const main = async (req) => {
   } catch (e) { await logErr('vote', e, { aid, fan }); return bad('busy', 503); }
 
   if (err) return bad(err[0], err[1]);
-  return json({ ok: true, final: true, ...outcome });
+  /* `at` is the server's clock. The voting page compares it with the render time
+     stamped on a shared board (which may be served from cache) to know whether a
+     board it is holding predates this cast — see mergeBoard in public/vote.html. */
+  return json({ ok: true, final: true, at: Date.now(), ...outcome });
 };
 export default guard('vote', main);

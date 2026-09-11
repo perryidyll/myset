@@ -25,7 +25,7 @@ open line, not after.
 
 | Option | What it does | What it costs | New moving parts | Risk if it goes wrong |
 |---|---|---|---|---|
-| **A — chosen: token bucket on the fan record** | 30 casts in a row, refilling at 30 a minute, stored as two numbers on the record the cast already writes; a refused cast writes nothing | Nothing — no extra read, no extra write | None | A real person hitting it — at 30 taps in a row, they will not |
+| **A — chosen: token bucket on the fan record** | 20 casts in a row (30 at first; the user lowered it to 20 the same day), refilling at 30 a minute, stored as two numbers on the record the cast already writes; a refused cast writes nothing | Nothing — no extra read, no extra write | None | A real person hitting it — at 20 taps in a row, they will not |
 | B — a limit by network address | Count casts per IP | A shared counter, a read and a write per cast | A new document under contention | The whole bar shares one address on the venue Wi-Fi, so the room is throttled as one; phones on mobile data rotate addresses and dodge it |
 | C — a global per-show cap | Stop the room at N casts a minute | A hot counter every cast contends on | The exact hot document INVARIANT 1 and the shards were built to avoid | Throttles the honest room to stop one script |
 | D — do nothing | — | The write bill is open to anyone with a loop | — | One script, one night, a Netlify bill |

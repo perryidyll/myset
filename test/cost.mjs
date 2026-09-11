@@ -14,6 +14,8 @@ process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const admin  = (await import('../netlify/functions/admin.mjs')).default;
 const showFn = (await import('../netlify/functions/show.mjs')).default;
+const boardFn = (await import('../netlify/functions/board.mjs')).default;
+const meFn    = (await import('../netlify/functions/me.mjs')).default;
 const voteFn = (await import('../netlify/functions/vote.mjs')).default;
 const { __opsStart, __opsStop } = await import('./blobs-fake.mjs');
 
@@ -66,11 +68,31 @@ ok('a show with a setlist and a vote in it', true);
 await hit(showFn, 'https://x/api/show?fan=warm');
 
 console.log('\nTHE AUDIENCE POLL  (every phone in the room, every few seconds)');
-const poll = await count(() => hit(showFn, 'https://x/api/show?fan=f1&in=1'));
-under('reads per poll', poll.reads, 15);
-ok(`only ONE global document is touched — ${poll.globals}`, poll.globals <= 1, poll);
+/* SINCE 2026-09-11 THE POLL IS TWO CALLS (P3-001, decision 0034). The board is the
+   same bytes for every phone and is served from the edge for the length of the
+   polling interval, so its reads happen once per interval for the whole room. The
+   personal call happens once per phone per poll and reads ONE shard, not twelve —
+   that is the number that used to grow with the square of the room, and the whole
+   point of the split is that it now grows with the room alone. */
+await hit(boardFn, 'https://x/api/board');
+const board = await count(() => hit(boardFn, 'https://x/api/board'));
+under('reads per SHARED board render (once per interval, not per phone)', board.reads, 15);
+ok(`only ONE global document is touched — ${board.globals}`, board.globals <= 1, board);
 ok('and it is the registry, not the flags doc (that one is cached in module scope)',
-   poll.globals <= 1);
+   board.globals <= 1);
+/* The first call from a phone stamps its presence (one write, one read-back); every
+   call after that is the steady state, which is the one every phone pays all night. */
+await hit(meFn, 'https://x/api/me?fan=f1&in=1');
+const me = await count(() => hit(meFn, 'https://x/api/me?fan=f1&in=1'));
+under('reads per PERSONAL poll (every phone, every tick)', me.reads, 3);
+ok(`it reads one shard, never the whole room — ${me.shardReads}`, me.shardReads === 1, me);
+ok('and no global document at all', me.globals === 0, me);
+ok('and it writes nothing once presence is stamped', me.writes === 0, me);
+
+/* The old door stays open for pages loaded before the split, at the old price. */
+const poll = await count(() => hit(showFn, 'https://x/api/show?fan=f1&in=1'));
+under('reads per LEGACY poll (/api/show, kept for open tabs)', poll.reads, 15);
+ok(`only ONE global document is touched — ${poll.globals}`, poll.globals <= 1, poll);
 
 console.log('\nA VOTE');
 const v = await count(() => hit(voteFn, 'https://x/api/vote',

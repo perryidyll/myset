@@ -519,9 +519,12 @@ If you are about to violate one, stop and say so rather than working around it.
    was counting, so nothing could notice.
 
    `blobs-fake.mjs` now logs operations (`__opsStart`/`__opsStop`) and `test/cost.mjs`
-   asserts ceilings: 15 reads per audience poll, ONE global document, 5 per vote, 22
-   per Studio poll. They are ceilings, not targets. Raising one is a decision to make
-   on purpose and say why in the commit, not something to discover on a bill.
+   asserts ceilings: 15 reads per shared board render (once per interval for the
+   whole room, since 0fi), 3 per personal poll (every phone, every tick — one shard;
+   no global document on the founding page, the registry for a slug), 15 per legacy
+   `/api/show` poll, ONE global document, 5 per vote, 22 per Studio poll. They are ceilings, not targets. Raising one is a
+   decision to make on purpose and say why in the commit, not something to discover
+   on a bill.
 
    Two things that fell out of it and are now rules:
    * **`_flags.mjs` is cached in module scope for 60s.** Safe because flags are never
@@ -730,7 +733,8 @@ If you are about to violate one, stop and say so rather than working around it.
    audience sheet casts several votes at once, and multiplicity lives in that array
    rather than a new field, because `voteCounts` and `creditsUsed` both work by
    counting entries. Anything that reasons about "did this fan vote for X" must count
-   occurrences, not test membership — `show.mjs` sends `mineCount` alongside `mine`
+   occurrences, not test membership — `show.mjs` (since 2026-09-11 the merge in
+   `_board.mjs` and in `vote.html`) sends `mineCount` alongside `mine`
    for exactly that reason. The quantity is bounded by affordability and hard-capped
    at 50 so a hand-made request cannot make a million-element array.
 
@@ -1826,7 +1830,8 @@ If you are about to violate one, stop and say so rather than working around it.
 0ek. **The server sets the polling interval, and the page obeys it.** The ladder
     used to be three constants in `public/vote.html`, which meant the only way to
     slow a room down was to ship a deploy every phone had to reload to receive — no
-    way at all during the one event where it matters. `show.mjs` now returns
+    way at all during the one event where it matters. `show.mjs` (since 2026-09-11
+    `_board.mjs`, 0fh) now returns
     `nextPollMs` from the real head count and `vote.html` builds all three rungs off
     it (clamped 1–60s; an absent value keeps the 3s every gig has always had). This
     is what makes the audience numbers safe: internal read traffic is
@@ -1837,7 +1842,8 @@ If you are about to violate one, stop and say so rather than working around it.
 0el. **The board may be shortened but a fan's own votes never leave it, and the
     shortening is always said out loud.** Past a few hundred phones `show.mjs` sends
     the top of the chart instead of all of it, and anything this fan voted for is
-    concatenated back on regardless of rank. In a voting app, a song that silently
+    concatenated back on regardless of rank (since 2026-09-11 the shared board
+    carries a tail and the phone does the putting-back — 0fh). In a voting app, a song that silently
     vanishes does not read as a shorter list — it reads as a lost vote, which is a
     trust failure rather than a cosmetic one. `vote.html` labels it.
 
@@ -1847,6 +1853,10 @@ If you are about to violate one, stop and say so rather than working around it.
     from O(people) into O(votes). Until that lands, `pollFloorFor` is what keeps a
     big night standing up, and the tier numbers must stay at what MySet can actually
     serve rather than at what the margin could afford.
+    *2026-09-11: it landed — 0fh–0fk. The dial now also sets the edge TTL, so it is
+    no longer only a brake; it is how long the whole room shares one copy. The tier
+    numbers have NOT been raised: the ceiling moved in a simulator, not at a gig, and
+    the write wall (P3-005) has still never been measured.*
 
 0en. **A stranger's vote must not accelerate a big room, and `totalVotes` is what
     made it.** `signature()` in `public/vote.html` included the running tally, so any
@@ -1876,9 +1886,9 @@ If you are about to violate one, stop and say so rather than working around it.
     count "content hosted on your project" with no exclusion for cached responses —
     so caching only ever removes compute, which is 63% of the bill and not the shape
     of the curve. The fix that does work is a shared board with NO fan parameter in
-    the URL, which cuts the number of requests as well as their cost. Anyone
-    reaching for `cache-control: public` on the existing endpoint is about to spend
-    a day for nothing.
+    the URL — built 2026-09-11 as `/api/board` (0fh–0fk). Anyone reaching for
+    `cache-control: public` on `/api/show` itself is still about to spend a day for
+    nothing: it keeps the fan id, and it keeps `no-store`.
 
 0eq. **There are TWO ways to get a clip's sound and both are checked, because "it
     has an audio track" and "it has sound in it" are different facts.** The sound is
@@ -2075,3 +2085,72 @@ If you are about to violate one, stop and say so rather than working around it.
     `{}`; nothing else does, and `test/stripe-fake.mjs` now throws exactly as the
     library does so the suite cannot let it back in. Session
     `2026-09-11-gig-week-one.md`.
+
+0fh. **The audience polls TWO addresses, and the shared one carries no fan id.**
+    `/api/board?a=<slug>` is the same bytes for every phone in the room — the tally,
+    the ranking, the room dials, what the artist did — and `/api/me?fan=<id>` is only
+    what is true of one phone: credits, its own votes, its paid pack, its request
+    statuses. Nothing personal may ever be added to the board, and nothing shared may
+    be added to the personal call, because the board is cached at the edge (0fi) and
+    the personal call reads ONE shard (0fj). `/api/show` stays for pages opened before
+    the split and answers the old shape composed from the same two builders in
+    `_board.mjs` — there is one definition of a song's shape, one of the rank, one of
+    what a fan is owed, and `test/split.mjs` holds the phone's copy of the merge
+    (`mergeBoard` in `public/vote.html`) to the server's (`mergeForOne`). Decision
+    `0034`.
+
+0fi. **The board is cached for the polling interval, and the interval is the TTL.**
+    `board.mjs` answers `netlify-cdn-cache-control: public, durable, s-maxage=<n>,
+    stale-while-revalidate=<n>` where n is `pollFloorFor(heads)` in seconds — the
+    same number the page is told to wait — so a copy is at most one interval old, two
+    while it is being replaced, against a ladder whose slowest rung is twenty. The
+    browser gets `max-age=0, must-revalidate`: the ladder decides when to look, not
+    the browser's cache. The address must carry ONLY `?a=` — `Netlify-Vary` is
+    ignored through the `/api/*` rewrite (9d6), so the URL is the whole key, and a
+    fan id in it would put every phone back on its own copy (0ep). The mechanism was
+    verified live on 2026-09-11 against `/api/img` (`cache-status: "Netlify Durable";
+    hit`); the three-second TTL itself has not been watched live yet. And the page's
+    board fetch is deliberately NOT `cache:'no-store'` — that mode sends
+    `Cache-Control: no-cache`, which an edge may take as "skip the cache".
+
+0fj. **The personal poll reads one shard and the show record — plus, for a slug, the
+    registry it has always read to become an id.** `/api/me` costs two strong reads
+    for the founding page and three for a slug (`publicArtist` turns the slug into an
+    id from the global `artists` document, exactly as the old `/api/show` did — the
+    one global read on the poll, and caching it is a separate decision, P3-014); a
+    night with requests on adds the requests document. `getShow(aid, { withName:
+    false })` exists so it does not pay for the artist's name it never shows.
+    `test/cost.mjs` holds the founding page to 3 reads, one shard, no global document
+    and no write once presence is stamped; the board render is held to 15 and
+    happens once per interval for the whole room.
+    This is what moved the wall: the read traffic a big room makes is now a twelfth
+    of the bag per phone plus the whole bag once per interval, instead of the whole
+    bag per phone. It is still a curve — a shard holds a twelfth of the room — just
+    a twelfth as steep. `tools/loadsim.py --ceiling` draws it.
+
+0fk. **A cached board cannot make a vote vanish, and the personal call may fail
+    without the board going dark.** Both halves of the poll fail on their own: if
+    `/api/me` is unreachable the board renders with the last personal state this
+    phone had, or with the fresh-phone numbers the board carries (`freeCredits`) —
+    the only thing the page can know, never a guess about a purchase; a fan who has
+    in fact spent everything is told so by the server when they tap (rule 3 traded
+    for rule 1, on purpose). If `/api/board` is unreachable the page keeps the board
+    it has — and a kept board may not feed the countdown, because `lastCall` never
+    shortens a deadline and a re-fed one would never end. A tap still goes to
+    `/api/vote`, which is the truth about credits whatever the screen says, and its
+    answer is applied to the held personal state (`applyCast`) so a phone whose
+    personal call is down still sees its own vote, its own count and the server's
+    `remaining`; a refused cast clears its own optimistic number. Because the board
+    may be a few seconds older than this phone's own cast, the page keeps what it
+    showed itself when it voted (`SHOWN`) and lets the board raise that number but
+    not lower it, until a board rendered after the cast arrives, or four intervals
+    pass. The clocks are the server's on both sides and their PLACEMENT is the
+    point: the board stamps `at` before it reads the room (a vote that lands during
+    the reads is not in it, and the stamp says so), and a cast answers with `at`
+    taken after its write is verified, which the page prefers over the record's
+    `lastAt` (`CAST_AT`) — a personal reply already in flight when the tap happened
+    can carry an older one. A personal state from another night (`showId` differs)
+    is ignored by both copies of the merge. Watched in a real browser with each half
+    returning 500 in turn; `test/split.mjs` holds the merge and goes red if the
+    board's clock moves back after its reads.
+

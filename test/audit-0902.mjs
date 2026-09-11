@@ -128,8 +128,10 @@ const disRule = votePage.match(/const dis=[^;]+;/);
 ok('the rule is still there to check', !!disRule, disRule);
 ok('THE BUG: it short-circuits on unlimited before comparing remaining',
    /!c\.unlimited\s*&&\s*c\.remaining\s*<\s*cost/.test(disRule[0]), disRule && disRule[0]);
+/* The rule moved out of show.mjs on 2026-09-11: credits are shaped once, in
+   _board.mjs (buildMe), for /api/show and /api/me alike. */
 ok('and the server does send null for remaining when unlimited',
-   /remaining: unl \? null/.test(readFileSync(new URL('../netlify/functions/show.mjs', import.meta.url), 'utf8')));
+   /remaining: unl \? null/.test(readFileSync(new URL('../netlify/functions/_board.mjs', import.meta.url), 'utf8')));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -42,6 +42,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) | Casting is rate-limited by a token bucket on the fan record | 2026-09-11 | scale | decided | perry-confirmed |
 | [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) | A night is evidence only if it lines up with a published gig | 2026-09-11 | money | decided | perry |
 | [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) | A Stripe options object is passed only when it has something in it | 2026-09-11 | money | decided | claude |
+| [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) | The audience poll is split into a shared, edge-cached board and a tiny personal call | 2026-09-11 | scale | decided | claude |
 
 ## By area
 
@@ -55,7 +56,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md)
 
 **storage** — [0008](0008-never-list-blobs-for-live-data.md)
 

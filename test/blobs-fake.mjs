@@ -23,10 +23,17 @@ export const __opsStart = () => { ops = []; return ops; };
 export const __opsStop = () => { const o = ops || []; ops = null; return o; };
 const note = (kind, key) => { if (ops) ops.push(kind + ' ' + String(key)); };
 
+/* Make every read take this long, so a test can interleave a write with a read
+   that is already in flight — the shape of "a vote landed while the board was
+   being rendered", which is invisible when reads answer in the same tick. */
+let readDelay = 0;
+export const __slowReads = (ms) => { readDelay = Math.max(0, Number(ms) || 0); };
+
 export function getStore() {
   return {
     async getWithMetadata(key, opts = {}) {
       note('get', key);
+      if (readDelay) await new Promise((r) => setTimeout(r, readDelay));
       const e = mem.get(key);
       if (!e) return null;
       let data = e.body;
