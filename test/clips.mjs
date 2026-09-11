@@ -11,7 +11,12 @@
      · deleting the post deletes the clip AND its poster
      · an unposted clip is swept; a POSTED clip in the pending list is NOT
      · the daily post limit is enforced at the upload door, not only at the post
-     · export and delete know about clips (nothing is left behind) */
+     · export and delete know about clips (nothing is left behind)
+     · THE BYTES ON R2: the signer matches Amazon's published example byte for
+       byte; an upload lands on R2 and /api/vid answers a signed link; a phone's
+       Range survives the redirect; a pre-R2 clip still serves from Blobs; every
+       R2 failure degrades to Blobs or a 404, never a hang or a 500; deleting a
+       post, sweeping an orphan and leaving MySet all take the bytes off R2 */
 process.env.ADMIN_CODE = 'devlocal';
 
 const commFn = (await import('../netlify/functions/community.mjs')).default;
@@ -375,6 +380,285 @@ console.log('\nA CLIP THAT ARRIVES IN PIECES  (clipup.mjs)');
   const ghost = await call('clip=kzzzzzzzzzz&i=0', junk, true);
   ok('a piece for an upload nobody started is refused', ghost.status === 409, ghost.status);
 }
+
+
+console.log('\nTHE SIGNER, AGAINST AMAZON’S OWN EXAMPLE');
+/* The worked example in the S3 developer guide ("Authenticating Requests: Using
+   Query Parameters" and "…the Authorization Header"): the example credentials,
+   2013-05-24, `examplebucket/test.txt`. The intermediate hashes are published
+   too, so the stage that went wrong is named rather than guessed. */
+const R2 = await import('../netlify/functions/_r2.mjs');
+{
+  const key = 'AKIAIOSFODNN7EXAMPLE', secret = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY', stamp = '20130524T000000Z';
+  const h = R2.sigv4({ method: 'GET', host: 'examplebucket.s3.amazonaws.com', path: '/test.txt',
+    headers: { range: 'bytes=0-9', 'x-amz-content-sha256': R2.EMPTY_SHA, 'x-amz-date': stamp },
+    payloadHash: R2.EMPTY_SHA, key, secret, region: 'us-east-1', stamp });
+  eq2('the canonical request hashes as Amazon says it should', h.toSign.split('\n')[3],
+    '7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972');
+  eq2('and the header signature is the published one', h.signature,
+    'f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41');
+  eq2('with the signed headers in canonical order', h.signedHeaders, 'host;range;x-amz-content-sha256;x-amz-date');
+  const u = R2.presign({ host: 'examplebucket.s3.amazonaws.com', path: '/test.txt', key, secret, stamp, expires: 86400, region: 'us-east-1' });
+  eq2('the presigned URL is the published one, byte for byte', u,
+    'https://examplebucket.s3.amazonaws.com/test.txt?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIOSFODNN7EXAMPLE%2F20130524%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20130524T000000Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=aeeed9bbccd4d02ee5c0109b86d86835f995330da4c265957d157751f604d404');
+  /* The PUT example from the same guide: `test$file.text`, payload "Welcome to
+     Amazon S3.", storage class header. The payload hash 44ce7dd6… is the published
+     one (confirmed from a third-party reproduction of the page); the final
+     signature is the value the guide gives as far as this author recalls, and an
+     independent re-derivation from the bytes undici actually sends agreed with it
+     on 2026-09-11 — see the session note. It pins what the GET vectors do not:
+     a non-empty payload hash, a `$` in the key, and a `date` header. */
+  const ph = R2.sha256('Welcome to Amazon S3.');
+  eq2('the PUT example’s payload hashes to the published value', ph, '44ce7dd67c959e0d3524ffac1771dfbba87d2b6b4b4e99e42034a8b803f8b072');
+  const put = R2.sigv4({ method: 'PUT', host: 'examplebucket.s3.amazonaws.com', path: '/test$file.text',
+    headers: { date: 'Fri, 24 May 2013 00:00:00 GMT', 'x-amz-content-sha256': ph, 'x-amz-date': stamp, 'x-amz-storage-class': 'REDUCED_REDUNDANCY' },
+    payloadHash: ph, key, secret, region: 'us-east-1', stamp });
+  eq2('and the PUT signature is the expected one', put.signature, '98ad721746da40c64f1a55b78f14c238d841ea1380cd77a1b5971af0ece108bd');
+  eq2('with the $ in the key encoded in the canonical URI', put.canonical.split('\n')[1], '/test%24file.text');
+  eq2('S3 URI encoding: unreserved passes, the rest is %XX upper-case, a slash is data unless told otherwise',
+    R2.uriEncode('a b/c~d.e_f-g+h'), 'a%20b%2Fc~d.e_f-g%2Bh');
+  eq2('and a path keeps its slashes', R2.uriEncode('/bucket/vid_x_y', true), '/bucket/vid_x_y');
+  ok('R2 is OFF until all four variables are set', !R2.r2Enabled());
+  process.env.R2_ACCOUNT_ID = 'x'; process.env.R2_BUCKET = 'y'; process.env.R2_ACCESS_KEY_ID = 'z';
+  ok('three of four is still off', !R2.r2Enabled());
+  delete process.env.R2_ACCOUNT_ID; delete process.env.R2_BUCKET; delete process.env.R2_ACCESS_KEY_ID;
+}
+
+console.log('\nTHE BYTES GO TO R2, AND THE PHONE IS SENT THERE  (_r2.mjs, vid.mjs)');
+const { __r2, __setClock } = await import('./r2-fake.mjs');
+const { putClip, hasClip, clipUrl, dropClipKeys } = await import('../netlify/functions/_video.mjs');
+const { store } = await import('../netlify/functions/_lib.mjs');
+const E = await import('../netlify/functions/_errlog.mjs');
+__r2.install();
+const C = await createArtist({ email: 'r2clipper@example.com', name: 'R2 Clipper' });
+const cid = C.artistId, cslug = C.slug;
+const r2call = (qs, body, raw) => clipupFn(new Request(`https://x/api/clipup?a=${cslug}&${qs}`, {
+  method: 'POST',
+  headers: { 'content-type': raw ? 'application/octet-stream' : 'application/json' },
+  body: raw ? body : JSON.stringify(body),
+}));
+async function uploadInPieces(buf, fan) {
+  const b = await jget(await r2call('begin=1', { fan, size: buf.length, type: 'video/mp4' }));
+  for (let i = 0; i < b.parts; i++) {
+    await r2call(`clip=${b.clip}&i=${i}`, buf.subarray(i * CHUNK_BYTES, Math.min(buf.length, (i + 1) * CHUNK_BYTES)), true);
+  }
+  return { clip: b.clip, done: await jget(await r2call(`clip=${b.clip}&end=1`, { poster: JPEG })) };
+}
+let r2clip = '';
+{
+  ok('with the four variables set, R2 is on', R2.r2Enabled());
+  const BIG = fakeMp4(11, CHUNK_BYTES + 5000);
+  const { clip, done } = await uploadInPieces(BIG, 'fanr2000001');
+  r2clip = clip;
+  ok('the chunked upload still completes', done.ok === true && done.clip === clip, done);
+  const o = __r2.objects.get(`vid_${cid}_${clip}`);
+  ok('THE BYTES LANDED ON R2, under the same key Blobs would have used', !!o && o.bytes.equals(BIG),
+    o ? { got: o.bytes.length, want: BIG.length } : 'nothing on R2');
+  eq2('typed as video', o && o.type, 'video/mp4');
+  ok('and NOT in Blobs', !(await store().get(`vid_${cid}_${clip}`, { type: 'arrayBuffer' })));
+  ok('the PUT was signed with the content hash, not UNSIGNED-PAYLOAD',
+    __r2.calls.some((c) => c.method === 'PUT' && c.key === `vid_${cid}_${clip}` && c.status === 200), __r2.calls);
+  ok('the poster still lands in Blobs as a normal photo slot', !!(await getImage(cid, clip)));
+  ok('and the pending list still knows about it', !!(await readPending(cid)).by[clip]);
+  ok('hasClip answers from a HEAD', await hasClip(cid, clip)
+    && __r2.calls.some((c) => c.method === 'HEAD' && c.key === `vid_${cid}_${clip}` && c.status === 200));
+  ok('and getClip reads the bytes back from R2', (await getClip(cid, clip)).bytes.equals(BIG));
+
+  const p = await jget(await commFn(post(`https://x/api/community?a=${cslug}`,
+    { action: 'post', fan: 'fanr2000001', text: 'from the bar', clip })));
+  ok('a post can name a clip that lives on R2', !!p.id, p);
+  const ghost = await jget(await commFn(post(`https://x/api/community?a=${cslug}`,
+    { action: 'post', fan: 'fanr2000002', text: 'hi', clip: 'k0000000000' })));
+  ok('and still cannot name one that exists nowhere', ghost.ok === false && /didn.t finish/.test(ghost.error || ''), ghost);
+}
+
+console.log('\n/api/vid IS A SIGNED LINK NOW');
+let link = '';
+{
+  const r = await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${r2clip}`));
+  eq2('a clip on R2 answers a 302', r.status, 302);
+  link = r.headers.get('location') || '';
+  ok('to the bucket’s own S3 endpoint', link.startsWith(`https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET}/vid_${cid}_${r2clip}?`), link.split('?')[0]);
+  ok('carrying a signature, not a public URL', /X-Amz-Signature=[0-9a-f]{64}/.test(link));
+  eq2(`good for LINK_SECS (${R2.LINK_SECS}s)`, new URL(link).searchParams.get('X-Amz-Expires'), String(R2.LINK_SECS));
+  eq2('the redirect is cached for an hour, not a year', r.headers.get('cache-control'), `public, max-age=${R2.CACHE_SECS}`);
+  ok('at the edge too, and never immutable', /durable/.test(r.headers.get('netlify-cdn-cache-control') || '')
+    && !/immutable/.test(r.headers.get('netlify-cdn-cache-control') || ''), r.headers.get('netlify-cdn-cache-control'));
+  ok('the link outlives the cache by at least an hour, however the clock falls',
+    R2.LINK_SECS - R2.ROUND_MS / 1000 >= R2.CACHE_SECS + 3600, { LINK_SECS: R2.LINK_SECS, CACHE_SECS: R2.CACHE_SECS, ROUND_MS: R2.ROUND_MS });
+  const again = await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${r2clip}`));
+  eq2('two requests in the same hour get the SAME link (signed from the top of the hour)', again.headers.get('location'), link);
+  const bySlug = await vidFn(new Request(`https://x/api/vid?a=${cslug}&c=${r2clip}`));
+  eq2('the slug works as well as the id', bySlug.status, 302);
+
+  /* What the phone does next. Safari asks the redirected URL for bytes=0-1 and
+     refuses to play if it gets a 200 — so the store on the far end of the link
+     has to answer a 206, and here that store is the fake, checking the signature. */
+  const probe = await fetch(link, { headers: { range: 'bytes=0-1' } });
+  eq2('THE TRAP, ON THE OTHER SIDE OF THE REDIRECT: bytes=0-1 is a 206', probe.status, 206);
+  const total = __r2.objects.get(`vid_${cid}_${r2clip}`).bytes.length;
+  eq2('with a content-range naming the real size', probe.headers.get('content-range'), `bytes 0-1/${total}`);
+  const whole = await fetch(link);
+  ok('and the whole clip comes back byte for byte', whole.status === 200
+    && Buffer.from(await whole.arrayBuffer()).equals(__r2.objects.get(`vid_${cid}_${r2clip}`).bytes));
+  eq2('as video/mp4', whole.headers.get('content-type'), 'video/mp4');
+
+  const forged = link.replace(/X-Amz-Signature=[0-9a-f]{4}/, 'X-Amz-Signature=0000');
+  eq2('a link with one nibble changed is refused', (await fetch(forged)).status, 403);
+  const other = link.replace(`vid_${cid}_${r2clip}`, `vid_${cid}_k0000000000`);
+  eq2('and a link re-pointed at another object is refused, not just missing', (await fetch(other)).status, 403);
+
+  const stamp = new URL(link).searchParams.get('X-Amz-Date');
+  const top = Date.UTC(+stamp.slice(0, 4), +stamp.slice(4, 6) - 1, +stamp.slice(6, 8), +stamp.slice(9, 11));
+  __setClock(() => top + (R2.LINK_SECS - 1) * 1000);
+  eq2('the link is still good a second before it expires', (await fetch(link)).status, 200);
+  __setClock(() => top + (R2.LINK_SECS + 1) * 1000);
+  eq2('and dead a second after', (await fetch(link)).status, 403);
+  __setClock(null);
+}
+
+console.log('\nA CLIP FROM BEFORE R2 STILL PLAYS FROM BLOBS');
+let oldClip = '';
+{
+  /* Uploaded with R2 off — exactly what every clip on the site was before today. */
+  __r2.uninstall();
+  const OLD = fakeMp4(7, 3000);
+  const { clip, done } = await uploadInPieces(OLD, 'fanr2000003');
+  oldClip = clip;
+  ok('with R2 off the upload lands in Blobs, as it always did', done.ok && !!(await store().get(`vid_${cid}_${clip}`, { type: 'arrayBuffer' })));
+  __r2.install();
+  __r2.calls.length = 0;
+  const r = await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${clip}`), );
+  eq2('with R2 back on, /api/vid serves it from Blobs — a 200 with the bytes', r.status, 200);
+  ok('after asking R2 first', __r2.calls.some((c) => c.method === 'HEAD' && c.key === `vid_${cid}_${clip}` && c.status === 404), __r2.calls);
+  ok('cached for a year as before', /immutable/.test(r.headers.get('cache-control') || ''));
+  const probe = await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${clip}`, { headers: { range: 'bytes=0-1' } }));
+  eq2('and bytes=0-1 is still a 206', probe.status, 206);
+  ok('a post can name it', !!(await jget(await commFn(post(`https://x/api/community?a=${cslug}`,
+    { action: 'post', fan: 'fanr2000003', text: 'old clip', clip })))).id);
+}
+
+console.log('\nEVERY R2 FAILURE DEGRADES — THE ROOM CAN STILL VOTE');
+{
+  __r2.fail(true);                                   // R2 answers 503 to everything
+  const B = fakeMp4(5, 2500);
+  const { clip, done } = await uploadInPieces(B, 'fanr2000004');
+  ok('an upload R2 refuses lands in Blobs and the person never knows', done.ok === true
+    && !!(await store().get(`vid_${cid}_${clip}`, { type: 'arrayBuffer' })) && !__r2.objects.has(`vid_${cid}_${clip}`), done);
+  const r = await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${clip}`));
+  eq2('and plays from Blobs while R2 is refusing', r.status, 200);
+  const rOld = await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${oldClip}`));
+  eq2('so does a pre-R2 clip', rOld.status, 200);
+  const rR2 = await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${r2clip}`));
+  eq2('a clip that only exists on R2 is a 404 for now — not a 500, not a hang', rR2.status, 404);
+  ok('a post naming it is refused rather than hung on', (await jget(await commFn(post(`https://x/api/community?a=${cslug}`,
+    { action: 'post', fan: 'fanr2000005', text: 'x', clip: r2clip })))).ok === false);
+  __r2.fail(false);
+
+  __r2.down(true);                                   // the network is gone
+  const rDown = await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${oldClip}`));
+  eq2('with R2 unreachable a Blobs clip still serves', rDown.status, 200);
+  const { done: d2 } = await uploadInPieces(fakeMp4(4, 2000), 'fanr2000006');
+  ok('and an upload still completes, into Blobs', d2.ok === true, d2);
+  __r2.down(false);
+
+  const rows = await E.recentErrs(2);
+  ok('the failures are on the record (0fb)', rows.some((x) => /^r2\./.test(x.where)), rows.map((x) => x.where));
+  const dump = JSON.stringify(rows);
+  ok('and the record carries no key, no secret and no signed link',
+    !dump.includes(process.env.R2_SECRET_ACCESS_KEY) && !dump.includes(process.env.R2_ACCESS_KEY_ID) && !dump.includes('X-Amz-Signature'));
+
+  /* A wrong secret is the failure that would actually happen on a first deploy.
+     The fake checks signatures, so this is a real refusal, not a stubbed one. */
+  const good = process.env.R2_SECRET_ACCESS_KEY;
+  process.env.R2_SECRET_ACCESS_KEY = 'not-the-secret';
+  __r2.calls.length = 0;
+  const { clip: c3, done: d3 } = await uploadInPieces(fakeMp4(3, 1500), 'fanr2000007');
+  ok('a wrong secret is refused by the bucket (a real 403, from a real signature check)',
+    __r2.calls.some((c) => c.method === 'PUT' && c.status === 403), __r2.calls);
+  ok('and the clip lands in Blobs anyway', d3.ok === true && !!(await store().get(`vid_${cid}_${c3}`, { type: 'arrayBuffer' })));
+  process.env.R2_SECRET_ACCESS_KEY = good;
+}
+
+console.log('\nTAKING IT DOWN TAKES IT OFF R2');
+{
+  const B = fakeMp4(6, 2200);
+  const { clip } = await uploadInPieces(B, 'fanr2000008');
+  const made = await jget(await commFn(post(`https://x/api/community?a=${cslug}`,
+    { action: 'post', fan: 'fanr2000008', text: 'hide me', clip })));
+  ok('on R2 while the post is up', __r2.objects.has(`vid_${cid}_${clip}`));
+  await moderate(cid, { action: 'postHide', id: made.id, on: true });
+  ok('hiding the post deletes the bytes from R2 (0dy1)', !__r2.objects.has(`vid_${cid}_${clip}`));
+  eq2('and /api/vid says so', (await vidFn(new Request(`https://x/api/vid?a=${cid}&c=${clip}`))).status, 404);
+
+  const { clip: orphan } = await uploadInPieces(fakeMp4(4, 2000), 'fanr2000009');
+  ok('an unposted clip sits on R2', __r2.objects.has(`vid_${cid}_${orphan}`));
+  ok('and the two-hour sweep takes it off R2', (await sweepPending(cid, Date.now() + PENDING_TTL + 1000)) >= 1
+    && !__r2.objects.has(`vid_${cid}_${orphan}`));
+  /* The same trap as the Blobs section: a POSTED clip left on the pending list
+     (clearPending is best-effort) must survive the sweep because the feed names
+     it — on R2 as much as in Blobs. */
+  await notePending(cid, r2clip);
+  ok('a POSTED clip on the pending list is NOT taken off R2 by the sweep',
+    (await sweepPending(cid, Date.now() + PENDING_TTL + 1000)) === 0 && __r2.objects.has(`vid_${cid}_${r2clip}`));
+  ok('but leaves the posted one alone', __r2.objects.has(`vid_${cid}_${r2clip}`));
+  ok('and none of the deletes so far had to be logged as a failure',
+    !(await E.recentErrs(2)).some((x) => x.where === 'r2.delete'), (await E.recentErrs(2)).filter((x) => x.where === 'r2.delete').map((x) => x.msg));
+
+  /* A DELETE R2 refuses must not become 75MB nothing can ever find. */
+  const { clip: stuck } = await uploadInPieces(fakeMp4(4, 2000), 'fanr2000011');
+  const madeStuck = await jget(await commFn(post(`https://x/api/community?a=${cslug}`,
+    { action: 'post', fan: 'fanr2000011', text: 'stuck', clip: stuck })));
+  __r2.fail(true);
+  await moderate(cid, { action: 'postHide', id: madeStuck.id, on: true });
+  ok('hiding while R2 refuses leaves the object there (it could not be deleted)…', __r2.objects.has(`vid_${cid}_${stuck}`));
+  ok('…and puts the clip BACK on the pending list, so the sweep will try again', !!(await readPending(cid)).by[stuck]);
+  const stillFailing = await sweepPending(cid, Date.now() + PENDING_TTL + 1000);
+  ok('a sweep while R2 still refuses keeps the note rather than clearing it',
+    stillFailing === 0 && !!(await readPending(cid)).by[stuck] && __r2.objects.has(`vid_${cid}_${stuck}`));
+  ok('and the ring keeps the owner rather than waiting for a new upload',
+    !!((await (await import('../netlify/functions/_lib.mjs')).readDoc('vidqueue', null)).data || { by: {} }).by[cid]);
+  __r2.fail(false);
+  const delRowsBefore = (await E.recentErrs(2)).filter((x) => x.where === 'r2.delete').length;
+  ok('once R2 is back, the sweep takes it off R2', (await sweepPending(cid, Date.now() + 2 * PENDING_TTL + 2000)) === 1
+    && !__r2.objects.has(`vid_${cid}_${stuck}`) && !(await readPending(cid)).by[stuck]);
+
+  const { deleteArtist } = await import('../netlify/functions/_account.mjs');
+  const keys = await keysFor(cid);
+  ok('the artist’s key list names the R2 clip', keys.includes(`vid_${cid}_${r2clip}`));
+  await deleteArtist(cid);
+  ok('LEAVING MYSET TAKES THE BYTES OFF R2', !__r2.objects.has(`vid_${cid}_${r2clip}`), [...__r2.objects.keys()]);
+  ok('and dropClipKeys only ever touches vid_ keys', (await dropClipKeys(['posts_x', 'img_x_y'])) === 0);
+  /* The first run of this section passed while every delete was throwing inside
+     the fake — the object was gone before the throw. So: the deletes must also
+     have left NO error behind, or "gone" is an accident. */
+  ok('and none of those deletes had to be logged as a failure',
+    (await E.recentErrs(2)).filter((x) => x.where === 'r2.delete').length === delRowsBefore,
+    (await E.recentErrs(2)).filter((x) => x.where === 'r2.delete').map((x) => x.msg));
+}
+
+/* A venue's clips live under `v_<id>` and are deleted by a different function
+   with its own key list; the R2 half has to be there too or a venue that left
+   would leave its clips behind for ever. */
+console.log('\nA VENUE THAT LEAVES TAKES ITS CLIPS OFF R2 TOO');
+{
+  const { createVenue } = await import('../netlify/functions/_venues.mjs');
+  const { deleteVenue } = await import('../netlify/functions/_venueaccount.mjs');
+  const V = await createVenue({ email: 'r2bar@example.com', name: 'R2 Bar' });
+  const vslug = V.slug, vo = `v_${V.venueId}`;
+  const vcall = (qs, body, raw) => clipupFn(new Request(`https://x/api/clipup?v=${vslug}&${qs}`, {
+    method: 'POST', headers: { 'content-type': raw ? 'application/octet-stream' : 'application/json' },
+    body: raw ? body : JSON.stringify(body) }));
+  const B = fakeMp4(5, 2100);
+  const b = await jget(await vcall('begin=1', { fan: 'fanr2000010', size: B.length, type: 'video/mp4' }));
+  for (let i = 0; i < b.parts; i++) await vcall(`clip=${b.clip}&i=${i}`, B.subarray(i * CHUNK_BYTES, Math.min(B.length, (i + 1) * CHUNK_BYTES)), true);
+  const done = await jget(await vcall(`clip=${b.clip}&end=1`, {}));
+  ok('a venue clip lands on R2 under v_<id>', done.ok === true && __r2.objects.has(`vid_${vo}_${b.clip}`), done);
+  eq2('and /api/vid sends the phone there', (await vidFn(new Request(`https://x/api/vid?a=${vo}&c=${b.clip}`))).status, 302);
+  await deleteVenue(V.venueId);
+  ok('deleting the venue takes it off R2', !__r2.objects.has(`vid_${vo}_${b.clip}`));
+}
+__r2.uninstall();
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

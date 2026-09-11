@@ -51,6 +51,7 @@ async function facts() {
   const lib = await import(join(ROOT, 'netlify/functions/_lib.mjs'));
   const flags = await import(join(ROOT, 'netlify/functions/_flags.mjs'));
   const video = await import(join(ROOT, 'netlify/functions/_video.mjs'));
+  const r2 = await import(join(ROOT, 'netlify/functions/_r2.mjs'));
 
   const fns = ls('netlify/functions').filter((f) => f.endsWith('.mjs'));
   const handlers = fns.filter((f) => !f.startsWith('_')).map((f) => f.replace('.mjs', '')).sort();
@@ -108,6 +109,8 @@ async function facts() {
       castPerMin: lib.CAST_PER_MIN,
       countdownMs: lib.COUNTDOWN_MS,
       maxVideoBytes: video.MAX_VIDEO_BYTES,
+      clipLinkSecs: r2.LINK_SECS,
+      clipRedirectCacheSecs: r2.CACHE_SECS,
       defaultFreeCredits: lib.DEFAULT_FREE_CREDITS,
       defaultReplayCost: 5,
       defaultAskCost: lib.DEFAULT_ASK_COST,
@@ -295,6 +298,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | Fan-record shards | ${f.constants.shards} |
 | Casts a device may make in a row / per minute after that | ${f.constants.castBurst} / ${f.constants.castPerMin} |
 | Largest clip accepted | ${(f.constants.maxVideoBytes / 1048576).toFixed(0)} MB |
+| A clip link on R2 lives / its redirect is cached | ${f.constants.clipLinkSecs / 3600} h / ${f.constants.clipRedirectCacheSecs / 3600} h |
 | Invariants | ${f.shape.invariants.count} (last: ${f.shape.invariants.last}) |
 | Test suites | ${f.shape.testSuites} |
 | Assertions | ${f.shape.assertions === null ? '*not stamped — run `node tools/overview.mjs --tests`*' : `**${f.shape.assertions.toLocaleString()}**, ${f.shape.testsFailed} failing, last run ${f.shape.testsRunAt}`} |

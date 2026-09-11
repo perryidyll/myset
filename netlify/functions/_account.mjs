@@ -5,7 +5,7 @@ import { readEvents, mutateEvents, reindexCities } from './_events.mjs';
 import { readLists, readLearn } from './_lists.mjs';
 import { readHistIndex } from './_history.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
-import { readPending } from './_video.mjs';
+import { readPending, dropClipKeys, vidKey } from './_video.mjs';
 import { readFeedback, shapeFeedback } from './_feedback.mjs';
 import { readMeta } from './_lib.mjs';
 
@@ -72,8 +72,8 @@ export async function keysFor(aid) {
   /* Clips, and their poster frames. Both the ones a post claims and the ones
      still pending, because an upload that was never posted is 3MB nothing else
      can ever find (`list()` is banned — INVARIANT 1). */
-  for (const p of posts.list || []) if (p && p.clip) { keys.push(`vid_${aid}_${p.clip}`); keys.push(IMG(aid, p.clip)); }
-  for (const c of Object.keys(pend.by || {})) { keys.push(`vid_${aid}_${c}`); keys.push(IMG(aid, c)); }
+  for (const p of posts.list || []) if (p && p.clip) { keys.push(vidKey(aid, p.clip)); keys.push(IMG(aid, p.clip)); }
+  for (const c of Object.keys(pend.by || {})) { keys.push(vidKey(aid, c)); keys.push(IMG(aid, c)); }
   return [...new Set(keys)];
 }
 
@@ -209,6 +209,8 @@ export async function deleteArtist(aid) {
   const keys = await keysFor(aid);
   let gone = 0;
   for (const k of keys) { try { await store().delete(k); gone++; } catch {} }
+  /* Clip bytes live on R2 when it is on (see _video.mjs); the same keys, the other store. */
+  await dropClipKeys(keys);
   await mutateArtists((reg) => {
     const me = reg.byId[aid];
     if (me && me.slug && reg.bySlug[me.slug] === aid) delete reg.bySlug[me.slug];

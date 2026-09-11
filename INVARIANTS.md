@@ -2086,6 +2086,38 @@ If you are about to violate one, stop and say so rather than working around it.
     library does so the suite cannot let it back in. Session
     `2026-09-11-gig-week-one.md`.
 
+0fd. **A clip's bytes live on Cloudflare R2, the phone fetches them from there, and
+    every R2 failure falls back to Blobs.** Netlify bills egress and R2 does not
+    (0ev), so `putClip` sends the bytes to R2 and `/api/vid` answers a 302 to a
+    presigned GET on the bucket's own S3 endpoint — the bucket stays private,
+    `myset.vip`'s DNS is on Netlify so there is no custom domain, and `r2.dev` is
+    not for production. The link is signed from the top of the hour and lives
+    `LINK_SECS`; the redirect is cached `CACHE_SECS`, at the edge and in the
+    browser, and `test/clips.mjs` demands the link outlive the cache by an hour
+    however the clock falls — a cached redirect must never hand out a dead link.
+    The browser is expected to carry its Range through the redirect so R2 answers
+    the 206 (0dr): the suite proves the far side of the link answers a 206, a real
+    phone after the deploy proves the browser half. READ R2 FIRST, THEN BLOBS:
+    clips from before this stay in Blobs and serve as they did; nothing is copied
+    in bulk (`list()`, INVARIANT 1). A PUT R2 refuses lands in Blobs; a serve that
+    cannot reach R2 tries Blobs; a clip only R2 has is a 404 while R2 is down,
+    never a 500 or a hang — every call has a timeout, and the failure is logged
+    at most once a minute per instance so an outage cannot pile CAS writes onto
+    the serving path. Hiding, sweeping, deleting a post, an artist or a venue
+    take the bytes off R2 (`dropClip`, `dropClipKeys`) — AND A DELETE R2 REFUSES
+    IS NOT FORGOTTEN: the clip goes back on the pending list and the sweep ring
+    keeps the owner until the list is empty, so the next ring tries again;
+    without that a hide during an outage would leave 75MB nothing could ever
+    find. NEVER REMOVE THE FOUR VARIABLES WHILE CLIPS ARE ON R2: with them gone
+    every clip already there is a 404 and every later delete skips it. Rotate a
+    key by replacing it; to stop new uploads going to R2, that is a code change,
+    not an env change. The signature is AWS SigV4 by hand in `_r2.mjs` (no third
+    dependency), pinned against Amazon's published example with its intermediate
+    hashes; `test/r2-fake.mjs` re-derives every signature from what was actually
+    sent and refuses a mismatch, so a wrong secret is a real 403 in the suite. No
+    key and no signed URL is ever logged (0fb). Decision `0033`. Session
+    `2026-09-11-clips-to-r2.md`.
+
 0fh. **The audience polls TWO addresses, and the shared one carries no fan id.**
     `/api/board?a=<slug>` is the same bytes for every phone in the room — the tally,
     the ranking, the room dials, what the artist did — and `/api/me?fan=<id>` is only

@@ -8,25 +8,27 @@ documents own: `MYSET-MASTER-OVERVIEW.md` is what MySet is, `INVARIANTS.md` is w
 never break, `docs/decisions/` is why a design is the way it is, and `docs/sessions/` is
 what happened on a given day.
 
-**Last reviewed:** 2026-09-11 (evening)
+**Last reviewed:** 2026-09-11 (night)
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The **shared-board split (P3-001) is built, tested and reviewed, and sits
-uncommitted in the working tree** alongside another session's uncommitted work of the
-same day (burst 20, the live Maps header, the artists-page interactive map). Two other
-sessions hold uncommitted work in worktrees: R2 (`claude/r2-clips`, which took decision
-0033 and INVARIANT 0fd — this split is 0034 / 0fh–0fk) and the open line. The
-audience poll is now two calls: `/api/board` (shared, no fan id, held at the edge for the
-polling interval) and `/api/me` (personal, one shard, never cached); `/api/show` stays for
-open tabs. 2,017 assertions, 0 failing. Nothing is deployed.
+**Current focus:** Two Phase 3 items landed on `main` the same evening. The **shared-board
+split (P3-001)** is `c3d0a4d`: the audience poll is two calls, `/api/board` (shared, no fan
+id, held at the edge for the polling interval) and `/api/me` (personal, one shard, never
+cached); `/api/show` stays for open tabs. **Clip bytes on Cloudflare R2 (P3-003)** is the
+commit after it: `/api/vid` answers a 302 to a presigned link on the private bucket; every
+clip from before stays in Blobs and serves as before; every R2 failure falls back so the
+room can still vote (decision `0033`, INVARIANT 0fd). Both were reviewed fresh-context and
+their findings fixed. The open line (P3-002) is being built in its own session.
 
-**Next work item (pick up here):** The user decides whether to commit and push. After the
-deploy: watch `/api/board` live (`cache-status` must say `"Netlify Durable"; hit` on the
-second request within three seconds, with an `age` header), then P3-013 (trim the cast
-receipts that make a voter's record ~2 KB), then R2 (P3-003, blocked on the user's
-Cloudflare click), then the open line (P3-002) **on the user's word — he said not to wait
-for a 2,000-person booking**.
+**Next work item (pick up here):** After the deploy, from outside: watch `/api/board`
+(`cache-status` must say `"Netlify Durable"; hit` on the second request within three
+seconds, with an `age`); upload one clip on a community page and `curl -sI` its `/api/vid`
+— a **302** with `location:` on `r2.cloudflarestorage.com` and `max-age=3600` — then play it
+on a real iPhone; try a large (~75MB) clip once, because the PUT's fit inside the function
+budget is unmeasured (session `2026-09-11-clips-to-r2.md` § "The order to deploy in").
+Then P3-013 (trim the cast receipts that make a voter's record ~2 KB). The open line
+(P3-002) runs **on the user's word — he said not to wait for a 2,000-person booking**.
 
-**Fresh-agent one-liner:** `Read AGENTS.md, then IMPLEMENTATION_STATUS.md; the split is built and not deployed — start from "Next work item".`
+**Fresh-agent one-liner:** `Read AGENTS.md, then IMPLEMENTATION_STATUS.md; the split and R2 are on main — start from "Next work item".`
 
 ---
 
@@ -63,7 +65,7 @@ for a 2,000-person booking**.
 | --- | --- | --- | --- | --- |
 | P3-001 | **Shared-board split** — one cached board, tiny per-fan endpoint | done | 2026-09-11, uncommitted: `_board.mjs`, `board.mjs`, `me.mjs`, `show.mjs` (composes from the same builders), `vote.mjs` (`at`), `_lib.mjs` (`getShow(aid,{withName:false})`, dial comment), `public/vote.html` (`load`, `mergeBoard`, `applyCast`, `SHOWN`/`CAST_AT`), `test/split.mjs` 80/80, `test/cost.mjs` board ≤15 / personal ≤3, `tools/loadsim.py --ceiling`, INVARIANTS 0fh–0fk, decision `0034`, fresh-context review with seven fixes taken; real-browser check of both halves failing in turn; live durable-cache probe on `/api/img` | Not deployed. After the deploy: watch `cache-status` and `age` on `/api/board`; read the personal call's billed duration off the function log (estimated ~50 ms, never measured) |
 | P3-002 | Open line to the room (Cloudflare Durable Objects) | deferred | `docs/reports/open-line.html`, decision `0012` | After P3-001 and P3-003. **Trigger changed 2026-09-11 by the user: do not wait for a 2,000 booking — remind him the moment the split and R2 are done, and build it on his word** |
-| P3-003 | Clip bytes onto Cloudflare R2 | in_progress | 2026-09-11: R2 enabled by the user; bucket **`myset-clips`** created (Standard class, automatic location, public access off). Account id `7a48fa04262dcda3055ebc7ba845985b`; S3 endpoint `https://7a48fa04262dcda3055ebc7ba845985b.r2.cloudflarestorage.com` | **Waiting on the user:** an R2 API token (Object Read & Write, scoped to `myset-clips`) put into Netlify as `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`. Then the code (~2 days). Open question for that session: how fans fetch clips — a custom domain needs the zone on Cloudflare; r2.dev is rate-limited and not for production; the alternative is a small signed-URL step |
+| P3-003 | **Clip bytes onto Cloudflare R2** | done | `netlify/functions/_r2.mjs` (SigV4 by hand), `_video.mjs`, `vid.mjs` (302 to a presigned link); `test/r2-fake.mjs`; `test/clips.mjs` 163/163, full suite 2,004/2,004 (stamped); independent fresh-context review, findings fixed; decision `0033`; INVARIANT 0fd; session `2026-09-11-clips-to-r2.md` | Rebased onto the split (`c3d0a4d`) and pushed to `main` 2026-09-11. Pre-R2 clips stay in Blobs and serve as before. Not run against the real bucket yet — the first deploy is the measurement (75MB PUT inside the function budget; playback through the 302 on a real iPhone) |
 | P3-004 | **Error tracking that outlives the night** | done | Durable capped hourly error documents, guarded handlers, fan report endpoint and Studio reader; 42/42 focused assertions | Retained in MySet's existing blob store; no third-party telemetry account required |
 | P3-005 | Fan-shard write ceiling actually measured | not_started | Derived from a measured 40ms *read*, never from a write | **Now the next wall after reads.** Hammer one shard before selling a room over 2,000 |
 | P3-013 | **A voter's record weighs ~2 KB after eight casts — trim the cast receipts** | not_started | Measured 2026-09-11 on the real write path: 101 bytes present-only, 412 after one cast, 864 after three, 2,010 after eight; `casts[]` (up to 20 receipts with outcomes) is most of it. At that weight the busiest-case read wall is ~2,500; at the report's 152-byte record it is past 10,000 | Keep the idempotency (INVARIANT 15h) and shrink the receipt: id + a compact outcome, fewer kept, or receipts aged out after a few minutes. Re-run `tools/loadsim.py --ceiling` after |
@@ -101,6 +103,7 @@ for a 2,000-person booking**.
 | Honest room ceiling | 2,000 sold | **~2,500** busiest case at today's record weight (was ~700–1,000 before the split at that weight) | 2026-09-11 | `tools/loadsim.py --ceiling`. The earlier "~2,500" assumed 152-byte fan records; a voter's record is ~2 KB today (P3-013). At the lighter record the wall is past 10,000. Reads, not money, are the wall; the write wall (P3-005) is next |
 | Test assertions | all passing | see §2.1 of the overview | 2026-09-08 | Stamped by `tools/overview.mjs --tests` |
 | Real gigs run on MySet | — | **1** | 2026-08-30 | Treat every projection as a projection |
+| Netlify egress per clip view, once on `main` | 0 for clips on R2 | — | 2026-09-11 | A 302 per view; a HEAD per clip per hour at the edge if the CDN caches the 302 (not verified), else per view; pre-R2 clips still bill until they leave (`0033`) |
 
 ---
 
@@ -108,6 +111,7 @@ for a 2,000-person booking**.
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-11 | R2 clip store, worktree `claude/r2-clips`: `node tools/overview.mjs --tests`; `test/clips.mjs`; the signer against Amazon's published SigV4 example; a fresh-context review that re-derived SigV4 from undici's wire bytes | Full suite 2,004/2,004; clips 163/163 (77 new); header signature `f0e8bdb8…`, canonical hash `7344ae5b…`, presigned `aeeed9bb…`, PUT payload hash `44ce7dd6…` all match; wire re-derivation matched for PUT/HEAD/DELETE. Not run against the real bucket |
 | 2026-09-11 | `sh test/run.sh` after the split and the review fixes | 2,017 assertions, 0 failures, every section green (`test/split.mjs` 80/80; `test/cost.mjs` board 14 reads, personal 2, legacy 14) |
 | 2026-09-11 | Parity of the old `show.mjs` (`git show HEAD:…`) against the new one, same in-memory store, 15 scenarios | 0 differ, ignoring key order and the additive `at`/`freeCredits` (the reviewer's script, re-run by hand) |
 | 2026-09-11 | Real browser (390px) against the real handlers over HTTP: vote through the sheet; `/api/me` returning 500; a fresh phone casting with `/api/me` down; `/api/board` returning 500 | Tally and "Your vote" stable across polls; board still updates with others' votes while the personal call is down; a cast with the personal call down is shown as mine with the server's `remaining`; the page keeps its board while the board call is down; no page errors |
@@ -161,6 +165,8 @@ for a 2,000-person booking**.
 | 2026-09-07 | Votes return between songs | A vote never comes back | Perry's rule, stated as final | Decision `0001` |
 | 2026-09-09 | No setlist vote ever returns | An artist may explicitly decline an unplayed song and return its votes | The queue needs a fair correction when a song cannot be played | Decision `0016` |
 | 2026-09-10 | Refresh the external SSD mirror | Mirror script stopped without writing because the SSD is not mounted | Preserve the local handoffs and rerun when the drive is connected | `~/Docs/Project Handoffs/mirror-to-ssd.sh` |
+| 2026-09-11 | R2 after the shared-board split, on a ~100GB/month trigger | R2 built now, in a worktree, while the split is mid-edit in the main checkout | The user withdrew the trigger, opened the Cloudflare account and put the keys in Netlify; the main checkout held another session's uncommitted files, so a worktree off `main` kept the two apart | Merge `claude/r2-clips` when told; the two touch no common code, only `IMPLEMENTATION_STATUS.md` |
+| 2026-09-11 | A custom domain in front of the bucket | A 302 from `/api/vid` to a presigned GET on the bucket's S3 endpoint | `myset.vip`'s DNS is on Netlify (NS1), not Cloudflare; `r2.dev` is rate-limited | Decision `0033`; revisit if the zone ever moves |
 
 ---
 
@@ -184,6 +190,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 | 2026-09-11 | Errors and bug reports live in the blob store, not a vendor | `0029` |
 | 2026-09-11 | Casting is rate-limited by a token bucket on the fan record | `0030` |
 | 2026-09-11 | The audience poll is split into a shared, edge-cached board and a tiny personal call | `0034` |
+| 2026-09-11 | A clip's bytes live on Cloudflare R2 and the phone is sent there by a signed link | `0033` |
 | 2026-09-07 | The open line is not next | `0012` |
 | 2026-09-06 | Clips go up as they are | `0011` |
 | 2026-09-05 | A full room is never refused | `0006` |
@@ -205,7 +212,9 @@ duplicate it here. Index: `docs/decisions/README.md`.
 | A room over ~2,500 breaks on reads | A big booked show fails live | P3-001 built (not deployed): the busiest-case wall at today's record weight is ~2,500 — and was ~700–1,000 before it. P3-013 (lighter records) moves it past 10,000 in the simulator | Active, bounded by the soft caps; **the number is a simulation** |
 | The edge does not hold the board for three seconds in production | Every phone pays the full render again — the pre-split bill, not an outage | Mechanism verified live on `/api/img`; the short TTL is unverified until the deploy. Watch `cache-status`/`age` on `/api/board` first thing | **Open until the deploy** |
 | The personal call bills more than the ~50 ms estimated | The split saves fewer credits than the simulator says | Read the function log after the first gig on the new endpoints | Open |
-| One clip watched a lot costs more than thirty gigs | Bandwidth is the only line item that can run away | The 75MB cap and the trim screen; R2 when it matters | Active, watched |
+| One clip watched a lot costs more than thirty gigs | Bandwidth is the only line item that can run away | The 75MB cap and the trim screen; clip bytes on R2 (no egress charge) once `claude/r2-clips` is on `main` — pre-R2 clips still bill Netlify egress until they leave | Mitigated in worktree 2026-09-11, pending deploy |
+| **A 75MB clip may not reach R2 inside the function's budget** | The upload falls back to Blobs (or fails with "try again"); the room is unaffected | PUT gives up at 8s; the first real large upload after deploy measures it; S3 multipart from the piece path is the fallback design | **Unmeasured** |
+| **Clip playback through the 302 on a real iPhone** | A clip on R2 does not play on the phones in a bar; voting unaffected | Verified in the suite that the Range survives to the far side of the link; not on a device | **Unmeasured** |
 
 ---
 

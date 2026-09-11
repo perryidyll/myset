@@ -1,4 +1,5 @@
 import { store, readDoc, casDoc } from './_lib.mjs';
+import { r2Enabled, r2Put, r2Head, r2Get, r2Delete, r2PresignGet } from './_r2.mjs';
 
 /* SHORT CLIPS ON A COMMUNITY POST — thirty seconds of the room, from a phone.
 
@@ -29,7 +30,7 @@ import { store, readDoc, casDoc } from './_lib.mjs';
    slice; getting it wrong is a black box on every iPhone in the room, which is
    most of them.
 
-   ORPHANS. A clip whose post is never written would sit in Blobs for ever, and
+   ORPHANS. A clip whose post is never written would sit in the store for ever, and
    `list()` is banned (INVARIANT 1), so nothing could ever find it. `vidpend_<owner>`
    is an append-only note of clips uploaded but not yet attached; addPost removes
    the entry, and the cron drops anything older than PENDING_TTL. */
@@ -66,7 +67,13 @@ import { store, readDoc, casDoc } from './_lib.mjs';
    clip can cost more than two hundred gigs. If clips take off, moving the BYTES
    (not the app) to a store with no egress charge is the single biggest saving
    available anywhere in MySet — see docs/sessions/2026-09-06-clips-as-they-are.md.
-   That move is what makes a bigger number here free rather than expensive. */
+   That move is what makes a bigger number here free rather than expensive.
+
+   THE MOVE HAPPENED, 2026-09-11. The bytes go to Cloudflare R2 (`_r2.mjs`), which
+   charges nothing to send them out, and `/api/vid` hands the phone a signed link
+   rather than the bytes. The table above is what a clip costs while R2 is off —
+   the four `R2_*` variables missing, or R2 refusing an upload — and for every
+   clip uploaded before the move, which stays in Blobs until it leaves. */
 export const MAX_VIDEO_BYTES = 75 * 1024 * 1024;
 /* Comfortably under Netlify's ~6MB request body, with room for headers. */
 export const CHUNK_BYTES = 4 * 1024 * 1024;
@@ -78,7 +85,11 @@ export const PEND = (owner) => `vidpend_${owner}`;
    `delqueue` in _account.mjs — a small global the cron drains one owner a ring,
    never read by the audience poll. */
 export const VIDQ = 'vidqueue';
-const KEY = (owner, clip) => `vid_${owner}_${clip}`;
+/* The one spelling of a clip's key, in both stores. `_account.mjs` and
+   `_venueaccount.mjs` build their delete lists with it. */
+export const vidKey = (owner, clip) => `vid_${owner}_${clip}`;
+const KEY = vidKey;
+const VID_KEY = /^vid_(.+)_(k[a-z0-9]{10})$/;
 /* THE PIECES OF AN UPLOAD IN FLIGHT, keyed by the CLIP id rather than by an
    upload id of their own. That is the whole trick: the clip id is minted and
    noted as pending before the first byte arrives, so an abandoned upload is
@@ -214,8 +225,42 @@ export function decodeVideoDataUrl(dataUrl) {
   return checkVideo(bytes);
 }
 
+/* WHERE THE BYTES LIVE (2026-09-11). A clip's bytes go to Cloudflare R2 when the
+   four `R2_*` variables are set, and to Blobs when they are not or when R2 refuses.
+   Everything ELSE about a clip — its id, the poster, the pending list, the post
+   that names it — is unchanged and stays in Blobs. The same key is used in both
+   stores, so a clip is found by computing its key and asking, never by listing.
+
+   READ R2 FIRST, THEN BLOBS. Clips uploaded before this change are in Blobs and
+   stay there; they keep serving exactly as before. Nothing is copied in bulk
+   (`list()` is banned, INVARIANT 1, and a copy that half-fails is worse than none)
+   — see docs/sessions/2026-09-11-clips-to-r2.md for the migration note.
+
+   AND EVERY R2 FAILURE DEGRADES. An upload that R2 refuses lands in Blobs, which
+   is where it would have gone anyway; a serve that cannot reach R2 tries Blobs;
+   nothing on this path can stop the room voting. The failure is logged (0fb) so it
+   is not silent, and the log never carries a key or a signed URL. */
+/* Once a minute per instance per kind of failure. During an outage every
+   uncached /api/vid would otherwise add a CAS write on the hourly error document
+   to a path that is already waiting on a timed-out HEAD; the first row says what
+   is wrong, the next hundred say it again. */
+const quiet = new Map();
+const logR2 = async (where, e) => {
+  const now = Date.now();
+  const next = quiet.get(where) || 0;
+  console.error(`[${where}]`, (e && e.message) || e);
+  if (now < next) return;
+  quiet.set(where, now + 60e3);
+  try { const { logErr } = await import('./_errlog.mjs'); await logErr(where, e); } catch { /* console line already went */ }
+};
+
 export async function putClip(owner, clip, bytes, type) {
+  if (r2Enabled()) {
+    try { await r2Put(KEY(owner, clip), bytes, type); return 'r2'; }
+    catch (e) { await logR2('r2.put', e); }
+  }
   await store().set(KEY(owner, clip), bytes, { metadata: { type, n: bytes.length } });
+  return 'blobs';
 }
 
 /**
@@ -224,10 +269,18 @@ export async function putClip(owner, clip, bytes, type) {
  * A clip id is minted once and never reused, and the bytes behind it never change —
  * so SERVING one has nothing to be consistent about, and a strong read is a slower
  * trip for no benefit on the one path a person is sitting and waiting on. The
- * existence check inside addPost is the exception: it runs seconds after the upload
- * and has to see a write that has only just landed, so it asks for strong.
+ * existence check that runs seconds after an upload is `hasClip` below, which asks
+ * Blobs for strong; `strong` here is kept for a caller that wants the bytes that
+ * fresh (none in production today). R2 is strongly consistent on its own. `r2:false`
+ * skips R2 altogether — for the caller that has just asked it (`/api/vid`) and must
+ * not wait on it twice. In production the R2 half of this function has no caller
+ * either: `/api/vid` redirects rather than reading; the suite reads back through it.
  */
-export async function getClip(owner, clip, { strong = false } = {}) {
+export async function getClip(owner, clip, { strong = false, r2 = true } = {}) {
+  if (r2 && r2Enabled()) {
+    try { const got = await r2Get(KEY(owner, clip)); if (got) return got; }
+    catch (e) { await logR2('r2.get', e); }
+  }
   try {
     const r = await store().getWithMetadata(KEY(owner, clip),
       { type: 'arrayBuffer', ...(strong ? { consistency: 'strong' } : {}) });
@@ -236,7 +289,56 @@ export async function getClip(owner, clip, { strong = false } = {}) {
   } catch { return null; }
 }
 
+/** Does the clip exist, wherever it is. What addPost asks before it will let a
+    post name a clip (INVARIANT 0dq) — one HEAD rather than 75MB pulled through
+    the function to answer yes. */
+export async function hasClip(owner, clip) {
+  if (r2Enabled()) {
+    try { if (await r2Head(KEY(owner, clip))) return true; }
+    catch (e) { await logR2('r2.head', e); }
+  }
+  try {
+    const r = await store().getWithMetadata(KEY(owner, clip), { type: 'arrayBuffer', consistency: 'strong' });
+    return !!(r && r.data);
+  } catch { return false; }
+}
+
+/** A signed, short-lived URL for the clip's bytes on R2 — or null, which means
+    "serve it from Blobs the old way" (the clip predates R2, or R2 could not be
+    asked). `/api/vid` answers this with a 302. Never log the result: it is a key. */
+export async function clipUrl(owner, clip, now = Date.now()) {
+  if (!r2Enabled()) return null;
+  try { return (await r2Head(KEY(owner, clip))) ? r2PresignGet(KEY(owner, clip), now) : null; }
+  catch (e) { await logR2('r2.head', e); return null; }
+}
+
+/** Every `vid_` key in a list, deleted from R2. Blobs deletion is the caller's
+    (deleteArtist / deleteVenue walk their key lists with `store().delete`); this
+    is the other half, so leaving MySet takes the clip bytes with it wherever they
+    are. Best effort, one owner at a time, never throws. */
+export async function dropClipKeys(keys) {
+  if (!r2Enabled()) return 0;
+  let gone = 0;
+  for (const k of keys) {
+    const m = VID_KEY.exec(k);
+    if (!m) continue;
+    try { await r2Delete(k); gone++; }
+    catch (e) { await logR2('r2.delete', e); await notePending(m[1], m[2]); }
+  }
+  return gone;
+}
+
+/** Returns false if the R2 half could not be done. A DELETE R2 refuses is not
+    forgotten: the clip goes back on the pending list, so the two-hour sweep — which
+    reads the feed first and finds no post naming it — tries again. Without that a
+    hide during an outage would leave 75MB on R2 that nothing could ever find
+    (`list()` is banned, INVARIANT 1). */
 export async function dropClip(owner, clip) {
+  let done = true;
+  if (r2Enabled()) {
+    try { await r2Delete(KEY(owner, clip)); }
+    catch (e) { done = false; await logR2('r2.delete', e); await notePending(owner, clip); }
+  }
   try { await store().delete(KEY(owner, clip)); } catch { /* already gone */ }
   try { const { dropImage } = await import('./_img.mjs'); await dropImage(owner, clip); } catch { /* no poster */ }
   /* AND ANY PIECES THAT NEVER BECAME A CLIP. An upload abandoned halfway leaves
@@ -247,6 +349,7 @@ export async function dropClip(owner, clip) {
     const up = await readUpload(owner, clip);
     if (up && up.parts > 0) await dropUpload(owner, clip, up.parts);
   } catch { /* nothing in flight */ }
+  return done;
 }
 
 /* ---------- the pending list, so nothing can be orphaned ---------- */
@@ -301,12 +404,16 @@ export async function sweepQueue(now = Date.now(), limit = 1) {
   let gone = 0;
   for (const [owner] of rows) {
     try { gone += await sweepPending(owner, now); } catch (e) { console.error('vid sweep', owner, e && e.message); }
-    /* Off the queue either way. An owner with a clip that is not yet due gets put
-       back the next time one is uploaded, and a clip that IS due has just been
-       dealt with — so a stuck row can never hold the queue. */
+    /* Off the queue once nothing is pending; to the BACK of it otherwise. A clip
+       that is not yet due, or one whose R2 delete was refused and re-noted, gets
+       another visit next time round without waiting for a fresh upload from the
+       same owner — and a stuck row still cannot hold the queue, because it moves. */
+    let left = 0;
+    try { left = Object.keys((await readPending(owner)).by).length; } catch { left = 0; }
     await casDoc(VIDQ, () => ({ v: 1, by: {} }), (d) => {
-      if (!d.by || !d.by[owner]) return false;
-      delete d.by[owner]; return true;
+      d.by ||= {};
+      if (!left) { if (!d.by[owner]) return false; delete d.by[owner]; return true; }
+      d.by[owner] = now; return true;
     }).catch(() => {});
   }
   return { swept: rows.length, deleted: gone };
@@ -320,7 +427,12 @@ export async function sweepPending(owner, now = Date.now()) {
   const claimed = new Set((await readPosts(owner)).list.map((p) => p && p.clip).filter(Boolean));
   let gone = 0;
   for (const clip of due) {
-    if (!claimed.has(clip)) { await dropClip(owner, clip); gone++; }
+    if (!claimed.has(clip)) {
+      /* A drop R2 refused has just re-noted the clip with a fresh timestamp; leave
+         that note alone so the next ring tries again. */
+      if (!(await dropClip(owner, clip))) continue;
+      gone++;
+    }
     await clearPending(owner, clip);
   }
   return gone;

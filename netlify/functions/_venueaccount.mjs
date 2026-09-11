@@ -2,7 +2,7 @@ import { store, readDoc, casDoc } from './_lib.mjs';
 import { readVenues, mutateVenues, getVenueProfile } from './_venues.mjs';
 import { readEvents } from './_events.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
-import { readPending } from './_video.mjs';
+import { readPending, dropClipKeys, vidKey } from './_video.mjs';
 
 /* A VENUE'S ACCOUNT — take it with you, or leave.
 
@@ -55,8 +55,8 @@ export async function keysForVenue(vid) {
   for (const p of posts.list || []) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(vid, `${p.id}_${i}`));
   /* Clips: the ones a post claims AND the ones still waiting to be claimed, or a
      venue that left would leave 3MB behind per unattached upload for ever. */
-  for (const p of posts.list || []) if (p && p.clip) { keys.push(`vid_${o}_${p.clip}`); keys.push(IMG(vid, p.clip)); }
-  for (const c of Object.keys(pend.by || {})) { keys.push(`vid_${o}_${c}`); keys.push(IMG(vid, c)); }
+  for (const p of posts.list || []) if (p && p.clip) { keys.push(vidKey(o, p.clip)); keys.push(IMG(vid, p.clip)); }
+  for (const c of Object.keys(pend.by || {})) { keys.push(vidKey(o, c)); keys.push(IMG(vid, c)); }
   return [...new Set(keys)];
 }
 
@@ -74,6 +74,8 @@ export async function deleteVenue(vid) {
   const keys = await keysForVenue(vid);
   let gone = 0;
   for (const k of keys) { try { await store().delete(k); gone++; } catch {} }
+  /* Clip bytes live on R2 when it is on (see _video.mjs); the same keys, the other store. */
+  await dropClipKeys(keys);
   // the registry rows go LAST, so a token presented mid-delete finds nothing to act on
   await mutateVenues((reg) => {
     const me = reg.byId[vid];
