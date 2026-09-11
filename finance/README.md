@@ -10,7 +10,10 @@ Stripe take, and what is left. Built 2026-09-05.
 | `actuals.json` | The latest real-show numbers, written by `tools/actuals.py --write`. Paste its contents into the dashboard's **Real shows** panel and switch on "Use real shows". |
 | `marks.json` | Bandwidth readings taken with `tools/actuals.py --mark`, before and after each gig; the script solves the polls per phone-hour out of them. |
 | `model-test.mjs` | The engine's test suite (`node finance/model-test.mjs`). |
-| `../tools/actuals.py` | Pulls every archived night out of production (read-only, via the signed-in Netlify CLI), keeps only nights that actually happened (the rules are at the top of the file), records bandwidth marks, and prints the JSON the dashboard understands. |
+| `fixtures/2026-09-11/` | A read-only snapshot of every archived night, the calendar and the fan requests as of 11 Sep 2026 (nothing secret) — what `tools/actuals-test.py` runs the night rules against. |
+| `reports/` | The plain-language reports: `2026-09-11-gig-week-one.html`, the first gig week. |
+| `../tools/actuals.py` | Pulls every archived night out of production (read-only, via the signed-in Netlify CLI), keeps only nights that line up with a gig on the artist's published calendar (the rules are at the top of the file), records bandwidth marks, and prints the JSON the dashboard understands. |
+| `../tools/actuals-test.py` | Offline tests of those rules against the fixtures, plus the bandwidth solver on synthetic marks. |
 | `../docs/sessions/2026-09-05-money-model.md` | The session record: what was asked, what was built, what the research panel found, what is still open. |
 
 ## How the model works, in one paragraph
@@ -40,6 +43,17 @@ MySet's own charges, Express fees, fixed costs) beside them.
 - **Guessed** (the dials): artists, plan mix, gigs, room size, what a room spends,
   featured share, fixed costs. Replace them with real numbers as they arrive.
 
+## What the first gig week changed (11 Sep 2026)
+
+Five real nights (30 Aug; 6, 7, 8, 9 Sep) replaced the one-night seed: 11 phones a
+night, 2.74 h, 2.35 votes + requests per phone, 216 deploys a month. Room money is
+still the single $3 pack from 30 Aug — card payments were down until Tue 8 Sep
+evening, and a bug in the archive's Stripe call (fixed that day, INVARIANT 0fc) hid
+every night's money regardless. The page opens on the real nights unless you switch
+them off. A **profile clips watched per gig** dial was added (a guess, 0.5) because
+three ~75 MB clips, not polls, were most of the bandwidth. Full record:
+`../docs/sessions/2026-09-11-gig-week-one.md`; the report: `reports/`.
+
 ## Keeping it honest as real shows happen
 
 Three commands, all read-only against production:
@@ -49,7 +63,8 @@ cd ~/Docs/MySet && python3 tools/actuals.py --mark "before Sat gig"
 ```
 
 Run that the evening **before** a gig and again the morning **after** it (with a
-different label). It records Netlify's account-wide bandwidth counter in
+different label — and `--studio-min N --clip-views 0` on the AFTER mark: one view of a
+posted clip is ~75 MB, thirty thousand polls' worth, so say how many there were). It records Netlify's account-wide bandwidth counter in
 `finance/marks.json`. Every audience poll is 2,530 bytes on the wire, so the bytes a
 night adds, minus what the Studio tab / page loads / votes cost, is the poll count —
 the one number the server projection hangs on, measured instead of guessed. Take two

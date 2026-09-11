@@ -32,7 +32,16 @@ export const __resetStripe = () => {
   state.links.length = 0; state.calls.length = 0;
   state.nextAcct = 1; state.nextSession = 1; state.nextCus = 1; state.nextPrice = 1; state.nextSub = 1; state.nextProd = 1;
 };
-const note = (method, args, opts) => state.calls.push({ method, args, opts: opts || {} });
+/* The real library rejects an EMPTY options object on anything but `retrieve`
+   ("Stripe: Unknown arguments ([object Object])", client-side) — the bug that
+   archived every night of 2–11 Sep 2026 as 'stripe-unreachable'. A stub that
+   swallowed `{}` let it through 50 tests; this one throws exactly as stripe-node does. */
+const note = (method, args, opts) => {
+  if (opts && typeof opts === 'object' && !Object.keys(opts).length && !/\.retrieve$/.test(method)) {
+    throw new Error('Stripe: Unknown arguments ([object Object]). Did you mean to pass an options object? See https://github.com/stripe/stripe-node/wiki/Passing-Options.');
+  }
+  state.calls.push({ method, args, opts: opts || {} });
+};
 const NOW = () => Math.floor(Date.now() / 1000);
 
 export default class Stripe {

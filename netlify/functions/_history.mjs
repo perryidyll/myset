@@ -37,13 +37,13 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
        client, and a throw there escaped this function entirely, straight past
        archiveShow's own await and into an empty catch in _lifecycle. A payments
        hiccup deleted a whole gig from history and said nothing. */
-    const { stripeFor } = await import('./_connect.mjs');
+    const { stripeFor, scope } = await import('./_connect.mjs');
     const { stripe: scoped, opts: sOpts } = await stripeFor(aid);
     const stripe = scoped || new Stripe(key);
     for (let page = 0; page < 10; page++) {
       const r = await stripe.checkout.sessions.list({
         limit: 100, created: { gte, lte }, ...(after ? { starting_after: after } : {}),
-      }, sOpts);
+      }, ...scope(sOpts));
       for (const s of r.data || []) {
         if (s.payment_status !== 'paid') continue;
         const md = s.metadata || {};

@@ -1,4 +1,5 @@
 import { readDoc, casDoc, DEFAULT_ARTIST } from './_lib.mjs';
+import { scope } from './_connect.mjs';
 
 /* THE BOOKS.
 
@@ -154,7 +155,7 @@ async function pull(stripe, opts, gte, lte) {
     const r = await stripe.balanceTransactions.list({
       limit: 100, created: { gte: Math.floor(gte / 1000), lte: Math.floor(lte / 1000) },
       ...(after ? { starting_after: after } : {}),
-    }, opts);
+    }, ...scope(opts));
     const rows = r.data || [];
     out.push(...rows);
     if (!r.has_more || !rows.length) break;

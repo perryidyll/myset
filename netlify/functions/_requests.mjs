@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { casDoc, readDoc, KEY, creditsUsed, isUnlimited, mutateFan, mutateMeta,
          grantPaidSongVotes, cleanFanId, getShow } from './_lib.mjs';
 import { notify } from './_push.mjs';
+import { scope } from './_connect.mjs';
 
 /* "Play something that isn't on the list."
 
@@ -204,7 +205,7 @@ export async function authorizeRequestSession(aid, session, fallbackFan, stripe,
   if ((md.show && md.show !== show.showId)
       || (md.requestCost && Number(md.requestCost) !== Number((show.requests || {}).cost))) {
     if (pi.status === 'requires_capture') {
-      try { await stripe.paymentIntents.cancel(piId, {}, opts); } catch {}
+      try { await stripe.paymentIntents.cancel(piId, {}, ...scope(opts)); } catch {}
     }
     return { ok: false, error: 'That request window changed — nothing was charged. Please send it again.', status: 409 };
   }
@@ -216,7 +217,7 @@ export async function authorizeRequestSession(aid, session, fallbackFan, stripe,
   });
   if (!r.ok) {
     if (pi.status === 'requires_capture') {
-      try { await stripe.paymentIntents.cancel(piId, {}, opts); } catch {}
+      try { await stripe.paymentIntents.cancel(piId, {}, ...scope(opts)); } catch {}
     }
     return r;
   }
@@ -277,7 +278,7 @@ async function cancelPledge(aid, row) {
   if (stripe) {
     try {
       const pi = await stripe.paymentIntents.retrieve(row.paymentIntent, opts);
-      if (pi.status === 'requires_capture') await stripe.paymentIntents.cancel(row.paymentIntent, {}, opts);
+      if (pi.status === 'requires_capture') await stripe.paymentIntents.cancel(row.paymentIntent, {}, ...scope(opts));
       if (pi.status === 'canceled' || pi.status === 'requires_capture') state = 'cancelled';
       if (pi.status === 'succeeded') state = 'captured';
     } catch {}

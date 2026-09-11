@@ -2617,3 +2617,63 @@ uses.
 `test/trim.mjs` 26 assertions (fixture sample *n* = a run of byte *n*, so trims are
 checked at the byte). `INVARIANTS.md` 0ew–0ez.
 `docs/sessions/2026-09-06-clips-as-they-are.md`.
+
+---
+
+# SESSION LOG — 2026-09-11 (gig week one: the first real data, and the money model)
+
+The user played six published gigs (4–10 Sep) with the app on, testing by hand in
+between, and asked for the data analysed (only the shows that lined up with published
+gigs), an explanation of how the data is stored, and the money model updated.
+
+**Read, read-only:** every archived night, the live show, the calendar, the scheduler
+index, ledger, registry, requests; Netlify's bandwidth counter (new mark 11 Sep) and
+deploy list; the pricing page. Six analysis lenses, a skeptic per lens, a reconciler
+(13 agents). Twelve refutations, all replaced with recomputed figures.
+
+**The week:** 4 real nights (Sun Sand & Tan 8 phones · Mon Ugly Duckling 14 · Tue
+Crystal Day 7 · Wed Anantara 18), 47 phones, 95 votes, 45 song starts, 4 requests.
+4–5 phones vote at once whatever the room size, so votes per phone fall as rooms grow;
+voting front-loads; ≥29% of votes never become a play; participation ≥40% (floor).
+The app was used at 5 of 11 published gigs; Thu 10 Sep ran 20 min with nobody.
+
+**Money — two corrections to what I had believed.** (1) The Stripe key was REPLACED,
+not removed: dead from soon after 30 Aug to Tue 8 Sep 21:57 local (`d329a90`). Sun/Mon
+rooms saw a dead button; Wed's 18-phone room had a working checkout all night — takings
+unread. (2) Every archive still said `stripe-unreachable` because `_history.mjs` passed
+`stripeFor()`'s empty `{}` to `sessions.list`, which stripe-node rejects client-side.
+Same shape in `revenue.mjs`, `_ledger.mjs`, three `cancel` sites in `_requests.mjs`,
+and `pay.mjs` (founder checkout without an attempt id). **Fixed:** `scope(opts)` in
+`_connect.mjs`; `test/stripe-fake.mjs` now throws exactly as the library does (it had
+swallowed `{}` — that is why 50 tests missed it); INVARIANT 0fc. Full suite 38 files,
+0 failures. Room money on the model stays $0.375 (one night, per VOTER — only 40–60% of
+phones vote, so per phone it may be $0.15–0.25; said on the page).
+
+**Cost:** deploys are the Netlify bill — 24 since 8 Sep = 360 credits ≈ $3.60 vs 7¢ of
+bandwidth; 216 in 30 days ≈ $34/month; the four gigs ≈ 18¢. Bandwidth is the three
+~75 MB profile clips (1–3 views explain the counter), not polls. Polls per phone-hour
+still unmeasured; Sun/Mon can never be (no mark before the 8 Sep reset).
+
+**Tracker (`tools/actuals.py`):** counts a night only when it lines up with a
+published gig (`ev_<artist>`, ±90 min before the slot to its end); hours = the record
+unless it overran the slot, then the later of the slot and the last song; two records
+in one slot merge; silent published gigs listed; `interactions` (votes + requests per
+phone) feeds the model; `--clip-views N` on a mark. `tools/actuals-test.py` (25 checks)
+on `finance/fixtures/2026-09-11`. INVARIANT 0ef rewritten.
+
+**Model (`finance/model.html`):** real shows now set the actions-per-person dial too;
+new `clipViews` (0.5 a gig, a labelled guess) × `clipBytes` (75 MB) line; Benchmark
+preset reads the seed; first-ever load opens on the real nights; seed regenerated
+(5 nights: 11 phones, 2.74 h, 2.35, 216 deploys). Benchmark case: revenue $3,019 →
+$3,835, profit $1,378 → $2,165, break-even 212 → 148 artists — all of it "11 phones
+instead of 8 × the same $0.375". 53 model checks pass.
+
+**Report:** `finance/reports/2026-09-11-gig-week-one.html` (artifact "Gig Week One").
+Record: `docs/sessions/2026-09-11-gig-week-one.md`.
+
+**For the user:** end tonight's Seaflower show by hand; check Stripe for Wed 9 Sep;
+confirm ~360 deploy credits on Netlify › Billing; marks around Sunday with
+`--studio-min` and `--clip-views 0`; say yes/no to deleting ~102 dead keys and to a
+scheduled read-only backup dump. Noted, not fixed: `requested[]` over-counts
+vote-rounds since 7 Sep; every Start tap counts against the free cap (25 vs 15);
+archives lack startedBy/endedBy; `histidx` endedAt inflated on re-archive.

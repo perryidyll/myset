@@ -17,7 +17,7 @@ for (const [fans,hours,look,inter,py] of targets) { const js = (ENGINE.pollsPerP
 ok('worst error across 8 cases ≤ 4%: ' + (worst*100).toFixed(1) + '%', worst <= 0.04);
 
 console.log('ONE GIG, audit shape (20 phones, 3 h, no Studio, no extra pages)');
-const pa = { ...P0, studioOn: false, extraViews: 0, interactions: 2.5, changeShare: 100, pollMs: 155, pollMsPerFan: 0 };
+const pa = { ...P0, studioOn: false, extraViews: 0, clipViews: 0, interactions: 2.5, changeShare: 100, pollMs: 155, pollMsPerFan: 0 };
 const one = ENGINE.gigTraffic(pa, 20, 3);
 const cr = ENGINE.netlifyCredits(one, 0, HOSTS0.netlifyPro);
 console.log('   polls', Math.round(one.polls), 'requests', Math.round(one.requests), 'MB', (one.bytes/1e6).toFixed(1), 'fn-min', (one.fnMs/60000).toFixed(1), 'credits', cr.total.toFixed(3), '$', (cr.total*10/1500).toFixed(4));
@@ -105,7 +105,7 @@ ok('every tier reports a net figure', [tf, tp, tr].every(x => isFinite(x.net)));
 ok('the Plus crossover is the subscription divided by the cut it gives up', isFinite(R.plusCrossover) && R.plusCrossover > 0);
 
 console.log('SCALE');
-const big = ENGINE.month({ ...P0, studioOn: false, extraViews: 0, changeShare: 100, plusPct: 100, proPct: 0, gigsPaid: 20, deploys: 0, compedPct: 0, pollMs: 155, pollMsPerFan: 0, cronRequests: 0 }, 10000);
+const big = ENGINE.month({ ...P0, studioOn: false, extraViews: 0, clipViews: 0, changeShare: 100, plusPct: 100, proPct: 0, gigsPaid: 20, deploys: 0, compedPct: 0, pollMs: 155, pollMsPerFan: 0, cronRequests: 0 }, 10000);
 console.log('   10,000 artists × 20 gigs: server $' + big.bill.usd.toFixed(0) + ' on ' + big.bill.plan + ' (audit: $5,597 at Pro rates)');
 ok('10k-artist server bill within 10% of the audit', Math.abs(big.bill.usd - 5597) / 5597 < 0.10, big.bill.usd);
 const kv = ENGINE.hostBill('cfKv', HOSTS0, big.T, 0), doo = ENGINE.hostBill('cfDo', HOSTS0, big.T, 0);
@@ -152,13 +152,27 @@ ok('actuals.py byte constants match the model defaults', pyBytes.poll === P0.pol
 ok('actuals.py Studio tick and extra-views match the model', /STUDIO_POLLS_PER_HOUR = 3600 \/ 4\b/.test(py) && +py.match(/EXTRA_VIEWS_PER_PHONE = ([\d.]+)/)[1] === P0.extraViews);
 /* the bandwidth arithmetic, done the model's way: a night's bytes minus everything that is not a poll, ÷ bytes per poll, gives the polls back */
 const nt = ENGINE.gigTraffic(P0, P0.fans, P0.hours);
-const other = nt.studioPolls * P0.studioBytes + P0.fans * P0.pageBytes + nt.writes * P0.writeBytes + nt.extraViews * P0.viewBytes;
-ok('bytes − (Studio + page loads + votes + views) ÷ 2,530 = the polls (the method the marks use)', Math.abs((nt.bytes - other) / P0.pollBytes - nt.polls) < 1e-6);
+const other = nt.studioPolls * P0.studioBytes + P0.fans * P0.pageBytes + nt.writes * P0.writeBytes + nt.extraViews * P0.viewBytes + nt.clipBytes;
+ok('bytes − (Studio + page loads + votes + views + clip views) ÷ 2,530 = the polls (the method the marks use)', Math.abs((nt.bytes - other) / P0.pollBytes - nt.polls) < 1e-6);
 console.log('   at the default gig the Studio tab is ' + Math.round(100 * nt.studioPolls * P0.studioBytes / nt.bytes) + '% of the bytes — leave it open the whole night or the solve is off by that much');
 const tierSum = R.perTier.reduce((n, t, i) => n + t.net * [R.nFree, R.nPlus, R.nPro][i], 0);
 ok('per-tier nets summed over the platform equal revenue − server − Stripe (venues aside)', Math.abs(tierSum - (R.revenue - R.bill.usd - R.stripe)) < 1.5, [tierSum, R.revenue - R.bill.usd - R.stripe]);
 ok('actuals.py assumes the same Studio share as the model when no minutes were recorded', +py.match(/STUDIO_SHARE = ([\d.]+)/)[1] === P0.studioShare / 100);
 const bookFree = ENGINE.showSizes(P0)[2].bookingAt(0.5);
 ok('the booking price covers Stripe’s card fee on itself (grossed up, not net)', bookFree > ENGINE.showSizes(P0)[2].server / 0.5 - ENGINE.showSizes(P0)[2].mysetRev, bookFree);
+console.log('REAL SHOWS reach the dials');
+/* applyActuals is page code, not engine code, but it is the one place real numbers become dials — so it is tested like the engine */
+const apText = html.match(/function applyActuals\(\) \{[\s\S]*?\n\}/)[0];
+const applied = new Function('P', 'ACT', 'ENGINE', 'let PRE_ACT = null; ' + apText + '; applyActuals(); return P;')(
+  withDefaultsTest({ useActuals: true }), { people: 11, hours: 2.51, interactions: 2.35, roomPerHead: 0.375, deploys: 150 }, ENGINE);
+ok('people → phones per gig, hours → length, interactions → actions per person, per-head → every room dial, deploys → deploys',
+  applied.fans === 11 && applied.hours === 2.51 && applied.interactions === 2.35 && applied.roomFree === 0.375 && applied.roomPlus === 0.375 && applied.roomPro === 0.375 && applied.deploys === 150, JSON.stringify([applied.fans, applied.hours, applied.interactions, applied.roomFree, applied.deploys]));
+const seed = new Function('return ' + html.match(/const SEED_ACT = (\{[\s\S]*?\});\n/)[1])();
+const file = JSON.parse(fs.readFileSync(new URL('./actuals.json', import.meta.url), 'utf8'));
+ok('the seed baked into the page equals finance/actuals.json (people, hours, interactions, room, deploys, shows, asOf)',
+  ['shows', 'people', 'hours', 'interactions', 'roomPerHead', 'deploys', 'asOf'].every((k) => seed[k] === file[k]),
+  JSON.stringify(['shows', 'people', 'hours', 'interactions', 'roomPerHead', 'deploys', 'asOf'].map((k) => [k, seed[k], file[k]])));
+ok('the tracker counts a night only on the published calendar, anchors its hours to the slot or the last song, merges split nights and subtracts clip views from a mark', /def gig_for\(/.test(py) && /max\(gig\['slotHours'\], last_act/.test(py) && /def merge_split_nights/.test(py) && /clipViews/.test(py));
+ok('actuals.py bytes per clip view matches the model', +py.match(/'clip': (\d+)/)[1] === P0.clipBytes);
 console.log(fails ? `\n${fails} FAILED` : '\nall passed');
 process.exit(fails ? 1 : 0);

@@ -114,6 +114,16 @@ export async function stripeFor(aid) {
   return { stripe, opts: {}, acct: '' };
 }
 
+/** The options object, spread into a Stripe call — or NOTHING when it is empty.
+ *  stripe-node treats a trailing object as options only if it carries a key it
+ *  recognises; an EMPTY one is "Stripe: Unknown arguments ([object Object])",
+ *  thrown client-side before any request. So for an artist on the platform account
+ *  (no `stripeAccount`) every list / create / cancel that was handed `opts` threw —
+ *  which is how every night from 2 Sep to 11 Sep 2026 was archived as
+ *  'stripe-unreachable' with a working key. `retrieve` tolerates it; nothing else
+ *  does. Use: `stripe.checkout.sessions.list(params, ...scope(opts))`. */
+export const scope = (opts) => (opts && Object.keys(opts).length ? [opts] : []);
+
 /** Which artist does a Connect webhook belong to? `event.account` is the only clue. */
 export async function artistForAccount(acct) {
   if (!acct) return '';

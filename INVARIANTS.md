@@ -1759,13 +1759,21 @@ If you are about to violate one, stop and say so rather than working around it.
     it was open all night; a night with the tab closed reads as more polls than
     there were.
 
-0ef. **A night is evidence only if the rules at the top of `tools/actuals.py` say
-    so, and every refusal is printed with its reason.** Nobody there; one phone and
-    no votes; ten or more phones ALL on one network (the load-test script — the
-    31/44/26-"person" rooms of 31 Aug were this, not people; the earlier audit that
-    called them real rooms was wrong); shorter than 30 minutes; longer than 12
-    hours (never ended). A night whose Stripe lookup failed counts for people and
-    hours but not for money. Weaken a rule and a test show moves a dial.
+0ef. **A night is evidence only if it lines up with a gig the artist PUBLISHED, and
+    every refusal is printed with its reason.** The founder, 11 Sep: shows started at
+    random hours or running inordinate lengths were him testing by hand. So
+    `tools/actuals.py` reads the artist's calendar (`ev_<artist>`, the document the
+    scheduler reads) and counts a night only if it started on a gig day between 90
+    minutes before the slot and its end — then nobody there / one phone and no votes
+    (listed as `onCalendarUnused`, not averaged) / ten-plus phones on ONE network in
+    under 30 minutes (the load-test script). Length alone is never the test marker:
+    a real gig legitimately leaves a 6-hour record because the show ends itself
+    three hours after the slot (Wed 9 Sep). A night's hours are the record unless it
+    overran the slot, then the later of the slot and the last song started; two
+    records inside one slot merge; published gigs with no record are listed as
+    `silentNights`. `tools/actuals-test.py` holds the 11 Sep snapshot
+    (`finance/fixtures/2026-09-11`) and fails if the rules move. A night whose
+    Stripe lookup failed counts for people and hours but not for money.
 
 0eg. **Nothing on the clip path may await something that can wait for ever, and
     `AudioContext.resume()` is that thing.** A phone only lets a page start making
@@ -2053,3 +2061,17 @@ If you are about to violate one, stop and say so rather than working around it.
     silence, with the console line as the fallback into Netlify's own 24-hour log. A
     bug report reads the last three of those keys — never `list()` (INVARIANT 1). No
     request body, no email, no secret is ever written into it. Decision `0029`.
+
+0fc. **A Stripe options object is passed only when it has something in it.**
+    stripe-node accepts a trailing object as *options* only if it carries a key it
+    knows (`stripeAccount`, `idempotencyKey`…); an EMPTY one is "Stripe: Unknown
+    arguments ([object Object])", thrown client-side before any request. `stripeFor`
+    returns `opts: {}` for an artist on the platform account — the founder — so every
+    `list`, `create` and `cancel` handed it threw, and every night from 2 to 11 Sep
+    2026 was archived as `stripe-unreachable` with a working key; the Studio's Money
+    tab and the books were blind the same way and a held request could not be
+    released. `scope(opts)` in `_connect.mjs` spreads the object or nothing:
+    `stripe.checkout.sessions.list(params, ...scope(opts))`. `retrieve` tolerates
+    `{}`; nothing else does, and `test/stripe-fake.mjs` now throws exactly as the
+    library does so the suite cannot let it back in. Session
+    `2026-09-11-gig-week-one.md`.

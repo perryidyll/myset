@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { json, bad, cleanFanId, getShow, publicArtist, sha,
          readFans, creditsUsed, isUnlimited } from './_lib.mjs';
 import { canTakeMoney } from './_pay.mjs';
-import { readConnect, connectUsable, feeCents } from './_connect.mjs';
+import { readConnect, connectUsable, feeCents, scope } from './_connect.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
 import { getProfile } from './_profile.mjs';
 import { PAYOUT_COUNTRIES } from './_connect.mjs';
@@ -274,7 +274,7 @@ const main = async (req) => {
       // MUST be a page that calls /api/confirm — vote.html and community.html redeem the session
       success_url: `${origin}${back}?paid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}${back}?cancelled=1`,
-    }, opts);
+    }, ...scope(opts));   // an older cached page sends no attempt: `{}` would be refused by the library, not by Stripe
     // the id goes back so the buyer's phone can re-try redemption if the
     // return trip fails (INVARIANT 5c)
     return json({ ok: true, url: session.url, id: session.id });

@@ -450,9 +450,13 @@ const ENGINE = (() => {
     const writes = p.interactions * fans;                       // vote / request / feedback… calls
     const studioPolls = p.studioOn ? hours * 3600 / 4 * (p.studioShare / 100) : 0;
     const extraViews = p.extraViews * fans;                     // profile / community / city feed
-    const requests = polls + writes + studioPolls + extraViews + fans * p.pageReqs;
+    /* a posted video clip is served whole to every viewer (edge-cached, so no function time, but every
+       byte is bandwidth): one view is ~75 MB, about a third of a whole gig's credits — the one line the
+       11 Sep bandwidth reading could not be explained without */
+    const clipViews = (p.clipViews || 0);
+    const requests = polls + writes + studioPolls + extraViews + fans * p.pageReqs + clipViews;
     const bytes = polls * p.pollBytes + writes * p.writeBytes + studioPolls * p.studioBytes
-                + extraViews * p.viewBytes + fans * p.pageBytes;
+                + extraViews * p.viewBytes + fans * p.pageBytes + clipViews * (p.clipBytes || 0);
     const fnMs = polls * pollMs + writes * p.writeMs + studioPolls * p.studioMs + extraViews * p.viewMs;
     /* the 3-second cache: with it the room of any size is one function call per 3 s */
     const cachedFnMs = fnMs - polls * pollMs + hours * 1200 * pollMs;
@@ -463,9 +467,9 @@ const ENGINE = (() => {
     const pollsPerSec = polls / (hours * 3600);
     const concurrent = pollsPerSec * pollMs / 1000;             // functions running at the same time, on average
     const readsPerSec = pollsPerSec * p.readsPerPoll;
-    return { perPhone, polls, writes, studioPolls, extraViews, requests, bytes, fnMs, cachedFnMs, reads, kvWrites, cpuMs, doGBs, pollMs, pollsPerSec, concurrent, readsPerSec, floorS };
+    return { perPhone, polls, writes, studioPolls, extraViews, clipViews, clipBytes: clipViews * (p.clipBytes || 0), requests, bytes, fnMs, cachedFnMs, reads, kvWrites, cpuMs, doGBs, pollMs, pollsPerSec, concurrent, readsPerSec, floorS };
   }
-  const zeroT = () => ({ perPhone: 0, polls: 0, writes: 0, studioPolls: 0, extraViews: 0, requests: 0, bytes: 0, fnMs: 0, cachedFnMs: 0, reads: 0, kvWrites: 0, cpuMs: 0, doGBs: 0, pollMs: 0, pollsPerSec: 0, concurrent: 0, readsPerSec: 0, floorS: 0 });
+  const zeroT = () => ({ perPhone: 0, polls: 0, writes: 0, studioPolls: 0, extraViews: 0, clipViews: 0, clipBytes: 0, requests: 0, bytes: 0, fnMs: 0, cachedFnMs: 0, reads: 0, kvWrites: 0, cpuMs: 0, doGBs: 0, pollMs: 0, pollsPerSec: 0, concurrent: 0, readsPerSec: 0, floorS: 0 });
   const addT = (a, b, k = 1) => { for (const key of Object.keys(a)) a[key] += (b[key] || 0) * k; return a; };
 
   /* ---------- Netlify plans (published 5 Sep 2026) ---------- */
@@ -819,7 +823,7 @@ const P0 = {
   v: 2,                       // schema: room money became $ per PERSON per gig at v2
   artists: 1000, plusPct: 30, proPct: 10, plusPrice: 10, proPrice: 20, compedPct: 8, venuePro: 0, venuePrice: 20,
   gigsFree: 3, freeCap: 4, gigsPaid: 8,
-  fans: 20, hours: 3, lookShare: 22, interactions: 2.5, changeShare: 90, installedPct: 15, extraViews: 0.5,
+  fans: 20, hours: 3, lookShare: 22, interactions: 2.5, changeShare: 90, installedPct: 15, extraViews: 0.5, clipViews: 0.5, clipBytes: 75000000,
   studioOn: true, studioShare: 60,
   pollBytes: 2530, pollMs: 120, pollMsPerFan: 0.006, readsPerPoll: 15, cpuMsPerPoll: 10,
   bigRoomOn: false, bigRoomFrom: 500, bigRoomFloor: 15,
@@ -841,7 +845,7 @@ const P0 = {
 };
 let P = JSON.parse(JSON.stringify(P0));
 let ACT = null;           // real-show numbers, when imported
-const SEED_ACT = { asOf: '2026-09-05', source: 'tools/actuals.py (seed)', shows: 1, people: 8, hours: 2.19, roomPerHead: 0.375, roomFree: null, roomPlus: null, roomPro: 0.375, deploys: 176, pollsPerPhoneHour: null, creditsPerShow: null, note: 'One countable night so far (30 Aug, Ugly Duckling): 8 voters, 21 votes, one $3 vote pack, 2.19 h — $0.375 a head, the only room-money figure MySet has ever observed. Not counted: a 4 Sep show with one phone and no votes, a 30 Aug show that ran 107.9 h because it was never ended, and three 31/44/26-phone bursts on 31 Aug that were all on one network for six minutes — the load-test script, not people. Deploys are account-wide, trailing 30 days (all five sites share the credit grant). Run tools/actuals.py for the latest.' };
+const SEED_ACT = {"asOf": "2026-09-11", "shows": 5, "people": 11.0, "hours": 2.74, "setHours": 1.92, "recordHours": 3.55, "votes": 23.2, "interactions": 2.35, "songs": 11.0, "nets": 7.0, "peakVoters": 5.4, "gigsOnCalendar": 11, "gigsUsed": 5, "gigsSilent": 5, "roomPerHead": 0.375, "roomFree": null, "roomPlus": null, "roomPro": 0.375, "deploys": 216, "pollsPerPhoneHour": null, "creditsPerShow": null, "source": "tools/actuals.py (seed)", "note": "Five nights on the published calendar where the room used the app — 30 Aug Sand & Tan, then 6 Sep Sand & Tan, 7 Sep Ugly Duckling, 8 Sep Crystal Day, 9 Sep Anantara: 11.0 phones a night on average (7–18; the 30 Aug figure is voters, phones were not counted then), 23.2 votes, 2.35 votes + requests per phone, 11.0 song starts, 2.74 h (the record, or where the 3 h auto-end grace let it overrun the slot, the later of the slot and the last song; first song to last averaged 1.92 h). Room money is still the single $3 vote pack from 30 Aug — $0.375 per VOTER, and only 40–60% of a room's phones ever vote, so per phone it may be nearer $0.15–0.25. Card payments were dead from soon after 30 Aug until the evening of Tue 8 Sep (bad key, replaced); Wednesday's 18-phone room had a working checkout all night but its takings have not been read from Stripe yet, and until 11 Sep a bug in the archive's money lookup made every night say 'unknown' regardless. On the calendar but unused: 4 Sep Seaflower (one phone) and 10 Sep Crystal Day (started, ended after 20 min, nobody came); four more published gigs (31 Aug–3 Sep) were swallowed by one show left running 107.9 h. Ten hand-started tests at random hours and the 31 Aug load-test bursts do not count. Polls per phone-hour is still unmeasured — no night was bracketed by two bandwidth marks — and the 335.7 MB used 8–11 Sep was mostly three ~75 MB profile clips, not polls. Deploys are account-wide, trailing 30 days (216: a heavy shipping week, and at 15 credits each the whole Netlify bill). Run tools/actuals.py for the latest."};
 
 /* ───────────────────────────── dials spec ───────────────────────────── */
 const DIALS = [
@@ -862,9 +866,11 @@ const DIALS = [
   { key: 'fans', label: 'People per gig', unit: 'phones', min: 0, max: 1000, step: 1, real: 'people' },
   { key: 'hours', label: 'Length of a gig', unit: 'hours', min: 0.5, max: 12, step: 0.25, real: 'hours' },
   { key: 'lookShare', label: 'Screen on, MySet in front', unit: '% of the gig, in glances', min: 0, max: 100, step: 1, real: 'pollsPerPhoneHour' },
-  { key: 'interactions', label: 'Actions per person per gig', unit: 'votes, requests, likes…', min: 0, max: 30, step: 0.5 },
+  { key: 'interactions', label: 'Actions per person per gig', unit: 'votes, requests, likes…', min: 0, max: 30, step: 0.5, real: 'interactions' },
   { key: 'changeShare', label: 'Actions everyone notices', unit: '% that change the room’s tally', min: 0, max: 100, step: 5 },
   { key: 'extraViews', label: 'Other pages viewed per person', unit: 'profile, community, city feed', min: 0, max: 10, step: 0.5 },
+  { key: 'clipViews', label: 'Profile clips watched per gig', unit: 'full views of a posted video, whole room — a GUESS; 8–11 Sep fits 1–2.5 views over two gigs', min: 0, max: 50, step: 0.5 },
+  { key: 'clipBytes', label: 'Bytes per clip view', unit: 'on the wire (the three clips posted so far are 74–79 MB each)', min: 0, max: 200000000, step: 1000000 },
   { key: 'installedPct', label: 'Installed as an app', unit: '% of the room (no cost effect — see note)', min: 0, max: 100, step: 5 },
   { key: 'studioShare', label: 'Studio Live tab open', unit: '% of the gig (one device, polls every 4 s)', min: 0, max: 100, step: 5 },
   { group: 'Money from the room', help: 'Tips and vote packs are charged on the artist’s own Stripe account; MySet’s cut is the plan’s transaction fee. These are PER PERSON, so a bigger room earns more as well as costing more — the show-size panel uses the same rule. The only figure ever observed is $0.375 a head (30 Aug: $3.00 from 8 people), which is what real nights will fill in; the dials start at a rounder $0.40 until then. Raise them per tier when the nights say so.' },
@@ -1092,9 +1098,12 @@ function renderActuals() {
 function renderActSummary() {
   const s = $('#actSummary'); if (!s) return;
   if (!ACT) { s.textContent = 'No real numbers on file yet.'; return; }
-  const parts = [`${ACT.shows} show${ACT.shows === 1 ? '' : 's'} as of ${ACT.asOf}`];
-  if (ACT.people != null) parts.push(`${ACT.people} people/night`); if (ACT.hours != null) parts.push(`${ACT.hours} h`);
-  if (ACT.roomFree != null) parts.push(`$${ACT.roomFree}/night from the room`); if (ACT.deploys != null) parts.push(`${ACT.deploys} deploys/mo`);
+  const parts = [`${ACT.shows} show${ACT.shows === 1 ? '' : 's'}${ACT.gigsOnCalendar != null && ACT.gigsOnCalendar !== ACT.shows ? ` (the app was used at ${ACT.shows} of ${ACT.gigsOnCalendar} published gigs)` : ''} as of ${ACT.asOf}`];
+  if (ACT.people != null) parts.push(`${ACT.people} phones/night`); if (ACT.hours != null) parts.push(`${ACT.hours} h${ACT.setHours != null ? ` (${ACT.setHours} h first song to last)` : ''}`);
+  if (ACT.votes != null) parts.push(`${ACT.votes} votes/night`); if (ACT.interactions != null) parts.push(`${ACT.interactions} votes + requests per phone`);
+  if (ACT.songs != null) parts.push(`${ACT.songs} songs/night`);
+  if (ACT.roomPerHead != null) parts.push(`$${ACT.roomPerHead} per person from the room`); else if (ACT.roomFree != null) parts.push(`$${ACT.roomFree} per person from the room`);
+  if (ACT.deploys != null) parts.push(`${ACT.deploys} deploys/mo`);
   if (ACT.pollsPerPhoneHour != null) parts.push(`${ACT.pollsPerPhoneHour} polls/phone-hour`);
   /* Compared against the gig the DIALS describe, not the show-size editor's first row —
      which the user can retype to any size, silently changing what the check compares. */
@@ -1104,9 +1113,11 @@ function renderActSummary() {
 let PRE_ACT = null;             // the guesses, stashed while real numbers are in force
 function applyActuals() {
   if (!P.useActuals || !ACT) return;
-  if (!PRE_ACT) PRE_ACT = { fans: P.fans, hours: P.hours, roomFree: P.roomFree, roomPlus: P.roomPlus, roomPro: P.roomPro, deploys: P.deploys, lookShare: P.lookShare };
+  if (!PRE_ACT) PRE_ACT = { fans: P.fans, hours: P.hours, interactions: P.interactions, roomFree: P.roomFree, roomPlus: P.roomPlus, roomPro: P.roomPro, deploys: P.deploys, lookShare: P.lookShare };
   if (ACT.people != null) P.fans = ACT.people;
   if (ACT.hours != null) P.hours = ACT.hours;
+  /* votes + song requests per phone, measured — the one behaviour dial a night's record answers directly */
+  if (ACT.interactions != null) P.interactions = ACT.interactions;
   if (ACT.roomFree != null) P.roomFree = ACT.roomFree;
   if (ACT.roomPlus != null) P.roomPlus = ACT.roomPlus;
   if (ACT.roomPro != null) P.roomPro = ACT.roomPro;
@@ -1171,7 +1182,7 @@ function render() {
   $('#kpiWhat').textContent = `${fmt.int(P.artists)} artists, ${P.plusPct}% Plus, ${P.proPct}% Pro`;
   $('#kpiToday').textContent = fmt.int(P.startArtists);
   /* The three dials doing most of the work, named, with what nobody has observed yet. */
-  $('#kpiBand').innerHTML = `<b>What is carrying these numbers:</b> the plan mix (${P.plusPct}% Plus + ${P.proPct}% Pro = ${(P.plusPct + P.proPct)}% paying — published freemium medians are 2–8%), the room spending ${Math.min(P.roomFree, P.roomPlus, P.roomPro) === Math.max(P.roomFree, P.roomPlus, P.roomPro) ? '$' + fmt.num(P.roomFree, 2) : '$' + fmt.num(Math.min(P.roomFree, P.roomPlus, P.roomPro), 2) + '–$' + fmt.num(Math.max(P.roomFree, P.roomPlus, P.roomPro), 2)} a head (one night observed, at $0.375), and ${P.featPct}% of gigs promoted (never sold one). Nobody has paid for a plan yet. Press <b>Benchmark case</b> to see the same engine on published industry figures.`;
+  $('#kpiBand').innerHTML = `<b>What is carrying these numbers:</b> the plan mix (${P.plusPct}% Plus + ${P.proPct}% Pro = ${(P.plusPct + P.proPct)}% paying — published freemium medians are 2–8%), the room spending ${Math.min(P.roomFree, P.roomPlus, P.roomPro) === Math.max(P.roomFree, P.roomPlus, P.roomPro) ? '$' + fmt.num(P.roomFree, 2) : '$' + fmt.num(Math.min(P.roomFree, P.roomPlus, P.roomPro), 2) + '–$' + fmt.num(Math.max(P.roomFree, P.roomPlus, P.roomPro), 2)} a head (one night observed, at $0.375 per voter — and only 40–60% of a room's phones vote; five nights since had no readable takings), and ${P.featPct}% of gigs promoted (never sold one). Nobody has paid for a plan yet. Press <b>Benchmark case</b> to see the same engine on published industry figures.`;
   /* live copy: numbers the notes quote must be the numbers the page shows */
   const lg = $('#liveGig'); if (lg) { const c0 = ENGINE.netlifyCredits(R.one, 0, P.hosts.netlifyPro).total; lg.textContent = `${fmt.int(R.one.polls)} polls, ${fmt.num(c0, 1)} credits`; }
   const ld = $('#liveDo'); if (ld && sizes[0].onHost.cfDo > 0) ld.textContent = `about ${(sizes[0].onHost.netlifyPro / sizes[0].onHost.cfDo).toFixed(1)}×`;
@@ -1265,7 +1276,7 @@ function render() {
   const g = (n) => rows.push({ group: n }); const r = (name, val, unit, how, cls) => rows.push({ name, val, unit, how, cls });
   g('Artists'); r('Artists', fmt.int(R.artists), 'artists', 'the dial'); r('Free · Plus · Pro', `${fmt.int(R.nFree)} · ${fmt.int(R.nPlus)} · ${fmt.int(R.nPro)}`, 'artists', `artists × mix (${free}% · ${P.plusPct}% · ${P.proPct}%)`);
   g('Gigs'); r('Gigs by free artists', fmt.int(R.G.free), 'gigs / month', `free artists × min(${P.gigsFree} wanted, ${P.freeCap} cap)`); r('Nights the free cap refuses', fmt.int(R.gigsCapped), 'gigs / month', 'free artists × (wanted − cap) — a nudge toward Plus', R.gigsCapped > 0 ? 'neg' : ''); r('Gigs by paid artists', fmt.int(R.G.plus + R.G.pro), 'gigs / month', `(Plus + Pro) × ${P.gigsPaid}`); r('All gigs', fmt.int(R.gigs), 'gigs / month', 'sum');
-  g('One gig’s traffic'); r('Polls per phone', fmt.num(R.one.perPhone, 0), 'polls', `the ladder simulated: ${P.fans} phones, ${P.hours} h, ${P.lookShare}% screen-on, ${P.interactions} actions each (+1 poll per action)`); r('Polls in the room', fmt.int(R.one.polls), 'polls / gig', 'per phone × phones'); r('Function time per poll', fmt.num(R.one.pollMs, 0) + ' ms', '', `${P.pollMs} ms + ${P.fans} people × ${P.pollMsPerFan} ms (every poll reads every fan record)`); r('Actions (writes)', fmt.int(R.one.writes), 'calls / gig', 'actions per person × phones'); r('Studio polls', fmt.int(R.one.studioPolls), 'calls / gig', `${P.hours} h × 3600 ÷ 4 s × ${P.studioShare}%`); r('Requests', fmt.int(R.one.requests), 'requests / gig', 'polls + actions + Studio + other pages + page files'); r('Bytes', fmt.num(R.one.bytes / 1e6, 1) + ' MB', 'per gig', 'each call × its measured size'); r('Function time', fmt.num(R.one.fnMs / 60000, 1) + ' min', 'per gig', `polls × ${fmt.num(R.one.pollMs, 1)} ms + actions × ${P.writeMs} ms + …`); r('Document reads', fmt.int(R.one.reads), 'per gig', `polls × ${P.readsPerPoll} + actions × ${P.readsPerWrite} + Studio × ${P.studioReads}`);
+  g('One gig’s traffic'); r('Polls per phone', fmt.num(R.one.perPhone, 0), 'polls', `the ladder simulated: ${P.fans} phones, ${P.hours} h, ${P.lookShare}% screen-on, ${P.interactions} actions each (+1 poll per action)`); r('Polls in the room', fmt.int(R.one.polls), 'polls / gig', 'per phone × phones'); r('Function time per poll', fmt.num(R.one.pollMs, 0) + ' ms', '', `${P.pollMs} ms + ${P.fans} people × ${P.pollMsPerFan} ms (every poll reads every fan record)`); r('Actions (writes)', fmt.int(R.one.writes), 'calls / gig', 'actions per person × phones'); r('Studio polls', fmt.int(R.one.studioPolls), 'calls / gig', `${P.hours} h × 3600 ÷ 4 s × ${P.studioShare}%`); r('Requests', fmt.int(R.one.requests), 'requests / gig', 'polls + actions + Studio + other pages + page files'); r('Bytes', fmt.num(R.one.bytes / 1e6, 1) + ' MB', 'per gig', `each call × its measured size${R.one.clipBytes ? `, of which ${fmt.num(R.one.clipBytes / 1e6, 0)} MB is ${P.clipViews} profile clip view${P.clipViews === 1 ? '' : 's'} — a guess, and the biggest single line` : ''}`); r('Function time', fmt.num(R.one.fnMs / 60000, 1) + ' min', 'per gig', `polls × ${fmt.num(R.one.pollMs, 1)} ms + actions × ${P.writeMs} ms + …`); r('Document reads', fmt.int(R.one.reads), 'per gig', `polls × ${P.readsPerPoll} + actions × ${P.readsPerWrite} + Studio × ${P.studioReads}`);
   g('The month’s traffic'); r('Requests', fmt.big(R.T.requests), 'per month', 'one gig × all gigs'); r('Bandwidth', fmt.num(R.T.bytes / 1e9, 1) + ' GB', 'per month', ''); r('Function compute', fmt.num(R.T.fnMs / 3600e3, 0) + ' GB-hours', 'per month', '1 GB of memory × wall time'); r('Background jobs', fmt.big(P.cronRequests) + ' calls', 'per month', `the gig scheduler every 2 min + nightly syncs, ${P.cronMs} ms each — runs with nobody playing`); r('Document reads', fmt.big(R.T.reads), 'per month', 'the number every other host prices');
   g('Server bill · ' + R.bill.label); for (const [n, v] of R.bill.lines) r(n, fmt.usdFull(v), '$ / month', ''); if (R.bill.credits != null) r('Credits needed', fmt.int(R.bill.credits), 'credits / month', `→ ${R.bill.plan}`); r('Server total', fmt.usdFull(R.bill.usd), '$ / month', '', 'sum');
   g('Revenue'); r('Plus subscriptions', fmt.usdFull(R.subsPlus), '$ / month', `${fmt.int(R.nPlus)} × $${P.plusPrice} × (1 − ${P.compedPct}% not paying)`); r('Pro subscriptions', fmt.usdFull(R.subsPro), '$ / month', `${fmt.int(R.nPro)} × $${P.proPrice} × (1 − ${P.compedPct}%)`); if (P.venuePro) r('Venue Pro subscriptions', fmt.usdFull(R.subsVenue), '$ / month', `${P.venuePro} × $${P.venuePrice}`); r('Room money (all artists)', fmt.usdFull(R.gmv.free + R.gmv.plus + R.gmv.pro), '$ / month', `gigs × ${P.fans} people × $ per person by tier ($${P.roomFree} · $${P.roomPlus} · $${P.roomPro}) — the artists’ money, not MySet’s`); r('MySet’s cut · free', fmt.usdFull(R.cuts.free), '$ / month', `${fmt.usd(R.gmv.free)} × ${P.cutFree}%`); r('MySet’s cut · Plus', fmt.usdFull(R.cuts.plus), '$ / month', `${fmt.usd(R.gmv.plus)} × ${P.cutPlus}%`); r('MySet’s cut · Pro', fmt.usdFull(R.cuts.pro), '$ / month', `${fmt.usd(R.gmv.pro)} × ${P.cutPro}%`); r('Subscription refunds', '−' + fmt.usdFull(R.refundsLost), '$ / month', `${P.stripe.refundPct}% of subscriptions given back (Stripe keeps its fee on them)`, 'neg'); r('Featured shows', fmt.usdFull(R.feat), '$ / month', `${fmt.int(R.gigs)} gigs × ${P.featPct}% × $${P.featPrice} − ${P.featRefundPct}% refunded`); r('Revenue', fmt.usdFull(R.revenue), '$ / month', 'subscriptions − refunds + cuts + featured', 'sum');
@@ -1386,8 +1397,13 @@ const store = {
     /* Did he leave the switch on last time? The real numbers used to be loaded and then
        silently ignored on every reload, so the page opened on the guesses while a badge
        in 11px type said "on file, not used". */
-    try { this.wasOn = localStorage.getItem('myset.model.useActuals') === '1'; } catch (e) { this.wasOn = false; }
-    if (!ACT) { ACT = SEED_ACT; this.wasOn = false; }
+    let pref = null;
+    try { pref = localStorage.getItem('myset.model.useActuals'); } catch (e) {}
+    this.wasOn = pref === '1';
+    /* Nothing chosen yet — a first visit, a new device — opens on the real nights, not
+       on the 20-phone guess: five measured rooms say 11, and the page's rule since 6 Sep
+       is to lead with what was measured. Switching it off is remembered as a choice. */
+    if (!ACT) { ACT = SEED_ACT; this.wasOn = pref === null && ACT.shows > 0; }
   },
   async save(s) { s.order = SCEN.findIndex(x => x.id === s.id); if (this.db) { try { await this.db.doc('scenarios/' + s.id).set(strip(s)); } catch (e) { toast('Could not save to the shared store'); } } this.local(); },
   async remove(id) { if (this.db) { try { await this.db.doc('scenarios/' + id).delete(); } catch (e) {} } this.local(); },
@@ -1422,11 +1438,11 @@ $('#scenSave').addEventListener('click', async () => {
    Benchmark = published freemium conversion medians and the one room-spend figure
    MySet has actually observed. */
 const PRESETS = {
-  bench: { plusPct: 4, proPct: 1, featPct: 1, roomFree: 0.375, roomPlus: 0.375, roomPro: 0.375, fans: 8, gigsPaid: 3, gigsFree: 3, churnPct: 5, compedPct: 8 },
+  bench: { plusPct: 4, proPct: 1, featPct: 1, roomFree: 0.375, roomPlus: 0.375, roomPro: 0.375, fans: SEED_ACT.people, hours: SEED_ACT.hours, interactions: SEED_ACT.interactions, deploys: SEED_ACT.deploys, gigsPaid: 3, gigsFree: 3, churnPct: 5, compedPct: 8 },
   hope:  { plusPct: 30, proPct: 10, featPct: 5, roomFree: 1.5, roomPlus: 2, roomPro: 3, fans: 40, gigsPaid: 8, gigsFree: 3, churnPct: 2, compedPct: 5 },
 };
 const applyPreset = (which) => { Object.assign(P, PRESETS[which]); P.useActuals = false; buildDials(); recalc();
-  toast(which === 'bench' ? 'Benchmark case — published medians and the one night we measured' : 'If it all works — an optimistic but not absurd world'); };
+  toast(which === 'bench' ? 'Benchmark case — published medians and the nights measured so far' : 'If it all works — an optimistic but not absurd world'); };
 $('#presetBench').addEventListener('click', () => applyPreset('bench'));
 $('#presetHope').addEventListener('click', () => applyPreset('hope'));
 $('#scenReset').addEventListener('click', () => { P = JSON.parse(JSON.stringify(P0)); ACTIVE = null; buildDials(); recalc(); toast('Dials reset'); });
