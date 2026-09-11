@@ -433,6 +433,8 @@ const THEME=await pg.evaluate(()=>{
   ok('the home page restores the light-mode switch',document.documentElement.dataset.theme==='light'&&localStorage.getItem('myset.theme')==='light');
   ok('the switch changes the rendered palette',before==='rgb(0, 0, 0)'&&after==='rgb(245, 245, 247)',`${before} -> ${after}`);
   ok('the loading screen follows the same switch',introBefore==='rgb(0, 0, 0)'&&introAfter==='rgb(245, 245, 247)',`${introBefore} -> ${introAfter}`);
+  const artistActions=[...document.querySelectorAll('.artistactions .artistsearch')];
+  ok('View on map sits left of Search for artists',artistActions.length===2&&/View on map/.test(artistActions[0].innerText)&&/Search for artists/.test(artistActions[1].innerText)&&artistActions[0].getBoundingClientRect().top===artistActions[1].getBoundingClientRect().top);
   ok('the three header controls fit a 320px phone',document.documentElement.scrollWidth<=innerWidth,`${document.documentElement.scrollWidth}/${innerWidth}`);
   return out.join('\n');
 });

@@ -1,10 +1,11 @@
+import { guard } from './_errlog.mjs';
 import { getShow, publicArtist, json, bad, cleanFanId } from './_lib.mjs';
 import { createRequest, readRequests, myRequests } from './_requests.mjs';
 
 /* Public. Asking for a song that isn't on the list, or a birthday shout-out.
    Both cost votes; a song request may carry a manually captured offer. The
    artist has to have switched the request type on. */
-export default async (req) => {
+const main = async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
 
@@ -28,3 +29,4 @@ export default async (req) => {
   const d = await readRequests(aid);
   return json({ ok: true, charged: r.charged, mine: myRequests(d, fanId, show) });
 };
+export default guard('request', main);

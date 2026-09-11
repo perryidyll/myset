@@ -128,3 +128,6 @@ node --import ./test/register.mjs test/books.mjs
 echo
 echo "── billing, the account, and a venue that takes money ──"
 node --import ./test/register.mjs test/billing.mjs
+echo
+echo "── the rate limit on casting, and what broke kept past the night ──"
+node --import ./test/register.mjs test/errlog.mjs

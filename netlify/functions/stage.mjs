@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, firstVotedAt, rankSongs, json, bad,
          requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
@@ -7,7 +8,7 @@ import { readFeedback, shapeFeedback } from './_feedback.mjs';
 import { readEvents, nextOccurrence } from './_events.mjs';
 import { localTime } from './_time.mjs';
 
-export default async (req) => {
+const main = async (req) => {
   const me = await requireArtist(req);
   if (!me) return bad('unauthorized', 401);
   return json(await stagePayload(me.aid));
@@ -91,3 +92,4 @@ export async function stagePayload(aid) {
     store: STORE_NAME,
   };
 }
+export default guard('stage', main);

@@ -1,4 +1,5 @@
-import { getShow, mutateFan, creditsUsed, chargeVotes, costOf, isUnlimited, publicArtist, json, bad,
+import { guard, logErr } from './_errlog.mjs';
+import { getShow, mutateFan, creditsUsed, chargeVotes, takeCastToken, costOf, isUnlimited, publicArtist, json, bad,
          cleanFanId, votable, roomHash, clientIp } from './_lib.mjs';
 
 /* A FAN CANNOT REVERSE A VOTE. It stays on the song it was cast for until that
@@ -7,7 +8,7 @@ import { getShow, mutateFan, creditsUsed, chargeVotes, costOf, isUnlimited, publ
    the `voteFinal` feature flag, with a working take-it-back path; the flag and path were
    both deleted on 2026-09-07 when the question stopped having two answers. */
 
-export default async (req) => {
+const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
@@ -108,6 +109,9 @@ export default async (req) => {
       const total = show.freeCredits + (me.extra || 0);
       const need = cost * n;
       if (!free && creditsUsed(me, show) + need > total) { err = ['no-credits', 402]; return false; }
+      /* After the credit check on purpose: a fan who is out of votes keeps hearing
+         that, and only casts that would have LANDED spend a token. */
+      if (!takeCastToken(me)) { err = ['Easy — that’s a lot of taps. Give it a few seconds', 429]; return false; }
       /* Charged HERE, at the cast, and never again. The old code deliberately did
          not do this — it settled the paid portion once, at the round reset, because
          un-voting would otherwise have burned a paid vote. With no un-vote and no
@@ -128,8 +132,9 @@ export default async (req) => {
     },
     // read back after writing: if the votes didn't stick, retry
     (me) => want === null || held(me) === want);
-  } catch { return bad('busy', 503); }
+  } catch (e) { await logErr('vote', e, { aid, fan }); return bad('busy', 503); }
 
   if (err) return bad(err[0], err[1]);
   return json({ ok: true, final: true, ...outcome });
 };
+export default guard('vote', main);

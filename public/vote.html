@@ -481,6 +481,36 @@ function drawFeedback(){
     <button class="go2" onclick="fbLater()">Not now</button>`);
 }
 function fbLater(){ closeSheet(); }        // fbAsked is already stamped: a week off
+
+/* ---------- "something wrong?" ----------
+   The page keeps the last twenty things it saw go wrong — a failed call, a script
+   error — in memory only. A report sends them with a sentence from the fan, and the
+   server adds the last three hours of its own errors, so the artist reads both
+   sides of the same minute. Nothing is stored on the phone. */
+const RECENT = [];
+function noteFail(what){ RECENT.push({ at: Date.now(), what: String(what || '').slice(0, 200) }); if (RECENT.length > 20) RECENT.shift(); }
+window.addEventListener('error', (e) => noteFail('js: ' + (e.message || 'error')));
+window.addEventListener('unhandledrejection', (e) => noteFail('promise: ' + ((e.reason && e.reason.message) || e.reason || '')));
+function openBug(){
+  openSheet(`
+    <div class="kick">Something wrong?</div>
+    <h3 style="margin:2px 0 2px">Tell us what happened</h3>
+    <p class="lede" style="margin-bottom:16px">One sentence is plenty. It goes straight to the artist with what the app saw, so it can be fixed.</p>
+    <textarea class="fbnote" id="bugNote" rows="3" maxlength="600" placeholder="I tapped vote and nothing happened"></textarea>
+    <button class="go" onclick="bugSend()">Send it</button>
+    <button class="go2" onclick="closeSheet()">Never mind</button>`);
+}
+async function bugSend(){
+  const note = (($('#bugNote') || {}).value || '').trim();
+  if (!note) { toast('Say what went wrong first'); return; }
+  closeSheet();
+  toast('Thank you \u2014 the artist will see it');
+  try {
+    await fetch(`${API}/bug${AQ1}`, { method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ fan: FAN, note, page: location.pathname, ua: navigator.userAgent, recent: RECENT }) });
+  } catch (e) { /* the thank-you already happened */ }
+}
 async function fbSend(){
   if (!FB_STARS) return;
   const note = (($('#fbNote') || {}).value || '').trim();
@@ -616,9 +646,9 @@ async function vote(id,n,castId){
   try{ d=await post(); }
   catch(e){
     try{ await new Promise(r=>setTimeout(r,900)); d=await post(); }
-    catch(e2){ toast('Couldn’t reach the room — try again'); }
+    catch(e2){ noteFail('vote: unreachable'); toast('Couldn’t reach the room — try again'); }
   }
-  if(d&&!d.ok){ if(d.error==='no-credits'){toast('Out of votes — grab more below');openBuy();}
+  if(d&&!d.ok){ noteFail('vote: '+d.error); if(d.error==='no-credits'){toast('Out of votes — grab more below');openBuy();}
     else toast(d.error||'Could not save that vote'); }
   busy.delete(id); wakeUp(true); load();
 }
@@ -812,7 +842,7 @@ function render(){
 
   h += `<a class="backlink" href="${HOME}">← ${esc(d.artist||'Artist')}’s page</a>
     <a class="backlink" href="/signup" style="font-size:13px;color:var(--faint)">Play live yourself? Get your own page →</a>
-    <div class="foot">MySet · myset.vip</div>`;
+    <div class="foot">MySet · myset.vip · <a href="#" onclick="openBug();return false">Something wrong?</a></div>`;
   $('#app').innerHTML=h;
   const restoreScroll=()=>{
     const queue=$('.queue-scroll'),list=$('.votelist');
@@ -972,6 +1002,7 @@ async function sendAsk(kind,withOffer=false){
       headers:{'content-type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){
+      noteFail(path+': '+d.error);
       if(d.error==='no-credits'){closeSheet();toast('Not enough votes — grab more below');openBuy();}
       else toast(d.error||'Couldn’t send that');
       if(btn){btn.disabled=false;btn.textContent=withOffer?'Authorize payment & send request':kind==='song'?`Send with ${((ST.asks||{}).song||{}).cost||3} votes only`:'Send it up';}

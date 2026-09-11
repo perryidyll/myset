@@ -1,3 +1,4 @@
+import { guard, logErr } from './_errlog.mjs';
 import { getShow, mutateFan, mutateMeta, unspentPaid, publicArtist, json, bad, cleanFanId } from './_lib.mjs';
 
 /* When a show ends, a fan with votes they paid for but never spent decides what
@@ -5,7 +6,7 @@ import { getShow, mutateFan, mutateMeta, unspentPaid, publicArtist, json, bad, c
    Doing nothing carries them — never silently pocket what someone paid for.
    No money moves here; the artist was paid at purchase time. This only decides
    whether the credit survives, and records the gift so he can see it. */
-export default async (req) => {
+const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
@@ -36,7 +37,7 @@ export default async (req) => {
       else delete me.pledged;
       return true;
     }, (me) => me.decided === show.showId);
-  } catch { return bad('busy', 503); }
+  } catch (e) { await logErr('gift', e, { aid, fan }); return bad('busy', 503); }
 
   if (choice === 'gift' && votes > 0) {
     await mutateMeta(aid, (m) => {
@@ -47,3 +48,4 @@ export default async (req) => {
   }
   return json({ ok: true, choice, votes });
 };
+export default guard('gift', main);

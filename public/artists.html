@@ -60,7 +60,7 @@ body{padding-bottom:42px}
       <button class="filtertoggle" id="signed" type="button" aria-pressed="false">Signed</button>
     </div>
   </section>
-  <div class="summary"><b id="count">Artists</b><button class="mapbtn" id="mapBtn" type="button" hidden>⌖ View map</button></div>
+  <div class="summary"><b id="count">Artists</b><button class="mapbtn" id="mapBtn" type="button" hidden>⌖ View on map</button></div>
   <div id="artists"><div class="loading"></div><div class="loading"></div></div>
 </main>
 <div class="mapmodal" id="mapModal" hidden role="dialog" aria-modal="true" aria-labelledby="mapTitle">
@@ -87,7 +87,7 @@ const mapEventsFor=rows=>{const country=$('#country').value,city=$('#city').valu
 function render(){
   const rows=matchingArtists(), mapEvents=mapEventsFor(rows), mapCount=mapEvents.length;
   $('#count').textContent=`${rows.length} artist${rows.length===1?'':'s'}`;
-  $('#mapBtn').hidden=!(MAPCFG&&MAPCFG.enabled&&mapEvents.some(canPin));$('#mapBtn').innerHTML=`⌖ View map · ${mapCount}`;
+  $('#mapBtn').hidden=!(MAPCFG&&MAPCFG.enabled&&mapEvents.some(canPin));$('#mapBtn').innerHTML=`⌖ View on map · ${mapCount}`;
   $('#artists').className=rows.length?'artists':'';
   $('#artists').innerHTML=rows.length?rows.map(a=>`<a class="artistcard" href="/${encodeURIComponent(a.slug)}">
     ${a.avatar?`<img class="avatar" src="${esc(a.avatar)}" alt="" loading="lazy">`:`<span class="avatar blank">${esc(a.name.slice(0,1).toUpperCase())}</span>`}
@@ -125,7 +125,7 @@ $('#upcoming').addEventListener('click',()=>{ONLY_UPCOMING=!ONLY_UPCOMING;$('#up
 $('#music').addEventListener('click',()=>{ONLY_MUSIC=!ONLY_MUSIC;$('#music').classList.toggle('on',ONLY_MUSIC);$('#music').setAttribute('aria-pressed',String(ONLY_MUSIC));render()});
 $('#signed').addEventListener('click',()=>{ONLY_SIGNED=!ONLY_SIGNED;$('#signed').classList.toggle('on',ONLY_SIGNED);$('#signed').setAttribute('aria-pressed',String(ONLY_SIGNED));render()});
 $('#mapBtn').addEventListener('click',openMap);$('#mapClose').addEventListener('click',closeMap);$('#mapModal').addEventListener('click',e=>{if(e.target===$('#mapModal'))closeMap()});addEventListener('keydown',e=>{if(e.key==='Escape')closeMap()});
-(async()=>{try{const [d,m]=await Promise.all([fetch('/api/artists',{cache:'no-store'}).then(r=>r.json()),fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json()).catch(()=>null)]);if(!d.ok)throw Error();ALL=d.artists||[];MAPCFG=m&&m.ok?m:null;fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
+(async()=>{try{const [d,m]=await Promise.all([fetch('/api/artists',{cache:'no-store'}).then(r=>r.json()),fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json()).catch(()=>null)]);if(!d.ok)throw Error();ALL=d.artists||[];MAPCFG=m&&m.ok?m:null;fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render();if(new URLSearchParams(location.search).get('map')==='1'&&!$('#mapBtn').hidden)openMap()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
 if('serviceWorker'in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 </script>
 </body>

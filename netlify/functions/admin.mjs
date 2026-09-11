@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, refundSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId as makeSongId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
@@ -180,6 +181,13 @@ async function handlePlan(aid, action, body, req, me) {
 
   /* Feature flags. Owner only, because a flag changes what every artist's room
      does. Never written during a show — see _flags.mjs. */
+  /* What fans reported, with the server's own errors from the hours before each.
+     Read on demand, never on the Studio poll — a report is rare and the poll is not. */
+  if (action === 'bugList') {
+    const { readBugs } = await import('./_errlog.mjs');
+    const b = await readBugs(aid);
+    return json({ ok: true, list: b.list.slice().reverse() });
+  }
   if (action === 'flagList') {
     const { FLAGS, readFlags, flagsFor } = await import('./_flags.mjs');
     const f = await readFlags();
@@ -425,7 +433,7 @@ const CAPABILITY = {
   accountExport: 'export',
 };
 
-const PLAN_ACTIONS = new Set(['planGet', 'promoRedeem', 'planCheckout', 'planFinish', 'planChange', 'planRetainOffered', 'planRetain', 'planPortal', 'planSync', 'planInvoices', 'accountExport', 'accountDelete', 'accountUndelete', 'accountFreeSlug', 'promoList', 'promoCreate', 'promoRevoke',
+const PLAN_ACTIONS = new Set(['planGet', 'bugList', 'promoRedeem', 'planCheckout', 'planFinish', 'planChange', 'planRetainOffered', 'planRetain', 'planPortal', 'planSync', 'planInvoices', 'accountExport', 'accountDelete', 'accountUndelete', 'accountFreeSlug', 'promoList', 'promoCreate', 'promoRevoke',
                               'venueList', 'venueVerify', 'shareStats',
                               // the ID review queue and a venue's plan — owner only,
                               // enforced inside handlePlan, not by this set
@@ -1548,7 +1556,7 @@ const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'media
                                  // Stripe Connect onboarding and status
                                  'payStatus', 'payStart', 'payDashboard']);
 
-export default async (req) => {
+const main = async (req) => {
   const me = await requireArtist(req);
   if (!me) return bad('unauthorized', 401);
   const aid = me.aid;
@@ -2080,3 +2088,4 @@ export default async (req) => {
   try { stage = await stagePayload(aid); } catch { /* the write still succeeded */ }
   return json({ ok: true, stage, note, songId: newSongId });
 };
+export default guard('admin', main);

@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
 import { json, bad, cleanArtistId, DEFAULT_ARTIST } from './_lib.mjs';
 import { redeemSession } from './_pay.mjs';
@@ -8,7 +9,7 @@ import { artistForAccount, mutateConnect, mirrorToShow, readConnect } from './_c
    granted. Stripe calls this regardless of what the buyer's phone does.
    Requires STRIPE_WEBHOOK_SECRET; absent, this is inert and the return page and
    the artist's reconcile sweep still cover it. */
-export default async (req) => {
+const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   const key = process.env.STRIPE_SECRET_KEY;
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -120,3 +121,4 @@ export default async (req) => {
   }
   return json({ received: true });       // 200 so Stripe stops retrying
 };
+export default guard('webhook', main);

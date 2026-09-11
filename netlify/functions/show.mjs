@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { COUNTDOWN_MS, getShow, readFans, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
          isUnlimited, publicArtist, json, bad, cleanFanId, markPresence, countInRoom,
          pollFloorFor, boardLimitFor,
@@ -7,7 +8,7 @@ import { canTakeMoney } from './_pay.mjs';
 import { readRequests, myRequests, VIBE_OPTIONS } from './_requests.mjs';
 import { readFlags, flagsFor } from './_flags.mjs';
 
-export default async (req) => {
+const main = async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
   const url = new URL(req.url);
@@ -209,3 +210,4 @@ export default async (req) => {
     updatedAt: show.updatedAt,
   });
 };
+export default guard('show', main);

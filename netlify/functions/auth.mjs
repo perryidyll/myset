@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad, requireArtist } from './_lib.mjs';
 import { normEmail, validEmail, issueCode, checkCode, sendCode, signToken, verifyToken,
          signTicket, readTicket, readArtists, mutateArtists, createArtist,
@@ -28,7 +29,7 @@ async function open(req, body, aid, email, rev) {
   return token;
 }
 
-export default async (req) => {
+const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
@@ -486,3 +487,4 @@ export default async (req) => {
 
   return bad('unknown action');
 };
+export default guard('auth', main);

@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad, publicArtist, getShow, cleanFanId, clientIp, requireArtist, DEFAULT_ARTIST } from './_lib.mjs';
 import { cleanSlug } from './_auth.mjs';
 import { getProfile } from './_profile.mjs';
@@ -77,7 +78,7 @@ async function resolveOwner(req) {
   };
 }
 
-export default async (req) => {
+const main = async (req) => {
   const o = await resolveOwner(req);
   if (!o) return bad('unknown page', 404);
   const signedArtist = o.kind === 'artist' ? await requireArtist(req) : null;
@@ -174,3 +175,4 @@ export default async (req) => {
   }
   return bad('unknown action', 400);
 };
+export default guard('community', main);

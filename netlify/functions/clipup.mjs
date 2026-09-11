@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import { json, bad, publicArtist, cleanFanId, sha } from './_lib.mjs';
 import { cleanSlug } from './_auth.mjs';
 import { venueBySlug } from './_venues.mjs';
@@ -51,7 +52,7 @@ async function ownerOf(req) {
 
 const mb = (n) => (n / 1048576).toFixed(1);
 
-export default async (req) => {
+const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   const q = new URL(req.url).searchParams;
   const owner = await ownerOf(req);
@@ -149,3 +150,4 @@ export default async (req) => {
 
   return bad('bad request');
 };
+export default guard('clipup', main);

@@ -1615,6 +1615,30 @@ function fbCard(){
     </div>`;
 }
 
+/* What fans reported through "Something wrong?", each with the server's own errors
+   from the three hours before it. Fetched on tap, never on the poll. */
+function bugCard(){
+  return `<div class="sec"><span class="kick">If something broke</span></div>
+    <div class="list"><div class="row" onclick="loadBugs()" style="cursor:pointer"><div class="m">
+      <div class="t">Bug reports from the room</div>
+      <div class="s muted">What a fan said, and what the app saw at the time</div>
+    </div></div></div>`;
+}
+async function loadBugs(){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'bugList'})});
+  const when=t=>new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const list=(d&&d.list)||[];
+  openSheet(`<div class="kick">Bug reports</div>
+    <h3 style="margin:2px 0 8px">${list.length?`${list.length} report${list.length===1?'':'s'}`:'Nothing reported'}</h3>
+    ${list.length?'':'<p class="lede">When a fan taps “Something wrong?” on the voting page, it lands here with what the app saw.</p>'}
+    ${list.map(r=>`<div class="row" style="display:block;padding:12px 0;border-top:1px solid var(--line)">
+      <div class="s muted">${esc(when(r.at))} · ${esc(r.fan)}</div>
+      <div class="t" style="font-weight:600">${esc(r.note)}</div>
+      ${(r.client||[]).length?`<div class="s muted" style="margin-top:6px">The phone saw:</div>${r.client.map(c=>`<div class="s mono">${esc(when(c.at))} ${esc(c.what)}</div>`).join('')}`:''}
+      ${(r.server||[]).length?`<div class="s muted" style="margin-top:6px">The server saw (3h before):</div>${r.server.map(c=>`<div class="s mono">${esc(when(c.at))} [${esc(c.where)}] ${esc(c.msg)}</div>`).join('')}`:'<div class="s muted" style="margin-top:6px">The server logged no errors in the three hours before this.</div>'}
+    </div>`).join('')}`);
+}
+
 /* ---------- getting paid ----------
    Stripe hosts the whole onboarding, so MySet never sees a bank detail. The card
    states who pays Stripe's own fee, because an artist who reads "2%" and then sees
@@ -2299,7 +2323,7 @@ function render(){
         <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
       }
       // Get-paid card, tonight, what the room said, then the Pro numbers preview
-      body=payCard()+head+fbCard()+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard();
+      body=payCard()+head+fbCard()+bugCard()+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard();
     }
   }
 
@@ -3764,11 +3788,7 @@ const TIER_COPY={
     ['Coming soon, included',': earnings by venue and night, a press kit, your branding, promotion in other cities'],
     ['<span class="fee">Transaction fee: 2%</span>',' on money taken through the app']]},
 };
-const tierList=(k)=>TIER_COPY[k].items.map(x=>{
-  const y=PLAN&&PLAN.owner&&k===PLAN.plan&&String(x[0]).includes('Transaction fee:')
-    ? ['<span class="fee">Transaction fee: 0%</span>',' for this account'] : x;
-  return `<li><b>${y[0]}</b>${y[1]||''}</li>`;
-}).join('');
+const tierList=(k)=>TIER_COPY[k].items.map(x=>`<li><b>${x[0]}</b>${x[1]||''}</li>`).join('');
 const RANK={free:0,plus:1,pro:2};
 function openPlans(){
   if(!PLAN||!PLAN.ok){toast('One moment…');loadPlan(true);return;}

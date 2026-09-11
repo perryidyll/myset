@@ -1,3 +1,4 @@
+import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
 import { json, bad, cleanFanId, getShow, publicArtist, sha,
          readFans, creditsUsed, isUnlimited } from './_lib.mjs';
@@ -18,7 +19,7 @@ const SHIP_COUNTRIES = [...new Set([...PAYOUT_COUNTRIES, 'AT','BE','CH','CZ','GR
 const amountCents = (line) =>
   Number(((line || {}).price_data || {}).unit_amount) * Number((line || {}).quantity || 1) || 0;
 
-export default async (req) => {
+const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return bad('payments-not-configured', 503);
@@ -281,3 +282,4 @@ export default async (req) => {
     return bad(e.message || 'stripe error', 502);
   }
 };
+export default guard('pay', main);

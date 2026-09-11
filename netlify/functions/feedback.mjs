@@ -1,9 +1,10 @@
+import { guard } from './_errlog.mjs';
 import { json, bad, cleanFanId, publicArtist, getShow } from './_lib.mjs';
 import { saveFeedback } from './_feedback.mjs';
 
 /* Public, like /api/vote — the audience never signs in (INVARIANT 9g), so this is
    anonymous by design. A device id and a star count, nothing else. */
-export default async (req) => {
+const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
@@ -20,3 +21,4 @@ export default async (req) => {
   if (!r.ok) return bad('Pick a star rating first', 400);
   return json({ ok: true, already: !!r.already });
 };
+export default guard('feedback', main);

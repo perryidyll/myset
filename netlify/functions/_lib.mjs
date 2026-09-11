@@ -775,6 +775,23 @@ export function chargeFan(fan, show, need) {
 /** Charge a group of votes and preserve the source of every individual vote.
  *  Each compact tuple is [credit cost, paid-credit portion]. A replay can cost
  *  several credits and straddle the free/paid boundary, so a boolean is not enough. */
+/* A token bucket on the record that is already being written (decision 0030).
+   A device may cast CAST_BURST times in a row and then CAST_PER_MIN a minute after
+   that; a person tapping as fast as they can stays well under it, a script does not.
+   Checked inside the mutation, so it costs no extra read and no extra write — and a
+   refused cast writes nothing at all, which is the point: the hole this closes is a
+   script running up the write bill, not a fan voting too enthusiastically. */
+export const CAST_BURST = 30;
+export const CAST_PER_MIN = 30;
+export function takeCastToken(me, now = Date.now()) {
+  const b = (me.rl && typeof me.rl.t === 'number') ? me.rl : { t: CAST_BURST, at: now };
+  const at = typeof b.at === 'number' ? b.at : now;
+  const t = Math.min(CAST_BURST, b.t + Math.max(0, now - at) / 60e3 * CAST_PER_MIN);
+  if (t < 1) return false;
+  me.rl = { t: t - 1, at: now };
+  return true;
+}
+
 export function chargeVotes(fan, show, songId, cost, count, unlimited = false) {
   chargeFan(fan, show, 0);                    // normalize legacy ledger fields first
   fan.va ||= {};

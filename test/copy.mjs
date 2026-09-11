@@ -72,6 +72,7 @@ ok('public and Studio loading screens use the active light or dark palette',
    }));
 ok('the $20 plan displays the same 2% transaction fee the server charges',
    /pro:\{name:'Pro',price:'\$20 \/ month'[\s\S]{0,1400}Transaction fee: 2%/.test(studio)&&
+   !/Transaction fee: 0%/.test(studio)&&
    !['studio.html','venue-studio.html','index.html','about.html','artists.html','artist.html','community.html','vote.html']
      .some(x=>/Transaction fee: 2\.5%/.test(read(`public/${x}`))));
 ok('Find artists is server-gated to effectively verified artists before cards or map data are built',
@@ -93,11 +94,12 @@ ok('the Studio scrolling windows use a clipping shell around the native scrollba
 ok('the Studio Live tab label is red',
    /button\[data-tab-live\]\{color:#FF375F\}/.test(studio)&&/button data-tab-live/.test(studio));
 ok('the home page links to the artist directory and its requested filters',
-   /href="\/artists">Search for artists/.test(home)&&
+   /class="artistactions"[\s\S]{0,240}href="\/artists\?map=1">⌖ View on map<\/a>[\s\S]{0,120}href="\/artists">Search for artists/.test(home)&&
    /MySet shows in next 30 days/.test(directory)&&/Music released/.test(directory)&&/Signed/.test(directory)&&
    /All countries/.test(directory)&&/All cities/.test(directory)&&/All styles/.test(directory)&&/Any rating/.test(directory));
 ok('the artist directory map is readiness-gated and the CSP permits only its image host',
    /id="mapBtn"[^>]*hidden/.test(directory)&&/api\/mapconfig/.test(directory)&&
+   /URLSearchParams\(location\.search\)\.get\('map'\)==='1'/.test(directory)&&
    /https:\/\/maps\.googleapis\.com/.test(read('netlify.toml')));
 ok('Featured shows remain a $10 first-come city promotion',
    /Featured shows/.test(home)&&/featureStart/.test(studio)&&/\$10/.test(studio)&&/first come, first served/i.test(studio));

@@ -10,17 +10,16 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-11
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The combined discovery and miscellaneous batch is live in production
-at `d1a6531`. It adds the filtered event map, verified-only
-directory/event/map discovery, stricter Signed eligibility, the 2% Pro fee everywhere,
-light-first themed loading, a one-time verification notice, and a plans sheet without
-placeholder testimonials. All 1,882 assertions and rendered mobile checks pass. Google
-billing, Static Maps, referrer/API restrictions and the Netlify production secret are
-configured; the live config and a real restricted PNG request were verified.
+**Current focus:** Production `3b69831` has the combined discovery/map batch. The ready
+working tree puts **View on map** left of **Search for artists**, deep-links into the map,
+keeps the Pro plan card at 2%, adds durable three-hour server-error context to fan bug
+reports, and rate-limits scripted vote floods without affecting normal tapping. All
+1,926 assertions and rendered mobile checks pass. Production is unchanged.
 
-**Next work item (pick up here):** Return to the **shared-board split**.
+**Next work item (pick up here):** Ship the complete tested working tree, verify the live
+map on `myset.vip`, then return to the **shared-board split**.
 
-**Fresh-agent one-liner:** `Read AGENTS.md, then finish the readiness-gated Find artists event map per IMPLEMENTATION_STATUS.md; it needs a restricted Google browser key before production.`
+**Fresh-agent one-liner:** `Read AGENTS.md, then continue Phase 3 from the shared-board split in IMPLEMENTATION_STATUS.md.`
 
 ---
 
@@ -37,7 +36,7 @@ configured; the live config and a real restricted PNG request were verified.
 | GATE-001 | A gig runs end to end with no intervention | done | The Ugly Duckling, 2026-08-30 — 8 voters, 21 votes, one $3 purchase, nothing went wrong | The only real-world data point there is |
 | GATE-002 | A second artist can sign up, get paid and run a show without Perry | in_progress | Accounts, roles, billing and Connect all shipped; nobody but Perry has done it | The real test of the $10/month ambition |
 | GATE-003 | A room of 2,000 works, not just costs an affordable amount | blocked | `tools/loadsim.py`; honest ceiling ~2,500 after the signature split | **Blocked on P3-001.** Do not sell a bigger room first |
-| GATE-004 | A bug reported by a fan can be traced without reproducing it | not_started | — | Netlify keeps function logs for **24 hours**. See P3-004 |
+| GATE-004 | A bug reported by a fan can be traced without reproducing it | done | Hour-keyed durable server errors + fan report context + Studio report reader; 42/42 focused assertions | Reports retain the three server hours before the fan's note |
 
 ---
 
@@ -58,7 +57,7 @@ configured; the live config and a real restricted PNG request were verified.
 | P3-001 | **Shared-board split** — one cached board, tiny per-fan endpoint | not_started | — | The next thing to build. Gates GATE-003 and the plan room sizes |
 | P3-002 | Open line to the room (Cloudflare Durable Objects) | deferred | `docs/reports/open-line.html`, decision `0012` | Deliberately after P3-001. Trigger: a booked show over 2,000 with a date and a deposit |
 | P3-003 | Clip bytes onto Cloudflare R2 | deferred | Session doc 2026-09-06 | Trigger: ~100GB of clip traffic a month (~$13). Needs Perry's own Cloudflare account |
-| P3-004 | **Error tracking that outlives the night** | not_started | — | Netlify's function logs are gone in 24h. Sentry's free tier is 5,000 errors/month, 30-day retention. Nothing can be diagnosed after the fact today |
+| P3-004 | **Error tracking that outlives the night** | done | Durable capped hourly error documents, guarded handlers, fan report endpoint and Studio reader; 42/42 focused assertions | Retained in MySet's existing blob store; no third-party telemetry account required |
 | P3-005 | Fan-shard write ceiling actually measured | not_started | Derived from a measured 40ms *read*, never from a write | Hammer one shard before selling a room over 2,000 |
 | P3-008 | **A payments health check that runs off the hot path** | not_started | — | The 2026-09-08 outage was invisible until a fan tapped. A key can be valid-looking and dead |
 | P3-009 | `/api/pay` throws when a caller sends no `attempt` | not_started | Reproduced live 2026-09-08: 502 `Stripe: Unknown arguments` | `opts` is `{}` for a platform-owner charge with no `attempt`, and stripe-node rejects an empty options object. **No fan is affected** — `vote.html` and `community.html` always send `attempt`. One-line fix: pass `opts` only when non-empty |
@@ -97,6 +96,7 @@ configured; the live config and a real restricted PNG request were verified.
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-11 | Draft `6aa3c42c072c9b9fc5bea38a`, focused copy/render checks and full suite | View-on-map is left of artist search at 320px; deep-link and consistent 2% Pro copy are served; 1,882 assertions, zero failures; production unchanged |
 | 2026-09-11 | Production commit `d1a6531` and live HTTP/config checks | Combined discovery/miscellaneous batch deployed successfully at `myset.vip`; map remains correctly hidden while provider config reports disabled |
 | 2026-09-11 | Draft `6aa3bcce9fd9709b3a45eb9c`, verified-only directory tests, rendered first-Settings notice and full gate | Served Studio has 2% Pro copy, verified-only explanation and no placeholder testimonials; directory endpoint returns only the qualifying profile; notice colors/persistence and mobile fit pass; 1,882 assertions, zero failures; production unchanged |
 | 2026-09-11 | Draft `6aa3b8e8eedd9a5d7e4e5391`, focused directory/fee/theme checks, rendered UI, `sh test/run.sh`, and overview stamp | Signed requires both label fields; Pro is 2%; first visit and loading screens are light while saved dark remains dark; map remains safely hidden without its key; 1,876 assertions, zero failures; production unchanged |
@@ -177,7 +177,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 | **Pre-attribution active votes cannot be split exactly by song** | A paid-vote pill or decline refund on a vote cast before this batch may not know its original source | New votes are exact; legacy decline uses a fan-favouring paid-first fallback | **Known transition risk** |
 | Card payments down on a bad Stripe key | Nobody can buy votes or tip | Key replaced 2026-09-08; live checkout verified. The gap that let it go unnoticed is still open — P3-008 | Resolved 2026-09-08 |
 | **Nothing detects a dead Stripe key** | `paymentsEnabled` checks the key EXISTS, never that it WORKS, so the room is shown a buy button that fails on tap | P3-008 | **Active, unmitigated** |
-| **A bug cannot be diagnosed after the night** | A fan reports something, the logs are already gone | P3-004 | **Active, unmitigated** |
+| **A bug cannot be diagnosed after the night** | A fan reports something, the logs are already gone | Durable hourly errors + fan reports with three-hour context | Resolved 2026-09-11 |
 | Nobody has tested a restore | Data loss would be discovered during recovery | — | Active |
 | Nobody is alerted when something breaks | A silent failure runs until somebody notices | P3-004 covers half of it | Active |
 | A room over ~2,500 breaks on reads | A big booked show fails live | P3-001 | Active, bounded by the soft caps |
