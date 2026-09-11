@@ -1874,7 +1874,7 @@ async function saveProfile(){
   const management=v('pfManagement'), managementUrl=v('pfManagementUrl');
   if(!!management!==!!managementUrl){toast('Add both the label or management name and its website, or leave both blank.');return;}
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'profileSet',
-    name:v('pfName'),tagline:v('pfTag'),management,managementUrl,bio:(($('#pfBio')||{}).value||''),
+    name:v('pfName'),tagline:v('pfTag'),style:v('pfStyle'),management,managementUrl,bio:(($('#pfBio')||{}).value||''),
     links:typed})});
   if(!d.ok){toast(d.error||'Could not save');return;}
   PROF=null; await loadProf(true);
@@ -2316,6 +2316,9 @@ function render(){
       <div class="field"><label>Name</label><input class="inp" id="pfName" maxlength="60" value="${esc(P.name||'')}"></div>
       <div class="field"><label>One line under your name <span class="cnt" id="cTag"></span></label>
         <input class="inp" id="pfTag" maxlength="120" value="${esc(P.tagline||'')}" placeholder="Make my set your set"></div>
+      <div class="field"><label>Style</label>
+        <input class="inp" id="pfStyle" maxlength="60" value="${esc(P.style||'')}" placeholder="Acoustic soul, indie rock, jazz…">
+        <p class="muted" style="font-size:12px;margin:7px 0 0">Used on your Find artists card and filters, not on your public profile.</p></div>
       <div class="field"><label>Label / management company</label>
         <input class="inp" id="pfManagement" maxlength="120" value="${esc(P.management||'')}" placeholder="Independent, label or management company"></div>
       <div class="field"><label>Label / management website</label>

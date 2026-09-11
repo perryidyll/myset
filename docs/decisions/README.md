@@ -33,6 +33,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) | Live shows end after three hours without artist or audience voting activity and are filed with a dated title | 2026-09-10 | ops | decided | perry |
 | [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) | Automatic chords require a licensed feed or recording-derived analysis | 2026-09-10 | media | decided | user-confirmed |
 | [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) | Public email sign-in requires a verified sender and confirmed delivery | 2026-09-10 | auth | decided | claude |
+| [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) | Artist directory cards derive public discovery tags and counts from existing profile, calendar, history and visible community data | 2026-09-11 | ui | decided | user |
 
 ## By area
 
@@ -50,7 +51,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **storage** — [0008](0008-never-list-blobs-for-live-data.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md)
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md)
 
 **voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 

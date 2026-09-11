@@ -16,8 +16,8 @@ const ROOT='/Users/perryidyll/Docs/MySet/public';
 const T={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
 const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');
  if(u.pathname==='/api/artists'){rs.writeHead(200,{'content-type':'application/json'});return rs.end(JSON.stringify({ok:true,artists:[
-   {slug:'demo',name:'Demo Artist',tagline:'Songs for the room',avatar:'',management:'Independent',musicReleased:true,upcomingShows:1,locations:[{country:'Thailand',city:'Bangkok'}],nextShow:{date:'2099-01-01',city:'Bangkok',country:'Thailand'}},
-   {slug:'quiet',name:'Quiet Band',tagline:'Acoustic songs',avatar:'',management:'',musicReleased:false,upcomingShows:0,locations:[],nextShow:null}
+   {slug:'demo',name:'Demo Artist',tagline:'Songs for the room',avatar:'',management:'Good Records',style:'Soul',signed:true,musicReleased:true,showsNext30Days:1,totalShows:12,rating:4.5,ratingCount:2,locations:[{country:'Thailand',city:'Bangkok'}],nextShow:{date:'2099-01-01',city:'Bangkok',country:'Thailand'}},
+   {slug:'quiet',name:'Quiet Band',tagline:'Acoustic songs',avatar:'',management:'',style:'Folk',signed:false,musicReleased:false,showsNext30Days:0,totalShows:0,rating:null,ratingCount:0,locations:[],nextShow:null}
  ]}))}
  const p=path.join(ROOT,u.pathname);
  if(!fs.existsSync(p)||fs.statSync(p).isDirectory()){rs.writeHead(404);return rs.end('no');}
@@ -422,10 +422,15 @@ await pg.goto(`http://127.0.0.1:${PORT}/artists.html`,{waitUntil:'networkidle0'}
 const DIRECTORY=await pg.evaluate(()=>{
   const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
   ok('the artist directory renders every artist',document.querySelectorAll('.artistcard').length===2,String(document.querySelectorAll('.artistcard').length));
+  const first=document.querySelector('.artistcard');
+  ok('the name and one-liner are separate spaced lines',getComputedStyle(first.querySelector('.name')).display==='block'&&parseFloat(getComputedStyle(first.querySelector('.tag')).marginTop)>=4);
+  ok('the directory shows location, style, signed, numeric and icon ratings, and both MySet show counts',/Bangkok, Thailand/.test(first.innerText)&&/Soul/.test(first.innerText)&&/Signed/.test(first.innerText)&&/4.5\/5/.test(first.innerText)&&/★★★★★/.test(first.innerText)&&/next 30 days/.test(first.innerText)&&/12 MySet shows total/.test(first.innerText),first.innerText);
   document.querySelector('#upcoming').click();
   ok('the upcoming-show filter narrows the directory',document.querySelectorAll('.artistcard').length===1&&/Demo Artist/.test(document.querySelector('#artists').innerText));
   document.querySelector('#upcoming').click();document.querySelector('#music').click();
   ok('the released-music filter uses its public signal',document.querySelectorAll('.artistcard').length===1&&/Music released/.test(document.querySelector('#artists').innerText));
+  document.querySelector('#music').click();document.querySelector('#signed').click();
+  ok('the signed filter uses the management-backed public signal',document.querySelectorAll('.artistcard').length===1&&/Demo Artist/.test(document.querySelector('#artists').innerText));
   ok('the directory fits a 320px phone',document.documentElement.scrollWidth<=innerWidth,`${document.documentElement.scrollWidth}/${innerWidth}`);
   ok('the directory has the same global theme control',!!document.querySelector('[data-theme-toggle]'));
   return out.join('\n');

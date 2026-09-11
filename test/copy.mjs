@@ -26,6 +26,7 @@ ok('the venue tick reads "✓ Verified"', /✓ Verified/.test(venue));
 ok('and its absence "Unverified listing"', /Unverified listing/.test(venue));
 ok('the artist tick reads "✓ Verified" too', /✓ Verified/.test(artist));
 ok('and is gated on the payload', /P\.verified\?/.test(artist));
+ok('directory style is not rendered on the public artist profile', !/P\.style/.test(artist));
 ok('an unverified artist page shows NO chip (not a warning about a person)', !/Unverified/.test(artist));
 ok('lyrics stay "Unofficial lyrics"', /Unofficial lyrics/.test(vote));
 ok('and the Community button sits in the stats grid', /class="ps cta"/.test(artist));
@@ -65,7 +66,8 @@ ok('the Studio Live tab label is red',
    /button\[data-tab-live\]\{color:#FF375F\}/.test(studio)&&/button data-tab-live/.test(studio));
 ok('the home page links to the artist directory and its requested filters',
    /href="\/artists">Search for artists/.test(home)&&
-   /Upcoming shows/.test(directory)&&/Music released/.test(directory)&&/All countries/.test(directory)&&/All cities/.test(directory));
+   /MySet shows in next 30 days/.test(directory)&&/Music released/.test(directory)&&/Signed/.test(directory)&&
+   /All countries/.test(directory)&&/All cities/.test(directory)&&/All styles/.test(directory)&&/Any rating/.test(directory));
 ok('Featured shows remain a $10 first-come city promotion',
    /Featured shows/.test(home)&&/featureStart/.test(studio)&&/\$10/.test(studio)&&/first come, first served/i.test(studio));
 ok('each upcoming gig offers Feature before Edit and cancel',

@@ -16,23 +16,23 @@ body{padding-bottom:42px}
 .mark svg{width:15px;height:15px;fill:#fff}
 .hero{padding:24px 20px 8px}.hero h1{font-size:34px}.hero p{margin:9px 0 0;color:var(--muted)}
 .filters{margin:18px;background:var(--surface);border-radius:var(--r-lg);padding:16px;box-shadow:var(--sh-2)}
-.filters .inp{margin:0}.selects{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.filters .inp{margin:0}.selects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
 .selects select{appearance:none;margin:0;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 21px,calc(100% - 13px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
 .toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .filtertoggle{padding:10px 13px;border-radius:var(--pill);background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:13px;font-weight:650}
 .filtertoggle.on{color:var(--accent-ink);background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
 .summary{display:flex;justify-content:space-between;align-items:baseline;padding:8px 20px 9px;color:var(--muted);font-size:13px}.summary b{color:var(--accent-ink);font-size:15px}
 .artists{display:grid;gap:10px;margin:0 18px}
-.artistcard{display:flex;align-items:center;gap:13px;padding:13px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);transition:transform .2s var(--spring),box-shadow .2s var(--ease)}
+.artistcard{display:flex;align-items:flex-start;gap:15px;padding:16px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);transition:transform .2s var(--spring),box-shadow .2s var(--ease)}
 .artistcard:active{transform:scale(.985)}.artistcard:hover{box-shadow:var(--sh-2)}
-.avatar{width:64px;height:64px;border-radius:17px;object-fit:cover;background:var(--bg-2);flex:0 0 auto}
+.avatar{width:76px;height:76px;border-radius:19px;object-fit:cover;background:var(--bg-2);flex:0 0 auto}
 .avatar.blank{display:grid;place-items:center;background:var(--grad);color:#fff;font-size:24px;font-weight:750}
-.copy{min-width:0;flex:1}.name{font-size:18px;font-weight:700;line-height:1.15}.tag{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}
-.badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}.badge{font-size:10.5px;font-weight:700;padding:4px 8px;border-radius:var(--pill);background:var(--bg-2);color:var(--muted)}
+.copy{display:block;min-width:0;flex:1}.name{display:block;font-size:19px;font-weight:700;line-height:1.15}.tag{display:block;font-size:13px;color:var(--muted);line-height:1.35;margin-top:6px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.badge{font-size:10.5px;font-weight:700;line-height:1.25;padding:5px 8px;border-radius:var(--pill);background:var(--bg-2);color:var(--muted)}
 .badge.music{background:rgba(48,209,88,.15);color:#187A32}.badge.show{background:var(--accent-soft);color:var(--accent-ink)}
-.arrow{color:var(--faint);font-size:18px}.emptyartists{text-align:center;color:var(--muted);padding:54px 28px}.emptyartists b{display:block;color:var(--ink);font-size:18px;margin-bottom:6px}
+.badge.rating{display:inline-flex;align-items:center;gap:5px}.stars{color:#ffb020;letter-spacing:1px;white-space:nowrap}.arrow{align-self:center;color:var(--faint);font-size:18px}.emptyartists{text-align:center;color:var(--muted);padding:54px 28px}.emptyartists b{display:block;color:var(--ink);font-size:18px;margin-bottom:6px}
 .loading{margin:12px 18px;height:92px;border-radius:var(--r);background:linear-gradient(100deg,var(--hair) 30%,var(--hair-2) 50%,var(--hair) 70%);background-size:220% 100%;animation:sh 1.4s infinite}
-@media(max-width:380px){.selects{grid-template-columns:1fr}.hero h1{font-size:30px}}
+@media(max-width:380px){.selects{grid-template-columns:1fr}.hero h1{font-size:30px}.avatar{width:68px;height:68px}.artistcard{gap:12px;padding:14px}}
 </style>
 </head>
 <body>
@@ -43,14 +43,17 @@ body{padding-bottom:42px}
   </div>
   <section class="hero"><h1>Find artists</h1><p>Discover every artist and band on MySet.</p></section>
   <section class="filters" aria-label="Artist filters">
-    <input class="inp" id="query" type="search" placeholder="Search artist or band" autocomplete="off">
+    <input class="inp" id="query" type="search" placeholder="Search name, style or location" autocomplete="off">
     <div class="selects">
       <select class="inp" id="country" aria-label="Country"><option value="">All countries</option></select>
       <select class="inp" id="city" aria-label="City"><option value="">All cities</option></select>
+      <select class="inp" id="style" aria-label="Style"><option value="">All styles</option></select>
+      <select class="inp" id="rating" aria-label="Minimum rating"><option value="">Any rating</option><option value="4">4+ stars</option><option value="3">3+ stars</option><option value="2">2+ stars</option><option value="1">1+ stars</option></select>
     </div>
     <div class="toggles">
-      <button class="filtertoggle" id="upcoming" type="button" aria-pressed="false">Upcoming shows</button>
+      <button class="filtertoggle" id="upcoming" type="button" aria-pressed="false">MySet shows in next 30 days</button>
       <button class="filtertoggle" id="music" type="button" aria-pressed="false">Music released</button>
+      <button class="filtertoggle" id="signed" type="button" aria-pressed="false">Signed</button>
     </div>
   </section>
   <div class="summary"><b id="count">Artists</b><span>Locations follow upcoming shows</span></div>
@@ -59,30 +62,34 @@ body{padding-bottom:42px}
 <script src="/theme.js"></script>
 <script>
 const $=s=>document.querySelector(s), esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-let ALL=[], ONLY_UPCOMING=false, ONLY_MUSIC=false;
+let ALL=[], ONLY_UPCOMING=false, ONLY_MUSIC=false, ONLY_SIGNED=false;
 const unique=(values)=>[...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 function fill(select,values,label){const keep=select.value;select.innerHTML=`<option value="">All ${label}</option>`+values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');if(values.includes(keep))select.value=keep;}
 function cities(){const country=$('#country').value;return unique(ALL.flatMap(a=>a.locations.filter(l=>!country||l.country===country).map(l=>l.city)));}
 function render(){
-  const query=$('#query').value.trim().toLowerCase(), country=$('#country').value, city=$('#city').value;
-  const rows=ALL.filter(a=>(!query||`${a.name} ${a.tagline} ${a.management}`.toLowerCase().includes(query))&&
+  const query=$('#query').value.trim().toLowerCase(), country=$('#country').value, city=$('#city').value, style=$('#style').value, rating=Number($('#rating').value||0);
+  const rows=ALL.filter(a=>(!query||`${a.name} ${a.tagline} ${a.management} ${a.style} ${a.locations.map(l=>`${l.city} ${l.country}`).join(' ')}`.toLowerCase().includes(query))&&
     (!country||a.locations.some(l=>l.country===country))&&(!city||a.locations.some(l=>(!country||l.country===country)&&l.city===city))&&
-    (!ONLY_UPCOMING||a.upcomingShows>0)&&(!ONLY_MUSIC||a.musicReleased));
+    (!style||a.style===style)&&(!rating||(a.rating||0)>=rating)&&
+    (!ONLY_UPCOMING||a.showsNext30Days>0)&&(!ONLY_MUSIC||a.musicReleased)&&(!ONLY_SIGNED||a.signed));
   $('#count').textContent=`${rows.length} artist${rows.length===1?'':'s'}`;
   $('#artists').className=rows.length?'artists':'';
   $('#artists').innerHTML=rows.length?rows.map(a=>`<a class="artistcard" href="/${encodeURIComponent(a.slug)}">
     ${a.avatar?`<img class="avatar" src="${esc(a.avatar)}" alt="" loading="lazy">`:`<span class="avatar blank">${esc(a.name.slice(0,1).toUpperCase())}</span>`}
     <span class="copy"><span class="name">${esc(a.name)}</span><span class="tag">${esc(a.tagline||a.management||'View profile')}</span>
-    <span class="badges">${a.upcomingShows?`<span class="badge show">${a.upcomingShows} upcoming</span>`:''}${a.musicReleased?'<span class="badge music">Music released</span>':''}</span></span><span class="arrow">›</span></a>`).join(''):
+    <span class="badges">${a.nextShow&&a.nextShow.city?`<span class="badge">${esc([a.nextShow.city,a.nextShow.country].filter(Boolean).join(', '))}</span>`:''}${a.style?`<span class="badge">${esc(a.style)}</span>`:''}${a.signed?'<span class="badge">Signed</span>':''}${a.rating?`<span class="badge rating"><span>${a.rating}/5</span><span class="stars" aria-label="${a.rating} out of 5 stars">${[1,2,3,4,5].map(n=>n<=Math.round(a.rating)?'★':'☆').join('')}</span></span>`:''}${a.musicReleased?'<span class="badge music">Music released</span>':''}<span class="badge show">${a.showsNext30Days||0} MySet show${a.showsNext30Days===1?'':'s'} over next 30 days</span><span class="badge">${a.totalShows||0} MySet show${a.totalShows===1?'':'s'} total</span></span></span><span class="arrow">›</span></a>`).join(''):
     '<div class="emptyartists"><b>No artists match</b>Try clearing one of the filters.</div>';
 }
 function toggle(button,key){window[key]=!window[key];button.classList.toggle('on',window[key]);button.setAttribute('aria-pressed',String(window[key]));render()}
 $('#query').addEventListener('input',render);
 $('#country').addEventListener('change',()=>{fill($('#city'),cities(),'cities');render()});
 $('#city').addEventListener('change',render);
+$('#style').addEventListener('change',render);
+$('#rating').addEventListener('change',render);
 $('#upcoming').addEventListener('click',()=>{ONLY_UPCOMING=!ONLY_UPCOMING;$('#upcoming').classList.toggle('on',ONLY_UPCOMING);$('#upcoming').setAttribute('aria-pressed',String(ONLY_UPCOMING));render()});
 $('#music').addEventListener('click',()=>{ONLY_MUSIC=!ONLY_MUSIC;$('#music').classList.toggle('on',ONLY_MUSIC);$('#music').setAttribute('aria-pressed',String(ONLY_MUSIC));render()});
-(async()=>{try{const d=await fetch('/api/artists',{cache:'no-store'}).then(r=>r.json());if(!d.ok)throw Error();ALL=d.artists||[];fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');render()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
+$('#signed').addEventListener('click',()=>{ONLY_SIGNED=!ONLY_SIGNED;$('#signed').classList.toggle('on',ONLY_SIGNED);$('#signed').setAttribute('aria-pressed',String(ONLY_SIGNED));render()});
+(async()=>{try{const d=await fetch('/api/artists',{cache:'no-store'}).then(r=>r.json());if(!d.ok)throw Error();ALL=d.artists||[];fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
 if('serviceWorker'in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 </script>
 </body>

@@ -8,16 +8,14 @@ documents own: `MYSET-MASTER-OVERVIEW.md` is what MySet is, `INVARIANTS.md` is w
 never break, `docs/decisions/` is why a design is the way it is, and `docs/sessions/` is
 what happened on a given day.
 
-**Last reviewed:** 2026-09-10
+**Last reviewed:** 2026-09-11
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** Upcoming gigs now expose their fixed-price Featured-show action
-directly, and the promotion sheet explains it in prominent orange bullets. Artist and
-venue signup email now requires a verified sender and reports provider rejection instead
-of falsely claiming a code was sent. The production Resend key exists, but `AUTH_FROM`
-is not configured, so public email signup is honestly unavailable until that final
-operator step is completed. All 1,863 assertions and rendered mobile checks pass. The
-complete batch is live in production at `33d7429`; deploy `6aa2bf1185cb7d000874ed54`
-was verified by served content.
+**Current focus:** The Find artists cards now separate names from one-liners and expose
+calendar location, directory-only style, management-backed signed status, visible
+community rating average, MySet shows over the next 30 days and completed MySet shows.
+Country, city, style, minimum rating, signed, released-music and 30-day-show filters are
+available. Full and rendered mobile checks pass; draft `6aa3a5cdaf109164f02e0a0d` was
+verified by served content. Production remains at `33d7429`.
 
 **Next work item (pick up here):** The **shared-board split** — one cacheable board
 payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
@@ -93,6 +91,7 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-11 | Draft `6aa3a5cdaf109164f02e0a0d`, focused directory/community/copy checks, `node tools/uicheck.mjs`, and `sh test/run.sh` | New directory tags, filters, calculated ratings/show counts, separate name/one-liner spacing and 320px fit all pass; full suite has zero failures; production unchanged |
 | 2026-09-10 | Production commit `33d7429`, Netlify deploy `6aa2bf1185cb7d000874ed54` | Deploy ready; live Studio serves gig-level Feature and orange promotion bullets, and live directory/theme assets match the approved batch |
 | 2026-09-10 | `sh test/run.sh` + `node tools/overview.mjs --tests` | 1,863 assertions, 0 failures, including verified-sender readiness, provider rejection, both signup doors and Featured-show settlement |
 | 2026-09-10 | `node tools/uicheck.mjs` | Gig-level Feature/Edit/cancel order, 320px fit, scoped three-bullet orange promotion sheet and all existing rendered checks pass |
@@ -143,6 +142,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 
 | Date | Decision | Record |
 | --- | --- | --- |
+| 2026-09-11 | Artist directory discovery facts derive from their existing source records; style alone is new profile data | `0024` |
 | 2026-09-09 | An artist-declined unplayed song returns its votes | `0016` |
 | 2026-09-08 | Three free votes; default packs are 3 for $5 and 15 for $20 | `0014` |
 | 2026-09-07 | A vote never comes back | `0001` |

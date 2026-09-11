@@ -38,7 +38,7 @@ export default async (req) => {
     live: show.status === 'live', venue: show.venue || '', city: show.city || '',
     showId: show.showId || '',
     merch: (p.merch || []).filter((m) => m.on).length,
-    name: p.name, tagline: p.tagline, bio: p.bio, photo: p.photo,
+    name: p.name, tagline: p.tagline, style: p.style, bio: p.bio, photo: p.photo,
     avatar: p.avatar || p.photo, photos: p.photos,
     management: p.management, managementUrl: p.managementUrl,
     links: p.links,

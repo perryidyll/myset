@@ -1014,7 +1014,7 @@ async function handleProfile(aid, action, body, req, me) {
     if (!!management !== !!managementUrl)
       return bad('Add both the label or management name and its website, or leave both blank.', 400);
     await mutateProfile(aid, (p) => {
-      for (const k of ['name', 'tagline', 'management', 'managementUrl', 'bio', 'photo', 'avatar'])
+      for (const k of ['name', 'tagline', 'style', 'management', 'managementUrl', 'bio', 'photo', 'avatar'])
         if (typeof body[k] === 'string') p[k] = body[k];
       if (Array.isArray(body.photos)) p.photos = body.photos;
       if (body.links && typeof body.links === 'object')

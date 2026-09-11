@@ -46,6 +46,7 @@ export const defaultProfile = () => ({
   artistId: null,
   name: '',
   tagline: '',
+  style: '',              // directory filter/tag only; not rendered on the public profile
   management: '',
   managementUrl: '',
   bio: '',
@@ -90,6 +91,7 @@ export function normProfile(p) {
   const out = { ...d, ...(p || {}) };
   out.name = clean(out.name, 60);
   out.tagline = clean(out.tagline, 120);
+  out.style = clean(out.style, 60);
   out.management = clean(out.management, 120);
   out.managementUrl = safeLink('website', out.managementUrl);
   out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 700);    // newlines kept
