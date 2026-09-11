@@ -40,6 +40,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md) | Find artists lists only effectively verified artist profiles | 2026-09-11 | trust | decided | user |
 | [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) | Errors and bug reports are kept in the blob store, not in a vendor | 2026-09-11 | ops | decided | perry-confirmed |
 | [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) | Casting is rate-limited by a token bucket on the fan record | 2026-09-11 | scale | decided | perry-confirmed |
+| [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) | A night is evidence only if it lines up with a published gig | 2026-09-11 | money | decided | perry |
+| [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) | A Stripe options object is passed only when it has something in it | 2026-09-11 | money | decided | claude |
 
 ## By area
 
@@ -47,7 +49,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md)
 
-**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md)
+**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md)
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md)
 
