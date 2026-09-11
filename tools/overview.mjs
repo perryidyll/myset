@@ -104,6 +104,8 @@ async function facts() {
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
       shards: lib.SHARDS,
+      castBurst: lib.CAST_BURST,
+      castPerMin: lib.CAST_PER_MIN,
       countdownMs: lib.COUNTDOWN_MS,
       maxVideoBytes: video.MAX_VIDEO_BYTES,
       defaultFreeCredits: lib.DEFAULT_FREE_CREDITS,
@@ -291,6 +293,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | Artist Studio actions | ${f.shape.studioActions.length} |
 | Venue Studio actions | ${f.shape.venueActions.length} |
 | Fan-record shards | ${f.constants.shards} |
+| Casts a device may make in a row / per minute after that | ${f.constants.castBurst} / ${f.constants.castPerMin} |
 | Largest clip accepted | ${(f.constants.maxVideoBytes / 1048576).toFixed(0)} MB |
 | Invariants | ${f.shape.invariants.count} (last: ${f.shape.invariants.last}) |
 | Test suites | ${f.shape.testSuites} |

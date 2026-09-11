@@ -10,14 +10,13 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-11
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** Production `3b69831` has the combined discovery/map batch. The ready
-working tree puts **View on map** left of **Search for artists**, deep-links into the map,
+**Current focus:** Production `e74292b` puts **View on map** left of **Search for artists**, deep-links into the map,
 keeps the Pro plan card at 2%, adds durable three-hour server-error context to fan bug
 reports, and rate-limits scripted vote floods without affecting normal tapping. All
-1,926 assertions and rendered mobile checks pass. Production is unchanged.
+1,926 assertions and rendered mobile checks pass. Live HTML, map configuration and an
+actual referrer-authorized PNG were verified.
 
-**Next work item (pick up here):** Ship the complete tested working tree, verify the live
-map on `myset.vip`, then return to the **shared-board split**.
+**Next work item (pick up here):** Return to the **shared-board split**.
 
 **Fresh-agent one-liner:** `Read AGENTS.md, then continue Phase 3 from the shared-board split in IMPLEMENTATION_STATUS.md.`
 
@@ -60,6 +59,8 @@ map on `myset.vip`, then return to the **shared-board split**.
 | P3-004 | **Error tracking that outlives the night** | done | Durable capped hourly error documents, guarded handlers, fan report endpoint and Studio reader; 42/42 focused assertions | Retained in MySet's existing blob store; no third-party telemetry account required |
 | P3-005 | Fan-shard write ceiling actually measured | not_started | Derived from a measured 40ms *read*, never from a write | Hammer one shard before selling a room over 2,000 |
 | P3-008 | **A payments health check that runs off the hot path** | not_started | — | The 2026-09-08 outage was invisible until a fan tapped. A key can be valid-looking and dead |
+| P3-010 | **Rate limit on casting** — token bucket on the fan record | done | 2026-09-11: `takeCastToken` in `_lib.mjs`, checked inside the vote mutation; 429 in plain words; `test/errlog.mjs` | 30 in a row, then 30 a minute. Decision `0030`, INVARIANT 0fa |
+| P3-011 | Same person, two browsers, not recognised as one | cancelled | — | Not fixable honestly — the fan id lives in the browser and browsers do not share it. IP matching is worse (the whole bar shares one). INVARIANT 0ae already stamps a per-show network hash so the artist can see one network making many phones. See master overview §1.12 |
 | P3-009 | `/api/pay` throws when a caller sends no `attempt` | not_started | Reproduced live 2026-09-08: 502 `Stripe: Unknown arguments` | `opts` is `{}` for a platform-owner charge with no `attempt`, and stripe-node rejects an empty options object. **No fan is affected** — `vote.html` and `community.html` always send `attempt`. One-line fix: pass `opts` only when non-empty |
 | P3-010 | Featured-show bidding | deferred | Fixed-price Featured shows are live; user chose to file bidding for later on 2026-09-10 | Revisit only after real demand shows the fixed-price, first-come inventory is regularly full |
 | P3-006 | `AGENTS.md` + this ledger on every project, not just MySet | in_progress | MySet done 2026-09-08 | iOhm landing, Idyll Mastery, Idyll Enterprises, Clients |
@@ -96,6 +97,7 @@ map on `myset.vip`, then return to the **shared-board split**.
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-11 | Production commit `e74292b`, deploy and live map/copy checks | Home actions and 2% Pro card are live; map config is enabled and a production-referrer request returns a real PNG; full suite 1,926/1,926 |
 | 2026-09-11 | Draft `6aa3c42c072c9b9fc5bea38a`, focused copy/render checks and full suite | View-on-map is left of artist search at 320px; deep-link and consistent 2% Pro copy are served; 1,882 assertions, zero failures; production unchanged |
 | 2026-09-11 | Production commit `d1a6531` and live HTTP/config checks | Combined discovery/miscellaneous batch deployed successfully at `myset.vip`; map remains correctly hidden while provider config reports disabled |
 | 2026-09-11 | Draft `6aa3bcce9fd9709b3a45eb9c`, verified-only directory tests, rendered first-Settings notice and full gate | Served Studio has 2% Pro copy, verified-only explanation and no placeholder testimonials; directory endpoint returns only the qualifying profile; notice colors/persistence and mobile fit pass; 1,882 assertions, zero failures; production unchanged |
@@ -162,6 +164,8 @@ duplicate it here. Index: `docs/decisions/README.md`.
 | 2026-09-08 | Three free votes; default packs are 3 for $5 and 15 for $20 | `0014` |
 | 2026-09-07 | A vote never comes back | `0001` |
 | 2026-09-07 | The countdown is a nudge, not a lock | `0010` |
+| 2026-09-11 | Errors and bug reports live in the blob store, not a vendor | `0029` |
+| 2026-09-11 | Casting is rate-limited by a token bucket on the fan record | `0030` |
 | 2026-09-07 | The open line is not next | `0012` |
 | 2026-09-06 | Clips go up as they are | `0011` |
 | 2026-09-05 | A full room is never refused | `0006` |
@@ -179,7 +183,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 | **Nothing detects a dead Stripe key** | `paymentsEnabled` checks the key EXISTS, never that it WORKS, so the room is shown a buy button that fails on tap | P3-008 | **Active, unmitigated** |
 | **A bug cannot be diagnosed after the night** | A fan reports something, the logs are already gone | Durable hourly errors + fan reports with three-hour context | Resolved 2026-09-11 |
 | Nobody has tested a restore | Data loss would be discovered during recovery | — | Active |
-| Nobody is alerted when something breaks | A silent failure runs until somebody notices | P3-004 covers half of it | Active |
+| Nobody is alerted when something breaks | A silent failure runs until somebody notices | Errors are now kept, but nobody is paged — that is the half Sentry would add | Active |
 | A room over ~2,500 breaks on reads | A big booked show fails live | P3-001 | Active, bounded by the soft caps |
 | One clip watched a lot costs more than thirty gigs | Bandwidth is the only line item that can run away | The 75MB cap and the trim screen; R2 when it matters | Active, watched |
 

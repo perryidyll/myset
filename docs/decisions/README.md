@@ -22,7 +22,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0010](0010-last-call-is-a-nudge-not-a-lock.md) | The ten-second countdown nudges the room; it does not close voting | 2026-09-07 | ui | decided | claude |
 | [0011](0011-clips-go-up-as-they-are.md) | A clip is uploaded exactly as it was filmed; nothing on the phone re-encodes it | 2026-09-06 | media | decided | perry |
 | [0012](0012-an-open-line-to-the-room-is-not-next.md) | An open line to the room is the right end state, and not the next thing built | 2026-09-07 | scale | decided | claude |
-| [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) | Errors are reported to a service that outlives the night | 2026-09-08 | ops | proposed | claude |
+| [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) | Errors are reported to a service that outlives the night | 2026-09-08 | ops | superseded | claude |
 | [0014](0014-three-free-votes-and-two-new-default-packs.md) | Every room on the former voting defaults moves to three free votes and the two new packs | 2026-09-08 | voting | decided | user |
 | [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) | The artist profile has one live voting call to action, and show controls are not duplicated in Settings | 2026-09-09 | ui | decided | user |
 | [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) | An artist-declined unplayed song returns its votes | 2026-09-09 | voting | decided | user |
@@ -38,6 +38,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) | The $20 artist plan takes a 2 percent transaction fee | 2026-09-11 | money | decided | user |
 | [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) | Light is the first-visit default and loading screens follow the active theme | 2026-09-11 | ui | decided | user |
 | [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md) | Find artists lists only effectively verified artist profiles | 2026-09-11 | trust | decided | user |
+| [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) | Errors and bug reports are kept in the blob store, not in a vendor | 2026-09-11 | ops | decided | perry-confirmed |
+| [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) | Casting is rate-limited by a token bucket on the fan record | 2026-09-11 | scale | decided | perry-confirmed |
 
 ## By area
 
@@ -47,11 +49,11 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md)
 
-**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md)
+**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md)
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md)
 
 **storage** — [0008](0008-never-list-blobs-for-live-data.md)
 

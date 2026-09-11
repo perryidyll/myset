@@ -2041,3 +2041,15 @@ If you are about to violate one, stop and say so rather than working around it.
     `/api/artists` applies that rule before reading profiles, calendars, history or
     community posts, so an unverified or lapsed account cannot appear in a card, the
     day-by-day event list or the map payload. Client filtering is never the trust gate.
+
+0fa. **A cast spends a token from a bucket on the fan record, and a refused cast writes
+    nothing.** `takeCastToken` in `_lib.mjs`, called inside the vote mutation AFTER the
+    credit check, so a fan who is out of votes keeps hearing that and only casts that
+    would have landed spend a token. A replay of a kept cast is answered before the
+    bucket is consulted. `test/errlog.mjs`. Decision `0030`.
+
+0fb. **Errors go to the blob store under a computable hourly key, and logging never
+    throws.** `_errlog.mjs`: `err_<YYYY-MM-DDTHH>`, capped per hour, three tries then
+    silence, with the console line as the fallback into Netlify's own 24-hour log. A
+    bug report reads the last three of those keys — never `list()` (INVARIANT 1). No
+    request body, no email, no secret is ever written into it. Decision `0029`.

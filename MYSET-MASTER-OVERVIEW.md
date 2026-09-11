@@ -316,6 +316,33 @@ and YouTube's only hard caps in Live chat are on spend and on attention, never o
 many people may watch. Decision record
 [`0006`](docs/decisions/0006-a-full-room-is-never-refused.md).
 
+### Two things a room is protected from (added 2026-09-11)
+
+**A script casting votes.** Every fan record carries a small token bucket: a device may
+cast a burst of votes in a row and then a steady number a minute after that (the exact
+figures are in §2.1). It is checked inside the write that already happens, so it costs
+no extra read, and a refused cast writes nothing — which is the point, because the hole
+it closes is somebody running up the write bill, not a fan voting enthusiastically. A
+person tapping as fast as they can stays under it. Decision `0030`.
+
+**A bug nobody can look at afterwards.** Netlify deletes function logs after 24 hours.
+So the server now writes its own errors into the blob store, one document per hour
+under a computable key, and the voting page has a **"Something wrong?"** link. A report
+carries the fan's sentence, the last twenty things the page saw fail, and the last three
+hours of the server's own errors — and the artist reads it in the Studio, under the
+money. No vendor, no account, no new dependency. Decision `0029`.
+
+**What MySet cannot do, and will not pretend to.** It cannot tell that Safari and Chrome
+on the same phone are the same person; the fan id lives in the browser, and browsers do
+not share it. Nothing on the web can, honestly. Matching by network address is worse
+than nothing: everyone on the bar's Wi-Fi shares one address, and a phone on mobile data
+changes its address mid-set — so a network rule either locks out the whole room or does
+nothing. What MySet does instead is stamp each fan record with a per-show hash of its
+network (INVARIANT 0ae), so the artist can see when one network is producing many
+"phones", and it keeps the free allowance small enough that a second browser is worth
+a handful of votes, not a swing. The votes that decide a night are the paid ones, and
+those cost real money per browser.
+
 ## 1.13 Between shows — the dark room
 
 A fan who opens the page with **no show running** sees the **setlist, whole and quiet**:
@@ -475,11 +502,12 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Artist Studio actions | 125 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
+| Casts a device may make in a row / per minute after that | 30 / 30 |
 | Largest clip accepted | 75 MB |
-| Invariants | 245 (last: 0f9) |
+| Invariants | 247 (last: 0fb) |
 | Test suites | 40 |
 | Assertions | **1,926**, 0 failing, last run 2026-09-11 |
-| Decision records | 28 |
+| Decision records | 30 |
 
 ### Feature flags in force
 

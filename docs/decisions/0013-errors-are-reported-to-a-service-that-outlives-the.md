@@ -2,11 +2,11 @@
 id: 0013
 title: Errors are reported to a service that outlives the night
 date: 2026-09-08
-status: proposed
+status: superseded
 decided_by: claude
 area: ops
 reverses:
-superseded_by:
+superseded_by: 0029
 invariants: []
 commits: []
 tests: []
