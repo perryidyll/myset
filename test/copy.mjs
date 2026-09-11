@@ -20,7 +20,7 @@ const read = (rel) => readFileSync(new URL('../' + rel, import.meta.url), 'utf8'
 
 console.log('\nFIXED LABELS  the strings other things lean on');
 const venue = read('public/venue.html'), artist = read('public/artist.html'), vote = read('public/vote.html');
-const home = read('public/index.html'), theme = read('public/app.css');
+const home = read('public/index.html'), theme = read('public/app.css'), themeScript = read('public/theme.js');
 const directory = read('public/artists.html');
 ok('the venue tick reads "✓ Verified"', /✓ Verified/.test(venue));
 ok('and its absence "Unverified listing"', /Unverified listing/.test(venue));
@@ -55,10 +55,38 @@ ok('lyrics wrap inside both audience and Studio sheets',
    /\.chartview\.stage-lyrics\{[^}]*white-space:pre-wrap[^}]*overflow-wrap:anywhere/.test(studio));
 ok('the home-page light mode switch persists across every public page',
    /id="themeBtn"[^>]*data-theme-toggle/.test(home)&&
-   /localStorage\.setItem\('myset\.theme', next\)/.test(read('public/theme.js'))&&
+   /localStorage\.setItem\('myset\.theme', next\)/.test(themeScript)&&
    /:root\[data-theme=light\]/.test(theme)&&
    ['index.html','artist.html','artists.html','community.html','vote.html','venue.html','about.html','studio.html','venue-studio.html']
      .every(x=>read(`public/${x}`).includes('/theme.js')));
+ok('light is the first-visit default on every page while a saved dark choice survives',
+   /const fallback = \(\) => 'light'/.test(themeScript)&&
+   ['index.html','artist.html','artists.html','community.html','vote.html','venue.html','about.html','studio.html','venue-studio.html','stage.html']
+     .every(x=>read(`public/${x}`).includes("let t='light'")));
+ok('public and Studio loading screens use the active light or dark palette',
+   ['artist.html','venue.html','community.html'].every(x=>{
+     const s=read(`public/${x}`);return /#intro\{[^}]*background:#F5F5F7/.test(s)&&/data-theme=dark\][^\n]*#intro|data-theme=dark\] #intro/.test(s);
+   })&&
+   ['studio.html','venue-studio.html'].every(x=>{
+     const s=read(`public/${x}`);return /#boot\{[^}]*background:var\(--bg\)/.test(s)&&/html\{background:#F5F5F7\}html\[data-theme=dark\]\{background:#000\}/.test(s);
+   }));
+ok('the $20 plan displays the same 2% transaction fee the server charges',
+   /pro:\{name:'Pro',price:'\$20 \/ month'[\s\S]{0,1400}Transaction fee: 2%/.test(studio)&&
+   !['studio.html','venue-studio.html','index.html','about.html','artists.html','artist.html','community.html','vote.html']
+     .some(x=>/Transaction fee: 2\.5%/.test(read(`public/${x}`))));
+ok('Find artists is server-gated to effectively verified artists before cards or map data are built',
+   /artist\.verified\s*&&\s*planOf\(artist\)\s*!==\s*'free'/.test(read('netlify/functions/artists.mjs')));
+ok('Settings clearly says verified profiles alone appear in search, the show list and map',
+   /Only verified profiles appear in Find artists search results, including the day-by-day show list and map\./.test(studio));
+ok('the first Settings visit shows the requested verification notice once per artist',
+   /myset\.verify-search-intro\.'\+aid/.test(studio)&&
+   /<h3>verify your account now<\/h3>/.test(studio)&&
+   /only verified profiles will show up in search results!/.test(studio)&&
+   /this is to minimize fraudulent use and ensure the best experience for MySet audiences/.test(studio)&&
+   /\.sheet\.verify-intro\{background:#111;color:#fff\}/.test(studio)&&
+   /\.verify-intro \.verify-lede\{color:var\(--accent-2\)/.test(studio));
+ok('the plans popup contains no placeholder testimonials',
+   !/TESTIMONIALS|What MySet members have to say|Sample artist|Sample duo|Sample band/.test(studio));
 ok('the Studio scrolling windows use a clipping shell around the native scrollbar',
    /class="scroll-shell queue-shell"><div class="list scroll-window queue-window"/.test(studio)&&
    /class="scroll-shell setlist-shell"><div class="list scroll-window setlist-window"/.test(studio));
@@ -68,6 +96,9 @@ ok('the home page links to the artist directory and its requested filters',
    /href="\/artists">Search for artists/.test(home)&&
    /MySet shows in next 30 days/.test(directory)&&/Music released/.test(directory)&&/Signed/.test(directory)&&
    /All countries/.test(directory)&&/All cities/.test(directory)&&/All styles/.test(directory)&&/Any rating/.test(directory));
+ok('the artist directory map is readiness-gated and the CSP permits only its image host',
+   /id="mapBtn"[^>]*hidden/.test(directory)&&/api\/mapconfig/.test(directory)&&
+   /https:\/\/maps\.googleapis\.com/.test(read('netlify.toml')));
 ok('Featured shows remain a $10 first-come city promotion',
    /Featured shows/.test(home)&&/featureStart/.test(studio)&&/\$10/.test(studio)&&/first come, first served/i.test(studio));
 ok('each upcoming gig offers Feature before Edit and cancel',

@@ -220,7 +220,7 @@ If you are about to violate one, stop and say so rather than working around it.
 0r0. **DIRECT CHARGES, and the fee is the plan's fee.** 0r below is now
    implemented (`_connect.mjs`). The charge is created ON the artist's connected
    account, so the money is legally theirs and MySet takes an
-   `application_fee_amount` off the top: **25% free, 10% Plus, 2.5% Pro**,
+   `application_fee_amount` off the top: **25% free, 10% Plus, 2% Pro**,
    defined once in `PLANS[*].cut` so the pricing page cannot drift from what is
    charged. The platform-owner account is explicitly exempt.
 
@@ -1450,8 +1450,8 @@ If you are about to violate one, stop and say so rather than working around it.
     rows go last, so a token presented mid-delete finds nothing left to act on.
 
 0da. **The plan sheet lists every tier in full.** Never "everything in Plus"; the
-    fee line reads "Transaction fee: N%" in orange; the testimonials array is the
-    architecture (empty it and the section disappears; placeholders are labelled).
+    fee line reads "Transaction fee: N%" in orange. Placeholder testimonials are
+    not shown; add that section back only when real attributed quotes exist.
     Top right of both Studios: `Upgrade ↗` on free, a green tag with the plan's
     name and the same arrow when paid. Settings holds one big green button.
 
@@ -2035,3 +2035,9 @@ If you are about to violate one, stop and say so rather than working around it.
     lands back there; `from` selects between two paths the SERVER builds and is never
     used as a url, because a caller-supplied redirect is an open redirect however
     innocent the caller looks.
+
+0f9. **Find artists contains only effectively verified artists.** The public badge is
+    the definition: a registry verification flag plus a current Plus or Pro plan.
+    `/api/artists` applies that rule before reading profiles, calendars, history or
+    community posts, so an unverified or lapsed account cannot appear in a card, the
+    day-by-day event list or the map payload. Client filtering is never the trust gate.

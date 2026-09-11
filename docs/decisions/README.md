@@ -26,7 +26,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0014](0014-three-free-votes-and-two-new-default-packs.md) | Every room on the former voting defaults moves to three free votes and the two new packs | 2026-09-08 | voting | decided | user |
 | [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) | The artist profile has one live voting call to action, and show controls are not duplicated in Settings | 2026-09-09 | ui | decided | user |
 | [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) | An artist-declined unplayed song returns its votes | 2026-09-09 | voting | decided | user |
-| [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) | Artist transaction fees are 25%, 10%, and 2.5%, with the platform-owner account exempt | 2026-09-09 | money | decided | user |
+| [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) | Artist transaction fees are 25%, 10%, and 2.5%, with the platform-owner account exempt | 2026-09-09 | money | superseded | user |
 | [0018](0018-song-request-offers-are-authorized-now-and-capture.md) | song request offers are authorized now and captured only after the song finishes | 2026-09-09 | money | decided | user |
 | [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md) | Mood votes are free requests that let the artist choose the song | 2026-09-10 | voting | decided | perry |
 | [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) | Artists cannot publish public posts on their own artist page except the founding account | 2026-09-10 | auth | decided | perry |
@@ -34,6 +34,10 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) | Automatic chords require a licensed feed or recording-derived analysis | 2026-09-10 | media | decided | user-confirmed |
 | [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) | Public email sign-in requires a verified sender and confirmed delivery | 2026-09-10 | auth | decided | claude |
 | [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) | Artist directory cards derive public discovery tags and counts from existing profile, calendar, history and visible community data | 2026-09-11 | ui | decided | user |
+| [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) | Filtered event maps use a static image and existing exact directions links | 2026-09-11 | ui | decided | user |
+| [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) | The $20 artist plan takes a 2 percent transaction fee | 2026-09-11 | money | decided | user |
+| [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) | Light is the first-visit default and loading screens follow the active theme | 2026-09-11 | ui | decided | user |
+| [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md) | Find artists lists only effectively verified artist profiles | 2026-09-11 | trust | decided | user |
 
 ## By area
 
@@ -41,7 +45,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md)
 
-**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md)
+**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md)
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md)
 
@@ -51,7 +55,9 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **storage** — [0008](0008-never-list-blobs-for-live-data.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md)
+**trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
+
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md)
 
 **voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 

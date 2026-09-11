@@ -14,7 +14,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
-<script>try{const t=localStorage.getItem('myset.theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)}}catch(e){}</script>
+<script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -27,12 +27,10 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<!-- FIRST PAINT IS BLACK, AND THE SPLASH NEEDS NOTHING FROM THE NETWORK. This
-     inline block comes before any external stylesheet, so the black ground and the
-     three bars are painted from the first frame instead of after app.css arrives —
-     which on a phone opening a new tab was a white screen. app.css is swapped in
-     without blocking rendering; the splash hides everything until first render. -->
-<style>html{background:#0D0B0C}
+<!-- FIRST PAINT MATCHES THE SAVED THEME, AND THE SPLASH NEEDS NOTHING FROM THE
+     NETWORK. This inline block comes before any external stylesheet, so the correct
+     ground is painted from the first frame instead of flashing the opposite theme. -->
+<style>html{background:#F5F5F7}html[data-theme=dark]{background:#0D0B0C}
 </style>
 <link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="/app.css"></noscript>
@@ -217,10 +215,11 @@ body{padding-bottom:34px}
 .empty{margin:0 18px;padding:26px 20px;text-align:center;color:var(--muted);font-size:14.5px;
   background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
 
-/* Loading splash — the homepage's intro, reused as a real loading state: black
-   ground, the three bars, the wordmark. Hidden by hideIntro() on first render
+/* Loading splash — the homepage's intro, reused as a real loading state in the
+   active theme. Hidden by hideIntro() on first render
    rather than a timer, because this page has a fetch to wait for. */
-#intro{position:fixed;inset:0;z-index:90;background:#0D0B0C;display:grid;place-items:center}
+#intro{position:fixed;inset:0;z-index:90;background:#F5F5F7;display:grid;place-items:center}
+:root[data-theme=dark] #intro{background:#0D0B0C}
 #intro.off{opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s .4s}
 #intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
 #intro .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;
@@ -228,7 +227,8 @@ body{padding-bottom:34px}
 #intro .bars i:nth-child(1){animation-delay:.02s;--h:38px}
 #intro .bars i:nth-child(2){animation-delay:.12s;--h:64px}
 #intro .bars i:nth-child(3){animation-delay:.22s;--h:28px}
-#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#fff}
+#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#1D1D1F}
+:root[data-theme=dark] #intro .word{color:#fff}
 @keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
 @media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
 </style>

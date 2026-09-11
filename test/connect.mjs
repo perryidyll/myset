@@ -8,7 +8,7 @@
      · nobody can take money until STRIPE says charges_enabled — not when a local
        flag says onboarding was started
      · the charge is created ON the artist's account, or it is not their money
-     · the fee is the plan's fee: 25% free, 10% Plus, 2.5% Pro
+     · the fee is the plan's fee: 25% free, 10% Plus, 2% Pro
      · a session created on a connected account can still be REDEEMED, which needs
        that account in scope — getting this wrong is the 2026-08-30 failure with a
        new cause
@@ -62,10 +62,10 @@ const completeOnboarding = async (acct) => {
 console.log('\nTHE PLAN TABLE IS THE ONE DEFINITION OF THE CUT');
 eq('free takes 25%', PLANS.free.cut, 0.25);
 eq('Plus takes 10%', PLANS.plus.cut, 0.10);
-eq('Pro takes 2.5%', PLANS.pro.cut, 0.025);
+eq('Pro takes 2%', PLANS.pro.cut, 0.02);
 eq('a $5 pack on free', C.feeCents(500, 'free'), 125);
 eq('a $5 pack on Plus', C.feeCents(500, 'plus'), 50);
-eq('a $5 pack on Pro', C.feeCents(500, 'pro'), 12);
+eq('a $5 pack on Pro', C.feeCents(500, 'pro'), 10);
 eq('rounding never favours the platform', C.feeCents(499, 'plus'), 49);
 
 console.log('\nSETUP  a second artist with a room of her own');
@@ -133,8 +133,8 @@ eq('on Plus it is 10%', lastCall('checkout.sessions.create').args.payment_intent
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'pro'; return true; });
 await buy('ana-reyes', 'f3', 'small');
 const proCall = lastCall('checkout.sessions.create');
-eq('on Pro it is 2.5%, rounded down',
-   proCall.args.payment_intent_data.application_fee_amount, 12);
+eq('on Pro it is 2%',
+   proCall.args.payment_intent_data.application_fee_amount, 10);
 ok('and the charge still labels itself for the books',
    proCall.args.payment_intent_data.metadata.kind === 'votes', proCall.args.payment_intent_data);
 
@@ -209,7 +209,7 @@ console.log('\nAND THE HONEST NOTE ABOUT WHO PAYS STRIPE');
 const s2 = await AS(TA, 'payStatus');
 ok('the status says Stripe\'s own fee comes off the artist',
    /2\.9%/.test(s2.pay.stripeFeeNote || ''), s2.pay.stripeFeeNote);
-eq('and reports the cut as a percentage the Studio can print', s2.pay.cutPct, 2.5);
+eq('and reports the cut as a percentage the Studio can print', s2.pay.cutPct, 2);
 
 delete process.env.STRIPE_SECRET_KEY;
 delete process.env.STRIPE_WEBHOOK_SECRET;

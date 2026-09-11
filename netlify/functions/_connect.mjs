@@ -59,7 +59,7 @@ export const connectUsable = (c) => !!(c && c.acct && c.chargesEnabled);
 /* ---------- the platform's share ----------
    Basis points, from the plan table, so there is ONE definition of the cut and the
    pricing page cannot drift from what is charged:
-     free  25%   ·   plus ($10/mo)  10%   ·   pro ($20/mo)  2.5% */
+     free  25%   ·   plus ($10/mo)  10%   ·   pro ($20/mo)  2% */
 const planRow = (plan, kind) =>
   (kind === 'venue' ? (VENUE_PLANS[plan] || VENUE_PLANS.free) : (PLANS[plan] || PLANS.free));
 export const cutOf = (plan, kind = 'artist') => {

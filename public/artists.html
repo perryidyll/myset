@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script>try{const t=localStorage.getItem('myset.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
-<meta name="theme-color" content="#000000">
+<script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t})();</script>
+<meta name="theme-color" content="#F5F5F7">
 <meta name="description" content="Find artists and bands on MySet.">
 <title>Find artists — MySet</title>
 <link rel="stylesheet" href="/app.css">
@@ -21,7 +21,7 @@ body{padding-bottom:42px}
 .toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 .filtertoggle{padding:10px 13px;border-radius:var(--pill);background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:13px;font-weight:650}
 .filtertoggle.on{color:var(--accent-ink);background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
-.summary{display:flex;justify-content:space-between;align-items:baseline;padding:8px 20px 9px;color:var(--muted);font-size:13px}.summary b{color:var(--accent-ink);font-size:15px}
+.summary{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 20px 9px;color:var(--muted);font-size:13px}.summary b{color:var(--accent-ink);font-size:15px}.mapbtn{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:var(--pill);background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:750;box-shadow:inset 0 0 0 1.5px var(--accent-2)}
 .artists{display:grid;gap:10px;margin:0 18px}
 .artistcard{display:flex;align-items:flex-start;gap:15px;padding:16px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);transition:transform .2s var(--spring),box-shadow .2s var(--ease)}
 .artistcard:active{transform:scale(.985)}.artistcard:hover{box-shadow:var(--sh-2)}
@@ -32,6 +32,10 @@ body{padding-bottom:42px}
 .badge.music{background:rgba(48,209,88,.15);color:#187A32}.badge.show{background:var(--accent-soft);color:var(--accent-ink)}
 .badge.rating{display:inline-flex;align-items:center;gap:5px}.stars{color:#ffb020;letter-spacing:1px;white-space:nowrap}.arrow{align-self:center;color:var(--faint);font-size:18px}.emptyartists{text-align:center;color:var(--muted);padding:54px 28px}.emptyartists b{display:block;color:var(--ink);font-size:18px;margin-bottom:6px}
 .loading{margin:12px 18px;height:92px;border-radius:var(--r);background:linear-gradient(100deg,var(--hair) 30%,var(--hair-2) 50%,var(--hair) 70%);background-size:220% 100%;animation:sh 1.4s infinite}
+.mapmodal[hidden]{display:none}.mapmodal{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;padding-top:max(24px,env(safe-area-inset-top));background:rgba(0,0,0,.7);backdrop-filter:blur(10px)}
+.mapsheet{display:flex;flex-direction:column;width:min(680px,100%);max-height:92dvh;background:var(--surface);border-radius:26px 26px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.38);overflow:hidden}.maphead{display:flex;align-items:center;justify-content:space-between;padding:17px 18px 13px}.maphead h2{font-size:21px;margin:0}.maphead p{font-size:12px;color:var(--muted);margin:3px 0 0}.mapclose{width:34px;height:34px;border-radius:50%;background:var(--bg-2);font-size:18px;color:var(--muted)}
+.mapscroll{overflow:auto;padding:0 14px max(18px,env(safe-area-inset-bottom))}.mapcanvas{position:relative;min-height:270px;border-radius:20px;overflow:hidden;background:var(--bg-2);box-shadow:inset 0 0 0 1px var(--hair-2)}.mapcanvas img{display:block;width:100%;height:270px;object-fit:cover}.maplegend{position:absolute;left:10px;bottom:10px;padding:6px 9px;border-radius:var(--pill);background:rgba(0,0,0,.72);color:#fff;font-size:10px;font-weight:700;backdrop-filter:blur(8px)}.mapfail{min-height:270px;display:grid;place-items:center;padding:28px;text-align:center;color:var(--muted);font-size:13px;line-height:1.45}.mapfail b{display:block;color:var(--ink);font-size:16px;margin-bottom:5px}
+.mapevents{display:grid;gap:8px;margin-top:12px}.mapevent{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px;border-radius:15px;background:var(--bg-2)}.pinlabel{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:var(--grad);color:#fff;font-size:11px;font-weight:800}.mapcopy{min-width:0}.mapcopy b,.mapcopy span{display:block}.mapcopy b{font-size:13px}.mapcopy span{font-size:11px;color:var(--muted);margin-top:3px}.mapgo{font-size:11px;font-weight:750;color:var(--accent-ink);padding:7px 8px;border-radius:var(--pill);background:var(--accent-soft)}
 @media(max-width:380px){.selects{grid-template-columns:1fr}.hero h1{font-size:30px}.avatar{width:68px;height:68px}.artistcard{gap:12px;padding:14px}}
 </style>
 </head>
@@ -56,23 +60,34 @@ body{padding-bottom:42px}
       <button class="filtertoggle" id="signed" type="button" aria-pressed="false">Signed</button>
     </div>
   </section>
-  <div class="summary"><b id="count">Artists</b><span>Locations follow upcoming shows</span></div>
+  <div class="summary"><b id="count">Artists</b><button class="mapbtn" id="mapBtn" type="button" hidden>⌖ View map</button></div>
   <div id="artists"><div class="loading"></div><div class="loading"></div></div>
 </main>
+<div class="mapmodal" id="mapModal" hidden role="dialog" aria-modal="true" aria-labelledby="mapTitle">
+  <section class="mapsheet">
+    <div class="maphead"><div><h2 id="mapTitle">Upcoming show map</h2><p id="mapMeta"></p></div><button class="mapclose" id="mapClose" type="button" aria-label="Close map">×</button></div>
+    <div class="mapscroll"><div class="mapcanvas" id="mapCanvas"></div><div class="mapevents" id="mapEvents"></div></div>
+  </section>
+</div>
 <script src="/theme.js"></script>
 <script>
 const $=s=>document.querySelector(s), esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-let ALL=[], ONLY_UPCOMING=false, ONLY_MUSIC=false, ONLY_SIGNED=false;
+let ALL=[], MAPCFG=null, ONLY_UPCOMING=false, ONLY_MUSIC=false, ONLY_SIGNED=false;
 const unique=(values)=>[...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 function fill(select,values,label){const keep=select.value;select.innerHTML=`<option value="">All ${label}</option>`+values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');if(values.includes(keep))select.value=keep;}
 function cities(){const country=$('#country').value;return unique(ALL.flatMap(a=>a.locations.filter(l=>!country||l.country===country).map(l=>l.city)));}
-function render(){
+function matchingArtists(){
   const query=$('#query').value.trim().toLowerCase(), country=$('#country').value, city=$('#city').value, style=$('#style').value, rating=Number($('#rating').value||0);
-  const rows=ALL.filter(a=>(!query||`${a.name} ${a.tagline} ${a.management} ${a.style} ${a.locations.map(l=>`${l.city} ${l.country}`).join(' ')}`.toLowerCase().includes(query))&&
+  return ALL.filter(a=>(!query||`${a.name} ${a.tagline} ${a.management} ${a.style} ${a.locations.map(l=>`${l.city} ${l.country}`).join(' ')}`.toLowerCase().includes(query))&&
     (!country||a.locations.some(l=>l.country===country))&&(!city||a.locations.some(l=>(!country||l.country===country)&&l.city===city))&&
     (!style||a.style===style)&&(!rating||(a.rating||0)>=rating)&&
     (!ONLY_UPCOMING||a.showsNext30Days>0)&&(!ONLY_MUSIC||a.musicReleased)&&(!ONLY_SIGNED||a.signed));
+}
+const mapEventsFor=rows=>{const country=$('#country').value,city=$('#city').value;return rows.flatMap(a=>(a.eventsNext30Days||[]).map(e=>({...e,artist:a.name,slug:a.slug}))).filter(e=>(!country||e.country===country)&&(!city||e.city===city)).sort((a,b)=>a.startsAt-b.startsAt)};
+function render(){
+  const rows=matchingArtists(), mapEvents=mapEventsFor(rows), mapCount=mapEvents.length;
   $('#count').textContent=`${rows.length} artist${rows.length===1?'':'s'}`;
+  $('#mapBtn').hidden=!(MAPCFG&&MAPCFG.enabled&&mapEvents.some(canPin));$('#mapBtn').innerHTML=`⌖ View map · ${mapCount}`;
   $('#artists').className=rows.length?'artists':'';
   $('#artists').innerHTML=rows.length?rows.map(a=>`<a class="artistcard" href="/${encodeURIComponent(a.slug)}">
     ${a.avatar?`<img class="avatar" src="${esc(a.avatar)}" alt="" loading="lazy">`:`<span class="avatar blank">${esc(a.name.slice(0,1).toUpperCase())}</span>`}
@@ -80,6 +95,26 @@ function render(){
     <span class="badges">${a.nextShow&&a.nextShow.city?`<span class="badge">${esc([a.nextShow.city,a.nextShow.country].filter(Boolean).join(', '))}</span>`:''}${a.style?`<span class="badge">${esc(a.style)}</span>`:''}${a.signed?'<span class="badge">Signed</span>':''}${a.rating?`<span class="badge rating"><span>${a.rating}/5</span><span class="stars" aria-label="${a.rating} out of 5 stars">${[1,2,3,4,5].map(n=>n<=Math.round(a.rating)?'★':'☆').join('')}</span></span>`:''}${a.musicReleased?'<span class="badge music">Music released</span>':''}<span class="badge show">${a.showsNext30Days||0} MySet show${a.showsNext30Days===1?'':'s'} over next 30 days</span><span class="badge">${a.totalShows||0} MySet show${a.totalShows===1?'':'s'} total</span></span></span><span class="arrow">›</span></a>`).join(''):
     '<div class="emptyartists"><b>No artists match</b>Try clearing one of the filters.</div>';
 }
+const hasCoords=e=>e.maps&&Number.isFinite(e.maps.lat)&&Number.isFinite(e.maps.lng);
+const canPin=e=>hasCoords(e)||!!e.address||!!(e.venue&&e.city);
+const locKey=e=>hasCoords(e)?`${e.maps.lat},${e.maps.lng}`:[e.venue,e.address,e.city,e.country].join('|').toLowerCase();
+const locText=e=>hasCoords(e)?`${e.maps.lat},${e.maps.lng}`:[e.venue,e.address,e.city,e.country].filter(Boolean).join(', ');
+const when=e=>`${new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(`${e.date}T12:00:00Z`))} · ${e.time}`;
+const directionsFor=e=>{const m=e.maps||{};return m.source||(/iPhone|iPad|iPod/.test(navigator.userAgent)?m.apple:m.google)||m.google||m.apple||''};
+function openMap(){
+  const events=mapEventsFor(matchingArtists());if(!events.length||!MAPCFG||!MAPCFG.enabled)return;
+  const places=[];for(const e of events.filter(canPin)){const key=locKey(e);if(!places.some(p=>p.key===key))places.push({key,event:e,label:String.fromCharCode(65+places.length)});}
+  if(!places.length)return;
+  const shown=places.slice(0,15), labels=new Map(shown.map(p=>[p.key,p.label]));
+  const u=new URL('https://maps.googleapis.com/maps/api/staticmap');u.searchParams.set('size','640x420');u.searchParams.set('scale','2');u.searchParams.set('maptype','roadmap');u.searchParams.set('key',MAPCFG.key);
+  for(const p of shown)u.searchParams.append('markers',`size:mid|color:0xff375f|label:${p.label}|${locText(p.event)}`);
+  $('#mapCanvas').innerHTML=`<img src="${esc(u.toString())}" alt="Map showing ${shown.length} event location${shown.length===1?'':'s'}"><span class="maplegend">${shown.length} location${shown.length===1?'':'s'}${places.length>shown.length?` · first ${shown.length} shown`:''}</span>`;
+  $('#mapCanvas img').addEventListener('error',()=>{$('#mapCanvas').innerHTML='<div class="mapfail"><span><b>Map unavailable</b>The complete show list and directions are still available below.</span></div>'},{once:true});
+  $('#mapMeta').textContent=`${events.length} show${events.length===1?'':'s'} over the next 30 days`;
+  $('#mapEvents').innerHTML=events.map(e=>{const label=labels.get(locKey(e))||'·', href=directionsFor(e);return `<div class="mapevent"><span class="pinlabel">${label}</span><span class="mapcopy"><b>${esc(e.artist)} · ${esc(e.venue||e.city)}</b><span>${esc(when(e))} · ${esc([e.city,e.country].filter(Boolean).join(', '))}</span></span>${href?`<a class="mapgo" href="${esc(href)}" target="_blank" rel="noopener noreferrer">Directions</a>`:''}</div>`}).join('');
+  $('#mapModal').hidden=false;document.body.style.overflow='hidden';$('#mapClose').focus();
+}
+function closeMap(){if($('#mapModal').hidden)return;$('#mapModal').hidden=true;document.body.style.overflow='';$('#mapBtn').focus()}
 function toggle(button,key){window[key]=!window[key];button.classList.toggle('on',window[key]);button.setAttribute('aria-pressed',String(window[key]));render()}
 $('#query').addEventListener('input',render);
 $('#country').addEventListener('change',()=>{fill($('#city'),cities(),'cities');render()});
@@ -89,7 +124,8 @@ $('#rating').addEventListener('change',render);
 $('#upcoming').addEventListener('click',()=>{ONLY_UPCOMING=!ONLY_UPCOMING;$('#upcoming').classList.toggle('on',ONLY_UPCOMING);$('#upcoming').setAttribute('aria-pressed',String(ONLY_UPCOMING));render()});
 $('#music').addEventListener('click',()=>{ONLY_MUSIC=!ONLY_MUSIC;$('#music').classList.toggle('on',ONLY_MUSIC);$('#music').setAttribute('aria-pressed',String(ONLY_MUSIC));render()});
 $('#signed').addEventListener('click',()=>{ONLY_SIGNED=!ONLY_SIGNED;$('#signed').classList.toggle('on',ONLY_SIGNED);$('#signed').setAttribute('aria-pressed',String(ONLY_SIGNED));render()});
-(async()=>{try{const d=await fetch('/api/artists',{cache:'no-store'}).then(r=>r.json());if(!d.ok)throw Error();ALL=d.artists||[];fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
+$('#mapBtn').addEventListener('click',openMap);$('#mapClose').addEventListener('click',closeMap);$('#mapModal').addEventListener('click',e=>{if(e.target===$('#mapModal'))closeMap()});addEventListener('keydown',e=>{if(e.key==='Escape')closeMap()});
+(async()=>{try{const [d,m]=await Promise.all([fetch('/api/artists',{cache:'no-store'}).then(r=>r.json()),fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json()).catch(()=>null)]);if(!d.ok)throw Error();ALL=d.artists||[];MAPCFG=m&&m.ok?m:null;fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
 if('serviceWorker'in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 </script>
 </body>

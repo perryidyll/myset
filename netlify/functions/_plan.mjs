@@ -81,7 +81,7 @@ export const PLANS = {
     label: 'Plus', price: 1000,
     featured: Infinity,
     gigs: Infinity,
-    /* The ladder is 25% free / 10% Plus / 2.5% Pro, so the
+    /* The ladder is 25% free / 10% Plus / 2% Pro, so the
        subscription and the transaction fee trade off against each other and a new
        artist never pays a subscription before they have earned anything. Taken as
        a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
@@ -95,7 +95,7 @@ export const PLANS = {
     label: 'Pro', price: 2000,
     featured: Infinity,
     gigs: Infinity,
-    cut: 0.025,
+    cut: 0.02,
     /* A theatre or a festival tent. Worst single night: under $7, and less than
        that in practice because the interval widens with the room.
 

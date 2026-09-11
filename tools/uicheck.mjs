@@ -16,9 +16,10 @@ const ROOT='/Users/perryidyll/Docs/MySet/public';
 const T={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
 const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');
  if(u.pathname==='/api/artists'){rs.writeHead(200,{'content-type':'application/json'});return rs.end(JSON.stringify({ok:true,artists:[
-   {slug:'demo',name:'Demo Artist',tagline:'Songs for the room',avatar:'',management:'Good Records',style:'Soul',signed:true,musicReleased:true,showsNext30Days:1,totalShows:12,rating:4.5,ratingCount:2,locations:[{country:'Thailand',city:'Bangkok'}],nextShow:{date:'2099-01-01',city:'Bangkok',country:'Thailand'}},
-   {slug:'quiet',name:'Quiet Band',tagline:'Acoustic songs',avatar:'',management:'',style:'Folk',signed:false,musicReleased:false,showsNext30Days:0,totalShows:0,rating:null,ratingCount:0,locations:[],nextShow:null}
+   {slug:'demo',name:'Demo Artist',tagline:'Songs for the room',avatar:'',management:'Good Records',style:'Soul',signed:true,musicReleased:true,showsNext30Days:1,totalShows:12,rating:4.5,ratingCount:2,locations:[{country:'Thailand',city:'Bangkok'}],eventsNext30Days:[{eventId:'g1',date:'2099-01-01',time:'20:00',startsAt:4070932800000,venue:'The Room',city:'Bangkok',country:'Thailand',address:'1 Music Lane',maps:{lat:13.75,lng:100.5,source:'https://maps.google.com/?q=13.75,100.5',google:'https://maps.google.com/?q=13.75,100.5'}}],nextShow:{date:'2099-01-01',city:'Bangkok',country:'Thailand'}},
+   {slug:'quiet',name:'Quiet Band',tagline:'Acoustic songs',avatar:'',management:'',style:'Folk',signed:false,musicReleased:false,showsNext30Days:0,totalShows:0,rating:null,ratingCount:0,locations:[],eventsNext30Days:[],nextShow:null}
  ]}))}
+ if(u.pathname==='/api/mapconfig'){rs.writeHead(200,{'content-type':'application/json'});return rs.end(JSON.stringify({ok:true,enabled:true,key:'test-browser-key'}))}
  const p=path.join(ROOT,u.pathname);
  if(!fs.existsSync(p)||fs.statSync(p).isDirectory()){rs.writeHead(404);return rs.end('no');}
  rs.writeHead(200,{'content-type':T[path.extname(p)]||'application/octet-stream'});fs.createReadStream(p).pipe(rs);});
@@ -85,7 +86,7 @@ const D=await pg.evaluate(async ()=>{
   ok('the header labels the free-vote allowance', creditText==='3/3 votes', creditText);
   const creditStyle=getComputedStyle(document.querySelector('#cr'));
   ok('and gives that allowance the Studio plan-tag treatment',
-    /rgba\(48,\s*209,\s*88/.test(creditStyle.backgroundColor)&&/rgb\((27, 142, 60|76, 217, 100)\)/.test(creditStyle.color),
+    /rgba\(48,\s*209,\s*88/.test(creditStyle.backgroundColor)&&/rgb\((24, 122, 50|76, 217, 100)\)/.test(creditStyle.color),
     `${creditStyle.backgroundColor} / ${creditStyle.color}`);
   ST.credits={remaining:0,total:3,freeRemaining:0,freeTotal:3,used:3,paidLeft:0,unlimited:false};
   ST.songs=[{id:'alpha',title:'Alpha',artist:'T',votes:0,cost:1,tags:[]}];
@@ -276,7 +277,7 @@ const SETTINGS=await pg.evaluate(async ()=>{
   ok('the Studio disables double-tap zoom too', getComputedStyle(document.documentElement).touchAction==='manipulation', getComputedStyle(document.documentElement).touchAction);
   TAB='settings';
   D={ok:true,paymentsEnabled:true,songs:[],tags:{builtin:[],own:[]},show:{
-    status:'pre',windowOpen:true,freeCredits:3,unlimited:false,replayCost:5,
+    artistId:'verified-demo',status:'pre',windowOpen:true,freeCredits:3,unlimited:false,replayCost:5,
     packs:{small:{votes:3,cents:500},big:{votes:15,cents:2000}},
     requests:{on:false,cost:3},birthdays:{on:false,cost:3},unlimitedFans:[],autoStart:true
   }};
@@ -293,6 +294,18 @@ const SETTINGS=await pg.evaluate(async ()=>{
   const requests=sections.indexOf('Requests from fans'), autoshow=sections.indexOf('Starting by itself');
   ok('Starting by itself is directly after Requests from fans', autoshow===requests+1,
      sections.slice(Math.max(0,requests),autoshow+2).join(' > '));
+  localStorage.removeItem('myset.verify-search-intro.verified-demo');
+  VERIFYINTROSHOWN=false;maybeVerifyIntro();await new Promise(r=>setTimeout(r,20));
+  const notice=document.querySelector('#sheet'), heading=notice.querySelector('h3');
+  ok('the first Settings visit opens the verification notice',notice.classList.contains('on')&&notice.classList.contains('verify-intro'));
+  ok('the notice carries the requested heading, search warning and reason',
+    /verify your account now/.test(notice.innerText)&&/only verified profiles will show up in search results!/.test(notice.innerText)&&
+    /minimize fraudulent use and ensure the best experience for MySet audiences/.test(notice.innerText));
+  ok('its heading and reason are white, and its search warning is orange',
+    getComputedStyle(heading).color==='rgb(255, 255, 255)'&&getComputedStyle(notice.querySelector('.verify-note')).color==='rgb(255, 255, 255)'&&
+    ['rgb(255, 122, 69)','rgb(255, 69, 110)'].includes(getComputedStyle(notice.querySelector('.verify-lede')).color));
+  closeSheet();VERIFYINTROSHOWN=false;maybeVerifyIntro();await new Promise(r=>setTimeout(r,20));
+  ok('the verification notice appears only once for this artist',!notice.classList.contains('on'));
   return out.join('\n');
 });
 console.log('\nSTUDIO SETTINGS\n'+SETTINGS);
@@ -314,7 +327,8 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   try{render();}catch(e){out.push('  ✗ Live render threw — '+e.message);return out.join('\n');}
   const top=document.querySelector('.bigplay');
   ok('top-voted action shows the total in words', top&&/\(4 votes total\)/.test(top.innerText), top&&top.innerText.replace(/\n/g,' | '));
-  ok('top-voted action carries the green paid-vote pill', top&&/\(2\) paid votes/.test(top.innerText)&&getComputedStyle(top.querySelector('.paidtag')).color==='rgb(48, 209, 88)');
+  ok('top-voted action carries the green paid-vote pill', top&&/\(2\) paid votes/.test(top.innerText)&&
+    ['rgb(24, 122, 50)','rgb(48, 209, 88)'].includes(getComputedStyle(top.querySelector('.paidtag')).color));
   const row=document.querySelector('.list .row');
   ok('the queue repeats total and paid counts', row&&/4 votes total/.test(row.innerText)&&/\(2\) paid votes/.test(row.innerText));
   const studioQueue=document.querySelector('.queue-window');
@@ -402,16 +416,23 @@ const GIG_FEATURE=await pg.evaluate(async ()=>{
 console.log('\nGIG FEATURE ACTION\n'+GIG_FEATURE);
 
 // ---------- 5: the restored fan-side light/dark switch ----------
+await pg.evaluate(()=>localStorage.removeItem('myset.theme'));
 await pg.goto(`http://127.0.0.1:${PORT}/index.html`,{waitUntil:'domcontentloaded'});
-await pg.evaluate(()=>localStorage.setItem('myset.theme','dark'));
+const DEFAULT_THEME=await pg.evaluate(()=>{
+  const body=getComputedStyle(document.body).backgroundColor, intro=getComputedStyle(document.querySelector('#intro')).backgroundColor;
+  return `  ${document.documentElement.dataset.theme==='light'&&body==='rgb(245, 245, 247)'&&intro==='rgb(245, 245, 247)'?'✓':'✗'} a first visit and its loading screen default to light — ${body} / ${intro}`;
+});
+console.log('\nDEFAULT THEME\n'+DEFAULT_THEME);
+await pg.evaluate(()=>{localStorage.setItem('myset.theme','dark');sessionStorage.removeItem('myset.seen')});
 await pg.reload({waitUntil:'domcontentloaded'});
 const THEME=await pg.evaluate(()=>{
   const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
-  const before=getComputedStyle(document.body).backgroundColor;
+  const intro=document.querySelector('#intro'), before=getComputedStyle(document.body).backgroundColor, introBefore=getComputedStyle(intro).backgroundColor;
   document.querySelector('#themeBtn').click();
-  const after=getComputedStyle(document.body).backgroundColor;
+  const after=getComputedStyle(document.body).backgroundColor, introAfter=getComputedStyle(intro).backgroundColor;
   ok('the home page restores the light-mode switch',document.documentElement.dataset.theme==='light'&&localStorage.getItem('myset.theme')==='light');
   ok('the switch changes the rendered palette',before==='rgb(0, 0, 0)'&&after==='rgb(245, 245, 247)',`${before} -> ${after}`);
+  ok('the loading screen follows the same switch',introBefore==='rgb(0, 0, 0)'&&introAfter==='rgb(245, 245, 247)',`${introBefore} -> ${introAfter}`);
   ok('the three header controls fit a 320px phone',document.documentElement.scrollWidth<=innerWidth,`${document.documentElement.scrollWidth}/${innerWidth}`);
   return out.join('\n');
 });
@@ -425,6 +446,12 @@ const DIRECTORY=await pg.evaluate(()=>{
   const first=document.querySelector('.artistcard');
   ok('the name and one-liner are separate spaced lines',getComputedStyle(first.querySelector('.name')).display==='block'&&parseFloat(getComputedStyle(first.querySelector('.tag')).marginTop)>=4);
   ok('the directory shows location, style, signed, numeric and icon ratings, and both MySet show counts',/Bangkok, Thailand/.test(first.innerText)&&/Soul/.test(first.innerText)&&/Signed/.test(first.innerText)&&/4.5\/5/.test(first.innerText)&&/★★★★★/.test(first.innerText)&&/next 30 days/.test(first.innerText)&&/12 MySet shows total/.test(first.innerText),first.innerText);
+  const mapButton=document.querySelector('#mapBtn');mapButton.click();
+  const modal=document.querySelector('#mapModal'),mapImage=modal.querySelector('.mapcanvas img');
+  ok('View map opens an accessible popup with every filtered event',!modal.hidden&&modal.getAttribute('aria-modal')==='true'&&modal.querySelectorAll('.mapevent').length===1);
+  ok('the popup sends the exact coordinate to a labeled static-map pin',mapImage&&/13\.75%2C100\.5/.test(mapImage.src)&&/label%3AA/.test(mapImage.src),mapImage&&mapImage.src);
+  ok('each mapped event keeps its exact directions link',modal.querySelector('.mapgo')?.href==='https://maps.google.com/?q=13.75,100.5');
+  document.querySelector('#mapClose').click();
   document.querySelector('#upcoming').click();
   ok('the upcoming-show filter narrows the directory',document.querySelectorAll('.artistcard').length===1&&/Demo Artist/.test(document.querySelector('#artists').innerText));
   document.querySelector('#upcoming').click();document.querySelector('#music').click();

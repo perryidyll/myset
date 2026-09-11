@@ -7,17 +7,16 @@
 <meta name="description" content="What fans said about the nights, and what's for sale.">
 <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
-<script>try{const t=localStorage.getItem('myset.theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)}}catch(e){}</script>
+<script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
-<!-- FIRST PAINT IS BLACK, AND THE SPLASH NEEDS NOTHING FROM THE NETWORK. This
-     inline block comes before any external stylesheet, so the black ground and the
-     three bars are painted from the first frame instead of after app.css arrives —
-     which on a phone opening a new tab was a white screen. app.css is swapped in
-     without blocking rendering; the splash hides everything until first render. -->
-<style>html{background:#0D0B0C}
-#intro{position:fixed;inset:0;z-index:90;background:#0D0B0C;display:grid;place-items:center}
+<!-- FIRST PAINT MATCHES THE SAVED THEME, AND THE SPLASH NEEDS NOTHING FROM THE
+     NETWORK. This inline block comes before any external stylesheet, so the correct
+     ground is painted from the first frame instead of flashing the opposite theme. -->
+<style>html{background:#F5F5F7}html[data-theme=dark]{background:#0D0B0C}
+#intro{position:fixed;inset:0;z-index:90;background:#F5F5F7;display:grid;place-items:center}
+html[data-theme=dark] #intro{background:#0D0B0C}
 #intro.off{opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s .4s}
 #intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
 #intro .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;
@@ -25,7 +24,8 @@
 #intro .bars i:nth-child(1){animation-delay:.02s;--h:38px}
 #intro .bars i:nth-child(2){animation-delay:.12s;--h:64px}
 #intro .bars i:nth-child(3){animation-delay:.22s;--h:28px}
-#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#fff}
+#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#1D1D1F}
+html[data-theme=dark] #intro .word{color:#fff}
 @keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
 @media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
 </style>

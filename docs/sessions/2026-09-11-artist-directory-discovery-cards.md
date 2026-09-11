@@ -27,13 +27,10 @@ Find artists cards; expose matching filters; keep style off the public profile p
   passed; all other rendered checks passed.
 - `sh test/run.sh`: full suite completed with zero failures.
 - Draft `6aa3a5cdaf109164f02e0a0d` served the updated directory and the real public payload.
-  Production was not changed.
+  Commit `02169fa` was pushed to `main`, Netlify finished the production deploy, and the
+  live page plus real computed directory payload were verified by served content.
 
 ## Map follow-up
 
-A multi-event map popup is feasible, but precise pins require coordinates. The existing
-event model supports address, source map URL and coordinates; the current production
-artist's next 60 occurrences all have short Google Maps links but none currently expose
-stored coordinates or addresses. Use a map provider/geocoder or resolve and persist exact
-coordinates before rendering the popup; venue/city text alone should not be presented as
-an exact event location.
+A multi-event map popup was subsequently built in a separate, unshipped batch. See
+`2026-09-11-filtered-event-map.md` and decision `0025`.

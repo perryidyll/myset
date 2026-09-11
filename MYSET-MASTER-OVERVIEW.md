@@ -402,7 +402,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 | | Free | Plus | Pro |
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
-| MySet's cut of money taken through the app | **25%** | **10%** | **2.5%** |
+| MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
 | Shows per calendar month (UTC) | 4 | unlimited | unlimited |
 | Songs live to the audience at once | 50 | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 200 | 1,000 | 2,000 |
@@ -469,17 +469,17 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | | |
 |---|---|
 | Public pages | 10 — about.html, artist.html, artists.html, community.html, index.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 26 — `admin`, `artists`, `auth`, `clipup`, `community`, `confirm`, `events`, `feedback`, `gift`, `history`, `img`, `lyrics`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
+| HTTP functions | 27 — `admin`, `artists`, `auth`, `clipup`, `community`, `confirm`, `events`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
 | Shared libraries | 42 |
 | Artist Studio actions | 124 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
 | Largest clip accepted | 75 MB |
-| Invariants | 244 (last: 0f8) |
+| Invariants | 245 (last: 0f9) |
 | Test suites | 39 |
-| Assertions | **1,867**, 0 failing, last run 2026-09-11 |
-| Decision records | 24 |
+| Assertions | **1,882**, 0 failing, last run 2026-09-11 |
+| Decision records | 28 |
 
 ### Feature flags in force
 

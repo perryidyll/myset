@@ -2,19 +2,22 @@ import { json } from './_lib.mjs';
 import { readArtists } from './_auth.mjs';
 import { getProfile } from './_profile.mjs';
 import { readEvents, occurrencesFor } from './_events.mjs';
-import { addDays, utcToDate } from './_time.mjs';
+import { addDays, localDate } from './_time.mjs';
 import { readHistIndex } from './_history.mjs';
 import { readPosts } from './_community.mjs';
+import { planOf } from './_plan.mjs';
 
 /* Public artist directory. Only fields already intended for public profiles and
    calendars leave this endpoint; account emails, roles and billing never do. */
 export default async () => {
   const registry = await readArtists();
-  const entries = Object.entries(registry.byId || {}).filter(([, artist]) => artist && !artist.del && artist.slug);
+  /* Find artists is a trust surface, not the complete account registry. The same
+     effective verification rule as the public badge applies: the review flag and
+     a current paid plan. Filtering before profile/calendar reads also means an
+     unverified account cannot leak into either cards or the map event list. */
+  const entries = Object.entries(registry.byId || {}).filter(([, artist]) =>
+    artist && !artist.del && artist.slug && artist.verified && planOf(artist) !== 'free');
   const now = Date.now();
-  const today = utcToDate(now);
-  const to30 = addDays(today, 30);
-  const toYear = addDays(today, 365);
   const artists = [];
 
   /* Small batches avoid turning a growing directory into a burst against Blobs. */
@@ -23,8 +26,12 @@ export default async () => {
       const [profile, events, history, posts] = await Promise.all([
         getProfile(artistId), readEvents(artistId), readHistIndex(artistId), readPosts(artistId),
       ]);
-      const gigs = occurrencesFor(events, today, toYear).filter((gig) => gig.endsAt > now);
-      const shows30 = occurrencesFor(events, today, to30).filter((gig) => gig.endsAt > now);
+      const tz = ((events.list || []).find((event) => event.tz) || {}).tz || 'UTC';
+      const today = localDate(now, tz);
+      const gigs = occurrencesFor(events, today, addDays(today, 365)).filter((gig) => gig.endsAt > now);
+      /* Today plus the following 29 local calendar days is exactly 30 dates.
+         occurrencesFor is inclusive at both ends. */
+      const shows30 = occurrencesFor(events, today, addDays(today, 29)).filter((gig) => gig.endsAt > now);
       const locationMap = new Map();
       for (const gig of gigs) {
         if (!gig.country || !gig.city) continue;
@@ -46,13 +53,19 @@ export default async () => {
         avatar: profile.avatar || profile.photo || '',
         management: profile.management || '',
         style: profile.style || '',
-        signed: !!profile.management && !/^(independent|unsigned|self[- ]managed)$/i.test(profile.management.trim()),
+        signed: !!(profile.management && profile.managementUrl)
+          && !/^(independent|unsigned|self[- ]managed)$/i.test(profile.management.trim()),
         musicReleased,
         showsNext30Days: shows30.length,
         totalShows: (history.shows || []).length,
         rating,
         ratingCount: ratings.length,
         locations: [...locationMap.values()],
+        eventsNext30Days: shows30.map((gig) => ({
+          eventId: gig.eventId, date: gig.date, time: gig.time, tz: gig.tz, startsAt: gig.startsAt,
+          venue: gig.venue || '', city: gig.city || '', country: gig.country || '',
+          address: gig.address || '', maps: gig.maps || null,
+        })),
         nextShow: next ? {
           date: next.date, time: next.time, venue: next.venue || '',
           city: next.city || '', country: next.country || '', startsAt: next.startsAt,

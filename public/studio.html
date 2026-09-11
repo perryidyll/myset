@@ -12,16 +12,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<script>try{const t=localStorage.getItem('myset.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t})();</script>
 <script src="/theme.js"></script>
-<meta name="theme-color" content="#161413" />
+<meta name="theme-color" content="#F5F5F7" />
 <meta name="robots" content="noindex,nofollow" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Studio" />
 <title>Artist Studio — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
 <link rel="manifest" href="/manifest-studio.webmanifest">
-<style>html{background:#000}</style>
+<style>html{background:#F5F5F7}html[data-theme=dark]{background:#000}</style>
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
@@ -347,12 +347,12 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .fine{font-size:12.5px;color:var(--faint);margin-top:14px;text-align:center}
 .plansheet .fine{font-size:14.5px}
 .plansheet .sec .kick{font-size:14px}
-.testi{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 8px;scroll-snap-type:x mandatory;scrollbar-width:none}
-.testi::-webkit-scrollbar{display:none}
-.tcard{flex:0 0 268px;scroll-snap-align:start;background:var(--surface-2);border-radius:var(--r);padding:15px}
-.tcard .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.tcard .who i{width:40px;height:40px;border-radius:12px;background:var(--grad) center/cover;display:grid;place-items:center;font-style:normal;font-weight:800;color:#fff}
-.tcard .who b{display:block;font-size:16px}.tcard .who span{font-size:14px;color:var(--muted)}
+.sheet.verify-intro{background:#111;color:#fff}
+.sheet.verify-intro .grab{background:rgba(255,255,255,.34)}
+.sheet.verify-intro .sheetx{color:#fff;background:rgba(255,255,255,.12)}
+.verify-intro h3{color:#fff;font-size:25px;font-weight:800;margin-top:16px}
+.verify-intro .verify-lede{color:var(--accent-2);font-size:18px;font-weight:700;line-height:1.3;margin:10px 0}
+.verify-intro .verify-note{color:#fff;font-size:14px;line-height:1.5;margin:0 0 18px}
 .tcard p{margin:0;font-size:16px;line-height:1.45;color:var(--ink-2)}
 .dg .big.no{background:var(--accent-2);color:#fff}
 .dg .big.yes{background:var(--surface-2);color:var(--muted);box-shadow:none;opacity:.7}
@@ -522,11 +522,10 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
   transform-origin:bottom;animation:busybar .9s ease-in-out infinite}
 #busy .bars i:nth-child(2){animation-delay:.15s}
 #busy .bars i:nth-child(3){animation-delay:.3s}
-/* LEAVING, AND ARRIVING, IN BLACK. Perry: "there's still a white blank page
-   showing for 1-2 seconds before the normal black loading screen appears when i
-   click on the artist name". The white belonged to the BROWSER: a tap on a link
+/* LEAVING, AND ARRIVING, IN THE ACTIVE THEME. A previous white flash belonged to
+   the browser: a tap on a link
    tore this document down and the next one had not painted yet, and a link that
-   opened a new tab handed him an empty white tab first. So MySet paints its own
+   opened a new tab handed over an empty white tab first. So MySet paints its own
    splash before it goes, and internal links stay in this window (goTo below). */
 #leave{position:fixed;inset:0;z-index:95;display:none;place-items:center;background:var(--bg)}
 #leave.on{display:grid}
@@ -595,7 +594,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <div id="qrbig" onclick="qrHide(event)"></div>
 <div id="leave" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div><p id="leaveline">Opening…</p></div>
 <div id="boot"><div class="bars"><i></i><i></i><i></i></div><div id="bootline">Warming up the room</div></div>
-<!-- Both blocking on purpose, and here rather than in <head> so the black boot screen above paints before they arrive. pull.js must stay before MySetPull() (INVARIANT 0cf). -->
+<!-- Both blocking on purpose, and here rather than in <head> so the themed boot screen above paints before they arrive. pull.js must stay before MySetPull() (INVARIANT 0cf). -->
 <link rel="stylesheet" href="/lock.css">
 <script src="/pull.js"></script>
 <div id="app"></div>
@@ -1009,6 +1008,7 @@ async function load(opts){
   if(!first) return;
   try{ await Promise.all(jobs.map(j=>Promise.resolve(j).catch(()=>null))); }catch(e){}
   bootDone();
+  if(TAB==='settings') maybeVerifyIntro();
 }
 let WRITING=false;
 async function act(action,extra={}){
@@ -1236,7 +1236,7 @@ function tickCard(){
   if(t.state==='verified') return `<div class="sec"><span class="kick">Verified</span></div>
     <div class="list"><div class="row"><div class="m">
       <div class="t"><span class="okmark">\u2713</span> Your page is verified</div>
-      <div class="s muted">People can see the details came from you.</div>
+      <div class="s muted">People can see the details came from you. Your profile can appear in Find artists search results, the day-by-day show list and the map.</div>
     </div></div></div>`;
   const body=t.state==='pending'
     ? `<div class="row"><div class="m"><div class="t">${TICKWHY?'Waiting on one more thing':'With MySet for review'}</div>
@@ -1249,7 +1249,7 @@ function tickCard(){
        ${t.rejectedWhy?`<div class="row"><div class="m"><div class="t">Not approved last time</div>
          <div class="s muted">${esc(t.rejectedWhy)} \u2014 you can try again.</div></div></div>`:''}`;
   return `<div class="sec"><span class="kick">Get verified</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">A green tick on your page, so people know the details came from you and not from somebody claiming to be you. Most of the time it happens by itself: give the name and date of birth on your ID, and if they match what Stripe has already verified on your payout account, you're verified on the spot \u2014 no waiting on us.</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px"><b>Only verified profiles appear in Find artists search results, including the day-by-day show list and map.</b> A green tick also tells people the details came from you and not from somebody claiming to be you. Most of the time it happens by itself: give the name and date of birth on your ID, and if they match what Stripe has already verified on your payout account, you're verified on the spot \u2014 no waiting on us.</p>
     <div class="list">${body}</div>
     ${t.state==='pending'?'':`<div class="wrap" style="margin-top:12px">
       ${t.readyForReview===false&&(!t.paidPlan||!t.payments)
@@ -1700,7 +1700,7 @@ function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')load
      the tab never called it — only a reload that landed here did. So the panel sat
      on its "Checking…" placeholder for anyone who tapped their way to Settings,
      which is everyone. */
-  if(t==='settings'){loadTeam();loadPlan();loadTick();drawPush();}
+  if(t==='settings'){loadTeam();loadPlan();loadTick();drawPush();maybeVerifyIntro();}
   if(t==='gigs'){ loadGigs(); loadPitches(); }}
 async function loadPitches(force){
   if(PITCHES&&!force)return;
@@ -2791,14 +2791,32 @@ async function askDo(action,id){
 /* Song titles/artists are user text — never interpolate them into an onclick.
    Look the song up from state by id instead. */
 function songById(id){ return (D&&D.songs||[]).find(x=>x.id===id); }
-function openSheet(h){
+function openSheet(h,kind=''){
   const sh=$('#sheet');
+  sh.className='sheet'+(kind?' '+kind:'');
   sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
     <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
   sh.style.transform=''; sh.scrollTop=0;
   $('#bg').classList.add('on'); sh.classList.add('on');
   attachDrag(sh);
 }
+let VERIFYINTROSHOWN=false;
+function maybeVerifyIntro(){
+  if(VERIFYINTROSHOWN||!D||TAB!=='settings')return;
+  const aid=(D.show&&D.show.artistId)||'artist';
+  const key='myset.verify-search-intro.'+aid;
+  try{if(localStorage.getItem(key))return;}catch(e){}
+  VERIFYINTROSHOWN=true;
+  setTimeout(()=>{
+    if(TAB!=='settings'){VERIFYINTROSHOWN=false;return;}
+    try{localStorage.setItem(key,'1');}catch(e){}
+    openSheet(`<h3>verify your account now</h3>
+      <p class="verify-lede">only verified profiles will show up in search results!</p>
+      <p class="verify-note">(this is to minimize fraudulent use and ensure the best experience for MySet audiences)</p>
+      <button class="big" onclick="startVerification()">Get verified</button>`,'verify-intro');
+  },0);
+}
+function startVerification(){closeSheet();scrollTo({top:0,behavior:'smooth'});}
 /* Dismissing a sheet used to mean hitting a 20px strip, which on a phone in a bar
    is a coin toss. Now:
      · the grab area is the whole top of the sheet, handle and all
@@ -3744,15 +3762,8 @@ const TIER_COPY={
     ['Shows that start and end themselves',' from your calendar'],
     ['Five sign-ins',' for your band'],
     ['Coming soon, included',': earnings by venue and night, a press kit, your branding, promotion in other cities'],
-    ['<span class="fee">Transaction fee: 2.5%</span>',' on money taken through the app']]},
+    ['<span class="fee">Transaction fee: 2%</span>',' on money taken through the app']]},
 };
-/* PLACEHOLDERS \u2014 Perry approves the layout, then these come down until real ones
-   are submitted by artists. Nothing here is a real quote. */
-const TESTIMONIALS=[
-  {name:'Sample artist',where:'Koh Phangan',text:'The room picked the last three songs and I\u2019ve never had a crowd that loud at the end of a set. (placeholder)'},
-  {name:'Sample duo',where:'Bangkok',text:'Requests stopped being shouted at us and started showing up on the screen, ranked. (placeholder)'},
-  {name:'Sample band',where:'Melbourne',text:'We got rebooked because the bar could see how many people voted. Numbers, not vibes. (placeholder)'},
-];
 const tierList=(k)=>TIER_COPY[k].items.map(x=>{
   const y=PLAN&&PLAN.owner&&k===PLAN.plan&&String(x[0]).includes('Transaction fee:')
     ? ['<span class="fee">Transaction fee: 0%</span>',' for this account'] : x;
@@ -3775,8 +3786,6 @@ function openPlans(){
       <div class="hd"><span>${TIER_COPY[k].name}</span><small>${TIER_COPY[k].price}</small></div>
       <ol>${tierList(k)}</ol>
       <div class="cta">${cta(k)}</div></div>`).join('')}
-    ${TESTIMONIALS.length?`<div class="sec" style="padding-left:0;margin-top:18px"><span class="kick">What MySet members have to say</span></div>
-    <div class="testi">${TESTIMONIALS.map(t=>`<div class="tcard"><div class="who"><i>${esc(t.name.slice(0,1))}</i><div><b>${esc(t.name)}</b><span>${esc(t.where)}</span></div></div><p>${esc(t.text.slice(0,180))}</p></div>`).join('')}</div>`:''}
     <p class="fine">Stripe handles the card. Cancel any time; a paid month is always yours to the end.</p></div>`);
 }
 async function startCheckout(plan){

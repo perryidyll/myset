@@ -10,19 +10,20 @@ what happened on a given day.
 
 **Last reviewed:** 2026-09-11
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
-**Current focus:** The Find artists cards now separate names from one-liners and expose
-calendar location, directory-only style, management-backed signed status, visible
-community rating average, MySet shows over the next 30 days and completed MySet shows.
-Country, city, style, minimum rating, signed, released-music and 30-day-show filters are
-available. Full and rendered mobile checks pass; draft `6aa3a5cdaf109164f02e0a0d` was
-verified by served content. Production remains at `33d7429`.
+**Current focus:** The requested Find artists card/filter batch is live in production at
+`02169fa`. The working tree and draft `6aa3bcce9fd9709b3a45eb9c` add the filtered event
+map, verified-only directory/event/map discovery, stricter Signed eligibility, the 2%
+Pro fee everywhere, light-first themed loading, a one-time verification notice, and a
+plans sheet without placeholder testimonials. All 1,882 assertions and rendered mobile
+checks pass. The map remains hidden because no restricted Google Maps browser key is
+configured. None of this combined draft is in production.
 
-**Next work item (pick up here):** The **shared-board split** — one cacheable board
-payload with no `fan=` in the URL, plus a tiny per-fan endpoint. ~5 days, no new vendor.
-It is the gate on raising the plans' room sizes. See `docs/reports/open-line.html` §
-"What to build first".
+**Next work item (pick up here):** Add a website/referrer- and Static-Maps-restricted
+`GOOGLE_MAPS_BROWSER_KEY` in Netlify, verify the actual image in a fresh draft, then ship
+the combined map/miscellaneous batch when explicitly authorized. After that, return to
+the **shared-board split**.
 
-**Fresh-agent one-liner:** `Read AGENTS.md, then continue Phase 3 per IMPLEMENTATION_STATUS.md — the next item is the shared-board split, not the open line.`
+**Fresh-agent one-liner:** `Read AGENTS.md, then finish the readiness-gated Find artists event map per IMPLEMENTATION_STATUS.md; it needs a restricted Google browser key before production.`
 
 ---
 
@@ -44,6 +45,14 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 ---
 
 ## Phase checklist
+
+### Current requested batch
+
+| ID | Work item | Status | Evidence | Blocker / next action |
+| --- | --- | --- | --- | --- |
+| UX-001 | Filtered thirty-day event map on Find artists | blocked | Decision `0025`; combined draft `6aa3bcce9fd9709b3a45eb9c`; 1,882/1,882 | Add restricted `GOOGLE_MAPS_BROWSER_KEY`, verify a real tile, then production approval |
+| UX-002 | Signed eligibility, Pro fee, light default and themed loading screens | done | Decisions `0024`, `0026`, `0027`; draft `6aa3bcce9fd9709b3a45eb9c`; 1,882/1,882 | Ship with UX-001 when its key is verified and production is explicitly authorized |
+| UX-003 | Verified-only artist discovery, first-Settings notice and plans-testimonial cleanup | done | Decision `0028`; draft `6aa3bcce9fd9709b3a45eb9c`; served directory contains one qualifying profile; 1,882/1,882 | Ship with the combined batch after map-key verification and explicit production approval |
 
 ### Phase 3 — scale preparation
 
@@ -91,6 +100,10 @@ It is the gate on raising the plans' room sizes. See `docs/reports/open-line.htm
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-11 | Draft `6aa3bcce9fd9709b3a45eb9c`, verified-only directory tests, rendered first-Settings notice and full gate | Served Studio has 2% Pro copy, verified-only explanation and no placeholder testimonials; directory endpoint returns only the qualifying profile; notice colors/persistence and mobile fit pass; 1,882 assertions, zero failures; production unchanged |
+| 2026-09-11 | Draft `6aa3b8e8eedd9a5d7e4e5391`, focused directory/fee/theme checks, rendered UI, `sh test/run.sh`, and overview stamp | Signed requires both label fields; Pro is 2%; first visit and loading screens are light while saved dark remains dark; map remains safely hidden without its key; 1,876 assertions, zero failures; production unchanged |
+| 2026-09-11 | Draft `6aa3ab8413b61425b33b9fcb`, focused map/copy checks, `node tools/uicheck.mjs`, `sh test/run.sh`, and overview stamp | Map popup, exact pin, existing directions link, filters, failure fallback and 320px fit pass; 1,872 assertions, zero failures; served config is honestly disabled without a key; production unchanged |
+| 2026-09-11 | Production commit `02169fa` | Artist directory card/filter batch is live; served HTML and real computed directory data verified |
 | 2026-09-11 | Draft `6aa3a5cdaf109164f02e0a0d`, focused directory/community/copy checks, `node tools/uicheck.mjs`, and `sh test/run.sh` | New directory tags, filters, calculated ratings/show counts, separate name/one-liner spacing and 320px fit all pass; full suite has zero failures; production unchanged |
 | 2026-09-10 | Production commit `33d7429`, Netlify deploy `6aa2bf1185cb7d000874ed54` | Deploy ready; live Studio serves gig-level Feature and orange promotion bullets, and live directory/theme assets match the approved batch |
 | 2026-09-10 | `sh test/run.sh` + `node tools/overview.mjs --tests` | 1,863 assertions, 0 failures, including verified-sender readiness, provider rejection, both signup doors and Featured-show settlement |
@@ -142,6 +155,10 @@ duplicate it here. Index: `docs/decisions/README.md`.
 
 | Date | Decision | Record |
 | --- | --- | --- |
+| 2026-09-11 | Find artists lists only effectively verified artist profiles | `0028` |
+| 2026-09-11 | Light is the first-visit default and loading screens follow the active theme | `0027` |
+| 2026-09-11 | The $20 artist plan takes a 2% transaction fee | `0026` |
+| 2026-09-11 | Filtered event maps use a static image and existing exact directions links | `0025` |
 | 2026-09-11 | Artist directory discovery facts derive from their existing source records; style alone is new profile data | `0024` |
 | 2026-09-09 | An artist-declined unplayed song returns its votes | `0016` |
 | 2026-09-08 | Three free votes; default packs are 3 for $5 and 15 for $20 | `0014` |
@@ -157,6 +174,7 @@ duplicate it here. Index: `docs/decisions/README.md`.
 
 | Risk | Impact | Mitigation | Status |
 | --- | --- | --- | --- |
+| Google Maps key is absent or misrestricted | Event-map image cannot render | Button is hidden while absent; preserve the full show list/directions on image failure; verify a real draft before production | **Blocked before production** |
 | **Perry's own accounts are phished** | Total — Google, GitHub, Netlify, Stripe. No line of MySet's code is involved | 2FA on all four. PER-003 | **Active, unmitigated** |
 | **Pre-attribution active votes cannot be split exactly by song** | A paid-vote pill or decline refund on a vote cast before this batch may not know its original source | New votes are exact; legacy decline uses a fan-favouring paid-first fallback | **Known transition risk** |
 | Card payments down on a bad Stripe key | Nobody can buy votes or tip | Key replaced 2026-09-08; live checkout verified. The gap that let it go unnoticed is still open — P3-008 | Resolved 2026-09-08 |

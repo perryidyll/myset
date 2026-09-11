@@ -2,9 +2,9 @@
    `data-theme-toggle` button; this file also handles controls added by a render. */
 (() => {
   const root = document.documentElement;
-  const system = () => matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
-  if (!root.dataset.theme) root.dataset.theme = system();
-  const active = () => root.dataset.theme || system();
+  const fallback = () => 'light';
+  if (!root.dataset.theme) root.dataset.theme = fallback();
+  const active = () => root.dataset.theme || fallback();
   const colour = (theme) => theme === 'light' ? '#F5F5F7' : '#000000';
   const sync = () => {
     const theme = active(), dark = theme === 'dark';
@@ -35,9 +35,5 @@
   });
   new MutationObserver(sync).observe(document.documentElement, { childList: true, subtree: true });
   addEventListener('DOMContentLoaded', sync, { once: true });
-  try { matchMedia('(prefers-color-scheme:dark)').addEventListener('change', () => {
-    let saved = ''; try { saved = localStorage.getItem('myset.theme') || ''; } catch (_) {}
-    if (!saved) { root.dataset.theme = system(); sync(); }
-  }); } catch (_) {}
   window.MySetTheme = { active, sync, toggle };
 })();

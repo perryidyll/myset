@@ -2,11 +2,11 @@
 id: 0017
 title: Artist transaction fees are 25%, 10%, and 2.5%, with the platform-owner account exempt
 date: 2026-09-09
-status: decided
+status: superseded
 decided_by: user
 area: money
 reverses:
-superseded_by:
+superseded_by: 0026
 invariants: [0r0]
 commits: []
 tests: [test/connect.mjs, test/billing.mjs]
@@ -51,4 +51,3 @@ copy, export and regression-test changes.
 `test/connect.mjs` checks the three source values, whole-cent rounding, the actual
 Checkout application fee on all tiers, and the platform-owner exemption.
 `test/billing.mjs` confirms artist fees are not altered by the venue fee-sharing rule.
-

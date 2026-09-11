@@ -8,7 +8,7 @@ area: ui
 reverses:
 superseded_by:
 invariants: [1, 0bu, 0ck]
-commits: []
+commits: [02169fa]
 tests: [test/artists.mjs, test/copy.mjs, tools/uicheck.mjs]
 files: [netlify/functions/_profile.mjs, netlify/functions/admin.mjs, netlify/functions/profile.mjs, netlify/functions/artists.mjs, public/studio.html, public/artists.html]
 ---
@@ -24,7 +24,7 @@ MySet shows, with every discovery attribute represented in the filters.
 
 | Option | What it does | What it costs | New moving parts | Risk if it goes wrong |
 |---|---|---|---|---|
-| **A — chosen** | Derive location and future shows from the calendar, totals from the history index, ratings from visible community posts, signed status from label/management, and store one directory-only style field | Two additional known-key reads per artist-directory entry | One profile string and more directory filters | A very large directory may outgrow the current batched request |
+| **A — chosen** | Derive location and future shows from the calendar, totals from the history index, ratings from visible community posts, signed status from a label/management name plus website, and store one directory-only style field | Two additional known-key reads per artist-directory entry | One profile string and more directory filters | A very large directory may outgrow the current batched request |
 | B | Store duplicate directory counters and ratings on the registry | Faster directory reads | Every calendar, history and community write must maintain a global summary | Summaries drift and show false public numbers |
 | C — do nothing | Keep the cramped card and former filters | Nothing | None | The requested discovery information stays absent |
 
@@ -40,8 +40,9 @@ public profile page does not render it.
 The directory now reads profile, calendar, history index and community posts for every
 artist. The twelve-at-a-time batching prevents a request burst, but pagination or a
 maintained discovery index will be needed if real directory latency grows with adoption.
-“Signed” is inferred from a non-empty label/management value, excluding the explicit
-values Independent, Unsigned and Self-managed; it is not a legal verification claim.
+“Signed” is inferred only when both a label/management name and its safe website are
+present, excluding the explicit values Independent, Unsigned and Self-managed; it is
+not a legal verification claim.
 
 ## What would reverse it
 
@@ -51,8 +52,9 @@ current directory tag.
 
 ## How it was verified
 
-`test/artists.mjs` passed 9/9 for privacy, 30-day calendar counts, style, signed state,
+`test/artists.mjs` passed 13/13 for privacy, 30-day calendar counts, style, signed state,
 rating average and total-show shape. `tools/uicheck.mjs` rendered the card and all new
 filters at a 390px mobile viewport with no horizontal overflow. `sh test/run.sh`
 completed with zero failures. Draft `6aa3a5cdaf109164f02e0a0d` served the new HTML and
-real computed directory payload. No production deploy was made.
+real computed directory payload. Commit `02169fa` was pushed once to `main`; the live
+page and its real directory payload were then verified by served content.

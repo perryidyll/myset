@@ -225,7 +225,7 @@ export default async (req) => {
   };
 
   /* The platform's share, from the plan table so there is one definition of the cut
-     (25% free / 10% Plus / 2.5% Pro). Zero is omitted rather than sent as 0 — an
+     (25% free / 10% Plus / 2% Pro). Zero is omitted rather than sent as 0 — an
      application fee of nothing is not a fee. Never applied to the founder's own
      platform charges, where there is nobody to take a fee from. */
   const { plan } = await planForArtist(aid);
