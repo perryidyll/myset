@@ -8,7 +8,7 @@ documents own: `MYSET-MASTER-OVERVIEW.md` is what MySet is, `INVARIANTS.md` is w
 never break, `docs/decisions/` is why a design is the way it is, and `docs/sessions/` is
 what happened on a given day.
 
-**Last reviewed:** 2026-09-11 (night)
+**Last reviewed:** 2026-09-12
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
 **Current focus:** Two Phase 3 items landed on `main` the same evening. The **shared-board
 split (P3-001)** is `c3d0a4d`: the audience poll is two calls, `/api/board` (shared, no fan
@@ -63,6 +63,7 @@ hostname (cross-origin `workers.dev` now, `line.myset.vip` delegated later).
 | UX-001 | Filtered thirty-day event map on Find artists | done | Decision `0025`; production `d1a6531`; restricted live PNG verified; 1,882/1,882 | — |
 | UX-002 | Signed eligibility, Pro fee, light default and themed loading screens | done | Decisions `0024`, `0026`, `0027`; production `d1a6531`; 1,882/1,882 | — |
 | UX-003 | Verified-only artist discovery, first-Settings notice and plans-testimonial cleanup | done | Decision `0028`; production `d1a6531`; served directory contains one qualifying profile; 1,882/1,882 | — |
+| UX-004 | Interactive event map: pan, zoom, tappable details, Google Maps links and current-location dot | done | Decision `0036`; production `8c41e13`; Chrome verified the live map, five venue pins, event list and location retry; full suite 2,095/2,095 | Physical blue-dot placement still needs a real device location fix; denial/retry fallback is live |
 
 ### Phase 3 — scale preparation
 
