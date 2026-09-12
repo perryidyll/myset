@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-12 17:12 — 34edfe6 — MySet@perf/html-edge-cache (2 files since origin/main)
+**tl;dr:** Pages (HTML routes) now carry Cache-Control max-age=60 + stale-while-revalidate=600, so the edge and the phone answer at once; the durable header on static files did nothing (functions only) and is gone
+**Other sessions:** A copy change on a page can take up to a minute to show on a phone that just had it open. Netlify-CDN-Cache-Control is for function replies only — do not put it in netlify.toml for static files.
+
 ### 2026-09-12 17:03 — f06857d — MySet@main (10 files since origin/main)
 **tl;dr:** Speed pass two (decision 0048): pages and static files now stay at the edge (no more 0.6–0.9s revalidation per tap); the Stripe SDK no longer loads on every cold start of profile/community/board/me; profile and venue reads batched
 **Other sessions:** json() now sends netlify-cdn-cache-control: no-store — keep it on any new raw Response that is personal. Never put a top-level import of 'stripe' in a module a public read imports. New rewritten HTML routes need their own [[headers]] block in netlify.toml. CORRECTION: 5b4a531 (16:10) accidentally carried profile.mjs with the other session's uncommitted decision-0043 work (topSongsOf, readFeedback/readPosts) — it is live and answering 200; that session need not push it again. Its uncommitted _history.mjs topOf() hunks were NOT committed.
