@@ -40,8 +40,13 @@
      serves it from cache, so blocking costs nothing measurable. -->
 <script src="/pull.js"></script>
 <style>
-#app{padding-bottom:150px}
+#app{padding-bottom:172px}
 .headtools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+/* The pill is a wallet, not a headline: 14px so the artist's name is the biggest
+   thing in the header again. Markup and colour are unchanged (uicheck pins them). */
+.headtools .credits{padding:7px 12px;font-size:14px}
+.headtools .credits small{font-size:11px}
+.sharebtn svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .credits,.credits.low{background:rgba(48,209,88,.16);color:#1B8E3C;box-shadow:none}
 .credits small{color:currentColor;opacity:.82}
 @media (prefers-color-scheme:dark){.credits,.credits.low{color:#4CD964}}
@@ -195,21 +200,23 @@
 
 /* ── sort ─────────────────────────────────────────────── */
 .sortbar{display:flex;gap:4px;margin:10px 18px 2px;padding:4px;background:var(--bg-2);
-  border-radius:var(--pill);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+  border-radius:var(--pill);box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}
 .sortbar button{flex:1;min-height:36px;padding:8px 6px;font-size:13.5px;font-weight:600;
   color:var(--muted);border-radius:var(--pill);letter-spacing:-.01em;
   transition:background .26s var(--ease),color .2s var(--ease),transform .22s var(--spring)}
-.sortbar button.on{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
+.sortbar button.on{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 .5px var(--hair-2),var(--sh-1)}
 .sortbar button:active{transform:scale(.96)}
 /* Genres, and only the ones actually on a song the room can see. */
 .gbar{display:flex;gap:7px;margin:10px 18px 0;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;
   -webkit-overflow-scrolling:touch}
 .gbar::-webkit-scrollbar{display:none}
+/* The shared .chip recipe (app.css): hairline + soft shadow, and .on is an accent
+   ring rather than a fill — a filled chip read as a button next to the sort bar. */
 .gbar button{flex:0 0 auto;padding:8px 15px;border-radius:var(--pill);background:var(--surface);
-  box-shadow:var(--sh-1);font-size:13.5px;font-weight:500;color:var(--muted);white-space:nowrap;
-  transition:transform .2s var(--spring)}
-.gbar button:active{transform:scale(.95)}
-.gbar button.on{background:var(--grad);color:#fff;font-weight:600;box-shadow:var(--sh-accent)}
+  box-shadow:inset 0 0 0 .5px var(--hair-2),var(--sh-1);font-size:13.5px;font-weight:500;color:var(--muted);white-space:nowrap;
+  transition:transform .2s var(--spring),background .18s var(--ease)}
+.gbar button:active{transform:scale(.94)}
+.gbar button.on{background:var(--accent-soft);color:var(--accent-ink);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--accent),var(--sh-1)}
 
 /* ── TIER 3 · POOL ────────────────────────────────────── */
 .sect{display:flex;align-items:baseline;justify-content:space-between;padding:24px 20px 10px}
@@ -280,6 +287,16 @@
    demands; the ring says "this one costs money too" without shouting over it. */
 .dock .btn-buy{box-shadow:inset 0 0 0 1.5px var(--accent)}
 .dock .btn-buy b{color:var(--accent)}
+/* One line above the buttons that says what the room can do right now. A <div>,
+   never a button — the two buttons below are the only things a thumb should find. */
+.dock .dockstate{grid-column:1/-1;display:flex;align-items:center;gap:7px;min-height:18px;margin:-2px 0 -1px;
+  font-size:12.5px;font-weight:600;letter-spacing:-.005em;color:var(--muted);font-variant-numeric:tabular-nums;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock .dockstate .dot{width:7px;height:7px;flex:0 0 auto}
+.dock .dockstate.open{color:var(--ink-2)}
+.dock .dockstate.lc{color:var(--accent-ink)}
+.dock .dockstate.lc .dot{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.dock .dockstate.shut .dot,.dock .dockstate.pre .dot,.dock .dockstate.over .dot{background:var(--faint);animation:none;box-shadow:none}
 
 .backlink{display:block;padding:22px 18px 0;text-align:center;font-size:14px;color:var(--muted)}
 /* The pull-to-refresh indicator lives in /pull.js now — one implementation for
@@ -340,6 +357,25 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
   cursor:pointer;transition:transform .12s var(--spring)}
 .go2:active{transform:scale(.985)}
 .vqmax{text-align:center;font-size:12.5px;color:var(--muted);margin:-2px 0 14px}
+/* Review card: the song and the wallet, side by side, before the stepper. What
+   the fan is about to spend on what — the thing the old sheet made them infer. */
+.vreview{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 14px;
+  padding:12px 14px;border-radius:var(--r);background:var(--bg-2);border:.5px solid var(--hair)}
+.vreview .m{min-width:0}
+.vreview .t{font-size:15px;font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vreview .by{font-size:12.5px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vreview .w{flex:0 0 auto;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:6px 10px;
+  border-radius:var(--pill);background:var(--surface);box-shadow:inset 0 0 0 .5px var(--hair-2)}
+.vreview .w b{color:var(--accent-ink)}
+/* Choose → Pay → Done. Only drawn on the buying path; a plain vote has one step. */
+.steps{display:flex;align-items:center;gap:6px;margin:0 0 14px;font-size:11.5px;font-weight:600;
+  letter-spacing:.02em;text-transform:uppercase;color:var(--faint)}
+.steps span{display:flex;align-items:center;gap:6px}
+.steps span::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--hair-2)}
+.steps span.done{color:var(--muted)}.steps span.done::before{background:var(--muted)}
+.steps span.cur{color:var(--accent-ink)}.steps span.cur::before{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.steps i{flex:1;height:1px;background:var(--hair-2)}
+.sticky-act .btn-text{width:100%;margin-top:4px;font-size:15px}
 /* the feedback prompt */
 .fbrow{display:flex;justify-content:center;gap:6px;margin:2px 0 16px}
 .fbst{width:52px;height:52px;border:0;background:none;font-size:34px;line-height:1;
@@ -637,6 +673,11 @@ function vq(d){
   VQ=Math.max(1,Math.min(voteMax(s),VQ+d)); buzz(6); drawVoteSheet(s);
 }
 let VSONG=null;
+/* Choose → Pay → Done, drawn only on the buying path. `n` is the current step. */
+function stepBar(n){
+  return `<div class="steps" aria-hidden="true">${['Choose','Pay','Done'].map((l,i)=>
+    `${i?'<i></i>':''}<span class="${i+1<n?'done':i+1===n?'cur':''}">${l}</span>`).join('')}</div>`;
+}
 function drawVoteSheet(s){
   VSONG=s.id;
   const c=ST.credits||{}, cost=s.cost||1, max=voteMax(s), total=cost*VQ;
@@ -659,18 +700,22 @@ function drawVoteSheet(s){
      votes on this song" directly under "Confirm — 5 votes" — in the one sentence
      whose whole job is to say what the button will do. */
   const warn='Are you sure? Votes can\u2019t be changed!';
+  /* The review card: what they are voting on and what is in the wallet, in one
+     glance, before the stepper asks how many. */
+  const wallet=c.unlimited?'Unlimited votes':`<b>${Number(c.remaining)||0}</b> vote${c.remaining===1?'':'s'} \u00b7 ${Number(c.paidLeft)||0} paid`;
+  const review=`<div class="vreview"><div class="m"><div class="t">${esc(s.title)}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}</div><span class="w">${wallet}</span></div>`;
   openSheet(`
-    <div class="kick">${replay?'Play it again':'Vote for'}</div>
-    <h3 style="margin:2px 0 2px">${replay?'how badly do you want to hear this again?':esc(s.title)}</h3>
-    ${replay?`<p class="lede" style="margin-bottom:5px">${esc(s.title)}</p>`:''}
-    ${s.artist?`<p class="lede" style="margin-bottom:14px">${esc(s.artist)}</p>`:'<div style="height:8px"></div>'}
+    <div class="kick">${replay?'Play it again':'Your vote'}</div>
+    <h3 style="margin:2px 0 ${replay?'2px':'14px'}">${replay?'how badly do you want to hear this again?':'Review and continue'}</h3>
     ${replay?`<p class="lede" style="margin-bottom:12px">Replays start at <b>${cost} votes</b>.</p>`:''}
     ${out?`
-      <p class="lede" style="margin-top:14px">You’re out of votes for tonight.</p>
+      ${stepBar(1)}${review}
+      <p class="lede" style="margin-top:4px">You’re out of votes for tonight.</p>
       <div class="sticky-act">
         <button class="go" onclick="openBuy()">Buy more votes</button>
-        <button class="go2" onclick="closeSheet()">Not yet</button>
+        <button class="btn btn-text" onclick="closeSheet()">Not yet</button>
       </div>`:`
+      ${review}
       <div class="vqrow">
         <button class="vqb" onclick="vq(-1)" ${VQ<=1?'disabled':''} aria-label="one fewer">\u2212</button>
         <div class="vqn"><b class="mono">${replay?total:VQ}</b><small>vote${(replay?total:VQ)===1?'':'s'}</small></div>
@@ -681,7 +726,7 @@ function drawVoteSheet(s){
       <div class="sticky-act">
         <button class="go" onclick="confirmVote()">Confirm${total>1?` \u2014 ${total} vote${total===1?'':'s'}`:''}</button>
         <p class="vwarn">${warn}</p>
-        <button class="go2" onclick="closeSheet()">Not yet</button>
+        <button class="btn btn-text" onclick="closeSheet()">Not yet</button>
       </div>`}
     ${replay&&ST.paymentsEnabled?`
       <div style="margin-top:18px;padding-top:18px;border-top:.5px solid var(--hair)">
@@ -792,9 +837,9 @@ function lastCall(msLeft){
   if(LC_TIMER) return;
   const tick=()=>{
     const left=LC_UNTIL-Date.now();
-    if(left<=0){ LC_UNTIL=0; clearInterval(LC_TIMER); LC_TIMER=null; box.classList.remove('on'); return; }
+    if(left<=0){ LC_UNTIL=0; clearInterval(LC_TIMER); LC_TIMER=null; box.classList.remove('on'); paintDockState(); return; }
     $('#lcN').textContent=Math.ceil(left/1000);
-    box.classList.add('on');
+    box.classList.add('on'); paintDockState();
   };
   tick(); LC_TIMER=setInterval(tick,200);
 }
@@ -840,7 +885,7 @@ let GIGS=null, GIGS_ASKED=false, NEXT_TIMER=null;
 async function loadGigs(){
   if(GIGS_ASKED)return; GIGS_ASKED=true;
   /* `?a=` with nothing after it is the founding page's own diary (events.mjs). */
-  try{ const d=await fetch(`${API}/events${AQ1||'?a='}`,{cache:'no-store'}).then(r=>r.json()); if(d&&d.ok) GIGS=d.gigs||[]; }
+  try{ const d=await fetch(`${API}/events${AQ1||'?a='}&n=2`,{cache:'no-store'}).then(r=>r.json()); if(d&&d.ok) GIGS=d.gigs||[]; }
   catch(e){ GIGS=[]; }
   if(ST&&ST.status!=='live') render();          // draws the label and the venue line
 }
@@ -875,8 +920,47 @@ function nextWhere(){
   return line?`<div class="by">${esc(line)}</div>`:'';
 }
 
+/* Share the vote link itself, not whatever URL the phone happens to be on (a
+   ?paid= return, say). Same shape as community.html's share(). */
+function share(){
+  const url=new URL(HOME,location.origin).href, title=`Vote the setlist${artistName('')?' — '+artistName(''):''}`;
+  if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
+  try{ navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast(url)); }catch(e){ toast(url); }
+}
+
+/* FLIP for the re-rank. render() throws the whole list away, so a song that
+   climbed two places simply teleported. Measure every keyed row before the swap,
+   then slide each one from where it was to where it is. Never under a finger —
+   a row moving while a thumb is on it is the row the thumb misses. */
+let FINGER=false;
+document.addEventListener('touchstart',()=>{FINGER=true},{passive:true});
+document.addEventListener('touchend',()=>{FINGER=false},{passive:true});
+document.addEventListener('touchcancel',()=>{FINGER=false},{passive:true});
+function flipFirst(){
+  if(FINGER||document.body.classList.contains('sheeting')||$('#sheet').classList.contains('on')) return null;
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches) return null;
+  const m=new Map();
+  document.querySelectorAll('.qrow[data-id],.prow[data-id]').forEach(el=>m.set((el.closest('.queue-scroll')?'q:':'p:')+el.getAttribute('data-id'),el.getBoundingClientRect()));
+  return m.size?m:null;
+}
+function flipPlay(first){
+  if(!first||FINGER) return;
+  const moved=[];
+  document.querySelectorAll('.qrow[data-id],.prow[data-id]').forEach(el=>{
+    const was=first.get((el.closest('.queue-scroll')?'q:':'p:')+el.getAttribute('data-id')); if(!was) return;
+    const now=el.getBoundingClientRect(), dx=was.left-now.left, dy=was.top-now.top;
+    if(Math.abs(dx)<1&&Math.abs(dy)<1) return;
+    el.style.transition='none'; el.style.transform=`translate(${dx}px,${dy}px)`; moved.push(el);
+  });
+  if(!moved.length) return;
+  void document.body.offsetHeight;                 // commit the inverted frame
+  moved.forEach(el=>{ el.style.transition='transform 240ms cubic-bezier(.2,.7,.2,1)'; el.style.transform=''; });
+  setTimeout(()=>moved.forEach(el=>{ el.style.transition=''; }),260);
+}
+
 function render(){
   const d=ST,c=d.credits;
+  const FIRST=flipFirst();
   const pageY=window.scrollY;
   const oldQueue=$('.queue-scroll'),oldList=$('.votelist');
   if(oldQueue)SCROLLPOS.queue=oldQueue.scrollTop;if(oldList)SCROLLPOS.list=oldList.scrollTop;
@@ -924,7 +1008,7 @@ function render(){
         :`<span class="dot"></span>Live${d.venue?' · '+esc(d.venue):''}`}${
         d.setlist?` · ${esc(d.setlist.name)}`:''}</div>
     </div>
-    <div class="headtools"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+    <div class="headtools"><button class="themebtn sharebtn" type="button" onclick="share()" aria-label="Share this page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
     <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞ votes':`${freeRemaining}<small>/${freeTotal} votes</small>`}</div></div>
   </div>`;
 
@@ -1028,6 +1112,7 @@ function render(){
   if(queueNow)queueNow.addEventListener('scroll',()=>{SCROLLPOS.queue=queueNow.scrollTop},{passive:true});
   if(listNow)listNow.addEventListener('scroll',()=>{SCROLLPOS.list=listNow.scrollTop},{passive:true});
   restoreScroll();requestAnimationFrame(()=>requestAnimationFrame(restoreScroll));
+  flipPlay(FIRST);
   tickNext();                                   // the between-shows countdown, if that card is up
   if(!BOOTED){ $('#app').classList.add('rise'); BOOTED=true; }
 
@@ -1055,10 +1140,27 @@ function render(){
   const dock=$('#dock');
   dock.hidden=false;
   const tipBtn=`<button class="btn btn-pri" onclick="openTip()"><b>Support ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Show your appreciation</small></button>`;
-  dock.innerHTML=(ended||c.unlimited)
+  dock.innerHTML=`<div class="dockstate"></div>`+((ended||c.unlimited)
     ? tipBtn
-    : `<button class="btn btn-buy" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>${tipBtn}`;
+    : `<button class="btn btn-buy" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>${tipBtn}`);
   dock.style.gridTemplateColumns=(ended||c.unlimited)?'1fr':'';
+  paintDockState();
+}
+/* The dock's state line. Derived from the same board fields the strip reads plus
+   the page's own last-call clock (LC_UNTIL), so the tick in lastCall() repaints it
+   without a render. Every field is guarded — the ui check renders a bare ST. */
+function paintDockState(){
+  const el=$('#dock .dockstate'); if(!el||!ST) return;
+  const d=ST,c=d.credits||{};
+  const ended=d.status==='ended',pre=d.status==='pre';
+  const lc=LC_UNTIL>0?Math.ceil((LC_UNTIL-Date.now())/1000):0;
+  let k='open',t;
+  if(ended){ k='over'; t='Show\u2019s over \u2014 say thanks'; }
+  else if(pre){ k='pre'; t='Doors open soon'; }
+  else if(lc>0){ k='lc'; t=`Last call \u00b7 ${lc}`; }
+  else if(!d.windowOpen){ k='shut'; t='Voting paused \u2014 votes stay'; }
+  else t=`${c.unlimited?'Unlimited votes':`${Number(c.remaining)||0} vote${c.remaining===1?'':'s'} left`} \u00b7 Voting open`;
+  el.className='dockstate '+k; el.innerHTML=`<span class="dot"></span>${t}`;
 }
 function row(s,c,open,replay,inQueue){
   const cost=s.cost||1;
@@ -1070,7 +1172,7 @@ function row(s,c,open,replay,inQueue){
      added to, it just cannot be taken back. Affordability is the only reason to
      disable the button. */
   const dis=!open||(!c.unlimited&&c.remaining<cost&&!(replay&&ST.paymentsEnabled)&&!(c.remaining<=0&&ST.paymentsEnabled));
-  return `<div class="prow ${s.votes?'hasv':''} ${replay?'played':''} ${inQueue?'inqueue':''}">
+  return `<div class="prow ${s.votes?'hasv':''} ${replay?'played':''} ${inQueue?'inqueue':''}" data-id="${s.id}">
     <div class="m"><div class="t">${esc(s.title)}${replay?`<span class="costpill">${cost} votes</span>`:''}</div>${s.artist?`<div class="by">${esc(s.artist)}</div>`:''}${replay?`<div class="playednote">already played (pay to request again)</div>`:inQueue?`<div class="queuednote">already voted in queue</div>`:''}</div>
     <div class="cnt mono">${s.votes?`${s.votes} vote${s.votes===1?'':'s'}`:''}</div>
     <button class="vb ${replay?'cost':''} ${POP===s.id?'pop':''}" ${dis?'disabled':''}
@@ -1338,7 +1440,7 @@ function openBuy(){
   // prices are whatever the artist set in their Studio — never hard-coded here
   const P=ST.packs||{small:{votes:3,cents:500},big:{votes:15,cents:2000}};
   const KEYS=['small','big'].filter(k=>P[k]);
-  openSheet(`<h3>Get more votes</h3><p class="lede buyline">goes straight to ${esc(artistFirst('the artist'))}</p>
+  openSheet(`${stepBar(2)}<h3>Get more votes</h3><p class="lede buyline">goes straight to ${esc(artistFirst('the artist'))}</p>
     <div class="tiles">
       ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
         <b>${money(P[k].cents)}</b><span>${P[k].votes} votes</span></button>`).join('')}

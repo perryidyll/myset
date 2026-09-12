@@ -40,6 +40,16 @@ html[data-theme=dark] #intro .word{color:#fff}
 
 <style>
 body{padding-bottom:34px}
+/* the "Say something" dock is fixed at the bottom, so the page needs room to scroll
+   out from under it — and the toast has to sit above it, not behind it */
+body.docked{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:var(--maxw);
+  padding:12px 18px calc(14px + env(safe-area-inset-bottom));z-index:40;
+  background:color-mix(in srgb,var(--bg) 72%,transparent);
+  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+  border-top:.5px solid var(--hair)}
+.dock[hidden]{display:none}
 .brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
 .baractions{display:flex;align-items:center;gap:8px}
 .mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
@@ -113,7 +123,31 @@ body{padding-bottom:34px}
 .comp .inp{margin-top:8px;min-height:44px;padding:11px 14px;font-size:15px}
 .comp select.inp{appearance:none;-webkit-appearance:none}
 .comp .row2{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
-.comp .chip{padding:9px 13px;border-radius:var(--pill);font-size:13px;font-weight:600;background:var(--bg);box-shadow:0 0 0 1.5px var(--hair) inset;color:var(--ink-2)}
+/* .comp .chip is the shared app.css recipe now — hairline, --sh-1, pill */
+.comp .chip{cursor:pointer}
+/* THE COMPOSER LIVES IN A SHEET. The form element is built once and stays in the
+   DOM for the whole visit — parked in #compHold while closed, moved into #sheet
+   while open — so a re-render can never orphan a half-typed post or a clip that is
+   still uploading. Inside the sheet it is flat: the sheet is already the card. */
+#compHold{display:none}
+.sheet .comp{margin:0;padding:0;background:none;box-shadow:none}
+.sheet .comp .stars{margin-top:6px}
+/* the proof rail: rating, clips, and one chip per night — scrolls sideways */
+.sumrail{display:flex;gap:8px;overflow-x:auto;padding:12px 18px 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.sumrail::-webkit-scrollbar{display:none}
+.sumrail .chip{flex:0 0 auto;font-variant-numeric:tabular-nums}
+.sumrail .chip .star{color:var(--accent-2)}
+/* sheet mechanics, copied from vote.html (INVARIANTS 0f0–0f2) */
+#sheet{max-height:88vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.grabzone{position:relative;min-height:56px;display:flex;align-items:center;margin:-8px 0 4px;cursor:grab;touch-action:none}
+.sheet h3,.sheet .lede{touch-action:none;-webkit-user-select:none;user-select:none}
+body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+.grabzone:active{cursor:grabbing}
+.grabzone .grab{margin:0 auto}
+.sheetx{position:absolute;top:6px;right:0;width:38px;height:38px;border-radius:50%;
+  border:0;background:var(--bg-2);color:var(--muted);font-size:15px;display:grid;
+  place-items:center;cursor:pointer;transition:transform .2s var(--spring)}
+.sheetx:active{transform:scale(.9)}
 .comp .thumbs{display:flex;gap:8px;margin-top:8px}
 .comp .thumbs div{width:58px;height:58px;border-radius:12px;background:center/cover;position:relative}
 .comp .thumbs div b{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:11px;display:grid;place-items:center;cursor:pointer}
@@ -227,11 +261,14 @@ body{padding-bottom:34px}
       </div>
     </details></div>
   </div>
-  <div id="app"><div class="empty">Loading…</div></div>
+  <div id="app"><div style="padding:18px"><div class="sk" style="height:22px;width:50%;margin-bottom:14px"></div><div class="sk" style="height:96px;border-radius:16px;margin-bottom:14px"></div><div class="sk" style="height:120px;border-radius:16px;margin-bottom:12px"></div><div class="sk" style="height:120px;border-radius:16px"></div></div></div>
   <div class="foot">MySet · myset.vip</div>
 </div>
+<div class="dock" id="dock" hidden><button class="btn btn-pri btn-block" id="sayBtn" onclick="openComposer()">Say something</button></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
+<!-- the composer form waits here while its sheet is closed; see .comp in the styles -->
+<div id="compHold"><div class="comp" id="comp"></div></div>
 <div class="lb" id="lb" onclick="this.classList.remove('on')"><img id="lbimg" alt=""></div>
 <div class="toast" id="toast"></div>
 
@@ -275,25 +312,124 @@ const authHeaders=(json=false)=>({...json?{'content-type':'application/json'}:{}
   document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
 })();
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
-function openSheet(h){$('#sheet').innerHTML='<div class="grab"></div>'+h;$('#sheet').classList.add('on');$('#bg').classList.add('on');}
-function closeSheet(){$('#sheet').classList.remove('on');$('#bg').classList.remove('on');}
+/* ── sheets ── copied from vote.html: a grab ZONE big enough for a thumb, an ✕ in
+   the corner, a real drag, and the page behind frozen (INVARIANTS 0f0–0f2). */
+let SHEETY=0;                    // where the page was before it was frozen
+/* The composer form is the one thing a sheet must never throw away: it is moved
+   back to its holder before the sheet's innerHTML is replaced, and again on close. */
+function parkComposer(){ const c=$('#comp'), h=$('#compHold'); if(c&&h&&c.parentNode!==h) h.appendChild(c); }
+function openSheet(h){
+  const sh=$('#sheet');
+  parkComposer();
+  if(!document.body.classList.contains('sheeting')){
+    SHEETY=window.scrollY||0;
+    document.body.style.top=`-${SHEETY}px`;
+    document.body.classList.add('sheeting');
+  }
+  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
+    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+  sh.style.transform=''; sh.scrollTop=0;
+  $('#bg').classList.add('on'); sh.classList.add('on');
+  attachDrag(sh);
+}
+function closeSheet(){
+  const sh=$('#sheet');sh.style.transition='';sh.style.transform='';
+  $('#bg').classList.remove('on');sh.classList.remove('on');
+  if(document.body.classList.contains('sheeting')){
+    document.body.classList.remove('sheeting'); document.body.style.top='';
+    window.scrollTo(0,SHEETY);
+  }
+  parkComposer();
+}
+function attachDrag(sh){
+  /* ONE set of listeners for the life of the page, delegated from the sheet —
+     rebinding on every open piled up stale closures that raced each other. */
+  if(sh.__drag)return;
+  sh.__drag=true;
+  let y0=null, dy=0, t0=0, fromBody=false;
+  const CONTROL='input,textarea,select,button,a,label,[contenteditable]';
+  /* THE SHEET IS CENTRED WITH translateX(-50%), so every transform written here
+     has to carry it (INVARIANT 0f0). */
+  const SHIFT='translateX(-50%) ';
+  const HANDLE='.grabzone,h3,.lede';
+  /* Anything that scrolls on its own is NOT a place to start dragging the sheet
+     from (0f1). Nothing on this page's sheets scrolls yet; kept so the two pages'
+     sheets stay the same code. */
+  const SCROLLER='.lyr';
+  const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
+    fromBody=!!body; sh.style.transition='none'; };
+  const move=(e)=>{
+    if(y0===null)return;
+    dy=((e.touches?e.touches[0]:e).clientY)-y0;
+    if(dy<0){ dy=0; sh.style.transform=SHIFT+'translateY(0)'; return; }
+    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
+    sh.style.transform=SHIFT+`translateY(${dy}px)`;
+    if(e.cancelable)e.preventDefault();
+  };
+  const end=()=>{
+    if(y0===null)return;
+    const speed=dy/Math.max(1,Date.now()-t0);
+    y0=null;
+    sh.style.transition='';
+    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform=SHIFT+'translateY(0)';
+  };
+  const begin=(e)=>{
+    const t=e.target;
+    if(!t||!t.closest)return;
+    if(t.closest(CONTROL))return;
+    if(t.closest(SCROLLER))return;
+    const inZone=!!t.closest(HANDLE);
+    if(!inZone&&sh.scrollTop>0)return;
+    start(e,!inZone);
+  };
+  sh.addEventListener('touchstart',begin,{passive:true});
+  sh.addEventListener('touchmove',move,{passive:false});
+  sh.addEventListener('touchend',end);
+  sh.addEventListener('touchcancel',end);
+  sh.addEventListener('mousedown',(e)=>{
+    if(!e.target.closest(HANDLE)||e.target.closest(CONTROL))return;
+    start(e,false);
+    const mm=(ev)=>move(ev), mu=()=>{ end();
+      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
+/* "Say something" — the composer's sheet. The form itself is rendered by render()
+   into #comp and only MOVED here, so whatever was typed comes along. */
+function openComposer(){
+  if(!D||D.canPost===false) return;
+  openSheet(`<h3>Say something</h3><p class="lede">Rate the night, then say what you like.</p><div id="compSlot"></div>`);
+  const slot=$('#compSlot'), c=$('#comp'); if(slot&&c) slot.appendChild(c);
+  if(!(DRAFT.text||'').trim()&&!DRAFT.stars){ const t=$('#txt'); if(t) try{ t.focus({preventScroll:true}); }catch(e){} }
+}
 const money=c=>'$'+(c/100).toFixed(c%100?2:0);
 const ago=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
 
-/* DRAFT.open: the composer starts folded to just the five stars. Tapping a star
-   unfolds the rest; once open it stays open for the visit even if the stars are
-   tapped off again. Arriving from the vote page with ?show= opens it straight away. */
-let D=null, DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}, SHOWPRE=(new URLSearchParams(location.search).get('show')||'');
+/* The composer lives in a sheet behind the "Say something" dock. DRAFT is the post
+   in progress, kept across re-renders. Arriving from the vote page with ?show= opens
+   the sheet straight away with that night picked (see load()). FILTER is the night
+   (or 'clips') the feed is narrowed to by the proof chips; '' is everything. */
+let D=null, DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}, SHOWPRE=(new URLSearchParams(location.search).get('show')||''), FILTER='', OPENED=false;
 
 async function load(){
   try{
     const E=window.__early||{}; window.__early=null;     // the head started this for a fan; see <head>
-    const r=await ((!ARTIST_TOKEN&&E.community)||fetch(`${API}/community${Q}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store',headers:authHeaders()}));
-    const d=await r.json();
+    // the last copy this phone saw paints first; the placeholder frame in #app covers a first visit
+    const K='community:'+Q+(ARTIST_TOKEN?':a':''), L=window.lastSeen?lastSeen.get(K):null;
+    if(L&&L.ok){ D=L; render(); }
+    { const i=document.getElementById('intro'); if(i) i.classList.add('off'); }
+    let d=null;
+    try{ const r=await ((!ARTIST_TOKEN&&E.community)||fetch(`${API}/community${Q}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store',headers:authHeaders()})); d=await r.json(); }
+    catch(e){ if(L&&L.ok) return; throw e; }            // offline: the copy stands
     if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b><br>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
+    if(window.lastSeen) lastSeen.set(K,d);
+    if(L&&JSON.stringify(d)===JSON.stringify(L)) return;   // nothing changed: keep what they may already be typing
+    DRAFT.text=($('#txt')||{}).value||DRAFT.text||''; DRAFT.name=($('#nm')||{}).value||DRAFT.name||'';
     D=d; render();
   }catch(e){ $('#app').innerHTML=`<div class="empty">Couldn’t load this page just now. Pull down to retry.</div>`; }
-  finally{ const i=document.getElementById('intro'); if(i) i.classList.add('off'); }
+  finally{ const i=document.getElementById('intro'); if(i) i.classList.add('off');
+    // the post-show wrap-up link: open the composer once, with the night already picked
+    if(SHOWPRE&&D&&D.ok&&!OPENED){ OPENED=true; openComposer(); } }
 }
 
 function render(){
@@ -311,6 +447,26 @@ function render(){
   if(!VENUE) h+=`<div class="tipbar"><button onclick="openTip()">
     <b>Support ${esc(firstName())}</b><small>Show your appreciation</small></button></div>`;
 
+  /* THE PROOF, BEFORE THE ASK. What the room has already said — the rating, the
+     clips, the nights — sits above the shop and the feed, and the night chips
+     narrow the feed to one show. Rating is the directory's formula (artists.mjs):
+     the mean of 1–5 stars over the posts served, to one decimal. */
+  const posts=d.posts||[];
+  const rated=posts.filter(p=>Number(p.stars)>=1&&Number(p.stars)<=5);
+  const rating=rated.length?Math.round(rated.reduce((s,p)=>s+Number(p.stars),0)/rated.length*10)/10:null;
+  const clips=posts.filter(p=>p.clip).length;
+  const nights=[]; for(const p of posts){ if(!p.show||!p.showLabel) continue; const n=nights.find(x=>x.id===p.show); if(n) n.count++; else nights.push({id:p.show,label:p.showLabel,count:1}); }
+  if(FILTER&&FILTER!=='clips'&&!nights.some(n=>n.id===FILTER)) FILTER='';
+  if(FILTER==='clips'&&!clips) FILTER='';
+  if(posts.length){
+    h+=`<div class="sumrail">
+      <button class="chip ${FILTER?'':'on'}" data-filter="">All</button>
+      <span class="chip">${rating!=null?`<span class="star">★</span> ${rating} · `:''}${posts.length} ${posts.length===1?'post':'posts'}</span>
+      ${clips?`<button class="chip ${FILTER==='clips'?'on':''}" data-filter="clips">${clips} ${clips===1?'clip':'clips'}</button>`:''}
+      ${nights.map(n=>`<button class="chip ${FILTER===n.id?'on':''}" data-filter="${esc(n.id)}">${esc(n.label)} · ${n.count}</button>`).join('')}
+    </div>`;
+  }
+
   if((d.merch||[]).length){
     h+=`<div class="sect">Merch</div><div class="rail">${d.merch.map(m=>`
       <div class="mcard">
@@ -324,17 +480,18 @@ function render(){
       ${d.canBuy?`<p class="fineprint">Paid to ${esc(d.name)} directly. Pickup items are handed over at a show.</p>`:''}`;
   }
 
-  // the composer
+  // the composer — rendered into the persistent #comp, not into #app (see openComposer)
   const showOpts=(d.shows||[]);
-  if(d.canPost===false) h+=`<div class="sect">Community posts</div><div class="empty">Artists can’t comment on their own pages.</div>`;
-  else{
-    const open=DRAFT.open||DRAFT.stars>0||!!SHOWPRE||!!(DRAFT.text||'').trim();
+  const comp=$('#comp'), dock=$('#dock');
+  if(d.canPost===false){
+    h+=`<div class="sect">Community posts</div><div class="empty">Artists can’t comment on their own pages.</div>`;
+    if(comp) comp.innerHTML=''; if(dock) dock.hidden=true; document.body.classList.remove('docked');
+  }else{
     const selShow=DRAFT.show||SHOWPRE;
-    h+=`<div class="sect">Say something</div>
-  <div class="comp${open?' open':''}">
+    if(dock) dock.hidden=false; document.body.classList.add('docked');
+    if(comp) comp.innerHTML=`
     <div class="stars">${[1,2,3,4,5].map(n=>`<button data-star="${n}" class="${DRAFT.stars>=n?'on':''}" aria-label="${n} stars">★</button>`).join('')}</div>
-    ${open?'':`<div class="muted" style="font-size:13px;margin:2px 0 0">Tap a star to rate the night and say something</div>`}
-    <div class="body" ${open?'':'hidden'}>
+    <div class="body">
     <textarea id="txt" maxlength="500" placeholder="How was the night?">${esc(DRAFT.text||'')}</textarea>
     <div class="cnt" id="cnt">0/500</div>
     <select class="inp" id="showSel"><option value="">Where did you see them? (select)</option>${showOpts.map(s=>`<option value="${esc(s.showId)}" ${selShow===s.showId?'selected':''}>${esc(s.label)}</option>`).join('')}<option value="_other" ${selShow==='_other'?'selected':''}>Somewhere else — I’ll type it</option></select>
@@ -354,15 +511,14 @@ function render(){
     <div class="prog" id="clipProg" hidden><i></i><span></span></div>
     <button class="go" id="postBtn" disabled>Post</button>
     <p class="fineprint" style="margin:10px 0 0">Three posts a day per phone. You won’t get a notification — come back and look.</p>
-    </div>
-  </div>`;
+    </div>`;
   }
 
   // the feed
-  const posts=d.posts||[];
-  h+=`<div class="sect">What fans said${posts.length?` · ${posts.length}`:''}</div>`;
+  const shown=FILTER==='clips'?posts.filter(p=>p.clip):FILTER?posts.filter(p=>p.show===FILTER):posts;
+  h+=`<div class="sect">What fans said${posts.length?` · ${shown.length===posts.length?posts.length:`${shown.length} of ${posts.length}`}`:''}</div>`;
   if(!posts.length) h+=`<div class="empty">Nothing here yet — say something about a night.</div>`;
-  for(const p of posts){
+  for(const p of shown){
     const n=p.photos.length;
     h+=`<div class="post" data-post="${esc(p.id)}">
       <div class="top"><b>${esc(p.name||'Someone')}</b>${p.mine?' <span class="muted">(you)</span>':''}
@@ -394,7 +550,11 @@ function wire(){
   const sel=$('#showSel'), whereTxt=$('#whereTxt');
   if(sel) sel.addEventListener('change',()=>{ DRAFT.show=sel.value; if(whereTxt){ whereTxt.hidden=sel.value!=='_other'; if(sel.value==='_other') whereTxt.focus(); } });
   if(whereTxt) whereTxt.addEventListener('input',()=>DRAFT.where=whereTxt.value);
-  document.querySelectorAll('[data-star]').forEach(b=>b.addEventListener('click',()=>{ const n=+b.getAttribute('data-star'); DRAFT.stars=DRAFT.stars===n?0:n; DRAFT.open=true; DRAFT.text=($('#txt')||{}).value||DRAFT.text||''; DRAFT.name=($('#nm')||{}).value||DRAFT.name||''; render(); if(!DRAFT.text) { const t=$('#txt'); if(t) t.focus(); } }));
+  /* a star tap only repaints the five stars and the Post button — never the whole
+     page, which would drop the keyboard mid-sentence */
+  document.querySelectorAll('[data-star]').forEach(b=>b.addEventListener('click',()=>{ const n=+b.getAttribute('data-star'); DRAFT.stars=DRAFT.stars===n?0:n;
+    document.querySelectorAll('[data-star]').forEach(x=>x.classList.toggle('on',+x.getAttribute('data-star')<=DRAFT.stars)); upd(); }));
+  document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{ const f=b.getAttribute('data-filter'); FILTER=FILTER===f?'':f; DRAFT.text=($('#txt')||{}).value||DRAFT.text||''; DRAFT.name=($('#nm')||{}).value||DRAFT.name||''; render(); }));
   document.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{ DRAFT.photos.splice(+b.getAttribute('data-rm'),1); render(); }));
   const pf=$('#pf'); if(pf) pf.addEventListener('change',async()=>{ for(const f of [...pf.files].slice(0,3-DRAFT.photos.length)){ try{ DRAFT.photos.push(await shrink(f)); }catch(e){ toast('Couldn’t read that photo'); } } render(); });
   const cf=$('#cf'); if(cf) cf.addEventListener('change',()=>{ if(cf.files&&cf.files[0]) addClip(cf.files[0]); cf.value=''; });
@@ -836,7 +996,7 @@ async function post(){
     const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:authHeaders(true),body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){ toast(d.error||'Couldn’t post'); btn.disabled=false; btn.textContent='Post'; return; }
-    D.posts=d.posts; DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}; SHOWPRE=''; render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
+    D.posts=d.posts; DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}; SHOWPRE=''; FILTER=''; closeSheet(); render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
   }catch(e){ toast('Connection hiccup — try again'); btn.disabled=false; btn.textContent='Post'; }
 }
 async function like(b){

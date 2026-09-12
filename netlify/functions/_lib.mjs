@@ -1024,6 +1024,28 @@ export const json = (body, status = 200) =>
       'access-control-allow-origin': '*',
     },
   });
+/* A PUBLIC READ THAT MANY PHONES SHARE. The reply is kept at the edge for `ttl`
+   seconds (and served stale for another `ttl` while one request refreshes it), so
+   a busy artist page costs one function run per interval for everybody instead of
+   one per phone — the pattern board.mjs proved on production (decision 0034,
+   INVARIANT 9d6: the URL is the whole cache key, headers are ignored). Only use
+   it for replies that do NOT vary by who is asking: nothing here may read a
+   token, a fan id, or a cookie. The browser keeps no copy of its own. A reader
+   that must see its own write straight away (the Studio after a save) adds a
+   throwaway `?t=` so it misses the cache on purpose. The durable cache ignores
+   lifetimes under 10s, so `ttl` is floored there. */
+export const jsonCached = (body, ttl = 30) => {
+  const t = Math.max(10, Math.round(ttl));
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: {
+      'content-type': 'application/json',
+      'cache-control': 'public, max-age=0, must-revalidate',
+      'netlify-cdn-cache-control': `public, durable, s-maxage=${t}, stale-while-revalidate=${t}`,
+      'access-control-allow-origin': '*',
+    },
+  });
+};
 export const bad = (msg, status = 400) => json({ ok: false, error: msg }, status);
 
 export const sha = (v) => createHash('sha256').update(String(v)).digest('hex');

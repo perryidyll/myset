@@ -1,4 +1,4 @@
-import { json, bad } from './_lib.mjs';
+import { json, bad, jsonCached } from './_lib.mjs';
 import { venueBySlug, venueById, getVenueProfile, shapeVenue, sameVenue } from './_venues.mjs';
 import { readEvents, occurrencesFor, readCityIndex } from './_events.mjs';
 import { localDate, addDays } from './_time.mjs';
@@ -40,10 +40,10 @@ export default async (req) => {
   const whatsOn = [...gigs, ...own].sort((a, b) => a.startsAt - b.startsAt).slice(0, 200);
   const names = Object.values(vouches.by || {}).map((x) => x.name).filter(Boolean);
 
-  return json({ ok: true, src: MARK, venue,
+  return jsonCached({ ok: true, src: MARK, venue,   // public, shared by every phone: 30s at the edge
                 gigs: whatsOn, artists: acts.slice(0, 24),
                 vouches: { count: names.length, need: MIN_VOUCHES, names: names.slice(0, 12) },
-                truncated: whatsOn.length >= 200 });
+                truncated: whatsOn.length >= 200 }, 30);
 };
 
 /** The venue's own listings — a quiz night, a DJ, the football. Same engine. */

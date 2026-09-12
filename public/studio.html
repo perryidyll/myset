@@ -50,7 +50,7 @@ html[data-theme=light]{background:var(--bg)}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;
   line-height:1.45;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;
-  -webkit-tap-highlight-color:transparent;padding-bottom:56px}
+  -webkit-tap-highlight-color:transparent;padding-bottom:calc(72px + env(safe-area-inset-bottom))}  /* clears the fixed tab bar */
 button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer;padding:0}
 .themebtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;
   background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:17px;
@@ -81,32 +81,86 @@ a{color:inherit;text-decoration:none}
 .whoami:active h1{opacity:.6}
 .headactions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 
-/* Sticks directly under the header. `--headh` is MEASURED by fitTabs() — the
-   hard-coded guess was 66px against a real 88px, so the blurred header sat over
-   the top quarter of the pill on every scroll. The fallback matches today's
-   measurement so the first paint is right too. */
-.tabs{position:sticky;top:var(--headh,88px);z-index:29;display:flex;gap:0;margin:14px 18px 0;padding:4px;
-  background:var(--surface);border-radius:var(--pill);
-  /* a hairline around the pill so the six read as one object */
-  box-shadow:var(--sh-1),inset 0 0 0 1.5px rgba(255,255,255,.16);
-  /* `safe center` centres the six when they fit and falls back to flex-start when
-     they don't — plain `center` clips the first tab off the scrollable start. */
-  justify-content:safe center;
-  overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.tabs::-webkit-scrollbar{display:none}
-/* `flex:1` gave every tab the SAME width, so a short label like "Live" floated in
-   a wide cell while "Settings" was squeezed — which is what made the gaps between
-   the words look uneven. Sized to content with equal padding instead, so the space
-   between any two labels is identical, and the pill's own 4px puts the two end
-   labels about half a gap from the border. */
-.tabs button{flex:0 0 auto;padding:10px 9px;font-size:13px;font-weight:600;color:var(--muted);
-  white-space:nowrap;letter-spacing:-.015em;
-  border-radius:var(--pill);transition:background .25s var(--ease),color .2s var(--ease)}
-.tabs button.on{background:var(--surface-2);color:var(--ink);
-  box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
-@media(max-width:390px){.tabs button{padding:10px 8px}}   /* six tabs sit inside 375px with nothing clipped */
-.tabs button[data-tab-live]{color:#FF375F}
-.tabs button[data-tab-live].on{color:#FF375F}
+/* THE TAB BAR LIVES AT THE BOTTOM OF THE SCREEN, fixed, where a thumb already is.
+   It used to be a sticky pill under the header, whose height had to be MEASURED
+   (fitTabs / --headh) so the blurred header would not sit over it; a fixed bar
+   has no header to clear. 52px plus the home-indicator inset. z-index 55: above
+   the header (30) and the page, under the sheet backdrop (.bg 60), so a sheet
+   still dims it. The body reserves the same height at the bottom. */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;justify-content:center;
+  height:calc(52px + env(safe-area-inset-bottom));padding:0 0 env(safe-area-inset-bottom);
+  background:color-mix(in srgb,var(--surface) 86%,transparent);
+  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+  border-top:.5px solid var(--hair)}
+.tabbar .in{display:flex;width:100%;max-width:var(--maxw)}
+.tabbar button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;height:52px;padding:0 2px;font-size:10.5px;font-weight:600;letter-spacing:-.01em;color:var(--muted);
+  white-space:nowrap;transition:color .2s var(--ease),transform .2s var(--spring)}
+.tabbar button:active{transform:scale(.92)}
+.tabbar button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.tabbar button.on{color:var(--ink)}
+.tabbar button.on svg{stroke-width:2.3}
+.tabbar button[data-tab-live]{color:#FF375F}
+.tabbar button[data-tab-live].on{color:#FF375F}
+.tabbar button[data-tab-live].on svg{fill:rgba(255,55,95,.18)}
+/* The Menu sheet: Profile, Settings, the plan, Sign out. */
+.menurow{display:flex;align-items:center;gap:12px;width:100%;padding:15px 2px;border-top:.5px solid var(--hair);
+  font-size:16.5px;font-weight:600;letter-spacing:-.014em;text-align:left}
+.menurow:first-of-type{border-top:none}
+.menurow svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;
+  stroke-linejoin:round;flex:0 0 auto;color:var(--muted)}
+.menurow .m{flex:1;min-width:0}
+.menurow .m span{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:1px}
+.menurow .chev{color:var(--faint);font-size:18px;flex:0 0 auto}
+.menurow.out{color:var(--accent)}
+.menurow.out svg{color:var(--accent)}
+/* TODAY — the checklist for tonight's gig, on the Live tab before a show. Each
+   row is a real check against the data; the first undone one is the pink one. */
+.today{margin:16px 18px 0;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-1);overflow:hidden}
+.today .th{padding:16px 18px 10px}
+.today .th b{display:block;font-size:19px;font-weight:700;letter-spacing:-.028em}
+.today .th span{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.todo{display:flex;align-items:center;gap:12px;width:100%;padding:12px 16px;border-top:.5px solid var(--hair);
+  text-align:left;transition:background .18s var(--ease)}
+.todo:active{background:var(--surface-2)}
+.todo .ic{flex:0 0 auto;width:34px;height:34px;border-radius:11px;background:var(--accent-soft);
+  display:grid;place-items:center}
+.todo .ic svg{width:24px;height:24px;display:block}
+.todo .m{flex:1;min-width:0}
+.todo .t{font-size:16px;font-weight:600;letter-spacing:-.014em;line-height:1.25}
+.todo .s{font-size:12.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.todo .tick{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  font-size:14px;font-weight:700;box-shadow:inset 0 0 0 1.5px var(--hair-2);color:var(--faint)}
+.todo.done .tick{background:var(--good);color:#fff;box-shadow:none}
+.todo.done .t{color:var(--muted);font-weight:500}
+.todo.done .ic{opacity:.6}
+.todo.next .t{color:var(--accent)}
+.todo.next .tick{box-shadow:inset 0 0 0 2px var(--accent);color:var(--accent)}
+.todo.next .s{color:var(--accent-ink)}
+/* FIRST RUN — five steps over everything, for a brand-new account. Under the
+   sheet backdrop (60) so Import and the plans still open on top of it; over the
+   tab bar (55) because there is nothing behind it worth tapping yet. */
+#firstrun{position:fixed;inset:0;z-index:58;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:var(--bg);padding:calc(18px + env(safe-area-inset-top)) 0 calc(24px + env(safe-area-inset-bottom))}
+#firstrun.on{display:block}
+.fr{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+.fr .bar{display:flex;gap:5px;margin:4px 0 22px}
+.fr .bar i{flex:1;height:4px;border-radius:999px;background:var(--surface-2)}
+.fr .bar i.on{background:var(--grad)}
+.fr .k{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2)}
+.fr h2{font-size:28px;font-weight:700;letter-spacing:-.03em;margin:6px 0 8px;line-height:1.12}
+.fr p{font-size:15px;color:var(--muted);margin:0 0 18px;line-height:1.45}
+.fr .go{margin-top:14px}
+.fr .skip{display:block;width:100%;padding:14px;margin-top:6px;font-size:15px;font-weight:600;color:var(--muted)}
+.fr .qrwrap{background:#fff;border-radius:var(--r-lg);padding:18px;display:grid;place-items:center;margin:0 0 14px}
+.fr .qrwrap img{width:min(240px,70vw);height:auto;display:block;image-rendering:pixelated}
+.fr .prices{margin:0 0 6px}
+.fr .prices .lrow{padding:12px 0}
+.fr .prices .lrow .cnt{font-size:16px;color:var(--accent)}
+.frback{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:56;
+  padding:12px 20px;border-radius:var(--pill);background:var(--ink);color:var(--bg);font-size:14.5px;font-weight:600;
+  box-shadow:var(--sh-2);white-space:nowrap}
 
 .stats{display:flex;gap:11px;margin:16px 18px 0}
 .stats .c{flex:1;background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1);padding:14px 12px}
@@ -566,7 +620,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 @keyframes bb{0%,100%{height:12px}50%{height:44px}}
 @media (prefers-reduced-motion:reduce){#boot .bars i{animation:none;height:28px}}
 @media (prefers-reduced-motion:reduce){#busy .bars i{animation:none;height:28px}}
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
+.toast{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(24px) scale(.96);
   width:calc(100% - 36px);max-width:calc(var(--maxw) - 36px);background:rgba(60,60,63,.94);color:#fff;
   backdrop-filter:blur(20px);font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
   box-shadow:var(--sh-2);z-index:70;opacity:0;pointer-events:none;
@@ -609,6 +663,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <link rel="stylesheet" href="/lock.css">
 <script src="/pull.js"></script>
 <div id="app"></div>
+<div id="firstrun" aria-live="polite"></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
@@ -1934,7 +1989,7 @@ async function hideGig(pair){
 }
 async function loadProf(force){
   if(PROF&&!force)return;
-  PROF=await fetch('/api/profile',{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+  PROF=await fetch('/api/profile?t='+Date.now(),{cache:'no-store'})   // ?t= skips the 15s edge copy: the artist sees their own save at once.then(r=>r.json()).catch(()=>null);
   if(TAB==='profile'&&D)render();
 }
 async function saveProfile(){
@@ -2038,6 +2093,73 @@ async function recover(){
 }
 
 const PANEL_SCROLL={queue:0,setlist:0};
+/* The free-show cap, shown only when it is about to matter. */
+function capNote(s){
+  const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
+  if(!cap||cap===null||!isFinite(cap))return '';
+  const used=s.gigMonth===monthKey()?(s.gigCount||0):0;
+  const left=Math.max(0,cap-used);
+  if(left>2)return '';
+  return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">${left===0
+    ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
+    : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
+}
+/* Tonight's gig, if there is one: the server's `sched` when the calendar gig is
+   within twelve hours, else today's occurrence from the calendar (loaded lazily;
+   null until it lands). */
+function tonightGig(s){
+  if(s.sched&&s.sched.startsAt) return {venue:s.sched.venue||'',time:s.sched.time||'',listId:s.listId||''};
+  const oc=(EVENTS&&EVENTS.ok&&EVENTS.occurrences)||[];
+  const o=oc.find(x=>x.date===todayStr()&&!x.cancelled);
+  return o?{venue:o.venue||'',time:o.time||'',listId:o.listId||''}:null;
+}
+/* TODAY. Four real checks, each against the data it is about, then Start.
+   Null-safe on purpose: PAY, EVENTS and TEAM all arrive after the first paint.
+   The clay icons are inline so the page stays one file with no requests. */
+const CLAYICON={
+  mic:'<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><defs><linearGradient id="clay-mic-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-mic-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-mic-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-mic-b" d="M32 5a10 10 0 0 1 10 10v11a10 10 0 0 1-20 0V15A10 10 0 0 1 32 5zM29 40h6v6h-6zM19 46h26a3 3 0 0 1 0 6H19a3 3 0 0 1 0-6z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><use href="#clay-mic-b" fill="url(#clay-mic-g)"/><use href="#clay-mic-b" fill="url(#clay-mic-d)"/><use href="#clay-mic-b" fill="url(#clay-mic-s)"/><path d="M26 15h12M26 20h12M26 25h12" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="2.2" opacity=".85"/><path d="M19 24v2a13 13 0 0 0 26 0v-2" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="3.2"/></svg>',
+  tip:'<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><defs><linearGradient id="clay-tip-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-tip-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-tip-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-tip-b" d="M22 12h20a3 3 0 0 1 0 6H22a3 3 0 0 1 0-6zM17 20h30a2 2 0 0 1 2 2v25a9 9 0 0 1-9 9H24a9 9 0 0 1-9-9V22a2 2 0 0 1 2-2z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><circle cx="32" cy="9" r="5.5" fill="#fff"/><circle cx="32" cy="9" r="2.4" fill="#FF5A52"/><use href="#clay-tip-b" fill="url(#clay-tip-g)"/><use href="#clay-tip-b" fill="url(#clay-tip-d)"/><use href="#clay-tip-b" fill="url(#clay-tip-s)"/><path d="M26 16h12" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="2.4"/><path d="M32 48.5c-4-2.5-8-5.3-8-9.2a4 4 0 0 1 8-1.6 4 4 0 0 1 8 1.6c0 3.9-4 6.7-8 9.2z" fill="#fff"/></svg>',
+  qr:'<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><defs><linearGradient id="clay-qr-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-qr-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-qr-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-qr-b" d="M20 8h24a12 12 0 0 1 12 12v24a12 12 0 0 1-12 12H20A12 12 0 0 1 8 44V20A12 12 0 0 1 20 8z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><use href="#clay-qr-b" fill="url(#clay-qr-g)"/><use href="#clay-qr-b" fill="url(#clay-qr-d)"/><use href="#clay-qr-b" fill="url(#clay-qr-s)"/><path d="M14 14h13v13H14zM37 14h13v13H37zM14 37h13v13H14zM37 37h4v4h-4zM45 37h5v4h-5zM37 45h4v5h-4zM45 45h5v5h-5z" fill="#fff"/><path d="M18 18h5v5h-5zM41 18h5v5h-5zM18 41h5v5h-5z" fill="#FF5A52"/></svg>',
+  ticket:'<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><defs><linearGradient id="clay-ticket-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-ticket-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-ticket-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-ticket-b" d="M12 14h40a4 4 0 0 1 4 4v7.5a6.5 6.5 0 0 0 0 13V46a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-7.5a6.5 6.5 0 0 0 0-13V18a4 4 0 0 1 4-4z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><use href="#clay-ticket-b" fill="url(#clay-ticket-g)"/><use href="#clay-ticket-b" fill="url(#clay-ticket-d)"/><use href="#clay-ticket-b" fill="url(#clay-ticket-s)"/><path d="M41 19v26" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="2.2" stroke-dasharray="3.2 3.6" opacity=".85"/><path d="M17 27h15M17 34h10M17 41h13" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="3.2"/></svg>'};
+let QRSHOWN=(()=>{try{return !!localStorage.getItem('myset.qrshown')}catch(e){return false}})();
+function todayCard(s){
+  const gig=tonightGig(s);
+  const listOn=!!(s.listId||(gig&&gig.listId));
+  const payOn=PAY?!!(PAY.platformOwner||PAY.ready||PAY.chargesEnabled):!!D.paymentsEnabled;
+  const votesOn=!!(s.unlimited||s.freeCredits>0);
+  const rows=[
+    ['mic','Setlist chosen',listOn?(s.listName?esc(s.listName):'Set for tonight'):'The room will see all your songs',listOn,'openLists()'],
+    ['tip','Card payments ready',payOn?'Tips and extra votes go through Stripe':'Tap to set up Stripe',payOn,"setTab('money')"],
+    ['qr','QR code printed or shown',QRSHOWN?'On the tables, they scan and vote':'Tap to bring it up full size',QRSHOWN,'showQr()'],
+    ['ticket','Free votes set',s.unlimited?'Unlimited votes for everyone':`${s.freeCredits||0} free vote${s.freeCredits===1?'':'s'} each`,votesOn,'showPricing()'],
+  ];
+  const next=rows.findIndex(r=>!r[3]);
+  return `<div class="today">
+    <div class="th"><b>Today</b><span>${gig
+      ? `${gig.venue?esc(gig.venue):'Your gig'}${gig.time?' · '+esc(gig.time):''}`
+      : (EVENTS?'No gig on the calendar today':'Checking your calendar…')}</span></div>
+    ${rows.map((r,i)=>`<button class="todo ${r[3]?'done':''} ${i===next?'next':''}" onclick="${r[4]}">
+      <span class="ic">${CLAYICON[r[0]]}</span>
+      <span class="m"><span class="t">${r[1]}</span><span class="s">${r[2]}</span></span>
+      <span class="tick">${r[3]?'✓':'○'}</span></button>`).join('')}
+  </div>`;
+}
+function showQr(){
+  if(TEAM&&TEAM.slug){ qrBig('profile'); return; }
+  toast('Fetching your code…');
+  loadTeam(true).then(()=>{ if(TEAM&&TEAM.slug) qrBig('profile'); else toast('Could not load your page address'); });
+}
+/* Straight to the free-votes chips in Settings. */
+function showPricing(){
+  if(TAB!=='settings') setTab('settings');
+  setTimeout(()=>{const el=document.getElementById('pricebox');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});},60);
+}
+async function saveNight(){
+  const v=(($('#nightName')||{}).value||'').trim();
+  if(!v){toast('Give the night a name');return;}
+  await act('venue',{venue:v});
+}
 function render(){
   if(!D||!D.show)return;                 // data not in yet — never crash the page
   const pageY=window.scrollY;
@@ -2061,27 +2183,39 @@ function render(){
   let body='';
   if(TAB==='live'){
   if(s.status!=='live'){
-    body=`<div class="wrap" style="padding-top:22px;padding-bottom:2px">
-      <button class="big bigplay" onclick="if(confirm('Start a fresh show? The previous show is saved and tonight starts with a clean vote board.'))act('newShow')">
-        <span>●</span><span style="flex:1">${s.status==='ended'&&(s.played||[]).length?'Start a new show':'Start the show'}</span></button>
+    /* BEFORE A SHOW the Live tab is TODAY: the checklist for tonight's gig, then
+       Start. AFTER a show has ended (and before it is filed) it is TONIGHT: the
+       night's numbers, a name for it if the calendar gave it none, and the choice
+       between a new show and resuming — the server cannot tell a deliberate end
+       from a fat finger, so the choice must be explicit. */
+    const ended=s.status==='ended'&&(s.played||[]).length;
+    body=ended?`
+    <div class="today"><div class="th"><b>Tonight</b><span>${s.venue?esc(s.venue)+(s.city?', '+esc(s.city):''):'Ended'}${s.endedBy==='schedule'?' · ended by itself, three hours after your gig’s scheduled end':s.endedBy==='inactivity'?' · saved by itself after three hours without activity':''}</span></div></div>
+    <div class="stats">
+      <div class="c"><b class="mono">${(s.played||[]).length}</b><span>Songs played</span></div>
+      <div class="c"><b class="mono">${songs.reduce((a,b)=>a+(b.votes||0),0)}</b><span>Votes</span></div>
+      <div class="c"><b class="mono acc">$${(((D.tips||{}).total)||0).toFixed(2)}</b><span>Tips</span></div>
     </div>
-    ${(()=>{
-      const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
-      if(!cap||cap===null||!isFinite(cap))return '';
-      const used=s.gigMonth===monthKey()?(s.gigCount||0):0;
-      const left=Math.max(0,cap-used);
-      if(left>2)return '';
-      return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">${left===0
-        ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
-        : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
-    })()}
-    ${s.status==='ended'&&(s.played||[]).length?`
-      <p class="muted" style="font-size:12px;padding:8px 20px 0">
-        ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
-        <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
-           style="color:var(--accent);font-weight:700">Resume it instead</a>
-        — use that if you ended it by mistake.${s.endedBy==='schedule'?' This one was ended by itself, three hours after your gig’s scheduled end.':s.endedBy==='inactivity'?' This one was saved automatically after three hours without activity.':''}</p>`
-      :`<p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to fans until you tap this — or until a gig on your calendar reaches its start time.</p>`}`;
+    ${s.venue?'':`<div class="field" style="padding-top:12px"><label>Name this night</label><div style="display:flex;gap:8px">
+      <input class="inp" id="nightName" maxlength="80" placeholder="Where was it? e.g. The Corner Hotel" style="flex:1" onkeydown="if(event.key==='Enter')saveNight()">
+      <button class="act pri" style="min-width:64px" onclick="saveNight()">Save</button></div></div>`}
+    <div class="wrap" style="padding-top:18px;padding-bottom:2px">
+      <button class="big bigplay" onclick="if(confirm('Start a fresh show? The previous show is saved and tonight starts with a clean vote board.'))act('newShow')">
+        <span>●</span><span style="flex:1">Start a new show</span></button>
+    </div>
+    ${capNote(s)}
+    <p class="muted" style="font-size:12px;padding:8px 20px 0">
+      ${(s.played||[]).length} song${(s.played||[]).length===1?'':'s'} already played on this one.
+      <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
+         style="color:var(--accent);font-weight:700">Resume it instead</a>
+      — use that if you ended it by mistake.</p>`
+    :`${todayCard(s)}
+    <div class="wrap" style="padding-top:18px;padding-bottom:2px">
+      <button class="big bigplay" onclick="if(confirm('Start a fresh show? The previous show is saved and tonight starts with a clean vote board.'))act('newShow')">
+        <span>●</span><span style="flex:1">Start the show</span></button>
+    </div>
+    ${capNote(s)}
+    <p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to fans until you tap this — or until a gig on your calendar reaches its start time.</p>`;
   }
 
   if(s.status==='live'){
@@ -2443,7 +2577,7 @@ function render(){
     <div class="sec"><span class="kick">Alerts on your phone</span></div>
     <div id="pushBox">${PUSHVIEW||`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div>`}</div>
 
-    <div class="sec"><span class="kick">Free votes per person</span></div>
+    <div class="sec" id="pricebox"><span class="kick">Free votes per person</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">How many free votes each person gets for the night.</p>
     ${/* THE UNLIMITED SWITCH IS NOT GATED, so it must not be greyed.
           `canPrice` in admin.mjs covers freeCredits, packs, replayCost and askSet —
@@ -2731,14 +2865,7 @@ function render(){
       ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
       :`<button class="plantag" onclick="openPlans()">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}</div>
   </div>
-  <div class="tabs">
-    <button data-tab-live class="${TAB==='live'?'on':''}" onclick="setTab('live')">Live</button>
-    <button class="${TAB==='setlist'?'on':''}" onclick="setTab('setlist')">Setlist</button>
-    <button class="${TAB==='gigs'?'on':''}" onclick="setTab('gigs')">Gigs</button>
-    <button class="${TAB==='money'?'on':''}" onclick="setTab('money')">Money</button>
-    <button class="${TAB==='profile'?'on':''}" onclick="setTab('profile')">Profile</button>
-    <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
-  </div>${leavingBar()}${cardTrouble(s)}${body}
+  ${leavingBar()}${cardTrouble(s)}${body}
   ${TAB==='setlist'?'':`<div class="wrap" style="padding-top:26px;padding-bottom:8px">
     ${/* WHAT "what fans see" MEANS DEPENDS ON THE TAB. On Live it is the voting
          screen — the thing the room is holding right now. Everywhere else (and
@@ -2752,7 +2879,8 @@ function render(){
            style="justify-content:center">See what fans see ↗</a>`
       : `<a class="big alt ${TAB==='profile'?'orange-outline':''}" href="${s.slug?'/'+esc(s.slug):'/artist.html'}"
            style="justify-content:center">See your page ↗</a>`}
-  </div>`}`;
+  </div>`}
+  ${tabBar()}`;
 
   document.querySelectorAll('[data-sort]').forEach(b=>
     b.addEventListener('click',()=>setSort(b.getAttribute('data-sort'))));
@@ -2763,7 +2891,7 @@ function render(){
   if(hq){ hq.addEventListener('input',e=>{HISTFOCUS=true;HISTQ=e.target.value;render();});
     if(HISTFOCUS){ hq.focus(); const v=hq.value; hq.setSelectionRange(v.length,v.length); } }
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
-  fitTabs();
+  drawFirstRun();
   const restoreScroll=()=>{
     const q=$('.queue-window'),l=$('.setlist-window');
     if(q)q.scrollTop=PANEL_SCROLL.queue;if(l)l.scrollTop=PANEL_SCROLL.setlist;
@@ -2774,16 +2902,39 @@ function render(){
   if(lNow)lNow.addEventListener('scroll',()=>{PANEL_SCROLL.setlist=lNow.scrollTop},{passive:true});
   restoreScroll();requestAnimationFrame(()=>requestAnimationFrame(restoreScroll));
 }
-/* The tab row sticks under the header, and the header's height is content-driven —
-   it grows with the phone's text-size setting. So it is measured rather than
-   guessed; a guess is how the header came to overlap the tabs. */
-function fitTabs(){
-  const h=document.querySelector('.head');
-  if(!h)return;
-  const px=Math.round(h.getBoundingClientRect().height);
-  if(px>0) document.documentElement.style.setProperty('--headh',px+'px');
+/* THE BOTTOM TAB BAR. Five tabs; Profile and Settings live under Menu, but their
+   TAB values are unchanged so ?tab=, the saved tab and the merch→profile alias all
+   still work. The Live tab is red (test/copy.mjs pins the selector). */
+const TABICON={
+  live:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4M3.5 3.5a12 12 0 0 0 0 17M20.5 3.5a12 12 0 0 1 0 17"/></svg>',
+  setlist:'<svg viewBox="0 0 24 24"><path d="M4 6h11M4 12h11M4 18h7"/><circle cx="18" cy="16.5" r="2.6"/><path d="M20.6 16.5V8.2l-3.4 1"/></svg>',
+  gigs:'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  money:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="3"/><path d="M3 10.5h18M7 15h3"/></svg>',
+  menu:'<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'};
+function tabBar(){
+  const on=t=>t==='menu'?(TAB==='profile'||TAB==='settings'):TAB===t;
+  return `<nav class="tabbar" aria-label="Studio"><div class="in">
+    ${[['live','Live'],['setlist','Setlist'],['gigs','Gigs'],['money','Money'],['menu','Menu']].map(([t,l])=>
+      `<button ${t==='live'?'data-tab-live ':''}class="${on(t)?'on':''}" onclick="${t==='menu'?'openMenu()':`setTab('${t}')`}" aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}</button>`).join('')}
+  </div></nav>`;
 }
-addEventListener('resize',fitTabs);
+function openMenu(){
+  const s=(D&&D.show)||{};
+  const planLine=PLAN&&PLAN.ok?(PLAN.plan==='free'?'Free plan · see the plans':esc((PLAN.limits&&PLAN.limits.label)||PLAN.plan)+' · manage'):'Plans';
+  openSheet(`<h3>Menu</h3>
+    <button class="menurow" onclick="closeSheet();setTab('profile')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+      <div class="m">Profile<span>${s.slug?'myset.vip/'+esc(s.slug):'Your public page'}</span></div><span class="chev">›</span></button>
+    <button class="menurow" onclick="closeSheet();setTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>
+      <div class="m">Settings<span>Prices, votes, codes, who can sign in</span></div><span class="chev">›</span></button>
+    <button class="menurow" onclick="closeSheet();openPlans()">
+      <svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>
+      <div class="m">Your plan<span>${planLine}</span></div><span class="chev">›</span></button>
+    <button class="menurow out" onclick="closeSheet();signOut()">
+      <svg viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></svg>
+      <div class="m">Sign out<span>Of this device</span></div></button>`);
+}
 /* What the room has asked for. Pending first, because a birthday is the one
    thing on this screen that goes stale. */
 /* Venues you've asked for a spot, and what they said. Sits on the Gigs tab
@@ -3273,6 +3424,7 @@ function qrBig(k){
     </div>
   </div>`;
   el.classList.add('on');
+  if(!QRSHOWN){ QRSHOWN=true; try{localStorage.setItem('myset.qrshown','1')}catch(e){} if(TAB==='live'&&D&&!typing())render(); }
 }
 function qrHide(e){ if(e&&e.target&&e.target.id!=='qrbig')return; $('#qrbig').classList.remove('on'); }
 function qrDownload(k){

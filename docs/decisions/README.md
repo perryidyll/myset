@@ -51,6 +51,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) | Between shows the voting page counts down to the next gig, and the wrap-up card lasts three hours | 2026-09-12 | ui | decided | perry |
 | [0040](0040-the-event-map-resolves-saved-google-short-links.md) | The event map resolves a saved Google short link before it guesses from venue text | 2026-09-12 | ui | decided | perry |
 | [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md) | Public map pins use saved coordinates and the home map opens without navigation | 2026-09-12 | ui | decided | perry |
+| [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) | public reads are shared at the edge and every page paints the last thing you saw first | 2026-09-12 | performance | decided | claude |
+| [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md) | the public artist page carries the room's rating, request status, post count and top songs | 2026-09-12 | ui | decided | claude |
 
 ## By area
 
@@ -62,6 +64,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md)
 
+**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md)
+
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md)
 
 **scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md)
@@ -70,7 +74,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) · [0040](0040-the-event-map-resolves-saved-google-short-links.md) · [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md)
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) · [0040](0040-the-event-map-resolves-saved-google-short-links.md) · [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md) · [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md)
 
 **voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 

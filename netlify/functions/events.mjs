@@ -1,4 +1,4 @@
-import { json, bad, publicArtist } from './_lib.mjs';
+import { json, bad, jsonCached, publicArtist } from './_lib.mjs';
 import { readEvents, occurrencesFor, readCityIndex, isVenueOwner, venueIdOf } from './_events.mjs';
 import { localDate, addDays, tzOffsetMs } from './_time.mjs';
 import { artistById } from './_auth.mjs';
@@ -33,7 +33,7 @@ export default async (req) => {
       countries.push({ country, cities: list, gigs: list.reduce((s, c) => s + c.gigs, 0) });
     }
     countries.sort((a, b) => b.gigs - a.gigs || a.country.localeCompare(b.country));
-    return json({ ok: true, src: MARK, countries });
+    return jsonCached({ ok: true, src: MARK, countries }, 60);   // the front door's picker, one run a minute
   }
 
   /* ---- one artist's diary ---- */
@@ -45,13 +45,18 @@ export default async (req) => {
     const aid = await publicArtist(req);
     if (!aid) return bad('unknown artist', 404);
     const days = Math.max(1, Math.min(120, parseInt(url.searchParams.get('days'), 10) || 60));
+    /* `n` is how many nights the caller will actually draw. The artist page shows
+       24 and the vote page wants only the next one; a weekly residency over 90
+       days is 60 rows at ~750 bytes each, 44KB on bar Wi-Fi for three visible rows. */
+    const n = Math.max(1, Math.min(60, parseInt(url.searchParams.get('n'), 10) || 60));
     const events = await readEvents(aid);
     const tz = guessTz(events);
     const from = localDate(Date.now(), tz);
     const occ = occurrencesFor(events, addDays(from, -1), addDays(from, days))
       .filter((o) => o.endsAt > Date.now())
-      .slice(0, 60);
-    return json({ ok: true, src: MARK, artistId: aid, gigs: occ.map(shape) });
+      .slice(0, n);
+    // thirty seconds at the edge — a diary changes by the week, `live` flips by the hour
+    return jsonCached({ ok: true, src: MARK, artistId: aid, gigs: occ.map(shape) }, 30);
   }
 
   /* ---- a city feed ---- */
@@ -144,7 +149,8 @@ export default async (req) => {
      in a payload is a thing somebody will eventually depend on by accident. */
   for (const d of days) for (const g of [...d.gigs, ...(d.featured || [])]) delete g._owner;
 
-  return json({
+  // the city feed is the same for every phone in town: one run a minute at the edge
+  return jsonCached({
     ok: true, country, city,
     today, horizon: addDays(today, WINDOW_DAYS),
     total: rows.length,

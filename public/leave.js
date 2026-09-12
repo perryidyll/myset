@@ -92,3 +92,13 @@
     }
   } catch (e) {}
 })();
+
+/* THE LAST THING YOU SAW, PAINTED FIRST. Each page keeps its most recent good
+   answer on the phone and draws it the instant the page opens, then fetches the
+   fresh one and redraws only if something changed. Second visits feel like zero
+   seconds; the network never gates the first paint. A copy older than a week is
+   ignored. Nothing private goes in here that the same phone did not already see. */
+window.lastSeen={
+  get(k){try{const s=localStorage.getItem('myset.last.'+k);if(!s)return null;const o=JSON.parse(s);return (o&&o.v&&Date.now()-o.t<7*864e5)?o.v:null}catch(e){return null}},
+  set(k,v){try{localStorage.setItem('myset.last.'+k,JSON.stringify({t:Date.now(),v}))}catch(e){}}
+};
