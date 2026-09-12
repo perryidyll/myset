@@ -58,8 +58,9 @@ async function resolveOwner(req) {
     const vid = await venueBySlug(slug);
     if (!vid) return null;
     const { readVenues } = await import('./_venues.mjs');
-    const reg = (await readVenues()).byId[vid] || {};
-    const prof = await getVenueProfile(vid);
+    // the registry row and the profile both need only the id: one hop, not two
+    const [venues, prof] = await Promise.all([readVenues(), getVenueProfile(vid)]);
+    const reg = venues.byId[vid] || {};
     const v = shapeVenue(prof, reg);
     return { kind: 'venue', id: vid, owner: `v_${vid}`, slug: reg.slug || slug, name: v.name,
              avatar: v.photo || '', verified: !!v.verified, merch: (v.merch || []).filter((m) => m.on), canBuy: !!v.paymentsEnabled, live: false, showId: '' };

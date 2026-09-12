@@ -59,6 +59,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0047](0047-the-repository-stays-public.md) | The repository stays public | 2026-09-12 | ops | decided | perry |
 | [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) | the pages and the static files live at the edge; the Stripe SDK loads only when money moves | 2026-09-12 | performance | decided | claude |
 | [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) | everything a fan reads comes through one warm door | 2026-09-12 | performance | decided | perry |
+| [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) | the studio's first two reads start from the head, and its functions are pinged awake | 2026-09-12 | performance | decided | perry |
 
 ## By area
 
@@ -70,7 +71,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md)
 
-**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md)
+**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md)
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md)
 

@@ -75,6 +75,7 @@ console.log('THE PAGES ASK THE DOOR');
   const cron = readFileSync('netlify/functions/autocron.mjs', 'utf8');
   ok('autocron rings the ping', cron.includes('/api/fan?what=warm'));
   ok('every fourth minute, not every ring', cron.includes('% 4 === 0'));
+  ok('and wakes the Studio\'s two functions with it', cron.includes("'/api/stage'") && cron.includes("'/api/admin'"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

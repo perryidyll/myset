@@ -39,9 +39,14 @@ export default async (req) => {
      never thrown. */
   if (new Date(now).getUTCMinutes() % 4 === 0) {
     const site = process.env.URL || 'https://myset.vip';
-    await fetch(`${site}/api/fan?what=warm`, { signal: AbortSignal.timeout(8000) })
-      .then((r) => console.log(`autocron: warmed the fan door (${r.status})`))
-      .catch((e) => console.log(`autocron: warm ping failed: ${e && e.message}`));
+    /* The Studio's two first reads are their own functions, and they sleep too:
+       /api/stage (the stage payload) and /api/admin (planGet, and everything the
+       Studio does). An unauthenticated GET wakes each one and is refused in a few
+       milliseconds — three pings a tick, ~32k calls a month in all (decision 0050). */
+    const warm = (path, label) => fetch(`${site}${path}`, { signal: AbortSignal.timeout(8000) })
+      .then((r) => console.log(`autocron: warmed ${label} (${r.status})`))
+      .catch((e) => console.log(`autocron: warm ping of ${label} failed: ${e && e.message}`));
+    await Promise.all([warm('/api/fan?what=warm', 'the fan door'), warm('/api/stage', 'stage'), warm('/api/admin', 'admin')]);
   }
 
   const state = await readSched().catch(() => emptySched());
