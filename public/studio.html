@@ -355,6 +355,12 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .songmeta span.k{background:var(--accent-soft);color:var(--accent)}
 .songcard{display:block;padding:15px 16px 13px}
 .songcard>.m{width:100%;min-width:0}
+/* .gigcard is the Gigs tab's "Coming up" row in the same shape: .gighead holds the
+   date and the words, .songactions the buttons beneath (the founder, 2026-09-12). */
+.gigcard{display:block;padding:15px 16px 13px}
+.gighead{display:flex;align-items:center;gap:12px}
+.gighead>.m{flex:1;min-width:0}
+.gigcard .songactions .act.warn.wide{flex:1;padding:0 12px}   /* "Hide" on a cancelled night has a word in it */
 .songactions{display:flex;align-items:center;gap:9px;margin-top:13px;width:100%}
 .songactions .act{flex:1;min-width:0;height:40px}
 .songactions .act.warn{flex:0 0 40px;padding:0}
@@ -695,7 +701,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=4d1ab49f"></script>
+<script src="/studio.js?v=d6907d62"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

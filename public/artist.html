@@ -224,7 +224,13 @@ a.pc:active{transform:scale(.97)}
   background:var(--grad);color:#fff;box-shadow:0 4px 14px rgba(255,55,95,.3)}
 .tonight .when b{display:block;font-size:19px;font-weight:700;letter-spacing:-.02em;line-height:1}
 .tonight .when span{display:block;font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;margin-top:5px;opacity:.92}
-.tonight .where{flex:1;min-width:0}
+/* The founder's card (2026-09-12): the orange time block on the left, the venue and
+   city centred in the middle, the RSVP pill on the right with its count beneath, and
+   the wide Directions button underneath as it was. The pill shares .rsvpcol with the
+   rows, so a tap here and a tap on the same night's row paint each other. */
+.tonight .where{flex:1;min-width:0;text-align:center}
+.tonight .top .rsvpcol{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tonight .top .going{display:block;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .tonight .where b{display:block;font-size:17px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
 .tonight .where span{font-size:14px;color:var(--muted)}
 .tonight .cta{padding:0 20px 20px}
@@ -263,16 +269,19 @@ a.pc:active{transform:scale(.97)}
 .media .meta a{font-size:13px;color:var(--accent-ink);font-weight:600;flex:0 0 auto}
 .fineprint{padding:4px 22px 0;font-size:12.5px;color:var(--faint);line-height:1.45}
 .gigs{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
-.gigrow{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair)}
+/* EVERYTHING ON A ROW IS CENTRED (the founder, 2026-09-12): the columns sit on
+   the row's middle line and each centres its own words — the same card as the
+   front door's feed and the venue page draw. */
+.gigrow{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair);text-align:center}
 .gigrow:first-child{border-top:none}
 .gigrow.live{background:var(--accent-soft)}
-/* 56px, not 44: the Directions pin sits under the date in this column now (it is
-   38px wide, so 56 still fits it with room), and the column keeps one width whether
-   or not a row has a map, so the venue names line up down the list. */
+/* 56px, not 44: the thin Directions pill sits under the date in this column, and
+   the column keeps one width whether or not a row has a map, so the venue names
+   line up down the list. */
 .gigrow .d{flex:0 0 auto;text-align:center;min-width:56px;display:flex;flex-direction:column;align-items:center}
 .gigrow .d b{display:block;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1}
 .gigrow .d span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
-.gigrow .d .dirs.ico{margin-top:7px}
+.gigrow .d .dirs.thin{margin-top:7px}
 /* RSVP (the founder, 2026-09-12): one small pill on every row, and a count beneath
    it so the room can see who else is coming. It sits at the RIGHT edge of the row,
    in its own column (.rsvpcol — not .go, which app.css already owns as the big
@@ -284,11 +293,11 @@ a.pc:active{transform:scale(.97)}
    page remembers its own answers in localStorage (rsvpMap). The count is the
    button's next sibling — rsvpTap's paint() finds it that way. */
 .gigrow .rsvpcol{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px}
-.gigrow .rsvp{padding:6px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.02em;
+.gigrow .rsvp,.tonight .rsvp{padding:6px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.02em;
   line-height:1;background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);
   box-shadow:inset 0 0 0 1.5px var(--accent-2);transition:transform .22s var(--spring)}
-.gigrow .rsvp[aria-pressed=true]{background:var(--accent-2);color:#fff;box-shadow:none}
-.gigrow .rsvp:active{transform:scale(.94)}
+.gigrow .rsvp[aria-pressed=true],.tonight .rsvp[aria-pressed=true]{background:var(--accent-2);color:#fff;box-shadow:none}
+.gigrow .rsvp:active,.tonight .rsvp:active{transform:scale(.94)}
 .gigrow .rsvpcol .going{display:block;font-size:10.5px;color:var(--muted);text-align:center;
   font-variant-numeric:tabular-nums;white-space:nowrap}
 /* overflow-wrap:anywhere — a venue word wider than the middle column (about 190px
@@ -305,9 +314,9 @@ a.pc:active{transform:scale(.97)}
   font-size:13px;font-weight:600;color:var(--accent-ink);padding:10px 15px;
   border-radius:var(--pill);background:var(--accent-soft)}
 .dirs svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;flex:0 0 auto}
-/* icon-only inside a row, where the words would cost the venue name its line */
-.dirs.ico{width:38px;height:38px;padding:0;border-radius:50%}
-.dirs.ico svg{width:17px;height:17px}
+/* inside a row: the thin pill the map sheet's cards wear, words only (the founder,
+   2026-09-12 — one Directions button on every card everywhere) */
+.dirs.thin{font-size:11px;font-weight:750;line-height:1.2;padding:7px 9px;gap:0}
 .tonight .dirsrow{display:flex;padding:0 20px 18px}
 .tonight .dirsrow .dirs{flex:1}
 .seemore{width:100%;padding:15px;border-top:.5px solid var(--hair);font-size:14.5px;font-weight:600;
@@ -434,9 +443,8 @@ const joinedWord=ms=>{if(!ms)return '';const d=new Date(Number(ms));
 const APPLE=/(iPhone|iPad|iPod|Macintosh|Mac OS X)/i.test(navigator.userAgent||'');
 const dirHref=m=>(APPLE?m.apple:m.google)||m.google||m.apple||'';
 const PIN='<svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>';
-const dirBtn=(m,icon)=>{const h=dirHref(m); if(!h)return '';
-  return `<a class="dirs${icon?' ico':''}" href="${esc(h)}" target="_blank" rel="noopener noreferrer"
-    aria-label="Directions"${icon?' title="Directions"':''}>${PIN}${icon?'':'Directions'}</a>`;};
+const dirBtn=(m,thin)=>{const h=dirHref(m); if(!h)return '';
+  return `<a class="dirs${thin?' thin':''}" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${thin?'':PIN}Directions</a>`;};
 /* Counts down to the next gig from the calendar. Red only means red. */
 function nextGig(){ return (G&&G.ok?G.gigs:[]).find(g=>g.endsAt>Date.now())||null; }
 /* The countdown is a real link to the setlist page, and it has to say so — a
@@ -564,9 +572,9 @@ function rsvpRemember(k,on){try{const m=rsvpMap();if(on)m[k]=1;else delete m[k];
 async function rsvpTap(b){
   const g=ROWS[+b.dataset.i]; if(!g||b.dataset.busy)return;
   const k=rsvpKey(g), was=b.getAttribute('aria-pressed')==='true', on=!was;
-  const live=()=>document.querySelector(`#app .rsvp[data-k="${CSS.escape(k)}"]`)||b;
-  const n0=Number(g.rsvp)||0, paint=(o,n)=>{const x=live(),cnt=x.nextElementSibling;
-    x.setAttribute('aria-pressed',o?'true':'false');if(cnt)cnt.textContent=`${compact(n)||'0'} going`;
+  const live=()=>{const all=[...document.querySelectorAll(`#app .rsvp[data-k="${CSS.escape(k)}"]`)];return all.length?all:[b];};
+  const n0=Number(g.rsvp)||0, paint=(o,n)=>{for(const x of live()){const cnt=x.nextElementSibling;
+      x.setAttribute('aria-pressed',o?'true':'false');if(cnt)cnt.textContent=`${compact(n)||'0'} going`;}
     ROWS.forEach(r=>{if(rsvpKey(r)===k)r.rsvp=n;}); rsvpRemember(k,o);};
   b.dataset.busy='1'; paint(on,Math.max(0,n0+(on?1:-1)));
   try{
@@ -665,7 +673,7 @@ function render(){
      Only a stored photo gets them — the stock placeholder is not a picture of the band. */
   const zoom=u=>`data-zoom="${esc(u)}" role="button" tabindex="0" aria-label="Enlarge photo"`;
   h+=`<div class="pcover rise" ${P.photo?zoom(cover):''} style="background-image:url('${esc(cdn(cover,48))}');background-size:cover;background-position:center">
-    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw)this.src=this.dataset.raw" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
+    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw}" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
     <div class="veil"></div>
   </div>
 
@@ -754,10 +762,14 @@ function render(){
       </div>
     </div>`;
   } else if(ng){
+    /* the same night's index in the rows below, so the pill here is the row's twin */
+    const ni=(G&&G.ok?G.gigs:[]).indexOf(ng), nk=rsvpKey(ng);
     h+=`<div class="tonight rise">
       <div class="top">
         <div class="when"><b>${fmtTime(ng.time)}</b><span>${whenWord(ng.date)}</span></div>
         <div class="where"><b>${esc(ng.venue)}</b><span>${esc([ng.city,ng.country].filter(Boolean).join(', '))}</span></div>
+        ${ni>=0&&ni<24?`<div class="rsvpcol"><button class="rsvp" type="button" data-i="${ni}" data-k="${esc(nk)}" aria-pressed="${rsvpMap()[nk]?'true':'false'}">RSVP</button>
+          <span class="going">${esc(compact(ng.rsvp)||'0')} going</span></div>`:''}
       </div>
       ${ng.maps?`<div class="dirsrow">${dirBtn(ng.maps)}</div>`:''}
     </div>`;
