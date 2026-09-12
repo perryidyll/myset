@@ -71,3 +71,17 @@ Step 4 (drop the boot screen on `stage` alone) was NOT done: in all eight of the
 founder's readings and the two taken here, `plan` answered before `stage` (0.6–1.1 s
 vs 0.9–1.7 s), so the boot screen never waits on the plan in practice — the change
 would buy nothing measurable and adds a locked-then-unlocked flash. Held; his call.
+
+## Later still — two hops, step 4, and the Venue Studio split (0054, 0053)
+
+The founder read `Opened in 0.94 s · page 0.06 · stage 0.83 · plan 0.83` after
+0053 and asked for the stage to be batched, for step 4, and for the Venue Studio to
+get the same split. The stage was already one batch; the cost was four sequential
+blob hops per signed-in request (secret → registry → batch → registry again).
+Now: the secret is memoised per warm instance, the registry read runs alongside
+it, the slug lookup joined the batch — two hops. Every authenticated call gets
+this, not just the Studio. Step 4: the boot screen drops on the stage; `has()`
+treats an unfetched plan as locked and a failed fetch as allowed. Venue Studio:
+`venue-studio.html` 125 KB → 25 KB shell + `venue-studio.js` 100 KB immutable;
+`tools/stamp.mjs` and the structure check now cover both pages; `/venues` gets
+the ten-minute edge life.

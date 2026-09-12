@@ -57,21 +57,23 @@ check('public/venue-studio.html', [
   ['function tabBar',        /\nfunction tabBar\(\)\{/g],
   ['sticky offset measured', /top:var\(--headh/g, 0],
 ]);
-/* /studio.js is served immutable for a year, addressed by its own hash. A stale
-   stamp means a phone keeps running last week's Studio under this week's shell. */
+/* /studio.js and /venue-studio.js are served immutable for a year, addressed by
+   their own hash. A stale stamp means a phone keeps running last week's Studio
+   under this week's shell. */
 {
   const { createHash } = await import('node:crypto');
-  const js = readFileSync(new URL('../public/studio.js', import.meta.url), 'utf8');
-  const want = createHash('sha1').update(js).digest('hex').slice(0, 8);
-  const html = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
-  const have = (html.match(/src="\/studio\.js\?v=([0-9a-f]+)"/) || [])[1];
-  const okStamp = have === want;
-  console.log(`  ${okStamp ? '✓' : '✗'} studio.js stamp ${okStamp ? 'matches' : `is ${have}, file is ${want} — run: node tools/stamp.mjs`}`);
-  if (!okStamp) fail++;
-  const inline = (html.match(/<script>/g) || []).length;
-  const okInline = inline <= 3;
-  console.log(`  ${okInline ? '✓' : '✗'} studio.html keeps only its small inline scripts (${inline})`);
-  if (!okInline) fail++;
+  for (const [page, js] of [['public/studio.html', 'studio.js'], ['public/venue-studio.html', 'venue-studio.js']]) {
+    const want = createHash('sha1').update(readFileSync(new URL('../public/' + js, import.meta.url), 'utf8')).digest('hex').slice(0, 8);
+    const html = readFileSync(new URL('../' + page, import.meta.url), 'utf8');
+    const have = (html.match(new RegExp(`src="/${js.replace('.', '\\.')}\\?v=([0-9a-f]+)"`)) || [])[1];
+    const okStamp = have === want;
+    console.log(`  ${okStamp ? '✓' : '✗'} ${js} stamp ${okStamp ? 'matches' : `is ${have}, file is ${want} — run: node tools/stamp.mjs`}`);
+    if (!okStamp) fail++;
+    const inline = (html.match(/<script>/g) || []).length;
+    const okInline = inline <= 3;
+    console.log(`  ${okInline ? '✓' : '✗'} ${page} keeps only its small inline scripts (${inline})`);
+    if (!okInline) fail++;
+  }
 }
 console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
 process.exit(fail ? 1 : 0);
