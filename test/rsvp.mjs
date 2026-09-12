@@ -56,6 +56,10 @@ const gig = (id, date) => hit(admin, 'https://x/api/admin', { action: 'eventSave
   id, venue: 'The Ugly Duckling', city: 'Koh Phangan', country: 'Thailand',
   tz: 'UTC', date, time: '20:00', endTime: '23:00' } }, tok);
 ok('the upcoming gig is saved', (await gig('ahead', SOON)).ok);
+const atBar = await hit(admin, 'https://x/api/admin', { action: 'eventSave', event: {
+  id: 'atbar', venue: 'The Rsvp Bar', city: 'Koh Phangan', country: 'Thailand',
+  tz: 'UTC', date: SOON, time: '21:00', endTime: '23:30' } }, tok);
+ok('a gig at the venue itself is saved', atBar.ok, atBar);
 ok('the finished gig is saved', (await gig('behind', GONE)).ok);
 
 const ven = await V.createVenue({ email: 'boss@rsvpbar.example', name: 'The Rsvp Bar',
@@ -106,6 +110,14 @@ console.log('\nA VENUE’S OWN EVENT COUNTS UNDER THE VENUE');
   eq('and the gig row is untouched', (all.find((g) => g.eventId === 'ahead') || {}).rsvp, 1);
   eq('its document is the venue’s, not an artist’s',
     Object.keys((await R.readRsvp(`v_${ven.venueId}`)).occ), [R.occKey('quiz', SOON)]);
+  /* The venue's own page offers the same button (the founder, 2026-09-12): every
+     row it draws carries the id to RSVP to and the count to show, for the venue's
+     own events and for the artists' gigs at it alike. */
+  const page = await hit(fanFn, 'https://x/api/fan?what=venue&v=rsvp-bar');
+  const pq = (page.gigs || []).find((g) => g.kind === 'event' && g.eventId === 'quiz');
+  eq('the venue page’s own event carries its id and the count', pq && pq.rsvp, 1);
+  const pg = (page.gigs || []).find((g) => g.kind === 'gig' && g.eventId === 'atbar');
+  eq('and an artist’s gig at the venue carries its id and a zero, not nothing', pg && [pg.slug, pg.rsvp], [slug, 0]);
   eq('an unknown venue is a 404',
     (await rsvp('?v=no-such-bar', { fan: FAN_A, eventId: 'quiz', date: SOON, on: true })).status, 404);
 }

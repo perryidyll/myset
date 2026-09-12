@@ -1,6 +1,7 @@
 import { json, bad, jsonCached } from './_lib.mjs';
 import { venueBySlug, venueById, getVenueProfile, shapeVenue, sameVenue } from './_venues.mjs';
 import { readEvents, occurrencesFor, readCityIndex } from './_events.mjs';
+import { readRsvp, rsvpCounts, occKey } from './_rsvp.mjs';
 import { localDate, addDays } from './_time.mjs';
 import { artistById } from './_auth.mjs';
 import { readVouches, MIN_VOUCHES } from './_verify.mjs';
@@ -46,16 +47,21 @@ export default async (req) => {
 };
 
 /** The venue's own listings — a quiz night, a DJ, the football. Same engine. */
+/* Every row carries `eventId` and `rsvp` (the count, never a fan), read in the
+   same hop as the owner's events — the venue page offers the same RSVP the city
+   feed does (decision 0056; the founder asked for it here on 2026-09-12), and a
+   row without its id would be a button that leads to a shrug. */
 async function ownEvents(vid, venue) {
-  const events = await readEvents(`v_${vid}`);
+  const [events, rs] = await Promise.all([readEvents(`v_${vid}`), readRsvp(`v_${vid}`)]);
   if (!(events.list || []).length) return [];
+  const counts = rsvpCounts(rs);
   const tz = ((events.list || []).find((x) => x.tz) || {}).tz || 'UTC';
   const now = Date.now();
   const from = localDate(now, tz);
   return occurrencesFor(events, addDays(from, -1), addDays(from, HORIZON))
     .filter((o) => o.endsAt > now)
     .map((o) => ({
-      kind: 'event',
+      kind: 'event', eventId: o.eventId, rsvp: counts[occKey(o.eventId, o.date)] || 0,
       date: o.date, time: o.time, endTime: o.endTime, tz: o.tz,
       startsAt: o.startsAt, endsAt: o.endsAt,
       title: o.title || 'Event',
@@ -74,8 +80,9 @@ async function gigsAt(venue) {
   const rows = [];
 
   for (const aid of ids) {
-    const [events, who] = await Promise.all([readEvents(aid), artistById(aid)]);
+    const [events, who, rs] = await Promise.all([readEvents(aid), artistById(aid), readRsvp(aid)]);
     if (!who) continue;
+    const counts = rsvpCounts(rs);
     const tz = ((events.list || []).find((x) => x.tz) || {}).tz || 'UTC';
     const from = localDate(now, tz);
     for (const o of occurrencesFor(events, addDays(from, -1), addDays(from, HORIZON))) {
@@ -83,7 +90,7 @@ async function gigsAt(venue) {
       if (o.city !== venue.city || o.country !== venue.country) continue;
       if (!sameVenue(o.venue, venue.name)) continue;
       rows.push({
-        kind: 'gig',
+        kind: 'gig', eventId: o.eventId, rsvp: counts[occKey(o.eventId, o.date)] || 0,
         date: o.date, time: o.time, endTime: o.endTime, tz: o.tz,
         startsAt: o.startsAt, endsAt: o.endsAt,
         artist: who.name, slug: who.slug,

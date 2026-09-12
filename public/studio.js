@@ -1699,8 +1699,7 @@ function render(){
       </div>
     </div>
     ${setPick()}
-    ${PLAN&&PLAN.ok&&PLAN.limits.featured?`<p class="muted" style="font-size:12px;padding:0 20px;margin:0">
-      <b>${active} of ${PLAN.limits.featured}</b> featured. Keep as many as you like (up to ${PLAN.limits.library}) — your plan shows ${PLAN.limits.featured} to fans at a time. The rest sit switched off.</p>`:''}
+
     ${songs.length?'':`<div class="sec"><span class="kick">No songs yet</span></div>
       <div class="list"><div class="row muted">Add a song above, or import a CSV, pasted list, or public Spotify playlist.</div></div>`}
     <div class="sec"><span class="kick">Your setlist — ${active} of ${songs.length} featured</span>${
@@ -1770,18 +1769,22 @@ function render(){
         }).join('')}
       </div>
       <div class="sec"><span class="kick">Coming up</span><span class="kick">${up.length}</span></div>
-      <div class="list">${(GIGSALL?up:up.slice(0,5)).map(o=>`<div class="row gigrow ${o.cancelled?'off':''}">
-        <div class="when"><b>${dayNum(o.date)}</b><span>${monShort(o.date)}</span></div>
+      ${/* Laid out like the Setlist tab's song cards (the founder, 2026-09-12): the
+            date and the words on one line, the three buttons on a full-width row
+            beneath. Three buttons beside the words left the venue name a column of
+            single words on a phone. */''}
+      <div class="list">${(GIGSALL?up:up.slice(0,5)).map(o=>`<div class="row gigrow gigcard ${o.cancelled?'off':''}">
+        <div class="gighead"><div class="when"><b>${dayNum(o.date)}</b><span>${monShort(o.date)}</span></div>
         <div class="m"><div class="t">${esc(o.venue)}</div>
           <div class="by">${esc(o.address||[o.city,o.country].filter(Boolean).join(', '))}</div>
           <div class="s">${dowName(o.date)} · ${o.time}${o.endTime?'–'+o.endTime:''}${o.repeating?' · repeats':''}${o.cancelled?' · cancelled':''}${
-            o.listId?' · '+esc(setName(o.listId)):''}</div></div>
-        ${o.cancelled
+            o.listId?' · '+esc(setName(o.listId)):''}</div></div></div>
+        <div class="songactions">${o.cancelled
           ? `<button class="act" data-act="gigskip" data-id="${o.eventId}|${o.date}">Restore</button>
-             <button class="act warn" data-act="gighide" data-id="${o.eventId}|${o.date}">Hide</button>`
+             <button class="act warn wide" data-act="gighide" data-id="${o.eventId}|${o.date}">Hide</button>`
           : `<button class="act" onclick="openPromote('${esc(o.eventId)}','${esc(o.date)}')">Feature</button>
              <button class="act" data-act="gigedit" data-id="${o.eventId}">Edit</button>
-             <button class="act warn" data-act="gigskip" data-id="${o.eventId}|${o.date}">✕</button>`}
+             <button class="act warn" data-act="gigskip" data-id="${o.eventId}|${o.date}">✕</button>`}</div>
       </div>`).join('')||'<div class="row muted">Nothing booked yet. Tap “Add a gig” — a weekly residency only needs entering once.</div>'}
       ${up.length>5?`<button class="seemore" onclick="GIGSALL=!GIGSALL;render()">${
         GIGSALL?'Show fewer ▴':`See ${up.length-5} more ▾`}</button>`:''}</div>

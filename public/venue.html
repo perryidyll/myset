@@ -125,7 +125,11 @@ body{padding-bottom:34px}
 .ttk .dir a{flex:0 0 auto;font-size:13.5px;font-weight:600;color:var(--accent-ink);white-space:nowrap}
 
 .rows{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
-.r{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair);position:relative}
+/* EVERYTHING ON A ROW IS CENTRED (the founder, 2026-09-12): the same card the
+   front door's feed and the artist page draw — the columns on the row's middle
+   line, each centring its own words, a thin Directions pill under the date and
+   the RSVP pill at the right edge with its count beneath. */
+.r{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair);position:relative;text-align:center}
 .r:first-child{border-top:none}
 .r.live{background:var(--accent-soft)}
 .r .rowlink{position:absolute;inset:0;z-index:1}
@@ -136,6 +140,19 @@ body{padding-bottom:34px}
 .r .m .v{font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
 .r .m .w{font-size:13.5px;color:var(--muted);margin-top:2px}
 .r .chev{flex:0 0 auto;font-size:20px;color:var(--faint);position:relative;z-index:2}
+.r .d .dirs{display:inline-block;margin-top:7px;font-size:11px;font-weight:750;line-height:1.2;position:relative;z-index:2;
+  color:var(--accent-ink);padding:7px 9px;border-radius:var(--pill);background:var(--accent-soft);white-space:nowrap}
+/* RSVP (decision 0056; on this page since 2026-09-12 at the founder's ask): the
+   .btn-grey ground with the orange ring and words, the orange fill once you are
+   going, "<n> going" centred beneath. Above the row link, so a tap RSVPs instead
+   of opening the artist. The page never waits on app.css for its own controls. */
+.r .rsvpcol{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;z-index:2}
+.r .rsvp{padding:6px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.02em;line-height:1;
+  background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);
+  box-shadow:inset 0 0 0 1.5px var(--accent-2);transition:transform .22s var(--spring)}
+.r .rsvp[aria-pressed=true]{background:var(--accent-2);color:#fff;box-shadow:none}
+.r .rsvp:active{transform:scale(.94)}
+.r .going{display:block;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .onnow{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;font-size:10.5px;
   font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:var(--pill);text-transform:uppercase;margin-bottom:3px}
 .onnow .dot{background:#fff;width:5px;height:5px}
@@ -428,6 +445,46 @@ function notFound(gone){
   document.title = gone ? 'Not found — MySet' : 'MySet';
 }
 
+/* The thin Directions pill under a date — every row is at this venue, so it is
+   the venue's own link, drawn on each card because the founder asked (2026-09-12)
+   for the same card everywhere. */
+const dirPill=h=>h?`<a class="dirs" href="${esc(h)}" target="_blank" rel="noopener noreferrer">Directions</a>`:'';
+/* RSVP on the venue's rows (decision 0056; here since 2026-09-12). The fan is the
+   same anonymous id the vote page keeps; the page remembers its own answers in
+   'myset.rsvp' under the same key the front door uses — an artist's gig under the
+   artist's slug, the venue's own event under v:<venueSlug> — so a phone that said
+   yes on the front door reads as going here too. A row without an id (an older
+   reply) draws no button rather than one that leads to a shrug. */
+function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
+  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
+  return v;}
+const rsvpOwner=g=>g.kind==='event'?'v:'+SLUG:(g.slug||'');
+const rsvpKey=g=>`${rsvpOwner(g)}|${g.eventId}|${g.date}`;
+function rsvpMap(){try{const m=JSON.parse(localStorage.getItem('myset.rsvp')||'{}');return m&&typeof m==='object'?m:{};}catch(e){return {};}}
+function rsvpRemember(k,on){try{const m=rsvpMap();if(on)m[k]=1;else delete m[k];localStorage.setItem('myset.rsvp',JSON.stringify(m));}catch(e){}}
+const rsvpCol=g=>g.eventId?`<div class="rsvpcol"><button class="rsvp" type="button" data-k="${esc(rsvpKey(g))}" aria-pressed="${rsvpMap()[rsvpKey(g)]?'true':'false'}">RSVP</button>
+          <span class="going">${Number(g.rsvp)||0} going</span></div>`:'';
+/* Optimistic, then the server's word; a refused tap goes back and says so. Every
+   paint goes to whichever button carries the key NOW (the page can redraw while
+   the request is out), and the same key can be on two rows (next up + the list). */
+async function rsvpTap(b){
+  const k=b.dataset.k, g=(V&&V.gigs||[]).find(x=>rsvpKey(x)===k); if(!g||b.dataset.busy)return;
+  const was=b.getAttribute('aria-pressed')==='true', on=!was, n0=Number(g.rsvp)||0;
+  const paint=(o,n)=>{document.querySelectorAll(`#app .rsvp[data-k="${CSS.escape(k)}"]`).forEach(x=>{
+      x.setAttribute('aria-pressed',o?'true':'false');const c=x.nextElementSibling;if(c)c.textContent=`${n} going`;});
+    (V.gigs||[]).forEach(r=>{if(rsvpKey(r)===k)r.rsvp=n;}); rsvpRemember(k,o);};
+  b.dataset.busy='1'; paint(on,Math.max(0,n0+(on?1:-1)));
+  try{
+    const q=g.kind==='event'?`v=${encodeURIComponent(SLUG)}`:`a=${encodeURIComponent(g.slug||'')}`;
+    const r=await fetch(`${API}/rsvp?${q}`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({fan:fanId(),eventId:g.eventId,date:g.date,on})});
+    const j=await r.json().catch(()=>null);
+    if(!r.ok||!j||!j.ok) throw new Error((j&&j.error)||'rsvp failed');
+    paint(!!j.on,Number(j.n)||0);
+  }catch(e){ paint(was,n0); toast('Couldn’t save that — try again'); }
+  delete b.dataset.busy;
+}
+document.getElementById('app').addEventListener('click',e=>{const b=e.target.closest('.rsvp');if(b){e.preventDefault();rsvpTap(b);}});
 function render(){
   const v=V.venue, gigs=V.gigs||[];
   const liveNow=gigs.find(g=>g.live)||null;
@@ -477,12 +534,12 @@ function render(){
     h+=`<div class="sect">${liveNow?'On now':'Next up'}</div>
       <div class="rows"><div class="r ${liveNow?'live':''}">
         ${isEv?'':`<a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>`}
-        <div class="d"><b>${liveNow?'●':dayNum(g.date)}</b><span>${liveNow?'Now':monShort(g.date)}</span></div>
+        <div class="d"><b>${liveNow?'●':dayNum(g.date)}</b><span>${liveNow?'Now':monShort(g.date)}</span>${dirPill(dh)}</div>
         <div class="m">
           ${liveNow?'<span class="onnow"><span class="dot"></span>On now</span>':isEv?'<span class="evtag">At the venue</span>':''}
           <div class="v">${esc(isEv?(g.title||'Event'):g.artist)}</div>
           <div class="w">${esc(whenWord(g.date))} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}</div>
-        </div>${isEv?'':'<span class="chev">›</span>'}</div></div>`;
+        </div>${rsvpCol(g)}${isEv?'':'<span class="chev">›</span>'}</div></div>`;
   }
 
   if(v.about) h+=`<div class="sect">About</div><div class="card"><p class="about">${esc(v.about)}</p></div>`;
@@ -502,11 +559,11 @@ function render(){
         const isEv=g.kind==='event';
         return `<div class="r">
         ${isEv?'':`<a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>`}
-        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span></div>
+        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span>${dirPill(dh)}</div>
         <div class="m">${isEv?'<span class="evtag">At the venue</span>':''}
           <div class="v">${esc(isEv?(g.title||'Event'):g.artist)}</div>
           <div class="w">${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.repeating?' · every week':''}${g.note?' · '+esc(g.note):''}</div></div>
-        ${isEv?'':'<span class="chev">›</span>'}</div>`;}).join('')}</div>`).join('');
+        ${rsvpCol(g)}${isEv?'':'<span class="chev">›</span>'}</div>`;}).join('')}</div>`).join('');
     h+=`<p class="fineprint">Shows are listed by the artists themselves from their own MySet calendars. Times can change — check with the venue.</p>`;
   } else if(!liveNow&&!next){
     h+=`<div class="sect">What’s on</div>

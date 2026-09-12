@@ -96,7 +96,8 @@ body{padding-bottom:34px}
 /* .artistsearch is a .chip from app.css, sized up to a two-up row. The pill
    shape is restated for the same stale-app.css reason as .signin above. */
 .artistsearch{display:flex;align-items:center;justify-content:center;gap:0;min-width:0;padding:14px 10px;text-align:center;
-  border-radius:var(--pill);background:var(--surface);white-space:nowrap;font-size:15px;font-weight:600;color:var(--accent-ink)}
+  border-radius:var(--pill);background:var(--surface);white-space:nowrap;font-size:15px;font-weight:600;color:var(--accent-ink);
+  border-color:transparent;box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}   /* the ring the finder wears (the founder, 2026-09-12) */
 .artistsearch:active{transform:scale(.98)}
 @media(max-width:370px){.artistsearch{font-size:13px;padding-left:7px;padding-right:7px}}
 /* The folded-map line icon on "View on map" (the founder, 2026-09-12): a text
@@ -158,22 +159,24 @@ body{padding-bottom:34px}
 /* The featured rows are their own cards, so the list they sit in must not also be
    one — otherwise a grey rounded panel peeks out from behind three orange ones. */
 .giglist.feats{background:none;border-radius:0;overflow:visible}
-.gig{position:relative;display:flex;gap:14px;align-items:flex-start;padding:15px 18px;
+/* EVERYTHING ON A ROW IS CENTRED (the founder, 2026-09-12): the three columns sit
+   on the row's middle line and each centres its own words, so a card reads as a
+   card and not as a form. The same layout on the artist and venue pages. */
+.gig{position:relative;display:flex;gap:14px;align-items:center;padding:15px 18px;text-align:center;
   background:var(--surface);border-top:.5px solid var(--hair)}
 .gig .rowlink{position:absolute;inset:0;z-index:1}
 .gig .dirs,.gig .chev{position:relative;z-index:2}
-/* The Directions pin sits under the time and date, inside .tm, since the
-   founder's ask of 2026-09-12 moved RSVP out to the row's right edge. A row
-   without a map simply has no pin. */
-.dirs{display:grid;place-items:center;margin-top:8px;
-  width:38px;height:38px;border-radius:50%;color:var(--accent-ink);background:var(--accent-soft)}
-.dirs svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round}
+/* "Directions" under the time and date — the same thin pill the map sheet's
+   cards wear (.hmapgo), not a pin in a circle: the founder asked on 2026-09-12
+   for the one button on every card everywhere. A row without a map has none. */
+.dirs{display:inline-block;margin-top:7px;font-size:11px;font-weight:750;line-height:1.2;
+  color:var(--accent-ink);padding:7px 9px;border-radius:var(--pill);background:var(--accent-soft);white-space:nowrap}
 .evtag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
   text-transform:uppercase;color:var(--accent-ink);background:var(--accent-soft);
   padding:2px 7px;border-radius:var(--pill);margin-bottom:4px}
 .gig:first-child{border-top:none}
 .giglist{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
-.gig .tm{flex:0 0 auto;min-width:62px}
+.gig .tm{flex:0 0 auto;min-width:62px;text-align:center}
 .gig .tm b{display:block;font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
 .gig .tm span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
 /* RSVP, at the right edge of the row where the Directions pin used to sit —
@@ -184,7 +187,7 @@ body{padding-bottom:34px}
    RSVPs instead of navigating — and it is not called .go, which app.css uses
    for a full-width gradient button. The .btn-grey ground is restated here
    because a page never waits on app.css to draw its own controls. */
-.gig .rsvpcol{flex:0 0 auto;align-self:center;display:flex;flex-direction:column;align-items:center;gap:4px;
+.gig .rsvpcol{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;
   position:relative;z-index:2}
 .gig .going{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center}
 .gig .rsvp{display:inline-block;padding:6px 11px;border-radius:var(--pill);
@@ -197,7 +200,7 @@ body{padding-bottom:34px}
 .gig .m .who{font-size:17px;font-weight:600;letter-spacing:-.018em;line-height:1.25}
 .gig .m .where{font-size:14px;color:var(--muted);margin-top:2px}
 .gig .m .note{font-size:13px;color:var(--faint);margin-top:3px}
-.gig .chev{flex:0 0 auto;align-self:center;font-size:20px;color:var(--faint)}
+.gig .chev{flex:0 0 auto;font-size:20px;color:var(--faint)}
 .livepill{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;
   font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:var(--pill);
   margin-bottom:4px;text-transform:uppercase}
@@ -292,22 +295,23 @@ body{padding-bottom:34px}
 .step2 div b{color:var(--ink);font-weight:600}
 .sheetfoot{margin:18px 0 0;padding-top:14px;border-top:.5px solid var(--hair);
   font-size:13px;color:var(--faint);line-height:1.5}
-/* Same side margins as every card on this page (18px), and the same thin orange
-   ring as the finder — the field used to run edge to edge and carried both a
-   border and app.css's inset ring, which read as one thick line. The 12px above
-   matches the 12px between the finder and the two chips (.artistactions) — the
-   founder asked on 2026-09-12 for the same gap on both sides of them. */
+/* Same side margins as every card on this page (18px). A hairline, not the
+   orange ring — the ring moved to the two chips above it (the founder,
+   2026-09-12), so the field is quiet and the two doors are loud. The field used
+   to run edge to edge and carried both a border and app.css's inset ring, which
+   read as one thick line. The 12px above matches the 12px between the finder and
+   the two chips (.artistactions) — the same gap on both sides of them. */
 .feedsearch{padding:12px 18px 12px}
 .feedsearch .inp{width:100%;min-height:46px;margin:0;padding:12px 18px;font-size:15.5px;border:none;
   border-radius:var(--pill);background:var(--surface);color:inherit;
-  box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}
+  box-shadow:inset 0 0 0 .5px var(--hair-2),var(--sh-1)}
 .feedsearch .inp:focus{outline:none;box-shadow:inset 0 0 0 2px var(--accent),var(--sh-1)}
 /* The line above a list that was found from the phone's own position, not a pick. */
 .nearhead{margin:22px 18px 0;font-size:13px;line-height:1.45;color:var(--muted)}
 .nearhead b{color:var(--ink);font-weight:600}
 .nearhead .pin{width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:var(--accent-ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .homemap[hidden]{display:none}.homemap{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;padding-top:max(24px,env(safe-area-inset-top));background:rgba(0,0,0,.7);backdrop-filter:blur(10px)}
-.hmapsheet{display:flex;flex-direction:column;width:min(680px,100%);max-height:92dvh;background:var(--surface);border-radius:26px 26px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.38);overflow:hidden}.hmaphead{display:flex;align-items:center;justify-content:space-between;padding:17px 18px 13px}.hmaphead h2{font-size:21px;margin:0}.hmaphead p{font-size:12px;color:var(--muted);margin:3px 0 0}.hmapclose{width:34px;height:34px;border-radius:50%;background:var(--bg-2);font-size:18px;color:var(--muted)}
+.hmapsheet{display:flex;flex-direction:column;width:min(680px,100%);max-height:92dvh;background:var(--surface);border-radius:26px 26px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.38);overflow:hidden}.hmaphead{position:relative;display:flex;align-items:center;justify-content:space-between;padding:26px 18px 15px;touch-action:none;cursor:grab}.hmaphead .hgrab{position:absolute;left:50%;top:9px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:var(--hair-2)}.hmaphead h2{font-size:21px;margin:0}.hmaphead p{font-size:12px;color:var(--muted);margin:3px 0 0}.hmapclose{width:34px;height:34px;border-radius:50%;background:var(--bg-2);font-size:18px;color:var(--muted)}
 .hmapscroll{overflow:auto;padding:0 14px max(18px,env(safe-area-inset-bottom))}.hmapcanvas{position:relative;height:min(52dvh,430px);min-height:300px;border-radius:20px;overflow:hidden;background:var(--bg-2);box-shadow:inset 0 0 0 1px var(--hair-2)}.hmapviewport{position:absolute;inset:0}.hmaploading,.hmapfail{height:100%;display:grid;place-items:center;padding:28px;text-align:center;color:var(--muted);font-size:13px;line-height:1.45}.hmapfail b{display:block;color:var(--ink);font-size:16px;margin-bottom:5px}
 .hmapevents{display:grid;gap:8px;margin-top:12px}.hmapevent{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px;border-radius:15px;background:var(--bg-2);cursor:pointer}.hmapevent:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.hpinlabel{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:var(--grad);color:#fff;font-size:11px;font-weight:800}.hmapcopy{min-width:0}.hmapcopy b,.hmapcopy span{display:block}.hmapcopy b{font-size:13px}.hmapcopy span{font-size:11px;color:var(--muted);margin-top:3px}.hmapgo{font-size:11px;font-weight:750;color:var(--accent-ink);padding:7px 8px;border-radius:var(--pill);background:var(--accent-soft)}
 .hmapsheet .gm-style .gm-style-iw-c{color:#202124}
@@ -373,9 +377,9 @@ body{padding-bottom:34px}
 </div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
-<div class="homemap" id="homeMapModal" hidden role="dialog" aria-modal="true" aria-labelledby="homeMapTitle">
+<div class="homemap" id="homeMapModal" hidden role="dialog" aria-modal="true" aria-labelledby="homeMapTitle" data-nopull>
   <section class="hmapsheet">
-    <div class="hmaphead"><div><h2 id="homeMapTitle">Upcoming show map</h2><p id="homeMapMeta">Loading shows…</p></div><button class="hmapclose" id="homeMapClose" type="button" aria-label="Close map">×</button></div>
+    <div class="hmaphead" id="homeMapHead"><span class="hgrab" aria-hidden="true"></span><div><h2 id="homeMapTitle">Upcoming show map</h2><p id="homeMapMeta">Loading shows…</p></div><button class="hmapclose" id="homeMapClose" type="button" aria-label="Close map">×</button></div>
     <div class="hmapscroll"><div class="hmapcanvas" id="homeMapCanvas"><div class="hmaploading">Loading interactive map…</div></div><div class="hmapevents" id="homeMapEvents"></div></div>
   </section>
 </div>
@@ -414,7 +418,20 @@ async function openHomeMap(){
     $('#homeMapEvents').querySelectorAll('.hmapevent').forEach(row=>{row.addEventListener('click',ev=>{if(!ev.target.closest('a'))pick(Number(row.dataset.event))});row.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();pick(Number(row.dataset.event))}})});
   }catch(e){$('#homeMapCanvas').innerHTML='<div class="hmapfail"><span><b>Map unavailable</b>Please try again in a moment.</span></div>';$('#homeMapMeta').textContent=''}
 }
-$('#homeMapBtn').addEventListener('click',openHomeMap);$('#homeMapClose').addEventListener('click',closeHomeMap);$('#homeMapModal').addEventListener('click',e=>{if(e.target===$('#homeMapModal'))closeHomeMap()});addEventListener('keydown',e=>{if(e.key==='Escape')closeHomeMap()});
+$('#homeMapBtn').addEventListener('click',openHomeMap);$('#homeMapClose').addEventListener('click',closeHomeMap);
+/* Drag the head down to close (the founder, 2026-09-12): the whole title strip
+   is the handle, with a grab bar to say so, and the sheet follows the finger
+   before it lets go — past 80px it closes, short of that it springs back. Only
+   the head: the map and the list beneath scroll on their own (INVARIANT 0f1).
+   data-nopull on the modal keeps pull.js out of it — the page behind is at the
+   top, and a downward drag here must never reload it. */
+(()=>{const head=$('#homeMapHead'),sheet=head.parentElement;let y0=null,dy=0;
+  head.addEventListener('pointerdown',e=>{if(e.target.closest('.hmapclose'))return;y0=e.clientY;dy=0;sheet.style.transition='none';try{head.setPointerCapture(e.pointerId)}catch(x){}});
+  head.addEventListener('pointermove',e=>{if(y0===null)return;dy=Math.max(0,e.clientY-y0);sheet.style.transform=`translateY(${dy}px)`});
+  const end=()=>{if(y0===null)return;y0=null;sheet.style.transition='transform .28s var(--ease)';
+    if(dy>80){sheet.style.transform=`translateY(${sheet.offsetHeight}px)`;setTimeout(()=>{closeHomeMap();sheet.style.transition='';sheet.style.transform=''},220)}
+    else sheet.style.transform=''};
+  head.addEventListener('pointerup',end);head.addEventListener('pointercancel',end);})();$('#homeMapModal').addEventListener('click',e=>{if(e.target===$('#homeMapModal'))closeHomeMap()});addEventListener('keydown',e=>{if(e.key==='Escape')closeHomeMap()});
 
 /* Once per session, never twice. */
 try{
@@ -702,7 +719,7 @@ function renderFeed(q){
   const box=(FEED.near?`<div class="nearhead"><svg class="pin" viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
       Near you · <b>${esc(city)}</b> · the closest listed gig is ${FEED.near} km away</div>`:'')
     +`<div class="feedsearch"><input class="inp" id="feedQ" type="search" autocomplete="off"
-      placeholder="Search — a name, a bar, “tuesday”, “8pm”…" value="${esc(q)}"
+      placeholder="Search by name, venue, date, time…" value="${esc(q)}"
       oninput="renderFeed(this.value)"></div>`;
   if(!shown.length){
     $('#out').innerHTML=box+`<div class="blank"><b>Nothing matches “${esc(q)}”</b>
@@ -830,9 +847,7 @@ const dayMonth=d=>`${+d.slice(8,10)} ${MONFULL[+d.slice(5,7)-1]}`;
    Google. */
 const APPLE=/(iPhone|iPad|iPod|Macintosh|Mac OS X)/i.test(navigator.userAgent||'');
 const dirBtn=m=>{const h=(APPLE?m.apple:m.google)||m.google||m.apple||''; if(!h)return '';
-  return `<a class="dirs" href="${esc(h)}" target="_blank" rel="noopener noreferrer"
-    aria-label="Directions" title="Directions">
-    <svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg></a>`;};
+  return `<a class="dirs" href="${esc(h)}" target="_blank" rel="noopener noreferrer">Directions</a>`;};
 
 /* ── save it to your home screen ────────────────────────
    Not shown when they are already running it installed, and not shown again once
@@ -866,7 +881,7 @@ function drawA2HS(){
   el.innerHTML=`<div class="a2hs">
     <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.6c.5 0 .9.4.9.9v8.4l2.5-2.5a.9.9 0 0 1 1.3 1.3l-4 4a.9.9 0 0 1-1.3 0l-4-4a.9.9 0 0 1 1.3-1.3l2.4 2.5V4.5c0-.5.4-.9.9-.9z"/><path d="M4.8 15.3c.5 0 .9.4.9.9v2.1c0 .3.2.5.5.5h11.6c.3 0 .5-.2.5-.5v-2.1a.9.9 0 0 1 1.8 0v2.1c0 1.3-1 2.3-2.3 2.3H6.2c-1.3 0-2.3-1-2.3-2.3v-2.1c0-.5.4-.9.9-.9z"/></svg></span>
     <div class="m"><b>Saved MySet to your home screen yet?</b>
-      <span>Takes about six seconds${INSTALL_EVENT?'':' — here’s how'}</span></div>
+      <span>Takes about 6 seconds${INSTALL_EVENT?'':' — here’s how'}</span></div>
     <button class="how" onclick="${INSTALL_EVENT?'installA2HS()':'openA2HS()'}">
       ${INSTALL_EVENT?'Install':'How'} <span style="font-size:11px">↗</span></button>
     <button class="no" onclick="hideA2HS()" aria-label="No thanks">✕</button>

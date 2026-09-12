@@ -98,7 +98,7 @@ html{touch-action:manipulation}
 /* THE BOTTOM TAB BAR, one recipe for both Studios — fixed, where a thumb already
    is. Each Studio used to carry a sticky pill under its header whose height had
    to be MEASURED (fitTabs / --headh) so the blurred header would not sit over
-   it; a fixed bar has no header to clear. 52px plus the home-indicator inset,
+   it; a fixed bar has no header to clear. 56px plus the home-indicator inset,
    and each Studio's body reserves exactly that at the bottom (and lifts its
    toast above it) — so the height is a contract, not a style: change it here
    and both pages' last card slides under the bar.
@@ -125,29 +125,36 @@ html{touch-action:manipulation}
    muted, no ring, the icon embossed a hair in the dark — so the one that is on
    is the only thing with any depth. The ring is a pseudo-element under the
    content (isolation + z-index:-1), so its fill never sits over the icon;
-   the Live tab's pink still wins for colour because the ring lives on ::before. */
+   the Live tab's pink still wins for colour because the ring lives on ::before.
+   THE SECOND PASS (the founder, 2026-09-12, from the phone): a thin line across
+   the top that is felt rather than seen (1px, as Airbnb's bar has), the icon and
+   label nudged down (they sat high over the home-indicator space, 3px of top
+   padding and a 56px bar), the labels 13px instead of 10.5, a hair less room
+   between the tabs, and the Live icon's outer arcs no longer clipped at the
+   viewBox edge (overflow:visible on the svg — the arcs reach x=0 and x=24 and a
+   2.3px stroke crossed the box). */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;justify-content:center;
-  height:calc(52px + env(safe-area-inset-bottom));padding:0 0 env(safe-area-inset-bottom);
+  height:calc(56px + env(safe-area-inset-bottom));padding:0 0 env(safe-area-inset-bottom);
   background:linear-gradient(180deg,#141417,#000 72%);
-  border-top:.5px solid rgba(255,255,255,.14);
+  border-top:1px solid rgba(255,255,255,.2);
   box-shadow:0 -10px 32px rgba(0,0,0,.6)}
 .tabbar::before{content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(105deg,rgba(255,255,255,.07) 0%,transparent 42%,transparent 68%,rgba(255,255,255,.04) 100%)}
 :root[data-theme=light] .tabbar{background:linear-gradient(180deg,#FFFFFF,#F2F2F5);
-  border-top-color:rgba(0,0,0,.12);box-shadow:0 -8px 28px rgba(0,0,0,.10)}
+  border-top-color:rgba(0,0,0,.14);box-shadow:0 -8px 28px rgba(0,0,0,.10)}
 :root[data-theme=light] .tabbar::before{background:linear-gradient(105deg,rgba(255,255,255,.9) 0%,transparent 42%,transparent 68%,rgba(0,0,0,.025) 100%)}
 .tabbar .in{position:relative;z-index:1;display:flex;width:100%;max-width:var(--maxw,600px)}
 .tabbar button{position:relative;isolation:isolate;flex:1 1 0;min-width:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:3px;height:52px;padding:0 2px;
-  font-family:inherit;font-size:10.5px;font-weight:600;letter-spacing:-.01em;color:var(--muted,#98989D);
+  align-items:center;justify-content:center;gap:4px;height:56px;padding:3px 1px 0;
+  font-family:inherit;font-size:13px;font-weight:600;letter-spacing:-.01em;color:var(--muted,#98989D);
   background:none;border:0;cursor:pointer;white-space:nowrap;
   transition:color .2s var(--ease,ease),transform .2s var(--spring,cubic-bezier(.34,1.4,.64,1))}
 .tabbar button:active{transform:scale(.92)}
 .tabbar button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;
-  stroke-linecap:round;stroke-linejoin:round;display:block;
+  stroke-linecap:round;stroke-linejoin:round;display:block;overflow:visible;
   filter:drop-shadow(0 1px 0 rgba(0,0,0,.6))}
 :root[data-theme=light] .tabbar button svg{filter:none}
-.tabbar button::before{content:"";position:absolute;z-index:-1;left:5px;right:5px;top:4px;bottom:4px;
+.tabbar button::before{content:"";position:absolute;z-index:-1;left:4px;right:4px;top:4px;bottom:4px;
   border-radius:var(--pill,999px);box-shadow:inset 0 0 0 1.5px transparent;
   transition:box-shadow .2s var(--ease,ease),background .2s var(--ease,ease)}
 .tabbar button.on{color:var(--ink,#F5F5F7);padding-bottom:2px}  /* the 1px lift */
