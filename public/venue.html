@@ -114,14 +114,15 @@ body{padding-bottom:34px}
 .ai svg{width:20px;height:20px;flex:0 0 auto;fill:none;stroke:var(--accent-ink);stroke-width:1.9;
   stroke-linecap:round;stroke-linejoin:round}
 .ai svg .dot{fill:currentColor;stroke:none}
+.rows.folded .ai.more{display:none}
 .showall{margin:10px 18px 0}
 .showall .btn{width:100%}
 .ttk .rows+.rows{margin-top:10px}
-.ttk .dir{margin:12px 18px 0}
-.ttk .dir .btn{width:100%}
-.ttk .dir .btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;
-  stroke-linejoin:round;flex:0 0 auto}
-.ttk .dir small{display:block;margin-top:8px;text-align:center;font-size:12.5px;color:var(--faint)}
+/* The address as a plain row with a small text link; the pink Directions pill
+   at the top is the button, and one is enough. */
+.ttk .dir{display:flex;align-items:center;gap:14px;padding:13px 18px;font-size:14.5px}
+.ttk .dir span{flex:1;min-width:0;color:var(--ink-2);line-height:1.35}
+.ttk .dir a{flex:0 0 auto;font-size:13.5px;font-weight:600;color:var(--accent-ink);white-space:nowrap}
 
 .rows{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
 .r{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair);position:relative}
@@ -196,6 +197,7 @@ body{padding-bottom:34px}
 .evtag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
   color:var(--accent-ink);background:var(--accent-soft);padding:2px 7px;border-radius:var(--pill);
   margin-bottom:3px}
+body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .bg{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;z-index:60;
   transition:opacity .3s var(--ease)}
 .bg.on{opacity:1;pointer-events:auto}
@@ -223,6 +225,23 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
   font-variant-numeric:tabular-nums;line-height:1.1}
 .rv .rvn span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
 .sheet .btn-block{margin-top:14px}
+/* THE SHARED TIERS THIS PAGE LEANS ON, REPEATED. .btn-grey and .chip belong to
+   app.css, but this page once deployed ahead of the stylesheet that defines
+   them and the "Sent — waiting to hear back" pill went out as bare text. A page
+   must not depend on its markup and its stylesheet landing together, so the
+   three recipes it uses are here too — same selectors, same specificity, same
+   declarations. Keep them identical to app.css; a change in one is a change in
+   both. */
+.btn-grey{background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--ink);box-shadow:none}
+.btn-grey:hover{box-shadow:none}
+.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;border-radius:var(--pill);font-size:14px;font-weight:600;letter-spacing:-.01em;
+  background:var(--surface);color:var(--ink-2);white-space:nowrap;
+  border:.5px solid var(--hair-2);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.chip:active{transform:scale(.94)}
+.chip.on{color:var(--accent-ink);background:var(--accent-soft);border-color:transparent;
+  box-shadow:0 0 0 1.5px var(--accent) inset,var(--sh-1)}
 .playcard .chip{white-space:normal;text-align:center;width:100%}
 .playcard .chip+.btn2{margin-top:9px}
 .go{display:block;width:100%;padding:16px;margin-top:14px;border-radius:var(--pill);
@@ -324,11 +343,16 @@ let V=null, MINE=null;
    signed in — that is what lets this ask for a spot and confirm the place is
    real without another login. */
 const ATOK=(()=>{try{return localStorage.getItem('myset.token')||''}catch(e){return ''}})();
-/* The Studio remembers the artist's page name; with it the pitch sheet can show
-   the artist the same numbers the venue will see. Empty means "no card" — an
-   empty ?a= on /api/profile is the founding page, never this artist. */
-const ASLUG=(()=>{try{return (localStorage.getItem('myset.aslug')||'').trim()}catch(e){return ''}})();
-let PROF=null;            // /api/profile reply, fetched once per page
+/* WHO IS ASKING comes from the token, never from a remembered page name. The
+   Studio leaves `myset.aslug` in localStorage only on its code doors and never
+   clears it on sign-out, so on a shared phone it can name whoever signed in
+   that way last — and the review card would head itself with their name and
+   their numbers while the enquiry goes out under this token. The server reads
+   the sender from the token too, so this is the page the venue will actually
+   see. No slug means no card — an empty ?a= on the profile read is the founding
+   page, never this artist. */
+let ME=null;              // {slug,name} behind ATOK, asked once per page
+let PROF=null;            // the profile reply (?what=profile), fetched once per page
 let AMEN_ALL=false;       // "Show all" survives the re-render loadMine() triggers
 const AMEN_SHOW=6;
 /* One 24-viewBox line icon per amenity key (_venues.mjs AMENITIES); anything else gets a dot. */
@@ -357,7 +381,10 @@ const AMICON={
   smoking:'<path d="M3 15h13v4H3zM18 15h3v4h-3M17 8c0-2 2-2 2-4M20 11c0-2 2-2 2-4"/>',
 };
 const amIcon=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${AMICON[k]||'<circle class="dot" cx="12" cy="12" r="3"/>'}</svg>`;
-function showAmen(){ AMEN_ALL=true; render(); }
+/* Reveal in place. Every row is already in the page with the tail folded away
+   by a class, so this never re-renders — a render() here rebuilt the cover and
+   replayed the entrance animations under the reader's thumb. */
+function showAmen(){ AMEN_ALL=true; const e=$('#amen'); if(e) e.classList.remove('folded'); const s=$('.showall'); if(s) s.remove(); }
 
 function hideIntro(){const i=document.getElementById('intro');if(i)i.classList.add('off');}
 async function boot(){
@@ -366,14 +393,21 @@ async function boot(){
   const E=window.__early||{}; window.__early=null;     // the head started this; see <head>
   // the last copy this phone saw paints first; otherwise the placeholder frame in #app shows
   const K='venue:'+SLUG, L=window.lastSeen?lastSeen.get(K):null;
-  if(L&&L.ok){ V=L; render(); }
+  /* ONE shape test for the copy and the fresh reply alike: `ok` and a `venue` to
+     draw. render() reads v.name, v.maps and the rest without asking again, so a
+     reply without a venue must never reach it — and a copy can be a week old and
+     in a shape this render() no longer expects; if it throws anyway, that must
+     cost the placeholder frame, never the fresh fetch. */
+  const usable=x=>!!(x&&x.ok&&x.venue);
+  let painted=false;
+  if(usable(L)){ try{ V=L; render(); painted=true; }catch(e){ V=null; } }
   hideIntro();
   try{ d=await (E.venue||fetch(`${API}/fan?what=venue&v=${encodeURIComponent(SLUG)}`,{cache:'no-store'})).then(r=>r.json()); }catch(e){}
-  if(!d&&L&&L.ok){ if(ATOK) loadMine(); return; }      // offline: the copy stands
-  if(d&&d.ok&&window.lastSeen) lastSeen.set(K,d);
+  if(!d&&painted){ if(ATOK) loadMine(); return; }       // offline: the copy stands
+  if(usable(d)&&window.lastSeen) lastSeen.set(K,d);
   V=d;
-  if(!d||!d.ok){ notFound(!d||d.error==='unknown venue'); return; }
-  if(!L||JSON.stringify(d)!==JSON.stringify(L)) render();   // redraw only on change
+  if(!usable(d)){ notFound(!!d&&d.error==='unknown venue'); return; }   // no reply at all is "couldn't load", never "no venue here"
+  if(!painted||JSON.stringify(d)!==JSON.stringify(L)) render();   // redraw only on change
   if(ATOK) loadMine();
 }
 async function loadMine(){
@@ -496,10 +530,10 @@ function render(){
 
   const ams=v.amenities||[];
   if(ams.length){
-    const shown=AMEN_ALL?ams:ams.slice(0,AMEN_SHOW);
-    h+=`<div class="sect">Good to know</div><div class="rows">${
-      shown.map(a=>`<div class="ai">${amIcon(a.key)}<span>${esc(a.label)}</span></div>`).join('')}</div>`;
-    if(ams.length>shown.length) h+=`<div class="showall"><button class="btn btn-grey btn-sm" onclick="showAmen()">Show all ${ams.length}</button></div>`;
+    const fold=!AMEN_ALL&&ams.length>AMEN_SHOW;
+    h+=`<div class="sect">What’s here</div><div class="rows${fold?' folded':''}" id="amen">${
+      ams.map((a,i)=>`<div class="ai${i>=AMEN_SHOW?' more':''}">${amIcon(a.key)}<span>${esc(a.label)}</span></div>`).join('')}</div>`;
+    if(fold) h+=`<div class="showall"><button class="btn btn-grey btn-sm" onclick="showAmen()">Show all ${ams.length}</button></div>`;
   }
 
   /* Hours, offers and how to get there, in one place. */
@@ -520,9 +554,8 @@ function render(){
           ${o.detail?`<span>${esc(o.detail)}</span>`:''}
           ${o.when?`<em>${esc(o.when)}</em>`:''}</div></div>`).join('')}</div>`;
     }
-    if(dh) h+=`<div class="dir"><a class="btn btn-ink" href="${esc(dh)}" target="_blank" rel="noopener noreferrer">
-        <svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>Directions</a>
-        ${v.maps&&v.maps.address?`<small>${esc(v.maps.address)}</small>`:''}</div>`;
+    if(dh) h+=`<div class="rows"><div class="dir"><span>${esc(v.maps.address||[v.city,v.country].filter(Boolean).join(', ')||'On the map')}</span>
+        <a href="${esc(dh)}" target="_blank" rel="noopener noreferrer">Directions ↗</a></div></div>`;
     h+=`</div>`;
   }
 
@@ -607,22 +640,35 @@ function openPitch(){
   openSheet(`<h3>${MINE&&MINE.sent?'Change your message':'Ask about a spot'}</h3>
     <p class="lede">Goes to ${esc(v.name)} with a link to your MySet page. Keep it short —
       what you play, and when you’re free. Nobody’s email is shared.</p>
-    ${ASLUG?`<div class="rv" id="rv"><span class="spin"></span> Fetching your numbers…</div>`:''}
+    <div class="rv" id="rv"><span class="spin"></span> Fetching your numbers…</div>
     <textarea class="inp" id="pitchMsg" maxlength="400"
       placeholder="Hi — I play acoustic covers and originals, mostly 90s to now. Free most Thursdays. Happy to do a trial night.">${esc((MINE&&MINE.message)||'')}</textarea>
     <button class="btn btn-pri btn-block" id="pitchGo" onclick="sendPitch()">${MINE&&MINE.sent?'Save it':'Send the enquiry'}</button>
     <p class="fine" style="text-align:center;margin-top:12px;font-size:12.5px;color:var(--faint)">
       You can only have one enquiry with a venue at a time — asking again just updates this.</p>`);
-  if(ASLUG) fillReview();
+  fillReview();
   setTimeout(()=>{const e=$('#pitchMsg'); if(e)e.focus();},280);
 }
+/* pitchStatus may one day carry `me`; until it does, /api/auth answers "who am I"
+   for the token — the same check the enquiry itself will pass through. */
+async function whoAmI(){
+  if(ME) return ME;
+  if(MINE&&MINE.me&&MINE.me.slug){ ME={slug:String(MINE.me.slug),name:String(MINE.me.name||'')}; return ME; }
+  try{
+    const d=await fetch(`${API}/auth`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({action:'me',token:ATOK})}).then(r=>r.json());
+    if(d&&d.ok&&d.signedIn&&d.slug) ME={slug:String(d.slug),name:String(d.name||'')};
+  }catch(e){}
+  return ME;
+}
 async function fillReview(){
-  if(!PROF){ try{ const d=await fetch(`${API}/profile?a=${encodeURIComponent(ASLUG)}`).then(r=>r.json()); if(d&&d.ok) PROF=d; }catch(e){} }
+  const me=await whoAmI();
+  if(me&&!PROF){ try{ const d=await fetch(`${API}/fan?what=profile&a=${encodeURIComponent(me.slug)}`).then(r=>r.json()); if(d&&d.ok) PROF=d; }catch(e){} }
   const e=$('#rv'); if(!e) return;
-  if(!PROF){ e.remove(); return; }           // the message still sends; the venue sees the numbers anyway
+  if(!me||!PROF){ e.remove(); return; }      // the message still sends; the venue sees the numbers anyway
   const s=PROF.stats||{}, n=x=>Number.isFinite(+x)?(+x).toLocaleString():'0';
   e.innerHTML=`<div class="rvh">${PROF.avatar?`<img src="${esc(PROF.avatar)}" alt="">`:CLAYMIC}
-      <div><b>${esc(PROF.name||ASLUG)}</b><span>What ${esc(V.venue.name)} will see</span></div></div>
+      <div><b>${esc(PROF.name||me.name||me.slug)}</b><span>What ${esc(V.venue.name)} will see</span></div></div>
     <div class="rvn"><div><b>${n(s.shows)}</b><span>nights</span></div><div><b>${n(s.people)}</b><span>people</span></div>
       <div><b>${n(s.votes)}</b><span>votes</span></div><div><b>${n(s.songs)}</b><span>songs</span></div></div>`;
 }
@@ -660,9 +706,23 @@ function share(){ const url=`${location.origin}/v/${SLUG}`, title=`${(V&&V.venue
   if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
   try{ navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast(url)); }catch(e){ toast(url); } }
 
+/* The page behind is frozen while the sheet is up (INVARIANT 0f2) — the same
+   mechanics as vote.html: fix the body at the offset it was at, put it back on
+   close. Without it iOS scrolls the page under the sheet. */
+let SHEETY=0;                    // where the page was before it was frozen
 function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;
+  if(!document.body.classList.contains('sheeting')){
+    SHEETY=window.scrollY||0;
+    document.body.style.top=`-${SHEETY}px`;
+    document.body.classList.add('sheeting');
+  }
+  $('#sheet').scrollTop=0;
   $('#bg').classList.add('on');$('#sheet').classList.add('on');}
-function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');}
+function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');
+  if(document.body.classList.contains('sheeting')){
+    document.body.classList.remove('sheeting'); document.body.style.top='';
+    window.scrollTo(0,SHEETY);
+  }}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet();});
 let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
   clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3400);}

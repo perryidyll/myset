@@ -251,6 +251,64 @@ eq('the server refuses a self-comment', r.status, 403);
 r = await hit(commFn, 'https://x/api/community?code=devlocal', { action: 'post', fan: 'founder-phone', text: 'founder exception' });
 ok('the founding account keeps the explicit exception', r.ok, r);
 
+console.log('\nTHE PROOF STRIP  (decision 0043: rating, requests, post count, top songs, comments, the setlist)');
+const fbFn = (await import('../netlify/functions/feedback.mjs')).default;
+const { topSongsOf, topAcross, commentsOf, MAX_COMMENT } = await import('../netlify/functions/profile.mjs');
+const { topPlayedOf, topPaidOf } = await import('../netlify/functions/_history.mjs');
+let pr = await hit(profileFn, 'https://x/api/profile?a=ana-reyes');
+eq('requests is a boolean', typeof pr.requests, 'boolean');
+eq('no feedback yet is null, never a zero-star rating', pr.rating, null);
+eq('the post count is a number', typeof pr.posts, 'number');
+eq('and no archived night means no favourites', pr.topSongs, []);
+ok('a fan rates the night', (await hit(fbFn, 'https://x/api/feedback?a=ana-reyes', { fan: 'phone7', stars: 4, note: 'SECRET NOTE' })).ok);
+ok('and another', (await hit(fbFn, 'https://x/api/feedback?a=ana-reyes', { fan: 'phone8', stars: 5 })).ok);
+pr = await hit(profileFn, 'https://x/api/profile?a=ana-reyes');
+eq('the page carries the average to one decimal, the count, and how many nights they name — none: she has no show on record', pr.rating, { avg: 4.5, count: 2, nights: 0 });
+ok('and never the note text — that stays in the Studio', !JSON.stringify(pr).includes('SECRET NOTE'));
+eq('the founder\u2019s ended night is filed on the next New show', (await OWNER('newShow')).ok, true);
+pr = await hit(profileFn, 'https://x/api/profile');
+eq('and the index rows alone name the room\u2019s favourite', pr.topSongs, [{ title: 'Valerie', votes: 1 }]);
+eq('a row without a top song is skipped, same titles merge, three at most',
+  topSongsOf([{ top: { title: 'A', votes: 2 } }, {}, { top: { title: 'a ', votes: 3 } }, { top: { title: 'B', votes: 4 } },
+    { top: { title: 'C', votes: 1 } }, { top: { title: 'D', votes: 1 } }, { top: { title: 'E', votes: 0 } }]),
+  [{ title: 'A', votes: 5 }, { title: 'B', votes: 4 }, { title: 'C', votes: 1 }]);
+eq('the single favourite is the first of those', pr.topVoted, { title: 'Valerie', votes: 1 });
+ok('a fan rates the founder\u2019s real night', (await hit(fbFn, 'https://x/api/feedback', { fan: 'phoneR', stars: 5 })).ok);
+eq('and that rating names one night', (await hit(profileFn, 'https://x/api/profile')).rating.nights, 1);
+eq('nothing was played that night, so there is no most-played song yet', pr.topPlayed, null);
+eq('and no paid-for one — the play log carries no paid count', pr.topPaid, null);
+/* The comments: the founder's page has, newest first, "founder exception", "ig" and
+   "watch" with words on them; Kim's 500-character five-star post is HIDDEN, and the
+   star-only post has no words to quote. A long one from a fresh phone is cut. */
+ok('the three most recent public posts with words travel, newest first',
+  Array.isArray(pr.comments) && pr.comments.length === 3 && pr.comments.map((c) => c.text).join('|') === 'founder exception|ig|watch', pr.comments);
+ok('each as text, stars (1–5 or null) and when', pr.comments.every((c) => typeof c.text === 'string' && (c.stars === null || (c.stars >= 1 && c.stars <= 5)) && typeof c.when === 'number' && c.when > 0), pr.comments);
+ok('the hidden post is not among them', !JSON.stringify(pr.comments).includes('Best night out'));
+ok('and no name or device id rides along', !JSON.stringify(pr.comments).match(/Kim|phone|"name"|"fan"/));
+ok('a long post is cut to a card', (await POST('', { action: 'post', fan: 'phoneL', text: 'L'.repeat(300), stars: 3 })).ok);
+pr = await hit(profileFn, 'https://x/api/profile');
+eq(`to ${MAX_COMMENT} characters, with its stars`, [pr.comments[0].text.length, pr.comments[0].stars], [MAX_COMMENT, 3]);
+eq('the star notes from the "enjoying MySet?" prompt are never quoted', commentsOf({ list: [{ text: '', stars: 5, note: 'a note', at: 1 }] }), []);
+eq('a page with no posts has an empty list', (await hit(profileFn, 'https://x/api/profile?a=ana-reyes')).comments, []);
+/* The setlist taste: the ten the room could pick from first, and how many there are. */
+ok('the founder\u2019s setlist names Valerie and counts the list', pr.setlist.includes('Valerie') && pr.songs >= 1 && pr.setlist.length <= 10, [pr.setlist, pr.songs]);
+eq('an artist with no songs has an empty setlist and zero', [(await hit(profileFn, 'https://x/api/profile?a=ana-reyes')).setlist, (await hit(profileFn, 'https://x/api/profile?a=ana-reyes')).songs], [[], 0]);
+/* Most played, from the play log: the founder plays Valerie on a new night. */
+const vId = (await OWNER('window', { open: true })).stage.songs.find((x) => x.title === 'Valerie').id;
+ok('the founder plays Valerie tonight', (await OWNER('status', { status: 'live' })).ok && (await OWNER('play', { song: vId })).ok);
+ok('and the night ends and is filed', (await OWNER('status', { status: 'ended' })).ok && (await OWNER('newShow')).ok);
+pr = await hit(profileFn, 'https://x/api/profile');
+eq('the index rows now name the most-played song and how often', pr.topPlayed, { title: 'Valerie', plays: 1 });
+eq('the vote it won on the first night still counts it as most voted', pr.topVoted, { title: 'Valerie', votes: 1 });
+eq('a replay counts twice; a tie goes to the more-voted song, then the one heard first',
+  topPlayedOf([{ songId: 'a', title: 'A', votes: 1 }, { songId: 'b', title: 'B', votes: 5 }, { songId: 'a', title: 'A', votes: 0, replay: true }]), { title: 'A', plays: 2 });
+eq('with no replays the more-voted song is the most played', topPlayedOf([{ songId: 'a', title: 'A', votes: 1 }, { songId: 'b', title: 'B', votes: 5 }]), { title: 'B', plays: 1 });
+eq('and an empty log is null', topPlayedOf([]), null);
+eq('paid: null until the log carries a per-song paid count', topPaidOf([{ songId: 'a', title: 'A', votes: 3 }]), null);
+eq('and the biggest paid count once it does', topPaidOf([{ songId: 'a', title: 'A', paidVotes: 2 }, { songId: 'b', title: 'B', paidVotes: 3 }, { songId: 'a', title: 'A', paidVotes: 2 }]), { title: 'A', paid: 4 });
+eq('across nights the same title merges and the biggest count wins',
+  topAcross([{ topPlayed: { title: 'A', plays: 2 } }, { top: { title: 'Z', votes: 9 } }, { topPlayed: { title: 'a', plays: 3 } }, { topPlayed: { title: 'B', plays: 4 } }], 'topPlayed', 'plays', 1), [{ title: 'A', plays: 5 }]);
+
 console.log('\nWHAT IT COSTS  (INVARIANT 9d13)');
 const g = await count(() => GET('?a=ana-reyes&fan=phone1'));
 /* +1 since the picker reads the calendar (ev_) as well as the archive */

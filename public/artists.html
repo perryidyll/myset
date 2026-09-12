@@ -19,8 +19,7 @@ body{padding-bottom:42px}
 .filters .inp{margin:0}.selects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
 .selects select{appearance:none;margin:0;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 21px,calc(100% - 13px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
 .toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-.filtertoggle{padding:10px 13px;border-radius:var(--pill);background:var(--bg);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:13px;font-weight:650}
-.filtertoggle.on{color:var(--accent-ink);background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+/* the three toggles are plain .chip from app.css — no page recipe */
 .summary{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 20px 9px;color:var(--muted);font-size:13px}.summary b{color:var(--accent-ink);font-size:15px}.mapbtn{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:var(--pill);background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:750;box-shadow:inset 0 0 0 1.5px var(--accent-2)}
 .artists{display:grid;gap:10px;margin:0 18px}
 .artistcard{display:flex;align-items:flex-start;gap:15px;padding:16px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);transition:transform .2s var(--spring),box-shadow .2s var(--ease)}
@@ -55,9 +54,9 @@ body{padding-bottom:42px}
       <select class="inp" id="rating" aria-label="Minimum rating"><option value="">Any rating</option><option value="4">4+ stars</option><option value="3">3+ stars</option><option value="2">2+ stars</option><option value="1">1+ stars</option></select>
     </div>
     <div class="toggles">
-      <button class="filtertoggle" id="upcoming" type="button" aria-pressed="false">MySet shows in next 30 days</button>
-      <button class="filtertoggle" id="music" type="button" aria-pressed="false">Music released</button>
-      <button class="filtertoggle" id="signed" type="button" aria-pressed="false">Signed</button>
+      <button class="chip filtertoggle" id="upcoming" type="button" aria-pressed="false">MySet shows in next 30 days</button>
+      <button class="chip filtertoggle" id="music" type="button" aria-pressed="false">Music released</button>
+      <button class="chip filtertoggle" id="signed" type="button" aria-pressed="false">Signed</button>
     </div>
   </section>
   <div class="summary"><b id="count">Artists</b><button class="mapbtn" id="mapBtn" type="button" hidden>⌖ View on map</button></div>

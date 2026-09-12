@@ -1,4 +1,4 @@
-import { json, bad, jsonCached, publicArtist, getShow } from './_lib.mjs';
+import { json, bad, jsonCached, publicArtist, getShow, playable } from './_lib.mjs';
 import { getProfile, shapeMedia } from './_profile.mjs';
 import { readHistIndex } from './_history.mjs';
 import { planOf } from './_plan.mjs';
@@ -6,19 +6,38 @@ import { readFeedback } from './_feedback.mjs';
 import { readPosts } from './_community.mjs';
 
 /* The room's favourites across every archived night, from the index rows alone
-   (decision 0043): rows carry `top:{title,votes}` since archive-time started
-   stamping it; older rows without it simply do not count. Same title across
-   nights is one song, and only its votes and title travel. */
-export function topSongsOf(rows) {
+   (decision 0043): rows carry `top:{title,votes}`, `topPlayed:{title,plays}` and
+   `topPaid:{title,paid}` since archive-time started stamping them; older rows
+   without a field simply do not count towards it. Same title across nights is one
+   song, and only its title and the one count travel. */
+export function topAcross(rows, field, key, n = 3) {
   const by = new Map();
   for (const r of rows || []) {
-    const t = r && r.top && r.top.title; if (!t) continue;
+    const t = r && r[field] && r[field].title; if (!t) continue;
     const k = String(t).trim().toLowerCase(); if (!k) continue;
-    const cur = by.get(k) || { title: String(t).trim(), votes: 0 };
-    cur.votes += Number(r.top.votes) || 0; by.set(k, cur);
+    const cur = by.get(k) || { title: String(t).trim(), [key]: 0 };
+    cur[key] += Number(r[field][key]) || 0; by.set(k, cur);
   }
-  return [...by.values()].filter((x) => x.votes > 0)
-    .sort((a, b) => b.votes - a.votes || a.title.localeCompare(b.title)).slice(0, 3);
+  return [...by.values()].filter((x) => x[key] > 0)
+    .sort((a, b) => b[key] - a[key] || a.title.localeCompare(b.title)).slice(0, n);
+}
+export const topSongsOf = (rows) => topAcross(rows, 'top', 'votes', 3);
+/* What a fan said, in public, on the community page: the three most recent posts
+   that carry words and are not hidden, cut to a card's worth. Never the star
+   notes from the "enjoying MySet?" prompt — those were written for the artist —
+   and never a name or a device id: the community page has the rest. */
+export const MAX_COMMENT = 140;
+export function commentsOf(posts) {
+  return ((posts && posts.list) || [])
+    .map((p, i) => ({ p, i }))
+    .filter(({ p }) => p && !p.hidden && String(p.text || '').trim())
+    // newest first; the list is append-order, which settles two posts in the same millisecond
+    .sort((a, b) => (b.p.at || 0) - (a.p.at || 0) || b.i - a.i).slice(0, 3)
+    .map(({ p }) => ({
+      text: String(p.text).replace(/\s+/g, ' ').trim().slice(0, MAX_COMMENT),
+      stars: p.stars >= 1 && p.stars <= 5 ? Math.round(p.stars) : null,
+      when: Number(p.at) || 0,
+    }));
 }
 
 /* Public. Everything here is already validated at write time; embeds are rebuilt
@@ -69,11 +88,27 @@ export default async (req) => {
     merch: (p.merch || []).filter((m) => m.on).length,
     /* The proof strip. `requests` from the show already in hand; `rating` is the
        average and count only — the notes stay in the Studio; `posts` counts what
-       the public feed would show; `topSongs` is at most three {title,votes}. */
+       the public feed would show; `topSongs` is at most three {title,votes}, and
+       `topVoted` / `topPlayed` / `topPaid` the single favourite by each count or
+       null; `comments` up to three public posts; `setlist` a taste of tonight's
+       list — the ten the room could pick from first — and `songs` how many it
+       holds. All from documents already in hand. */
     requests: !!(show.requests && show.requests.on),
-    rating: fb && fb.count > 0 ? { avg: Math.round((fb.sum / fb.count) * 10) / 10, count: fb.count } : null,
+    /* `nights` is how many different shows the kept ratings name — a floor, since
+       the list is trimmed and the earliest ratings named no show — so the page can
+       say "over N nights" and mean it, and falls back to the count when it is 0.
+       `show-<ms>` is the id normShow invents per read for an account with no show
+       on record: it names no night, so it does not count as one. */
+    rating: fb && fb.count > 0 ? { avg: Math.round((fb.sum / fb.count) * 10) / 10, count: fb.count,
+                                   nights: new Set((fb.list || []).map((r) => r && r.show).filter((s) => s && !/^show-\d*$/.test(s))).size } : null,
     posts: posts ? posts.list.filter((x) => x && !x.hidden).length : 0,
     topSongs: topSongsOf(hist.shows),
+    topVoted: topSongsOf(hist.shows)[0] || null,
+    topPlayed: topAcross(hist.shows, 'topPlayed', 'plays', 1)[0] || null,
+    topPaid: topAcross(hist.shows, 'topPaid', 'paid', 1)[0] || null,
+    comments: commentsOf(posts),
+    setlist: playable(show).songs.slice(0, 10).map((s) => String(s.title || '')).filter(Boolean),
+    songs: playable(show).songs.length,
     name: p.name, tagline: p.tagline, style: p.style, bio: p.bio, photo: p.photo,
     avatar: p.avatar || p.photo, photos: p.photos,
     management: p.management, managementUrl: p.managementUrl,

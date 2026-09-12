@@ -67,10 +67,15 @@ body{padding-bottom:34px}
   background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:17px;
   transition:transform .2s var(--spring),background .2s var(--ease)}
 .themebtn:active{transform:scale(.9)}
-.signin{flex:0 0 auto;padding:9px 13px;border-radius:var(--pill);font-size:13px;font-weight:600;
-  color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent-2);letter-spacing:-.015em;
-  white-space:nowrap;transition:transform .2s var(--spring),background .2s var(--ease)}
-.signin:active{transform:scale(.95)}
+/* .signin is a .chip from app.css, worn .on-style: the accent ink and the orange
+   ring it always had, so the two calls to action stay the loudest things in the
+   bar. The pill, its ground, weight and nowrap are restated here on purpose:
+   app.css is cached for ten minutes (netlify.toml) and sw.js serves it
+   stale-first, so a returning phone can draw this page with an app.css from
+   before .chip existed. Restated, that phone still sees a pill, not bare text. */
+.signin{flex:0 0 auto;padding:9px 13px;border-radius:var(--pill);background:var(--surface);white-space:nowrap;
+  font-size:13px;font-weight:600;color:var(--accent-ink);border-color:transparent;
+  box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}
 .signin:hover{background:var(--accent-soft)}
 @media(max-width:370px){.brandbar{padding-left:12px;padding-right:12px}.topbtns{gap:4px}
   .signin{padding:9px 9px;font-size:12px}.themebtn{width:34px;height:34px}.mark{font-size:15px}.mark i{width:24px;height:24px}}
@@ -82,9 +87,10 @@ body{padding-bottom:34px}
 .finder{margin:20px 18px 0;background:var(--surface);border-radius:var(--r-lg);
   box-shadow:var(--sh-2);padding:18px 18px 20px}
 .artistactions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 18px 0}
+/* .artistsearch is a .chip from app.css, sized up to a two-up row. The pill
+   shape is restated for the same stale-app.css reason as .signin above. */
 .artistsearch{display:flex;align-items:center;justify-content:center;min-width:0;padding:14px 10px;text-align:center;
-  border-radius:var(--pill);font-size:15px;font-weight:650;color:var(--accent-ink);
-  background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}
+  border-radius:var(--pill);background:var(--surface);white-space:nowrap;font-size:15px;font-weight:600;color:var(--accent-ink)}
 .artistsearch:active{transform:scale(.98)}
 @media(max-width:370px){.artistsearch{font-size:13px;padding-left:7px;padding-right:7px}}
 .finder label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 7px}
@@ -145,7 +151,6 @@ body{padding-bottom:34px}
 .dirs{flex:0 0 auto;align-self:center;display:inline-grid;place-items:center;
   width:38px;height:38px;border-radius:50%;color:var(--accent-ink);background:var(--accent-soft)}
 .dirs svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round}
-.gig .m .addr{font-size:12.5px;color:var(--faint);margin-top:3px}
 .evtag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
   text-transform:uppercase;color:var(--accent-ink);background:var(--accent-soft);
   padding:2px 7px;border-radius:var(--pill);margin-bottom:4px}
@@ -170,6 +175,16 @@ body{padding-bottom:34px}
 .blank p{margin:8px 0 0;font-size:14.5px;color:var(--muted);line-height:1.5}
 .endcard{margin:22px 18px 0;padding:22px;text-align:center;background:var(--bg-2);
   border-radius:var(--r);color:var(--muted);font-size:14px;line-height:1.5}
+/* The weeks after this one. A small head over each, in the featured head's
+   voice but muted — it marks a boundary, it isn't selling anything. */
+.weekhead{font-size:11.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted);padding:32px 20px 0}
+.weekhead em{font-style:normal;font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint)}
+.weekhead+.dayhead{padding-top:8px}
+/* Not .btn-block: width:100% plus the page's 18px side margins runs off the
+   right edge, and a button never stretches to fill a line on its own. */
+.weekbtn{display:flex;width:calc(100% - 36px);margin:10px 18px 0}
+.weeknote{margin:12px 18px 0;text-align:center;font-size:13.5px;color:var(--muted);line-height:1.5}
 .artistcta{display:block;margin:26px 18px 0;padding:16px;text-align:center;font-size:14px;
   color:var(--muted);background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)}
 /* The quiet third option under the two "add yours" cards. Not a card itself —
@@ -273,8 +288,8 @@ body{padding-bottom:34px}
     <span class="mark"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet</span>
     <span class="topbtns">
       <button class="themebtn" id="themeBtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
-      <a class="signin" href="/studio?tab=setlist">For artists</a>
-      <a class="signin" href="/venues">For venues</a>
+      <a class="chip signin" href="/studio?tab=setlist">For artists</a>
+      <a class="chip signin" href="/venues">For venues</a>
     </span>
   </div>
 
@@ -302,8 +317,8 @@ body{padding-bottom:34px}
   </div>
 
   <div class="artistactions" aria-label="Artist discovery">
-    <button class="artistsearch" id="homeMapBtn" type="button">⌖ View on map</button>
-    <a class="artistsearch" href="/artists">Search for artists →</a>
+    <button class="chip artistsearch" id="homeMapBtn" type="button">⌖ View on map</button>
+    <a class="chip artistsearch" href="/artists">Search for artists →</a>
   </div>
 
   <div id="a2hs"></div>
@@ -548,11 +563,73 @@ async function search(near){
     return `${h}:${t[1]}${ap}`;
   };
   /* Keep the fetched week so the search box can re-render it without another
-     request — filtering forty rows is the phone's job, not the server's. */
-  FEED={days:d.days,city,fmt,near:near?NEAR.km:0};
+     request — filtering forty rows is the phone's job, not the server's.
+     `today`/`horizon` are the server's own window, in the city's zone, so the
+     weeks after this one are cut where the server cut this one. Both ends are
+     INCLUSIVE, as the server counts them: `horizon` is the last day it served
+     (today+7, and a gig on that day is in `days`), `shownTo` the last day drawn.
+     Every row the server sent gets drawn — the phone never drops a night. */
+  FEED={days:d.days,city,country,fmt,near:near?NEAR.km:0,today:d.today||'',horizon:d.horizon||'',
+        shownTo:d.horizon||'',window:typeof d.window==='number'?d.window:0,more:'offer'};
   renderFeed('');
 }
 let FEED=null;
+
+/* ── the weeks after this one ────────────────────────────
+   The feed is the next seven days. A tap asks for seven more — one request for
+   a wider window, the same rows plus the new ones — and nothing is fetched
+   twice: when the server has already sent further than the tap needs, the tap
+   only reveals. Offered only when the server says how wide a window it
+   honoured (`window` in the reply): a server that does not accept `days=`
+   would answer the tap with the same seven days, and a button that leads to a
+   shrug must not be on the page. Four weeks is where a what's-on feed stops
+   being one and becomes a calendar, so that is where it stops. */
+const WEEK=7, FEED_MAX_DAYS=28;
+const dayAdd=(d,n)=>{const [Y,M,D]=d.split('-').map(Number);return new Date(Date.UTC(Y,M-1,D+n)).toISOString().slice(0,10)};
+const dayDiff=(a,b)=>Math.round((Date.parse(b+'T00:00:00Z')-Date.parse(a+'T00:00:00Z'))/864e5);
+/* 0 is this week, 1 the next, and so on. The weeks are cut where the server
+   cuts its windows — today..today+7 inclusive, then seven days each — so the
+   last day of the served week is never headed "Next week". A set from last
+   night that is still running has yesterday's date and belongs to this week. */
+const weekOf=date=>FEED&&FEED.today&&date>FEED.today?Math.floor((dayDiff(FEED.today,date)-1)/WEEK):0;
+const WEEKWORD=['this week','next week','in two weeks','in three weeks'];
+const spanWord=()=>{const n=FEED.today&&FEED.shownTo?dayDiff(FEED.today,FEED.shownTo):WEEK;
+  return n===7?'seven days':n===14?'two weeks':n===21?'three weeks':n===28?'four weeks':`${n} days`};
+function weekHead(k){
+  const a=dayAdd(FEED.today,k*WEEK+1), b=dayAdd(a,WEEK-1), name=WEEKWORD[k]||`in ${k} weeks`;
+  return `<div class="weekhead">${name[0].toUpperCase()+name.slice(1)} <em>· ${shortDate(a)} – ${shortDate(b)}</em></div>`;
+}
+function weekMore(){
+  if(!FEED||!FEED.window||!FEED.today||!FEED.shownTo)return '';
+  if(FEED.more==='none'||FEED.more==='end'||dayDiff(FEED.today,FEED.shownTo)>=FEED_MAX_DAYS)return '';
+  const busy=FEED.more==='busy', first=dayDiff(FEED.today,FEED.shownTo)<=WEEK;
+  return (FEED.more==='fail'?`<div class="weeknote">Couldn’t load next week. Try again in a moment.</div>`:'')
+    +`<button class="btn btn-grey weekbtn" type="button" onclick="moreWeek()"${busy?' disabled':''}>${
+      busy?'Looking…':first?'View next week’s events':'View the week after'}</button>`;
+}
+async function moreWeek(){
+  if(!FEED||FEED.more==='busy')return;
+  const q=($('#feedQ')||{}).value||'';
+  let want=dayAdd(FEED.shownTo,WEEK);
+  if(FEED.horizon<want){
+    FEED.more='busy'; const b=$('.weekbtn'); if(b){b.disabled=true;b.textContent='Looking…';}
+    let d=null;
+    try{ d=await fetch(`${API}/events?country=${encodeURIComponent(FEED.country)}&city=${encodeURIComponent(FEED.city)}&days=${dayDiff(FEED.today,want)}`,
+      {cache:'no-store'}).then(r=>r.json()); }catch(e){}
+    if(!d||!d.ok||!Array.isArray(d.days)){ FEED.more='fail'; renderFeed(q); return; }
+    /* The wider window is the same feed, fresher — it replaces, it doesn't append.
+       Midnight may have passed since the first fetch; if so the weeks are cut
+       from the server's new today, and the tap shows the next one from there. */
+    FEED.days=d.days; FEED.horizon=d.horizon||FEED.horizon;
+    if(d.today&&d.today!==FEED.today){ FEED.today=d.today; FEED.shownTo=dayAdd(d.today,WEEK); want=dayAdd(FEED.shownTo,WEEK); }
+  }
+  /* `from` is already on the page; the new week is the days after it, up to and
+     including `to`. */
+  const from=FEED.shownTo, to=FEED.horizon<want?FEED.horizon:want;
+  if(to<=from){ FEED.more='end'; renderFeed(q); return; }
+  if(!FEED.days.some(day=>day.date>from&&day.date<=to)){ FEED.more='none'; renderFeed(q); return; }
+  FEED.shownTo=to; FEED.more='offer'; renderFeed(q);
+}
 const DOWS=['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 /* Every word must land somewhere: the act or event title, the venue, the address,
    the note, a day of the week ("tue"/"tuesday"), or a time ("8pm", "20:30"). */
@@ -573,7 +650,11 @@ function renderFeed(q){
   const {days,city,fmt}=FEED;
   const hadFocus=!!(document.activeElement&&document.activeElement.id==='feedQ');
   const words=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
-  const shown=days.map(day=>({...day,
+  /* Only the weeks revealed so far — the server may have sent further. `shownTo`
+     is the last day shown, inclusive: the day on the server's horizon is served
+     and must be drawn. */
+  const shown=days.filter(day=>!FEED.shownTo||day.date<=FEED.shownTo)
+                  .map(day=>({...day,
                     featured:(day.featured||[]).filter(g=>gigMatches(g,day,words,fmt)),
                     gigs:day.gigs.filter(g=>gigMatches(g,day,words,fmt))}))
                   .filter(day=>day.gigs.length||day.featured.length);
@@ -604,23 +685,26 @@ function renderFeed(q){
             :ev?'<span class="evtag">At the venue</span>':''}
           <div class="who">${esc(ev?(g.title||'Event'):g.artist)}</div>
           <div class="where">${esc(g.venue)}</div>
-          ${g.address?`<div class="addr">${esc(g.address)}</div>`:''}
           ${g.note?`<div class="note">${esc(g.note)}</div>`:''}
         </div>
         ${g.maps?dirBtn(g.maps):''}
         <span class="chev">›</span>
       </div>`;};
-  $('#out').innerHTML=box+shown.map(day=>`
+  /* A week head goes in where the week changes — never over this week. */
+  let wk=0;
+  $('#out').innerHTML=box+shown.map(day=>{const k=weekOf(day.date), head=k>wk?weekHead(k):''; wk=k; return head+`
     <div class="dayhead"><b>${esc(day.label)} <em>– ${dayMonth(day.date)}</em></b><span>${day.count} gig${day.count===1?'':'s'}</span></div>
     ${/* The heading appears only when something is actually featured, and never
          draws an empty slot — one featured show is one row, not one row and two
          gaps. Perry was explicit about that. */''}
     ${(day.featured||[]).length?`<div class="feathead">Featured shows</div>
       <div class="giglist feats">${day.featured.map(g=>row(g,true)).join('')}</div>`:''}
-    ${day.gigs.length?`<div class="giglist">${day.gigs.map(g=>row(g,false)).join('')}</div>`:''}`).join('')
+    ${day.gigs.length?`<div class="giglist">${day.gigs.map(g=>row(g,false)).join('')}</div>`:''}`}).join('')
     + `<div class="endcard">${words.length
         ? `${total} match${total===1?'':'es'} for “${esc(q)}” in ${esc(city)}.`
-        : `That’s everything in ${esc(city)} for the next seven days.`}</div>`;
+        : `That’s everything in ${esc(city)} for the next ${spanWord()}.`}${
+        FEED.more==='none'?`<br>Nothing listed for ${dayDiff(FEED.today,FEED.shownTo)<=WEEK?'next week':'the week after'} yet.`:''}</div>`
+    + weekMore();
   /* re-rendering replaces the input, so put the cursor back where it was — only
      while somebody is typing; a list that arrived on its own must not grab focus */
   const i=$('#feedQ'); if(i&&hadFocus){i.focus();i.setSelectionRange(q.length,q.length);}

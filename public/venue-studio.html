@@ -51,7 +51,7 @@ html[data-theme=light]{background:var(--bg)}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;
   line-height:1.45;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;
-  -webkit-tap-highlight-color:transparent;padding-bottom:56px}
+  -webkit-tap-highlight-color:transparent;padding-bottom:calc(72px + env(safe-area-inset-bottom))}  /* clears the fixed tab bar */
 button{font-family:inherit;background:none;border:none;color:inherit;cursor:pointer;padding:0}
 .themebtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;
   background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:17px;
@@ -85,16 +85,10 @@ a{color:inherit;text-decoration:none}
 .pill.no{background:var(--surface-2);color:var(--muted)}
 .orange-outline{box-shadow:inset 0 0 0 1.5px var(--accent-2)!important}
 
-/* Sticks under the header, whose height is measured by fitTabs() — see the same
-   comment in studio.html. 66px was a guess against a real ~88px. */
-.tabs{position:sticky;top:var(--headh,88px);z-index:29;display:flex;gap:5px;margin:14px 18px 0;padding:4px;
-  background:var(--surface);border-radius:var(--pill);box-shadow:var(--sh-1);
-  overflow-x:auto;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:0 0 auto;padding:10px 13px;font-size:13px;font-weight:600;color:var(--muted);
-  white-space:nowrap;letter-spacing:-.015em;border-radius:var(--pill);
-  transition:background .25s var(--ease),color .2s var(--ease)}
-.tabs button.on{background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
+/* The tabs are a fixed bar at the bottom of the screen — .tabbar and the Menu
+   sheet's .menurow are the shared recipe in /lock.css, the same bar the Artist
+   Studio draws. It used to be a sticky pill under the header whose height had
+   to be measured (fitTabs / --headh); a fixed bar has no header to clear. */
 
 .sec{display:flex;align-items:baseline;justify-content:space-between;padding:26px 20px 9px}
 /* The section headings were all --muted grey and ran together down the page.
@@ -340,7 +334,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
   transform-origin:bottom;animation:bb .9s ease-in-out infinite}
 #busy .bars i:nth-child(2){animation-delay:.15s}#busy .bars i:nth-child(3){animation-delay:.3s}
 @keyframes bb{0%,100%{height:12px}50%{height:44px}}
-.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
+.toast{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(24px) scale(.96);
   width:calc(100% - 36px);max-width:calc(var(--maxw) - 36px);background:rgba(60,60,63,.94);color:#fff;
   backdrop-filter:blur(20px);font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
   box-shadow:var(--sh-2);z-index:70;opacity:0;pointer-events:none;
@@ -1413,32 +1407,51 @@ function render(){
         :`<button class="plantag" onclick="openPlans()">${esc((V.limits&&V.limits.label)||'Pro')} <span>↗</span></button>`}</div>
       <span class="pill ${V.verified?'ok':'no'}">${V.verified?'✓ Verified':'Unverified'}</span>
     </div>
-  </div>
-  <div class="tabs">
-    <button class="${TAB==='page'?'on':''}" onclick="setTab('page')">Page</button>
-    <button class="${TAB==='shows'?'on':''}" onclick="setTab('shows')">What’s on</button>
-    <button class="${TAB==='numbers'?'on':''}" onclick="setTab('numbers')">Numbers</button>
-    <button class="${TAB==='menu'?'on':''}" onclick="setTab('menu')">Menu</button>
-    <button class="${TAB==='merch'?'on':''}" onclick="setTab('merch')">Merch</button>
-    <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${leavingBar()}${cardTrouble()}${body}
   <div class="wrap" style="padding-top:26px;padding-bottom:8px">
     ${V.slug?`<a class="big alt ${TAB==='page'?'orange-outline':''}" href="/v/${esc(V.slug)}">See your public page ↗</a>`:''}
-  </div>`;
+  </div>
+  ${tabBar()}`;
   wireCount('#fTag','#cTag',120); wireCount('#fAbout','#cAbout',900);
   document.querySelectorAll('input[data-hday]').forEach(el=>
     el.addEventListener('change',()=>save({action:'hours',day:el.dataset.hday,
       [el.dataset.hfield]:el.value},'Hours saved')));
-  fitTabs();
 }
-/* Measured, not guessed — see the same function in studio.html. */
-function fitTabs(){
-  const h=document.querySelector('.head');
-  if(!h)return;
-  const px=Math.round(h.getBoundingClientRect().height);
-  if(px>0) document.documentElement.style.setProperty('--headh',px+'px');
+/* THE BOTTOM TAB BAR — the same bar as the Artist Studio (recipe in /lock.css).
+   Five tabs: Page, What's on, Numbers, Merch, and Menu, which opens a sheet
+   holding the food-and-drink menu, Settings, the plan and Sign out. The TAB
+   values are unchanged, so the saved tab still lands where it did; Menu lights
+   for either of the two tabs it holds. */
+const TABICON={
+  page:'<svg viewBox="0 0 24 24"><path d="M4 10.5L12 4l8 6.5V20H4z"/><path d="M9.5 20v-6h5v6"/></svg>',
+  shows:'<svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>',
+  numbers:'<svg viewBox="0 0 24 24"><path d="M5 20v-7M12 20V5M19 20v-10M3 20h18"/></svg>',
+  merch:'<svg viewBox="0 0 24 24"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1 1 0 0 1 0 1.4l-6.7 6.7a1 1 0 0 1-1.4 0z"/><circle cx="8" cy="8" r="1.4"/></svg>',
+  menu:'<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'};
+function tabBar(){
+  const on=t=>t==='menu'?(TAB==='menu'||TAB==='settings'):TAB===t;
+  return `<nav class="tabbar" aria-label="Venue Studio"><div class="in">
+    ${[['page','Page'],['shows','What’s on'],['numbers','Numbers'],['merch','Merch'],['menu','Menu']].map(([t,l])=>
+      `<button class="${on(t)?'on':''}" onclick="${t==='menu'?'openMenu()':`setTab('${t}')`}" aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}</button>`).join('')}
+  </div></nav>`;
 }
-addEventListener('resize',fitTabs);
+function openMenu(){
+  const M=(V&&V.menu)||{}, n=(M.items||[]).length;
+  const planLine=(V&&V.plan||'free')==='free'?'Free plan · see the plans':esc((V.limits&&V.limits.label)||V.plan)+' · manage';
+  openSheet(`<h3>Menu</h3>
+    <button class="menurow" onclick="closeSheet();setTab('menu')">
+      <svg viewBox="0 0 24 24"><path d="M6 3v7a3 3 0 0 0 6 0V3M9 3v18M17 3c-1.7 1.4-2.5 3.4-2.5 6.2V13h3.5v8"/></svg>
+      <div class="m">Food &amp; drink<span>${n?n+' highlight'+(n===1?'':'s')+' on your page':'The menu link, highlights and offers'}</span></div><span class="chev">›</span></button>
+    <button class="menurow" onclick="closeSheet();setTab('settings')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>
+      <div class="m">Settings<span>Address, verification, codes, sign-in</span></div><span class="chev">›</span></button>
+    <button class="menurow" onclick="closeSheet();openPlans()">
+      <svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>
+      <div class="m">Your plan<span>${planLine}</span></div><span class="chev">›</span></button>
+    <button class="menurow out" onclick="closeSheet();signOut()">
+      <svg viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></svg>
+      <div class="m">Sign out<span>Of this device</span></div></button>`);
+}
 
 /* ── verification ───────────────────────────────────────
    Shown as a CHECKLIST, not a yes/no, because "unverified" with no explanation

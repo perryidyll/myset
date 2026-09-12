@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-12 18:56 — fe86186 — MySet@ux/airbnb-batch-two (30 files since origin/main)
+**tl;dr:** Airbnb batch two: four button tiers + one chip recipe (app.css/lock.css, docs/design-system.md, 0051); artist page pinned pill + auto-scrolling proof carousel (rating · comments · top voted/played/paid, /api/profile 0043); vote dock state line, review sheet, FLIP re-rank, Share; community composer in a dock sheet; venue listing + pitch card; both Studios on a bottom tab bar with Today, a first run, earnings charts; front door "View next week's events" (events.mjs days=, 0052). Also finishes the half of this that 5b4a531 pushed early (unstyled .fab/.chip, Studio's undefined drawFirstRun).
+**Other sessions:** compose buttons from .btn-pri / .btn-ink / .btn-grey / .btn-text and chips from .chip — see docs/design-system.md before inventing a page-local recipe; lock.css carries the same tiers for the Studios. /api/profile now has rating/comments/topVoted/topPlayed/topPaid/setlist (topPaid stays null until admin.mjs logPlay writes paidVotes — one line, wants an owner). The city feed takes days=7..28 and echoes window. Decisions 0044–0047 are now committed; docs/processes and the Puzzle session notes are NOT — still yours to push.
+
 ### 2026-09-12 18:33 — eb84daa — myset-stopwatch@perf/studio-stopwatch (6 files since origin/main)
 **tl;dr:** Studio Settings tab now shows a stopwatch line (Opened in X s · page · stage · plan) so the founder's phone can say where a slow open goes; /studio edge copy lives 10 min instead of 60 s
 **Other sessions:** studio.html: window.__boot in the head, BOOT/bootStat() by bootDone(); the 6 s timer now calls bootDone(true). netlify.toml: /studio and /studio.html rules after /:slug. NOTE: origin/main's suite is red before this branch — structure wants fitTabs/--headh in studio.html and copy.mjs fails two Studio checks; another session's in-flight work, not touched here.

@@ -300,6 +300,37 @@ console.log('\nTHE HEAL  a night on disk with no row pointing at it');
   await cas('histids_' + aid, () => ({ v: 1, ids: [] }), (d) => { d.ids = ['n1', 'n2']; return true; });
   await healHistory(aid, { force: true });
   eq('a night where nothing happened is still not a night', (await readHistIndex(aid)).shows.length, 1);
+
+  console.log('\nTHE TOP-SONG BACK-FILL RUNS ON ITS OWN  (decision 0043)');
+  /* A row filed before 0043 has no `top`. This index is already stamped `healedAt`
+     by the passes above, and the Money tab's caller in history.mjs never forces —
+     so if the gate only looked at the stamp, the favourite would stay blank on
+     every existing account until somebody tapped "Look for missing shows". */
+  await cas(KEY.hist(aid, 'n1'), () => ({}), (d) => { d.stats.topSong = { songId: 's1', title: 'Valerie', votes: 7 };
+    // the play log the detail always had: Valerie twice (a replay), Alpha once with more votes
+    d.played = [{ songId: 's1', title: 'Valerie', votes: 7 }, { songId: 's2', title: 'Alpha', votes: 9 }, { songId: 's1', title: 'Valerie', votes: 0, replay: true }];
+    return true; });
+  await cas(KEY.histIdx(aid), () => ({ shows: [] }), (d) => { for (const r of d.shows) { delete r.top; delete r.topPlayed; delete r.topPaid; } return true; });
+  eq('a row filed before 0043 carries no top', 'top' in (await readHistIndex(aid)).shows[0], false);
+  eq('a plain heal — no force — runs again and repairs it', (await healHistory(aid)).fixed, 1);
+  eq('with the favourite from the detail it was reading anyway', (await readHistIndex(aid)).shows[0].top, { title: 'Valerie', votes: 7 });
+  eq('the most-played from the same play log', (await readHistIndex(aid)).shows[0].topPlayed, { title: 'Valerie', plays: 2 });
+  eq('and the most-paid-for stamped null, since the log has no paid count', (await readHistIndex(aid)).shows[0].topPaid, null);
+  eq('and then retires again', (await healHistory(aid)).skipped, true);
+  /* Each field re-opens the gate on its own: a row that has `top` but not the two
+     newer ones is what every night filed between the two changes looks like. */
+  await cas(KEY.histIdx(aid), () => ({ shows: [] }), (d) => { for (const r of d.shows) delete r.topPlayed; return true; });
+  eq('a row missing only the newer field re-opens the heal', (await healHistory(aid)).fixed, 1);
+  eq('which fills it', (await readHistIndex(aid)).shows[0].topPlayed, { title: 'Valerie', plays: 2 });
+  eq('and retires', (await healHistory(aid)).skipped, true);
+  /* A row whose detail document is gone still gets the field, or the gate would
+     never close for that artist and every Money tab load would be a full heal. */
+  await cas(KEY.histIdx(aid), () => ({ shows: [] }), (d) => { d.shows.push({ showId: 'gone', venue: 'Lost Detail', startedAt: 1, endedAt: 2, songsPlayed: 1 }); return true; });
+  await healHistory(aid);
+  eq('a row with no detail is stamped null, not left open', (await readHistIndex(aid)).shows.find((r) => r.showId === 'gone').top, null);
+  const goneRow = (await readHistIndex(aid)).shows.find((r) => r.showId === 'gone');
+  eq('with all three fields, so no later field re-opens it either', ['top', 'topPlayed', 'topPaid'].map((f) => f in goneRow ? goneRow[f] : 'missing'), [null, null, null]);
+  eq('so the heal retires for that artist too', (await healHistory(aid)).skipped, true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -6,10 +6,11 @@ import { venueById } from './_venues.mjs';
 import { MARK } from './_canary.mjs';
 
 const WINDOW_DAYS = 7;
+const MAX_WINDOW_DAYS = 28;   // `days=` on the city feed may widen the window this far
 
 /* Public. Three shapes:
      ?places=1                 the country/city picker, with live counts
-     ?country=&city=           what's on there over the next 7 days
+     ?country=&city=[&days=]   what's on there over the next 7 days (up to 28 with days=)
      ?a=<slug>                 one artist's upcoming gigs
 */
 export default async (req) => {
@@ -64,6 +65,15 @@ export default async (req) => {
   const city = (url.searchParams.get('city') || '').slice(0, 60);
   if (!country || !city) return bad('pick a country and a city');
 
+  /* `days=` widens the window a week at a time for the front door's "View next
+     week's events" — never narrower than the seven the feed always carried, never
+     past four weeks (28: the calendar's own listing horizon is a month, and every
+     extra shape is one more edge-cached copy per city). The page offers the button
+     only when `window` comes back in the reply, so a server without this line
+     shows no button rather than a button that leads to a shrug. */
+  const days = Math.max(WINDOW_DAYS, Math.min(MAX_WINDOW_DAYS,
+    parseInt(url.searchParams.get('days'), 10) || WINDOW_DAYS));
+
   const idx = await readCityIndex();
   const ids = ((idx.countries || {})[country] || {})[city] || [];
   const now = Date.now();
@@ -82,7 +92,7 @@ export default async (req) => {
     if (!who) continue;
     const tz = guessTz(events);
     const from = localDate(now, tz);
-    for (const o of occurrencesFor(events, addDays(from, -1), addDays(from, WINDOW_DAYS))) {
+    for (const o of occurrencesFor(events, addDays(from, -1), addDays(from, days))) {
       if (o.city !== city || o.country !== country) continue;
       if (o.endsAt <= now) continue;                       // finished
       rows.push(venueOwned
@@ -98,11 +108,11 @@ export default async (req) => {
      runs to 2am belongs to the night it started — and is still listed as on. */
   const tz0 = rows[0] ? rows[0].tz : 'UTC';
   const today = localDate(now, tz0);
-  const days = [];
+  const byDay = [];
   for (const r of rows) {
-    const d = days.find((x) => x.date === r.date);
+    const d = byDay.find((x) => x.date === r.date);
     if (d) d.gigs.push(r);
-    else days.push({ date: r.date, label: dayLabel(r.date, today), gigs: [r] });
+    else byDay.push({ date: r.date, label: dayLabel(r.date, today), gigs: [r] });
   }
   /* FEATURED SHOWS — up to three paid spots at the top of each night.
 
@@ -123,7 +133,7 @@ export default async (req) => {
   if (featuredOn) {
     const { cityKey, featuredFor } = await import('./_featured.mjs');
     const picked = await featuredFor(cityKey(country, city), today).catch(() => ({}));
-    for (const d of days) {
+    for (const d of byDay) {
       const want = picked[d.date] || [];
       if (!want.length) continue;
       const out = [];
@@ -143,20 +153,20 @@ export default async (req) => {
     }
   }
 
-  days.forEach((d) => { d.count = d.gigs.length + ((d.featured || []).length); });
+  byDay.forEach((d) => { d.count = d.gigs.length + ((d.featured || []).length); });
   /* `_owner` was only ever for matching a paid spot to the artist who bought it.
      It does not go out: the public feed names artists by slug, and an internal id
      in a payload is a thing somebody will eventually depend on by accident. */
-  for (const d of days) for (const g of [...d.gigs, ...(d.featured || [])]) delete g._owner;
+  for (const d of byDay) for (const g of [...d.gigs, ...(d.featured || [])]) delete g._owner;
 
   // the city feed is the same for every phone in town: one run a minute at the edge
   return jsonCached({
     ok: true, country, city,
-    today, horizon: addDays(today, WINDOW_DAYS),
+    today, horizon: addDays(today, days), window: days,
     total: rows.length,
     artists: ids.filter((x) => !isVenueOwner(x)).length,
     venues: ids.filter(isVenueOwner).length,
-    days,
+    days: byDay,
   });
 };
 

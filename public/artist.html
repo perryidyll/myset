@@ -42,7 +42,7 @@
 <noscript><link rel="stylesheet" href="/app.css"></noscript>
 
 <style>
-body{padding-bottom:calc(100px + env(safe-area-inset-bottom))}   /* room for the pinned .fab pill (app.css) above the footer */
+body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the pinned .fab block (below) above the footer */
 .brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
 .baractions{display:flex;align-items:center;gap:8px}
 .mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
@@ -129,16 +129,37 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom))}   /* room for the
 .ps b{display:block;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ps span{display:block;font-size:12px;color:var(--muted);margin-top:3px}
-/* ONE call to action, pinned to the bottom of the phone (.fab in app.css): the left
-   half says what is true right now, the right half is the one thing to tap. The
-   countdown carries "(view setlist)" so it reads as a button, not a status — at
-   375px that is two lines, so the action may wrap and the state may take two too. */
-.fab .state{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.25}
-.fab .state b{display:block;color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fab .state span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fab .act{font-size:13px;font-weight:700;padding:11px 15px;gap:8px;white-space:normal;text-align:center;line-height:1.2;
-  max-width:calc(100% - 92px);font-variant-numeric:tabular-nums}
-.fab .act.cd{font-size:12.5px;padding:10px 13px;max-width:188px}   /* the countdown is the long one; leave the state its day and venue */
+/* ONE call to action, pinned to the bottom of the phone: the left half says what
+   is true right now, the right half is the one thing to tap. The base rules below
+   are a copy of the .fab / .btn-ink block in app.css — this page shipped before that
+   shared block did, and a public page must never wait on a shared-CSS deploy to
+   draw its one call to action, so it carries its own. Same values; keep the two in
+   step. (.btn itself has always been in app.css.) */
+.btn-ink{background:var(--ink);color:var(--bg);box-shadow:var(--sh-1)}
+.btn-ink:hover{box-shadow:var(--sh-2)}
+.fab{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:50;
+  width:calc(100% - 24px);max-width:calc(var(--maxw) - 24px);
+  margin-bottom:calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:12px;padding:10px 10px 10px 18px;
+  background:var(--surface);border:.5px solid var(--hair-2);border-radius:var(--pill);
+  box-shadow:var(--sh-2)}
+.fab .state{flex:1 1 auto;min-width:0;font-size:13px;font-weight:500;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fab .act{flex:0 0 auto}
+/* CENTRED (the founder, 2026-09-12): the state line on top, the one action beneath
+   it, both centred in a block that is itself centred on the screen. One state line
+   — "Next: Mon 6:30pm · Venue" — and the venue is what gives way on a narrow phone.
+   The countdown carries "(view setlist)" so it reads as a button, not a status; with
+   the full width to itself it fits on one line at 375px. */
+.fab{flex-direction:column;align-items:center;gap:9px;padding:12px 16px;text-align:center;border-radius:var(--r-lg)}
+.fab .state{flex:0 0 auto;width:100%;line-height:1.3}
+.fab .state b{color:var(--ink);font-weight:600}
+.fab .state span::before{content:' · '}
+.fab .act{font-size:13px;font-weight:700;padding:11px 18px;gap:8px;white-space:normal;text-align:center;line-height:1.2;
+  max-width:100%;font-variant-numeric:tabular-nums}
+.fab .act.cd{font-size:12.5px;padding:10px 16px}   /* the countdown is the long one */
+/* The toast rises above the block instead of covering the one thing to tap. */
+#toast{bottom:calc(112px + env(safe-area-inset-bottom))}
 .fab .act.liveglow{animation:emberGlow 4.2s ease-in-out infinite}
 @keyframes emberGlow{
   0%,100%{filter:drop-shadow(0 0 5px rgba(255,122,69,.22))}
@@ -149,17 +170,25 @@ body{padding-bottom:calc(100px + env(safe-area-inset-bottom))}   /* room for the
 @keyframes lvp{70%{box-shadow:0 0 0 9px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
 @media (prefers-reduced-motion:reduce){.fab .lv,.fab .act.liveglow{animation:none}}
 /* Proof, not a pitch: a strip of small cards under the numbers, each one a fact the
-   server can vouch for, drawn only when the fact exists. No headline — the numbers
-   above are the headline. */
-.proof{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;padding:16px 18px 2px;
+   server can vouch for, drawn only when the fact exists — the room's rating, what
+   fans said on the community page, the songs the room voted for, heard and paid for
+   most — or, on a brand-new page, a taste of the setlist. It turns itself
+   (startProof) and a finger stops it. No headline and no icons: the words are the
+   card. scroll-padding keeps a snapped card off the screen's edge, where the first
+   one already sits. */
+.proof{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:18px;padding:16px 18px 2px;
   -webkit-overflow-scrolling:touch;scrollbar-width:none}
 .proof::-webkit-scrollbar{display:none}
-.proof .pc{flex:0 0 200px;scroll-snap-align:start;display:flex;flex-direction:column;gap:6px;padding:14px 14px 13px;
+.proof .pc{flex:0 0 236px;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:14px 16px 13px;
   border-radius:var(--r);background:var(--surface);border:.5px solid var(--hair-2);box-shadow:var(--sh-1);
   color:inherit;text-decoration:none;min-width:0}
-.proof .pc svg{width:24px;height:24px;flex:0 0 auto;margin-bottom:2px}
-.proof .pc b{display:block;font-size:14.5px;font-weight:700;letter-spacing:-.02em;line-height:1.2;
+.proof .pc i{display:block;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent-ink)}
+.proof .pc i.stars{color:var(--accent-2);letter-spacing:.08em;font-size:12px}
+.proof .pc b{display:block;font-size:15px;font-weight:700;letter-spacing:-.02em;line-height:1.25;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.proof .pc.rate b{font-size:22px;letter-spacing:-.03em}   /* the rating is a number; let it read as one */
+/* a comment gets three lines, in the fan's own words */
+.proof .pc.quote b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;font-size:14px;font-weight:600;line-height:1.35}
 .proof .pc span{display:block;font-size:12.5px;color:var(--muted);line-height:1.3}
 a.pc:active{transform:scale(.97)}
 .sharebtn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:var(--pill);
@@ -371,12 +400,47 @@ function nextLabel(){
   return `Live in ${m}m ${String(sec).padStart(2,'0')}s (view setlist)`;
 }
 /* "Live now — N voting": the count comes from the shared, edge-cached board the room
-   already polls, never from the profile (INVARIANT 0af). Missing → plain "Live now". */
+   already polls, never from the profile (INVARIANT 0af). Same URL as the vote page
+   (AQ1 — bare /api/board for the founding page) so it is the same cached copy and
+   never forces the registry read an empty slug is there to skip. Missing → "Live now". */
 async function headCount(){
-  try{ const r=await fetch(`${API}/board?a=${encodeURIComponent(SLUG||'perryidyll')}`); const b=await r.json();
+  try{ const r=await fetch(`${API}/board${AQ1}`); const b=await r.json();
     const n=b&&b.ok&&b.room&&Number(b.room.in); const el=document.getElementById('fabIn');
     if(el&&n>0) el.textContent=n+' voting'; }catch(e){}
 }
+/* THE STRIP TURNS ITSELF (the founder, 2026-09-12): the next card every 3.5 s,
+   smooth and snapped, and back to the first after the last. A finger on it, or a
+   pointer over it, stops it; it picks up again 6 s after they leave. A phone that
+   asked for less motion gets a strip that only moves when swiped. Bound to the
+   element render() just drew — a redraw replaces it and the old timer, finding its
+   strip gone, quits. Nothing runs while the tab is hidden. */
+let PT=null,PR_=null;
+function startProof(){
+  clearInterval(PT); clearTimeout(PR_);
+  const el=document.getElementById('proof'); if(!el||el.children.length<2)return;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  let hold=false;
+  const pause=()=>{hold=true;clearTimeout(PR_);};
+  const resume=()=>{clearTimeout(PR_);PR_=setTimeout(()=>{hold=false;},6000);};
+  el.addEventListener('touchstart',pause,{passive:true});
+  el.addEventListener('touchend',resume,{passive:true});
+  el.addEventListener('touchcancel',resume,{passive:true});
+  el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')pause();});
+  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')resume();});
+  PT=setInterval(()=>{
+    if(!el.isConnected){clearInterval(PT);return;}
+    if(hold||document.hidden)return;
+    const cs=[...el.children], x0=cs[0].offsetLeft;
+    let at=0,best=Infinity;                        // the card nearest the left edge right now
+    cs.forEach((c,i)=>{const d=Math.abs(c.offsetLeft-x0-el.scrollLeft); if(d<best){best=d;at=i;}});
+    const end=el.scrollLeft+el.clientWidth>=el.scrollWidth-2;   // nothing further right to show
+    const n=(end||at>=cs.length-1)?0:at+1;
+    el.scrollTo({left:cs[n].offsetLeft-x0,behavior:'smooth'});
+  },3500);
+}
+/* When a fan said it, for the card: today, yesterday, days, then the month. */
+const agoWord=ms=>{const d=(Date.now()-Number(ms))/86400000; if(!(Number(ms)>0)||isNaN(d))return '';
+  if(d<1)return 'Today'; if(d<2)return 'Yesterday'; if(d<30)return `${Math.floor(d)} days ago`; return joinedWord(ms);};
 let TICK=null;
 function startTick(){
   clearInterval(TICK);
@@ -392,8 +456,6 @@ function startTick(){
   },1000);
 }
 
-/* Dimensional icons for the proof strip; the same set as about.html. */
-const CLAY={"qr":"<svg viewBox=\"0 0 64 64\" aria-label=\"QR code\"><defs><linearGradient id=\"clay-qr-g\" y2=\"1\"><stop stop-color=\"#FF375F\"/><stop offset=\"1\" stop-color=\"#FF7A45\"/></linearGradient><linearGradient id=\"clay-qr-d\" x2=\"0\" y2=\"1\"><stop offset=\".5\" stop-color=\"#600\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#600\" stop-opacity=\".3\"/></linearGradient><radialGradient id=\"clay-qr-s\" cx=\".32\" cy=\".2\" r=\".55\"><stop stop-color=\"#fff\" stop-opacity=\".62\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></radialGradient><path id=\"clay-qr-b\" d=\"M20 8h24a12 12 0 0 1 12 12v24a12 12 0 0 1-12 12H20A12 12 0 0 1 8 44V20A12 12 0 0 1 20 8z\"/></defs><ellipse cx=\"32\" cy=\"58\" rx=\"17\" ry=\"3.4\" fill=\"#FF375F\" opacity=\".22\"/><use href=\"#clay-qr-b\" fill=\"url(#clay-qr-g)\"/><use href=\"#clay-qr-b\" fill=\"url(#clay-qr-d)\"/><use href=\"#clay-qr-b\" fill=\"url(#clay-qr-s)\"/><path d=\"M14 14h13v13H14zM37 14h13v13H37zM14 37h13v13H14zM37 37h4v4h-4zM45 37h5v4h-5zM37 45h4v5h-4zM45 45h5v5h-5z\" fill=\"#fff\"/><path d=\"M18 18h5v5h-5zM41 18h5v5h-5zM18 41h5v5h-5z\" fill=\"#FF5A52\"/></svg>","ticket":"<svg viewBox=\"0 0 64 64\" aria-label=\"Ticket\"><defs><linearGradient id=\"clay-ticket-g\" y2=\"1\"><stop stop-color=\"#FF375F\"/><stop offset=\"1\" stop-color=\"#FF7A45\"/></linearGradient><linearGradient id=\"clay-ticket-d\" x2=\"0\" y2=\"1\"><stop offset=\".5\" stop-color=\"#600\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#600\" stop-opacity=\".3\"/></linearGradient><radialGradient id=\"clay-ticket-s\" cx=\".32\" cy=\".2\" r=\".55\"><stop stop-color=\"#fff\" stop-opacity=\".62\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></radialGradient><path id=\"clay-ticket-b\" d=\"M12 14h40a4 4 0 0 1 4 4v7.5a6.5 6.5 0 0 0 0 13V46a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-7.5a6.5 6.5 0 0 0 0-13V18a4 4 0 0 1 4-4z\"/></defs><ellipse cx=\"32\" cy=\"58\" rx=\"17\" ry=\"3.4\" fill=\"#FF375F\" opacity=\".22\"/><use href=\"#clay-ticket-b\" fill=\"url(#clay-ticket-g)\"/><use href=\"#clay-ticket-b\" fill=\"url(#clay-ticket-d)\"/><use href=\"#clay-ticket-b\" fill=\"url(#clay-ticket-s)\"/><path d=\"M41 19v26\" fill=\"none\" stroke=\"#fff\" stroke-linecap=\"round\" stroke-width=\"2.2\" stroke-dasharray=\"3.2 3.6\" opacity=\".85\"/><path d=\"M17 27h15M17 34h10M17 41h13\" fill=\"none\" stroke=\"#fff\" stroke-linecap=\"round\" stroke-width=\"3.2\"/></svg>","star":"<svg viewBox=\"0 0 64 64\" aria-label=\"Star\"><defs><linearGradient id=\"clay-star-g\" y2=\"1\"><stop stop-color=\"#FF375F\"/><stop offset=\"1\" stop-color=\"#FF7A45\"/></linearGradient><linearGradient id=\"clay-star-d\" x2=\"0\" y2=\"1\"><stop offset=\".5\" stop-color=\"#600\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#600\" stop-opacity=\".3\"/></linearGradient><radialGradient id=\"clay-star-s\" cx=\".32\" cy=\".2\" r=\".55\"><stop stop-color=\"#fff\" stop-opacity=\".62\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></radialGradient><path id=\"clay-star-b\" d=\"M32.0 6.0L38.8 20.7L54.8 22.6L42.9 33.6L46.1 49.4L32.0 41.5L17.9 49.4L21.1 33.6L9.2 22.6L25.2 20.7Z\"/></defs><ellipse cx=\"32\" cy=\"58\" rx=\"17\" ry=\"3.4\" fill=\"#FF375F\" opacity=\".22\"/><use href=\"#clay-star-b\" fill=\"url(#clay-star-g)\" stroke=\"url(#clay-star-g)\" stroke-width=\"5\" stroke-linejoin=\"round\"/><use href=\"#clay-star-b\" fill=\"url(#clay-star-d)\" stroke=\"url(#clay-star-d)\" stroke-width=\"5\" stroke-linejoin=\"round\"/><use href=\"#clay-star-b\" fill=\"url(#clay-star-s)\" stroke=\"url(#clay-star-s)\" stroke-width=\"5\" stroke-linejoin=\"round\"/><circle cx=\"24\" cy=\"21\" r=\"2.6\" fill=\"#fff\"/></svg>","mic":"<svg viewBox=\"0 0 64 64\" aria-label=\"Microphone\"><defs><linearGradient id=\"clay-mic-g\" y2=\"1\"><stop stop-color=\"#FF375F\"/><stop offset=\"1\" stop-color=\"#FF7A45\"/></linearGradient><linearGradient id=\"clay-mic-d\" x2=\"0\" y2=\"1\"><stop offset=\".5\" stop-color=\"#600\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#600\" stop-opacity=\".3\"/></linearGradient><radialGradient id=\"clay-mic-s\" cx=\".32\" cy=\".2\" r=\".55\"><stop stop-color=\"#fff\" stop-opacity=\".62\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></radialGradient><path id=\"clay-mic-b\" d=\"M32 5a10 10 0 0 1 10 10v11a10 10 0 0 1-20 0V15A10 10 0 0 1 32 5zM29 40h6v6h-6zM19 46h26a3 3 0 0 1 0 6H19a3 3 0 0 1 0-6z\"/></defs><ellipse cx=\"32\" cy=\"58\" rx=\"17\" ry=\"3.4\" fill=\"#FF375F\" opacity=\".22\"/><use href=\"#clay-mic-b\" fill=\"url(#clay-mic-g)\"/><use href=\"#clay-mic-b\" fill=\"url(#clay-mic-d)\"/><use href=\"#clay-mic-b\" fill=\"url(#clay-mic-s)\"/><path d=\"M26 15h12M26 20h12M26 25h12\" fill=\"none\" stroke=\"#fff\" stroke-linecap=\"round\" stroke-width=\"2.2\" opacity=\".85\"/><path d=\"M19 24v2a13 13 0 0 0 26 0v-2\" fill=\"none\" stroke=\"#fff\" stroke-linecap=\"round\" stroke-width=\"3.2\"/></svg>","venue":"<svg viewBox=\"0 0 64 64\" aria-label=\"Venue\"><defs><linearGradient id=\"clay-venue-g\" y2=\"1\"><stop stop-color=\"#FF375F\"/><stop offset=\"1\" stop-color=\"#FF7A45\"/></linearGradient><linearGradient id=\"clay-venue-d\" x2=\"0\" y2=\"1\"><stop offset=\".5\" stop-color=\"#600\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#600\" stop-opacity=\".3\"/></linearGradient><radialGradient id=\"clay-venue-s\" cx=\".32\" cy=\".2\" r=\".55\"><stop stop-color=\"#fff\" stop-opacity=\".62\"/><stop offset=\"1\" stop-color=\"#fff\" stop-opacity=\"0\"/></radialGradient><path id=\"clay-venue-b\" d=\"M12 24h40v26a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6zM10 12h44a4 4 0 0 1 4 4v10H6V16a4 4 0 0 1 4-4M6 26a7 7 0 0 0 13 0zm13 0a7 7 0 0 0 13 0zm13 0a7 7 0 0 0 13 0zm13 0a7 7 0 0 0 13 0z\"/></defs><ellipse cx=\"32\" cy=\"58\" rx=\"17\" ry=\"3.4\" fill=\"#FF375F\" opacity=\".22\"/><use href=\"#clay-venue-b\" fill=\"url(#clay-venue-g)\"/><use href=\"#clay-venue-b\" fill=\"url(#clay-venue-d)\"/><use href=\"#clay-venue-b\" fill=\"url(#clay-venue-s)\"/><path d=\"M19 14v12m13-12v12m13-12v12\" fill=\"none\" stroke=\"#fff\" stroke-linecap=\"round\" stroke-width=\"3.4\"/><path d=\"M27 56V40a5 5 0 0 1 10 0v16\" fill=\"#fff\"/><path d=\"M15 34h7v7h-7zm27 0h7v7h-7z\" fill=\"#fff\"/></svg>"};
 const ICON={
   spotify:'<svg viewBox="0 0 24 24" fill="#1DB954"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm4.6 14.4a.6.6 0 01-.9.2c-2.4-1.5-5.4-1.8-9-1a.6.6 0 11-.3-1.2c3.9-.9 7.3-.5 10 1.1.3.2.4.6.2.9zm1.2-2.7a.8.8 0 01-1 .3c-2.7-1.7-6.9-2.2-10.1-1.2a.8.8 0 11-.4-1.5c3.7-1.1 8.3-.6 11.4 1.4.4.2.5.7.1 1zm.1-2.8C14.6 8.9 9.1 8.7 6 9.7a.9.9 0 11-.5-1.8c3.6-1.1 9.6-.9 13.4 1.4a.9.9 0 11-1 1.6z"/></svg>',
   applemusic:'<svg viewBox="0 0 24 24" fill="#FA243C"><path d="M18.7 3.2 9.4 5.1c-.5.1-.8.5-.8 1v9.3a3.4 3.4 0 10 1.6 2.9V9l7.7-1.6v6.2a3.4 3.4 0 101.6 2.9V4.2c0-.7-.6-1.1-1.2-1z"/></svg>',
@@ -483,18 +545,39 @@ function render(){
     <div class="ps cta"><a href="${COMMHREF}"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/></svg>Community</a></div>
   </div>`;
 
-  /* Proof cards. Every field is optional — /api/profile may not send any of them
-     yet, and the strip simply doesn't draw. */
-  const proof=[];
-  const card=(icon,b,sp,href)=>`<${href?`a href="${esc(href)}"`:'div'} class="pc">${CLAY[icon]}<b>${b}</b><span>${sp}</span>${href?'</a>':'</div>'}`;
-  if(P.requests===true) proof.push(card('qr','Takes requests tonight','Ask for a song from your phone.'));
-  if(st.shows>0&&joinedWord(st.joined)) proof.push(card('ticket',`${esc(compact(st.shows))} show${st.shows===1?'':'s'} on MySet`,`Since ${esc(joinedWord(st.joined))}.`));
+  /* Proof, not a pitch (decision 0043). Every field is optional — a copy of the
+     payload from before it existed renders fine: a card whose fact is missing is
+     not drawn. The order: the room's rating, a comment, the most voted, a comment,
+     the most played, a comment, the most paid for; the strip then loops back to the
+     rating. A page with none of those shows a taste of the setlist instead, and a
+     page with no setlist shows no strip. Comments are the fan's own words from the
+     community page — escaped here, cut to a card on the server. */
+  const wrap=(inner,href,cls)=>href?`<a class="pc${cls?' '+cls:''}" href="${esc(href)}">${inner}</a>`:`<div class="pc${cls?' '+cls:''}">${inner}</div>`;
+  const cards=[];
   const rt=P.rating&&P.rating.count>0&&Number(P.rating.avg)>0?P.rating:null;
-  if(rt) proof.push(card('star',`Rated ${esc((Math.round(rt.avg*10)/10).toString())}/5`,`How the room rated the night, ${esc(compact(rt.count))} night${rt.count===1?'':'s'} rated.`));
-  (Array.isArray(P.topSongs)?P.topSongs:[]).slice(0,3).forEach(t=>{ if(t&&t.title&&t.votes>0)
-    proof.push(card('mic',`Most voted: ${esc(t.title)}`,`${esc(compact(t.votes))} vote${t.votes===1?'':'s'} from the room.`)); });
-  if(Number(P.posts)>0) proof.push(card('venue',`${esc(compact(P.posts))} community post${P.posts===1?'':'s'}`,'From the artist to everybody who was there.',COMMHREF));
-  if(proof.length) h+=`<div class="proof">${proof.join('')}</div>`;
+  /* The stars answer "Enjoying MySet?" on the vote page: the room's rating of the
+     night on MySet. `nights` is how many different nights the ratings name. */
+  if(rt) cards.push(wrap(`<b>★ ${esc((Math.round(rt.avg*10)/10).toString())}</b><span>${rt.nights>0
+    ?`rated by the room over ${esc(compact(rt.nights))} night${rt.nights===1?'':'s'}`
+    :`rated by the room · ${esc(compact(rt.count))} rating${rt.count===1?'':'s'}`}</span>`,'','rate'));
+  const cm=(Array.isArray(P.comments)?P.comments:[]).filter(c=>c&&String(c.text||'').trim()).slice(0,3);
+  const quote=c=>wrap(`<i${c.stars>0?' class="stars"':''}>${c.stars>0?'★'.repeat(Math.min(5,Math.round(c.stars))):'From the room'}</i><b>“${esc(String(c.text).slice(0,140))}”</b><span>${esc(agoWord(c.when))||'On the community page'}</span>`,COMMHREF,'quote');
+  const song=(kick,t,sub)=>wrap(`<i>${kick}</i><b>${esc(t.title)}</b><span>${sub}</span>`);
+  const tv=P.topVoted&&P.topVoted.title&&P.topVoted.votes>0?P.topVoted
+    :(Array.isArray(P.topSongs)&&P.topSongs[0]&&P.topSongs[0].title&&P.topSongs[0].votes>0?P.topSongs[0]:null);
+  const tp=P.topPlayed&&P.topPlayed.title&&P.topPlayed.plays>0?P.topPlayed:null;
+  const tq=P.topPaid&&P.topPaid.title&&P.topPaid.paid>0?P.topPaid:null;
+  cards.push(...[
+    cm[0]&&quote(cm[0]),
+    tv&&song('Most voted',tv,`${esc(compact(tv.votes))} vote${tv.votes===1?'':'s'} from the room`),
+    cm[1]&&quote(cm[1]),
+    tp&&song('Most played',tp,`played ${esc(compact(tp.plays))} time${tp.plays===1?'':'s'} on MySet`),
+    cm[2]&&quote(cm[2]),
+    tq&&song('Most paid for',tq,`${esc(compact(tq.paid))} paid vote${tq.paid===1?'':'s'}`),
+  ].filter(Boolean));
+  if(!cards.length) (Array.isArray(P.setlist)?P.setlist:[]).filter(t=>t&&String(t).trim()).slice(0,10)
+    .forEach(t=>cards.push(wrap(`<i>On the setlist</i><b>${esc(t)}</b>`)));
+  if(cards.length) h+=`<div class="proof" id="proof">${cards.join('')}</div>`;
 
   /* LISTEN & FOLLOW, ABOVE THE FOLD (Perry, 2026-09-07). It used to sit near the
      bottom, under the bio and every upcoming gig, which is a long way to scroll for
@@ -551,9 +634,9 @@ function render(){
       </div>`;
   }
 
-  if(P.media.length){
+  if((P.media||[]).length){
     h+=`<div class="sect">Watch &amp; listen</div>`;
-    h+=P.media.map(m=>{
+    h+=(P.media||[]).map(m=>{
       const shape=m.ratio?`r${m.ratio}`:'';
       // the facade is just a poster — the widget takes its real height on load,
       // so a 450px Apple album card doesn't sit there as an empty slab first
@@ -573,7 +656,7 @@ function render(){
         </div>
       </div>`;
     }).join('');
-    if(P.media.some(m=>m.provider==='spotify'||m.provider==='applemusic'))
+    if((P.media||[]).some(m=>m.provider==='spotify'||m.provider==='applemusic'))
       h+=`<p class="fineprint">Spotify and Apple Music play a short preview unless you’re already signed in on this device — tap “Open ↗” for the full track.</p>`;
   }
 
@@ -593,7 +676,7 @@ function render(){
 
   $('#app').innerHTML=h;
   if(P.name) document.title = P.name + ' — MySet';
-  startTick();
+  startTick(); startProof();
   if(live) headCount();
 }
 

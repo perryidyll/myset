@@ -97,39 +97,14 @@ a{color:inherit;text-decoration:none}
 .headactions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 
 /* THE TAB BAR LIVES AT THE BOTTOM OF THE SCREEN, fixed, where a thumb already is.
-   It used to be a sticky pill under the header, whose height had to be MEASURED
-   (fitTabs / --headh) so the blurred header would not sit over it; a fixed bar
-   has no header to clear. 52px plus the home-indicator inset. z-index 55: above
-   the header (30) and the page, under the sheet backdrop (.bg 60), so a sheet
-   still dims it. The body reserves the same height at the bottom. */
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;justify-content:center;
-  height:calc(52px + env(safe-area-inset-bottom));padding:0 0 env(safe-area-inset-bottom);
-  background:color-mix(in srgb,var(--surface) 86%,transparent);
-  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
-  border-top:.5px solid var(--hair)}
-.tabbar .in{display:flex;width:100%;max-width:var(--maxw)}
-.tabbar button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:3px;height:52px;padding:0 2px;font-size:10.5px;font-weight:600;letter-spacing:-.01em;color:var(--muted);
-  white-space:nowrap;transition:color .2s var(--ease),transform .2s var(--spring)}
-.tabbar button:active{transform:scale(.92)}
-.tabbar button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;
-  stroke-linecap:round;stroke-linejoin:round;display:block}
-.tabbar button.on{color:var(--ink)}
-.tabbar button.on svg{stroke-width:2.3}
+   The bar itself (.tabbar, the ring on the selected tab, the Menu sheet's
+   .menurow) is the shared recipe in /lock.css — both Studios draw the same bar.
+   Only the Live tab's red is this page's own; test/copy.mjs pins the selector.
+   The `.on` rule has to out-rank lock.css's `.tabbar button.on` (ink), which
+   loads after this style block. */
 .tabbar button[data-tab-live]{color:#FF375F}
 .tabbar button[data-tab-live].on{color:#FF375F}
 .tabbar button[data-tab-live].on svg{fill:rgba(255,55,95,.18)}
-/* The Menu sheet: Profile, Settings, the plan, Sign out. */
-.menurow{display:flex;align-items:center;gap:12px;width:100%;padding:15px 2px;border-top:.5px solid var(--hair);
-  font-size:16.5px;font-weight:600;letter-spacing:-.014em;text-align:left}
-.menurow:first-of-type{border-top:none}
-.menurow svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;
-  stroke-linejoin:round;flex:0 0 auto;color:var(--muted)}
-.menurow .m{flex:1;min-width:0}
-.menurow .m span{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:1px}
-.menurow .chev{color:var(--faint);font-size:18px;flex:0 0 auto}
-.menurow.out{color:var(--accent)}
-.menurow.out svg{color:var(--accent)}
 /* TODAY — the checklist for tonight's gig, on the Live tab before a show. Each
    row is a real check against the data; the first undone one is the pink one. */
 .today{margin:16px 18px 0;background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-1);overflow:hidden}
@@ -142,9 +117,9 @@ a{color:inherit;text-decoration:none}
 .todo .ic{flex:0 0 auto;width:34px;height:34px;border-radius:11px;background:var(--accent-soft);
   display:grid;place-items:center}
 .todo .ic svg{width:24px;height:24px;display:block}
-.todo .m{flex:1;min-width:0}
-.todo .t{font-size:16px;font-weight:600;letter-spacing:-.014em;line-height:1.25}
-.todo .s{font-size:12.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.todo .m{flex:1;min-width:0;display:grid;gap:2px}
+.todo .t{display:block;width:100%;font-size:16px;font-weight:600;letter-spacing:-.014em;line-height:1.25}
+.todo .s{display:block;width:100%;font-size:12.5px;line-height:1.35;color:var(--muted);overflow-wrap:anywhere}
 .todo .tick{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
   font-size:14px;font-weight:700;box-shadow:inset 0 0 0 1.5px var(--hair-2);color:var(--faint)}
 .todo.done .tick{background:var(--good);color:#fff;box-shadow:none}
@@ -166,8 +141,9 @@ a{color:inherit;text-decoration:none}
 .fr .k{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2)}
 .fr h2{font-size:28px;font-weight:700;letter-spacing:-.03em;margin:6px 0 8px;line-height:1.12}
 .fr p{font-size:15px;color:var(--muted);margin:0 0 18px;line-height:1.45}
-.fr .go{margin-top:14px}
-.fr .skip{display:block;width:100%;padding:14px;margin-top:6px;font-size:15px;font-weight:600;color:var(--muted)}
+.fr .btn-pri{margin-top:14px}
+.fr .btn-text{width:100%;margin-top:6px;color:var(--muted)}
+.fr .lnk{display:inline;font:inherit;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
 .fr .qrwrap{background:#fff;border-radius:var(--r-lg);padding:18px;display:grid;place-items:center;margin:0 0 14px}
 .fr .qrwrap img{width:min(240px,70vw);height:auto;display:block;image-rendering:pixelated}
 .fr .prices{margin:0 0 6px}
@@ -245,6 +221,30 @@ a{color:inherit;text-decoration:none}
   color:var(--faint);font-size:11.5px;font-weight:700}
 .paidtag{display:inline-flex;align-items:center;padding:8px 12px;border-radius:var(--pill);
   background:rgba(48,209,88,.16);color:var(--good);font-size:13px;font-weight:700;white-space:nowrap}
+.chip.reply{display:inline-block;margin-top:5px;padding:4px 10px;min-width:0;font-size:11.5px;color:var(--muted);
+  box-shadow:none;border:.5px solid var(--hair-2)}
+.chip.reply.on{background:var(--accent-soft);color:var(--accent);border-color:transparent;box-shadow:0 0 0 1.5px var(--accent) inset}
+/* Three dollar figures at 23px did not fit a 375px phone — the third tile pushed the page to 381px. */
+.stats.money .c{min-width:0;padding:14px 8px}
+.stats.money b{font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.echart{margin:14px 18px 0;padding:12px 12px 8px;background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)}
+.echart svg{display:block;width:100%;height:auto;overflow:visible}
+.echart .ml{display:flex;margin-top:6px}
+.echart .ml span{flex:1;text-align:center;font-size:10.5px;font-weight:600;color:var(--faint)}
+.echart .ml span.now{color:var(--accent)}
+.donut{display:flex;align-items:center;gap:12px;margin:12px 18px 0;padding:14px;background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)}
+.donut svg{flex:0 0 auto;width:104px;height:104px}
+.donut .lg{flex:1;min-width:0;font-size:13px}
+.donut .lg div{padding:5px 0;line-height:1.25}
+.donut .lg div+div{border-top:.5px solid var(--hair)}
+.donut .lg span{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);font-weight:600}
+.donut .lg i{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+.donut .lg b{font-size:15px;font-weight:700}
+.donut .lg small{color:var(--faint);font-weight:600;font-size:12px;margin-left:6px}
+.earnlist{margin:0 0 6px;padding:0;list-style:none}
+.earnlist li{padding:11px 0;border-top:.5px solid var(--hair-2);font-size:14px;line-height:1.4;color:var(--muted)}
+.earnlist li b{display:block;color:var(--ink);font-size:15px;margin-bottom:2px}
+.earnlist li em{font-style:normal;color:var(--accent)}
 .refundlink{display:block;margin-top:5px;padding:0;color:var(--accent);font-size:11.5px;font-weight:700;text-align:left}
 .refundlink:active{opacity:.55}
 .act{flex:0 0 auto;height:36px;padding:0 14px;border-radius:var(--pill);font-size:13.5px;font-weight:600;
@@ -426,8 +426,8 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .plansheet .sec .kick{font-size:14px}
 .sheet.verify-intro{background:#111;color:#fff;top:50%;bottom:auto;width:calc(100% - 32px);max-width:420px;
   max-height:calc(100vh - 32px);border-radius:var(--r-lg);padding-bottom:24px;
-  transform:translateX(-50%) translateY(calc(-50% + 24px)) scale(.96);opacity:0}
-#sheet.verify-intro.on{transform:translateX(-50%) translateY(-50%) scale(1);opacity:1}
+  transform:translateX(-50%) translateY(calc(-50% + 24px)) scale(.96);opacity:0;pointer-events:none}  /* invisible must mean untouchable: closed, it sat over the middle of the screen */
+#sheet.verify-intro.on{transform:translateX(-50%) translateY(-50%) scale(1);opacity:1;pointer-events:auto}
 .sheet.verify-intro .grab{background:rgba(255,255,255,.34)}
 .sheet.verify-intro .sheetx{color:#fff;background:rgba(255,255,255,.12)}
 .verify-intro h3{color:#fff;font-size:25px;font-weight:800;margin-top:16px}
@@ -1082,6 +1082,11 @@ async function load(opts){
   if(TAB==='settings'){ if(!TEAM)jobs.push(loadTeam());
     jobs.push(loadTick()); drawPush(); }
   if(TAB==='gigs'){ if(!EVENTS)jobs.push(loadGigs()); if(!PITCHES)jobs.push(loadPitches()); }
+  /* Today's checklist (Live, before a show) reads the calendar and the card state;
+     neither is awaited — the card paints its checks as they land. A library with
+     no songs asks history whether this is a brand-new account (drawFirstRun). */
+  if(TAB==='live'&&first){ if(!EVENTS)loadGigs(); if(!PAY)loadPay(); }
+  if(first&&d.songs&&!d.songs.length&&!HIST) loadHist();
   if(!first) return;
   try{ await Promise.all(jobs.map(j=>Promise.resolve(j).catch(()=>null))); }catch(e){}
   bootDone();
@@ -1104,6 +1109,11 @@ let GATE_EMAIL='';
 function gate(err,mode){
   bootDone();
   clearInterval(timer);
+  /* The first-run steps sit over #app at z-58 and their "Continue setup" pill hangs
+     off <body>: neither may be left over a sign-in screen, whichever road led here. */
+  FR={step:0,hidden:false,drawn:''};
+  const fr=$('#firstrun'); if(fr)fr.classList.remove('on');
+  const fb=$('#frback'); if(fb)fb.remove();
   const m=mode||'start';
   const head=`<h2>Artist Studio</h2>`;
   let inner;
@@ -1258,6 +1268,7 @@ async function claimAccount(){
   if(!d.ok){toast(d.error||'Could not create that');return;}
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
+  try{localStorage.setItem('myset.firstrun',(d.artistId||'')+':1')}catch(e){}   // a brand-new account: the first-run steps, keyed to it
   toast('Welcome \u2014 your page is myset.vip/'+d.slug); start();
 }
 async function submitCode(){
@@ -1273,6 +1284,7 @@ async function submitCode(){
   if(d.needName){ TICKET=d.ticket; gate(null,'name'); return; }
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
+  if(d.isNew){ try{localStorage.setItem('myset.firstrun',(d.artistId||'')+':1')}catch(e){} }
   toast(d.isNew?`Welcome — your page is myset.vip/${d.slug}`:`Signed in as ${d.email}`);
   start();
 }
@@ -1303,6 +1315,13 @@ async function signOut(){
   try{ await api('/auth',{method:'POST',body:JSON.stringify({action:'signOut'}),quiet:true}); }catch(e){}
   CODE='';TOKEN='';
   localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token');
+  try{localStorage.removeItem('myset.firstrun')}catch(e){}
+  /* Nothing of this account may greet the next one on the same phone: not the
+     stage (a late loader would repaint it over the sign-in screen), not the plan,
+     the team, the card state or the history the first-run steps read. Null is the
+     state every one of these is in at first paint, so the next load is a first load. */
+  D=null;PLAN=null;PROF=null;TEAM=null;PAY=null;HIST=null;REV=null;LEDGER=null;EVENTS=null;PITCHES=null;
+  FEAT=null;MERCH=null;ORDERS=null;COMM=null;SESS=null;REC=null;TICK=null;PKEYS=null;
   gate();
 }
 function signOutEverywhere(){
@@ -1747,7 +1766,11 @@ async function loadPay(refresh){
   if(PAYQ) return; PAYQ=true;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'payStatus',refresh:!!refresh}),quiet:true});
   PAYQ=false;
-  if(d&&d.ok){ PAY=d.pay; if(TAB==='money'&&D) render(); }
+  if(d&&d.ok){ PAY=d.pay;
+    if((TAB==='money'||(TAB==='live'&&!typing()))&&D) render();
+    /* Step 4 of the first run asks for this and keys its paint on it; a new
+       account lands on Setlist, so the tab test above would leave it stale. */
+    else if(D&&isNew()) drawFirstRun(); }
 }
 function payCard(){
   if(!PAY){ loadPay(); return ''; }
@@ -1799,7 +1822,10 @@ function payCountries(){
     .map(([c,n])=>`<option value="${c}"${c===guess?' selected':''}>${esc(n)}</option>`).join('');
 }
 async function payStart(){
-  const sel=$('#payCountry');
+  /* Step 4 of the first run draws its own country select over the Money tab's;
+     while that overlay is up it is the only one the artist can be tapping, so
+     it wins — reading the tab's would refuse a country they had just picked. */
+  const sel=$('#firstrun.on #frCountry')||$('#payCountry');
   const country=sel?(sel.value||''):'';
   if(sel&&!country){ toast('Pick where your bank account is first'); return; }
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'payStart',country})});
@@ -1813,7 +1839,7 @@ async function payDash(){
   else toast((d&&d.error)||'Not available yet');
 }
 
-function setTab(t){if(t==='merch')t='profile';TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(D)render();
+function setTab(t){if(t==='merch')t='profile';TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();loadOrders();}
   if(t==='profile'){ loadProf(); loadComm(); loadPlan(); loadMerch(); loadOrders(); }
   if(t==='setlist') loadPlan();
@@ -1874,7 +1900,7 @@ async function loadGigs(force){
   if(EVENTS&&!force)return;
   const w=calWindow();
   EVENTS=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventList',from:w.from,to:w.to}),quiet:true});
-  if(TAB==='gigs'&&D)render();
+  if((TAB==='gigs'||(TAB==='live'&&!typing()))&&D)render();
 }
 function calMove(n){
   const [Y,M]=CAL_MONTH.split('-').map(Number);
@@ -2089,7 +2115,7 @@ async function placeHist(){
 async function loadHist(force){
   if(HIST&&!force)return;
   HIST=await api('/history',{quiet:true});
-  if(TAB==='money'&&D)render();
+  if((TAB==='money'||(D&&D.songs&&!D.songs.length))&&D&&!typing())render();
 }
 async function openShow(id){
   DETAIL={loading:true}; render();
@@ -2125,7 +2151,7 @@ function capNote(s){
     ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
     : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
 }
-/* Tonight's gig, if there is one: the server's `sched` when the calendar gig is
+/* The gig tonight, if there is one: the server's `sched` when the calendar gig is
    within twelve hours, else today's occurrence from the calendar (loaded lazily;
    null until it lands). */
 function tonightGig(s){
@@ -2457,7 +2483,7 @@ function render(){
           <div class="c"><b class="mono acc">$${(L.gross||0).toFixed(2)}</b><span>Taken</span></div>
         </div>
         ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
-        <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Tap “New show” in Settings when the next gig starts.':'Tonight gets filed away when you end the show or start a new one.'}</p>
+        <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Start the next one from the Live tab when the gig begins.':'Tonight gets filed away when you end the show or start a new one.'}</p>
         ${(()=>{  /* filter by anything a night is remembered by: venue, city, date, weekday */
           const hw=HISTQ.toLowerCase().split(/\s+/).filter(Boolean);
           const hay=x=>{const d=new Date(x.endedAt||x.startedAt||0);
@@ -2935,8 +2961,9 @@ const TABICON={
 function tabBar(){
   const on=t=>t==='menu'?(TAB==='profile'||TAB==='settings'):TAB===t;
   return `<nav class="tabbar" aria-label="Studio"><div class="in">
-    ${[['live','Live'],['setlist','Setlist'],['gigs','Gigs'],['money','Money'],['menu','Menu']].map(([t,l])=>
-      `<button ${t==='live'?'data-tab-live ':''}class="${on(t)?'on':''}" onclick="${t==='menu'?'openMenu()':`setTab('${t}')`}" aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}</button>`).join('')}
+    <button data-tab-live class="${TAB==='live'?'on':''}" onclick="setTab('live')" aria-current="${TAB==='live'?'page':'false'}">${TABICON.live}Live</button>
+    ${[['setlist','Setlist'],['gigs','Gigs'],['money','Money'],['menu','Menu']].map(([t,l])=>
+      `<button class="${on(t)?'on':''}" onclick="${t==='menu'?'openMenu()':`setTab('${t}')`}" aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}</button>`).join('')}
   </div></nav>`;
 }
 function openMenu(){
@@ -2956,6 +2983,144 @@ function openMenu(){
       <svg viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></svg>
       <div class="m">Sign out<span>Of this device</span></div></button>`);
 }
+/* FIRST RUN. Five steps for a brand-new account — name, songs, prices, Stripe,
+   QR — drawn into #firstrun, NOT into #app, so the 4 s repaint and the lazy
+   loaders can never wipe what is being typed. The flag in localStorage carries the
+   step ('1'..'5') so a trip to Stripe and back lands on the same step; 'done'
+   ends it for good. An account with no songs and no shows in history counts as
+   new too, so a second device sees the same steps.
+   The flag is `<artistId>:<step>` — a phone is not an account. One left half-done
+   by a new artist must never wall off the established one who signs in next on
+   the same phone, so a flag keyed to anybody else reads as no flag at all. */
+const frAid=()=>(D&&D.show&&D.show.artistId)||'';
+const frFlag=()=>{try{const f=localStorage.getItem('myset.firstrun')||'', i=f.indexOf(':');
+  return i>0&&f.slice(0,i)===frAid()?f.slice(i+1):'';}catch(e){return ''}};
+const frSet=v=>{try{localStorage.setItem('myset.firstrun',frAid()+':'+v)}catch(e){}};
+function isNew(){
+  const f=frFlag();
+  if(f==='done')return false;
+  if(f)return true;
+  return !!(D&&D.songs&&!D.songs.length&&!((D.show||{}).played||[]).length
+    &&HIST&&HIST.ok&&Array.isArray(HIST.shows)&&!HIST.shows.length);
+}
+let FR={step:0,hidden:false,drawn:''};
+function drawFirstRun(){
+  const el=$('#firstrun'); if(!el)return;
+  const back=$('#frback');
+  if(!D||!isNew()){ el.classList.remove('on'); FR.drawn=''; if(back)back.remove(); return; }
+  if(FR.hidden){ el.classList.remove('on'); FR.drawn='';
+    if(!back){ const b=document.createElement('button'); b.id='frback'; b.className='frback';
+      b.textContent='Continue setup ›'; b.onclick=()=>{FR.hidden=false;drawFirstRun();}; document.body.appendChild(b); }
+    return; }
+  if(back)back.remove();
+  if(!FR.step){ const f=parseInt(frFlag(),10); FR.step=(f>=1&&f<=5)?f:1; }
+  /* The key names every fact the step draws from, so a loader landing repaints
+     it and nothing else does: step 3 the plan (prices are a plan feature), step 4
+     Stripe, step 5 the slug — or that /auth answered without one. */
+  const key=FR.step+(FR.step===3?':'+(has('pricing')?'p':'np'):'')
+    +(FR.step===5?':'+(TEAM?(TEAM.slug||'none'):''):'')
+    +(FR.step===4?':'+(PAY&&(PAY.ready||PAY.chargesEnabled)?'on':PAY&&PAY.started?'started':'off'):'');
+  if(FR.drawn===key){ el.classList.add('on'); return; }     // same step, same facts: leave the fields alone
+  FR.drawn=key;
+  el.innerHTML=frStep(FR.step); el.classList.add('on'); el.scrollTop=0;
+  if(FR.step===5&&!TEAM) loadTeam();        // a failed answer is retried by hand, not on every paint
+  if(FR.step===4&&!PAY) loadPay();
+  if(FR.step===3&&!PLAN) loadPlan();
+}
+function frStep(n){
+  const s=(D&&D.show)||{};
+  const bar=`<div class="bar">${[1,2,3,4,5].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div><span class="k">Step ${n} of 5</span>`;
+  const skip=`<button class="btn-text" onclick="frNext()">Skip for now</button>`;
+  let h='';
+  if(n===1) h=`<h2>What’s your page called?</h2>
+    <p>The name on your page. Change it any time in Profile.</p>
+    <input class="inp" id="frName" maxlength="60" placeholder="Your name, or the band’s" value="${esc((PROF&&PROF.name)||s.artist||'')}" onkeydown="if(event.key==='Enter')frName()">
+    <button class="btn-pri btn-block" onclick="frName()">Next</button>${skip}`;
+  if(n===2) h=`<h2>Paste your songs</h2>
+    <p>One per line — <b>Title, Artist</b> or <b>Title — Artist</b>. You can add more, and organise them into setlists, on the Setlist tab.</p>
+    <textarea class="inp" id="frSongs" rows="7" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" oninput="impParse(this.value)"></textarea>
+    <p class="muted" id="impCount" style="font-size:13px;margin:12px 2px 0">Nothing to import yet.</p>
+    <button class="btn-pri btn-block" id="impGo" onclick="frImport()" disabled>Import these</button>${skip}`;
+  if(n===3){ const P=s.packs||{}, sm=P.small||{}, bg=P.big||{};
+    h=`<h2>Prices</h2>
+    <p>${has('pricing')
+      ?'Every artist starts with these. Keep them for tonight, or change them now — they are all in Settings.'
+      :`Every artist starts with these. Changing them is a ${esc(needsPlan('pricing'))} feature — the plans are in Settings whenever you want a look.`}</p>
+    <div class="prices">
+      <div class="lrow"><div class="m"><b>Free votes</b><span>Each person, each night</span></div><span class="cnt">${s.unlimited?'Unlimited':(s.freeCredits||0)}</span></div>
+      <div class="lrow"><div class="m"><b>Replay a played song</b><span>Votes it costs</span></div><span class="cnt">${s.replayCost||0}</span></div>
+      ${sm.votes?`<div class="lrow"><div class="m"><b>Extra votes, small</b><span>${sm.votes} votes</span></div><span class="cnt">$${((sm.cents||0)/100).toFixed(2)}</span></div>`:''}
+      ${bg.votes?`<div class="lrow"><div class="m"><b>Extra votes, big</b><span>${bg.votes} votes</span></div><span class="cnt">$${((bg.cents||0)/100).toFixed(2)}</span></div>`:''}
+    </div>
+    <button class="btn-pri btn-block" onclick="frNext()">Keep these</button>
+    ${/* Pricing is a plan feature: on a plan without it the button would land on a
+          veiled box, so it is the plans that are offered instead (rule 3). */''}
+    ${has('pricing')
+      ?`<button class="btn-text" onclick="frPricing()">Change prices</button>`
+      :`<button class="btn-text" onclick="frPlans()">See the plans</button>`}`; }
+  if(n===4){ const on=!!(PAY&&(PAY.ready||PAY.chargesEnabled));
+    /* Three honest states, the same three the Money tab's card knows: on; started
+       on Stripe but not finished (back from an abandoned onboarding — the account
+       exists, so its country is fixed and must not be asked for again); never
+       started. The select has its own id so payStart reads THIS one, not the
+       Money tab's underneath. */
+    h=on
+    ? `<h2>Card payments are on ✓</h2><p>Tips and extra votes go through Stripe, straight to you.</p>
+       <button class="btn-pri btn-block" onclick="frNext()">Next</button>`
+    : PAY&&PAY.started
+    ? `<h2>Stripe still needs a few details</h2>
+       <p>You started this but Stripe hasn’t finished checking yet. Tips and extra votes stay off in your room until it has — so nothing can land in the wrong account.</p>
+       <button class="btn-pri btn-block" onclick="frSet('4');payStart()">Finish with Stripe</button>
+       <button class="btn-text" onclick="frNext()">Later</button>`
+    : `<h2>Take tips and paid votes</h2>
+       <p>Stripe pays you out directly and takes a few minutes to set up. It can wait — the Money tab has the same button.</p>
+       <div class="field" style="padding:0 0 4px"><label>Where’s your bank account?</label>
+         <select class="inp" id="frCountry">${payCountries()}</select></div>
+       <button class="btn-pri btn-block" onclick="frSet('4');payStart()">Start with Stripe</button>
+       <button class="btn-text" onclick="frNext()">Later</button>`; }
+  if(n===5) h=`<h2>Here’s your QR code</h2>
+    <p>On the tables, on the tip jar, on your case. They scan it, they vote, you play.</p>
+    ${TEAM&&TEAM.slug?`<div class="qrwrap"><img src="${qrSrc('profile',6)}" alt="Your QR code"></div>
+      <p style="text-align:center;margin-top:-6px">myset.vip/${esc(TEAM.slug)}</p>
+      <button class="btn-text" onclick="qrBig('profile')">Show it big to print</button>`
+      :TEAM
+      ?`<p class="muted">Couldn’t load your code — <button class="lnk" onclick="frCodes()">open Settings</button>, it’s under Codes to print.</p>
+        <button class="btn-text" onclick="frRetryCode(this)">Try again</button>`
+      :`<p class="muted">Loading your code…</p>`}
+    <button class="btn-pri btn-block" onclick="frDone()">Done</button>`;
+  return `<div class="fr">${bar}${h}</div>`;
+}
+function frNext(){ FR.step=Math.min(5,FR.step+1); frSet(String(FR.step)); drawFirstRun(); }
+async function frName(){
+  const nm=(($('#frName')||{}).value||'').trim();
+  if(!nm){toast('Give your page a name');return;}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'profileSet',name:nm})});
+  if(!d.ok){toast(d.error||'Could not save that');return;}
+  PROF=null; loadProf();
+  frNext();
+}
+async function frImport(){
+  if(!IMP.length)return;
+  const g=$('#impGo'); if(g){g.disabled=true;g.textContent='Importing…';}
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'importSongs',songs:IMP})});
+  if(!d.ok){toast(d.error||'Import failed');if(g){g.disabled=false;g.textContent='Import these';}return;}
+  if(d.stage&&d.stage.ok)D=d.stage;
+  toast(d.note||'Imported'); IMP=[];
+  frNext(); render();
+}
+/* Prices live in Settings: hide the steps, go there, and leave a way back. */
+function frPricing(){ FR.hidden=true; frNext(); showPricing(); }
+/* Same shape for a plan that cannot change prices: the plan cards, not a veil. */
+function frPlans(){ FR.hidden=true; frNext(); showPlans(); }
+/* Step 5 when /auth would not answer: the last step, so the setup is done and the
+   codes are where Settings keeps them; a retry there refreshes the same list. */
+function frCodes(){ frDone(); setTab('settings'); loadTeam(true);
+  setTimeout(()=>{const el=[...document.querySelectorAll('.sec .kick')].find(k=>k.textContent==='Codes to print');
+    if(el) el.scrollIntoView({behavior:'smooth',block:'start'});},120); }
+async function frRetryCode(b){ if(b){b.disabled=true;b.textContent='Trying…';}
+  await loadTeam(true);
+  if(!(TEAM&&TEAM.slug)){ toast('Still couldn’t reach it — try again in a moment'); if(b){b.disabled=false;b.textContent='Try again';} } }
+function frDone(){ frSet('done'); FR.hidden=false; FR.drawn=''; drawFirstRun(); if(D)render(); }
 /* What the room has asked for. Pending first, because a birthday is the one
    thing on this screen that goes stale. */
 /* Venues you've asked for a spot, and what they said. Sits on the Gigs tab
@@ -2968,14 +3133,14 @@ function pitchPanel(){
       <b>“Want to perform here?”</b> button on their page. They see your real numbers —
       nights played, people in the room, votes cast — not just a bio. Find them from the
       <a href="/" style="color:var(--accent)">city feed</a>.</div></div>`;
-  const label={new:['Waiting to hear back','muted'],keen:['They’re keen — get in touch','acc'],
-               nope:['Not this time','faint']};
+  const reply={new:'Sent',keen:'They’re keen',nope:'Not this time'};
   return `<div class="sec"><span class="kick">Venues you’ve asked</span><span class="kick">${rows.length}</span></div>
     <div class="list">${rows.map(p=>{
-      const [txt,tone]=label[p.status]||label.new;
+      const keen=p.status==='keen';
       return `<div class="row ${p.status==='nope'?'off':''}">
         <div class="m"><div class="t">${esc(p.name)}</div>
-          <div class="s" style="${tone==='acc'?'color:var(--accent);font-weight:600':''}">${txt} · ${when(p.at)}</div></div>
+          <div class="s">${keen?'Get in touch':'Asked'} · ${when(p.at)}</div>
+          <span class="chip reply ${keen?'on':''}">${reply[p.status]||reply.new}</span></div>
         <a class="act" href="/v/${esc(p.slug)}">Open</a>
       </div>`;}).join('')}</div>`;
 }
@@ -3767,11 +3932,12 @@ function earningsCard(){
   const t=L.total||{};
   return `
   <div class="sec"><span class="kick">Your earnings · last 12 months</span><span class="kick">${m$(t.net)}</span></div>
-  <div class="stats">
+  <div class="stats money">
     <div class="c"><b class="mono">${m$(t.gross)}</b><span>Fans paid</span></div>
     <div class="c"><b class="mono">${m$(-(t.stripeFee||0)-(t.platformFee||0))}</b><span>Fees</span></div>
     <div class="c"><b class="mono acc">${m$(t.net)}</b><span>Yours</span></div>
   </div>
+  ${earnChart(L)}
   ${rows.length?`<div class="list">${rows.map(m=>`<div class="row">
     <div class="m"><div class="t">${mlabel(m.month)}</div>
       <div class="s">${m.count} payment${m.count===1?'':'s'} · ${m$(m.gross)} taken · ${m$(m.stripeFee)} Stripe${m.platformFee?` · ${m$(m.platformFee)} MySet`:''}${m.payouts?` · ${m$(-m.payouts)} paid out`:''}</div></div>
@@ -3781,7 +3947,82 @@ function earningsCard(){
     <button class="big alt" onclick="downloadLedger()">Download it as a spreadsheet</button>
     <p class="muted" style="font-size:12px;margin:8px 0 0">Every figure comes straight from Stripe — the same numbers your bank sees. “Yours” is after both fees. Hand the file to whoever does your tax.${PLAN&&PLAN.owner?' <b>Your gigs only</b> — subscriptions other artists pay MySet are kept out of this and live in the books below.':''}</p>
     <button class="act" style="margin-top:10px" onclick="loadLedger(true)">↺ Check again</button>
+  </div>
+  ${revDonut(REV)}
+  <div class="wrap" style="margin-top:12px"><button class="btn-grey btn-block" onclick="openEarnTips()">Quick tips for earning more</button></div>`;
+}
+
+/* Twelve bars, oldest on the left. Padded to twelve from the newest key the ledger
+   sent, so an artist who joined in March still sees a full year with nine hairlines.
+   Cents in, dollars on the label; a month that lost money draws as a hairline. */
+function earnChart(L){
+  const by={}; (L.months||[]).forEach(m=>{by[m.month]=m;});
+  const newest=(L.months||[])[0]; if(!newest) return '';
+  let y=+newest.month.slice(0,4), mo=+newest.month.slice(5,7);
+  const keys=[]; for(let i=0;i<12;i++){ keys.unshift(`${y}-${String(mo).padStart(2,'0')}`); if(--mo<1){mo=12;y--;} }
+  const vals=keys.map(k=>Math.max(0,(by[k]&&by[k].net)||0));
+  const max=Math.max(1,...vals);
+  const W=360,H=130,top=22,base=H-2,slot=W/12,bw=18;
+  const bars=keys.map((k,i)=>{
+    const v=vals[i], h=v?Math.max(3,Math.round((base-top)*v/max)):0, x=i*slot+(slot-bw)/2, now=i===11;
+    if(!h) return `<rect x="${x}" y="${base-1}" width="${bw}" height="1" fill="var(--hair-2)"/>`;
+    return `<rect x="${x}" y="${base-h}" width="${bw}" height="${h}" rx="4" fill="${now?'url(#eg)':'var(--accent)'}" ${now?'':'opacity=".8"'}/>`
+      +(now?`<text x="${x+bw/2}" y="${base-h-7}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)" class="mono">${m$(v)}</text>`:'');
+  }).join('');
+  return `<div class="echart">
+    <svg viewBox="0 0 ${W} ${H}" aria-label="Net earnings by month">
+      <defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
+      ${bars}</svg>
+    <div class="ml">${keys.map((k,i)=>`<span class="${i===11?'now':''}">${'JFMAMJJASOND'[+k.slice(5,7)-1]}</span>`).join('')}</div>
   </div>`;
+}
+
+/* Votes against tips — the split the ledger does not carry. REV is the Checkout view
+   (dollars, gross, 180 days), so it is labelled as such and fails the same way the
+   payments list above it does. */
+function revDonut(R){
+  const head=`<div class="sec"><span class="kick">Where it came from · 180 days</span></div>`;
+  const note=m=>head+`<div class="list"><div class="row muted">${m}</div></div>`;
+  if(!R) return note('<span class="spin"></span>&nbsp;&nbsp;Reading Stripe…');
+  if(!R.ok) return note('Couldn’t reach Stripe just now.');
+  if(!R.enabled) return note(PLAN&&PLAN.owner
+    ? 'Card payments are off for the whole platform — the Stripe key is not set in Netlify.'
+    : 'Card payments aren’t on for your page yet. Set them up under “Getting paid” above.');
+  const t=R.totals||{};
+  const parts=[['More votes',+t.votes||0,'var(--accent)'],['Tips',+t.tips||0,'var(--accent-2)']];
+  if(+t.merch>0) parts.push(['Merch',+t.merch,'var(--good)']);
+  const total=parts.reduce((a,p)=>a+p[1],0);
+  if(!(total>0)) return note('No payments in the last 180 days.');
+  const r=44,c=2*Math.PI*r; let off=0;
+  const arcs=parts.map(p=>{const len=c*p[1]/total;
+    const s=`<circle cx="56" cy="56" r="${r}" fill="none" stroke="${p[2]}" stroke-width="14" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 56 56)"/>`;
+    off+=len; return s;}).join('');
+  return head+`<div class="donut">
+    <svg viewBox="0 0 112 112" aria-label="Votes against tips">${arcs}
+      <text x="56" y="54" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)" class="mono">$${total.toFixed(2)}</text>
+      <text x="56" y="70" text-anchor="middle" font-size="10.5" font-weight="600" fill="var(--faint)">total</text></svg>
+    <div class="lg">${parts.map(p=>`<div><span><i style="background:${p[2]}"></i>${p[0]}</span><b class="mono">$${p[1].toFixed(2)}</b><small>${Math.round(100*p[1]/total)}%</small></div>`).join('')}</div>
+  </div>`;
+}
+
+function openEarnTips(){
+  const s=D&&D.show;
+  const fv=s&&!s.unlimited&&s.freeCredits>0?`${s.freeCredits} free vote${s.freeCredits===1?'':'s'}`:'their free votes';
+  const tips=[
+    ['Print the QR big at the door and on the tip jar','The two places every person in the room looks at least once. Big enough to scan from a metre away.'],
+    ['Put a QR table tent on every table','People vote from their seat, not the bar. A folded card on each table gets the whole room on the board.'],
+    ['Open the night in one breath','<em>“Scan the code on your table — you pick what I play next.”</em> Say it, then play. No walkthrough.'],
+    ['Frame the evening as theirs','<em>“You’re building tonight’s setlist.”</em> A room that owns the list votes for it, and tips the person playing it.'],
+    ['Read the top of the board out loud between songs','Say the leader and the one chasing it. The people who want the runner-up will pay to push it over.'],
+    ['Thank the room for a tip from the stage','A tip lands under Recent tips on the Live tab, with any note the person left. Read the note out — a thank-you from the mic is worth more than the tip, and the table next to them hears it too.'],
+    ['Tap Last call before the final set','Every phone in the room counts ten seconds down. Say <em>“last votes for this set”</em> as it runs — a deadline you can see moves the people who were only thinking about it.'],
+    [`Mention that ${fv} reset every show`,'Nobody saves votes for later. Say it once near the start and again at the break.'],
+    ['Show the merch and community link at the break','The pause is when phones come out. Point at the code, name the thing to buy, keep the set moving.']
+  ];
+  openSheet(`<h3>Earn more tonight</h3>
+    <p class="lede">Nine things that cost nothing and move the number on this tab.</p>
+    <ul class="earnlist">${tips.map(t=>`<li><b>${t[0]}</b>${t[1]}</li>`).join('')}</ul>
+    <button class="big alt" style="margin-top:8px" onclick="closeSheet();setTab('settings')">Codes to print</button>`);
 }
 
 async function downloadLedger(){
@@ -4224,7 +4465,7 @@ async function verifyVenue(vid){
 async function loadTeam(force){
   if(TEAM&&!force)return;
   TEAM=await api('/auth',{method:'POST',body:JSON.stringify({action:'list'}),quiet:true});
-  if(TAB==='settings'&&D)render();
+  if((TAB==='settings'||isNew())&&D&&!typing())render();
 }
 function copyRef(){
   const el=$('#refLink'); if(!el)return;

@@ -24,7 +24,9 @@ check('public/studio.html', [
   ["render: tab 'profile'",  /if\(TAB==='profile'\)\{\n/g],
   ["render: tab 'settings'", /if\(TAB==='settings'\)\{\n/g],
   ['function render',   /\nfunction render\(\)\{/g],
-  ['function fitTabs',  /\nfunction fitTabs\(\)\{/g],
+  // the Studio's tabs moved to a fixed bottom bar on 2026-09-12: no sticky offset to measure, so fitTabs is gone
+  ['function fitTabs',  /\nfunction fitTabs\(\)\{/g, 0],
+  ['function tabBar',   /\nfunction tabBar\(\)\{/g],
   ['function setPick',  /\nfunction setPick\(\)\{/g],
   ['const setName',     /\nconst setName=/g],
   // the flags the server produces must have a consumer — a producer with no
@@ -32,7 +34,7 @@ check('public/studio.html', [
   ['consumes votable',        /x\.votable!==false/g],
   ['consumes inSet (rows)',   /x\.inSet===false\?'Not in this set'/g],
   ['consumes inSet (toast)',  /sg\.inSet===false/g],
-  ['sticky offset measured',  /top:var\(--headh/g],
+  ['sticky offset measured',  /top:var\(--headh/g, 0],   // see the fitTabs row: the bar is fixed at the bottom now
   /* C001: a dropped poll must not gate the artist out mid-gig (INVARIANT 16).
      Both halves are needed — the flag without the guard, or the guard without the
      flag, silently restores the old behaviour. */
@@ -49,8 +51,10 @@ check('public/studio.html', [
 check('public/studio.html', [['prose rows opt out of flex', /\.row\.muted\{display:block\}/g]]);
 check('public/venue-studio.html', [
   ['prose rows opt out of flex', /\.row\.muted\{display:block\}/g],
-  ['function fitTabs',       /\nfunction fitTabs\(\)\{/g],
-  ['sticky offset measured', /top:var\(--headh/g],
+  // the Venue Studio's tabs moved to the same fixed bottom bar on 2026-09-12: nothing to measure, so fitTabs and --headh are gone
+  ['function fitTabs',       /\nfunction fitTabs\(\)\{/g, 0],
+  ['function tabBar',        /\nfunction tabBar\(\)\{/g],
+  ['sticky offset measured', /top:var\(--headh/g, 0],
 ]);
 console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
 process.exit(fail ? 1 : 0);
