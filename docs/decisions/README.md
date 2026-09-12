@@ -49,6 +49,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) | The free plan allows ten shows a calendar month | 2026-09-12 | plans | decided | perry |
 | [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) | Every page paints the MySet splash the moment a link is tapped, and starts its first call from the head | 2026-09-12 | ui | decided | claude |
 | [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) | Between shows the voting page counts down to the next gig, and the wrap-up card lasts three hours | 2026-09-12 | ui | decided | perry |
+| [0040](0040-the-event-map-resolves-saved-google-short-links.md) | The event map resolves a saved Google short link before it guesses from venue text | 2026-09-12 | ui | decided | perry |
 
 ## By area
 
@@ -68,7 +69,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md)
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) · [0040](0040-the-event-map-resolves-saved-google-short-links.md)
 
 **voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 

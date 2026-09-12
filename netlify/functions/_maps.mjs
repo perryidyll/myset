@@ -72,6 +72,58 @@ export function normPlace(e) {
   return { address, mapUrl, lat, lng };
 }
 
+/* Google Maps share links are deliberately short, so they contain neither an
+   address nor coordinates. The public directory cannot place one accurately by
+   geocoding a decorated venue name; "The Ugly Duckling" exists in more than one
+   country. When the interactive map explicitly asks for richer locations, follow
+   only Google's allow-listed short host and read the address Google put in its
+   first redirect. No page body is downloaded and no arbitrary redirect is
+   followed. */
+const SHORT_GOOGLE = /^maps\.app\.goo\.gl$/;
+const resolved = new Map();
+
+export function addressFromMapUrl(raw) {
+  let u;
+  try { u = new URL(String(raw || '')); } catch { return ''; }
+  if (!safeMapUrl(u.toString())) return '';
+  for (const key of ['q', 'query', 'daddr', 'destination']) {
+    const value = clean(u.searchParams.get(key), 160);
+    if (!value || /^-?\d{1,3}(?:\.\d+)?,\s*-?\d{1,3}(?:\.\d+)?$/.test(value)) continue;
+    if (/^https?:\/\//i.test(value)) continue;
+    return value;
+  }
+  return '';
+}
+
+export async function resolveShortMapPlace(place, fetcher = globalThis.fetch) {
+  const p = normPlace(place || {});
+  if ((Number.isFinite(p.lat) && Number.isFinite(p.lng)) || !p.mapUrl || !fetcher) return p;
+  let start;
+  try { start = new URL(p.mapUrl); } catch { return p; }
+  if (!SHORT_GOOGLE.test(start.hostname.toLowerCase())) return p;
+  if (resolved.has(p.mapUrl)) return { ...p, address: (await resolved.get(p.mapUrl)) || p.address };
+
+  const lookup = (async () => {
+    let timer = null;
+    try {
+      const controller = new AbortController();
+      timer = setTimeout(() => controller.abort(), 2500);
+      const response = await fetcher(p.mapUrl, { method: 'HEAD', redirect: 'manual', signal: controller.signal });
+      const location = response && response.headers && response.headers.get('location');
+      if (!location) return '';
+      const target = new URL(location, p.mapUrl).toString();
+      return safeMapUrl(target) ? addressFromMapUrl(target) : '';
+    } catch { return ''; }
+    finally { if (timer) clearTimeout(timer); }
+  })();
+  resolved.set(p.mapUrl, lookup);
+  if (resolved.size > 100) resolved.delete(resolved.keys().next().value);
+  /* Google's canonical share-link address wins when it disagrees with a typed
+     address. That is the automatic cross-check: the exact saved Maps place is
+     stronger evidence than a second free-text field. */
+  return { ...p, address: (await lookup) || p.address };
+}
+
 /* Emoji and pipes are decoration in a venue name and noise in a map query —
    "The Ugly Duckling | Irish Pub ☘️🍻" searches better as "The Ugly Duckling
    Irish Pub". */

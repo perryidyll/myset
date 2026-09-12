@@ -130,6 +130,8 @@ a{color:inherit;text-decoration:none}
 .big:disabled{opacity:.42;transform:none}
 .bigplay{padding:20px 22px;font-size:17px;line-height:1.32;align-items:flex-start;margin-bottom:0}
 .bigplay>span:first-child{flex:0 0 auto;padding-top:1px}
+.setlist-tools{display:flex;gap:9px;align-items:stretch}
+.setlist-tools .big{flex:1;min-width:0;min-height:56px;margin:0;padding:17px 12px;justify-content:center}
 .liveactions{display:flex;gap:10px;align-items:stretch}
 .liveactions .big{flex:1;margin:0;min-width:0}
 .liveactions .endnow{justify-content:center;background:var(--surface);color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
@@ -139,7 +141,7 @@ a{color:inherit;text-decoration:none}
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
 .scroll-shell{position:relative;margin:0 55px 0 18px;border-radius:var(--r);background:var(--surface);
   border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);overflow:hidden;
-  animation:edgeGlow 4.8s ease-in-out infinite}
+  animation:edgeGlow 6.4s cubic-bezier(.45,0,.55,1) infinite}
 .scroll-shell>.scroll-window{margin:0;border:0;border-radius:0;box-shadow:none;animation:none;width:100%}
 .scroll-window{overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;overflow-anchor:none;
   -webkit-overflow-scrolling:touch;scrollbar-width:thin}
@@ -150,8 +152,8 @@ a{color:inherit;text-decoration:none}
 .queue-window{max-height:294px}.setlist-window{max-height:720px}
 .sec.upnext .kick:first-child{font-size:15px;font-weight:750;color:var(--accent-2)}
 @keyframes edgeGlow{
-  0%,100%{box-shadow:var(--sh-1),7px 0 9px rgba(255,122,69,.18),18px 0 24px rgba(255,69,110,.07)}
-  50%{box-shadow:var(--sh-1),10px 0 15px rgba(255,122,69,.43),25px 0 34px rgba(255,69,110,.16)}
+  0%,100%{box-shadow:var(--sh-1),12px 0 15px rgba(255,122,69,.16),30px 0 38px rgba(255,69,110,.07),54px 0 62px rgba(255,122,69,.025)}
+  50%{box-shadow:var(--sh-1),18px 0 24px rgba(255,122,69,.42),44px 0 54px rgba(255,69,110,.18),72px 0 80px rgba(255,122,69,.07)}
 }
 .row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
 /* A prose row is a SENTENCE, not a row of items. `.row` is a flex container, so
@@ -272,6 +274,11 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .songmeta span{font-size:11px;font-weight:600;letter-spacing:.01em;padding:2px 7px;border-radius:var(--pill);
   background:var(--surface-2);color:var(--muted)}
 .songmeta span.k{background:var(--accent-soft);color:var(--accent)}
+.songcard{display:block;padding:15px 16px 13px}
+.songcard>.m{width:100%;min-width:0}
+.songactions{display:flex;align-items:center;gap:9px;margin-top:13px;width:100%}
+.songactions .act{flex:1;min-width:0;height:40px}
+.songactions .act.warn{flex:0 0 40px;padding:0}
 .chartbtn{display:inline-flex;align-items:center;gap:7px;margin-top:14px;padding:9px 15px;
   border-radius:var(--pill);background:rgba(255,255,255,.19);color:#fff;font-size:14px;font-weight:600;
   backdrop-filter:blur(10px);border:.5px solid rgba(255,255,255,.3)}
@@ -645,7 +652,7 @@ const tagLabel=(id)=>{
 /* ── setlists ────────────────────────────────────────────
    One library of songs; a setlist is a named subset of it, like a playlist. */
 function setPick(){
-  return `<div class="wrap" style="padding-top:0;padding-bottom:0">
+  return `<div class="wrap" style="padding-top:10px;padding-bottom:0">
     <button class="big alt orange-outline" style="justify-content:center;margin:0" onclick="openLists()">Organize your songs into setlists</button>
     </div>
     ${D.listFellBack?`<div class="warnstrip"><b>Nothing votable in that set.</b>
@@ -2114,10 +2121,10 @@ function render(){
       .filter(x=>!q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q)));
     body=`
     <div class="wrap" style="padding-top:18px">
-      <div style="display:flex;gap:9px">
-      <button class="big bigplay" style="flex:1;margin:0" onclick="openSongSheet(null)">
+      <div class="setlist-tools">
+      <button class="big" onclick="openSongSheet(null)">
         <span>+</span><span style="flex:1">Add a song</span></button>
-      <button class="big alt" style="flex:1;justify-content:center;margin:0" onclick="openImport()">⇪ Import songs</button>
+      <button class="big alt" onclick="openImport()">⇪ Import songs</button>
       </div>
     </div>
     ${setPick()}
@@ -2139,7 +2146,7 @@ function render(){
       <button onclick="confirmAutoTag()">✨ Auto-tag songs</button></div>
     ${genreBar(songs)}
     <p class="muted" style="font-size:12px;padding:10px 14px 4px;margin:0">Turn a song OFF to hide it from fans tonight. Remove deletes it for good.</p>
-    <div class="scroll-shell setlist-shell"><div class="list scroll-window setlist-window">${shown.length?shown.map(x=>`<div class="row ${x.active===false?'off':''}">
+    <div class="scroll-shell setlist-shell"><div class="list scroll-window setlist-window">${shown.length?shown.map(x=>`<div class="row songcard ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
         <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden'
@@ -2147,9 +2154,9 @@ function render(){
         ${(x.key||(x.tags||[]).length)?`<div class="songmeta">
           ${x.key?`<span class="k">${esc(x.key)}</span>`:''}
           ${(x.tags||[]).map(t=>`<span>${esc(tagLabel(t))}</span>`).join('')}</div>`:''}</div>
-      <button class="act" data-act="edit" data-id="${x.id}">Edit</button>
+      <div class="songactions"><button class="act" data-act="edit" data-id="${x.id}">Edit</button>
       <button class="act" onclick="act('toggleSong',{song:'${x.id}'})">${x.active===false?'Show':'Hide'}</button>
-      <button class="act warn" data-act="del" data-id="${x.id}">✕</button>
+      <button class="act warn" data-act="del" data-id="${x.id}" aria-label="Delete ${esc(x.title)}">✕</button></div>
     </div>`).join(''):`<div class="row muted">Nothing matches “${esc(SETQ)}”</div>`}</div></div>
     ${learnSection()}
     <div class="wrap" style="padding-top:18px;padding-bottom:0">

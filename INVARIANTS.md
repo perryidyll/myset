@@ -887,13 +887,18 @@ If you are about to violate one, stop and say so rather than working around it.
 0ag. **There is no one link that opens in whichever map app a phone uses.** `geo:`
     is the closest thing on paper and iOS Safari ignores it. So the server builds
     BOTH an Apple and a Google URL from the stored address/coordinates, and the
-    page picks by platform. Nothing is guessed in the browser and no third party is
-    contacted to resolve a short link.
+    page picks by platform. A saved Google short link is stronger evidence than
+    hand-entered venue text: only the map-rich directory request may resolve that
+    allow-listed redirect, under a short timeout and bounded cache, while the saved
+    link itself remains the Directions source.
 
 0ah. **A bare venue name is not a location.** "The Ugly Duckling" on its own could
     send somebody to Amsterdam, so `mapLinks()` returns null unless there are
     coordinates, an address, or a name WITH a city — and the city and country always
-    go into the query. No Directions button is better than a wrong one.
+    go into the query. Before drawing a pin, the directory checks Google's structured
+    address components against the saved city and country and rejects partial or
+    conflicting results. Coordinates are reverse-geocoded through the same check.
+    No pin is better than a wrong one; the event and exact Directions link remain.
 
 ## Venues, part two
 
@@ -2041,6 +2046,9 @@ If you are about to violate one, stop and say so rather than working around it.
     closing it), and `test/darkroom.mjs` pins that. Ten seconds lives once, as
     `COUNTDOWN_MS` in `_lib.mjs` — not in admin.mjs, because show.mjs is the endpoint
     every phone polls and must not import a handler to read a number.
+    Every countdown displayed anywhere in MySet includes seconds and ticks once per
+    second; a minute-only display is never an acceptable substitute. (**Seconds
+    display locked 2026-09-12.**)
 
 0f7. **Between shows the room is DARK, and nothing is deleted to make it so.** A fan
     opening the page with no show running was shown the LAST one — its votes, its
@@ -2201,4 +2209,3 @@ If you are about to violate one, stop and say so rather than working around it.
     is ignored by both copies of the merge. Watched in a real browser with each half
     returning 500 in turn; `test/split.mjs` holds the merge and goes red if the
     board's clock moves back after its reads.
-

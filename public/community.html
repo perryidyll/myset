@@ -309,7 +309,7 @@ function render(){
      here to say the night was good should not have to scroll past a shop to do
      something about it. */
   if(!VENUE) h+=`<div class="tipbar"><button onclick="openTip()">
-    <b>Tip ${esc(firstName())}</b><small>${d.canBuy?'Say thanks':'Card tips aren’t on yet — say hi at the show'}</small></button></div>`;
+    <b>Support ${esc(firstName())}</b><small>Show your appreciation</small></button></div>`;
 
   if((d.merch||[]).length){
     h+=`<div class="sect">Merch</div><div class="rail">${d.merch.map(m=>`

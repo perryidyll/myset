@@ -340,14 +340,17 @@ function nextLabel(){
   const d=Math.floor(ms/86400000); ms-=d*86400000;
   const h=Math.floor(ms/3600000);  ms-=h*3600000;
   const m=Math.floor(ms/60000);    const sec=Math.floor((ms-m*60000)/1000);
-  if(d>0) return `Live in ${d}d ${h}h ${m}m (view setlist)`;
+  if(d>0) return `Live in ${d}d ${h}h ${m}m ${String(sec).padStart(2,'0')}s (view setlist)`;
   if(h>0) return `Live in ${h}h ${m}m ${String(sec).padStart(2,'0')}s (view setlist)`;
   return `Live in ${m}m ${String(sec).padStart(2,'0')}s (view setlist)`;
 }
 let TICK=null;
 function startTick(){
   clearInterval(TICK);
-  if(!(S&&S.ok)||S.status==='live')return;
+  /* This page deliberately stopped fetching /api/show; /api/profile carries the
+     live flag now. S is therefore always null, and using it as the timer gate
+     silently prevented the profile countdown from ever starting. */
+  if(!P||P.live)return;
   const b=document.getElementById('joinBtn'); if(!b||!nextGig())return;
   TICK=setInterval(()=>{
     const el=document.getElementById('joinBtn');

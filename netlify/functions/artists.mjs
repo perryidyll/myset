@@ -6,10 +6,12 @@ import { addDays, localDate } from './_time.mjs';
 import { readHistIndex } from './_history.mjs';
 import { readPosts } from './_community.mjs';
 import { planOf } from './_plan.mjs';
+import { mapLinks, resolveShortMapPlace } from './_maps.mjs';
 
 /* Public artist directory. Only fields already intended for public profiles and
    calendars leave this endpoint; account emails, roles and billing never do. */
-export default async () => {
+export default async (req) => {
+  const wantsMaps = !!(req && new URL(req.url).searchParams.get('maps'));
   const registry = await readArtists();
   /* Find artists is a trust surface, not the complete account registry. The same
      effective verification rule as the public badge applies: the review flag and
@@ -32,6 +34,15 @@ export default async () => {
       /* Today plus the following 29 local calendar days is exactly 30 dates.
          occurrencesFor is inclusive at both ends. */
       const shows30 = occurrencesFor(events, today, addDays(today, 29)).filter((gig) => gig.endsAt > now);
+      const mapReady30 = wantsMaps ? await Promise.all(shows30.map(async (gig) => {
+        const place = await resolveShortMapPlace({
+          address: gig.address, mapUrl: gig.mapUrl,
+          lat: gig.maps && gig.maps.lat, lng: gig.maps && gig.maps.lng,
+        });
+        if (!place.address || place.address === gig.address) return gig;
+        return { ...gig, address: place.address,
+          maps: mapLinks({ ...place, city: gig.city, country: gig.country }, gig.venue) };
+      })) : shows30;
       const locationMap = new Map();
       for (const gig of gigs) {
         if (!gig.country || !gig.city) continue;
@@ -61,7 +72,7 @@ export default async () => {
         rating,
         ratingCount: ratings.length,
         locations: [...locationMap.values()],
-        eventsNext30Days: shows30.map((gig) => ({
+        eventsNext30Days: mapReady30.map((gig) => ({
           eventId: gig.eventId, date: gig.date, time: gig.time, tz: gig.tz, startsAt: gig.startsAt,
           venue: gig.venue || '', city: gig.city || '', country: gig.country || '',
           address: gig.address || '', maps: gig.maps || null,

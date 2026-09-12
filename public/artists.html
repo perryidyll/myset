@@ -99,7 +99,7 @@ function render(){
 const hasCoords=e=>e.maps&&Number.isFinite(e.maps.lat)&&Number.isFinite(e.maps.lng);
 const canPin=e=>hasCoords(e)||!!e.address||!!(e.venue&&e.city);
 const locKey=e=>hasCoords(e)?`${e.maps.lat},${e.maps.lng}`:[e.venue,e.address,e.city,e.country].join('|').toLowerCase();
-const locText=e=>hasCoords(e)?`${e.maps.lat},${e.maps.lng}`:[e.venue,e.address,e.city,e.country].filter(Boolean).join(', ');
+const locText=e=>hasCoords(e)?`${e.maps.lat},${e.maps.lng}`:[e.address||e.venue,e.city,e.country].filter(Boolean).join(', ');
 const when=e=>`${new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(`${e.date}T12:00:00Z`))} · ${e.time}`;
 const directionsFor=e=>{const m=e.maps||{};return m.source||(/iPhone|iPad|iPod/.test(navigator.userAgent)?m.apple:m.google)||m.google||m.apple||''};
 function openMap(){
@@ -117,14 +117,34 @@ function openMap(){
 }
 function loadGoogleMaps(){
   if(window.google&&google.maps)return Promise.resolve(google.maps);if(GMAPS_PROMISE)return GMAPS_PROMISE;
-  GMAPS_PROMISE=new Promise((resolve,reject)=>{window.__mysetMapsReady=()=>resolve(google.maps);const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(MAPCFG.key)}&v=weekly&loading=async&callback=__mysetMapsReady`;s.async=true;s.onerror=reject;document.head.appendChild(s)});return GMAPS_PROMISE;
+  GMAPS_PROMISE=new Promise((resolve,reject)=>{window.__mysetMapsReady=()=>resolve(google.maps);const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(MAPCFG.key)}&v=weekly&loading=async&language=en&callback=__mysetMapsReady`;s.async=true;s.onerror=reject;document.head.appendChild(s)});return GMAPS_PROMISE;
 }
-const positionFor=async(maps,e,geocoder)=>{if(hasCoords(e))return{lat:e.maps.lat,lng:e.maps.lng};const r=await geocoder.geocode({address:locText(e)});return r.results&&r.results[0]?r.results[0].geometry.location:null};
-function infoHtml(events){const e=events[0],more=events.length-1,href=e.maps&&e.maps.google||directionsFor(e);return `<div class="mapinfo"><b>${esc(e.artist)} · ${esc(e.venue||e.city)}</b><span>${esc(when(e))}</span><span>${esc([e.address,e.city,e.country].filter(Boolean).join(', '))}${more?` · ${more} more show${more===1?'':'s'} here`:''}</span>${href?`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">⌖ Open in Google Maps</a>`:''}</div>`}
+const geoKey=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()
+  .replace(/\bkoh\b/g,'ko').replace(/[^a-z0-9]+/g,'');
+const geoAgrees=(want,values)=>{const w=geoKey(want);return !w||(values||[]).some(v=>{const k=geoKey(v);return k&&(k===w||k.includes(w)||w.includes(k))})};
+/* A Google result is allowed onto MySet's map only when its own structured
+   address agrees with the city and country the artist saved. Google documents
+   component order as unstable, so this checks component TYPES, never positions.
+   A partial match is not an exact enough answer for sending somebody to a gig. */
+function mapResultMatches(e,r){
+  if(!r||!r.geometry||!r.geometry.location||r.partial_match)return false;
+  const c=r.address_components||[], vals=types=>c.filter(x=>(x.types||[]).some(t=>types.includes(t))).flatMap(x=>[x.long_name,x.short_name]);
+  const countries=vals(['country']);
+  if(e.country&&!geoAgrees(e.country,countries.length?countries:[r.formatted_address]))return false;
+  const areas=vals(['locality','postal_town','sublocality','sublocality_level_1','administrative_area_level_1','administrative_area_level_2','administrative_area_level_3']);
+  if(e.city&&!geoAgrees(e.city,areas.length?areas:[r.formatted_address]))return false;
+  return true;
+}
+const positionFor=async(maps,e,geocoder)=>{
+  const request=hasCoords(e)?{location:{lat:e.maps.lat,lng:e.maps.lng}}:{address:locText(e)};
+  const r=await geocoder.geocode(request), hit=(r.results||[]).find(x=>mapResultMatches(e,x));
+  return hit?hit.geometry.location:null;
+};
+function infoHtml(events){const e=events[0],more=events.length-1,href=directionsFor(e);return `<div class="mapinfo"><b>${esc(e.artist)} · ${esc(e.venue||e.city)}</b><span>${esc(when(e))}</span><span>${esc([e.address,e.city,e.country].filter(Boolean).join(', '))}${more?` · ${more} more show${more===1?'':'s'} here`:''}</span>${href?`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">⌖ Open in Google Maps</a>`:''}</div>`}
 async function drawInteractiveMap(places,events){
   const maps=await loadGoogleMaps(), geocoder=new maps.Geocoder(), bounds=new maps.LatLngBounds(), pins=[];MAP_MARKERS=new Map();
   LIVE_MAP=new maps.Map($('#mapViewport'),{center:{lat:20,lng:0},zoom:2,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'greedy'});INFO=new maps.InfoWindow();
-  for(const p of places){let pos;try{pos=await positionFor(maps,p.event,geocoder)}catch(e){continue}if(!pos)continue;const marker=new maps.Marker({map:LIVE_MAP,position:pos,label:{text:p.label,color:'#fff',fontWeight:'700'},title:`${p.event.artist} · ${p.event.venue||p.event.city}`});const here=events.filter(e=>locKey(e)===p.key);marker.addListener('click',()=>{INFO.setContent(infoHtml(here));INFO.open({map:LIVE_MAP,anchor:marker})});MAP_MARKERS.set(p.key,marker);bounds.extend(pos);pins.push(marker)}
+  for(const p of places){let pos;try{pos=await positionFor(maps,p.event,geocoder)}catch(e){}if(!pos){events.forEach((e,i)=>{if(locKey(e)===p.key){const pin=document.querySelector(`.mapevent[data-event="${i}"] .pinlabel`);if(pin)pin.textContent='·'}});continue}const marker=new maps.Marker({map:LIVE_MAP,position:pos,label:{text:p.label,color:'#fff',fontWeight:'700'},title:`${p.event.artist} · ${p.event.venue||p.event.city}`});const here=events.filter(e=>locKey(e)===p.key);marker.addListener('click',()=>{INFO.setContent(infoHtml(here));INFO.open({map:LIVE_MAP,anchor:marker})});MAP_MARKERS.set(p.key,marker);bounds.extend(pos);pins.push(marker)}
   if(!pins.length)throw Error('no map locations');if(pins.length===1){LIVE_MAP.setCenter(pins[0].getPosition());LIVE_MAP.setZoom(13)}else{LIVE_MAP.fitBounds(bounds,48)}showLocation();
 }
 function showLocation(){
@@ -142,7 +162,7 @@ $('#upcoming').addEventListener('click',()=>{ONLY_UPCOMING=!ONLY_UPCOMING;$('#up
 $('#music').addEventListener('click',()=>{ONLY_MUSIC=!ONLY_MUSIC;$('#music').classList.toggle('on',ONLY_MUSIC);$('#music').setAttribute('aria-pressed',String(ONLY_MUSIC));render()});
 $('#signed').addEventListener('click',()=>{ONLY_SIGNED=!ONLY_SIGNED;$('#signed').classList.toggle('on',ONLY_SIGNED);$('#signed').setAttribute('aria-pressed',String(ONLY_SIGNED));render()});
 $('#mapBtn').addEventListener('click',openMap);$('#mapClose').addEventListener('click',closeMap);$('#mapModal').addEventListener('click',e=>{if(e.target===$('#mapModal'))closeMap()});addEventListener('keydown',e=>{if(e.key==='Escape')closeMap()});
-(async()=>{try{const [d,m]=await Promise.all([fetch('/api/artists',{cache:'no-store'}).then(r=>r.json()),fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json()).catch(()=>null)]);if(!d.ok)throw Error();ALL=d.artists||[];MAPCFG=m&&m.ok?m:null;fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render();if(new URLSearchParams(location.search).get('map')==='1'&&!$('#mapBtn').hidden)openMap()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
+(async()=>{try{const [d,m]=await Promise.all([fetch('/api/artists?maps=1',{cache:'no-store'}).then(r=>r.json()),fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json()).catch(()=>null)]);if(!d.ok)throw Error();ALL=d.artists||[];MAPCFG=m&&m.ok?m:null;fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render();if(new URLSearchParams(location.search).get('map')==='1'&&!$('#mapBtn').hidden)openMap()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
 if('serviceWorker'in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 </script>
 </body>

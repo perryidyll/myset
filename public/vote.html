@@ -61,7 +61,7 @@
 .now.none{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
 .now.none::after{display:none}
 .now.none .lab{color:var(--muted)}
-.now.none .t{font-size:21px}
+.now.none .t{font-size:21px;color:#FF375F;font-variant-numeric:tabular-nums}
 .eq{position:absolute;right:22px;bottom:22px;display:flex;gap:3.5px;align-items:flex-end;height:26px;z-index:1}
 .eq i{width:4px;border-radius:2px;background:rgba(255,255,255,.95);animation:eq 1s ease-in-out infinite}
 .eq i:nth-child(2){animation-delay:.18s}.eq i:nth-child(3){animation-delay:.36s}.eq i:nth-child(4){animation-delay:.12s}
@@ -78,7 +78,7 @@
 /* ── TIER 2 · UP NEXT ─────────────────────────────────── */
 .queue{position:relative;margin:18px 55px 0 18px;border-radius:var(--r-lg);background:var(--surface);
   border:1.5px solid var(--accent-2);box-shadow:var(--sh-2);overflow:hidden;
-  animation:edgeGlow 4.8s ease-in-out infinite}
+  animation:edgeGlow 6.4s cubic-bezier(.45,0,.55,1) infinite}
 .queue-scroll{max-height:266px;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
   -webkit-overflow-scrolling:touch;scrollbar-width:thin;overflow-anchor:none}
 .queue-scroll,.list.votelist{scrollbar-color:rgba(142,142,147,.7) transparent}
@@ -219,7 +219,7 @@
 .list{margin:0 18px;border-radius:var(--r);background:var(--surface);box-shadow:var(--sh-1);overflow:hidden}
 .list.votelist{margin-right:55px;max-height:660px;overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;
   touch-action:pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:thin;
-  border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);animation:edgeGlow 4.8s ease-in-out infinite}
+  border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);animation:edgeGlow 6.4s cubic-bezier(.45,0,.55,1) infinite}
 .prow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
 .prow:first-child{border-top:none}
 .prow .m{flex:1;min-width:0}
@@ -233,8 +233,8 @@
 .playednote{font-size:11.5px;font-weight:700;color:var(--accent-2);margin-top:4px;line-height:1.3}
 .buyline,.secure-votes{color:var(--accent-2)!important}
 @keyframes edgeGlow{
-  0%,100%{filter:drop-shadow(7px 0 7px rgba(255,122,69,.18)) drop-shadow(14px 0 15px rgba(255,69,110,.08))}
-  50%{filter:drop-shadow(10px 0 11px rgba(255,122,69,.46)) drop-shadow(20px 0 24px rgba(255,69,110,.2))}
+  0%,100%{filter:drop-shadow(12px 0 15px rgba(255,122,69,.16)) drop-shadow(30px 0 38px rgba(255,69,110,.07)) drop-shadow(54px 0 62px rgba(255,122,69,.025))}
+  50%{filter:drop-shadow(18px 0 24px rgba(255,122,69,.42)) drop-shadow(44px 0 54px rgba(255,69,110,.18)) drop-shadow(72px 0 80px rgba(255,122,69,.07))}
 }
 
 /* vote button */
@@ -862,7 +862,7 @@ function nextLabel(){
   const d=Math.floor(ms/86400000); ms-=d*86400000;
   const h=Math.floor(ms/3600000);  ms-=h*3600000;
   const m=Math.floor(ms/60000);    const sec=Math.floor((ms-m*60000)/1000);
-  if(d>0) return `Live in ${d}d ${h}h ${m}m`;
+  if(d>0) return `Live in ${d}d ${h}h ${m}m ${String(sec).padStart(2,'0')}s`;
   if(h>0) return `Live in ${h}h ${m}m ${String(sec).padStart(2,'0')}s`;
   return `Live in ${m}m ${String(sec).padStart(2,'0')}s`;
 }
@@ -1054,7 +1054,7 @@ function render(){
      votes to buy, so it is the tip alone, across the full width. */
   const dock=$('#dock');
   dock.hidden=false;
-  const tipBtn=`<button class="btn btn-pri" onclick="openTip()"><b>Tip ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Say thanks</small></button>`;
+  const tipBtn=`<button class="btn btn-pri" onclick="openTip()"><b>Support ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Show your appreciation</small></button>`;
   dock.innerHTML=(ended||c.unlimited)
     ? tipBtn
     : `<button class="btn btn-buy" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>${tipBtn}`;

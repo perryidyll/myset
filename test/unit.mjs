@@ -1,6 +1,7 @@
 import { playable, votable, inPlay, rankSongs, newShowId } from '../netlify/functions/_lib.mjs';
 import { shapeLists } from '../netlify/functions/_lists.mjs';
 import { findUltimateGuitarLink, ultimateGuitarSearch } from '../netlify/functions/_chords.mjs';
+import { addressFromMapUrl, resolveShortMapPlace } from '../netlify/functions/_maps.mjs';
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -133,6 +134,22 @@ console.log('\nUltimate Guitar direct-link resolver');
     findUltimateGuitarLink(`{&quot;id&quot;:1,${html}}`, 'Blackbird', 'Sarah McLachlan'), null);
   eq('the fallback stays a filtered provider search',
     ultimateGuitarSearch('Blackbird', 'The Beatles').includes('search_type=title&value=Blackbird%20The%20Beatles'), true);
+}
+
+console.log('\nGoogle Maps short-link resolver');
+{
+  const full = 'https://maps.google.com?q=145,+The+Ugly+Duckling,+2+Taladkao+Rd,+Ko+Pha-ngan,+Thailand&ftid=place';
+  eq('the exact address is read from a safe Google redirect', addressFromMapUrl(full),
+    '145, The Ugly Duckling, 2 Taladkao Rd, Ko Pha-ngan, Thailand');
+  const place = await resolveShortMapPlace({ mapUrl: 'https://maps.app.goo.gl/unit-test-ugly-duckling' },
+    async () => new Response(null, { status: 302, headers: { location: full } }));
+  eq('a short share link becomes a place the interactive map can geocode', place.address,
+    '145, The Ugly Duckling, 2 Taladkao Rd, Ko Pha-ngan, Thailand');
+  const checked = await resolveShortMapPlace({ address: 'Wrong Road, Amsterdam',
+      mapUrl: 'https://maps.app.goo.gl/unit-test-address-check' },
+    async () => new Response(null, { status: 302, headers: { location: full } }));
+  eq('the exact Google place corrects a conflicting typed address', checked.address,
+    '145, The Ugly Duckling, 2 Taladkao Rd, Ko Pha-ngan, Thailand');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

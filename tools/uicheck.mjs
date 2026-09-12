@@ -97,8 +97,8 @@ const D=await pg.evaluate(async ()=>{
   closeSheet();
   draw(true,false);
   ok('ended: the dock is STILL there', !dock.hidden);
-  ok('and it is the tip, on its own', dock.querySelectorAll('button').length===1 &&
-     /Tip Test/.test(dock.innerText), dock.innerText.replace(/\n/g,' | '));
+  ok('and it is support, on its own', dock.querySelectorAll('button').length===1 &&
+     /Support Test/.test(dock.innerText)&&/Show your appreciation/.test(dock.innerText), dock.innerText.replace(/\n/g,' | '));
   ok('across the full width', dock.querySelector('button').getBoundingClientRect().width>330,
      String(Math.round(dock.querySelector('button').getBoundingClientRect().width)));
   return out.join('\n');
@@ -265,6 +265,11 @@ const PR=await pg.evaluate(async ()=>{
      sects.indexOf('Watch & listen')===sects.length-1, sects.join(' | '));
   const links=app.querySelector('.links').getBoundingClientRect();
   ok('the links are above the fold on a phone', links.top<844, `top ${Math.round(links.top)}`);
+  P.live=false;const startsAt=Date.now()+65000;
+  G={ok:true,gigs:[{date:'2099-01-01',time:'20:00',startsAt,endsAt:startsAt+10800000,venue:'The Room',city:'Bangkok',country:'Thailand'}]};
+  render();const before=document.querySelector('#joinBtn').textContent;
+  await new Promise(r=>setTimeout(r,1100));const after=document.querySelector('#joinBtn').textContent;
+  ok('the profile countdown seconds move in real time',/\d{2}s/.test(before)&&before!==after,`${before} -> ${after}`);
   return out.join('\n');
 });
 console.log('\nPROFILE PAGE\n'+PR);
@@ -321,7 +326,7 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   D={ok:true,paymentsEnabled:true,voters:2,room:2,nets:1,asks:[
       {id:'req1',kind:'song',status:'pending',title:'Cash Request',artist:'Band',cost:3,at:Date.now(),pledgeCents:500,pledgeVotes:5,pledgeState:'authorized'}],feedback:{},
     tips:{total:0,count:0,recent:[]},songs:[
-      {id:'alpha',title:'Alpha',artist:'T',votes:4,paidVotes:2,active:true,votable:true,inSet:true,played:false,now:false},
+      {id:'alpha',title:'Alpha',artist:'T',key:'Am',tags:['rock'],votes:4,paidVotes:2,active:true,votable:true,inSet:true,played:false,now:false},
       {id:'bravo',title:'Bravo',artist:'T',votes:1,paidVotes:0,active:true,votable:true,inSet:true,played:false,now:false},
       ...Array.from({length:13},(_,i)=>({id:'extra'+i,title:'Extra '+i,artist:'T',votes:0,paidVotes:0,active:true,votable:true,inSet:true,played:false,now:false})),
       {id:'current',title:'Current',artist:'T',votes:0,paidVotes:0,active:true,votable:false,inSet:true,played:false,now:true}],
@@ -387,6 +392,16 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
     !/Decline \+ refund votes/.test(document.querySelector('#app').innerText));
   const studioSet=document.querySelector('.setlist-window');
   const studioSetShell=document.querySelector('.setlist-shell');
+  const setTools=[...document.querySelectorAll('.setlist-tools .big')];
+  const organize=[...document.querySelectorAll('.orange-outline')].find(x=>/Organize your songs/.test(x.innerText));
+  ok('setlist creation buttons match the standard height and leave a gap below',
+    setTools.length===2&&Math.abs(setTools[0].getBoundingClientRect().height-setTools[1].getBoundingClientRect().height)<1&&
+      setTools[0].getBoundingClientRect().height<=58&&organize&&organize.getBoundingClientRect().top-setTools[0].getBoundingClientRect().bottom>=9,
+    setTools.map(x=>Math.round(x.getBoundingClientRect().height)).join('/')+(organize?`; gap ${Math.round(organize.getBoundingClientRect().top-setTools[0].getBoundingClientRect().bottom)}`:''));
+  const songCard=document.querySelector('.songcard'), songActions=songCard&&songCard.querySelector('.songactions');
+  ok('setlist song copy spans the card and tags/actions each get their own wrapping row',
+    songCard&&songActions&&getComputedStyle(songCard).display==='block'&&songActions.getBoundingClientRect().top>songCard.querySelector('.songmeta').getBoundingClientRect().bottom&&
+      Math.abs(songCard.querySelector('.m').getBoundingClientRect().right-songCard.getBoundingClientRect().right+16)<2&&getComputedStyle(songCard.querySelector('.songmeta')).flexWrap==='wrap');
   ok('the artist setlist is capped at ten rows with the same thumb lane and glow',
     studioSet&&studioSetShell&&studioSet.scrollHeight>studioSet.clientHeight&&studioSet.clientHeight<=721
       &&innerWidth-studioSetShell.getBoundingClientRect().right>=54&&getComputedStyle(studioSetShell).animationName==='edgeGlow',
@@ -450,17 +465,24 @@ console.log('\nPUBLIC THEME\n'+THEME);
 
 // ---------- 6: the searchable artist directory ----------
 await pg.goto(`http://127.0.0.1:${PORT}/artists.html`,{waitUntil:'networkidle0'});
-const DIRECTORY=await pg.evaluate(()=>{
+const DIRECTORY=await pg.evaluate(async()=>{
   const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
   ok('the artist directory renders every artist',document.querySelectorAll('.artistcard').length===2,String(document.querySelectorAll('.artistcard').length));
   const first=document.querySelector('.artistcard');
   ok('the name and one-liner are separate spaced lines',getComputedStyle(first.querySelector('.name')).display==='block'&&parseFloat(getComputedStyle(first.querySelector('.tag')).marginTop)>=4);
   ok('the directory shows location, style, signed, numeric and icon ratings, and both MySet show counts',/Bangkok, Thailand/.test(first.innerText)&&/Soul/.test(first.innerText)&&/Signed/.test(first.innerText)&&/4.5\/5/.test(first.innerText)&&/★★★★★/.test(first.innerText)&&/next 30 days/.test(first.innerText)&&/12 MySet shows total/.test(first.innerText),first.innerText);
   const mapButton=document.querySelector('#mapBtn');mapButton.click();
-  const modal=document.querySelector('#mapModal'),mapImage=modal.querySelector('.mapcanvas img');
+  const modal=document.querySelector('#mapModal'),mapViewport=modal.querySelector('#mapViewport');
   ok('View map opens an accessible popup with every filtered event',!modal.hidden&&modal.getAttribute('aria-modal')==='true'&&modal.querySelectorAll('.mapevent').length===1);
-  ok('the popup sends the exact coordinate to a labeled static-map pin',mapImage&&/13\.75%2C100\.5/.test(mapImage.src)&&/label%3AA/.test(mapImage.src),mapImage&&mapImage.src);
+  ok('the popup opens an interactive map viewport for the exact event location',!!mapViewport&&/A/.test(modal.querySelector('.pinlabel')?.textContent||''));
   ok('each mapped event keeps its exact directions link',modal.querySelector('.mapgo')?.href==='https://maps.google.com/?q=13.75,100.5');
+  const good={formatted_address:'145, 2 Taladkao Rd, Ko Pha-ngan District, Surat Thani 84280, Thailand',partial_match:false,
+    address_components:[{long_name:'Ko Pha-ngan District',short_name:'Ko Pha-ngan',types:['administrative_area_level_2']},{long_name:'Thailand',short_name:'TH',types:['country']}],geometry:{location:{lat:()=>9.73,lng:()=>100.01}}};
+  const wrong={...good,formatted_address:'Amsterdam, Netherlands',address_components:[{long_name:'Amsterdam',short_name:'Amsterdam',types:['locality']},{long_name:'Netherlands',short_name:'NL',types:['country']}],geometry:{location:{lat:()=>52.37,lng:()=>4.89}}};
+  const event={venue:'The Ugly Duckling',address:'145, 2 Taladkao Rd',city:'Koh Phangan',country:'Thailand',maps:{lat:null,lng:null}};
+  const accepted=await positionFor({},event,{geocode:async()=>({results:[wrong,good]})});
+  const refused=await positionFor({},event,{geocode:async()=>({results:[wrong]})});
+  ok('map pins automatically reject a Google result in the wrong city or country',accepted&&accepted.lat()===9.73&&refused===null);
   document.querySelector('#mapClose').click();
   document.querySelector('#upcoming').click();
   ok('the upcoming-show filter narrows the directory',document.querySelectorAll('.artistcard').length===1&&/Demo Artist/.test(document.querySelector('#artists').innerText));
