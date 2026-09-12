@@ -66,12 +66,15 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0054](0054-a-signed-in-request-costs-two-hops-not-four.md) | A signed-in request costs two hops, not four | 2026-09-12 | performance | decided | perry-confirmed |
 | [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) | The artist plans are sold as Hobbyist, Bar Star and Rock Star | 2026-09-12 | plans | decided | perry |
 | [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md) | Fans can RSVP to a listed show without an account | 2026-09-12 | general | decided | perry |
+| [0057](0057-a-filed-night-can-be-renamed-by-hand-from-the-mone.md) | A filed night can be renamed by hand from the Money tab | 2026-09-12 | history | decided | perry-confirmed |
 
 ## By area
 
 **auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md)
 
 **general** — [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md)
+
+**history** — [0057](0057-a-filed-night-can-be-renamed-by-hand-from-the-mone.md)
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) · [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md)
 

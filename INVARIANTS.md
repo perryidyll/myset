@@ -2049,6 +2049,17 @@ If you are about to violate one, stop and say so rather than working around it.
     nights already filed — but only where a gig was actually running when that night
     started, because a confidently wrong venue is worse than an out-of-date one.
 
+0fm. **A name the artist typed for a night outlives every automatic one.** A rename
+    from the Money tab (`renameShow`, decision 0057) writes `title` and
+    `titleByHand: true` on the detail document and `title` on the index row; a
+    richer re-archive of the same night (17c's other half) restores both fields
+    after it copies the fresh snapshot in, and the row is rebuilt from what was
+    kept. Only the detail carries the flag, so any future writer of `title` — a
+    smarter `placeShows`, a calendar back-fill, an import — reads `titleByHand`
+    first or it quietly undoes the artist. The name is folded and cut to 100
+    characters on the way in, and only the owner's token can reach it: the key
+    is per artist, so somebody else's showId is a document that is not there.
+
 0f6. **A countdown is sent as TIME LEFT, never as the moment it ends.** `show.countdownAt`
     is a server timestamp; the payload carries `countdownIn` in milliseconds, and the
     phone turns that into its own local deadline. A device whose clock is four minutes

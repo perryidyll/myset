@@ -224,7 +224,7 @@
 .sect.votehead b{color:var(--accent-2)}
 .sect span{font-size:12.5px;color:var(--faint)}
 .list{margin:0 18px;border-radius:var(--r);background:var(--surface);box-shadow:var(--sh-1);overflow:hidden}
-.list.votelist{margin-right:55px;max-height:660px;overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;
+.list.votelist{position:relative;margin-right:55px;max-height:660px;overflow-y:auto;overscroll-behavior:contain;overflow-anchor:none;
   touch-action:pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:thin;
   border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);animation:edgeGlow 6.4s cubic-bezier(.45,0,.55,1) infinite}
 .prow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
@@ -239,9 +239,20 @@
 .queuednote{font-size:11.5px;color:var(--accent-2);font-weight:650;margin-top:3px}
 .playednote{font-size:11.5px;font-weight:700;color:var(--accent-2);margin-top:4px;line-height:1.3}
 .buyline,.secure-votes{color:var(--accent-2)!important}
+/* THE STUDIO'S RECIPE, BYTE FOR BYTE (studio.html, .scroll-shell's edgeGlow). The
+   audience windows and the artist's setlist window breathe the same orange at the
+   same right-hand edge — the founder asked for them to match (2026-09-12) after
+   this page's copy drifted to `filter: drop-shadow` with the same numbers. A
+   drop-shadow is computed from the element's alpha on its own compositor layer and
+   three of them do not sum the way three box-shadows do, so the same values paint
+   a different edge (in Chrome: dimmer at the border, flatter across the 55px
+   margin; on the phone the founder saw the two differ). The base --sh-2 / --sh-1
+   on .queue and .list.votelist are overridden while this runs, exactly as in the
+   Studio; the frames carry --sh-1 underneath so the lift never blinks out. Change
+   this only together with the Studio's copy, or the two diverge again. */
 @keyframes edgeGlow{
-  0%,100%{filter:drop-shadow(12px 0 15px rgba(255,122,69,.16)) drop-shadow(30px 0 38px rgba(255,69,110,.07)) drop-shadow(54px 0 62px rgba(255,122,69,.025))}
-  50%{filter:drop-shadow(18px 0 24px rgba(255,122,69,.42)) drop-shadow(44px 0 54px rgba(255,69,110,.18)) drop-shadow(72px 0 80px rgba(255,122,69,.07))}
+  0%,100%{box-shadow:var(--sh-1),12px 0 15px rgba(255,122,69,.16),30px 0 38px rgba(255,69,110,.07),54px 0 62px rgba(255,122,69,.025)}
+  50%{box-shadow:var(--sh-1),18px 0 24px rgba(255,122,69,.42),44px 0 54px rgba(255,69,110,.18),72px 0 80px rgba(255,122,69,.07)}
 }
 
 /* vote button */

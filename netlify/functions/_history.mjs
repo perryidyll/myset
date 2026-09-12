@@ -214,7 +214,12 @@ export async function archiveShow(aid, show, fans) {
       const richer = (doc.played || []).length > (d.played || []).length
         || (doc.stats.totalVotes || 0) > ((d.stats || {}).totalVotes || 0);
       if (!richer) { d.money = money; d.archivedAt = endedAt; kept = d; return true; }
-      Object.assign(d, doc); kept = d; return true;
+      /* A name the artist TYPED outlives a richer snapshot. renameShow stamps
+         `titleByHand`; without this the same night ended again with more songs
+         would put show.archiveTitle (or nothing) back over it, and the index row
+         below is built from what was kept, so it would follow. */
+      const hand = d.titleByHand ? { title: d.title, titleByHand: true } : null;
+      Object.assign(d, doc); if (hand) Object.assign(d, hand); kept = d; return true;
     }
     Object.assign(d, doc); kept = d; return true;
   }).then(() => { stored = true; })
@@ -514,6 +519,37 @@ export async function placeShows(aid) {
     return touched;
   }).catch(() => {});
   return { ok: true, placed: changes.length, looked: rows.length };
+}
+
+/* NAMING ONE NIGHT BY HAND. A show started from the Live tab is filed under the
+   venue that was typed, or as nothing at all ("Untitled show" on the page), and
+   placeShows only renames what the calendar can prove. This is the artist saying
+   what the night was called, from the Money tab (the founder, 2026-09-12). The
+   detail document first, then the row — the same lean as every repair in this
+   file: the detail is the record, the row is the summary of it, and healHistory
+   rebuilds rows from details. `titleByHand` is what archiveShow reads to keep the
+   name through a richer re-archive. Per-artist key, so another artist's showId
+   is simply a document that does not exist: null, and the caller answers 404.
+   The title is folded and cut to 100 here as well as in history.mjs, so the
+   function is safe from any caller, and the cut title is what comes back. */
+export async function renameShow(aid, showId, title) {
+  const t = String(title || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+  if (!showId || !t) return null;
+  let found = false;
+  await casDoc(HIST(aid, showId), () => ({}), (d) => {
+    if (!d || !d.showId) return false;
+    found = true;
+    if (d.title === t && d.titleByHand) return false;
+    d.title = t; d.titleByHand = true;
+    return true;
+  });
+  if (!found) return null;
+  await casDoc(INDEX(aid), () => ({ shows: [] }), (idx) => {
+    const row = (idx.shows || []).find((x) => x.showId === showId);
+    if (!row || row.title === t) return false;
+    row.title = t; return true;
+  });
+  return { showId, title: t };
 }
 
 export async function readHistIndex(aid) {

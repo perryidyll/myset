@@ -7,7 +7,7 @@ sources:
   - netlify/functions/moneymodel.mjs; finance/README.md, finance/model.html, finance/actuals.json, finance/marks.json
   - tools/actuals.py, tools/actuals-test.py, tools/loadsim.py
   - MYSET-MASTER-OVERVIEW.md §3.3 Money, §3.8, §5.7
-  - docs/decisions/0031, 0032
+  - docs/decisions/0031, 0032, 0057
   - docs/sessions/2026-09-05-money-model.md
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps)
@@ -31,7 +31,8 @@ verified: code read 2026-09-12 (_history.mjs moneyForShow window; actuals.py hea
 | h09 | Mark bandwidth before and after | task | Person | Founder R | Netlify | `tools/actuals.py --mark` records Netlify bandwidth readings into `finance/marks.json`; the script solves polls per phone-hour out of consecutive marks. `src: finance/README.md` |
 | h10 | Update the money model | task | Person | Founder R | Netlify | Paste `actuals.json` into the dashboard's *Real shows* panel (`/moneymodel`, behind a passcode, served by `moneymodel.mjs` from `finance/` outside the published folder — INVARIANT 0ec). Inputs are labelled **measured / published / simulated / guessed**, and the page says which. Every projection is a projection: one paid gig to date. `src: finance/README.md; ledger metrics` |
 | h11 | Test the night rules offline | task | AI Agent | Coding agent R | — | `python3 tools/actuals-test.py` against `finance/fixtures/2026-09-11/` (a read-only snapshot, nothing secret) and the bandwidth solver on synthetic marks; `node finance/model-test.mjs` for the engine. `src: finance/README.md` |
+| h12 | Name a night by hand | task | Person | Artist R · MySet server R | Netlify | Studio → Money → Past shows: tap the night's name (or the name at the top of an opened night) and type what it was called — the ask of 2026-09-12 for a show started by hand, which `placeShows` can never name because no gig lines up with it. `POST /api/history {action:'rename', show, title}` → `renameShow`: the detail document gets `title` + `titleByHand:true`, then the index row gets `title`; a richer re-archive keeps both (INVARIANT 0fm); 100 characters, whitespace folded; owner-only by key, so another artist's showId is a 404. Unchanged, blank and cancelled prompts send nothing; the past-shows search finds a night by its typed name. Decision 0057. `src: _history.mjs renameShow; history.mjs; studio.js renameNight; test/histname.mjs` |
 
 ## Connections
 
-h01 → h02 → h03; h03 → h04 / h05 / h06 (artist tools); h01 → h07 (nightly); h01 → h08 → h10; h09 → h08; h08 → h11.
+h01 → h02 → h03; h03 → h04 / h05 / h06 / h12 (artist tools); h01 → h07 (nightly); h01 → h08 → h10; h09 → h08; h08 → h11.

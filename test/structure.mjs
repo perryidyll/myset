@@ -75,5 +75,20 @@ check('public/venue-studio.html', [
     if (!okInline) fail++;
   }
 }
+/* THE EDGE GLOW IS ONE RECIPE. The orange pulse on the right edge of a scrolling
+   window is the Studio's box-shadow keyframes, and the audience's vote page carries
+   a copy (it never waits on the Studio's CSS). The founder asked on 2026-09-12 for
+   the two to match; a filter: drop-shadow variant on the vote page had drifted
+   from it and painted differently on a phone. Byte for byte, or this fails. */
+{
+  const block = (file) => {
+    const s = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+    return (s.match(/\n@keyframes edgeGlow\{\n[\s\S]*?\n\}/) || [''])[0];
+  };
+  const a = block('public/studio.html'), b = block('public/vote.html');
+  const same = a.length > 0 && a === b;
+  console.log(`  ${same ? '✓' : '✗'} @keyframes edgeGlow is byte-identical in studio.html and vote.html${same ? '' : ' — copy the Studio\'s block over'}`);
+  if (!same) fail++;
+}
 console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
 process.exit(fail ? 1 : 0);
