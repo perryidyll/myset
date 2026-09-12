@@ -20,7 +20,7 @@
      the request that decides what is on screen would wait behind them. Here it is
      already in flight while they load; boot() below picks up the reply. Used once,
      on the first load only — a pull-to-refresh fetches fresh. -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const a=S?'&a='+encodeURIComponent(S):'',a1=S?'?a='+encodeURIComponent(S):'';let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}const g=(u,o)=>{const f=fetch(u,o);f.catch(()=>{});return f};window.__early={board:g('/api/board'+a1),me:g('/api/me?fan='+encodeURIComponent(F)+'&in=1'+a,{cache:'no-store'})}}catch(e){}})();</script>
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const a=S?'&a='+encodeURIComponent(S):'',a1=S?'?a='+encodeURIComponent(S):'';let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}const g=(u,o)=>{const f=fetch(u,o);f.catch(()=>{});return f};window.__early={board:g('/api/fan?what=board'+a1.replace('?','&')),me:g('/api/fan?what=me&fan='+encodeURIComponent(F)+'&in=1'+a,{cache:'no-store'})}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
@@ -468,8 +468,8 @@ async function load(){
      how old the edge's copy is, and the countdown is corrected by it. */
   const E=window.__early||{}; window.__early=null;     // the head started these; see <head>
   const [b,m]=await Promise.all([
-    (E.board||fetch(`${API}/board${AQ1}`)).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null),
-    (E.me||fetch(`${API}/me?fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
+    (E.board||fetch(`${API}/fan?what=board${AQ1.replace('?','&')}`)).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null),
+    (E.me||fetch(`${API}/fan?what=me&fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
   ]);
   /* A personal reply can have left the server before this phone's last cast landed
      (it was already in flight when the tap happened), so its `lastAt` may be older
@@ -885,7 +885,7 @@ let GIGS=null, GIGS_ASKED=false, NEXT_TIMER=null;
 async function loadGigs(){
   if(GIGS_ASKED)return; GIGS_ASKED=true;
   /* `?a=` with nothing after it is the founding page's own diary (events.mjs). */
-  try{ const d=await fetch(`${API}/events${AQ1||'?a='}&n=2`,{cache:'no-store'}).then(r=>r.json()); if(d&&d.ok) GIGS=d.gigs||[]; }
+  try{ const d=await fetch(`${API}/fan?what=events${(AQ1||'?a=').replace('?','&')}&n=2`,{cache:'no-store'}).then(r=>r.json()); if(d&&d.ok) GIGS=d.gigs||[]; }
   catch(e){ GIGS=[]; }
   if(ST&&ST.status!=='live') render();          // draws the label and the venue line
 }

@@ -500,7 +500,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | | |
 |---|---|
 | Public pages | 10 — about.html, artist.html, artists.html, community.html, index.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 30 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
+| HTTP functions | 31 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
 | Shared libraries | 45 |
 | Artist Studio actions | 125 |
@@ -510,9 +510,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | Invariants | 253 (last: 0fk) |
-| Test suites | 41 |
+| Test suites | 42 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 48 |
+| Decision records | 49 |
 
 ### Feature flags in force
 
