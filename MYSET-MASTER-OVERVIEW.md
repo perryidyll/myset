@@ -430,7 +430,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 
 ### The artist ladder, exactly as the server enforces it
 
-| | Free | Plus | Pro |
+| | Hobbyist | Bar Star | Rock Star |
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
@@ -451,7 +451,7 @@ Everyone keeps up to **2,000** songs in their library on any plan — the cap
 above limits how many are *live to the audience*, and it never deletes anything.
 
 **Designed and not built:** `promote`, `analytics`, `presskit`, `branding`. These are named in
-`NOT_BUILT` in `_plan.mjs` and are greyed as *"Coming soon"* on **every** plan including Pro.
+`NOT_BUILT` in `_plan.mjs` and are greyed as *"Coming soon"* on **every** plan including Rock Star.
 Deleting a name from that list is the last step of building the feature, and
 `test/limits.mjs` asserts that anything **not** in the list is genuinely enforced somewhere.
 
@@ -500,19 +500,19 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | | |
 |---|---|
 | Public pages | 10 — about.html, artist.html, artists.html, community.html, index.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 31 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
+| HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
-| Shared libraries | 45 |
+| Shared libraries | 46 |
 | Artist Studio actions | 125 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
-| Invariants | 253 (last: 0fk) |
-| Test suites | 42 |
+| Invariants | 254 (last: 0fk) |
+| Test suites | 43 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 54 |
+| Decision records | 56 |
 
 ### Feature flags in force
 
@@ -530,7 +530,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | `audience` | a **soft** ceiling stamped onto the show; the room slows and shortens, nobody is refused | `_lib.mjs` (`pollFloorFor`, `boardLimitFor`), `show.mjs` |
 | `seats` | team members who can sign in | `_account.mjs` |
 | `pricing` | setting your own vote-pack prices, replay cost and request costs | `admin.mjs`, 402 |
-| `setlists` | **creating** a named setlist. Only creating — an artist who made sets on Plus and drops to free keeps using, renaming, filling and deleting them, because **a cap never deletes anything** | `_lists.mjs` |
+| `setlists` | **creating** a named setlist. Only creating — an artist who made sets on Bar Star and drops to Hobbyist keeps using, renaming, filling and deleting them, because **a cap never deletes anything** | `_lists.mjs` |
 | `merch` | selling items from the community page | `_plan.mjs` `merchAllowed()`, checked by the Studio, the checkout **and** the page — one answer, three readers |
 | `moderate` | **deleting** a fan's post for good. **Hiding is free on every plan, for ever** | `_plan.mjs` `moderateAllowed()` |
 
@@ -557,7 +557,7 @@ way, and the count cannot be fudged from a phone.
 Decision record
 [`0003`](docs/decisions/0003-the-free-tier-is-capped-by-gigs-not-features.md).
 
-## 2.4 "Plus feature" versus "Coming soon"
+## 2.4 "Bar Star feature" versus "Coming soon"
 
 Locked features are **shown, greyed out — never hidden**. Perry's call, and it fixed a
 real shrug: the pricing controls were fully tappable on free and the server refused them
@@ -566,9 +566,9 @@ with a 402.
 Two states, and the difference is honesty:
 
 - **`.lock`** — built, and a higher plan turns it on. The veil is a button; tapping it
-  scrolls to the plan cards. Reads *"Plus feature"* / *"Pro feature"*, naming the
+  scrolls to the plan cards. Reads *"Bar Star feature"* / *"Rock Star feature"*, naming the
   **cheapest** plan that actually has it.
-- **`.lock.soon`** — designed and **not built**. Greyed on **every** plan including Pro,
+- **`.lock.soon`** — designed and **not built**. Greyed on **every** plan including Rock Star,
   not tappable, reads *"Coming soon"*.
 
 `pointer-events: none` is the lock; opacity is only how it looks. A lock that is only
@@ -742,7 +742,7 @@ said** — the star ratings and their notes.
 
 **Profile** — name, bio, photos with cropping; links; embedded music from YouTube,
 Spotify and Apple Music; then **merch** — up to 12 items (name, line, price, pickup or
-posted, on/off, picture), a **Plus** feature, with its **orders** (a Details sheet
+posted, on/off, picture), a **Bar Star** feature, with its **orders** (a Details sheet
 fetches the buyer's name and address from Stripe **at that moment** and keeps nothing);
 Save profile; your community page (reply / pin / hide / delete); the public page
 address.
@@ -874,7 +874,7 @@ encodes an identity: *MySet is not selling the night — the artist is, and MySe
 the infrastructure.*
 
 **The trade, stated plainly:** with direct charges, Stripe's own processing fee
-(~2.9% + 30¢) is charged to **the artist**, not to MySet. On a $5 vote pack a Plus artist
+(~2.9% + 30¢) is charged to **the artist**, not to MySet. On a $5 vote pack a Bar Star artist
 pays roughly 45¢ to Stripe and 50¢ to MySet. ***"10% to MySet" is not "you keep 90%."***
 The Studio says this before an artist onboards.
 
@@ -1440,9 +1440,9 @@ records, never the index.**
 
 # PART 8 — WHAT IS NOT DONE
 
-- **Four Pro features are sold in the plan copy and not built** — `promote`, `analytics`,
+- **Four Rock Star features are sold in the plan copy and not built** — `promote`, `analytics`,
   `presskit`, `branding`. They are named in `NOT_BUILT` and shown as *"Coming soon"* on
-  every plan including Pro (§2.4).
+  every plan including Rock Star (§2.4).
 - **Venue tips and venue speaker-voting** — same treatment on the venue ladder.
 - **Venue merch cannot be bought through MySet** where the venue has no payout account;
   those items sell through the venue's own link, and the Venue Studio says so.

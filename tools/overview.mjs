@@ -231,7 +231,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 
 ### The artist ladder, exactly as the server enforces it
 
-| | Free | Plus | Pro |
+| | ${p.free.label} | ${p.plus.label} | ${p.pro.label} |
 |---|---|---|---|
 | Price per month | ${money(p.free.price)} | **${money(p.plus.price)}** | **${money(p.pro.price)}** |
 | MySet's cut of money taken through the app | **${pct(p.free.cut)}** | **${pct(p.plus.cut)}** | **${pct(p.pro.cut)}** |
@@ -245,7 +245,7 @@ Everyone keeps up to **${f.plans.maxLibrary.toLocaleString()}** songs in their l
 above limits how many are *live to the audience*, and it never deletes anything.
 
 **Designed and not built:** ${f.plans.notBuilt.map((x) => `\`${x}\``).join(', ')}. These are named in
-\`NOT_BUILT\` in \`_plan.mjs\` and are greyed as *"Coming soon"* on **every** plan including Pro.
+\`NOT_BUILT\` in \`_plan.mjs\` and are greyed as *"Coming soon"* on **every** plan including ${p.pro.label}.
 Deleting a name from that list is the last step of building the feature, and
 \`test/limits.mjs\` asserts that anything **not** in the list is genuinely enforced somewhere.
 

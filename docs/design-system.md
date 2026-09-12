@@ -89,7 +89,7 @@ Dark shadows are heavier (`app.css:47–49`) because a shadow on black has to be
 
 **The Studios have their own token blocks** (`studio.html:43–63`, `venue-studio.html:29–49`) with the same names and values but a shorter list: no `--r-xs`, `--r-xl`, `--sh-3`, `--sh-accent`, `--grad-warm`, `--bg-2`; and the Venue Studio has no `--accent-ink` at all. That is why every rule in `lock.css` reads `var(--x, fallback)`, and why `.btn-text` there falls back to `--accent` rather than a literal pink (`lock.css:72–76`, `87`) — the literal was one theme's pink on both grounds.
 
-Fixed colours that are *not* tokens, and why: `#FF375F` on the Studio's Live tab (`studio.html:105–107`, pinned by `test/copy.mjs:119` — it is red in both themes on purpose); `#000` on the dark tab bar (`lock.css:113–117`, § 7); the six clay icons (§ 12), which carry their own gradient so they render the same in both themes; `#fff` on any gradient fill.
+Fixed colours that are *not* tokens, and why: `#FF375F` on the Studio's Live tab (`studio.html:105–107`, pinned by `test/copy.mjs:119` — it is red in both themes on purpose); `#141417` into `#000` on the dark tab bar (`lock.css:129–133`, § 7), and `#FF3B30` — a true red, not the pink accent — as the ring on the artist page's countdown (`artist.html:166`); the six clay icons (§ 12), which carry their own gradient so they render the same in both themes; `#fff` on any gradient fill.
 
 The provenance marker `--ms-k` (`app.css:6–9`) is not a token. Leave it alone.
 
@@ -204,26 +204,28 @@ A floating block pinned to the bottom of the phone: what is true right now, and 
 
 - The state slot may never push the button off: it shrinks and ellipsises first (`min-width:0` is what allows that in a flex row).
 - **A page that shows it pads its own bottom** and lifts its toast above it — the artist page does both (`artist.html:45`, `162`). The toast is z 70, the pill z 50, sheets 60/61: a sheet covers the pill, and a toast that was not lifted covered most of it for three seconds.
-- The artist page's variant stacks the two halves as a centred column (the founder's call, `artist.html:154–171`): one state line ("Next: Thu 6:30pm · Seaflower Bungalows", "Live now · 23 voting", "No shows listed") over one action, in a `--r-lg` block. While live the action is `btn-pri` with the `emberGlow` pulse; before a gig it is `btn-ink` with the countdown; with nothing listed it is `btn-ink` "Community". `#joinBtn` stays inside `#app` and reads "TAP TO VOTE THE SETLIST" when live (`tools/uicheck.mjs`, `test/copy.mjs`).
+- The artist page's variant stacks the two halves as a centred column (the founder's call, `artist.html:154–171`): one state line ("Next: Thu 6:30pm · Seaflower Bungalows", "Live now · 23 voting", "No shows listed") over one action, in a `--r-lg` block. While live the action is `btn-pri` with the `emberGlow` pulse; before a gig it is `btn-ink` with the countdown, wearing a 1.5px true-red ring (`#FF3B30` — a ring, not a live state); with nothing listed it is `btn-ink` "Community". Since 2026-09-12 the block itself wears the orange ring (`--accent-2`) and the state line's bold half is orange too (`artist.html:154–166`, the founder's colours). `#joinBtn` stays inside `#app` and reads "TAP TO VOTE THE SETLIST" when live (`tools/uicheck.mjs`, `test/copy.mjs`).
 
 ---
 
 ## 7. The bottom tab bar
 
-One recipe for both Studios (`lock.css:113–133`; the reasons at `98–112`):
+One recipe for both Studios (`lock.css:129–162`; the reasons at `92–128`). Since the facelift of 2026-09-12 the bar is a slab, not a flat strip:
 
 ```
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;justify-content:center;
   height:calc(52px + env(safe-area-inset-bottom));padding:0 0 env(safe-area-inset-bottom);
-  background:#000;border-top:.5px solid var(--hair,rgba(255,255,255,.09));
-  box-shadow:0 -6px 24px rgba(0,0,0,.28)}
-:root[data-theme=light] .tabbar{background:var(--surface,#fff);box-shadow:0 -4px 18px rgba(0,0,0,.08)}
+  background:linear-gradient(180deg,#141417,#000 72%);
+  border-top:.5px solid rgba(255,255,255,.14);
+  box-shadow:0 -10px 32px rgba(0,0,0,.6)}
+.tabbar::before{ … a 105deg sheen, pointer-events:none … }
+:root[data-theme=light] .tabbar{background:linear-gradient(180deg,#FFFFFF,#F2F2F5); …}
 ```
 
 - **Fixed, where a thumb already is.** Each Studio used to carry a sticky pill under its header whose height had to be measured (`fitTabs` / `--headh`); a fixed bar has no header to clear. `test/structure.mjs:27–37`, `54–57` now assert those are gone and that each Studio has exactly one `tabBar()` (`studio.html:2961`, `venue-studio.html:1431`).
-- **Black in the dark, not surface grey**: on a black page a grey bar merged with the cards above it. A clean surface in the light, with a lighter shadow.
+- **Black in the dark, not surface grey**: on a black page a grey bar merged with the cards above it — and a flat `#000` merged with the page. So: graphite into true black, a hairline of light on the top edge, a deeper lift shadow and a faint diagonal sheen (`.tabbar::before`, with `.in` stacked above it so nothing sits between a thumb and a button). A clean surface in the light, white into off-white, with a darker hairline and a lighter shadow (the founder's ask, 2026-09-12: "black on dark mode with a subtle futuristic sheen … feel 3D").
 - z-index 55: above each Studio's header and page, under its sheet backdrop (60), so a sheet still dims it.
-- The selected tab wears a **ring**, not a fill: a pill drawn by `button::before` behind icon and label, inset from the button so five tabs still read at 375px, with the hit area the full fifth of the bar (`lock.css:119–133`). The Live tab keeps its red in both themes (`studio.html:105–107`).
+- The selected tab wears an **orange ring** (`--accent-2`) and reads **raised**: a pill drawn by `button::before` behind icon and label, inset from the button so five tabs still read at 375px, with the hit area the full fifth of the bar (`lock.css:150–162`) — a lit inner top edge, a shaded inner bottom, an orange tint fading downward, a soft orange glow beneath, and the icon and label lifted a pixel. Unselected tabs stay quiet (muted, no ring, the icon embossed a hair in the dark). The Live tab keeps its pink in both themes (`studio.html:105–107`); the ring still shows around it because it lives on `::before`.
 - Each Studio's body reserves the bar's height at the bottom and lifts its toast to `64px + env(safe-area-inset-bottom)` (`studio.html:638`, `venue-studio.html:337`).
 - Five tabs each: Live · Setlist · Gigs · Money · Menu (Artist), Page · What's on · Numbers · Merch · Menu (Venue). Menu opens a sheet of `.menurow`s (`lock.css:137–148`): Profile / Settings / Your plan / Sign out, or Food & drink / Settings / Your plan / Sign out. The tab remembered in `localStorage` (`myset.tab`, default `setlist`) is unchanged (`test/copy.mjs`).
 
@@ -278,7 +280,7 @@ The whole system moves on two curves: `--spring` for things that arrive or are p
 
 - **Entrance.** `.rise` is `.5s` on `--ease` (`app.css:248–249`); `.stagger>*` arrives in `.45s`, each child 30ms after the last (`250–255`). Do not re-render a page to change one thing — a full `render()` replays every entrance while the person is mid-page. Reveal in place (the venue's "Show all" drops a class; the vote page repaints the dock state line alone).
 - **FLIP re-rank on the vote page** (`vote.html:954–975`). `flipFirst()` records every `.qrow`/`.prow` rect before the innerHTML swap; `flipPlay()` inverts each moved row with an inline `translate`, forces one reflow, then plays `transform 240ms cubic-bezier(.2,.7,.2,1)` back to rest and clears the inline transition after 260ms. It returns `null` — no animation — under a finger (`FINGER`, `950–953`), while a sheet is open or the page is frozen, and under `prefers-reduced-motion`.
-- **The proof carousel on the artist page** (`artist.html:179–195`, `418–440`). `scroll-snap-type:x mandatory`, `scroll-padding-left:18px` so a snapped card sits where the first one already does. `startProof()` turns it every 3.5s by `scrollTo({behavior:'smooth'})` to the card after the one nearest the left edge, loops to the first after the last, pauses on `touchstart` (or a mouse entering) and resumes 6s after the finger lifts, does nothing while `document.hidden`, quits when its element is replaced, and never starts under `prefers-reduced-motion`.
+- **The proof strip on the artist page** (`artist.html:181–196`, `429–480`) is a slow marquee since 2026-09-12 (the founder: "a slow continuous scroll that can also be swiped"). No `scroll-snap` — snapping fights a marquee. `render()` draws the set twice (the copies `aria-hidden`, their links `tabindex=-1`) and `startProof()` drifts `scrollLeft` about 28px a second from the frame timestamp, pulling back by exactly one set when the scroll passes the first copy, so the loop has no seam. A finger, a wheel or a mouse over it stops it and the strip stays a native scroller; it resumes 3s after the finger lifts (iOS momentum first). Nothing moves while `document.hidden`; it quits when its element is replaced; under `prefers-reduced-motion` it only moves when swiped and draws no copies. The cards: comments from the community page interleaved with the room's most voted, most played and most paid-for songs — the rating card was dropped the same day.
 - **`emberGlow`** is the one pulsing call to action per page: the artist pill while live (`artist.html:163–164`), the vote dock's button (`vote.html:280`), the tip bar (`community.html:88`). One per page; two glows compete.
 - **The credits pill** bumps by `scale(1.14)` when a vote lands and wears the accent ring when low (`app.css:166–171`). The live `.dot` pings (`app.css:101–107`).
 - **Reduced motion.** `app.css:260–263` is the kill switch for every public page — every animation and transition collapses to `.01ms`. The Venue Studio has the same (`venue-studio.html:348`); each page also guards its own loops by hand (`artist.html:171`, `vote.html:284`, `community.html:96`, the equaliser bars on every loading screen). Anything driven by JavaScript timers (the carousel, FLIP) must check `matchMedia('(prefers-reduced-motion:reduce)')` itself — CSS cannot stop a `setInterval`.

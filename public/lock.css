@@ -98,25 +98,45 @@ html{touch-action:manipulation}
 /* THE BOTTOM TAB BAR, one recipe for both Studios — fixed, where a thumb already
    is. Each Studio used to carry a sticky pill under its header whose height had
    to be MEASURED (fitTabs / --headh) so the blurred header would not sit over
-   it; a fixed bar has no header to clear. 52px plus the home-indicator inset.
+   it; a fixed bar has no header to clear. 52px plus the home-indicator inset,
+   and each Studio's body reserves exactly that at the bottom (and lifts its
+   toast above it) — so the height is a contract, not a style: change it here
+   and both pages' last card slides under the bar.
    z-index 55: above each Studio's header (30) and page, under its sheet
-   backdrop (.bg 60), so a sheet still dims it. Each Studio's body reserves the
-   same height at the bottom and lifts its toast above the bar.
-   BLACK IN THE DARK, not surface grey: on a black page a grey bar merged with
-   the cards above it and read as one more card. Black, with a soft shadow off
-   its top edge and a hairline, sits on top of the page instead. A clean
-   surface in the light, with a lighter shadow.
-   The selected tab wears the orange ring (accent-2, the "View on map" outline —
-   the founder asked for orange, and the pink accent already marks Live): a pill drawn behind icon and label, inset
-   from the button so five tabs still read at 375px, while the hit area stays
-   the full fifth of the bar. The ring is a pseudo-element under the content
-   (isolation + z-index:-1), so its faint fill never sits over the icon. */
+   backdrop (.bg 60), so a sheet still dims it.
+   THE FACELIFT, 2026-09-12. The founder asked for a face lift on the flat black
+   strip with its tinted pill: black in the dark with a subtle futuristic sheen,
+   an orange border around the selected tab, and a bar that feels 3D. So the bar
+   is now a slab: graphite
+   into true black top to bottom (a flat #000 merged with the black page and
+   read as one more card), a hairline of light along its top edge, a deeper
+   lift shadow above it, and a faint diagonal sheen — a pseudo-element over the
+   whole bar, pointer-events off, with the tab row (.in) stacked above it so
+   nothing sits between a thumb and a button. The light theme speaks the same
+   language on a clean surface: white into off-white, a darker hairline, a
+   softer shadow. Both Studios draw the same bar, on purpose: it is one product.
+   The selected tab's pill — the pseudo-element behind icon and label, inset
+   from the button so five tabs still read at 375px while the hit area stays
+   the full fifth of the bar — wears the orange ring (accent-2, the "View on
+   map" outline; the pink accent already marks Live) and reads RAISED: a lit
+   inner top edge, a shaded inner bottom, an orange tint that fades downward,
+   and a soft orange glow beneath. Its icon and label lift a pixel (padding on
+   the button, so the pill itself stays put). Unselected tabs stay quiet —
+   muted, no ring, the icon embossed a hair in the dark — so the one that is on
+   is the only thing with any depth. The ring is a pseudo-element under the
+   content (isolation + z-index:-1), so its fill never sits over the icon;
+   the Live tab's pink still wins for colour because the ring lives on ::before. */
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;justify-content:center;
   height:calc(52px + env(safe-area-inset-bottom));padding:0 0 env(safe-area-inset-bottom);
-  background:#000;border-top:.5px solid var(--hair,rgba(255,255,255,.09));
-  box-shadow:0 -6px 24px rgba(0,0,0,.28)}
-:root[data-theme=light] .tabbar{background:var(--surface,#fff);box-shadow:0 -4px 18px rgba(0,0,0,.08)}
-.tabbar .in{display:flex;width:100%;max-width:var(--maxw,600px)}
+  background:linear-gradient(180deg,#141417,#000 72%);
+  border-top:.5px solid rgba(255,255,255,.14);
+  box-shadow:0 -10px 32px rgba(0,0,0,.6)}
+.tabbar::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,rgba(255,255,255,.07) 0%,transparent 42%,transparent 68%,rgba(255,255,255,.04) 100%)}
+:root[data-theme=light] .tabbar{background:linear-gradient(180deg,#FFFFFF,#F2F2F5);
+  border-top-color:rgba(0,0,0,.12);box-shadow:0 -8px 28px rgba(0,0,0,.10)}
+:root[data-theme=light] .tabbar::before{background:linear-gradient(105deg,rgba(255,255,255,.9) 0%,transparent 42%,transparent 68%,rgba(0,0,0,.025) 100%)}
+.tabbar .in{position:relative;z-index:1;display:flex;width:100%;max-width:var(--maxw,600px)}
 .tabbar button{position:relative;isolation:isolate;flex:1 1 0;min-width:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:3px;height:52px;padding:0 2px;
   font-family:inherit;font-size:10.5px;font-weight:600;letter-spacing:-.01em;color:var(--muted,#98989D);
@@ -124,14 +144,22 @@ html{touch-action:manipulation}
   transition:color .2s var(--ease,ease),transform .2s var(--spring,cubic-bezier(.34,1.4,.64,1))}
 .tabbar button:active{transform:scale(.92)}
 .tabbar button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;
-  stroke-linecap:round;stroke-linejoin:round;display:block}
+  stroke-linecap:round;stroke-linejoin:round;display:block;
+  filter:drop-shadow(0 1px 0 rgba(0,0,0,.6))}
+:root[data-theme=light] .tabbar button svg{filter:none}
 .tabbar button::before{content:"";position:absolute;z-index:-1;left:5px;right:5px;top:4px;bottom:4px;
   border-radius:var(--pill,999px);box-shadow:inset 0 0 0 1.5px transparent;
   transition:box-shadow .2s var(--ease,ease),background .2s var(--ease,ease)}
-.tabbar button.on{color:var(--ink,#F5F5F7)}
-.tabbar button.on svg{stroke-width:2.3}
-.tabbar button.on::before{box-shadow:inset 0 0 0 1.5px var(--accent-2,#FF7A45);
-  background:var(--accent-soft,rgba(255,55,95,.10))}
+.tabbar button.on{color:var(--ink,#F5F5F7);padding-bottom:2px}  /* the 1px lift */
+.tabbar button.on svg{stroke-width:2.3;filter:none}
+.tabbar button.on::before{
+  background:linear-gradient(180deg,rgba(255,122,69,.26),rgba(255,122,69,.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1.5px var(--accent-2,#FF7A45),
+    inset 0 -3px 6px rgba(0,0,0,.35),0 3px 12px rgba(255,122,69,.3)}
+:root[data-theme=light] .tabbar button.on::before{
+  background:linear-gradient(180deg,rgba(255,122,69,.18),rgba(255,122,69,.05));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 1.5px var(--accent-2,#FF7A45),
+    inset 0 -3px 6px rgba(0,0,0,.07),0 3px 12px rgba(255,122,69,.22)}
 
 /* The Menu sheet's rows — Profile / Settings / plan / Sign out in the Artist
    Studio; Food & drink / Settings / plan / Sign out in the Venue Studio. */

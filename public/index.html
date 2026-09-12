@@ -159,6 +159,18 @@ body{padding-bottom:34px}
 .gig .tm{flex:0 0 auto;min-width:62px}
 .gig .tm b{display:block;font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
 .gig .tm span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+/* RSVP, under the time and date — the founder's ask of 2026-09-12. One small
+   pill in the audience's orange: a ring while you are not going, filled once
+   you are, and a "<n> going" line under it. Above the row link, like .dirs, so
+   a tap RSVPs instead of navigating. The .btn-grey ground is restated here
+   because a page never waits on app.css to draw its own controls. */
+.gig .rsvp,.gig .going{position:relative;z-index:2}
+.gig .rsvp{display:inline-block;margin-top:8px;padding:6px 11px;border-radius:var(--pill);
+  font-size:11.5px;font-weight:700;letter-spacing:.02em;line-height:1.2;
+  background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);
+  box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+.gig .rsvp[aria-pressed="true"]{background:var(--accent-2);color:#fff;box-shadow:none}
+.gig .rsvp:active{transform:scale(.94)}
 .gig .m{flex:1;min-width:0}
 .gig .m .who{font-size:17px;font-weight:600;letter-spacing:-.018em;line-height:1.25}
 .gig .m .where{font-size:14px;color:var(--muted);margin-top:2px}
@@ -206,8 +218,11 @@ body{padding-bottom:34px}
 
 /* ── save to home screen ────────────────────────────────
    Sits under the finder rather than over the content: a bar that covers what
-   somebody came for is an advert, not a help. Dismissed once, it stays gone. */
-.a2hs{display:flex;align-items:center;gap:13px;margin:18px 18px 0;padding:14px 16px;
+   somebody came for is an advert, not a help. Dismissed once, it stays gone.
+   12px above, not 18: on a first visit the card sits between the two chips and
+   the search field, and the founder asked on 2026-09-12 for the same gap on
+   both sides of the chips — with the card drawn, this is the gap below them. */
+.a2hs{display:flex;align-items:center;gap:13px;margin:12px 18px 0;padding:14px 16px;
   background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);
   box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-soft);animation:a2hsGlow 4.2s ease-in-out infinite}
 @keyframes a2hsGlow{
@@ -257,8 +272,10 @@ body{padding-bottom:34px}
   font-size:13px;color:var(--faint);line-height:1.5}
 /* Same side margins as every card on this page (18px), and the same thin orange
    ring as "View on map" — the field used to run edge to edge and carried both a
-   border and app.css's inset ring, which read as one thick line. */
-.feedsearch{padding:4px 18px 12px}
+   border and app.css's inset ring, which read as one thick line. The 12px above
+   matches the 12px between the finder and the two chips (.artistactions) — the
+   founder asked on 2026-09-12 for the same gap on both sides of them. */
+.feedsearch{padding:12px 18px 12px}
 .feedsearch .inp{width:100%;min-height:46px;margin:0;padding:12px 18px;font-size:15.5px;border:none;
   border-radius:var(--pill);background:var(--surface);color:inherit;
   box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}
@@ -648,6 +665,7 @@ function gigMatches(g,day,words,fmt){
 function renderFeed(q){
   if(!FEED)return;
   const {days,city,fmt}=FEED;
+  bindRsvp();
   const hadFocus=!!(document.activeElement&&document.activeElement.id==='feedQ');
   const words=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
   /* Only the weeks revealed so far — the server may have sent further. `shownTo`
@@ -677,9 +695,13 @@ function renderFeed(q){
          the venue itself put on. Same row, different headline. */
       const ev=g.kind==='event';
       const href=g.href||(ev?'/':'/'+g.slug);
+      /* The pressed state is the phone's own memory; the count is the server's. */
+      const on=rsvpMine(g), n=g.rsvp|0;
       return `<div class="gig${feat?' feat':''}">
         <a class="rowlink" href="${esc(href)}" aria-label="${esc(ev?(g.title||'Event'):g.artist)} at ${esc(g.venue)}"></a>
-        <div class="tm"><b>${fmt(g)}</b><span>${esc(shortDate(g.date))}</span></div>
+        <div class="tm"><b>${fmt(g)}</b><span>${esc(shortDate(g.date))}</span>
+          <button class="rsvp" type="button" data-k="${esc(rsvpKey(g))}" aria-pressed="${on?'true':'false'}">RSVP</button>
+          <span class="going">${n} going</span></div>
         <div class="m">
           ${g.live?'<span class="livepill"><span class="dot"></span>On now</span>'
             :ev?'<span class="evtag">At the venue</span>':''}
@@ -708,6 +730,72 @@ function renderFeed(q){
   /* re-rendering replaces the input, so put the cursor back where it was — only
      while somebody is typing; a list that arrived on its own must not grab focus */
   const i=$('#feedQ'); if(i&&hadFocus){i.focus();i.setSelectionRange(q.length,q.length);}
+}
+
+/* ── RSVP ────────────────────────────────────────────────
+   A fan says "I'm going" from the feed — the founder's ask of 2026-09-12 — and
+   nobody signs in. The id is the vote page's own anonymous one (same key, same
+   recipe, so the phone is one fan across both pages); which nights this phone
+   said yes to is kept in localStorage 'myset.rsvp', and the count on a row is
+   whatever the server last said. The state lives on the FEED rows, not in the
+   DOM: renderFeed() redraws on every keystroke in the search box, so a button
+   only ever paints what the row and the map say. */
+function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
+  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
+  return v;}
+/* Once per load, as vote.html does: a phone that blocks storage would otherwise
+   be a new fan on every tap, each one another "going" nobody can take back. */
+const FAN=fanId();
+const RSVP_KEY='myset.rsvp';
+/* The same phone keeps its answers in memory too, so with storage blocked a
+   second tap still reads as "take me off" rather than another yes. */
+let RSVP_MEM={};
+const rsvpMap=()=>{try{const m=JSON.parse(localStorage.getItem(RSVP_KEY)||'{}');return m&&typeof m==='object'?m:{}}catch(e){return RSVP_MEM}};
+/* An artist's gig is keyed by the artist's slug (empty for the founding page,
+   exactly as the events fetch and /api/rsvp?a= read it); a venue's own event by
+   'v:' and the venue's slug. */
+const rsvpOwner=g=>g.kind==='event'?'v:'+(g.venueSlug||''):(g.slug||'');
+const rsvpKey=g=>`${rsvpOwner(g)}|${g.eventId||''}|${g.date}`;
+const rsvpMine=g=>!!rsvpMap()[rsvpKey(g)];
+function rsvpSet(g,on){const m=rsvpMap(); if(on)m[rsvpKey(g)]=1; else delete m[rsvpKey(g)]; RSVP_MEM=m; try{localStorage.setItem(RSVP_KEY,JSON.stringify(m))}catch(e){}}
+const rsvpRows=k=>{const out=[]; if(!FEED)return out;
+  for(const day of FEED.days)for(const g of [...(day.featured||[]),...day.gigs])if(rsvpKey(g)===k)out.push(g);
+  return out;};
+/* Paint every button for that occurrence — by key, not by node, because the
+   node a tap landed on may have been redrawn by the time the server answers. */
+const paintRsvp=(k,on,n)=>{$('#out').querySelectorAll('button.rsvp').forEach(b=>{ if(b.dataset.k!==k)return;
+  b.setAttribute('aria-pressed',on?'true':'false');
+  const c=b.nextElementSibling; if(c&&c.classList.contains('going'))c.textContent=`${n} going`; });};
+const RSVP_BUSY=new Set();
+let RSVP_BOUND=false;
+/* One delegated listener on #out, bound once — the rows under it are replaced
+   on every render. */
+function bindRsvp(){
+  if(RSVP_BOUND)return; RSVP_BOUND=true;
+  $('#out').addEventListener('click',async(e)=>{
+    const b=e.target.closest('button.rsvp'); if(!b)return;
+    /* Not stopPropagation: the row link is a sibling, not an ancestor, so the tap
+       cannot navigate — and the city picker's document listener needs to see
+       the click to close an open list. */
+    e.preventDefault();
+    const k=b.dataset.k, rows=rsvpRows(k); if(!rows.length||RSVP_BUSY.has(k))return;
+    const g=rows[0], was=rsvpMine(g), wasN=g.rsvp|0, on=!was;
+    /* Optimistic: flip now, then trust the reply. If the request fails the
+       button goes back to what the server last confirmed — there is no toast
+       on this page, so the count simply stays what it was. */
+    RSVP_BUSY.add(k);
+    rsvpSet(g,on); for(const r of rows)r.rsvp=Math.max(0,wasN+(on?1:-1)); paintRsvp(k,on,g.rsvp);
+    const q=g.kind==='event'?'v='+encodeURIComponent(g.venueSlug||''):'a='+encodeURIComponent(g.slug||'');
+    let d=null;
+    try{ d=await fetch(`${API}/rsvp?${q}`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({fan:FAN,eventId:g.eventId,date:g.date,on})}).then(r=>r.json()); }catch(e){}
+    /* Painted from the reply itself, not the map: the button shows what the
+       server confirmed even on a phone whose storage never took the note. */
+    let now=was;
+    if(!d||!d.ok){ rsvpSet(g,was); for(const r of rows)r.rsvp=wasN; }
+    else { now=!!d.on; rsvpSet(g,now); for(const r of rows)r.rsvp=Math.max(0,d.n|0); }
+    RSVP_BUSY.delete(k); paintRsvp(k,now,g.rsvp);
+  });
 }
 
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

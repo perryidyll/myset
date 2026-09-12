@@ -747,7 +747,7 @@ async function handleLists(aid, action, body) {
        sets they already have, because a cap never deletes anything (INVARIANT 0s).
        Only creating another one is gated. */
     if (!isPlatformOwner(aid) && (await planForArtist(aid)).limits.setlists !== true)
-      return bad('Separate setlists are a Plus feature — everything you already have keeps working.', 402);
+      return bad('Separate setlists are a Bar Star feature — everything you already have keeps working.', 402);
     const name = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, MAX_NAME);
     if (!name) return bad('Give the set a name');
     const id = 'l' + Math.random().toString(36).slice(2, 9);      // outside the CAS
@@ -1168,7 +1168,7 @@ async function handleProfile(aid, action, body, req, me) {
     /* Refuse BEFORE taking the photo. Asking a stranger for their ID and then
        telling them it did not count would be the rude way round, and it would
        leave an ID on disk for a check that was never going to pass. */
-    if (!pre.paidPlan) return bad('The tick is on the Plus and Pro plans', 402);
+    if (!pre.paidPlan) return bad('The tick is on the Bar Star and Rock Star plans', 402);
     if (!pre.payments) return bad('Set up card payments first — the tick confirms who gets paid', 409);
     if (pre.reviewed) return json({ ok: true, already: true, checks: pre });
     /* THE LEGAL NAME AND THE DATE OF BIRTH, not the MySet name. Most artists trade
@@ -1243,7 +1243,7 @@ async function handleProfile(aid, action, body, req, me) {
    Orders are the ONE place a buyer's details appear, and they are fetched from
    Stripe when the artist opens an order — never stored (0bu's posture). */
 async function handleShop(aid, action, body) {
-  const merchLocked = ['Merch on your page is a Plus feature — anything you already added stays.', 402];
+  const merchLocked = ['Merch on your page is a Bar Star feature — anything you already added stays.', 402];
   const canMerch = async () => merchAllowed(aid, (await planForArtist(aid)).limits);
 
   if (action === 'merchList') {
@@ -1311,7 +1311,7 @@ async function handleShop(aid, action, body) {
       const { planForArtist, moderateAllowed } = await import('./_plan.mjs');
       const { limits } = await planForArtist(aid);
       if (!moderateAllowed(aid, limits))
-        return bad('Deleting a post for good is a Plus feature — you can hide it on any plan, and hiding is instant and undoable.', 402);
+        return bad('Deleting a post for good is a Bar Star feature — you can hide it on any plan, and hiding is instant and undoable.', 402);
     }
     const r = await moderate(aid, { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
     if (!r.ok) return bad(r.error, 404);
@@ -1729,7 +1729,7 @@ const main = async (req) => {
   if (['freeCredits', 'packs', 'replayCost', 'askSet'].includes(action)) {
     canPrice = isPlatformOwner(aid) || (await planForArtist(aid)).limits.pricing === true;
   }
-  const PRICE_LOCKED = ['Setting your own prices is a Plus feature — the defaults stay on for now.', 402];
+  const PRICE_LOCKED = ['Setting your own prices is a Bar Star feature — the defaults stay on for now.', 402];
 
   let newSongId = null;                       // so the sheet can keep editing it
   /* Read before the mutation, for every action that will settle the paid-vote

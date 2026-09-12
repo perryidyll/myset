@@ -49,9 +49,10 @@ function openLists(){
   openSheet(`<h3>Your setlists</h3>
     <p class="lede">A setlist is just a named handful of your songs — a beach set, a
       late set, the one for the Irish pub. Pick one and the room only sees those.</p>
-    <div class="lrow" onclick="useList('')">
+    <div class="lrow">
       <div class="m"><b>All songs</b><span>everything you haven’t hidden</span></div>
-      ${!s.listId?'<span class="now">In play</span>':''}
+      ${!s.listId?'<span class="now">In play</span>'
+        :`<button class="act" data-act="luse" data-id="">Use</button>`}
     </div>
     ${lists.map(l=>`<div class="lrow">
       <div class="m" onclick="openList('${esc(l.id)}')"><b>${esc(l.name)}</b>
@@ -80,6 +81,8 @@ async function newList(){
 async function useList(id){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'listUse',id:id||''})});
   if(!d.ok){toast(d.error||'Failed');return;}
+  ALLSONGS=!id;                          // the checklist's "chose All songs" — see todayCard
+  try{ if(id) localStorage.removeItem('myset.allsongs'); else localStorage.setItem('myset.allsongs','1'); }catch(e){}
   closeSheet(); await load();
   toast(d.listName?`The room now sees “${d.listName}”`:'The room sees all your songs');
 }
@@ -678,7 +681,7 @@ function tickCard(){
         <div class="s muted">${TICKWHY
           ? esc(TICKWHY)+'. We check again on its own — nothing more for you to do.'
           : 'We\u2019ll look at it and let you know. Your ID is deleted either way, as soon as we decide.'}</div></div></div>`
-    : `${step(t.paidPlan,'On Plus or Pro',t.paidPlan?'':'The tick is part of a paid plan')}
+    : `${step(t.paidPlan,'On Bar Star or Rock Star',t.paidPlan?'':'The tick is part of a paid plan')}
        ${step(t.payments,'Card payments set up',t.payments?'':'Set this up in the Money tab \u2014 the tick confirms who gets paid')}
        ${step(false,'Your ID, legal name and date of birth',t.readyForReview?'Ready when you are':'Checked against your payout account')}
        ${t.rejectedWhy?`<div class="row"><div class="m"><div class="t">Not approved last time</div>
@@ -809,7 +812,7 @@ const soonTag=(L,flag)=>((L&&L.soon||[]).includes(flag)?' <i style="opacity:.7">
 function needsPlan(flag){
   const P=(PLAN&&PLAN.plans)||null;
   if(P) for(const k of ['plus','pro']) if(P[k]&&P[k][flag]===true) return P[k].label;
-  return 'Pro';
+  return 'Rock Star';
 }
 /** Wraps `html` in a veil when the plan does not include `flag`. */
 function lock(flag,html,why){
@@ -1034,9 +1037,9 @@ async function idDecide(who,yes){
   IDQ=null; toast(yes?'Verified':'Turned down');
 }
 
-/* What the audience said when MySet asked them. Read-only, and deliberately shown
-   next to the money: a four-star night with a note about the queue is worth more to
-   an artist than either number alone. */
+/* What the audience said when MySet asked them. Read-only. It lived next to the
+   money until 2026-09-12, when the founder moved it to the Profile tab, under the
+   merch: the rating is about the page and the person, not the takings. */
 function fbCard(){
   const f=(D&&D.feedback)||null;
   if(!f||!f.count) return '';
@@ -1491,13 +1494,19 @@ const CLAYICON={
   qr:'<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><defs><linearGradient id="clay-qr-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-qr-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-qr-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-qr-b" d="M20 8h24a12 12 0 0 1 12 12v24a12 12 0 0 1-12 12H20A12 12 0 0 1 8 44V20A12 12 0 0 1 20 8z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><use href="#clay-qr-b" fill="url(#clay-qr-g)"/><use href="#clay-qr-b" fill="url(#clay-qr-d)"/><use href="#clay-qr-b" fill="url(#clay-qr-s)"/><path d="M14 14h13v13H14zM37 14h13v13H37zM14 37h13v13H14zM37 37h4v4h-4zM45 37h5v4h-5zM37 45h4v5h-4zM45 45h5v5h-5z" fill="#fff"/><path d="M18 18h5v5h-5zM41 18h5v5h-5zM18 41h5v5h-5z" fill="#FF5A52"/></svg>',
   ticket:'<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><defs><linearGradient id="clay-ticket-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-ticket-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-ticket-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-ticket-b" d="M12 14h40a4 4 0 0 1 4 4v7.5a6.5 6.5 0 0 0 0 13V46a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-7.5a6.5 6.5 0 0 0 0-13V18a4 4 0 0 1 4-4z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><use href="#clay-ticket-b" fill="url(#clay-ticket-g)"/><use href="#clay-ticket-b" fill="url(#clay-ticket-d)"/><use href="#clay-ticket-b" fill="url(#clay-ticket-s)"/><path d="M41 19v26" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="2.2" stroke-dasharray="3.2 3.6" opacity=".85"/><path d="M17 27h15M17 34h10M17 41h13" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="3.2"/></svg>'};
 let QRSHOWN=(()=>{try{return !!localStorage.getItem('myset.qrshown')}catch(e){return false}})();
+/* "All songs" is a choice, not the absence of one — but the server cannot tell the
+   two apart: an empty listId is also what a show has before anyone picks. So the
+   phone remembers that the artist tapped All songs on purpose (set in useList,
+   cleared when a named set is used), and the checklist ticks the step off. */
+let ALLSONGS=(()=>{try{return localStorage.getItem('myset.allsongs')==='1'}catch(e){return false}})();
 function todayCard(s){
   const gig=tonightGig(s);
-  const listOn=!!(s.listId||(gig&&gig.listId));
+  const named=!!(s.listId||(gig&&gig.listId));
+  const listOn=named||ALLSONGS;
   const payOn=PAY?!!(PAY.platformOwner||PAY.ready||PAY.chargesEnabled):!!D.paymentsEnabled;
   const votesOn=!!(s.unlimited||s.freeCredits>0);
   const rows=[
-    ['mic','Setlist chosen',listOn?(s.listName?esc(s.listName):'Set for tonight'):'The room will see all your songs',listOn,'openLists()'],
+    ['mic','Select setlist',named?(s.listName?esc(s.listName):'Set for tonight'):ALLSONGS?'All songs — everything you haven’t hidden':'Tap to pick a set, or all your songs',listOn,'openLists()'],
     ['tip','Card payments ready',payOn?'Tips and extra votes go through Stripe':'Tap to set up Stripe',payOn,"setTab('money')"],
     ['qr','QR code printed or shown',QRSHOWN?'On the tables, they scan and vote':'Tap to bring it up full size',QRSHOWN,'showQr()'],
     ['ticket','Free votes set',s.unlimited?'Unlimited votes for everyone':`${s.freeCredits||0} free vote${s.freeCredits===1?'':'s'} each`,votesOn,'showPricing()'],
@@ -1869,8 +1878,8 @@ function render(){
         </div>`).join('')||'<div class="row muted">No payments yet.</div>'}</div>
         <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
       }
-      // Get-paid card, tonight, what the room said, then the Pro numbers preview
-      body=payCard()+head+fbCard()+bugCard()+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard();
+      // Get-paid card, tonight, bug reports, then the Rock Star numbers preview
+      body=payCard()+head+bugCard()+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard();
     }
   }
 
@@ -1930,6 +1939,7 @@ function render(){
       </div>`).join('')||'<div class="row muted">Nothing yet. Paste a link above.</div>'}</div>
       ${merchSection()}
       <div class="wrap" style="margin-top:14px"><button class="big" onclick="saveProfile()">Save profile</button></div>
+      ${fbCard()}
       ${commSection()}
       ${presskitCard()}
       ${brandingCard()}`;
@@ -2061,7 +2071,7 @@ function render(){
             portal, and an account section that silently disappears is exactly the
             thing Perry could not find. */''}
       <div class="planbox" id="planbox">
-        <button class="bigup" onclick="openPlans()">${PLAN.plan==='pro'?'Pro membership':'Upgrade your plan'} <span>↗</span></button>
+        <button class="bigup" onclick="openPlans()">${PLAN.plan==='pro'?'Rock Star membership':'Upgrade your plan'} <span>↗</span></button>
         <p class="planwhen">${planWhen()}</p>
       </div>
       <div class="field"><label>Got a code?</label><div style="display:flex;gap:8px">
@@ -2078,7 +2088,7 @@ function render(){
           <input class="inp" id="pcCode" maxlength="24" placeholder="CODE" autocapitalize="characters">
           <div style="display:flex;gap:8px;margin-top:8px">
             <select class="inp" id="pcPct" style="flex:1"><option value="100">100% off</option><option value="50">50% off</option></select>
-            <select class="inp" id="pcPlan" style="flex:1"><option value="pro">Pro</option><option value="plus">Plus</option></select>
+            <select class="inp" id="pcPlan" style="flex:1"><option value="pro">Rock Star</option><option value="plus">Bar Star</option></select>
           </div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <input class="inp" id="pcMonths" type="number" min="1" max="60" value="12" style="flex:1" placeholder="months">
@@ -2147,7 +2157,7 @@ function render(){
       ? lock('seats',`<div class="field"><label>Add an email</label><div style="display:flex;gap:8px">
           <input class="inp" type="email" placeholder="you@email.com" style="flex:1" disabled>
           <button class="act pri" style="min-width:64px">Add</button></div></div>`,
-          'Your plan has '+PLAN.limits.seats+' sign-in'+(PLAN.limits.seats===1?'':'s')+'. Pro has '+(((PLAN.plans||{}).pro||{}).seats||5)+'.')
+          'Your plan has '+PLAN.limits.seats+' sign-in'+(PLAN.limits.seats===1?'':'s')+'. Rock Star has '+(((PLAN.plans||{}).pro||{}).seats||5)+'.')
       : `<div class="field"><label>Add an email</label><div style="display:flex;gap:8px">
           <input class="inp" id="teamEmail" type="email" inputmode="email" placeholder="you@email.com" style="flex:1">
           <button class="act pri" style="min-width:64px" onclick="addTeam()">Add</button></div></div>`}
@@ -2290,11 +2300,11 @@ function tabBar(){
 }
 function openMenu(){
   const s=(D&&D.show)||{};
-  const planLine=PLAN&&PLAN.ok?(PLAN.plan==='free'?'Free plan · see the plans':esc((PLAN.limits&&PLAN.limits.label)||PLAN.plan)+' · manage'):'Plans';
+  const planLine=PLAN&&PLAN.ok?(PLAN.plan==='free'?'Hobbyist plan · see the plans':esc((PLAN.limits&&PLAN.limits.label)||PLAN.plan)+' · manage'):'Plans';
   openSheet(`<h3>Menu</h3>
     <button class="menurow" onclick="closeSheet();setTab('profile')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
-      <div class="m">Profile<span>${s.slug?'myset.vip/'+esc(s.slug):'Your public page'}</span></div><span class="chev">›</span></button>
+      <div class="m">Profile<span>Manage your profile page + merch</span></div><span class="chev">›</span></button>
     <button class="menurow" onclick="closeSheet();setTab('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>
       <div class="m">Settings<span>Prices, votes, codes, who can sign in</span></div><span class="chev">›</span></button>
@@ -3218,7 +3228,7 @@ function merchSection(){
         <button class="act" onclick="openMerch('${esc(m.id)}')">Edit</button>
         <button class="act warn" onclick="rmMerch('${esc(m.id)}')">✕</button></div>`).join('')||'<div class="row muted">Nothing yet. Add a tee, a print, a sticker.</div>'}</div>
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openMerch('')">+ Add an item</button></div>`;
-  return `${lock('merch', list, 'Merch on your page is part of Plus — $10 a month. Anything you add stays saved.')}
+  return `${lock('merch', list, 'Merch on your page is part of Bar Star — $10 a month. Anything you add stays saved.')}
     ${ordersSection()}`;
 }
 /* ---------- THE BOOKS -------------------------------------------------------
@@ -3483,7 +3493,7 @@ async function orderDetail(sid){
 function commSection(){
   const s=D.show, posts=COMM||[];
   return `<div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post, pin one, and hide anything on any plan — hiding takes it off your page at once and deletes its photos and clip, and the words can be un-hidden. Deleting the whole record for good is a Plus feature. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post, pin one, and hide anything on any plan — hiding takes it off your page at once and deletes its photos and clip, and the words can be un-hidden. Deleting the whole record for good is a Bar Star feature. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
       <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · <span style="color:var(--accent)">${p.reports} report${p.reports===1?'':'s'}</span>`:''}</div>
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}${p.showLabel?' · '+esc(p.showLabel):''}</div>
@@ -3498,7 +3508,7 @@ function commSection(){
              too, so this is the sign and not the lock (15k). */''}
         ${canDelete()
           ? `<button class="act warn" onclick="if(confirm('Delete this post for good? Hiding it is undoable; this is not.'))commAct('postDelete','${esc(p.id)}')">✕</button>`
-          : `<button class="act" style="opacity:.5" onclick="toast('Deleting for good is a Plus feature — hide it instead, which is instant and undoable');openPlans()">✕ Plus</button>`}</div>
+          : `<button class="act" style="opacity:.5" onclick="toast('Deleting for good is a Bar Star feature — hide it instead, which is instant and undoable');openPlans()">✕ Bar Star</button>`}</div>
     </div>`).join('')||'<div class="row muted">Nothing posted yet.</div>'}</div>`;
 }
 /* One answer for "may this artist delete a post", read from the plan the server
@@ -3529,7 +3539,7 @@ function replyPost(id){
    it slows down and shortens the board — so the card says the room size and the
    next line says what happens past it, rather than implying a locked door. */
 const TIER_COPY={
-  free:{name:'Free',price:'$0',items:[
+  free:{name:'Hobbyist',price:'$0',items:[
     ['10 shows a month',' \u2014 up to 200 in the room at each'],
     ['Everything fans touch',': voting, requests, birthday shout-outs, lyrics'],
     ['The song sheet',': chord charts, keys and genres'],
@@ -3540,7 +3550,7 @@ const TIER_COPY={
     ['Keep 2,000 songs',' \u2014 50 live to the room at once'],
     ['One sign-in',''],
     ['<span class="fee">Transaction fee: 25%</span>',' on money taken through the app']]},
-  plus:{name:'Plus',price:'$10 / month',items:[
+  plus:{name:'Bar Star',price:'$10 / month',items:[
     ['Unlimited shows',' \u2014 play as often as you like'],
     ['Rooms up to 1,000',' \u2014 a bigger night still runs, just a little calmer'],
     ['Unlimited songs',' live to the room at once'],
@@ -3554,7 +3564,7 @@ const TIER_COPY={
     ['Shows that start and end themselves',' from your calendar'],
     ['One sign-in',''],
     ['<span class="fee">Transaction fee: 10%</span>',' on money taken through the app']]},
-  pro:{name:'Pro',price:'$20 / month',items:[
+  pro:{name:'Rock Star',price:'$20 / month',items:[
     ['Unlimited shows',' \u2014 play as often as you like'],
     ['Rooms up to 2,000',' \u2014 a bigger night still runs, just a little calmer'],
     ['Unlimited songs',' live to the room at once'],
@@ -3716,11 +3726,11 @@ function cardTrouble(s){
     <p style="margin-top:8px">Everything keeps working until ${daystamp(ends)}.</p></div>`;
   if(days>=0) return `<div class="paybar">
     <b>Your card still hasn’t gone through</b>
-    <p>If it isn’t sorted by tomorrow your page goes back to Free. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} shows a month, merch comes off your community page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
+    <p>If it isn’t sorted by tomorrow your page goes back to Hobbyist. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} shows a month, merch comes off your community page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
     <button class="big" style="margin-top:12px" ${fix}>Update my card</button></div>`;
   return `<div class="paybar">
-    <b>You’re on Free for now</b>
-    <p>The payment never went through, so your page went back to Free. Nothing was deleted — your songs, gigs, history and photos are all still here. Put a card back on and everything switches straight back on.</p>
+    <b>You’re on Hobbyist for now</b>
+    <p>The payment never went through, so your page went back to Hobbyist. Nothing was deleted — your songs, gigs, history and photos are all still here. Put a card back on and everything switches straight back on.</p>
     <button class="big" style="margin-top:12px" ${fix}>Put a card back on</button></div>`;
 }
 
@@ -3736,7 +3746,7 @@ function planWhen(){
   const b=PLAN.billing||{}, name=esc(PLAN.limits.label);
   const link=b.portal?` · <a href="#" onclick="event.preventDefault();openPortal()">Card, invoices and receipts ↗</a>`:'';
   if(PLAN.comped) return `${name}, on the house${PLAN.until?' until '+daystamp(PLAN.until):''}`;
-  if(PLAN.plan==='free') return 'Free, forever'+(PLAN.discountPct?` · ${PLAN.discountPct}% off saved for your first month`:'');
+  if(PLAN.plan==='free') return 'Hobbyist — free, forever'+(PLAN.discountPct?` · ${PLAN.discountPct}% off saved for your first month`:'');
   const when=b.renewsAt||PLAN.until;
   if(when) return `${b.cancelAtPeriodEnd?'Ends':'Renews'} ${daystamp(when)}${link}`;
   return `Active${link}`;

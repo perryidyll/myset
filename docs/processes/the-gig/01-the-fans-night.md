@@ -3,10 +3,11 @@ tab: The gig
 section: The fan's night
 puzzle_section_id: 41964
 sources:
+  - netlify/functions/rsvp.mjs, _rsvp.mjs, events.mjs (the RSVP count)
   - MYSET-MASTER-OVERVIEW.md §1.1–1.4, §1.7–1.10, §1.13, §3.1, §3.2
   - public/vote.html (the sheet wording, the dock, "Something wrong?")
   - netlify/functions/board.mjs, me.mjs, vote.mjs
-  - docs/decisions/0001, 0002, 0009, 0014
+  - docs/decisions/0001, 0002, 0009, 0014, 0056
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections)
 verified: code read 2026-09-12 (vote.mjs refusal order; vote.html dock and bug link)
@@ -40,10 +41,11 @@ Every failure on this path degrades to *the room can still vote*. Nobody signs i
 | f18 | The show ends | signal | Automation | MySet server R · Fan I | Netlify | *Playing now* becomes *"Tonight — that's all, see you next time"*. The board is gone with the night. Unspent **free** credits are gone. `src: overview §1.6, §3.2` |
 | f19 | Carry or gift bought credits | conditional | Person | Fan R | Netlify | A fan holding unspent **bought** credits is asked: carry them to the next show, or let the artist keep them. **Doing nothing carries them** — never silently pocket what somebody paid for. The gift is a *pledge*, honoured only at the real end-of-show boundary, so an accidental End that is restarted cancels it invisibly. `src: overview §1.8; INVARIANTS § Money` |
 | f20 | See the dark room | notification | Automation | MySet server R · Fan I | Netlify | No show running: the setlist, whole and quiet — every song listed, no votes, nothing playing, every song priced at 1. Display only — the show record is untouched, so the artist's *Resume it instead* still finds the night. The **Tip** button stays, full width: the minute after a night ends is when somebody decides it was worth something. `src: overview §1.13; decision 0009` |
+| f21 | Say you're coming | task | Person | Fan R | Netlify | **RSVP** under the time and date of any listed show — on the front door's city feed and on the artist page's *Upcoming shows* — with "*N* going" beneath it (decision 0056, 2026-09-12). One tap, no account: `POST /api/rsvp?a=<slug>` (or `?v=<venueSlug>` for a venue-listed event) with the same anonymous `myset.fan` id the vote page keeps; the phone remembers its own RSVPs (`myset.rsvp`), the server keeps only a hashed id per occurrence (`rsvp_<owner>`, never `list()`), and every event row from `/api/events` carries the count. Refused for a show that has ended, does not exist, or is more than 120 days out. A count is a social signal, not a ticket and not money. |
 
 ## Connections
 
-f01 → f02 → f03; f03 —live→ f04; f03 —no show→ f20; f04 → f05 → f06 → f07 → f08 → f09; f09 —accepted→ f10; f09 —no credits→ f11; f09 —refused→ f04; f10 → f14; f11 → f12; f12 → f14; f04 → f13; f13 → f14; f14 → f15 (when tapped); f14 → f16 (any time); f14 → f17 (after an hour); f14 → f18; f18 → f19; f19 → f20; f20 → f12 (tip only).
+f01 → f02 → f03; f03 —live→ f04; f03 —no show→ f20; f21 stands alone (any listed show, before or between nights); f04 → f05 → f06 → f07 → f08 → f09; f09 —accepted→ f10; f09 —no credits→ f11; f09 —refused→ f04; f10 → f14; f11 → f12; f12 → f14; f04 → f13; f13 → f14; f14 → f15 (when tapped); f14 → f16 (any time); f14 → f17 (after an hour); f14 → f18; f18 → f19; f19 → f20; f20 → f12 (tip only).
 
 ## What is deliberately absent
 

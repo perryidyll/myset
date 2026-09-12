@@ -53,7 +53,7 @@ export async function keysFor(aid) {
     `ev_${aid}`, `lists_${aid}`, `learn_${aid}`, `push_${aid}`, `connect_${aid}`, `fb_${aid}`,
     `lock_${aid}`, `apitch_${aid}`, `songstats_${aid}`, `posts_${aid}`, `likes_${aid}`, `billing_${aid}`,
     `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
-    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`];
+    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`];
   /* `ledger_platform` is the COMPANY's, not this artist's, and is never deleted here. */
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
   const [hist, show, profile, posts, ids, pend] = await Promise.all([

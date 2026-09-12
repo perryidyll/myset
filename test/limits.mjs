@@ -82,7 +82,7 @@ console.log('\nCREATING A SETLIST IS A PLUS FEATURE');
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'free'; return true; });
 const blocked = await A('listNew', { name: 'Late set' });
 eq('a free artist is refused', blocked.status, 402);
-ok('and told it is a Plus feature', /Plus feature/i.test(blocked.error || ''), blocked.error);
+ok('and told it is a Bar Star feature', /Bar Star feature/i.test(blocked.error || ''), blocked.error);
 ok('and reassured nothing is taken away',
    /keeps working/i.test(blocked.error || ''), blocked.error);
 eq('nothing was created', ((await A('listAll')).lists || []).length, 0);
@@ -122,7 +122,7 @@ ok('the plan payload carries the setlists flag', /setlists: !!l\.setlists/.test(
 ok('the new setlist button goes through the shared lock', /lock\('setlists'/.test(page));
 ok('with the promise that existing sets keep working',
    /Sets you already have keep working/.test(page));
-ok('and the old one-off greyed button is gone', !/a Plus feature<\/button>/.test(page));
+ok('and the old one-off greyed button is gone', !/a (Plus|Bar Star) feature<\/button>/.test(page));
 
 console.log('\nA LOCK IS POINTER-EVENTS, NOT OPACITY  — AND IT HAS TO REACH THE PAGE');
 const css = readFileSync(new URL('../public/lock.css', import.meta.url), 'utf8');
@@ -151,7 +151,7 @@ eq('the four Pro features with no code behind them are named',
 ok('merch is a real flag on every row', 'merch' in PLANS.free && PLANS.plus.merch === true && PLANS.pro.merch === true);
 ok('and is not in the coming-soon list', !NOT_BUILT.includes('merch'));
 ok('merch is refused server-side on free', /merchAllowed\(aid/.test(adminSrc));
-ok('with the plan named', /Merch on your page is a Plus feature/.test(adminSrc));
+ok('with the plan named', /Merch on your page is a Bar Star feature/.test(adminSrc));
 ok('and forwarded to the Studio', /merch: !!l\.merch/.test(adminSrc));
 ok('every one of them is a real plan flag',
    NOT_BUILT.every((f) => f in PLANS.pro), NOT_BUILT);

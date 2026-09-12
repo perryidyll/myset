@@ -71,7 +71,7 @@ const ana = await createArtist({ email: 'ana@example.com', name: 'Ana Reyes', sl
 const TA = await signToken('ana@example.com', revOf(await readArtists(), ana.artistId));
 let r = await AS(TA, 'merchSave', { item: { title: 'Tour tee', cents: 2500 } });
 eq('free is refused', r.status, 402);
-ok('with the words the Studio shows', /Plus feature/.test(r.error || '') && /stays/.test(r.error || ''), r.error);
+ok('with the words the Studio shows', /Bar Star feature/.test(r.error || '') && /stays/.test(r.error || ''), r.error);
 ok('and told before uploading a picture too', (await AS(TA, 'merchPhoto', { id: 'mabc123', data: JPEG })).status === 402);
 ok('but removing is never gated', (await AS(TA, 'merchRemove', { id: 'mabc123' })).ok);
 eq('the plan payload forwards the flag', (await AS(TA, 'planGet')).limits.merch, false);

@@ -1,5 +1,6 @@
 import { json, bad, jsonCached, publicArtist } from './_lib.mjs';
 import { readEvents, occurrencesFor, readCityIndex, isVenueOwner, venueIdOf } from './_events.mjs';
+import { readRsvp, rsvpCounts, occKey, HORIZON_DAYS } from './_rsvp.mjs';
 import { localDate, addDays, tzOffsetMs } from './_time.mjs';
 import { artistById } from './_auth.mjs';
 import { venueById } from './_venues.mjs';
@@ -12,6 +13,9 @@ const MAX_WINDOW_DAYS = 28;   // `days=` on the city feed may widen the window t
      ?places=1                 the country/city picker, with live counts
      ?country=&city=[&days=]   what's on there over the next 7 days (up to 28 with days=)
      ?a=<slug>                 one artist's upcoming gigs
+   Every gig or event row carries `rsvp`, how many said they are coming (0 when
+   nobody has) — read from the owner's one rsvp document in the same hop as their
+   events, never a read per row (_rsvp.mjs).
 */
 export default async (req) => {
   const url = new URL(req.url);
@@ -45,19 +49,22 @@ export default async (req) => {
   if (slug !== null) {
     const aid = await publicArtist(req);
     if (!aid) return bad('unknown artist', 404);
-    const days = Math.max(1, Math.min(120, parseInt(url.searchParams.get('days'), 10) || 60));
+    // the cap is HORIZON_DAYS so an RSVP is never taken on a night the diary cannot show
+    const days = Math.max(1, Math.min(HORIZON_DAYS, parseInt(url.searchParams.get('days'), 10) || 60));
     /* `n` is how many nights the caller will actually draw. The artist page shows
        24 and the vote page wants only the next one; a weekly residency over 90
        days is 60 rows at ~750 bytes each, 44KB on bar Wi-Fi for three visible rows. */
     const n = Math.max(1, Math.min(60, parseInt(url.searchParams.get('n'), 10) || 60));
-    const events = await readEvents(aid);
+    // the diary and its RSVP counts together: one hop, not two
+    const [events, rs] = await Promise.all([readEvents(aid), readRsvp(aid)]);
+    const counts = rsvpCounts(rs);
     const tz = guessTz(events);
     const from = localDate(Date.now(), tz);
     const occ = occurrencesFor(events, addDays(from, -1), addDays(from, days))
       .filter((o) => o.endsAt > Date.now())
       .slice(0, n);
     // thirty seconds at the edge — a diary changes by the week, `live` flips by the hour
-    return jsonCached({ ok: true, src: MARK, artistId: aid, gigs: occ.map(shape) }, 30);
+    return jsonCached({ ok: true, src: MARK, artistId: aid, gigs: occ.map((o) => shape(o, counts)) }, 30);
   }
 
   /* ---- a city feed ---- */
@@ -81,24 +88,27 @@ export default async (req) => {
   /* Two kinds of thing are on tonight: a gig an ARTIST listed, and an event the
      VENUE itself listed (quiz night, a DJ, the football). Both come out of the
      same recurrence engine and go into the same feed, tagged so the page can
-     tell them apart. */
+     tell them apart. Each owner is one parallel hop: their events, who they are,
+     and their RSVP counts. */
   const rows = [];
   for (const id of ids) {
     const venueOwned = isVenueOwner(id);
-    const [events, who] = await Promise.all([
+    const [events, who, rs] = await Promise.all([
       readEvents(id),
       venueOwned ? venueById(venueIdOf(id)) : artistById(id),
+      readRsvp(id),
     ]);
     if (!who) continue;
+    const counts = rsvpCounts(rs);
     const tz = guessTz(events);
     const from = localDate(now, tz);
     for (const o of occurrencesFor(events, addDays(from, -1), addDays(from, days))) {
       if (o.city !== city || o.country !== country) continue;
       if (o.endsAt <= now) continue;                       // finished
       rows.push(venueOwned
-        ? { ...shape(o), kind: 'event', title: o.title || 'Event',
+        ? { ...shape(o, counts), kind: 'event', title: o.title || 'Event',
             artist: '', slug: '', venueSlug: who.slug || '', href: `/v/${who.slug || ''}`, _owner: id }
-        : { ...shape(o), kind: 'gig', artist: who.name, slug: who.slug,
+        : { ...shape(o, counts), kind: 'gig', artist: who.name, slug: who.slug,
             href: `/${who.slug || ''}`, _owner: id });
     }
   }
@@ -170,13 +180,14 @@ export default async (req) => {
   });
 };
 
-const shape = (o) => ({
+const shape = (o, counts = {}) => ({
   eventId: o.eventId, date: o.date, time: o.time, endTime: o.endTime, tz: o.tz,
   startsAt: o.startsAt, endsAt: o.endsAt,
   venue: o.venue, city: o.city, country: o.country,
   address: o.address || '', maps: o.maps || null,
   note: o.note, ticketUrl: o.ticketUrl, repeating: o.repeating,
   live: Date.now() >= o.startsAt && Date.now() < o.endsAt,
+  rsvp: counts[occKey(o.eventId, o.date)] || 0,     // how many said they are coming
 });
 
 /** Everything an artist has is usually in one zone; use the soonest gig's. */
