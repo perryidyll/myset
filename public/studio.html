@@ -2320,7 +2320,6 @@ function render(){
     <div class="ghead"><span class="kick">Genres</span>
       <button onclick="confirmAutoTag()">✨ Auto-tag songs</button></div>
     ${genreBar(songs)}
-    <p class="muted" style="font-size:12px;padding:10px 14px 4px;margin:0">Turn a song OFF to hide it from fans tonight. Remove deletes it for good.</p>
     <div class="scroll-shell setlist-shell"><div class="list scroll-window setlist-window">${shown.length?shown.map(x=>`<div class="row songcard ${x.active===false?'off':''}">
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
