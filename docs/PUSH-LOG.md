@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-12 22:16 — 3c00963 — wt@money/connect-webhook-secret (8 files since origin/main)
+**tl;dr:** The Stripe webhook now accepts events from the new Connected-accounts destination too (STRIPE_CONNECT_WEBHOOK_SECRET, decision 0058); Customer Portal saved in live mode so Manage billing works; no MySet product exists in Stripe yet, so the Bar Star / Rock Star names will be created on first checkout (PER-011 cancelled)
+**Other sessions:** webhook.mjs exports webhookSecrets() and constructSigned(); test/twosecrets.mjs runs WITHOUT the fake (real stripe HMAC) and is in run.sh after connect. Both Stripe destinations point at /api/webhook — a Connect event ticked on the 'Your account' destination is silently never delivered. Overview §6.3 now lists eleven production env vars (AUTH_FROM IS set — PER-004 may be stale).
+
 ### 2026-09-12 22:00 — 6c22af4 — wt@ui/product-dev3-batch (21 files since origin/main)
 **tl;dr:** Product Dev 3: RSVP sits at the right edge of every show row (pin under the date, count centred under the pill); a filed night can be renamed by a tap on the Money tab (0057); All songs is a real Use choice that turns the Live step green; the vote page's edge glow now matches the Studio's; photos on the artist page enlarge; orange Community button, new hero line, orange finder ring, folded-map icon
 **Other sessions:** history.mjs takes {action:'rename', show, title} → _history.mjs renameShow; a detail doc with titleByHand:true keeps its title through archiveShow (INVARIANT 0fm) — read the flag before writing title. test/structure.mjs pins @keyframes edgeGlow byte-identical in studio.html and vote.html. studio.js restamped ?v=4d1ab49f (run node tools/stamp.mjs after any edit — AGENTS.md now says so). Rows: .rsvpcol on index/artist (not .go, app.css owns it). docs/processes engineering-os c02 sheet + step 370033 still want the Studio scripts line.

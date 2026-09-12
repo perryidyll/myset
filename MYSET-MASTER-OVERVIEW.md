@@ -510,9 +510,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | Invariants | 255 (last: 0fk) |
-| Test suites | 44 |
+| Test suites | 45 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 57 |
+| Decision records | 58 |
 
 ### Feature flags in force
 
@@ -1296,12 +1296,15 @@ about 100GB of clip traffic a month (~$13).**
 
 Never in the repo, never in a chat window. All set by Perry directly in Netlify:
 
-`ADMIN_CODE` · `STRIPE_SECRET_KEY` · `STRIPE_WEBHOOK_SECRET` · `RESEND_API_KEY` ·
+`ADMIN_CODE` · `STRIPE_SECRET_KEY` · `STRIPE_WEBHOOK_SECRET` · `STRIPE_CONNECT_WEBHOOK_SECRET` · `RESEND_API_KEY` ·
 `VAPID_PUBLIC_KEY` · `VAPID_PRIVATE_KEY` · `VAPID_SUBJECT` · `AUTH_FROM` ·
-`SPOTIFY_CLIENT_ID` · `SPOTIFY_CLIENT_SECRET` · `GSHEET_ID` · `GSHEET_EMAIL` · `GSHEET_KEY`
+`SPOTIFY_CLIENT_ID` · `SPOTIFY_CLIENT_SECRET` · `GSHEET_ID` · `GSHEET_EMAIL` · `GSHEET_KEY` ·
+`R2_ACCOUNT_ID` · `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` · `R2_BUCKET` · `GOOGLE_MAPS_BROWSER_KEY`
 
-**Four are set in production**: `ADMIN_CODE`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-`RESEND_API_KEY`. Everything else is unset, and each **degrades honestly rather than
+**Eleven are set in production** (`netlify env:list --context production`, 2026-09-12):
+`ADMIN_CODE`, `AUTH_FROM`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+`STRIPE_CONNECT_WEBHOOK_SECRET`, `RESEND_API_KEY`, `GOOGLE_MAPS_BROWSER_KEY` and the four
+`R2_*` values. Everything else is unset, and each **degrades honestly rather than
 failing** — push alerts say they cannot send, the Sheet is off, Spotify import answers an
 honest 503, and sign-in refuses to claim success until `AUTH_FROM` names a verified,
 non-sandbox sender.

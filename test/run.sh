@@ -72,6 +72,9 @@ echo
 echo "── stripe connect, direct charges ──"
 node --import ./test/register.mjs test/connect.mjs
 echo
+echo "── the webhook's two signing secrets (real stripe library) ──"
+node test/twosecrets.mjs
+echo
 echo "── paid replay votes and held request payments ──"
 node --import ./test/register.mjs test/request-payments.mjs
 echo

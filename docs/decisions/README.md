@@ -67,6 +67,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) | The artist plans are sold as Hobbyist, Bar Star and Rock Star | 2026-09-12 | plans | decided | perry |
 | [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md) | Fans can RSVP to a listed show without an account | 2026-09-12 | general | decided | perry |
 | [0057](0057-a-filed-night-can-be-renamed-by-hand-from-the-mone.md) | A filed night can be renamed by hand from the Money tab | 2026-09-12 | history | decided | perry-confirmed |
+| [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md) | The Stripe webhook verifies against two signing secrets — one per event destination | 2026-09-12 | money | decided | perry-confirmed |
 
 ## By area
 
@@ -78,7 +79,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) · [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md)
 
-**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md)
+**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md) · [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md)
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md)
 
