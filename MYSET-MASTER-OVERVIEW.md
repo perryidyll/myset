@@ -1457,10 +1457,12 @@ records, never the index.**
 - **Spotify playlist import cannot run** — `SPOTIFY_CLIENT_ID` / `_SECRET` are not set. The
   button is offered and answers an honest 503. **This is the one place the artist is shown a
   control that leads to a message rather than a result.**
-- **Public sign-in email is unavailable** because `AUTH_FROM` is unset. Resend's former
-  `onboarding@resend.dev` fallback can send only to the Resend account owner, so MySet now
-  fails closed instead of telling a stranger that an undeliverable code was sent. Verify
-  the MySet domain in Resend and configure a sender on it.
+- **Public sign-in email is configured but unconfirmed** — `AUTH_FROM` is set in
+  production (`MySet <hello@myset.vip>`, read 2026-09-12) and the domain carries Resend's
+  DKIM and SPF records; nobody has yet watched a sign-in code arrive from that address on
+  a phone (PER-004). Without `AUTH_FROM` MySet fails closed rather than telling a stranger
+  an undeliverable code was sent — Resend's former `onboarding@resend.dev` fallback could
+  reach only the account owner.
 - **Payout countries are a 22-country list**, not Stripe's full set. Deliberate: the
   alternative was accepting any two letters and creating an account in the wrong country,
   permanently.

@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-12 23:02 — 9656e93 — wt@docs/payments-session-ledger (3 files since origin/main)
+**tl;dr:** Docs only: ledger + session note for the payments session — PER-004 is done (AUTH_FROM was already set), PER-013 watches Connect payout fees, the connected-account risk is mitigated by 0058; the Founder Run Sheet artifact is refreshed [skip ci]
+**Other sessions:** Nothing to redo. Puzzle steps 370264/370098/370266 are Live and 370273 Testing — the matching docs/processes sheets (admin-and-finance 02 s05 + 03 AUTH_FROM row, reliability j07, money/02) are the Puzzle-mapping session's uncommitted files and still say Draft: flip them when you push. HARDENING §1's 'Checkout Sessions only' restricted-key advice is stale — the functions call 25 Stripe endpoints (noted on PER-007).
+
 ### 2026-09-12 22:16 — 3c00963 — wt@money/connect-webhook-secret (8 files since origin/main)
 **tl;dr:** The Stripe webhook now accepts events from the new Connected-accounts destination too (STRIPE_CONNECT_WEBHOOK_SECRET, decision 0058); Customer Portal saved in live mode so Manage billing works; no MySet product exists in Stripe yet, so the Bar Star / Rock Star names will be created on first checkout (PER-011 cancelled)
 **Other sessions:** webhook.mjs exports webhookSecrets() and constructSigned(); test/twosecrets.mjs runs WITHOUT the fake (real stripe HMAC) and is in run.sh after connect. Both Stripe destinations point at /api/webhook — a Connect event ticked on the 'Your account' destination is silently never delivered. Overview §6.3 now lists eleven production env vars (AUTH_FROM IS set — PER-004 may be stale).
