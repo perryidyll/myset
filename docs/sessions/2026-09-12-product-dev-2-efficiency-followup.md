@@ -70,3 +70,8 @@ production immediately returned all five letters and markers. Studio now resolve
 stores coordinates when a gig is saved, both public maps consume only those numbers,
 and the home View on map button owns a home-page modal instead of navigating through
 Find artists.
+
+Production commit `a6d7566` is pushed on `main`. Chrome verified the home modal opens
+and closes on `/`, all 25 upcoming occurrences retain A–E letters, and both public maps
+draw the same five unique markers at the exact saved coordinate pairs. The production
+health report remained clean after deployment.

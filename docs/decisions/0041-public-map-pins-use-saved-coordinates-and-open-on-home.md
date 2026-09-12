@@ -8,7 +8,7 @@ area: ui
 reverses: 0040
 superseded_by:
 invariants: [0ah]
-commits: []
+commits: [a6d7566]
 tests: [test/place.mjs, test/copy.mjs, tools/uicheck.mjs]
 files: [public/index.html, public/artists.html, public/studio.html, netlify/functions/admin.mjs]
 ---
@@ -48,4 +48,6 @@ Directions link, but it cannot receive a public map pin until coordinates are sa
 - Event tests pin coordinate resolution and persistence.
 - Copy tests require both public maps to be coordinate-only.
 - Rendered checks require the home modal to open and close without changing pathname.
-- Production verification must confirm five unique markers and nonblank list letters.
+- Production Chrome confirmed five unique markers at the saved coordinate pairs on both
+  the home and directory maps, nonblank A–E list letters, and an unchanged `/` pathname
+  after opening and closing the home modal.
