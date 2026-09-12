@@ -2677,3 +2677,26 @@ confirm ~360 deploy credits on Netlify › Billing; marks around Sunday with
 scheduled read-only backup dump. Noted, not fixed: `requested[]` over-counts
 vote-rounds since 7 Sep; every Start tap counts against the free cap (25 vs 15);
 archives lack startedBy/endedBy; `histidx` endedAt inflated on re-archive.
+
+# SESSION LOG — 2026-09-12 (money model: light/dark toggle; the plan for pricing the split and the open line)
+
+The user asked what the next steps are for updating the money model for the shared-board
+split (0034) and the open line (0035/0036), and for a light-mode toggle on the page.
+
+**Toggle (`finance/model.html`):** a `LIGHT`/`DARK` button at the right of the stamp row
+sets `data-theme` on the root, remembered as `localStorage['myset.model.theme']`, applied
+before first paint; the charts repaint through the existing observer. Verified in the
+in-app browser (toggle, persist across reload, no console errors); 53 model checks pass.
+Commit `0fca98c`, pushed.
+
+**Plan (not built), in `docs/sessions/2026-09-12-model-theme-toggle-and-split-plan.md`:**
+the model's engine still prices the old one-call poll; `tools/loadsim.py` already models
+the split (11-phone night: 8.9 credits best case, 13.3 worst; 1,000 phones $0.98 → $0.56).
+Steps: port the split into the engine with a parity test pinned to the simulator; retire
+the "3-second cache (not built)" host; keep "before the split" as the comparison; measure
+the `board`/`me` hit ratio at Sunday's gig (13 Sep, Sand & Tan) from the bandwidth marks
+and Netlify's per-function counts; update the tracker's byte table to board + me; rewrite
+the Durable Objects host from the measured probe (two requests per socket, one per
+nudge, duration ≈ 0) once the line — built in a parallel worktree, off until `LINE_URL`
+and `LINE_KEY` are set — has run one real night. **Numbering:** that worktree's decision
+is `0036`, which collides with `main`'s `0036` (interactive map); renumber at merge.

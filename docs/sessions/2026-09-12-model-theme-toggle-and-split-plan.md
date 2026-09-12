@@ -59,20 +59,31 @@ work, smallest evidence-bearing step first:
 3. **Feed the measurement back** — `pollsPerPhoneHour` becomes ticks per phone-hour;
    `calibrateLook` keeps working unchanged once the engine counts ticks.
 
-4. **Rewrite the Durable Objects host from the probe's measured numbers** (decision 0035),
-   replacing the list-price guess in both the model and the simulator:
-   - two billed requests per connection (upgrade + close), not one;
-   - duration ≈ 0 — hibernation made 12,000 connections cost 13.65 s of billable time;
-   - outbound messages free; one vote → N boards, last arrival 179 ms at 1,000 sockets;
-   - Workers Paid $5/month base; requests $0.30/M after 10M; DO requests $0.15/M after 1M;
-   - a new dial: reconnections per phone per gig (a bar's Wi-Fi drops; each is two requests);
-   - Netlify stays for pages, the Studio and the writes — the DO column must be Netlify +
-     Cloudflare, not Cloudflare alone.
+4. **Rewrite the Durable Objects host from measured numbers**, replacing the list-price
+   guess in both the model and the simulator. The open line is now BUILT in a parallel
+   worktree (`.claude/worktrees/compassionate-chatterjee-41ecbe`, its decision numbered
+   `0036` there — which collides with `main`'s `0036` interactive map; renumber at merge).
+   Its shape decides the cost lines:
+   - the line is an ADD-ON to polling, not a replacement: phones still poll the board and
+     the personal call, but while the line is open the tally moving no longer speeds the
+     ladder up, so a busy room's polling settles on the slow rungs → in the engine, the
+     "room changes per minute" input to the ladder becomes ~0 for phones on the socket;
+   - Cloudflare: two billed requests per socket (open + close) plus one per nudge — one
+     nudge per landed vote, casts inside 250 ms folded into one broadcast; outbound
+     messages free; duration ≈ 0 under hibernation (13.65 s for 12,000 connections);
+     Workers Free 100k requests/day, Paid $5/month + $0.30/M after 10M;
+   - Netlify: each landed vote now waits for the nudge's round trip (115–140 ms measured
+     from a Mac, capped at 1.2 s, unmeasured from Netlify's region) — that is function
+     time on the write path, so `writeMs` grows; measure it from the function log at the
+     first gig with the line on;
+   - new dials: share of phones on the socket (a blocked or dropped socket falls back to
+     the ladder), reconnections per phone per gig (each is two requests), nudges per vote.
+   - The DO column becomes Netlify + Cloudflare, never Cloudflare alone.
 
-5. **Only after the production open-line design exists** (0035 said: design after the split
-   lands — the design decision is still to be written), add it as the `host` the Benchmark
-   case can be switched to, with the polling path kept as the fallback for phones that
-   cannot hold a socket. The model then needs a "share of phones on the socket" dial.
+5. **Measure the line at a real gig before pricing it**: it is off until `LINE_URL` and
+   `LINE_KEY` are set in Netlify (the founder's hands). Once on, one night's numbers:
+   Cloudflare's request count for the night (÷ phones = sockets + reconnects), the
+   Worker's `/stats`, Netlify's `vote` function duration before and after.
 
 6. Re-run the projection deltas and republish, the way the gig-week report did.
 
