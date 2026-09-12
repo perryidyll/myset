@@ -48,15 +48,23 @@ const TJ = await signToken('jo@example.com', revOf(await readArtists(), jo.artis
 await mutateArtists((r) => { r.byId[jo.artistId].plan = 'plus'; return true; });
 await mutateShow(jo.artistId, (s) => { s.venue = 'The Ugly Duckling'; s.city = 'Koh Phangan, Thailand'; return true; });
 ok('she has a song', (await AS(TJ, 'addSong', { title: 'Valerie', artist: 'Amy Winehouse' })).ok);
+const exactPlace = await AS(TJ, 'eventPlace', { place: {
+  mapUrl: 'https://www.google.com/maps?q=9.711894,99.986544' } });
+eq('a gig can resolve and store an exact coordinate pair before it is saved',
+  [exactPlace.lat, exactPlace.lng], [9.711894, 99.986544]);
 
 /* A weekly residency that started three weeks ago and is running RIGHT NOW: it
    began ten minutes ago and has two hours left. */
 const START = NOW - 10 * 60e3;
 const ev = await AS(TJ, 'eventSave', { event: {
   id: 'gjo', venue: 'Seaflower Bungalows', city: 'Koh Phangan', country: 'Thailand', tz: 'UTC',
+  lat: 9.763564, lng: 99.962666,
   date: ymd(START - 21 * DAY), time: hm(START), endTime: hm(START + 2 * H),
   repeat: { freq: 'weekly', until: null } } });
 ok('and a weekly gig somewhere else entirely', ev.ok, ev);
+eq('its exact coordinates survive the calendar write',
+  [ev.events.find((x) => x.id === 'gjo').lat, ev.events.find((x) => x.id === 'gjo').lng],
+  [9.763564, 99.962666]);
 
 console.log('\nSTARTING A SHOW TAKES THE PLACE FROM THE CALENDAR');
 {

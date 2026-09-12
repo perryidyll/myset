@@ -6,7 +6,7 @@ status: decided
 decided_by: perry
 area: ui
 reverses:
-superseded_by:
+superseded_by: 0041
 invariants: [0ag, 0ah]
 commits: [5cfa27d, 51bf8a8]
 tests: [test/unit.mjs, test/artists.mjs, tools/uicheck.mjs]
@@ -40,9 +40,11 @@ caches the extracted address. Ordinary `/api/artists` calls do no extra work; on
 source remains the Directions link. Its canonical Google address overrides conflicting
 typed address text. Before the browser draws any pin it compares Google's typed
 `address_components` with the saved city and country. A result Google calls partial is
-accepted only when its structured route and street number still match the saved address;
+accepted only when a specific structured address fragment still matches the saved
+address, including Google's untyped local-address component used for Thai addresses;
 saved coordinates are reverse-geocoded through the same check. If the location cannot
-be verified, the event stays in the list with its exact Directions link but gets no pin.
+be verified, the event stays in the list with its exact Directions link but gets no pin,
+and its list letter is never erased.
 
 ## What this makes harder
 

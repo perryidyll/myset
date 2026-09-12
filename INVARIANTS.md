@@ -895,12 +895,11 @@ If you are about to violate one, stop and say so rather than working around it.
 0ah. **A bare venue name is not a location.** "The Ugly Duckling" on its own could
     send somebody to Amsterdam, so `mapLinks()` returns null unless there are
     coordinates, an address, or a name WITH a city — and the city and country always
-    go into the query. Before drawing a pin, the directory checks Google's structured
-    address components against the saved city and country and rejects conflicting
-    results. A partial geocode is accepted only when its structured route and street
-    number still match the saved address; coordinates are reverse-geocoded through
-    the same check.
-    No pin is better than a wrong one; the event and exact Directions link remain.
+    go into the query. A PUBLIC MAP PIN is stricter: it is drawn only from latitude
+    and longitude already stored on the gig. Studio resolves the pasted map place and
+    geocodes it once, before saving; the home page and artist directory never guess a
+    coordinate from venue or address text at read time. No pin is better than a wrong
+    one; the event and exact Directions link remain. (**Coordinates locked 2026-09-12.**)
 
 ## Venues, part two
 

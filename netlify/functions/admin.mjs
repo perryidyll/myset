@@ -23,6 +23,7 @@ import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
 import { resolveUltimateGuitar } from './_chords.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, endTimeOf,
          MAX_EVENTS } from './_events.mjs';
+import { resolveShortMapPlace } from './_maps.mjs';
 import { reindexSched } from './_auto.mjs';
 import { startShow, endShow } from './_lifecycle.mjs';
 import { stagePayload } from './stage.mjs';
@@ -426,7 +427,7 @@ const CAPABILITY = {
   addSong: 'library', editSong: 'library', removeSong: 'library', importSongs: 'library',
   songSet: 'library', bulkSongs: 'library', setChart: 'library', setLyrics: 'library',
   listSave: 'library', listDelete: 'library', listApply: 'library', learnAdd: 'library', learnRemove: 'library',
-  eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventUnskip: 'gigs',
+  eventPlace: 'gigs', eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventUnskip: 'gigs',
   featureList: 'gigs',
   profileSave: 'profile', merchSave: 'profile', merchDelete: 'profile', imgSave: 'profile', imgDelete: 'profile',
   postReply: 'community', postHide: 'community', postDelete: 'community',
@@ -446,6 +447,11 @@ const PLAN_ACTIONS = new Set(['planGet', 'bugList', 'promoRedeem', 'planCheckout
    Every write reindexes the artist's cities, which is what keeps the public
    country/city feed correct without a job to run. */
 async function handleEvents(aid, action, body) {
+  if (action === 'eventPlace') {
+    const place = await resolveShortMapPlace(body.place || {});
+    return json({ ok: true, address: place.address, mapUrl: place.mapUrl,
+                  lat: place.lat, lng: place.lng });
+  }
   if (action === 'eventList') {
     const events = await readEvents(aid);
     // Expanded here, never in the browser. One implementation of "when does this
@@ -552,7 +558,7 @@ async function handleEvents(aid, action, body) {
   }
   return bad('unknown action', 400);
 }
-const EVENT_ACTIONS = new Set(['eventList', 'eventSave', 'eventDelete', 'eventSkip', 'eventHide']);
+const EVENT_ACTIONS = new Set(['eventPlace', 'eventList', 'eventSave', 'eventDelete', 'eventSkip', 'eventHide']);
 
 /* An artist asking a venue for a spot, and an artist confirming they play at one.
    Both need an artist session — that IS the feature. A venue gets a link to a

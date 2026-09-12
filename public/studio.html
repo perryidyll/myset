@@ -1827,6 +1827,10 @@ function openGig(id,onDate){
     <div class="field" style="padding-left:0;padding-right:0"><label>Or paste a maps link</label>
       <input class="inp" id="gMap" type="url" inputmode="url" autocomplete="off" spellcheck="false"
         placeholder="Paste from Google or Apple Maps" value="${esc(editing?(ev.mapUrl||''):'')}"></div>
+    <input type="hidden" id="gLat" value="${Number.isFinite(ev&&ev.lat)?ev.lat:''}">
+    <input type="hidden" id="gLng" value="${Number.isFinite(ev&&ev.lng)?ev.lng:''}">
+    <input type="hidden" id="gAddr0" value="${esc(editing?(ev.address||''):'')}">
+    <input type="hidden" id="gMap0" value="${esc(editing?(ev.mapUrl||''):'')}">
     <p class="muted" style="font-size:12px;margin:2px 0 0">Either one gives fans a <b>Directions</b> button that opens in whichever map app their phone uses — Google or Apple.</p>
     <div class="field" style="padding-left:0;padding-right:0"><label>Date</label>
       <input class="inp" id="gDate" type="date" value="${esc(ev?ev.date:(onDate||todayStr()))}"></div>
@@ -1857,6 +1861,22 @@ function openGig(id,onDate){
     <button class="big" style="margin-top:16px" data-act="gigsave" data-id="${esc(ev?ev.id:'')}">${ev?'Save changes':'Add it'}</button>
     ${ev?`<button class="big alt" style="margin-top:10px" data-act="gigdel" data-id="${esc(ev.id)}">Delete this gig${ev.repeat?' and its whole run':''}</button>`:''}`);
 }
+let GIG_MAPS_PROMISE=null;
+async function loadGigMaps(){
+  if(window.google&&google.maps)return google.maps;if(GIG_MAPS_PROMISE)return GIG_MAPS_PROMISE;
+  GIG_MAPS_PROMISE=(async()=>{const c=await fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json());if(!c.ok||!c.enabled||!c.key)throw Error('maps unavailable');return new Promise((resolve,reject)=>{window.__mysetGigMapsReady=()=>resolve(google.maps);const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(c.key)}&v=weekly&loading=async&language=en&callback=__mysetGigMapsReady`;s.async=true;s.onerror=reject;document.head.appendChild(s)})})();
+  return GIG_MAPS_PROMISE;
+}
+async function coordinateGig(ev){
+  try{
+    const p=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventPlace',place:ev}),quiet:true});
+    if(p&&p.ok){ev.address=p.address||ev.address;ev.mapUrl=p.mapUrl||ev.mapUrl;if(Number.isFinite(p.lat)&&Number.isFinite(p.lng)){ev.lat=p.lat;ev.lng=p.lng;return ev}}
+    const maps=await loadGigMaps(), q=ev.address||[ev.venue,ev.city,ev.country].filter(Boolean).join(', ');
+    if(!q)return ev;const r=await new maps.Geocoder().geocode({address:q}),hit=r.results&&r.results[0];
+    if(hit){ev.lat=hit.geometry.location.lat();ev.lng=hit.geometry.location.lng()}
+  }catch(e){}
+  return ev;
+}
 async function saveGig2(id){
   if(WRITING)return; WRITING=true;
   try{
@@ -1864,10 +1884,14 @@ async function saveGig2(id){
   const freq=v('gRepeat');
   const ev={id:id||undefined,venue:v('gV'),city:v('gCity'),country:v('gCountry'),
     address:v('gAddr'),mapUrl:v('gMap'),listId:v('gList'),
+    lat:v('gLat')===''?null:Number(v('gLat')),lng:v('gLng')===''?null:Number(v('gLng')),
     tz:v('gTz'),date:v('gDate'),time:v('gTime')||'20:00',endTime:v('gEnd')||'',
     repeat:freq?{freq,until:v('gUntil')||null}:null};
   if(!ev.venue){toast('Where is it?');return;}
   if(!ev.date){toast('Pick a date');return;}
+  const placeChanged=ev.address!==v('gAddr0')||ev.mapUrl!==v('gMap0');
+  if(placeChanged){ev.lat=null;ev.lng=null;}
+  if(!Number.isFinite(ev.lat)||!Number.isFinite(ev.lng))await coordinateGig(ev);
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventSave',event:ev})});
   if(!d.ok){toast(d.error||'Could not save');return;}
   const saved=(d.events||[]).find(x=>x.id===d.id);

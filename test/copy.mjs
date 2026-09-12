@@ -114,13 +114,17 @@ ok('the Studio scrolling windows use a clipping shell around the native scrollba
 ok('the Studio Live tab label is red',
    /button\[data-tab-live\]\{color:#FF375F\}/.test(studio)&&/button data-tab-live/.test(studio));
 ok('the home page links to the artist directory and its requested filters',
-   /class="artistactions"[\s\S]{0,240}href="\/artists\?map=1">⌖ View on map<\/a>[\s\S]{0,120}href="\/artists">Search for artists/.test(home)&&
+   /class="artistactions"[\s\S]{0,240}id="homeMapBtn"[^>]*>⌖ View on map<\/button>[\s\S]{0,120}href="\/artists">Search for artists/.test(home)&&
+   /id="homeMapModal"[^>]*hidden[^>]*aria-modal="true"/.test(home)&&
    /MySet shows in next 30 days/.test(directory)&&/Music released/.test(directory)&&/Signed/.test(directory)&&
    /All countries/.test(directory)&&/All cities/.test(directory)&&/All styles/.test(directory)&&/Any rating/.test(directory));
 ok('the artist directory map is readiness-gated and the CSP permits its Google services',
    /id="mapBtn"[^>]*hidden/.test(directory)&&/api\/mapconfig/.test(directory)&&/maps\/api\/js/.test(directory)&&/navigator\.geolocation/.test(directory)&&
    /URLSearchParams\(location\.search\)\.get\('map'\)==='1'/.test(directory)&&
    /https:\/\/maps\.googleapis\.com/.test(read('netlify.toml')));
+ok('both public maps place pins from saved coordinates rather than address guesses',
+   /const homeCoords=e=>e\.maps&&Number\.isFinite\(e\.maps\.lat\)/.test(home)&&
+   /const canPin=e=>hasCoords\(e\)/.test(directory)&&!/new maps\.Geocoder/.test(directory));
 ok('Featured shows remain a $10 first-come city promotion',
    /Featured shows/.test(home)&&/featureStart/.test(studio)&&/\$10/.test(studio)&&/first come, first served/i.test(studio));
 ok('each upcoming gig offers Feature before Edit and cancel',

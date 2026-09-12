@@ -252,6 +252,11 @@ body{padding-bottom:34px}
 .nearhead{margin:22px 18px 0;font-size:13px;line-height:1.45;color:var(--muted)}
 .nearhead b{color:var(--ink);font-weight:600}
 .nearhead .pin{width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:var(--accent-ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.homemap[hidden]{display:none}.homemap{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;padding-top:max(24px,env(safe-area-inset-top));background:rgba(0,0,0,.7);backdrop-filter:blur(10px)}
+.hmapsheet{display:flex;flex-direction:column;width:min(680px,100%);max-height:92dvh;background:var(--surface);border-radius:26px 26px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.38);overflow:hidden}.hmaphead{display:flex;align-items:center;justify-content:space-between;padding:17px 18px 13px}.hmaphead h2{font-size:21px;margin:0}.hmaphead p{font-size:12px;color:var(--muted);margin:3px 0 0}.hmapclose{width:34px;height:34px;border-radius:50%;background:var(--bg-2);font-size:18px;color:var(--muted)}
+.hmapscroll{overflow:auto;padding:0 14px max(18px,env(safe-area-inset-bottom))}.hmapcanvas{position:relative;height:min(52dvh,430px);min-height:300px;border-radius:20px;overflow:hidden;background:var(--bg-2);box-shadow:inset 0 0 0 1px var(--hair-2)}.hmapviewport{position:absolute;inset:0}.hmaploading,.hmapfail{height:100%;display:grid;place-items:center;padding:28px;text-align:center;color:var(--muted);font-size:13px;line-height:1.45}.hmapfail b{display:block;color:var(--ink);font-size:16px;margin-bottom:5px}
+.hmapevents{display:grid;gap:8px;margin-top:12px}.hmapevent{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px;border-radius:15px;background:var(--bg-2);cursor:pointer}.hmapevent:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.hpinlabel{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:var(--grad);color:#fff;font-size:11px;font-weight:800}.hmapcopy{min-width:0}.hmapcopy b,.hmapcopy span{display:block}.hmapcopy b{font-size:13px}.hmapcopy span{font-size:11px;color:var(--muted);margin-top:3px}.hmapgo{font-size:11px;font-weight:750;color:var(--accent-ink);padding:7px 8px;border-radius:var(--pill);background:var(--accent-soft)}
+.hmapsheet .gm-style .gm-style-iw-c{color:#202124}
 </style>
 </head>
 <body>
@@ -297,7 +302,7 @@ body{padding-bottom:34px}
   </div>
 
   <div class="artistactions" aria-label="Artist discovery">
-    <a class="artistsearch" href="/artists?map=1">⌖ View on map</a>
+    <button class="artistsearch" id="homeMapBtn" type="button">⌖ View on map</button>
     <a class="artistsearch" href="/artists">Search for artists →</a>
   </div>
 
@@ -314,12 +319,48 @@ body{padding-bottom:34px}
 </div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
+<div class="homemap" id="homeMapModal" hidden role="dialog" aria-modal="true" aria-labelledby="homeMapTitle">
+  <section class="hmapsheet">
+    <div class="hmaphead"><div><h2 id="homeMapTitle">Upcoming show map</h2><p id="homeMapMeta">Loading shows…</p></div><button class="hmapclose" id="homeMapClose" type="button" aria-label="Close map">×</button></div>
+    <div class="hmapscroll"><div class="hmapcanvas" id="homeMapCanvas"><div class="hmaploading">Loading interactive map…</div></div><div class="hmapevents" id="homeMapEvents"></div></div>
+  </section>
+</div>
 
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+let HOME_MAP_PROMISE=null,HOME_MAP=null,HOME_INFO=null,HOME_MARKERS=new Map();
+const homeCoords=e=>e.maps&&Number.isFinite(e.maps.lat)&&Number.isFinite(e.maps.lng);
+const homeKey=e=>`${e.maps.lat},${e.maps.lng}`;
+const homeDirections=e=>{const m=e.maps||{};return m.source||(/iPhone|iPad|iPod/.test(navigator.userAgent)?m.apple:m.google)||m.google||m.apple||''};
+const homeWhen=e=>`${new Intl.DateTimeFormat(undefined,{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(`${e.date}T12:00:00Z`))} · ${e.time}`;
+async function homeMaps(cfg){
+  if(window.google&&google.maps)return google.maps;if(HOME_MAP_PROMISE)return HOME_MAP_PROMISE;
+  HOME_MAP_PROMISE=new Promise((resolve,reject)=>{window.__mysetHomeMapsReady=()=>resolve(google.maps);const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(cfg.key)}&v=weekly&loading=async&language=en&callback=__mysetHomeMapsReady`;s.async=true;s.onerror=reject;document.head.appendChild(s)});return HOME_MAP_PROMISE;
+}
+function closeHomeMap(){const m=$('#homeMapModal');if(m.hidden)return;m.hidden=true;document.body.style.overflow='';$('#homeMapBtn').focus()}
+async function openHomeMap(){
+  const modal=$('#homeMapModal');modal.hidden=false;document.body.style.overflow='hidden';$('#homeMapClose').focus();
+  $('#homeMapCanvas').innerHTML='<div class="hmapviewport" id="homeMapViewport"><div class="hmaploading">Loading interactive map…</div></div>';
+  $('#homeMapEvents').innerHTML='';$('#homeMapMeta').textContent='Loading shows…';
+  try{
+    const [d,c]=await Promise.all([fetch('/api/artists?maps=1',{cache:'no-store'}).then(r=>r.json()),fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json())]);
+    if(!d.ok||!c.ok||!c.enabled||!c.key)throw Error('map unavailable');
+    const events=(d.artists||[]).flatMap(a=>(a.eventsNext30Days||[]).map(e=>({...e,artist:a.name}))).filter(homeCoords).sort((a,b)=>a.startsAt-b.startsAt);
+    const places=[];for(const e of events){const key=homeKey(e);if(!places.some(p=>p.key===key))places.push({key,event:e,label:String.fromCharCode(65+places.length)})}
+    if(!places.length)throw Error('no coordinates');const shown=places.slice(0,15),labels=new Map(shown.map(p=>[p.key,p.label]));
+    $('#homeMapMeta').textContent=`${events.length} show${events.length===1?'':'s'} over the next 30 days`;
+    $('#homeMapEvents').innerHTML=events.map((e,i)=>{const h=homeDirections(e);return `<div class="hmapevent" data-event="${i}" role="button" tabindex="0"><span class="hpinlabel">${labels.get(homeKey(e))||'·'}</span><span class="hmapcopy"><b>${esc(e.artist)} · ${esc(e.venue||e.city)}</b><span>${esc(homeWhen(e))} · ${esc([e.city,e.country].filter(Boolean).join(', '))}</span></span>${h?`<a class="hmapgo" href="${esc(h)}" target="_blank" rel="noopener noreferrer">Directions</a>`:''}</div>`}).join('');
+    const maps=await homeMaps(c),bounds=new maps.LatLngBounds();HOME_MAP=new maps.Map($('#homeMapViewport'),{center:{lat:20,lng:0},zoom:2,mapTypeControl:false,streetViewControl:false,fullscreenControl:false,gestureHandling:'greedy'});HOME_INFO=new maps.InfoWindow();HOME_MARKERS=new Map();
+    for(const p of shown){const pos={lat:p.event.maps.lat,lng:p.event.maps.lng},marker=new maps.Marker({map:HOME_MAP,position:pos,label:{text:p.label,color:'#fff',fontWeight:'700'},title:`${p.event.artist} · ${p.event.venue||p.event.city}`});HOME_MARKERS.set(p.key,marker);bounds.extend(pos)}
+    if(shown.length===1){HOME_MAP.setCenter({lat:shown[0].event.maps.lat,lng:shown[0].event.maps.lng});HOME_MAP.setZoom(13)}else HOME_MAP.fitBounds(bounds,48);
+    const pick=i=>{const e=events[i],marker=e&&HOME_MARKERS.get(homeKey(e));if(!marker)return;HOME_MAP.panTo(marker.getPosition());if(HOME_MAP.getZoom()<13)HOME_MAP.setZoom(13);HOME_INFO.setContent(`<div style="color:#202124;max-width:230px"><b>${esc(e.artist)} · ${esc(e.venue||e.city)}</b><br><small>${esc(homeWhen(e))}</small></div>`);HOME_INFO.open({map:HOME_MAP,anchor:marker})};
+    $('#homeMapEvents').querySelectorAll('.hmapevent').forEach(row=>{row.addEventListener('click',ev=>{if(!ev.target.closest('a'))pick(Number(row.dataset.event))});row.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();pick(Number(row.dataset.event))}})});
+  }catch(e){$('#homeMapCanvas').innerHTML='<div class="hmapfail"><span><b>Map unavailable</b>Please try again in a moment.</span></div>';$('#homeMapMeta').textContent=''}
+}
+$('#homeMapBtn').addEventListener('click',openHomeMap);$('#homeMapClose').addEventListener('click',closeHomeMap);$('#homeMapModal').addEventListener('click',e=>{if(e.target===$('#homeMapModal'))closeHomeMap()});addEventListener('keydown',e=>{if(e.key==='Escape')closeHomeMap()});
 
 /* Once per session, never twice. */
 try{

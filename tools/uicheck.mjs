@@ -448,7 +448,7 @@ const DEFAULT_THEME=await pg.evaluate(()=>{
 console.log('\nDEFAULT THEME\n'+DEFAULT_THEME);
 await pg.evaluate(()=>{localStorage.setItem('myset.theme','dark');sessionStorage.removeItem('myset.seen')});
 await pg.reload({waitUntil:'domcontentloaded'});
-const THEME=await pg.evaluate(()=>{
+const THEME=await pg.evaluate(async()=>{
   const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
   const intro=document.querySelector('#intro'), before=getComputedStyle(document.body).backgroundColor, introBefore=getComputedStyle(intro).backgroundColor;
   document.querySelector('#themeBtn').click();
@@ -458,6 +458,17 @@ const THEME=await pg.evaluate(()=>{
   ok('the loading screen follows the same switch',introBefore==='rgb(0, 0, 0)'&&introAfter==='rgb(245, 245, 247)',`${introBefore} -> ${introAfter}`);
   const artistActions=[...document.querySelectorAll('.artistactions .artistsearch')];
   ok('View on map sits left of Search for artists',artistActions.length===2&&/View on map/.test(artistActions[0].innerText)&&/Search for artists/.test(artistActions[1].innerText)&&artistActions[0].getBoundingClientRect().top===artistActions[1].getBoundingClientRect().top);
+  class TestBounds{extend(){}}
+  class TestMap{fitBounds(){}setCenter(){}setZoom(){}getZoom(){return 12}panTo(){}}
+  class TestMarker{constructor(o){this.o=o}getPosition(){return{lat:()=>this.o.position.lat,lng:()=>this.o.position.lng}}}
+  class TestInfo{setContent(){}open(){}}
+  window.google={maps:{LatLngBounds:TestBounds,Map:TestMap,Marker:TestMarker,InfoWindow:TestInfo}};
+  const path=location.pathname;artistActions[0].click();const homeMap=document.querySelector('#homeMapModal');
+  await new Promise(r=>setTimeout(r,30));
+  ok('the home map opens in place without loading the artist-search page',!homeMap.hidden&&homeMap.getAttribute('aria-modal')==='true'&&location.pathname===path&&document.querySelectorAll('.hmapevent').length===1);
+  ok('the home map places its labeled pin directly at the saved coordinates',
+    document.querySelector('.hpinlabel')?.textContent==='A'&&[...HOME_MARKERS.values()][0]?.getPosition().lat()===13.75);
+  closeHomeMap();ok('closing the home map returns to the unchanged home page',homeMap.hidden&&location.pathname===path);
   ok('the three header controls fit a 320px phone',document.documentElement.scrollWidth<=innerWidth,`${document.documentElement.scrollWidth}/${innerWidth}`);
   return out.join('\n');
 });
@@ -476,13 +487,8 @@ const DIRECTORY=await pg.evaluate(async()=>{
   ok('View map opens an accessible popup with every filtered event',!modal.hidden&&modal.getAttribute('aria-modal')==='true'&&modal.querySelectorAll('.mapevent').length===1);
   ok('the popup opens an interactive map viewport for the exact event location',!!mapViewport&&/A/.test(modal.querySelector('.pinlabel')?.textContent||''));
   ok('each mapped event keeps its exact directions link',modal.querySelector('.mapgo')?.href==='https://maps.google.com/?q=13.75,100.5');
-  const good={formatted_address:'145, 2 Taladkao Rd, Ko Pha-ngan District, Surat Thani 84280, Thailand',partial_match:true,
-    address_components:[{long_name:'2',short_name:'2',types:['street_number']},{long_name:'Taladkao Rd',short_name:'Taladkao Rd',types:['route']},{long_name:'Ko Pha-ngan District',short_name:'Ko Pha-ngan',types:['administrative_area_level_2']},{long_name:'Thailand',short_name:'TH',types:['country']}],geometry:{location:{lat:()=>9.73,lng:()=>100.01}}};
-  const wrong={...good,formatted_address:'Amsterdam, Netherlands',address_components:[{long_name:'Amsterdam',short_name:'Amsterdam',types:['locality']},{long_name:'Netherlands',short_name:'NL',types:['country']}],geometry:{location:{lat:()=>52.37,lng:()=>4.89}}};
-  const event={venue:'The Ugly Duckling',address:'145, 2 Taladkao Rd',city:'Koh Phangan',country:'Thailand',maps:{lat:null,lng:null}};
-  const accepted=await positionFor({},event,{geocode:async()=>({results:[wrong,good]})});
-  const refused=await positionFor({},event,{geocode:async()=>({results:[wrong]})});
-  ok('map pins automatically reject a Google result in the wrong city or country',accepted&&accepted.lat()===9.73&&refused===null);
+  ok('the directory map uses saved coordinates directly and never guesses from an address',
+    /const canPin=e=>hasCoords\(e\)/.test(document.documentElement.innerHTML)&&!/new maps\.Geocoder/.test(document.documentElement.innerHTML));
   document.querySelector('#mapClose').click();
   document.querySelector('#upcoming').click();
   ok('the upcoming-show filter narrows the directory',document.querySelectorAll('.artistcard').length===1&&/Demo Artist/.test(document.querySelector('#artists').innerText));

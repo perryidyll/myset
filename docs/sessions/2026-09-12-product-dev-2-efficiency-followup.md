@@ -29,9 +29,10 @@
   Road instead of an ambiguous name search. Decision `0040` records the boundary.
 - The profile ticker no longer waits on obsolete show state, so it starts as soon as
   the profile countdown button exists. The map now validates Google's structured
-  address components against the saved city/country and, for partial results, its
-  route/street number (including reverse-geocoding saved coordinates). It omits any
-  pin it cannot verify instead of showing a guess.
+  address components against the saved city/country and, for partial results, a
+  specific matching address fragment (including reverse-geocoding saved coordinates
+  and Thai untyped address components). It omits any pin it cannot verify instead of
+  showing a guess, without erasing the event's list letter.
 
 ## Where feedback goes
 
@@ -57,3 +58,15 @@ the current card renders six.
 - Production commits `5cfa27d` and `51bf8a8` are pushed on `main`. Chrome verified the
   profile seconds advancing in real time and The Ugly Duckling marker at
   `9.72658, 100.00396`; the exact saved Google Directions link is unchanged.
+
+## Coordinate-map correction
+
+The address validator then proved too strict for valid Thai addresses: Google returned
+house-number or untyped local-address components for Sand & Tan, Anantara Rasananda and
+Seaflower, so their pins and list letters disappeared. At the user's direction, decision
+`0041` replaces read-time address geocoding with saved coordinates. The six current
+recurring event records (five venues) were backed up and populated with coordinates;
+production immediately returned all five letters and markers. Studio now resolves and
+stores coordinates when a gig is saved, both public maps consume only those numbers,
+and the home View on map button owns a home-page modal instead of navigating through
+Find artists.
