@@ -29,3 +29,29 @@ alone and let the plan fill in after.
 studio.html, and `test/copy.mjs` fails "the Studio Live tab label is red" and
 "Settings omits the retired gig…". Those belong to another session's in-flight
 Studio work; nothing here touches them. Every other file: green.
+
+## Same evening — the stopwatch found it
+
+Eight readings from the founder (laptop + phone, Chrome + Safari, browser + installed
+app): page ≤ 1.4 s, stage ≤ 1.7 s, plan ≤ 1.1 s, **Opened in 6.0–7.4 s, "the 6 s
+timer ended the wait" on all eight.** Reproduced in the Browser pane after he signed
+in (`BOOT.forced:true`, 6.96 s); the console said why:
+`ReferenceError: drawFirstRun is not defined at render … at load (studio:1063)`.
+
+`render()` calls the first-run wizard at its tail. The call reached main in `5b4a531`
+(this session's pass-one commit carried ~290 uncommitted lines of another session's
+wizard, the same way it carried the decision-0043 profile work) while the function
+was still being written. So from 16:10 every paint of the Studio threw at that line:
+`load()` never reached `bootDone()` — every open waited the full 6 s safety timer —
+and the lines after it in render() (scroll restore) never ran. The head start and
+the pings (0050) were real but invisible behind that timer.
+
+The other session shipped the function itself in PR #11 (`d980ec4`, 18:56), which
+is the fix; a one-line guard prepared here (PR #13) was closed unmerged as
+superseded. Verified live after #11 with the founder signed in:
+`Opened in 1.8 s · page 1.3 · stage 1.2 · plan 0.9`, `forced:false`.
+
+Two lessons, both now in the push-log rule: stage only your own hunks (this was the
+second casualty of one commit), and a boot screen with a safety timer needs a
+readout that says when the timer — not the data — ended the wait. The stopwatch
+stays; the founder reads it, nobody guesses.
