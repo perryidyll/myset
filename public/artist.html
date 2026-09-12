@@ -20,7 +20,7 @@
      the request that decides what is on screen would wait behind them. Here it is
      already in flight while they load; boot() below picks up the reply. Used once,
      on the first load only — a pull-to-refresh fetches fresh. -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const q=S?'?a='+encodeURIComponent(S):'';const g=(u)=>{const f=fetch(u,{cache:'no-store'});f.catch(()=>{});return f};window.__early={profile:g('/api/profile'+q),events:g('/api/events?a='+encodeURIComponent(S||'perryidyll')+'&days=90&n=24')}}catch(e){}})();</script>
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const q=S?'?a='+encodeURIComponent(S):'';const g=(u)=>{const f=fetch(u,{cache:'no-store'});f.catch(()=>{});return f};window.__early={profile:g('/api/fan?what=profile'+q.replace('?','&')),events:g('/api/fan?what=events&a='+encodeURIComponent(S||'perryidyll')+'&days=90&n=24')}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -420,8 +420,8 @@ async function boot(){
   else $('#app').innerHTML=SKEL;
   hideIntro();
   const [p,g]=await Promise.all([
-    (E.profile||fetch(`${API}/profile${AQ1}`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
-    (E.events||fetch(`${API}/events?a=${encodeURIComponent(SLUG||'perryidyll')}&days=90&n=24`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
+    (E.profile||fetch(`${API}/fan?what=profile${AQ1.replace('?','&')}`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
+    (E.events||fetch(`${API}/fan?what=events&a=${encodeURIComponent(SLUG||'perryidyll')}&days=90&n=24`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
   ]);
   if(!p&&L&&L.p&&L.p.ok) return;                       // offline: the copy stands
   if(p&&p.ok&&window.lastSeen) lastSeen.set(K,{p,g});

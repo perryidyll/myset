@@ -87,6 +87,9 @@ echo
 echo "── the shared-board split ──"
 node --import ./test/register.mjs test/split.mjs
 echo
+echo "── the one warm door ──"
+node --import ./test/register.mjs test/fandoor.mjs
+echo
 echo "── the free plan's limits ──"
 node --import ./test/register.mjs test/limits.mjs
 echo

@@ -13,7 +13,7 @@
      the request that decides what is on screen would wait behind them. Here it is
      already in flight while they load; boot() below picks up the reply. Used once,
      on the first load only — a pull-to-refresh fetches fresh. -->
-<script>(()=>{try{let T='';try{T=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin')||''}catch(e){}if(T)return;const P=location.pathname.split('/').filter(Boolean);const V=P[0]==='v';const S=V?(P[1]||''):(P[0]&&P[0]!=='community.html'?P[0]:'');const Q=V?'?v='+encodeURIComponent(S):(S?'?a='+encodeURIComponent(S):'?');let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}const f=fetch('/api/community'+Q+(Q==='?'?'':'&')+'fan='+encodeURIComponent(F),{cache:'no-store'});f.catch(()=>{});window.__early={community:f}}catch(e){}})();</script>
+<script>(()=>{try{let T='';try{T=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin')||''}catch(e){}if(T)return;const P=location.pathname.split('/').filter(Boolean);const V=P[0]==='v';const S=V?(P[1]||''):(P[0]&&P[0]!=='community.html'?P[0]:'');const Q=V?'?v='+encodeURIComponent(S):(S?'?a='+encodeURIComponent(S):'?');let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}const f=fetch('/api/fan?what=community'+Q.replace('?','&')+(Q==='?'?'':'&')+'fan='+encodeURIComponent(F),{cache:'no-store'});f.catch(()=>{});window.__early={community:f}}catch(e){}})();</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
@@ -419,7 +419,7 @@ async function load(){
     if(L&&L.ok){ D=L; render(); }
     { const i=document.getElementById('intro'); if(i) i.classList.add('off'); }
     let d=null;
-    try{ const r=await ((!ARTIST_TOKEN&&E.community)||fetch(`${API}/community${Q}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store',headers:authHeaders()})); d=await r.json(); }
+    try{ const r=await ((!ARTIST_TOKEN&&E.community)||fetch(`${API}/fan?what=community${Q.replace('?','&')}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store',headers:authHeaders()})); d=await r.json(); }
     catch(e){ if(L&&L.ok) return; throw e; }            // offline: the copy stands
     if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b><br>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
     if(window.lastSeen) lastSeen.set(K,d);

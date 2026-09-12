@@ -20,7 +20,7 @@
      the request that decides what is on screen would wait behind them. Here it is
      already in flight while they load; boot() below picks up the reply. Used once,
      on the first load only — a pull-to-refresh fetches fresh. -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const f=fetch('/api/venue?v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const f=fetch('/api/fan?what=venue&v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -368,7 +368,7 @@ async function boot(){
   const K='venue:'+SLUG, L=window.lastSeen?lastSeen.get(K):null;
   if(L&&L.ok){ V=L; render(); }
   hideIntro();
-  try{ d=await (E.venue||fetch(`${API}/venue?v=${encodeURIComponent(SLUG)}`,{cache:'no-store'})).then(r=>r.json()); }catch(e){}
+  try{ d=await (E.venue||fetch(`${API}/fan?what=venue&v=${encodeURIComponent(SLUG)}`,{cache:'no-store'})).then(r=>r.json()); }catch(e){}
   if(!d&&L&&L.ok){ if(ATOK) loadMine(); return; }      // offline: the copy stands
   if(d&&d.ok&&window.lastSeen) lastSeen.set(K,d);
   V=d;

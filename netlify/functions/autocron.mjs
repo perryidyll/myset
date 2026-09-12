@@ -31,6 +31,19 @@ export default async (req) => {
   try { marker = ((await req.clone().json()) || {}).next_run || null; } catch { marker = null; }
   const now = Date.now();
 
+  /* KEEP THE FAN DOOR AWAKE (decision 0049). One GET to /api/fan?what=warm every
+     fourth minute — this rings every second minute, so every other ring — is
+     ~11k calls a month, and it means the first fan of a quiet evening does not
+     pay the ~1.5s a sleeping function costs to wake. Awaited, so the runtime
+     cannot freeze it mid-flight; eight seconds is the most it may take; logged,
+     never thrown. */
+  if (new Date(now).getUTCMinutes() % 4 === 0) {
+    const site = process.env.URL || 'https://myset.vip';
+    await fetch(`${site}/api/fan?what=warm`, { signal: AbortSignal.timeout(8000) })
+      .then((r) => console.log(`autocron: warmed the fan door (${r.status})`))
+      .catch((e) => console.log(`autocron: warm ping failed: ${e && e.message}`));
+  }
+
   const state = await readSched().catch(() => emptySched());
   const since = now - (Number(state.lastRunAt) || 0);
   if (since < MIN_GAP) {
