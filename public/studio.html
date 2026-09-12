@@ -22,8 +22,12 @@
 const C=localStorage.getItem('myset.admin')||'',T=localStorage.getItem('myset.token')||'';if(!C&&!T)return;
 const S=localStorage.getItem('myset.aslug')||'';const h={'content-type':'application/json'};
 if(C){h['x-admin-code']=C;if(S)h['x-admin-artist']=S;}if(T)h['authorization']='Bearer '+T;
-const g=(u,o)=>{const f=fetch(u,o);f.catch(()=>{});return f};
-window.__early={stage:g('/api/stage',{headers:h}),plan:g('/api/admin',{method:'POST',headers:h,body:'{"action":"planGet"}'})};
+/* __boot: how long each early read took to answer (headers in), for the stopwatch
+   line on the Settings tab. Diagnosis, not decoration — the founder reads it off
+   his phone so nobody has to guess where a slow open goes. */
+const B=window.__boot={};
+const g=(k,u,o)=>{const t=performance.now();const f=fetch(u,o);f.then(()=>{B[k]=performance.now()-t;},()=>{});return f};
+window.__early={stage:g('stage','/api/stage',{headers:h}),plan:g('plan','/api/admin',{method:'POST',headers:h,body:'{"action":"planGet"}'})};
 }catch(e){}})();</script>
 <meta name="theme-color" content="#F5F5F7" />
 <meta name="robots" content="noindex,nofollow" />
@@ -2849,6 +2853,7 @@ function render(){
       <button class="big alt" onclick="signOut()">Sign out of this device</button>
       <p class="muted" style="font-size:12.5px;margin:10px 0 0;text-align:center">
         <a href="#" onclick="event.preventDefault();signOutEverywhere()" style="color:var(--accent);font-weight:600">Sign out everywhere, including this one</a></p>
+      <p class="muted" id="bootStat" style="font-size:12px;margin:10px 0 0;text-align:center;opacity:.7">${bootStat()}</p>
     </div>
     <div class="list" style="margin-top:14px">
       <div class="row"><div class="m"><div class="t">Delete my account</div><div class="s">Your page goes offline today. We keep everything for 30 days, then it’s gone.</div></div>
@@ -4678,8 +4683,22 @@ document.addEventListener('click',(e)=>{
   e.preventDefault();
   goTo(u.pathname+u.search+u.hash,a.dataset.leaving||'Opening…');
 });
-function bootDone(){
+/* The stopwatch: stamped once, the first time the boot screen comes down, and
+   shown under Sign out on the Settings tab. `forced` means the 6 s safety timer
+   ended the wait, not the data — a hang, not slowness, and the thing to chase. */
+let BOOT=null;
+function bootStat(){
+  if(!BOOT)return '';
+  const s=v=>(v/1000).toFixed(1);
+  const parts=['Opened in '+s(BOOT.total)+' s','page '+s(BOOT.page)];
+  if(BOOT.stage!=null)parts.push('stage '+s(BOOT.stage));
+  if(BOOT.plan!=null)parts.push('plan '+s(BOOT.plan));
+  return parts.join(' · ')+(BOOT.forced?' · the 6 s timer ended the wait':'');
+}
+function bootDone(forced){
   clearInterval(bootT);
+  if(!BOOT){ const nav=(performance.getEntriesByType('navigation')||[])[0]||{}, E=window.__boot||{};
+    BOOT={total:performance.now(),page:nav.responseEnd||0,stage:E.stage,plan:E.plan,forced:!!forced}; }
   const el=document.getElementById('boot'); if(!el)return;
   el.classList.add('gone');
   setTimeout(()=>el.remove(),320);        // gone for good: it can never flash again
@@ -4688,7 +4707,7 @@ function start(){clearInterval(timer);
   handleSubReturn();
   /* Whatever happens, the boot screen goes. A hung request must never leave somebody
      staring at bars — better a half-filled Studio they can use. */
-  setTimeout(bootDone,6000);
+  setTimeout(()=>bootDone(true),6000);
   load();
   timer=setInterval(()=>{if(!document.hidden&&TAB==='live'&&D&&D.show&&D.show.status==='live')load({quiet:true})},4000);}
 /* A pull refreshes the Studio's data rather than reloading the page — no white
