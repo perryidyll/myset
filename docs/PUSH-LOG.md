@@ -10,9 +10,9 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
-### 2026-09-12 17:12 — 34edfe6 — MySet@perf/html-edge-cache (2 files since origin/main)
-**tl;dr:** Pages (HTML routes) now carry Cache-Control max-age=60 + stale-while-revalidate=600, so the edge and the phone answer at once; the durable header on static files did nothing (functions only) and is gone
-**Other sessions:** A copy change on a page can take up to a minute to show on a phone that just had it open. Netlify-CDN-Cache-Control is for function replies only — do not put it in netlify.toml for static files.
+### 2026-09-12 17:26 — 4ba232b — MySet@perf/one-warm-door (12 files since origin/main)
+**tl;dr:** One warm door: the four fan pages now read /api/fan?what=… (one function for profile/events/board/me/community/venue), pinged awake every 4 min by autocron. Decision 0049.
+**Other sessions:** Old addresses (/api/profile etc.) still work — index.html and artists.html were NOT switched (another session has them open); switch them to /api/fan?what=events when convenient. A new public read must be added to DOORS in fan.mjs or it sleeps alone. Photos stay on /api/img: already immutable+durable per ?v=.
 
 ### 2026-09-12 17:03 — f06857d — MySet@main (10 files since origin/main)
 **tl;dr:** Speed pass two (decision 0048): pages and static files now stay at the edge (no more 0.6–0.9s revalidation per tap); the Stripe SDK no longer loads on every cold start of profile/community/board/me; profile and venue reads batched
