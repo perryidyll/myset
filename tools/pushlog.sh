@@ -24,8 +24,9 @@ ENTRY="### $WHEN — $HASH — $WHO ($FILES files since origin/main)
 **tl;dr:** $1
 ${2:+**Other sessions:** $2
 }"
-# keep the header, put the new entry first
-awk -v e="$ENTRY" 'BEGIN{done=0} /^### /&&!done{print e; done=1} {print} END{if(!done)print e}' "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+# keep the header, put the new entry first (macOS awk cannot take a multi-line -v)
+N=$(grep -n '^### ' "$LOG" | head -1 | cut -d: -f1)
+{ if [ -n "$N" ]; then head -n $((N-1)) "$LOG"; printf '%s\n' "$ENTRY"; tail -n +"$N" "$LOG"; else cat "$LOG"; printf '\n%s\n' "$ENTRY"; fi; } > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 git add "$LOG"
 git commit -q -m "Push log: $1"
 echo "logged as $(git rev-parse --short HEAD) — now: git push"
