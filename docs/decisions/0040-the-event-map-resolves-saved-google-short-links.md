@@ -8,7 +8,7 @@ area: ui
 reverses:
 superseded_by:
 invariants: [0ag, 0ah]
-commits: []
+commits: [5cfa27d, 51bf8a8]
 tests: [test/unit.mjs, test/artists.mjs, tools/uicheck.mjs]
 files: [netlify/functions/_maps.mjs, netlify/functions/artists.mjs, public/artists.html]
 ---
@@ -68,6 +68,5 @@ share-link redirect format.
 - The draft endpoint resolved the live saved link to `145, The Ugly Duckling,
   2 Taladkao Rd, Ko Pha-ngan, … 84280, Thailand` and retained its exact source URL.
 - The full test suite passed; the rendered phone-width suite passed.
-- The draft hostname cannot render Google's live canvas because the production-only
-  browser-key restriction correctly rejects Netlify preview referrers. Pin placement
-  therefore remains to be checked on `myset.vip` after a requested production push.
+- Production Chrome rendered The Ugly Duckling marker at `9.72658, 100.00396`, kept
+  the exact saved Directions link, and omitted the former wrong-location result.

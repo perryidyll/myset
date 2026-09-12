@@ -53,5 +53,7 @@ the current card renders six.
   seconds countdown, and Support dock.
 - Draft `6aa508262ef6305007973b78` serves the requested content. Its map-rich API resolves
   the live Ugly Duckling address and exact source link. Google's browser key rejects the
-  preview hostname, so live-canvas placement can only be verified after production push.
-- Production deployment and live-key canvas verification are the final session step.
+  preview hostname, so its live canvas was checked after production deployment.
+- Production commits `5cfa27d` and `51bf8a8` are pushed on `main`. Chrome verified the
+  profile seconds advancing in real time and The Ugly Duckling marker at
+  `9.72658, 100.00396`; the exact saved Google Directions link is unchanged.
