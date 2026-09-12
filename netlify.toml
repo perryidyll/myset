@@ -201,6 +201,18 @@
   for = "/:slug"
   [headers.values]
     Cache-Control = "public, max-age=60, stale-while-revalidate=600"
+# The Studio is opened by one person a few times a day, so a 60 s edge life never
+# hit — every open forwarded to origin (0.7–0.9 s for 312 KB). Ten minutes fresh,
+# an hour stale-while-revalidate: the shell comes from the edge and a deploy still
+# clears it. Listed after /:slug on purpose: the later rule wins for the same header.
+[[headers]]
+  for = "/studio"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=3600"
+[[headers]]
+  for = "/studio.html"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=3600"
 [[headers]]
   for = "/:slug/vote"
   [headers.values]

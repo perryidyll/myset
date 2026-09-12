@@ -52,11 +52,6 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0040](0040-the-event-map-resolves-saved-google-short-links.md) | The event map resolves a saved Google short link before it guesses from venue text | 2026-09-12 | ui | decided | perry |
 | [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md) | Public map pins use saved coordinates and the home map opens without navigation | 2026-09-12 | ui | decided | perry |
 | [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) | public reads are shared at the edge and every page paints the last thing you saw first | 2026-09-12 | performance | decided | claude |
-| [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md) | the public artist page carries the room's rating and comments, the top voted, played and paid-for songs, and a taste of the setlist | 2026-09-12 | ui | decided | claude |
-| [0044](0044-artists-are-paid-out-daily-on-purpose.md) | Artists are paid out daily, on purpose | 2026-09-12 | money | decided | perry |
-| [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) | main is protected — nothing lands on it except through a pull request | 2026-09-12 | ops | decided | perry-confirmed |
-| [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) | The datastore is copied weekly and before every gig, verified, and kept for ninety days | 2026-09-12 | ops | decided | perry-confirmed |
-| [0047](0047-the-repository-stays-public.md) | The repository stays public | 2026-09-12 | ops | decided | perry |
 | [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) | the pages and the static files live at the edge; the Stripe SDK loads only when money moves | 2026-09-12 | performance | decided | claude |
 | [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) | everything a fan reads comes through one warm door | 2026-09-12 | performance | decided | perry |
 | [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) | the studio's first two reads start from the head, and its functions are pinged awake | 2026-09-12 | performance | decided | perry |
@@ -67,9 +62,9 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) · [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md)
 
-**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md)
+**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md)
 
-**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md)
+**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md)
 
 **performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md)
 
@@ -81,7 +76,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) · [0040](0040-the-event-map-resolves-saved-google-short-links.md) · [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md) · [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md)
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) · [0040](0040-the-event-map-resolves-saved-google-short-links.md) · [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md)
 
 **voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 
