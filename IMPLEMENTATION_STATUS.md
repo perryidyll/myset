@@ -8,7 +8,7 @@ documents own: `MYSET-MASTER-OVERVIEW.md` is what MySet is, `INVARIANTS.md` is w
 never break, `docs/decisions/` is why a design is the way it is, and `docs/sessions/` is
 what happened on a given day.
 
-**Last reviewed:** 2026-09-12 (evening — UX-009, the first Airbnb-dive batch, in the working tree)
+**Last reviewed:** 2026-09-12 (night — UX-010 Product Dev 2 follow-up live)
 **Current phase:** Phase 3 — scale preparation, on a product that is already live
 **Current focus:** Two Phase 3 items landed on `main` the same evening. The **shared-board
 split (P3-001)** is `c3d0a4d`: the audience poll is two calls, `/api/board` (shared, no fan
@@ -69,6 +69,7 @@ hostname (cross-origin `workers.dev` now, `line.myset.vip` delegated later).
 | UX-007 | Faster page switching: `leave.js` splash on every tap, first API call started from `<head>`, static files cached 10 min + stale-while-revalidate, Chrome prefetch on touch, smaller default cover | done | Decision `0038`; `test/copy.mjs` 37/37; `node --check leave.js` | Working tree only. Verify on a phone after the push: tap artist → vote → community and watch for any white frame |
 | UX-008 | Setlist control cleanup, live-only refund actions, ended-show payload masking, centered verification notice, and starter-pack retirement | done | Production `d9b2f2f`; full suite green; rendered checks confirm the modal is centered and Setlist has no vote/refund controls; live content verified | — |
 | UX-009 | Airbnb-dive batch 1: front door shows gigs near the phone (geolocation seeds the city), feed search field restyled, artist countdown says "(view setlist)", vote page counts down to the next gig between shows (wrap-up card kept three hours, Up next only while live), Merch folded into the Studio's Profile tab (six tabs fit 375px), sign-in = email + code box (Studio code behind a link), theme choice survives the back button | done | Working tree only. Decision `0039`; session `2026-09-12-airbnb-batch-front-door-vote-studio-signin.md`; `sh test/run.sh` 2,110/2,110; scratch puppeteer run at 375px (three vote states, near-you seed, 0px tab overflow, section order Videos → Merch → Save); `tools/uicheck.mjs` 104 ✓ + 1 ✗ in the other session's map | Not committed. Not seen on the live site. Rules "a vote never comes back" and "the room is always free" demoted to current behaviour in AGENTS / VISION / INVARIANTS / overview at the user's word |
+| UX-010 | Product Dev 2 efficiency follow-up: Support labels; compact Setlist controls; reflowed song cards; wider gradual scroll glow; red second-by-second audience countdown and seconds on profile; saved-coordinate map pins; home-page map modal | done | Production `5cfa27d` + `51bf8a8` + `a6d7566`; decisions `0040`, `0041`; session `2026-09-12-product-dev-2-efficiency-followup.md`; full suite green; live profile ticker advances; both production maps show five exact saved-coordinate pins with A–E letters; home modal opens/closes without navigation | — |
 
 ### Phase 3 — scale preparation
 
@@ -123,6 +124,7 @@ hostname (cross-origin `workers.dev` now, `line.myset.vip` delegated later).
 
 | Date | Check | Result |
 | --- | --- | --- |
+| 2026-09-12 | Production `a6d7566`, live content/API checks, production Chrome on `/` and `/artists?map=1`, and `python3 tools/prod.py` | Home View on map opens and closes without navigation; both maps render five markers at exact saved coordinate pairs; all 25 upcoming occurrences retain A–E letters; production health remained clean |
 | 2026-09-11 | R2 clip store, worktree `claude/r2-clips`: `node tools/overview.mjs --tests`; `test/clips.mjs`; the signer against Amazon's published SigV4 example; a fresh-context review that re-derived SigV4 from undici's wire bytes | Full suite 2,004/2,004; clips 163/163 (77 new); header signature `f0e8bdb8…`, canonical hash `7344ae5b…`, presigned `aeeed9bb…`, PUT payload hash `44ce7dd6…` all match; wire re-derivation matched for PUT/HEAD/DELETE. Not run against the real bucket |
 | 2026-09-11 | Production `c3d0a4d`, then two draft deploys (`6aa3e51586…`, `6aa3e61262…`) with a header switch, then production again | New page and both endpoints live and correct within 40 s; the durable cache bypasses every lifetime under 10 s in every spelling and hits at 10 and 60; a 3 s copy is an edge hit on the same connection (`ttl=2`) and a miss from the next node — on the draft and on production |
 | 2026-09-11 | `sh test/run.sh` on a clean checkout of `c3d0a4d` before the push | 2,017 assertions, 0 failures, every section green (`test/split.mjs` 80/80; `test/cost.mjs` board 14 reads, personal 2, legacy 14) |
