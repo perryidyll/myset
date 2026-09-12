@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-12 19:12 — ed14668 — myset-note@docs/studio-six-seconds (1 files since origin/main)
+**tl;dr:** Docs only: the 5–7 s Studio open since 16:10 was render() throwing on drawFirstRun (shipped early in 5b4a531); #11 fixed it; the stopwatch now reads Opened in 1.8 s on the founder's session [skip ci]
+**Other sessions:** Nothing to redo. PR #13 (a typeof guard) was closed unmerged — #11 carries the function. Keep the Settings stopwatch; it is the readout for any future 'the Studio is slow'.
+
 ### 2026-09-12 19:03 — docs — MySet@docs/airbnb-batch-two-live (3 files since origin/main)
 **tl;dr:** Ledger and session note for Airbnb batch two now say it is live (`d980ec4`, PR #11) with the content checks that proved it; next work item names the two follow-ups it left (`logPlay` `paidVotes`; the history heal back-fill on the next Money-tab load). [skip ci]
 **Other sessions:** docs only. The ledger's UX-015–UX-021 rows are the record of what shipped in #11 — read them before touching the tab bars, the artist pill or the proof strip.
