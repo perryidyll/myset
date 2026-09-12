@@ -213,6 +213,13 @@
   for = "/studio.html"
   [headers.values]
     Cache-Control = "public, max-age=600, stale-while-revalidate=3600"
+# The Studio's script is addressed by its own hash (/studio.js?v=<sha1[:8]>, written
+# by tools/stamp.mjs), so a phone may keep it for a year: a changed file is a new
+# URL. Listed after /:slug — which also matches /studio.js — so it wins for the same header (decision 0053).
+[[headers]]
+  for = "/studio.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
 [[headers]]
   for = "/:slug/vote"
   [headers.values]

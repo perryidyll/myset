@@ -127,7 +127,8 @@ console.log('\nAND THE FOUR PAGES AGREE WITH THE SERVER');
    tools/uicheck.mjs drives all four in a real browser; this is the cheap guard that
    runs on every deploy. */
 const { readFileSync } = await import('node:fs');
-const read = (f) => readFileSync(new URL('../public/' + f, import.meta.url), 'utf8');
+const { src } = await import('./_src.mjs');
+const read = (f) => src(new URL('../public/' + f, import.meta.url));
 {
   const studio = read('studio.html');
   ok('the Studio has a Last call button', /onclick="lastCall\(\)"/.test(studio));

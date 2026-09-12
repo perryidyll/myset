@@ -55,3 +55,19 @@ Two lessons, both now in the push-log rule: stage only your own hunks (this was 
 second casualty of one commit), and a boot screen with a safety timer needs a
 readout that says when the timer — not the data — ended the wait. The stopwatch
 stays; the founder reads it, nobody guesses.
+
+## Later — step 3: the script is a file the phone keeps (decision 0053)
+
+`public/studio.html` 312 KB → 49 KB shell; `public/studio.js` 283 KB, moved verbatim
+(lines 686–4959 of the old file), addressed as `/studio.js?v=<sha1[:8]>` and served
+`immutable` for a year. `node tools/stamp.mjs` rewrites the stamp; `test/structure.mjs`
+fails if it is stale, and if studio.html grows inline scripts again. Every test that
+read studio.html now reads the pair through `test/_src.mjs`, so "exactly once" and
+"never says" mean what they meant. The service worker already keys static files by
+full URL (rule 3, cache-first with background refresh), so the installed app gets the
+script from disk on the second open.
+
+Step 4 (drop the boot screen on `stage` alone) was NOT done: in all eight of the
+founder's readings and the two taken here, `plan` answered before `stage` (0.6–1.1 s
+vs 0.9–1.7 s), so the boot screen never waits on the plan in practice — the change
+would buy nothing measurable and adds a locked-then-unlocked flash. Held; his call.

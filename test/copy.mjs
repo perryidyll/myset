@@ -10,13 +10,14 @@
    pin the ONE label that something else depends on — the way the checks below do —
    rather than banning a synonym across every page. */
 import { readFileSync } from 'node:fs';
+import { src } from './_src.mjs';
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
   if (cond) { pass++; console.log('  ✓', name); }
   else { fail++; console.log('  ✗', name, detail === undefined ? '' : '\n      ' + JSON.stringify(detail)); }
 };
-const read = (rel) => readFileSync(new URL('../' + rel, import.meta.url), 'utf8');
+const read = (rel) => src(new URL('../' + rel, import.meta.url));
 
 console.log('\nFIXED LABELS  the strings other things lean on');
 const venue = read('public/venue.html'), artist = read('public/artist.html'), vote = read('public/vote.html');

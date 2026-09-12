@@ -16,6 +16,7 @@ const { PLANS } = await import('../netlify/functions/_plan.mjs');
 const { createArtist, signToken, readArtists, revOf, mutateArtists } =
   await import('../netlify/functions/_auth.mjs');
 const { readFileSync } = await import('node:fs');
+const { src } = await import('./_src.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -100,7 +101,7 @@ ok('...still play it tonight', (await A('listUse', { id: made.id })).ok);
 ok('...and still delete it', (await A('listDelete', { id: made.id })).ok);
 
 console.log('\nTHE STUDIO SAYS THE SAME THING THE SERVER ENFORCES');
-const page = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
+const page = src(new URL('../public/studio.html', import.meta.url));
 ok('the Live warning counts by month', /s\.gigMonth===monthKey\(\)/.test(page));
 ok('and the page computes the SAME bucket the server does', /const monthKey=/.test(page));
 ok('the wording says month', /free shows this month/.test(page));

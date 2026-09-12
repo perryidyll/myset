@@ -22,6 +22,7 @@ const { createArtist, signToken, readArtists, revOf, mutateArtists } =
   await import('../netlify/functions/_auth.mjs');
 const { casDoc } = await import('../netlify/functions/_lib.mjs');
 const { readFileSync } = await import('node:fs');
+const { src } = await import('./_src.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -191,7 +192,7 @@ eq('nor set one on somebody else', anaSetOther.status, 401);
 ok('while the founder can', (await OWNER('flagList')).ok);
 const { flagValue, readFlags } = await import('../netlify/functions/_flags.mjs');
 eq('and none of that changed the flag', flagValue(await readFlags(), 'featuredShows', 'perry-idyll'), true);
-const studioSrc = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
+const studioSrc = src(new URL('../public/studio.html', import.meta.url));
 ok('the card is also hidden for everyone else, as a courtesy',
    /function flagCard\(\)\{[\s\S]{0,120}PLAN\.owner/.test(studioSrc), 'flagCard must gate on PLAN.owner');
 
