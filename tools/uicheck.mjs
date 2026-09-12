@@ -476,8 +476,8 @@ const DIRECTORY=await pg.evaluate(async()=>{
   ok('View map opens an accessible popup with every filtered event',!modal.hidden&&modal.getAttribute('aria-modal')==='true'&&modal.querySelectorAll('.mapevent').length===1);
   ok('the popup opens an interactive map viewport for the exact event location',!!mapViewport&&/A/.test(modal.querySelector('.pinlabel')?.textContent||''));
   ok('each mapped event keeps its exact directions link',modal.querySelector('.mapgo')?.href==='https://maps.google.com/?q=13.75,100.5');
-  const good={formatted_address:'145, 2 Taladkao Rd, Ko Pha-ngan District, Surat Thani 84280, Thailand',partial_match:false,
-    address_components:[{long_name:'Ko Pha-ngan District',short_name:'Ko Pha-ngan',types:['administrative_area_level_2']},{long_name:'Thailand',short_name:'TH',types:['country']}],geometry:{location:{lat:()=>9.73,lng:()=>100.01}}};
+  const good={formatted_address:'145, 2 Taladkao Rd, Ko Pha-ngan District, Surat Thani 84280, Thailand',partial_match:true,
+    address_components:[{long_name:'2',short_name:'2',types:['street_number']},{long_name:'Taladkao Rd',short_name:'Taladkao Rd',types:['route']},{long_name:'Ko Pha-ngan District',short_name:'Ko Pha-ngan',types:['administrative_area_level_2']},{long_name:'Thailand',short_name:'TH',types:['country']}],geometry:{location:{lat:()=>9.73,lng:()=>100.01}}};
   const wrong={...good,formatted_address:'Amsterdam, Netherlands',address_components:[{long_name:'Amsterdam',short_name:'Amsterdam',types:['locality']},{long_name:'Netherlands',short_name:'NL',types:['country']}],geometry:{location:{lat:()=>52.37,lng:()=>4.89}}};
   const event={venue:'The Ugly Duckling',address:'145, 2 Taladkao Rd',city:'Koh Phangan',country:'Thailand',maps:{lat:null,lng:null}};
   const accepted=await positionFor({},event,{geocode:async()=>({results:[wrong,good]})});

@@ -127,12 +127,21 @@ const geoAgrees=(want,values)=>{const w=geoKey(want);return !w||(values||[]).som
    component order as unstable, so this checks component TYPES, never positions.
    A partial match is not an exact enough answer for sending somebody to a gig. */
 function mapResultMatches(e,r){
-  if(!r||!r.geometry||!r.geometry.location||r.partial_match)return false;
+  if(!r||!r.geometry||!r.geometry.location)return false;
   const c=r.address_components||[], vals=types=>c.filter(x=>(x.types||[]).some(t=>types.includes(t))).flatMap(x=>[x.long_name,x.short_name]);
   const countries=vals(['country']);
   if(e.country&&!geoAgrees(e.country,countries.length?countries:[r.formatted_address]))return false;
   const areas=vals(['locality','postal_town','sublocality','sublocality_level_1','administrative_area_level_1','administrative_area_level_2','administrative_area_level_3']);
   if(e.city&&!geoAgrees(e.city,areas.length?areas:[r.formatted_address]))return false;
+  /* Google marks an otherwise exact street result partial when the saved text also
+     contains a business name it did not resolve. Accept that only when the typed
+     route and street number are both present in Google's structured result. */
+  if(r.partial_match){
+    const address=String(e.address||''), routes=vals(['route']);
+    const numbers=vals(['street_number']).map(x=>String(x||'').trim()).filter(Boolean);
+    const savedNumbers=address.match(/\b\d+(?:\/\d+)?\b/g)||[];
+    if(!address||!routes.length||!geoAgrees(address,routes)||!numbers.length||!numbers.some(x=>savedNumbers.includes(x)))return false;
+  }
   return true;
 }
 const positionFor=async(maps,e,geocoder)=>{

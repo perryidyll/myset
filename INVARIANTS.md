@@ -896,8 +896,10 @@ If you are about to violate one, stop and say so rather than working around it.
     send somebody to Amsterdam, so `mapLinks()` returns null unless there are
     coordinates, an address, or a name WITH a city — and the city and country always
     go into the query. Before drawing a pin, the directory checks Google's structured
-    address components against the saved city and country and rejects partial or
-    conflicting results. Coordinates are reverse-geocoded through the same check.
+    address components against the saved city and country and rejects conflicting
+    results. A partial geocode is accepted only when its structured route and street
+    number still match the saved address; coordinates are reverse-geocoded through
+    the same check.
     No pin is better than a wrong one; the event and exact Directions link remain.
 
 ## Venues, part two

@@ -29,8 +29,9 @@
   Road instead of an ambiguous name search. Decision `0040` records the boundary.
 - The profile ticker no longer waits on obsolete show state, so it starts as soon as
   the profile countdown button exists. The map now validates Google's structured
-  address components against the saved city/country (including reverse-geocoding
-  saved coordinates) and omits any pin it cannot verify instead of showing a guess.
+  address components against the saved city/country and, for partial results, its
+  route/street number (including reverse-geocoding saved coordinates). It omits any
+  pin it cannot verify instead of showing a guess.
 
 ## Where feedback goes
 

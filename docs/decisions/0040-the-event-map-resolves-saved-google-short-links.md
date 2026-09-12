@@ -38,10 +38,11 @@ validates the redirect as another permitted map URL, stops after 2.5 seconds, an
 caches the extracted address. Ordinary `/api/artists` calls do no extra work; only
 `?maps=1`, used by the interactive directory, asks for enrichment. The exact saved
 source remains the Directions link. Its canonical Google address overrides conflicting
-typed address text. Before the browser draws any pin it rejects partial geocodes and
-compares Google's typed `address_components` with the saved city and country; saved
-coordinates are reverse-geocoded through the same check. If the location cannot be
-verified, the event stays in the list with its exact Directions link but gets no pin.
+typed address text. Before the browser draws any pin it compares Google's typed
+`address_components` with the saved city and country. A result Google calls partial is
+accepted only when its structured route and street number still match the saved address;
+saved coordinates are reverse-geocoded through the same check. If the location cannot
+be verified, the event stays in the list with its exact Directions link but gets no pin.
 
 ## What this makes harder
 
