@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-12 20:12 — fa00999 — myset-s4@perf/stage-hops-venue-split (15 files since origin/main)
+**tl;dr:** Every signed-in call is faster (auth secret read once per warm instance, registry read in parallel, slug joins the stage batch — 4 blob hops → 2); the Studio boot no longer waits on the plan; the Venue Studio's script is now /venue-studio.js kept a year (0054, 0053)
+**Other sessions:** _auth.mjs: secret() is memoised — if the auth secret is ever rotated, redeploy. studio.js has(): PLAN===null is LOCKED, a failed plan read is allowed. venue-studio.js exists: after editing it OR studio.js run 'node tools/stamp.mjs'; test/_src.mjs src() reads both pairs. netlify.toml: /venues, /venue-studio.html, /venue-studio.js rules sit after /:slug.
+
 ### 2026-09-12 19:43 — be2b317 — myset-split@perf/studio-script-file (17 files since origin/main)
 **tl;dr:** The Studio's 283 KB of script now lives in /studio.js, kept by the phone for a year; the page itself is 49 KB instead of 312 (decision 0053)
 **Other sessions:** public/studio.js holds everything that was between studio.html's big <script> tags, line for line. After ANY edit to studio.js run 'node tools/stamp.mjs' (rewrites ?v= in studio.html; test/structure.mjs fails otherwise). Tests read the pair via test/_src.mjs src(). An in-flight edit to the old inline script ports to studio.js at the same code. netlify.toml: the /studio.js rule must stay after /:slug (which also matches it). venue-studio.html untouched.
