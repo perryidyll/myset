@@ -41,6 +41,10 @@ ok('the live profile has one vote CTA with the requested label',
    /TAP TO VOTE THE SETLIST/.test(artist) && !/Live now — vote the setlist/.test(artist) && !/>Join live</.test(artist));
 
 const studio = read('public/studio.html');
+/* 2026-09-12: a sed edit dropped a `// comment` in front of `.then(r=>r.json())`, so
+   the Studio's profile read returned a Response object for two hours and the
+   Profile tab drew blanks. The parse must be on the same statement as the fetch. */
+ok('the Studio parses its profile read as JSON', /PROF=await fetch\('\/api\/profile\?t='\+Date\.now\(\),\{cache:'no-store'\}\)\.then\(r=>r\.json\(\)\)/.test(studio));
 ok('the Artist Studio defaults to Setlist', /getItem\('myset\.tab'\)\|\|'setlist'/.test(studio));
 ok('the live song offers the delegated Lyrics action', /data-act="lyrics"[\s\S]{0,240}>Lyrics</.test(studio));
 ok('Lyrics, Auto chords and My chart remain separate ordered actions',

@@ -1989,7 +1989,8 @@ async function hideGig(pair){
 }
 async function loadProf(force){
   if(PROF&&!force)return;
-  PROF=await fetch('/api/profile?t='+Date.now(),{cache:'no-store'})   // ?t= skips the 15s edge copy: the artist sees their own save at once.then(r=>r.json()).catch(()=>null);
+  // ?t= skips the 15s edge copy (decision 0042): the artist sees their own save at once
+  PROF=await fetch('/api/profile?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
   if(TAB==='profile'&&D)render();
 }
 async function saveProfile(){

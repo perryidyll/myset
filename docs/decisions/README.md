@@ -52,7 +52,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0040](0040-the-event-map-resolves-saved-google-short-links.md) | The event map resolves a saved Google short link before it guesses from venue text | 2026-09-12 | ui | decided | perry |
 | [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md) | Public map pins use saved coordinates and the home map opens without navigation | 2026-09-12 | ui | decided | perry |
 | [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) | public reads are shared at the edge and every page paints the last thing you saw first | 2026-09-12 | performance | decided | claude |
-| [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md) | the public artist page carries the room's rating, request status, post count and top songs | 2026-09-12 | ui | decided | claude |
+| [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md) | the public artist page carries the room's rating and comments, the top voted, played and paid-for songs, and a taste of the setlist | 2026-09-12 | ui | decided | claude |
 | [0044](0044-artists-are-paid-out-daily-on-purpose.md) | Artists are paid out daily, on purpose | 2026-09-12 | money | decided | perry |
 | [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) | main is protected — nothing lands on it except through a pull request | 2026-09-12 | ops | decided | perry-confirmed |
 | [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) | The datastore is copied weekly and before every gig, verified, and kept for ninety days | 2026-09-12 | ops | decided | perry-confirmed |
