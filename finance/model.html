@@ -67,6 +67,7 @@
   .mast .rule { height: 3px; background: var(--ink); margin-bottom: 18px; }
   .stamp { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 11px; letter-spacing: .05em; color: var(--muted); margin-bottom: 20px; }
   .stamp b { color: var(--ink-soft); font-weight: 500; }
+  .stamp .theme-btn { margin-left: auto; letter-spacing: .08em; font-size: 10.5px; padding: 3px 7px; }
   .lede { font-size: 18px; max-width: 760px; color: var(--ink-soft); margin: 14px 0 0; }
 
   /* ── KPI row ── */
@@ -207,6 +208,11 @@
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } html { scroll-behavior: auto; } }
 </style>
+<script>
+/* Light / dark: the reader's own choice wins over the system setting, and is remembered in this browser.
+   Applied before the first paint so the page never flashes the wrong ground. */
+try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 
 <div class="page">
 <header class="mast">
@@ -217,6 +223,7 @@
     <span>RATES CHECKED <b>5 SEP 2026</b></span>
     <span>STORAGE <b id="storeMode">this browser</b></span>
     <span id="calibStamp">REAL SHOWS <b>none used yet</b></span>
+    <button class="btn small ghost theme-btn" id="themeBtn" type="button" aria-label="Switch between light and dark">LIGHT</button>
   </div>
   <h1>MySet Money Model</h1>
   <p class="lede">Move a dial, watch the business. Every number on this page comes out of one formula:
@@ -1457,7 +1464,12 @@ buildDials(); recalc();
   if (store.wasOn && ACT) { P.useActuals = true; applyActuals(); buildDials(); }
   renderActSummary(); markReal(); recalc(); renderCards();
 })();
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recalc);
+const themeBtn = $('#themeBtn');
+const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+const paintThemeBtn = () => { themeBtn.textContent = isDark() ? 'LIGHT' : 'DARK'; themeBtn.title = isDark() ? 'Switch to light mode' : 'Switch to dark mode'; };
+themeBtn.addEventListener('click', () => { const next = isDark() ? 'light' : 'dark'; document.documentElement.dataset.theme = next; try { localStorage.setItem('myset.model.theme', next); } catch (e) {} paintThemeBtn(); });
+paintThemeBtn();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { paintThemeBtn(); recalc(); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { charts = Object.fromEntries(Object.entries(charts).map(([k, c]) => (c.destroy(), [k, null]))); recalc(); });
 new MutationObserver(recalc).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 </script>
