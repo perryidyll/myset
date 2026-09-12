@@ -122,8 +122,14 @@ preview. Switch to a deep investigation only when the user asks or the risk dema
 
 ### At session start
 
-Read `IMPLEMENTATION_STATUS.md` — current focus, next work item, blockers, deviations.
+**First, read the top of `docs/PUSH-LOG.md`** — what the other sessions pushed, in three lines each. Then
+read `IMPLEMENTATION_STATUS.md` — current focus, next work item, blockers, deviations.
 Do not redo `done` rows unless the evidence is invalid.
+
+### Before every push
+
+Run `./tools/pushlog.sh "what changed, for a person" "what another session must know"` as the
+last step, then push. The pre-push hook refuses a push whose commits do not touch the log.
 
 ### Before ending a session
 
