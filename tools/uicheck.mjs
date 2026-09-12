@@ -304,6 +304,11 @@ const SETTINGS=await pg.evaluate(async ()=>{
   ok('its heading and reason are white, and its search warning is orange',
     getComputedStyle(heading).color==='rgb(255, 255, 255)'&&getComputedStyle(notice.querySelector('.verify-note')).color==='rgb(255, 255, 255)'&&
     ['rgb(255, 122, 69)','rgb(255, 69, 110)'].includes(getComputedStyle(notice.querySelector('.verify-lede')).color));
+  await new Promise(r=>setTimeout(r,500));
+  const noticeBox=notice.getBoundingClientRect();
+  ok('the verification notice is centered in the viewport',
+    Math.abs((noticeBox.top+noticeBox.height/2)-innerHeight/2)<2,
+    `${Math.round(noticeBox.top+noticeBox.height/2)}/${Math.round(innerHeight/2)}`);
   closeSheet();VERIFYINTROSHOWN=false;maybeVerifyIntro();await new Promise(r=>setTimeout(r,20));
   ok('the verification notice appears only once for this artist',!notice.classList.contains('on'));
   return out.join('\n');
@@ -376,7 +381,10 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   ok('between shows the Live tab hides stale stats and now-playing', !document.querySelector('.stats')&&!document.querySelector('.np')&&!document.querySelector('.votebox'));
   D.show.status='live'; D.songs[0].votes=4; D.songs[0].paidVotes=2;
   TAB='setlist'; render();
-  ok('the Setlist tab also shows paid attribution', /4 votes total/.test(document.querySelector('#app').innerText)&&/\(2\) paid votes/.test(document.querySelector('#app').innerText));
+  ok('the Setlist tab never shows live vote or refund controls',
+    !/4 votes total/.test(document.querySelector('#app').innerText)&&
+    !/\(2\) paid votes/.test(document.querySelector('#app').innerText)&&
+    !/Decline \+ refund votes/.test(document.querySelector('#app').innerText));
   const studioSet=document.querySelector('.setlist-window');
   const studioSetShell=document.querySelector('.setlist-shell');
   ok('the artist setlist is capped at ten rows with the same thumb lane and glow',

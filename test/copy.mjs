@@ -84,8 +84,28 @@ ok('the first Settings visit shows the requested verification notice once per ar
    /<h3>verify your account now<\/h3>/.test(studio)&&
    /only verified profiles will show up in search results!/.test(studio)&&
    /this is to minimize fraudulent use and ensure the best experience for MySet audiences/.test(studio)&&
-   /\.sheet\.verify-intro\{background:#111;color:#fff\}/.test(studio)&&
+   /\.sheet\.verify-intro\{[^}]*top:50%;bottom:auto[^}]*border-radius:var\(--r-lg\)/.test(studio)&&
+   /#sheet\.verify-intro\.on\{transform:translateX\(-50%\) translateY\(-50%\)/.test(studio)&&
    /\.verify-intro \.verify-lede\{color:var\(--accent-2\)/.test(studio));
+const renderAt = studio.indexOf('function render()');
+const setlistAt = studio.indexOf("if(TAB==='setlist'){", renderAt);
+const setlistBlock = studio.slice(setlistAt, studio.indexOf("if(TAB==='gigs')", setlistAt));
+const addAt = setlistBlock.indexOf('>Add a song</span>');
+const importAt = setlistBlock.indexOf('>⇪ Import songs</button>');
+const organizeAt = setlistBlock.indexOf('${setPick()}');
+const learnAt = setlistBlock.indexOf('${learnSection()}');
+const fansAt = setlistBlock.indexOf('>See what fans see ↗</a>');
+const clearAt = setlistBlock.indexOf('>Clear setlist</button>');
+ok('Setlist actions follow the requested order',
+   /class="big alt orange-outline"[^>]*onclick="openLists\(\)"[^>]*>Organize your songs into setlists</.test(studio)&&
+   addAt >= 0 && importAt > addAt && organizeAt > importAt && learnAt > organizeAt && fansAt > learnAt && clearAt > fansAt);
+ok('Decline + refund appears on Live only, never Setlist',
+   /Decline \+ refund votes/.test(studio.slice(studio.indexOf("if(TAB==='live')"), studio.indexOf("if(TAB==='setlist')"))) &&
+   !/Decline \+ refund votes/.test(setlistBlock));
+ok('the starter-pack UI and server feature are removed',
+   !/starter pack|starterSetlist/i.test(studio)&&
+   !/STARTER_SONGS|starterSetlist/.test(read('netlify/functions/_lib.mjs'))&&
+   !/STARTER_SONGS|starterSetlist/.test(read('netlify/functions/admin.mjs')));
 ok('the plans popup contains no placeholder testimonials',
    !/TESTIMONIALS|What MySet members have to say|Sample artist|Sample duo|Sample band/.test(studio));
 ok('the Studio scrolling windows use a clipping shell around the native scrollbar',

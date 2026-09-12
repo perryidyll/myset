@@ -178,8 +178,6 @@ await A('addSong', { title: 'Golf', artist: 'Test' });
 ok('adding it back re-projects it', (await st()).songs.find((x) => x.id === 'golf')?.inSet === true);
 await A('editSong', { song: 'golf', artist: 'Renamed' });
 eq('an edit that changes no ids leaves the set alone', (await st()).show.listId, lid);
-await A('starterSetlist');
-ok('the starter pack re-projects too', (await st()).songs.length > 10);
 
 /* ── FINDING 10 + 11 ───────────────────────────────────────────── */
 console.log('\nFINDING 10+11  "N of your M songs are in play" must be true');
@@ -192,6 +190,7 @@ await A('toggleSong', { song: 'bravo' });
 
 /* ── FINDING 13 ────────────────────────────────────────────────── */
 console.log('\nFINDING 13  tagAuto reports what it did, once');
+await A('addSong', { title: 'Wagon Wheel', artist: 'Darius Rucker' });
 const t1 = await A('tagAuto');
 eq('filled + kept + unknown covers every song',
    t1.filled + t1.kept + t1.unknownCount, (await st()).songs.length);

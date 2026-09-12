@@ -43,74 +43,6 @@ import { createHash, timingSafeEqual } from 'node:crypto';
 export const STORE_NAME = 'myset';
 export const store = () => getStore(STORE_NAME);
 
-/* ---------- starter setlist offered to a new artist ---------- */
-export const STARTER_SONGS = [
-  // A starter pack of well-known covers, offered to a brand-new artist so their
-  // first gig isn't a blank page. Nobody's own songs belong in here.
-  ['The Joker','Steve Miller Band'],
-  ['Jack & Diane','John Mellencamp'],
-  ['Faith','George Michael'],
-  ['Crazy Little Thing Called Love','Queen'],
-  ['Shape Of You','Ed Sheeran'],
-  ['Amie','Pure Prairie League'],
-  ['Hey Jude','The Beatles'],
-  ['Vienna','Billy Joel'],
-  ['Best Part','Daniel Caesar'],
-  ['Peaceful Easy Feeling','Eagles'],
-  ['Brown Eyed Girl','Van Morrison'],
-  ['Chicken Fried','Zac Brown Band'],
-  ['Wagon Wheel','Darius Rucker'],
-  ['Margaritaville','Jimmy Buffett'],
-  ['Bar Song (Tipsy)','Shaboozey'],
-  ['What I Got','Sublime'],
-  ['Santeria','Sublime'],
-  ['This Love','Maroon 5'],
-  ['Sunday Morning','Maroon 5'],
-  ['Better Together','Jack Johnson'],
-  ['Banana Pancakes','Jack Johnson'],
-  ["I'm Yours",'Jason Mraz'],
-  ['Hey Soul Sister','Train'],
-  ['Drops Of Jupiter','Train'],
-  ['Perfect','Ed Sheeran'],
-  ['All Of Me','John Legend'],
-  ['Circles','Post Malone'],
-  ['Wish You Were Here','Pink Floyd'],
-  ['Sitting On The Dock Of The Bay','Otis Redding'],
-  ['Feel It Still','Portugal. The Man'],
-  ["Ain't No Rest For The Wicked",'Cage The Elephant'],
-  ['Come Together','The Beatles'],
-  ['Sweet Home Alabama','Lynyrd Skynyrd'],
-  ['Tennessee Whiskey','Chris Stapleton'],
-  ["Summer Of '69",'Bryan Adams'],
-  ['2009','Mac Miller'],
-  ['Something Like Olivia','John Mayer'],
-  ["Ain't No Sunshine",'Bill Withers'],
-  ['Stick Season','Noah Kahan'],
-  ['Do You Remember','Jack Johnson'],
-  ['Taylor','Jack Johnson'],
-  ['Fast Car','Tracy Chapman'],
-  ['3 AM','Matchbox Twenty'],
-  ['Landslide','Fleetwood Mac'],
-  ['Hey There Delilah',"Plain White T's"],
-  ['Fire And Rain','James Taylor'],
-  ['Hallelujah','Jeff Buckley'],
-  ['Have You Ever Seen The Rain','Creedence Clearwater Revival'],
-  ['Gravity','John Mayer'],
-  ['Why Georgia','John Mayer'],
-  ['Slow Dancing In A Burning Room','John Mayer'],
-  ['Who Says','John Mayer'],
-  ['Stop This Train','John Mayer'],
-  ['Edge Of Desire','John Mayer'],
-  ["Free Fallin'",'Tom Petty (John Mayer version)'],
-  ['I Will Follow You Into The Dark','Death Cab For Cutie'],
-  ['Catch & Release','Matt Simons'],
-  ['Simple Man','Lynyrd Skynyrd'],
-  ['Imagine','John Lennon'],
-  ['Until I Found You','Stephen Sanchez'],
-  ['Blackbird','The Beatles'],
-  ['Follow The Sun','Xavier Rudd'],
-];
-
 /* Stamped on every new record. Nothing is multi-artist yet, but a field costs
    nothing now and is the difference between a rename and a rewrite later. */
 export const ARTIST_ID = 'perry-idyll';
@@ -148,7 +80,7 @@ export const slug = (t) =>
    is still stable and still derived from the song.
 
    ONE definition, used by every place that mints a song id — addSong, importSongs,
-   askAccept, starterSetlist — so they cannot disagree about what a song is called. */
+   and askAccept — so they cannot disagree about what a song is called. */
 export const songId = (title, artist = '') =>
   slug(String(title)) || 's' + sha(`${title}|${artist}`).slice(0, 8);
 
@@ -159,8 +91,7 @@ export const songSig = (title, artist = '') =>
   `${slug(String(title)) || String(title).trim().toLowerCase()}|${slug(String(artist || ''))}`;
 
 /* Deliberately blank. A second artist signing up must never inherit the first
-   artist's name, venue or setlist — `getShow` fills the name in from the
-   registry, and the Studio offers the starter pack as an explicit choice. */
+   artist's name, venue or setlist — `getShow` fills the name in from the registry. */
 export const DEFAULT_FREE_CREDITS = 3;
 export const VOTE_DEFAULTS_VERSION = 2;
 export function defaultShow() {

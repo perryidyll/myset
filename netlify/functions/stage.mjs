@@ -31,9 +31,14 @@ export async function stagePayload(aid) {
   } catch { sched = null; }
   const { artistById } = await import('./_auth.mjs');
   const who = await artistById(aid);
-  const counts = voteCounts(fans);
-  const paidCounts = paidVoteCounts(fans);
-  const firstAt = firstVotedAt(fans);
+  /* An ended show keeps its board briefly so an accidental End can be resumed,
+     but that recovery state is not a live setlist. Never expose its totals or
+     refund affordances in the inactive Studio payload. A fresh show performs the
+     durable carry/reset at the true night boundary. */
+  const live = show.status === 'live';
+  const counts = live ? voteCounts(fans) : {};
+  const paidCounts = live ? paidVoteCounts(fans) : {};
+  const firstAt = live ? firstVotedAt(fans) : {};
   const room = roomCounts(fans);
   const total = meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0);
 
@@ -60,10 +65,10 @@ export async function stagePayload(aid) {
     /* True when the chosen setlist has nothing votable left and the whole library
        is standing in for it. The artist has to be told — silently is worse. */
     listFellBack: playable(show).fellBack,
-    voters: Object.values(fans).filter((f) => (f.v || []).length).length,
+    voters: live ? Object.values(fans).filter((f) => (f.v || []).length).length : 0,
     // phones in the room tonight, not just phones that voted
-    room: room.phones,
-    nets: room.nets,
+    room: live ? room.phones : 0,
+    nets: live ? room.nets : 0,
     asks: shapeRequests(reqs, show),
     songs: (() => {
       const on = new Set(playable(show).songs.map((x) => x.id));

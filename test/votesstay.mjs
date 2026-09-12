@@ -98,8 +98,9 @@ await A('toggleSong', { song: 'bravo' });      // the artist hides one
 eq('hiding gives nothing back', await spent('dee'), 6);
 await A('removeSong', { song: 'charlie' });    // the artist deletes another
 eq('deleting gives nothing back', await spent('dee'), 6);
-await A('status', { status: 'ended' });
+const ended = await A('status', { status: 'ended' });
 eq('and ending the show gives nothing back', await spent('dee'), 6);
+eq('but the inactive Studio receives no stale vote total', ended.stage.songs.find((x) => x.id === 'bravo').votes, 0);
 
 console.log('\nWHAT A FAN IS OWED IS BEING TOLD, AND THEY ARE');
 /* The design is only fair if nobody finds out afterwards. Check the approved

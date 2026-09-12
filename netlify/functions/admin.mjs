@@ -2,7 +2,7 @@ import { guard } from './_errlog.mjs';
 import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSongVotes, refundSongVotes, wipeBoard, voteCounts, readMeta, mutateMeta,
          firstVotedAt, rankSongs, json, bad, requireArtist, slug, songId as makeSongId, songSig, sha,
          MIN_CODE, weakCode, cleanArtistId,
-         normPacks, normAsk, STARTER_SONGS,
+         normPacks, normAsk,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf, DEFAULT_ARTIST,
          DEFAULT_FREE_CREDITS } from './_lib.mjs';
@@ -1708,7 +1708,7 @@ const main = async (req) => {
      MAX_LIBRARY songs on any plan; the plan only limits how many are live to the
      audience at once. Going over just means the extras arrive switched off. */
   let featureCap = null;
-  if (['addSong', 'starterSetlist', 'toggleSong', 'importSongs'].includes(action)) {
+  if (['addSong', 'toggleSong', 'importSongs'].includes(action)) {
     const f = (await planForArtist(aid)).limits.featured;
     featureCap = f === Infinity ? null : f;
   }
@@ -2036,19 +2036,6 @@ const main = async (req) => {
          afterwards, and the artist reaching for this button does not change that.
          The Studio says so on the button. */
       case 'resetVotes': clearBoard = true; break;
-      case 'starterSetlist': {          // append the generic covers, never replace
-        const have = new Set(show.songs.map((x) => x.id));
-        let live = show.songs.filter((x) => x.active !== false).length;
-        for (const [t, a] of STARTER_SONGS) {
-          if (show.songs.length >= MAX_LIBRARY) break;
-          const id = makeSongId(t, a);
-          if (have.has(id)) continue;
-          const on = featureCap === null || live < featureCap;
-          show.songs.push({ id, title: t, artist: a, active: on });
-          if (on) live++;
-        }
-        break;
-      }
       case 'clearSetlist': show.songs = []; break;
       default: err = ['unknown action', 400]; return false;
     }

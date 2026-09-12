@@ -430,7 +430,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
-| Shows per calendar month (UTC) | 10 | unlimited | unlimited |
+| Shows per calendar month (UTC) | 4 | unlimited | unlimited |
 | Songs live to the audience at once | 50 | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 200 | 1,000 | 2,000 |
 | Team seats | 1 | 1 | 5 |
@@ -499,7 +499,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | HTTP functions | 30 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
 | Shared libraries | 45 |
-| Artist Studio actions | 125 |
+| Artist Studio actions | 124 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |

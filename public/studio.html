@@ -347,7 +347,10 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .fine{font-size:12.5px;color:var(--faint);margin-top:14px;text-align:center}
 .plansheet .fine{font-size:14.5px}
 .plansheet .sec .kick{font-size:14px}
-.sheet.verify-intro{background:#111;color:#fff}
+.sheet.verify-intro{background:#111;color:#fff;top:50%;bottom:auto;width:calc(100% - 32px);max-width:420px;
+  max-height:calc(100vh - 32px);border-radius:var(--r-lg);padding-bottom:24px;
+  transform:translateX(-50%) translateY(calc(-50% + 24px)) scale(.96);opacity:0}
+#sheet.verify-intro.on{transform:translateX(-50%) translateY(-50%) scale(1);opacity:1}
 .sheet.verify-intro .grab{background:rgba(255,255,255,.34)}
 .sheet.verify-intro .sheetx{color:#fff;background:rgba(255,255,255,.12)}
 .verify-intro h3{color:#fff;font-size:25px;font-weight:800;margin-top:16px}
@@ -638,20 +641,10 @@ const tagLabel=(id)=>{
   return hit?hit.label:id;
 };
 /* ── setlists ────────────────────────────────────────────
-   One library of songs; a setlist is a named subset of it, like a playlist. The
-   row at the top of the Setlist tab is the only place that says what the room can
-   currently see, so it has to be unmissable and it has to be honest. */
+   One library of songs; a setlist is a named subset of it, like a playlist. */
 function setPick(){
-  const s=D.show, lists=(D&&D.lists)||[];
-  const on=lists.find(l=>l.id===s.listId);
-  const total=(D.songs||[]).filter(x=>x.active!==false).length;
-  return `<div class="setpick ${on?'narrowed':''}" onclick="openLists()">
-      <span class="ic">${on?'☰':'♾'}</span>
-      <div class="m">
-        <b>${on?esc(on.name):'All songs'}</b>
-        <span>${on?`${on.count} of your ${total} songs are in play`:`the whole library — ${total} songs`}</span>
-      </div>
-      <span class="go2 ${lists.length?'':'orange-outline'}">${lists.length?'Change':'Make a set'}</span>
+  return `<div class="wrap" style="padding-top:0;padding-bottom:0">
+    <button class="big alt orange-outline" style="justify-content:center;margin:0" onclick="openLists()">Organize your songs into setlists</button>
     </div>
     ${D.listFellBack?`<div class="warnstrip"><b>Nothing votable in that set.</b>
       The room is seeing your whole library instead, so the night still works —
@@ -2099,25 +2092,17 @@ function render(){
       .filter(x=>!q||x.title.toLowerCase().includes(q)||(x.artist||'').toLowerCase().includes(q)));
     body=`
     <div class="wrap" style="padding-top:18px">
-      <a class="big alt orange-outline" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
-         style="justify-content:center">See what fans see ↗</a>
       <div style="display:flex;gap:9px">
-        <button class="big alt" style="flex:1;justify-content:center;margin:0"
-          onclick="if(confirm('Add around 60 well-known covers to your setlist? Nothing you already have is touched.'))act('starterSetlist')">+ Starter pack</button>
-        <button class="big alt" style="flex:1;justify-content:center;margin:0;color:var(--accent)"
-          onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear setlist</button>
+      <button class="big bigplay" style="flex:1;margin:0" onclick="openSongSheet(null)">
+        <span>+</span><span style="flex:1">Add a song</span></button>
+      <button class="big alt" style="flex:1;justify-content:center;margin:0" onclick="openImport()">⇪ Import songs</button>
       </div>
     </div>
     ${setPick()}
-    <div class="wrap" style="padding-top:16px">
-      <button class="big bigplay" style="margin:0" onclick="openSongSheet(null)">
-        <span>+</span><span style="flex:1">Add a song</span></button>
-      <button class="big alt" style="justify-content:center" onclick="openImport()">⇪ Import songs — CSV or text</button>
-    </div>
     ${PLAN&&PLAN.ok&&PLAN.limits.featured?`<p class="muted" style="font-size:12px;padding:0 20px;margin:0">
       <b>${active} of ${PLAN.limits.featured}</b> featured. Keep as many as you like (up to ${PLAN.limits.library}) — your plan shows ${PLAN.limits.featured} to fans at a time. The rest sit switched off.</p>`:''}
     ${songs.length?'':`<div class="sec"><span class="kick">No songs yet</span></div>
-      <div class="list"><div class="row muted">Add your songs above, or tap <b>Add the starter pack</b> at the bottom for around 60 well-known covers to edit down.</div></div>`}
+      <div class="list"><div class="row muted">Add a song above, or import a CSV, pasted list, or public Spotify playlist.</div></div>`}
     <div class="sec"><span class="kick">Your setlist — ${active} of ${songs.length} featured</span>${
       SETQ?`<span class="kick">${shown.length} match${shown.length===1?'':'es'}</span>`:''}</div>
     <div class="find">
@@ -2136,8 +2121,7 @@ function render(){
       <div class="m"><div class="t">${esc(x.title)}</div>
         <div class="by">${esc(x.artist||'— no artist —')}</div>
         <div class="s">${x.now?'Playing now':x.played?'Played':x.active===false?'Hidden'
-          :x.inSet===false?'Not in this set':'In the pool'}${x.votes?' · '+x.votes+' votes total '+paidPill(x):''}</div>
-        ${x.votes&&!x.played&&!x.now?`<button class="refundlink" onclick="declineSong('${x.id}')">Decline + refund votes</button>`:''}
+          :x.inSet===false?'Not in this set':'In the pool'}</div>
         ${(x.key||(x.tags||[]).length)?`<div class="songmeta">
           ${x.key?`<span class="k">${esc(x.key)}</span>`:''}
           ${(x.tags||[]).map(t=>`<span>${esc(tagLabel(t))}</span>`).join('')}</div>`:''}</div>
@@ -2146,6 +2130,14 @@ function render(){
       <button class="act warn" data-act="del" data-id="${x.id}">✕</button>
     </div>`).join(''):`<div class="row muted">Nothing matches “${esc(SETQ)}”</div>`}</div></div>
     ${learnSection()}
+    <div class="wrap" style="padding-top:18px;padding-bottom:0">
+      <a class="big alt orange-outline" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
+         style="justify-content:center">See what fans see ↗</a>
+    </div>
+    <div class="wrap" style="padding-top:18px;padding-bottom:8px">
+      <button class="big alt" style="justify-content:center;margin:0;color:var(--accent)"
+        onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear setlist</button>
+    </div>
     `;
   }
 
