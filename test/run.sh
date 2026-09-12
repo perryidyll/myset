@@ -123,6 +123,9 @@ echo
 echo "── featured shows ──"
 node --import ./test/register.mjs test/featured.mjs
 echo
+echo "── who says they are coming ──"
+node --import ./test/register.mjs test/rsvp.mjs
+echo
 echo "── the artist directory ──"
 node --import ./test/register.mjs test/artists.mjs
 echo

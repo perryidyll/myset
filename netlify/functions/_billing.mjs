@@ -47,8 +47,8 @@ export const isVenueOwner = (o) => String(o || '').startsWith('v_');
 /* Tier → lookup key → price. Amounts come from the plan tables so the pricing page,
    the Studio and Stripe cannot drift (0r0). */
 export const TIERS = {
-  artist: { plus: { key: 'myset_plus_monthly', name: 'MySet Plus', cents: PLANS.plus.price },
-            pro:  { key: 'myset_pro_monthly',  name: 'MySet Pro',  cents: PLANS.pro.price } },
+  artist: { plus: { key: 'myset_plus_monthly', name: 'MySet Bar Star', cents: PLANS.plus.price },
+            pro:  { key: 'myset_pro_monthly',  name: 'MySet Rock Star',  cents: PLANS.pro.price } },
   venue:  { pro:  { key: 'myset_venue_pro_monthly', name: 'MySet Pro for venues', cents: 2000 } },
 };
 export const RETAIN_COUPON = 'myset_stay_50';

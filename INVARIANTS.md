@@ -327,6 +327,18 @@ If you are about to violate one, stop and say so rather than working around it.
     a real night. Placeholder venues were once loaded to test the feed and had to
     be deleted before they could be seen.
 
+0fl. **An RSVP count is a social signal, never a headcount, and never a fan.** The
+    document (`rsvp_<ownerId>`, one per artist or venue, keyed inside by
+    `eventId|date`) holds a 16-hex prefix of the hashed device id, never the id;
+    it is read in the same hop as the owner's events, never one read per row;
+    and a night that the owner has not listed, that has finished, or that lies
+    past the diary's own horizon (`HORIZON_DAYS`, the one cap both read) is a
+    404 — a count on a gig nobody listed is a number somebody would eventually
+    depend on, and a repeating rule would otherwise grow the document a night
+    per anonymous POST. The key is in `keysFor` and `keysForVenue` (0cy), so
+    deleting the account deletes the hashes with it. Anyone with a script can
+    inflate it. Nothing may spend, plan or promise on it.
+
 ## Artist sign-in
 
 9g. **The audience never signs in.** Anonymous is why the app works in a bar.
@@ -1391,9 +1403,9 @@ If you are about to violate one, stop and say so rather than working around it.
     email or address is stored**: `orderDetail` fetches them from Stripe when the
     artist opens an order, reading both shipping shapes, and keeps nothing.
 
-0cn. **Merch is a Plus feature for artists and Pro for venues; removing is never
+0cn. **Merch is a Bar Star feature for artists and Pro for venues; removing is never
     gated.** `merchAllowed(aid, limits)` is the one rule (founder included, as with
-    pricing); `merchSave` and `merchPhoto` refuse with "Merch on your page is a Plus
+    pricing); `merchSave` and `merchPhoto` refuse with "Merch on your page is a Bar Star
     feature — anything you already added stays." A lapsed plan HIDES the rail on
     the page and keeps the items (0s). A venue item must carry a link — a venue has
     no payout account, so buying through MySet would put its money in the wrong

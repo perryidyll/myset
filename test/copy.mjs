@@ -76,7 +76,7 @@ ok('public and Studio loading screens use the active light or dark palette',
      const s=read(`public/${x}`);return /#boot\{[^}]*background:var\(--bg\)/.test(s)&&/html\{background:#F5F5F7\}html\[data-theme=dark\]\{background:#000\}/.test(s);
    }));
 ok('the $20 plan displays the same 2% transaction fee the server charges',
-   /pro:\{name:'Pro',price:'\$20 \/ month'[\s\S]{0,1400}Transaction fee: 2%/.test(studio)&&
+   /pro:\{name:'Rock Star',price:'\$20 \/ month'[\s\S]{0,1400}Transaction fee: 2%/.test(studio)&&
    !/Transaction fee: 0%/.test(studio)&&
    !['studio.html','venue-studio.html','index.html','about.html','artists.html','artist.html','community.html','vote.html']
      .some(x=>/Transaction fee: 2\.5%/.test(read(`public/${x}`))));

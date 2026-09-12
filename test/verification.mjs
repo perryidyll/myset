@@ -86,7 +86,7 @@ eq('a free artist fails the plan check', st0.checks.paidPlan, false);
 eq('and starts with no ID on file', st0.checks.state, 'none');
 const up0 = await AS(TA, 'idUpload', { data: 'data:image/png;base64,iVBORw0KGgo=' });
 eq('THE RIGHT WAY ROUND: refused before the photo is taken', up0.status, 402);
-ok('and it says why', /Plus and Pro/.test(up0.error || ''), up0.error);
+ok('and it says why', /Bar Star and Rock Star/.test(up0.error || ''), up0.error);
 
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'pro'; return true; });
 const st1 = await AS(TA, 'verifyStatus');

@@ -151,13 +151,19 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
    — "Next: Mon 6:30pm · Venue" — and the venue is what gives way on a narrow phone.
    The countdown carries "(view setlist)" so it reads as a button, not a status; with
    the full width to itself it fits on one line at 375px. */
-.fab{flex-direction:column;align-items:center;gap:9px;padding:12px 16px;text-align:center;border-radius:var(--r-lg)}
+.fab{flex-direction:column;align-items:center;gap:9px;padding:12px 16px;text-align:center;border-radius:var(--r-lg);
+  box-shadow:0 0 0 1.5px var(--accent-2),var(--sh-2)}
 .fab .state{flex:0 0 auto;width:100%;line-height:1.3}
-.fab .state b{color:var(--ink);font-weight:600}
+/* THE FOUNDER'S COLOURS (2026-09-12): an orange ring around the whole card and an
+   orange heading, so the next show reads as one warm object; the countdown alone
+   wears a true red ring. Red here is a ring, not a live state — #FF3B30 is not the
+   pink accent, and nothing about it says "voting is open" (the live button is the
+   gradient fill with the pulsing dot, and carries no ring). */
+.fab .state b{color:var(--accent-2);font-weight:600}
 .fab .state span::before{content:' · '}
 .fab .act{font-size:13px;font-weight:700;padding:11px 18px;gap:8px;white-space:normal;text-align:center;line-height:1.2;
   max-width:100%;font-variant-numeric:tabular-nums}
-.fab .act.cd{font-size:12.5px;padding:10px 16px}   /* the countdown is the long one */
+.fab .act.cd{font-size:12.5px;padding:10px 16px;box-shadow:0 0 0 1.5px #FF3B30,var(--sh-1)}   /* the countdown is the long one */
 /* The toast rises above the block instead of covering the one thing to tap. */
 #toast{bottom:calc(112px + env(safe-area-inset-bottom))}
 .fab .act.liveglow{animation:emberGlow 4.2s ease-in-out infinite}
@@ -170,23 +176,22 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
 @keyframes lvp{70%{box-shadow:0 0 0 9px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
 @media (prefers-reduced-motion:reduce){.fab .lv,.fab .act.liveglow{animation:none}}
 /* Proof, not a pitch: a strip of small cards under the numbers, each one a fact the
-   server can vouch for, drawn only when the fact exists — the room's rating, what
-   fans said on the community page, the songs the room voted for, heard and paid for
-   most — or, on a brand-new page, a taste of the setlist. It turns itself
-   (startProof) and a finger stops it. No headline and no icons: the words are the
-   card. scroll-padding keeps a snapped card off the screen's edge, where the first
-   one already sits. */
-.proof{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding-left:18px;padding:16px 18px 2px;
+   server can vouch for, drawn only when the fact exists — what fans said on the
+   community page, the songs the room voted for, heard and paid for most — or, on a
+   brand-new page, a taste of the setlist. It drifts on its own (startProof, a slow
+   marquee) and a finger stops it. No headline and no icons: the words are the card.
+   No scroll-snap: snapping fights a marquee, and the strip stays overflow-x:auto so
+   a swipe scrolls it natively. */
+.proof{display:flex;gap:10px;overflow-x:auto;padding:16px 18px 2px;
   -webkit-overflow-scrolling:touch;scrollbar-width:none}
 .proof::-webkit-scrollbar{display:none}
-.proof .pc{flex:0 0 236px;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:14px 16px 13px;
+.proof .pc{flex:0 0 236px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:14px 16px 13px;
   border-radius:var(--r);background:var(--surface);border:.5px solid var(--hair-2);box-shadow:var(--sh-1);
   color:inherit;text-decoration:none;min-width:0}
 .proof .pc i{display:block;font-style:normal;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent-ink)}
 .proof .pc i.stars{color:var(--accent-2);letter-spacing:.08em;font-size:12px}
 .proof .pc b{display:block;font-size:15px;font-weight:700;letter-spacing:-.02em;line-height:1.25;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.proof .pc.rate b{font-size:22px;letter-spacing:-.03em}   /* the rating is a number; let it read as one */
 /* a comment gets three lines, in the fan's own words */
 .proof .pc.quote b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;font-size:14px;font-weight:600;line-height:1.35}
 .proof .pc span{display:block;font-size:12.5px;color:var(--muted);line-height:1.3}
@@ -244,14 +249,27 @@ a.pc:active{transform:scale(.97)}
 .gigrow{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair)}
 .gigrow:first-child{border-top:none}
 .gigrow.live{background:var(--accent-soft)}
-.gigrow .d{flex:0 0 auto;text-align:center;min-width:44px}
+/* 56px, not 44: "RSVP" sits under the date in this column and must not wrap. */
+.gigrow .d{flex:0 0 auto;text-align:center;min-width:56px;display:flex;flex-direction:column;align-items:center}
 .gigrow .d b{display:block;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1}
 .gigrow .d span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
+/* RSVP (the founder, 2026-09-12): one small pill under the date on every row, and a
+   count beneath it so the room can see who else is coming. Off is the .btn-grey
+   ground with an orange ring and orange text; on is the orange fill. Orange is
+   --accent-2, the ring colour everywhere else on the site. Nobody signs in: the fan
+   is the same anonymous id the vote page keeps, and the page remembers its own
+   answers in localStorage (rsvpMap). */
+.gigrow .rsvp{margin-top:7px;padding:6px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.02em;
+  line-height:1;background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);
+  box-shadow:inset 0 0 0 1.5px var(--accent-2);transition:transform .22s var(--spring)}
+.gigrow .rsvp[aria-pressed=true]{background:var(--accent-2);color:#fff;box-shadow:none}
+.gigrow .rsvp:active{transform:scale(.94)}
+.gigrow .d .going{display:block;font-size:10.5px;color:var(--muted);margin-top:4px;text-transform:none;letter-spacing:0;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
 .gigrow .m{flex:1;min-width:0}
 .gigrow .m .v{font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
 .gigrow .m .w{font-size:13.5px;color:var(--muted);margin-top:2px}
 .gigrow .tix{flex:0 0 auto;font-size:13px;font-weight:600;color:var(--accent-ink)}
-.gigrow .m .a{font-size:12.5px;color:var(--faint);margin-top:3px}
 .dirs{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;
   font-size:13px;font-weight:600;color:var(--accent-ink);padding:10px 15px;
   border-radius:var(--pill);background:var(--accent-soft)}
@@ -408,35 +426,53 @@ async function headCount(){
     const n=b&&b.ok&&b.room&&Number(b.room.in); const el=document.getElementById('fabIn');
     if(el&&n>0) el.textContent=n+' voting'; }catch(e){}
 }
-/* THE STRIP TURNS ITSELF (the founder, 2026-09-12): the next card every 3.5 s,
-   smooth and snapped, and back to the first after the last. A finger on it, or a
-   pointer over it, stops it; it picks up again 6 s after they leave. A phone that
-   asked for less motion gets a strip that only moves when swiped. Bound to the
-   element render() just drew — a redraw replaces it and the old timer, finding its
-   strip gone, quits. Nothing runs while the tab is hidden. */
+/* THE STRIP TURNS ITSELF (the founder, 2026-09-12: "slow continuous scroll that
+   can be swiped"): a marquee, about 28 px a second, driven by the frame
+   timestamp so a 120 Hz phone and a throttled tab drift at the same speed. It is
+   seamless because render() drew the set twice — when the scroll passes the first
+   copy it is pulled back by exactly one set, which the eye cannot see. A finger on
+   it, a wheel, or a mouse over it stops it, and the strip is still a native
+   scroller under the finger; while stopped, every scroll event resyncs the float
+   position from wherever the finger left it. It picks up again 3 s after the
+   finger lifts, so iOS momentum has finished before the drift takes over. A phone
+   that asked for less motion gets a strip that only moves when swiped (and no
+   copies). Bound to the element render() just drew — a redraw replaces it and the
+   old loop, finding its strip gone, quits. Nothing moves while the tab is hidden. */
 let PT=null,PR_=null;
 function startProof(){
-  clearInterval(PT); clearTimeout(PR_);
+  cancelAnimationFrame(PT); clearTimeout(PR_);
   const el=document.getElementById('proof'); if(!el||el.children.length<2)return;
   if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
-  let hold=false;
+  const copy=el.querySelector('[aria-hidden="true"]'); if(!copy)return;
+  /* One set's width, gap included — read every frame, not once: a page drawn from
+     the last-seen copy runs this before the preloaded stylesheet has landed, and a
+     width measured then is the wrong width for the rest of the visit. */
+  const span=()=>copy.offsetLeft-el.children[0].offsetLeft;
+  /* Two cards on a tablet-wide screen: one copy of the set is not enough for the
+     scroll to reach the seam (the strip would stall at its end, then jump back), so
+     more copies go on until it can — checked per frame for the same reason span()
+     is, and capped so a strip that never measures right cannot grow forever. */
+  const ghosts=[...el.children].filter(c=>c.getAttribute('aria-hidden')==='true'); let extra=0;
+  const topUp=()=>{const s=span(); if(s>0&&extra<4&&s+el.clientWidth>el.scrollWidth){ghosts.forEach(c=>el.appendChild(c.cloneNode(true)));extra++;}};
+  let hold=false, x=el.scrollLeft, last=0;
   const pause=()=>{hold=true;clearTimeout(PR_);};
-  const resume=()=>{clearTimeout(PR_);PR_=setTimeout(()=>{hold=false;},6000);};
+  const resume=()=>{clearTimeout(PR_);PR_=setTimeout(()=>{hold=false;x=el.scrollLeft;last=0;},3000);};
   el.addEventListener('touchstart',pause,{passive:true});
   el.addEventListener('touchend',resume,{passive:true});
   el.addEventListener('touchcancel',resume,{passive:true});
+  el.addEventListener('pointerdown',pause,{passive:true});
+  el.addEventListener('wheel',()=>{pause();resume();},{passive:true});
   el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')pause();});
   el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')resume();});
-  PT=setInterval(()=>{
-    if(!el.isConnected){clearInterval(PT);return;}
-    if(hold||document.hidden)return;
-    const cs=[...el.children], x0=cs[0].offsetLeft;
-    let at=0,best=Infinity;                        // the card nearest the left edge right now
-    cs.forEach((c,i)=>{const d=Math.abs(c.offsetLeft-x0-el.scrollLeft); if(d<best){best=d;at=i;}});
-    const end=el.scrollLeft+el.clientWidth>=el.scrollWidth-2;   // nothing further right to show
-    const n=(end||at>=cs.length-1)?0:at+1;
-    el.scrollTo({left:cs[n].offsetLeft-x0,behavior:'smooth'});
-  },3500);
+  el.addEventListener('scroll',()=>{if(hold)x=el.scrollLeft;},{passive:true});
+  const step=(t)=>{
+    if(!el.isConnected)return;
+    PT=requestAnimationFrame(step);
+    if(hold||document.hidden){last=0;return;}
+    if(last){ topUp(); const s=span(); x+=28*(t-last)/1000; if(s>0&&x>=s)x-=s; el.scrollLeft=x; }
+    last=t;
+  };
+  PT=requestAnimationFrame(step);
 }
 /* When a fan said it, for the card: today, yesterday, days, then the month. */
 const agoWord=ms=>{const d=(Date.now()-Number(ms))/86400000; if(!(Number(ms)>0)||isNaN(d))return '';
@@ -469,7 +505,45 @@ const ICON={
    nobody taps from a phone in a bar. */
 const LABEL={instagram:'Instagram',spotify:'Spotify',applemusic:'Apple Music',ytmusic:'YouTube Music',website:'Website'};
 
-let P=null,S=null,G=null;
+let P=null,S=null,G=null,ROWS=[];
+
+/* RSVP (the founder, 2026-09-12). The fan is the same anonymous id the vote page
+   keeps — the recipe is copied from there, so a phone that has voted RSVPs as the
+   same person. The page remembers its own answers in 'myset.rsvp' (one key per
+   owner|event|date); the count comes from the row the server sent. Every storage
+   read and write is wrapped, because private browsing throws. */
+function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
+  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
+  return v;}
+const OWNER=SLUG||'perryidyll';                       // the same fallback the events fetch uses
+const rsvpKey=g=>`${OWNER}|${g.eventId}|${g.date}`;
+function rsvpMap(){try{const m=JSON.parse(localStorage.getItem('myset.rsvp')||'{}');return m&&typeof m==='object'?m:{};}catch(e){return {};}}
+function rsvpRemember(k,on){try{const m=rsvpMap();if(on)m[k]=1;else delete m[k];localStorage.setItem('myset.rsvp',JSON.stringify(m));}catch(e){}}
+/* The tap flips the button at once and asks the server; the reply is the truth
+   (on and the new count), and a failed request puts the button back and says so —
+   the button is never left in a state the server did not confirm. Every paint goes
+   to whichever button carries the key NOW, not the one tapped: the fresh diary can
+   land and redraw the rows while the request is out (the cached paint came first),
+   and a redraw reads its pressed state from memory — so memory is written at the
+   optimistic paint too, and put back with the button if the server says no. */
+async function rsvpTap(b){
+  const g=ROWS[+b.dataset.i]; if(!g||b.dataset.busy)return;
+  const k=rsvpKey(g), was=b.getAttribute('aria-pressed')==='true', on=!was;
+  const live=()=>document.querySelector(`#app .rsvp[data-k="${CSS.escape(k)}"]`)||b;
+  const n0=Number(g.rsvp)||0, paint=(o,n)=>{const x=live(),cnt=x.nextElementSibling;
+    x.setAttribute('aria-pressed',o?'true':'false');if(cnt)cnt.textContent=`${compact(n)||'0'} going`;
+    ROWS.forEach(r=>{if(rsvpKey(r)===k)r.rsvp=n;}); rsvpRemember(k,o);};
+  b.dataset.busy='1'; paint(on,Math.max(0,n0+(on?1:-1)));
+  try{
+    const r=await fetch(`${API}/rsvp?a=${encodeURIComponent(OWNER)}`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({fan:fanId(),eventId:g.eventId,date:g.date,on})});
+    const j=await r.json().catch(()=>null);
+    if(!r.ok||!j||!j.ok) throw new Error((j&&j.error)||'rsvp failed');
+    paint(!!j.on,Number(j.n)||0);
+  }catch(e){ paint(was,n0); toast('Couldn’t save that — try again'); }
+  delete b.dataset.busy;
+}
+document.getElementById('app').addEventListener('click',e=>{const b=e.target.closest('.rsvp');if(b)rsvpTap(b);});
 
 async function boot(){
   /* Two fetches, not three: /api/profile now carries live/venue/city, so the page
@@ -547,37 +621,44 @@ function render(){
 
   /* Proof, not a pitch (decision 0043). Every field is optional — a copy of the
      payload from before it existed renders fine: a card whose fact is missing is
-     not drawn. The order: the room's rating, a comment, the most voted, a comment,
-     the most played, a comment, the most paid for; the strip then loops back to the
-     rating. A page with none of those shows a taste of the setlist instead, and a
-     page with no setlist shows no strip. Comments are the fan's own words from the
-     community page — escaped here, cut to a card on the server. */
+     not drawn. The order (the founder, 2026-09-12, asked for top voted and played
+     songs alongside the comments): a comment, the most voted, a comment, the most
+     played, a comment, then the second and third most voted,
+     then the most paid for. Songs are interleaved with the comments because three
+     comments in a row read as a testimonial page, and the room's rating card is
+     gone — the stars on each comment already say it. A page with none of those
+     shows a taste of the setlist instead, and a page with no setlist shows no strip.
+     Comments are the fan's own words from the community page — escaped here, cut
+     to a card on the server. */
   const wrap=(inner,href,cls)=>href?`<a class="pc${cls?' '+cls:''}" href="${esc(href)}">${inner}</a>`:`<div class="pc${cls?' '+cls:''}">${inner}</div>`;
   const cards=[];
-  const rt=P.rating&&P.rating.count>0&&Number(P.rating.avg)>0?P.rating:null;
-  /* The stars answer "Enjoying MySet?" on the vote page: the room's rating of the
-     night on MySet. `nights` is how many different nights the ratings name. */
-  if(rt) cards.push(wrap(`<b>★ ${esc((Math.round(rt.avg*10)/10).toString())}</b><span>${rt.nights>0
-    ?`rated by the room over ${esc(compact(rt.nights))} night${rt.nights===1?'':'s'}`
-    :`rated by the room · ${esc(compact(rt.count))} rating${rt.count===1?'':'s'}`}</span>`,'','rate'));
   const cm=(Array.isArray(P.comments)?P.comments:[]).filter(c=>c&&String(c.text||'').trim()).slice(0,3);
   const quote=c=>wrap(`<i${c.stars>0?' class="stars"':''}>${c.stars>0?'★'.repeat(Math.min(5,Math.round(c.stars))):'From the room'}</i><b>“${esc(String(c.text).slice(0,140))}”</b><span>${esc(agoWord(c.when))||'On the community page'}</span>`,COMMHREF,'quote');
   const song=(kick,t,sub)=>wrap(`<i>${kick}</i><b>${esc(t.title)}</b><span>${sub}</span>`);
-  const tv=P.topVoted&&P.topVoted.title&&P.topVoted.votes>0?P.topVoted
-    :(Array.isArray(P.topSongs)&&P.topSongs[0]&&P.topSongs[0].title&&P.topSongs[0].votes>0?P.topSongs[0]:null);
+  const voted=t=>t&&t.title&&t.votes>0?t:null;
+  const ts=Array.isArray(P.topSongs)?P.topSongs:[];
+  const tv=voted(P.topVoted)||voted(ts[0]);
   const tp=P.topPlayed&&P.topPlayed.title&&P.topPlayed.plays>0?P.topPlayed:null;
   const tq=P.topPaid&&P.topPaid.title&&P.topPaid.paid>0?P.topPaid:null;
+  const votes=t=>`${esc(compact(t.votes))} vote${t.votes===1?'':'s'} from the room`;
   cards.push(...[
     cm[0]&&quote(cm[0]),
-    tv&&song('Most voted',tv,`${esc(compact(tv.votes))} vote${tv.votes===1?'':'s'} from the room`),
+    tv&&song('Most voted',tv,votes(tv)),
     cm[1]&&quote(cm[1]),
     tp&&song('Most played',tp,`played ${esc(compact(tp.plays))} time${tp.plays===1?'':'s'} on MySet`),
     cm[2]&&quote(cm[2]),
+    voted(ts[1])&&song('Also voted for',ts[1],votes(ts[1])),
+    voted(ts[2])&&song('Also voted for',ts[2],votes(ts[2])),
     tq&&song('Most paid for',tq,`${esc(compact(tq.paid))} paid vote${tq.paid===1?'':'s'}`),
   ].filter(Boolean));
   if(!cards.length) (Array.isArray(P.setlist)?P.setlist:[]).filter(t=>t&&String(t).trim()).slice(0,10)
     .forEach(t=>cards.push(wrap(`<i>On the setlist</i><b>${esc(t)}</b>`)));
-  if(cards.length) h+=`<div class="proof" id="proof">${cards.join('')}</div>`;
+  /* The set is drawn twice so the marquee (startProof) can wrap without a seam. The
+     copies are hidden from screen readers and skipped by the tab key; a phone that
+     asked for less motion gets one set, because nothing will drift. */
+  const ghost=c=>c.replace(/^<a /,'<a tabindex="-1" aria-hidden="true" ').replace(/^<div /,'<div aria-hidden="true" ');
+  const twice=cards.length>=2&&!matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if(cards.length) h+=`<div class="proof" id="proof">${cards.join('')}${twice?cards.map(ghost).join(''):''}</div>`;
 
   /* LISTEN & FOLLOW, ABOVE THE FOLD (Perry, 2026-09-07). It used to sit near the
      bottom, under the bio and every upcoming gig, which is a long way to scroll for
@@ -605,7 +686,7 @@ function render(){
     h+=`<div class="tonight rise">
       <div class="top">
         <div class="when"><b>${fmtTime(ng.time)}</b><span>${whenWord(ng.date)}</span></div>
-        <div class="where"><b>${esc(ng.venue)}</b><span>${esc(ng.address||[ng.city,ng.country].filter(Boolean).join(', '))}</span></div>
+        <div class="where"><b>${esc(ng.venue)}</b><span>${esc([ng.city,ng.country].filter(Boolean).join(', '))}</span></div>
       </div>
       ${ng.maps?`<div class="dirsrow">${dirBtn(ng.maps)}</div>`:''}
     </div>`;
@@ -614,14 +695,20 @@ function render(){
   if(P.bio) h+=`<div class="sect">About</div><div class="card"><p class="bio">${esc(P.bio)}</p></div>`;
 
   const gigs=(G&&G.ok?G.gigs:[]).slice(0,24);
+  /* ROWS keeps what was drawn so a tap can find its gig, and an RSVP reply can
+     update the count a later redraw reads. No address on a row (the founder,
+     2026-09-12): the Directions button is where the address belongs. */
+  ROWS=gigs;
   if(gigs.length){
-    const row=(g)=>`<div class="gigrow${g.live?' live':''}">
-        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span></div>
+    const mine=rsvpMap();
+    const row=(g,i)=>`<div class="gigrow${g.live?' live':''}">
+        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span>
+          <button class="rsvp" type="button" data-i="${i}" data-k="${esc(rsvpKey(g))}" aria-pressed="${mine[rsvpKey(g)]?'true':'false'}">RSVP</button>
+          <span class="going">${esc(compact(g.rsvp)||'0')} going</span></div>
         <div class="m">
           ${g.live?'<span class="onnow"><span class="dot"></span>On now</span>':''}
           <div class="v">${esc(g.venue)}</div>
           <div class="w">${esc(dowName(g.date))} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.city?' · '+esc(g.city):''}</div>
-          ${g.address?`<div class="a">${esc(g.address)}</div>`:''}
         </div>
         ${g.maps?dirBtn(g.maps,true):''}
         ${g.ticketUrl?`<a class="tix" href="${esc(g.ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>`:''}
@@ -629,7 +716,7 @@ function render(){
     const first=gigs.slice(0,3), rest=gigs.slice(3);
     h+=`<div class="sect">Upcoming shows</div>
       <div class="gigs">${first.map(row).join('')}
-        ${rest.length?`<div class="more" id="moreWrap" hidden>${rest.map(row).join('')}</div>
+        ${rest.length?`<div class="more" id="moreWrap" hidden>${rest.map((g,j)=>row(g,j+first.length)).join('')}</div>
           <button class="seemore" id="seeMore">See ${rest.length} more ▾</button>`:''}
       </div>`;
   }

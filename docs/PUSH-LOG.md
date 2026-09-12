@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-12 20:30 — 4a50abe — wt@ui/product-dev2-batch (33 files since origin/main)
+**tl;dr:** Studio tab bar face-lifted (black slab, sheen, raised orange-ringed tab, both Studios); plans now read Hobbyist / Bar Star / Rock Star (0055); anonymous RSVP with a public count under the date of every show card on the front door and artist page (0056); the artist strip drops the rating card, adds the room's songs and turns as a slow marquee; the pinned card wears orange with a red countdown ring; What the room said lives under Profile's merch; Select setlist with All songs as a real choice
+**Other sessions:** New public write path POST /api/rsvp?a=|v= → rsvp_<ownerId> (never list(); erased in keysFor/keysForVenue); every /api/events row now carries rsvp:<n>. Plan IDS stay free/plus/pro — only labels changed; PLANS[k].label is the name to print. Stripe products still say MySet Plus/Pro until renamed by hand (PER-011). After ANY studio.js edit: node tools/stamp.mjs. Decisions 0055/0056 need their Puzzle changelog entries (tandem rule).
+
 ### 2026-09-12 20:12 — fa00999 — myset-s4@perf/stage-hops-venue-split (15 files since origin/main)
 **tl;dr:** Every signed-in call is faster (auth secret read once per warm instance, registry read in parallel, slug joins the stage batch — 4 blob hops → 2); the Studio boot no longer waits on the plan; the Venue Studio's script is now /venue-studio.js kept a year (0054, 0053)
 **Other sessions:** _auth.mjs: secret() is memoised — if the auth secret is ever rotated, redeploy. studio.js has(): PLAN===null is LOCKED, a failed plan read is allowed. venue-studio.js exists: after editing it OR studio.js run 'node tools/stamp.mjs'; test/_src.mjs src() reads both pairs. netlify.toml: /venues, /venue-studio.html, /venue-studio.js rules sit after /:slug.

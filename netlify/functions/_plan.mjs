@@ -14,9 +14,12 @@ import { readArtists, mutateArtists } from './_auth.mjs';
    unreliable, which costs more than the subscription is worth. Anything the
    ROOM experiences stays free. */
 
+/* The keys are the ids — free / plus / pro — and they never change: storage, the
+   Stripe lookup keys, RANK and every PLAN.plan comparison read them. `label` is
+   what a PERSON reads, sold as Hobbyist / Bar Star / Rock Star (founder, 2026-09-12). */
 export const PLANS = {
   free: {
-    label: 'Free', price: 0,
+    label: 'Hobbyist', price: 0,
     featured: 50,       // how many can be live to the audience at once
     /* SHOWS PER CALENDAR MONTH (UTC — see gigMonthOf in _lib.mjs). This is the one
        limit that tracks what MySet actually costs to run: every phone in the room
@@ -81,7 +84,7 @@ export const PLANS = {
     branding: false,      // your colours and logo on the audience pages
   },
   plus: {
-    label: 'Plus', price: 1000,
+    label: 'Bar Star', price: 1000,
     featured: Infinity,
     gigs: Infinity,
     /* The ladder is 25% free / 10% Plus / 2% Pro, so the
@@ -95,7 +98,7 @@ export const PLANS = {
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
-    label: 'Pro', price: 2000,
+    label: 'Rock Star', price: 2000,
     featured: Infinity,
     gigs: Infinity,
     cut: 0.02,

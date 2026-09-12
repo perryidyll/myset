@@ -402,7 +402,7 @@ const main = async (req) => {
       const mine = Object.entries(reg0.byEmail).filter(([, v]) => v.artistId === me.aid);
       if (!mine.some(([e]) => e === email) && mine.length >= limits.seats)
         return bad(limits.seats === 1
-          ? 'Your plan allows one sign-in. Pro allows five.'
+          ? 'Your plan allows one sign-in. Rock Star allows five.'
           : `Your plan allows ${limits.seats} sign-ins.`, 402);
       let taken = false;
       await mutateArtists((a) => {

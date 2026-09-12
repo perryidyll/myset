@@ -188,6 +188,12 @@ a{color:inherit;text-decoration:none}
   border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);overflow:hidden;
   animation:edgeGlow 6.4s cubic-bezier(.45,0,.55,1) infinite}
 .scroll-shell>.scroll-window{margin:0;border:0;border-radius:0;box-shadow:none;animation:none;width:100%}
+/* On the Setlist tab the song list sits the same 12px under the genre chips as the
+   chips sit under their heading row — the founder asked for the two gaps to match
+   (2026-09-12). Above: 2px of .ghead padding + 10px of .gbar margin. Below: the
+   chip bar's own 2px of padding + this 10px. Scoped to the setlist shell: the
+   Live tab's queue shares .scroll-shell and keeps its own spacing. */
+.setlist-shell{margin-top:10px}
 .scroll-window{overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;overflow-anchor:none;
   -webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .scroll-window{scrollbar-color:rgba(142,142,147,.7) transparent}
@@ -685,7 +691,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=574b8753"></script>
+<script src="/studio.js?v=33a60583"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

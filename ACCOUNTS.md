@@ -13,10 +13,10 @@ MySet already had the bones of a real account system before this pass. None of i
 | **Identity** | `_auth.mjs` | An *artist* (`artistId`, a slug, a name) owns a page. A *venue* (`venueId`) owns a venue page. Both live in one registry document each (`artists`, `venues`) keyed three ways: by id, by slug, by email. |
 | **Sign-in** | `auth.mjs`, `venueauth.mjs` | Passwordless. You type an email, we send a six-digit code (Resend), you type it back. A signed token (HMAC, `signToken`) is stored in the browser. No passwords exist anywhere. |
 | **Session revocation** | `_auth.mjs` (`revOf`) | Every token carries the account's *revision*. Removing an email, or any change that must sign everyone out, bumps the revision and every old token dies at once. There is no session list to clean up because there is nothing to list — the revision is the list. |
-| **Members** | `auth.mjs` `list/add/remove` | An artist page can have up to 5 sign-in addresses on Pro (1 otherwise). Owner vs member roles; members cannot touch money, plans or deletion. |
+| **Members** | `auth.mjs` `list/add/remove` | An artist page can have up to 5 sign-in addresses on Rock Star (1 otherwise). Owner vs member roles; members cannot touch money, plans or deletion. |
 | **The founder's recovery key** | `_lib.mjs` `ownerOf` | `ADMIN_CODE` is checked first so a lock-out can never shut Perry out of his own platform. It never lives *only* in an env var (INVARIANT — see `HARDENING.md`). |
 | **Per-page Studio code** | `show.codeHash` | The older door: a code per page, hashed, with lock-out after repeated failures (`codeLocked`, `noteCodeFailure`). Still works for the founder's own page. **Since 2026-09-12 it is behind a small "Studio code" link on the sign-in screen**, not on it — the screen is email + "Email me a code" + a box for a code already received (so a code emailed to one phone signs in on another). |
-| **Plans** | `_plan.mjs`, `_venues.mjs` | Free / Plus ($10) / Pro ($20) for artists; Free / Pro ($20) for venues. `planForArtist` reads the registry row; a plan with a `planUntil` in the past falls back to free. Comps (`billing:'comp'`) were the only way to be on a paid plan. |
+| **Plans** | `_plan.mjs`, `_venues.mjs` | Hobbyist / Bar Star ($10) / Rock Star ($20) for artists (ids `free` / `plus` / `pro`, decision 0055); Free / Pro ($20) for venues. `planForArtist` reads the registry row; a plan with a `planUntil` in the past falls back to free. Comps (`billing:'comp'`) were the only way to be on a paid plan. |
 | **Referrals and promo codes** | `_plan.mjs` | A referral rewards the referrer when the referred pays; a promo code sets a `discountPct` on the row. |
 | **Verification** | `_verify.mjs` | ID check queue for the tick; auto-verify from a Stripe Connect identity for artists. |
 | **Getting paid (artists)** | `_connect.mjs` | Stripe Connect Express, direct charges on the artist's account, MySet's fee as `application_fee_amount`. |
@@ -60,9 +60,9 @@ The reference class was "small SaaS with a free tier and one or two paid tiers":
 
 ### The Studios
 - **Top right:** `Upgrade ↗` (orange outline) on free; a green tag with the plan's name and the same `↗` when paid. Both open the plan sheet.
-- **The plan sheet:** every tier in an orange-bordered box, name and price bold white on an orange banner, a *numbered* list of everything in that tier (never "everything in Plus"), the transaction fee in orange and called exactly that, a testimonials carousel at the bottom (placeholders until real ones are submitted — the array is the architecture; empty it and the section disappears).
-- **Settings → Your plan:** one big green button — "Upgrade your plan" on free/Plus, "Pro membership" on Pro — plus a small "Card, invoices and receipts ↗" link to the portal when there is a subscription.
-- **Leaving Pro:** "Are you sure you want to lose your Pro membership benefits?" (No in orange, Yes greyed) → "We're sad to see you go… keep your plan for 50% off for 1 more month?" → `planRetain` or `planChange`.
+- **The plan sheet:** every tier in an orange-bordered box, name and price bold white on an orange banner, a *numbered* list of everything in that tier (never "everything in Bar Star"), the transaction fee in orange and called exactly that, a testimonials carousel at the bottom (placeholders until real ones are submitted — the array is the architecture; empty it and the section disappears).
+- **Settings → Your plan:** one big green button — "Upgrade your plan" on Hobbyist/Bar Star, "Rock Star membership" on Rock Star — plus a small "Card, invoices and receipts ↗" link to the portal when there is a subscription.
+- **Leaving Rock Star:** "Are you sure you want to lose your Rock Star membership benefits?" (No in orange, Yes greyed) → "We're sad to see you go… keep your plan for 50% off for 1 more month?" → `planRetain` or `planChange`.
 - **Back from Stripe:** `?sub=done&cs=…` → `planFinish` → toast; `?sub=cancelled` → "No change made". `?connect=done` → re-read Connect status.
 - **Your account:** sign-in address and how many sign-ins the page has; **Download my data**; **Delete my account** (type DELETE).
 
@@ -83,7 +83,7 @@ fee = max(0, floor(amount × cut) − round((amount × 0.029 + 30) / 2))
 | $50 merch, venue on Free | 10% | 500¢ | 175¢ | **412¢** |
 | $50 merch, venue on Pro | 2% | 100¢ | 175¢ | **12¢** |
 | $12 cap, venue on Pro | 2% | 24¢ | 65¢ | **0¢** (floored) |
-| $50 vote pack, artist on Plus | 10% | 500¢ | — | **500¢** (artists are not split) |
+| $50 vote pack, artist on Bar Star | 10% | 500¢ | — | **500¢** (artists are not split) |
 
 Two honest limits, both written into the Studio copy:
 - It is an **estimate at checkout**. Stripe's real fee depends on card type and country. An *exact* split would need a post-charge `transfers.create` from the platform back to the venue after `charge.succeeded` reports the real `balance_transaction.fee`. That is the next step if the estimate ever matters at scale; today the amounts are cents.
@@ -314,7 +314,7 @@ recovery door. In practice that means Perry sees it now, on his own account, and
 nobody signing up for the first time is shown a door they cannot open.
 
 Only the **owner** may add one, and a passkey opens the owner's session — so a band
-mate on one of five Pro seats cannot register a thumbprint and take the account.
+mate on one of five Rock Star seats cannot register a thumbprint and take the account.
 
 ### 9f. When to do the rest
 

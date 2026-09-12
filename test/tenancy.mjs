@@ -249,7 +249,7 @@ const packed = await A(TA4, 'packs', { small: { votes: 1, cents: 100 }, big: { v
 eq('changing pack prices -> 402', packed.status, 402);
 const rc = await A(TA4, 'replayCost', { n: 9 });
 eq('changing the replay cost -> 402', rc.status, 402);
-ok('and the refusal says what to do about it', /Plus/.test(priced.error || ''), priced.error);
+ok('and the refusal says what to do about it', /Bar Star/.test(priced.error || ''), priced.error);
 
 const tog = await A(TA4, 'askSet', { kind: 'song', on: true });
 ok('but switching requests ON is free — that is running your show', tog.ok, tog);
