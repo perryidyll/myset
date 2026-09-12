@@ -105,6 +105,9 @@ echo
 echo "── where a night happened ──"
 node --import ./test/register.mjs test/place.mjs
 echo
+echo "── naming a night by hand ──"
+node --import ./test/register.mjs test/histname.mjs
+echo
 echo "── a dark room, and the last call ──"
 node --import ./test/register.mjs test/darkroom.mjs
 echo

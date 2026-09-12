@@ -119,7 +119,7 @@ ok('the Studio scrolling windows use a clipping shell around the native scrollba
 ok('the Studio Live tab label is red',
    /button\[data-tab-live\]\{color:#FF375F\}/.test(studio)&&/button data-tab-live/.test(studio));
 ok('the home page links to the artist directory and its requested filters',
-   /class="artistactions"[\s\S]{0,240}id="homeMapBtn"[^>]*>⌖ View on map<\/button>[\s\S]{0,120}href="\/artists">Search for artists/.test(home)&&
+   /class="artistactions"[\s\S]{0,240}id="homeMapBtn"[^>]*><svg[^>]*>[\s\S]{0,160}<\/svg>View on map<\/button>[\s\S]{0,120}href="\/artists">Search for artists/.test(home)&&
    /id="homeMapModal"[^>]*hidden[^>]*aria-modal="true"/.test(home)&&
    /MySet shows in next 30 days/.test(directory)&&/Music released/.test(directory)&&/Signed/.test(directory)&&
    /All countries/.test(directory)&&/All cities/.test(directory)&&/All styles/.test(directory)&&/Any rating/.test(directory));

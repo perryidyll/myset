@@ -83,17 +83,31 @@ body{padding-bottom:34px}
 .hero{padding:20px 20px 4px}
 .hero h1{font-size:32px;font-weight:700;letter-spacing:-.04em;line-height:1.1;margin:0}
 .hero p{margin:9px 0 0;font-size:16px;color:var(--muted);line-height:1.45}
+/* The bold half is the audience's orange — the founder's colours (2026-09-12). */
+.hero p b{color:var(--accent-2);font-weight:700}
 
+/* The finder wears the same thin orange ring as .signin and the feed search
+   below, and its two headings are ink, not muted — the founder asked (2026-09-12)
+   from a dark phone for white headings; --ink is white there and near-black on
+   the light card, where a literal white would vanish. */
 .finder{margin:20px 18px 0;background:var(--surface);border-radius:var(--r-lg);
-  box-shadow:var(--sh-2);padding:18px 18px 20px}
+  box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-2);padding:18px 18px 20px}
 .artistactions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 18px 0}
 /* .artistsearch is a .chip from app.css, sized up to a two-up row. The pill
    shape is restated for the same stale-app.css reason as .signin above. */
-.artistsearch{display:flex;align-items:center;justify-content:center;min-width:0;padding:14px 10px;text-align:center;
+.artistsearch{display:flex;align-items:center;justify-content:center;gap:0;min-width:0;padding:14px 10px;text-align:center;
   border-radius:var(--pill);background:var(--surface);white-space:nowrap;font-size:15px;font-weight:600;color:var(--accent-ink)}
 .artistsearch:active{transform:scale(.98)}
 @media(max-width:370px){.artistsearch{font-size:13px;padding-left:7px;padding-right:7px}}
-.finder label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 7px}
+/* The folded-map line icon on "View on map" (the founder, 2026-09-12): a text
+   glyph (⌖) sits on the baseline and cannot be sized or centred like a line
+   icon; an inline SVG (design-system §12) is centred on the label and a hair
+   bigger. The grid row stretches both chips to one height, so the icon never
+   sets it. The 7px before the label is the icon's own margin, with .chip's gap
+   zeroed above, so the space is the same on a phone holding a stale app.css. */
+.artistsearch svg{width:17px;height:17px;flex:0 0 auto;margin-right:7px;fill:none;stroke:currentColor;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.finder label{display:block;font-size:12.5px;font-weight:700;color:var(--ink);margin:0 0 7px}
 /* Type to narrow, or tap to browse the whole list. With three cities typing is
    fastest; with three hundred a plain <select> stops being usable. */
 .combo{position:relative;margin-bottom:13px}
@@ -148,7 +162,10 @@ body{padding-bottom:34px}
   background:var(--surface);border-top:.5px solid var(--hair)}
 .gig .rowlink{position:absolute;inset:0;z-index:1}
 .gig .dirs,.gig .chev{position:relative;z-index:2}
-.dirs{flex:0 0 auto;align-self:center;display:inline-grid;place-items:center;
+/* The Directions pin sits under the time and date, inside .tm, since the
+   founder's ask of 2026-09-12 moved RSVP out to the row's right edge. A row
+   without a map simply has no pin. */
+.dirs{display:grid;place-items:center;margin-top:8px;
   width:38px;height:38px;border-radius:50%;color:var(--accent-ink);background:var(--accent-soft)}
 .dirs svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round}
 .evtag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
@@ -159,13 +176,18 @@ body{padding-bottom:34px}
 .gig .tm{flex:0 0 auto;min-width:62px}
 .gig .tm b{display:block;font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
 .gig .tm span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
-/* RSVP, under the time and date — the founder's ask of 2026-09-12. One small
-   pill in the audience's orange: a ring while you are not going, filled once
-   you are, and a "<n> going" line under it. Above the row link, like .dirs, so
-   a tap RSVPs instead of navigating. The .btn-grey ground is restated here
+/* RSVP, at the right edge of the row where the Directions pin used to sit —
+   the founder's ask of 2026-09-12 — as its own column (.rsvpcol) between the
+   headline and the chevron: one small pill in the audience's orange, a ring
+   while you are not going, filled once you are, and the "<n> going" count
+   centred beneath it. The column is above the row link, like .dirs, so a tap
+   RSVPs instead of navigating — and it is not called .go, which app.css uses
+   for a full-width gradient button. The .btn-grey ground is restated here
    because a page never waits on app.css to draw its own controls. */
-.gig .rsvp,.gig .going{position:relative;z-index:2}
-.gig .rsvp{display:inline-block;margin-top:8px;padding:6px 11px;border-radius:var(--pill);
+.gig .rsvpcol{flex:0 0 auto;align-self:center;display:flex;flex-direction:column;align-items:center;gap:4px;
+  position:relative;z-index:2}
+.gig .going{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center}
+.gig .rsvp{display:inline-block;padding:6px 11px;border-radius:var(--pill);
   font-size:11.5px;font-weight:700;letter-spacing:.02em;line-height:1.2;
   background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);
   box-shadow:inset 0 0 0 1.5px var(--accent-2)}
@@ -271,7 +293,7 @@ body{padding-bottom:34px}
 .sheetfoot{margin:18px 0 0;padding-top:14px;border-top:.5px solid var(--hair);
   font-size:13px;color:var(--faint);line-height:1.5}
 /* Same side margins as every card on this page (18px), and the same thin orange
-   ring as "View on map" — the field used to run edge to edge and carried both a
+   ring as the finder — the field used to run edge to edge and carried both a
    border and app.css's inset ring, which read as one thick line. The 12px above
    matches the 12px between the finder and the two chips (.artistactions) — the
    founder asked on 2026-09-12 for the same gap on both sides of them. */
@@ -312,7 +334,7 @@ body{padding-bottom:34px}
 
   <div class="hero">
     <h1>Live music near you.<br>You pick what plays.</h1>
-    <p>Find a gig, open the link at the venue, and vote on the next song from your phone.</p>
+    <p>Find a show, open the setlist at the venue, and <b>vote on your favorite songs</b>.</p>
   </div>
 
   <div class="finder">
@@ -334,7 +356,7 @@ body{padding-bottom:34px}
   </div>
 
   <div class="artistactions" aria-label="Artist discovery">
-    <button class="chip artistsearch" id="homeMapBtn" type="button">⌖ View on map</button>
+    <button class="chip artistsearch" id="homeMapBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>View on map</button>
     <a class="chip artistsearch" href="/artists">Search for artists →</a>
   </div>
 
@@ -700,8 +722,7 @@ function renderFeed(q){
       return `<div class="gig${feat?' feat':''}">
         <a class="rowlink" href="${esc(href)}" aria-label="${esc(ev?(g.title||'Event'):g.artist)} at ${esc(g.venue)}"></a>
         <div class="tm"><b>${fmt(g)}</b><span>${esc(shortDate(g.date))}</span>
-          <button class="rsvp" type="button" data-k="${esc(rsvpKey(g))}" aria-pressed="${on?'true':'false'}">RSVP</button>
-          <span class="going">${n} going</span></div>
+          ${g.maps?dirBtn(g.maps):''}</div>
         <div class="m">
           ${g.live?'<span class="livepill"><span class="dot"></span>On now</span>'
             :ev?'<span class="evtag">At the venue</span>':''}
@@ -709,7 +730,9 @@ function renderFeed(q){
           <div class="where">${esc(g.venue)}</div>
           ${g.note?`<div class="note">${esc(g.note)}</div>`:''}
         </div>
-        ${g.maps?dirBtn(g.maps):''}
+        <div class="rsvpcol">
+          <button class="rsvp" type="button" data-k="${esc(rsvpKey(g))}" aria-pressed="${on?'true':'false'}">RSVP</button>
+          <span class="going">${n} going</span></div>
         <span class="chev">›</span>
       </div>`;};
   /* A week head goes in where the week changes — never over this week. */

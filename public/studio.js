@@ -51,7 +51,12 @@ function openLists(){
       late set, the one for the Irish pub. Pick one and the room only sees those.</p>
     <div class="lrow">
       <div class="m"><b>All songs</b><span>everything you haven’t hidden</span></div>
-      ${!s.listId?'<span class="now">In play</span>'
+      ${/* "In play" only once it was CHOSEN. An empty listId is also what a show has
+            before anyone picks, and a row that says In play with no button gave an
+            artist who wanted All songs on purpose nothing to tap — so the Live
+            checklist could never tick the step (the founder, 2026-09-12). The Use
+            here is the same luse the named rows carry; useList('') sets ALLSONGS. */''}
+      ${!s.listId&&ALLSONGS?'<span class="now">In play</span>'
         :`<button class="act" data-act="luse" data-id="">Use</button>`}
     </div>
     ${lists.map(l=>`<div class="lrow">
@@ -1450,6 +1455,30 @@ async function openShow(id){
   render();
 }
 function closeShow(){DETAIL=null;render();}
+/* THE NIGHT'S NAME IS TAPPABLE. A show started by hand from the Live tab is filed
+   under whatever venue was typed, or as "Untitled show" — and the founder asked
+   (2026-09-12) to be able to name it afterwards from the Money tab; it works for
+   every filed night, not only the hand-started ones. The title sits INSIDE a row
+   that is itself data-act="show", and the click dispatcher takes the innermost
+   data-act, so a tap on the name renames and never opens. The pencil is inline so
+   the row reads as editable without a rule in studio.html. The element shrinks to
+   its words (inline-block): the blank line to the right of a short name is still
+   the row, and a tap there opens the show like the rest of it. */
+const histName=(id,title)=>`<div class="t" data-act="histname" data-id="${esc(id)}" role="button" tabindex="0" title="Rename this night" style="cursor:text;display:inline-block;max-width:100%">${esc(title)}<i style="font-style:normal;font-size:12px;color:var(--muted);margin-left:6px">✎</i></div>`;
+async function renameNight(id){
+  const r=(DETAIL&&DETAIL.showId===id)?DETAIL:(((HIST&&HIST.shows)||[]).find(x=>x.showId===id)||null);
+  const shown=r?(r.title||r.venue||''):'';   // what the prompt was pre-filled with, title or venue
+  const title=(prompt('Name this night',shown)||'').replace(/\s+/g,' ').trim().slice(0,100);
+  // OK on the untouched prompt is not a rename: a venue-named night must not get
+  // its venue frozen as a hand-typed title, which would lock it against placeShows.
+  if(!title||title===shown)return;
+  const d=await api('/history',{method:'POST',body:JSON.stringify({action:'rename',show:id,title})});
+  if(!d||!d.ok){toast((d&&d.error)||'Couldn\u2019t rename that');return;}
+  const t=d.title||title;     // the server's cut of it, so the row shows what was kept
+  if(HIST&&HIST.shows) HIST.shows.forEach(x=>{ if(x.showId===id) x.title=t; });
+  if(DETAIL&&DETAIL.showId===id) DETAIL.title=t;
+  render(); toast('Renamed');
+}
 async function reconcile(id){
   toast('Re-checking Stripe\u2026');
   const d=await api('/history',{method:'POST',body:JSON.stringify({action:'reconcile',show:id})});
@@ -1497,7 +1526,9 @@ let QRSHOWN=(()=>{try{return !!localStorage.getItem('myset.qrshown')}catch(e){re
 /* "All songs" is a choice, not the absence of one — but the server cannot tell the
    two apart: an empty listId is also what a show has before anyone picks. So the
    phone remembers that the artist tapped All songs on purpose (set in useList,
-   cleared when a named set is used), and the checklist ticks the step off. */
+   cleared when a named set is used), and the checklist ticks the step off. The
+   setlists sheet reads it too: its All songs row says "In play" only when this is
+   set, and offers Use otherwise — the only way an artist can make the choice. */
 let ALLSONGS=(()=>{try{return localStorage.getItem('myset.allsongs')==='1'}catch(e){return false}})();
 function todayCard(s){
   const gig=tonightGig(s);
@@ -1658,8 +1689,12 @@ function render(){
     body=`
     <div class="wrap" style="padding-top:18px">
       <div class="setlist-tools">
+      ${/* Both spans are plain flex items, so the label centres as ONE thing beside
+            its sibling. The second used to be flex:1, which parked "Add a song" at the
+            left of a centred button (the founder, 2026-09-12). Two spans still, because
+            test/copy.mjs finds ">Add a song</span>". */''}
       <button class="big" onclick="openSongSheet(null)">
-        <span>+</span><span style="flex:1">Add a song</span></button>
+        <span>+</span><span>Add a song</span></button>
       <button class="big alt" onclick="openImport()">⇪ Import songs</button>
       </div>
     </div>
@@ -1768,7 +1803,7 @@ function render(){
       <div class="wrap" style="padding-top:14px"><button class="act" onclick="closeShow()">← All shows</button></div>
       <div class="np rise" style="background:var(--surface-2);color:var(--ink);box-shadow:var(--sh-1)">
         <div class="k" style="color:var(--muted)">${dstamp(H.endedAt||H.startedAt)}</div>
-        <div class="t">${esc(H.title||H.venue||'Untitled show')}</div>
+        ${histName(H.showId,H.title||H.venue||'Untitled show')}
         <div class="a" style="color:var(--muted)">${esc(H.city||'')}${H.startedAt&&H.endedAt?' · '+dur(H.endedAt-H.startedAt):''}</div>
       </div>
       <div class="stats">
@@ -1815,10 +1850,10 @@ function render(){
         </div>
         ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
         <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Start the next one from the Live tab when the gig begins.':'Tonight gets filed away when you end the show or start a new one.'}</p>
-        ${(()=>{  /* filter by anything a night is remembered by: venue, city, date, weekday */
+        ${(()=>{  /* filter by anything a night is remembered by: its name, venue, city, date, weekday */
           const hw=HISTQ.toLowerCase().split(/\s+/).filter(Boolean);
           const hay=x=>{const d=new Date(x.endedAt||x.startedAt||0);
-            return [x.venue,x.city,dstamp(x.endedAt||x.startedAt),
+            return [x.title,x.venue,x.city,dstamp(x.endedAt||x.startedAt),
                     ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'][d.getDay()]]
               .filter(Boolean).join(' ').toLowerCase();};
           HSHOWN=hw.length?H.shows.filter(x=>{const h=hay(x);return hw.every(w=>h.includes(w));}):H.shows;
@@ -1833,7 +1868,7 @@ function render(){
           ${HISTQ?`<button class="clr" onclick="HISTQ='';HISTFOCUS=false;render()" aria-label="Clear search">✕</button>`:''}
         </div>`:''}
         <div class="list">${HROWS.map(x=>`<div class="row" data-act="show" data-id="${x.showId}" style="cursor:pointer">
-          <div class="m"><div class="t">${esc(x.title||x.venue||'Untitled show')}</div>
+          <div class="m">${histName(x.showId,x.title||x.venue||'Untitled show')}
             <div class="by">${esc(x.city||'')}</div>
             <div class="s">${dstamp(x.endedAt||x.startedAt)} · ${x.songsPlayed} song${x.songsPlayed===1?'':'s'} · ${x.totalVotes} votes · ${x.peakVoters} people${
               x.unattributed?` · $${x.unattributed.toFixed(2)} untagged`:''}</div></div>
@@ -2620,6 +2655,11 @@ function attachDrag(sh){
     window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
 }
 function closeSheet(){const sh=$('#sheet');sh.style.transition='';sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
+/* The night's name is role=button so it is announced as one; the click dispatcher
+   is tap-only, so Enter/Space have to be forwarded by hand or the promise is empty. */
+document.addEventListener('keydown',e=>{ if(e.key!=='Enter'&&e.key!==' ')return;
+  const b=e.target&&e.target.closest&&e.target.closest('[data-act="histname"]'); if(!b)return;
+  e.preventDefault(); renameNight(b.getAttribute('data-id')); });
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
   if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
 
@@ -2889,6 +2929,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='lyrclear') clearLyrics(id);
   if(b.dataset.act==='del') removeSong(id);
   if(b.dataset.act==='show') openShow(id);
+  if(b.dataset.act==='histname') renameNight(id);
   if(b.dataset.act==='recon') reconcile(id);
   if(b.dataset.act==='mup') media('mediaMove',id,'up');
   if(b.dataset.act==='mdn') media('mediaMove',id,'down');

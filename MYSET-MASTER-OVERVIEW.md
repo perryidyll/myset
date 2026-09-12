@@ -509,10 +509,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
-| Invariants | 254 (last: 0fk) |
-| Test suites | 43 |
+| Invariants | 255 (last: 0fk) |
+| Test suites | 44 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 56 |
+| Decision records | 57 |
 
 ### Feature flags in force
 

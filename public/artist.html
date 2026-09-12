@@ -81,6 +81,20 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
 .cluster.solo .pav{width:120px;height:120px;border-radius:28px}
 .pth{width:40px;height:40px;border-radius:13px;background-size:cover;background-position:center;
   border:3px solid var(--bg);box-shadow:var(--sh-2)}
+/* EVERY PHOTO UP TOP ENLARGES ON A TAP (the founder, 2026-09-12): the cover, the
+   portrait and the three small ones each carry data-zoom (the stored URL, not the
+   thumbnail the slot was drawn from) and open the same lightbox the community page
+   uses — one black sheet, the picture as big as the screen allows, a tap anywhere
+   closes it. The cover's tap lands on .veil, so the attribute is on .pcover itself.
+   z-index 80: over the pinned pill (50) and the menu (20), under the splash (90).
+   grid-template-rows:100% is what makes max-height:100% mean anything: against an
+   auto row it clamps nothing, and a tall photo (or the cover on a phone turned
+   sideways) ran off the bottom of a sheet that cannot scroll. The sheet takes
+   focus while it is up (no ring: it is the whole screen), so Enter on the photo
+   behind it cannot open a second one. */
+[data-zoom]{cursor:zoom-in}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:80;display:none;place-items:center;padding:20px;outline:none}
+.lb.on{display:grid;grid-template-rows:100%}.lb img{max-width:100%;max-height:100%;border-radius:8px}
 /* padding-top so the name isn't jammed against the bottom of the cover */
 .pname{flex:1;min-width:0;padding:22px 0 2px;display:flex;flex-direction:column;justify-content:flex-end;
   min-height:96px}
@@ -114,11 +128,14 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
   background:var(--accent-soft);color:var(--accent-ink);font-style:normal;font-size:14px}
 
 /* The Community button sits in the stats grid as a sixth cell — on a phone that
-   is the empty slot beneath the fans count and to the right of the songs count. */
+   is the empty slot beneath the fans count and to the right of the songs count.
+   Orange, not pink (the founder, 2026-09-12): ring and words are --accent-2, the
+   audience colour and the ring colour everywhere else on the site; the pink is for
+   warnings and the live state. The icon strokes currentColor, so it follows. */
 .ps.cta{align-self:end}
 .ps.cta a{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;
   padding:9px 10px;border-radius:var(--pill);font-size:13px;font-weight:700;letter-spacing:-.01em;
-  color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent);transition:transform .22s var(--spring)}
+  color:var(--accent-2);box-shadow:inset 0 0 0 1.5px var(--accent-2);transition:transform .22s var(--spring)}
 .ps.cta a:active{transform:scale(.95)}
 .ps.cta a svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
@@ -249,27 +266,41 @@ a.pc:active{transform:scale(.97)}
 .gigrow{display:flex;gap:14px;align-items:center;padding:14px 18px;border-top:.5px solid var(--hair)}
 .gigrow:first-child{border-top:none}
 .gigrow.live{background:var(--accent-soft)}
-/* 56px, not 44: "RSVP" sits under the date in this column and must not wrap. */
+/* 56px, not 44: the Directions pin sits under the date in this column now (it is
+   38px wide, so 56 still fits it with room), and the column keeps one width whether
+   or not a row has a map, so the venue names line up down the list. */
 .gigrow .d{flex:0 0 auto;text-align:center;min-width:56px;display:flex;flex-direction:column;align-items:center}
 .gigrow .d b{display:block;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1}
 .gigrow .d span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
-/* RSVP (the founder, 2026-09-12): one small pill under the date on every row, and a
-   count beneath it so the room can see who else is coming. Off is the .btn-grey
-   ground with an orange ring and orange text; on is the orange fill. Orange is
-   --accent-2, the ring colour everywhere else on the site. Nobody signs in: the fan
-   is the same anonymous id the vote page keeps, and the page remembers its own
-   answers in localStorage (rsvpMap). */
-.gigrow .rsvp{margin-top:7px;padding:6px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.02em;
+.gigrow .d .dirs.ico{margin-top:7px}
+/* RSVP (the founder, 2026-09-12): one small pill on every row, and a count beneath
+   it so the room can see who else is coming. It sits at the RIGHT edge of the row,
+   in its own column (.rsvpcol — not .go, which app.css already owns as the big
+   gradient button), where the Directions pin used to be; the pin went under the
+   date, so the one thing to tap is where a thumb lands and the date stays a date.
+   Off is the .btn-grey ground with an orange ring and orange text; on is the
+   orange fill. Orange is --accent-2, the ring colour everywhere else on the site.
+   Nobody signs in: the fan is the same anonymous id the vote page keeps, and the
+   page remembers its own answers in localStorage (rsvpMap). The count is the
+   button's next sibling — rsvpTap's paint() finds it that way. */
+.gigrow .rsvpcol{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px}
+.gigrow .rsvp{padding:6px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.02em;
   line-height:1;background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);
   box-shadow:inset 0 0 0 1.5px var(--accent-2);transition:transform .22s var(--spring)}
 .gigrow .rsvp[aria-pressed=true]{background:var(--accent-2);color:#fff;box-shadow:none}
 .gigrow .rsvp:active{transform:scale(.94)}
-.gigrow .d .going{display:block;font-size:10.5px;color:var(--muted);margin-top:4px;text-transform:none;letter-spacing:0;
+.gigrow .rsvpcol .going{display:block;font-size:10.5px;color:var(--muted);text-align:center;
   font-variant-numeric:tabular-nums;white-space:nowrap}
-.gigrow .m{flex:1;min-width:0}
+/* overflow-wrap:anywhere — a venue word wider than the middle column (about 190px
+   at 390, 120px at 320, now that the RSVP column sits beside it) ran out of its box
+   under the pill. A broken word is ugly; a hidden one is worse. */
+.gigrow .m{flex:1;min-width:0;overflow-wrap:anywhere}
 .gigrow .m .v{font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.25}
 .gigrow .m .w{font-size:13.5px;color:var(--muted);margin-top:2px}
-.gigrow .tix{flex:0 0 auto;font-size:13px;font-weight:600;color:var(--accent-ink)}
+/* Tickets is a line under the day and time, not a fourth column: with the RSVP
+   column at the right edge a fourth column left the venue name 37px on a 320 phone
+   and sharded it into three-letter lines. */
+.gigrow .tix{display:inline-block;margin-top:5px;font-size:13px;font-weight:600;color:var(--accent-ink)}
 .dirs{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;
   font-size:13px;font-weight:600;color:var(--accent-ink);padding:10px 15px;
   border-radius:var(--pill);background:var(--accent-soft)}
@@ -328,6 +359,10 @@ a.pc:active{transform:scale(.97)}
   <div class="foot">MySet · myset.vip</div>
   <div class="toast" id="toast"></div>
 </div>
+<!-- the lightbox; empty until a photo opens it, so no <img> ever sits here with no src.
+     data-nopull: every photo sits at the top of the page, so a swipe down on the black
+     sheet would otherwise arm pull.js and reload the page under the fan's thumb -->
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo" tabindex="-1" data-nopull></div>
 
 <!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
 <script src="/theme.js"></script>
@@ -545,6 +580,38 @@ async function rsvpTap(b){
 }
 document.getElementById('app').addEventListener('click',e=>{const b=e.target.closest('.rsvp');if(b)rsvpTap(b);});
 
+/* THE LIGHTBOX (the founder, 2026-09-12). Bound once, by delegation on #app,
+   because render() replaces the photos wholesale. The <img> is made on open and
+   thrown away on close, so the sheet never holds an image with no src. It asks the
+   CDN for a 1600 wide copy and falls back to the stored file if the transform
+   fails, the way the cover does; the raw attribute is compared, because .src comes
+   back absolute. Escape closes it too, focus moves onto the sheet while it is up
+   and goes back to the photo that opened it after — without scrolling, or a cover
+   half under the top edge would yank the page when the sheet closes. The page
+   behind is body overflow:hidden, not INVARIANT 0f2's position:fixed freeze, on
+   purpose: this is not a sheet, the black is opaque, and nothing is torn down and
+   rebuilt around it, so there is no offset to lose. */
+let LBF=null;
+function lbOpen(el){
+  const u=el.getAttribute('data-zoom'); if(!u)return;
+  const lb=document.getElementById('lb'), img=document.createElement('img');
+  img.alt=''; img.decoding='async'; img.onerror=()=>{if(img.getAttribute('src')!==u)img.src=u;};
+  img.src=cdn(u,1600); lb.replaceChildren(img); lb.classList.add('on');
+  LBF=el; document.body.style.overflow='hidden';
+  try{ lb.focus({preventScroll:true}); }catch(e){}
+}
+function lbClose(){
+  const lb=document.getElementById('lb'); if(!lb.classList.contains('on'))return;
+  lb.classList.remove('on'); lb.replaceChildren(); document.body.style.overflow='';
+  if(LBF&&LBF.isConnected){ try{ LBF.focus({preventScroll:true}); }catch(e){} } LBF=null;
+}
+document.getElementById('app').addEventListener('click',e=>{const z=e.target.closest('[data-zoom]');if(z)lbOpen(z);});
+document.getElementById('app').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const z=e.target.closest('[data-zoom]'); if(!z)return; e.preventDefault(); lbOpen(z);});
+document.getElementById('lb').addEventListener('click',lbClose);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')lbClose();});
+
 async function boot(){
   /* Two fetches, not three: /api/profile now carries live/venue/city, so the page
      no longer pays a full 15-read audience poll just to draw the Live pill. */
@@ -593,15 +660,19 @@ function render(){
      then a stats row with the live button sitting right in it. */
   const shots=(P.photos||[]).filter(Boolean).slice(0,3);
   const cover=P.photo||'/img/band-sm.jpg', avatar=P.avatar||cover;
-  h+=`<div class="pcover rise" style="background-image:url('${esc(cdn(cover,48))}');background-size:cover;background-position:center">
+  /* the tap target's attributes: what the lightbox opens (the stored URL), and the
+     button semantics a div needs so a keyboard and a screen reader get the same tap.
+     Only a stored photo gets them — the stock placeholder is not a picture of the band. */
+  const zoom=u=>`data-zoom="${esc(u)}" role="button" tabindex="0" aria-label="Enlarge photo"`;
+  h+=`<div class="pcover rise" ${P.photo?zoom(cover):''} style="background-image:url('${esc(cdn(cover,48))}');background-size:cover;background-position:center">
     <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw)this.src=this.dataset.raw" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
     <div class="veil"></div>
   </div>
 
   <div class="phead">
     <div class="cluster ${shots.length?'':'solo'}">
-      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" style="background-image:url('${esc(cdn(u,220))}'),url('${esc(u)}')"></div>`).join('')}</div>`:''}
-      <div class="pav" style="background-image:url('${esc(cdn(avatar,320))}'),url('${esc(cdn(avatar,48))}'),url('${esc(avatar)}')"></div>
+      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" ${zoom(u)} style="background-image:url('${esc(cdn(u,220))}'),url('${esc(u)}')"></div>`).join('')}</div>`:''}
+      <div class="pav" ${P.avatar||P.photo?zoom(avatar):''} style="background-image:url('${esc(cdn(avatar,320))}'),url('${esc(cdn(avatar,48))}'),url('${esc(avatar)}')"></div>
     </div>
     <div class="pname">
       <h1>${esc(P.name)}</h1>
@@ -702,16 +773,15 @@ function render(){
   if(gigs.length){
     const mine=rsvpMap();
     const row=(g,i)=>`<div class="gigrow${g.live?' live':''}">
-        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span>
-          <button class="rsvp" type="button" data-i="${i}" data-k="${esc(rsvpKey(g))}" aria-pressed="${mine[rsvpKey(g)]?'true':'false'}">RSVP</button>
-          <span class="going">${esc(compact(g.rsvp)||'0')} going</span></div>
+        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span>${g.maps?dirBtn(g.maps,true):''}</div>
         <div class="m">
           ${g.live?'<span class="onnow"><span class="dot"></span>On now</span>':''}
           <div class="v">${esc(g.venue)}</div>
           <div class="w">${esc(dowName(g.date))} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.city?' · '+esc(g.city):''}</div>
+          ${g.ticketUrl?`<a class="tix" href="${esc(g.ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>`:''}
         </div>
-        ${g.maps?dirBtn(g.maps,true):''}
-        ${g.ticketUrl?`<a class="tix" href="${esc(g.ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>`:''}
+        <div class="rsvpcol"><button class="rsvp" type="button" data-i="${i}" data-k="${esc(rsvpKey(g))}" aria-pressed="${mine[rsvpKey(g)]?'true':'false'}">RSVP</button>
+          <span class="going">${esc(compact(g.rsvp)||'0')} going</span></div>
       </div>`;
     const first=gigs.slice(0,3), rest=gigs.slice(3);
     h+=`<div class="sect">Upcoming shows</div>

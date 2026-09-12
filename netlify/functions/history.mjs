@@ -1,5 +1,5 @@
 import { json, bad, requireArtist, getShow, readFans, voteCounts } from './_lib.mjs';
-import { readHistIndex, readHistShow, reconcileShow, moneyForShow, healHistory, placeShows } from './_history.mjs';
+import { readHistIndex, readHistShow, reconcileShow, moneyForShow, healHistory, placeShows, renameShow } from './_history.mjs';
 
 /* Artist-only. GET lists past shows (or one in detail); POST re-pulls Stripe for
    a single show. The show currently running is included as a live preview so the
@@ -18,6 +18,15 @@ export default async (req) => {
     if (body.action === 'heal') return json({ ok: true, ...(await healHistory(aid, { force: true })) });
     /* "Name these from my calendar" in the Studio — see placeShows. */
     if (body.action === 'place') return json({ ok: true, ...(await placeShows(aid)) });
+    /* A tap on a night's name in the Studio — see renameShow. Cut to 100 here so
+       the reply carries exactly what was kept and the page can show that. */
+    if (body.action === 'rename') {
+      const title = String(body.title || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+      if (!title) return bad('Give the night a name');
+      const r = await renameShow(aid, String(body.show || ''), title);
+      if (!r) return bad('unknown show', 404);
+      return json({ ok: true, ...r });
+    }
     if (body.action !== 'reconcile') return bad('unknown action');
     const d = await reconcileShow(aid, String(body.show || ''));
     if (!d) return bad('unknown show', 404);
