@@ -1021,6 +1021,7 @@ export const json = (body, status = 200) =>
     headers: {
       'content-type': 'application/json',
       'cache-control': 'no-store',
+      'netlify-cdn-cache-control': 'no-store',   // said outright, so no header rule can ever cache a personal reply
       'access-control-allow-origin': '*',
     },
   });

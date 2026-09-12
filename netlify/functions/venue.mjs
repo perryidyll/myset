@@ -24,12 +24,11 @@ export default async (req) => {
 
   const vid = await venueBySlug(slug);
   if (!vid) return bad('unknown venue', 404);
-  const [reg, prof] = await Promise.all([venueById(vid), getVenueProfile(vid)]);
+  // the vouches need only the id, so they travel with the registry and profile reads
+  const [reg, prof, vouches] = await Promise.all([venueById(vid), getVenueProfile(vid), readVouches(vid)]);
   const venue = shapeVenue(prof, reg);
 
-  const [gigs, own, vouches] = await Promise.all([
-    gigsAt(venue), ownEvents(vid, venue), readVouches(vid),
-  ]);
+  const [gigs, own] = await Promise.all([gigsAt(venue), ownEvents(vid, venue)]);
 
   const acts = [];
   for (const g of gigs) {

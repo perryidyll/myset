@@ -1,4 +1,8 @@
-import Stripe from 'stripe';
+/* The Stripe SDK is loaded HERE, inside the one function that needs it, not at
+   the top of the file: this module rides in the profile, community and artists
+   bundles, and a top-level import made every cold start of those public reads pay
+   for evaluating the whole SDK before answering a fan who wanted a name and a
+   photo (speed pass two, decision 0048). */
 import { casDoc, readDoc, voteCounts, roomCounts, KEY, DEFAULT_ARTIST } from './_lib.mjs';
 
 const HIST = KEY.hist;                  // flat key — INVARIANT 2
@@ -37,7 +41,7 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
        client, and a throw there escaped this function entirely, straight past
        archiveShow's own await and into an empty catch in _lifecycle. A payments
        hiccup deleted a whole gig from history and said nothing. */
-    const { stripeFor, scope } = await import('./_connect.mjs');
+    const [{ stripeFor, scope }, { default: Stripe }] = await Promise.all([import('./_connect.mjs'), import('stripe')]);
     const { stripe: scoped, opts: sOpts } = await stripeFor(aid);
     const stripe = scoped || new Stripe(key);
     for (let page = 0; page < 10; page++) {
