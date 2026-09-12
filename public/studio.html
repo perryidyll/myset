@@ -104,6 +104,7 @@ a{color:inherit;text-decoration:none}
   border-radius:var(--pill);transition:background .25s var(--ease),color .2s var(--ease)}
 .tabs button.on{background:var(--surface-2);color:var(--ink);
   box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent)}
+@media(max-width:390px){.tabs button{padding:10px 8px}}   /* six tabs sit inside 375px with nothing clipped */
 .tabs button[data-tab-live]{color:#FF375F}
 .tabs button[data-tab-live].on{color:#FF375F}
 
@@ -614,6 +615,7 @@ let ASLUG=localStorage.getItem('myset.aslug')||'';
 let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null, PITCHES=null, CHARTS=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'setlist';
+if(TAB==='merch')TAB='profile';               // the Merch tab folded into Profile on 2026-09-12
 let MERCH=null, ORDERS=null, COMM=null;   // the shop, its orders, and the community page's posts
 let SESS=null, REC=null;                  // where you're signed in, and your recovery codes
 /* The same search and the same three orders the audience has on the voting page,
@@ -1048,17 +1050,30 @@ function gate(err,mode){
       <p class="muted" style="font-size:12.5px;margin:14px 0 0;text-align:center">
         New here? Same button — we'll set you up right after the code.<br>
         No password to forget — we email you a code each time.</p>
-      <div style="display:flex;align-items:center;gap:12px;margin:22px 0 14px">
-        <span style="flex:1;height:.5px;background:var(--hair)"></span>
-        <span class="kick" style="font-size:12px">or</span>
-        <span style="flex:1;height:.5px;background:var(--hair)"></span>
-      </div>
+      ${/* ALREADY HOLDING A CODE — the email landed on another phone, or this is a
+           second browser. The code is tied to the address, not the device, so it
+           works here as long as the same email is in the box above. This replaced
+           the page-name + Studio-code door on 2026-09-12 (the user's call: one
+           way in, not two on one screen). The server still answers that door; the
+           founder's stored code keeps working. */''}
+      <div class="sec" style="padding-left:0;padding-right:0;margin-top:22px"><span class="kick">Got a code already?</span></div>
+      <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+        placeholder="My code" style="letter-spacing:.2em">
+      <button class="big alt" style="margin-top:12px" onclick="submitCode()">Sign in with my code</button>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">The 6 digits from the email — type them here with the same address above, on any phone or browser.</p>
+      <p class="muted" style="font-size:12.5px;margin:16px 0 0;text-align:center">
+        <a href="#" onclick="event.preventDefault();gate(null,'recover')" style="color:var(--accent);font-weight:600">Lost your email? Use a recovery code</a>
+        &nbsp;·&nbsp; <a href="#" onclick="event.preventDefault();gate(null,'studiocode')" style="color:var(--muted);font-weight:600">Studio code</a></p>`;
+  }
+  /* The per-page Studio code (set in Settings). Off the front screen since
+     2026-09-12, behind a link, so the Settings card still has a door. */
+  if(m==='studiocode'){
+    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">The code you set in Settings for this page.</p>
       <input class="inp" id="aslug" placeholder="Your page name (myset.vip/…)" autocomplete="username" value="${esc(ASLUG)}">
       <input class="inp" id="code" type="password" placeholder="Studio code" autocomplete="current-password" style="margin-top:8px">
-      <button class="big alt" style="margin-top:12px" onclick="unlock()">Unlock with code</button>
+      <button class="big" style="margin-top:12px" onclick="unlock()">Unlock with code</button>
       <p class="muted" style="font-size:12px;margin:10px 0 0">Your page name is the bit after myset.vip/ — leave it blank if you set your code before pages existed.</p>
-      <p class="muted" style="font-size:12.5px;margin:16px 0 0;text-align:center">
-        <a href="#" onclick="event.preventDefault();gate(null,'recover')" style="color:var(--accent);font-weight:600">Lost your email? Use a recovery code</a></p>`;
+      <button class="act" style="margin-top:14px;width:100%" onclick="gate()">← Back</button>`;
   }
   if(m==='recover'){
     inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">One of the eight codes you saved. Each works once, and every other device gets signed out.</p>
@@ -1068,10 +1083,11 @@ function gate(err,mode){
       <button class="act" style="margin-top:14px;width:100%" onclick="gate()">← Back</button>`;
   }
   document.getElementById('app').innerHTML=`<div class="gate">${head}${inner}</div>`;
-  const first=$('#otp')||$('#newName')||$('#email');
+  const first=m==='code'?$('#otp'):($('#newName')||$('#email'));
   if(first){ first.addEventListener('keydown',e=>{if(e.key==='Enter'){
       m==='code'?submitCode():m==='name'?claimAccount():sendCode();}});
     setTimeout(()=>first.focus(),100); }
+  if(m==='start'){ const o=$('#otp'); if(o) o.addEventListener('keydown',e=>{if(e.key==='Enter')submitCode()}); }
   const c=$('#code'); if(c) c.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
 }
 /* Stripe sends them back to /studio?connect=done. Ask Stripe for the real answer
@@ -1110,8 +1126,9 @@ async function recoverIn(){
   toast(d.left?`You’re in. ${d.left} recovery codes left.`:'You’re in. That was your last recovery code — make new ones in Settings.');
   start();
 }
+/* The Studio-code door — behind a link on the sign-in screen since 2026-09-12. */
 function unlock(){
-  CODE=($('#code').value||'').trim();
+  CODE=(($('#code')||{}).value||'').trim();
   ASLUG=(($('#aslug')||{}).value||'').trim().toLowerCase().replace(/[^a-z0-9-]/g,'');
   localStorage.setItem('myset.admin',CODE); localStorage.setItem('myset.aslug',ASLUG);
   start();
@@ -1163,6 +1180,12 @@ async function claimAccount(){
 }
 async function submitCode(){
   const code=(($('#otp')||{}).value||'').trim();
+  /* From the start screen the address is whatever is in the email box; from the
+     code screen it is the one the code was sent to. */
+  const typed=(($('#email')||{}).value||'').trim();
+  if(typed) GATE_EMAIL=typed;
+  if(!GATE_EMAIL){toast('Enter your email first');return;}
+  if(code.replace(/\D/g,'').length!==6){toast('The code is 6 digits');return;}
   const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'verify',email:GATE_EMAIL,code})});
   if(!d.ok){toast(d.error||'Check the code and try again');return;}
   if(d.needName){ TICKET=d.ticket; gate(null,'name'); return; }
@@ -1708,10 +1731,9 @@ async function payDash(){
   else toast((d&&d.error)||'Not available yet');
 }
 
-function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(D)render();
+function setTab(t){if(t==='merch')t='profile';TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();loadOrders();}
-  if(t==='profile'){ loadProf(); loadComm(); }
-  if(t==='merch'){ loadPlan(); loadMerch(); loadOrders(); }
+  if(t==='profile'){ loadProf(); loadComm(); loadPlan(); loadMerch(); loadOrders(); }
   if(t==='setlist') loadPlan();
   /* drawPush paints into a div that render() has just created, and switching INTO
      the tab never called it — only a reload that landed here did. So the panel sat
@@ -2373,6 +2395,7 @@ function render(){
         <button class="act" data-act="mdn" data-id="${esc(m.mid)}" ${i===P.media.length-1?'disabled style="opacity:.3"':''}>↓</button>
         <button class="act warn" data-act="mrm" data-id="${esc(m.mid)}">✕</button>
       </div>`).join('')||'<div class="row muted">Nothing yet. Paste a link above.</div>'}</div>
+      ${merchSection()}
       <div class="wrap" style="margin-top:14px"><button class="big" onclick="saveProfile()">Save profile</button></div>
       ${commSection()}
       ${presskitCard()}
@@ -2660,9 +2683,6 @@ function render(){
     </div>`;
   }
 
-  if(TAB==='merch'){
-    body=merchTab();
-  }
 
   document.getElementById('app').innerHTML=`
   <div class="head">
@@ -2686,7 +2706,6 @@ function render(){
     <button class="${TAB==='gigs'?'on':''}" onclick="setTab('gigs')">Gigs</button>
     <button class="${TAB==='money'?'on':''}" onclick="setTab('money')">Money</button>
     <button class="${TAB==='profile'?'on':''}" onclick="setTab('profile')">Profile</button>
-    <button class="${TAB==='merch'?'on':''}" onclick="setTab('merch')">Merch</button>
     <button class="${TAB==='settings'?'on':''}" onclick="setTab('settings')">Settings</button>
   </div>${leavingBar()}${cardTrouble(s)}${body}
   ${TAB==='setlist'?'':`<div class="wrap" style="padding-top:26px;padding-bottom:8px">
@@ -3486,12 +3505,18 @@ function openStudioInstall(){
    ledger; a buyer's name and address are fetched when an order is opened and
    never kept here. The community page is free on every plan — moderating it is
    running your page. */
-async function loadMerch(force){ if(MERCH&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchList'}),quiet:true}); if(d&&d.ok){MERCH=d.merch; if(TAB==='merch'&&D)render();} }
-async function loadOrders(force){ if(ORDERS&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'orderList'}),quiet:true}); if(d&&d.ok){ORDERS=d.orders; if((TAB==='merch'||TAB==='money')&&D)render();} }
+async function loadMerch(force){ if(MERCH&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchList'}),quiet:true}); if(d&&d.ok){MERCH=d.merch; if(TAB==='profile'&&D&&!typing())render();} }
+async function loadOrders(force){ if(ORDERS&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'orderList'}),quiet:true}); if(d&&d.ok){ORDERS=d.orders; if((TAB==='profile'||TAB==='money')&&D&&!typing())render();} }
+/* A late reply must not repaint over a field somebody is typing into — render()
+   replaces #app wholesale. The data is drawn on the next render either way. */
+const typing=()=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest('#app')&&a.matches('input,textarea'));};
 async function loadComm(force){ if(COMM&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'postList'}),quiet:true}); if(d&&d.ok){COMM=d.posts; if(TAB==='profile'&&D)render();} }
 const money=c=>'$'+(c/100).toFixed(c%100?2:0);
-function merchTab(){
-  const s=D.show, items=MERCH||[];
+/* Merch lives on the Profile tab, under Videos & music — the user folded the
+   seventh tab away on 2026-09-12 because seven did not fit a phone. Same section,
+   same lock, same orders list; only the tab is gone. */
+function merchSection(){
+  const items=MERCH||[];
   const list=`<div class="sec"><span class="kick">Your merch</span><span class="kick">${items.length}/12</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Shows on your community page. Fans pay you directly through Stripe — MySet takes your plan’s cut, Stripe takes its fee from your side. An item with a link sells wherever that link goes instead.</p>
     ${!D.paymentsEnabled?`<div class="row muted">Fans can’t pay by card until Stripe is set up on the <b>Money</b> tab — items with a link still sell, and everything shows.</div>`:''}
@@ -3502,10 +3527,8 @@ function merchTab(){
         <button class="act" onclick="openMerch('${esc(m.id)}')">Edit</button>
         <button class="act warn" onclick="rmMerch('${esc(m.id)}')">✕</button></div>`).join('')||'<div class="row muted">Nothing yet. Add a tee, a print, a sticker.</div>'}</div>
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openMerch('')">+ Add an item</button></div>`;
-  return `<div class="wrap" style="padding-top:14px"></div>
-    ${lock('merch', list, 'Merch on your page is part of Plus — $10 a month. Anything you add stays saved.')}
-    ${ordersSection()}
-    <div class="wrap" style="padding-top:22px"><a class="big alt" href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="justify-content:center">See your community page ↗</a></div>`;
+  return `${lock('merch', list, 'Merch on your page is part of Plus — $10 a month. Anything you add stays saved.')}
+    ${ordersSection()}`;
 }
 /* ---------- THE BOOKS -------------------------------------------------------
    Two cards. "Your earnings" is every artist's and every venue's; "MySet's books"
@@ -3730,7 +3753,7 @@ function replyPost(id){
    changing a paid plan happens on the live subscription; leaving a paid plan asks
    twice and offers one month at half price, once. */
 /* Every item is [the thing, what it means]. The first half is bold, the second
-   is not — Perry's note: "4 shows a month" bold, the rest not.
+   is not — the founder's note: "10 shows a month" bold, the rest not.
 
    THE ROOM SIZE IS SAID PLAINLY ON EVERY CARD. It used to say "unlimited voters at
    each", which stopped being true the day audience caps landed, and a plan card
@@ -3740,7 +3763,7 @@ function replyPost(id){
    next line says what happens past it, rather than implying a locked door. */
 const TIER_COPY={
   free:{name:'Free',price:'$0',items:[
-    ['4 shows a month',' \u2014 up to 200 in the room at each'],
+    ['10 shows a month',' \u2014 up to 200 in the room at each'],
     ['Everything fans touch',': voting, requests, birthday shout-outs, lyrics'],
     ['The song sheet',': chord charts, keys and genres'],
     ['Your page',', gig calendar and city listings'],
@@ -3926,7 +3949,7 @@ function cardTrouble(s){
     <p style="margin-top:8px">Everything keeps working until ${daystamp(ends)}.</p></div>`;
   if(days>=0) return `<div class="paybar">
     <b>Your card still hasn’t gone through</b>
-    <p>If it isn’t sorted by tomorrow your page goes back to Free. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.gigsPerMonth:4} shows a month, merch comes off your community page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
+    <p>If it isn’t sorted by tomorrow your page goes back to Free. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} shows a month, merch comes off your community page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
     <button class="big" style="margin-top:12px" ${fix}>Update my card</button></div>`;
   return `<div class="paybar">
     <b>You’re on Free for now</b>

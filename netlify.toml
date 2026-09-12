@@ -140,3 +140,36 @@
   [headers.values]
     Content-Type = "text/plain; charset=utf-8"
     Cache-Control = "public, max-age=86400"
+
+# THE FILES EVERY PAGE SHARES ARE KEPT ON THE PHONE (added 2026-09-12).
+# Without this, Netlify's default for a static file is `max-age=0, must-revalidate`:
+# every page a person opens re-asks the network for app.css, theme.js, pull.js and
+# leave.js before the page can finish — four round trips, in a bar, on one bar of
+# signal, to be told "not modified" four times. Ten minutes of `max-age` means a
+# person walking from the artist page to the vote page to the community page never
+# asks twice; `stale-while-revalidate` means that after ten minutes the phone still
+# uses what it has and quietly fetches the new one behind it, so a deploy lands on
+# the load after next rather than costing a wait. The service worker already did
+# this for phones that have it; this does it for every phone, Safari included.
+#
+# NOT the HTML pages: those stay `must-revalidate` on purpose, so a deploy is on
+# every phone at its next navigation (sw.js rule 2 says the same). sw.js itself is
+# matched by /*.js and that is fine — the browser checks a service worker for
+# updates straight from the network regardless of these headers.
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=86400"
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=86400"
+# Pictures and icons change by being replaced with a new file, so a day is safe.
+[[headers]]
+  for = "/img/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"

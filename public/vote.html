@@ -15,6 +15,12 @@
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
+<!-- THE FIRST CALL LEAVES BEFORE THE PAGE IS PARSED. The page's own script cannot
+     run until the stylesheet and the shared scripts have arrived, so without this
+     the request that decides what is on screen would wait behind them. Here it is
+     already in flight while they load; boot() below picks up the reply. Used once,
+     on the first load only — a pull-to-refresh fetches fresh. -->
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const a=S?'&a='+encodeURIComponent(S):'',a1=S?'?a='+encodeURIComponent(S):'';let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}const g=(u,o)=>{const f=fetch(u,o);f.catch(()=>{});return f};window.__early={board:g('/api/board'+a1),me:g('/api/me?fan='+encodeURIComponent(F)+'&in=1'+a,{cache:'no-store'})}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
@@ -359,6 +365,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 <div class="toast" id="toast"></div>
 
 <script src="/theme.js"></script>
+<script src="/leave.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
@@ -423,9 +430,10 @@ async function load(){
      cache", and the cache is the whole point. The server's own `max-age=0,
      must-revalidate` already stops the browser keeping a copy. The `Age` header is
      how old the edge's copy is, and the countdown is corrected by it. */
+  const E=window.__early||{}; window.__early=null;     // the head started these; see <head>
   const [b,m]=await Promise.all([
-    fetch(`${API}/board${AQ1}`).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null),
-    fetch(`${API}/me?fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null),
+    (E.board||fetch(`${API}/board${AQ1}`)).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null),
+    (E.me||fetch(`${API}/me?fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
   ]);
   /* A personal reply can have left the server before this phone's last cast landed
      (it was already in flight when the tap happened), so its `lastAt` may be older
@@ -825,6 +833,48 @@ function applySort(list){
 const SORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
 const SCROLLPOS={queue:0,list:0};
 
+/* THE NEXT GIG, for the card between shows. One request, once per page open,
+   only while no show is running \u2014 the room is never polling for this. The same
+   endpoint and the same label as the artist page, so the two never disagree. */
+let GIGS=null, GIGS_ASKED=false, NEXT_TIMER=null;
+async function loadGigs(){
+  if(GIGS_ASKED)return; GIGS_ASKED=true;
+  /* `?a=` with nothing after it is the founding page's own diary (events.mjs). */
+  try{ const d=await fetch(`${API}/events${AQ1||'?a='}`,{cache:'no-store'}).then(r=>r.json()); if(d&&d.ok) GIGS=d.gigs||[]; }
+  catch(e){ GIGS=[]; }
+  if(ST&&ST.status!=='live') render();          // draws the label and the venue line
+}
+/* The one-second tick lives and dies with the card: render() calls this after
+   every paint, so a wrap-up card that turns into a countdown three hours later
+   starts ticking the moment it appears, and a show that starts stops it. */
+function tickNext(){
+  const el=document.getElementById('nextT');
+  if(!el||!nextGig()){ if(NEXT_TIMER){clearInterval(NEXT_TIMER);NEXT_TIMER=null;} return; }
+  if(NEXT_TIMER) return;
+  NEXT_TIMER=setInterval(()=>{ const t=document.getElementById('nextT'); if(!t||!nextGig()){clearInterval(NEXT_TIMER);NEXT_TIMER=null;return;} t.textContent=nextLabel(); },1000);
+}
+function nextGig(){ return (GIGS||[]).find(g=>g.endsAt>Date.now())||null; }
+function nextLabel(){
+  if(GIGS===null) return 'Checking the calendar\u2026';
+  const g=nextGig(); if(!g) return 'Nothing scheduled yet';
+  let ms=g.startsAt-Date.now();
+  if(ms<=0) return 'Starting now';
+  const d=Math.floor(ms/86400000); ms-=d*86400000;
+  const h=Math.floor(ms/3600000);  ms-=h*3600000;
+  const m=Math.floor(ms/60000);    const sec=Math.floor((ms-m*60000)/1000);
+  if(d>0) return `Live in ${d}d ${h}h ${m}m`;
+  if(h>0) return `Live in ${h}h ${m}m ${String(sec).padStart(2,'0')}s`;
+  return `Live in ${m}m ${String(sec).padStart(2,'0')}s`;
+}
+function nextWhere(){
+  const g=nextGig(); if(!g) return '';
+  const when=g.date?new Date(g.date+'T12:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'}):'';
+  const t=String(g.time||'').split(':'); const hh=+t[0];
+  const clock=t.length>1&&Number.isFinite(hh)?`${hh%12||12}:${t[1]}${hh<12?'am':'pm'}`:'';
+  const line=[when,clock,g.venue].filter(Boolean).join(' \u00b7 ');
+  return line?`<div class="by">${esc(line)}</div>`:'';
+}
+
 function render(){
   const d=ST,c=d.credits;
   const pageY=window.scrollY;
@@ -838,6 +888,11 @@ function render(){
   if(who) document.title=`Vote the setlist — ${who}`;
   const ended=d.status==='ended',pre=d.status==='pre';
   const open=d.windowOpen&&!ended&&!pre;
+  /* Three hours after a show it is still "tonight"; after that the page is
+     between shows and counts down to the next one (decision 0039). Both clocks
+     are the server's. An ended show with no stamp reads as long ago. */
+  const live=!ended&&!pre;
+  const recentEnd=ended&&Number(d.endedAt)>0&&((Number(d.at)||Date.now())-Number(d.endedAt))<3*3600000;
   const q=(FILTER||'').trim().toLowerCase();
   const match=s=>!q||s.title.toLowerCase().includes(q)||(s.artist||'').toLowerCase().includes(q);
 
@@ -865,7 +920,7 @@ function render(){
   let h=`<div class="head">
     <div style="min-width:0">
       <a class="whoami" href="${HOME}"><h1>${esc(d.artist)}</h1><span>↗</span></a>
-      <div class="sub">${ended?'That’s a wrap — thanks for coming'
+      <div class="sub">${recentEnd?'That’s a wrap — thanks for coming':!live?'Between shows'
         :`<span class="dot"></span>Live${d.venue?' · '+esc(d.venue):''}`}${
         d.setlist?` · ${esc(d.setlist.name)}`:''}</div>
     </div>
@@ -878,22 +933,35 @@ function render(){
      contradiction-on-one-screen this page has been cleaned of everywhere else.
      nowPlaying survives the end of a show on purpose (the history needs it), so the
      check belongs here, at the point of display. */
-  h += (d.nowPlaying && !ended)
+  /* BETWEEN SHOWS the top card counts down to the next gig on the calendar. The
+     "That's all — see you next time" card stays for THREE HOURS after a show ends
+     (server clocks on both sides: `at` and `endedAt`), because that is the minute
+     somebody decides the night was worth a word; after that, and before a show
+     has started, the room is told when the next one is instead. An ended show
+     with no `endedAt` (from before the stamp existed) counts as long ago. */
+  if(!live) loadGigs();
+  h += (d.nowPlaying && live)
     ? `<div class="now"><div class="lab"><span class="dot"></span>Playing now</div>
         <div class="t">${esc(d.nowPlaying.title)}</div>${d.nowPlaying.artist?`<div class="by">${esc(d.nowPlaying.artist)}</div>`:''}
         <div class="eq"><i></i><i></i><i></i><i></i></div>
         <button class="lyricsbtn" onclick="openLyrics()">
           <svg viewBox="0 0 24 24"><path d="M4 6h11M4 11h13M4 16h8"/><circle cx="18.5" cy="15" r="2.6"/><path d="M21.1 15V8.4l-3.6.9"/></svg>
           Lyrics</button></div>`
-    : `<div class="now none"><div class="lab">${ended?'Tonight':'Playing now'}</div><div class="t">${ended?'That’s all — see you next time':'Starting soon…'}</div>
-        ${ended?`<a class="lyricsbtn" href="${SLUG?'/'+esc(SLUG)+'/community':'/community.html'}${d.showId?'?show='+encodeURIComponent(d.showId):''}" style="margin-top:12px;display:inline-flex">Say something about tonight →</a>`:''}</div>`;
+    : live
+    ? `<div class="now none"><div class="lab">Playing now</div><div class="t">Starting soon…</div></div>`
+    : recentEnd
+    ? `<div class="now none"><div class="t">That’s all — see you next time</div>
+        <a class="lyricsbtn" href="${SLUG?'/'+esc(SLUG)+'/community':'/community.html'}${d.showId?'?show='+encodeURIComponent(d.showId):''}" style="margin-top:12px;display:inline-flex">Say something about tonight →</a></div>`
+    : `<div class="now none"><div class="lab">Next show</div><div class="t" id="nextT">${esc(nextLabel())}</div>${nextWhere()}</div>`;
 
   if(!ended) h += `<div class="strip ${open?'':'shut'}">
       <span class="l"><span class="dot"></span>${open?'Voting open':'Voting paused'}</span>
       <span class="r">${c.unlimited?'Unlimited votes':`${c.remaining} vote${c.remaining===1?'':'s'} left`}</span></div>`;
 
-  /* TIER 2 — always visible, even with nothing voted yet */
-  h += `<div class="queue">
+  /* TIER 2 — visible whenever a show is running, even with nothing voted yet.
+     Between shows there is no queue to show (the board is blank by design,
+     decision 0009), so the box is not drawn at all rather than drawn empty. */
+  if(live) h += `<div class="queue">
     <div class="qh"><b>Up next</b><span>${queue.length?'Top '+queue.length+' by votes':'Nothing yet'}</span></div>
     <div class="queue-scroll">${queue.length?queue.map((s,i)=>{const replay=replayIds.has(s.id);return `
       <div class="qrow ${i===0?'lead':''} ${replay?'played':''}" data-id="${s.id}">
@@ -960,6 +1028,7 @@ function render(){
   if(queueNow)queueNow.addEventListener('scroll',()=>{SCROLLPOS.queue=queueNow.scrollTop},{passive:true});
   if(listNow)listNow.addEventListener('scroll',()=>{SCROLLPOS.list=listNow.scrollTop},{passive:true});
   restoreScroll();requestAnimationFrame(()=>requestAnimationFrame(restoreScroll));
+  tickNext();                                   // the between-shows countdown, if that card is up
   if(!BOOTED){ $('#app').classList.add('rise'); BOOTED=true; }
 
   $('#app').querySelectorAll('[data-sort]').forEach(b=>
@@ -1117,7 +1186,7 @@ async function sendAsk(kind,withOffer=false){
     }
     if(withOffer&&d.url){
       if(d.id)pendingSet({id:d.id,at:Date.now()});
-      window.location.href=d.url;return;
+      goTo(d.url,'Opening secure checkout…');return;
     }
     closeSheet(); buzz([10,40,10]);
     toast(kind==='birthday'?'Sent up — 🎂':kind==='vibe'?'Vibe sent — ✨':'Request sent');
@@ -1314,7 +1383,7 @@ async function checkout(kind){
       // remember it BEFORE leaving. If the return trip fails (tab closed, flaky
       // venue wifi, wallet app hijacks the redirect) the next page load redeems it.
       if(d.id) pendingSet({id:d.id,at:Date.now()});
-      window.location.href=d.url;return;}
+      goTo(d.url,'Opening secure checkout…');return;}
     toast(`Card payments aren’t working right now — grab ${artistFirst()} between songs`);
   }catch(e){toast(`Card payments aren’t working right now — grab ${artistFirst()} between songs`);}
   if(btn){btn.disabled=false;btn.textContent='Continue to payment';}

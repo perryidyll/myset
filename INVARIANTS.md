@@ -208,7 +208,11 @@ If you are about to violate one, stop and say so rather than working around it.
 
 ## Plans and money
 
-0w. **The core ROOM experience never requires payment.** Lyrics were briefly gated
+0w. **Today, the core ROOM experience does not require payment — not a rule.** The
+    user, 2026-09-12: "anything the room experiences is free" is too strong a
+    statement for something relatively unimportant and subject to change; keep it as
+    a description of what is free now, not a constraint on what may be charged for
+    later. Lyrics were briefly gated
     to Plus and put back deliberately: an audience that gets a sing-along at one
     artist's gig and not the next learns that MySet is unreliable, which costs more
     than a subscription is worth. Optional vote purchases, tips and request offers
@@ -596,8 +600,12 @@ If you are about to violate one, stop and say so rather than working around it.
     `vote.mjs`, not in the UI. Replay votes cost `show.replayCost` (default 5) and
     the check is weighted accordingly.
 
-14. **A VOTE STAYS ON THE SONG IT WAS CAST FOR, unless the artist explicitly
-    declines that unplayed song.** Perry,
+14. **Today's behaviour, not a hard rule: a vote stays on the song it was cast for
+    until that song is played or the night ends, and the artist can decline a song
+    or a request and return its votes.** The user, 2026-09-12: this was never meant
+    as an invariant, votes do come back when the artist declines, and the design may
+    change. What follows is how it came to work this way and what the tests pin
+    today — read it as history and current behaviour, not as a promise. Perry,
     2026-09-07: *"the votes do NOT go back to the audience members whose songs were
     not chosen. They stay attached to the song you voted for, and that song stays in
     the queue until it is played or the show is over. If they paid for votes and their
@@ -622,7 +630,7 @@ If you are about to violate one, stop and say so rather than working around it.
     you confirm, it's final! Votes **can't be changed** once cast and ***don't come
     back***."* That sentence is the feature. `test/votesstay.mjs` checks it ships.
 
-14b. **There is no way to un-vote, and no flag that brings one back.** `voteFinal`
+14b. **There is currently no way for a fan to un-vote** (not a hard rule — see 14). `voteFinal`
     shipped as a flag on 2026-09-02 with both answers working, and stopped being a
     question on 2026-09-07. The flag, the un-vote path in `vote.mjs`, `openUnvote` in
     the page and `releaseUnvotable` in `_lib.mjs` are all deleted. A page cached from

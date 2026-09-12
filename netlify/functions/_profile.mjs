@@ -50,7 +50,7 @@ export const defaultProfile = () => ({
   management: '',
   managementUrl: '',
   bio: '',
-  photo: '/img/band.jpg',
+  photo: '/img/band-sm.jpg',   // 800px wide: a phone never draws it bigger, and it is a third of the bytes
   avatar: '',            // the big square portrait
   photos: [],            // up to MAX_PHOTOS small ones clustered around it
   links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', website: '' },

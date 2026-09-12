@@ -135,6 +135,13 @@ export function buildBoard({ aid, show, fans, flags, at = Date.now() }) {
     at,
     artistId: aid, artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
     status: show.status, windowOpen: !!show.windowOpen,
+    /* WHEN THE NIGHT ENDED, server clock, only while it is ended. The voting page
+       says "That's all — see you next time" for three hours after a show and then
+       counts down to the next gig instead; without this it could only guess. A
+       resumed show goes back to `live`, so a stale stamp is never sent. Absent
+       (null) for shows ended before the stamp existed, which the page treats as
+       "long ago". */
+    endedAt: show.status === 'ended' ? (Number(show.endedAt) || null) : null,
     /* MILLISECONDS LEFT, not the moment it ends — see the `countdown` action in
        admin.mjs. Absent unless one is actually running. A cached copy is late by its
        age, and the page subtracts the `Age` header the edge sends with it. */

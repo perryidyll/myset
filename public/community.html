@@ -8,6 +8,12 @@
 <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
+<!-- THE FIRST CALL LEAVES BEFORE THE PAGE IS PARSED. The page's own script cannot
+     run until the stylesheet and the shared scripts have arrived, so without this
+     the request that decides what is on screen would wait behind them. Here it is
+     already in flight while they load; boot() below picks up the reply. Used once,
+     on the first load only — a pull-to-refresh fetches fresh. -->
+<script>(()=>{try{let T='';try{T=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin')||''}catch(e){}if(T)return;const P=location.pathname.split('/').filter(Boolean);const V=P[0]==='v';const S=V?(P[1]||''):(P[0]&&P[0]!=='community.html'?P[0]:'');const Q=V?'?v='+encodeURIComponent(S):(S?'?a='+encodeURIComponent(S):'?');let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}const f=fetch('/api/community'+Q+(Q==='?'?'':'&')+'fan='+encodeURIComponent(F),{cache:'no-store'});f.catch(()=>{});window.__early={community:f}}catch(e){}})();</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
@@ -103,6 +109,7 @@ body{padding-bottom:34px}
 .comp textarea:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
 .comp .cnt{font-size:12px;color:var(--faint);text-align:right;margin-top:4px}
 .comp .cnt.hot{color:var(--accent-2);font-weight:600}
+.comp [hidden]{display:none!important}
 .comp .inp{margin-top:8px;min-height:44px;padding:11px 14px;font-size:15px}
 .comp select.inp{appearance:none;-webkit-appearance:none}
 .comp .row2{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
@@ -241,6 +248,7 @@ body{padding-bottom:34px}
   </div>
 </div>
 <script src="/theme.js"></script>
+<script src="/leave.js"></script>
 <script src="/pull.js"></script>
 <script src="/mp4trim.js"></script>
 <script>
@@ -272,11 +280,15 @@ function closeSheet(){$('#sheet').classList.remove('on');$('#bg').classList.remo
 const money=c=>'$'+(c/100).toFixed(c%100?2:0);
 const ago=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
 
-let D=null, DRAFT={stars:0,photos:[],show:'',clip:null}, SHOWPRE=(new URLSearchParams(location.search).get('show')||'');
+/* DRAFT.open: the composer starts folded to just the five stars. Tapping a star
+   unfolds the rest; once open it stays open for the visit even if the stars are
+   tapped off again. Arriving from the vote page with ?show= opens it straight away. */
+let D=null, DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}, SHOWPRE=(new URLSearchParams(location.search).get('show')||'');
 
 async function load(){
   try{
-    const r=await fetch(`${API}/community${Q}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store',headers:authHeaders()});
+    const E=window.__early||{}; window.__early=null;     // the head started this for a fan; see <head>
+    const r=await ((!ARTIST_TOKEN&&E.community)||fetch(`${API}/community${Q}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store',headers:authHeaders()}));
     const d=await r.json();
     if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b><br>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
     D=d; render();
@@ -287,7 +299,7 @@ async function load(){
 function render(){
   const d=D, who=VENUE?'The venue':'The artist';
   let h=`<div class="owner rise">
-    <div class="av" style="background-image:url('${esc(d.avatar||'/img/band.jpg')}')"></div>
+    <div class="av" style="background-image:url('${esc(d.avatar||'/img/band-sm.jpg')}')"></div>
     <div class="n"><div class="k">Community</div>
       <h1><a href="${esc(HOME)}">${esc(d.name)}</a>${d.verified?'<span class="vbadge">✓ Verified</span>':''}</h1></div>
     <button class="share" onclick="share()">Share</button>
@@ -315,12 +327,18 @@ function render(){
   // the composer
   const showOpts=(d.shows||[]);
   if(d.canPost===false) h+=`<div class="sect">Community posts</div><div class="empty">Artists can’t comment on their own pages.</div>`;
-  else h+=`<div class="sect">Say something</div>
-  <div class="comp">
+  else{
+    const open=DRAFT.open||DRAFT.stars>0||!!SHOWPRE||!!(DRAFT.text||'').trim();
+    const selShow=DRAFT.show||SHOWPRE;
+    h+=`<div class="sect">Say something</div>
+  <div class="comp${open?' open':''}">
     <div class="stars">${[1,2,3,4,5].map(n=>`<button data-star="${n}" class="${DRAFT.stars>=n?'on':''}" aria-label="${n} stars">★</button>`).join('')}</div>
+    ${open?'':`<div class="muted" style="font-size:13px;margin:2px 0 0">Tap a star to rate the night and say something</div>`}
+    <div class="body" ${open?'':'hidden'}>
     <textarea id="txt" maxlength="500" placeholder="How was the night?">${esc(DRAFT.text||'')}</textarea>
     <div class="cnt" id="cnt">0/500</div>
-    ${showOpts.length?`<select class="inp" id="showSel"><option value="">Where did you see them? (select)</option>${showOpts.map(s=>`<option value="${esc(s.showId)}" ${(DRAFT.show||SHOWPRE)===s.showId?'selected':''}>${esc(s.label)}</option>`).join('')}</select>`:''}
+    <select class="inp" id="showSel"><option value="">Where did you see them? (select)</option>${showOpts.map(s=>`<option value="${esc(s.showId)}" ${selShow===s.showId?'selected':''}>${esc(s.label)}</option>`).join('')}<option value="_other" ${selShow==='_other'?'selected':''}>Somewhere else — I’ll type it</option></select>
+    <input class="inp" id="whereTxt" maxlength="60" placeholder="Where was it? (venue, city, or the date)" value="${esc(DRAFT.where||'')}" ${selShow==='_other'?'':'hidden'}>
     <input class="inp" id="nm" maxlength="30" placeholder="Your name (optional)" value="${esc(DRAFT.name||'')}">
     <input class="inp" id="vid" placeholder="Paste a video link" value="${esc(DRAFT.video||'')}">
     <div class="row2">
@@ -336,7 +354,9 @@ function render(){
     <div class="prog" id="clipProg" hidden><i></i><span></span></div>
     <button class="go" id="postBtn" disabled>Post</button>
     <p class="fineprint" style="margin:10px 0 0">Three posts a day per phone. You won’t get a notification — come back and look.</p>
+    </div>
   </div>`;
+  }
 
   // the feed
   const posts=d.posts||[];
@@ -371,8 +391,10 @@ function wire(){
   if(txt){ txt.addEventListener('input',()=>{DRAFT.text=txt.value;upd();}); upd(); }
   const vid=$('#vid'); if(vid) vid.addEventListener('input',()=>{DRAFT.video=vid.value;upd();});
   const nm=$('#nm'); if(nm) nm.addEventListener('input',()=>DRAFT.name=nm.value);
-  const sel=$('#showSel'); if(sel) sel.addEventListener('change',()=>DRAFT.show=sel.value);
-  document.querySelectorAll('[data-star]').forEach(b=>b.addEventListener('click',()=>{ const n=+b.getAttribute('data-star'); DRAFT.stars=DRAFT.stars===n?0:n; render(); }));
+  const sel=$('#showSel'), whereTxt=$('#whereTxt');
+  if(sel) sel.addEventListener('change',()=>{ DRAFT.show=sel.value; if(whereTxt){ whereTxt.hidden=sel.value!=='_other'; if(sel.value==='_other') whereTxt.focus(); } });
+  if(whereTxt) whereTxt.addEventListener('input',()=>DRAFT.where=whereTxt.value);
+  document.querySelectorAll('[data-star]').forEach(b=>b.addEventListener('click',()=>{ const n=+b.getAttribute('data-star'); DRAFT.stars=DRAFT.stars===n?0:n; DRAFT.open=true; DRAFT.text=($('#txt')||{}).value||DRAFT.text||''; DRAFT.name=($('#nm')||{}).value||DRAFT.name||''; render(); if(!DRAFT.text) { const t=$('#txt'); if(t) t.focus(); } }));
   document.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{ DRAFT.photos.splice(+b.getAttribute('data-rm'),1); render(); }));
   const pf=$('#pf'); if(pf) pf.addEventListener('change',async()=>{ for(const f of [...pf.files].slice(0,3-DRAFT.photos.length)){ try{ DRAFT.photos.push(await shrink(f)); }catch(e){ toast('Couldn’t read that photo'); } } render(); });
   const cf=$('#cf'); if(cf) cf.addEventListener('change',()=>{ if(cf.files&&cf.files[0]) addClip(cf.files[0]); cf.value=''; });
@@ -808,12 +830,13 @@ async function post(){
   const btn=$('#postBtn'); btn.disabled=true; btn.textContent='Posting…';
   try{
     const body={action:'post',fan:FAN,text:($('#txt')||{}).value||'',stars:DRAFT.stars||null,name:($('#nm')||{}).value||'',
-      show:($('#showSel')||{}).value||'',video:($('#vid')||{}).value||'',photos:DRAFT.photos,
+      show:(($('#showSel')||{}).value||'')==='_other'?'':(($('#showSel')||{}).value||''),where:(($('#showSel')||{}).value||'')==='_other'?(($('#whereTxt')||{}).value||''):'',
+      video:($('#vid')||{}).value||'',photos:DRAFT.photos,
       clip:DRAFT.clip?DRAFT.clip.id:''};
     const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:authHeaders(true),body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){ toast(d.error||'Couldn’t post'); btn.disabled=false; btn.textContent='Post'; return; }
-    D.posts=d.posts; DRAFT={stars:0,photos:[],show:'',clip:null}; SHOWPRE=''; render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
+    D.posts=d.posts; DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}; SHOWPRE=''; render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
   }catch(e){ toast('Connection hiccup — try again'); btn.disabled=false; btn.textContent='Post'; }
 }
 async function like(b){
@@ -939,7 +962,7 @@ async function sendTip(){
     if(!d.ok||!d.url){ toast('Couldn’t open checkout — try again in a moment'); if(b){b.disabled=false;b.textContent='Continue to payment';} return; }
     // remembered BEFORE leaving, so a lost return trip is still redeemed next load
     try{ localStorage.setItem(PEND,JSON.stringify({id:d.id,at:Date.now()})); }catch(e){}
-    location.href=d.url;
+    goTo(d.url,'Opening secure checkout…');
   }catch(e){ toast('Couldn’t open checkout — try again in a moment');
     if(b){b.disabled=false;b.textContent='Continue to payment';} }
 }
@@ -952,7 +975,7 @@ async function buy(id){
     const d=await r.json();
     if(!d.ok||!d.url){ toast('Couldn’t open checkout — try again in a moment'); b.disabled=false; return; }
     try{ localStorage.setItem(PEND,JSON.stringify({id:d.id,at:Date.now()})); }catch(e){}
-    location.href=d.url;
+    goTo(d.url,'Opening secure checkout…');
   }catch(e){ toast('Couldn’t open checkout — try again in a moment'); b.disabled=false; }
 }
 /* the return trip: verify with the server, never trust the URL (INVARIANT 6); a

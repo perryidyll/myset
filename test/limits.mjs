@@ -32,7 +32,7 @@ const hit = async (h, url, body, token) => {
 };
 
 console.log('\nTHE NUMBERS ARE WHAT PERRY ASKED FOR');
-eq('four shows a month', PLANS.free.gigs, 4);
+eq('ten shows a month', PLANS.free.gigs, 10);
 eq('and setlists are not on free', PLANS.free.setlists, false);
 eq('but are on Plus', PLANS.plus.setlists, true);
 eq('and on Pro', PLANS.pro.setlists, true);

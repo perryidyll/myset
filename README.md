@@ -25,11 +25,13 @@ plus Netlify Functions in `netlify/functions/` backed by Netlify Blobs, taking r
   settings (free votes, replay cost, gig details).
 - **Search** the setlist by song title or artist.
 
-Not built yet: multi-artist accounts, auth, audio playback, merch/ticketing.
+Also built since: artist accounts with roles, passkeys and recovery codes (`ACCOUNTS.md`), a plan
+ladder, Stripe Connect payouts, venues, community pages with clips, and shows that start and end
+themselves. Not built: audio playback, ticketing, a native app.
 
 ## Run locally
 
-It's a single static file — just open it, or serve the folder:
+The pages are static and open on their own; the API needs Netlify (see below):
 
 ```bash
 python3 -m http.server 8940
@@ -61,8 +63,6 @@ Required environment variables (Netlify, never in the repo):
 `ADMIN_CODE` (Studio passcode) and `STRIPE_SECRET_KEY` (payments; the app degrades gracefully without it).
 
 ---
-
-> Single-artist product today: no multi-artist accounts or auth, and no audio playback.
 
 ## The documents worth knowing about
 

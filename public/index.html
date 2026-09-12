@@ -240,10 +240,18 @@ body{padding-bottom:34px}
 .step2 div b{color:var(--ink);font-weight:600}
 .sheetfoot{margin:18px 0 0;padding-top:14px;border-top:.5px solid var(--hair);
   font-size:13px;color:var(--faint);line-height:1.5}
-.feedsearch{padding:4px 0 12px}
-.feedsearch .inp{width:100%;min-height:46px;padding:12px 16px;font-size:15.5px;border-radius:14px;
-  border:1.5px solid var(--hair,rgba(128,128,128,.25));background:var(--surface,rgba(255,255,255,.05));color:inherit}
-.feedsearch .inp:focus{outline:none;border-color:var(--accent,#FF375F)}
+/* Same side margins as every card on this page (18px), and the same thin orange
+   ring as "View on map" — the field used to run edge to edge and carried both a
+   border and app.css's inset ring, which read as one thick line. */
+.feedsearch{padding:4px 18px 12px}
+.feedsearch .inp{width:100%;min-height:46px;margin:0;padding:12px 18px;font-size:15.5px;border:none;
+  border-radius:var(--pill);background:var(--surface);color:inherit;
+  box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}
+.feedsearch .inp:focus{outline:none;box-shadow:inset 0 0 0 2px var(--accent),var(--sh-1)}
+/* The line above a list that was found from the phone's own position, not a pick. */
+.nearhead{margin:22px 18px 0;font-size:13px;line-height:1.45;color:var(--muted)}
+.nearhead b{color:var(--ink);font-weight:600}
+.nearhead .pin{width:14px;height:14px;vertical-align:-2px;margin-right:4px;stroke:var(--accent-ink);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 </style>
 </head>
 <body>
@@ -308,6 +316,7 @@ body{padding-bottom:34px}
 <div class="sheet" id="sheet"></div>
 
 <script src="/theme.js"></script>
+<script src="/leave.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -357,8 +366,61 @@ async function boot(){
     const c=PLACES.countries.find(x=>x.country===lc);
     if(lt&&c&&c.cities.some(x=>x.city===lt)){
       setCombo('#cCity',lt); CHOSEN.city=lt; $('#go').disabled=false; search();
+      return;
     }
   }
+  // nothing remembered: let the phone say where it is
+  nearMe();
+}
+
+/* SHOWS NEAR YOU, WITHOUT ASKING FIRST. A first visit used to be a blank form —
+   two pickers and nothing on the page until both were filled in. Now, when
+   nothing is remembered, the phone's own position picks the city: the closest
+   listed gig (by straight-line distance) names the country and city, and the
+   ordinary search runs for it, headed "Near you". The pickers stay exactly where
+   they are, filled in with that city, so changing it is one tap.
+
+   What "near" means here: the nearest upcoming gig that carries coordinates,
+   within 300 km. Coordinates come from the venue's map link (only some carry
+   them) by way of the artist directory, which lists only verified artists on a
+   paid plan (decision 0028, artists.mjs) — so this is a seed for the CITY, not
+   the feed; once the city is chosen the feed shows everything on there, from
+   anyone, coordinates or not. No gig within reach, permission refused, or no
+   position: nothing changes, the form is still there. Nothing is stored — a
+   remembered city is only ever one the person picked.
+
+   COST, stated honestly: /api/artists reads every listed artist's profile and
+   calendar, once per first visit with nothing remembered. Fine at today's size;
+   at a thousand artists the city index (?places=1, already fetched) should carry
+   a coordinate per city and this should read that instead — see P3 in
+   IMPLEMENTATION_STATUS.md. */
+const NEAR={km:0};
+async function nearMe(){
+  if(!navigator.geolocation||CHOSEN.city)return;
+  try{ if(navigator.permissions){ const p=await navigator.permissions.query({name:'geolocation'}); if(p.state==='denied')return; } }catch(e){}
+  const pos=await new Promise(res=>navigator.geolocation.getCurrentPosition(
+    p=>res(p.coords), ()=>res(null), {timeout:8000, maximumAge:600000}));
+  if(!pos||CHOSEN.city)return;
+  let d=null;
+  try{ d=await fetch(`${API}/artists`,{cache:'no-store'}).then(r=>r.json()); }catch(e){}
+  if(!d||!d.ok)return;
+  const km=(a,b)=>{const R=6371,r=x=>x*Math.PI/180,dl=r(b.lat-a.lat),dg=r(b.lng-a.lng);
+    const s=Math.sin(dl/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dg/2)**2;
+    return 2*R*Math.asin(Math.sqrt(s));};
+  let best=null;
+  for(const a of (d.artists||[])) for(const e of (a.eventsNext30Days||[])){
+    const m=e.maps||{}; if(!Number.isFinite(m.lat)||!Number.isFinite(m.lng)||!e.city||!e.country)continue;
+    const dist=km({lat:pos.latitude,lng:pos.longitude},{lat:m.lat,lng:m.lng});
+    if(dist<=300&&(!best||dist<best.dist)) best={dist,city:e.city,country:e.country};
+  }
+  if(!best||CHOSEN.city)return;
+  const c=PLACES.countries.find(x=>x.country===best.country);
+  if(!c||!c.cities.some(x=>x.city===best.city))return;
+  setCombo('#cCountry',best.country); CHOSEN.country=best.country;
+  $('#city').disabled=false; $('#city').placeholder='Start typing, or tap to see the list';
+  setCombo('#cCity',best.city); CHOSEN.city=best.city; $('#go').disabled=false;
+  NEAR.km=Math.max(1,Math.round(best.dist));
+  search(true);
 }
 
 const CHOSEN={country:'',city:''};
@@ -417,10 +479,13 @@ function combo(sel, getItems, onPick){
   document.addEventListener('click',(e)=>{ if(!box.contains(e.target)) shut(); });
 }
 
-async function search(){
+async function search(near){
   const country=CHOSEN.country, city=CHOSEN.city;
   if(!country||!city)return;
-  remember('myset.country',country); remember('myset.city',city);
+  /* `near===true` only from nearMe(); the Search button passes its click event.
+     A city the phone guessed is not remembered — only one the person chose. */
+  near=near===true;
+  if(!near){ remember('myset.country',country); remember('myset.city',city); }
   $('#out').innerHTML=`<div class="blank"><b>Looking…</b></div>`;
   let d=null;
   try{ d=await fetch(`${API}/events?country=${encodeURIComponent(country)}&city=${encodeURIComponent(city)}`,
@@ -443,7 +508,7 @@ async function search(){
   };
   /* Keep the fetched week so the search box can re-render it without another
      request — filtering forty rows is the phone's job, not the server's. */
-  FEED={days:d.days,city,fmt};
+  FEED={days:d.days,city,fmt,near:near?NEAR.km:0};
   renderFeed('');
 }
 let FEED=null;
@@ -465,13 +530,16 @@ function gigMatches(g,day,words,fmt){
 function renderFeed(q){
   if(!FEED)return;
   const {days,city,fmt}=FEED;
+  const hadFocus=!!(document.activeElement&&document.activeElement.id==='feedQ');
   const words=String(q||'').toLowerCase().split(/\s+/).filter(Boolean);
   const shown=days.map(day=>({...day,
                     featured:(day.featured||[]).filter(g=>gigMatches(g,day,words,fmt)),
                     gigs:day.gigs.filter(g=>gigMatches(g,day,words,fmt))}))
                   .filter(day=>day.gigs.length||day.featured.length);
   const total=shown.reduce((a,day)=>a+day.gigs.length+day.featured.length,0);
-  const box=`<div class="feedsearch"><input class="inp" id="feedQ" type="search" autocomplete="off"
+  const box=(FEED.near?`<div class="nearhead"><svg class="pin" viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
+      Near you · <b>${esc(city)}</b> · the closest listed gig is ${FEED.near} km away</div>`:'')
+    +`<div class="feedsearch"><input class="inp" id="feedQ" type="search" autocomplete="off"
       placeholder="Search — a name, a bar, “tuesday”, “8pm”…" value="${esc(q)}"
       oninput="renderFeed(this.value)"></div>`;
   if(!shown.length){
@@ -512,8 +580,9 @@ function renderFeed(q){
     + `<div class="endcard">${words.length
         ? `${total} match${total===1?'':'es'} for “${esc(q)}” in ${esc(city)}.`
         : `That’s everything in ${esc(city)} for the next seven days.`}</div>`;
-  /* re-rendering replaces the input, so put the cursor back where it was */
-  const i=$('#feedQ'); if(i&&words.length!==undefined){i.focus();i.setSelectionRange(q.length,q.length);}
+  /* re-rendering replaces the input, so put the cursor back where it was — only
+     while somebody is typing; a list that arrived on its own must not grab focus */
+  const i=$('#feedQ'); if(i&&hadFocus){i.focus();i.setSelectionRange(q.length,q.length);}
 }
 
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

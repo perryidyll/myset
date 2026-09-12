@@ -69,12 +69,9 @@ Stop, or change shape, if:
 1. **Nothing may break the gig.** Every failure degrades to *"the room can still vote"*.
    This is the ranking function for every trade-off in the product.
 2. **Never show the room a button that leads to a shrug.**
-3. **Anything the ROOM experiences stays free on every plan.** An audience that gets a
-   sing-along at one gig and not the next learns MySet is unreliable, which costs more
-   than a subscription is worth.
-4. **Show locked features, never hide them.** An artist should be able to see what paying
+3. **Show locked features, never hide them.** An artist should be able to see what paying
    would get them — and greying something that actually works is the same class of lie as
    showing something that does not.
-5. **Never claim what has not been run.** An honest gap beats a confident guess.
-6. **Does this hold at a thousand artists, or only at one?** That question has already
+4. **Never claim what has not been run.** An honest gap beats a confident guess.
+5. **Does this hold at a thousand artists, or only at one?** That question has already
    killed several ideas and reshaped others.

@@ -269,7 +269,7 @@ await A(TA4, 'freeCredits', { n: 3 });
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'free'; return true; });
 
 /* ── the free plan's gig cap ─────────────────────────────────────── */
-console.log('\nGIG CAP  four free shows a month, counted where a gig starts');
+console.log('\nGIG CAP  ten free shows a month, counted where a gig starts');
 
 /* Ana is on the free plan. A gig starts on newShow, and on status->live from
    anything that is not already live. She has already used one earlier in this

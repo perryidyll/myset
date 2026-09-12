@@ -37,8 +37,11 @@ export default async (req) => {
   }
 
   /* ---- one artist's diary ---- */
+  /* `?a=` present but EMPTY is the founding page, exactly as publicArtist reads
+     it — the bare /vote.html has no slug in its path and still needs the diary
+     for its between-shows countdown (decision 0039). Absent means the city feed. */
   const slug = url.searchParams.get('a');
-  if (slug) {
+  if (slug !== null) {
     const aid = await publicArtist(req);
     if (!aid) return bad('unknown artist', 404);
     const days = Math.max(1, Math.min(120, parseInt(url.searchParams.get('days'), 10) || 60));

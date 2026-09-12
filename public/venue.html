@@ -15,6 +15,12 @@
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
+<!-- THE FIRST CALL LEAVES BEFORE THE PAGE IS PARSED. The page's own script cannot
+     run until the stylesheet and the shared scripts have arrived, so without this
+     the request that decides what is on screen would wait behind them. Here it is
+     already in flight while they load; boot() below picks up the reply. Used once,
+     on the first load only — a pull-to-refresh fetches fresh. -->
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const f=fetch('/api/venue?v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -247,6 +253,7 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
 
 <!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
 <script src="/theme.js"></script>
+<script src="/leave.js"></script>
 <script src="/pull.js"></script>
 <script>
 const $=s=>document.querySelector(s), API='/api';
@@ -293,7 +300,8 @@ function hideIntro(){const i=document.getElementById('intro');if(i)i.classList.a
 async function boot(){
   if(!SLUG){ notFound(); hideIntro(); return; }
   let d=null;
-  try{ d=await fetch(`${API}/venue?v=${encodeURIComponent(SLUG)}`,{cache:'no-store'}).then(r=>r.json()); }catch(e){}
+  const E=window.__early||{}; window.__early=null;     // the head started this; see <head>
+  try{ d=await (E.venue||fetch(`${API}/venue?v=${encodeURIComponent(SLUG)}`,{cache:'no-store'})).then(r=>r.json()); }catch(e){}
   V=d;
   if(!d||!d.ok){ notFound(!d||d.error==='unknown venue'); hideIntro(); return; }
   render();

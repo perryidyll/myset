@@ -137,6 +137,10 @@ const main = async (req) => {
   }
 
   if (body.action === 'post') {
+    /* WHERE THEY SAW THEM: either a night off the artist's own list (show id →
+       its label, and one post per night per phone), or a name the fan typed
+       themselves — a venue, a city, a festival that isn't on the list. A typed
+       name is just a label on the post; it never counts as a show id. */
     let showLabel = '';
     const show = String(body.show || '').slice(0, 40);
     if (show && o.kind === 'artist') {
@@ -144,6 +148,7 @@ const main = async (req) => {
       if (!row) return bad('Pick a night from the list.');
       showLabel = row.label;
     }
+    if (!showLabel && body.where) showLabel = String(body.where).replace(/\s+/g, ' ').trim().slice(0, 60);
     const r = await addPost(o.owner, {
       fan, ip: clientIp(req), name: body.name, text: body.text, stars: body.stars,
       show: o.kind === 'artist' ? show : '', showLabel, photos: body.photos, video: body.video,

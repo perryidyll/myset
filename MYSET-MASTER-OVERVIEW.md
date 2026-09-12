@@ -84,11 +84,15 @@ in a generated number, fix the generator — a number that drifted once will dri
 
 *This is the heart of the product. Every other part of MySet exists to serve it.*
 
-## 1.1 The one rule
+## 1.1 How a vote behaves today
 
 > **A vote is spent the moment it is cast. It stays on that song until it is played
-> or the night ends. The sole setlist exception is an artist explicitly declining an
-> unplayed song, which returns every attached vote.**
+> or the night ends — unless the artist declines the song or request, which returns
+> its votes.**
+
+**This is the current behaviour, not a hard rule.** The user, 2026-09-12: "that was
+never meant to be a hard rule, and currently votes do go back if the artist declines
+the vote/request." It may change; the rest of Part 1 describes how it works now.
 
 Perry, 2026-09-07, settling it:
 
@@ -430,7 +434,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
-| Shows per calendar month (UTC) | 4 | unlimited | unlimited |
+| Shows per calendar month (UTC) | 10 | unlimited | unlimited |
 | Songs live to the audience at once | 50 | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 200 | 1,000 | 2,000 |
 | Team seats | 1 | 1 | 5 |
@@ -508,7 +512,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 253 (last: 0fk) |
 | Test suites | 41 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 35 |
+| Decision records | 39 |
 
 ### Feature flags in force
 
@@ -621,9 +625,11 @@ a **thirty-day soft delete in which not one document moves**: the page 404s, bil
 stops the same day, and one tap undoes it. The founder cannot be deleted from the app.
 Full design in `ACCOUNTS.md`.
 
-## 2.8 What is free for ever, on every plan
+## 2.8 What is free today, on every plan
 
-**Anything the ROOM experiences.** Lyrics were briefly behind a paywall and were put
+**Not a rule** — the user, 2026-09-12: "anything the room experiences is free" is too
+strong a statement for something relatively unimportant and subject to change. What
+follows is the list as it stands. Lyrics were briefly behind a paywall and were put
 back: an audience that gets a sing-along at one gig and not the next learns that MySet
 is unreliable, which costs more than the subscription is worth.
 
@@ -705,7 +711,7 @@ a sheet whose body is a scroller, the bar was the only place a thumb could pull 
 `tools/sheetcheck.mjs` drives all of this with real touch events at a 390px viewport.
 **None of it is visible to a node test.**
 
-## 3.3 The Artist Studio — seven tabs
+## 3.3 The Artist Studio — six tabs
 
 `/studio`. Dark-only by design — it is used on a stage.
 
@@ -734,12 +740,11 @@ a **reconcile** sweep; **Name these from my calendar** (§3.8); **Look for missi
 shows**; **Your earnings** (twelve months, gross/fees/net, CSV); and **What the room
 said** — the star ratings and their notes.
 
-**Merch** — up to 12 items (name, line, price, pickup or posted, on/off, picture), a
-**Plus** feature; and **orders**, with a Details sheet that fetches the buyer's name and
-address from Stripe **at that moment** and keeps nothing.
-
-**Profile** — your community page (reply / pin / hide / delete); name, bio, photos with
-cropping; links; embedded music from YouTube, Spotify and Apple Music; the public page
+**Profile** — name, bio, photos with cropping; links; embedded music from YouTube,
+Spotify and Apple Music; then **merch** — up to 12 items (name, line, price, pickup or
+posted, on/off, picture), a **Plus** feature, with its **orders** (a Details sheet
+fetches the buyer's name and address from Stripe **at that moment** and keeps nothing);
+Save profile; your community page (reply / pin / hide / delete); the public page
 address.
 
 **Settings** — Get verified; feature switches (owner only); push alerts; free votes per

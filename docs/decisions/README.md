@@ -46,6 +46,9 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) | The audience poll is split into a shared, edge-cached board and a tiny personal call | 2026-09-11 | scale | decided | claude |
 | [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) | The open line is built now, after the split lands, from measured numbers rather than list prices | 2026-09-11 | scale | decided | user-confirmed |
 | [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) | the artist event map is interactive and asks the browser for location only when opened | 2026-09-12 | ui | decided | user |
+| [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) | The free plan allows ten shows a calendar month | 2026-09-12 | plans | decided | perry |
+| [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) | Every page paints the MySet splash the moment a link is tapped, and starts its first call from the head | 2026-09-12 | ui | decided | claude |
+| [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) | Between shows the voting page counts down to the next gig, and the wrap-up card lasts three hours | 2026-09-12 | ui | decided | perry |
 
 ## By area
 
@@ -57,7 +60,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md)
 
-**plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md)
+**plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md)
 
 **scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md)
 
@@ -65,7 +68,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md)
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md)
 
 **voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 
