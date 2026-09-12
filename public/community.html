@@ -91,7 +91,8 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 }
 .tipbar b{font-size:16px;font-weight:700;letter-spacing:-.015em}
 .tipbar small{font-size:12.5px;font-weight:400;color:rgba(255,255,255,.9)}
-.tipbar .off{background:var(--surface);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--hair-2)}
+.tipbar .off{background:var(--surface);color:var(--muted);box-shadow:inset 0 0 0 1.5px var(--hair-2);animation:none}
+.tipbar .off small{color:inherit}
 @media (prefers-reduced-motion:reduce){.tipbar button{animation:none}}
 .sect{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:26px 20px 10px}
 
@@ -123,7 +124,21 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 .comp .inp{margin-top:8px;min-height:44px;padding:11px 14px;font-size:15px}
 .comp select.inp{appearance:none;-webkit-appearance:none}
 .comp .row2{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
-/* .comp .chip is the shared app.css recipe now — hairline, --sh-1, pill */
+/* THE CHIP RECIPE, LOCAL UNTIL app.css CARRIES IT. This page shipped pointing at a
+   shared .chip that had not been pushed, and every chip below — the proof rail, the
+   "Add photos"/"Add a clip" labels, "Remove clip" — fell back to app.css's bare
+   button reset: no padding, no ring, no .on state. This block is the shared recipe
+   copied verbatim (hairline, --sh-1, pill; .on is an accent ring, never a fill) so
+   the page stands on its own. Delete it the day app.css ships .chip — it is a
+   duplicate then, and nothing moves. */
+.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;border-radius:var(--pill);font-size:14px;font-weight:600;letter-spacing:-.01em;
+  background:var(--surface);color:var(--ink-2);white-space:nowrap;
+  border:.5px solid var(--hair-2);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.chip:active{transform:scale(.94)}
+.chip.on{color:var(--accent-ink);background:var(--accent-soft);border-color:transparent;
+  box-shadow:0 0 0 1.5px var(--accent) inset,var(--sh-1)}
 .comp .chip{cursor:pointer}
 /* THE COMPOSER LIVES IN A SHEET. The form element is built once and stays in the
    DOM for the whole visit — parked in #compHold while closed, moved into #sheet
@@ -443,9 +458,10 @@ function render(){
 
   /* Straight under the name, before anything else on the page. Somebody who came
      here to say the night was good should not have to scroll past a shop to do
-     something about it. */
-  if(!VENUE) h+=`<div class="tipbar"><button onclick="openTip()">
-    <b>Support ${esc(firstName())}</b><small>Show your appreciation</small></button></div>`;
+     something about it. When card tips are not switched on, the button says so
+     BEFORE the tap and drops the glow — never a button that leads to a shrug. */
+  if(!VENUE) h+=`<div class="tipbar"><button${d.canBuy?'':' class="off"'} onclick="openTip()">
+    <b>Support ${esc(firstName())}</b><small>${d.canBuy?'Show your appreciation':'Card tips aren’t on yet — say hi at the show'}</small></button></div>`;
 
   /* THE PROOF, BEFORE THE ASK. What the room has already said — the rating, the
      clips, the nights — sits above the shop and the feed, and the night chips

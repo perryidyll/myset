@@ -9,6 +9,48 @@ const HIST = KEY.hist;                  // flat key — INVARIANT 2
 const INDEX = KEY.histIdx;
 const IDS = (a) => `histids_${a}`;      // every showId ever archived, append-only
 const round = (n) => Math.round(n * 100) / 100;
+/* The compact top-song for an index row: `{title, <key>}` or null, where the key is
+   `votes` (the night's most-voted), `plays` or `paid`. Keeps whichever of the old
+   row and the fresh snapshot has the bigger count, so a re-archive after the tally
+   was wiped cannot blank it. */
+const topOf = (was, top, key = 'votes') => {
+  const a = was && was.title ? { title: String(was.title), [key]: Number(was[key]) || 0 } : null;
+  const b = top && top.title ? { title: String(top.title), [key]: Number(top[key]) || 0 } : null;
+  if (!a) return b; if (!b) return a; return b[key] > a[key] ? b : a;
+};
+/* THE NIGHT'S MOST-PLAYED AND MOST-PAID-FOR SONG, from the play log the snapshot
+   already holds (decision 0043). One log entry is one play, so a replay counts
+   twice; a tie goes to the song the room voted for more, then to the one heard
+   first. `topPaidOf` needs a per-song paid-vote count on the log entries
+   (`paidVotes`), which logPlay does not record yet — a song's paid votes are
+   consumed with the rest when it starts — so it answers null until it does, and
+   the public page draws no card rather than a wrong one. Both are pure: the
+   archive and the heal call them on a document they are already holding. */
+export function topPlayedOf(played) {
+  const by = new Map();
+  (Array.isArray(played) ? played : []).forEach((p, i) => {
+    const k = p && (p.songId || p.title); if (!k) return;
+    const cur = by.get(k) || { title: String(p.title || k), plays: 0, votes: 0, at: i };
+    cur.plays += 1; cur.votes += Number(p.votes) || 0; by.set(k, cur);
+  });
+  const best = [...by.values()].sort((a, b) => b.plays - a.plays || b.votes - a.votes || a.at - b.at)[0];
+  return best ? { title: best.title, plays: best.plays } : null;
+}
+export function topPaidOf(played) {
+  const by = new Map();
+  for (const p of Array.isArray(played) ? played : []) {
+    const k = p && (p.songId || p.title); if (!k || !Number.isFinite(Number(p.paidVotes))) continue;
+    const cur = by.get(k) || { title: String(p.title || k), paid: 0 };
+    cur.paid += Number(p.paidVotes) || 0; by.set(k, cur);
+  }
+  const best = [...by.values()].filter((x) => x.paid > 0).sort((a, b) => b.paid - a.paid || a.title.localeCompare(b.title))[0];
+  return best ? { title: best.title, paid: best.paid } : null;
+}
+/* Every per-night field the artist page reads off an index row. The heal's gate
+   below re-opens once for any row missing one of these, so a field added here
+   is back-filled on the next Money-tab load without anybody tapping anything. */
+const ROW_TOPS = ['top', 'topPlayed', 'topPaid'];
+const stampTops = (row) => { for (const f of ROW_TOPS) if (!(f in row)) row[f] = null; return row; };
 
 /* Stripe stays the source of truth for money (INVARIANT 5d); this is a cache of
    it that the artist can re-pull at any time. Bounded to the show's own window
@@ -215,6 +257,14 @@ export async function archiveShow(aid, show, fans) {
          the artist had to open the night to find out otherwise. It is a WINDOW
          figure, not a per-night one — never sum it. */
       unattributed: money.unattributed || 0,
+      /* The night's most-voted, most-played and most-paid-for song, title and
+         count only, so the public artist page can name the room's favourites from
+         this one document instead of opening every night (decision 0043). Never
+         go down, like the rest. The play log is the kept document's, for the same
+         reason the stats are. */
+      top: topOf(was.top, st.topSong),
+      topPlayed: topOf(was.topPlayed, topPlayedOf((kept || doc).played), 'plays'),
+      topPaid: topOf(was.topPaid, topPaidOf((kept || doc).played), 'paid'),
     };
     const at = idx.shows.findIndex((x) => x.showId === showId);
     if (at >= 0) idx.shows[at] = row; else idx.shows.unshift(row);
@@ -276,11 +326,14 @@ export async function archiveShow(aid, show, fans) {
 
    Idempotent, cheap, and self-retiring: once it has run it stamps `healedAt` on the
    index and the second call does nothing but read one document it was reading
-   anyway. */
+   anyway. The one thing that re-opens it is a row missing a field a later change
+   added (`top`, `topPlayed`, `topPaid` — decision 0043): the only automatic caller never forces, so without
+   this the back-fill would wait for a human to tap "Look for missing shows" on
+   every account that had already been healed. One more pass, then it retires. */
 export async function healHistory(aid, { force = false } = {}) {
   const idx = await readDoc(INDEX(aid), { shows: [] });
   const cur = (idx.data && idx.data.shows) || [];
-  if (!force && idx.data && idx.data.healedAt) return { ok: true, skipped: true, added: 0, fixed: 0 };
+  if (!force && idx.data && idx.data.healedAt && cur.every((r) => r && ROW_TOPS.every((f) => f in r))) return { ok: true, skipped: true, added: 0, fixed: 0 };
 
   const known = new Set(cur.map((r) => r.showId).filter(Boolean));
   const candidates = new Set(known);
@@ -319,7 +372,8 @@ export async function healHistory(aid, { force = false } = {}) {
       }
     }
     const was = cur.find((r) => r.showId === showId) || null;
-    if (!doc) { if (was) rows.push(was); continue; }   // a row with no detail is still a night
+    // a row with no detail is still a night — stamped with the field so the gate above can close
+    if (!doc) { if (was) rows.push(ROW_TOPS.every((f) => f in was) ? was : stampTops({ ...was })); continue; }
     /* A NIGHT WHERE NOTHING HAPPENED IS STILL NOT A NIGHT. `hist_2026-08-30-1855`
        is a real example: a show that existed for 151 seconds with no song, no vote
        and nobody in the room. Today's archiveShow refuses to file that, so the heal
@@ -330,16 +384,28 @@ export async function healHistory(aid, { force = false } = {}) {
     if (!was && !(s0.songsPlayed || s0.totalVotes || s0.peakVoters || s0.room)) continue;
     const st = doc.stats || {}, money = doc.money || {};
     const row = {
-      showId, venue: doc.venue || '', city: doc.city || '',
+      showId,
+      // the artist's name for the night, with the precedence archiveShow gives it
+      title: doc.title || (was && was.title) || '',
+      venue: doc.venue || '', city: doc.city || '',
       startedAt: doc.startedAt || null, endedAt: doc.endedAt || null,
       songsPlayed: st.songsPlayed || 0, totalVotes: st.totalVotes || 0,
       peakVoters: st.peakVoters || 0, room: st.room || 0, nets: st.nets || 0,
       gross: money.gross || 0, unattributed: money.unattributed || 0,
+      // from the detail already in hand — no extra read
+      top: topOf(was && was.top, st.topSong),
+      topPlayed: topOf(was && was.topPlayed, topPlayedOf(doc.played), 'plays'),
+      topPaid: topOf(was && was.topPaid, topPaidOf(doc.played), 'paid'),
     };
     if (!was) { added++; const t = row.endedAt || row.startedAt || 0;
       if (t && (!oldestAdded || t < oldestAdded)) oldestAdded = t; }
     else if (JSON.stringify({ ...was }) !== JSON.stringify({ ...was, ...row })) fixed++;
-    rows.push(row);
+    /* Merged OVER the row that was there, never pushed in its place. The rebuilt
+       row used to go in bare, so a field the archive stamps and this list did not
+       (the night's title, until today) was stripped on every pass — and the gate
+       above re-opens on its own, so that pass ran on every account without anybody
+       tapping anything. The comparison that counts `fixed` merges; the push matches. */
+    rows.push(was ? { ...was, ...row } : row);
   }
 
   rows.sort((a, b) => (b.endedAt || b.startedAt || 0) - (a.endedAt || a.startedAt || 0));

@@ -352,6 +352,30 @@ console.log('\nTHE CITY FEED');
   ok('a cancelled gig leaves no featured row behind', !day2 || !(day2.featured || []).length, day2);
 }
 
+console.log('\nTHE WINDOW  (the front door\'s "View next week\'s events")');
+{
+  /* A gig ten days out is past the seven-day window the feed always carried; days=
+     widens it a week at a time, never narrower than seven, never past four weeks.
+     The page draws the button only when `window` comes back — an older server
+     shows no button rather than one that leads to a shrug. */
+  const far = new Date(Date.now() + 10 * 86400e3).toISOString().slice(0, 10);
+  await admin(post(tok, { action: 'eventSave', event: {
+    id: 'evFar', venue: 'The Ugly Duckling', city: 'Koh Phangan', country: 'Thailand',
+    tz: 'UTC', date: far, time: '20:00', endTime: '23:00' } }));
+  const base = 'https://myset.vip/api/events?country=Thailand&city=Koh%20Phangan';
+  const plain = await j(await eventsFn(new Request(base)));
+  eq('the plain feed still says seven days', plain.window, 7);
+  ok('and a gig ten days out is not in it', !(plain.days || []).some((x) => x.date === far), plain.days);
+  const wide = await j(await eventsFn(new Request(base + '&days=14')));
+  eq('days=14 widens the window to fourteen', wide.window, 14);
+  ok('and the horizon moves with it', wide.horizon > plain.horizon, { wide: wide.horizon, plain: plain.horizon });
+  ok('and the gig ten days out is now listed', (wide.days || []).some((x) => x.date === far), wide.days);
+  eq('days=3 is never narrower than the seven the feed promised', (await j(await eventsFn(new Request(base + '&days=3')))).window, 7);
+  eq('days=99 stops at four weeks', (await j(await eventsFn(new Request(base + '&days=99')))).window, 28);
+  eq('days=junk is the plain feed', (await j(await eventsFn(new Request(base + '&days=abc')))).window, 7);
+  await admin(post(tok, { action: 'eventDelete', id: 'evFar' }));
+}
+
 console.log('\nTHE FLAG');
 {
   await setFlag('featuredShows', false);

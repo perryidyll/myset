@@ -362,7 +362,10 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .vreview{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 14px;
   padding:12px 14px;border-radius:var(--r);background:var(--bg-2);border:.5px solid var(--hair)}
 .vreview .m{min-width:0}
-.vreview .t{font-size:15px;font-weight:600;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The title wraps. Beside the wallet pill it has about 22 characters of width on
+   a phone, and a review step that shows "Somebody That I Used t…" is not reviewing
+   anything. Only the artist line stays on one line. */
+.vreview .t{font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.25;overflow-wrap:anywhere}
 .vreview .by{font-size:12.5px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vreview .w{flex:0 0 auto;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:6px 10px;
   border-radius:var(--pill);background:var(--surface);box-shadow:inset 0 0 0 .5px var(--hair-2)}
@@ -375,7 +378,11 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .steps span.done{color:var(--muted)}.steps span.done::before{background:var(--muted)}
 .steps span.cur{color:var(--accent-ink)}.steps span.cur::before{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .steps i{flex:1;height:1px;background:var(--hair-2)}
-.sticky-act .btn-text{width:100%;margin-top:4px;font-size:15px}
+/* "Not yet" is the text tier. app.css defines .btn-text, but the sheet must not
+   depend on that file landing first: through .btn alone the words come out as a
+   second filled pill under Confirm, and two pills look like two choices. The
+   tier's four declarations are repeated here so the page stands on its own. */
+.sticky-act .btn-text{width:100%;margin-top:4px;font-size:15px;background:none;box-shadow:none;color:var(--accent-ink);padding:12px 14px}
 /* the feedback prompt */
 .fbrow{display:flex;justify-content:center;gap:6px;margin:2px 0 16px}
 .fbst{width:52px;height:52px;border:0;background:none;font-size:34px;line-height:1;
@@ -660,7 +667,7 @@ function openVote(id){
      the same song, and the server allows exactly that (want = mine + n). There is
      no other sheet any more: `openUnvote` and the take-it-back path went with the
      rule on 2026-09-07. */
-  VQ=1; if((s.cost||1)>1)sel.songVotes=5; buzz(8); drawVoteSheet(s);
+  VQ=1; VSTEP=0; if((s.cost||1)>1)sel.songVotes=5; buzz(8); drawVoteSheet(s);
 }
 function voteMax(s){
   const c=ST.credits||{}, cost=s.cost||1;
@@ -673,6 +680,12 @@ function vq(d){
   VQ=Math.max(1,Math.min(voteMax(s),VQ+d)); buzz(6); drawVoteSheet(s);
 }
 let VSONG=null;
+/* VSTEP is the step the vote sheet is on: 0 for an ordinary tap (no bar), 3 when
+   the sheet is reopened by the return trip from Stripe, so the fan sees Done
+   and the votes they just bought go on the song they bought them for. BUYSONG is
+   that song — set when openBuy() is reached from the vote sheet, null from the
+   dock — and it rides the pending record through Stripe. */
+let VSTEP=0,BUYSONG=null;
 /* Choose → Pay → Done, drawn only on the buying path. `n` is the current step. */
 function stepBar(n){
   return `<div class="steps" aria-hidden="true">${['Choose','Pay','Done'].map((l,i)=>
@@ -715,7 +728,7 @@ function drawVoteSheet(s){
         <button class="go" onclick="openBuy()">Buy more votes</button>
         <button class="btn btn-text" onclick="closeSheet()">Not yet</button>
       </div>`:`
-      ${review}
+      ${VSTEP?stepBar(VSTEP):''}${review}
       <div class="vqrow">
         <button class="vqb" onclick="vq(-1)" ${VQ<=1?'disabled':''} aria-label="one fewer">\u2212</button>
         <div class="vqn"><b class="mono">${replay?total:VQ}</b><small>vote${(replay?total:VQ)===1?'':'s'}</small></div>
@@ -754,7 +767,7 @@ function newCastId(){
 }
 function confirmVote(){
   const id=VSONG, q=VQ;
-  closeSheet();
+  VSTEP=0; closeSheet();
   if(id) vote(id,q,newCastId());
 }
 
@@ -920,10 +933,12 @@ function nextWhere(){
   return line?`<div class="by">${esc(line)}</div>`:'';
 }
 
-/* Share the vote link itself, not whatever URL the phone happens to be on (a
-   ?paid= return, say). Same shape as community.html's share(). */
+/* Share THIS page — /<slug>/vote, the one the fan is on — not whatever URL the
+   phone happens to be holding (a ?paid= return, say) and not HOME, which is the
+   profile: the title says "Vote the setlist", so the link has to land on the
+   voting page. Same shape as community.html's share(). */
 function share(){
-  const url=new URL(HOME,location.origin).href, title=`Vote the setlist${artistName('')?' — '+artistName(''):''}`;
+  const url=new URL(VOTEHREF,location.origin).href, title=`Vote the setlist${artistName('')?' — '+artistName(''):''}`;
   if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
   try{ navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast(url)); }catch(e){ toast(url); }
 }
@@ -1154,8 +1169,12 @@ function paintDockState(){
   const d=ST,c=d.credits||{};
   const ended=d.status==='ended',pre=d.status==='pre';
   const lc=LC_UNTIL>0?Math.ceil((LC_UNTIL-Date.now())/1000):0;
+  /* The header's three-hour window, on the server's clocks (decision 0039): for
+     that long the night is still tonight and the line asks for thanks; after it
+     the room is between shows, and the page above is counting down to the next. */
+  const recent=ended&&Number(d.endedAt)>0&&((Number(d.at)||Date.now())-Number(d.endedAt))<3*3600000;
   let k='open',t;
-  if(ended){ k='over'; t='Show\u2019s over \u2014 say thanks'; }
+  if(ended){ k='over'; t=recent?'Show\u2019s over \u2014 say thanks':'Between shows'; }
   else if(pre){ k='pre'; t='Doors open soon'; }
   else if(lc>0){ k='lc'; t=`Last call \u00b7 ${lc}`; }
   else if(!d.windowOpen){ k='shut'; t='Voting paused \u2014 votes stay'; }
@@ -1435,12 +1454,16 @@ async function decideLeftover(choice){
   load();
 }
 function openBuy(){
+  /* Reached from the vote sheet (it is open, with its review card) the pack is for
+     that song and Choose is done. From the dock nothing was chosen, so there is
+     no bar to show — a step marked done that never happened is a small lie. */
+  const sh=$('#sheet'); BUYSONG=(sh&&sh.classList.contains('on')&&sh.querySelector('.vreview'))?VSONG:null;
   if(!ST.paymentsEnabled){openSheet(`<h3>More votes</h3><p class="lede">Card payments aren’t on tonight — grab ${esc(artistFirst())} between songs.</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.pack='small';
   // prices are whatever the artist set in their Studio — never hard-coded here
   const P=ST.packs||{small:{votes:3,cents:500},big:{votes:15,cents:2000}};
   const KEYS=['small','big'].filter(k=>P[k]);
-  openSheet(`${stepBar(2)}<h3>Get more votes</h3><p class="lede buyline">goes straight to ${esc(artistFirst('the artist'))}</p>
+  openSheet(`${BUYSONG?stepBar(2):''}<h3>Get more votes</h3><p class="lede buyline">goes straight to ${esc(artistFirst('the artist'))}</p>
     <div class="tiles">
       ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
         <b>${money(P[k].cents)}</b><span>${P[k].votes} votes</span></button>`).join('')}
@@ -1484,7 +1507,7 @@ async function checkout(kind){
     if(d.ok&&d.url){
       // remember it BEFORE leaving. If the return trip fails (tab closed, flaky
       // venue wifi, wallet app hijacks the redirect) the next page load redeems it.
-      if(d.id) pendingSet({id:d.id,at:Date.now()});
+      if(d.id) pendingSet({id:d.id,at:Date.now(),song:kind==='votes'&&BUYSONG?BUYSONG:''});
       goTo(d.url,'Opening secure checkout…');return;}
     toast(`Card payments aren’t working right now — grab ${artistFirst()} between songs`);
   }catch(e){toast(`Card payments aren’t working right now — grab ${artistFirst()} between songs`);}
@@ -1514,6 +1537,10 @@ async function redeem(sid,loud){
     const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}${AQ}`);
     const d=await r.json();
     if(d.ok){
+      /* Which song the pack was for is on the pending record — read it before the
+         record is cleared, and only trust it for THIS session and a pack of votes
+         (song votes and tips land on their own; nothing is left to confirm). */
+      const p=pendingGet(), forSong=(p&&p.id===sid&&d.kind==='votes'&&p.song)||'';
       pendingSet(null);
       if(!d.already){
         if(d.kind!=='request_hold')confetti(); buzz([12,50,12]);
@@ -1522,13 +1549,35 @@ async function redeem(sid,loud){
           :d.kind==='song_votes'?`${d.granted||0} paid votes added to that song`
           :`${d.granted||0} extra votes added — vote away!`); }
       else if(loud) toast('Already added — you\u2019re all set');
-      load(); return true;
+      /* The fresh board first (it carries the fuller wallet), then the sheet. Not
+         awaited: the boot sequence never waited on this load and still must not. */
+      load().then(()=>{ if(forSong) resumeVote(forSong); });
+      return true;
     }
     // 402 = not paid yet; keep it pending. A hard 4xx means it will never work.
     if(r.status>=400&&r.status!==402&&r.status<500) pendingSet(null);
     if(loud) toast(`Could not confirm that payment \u2014 show ${artistFirst()} your receipt`);
   }catch(e){ if(loud) toast(`Could not confirm that payment \u2014 show ${artistFirst()} your receipt`); }
   return false;
+}
+/* Back from Stripe with a pack bought for one song: the wallet is fuller and the
+   sheet they left reopens on the Done step, so Confirm puts the votes where they
+   were meant to go. Only while the room can take a vote — a night that ended
+   during the payment gets the leftover sheet from render() instead, and a paused
+   window would put a Confirm in front of them that the server refuses (rule 3).
+   Same lookup as openVote: a replay sheet finds its song in `played`. And only
+   when the wallet on this phone can actually pay for the song: load() swallows a
+   failed personal fetch, so on flaky venue wifi the wallet here can still be the
+   one from before the payment — and drawVoteSheet would then say "out of votes"
+   with a second Buy button under the very toast that said the votes had landed.
+   The toast and the strip carry the news instead; the fan taps the song once the
+   next poll brings the fuller wallet. */
+function resumeVote(id){
+  const d=ST; if(!d||d.status==='ended'||d.status==='pre'||!d.windowOpen) return;
+  const s=(d.songs||[]).find(x=>x.id===id)||(d.played||[]).find(x=>x.id===id);
+  if(!s) return;
+  const c=d.credits||{}; if(!c.unlimited&&(Number(c.remaining)||0)<(s.cost||1)) return;
+  VQ=1; VSTEP=3; if((s.cost||1)>1)sel.songVotes=5; drawVoteSheet(s);
 }
 
 async function handleReturn(){

@@ -23,10 +23,13 @@
                     behind it to open. Perry is comped to Pro; without this he
                     would be shown four dead ends as if they were his.
 
-   ALWAYS DARK, deliberately. Both Studios set a fixed dark palette and have no
-   `prefers-color-scheme` block anywhere — so a veil that lightened itself for a
-   light system theme washed out a page that was still black. There is no light
-   mode here to serve.
+   THE VEIL IS ALWAYS DARK, deliberately. It was written when both Studios were
+   fixed-dark pages; they now carry a `:root[data-theme=light]` block each and
+   follow the phone (theme.js), but the veil keeps its dark gradient in both
+   themes: a veil that lightened itself washed out the greyed content behind it,
+   and a dark scrim over a light card still reads as "not yet" without a word.
+   Everything ELSE in this file takes its colours from the Studio's tokens, with
+   a dark fallback for any token a Studio does not define.
 
    The veil sits ON TOP rather than replacing the content, so the real thing stays
    visible at real size. `pointer-events` is the lock; the opacity is only how it
@@ -57,3 +60,90 @@ html{touch-action:manipulation}
    "Coming soo". Outside it, one line always fits and always reads. */
 .lockwhy{font-size:12px;color:var(--muted,#98989D);margin:9px 0 0;padding:0 18px;
   line-height:1.35}
+
+/* BUTTON TIERS AND THE CHIP RECIPE, copied from app.css for the same reason the
+   lock rules live here: the Studios never load app.css. Keep the two in step.
+   The Studios have no `.btn` base, so each tier is complete on its own here;
+   on a public page the same class composes with .btn and only restates fill.
+     .btn-pri   commit — gradient pill.
+     .btn-ink   next step / neutral primary. Ink on paper, inverts in the dark.
+     .btn-grey  secondary ("Show all").
+     .btn-text  tertiary ("Not yet"). Words only.
+   Tokens the Studios lack (--sh-accent, --bg-2) get a literal fallback — except
+   --accent-ink, which the Venue Studio never defines: a literal there would be
+   one theme's pink on both grounds (the dark pink on a light card measured
+   about 2.2:1), so .btn-text falls back to the page's own --accent, which
+   both Studios restate per theme. */
+.btn-pri,.btn-ink,.btn-grey,.btn-text{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-family:inherit;font-size:16px;font-weight:600;letter-spacing:-.01em;padding:15px 22px;
+  border:0;border-radius:var(--pill,999px);cursor:pointer;white-space:nowrap;
+  transition:transform .22s var(--spring,cubic-bezier(.34,1.4,.64,1)),box-shadow .22s var(--ease,ease)}
+.btn-pri:active,.btn-ink:active,.btn-grey:active,.btn-text:active{transform:scale(.965)}
+.btn-pri:disabled,.btn-ink:disabled,.btn-grey:disabled,.btn-text:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.btn-pri{background:var(--grad,linear-gradient(135deg,#FF375F,#FF6B45));color:#fff;
+  box-shadow:var(--sh-accent,0 6px 20px rgba(255,55,95,.32))}
+.btn-ink{background:var(--ink,#F5F5F7);color:var(--bg,#000);box-shadow:var(--sh-1,0 2px 8px rgba(0,0,0,.5))}
+.btn-grey{background:color-mix(in srgb,var(--ink,#F5F5F7) 9%,var(--surface,#1C1C1E));color:var(--ink,#F5F5F7)}
+.btn-text{background:none;color:var(--accent-ink,var(--accent,#FF375F));padding:12px 14px}
+.btn-block{width:100%}
+
+/* The chip recipe is a hairline AND a soft shadow — the pill above (.lockveil b)
+   found it first. Each Studio already sizes its own .chip and fills .chip.on
+   with the gradient, and this file loads after those rules, so it adds ONLY the
+   hairline and leaves size, weight and the on-fill to the page. The hairline
+   goes clear under the gradient fill rather than drawing a grey edge on it. */
+.chip{border:.5px solid var(--hair-2,rgba(255,255,255,.16))}
+.chip.on{border-color:transparent}
+
+/* THE BOTTOM TAB BAR, one recipe for both Studios — fixed, where a thumb already
+   is. Each Studio used to carry a sticky pill under its header whose height had
+   to be MEASURED (fitTabs / --headh) so the blurred header would not sit over
+   it; a fixed bar has no header to clear. 52px plus the home-indicator inset.
+   z-index 55: above each Studio's header (30) and page, under its sheet
+   backdrop (.bg 60), so a sheet still dims it. Each Studio's body reserves the
+   same height at the bottom and lifts its toast above the bar.
+   BLACK IN THE DARK, not surface grey: on a black page a grey bar merged with
+   the cards above it and read as one more card. Black, with a soft shadow off
+   its top edge and a hairline, sits on top of the page instead. A clean
+   surface in the light, with a lighter shadow.
+   The selected tab wears the orange ring (accent-2, the "View on map" outline —
+   the founder asked for orange, and the pink accent already marks Live): a pill drawn behind icon and label, inset
+   from the button so five tabs still read at 375px, while the hit area stays
+   the full fifth of the bar. The ring is a pseudo-element under the content
+   (isolation + z-index:-1), so its faint fill never sits over the icon. */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;justify-content:center;
+  height:calc(52px + env(safe-area-inset-bottom));padding:0 0 env(safe-area-inset-bottom);
+  background:#000;border-top:.5px solid var(--hair,rgba(255,255,255,.09));
+  box-shadow:0 -6px 24px rgba(0,0,0,.28)}
+:root[data-theme=light] .tabbar{background:var(--surface,#fff);box-shadow:0 -4px 18px rgba(0,0,0,.08)}
+.tabbar .in{display:flex;width:100%;max-width:var(--maxw,600px)}
+.tabbar button{position:relative;isolation:isolate;flex:1 1 0;min-width:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;height:52px;padding:0 2px;
+  font-family:inherit;font-size:10.5px;font-weight:600;letter-spacing:-.01em;color:var(--muted,#98989D);
+  background:none;border:0;cursor:pointer;white-space:nowrap;
+  transition:color .2s var(--ease,ease),transform .2s var(--spring,cubic-bezier(.34,1.4,.64,1))}
+.tabbar button:active{transform:scale(.92)}
+.tabbar button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;display:block}
+.tabbar button::before{content:"";position:absolute;z-index:-1;left:5px;right:5px;top:4px;bottom:4px;
+  border-radius:var(--pill,999px);box-shadow:inset 0 0 0 1.5px transparent;
+  transition:box-shadow .2s var(--ease,ease),background .2s var(--ease,ease)}
+.tabbar button.on{color:var(--ink,#F5F5F7)}
+.tabbar button.on svg{stroke-width:2.3}
+.tabbar button.on::before{box-shadow:inset 0 0 0 1.5px var(--accent-2,#FF7A45);
+  background:var(--accent-soft,rgba(255,55,95,.10))}
+
+/* The Menu sheet's rows — Profile / Settings / plan / Sign out in the Artist
+   Studio; Food & drink / Settings / plan / Sign out in the Venue Studio. */
+.menurow{display:flex;align-items:center;gap:12px;width:100%;padding:15px 2px;
+  border-top:.5px solid var(--hair,rgba(255,255,255,.09));
+  font-family:inherit;font-size:16.5px;font-weight:600;letter-spacing:-.014em;text-align:left;
+  background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;cursor:pointer}
+.menurow:first-of-type{border-top:none}
+.menurow svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;
+  stroke-linejoin:round;flex:0 0 auto;color:var(--muted,#98989D)}
+.menurow .m{flex:1;min-width:0}
+.menurow .m span{display:block;font-size:12.5px;font-weight:500;color:var(--muted,#98989D);margin-top:1px}
+.menurow .chev{color:var(--faint,#68686D);font-size:18px;flex:0 0 auto}
+.menurow.out{color:var(--accent,#FF375F)}
+.menurow.out svg{color:var(--accent,#FF375F)}
