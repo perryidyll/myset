@@ -63,6 +63,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0051](0051-every-page-composes-from-four-button-tiers-one-chi.md) | Every page composes from four button tiers, one chip recipe and a written design system | 2026-09-12 | ui | decided | claude |
 | [0052](0052-the-city-feed-widens-a-week-at-a-time-on-request-a.md) | The city feed widens a week at a time on request, and says how wide it is | 2026-09-12 | ui | decided | claude |
 | [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) | The Studio's script is a file the phone keeps | 2026-09-12 | performance | decided | perry-confirmed |
+| [0054](0054-a-signed-in-request-costs-two-hops-not-four.md) | A signed-in request costs two hops, not four | 2026-09-12 | performance | decided | perry-confirmed |
 
 ## By area
 
@@ -74,7 +75,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md)
 
-**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md)
+**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) · [0054](0054-a-signed-in-request-costs-two-hops-not-four.md)
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md)
 

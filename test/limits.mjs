@@ -134,7 +134,7 @@ ok('and the veil sits above it', /\.lockveil\{[^}]*z-index:2/.test(css));
    believed until computed styles were measured in a real browser — reading the
    diff would never have caught it. So this checks the LINK, in both pages, and
    that the rules live in exactly one file. */
-const vpage = readFileSync(new URL('../public/venue-studio.html', import.meta.url), 'utf8');
+const vpage = src(new URL('../public/venue-studio.html', import.meta.url));
 const appcss = readFileSync(new URL('../public/app.css', import.meta.url), 'utf8');
 ok('the Artist Studio links it', /<link rel="stylesheet" href="\/lock\.css">/.test(page));
 ok('the Venue Studio links it', /<link rel="stylesheet" href="\/lock\.css">/.test(vpage));

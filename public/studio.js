@@ -387,7 +387,10 @@ async function load(opts){
      fully live and tappable to a free artist, and the server answered 402. That is
      INVARIANT 0ad narrowed to a window rather than closed. It is one small read on
      a path that is already awaiting several. */
-  if(planJob) jobs.push(planJob); else if(!PLAN) jobs.push(loadPlan());
+  /* Not awaited since 0054: has() reads an unfetched plan as locked, so the screen
+     can come down on the stage alone and the plan repaints when it lands — which
+     in every measured open was BEFORE the stage anyway. */
+  if(!planJob&&!PLAN) loadPlan();
   if(TAB==='money'){ if(!REV)jobs.push(loadRev()); if(!HIST)jobs.push(loadHist()); if(!LEDGER)jobs.push(loadLedger()); }
   if(TAB==='gigs'&&!FEAT)jobs.push(loadFeature());
   if(TAB==='profile'&&!PROF) jobs.push(loadProf());
@@ -777,9 +780,13 @@ async function flagFlip(name,on){
 const LOCKICON='<svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.4"/><path d="M8 10.5V7.6a4 4 0 0 1 8 0v2.9"/></svg>';
 const isSoon=(flag)=>!!(PLAN&&PLAN.limits&&(PLAN.limits.soon||[]).includes(flag));
 function has(flag){
-  /* Unknown plan is treated as ALLOWED. A momentary grey flash on every load,
-     before planGet lands, would look like a downgrade. */
-  if(!PLAN||!PLAN.ok||!PLAN.limits) return true;
+  /* NOT YET FETCHED is locked; FETCHED AND FAILED is allowed. The first keeps
+     INVARIANT 0ad closed now that the boot screen no longer waits for the plan
+     (0054): if stage ever lands first, paid controls show locked for the beat
+     until planGet repaints, never live-and-402. The second is bar wifi: a plan
+     read that failed must not lock a paying artist out until a reload. */
+  if(PLAN===null) return false;
+  if(!PLAN.ok||!PLAN.limits) return true;
   if(isSoon(flag)) return false;
   if(PLAN.owner) return true;
   const mine=PLAN.limits[flag];

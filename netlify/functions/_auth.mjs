@@ -30,14 +30,20 @@ const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v);
 /* The signing secret is generated once and kept in Blobs — private to the site,
    same exposure as an env var, and one less thing to configure by hand. */
 export async function authSecret() { return secret(); }
+/* Read once per warm instance. The secret is written once and never rotated —
+   "sign out everywhere" bumps an artist's `rev`, not this — so re-reading it on
+   every signed-in request was a blob round-trip (150–200 ms from the function's
+   region) paid for nothing. Decision 0054. */
+let SECRET = null;
 async function secret() {
+  if (SECRET) return SECRET;
   const { data } = await readDoc('authsecret', null);
-  if (data && data.k) return data.k;
+  if (data && data.k) return (SECRET = data.k);
   const k = randomBytes(32).toString('hex');
   await casDoc('authsecret', () => ({}), (d) => { if (d.k) return false; d.k = k; return true; })
     .catch(() => {});
   const again = await readDoc('authsecret', null);
-  return (again.data && again.data.k) || k;
+  return (SECRET = (again.data && again.data.k) || k);
 }
 
 /* ---------- the artist registry ----------
@@ -189,7 +195,12 @@ export async function verifyToken(token) {
   if (!b64 || !mac) return null;
   let body;
   try { body = Buffer.from(b64, 'base64url').toString(); } catch { return null; }
-  const want = createHmac('sha256', await secret()).update(body).digest('base64url');
+  /* The registry is fetched alongside the secret, not after the MAC check: the
+     check needs the secret, the lookup needs the registry, and neither needs the
+     other. A bad token costs one wasted read; every good one saves a round-trip
+     (and on a warm instance the secret is already in memory — see secret()). */
+  const [sec, reg] = await Promise.all([secret(), readArtists()]);
+  const want = createHmac('sha256', sec).update(body).digest('base64url');
   if (!eq(mac, want)) return null;
   /* POPPED FROM THE END, never destructured from the front: the fixed fields are
      the last two or three, so nothing an address could contain can move them. */
@@ -199,7 +210,6 @@ export async function verifyToken(token) {
   const exp = parts.pop();
   const email = parts.join('|');
   if (!email || Number(exp) < Date.now()) return null;
-  const reg = await readArtists();
   const link = reg.byEmail[email];
   if (!link || !reg.byId[link.artistId]) return null;       // access removed
   /* PER-ARTIST. `reg.rev` is one global counter, and "Sign out every device" bumped

@@ -16,9 +16,11 @@ const main = async (req) => {
 
 /** Shared so a write can return the new state instead of forcing a second fetch. */
 export async function stagePayload(aid) {
-  const [show, fans, meta, reqs, lists, learn, fb, events] = await Promise.all([
+  const { artistById } = await import('./_auth.mjs');
+  const [show, fans, meta, reqs, lists, learn, fb, events, who] = await Promise.all([
     getShow(aid), readFans(aid), readMeta(aid), readRequests(aid),
-    readLists(aid), readLearn(aid), readFeedback(aid), readEvents(aid).catch(() => ({ list: [] }))]);
+    readLists(aid), readLearn(aid), readFeedback(aid), readEvents(aid).catch(() => ({ list: [] })),
+    artistById(aid)]);   // in the batch, not after it: one fewer round-trip per poll (0054)
   /* Tonight's gig, if there is one on the calendar within the next few hours or
      running now — ONE extra read on the Studio poll (21 of the 22 ceiling), so the
      Live tab can say when the show will start by itself (_auto.mjs). */
@@ -29,8 +31,6 @@ export async function stagePayload(aid) {
       sched = { startsAt: occ.startsAt, endsAt: occ.endsAt, venue: occ.venue || '',
                 time: localTime(occ.startsAt, occ.tz), endTime: localTime(occ.endsAt, occ.tz) };
   } catch { sched = null; }
-  const { artistById } = await import('./_auth.mjs');
-  const who = await artistById(aid);
   /* An ended show keeps its board briefly so an accidental End can be resumed,
      but that recovery state is not a live setlist. Never expose its totals or
      refund affordances in the inactive Studio payload. A fresh show performs the
