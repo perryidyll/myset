@@ -512,7 +512,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 253 (last: 0fk) |
 | Test suites | 41 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 43 |
+| Decision records | 48 |
 
 ### Feature flags in force
 
@@ -1226,13 +1226,17 @@ Sheets runs both.
 ## 6.1 Deploying
 
 ```bash
-cd ~/Docs/MySet && sh test/run.sh && git push
+cd ~/Docs/MySet && sh test/run.sh
+git switch -c <area>/<what-changed> && ./tools/pushlog.sh "what changed" "note" && git push -u origin HEAD
+gh pr create --fill && gh pr merge --squash --delete-branch
 ```
 
-`git push` to `main` **is** the production deploy. **Never also run `netlify deploy
---prod`** — that bills a second deploy for the same change and races over what is actually
-live (INVARIANT 9d3). `netlify deploy` with no `--prod` gives a free draft URL and is still
-the right way to preview.
+Merging a pull request into `main` **is** the production deploy. Since 2026-09-12 `main`
+is protected by a GitHub ruleset (decision 0045): direct pushes are refused, force-pushes
+and deletion are blocked, a PR needs no approvals — the person shipping merges their own —
+and every PR gets a free Netlify deploy preview on the exact bytes that will ship. **Never
+also run `netlify deploy --prod`** — that bills a second deploy for the same change and
+races over what is actually live (INVARIANT 9d3).
 
 **Only `public/` is published.** Publishing the repo root once exposed docs, backups and
 the design handoff on the live domain.
@@ -1563,6 +1567,7 @@ blob reads on the audience poll are counted by a test.
 | `tools/decide.sh` | Scaffolds a decision record |
 | `tools/hooks/install.sh` | Installs the two git hooks |
 | `tools/prod.py` | A plain-language health report of the **live** site, read-only, no password needed |
+| `tools/backup.py` | A read-only copy of the whole datastore into a dated folder outside the repo, verified on the spot and pruned by decision 0046's rule; `--if-stale` at session start, always before a gig |
 | `tools/loadsim.py` | Reproduces every cost figure by walking the real polling ladder |
 | `tools/actuals.py` | The tracker behind the money model |
 | `tools/sheetcheck.mjs` | Bottom-sheet touch behaviour, real TouchEvents |

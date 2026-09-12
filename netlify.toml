@@ -160,16 +160,61 @@
   for = "/*.css"
   [headers.values]
     Cache-Control = "public, max-age=600, stale-while-revalidate=86400"
+    Netlify-CDN-Cache-Control = "public, durable, max-age=3600, stale-while-revalidate=86400"
 [[headers]]
   for = "/*.js"
   [headers.values]
     Cache-Control = "public, max-age=600, stale-while-revalidate=86400"
+    Netlify-CDN-Cache-Control = "public, durable, max-age=3600, stale-while-revalidate=86400"
 # Pictures and icons change by being replaced with a new file, so a day is safe.
 [[headers]]
   for = "/img/*"
   [headers.values]
     Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+    Netlify-CDN-Cache-Control = "public, durable, max-age=86400, stale-while-revalidate=604800"
 [[headers]]
   for = "/icons/*"
   [headers.values]
     Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+    Netlify-CDN-Cache-Control = "public, durable, max-age=86400, stale-while-revalidate=604800"
+
+# THE PAGES THEMSELVES STAY AT THE EDGE (speed pass two, decision 0048). Measured
+# 2026-09-12: every page open answered `cache-status: "Netlify Edge"; fwd=stale` —
+# the edge held a copy but went back to the origin to ask if it was still good,
+# 0.6–0.9s from where the fans are, on EVERY tap, before a byte of HTML moved.
+# `Netlify-CDN-Cache-Control` is read by the CDN only; the browser still gets the
+# must-revalidate default and keeps no copy of its own. `durable` is one shared
+# copy for every node; a minute fresh, then served stale at once while one
+# request refreshes it. A deploy purges the CDN cache, so a new build is seen
+# within that minute at worst. These `for` patterns are the REQUEST paths, so the
+# rewritten routes (/:slug, /:slug/vote …) are listed, not only the .html files
+# behind them. /api/* matches none of them, and every function reply now says
+# `netlify-cdn-cache-control: no-store` itself unless it chose to be shared.
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, durable, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, durable, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/:slug"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, durable, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/:slug/vote"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, durable, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/:slug/community"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, durable, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/v/:slug"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, durable, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/v/:slug/community"
+  [headers.values]
+    Netlify-CDN-Cache-Control = "public, durable, max-age=60, stale-while-revalidate=600"

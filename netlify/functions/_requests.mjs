@@ -1,4 +1,7 @@
-import Stripe from 'stripe';
+/* No top-level Stripe import: this module rides in the board and me bundles that
+   every phone in the room polls, and evaluating the SDK on each cold start was a
+   tax on reads that never touch money. stripeForRow loads it when a pledge is
+   actually captured or cancelled (speed pass two, decision 0048). */
 import { casDoc, readDoc, KEY, creditsUsed, isUnlimited, mutateFan, mutateMeta,
          grantPaidSongVotes, cleanFanId, getShow } from './_lib.mjs';
 import { notify } from './_push.mjs';
@@ -267,13 +270,16 @@ export async function resolveRequest(aid, id, status, show) {
   return row;
 }
 
-const stripeForRow = (row) => ({
-  stripe: process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null,
-  opts: row.paymentAccount ? { stripeAccount: row.paymentAccount } : {},
-});
+const stripeForRow = async (row) => {
+  const { default: Stripe } = await import('stripe');
+  return {
+    stripe: process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null,
+    opts: row.paymentAccount ? { stripeAccount: row.paymentAccount } : {},
+  };
+};
 
 async function cancelPledge(aid, row) {
-  const { stripe, opts } = stripeForRow(row);
+  const { stripe, opts } = await stripeForRow(row);
   let state = 'cancel_pending';
   if (stripe) {
     try {
@@ -308,7 +314,7 @@ export async function completeSongRequests(aid, songId) {
       });
       continue;
     }
-    const { stripe, opts } = stripeForRow(row);
+    const { stripe, opts } = await stripeForRow(row);
     if (!stripe) {
       pending++;
       await mutateRequests(aid, (d) => {

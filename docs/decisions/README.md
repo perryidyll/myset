@@ -53,6 +53,11 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md) | Public map pins use saved coordinates and the home map opens without navigation | 2026-09-12 | ui | decided | perry |
 | [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) | public reads are shared at the edge and every page paints the last thing you saw first | 2026-09-12 | performance | decided | claude |
 | [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md) | the public artist page carries the room's rating, request status, post count and top songs | 2026-09-12 | ui | decided | claude |
+| [0044](0044-artists-are-paid-out-daily-on-purpose.md) | Artists are paid out daily, on purpose | 2026-09-12 | money | decided | perry |
+| [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) | main is protected — nothing lands on it except through a pull request | 2026-09-12 | ops | decided | perry-confirmed |
+| [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) | The datastore is copied weekly and before every gig, verified, and kept for ninety days | 2026-09-12 | ops | decided | perry-confirmed |
+| [0047](0047-the-repository-stays-public.md) | The repository stays public | 2026-09-12 | ops | decided | perry |
+| [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) | the pages and the static files live at the edge; the Stripe SDK loads only when money moves | 2026-09-12 | performance | decided | claude |
 
 ## By area
 
@@ -60,11 +65,11 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) · [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md)
 
-**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md)
+**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md)
 
-**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md)
+**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md)
 
-**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md)
+**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md)
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md)
 

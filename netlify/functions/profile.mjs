@@ -26,13 +26,14 @@ export function topSongsOf(rows) {
 export default async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
-  const p = await getProfile(aid);
   // Real numbers only. No follower count, because there is no follow yet.
   const { artistById } = await import('./_auth.mjs');
   /* `fb_` and `posts_` are the two reads added for the proof strip (decision 0043),
-     edge-shared like the rest (below); presence is still never read here (0af). */
-  const [hist, show, who, fb, posts] = await Promise.all([
-    readHistIndex(aid), getShow(aid), artistById(aid),
+     edge-shared like the rest (below); presence is still never read here (0af).
+     The profile travels in the same batch: all six need only `aid`, so this is one
+     hop to storage, not two (speed pass two). */
+  const [p, hist, show, who, fb, posts] = await Promise.all([
+    getProfile(aid), readHistIndex(aid), getShow(aid), artistById(aid),
     readFeedback(aid).catch(() => null), readPosts(aid).catch(() => null),
   ]);
   const shows = hist.shows.length;
