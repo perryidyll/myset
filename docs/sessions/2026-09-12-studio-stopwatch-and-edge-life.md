@@ -29,3 +29,24 @@ alone and let the plan fill in after.
 studio.html, and `test/copy.mjs` fails "the Studio Live tab label is red" and
 "Settings omits the retired gig…". Those belong to another session's in-flight
 Studio work; nothing here touches them. Every other file: green.
+
+## Same evening — the stopwatch found it
+
+Eight readings from the founder (laptop + phone, Chrome + Safari, browser + installed
+app): page ≤ 1.4 s, stage ≤ 1.7 s, plan ≤ 1.1 s, **Opened in 6.0–7.4 s, "the 6 s
+timer ended the wait" on all eight.** Reproduced in the Browser pane after he signed
+in: `BOOT.forced:true`, and the console said why —
+`ReferenceError: drawFirstRun is not defined at render … at load (studio:1063)`.
+
+`render()` calls `drawFirstRun()` at its tail. The call reached main in `5b4a531`
+(this session's pass-one commit carried ~290 uncommitted lines of another session's
+first-run wizard, the same way it carried decision-0043 profile work) but the
+function itself was still being written. So since 16:10 every paint of the Studio
+threw at that line: `load()` never reached `bootDone()` — every open waited the full
+6 s safety timer — and the lines after it in render() (scroll restore) never ran.
+The head start and the pings were real but invisible behind that timer.
+
+Fix: `if(typeof drawFirstRun==='function') drawFirstRun();` until the wizard lands
+whole. The lesson is already in the push-log rule (stage only your own hunks); this
+is the second time the same commit bit. Suite: green except the four pre-existing
+checks noted above.

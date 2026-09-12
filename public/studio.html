@@ -2938,7 +2938,11 @@ function render(){
   if(hq){ hq.addEventListener('input',e=>{HISTFOCUS=true;HISTQ=e.target.value;render();});
     if(HISTFOCUS){ hq.focus(); const v=hq.value; hq.setSelectionRange(v.length,v.length); } }
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
-  drawFirstRun();
+  /* The first-run wizard is in flight in another session; its call reached main
+     (5b4a531) before its function did, and render() threw here on every paint —
+     load() never reached bootDone(), so every Studio open waited for the 6 s
+     safety timer, and nothing below this line ever ran. Guarded until it lands. */
+  if(typeof drawFirstRun==='function') drawFirstRun();
   const restoreScroll=()=>{
     const q=$('.queue-window'),l=$('.setlist-window');
     if(q)q.scrollTop=PANEL_SCROLL.queue;if(l)l.scrollTop=PANEL_SCROLL.setlist;
