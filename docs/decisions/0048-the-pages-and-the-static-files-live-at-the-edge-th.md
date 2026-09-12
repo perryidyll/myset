@@ -30,7 +30,7 @@ a name and a photo. `/api/profile` read the profile, then five more things.
 
 | Option | What it does | What it costs | New moving parts | Risk if it goes wrong |
 |---|---|---|---|---|
-| **A — chosen** | HTML routes and static files carry `Netlify-CDN-Cache-Control` (HTML: durable, 60s fresh, served stale for 10 min while refreshing; css/js 1h; img a day); every `json()` reply says `netlify-cdn-cache-control: no-store` outright; the Stripe SDK becomes a dynamic import in `_history.mjs` and `_requests.mjs`; profile's six reads and venue's vouches travel in one batch | a new build can be up to 60s late on a page (a deploy purges the cache, so in practice seconds) | seven header blocks in netlify.toml | a header rule caching a function reply — closed off by the explicit no-store in `json()` |
+| **A — chosen** | HTML routes carry `Cache-Control: public, max-age=60, stale-while-revalidate=600` (the edge and the phone answer at once for a minute, then serve the copy for ten more while refreshing); every `json()` reply says `netlify-cdn-cache-control: no-store` outright; the Stripe SDK becomes a dynamic import in `_history.mjs` and `_requests.mjs`; profile's six reads and venue's vouches travel in one batch | a new build can be up to 60s late on a page (a deploy purges the cache, so in practice seconds) | seven header blocks in netlify.toml | a header rule caching a function reply — closed off by the explicit no-store in `json()` |
 | B | one warm function for all fan reads, pinged by the cron | an afternoon; every fan read depends on one door | the merge and the pinger | one bug takes every read down |
 | C | move the function region nearer the fans | a dashboard setting; the blob store may then be farther from the functions | none | five reads in a row get slower, not faster |
 | D — do nothing | | | | 5–7s first opens stay |
@@ -63,6 +63,10 @@ read imports puts the tax back; the two comments in `_history.mjs` and
 A stale page causing a real support case after a deploy; Netlify changing the
 purge-on-deploy behaviour of the durable cache; option B landing and making the
 function-side half of this moot.
+
+## Correction, same day
+
+The first cut set `Netlify-CDN-Cache-Control … durable` on the static routes. Measured on deploy-preview-4 and then on production: no effect — Netlify's docs say the directive is for function responses only; static files are governed by plain `Cache-Control`, and the edge copy is invalidated by every deploy anyway. Replaced with `Cache-Control: public, max-age=60, stale-while-revalidate=600` on the HTML routes; the css/js/img blocks keep the browser-side values they already had.
 
 ## How it was verified
 
