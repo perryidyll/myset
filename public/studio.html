@@ -14,6 +14,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t})();</script>
 <script src="/theme.js"></script>
+<script>(()=>{try{
+/* THE STUDIO'S FIRST TWO READS START HERE, before the rest of this (large) page
+   has even arrived: the stage payload and the plan, with the same headers api()
+   would send. api() picks these promises up on its first call for each path and
+   never starts them twice (decision 0050). A signed-out visitor starts nothing. */
+const C=localStorage.getItem('myset.admin')||'',T=localStorage.getItem('myset.token')||'';if(!C&&!T)return;
+const S=localStorage.getItem('myset.aslug')||'';const h={'content-type':'application/json'};
+if(C){h['x-admin-code']=C;if(S)h['x-admin-artist']=S;}if(T)h['authorization']='Bearer '+T;
+const g=(u,o)=>{const f=fetch(u,o);f.catch(()=>{});return f};
+window.__early={stage:g('/api/stage',{headers:h}),plan:g('/api/admin',{method:'POST',headers:h,body:'{"action":"planGet"}'})};
+}catch(e){}})();</script>
 <meta name="theme-color" content="#F5F5F7" />
 <meta name="robots" content="noindex,nofollow" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -998,6 +1009,11 @@ function hdrs(){
   return h;
 }
 async function api(p,o={}){
+  /* The <head> started the first stage read and planGet before this script had
+     parsed; use each of those answers once, then fetch like always. */
+  const E=window.__early; let early=null;
+  if(E){ const k=(p==='/stage'&&!o.method)?'stage':(p==='/admin'&&o.body==='{"action":"planGet"}')?'plan':null;
+    if(k&&E[k]){ early=E[k]; E[k]=null; } }
   const h={'content-type':'application/json',...(o.headers||{})};
   if(CODE){ h['x-admin-code']=CODE; if(ASLUG) h['x-admin-artist']=ASLUG; }
   if(TOKEN) h['authorization']='Bearer '+TOKEN;
@@ -1005,7 +1021,7 @@ async function api(p,o={}){
   // and flashing the overlay at it looked like something was wrong
   if(!o.quiet) busy(true);
   try{
-    const r=await fetch(API+p,{...o,headers:h});
+    const r=await (early||fetch(API+p,{...o,headers:h}));
     return await r.json();
   // `offline` distinguishes "the network failed" from "the server said no".
   // load() used to treat both as an auth failure and throw the artist out to the
