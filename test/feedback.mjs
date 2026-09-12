@@ -15,6 +15,7 @@ const stageFn = (await import('../netlify/functions/stage.mjs')).default;
 const fbFn    = (await import('../netlify/functions/feedback.mjs')).default;
 const F       = await import('../netlify/functions/_feedback.mjs');
 const { readFileSync } = await import('node:fs');
+const { src } = await import('./_src.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -87,7 +88,7 @@ ok('and the notes', st.feedback.recent.some((r) => /queue moved too slowly/.test
    st.feedback.recent);
 ok('THE PRIVACY LINE: never a device id', !JSON.stringify(st.feedback.recent).includes('f1'),
    st.feedback.recent);
-const studio = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
+const studio = src(new URL('../public/studio.html', import.meta.url));
 ok('and the Studio renders it', /function fbCard\(/.test(studio) && /fbCard\(\)/.test(studio));
 
 console.log('\nTHE PAGE\'S OWN RULES ARE THE ONES PERRY ASKED FOR');

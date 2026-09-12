@@ -13,6 +13,7 @@ const bugFn  = (await import('../netlify/functions/bug.mjs')).default;
 const L      = await import('../netlify/functions/_lib.mjs');
 const E      = await import('../netlify/functions/_errlog.mjs');
 const { readFileSync } = await import('node:fs');
+const { src } = await import('./_src.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -101,7 +102,7 @@ console.log('\nTHE PAGES');
   const vote = readFileSync('public/vote.html', 'utf8');
   ok('the voting page offers "Something wrong?"', vote.includes('Something wrong?') && vote.includes('/bug'));
   ok('and remembers what it saw fail, in memory only', vote.includes('noteFail(') && !vote.includes("localStorage.setItem('myset.recent"));
-  const studio = readFileSync('public/studio.html', 'utf8');
+  const studio = src('public/studio.html');
   ok('the Studio can read the reports', studio.includes("action:'bugList'"));
   for (const f of ['vote', 'show', 'board', 'me', 'pay', 'stage', 'community', 'request', 'gift', 'feedback', 'webhook', 'admin', 'auth', 'clipup', 'confirm']) {
     const src = readFileSync(`netlify/functions/${f}.mjs`, 'utf8');

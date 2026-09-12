@@ -7,9 +7,10 @@
    blocks. A case-sensitive innerText check has bitten this before too — CSS
    `text-transform` means the DOM text is not what the source says. */
 import { readFileSync } from 'node:fs';
+import { src } from './_src.mjs';
 let fail = 0;
 const check = (file, needles) => {
-  const s = readFileSync(new URL('../' + file, import.meta.url), 'utf8');
+  const s = src(new URL('../' + file, import.meta.url));
   for (const [label, pat, want = 1] of needles) {
     const n = (s.match(pat) || []).length;
     if (n !== want) { fail++; console.log(`  ✗ ${file}: ${label} appears ${n}×, expected ${want}`); }
@@ -56,5 +57,21 @@ check('public/venue-studio.html', [
   ['function tabBar',        /\nfunction tabBar\(\)\{/g],
   ['sticky offset measured', /top:var\(--headh/g, 0],
 ]);
+/* /studio.js is served immutable for a year, addressed by its own hash. A stale
+   stamp means a phone keeps running last week's Studio under this week's shell. */
+{
+  const { createHash } = await import('node:crypto');
+  const js = readFileSync(new URL('../public/studio.js', import.meta.url), 'utf8');
+  const want = createHash('sha1').update(js).digest('hex').slice(0, 8);
+  const html = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
+  const have = (html.match(/src="\/studio\.js\?v=([0-9a-f]+)"/) || [])[1];
+  const okStamp = have === want;
+  console.log(`  ${okStamp ? '✓' : '✗'} studio.js stamp ${okStamp ? 'matches' : `is ${have}, file is ${want} — run: node tools/stamp.mjs`}`);
+  if (!okStamp) fail++;
+  const inline = (html.match(/<script>/g) || []).length;
+  const okInline = inline <= 3;
+  console.log(`  ${okInline ? '✓' : '✗'} studio.html keeps only its small inline scripts (${inline})`);
+  if (!okInline) fail++;
+}
 console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
 process.exit(fail ? 1 : 0);

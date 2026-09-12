@@ -10,8 +10,9 @@ const voteFn = (await import('../netlify/functions/vote.mjs')).default;
 const { mutateFan, readFans, DEFAULT_ARTIST } = await import('../netlify/functions/_lib.mjs');
 const { __failWrites } = await import('./blobs-fake.mjs');
 const { readFileSync } = await import('node:fs');
+const { src } = await import('./_src.mjs');
 const votePage = readFileSync(new URL('../public/vote.html', import.meta.url), 'utf8');
-const studioPage = readFileSync(new URL('../public/studio.html', import.meta.url), 'utf8');
+const studioPage = src(new URL('../public/studio.html', import.meta.url));
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
