@@ -95,7 +95,7 @@ Two honest limits, both written into the Studio copy:
 
 - **No card data, ever.** Checkout and the portal are Stripe-hosted pages.
 - **Never trust the return URL.** `planFinish` reads the session from Stripe by id and checks `metadata.owner`; `?sub=done` alone changes nothing.
-- **Webhook signature** is verified (`STRIPE_WEBHOOK_SECRET`); events for an unknown owner are ignored, not guessed at.
+- **Webhook signature** is verified against `STRIPE_WEBHOOK_SECRET` (the *Your account* destination) or `STRIPE_CONNECT_WEBHOOK_SECRET` (the *Connected accounts* destination — Stripe signs each destination with its own secret, decision `0058`); events for an unknown owner are ignored, not guessed at.
 - **Members cannot bill or delete.** `accountDelete`, `planCheckout`, `planChange`, `planRetain`, `planPortal` refuse non-owners (403).
 - **Delete needs the word.** `confirm: 'DELETE'` in the body; the Studio makes you type it. The founder cannot be deleted from the app.
 - **Retention is once, ever**, enforced server-side — the client can ask twice, the server answers once.
