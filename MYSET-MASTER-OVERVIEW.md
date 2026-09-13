@@ -768,8 +768,8 @@ on a paid plan — one primary **TAP TO VOTE THE SETLIST** button when a show is
 stats row
 (Joined · Shows · **Fans** · Votes cast · Songs) with a **Community** button in it.
 
-**Listen & follow sits directly under the stats**, in the order **Instagram → Spotify →
-Apple Music → YouTube Music → Website**. It used to sit under the bio and every upcoming
+**Listen, follow, & support sits directly under the stats** (the heading was *Listen & follow* until 2026-09-13), in the order **Instagram → Spotify →
+Apple Music → YouTube Music → Bandcamp → GoFundMe → Website**, and since 2026-09-13 the pills drift left to right, the mirror of the proof strip above them, the same marquee (`drift()`) with the same stop-under-a-finger rules. It used to sit under the bio and every upcoming
 gig, which is a long way to scroll for the one thing somebody who just watched a set
 wants to do. The Studio's link fields were reordered to match, so what an artist fills in
 top to bottom is what a fan reads left to right. The YouTube **videos** stay at the

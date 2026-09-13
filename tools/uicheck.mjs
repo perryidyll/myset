@@ -256,15 +256,15 @@ const PR=await pg.evaluate(async ()=>{
      cta?cta.textContent.trim():'missing');
   ok('and no duplicate button sits over the cover', !app.querySelector('.livepill'));
   ok('the live CTA carries the gentle orange pulse', getComputedStyle(cta).animationName==='emberGlow', getComputedStyle(cta).animationName);
-  ok('label or management is the last Listen & follow button',
-    [...app.querySelectorAll('.links a')].at(-1)?.textContent.includes('Independent Artists Management'));
+  ok('label or management is the last Listen, follow, & support button',
+    [...app.querySelectorAll('.links a:not([aria-hidden])')].at(-1)?.textContent.includes('Independent Artists Management'));
   const order=[...app.querySelectorAll('.links a')].map(a=>a.textContent.trim());
   ok('Instagram first, then Spotify, Apple Music, YouTube Music',
      JSON.stringify(order.slice(0,4))===JSON.stringify(['Instagram','Spotify','Apple Music','YouTube Music']),
      order.join(' > '));
   const sects=[...app.querySelectorAll('.sect')].map(s=>s.textContent.trim());
-  ok('"Listen & follow" comes before "About"',
-     sects.indexOf('Listen & follow')<sects.indexOf('About'), sects.join(' | '));
+  ok('"Listen, follow, & support" comes before "About"',
+     sects.indexOf('Listen, follow, & support')<sects.indexOf('About'), sects.join(' | '));
   ok('and the videos stay at the bottom',
      sects.indexOf('Watch & listen')===sects.length-1, sects.join(' | '));
   const links=app.querySelector('.links').getBoundingClientRect();

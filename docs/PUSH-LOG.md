@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 15:26 — b966884 — wt@ui/links-strip (0 files since origin/main)
+**tl;dr:** The artist page's link pills now drift left to right under the heading Listen, follow, & support — the mirror of the proof strip above them
+**Other sessions:** artist.html: startProof() is now drift(id,dir) run for #proof (+1) and #links (-1), per-strip handles in DRIFT{}; .links is a nowrap overflow strip with ghost copies (aria-hidden) — query '.links a:not([aria-hidden])' for the real pills. Studio's Profile section label still says Listen & follow.
+
 ### 2026-09-13 14:53 — 67c6d78 — wt@ui/batch-seven (0 files since origin/main)
 **tl;dr:** Batch seven: every song in the library is live to the room on every plan, Bar Star holds 200, Bandcamp + GoFundMe links, plan cards reworded, installed Studio reloads after a theme toggle (decision 0061)
 **Other sessions:** free featured is Infinity and plus library 200 in _plan.mjs (cap machinery kept); _profile.mjs LINK_HOSTS has bandcamp/gofundme with a wildcard hostOk(); theme.js toggle() reloads when navigator.standalone; studio.js restamped 72f3dec6
