@@ -159,7 +159,7 @@ const read = (f) => src(new URL('../public/' + f, import.meta.url));
   eq('Instagram first, then the three music services, Bandcamp and GoFundMe, the website last', order,
      ['instagram', 'spotify', 'applemusic', 'ytmusic', 'bandcamp', 'gofundme', 'website']);
   ok('and the links block is built before the bio',
-     artist.indexOf('Listen &amp; follow') < artist.indexOf('<div class="sect">About</div>'));
+     artist.indexOf('Listen, follow, &amp; support') < artist.indexOf('<div class="sect">About</div>'));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

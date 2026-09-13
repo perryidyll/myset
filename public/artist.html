@@ -240,8 +240,13 @@ a.pc:active{transform:scale(.97)}
 .card{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:18px 20px}
 .bio{font-size:16px;line-height:1.55;color:var(--ink-2);white-space:pre-wrap;margin:0}
 
-.links{display:flex;flex-wrap:wrap;gap:9px;margin:0 18px}
-.links a{display:inline-flex;align-items:center;gap:8px;padding:12px 17px;border-radius:var(--pill);
+/* LINKS DRIFT TOO (the founder, 2026-09-13): the same marquee as the proof strip
+   above, the other way round — right to left up there, left to right down here, so
+   the two rows read as a pair rather than a repeat. Same rules: doubled set,
+   a finger stops it, no scroll-snap, native swipe. */
+.links{display:flex;gap:9px;overflow-x:auto;padding:0 18px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.links::-webkit-scrollbar{display:none}
+.links a{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;padding:12px 17px;border-radius:var(--pill);
   background:var(--surface);box-shadow:var(--sh-1);font-size:14.5px;font-weight:600;letter-spacing:-.01em;
   transition:transform .22s var(--spring)}
 .links a:active{transform:scale(.96)}
@@ -487,10 +492,15 @@ async function headCount(){
    that asked for less motion gets a strip that only moves when swiped (and no
    copies). Bound to the element render() just drew — a redraw replaces it and the
    old loop, finding its strip gone, quits. Nothing moves while the tab is hidden. */
-let PT=null,PR_=null;
-function startProof(){
-  cancelAnimationFrame(PT); clearTimeout(PR_);
-  const el=document.getElementById('proof'); if(!el||el.children.length<2)return;
+/* One loop per strip, keyed by id, so the proof strip and the links strip each
+   keep their own frame handle and resume timer. dir is +1 for right-to-left (the
+   content moves left, as the proof strip always has) and -1 for left-to-right. */
+const DRIFT={};
+function startProof(){ drift('proof',1); drift('links',-1); }
+function drift(id,dir){
+  const H=DRIFT[id]||(DRIFT[id]={PT:null,PR_:null});
+  cancelAnimationFrame(H.PT); clearTimeout(H.PR_);
+  const el=document.getElementById(id); if(!el||el.children.length<2)return;
   if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
   const copy=el.querySelector('[aria-hidden="true"]'); if(!copy)return;
   /* One set's width, gap included — read every frame, not once: a page drawn from
@@ -504,8 +514,8 @@ function startProof(){
   const ghosts=[...el.children].filter(c=>c.getAttribute('aria-hidden')==='true'); let extra=0;
   const topUp=()=>{const s=span(); if(s>0&&extra<4&&s+el.clientWidth>el.scrollWidth){ghosts.forEach(c=>el.appendChild(c.cloneNode(true)));extra++;}};
   let hold=false, touching=false, x=el.scrollLeft, last=0;
-  const pause=()=>{hold=true;clearTimeout(PR_);};
-  const resume=()=>{clearTimeout(PR_);PR_=setTimeout(()=>{hold=false;x=el.scrollLeft;last=0;},1000);};
+  const pause=()=>{hold=true;clearTimeout(H.PR_);};
+  const resume=()=>{clearTimeout(H.PR_);H.PR_=setTimeout(()=>{hold=false;x=el.scrollLeft;last=0;},1000);};
   el.addEventListener('touchstart',()=>{touching=true;pause();},{passive:true});
   el.addEventListener('touchend',()=>{touching=false;resume();},{passive:true});
   el.addEventListener('touchcancel',()=>{touching=false;resume();},{passive:true});
@@ -516,12 +526,16 @@ function startProof(){
   el.addEventListener('scroll',()=>{if(hold){x=el.scrollLeft;if(!touching)resume();}},{passive:true});
   const step=(t)=>{
     if(!el.isConnected)return;
-    PT=requestAnimationFrame(step);
+    H.PT=requestAnimationFrame(step);
     if(hold||document.hidden){last=0;return;}
-    if(last){ topUp(); const s=span(); x+=28*(t-last)/1000; if(s>0&&x>=s)x-=s; el.scrollLeft=x; }
+    /* Running backwards, the scroll starts one set in and is pushed forward by a set
+       whenever it reaches the front — the same seam, seen from the other side. */
+    if(last){ topUp(); const s=span(); x+=dir*28*(t-last)/1000;
+      if(s>0){ if(x>=s)x-=s; else if(x<0)x+=s; } el.scrollLeft=x; }
+    else if(dir<0&&!el.scrollLeft){ const s=span(); if(s>0){x=s;el.scrollLeft=x;} }
     last=t;
   };
-  PT=requestAnimationFrame(step);
+  H.PT=requestAnimationFrame(step);
 }
 /* When a fan said it, for the card: today, yesterday, days, then the month. */
 const agoWord=ms=>{const d=(Date.now()-Number(ms))/86400000; if(!(Number(ms)>0)||isNaN(d))return '';
@@ -755,8 +769,9 @@ function render(){
   const links=Object.keys(LABEL).filter(k=>P.links&&P.links[k]);
   if(P.management&&P.managementUrl)links.push('management');
   if(links.length){
-    h+=`<div class="sect">Listen &amp; follow</div><div class="links">${links.map(k=>
-      `<a href="${esc(k==='management'?P.managementUrl:P.links[k])}" target="_blank" rel="noopener noreferrer">${k==='management'?'↗ ':ICON[k]}${k==='management'?P.management:LABEL[k]}</a>`).join('')}</div>`;
+    const pills=links.map(k=>
+      `<a href="${esc(k==='management'?P.managementUrl:P.links[k])}" target="_blank" rel="noopener noreferrer">${k==='management'?'↗ ':ICON[k]}${k==='management'?P.management:LABEL[k]}</a>`);
+    h+=`<div class="sect">Listen, follow, &amp; support</div><div class="links" id="links">${pills.join('')}${pills.length>=2&&!matchMedia('(prefers-reduced-motion:reduce)').matches?pills.map(ghost).join(''):''}</div>`;
   }
 
   /* Driven by the calendar, not the old show.showTime placeholder — that said
