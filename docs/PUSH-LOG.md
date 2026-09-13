@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 21:56 — 34215b8 — wt3@ui/fab-live-red (0 files since origin/main)
+**tl;dr:** The artist page's floating bar is red and says ENTER NOW TO VOTE while a show is on; the countdown's 'view setlist' is pink-orange. Plus the ledger/session note for UX-039 (band names + hero video, live as 34215b8)
+**Other sessions:** artist.html: .act.now on the live button; nextLabel() returns HTML (<i class=vs>), the tick writes innerHTML. uicheck/test/copy assert 'ENTER NOW TO VOTE'. UX-039's production build had to be triggered from Netlify (createSiteBuild) after GitHub's outage dropped the webhook — check listSiteDeploys if a merge does not appear.
+
 ### 2026-09-13 15:57 — 12b5e24 — wt@ui/hero-video-band-name (0 files since origin/main)
 **tl;dr:** A band name works everywhere a first name did (First name or band name + optional Last name on the Profile tab); with more than three videos the ticked one is the hero and the rest drift under Watch more from <First> (decision 0062)
 **Other sessions:** profileSet now writes the registry row's name + first when the save carries first (CAS, only on change) — byId[aid].name is no longer sign-up-only. getShow adds show.artistFirst; board/stage payloads carry artistFirst; profile/community payloads carry first. New admin action mediaHero; media items carry hero (one, first). artist.html: mediaCard/reelCard/playMedia/ghost are module-level; startProof drifts #proof, #links, #reel. studio.js restamped 42899db1.

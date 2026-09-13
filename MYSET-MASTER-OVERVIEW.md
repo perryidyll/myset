@@ -764,7 +764,7 @@ review queue, venue plans, promo minting, venue verification, feature flags, she
 ## 3.4 The artist's public page
 
 `/<slug>`. Cover photo, avatar, name — with the green **✓ Verified** chip when earned and
-on a paid plan — one primary **TAP TO VOTE THE SETLIST** button when a show is on, and a
+on a paid plan — one primary, red **ENTER NOW TO VOTE** button when a show is on, and a
 stats row
 (Joined · Shows · **Fans** · Votes cast · Songs) with a **Community** button in it.
 

@@ -252,7 +252,7 @@ const PR=await pg.evaluate(async ()=>{
   if(!document.querySelector('.links')){ out.push('  ✗ no .links; app len '+document.querySelector('#app').innerHTML.length); return out.join('\n'); }
   const app=document.querySelector('#app');
   const cta=app.querySelector('#joinBtn');
-  ok('the live profile has one voting CTA', !!cta && cta.textContent.trim()==='TAP TO VOTE THE SETLIST',
+  ok('the live profile has one voting CTA', !!cta && cta.textContent.trim()==='ENTER NOW TO VOTE',
      cta?cta.textContent.trim():'missing');
   ok('and no duplicate button sits over the cover', !app.querySelector('.livepill'));
   ok('the live CTA carries the gentle orange pulse', getComputedStyle(cta).animationName==='emberGlow', getComputedStyle(cta).animationName);

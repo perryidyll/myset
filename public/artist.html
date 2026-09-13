@@ -181,6 +181,13 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
 .fab .act{font-size:13px;font-weight:700;padding:11px 18px;gap:8px;white-space:normal;text-align:center;line-height:1.2;
   max-width:100%;font-variant-numeric:tabular-nums}
 .fab .act.cd{font-size:12.5px;padding:10px 16px;box-shadow:0 0 0 1.5px #FF3B30,var(--sh-1)}   /* the countdown is the long one */
+/* THE WORDS ARE THE BUTTON (the founder, 2026-09-13): "view setlist" in the
+   pink-orange, the parentheses in the pill's own ink. */
+.fab .act.cd{display:inline-block}   /* inline text, so the flex gap does not open the parentheses */
+.fab .act.cd .vs{color:var(--accent-2);font-style:normal}
+/* LIVE IS RED (the founder, 2026-09-13): while the show is on, the one button is a
+   true red fill — "ENTER NOW TO VOTE" — not the gradient. The glow stays. */
+.fab .act.now{background:#FF3B30;color:#fff;box-shadow:0 8px 24px rgba(255,59,48,.35)}
 /* The toast rises above the block instead of covering the one thing to tap. */
 #toast{bottom:calc(112px + env(safe-area-inset-bottom))}
 .fab .act.liveglow{animation:emberGlow 4.2s ease-in-out infinite}
@@ -476,13 +483,14 @@ function nextGig(){ return (G&&G.ok?G.gigs:[]).find(g=>g.endsAt>Date.now())||nul
 function nextLabel(){
   const g=nextGig(); if(!g) return 'See the setlist';
   let ms=g.startsAt-Date.now();
-  if(ms<=0) return 'Starting now (view setlist)';
+  const VS='(<i class="vs">view setlist</i>)';
+  if(ms<=0) return 'Starting now '+VS;
   const d=Math.floor(ms/86400000); ms-=d*86400000;
   const h=Math.floor(ms/3600000);  ms-=h*3600000;
   const m=Math.floor(ms/60000);    const sec=Math.floor((ms-m*60000)/1000);
-  if(d>0) return `Live in ${d}d ${h}h ${m}m ${String(sec).padStart(2,'0')}s (view setlist)`;
-  if(h>0) return `Live in ${h}h ${m}m ${String(sec).padStart(2,'0')}s (view setlist)`;
-  return `Live in ${m}m ${String(sec).padStart(2,'0')}s (view setlist)`;
+  if(d>0) return `Live in ${d}d ${h}h ${m}m ${String(sec).padStart(2,'0')}s ${VS}`;
+  if(h>0) return `Live in ${h}h ${m}m ${String(sec).padStart(2,'0')}s ${VS}`;
+  return `Live in ${m}m ${String(sec).padStart(2,'0')}s ${VS}`;
 }
 /* "Live now — N voting": the count comes from the shared, edge-cached board the room
    already polls, never from the profile (INVARIANT 0af). Same URL as the vote page
@@ -604,7 +612,7 @@ function startTick(){
   TICK=setInterval(()=>{
     const el=document.getElementById('joinBtn');
     if(!el){clearInterval(TICK);return;}
-    el.textContent=nextLabel();
+    el.innerHTML=nextLabel();   // carries the <i class="vs"> around the words
   },1000);
 }
 
@@ -905,7 +913,7 @@ function render(){
     : ng ? `<b>Next: ${esc(whenWord(ng.date)==='Tonight'||whenWord(ng.date)==='Tomorrow'?whenWord(ng.date):dowName(ng.date).slice(0,3))} ${esc(fmtTime(ng.time))}</b><span>${esc(ng.venue)}</span>`
     : `<b>No shows listed</b>`;
   const act=live
-    ? `<a class="btn btn-pri act liveglow" href="${VOTEHREF}" id="joinBtn"><span class="lv"></span>TAP TO VOTE THE SETLIST</a>`
+    ? `<a class="btn btn-pri act now liveglow" href="${VOTEHREF}" id="joinBtn"><span class="lv"></span>ENTER NOW TO VOTE</a>`
     : ng ? `<a class="btn btn-ink act cd" href="${VOTEHREF}" id="joinBtn">${nextLabel()}</a>`
     : `<a class="btn btn-ink act" href="${COMMHREF}" id="joinBtn">Community</a>`;
   h+=`<div class="fab"><div class="state">${state}</div>${act}</div>`;
