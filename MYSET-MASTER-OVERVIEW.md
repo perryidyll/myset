@@ -516,8 +516,8 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 |---|---|
 | Public pages | 12 — about.html, artist.html, artists.html, community.html, index.html, report.html, shop.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
-| Scheduled jobs | 2 — autocron, sheetcron |
-| Shared libraries | 48 |
+| Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
+| Shared libraries | 52 |
 | Artist Studio actions | 131 |
 | Venue Studio actions | 48 |
 | Fan-record shards | 12 |
@@ -525,10 +525,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / pack-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 258 (last: 0fn) |
-| Test suites | 47 |
+| Invariants | 262 (last: 0fn) |
+| Test suites | 48 |
 | Assertions | **2,867**, 0 failing, last run 2026-09-13 |
-| Decision records | 65 |
+| Decision records | 69 |
 
 ### Feature flags in force
 
@@ -1024,14 +1024,16 @@ Netlify Blobs, one store, everything namespaced per artist or venue.
 **Per artist:** `show_` · `f0…f11_` (fan records, sharded) · `meta_` (payments and tips) ·
 `hist_` / `histidx_` / `histids_` / `histpend_` (past shows) · `ev_` (gigs) · `lists_` ·
 `learn_` · `req_` · `profile_` (merch lives on it) · `img_` · `chart_` · `lyr_` · `push_` ·
-`connect_` · `fb_` · `lock_` · `apitch_` · `songstats_` · `posts_` / `likes_` ·
-`billing_` · `ledger_` · `vidpend_`
+`connect_` · `fb_` / `fbarch_` · `lock_` · `apitch_` · `songstats_` · `posts_` / `likes_` /
+`postsarch_` · `billing_` · `ledger_` · `vidpend_` · `biz_` · `rsvp_` · `sess_` / `log_` /
+`rec_` / `pkeys_` · `evt_<aid>_<showId>` (the night's event log, 0066) · `ver_` / `vers_`
+(versions of the hand-edited documents, 0067) · `mirror_` (what the nightly copy has seen, 0069)
 
-**Per venue:** `v_` · `vprofile_` · `vouch_` · `vpitch_` · `posts_v_` · `likes_v_`
+**Per venue:** `v_` · `vprofile_` · `vouch_` · `vpitch_` · `posts_v_` / `likes_v_` / `postsarch_v_`
 
 **Global — the only shared documents:** `artists` (the registry) · `venues` · `cityindex` ·
 `acctindex` · `flags` · `idqueue` · `promos` · `authsecret` · `authc_` · `sheetsync` ·
-`gigsched` · `vidqueue`
+`gigsched` · `vidqueue` · `delqueue` · `mirror`
 
 ### The five hard-won storage rules
 
@@ -1049,6 +1051,24 @@ Netlify Blobs, one store, everything namespaced per artist or venue.
    on one key. Load-tested: 80 simultaneous voters, zero loss.
 
 Decision record [`0008`](docs/decisions/0008-never-list-blobs-for-live-data.md).
+
+### The record, not just the screen (2026-09-14)
+
+Four more, from the day the founder asked that nothing ever be lost (decisions
+[`0066`](docs/decisions/0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md)–[`0069`](docs/decisions/0069-every-document-is-copied-nightly-to-r2-and-a-restor.md);
+INVARIANTS 0fq–0ft):
+
+6. **State is a cache of the log.** Every vote, play and dollar of a night is filed in
+   `evt_<aid>_<showId>` at the moment it happens — never from the vote path, which still
+   costs 5 reads and 2 writes. The archive keeps sums; the log keeps the night.
+7. **A capped list must have a complete sibling.** `histidx_` ↔ `histids_`, `posts_` ↔
+   `postsarch_`, `fb_` ↔ `fbarch_`, `show.log` ↔ the event log. The sibling is an
+   append-only log in computable keys (`_append.mjs`), never trimmed.
+8. **A hand-edited document keeps a version before every overwrite** — profile, setlists,
+   calendar, library — write-once, at most one every thirty seconds.
+9. **Every document has a second home.** `mirrorcron` copies what changed to R2 under the
+   same key once a day (never secrets, sessions or fan shards); `tools/backup.py` takes the
+   laptop copy and can restore it — rehearsed, and it refuses production by name.
 
 ## 5.3 What an endpoint costs
 

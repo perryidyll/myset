@@ -1,4 +1,5 @@
 import { casDoc, readDoc } from './_lib.mjs';
+import { casKeep } from './_versions.mjs';
 import { wallClockToMs, validTz, addDays, addMonths, daysBetween, utcToDate } from './_time.mjs';
 import { normPlace, mapLinks } from './_maps.mjs';
 
@@ -22,8 +23,9 @@ export async function readEvents(aid) {
   d.list = Array.isArray(d.list) ? d.list : [];
   return d;
 }
+/* casKeep: the calendar as it was is kept before every change (decision 0067). */
 export const mutateEvents = (aid, fn) =>
-  casDoc(EV(aid), emptyEvents, (d) => { d.list = Array.isArray(d.list) ? d.list : []; return fn(d); });
+  casKeep(EV(aid), emptyEvents, (d) => { d.list = Array.isArray(d.list) ? d.list : []; return fn(d); });
 
 const str = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
 

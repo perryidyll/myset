@@ -136,7 +136,7 @@ company buys with headcount. Almost everything below is paperwork and habits.
 | **A secret-rotation runbook** | Right now there is no written answer to "the key leaked, what do I do in the next ten minutes". One page. |
 | **Pin dependencies + Dependabot** | Exact versions, a bot that opens the PR, `npm test` as the gate. |
 | **Edge rate limiting** | Netlify has traffic rules. A per-IP ceiling on `/api/*` bounds both abuse and the bill. |
-| **A backup you have actually restored** | Blobs are the only datastore. Nobody has ever tested a restore. An untested backup is a rumour. |
+| **A backup you have actually restored** | ~~Blobs are the only datastore. Nobody has ever tested a restore.~~ Done 2026-09-14: `tools/backup.py --restore` wrote the 2026-09-13 copy into a rehearsal store and read every key back equal (decision `0069`, session `2026-09-14-data-foundations.md`); and `mirrorcron` copies every document to R2 nightly. Still to do: rehearse it again in six months, and the R2 copy on a hard delete. |
 | **Error and alert monitoring** | Today a failure is a line in a log nobody reads. Sentry's free tier, or Netlify's own alerts, plus one alert on a spike in 5xx. |
 | **CSP script hashes** | Removes `'unsafe-inline'`. A build step that hashes each inline block, or moving the scripts to files. |
 | **Application-level encryption of ID photos** | Blobs are encrypted at rest by Netlify, but the ID photos are the most sensitive bytes in the system. Encrypting them with a key only the verification path holds means a storage compromise does not hand over passports. |
@@ -187,9 +187,10 @@ have been enforced by tests from early on and because the app deliberately holds
 almost no personal data. Fans are counted and never named, so **there is no user
 database to leak** — which is the thing that actually ends companies.
 
-The gap to a $100M SaaS is not code quality. It is: *nobody has tested a restore,
-nobody is alerted when something breaks, there is no written plan for a bad day,
-and the founder's own accounts are the softest target in the system.*
+The gap to a $100M SaaS is not code quality. It is: *nobody is alerted when
+something breaks, there is no written plan for a bad day, and the founder's own
+accounts are the softest target in the system.* (The restore was rehearsed on
+2026-09-14 — decision `0069`.)
 
 Fix those four and MySet is, genuinely, in the top decile for its stage.
 

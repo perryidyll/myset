@@ -1,4 +1,5 @@
 import { casDoc, readDoc, store } from './_lib.mjs';
+import { casKeep } from './_versions.mjs';
 
 /* SETLISTS — named subsets of the one song library.
 
@@ -54,8 +55,9 @@ export async function readLists(aid) {
   const { data } = await readDoc(LK(aid), null);
   return normLists(data || emptyLists());
 }
+/* casKeep: every change keeps what the setlists were (decision 0067). */
 export const mutateLists = (aid, fn) =>
-  casDoc(LK(aid), emptyLists, (d) => { normLists(d); return fn(d); });
+  casKeep(LK(aid), emptyLists, (d) => { normLists(d); return fn(d); });
 
 export async function readLearn(aid) {
   const { data } = await readDoc(NK(aid), null);

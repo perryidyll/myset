@@ -152,3 +152,6 @@ node --import ./test/register.mjs test/billing.mjs
 echo
 echo "── the rate limit on casting, and what broke kept past the night ──"
 node --import ./test/register.mjs test/errlog.mjs
+echo
+echo "── the data foundations: the event log, versions, archives, the second home ──"
+node --import ./test/register.mjs test/foundations.mjs

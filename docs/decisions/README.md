@@ -75,6 +75,10 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0063](0063-the-current-song-has-to-be-ended-before-another-ca.md) | The current song has to be ended before another can start — every ▶ in the Studio asks "End current song?" while one is playing | 2026-09-13 | ui | decided | perry |
 | [0064](0064-postage-is-a-shipping-rate-off-the-cut-the-pickup.md) | Merch has its own page at /<slug>/shop, entered from a ringed card above the tip button; postage is a shipping rate off the cut, the pickup code is a lookup key, sold out is not off, and the owner id is kept whole | 2026-09-13 | money | decided | the founder |
 | [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md) | the paid plans get a business dashboard — one document per artist, keyed by the calendar night, profit before app fees, the whole evening in the hourly rate | 2026-09-13 | plans | decided | perry |
+| [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) | every vote, play and dollar of a night is filed in an append-only event log as it happens — the archive keeps sums, the log keeps the night | 2026-09-14 | storage | decided | perry |
+| [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) | the profile, the setlists, the calendar and the library keep a version before every overwrite — write-once, at most one every thirty seconds | 2026-09-14 | storage | decided | perry |
+| [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) | a capped list must have a complete sibling — the feed and the feedback list spill into archives, and an id once minted is never reused | 2026-09-14 | storage | decided | perry |
+| [0069](0069-every-document-is-copied-nightly-to-r2-and-a-restor.md) | every document is copied nightly to R2 under the same key, and a restore from the laptop copy has been rehearsed and refuses production by name | 2026-09-14 | ops | decided | perry |
 
 ## By area
 
@@ -88,7 +92,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md) · [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md) · [0064](0064-postage-is-a-shipping-rate-off-the-cut-the-pickup.md)
 
-**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md)
+**ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md) · [0069](0069-every-document-is-copied-nightly-to-r2-and-a-restor.md)
 
 **performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) · [0054](0054-a-signed-in-request-costs-two-hops-not-four.md)
 
@@ -96,7 +100,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md)
 
-**storage** — [0008](0008-never-list-blobs-for-live-data.md)
+**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md)
 
 **trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
 

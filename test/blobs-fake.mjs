@@ -55,6 +55,11 @@ export function getStore() {
       mem.set(key, { body: buf, etag: tag(buf), metadata: opts.metadata || {} });
       return { modified: true };
     },
+    async getMetadata(key) {
+      note('meta', key);
+      const e = mem.get(key);
+      return e ? { etag: e.etag, metadata: e.metadata || {} } : null;
+    },
     async delete(key) { note('del', key); mem.delete(key); },
     async list() { return { blobs: [...mem.keys()].map((key) => ({ key })) }; },
   };

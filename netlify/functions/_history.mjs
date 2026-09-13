@@ -4,6 +4,7 @@
    for evaluating the whole SDK before answering a fan who wanted a name and a
    photo (speed pass two, decision 0048). */
 import { casDoc, readDoc, voteCounts, roomCounts, KEY, DEFAULT_ARTIST } from './_lib.mjs';
+import { closeLog } from './_evlog.mjs';
 
 const HIST = KEY.hist;                  // flat key — INVARIANT 2
 const INDEX = KEY.histIdx;
@@ -258,6 +259,11 @@ export async function archiveShow(aid, show, fans) {
     Object.assign(d, doc); kept = d; return true;
   }).then(() => { stored = true; })
     .catch((e) => { console.error('archive: detail write failed', aid, showId, e && e.message); });
+
+  /* The night's event log gets what is still on the board, the money and the end
+     (decision 0066). Replaced, not appended, so filing twice files once. */
+  await closeLog(aid, showId, { fans, startedAt: show.startedAt, endedAt })
+    .catch((e) => { console.error('archive: event log close failed', aid, showId, e && e.message); });
 
   /* THE INDEX ROW IS BUILT FROM WHAT WAS KEPT, NOT FROM WHAT WAS OFFERED. The
      detail write above already refuses a poorer snapshot; this write did not, and
