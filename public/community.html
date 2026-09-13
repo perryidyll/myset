@@ -1106,7 +1106,8 @@ function buySheet(id){
     <button class="go" id="buyGo" onclick="buy('${esc(id)}')">Pay ${money(m.cents)}</button>
     <p class="fine">Paid to ${esc(D.name)} through Stripe. MySet never sees your card.</p>`);
 }
-const firstName=()=>String(D&&D.name||'the artist').split(' ')[0]||'the artist';
+/* The band name or first name the artist chose (decision 0062), else the first word of the name. */
+const firstName=()=>(D&&String(D.first||'').trim())||String(D&&D.name||'the artist').split(' ')[0]||'the artist';
 let TIP=10;
 /* The same sheet the voting page offers, on the page people actually come back to
    after a gig. It posts `from:'community'` so the return trip lands here rather than

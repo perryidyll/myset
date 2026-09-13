@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 15:57 — 12b5e24 — wt@ui/hero-video-band-name (0 files since origin/main)
+**tl;dr:** A band name works everywhere a first name did (First name or band name + optional Last name on the Profile tab); with more than three videos the ticked one is the hero and the rest drift under Watch more from <First> (decision 0062)
+**Other sessions:** profileSet now writes the registry row's name + first when the save carries first (CAS, only on change) — byId[aid].name is no longer sign-up-only. getShow adds show.artistFirst; board/stage payloads carry artistFirst; profile/community payloads carry first. New admin action mediaHero; media items carry hero (one, first). artist.html: mediaCard/reelCard/playMedia/ghost are module-level; startProof drifts #proof, #links, #reel. studio.js restamped 42899db1.
+
 ### 2026-09-13 15:28 — 466a907 — wt2@docs/links-strip-ledger (0 files since origin/main)
 **tl;dr:** Ledger + session note for the link strip (UX-038, PR #25) [skip ci]
 **Other sessions:** Docs only. The unexplained first-save drop of a Bandcamp link is recorded in docs/sessions/2026-09-13-links-strip.md.

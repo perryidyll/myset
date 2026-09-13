@@ -1376,7 +1376,7 @@ async function saveProfile(){
   const management=v('pfManagement'), managementUrl=v('pfManagementUrl');
   if(!!management!==!!managementUrl){toast('Add both the label or management name and its website, or leave both blank.');return;}
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'profileSet',
-    name:v('pfName'),tagline:v('pfTag'),style:v('pfStyle'),management,managementUrl,bio:(($('#pfBio')||{}).value||''),
+    first:v('pfFirst'),last:v('pfLast'),tagline:v('pfTag'),style:v('pfStyle'),management,managementUrl,bio:(($('#pfBio')||{}).value||''),
     links:typed})});
   if(!d.ok){toast(d.error||'Could not save');return;}
   PROF=null; await loadProf(true);
@@ -1937,7 +1937,8 @@ function render(){
       <div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="/artist.html" style="justify-content:center">View your page ↗</a></div>
 
       <div class="sec"><span class="kick">Who you are</span></div>
-      <div class="field"><label>Name</label><input class="inp" id="pfName" maxlength="60" value="${esc(P.name||'')}"></div>
+      <div class="field"><label>First name or band name</label><input class="inp" id="pfFirst" maxlength="60" value="${esc(P.first||(P.name||'').split(' ')[0]||'')}" placeholder="What the room calls you"></div>
+      <div class="field"><label>Last name <span class="muted">(optional — leave blank for a band)</span></label><input class="inp" id="pfLast" maxlength="60" value="${esc(P.first?P.last||'':(P.name||'').split(' ').slice(1).join(' '))}"></div>
       <div class="field"><label>One line under your name <span class="cnt" id="cTag"></span></label>
         <input class="inp" id="pfTag" maxlength="120" value="${esc(P.tagline||'')}" placeholder="Make my set your set"></div>
       <div class="field"><label>Style</label>
@@ -1978,7 +1979,8 @@ function render(){
       </div></div>
       <div class="list" style="margin-top:14px">${P.media.map((m,i)=>`<div class="row">
         <div class="m"><div class="t">${esc(m.title||m.provider)}</div>
-          <div class="by">${esc({youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'}[m.provider]||m.provider)}</div></div>
+          <div class="by">${esc({youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'}[m.provider]||m.provider)}</div>
+          <label class="by" style="display:flex;align-items:center;gap:6px;margin-top:4px;cursor:pointer"><input type="checkbox" data-act="mhero" data-id="${esc(m.mid)}" ${m.hero?'checked':''}> Top video on your page</label></div>
         <button class="act" data-act="mup" data-id="${esc(m.mid)}" ${i===0?'disabled style="opacity:.3"':''}>↑</button>
         <button class="act" data-act="mdn" data-id="${esc(m.mid)}" ${i===P.media.length-1?'disabled style="opacity:.3"':''}>↓</button>
         <button class="act warn" data-act="mrm" data-id="${esc(m.mid)}">✕</button>
@@ -2945,6 +2947,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='mup') media('mediaMove',id,'up');
   if(b.dataset.act==='mdn') media('mediaMove',id,'down');
   if(b.dataset.act==='mrm') media('mediaRemove',id);
+  if(b.dataset.act==='mhero') media('mediaHero',id);
   if(b.dataset.act==='rmmail') removeTeam(id);
   if(b.dataset.act==='photoclear'){ e.preventDefault(); clearPhoto(id); }
   if(b.dataset.act==='promotoggle') togglePromo(id);

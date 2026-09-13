@@ -45,6 +45,12 @@ export const defaultProfile = () => ({
   v: 1,
   artistId: null,
   name: '',
+  /* THE NAME IN TWO PARTS (the founder, 2026-09-13): `first` is a first name OR a
+     band name — every "Support <First>" and "Watch more from <First>" on the site
+     reads it — and `last` is optional. `name` stays the one field every page
+     renders; it is rebuilt from the two on every save that carries them. */
+  first: '',
+  last: '',
   tagline: '',
   style: '',              // directory filter/tag only; not rendered on the public profile
   management: '',
@@ -95,7 +101,9 @@ const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().s
 export function normProfile(p) {
   const d = defaultProfile();
   const out = { ...d, ...(p || {}) };
-  out.name = clean(out.name, 60);
+  out.first = clean(out.first, 60);
+  out.last = clean(out.last, 60);
+  out.name = out.first ? [out.first, out.last].filter(Boolean).join(' ').slice(0, 60) : clean(out.name, 60);
   out.tagline = clean(out.tagline, 120);
   out.style = clean(out.style, 60);
   out.management = clean(out.management, 120);
@@ -124,8 +132,13 @@ export function normProfile(p) {
   // it claims to be — the stored record is not trusted on read either
   out.media = (Array.isArray(out.media) ? out.media : [])
     .filter((m) => m && typeof m === 'object' && embedSrc(m))
-    .map((m) => ({ ...m, title: clean(m.title, 120), thumb: String(m.thumb || '').slice(0, 300) }))
+    .map((m) => ({ ...m, title: clean(m.title, 120), thumb: String(m.thumb || '').slice(0, 300), hero: !!m.hero }))
     .slice(0, 24);
+  /* One hero at most — the one the artist ticked — and it leads the list, so every
+     reader that takes media[0] as the top video agrees with the tick. */
+  const hi = out.media.findIndex((m) => m.hero);
+  out.media.forEach((m, i) => { m.hero = i === hi; });
+  if (hi > 0) out.media.unshift(out.media.splice(hi, 1)[0]);
   out.merch = normMerch(out.merch);
   return out;
 }
@@ -156,10 +169,14 @@ export function shapeMedia(m) {
   const src = embedSrc(m);
   if (!src) return null;
   return {
-    mid: m.mid, provider: m.provider, title: m.title || '',
+    mid: m.mid, provider: m.provider, title: m.title || '', hero: !!m.hero,
     thumb: m.thumb || (m.provider === 'youtube' && m.id ? `https://i.ytimg.com/vi/${encodeURIComponent(m.id)}/hqdefault.jpg` : ''),
     thumbFallback: m.provider === 'youtube' && m.id ? `https://img.youtube.com/vi/${encodeURIComponent(m.id)}/0.jpg` : '',
     src, href: linkOut(m), ...embedShape(m),
   };
 }
+/* The word the site uses for the artist in a sentence: the band name or first name
+   they chose, else the first word of whatever name there is. `p` may be a profile
+   or a registry row — both carry `first` and `name`. */
+export const firstOf = (p, fb = '') => (p && (String(p.first || '').trim() || String(p.name || '').trim().split(' ')[0])) || fb;
 export { parseMedia };

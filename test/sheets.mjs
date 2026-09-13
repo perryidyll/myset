@@ -461,6 +461,23 @@ eq('a valid management website survives profile normalization',
 eq('an unsafe management website is discarded',
    normProfile({ managementUrl: 'javascript:alert(1)' }).managementUrl, '');
 
+/* THE NAME IN TWO PARTS (decision 0062): a first name or a band name, and an
+   optional last name; `name` is rebuilt from them, and a profile saved before the
+   split keeps the name it had. */
+const { firstOf } = await import('../netlify/functions/_profile.mjs');
+eq('first + last make the name', normProfile({ first: 'Perry', last: 'Idyll' }).name, 'Perry Idyll');
+eq('a band has no last name and keeps its whole name', normProfile({ first: 'The Weekend Warriors', last: '' }).name, 'The Weekend Warriors');
+eq('a profile saved before the split keeps its name', normProfile({ name: 'Perry Idyll' }).name, 'Perry Idyll');
+eq('the word for a band is the band name', firstOf({ first: 'The Weekend Warriors', name: 'The Weekend Warriors' }), 'The Weekend Warriors');
+eq('the word for an artist without the split is the first word', firstOf({ name: 'Perry Idyll' }), 'Perry');
+eq('and nobody at all is the fallback', firstOf(null, 'the artist'), 'the artist');
+/* THE TOP VIDEO: one hero at most, and it leads the list. */
+const yt = (id, hero) => ({ mid: 'm' + id, provider: 'youtube', type: 'video', id: 'v' + id, hero });
+const pm = normProfile({ media: [yt(1), yt(2, true), yt(3, true)] }).media;
+eq('the first ticked one is the hero', pm.map((m) => m.hero), [true, false, false]);
+eq('and it moves to the front', pm.map((m) => m.mid), ['m2', 'm1', 'm3']);
+eq('no tick, no hero, order kept', normProfile({ media: [yt(1), yt(2)] }).media.map((m) => m.hero), [false, false]);
+
 /* ---------- the nightly job is a public URL ---------- */
 console.log('\nTHE CRON IS REACHABLE OVER HTTP, SO IT RATE-LIMITS ITSELF');
 /* Every file in netlify/functions is reachable at /.netlify/functions/<name>

@@ -133,7 +133,7 @@ export function buildBoard({ aid, show, fans, flags, at = Date.now() }) {
        know whether the board it is holding is older than its own last vote — which,
        served from cache, it can be for a few seconds. */
     at,
-    artistId: aid, artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime,
+    artistId: aid, artist: show.artist, artistFirst: show.artistFirst || '', venue: show.venue, city: show.city, showTime: show.showTime,
     status: show.status, windowOpen: !!show.windowOpen,
     /* WHEN THE NIGHT ENDED, server clock, only while it is ended. The voting page
        says "That's all — see you next time" for three hours after a show and then

@@ -272,6 +272,22 @@ a.pc:active{transform:scale(.97)}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .media .meta .p{font-size:12px;color:var(--faint);font-weight:500;flex:0 0 auto}
 .media .meta a{font-size:13px;color:var(--accent-ink);font-weight:600;flex:0 0 auto}
+/* WATCH MORE (the founder, 2026-09-13): with more than three videos the ticked (or
+   first) one is the hero, drawn as the full card above, and the rest are small
+   cards in a strip that drifts like the proof strip. A tap on one lifts it into the
+   hero slot and starts it. */
+.reel{display:flex;gap:10px;overflow-x:auto;padding:0 18px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.reel::-webkit-scrollbar{display:none}
+.reel .rc{flex:0 0 200px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden;cursor:pointer;
+  transition:transform .22s var(--spring)}
+.reel .rc:active{transform:scale(.97)}
+.reel .rc .th{position:relative;aspect-ratio:16/9;background:var(--bg-2);line-height:0}
+.reel .rc .th img{width:100%;height:100%;object-fit:cover;display:block}
+.reel .rc .th .noart{display:flex;align-items:flex-end;width:100%;height:100%;background:var(--grad);color:#fff;font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:10px 12px;line-height:1.3;opacity:.92}
+.reel .rc .th .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.94);display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.reel .rc .th .play svg{width:16px;height:16px;fill:#111;margin-left:2px}
+.reel .rc .t{font-size:13.5px;font-weight:600;letter-spacing:-.01em;line-height:1.3;padding:10px 12px 11px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fineprint{padding:4px 22px 0;font-size:12.5px;color:var(--faint);line-height:1.45}
 .gigs{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
 /* EVERYTHING ON A ROW IS CENTRED (the founder, 2026-09-12): the columns sit on
@@ -496,7 +512,7 @@ async function headCount(){
    keep their own frame handle and resume timer. dir is +1 for right-to-left (the
    content moves left, as the proof strip always has) and -1 for left-to-right. */
 const DRIFT={};
-function startProof(){ drift('proof',1); drift('links',-1); }
+function startProof(){ drift('proof',1); drift('links',-1); drift('reel',1); }
 function drift(id,dir){
   const H=DRIFT[id]||(DRIFT[id]={PT:null,PR_:null});
   cancelAnimationFrame(H.PT); clearTimeout(H.PR_);
@@ -536,6 +552,43 @@ function drift(id,dir){
     last=t;
   };
   H.PT=requestAnimationFrame(step);
+}
+/* A second copy of a card for a drifting strip: out of the tab order and hidden from
+   a screen reader, which reads one set. */
+const ghost=c=>c.replace(/^<a /,'<a tabindex="-1" aria-hidden="true" ').replace(/^<div /,'<div aria-hidden="true" ');
+/* The band name or first name the artist chose (decision 0062), else the first word. */
+const firstName=()=>(P&&String(P.first||'').trim())||String(P&&P.name||'').split(' ')[0]||'the artist';
+/* One media item as the full card: a poster with a play button, the widget arrives
+   on tap (see the click handler). The facade is just a poster — the widget takes its
+   real height on load, so a 450px Apple album card doesn't sit there as an empty
+   slab first. */
+function mediaCard(m){
+  const shape=m.ratio?`r${m.ratio}`:'';
+  const style=m.height?`height:${Math.min(m.height,168)}px`:'';
+  const art=m.thumb
+    ? `<img src="${esc(m.thumb)}" ${m.thumbFallback?`data-fallback="${esc(m.thumbFallback)}" onerror="if(this.src!==this.dataset.fallback)this.src=this.dataset.fallback"`:''} alt="" loading="lazy">`
+    : `<span class="noart">${esc(PROV[m.provider]||'Play')}</span>`;
+  return `<div class="media rise" data-mid="${esc(m.mid)}">
+    <button class="facade ${shape}" style="${shape?'':style}" data-mid="${esc(m.mid)}"
+      aria-label="Play ${esc(m.title||PROV[m.provider]||'media')}">
+      ${art}<span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+    </button>
+    <div class="meta">
+      <span class="t">${esc(m.title||PROV[m.provider])}</span>
+      <span class="p">${esc(PROV[m.provider]||'')}</span>
+      ${m.href?`<a href="${esc(m.href)}" target="_blank" rel="noopener noreferrer">Open ↗</a>`:''}
+    </div>
+  </div>`;
+}
+/* The same item as a small card in the "Watch more" strip. */
+function reelCard(m){
+  const art=m.thumb
+    ? `<img src="${esc(m.thumb)}" ${m.thumbFallback?`data-fallback="${esc(m.thumbFallback)}" onerror="if(this.src!==this.dataset.fallback)this.src=this.dataset.fallback"`:''} alt="" loading="lazy">`
+    : `<span class="noart">${esc(PROV[m.provider]||'Play')}</span>`;
+  return `<div class="rc" role="button" tabindex="0" data-reel="${esc(m.mid)}" aria-label="Watch ${esc(m.title||PROV[m.provider]||'media')}">
+    <div class="th">${art}<span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></div>
+    <div class="t">${esc(m.title||PROV[m.provider])}</div>
+  </div>`;
 }
 /* When a fan said it, for the card: today, yesterday, days, then the month. */
 const agoWord=ms=>{const d=(Date.now()-Number(ms))/86400000; if(!(Number(ms)>0)||isNaN(d))return '';
@@ -757,7 +810,6 @@ function render(){
   /* The set is drawn twice so the marquee (startProof) can wrap without a seam. The
      copies are hidden from screen readers and skipped by the tab key; a phone that
      asked for less motion gets one set, because nothing will drift. */
-  const ghost=c=>c.replace(/^<a /,'<a tabindex="-1" aria-hidden="true" ').replace(/^<div /,'<div aria-hidden="true" ');
   const twice=cards.length>=2&&!matchMedia('(prefers-reduced-motion:reduce)').matches;
   if(cards.length) h+=`<div class="proof" id="proof">${cards.join('')}${twice?cards.map(ghost).join(''):''}</div>`;
 
@@ -828,26 +880,18 @@ function render(){
 
   if((P.media||[]).length){
     h+=`<div class="sect">Watch &amp; listen</div>`;
-    h+=(P.media||[]).map(m=>{
-      const shape=m.ratio?`r${m.ratio}`:'';
-      // the facade is just a poster — the widget takes its real height on load,
-      // so a 450px Apple album card doesn't sit there as an empty slab first
-      const style=m.height?`height:${Math.min(m.height,168)}px`:'';
-      const art=m.thumb
-        ? `<img src="${esc(m.thumb)}" ${m.thumbFallback?`data-fallback="${esc(m.thumbFallback)}" onerror="if(this.src!==this.dataset.fallback)this.src=this.dataset.fallback"`:''} alt="" loading="lazy">`
-        : `<span class="noart">${esc(PROV[m.provider]||'Play')}</span>`;
-      return `<div class="media rise" data-mid="${esc(m.mid)}">
-        <button class="facade ${shape}" style="${shape?'':style}" data-mid="${esc(m.mid)}"
-          aria-label="Play ${esc(m.title||PROV[m.provider]||'media')}">
-          ${art}<span class="play"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
-        </button>
-        <div class="meta">
-          <span class="t">${esc(m.title||PROV[m.provider])}</span>
-          <span class="p">${esc(PROV[m.provider]||'')}</span>
-          ${m.href?`<a href="${esc(m.href)}" target="_blank" rel="noopener noreferrer">Open ↗</a>`:''}
-        </div>
-      </div>`;
-    }).join('');
+    const media=P.media||[];
+    /* Up to three: every card in full, as always. More: the hero (the one ticked in
+       the Studio — the server puts it first — else the first) in full, then a
+       drifting strip of the rest under "Watch more from <First>". */
+    if(media.length>3){
+      const hero=media.find(m=>m.hero)||media[0];
+      const rest=media.filter(m=>m!==hero);
+      h+=`<div id="hero">${mediaCard(hero)}</div>`;
+      const cards=rest.map(reelCard);
+      h+=`<div class="sect">Watch more from ${esc(firstName())}</div>
+        <div class="reel" id="reel">${cards.join('')}${cards.length>=2&&!matchMedia('(prefers-reduced-motion:reduce)').matches?cards.map(ghost).join(''):''}</div>`;
+    }else h+=media.map(mediaCard).join('');
     if((P.media||[]).some(m=>m.provider==='spotify'||m.provider==='applemusic'))
       h+=`<p class="fineprint">Spotify and Apple Music play a short preview unless you’re already signed in on this device — tap “Open ↗” for the full track.</p>`;
   }
@@ -880,7 +924,26 @@ document.addEventListener('click',e=>{
   if(sm){ const w=document.getElementById('moreWrap');
     const open=!w.hidden; w.hidden=open;
     sm.textContent=open?`See ${w.children.length} more ▾`:'Show fewer ▴'; return; }
+  const rc=e.target.closest('.rc[data-reel]');
+  if(rc){
+    const mid=rc.getAttribute('data-reel'); const m=(P&&P.media||[]).find(x=>x.mid===mid); const slot=document.getElementById('hero');
+    if(!m||!slot)return;
+    const was=(P.media.find(x=>x.hero)||P.media[0]);
+    slot.innerHTML=mediaCard(m);
+    /* The one that was the hero goes back into the strip where the tapped one was —
+       every real card and its ghost — so the strip still holds everything but the hero. */
+    if(was&&was!==m) document.querySelectorAll(`.rc[data-reel="${CSS.escape(mid)}"]`).forEach(x=>{const g=x.getAttribute('aria-hidden')==='true'; x.outerHTML=g?ghost(reelCard(was)):reelCard(was);});
+    P.media.forEach(x=>{x.hero=x===m;});
+    slot.scrollIntoView({behavior:'smooth',block:'center'});
+    playMedia(slot.querySelector('.facade'),true);
+    return;
+  }
   const b=e.target.closest('.facade'); if(!b)return;
+  playMedia(b,false);
+});
+/* A tap on a poster swaps in the real player. `auto` (a card lifted from the strip)
+   asks YouTube to start at once — the tap was the gesture. */
+function playMedia(b,auto){
   const wrap=b.closest('.media'); const mid=b.getAttribute('data-mid');
   const m=(P&&P.media||[]).find(x=>x.mid===mid); if(!m)return;
 
@@ -888,7 +951,7 @@ document.addEventListener('click',e=>{
   if(m.ratio){ box.style.aspectRatio=(m.ratio==='9x16'?'9 / 16':'16 / 9');
                box.style.width='100%'; if(m.ratio==='9x16'){box.style.maxWidth='405px';box.style.margin='0 auto';} }
   const f=document.createElement('iframe');
-  f.setAttribute('src',m.src);
+  f.setAttribute('src',auto&&m.provider==='youtube'?m.src+(m.src.includes('?')?'&':'?')+'autoplay=1':m.src);
   f.setAttribute('title',(m.title||PROV[m.provider]||'Media')+' — '+(PROV[m.provider]||'player'));
   f.setAttribute('loading','lazy');
   f.setAttribute('allowfullscreen','');
@@ -908,7 +971,7 @@ document.addEventListener('click',e=>{
   }
   if(m.ratio){ box.appendChild(f); b.replaceWith(box); } else { b.replaceWith(f); }
   wrap.classList.add('playing');
-});
+}
 
 boot();
 </script>

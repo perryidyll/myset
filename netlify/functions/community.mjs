@@ -1,7 +1,7 @@
 import { guard } from './_errlog.mjs';
 import { json, bad, publicArtist, getShow, cleanFanId, clientIp, requireArtist, DEFAULT_ARTIST } from './_lib.mjs';
 import { cleanSlug } from './_auth.mjs';
-import { getProfile } from './_profile.mjs';
+import { getProfile, firstOf } from './_profile.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
 import { readHistIndex } from './_history.mjs';
 import { readEvents, occurrencesFor } from './_events.mjs';
@@ -69,7 +69,7 @@ async function resolveOwner(req) {
   if (!aid) return null;
   const [{ artist: who, plan, limits }, p, show] = await Promise.all([planForArtist(aid), getProfile(aid), getShow(aid)]);
   return {
-    kind: 'artist', id: aid, owner: aid, slug: (who && who.slug) || '', name: p.name || (who && who.name) || '',
+    kind: 'artist', id: aid, owner: aid, slug: (who && who.slug) || '', name: p.name || (who && who.name) || '', first: firstOf(p, firstOf(who)),
     avatar: p.avatar || p.photo || '', verified: !!(who && who.verified) && plan !== 'free',
     /* Merch shows only while the plan has it (never deleted when a plan lapses — 0s). */
     merch: merchAllowed(aid, limits) ? p.merch.filter((m) => m.on) : [],
