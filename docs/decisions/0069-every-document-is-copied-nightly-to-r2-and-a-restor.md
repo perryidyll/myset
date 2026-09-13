@@ -76,6 +76,23 @@ over; each worker handles at least one key a ring, so a pass always moves; the
 budget is 5.5 s of the 10. The suite drives a pass to completion with a budget
 of 0 ms and counts every key copied exactly once across the rings.
 
+## The second ring, and what it found (18:00Z)
+
+After the fix the ring ran in a second and finished the pass: `cursor 3 of 3,
+copied 0, failed 69`. R2 answered 403 to every PUT. It was not the mirror: the
+error-log document `err_2026-09-11T18` (in the laptop backup) holds `r2.put
+403` from the first clip upload after the R2 deploy, and both live clips
+answer `200 video/mp4` from Blobs rather than a `302` — every clip since
+2026-09-11 had silently taken the Blobs fallback, exactly as `_video.mjs`
+promised it would, and nobody read the error log. With the same credentials a
+HEAD answers 404 (the signature is accepted) while PUT and DELETE answer 403:
+**the token can read the bucket but not write it.** That is a permission in the
+Cloudflare dashboard (*Object Read & Write* on the bucket), the founder's to
+change; not code, and never a value this session handles. Until then the mirror
+has a bell but no bucket. So the ring now names the first refusal in its log
+line and a pass that failed comes back in an hour, not a day (`RETRY_GAP_MS`),
+and the moment the token can write, the next ring copies everything — no deploy.
+
 ## How it was verified
 
 `test/foundations.mjs`: a pass copies every key an owner holds under
