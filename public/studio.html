@@ -183,7 +183,20 @@ a{color:inherit;text-decoration:none}
 .setlist-tools .big{flex:1;min-width:0;min-height:56px;margin:0;padding:17px 12px;justify-content:center;text-align:center}
 .liveactions{display:flex;gap:10px;align-items:stretch}
 .liveactions .big{flex:1;margin:0;min-width:0}
-.liveactions .endnow{justify-content:center;background:var(--surface);color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
+/* End current song: a light true-red fill with red text — the same red as the
+   artist page's ENTER NOW TO VOTE button, tinted, not the brand gradient (the
+   founder, 2026-09-13). A song has to be ended before another can start. */
+.liveactions .endnow{justify-content:center;background:rgba(255,59,48,.14);color:#FF3B30;box-shadow:inset 0 0 0 1.5px rgba(255,59,48,.55)}
+/* "End current song?" — the small window that opens when a song is tapped to
+   start while another is still playing (UX-042). Centred, not a bottom sheet. */
+#ask{position:fixed;inset:0;z-index:66;display:none;place-items:center;padding:24px;background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
+#ask.on{display:grid}
+#ask .box{width:100%;max-width:340px;background:var(--surface);border-radius:var(--r-lg);padding:22px 20px 12px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+#ask h3{font-size:21px;font-weight:700;letter-spacing:-.03em;margin:0 0 4px;text-align:center}
+#ask .lede{font-size:14px;color:var(--muted);margin:0 0 16px;text-align:center}
+#ask .big{justify-content:center;margin-bottom:10px}
+#ask .big.yes{background:#FF3B30;color:#fff;box-shadow:0 6px 20px rgba(255,59,48,.3)}
+#ask .big.keep{background:var(--surface);color:var(--accent-2);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
 @media(max-width:430px){.liveactions{flex-direction:column}}
 .wrap{padding:0 18px}
 
@@ -700,11 +713,15 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <div id="firstrun" aria-live="polite"></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
+<div id="ask" role="dialog" aria-modal="true" aria-labelledby="askTitle"><div class="box">
+  <h3 id="askTitle">End current song?</h3><p class="lede" id="askLede"></p>
+  <button class="big yes" id="askYes">Yes, end it</button>
+  <button class="big keep" onclick="closeAsk()">Keep playing</button></div></div>
 <div class="toast" id="toast"></div>
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=c0796b39"></script>
+<script src="/studio.js?v=93bb664e"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

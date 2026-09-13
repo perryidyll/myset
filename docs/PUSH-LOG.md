@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 23:04 — b33e66c — wt5@ux/end-before-start (0 files since origin/main)
+**tl;dr:** The Studio refuses to start a song while one is playing: ▶ opens a small End current song? window (red Yes, end it / pink-orange Keep playing); End current song is a light-red fill with red text (UX-042, decision 0063)
+**Other sessions:** studio.js: every ▶ must go through startSong(action,extra) — test/darkroom.mjs fails on a raw act('play'…). No server change: Yes, end it sends the same play. Decision 0063 took the next number on origin/main — the unpushed business-dashboard (0063) and merch (0064) records on other branches must renumber before they land.
+
 ### 2026-09-13 22:21 — 67199bf — wt4@ui/save-top (0 files since origin/main)
 **tl;dr:** A second Save profile button at the top of the Profile tab; the voting page now gets the band/first name (the founder's show record names the artist itself, so the registry sync alone never reached the board)
 **Other sessions:** admin.mjs profileSet also mutateShow()s artist + artistFirst on change. If a show record carries its own artist, getShow never reads the registry — remember that for any future field that must reach the board. Investigation of tonight's vote in docs/sessions/2026-09-13-peaceful-easy-feeling.md: no bug, a play spends the vote.

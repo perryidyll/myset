@@ -137,6 +137,17 @@ const read = (f) => src(new URL('../public/' + f, import.meta.url));
      'the button must be inside the status===live branch');
   ok('and it asks the server for it', /act\('countdown'\)/.test(studio));
 
+  // UX-042: the current song has to be ended before another can start.
+  ok('every ▶ in the Studio goes through startSong, never straight to play',
+     !/act\('play(Top)?'/.test(studio) && /startSong\('playTop'\)/.test(studio) && /startSong\('play',\{song:/.test(studio));
+  ok('startSong opens "End current song?" while a song is playing, with Yes, end it and Keep playing',
+     /function startSong\(/.test(studio) && /End current song\?/.test(studio)
+       && /class="big yes" id="askYes">Yes, end it</.test(studio) && /class="big keep" onclick="closeAsk\(\)">Keep playing</.test(studio));
+  ok('End current song is a light red fill with red text, the window\u2019s Yes is red, Keep playing is pink-orange bordered',
+     /\.liveactions \.endnow\{[^}]*background:rgba\(255,59,48,[^}]*color:#FF3B30/.test(studio)
+       && /#ask \.big\.yes\{background:#FF3B30;color:#fff/.test(studio)
+       && /#ask \.big\.keep\{[^}]*color:var\(--accent-2\);box-shadow:inset 0 0 0 1\.5px var\(--accent-2\)/.test(studio));
+
   const vote = read('vote.html');
   ok('the audience page has the box', /id="lastcall"/.test(vote) && /id="lcN"/.test(vote));
   ok('and reads the milliseconds left, not an end time',

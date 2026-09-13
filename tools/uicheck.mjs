@@ -359,6 +359,13 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
     studioQueueShell&&getComputedStyle(studioQueueShell).overflow);
   ok('a voted unplayed song offers decline + refund', row&&/Decline \+ refund votes/.test(row.innerText));
   ok('end current song sits beside start top voted', !!document.querySelector('.liveactions .bigplay')&&!!document.querySelector('.liveactions .endnow'));
+  ok('end current song is filled light red with red text', /rgba\(255, 59, 48, 0\.14\)/.test(getComputedStyle(document.querySelector('.liveactions .endnow')).backgroundColor)&&getComputedStyle(document.querySelector('.liveactions .endnow')).color==='rgb(255, 59, 48)', getComputedStyle(document.querySelector('.liveactions .endnow')).backgroundColor);
+  { const b=document.querySelector('.queue-window .act'); if(b) b.click();
+    const ask=document.getElementById('ask');
+    ok('tapping ▶ while a song plays opens End current song? instead of starting it', ask&&ask.classList.contains('on')&&/End current song\?/.test(ask.innerText)&&/Yes, end it/.test(ask.innerText)&&/Keep playing/.test(ask.innerText), ask&&ask.innerText);
+    ok('Yes, end it is true red, Keep playing is pink-orange bordered', ask&&getComputedStyle(ask.querySelector('.yes')).backgroundColor==='rgb(255, 59, 48)'&&getComputedStyle(ask.querySelector('.keep')).color==='rgb(255, 86, 80)');
+    const kp=ask&&ask.querySelector('.keep'); if(kp) kp.click();
+    ok('Keep playing closes the window and nothing started', ask&&!ask.classList.contains('on')&&!!document.querySelector('.liveactions .endnow')); }
   ok('the audience stats no longer look like a vote allowance', /2 voting/.test(document.querySelector('.stats').innerText)&&/2 in room · 1 network/.test(document.querySelector('.stats').innerText));
   const requestRow=document.querySelector('.askpanel .arow');
   ok('the artist sees the held dollar offer and its paid-vote value',

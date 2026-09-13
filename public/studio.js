@@ -431,6 +431,24 @@ async function act(action,extra={}){
     if(d.note) toast(d.note);
   } finally { WRITING=false; }
 }
+/* THE RULE (UX-042, the founder 2026-09-13): the current song has to be ended
+   before another can be started. Every ▶ comes through here; while a song is
+   playing it opens the small "End current song?" window instead of starting.
+   "Yes, end it" sends the same play — the server files the playing song as
+   played and starts the new one in one write, exactly what ■ End + ▶ would do. */
+let ASK_GO=null;
+function startSong(action,extra={}){
+  const now=D&&D.songs&&D.songs.find(x=>x.now);
+  if(!now||(action==='play'&&extra.song===now.id)) return act(action,extra);
+  ASK_GO=()=>act(action,extra);
+  const l=$('#askLede'); if(l) l.textContent=`${now.title} is still playing.`;
+  const a=$('#ask'); if(a) a.classList.add('on');
+}
+function closeAsk(){ ASK_GO=null; const a=$('#ask'); if(a) a.classList.remove('on'); }
+document.addEventListener('click',e=>{
+  if(e.target&&e.target.id==='askYes'){ const go=ASK_GO; closeAsk(); if(go) go(); }
+  else if(e.target&&e.target.id==='ask') closeAsk();      // a tap on the dim keeps playing
+});
 let GATE_EMAIL='';
 function gate(err,mode){
   bootDone();
@@ -1656,7 +1674,7 @@ function render(){
     ${s.startedBy==='schedule'?`<p class="muted" style="font-size:12px;padding:6px 20px 0">Started by itself for the gig on your calendar. It ends by itself three hours after that gig’s end time, unless you end it first.</p>`:''}
 
     <div class="wrap liveactions" style="padding-top:14px;padding-bottom:10px">
-      ${top?`<button class="big bigplay" onclick="act('playTop')">
+      ${top?`<button class="big bigplay" onclick="startSong('playTop')">
         <span>▶</span><span style="flex:1;min-width:0">Start top voted — ${esc(top.title)} (${top.votes} votes total) ${paidPill(top)}</span></button>`:''}
       ${now?`<button class="big endnow" onclick="act('endSong')">■ End current song</button>`:''}
     </div>
@@ -1666,7 +1684,7 @@ function render(){
       <div class="m"><div class="t">${esc(x.title)}</div>${x.artist?`<div class="by">${esc(x.artist)}</div>`:''}
         <div class="songvotes"><span class="mono">${x.votes} votes total</span>${paidPill(x)}</div>
         ${x.votes?`<button class="refundlink" onclick="declineSong('${x.id}')">Decline + refund votes</button>`:''}</div>
-      <button class="act" onclick="act('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div></div>
+      <button class="act" onclick="startSong('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div></div>
     <div class="wrap" style="padding-top:14px;padding-bottom:2px">
       <button class="big alt orange-outline" onclick="openEndShow()" style="justify-content:center">■ End the show</button>
     </div>
