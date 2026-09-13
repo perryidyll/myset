@@ -24,6 +24,7 @@ check('public/studio.html', [
   ["render: tab 'gigs'",     /if\(TAB==='gigs'\)\{\n/g],
   ["render: tab 'money'",    /if\(TAB==='money'\)\{\n/g],
   ["render: tab 'profile'",  /if\(TAB==='profile'\)\{\n/g],
+  ["render: tab 'merch'",    /if\(TAB==='merch'\)\{\n/g],      // the Merch store is its own screen again (2026-09-13)
   ["render: tab 'settings'", /if\(TAB==='settings'\)\{\n/g],
   ['function render',   /\nfunction render\(\)\{/g],
   // the Studio's tabs moved to a fixed bottom bar on 2026-09-12: no sticky offset to measure, so fitTabs is gone

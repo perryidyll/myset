@@ -27,6 +27,7 @@ const vadmin = (await import('../netlify/functions/venueadmin.mjs')).default;
 const webhookFn = (await import('../netlify/functions/webhook.mjs')).default;
 const commFn = (await import('../netlify/functions/community.mjs')).default;
 const payFn  = (await import('../netlify/functions/pay.mjs')).default;
+const confirmFn = (await import('../netlify/functions/confirm.mjs')).default;
 const imgFn  = (await import('../netlify/functions/img.mjs')).default;
 const { createArtist, signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
 const { createVenue, signVenueToken, readVenues, vRevOf, mutateVenues, getVenueProfile } = await import('../netlify/functions/_venues.mjs');
@@ -212,6 +213,59 @@ eq('with the venue plan’s fee minus half of Stripe’s (0 → no fee field at 
 eq('which is 2% minus half of (2.9% + 30¢)', expectFee, Math.max(0, Math.floor(1200 * 0.02) - Math.round(stripeFeeEstimate(1200) / 2)));
 eq('artists are not split (their table says so)', feeCents(1200, 'plus'), Math.floor(1200 * 0.10));
 ok('and returns to the venue’s community page', /\/v\/.*\/community\?paid=/.test(created.args.success_url));
+r = await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'merch', item: cap.id, qty: 1, attempt: 'v1s', from: 'shop' });
+ok('bought from the shop, it opens', r.ok, r);
+ok('and returns to the venue’s shop', /\/v\/.*\/shop\?paid=/.test(lastCall('checkout.sessions.create').args.success_url), lastCall('checkout.sessions.create').args.success_url);
+ok('never to a caller’s url', !/evil/.test((await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'merch', item: cap.id, attempt: 'v1e', from: 'https://evil.example/' }), lastCall('checkout.sessions.create').args.success_url)));
+
+console.log('\nPOSTAGE IS NOT MERCH MONEY  the venue’s fee is taken on the line, never the stamp');
+/* $50 so the 2% is big enough to survive the half-of-Stripe subtraction (12c): a
+   fee wrongly computed on line-plus-postage would read 16c and the test goes red. */
+r = await VS(TV, 'merchSave', { item: { title: 'Bar hoodie', cents: 5000, ship: 'ship', post: 600, variants: [{ label: 'M' }, { label: 'L', out: true }] } });
+ok('a posted item with a postage figure and sizes saves', r.ok, r);
+const hoodie = r.venue.merch.find((m) => m.title === 'Bar hoodie');
+eq('and the venue record keeps them', [hoodie.post, hoodie.variants.map((v) => v.label + (v.out ? '!' : ''))], [600, ['M', 'L!']]);
+r = await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'merch', item: hoodie.id, attempt: 'v2' });
+eq('no size sent is a 400', [r.status, r.error], [400, 'Pick a size']);
+eq('the sold-out size is a 409', (await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'merch', item: hoodie.id, variant: 'L', attempt: 'v3' })).status, 409);
+r = await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'merch', item: hoodie.id, variant: 'm', attempt: 'v4' });
+ok('the size that is there opens checkout', r.ok, r);
+created = lastCall('checkout.sessions.create');
+const withPost = created.args;
+eq('the line names the size', /Bar hoodie \(M\)/.test(withPost.line_items[0].price_data.product_data.name), true);
+eq('postage rides as a fixed Stripe rate', withPost.shipping_options[0].shipping_rate_data.fixed_amount.amount, 600);
+eq('with the address asked for', !!withPost.shipping_address_collection, true);
+eq('and the metadata says both', [withPost.metadata.variant, withPost.metadata.post], ['M', '600']);
+const feeOnLine = feeCents(5000, 'pro', 'venue');
+ok('the fee is the plan’s cut of the LINE', feeOnLine > 0 && withPost.payment_intent_data.application_fee_amount === feeOnLine, { got: withPost.payment_intent_data.application_fee_amount, want: feeOnLine });
+ok('not of line plus postage', withPost.payment_intent_data.application_fee_amount !== feeCents(5600, 'pro', 'venue'));
+eq('and the payment intent carries the base the fee was taken on, so the later split uses the same line', withPost.payment_intent_data.metadata.base, String(hoodie.cents * 1));
+await VS(TV, 'merchSave', { item: { id: hoodie.id, title: 'Bar hoodie', cents: 5000, ship: 'ship', post: 0, variants: [{ label: 'M' }] } });
+await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'merch', item: hoodie.id, variant: 'M', attempt: 'v5' });
+const noPost = lastCall('checkout.sessions.create').args;
+eq('with the postage figure at zero there is no rate', noPost.shipping_options, undefined);
+eq('and the fee is identical', noPost.payment_intent_data.application_fee_amount, withPost.payment_intent_data.application_fee_amount);
+const hoodieSid = [...__stripe.sessions.keys()].filter((id) => __stripe.sessions.get(id).onAccount === acct).slice(-2)[0];
+r = await hit(confirmFn, `https://x/api/confirm?session_id=${hoodieSid}&fan=phone1&v=${bar.slug}`);
+ok('the venue’s return trip redeems it, found on the venue’s account by the ?v= hint', r.ok && r.kind === 'merch', r);
+eq('and the receipt’s order leaves the postage out of the line', r.order && [r.order.cents, r.order.post, r.order.variant, r.order.ship], [5000, 600, 'M', 'ship']);
+ok('with a pickup code even for a posted order — it names the order', /^[A-Z2-9]{4,5}$/.test(r.order && r.order.code), r.order);
+r = await VS(TV, 'orderList');
+ok('the venue’s order list is shaped like the artist’s — a code, never the fan', r.ok && r.orders.length === 1 && r.orders.every((o) => /^[A-Z2-9]{4,5}$/.test(o.code) && !('fan' in o)), r);
+eq('with the size and the postage on the row', [r.orders[0].variant, r.orders[0].post, r.orders[0].amount], ['M', 600, 56]);
+/* THE WEBHOOK LANDS IN THE SAME DOCUMENT. `metadata.artist` is `v_<vid>`, and
+   cleanArtistId strips the underscore — so until 2026-09-13 both delivery paths
+   wrote a venue's order under `meta_v<vid>`, a key nobody reads, and the Venue
+   Studio never saw the sale. cleanOwnerId keeps the prefix on both paths. */
+const lastHoodie = [...__stripe.sessions.keys()].filter((id) => __stripe.sessions.get(id).onAccount === acct).pop();
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+await hit(webhookFn, 'https://x/api/webhook', { type: 'checkout.session.completed', account: acct, data: { object: __stripe.sessions.get(lastHoodie).session } }, null, { 'stripe-signature': 'sig' });
+delete process.env.STRIPE_WEBHOOK_SECRET;
+r = await VS(TV, 'orderList');
+eq('a webhook for a venue session writes the order where the Venue Studio reads it', r.orders.map((o) => o.sid).sort(), [hoodieSid, lastHoodie].sort());
+ok('and never under a mangled owner id', ![...__dump().keys()].some((k) => /^meta_v[a-z]/.test(k)), [...__dump().keys()].filter((k) => k.startsWith('meta_')));
+r = await hit(confirmFn, `https://x/api/confirm?session_id=${lastHoodie}&fan=phone1&v=${bar.slug}`);
+ok('the return trip after the webhook is a replay with the same code', r.ok && r.already === true && r.order && r.order.code === (await VS(TV, 'orderList')).orders.find((o) => o.sid === lastHoodie).code, r);
 r = await VS(TV, 'planGet');
 ok('the venue plan payload carries billing', r.ok && 'billing' in r && r.plan === 'pro', r);
 
@@ -266,6 +320,21 @@ console.log('\nHALF OF STRIPE’S CARD FEE, EXACTLY  (once Stripe knows what it 
     fee_details: [{ type: 'stripe_fee', amount: 6300 }], __account: acct });
   await settleSplit(owner, acct, { id: 'ch_3', amount: 5000, currency: 'usd', balance_transaction: 'txn_3' });
   eq('an unconvertible currency is recorded, not guessed at', (await readMeta(owner)).fees.ch_3.state, 'unconvertible');
+
+  /* POSTAGE. The charge is line plus stamp, but the fee was estimated on the line
+     alone and the payment intent says so (`metadata.base`). The correction must
+     read that base, or every posted order shorts the venue by half the fee on
+     the postage. $50 line, $6 postage, Stripe took 192c in truth. */
+  const lineC = 5000, postC = 600;
+  const charged4 = feeCents(lineC, 'pro', 'venue');
+  __stripe.fees.set('fee_4', { id: 'fee_4', charge: 'ch_4', amount: charged4, amount_refunded: 0 });
+  __stripe.bts.set('txn_4', { id: 'txn_4', currency: 'usd', fee: 192 + charged4,
+    fee_details: [{ type: 'stripe_fee', amount: 192 }], __account: acct });
+  r = await settleSplit(owner, acct, { id: 'ch_4', amount: lineC + postC, currency: 'usd', balance_transaction: 'txn_4',
+    application_fee: 'fee_4', payment_intent: 'pi_4', metadata: { base: String(lineC) } });
+  const give4 = Math.max(0, Math.min(Math.round(192 / 2) - Math.round(stripeFeeEstimate(lineC) / 2), charged4));
+  eq('postage never shrinks the venue’s half: the estimate uses the line, not the charge', r.give, give4);
+  eq('which here is eight cents', give4, 8);
 }
 
 delete process.env.STRIPE_SECRET_KEY;

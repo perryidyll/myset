@@ -91,6 +91,7 @@ node tools/overview.mjs            # regenerate the master overview's numbers
 node tools/overview.mjs --tests    # run the suite and stamp the assertion count
 node tools/sheetcheck.mjs          # bottom-sheet touch behaviour, real touch events
 node tools/uicheck.mjs             # rendered layout in a real browser
+node tools/mock.mjs                # look at every page against a fake API on localhost:8787 — touches nothing live
 python3 tools/prod.py              # read-only health report of the LIVE site
 node --import ./test/register.mjs tools/localhost.mjs   # the whole site on localhost:8950 with the REAL functions on an in-memory store (writes work); open /dev
 ```

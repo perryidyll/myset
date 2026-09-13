@@ -32,11 +32,13 @@ If you are about to violate one, stop and say so rather than working around it.
 ## Money
 
 5b. **Stripe's `success_url` must point at a page that calls `/api/confirm`.**
-   Two do: `/vote.html` (votes and tips) and `/community.html` (merch). Each
-   redeems on the return trip with its own copy of the pending/retry logic — copied
-   on purpose, so the voting page's payment-return path is never touched by shop
-   work. Pointing a session anywhere else takes the money and grants nothing — that
-   shipped once and was caught in review, not by a user.
+   Three do: `/vote.html` (votes and tips), `/community.html` (a tip from that
+   page, and merch sessions minted before 2026-09-13) and `/shop.html` (merch from
+   the shop). Each redeems on the
+   return trip with its own copy of the pending/retry logic — copied on purpose, so
+   the voting page's payment-return path is never touched by shop work. Pointing a
+   session anywhere else takes the money and grants nothing — that shipped once and
+   was caught in review, not by a user.
 
 5c. **A payment must have more than one path to delivery.** The return trip
    through `/vote.html` is not enough — in a bar a buyer locks the screen and
@@ -1402,21 +1404,64 @@ If you are about to violate one, stop and say so rather than working around it.
     writes an ORDER inside the same claim, so a session can never be claimed
     without one — the order is the delivery, `delivered: true`. **No buyer name,
     email or address is stored**: `orderDetail` fetches them from Stripe when the
-    artist opens an order, reading both shipping shapes, and keeps nothing.
+    artist opens an order, reading both shipping shapes, and keeps nothing. A size
+    is bought only as one the record lists (`Pick a size` / `That size is sold out`),
+    a sold-out item is refused, and postage is a fixed Stripe shipping rate on the
+    session — never in the line, so the plan's cut is never taken on a stamp. The
+    order carries a **pickup code**: a lookup key derived from the session id
+    (`pickupCode`, four characters over an alphabet without 0/O/1/I, a fifth on a
+    clash with another open order of the same owner, minted inside the same CAS),
+    never derived from the fan, never a secret and never proof of payment —
+    `orderDone` is the only fulfilment. `metadata.artist` is an OWNER id and is read
+    back through `cleanOwnerId`, which keeps a venue's `v_` prefix: `cleanArtistId`
+    strips the underscore, and for a while every venue order was written under a
+    document its Studio never read.
 
 0cn. **Merch is a Bar Star feature for artists and Pro for venues; removing is never
     gated.** `merchAllowed(aid, limits)` is the one rule (founder included, as with
     pricing); `merchSave` and `merchPhoto` refuse with "Merch on your page is a Bar Star
-    feature — anything you already added stays." A lapsed plan HIDES the rail on
-    the page and keeps the items (0s). A venue item must carry a link — a venue has
-    no payout account, so buying through MySet would put its money in the wrong
-    balance (0r, 0x). `reviews` left `VENUE_NOT_BUILT` the day the feed shipped and
-    is true on both venue rows: what the room reads cannot be Pro-only.
+    feature — anything you already added stays." A lapsed plan removes the items
+    from the community read, so the community page draws no shop card and the shop
+    page shows nothing for sale, while the Studio keeps the items (0s). A venue
+    item needs a link only while card
+    payments are not on: until the venue's Connect account is ready (`pay.ready`)
+    the only place it can sell is elsewhere, because a charge through MySet would
+    put its money in the wrong balance (0r, 0x); once ready, a link-less item sells
+    as a direct charge on the venue's own account. `reviews` left `VENUE_NOT_BUILT`
+    the day the feed shipped and is true on both venue rows: what the room reads
+    cannot be Pro-only.
 
 0co. **A merch picture's slot is the item's own id; a post's photos are
     `<postId>_<n>`.** Two more slot families in `_img.mjs`, by pattern, so a picture
     can never outlive its record by name; deleting the record deletes the bytes.
     `idcheck` matches neither, so the ID photo stays unservable (0bk).
+
+0fo. **The shop's entry card exists only when the community read returns at least
+    one item, and the shop offers Buy only where the server would accept it
+    (`canBuy` and a price at or above `MIN_CENTS`, the floor in `_profile.mjs`) — the
+    same `merchAllowed`/`canTakeMoney` answers, never a local flag. The shop page
+    never constructs a redirect URL; the two pages redeem with their own copies.** `from:'shop'` on `/api/pay` picks a path
+    the server builds from the owner's slug (`/<slug>/shop`, `/v/<slug>/shop`), as
+    `from:'community'` always has (0f8); anything else lands on the community page.
+    A sold-out item (`out`) is listed with its price and no Buy; a size is offered
+    only from the record's `variants`; the sheet's total is the line plus the
+    record's `post`, which is exactly what Stripe's page will ask — so the number
+    on the button is never a surprise on the next page. Both pages write ONE
+    `myset.orders` row shape — `{sid,slug,venue,item,title,qty,variant,ship,cents,post,code,at}`,
+    newest first, capped at 20, rows older than 30 days dropped on write — and
+    `slug`+`venue` together name the owner (an artist's `/x` and a venue's `/v/x`
+    are separate namespaces), so community.html's shop card and shop.html's compact
+    receipt both filter on `o.slug===SLUG && !!o.venue===VENUE`.
+
+0fp. **A request from the shop is a sentence, not a channel.** "Make a request" on the
+    shop page (`action:'wish'` on `/api/community`, `_wishes.mjs`) stores the fan's
+    words, an optional name, when, and — hashed — which device, under
+    `wishes_<owner>`; it stores no email, no handle, no way back to the fan (9g, 0bu),
+    and the Studio's only verb on it is Done/Undo. The limits are inside the CAS
+    (`WISHES_PER_DEVICE_PER_DAY`, a per-network ceiling, `MAX_WISHES` kept), never only
+    on the page (15k); the owner cannot ask their own shop (the community page's rule).
+    The shape both Studios read comes from `shapeWishes()` — newest first, open before
+    done — and never carries the device hash.
 
 0cp. **The schedule reads one document to learn who is due.** `gigsched` is a global
     index rewritten by every calendar write (the `cityindex` pattern, 0i) and
@@ -2090,12 +2135,14 @@ If you are about to violate one, stop and say so rather than working around it.
 0f8. **The tip button is always on the page.** The whole audience dock used to vanish
     when a show ended — the exact minute somebody decides the night was worth
     something. It never hides now: between shows it is the tip alone, full width,
-    because there are no votes left to buy. It is also the first thing under the name
-    on the community page (artist pages only — tipping a venue is not a thing).
+    because there are no votes left to buy. On the community page it sits directly
+    under the shop card, which exists only when there is something to sell; still
+    above the proof and the feed (artist pages only — tipping a venue is not a thing).
     A tip started from the community page posts `from:'community'` so the return trip
-    lands back there; `from` selects between two paths the SERVER builds and is never
-    used as a url, because a caller-supplied redirect is an open redirect however
-    innocent the caller looks.
+    lands back there, and a shirt bought from the shop posts `from:'shop'` (0fo);
+    `from` selects between paths the SERVER builds and is never used as a url,
+    because a caller-supplied redirect is an open redirect however innocent the
+    caller looks.
 
 0f9. **Find artists contains only effectively verified artists.** The public badge is
     the definition: a registry verification flag plus a current Plus or Pro plan.

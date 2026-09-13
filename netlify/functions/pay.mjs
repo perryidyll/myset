@@ -5,7 +5,7 @@ import { json, bad, cleanFanId, getShow, publicArtist, sha,
 import { canTakeMoney } from './_pay.mjs';
 import { readConnect, connectUsable, feeCents, scope } from './_connect.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
-import { getProfile } from './_profile.mjs';
+import { getProfile, MIN_CENTS } from './_profile.mjs';
 import { PAYOUT_COUNTRIES } from './_connect.mjs';
 
 /* Where a shipped item can go. Stripe needs an explicit list; this is the payout
@@ -15,9 +15,41 @@ import { PAYOUT_COUNTRIES } from './_connect.mjs';
 const SHIP_COUNTRIES = [...new Set([...PAYOUT_COUNTRIES, 'AT','BE','CH','CZ','GR','HU','PL','RO','SK','SI',
   'HR','BG','LT','LV','EE','LU','IS','IL','AE','SA','ZA','KR','TW','HK','PH','ID','VN','IN','AR','CL','CO','PE'])];
 
-/** What this checkout is worth, in cents — the base the platform fee comes off. */
+/** What this checkout is worth, in cents — the base the platform fee comes off.
+ *  The LINE only: postage is a shipping rate on the session, not in the line, so
+ *  MySet never takes its cut of a stamp. */
 const amountCents = (line) =>
   Number(((line || {}).price_data || {}).unit_amount) * Number((line || {}).quantity || 1) || 0;
+
+/* THE SIZE THE BUYER PICKED, checked against the record and never trusted as text.
+   An item with variants must be bought as one of them; an item without any takes
+   no `variant` at all. Matched by exact label without regard to case, because the
+   page sends back the label the server gave it. Returns the matched variant, or a
+   refusal the page turns into its own words (rule 3 — the sheet never offered a
+   size that was out, so these are the backstop, not the UI). */
+function pickVariant(item, raw) {
+  const list = Array.isArray(item.variants) ? item.variants : [];
+  if (!list.length) return { variant: null };
+  const want = String(raw || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const variant = want ? list.find((v) => v && String(v.label).toLowerCase() === want) : null;
+  if (!variant) return { error: bad('Pick a size', 400) };
+  if (variant.out) return { error: bad('That size is sold out', 409) };
+  return { variant };
+}
+
+/* Postage as a REAL Stripe shipping rate, so the total on Stripe's page equals the
+   total the sheet promised. Only a posted item with a postage figure gets one; a
+   pickup item never does, whatever `post` says on the record. */
+const postageOf = (item) => (item.ship === 'ship' ? Math.max(0, parseInt(item.post, 10) || 0) : 0);
+const shippingRate = (post) => post > 0
+  ? { shipping_options: [{ shipping_rate_data: { type: 'fixed_amount', fixed_amount: { amount: post, currency: 'usd' }, display_name: 'Postage' } }] }
+  : {};
+
+/* The picture on Stripe's page — trust at the moment of paying. Only a picture
+   this app serves (`/api/img?…`), made absolute with the same origin the return
+   trip uses, so a pasted URL can never ride into Stripe as ours. */
+const productImages = (origin, item) =>
+  (typeof item.img === 'string' && item.img.startsWith('/api/img')) ? { images: [origin + item.img] } : {};
 
 const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -48,25 +80,36 @@ const main = async (req) => {
     if (!VENUE_PLANS[venuePlanOf(reg)].merch) return bad('Merch isn’t on this page right now', 404);
     const item = (prof.merch || []).find((m) => m.id === String(body.item || '') && m.on);
     if (!item) return bad('That item isn’t for sale right now', 404);
-    if (item.cents < 100) return bad('That one isn’t sold through MySet — ask at the bar', 400);
+    if (item.out) return bad('That one’s sold out', 409);
+    if (item.cents < MIN_CENTS) return bad('That one isn’t sold through MySet — ask at the bar', 400);
+    const picked = pickVariant(item, body.variant);
+    if (picked.error) return picked.error;
+    const vlabel = picked.variant ? picked.variant.label : '';
     const conn = await readConnect(owner);
     if (!connectUsable(conn) || !(prof.pay && prof.pay.ready)) return bad('payments-not-configured', 503);
     const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
     const vname = prof.name || (reg && reg.name) || 'the venue';
+    const vpost = postageOf(item);
     const vline = { quantity: qty, price_data: { currency: 'usd', unit_amount: item.cents,
-      product_data: { name: `${item.title} — ${vname}`, description: item.blurb || (item.ship === 'ship' ? 'Shipped to you' : 'Pick it up at the bar') } } };
+      product_data: { name: `${item.title}${vlabel ? ` (${vlabel})` : ''} — ${vname}`, description: item.blurb || (item.ship === 'ship' ? 'Shipped to you' : 'Pick it up at the bar'),
+                      ...productImages(origin, item) } } };
     const attempt = String(body.attempt || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
     const fee = feeCents(amountCents(vline), venuePlanOf(reg), 'venue');
-    const back = `/v/${reg.slug}/community`;
+    /* Back to the page the buyer left: the shop when it says so, the community page
+       otherwise. Both are paths THIS server builds from the venue's slug — `from` is
+       a choice between them, never a url (0f8). */
+    const back = body.from === 'shop' ? `/v/${reg.slug}/shop` : `/v/${reg.slug}/community`;
     try {
       const session = await stripe.checkout.sessions.create({
         mode: 'payment', line_items: [vline],
-        metadata: { fan, kind: 'merch', item: item.id, title: item.title.slice(0, 60), qty: String(qty), ship: item.ship, artist: owner },
+        metadata: { fan, kind: 'merch', item: item.id, title: item.title.slice(0, 60), qty: String(qty), ship: item.ship, artist: owner,
+                    variant: vlabel, post: String(vpost) },
         payment_intent_data: {
           ...(fee > 0 ? { application_fee_amount: fee } : {}),
-          metadata: { kind: 'merch', artist: owner },
+          metadata: { kind: 'merch', artist: owner, base: String(amountCents(vline)) },
         },
         ...(item.ship === 'ship' ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES } } : {}),
+        ...shippingRate(vpost),
         success_url: `${origin}${back}?paid={CHECKOUT_SESSION_ID}`,
         cancel_url: `${origin}${back}?cancelled=1`,
       }, { ...(attempt ? { idempotencyKey: sha(`myset-pay|${owner}|${fan}|merch|${attempt}`).slice(0, 48) } : {}), stripeAccount: conn.acct });
@@ -82,7 +125,7 @@ const main = async (req) => {
   if (!canTakeMoney(aid, show)) return bad('payments-not-configured', 503);
   const artist = show.artist || 'the artist';
 
-  let line, metadata, shipping = false;
+  let line, metadata, shipping = false, post = 0;
   if (body.kind === 'votes') {
     // price is whatever the artist set — never what the client claims
     const pack = show.packs && show.packs[body.pack];
@@ -174,19 +217,25 @@ const main = async (req) => {
     const prof = await getProfile(aid);
     const item = (prof.merch || []).find((m) => m.id === String(body.item || '') && m.on);
     if (!item) return bad('That item isn’t for sale right now', 404);
-    if (item.cents < 100) return bad('That one isn’t sold through MySet — ask at the merch table', 400);
+    if (item.out) return bad('That one’s sold out', 409);
+    if (item.cents < MIN_CENTS) return bad('That one isn’t sold through MySet — ask at the merch table', 400);
+    const picked = pickVariant(item, body.variant);
+    if (picked.error) return picked.error;
+    const vlabel = picked.variant ? picked.variant.label : '';
     const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
+    post = postageOf(item);
     line = {
       quantity: qty,
       price_data: {
         currency: 'usd',
         unit_amount: item.cents,
-        product_data: { name: `${item.title} — ${artist}`,
-                        description: item.blurb || (item.ship === 'ship' ? 'Shipped to you' : 'Pick it up at the show') },
+        product_data: { name: `${item.title}${vlabel ? ` (${vlabel})` : ''} — ${artist}`,
+                        description: item.blurb || (item.ship === 'ship' ? 'Shipped to you' : 'Pick it up at the show'),
+                        ...productImages(origin, item) },
       },
     };
     metadata = { fan, kind: 'merch', item: item.id, title: item.title.slice(0, 60), qty: String(qty),
-                 ship: item.ship, show: show.showId || '', artist: aid };
+                 ship: item.ship, show: show.showId || '', artist: aid, variant: vlabel, post: String(post) };
     shipping = item.ship === 'ship';
   } else {
     return bad('unknown kind');
@@ -239,17 +288,21 @@ const main = async (req) => {
      holds: /:slug/vote serves vote.html, which is what calls /api/confirm. */
   const { artistById } = await import('./_auth.mjs');
   const who = await artistById(aid);
-  /* Merch returns to the community page, which redeems the session exactly as
-     vote.html does — the two pages that call /api/confirm (INVARIANT 5b). */
+  /* Merch returns to the page it was bought from — the shop when the request says
+     `from:'shop'`, the community page otherwise — and each redeems the session
+     exactly as vote.html does: the three pages that call /api/confirm (INVARIANT 5b). */
   /* A TIP CAN NOW START FROM THE COMMUNITY PAGE TOO (Perry, 2026-09-07: the tip
      button must always be there, including at the top of that page), and somebody
-     who taps it there has to come back there. `from` chooses between two paths this
+     who taps it there has to come back there. `from` chooses between the paths this
      server builds — it is never used AS a url, because a caller-supplied redirect is
      an open redirect however innocent the caller looks. */
+  const shop = body.from === 'shop' && body.kind === 'merch';
   const home = body.from === 'community' || body.kind === 'merch';
-  const back = home
-    ? (who && who.slug ? `/${who.slug}/community` : '/community.html')
-    : (who && who.slug ? `/${who.slug}/vote` : '/vote.html');
+  const back = shop
+    ? (who && who.slug ? `/${who.slug}/shop` : '/shop.html')
+    : home
+      ? (who && who.slug ? `/${who.slug}/community` : '/community.html')
+      : (who && who.slug ? `/${who.slug}/vote` : '/vote.html');
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -261,17 +314,21 @@ const main = async (req) => {
          balance later — the earnings statement, an accountant, Stripe's own export —
          sees an untagged payment and has to join back through the sessions list to
          find out what it was. Two fields here make every future charge explain
-         itself. Kept to `kind` and `artist` on purpose: a charge's metadata is
-         visible on a receipt, so nothing about the buyer goes in it (0bu). */
+         itself, and a third — `base`, the LINE amount the fee was estimated on —
+         lets the half-of-Stripe's-fee correction (_feesplit.mjs) use the same base
+         rather than the charge, which includes postage. Nothing about the buyer
+         goes in it: a charge's metadata is visible on a receipt (0bu). */
       payment_intent_data: {
         ...(fee > 0 ? { application_fee_amount: fee } : {}),
         ...(metadata.kind === 'request_hold' ? { capture_method: 'manual' } : {}),
-        metadata: { kind: metadata.kind || '', artist: aid },
+        metadata: { kind: metadata.kind || '', artist: aid, ...(direct && line ? { base: String(amountCents(line)) } : {}) },
       },
       ...(metadata.kind === 'request_hold' ? { payment_method_types: ['card'] } : {}),
       // only a SHIPPED item asks for an address — a T-shirt handed over at the bar needs none
       ...(shipping ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES } } : {}),
-      // MUST be a page that calls /api/confirm — vote.html and community.html redeem the session
+      // and only a shipped item with a postage figure adds a rate; the fee above never saw it
+      ...shippingRate(shipping ? post : 0),
+      // MUST be a page that calls /api/confirm — vote.html, community.html and shop.html redeem the session
       success_url: `${origin}${back}?paid={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}${back}?cancelled=1`,
     }, ...scope(opts));   // an older cached page sends no attempt: `{}` would be refused by the library, not by Stripe

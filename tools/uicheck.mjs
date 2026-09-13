@@ -10,9 +10,9 @@
 
    Needs Chrome and puppeteer-core, which live outside this repo — same arrangement
    as tools/clipcheck.mjs and tools/sheetcheck.mjs. */
-import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
 import puppeteer from '/Users/perryidyll/Docs/MySet-Content/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
-const ROOT=process.env.MYSET_PUBLIC||'/Users/perryidyll/Docs/MySet/public';
+const ROOT=process.env.MYSET_PUBLIC||path.join(path.dirname(fileURLToPath(import.meta.url)),'..','public');   // the public/ beside THIS file — a worktree checks its own pages; MYSET_PUBLIC overrides (2026-09-13)
 const T={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
 /* THE MONEY TAB'S FIXTURE (decision 0065): a signed-in Bar Star owner with one
    weekly residency and three past nights of it — one logged by hand with a band, a
@@ -78,6 +78,9 @@ const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');
  if(u.pathname==='/api/revenue')return J(MOCK.revenue);
  if(u.pathname==='/api/auth'){let body='';rq.on('data',c=>body+=c);rq.on('end',()=>{let b={};try{b=JSON.parse(body||'{}');}catch(e){}J(MOCK.auth(b));});return;}
  if(u.pathname==='/api/admin'){let body='';rq.on('data',c=>body+=c);rq.on('end',()=>{let b={};try{b=JSON.parse(body||'{}');}catch(e){}J(MOCK.admin(b,whoami));});return;}
+ // a merch picture: a flat SVG tile, a different fill per key, so the shop grid and the fanned trio have something to draw
+ if(u.pathname==='/api/img'){const k=(u.search.match(/\d+/)||['0'])[0];const hue=(Number(k)*47)%360;rs.writeHead(200,{'content-type':'image/svg+xml'});
+   return rs.end(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 480"><rect width="480" height="480" fill="hsl(${hue} 60% 55%)"/></svg>`)}
  if(u.pathname==='/api/artists'){rs.writeHead(200,{'content-type':'application/json'});return rs.end(JSON.stringify({ok:true,artists:[
    {slug:'demo',name:'Demo Artist',tagline:'Songs for the room',avatar:'',management:'Good Records',style:'Soul',signed:true,musicReleased:true,showsNext30Days:1,totalShows:12,rating:4.5,ratingCount:2,locations:[{country:'Thailand',city:'Bangkok'}],eventsNext30Days:[{eventId:'g1',date:'2099-01-01',time:'20:00',startsAt:4070932800000,venue:'The Room',city:'Bangkok',country:'Thailand',address:'1 Music Lane',maps:{lat:13.75,lng:100.5,source:'https://maps.google.com/?q=13.75,100.5',google:'https://maps.google.com/?q=13.75,100.5'}}],nextShow:{date:'2099-01-01',city:'Bangkok',country:'Thailand'}},
    {slug:'quiet',name:'Quiet Band',tagline:'Acoustic songs',avatar:'',management:'',style:'Folk',signed:false,musicReleased:false,showsNext30Days:0,totalShows:0,rating:null,ratingCount:0,locations:[],eventsNext30Days:[],nextShow:null}
@@ -281,12 +284,31 @@ const C=await pg.evaluate(async ()=>{
   D={name:'Perry Idyll',avatar:'',verified:true,canBuy:true,merch:[],posts:[],
      showOpts:[],photos:[],clipOn:true,asks:{}};
   window.render&&render();
-  const bar=document.querySelector('.tipbar');
+  let bar=document.querySelector('.tipbar');
   ok('the tip button is on the community page', !!bar, bar?bar.innerText.replace(/\n/g,' | '):'missing');
   if(bar){
     const first=document.querySelector('#app').children[1];
-    ok('and it is the FIRST thing under the name', first&&first.classList.contains('tipbar'),
+    ok('with nothing to sell, it is the FIRST thing under the name', first&&first.classList.contains('tipbar'),
        first?first.className:'—');
+    /* THE SHOP CARD (2026-09-13, blueprint §4.2 / M6): with merch the community page wears the
+       shop's front door directly under the name — the finder chassis with the gradient ring,
+       up to three pictures fanned — and the tip button moves one slot down (INVARIANT 0f8). */
+    D.merch=[{id:'m000001',title:'Tour tee',cents:2500,img:'/api/img?k=1',ship:'pickup',on:true,at:1,variants:[],out:false,post:0},
+             {id:'m000002',title:'Vinyl',cents:3000,img:'/api/img?k=2',ship:'ship',on:true,at:2,variants:[],out:false,post:600},
+             {id:'m000003',title:'Poster',cents:1200,img:'/api/img?k=3',ship:'pickup',on:true,at:3,variants:[],out:true,post:0},
+             {id:'m000004',title:'Sticker',cents:300,img:'',ship:'pickup',on:true,at:4,variants:[],out:false,post:0}];
+    render(); await new Promise(r=>setTimeout(r,60));
+    const app=document.querySelector('#app'), card=app.children[1];
+    ok('with merch, the shop card is the first thing under the name', card&&card.classList.contains('shopcard'), card?card.className:'—');
+    ok('it is a link into the shop', card&&card.tagName==='A'&&/^\/shop\.html$|\/shop$/.test(card.getAttribute('href')||''), card?card.getAttribute('href'):'—');   // the bare file has no slug, so /shop.html; /<slug>/shop on the real route
+    ok('and wears the gradient ring', card&&/linear-gradient/.test(getComputedStyle(card,'::after').backgroundImage), card?getComputedStyle(card,'::after').backgroundImage.slice(0,40):'—');
+    ok('three pictures fanned, no more', card&&card.querySelectorAll('.fan img').length===3, card?String(card.querySelectorAll('.fan img').length):'—');
+    ok('it says how many and who is paid', card&&card.innerText.includes('4 items · paid to '+D.name+' through Stripe'), card?card.innerText.replace(/\n/g,' | '):'—');
+    ok('the tip button moved one slot down', app.children[2]&&app.children[2].classList.contains('tipbar'), app.children[2]?app.children[2].className:'—');
+    ok('the card fits the phone', document.documentElement.scrollWidth<=innerWidth, `${document.documentElement.scrollWidth}/${innerWidth}`);
+    D.merch=[]; render(); await new Promise(r=>setTimeout(r,60));
+    ok('and with the merch gone the tip button is first again', app.children[1]&&app.children[1].classList.contains('tipbar'), app.children[1]?app.children[1].className:'—');
+    bar=document.querySelector('.tipbar');   // the re-render replaced the node; a detached one has no animation
     ok('and it carries the gentle orange pulse', getComputedStyle(bar.querySelector('button')).animationName==='emberGlow',
       getComputedStyle(bar.querySelector('button')).animationName);
     openTip(); await new Promise(r=>setTimeout(r,80));
@@ -737,5 +759,139 @@ const DIRECTORY=await pg.evaluate(async()=>{
   return out.join('\n');
 });
 console.log('\nARTIST DIRECTORY\n'+DIRECTORY);
+
+// ---------- 7: the shop page (2026-09-13, blueprint §5 M6 / §8.2) ----------
+/* /api/fan is not stubbed here, so the page lands on its "couldn't load" state; D is a `var`
+   and render() a declaration on purpose, so this drives the page the way the other blocks do. */
+const SHOP_FIX=()=>({ok:true,name:'Demo Artist',first:'Demo',avatar:'',verified:true,live:true,canBuy:true,
+  merch:[
+    {id:'m000001',title:'Tour tee',blurb:'Soft cotton.',cents:2500,img:'/api/img?k=1',link:'',ship:'pickup',on:true,at:7,out:false,post:0,variants:[{label:'S',out:false},{label:'M',out:true},{label:'L',out:false}]},
+    {id:'m000002',title:'Vinyl',blurb:'',cents:3000,img:'/api/img?k=2',link:'',ship:'ship',on:true,at:6,out:false,post:600,variants:[]},
+    {id:'m000003',title:'Bandcamp album',blurb:'',cents:0,img:'/api/img?k=3',link:'https://demo.bandcamp.com/album/x',ship:'pickup',on:true,at:5,out:false,post:0,variants:[]},
+    {id:'m000004',title:'Poster',blurb:'',cents:1200,img:'/api/img?k=4',link:'',ship:'pickup',on:true,at:4,out:true,post:0,variants:[]},
+    {id:'m000005',title:'Sticker',blurb:'',cents:0,img:'',link:'',ship:'pickup',on:true,at:3,out:false,post:0,variants:[]},
+    {id:'m000006',title:'Hoodie',blurb:'',cents:4500,img:'/api/img?k=6',link:'',ship:'ship',on:true,at:2,out:false,post:0,variants:[]},
+    {id:'m000007',title:'Tote',blurb:'',cents:1500,img:'/api/img?k=7',link:'',ship:'pickup',on:true,at:1,out:false,post:0,variants:[]}],
+  posts:[{id:'p1',name:'Ana',stars:5,text:'Best night out in months.',at:Date.now()-3600000,pinned:false},
+         {id:'p2',name:'Bo',stars:4,text:'The encore.',at:Date.now()-7200000,pinned:false}],
+  showOpts:[],photos:[],clipOn:true,asks:{}});
+await pg.setViewport({width:390,height:844,isMobile:true,hasTouch:true,deviceScaleFactor:2});   // the gig block left the page at 320
+await pg.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
+await pg.goto(`http://127.0.0.1:${PORT}/shop.html?a=demo`,{waitUntil:'domcontentloaded'});
+await new Promise(r=>setTimeout(r,600));
+const SHOP=await pg.evaluate(async (FIXD)=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  const $$=s=>[...document.querySelectorAll(s)], FIX=()=>JSON.parse(JSON.stringify(FIXD));   // a fresh copy per state
+  const sh=document.querySelector('#sheet');
+  ok('the closed sheet is a dialog, modal, and inert', sh&&sh.getAttribute('role')==='dialog'&&sh.getAttribute('aria-modal')==='true'&&sh.inert===true,
+     sh?`${sh.getAttribute('role')}/${sh.getAttribute('aria-modal')}/inert ${sh.inert}`:'no #sheet');
+  D=FIX(); render(); await new Promise(r=>setTimeout(r,80));
+  ok('the shop fits a 390 phone', document.documentElement.scrollWidth<=innerWidth, `${document.documentElement.scrollWidth}/${innerWidth}`);
+  const grid=document.querySelector('.pgrid');
+  ok('the grid is two across', !!grid&&getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length===2, grid?getComputedStyle(grid).gridTemplateColumns:'no .pgrid');
+  const cards=$$('.pgrid .pcard');
+  ok('seven cards', cards.length===7, String(cards.length));
+  ok('a priced item offers Buy', !!cards[0].querySelector('.act.buy'), cards[0].innerText.replace(/\n/g,' | '));
+  ok('a link-only item offers the link', !!cards[2].querySelector('.act.ext')&&!cards[2].querySelector('.act.buy'), cards[2].innerText.replace(/\n/g,' | '));
+  ok('a sold-out item keeps its price and offers nothing', !cards[3].querySelector('.act')&&/\$12/.test(cards[3].innerText)&&/Sold out/.test(cards[3].innerText), cards[3].innerText.replace(/\n/g,' | '));
+  ok('an unpriced, unlinked item says Ask at the show', !!cards[4].querySelector('.act.ask'), cards[4].innerText.replace(/\n/g,' | '));
+  const im1=cards[0].querySelector('img'), im7=cards[6].querySelector('img');
+  ok('the first picture is fetched first, never lazily', im1&&im1.getAttribute('fetchpriority')==='high'&&im1.getAttribute('loading')!=='lazy', im1?`${im1.getAttribute('fetchpriority')}/${im1.getAttribute('loading')}`:'no img');
+  ok('the seventh picture is lazy', im7&&im7.getAttribute('loading')==='lazy', im7?String(im7.getAttribute('loading')):'no img');
+  const tonight=cards.filter(c=>/Tonight/.test(c.querySelector('.tag')?.textContent||''));
+  ok('Tonight is said only of live pickup cards that are not sold out',   // Tour tee and Tote: link-out and ask items no longer wear the tag
+     tonight.length===2&&tonight.every(c=>/pick up/.test(c.getAttribute('aria-label')))&&!tonight.includes(cards[3])&&!tonight.includes(cards[1]),
+     tonight.map(c=>c.querySelector('.t').textContent).join(','));
+  ok('the live shop carries the vote fab', !!document.querySelector('.fab'));
+  ok('the picks strip is off by default', !document.querySelector('.picks'));   // a founder toggle, ?picks=1 previews it (shop.html PICKS)
+  const q=document.querySelector('.quotes');
+  ok('two starred posts make the quotes strip', !!q&&q.children.length>0, q?String(q.children.length):'no .quotes');
+  ok('and a pause control for the strips that move', $$('.still').length>0, String($$('.still').length));
+  ok('the strips carry a ghost set so they can wrap', !!q&&q.children.length===4&&q.querySelectorAll('[aria-hidden="true"]').length===2, q?String(q.children.length):'—');
+  // the More strip in the product sheet (2026-09-13): the other six, drawn twice, under the page's one pause control; a card swaps the sheet in place
+  const HL=history.length; openItem('m000001'); await new Promise(r=>setTimeout(r,160));
+  const sh2=document.querySelector('#sheet'), mk=()=>$$('#sheet .more [data-more]:not([aria-hidden])');
+  let more=document.querySelector('#sheet .more');
+  ok('the open sheet carries a More strip of the other six', !!more&&mk().length===6, more?String(mk().length):'no .more');
+  ok('drawn twice so it can wrap, the second set hidden from a reader', !!more&&more.children.length===12&&more.querySelectorAll('[aria-hidden="true"]').length===6, more?`${more.children.length} children / ${more.querySelectorAll('[aria-hidden="true"]').length} ghosts`:'—');
+  ok('every card in it is one button', $$('#sheet .more > *').every(c=>c.tagName==='BUTTON'&&c.dataset.more));
+  ok('it never offers the item already open', !mk().some(b=>b.dataset.more==='m000001'));
+  ok('the sold-out one is in it, dimmed and saying so', (()=>{const b=mk().find(x=>x.dataset.more==='m000004'); return !!b&&b.classList.contains('out')&&/Sold out/.test(b.textContent)&&/\$12/.test(b.textContent);})(), (mk().find(x=>x.dataset.more==='m000004')||{}).textContent);
+  const sect=document.querySelector('#sheet .sect');
+  ok('under a heading that names the artist, with the pause control', !!sect&&/^More from Demo/.test(sect.textContent.trim())&&!!sect.querySelector('.still'), sect?sect.textContent.trim():'no .sect');
+  ok('and the heading wears the gradient bar, in ink', !!sect&&!!sect.querySelector('i')&&/gradient/.test(getComputedStyle(sect.querySelector('i')).backgroundImage)&&getComputedStyle(sect).color===getComputedStyle(sh2.querySelector('h3')).color);
+  ok('the strip sits under the photo', !!more&&more.getBoundingClientRect().top>sh2.querySelector('.spic').getBoundingClientRect().top);
+  ok('and never starts a sheet drag: it is a scroller, not a handle', getComputedStyle(more).touchAction==='pan-x pan-y'&&getComputedStyle(more).overflowX==='auto', `${getComputedStyle(more).touchAction} / ${getComputedStyle(more).overflowX}`);
+  const a0=more.scrollLeft; await new Promise(r=>setTimeout(r,500)); const a1=more.scrollLeft;
+  ok('it drifts the links-strip way — starts one set in, comes back', a0>0&&a1<a0, `${a0} -> ${a1}`);
+  const first=mk()[0], want=first.dataset.more, wantTitle=first.querySelector('.t').textContent;
+  first.click(); await new Promise(r=>setTimeout(r,160));
+  const h3=document.querySelector('#sheet h3');
+  ok('tapping a card swaps the sheet to that item', !!h3&&h3.textContent===wantTitle&&location.hash==='#'+want, h3?`${h3.textContent} ${location.hash}`:'—');
+  ok('without a second history entry — Back still closes it in one step', history.length===HL+1&&!!history.state&&history.state.m===want, `${HL} -> ${history.length}`);
+  ok('focus lands on the new title', document.activeElement===h3&&h3.id==='sheetTitle', document.activeElement?document.activeElement.tagName+'#'+document.activeElement.id:'—');
+  more=document.querySelector('#sheet .more');
+  ok('and the strip restarts around the new item', !!more&&mk().length===6&&!mk().some(b=>b.dataset.more===want)&&mk().some(b=>b.dataset.more==='m000001'));
+  ok('with a fresh loop', typeof DRIFT!=='undefined'&&!!DRIFT.more&&more.scrollLeft>0, more?String(more.scrollLeft):'—');
+  history.back(); await new Promise(r=>setTimeout(r,250));
+  ok('Back closes it in one step', !sh2.classList.contains('on')&&!location.hash&&sh2.inert===true, location.hash||'(no hash)');
+  ok('and the strip\'s loop is gone with it', typeof DRIFT!=='undefined'&&!DRIFT.more);
+  const F2=FIX(); F2.merch=F2.merch.slice(0,2); D=F2; render(); await new Promise(r=>setTimeout(r,40));
+  openItem('m000001'); await new Promise(r=>setTimeout(r,120));
+  ok('with only one other item there is no More strip', sh2.classList.contains('on')&&!document.querySelector('#sheet .more')&&!document.querySelector('#sheet .sect'));
+  history.back(); await new Promise(r=>setTimeout(r,250));
+  // the states that must NOT draw
+  D=Object.assign(FIX(),{live:false}); render(); await new Promise(r=>setTimeout(r,40));
+  ok('no fab when the vote is not on', !document.querySelector('.fab'));
+  ok('and Tonight is not said', !$$('.tag').some(t=>/Tonight/.test(t.textContent)));
+  D=Object.assign(FIX(),{canBuy:false}); render(); await new Promise(r=>setTimeout(r,40));
+  ok('with card payments off, nothing says Buy', $$('.act.buy').length===0&&$$('.act.ext').length===1&&$$('.act.ask').length>0, `${$$('.act.buy').length} buy / ${$$('.act.ext').length} ext / ${$$('.act.ask').length} ask`);
+  D=Object.assign(FIX(),{posts:[]}); render(); await new Promise(r=>setTimeout(r,40));
+  ok('no quotes strip without a starred post', !document.querySelector('.quotes'));
+  const F3=FIX(); F3.merch=F3.merch.slice(0,3); D=F3; render(); await new Promise(r=>setTimeout(r,40));
+  ok('under four items there is still no picks strip, and a grid', !document.querySelector('.picks')&&!!document.querySelector('.pgrid'));
+  D=FIX(); render();
+  return out.join('\n');
+}, SHOP_FIX());
+console.log('\nTHE SHOP\n'+SHOP);
+
+// the same page at 320 wide, and with motion switched off by the phone
+await pg.setViewport({width:320,height:568,isMobile:true,hasTouch:true,deviceScaleFactor:2});
+await new Promise(r=>setTimeout(r,150));
+const SHOP320=await pg.evaluate(async ()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  render(); await new Promise(r=>setTimeout(r,80));
+  ok('the shop fits a 320 phone', document.documentElement.scrollWidth<=innerWidth, `${document.documentElement.scrollWidth}/${innerWidth}`);
+  const grid=document.querySelector('.pgrid');
+  ok('and is still two across', !!grid&&getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/).length===2, grid?getComputedStyle(grid).gridTemplateColumns:'—');
+  return out.join('\n');
+});
+console.log(SHOP320);
+await pg.setViewport({width:390,height:844,isMobile:true,hasTouch:true,deviceScaleFactor:2});
+await pg.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'reduce'}]);
+await new Promise(r=>setTimeout(r,150));
+const SHOP_RM=await pg.evaluate(async ()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  ok('the phone asked for reduced motion', matchMedia('(prefers-reduced-motion:reduce)').matches);
+  render(); await new Promise(r=>setTimeout(r,80));
+  const q=document.querySelector('#quotes');   // the picks strip is off by default, so only the quotes strip is here to check
+  ok('under reduced motion the quotes strip is drawn once — no ghost set', !!q&&q.children.length===2&&document.querySelectorAll('#quotes [aria-hidden="true"]').length===0,
+     `${q?q.children.length:'-'} quotes`);
+  ok('and no pause control, since nothing moves', document.querySelectorAll('.still').length===0);
+  const s0=q?q.scrollLeft:0; await new Promise(r=>setTimeout(r,500));
+  ok('nothing drifted in half a second', !!q&&q.scrollLeft===s0, q?`${s0}->${q.scrollLeft}`:'no #quotes');
+  // the sheet's More strip under the same setting: one set, static, no control
+  openItem('m000001'); await new Promise(r=>setTimeout(r,160));
+  const more=document.querySelector('#sheet .more');
+  ok('the More strip is drawn once — six cards, no ghosts', !!more&&more.children.length===6&&more.querySelectorAll('[aria-hidden="true"]').length===0, more?`${more.children.length} children / ${more.querySelectorAll('[aria-hidden="true"]').length} ghosts`:'no .more');
+  ok('and no pause control anywhere, the sheet included', document.querySelectorAll('.still').length===0, String(document.querySelectorAll('.still').length));
+  const m0=more?more.scrollLeft:0; await new Promise(r=>setTimeout(r,400));
+  ok('and it is static', !!more&&more.scrollLeft===0&&more.scrollLeft===m0&&(typeof DRIFT==='undefined'||!DRIFT.more||!DRIFT.more.PT), more?`${m0}->${more.scrollLeft}`:'—');
+  history.back(); await new Promise(r=>setTimeout(r,250));
+  ok('and Back closes the sheet', !document.querySelector('#sheet').classList.contains('on')&&!location.hash);
+  return out.join('\n');
+});
+console.log(SHOP_RM);
+await pg.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
 
 await b.close(); srv.close();

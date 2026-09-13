@@ -20,9 +20,44 @@ export const MAX_PHOTOS = 3;
    by name. Price is cents, never below zero and never above $500 — the same
    ceiling as a tip. A link is where it sells if not through MySet; it goes
    through safeLink like every pasted URL (9b). `ship` decides whether Stripe asks
-   the buyer for an address: a T-shirt handed over at the bar needs none. */
+   the buyer for an address: a T-shirt handed over at the bar needs none.
+
+   THE SHOP PAGE (2026-09-13) added three fields, and this map is the whitelist
+   that decides whether they exist at all — a key not named here is dropped on
+   every read AND every write, for artists and venues alike:
+     `variants`  sizes or options, `[{ label, out }]`, at most MAX_VARIANTS, each
+                 label VARIANT_LEN characters, de-duplicated without regard to case,
+                 blanks dropped. An empty list means no choice is needed. pay.mjs
+                 refuses a checkout that names none of them, or one marked `out`.
+     `out`       the WHOLE item is sold out: the page keeps showing the price with
+                 no Buy, pay.mjs refuses it. The artist's older only option was
+                 `on:false`, which lost the price signal.
+     `post`      flat per-order postage in cents, on top of the price, only
+                 meaningful when `ship === 'ship'` — it becomes a fixed Stripe
+                 shipping rate, and MySet's cut is never taken on it. 0 = none. */
 export const MAX_MERCH = 12;
 export const MERCH_ID = /^m[a-z0-9]{6}$/;
+export const MAX_VARIANTS = 8;
+export const VARIANT_LEN = 24;
+export const MAX_POST = 10000;
+/* The price band a card sale runs in: normMerch clamps to the ceiling; pay.mjs
+   refuses a checkout under the floor ("ask at the bar"). Both Studios read these
+   from merchList rather than typing them. */
+export const MIN_CENTS = 100;
+export const MAX_CENTS = 50000;
+export function normVariants(list) {
+  const seen = new Set(), out = [];
+  for (const v of (Array.isArray(list) ? list : [])) {
+    // a bare string is a label with nothing sold out — the Studio's comma field may send either shape
+    const label = clean(typeof v === 'string' ? v : (v && typeof v === 'object' ? v.label : ''), VARIANT_LEN);
+    const key = label.toLowerCase();
+    if (!label || seen.has(key)) continue;
+    seen.add(key);
+    out.push({ label, out: !!(v && typeof v === 'object' && v.out === true) });
+    if (out.length >= MAX_VARIANTS) break;
+  }
+  return out;
+}
 export function normMerch(list) {
   return (Array.isArray(list) ? list : [])
     .filter((m) => m && typeof m === 'object')
@@ -30,12 +65,15 @@ export function normMerch(list) {
       id: String(m.id || '').replace(/[^a-z0-9]/g, '').slice(0, 7),
       title: clean(m.title, 60),
       blurb: clean(m.blurb, 160),
-      cents: Math.max(0, Math.min(50000, parseInt(m.cents, 10) || 0)),
+      cents: Math.max(0, Math.min(MAX_CENTS, parseInt(m.cents, 10) || 0)),
       img: String(m.img || '').slice(0, 300),
       link: safeLink('website', m.link),
       ship: m.ship === 'ship' ? 'ship' : 'pickup',
       on: m.on !== false,
       at: Number(m.at) || 0,
+      variants: normVariants(m.variants),
+      out: m.out === true,
+      post: Math.max(0, Math.min(MAX_POST, parseInt(m.post, 10) || 0)),
     }))
     .filter((m) => MERCH_ID.test(m.id) && m.title)
     .slice(0, MAX_MERCH);

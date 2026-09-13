@@ -53,6 +53,8 @@ async function facts() {
   const video = await import(join(ROOT, 'netlify/functions/_video.mjs'));
   const r2 = await import(join(ROOT, 'netlify/functions/_r2.mjs'));
   const biz = await import(join(ROOT, 'netlify/functions/_biz.mjs'));
+  const prof = await import(join(ROOT, 'netlify/functions/_profile.mjs'));   // the merch caps (blueprint S7, 2026-09-13)
+  const wishes = await import(join(ROOT, 'netlify/functions/_wishes.mjs'));  // Make a request (the founder, 2026-09-13)
 
   const fns = ls('netlify/functions').filter((f) => f.endsWith('.mjs'));
   const handlers = fns.filter((f) => !f.startsWith('_')).map((f) => f.replace('.mjs', '')).sort();
@@ -66,6 +68,17 @@ async function facts() {
     const src = read(`netlify/functions/${file}`);
     const hits = src.match(/action === '[a-zA-Z]+'|case '[a-zA-Z]+':/g) || [];
     return [...new Set(hits.map((h) => h.match(/'([a-zA-Z]+)'/)[1]))].sort();
+  };
+
+  /* The per-order quantity clamp is an inline literal in pay.mjs (both merch branches), not an
+     export, so it is read out of the source by pattern like the action names above. Two clamps
+     that disagree, or none, throw — a typed number here would be the bug this table exists to
+     prevent. (_pay.mjs redeemSession clamps wider on the way back in; the row names checkout.) */
+  const qtyClamp = () => {
+    const hits = [...read('netlify/functions/pay.mjs').matchAll(/Math\.min\((\d+), parseInt\(body\.qty/g)].map((m) => Number(m[1]));
+    const set = [...new Set(hits)];
+    if (set.length !== 1) throw new Error(`pay.mjs qty clamp: expected one value, found ${JSON.stringify(hits)}`);
+    return set[0];
   };
 
   const inv = read('INVARIANTS.md');
@@ -103,6 +116,11 @@ async function facts() {
     },
     plans: { artist: plan.PLANS, notBuilt: plan.NOT_BUILT, maxLibrary: plan.MAX_LIBRARY },
     venuePlans: { venue: ven.VENUE_PLANS, notBuilt: ven.VENUE_NOT_BUILT, maxMerch: ven.VMAX_MERCH },
+    /* the shop's caps, read from _profile.mjs — the Studios read the item cap from the
+       server too, so a typed 12, 8, 24 or $100 anywhere is a bug */
+    merch: { maxItems: prof.MAX_MERCH, maxVariants: prof.MAX_VARIANTS, variantLen: prof.VARIANT_LEN, maxPostCents: prof.MAX_POST,
+             minCents: prof.MIN_CENTS, maxCents: prof.MAX_CENTS, maxQty: qtyClamp(),
+             wishLen: wishes.MAX_WISH, wishesPerDay: wishes.WISHES_PER_DEVICE_PER_DAY, wishesKept: wishes.MAX_WISHES },
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
       shards: lib.SHARDS,
@@ -206,7 +224,7 @@ gets written down is one nobody can revisit.
 const FLAG_LABEL = {
   pricing: 'Set your own prices (vote packs, replay, requests)',
   setlists: 'Create named setlists',
-  merch: 'Sell merch on your community page',
+  merch: 'Sell merch on your shop page *(`/<slug>/shop`; the community page wears the shop card — 2026-09-13)*',
   moderate: 'Hide a fan\'s post *(sold as "hide 1–2 star reviews"; deleting for good is gone — 0060)*',
   reports: 'Data reports and the business dashboard — the filed nights, pay, band splits, costs, hours and profit on the Money tab, and the printed report *(every night is still filed on every plan)*',
   promote: 'Promote gigs in other cities',
@@ -266,11 +284,22 @@ Deleting a name from that list is the last step of building the feature, and
 | Photos | ${v.free.photos} | ${v.pro.photos} |
 | Verification tick | ${yes(v.free.tick)} | ${yes(v.pro.tick)} |
 | Community page | ${yes(v.free.reviews)} | ${yes(v.pro.reviews)} |
-| Merch on the community page | ${yes(v.free.merch)} | ${yes(v.pro.merch)} |
+| Merch on the shop page (\`/v/<slug>/shop\`) | ${yes(v.free.merch)} | ${yes(v.pro.merch)} |
 | Receive tips | ${vcell('tips', 'free')} | ${vcell('tips', 'pro')} |
 | Voting on the venue's own speaker music | ${vcell('speakerVotes', 'free')} | ${vcell('speakerVotes', 'pro')} |
 
 Up to **${f.venuePlans.maxMerch}** merch items. Not built: ${f.venuePlans.notBuilt.map((x) => `\`${x}\``).join(', ')}.
+
+### The shop
+
+| | Value | Where it lives |
+|---|---|---|
+| Merch items a page holds (artist / venue) | ${f.merch.maxItems} / ${f.venuePlans.maxMerch} | \`MAX_MERCH\` in \`_profile.mjs\`, \`VMAX_MERCH\` in \`_venues.mjs\` — the Studios show the cap the server sends |
+| Sizes or options per item | ${f.merch.maxVariants}, each up to ${f.merch.variantLen} characters | \`MAX_VARIANTS\`, \`VARIANT_LEN\` in \`_profile.mjs\` |
+| Flat postage per order, at most | ${money(f.merch.maxPostCents)} | \`MAX_POST\` in \`_profile.mjs\`; a fixed Stripe shipping rate, never part of MySet's cut |
+| Most of one item per order | ${f.merch.maxQty} | the checkout clamp in \`pay.mjs\` (both merch branches); the shop's + stops at the same count |
+| A card sale's price runs | ${money(f.merch.minCents)}–${money(f.merch.maxCents)} | \`MIN_CENTS\`, \`MAX_CENTS\` in \`_profile.mjs\`; under the floor the shop shows the price and says "ask at the table" — both merchLists send the band |
+| A fan's request to the shop ("Make a request") | up to ${f.merch.wishLen} characters, ${f.merch.wishesPerDay} a day per phone, the newest ${f.merch.wishesKept} kept | \`MAX_WISH\`, \`WISHES_PER_DEVICE_PER_DAY\`, \`MAX_WISHES\` in \`_wishes.mjs\`; lands under Requests from the shop in both Studios' Merch screens |
 
 ### Voting numbers
 

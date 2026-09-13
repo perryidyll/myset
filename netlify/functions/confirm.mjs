@@ -1,12 +1,15 @@
 import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
-import { json, bad, cleanFanId, cleanArtistId, DEFAULT_ARTIST } from './_lib.mjs';
-import { redeemSession } from './_pay.mjs';
+import { json, bad, cleanFanId, DEFAULT_ARTIST } from './_lib.mjs';
+import { redeemSession, cleanOwnerId } from './_pay.mjs';
 import { stripeFor } from './_connect.mjs';
 
-/* The fast path: the buyer lands back on /vote.html?paid=<session id> and this
-   verifies the payment with Stripe server-side, then grants. The webhook and the
-   artist's reconcile sweep are the safety nets for when the buyer never returns. */
+/* The fast path: the buyer lands back on /vote.html, /community.html or
+   /shop.html with ?paid=<session id> and this verifies the payment with Stripe
+   server-side, then grants. The webhook and the artist's reconcile sweep are the
+   safety nets for when the buyer never returns. The reply is redeemSession's whole
+   answer — for merch that includes `order` (title, quantity, size, postage, the
+   pickup code), so the shop's receipt needs no second call and no second read. */
 const main = async (req) => {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return bad('payments-not-configured', 503);
@@ -56,8 +59,9 @@ const main = async (req) => {
     catch { return bad('could not verify payment', 502); }
   }
 
-  // whose money this is was decided when the session was created, not now
-  const aid = cleanArtistId((session.metadata || {}).artist) || DEFAULT_ARTIST;
+  // whose money this is was decided when the session was created, not now — an
+  // artist id or a venue's `v_<vid>`, kept whole (cleanOwnerId, not cleanArtistId)
+  const aid = cleanOwnerId((session.metadata || {}).artist) || DEFAULT_ARTIST;
   if ((session.metadata || {}).kind === 'request_hold') {
     const { authorizeRequestSession } = await import('./_requests.mjs');
     const held = await authorizeRequestSession(

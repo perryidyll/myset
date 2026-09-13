@@ -136,6 +136,64 @@ const pp = (await OWNER('merchList')).merch.find((m) => m.title === 'Posted prin
 await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: pp.id, qty: 1, attempt: 'tap4' });
 created = lastCall('checkout.sessions.create');
 ok('a posted item asks Stripe for an address', !!(created.args.shipping_address_collection && created.args.shipping_address_collection.allowed_countries.includes('TH')));
+eq('and, with no postage figure, adds no shipping rate', created.args.shipping_options, undefined);
+eq('the metadata says so', created.args.metadata.post, '0');
+
+console.log('\nFROM THE SHOP  the return trip lands where the buyer left (0f8: a choice, never a url)');
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: pt.id, qty: 1, attempt: 'tap5', from: 'shop' });
+ok('checkout opens from the shop', r.ok, r);
+created = lastCall('checkout.sessions.create');
+ok('and returns to the shop', /\/shop(\.html)?\?paid=/.test(created.args.success_url), created.args.success_url);
+ok('cancelling too', /\/shop(\.html)?\?cancelled=1/.test(created.args.cancel_url), created.args.cancel_url);
+await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: pt.id, attempt: 'tap6', from: 'https://evil.example/' });
+created = lastCall('checkout.sessions.create');
+ok('never to a caller’s url', !/evil/.test(created.args.success_url) && !/evil/.test(created.args.cancel_url), created.args.success_url);
+ok('and anything but the shop still lands on the community page', /\/community(\.html)?\?paid=/.test(created.args.success_url));
+
+console.log('\nSOLD OUT, SIZES AND POSTAGE  the record decides, the request only chooses');
+r = await OWNER('merchSave', { item: { title: 'Last poster', cents: 1000, out: true } });
+const lp = r.merch.find((m) => m.title === 'Last poster');
+eq('an item saves as sold out', lp && lp.out, true);
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: lp.id, attempt: 'tap7' });
+eq('and cannot be bought', r.status, 409);
+ok('in words the page can show', /sold out/i.test(r.error || ''), r.error);
+ok('while the page still lists it, dimmed, with its price', (await GET('?fan=phone1')).merch.some((m) => m.id === lp.id && m.out === true && m.cents === 1000));
+r = await OWNER('merchSave', { item: { title: 'Sized tee', cents: 3000, ship: 'ship', post: 600,
+  variants: [{ label: 'S' }, { label: ' M ' }, { label: 'L', out: false }, { label: 'XL', out: true }, { label: 'l' }, ''] } });
+const st = r.merch.find((m) => m.title === 'Sized tee');
+eq('sizes save de-duplicated, trimmed, blanks dropped', st.variants.map((v) => v.label), ['S', 'M', 'L', 'XL']);
+eq('with the sold-out size marked', st.variants.find((v) => v.label === 'XL').out, true);
+eq('and the postage figure kept', st.post, 600);
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: st.id, attempt: 'tap8' });
+eq('no size sent is a 400', r.status, 400);
+eq('saying so', r.error, 'Pick a size');
+eq('a size the record does not have is a 400 too', (await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: st.id, variant: 'XXXL', attempt: 'tap9' })).status, 400);
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: st.id, variant: 'XL', attempt: 'tap10' });
+eq('a sold-out size is a 409', r.status, 409);
+eq('with the size’s own words', r.error, 'That size is sold out');
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: st.id, qty: 2, variant: 'l', attempt: 'tap11', from: 'shop' });
+ok('a size that is there opens checkout, whatever its case', r.ok, r);
+created = lastCall('checkout.sessions.create');
+ok('the line names the size as the record spells it', /\(L\)/.test(created.args.line_items[0].price_data.product_data.name), created.args.line_items[0].price_data.product_data.name);
+eq('and the metadata carries it', created.args.metadata.variant, 'L');
+eq('postage is a real Stripe shipping rate', created.args.shipping_options[0].shipping_rate_data.fixed_amount.amount, 600);
+eq('flat per order, in the metadata too', created.args.metadata.post, '600');
+eq('the line is still price × quantity', created.args.line_items[0].price_data.unit_amount * created.args.line_items[0].quantity, 6000);
+const sizedSid = [...__stripe.sessions.keys()].pop();
+eq('and the fake’s total is lines plus postage, as Stripe’s is', __stripe.sessions.get(sizedSid).session.amount_total, 6600);
+/* The founder charges on the platform account, where there is no fee to compare;
+   the fee-on-the-line-only proof is the venue's in test/billing.mjs. Here: a
+   postage figure on a PICKUP item changes nothing, because nothing is posted. */
+await OWNER('merchSave', { item: { id: pt.id, title: pt.title, cents: 2000, ship: 'pickup', post: 900 } });
+await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: pt.id, attempt: 'tap12' });
+created = lastCall('checkout.sessions.create');
+eq('a pickup item never carries a shipping rate, whatever `post` says', created.args.shipping_options, undefined);
+eq('and its metadata says none was charged', created.args.metadata.post, '0');
+eq('nor a picture, when it has none', created.args.line_items[0].price_data.product_data.images, undefined);
+ok('a picture lands on the founder’s tee', (await OWNER('merchPhoto', { id: pt.id, data: JPEG })).ok);
+await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: pt.id, attempt: 'tap13' });
+created = lastCall('checkout.sessions.create');
+ok('and Stripe’s page shows it, from this origin', /^https:\/\/x\/api\/img\?a=.*&s=m[a-z0-9]{6}/.test(((created.args.line_items[0].price_data.product_data.images || [])[0]) || ''), created.args.line_items[0].price_data.product_data.images);
 
 console.log('\nREDEEMING  an order lands, nothing about the buyer does');
 const sid = [...__stripe.sessions.keys()][0];
@@ -148,16 +206,59 @@ eq('for two', order && order.qty, 2);
 eq('at the right amount', order && order.amount, 40);
 ok('and it is delivered — the order IS the delivery', meta.paid[sid] && meta.paid[sid].delivered === true);
 ok('no email or address is stored', !JSON.stringify(order).match(/@|line1|postal/), order);
+/* THE RECEIPT'S ORDER rides on the confirm reply, fresh and on a replay, from the
+   meta document already in hand — the shop page reads it and needs nothing else. */
+ok('the reply carries the order for the receipt', r.order && r.order.title === pt.title && r.order.qty === 2, r.order);
+ok('with a pickup code — four or five letters and digits nobody misreads', /^[A-Z2-9]{4,5}$/.test(r.order && r.order.code), r.order);
+eq('the line total in cents, with no postage', [r.order.cents, r.order.post], [4000, 0]);
+eq('the size, when there is none', r.order.variant, '');
+eq('and the night it was bought on', typeof r.order.show, 'string');
+ok('never the buyer', !('fan' in r.order) && !('sid' in r.order), r.order);
+eq('the code is on the order row', order.code, r.order.code);
+const firstReply = r;
 r = await hit(confirmFn, `https://x/api/confirm?session_id=${sid}&fan=phone1`);
 eq('redeeming twice is one order', (await readMeta(DEFAULT_ARTIST)).orders.filter((o) => o.sid === sid).length, 1);
+ok('and the replay says so', r.already === true, r);
+eq('with the same order and the same code', r.order, firstReply.order);
 r = await hit(revenueFn, 'https://x/api/revenue?code=devlocal');
 ok('the Money tab sees it', r.payments.some((p) => p.kind === 'merch' && p.item === 'Perry tee'), r.payments);
 ok('and totals it', r.totals.merch >= 40, r.totals);
+r = await hit(confirmFn, `https://x/api/confirm?session_id=${sizedSid}&fan=phone1`);
+ok('a sized, posted order redeems', r.ok && r.order, r);
+eq('its line total leaves the postage out', [r.order.cents, r.order.post, r.order.variant, r.order.qty], [6000, 600, 'L', 2]);
+eq('and the amount the row books is what the buyer paid', (await readMeta(DEFAULT_ARTIST)).orders.find((o) => o.sid === sizedSid).amount, 66);
+r = await hit(revenueFn, 'https://x/api/revenue?code=devlocal');
+ok('the Money tab names the size in brackets', r.payments.some((p) => p.kind === 'merch' && p.item === 'Sized tee (L)' && p.variant === 'L'), r.payments.map((p) => p.item));
 r = await OWNER('orderList');
-ok('orders list newest first', r.orders[0].sid === sid || r.orders.some((o) => o.sid === sid), r.orders);
+ok('orders list newest first', r.orders[0].sid === sizedSid, r.orders.map((o) => o.sid));
+ok('every row carries a code and never the fan', r.orders.length > 0 && r.orders.every((o) => /^[A-Z2-9]{4,5}$/.test(o.code) && !('fan' in o)), r.orders);
+eq('the size and postage too', [r.orders[0].variant, r.orders[0].post], ['L', 600]);
 ok('an order can be marked done', (await OWNER('orderDone', { sid })).orders.find((o) => o.sid === sid).status === 'done');
+ok('and those rows are shaped the same way', (await OWNER('orderList')).orders.every((o) => o.code && !('fan' in o)));
+
+console.log('\nTHE PICKUP CODE  a lookup key, never a secret (0cm)');
+{
+  const { pickupCode, CODE_ALPHABET, pubOrder, ownerOrder } = await import('../netlify/functions/_pay.mjs');
+  eq('thirty-two symbols, without 0, O, 1 or I', [CODE_ALPHABET.length, /[0O1I]/.test(CODE_ALPHABET)], [32, false]);
+  eq('the same session always says the same code', pickupCode('cs_test_a'), pickupCode('cs_test_a'));
+  ok('four characters from the alphabet', new RegExp(`^[${CODE_ALPHABET}]{4}$`).test(pickupCode('cs_test_a')), pickupCode('cs_test_a'));
+  const c = pickupCode('cs_test_a');
+  eq('a clash with another OPEN order of the same owner takes a fifth character', pickupCode('cs_test_a', [{ sid: 'cs_test_b', status: 'new', code: c }]).length, 5);
+  eq('which begins with the same four', pickupCode('cs_test_a', [{ sid: 'cs_test_b', status: 'new', code: c }]).slice(0, 4), c);
+  eq('a DONE order with that code is no clash — it has left the table', pickupCode('cs_test_a', [{ sid: 'cs_test_b', status: 'done', code: c }]), c);
+  eq('nor is the order’s own earlier row', pickupCode('cs_test_a', [{ sid: 'cs_test_a', status: 'new', code: c }]), c);
+  /* cs_old_1 and cs_new_454072 both hash to the same four under this alphabet and
+     prefix — an old row with no stored code must clash on what it back-fills. */
+  eq('an OPEN row from before codes clashes on its back-filled four', pickupCode('cs_new_454072', [{ sid: 'cs_old_1', status: 'new' }]).length, 5);
+  eq('and a DONE code-less row is no clash', pickupCode('cs_new_454072', [{ sid: 'cs_old_1', status: 'done' }]).length, 4);
+  ok('the fan id is not in it', pickupCode('cs_test_a') === pickupCode('cs_test_a', []) && !/phone/.test(pickupCode('phone1')));
+  const old = { sid: 'cs_old', item: 'mabc123', title: 'Old tee', qty: 1, amount: 25, fan: 'phone7', at: 1, ship: 'pickup', status: 'new' };
+  eq('a row from before codes is back-filled for the Studio, and loses the fan', ownerOrder(old), { ...old, fan: undefined, code: pickupCode('cs_old'), variant: '', post: 0 });
+  eq('and for the receipt, with cents rebuilt from the amount', pubOrder(old), { item: 'mabc123', title: 'Old tee', qty: 1, variant: '', ship: 'pickup', cents: 2500, post: 0, code: pickupCode('cs_old'), show: '', at: 1 });
+}
 r = await OWNER('orderDetail', { sid });
 ok('details are fetched from Stripe, not the store', r.ok && 'buyer' in r && 'shipping' in r, r);
+ok('the row is shaped like the list: a code, never the fan', r.ok && /^[A-Z2-9]{4,5}$/.test(r.order.code) && !('fan' in r.order) && 'variant' in r.order && 'post' in r.order, r.order);
 eq('an unknown order is a 404', (await OWNER('orderDetail', { sid: 'cs_nope' })).status, 404);
 
 console.log('\nPOSTING  what a fan may say, and how often');
@@ -253,6 +354,34 @@ r = await hit(commFn, 'https://x/api/community?a=ana-reyes', { action: 'post', f
 eq('the server refuses a self-comment', r.status, 403);
 r = await hit(commFn, 'https://x/api/community?code=devlocal', { action: 'post', fan: 'founder-phone', text: 'founder exception' });
 ok('the founding account keeps the explicit exception', r.ok, r);
+
+console.log('\nMAKE A REQUEST  (_wishes.mjs: a sentence for the Studio, three a day per phone, done and undone)');
+r = await POST('?a=ana-reyes', { action: 'wish', fan: 'wisher1', text: '  A hoodie   in XL ', name: 'Jess', item: 'm000001' });
+ok('a fan asks the shop for something', r.ok && /^w[a-z0-9]{8}$/.test(r.id), r);
+eq('a request with no words is refused', (await POST('?a=ana-reyes', { action: 'wish', fan: 'wisher1', text: ' x ' })).status, 400);
+eq('and with no device', (await POST('?a=ana-reyes', { action: 'wish', text: 'a tote' })).status, 400);
+ok('a second in the day is fine', (await POST('?a=ana-reyes', { action: 'wish', fan: 'wisher1', text: 'a tote bag' })).ok);
+ok('and a third', (await POST('?a=ana-reyes', { action: 'wish', fan: 'wisher1', text: 'the poster' })).ok);
+r = await POST('?a=ana-reyes', { action: 'wish', fan: 'wisher1', text: 'four' });
+eq('a fourth is a 429', r.status, 429);
+ok('with the page’s words', /three requests today/.test(r.error || ''), r.error);
+r = await hit(commFn, 'https://x/api/community?a=ana-reyes', { action: 'wish', fan: 'ana-phone', text: 'my own ask' }, TA);
+eq('the owner cannot ask their own shop', r.status, 403);
+r = await AS(TA, 'wishList');
+ok('the Studio lists them, newest first, the device never named', r.ok && r.wishes.length === 3 && r.wishes[0].text === 'the poster' && !('f' in r.wishes[0]) && !('fan' in r.wishes[0]), r);
+const hoodie = r.wishes.find((w) => w.text === 'A hoodie in XL');
+ok('whitespace folded, the name kept', hoodie && hoodie.name === 'Jess', hoodie);
+eq('an item id that is not on the table names nothing', hoodie && hoodie.itemTitle, '');
+eq('open ones are open', r.wishes.every((w) => w.done === false), true);
+r = await AS(TA, 'wishDone', { id: hoodie.id });
+ok('the owner marks one done and it sinks under the open ones', r.ok && r.wishes[r.wishes.length - 1].id === hoodie.id && r.wishes[r.wishes.length - 1].done === true, r);
+r = await AS(TA, 'wishDone', { id: hoodie.id, done: false });
+ok('and takes it back', r.ok && r.wishes.find((w) => w.id === hoodie.id).done === false, r);
+eq('a request that is gone is a 404', (await AS(TA, 'wishDone', { id: 'wnope0000' })).status, 404);
+ok('a venue’s shop takes requests too', (await POST(`?v=${bar.slug}`, { action: 'wish', fan: 'wisher1', text: 'a bar cap in black' })).ok);
+r = await VS(TV, 'wishList');
+ok('and its Studio lists them', r.ok && r.wishes.length === 1 && r.wishes[0].text === 'a bar cap in black', r);
+eq('the read carries the length cap for the page', (await GET('?a=ana-reyes')).limits.wish, 200);
 
 console.log('\nTHE PROOF STRIP  (decision 0043: rating, requests, post count, top songs, comments, the setlist)');
 const fbFn = (await import('../netlify/functions/feedback.mjs')).default;

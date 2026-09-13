@@ -2,6 +2,7 @@ import { playable, votable, inPlay, rankSongs, newShowId } from '../netlify/func
 import { shapeLists } from '../netlify/functions/_lists.mjs';
 import { findUltimateGuitarLink, ultimateGuitarSearch } from '../netlify/functions/_chords.mjs';
 import { addressFromMapUrl, resolveShortMapPlace } from '../netlify/functions/_maps.mjs';
+import { normMerch, normVariants, MAX_VARIANTS, VARIANT_LEN, MAX_POST } from '../netlify/functions/_profile.mjs';
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -150,6 +151,28 @@ console.log('\nGoogle Maps short-link resolver');
     async () => new Response(null, { status: 302, headers: { location: full } }));
   eq('the exact Google place corrects a conflicting typed address', checked.address,
     '145, The Ugly Duckling, 2 Taladkao Rd, Ko Pha-ngan, Thailand');
+}
+
+console.log('\nnormMerch(): the whitelist a shop item is — sizes, sold out, postage');
+{
+  const one = (extra) => normMerch([{ id: 'mabc123', title: 'Tee', ...extra }])[0];
+  eq('an item without the new fields reads as none of them', [one({}).variants, one({}).out, one({}).post], [[], false, 0]);
+  eq('sizes are labels with a sold-out flag, in the order given', one({ variants: [{ label: 'S' }, { label: 'M', out: true }] }).variants,
+    [{ label: 'S', out: false }, { label: 'M', out: true }]);
+  eq('de-duplicated without regard to case, trimmed, blanks dropped',
+    one({ variants: [{ label: ' L ' }, { label: 'l' }, { label: '' }, { label: '   ' }, null, 7, { label: 'XL' }] }).variants.map((v) => v.label), ['L', 'XL']);
+  eq('the first spelling wins a duplicate', one({ variants: [{ label: 'Large' }, { label: 'LARGE', out: true }] }).variants, [{ label: 'Large', out: false }]);
+  eq('a bare string is a label', one({ variants: ['S', 'M'] }).variants, [{ label: 'S', out: false }, { label: 'M', out: false }]);
+  eq(`at most ${MAX_VARIANTS}`, one({ variants: Array.from({ length: 20 }, (_, i) => ({ label: 'v' + i })) }).variants.length, MAX_VARIANTS);
+  eq(`each label ${VARIANT_LEN} characters`, one({ variants: [{ label: 'x'.repeat(80) }] }).variants[0].label.length, VARIANT_LEN);
+  eq('inner whitespace folds to one space', one({ variants: [{ label: 'One   size\tfits' }] }).variants[0].label, 'One size fits');
+  eq('`out` only when it is exactly true', [one({ out: true }).out, one({ out: 'yes' }).out, one({ out: 1 }).out, one({ out: undefined }).out], [true, false, false, false]);
+  eq('a size is out only when exactly true too', one({ variants: [{ label: 'S', out: 'yes' }] }).variants[0].out, false);
+  eq('postage is whole cents, never below zero', [one({ post: 600 }).post, one({ post: '600' }).post, one({ post: -5 }).post, one({ post: 'free' }).post, one({ post: 6.99 }).post], [600, 600, 0, 0, 6]);
+  eq(`and never above ${MAX_POST}`, one({ post: 999999 }).post, MAX_POST);
+  eq('normVariants alone takes anything and returns a list', [normVariants(null), normVariants('S'), normVariants([{ label: 'S' }])], [[], [], [{ label: 'S', out: false }]]);
+  eq('the old fields still normalise as they did', normMerch([{ id: 'mabc123', title: ' Tee ', cents: '2500', ship: 'ship', on: false, link: 'javascript:x' }])[0],
+    { id: 'mabc123', title: 'Tee', blurb: '', cents: 2500, img: '', link: '', ship: 'ship', on: false, at: 0, variants: [], out: false, post: 0 });
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -109,7 +109,12 @@ reg = await readArtists();
 const TC = await signToken('sound@example.com', revOf(reg, rita), newSid());
 ok('crew can run the show', (await S({ action: 'status', status: 'live' }, TC)).ok);
 eq('crew cannot rewrite the library', (await S({ action: 'addSong', title: 'No', artist: 'X' }, TC)).status, 403);
-eq('crew cannot touch the profile', (await S({ action: 'profileSave', profile: { bio: 'x' } }, TC)).status, 403);
+eq('crew cannot touch the profile', (await S({ action: 'profileSet', profile: { bio: 'x' } }, TC)).status, 403);
+/* The shop and media writes are tenancy, not the show: each must be refused BEFORE the
+   action is looked up, or a crew sign-in could clear an order or a photo. */
+for (const a of ['merchRemove', 'merchPhotoClear', 'photoClear', 'orderDone', 'orderDetail', 'mediaRemove'])
+  eq('crew is refused ' + a, (await S({ action: a, id: 'mabcdef', sid: 'cs_x', slot: 'p0' }, TC)).status, 403);
+ok('a member may still work the shop', (await S({ action: 'merchList' }, TM)).ok);
 ok('an unknown role falls back to the least it could be, never the most',
    can('owner', 'library') && !can('crew', 'library') && !can('made-up-role', 'library'));
 /* `CAN['toString']` is an inherited Function: truthy, with no `.has`, so the

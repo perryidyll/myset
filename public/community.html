@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Community — MySet</title>
-<meta name="description" content="What fans said about the nights, and what's for sale.">
+<meta name="description" content="What fans said about the nights.">
 <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
@@ -77,9 +77,12 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 :root[data-theme=dark] .vbadge{background:rgba(48,209,88,.18);color:#4CD964}
 .share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600;position:relative}
 .share::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}   /* the brand-gradient ring (the founder, 2026-09-13) */
-/* THE TIP BUTTON, AT THE TOP (Perry, 2026-09-07). Full width and solid, because on
-   this page it is the only thing anyone can hand the artist — there are no votes
-   here to buy. Only ever on an ARTIST's page: tipping a venue is not a thing. */
+/* THE TIP BUTTON, DIRECTLY UNDER THE SHOP CARD (the founder, 2026-09-13; it sat at
+   the very top from 2026-09-07 until the shop card arrived). Full width and solid:
+   with merch moved to its own page this is the one thing left here that anyone can
+   hand the artist — there are no votes here to buy. The shop card is only drawn when
+   there is something to sell, so on a page with no merch this is still the first
+   thing under the name. Only ever on an ARTIST's page: tipping a venue is not a thing. */
 .tipbar{margin:14px 18px 0}
 .tipbar button{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;
   padding:14px 17px;border-radius:var(--r-sm);background:var(--grad);color:#fff;
@@ -97,17 +100,36 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 @media (prefers-reduced-motion:reduce){.tipbar button{animation:none}}
 .sect{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:26px 20px 10px}
 
-/* the merch rail */
-.rail{display:flex;gap:12px;overflow-x:auto;padding:2px 18px 6px;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.rail::-webkit-scrollbar{display:none}
-.mcard{flex:0 0 156px;scroll-snap-align:start;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
-.mcard .pic{width:100%;aspect-ratio:1;background:var(--bg-2) center/cover;display:grid;place-items:center;font-size:34px;font-weight:700;color:var(--faint)}
-.mcard .b{padding:10px 12px 12px}
-.mcard .t{font-size:14px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.5em}
-.mcard .p{font-size:13px;color:var(--muted);margin-top:3px}
-.mcard .buy{display:block;width:100%;margin-top:9px;padding:9px 0;border-radius:var(--pill);text-align:center;font-size:13px;font-weight:700;background:var(--accent);color:#fff}
-.mcard .buy.ext{background:transparent;color:var(--accent-ink);box-shadow:inset 0 0 0 1.5px var(--accent)}
-.mcard .buy.ask{background:var(--bg-2);color:var(--muted);font-weight:600}
+/* THE SHOP CARD — the merch table's front door (the founder, 2026-09-13). The merch
+   rail that used to scroll sideways here is gone: merch is sold on /<slug>/shop, and
+   this page only opens the door. The chassis is the home page's finder
+   (index.html .finder: --surface, --r-lg, --sh-2, 18px 18px 20px) wearing the same
+   brand-gradient ring (index.html .finder::after), 14px above and below so
+   owner → card → tip button reads 4/14/14. */
+.shopcard{display:flex;align-items:center;gap:14px;margin:14px 18px 0;padding:18px 18px 20px;border-radius:var(--r-lg);background:var(--surface);
+  box-shadow:var(--sh-2);position:relative;color:inherit;text-decoration:none;transition:transform .12s var(--ease)}
+.shopcard::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.shopcard:active{transform:scale(.985)}
+/* .rise's `both` fill would pin transform:none after the entrance and swallow the
+   :active press; `backwards` lets the normal rules take over once it has landed */
+.shopcard.rise{animation-fill-mode:backwards}
+.shopcard .n{flex:1;min-width:0}
+.shopcard .k{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.shopcard .k i{width:14px;height:4px;border-radius:2px;background:var(--grad)}
+.shopcard h2{margin:5px 0 0;font-size:20px;font-weight:700;letter-spacing:-.028em;line-height:1.1;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shopcard p{margin:6px 0 0;font-size:14px;color:var(--muted);line-height:1.4}
+.shopcard .order{margin-top:10px;padding:8px 10px;border-radius:var(--r-xs);background:var(--accent-soft);color:var(--ink);font-size:13.5px;font-variant-numeric:tabular-nums}
+.shopcard .btn{margin-top:12px}
+/* the fanned trio: up to three photos, three static rotations; no motion, one transform each */
+.shopcard .fan{position:relative;flex:0 0 96px;height:96px}
+.shopcard .fan img,.shopcard .fan b{position:absolute;top:8px;left:18px;width:60px;height:60px;border-radius:12px;object-fit:cover;box-shadow:var(--sh-1);background:var(--bg-2)}
+.shopcard .fan img:nth-child(1){transform:rotate(-9deg) translate(-12px,4px)}
+.shopcard .fan img:nth-child(2){transform:rotate(2deg);z-index:1}
+.shopcard .fan img:nth-child(3){transform:rotate(11deg) translate(12px,4px)}
+.shopcard .fan b{display:grid;place-items:center;font-size:26px;font-weight:800;color:var(--ink);background:var(--grad-soft)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .shopcard .fan img{filter:brightness(.82)}}
+:root[data-theme=dark] .shopcard .fan img{filter:brightness(.82)}
+@media (max-width:340px){.shopcard .fan{display:none}}
 .fineprint{font-size:12.5px;color:var(--faint);margin:10px 20px 0;line-height:1.4}
 .checkoutcopy{color:var(--accent-2)!important}
 
@@ -418,7 +440,6 @@ function openComposer(){
   const slot=$('#compSlot'), c=$('#comp'); if(slot&&c) slot.appendChild(c);
   if(!(DRAFT.text||'').trim()&&!DRAFT.stars){ const t=$('#txt'); if(t) try{ t.focus({preventScroll:true}); }catch(e){} }
 }
-const money=c=>'$'+(c/100).toFixed(c%100?2:0);
 const ago=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
 
 /* The composer lives in a sheet behind the "Say something" dock. DRAFT is the post
@@ -457,15 +478,38 @@ function render(){
     <button class="share" onclick="share()">Share</button>
   </div>`;
 
-  /* Straight under the name, before anything else on the page. Somebody who came
-     here to say the night was good should not have to scroll past a shop to do
-     something about it. When card tips are not switched on, the button says so
-     BEFORE the tap and drops the glow — never a button that leads to a shrug. */
+  /* THE SHOP CARD (the founder, 2026-09-13): the merch table's front door, straight
+     under the name and above the tip button, sized like the home page's finder and
+     wearing the same gradient ring. Drawn only when there is something to sell —
+     never a card that leads to an empty shop (rule 3). Artists and venues both. The
+     sub-line only promises card payments when the server would take them (canBuy),
+     and "pick up tonight" only while live AND something is a pickup item. */
+  if((d.merch||[]).length){
+    const n=d.merch.length, pics=d.merch.filter(m=>m.img&&m.img[0]==='/').slice(0,3);
+    const who=VENUE?d.name:firstName();
+    const mine=(ORDERS||[]).filter(o=>o&&o.slug===SLUG&&!!o.venue===VENUE)[0];   // artist and venue slugs are separate namespaces
+    h+=`<a class="shopcard rise" href="${SLUG?esc(HOME)+'/shop':'/shop.html'}" data-leaving="Opening the shop…">
+      <div class="n"><div class="k"><i></i>Merch</div>
+        <h2>${esc(who)}’s merch</h2>
+        <p>${n} ${n===1?'item':'items'} · ${d.canBuy?'paid to '+esc(d.name)+' through Stripe'+(d.live&&d.merch.some(m=>m.ship!=='ship')?' · pick up tonight':''):(VENUE?'links and the bar':'links and the merch table')}</p>
+        ${mine?`<div class="order">Your order${mine.code?' · '+esc(mine.code):''} · ${esc(mine.title||'')}${mine.variant?' ('+esc(mine.variant)+')':''}${mine.qty>1?' × '+mine.qty:''}</div>`:''}
+        <span class="btn btn-ink btn-sm">Browse the shop →</span></div>
+      <div class="fan" aria-hidden="true">${pics.length?pics.map(m=>`<img src="${esc(m.img)}" width="120" height="120" alt="" loading="lazy" decoding="async">`).join('')
+        :`<b>${esc((d.merch[0].title||'?').slice(0,1).toUpperCase())}</b>`}</div>
+    </a>`;
+  }
+
+  /* Under the shop card, still above everything the room has said (the founder,
+     2026-09-13: the shop's front door first, then the tip). The card exists only
+     when there is something to sell, so on a page with no merch this is still the
+     first thing under the name. When card tips are not switched on, the button says
+     so BEFORE the tap and drops the glow — never a button that leads to a shrug. */
   if(!VENUE) h+=`<div class="tipbar"><button${d.canBuy?'':' class="off"'} onclick="openTip()">
     <b>Support ${esc(firstName())}</b><small>${d.canBuy?'Show your appreciation':'Card tips aren’t on yet — say hi at the show'}</small></button></div>`;
 
-  /* THE PROOF, BEFORE THE ASK. What the room has already said — the rating, the
-     clips, the nights — sits above the shop and the feed, and the night chips
+  /* THE PROOF, ABOVE THE FEED. What the room has already said — the rating, the
+     clips, the nights — sits under the shop card and the tip button and above the
+     feed (the founder, 2026-09-13: door, tip, proof, feed), and the night chips
      narrow the feed to one show. Rating is the directory's formula (artists.mjs):
      the mean of 1–5 stars over the posts served, to one decimal. */
   const posts=d.posts||[];
@@ -482,19 +526,6 @@ function render(){
       ${clips?`<button class="chip ${FILTER==='clips'?'on':''}" data-filter="clips">${clips} ${clips===1?'clip':'clips'}</button>`:''}
       ${nights.map(n=>`<button class="chip ${FILTER===n.id?'on':''}" data-filter="${esc(n.id)}">${esc(n.label)} · ${n.count}</button>`).join('')}
     </div>`;
-  }
-
-  if((d.merch||[]).length){
-    h+=`<div class="sect">Merch</div><div class="rail">${d.merch.map(m=>`
-      <div class="mcard">
-        <div class="pic" ${m.img?`style="background-image:url('${esc(m.img)}')"`:''}>${m.img?'':esc((m.title||'?').slice(0,1).toUpperCase())}</div>
-        <div class="b"><div class="t">${esc(m.title)}</div>
-          <div class="p">${m.cents?money(m.cents):'No price listed'}${m.blurb?' · '+esc(m.blurb):''}</div>
-          ${d.canBuy&&m.cents>=100?`<button class="buy" data-buy="${esc(m.id)}">Buy · ${money(m.cents)}</button>`
-            :m.link?`<a class="buy ext" href="${esc(m.link)}" target="_blank" rel="noopener noreferrer">Get it ↗</a>`
-            :`<span class="buy ask">Ask at the show</span>`}</div>
-      </div>`).join('')}</div>
-      ${d.canBuy?`<p class="fineprint">Paid to ${esc(d.name)} directly. Pickup items are handed over at a show.</p>`:''}`;
   }
 
   // the composer — rendered into the persistent #comp, not into #app (see openComposer)
@@ -583,7 +614,6 @@ function wire(){
   if(btn) btn.addEventListener('click',post);
   document.querySelectorAll('[data-like]').forEach(b=>b.addEventListener('click',()=>like(b)));
   document.querySelectorAll('[data-more]').forEach(b=>b.addEventListener('click',()=>more(b.getAttribute('data-more'))));
-  document.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>buySheet(b.getAttribute('data-buy'))));
   document.querySelectorAll('[data-zoom]').forEach(i=>i.addEventListener('click',()=>{ $('#lbimg').src=i.getAttribute('data-zoom'); $('#lb').classList.add('on'); }));
   wireClips();
 }
@@ -1094,18 +1124,12 @@ async function report(id){
 }
 function share(){ const url=new URL(HOME,location.origin).href; if(navigator.share){ navigator.share({title:`${D.name} — MySet`,url}).catch(()=>{}); } else { try{ navigator.clipboard.writeText(url); toast('Profile link copied'); }catch(e){ toast(url); } } }
 
-/* ---------- buying ---------- */
-let QTY=1;
-function buySheet(id){
-  const m=(D.merch||[]).find(x=>x.id===id); if(!m) return; QTY=1;
-  const paint=()=>{ $('#qty').textContent=QTY; $('#buyGo').textContent=`Pay ${money(m.cents*QTY)}`; };
-  openSheet(`<h3>${esc(m.title)}</h3><p class="lede">${m.ship==='ship'?'Posted to you — you’ll give an address at checkout.':'Pick it up at a show.'}</p>
-    <div class="tiles" style="align-items:center"><button class="tile" style="flex:0 0 64px;text-align:center" onclick="QTY=Math.max(1,QTY-1);(${paint.toString()})()">−</button>
-      <b id="qty" style="flex:1;text-align:center;font-size:26px">1</b>
-      <button class="tile" style="flex:0 0 64px;text-align:center" onclick="QTY=Math.min(5,QTY+1);(${paint.toString()})()">＋</button></div>
-    <button class="go" id="buyGo" onclick="buy('${esc(id)}')">Pay ${money(m.cents)}</button>
-    <p class="fine">Paid to ${esc(D.name)} through Stripe. MySet never sees your card.</p>`);
-}
+/* ---------- tips, and the return trip from Stripe ----------
+   Merch is sold on the shop page (/<slug>/shop) since 2026-09-13; the buy sheet that
+   lived here is gone. What stays: the tip sheet, and redeem()/handleReturn(), because
+   tips started here come back here, and a merch session created before that deploy
+   carries a server-built success_url to THIS page — it must still be redeemed
+   (INVARIANTS 5b, 5c). */
 /* The band name or first name the artist chose (decision 0062), else the first word of the name. */
 const firstName=()=>(D&&String(D.first||'').trim())||String(D&&D.name||'the artist').split(' ')[0]||'the artist';
 let TIP=10;
@@ -1145,24 +1169,32 @@ async function sendTip(){
     if(b){b.disabled=false;b.textContent='Continue to payment';} }
 }
 const PEND='myset.pending.merch';
-async function buy(id){
-  const b=$('#buyGo'); b.disabled=true; b.textContent='Opening checkout…';
-  const attempt=Math.random().toString(36).slice(2,14);
-  try{
-    const r=await fetch(`${API}/pay${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({fan:FAN,kind:'merch',item:id,qty:QTY,attempt})});
-    const d=await r.json();
-    if(!d.ok||!d.url){ toast('Couldn’t open checkout — try again in a moment'); b.disabled=false; return; }
-    try{ localStorage.setItem(PEND,JSON.stringify({id:d.id,at:Date.now()})); }catch(e){}
-    goTo(d.url,'Opening secure checkout…');
-  }catch(e){ toast('Couldn’t open checkout — try again in a moment'); b.disabled=false; }
+/* WHAT THIS PHONE HAS BOUGHT — `myset.orders`, the list the shop page writes and reads,
+   one shape for both writers: {sid,slug,venue,item,title,qty,variant,ship,cents,post,code,at}
+   — newest first, capped at 20, anything over 30 days dropped on write. `slug` AND
+   `venue` together name the owner (artist /x and venue /v/x are different owners), so
+   the shop card here and the compact receipt on the shop page show the same order.
+   Read once at boot; rememberOrder() keeps the two in step. */
+const ORDERS_KEY='myset.orders';
+let ORDERS=(()=>{ try{ const a=JSON.parse(localStorage.getItem(ORDERS_KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } })();
+function rememberOrder(o){
+  const cut=Date.now()-30*864e5;
+  ORDERS=[o,...ORDERS.filter(x=>x&&x.sid!==o.sid&&(x.at||0)>cut)].slice(0,20);
+  try{ localStorage.setItem(ORDERS_KEY,JSON.stringify(ORDERS)); }catch(e){}
 }
 /* the return trip: verify with the server, never trust the URL (INVARIANT 6); a
-   stale pending session from a lost return is retried too (5c) */
+   stale pending session from a lost return is retried too (5c). A merch order is
+   also written to `myset.orders` and the page re-drawn first, so the shop card shows
+   "Your order · code · title" under the receipt. */
 async function redeem(sid){
   try{
     const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}${Q==='?'?'':'&'+Q.slice(1)}`);
     const d=await r.json();
     if(d.ok){ try{ localStorage.removeItem(PEND); }catch(e){}
+      if(d.kind==='merch'&&d.order){ const o=d.order;
+        rememberOrder({sid,slug:SLUG,venue:VENUE,item:String(o.item||''),title:String(o.title||'Your order'),qty:Number(o.qty)||1,variant:String(o.variant||''),ship:o.ship==='ship'?'ship':'pickup',
+          cents:o.cents!=null?Number(o.cents):null,post:Number(o.post)||0,code:String(o.code||''),at:Number(o.at)||Date.now()});
+        if(D&&D.ok) render(); }
       const app=$('#app'); const card=document.createElement('div'); card.className='receipt';
       card.innerHTML=`<b>Paid — thank you</b>${d.kind==='tip'
         ? (d.already?'That tip was already in.':`${esc(firstName())} has your tip.`)

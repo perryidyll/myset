@@ -257,8 +257,14 @@ export default class Stripe {
                       subscription: subId, customer: params.customer, payment_status: 'paid',
                       created: NOW(), metadata: params.metadata || {} };
         } else {
-          const amount = (params.line_items || []).reduce((sum, l) =>
+          const lines = (params.line_items || []).reduce((sum, l) =>
             sum + Number((l.price_data || {}).unit_amount || 0) * Number(l.quantity || 1), 0);
+          /* A FIXED SHIPPING RATE IS IN THE TOTAL, as it is on Stripe: with one
+             option offered the buyer pays it, and `amount_total` is lines plus
+             postage while `amount_subtotal` is the lines alone. Without this a test
+             could never catch an order row that books the postage as merch money. */
+          const ship = Number(((((params.shipping_options || [])[0] || {}).shipping_rate_data || {}).fixed_amount || {}).amount || 0);
+          const amount = lines + ship;
           /* A REAL payment intent ID, not the params object. Stripe returns an id
              (or an expanded object with one); handing back the request params meant
              every refund path in every test silently did nothing, because there was
@@ -271,7 +277,8 @@ export default class Stripe {
               capture_method: manual ? 'manual' : 'automatic_async' } });
           session = {
             id, url: `https://checkout.stripe.test/${id}`, mode: 'payment',
-            payment_status: manual ? 'unpaid' : 'paid', amount_total: amount,
+            payment_status: manual ? 'unpaid' : 'paid', amount_total: amount, amount_subtotal: lines,
+            total_details: { amount_shipping: ship, amount_discount: 0, amount_tax: 0 },
             created: NOW(), metadata: params.metadata || {},
             payment_intent: pi,
             payment_intent_data: params.payment_intent_data || null,
