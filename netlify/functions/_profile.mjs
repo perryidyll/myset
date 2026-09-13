@@ -53,7 +53,7 @@ export const defaultProfile = () => ({
   photo: '/img/band-sm.jpg',   // 800px wide: a phone never draws it bigger, and it is a third of the bytes
   avatar: '',            // the big square portrait
   photos: [],            // up to MAX_PHOTOS small ones clustered around it
-  links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', website: '' },
+  links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', bandcamp: '', gofundme: '', website: '' },
   media: [],
   merch: [],
   updatedAt: Date.now(),
@@ -67,8 +67,14 @@ const LINK_HOSTS = {
   applemusic: ['music.apple.com', 'geo.music.apple.com'],
   ytmusic: ['music.youtube.com'],
   instagram: ['instagram.com', 'www.instagram.com'],
+  /* Bandcamp pages live on the artist's own subdomain (name.bandcamp.com), so the
+     rule is the suffix, checked below with a dot in front of it — `evilbandcamp.com`
+     does not pass. Added with GoFundMe at the founder's ask, 2026-09-13. */
+  bandcamp: ['bandcamp.com', '*.bandcamp.com'],
+  gofundme: ['gofundme.com', 'www.gofundme.com', 'gf.me'],
   website: null,                      // any https host
 };
+const hostOk = (allow, host) => allow.some((a) => a.startsWith('*.') ? host.endsWith(a.slice(1)) && host.length > a.length - 1 : a === host);
 export function safeLink(kind, raw) {
   const v = String(raw || '').trim();
   if (!v) return '';
@@ -77,7 +83,7 @@ export function safeLink(kind, raw) {
   if (u.protocol !== 'https:') return '';
   const host = u.hostname.toLowerCase().replace(/\.$/, '');
   const allow = LINK_HOSTS[kind];
-  if (allow && !allow.includes(host)) return '';
+  if (allow && !hostOk(allow, host)) return '';
   u.hash = '';
   for (const junk of ['si', 'utm_source', 'utm_medium', 'utm_campaign', 'app', 'uo'])
     u.searchParams.delete(junk);
@@ -110,6 +116,8 @@ export function normProfile(p) {
     applemusic: safeLink('applemusic', L.applemusic),
     ytmusic: safeLink('ytmusic', L.ytmusic),
     instagram: safeLink('instagram', L.instagram),
+    bandcamp: safeLink('bandcamp', L.bandcamp),
+    gofundme: safeLink('gofundme', L.gofundme),
     website: safeLink('website', L.website),
   };
   // anything that can no longer produce a valid embed src is dropped, whatever

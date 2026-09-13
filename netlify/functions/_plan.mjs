@@ -20,7 +20,12 @@ import { readArtists, mutateArtists } from './_auth.mjs';
 export const PLANS = {
   free: {
     label: 'Hobbyist', price: 0,
-    featured: 50,       // how many can be live to the audience at once
+    /* How many songs can be live to the audience at once. UNLIMITED on every plan
+       since 2026-09-13 (the founder: a small setlist must never be the reason to
+       upgrade — the room should feel it has lots and lots of options); the
+       library's SIZE is the plan line now (`library` below). The machinery for a
+       cap stays, reading Infinity as no cap, so a future plan can have one. */
+    featured: Infinity,
     /* SHOWS PER CALENDAR MONTH (UTC — see gigMonthOf in _lib.mjs). This is the one
        limit that tracks what MySet actually costs to run: every phone in the room
        polls for the whole gig, so the bill is driven by gigs played, not by artists
@@ -107,7 +112,7 @@ export const PLANS = {
        a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
     cut: 0.10,
     audience: 300,        // a bar with a floor (the founder, 2026-09-13; was 1,000). Worst single night: well under a dollar.
-    library: 2000,        // MAX_LIBRARY, restated so every plan row reads the same
+    library: 200,         // "add up to 200 songs" (the founder, 2026-09-13); Rock Star holds MAX_LIBRARY
     seats: 1,
     pricing: true, setlists: true, merch: true, moderate: true, reports: true,
     promote: false, analytics: false, presskit: false, branding: false,

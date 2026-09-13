@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 14:53 — 67c6d78 — wt@ui/batch-seven (0 files since origin/main)
+**tl;dr:** Batch seven: every song in the library is live to the room on every plan, Bar Star holds 200, Bandcamp + GoFundMe links, plan cards reworded, installed Studio reloads after a theme toggle (decision 0061)
+**Other sessions:** free featured is Infinity and plus library 200 in _plan.mjs (cap machinery kept); _profile.mjs LINK_HOSTS has bandcamp/gofundme with a wildcard hostOk(); theme.js toggle() reloads when navigator.standalone; studio.js restamped 72f3dec6
+
 ### 2026-09-13 12:00 — 740d852 — wt@ui/batch-six (0 files since origin/main)
 **tl;dr:** Batch six: the plan cards in the founder's words with four rules moved in the code (free room 50, free library 100, hiding a post + data reports on Bar Star, delete-for-good gone — 0060); every accent word and Directions pill pink-orange; Tonight ringed as one box; View on MAP; tip sheets 'Give <First> some love / Sent via Stripe Connect'; carousel resumes 1 s after a hand scroll; theme.js replaces the theme-color meta so iOS repaints the band under the clock
 **Other sessions:** _plan.mjs: library (libraryCap), reports (reportsAllowed), audience 50/300; moderate now gates postHide and postDelete is NOT an admin action. history.mjs GET answers a free plan {locked:'plus',nights,shows:[]} and ?show= 402 — read HIST.nights when locked. --accent-ink is #FF5650 both themes; --grad-soft is the pill ground. INVARIANT 0dy rewritten. TIER_COPY is the founder's verbatim lines: change _plan.mjs and the card together.

@@ -1371,7 +1371,7 @@ async function loadProf(force){
 }
 async function saveProfile(){
   const v=id=>(($('#'+id)||{}).value||'').trim();
-  const IDS={spotify:'lkSpotify',applemusic:'lkApple',ytmusic:'lkYtm',instagram:'lkIg',website:'lkWeb'};
+  const IDS={spotify:'lkSpotify',applemusic:'lkApple',ytmusic:'lkYtm',instagram:'lkIg',bandcamp:'lkBc',gofundme:'lkGfm',website:'lkWeb'};
   const typed={}; for(const k in IDS) typed[k]=v(IDS[k]);   // capture BEFORE the re-render
   const management=v('pfManagement'), managementUrl=v('pfManagementUrl');
   if(!!management!==!!managementUrl){toast('Add both the label or management name and its website, or leave both blank.');return;}
@@ -1966,6 +1966,8 @@ function render(){
       <div class="field"><label>Spotify</label><input class="inp" id="lkSpotify" value="${esc(L.spotify||'')}" placeholder="https://open.spotify.com/artist/…"></div>
       <div class="field"><label>Apple Music</label><input class="inp" id="lkApple" value="${esc(L.applemusic||'')}" placeholder="https://music.apple.com/…"></div>
       <div class="field"><label>YouTube Music</label><input class="inp" id="lkYtm" value="${esc(L.ytmusic||'')}" placeholder="https://music.youtube.com/…"></div>
+      <div class="field"><label>Bandcamp</label><input class="inp" id="lkBc" value="${esc(L.bandcamp||'')}" placeholder="https://yourname.bandcamp.com"></div>
+      <div class="field"><label>GoFundMe</label><input class="inp" id="lkGfm" value="${esc(L.gofundme||'')}" placeholder="https://www.gofundme.com/f/…"></div>
       <div class="field"><label>Website</label><input class="inp" id="lkWeb" value="${esc(L.website||'')}" placeholder="https://…"></div>
 
       <div class="sec"><span class="kick">Videos &amp; music</span><span class="kick">${P.media.length}/24</span></div>
@@ -3594,20 +3596,20 @@ function replyPost(id){
 const TIER_COPY={
   free:{name:'Hobbyist',price:'$0',items:[
     ['10 shows for free',' – up to 50 people each'],
-    ['All core fan features',' – voting, requests, birthday shout-outs, lyrics'],
+    ['All core fan features',' – voting, requests, birthday shout-outs, and more'],
     ['Lyrics and chords',' – customizable charts to read in-app while playing'],
-    ['Your page',' – gig calendar and city listings'],
-    ['A community page',' – fans rate the night and post photos, you reply'],
-    ['Add up to 100 songs',' – and show up to 50 to your audience to vote on'],
+    ['All-in-1 artist page',' – a complete promotional tool for your music: feature your upcoming show/tour schedule, all your streaming links, YouTube video links, Bandcamp/GoFundMe/etc. links, and more'],
+    ['A community page',' – fans rate the night, post comments/photos/videos, and you can reply to them directly to build connection and engagement'],
+    ['Add up to 100 songs',' – showcase all of them for your audience to vote on'],
     ['<span class="fee">Transaction fee</span>',' – 25% on money taken through the app']]},
   plus:{name:'Bar Star',price:'$10 / month',items:[
     ['Everything in Hobbyist',''],
     ['Unlimited shows',' – play as often as you like'],
     ['Rooms up to 300',' – give everyone a chance to connect'],
-    ['Unlimited songs',' – live to the room at once'],
+    ['Add up to 200 songs',' – showcase all of them for your audience to vote on'],
     ['Separate setlists',' – customizable for different gigs and venues'],
     ['Set your own rules',' – # of free votes per person, price of buying more, votes needed to request a song not on your setlist, and more'],
-    ['Sell merch',' – straight from your community page'],
+    ['In-app merch store',' – feature and sell your merch directly from your artist page'],
     ['Hide 1-2 star reviews',' – protect your page from drunk haters'],
     ['Verification badge',' – after credentials are approved'],
     ['Data reports',' – track the numbers of fans and tips from every show'],
@@ -3616,7 +3618,7 @@ const TIER_COPY={
   pro:{name:'Rock Star',price:'$20 / month',items:[
     ['Everything in Bar Star',''],
     ['Rooms up to 2,000',' – a bigger night still runs, just a little calmer'],
-    ['Coming soon, included',' – earnings by venue and night, a press kit, your branding, promotion in other cities'],
+    ['Professional business dashboard',' – a sleek, all-in-1 system for managing your earnings from tips and merch sales (by night, venue, etc.), ads and promotions, creating in-app personalized branding, press kits, and more <em class="soon">(coming soon)</em>'],
     ['<span class="fee">Transaction fee</span>',' – 2% on money taken through the app']]},
 };
 const tierList=(k)=>TIER_COPY[k].items.map(x=>`<li><b>${x[0]}</b>${x[1]||''}</li>`).join('');

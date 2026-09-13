@@ -1102,8 +1102,9 @@ If you are about to violate one, stop and say so rather than working around it.
 0be. **Accepting a request must make it votable, or refuse.** `askAccept` added the
     song to the library only; with a setlist active the room could never vote for
     it, while the fan who paid three credits was told "On the list — go vote for
-    it". It now joins tonight's set. If the plan's featured cap would land it
-    switched off instead, the accept is REFUSED — the request stays pending, so the
+    it". It now joins tonight's set. If a plan's featured cap would land it
+    switched off instead (no plan has one since decision 0061; the check stays),
+    the accept is REFUSED — the request stays pending, so the
     fan's credits are still attached to something the artist can honour or decline.
 
 0bf. **The projection refresh is measured, not an allow-list.** `refreshActive` used
@@ -1297,8 +1298,8 @@ If you are about to violate one, stop and say so rather than working around it.
     picture in slot **p1**. Clearing one photo appeared to move another. Only
     *trailing* blanks are dropped, so the array still stays short when it can.
 
-0ca. **A numeric limit is not a yes/no.** `photos` is 3 or 12 and `featured` is 50
-    or unlimited, so `limits[flag] === true` was false for both and a Pro venue saw
+0ca. **A numeric limit is not a yes/no.** `photos` is 3 or 12 and `featured` was 50
+    or unlimited (unlimited on every plan since decision 0061), so `limits[flag] === true` was false for both and a Pro venue saw
     a dash beside twelve photo slots it fully had. "Has it" means "has as much as
     the top plan gives". Unlimited arrives as `null`, because `shapeLimits` maps
     `Infinity` to `null` so it survives JSON.

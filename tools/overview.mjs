@@ -237,7 +237,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 | Price per month | ${money(p.free.price)} | **${money(p.plus.price)}** | **${money(p.pro.price)}** |
 | MySet's cut of money taken through the app | **${pct(p.free.cut)}** | **${pct(p.plus.cut)}** | **${pct(p.pro.cut)}** |
 | Shows per calendar month (UTC) | ${cap(p.free.gigs)} | ${cap(p.plus.gigs)} | ${cap(p.pro.gigs)} |
-| Songs live to the audience at once | ${cap(p.free.featured)} | ${cap(p.plus.featured)} | ${cap(p.pro.featured)} |
+| Songs live to the audience at once (the whole library since decision 0061) | ${cap(p.free.featured)} | ${cap(p.plus.featured)} | ${cap(p.pro.featured)} |
 | People in one room (soft — nobody is refused) | ${p.free.audience.toLocaleString()} | ${p.plus.audience.toLocaleString()} | ${p.pro.audience.toLocaleString()} |
 | Songs the library holds | ${p.free.library.toLocaleString()} | ${p.plus.library.toLocaleString()} | ${p.pro.library.toLocaleString()} |
 | Team seats | ${p.free.seats} | ${p.plus.seats} | ${p.pro.seats} |

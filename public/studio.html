@@ -432,6 +432,7 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .tier ol li{padding:3px 0}
 .tier ol li b{color:var(--ink);font-weight:700}
 .tier .fee{color:var(--accent-2);font-weight:700}
+.tier .soon{color:var(--muted);font-style:italic;font-size:14px}
 .tier .cta{margin:2px 14px 14px}
 .tier .cta .big{margin:0}
 .tier .cta .big.now{background:var(--surface-2);color:var(--muted);box-shadow:none;cursor:default}
@@ -703,7 +704,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=131ddc0f"></script>
+<script src="/studio.js?v=72f3dec6"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —
