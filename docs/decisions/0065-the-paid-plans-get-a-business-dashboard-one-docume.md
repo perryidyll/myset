@@ -151,6 +151,23 @@ returns `timedSum` and `Biz.rates(timedSum, view)` gives the four readings;
 `normGig` stores `cut`. The report's hero, KPIs and table follow the same words
 (its rates stay the whole act's, before the fee — an accountant's figures).
 
+**Second pass, same day:** the report grew a sixth card, *Adjust $/h
+calculations → Rate settings*, a window with the four hour switches (saved to
+the account as `bizPrefs`, so the Studio follows), the *Total / My cut*
+toggle and a *Show rates after MySet's fee* switch (kept on the phone under
+the Studio's own `myset.biz.view`, so a toggle here is the toggle there); the
+report's rates and its $/h column now follow that view and say so. A filed
+night learned **what the room paid for**: `moneyForShow` counts the votes
+bought (`votes.paid`, the packs' `votes` metadata summed) and the paid requests
+accepted (`requests`, a `request_hold` is only `paid` once captured); the row
+carries `paidVotes` / `paidRequests`, Re-check fills them on an older night,
+and the heal is NOT re-opened for them (a block written before the counts has
+nothing to yield — the same rule as `key`). The editor sheet and the report's
+venue cell read *"63 votes · 40 free · 23 paid · 2 paid requests"*, free votes
+being the tally less the bought ones, floored at zero; a night that does not
+know says only its tally. The Shows list shows three and folds the rest behind
+*Show N more* (a search or *Pick shows* lists every row).
+
 ## How it was verified
 
 Built in a clean worktree off `origin/main` (`b966884`, rebased onto `34215b8` when

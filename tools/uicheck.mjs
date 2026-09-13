@@ -40,7 +40,7 @@ const MOCK={
     show:{artistId:'demo',slug:'demo',artist:'Demo Artist',status:'pre',showId:'',windowOpen:true,played:[],nowPlaying:null,freeCredits:3,unlimited:false,replayCost:5,
       packs:{small:{votes:3,cents:500},big:{votes:15,cents:2000}},requests:{on:false,cost:3},birthdays:{on:false,cost:3},unlimitedFans:[],autoStart:true}},
   history:{ok:true,live:{showId:'n1',venue:'The Room',city:'Bangkok',startedAt:N1.getTime()+600000,endedAt:N1.getTime()+3*3600000,live:false,status:'ended',songsPlayed:12,totalVotes:40,peakVoters:9,gross:42.5,unattributed:0},
-    shows:[night('n1',N1,42.5,'stripe'),night('n2',N2,0,'stripe-unreachable')]},
+    shows:[{...night('n1',N1,42.5,'stripe'),paidVotes:23,paidRequests:2},night('n2',N2,0,'stripe-unreachable')]},   // n2 predates the paid counts
   historyB:{ok:true,live:null,shows:[]},
   revenue:{ok:true,enabled:false,payments:[],unredeemed:0,totals:{all:0,tips:0,votes:0,merch:0,count:0}},
   auth:(b)=>{
@@ -560,8 +560,11 @@ const MONEY=await pg.evaluate(async ()=>{
   const log=[...app.querySelectorAll('button')].find(b=>/^Log tonight$/.test(b.textContent.trim()));
   ok('the just-ended night offers “Log tonight” under the tiles', !!log&&log.classList.contains('btn-pri'));
   ok('and its top edge sits in the upper half of an 844px phone', !!log&&log.getBoundingClientRect().top<844*0.5, log&&String(Math.round(log.getBoundingClientRect().top)));
+  const first=[...app.querySelectorAll('.list .row[data-act="bizopen"]')], more=app.querySelector('[data-act="bizmore"]');
+  ok('the Shows list shows three at first, newest first, with Show more for the rest', first.length===3&&/The Room/.test(first[0].innerText)&&!!more&&/^Show 1 more$/.test(more.textContent.trim()), `${first.length} rows · ${more&&more.textContent.trim()}`);
+  more.click(); await new Promise(r=>setTimeout(r,60));
   const rows=[...app.querySelectorAll('.list .row[data-act="bizopen"]')];
-  ok('one row per show in the period, newest first', rows.length===4&&/The Room/.test(rows[0].innerText), String(rows.length));
+  ok('Show more unfolds every show in the period', rows.length===4&&/Show fewer/.test((app.querySelector('[data-act="bizmore"]')||{}).textContent||''), String(rows.length));
   const orphan=rows.find(r=>/Logged show/.test(r.innerText));
   ok('a record whose gig left the calendar is listed as “Logged show”, dated, counted, and says why', !!orphan&&!!orphan.querySelector('.bizchip.pos')&&/\$150\.00 paid/.test(orphan.innerText)&&/no longer on your calendar/.test(orphan.innerText), orphan&&orphan.innerText.replace(/\n/g,' | '));
   ok('the profit chart has a heading', /Profit by show/i.test(text));   // the kick is uppercased by CSS
@@ -595,6 +598,7 @@ const MONEY=await pg.evaluate(async ()=>{
   [...app.querySelectorAll('button')].find(b=>/^Log tonight$/.test(b.textContent.trim())).click(); await new Promise(r=>setTimeout(r,120));
   const sheet=document.querySelector('#sheet');
   ok('“Log tonight” opens the editor sheet with the drag exception class', sheet.classList.contains('on')&&sheet.classList.contains('biz'));
+  ok('the sheet says what the room paid for on that night', /40 votes · 17 free · 23 paid · 2 paid requests/.test((sheet.querySelector('.bizvotes')||{}).textContent||''), (sheet.querySelector('.bizvotes')||{}).textContent);
   ok('the sheet is titled Log a show, asks for the total pay from the venue and the splits, and carries no $/h pills', sheet.querySelector('h3').textContent==='Log a show'&&/Total pay from venue/.test(sheet.innerText)&&/Splits/.test(sheet.innerText)&&!sheet.querySelector('[data-act="bizhk"]'), sheet.querySelector('h3').textContent);
   const cutIn=sheet.querySelector('.bz[data-f="cut"]');
   ok('My cut sits in the splits box above + Add band member, blank, with what’s left as its placeholder', !!cutIn&&!!cutIn.closest('[data-rows="band"]')&&cutIn.value===''&&/342\.50 — what's left/.test(cutIn.placeholder)&&!!(cutIn.compareDocumentPosition(sheet.querySelector('[data-act="bizadd"][data-id="band"]'))&Node.DOCUMENT_POSITION_FOLLOWING), cutIn&&cutIn.placeholder);

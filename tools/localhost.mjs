@@ -155,7 +155,7 @@ async function seed(plan = 'plus') {
     const started = at(dateIso, hh, 4), ended = started + 3 * H + 12 * 60e3;
     if (money) for (const [i, [kind, cents]] of money.entries())
       __stripe.sessions.set(`cs_${showId}_${i}`, { onAccount: acct, session: { id: `cs_${showId}_${i}`, mode: 'payment', payment_status: 'paid',
-        created: Math.floor((started + (i + 1) * 25 * 60e3) / 1000), amount_total: cents, metadata: { kind, artist: aid, show: showId, votes: kind === 'votes' ? '10' : '' } } });
+        created: Math.floor((started + (i + 1) * 25 * 60e3) / 1000), amount_total: cents, metadata: { kind, artist: aid, show: showId, votes: kind === 'votes' ? String(Math.round(cents / 100)) : kind === 'song_votes' ? '5' : '', title: kind === 'request_hold' ? 'Wagon Wheel' : '' } } });
     const real = Date.now; Date.now = () => ended;
     try {
       const log = play(songs, started);
@@ -169,11 +169,11 @@ async function seed(plan = 'plus') {
   const nights = [];
   for (const w of [6, 5, 4, 3, 2, 1]) {
     const d = thursday(w); const showId = `${d}-2004-th${w}`;
-    const money = w === 3 ? null : [['votes', 500 + w * 300], ['tip', 700], ['votes', 300], w % 2 ? ['tip', 1200] : ['votes', 500]];
+    const money = w === 3 ? null : [['votes', 500 + w * 300], ['tip', 700], ['votes', 300], w % 2 ? ['tip', 1200] : ['votes', 500], ...(w === 1 || w === 4 ? [['request_hold', 500], ['song_votes', 250]] : [])];
     nights.push({ w, d, showId, ...(await file({ showId, key: `${RES}@${d}`, dateIso: d, hh: 20, venue: 'The Ugly Duckling Irish Pub', songs: bar.slice(0, 8 + (w % 4)), phones: 20 + w * 3, money })) });
   }
   // the Saturday one-off (money known), last night (just ended — "Log tonight"), and a Tuesday MySet ran with no gig on the calendar
-  await file({ showId: `${satDate}-1934-sat`, key: `${SAT}@${satDate}`, dateIso: satDate, hh: 19, venue: 'Beach House Koh Phangan', songs: bar.slice(2, 12), phones: 41, money: [['votes', 1500], ['tip', 2000], ['votes', 800]] });
+  await file({ showId: `${satDate}-1934-sat`, key: `${SAT}@${satDate}`, dateIso: satDate, hh: 19, venue: 'Beach House Koh Phangan', songs: bar.slice(2, 12), phones: 41, money: [['votes', 1500], ['tip', 2000], ['votes', 800], ['request_hold', 500], ['request_hold', 500]] });
   const lastNight = await file({ showId: `${lastDate}-2003-last`, key: `${LAST}@${lastDate}`, dateIso: lastDate, hh: 20, venue: 'Baan Tai Beach Bar', songs: bar.slice(1, 10), phones: 33, money: [['votes', 900], ['tip', 500]] });
   const tueDate = iso(now - 12 * D - ((new Date(now - 12 * D).getDay() + 5) % 7) * D);
   const tueId = `${tueDate}-2102-tue`;

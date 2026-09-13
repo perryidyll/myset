@@ -172,18 +172,30 @@ console.log('\nRE-CHECK CLEARS "APP MONEY NOT AVAILABLE" ON THE ROW TOO  (0065)'
   await cas(`hist_${mo.artistId}_hand-1`, () => ({}), (d) => { d.money = { ...(d.money || {}), gross: 0, source: 'stripe-unreachable' }; return true; });
   await cas(KEY.histIdx(mo.artistId), () => ({ shows: [] }), (d) => { const r = d.shows.find((x) => x.showId === 'hand-1'); r.gross = 0; r.source = 'stripe-unreachable'; return true; });
   eq('the night is on file as unreachable', (await row(mo.artistId, 'hand-1')).source, 'stripe-unreachable');
+  ok('a night filed without Stripe answering has no paid counts — unknown, not zero', (await row(mo.artistId, 'hand-1')).paidVotes == null);
   const started = (await readHistShow(mo.artistId, 'hand-1')).startedAt;
   __stripe.sessions.set('cs_hand1', { onAccount: '', session: { id: 'cs_hand1', mode: 'payment', payment_status: 'paid',
     created: Math.floor(started / 1000) + 600, amount_total: 500, metadata: { kind: 'tip', artist: mo.artistId, show: 'hand-1' } } });
+  /* What the room paid for, on the same night: a ten-vote pack, a five-vote song
+     pack and an accepted paid request — the three counts the dashboard lists. */
+  __stripe.sessions.set('cs_hand1v', { onAccount: '', session: { id: 'cs_hand1v', mode: 'payment', payment_status: 'paid',
+    created: Math.floor(started / 1000) + 700, amount_total: 1000, metadata: { kind: 'votes', votes: '10', artist: mo.artistId, show: 'hand-1' } } });
+  __stripe.sessions.set('cs_hand1s', { onAccount: '', session: { id: 'cs_hand1s', mode: 'payment', payment_status: 'paid',
+    created: Math.floor(started / 1000) + 800, amount_total: 500, metadata: { kind: 'song_votes', votes: '5', artist: mo.artistId, show: 'hand-1' } } });
+  __stripe.sessions.set('cs_hand1r', { onAccount: '', session: { id: 'cs_hand1r', mode: 'payment', payment_status: 'paid',
+    created: Math.floor(started / 1000) + 900, amount_total: 500, metadata: { kind: 'request_hold', artist: mo.artistId, show: 'hand-1' } } });
   process.env.STRIPE_SECRET_KEY = 'sk_test_notreal_forlocaltestsonly';   // this time Stripe answers
   const re = await reconcileShow(mo.artistId, 'hand-1');
   delete process.env.STRIPE_SECRET_KEY;
-  eq('the re-check hears from Stripe', [re.money.source, re.money.gross], ['stripe', 5]);
+  eq('the re-check hears from Stripe', [re.money.source, re.money.gross], ['stripe', 25]);
+  eq('the money block counts the votes bought and the requests accepted', [re.money.votes.paid, re.money.requests.count, re.money.requests.amount], [15, 1, 5]);
+  eq('the tip is a tip, the request is not', [re.money.tips.count, re.money.votes.count], [1, 3]);
   const doc = await readHistShow(mo.artistId, 'hand-1');
   eq('the detail carries the answer', doc.money.source, 'stripe');
   const r = await row(mo.artistId, 'hand-1');
   eq('and so does the row the dashboard reads — source equals the detail\'s', r.source, doc.money.source);
-  eq('with the gross', r.gross, 5);
+  eq('with the gross', r.gross, 25);
+  eq('and the paid counts, so the editor can say what the room paid for', [r.paidVotes, r.paidRequests], [15, 1]);
 }
 
 console.log('\nTHE NAME IS CUT AT 100 CHARACTERS');

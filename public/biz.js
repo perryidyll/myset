@@ -206,6 +206,14 @@ const Biz = (() => {
       s.appKnown = ns.length > 0 && ns.every((n) => n.source === 'stripe');
       s.app = s.appKnown ? ns.reduce((t, n) => t + Math.round((Number(n.gross) || 0) * 100), 0) : null;
       s.votes = ns.reduce((t, n) => t + (n.totalVotes || 0), 0);
+      /* What the room paid for, off the rows: votes bought and requests accepted.
+         Known only when every night of the show says so (a night filed before
+         the counts existed, or without Stripe answering, reads null); free votes
+         are what is left of the tally once the bought ones are taken out. */
+      const paidKnown = ns.length > 0 && ns.every((n) => n.paidVotes != null && n.paidRequests != null);
+      s.paidVotes = paidKnown ? ns.reduce((t, n) => t + (Number(n.paidVotes) || 0), 0) : null;
+      s.paidRequests = paidKnown ? ns.reduce((t, n) => t + (Number(n.paidRequests) || 0), 0) : null;
+      s.freeVotes = paidKnown ? Math.max(0, s.votes - s.paidVotes) : null;
       s.songs = ns.reduce((t, n) => t + (n.songsPlayed || 0), 0);
       s.peak = ns.reduce((t, n) => Math.max(t, n.peakVoters || 0), 0);
       let found = gigs[s.key] ? s.key : null;
@@ -228,7 +236,8 @@ const Biz = (() => {
       const [y, m, d] = date.split('-').map(Number);
       shows.push({ key: k, bizKey: k, date, startsAt: y ? new Date(y, m - 1, d, 12).getTime() : null, endsAt: null,
         venue: '', city: '', title: 'Logged show', repeating: false, occ: null, nights: [], appKnown: false, app: null,
-        votes: 0, songs: 0, peak: 0, biz: gigs[k], rule: null, gig: gigs[k], source: 'gig', counted: true, orphanRecord: true });
+        votes: 0, songs: 0, peak: 0, paidVotes: null, paidRequests: null, freeVotes: null,
+        biz: gigs[k], rule: null, gig: gigs[k], source: 'gig', counted: true, orphanRecord: true });
     }
     return shows.sort((a, b) => (b.startsAt || 0) - (a.startsAt || 0));
   }
@@ -252,6 +261,15 @@ const Biz = (() => {
   }
 
   const inRange = (show, from, to) => !!show.date && show.date >= from && show.date <= to;
+
+  /* The night's votes in words — the total, and what the room paid for when the
+     filed night knows: "63 votes · 40 free · 23 paid · 2 paid requests". */
+  function votesLine(s) {
+    const n = (v, w) => `${v} ${w}${v === 1 ? '' : 's'}`;
+    const out = [n(s.votes || 0, 'vote')];
+    if (s.paidVotes != null) out.push(`${s.freeVotes} free`, `${s.paidVotes} paid`, n(s.paidRequests || 0, 'paid request'));
+    return out.join(' · ');
+  }
 
   /* The period's totals, over COUNTED shows only. Profit, revenue and costs are
      over every counted show; the hourly rate is over the TIMED subset — the shows
@@ -289,7 +307,7 @@ const Biz = (() => {
       out.includedMinutes += c.includedMinutes;
       if (c.timed) { out.timed++; T.profit += c.profit; T.cut += c.cut; T.fee += c.fee; T.included += c.includedMinutes; T.perform += c.minutes.perform || 0; }
       out.byShow.push({ key: s.key, date: s.date, venue: s.venue, title: s.title, source: s.source, nights: (s.nights || []).length,
-        votes: s.votes || 0, pay: c.pay, band: c.bandTotal, tips: c.tips, merch: c.merch, app: c.app, appKnown: c.appKnown,
+        votes: s.votes || 0, freeVotes: s.freeVotes == null ? null : s.freeVotes, paidVotes: s.paidVotes == null ? null : s.paidVotes, paidRequests: s.paidRequests == null ? null : s.paidRequests, pay: c.pay, band: c.bandTotal, tips: c.tips, merch: c.merch, app: c.app, appKnown: c.appKnown,
         costs: c.costs, revenue: c.revenue, profit: c.profit, fee: c.fee, cut: c.cut, minutes: c.minutes, includedMinutes: c.includedMinutes, timed: c.timed, rate: c.rate });
       const mo = String(s.date || '').slice(0, 7);
       if (mo > latest) latest = mo;
@@ -323,6 +341,6 @@ const Biz = (() => {
     return out;
   }
 
-  return { LIMITS, TIME_KINDS, JOIN, empty, norm, money, hm, parseHm, bullets, calc, rate, rates, join, period, inRange, sum, key, parseKey, localDate };
+  return { LIMITS, TIME_KINDS, JOIN, empty, norm, money, hm, parseHm, bullets, calc, rate, rates, join, period, inRange, votesLine, sum, key, parseKey, localDate };
 })();
 if (typeof module !== 'undefined') module.exports = Biz;

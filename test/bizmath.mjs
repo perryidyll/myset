@@ -217,6 +217,21 @@ console.log('\njoin(): a record is found under every key its show has ever had')
   ok('an orphan record is in range for its day', Biz.inRange(byShowId, '2026-08-30', '2026-08-30'));
 }
 
+console.log('\nvotesLine(): what the room paid for');
+{
+  const o = occ('ev9', 2026, 9, 1, 20);
+  const known = Biz.join([night('k1', at(2026, 9, 1, 20), { totalVotes: 63, paidVotes: 23, paidRequests: 2 })], [o], {}, NOW)[0];
+  eq('free votes are the tally less the bought ones', [known.votes, known.freeVotes, known.paidVotes, known.paidRequests], [63, 40, 23, 2]);
+  eq('in words', Biz.votesLine(known), '63 votes · 40 free · 23 paid · 2 paid requests');
+  const old = Biz.join([night('k2', at(2026, 9, 1, 20), { totalVotes: 9 })], [o], {}, NOW)[0];
+  eq('a night filed before the counts existed reads unknown, never zero', [old.freeVotes, old.paidVotes, old.paidRequests], [null, null, null]);
+  eq('and says only the tally', Biz.votesLine(old), '9 votes');
+  const two = Biz.join([night('k3', at(2026, 9, 1, 20), { totalVotes: 5, paidVotes: 5, paidRequests: 0 }), night('k4', at(2026, 9, 1, 21), { totalVotes: 4 })], [o], {}, NOW)[0];
+  eq('two nights on one gig: unknown if either is', [two.nights.length, two.paidVotes], [2, null]);
+  eq('bought more than were cast: free votes floor at zero', Biz.join([night('k5', at(2026, 9, 1, 20), { totalVotes: 3, paidVotes: 8, paidRequests: 1 })], [o], {}, NOW)[0].freeVotes, 0);
+  eq('the report row carries the three', (({ freeVotes, paidVotes, paidRequests }) => [freeVotes, paidVotes, paidRequests])(Biz.sum([known], null).byShow[0]), [40, 23, 2]);
+}
+
 console.log('\nkey(), parseKey(), inRange()');
 {
   eq('key', Biz.key('ev1', '2026-09-12'), 'ev1@2026-09-12');

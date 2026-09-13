@@ -46,6 +46,14 @@ export function topPaidOf(played) {
   const best = [...by.values()].filter((x) => x.paid > 0).sort((a, b) => b.paid - a.paid || a.title.localeCompare(b.title))[0];
   return best ? { title: best.title, paid: best.paid } : null;
 }
+/* The two paid counts off a money block, for the row. A block written before the
+   counts existed, or one Stripe never answered, has nothing to say — null, never
+   0, the same rule as `source` — and a row that already knew keeps what it knew. */
+const paidOf = (money, field, was) => {
+  const m = money || {};
+  if (m.source !== 'stripe' || !m.votes || m.votes.paid == null) return (was && was[field] != null) ? was[field] : null;
+  return field === 'paidVotes' ? (Number(m.votes.paid) || 0) : (Number(m.requests && m.requests.count) || 0);
+};
 /* Every per-night field the artist page reads off an index row. The heal's gate
    below re-opens once for any row missing one of these, so a field added here
    is back-filled on the next Money-tab load without anybody tapping anything. */
@@ -54,6 +62,10 @@ export function topPaidOf(played) {
    "app money not available" instead of writing down a zero. `key` is deliberately
    NOT here: a night filed before 0065 has no key to back-fill, and re-opening the
    heal for every account to write null would be a pass that repairs nothing. */
+/* `paidVotes` / `paidRequests` (0065) are NOT here for the same reason `key` is not:
+   a money block written before they existed cannot yield them, so re-opening the
+   heal for every account to write null would repair nothing — *Re-check* on a
+   night asks Stripe again and fills them. A missing field reads as unknown. */
 const ROW_TOPS = ['top', 'topPlayed', 'topPaid', 'source'];
 const stampTops = (row) => { for (const f of ROW_TOPS) if (!(f in row)) row[f] = null; return row; };
 
@@ -63,10 +75,17 @@ const stampTops = (row) => { for (const f of ROW_TOPS) if (!(f in row)) row[f] =
    busy month would silently truncate. */
 export async function moneyForShow(aid, showId, fromMs, toMs) {
   const key = process.env.STRIPE_SECRET_KEY;
+  /* `votes.paid` is how many votes the room BOUGHT that night (the packs' `votes`
+     metadata summed) and `requests` the paid song requests the artist accepted
+     (a request_hold is only `paid` once captured) — the two figures the business
+     dashboard lists beside the night's total, so an artist can see what the
+     room paid for and not just what it added up to (0065). `votes.count` stays
+     what it was: sessions, not votes, and request holds are still in it. */
   const out = {
     currency: 'USD', gross: 0,
-    votes: { amount: 0, count: 0 },
+    votes: { amount: 0, count: 0, paid: 0 },
     tips: { amount: 0, count: 0, recent: [] },
+    requests: { amount: 0, count: 0 },
     unattributed: 0, source: key ? 'stripe' : 'off', reconciledAt: Date.now(),
   };
   if (!key) return out;
@@ -112,6 +131,8 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
         if (['votes', 'song_votes', 'request_hold'].includes(md.kind)) {
           out.votes.amount = round(out.votes.amount + amt);
           out.votes.count += 1;
+          if (md.kind === 'request_hold') { out.requests.amount = round(out.requests.amount + amt); out.requests.count += 1; }
+          else out.votes.paid += parseInt(md.votes, 10) || 0;
         } else {
           out.tips.amount = round(out.tips.amount + amt);
           out.tips.count += 1;
@@ -278,6 +299,8 @@ export async function archiveShow(aid, show, fans) {
       unattributed: money.unattributed || 0,
       // whether that gross is Stripe's answer or the absence of one (see ROW_TOPS)
       source: money.source || null,
+      // what the room paid for: votes bought and requests accepted (null = not asked)
+      paidVotes: paidOf(money, 'paidVotes', was), paidRequests: paidOf(money, 'paidRequests', was),
       /* The night's most-voted, most-played and most-paid-for song, title and
          count only, so the public artist page can name the room's favourites from
          this one document instead of opening every night (decision 0043). Never
@@ -415,6 +438,7 @@ export async function healHistory(aid, { force = false } = {}) {
       peakVoters: st.peakVoters || 0, room: st.room || 0, nets: st.nets || 0,
       gross: money.gross || 0, unattributed: money.unattributed || 0,
       source: money.source || null,
+      paidVotes: paidOf(money, 'paidVotes', was), paidRequests: paidOf(money, 'paidRequests', was),
       // from the detail already in hand — no extra read
       top: topOf(was && was.top, st.topSong),
       topPlayed: topOf(was && was.topPlayed, topPlayedOf(doc.played), 'plays'),
@@ -608,7 +632,8 @@ export async function reconcileShow(aid, showId) {
        successful re-pull kept the night's gross out of profit and kept offering
        the same Re-check for ever — the one button decision 0065 promises clears
        "app money not available" could not clear it. */
-    if (row) { row.gross = money.gross; row.unattributed = money.unattributed || 0; row.source = money.source || null; }
+    if (row) { row.gross = money.gross; row.unattributed = money.unattributed || 0; row.source = money.source || null;
+      row.paidVotes = paidOf(money, 'paidVotes', row); row.paidRequests = paidOf(money, 'paidRequests', row); }
     return true;
   }).catch(() => {});
   return { ...doc, money };

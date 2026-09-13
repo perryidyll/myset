@@ -74,6 +74,8 @@ const CSS=`
 .bizfee{flex:1 1 auto;text-align:left;font-size:12.5px;font-weight:600;line-height:1.35;color:var(--accent-ink,#FF5650);padding:7px 12px;border-radius:14px;box-shadow:inset 0 0 0 1px var(--accent-ink,#FF5650);transition:transform .2s var(--spring,ease)}
 .bizfee:active{transform:scale(.98)}
 .biznote{font-size:12px;padding:10px 18px 0;margin:0;color:var(--accent-ink,#FF5650);line-height:1.45}
+.list .bizmore{width:100%;justify-content:center;font-size:14.5px;font-weight:600;color:var(--accent-ink,#FF5650);cursor:pointer;text-align:center}
+.bizvotes{font-size:13px;font-weight:600;color:var(--ink-2,#DDDDE0);margin:-8px 0 14px;line-height:1.45}.bizvotes .muted{font-weight:500}
 .bizchip{flex:0 0 auto;font-size:13px;font-weight:700;padding:5px 9px;border-radius:999px;background:var(--surface-2,#2C2C2E);color:var(--ink,#F5F5F7)}
 .bizchip.pos{color:var(--good,#30D158);background:color-mix(in srgb,var(--good,#30D158) 14%,transparent)}
 .bizchip.neg{color:var(--accent-ink,#FF5650);background:var(--accent-soft,rgba(255,86,80,.18))}
@@ -117,6 +119,8 @@ let PULSE=false;         // the hero pulses once on the paint after a save
 let SHOWN={};            // last value each tile showed, so a count-up starts from it
 let PICKS=null;          // a Set of keys while "Pick shows" is on, else null
 let BARI=-1;             // the tapped chart bar
+let MORE=false;          // the Shows list unfolded past its first three (the founder, 2026-09-13)
+const FOLD=3;
 let ED=null;             // the open editor: {key, show, base, stored}
 let PER=(()=>{ try{ return JSON.parse(localStorage.getItem('myset.biz.period')||'null')||{kind:'month'}; }catch(e){ return {kind:'month'}; } })();
 /* How the hourly rate is read: the whole act's profit or the artist's own cut,
@@ -211,7 +215,7 @@ function stale(){ BZ=null; LOADING=null; FLIGHT=null; REQ++; }
 /* THE BOOK IS FORGOTTEN: sign-out, or a door back in that may be somebody else.
    Every piece of state in this file goes back to what it was before the first
    read — nothing of one account may greet the next one on the same phone. */
-function forget(){ stale(); WIN=null; ED=null; PICKS=null; BARI=-1; SHOWN={}; ANIM=true; PULSE=false; GEN++; }
+function forget(){ stale(); WIN=null; ED=null; PICKS=null; BARI=-1; MORE=false; SHOWN={}; ANIM=true; PULSE=false; GEN++; }
 
 /* ---------- THE JOIN, once per paint. A gig that is on right now (started, not
    over, nothing filed yet) is tonight's business, not an unconfirmed night. */
@@ -350,7 +354,9 @@ function showRow(s,S){
 function showsList(inP,S,P){
   const q=String(HISTQ||'').toLowerCase().split(/\s+/).filter(Boolean);
   const hay=s=>[s.title,s.venue,s.city,s.date,dlabel(s.date),dfull(s.date)].filter(Boolean).join(' ').toLowerCase();
-  const rows=q.length?inP.filter(s=>{const h=hay(s);return q.every(w=>h.includes(w));}):inP;
+  const all=q.length?inP.filter(s=>{const h=hay(s);return q.every(w=>h.includes(w));}):inP;
+  /* Three at first, the rest behind Show more — a search or Pick shows lists every row. */
+  const folded=!MORE&&!q.length&&!PICKS&&all.length>FOLD, rows=folded?all.slice(0,FOLD):all;
   const n=PICKS?PICKS.size:0;
   const right=PICKS?`<button class="btn-line" id="bizpickbtn" style="padding:8px 14px;font-size:13px" data-act="bizreport" ${n?'':'disabled'}>Report ${n} show${n===1?'':'s'}</button>`
                    :`<button class="btn-text" style="padding:0" data-act="bizpickmode">Pick shows</button>`;
@@ -360,6 +366,7 @@ function showsList(inP,S,P){
   ${inP.length>12?`<div class="find" style="margin-bottom:8px"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
     <input id="histq" type="search" placeholder="Find a show — venue, city, date…" value="${esc(HISTQ||'')}" autocomplete="off"></div>`:''}
   <div class="list">${rows.map(s=>showRow(s,S)).join('')||`<div class="row muted">Nothing matches “${esc(HISTQ||'')}”.</div>`}
+    ${folded?`<button class="row bizmore" type="button" data-act="bizmore">Show ${all.length-FOLD} more</button>`:MORE&&!q.length&&!PICKS&&all.length>FOLD?`<button class="row bizmore" type="button" data-act="bizmore">Show fewer</button>`:''}
     ${sparse?`<div class="row muted">Played a night MySet wasn't at? Add it on the Gigs tab — past dates are fine — and it shows up here.</div>`:''}</div>
   ${BZ.dropped>0?`<p class="muted" style="font-size:12px;padding:10px 18px 0;margin:0">MySet keeps your last ${((HIST&&HIST.shows)||[]).length} nights; ${BZ.dropped} older ones are not shown.</p>`:''}
   <div class="wrap bizfoot2" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0 4px"><button class="btn-text" onclick="healHist()">Look for missing shows</button><button class="btn-text" onclick="placeHist()">Name these from my calendar</button></div>`;
@@ -443,7 +450,7 @@ function after(gen){
   });
   if(PULSE){ PULSE=false; const h=$m('.bizhero'); if(h&&!quiet){ h.classList.add('pulse'); setTimeout(()=>h.classList.remove('pulse'),700); } }
 }
-function reset(){ ANIM=true; BARI=-1; PICKS=null; }
+function reset(){ ANIM=true; BARI=-1; PICKS=null; MORE=false; }
 
 /* "Log tonight" under the Tonight / last show tiles, once the night is filed and
    the dashboard knows which gig it was. */
@@ -556,6 +563,7 @@ async function openBiz(key){
   openSheet(`<div class="bizro"><div class="k">Profit for this show</div><b class="mono" id="bizro"></b></div>
     <h3>${rec?'Edit this show':'Log a show'}</h3>
     <p class="lede"><b>${dlabel(s.date)} · ${name}.</b> ${s.nights.length?(s.appKnown?`${Biz.money(s.app)} came through the app that night, before fees.`:'The app money for this night is not available — Re-check it from the list.'):s.source==='rule'&&!rec?'Started from the run’s usual numbers — change anything that was different.':'Only what you type here is counted.'}</p>
+    ${s.nights.length?`<p class="bizvotes">${esc(Biz.votesLine(s))}${s.paidVotes==null?' <span class="muted">· paid votes and requests not counted for this night — Re-check it from the list</span>':''}</p>`:''}
     ${draft?`<p class="muted" style="font-size:12.5px;margin:-8px 0 12px">Your unsaved numbers from earlier are back.</p>`:''}
     <div class="bizf" id="bizf">${datalist()}${rows.pay(g)}${rows.band(g,stored)}${rows.tips(g)}${rows.merch(g)}${rows.costs(g,stored)}${rows.time(g)}${rows.gear(g)}${rows.note(g)}</div>
     <button class="btn-pri btn-block" style="margin-top:18px" data-act="bizsave">Save</button>
@@ -701,6 +709,7 @@ function tap(e,b,id){
   if(a==='bizfee')setView({net:!VIEW.net});
   if(a==='bizbar'){ if(!BZ||!BZ.ok)return; BARI=BARI===Number(id)?-1:Number(id); const {S,P}=joined(); const el=$m('#bizchart'); if(el)el.outerHTML=chartBox(S,P,false); }
   if(a==='bizpickmode'){ PICKS=PICKS?null:new Set(); render(); }
+  if(a==='bizmore'){ MORE=!MORE; render(); }
   if(a==='bizpick'){ if(!PICKS)return; if(e.target.closest('button'))return; PICKS.has(id)?PICKS.delete(id):PICKS.add(id);
     const ck=b.querySelector('.bizck'); if(ck&&ck!==e.target)ck.checked=PICKS.has(id);
     const btn=$m('#bizpickbtn'); if(btn){ btn.disabled=!PICKS.size; btn.textContent=`Report ${PICKS.size} show${PICKS.size===1?'':'s'}`; } }
