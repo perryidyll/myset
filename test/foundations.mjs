@@ -209,7 +209,7 @@ console.log('\nTHE SECOND HOME');
   ok('a pass copies every key an owner holds', r1.done && r1.copied > 20 && r1.failed === 0, r1);
   const stored = [...__r2.objects.keys()];
   ok('under backup/<key> — the same key, the other store', stored.includes(PREFIX + KEY.show(AID)) && stored.includes(PREFIX + EVT(AID, showId)) && stored.includes(PREFIX + 'cityindex'), stored.slice(0, 5));
-  ok('never a fan shard, a session or a sign-in secret', !stored.some((k) => /^backup\/(f\d+_|sess_|lock_|authc_|authsecret)/.test(k)), stored.filter((k) => /f\d+_|sess_/.test(k)));
+  ok('never a fan shard, a session, a sign-in secret or a clip (already on R2)', !stored.some((k) => /^backup\/(f\d+_|sess_|lock_|authc_|authsecret|vid_)/.test(k)), stored.filter((k) => /f\d+_|sess_|vid_/.test(k)));
   const r2 = await runMirror({ owners, keysOf });
   eq('the next ring after a finished pass does nothing', [r2.done, r2.copied], [true, undefined]);
   await casDoc(STATE, () => ({}), (d) => { d.passDoneAt = Date.now() - 25 * 3600e3; return true; });
@@ -221,14 +221,18 @@ console.log('\nTHE SECOND HOME');
   ok('a changed document (and its new version) crosses; the rest is skipped', r4.copied >= 1 && r4.copied <= 3 && r4.skipped >= r1.copied - 1, r4);
   const bytes = __r2.objects.get(PREFIX + KEY.profile(AID));
   ok('the bytes on R2 are the document', bytes && JSON.parse(Buffer.from(bytes.bytes).toString()).tagline === 'changed');
-  /* Out of time: a budget of one millisecond does one owner per ring and carries on. */
-  await casDoc(STATE, () => ({}), (d) => { d.passDoneAt = Date.now() - 25 * 3600e3; return true; });
-  const r5 = await runMirror({ owners: async () => [AID, 'nobody'], keysOf: async (o) => (o === AID ? keysFor(AID) : ['profile_nobody']), budgetMs: 0 });
-  eq('a pass too big for the ring stops with a cursor', [r5.done, r5.cursor, r5.of], [false, 1, 3]);
-  const r6 = await runMirror({ owners: async () => [AID, 'nobody'], keysOf: async (o) => (o === AID ? keysFor(AID) : ['profile_nobody']), budgetMs: 0 });
-  eq('and the next ring carries on from it', [r6.cursor, r6.done], [2, false]);
-  const r7 = await runMirror({ owners: async () => [AID, 'nobody'], keysOf: async (o) => (o === AID ? keysFor(AID) : ['profile_nobody']), budgetMs: 5000 });
-  eq('until it is done', [r7.cursor, r7.done], [3, true]);
+  /* Out of time: with no budget at all a ring still copies at least one key per
+     worker, leaves the cursor on the unfinished owner, and the next ring carries on
+     from the manifest — until the pass is done, with every key copied exactly once. */
+  __r2.reset();
+  for (const k of [...__dump().keys()].filter((x) => x.startsWith('mirror'))) await store().delete(k);
+  const two = { owners: async () => [AID, 'nobody'], keysOf: async (o) => (o === AID ? keysFor(AID) : ['profile_nobody']) };
+  const r5 = await runMirror({ ...two, budgetMs: 0 });
+  ok('a pass too big for the ring stops with the cursor on the unfinished owner', !r5.done && r5.cursor === 0 && r5.copied >= 1 && r5.copied < r1.copied, r5);
+  let rings = 1, last = r5;
+  while (!last.done && rings < 60) { last = await runMirror({ ...two, budgetMs: 0 }); rings++; }
+  ok('and ring after ring finishes the pass', last.done && last.cursor === 3 && rings > 2, { rings, last });
+  eq('with every key copied once across the rings', [...__r2.objects.keys()].length, r1.copied);
   __r2.uninstall();
   eq('with R2 off, the ring says so and copies nothing', await runMirror({ owners, keysOf }), { off: true });
 }
