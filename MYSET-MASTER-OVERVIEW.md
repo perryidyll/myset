@@ -435,9 +435,9 @@ worth reading. If a number here is wrong, the source is wrong.*
 | Price per month | $0 | **$10** | **$20** |
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
 | Shows per calendar month (UTC) | 10 | unlimited | unlimited |
-| Songs live to the audience at once | 50 | unlimited | unlimited |
+| Songs live to the audience at once (the whole library since decision 0061) | unlimited | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 50 | 300 | 2,000 |
-| Songs the library holds | 100 | 2,000 | 2,000 |
+| Songs the library holds | 100 | 200 | 2,000 |
 | Team seats | 1 | 1 | 5 |
 | Set your own prices (vote packs, replay, requests) | — | yes | yes |
 | Create named setlists | — | yes | yes |
@@ -514,7 +514,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 255 (last: 0fk) |
 | Test suites | 45 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 60 |
+| Decision records | 61 |
 
 ### Feature flags in force
 
@@ -528,7 +528,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 |---|---|---|
 | `cut` | the platform's share of every tip, vote pack and merch sale | `_connect.mjs`, as a Stripe `application_fee_amount` on a direct charge |
 | `gigs` | how many shows may be **started** in a UTC calendar month | `admin.mjs` and `_lifecycle.mjs` — both the button and the scheduler go through one function |
-| `featured` | how many songs are **live to the audience** at once (never how many are stored) | `admin.mjs` on `toggleSong`, and the payload builder |
+| `featured` | how many songs are **live to the audience** at once (never how many are stored) — unlimited on every plan since decision 0061, the check kept | `admin.mjs` on `toggleSong`, and the payload builder |
 | `audience` | a **soft** ceiling stamped onto the show; the room slows and shortens, nobody is refused | `_lib.mjs` (`pollFloorFor`, `boardLimitFor`), `show.mjs` |
 | `seats` | team members who can sign in | `_account.mjs` |
 | `pricing` | setting your own vote-pack prices, replay cost and request costs | `admin.mjs`, 402 |

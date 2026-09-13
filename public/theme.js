@@ -46,6 +46,18 @@
        the colour behind the status bar on scroll, and this is the cheapest scroll
        there is. Nothing visible moves. */
     requestAnimationFrame(() => { const y = scrollY; scrollTo(0, y + 1); scrollTo(0, y); });
+    /* AND, FROM THE HOME SCREEN, A RELOAD. The founder's phone (2026-09-13, twice):
+       a MySet opened from its icon keeps the band under the clock in the OLD colour
+       after the toggle — the replaced meta above made a refresh fix it where before
+       only a new page did, but the toggle itself still does not. iOS reads the
+       colour for a standalone app when the page loads and at no other time we can
+       find, so the toggle finishes with the one thing that is known to work. Only
+       standalone (`navigator.standalone` is iOS's own flag; Safari's tab bar
+       follows the meta live and needs no reload); the choice is already in
+       localStorage and the <head> script applies it as the page parses, so the
+       reload lands in the new theme with no flash. Deferred a beat so the tap's
+       own paint lands first. */
+    if (navigator.standalone === true) setTimeout(() => location.reload(), 60);
   };
   document.addEventListener('click', (event) => {
     if (event.target.closest('[data-theme-toggle]')) toggle();

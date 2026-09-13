@@ -156,8 +156,8 @@ const read = (f) => src(new URL('../public/' + f, import.meta.url));
 
   const artist = read('artist.html');
   const order = /const LABEL=\{([^}]*)\}/.exec(artist)[1].split(',').map((x) => x.split(':')[0]);
-  eq('Instagram first, then the three music services', order,
-     ['instagram', 'spotify', 'applemusic', 'ytmusic', 'website']);
+  eq('Instagram first, then the three music services, Bandcamp and GoFundMe, the website last', order,
+     ['instagram', 'spotify', 'applemusic', 'ytmusic', 'bandcamp', 'gofundme', 'website']);
   ok('and the links block is built before the bio',
      artist.indexOf('Listen &amp; follow') < artist.indexOf('<div class="sect">About</div>'));
 }

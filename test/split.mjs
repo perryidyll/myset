@@ -218,7 +218,7 @@ console.log('\nA PERSONAL STATE FROM ANOTHER NIGHT IS NO STATE AT ALL');
 }
 
 console.log('\nA BIG ROOM: YOUR OWN SONG COMES BACK FROM THE TAIL');
-/* Fifty live songs (the free plan's featured cap — later ones start switched off),
+/* Fifty live songs (every plan shows the whole library since 2026-09-13, decision 0061),
    more than the short board carries; one fan votes for one nobody else has and it
    sits below the cut. A phone must still see it (INVARIANT 0el). */
 for (let i = 0; i < 42; i++) await A('addSong', { title: 'Filler ' + i, artist: 'T' });

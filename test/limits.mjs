@@ -181,7 +181,7 @@ ok('the venue photo cap is actually enforced', /venueLimits\(await venueById\(vi
 ok('and refused with a 402, like every other plan limit', /Extra photos come with Pro\.`, 402\)/.test(vadmin));
 
 console.log('\nA NUMERIC LIMIT IS NOT A YES/NO');
-/* `photos` is 3 or 12 and `featured` is 50 or unlimited, so the first version of
+/* `photos` is 3 or 12 and `featured` was 50 or unlimited (unlimited on every plan since 0061), so the first version of
    has() — `limits[flag]===true` — was false for both, and a Pro venue was shown a
    dash beside twelve photo slots it fully had. Caught in a browser, not in review.
    Both Studios carry the same fix and both are checked, because they are meant to
@@ -205,7 +205,8 @@ console.log('\nTHE LIBRARY HAS A SIZE, AND ON THE FREE PLAN IT IS 100  (decision
 {
   const { libraryCap, MAX_LIBRARY } = await import('../netlify/functions/_plan.mjs');
   eq('the free plan holds 100 songs', libraryCap(PLANS.free), 100);
-  eq('the paid plans hold the most any library holds', [libraryCap(PLANS.plus), libraryCap(PLANS.pro)], [MAX_LIBRARY, MAX_LIBRARY]);
+  eq('Bar Star holds 200 songs', libraryCap(PLANS.plus), 200);
+  eq('Rock Star holds the most any library holds', libraryCap(PLANS.pro), MAX_LIBRARY);
   const lib = await createArtist({ email: 'lib@example.com', name: 'Lib Rarian', slug: 'lib-rarian' });
   const TL = await signToken('lib@example.com', revOf(await readArtists(), lib.artistId));
   const L = (action, extra = {}) => hit(admin, 'https://x/api/admin', { action, ...extra }, TL);
