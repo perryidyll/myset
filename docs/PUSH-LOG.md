@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 01:08 — 029666e — wt8@ops/mirror-says-why (6 files since origin/main)
+**tl;dr:** The mirror's first real pass was 0 copied / 69 failed: R2 refuses every PUT — and has since 2026-09-11 (r2.put 403 in the error log; both live clips are served from Blobs, not R2). The token can read the bucket, not write it: a Cloudflare permission, the founder's to fix, no deploy needed after. The ring now names the first refusal and retries hourly
+**Other sessions:** P3-003 (clips on R2) is NOT working in production and never was — status blocked in the ledger; every clip upload since 2026-09-11 took the Blobs fallback. Do not build anything that assumes bytes are on R2 until the founder fixes the token (Object Read & Write on R2_BUCKET). Read a ring with: netlify logs --source functions --function mirrorcron --since 30m; the state is: netlify blobs:get myset mirror -O -. _mirror.mjs: RETRY_GAP_MS 1h after a failed pass; result carries err.
+
 ### 2026-09-14 00:48 — 1ce731f — wt7@ops/mirror-deadline (5 files since origin/main)
 **tl;dr:** mirrorcron's first ring in production timed out (12.9 s, Netlify's 10 s limit) pulling the 70 MB clips through the function — now it skips vid_ (clips are already on R2 under the same key), checks the deadline after every key, and resumes a partial owner at the key it reached; budget 5.5 s
 **Other sessions:** _mirror.mjs: SKIP now includes vid_; mirrorOwner(owner, keys, now, deadline, start) returns {partial, next}; the state doc 'mirror' carries keyCursor. Read the ring with: netlify logs --source functions --function mirrorcron --since 30m (netlify logs:function is gone). A timed-out ring shows Duration > 10000 ms and no 'mirrorcron:' line.
