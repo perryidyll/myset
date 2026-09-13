@@ -49,6 +49,16 @@ export default async (req) => {
     if (!d) return bad('unknown show', 404);
     return json({ ok: true, show: d });
   }
+  /* The night's event log (decision 0066): every vote, play and dollar in order.
+     Same door as the detail — it is a data report. */
+  const logWanted = url.searchParams.get('log');
+  if (logWanted) {
+    if (!reports) return bad(LOCKED, 402);
+    const { readEventLog } = await import('./_evlog.mjs');
+    const log = await readEventLog(aid, String(logWanted).slice(0, 40));
+    if (!log.n) return bad('no log for that night', 404);
+    return json({ ok: true, log });
+  }
 
   /* Once per artist, ever: fold in nights that were archived but never indexed, and
      the ones still sitting under the pre-multi-tenancy flat keys. It stamps the index

@@ -1,4 +1,5 @@
-import { casDoc, readDoc, KEY } from './_lib.mjs';
+import { readDoc, KEY } from './_lib.mjs';
+import { casKeep } from './_versions.mjs';
 import { parseMedia, embedSrc, linkOut, embedShape } from './_embeds.mjs';
 
 /* HOW MANY SMALL PHOTOS AN ARTIST GETS, named rather than inlined as a 3.
@@ -187,8 +188,9 @@ export async function getProfile(aid) {
   p.artistId = aid;
   return p;
 }
+/* casKeep: the profile as it was is kept as a version before every change (0067). */
 export const mutateProfile = (aid, fn) =>
-  casDoc(KEY.profile(aid), defaultProfile, (p) => {
+  casKeep(KEY.profile(aid), defaultProfile, (p) => {
     const np = normProfile(p);
     Object.keys(p || {}).forEach((k) => delete p[k]);
     Object.assign(p, np);

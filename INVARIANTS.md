@@ -29,6 +29,51 @@ If you are about to violate one, stop and say so rather than working around it.
    > Regression test for 1–5: fire N simultaneous votes from N distinct fans and
    > assert the tally equals N exactly. Last verified: **80/80, zero loss.**
 
+0fq. **State is a cache of the log: every vote, play and dollar of a night is filed
+    in `evt_<aid>_<showId>` as it happens, and never from the vote path.** A vote
+    row is `[cost, paid, when]`; the three functions that take rows off the board
+    (`dropSongVotes`, `refundSongVotes`, `wipeBoard`) hand back what they removed
+    and the Studio action files it — `vote` with the `play`, `refund`, `drop`,
+    `reset` — so every vote appears once with the reason it left; the archive
+    files what is still standing, the money and the end by REPLACING the head's
+    state, so filing twice files once. A new path that removes votes from the
+    board must harvest and file them or the log goes silent for it. A log write
+    that fails never stops a song (caught) — the sum is still in `show.log`. The
+    cast itself pays nothing: `test/cost.mjs` holds 5 reads / 2 writes. `d` is a
+    per-night pseudonym, never the device (0bu). Decision `0066`;
+    `test/foundations.mjs`.
+
+0fr. **A capped list must have a complete sibling, and a hand-edited document keeps
+    a version before every overwrite.** Every list cut for a screen names the
+    record that is not cut: `histidx_` (400) ↔ `histids_`; `posts_` (200) ↔
+    `postsarch_`; `fb_` (200) ↔ `fbarch_`; `show.log` (200) ↔ the night's event
+    log; `histpend_` (50) is a queue whose answer is `histids_`. The record side
+    is an append-only log in computable keys (`_append.mjs`: a head that spills
+    write-once parts, no `list()` — 1), appended BEFORE the list is trimmed, read
+    through a dedup, so a crash duplicates and never loses. `profile_`, `lists_`,
+    `ev_` and the show record's library go through `casKeep`: the bytes as read to
+    `ver_<key>_<ts>` (write-once), the stamp to `vers_<key>`, at most one every
+    thirty seconds, never for a document that did not exist, never on a play, a
+    vote or a poll. A new capped list names its sibling in the same change; a new
+    hand-edited document uses `casKeep`. Decisions `0067`, `0068`.
+
+0fs. **An id, once minted, is never reused and never changes meaning.** Artist,
+    venue, show, song, post, clip, version stamp, log part — the event log, the
+    versions, the archives, the mirror and every migration at any scale key on
+    them. A slug is a name, not an id (0di: a held slug, an old one that keeps answering; the id under it never moves).
+    Decision `0068`.
+
+0ft. **Every document has a second home, and the restore has been run.** `mirrorcron`
+    walks the registries and `keysFor()` / `keysForVenue()` — the one list — asks
+    each key for its etag, and copies what changed to R2 under `backup/<key>`
+    (content type kept) once a day, time-boxed with a cursor. Never a fan shard,
+    a session, a lockout, a sign-in code or the auth secret. A new per-owner key
+    is copied because it is in `keysFor()`, and for no other reason.
+    `tools/backup.py --restore DIR --store NAME` writes a laptop copy back, reads
+    every key and compares, and refuses the production store by name; rehearsed
+    2026-09-14 (`docs/sessions/2026-09-14-data-foundations.md`). Open: a hard
+    delete on request does not yet reach the R2 copy. Decision `0069`.
+
 ## Money
 
 5b. **Stripe's `success_url` must point at a page that calls `/api/confirm`.**

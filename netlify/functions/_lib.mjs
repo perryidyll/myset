@@ -527,19 +527,26 @@ export const consumePlayedVotes = (aid, songId) => dropSongVotes(aid, songId);
    reaching for this button does not change that. It is the only remaining way to
    empty the board by hand, and the Studio says what it does. */
 export async function wipeBoard(aid) {
+  const harvested = [];                      // every vote it wiped — see dropSongVotes
   await Promise.all(
-    Array.from({ length: SHARDS }, (_, n) =>
-      casDoc(shardKey(aid, n), () => ({}), (bag) => {
+    Array.from({ length: SHARDS }, (_, n) => {
+      let got = [];
+      return casDoc(shardKey(aid, n), () => ({}), (bag) => {
         let touched = false;
+        got = [];
         for (const id of Object.keys(bag)) {
           if (!(bag[id].v || []).length) continue;
+          const held = {};
+          for (const s of bag[id].v) held[s] = (held[s] || 0) + 1;
+          for (const s of Object.keys(held)) got.push(harvest(id, s, bag[id], held[s]));
           bag[id].v = []; bag[id].ts = {}; bag[id].va = {};
           touched = true;
         }
         return touched;
-      }, null).catch(() => {})
-    )
+      }, null).then(() => { for (const h of got) harvested.push(h); }).catch(() => {});
+    })
   );
+  return harvested;
 }
 
 /* Votes someone PAID for shouldn't evaporate because the artist tapped
@@ -591,11 +598,19 @@ export async function carryFans(aid, show) {
    with the rest of the give-it-back machinery. */
 
 export async function dropSongVotes(aid, songId) {
-  if (!songId) return;
+  if (!songId) return [];
+  /* WHAT CAME OFF THE BOARD, HANDED BACK. The vote rows are the only record of
+     when each vote arrived and what it cost, and this is the moment they are
+     destroyed — so they are collected as they go and returned to the caller,
+     which files them in the night's event log (decision 0066). Collected inside
+     the mutation so a CAS retry starts over, and taken from the run that stuck. */
+  const harvested = [];
   await Promise.all(
-    Array.from({ length: SHARDS }, (_, n) =>
-      casDoc(shardKey(aid, n), () => ({}), (bag) => {
+    Array.from({ length: SHARDS }, (_, n) => {
+      let got = [];
+      return casDoc(shardKey(aid, n), () => ({}), (bag) => {
         let touched = false;
+        got = [];
         for (const id of Object.keys(bag)) {
           const v = bag[id].v || [];
           /* EVERY occurrence, not the first. This was indexOf + splice, written when
@@ -606,15 +621,31 @@ export async function dropSongVotes(aid, songId) {
              once finality is on. */
           const kept = v.filter((x) => x !== songId);
           if (kept.length === v.length) continue;
+          got.push(harvest(id, songId, bag[id], v.length - kept.length));
           bag[id].v = kept;
           if (bag[id].ts) delete bag[id].ts[songId];
           if (bag[id].va) delete bag[id].va[songId];
           touched = true;
         }
         return touched;                  // no write when this shard held none
-      }, null).catch(() => {})
-    )
+      }, null).then(() => { for (const h of got) harvested.push(h); }).catch(() => {});
+    })
   );
+  return harvested;
+}
+
+/** One fan's votes on one song, as they stand: the rows (cost, paid, when) for the
+ *  `held` votes, padded from the song's first-vote stamp for rows written before
+ *  the stamp existed. Never the fan's id past this module's callers. */
+export function harvest(fanId, songId, fan, held) {
+  const raw = Array.isArray(fan.va && fan.va[songId]) ? fan.va[songId].slice(0, held) : [];
+  const first = Number((fan.ts || {})[songId]) || 0;
+  const rows = [];
+  for (let i = 0; i < held; i++) {
+    const r = Array.isArray(raw[i]) ? raw[i] : [];
+    rows.push([Math.max(0, Number(r[0]) || 0), Math.max(0, Number(r[1]) || 0), Number(r[2]) || first || 0]);
+  }
+  return { fan: fanId, song: songId, rows };
 }
 
 export async function wipeFans(aid) {
@@ -736,11 +767,17 @@ export function chargeVotes(fan, show, songId, cost, count, unlimited = false) {
   fan.va ||= {};
   const rows = (fan.va[songId] ||= []);
   let freeLeft = Math.max(0, (show.freeCredits || 0) - fan.freeUsed);
+  /* [credit cost, paid portion, WHEN]. The third field is the moment of the
+     cast, per vote, so the night's event log (_evlog.mjs, decision 0066) can say
+     when each vote arrived after the song has played and the row is gone from
+     here. Readers take the first two fields and ignore the rest, and a row from
+     before the stamp existed is read with the song's first-vote time instead. */
+  const at = Date.now();
   for (let i = 0; i < count; i++) {
     const price = unlimited ? 0 : cost;
     const fromFree = Math.min(price, freeLeft);
     freeLeft -= fromFree;
-    rows.push([price, price - fromFree]);
+    rows.push([price, price - fromFree, at]);
   }
   chargeFan(fan, show, unlimited ? 0 : cost * count);
 }
@@ -777,9 +814,10 @@ export async function grantPaidSongVotes(aid, fanId, songId, count, grantId) {
     /* [0, 1]: this vote consumed no wallet credits, but it is a paid vote. The
        refund path clamps its refundable credit value to the first field, so a
        later setlist correction can remove it without minting a free credit. */
+    const at = Date.now();
     for (let i = 0; i < n; i++) {
       me.v.push(songId);
-      rows.push([0, 1]);
+      rows.push([0, 1, at]);
     }
     me.ts ||= {};
     me.ts[songId] ||= Date.now();
@@ -800,15 +838,19 @@ export async function grantPaidSongVotes(aid, fanId, songId, count, grantId) {
  *  Pre-attribution votes use a fan-favouring paid-first fallback, while all votes
  *  cast after this field shipped are restored from their exact recorded split. */
 export async function refundSongVotes(aid, songId, show) {
-  if (!songId) return;
+  if (!songId) return [];
+  const harvested = [];                      // every vote it gave back — see dropSongVotes
   await Promise.all(
-    Array.from({ length: SHARDS }, (_, n) =>
-      casDoc(shardKey(aid, n), () => ({}), (bag) => {
+    Array.from({ length: SHARDS }, (_, n) => {
+      let got = [];
+      return casDoc(shardKey(aid, n), () => ({}), (bag) => {
         let touched = false;
+        got = [];
         for (const id of Object.keys(bag)) {
           const fan = bag[id];
           const held = (fan.v || []).filter((x) => x === songId).length;
           if (!held) continue;
+          got.push(harvest(id, songId, fan, held));
 
           chargeFan(fan, show, 0);
           const rows = Array.isArray(fan.va && fan.va[songId])
@@ -840,8 +882,10 @@ export async function refundSongVotes(aid, songId, show) {
         return touched;
       }, (bag) => Object.values(bag || {}).every(
         (fan) => !(fan.v || []).includes(songId) && !(fan.va && fan.va[songId])))
-    )
+        .then(() => { for (const h of got) harvested.push(h); });
+    })
   );
+  return harvested;
 }
 
 /* ---------- who was in the room ----------

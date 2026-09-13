@@ -1,4 +1,5 @@
 import { casDoc, readDoc, sha } from './_lib.mjs';
+import { appendLog, readLog, logKeys } from './_append.mjs';
 import { parseYouTube, embedSrc } from './_embeds.mjs';
 import { decodeDataUrl, putImage, dropImage, POST_SLOT } from './_img.mjs';
 import { hasClip, dropClip, clearPending, CLIP_ID } from './_video.mjs';
@@ -146,7 +147,7 @@ export async function addPost(owner, { fan, ip, name, text, stars, show, showLab
 
   const now = Date.now();
   const f = h10(fan), net = h10(owner + '|' + (ip || ''));
-  let refused = null;
+  let refused = null, full = false;
   await casDoc(KEY(owner), empty, (d) => {
     d.list = Array.isArray(d.list) ? d.list : [];
     d.recent = (Array.isArray(d.recent) ? d.recent : []).filter((r) => r && now - r.at < DAY);
@@ -161,16 +162,49 @@ export async function addPost(owner, { fan, ip, name, text, stars, show, showLab
                   photos: urls, video: vid, clip: clipId || null, at: now, likes: 0, reply: null,
                   hidden: false, pinned: false, reports: 0, rep: [] });
     d.n = (d.n || 0) + 1;
-    if (d.list.length > MAX_POSTS) d.list = d.list.slice(-MAX_POSTS);
+    full = d.list.length > MAX_POSTS;
     return true;
   });
   if (refused) { for (let i = 0; i < urls.length; i++) await dropImage(owner, `${id}_${i}`); return { ok: false, error: refused }; }
+  // the feed stays MAX_POSTS long and nothing is lost; costs nothing until it is full
+  if (full) await spillPosts(owner).catch(() => {});
   /* The clip now belongs to a post, so it is no longer an orphan waiting to be
      swept. Best-effort on purpose: if this write is lost the sweep deletes a clip
      that IS posted, which would be wrong — so sweepPending checks the feed too. */
   if (clipId) await clearPending(owner, clipId);
   return { ok: true, id };
 }
+
+/* THE FEED IS CAPPED; THE RECORD IS NOT. `posts_` keeps MAX_POSTS so the page
+   reads one document. Past that the oldest used to be sliced off and gone — with
+   their photos and clips left on disk under keys nothing could find again. Now
+   the overflow is appended to `postsarch_<owner>` (an append-only log, never
+   trimmed, computable — _append.mjs; decision 0068) BEFORE it leaves the feed,
+   and only then removed. A crash between the two appends the same posts again
+   next time, so the archive is read through a dedup by id: twice is fine, never
+   is not. Everything export and delete need — the photo and clip keys — comes
+   from the archive as well as the feed. */
+export const ARCH = (owner) => `postsarch_${owner}`;
+export async function spillPosts(owner) {
+  const d = await readPosts(owner);
+  if (d.list.length <= MAX_POSTS) return 0;
+  const over = d.list.slice(0, d.list.length - MAX_POSTS);
+  await appendLog(ARCH(owner), over);
+  const gone = new Set(over.map((p) => p && p.id));
+  await casDoc(KEY(owner), empty, (x) => {
+    x.list = (Array.isArray(x.list) ? x.list : []).filter((p) => !(p && gone.has(p.id)));
+    return true;
+  });
+  return over.length;
+}
+/** Posts that left the feed, oldest first, deduped by id. */
+export async function readArchivedPosts(owner) {
+  const log = await readLog(ARCH(owner));
+  const seen = new Set(), out = [];
+  for (const p of log.list) if (p && p.id && !seen.has(p.id)) { seen.add(p.id); out.push(p); }
+  return out;
+}
+export const archiveKeys = (owner) => logKeys(ARCH(owner));
 
 /** Change what you wrote, for 24 hours. Only your own post, and only the words and
  *  the stars — photos and the clip are left alone, because re-uploading them is a

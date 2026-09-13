@@ -1,4 +1,5 @@
 import { casDoc, readDoc } from './_lib.mjs';
+import { appendLog, readLog, logKeys } from './_append.mjs';
 
 /* WHAT THE ROOM THOUGHT OF MYSET.
 
@@ -36,7 +37,7 @@ export async function saveFeedback(aid, fanId, stars, note, showId) {
   if (!Number.isFinite(n) || n < 1 || n > 5) return { ok: false, error: 'stars' };
   const text = String(note || '').trim().slice(0, MAX_NOTE);
   const now = Date.now();
-  let already = false;
+  let already = false, full = false;
 
   await casDoc(K(aid), empty, (d) => {
     d.list = Array.isArray(d.list) ? d.list : [];
@@ -55,14 +56,43 @@ export async function saveFeedback(aid, fanId, stars, note, showId) {
     d.count = (d.count || 0) + 1;
     d.sum = (d.sum || 0) + n;
     d.list.push({ fan: fanId, stars: n, note: text, at: now, show: showId || '' });
-    if (d.list.length > MAX_NOTES) d.list = d.list.slice(-MAX_NOTES);
+    full = d.list.length > MAX_NOTES;
     return true;
   });
+  // the Studio reads MAX_NOTES and nothing is lost; costs nothing until it is full
+  if (full) await spillFeedback(aid).catch(() => {});
 
   return already ? { ok: true, already: true } : { ok: true };
 }
 
 /** The compact shape the Studio renders. Notes only — never a device id. */
+/* The Studio's list is capped at MAX_NOTES; what the room said is not thrown away
+   past it. The overflow goes to `fbarch_<aid>` (append-only, never trimmed —
+   _append.mjs, decision 0068) before it leaves the list. Same at-least-once shape
+   as the community feed's archive: a crash between the two writes appends again,
+   and the reader dedups. */
+export const ARCH = (aid) => `fbarch_${aid}`;
+export async function spillFeedback(aid) {
+  const { data } = await readDoc(K(aid), null);
+  const list = Array.isArray(data && data.list) ? data.list : [];
+  if (list.length <= MAX_NOTES) return 0;
+  const over = list.slice(0, list.length - MAX_NOTES);
+  await appendLog(ARCH(aid), over);
+  const gone = new Set(over.map((r) => `${r.fan}|${r.at}`));
+  await casDoc(K(aid), empty, (d) => {
+    d.list = (Array.isArray(d.list) ? d.list : []).filter((r) => !(r && gone.has(`${r.fan}|${r.at}`)));
+    return true;
+  });
+  return over.length;
+}
+export async function readArchivedFeedback(aid) {
+  const log = await readLog(ARCH(aid));
+  const seen = new Set(), out = [];
+  for (const r of log.list) { const k = r && `${r.fan}|${r.at}`; if (k && !seen.has(k)) { seen.add(k); out.push(r); } }
+  return out;
+}
+export const archiveKeys = (aid) => logKeys(ARCH(aid));
+
 export function shapeFeedback(d) {
   const count = d.count || 0;
   const withNotes = d.list.filter((r) => r && r.note).slice(-20).reverse();

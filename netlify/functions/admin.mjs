@@ -27,6 +27,8 @@ import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor, end
 import { resolveShortMapPlace } from './_maps.mjs';
 import { reindexSched } from './_auto.mjs';
 import { startShow, endShow } from './_lifecycle.mjs';
+import { logPlay as filePlay, logLeft } from './_evlog.mjs';
+import { keepVersion } from './_versions.mjs';
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, reportsAllowed, redeemPromo,
@@ -1980,7 +1982,14 @@ const main = async (req) => {
   const prevShow = NEEDS_BEFORE.has(action) ? await getShow(aid) : null;
 
   let libChanged = false;
+  /* The night this write belongs to, and the record as it was — the event log
+     files under the first (decision 0066), and a library change keeps the second
+     as a version (0067). Both taken inside the callback so a CAS retry refreshes
+     them; the values used are the run that stuck. */
+  let showIdNow = null, playedEntry = null, before = null;
   await mutateShow(aid, (show) => {
+    showIdNow = show.showId || null;
+    before = JSON.stringify(show);
     // which songs exist, before anything in the switch runs — see the compare at
     // the bottom of this callback
     const idsBefore = (show.songs || []).map((x) => x.id).join('\u0000');
@@ -2018,6 +2027,9 @@ const main = async (req) => {
         round,
         replay: show.played.includes(id), at: Date.now(),
       });
+      playedEntry = show.log[show.log.length - 1];
+      /* The Studio's list is capped; the night's event log (0066) is not — every
+         play past the two-hundredth is still filed there. */
       if (show.log.length > 200) show.log = show.log.slice(-200);
     };
 
@@ -2280,24 +2292,36 @@ const main = async (req) => {
 
   if (err) return bad(err[0], err[1]);
   // the library changed => what's in the active setlist may have changed with it
-  if (libChanged) note = join(note, await syncActive(aid));
+  if (libChanged) {
+    note = join(note, await syncActive(aid));
+    await keepVersion(KEY.show(aid), before);       // the library as it was (0067)
+  }
 
   /* The song that just started has collected its votes, so they come off the board.
-     Nothing is refunded — see the ledger header in _lib.mjs. */
-  if (playedNow) await consumePlayedVotes(aid, playedNow);
+     Nothing is refunded — see the ledger header in _lib.mjs. What came off is
+     filed in the night's event log with the play itself (0066); a log that
+     cannot be written never stops a song. */
+  if (playedNow) {
+    const harvested = await consumePlayedVotes(aid, playedNow);
+    const e = playedEntry || {};
+    await filePlay(aid, showIdNow, { songId: playedNow, at: e.at || Date.now(), votes: e.roundVotes ?? e.votes ?? 0,
+                                     voters: e.voters || 0, replay: !!e.replay, harvested }).catch(() => {});
+  }
   if (completedSong) {
     const settled = await completeSongRequests(aid, completedSong);
     if (settled.pending) note = join(note,
       'The song ended, but its card authorization still needs another Stripe attempt. It has not been charged twice.');
   }
-  if (clearBoard) await wipeBoard(aid);
+  if (clearBoard) await logLeft(aid, showIdNow, 'reset', await wipeBoard(aid)).catch(() => {});
   else if (refundSong) {
-    try { await refundSongVotes(aid, refundSong, await getShow(aid)); }
+    let given = [];
+    try { given = await refundSongVotes(aid, refundSong, await getShow(aid)); }
     catch { return bad('Song hidden, but the vote return is still finishing — tap “Decline + refund” again.', 503); }
+    await logLeft(aid, showIdNow, 'refund', given).catch(() => {});
     await declineRequestsForSong(aid, refundSong, await getShow(aid));
   }
   // a deleted song's votes must not go on being counted for a song nobody can see
-  else if (droppedSong) await dropSongVotes(aid, droppedSong);
+  else if (droppedSong) await logLeft(aid, showIdNow, 'drop', await dropSongVotes(aid, droppedSong)).catch(() => {});
 
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.
