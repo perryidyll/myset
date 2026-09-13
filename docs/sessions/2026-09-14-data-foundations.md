@@ -79,6 +79,18 @@ job that a person can run, and the script that runs it cannot be pointed at
 production by accident. (First attempt, from the worktree: 0 of 209 — the CLI was
 not in a linked folder; hence `MYSET_SITE_DIR`.)
 
+**The first ring (PR #36 live as `51d7584`, 17:26Z).** `netlify logs --source
+functions --function mirrorcron --since 30m` showed the 17:40Z ring ran twice —
+`Duration: 12902 ms` and `11656 ms`, 1024 MB, and no `mirrorcron:` line: the
+ten-second limit killed it and Netlify retried once. Cause: `keysFor` names the
+`vid_` clip keys (four clips up to 70 MB) and the mirror pulled them through the
+function to put them where they already are (clips live on R2 under the same
+key). Fix, PR #37: `vid_` skipped; the deadline checked after every key; a
+partial owner keeps the cursor and a `keyCursor` so the next ring resumes at the
+key it reached; at least one key per worker per ring; budget 5.5 s. The suite now
+drives a pass to completion at a budget of 0 ms and counts every key copied once.
+The 18:00Z ring after the fix is quoted below when it has rung.
+
 **Verified.** `sh test/run.sh` → exit 0, 46 files, **2,932 ✓ / 0 ✗** — new
 `test/foundations.mjs` 60 ✓ (what each assertion holds is in the ledger's
 verification log); `test/cost.mjs` a vote 5 reads / 2 writes, unchanged;

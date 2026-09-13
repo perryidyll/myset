@@ -19,43 +19,54 @@ import { r2Enabled, r2Put } from './_r2.mjs';
    log part) cross exactly once.
 
    WHAT IS NOT COPIED, on purpose: sign-in secrets and codes, sessions and lockouts
-   (ephemeral, and a second copy of a secret is a second place to lose it), and the
+   (ephemeral, and a second copy of a secret is a second place to lose it), the
    room's fan shards — device records for tonight, wiped at the end of it, never
-   exported (0bu). A restore from this copy is a restore of the record, not of a
-   show in progress.
+   exported (0bu) — and clip bytes (`vid_`), which already live on R2 under the
+   same key (0dq): pulling a 70 MB clip through a function to put it where it
+   already is was what the first ring in production did, and it hit Netlify's
+   ten-second limit twice (2026-09-13 17:40Z, 12.9 s and 11.7 s, no log line). A
+   restore from this copy is a restore of the record, not of a show in progress.
 
-   TIME-BOXED. A scheduled function has seconds, not minutes, so a pass is a cursor
-   over the owner list that advances as far as the budget allows and continues on
-   the next ring; the ring after a finished pass is one read and a return until
-   the pass is a day old. At today's size a pass is one ring. */
+   TIME-BOXED, PER KEY. A scheduled function has ten seconds, not minutes. The
+   deadline is checked after every key, not only between owners: a ring copies
+   what it can, saves the manifest for what it did, and leaves the cursor on the
+   unfinished owner AND on the key it reached (`keyCursor`), so the next ring
+   carries on from there rather than re-reading the owner's keys from the top.
+   Each worker handles at least one key per ring, so a pass always moves. The
+   key list is rebuilt each ring; a key that moved in the list is caught by the
+   next pass — the manifest does not have it, so it is copied then. The ring
+   after a finished pass is one read and a return until the pass is a day old. */
 
 export const STATE = 'mirror';
 export const MANIFEST = (owner) => `mirror_${owner}`;
 export const PREFIX = 'backup/';
 export const PASS_GAP_MS = 20 * 3600e3;
-export const BUDGET_MS = () => Math.max(500, parseInt(process.env.MYSET_MIRROR_BUDGET_MS, 10) || 7000);
+export const BUDGET_MS = () => Math.max(0, Number(process.env.MYSET_MIRROR_BUDGET_MS ?? 5500));
 export const GLOBALS = ['artists', 'venues', 'cityindex', 'acctindex', 'flags', 'idqueue', 'promos',
                         'sheetsync', 'gigsched', 'vidqueue', 'delqueue', 'ledger_platform'];
-export const SKIP = /^(sess_|lock_|authc_|authsecret$|f\d+_)/;
+export const SKIP = /^(sess_|lock_|authc_|authsecret$|f\d+_|vid_)/;
 export const skipped = (k) => SKIP.test(k);
 
-const emptyState = () => ({ v: 1, order: [], cursor: 0, passStartedAt: 0, passDoneAt: 0, copied: 0, skipped: 0, failed: 0 });
+const emptyState = () => ({ v: 1, order: [], cursor: 0, keyCursor: 0, passStartedAt: 0, passDoneAt: 0, copied: 0, skipped: 0, failed: 0 });
 const emptyManifest = () => ({ v: 1, at: 0, by: {} });
 
 async function etagOf(key) {
   try { const m = await store().getMetadata(key); return m ? (m.etag || null) : null; } catch { return null; }
 }
 
-/** Copy one owner's keys that changed since the manifest. Returns the counts. */
-export async function mirrorOwner(owner, keys, now = Date.now()) {
-  const out = { copied: 0, skipped: 0, failed: 0, missing: 0 };
+/** Copy one owner's keys that changed since the manifest, from index `start`,
+ *  until `deadline`. Returns the counts, `partial` when the deadline stopped it
+ *  short, and `next` — the index the next ring should start from. */
+export async function mirrorOwner(owner, keys, now = Date.now(), deadline = Infinity, start = 0) {
+  const out = { copied: 0, skipped: 0, failed: 0, missing: 0, partial: false, next: 0 };
   const { data: man } = await readDoc(MANIFEST(owner), null);
   const by = { ...((man && man.by) || {}) };
   const todo = [...new Set(keys)].filter((k) => k && !skipped(k));
   const POOL = 6;
-  let i = 0;
+  let i = Math.min(Math.max(0, start | 0), todo.length);
   const worker = async () => {
-    while (i < todo.length) {
+    do {
+      if (i >= todo.length) return;
       const k = todo[i++];
       const etag = await etagOf(k);
       if (!etag) { out.missing++; continue; }
@@ -68,9 +79,11 @@ export async function mirrorOwner(owner, keys, now = Date.now()) {
         by[k] = r.etag || etag;
         out.copied++;
       } catch { out.failed++; }
-    }
+    } while (Date.now() < deadline);          // at least one key per worker, then the clock decides
   };
-  await Promise.all(Array.from({ length: Math.min(POOL, todo.length) }, worker));
+  await Promise.all(Array.from({ length: Math.min(POOL, Math.max(0, todo.length - i)) }, worker));
+  out.partial = i < todo.length;
+  out.next = out.partial ? i : 0;
   await casDoc(MANIFEST(owner), emptyManifest, (m) => { m.at = now; m.by = by; return true; }).catch(() => {});
   return out;
 }
@@ -87,18 +100,21 @@ export async function runMirror({ now = Date.now(), budgetMs = BUDGET_MS(), owne
   if (!inPass) {
     if (st.passDoneAt && now - st.passDoneAt < PASS_GAP_MS) return { done: true, passDoneAt: st.passDoneAt };
     st.order = ['global', ...(await owners())];
-    st.cursor = 0; st.passStartedAt = now; st.copied = 0; st.skipped = 0; st.failed = 0;
+    st.cursor = 0; st.keyCursor = 0; st.passStartedAt = now; st.copied = 0; st.skipped = 0; st.failed = 0;
   }
   const did = [];
-  // at least one owner per ring, so a pass always moves; more while the budget lasts
+  const deadline = t0 + budgetMs;
+  // every ring copies something (each worker at least one key); more while the clock allows
   while (st.cursor < st.order.length) {
     const owner = st.order[st.cursor];
     const keys = owner === 'global' ? GLOBALS : await keysOf(owner).catch(() => []);
-    const r = await mirrorOwner(owner, keys, now);
+    const r = await mirrorOwner(owner, keys, now, deadline, st.keyCursor);
     st.copied += r.copied; st.skipped += r.skipped; st.failed += r.failed;
     did.push(owner);
+    st.keyCursor = r.next;
+    if (r.partial) break;                     // the cursor stays: the next ring finishes this owner
     st.cursor++;
-    if (Date.now() - t0 >= budgetMs) break;
+    if (Date.now() >= deadline) break;
   }
   const finished = st.cursor >= st.order.length;
   if (finished) st.passDoneAt = now;

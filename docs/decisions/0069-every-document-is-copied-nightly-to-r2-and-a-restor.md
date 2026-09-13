@@ -62,6 +62,20 @@ R2's bill at scale (its egress is free; storage is cents a GB). A vendor that
 offers point-in-time restore natively. A deletion law that makes a backup's
 retention the harder problem — then the mirror gains a delete path first.
 
+## The first ring, and what it taught (2026-09-13 17:40Z)
+
+The first scheduled ring in production ran twice — 12.9 s and 11.7 s, no log
+line — which is what Netlify's ten-second limit looks like from the outside.
+`keysFor` names the clip keys (`vid_`, up to 70 MB each) and the mirror pulled
+them through the function to put them where they already were (clips live on R2
+under the same key, 0dq). Fixed the same hour: `vid_` is skipped; the deadline is
+checked after every key, not only between owners; a ring saves the manifest for
+what it copied and leaves the cursor on the unfinished owner and the key it
+reached (`keyCursor`), so the next ring continues rather than starting the owner
+over; each worker handles at least one key a ring, so a pass always moves; the
+budget is 5.5 s of the 10. The suite drives a pass to completion with a budget
+of 0 ms and counts every key copied exactly once across the rings.
+
 ## How it was verified
 
 `test/foundations.mjs`: a pass copies every key an owner holds under
