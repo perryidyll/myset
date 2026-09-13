@@ -233,6 +233,18 @@ console.log('\nTHE SECOND HOME');
   while (!last.done && rings < 60) { last = await runMirror({ ...two, budgetMs: 0 }); rings++; }
   ok('and ring after ring finishes the pass', last.done && last.cursor === 3 && rings > 2, { rings, last });
   eq('with every key copied once across the rings', [...__r2.objects.keys()].length, r1.copied);
+  /* R2 refusing every put — the real first ring: the pass finishes, says which
+     key and why, and comes back in an hour rather than a day. */
+  __r2.reset(); __r2.fail(true);
+  for (const k of [...__dump().keys()].filter((x) => x.startsWith('mirror'))) await store().delete(k);
+  const r8 = await runMirror({ owners, keysOf });
+  ok('a refused pass says so: copied 0, every put failed, the first failure named', r8.done && r8.copied === 0 && r8.failed > 20 && /: r2 put 503$/.test(r8.err || ''), r8);
+  const r9 = await runMirror({ owners, keysOf });
+  ok('and the next ring inside the hour waits, carrying the reason', r9.done && r9.failed === r8.failed && r9.err === r8.err, r9);
+  await casDoc(STATE, () => ({}), (d) => { d.passDoneAt = Date.now() - 2 * 3600e3; return true; });
+  __r2.fail(false);
+  const r10 = await runMirror({ owners, keysOf });
+  ok('an hour on it tries again, and copies once R2 answers', r10.done && r10.copied === r8.failed && r10.failed === 0 && r10.err === null, r10);
   __r2.uninstall();
   eq('with R2 off, the ring says so and copies nothing', await runMirror({ owners, keysOf }), { off: true });
 }

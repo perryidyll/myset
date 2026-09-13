@@ -89,7 +89,22 @@ key). Fix, PR #37: `vid_` skipped; the deadline checked after every key; a
 partial owner keeps the cursor and a `keyCursor` so the next ring resumes at the
 key it reached; at least one key per worker per ring; budget 5.5 s. The suite now
 drives a pass to completion at a budget of 0 ms and counts every key copied once.
-The 18:00Z ring after the fix is quoted below when it has rung.
+**The 18:00Z ring (production `b6edb37` since 17:50Z):** the log showed one
+invocation, 18:00:49–50Z, and `netlify blobs:get myset mirror` read
+`{"order":["global","perry-idyll","v:idyllstudios"],"cursor":3,"keyCursor":0,
+"passDoneAt":"2026-09-13T18:00:50.731Z","copied":0,"skipped":0,"failed":69}`.
+Every PUT refused. **This is older than tonight:** the laptop backup's
+`err_2026-09-11T18` document holds `{"where":"r2.put","msg":"r2 put 403"}`
+from the first clip upload after the R2 deploy, and `curl -I
+'https://myset.vip/api/vid?a=perry-idyll&c=k6qu6yfqi4v'` answers `200
+video/mp4` (Blobs), not a 302 to R2 — for both live clips. So decision 0033's
+"the first deploy is the measurement" was never read: every clip since
+2026-09-11 fell back to Blobs, silently, as designed. Diagnosis with the real
+module and the site's variables (loaded into a process, never printed): HEAD →
+404 (signature accepted), PUT → 403, DELETE → 403 — the R2 API token can read
+but not write. The fix is in Cloudflare (token permission *Object Read & Write*
+on the bucket), the founder's; no deploy is needed afterwards. PR #38: the ring
+names the first refusal (`err`) and a failed pass retries in an hour.
 
 **Verified.** `sh test/run.sh` → exit 0, 46 files, **2,932 ✓ / 0 ✗** — new
 `test/foundations.mjs` 60 ✓ (what each assertion holds is in the ledger's

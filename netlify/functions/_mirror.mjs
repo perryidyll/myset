@@ -41,13 +41,20 @@ export const STATE = 'mirror';
 export const MANIFEST = (owner) => `mirror_${owner}`;
 export const PREFIX = 'backup/';
 export const PASS_GAP_MS = 20 * 3600e3;
+/* A pass that failed to copy anything is not a pass: try again in an hour, not a
+   day. The first one in production (2026-09-13 18:00Z) was 0 copied / 69 failed —
+   R2 answered 403 to every PUT (the token can read the bucket, not write it; the
+   clips had been falling back to Blobs since 2026-09-11 for the same reason,
+   `r2.put 403` in the error log). The ring says the first failure's words so
+   the next person does not have to guess. */
+export const RETRY_GAP_MS = 3600e3;
 export const BUDGET_MS = () => Math.max(0, Number(process.env.MYSET_MIRROR_BUDGET_MS ?? 5500));
 export const GLOBALS = ['artists', 'venues', 'cityindex', 'acctindex', 'flags', 'idqueue', 'promos',
                         'sheetsync', 'gigsched', 'vidqueue', 'delqueue', 'ledger_platform'];
 export const SKIP = /^(sess_|lock_|authc_|authsecret$|f\d+_|vid_)/;
 export const skipped = (k) => SKIP.test(k);
 
-const emptyState = () => ({ v: 1, order: [], cursor: 0, keyCursor: 0, passStartedAt: 0, passDoneAt: 0, copied: 0, skipped: 0, failed: 0 });
+const emptyState = () => ({ v: 1, order: [], cursor: 0, keyCursor: 0, passStartedAt: 0, passDoneAt: 0, copied: 0, skipped: 0, failed: 0, err: null });
 const emptyManifest = () => ({ v: 1, at: 0, by: {} });
 
 async function etagOf(key) {
@@ -58,7 +65,7 @@ async function etagOf(key) {
  *  until `deadline`. Returns the counts, `partial` when the deadline stopped it
  *  short, and `next` — the index the next ring should start from. */
 export async function mirrorOwner(owner, keys, now = Date.now(), deadline = Infinity, start = 0) {
-  const out = { copied: 0, skipped: 0, failed: 0, missing: 0, partial: false, next: 0 };
+  const out = { copied: 0, skipped: 0, failed: 0, missing: 0, partial: false, next: 0, err: null };
   const { data: man } = await readDoc(MANIFEST(owner), null);
   const by = { ...((man && man.by) || {}) };
   const todo = [...new Set(keys)].filter((k) => k && !skipped(k));
@@ -78,7 +85,7 @@ export async function mirrorOwner(owner, keys, now = Date.now(), deadline = Infi
         await r2Put(PREFIX + k, Buffer.from(r.data), type);
         by[k] = r.etag || etag;
         out.copied++;
-      } catch { out.failed++; }
+      } catch (e) { out.failed++; out.err ||= `${k}: ${String((e && e.message) || e).slice(0, 80)}`; }
     } while (Date.now() < deadline);          // at least one key per worker, then the clock decides
   };
   await Promise.all(Array.from({ length: Math.min(POOL, Math.max(0, todo.length - i)) }, worker));
@@ -98,9 +105,10 @@ export async function runMirror({ now = Date.now(), budgetMs = BUDGET_MS(), owne
   st = { ...emptyState(), ...st };
   const inPass = st.order.length && st.cursor < st.order.length;
   if (!inPass) {
-    if (st.passDoneAt && now - st.passDoneAt < PASS_GAP_MS) return { done: true, passDoneAt: st.passDoneAt };
+    const gap = st.failed ? RETRY_GAP_MS : PASS_GAP_MS;
+    if (st.passDoneAt && now - st.passDoneAt < gap) return { done: true, passDoneAt: st.passDoneAt, failed: st.failed, err: st.err || null };
     st.order = ['global', ...(await owners())];
-    st.cursor = 0; st.keyCursor = 0; st.passStartedAt = now; st.copied = 0; st.skipped = 0; st.failed = 0;
+    st.cursor = 0; st.keyCursor = 0; st.passStartedAt = now; st.copied = 0; st.skipped = 0; st.failed = 0; st.err = null;
   }
   const did = [];
   const deadline = t0 + budgetMs;
@@ -110,6 +118,7 @@ export async function runMirror({ now = Date.now(), budgetMs = BUDGET_MS(), owne
     const keys = owner === 'global' ? GLOBALS : await keysOf(owner).catch(() => []);
     const r = await mirrorOwner(owner, keys, now, deadline, st.keyCursor);
     st.copied += r.copied; st.skipped += r.skipped; st.failed += r.failed;
+    st.err ||= r.err;
     did.push(owner);
     st.keyCursor = r.next;
     if (r.partial) break;                     // the cursor stays: the next ring finishes this owner
@@ -119,5 +128,5 @@ export async function runMirror({ now = Date.now(), budgetMs = BUDGET_MS(), owne
   const finished = st.cursor >= st.order.length;
   if (finished) st.passDoneAt = now;
   await casDoc(STATE, emptyState, (d) => { Object.assign(d, st); return true; }).catch(() => {});
-  return { done: finished, owners: did, cursor: st.cursor, of: st.order.length, copied: st.copied, skipped: st.skipped, failed: st.failed };
+  return { done: finished, owners: did, cursor: st.cursor, of: st.order.length, copied: st.copied, skipped: st.skipped, failed: st.failed, err: st.err || null };
 }

@@ -24,6 +24,7 @@ export default async (req) => {
       },
     });
     if (r.off) { console.log('mirrorcron: R2 is off — nothing copied'); return new Response('off', { status: 200 }); }
+    if (r.failed) console.error('mirrorcron: R2 refused', r.failed, 'copies —', r.err || '(no message)', '— check the R2 token can WRITE the bucket');
     console.log('mirrorcron:', JSON.stringify(r), marker ? `(scheduled for ${marker})` : '(no scheduler marker)');
     return new Response('ok', { status: 200 });
   } catch (e) {
