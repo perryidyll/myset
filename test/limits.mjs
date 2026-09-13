@@ -201,5 +201,26 @@ ok('it names him', /Perry Idyll<\/summary>/.test(page));
 ok('and his line matches what is enforced', /limited to 4\/month on the free plan/.test(page));
 ok('and the old explainer is gone', !/shows a month<\/b> rather than by/.test(page));
 
+console.log('\nTHE LIBRARY HAS A SIZE, AND ON THE FREE PLAN IT IS 100  (decision 0060)');
+{
+  const { libraryCap, MAX_LIBRARY } = await import('../netlify/functions/_plan.mjs');
+  eq('the free plan holds 100 songs', libraryCap(PLANS.free), 100);
+  eq('the paid plans hold the most any library holds', [libraryCap(PLANS.plus), libraryCap(PLANS.pro)], [MAX_LIBRARY, MAX_LIBRARY]);
+  const lib = await createArtist({ email: 'lib@example.com', name: 'Lib Rarian', slug: 'lib-rarian' });
+  const TL = await signToken('lib@example.com', revOf(await readArtists(), lib.artistId));
+  const L = (action, extra = {}) => hit(admin, 'https://x/api/admin', { action, ...extra }, TL);
+  const rows = Array.from({ length: 101 }, (_, i) => ({ title: 'Song ' + (i + 1), artist: 'Band ' + (i % 7) }));
+  const imp = await L('importSongs', { songs: rows });
+  ok('an import of 101 songs on the free plan lands', imp.ok, imp);
+  eq('with 100 kept', (await getShow(lib.artistId)).songs.length, 100);
+  ok('and the note says which plan lifts the ceiling', /1 refused — that’s the 100-song ceiling on Hobbyist/.test(imp.note || ''), imp.note);
+  const more = await L('addSong', { title: 'One more', artist: 'Band X' });
+  eq('the 101st by hand is refused', more.status, 402);
+  ok('naming the plan that holds more', /Hobbyist plan holds 100\. Bar Star holds 2,000/.test(more.error || ''), more.error);
+  await mutateArtists((reg) => { reg.byId[lib.artistId].plan = 'plus'; return true; });
+  ok('and on Bar Star it goes in', (await L('addSong', { title: 'One more', artist: 'Band X' })).ok);
+  ok('the Studio is told the size', /library: libraryCap\(l\)/.test(adminSrc));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

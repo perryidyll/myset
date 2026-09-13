@@ -76,8 +76,8 @@ ok('public and Studio loading screens use the active light or dark palette',
      const s=read(`public/${x}`);return /#boot\{[^}]*background:var\(--bg\)/.test(s)&&/html\{background:#F5F5F7\}html\[data-theme=dark\]\{background:#000\}/.test(s);
    }));
 ok('the $20 plan displays the same 2% transaction fee the server charges',
-   /pro:\{name:'Rock Star',price:'\$20 \/ month'[\s\S]{0,1400}Transaction fee: 2%/.test(studio)&&
-   !/Transaction fee: 0%/.test(studio)&&
+   /pro:\{name:'Rock Star',price:'\$20 \/ month'[\s\S]{0,1400}Transaction fee<\/span>',' – 2%/.test(studio)&&   // "Transaction fee – 2% on money…" since 2026-09-13
+   !/Transaction fee<\/span>',' – 0%/.test(studio)&&
    !['studio.html','venue-studio.html','index.html','about.html','artists.html','artist.html','community.html','vote.html']
      .some(x=>/Transaction fee: 2\.5%/.test(read(`public/${x}`))));
 ok('Find artists is server-gated to effectively verified artists before cards or map data are built',
@@ -119,7 +119,7 @@ ok('the Studio scrolling windows use a clipping shell around the native scrollba
 ok('the Studio Live tab label is red',
    /button\[data-tab-live\]\{color:#FF375F\}/.test(studio)&&/button data-tab-live/.test(studio));
 ok('the home page links to the artist directory and its requested filters',
-   /class="artistactions"[\s\S]{0,240}id="homeMapBtn"[^>]*><svg[^>]*>[\s\S]{0,160}<\/svg>View on map<\/button>[\s\S]{0,120}href="\/artists">Search for artists/.test(home)&&
+   /class="artistactions"[\s\S]{0,240}id="homeMapBtn"[^>]*><svg[^>]*>[\s\S]{0,160}<\/svg>View on MAP<\/button>[\s\S]{0,120}href="\/artists">Search for artists/.test(home)&&
    /id="homeMapModal"[^>]*hidden[^>]*aria-modal="true"/.test(home)&&
    /MySet shows in next 30 days/.test(directory)&&/Music released/.test(directory)&&/Signed/.test(directory)&&
    /All countries/.test(directory)&&/All cities/.test(directory)&&/All styles/.test(directory)&&/Any rating/.test(directory));

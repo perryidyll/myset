@@ -58,17 +58,19 @@ The one warm accent (`app.css:21–26`; dark overrides at `46`):
 ```
 --accent:#FF375F;
 --accent-2:#FF5650;
---accent-ink:#D6003C;
---accent-soft:rgba(255,55,95,.10);
+--accent-ink:#FF5650;
+--accent-soft:rgba(255,86,80,.12);
+--grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));
 --grad:linear-gradient(135deg,#FF375F 0%,#FF6B45 100%);
 --grad-warm:linear-gradient(135deg,#FF375F 0%,#FF9F45 100%);
 ```
 
 ```
---accent:#FF456E; --accent-ink:#FF8AA5; --accent-soft:rgba(255,69,110,.16);
+--accent:#FF456E; --accent-ink:#FF5650; --accent-soft:rgba(255,86,80,.18);
+--grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
 ```
 
-`--accent` is the fill, `--accent-ink` is the accent as *text* (dark enough on a light ground, light enough on a dark one), `--accent-soft` is the accent as a *ground*, and `--accent-2` is the logo's pink-orange — the middle of `--grad`, a touch warm of centre — used for the audience's words ("vote on your favorite songs", RSVP, Community, the section headings) and emphasis lines ("goes straight to the artist"); flat orange `#FF7A45` was retired on 2026-09-13 (decision 0059).
+`--accent` is the fill (and the colour of warnings and the live state), `--accent-ink` is the accent as *text* — since 2026-09-13 the same logo pink-orange as `--accent-2` in both themes, at the founder's ask that every accent word on the site be that colour (it was a darker pink on light and a paler one on dark); `--accent-soft` is the accent as a *ground*, and `--grad-soft` is that ground with the brand's hue shift, for the pills that carry it (every *Directions* pill: `index.html` `.dirs`/`.hmapgo`, `artist.html` `.dirs`, `venue.html` `.r .d .dirs`, `artists.html` `.mapgo`); and `--accent-2` is the logo's pink-orange — the middle of `--grad`, a touch warm of centre — used for the audience's words ("vote on your favorite songs", RSVP, Community, the section headings) and emphasis lines ("goes straight to the artist"); flat orange `#FF7A45` was retired on 2026-09-13 (decision 0059).
 
 **The ring is the brand gradient** (the founder, 2026-09-13; decision 0059): every thin ring on the site runs `--grad` — pink-red at the left, orange at the right, the Search button's fill. Two recipes, both 1.5px and neither moves a pixel:
 
@@ -196,6 +198,7 @@ One recipe for every small pressable pill (`app.css:143–150`):
 - **`.on` is an accent ring on a soft ground, never a fill.** A filled chip reads as a button. The vote page's genre chips lost their gradient fill for this reason.
 - Chips are for filters, toggles and states — "All", "2 clips", a night, "Upcoming", "They're keen". A chip that *does* something is a `.btn-sm`.
 - In the Studios `lock.css:95–96` adds only the hairline: each Studio sizes its own `.chip` (`studio.html:531–535`, `venue-studio.html:199–203`) and, for now, still fills `.chip.on` with the gradient because `lock.css` loads after those rules and cannot override them without overriding the sizes too. The pitch reply chip (`studio.html:224–226`) already wears the ring. Moving the Studio's other `.chip.on` states to the ring is a page edit, not a `lock.css` one.
+- **Tonight wears one ring** on the front door (`index.html` `.tonightbox`, the founder, 2026-09-13): the day whose label is *Tonight* wraps its featured rows and its list in one box with the brand-gradient ring painted to its border box — one ring around the whole night, never one per row.
 - **The show row is one card on three pages** (`index.html` `.gig`, `artist.html` `.gigrow`, `venue.html` `.r`; the founder's asks of 2026-09-12): three columns on the row's middle line (`align-items:center`), every column centring its own words (`text-align:center` on the row). Left: the time or day, the date, and beneath them the **thin Directions pill** — the same 11px/750 `--accent-soft` pill the map sheet's cards wear (`.hmapgo`), words only, never a pin in a circle. Middle: the headline and the when line (a ticket link is a line here, not a fourth column). Right: **the RSVP pill** — the chip's cousin — `.btn-grey` ground with an orange ring and orange words while you are not going, the orange fill while you are (`--accent-2` both ways, never the pink), in its own column (`.rsvpcol` — not `.go`, which `app.css` owns) with "<n> going" centred beneath it. Each page restates the pill because none waits on `app.css`. The map sheet's own cards (`.hmapevent`) keep their pin-label | copy | Directions grid.
 - Where the recipe is consumed: the artists directory toggles (`chip filtertoggle`), the front door's header links (`chip signin`, restated in accent ink there), the community proof rail and composer labels, the venue's reply pill, the vote page's genre and sort bars (as inset shadows so no layout shifts; `vote.html:201–217`).
 
@@ -326,7 +329,7 @@ There is no separate copy guide; the rules are AGENTS.md's ranking rules, VISION
 ## 12. Icons
 
 - **Line icons everywhere in chrome**: 24-viewBox, `fill:none; stroke:currentColor; stroke-width:2` (1.9 in the tab bar, 2.3 when selected), round caps. Inline SVG, no icon files, nothing under `public/icons/` but the two app icons.
-- **"View on map" on the front door** is a folded-map line icon since 2026-09-12 (`index.html` `.artistsearch svg`, 17px, centred on the label with a 7px gap) — it was the ⌖ text glyph, which sits on the baseline and cannot be sized or centred like a line icon. Both chips under the finder wear the finder's 1.5px orange ring; the feed's search field beneath them wears only a hairline (the ring moved off it the same day).
+- **"View on MAP" on the front door** (MAP in capitals since 2026-09-13) is a folded-map line icon since 2026-09-12 (`index.html` `.artistsearch svg`, 17px, centred on the label with a 7px gap) — it was the ⌖ text glyph, which sits on the baseline and cannot be sized or centred like a line icon. Both chips under the finder wear the finder's 1.5px orange ring; the feed's search field beneath them wears only a hairline (the ring moved off it the same day).
 - **The brand mark**: three rounded bars, white on a `--grad` rounded square, one path shared by every page.
 - **Six "clay" icons** — mic, ticket, tip, qr, venue, star — 64-viewBox, a `--grad` body with a vertical shade, a radial white sheen and a soft `#FF375F` ground, each about a kilobyte, ids prefixed `clay-<name>-` so two on one page cannot collide. They sit where a picture earns its place: the three cards under "It's not really about the votes" and the three under the venue section on `/about` (at 40px, in place of the emoji that were there), the Studio's Today checklist rows (24px), the venue pitch card's avatar fallback. They carry their own colours and so render the same in both themes. The proof strip on the artist page deliberately has none: the words are the card.
 - The Studio's favicon (`studio.html:37`) still carries the handoff's colours (`#201e1d` / `#ec3013`) where every other page uses the `--grad` pair. It is the last trace of § 13 in the product and is a one-line change whenever the Studio is next touched.

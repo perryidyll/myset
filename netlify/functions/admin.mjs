@@ -29,7 +29,7 @@ import { startShow, endShow } from './_lifecycle.mjs';
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, redeemPromo,
-         readPromos, mutatePromos, cleanCode, MAX_LIBRARY, NOT_BUILT } from './_plan.mjs';
+         readPromos, mutatePromos, cleanCode, MAX_LIBRARY, libraryCap, NOT_BUILT } from './_plan.mjs';
 
 /* Rebuilds the projection of the active setlist after the library changed.
 
@@ -409,14 +409,20 @@ const shapeLimits = (l) => ({
   pricing: !!l.pricing,
   setlists: !!l.setlists,      // so the Studio can say so BEFORE the server refuses
   merch: !!l.merch,
-  moderate: !!l.moderate,      // permanently deleting a fan's post; hiding stays free
-  library: MAX_LIBRARY,
+  moderate: !!l.moderate,      // hiding a fan's post (Bar Star and up since 0060)
+  reports: !!l.reports,        // reading the filed nights on the Money tab
+  library: libraryCap(l),      // how many songs the library holds on this plan
   cut: l.cut, cutPct: Math.round((Number(l.cut)||0)*1000)/10, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
   /* Shipped on every plan row so the Studio can grey a designed-but-unbuilt
      feature as "coming" rather than as "yours" — see NOT_BUILT in _plan.mjs. */
   soon: NOT_BUILT,
 });
+/* The library is full. A free plan's ceiling names the plan that lifts it; the
+   top ceiling is just a number nobody needs. */
+const FULL = (cap) => cap < MAX_LIBRARY
+  ? `That's ${cap} songs — the Hobbyist plan holds ${cap}. Bar Star holds ${MAX_LIBRARY.toLocaleString('en-US')}.`
+  : `That's ${MAX_LIBRARY} songs — more than any setlist needs.`;
 /* An action NOT in this table needs no capability beyond being signed in — every
    money, plan and access action is already refused by name inside handlePlan or by
    `isPlatformOwner`. What is listed here is the everyday work of running a page,
@@ -430,7 +436,7 @@ const CAPABILITY = {
   eventPlace: 'gigs', eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventUnskip: 'gigs',
   featureList: 'gigs',
   profileSave: 'profile', merchSave: 'profile', merchDelete: 'profile', imgSave: 'profile', imgDelete: 'profile',
-  postReply: 'community', postHide: 'community', postDelete: 'community',
+  postReply: 'community', postHide: 'community',
   accountExport: 'export',
 };
 
@@ -844,13 +850,13 @@ async function handleLists(aid, action, body) {
     const d0 = await readLearn(aid);
     const row = d0.list.find((x) => x.id === body.id);
     if (!row) return bad('unknown song', 404);
-    const cap = (await planForArtist(aid)).limits.featured;
+    const lim = (await planForArtist(aid)).limits, cap = lim.featured, libCap = libraryCap(lim);
     const featureCap = cap === Infinity ? null : cap;
     const { artistById } = await import('./_auth.mjs');
     const ownerName = ((await artistById(aid)) || {}).name || '';
     let sid = null, note = null;
     await mutateShow(aid, (sh) => {
-      if (sh.songs.length >= MAX_LIBRARY) return false;
+      if (sh.songs.length >= libCap) return false;
       let id = makeSongId(row.title, row.artist);
       if (sh.songs.some((x) => x.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
       const live = sh.songs.filter((x) => x.active !== false).length;
@@ -864,7 +870,7 @@ async function handleLists(aid, action, body) {
       sid = id;
       return true;
     });
-    if (!sid) return bad(`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402);
+    if (!sid) return bad(FULL(libCap), 402);
     await mutateLearn(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
     /* This is one of the ways a song id can APPEAR in the library — including an id
        an old setlist still holds — so the projection has to be rebuilt. */
@@ -911,14 +917,14 @@ async function handleAsks(aid, action, body) {
     if (!row) return bad('unknown request', 404);
     if (row.kind !== 'song') return bad('Nothing to add for that one', 400);
 
-    const cap = (await planForArtist(aid)).limits.featured;
+    const lim = (await planForArtist(aid)).limits, cap = lim.featured, libCap = libraryCap(lim);
     const featureCap = cap === Infinity ? null : cap;
     const room = (sh) => featureCap === null
       || sh.songs.filter((x) => x.active !== false).length < featureCap;
     let songId = null, full = false, capped = false;
     await mutateShow(aid, (sh) => {
       full = false; capped = false;
-      if (sh.songs.length >= MAX_LIBRARY) { full = true; return false; }
+      if (sh.songs.length >= libCap) { full = true; return false; }
       let sid = makeSongId(row.title, row.artist || '');
       if (sh.songs.some((x) => x.id === sid)) {
         const had = sh.songs.find((x) => x.id === sid);
@@ -940,7 +946,7 @@ async function handleAsks(aid, action, body) {
       songId = sid;
       return true;
     });
-    if (full) return bad(`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402);
+    if (full) return bad(FULL(libCap), 402);
     if (capped) return bad(`Your plan features ${featureCap} songs at a time. Switch one off first, then accept this — their votes stay put until you do.`, 402);
 
     /* Adding it to the LIBRARY is not enough when a setlist is active: playable()
@@ -1297,21 +1303,22 @@ async function handleShop(aid, action, body) {
     return json({ ok: true, merch: (await getProfile(aid)).merch });
   }
 
-  // the community page — moderation, free on every plan
+  // the community page — replying and pinning on every plan, hiding on Bar Star
   if (action === 'postList') {
     return json({ ok: true, posts: shapeForOwner(await readPosts(aid), aid) });
   }
-  if (['postHide', 'postPin', 'postReply', 'postDelete'].includes(action)) {
-    /* DELETING FOR GOOD IS A PAID FEATURE; HIDING IS NOT, and never will be. An
-       artist on any plan must be able to take something offensive off their page
-       the second they see it — hiding does that instantly and can be undone. What
-       Plus and Pro buy is erasing it. Refused here as well as greyed in the Studio,
-       because a limit only the page enforces is not a limit (15k). */
-    if (action === 'postDelete') {
+  if (['postHide', 'postPin', 'postReply'].includes(action)) {
+    /* HIDING IS A BAR STAR FEATURE since 2026-09-13 (decision 0060) — sold as "hide
+       1–2 star reviews"; it hides any post, and a hidden post can come back. The
+       older rule (hide free, delete paid) is gone with the delete action itself:
+       `postDelete` is no longer an action here, so nothing an artist does erases a
+       fan's words for good. Refused here as well as greyed in the Studio, because
+       a limit only the page enforces is not a limit (15k). */
+    if (action === 'postHide') {
       const { planForArtist, moderateAllowed } = await import('./_plan.mjs');
       const { limits } = await planForArtist(aid);
       if (!moderateAllowed(aid, limits))
-        return bad('Deleting a post for good is a Bar Star feature — you can hide it on any plan, and hiding is instant and undoable.', 402);
+        return bad('Hiding a post is a Bar Star feature — upgrade and it comes off your page the moment you tap.', 402);
     }
     const r = await moderate(aid, { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
     if (!r.ok) return bad(r.error, 404);
@@ -1552,7 +1559,7 @@ async function handleFeature(req, aid, body, action) {
 }
 
 const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear',
-                              'postList', 'postHide', 'postPin', 'postReply', 'postDelete',
+                              'postList', 'postHide', 'postPin', 'postReply',
                               'orderList', 'orderDone', 'orderDetail']);
 
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove',
@@ -1710,13 +1717,15 @@ const main = async (req) => {
     votersNow = Object.values(f).filter((x) => (x.v || []).length).length;
   }
 
-  /* Two different ceilings, and the distinction matters: you can KEEP up to
-     MAX_LIBRARY songs on any plan; the plan only limits how many are live to the
-     audience at once. Going over just means the extras arrive switched off. */
-  let featureCap = null;
+  /* Two different ceilings, and the distinction matters: the plan says how many
+     songs the library HOLDS (`library` — 100 free, MAX_LIBRARY paid, since 0060)
+     and how many are live to the audience at once (`featured`). Going over the
+     second just means the extras arrive switched off; the first refuses the add. */
+  let featureCap = null, libCap = MAX_LIBRARY;
   if (['addSong', 'toggleSong', 'importSongs'].includes(action)) {
-    const f = (await planForArtist(aid)).limits.featured;
-    featureCap = f === Infinity ? null : f;
+    const lim = (await planForArtist(aid)).limits;
+    featureCap = lim.featured === Infinity ? null : lim.featured;
+    libCap = libraryCap(lim);
   }
 
   /* Setting your own prices is a paid feature: the free-vote count, the pack
@@ -1925,9 +1934,7 @@ const main = async (req) => {
         // over the featured limit? it still gets added, just switched off
         const liveNow = show.songs.filter((x) => x.active !== false).length;
         const startsOff = featureCap !== null && liveNow >= featureCap;
-        if (show.songs.length >= MAX_LIBRARY) {
-          err = [`That's ${MAX_LIBRARY} songs — more than any setlist needs.`, 402]; return false;
-        }
+        if (show.songs.length >= libCap) { err = [FULL(libCap), 402]; return false; }
         const artist = String(body.artist || '').trim().slice(0, 60);
         let id = makeSongId(title, artist);
         if (show.songs.some((s) => s.id === id)) id += '-' + Math.random().toString(36).slice(2, 5);
@@ -1956,7 +1963,7 @@ const main = async (req) => {
         for (const r of rows) {
           const sig = songSig(r.title, r.artist);
           if (have.has(sig)) { dupes++; continue; }
-          if (show.songs.length >= MAX_LIBRARY) { refused++; continue; }
+          if (show.songs.length >= libCap) { refused++; continue; }
           const liveNow = show.songs.filter((x) => x.active !== false).length;
           const startsOff = featureCap !== null && liveNow >= featureCap;
           let id = makeSongId(r.title, r.artist);
@@ -1968,7 +1975,7 @@ const main = async (req) => {
         note = `Added ${added} song${added === 1 ? '' : 's'}`
           + (dupes ? ` · skipped ${dupes} you already had` : '')
           + (off ? ` · ${off} arrived switched off (your plan features ${featureCap} at a time)` : '')
-          + (refused ? ` · ${refused} refused — that’s the ${MAX_LIBRARY}-song ceiling` : '');
+          + (refused ? ` · ${refused} refused — that’s the ${libCap}-song ceiling${libCap < MAX_LIBRARY ? ' on Hobbyist' : ''}` : '');
         break;
       }
       case 'editSong': {

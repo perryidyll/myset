@@ -198,11 +198,11 @@ const VOTING_UI=await pg.evaluate(()=>{
   openBuy();
   const sheet=document.querySelector('#sheet');
   const straight=sheet.querySelector('.buyline'), secure=sheet.querySelector('.secure-votes');
-  ok('the pack sheet names only the artist’s first name', straight&&straight.textContent.trim()==='goes straight to Test', straight&&straight.textContent.trim());
+  ok('the pack sheet names only the artist’s first name', straight&&straight.textContent.trim()==='Test will receive through Stripe Connect', straight&&straight.textContent.trim());   // the founder's words, 2026-09-13
   ok('both requested pack-sheet lines are orange', straight&&secure&&orange.test(getComputedStyle(straight).color)&&orange.test(getComputedStyle(secure).color));
   closeSheet(); openTip();
   const tipStraight=sheet.querySelector('.buyline'), tipSecure=sheet.querySelector('.secure-votes');
-  ok('the tip sheet repeats both orange checkout lines', tipStraight&&tipSecure&&tipStraight.textContent.trim()==='goes straight to Test'&&orange.test(getComputedStyle(tipStraight).color)&&orange.test(getComputedStyle(tipSecure).color));
+  ok('the tip sheet repeats both orange checkout lines', tipStraight&&tipSecure&&tipStraight.textContent.trim()==='Sent via Stripe Connect'&&orange.test(getComputedStyle(tipStraight).color)&&orange.test(getComputedStyle(tipSecure).color));
   closeSheet();
   return out.join('\n');
 });
@@ -226,7 +226,7 @@ const C=await pg.evaluate(async ()=>{
     ok('and it carries the gentle orange pulse', getComputedStyle(bar.querySelector('button')).animationName==='emberGlow',
       getComputedStyle(bar.querySelector('button')).animationName);
     openTip(); await new Promise(r=>setTimeout(r,80));
-    ok('tapping it opens a tip sheet', /Tip Perry/.test(document.querySelector('#sheet').innerText));
+    ok('tapping it opens a tip sheet', /Give Perry some love/.test(document.querySelector('#sheet').innerText));
     ok('with amounts and a note', !!document.querySelector('#tipAmt')&&!!document.querySelector('#tipNote'));
     const orange=/rgb\(255,\s*86,\s*80\)/;   // --accent-2, the logo's pink-orange (2026-09-13)
     ok('with both requested lines in orange', [...document.querySelectorAll('#sheet .checkoutcopy')].length===2&&
@@ -461,7 +461,7 @@ const THEME=await pg.evaluate(async()=>{
   ok('the switch changes the rendered palette',before==='rgb(0, 0, 0)'&&after==='rgb(245, 245, 247)',`${before} -> ${after}`);
   ok('the loading screen follows the same switch',introBefore==='rgb(0, 0, 0)'&&introAfter==='rgb(245, 245, 247)',`${introBefore} -> ${introAfter}`);
   const artistActions=[...document.querySelectorAll('.artistactions .artistsearch')];
-  ok('View on map sits left of Search for artists',artistActions.length===2&&/View on map/.test(artistActions[0].innerText)&&/Search for artists/.test(artistActions[1].innerText)&&artistActions[0].getBoundingClientRect().top===artistActions[1].getBoundingClientRect().top);
+  ok('View on map sits left of Search for artists',artistActions.length===2&&/View on MAP/.test(artistActions[0].innerText)&&/Search for artists/.test(artistActions[1].innerText)&&artistActions[0].getBoundingClientRect().top===artistActions[1].getBoundingClientRect().top);
   class TestBounds{extend(){}}
   class TestMap{fitBounds(){}setCenter(){}setZoom(){}getZoom(){return 12}panTo(){}}
   class TestMarker{constructor(o){this.o=o}getPosition(){return{lat:()=>this.o.position.lat,lng:()=>this.o.position.lng}}}

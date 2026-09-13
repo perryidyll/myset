@@ -1853,6 +1853,12 @@ function render(){
         </div>
         ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
         <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Start the next one from the Live tab when the gig begins.':'Tonight gets filed away when you end the show or start a new one.'}</p>
+        ${H.locked?`<div class="sec"><span class="kick">Data reports</span><span class="kick">${H.nights||0}</span></div>
+        <div class="list"><div class="row" style="flex-wrap:wrap">
+          <div class="m" style="flex:1 1 100%"><div class="t">${H.nights?`${H.nights} night${H.nights===1?'':'s'} filed and waiting`:'Every night gets filed here'}</div>
+            <div class="s">Data reports — the fans, votes and tips from every show — are a Bar Star feature. Upgrade and ${H.nights?'all of them open':'they open as you play'}.</div></div>
+          <button class="act" onclick="openPlans()">See plans</button></div></div>`:''}
+        ${H.locked?'':`
         ${(()=>{  /* filter by anything a night is remembered by: its name, venue, city, date, weekday */
           const hw=HISTQ.toLowerCase().split(/\s+/).filter(Boolean);
           const hay=x=>{const d=new Date(x.endedAt||x.startedAt||0);
@@ -1884,7 +1890,7 @@ function render(){
           <button class="big alt" onclick="healHist()">Look for missing shows</button>
           <p class="muted" style="font-size:12px;margin:8px 0 0">A night is filed when you end the show. If one is missing this goes back through the records and puts it where it belongs.</p>
           <button class="big alt" style="margin-top:10px" onclick="placeHist()">Name these from my calendar</button>
-          <p class="muted" style="font-size:12px;margin:8px 0 0">Older nights were all filed under the same venue. This renames each one from the gig that was on your calendar that night — nothing else about them changes.</p></div>`}`;
+          <p class="muted" style="font-size:12px;margin:8px 0 0">Older nights were all filed under the same venue. This renames each one from the gig that was on your calendar that night — nothing else about them changes.</p></div>`}`}`;
       }
       let pays='';
       if(!R) pays=`<div class="sec"><span class="kick">All payments</span></div>
@@ -2371,7 +2377,7 @@ function isNew(){
   if(f==='done')return false;
   if(f)return true;
   return !!(D&&D.songs&&!D.songs.length&&!((D.show||{}).played||[]).length
-    &&HIST&&HIST.ok&&Array.isArray(HIST.shows)&&!HIST.shows.length);
+    &&HIST&&HIST.ok&&!(HIST.locked?HIST.nights:(Array.isArray(HIST.shows)?HIST.shows.length:1)));   /* a free plan gets the count, not the rows (0060) */
 }
 let FR={step:0,hidden:false,drawn:''};
 function drawFirstRun(){
@@ -3537,7 +3543,7 @@ async function orderDetail(sid){
 function commSection(){
   const s=D.show, posts=COMM||[];
   return `<div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post, pin one, and hide anything on any plan — hiding takes it off your page at once and deletes its photos and clip, and the words can be un-hidden. Deleting the whole record for good is a Bar Star feature. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post and pin one on any plan. Hiding a post is a Bar Star feature — it takes the post off your page at once and deletes its photos and clip, and the words can be un-hidden. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
       <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · <span style="color:var(--accent)">${p.reports} report${p.reports===1?'':'s'}</span>`:''}</div>
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}${p.showLabel?' · '+esc(p.showLabel):''}</div>
@@ -3545,20 +3551,19 @@ function commSection(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px">
         <button class="act" onclick="replyPost('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
         <button class="act" onclick="commAct('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
-        <button class="act" onclick="${p.hidden?`commAct('postHide','${esc(p.id)}',false)`
-          :`if(confirm(${JSON.stringify((p.photos.length||p.clip)?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}))commAct('postHide','${esc(p.id)}',true)`}">${p.hidden?'Show':'Hide'}</button>
-        ${/* Greyed rather than hidden — Perry's rule for a locked feature: show it,
+        ${canHide()?`<button class="act" onclick="${p.hidden?`commAct('postHide','${esc(p.id)}',false)`
+          :`if(confirm(${JSON.stringify((p.photos.length||p.clip)?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}))commAct('postHide','${esc(p.id)}',true)`}">${p.hidden?'Un-hide':'Hide'}</button>`
+          :`<button class="act" style="opacity:.5" onclick="toast('Hiding a post is a Bar Star feature');openPlans()">Hide · Bar Star</button>`}
+        ${/* Greyed rather than hidden — the founder's rule for a locked feature: show it,
              say what it needs, never pretend it isn't there. The server refuses it
-             too, so this is the sign and not the lock (15k). */''}
-        ${canDelete()
-          ? `<button class="act warn" onclick="if(confirm('Delete this post for good? Hiding it is undoable; this is not.'))commAct('postDelete','${esc(p.id)}')">✕</button>`
-          : `<button class="act" style="opacity:.5" onclick="toast('Deleting for good is a Bar Star feature — hide it instead, which is instant and undoable');openPlans()">✕ Bar Star</button>`}</div>
+             too, so this is the sign and not the lock (15k). */''}</div>
     </div>`).join('')||'<div class="row muted">Nothing posted yet.</div>'}</div>`;
 }
-/* One answer for "may this artist delete a post", read from the plan the server
-   also reads. The founder bypass lives on the server (moderateAllowed); PLAN.owner
-   mirrors it so the founder never sees his own feature greyed. */
-const canDelete=()=>!!(PLAN&&(PLAN.owner||(PLAN.limits&&PLAN.limits.moderate)));
+/* One answer for "may this artist hide a post" (Bar Star and up since 0060), read
+   from the plan the server also reads. The founder bypass lives on the server
+   (moderateAllowed); PLAN.owner mirrors it so the founder never sees his own
+   feature greyed. */
+const canHide=()=>!!(PLAN&&(PLAN.owner||(PLAN.limits&&PLAN.limits.moderate)));
 async function commAct(action,id,on,text){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action,id,on,text})}); if(d.ok){COMM=d.posts;closeSheet();render();} else toast(d.error||'Couldn’t do that'); }
 function replyPost(id){
   const p=(COMM||[]).find(x=>x.id===id)||{};
@@ -3582,47 +3587,37 @@ function replyPost(id){
    about what the number IS: the night is never cut off when more people turn up —
    it slows down and shortens the board — so the card says the room size and the
    next line says what happens past it, rather than implying a locked door. */
+/* THE PLAN CARDS, in the founder's words (2026-09-13). Every line is a bold
+   heading, an en dash, then the detail — one shape on every card. A paid card
+   says "Everything in <the plan below>" once rather than repeating it. The
+   numbers here are the rules in _plan.mjs, restated: change one there and here. */
 const TIER_COPY={
   free:{name:'Hobbyist',price:'$0',items:[
-    ['10 shows a month',' \u2014 up to 200 in the room at each'],
-    ['Everything fans touch',': voting, requests, birthday shout-outs, lyrics'],
-    ['The song sheet',': chord charts, keys and genres'],
-    ['Your page',', gig calendar and city listings'],
-    ['A community page',' \u2014 fans rate the night and post photos, you reply'],
-    ['Hide any post',' \u2014 instantly, and undo it'],
-    ['Show history',' and your real numbers'],
-    ['Keep 2,000 songs',' \u2014 50 live to the room at once'],
-    ['One sign-in',''],
-    ['<span class="fee">Transaction fee: 25%</span>',' on money taken through the app']]},
+    ['10 shows for free',' – up to 50 people each'],
+    ['All core fan features',' – voting, requests, birthday shout-outs, lyrics'],
+    ['Lyrics and chords',' – customizable charts to read in-app while playing'],
+    ['Your page',' – gig calendar and city listings'],
+    ['A community page',' – fans rate the night and post photos, you reply'],
+    ['Add up to 100 songs',' – and show up to 50 to your audience to vote on'],
+    ['<span class="fee">Transaction fee</span>',' – 25% on money taken through the app']]},
   plus:{name:'Bar Star',price:'$10 / month',items:[
-    ['Unlimited shows',' \u2014 play as often as you like'],
-    ['Rooms up to 1,000',' \u2014 a bigger night still runs, just a little calmer'],
-    ['Unlimited songs',' live to the room at once'],
-    ['Separate setlists',', one active per night, applied from your calendar'],
-    ['Set your own vote rules',' \u2014 free votes per person, the cost of a replay'],
-    ['Price your own vote packs',', requests and shout-outs'],
-    ['Merch on your community page',', paid straight to you'],
-    ['Delete a post for good',' \u2014 hiding is free on every plan'],
-    ['The verification tick',', once you\u2019re checked'],
-    ['Everything fans touch',', the song sheet, your page, calendar, community page and history'],
-    ['Shows that start and end themselves',' from your calendar'],
-    ['One sign-in',''],
-    ['<span class="fee">Transaction fee: 10%</span>',' on money taken through the app']]},
+    ['Everything in Hobbyist',''],
+    ['Unlimited shows',' – play as often as you like'],
+    ['Rooms up to 300',' – give everyone a chance to connect'],
+    ['Unlimited songs',' – live to the room at once'],
+    ['Separate setlists',' – customizable for different gigs and venues'],
+    ['Set your own rules',' – # of free votes per person, price of buying more, votes needed to request a song not on your setlist, and more'],
+    ['Sell merch',' – straight from your community page'],
+    ['Hide 1-2 star reviews',' – protect your page from drunk haters'],
+    ['Verification badge',' – after credentials are approved'],
+    ['Data reports',' – track the numbers of fans and tips from every show'],
+    ['Shows that start and end themselves',' – from your calendar'],
+    ['<span class="fee">Transaction fee</span>',' – 10% on money taken through the app']]},
   pro:{name:'Rock Star',price:'$20 / month',items:[
-    ['Unlimited shows',' \u2014 play as often as you like'],
-    ['Rooms up to 2,000',' \u2014 a bigger night still runs, just a little calmer'],
-    ['Unlimited songs',' live to the room at once'],
-    ['Separate setlists',', one active per night, applied from your calendar'],
-    ['Set your own vote rules',' \u2014 free votes per person, the cost of a replay'],
-    ['Price your own vote packs',', requests and shout-outs'],
-    ['Merch on your community page',', paid straight to you'],
-    ['Delete a post for good',' \u2014 hiding is free on every plan'],
-    ['The verification tick',', once you\u2019re checked'],
-    ['Everything fans touch',', the song sheet, your page, calendar, community page and history'],
-    ['Shows that start and end themselves',' from your calendar'],
-    ['Five sign-ins',' for your band'],
-    ['Coming soon, included',': earnings by venue and night, a press kit, your branding, promotion in other cities'],
-    ['<span class="fee">Transaction fee: 2%</span>',' on money taken through the app']]},
+    ['Everything in Bar Star',''],
+    ['Rooms up to 2,000',' – a bigger night still runs, just a little calmer'],
+    ['Coming soon, included',' – earnings by venue and night, a press kit, your branding, promotion in other cities'],
+    ['<span class="fee">Transaction fee</span>',' – 2% on money taken through the app']]},
 };
 const tierList=(k)=>TIER_COPY[k].items.map(x=>`<li><b>${x[0]}</b>${x[1]||''}</li>`).join('');
 const RANK={free:0,plus:1,pro:2};
@@ -3633,7 +3628,9 @@ function openPlans(){
     if(k===cur) return `<button class="big now" disabled>Your plan</button>`;
     if(RANK[k]>RANK[cur]) return sub?`<button class="big" onclick="changePlan('${k}')">Move to ${TIER_COPY[k].name}</button>`
                                      :`<button class="big" onclick="startCheckout('${k}')">Upgrade to ${TIER_COPY[k].name}</button>`;
-    if(comped&&!sub) return `<button class="big now" disabled>Comped until ${dstamp(PLAN.until)}</button>`;
+    /* "Comped until" is for a plan that came from a code or a referral — never on the
+       founder's own account (the founder, 2026-09-13). */
+    if(comped&&!sub&&!PLAN.owner) return `<button class="big now" disabled>Comped until ${dstamp(PLAN.until)}</button>`;
     return sub?`<button class="big alt" onclick="confirmDowngrade('${k}')">Switch to ${TIER_COPY[k].name}</button>`
               :`<button class="big now" disabled>${TIER_COPY[k].name}</button>`;
   };

@@ -177,12 +177,19 @@ body{padding-bottom:34px}
    cards wear (.hmapgo), not a pin in a circle: the founder asked on 2026-09-12
    for the one button on every card everywhere. A row without a map has none. */
 .dirs{display:inline-block;margin-top:7px;font-size:11px;font-weight:750;line-height:1.2;
-  color:var(--accent-ink);padding:7px 9px;border-radius:var(--pill);background:var(--accent-soft);white-space:nowrap}
+  color:var(--accent-ink);padding:7px 9px;border-radius:var(--pill);background:var(--grad-soft,var(--accent-soft));white-space:nowrap}   /* pink-orange words on the soft gradient ground (the founder, 2026-09-13) */
 .evtag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;
   text-transform:uppercase;color:var(--accent-ink);background:var(--accent-soft);
   padding:2px 7px;border-radius:var(--pill);margin-bottom:4px}
 .gig:first-child{border-top:none}
 .giglist{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
+/* TONIGHT wears one brand-gradient ring around everything on tonight — the featured
+   rows and the list together, never a ring per row (the founder, 2026-09-13). The
+   box has a real border, so the ring is painted to its border box; the lists
+   inside lose their side margins and the box takes them. */
+.tonightbox{margin:0 18px;padding:8px;border-radius:calc(var(--r) + 8px);border:1.5px solid transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box}
+.tonightbox .giglist,.tonightbox .feathead{margin-left:0;margin-right:0}
+.tonightbox .giglist.feats{margin:0}.tonightbox .feathead{padding-left:10px}
 .gig .tm{flex:0 0 auto;min-width:62px;text-align:center}
 .gig .tm b{display:block;font-size:16px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
 .gig .tm span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
@@ -319,7 +326,7 @@ body{padding-bottom:34px}
 .homemap[hidden]{display:none}.homemap{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;padding-top:max(24px,env(safe-area-inset-top));background:rgba(0,0,0,.7);backdrop-filter:blur(10px)}
 .hmapsheet{display:flex;flex-direction:column;width:min(680px,100%);max-height:92dvh;background:var(--surface);border-radius:26px 26px 0 0;box-shadow:0 -18px 60px rgba(0,0,0,.38);overflow:hidden}.hmaphead{position:relative;display:flex;align-items:center;justify-content:space-between;padding:26px 18px 15px;touch-action:none;cursor:grab}.hmaphead .hgrab{position:absolute;left:50%;top:9px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:var(--hair-2)}.hmaphead h2{font-size:21px;margin:0}.hmaphead p{font-size:12px;color:var(--muted);margin:3px 0 0}.hmapclose{width:34px;height:34px;border-radius:50%;background:var(--bg-2);font-size:18px;color:var(--muted)}
 .hmapscroll{overflow:auto;padding:0 14px max(18px,env(safe-area-inset-bottom))}.hmapcanvas{position:relative;height:min(52dvh,430px);min-height:300px;border-radius:20px;overflow:hidden;background:var(--bg-2);box-shadow:inset 0 0 0 1px var(--hair-2)}.hmapviewport{position:absolute;inset:0}.hmaploading,.hmapfail{height:100%;display:grid;place-items:center;padding:28px;text-align:center;color:var(--muted);font-size:13px;line-height:1.45}.hmapfail b{display:block;color:var(--ink);font-size:16px;margin-bottom:5px}
-.hmapevents{display:grid;gap:8px;margin-top:12px}.hmapevent{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px;border-radius:15px;background:var(--bg-2);cursor:pointer}.hmapevent:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.hpinlabel{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:var(--grad);color:#fff;font-size:11px;font-weight:800}.hmapcopy{min-width:0}.hmapcopy b,.hmapcopy span{display:block}.hmapcopy b{font-size:13px}.hmapcopy span{font-size:11px;color:var(--muted);margin-top:3px}.hmapgo{font-size:11px;font-weight:750;color:var(--accent-ink);padding:7px 8px;border-radius:var(--pill);background:var(--accent-soft)}
+.hmapevents{display:grid;gap:8px;margin-top:12px}.hmapevent{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:11px;border-radius:15px;background:var(--bg-2);cursor:pointer}.hmapevent:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.hpinlabel{width:28px;height:28px;border-radius:10px;display:grid;place-items:center;background:var(--grad);color:#fff;font-size:11px;font-weight:800}.hmapcopy{min-width:0}.hmapcopy b,.hmapcopy span{display:block}.hmapcopy b{font-size:13px}.hmapcopy span{font-size:11px;color:var(--muted);margin-top:3px}.hmapgo{font-size:11px;font-weight:750;color:var(--accent-ink);padding:7px 8px;border-radius:var(--pill);background:var(--grad-soft,var(--accent-soft))}
 .hmapsheet .gm-style .gm-style-iw-c{color:#202124}
 </style>
 </head>
@@ -366,7 +373,7 @@ body{padding-bottom:34px}
   </div>
 
   <div class="artistactions" aria-label="Artist discovery">
-    <button class="chip artistsearch" id="homeMapBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>View on map</button>
+    <button class="chip artistsearch" id="homeMapBtn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>View on MAP</button>
     <a class="chip artistsearch" href="/artists">Search for artists →</a>
   </div>
 
@@ -765,9 +772,11 @@ function renderFeed(q){
     ${/* The heading appears only when something is actually featured, and never
          draws an empty slot — one featured show is one row, not one row and two
          gaps. Perry was explicit about that. */''}
+    ${day.label==='Tonight'?'<div class="tonightbox">':''}
     ${(day.featured||[]).length?`<div class="feathead">Featured shows</div>
       <div class="giglist feats">${day.featured.map(g=>row(g,true)).join('')}</div>`:''}
-    ${day.gigs.length?`<div class="giglist">${day.gigs.map(g=>row(g,false)).join('')}</div>`:''}`}).join('')
+    ${day.gigs.length?`<div class="giglist">${day.gigs.map(g=>row(g,false)).join('')}</div>`:''}
+    ${day.label==='Tonight'?'</div>':''}`}).join('')
     + `<div class="endcard">${words.length
         ? `${total} match${total===1?'':'es'} for “${esc(q)}” in ${esc(city)}.`
         : `That’s everything in ${esc(city)} for the next ${spanWord()}.`}${
@@ -887,7 +896,7 @@ function drawA2HS(){
   el.innerHTML=`<div class="a2hs">
     <span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.6c.5 0 .9.4.9.9v8.4l2.5-2.5a.9.9 0 0 1 1.3 1.3l-4 4a.9.9 0 0 1-1.3 0l-4-4a.9.9 0 0 1 1.3-1.3l2.4 2.5V4.5c0-.5.4-.9.9-.9z"/><path d="M4.8 15.3c.5 0 .9.4.9.9v2.1c0 .3.2.5.5.5h11.6c.3 0 .5-.2.5-.5v-2.1a.9.9 0 0 1 1.8 0v2.1c0 1.3-1 2.3-2.3 2.3H6.2c-1.3 0-2.3-1-2.3-2.3v-2.1c0-.5.4-.9.9-.9z"/></svg></span>
     <div class="m"><b>Saved MySet to your home screen yet?</b>
-      <span>Takes about 6 seconds${INSTALL_EVENT?'':' — here’s how'}</span></div>
+      <span>Runs faster, is free, takes ~6 seconds${INSTALL_EVENT?'':' — here’s how'}</span></div>
     <button class="how" onclick="${INSTALL_EVENT?'installA2HS()':'openA2HS()'}">
       ${INSTALL_EVENT?'Install':'How'} <span style="font-size:11px">↗</span></button>
     <button class="no" onclick="hideA2HS()" aria-label="No thanks">✕</button>

@@ -15,20 +15,37 @@
       button.setAttribute('aria-label', label);
       button.title = label;
     });
+    /* THE BAND BEHIND THE STATUS BAR. On a phone that opened MySet from its home
+       screen, iOS paints the strip under the clock from the page's theme-color —
+       and reads it when the page LOADS. Changing the meta's `content` in place is
+       noticed by Safari's own tab bar but not, reliably, by the standalone status
+       bar, which kept the old colour until the next page (the founder's screenshot,
+       2026-09-13: a light band over a dark Studio). So the meta is REPLACED — a new
+       element is a new declaration, which is what a load would have handed iOS —
+       in the colour the root actually has, so the strip is right whichever of the
+       two iOS is reading. Rewritten only when the colour actually changes: sync()
+       runs on every DOM mutation. The colour is the page's OWN root background
+       where it has one (the artist page's dark is a warm near-black, not #000), so
+       the band matches the page rather than a table here. */
+    let want = '';
+    try { want = getComputedStyle(root).backgroundColor || ''; } catch (_) {}
+    if (!want || want === 'transparent' || want === 'rgba(0, 0, 0, 0)') want = colour(theme);
     let meta = document.querySelector('meta#manualTheme') || document.querySelector('meta[name="theme-color"]');
-    if (!meta) {
-      meta = document.createElement('meta');
-      meta.name = 'theme-color';
-      document.head.appendChild(meta);
+    if (!meta || meta.content !== want) {
+      const fresh = document.createElement('meta');
+      fresh.name = 'theme-color'; fresh.id = 'manualTheme'; fresh.content = want;
+      if (meta) meta.replaceWith(fresh); else document.head.appendChild(fresh);
     }
-    meta.id = 'manualTheme';
-    meta.content = colour(theme);
   };
   const toggle = () => {
     const next = active() === 'dark' ? 'light' : 'dark';
     root.dataset.theme = next;
     try { localStorage.setItem('myset.theme', next); } catch (_) {}
     sync();
+    /* A one-pixel nudge of the scroll position, put straight back: iOS re-samples
+       the colour behind the status bar on scroll, and this is the cheapest scroll
+       there is. Nothing visible moves. */
+    requestAnimationFrame(() => { const y = scrollY; scrollTo(0, y + 1); scrollTo(0, y); });
   };
   document.addEventListener('click', (event) => {
     if (event.target.closest('[data-theme-toggle]')) toggle();

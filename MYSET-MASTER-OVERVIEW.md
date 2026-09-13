@@ -436,19 +436,21 @@ worth reading. If a number here is wrong, the source is wrong.*
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
 | Shows per calendar month (UTC) | 10 | unlimited | unlimited |
 | Songs live to the audience at once | 50 | unlimited | unlimited |
-| People in one room (soft — nobody is refused) | 200 | 1,000 | 2,000 |
+| People in one room (soft — nobody is refused) | 50 | 300 | 2,000 |
+| Songs the library holds | 100 | 2,000 | 2,000 |
 | Team seats | 1 | 1 | 5 |
 | Set your own prices (vote packs, replay, requests) | — | yes | yes |
 | Create named setlists | — | yes | yes |
 | Sell merch on your community page | — | yes | yes |
-| Delete a fan's post for good *(hiding is free on every plan)* | — | yes | yes |
+| Hide a fan's post *(sold as "hide 1–2 star reviews"; deleting for good is gone — 0060)* | — | yes | yes |
+| Data reports — the filed nights on the Money tab *(every night is still filed on every plan)* | — | yes | yes |
 | Promote gigs in other cities | *coming soon* | *coming soon* | *coming soon* |
 | Earnings analytics | *coming soon* | *coming soon* | *coming soon* |
 | Press kit | *coming soon* | *coming soon* | *coming soon* |
 | Your own branding | *coming soon* | *coming soon* | *coming soon* |
 
-Everyone keeps up to **2,000** songs in their library on any plan — the cap
-above limits how many are *live to the audience*, and it never deletes anything.
+The library holds **100** songs on Hobbyist and **2,000** on the paid plans (decision 0060) —
+a full library refuses the *next* add and never deletes a song; the row above it limits how many are *live to the audience*.
 
 **Designed and not built:** `promote`, `analytics`, `presskit`, `branding`. These are named in
 `NOT_BUILT` in `_plan.mjs` and are greyed as *"Coming soon"* on **every** plan including Rock Star.
@@ -512,7 +514,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 255 (last: 0fk) |
 | Test suites | 45 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 59 |
+| Decision records | 60 |
 
 ### Feature flags in force
 
@@ -532,12 +534,15 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | `pricing` | setting your own vote-pack prices, replay cost and request costs | `admin.mjs`, 402 |
 | `setlists` | **creating** a named setlist. Only creating — an artist who made sets on Bar Star and drops to Hobbyist keeps using, renaming, filling and deleting them, because **a cap never deletes anything** | `_lists.mjs` |
 | `merch` | selling items from the community page | `_plan.mjs` `merchAllowed()`, checked by the Studio, the checkout **and** the page — one answer, three readers |
-| `moderate` | **deleting** a fan's post for good. **Hiding is free on every plan, for ever** | `_plan.mjs` `moderateAllowed()` |
+| `moderate` | **hiding** a fan's post — sold as *"hide 1–2 star reviews"*; it hides any post, and a hidden post can come back. Deleting for good is no longer an action (decision 0060, 2026-09-13) | `_plan.mjs` `moderateAllowed()` |
+| `reports` | **reading** the filed nights on the Money tab — the fans, votes and tips from every show. Every night is still filed on every plan; the free plan gets the count | `_plan.mjs` `reportsAllowed()`, `history.mjs` |
+| `library` | how many songs the library **holds** — 100 on Hobbyist, `MAX_LIBRARY` on the paid plans; a full library refuses the next add and never deletes a song | `_plan.mjs` `libraryCap()`, `admin.mjs` on every add |
 
-**Hiding is free and always will be.** Every artist must be able to take something
-offensive off their page the second they see it. What a paid plan buys is *erasing* it.
-And because `/api/img` and `/api/vid` serve by URL and know nothing about a post being
-hidden, **hiding deletes the bytes** — the words stay and can be un-hidden.
+**Hiding was free on every plan until 2026-09-13**, when the founder moved it to Bar Star
+(decision 0060) and dropped deleting for good: a hidden post is off the page at once and
+can come back, which is all the protection a page needs. Because `/api/img` and
+`/api/vid` serve by URL and know nothing about a post being hidden, **hiding deletes the
+bytes** — the words stay and can be un-hidden.
 
 **The founder bypass is load-bearing.** Perry predates the registry, so `planForArtist`
 returns "free" for him. `merchAllowed` and `moderateAllowed` both bypass on

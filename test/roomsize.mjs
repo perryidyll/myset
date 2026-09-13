@@ -102,7 +102,13 @@ eq('and the cap is told to the page', first.room.cap, PLANS.free.audience);
 console.log('\nFILL IT PAST THE CAP');
 const cap = PLANS.free.audience;
 const live = await getShow(a.artistId);
-for (let i = 0; i < cap + 25; i++) {
+/* Past the cap AND past the first rung of the dial. The two used to coincide (a
+   200-person free room); since 2026-09-13 the free room is 50, so a room that is
+   over its cap is still a small room to the throttle — the cap is a billing line
+   and the throttle is about load, and this file asserts both without conflating
+   them. `over` reads at the room's real size; the slow-down at the dial's. */
+const fill = Math.max(cap, 200) + 25;
+for (let i = 0; i < fill; i++) {
   await mutateFan(a.artistId, 'f' + String(i).padStart(9, '0'), (me) => {
     me.seenShow = live.showId; me.ipH = 'x'; return true;
   });

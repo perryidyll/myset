@@ -44,9 +44,9 @@ window.__early={stage:g('stage','/api/stage',{headers:h}),plan:g('plan','/api/ad
   --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
   --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
   --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
-  --accent:#FF456E; --accent-2:#FF5650; --accent-soft:rgba(255,69,110,.16);
+  --accent:#FF456E; --accent-2:#FF5650; --accent-soft:rgba(255,86,80,.18);
   --grad:linear-gradient(135deg,#FF375F,#FF6B45);
-  --good:#30D158; --accent-ink:#FF8AA5;
+  --good:#30D158; --accent-ink:#FF5650;   /* accent as text: the logo's pink-orange (the founder, 2026-09-13) */
   --r-sm:14px; --r:18px; --r-lg:24px; --pill:999px;
   --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
   --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
@@ -58,7 +58,7 @@ window.__early={stage:g('stage','/api/stage',{headers:h}),plan:g('plan','/api/ad
   --bg:#F5F5F7;--surface:#FFFFFF;--surface-2:#EBEBEF;
   --ink:#1D1D1F;--ink-2:#3A3A3C;--muted:#6E6E73;--faint:#8E8E93;
   --hair:rgba(0,0,0,.08);--hair-2:rgba(0,0,0,.14);
-  --accent:#FF375F;--accent-soft:rgba(255,55,95,.10);--good:#187A32;--accent-ink:#D6003C;
+  --accent:#FF375F;--accent-soft:rgba(255,86,80,.12);--good:#187A32;--accent-ink:#FF5650;
   --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
   --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09)}
 html[data-theme=light]{background:var(--bg)}
@@ -703,7 +703,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=d6907d62"></script>
+<script src="/studio.js?v=131ddc0f"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —
