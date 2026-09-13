@@ -1,8 +1,9 @@
 # 2026-09-13 — The business dashboard for the paid plans
 
 Branch `crm/artist-dashboard`, worktree off `origin/main` `b966884`, rebased onto
-`34215b8` mid-build. Decision `0065`, INVARIANT 0fn. **Not pushed at the time of
-writing — the founder decides.**
+`34215b8` mid-build, then onto `f004926` to ship. Decision `0065` (numbered 0063
+when written; #30 took that number on `main` and the merch batch holds 0064), INVARIANT
+0fn. **Live as `81a48f3`, PR #31, 2026-09-13**, with the founder's first pass folded in.
 
 ## What was asked
 
@@ -120,6 +121,8 @@ time invested* with *Stage time rate* / *Full evening rate*, the *Total / My cut
 toggle and the post-fee button (`Biz.rates`). Suite 2,571 ✓ / 0 ✗; uicheck
 167 ✓ / 0 ✗ / 0 page errors; the report check 35 ✓; looked at in both themes
 on the localhost, the fee and cut toggles moving the figures the maths says.
+Shipped as PR #31 → `81a48f3`; the live `/biz.js` and `/studio-money.js` compared
+byte-equal to the tree and `/studio` names `studio.js?v=ade6a231`.
 
 ## Open
 

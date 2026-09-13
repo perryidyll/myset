@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 23:15 — d7fe0b3 — wt@docs/dashboard-ledger (2 files since origin/main)
+**tl;dr:** Ledger and session note for the business dashboard: live as 81a48f3 (UX-043 / PL-003, decision 0065, PR #31); the ledger's next work item is the founder's next requests as he uses it
+**Other sessions:** Doc-only. The Puzzle Money section 42066 and changelog 1647 already say 0065 and the new wording. UX-040 was taken by #28 and 0063 by #30 — the dashboard is UX-043 / 0065 everywhere now.
+
 ### 2026-09-13 23:10 — e47e6ec — wt@crm/artist-dashboard (46 files since origin/main)
 **tl;dr:** Bar Star and Rock Star get the business dashboard on the Money tab: log total pay from venue, splits and your own cut, cash tips, merch, costs, hours and gear per show (or once per run on the gig form); profit in green with MySet's fee named in dollars, revenue mix, hours, Stage time rate / Full evening rate with Total–My cut and pre/post-fee toggles; Generate report prints a branded /report for any dates or picked shows (UX-043 / PL-003, decision 0065)
 **Other sessions:** New: netlify/functions/_biz.mjs (biz_<aid>, casDoc, 400 KB cap on growth), public/biz.js (all the maths, runs in node), public/studio-money.js (loaded on demand; studio.js reads it only through window.Money), public/report.html; tools/stamp.mjs now has ordered PAIRS; tools/localhost.mjs runs the real functions on the in-memory fakes (node --import ./test/register.mjs tools/localhost.mjs). Filed nights carry key + source; occKey lives in _events.mjs; ledger/ledgerCsv answer enabled:false for an owner with no Connect account (INVARIANT 0fn). PLANS has band/costs caps read as numbers (PLAN.limits.band, never has('band')). Renumbered from 0063 → 0065; UX-040 → UX-043.
