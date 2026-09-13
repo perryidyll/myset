@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 23:47 — 08d8c7b — wt@crm/dashboard-pass-two (14 files since origin/main)
+**tl;dr:** The business report gets Rate settings (which hours count, Total / My cut, before or after MySet's fee — the same choices as the Studio's $/hour tile, shared through the phone); a filed night now counts the votes bought and the paid requests accepted, and the editor sheet and the report say 'N votes · free · paid · paid requests'; the Money tab's Shows list shows three and folds the rest behind Show N more
+**Other sessions:** _history.mjs moneyForShow now returns votes.paid (packs' votes summed) and requests {amount,count}; the index row carries paidVotes / paidRequests (null = not asked; NOT in ROW_TOPS on purpose — Re-check fills an older night). Biz.votesLine(show). The report reads/writes the Studio's localStorage myset.biz.view and POSTs bizPrefs. Nothing else on the wire changed. PR #35.
+
 ### 2026-09-13 23:35 — 9858ce8 — wt@docs/shop-live (3 files since origin/main)
 **tl;dr:** Ledger and session note: the shop is live as 406f3f4 (UX-044, decision 0064, PR #33); the founder's page lists no merch yet, so the first real item is his to add [skip ci]
 **Other sessions:** Docs only. Puzzle 41974's twelve steps are Live. Numbers now taken: UX-044, INVARIANTS 0fo/0fp, decision 0064.
