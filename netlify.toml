@@ -58,6 +58,13 @@
   to = "/venue-studio.html"
   status = 200
 
+# The printable business report (decision 0065). Above the catch-all like the
+# others, or an artist called "report" would be handed the accountant's page.
+[[redirects]]
+  from = "/report"
+  to = "/report.html"
+  status = 200
+
 # Venue pages live under /v/ so the artist namespace stays a flat slug and
 # nothing has to move. `v` is reserved for artists, and so is any slug starting
 # with it, so the two can never shadow each other.
@@ -232,6 +239,30 @@
   for = "/venue-studio.js"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+# The dashboard's two scripts are stamped the same way (decision 0065), so the
+# same year applies: /biz.js is loaded by the Studio and by /report, and
+# /studio-money.js on demand by the Studio alone.
+[[headers]]
+  for = "/biz.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+[[headers]]
+  for = "/studio-money.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+# The report is a Studio page opened by one person, a few times a year, to print:
+# the Studio's own edge life (a deploy still clears it), and the same noindex
+# header /stage carries, because a search engine has no business with either.
+[[headers]]
+  for = "/report"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=3600"
+    X-Robots-Tag = "noindex, nofollow"
+[[headers]]
+  for = "/report.html"
+  [headers.values]
+    Cache-Control = "public, max-age=600, stale-while-revalidate=3600"
+    X-Robots-Tag = "noindex, nofollow"
 [[headers]]
   for = "/:slug/vote"
   [headers.values]

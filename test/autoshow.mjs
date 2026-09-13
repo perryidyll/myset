@@ -333,5 +333,46 @@ console.log('\nTHE HEAL  a night on disk with no row pointing at it');
   eq('so the heal retires for that artist too', (await healHistory(aid)).skipped, true);
 }
 
+console.log('\nWHICH GIG A HAND-STARTED NIGHT IS  (decision 0065)');
+/* The scheduler always stamped its occurrence key on the show; a tap never did —
+   and never cleared the last one, so after one scheduled night every later
+   hand-started night carried the previous gig's id for good. The filed night now
+   copies the key, so a hand start near tonight's gig must be that gig and a hand
+   start near nothing must be nobody's. Real clock here, because the lifecycle
+   stamps startedAt from Date.now() and "near" is measured from it. */
+{
+  const kay = await createArtist({ email: 'kay@example.com', name: 'Kay', slug: 'kay' });
+  const TK = await signToken('kay@example.com', revOf(await readArtists(), kay.artistId));
+  await mutateArtists((r) => { r.byId[kay.artistId].plan = 'plus'; return true; });
+  ok('she has a song', (await AS(TK, 'addSong', { title: 'Now', artist: 'K' })).ok);
+  const now = Date.now(), soon = now + 20 * 60e3;               // a gig starting in twenty minutes
+  ok('and a gig about to start', (await AS(TK, 'eventSave', { event: { id: 'gkay', venue: 'The Corner', city: 'Koh Phangan', country: 'Thailand',
+    tz: 'UTC', date: ymd(soon), time: hm(soon), endTime: hm(soon + 2 * H) } })).ok);
+  ok('she starts the night by hand', (await AS(TK, 'newShow')).ok);
+  let s = await getShow(kay.artistId);
+  eq('and the show knows which gig it is', s.autoKey, `gkay@${ymd(soon)}`);
+  eq('by id as well', s.autoEvent, 'gkay');
+  eq('started by her, not the schedule', s.startedBy, 'artist');
+  await mutateShow(kay.artistId, (sh2) => { sh2.log = [{ songId: 'now', title: 'Now', roundVotes: 1, at: Date.now() }]; return true; });
+  ok('she ends it', (await AS(TK, 'status', { status: 'ended' })).ok);
+  const filed = (await readHistIndex(kay.artistId)).shows[0];
+  eq('the filed night carries the key', filed && filed.key, `gkay@${ymd(soon)}`);
+  eq('and says whether its money is known', filed && filed.source, 'off');
+  /* The scheduler agrees it is the same night: its key matches, so it does not
+     start the gig a second time on top of hers. */
+  const tick = await autoTick(kay.artistId, { now: soon + 60e3 });
+  eq('the schedule leaves her night alone', tick.did, null);
+  // the gig is gone, and a fresh hand start is near nothing
+  ok('the gig is deleted', (await AS(TK, 'eventDelete', { id: 'gkay' })).ok);
+  ok('a new night by hand', (await AS(TK, 'newShow')).ok);
+  s = await getShow(kay.artistId);
+  eq('carries no gig — THE BUG: it used to keep the last one for ever', s.autoKey, null);
+  eq('and no event id', s.autoEvent, null);
+  /* A RESUME does not touch it either way. */
+  await mutateShow(kay.artistId, (sh2) => { sh2.status = 'ended'; sh2.autoKey = 'kept@2026-01-01'; return true; });
+  ok('she resumes', (await AS(TK, 'status', { status: 'live' })).ok);
+  eq('resuming leaves the stamp alone', (await getShow(kay.artistId)).autoKey, 'kept@2026-01-01');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

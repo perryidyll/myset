@@ -52,6 +52,7 @@ async function facts() {
   const flags = await import(join(ROOT, 'netlify/functions/_flags.mjs'));
   const video = await import(join(ROOT, 'netlify/functions/_video.mjs'));
   const r2 = await import(join(ROOT, 'netlify/functions/_r2.mjs'));
+  const biz = await import(join(ROOT, 'netlify/functions/_biz.mjs'));
 
   const fns = ls('netlify/functions').filter((f) => f.endsWith('.mjs'));
   const handlers = fns.filter((f) => !f.startsWith('_')).map((f) => f.replace('.mjs', '')).sort();
@@ -116,6 +117,8 @@ async function facts() {
       defaultAskCost: lib.DEFAULT_ASK_COST,
       defaultPacks: lib.DEFAULT_PACKS(),
       ladder: heads.map((n) => ({ heads: n, pollMs: lib.pollFloorFor(n), board: lib.boardLimitFor(n) })),
+      // the artist's book (decision 0065): the fixed caps, the rule cap and the document ceiling
+      biz: { ...biz.LIMITS, rules: biz.MAX_RULES, maxBytes: biz.BIZ_MAX_BYTES, timeKinds: biz.TIME_KINDS.map(([, label]) => label) },
     },
     decisions: decisionIndex(),
   };
@@ -205,7 +208,7 @@ const FLAG_LABEL = {
   setlists: 'Create named setlists',
   merch: 'Sell merch on your community page',
   moderate: 'Hide a fan\'s post *(sold as "hide 1–2 star reviews"; deleting for good is gone — 0060)*',
-  reports: 'Data reports — the filed nights on the Money tab *(every night is still filed on every plan)*',
+  reports: 'Data reports and the business dashboard — the filed nights, pay, band splits, costs, hours and profit on the Money tab, and the printed report *(every night is still filed on every plan)*',
   promote: 'Promote gigs in other cities',
   analytics: 'Earnings analytics',
   presskit: 'Press kit',
@@ -241,6 +244,8 @@ worth reading. If a number here is wrong, the source is wrong.*
 | People in one room (soft — nobody is refused) | ${p.free.audience.toLocaleString()} | ${p.plus.audience.toLocaleString()} | ${p.pro.audience.toLocaleString()} |
 | Songs the library holds | ${p.free.library.toLocaleString()} | ${p.plus.library.toLocaleString()} | ${p.pro.library.toLocaleString()} |
 | Team seats | ${p.free.seats} | ${p.plus.seats} | ${p.pro.seats} |
+| Band members paid per show, on the business dashboard | ${p.free.band} | ${p.plus.band} | ${p.pro.band} |
+| Costs logged per show, on the business dashboard | ${p.free.costs} | ${p.plus.costs} | ${p.pro.costs} |
 ${Object.keys(FLAG_LABEL).map(flagRow).join('\n')}
 
 The library holds **${p.free.library.toLocaleString()}** songs on ${p.free.label} and **${f.plans.maxLibrary.toLocaleString()}** on the paid plans (decision 0060) —
@@ -301,6 +306,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | Casts a device may make in a row / per minute after that | ${f.constants.castBurst} / ${f.constants.castPerMin} |
 | Largest clip accepted | ${(f.constants.maxVideoBytes / 1048576).toFixed(0)} MB |
 | A clip link on R2 lives / its redirect is cached | ${f.constants.clipLinkSecs / 3600} h / ${f.constants.clipRedirectCacheSecs / 3600} h |
+| The artist's book, per show (decision 0065) | ${f.constants.biz.merch} merch lines · ${f.constants.biz.gear} gear lines of ${f.constants.biz.gearChars} characters · names ${f.constants.biz.name} · note ${f.constants.biz.note} · one amount up to $${(f.constants.biz.cents / 100).toLocaleString('en-US')} · ${f.constants.biz.minutes / 60} hours per kind of time (${f.constants.biz.timeKinds.join(', ')}) · ${f.constants.biz.rules} rule defaults · the document ${(f.constants.biz.maxBytes / 1000).toFixed(0)} KB, then a year shard |
 | Invariants | ${f.shape.invariants.count} (last: ${f.shape.invariants.last}) |
 | Test suites | ${f.shape.testSuites} |
 | Assertions | ${f.shape.assertions === null ? '*not stamped — run `node tools/overview.mjs --tests`*' : `**${f.shape.assertions.toLocaleString()}**, ${f.shape.testsFailed} failing, last run ${f.shape.testsRunAt}`} |

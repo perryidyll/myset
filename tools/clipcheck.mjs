@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import puppeteer from '/Users/perryidyll/Docs/MySet-Content/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
 
-const ROOT = '/Users/perryidyll/Docs/MySet/public';
+const ROOT = process.env.MYSET_PUBLIC || '/Users/perryidyll/Docs/MySet/public';
 const TYPES = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const srv = http.createServer((req,res)=>{
   const u = new URL(req.url,'http://x'); const p = path.join(ROOT, u.pathname);

@@ -14,7 +14,7 @@
    of `sh test/run.sh` — same arrangement as tools/clipcheck.mjs. */
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 import puppeteer from '/Users/perryidyll/Docs/MySet-Content/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
-const ROOT='/Users/perryidyll/Docs/MySet/public';
+const ROOT=process.env.MYSET_PUBLIC||'/Users/perryidyll/Docs/MySet/public';
 const T={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
 const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');const p=path.join(ROOT,u.pathname);
  if(!fs.existsSync(p)||fs.statSync(p).isDirectory()){rs.writeHead(404);return rs.end('no');}

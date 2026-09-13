@@ -8,6 +8,7 @@
    `text-transform` means the DOM text is not what the source says. */
 import { readFileSync } from 'node:fs';
 import { src } from './_src.mjs';
+import { PAIRS, stampOf, stampRe } from '../tools/stamp.mjs';
 let fail = 0;
 const check = (file, needles) => {
   const s = src(new URL('../' + file, import.meta.url));
@@ -57,23 +58,56 @@ check('public/venue-studio.html', [
   ['function tabBar',        /\nfunction tabBar\(\)\{/g],
   ['sticky offset measured', /top:var\(--headh/g, 0],
 ]);
-/* /studio.js and /venue-studio.js are served immutable for a year, addressed by
-   their own hash. A stale stamp means a phone keeps running last week's Studio
-   under this week's shell. */
+/* /studio.js, /venue-studio.js, /biz.js and /studio-money.js are served immutable
+   for a year, addressed by their own hash. A stale stamp means a phone keeps
+   running last week's Studio under this week's shell. The pairs come from
+   tools/stamp.mjs itself, in its order, so the test and the tool cannot drift. */
 {
-  const { createHash } = await import('node:crypto');
-  for (const [page, js] of [['public/studio.html', 'studio.js'], ['public/venue-studio.html', 'venue-studio.js']]) {
-    const want = createHash('sha1').update(readFileSync(new URL('../public/' + js, import.meta.url), 'utf8')).digest('hex').slice(0, 8);
+  for (const [page, js] of PAIRS) {
+    const want = stampOf(readFileSync(new URL('../public/' + js, import.meta.url), 'utf8'));
     const html = readFileSync(new URL('../' + page, import.meta.url), 'utf8');
-    const have = (html.match(new RegExp(`src="/${js.replace('.', '\\.')}\\?v=([0-9a-f]+)"`)) || [])[1];
+    const have = (html.match(stampRe(js)) || ['', ''])[0].slice(-8);
     const okStamp = have === want;
-    console.log(`  ${okStamp ? '✓' : '✗'} ${js} stamp ${okStamp ? 'matches' : `is ${have}, file is ${want} — run: node tools/stamp.mjs`}`);
+    console.log(`  ${okStamp ? '✓' : '✗'} ${js} stamp in ${page} ${okStamp ? 'matches' : `is ${have || 'missing'}, file is ${want} — run: node tools/stamp.mjs`}`);
     if (!okStamp) fail++;
+    if (!page.endsWith('.html')) continue;
     const inline = (html.match(/<script>/g) || []).length;
     const okInline = inline <= 3;
     console.log(`  ${okInline ? '✓' : '✗'} ${page} keeps only its small inline scripts (${inline})`);
     if (!okInline) fail++;
   }
+}
+/* THE DASHBOARD MODULE (decision 0065). It reads studio.js's globals by bare name
+   from inside one IIFE, so a top-level name declared in both would throw at load
+   (`let` twice in the global lexical scope) and take the whole Studio down. And
+   has('band') is a trap: has() compares a number against the top plan and answers
+   false on Bar Star, so the caps are read off PLAN.limits directly. */
+{
+  const money = readFileSync(new URL('../public/studio-money.js', import.meta.url), 'utf8');
+  const studio = readFileSync(new URL('../public/studio.js', import.meta.url), 'utf8');
+  const names = (s) => new Set([...s.matchAll(/^(?:async\s+)?(?:let|const|function|class)\s+([\w$]+)/gm)].map((m) => m[1]));
+  const both = [...names(money)].filter((n) => names(studio).has(n));
+  console.log(`  ${both.length ? '✗' : '✓'} studio-money.js redeclares none of studio.js's top-level names${both.length ? ' — ' + both.join(', ') : ''}`);
+  if (both.length) fail++;
+  const iife = /^\(\(\) => \{\n/m.test(money) && /\n\}\)\(\);\n?$/.test(money);
+  console.log(`  ${iife ? '✓' : '✗'} studio-money.js is one IIFE`);
+  if (!iife) fail++;
+  const trap = /has\('(band|costs)'/.test(studio) || /has\('(band|costs)'/.test(money);
+  console.log(`  ${trap ? '✗' : '✓'} the Studio never asks has('band') or has('costs')`);
+  if (trap) fail++;
+  const exposes = /window\.Money=\{tab,openBiz,reset,forget,stale/.test(money);
+  console.log(`  ${exposes ? '✓' : '✗'} studio-money.js exposes window.Money = {tab, openBiz, reset, forget, stale, …}`);
+  if (!exposes) fail++;
+  /* The module keeps its own copy of the book (the review of 0065, C2/C4/C7): the
+     sign-out and the door back in (start) must forget it, and every calendar write
+     — saveGig2, delGig, skipGig, hideGig — must mark it stale, or the next paint
+     shows the previous account's shows, or a calendar the server no longer has. */
+  const forgets = (studio.match(/if\(window\.Money\)Money\.forget\(\)/g) || []).length;
+  console.log(`  ${forgets >= 2 ? '✓' : '✗'} studio.js forgets the book on sign-out and on every door back in (${forgets} of 2)`);
+  if (forgets < 2) fail++;
+  const stales = (studio.match(/if\(window\.Money\)Money\.stale\(\)/g) || []).length;
+  console.log(`  ${stales === 4 ? '✓' : '✗'} the four calendar writes mark the book stale (${stales} of 4)`);
+  if (stales !== 4) fail++;
 }
 /* THE EDGE GLOW IS ONE RECIPE. The orange pulse on the right edge of a scrolling
    window is the Studio's box-shadow keyframes, and the audience's vote page carries

@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 23:10 — e47e6ec — wt@crm/artist-dashboard (46 files since origin/main)
+**tl;dr:** Bar Star and Rock Star get the business dashboard on the Money tab: log total pay from venue, splits and your own cut, cash tips, merch, costs, hours and gear per show (or once per run on the gig form); profit in green with MySet's fee named in dollars, revenue mix, hours, Stage time rate / Full evening rate with Total–My cut and pre/post-fee toggles; Generate report prints a branded /report for any dates or picked shows (UX-043 / PL-003, decision 0065)
+**Other sessions:** New: netlify/functions/_biz.mjs (biz_<aid>, casDoc, 400 KB cap on growth), public/biz.js (all the maths, runs in node), public/studio-money.js (loaded on demand; studio.js reads it only through window.Money), public/report.html; tools/stamp.mjs now has ordered PAIRS; tools/localhost.mjs runs the real functions on the in-memory fakes (node --import ./test/register.mjs tools/localhost.mjs). Filed nights carry key + source; occKey lives in _events.mjs; ledger/ledgerCsv answer enabled:false for an owner with no Connect account (INVARIANT 0fn). PLANS has band/costs caps read as numbers (PLAN.limits.band, never has('band')). Renumbered from 0063 → 0065; UX-040 → UX-043.
+
 ### 2026-09-13 23:04 — b33e66c — wt5@ux/end-before-start (0 files since origin/main)
 **tl;dr:** The Studio refuses to start a song while one is playing: ▶ opens a small End current song? window (red Yes, end it / pink-orange Keep playing); End current song is a light-red fill with red text (UX-042, decision 0063)
 **Other sessions:** studio.js: every ▶ must go through startSong(action,extra) — test/darkroom.mjs fails on a raw act('play'…). No server change: Yes, end it sends the same play. Decision 0063 took the next number on origin/main — the unpushed business-dashboard (0063) and merch (0064) records on other branches must renumber before they land.

@@ -12,9 +12,72 @@
    as tools/clipcheck.mjs and tools/sheetcheck.mjs. */
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 import puppeteer from '/Users/perryidyll/Docs/MySet-Content/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
-const ROOT='/Users/perryidyll/Docs/MySet/public';
+const ROOT=process.env.MYSET_PUBLIC||'/Users/perryidyll/Docs/MySet/public';
 const T={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
+/* THE MONEY TAB'S FIXTURE (decision 0065): a signed-in Bar Star owner with one
+   weekly residency and three past nights of it — one logged by hand with a band, a
+   cost and hours (its filed night came back without Stripe answering), one filed
+   with Stripe's figure and nothing logged yet (that is "tonight", just ended), and
+   one the calendar expects but nothing was filed for (listed, never counted) — and
+   one record logged under a gig that has since left the calendar (listed as
+   "Logged show", counted, removable). Every date is relative to today so the
+   "30 days" period always holds all of them.
+   The mock is two artists apart by the bearer token: `tok-b` is a second paid owner
+   with an empty book, for the sign-out probe. Gigs saved through eventSave are
+   kept and expanded into bizGet's occurrences, the way the server does. */
+const ago=(d,h)=>{const t=new Date();t.setDate(t.getDate()-d);t.setHours(h||20,0,0,0);return t;};
+const isoOf=(t)=>`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+const N1=ago(1),N2=ago(8),N3=ago(15),N4=ago(20), D1=isoOf(N1),D2=isoOf(N2),D3=isoOf(N3),D4=isoOf(N4);
+const occ=(t,d)=>({eventId:'g1',date:d,startsAt:t.getTime(),endsAt:t.getTime()+3*3600000,title:'',venue:'The Room',city:'Bangkok',tz:'Asia/Bangkok',repeating:true});
+const ADDED=[];   // events saved during the run, in the shape eventList and bizGet answer with
+const addedOcc=(e)=>{ const [y,m,d]=e.date.split('-').map(Number), [h,mi]=(e.time||'20:00').split(':').map(Number); const t=new Date(y,m-1,d,h,mi).getTime();
+  return {eventId:e.id,date:e.date,time:e.time||'20:00',startsAt:t,endsAt:t+3*3600000,title:'',venue:e.venue,city:e.city||'',country:e.country||'',tz:e.tz||'',repeating:false}; };
+const night=(id,t,gross,source)=>({showId:id,title:'',venue:'The Room',city:'Bangkok',startedAt:t.getTime()+600000,endedAt:t.getTime()+3*3600000,songsPlayed:12,totalVotes:40,peakVoters:9,room:14,nets:9,gross,unattributed:0,top:null,topPlayed:null,topPaid:null,key:'g1@'+isoOf(t),source});
+const LIM={free:{label:'Hobbyist',reports:false,band:0,costs:0,cutPct:25},plus:{label:'Bar Star',reports:true,band:5,costs:5,cutPct:10},pro:{label:'Rock Star',reports:true,band:10,costs:10,cutPct:2}};
+const MOCK={
+  stage:{ok:true,paymentsEnabled:true,voters:0,room:0,nets:0,asks:[],feedback:{},tips:{total:0,count:0,recent:[]},lists:[],tags:{builtin:[],own:[]},
+    songs:[{id:'alpha',title:'Alpha',artist:'T',votes:0,paidVotes:0,active:true,votable:true,inSet:true,played:false,now:false}],
+    show:{artistId:'demo',slug:'demo',artist:'Demo Artist',status:'pre',showId:'',windowOpen:true,played:[],nowPlaying:null,freeCredits:3,unlimited:false,replayCost:5,
+      packs:{small:{votes:3,cents:500},big:{votes:15,cents:2000}},requests:{on:false,cost:3},birthdays:{on:false,cost:3},unlimitedFans:[],autoStart:true}},
+  history:{ok:true,live:{showId:'n1',venue:'The Room',city:'Bangkok',startedAt:N1.getTime()+600000,endedAt:N1.getTime()+3*3600000,live:false,status:'ended',songsPlayed:12,totalVotes:40,peakVoters:9,gross:42.5,unattributed:0},
+    shows:[night('n1',N1,42.5,'stripe'),night('n2',N2,0,'stripe-unreachable')]},
+  historyB:{ok:true,live:null,shows:[]},
+  revenue:{ok:true,enabled:false,payments:[],unredeemed:0,totals:{all:0,tips:0,votes:0,merch:0,count:0}},
+  auth:(b)=>{
+    if(b.action==='recoverySignIn') return {ok:true,token:'tok-b',slug:'other',left:7};
+    return {ok:true};
+  },
+  admin:(b,whoami)=>{
+    if(b.action==='planGet') return {ok:true,plan:'plus',role:'owner',owner:false,email:'artist@test.invalid',shareStats:true,until:null,comped:false,discountPct:0,del:null,
+      billing:{subscribed:true,plan:'plus',portal:true,pastDue:false},limits:{...LIM.plus,soon:['promote','analytics','presskit','branding'],seats:1},plans:LIM};
+    if(b.action==='bizGet'&&whoami==='b') return {ok:true,from:b.from,to:b.to,dropped:0,oldestKept:null,limits:{band:5,costs:5},cutPct:10,name:'Other Artist',occ:[],
+      biz:{v:1,at:Date.now(),prefs:{hours:{perform:true,break:true,travel:true,setup:true}},rules:{},gigs:{}}};
+    if(b.action==='bizGet') return {ok:true,from:b.from,to:b.to,dropped:0,oldestKept:null,limits:{band:5,costs:5},cutPct:10,name:'Demo Artist',
+      occ:[occ(N3,D3),occ(N2,D2),occ(N1,D1),...ADDED.map(addedOcc)],
+      biz:{v:1,at:Date.now(),prefs:{hours:{perform:true,break:true,travel:true,setup:true}},
+        rules:{g1:{pay:30000,band:[],tips:null,merch:[],costs:[],min:{perform:null,break:null,travel:null,setup:null},gear:[],note:'',at:1}},
+        gigs:{['g1@'+D2]:{pay:30000,band:[{name:'Sam',cents:10000}],tips:4500,merch:[{name:'T-shirt',qty:2,cents:4000}],costs:[{name:'Parking',cents:1200}],min:{perform:120,break:30,travel:60,setup:45},gear:['Taylor 314'],note:'',at:1},
+          ['ggone@'+D4]:{pay:15000,band:[],tips:null,merch:[],costs:[],min:{perform:null,break:null,travel:null,setup:null},gear:[],note:'',at:1}}}};
+    if(b.action==='bizSave') return {ok:true,gig:b.gig||null};
+    if(b.action==='eventPlace') return {ok:true,address:'',mapUrl:'',lat:13.75,lng:100.5};   // answered, so the save never waits on a maps script
+    if(b.action==='eventList') return {ok:true,events:ADDED,occurrences:ADDED.map(addedOcc)};
+    if(b.action==='eventSave'){ const e={...b.event,id:(b.event&&b.event.id)||'gNew'+ADDED.length}; const at=ADDED.findIndex(x=>x.id===e.id); if(at<0)ADDED.push(e); else ADDED[at]=e; return {ok:true,id:e.id,events:ADDED}; }
+    if(b.action==='bizPrefs') return {ok:true,prefs:{hours:b.hours}};
+    if(b.action==='orderList') return {ok:true,orders:[]};
+    if(b.action==='merchList') return {ok:true,merch:[{id:'m1',title:'T-shirt',cents:2000,ship:'pickup',on:true,img:''}]};
+    if(b.action==='payStatus') return {ok:true,pay:{kind:'artist',splitFee:false,acct:'',started:false,detailsSubmitted:false,chargesEnabled:false,payoutsEnabled:false,ready:false,country:'',plan:'plus',cutPct:10,stripeFeeNote:'',platformOwner:false}};
+    if(b.action==='ledger') return {ok:true,enabled:false,months:[],total:null};
+    if(b.action==='bugList') return {ok:true,bugs:[]};
+    return {ok:true};
+  }};
 const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');
+ const J=(o)=>{rs.writeHead(200,{'content-type':'application/json'});rs.end(JSON.stringify(o));};
+ const whoami=rq.headers.authorization==='Bearer tok-b'?'b':'a';
+ if(u.pathname==='/api/stage')return J(whoami==='b'?{...MOCK.stage,show:{...MOCK.stage.show,artistId:'other',slug:'other',artist:'Other Artist'}}:MOCK.stage);
+ if(u.pathname==='/api/history')return J(whoami==='b'?MOCK.historyB:MOCK.history);
+ if(u.pathname==='/api/revenue')return J(MOCK.revenue);
+ if(u.pathname==='/api/auth'){let body='';rq.on('data',c=>body+=c);rq.on('end',()=>{let b={};try{b=JSON.parse(body||'{}');}catch(e){}J(MOCK.auth(b));});return;}
+ if(u.pathname==='/api/admin'){let body='';rq.on('data',c=>body+=c);rq.on('end',()=>{let b={};try{b=JSON.parse(body||'{}');}catch(e){}J(MOCK.admin(b,whoami));});return;}
  if(u.pathname==='/api/artists'){rs.writeHead(200,{'content-type':'application/json'});return rs.end(JSON.stringify({ok:true,artists:[
    {slug:'demo',name:'Demo Artist',tagline:'Songs for the room',avatar:'',management:'Good Records',style:'Soul',signed:true,musicReleased:true,showsNext30Days:1,totalShows:12,rating:4.5,ratingCount:2,locations:[{country:'Thailand',city:'Bangkok'}],eventsNext30Days:[{eventId:'g1',date:'2099-01-01',time:'20:00',startsAt:4070932800000,venue:'The Room',city:'Bangkok',country:'Thailand',address:'1 Music Lane',maps:{lat:13.75,lng:100.5,source:'https://maps.google.com/?q=13.75,100.5',google:'https://maps.google.com/?q=13.75,100.5'}}],nextShow:{date:'2099-01-01',city:'Bangkok',country:'Thailand'}},
    {slug:'quiet',name:'Quiet Band',tagline:'Acoustic songs',avatar:'',management:'',style:'Folk',signed:false,musicReleased:false,showsNext30Days:0,totalShows:0,rating:null,ratingCount:0,locations:[],eventsNext30Days:[],nextShow:null}
@@ -28,7 +91,8 @@ const b=await puppeteer.launch({executablePath:'/Applications/Google Chrome.app/
 const pg=await b.newPage();
 await pg.emulate({viewport:{width:390,height:844,isMobile:true,hasTouch:true,deviceScaleFactor:2},
   userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1'});
-pg.on('pageerror',e=>console.log('PAGEERROR:',String(e).slice(0,200)));
+let PAGEERRORS=0;
+pg.on('pageerror',e=>{PAGEERRORS++;console.log('PAGEERROR:',String(e).slice(0,200));});
 
 // ---------- 1 + 3: the vote page, countdown + dock ----------
 await pg.goto(`http://127.0.0.1:${PORT}/vote.html?a=demo`,{waitUntil:'domcontentloaded'});
@@ -448,6 +512,167 @@ const GIG_FEATURE=await pg.evaluate(async ()=>{
   return out.join('\n');
 });
 console.log('\nGIG FEATURE ACTION\n'+GIG_FEATURE);
+
+// ---------- the Money tab as a Bar Star owner boots into it (decision 0065) ----------
+await pg.setViewport({width:390,height:844,isMobile:true,hasTouch:true,deviceScaleFactor:2});
+await pg.evaluate(()=>{localStorage.setItem('myset.token','test-token');localStorage.setItem('myset.tab','money');localStorage.setItem('myset.biz.period','{"kind":"30d"}');localStorage.removeItem('myset.biz.draft');localStorage.setItem('myset.firstrun','demo:done');});
+const errsBefore=PAGEERRORS, bootAt=Date.now();
+await pg.goto(`http://127.0.0.1:${PORT}/studio.html`,{waitUntil:'domcontentloaded'});
+// the skeleton must be gone within two seconds of the boot: poll rather than sleep
+let heroAt=null; for(let i=0;i<40&&heroAt===null;i++){ if(await pg.evaluate(()=>!!document.querySelector('#app .bizhero'))) heroAt=Date.now()-bootAt; else await new Promise(r=>setTimeout(r,50)); }
+await new Promise(r=>setTimeout(r,800));   // the count-ups and the donut sweep settle
+const MONEY=await pg.evaluate(async ()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  const app=document.querySelector('#app'), text=app.innerText;
+  ok('the Money tab is the one on screen', TAB==='money'&&/Business dashboard|Through the app/.test(text));
+  ok('the dashboard module loaded on demand', !!window.Money&&typeof Biz!=='undefined'&&!!document.getElementById('bizcss'));
+  const hero=app.querySelector('.bizhero'), v=hero&&hero.querySelector('.v');
+  ok('the profit hero is in #app', !!v&&/^-?\$[\d,]+\.\d\d$/.test(v.textContent.trim()), v&&v.textContent);
+  ok('the skeleton is gone', !app.querySelector('.bizsk'));
+  ok('three shows count, two are logged — the rule-only slot is listed, never counted', /3 shows · 2 logged/.test(text), (text.match(/\d+ shows? · \d+ logged/)||[])[0]);
+  ok('the profit is the logged night, the filed one and the orphaned record, the unreachable night adding nothing', v&&v.textContent.trim()==='$765.50', v&&v.textContent);
+  ok('the fee sentence names the cut as the plan’s, with the dollars', /10% \(\$[\d,]+\.\d\d\) goes to MySet for transaction fees/.test(text), (text.match(/[^\n]*goes to MySet[^\n]*/)||[])[0]);
+  ok('the profit is green and its heading pink-orange', !!v&&v.classList.contains('pos')&&getComputedStyle(v).color!==getComputedStyle(hero.querySelector('.k')).color);
+  ok('the hero says app money is missing for the night Stripe never answered', /App money not available for 1 show/.test(text));
+  ok('nothing scrolls sideways at 390px', document.documentElement.scrollWidth<=innerWidth, `${document.documentElement.scrollWidth}/${innerWidth}`);
+  const log=[...app.querySelectorAll('button')].find(b=>/^Log tonight$/.test(b.textContent.trim()));
+  ok('the just-ended night offers “Log tonight” under the tiles', !!log&&log.classList.contains('btn-pri'));
+  ok('and its top edge sits in the upper half of an 844px phone', !!log&&log.getBoundingClientRect().top<844*0.5, log&&String(Math.round(log.getBoundingClientRect().top)));
+  const rows=[...app.querySelectorAll('.list .row[data-act="bizopen"]')];
+  ok('one row per show in the period, newest first', rows.length===4&&/The Room/.test(rows[0].innerText), String(rows.length));
+  const orphan=rows.find(r=>/Logged show/.test(r.innerText));
+  ok('a record whose gig left the calendar is listed as “Logged show”, dated, counted, and says why', !!orphan&&!!orphan.querySelector('.bizchip.pos')&&/\$150\.00 paid/.test(orphan.innerText)&&/no longer on your calendar/.test(orphan.innerText), orphan&&orphan.innerText.replace(/\n/g,' | '));
+  ok('the profit chart has a heading', /Profit by show/i.test(text));   // the kick is uppercased by CSS
+  const unconfirmed=rows.find(r=>/Not confirmed/.test(r.innerText));
+  ok('the rule-only night reads “from the run”, “Not confirmed”, with Log it and Didn’t happen and no profit chip', !!unconfirmed&&/\$300\.00 from the run/.test(unconfirmed.innerText)&&/Log it/.test(unconfirmed.innerText)&&/Didn't happen/.test(unconfirmed.innerText)&&!unconfirmed.querySelector('.bizchip'), unconfirmed&&unconfirmed.innerText.replace(/\n/g,' | '));
+  const unreachable=rows.find(r=>/app money not available/.test(r.innerText));
+  ok('the night Stripe never answered says so and offers Re-check', !!unreachable&&/Re-check/.test(unreachable.innerText)&&!!unreachable.querySelector('.bizchip.pos'), unreachable&&unreachable.innerText.replace(/\n/g,' | '));
+  ok('the profit chart, the mix donut and the evening bar drew', !!app.querySelector('#bizchart svg rect.bar')&&!!app.querySelector('#bizdonut circle')&&!!app.querySelector('.bizeve .stack i'));
+  const rate=[...app.querySelectorAll('.biztiles .c')].find(c=>/\$\/hour/i.test(c.innerText));   // the heading is uppercased by CSS
+  ok('the $/hour tile says whose rate it is and how many shows were timed', !!rate&&/Total · before MySet fees/.test(rate.innerText)&&/1 of 3 shows timed/.test(rate.innerText), rate&&rate.innerText.replace(/\n/g,' | '));
+  ok('every tile leads with a pink-orange heading', [...app.querySelectorAll('.biztiles .c')].every(c=>c.querySelector('.bizhd')&&c.querySelector('.bizhd').compareDocumentPosition(c.querySelector('b'))&Node.DOCUMENT_POSITION_FOLLOWING));
+  const eve=app.querySelector('.bizeve');
+  ok('the time box is the total over the period, with both rates under their own headings', /Total time invested/i.test(text)&&!!eve&&[...eve.querySelectorAll('.rates .bizhd')].map(h=>h.textContent).join('|')==='Stage time rate|Full evening rate', eve&&[...eve.querySelectorAll('.rates .bizhd')].map(h=>h.textContent).join('|'));
+  const seg=eve&&eve.querySelector('[data-act="bizview"][data-id="mine"]'), feeBtn=eve&&eve.querySelector('[data-act="bizfee"]');
+  ok('with the Total / My cut toggle and the fee button', !!seg&&!!feeBtn&&/before MySet’s transaction fees/.test(feeBtn.textContent), feeBtn&&feeBtn.textContent);
+  const evBefore=eve.querySelector('[data-rate="evening"]').textContent;
+  feeBtn.click(); await new Promise(r=>setTimeout(r,60));
+  const eve2=app.querySelector('.bizeve'), evAfter=eve2.querySelector('[data-rate="evening"]').textContent;
+  /* The one timed night here was filed without Stripe answering, so its fee is
+     nothing and the post-fee rate is the same figure — the words must still change. */
+  ok('tapping it reads the post-fee rate and says so on the box and the tile', parseFloat(evAfter.slice(1))<=parseFloat(evBefore.slice(1))&&/after MySet’s transaction fees/.test(eve2.querySelector('[data-act="bizfee"]').textContent)&&/after MySet fees/.test(app.querySelector('.biztiles button.c').innerText), `${evBefore} → ${evAfter}`);
+  eve2.querySelector('[data-act="bizfee"]').click(); await new Promise(r=>setTimeout(r,60));
+  ok('and again puts it back', app.querySelector('.bizeve [data-rate="evening"]').textContent===evBefore);
+  const rep=app.querySelector('.bizbar a.btn-line');
+  ok('Generate report is an outlined pink-orange button that opens the printable report for the same dates', !!rep&&rep.textContent.trim()==='Generate report'&&/^\/report\?from=\d{4}-\d\d-\d\d&to=\d{4}-\d\d-\d\d&hours=1$/.test(rep.getAttribute('href'))&&getComputedStyle(rep).backgroundColor==='rgba(0, 0, 0, 0)'&&/inset/.test(getComputedStyle(rep).boxShadow), rep&&rep.getAttribute('href'));
+  const kicks=[...app.querySelectorAll('.sec .kick')].map(k=>k.textContent);   // innerText would carry the CSS uppercase
+  ok('the Stripe cards follow under one label', kicks.includes('Through the app')&&kicks.some(k=>/^Getting paid/.test(k))&&kicks.some(k=>/^Your earnings/.test(k)), kicks.join(' | '));
+  ok('the old Past shows list is not drawn twice', !/past shows/i.test(text)&&!/Look for missing shows[\s\S]*Look for missing shows/.test(text));
+  // the editor: opens from the button, keeps its readout live, never dismisses on a body drag
+  // (the fee toggles above repainted the tab, so the button is found again)
+  [...app.querySelectorAll('button')].find(b=>/^Log tonight$/.test(b.textContent.trim())).click(); await new Promise(r=>setTimeout(r,120));
+  const sheet=document.querySelector('#sheet');
+  ok('“Log tonight” opens the editor sheet with the drag exception class', sheet.classList.contains('on')&&sheet.classList.contains('biz'));
+  ok('the sheet is titled Log a show, asks for the total pay from the venue and the splits, and carries no $/h pills', sheet.querySelector('h3').textContent==='Log a show'&&/Total pay from venue/.test(sheet.innerText)&&/Splits/.test(sheet.innerText)&&!sheet.querySelector('[data-act="bizhk"]'), sheet.querySelector('h3').textContent);
+  const cutIn=sheet.querySelector('.bz[data-f="cut"]');
+  ok('My cut sits in the splits box above + Add band member, blank, with what’s left as its placeholder', !!cutIn&&!!cutIn.closest('[data-rows="band"]')&&cutIn.value===''&&/342\.50 — what's left/.test(cutIn.placeholder)&&!!(cutIn.compareDocumentPosition(sheet.querySelector('[data-act="bizadd"][data-id="band"]'))&Node.DOCUMENT_POSITION_FOLLOWING), cutIn&&cutIn.placeholder);
+  ok('the editor starts from the run’s pay and the slot’s length', sheet.querySelector('.bz[data-f="pay"]').value==='300'&&sheet.querySelector('.bzmin[data-k="perform"]').value==='3h', `${sheet.querySelector('.bz[data-f="pay"]').value} / ${sheet.querySelector('.bzmin[data-k="perform"]').value}`);
+  const ro=sheet.querySelector('#bizro');
+  ok('the sticky readout shows profit and $/h before a key is pressed', /\$342\.50/.test(ro.textContent)&&/\$114\.17\/h/.test(ro.textContent), ro.textContent);
+  const pay=sheet.querySelector('.bz[data-f="pay"]'); pay.value='400'; pay.dispatchEvent(new Event('input',{bubbles:true}));
+  ok('and follows every keystroke without a render', /\$442\.50/.test(ro.textContent)&&sheet.classList.contains('on'), ro.textContent);
+  ok('the band cap reads from the plan, not has()', /0 of 5/.test(sheet.querySelector('[data-rows="band"]').innerText));
+  ok('money fields wear a dollar sign that stays', !!sheet.querySelector('.bzmoney > i')&&getComputedStyle(sheet.querySelector('.bzmoney > i')).position==='absolute');
+  sheet.querySelector('[data-act="bizadd"][data-id="band"]').click();
+  ok('adding a band member adds a row and counts it', sheet.querySelectorAll('[data-rows="band"] .bzrow').length===1&&/1 of 5/.test(sheet.querySelector('[data-rows="band"]').innerText));
+  const tm=sheet.querySelector('.bzmin[data-k="travel"]'); tm.value='90'; tm.dispatchEvent(new Event('focusout',{bubbles:true}));
+  ok('a bare 90 is refused as hours — the field shakes and stays', tm.classList.contains('bad'));
+  tm.value='1.5'; tm.dispatchEvent(new Event('input',{bubbles:true})); tm.dispatchEvent(new Event('focusout',{bubbles:true}));
+  ok('1.5 is an hour and a half', tm.value==='1h 30m'&&!tm.classList.contains('bad'), tm.value);
+  ok('the draft is kept in the phone while typing', /"key":"g1@/.test(localStorage.getItem('myset.biz.draft')||''));
+  ok('nothing in the sheet scrolls sideways', sheet.scrollWidth<=sheet.clientWidth+1, `${sheet.scrollWidth}/${sheet.clientWidth}`);
+  closeSheet(); localStorage.removeItem('myset.biz.draft');
+  return out.join('\n');
+});
+console.log('\nMONEY TAB\n'+MONEY+`\n  ${heroAt!==null&&heroAt<2000?'✓':'✗'} the dashboard replaced its skeleton ${heroAt===null?'never':'in '+heroAt+' ms'}\n  ${PAGEERRORS===errsBefore?'✓':'✗'} no page errors while booting into the tab (${PAGEERRORS-errsBefore})`);
+
+/* ---------- the Money tab follows the calendar, refuses a bad time, and forgets on
+   sign-out — the review of 0065 (C2, C3, C4/C7 and the minors). Every request the
+   page makes is counted off window.fetch, so "no bizSave" and "one bizGet" are
+   facts about the wire, not about a flag. */
+const MONEY2=await pg.evaluate(async ()=>{
+  const out=[];const ok=(n,c,x='')=>out.push(`${c?'  ✓':'  ✗'} ${n}${x?' — '+x:''}`);
+  const acts=[]; const nf=window.fetch; window.fetch=(u,o)=>{ try{ if(String(u).includes('/api/admin')) acts.push(JSON.parse(o.body).action); }catch(e){} return nf(u,o); };
+  const until=async(f,ms=3000)=>{ const t0=Date.now(); while(Date.now()-t0<ms){ if(f())return true; await new Promise(r=>setTimeout(r,40)); } return !!f(); };
+  const iso=(d)=>{const t=new Date();t.setDate(t.getDate()-d);return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;};
+  const app=document.querySelector('#app'), sheet=document.querySelector('#sheet');
+  // the orphaned record opens in the editor with its numbers and a way out
+  const orphan=[...app.querySelectorAll('.list .row[data-act="bizopen"]')].find(r=>/Logged show/.test(r.innerText));
+  if(orphan){ orphan.click(); await until(()=>sheet.classList.contains('on')&&document.querySelector('#bizf'));
+    ok('the “Logged show” row opens the editor on its own numbers, with Remove', sheet.querySelector('.bz[data-f="pay"]').value==='150'&&!!sheet.querySelector('[data-act="bizremove"]'), sheet.querySelector('.bz[data-f="pay"]').value);
+    closeSheet(); }
+  else ok('the “Logged show” row opens the editor on its own numbers, with Remove', false, 'no such row');
+  // the gig form on a past date: open for back-filling, the slot a placeholder, a bad time refused, nothing typed → no rule
+  const past=iso(3);
+  setTab('gigs'); await loadGigs(true);
+  openGig(undefined,past);
+  await until(()=>document.querySelector('#gBiz .bizf'));
+  const det=document.querySelector('#gBiz'), perf=document.querySelector('#gBiz .bzmin[data-k="perform"]');
+  ok('a new gig on a past date opens “The business side” for back-filling', !!det&&det.open);
+  ok('the slot length is the On stage placeholder on the gig form, never its value', !!perf&&perf.value===''&&/3h from the gig/.test(perf.placeholder), perf&&`"${perf.value}" / ${perf.placeholder}`);
+  const addBtn=document.querySelector('#gBiz .btn-grey');
+  ok('the + Add buttons carry an edge of their own inside the grey box', !!addBtn&&getComputedStyle(addBtn).boxShadow!=='none', addBtn&&getComputedStyle(addBtn).boxShadow);
+  // nothing touched on the business side: the gig saves, no rule is written
+  document.querySelector('#gV').value='Corner Pub';
+  const n1=acts.length;
+  document.querySelector('[data-act="gigsave"]').click();
+  await until(()=>!sheet.classList.contains('on')&&acts.slice(n1).includes('eventSave'));
+  await new Promise(r=>setTimeout(r,250));
+  ok('“Add it” with nothing typed on the business side sends no bizSave', acts.slice(n1).includes('eventSave')&&!acts.slice(n1).includes('bizSave'), acts.slice(n1).join(','));
+  const n2=acts.length;   // from here to the Money paint: exactly one fresh read of the book
+  // a time that makes no sense blocks the save the way it blocks the editor's
+  openGig(undefined,iso(4));
+  await until(()=>document.querySelector('#gBiz .bizf'));
+  const perf2=document.querySelector('#gBiz .bzmin[data-k="perform"]');
+  document.querySelector('#gV').value='Side Room';
+  perf2.value='90'; perf2.dispatchEvent(new Event('focusout',{bubbles:true}));
+  const n0=acts.length;
+  document.querySelector('[data-act="gigsave"]').click(); await new Promise(r=>setTimeout(r,150));
+  ok('a refused time blocks “Add it” with the shake and a toast', sheet.classList.contains('on')&&perf2.classList.contains('bad')&&document.querySelector('#toast').textContent==='Check the time fields'&&!acts.slice(n0).includes('eventSave'), `toast “${document.querySelector('#toast').textContent}”, sent ${acts.slice(n0).join(',')||'nothing'}`);
+  closeSheet();
+  // back on Money, the gig just added is there after exactly one fresh read
+  setTab('money');
+  await until(()=>app.querySelector('.bizhero')&&/Corner Pub/.test(app.innerText));
+  const gets=acts.slice(n2).filter(a=>a==='bizGet').length;
+  ok('a past gig added on the Gigs tab shows up on the Money tab after one fresh bizGet', /Corner Pub/.test(app.innerText)&&gets===1, `bizGet ×${gets}; rows ${[...app.querySelectorAll('.row[data-act="bizopen"] .t')].map(x=>x.textContent).join(' / ')}`);
+  // the editor: a bad-time refocus never lands in a dismissed sheet; a no-op leaves no draft
+  const log=[...app.querySelectorAll('button')].find(b=>/^Log tonight$/.test(b.textContent.trim()));
+  log.click(); await until(()=>document.querySelector('#bizf'));
+  const tm=document.querySelector('#bizf .bzmin[data-k="travel"]'); tm.focus(); tm.value='90'; tm.blur(); closeSheet();
+  await new Promise(r=>setTimeout(r,40));
+  ok('the bad-time refocus does not fire into a dismissed sheet', tm.classList.contains('bad')&&document.activeElement!==tm, document.activeElement&&document.activeElement.tagName);
+  localStorage.removeItem('myset.biz.draft');
+  log.click(); await until(()=>document.querySelector('#bizf'));
+  document.querySelector('#bizf [data-act="bizadd"][data-id="band"]').click(); closeSheet();
+  ok('an empty row added and closed again leaves no draft', !localStorage.getItem('myset.biz.draft'), localStorage.getItem('myset.biz.draft')||'');
+  // sign out, then in through the recovery door as somebody else: the module forgot
+  await signOut();
+  ok('sign-out shows the sign-in screen', !!document.querySelector('.gate'));
+  gate(null,'recover'); document.querySelector('#rslug').value='other'; document.querySelector('#rcode').value='AAAA-BBBB';
+  const n3=acts.length;
+  await recoverIn();
+  await until(()=>D&&D.show&&D.show.artistId==='other');
+  setTab('money');
+  await until(()=>acts.slice(n3).includes('bizGet')&&!app.querySelector('.bizsk')&&/Nothing logged|Business dashboard/.test(app.innerText));
+  await new Promise(r=>setTimeout(r,200));
+  const text=app.innerText, getsB=acts.slice(n3).filter(a=>a==='bizGet').length;
+  ok('the next owner on this phone gets a fresh read and none of the first artist’s shows', getsB===1&&!/The Room|Corner Pub|Logged show|\$765/.test(text)&&app.querySelectorAll('.row[data-act="bizopen"]').length===0&&/Nothing logged for this period yet/.test(text),
+    `bizGet ×${getsB}; rows ${app.querySelectorAll('.row[data-act="bizopen"]').length}; ${(text.match(/Nothing logged for this period yet|The Room|Corner Pub/g)||[]).join(',')}`);
+  window.fetch=nf;
+  return out.join('\n');
+});
+console.log('\nMONEY TAB, THE CALENDAR AND THE DOOR\n'+MONEY2+`\n  ${PAGEERRORS===errsBefore?'✓':'✗'} still no page errors (${PAGEERRORS-errsBefore})`);
+await pg.evaluate(()=>{localStorage.removeItem('myset.token');localStorage.removeItem('myset.tab');localStorage.removeItem('myset.biz.period');localStorage.removeItem('myset.aslug');localStorage.removeItem('myset.biz.draft');});
 
 // ---------- 5: the restored fan-side light/dark switch ----------
 await pg.evaluate(()=>localStorage.removeItem('myset.theme'));

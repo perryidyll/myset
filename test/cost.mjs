@@ -122,5 +122,27 @@ const stageFn = (await import('../netlify/functions/stage.mjs')).default;
 const st = await count(() => hit(stageFn, 'https://x/api/stage?code=devlocal'));
 under('reads per Studio poll', st.reads, 22);
 
+console.log('\nTHE BUSINESS DASHBOARD  (once per Money-tab open, decision 0065)');
+/* Counted on the BEARER path, the one a real artist takes: the registry is read
+   three times before the handler runs (verifyToken, deletionOf, planForArtist —
+   inherited, not this endpoint's to fix), then the book and the calendar in ONE
+   batch, and the history index only when the report page asks for the nights. So
+   the ceiling is six without nights and seven with; a change that adds a read
+   here is a decision, not a drift. */
+{
+  const { createArtist, signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
+  const bea = await createArtist({ email: 'bea@example.com', name: 'Bea Counter', slug: 'bea-counter' });
+  const TB = await signToken('bea@example.com', revOf(await readArtists(), bea.artistId));
+  await mutateArtists((r) => { r.byId[bea.artistId].plan = 'plus'; return true; });
+  const B = (body) => admin(new Request('https://x/api/admin', { method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + TB }, body: JSON.stringify(body) })).then((r) => r.text());
+  await B({ action: 'bizGet' });                       // the auth secret is memoised on the first call
+  const tab = await count(() => B({ action: 'bizGet' }));
+  under('reads for the Money tab (no nights)', tab.reads, 6);
+  ok('and it writes nothing', tab.writes === 0, tab);
+  const report = await count(() => B({ action: 'bizGet', nights: true }));
+  under('reads for the report page (with nights)', report.reads, 7);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

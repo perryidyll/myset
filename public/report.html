@@ -1,0 +1,305 @@
+<!doctype html>
+<!--
+  MySet — myset.vip
+  © 2026 Perry Idyll. All rights reserved.
+
+  This file is sent to your browser because it has to be, in order to run. That is
+  not a licence to reuse it. The source is not open, and the parts that actually
+  matter — the data, the money, the accounts — are on the server, where they are
+  authorised per request and where you cannot see them.
+-->
+<!--
+  THE BUSINESS REPORT (decision 0065, D13). A document, not a screen: it is opened
+  from the Studio's Money tab to be printed or saved as a PDF and handed to an
+  accountant, so it is paper-white in every theme, like the .qrpaper QR sheet.
+  That is why there is no theme switch, no theme attribute and no dark block, and why
+  every colour is written out rather than read from a token — a dark-mode phone
+  printing this must get the same page as a light one, and "print backgrounds"
+  off must still leave a legible table. The maths is /biz.js, the same file the
+  Studio uses, so a figure here is the figure on the tab.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Business report — MySet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23201e1d'/><g fill='%23ec3013'><rect x='24' y='42' width='11' height='34'/><rect x='44' y='24' width='11' height='52'/><rect x='64' y='54' width='11' height='22'/></g></svg>" />
+<style>
+html{background:#fff;color:#1D1D1F;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  font-size:14px;line-height:1.4;-webkit-font-smoothing:antialiased}
+.page{max-width:1024px;margin:0 auto;padding:28px 24px 48px}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.num{text-align:right;white-space:nowrap}
+.muted{color:#6E6E73}.faint{color:#8E8E93}
+.neg{color:#B3261E}.pos{color:#187A32}
+a{color:#1D1D1F}
+
+/* Brand header: the mark and wordmark every page shares (index.html .mark). */
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
+.mark i{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#FF375F,#FF6B45);display:grid;place-items:center;
+  flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
+.mark i svg{width:14px;height:14px;fill:#fff;display:block}
+.mark small{font-size:12px;color:#6E6E73;font-weight:500}
+.tools{display:flex;gap:8px;align-items:center}
+.btn{font:inherit;font-weight:600;font-size:13px;padding:9px 14px;border-radius:999px;border:1.5px solid rgba(0,0,0,.14);
+  background:#fff;color:#1D1D1F;cursor:pointer;text-decoration:none;line-height:1}
+.btn.pri{background:linear-gradient(135deg,#FF375F,#FF6B45);color:#fff;border-color:transparent}
+.title{margin:22px 0 0}
+.kick{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#FF5650}
+h1{margin:4px 0 0;font-size:28px;letter-spacing:-.03em;line-height:1.12;font-weight:700}
+.sub{margin:4px 0 0;color:#6E6E73;font-size:14px}
+.picked{margin:6px 0 0;padding:0;list-style:none;color:#3A3A3C;font-size:13px}
+.picked li{display:inline-block;margin:0 14px 2px 0}
+
+/* The hero: the profit in the same green the Studio's plan tag wears, under a
+   pink-orange heading — the brand as text, the figure as a figure. */
+.hero{margin:22px 0 0;padding:18px 20px;border-radius:18px;border:1.5px solid rgba(0,0,0,.08);background:#fff}
+.hero .k{font-size:15px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:#FF5650}
+.hero .v{display:inline-block;font-size:36px;font-weight:700;letter-spacing:-.03em;line-height:1.05;margin-top:6px;padding:6px 18px;border-radius:999px;color:#187A32;background:rgba(24,122,50,.12)}
+.hero .v.neg{color:#B3261E;background:rgba(179,38,30,.1)}
+.hero .s{font-size:13px;color:#6E6E73;margin-top:6px}
+.hero .s b{color:#1D1D1F;font-weight:500}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:10px 0 0}
+.kpi{border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:12px 14px;min-width:0}
+.kpi .k{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#FF5650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .v{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
+.kpi .s{font-size:12px;color:#8E8E93;margin-top:2px}
+
+section{margin:26px 0 0}
+h2{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#6E6E73;margin:0 0 8px;
+  padding-bottom:6px;border-bottom:1px solid rgba(0,0,0,.08)}
+.charts{display:grid;grid-template-columns:3fr 2fr;gap:18px}
+.chart svg{width:100%;height:auto;display:block}
+.ml{display:flex;justify-content:space-around;font-size:11px;color:#8E8E93;margin-top:4px}
+.ml span.now{color:#1D1D1F;font-weight:600}
+.donut{display:grid;grid-template-columns:120px 1fr;gap:14px;align-items:center}
+.donut svg{width:120px;height:120px}
+.lg div{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0}
+.lg i{width:10px;height:10px;border-radius:3px;display:inline-block;flex:0 0 auto}
+.lg b{margin-left:auto;font-weight:600}
+.lg small{color:#8E8E93;min-width:34px;text-align:right}
+.note{font-size:12px;color:#6E6E73;margin:8px 0 0}
+
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#6E6E73;text-align:left;
+  padding:6px 8px;border-bottom:1px solid rgba(0,0,0,.14);vertical-align:bottom;white-space:nowrap}
+th small{display:block;font-size:10px;letter-spacing:0;text-transform:none;font-weight:500;color:#8E8E93}
+th.num{text-align:right}
+td{padding:7px 8px;border-bottom:1px solid rgba(0,0,0,.06);vertical-align:top}
+td .sm{display:block;font-size:11.5px;color:#8E8E93}
+tfoot td{font-weight:700;border-top:1.5px solid rgba(0,0,0,.14);border-bottom:0}
+.empty{padding:18px;border:1px dashed rgba(0,0,0,.14);border-radius:14px;color:#6E6E73;text-align:center}
+.state{margin:60px auto 0;max-width:420px;text-align:center;color:#3A3A3C}
+.state h1{font-size:22px}
+.state p{margin:8px 0 18px;color:#6E6E73}
+footer{margin:34px 0 0;padding-top:12px;border-top:1px solid rgba(0,0,0,.08);font-size:11.5px;color:#6E6E73;line-height:1.5}
+footer p{margin:0 0 6px}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}.page{padding:18px 16px 40px}}
+
+/* Paper. The tools are for the screen; a section or a table row is never split
+   over a page; and the colours print, because a report with a grey profit and
+   invisible bars is a worse report than one that cost some ink. */
+@page{margin:14mm}
+@media print{
+  .page{max-width:none;padding:0}
+  .tools,.noprint{display:none!important}
+  section,.hero,.kpi,tr{break-inside:avoid;page-break-inside:avoid}
+  .kpis{grid-template-columns:repeat(5,1fr)}
+  .charts{grid-template-columns:3fr 2fr}
+  .tbl{overflow:visible}
+  a{text-decoration:none}
+}
+</style>
+</head>
+<body>
+<div class="page" id="page"><div class="state"><p class="muted">Adding up…</p></div></div>
+<script src="/biz.js?v=73853ac5"></script>
+<script>
+/* The session is the Studio's, read exactly as studio.html reads it: the passcode
+   and the artist it names, or the account token. This page never signs anyone in
+   and never signs anyone out — a bad session sends the reader to the Studio. */
+const C=localStorage.getItem('myset.admin')||'',T=localStorage.getItem('myset.token')||'',S=localStorage.getItem('myset.aslug')||'';
+const HEAD={'content-type':'application/json'};
+if(C){HEAD['x-admin-code']=C;if(S)HEAD['x-admin-artist']=S;}if(T)HEAD['authorization']='Bearer '+T;
+const Q=new URLSearchParams(location.search);
+const HOURS=Q.get('hours')==='1';
+const PICK=(Q.get('shows')||'').split(',').map(s=>s.trim()).filter(Boolean);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const M=c=>Biz.money(c);
+const MARK='<i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>';
+const dayShift=(iso,n)=>{const [y,m,d]=iso.split('-').map(Number);return Biz.localDate(new Date(y,m-1,d+n).getTime());};
+const fmtDate=(iso,opts)=>{const [y,m,d]=String(iso||'').split('-').map(Number);
+  return y?new Date(y,m-1,d).toLocaleDateString(undefined,opts||{weekday:'short',day:'numeric',month:'short',year:'numeric'}):'';};
+const rate=v=>v==null?'—':M(v)+'/h';
+const signed=v=>`<span class="${v<0?'neg':''}">${M(v)}</span>`;
+
+/* Which window to ask for. A hand-picked list is asked for as the days it spans,
+   a day either side so a night filed just past midnight still joins its gig, and
+   then narrowed back to the picked keys once the join has run. */
+function window_(){
+  if(PICK.length){
+    const dates=PICK.map(k=>(Biz.parseKey(k)||{}).date||(/^\d{4}-\d{2}-\d{2}/.exec(k)||[])[0]).filter(Boolean).sort();
+    return dates.length?{from:dayShift(dates[0],-1),to:dayShift(dates[dates.length-1],1)}:{};
+  }
+  const p=Biz.period('month');
+  const ok=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||'');
+  return {from:ok(Q.get('from'))?Q.get('from'):p.from,to:ok(Q.get('to'))?Q.get('to'):p.to};
+}
+
+function state(h,p,link,label){
+  $('#page').innerHTML=`<div class="state"><span class="mark">${MARK}MySet</span><h1>${h}</h1><p>${p}</p>
+    ${link?`<a class="btn pri" href="${link}">${label}</a>`:`<button class="btn pri" onclick="load()">Try again</button>`}</div>`;
+}
+
+async function load(){
+  if(!C&&!T) return state('Open the Studio and sign in first','This report reads your Studio session.','/studio','Open the Studio');
+  const W=window_();
+  let r,d;
+  try{
+    r=await fetch('/api/admin',{method:'POST',headers:HEAD,body:JSON.stringify({action:'bizGet',...W,nights:true})});
+    d=await r.json();
+  }catch(e){ return state('Couldn’t reach MySet','Check the connection and try again.'); }
+  if(!d||!d.ok){
+    if(r.status===402) return state('The business dashboard is a Bar Star feature','Upgrade in the Studio and every show you have logged opens here.','/studio','Open the Studio');
+    if(r.status===403) return state('The business dashboard is the account owner’s','It holds their pay and splits.','/studio','Open the Studio');
+    if(r.status===401||(d&&d.error==='unauthorized')) return state('Open the Studio and sign in first','Your session has ended.','/studio','Open the Studio');
+    return state('Couldn’t read the dashboard',esc((d&&d.error)||'Try again in a moment.'));
+  }
+  draw(d);
+}
+
+function draw(d){
+  const prefs=(d.biz&&d.biz.prefs)||{};
+  let shows=Biz.join(d.nights||[],d.occ||[],d.biz,Date.now());
+  const from=d.from||'',to=d.to||'';
+  shows=PICK.length?shows.filter(s=>PICK.includes(s.key)):shows.filter(s=>Biz.inRange(s,from,to));
+  const t=Biz.sum(shows,prefs,PICK.length?null:{from,to},Number(d.cutPct)||0);
+  const fees=t.app>0;
+  const counted=shows.filter(s=>s.counted);
+  const kinds=Biz.TIME_KINDS.filter(([k])=>!(prefs.hours&&prefs.hours[k]===false)).map(([,l])=>l.toLowerCase());
+  const span=PICK.length?`${counted.length} selected show${counted.length===1?'':'s'}`:`${fmtDate(from)} – ${fmtDate(to)}`;
+
+  $('#page').innerHTML=`
+  <div class="top">
+    <span class="mark">${MARK}MySet <small>Business report</small></span>
+    <span class="tools"><a class="btn" href="/studio">← Studio</a><button class="btn pri" onclick="window.print()">Print / Save as PDF</button></span>
+  </div>
+  <div class="title">
+    <div class="kick">${PICK.length?'Selected shows':'Period'}</div>
+    <h1>${esc(d.name||'')}</h1>
+    <p class="sub">${span} · generated ${fmtDate(Biz.localDate(Date.now()))}</p>
+    ${PICK.length?`<ul class="picked">${counted.map(s=>`<li>${fmtDate(s.date,{day:'numeric',month:'short',year:'numeric'})} · ${esc(s.venue||s.title||'Show')}</li>`).join('')}</ul>`:''}
+  </div>
+  <div class="hero">
+    <div class="k">Profit</div>
+    <div class="v mono${t.profit<0?' neg':''}">${M(t.profit)}</div>
+    <div class="s">${t.shows} show${t.shows===1?'':'s'} · ${t.logged} logged${fees?(Number(d.cutPct)>0?` · <b>${esc(d.cutPct)}% (${M(t.fee)}) goes to MySet for transaction fees</b>`:` · includes ${M(t.app)} through the app before Stripe’s fee`):''}${t.appUnknown>0?` · app money not available for ${t.appUnknown} show${t.appUnknown===1?'':'s'}`:''}</div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="k">Revenue</div><div class="v mono">${M(t.revenue)}</div></div>
+    <div class="kpi"><div class="k">Costs</div><div class="v mono">${M(t.costs)}</div><div class="s">${t.band?`splits ${M(t.band)} on top`:''}</div></div>
+    <div class="kpi"><div class="k">Hours</div><div class="v mono">${Biz.hm(t.includedMinutes)||'—'}</div><div class="s">${esc(kinds.join(' · '))||'no kinds included'}</div></div>
+    <div class="kpi"><div class="k">Full evening rate</div><div class="v mono">${rate(t.rate)}</div><div class="s">${fees?'before MySet’s fee':''}${t.timed<t.shows?`${fees?' · ':''}${t.timed} of ${t.shows} shows timed`:''}</div></div>
+    <div class="kpi"><div class="k">Stage time rate</div><div class="v mono">${rate(t.rateStage)}</div><div class="s">${fees?'before MySet’s fee · ':''}on-stage minutes only</div></div>
+  </div>
+  <section><div class="charts">
+    <div class="chart"><h2>Profit</h2>${chart(t,from,to)}</div>
+    <div><h2>Where it came from</h2>${donut(t)}</div>
+  </div></section>
+  <section><h2>Shows</h2>${table(t)}</section>
+  ${t.bandBy.length?`<section><h2>Splits</h2>${simple(t.bandBy.map(r=>[r.name,`${r.shows} show${r.shows===1?'':'s'}`,r.cents]),['Member','Shows','Paid'])}</section>`:''}
+  ${t.costsBy.length?`<section><h2>Costs</h2>${simple(t.costsBy.map(r=>[r.name,`${r.n}×`,r.cents]),['Cost','Times','Total'])}</section>`:''}
+  ${t.merchBy.length?`<section><h2>Merch</h2>${simple(t.merchBy.map(r=>[r.name,`${r.qty} sold`,r.cents]),['Item','Qty','Total'])}</section>`:''}
+  <footer>
+    <p>Figures logged by the artist in MySet. 'App' is what fans paid through MySet in votes and tips, before Stripe's and MySet's fees; merch bought through the app is not in it. Stripe's monthly statement of the net is the artist's, exported from the Studio as CSV.</p>
+    ${t.appUnknown>0?`<p>App money not available for ${t.appUnknown} show${t.appUnknown===1?'':'s'}.</p>`:''}
+  </footer>`;
+  /* Paper orientation follows the table: past eight columns a portrait A4 squeezes
+     the money columns into each other, so the sheet turns sideways. @page cannot
+     read a class, hence a rule written in rather than toggled. */
+  if(document.querySelectorAll('#shows thead th').length>8){
+    const s=document.createElement('style');s.textContent='@page{size:A4 landscape}';document.head.appendChild(s);
+  }
+}
+
+/* Twelve months of profit, or one bar a show when the period is short enough to
+   read that way. Same shape as the Studio's earnChart; a loss hangs below the axis. */
+function chart(t,from,to){
+  const days=(from&&to)?Math.round((new Date(to)-new Date(from))/864e5):0;
+  const byShow=PICK.length||days<=45;
+  const pts=byShow?t.byShow.slice().reverse().map(s=>({label:fmtDate(s.date,{day:'numeric',month:'short'}),v:s.profit,now:false}))
+    :t.byMonth.map((m,i)=>({label:'JFMAMJJASOND'[+m.month.slice(5,7)-1],v:m.profit,now:i===t.byMonth.length-1}));
+  if(!pts.length) return '<div class="empty">Nothing to chart.</div>';
+  const W=420,H=150,top=22,bot=18,n=pts.length,slot=W/n,bw=Math.min(22,slot*.6);
+  const max=Math.max(1,...pts.map(p=>Math.abs(p.v)));
+  const neg=pts.some(p=>p.v<0), axis=neg?top+(H-top-bot)*.66:H-bot;
+  const bars=pts.map((p,i)=>{
+    const h=p.v?Math.max(2,Math.round((p.v>0?axis-top:H-bot-axis)*Math.abs(p.v)/max)):0, x=i*slot+(slot-bw)/2;
+    if(!h) return `<rect x="${x}" y="${axis-1}" width="${bw}" height="1" fill="rgba(0,0,0,.14)"/>`;
+    const y=p.v>0?axis-h:axis;
+    return `<rect x="${x}" y="${y}" width="${bw}" height="${h}" rx="3" fill="${p.v<0?'#B3261E':p.now?'url(#bizg-r)':'#FF375F'}" ${p.now||p.v<0?'':'opacity=".75"'}/>`
+      +(p.now||n<=8?`<text x="${x+bw/2}" y="${p.v<0?axis+h+11:y-6}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1D1D1F" class="mono">${M(p.v)}</text>`:'');
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" aria-label="Profit by ${byShow?'show':'month'}">
+    <defs><linearGradient id="bizg-r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF5650"/><stop offset="1" stop-color="#FF375F"/></linearGradient></defs>
+    <line x1="0" y1="${axis}" x2="${W}" y2="${axis}" stroke="rgba(0,0,0,.14)"/>${bars}</svg>
+    <div class="ml">${pts.map(p=>`<span class="${p.now?'now':''}">${esc(p.label)}</span>`).join('')}</div>`;
+}
+
+/* The revenue mix, the Studio's revDonut with the report's colours. */
+function donut(t){
+  const col={pay:'#FF375F',tips:'#FF6B45',merch:'#187A32',app:'#3A3A3C'};
+  const parts=t.mix.filter(p=>p.cents>0), total=parts.reduce((a,p)=>a+p.cents,0);
+  if(!(total>0)) return '<div class="empty">Nothing logged yet.</div>';
+  const r=44,c=2*Math.PI*r; let off=0;
+  const arcs=parts.map(p=>{const len=c*p.cents/total;
+    const s=`<circle cx="56" cy="56" r="${r}" fill="none" stroke="${col[p.k]}" stroke-width="14" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 56 56)"/>`;
+    off+=len; return s;}).join('');
+  return `<div class="donut"><svg viewBox="0 0 112 112" aria-label="Revenue mix">${arcs}
+      <text x="56" y="54" text-anchor="middle" font-size="13" font-weight="700" fill="#1D1D1F" class="mono">${M(total)}</text>
+      <text x="56" y="70" text-anchor="middle" font-size="10" font-weight="600" fill="#8E8E93">revenue</text></svg>
+    <div class="lg">${parts.map(p=>`<div><i style="background:${col[p.k]}"></i>${esc(p.label)}<b class="mono">${M(p.cents)}</b><small>${Math.round(100*p.cents/total)}%</small></div>`).join('')}</div></div>
+    <div class="note">Through the app = votes and tips fans paid through MySet, before MySet’s cut and Stripe’s fee. Merch sold through the app is not in it.</div>`;
+}
+
+/* One row a counted show — a calendar slot with nothing logged and no night is not
+   income and is not on an accountant's table (INVARIANT 0ef). Dates carry a full
+   year: a tax return does not guess which '26 is meant. The App cell says n/a only
+   for a night MySet ran and could not price; a show MySet was not at has nothing
+   to be unavailable, so it prints a dash and is not in the footer's count. The
+   App column says "before fees" and Profit does not: the hero names the fee. */
+function table(t){
+  if(!t.byShow.length) return '<div class="empty">Nothing logged for this period yet.</div>';
+  const cols=['Date','Venue','Pay','Splits','Tips','Merch','App<small>before fees</small>','Costs','Profit'].concat(HOURS?['Hours','$/h']:[]);
+  const th=cols.map((c,i)=>`<th class="${i>1?'num':''}">${c}</th>`).join('');
+  const rows=t.byShow.map(s=>`<tr>
+    <td class="mono" style="white-space:nowrap">${fmtDate(s.date,{day:'numeric',month:'short',year:'numeric'})}</td>
+    <td>${esc(s.venue||s.title||'—')}${s.nights?`<span class="sm">${s.votes} vote${s.votes===1?'':'s'} through the app</span>`:''}</td>
+    <td class="num mono">${M(s.pay)}</td><td class="num mono">${s.band?'−'+M(s.band):'—'}</td>
+    <td class="num mono">${M(s.tips)}</td><td class="num mono">${M(s.merch)}</td>
+    <td class="num mono">${s.appKnown?M(s.app):s.nights?`<span class="faint" title="App money not available">n/a</span>`:`<span class="faint" title="MySet was not at this show">—</span>`}</td>
+    <td class="num mono">${s.costs?'−'+M(s.costs):'—'}</td><td class="num mono"><b>${signed(s.profit)}</b></td>
+    ${HOURS?`<td class="num mono">${Biz.hm(s.includedMinutes)||'—'}</td><td class="num mono">${rate(s.rate)}</td>`:''}</tr>`).join('');
+  const foot=`<tr><td colspan="2">${t.shows} show${t.shows===1?'':'s'}</td><td class="num mono">${M(t.pay)}</td><td class="num mono">${t.band?'−'+M(t.band):'—'}</td>
+    <td class="num mono">${M(t.tips)}</td><td class="num mono">${M(t.merch)}</td><td class="num mono">${M(t.app)}</td>
+    <td class="num mono">${t.costs?'−'+M(t.costs):'—'}</td><td class="num mono">${signed(t.profit)}</td>
+    ${HOURS?`<td class="num mono">${Biz.hm(t.includedMinutes)||'—'}</td><td class="num mono">${rate(t.rate)}</td>`:''}</tr>`;
+  return `<div class="tbl"><table id="shows"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>`;
+}
+
+function simple(rows,heads){
+  const total=rows.reduce((a,r)=>a+r[2],0);
+  return `<div class="tbl"><table><thead><tr><th>${heads[0]}</th><th>${heads[1]}</th><th class="num">${heads[2]}</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td>${esc(r[0])}</td><td class="muted">${esc(r[1])}</td><td class="num mono">${M(r[2])}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="2">Total</td><td class="num mono">${M(total)}</td></tr></tfoot></table></div>`;
+}
+
+load();
+</script>
+</body>
+</html>

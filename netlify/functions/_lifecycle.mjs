@@ -1,7 +1,7 @@
 import { getShow, mutateShow, readFans, carryFans, newShowId, gigMonthOf, casDoc } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
-import { readEvents, nextOccurrence } from './_events.mjs';
+import { readEvents, nextOccurrence, occKey } from './_events.mjs';
 import { planForArtist, isPlatformOwner } from './_plan.mjs';
 
 const AUTO_INDEX = 'gigsched';
@@ -74,12 +74,13 @@ export async function roomCapFor(aid) {
    calendar, one name on all five. The calendar already knows where tonight is, and
    it is the same occurrence this function is already holding. */
 async function resolveTonight(aid, now) {
-  const out = { listId: null, note: null, venue: '', city: '', startsAt: null };
+  const out = { listId: null, note: null, venue: '', city: '', startsAt: null, eventId: null, key: null };
   try {
     const occ = nextOccurrence(await readEvents(aid), now);
     // only a gig that is on now or within the next few hours — not next Tuesday's
     if (occ && occ.startsAt - now < 6 * 3600e3) {
       out.startsAt = occ.startsAt;
+      out.eventId = occ.eventId; out.key = occKey(occ);   // which gig, not just where
       if (occ.listId) out.listId = occ.listId;
       /* The city too, because they travel together: a night filed with the right
          venue and the wrong city is no better than before. Only ever taken from a
@@ -111,9 +112,11 @@ async function resolveTonight(aid, now) {
  *   by      'artist' | 'schedule' — stamped on the show so the Studio can say so
  *   occKey  when the schedule starts it: which occurrence, so the same gig is
  *           never started twice and a night the artist ended is left ended
+ *           (read into `schedKey` below — `occKey` is also the helper imported
+ *           from _events.mjs, and a parameter of the same name shadowed it)
  * Returns { ok, err:[message, status]|null, note, already }.
  */
-export async function startShow(aid, { fresh = false, by = 'artist', occKey = null, eventId = null } = {}) {
+export async function startShow(aid, { fresh = false, by = 'artist', occKey: schedKey = null, eventId = null } = {}) {
   const now = Date.now();
   const [gigCap, roomCap] = await Promise.all([gigCapFor(aid), roomCapFor(aid)]);
 
@@ -158,6 +161,18 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
         show.venue = auto.venue;
         if (auto.city) show.city = auto.city;
       }
+      /* WHICH GIG THIS NIGHT IS. The scheduler has always stamped its occurrence
+         key (below); a hand start never did — and never CLEARED the last one, so
+         after one scheduled night every later hand-started night carried the
+         previous gig's id for good (normShow spreads stored fields forward). The
+         filed night now copies this key (0065), so it has to be right: a hand
+         start near tonight's gig is that gig, and a hand start near nothing is
+         nobody's. The scheduler's own outcomes do not change — it compares the
+         key against tonight's, and a stale key never matched that either. */
+      if (by === 'artist') {
+        show.autoKey = nearManualGig ? auto.key : null;
+        show.autoEvent = nearManualGig ? auto.eventId : null;
+      }
     }
     /* Tonight's ceiling, fixed for the night. A show started before room caps
        existed has no `roomCap` and is uncapped — nothing that is already running
@@ -167,7 +182,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey = nu
     show.status = 'live';
     show.startedBy = by;
     show.endedBy = null;
-    if (occKey) show.autoKey = occKey;
+    if (schedKey) show.autoKey = schedKey;
     if (eventId) show.autoEvent = eventId;
     return true;
   });

@@ -269,6 +269,72 @@ console.log('\nWHO MAY LOOK');
   ok('named for the artist', /filename=/.test(csvR.headers.get('content-disposition') || ''));
 }
 
+console.log('\nNO ACCOUNT, NO STATEMENT  (INVARIANT 0fn)');
+{
+  /* `stripeFor` hands back the platform client with empty options for an artist
+     who has not connected, and `statement` pulls whatever account it is given —
+     so an unconnected Bar Star artist was shown MySet's own subscription income as
+     their earnings (verified by execution, 2026-09-13). The platform rows planted
+     under SCOPE above are still in the fake. */
+  const U = await createArtist({ email: 'unconnected@example.com', name: 'Un' });
+  await mutateArtists((reg) => { reg.byId[U.artistId].createdAt = Date.UTC(2026, 0, 1); return true; });
+  const ut = await signToken('unconnected@example.com', revOf(await readArtists(), U.artistId));
+  const d = await jget(await admin(post(ut, { action: 'ledger', months: 12 })));
+  ok('an unconnected artist gets enabled:false, not the platform\'s money', d.ok && d.enabled === false && d.months.length === 0, d);
+  eq('and nothing was cached under their key', Object.keys((await readLedger(U.artistId)).months).length, 0);
+  const csv = await admin(post(ut, { action: 'ledgerCsv', months: 12 }));
+  ok('the CSV door answers the same way', /json/.test(csv.headers.get('content-type') || '') && (await jget(csv)).enabled === false);
+
+  /* THE POISONED CACHE. A statement computed before Connect — the way the old code
+     did it, against the platform — sat on disk with no mark of whose it was, and a
+     closed month is never re-read. So after connecting, last month stayed MySet's
+     $15 until somebody pressed "Check again". The cache now carries the account. */
+  const stripe = new (await import('stripe')).default('sk');
+  await statement(U.artistId, stripe, {}, { months: 3, now: NOW });         // what the old handler used to do
+  const poisoned = await readLedger(U.artistId);
+  ok('a statement pulled against the wrong account is on disk', (poisoned.months[THIS] || {}).gross > 0, poisoned.months);
+  eq('stamped with the account it came from — none', poisoned.acct, '');
+  await ready(U.artistId, 'acct_later');
+  bt({ __account: 'acct_later', created: at(THIS, 2), type: 'charge', amount: 700, fee: 50, net: 650,
+       fee_details: [{ type: 'stripe_fee', amount: 45 }, { type: 'application_fee', amount: 5 }] });
+  const own = await statement(U.artistId, stripe, { stripeAccount: 'acct_later' }, { months: 3, now: NOW });
+  const m = Object.fromEntries(own.months.map((x) => [x.month, x]));
+  eq('after Connect the statement is their own, without force', m[THIS].gross, 700);
+  eq('and the poisoned months are gone from the cache', (await readLedger(U.artistId)).acct, 'acct_later');
+  eq('every month on disk is now theirs', Object.values((await readLedger(U.artistId)).months).every((x) => x.gross === 700 || x.gross === 0), true);
+  /* The founder is the one artist legitimately on the platform account, and keeps
+     his split (WHO MAY LOOK, above) — the refusal is for everyone else. */
+
+  /* THE MISMATCH IS RESOLVED ON DISK BEFORE STRIPE IS ASKED. A cache from before
+     the stamp existed carries no `acct` and twelve closed months; for a connected
+     artist that is a mismatch, and the wipe used to live only in memory until the
+     pull's own write. A pull that failed (or ran out of pages — neither is
+     cached) left the foreign months on disk to be found again on every read: a
+     wide re-pull for ever, the artist's own closed months never landing. */
+  const L = await createArtist({ email: 'legacy@example.com', name: 'Leg' });
+  await mutateArtists((reg) => { reg.byId[L.artistId].createdAt = Date.UTC(2025, 0, 1); return true; });
+  const legacyMonths = Object.fromEntries(lastMonths(12, NOW).map((k) => [k, { currency: 'usd', gross: 999, stripeFee: 0, platformFee: 0, net: 999, refunds: 0, disputes: 0, payouts: 0, other: 0, count: 1 }]));
+  await (await import('../netlify/functions/_lib.mjs')).casDoc(`ledger_${L.artistId}`, () => ({}), (d) => {
+    Object.assign(d, { v: 1, months: legacyMonths, at: 5 }); delete d.acct; return true; });
+  await ready(L.artistId, 'acct_legacy');
+  bt({ __account: 'acct_legacy', created: at(THIS, 2), type: 'charge', amount: 800, fee: 50, net: 750,
+       fee_details: [{ type: 'stripe_fee', amount: 45 }, { type: 'application_fee', amount: 5 }] });
+  const down = { balanceTransactions: { list: async () => { throw new Error('Stripe is down'); } } };
+  const failed = await statement(L.artistId, down, { stripeAccount: 'acct_legacy' }, { months: 12, now: NOW });
+  ok('a pull that fails says so', !!failed.error, failed.error);
+  const stamped = await readLedger(L.artistId);
+  eq('and yet the stamp is already on disk', stamped.acct, 'acct_legacy');
+  eq('with the foreign months gone', Object.keys(stamped.months).length, 0);
+  const calls = () => __stripe.calls.filter((c) => c.method === 'balanceTransactions.list');
+  const n0 = calls().length;
+  const wide = await statement(L.artistId, stripe, { stripeAccount: 'acct_legacy' }, { months: 12, now: NOW });
+  eq('the next read pulls the whole window once', calls().length - n0, 1);
+  ok('from twelve months back', calls().pop().args.created.gte < at(LAST, 1), calls().pop().args.created);
+  eq('and the statement is their own', wide.total.gross, 800);
+  await statement(L.artistId, stripe, { stripeAccount: 'acct_legacy' }, { months: 12, now: NOW });
+  ok('a read after that asks only for this month — the closed ones are on disk', calls().pop().args.created.gte >= at(THIS, 1), calls().pop().args.created);
+}
+
 console.log('\nA VENUE HAS BOOKS TOO');
 {
   const V = await createVenue({ email: 'vbooks@example.com', name: 'The Bar', city: 'Koh Phangan', country: 'TH' });
@@ -291,6 +357,21 @@ console.log('\nA VENUE HAS BOOKS TOO');
   ok('a venue owner can read theirs', r.status === 200 && d.ok, d);
   eq('with the venue’s own gross', (d.months || []).reduce((s, m) => s + m.gross, 0), 3000);
 
+  /* NO ACCOUNT, NO STATEMENT — the venue door too (INVARIANT 0fn). The artist
+     fix left this one open: a venue that had not connected was handed the
+     platform client and shown MySet's subscription income as its takings, cached
+     under ledger_v_<vid>. The platform rows from SCOPE are still in the fake. */
+  const N = await createVenue({ email: 'vnoacct@example.com', name: 'No Account Bar', city: 'Koh Phangan', country: 'TH' });
+  await (await import('../netlify/functions/_venues.mjs')).mutateVenues((reg) => {
+    reg.byId[N.venueId].createdAt = Date.UTC(2026, 0, 1); return true; });
+  const ntok = await signVenueToken('vnoacct@example.com', vRevOf(await readVenues(), N.venueId));
+  const vpost = (body) => vadmin(new Request('https://x/api/venueadmin', { method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${ntok}` }, body: JSON.stringify(body) }));
+  const nd = await jget(await vpost({ action: 'ledger', months: 12 }));
+  ok('an unconnected venue gets enabled:false, not the platform\'s money', nd.ok && nd.enabled === false && nd.months.length === 0, nd);
+  eq('and nothing was cached under the venue\'s key', Object.keys((await readLedger(`v_${N.venueId}`)).months).length, 0);
+  const ncsv = await vpost({ action: 'ledgerCsv', months: 12 });
+  ok('the venue\'s CSV door answers the same way', /json/.test(ncsv.headers.get('content-type') || '') && (await jget(ncsv)).enabled === false);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -16,7 +16,10 @@ process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const history = (await import('../netlify/functions/history.mjs')).default;
 const { createArtist, signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
-const { archiveShow, readHistIndex, readHistShow } = await import('../netlify/functions/_history.mjs');
+const { archiveShow, readHistIndex, readHistShow, healHistory, placeShows, reconcileShow } = await import('../netlify/functions/_history.mjs');
+const { __stripe } = await import('./stripe-fake.mjs');
+const admin = (await import('../netlify/functions/admin.mjs')).default;
+const { casDoc, KEY } = await import('../netlify/functions/_lib.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -36,11 +39,12 @@ const row = async (aid, id) => (await readHistIndex(aid)).shows.find((x) => x.sh
 
 const H = 3600e3, NOW = Date.now();
 /* A night the way endShow files a hand-started one: no venue, the dated fallback
-   as its title, a few songs in the log. */
+   as its title, a few songs in the log — and, since 0065, the gig the lifecycle
+   stamped on it (`autoKey`), which the archive copies as `key`. */
 const play = (n) => Array.from({ length: n }, (_, i) => ({
   songId: 's' + i, title: 'Song ' + i, artist: '', at: NOW - 2 * H + i * 300e3, votes: 3, roundVotes: 3, voters: 4, round: [] }));
 const night = (songs, extra = {}) => ({
-  showId: 'hand-1', venue: '', city: '', startedAt: NOW - 2 * H,
+  showId: 'hand-1', venue: '', city: '', startedAt: NOW - 2 * H, autoKey: 'ghand@2026-09-12',
   songs: play(songs).map((p) => ({ id: p.songId, title: p.title })),
   log: play(songs), nowPlaying: null, archiveTitle: 'Untitled show – 2026-09-12', ...extra });
 
@@ -106,9 +110,80 @@ console.log('\nA RICHER RE-ARCHIVE KEEPS THE HAND-TYPED NAME');
   eq('with the richer count', (await row(mo.artistId, 'hand-1')).songsPlayed, 13);
   /* And a night that was NOT renamed still takes the archive's title on a richer
      re-archive — the protection is only for names typed by hand. */
-  await archiveShow(mo.artistId, night(3, { showId: 'hand-2', archiveTitle: 'First name' }), {});
-  await archiveShow(mo.artistId, night(6, { showId: 'hand-2', archiveTitle: 'Second name' }), {});
+  await archiveShow(mo.artistId, night(3, { showId: 'hand-2', autoKey: null, archiveTitle: 'First name' }), {});
+  await archiveShow(mo.artistId, night(6, { showId: 'hand-2', autoKey: null, archiveTitle: 'Second name' }), {});
   eq('a night nobody renamed follows the richer archive’s title', (await readHistShow(mo.artistId, 'hand-2')).title, 'Second name');
+}
+
+console.log('\nA FILED NIGHT KNOWS WHICH GIG IT WAS, AND WHETHER ITS MONEY IS KNOWN  (0065)');
+{
+  const doc = await readHistShow(mo.artistId, 'hand-1');
+  eq('the detail carries the key the lifecycle stamped', doc.key, 'ghand@2026-09-12');
+  eq('and so does the row', (await row(mo.artistId, 'hand-1')).key, 'ghand@2026-09-12');
+  eq('the row says where its money came from — no Stripe key here, so "off"', (await row(mo.artistId, 'hand-1')).source, 'off');
+  eq('a night the calendar never claimed files null', (await row(mo.artistId, 'hand-2')).key, null);
+  /* The heal rebuilds a row from the detail: a row restored from histpend_ keeps
+     the key, and a row filed before 0065 has `source` filled in on the next plain
+     heal — `source` is in ROW_TOPS, `key` deliberately is not. */
+  await casDoc(KEY.histIdx(mo.artistId), () => ({ shows: [] }), (d) => { d.shows = d.shows.filter((r) => r.showId !== 'hand-1'); return true; });
+  await casDoc(`histpend_${mo.artistId}`, () => ({ ids: [] }), (d) => { d.ids = ['hand-1']; return true; });
+  eq('the row is gone', (await row(mo.artistId, 'hand-1')).key, undefined);
+  eq('the heal restores it', (await healHistory(mo.artistId, { force: true })).added, 1);
+  eq('with its key', (await row(mo.artistId, 'hand-1')).key, 'ghand@2026-09-12');
+  await casDoc(KEY.histIdx(mo.artistId), () => ({ shows: [] }), (d) => { for (const r of d.shows) delete r.source; return true; });
+  eq('a row with no source re-opens a plain heal', (await healHistory(mo.artistId)).fixed, 2);
+  eq('which back-fills it', (await row(mo.artistId, 'hand-1')).source, 'off');
+  eq('and then retires', (await healHistory(mo.artistId)).skipped, true);
+  /* placeShows stamps the key it proves, so nights filed before the lifecycle
+     stamped one migrate to an exact join the first time the artist taps "Name
+     these from my calendar". hand-2 has none; a gig was running when it started. */
+  const st = new Date(NOW - 2 * H);
+  const p2 = (n) => String(n).padStart(2, '0');
+  ok('a gig on the calendar when hand-2 started', (await hit(admin, 'https://x/api/admin', { action: 'eventSave', event: {
+    id: 'gpier', venue: 'The Pier', city: 'Koh Phangan', country: 'Thailand', tz: 'UTC',
+    date: st.toISOString().slice(0, 10), time: `${p2(st.getUTCHours())}:${p2(st.getUTCMinutes())}`,
+    endTime: `${p2((st.getUTCHours() + 3) % 24)}:${p2(st.getUTCMinutes())}` } }, TM)).ok);
+  /* hand-3: already at the right venue, only missing its key — a stamp, not a
+     rename, and the reply must say which, because the Studio toasts "Renamed N
+     nights" from `placed`. */
+  await archiveShow(mo.artistId, night(2, { showId: 'hand-3', autoKey: null, venue: 'The Pier', archiveTitle: 'Pier again' }), {});
+  const placed = await placeShows(mo.artistId);
+  ok('placing runs', placed.ok && placed.placed >= 1, placed);
+  const key2 = `gpier@${st.toISOString().slice(0, 10)}`;
+  eq('hand-2 is stamped with the gig it was under', (await row(mo.artistId, 'hand-2')).key, key2);
+  eq('on the detail too', (await readHistShow(mo.artistId, 'hand-2')).key, key2);
+  eq('and named after it', (await row(mo.artistId, 'hand-2')).venue, 'The Pier');
+  eq('hand-1 keeps the key the scheduler gave it — a stamp beats a time window', (await row(mo.artistId, 'hand-1')).key, 'ghand@2026-09-12');
+  eq('hand-3 gains its key too', (await row(mo.artistId, 'hand-3')).key, key2);
+  // three nights touched: hand-1 and hand-2 renamed (hand-1 keeps its own key), hand-2 and hand-3 keyed
+  eq('hand-3 is not counted as renamed — it was already at The Pier', [placed.placed, placed.keyed], [2, 2]);
+  eq('running it again changes nothing', [(await placeShows(mo.artistId)).placed, (await placeShows(mo.artistId)).keyed], [0, 0]);
+}
+
+console.log('\nRE-CHECK CLEARS "APP MONEY NOT AVAILABLE" ON THE ROW TOO  (0065)');
+{
+  /* The dashboard reads `source` off the index ROW. A night archived while Stripe
+     was unreachable — nine of the founder's nineteen real nights in the 2026-09-12
+     backup — stays "app money not available" until the artist taps Re-check, which
+     re-pulls Stripe and rewrote the detail's money block but copied only `gross`
+     onto the row. So the row never learned, the gross never joined profit, and the
+     button was offered again for ever. */
+  const { casDoc: cas } = await import('../netlify/functions/_lib.mjs');
+  await cas(`hist_${mo.artistId}_hand-1`, () => ({}), (d) => { d.money = { ...(d.money || {}), gross: 0, source: 'stripe-unreachable' }; return true; });
+  await cas(KEY.histIdx(mo.artistId), () => ({ shows: [] }), (d) => { const r = d.shows.find((x) => x.showId === 'hand-1'); r.gross = 0; r.source = 'stripe-unreachable'; return true; });
+  eq('the night is on file as unreachable', (await row(mo.artistId, 'hand-1')).source, 'stripe-unreachable');
+  const started = (await readHistShow(mo.artistId, 'hand-1')).startedAt;
+  __stripe.sessions.set('cs_hand1', { onAccount: '', session: { id: 'cs_hand1', mode: 'payment', payment_status: 'paid',
+    created: Math.floor(started / 1000) + 600, amount_total: 500, metadata: { kind: 'tip', artist: mo.artistId, show: 'hand-1' } } });
+  process.env.STRIPE_SECRET_KEY = 'sk_test_notreal_forlocaltestsonly';   // this time Stripe answers
+  const re = await reconcileShow(mo.artistId, 'hand-1');
+  delete process.env.STRIPE_SECRET_KEY;
+  eq('the re-check hears from Stripe', [re.money.source, re.money.gross], ['stripe', 5]);
+  const doc = await readHistShow(mo.artistId, 'hand-1');
+  eq('the detail carries the answer', doc.money.source, 'stripe');
+  const r = await row(mo.artistId, 'hand-1');
+  eq('and so does the row the dashboard reads — source equals the detail\'s', r.source, doc.money.source);
+  eq('with the gross', r.gross, 5);
 }
 
 console.log('\nTHE NAME IS CUT AT 100 CHARACTERS');

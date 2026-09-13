@@ -5,7 +5,7 @@ import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSo
          normPacks, normAsk,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
          MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf, DEFAULT_ARTIST,
-         DEFAULT_FREE_CREDITS } from './_lib.mjs';
+         DEFAULT_FREE_CREDITS, readDoc, KEY } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
 import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
@@ -28,8 +28,9 @@ import { reindexSched } from './_auto.mjs';
 import { startShow, endShow } from './_lifecycle.mjs';
 import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
-import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, redeemPromo,
+import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, reportsAllowed, redeemPromo,
          readPromos, mutatePromos, cleanCode, MAX_LIBRARY, libraryCap, NOT_BUILT } from './_plan.mjs';
+import { readBiz, mutateBiz, normGig, pruneRules, keyOk, bizCaps, BIZ_FULL, TIME_KINDS, MAX_RULES } from './_biz.mjs';
 
 /* Rebuilds the projection of the active setlist after the library changed.
 
@@ -56,7 +57,10 @@ async function handlePlan(aid, action, body, req, me) {
   if (action === 'planGet') {
     const mine = (me && me.role || 'owner') === 'owner';
     const b = await B.billingStatus(aid);
-    return json({ ok: true, plan, limits: shapeLimits(limits),
+    // the dashboard's two sizes: a yes/no gate bypasses to yes for the founder,
+    // a number has to bypass to a number (bizCaps), or his "n of N" reads 0 of 0
+    const caps = bizCaps(aid, limits);
+    return json({ ok: true, plan, limits: shapeLimits({ ...limits, band: caps.band, costs: caps.costs }),
                   shareStats: !artist || artist.shareStats !== false,
                   /* A member gets the LIMITS, because every lock in the Studio is
                      drawn from them and hiding them makes locks fail open. They do
@@ -412,6 +416,10 @@ const shapeLimits = (l) => ({
   moderate: !!l.moderate,      // hiding a fan's post (Bar Star and up since 0060)
   reports: !!l.reports,        // reading the filed nights on the Money tab
   library: libraryCap(l),      // how many songs the library holds on this plan
+  /* Numbers, read directly by the Studio for "n of N" on the business dashboard
+     — never through has(), which would read Bar Star's 5 as "not the top plan"
+     and grey a working feature (0bx1). */
+  band: Number(l.band) || 0, costs: Number(l.costs) || 0,
   cut: l.cut, cutPct: Math.round((Number(l.cut)||0)*1000)/10, seats: l.seats,
   promote: l.promote, analytics: l.analytics, presskit: l.presskit, branding: l.branding,
   /* Shipped on every plan row so the Studio can grey a designed-but-unbuilt
@@ -499,24 +507,46 @@ async function handleEvents(aid, action, body) {
       const known = new Set((await readLists(aid)).lists.map((l) => l.id));
       if (!known.has(ev.listId)) ev.listId = '';
     }
+    let movedFrom = null;
     await mutateEvents(aid, (d) => {
       const at = d.list.findIndex((x) => x.id === id);
-      if (at >= 0) d.list[at] = { ...ev, skip: d.list[at].skip || [], hid: d.list[at].hid || [],
-                                  createdAt: d.list[at].createdAt };
+      if (at >= 0) {
+        const was = d.list[at];
+        // a one-off gig moved to another day — the night logged under it moves too (below)
+        if (!was.repeat && !ev.repeat && was.date && was.date !== ev.date) movedFrom = was.date;
+        d.list[at] = { ...ev, skip: was.skip || [], hid: was.hid || [], createdAt: was.createdAt };
+      }
       else if (d.list.length >= MAX_EVENTS) { full = true; return false; }
       else d.list.push(ev);
       return true;
     });
     if (full) return bad('That is as many gigs as one calendar can hold');
     const events = await readEvents(aid);
-    await Promise.all([reindexCities(aid, events), reindexSched(aid, events)]);
+    await Promise.all([reindexCities(aid, events), reindexSched(aid, events),
+      /* THE RECORD FOLLOWS THE GIG (0065). A night's numbers are keyed by the
+         calendar occurrence, `<eventId>@<date>`, so when a one-off gig is moved a
+         day the record stayed under the old date — kept on disk, counted towards
+         the cap, listed and totalled nowhere. Re-key it inside one CAS; a record
+         already under the new day wins (the artist typed that one last), and an
+         artist with no book costs no write — `at` is 0 on the empty document. */
+      movedFrom ? mutateBiz(aid, (d) => {
+        const oldKey = `${id}@${movedFrom}`, newKey = `${id}@${ev.date}`;
+        if (!d.at || !(oldKey in d.gigs) || newKey in d.gigs) return false;
+        d.gigs[newKey] = d.gigs[oldKey]; delete d.gigs[oldKey];
+        return true;
+      }).catch(() => {}) : null]);
     return json({ ok: true, id, events: events.list });
   }
 
   if (action === 'eventDelete') {
     await mutateEvents(aid, (d) => { d.list = d.list.filter((x) => x.id !== body.id); return true; });
     const events = await readEvents(aid);
-    await Promise.all([reindexCities(aid, events), reindexSched(aid, events)]);
+    await Promise.all([reindexCities(aid, events), reindexSched(aid, events),
+      /* The gig's default pay/costs go with it (0065). Only when a book exists —
+         `at` is 0 on the empty document, so an artist who never opened the
+         dashboard costs no write here. Nights already logged under the gig keep
+         their own records: a record is the artist's, a rule was the gig's. */
+      mutateBiz(aid, (d) => (d.at ? pruneRules(d, events) > 0 : false)).catch(() => {})]);
     return json({ ok: true, events: events.list });
   }
 
@@ -1403,7 +1433,12 @@ async function handleBooks(req, aid, body, action, isFounder) {
 
   if (action === 'ledger' || action === 'ledgerCsv') {
     const { stripe, opts, acct } = await stripeFor(aid);
-    if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
+    /* NO ACCOUNT, NO STATEMENT. `stripeFor` answers the platform client with empty
+       options for an artist who has not connected, and `statement` pulls whatever
+       account it is handed — so an unconnected Bar Star artist was shown MySet's
+       own subscription income as their earnings, and it was cached under their
+       key (INVARIANT 0fn). The founder is the one exception, split out below. */
+    if (!stripe || (!acct && !isFounder)) return json({ ok: true, enabled: false, months: [], total: null });
     /* NEVER FURTHER BACK THAN THE DAY THEY JOINED. Twelve rows of zero before an
        account existed is not a statement, it is a page that looks like a bad year. */
     const since = Number(((await readArtists()).byId[aid] || {}).createdAt) || 0;
@@ -1461,6 +1496,111 @@ async function handleBooks(req, aid, body, action, isFounder) {
   return bad('unknown action', 400);
 }
 const BOOK_ACTIONS = new Set(['ledger', 'ledgerCsv', 'books', 'bookCost']);
+
+/* ---------- the artist's book (decision 0065) ------------------------------- */
+/* What a show was worth to the artist — pay, band, cash tips, merch, costs, time,
+   gear — kept in `biz_<aid>` (see the header of _biz.mjs). Gated on `reports`, the
+   same flag that opens the filed nights, because it is the same question. Owner
+   only (OWNER_ONLY in main): a band mate's own split is in here. */
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const BIZ_LOCKED = 'The business dashboard is a Bar Star feature — every show you log is kept, and upgrading opens all of them.';
+async function handleBiz(aid, action, body) {
+  const { limits, artist } = await planForArtist(aid);
+  if (!reportsAllowed(aid, limits)) return bad(BIZ_LOCKED, 402);
+  const caps = bizCaps(aid, limits);
+
+  if (action === 'bizGet') {
+    const { addDays, addMonths, utcToDate } = await import('./_time.mjs');
+    const to = DATE_RE.test(body.to || '') ? body.to : utcToDate(Date.now());
+    const from = DATE_RE.test(body.from || '') ? body.from : addMonths(to, -12);
+    if (from > to) return bad('bad dates');
+    const nights = body.nights === true;
+    const [biz, events, idx] = await Promise.all([readBiz(aid), readEvents(aid),
+      nights ? readDoc(KEY.histIdx(aid), { shows: [] }) : null]);
+    /* A day of margin at each end: a key's date is the gig's own local day, the
+       window is UTC, and a 10pm set is on both sides of midnight somewhere. A
+       showId-keyed record (a night no gig claimed) always ships — there is no
+       date on the key to trim by, and there are never many. */
+    const lo = addDays(from, -1), hi = addDays(to, 1);
+    const gigs = {};
+    for (const [k, g] of Object.entries(biz.gigs)) {
+      const at = k.indexOf('@');
+      const date = at > 0 ? k.slice(at + 1) : null;
+      if (!date || (date >= lo && date <= hi)) gigs[k] = g;
+    }
+    const occ = occurrencesFor(events, from, to).map((o) => ({
+      eventId: o.eventId, date: o.date, startsAt: o.startsAt, endsAt: o.endsAt, title: o.title,
+      venue: o.venue, city: o.city, tz: o.tz, repeating: o.repeating }));
+    const rows = idx ? ((idx.data && idx.data.shows) || []) : null;
+    return json({ ok: true,
+      biz: { v: biz.v, at: biz.at, prefs: biz.prefs, rules: biz.rules, gigs },
+      occ, limits: { band: caps.band, costs: caps.costs },
+      /* The founder's fee is 0 (see feeCents in _connect.mjs); his registry row
+         reads as free, whose cut would label money that carries no cut at all. */
+      cutPct: isPlatformOwner(aid) ? 0 : Math.round((Number(limits.cut) || 0) * 1000) / 10,
+      name: (artist && artist.name) || '',
+      from, to,
+      dropped: rows ? ((idx.data && idx.data.dropped) || 0) : null,
+      oldestKept: rows ? ((idx.data && idx.data.oldestKept) || null) : null,
+      // only the report page asks; the tab already holds the same rows from /api/history
+      ...(rows ? { nights: rows.map((r) => ({ ...r, key: r.key || null, source: r.source || null })) } : {}) });
+  }
+
+  if (action === 'bizSave') {
+    const rule = body.rule != null ? String(body.rule).slice(0, 24) : null;
+    const key = rule === null ? String(body.key || '') : null;
+    if (rule === null && !keyOk(key)) return bad('bad key');
+    let events = null;
+    if (rule !== null) {
+      events = await readEvents(aid);
+      if (!events.list.some((e) => e && e.id === rule)) return bad('That gig isn’t on your calendar', 400);
+    }
+    let res = null, full = false;
+    const r = await mutateBiz(aid, (d) => {
+      const map = rule !== null ? d.rules : d.gigs, id = rule !== null ? rule : key;
+      if (body.remove === true) {
+        if (!(id in map)) return false;
+        delete map[id]; res = { gig: null };
+      } else {
+        /* The growth rule (INVARIANT 0s) measures against what the artist already
+           HAS. For a night with no record of its own that is the gig's rule — the
+           editor pre-filled it from there — so eight band members written on
+           Rock Star can be logged on the first save after a downgrade to Bar
+           Star, and only a ninth is refused. Occurrence keys only: a showId has
+           no gig to lean on. */
+        const at = rule === null ? id.indexOf('@') : -1;
+        const prev = map[id] || (at > 0 ? d.rules[id.slice(0, at)] : undefined);
+        res = normGig(body.gig, caps, prev);
+        if (res.err) return false;
+        if (rule !== null && !(id in map) && Object.keys(map).length >= MAX_RULES) { full = true; return false; }
+        map[id] = res.gig;
+      }
+      // orphans go whenever a rule is touched (0065) — the calendar is in hand
+      if (rule !== null) pruneRules(d, events);
+      return true;
+    });
+    if (res && res.err) return bad(res.err, res.status || 400);
+    if (full) return bad('That is as many gigs as one calendar can hold');
+    if (r.full) return bad(BIZ_FULL, 400);
+    return json({ ok: true, gig: res ? res.gig : null });
+  }
+
+  if (action === 'bizPrefs') {
+    const given = (body.hours && typeof body.hours === 'object') ? body.hours : {};
+    let prefs = null;
+    const r = await mutateBiz(aid, (d) => {
+      // a kind not mentioned keeps what it had; a missing pref has always meant ON
+      for (const [k] of TIME_KINDS) if (k in given) d.prefs.hours[k] = given[k] !== false;
+      prefs = d.prefs;
+      return true;
+    });
+    // a refused write is not an ok — the page would show a toggle the book does not hold
+    if (r.full) return bad(BIZ_FULL, 400);
+    return json({ ok: true, prefs });
+  }
+  return bad('unknown action', 400);
+}
+const BIZ_ACTIONS = new Set(['bizGet', 'bizSave', 'bizPrefs']);
 
 /* ---------- PROMOTING A GIG ------------------------------------------------
    Three paid spots at the top of a city's night, $10, first come first served.
@@ -1622,9 +1762,12 @@ const main = async (req) => {
      the same sentence, which also tells them the way back. */
   /* `ledger` and `ledgerCsv` are here on purpose: somebody on their way out has
      thirty days to take their records with them, and a tax statement is exactly
-     the kind of thing they come back for. Reading cannot hurt anything. */
+     the kind of thing they come back for. Reading cannot hurt anything. `bizGet`
+     for the same reason — the book is their pay, splits and costs, and the
+     printed report is the shape an accountant wants it in; the export carries
+     the raw JSON, which is not that. Read-only: bizSave and bizPrefs stay out. */
   const LEAVING_OK = new Set(['planGet', 'accountUndelete', 'accountExport', 'accountFreeSlug',
-                              'planPortal', 'ledger', 'ledgerCsv']);
+                              'planPortal', 'ledger', 'ledgerCsv', 'bizGet']);
   if (!LEAVING_OK.has(action)) {
     const { deletionOf } = await import('./_lib.mjs');
     const del = await deletionOf(aid);
@@ -1651,6 +1794,11 @@ const main = async (req) => {
        livelihood in one payload; a band mate on one of five Pro seats has no
        business with it, and `books`/`bookCost` are MySet's own P&L. */
     'ledger', 'ledgerCsv', 'books', 'bookCost',
+    /* THE ARTIST'S BOOK IS THE OWNER'S TOO (0065). It holds what the act was paid
+       and who in the band got what — a band mate on a seat would be reading their
+       own split next to everyone else's. A member is not shown the dashboard at
+       all; this is what makes that a rule rather than a courtesy. */
+    'bizGet', 'bizSave', 'bizPrefs',
     /* Promoting a gig spends $10 of the owner's money, so it is the owner's to
        spend. `featureList` is NOT here — a band mate may look at what is booked. */
     'featureStart', 'featureFinish']);
@@ -1721,6 +1869,7 @@ const main = async (req) => {
 
   if (PROFILE_ACTIONS.has(action)) return handleProfile(aid, action, body, req, me);
   if (BOOK_ACTIONS.has(action)) return handleBooks(req, aid, body, action, aid === DEFAULT_ARTIST);
+  if (BIZ_ACTIONS.has(action)) return handleBiz(aid, action, body);
   if (FEATURE_ACTIONS.has(action)) return handleFeature(req, aid, body, action);
   if (SHOP_ACTIONS.has(action)) return handleShop(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));

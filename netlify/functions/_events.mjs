@@ -137,6 +137,11 @@ export function expand(ev, fromDate, toDate) {
   return out;
 }
 
+/** One night of one gig, as a key: `<eventId>@<date>`. The scheduler stamps it on
+ *  the show it starts, the filed night keeps it, and the artist's book (_biz.mjs)
+ *  files that night's numbers under it — one spelling, from here. */
+export const occKey = (o) => `${o.eventId}@${o.date}`;
+
 /** Every gig an artist has in a window, flattened and in time order. */
 export function occurrencesFor(events, fromDate, toDate) {
   return events.list

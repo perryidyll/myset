@@ -141,6 +141,12 @@ echo
 echo "── the books ──"
 node --import ./test/register.mjs test/books.mjs
 echo
+echo "── the artist's book ──"
+node --import ./test/register.mjs test/biz.mjs
+echo
+echo "── the dashboard's maths ──"
+node test/bizmath.mjs
+echo
 echo "── billing, the account, and a venue that takes money ──"
 node --import ./test/register.mjs test/billing.mjs
 echo
