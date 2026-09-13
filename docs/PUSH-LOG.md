@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 15:28 — 466a907 — wt2@docs/links-strip-ledger (0 files since origin/main)
+**tl;dr:** Ledger + session note for the link strip (UX-038, PR #25) [skip ci]
+**Other sessions:** Docs only. The unexplained first-save drop of a Bandcamp link is recorded in docs/sessions/2026-09-13-links-strip.md.
+
 ### 2026-09-13 15:26 — b966884 — wt@ui/links-strip (0 files since origin/main)
 **tl;dr:** The artist page's link pills now drift left to right under the heading Listen, follow, & support — the mirror of the proof strip above them
 **Other sessions:** artist.html: startProof() is now drift(id,dir) run for #proof (+1) and #links (-1), per-strip handles in DRIFT{}; .links is a nowrap overflow strip with ghost copies (aria-hidden) — query '.links a:not([aria-hidden])' for the real pills. Studio's Profile section label still says Listen & follow.
