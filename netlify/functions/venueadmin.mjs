@@ -2,7 +2,7 @@ import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
          mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU,
          venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH, venuePlanOf, venuePaid } from './_venues.mjs';
-import { normMerch } from './_profile.mjs';
+import { normMerch, MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS } from './_profile.mjs';
 import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
@@ -35,7 +35,7 @@ export default async (req) => {
      Anything not on this list is OWNER ONLY, which is the safe way round: a new
      action is locked until somebody decides it should not be. */
   const CREW_OK = new Set(['get', 'stats', 'eventList', 'pitchList', 'postList', 'postReply',
-                           'orderList', 'orderDone', 'orderDetail', 'planGet']);
+                           'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone', 'planGet']);
   const MANAGER_OK = new Set([...CREW_OK, 'eventSave', 'eventDelete', 'eventSkip', 'pitchSet',
                               'set', 'amenity', 'hours', 'menuSet', 'menuAdd', 'menuRemove',
                               'offerSave', 'offerRemove', 'photoUpload', 'photoClear',
@@ -451,18 +451,38 @@ export default async (req) => {
     if (!r.ok) return bad(r.error === 'no-billing' ? 'Nothing to manage yet.' : (r.error || 'Couldn’t open billing'), 400);
     return json({ ok: true, url: r.url });
   }
+  // orders — newest first, each through ownerOrder (the pickup code back-filled for
+  // rows older than codes, the size, the postage, never the fan), as for artists
   if (action === 'orderList') {
     const { readMeta } = await import('./_lib.mjs');
-    return json({ ok: true, orders: ((await readMeta(owner)).orders || []).slice().reverse() });
+    const { ownerOrder } = await import('./_pay.mjs');
+    return json({ ok: true, orders: ((await readMeta(owner)).orders || []).slice().reverse().map(ownerOrder) });
   }
   if (action === 'orderDone') {
     const { mutateMeta, readMeta } = await import('./_lib.mjs');
+    const { ownerOrder } = await import('./_pay.mjs');
     const sid = String(body.sid || '').slice(0, 120);
-    await mutateMeta(owner, (m) => { const o = (m.orders || []).find((x) => x.sid === sid); if (!o) return false; o.status = body.done === false ? 'new' : 'done'; return true; });
-    return json({ ok: true, orders: (await readMeta(owner)).orders.slice().reverse() });
+    await mutateMeta(owner, (m) => {
+      const o = (m.orders || []).find((x) => x.sid === sid); if (!o) return false;
+      o.status = body.done === false ? 'new' : 'done';
+      if (o.status === 'done') o.doneAt = Date.now(); else delete o.doneAt;
+      return true;
+    });
+    return json({ ok: true, orders: (await readMeta(owner)).orders.slice().reverse().map(ownerOrder) });
+  }
+  // what fans asked the shop for (_wishes.mjs), as for artists
+  if (action === 'wishList' || action === 'wishDone') {
+    const { readWishes, setWishDone, shapeWishes } = await import('./_wishes.mjs');
+    if (action === 'wishDone') {
+      const r = await setWishDone(owner, String(body.id || '').slice(0, 12), body.done !== false);
+      if (!r.ok) return bad(r.error, 404);
+    }
+    const [w, prof] = await Promise.all([readWishes(owner), getVenueProfile(vid)]);
+    return json({ ok: true, wishes: shapeWishes(w, prof.merch) });
   }
   if (action === 'orderDetail') {
     const { readMeta } = await import('./_lib.mjs');
+    const { ownerOrder } = await import('./_pay.mjs');   // the row goes out like the list's: a code, never the fan
     const sid = String(body.sid || '').slice(0, 120);
     const mine = ((await readMeta(owner)).orders || []).find((x) => x.sid === sid);
     if (!mine) return bad('unknown order', 404);
@@ -474,20 +494,22 @@ export default async (req) => {
     const cd = s.customer_details || {};
     const sh = (s.collected_information && s.collected_information.shipping_details) || s.shipping_details || null;
     const addr = sh && sh.address ? sh.address : null;
-    return json({ ok: true, order: mine, buyer: { name: cd.name || (sh && sh.name) || '', email: cd.email || '' },
+    return json({ ok: true, order: ownerOrder(mine), buyer: { name: cd.name || (sh && sh.name) || '', email: cd.email || '' },
                   shipping: addr ? { name: (sh && sh.name) || '', line1: addr.line1 || '', line2: addr.line2 || '', city: addr.city || '',
                                      state: addr.state || '', postal: addr.postal_code || '', country: addr.country || '' } : null });
   }
 
   /* ---------- merch and the community page ----------
      Merch on a venue's page is a Pro feature (there is no $10 venue tier — venue
-     plans are free and Pro, owner-set). Items sell through a LINK only: a venue has
-     no payout account, so buying through MySet would put its money in the wrong
+     plans are free and Pro, owner-set). Items sell through MySet as a direct charge
+     once the venue's Connect account is ready (pay.ready, 0cn); until then a LINK is
+     required, because a charge with no payout account would land in the wrong
      balance (0r, 0x). Removing is never gated (0s). The community page and its
      moderation are free (0w). */
   if (action === 'merchList') {
     const p = await getVenueProfile(vid);
-    return json({ ok: true, merch: p.merch, max: VMAX_MERCH, allowed: !!venueLimits(await venueById(vid)).merch });
+    return json({ ok: true, merch: p.merch, max: VMAX_MERCH, maxVariants: MAX_VARIANTS, variantLen: VARIANT_LEN, maxPost: MAX_POST,
+                  minCents: MIN_CENTS, maxCents: MAX_CENTS, allowed: !!venueLimits(await venueById(vid)).merch });
   }
   if (action === 'merchSave') {
     if (!venueLimits(await venueById(vid)).merch) return bad('Merch on your page comes with Pro — anything you already added stays.', 402);

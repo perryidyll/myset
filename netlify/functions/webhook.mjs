@@ -1,7 +1,7 @@
 import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
-import { json, bad, cleanArtistId, DEFAULT_ARTIST } from './_lib.mjs';
-import { redeemSession } from './_pay.mjs';
+import { json, bad, DEFAULT_ARTIST } from './_lib.mjs';
+import { redeemSession, cleanOwnerId } from './_pay.mjs';
 import { artistForAccount, mutateConnect, mirrorToShow, readConnect } from './_connect.mjs';
 
 /* The safety net. /api/confirm only runs if the buyer's browser makes it back to
@@ -107,7 +107,7 @@ const main = async (req) => {
        it for manual capture; create the request now, then the artist's later
        play-completion action is the only code allowed to capture it. */
     if (session && (session.metadata || {}).kind === 'request_hold') {
-      const aid = cleanArtistId((session.metadata || {}).artist)
+      const aid = cleanOwnerId((session.metadata || {}).artist)
                   || (event.account ? await artistForAccount(event.account) : '')
                   || DEFAULT_ARTIST;
       try {
@@ -130,7 +130,7 @@ const main = async (req) => {
     }
     // redeemSession is replay-safe, so a webhook retry racing the return page is fine
     if (session && session.payment_status === 'paid') {
-      const aid = cleanArtistId((session.metadata || {}).artist)
+      const aid = cleanOwnerId((session.metadata || {}).artist)
                   || (event.account ? await artistForAccount(event.account) : '')
                   || DEFAULT_ARTIST;
       try { await redeemSession(aid, session); } catch { /* Stripe will retry */ }

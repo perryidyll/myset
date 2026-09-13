@@ -77,7 +77,9 @@ export default async (req) => {
       currency: (s.currency || 'usd').toUpperCase(),
       kind: md.kind || 'unknown',
       votes: parseInt(md.votes, 10) || 0,
-      item: md.title || '', qty: parseInt(md.qty, 10) || 0,
+      // a merch line names its size in brackets — "Tour tee (L)" — so the Money tab reads like the order list
+      item: md.title ? (md.variant ? `${md.title} (${md.variant})` : md.title) : '', qty: parseInt(md.qty, 10) || 0,
+      variant: md.variant || '',
       fan: md.fan || '',
       note: md.note || '',
       email: (s.customer_details && s.customer_details.email) || '',

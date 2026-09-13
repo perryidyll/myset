@@ -64,14 +64,14 @@ ok('the home-page light mode switch persists across every public page',
    /id="themeBtn"[^>]*data-theme-toggle/.test(home)&&
    /localStorage\.setItem\('myset\.theme', next\)/.test(themeScript)&&
    /:root\[data-theme=light\]/.test(theme)&&
-   ['index.html','artist.html','artists.html','community.html','vote.html','venue.html','about.html','studio.html','venue-studio.html']
+   ['index.html','artist.html','artists.html','community.html','shop.html','vote.html','venue.html','about.html','studio.html','venue-studio.html']
      .every(x=>read(`public/${x}`).includes('/theme.js')));
 ok('light is the first-visit default on every page while a saved dark choice survives',
    /const fallback = \(\) => 'light'/.test(themeScript)&&
-   ['index.html','artist.html','artists.html','community.html','vote.html','venue.html','about.html','studio.html','venue-studio.html','stage.html']
+   ['index.html','artist.html','artists.html','community.html','shop.html','vote.html','venue.html','about.html','studio.html','venue-studio.html','stage.html']
      .every(x=>read(`public/${x}`).includes("let t='light'")));
 ok('public and Studio loading screens use the active light or dark palette',
-   ['artist.html','venue.html','community.html'].every(x=>{
+   ['artist.html','venue.html','community.html','shop.html'].every(x=>{
      const s=read(`public/${x}`);return /#intro\{[^}]*background:#F5F5F7/.test(s)&&/data-theme=dark\][^\n]*#intro|data-theme=dark\] #intro/.test(s);
    })&&
    ['studio.html','venue-studio.html'].every(x=>{
@@ -88,8 +88,65 @@ ok('the business report is a light-only paper document: explicit colours, noinde
 ok('the $20 plan displays the same 2% transaction fee the server charges',
    /pro:\{name:'Rock Star',price:'\$20 \/ month'[\s\S]{0,1400}Transaction fee<\/span>',' – 2%/.test(studio)&&   // "Transaction fee – 2% on money…" since 2026-09-13
    !/Transaction fee<\/span>',' – 0%/.test(studio)&&
-   !['studio.html','venue-studio.html','index.html','about.html','artists.html','artist.html','community.html','vote.html']
+   !['studio.html','venue-studio.html','index.html','about.html','artists.html','artist.html','community.html','shop.html','vote.html']
      .some(x=>/Transaction fee: 2\.5%/.test(read(`public/${x}`))));
+/* THE SHOP (2026-09-13): merch is sold on /<slug>/shop and the community page only
+   opens the door. These pin the contract between the two pages and the server —
+   not vocabulary: each is a literal something else depends on. */
+const shop = read('public/shop.html'), community = read('public/community.html'), venueStudio = read('public/venue-studio.html');
+ok('the shop asks the same fan door the community page does', /\/api\/fan\?what=community/.test(shop));
+ok('a merch checkout carries kind merch and says it came from the shop, so Stripe returns there',
+   /kind:'merch'/.test(shop) && /from:'shop'/.test(shop));
+ok('the shop keeps its own last-seen copy, never the community page\'s', /lastSeen\.get\('shop:'/.test(shop));
+ok('the shop offers Buy only where the server would take the money', /canBuy\s*&&\s*m\.cents\s*>=\s*100/.test(shop));
+ok('the community page no longer sells — it wears the shop card instead',
+   !/data-buy=/.test(community) && /class="shopcard/.test(community));
+/* the More strip in the product sheet: a scroller, so never a place a sheet drag starts from (0f1), and a
+   card swaps the open entry rather than stacking one — Back closes the sheet in one step. tools/sheetcheck.mjs
+   and tools/uicheck.mjs prove both in a browser; this is the copy of the rule the suite can read. */
+ok('the sheet\'s More strip is a scroller to the drag code, and a card swaps the history entry',
+   /SCROLLER='\.sizes,\.more'/.test(shop) && /mode==='swap'\)\s*history\.replaceState\(\{m:id\}/.test(shop));
+/* MAKE A REQUEST (the founder, 2026-09-13): the shop's button under "how it works" asks the fan
+   what they'd buy, posts it as action 'wish' to the same community door, and the Studio's Merch
+   store lists it. The way back to the community page is the Community crumb at the very top. */
+ok('the shop’s how-block button is Make a request, and the request posts to the community door as a wish',
+   /data-ask>Make a request<\/button>/.test(shop) && /action:'wish',fan:FAN/.test(shop));
+ok('the way back is the Community crumb in the bar, pointed at this page’s community page',
+   /class="crumb" id="crumb"/.test(shop) && /c\.href=COMMHREF/.test(shop));
+ok('the fan’s earlier orders sit at the foot, without a date', /h\+=pastOrders\(\);\s*\n\s*h\+=`<div class="foot">/.test(shop) && !/o\.qty\}`:''\} · \$\{esc\(day\(o\.at\)\)\}/.test(shop));
+ok('the strip is What fans are saying', /What fans are saying/.test(shop) && !/What the room said/.test(shop));
+ok('the promise says shipped to your door, options per item', /or shipped to your door — options vary per item\./.test(shop));
+ok('both Studios list the requests under the orders, with Done and Undo',
+   /Requests from the shop/.test(studio) && /action:'wishDone'/.test(studio) && /Requests from the shop/.test(venueStudio) && /action:'wishDone'/.test(venueStudio));
+/* THE MERCH STORE IN THE STUDIO (2026-09-13): merch left the Profile tab for a screen of
+   its own, reached from the Menu. The alias that folded `merch` into `profile` is gone,
+   the cap and the plan price come from the server, and a merch photo can be cleared. */
+ok('the Studio Menu offers Profile and, second, the Merch store',
+   /Profile<span>Manage your profile page<\/span>/.test(studio) &&
+   /Merch store<span>Items, sizes, prices and orders<\/span>/.test(studio) &&
+   studio.indexOf('Merch store<span>') > studio.indexOf('Manage your profile page') &&
+   studio.indexOf('Merch store<span>') < studio.indexOf('Settings<span>'));
+ok('merch is a real tab, not an alias of profile', !/TAB==='merch'\)TAB='profile'/.test(studio) && /if\(TAB==='merch'\)\{\n/.test(studio));
+ok('the item cap and the plan price are the server’s, never typed',
+   !/\/12<\/span>/.test(studio) && !/\/12<\/span>/.test(venueStudio) && !/\$10 a month/.test(studio) && /MERCHMAX/.test(studio) && /V\.merchMax/.test(venueStudio));
+{
+  /* The size, label, postage and price caps live in _profile.mjs and ride on merchList;
+     a Studio that typed 8 / 24 / 220 / $100 / $500 would drift the day one moved. */
+  const { MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS } = await import('../netlify/functions/_profile.mjs');
+  const admin = read('netlify/functions/admin.mjs'), vadmin = read('netlify/functions/venueadmin.mjs');
+  ok('the size, label, postage and price caps are exported once and sent by both merchLists',
+     [MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS].every((n) => Number.isInteger(n) && n > 0) &&
+     [admin, vadmin].every((f) => /maxVariants: MAX_VARIANTS, variantLen: VARIANT_LEN, maxPost: MAX_POST,\s*minCents: MIN_CENTS, maxCents: MAX_CENTS/.test(f)));
+  const typed = new RegExp(`slice\\(0,${VARIANT_LEN}\\)|length>=${MAX_VARIANTS}\\)|id="[mv]{1,2}Variants" maxlength="|\\b${MAX_POST}\\b|\\b${MAX_CENTS}\\b`);
+  ok('and neither Studio types them — each reads merchList’s figures and applies a cap only when it was sent',
+     !typed.test(studio) && !typed.test(venueStudio) &&
+     /MERCHLIM=\{maxVariants:Number\(d\.maxVariants\)\|\|0,variantLen:Number\(d\.variantLen\)\|\|0,maxPost:Number\(d\.maxPost\)\|\|0/.test(studio) &&
+     /VMLIM=\{loaded:true,maxVariants:Number\(d\.maxVariants\)\|\|0,variantLen:Number\(d\.variantLen\)\|\|0,maxPost:Number\(d\.maxPost\)\|\|0/.test(venueStudio) &&
+     /if\(max&&out\.length>=max\)break/.test(studio) && /if\(max&&out\.length>=max\)break/.test(venueStudio));
+}
+ok('both Studios can clear a merch photo and encode one as WebP first',
+   /action:'merchPhotoClear'/.test(studio) && /action:'merchPhotoClear'/.test(venueStudio) &&
+   /toDataURL\('image\/webp'/.test(studio) && /toDataURL\('image\/webp'/.test(venueStudio));
 ok('Find artists is server-gated to effectively verified artists before cards or map data are built',
    /artist\.verified\s*&&\s*planOf\(artist\)\s*!==\s*'free'/.test(read('netlify/functions/artists.mjs')));
 ok('Settings clearly says verified profiles alone appear in search, the show list and map',

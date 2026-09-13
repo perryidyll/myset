@@ -73,6 +73,14 @@
   to = "/community.html"
   status = 200
 
+# The shop is a new public page (2026-09-13); without its own rule the two-segment
+# path would fall through every slug rule and 404. `shop` is a reserved slug for
+# artists and venues alike, so /shop can never be somebody's profile.
+[[redirects]]
+  from = "/v/:slug/shop"
+  to = "/shop.html"
+  status = 200
+
 [[redirects]]
   from = "/v/:slug"
   to = "/venue.html"
@@ -81,6 +89,11 @@
 [[redirects]]
   from = "/:slug/community"
   to = "/community.html"
+  status = 200
+
+[[redirects]]
+  from = "/:slug/shop"
+  to = "/shop.html"
   status = 200
 
 [[redirects]]
@@ -277,5 +290,13 @@
     Cache-Control = "public, max-age=60, stale-while-revalidate=600"
 [[headers]]
   for = "/v/:slug/community"
+  [headers.values]
+    Cache-Control = "public, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/:slug/shop"
+  [headers.values]
+    Cache-Control = "public, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/v/:slug/shop"
   [headers.values]
     Cache-Control = "public, max-age=60, stale-while-revalidate=600"

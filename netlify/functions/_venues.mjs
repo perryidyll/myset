@@ -429,6 +429,7 @@ export function shapeVenue(p, reg) {
        just not shown (0s). Same AND-on-read as the tick below. */
     merch: venueLimits(r).merch ? p.merch : [],
     merchStored: p.merch.length,
+    merchMax: VMAX_MERCH,               // the cap the Venue Studio shows as N/max — never typed there
     // ONE money gate for a venue's page, mirrored from Stripe like show.pay (0bl)
     paymentsEnabled: !!process.env.STRIPE_SECRET_KEY && !!(p.pay && p.pay.ready),
     /* AND on read: the tick is part of Pro, so a stored flag on a free page does

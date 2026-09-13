@@ -89,7 +89,15 @@ export async function settleSplit(owner, acct, ch) {
   } catch { /* fall through: no fee found */ }
   if (!fee) return record(owner, cid, ch, { state: 'nothing', stripeFee: realFee, why: 'no fee was taken' });
 
-  const estHalf = Math.round(stripeFeeEstimate(ch.amount) / 2);   // already deducted at checkout
+  /* THE SAME BASE AS CHECKOUT. pay.mjs estimates Stripe's fee on the LINE alone —
+     never on postage — and writes that base onto the payment intent as
+     `metadata.base`, which Stripe copies onto the charge. `ch.amount` includes the
+     postage shipping rate, so estimating on it here would overstate what was
+     already deducted and short the venue by half the fee on the postage, on every
+     posted order. A charge with no base (older, or no postage) uses its amount. */
+  const metaBase = parseInt(ch.metadata && ch.metadata.base, 10);
+  const base = metaBase > 0 && metaBase <= ch.amount ? metaBase : ch.amount;
+  const estHalf = Math.round(stripeFeeEstimate(base) / 2);   // already deducted at checkout
   const realHalf = Math.round(realFee / 2);
   const room = Math.max(0, (fee.amount || 0) - (fee.amount_refunded || 0));
   const give = Math.max(0, Math.min(realHalf - estHalf, room));

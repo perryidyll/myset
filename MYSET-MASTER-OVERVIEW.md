@@ -443,7 +443,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 | Costs logged per show, on the business dashboard | 0 | 5 | 10 |
 | Set your own prices (vote packs, replay, requests) | — | yes | yes |
 | Create named setlists | — | yes | yes |
-| Sell merch on your community page | — | yes | yes |
+| Sell merch on your shop page *(`/<slug>/shop`; the community page wears the shop card — 2026-09-13)* | — | yes | yes |
 | Hide a fan's post *(sold as "hide 1–2 star reviews"; deleting for good is gone — 0060)* | — | yes | yes |
 | Data reports and the business dashboard — the filed nights, pay, band splits, costs, hours and profit on the Money tab, and the printed report *(every night is still filed on every plan)* | — | yes | yes |
 | Promote gigs in other cities | *coming soon* | *coming soon* | *coming soon* |
@@ -469,11 +469,22 @@ Deleting a name from that list is the last step of building the feature, and
 | Photos | 3 | 12 |
 | Verification tick | — | yes |
 | Community page | yes | yes |
-| Merch on the community page | — | yes |
+| Merch on the shop page (`/v/<slug>/shop`) | — | yes |
 | Receive tips | *coming soon* | *coming soon* |
 | Voting on the venue's own speaker music | *coming soon* | *coming soon* |
 
 Up to **12** merch items. Not built: `tips`, `speakerVotes`.
+
+### The shop
+
+| | Value | Where it lives |
+|---|---|---|
+| Merch items a page holds (artist / venue) | 12 / 12 | `MAX_MERCH` in `_profile.mjs`, `VMAX_MERCH` in `_venues.mjs` — the Studios show the cap the server sends |
+| Sizes or options per item | 8, each up to 24 characters | `MAX_VARIANTS`, `VARIANT_LEN` in `_profile.mjs` |
+| Flat postage per order, at most | $100 | `MAX_POST` in `_profile.mjs`; a fixed Stripe shipping rate, never part of MySet's cut |
+| Most of one item per order | 5 | the checkout clamp in `pay.mjs` (both merch branches); the shop's + stops at the same count |
+| A card sale's price runs | $1–$500 | `MIN_CENTS`, `MAX_CENTS` in `_profile.mjs`; under the floor the shop shows the price and says "ask at the table" — both merchLists send the band |
+| A fan's request to the shop ("Make a request") | up to 200 characters, 3 a day per phone, the newest 100 kept | `MAX_WISH`, `WISHES_PER_DEVICE_PER_DAY`, `MAX_WISHES` in `_wishes.mjs`; lands under Requests from the shop in both Studios' Merch screens |
 
 ### Voting numbers
 
@@ -503,21 +514,21 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 
 | | |
 |---|---|
-| Public pages | 11 — about.html, artist.html, artists.html, community.html, index.html, report.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
+| Public pages | 12 — about.html, artist.html, artists.html, community.html, index.html, report.html, shop.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
-| Shared libraries | 47 |
-| Artist Studio actions | 129 |
-| Venue Studio actions | 46 |
+| Shared libraries | 48 |
+| Artist Studio actions | 131 |
+| Venue Studio actions | 48 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / pack-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 256 (last: 0fn) |
+| Invariants | 258 (last: 0fn) |
 | Test suites | 47 |
-| Assertions | **2,693**, 0 failing, last run 2026-09-13 |
-| Decision records | 64 |
+| Assertions | **2,867**, 0 failing, last run 2026-09-13 |
+| Decision records | 65 |
 
 ### Feature flags in force
 

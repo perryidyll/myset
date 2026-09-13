@@ -7,8 +7,10 @@ let ASLUG=localStorage.getItem('myset.aslug')||'';
 let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null, PITCHES=null, CHARTS=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
 let TAB=localStorage.getItem('myset.tab')||'setlist';
-if(TAB==='merch')TAB='profile';               // the Merch tab folded into Profile on 2026-09-12
-let MERCH=null, ORDERS=null, COMM=null;   // the shop, its orders, and the community page's posts
+/* 'merch' is a real tab again — its own option under Menu since 2026-09-13 (the
+   founder's call: a store is not a profile field). It was folded into Profile on
+   2026-09-12, so a phone that saved 'merch' before then simply lands on the store. */
+let MERCH=null, MERCHMAX=0, MERCHLIM={}, MERCHERR=null, ORDERS=null, WISHES=null, COMM=null;   // the shop (and the caps the server holds it to), why it didn't load, its orders, what fans asked it for, and the community page's posts
 let SESS=null, REC=null;                  // where you're signed in, and your recovery codes
 /* The same search and the same three orders the audience has on the voting page,
    so the two screens never disagree about where a song is. 'votes' keeps the
@@ -407,6 +409,7 @@ async function load(opts){
   if(TAB==='money'){ if(!REV)jobs.push(loadRev()); if(!HIST)jobs.push(loadHist()); if(!LEDGER)jobs.push(loadLedger()); }
   if(TAB==='gigs'&&!FEAT)jobs.push(loadFeature());
   if(TAB==='profile'&&!PROF) jobs.push(loadProf());
+  if(TAB==='merch'){ if(!MERCH)jobs.push(loadMerch()); if(!ORDERS)jobs.push(loadOrders()); if(!WISHES)jobs.push(loadWishes()); if(!PAY)loadPay(); }
   /* drawPush is NOT awaited: it races serviceWorker.ready for up to four seconds,
      and a boot screen held for a worker that may never come is a boot screen
      held for nothing. It paints into #pushBox whenever it lands (PUSHVIEW). */
@@ -670,7 +673,7 @@ async function signOut(){
      the team, the card state or the history the first-run steps read. Null is the
      state every one of these is in at first paint, so the next load is a first load. */
   D=null;PLAN=null;PROF=null;TEAM=null;PAY=null;HIST=null;REV=null;LEDGER=null;EVENTS=null;PITCHES=null;
-  FEAT=null;MERCH=null;ORDERS=null;COMM=null;SESS=null;REC=null;TICK=null;PKEYS=null;
+  FEAT=null;MERCH=null;MERCHERR=null;ORDERS=null;WISHES=null;COMM=null;SESS=null;REC=null;TICK=null;PKEYS=null;
   if(window.Money)Money.forget();   // the dashboard keeps its own copy of the book (0065)
   gate();
 }
@@ -1193,9 +1196,10 @@ async function payDash(){
   else toast((d&&d.error)||'Not available yet');
 }
 
-function setTab(t){if(t==='merch')t='profile';TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
+function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
   if(t==='money'){DETAIL=null;loadRev();loadHist();loadOrders(); if(window.Money)Money.reset(); if(bizOwner())ensureMoney().catch(()=>{});}
-  if(t==='profile'){ loadProf(); loadComm(); loadPlan(); loadMerch(); loadOrders(); }
+  if(t==='profile'){ loadProf(); loadComm(); loadPlan(); }
+  if(t==='merch'){ loadMerch(); loadOrders(); loadWishes(); loadPlan(); if(!PAY)loadPay(); }
   if(t==='setlist') loadPlan();
   /* drawPush paints into a div that render() has just created, and switching INTO
      the tab never called it — only a reload that landed here did. So the panel sat
@@ -2060,13 +2064,21 @@ function render(){
         <button class="act" data-act="mdn" data-id="${esc(m.mid)}" ${i===P.media.length-1?'disabled style="opacity:.3"':''}>↓</button>
         <button class="act warn" data-act="mrm" data-id="${esc(m.mid)}">✕</button>
       </div>`).join('')||'<div class="row muted">Nothing yet. Paste a link above.</div>'}</div>
-      ${merchSection()}
       <div class="wrap" style="margin-top:14px"><button class="big" onclick="saveProfile()">Save profile</button></div>
       ${fbCard()}
       ${commSection()}
       ${presskitCard()}
       ${brandingCard()}`;
     }
+  }
+
+  if(TAB==='merch'){
+    /* THE MERCH STORE — its own screen under Menu since 2026-09-13. Items, sizes,
+       prices and the orders live here and feed the public shop page. The editor
+       sits under one lock so a free artist sees exactly what paying gets them (0bx);
+       the orders never do — an order already paid for is theirs to hand over on any
+       plan. */
+    body=merchSection();
   }
 
   if(TAB==='settings'){
@@ -2404,9 +2416,9 @@ function render(){
   if(lNow)lNow.addEventListener('scroll',()=>{PANEL_SCROLL.setlist=lNow.scrollTop},{passive:true});
   restoreScroll();requestAnimationFrame(()=>requestAnimationFrame(restoreScroll));
 }
-/* THE BOTTOM TAB BAR. Five tabs; Profile and Settings live under Menu, but their
-   TAB values are unchanged so ?tab=, the saved tab and the merch→profile alias all
-   still work. The Live tab is red (test/copy.mjs pins the selector). */
+/* THE BOTTOM TAB BAR. Five tabs; Profile, the Merch store and Settings live under
+   Menu, but their TAB values are unchanged so ?tab= and the saved tab still work.
+   The Live tab is red (test/copy.mjs pins the selector). */
 const TABICON={
   live:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M6.3 6.3a8 8 0 0 0 0 11.4M17.7 6.3a8 8 0 0 1 0 11.4M3.5 3.5a12 12 0 0 0 0 17M20.5 3.5a12 12 0 0 1 0 17"/></svg>',
   setlist:'<svg viewBox="0 0 24 24"><path d="M4 6h11M4 12h11M4 18h7"/><circle cx="18" cy="16.5" r="2.6"/><path d="M20.6 16.5V8.2l-3.4 1"/></svg>',
@@ -2414,7 +2426,7 @@ const TABICON={
   money:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="3"/><path d="M3 10.5h18M7 15h3"/></svg>',
   menu:'<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'};
 function tabBar(){
-  const on=t=>t==='menu'?(TAB==='profile'||TAB==='settings'):TAB===t;
+  const on=t=>t==='menu'?(TAB==='profile'||TAB==='merch'||TAB==='settings'):TAB===t;
   return `<nav class="tabbar" aria-label="Studio"><div class="in">
     <button data-tab-live class="${TAB==='live'?'on':''}" onclick="setTab('live')" aria-current="${TAB==='live'?'page':'false'}">${TABICON.live}Live</button>
     ${[['setlist','Setlist'],['gigs','Gigs'],['money','Money'],['menu','Menu']].map(([t,l])=>
@@ -2427,7 +2439,10 @@ function openMenu(){
   openSheet(`<h3>Menu</h3>
     <button class="menurow" onclick="closeSheet();setTab('profile')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
-      <div class="m">Profile<span>Manage your profile page + merch</span></div><span class="chev">›</span></button>
+      <div class="m">Profile<span>Manage your profile page</span></div><span class="chev">›</span></button>
+    <button class="menurow" onclick="closeSheet();setTab('merch')">
+      <svg viewBox="0 0 24 24"><path d="M3.5 4.5h7.5l9.5 9.5-6.5 6.5L3.5 11z"/><circle cx="7.6" cy="8.6" r="1.4"/></svg>
+      <div class="m">Merch store<span>Items, sizes, prices and orders</span></div><span class="chev">›</span></button>
     <button class="menurow" onclick="closeSheet();setTab('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>
       <div class="m">Settings<span>Prices, votes, codes, who can sign in</span></div><span class="chev">›</span></button>
@@ -3028,6 +3043,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='mhero') media('mediaHero',id);
   if(b.dataset.act==='rmmail') removeTeam(id);
   if(b.dataset.act==='photoclear'){ e.preventDefault(); clearPhoto(id); }
+  if(b.dataset.act==='mcvout') mcVarOut(id);
   if(b.dataset.act==='promotoggle') togglePromo(id);
   if(b.dataset.act==='qrbig'){ e.preventDefault(); qrBig(id); }
   if(b.dataset.act==='askadd') askDo('askAccept',id);
@@ -3339,31 +3355,63 @@ function openStudioInstall(){
    ledger; a buyer's name and address are fetched when an order is opened and
    never kept here. The community page is free on every plan — moderating it is
    running your page. */
-async function loadMerch(force){ if(MERCH&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchList'}),quiet:true}); if(d&&d.ok){MERCH=d.merch; if(TAB==='profile'&&D&&!typing())render();} }
-async function loadOrders(force){ if(ORDERS&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'orderList'}),quiet:true}); if(d&&d.ok){ORDERS=d.orders; if((TAB==='profile'||TAB==='money')&&D&&!typing())render();} }
+async function loadMerch(force){ if(MERCH&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchList'}),quiet:true});
+  if(d&&d.ok){MERCH=d.merch; MERCHERR=null; MERCHMAX=Number(d.max)||0;
+    MERCHLIM={maxVariants:Number(d.maxVariants)||0,variantLen:Number(d.variantLen)||0,maxPost:Number(d.maxPost)||0,minCents:Number(d.minCents)||0,maxCents:Number(d.maxCents)||0};}
+  /* A failed read (bar wifi, or the server said no) used to leave the "Loading…"
+     row up for as long as anyone looked at it. Now the row says what happened and
+     offers a retry; the next visit to the tab retries on its own (MERCH is still null). */
+  else MERCHERR=(d&&d.error)||'Couldn’t load your items';
+  if(TAB==='merch'&&D&&!typing())render(); }
+function retryMerch(){ MERCHERR=null; MERCH=null; render(); loadMerch(true); }
+async function loadOrders(force){ if(ORDERS&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'orderList'}),quiet:true}); if(d&&d.ok){ORDERS=d.orders; if((TAB==='merch'||TAB==='money')&&D&&!typing())render();} }
+async function loadWishes(force){ if(WISHES&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'wishList'}),quiet:true}); if(d&&d.ok){WISHES=d.wishes; if(TAB==='merch'&&D&&!typing())render();} }
 /* A late reply must not repaint over a field somebody is typing into — render()
    replaces #app wholesale. The data is drawn on the next render either way. */
 const typing=()=>{const a=document.activeElement;return !!(a&&a.closest&&a.closest('#app')&&a.matches('input,textarea'));};
 async function loadComm(force){ if(COMM&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'postList'}),quiet:true}); if(d&&d.ok){COMM=d.posts; if(TAB==='profile'&&D)render();} }
 const money=c=>'$'+(c/100).toFixed(c%100?2:0);
-/* Merch lives on the Profile tab, under Videos & music — the user folded the
-   seventh tab away on 2026-09-12 because seven did not fit a phone. Same section,
-   same lock, same orders list; only the tab is gone. */
+/* THE MERCH STORE SCREEN. A link to the live shop page, the items under the plan
+   lock, then the orders. The cap and the plan's price are read from what the
+   server sent (merchList's `max`, planGet's `plans.plus`) — never typed here, so
+   a change in _profile.mjs or _plan.mjs cannot leave this screen lying. */
 function merchSection(){
-  const items=MERCH||[];
-  const list=`<div class="sec"><span class="kick">Your merch</span><span class="kick">${items.length}/12</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Shows on your community page. Fans pay you directly through Stripe — MySet takes your plan’s cut, Stripe takes its fee from your side. An item with a link sells wherever that link goes instead.</p>
+  const s=D.show, items=MERCH||[];
+  const shopHref=s.slug?'/'+esc(s.slug)+'/shop':'/shop.html';
+  const plus=(PLAN&&PLAN.plans&&PLAN.plans.plus)||null;
+  const why='Selling merch is part of '+(plus&&plus.label?plus.label:'Bar Star')+(plus&&plus.price?' — '+money$(plus.price)+' a month':'')+'. Anything you add stays saved.';
+  /* "S / <s>M</s> / L" — a struck size is sold out; the row says so without a tap. */
+  const sizes=m=>{const v=m.variants||[]; return v.length?' · '+v.map(x=>x.out?'<s>'+esc(x.label)+'</s>':esc(x.label)).join(' / '):'';};
+  const list=`<div class="sec"><span class="kick">Your items</span><span class="kick">${items.length}${MERCHMAX?'/'+MERCHMAX:''}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Sells from your shop page. Fans pay you directly through Stripe — MySet takes your plan’s cut on the price, Stripe takes its fee from your side. An item with a link sells wherever that link goes instead.</p>
     ${!D.paymentsEnabled?`<div class="row muted">Fans can’t pay by card until Stripe is set up on the <b>Money</b> tab — items with a link still sell, and everything shows.</div>`:''}
-    <div class="list">${items.map(m=>`<div class="row">
+    <div class="list">${MERCH===null?(MERCHERR?`<div class="row muted" onclick="retryMerch()" style="cursor:pointer"><div class="m"><div class="t">${esc(MERCHERR)}</div><div class="s">Tap to try again</div></div></div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>'):items.map(m=>`<div class="row"${m.on===false||m.out?' style="opacity:.6"':''}>
         <div class="slotmini" style="background-image:url('${esc(m.img||'')}')">${m.img?'':'＋'}</div>
-        <div class="m"><div class="t">${esc(m.title)}${m.on===false?' <span class="s">· off</span>':''}</div>
-          <div class="s">${m.cents?money(m.cents):'No price'} · ${m.ship==='ship'?'Posted':'Pickup at the show'}${m.link?' · link':''}</div></div>
+        <div class="m"><div class="t">${esc(m.title)}</div>
+          <div class="s">${m.cents?money(m.cents):'No price'} · ${m.ship==='ship'?'Posted'+(m.post>0?' +'+money(m.post):''):'Pickup at the show'}${m.link?' · link':''}${m.out?' · <b style="color:var(--accent)">Sold out</b>':''}${m.on===false?' · Off':''}${sizes(m)}</div></div>
         <button class="act" onclick="openMerch('${esc(m.id)}')">Edit</button>
         <button class="act warn" onclick="rmMerch('${esc(m.id)}')">✕</button></div>`).join('')||'<div class="row muted">Nothing yet. Add a tee, a print, a sticker.</div>'}</div>
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openMerch('')">+ Add an item</button></div>`;
-  return `${lock('merch', list, 'Merch on your page is part of Bar Star — $10 a month. Anything you add stays saved.')}
-    ${ordersSection()}`;
+  return `<div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${shopHref}" style="justify-content:center">See your shop ↗</a></div>
+    ${lock('merch', list, why)}
+    ${ordersSection()}
+    ${wishesSection()}`;
 }
+/* WHAT FANS ASKED FOR — the shop page's "Make a request" (the founder, 2026-09-13; _wishes.mjs).
+   A sentence each, in the fan's words, newest first, the open ones on top. Nothing to reply to
+   and nobody to reply to: the fan left no way back on purpose. Done means "made it" or "won't" —
+   the row dims and stays, so a month on the question "did anyone ask for this?" still has its answer. */
+function wishesSection(){
+  const w=WISHES||[], open=w.filter(x=>!x.done);
+  return `<div class="sec"><span class="kick">Requests from the shop</span><span class="kick">${WISHES===null?'':open.length?open.length+' new':w.length}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">What fans would buy that isn’t on the table — sent from the <b>Make a request</b> button on your shop page. Make it, or don’t; tap Done either way.</p>
+    <div class="list">${WISHES===null?'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>':w.slice(0,60).map(x=>`<div class="row ${x.done?'muted':''}">
+      <div class="m"><div class="t" style="white-space:normal">${esc(x.text)}</div>
+        <div class="s">${x.name?esc(x.name)+' · ':''}${x.itemTitle?'about '+esc(x.itemTitle)+' · ':''}${when(x.at)}${x.done?' · Done':''}</div></div>
+      <button class="act ${x.done?'':'pri'}" onclick="wishDone('${esc(x.id)}',${x.done?'false':'true'})">${x.done?'Undo':'Done'}</button></div>`).join('')
+      ||'<div class="row muted">Nothing asked for yet. Requests land here the moment a fan sends one.</div>'}</div>`;
+}
+async function wishDone(id,done){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'wishDone',id,done})}); if(d&&d.ok){WISHES=d.wishes;render();} }
 /* ---------- THE BOOKS -------------------------------------------------------
    Two cards. "Your earnings" is every artist's and every venue's; "MySet's books"
    is the founder's only and is a real P&L — what came in, minus what Perry types
@@ -3566,29 +3614,86 @@ async function saveCosts(month){
   closeSheet(); BOOKS=null; await loadBooks(); toast('Saved');
 }
 
+/* THE ORDERS. The pickup code comes first and big: it is what the buyer reads out
+   at the table, so it has to be readable across one. It is a lookup key minted
+   from the session id — never a secret, never proof of payment; the button under
+   it is the only fulfilment. The verb on that button is the thing the artist
+   actually does: hands it over, or posts it. */
 function ordersSection(){
   const o=ORDERS||[]; const open=o.filter(x=>x.status!=='done');
   return `<div class="sec"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
-    <div class="list">${o.slice(0,40).map(x=>`<div class="row ${x.status==='done'?'muted':''}">
-      <div class="m"><div class="t">${esc(x.title)}${x.qty>1?' × '+x.qty:''} · $${Number(x.amount||0).toFixed(2)}</div>
-        <div class="s">${x.ship==='ship'?'Posted':'Pickup'} · ${when(x.at)}${x.status==='done'?' · done':''}</div></div>
-      <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
-      <button class="act" onclick="orderDone('${esc(x.sid)}',${x.status==='done'?'false':'true'})">${x.status==='done'?'Undo':'Done'}</button></div>`).join('')
+    <div class="list">${o.slice(0,40).map(x=>{const done=x.status==='done', posted=x.ship==='ship', verb=posted?'Posted':'Handed over';
+      return `<div class="row ${done?'muted':''}" style="display:flex;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:12px;flex:1 1 100%;min-width:0">
+        ${x.code?`<b style="font-size:24px;font-weight:800;letter-spacing:.08em;font-variant-numeric:tabular-nums;flex:0 0 auto;color:var(--ink)">${esc(x.code)}</b>`:''}
+        <div class="m"><div class="t">${esc(x.title)}${x.variant?' ('+esc(x.variant)+')':''}${x.qty>1?' × '+x.qty:''}&nbsp;·&nbsp;$${Number(x.amount||0).toFixed(2)}</div>
+          <div class="s">${posted?'To post':'Pickup'}${x.post>0?' · '+money(x.post)+' postage':''} · ${when(x.at)}${done?' · '+verb:''}</div></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
+        <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
+        <button class="act ${done?'':'pri'}" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button></div></div>`;}).join('')
       ||'<div class="row muted">No orders yet. They land here the moment somebody pays.</div>'}</div>`;
 }
-let mcShip='pickup', mcOn=true;
+/* THE ITEM EDITOR. Sizes are typed as one comma-separated line and become
+   `variants` — each with its own sold-out flag, toggled by the chips under the
+   field once the item is saved. Postage is a flat figure per order that Stripe
+   adds on top of the price; MySet's fee is on the price alone, so the field says
+   so. The server caps and de-duplicates everything again (normMerch); the caps it
+   works to (merchList's maxVariants / variantLen / maxPost) are read from it, never
+   typed here, and applied only when it sent them. Whatever it trimmed on the way in
+   is said out loud (merchTrimmed) rather than quietly re-drawn. */
+let mcShip='pickup', mcOn=true, mcOut=false, mcVar=[];
+const mcChips=()=>mcVar.map((v,i)=>`<button type="button" class="chip ${v.out?'':'on'}"${v.out?' style="background:var(--surface-2)"':''} data-act="mcvout" data-id="${i}">${esc(v.label)}${v.out?' · out':''}</button>`).join('');
+function mcVariants(){
+  const len=MERCHLIM.variantLen||0, max=MERCHLIM.maxVariants||0;
+  const raw=((document.getElementById('mcVariants')||{}).value||'').split(',').map(s=>{s=s.replace(/\s+/g,' ').trim(); return len?s.slice(0,len):s;}).filter(Boolean);
+  const seen=new Set(), out=[];
+  for(const label of raw){ const k=label.toLowerCase(); if(seen.has(k))continue; seen.add(k);
+    const prev=mcVar.find(v=>v.label.toLowerCase()===k); out.push({label,out:!!(prev&&prev.out)}); if(max&&out.length>=max)break; }
+  return out;
+}
+/* What the server kept against what was sent: fewer sizes, a shortened label, or a
+   postage figure held to its cap. One line naming the cap when it is known. */
+function merchTrimmed(sent,kept){
+  if(!kept)return '';
+  const sv=sent.variants||[], kv=kept.variants||[], max=MERCHLIM.maxVariants, len=MERCHLIM.variantLen, mp=MERCHLIM.maxPost;
+  if(kv.length<sv.length) return max?'Up to '+max+' sizes — the rest were dropped':'Some sizes were dropped';
+  if(kv.some((v,i)=>sv[i]&&v.label!==sv[i].label)) return len?'Sizes are up to '+len+' characters — one was shortened':'A size name was shortened';
+  if(sent.ship==='ship'&&(sent.post||0)>(kept.post||0)) return mp?'Postage tops out at '+money(mp)+' — set to that':'Postage was lowered to the most allowed';
+  if((sent.cents||0)!==(kept.cents||0)) return kept.cents?'Price tops out at '+money(kept.cents)+' — set to that':'Price cleared — it can’t be below zero';
+  if(MERCHLIM.minCents&&kept.cents>0&&kept.cents<MERCHLIM.minCents) return 'Under '+money(MERCHLIM.minCents)+' — the shop shows the price but says “ask at the table” instead of Buy';
+  return '';
+}
+/* The field helpers name a bound only when the server has sent it (MERCHLIM); a
+   bound it has not sent is not stated rather than guessed. */
+function mcPriceHelp(){ const L=MERCHLIM;
+  return 'Blank means “ask at the show”.'+(L.minCents&&L.maxCents?' Card sales run '+money(L.minCents)+'–'+money(L.maxCents)+'; under '+money(L.minCents)+' the shop says “ask at the table”.':'');}
+function mcVarHelp(){ const L=MERCHLIM;
+  return 'Leave blank if there’s nothing to choose. Commas between them.'+(L.maxVariants?' Up to '+L.maxVariants+(L.variantLen?', '+L.variantLen+' characters each':'')+'.':'');}
+function mcPostHelp(){ const L=MERCHLIM;
+  return 'Added on top at checkout; MySet’s fee is on the price alone.'+(L.maxPost?' Up to '+money(L.maxPost)+' an order.':'');}
 function openMerch(id){
-  const m=(MERCH||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',ship:'pickup',on:true,img:''};
-  mcShip=m.ship||'pickup'; mcOn=m.on!==false;
+  const m=(MERCH||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',ship:'pickup',on:true,img:'',variants:[],out:false,post:0};
+  mcShip=m.ship||'pickup'; mcOn=m.on!==false; mcOut=m.out===true;
+  mcVar=(m.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));
   openSheet(`<h3>${id?'Edit item':'Add an item'}</h3>
     ${id?`<div class="slots" style="margin:6px 0 10px">${slotBox(id,m.img,'sq')}</div>`:'<p class="lede">Save it first, then add a picture.</p>'}
     <div class="field"><label>Name</label><input class="inp" id="mcTitle" maxlength="60" value="${esc(m.title)}" placeholder="Tour tee"></div>
-    <div class="field"><label>A line about it</label><input class="inp" id="mcBlurb" maxlength="160" value="${esc(m.blurb)}" placeholder="Black, all sizes"></div>
-    <div class="field"><label>Price (USD) — blank for “ask at the show”</label><input class="inp" id="mcPrice" inputmode="decimal" value="${m.cents?(m.cents/100):''}" placeholder="25"></div>
+    <div class="field"><label>A line about it</label><input class="inp" id="mcBlurb" maxlength="160" value="${esc(m.blurb)}" placeholder="Black, heavy cotton"></div>
+    <div class="field"><label>Price (USD)</label><input class="inp" id="mcPrice" inputmode="decimal" value="${m.cents?(m.cents/100):''}" placeholder="25">
+      <p class="muted" style="font-size:12px;margin:7px 0 0">${mcPriceHelp()}</p></div>
+    <div class="field"><label>Sizes / options</label><input class="inp" id="mcVariants"${MERCHLIM.maxVariants&&MERCHLIM.variantLen?' maxlength="'+(MERCHLIM.maxVariants*(MERCHLIM.variantLen+2))+'"':''} value="${esc(mcVar.map(v=>v.label).join(', '))}" placeholder="S, M, L, XL" autocomplete="off">
+      <p class="muted" style="font-size:12px;margin:7px 0 0">${mcVarHelp()}</p>
+      ${id&&mcVar.length?`<p class="muted" style="font-size:12px;margin:10px 0 7px">Tap a size to mark it sold out — it saves straight away.</p>
+      <div class="chips" id="mcVarChips" data-item="${esc(id)}">${mcChips()}</div>`:''}</div>
     <div class="field"><label>Or a link to where it sells (optional)</label><input class="inp" id="mcLink" value="${esc(m.link)}" placeholder="https://…"></div>
     <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Posted asks for an address at checkout</div></div>
-      <div class="tog"><button id="mcPick" class="${m.ship!=='ship'?'on':''}" onclick="mcShip='pickup';this.classList.add('on');document.getElementById('mcPost').classList.remove('on')">Pickup</button>
-      <button id="mcPost" class="${m.ship==='ship'?'on':''}" onclick="mcShip='ship';this.classList.add('on');document.getElementById('mcPick').classList.remove('on')">Posted</button></div></div>
+      <div class="tog"><button id="mcPick" class="${m.ship!=='ship'?'on':''}" onclick="mcShip='pickup';this.classList.add('on');document.getElementById('mcPost').classList.remove('on');document.getElementById('mcPostWrap').hidden=true">Pickup</button>
+      <button id="mcPost" class="${m.ship==='ship'?'on':''}" onclick="mcShip='ship';this.classList.add('on');document.getElementById('mcPick').classList.remove('on');document.getElementById('mcPostWrap').hidden=false">Posted</button></div></div>
+    <div class="field" id="mcPostWrap"${m.ship==='ship'?'':' hidden'}><label>Postage per order (USD)</label><input class="inp" id="mcPostage" inputmode="decimal" value="${m.post?(m.post/100):''}" placeholder="6">
+      <p class="muted" style="font-size:12px;margin:7px 0 0">${mcPostHelp()}</p></div>
+    <div class="row"><div class="m"><div class="t">Stock</div><div class="s">Sold out stays on the page, greyed, with no Buy</div></div>
+      <div class="tog"><button id="mcIn" class="${m.out!==true?'on':''}" onclick="mcOut=false;this.classList.add('on');document.getElementById('mcSold').classList.remove('on')">In stock</button>
+      <button id="mcSold" class="${m.out===true?'on':''}" onclick="mcOut=true;this.classList.add('on');document.getElementById('mcIn').classList.remove('on')">Sold out</button></div></div>
     <div class="row"><div class="m"><div class="t">On the page</div></div>
       <div class="tog"><button id="mcOn" class="${m.on!==false?'on':''}" onclick="mcOn=true;this.classList.add('on');document.getElementById('mcOff').classList.remove('on')">On</button>
       <button id="mcOff" class="${m.on===false?'on':''}" onclick="mcOn=false;this.classList.add('on');document.getElementById('mcOn').classList.remove('on')">Off</button></div></div>
@@ -3598,10 +3703,31 @@ function openMerch(id){
 async function saveMerch(id){
   const v=k=>(document.getElementById(k)||{}).value||'';
   const cents=Math.round(parseFloat(v('mcPrice'))*100)||0;
-  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchSave',item:{id:id||undefined,title:v('mcTitle'),blurb:v('mcBlurb'),cents,link:v('mcLink'),ship:mcShip,on:mcOn}})});
+  /* the postage figure is sent even while Pickup is chosen, so switching back to
+     Posted later finds it where it was; the server ignores it for a pickup item */
+  const post=Math.round(parseFloat(v('mcPostage'))*100)||0;
+  const item={id:id||undefined,title:v('mcTitle'),blurb:v('mcBlurb'),cents,link:v('mcLink'),ship:mcShip,on:mcOn,out:mcOut,post,variants:mcVariants()};
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchSave',item})});
   if(!d.ok){toast(d.error||'Couldn’t save');return;}
-  MERCH=d.merch; closeSheet(); render(); toast('Saved');
+  MERCH=d.merch; closeSheet(); render();
+  const trimmed=merchTrimmed(item,(MERCH||[]).find(x=>x.id===(id||d.id)));
+  toast(trimmed?'Saved — '+trimmed:'Saved');
   if(!id) setTimeout(()=>openMerch(d.id),350);       // straight into the picture slot
+}
+/* One size sold out, one tap: flips the flag, repaints the chips, and saves just
+   the sizes (merchSave merges over the stored row), so the rest of the sheet —
+   half-typed or not — is left alone. */
+async function mcVarOut(i){
+  const box=document.getElementById('mcVarChips'); if(!box)return;
+  const id=box.getAttribute('data-item'); i=parseInt(i,10);
+  if(!id||!mcVar[i])return;
+  mcVar[i].out=!mcVar[i].out; box.innerHTML=mcChips();
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchSave',item:{id,variants:mcVariants()}})});
+  if(!d.ok){ mcVar[i].out=!mcVar[i].out; box.innerHTML=mcChips(); toast(d.error||'Couldn’t save'); return; }
+  const was=mcVar[i].out;
+  MERCH=d.merch; const it=(MERCH||[]).find(x=>x.id===id);
+  if(it) mcVar=(it.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));   // what the server kept, in its order
+  box.innerHTML=mcChips(); render(); toast(was?'Marked sold out':'Back in stock');
 }
 async function rmMerch(id){
   if(!confirm('Remove this item?'))return;
@@ -3614,7 +3740,7 @@ async function orderDetail(sid){
   if(!d.ok){toast(d.error||'Couldn’t fetch that');return;}
   const o=d.order, b=d.buyer||{}, sh=d.shipping;
   const addr=sh?[sh.name,sh.line1,sh.line2,sh.city,sh.state,sh.postal,sh.country].filter(Boolean).join(', '):'';
-  openSheet(`<h3>${esc(o.title)}${o.qty>1?' × '+o.qty:''}</h3><p class="lede">$${Number(o.amount||0).toFixed(2)} · ${when(o.at)}</p>
+  openSheet(`<h3>${esc(o.title)}${o.variant?' ('+esc(o.variant)+')':''}${o.qty>1?' × '+o.qty:''}</h3><p class="lede">${o.code?'Code <b>'+esc(o.code)+'</b> · ':''}$${Number(o.amount||0).toFixed(2)}${o.post>0?' incl. '+money(o.post)+' postage':''} · ${when(o.at)}</p>
     <div class="list" style="margin-top:12px">
       <div class="row"><div class="m"><div class="t">${esc(b.name||'Name not given')}</div><div class="s">${esc(b.email||'')}</div></div></div>
       ${sh?`<div class="row"><div class="m"><div class="t">Post to</div><div class="s">${esc(addr)}</div></div>
@@ -3851,7 +3977,7 @@ function cardTrouble(s){
     <p style="margin-top:8px">Everything keeps working until ${daystamp(ends)}.</p></div>`;
   if(days>=0) return `<div class="paybar">
     <b>Your card still hasn’t gone through</b>
-    <p>If it isn’t sorted by tomorrow your page goes back to Hobbyist. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} shows a month, merch comes off your community page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
+    <p>If it isn’t sorted by tomorrow your page goes back to Hobbyist. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} shows a month, merch comes off your shop page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
     <button class="big" style="margin-top:12px" ${fix}>Update my card</button></div>`;
   return `<div class="paybar">
     <b>You’re on Hobbyist for now</b>
@@ -4285,18 +4411,24 @@ async function confirmCrop(){
     const s=base*zoom;
     // map the visible frame back onto the source pixels
     const sx=-ox/s, sy=-oy/s, sw=W/s, sh=H/s;
-    const outW=slot==='cover'?1200:640;   // 1200 is plenty on a phone; half the bytes of 1400
+    /* a merch item's picture: the slot IS the item id. It is drawn ~170px wide on
+       a two-up shop grid, so 480px is plenty and the bytes matter more than the
+       pixels — a shop page is a dozen of these on bar wifi. */
+    const merch=/^m[a-z0-9]{6}$/.test(slot);
+    const outW=slot==='cover'?1200:merch?480:640;   // 1200 is plenty on a phone; half the bytes of 1400
     const outH=Math.round(outW*H/W);
     const c=document.createElement('canvas'); c.width=outW; c.height=outH;
     c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
     let data=null;
-    for(const q of [0.84,0.72,0.6,0.46]){
-      const d=c.toDataURL('image/jpeg',q);
-      if(d.length*0.75<450*1024){ data=d; break; }
+    if(merch) data=encodeMerch(c);
+    else{
+      for(const q of [0.84,0.72,0.6,0.46]){
+        const d=c.toDataURL('image/jpeg',q);
+        if(d.length*0.75<450*1024){ data=d; break; }
+      }
+      if(!data) data=c.toDataURL('image/jpeg',0.4);
     }
-    if(!data) data=c.toDataURL('image/jpeg',0.4);
-    /* a merch item's picture: the slot IS the item id */
-    if(/^m[a-z0-9]{6}$/.test(slot)){
+    if(merch){
       const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhoto',id:slot,data})});
       if(!r.ok){toast(r.error||'Could not save that photo');return;}
       cancelCrop(); MERCH=r.merch; render(); toast('Photo added'); return;
@@ -4307,12 +4439,37 @@ async function confirmCrop(){
   }catch(e){ toast('Could not save that photo'); }
   finally{ WRITING=false; }
 }
+/* A merch picture, encoded small: WebP first — the same picture at roughly half
+   the JPEG bytes — falling to JPEG where the browser cannot write WebP (Safari
+   hands back a PNG instead of refusing, hence the prefix check). Each format steps
+   its quality down until the file fits ~60 KB; the last step wins if nothing does. */
+function encodeMerch(c){
+  const cap=60*1024, fits=d=>d.length*0.75<cap;
+  for(const q of [0.84,0.74,0.64,0.54]){
+    const w=c.toDataURL('image/webp',q);
+    if(!w.startsWith('data:image/webp')) break;
+    if(fits(w)) return w;
+  }
+  let last=null;
+  for(const q of [0.84,0.74,0.64,0.54]){ last=c.toDataURL('image/jpeg',q); if(fits(last)) return last; }
+  return last;
+}
 async function uploadPhoto(slot,file){
   if(!file)return;
   if(!/^image\//.test(file.type)){toast('That needs to be a photo');return;}
   await openCrop(slot,file);
 }
 async function clearPhoto(slot){
+  /* a merch item's picture is cleared by item id — photoClear knows only the
+     profile's named slots and refuses anything else, so this ✕ used to do nothing */
+  if(/^m[a-z0-9]{6}$/.test(slot)){
+    const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhotoClear',id:slot})});
+    if(!d.ok){toast(d.error||'Failed');return;}
+    MERCH=d.merch; render(); toast('Photo removed');
+    const el=document.querySelector(`#sheet .slot[data-slot="${slot}"]`);   // the open editor's slot, without losing what's typed
+    if(el) el.outerHTML=slotBox(slot,'','sq');
+    return;
+  }
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'photoClear',slot})});
   if(!d.ok){toast(d.error||'Failed');return;}
   PROF=null; await loadProf(true); render(); toast('Photo removed');

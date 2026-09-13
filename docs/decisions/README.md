@@ -73,6 +73,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) | the whole library is live on every plan, Bar Star holds 200 songs, the cards say what the page does | 2026-09-13 | plans | decided | perry |
 | [0062](0062-the-name-is-a-first-name-or-a-band-name-plus-an-op.md) | The name is a first name or a band name plus an optional last name, the registry follows the profile, and the top video leads a drifting strip | 2026-09-13 | ui | decided | perry |
 | [0063](0063-the-current-song-has-to-be-ended-before-another-ca.md) | The current song has to be ended before another can start — every ▶ in the Studio asks "End current song?" while one is playing | 2026-09-13 | ui | decided | perry |
+| [0064](0064-postage-is-a-shipping-rate-off-the-cut-the-pickup.md) | Merch has its own page at /<slug>/shop, entered from a ringed card above the tip button; postage is a shipping rate off the cut, the pickup code is a lookup key, sold out is not off, and the owner id is kept whole | 2026-09-13 | money | decided | the founder |
 | [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md) | the paid plans get a business dashboard — one document per artist, keyed by the calendar night, profit before app fees, the whole evening in the hourly rate | 2026-09-13 | plans | decided | perry |
 
 ## By area
@@ -85,7 +86,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) · [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md)
 
-**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md) · [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md)
+**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md) · [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md) · [0064](0064-postage-is-a-shipping-rate-off-the-cut-the-pickup.md)
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md)
 

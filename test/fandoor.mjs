@@ -67,6 +67,7 @@ console.log('THE PAGES ASK THE DOOR');
     ['artist',    ['what=profile', 'what=events']],
     ['vote',      ['what=board', 'what=me', 'what=events']],
     ['community', ['what=community']],
+    ['shop',      ['what=community']],
     ['venue',     ['what=venue']],
   ]) {
     const src = readFileSync(`public/${page}.html`, 'utf8');

@@ -35,6 +35,7 @@ import { readPosts, readLikes, shapePosts, addPost, likePost, reportPost, editPo
          removeOwnPost, PER_DEVICE_PER_DAY, DAY, EDIT_WINDOW } from './_community.mjs';
 import { decodeVideoDataUrl, putClip, notePending, newClipId,
          MAX_SECONDS, MAX_VIDEO_BYTES } from './_video.mjs';
+import { addWish, MAX_WISH } from './_wishes.mjs';
 import { decodeDataUrl, putImage } from './_img.mjs';
 import { canTakeMoney } from './_pay.mjs';
 import { venueBySlug, getVenueProfile, shapeVenue } from './_venues.mjs';
@@ -44,7 +45,8 @@ import { venueBySlug, getVenueProfile, shapeVenue } from './_venues.mjs';
    GET  ?a=<artist slug>  or  ?v=<venue slug>   [&fan=<device id>]
         → the owner, their merch, the feed, the shows a fan can pick, and which
           posts this device already liked
-   POST { action: 'post' | 'like' | 'unlike' | 'report', fan, ... }
+   POST { action: 'post' | 'like' | 'unlike' | 'report' | 'wish', fan, ... }
+        ('wish' is the shop page's Make a request — see _wishes.mjs)
 
    Reads, for an artist page: the registry (twice — once to resolve the slug, once
    for the plan and the tick), the profile, the show (for the money gate and the
@@ -98,13 +100,13 @@ const main = async (req) => {
                   posts: shapePosts(posts, likes, fan, o.owner), shows,
                   limits: { text: 500, photos: 3, perDay: PER_DEVICE_PER_DAY,
                             clipSeconds: MAX_SECONDS, clipBytes: MAX_VIDEO_BYTES,
-                            editHours: Math.round(EDIT_WINDOW / 3600e3) } });
+                            editHours: Math.round(EDIT_WINDOW / 3600e3), wish: MAX_WISH } });
   }
 
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
-  if (ownArtistPage && ['post', 'clip'].includes(body.action))
+  if (ownArtistPage && ['post', 'clip', 'wish'].includes(body.action))
     return bad('Artists can’t post on their own community page.', 403);
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
@@ -171,6 +173,13 @@ const main = async (req) => {
     return json({ ok: true, posts: shapePosts(posts, likes, fan, o.owner) });
   }
 
+  /* MAKE A REQUEST (the shop page). A sentence for the owner's Studio, nothing back
+     to the fan but a thank-you; the limits live inside addWish's CAS. */
+  if (body.action === 'wish') {
+    const r = await addWish(o.owner, { fan, ip: clientIp(req), name: body.name, text: body.text, item: body.item });
+    if (!r.ok) return bad(r.error, /today/.test(r.error) ? 429 : 400);
+    return json({ ok: true, id: r.id });
+  }
   if (body.action === 'like' || body.action === 'unlike') {
     const r = await likePost(o.owner, fan, String(body.id || '').slice(0, 12), body.action === 'like');
     return r.ok ? json(r) : bad(r.error, 404);

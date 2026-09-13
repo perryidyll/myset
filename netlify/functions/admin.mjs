@@ -16,7 +16,8 @@ import { readArtists, mutateArtists } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
 import { readSubs, saveSub, dropSub, notify } from './_push.mjs';
-import { mutateProfile, getProfile, shapeMedia, parseMedia, MAX_PHOTOS, MAX_MERCH, MERCH_ID, normMerch } from './_profile.mjs';
+import { mutateProfile, getProfile, shapeMedia, parseMedia, MAX_PHOTOS, MAX_MERCH, MERCH_ID, normMerch,
+         MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS } from './_profile.mjs';
 import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
@@ -443,7 +444,13 @@ const CAPABILITY = {
   listSave: 'library', listDelete: 'library', listApply: 'library', learnAdd: 'library', learnRemove: 'library',
   eventPlace: 'gigs', eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventUnskip: 'gigs',
   featureList: 'gigs',
-  profileSave: 'profile', merchSave: 'profile', merchDelete: 'profile', imgSave: 'profile', imgDelete: 'profile',
+  /* The real action names. This row once read profileSave / merchDelete / imgSave /
+     imgDelete — names no handler has — so `crew` sailed past the gate on the actions
+     that DO exist and could remove merch, change photos and mark orders done. */
+  profileSet: 'profile', photoUpload: 'profile', photoClear: 'profile',
+  mediaAdd: 'profile', mediaRemove: 'profile', mediaMove: 'profile', mediaHero: 'profile',
+  merchSave: 'profile', merchRemove: 'profile', merchPhoto: 'profile', merchPhotoClear: 'profile',
+  orderList: 'profile', orderDone: 'profile', orderDetail: 'profile', wishList: 'profile', wishDone: 'profile',
   postReply: 'community', postHide: 'community',
   accountExport: 'export',
 };
@@ -1322,7 +1329,9 @@ async function handleShop(aid, action, body) {
 
   if (action === 'merchList') {
     const p = await getProfile(aid);
-    return json({ ok: true, merch: p.merch, max: MAX_MERCH, allowed: await canMerch() });
+    // the caps ride with the list so the Studio's helper text and trims say the server's figures, never typed ones
+    return json({ ok: true, merch: p.merch, max: MAX_MERCH, maxVariants: MAX_VARIANTS, variantLen: VARIANT_LEN, maxPost: MAX_POST,
+                  minCents: MIN_CENTS, maxCents: MAX_CENTS, allowed: await canMerch() });
   }
   if (action === 'merchSave') {
     if (!(await canMerch())) return bad(merchLocked[0], merchLocked[1]);
@@ -1393,19 +1402,40 @@ async function handleShop(aid, action, body) {
     return json({ ok: true, posts: shapeForOwner(await readPosts(aid), aid) });
   }
 
-  // orders
+  // orders — newest first, each through ownerOrder: the pickup code (back-filled
+  // from the session id for rows older than codes), the size, the postage, never the fan
   if (action === 'orderList') {
+    const { ownerOrder } = await import('./_pay.mjs');
     const m = await readMeta(aid);
-    return json({ ok: true, orders: (m.orders || []).slice().reverse() });
+    return json({ ok: true, orders: (m.orders || []).slice().reverse().map(ownerOrder) });
   }
   if (action === 'orderDone') {
+    const { ownerOrder } = await import('./_pay.mjs');
     const sid = String(body.sid || '').slice(0, 120);
-    await mutateMeta(aid, (m) => { const o = (m.orders || []).find((x) => x.sid === sid); if (!o) return false; o.status = body.done === false ? 'new' : 'done'; return true; });
-    return json({ ok: true, orders: (await readMeta(aid)).orders.slice().reverse() });
+    await mutateMeta(aid, (m) => {
+      const o = (m.orders || []).find((x) => x.sid === sid); if (!o) return false;
+      o.status = body.done === false ? 'new' : 'done';
+      if (o.status === 'done') o.doneAt = Date.now(); else delete o.doneAt;
+      return true;
+    });
+    return json({ ok: true, orders: (await readMeta(aid)).orders.slice().reverse().map(ownerOrder) });
+  }
+  /* what fans asked the shop for (_wishes.mjs): read with the merch so each row can
+     name the item it was asked from; done/undone is the owner's only verb */
+  if (action === 'wishList' || action === 'wishDone') {
+    const { readWishes, setWishDone, shapeWishes } = await import('./_wishes.mjs');
+    if (action === 'wishDone') {
+      const r = await setWishDone(aid, String(body.id || '').slice(0, 12), body.done !== false);
+      if (!r.ok) return bad(r.error, 404);
+    }
+    const [w, p] = await Promise.all([readWishes(aid), getProfile(aid)]);
+    return json({ ok: true, wishes: shapeWishes(w, p.merch) });
   }
   if (action === 'orderDetail') {
     /* Fetched, shown, forgotten. Both shipping shapes are read because which one
-       Stripe returns depends on the account's API version. */
+       Stripe returns depends on the account's API version. The row itself goes
+       through ownerOrder like the list does: same back-filled code, never the fan. */
+    const { ownerOrder } = await import('./_pay.mjs');
     const sid = String(body.sid || '').slice(0, 120);
     const mine = (await readMeta(aid)).orders.find((x) => x.sid === sid);
     if (!mine) return bad('unknown order', 404);
@@ -1417,7 +1447,7 @@ async function handleShop(aid, action, body) {
     const cd = s.customer_details || {};
     const sh = (s.collected_information && s.collected_information.shipping_details) || s.shipping_details || null;
     const addr = sh && sh.address ? sh.address : null;
-    return json({ ok: true, order: mine, buyer: { name: cd.name || (sh && sh.name) || '', email: cd.email || '' },
+    return json({ ok: true, order: ownerOrder(mine), buyer: { name: cd.name || (sh && sh.name) || '', email: cd.email || '' },
                   shipping: addr ? { name: (sh && sh.name) || '', line1: addr.line1 || '', line2: addr.line2 || '',
                                      city: addr.city || '', state: addr.state || '', postal: addr.postal_code || '', country: addr.country || '' } : null });
   }
@@ -1738,7 +1768,7 @@ async function handleFeature(req, aid, body, action) {
 
 const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear',
                               'postList', 'postHide', 'postPin', 'postReply',
-                              'orderList', 'orderDone', 'orderDetail']);
+                              'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone']);
 
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove', 'mediaHero',
                                  'photoUpload', 'photoClear',

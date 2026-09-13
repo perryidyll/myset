@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Merch — MySet</title>
+<meta name="description" content="What's on the merch table, and how to take it home.">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
+<!-- the first call leaves before the page is parsed (community.html's pattern); no fan= on purpose — it skips a blob read -->
+<script>(()=>{try{const P=location.pathname.split('/').filter(Boolean),qs=new URLSearchParams(location.search);const V=P[0]==='v'||((!P[0]||P[0]==='shop.html')&&!!qs.get('v'));const S=P[0]==='v'?(P[1]||''):(P[0]&&P[0]!=='shop.html'?P[0]:(qs.get('a')||qs.get('v')||''));const Q=V?'?v='+encodeURIComponent(S):(S?'?a='+encodeURIComponent(S):'?');const f=fetch('/api/fan?what=community'+(Q==='?'?'':'&'+Q.slice(1)),{cache:'no-store'});f.catch(()=>{});window.__early={shop:f}}catch(e){}})();</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-512.png">
+<!-- FIRST PAINT MATCHES THE SAVED THEME, AND THE SPLASH NEEDS NOTHING FROM THE
+     NETWORK. This inline block comes before any external stylesheet, so the correct
+     ground is painted from the first frame instead of flashing the opposite theme. -->
+<style>html{background:#F5F5F7}html[data-theme=dark]{background:#0D0B0C}
+#intro{position:fixed;inset:0;z-index:90;background:#F5F5F7;display:grid;place-items:center}
+html[data-theme=dark] #intro{background:#0D0B0C}
+#intro.off{opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s .4s}
+#intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
+#intro .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;
+  background:linear-gradient(135deg,#FF375F,#FF7A45);animation:introbar 1.05s ease-in-out infinite alternate}
+#intro .bars i:nth-child(1){animation-delay:.02s;--h:38px}
+#intro .bars i:nth-child(2){animation-delay:.12s;--h:64px}
+#intro .bars i:nth-child(3){animation-delay:.22s;--h:28px}
+#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#1D1D1F}
+html[data-theme=dark] #intro .word{color:#fff}
+@keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
+@media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
+</style>
+<link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/app.css"></noscript>
+<style>
+/* tokens: a byte copy of app.css:5–75 (decision 0051), so the lastSeen paint is styled while the deferred stylesheet is in flight */
+:root{
+  /* Provenance marker. Arbitrary, meaningless, and referenced nowhere — that is
+     the point: a shared value with no function has no innocent explanation.
+     Registered in FINGERPRINTS.md. Do not "clean this up". */
+  --ms-k:ms-k3f9qz;
+  --bg:#F5F5F7;
+  --bg-2:#EBEBEF;
+  --surface:#FFFFFF;
+  --surface-2:#FFFFFF;
+  --ink:#1D1D1F;
+  --ink-2:#3A3A3C;
+  --muted:#6E6E73;
+  --faint:#A1A1A6;
+  --hair:rgba(0,0,0,.07);
+  --hair-2:rgba(0,0,0,.12);
+
+  --accent:#FF375F;
+  --accent-2:#FF5650;   /* the logo's pink-orange: the middle of --grad, not its warm end (the founder, 2026-09-13) */
+  --accent-ink:#FF5650;   /* accent as TEXT — the logo's pink-orange in both themes (the founder, 2026-09-13; was #D6003C / #FF8AA5) */
+  --accent-soft:rgba(255,86,80,.12);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));   /* the soft ground with the brand's hue shift */
+  --grad:linear-gradient(135deg,#FF375F 0%,#FF6B45 100%);
+  --grad-warm:linear-gradient(135deg,#FF375F 0%,#FF9F45 100%);
+
+  --r-xs:10px; --r-sm:14px; --r:18px; --r-lg:24px; --r-xl:30px; --pill:999px;
+
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09);
+  --sh-3:0 6px 18px rgba(0,0,0,.08),0 22px 55px rgba(0,0,0,.14);
+  --sh-accent:0 6px 20px rgba(255,55,95,.32);
+
+  --spring:cubic-bezier(.34,1.4,.64,1);
+  --ease:cubic-bezier(.4,0,.2,1);
+  --maxw:560px;
+  --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#000000; --bg-2:#0A0A0C;
+    --surface:#1C1C1E; --surface-2:#2C2C2E;
+    --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
+    --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
+    --accent:#FF456E; --accent-ink:#FF5650; --accent-soft:rgba(255,86,80,.18);
+    --grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
+    --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+    --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+    --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6);
+  }
+}
+/* A manual choice wins over the phone setting. The compact home-page switch
+   stores one value for every audience, artist-profile and venue page. */
+:root[data-theme=light]{
+  color-scheme:light;
+  --bg:#F5F5F7;--bg-2:#EBEBEF;--surface:#FFFFFF;--surface-2:#FFFFFF;
+  --ink:#1D1D1F;--ink-2:#3A3A3C;--muted:#6E6E73;--faint:#A1A1A6;
+  --hair:rgba(0,0,0,.07);--hair-2:rgba(0,0,0,.12);
+  --accent:#FF375F;--accent-ink:#FF5650;--accent-soft:rgba(255,86,80,.12);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09);
+  --sh-3:0 6px 18px rgba(0,0,0,.08),0 22px 55px rgba(0,0,0,.14)}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#000000;--bg-2:#0A0A0C;--surface:#1C1C1E;--surface-2:#2C2C2E;
+  --ink:#F5F5F7;--ink-2:#DDDDE0;--muted:#98989D;--faint:#68686D;
+  --hair:rgba(255,255,255,.09);--hair-2:rgba(255,255,255,.16);
+  --accent:#FF456E;--accent-ink:#FF5650;--accent-soft:rgba(255,86,80,.18);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
+  --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+  --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+  --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6)}
+/* the shared recipes the first paint depends on, byte-identical to app.css (0051); what opens after a tap may wait for app.css */
+a{color:inherit;text-decoration:none}
+.wrap{max-width:var(--maxw);margin:0 auto}
+.themebtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;
+  background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:17px;
+  transition:transform .2s var(--spring),background .2s var(--ease)}
+.themebtn:active{transform:scale(.9)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:600;letter-spacing:-.01em;padding:15px 22px;border-radius:var(--pill);
+  background:var(--surface);color:var(--ink);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.btn:active{transform:scale(.965)}
+.btn-pri{background:var(--grad);color:#fff;box-shadow:var(--sh-accent)}
+.btn-block{width:100%}
+.btn-sm{padding:10px 16px;font-size:14px}
+.btn-ink{background:var(--ink);color:var(--bg);box-shadow:var(--sh-1)}
+.btn-grey{background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--ink);box-shadow:none}
+.btn-text{background:none;color:var(--accent-ink);box-shadow:none;padding:12px 14px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;flex:0 0 auto;
+  box-shadow:0 0 0 0 rgba(255,55,95,.55);animation:ping 2s var(--ease) infinite}
+@keyframes ping{
+  0%{box-shadow:0 0 0 0 rgba(255,55,95,.5)}
+  70%{box-shadow:0 0 0 7px rgba(255,55,95,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,55,95,0)}
+}
+.sk{background:linear-gradient(100deg,var(--hair) 30%,var(--hair-2) 50%,var(--hair) 70%);
+  background-size:220% 100%;animation:sh 1.4s ease-in-out infinite;border-radius:8px}
+@keyframes sh{to{background-position:-120% 0}}
+.rise{animation:rise .5s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+body{padding-bottom:24px}
+body.live{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the live bar; the toast rises above it (artist.html:45,185) */
+body.live #toast{bottom:calc(112px + env(safe-area-inset-bottom))}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#app>div .pgrid .sk{aspect-ratio:1;border-radius:18px}
+.brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+.baractions{display:flex;align-items:center;gap:8px}
+.mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
+.mark i{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
+.mark i svg{width:14px;height:14px;fill:#fff;display:block}
+.mark .up{font-size:12px;color:var(--faint);font-weight:600;margin-left:1px}
+/* the way back, at the very top: "Community ↗" beside the mark, the mark's own arrow (the founder, 2026-09-13) */
+.crumb{display:inline-flex;align-items:center;gap:3px;margin-left:12px;padding:7px 11px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap}
+.crumb .up{font-size:12px;color:var(--faint);font-weight:600}
+.barleft{display:flex;align-items:center;min-width:0}
+@media (max-width:359px){.crumb{margin-left:8px;padding:7px 9px}}
+.menu{position:relative}
+.menu summary{list-style:none;cursor:pointer;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--surface);box-shadow:var(--sh-1);color:var(--ink)}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary svg{width:18px;height:18px;stroke:var(--accent-2);fill:none;stroke-width:2.2;stroke-linecap:round}
+.menu[open] summary{background:var(--surface-2)}
+.menu .pop{position:absolute;right:0;top:44px;min-width:200px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-3);padding:6px;z-index:20}
+.menu .pop a{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-xs);font-size:15px;font-weight:600;color:var(--ink)}
+.menu .pop a small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.menu .pop a i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-soft);color:var(--accent-2);font-style:normal;font-size:14px}
+/* the head: a 40 px avatar so the grid starts by y ≈ 152; the promise in --muted, never --faint at 13 px */
+.shophead{display:flex;align-items:center;gap:12px;margin:4px 18px 0}
+.shophead .av{width:40px;height:40px;border-radius:13px;background:var(--bg-2) center/cover;flex:0 0 auto;box-shadow:var(--sh-1)}
+.shophead .n{flex:1;min-width:0}
+.shophead h1{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shophead .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.promise{margin:3px 0 0;font-size:13px;line-height:1.35;color:var(--muted);display:flex;align-items:flex-start;gap:6px}
+.promise .dot{margin-top:5px}
+.vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 9px;border-radius:var(--pill);font-size:11px;font-weight:700;letter-spacing:.01em;vertical-align:3px;background:rgba(48,209,88,.14);color:#1B8E3C}
+@media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
+:root[data-theme=light] .vbadge{background:rgba(40,167,69,.12);color:#187A32}
+:root[data-theme=dark] .vbadge{background:rgba(48,209,88,.18);color:#4CD964}
+.share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600;position:relative}
+.share::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}   /* the brand-gradient ring (the founder, 2026-09-13) */
+/* the receipt: heading in --ink (--accent-ink on the pink ground is 3.13:1 in light); drawn inside render() so a pull redraws it */
+.receipt{display:block;width:calc(100% - 36px);margin:12px 18px 0;padding:16px;border:0;border-radius:var(--r);background:var(--accent-soft);color:var(--ink);font:inherit;font-size:15px;line-height:1.4;text-align:left}
+.receipt>b{display:flex;align-items:center;color:var(--ink);font-weight:700;margin-bottom:3px}
+.receipt .ok{width:22px;height:22px;flex:0 0 auto;margin-right:6px;stroke:var(--accent-2);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.receipt .ok circle{stroke-dasharray:63;stroke-dashoffset:63;animation:draw .6s var(--ease) forwards}
+.receipt .ok path{stroke-dasharray:20;stroke-dashoffset:20;animation:draw .25s .3s var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.receipt .rbox{margin-top:10px;padding:12px 14px;border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--sh-1)}
+.receipt .rbox span{display:block;font-size:13px;color:var(--muted)}
+.receipt .code{display:block;margin-top:4px;font-size:34px;font-weight:700;letter-spacing:.18em;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--ink)}
+.receipt .code i{font-style:normal;opacity:0;animation:in .2s var(--ease) forwards}
+@keyframes in{to{opacity:1}}
+.receipt .code i:nth-child(2){animation-delay:.09s}.receipt .code i:nth-child(3){animation-delay:.18s}.receipt .code i:nth-child(4){animation-delay:.27s}.receipt .code i:nth-child(5){animation-delay:.36s}
+.receipt.quiet .ok circle,.receipt.quiet .ok path{animation:none;stroke-dashoffset:0}   /* a receipt reopened later shows its final state at once */
+.receipt.quiet .code i{animation:none;opacity:1}
+.receipt small{display:block;margin-top:10px;font-size:13px;color:var(--muted)}
+.receipt .acts,.hint .acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.receipt.compact{padding:12px 16px;font-size:14px;cursor:pointer}
+.past{margin-top:18px}
+.past .receipt{margin-top:8px}
+.receipt.checking{color:var(--muted)}
+.hint{margin:12px 18px 0;padding:14px 16px;border-radius:var(--r);background:var(--surface);box-shadow:var(--sh-1);font-size:14px;color:var(--ink);line-height:1.4}
+.hint b{display:block;margin-bottom:2px}
+/* a section heading: ink, with the brand as a graphic (a 16×4 --grad bar) — not --accent-2 text, 3.0–3.13:1 at 13 px in light */
+.sect{display:flex;align-items:center;gap:8px;margin:22px 20px 10px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.sect i{width:16px;height:4px;border-radius:2px;background:var(--grad);flex:0 0 auto}
+.sect span{color:var(--muted);font-weight:600;letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sect .still{flex:0 0 auto;width:44px;height:44px;margin:-10px -12px -10px 0;border-radius:50%;display:grid;place-items:center;color:var(--ink);background:none;border:0;font-size:16px;cursor:pointer}   /* WCAG 2.2.2: the mechanism for the strips that move */
+.picks,.quotes{display:flex;gap:10px;overflow-x:auto;padding:4px 18px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.picks::-webkit-scrollbar,.quotes::-webkit-scrollbar,.sizes .row::-webkit-scrollbar{display:none}
+.pk{flex:0 0 auto;display:flex;align-items:center;gap:10px;width:208px;padding:8px 12px 8px 8px;border-radius:var(--r);background:var(--surface);border:.5px solid var(--hair-2);box-shadow:var(--sh-1);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:transform .12s var(--ease)}
+.pk .pic{width:72px;height:72px;border-radius:var(--r-sm);flex:0 0 auto;font-size:22px}
+.pk .b{flex:1;min-width:0}
+.pk .t{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:14px;font-weight:700;line-height:1.25;color:var(--ink)}
+.pk .p{display:block;margin-top:2px;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* the grid — no heading, it must start by y ≈ 160; two columns even at 320 px; .one for exactly one item */
+.pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 18px 0}
+.pgrid.one{grid-template-columns:1fr}
+/* one card, one <button> into the sheet, one screen-reader stop */
+.pcard{display:flex;flex-direction:column;min-width:0;width:100%;overflow:hidden;text-align:left;padding:0;border-radius:var(--r);background:var(--surface);border:.5px solid var(--hair-2);box-shadow:var(--sh-1);color:inherit;font:inherit;cursor:pointer;transition:transform .12s var(--ease)}
+.pcard:active,.pk:active,.qc:active{transform:scale(.97)}
+.pic{display:grid;place-items:center;position:relative;width:100%;aspect-ratio:1;background:var(--bg-2);overflow:hidden;font-size:34px;font-weight:700;color:var(--faint)}   /* the initial letter shows until the picture lands, or when there is none */
+.pic img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pic img.lazy{opacity:0;transition:opacity .24s var(--ease)}.pic img.lazy.ready{opacity:1}
+.pcard .b{display:flex;flex-direction:column;gap:3px;padding:10px 12px 12px;width:100%}
+.pcard .t{font-size:17px;font-weight:700;line-height:1.2;letter-spacing:-.02em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.4em;color:var(--ink)}
+.pcard .p{font-size:16px;font-weight:400;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard .p small{font-size:13px;color:var(--muted)}
+.pcard .act{display:block;margin-top:6px;padding:0 10px;min-height:44px;line-height:44px;border-radius:var(--pill);text-align:center;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+@media (max-width:340px){.pcard .act{white-space:normal;display:grid;place-items:center;line-height:1.2;padding:6px 8px}}   /* 'Ask at the show' wraps to two lines rather than 'Ask at the s…' */
+.pcard .act.buy{background:var(--grad);color:#fff;box-shadow:var(--sh-accent)}
+.pcard .act.ext{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}   /* --ink, never --accent-ink: 3.13:1 in light */
+.pcard .act.ask,.askline{background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--muted);font-weight:600}
+/* the badge: the reference store's pill made solid — never words printed on the photo */
+.tag{position:absolute;top:10px;left:10px;height:26px;line-height:24px;padding:0 11px;border-radius:var(--pill);font-size:13px;font-weight:700;background:var(--surface);color:var(--ink);border:1px solid var(--hair-2);pointer-events:none}
+.tag.out{background:var(--ink);color:var(--bg);border-color:transparent}
+.out .pic img{opacity:.5}
+.out .pic:has(img){color:transparent}   /* the placeholder letter would bleed through the dimmed photo */
+/* the quotes: the artist page's proof card, each one a way to the community page */
+.qc{flex:0 0 236px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:14px 16px 13px;border-radius:var(--r);background:var(--surface);border:.5px solid var(--hair-2);box-shadow:var(--sh-1);color:inherit;text-decoration:none;min-width:0;transition:transform .12s var(--ease)}
+.qc .stars{display:block;font-style:normal;font-size:12px;letter-spacing:.08em;color:var(--accent-2)}
+.qc .stars span{color:var(--hair-2)}
+.qc b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;font-size:14px;font-weight:600;line-height:1.35;color:var(--ink)}
+.qc>span{display:block;font-size:12.5px;color:var(--muted);line-height:1.3}
+.how{margin:22px 18px 0;padding:14px 16px;border-radius:var(--r);background:var(--surface);box-shadow:var(--sh-1);display:grid;gap:10px}
+.how div{display:flex;align-items:center;gap:12px;font-size:14px;color:var(--ink-2);line-height:1.35}
+.how i{flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:12px;font-weight:800;color:var(--ink);background:var(--grad-soft)}
+.hownext{margin:12px 18px 0}
+.hownext .fine{margin:8px 0 0;text-align:center;font-size:13px;color:var(--muted)}
+/* the request sheet: one textarea, an optional name, the commit; the thank-you re-uses the receipt's drawn tick */
+#sheet .ask label{display:block;margin:14px 0 6px}
+#sheet .ask textarea.inp{min-height:104px;resize:none;line-height:1.4;padding:12px 14px}
+#sheet .ask .count{margin:6px 2px 0;text-align:right;font-size:12px;color:var(--faint)}
+#sheet .ask .count.near{color:var(--accent-ink)}
+#sheet .sent{text-align:center;padding:8px 0 4px}
+#sheet .sent .ok{width:56px;height:56px;margin:6px auto 10px;display:block;stroke:var(--accent-2);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+#sheet .sent .ok circle{stroke-dasharray:63;stroke-dashoffset:63;animation:draw .6s var(--ease) forwards}
+#sheet .sent .ok path{stroke-dasharray:20;stroke-dashoffset:20;animation:draw .25s .3s var(--ease) forwards}
+#sheet .sent b{display:block;font-size:20px;font-weight:700;letter-spacing:-.02em}
+#sheet .sent p{margin:8px 0 0;font-size:15px;color:var(--ink-2);line-height:1.4}
+#sheet .sent q{display:block;margin:12px 0 0;padding:12px 14px;border-radius:var(--r-sm);background:var(--bg);color:var(--ink);font-size:15px;quotes:"“" "”"}
+.empty{margin:14px 18px 0;padding:26px 20px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);text-align:center;color:var(--muted);font-size:14.5px}
+.empty b{display:block;color:var(--ink);font-size:18px;font-weight:600;margin-bottom:8px}
+.empty .btn{margin-top:14px}
+.foot{padding:32px 18px 40px;text-align:center;font-size:13px;color:var(--muted);line-height:1.5}
+/* dark: a white flat-lay becomes a calm grey tile and print hues survive (255 → 209, gap-1 §7) */
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .pic img{filter:brightness(.82)}}
+:root[data-theme=dark] .pic img{filter:brightness(.82)}
+#sheet{max-height:88vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.grabzone{position:relative;min-height:56px;display:flex;align-items:center;margin:-8px 0 4px;cursor:grab;touch-action:none}
+.sheet h3{touch-action:none;-webkit-user-select:none;user-select:none}
+body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+.grabzone:active{cursor:grabbing}
+.grabzone .grab{margin:0 auto}
+.sheetx{position:absolute;top:3px;right:0;width:44px;height:44px;border-radius:50%;
+  border:0;background:var(--bg-2);color:var(--muted);font-size:15px;display:grid;
+  place-items:center;cursor:pointer;transition:transform .2s var(--spring)}   /* 44, not 38: a thumb target */
+.sheetx:active{transform:scale(.9)}
+/* the product sheet (blueprint §3.3): title → price → the fulfilment line → size → quantity → the commit (sticky, so a long sheet never hides it) → the blurb → the picture */
+.prow{display:flex;align-items:baseline;gap:10px;margin:6px 0 0}
+.prow .price{font-size:22px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.prow span{font-size:13px;color:var(--muted)}
+.sizes{margin:14px 0 0;padding:0;border:0;min-width:0}
+.sizes legend{padding:0;margin-bottom:6px}
+.sizes .row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:2px 0 4px}   /* 7+ chips scroll, the last one peeking; never a second row */
+.sizes .chip{position:relative;flex:0 0 auto;min-height:44px;min-width:48px;padding:0 14px;background:var(--bg);color:var(--ink);border:0;box-shadow:0 0 0 1.5px var(--hair) inset;cursor:pointer;transition:box-shadow .12s var(--ease)}
+.sizes.nudge .chip:not(.is-out){box-shadow:0 0 0 2.5px var(--accent) inset}   /* Pay tapped with no size: the row's ring pulses 120 ms (blueprint §3.3) */
+.sizes .chip input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}
+.sizes .chip:has(input:checked){background:var(--accent-soft);box-shadow:0 0 0 2.5px var(--accent) inset;font-weight:700}   /* three signals: ground, ring, weight (WCAG 1.4.1) */
+.sizes .chip:has(input:focus-visible){outline:2.5px solid var(--accent);outline-offset:3px}
+.sizes .chip.is-out{opacity:.45;text-decoration:line-through;cursor:default}
+.qty{align-items:center;margin:14px 0 0}
+.qty .tile{flex:0 0 64px;font-size:22px;min-height:52px;padding:0;display:grid;place-items:center}
+.qty .tile:disabled{opacity:.35}
+.qty b{flex:1;text-align:center;font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;transition:transform .3s var(--spring)}   /* the .credits.bump idiom */
+.qty b.bump{transform:scale(1.14)}
+.sticky-act{position:sticky;bottom:0;padding:12px 0 4px;margin-top:4px;background:var(--surface)}   /* vote.html's .sticky-act */
+#sheet .go{margin-top:6px;font-size:19px;font-weight:700}   /* 18.66/700 is the large-text threshold: 3:1 on the gradient's pink end */
+.total{margin:10px 0 0;text-align:center;font-size:17px;color:var(--ink);font-variant-numeric:tabular-nums}
+.total b{font-weight:700}
+#sheet .fine{color:var(--muted);font-size:13px;margin-top:10px}   /* --faint at 12.5px is 2.57:1 in light; not copied */
+.sticky-act .btn-text{width:100%;margin-top:4px;font-size:15px}
+.go.ext{display:block;text-align:center;background:var(--surface);color:var(--ink);box-shadow:var(--sh-1);position:relative}
+.askline{display:block;margin-top:6px;padding:15px;border-radius:var(--pill);text-align:center;font-size:15px}
+#sheet .lede{margin:8px 0 0}
+.blurb{margin:10px 0 0;font-size:15px;color:var(--ink-2);line-height:1.4}
+.pic.spic{margin:12px 0 0;border-radius:var(--r);font-size:44px;cursor:zoom-in}
+/* More from {First} — where Shopify puts it, under the photo: the picks card on the sheet's ground, one <button> that swaps the sheet in
+   place. A scroller, so never a place to start a sheet drag from (0f1); a vertical swipe on it scrolls the SHEET (touch-action pan-x pan-y). */
+#sheet .sect{margin:22px 2px 10px}
+.more{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;touch-action:pan-x pan-y;margin:0 -18px;padding:4px 18px 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.more::-webkit-scrollbar{display:none}
+#sheet .pk{background:var(--bg)}
+.more .t{font-weight:600}
+.pk.out .t{color:var(--muted)}   /* dimmed, and the price line says Sold out */
+/* the programmatic focus on the title paints no ring; a keyboard's still does */
+#sheetTitle:focus{outline:none}
+#sheetTitle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* every ring on the site is the brand gradient, 1.5 px, a masked pseudo-element (decision 0059) */
+.fab::after,.pcard .act.ext::after,.go.ext::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.fab{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:50;
+  width:calc(100% - 24px);max-width:calc(var(--maxw) - 24px);
+  margin-bottom:calc(12px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;align-items:center;gap:9px;padding:12px 16px;text-align:center;
+  background:var(--surface);border:.5px solid var(--hair-2);border-radius:var(--r-lg);box-shadow:var(--sh-2)}
+.fab .state{flex:0 0 auto;width:100%;min-width:0;font-size:13px;font-weight:500;color:var(--muted);line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fab .state b{color:var(--accent-2);font-weight:600}
+.fab .state span::before{content:' · '}
+.fab .act{flex:0 0 auto;font-size:13px;font-weight:700;padding:11px 18px;gap:8px;white-space:normal;text-align:center;line-height:1.2;
+  max-width:100%;font-variant-numeric:tabular-nums}
+.fab .act.liveglow{animation:emberGlow 4.2s ease-in-out infinite}
+@keyframes emberGlow{
+  0%,100%{filter:drop-shadow(0 0 5px rgba(255,86,80,.22))}
+  50%{filter:drop-shadow(0 0 13px rgba(255,86,80,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}
+}
+.fab .lv{width:8px;height:8px;border-radius:50%;background:#fff;flex:0 0 auto;
+  box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:lvp 1.8s infinite}
+@keyframes lvp{70%{box-shadow:0 0 0 9px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+@media (prefers-reduced-motion:reduce){.fab .lv,.fab .act.liveglow{animation:none}}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:80;display:none;place-items:center;padding:20px}
+.lb.on{display:grid}.lb img{max-width:100%;max-height:100%;border-radius:8px}
+/* the page's own loops on top of the shared kill switch; drift() checks the media query itself */
+@media (prefers-reduced-motion:reduce){
+  .sk,.pcard,.pk,.qc,.dot,.fab .lv,.fab .act.liveglow,.receipt .ok circle,.receipt .ok path,.receipt .code i{animation:none}
+  .receipt .ok circle,.receipt .ok path{stroke-dashoffset:0}
+  .receipt .code i{opacity:1}
+}
+</style>
+</head>
+<body>
+<div id="intro" aria-hidden="true"><div><div class="bars"><i></i><i></i><i></i></div><div class="word">MySet</div></div></div>
+<div class="wrap">
+  <div class="brandbar">
+    <div class="barleft"><a class="mark" href="/" aria-label="MySet home"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet<span class="up">↗</span></a>
+    <a class="crumb" id="crumb" href="/community.html" data-leaving="Opening the community page…">Community<span class="up" aria-hidden="true">↗</span></a></div>
+    <div class="baractions"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+    <details class="menu" id="menu">
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16"/></svg></summary>
+      <div class="pop">
+        <a id="mArtist" href="/signup"><i>♪</i><span>Artist Studio<small id="mArtistS">Set one up — it’s free</small></span></a>
+        <a id="mVenue" href="/venues"><i>⌂</i><span>Venue Studio<small id="mVenueS">Set one up — it’s free</small></span></a>
+      </div>
+    </details></div>
+  </div>
+  <!-- the first frame is already the layout: head bars and six tinted squares at the real geometry (INVARIANT 0dp) -->
+  <div id="app"><div style="padding:0 18px">
+    <div style="display:flex;gap:12px;align-items:center;margin-top:4px"><div class="sk" style="width:40px;height:40px;border-radius:13px;flex:0 0 auto"></div><div class="sk" style="height:22px;width:50%"></div></div>
+    <div class="sk" style="height:14px;width:80%;margin:10px 0 18px"></div>
+    <div class="pgrid" style="margin:0" aria-busy="true"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>
+  </div></div>
+</div>
+<div class="bg" id="bg" onclick="closeSheet()"></div>
+<!-- a dialog while open (the page behind is inert as well as frozen), inert itself while closed -->
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert></div>
+<div class="lb" id="lb" onclick="this.classList.remove('on')"><img id="lbimg" alt=""></div>
+<div class="toast" id="toast" role="status"></div>
+<div id="paylive" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
+
+<!-- blocking on purpose, after the splash; MySetPull() is called below (INVARIANT 0cf) -->
+<script src="/theme.js"></script>
+<script src="/leave.js"></script>
+<script src="/pull.js"></script>
+<script>
+const $=s=>document.querySelector(s), API='/api';
+/* /<slug>/shop or /v/<slug>/shop — and the bare file with ?a=|?v= so tools/uicheck.mjs can open it */
+const P=location.pathname.split('/').filter(Boolean), qs=new URLSearchParams(location.search);
+const VENUE=P[0]==='v'||((!P[0]||P[0]==='shop.html')&&!!qs.get('v'));
+const SLUG=P[0]==='v'?(P[1]||''):(P[0]&&P[0]!=='shop.html'?P[0]:(qs.get('a')||qs.get('v')||''));
+const Q=VENUE?'?v='+encodeURIComponent(SLUG):(SLUG?'?a='+encodeURIComponent(SLUG):'?');
+const HOME=VENUE?'/v/'+SLUG:'/'+SLUG, COMMHREF=SLUG?HOME+'/community':'/community.html', VOTEHREF=SLUG?HOME+'/vote':'/vote.html', SHOPHREF=SLUG?HOME+'/shop':'/shop.html';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+{ const c=document.getElementById('crumb'); if(c) c.href=COMMHREF; }   // the crumb points at THIS page's community page, resolved with the slug
+/* the device id, this page's own copy (INVARIANT 5b); FAN goes to /api/pay and /api/confirm, never to the read */
+function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
+  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
+  return v;}
+const FAN=fanId();
+(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
+  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
+  if(A){ A.href=a?'/studio?tab=setlist':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
+  if(V){ document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
+})();
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
+const money=c=>'$'+(c/100).toFixed(c%100?2:0);
+const ago=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
+const day=t=>{try{return new Date(t).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}catch(e){return ''}};
+const REDUCED=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches);
+const host=l=>{try{return new URL(l).hostname.replace(/^www\./,'')}catch(e){return 'the link'}};
+const TABLE=VENUE?'the bar':'the merch table';
+/* the band name or first name the artist chose (decision 0062), else the first word; a venue reads d.name */
+const firstName=()=>(D&&String(D.first||'').trim())||String(D&&D.name||'the artist').split(' ')[0]||'the artist';
+/* ── sheets ── community.html's (INVARIANTS 0f0–0f2), plus: the page behind is inert, focus lands on the title and
+   returns to the opener, the closed sheet is inert, and an open sheet is a history entry (#m<id>) so Back closes it. */
+let SHEETY=0, OPENER=null;   // where the page was before it was frozen; what had focus
+function openSheet(h){
+  const sh=$('#sheet');
+  if(!document.body.classList.contains('sheeting')){
+    SHEETY=window.scrollY||0;
+    document.body.style.top=`-${SHEETY}px`;
+    document.body.classList.add('sheeting');
+    OPENER=document.activeElement;
+    const w=$('.wrap'); if(w){ w.inert=true; w.setAttribute('aria-hidden','true'); }
+  }
+  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
+    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+  sh.style.transform=''; sh.scrollTop=0;
+  $('#bg').classList.add('on'); sh.classList.add('on'); sh.inert=false;
+  const t=sh.querySelector('h3'); if(t){ t.id='sheetTitle'; t.tabIndex=-1; }
+  setTimeout(()=>{ if(sh.classList.contains('on')) try{ (t||sh.querySelector('.sheetx')).focus({preventScroll:true}); }catch(e){} },100);
+  attachDrag(sh);
+}
+function closeSheet(){
+  const sh=$('#sheet');
+  /* when the open sheet is a history entry, closing it IS going back — popstate calls this again with the entry gone */
+  if(sh.classList.contains('on')&&history.state&&history.state.m){ history.back(); return; }
+  sh.style.transition='';sh.style.transform='';
+  $('#bg').classList.remove('on');sh.classList.remove('on'); sh.inert=true;
+  undrift('more');   // the strip in the sheet stops with the sheet
+  if(document.body.classList.contains('sheeting')){
+    document.body.classList.remove('sheeting'); document.body.style.top='';
+    window.scrollTo(0,SHEETY);
+    const w=$('.wrap'); if(w){ w.inert=false; w.removeAttribute('aria-hidden'); }
+    let o=OPENER; if(o&&!o.isConnected&&o.dataset&&o.dataset.item!=null) o=$(`#app [data-item="${o.dataset.item}"]`);   // the page was redrawn under the sheet (a ⏸, a 409): the same card, drawn again
+    if(o&&o.isConnected&&o!==document.body) try{ o.focus({preventScroll:true}); }catch(e){}
+    OPENER=null;
+  }
+  CUR=null;
+}
+function attachDrag(sh){
+  /* ONE set of listeners for the life of the page — rebinding on every open piled up stale closures */
+  if(sh.__drag)return;
+  sh.__drag=true;
+  let y0=null, dy=0, t0=0, fromBody=false;
+  const CONTROL='input,textarea,select,button,a,label,[contenteditable]';
+  /* THE SHEET IS CENTRED WITH translateX(-50%), so every transform written here
+     has to carry it (INVARIANT 0f0). */
+  const SHIFT='translateX(-50%) ';
+  /* NOT .lede (community.html has it): a scrolled sheet can still have the fulfilment line mid-screen, and a drag from there must scroll, not close. */
+  const HANDLE='.grabzone,h3';
+  /* Anything that scrolls on its own is NOT a place to start dragging the sheet from (0f1): here, the size row and the More strip. */
+  const SCROLLER='.sizes,.more';
+  const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
+    fromBody=!!body; sh.style.transition='none'; };
+  const move=(e)=>{
+    if(y0===null)return;
+    dy=((e.touches?e.touches[0]:e).clientY)-y0;
+    if(dy<0){ dy=0; sh.style.transform=SHIFT+'translateY(0)'; return; }
+    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
+    sh.style.transform=SHIFT+`translateY(${dy}px)`;
+    if(e.cancelable)e.preventDefault();
+  };
+  const end=()=>{
+    if(y0===null)return;
+    const speed=dy/Math.max(1,Date.now()-t0);
+    y0=null;
+    sh.style.transition='';
+    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform=SHIFT+'translateY(0)';
+  };
+  const begin=(e)=>{
+    const t=e.target;
+    if(!t||!t.closest)return;
+    if(t.closest(CONTROL))return;
+    if(t.closest(SCROLLER))return;
+    const inZone=!!t.closest(HANDLE);
+    if(!inZone&&sh.scrollTop>0)return;
+    start(e,!inZone);
+  };
+  sh.addEventListener('touchstart',begin,{passive:true});
+  sh.addEventListener('touchmove',move,{passive:false});
+  sh.addEventListener('touchend',end);
+  sh.addEventListener('touchcancel',end);
+  sh.addEventListener('mousedown',(e)=>{
+    if(!e.target.closest(HANDLE)||e.target.closest(CONTROL))return;
+    start(e,false);
+    const mm=(ev)=>move(ev), mu=()=>{ end();
+      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
+
+/* ---------- the product sheet ---------- */
+let CUR=null, QTY=1, SIZE='', SAYT=0;
+const postOf=m=>(m.ship==='ship'&&m.post>0)?m.post:0;
+const soldOut=m=>!!m.out||((m.variants||[]).length>0&&m.variants.every(v=>v.out));
+/* one item, one history entry: a tap pushes #m<id>, Back pops it; a share, a QR or a cancelled Stripe trip opens it by the hash.
+   mode 'swap' (the More strip) REPLACES the open sheet's entry, so Back still closes it in one step; true = arriving from history, write nothing */
+function openItem(id,mode){
+  const m=(D&&D.merch||[]).find(x=>x.id===id); if(!m) return false;
+  CUR=m; QTY=1; SIZE=''; clearTimeout(SAYT);   // a total armed for the last item must not be read out for this one
+  if(mode==='swap') history.replaceState({m:id},'','#'+id);
+  else if(!mode) history.pushState({m:id},'','#'+id);
+  paintSheet(); return true;
+}
+function openFromHash(){
+  if($('#sheet').classList.contains('on')) return;
+  if(location.hash==='#ask'&&D){ history.replaceState(null,'',location.pathname+location.search); openAsk(); return; }   // a shared "ask them" link opens the request sheet
+  const h=location.hash.match(/^#(m[a-z0-9]{6})$/); if(!h||!D) return;
+  history.replaceState(null,'',location.pathname+location.search);   // the entry under the sheet is the plain shop, so Back lands here
+  if(!openItem(h[1])) toast('That one isn’t on the table any more.');
+}
+addEventListener('popstate',()=>{
+  const on=$('#sheet').classList.contains('on'), st=history.state&&history.state.m;
+  if(on&&!st) closeSheet();
+  else if(!on&&st&&D){ if(st==='ask') openAsk(true); else if(!openItem(st,true)) history.replaceState(null,'',location.pathname+location.search); }
+  else if(!on&&!st&&location.hash) openFromHash();
+});
+/* the fulfilment line — only what the server backs */
+function ledeFor(m){
+  const d=D, post=postOf(m);
+  if(soldOut(m)) return `Sold out — ask about a restock at ${TABLE}.`;
+  if(d.canBuy&&m.cents>=100){
+    if(m.ship==='ship') return post?`Posted to you — the total includes ${money(post)} postage. You’ll give an address on the next page.`
+                                   :'Posted to you, postage included — you’ll give an address on the next page.';
+    if(VENUE) return 'Pick it up at the bar — show your receipt.';
+    return d.live?'Pick it up at the merch table tonight — show your code after the set.':'Pick it up at a show — show your receipt at the merch table.';
+  }
+  if(m.link) return 'Sold outside MySet.';
+  if(!d.canBuy&&m.cents>=100) return `Card payments aren’t on yet — ask at ${TABLE}.`;
+  return `Not sold through MySet — ask at ${TABLE}.`;
+}
+/* a state that cannot pay gets a different control with a different verb, never a disabled Pay; the stepper is bound with listeners after openSheet */
+function paintSheet(){
+  const m=CUR, d=D; if(!m||!d) return;
+  const vars=m.variants||[], out=soldOut(m), buyable=!out&&d.canBuy&&m.cents>=100, post=postOf(m);
+  const mine=buyable||out, where=mine?(m.ship==='ship'?'posted':'pick up')+(post?' · + '+money(post)+' post':'')+(buyable&&d.live&&!VENUE&&m.ship==='pickup'?' · Tonight':''):'';
+  let h=`<h3>${esc(m.title)}</h3>
+    <div class="prow"><b class="price">${m.cents?money(m.cents):'No price listed'}</b>${where?`<span>${where}</span>`:''}</div>
+    <p class="lede" id="lede">${ledeFor(m)}</p>`;
+  if(buyable&&vars.length) h+=`<fieldset class="sizes" id="sizes" data-nopull><legend class="kick">Size</legend><div class="row">${vars.map(v=>`<label class="chip${v.out?' is-out':''}"><input type="radio" name="size" value="${esc(v.label)}"${v.out?' disabled':''}${SIZE===v.label?' checked':''}><span>${esc(v.label)}</span>${v.out?'<span class="sr">, sold out</span>':''}</label>`).join('')}</div></fieldset>`;
+  if(buyable){
+    h+=`<div class="tiles qty"><button class="tile" id="qMinus" aria-label="One fewer">−</button><b id="qty" aria-label="Quantity">${QTY}</b><button class="tile" id="qPlus" aria-label="One more">＋</button></div>
+    <p class="fine" id="qmax" hidden>Five is the most per order.</p>
+    <div class="sticky-act">
+      <button class="go" id="buyGo" aria-describedby="lede payFine"></button>
+      <p class="total" id="total" hidden></p>
+      <p class="fine" id="payFine">Paid to ${esc(d.name)} through Stripe · Apple Pay, Google Pay or card · Prices in US dollars.</p>
+      <button class="btn btn-text" onclick="closeSheet()">Not yet</button>
+    </div>`;
+  }else if(out){
+    h+=`<div class="sticky-act"><button class="btn btn-grey btn-block" onclick="closeSheet()">Close</button></div>`;
+  }else if(m.link){
+    const hn=host(m.link);
+    h+=`<div class="sticky-act"><a class="go ext" href="${esc(m.link)}" target="_blank" rel="noopener noreferrer">Get it on ${esc(hn)} ↗</a><p class="fine">Opens ${esc(hn)} in a new tab.</p><button class="btn btn-text" onclick="closeSheet()">Not yet</button></div>`;
+  }else{
+    h+=`<div class="sticky-act"><div class="askline">${VENUE?'Ask at the bar':'Ask at the show'}</div><button class="btn btn-text" onclick="closeSheet()">Close</button></div>`;
+  }
+  if(m.blurb) h+=`<p class="blurb">${esc(m.blurb)}</p>`;
+  h+=`<div class="pic spic${out?' out':''}">${pic(m,'zoom')}</div>`;
+  h+=`<div id="moreWrap">${moreBlock(m)}</div>`;
+  undrift('more');   // the last item's strip, if any — the new one starts below
+  openSheet(h);
+  const sh=$('#sheet');
+  /* the More strip: a card swaps the sheet to that item; its ⏸ is the page's one control, so the page redraws with it and the strip follows */
+  const mw=$('#moreWrap'); if(mw) mw.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-more],.still'); if(!t) return;
+    if(t.dataset.more!=null){ openItem(t.dataset.more,'swap'); return; }
+    STILL=!STILL; try{ localStorage.setItem('myset.shop.still',STILL?'1':'0'); }catch(x){} render(); paintMore();
+    const s=sh.querySelector('.sect .still'); if(s) try{ s.focus({preventScroll:true}); }catch(x){} });   // the redraw removed the control under the finger — put focus back on its replacement so the flip is heard
+  if(!STILL&&!REDUCED()) drift('more',-1);   // .on is already set: the first frame drift() takes is after the arrival has begun
+  sh.querySelectorAll('input[name="size"]').forEach(i=>i.addEventListener('change',()=>{ SIZE=i.value; paint(); sayTotal(); }));
+  const mi=$('#qMinus'), pl=$('#qPlus'), go=$('#buyGo'), z=sh.querySelector('[data-zoom]');
+  if(mi) mi.addEventListener('click',()=>{ QTY=Math.max(1,QTY-1); bump(); paint(); sayTotal(); });
+  if(pl) pl.addEventListener('click',()=>{ QTY=Math.min(5,QTY+1); bump(); paint(); sayTotal(); });
+  /* Pay is never disabled (blueprint §3.3/§3.8): with sizes and none chosen, a tap points at the size row and says why */
+  if(go) go.addEventListener('click',()=>{
+    if((CUR.variants||[]).length&&!SIZE){ const f=$('#sizes'); if(f){ f.scrollIntoView({block:'center',behavior:REDUCED()?'auto':'smooth'}); f.classList.add('nudge'); setTimeout(()=>f.classList.remove('nudge'),120); }
+      const l=$('#paylive'); if(l){ l.textContent=''; setTimeout(()=>{ l.textContent='Pick a size first'; },40); } return; }
+    buy(); });
+  if(z) z.addEventListener('click',()=>{ $('#lbimg').src=z.src; $('#lb').classList.add('on'); });
+  paint();
+}
+/* the label is the total; .total repeats the sum in --ink whenever it differs, saying what is INSIDE it (never a "+" that reads as more to come). No size chosen: 'Pick a size', enabled. */
+function paint(){
+  const m=CUR, b=$('#buyGo'); if(!m||!b) return;
+  const post=postOf(m), total=m.cents*QTY+post, pick=(m.variants||[]).length>0&&!SIZE;
+  const q=$('#qty'), mi=$('#qMinus'), pl=$('#qPlus'), qm=$('#qmax'), t=$('#total');
+  if(q) q.textContent=QTY; if(mi) mi.disabled=QTY<=1; if(pl) pl.disabled=QTY>=5; if(qm) qm.hidden=QTY<5;
+  b.disabled=false; b.textContent=pick?'Pick a size':`Pay ${money(total)}`;
+  if(t){ const show=QTY>1||post>0; t.hidden=!show; if(show) t.innerHTML=`Total <b>${money(total)}</b>${QTY>1?' for '+QTY:''}${post?' · includes '+money(post)+' postage':''}`; }
+}
+function bump(){ const q=$('#qty'); if(!q) return; q.classList.add('bump'); setTimeout(()=>q.classList.remove('bump'),160); }
+/* one announcement, 800 ms after the last tap, atomic — never on the button */
+function sayTotal(){ clearTimeout(SAYT); SAYT=setTimeout(()=>{ const m=CUR, l=$('#paylive'); if(!m||!l||!$('#buyGo')) return; const post=postOf(m);
+  l.textContent=`Total ${money(m.cents*QTY+post)} for ${QTY}${SIZE?', size '+SIZE:''}${post?', including '+money(post)+' postage':''}`; },800); }
+/* More from {First} (a venue: the bar): every OTHER item on the table, sold-out ones dimmed and saying so, when there are two or more.
+   Drawn twice for drift() to wrap — once when paused or under reduced motion; the ghosts are out of the tab order and hidden from a reader. */
+function moreBlock(m){
+  const others=(D&&D.merch||[]).filter(x=>x.id!==m.id&&x.on!==false);
+  if(others.length<2) return '';
+  const cards=others.map(x=>{ const out=soldOut(x), p=x.cents?money(x.cents):'No price listed';
+    return `<button class="pk${out?' out':''}" data-more="${esc(x.id)}" aria-label="${esc(x.title)}, ${x.cents?money(x.cents):'no price listed'}${out?', sold out':''}"><span class="pic">${pic(x,'pk')}</span><span class="b"><span class="t">${esc(x.title)}</span><span class="p">${p}${out?' · Sold out':''}</span></span></button>`; });
+  const twice=!STILL&&!REDUCED(), gb=c=>c.replace(/^<button /,'<button tabindex="-1" aria-hidden="true" ');
+  return `<div class="sect"><i></i>More from ${esc(VENUE?'the bar':firstName())}<span></span>${stillBtn(cards.length)}</div><div class="more" id="more" data-nopull>${cards.join('')}${twice?cards.map(gb).join(''):''}</div>`;
+}
+/* the strip alone, redrawn — the ⏸ must not redraw the sheet, or the size and quantity chosen would scroll out from under the thumb */
+function paintMore(){ const w=$('#moreWrap'); if(!w||!CUR) return; undrift('more'); w.innerHTML=moreBlock(CUR); if(!STILL&&!REDUCED()) drift('more',-1); }
+
+/* ---------- make a request ---------- */
+/* Something a fan would buy that is not on the table, in their own words, for the owner's Studio (the founder, 2026-09-13;
+   _wishes.mjs). No account, no way back to the fan — a demand signal, not a thread. A history entry like an item (#ask), so
+   Back closes it. The name is remembered on this phone the way the community composer's is; the ask itself is not. */
+const WISH_KEY='myset.wish.name';
+let ASKING=false;
+function openAsk(fromHistory){
+  if(!D) return;
+  const F=esc(VENUE?D.name:firstName()), max=(D.limits&&D.limits.wish)||200;
+  let name=''; try{ name=localStorage.getItem(WISH_KEY)||''; }catch(e){}
+  if(!fromHistory) history.pushState({m:'ask'},'','#ask');
+  CUR=null; undrift('more');
+  openSheet(`<h3>Make a request</h3>
+    <p class="lede">Something you’d buy that isn’t on the table? Tell ${F} — it lands in their Studio.</p>
+    <div class="ask">
+      <label class="kick" for="wishText">What would you like?</label>
+      <textarea class="inp" id="wishText" maxlength="${max}" rows="3" placeholder="A hoodie in XL, a tote bag, the poster from the last show…" autocomplete="off" enterkeyhint="send"></textarea>
+      <p class="count" id="wishCount" aria-hidden="true">0/${max}</p>
+      <label class="kick" for="wishName">Your name <span style="font-weight:500">(optional)</span></label>
+      <input class="inp" id="wishName" maxlength="30" placeholder="So they know who asked" value="${esc(name)}" autocomplete="nickname">
+    </div>
+    <div class="sticky-act">
+      <button class="go" id="wishGo">Send to ${F}</button>
+      <p class="fine">No account, no email — just the ask. ${F} sees it next time they open their Studio.</p>
+      <button class="btn btn-text" onclick="closeSheet()">Not now</button>
+    </div>`);
+  const ta=$('#wishText'), c=$('#wishCount'), go=$('#wishGo');
+  const count=()=>{ if(!ta||!c) return; c.textContent=`${ta.value.length}/${max}`; c.classList.toggle('near',ta.value.length>=max-20); };
+  if(ta){ ta.addEventListener('input',count); ta.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendWish(); } }); }
+  if(go) go.addEventListener('click',sendWish);
+  setTimeout(()=>{ if(ta&&$('#sheet').classList.contains('on')) try{ ta.focus({preventScroll:true}); }catch(e){} },160);   // after the title took focus: the sheet is a form, so the pen goes to the paper
+}
+async function sendWish(){
+  const ta=$('#wishText'), nm=$('#wishName'), go=$('#wishGo'); if(!ta||!go||ASKING) return;
+  const text=ta.value.replace(/\s+/g,' ').trim(), name=(nm?nm.value:'').trim();
+  if(text.length<2){ toast('Say what you’d like — a word or two is enough.'); try{ ta.focus(); }catch(e){} return; }
+  ASKING=true; go.disabled=true; go.textContent='Sending…';
+  try{ if(name) localStorage.setItem(WISH_KEY,name); else localStorage.removeItem(WISH_KEY); }catch(e){}
+  try{
+    const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'wish',fan:FAN,text,name})});
+    const d=await r.json().catch(()=>({}));
+    if(!d.ok){ toast(d.error||'Couldn’t send that just now — try again in a moment'); go.disabled=false; go.textContent=`Send to ${VENUE?D.name:firstName()}`; ASKING=false; if(r.status===429) closeSheet(); return; }
+    const F=esc(VENUE?D.name:firstName()), sh=$('#sheet');
+    sh.querySelector('.ask').outerHTML=`<div class="sent" role="status"><b>${tick()}Sent to ${F}</b><p>They’ll see it in their Studio. If it gets made, it shows up here.</p><q>${esc(text)}</q></div>`;
+    sh.querySelector('.sticky-act').innerHTML=`<button class="btn btn-grey btn-block" onclick="closeSheet()">Done</button>`;
+    sh.querySelector('.lede').remove();
+  }catch(e){ toast(navigator.onLine===false?'You’re offline — try again when the bar’s wifi wakes up.':'Couldn’t send that just now — try again in a moment'); go.disabled=false; go.textContent=`Send to ${VENUE?D.name:firstName()}`; }
+  ASKING=false;
+}
+
+/* ---------- state, load, render ---------- */
+/* globals on purpose: tools/uicheck.mjs sets D and calls render() */
+var D=null;
+let RECEIPT=null, CHECKING='', HID=0, LIFT=0;
+let STILL=(()=>{try{return localStorage.getItem('myset.shop.still')==='1'}catch(e){return false}})();   // a fan who asked for stillness keeps it
+/* the picks strip (S8) is a founder toggle, OFF in v1 (NN/g, Baymard: no auto-forwarding strip above the grid); ?picks=1 previews it */
+const PICKS=qs.get('picks')==='1';
+const WV=(()=>{const m=/Instagram|FBAN|FBAV|FB_IAB|BytedanceWebview|musical_ly/i.exec(navigator.userAgent||''); if(!m) return ''; const s=m[0].toLowerCase(); return /instagram/.test(s)?'Instagram':/bytedance|musical/.test(s)?'TikTok':'Facebook';})();
+let HINT=!!WV&&(()=>{try{return localStorage.getItem('myset.shop.hint')!=='1'}catch(e){return true}})();
+const cssReady=()=>{try{return [...document.styleSheets].some(s=>s.href&&/\/app\.css/.test(s.href))}catch(e){return true}};
+/* the splash lifts when the cached paint is styled (app.css has landed) or after 400 ms, whichever is first */
+function lift(wait){
+  const i=document.getElementById('intro'); if(!i||i.classList.contains('off')||LIFT) return;
+  if(!wait||cssReady()){ i.classList.add('off'); return; }
+  LIFT=1; const t0=Date.now();
+  const k=()=>{ if(cssReady()||Date.now()-t0>400) i.classList.add('off'); else requestAnimationFrame(k); }; requestAnimationFrame(k);
+}
+async function load(){
+  try{
+    const E=window.__early||{}; window.__early=null;     // the head started this; see <head>
+    const K='shop:'+Q, L=window.lastSeen?lastSeen.get('shop:'+Q):null;   // the last copy this phone saw paints first — its own key, never the community page's
+    if(L&&L.ok){ D=L; render(); }
+    lift(!!(L&&L.ok));
+    let d=null;
+    try{ const r=await (E.shop||fetch(`${API}/fan?what=community${Q==='?'?'':'&'+Q.slice(1)}`,{cache:'no-store'})); d=await r.json(); }
+    catch(e){ if(L&&L.ok) return; throw e; }            // offline: the copy stands
+    if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b><br>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
+    if(window.lastSeen) lastSeen.set(K,d);
+    if(L&&JSON.stringify(d)===JSON.stringify(L)) return;   // nothing changed: keep what is on screen
+    D=d; render();
+  }catch(e){ $('#app').innerHTML=`<div class="empty">Couldn’t load the shop just now. Pull down to retry.</div>`; }
+  finally{ lift(false); }
+}
+/* the page never polls: one read at open, a pull, and a re-read after five minutes away */
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) HID=Date.now(); else if(HID&&Date.now()-HID>300000&&!$('#sheet').classList.contains('on')) load().catch(()=>{}); });
+
+/* the promise: extra costs and delivery, with only what the payload backs */
+function promise(d,merch){
+  const priced=merch.some(m=>m.cents>=100), pick=merch.some(m=>m.ship==='pickup'), allPick=merch.every(m=>m.ship==='pickup'), allShip=merch.every(m=>m.ship==='ship');
+  const posted=merch.some(m=>m.ship==='ship'&&m.post>0)?'posted to you; postage is shown on each item':'posted to you, postage included';
+  /* a venue runs the same branches with 'the bar' for 'a show' — one page, one story about delivery */
+  if(!d.canBuy) return VENUE?'Card payments aren’t on yet — ask at the bar.':'Card payments aren’t on yet — the links still work, and the merch table takes cash.';
+  if(!priced) return `Follow the links, or ask at ${TABLE}.`;
+  if(d.live&&pick&&!VENUE) return 'Live now — pay here, pick up at the merch table tonight.';
+  if(allPick) return VENUE?'Pay here, pick up at the bar.':'Pay here, pick up at a show.';
+  if(allShip) return `Pay here — ${posted}.`;
+  return `Pick up at ${VENUE?'the bar':'a show'} or shipped to your door — options vary per item.`;
+}
+/* an <img> only for a same-origin path (an external URL is CSP-blocked silently); cards 1–2 fetch first, 7+ lazily; always 480×480 (CLS 0) */
+function pic(m,i){
+  const letter=esc((m.title||'?').trim().slice(0,1).toUpperCase());
+  if(!m.img||m.img[0]!=='/') return letter;
+  const a=i==='zoom'?' data-zoom':i==='pk'?'':i<2?' fetchpriority="high"':i>=6?' loading="lazy" class="lazy"':'';
+  return `${letter}<img src="${esc(m.img)}" width="480" height="480" alt="" decoding="async"${a}>`;
+}
+/* THE THREE STATES (INVARIANT 0ad; pay.mjs refuses under $1): Buy only when canBuy && cents >= 100, else the link,
+   else "Ask at the show". Sold out keeps the price and offers nothing. One card, one <button>, one screen-reader stop. */
+function card(m,i){
+  const d=D, out=soldOut(m), buyable=!out&&d.canBuy&&m.cents>=100, post=postOf(m);
+  const price=m.cents?money(m.cents):'No price listed', where=m.ship==='ship'?'· posted':'· pick up';
+  let small='', act='', state='', ship='', pline=m.cents?`<b>${money(m.cents)}</b>`:'No price listed';
+  /* the fulfilment words and the Tonight tag are said only of what MySet sells or sold out of, never of a link-out or an ask item */
+  if(out){ small=where; state='sold out'; ship=m.ship==='ship'?'posted to you':(VENUE?'pick up at the bar':'pick up at a show'); }
+  else if(buyable){ act=`<span class="act buy">Buy · ${money(m.cents)}</span>`; small=post?`+ ${money(post)} post`:where; state='Buy'; ship=m.ship==='ship'?'posted to you':(VENUE?'pick up at the bar':'pick up at a show'); }
+  else if(m.link){ const hn=host(m.link); act=`<span class="act ext">Get it ↗</span>`; state='opens '+hn; if(m.cents) small='· '+hn; else pline=esc(hn); }   // unpriced: the host takes the price line, so it fits at 320
+  else { act=`<span class="act ask">${VENUE?'Ask at the bar':'Ask at the show'}</span>`; state=VENUE?'ask at the bar':'ask at the show'; }
+  const tag=out?'<span class="tag out">Sold out</span>':(buyable&&d.live&&!VENUE&&m.ship==='pickup'?'<span class="tag">Tonight</span>':'');   // a true statement, not scarcity
+  const label=`${m.title}, ${price}${post&&ship?' plus '+money(post)+' postage':''}${ship?', '+ship:''}, ${state}`;
+  return `<button class="pcard${out?' out':''}" data-item="${esc(m.id)}" aria-label="${esc(label)}"><span class="pic">${pic(m,i)}${tag}</span><span class="b"><span class="t">${esc(m.title)}</span><span class="p">${pline}${small?` <small>${esc(small)}</small>`:''}</span>${act}</span></button>`;
+}
+const stillBtn=n=>(n>=2&&!REDUCED())?`<button class="still" aria-pressed="${STILL?'true':'false'}" aria-label="${STILL?'Play':'Pause'} the moving strips">${STILL?'▶':'⏸'}</button>`:'';
+/* the picks strip (S8): the five newest, drifting the other way from the quotes under the same pause control */
+function picksBlock(merch){
+  const cards=merch.slice().sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,5).map(m=>`<button class="pk" data-item="${esc(m.id)}" aria-label="${esc(m.title)}, ${m.cents?money(m.cents):'no price listed'}"><span class="pic">${pic(m,'pk')}</span><span class="b"><span class="t">${esc(m.title)}</span><span class="p">${m.cents?money(m.cents):'No price listed'}</span></span></button>`);
+  const twice=cards.length>=2&&!STILL&&!REDUCED(), gb=c=>c.replace(/^<button /,'<button tabindex="-1" aria-hidden="true" ');
+  return `<div class="sect"><i></i>Picks<span></span>${stillBtn(cards.length)}</div><div class="picks" id="picks" data-nopull>${cards.join('')}${twice?cards.map(gb).join(''):''}</div>`;
+}
+/* what fans are saying: starred posts with text, pinned first then newest, eight at most; drawn twice (ghost) so drift() wraps, once when paused or under reduced motion */
+function quotesBlock(d){
+  const posts=(d.posts||[]).filter(p=>p&&Number(p.stars)>=1);
+  const quotes=posts.filter(p=>String(p.text||'').trim()).sort((a,b)=>(b.pinned-a.pinned)||(b.at-a.at)).slice(0,8);
+  if(!quotes.length) return '';
+  const avg=(posts.reduce((s,p)=>s+Number(p.stars),0)/posts.length).toFixed(1);
+  const cards=quotes.map(p=>{ const s=Math.max(1,Math.min(5,Math.round(Number(p.stars)))), txt=String(p.text).replace(/\s+/g,' ').trim().slice(0,140);
+    return `<a class="qc" href="${esc(COMMHREF)}" data-leaving="Opening the community page…"><i class="stars" aria-label="${s} star${s===1?'':'s'}">${'★'.repeat(s)}<span>${'★'.repeat(5-s)}</span></i><b>“${esc(txt)}”</b><span>${esc(p.name||'Someone')} · ${esc(p.showLabel||ago(p.at))}</span></a>`; });
+  const twice=cards.length>=2&&!STILL&&!REDUCED();
+  return `<div class="sect"><i></i>What fans are saying <span>· ★ ${avg}</span>${stillBtn(cards.length)}</div><div class="quotes" id="quotes" data-nopull>${cards.join('')}${twice?cards.map(ghost).join(''):''}</div>`;
+}
+/* how it works — true with or without a pickup code; Apple/Google Pay show because pay.mjs sets no payment_method_types — do not add one */
+function howBlock(d,merch){
+  const pick=merch.some(m=>m.ship==='pickup'), ship=merch.some(m=>m.ship==='ship'), N=esc(d.name), F=esc(VENUE?d.name:firstName());
+  let rows;
+  if(!d.canBuy) rows=[`Card payments aren’t on yet. Items with a link sell where the link goes; ${TABLE} takes cash.`];
+  else{ const l1=`Pay here — Apple Pay, Google Pay or card, straight to ${N} through Stripe.`;
+    rows=pick&&ship?[l1,`Show the receipt at ${TABLE}, or give an address at checkout — each item says which.`,'Take it home.']
+        :ship?[l1,'Give an address on the next page.',`${F} posts it.`]
+        :[l1,`Show the receipt on this phone at ${TABLE}.`,'Take it home.']; }
+  return `<div class="how">${rows.map((r,i)=>`<div><i>${rows.length>1?i+1:'·'}</i><span>${r}</span></div>`).join('')}</div>
+    <div class="hownext"><button class="btn btn-ink btn-block" data-ask>Make a request</button><p class="fine">Want something that isn’t on the table? Tell ${F}.</p></div>`;
+}
+/* the in-app-browser hint: no auto-redirect (every escape scheme is undocumented); Buy still works by card */
+function hintBlock(){
+  if(!HINT) return '';
+  return `<div class="hint"><b>You’re in ${WV}’s browser.</b>Buying works here, but Apple Pay and Google Pay may not show up — you’d type your card. For one-tap pay, open this page in your browser: tap the ··· menu, then <em>Open in browser</em>.<div class="acts"><button class="btn btn-grey btn-sm" data-copy>Copy link</button><button class="btn btn-text btn-sm" data-gotit>Got it</button></div></div>`;
+}
+function render(){
+  const d=D; if(!d) return;
+  const merch=d.merch||[], live=!!d.live&&!VENUE;
+  document.body.classList.toggle('live',live);
+  document.title=`${d.name} · Merch — MySet`;
+  let h=`<div class="shophead rise">
+    <div class="av" style="background-image:url('${esc(d.avatar||'/img/band-sm.jpg')}')"></div>
+    <div class="n"><div class="k">Merch</div>
+      <h1><a href="${esc(HOME)}">${esc(d.name)}</a>${d.verified?'<span class="vbadge">✓ Verified</span>':''}</h1>
+      ${merch.length?`<p class="promise">${live?'<i class="dot"></i>':''}<span>${promise(d,merch)}</span></p>`:''}</div>
+    <button class="share" onclick="share()">Share</button>
+  </div>`;
+  h+=receiptBlock()+hintBlock();   // the fresh receipt (or the check) stays above the grid; earlier orders sit at the foot
+  if(!merch.length){
+    h+=`<div class="empty"><b>Nothing on the table right now</b>${live?'The set list is still open.':'Check back after the next show.'}<br><button class="btn btn-ink btn-sm" data-ask>Make a request</button></div>`;
+  }else{
+    h+=`<div class="pgrid${merch.length===1?' one':''}">${merch.map(card).join('')}</div>`;
+    if(PICKS&&merch.length>=6) h+=picksBlock(merch);   // after the grid, so the grid keeps y ≈ 158 and its second row of prices stays above the fold
+    h+=quotesBlock(d)+howBlock(d,merch);
+  }
+  h+=pastOrders();
+  h+=`<div class="foot">Sold by ${esc(d.name)} · Payments by Stripe · MySet<br>Questions about an order go to ${esc(d.name)}.</div>`;
+  // the page's one emberGlow, only while the vote is on: one tap to the room, before and after paying
+  if(live) h+=`<div class="fab"><div class="state"><b>Live now</b><span>Voting is open</span></div><a class="btn btn-pri act liveglow" href="${esc(VOTEHREF)}"><span class="lv"></span>TAP TO VOTE THE SETLIST</a></div>`;
+  $('#app').innerHTML=h;
+  document.querySelectorAll('img.lazy').forEach(im=>{ if(im.complete&&im.naturalWidth) im.classList.add('ready'); else im.addEventListener('load',()=>im.classList.add('ready'),{once:true}); });
+  if(!STILL&&!REDUCED()){ drift('quotes',1); drift('picks',-1); }
+  if(RECEIPT&&!RECEIPT.quiet) RECEIPT.quiet=true;   // the tick and the code play once per fresh receipt, never on a re-render (§3.7)
+}
+/* one listener for everything in #app, bound once — a redraw cannot orphan it */
+$('#app').addEventListener('click',e=>{
+  const t=e.target.closest&&e.target.closest('[data-item],[data-order],[data-keep],[data-copy],[data-gotit],[data-ask],.still'); if(!t) return;
+  if(t.dataset.item!=null) return openItem(t.dataset.item);
+  if(t.dataset.ask!=null) return openAsk();
+  if(t.dataset.order!=null){ const o=orders().find(x=>x&&x.sid===t.dataset.order); if(o){ RECEIPT={order:o,quiet:true}; render(); window.scrollTo({top:0,behavior:REDUCED()?'auto':'smooth'}); } return; }   // the receipt is drawn above the grid; the tap came from the foot
+  if(t.dataset.keep!=null){ RECEIPT=null; return render(); }
+  if(t.dataset.copy!=null){ try{ navigator.clipboard.writeText(location.origin+SHOPHREF); toast('Shop link copied'); }catch(x){ toast(location.origin+SHOPHREF); } return; }
+  if(t.dataset.gotit!=null){ HINT=false; try{ localStorage.setItem('myset.shop.hint','1'); }catch(x){} return render(); }
+  STILL=!STILL; try{ localStorage.setItem('myset.shop.still',STILL?'1':'0'); }catch(x){} render();
+  const s=$('#app .still'); if(s) try{ s.focus({preventScroll:true}); }catch(x){}   // same: render() replaced the control, focus goes to its replacement
+});
+function share(){ const url=location.origin+SHOPHREF; if(navigator.share){ navigator.share({title:`${D.name} merch`,url}).catch(()=>{}); } else { try{ navigator.clipboard.writeText(url); toast('Shop link copied'); }catch(e){ toast(url); } } }
+
+/* THE STRIPS TURN THEMSELVES — DRIFT, drift() and ghost() are artist.html's, byte for byte: 28 px/s over a ghost set,
+   stopped by a finger, never under prefers-reduced-motion. The pause control re-renders without the ghost set; the old loop quits. */
+const DRIFT={};
+function drift(id,dir){
+  const H=DRIFT[id]||(DRIFT[id]={PT:null,PR_:null});
+  cancelAnimationFrame(H.PT); clearTimeout(H.PR_);
+  const el=document.getElementById(id); if(!el||el.children.length<2)return;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
+  const copy=el.querySelector('[aria-hidden="true"]'); if(!copy)return;
+  /* One set's width, gap included — read every frame, not once: a page drawn from
+     the last-seen copy runs this before the preloaded stylesheet has landed, and a
+     width measured then is the wrong width for the rest of the visit. */
+  const span=()=>copy.offsetLeft-el.children[0].offsetLeft;
+  /* Two cards on a tablet-wide screen: one copy of the set is not enough for the
+     scroll to reach the seam (the strip would stall at its end, then jump back), so
+     more copies go on until it can — checked per frame for the same reason span()
+     is, and capped so a strip that never measures right cannot grow forever. */
+  const ghosts=[...el.children].filter(c=>c.getAttribute('aria-hidden')==='true'); let extra=0;
+  const topUp=()=>{const s=span(); if(s>0&&extra<4&&s+el.clientWidth>el.scrollWidth){ghosts.forEach(c=>el.appendChild(c.cloneNode(true)));extra++;}};
+  let hold=false, touching=false, x=el.scrollLeft, last=0;
+  const pause=()=>{hold=true;clearTimeout(H.PR_);};
+  const resume=()=>{clearTimeout(H.PR_);H.PR_=setTimeout(()=>{hold=false;x=el.scrollLeft;last=0;},1000);};
+  el.addEventListener('touchstart',()=>{touching=true;pause();},{passive:true});
+  el.addEventListener('touchend',()=>{touching=false;resume();},{passive:true});
+  el.addEventListener('touchcancel',()=>{touching=false;resume();},{passive:true});
+  el.addEventListener('pointerdown',pause,{passive:true});
+  el.addEventListener('wheel',()=>{pause();resume();},{passive:true});
+  el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')pause();});
+  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')resume();});
+  el.addEventListener('scroll',()=>{if(hold){x=el.scrollLeft;if(!touching)resume();}},{passive:true});
+  const step=(t)=>{
+    if(!el.isConnected)return;
+    H.PT=requestAnimationFrame(step);
+    if(hold||document.hidden){last=0;return;}
+    /* Running backwards, the scroll starts one set in and is pushed forward by a set
+       whenever it reaches the front — the same seam, seen from the other side. */
+    if(last){ topUp(); const s=span(); x+=dir*28*(t-last)/1000;
+      if(s>0){ if(x>=s)x-=s; else if(x<0)x+=s; } el.scrollLeft=x; }
+    else if(dir<0&&!el.scrollLeft){ const s=span(); if(s>0){x=s;el.scrollLeft=x;} }
+    last=t;
+  };
+  H.PT=requestAnimationFrame(step);
+}
+/* drift() has no cancel path of its own — a strip on the page lives as long as the page. The sheet's strip does not: when the sheet
+   closes or the item switches its loop must stop, or a hidden strip goes on laying out every frame. The smallest one (2026-09-13). */
+function undrift(id){ const H=DRIFT[id]; if(!H) return; cancelAnimationFrame(H.PT); clearTimeout(H.PR_); delete DRIFT[id]; }
+/* A second copy of a card for a drifting strip: out of the tab order and hidden from
+   a screen reader, which reads one set. */
+const ghost=c=>c.replace(/^<a /,'<a tabindex="-1" aria-hidden="true" ').replace(/^<div /,'<div aria-hidden="true" ');
+
+/* ---------- buying ---------- */
+/* PEND is the community page's key on purpose: both redeem()s are replay-safe (INVARIANT 7), so whichever page opens next finishes a lost return */
+const PEND='myset.pending.merch', ORD='myset.orders';
+const pend=()=>{ try{ return JSON.parse(localStorage.getItem(PEND)||'null'); }catch(e){ return null; } };
+function orders(){ try{ const a=JSON.parse(localStorage.getItem(ORD)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+/* this phone's receipts: newest first, twenty at most, thirty days at most — "stays on this phone", never "forever" */
+function saveOrder(o){ try{ const cut=Date.now()-30*864e5; localStorage.setItem(ORD,JSON.stringify([o,...orders().filter(x=>x&&x.sid!==o.sid&&x.at>cut)].slice(0,20))); }catch(e){} }
+async function buy(){
+  const m=CUR, b=$('#buyGo'); if(!m||!b) return;
+  b.disabled=true; b.textContent='Opening checkout…';
+  const attempt=Math.random().toString(36).slice(2,14);
+  const body={fan:FAN,kind:'merch',item:m.id,qty:QTY,attempt,from:'shop'};   // from:'shop' picks a SERVER-built return path, never a URL (0f8)
+  if(SIZE) body.variant=SIZE;
+  const again=()=>{ b.disabled=false; paint(); };
+  try{
+    const r=await fetch(`${API}/pay${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    if(!d.ok||!d.url){
+      /* never a raw gateway error (INVARIANT 8): say what still works, and never leave a button the server would now refuse */
+      const e=String(d.error||'');
+      if(r.status===503||e==='payments-not-configured'){ toast(`Card payments just went off for ${VENUE?D.name:firstName()} — ${TABLE} takes cash tonight.`); D.canBuy=false; render(); paintSheet(); return; }
+      if(r.status===404){ toast('That one just came off sale. Pull down to refresh.'); closeSheet(); return; }
+      if(r.status===409&&/size/i.test(e)){ const v=(m.variants||[]).find(x=>x.label===SIZE); if(v) v.out=true; const left=(m.variants||[]).filter(x=>!x.out).map(x=>x.label); toast(`${SIZE} just went${left.length?' — '+left.join(', ')+' left':''}.`); SIZE=''; paintSheet(); return; }
+      if(r.status===409){ m.out=true; toast(e||'That one’s sold out'); render(); paintSheet(); return; }
+      /* a 400 refuses THIS request (sizes added, price changed): retrying never clears it — re-read and repaint, never a Buy that fails the same way */
+      if(r.status===400){
+        toast(e||'That one just changed. Have another look.');
+        await load();
+        const f=(D&&D.merch||[]).find(x=>x.id===m.id);
+        if(!f){ closeSheet(); return; }                  // the read only carries items still on sale
+        CUR=f; if(SIZE&&!(f.variants||[]).some(v=>v.label===SIZE&&!v.out)) SIZE='';
+        paintSheet(); return;
+      }
+      toast('Couldn’t open checkout — try again in a moment'); again(); return;
+    }
+    // remembered BEFORE leaving, so a lost return trip is still redeemed next load (5c); the item fields let a cancelled trip re-open this sheet
+    try{ localStorage.setItem(PEND,JSON.stringify({id:d.id,at:Date.now(),item:m.id,title:m.title,qty:QTY,ship:m.ship,amount:m.cents*QTY,post:postOf(m),size:SIZE||'',slug:SLUG,venue:VENUE,from:'shop'})); }catch(e){}
+    goTo(d.url,'Opening secure checkout…');
+  }catch(e){ toast(navigator.onLine===false?'You’re offline — try again when the bar’s wifi wakes up.':'Couldn’t open checkout — try again in a moment'); again(); }
+}
+/* the return trip: verify with the server, never trust the URL (INVARIANT 6); a stale pending session is retried too (5c).
+   The order is d.order, else what this phone remembered at checkout — never a code the server did not mint. */
+async function redeem(sid,found){
+  try{
+    const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(FAN)}${Q==='?'?'':'&'+Q.slice(1)}`);
+    const d=await r.json();
+    if(d.ok){ try{ localStorage.removeItem(PEND); }catch(e){} CHECKING='';
+      if(d.kind&&d.kind!=='merch'){ RECEIPT={sid,tip:true,already:!!d.already}; render(); return true; }   // the shared key can hold a tip started on the community page
+      const p=pend(), o=d.order||{}, pm=p&&p.id===sid?p:null;
+      const order={sid,slug:SLUG,venue:VENUE,item:o.item||(pm&&pm.item)||'',title:o.title||(pm&&pm.title)||'Your order',
+        qty:o.qty!=null?o.qty:(pm?pm.qty:null),variant:o.variant||(pm&&pm.size)||'',ship:o.ship||(pm&&pm.ship)||'pickup',
+        cents:o.cents!=null?o.cents:(pm&&pm.amount!=null?pm.amount:null),post:o.post||(pm&&pm.post)||0,code:String(o.code||''),at:o.at||Date.now()};
+      saveOrder(order); RECEIPT={sid,order,already:!!d.already,found:!!found}; render(); return true; }
+    if(d.error==='not paid') return false;
+  }catch(e){}
+  return null;
+}
+const tick=()=>`<svg class="ok" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7 12.5l3.2 3.2L17 9"/></svg>`;
+/* the receipt: a drawn tick and the code a glyph at a time (aria-label carries it whole from frame one); never the fan's email (0cm) */
+function receiptCard(R){
+  const o=R.order||{}, N=esc(D.name), q=R.quiet?' quiet':'';
+  if(R.tip) return `<div class="receipt${q}" role="status"><b>${tick()}Paid — thank you</b>${R.already?'That tip was already in.':`${esc(firstName())} has your tip.`}</div>`;
+  const head=R.already?'Already in':R.found?'Found it — you paid earlier':'Paid — thank you';
+  const line=`${o.qty?o.qty+' × ':''}${esc(o.title||'Your order')}${o.variant?' ('+esc(o.variant)+')':''}${o.cents!=null?' · '+money(o.cents):''}${o.post?' + '+money(o.post)+' post':''}`;
+  const code=o.code?`<b class="code" aria-label="${esc(o.code.split('').join(' '))}">${o.code.split('').map(c=>`<i>${esc(c)}</i>`).join('')}</b>`:'';
+  const box=o.ship==='ship'
+    ? `<div class="rbox"><span>Posted to the address you gave Stripe</span>${code?`<span>Order</span>${code}`:''}</div>`
+    : `<div class="rbox"><span>${code?'Show this at '+TABLE:'Show this receipt at '+TABLE}</span>${code}</div>`;
+  const small=o.ship==='ship'?`${N} sees your address when they pack it. MySet doesn’t keep it.`
+    :`Paid to ${N} through Stripe. This stays on this phone — find it here under Your order, or take a screenshot.`;
+  return `<div class="receipt${q}" role="status"><b>${tick()}${head}</b>${R.already?`<div>That order went through earlier.${o.code?' Here’s your code again.':''}</div>`:''}<div>${line}</div>${box}<small>${small}</small>
+    <div class="acts"><a class="btn btn-ink btn-sm" href="${esc(COMMHREF)}" data-leaving="Opening the community page…">Say thanks →</a><button class="btn btn-text btn-sm" data-keep>Keep shopping</button></div></div>`;
+}
+/* above the grid — the full card, once, the moment a buyer comes back from Stripe (or the check that finds it) */
+function receiptBlock(){
+  if(CHECKING) return `<div class="receipt checking">Checking on your ${esc(CHECKING)}…</div>`;
+  if(RECEIPT) return receiptCard(RECEIPT);
+  return '';
+}
+/* at the foot — a returning buyer's job is pickup, but the grid comes first: this phone's earlier orders here, one line each, no date
+   (the code and the item are what the merch table wants; the founder, 2026-09-13). A tap re-opens the full receipt above the grid. */
+function pastOrders(){
+  if(RECEIPT||CHECKING) return '';
+  const mine=orders().filter(o=>o&&o.slug===SLUG&&!!o.venue===VENUE).slice(0,3);
+  if(!mine.length) return '';
+  return `<div class="past">${mine.map((o,i)=>`<button class="receipt compact" data-order="${esc(o.sid)}">${i?'Your order':'Your last order'}${o.code?' · '+esc(o.code):''} · ${esc(o.title)}${o.qty>1?' × '+o.qty:''}</button>`).join('')}</div>`;
+}
+/* drop ?paid= / ?cancelled= (INVARIANT 7) but keep ?a=|?v= for the bare-file route */
+function stripQ(){ const u=new URL(location.href); u.searchParams.delete('paid'); u.searchParams.delete('cancelled'); history.replaceState(null,'',u.pathname+u.search+u.hash); }
+/* a confirm that could not be reached (bar wifi, a 502) is never silent, and PEND stays so a pull retries it — the page's own remedy */
+const RETRY='Couldn’t check on your order just now — pull down to try again.';
+async function handleReturn(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('cancelled')){
+    toast('No charge — your card wasn’t touched.');
+    stripQ();
+    // the same sheet — item, quantity and size — so paying again is one tap; a hash on the address wins
+    const p=pend(); try{ localStorage.removeItem(PEND); }catch(e){}
+    if(p&&p.from==='shop'&&p.slug===SLUG&&p.item&&!location.hash&&openItem(p.item)){ QTY=Math.max(1,Math.min(5,parseInt(p.qty,10)||1)); SIZE=p.size||''; paintSheet(); }
+    return;
+  }
+  const sid=q.get('paid');
+  if(sid){ const p=pend(); CHECKING=(p&&p.id===sid&&p.title)||'order'; render();
+    const ok=await redeem(sid); stripQ();
+    if(!ok){ CHECKING=''; render(); toast(ok===false?'That checkout wasn’t finished — nothing was charged.':RETRY); } return; }
+  const p=pend();
+  if(p&&p.id&&Date.now()-p.at<86400000){ CHECKING=p.title||'order'; render();
+    const ok=await redeem(p.id,Date.now()-p.at>600000);   // a retry within ten minutes of checkout is still 'Paid — thank you'; older is 'Found it'
+    if(!ok){ CHECKING=''; if(ok===false){ try{ localStorage.removeItem(PEND); }catch(e){} } render(); toast(ok===false?'That checkout wasn’t finished — nothing was charged.':RETRY); } }
+}
+
+MySetPull(async()=>{ try{ await load(); if(D&&pend()) await handleReturn(); }catch(e){} });
+(async()=>{ await load(); if(D) await handleReturn(); openFromHash(); })();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>
