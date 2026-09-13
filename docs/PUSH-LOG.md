@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 10:22 — 0000bc8 — wt@ui/pink-orange-pass (0 files since origin/main)
+**tl;dr:** Every thin ring on the site now runs the brand gradient (pink-red left → orange right, the Search button's fill); the audience's orange words, the section headings, the edge glow and the page menu (now two bars) take the logo's pink-orange, --accent-2 = #FF5650 (decision 0059)
+**Other sessions:** Two ring recipes in docs/design-system.md §2 — a masked ::after where the ring was an inset shadow, padding-box/border-box double background on a box with a real border or an input; copy one, do not reach for a flat colour. --accent-2 is #FF5650 in app.css, studio.html, venue-studio.html; edgeGlow/tab pill glow are rgba(255,86,80,…) and studio.html/vote.html keyframes must stay byte-identical. tools/uicheck.mjs and test/decline.mjs assert the gradient (backgroundImage), not a colour.
+
 ### 2026-09-12 23:21 — 567bdb6 — wt@ui/product-dev4-batch (12 files since origin/main)
 **tl;dr:** Product Dev 4: every show row is one centred card (front door, artist page, venue page) with the thin Directions pill under the date and RSVP at the edge — RSVP now on the venue page too; the map sheet drags closed; orange rings on the two chips, a quiet search bar; both Studios' tab bar has a top line, sits lower, 13px labels, the Live icon unclipped; Gigs tab rows are cards
 **Other sessions:** venue.mjs rows now carry eventId + rsvp (0056 extended — no new record; PENDING row cleared). venue.html has its own rsvpTap keyed v:<slug>|event|date / <artistSlug>|event|date like index.html. lock.css .tabbar is 56px now (bodies still reserve 72px + inset). studio.js restamped ?v=d6907d62. artist.html: .dirs.thin replaces .dirs.ico; the cover's onerror drops srcset before falling back. index.html #homeMapModal carries data-nopull and #homeMapHead the drag handlers.

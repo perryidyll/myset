@@ -74,8 +74,8 @@ body{padding-bottom:34px}
    stale-first, so a returning phone can draw this page with an app.css from
    before .chip existed. Restated, that phone still sees a pill, not bare text. */
 .signin{flex:0 0 auto;padding:9px 13px;border-radius:var(--pill);background:var(--surface);white-space:nowrap;
-  font-size:13px;font-weight:600;color:var(--accent-ink);border-color:transparent;
-  box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}
+  font-size:13px;font-weight:600;color:var(--accent-ink);border-color:transparent;position:relative;
+  box-shadow:var(--sh-1)}
 .signin:hover{background:var(--accent-soft)}
 @media(max-width:370px){.brandbar{padding-left:12px;padding-right:12px}.topbtns{gap:4px}
   .signin{padding:9px 9px;font-size:12px}.themebtn{width:34px;height:34px}.mark{font-size:15px}.mark i{width:24px;height:24px}}
@@ -90,14 +90,21 @@ body{padding-bottom:34px}
    below, and its two headings are ink, not muted — the founder asked (2026-09-12)
    from a dark phone for white headings; --ink is white there and near-black on
    the light card, where a literal white would vanish. */
-.finder{margin:20px 18px 0;background:var(--surface);border-radius:var(--r-lg);
-  box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-2);padding:18px 18px 20px}
+.finder{margin:20px 18px 0;background:var(--surface);border-radius:var(--r-lg);position:relative;
+  box-shadow:var(--sh-2);padding:18px 18px 20px}
 .artistactions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 18px 0}
 /* .artistsearch is a .chip from app.css, sized up to a two-up row. The pill
    shape is restated for the same stale-app.css reason as .signin above. */
 .artistsearch{display:flex;align-items:center;justify-content:center;gap:0;min-width:0;padding:14px 10px;text-align:center;
   border-radius:var(--pill);background:var(--surface);white-space:nowrap;font-size:15px;font-weight:600;color:var(--accent-ink);
-  border-color:transparent;box-shadow:inset 0 0 0 1.5px var(--accent-2),var(--sh-1)}   /* the ring the finder wears (the founder, 2026-09-12) */
+  border-color:transparent;position:relative;box-shadow:var(--sh-1)}   /* the ring the finder wears (the founder, 2026-09-12) */
+/* THE RING IS THE BRAND GRADIENT (the founder, 2026-09-13): pink-red at the left,
+   orange at the right, exactly the Search button's fill — on every ring on the site.
+   A pseudo-element, so it costs no layout and sits on any background; a box that
+   already has a real border, or an input, paints the gradient to its border box
+   instead (see .gig.feat). */
+.signin::after,.finder::after,.artistsearch::after,.gig .rsvp::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.gig .rsvp[aria-pressed="true"]::after{content:none}
 .artistsearch:active{transform:scale(.98)}
 @media(max-width:370px){.artistsearch{font-size:13px;padding-left:7px;padding-right:7px}}
 /* The folded-map line icon on "View on map" (the founder, 2026-09-12): a text
@@ -145,17 +152,17 @@ body{padding-bottom:34px}
 /* The whole row is tappable, but it can't be one big <a> any more — there is a
    Directions link inside it now, and an anchor inside an anchor is not a thing.
    So the row link is stretched across the row underneath everything else. */
-/* ORANGE, which is --accent-2 — Perry's colour for the audience. --accent is the
+/* PINK-ORANGE, which is --accent-2 — the founder's colour for the audience. --accent is the
    pink/red used for warnings and destructive things, and a paid listing must not
    wear it. */
 .feathead{font-size:11.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
   color:var(--accent-2);padding:15px 2px 7px}
-.gig.feat{border:1.5px solid var(--accent-2);border-radius:12px;margin:8px 0;
-  box-shadow:0 0 0 3px rgba(255,122,69,.14)}
+.gig.feat{border:1.5px solid transparent;border-radius:12px;margin:8px 0;border-color:transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box;
+  box-shadow:0 0 0 3px rgba(255,86,80,.14)}
 /* `.gig:first-child{border-top:none}` is what separates ordinary rows in a list, and
    it was quietly eating the top edge of a featured row — three orange sides and a
    grey one. Caught by reading the computed style, not by looking at a screenshot. */
-.gig.feat:first-child{border-top:1.5px solid var(--accent-2)}
+.gig.feat:first-child{border-top:1.5px solid transparent}
 /* The featured rows are their own cards, so the list they sit in must not also be
    one — otherwise a grey rounded panel peeks out from behind three orange ones. */
 .giglist.feats{background:none;border-radius:0;overflow:visible}
@@ -192,8 +199,7 @@ body{padding-bottom:34px}
 .gig .going{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center}
 .gig .rsvp{display:inline-block;padding:6px 11px;border-radius:var(--pill);
   font-size:11.5px;font-weight:700;letter-spacing:.02em;line-height:1.2;
-  background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);
-  box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+  background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);position:relative}
 .gig .rsvp[aria-pressed="true"]{background:var(--accent-2);color:#fff;box-shadow:none}
 .gig .rsvp:active{transform:scale(.94)}
 .gig .m{flex:1;min-width:0}
@@ -251,8 +257,8 @@ body{padding-bottom:34px}
   background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);
   box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-soft);animation:a2hsGlow 4.2s ease-in-out infinite}
 @keyframes a2hsGlow{
-  0%,100%{filter:drop-shadow(0 0 5px rgba(255,122,69,.22))}
-  50%{filter:drop-shadow(0 0 13px rgba(255,122,69,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}}
+  0%,100%{filter:drop-shadow(0 0 5px rgba(255,86,80,.22))}
+  50%{filter:drop-shadow(0 0 13px rgba(255,86,80,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}}
 .a2hs .ic{flex:0 0 auto;width:36px;height:36px;border-radius:11px;background:var(--grad);
   display:grid;place-items:center;box-shadow:0 3px 10px rgba(255,55,95,.3)}
 .a2hs .ic svg{width:19px;height:19px;fill:#fff}

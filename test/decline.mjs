@@ -82,10 +82,12 @@ eq('and returns the credits exactly once', [(await pub('cara')).credits.used, (a
 console.log('\nTHE TWO SCREENS SAY AND SHOW IT');
 ok('audience heading has the requested copy', /Vote your favorite songs below/.test(votePage));
 ok('played songs carry the exact replay note', /already played \(pay to request again\)/.test(votePage));
-ok('the search, sort control, and voting list use the orange border',
-  /search input[\s\S]{0,220}accent-2/.test(votePage) &&
-  /\.sortbar[\s\S]{0,180}accent-2/.test(votePage) &&
-  /\.list\.votelist[\s\S]{0,320}accent-2/.test(votePage));
+/* the ring is the brand gradient since 2026-09-13: a box with a real border paints
+   var(--grad) to its border box, a box without one draws it with ::after */
+ok('the search, sort control, and voting list wear the brand-gradient ring',
+  /search input[\s\S]{0,260}var\(--grad\) border-box/.test(votePage) &&
+  /\.sortbar::after\{[^}]*var\(--grad\)/.test(votePage) &&
+  /\.list\.votelist[\s\S]{0,360}var\(--grad\) border-box/.test(votePage));
 ok('the vote-pack sheet uses first-name-only orange copy',
   /lede buyline[^>]*>goes straight to \$\{esc\(artistFirst/.test(votePage) && /fine secure-votes/.test(votePage));
 ok('the Studio renders paid-vote pills and the decline action',

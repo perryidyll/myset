@@ -30,7 +30,7 @@ html{background:var(--bg)}
   --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
   --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
   --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
-  --accent:#FF456E; --accent-2:#FF7A45; --accent-soft:rgba(255,69,110,.16);
+  --accent:#FF456E; --accent-2:#FF5650; --accent-soft:rgba(255,69,110,.16);
   --grad:linear-gradient(135deg,#FF375F,#FF6B45);
   --good:#30D158;
   --r-sm:14px; --r:18px; --r-lg:24px; --pill:999px;
@@ -83,7 +83,9 @@ a{color:inherit;text-decoration:none}
 .pill{flex:0 0 auto;padding:6px 12px;border-radius:var(--pill);font-size:11.5px;font-weight:700}
 .pill.ok{background:rgba(48,209,88,.16);color:var(--good)}
 .pill.no{background:var(--surface-2);color:var(--muted)}
-.orange-outline{box-shadow:inset 0 0 0 1.5px var(--accent-2)!important}
+/* the brand-gradient ring, as on the front door (the founder, 2026-09-13) */
+.orange-outline,.upg{position:relative}
+.orange-outline::after,.upg::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 
 /* The tabs are a fixed bar at the bottom of the screen — .tabbar and the Menu
    sheet's .menurow are the shared recipe in /lock.css, the same bar the Artist
@@ -140,7 +142,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 /* the plan, top right: an orange-ringed Upgrade on free, a green tag with the plan's
    name otherwise — both tappable, both with the same arrow the name carries */
 .upg,.plantag{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:var(--pill);font-size:13px;font-weight:700;flex:0 0 auto;white-space:nowrap}
-.upg{color:var(--accent-2);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+.upg{color:var(--accent-2)}
 .plantag{background:rgba(48,209,88,.16);color:var(--good)}
 .upg span,.plantag span{font-size:11px;opacity:.75}
 .planwhen{margin:10px 0 0;text-align:center;font-size:13.5px;color:var(--ink)}
@@ -155,7 +157,7 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .bigup{width:100%;padding:16px;border-radius:var(--pill);font-size:16.5px;font-weight:700;
   background:rgba(48,209,88,.16);color:var(--good);display:flex;align-items:center;justify-content:center;gap:8px}
 .bigup span{font-size:12px;opacity:.75}
-.tier{border:1.5px solid var(--accent-2);border-radius:var(--r);overflow:hidden;margin-top:14px;background:var(--surface)}
+.tier{border:1.5px solid transparent;border-color:transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box;border-radius:var(--r);overflow:hidden;margin-top:14px}
 .tier .hd{background:var(--accent-2);color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:baseline;font-weight:800;font-size:21px;letter-spacing:-.02em}
 .tier .hd small{font-size:16px;font-weight:700;opacity:.95}
 .tier ol{margin:0;padding:13px 16px 13px 34px;font-size:16.5px;line-height:1.5;color:var(--ink-2)}

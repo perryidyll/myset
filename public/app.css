@@ -19,7 +19,7 @@
   --hair-2:rgba(0,0,0,.12);
 
   --accent:#FF375F;
-  --accent-2:#FF7A45;
+  --accent-2:#FF5650;   /* the logo's pink-orange: the middle of --grad, not its warm end (the founder, 2026-09-13) */
   --accent-ink:#D6003C;
   --accent-soft:rgba(255,55,95,.10);
   --grad:linear-gradient(135deg,#FF375F 0%,#FF6B45 100%);

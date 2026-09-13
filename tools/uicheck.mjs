@@ -118,18 +118,22 @@ const VOTING_UI=await pg.evaluate(()=>{
     played:[{id:'beta',title:'Beta',artist:'T',votes:0,cost:5,tags:[]}],
     flags:{},tags:[],asks:{vibe:{cost:0,options:['Energetic','Chill','Romantic','Upbeat','Melancholy','Funky','Acoustic','Rowdy','Nostalgic','Dark','Groovy','Mellow','Anthemic','Intimate','Hypnotic','Uplifting','Soulful','Wild','Dreamy','Heavy']}},myAsks:[]};
   render();
-  const orange=/rgb\(255,\s*122,\s*69\)/;
-  const search=getComputedStyle(document.querySelector('.search input')).boxShadow;
-  const sort=getComputedStyle(document.querySelector('.sortbar')).boxShadow;
-  const list=getComputedStyle(document.querySelector('.votelist')).borderColor;
-  ok('search has a thin orange border', orange.test(search), search);
-  ok('sort buttons have a thin orange border', orange.test(sort), sort);
-  ok('the voting list has a thin orange border', orange.test(list), list);
+  const orange=/rgb\(255,\s*86,\s*80\)/;   // --accent-2, the logo's pink-orange (2026-09-13)
+  /* THE RING IS THE BRAND GRADIENT (2026-09-13): a box with a real border paints it
+     to its border box, a box without one draws it with ::after — both read as a
+     linear-gradient running #FF375F → #FF6B45 where a flat colour used to be. */
+  const grad=/linear-gradient\(135deg,\s*rgb\(255,\s*55,\s*95\).*rgb\(255,\s*107,\s*69\)/;
+  const search=getComputedStyle(document.querySelector('.search input')).backgroundImage;
+  const sort=getComputedStyle(document.querySelector('.sortbar'),'::after').backgroundImage;
+  const list=getComputedStyle(document.querySelector('.votelist')).backgroundImage;
+  ok('search wears the brand-gradient ring', grad.test(search), search);
+  ok('sort buttons wear the brand-gradient ring', grad.test(sort), sort);
+  ok('the voting list wears the brand-gradient ring', grad.test(list), list);
   const head=document.querySelector('.votehead b');
   ok('the voting-list heading has the requested orange copy', head&&head.textContent==='Vote your favorite songs below'&&orange.test(getComputedStyle(head).color), head&&head.textContent);
   const queueBox=document.querySelector('.queue'), queueScroll=document.querySelector('.queue-scroll');
   ok('Up next is larger, orange, bordered, and internally scrollable to three-and-a-half rows',
-    queueBox&&queueScroll&&orange.test(getComputedStyle(queueBox).borderColor)
+    queueBox&&queueScroll&&grad.test(getComputedStyle(queueBox).backgroundImage)
       &&orange.test(getComputedStyle(queueBox.querySelector('.qh b')).color)
       &&parseFloat(getComputedStyle(queueBox.querySelector('.qh b')).fontSize)>=15
       &&queueScroll.scrollHeight>queueScroll.clientHeight&&queueScroll.clientHeight<=267,
@@ -224,7 +228,7 @@ const C=await pg.evaluate(async ()=>{
     openTip(); await new Promise(r=>setTimeout(r,80));
     ok('tapping it opens a tip sheet', /Tip Perry/.test(document.querySelector('#sheet').innerText));
     ok('with amounts and a note', !!document.querySelector('#tipAmt')&&!!document.querySelector('#tipNote'));
-    const orange=/rgb\(255,\s*122,\s*69\)/;
+    const orange=/rgb\(255,\s*86,\s*80\)/;   // --accent-2, the logo's pink-orange (2026-09-13)
     ok('with both requested lines in orange', [...document.querySelectorAll('#sheet .checkoutcopy')].length===2&&
       [...document.querySelectorAll('#sheet .checkoutcopy')].every(x=>orange.test(getComputedStyle(x).color)));
   }
@@ -308,7 +312,7 @@ const SETTINGS=await pg.evaluate(async ()=>{
     /minimize fraudulent use and ensure the best experience for MySet audiences/.test(notice.innerText));
   ok('its heading and reason are white, and its search warning is orange',
     getComputedStyle(heading).color==='rgb(255, 255, 255)'&&getComputedStyle(notice.querySelector('.verify-note')).color==='rgb(255, 255, 255)'&&
-    ['rgb(255, 122, 69)','rgb(255, 69, 110)'].includes(getComputedStyle(notice.querySelector('.verify-lede')).color));
+    ['rgb(255, 86, 80)','rgb(255, 69, 110)'].includes(getComputedStyle(notice.querySelector('.verify-lede')).color));
   await new Promise(r=>setTimeout(r,500));
   const noticeBox=notice.getBoundingClientRect();
   ok('the verification notice is centered in the viewport',
@@ -345,7 +349,7 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   const studioQueueShell=document.querySelector('.queue-shell');
   ok('the artist Up next window is orange, indented, and internally scrollable',
     studioQueue&&studioQueueShell&&studioQueue.scrollHeight>studioQueue.clientHeight&&innerWidth-studioQueueShell.getBoundingClientRect().right>=54
-      &&/255,\s*122,\s*69/.test(getComputedStyle(studioQueueShell).borderColor)
+      &&/linear-gradient\(135deg,\s*rgb\(255,\s*55,\s*95\)/.test(getComputedStyle(studioQueueShell).backgroundImage)
       &&/up next/i.test(document.querySelector('.sec.upnext').innerText),
     studioQueue&&`${studioQueue.clientHeight}/${studioQueue.scrollHeight}; gap ${Math.round(innerWidth-studioQueueShell.getBoundingClientRect().right)}; ${getComputedStyle(studioQueueShell).boxShadow}; ${document.querySelector('.sec.upnext')&&document.querySelector('.sec.upnext').innerText}`);
   ok('the Studio scrollbar is clipped inside the rounded orange frame',
@@ -430,7 +434,7 @@ const GIG_FEATURE=await pg.evaluate(async ()=>{
   gig.querySelector('button').click();await new Promise(r=>setTimeout(r,20));
   const lead=document.querySelector('.promotelede'),style=lead&&getComputedStyle(lead);
   ok('the promotion sheet opens scoped to that gig with three large orange bullets',
-    lead&&lead.querySelectorAll('li').length===3&&parseFloat(style.fontSize)>=16&&/255,\s*122,\s*69/.test(style.color)
+    lead&&lead.querySelectorAll('li').length===3&&parseFloat(style.fontSize)>=16&&/255,\s*86,\s*80/.test(style.color)
       &&/Small Jazz Room/.test(document.querySelector('#sheet').innerText),
     lead&&`${lead.querySelectorAll('li').length} · ${style.fontSize} · ${style.color}`);
   closeSheet();

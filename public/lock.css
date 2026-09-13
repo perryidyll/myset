@@ -117,8 +117,8 @@ html{touch-action:manipulation}
    softer shadow. Both Studios draw the same bar, on purpose: it is one product.
    The selected tab's pill — the pseudo-element behind icon and label, inset
    from the button so five tabs still read at 375px while the hit area stays
-   the full fifth of the bar — wears the orange ring (accent-2, the "View on
-   map" outline; the pink accent already marks Live) and reads RAISED: a lit
+   the full fifth of the bar — wears the brand-gradient ring (the "View on
+   map" outline, drawn by ::after below; the pink accent already marks Live) and reads RAISED: a lit
    inner top edge, a shaded inner bottom, an orange tint that fades downward,
    and a soft orange glow beneath. Its icon and label lift a pixel (padding on
    the button, so the pill itself stays put). Unselected tabs stay quiet —
@@ -160,13 +160,18 @@ html{touch-action:manipulation}
 .tabbar button.on{color:var(--ink,#F5F5F7);padding-bottom:2px}  /* the 1px lift */
 .tabbar button.on svg{stroke-width:2.3;filter:none}
 .tabbar button.on::before{
-  background:linear-gradient(180deg,rgba(255,122,69,.26),rgba(255,122,69,.08));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 1.5px var(--accent-2,#FF7A45),
-    inset 0 -3px 6px rgba(0,0,0,.35),0 3px 12px rgba(255,122,69,.3)}
+  background:linear-gradient(180deg,rgba(255,86,80,.26),rgba(255,86,80,.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),
+    inset 0 -3px 6px rgba(0,0,0,.35),0 3px 12px rgba(255,86,80,.3)}
 :root[data-theme=light] .tabbar button.on::before{
-  background:linear-gradient(180deg,rgba(255,122,69,.18),rgba(255,122,69,.05));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 0 0 1.5px var(--accent-2,#FF7A45),
-    inset 0 -3px 6px rgba(0,0,0,.07),0 3px 12px rgba(255,122,69,.22)}
+  background:linear-gradient(180deg,rgba(255,86,80,.18),rgba(255,86,80,.05));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -3px 6px rgba(0,0,0,.07),0 3px 12px rgba(255,86,80,.22)}
+/* the ring itself: the same band as every ring on the site (the founder, 2026-09-13),
+   inset to the pill's own edges, behind icon and label with the pill */
+.tabbar button.on::after{content:"";position:absolute;z-index:-1;left:4px;right:4px;top:4px;bottom:4px;
+  border-radius:var(--pill,999px);padding:1.5px;background:var(--grad,linear-gradient(135deg,#FF375F,#FF6B45));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 
 /* The Menu sheet's rows — Profile / Settings / plan / Sign out in the Artist
    Studio; Food & drink / Settings / plan / Sign out in the Venue Studio. */
