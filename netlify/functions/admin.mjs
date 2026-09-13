@@ -1055,6 +1055,15 @@ async function handleProfile(aid, action, body, req, me) {
         if (e.name === prof.name && e.first === prof.first) return false;
         e.name = prof.name; e.first = prof.first; return true;
       }).catch(() => {});
+      /* THE SHOW RECORD TOO. getShow only reads the registry when the show record
+         has no `artist` of its own — and the founder's has one, so the board and
+         the stage never saw `first` (found 2026-09-13, the evening after 0062
+         shipped). Written here, the hot paths read it in the same hop they already
+         make. Only when something changed, so a no-op save touches nothing. */
+      await mutateShow(aid, (s) => {
+        if (s.artist === prof.name && s.artistFirst === prof.first) return false;
+        s.artist = prof.name; s.artistFirst = prof.first; return true;
+      }).catch(() => {});
     }
     return json({ ok: true, profile: prof });
   }

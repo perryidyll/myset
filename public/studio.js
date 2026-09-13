@@ -1935,6 +1935,7 @@ function render(){
       const L=P.links||{};
       body=`
       <div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="/artist.html" style="justify-content:center">View your page ↗</a></div>
+      <div class="wrap" style="padding-top:10px"><button class="big" onclick="saveProfile()">Save profile</button></div>
 
       <div class="sec"><span class="kick">Who you are</span></div>
       <div class="field"><label>First name or band name</label><input class="inp" id="pfFirst" maxlength="60" value="${esc(P.first||(P.name||'').split(' ')[0]||'')}" placeholder="What the room calls you"></div>
