@@ -62,7 +62,8 @@ h1{margin:4px 0 0;font-size:28px;letter-spacing:-.03em;line-height:1.12;font-wei
 .hero .v.neg{color:#B3261E;background:rgba(179,38,30,.1)}
 .hero .s{font-size:13px;color:#6E6E73;margin-top:6px}
 .hero .s b{color:#1D1D1F;font-weight:500}
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:10px 0 0}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0 0}
+.kpi.set{display:flex;flex-direction:column;gap:8px;align-items:flex-start}.kpi.set .k{white-space:normal}.kpi.set .btn{margin-top:2px}
 .kpi{border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:12px 14px;min-width:0}
 .kpi .k{font-size:11.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#FF5650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kpi .v{font-size:22px;font-weight:700;letter-spacing:-.02em;margin-top:2px}
@@ -97,8 +98,31 @@ tfoot td{font-weight:700;border-top:1.5px solid rgba(0,0,0,.14);border-bottom:0}
 .state h1{font-size:22px}
 .state p{margin:8px 0 18px;color:#6E6E73}
 footer{margin:34px 0 0;padding-top:12px;border-top:1px solid rgba(0,0,0,.08);font-size:11.5px;color:#6E6E73;line-height:1.5}
+
+/* Rate settings: the one window on the page. The same three choices the Studio's
+   $/hour tile offers — which hours count (saved to the account as bizPrefs, so
+   the Studio follows), whose rate, before or after MySet's fee (kept on the
+   phone as myset.biz.view, the key the Studio reads). */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.42);display:none;align-items:flex-end;justify-content:center;z-index:9;padding:16px}
+.veil.on{display:flex}
+.pop{background:#fff;border-radius:22px;padding:20px 20px 16px;width:100%;max-width:420px;box-shadow:0 18px 50px rgba(0,0,0,.28)}
+.pop h3{margin:0 0 4px;font-size:19px;letter-spacing:-.02em}
+.pop .lede{margin:0 0 14px;color:#6E6E73;font-size:13px}
+.pop h4{margin:16px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#FF5650}
+.sw{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.06);font-size:15px;cursor:pointer}
+.sw:last-of-type{border-bottom:0}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw i{flex:0 0 auto;width:46px;height:28px;border-radius:999px;background:rgba(0,0,0,.14);position:relative;transition:background .2s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+.sw input:checked+i{background:#187A32}.sw input:checked+i::after{transform:translateX(18px)}
+.seg{display:inline-flex;background:rgba(0,0,0,.06);border-radius:999px;padding:3px}
+.seg button{font:inherit;font-size:13px;font-weight:700;padding:8px 16px;border:0;border-radius:999px;background:none;color:#6E6E73;cursor:pointer}
+.seg button.on{background:#fff;color:#1D1D1F;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.pop .done{margin-top:18px;width:100%;padding:12px}
+.pop .saved{font-size:12px;color:#6E6E73;margin:10px 0 0;min-height:1.2em}
+@media (min-width:721px){.veil{align-items:center}}
 footer p{margin:0 0 6px}
-@media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.charts{grid-template-columns:1fr}.page{padding:18px 16px 40px}}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}.kpi.set .btn{width:100%;justify-content:center;display:inline-flex}.charts{grid-template-columns:1fr}.page{padding:18px 16px 40px}}
 
 /* Paper. The tools are for the screen; a section or a table row is never split
    over a page; and the colours print, because a report with a grey profit and
@@ -109,6 +133,7 @@ footer p{margin:0 0 6px}
   .tools,.noprint{display:none!important}
   section,.hero,.kpi,tr{break-inside:avoid;page-break-inside:avoid}
   .kpis{grid-template-columns:repeat(5,1fr)}
+  .kpi.set,.veil{display:none!important}
   .charts{grid-template-columns:3fr 2fr}
   .tbl{overflow:visible}
   a{text-decoration:none}
@@ -117,7 +142,7 @@ footer p{margin:0 0 6px}
 </head>
 <body>
 <div class="page" id="page"><div class="state"><p class="muted">Adding up…</p></div></div>
-<script src="/biz.js?v=73853ac5"></script>
+<script src="/biz.js?v=e5e1ff47"></script>
 <script>
 /* The session is the Studio's, read exactly as studio.html reads it: the passcode
    and the artist it names, or the account token. This page never signs anyone in
@@ -136,6 +161,11 @@ const dayShift=(iso,n)=>{const [y,m,d]=iso.split('-').map(Number);return Biz.loc
 const fmtDate=(iso,opts)=>{const [y,m,d]=String(iso||'').split('-').map(Number);
   return y?new Date(y,m-1,d).toLocaleDateString(undefined,opts||{weekday:'short',day:'numeric',month:'short',year:'numeric'}):'';};
 const rate=v=>v==null?'—':M(v)+'/h';
+/* The last answer, so a setting change redraws without asking again; the view is
+   the Studio's own key, so a toggle here is the toggle there. */
+let D=null;
+let VIEW=(()=>{try{const v=JSON.parse(localStorage.getItem('myset.biz.view')||'null')||{};return {mine:!!v.mine,net:!!v.net};}catch(e){return {mine:false,net:false};}})();
+const viewWords=(fees)=>[VIEW.mine?'My cut':'Total'].concat(fees?[VIEW.net?'after MySet’s fee':'before MySet’s fee']:[]).join(' · ');
 const signed=v=>`<span class="${v<0?'neg':''}">${M(v)}</span>`;
 
 /* Which window to ask for. A hand-picked list is asked for as the days it spans,
@@ -170,7 +200,7 @@ async function load(){
     if(r.status===401||(d&&d.error==='unauthorized')) return state('Open the Studio and sign in first','Your session has ended.','/studio','Open the Studio');
     return state('Couldn’t read the dashboard',esc((d&&d.error)||'Try again in a moment.'));
   }
-  draw(d);
+  D=d; draw(d);
 }
 
 function draw(d){
@@ -179,7 +209,7 @@ function draw(d){
   const from=d.from||'',to=d.to||'';
   shows=PICK.length?shows.filter(s=>PICK.includes(s.key)):shows.filter(s=>Biz.inRange(s,from,to));
   const t=Biz.sum(shows,prefs,PICK.length?null:{from,to},Number(d.cutPct)||0);
-  const fees=t.app>0;
+  const fees=t.app>0, R=Biz.rates(t.timedSum,VIEW);
   const counted=shows.filter(s=>s.counted);
   const kinds=Biz.TIME_KINDS.filter(([k])=>!(prefs.hours&&prefs.hours[k]===false)).map(([,l])=>l.toLowerCase());
   const span=PICK.length?`${counted.length} selected show${counted.length===1?'':'s'}`:`${fmtDate(from)} – ${fmtDate(to)}`;
@@ -204,8 +234,9 @@ function draw(d){
     <div class="kpi"><div class="k">Revenue</div><div class="v mono">${M(t.revenue)}</div></div>
     <div class="kpi"><div class="k">Costs</div><div class="v mono">${M(t.costs)}</div><div class="s">${t.band?`splits ${M(t.band)} on top`:''}</div></div>
     <div class="kpi"><div class="k">Hours</div><div class="v mono">${Biz.hm(t.includedMinutes)||'—'}</div><div class="s">${esc(kinds.join(' · '))||'no kinds included'}</div></div>
-    <div class="kpi"><div class="k">Full evening rate</div><div class="v mono">${rate(t.rate)}</div><div class="s">${fees?'before MySet’s fee':''}${t.timed<t.shows?`${fees?' · ':''}${t.timed} of ${t.shows} shows timed`:''}</div></div>
-    <div class="kpi"><div class="k">Stage time rate</div><div class="v mono">${rate(t.rateStage)}</div><div class="s">${fees?'before MySet’s fee · ':''}on-stage minutes only</div></div>
+    <div class="kpi"><div class="k">Full evening rate</div><div class="v mono">${rate(R.evening)}</div><div class="s">${viewWords(fees)}${t.timed<t.shows?` · ${t.timed} of ${t.shows} shows timed`:''}</div></div>
+    <div class="kpi"><div class="k">Stage time rate</div><div class="v mono">${rate(R.stage)}</div><div class="s">${viewWords(fees)} · on-stage minutes only</div></div>
+    <div class="kpi set noprint"><div class="k">Adjust $/h calculations</div><button class="btn" type="button" onclick="settings()">Rate settings</button><div class="s">Which hours count, whose rate, before or after the fee.</div></div>
   </div>
   <section><div class="charts">
     <div class="chart"><h2>Profit</h2>${chart(t,from,to)}</div>
@@ -279,17 +310,53 @@ function table(t){
   const th=cols.map((c,i)=>`<th class="${i>1?'num':''}">${c}</th>`).join('');
   const rows=t.byShow.map(s=>`<tr>
     <td class="mono" style="white-space:nowrap">${fmtDate(s.date,{day:'numeric',month:'short',year:'numeric'})}</td>
-    <td>${esc(s.venue||s.title||'—')}${s.nights?`<span class="sm">${s.votes} vote${s.votes===1?'':'s'} through the app</span>`:''}</td>
+    <td>${esc(s.venue||s.title||'—')}${s.nights?`<span class="sm">${esc(Biz.votesLine(s))}</span>`:''}</td>
     <td class="num mono">${M(s.pay)}</td><td class="num mono">${s.band?'−'+M(s.band):'—'}</td>
     <td class="num mono">${M(s.tips)}</td><td class="num mono">${M(s.merch)}</td>
     <td class="num mono">${s.appKnown?M(s.app):s.nights?`<span class="faint" title="App money not available">n/a</span>`:`<span class="faint" title="MySet was not at this show">—</span>`}</td>
     <td class="num mono">${s.costs?'−'+M(s.costs):'—'}</td><td class="num mono"><b>${signed(s.profit)}</b></td>
-    ${HOURS?`<td class="num mono">${Biz.hm(s.includedMinutes)||'—'}</td><td class="num mono">${rate(s.rate)}</td>`:''}</tr>`).join('');
+    ${HOURS?`<td class="num mono">${Biz.hm(s.includedMinutes)||'—'}</td><td class="num mono">${rate(Biz.rate((VIEW.mine?s.cut:s.profit)-(VIEW.net?s.fee:0),s.includedMinutes))}</td>`:''}</tr>`).join('');
   const foot=`<tr><td colspan="2">${t.shows} show${t.shows===1?'':'s'}</td><td class="num mono">${M(t.pay)}</td><td class="num mono">${t.band?'−'+M(t.band):'—'}</td>
     <td class="num mono">${M(t.tips)}</td><td class="num mono">${M(t.merch)}</td><td class="num mono">${M(t.app)}</td>
     <td class="num mono">${t.costs?'−'+M(t.costs):'—'}</td><td class="num mono">${signed(t.profit)}</td>
-    ${HOURS?`<td class="num mono">${Biz.hm(t.includedMinutes)||'—'}</td><td class="num mono">${rate(t.rate)}</td>`:''}</tr>`;
+    ${HOURS?`<td class="num mono">${Biz.hm(t.includedMinutes)||'—'}</td><td class="num mono">${rate(Biz.rates(t.timedSum,VIEW).evening)}</td>`:''}</tr>`;
   return `<div class="tbl"><table id="shows"><thead><tr>${th}</tr></thead><tbody>${rows}</tbody><tfoot>${foot}</tfoot></table></div>`;
+}
+
+/* The settings window. Hours save to the account (the Studio's bizPrefs, so the
+   Money tab follows); the view saves to the phone. Every change redraws the page
+   from the answer already in hand — one bizGet per visit stays true. */
+function settings(){
+  if(!D) return;
+  const on=(D.biz&&D.biz.prefs&&D.biz.prefs.hours)||{};
+  let v=$('#veil');
+  if(!v){ v=document.createElement('div'); v.id='veil'; v.className='veil'; v.addEventListener('click',e=>{ if(e.target===v) v.classList.remove('on'); }); document.body.appendChild(v); }
+  v.innerHTML=`<div class="pop" role="dialog" aria-label="Rate settings">
+    <h3>Rate settings</h3><p class="lede">The $/h figures are profit over the hours you count.</p>
+    <h4>Hours that count</h4>
+    ${Biz.TIME_KINDS.map(([k,l])=>`<label class="sw"><span>${esc(l)}</span><input type="checkbox" data-hour="${k}" ${on[k]!==false?'checked':''}><i></i></label>`).join('')}
+    <h4>Whose rate</h4>
+    <div class="seg"><button type="button" class="${VIEW.mine?'':'on'}" data-view="total">Total</button><button type="button" class="${VIEW.mine?'on':''}" data-view="mine">My cut</button></div>
+    <p class="lede" style="margin:8px 0 0;font-size:12px">My cut is what you typed on a show; a show with nothing typed counts its whole profit as yours.</p>
+    <h4>Fees</h4>
+    <label class="sw"><span>Show rates after MySet’s fee</span><input type="checkbox" data-net ${VIEW.net?'checked':''}><i></i></label>
+    <p class="saved" id="setsaved"></p>
+    <button class="btn pri done" type="button" onclick="document.getElementById('veil').classList.remove('on')">Done</button></div>`;
+  v.classList.add('on');
+  v.querySelectorAll('[data-hour]').forEach(i=>i.addEventListener('change',async()=>{
+    const h=Object.assign({},(D.biz.prefs=D.biz.prefs||{}).hours||{}); h[i.dataset.hour]=i.checked; D.biz.prefs.hours=h; draw(D);
+    const note=$('#setsaved'); if(note) note.textContent='Saving…';
+    try{ const r=await fetch('/api/admin',{method:'POST',headers:HEAD,body:JSON.stringify({action:'bizPrefs',hours:h})}); const d=await r.json();
+      if(note) note.textContent=d&&d.ok?'Saved — the Studio follows the same choice.':'Couldn’t save that choice — it applies to this report only.'; }
+    catch(e){ if(note) note.textContent='Couldn’t save that choice — it applies to this report only.'; }
+  }));
+  v.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{ setView({mine:b.dataset.view==='mine'}); v.querySelectorAll('[data-view]').forEach(x=>x.classList.toggle('on',(x.dataset.view==='mine')===VIEW.mine)); }));
+  const net=v.querySelector('[data-net]'); net.addEventListener('change',()=>setView({net:net.checked}));
+}
+function setView(patch){
+  VIEW=Object.assign({},VIEW,patch);
+  try{ localStorage.setItem('myset.biz.view',JSON.stringify(VIEW)); }catch(e){}
+  if(D) draw(D);
 }
 
 function simple(rows,heads){

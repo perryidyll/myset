@@ -124,6 +124,15 @@ on the localhost, the fee and cut toggles moving the figures the maths says.
 Shipped as PR #31 → `81a48f3`; the live `/biz.js` and `/studio-money.js` compared
 byte-equal to the tree and `/studio` names `studio.js?v=ade6a231`.
 
+**Second pass (same day):** the report's *Rate settings* card and window (hours →
+`bizPrefs`, view → the phone); a filed night counts the votes bought and the paid
+requests accepted (`_history.mjs` `moneyForShow` → `votes.paid`, `requests`; the row's
+`paidVotes` / `paidRequests`; Re-check fills an older night; the heal is not re-opened);
+the editor sheet and the report's venue cell read *"N votes · free · paid · paid
+requests"*; the Shows list folds to three behind *Show N more*. Suite 2,588 ✓ / 0 ✗;
+uicheck 173 ✓; report check 44 ✓ (the window exercised: a switch redraws and saves,
+the fee switch, My cut with nothing typed changing the words and not the figure).
+
 ## Open
 
 - The year shard `biz_<aid>_<yyyy>` is named and not built; the first artist to
