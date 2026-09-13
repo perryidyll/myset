@@ -129,3 +129,7 @@ Blueprint §8.4's list, for the founder or the next session on a real phone and 
 - `orderDetail` in `admin.mjs` still returns `order` with `fan` — pre-existing; nothing reads it.
 - A shop link on `artist.html` so the Bar Star card's "in-app merch store" promise is literally true from the artist page (blueprint L11) — next PR.
 - `.sect` headings on the artist and community pages still use `--accent-2` text; the shop's ink-plus-bar recipe is the one to unify on (blueprint S11).
+
+## Shipped
+
+Rebased onto `15beca1` (the business dashboard, 0065, had merged meanwhile — conflicts in `studio.js` (`setTab`, the reset line), `tools/overview.mjs`, `tools/uicheck.mjs`, `tools/sheetcheck.mjs` (`ROOT` = `MYSET_PUBLIC` || the tool's own `public/`), the ledger, and the generated files re-made). Renumbered on the way: UX-040 → **UX-044** (#28 took UX-040), INVARIANTS 0fn → **0fo**, 0fo → **0fp** (0065 took 0fn); Puzzle step notes re-pointed. Gate on the rebased tree: suite exit 0, 45 suites, 2,867 ✓; uicheck 228 ✓; sheetcheck 39 ✓; overview current. Pushed as `e85cae8` + push-log `d4d47ec`, PR #33, preview looked at 375 px (the founder's page lists no merch, so the empty shop with *Make a request* and a community page with no card and no Buy — nothing to Buy on a preview, and nothing was), merged as **`406f3f4`**, live by content 30 s later. Puzzle 41974: twelve steps `Live`.

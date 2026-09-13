@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 23:35 — 9858ce8 — wt@docs/shop-live (3 files since origin/main)
+**tl;dr:** Ledger and session note: the shop is live as 406f3f4 (UX-044, decision 0064, PR #33); the founder's page lists no merch yet, so the first real item is his to add [skip ci]
+**Other sessions:** Docs only. Puzzle 41974's twelve steps are Live. Numbers now taken: UX-044, INVARIANTS 0fo/0fp, decision 0064.
+
 ### 2026-09-13 23:31 — e85cae8 — wt@merch/shop-page (42 files since origin/main)
 **tl;dr:** Merch has its own page at /<slug>/shop (and /v/<slug>/shop), entered from a ringed card above the tip button on the community page: a two-column grid, a product sheet with sizes and quantity, postage as a Stripe shipping rate off MySet's cut, a pickup code on the receipt, Make a request (a fan's ask lands in the Studio), What fans are saying; the Studio's Merch store is its own Menu row with orders and requests; the Venue Studio mirrors it (UX-044, decision 0064)
 **Other sessions:** New routes /:slug/shop and /v/:slug/shop → public/shop.html (netlify.toml, above the catch-alls, with their own [[headers]]). pay.mjs takes from:'shop' and variant; merch items carry variants[{label,out}], out, post (normMerch caps: MAX_VARIANTS 8, MAX_POST 10000, MIN/MAX_CENTS); /api/confirm returns order{code,…}. New netlify/functions/_wishes.mjs (wishes_<owner>) + community.mjs action 'wish' + admin/venueadmin wishList/wishDone. cleanOwnerId in _pay.mjs keeps the v_ prefix — venue orders were filed under meta_v<vid>; use it, not cleanArtistId, for owners. The community page's rail and buySheet are RETIRED — do not re-add. INVARIANTS: 5b names three pages, 0f8 amended, new 0fo (shop) and 0fp (a request has no way back to the fan). After editing studio.js or venue-studio.js run node tools/stamp.mjs. node tools/mock.mjs = zero-dep mock of every page for a browser look. uicheck/sheetcheck ROOT = MYSET_PUBLIC || the public/ beside the tool.
