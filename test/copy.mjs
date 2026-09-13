@@ -39,7 +39,7 @@ ok('an out-of-votes voting sheet offers “Buy more votes”',
 ok('the voting sheet omits the manual-refresh instruction',
    !/please pull down on your screen/.test(vote) && !/see the current list now/.test(vote));
 ok('the live profile has one vote CTA with the requested label',
-   /TAP TO VOTE THE SETLIST/.test(artist) && !/Live now — vote the setlist/.test(artist) && !/>Join live</.test(artist));
+   /ENTER NOW TO VOTE/.test(artist) && !/TAP TO VOTE THE SETLIST/.test(artist) && !/Live now — vote the setlist/.test(artist) && !/>Join live</.test(artist));
 
 const studio = read('public/studio.html');
 /* 2026-09-12: a sed edit dropped a `// comment` in front of `.then(r=>r.json())`, so
