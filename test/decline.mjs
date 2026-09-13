@@ -88,8 +88,8 @@ ok('the search, sort control, and voting list wear the brand-gradient ring',
   /search input[\s\S]{0,260}var\(--grad\) border-box/.test(votePage) &&
   /\.sortbar::after\{[^}]*var\(--grad\)/.test(votePage) &&
   /\.list\.votelist[\s\S]{0,360}var\(--grad\) border-box/.test(votePage));
-ok('the vote-pack sheet uses first-name-only orange copy',
-  /lede buyline[^>]*>goes straight to \$\{esc\(artistFirst/.test(votePage) && /fine secure-votes/.test(votePage));
+ok('the vote-pack sheet uses first-name-only pink-orange copy',   // "<First> will receive through Stripe Connect" since 2026-09-13
+  /lede buyline[^>]*>\$\{esc\(artistFirst\('The artist'\)\)\} will receive through Stripe Connect/.test(votePage) && /fine secure-votes/.test(votePage));
 ok('the Studio renders paid-vote pills and the decline action',
   /paidVotes/.test(studioPage) && /paid votes/.test(studioPage) && /Decline \+ refund votes/.test(studioPage));
 

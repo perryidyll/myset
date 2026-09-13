@@ -218,10 +218,13 @@ eq('a pinned post comes first', (await GET('')).posts[0].id, p3.id);
 ok('the owner hides', (await OWNER('postHide', { id: p1.id, on: true })).ok);
 ok('a hidden post vanishes for the room', !(await GET('')).posts.some((p) => p.id === p1.id));
 ok('and stays for the owner, marked', (await OWNER('postList')).posts.find((p) => p.id === p1.id).hidden === true);
-ok('the owner deletes the photo post', (await OWNER('postDelete', { id: p3.id })).ok);
+/* DELETING A POST FOR GOOD IS GONE (2026-09-13, decision 0060): hiding is the whole
+   of moderation now, and a hidden post's photos already go with it. */
+eq('deleting a post for good is no longer an action', (await OWNER('postDelete', { id: p3.id })).status, 400);
+ok('the owner hides the photo post', (await OWNER('postHide', { id: p3.id, on: true })).ok);
 img = await imgFn(new Request('https://x' + p3.photos[0].split('&v=')[0]));
 eq('and its photos go with it', img.status, 404);
-eq('moderating a gone post is a 404', (await OWNER('postHide', { id: p3.id })).status, 404);
+eq('moderating a post that never existed is a 404', (await OWNER('postHide', { id: 'nope00000001' })).status, 404);
 eq('another artist cannot moderate this page (her own page has no such post)', (await AS(TA, 'postHide', { id: p1.id })).status, 404);
 
 console.log('\nA VENUE');

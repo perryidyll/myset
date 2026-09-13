@@ -1476,7 +1476,7 @@ function openBuy(){
   // prices are whatever the artist set in their Studio — never hard-coded here
   const P=ST.packs||{small:{votes:3,cents:500},big:{votes:15,cents:2000}};
   const KEYS=['small','big'].filter(k=>P[k]);
-  openSheet(`${BUYSONG?stepBar(2):''}<h3>Get more votes</h3><p class="lede buyline">goes straight to ${esc(artistFirst('the artist'))}</p>
+  openSheet(`${BUYSONG?stepBar(2):''}<h3>Get more votes</h3><p class="lede buyline">${esc(artistFirst('The artist'))} will receive through Stripe Connect</p>
     <div class="tiles">
       ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
         <b>${money(P[k].cents)}</b><span>${P[k].votes} votes</span></button>`).join('')}
@@ -1487,9 +1487,9 @@ function openBuy(){
 function pickPack(p){sel.pack=p;buzz(8);
   ['small','big'].forEach(k=>{const el=$('#p-'+k); if(el)el.classList.toggle('on',k===p);});}
 function openTip(){
-  if(!ST.paymentsEnabled){openSheet(`<h3>Tip ${esc(artistFirst())}</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
+  if(!ST.paymentsEnabled){openSheet(`<h3>Give ${esc(artistFirst())} some love</h3><p class="lede">Card tips aren’t on tonight — say hi between songs!</p><button class="go" onclick="closeSheet()">Got it</button>`);return;}
   sel.tip=10;
-  openSheet(`<h3>Tip ${esc(artistFirst())}</h3><p class="lede buyline">goes straight to ${esc(artistFirst('them'))}</p>
+  openSheet(`<h3>Give ${esc(artistFirst())} some love</h3><p class="lede buyline">Sent via Stripe Connect</p>
     <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
     <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">

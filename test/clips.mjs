@@ -272,7 +272,7 @@ console.log('\nHIDING TAKES THE PICTURES DOWN TOO');
   ok('un-hiding brings the words back', !(await readPosts(aid)).list.find((p) => p.id === pid).hidden);
 }
 
-console.log('\nDELETING FOR GOOD IS A PAID FEATURE; HIDING IS NOT');
+console.log('\nHIDING IS A BAR STAR FEATURE; DELETING FOR GOOD IS GONE  (decision 0060)');
 {
   const adminFn = (await import('../netlify/functions/admin.mjs')).default;
   const { signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
@@ -284,16 +284,17 @@ console.log('\nDELETING FOR GOOD IS A PAID FEATURE; HIDING IS NOT');
     { action: 'post', fan: 'somefan0001', text: 'hello' })));
 
   const hide = await call({ action: 'postHide', id: made.id, on: true }, ftok);
-  ok('a FREE artist can hide a post — instantly, on any plan', hide.status === 200, hide.status);
+  eq2('a FREE artist cannot hide a post — it is a Bar Star feature', hide.status, 402);
+  ok('and the post is still on the page',
+    !(await readPosts(P.artistId)).list.find((p) => p.id === made.id).hidden);
   const del = await call({ action: 'postDelete', id: made.id }, ftok);
-  eq2('but not delete it for good', del.status, 402);
-  ok('and the post is still there to un-hide',
-    (await readPosts(P.artistId)).list.some((p) => p.id === made.id));
+  eq2('deleting for good is no longer an action on any plan', del.status, 400);
 
   await mutateArtists((reg) => { reg.byId[P.artistId].plan = 'plus'; return true; });
-  const paid = await call({ action: 'postDelete', id: made.id }, ftok);
-  eq2('on Plus it goes', paid.status, 200);
-  ok('for good', !(await readPosts(P.artistId)).list.some((p) => p.id === made.id));
+  const paid = await call({ action: 'postHide', id: made.id, on: true }, ftok);
+  eq2('on Bar Star the hide lands', paid.status, 200);
+  ok('and the post is still there to un-hide',
+    (await readPosts(P.artistId)).list.find((p) => p.id === made.id).hidden === true);
 }
 
 console.log('\nLEAVING TAKES THE CLIPS WITH IT');

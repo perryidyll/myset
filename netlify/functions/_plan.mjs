@@ -67,17 +67,31 @@ export const PLANS = {
        Four numbers, one place. The Studio copy, the plans cards and the tests all
        read these rather than repeating them. `Infinity` means no ceiling and is
        reserved for the founder. */
-    audience: 200,        // a pub. Worst case: 10 gigs x 200 = $3.20 a month.
+    /* 50 since 2026-09-13 (the founder: "10 shows for free — up to 50 people
+       each"), down from 200. Worst case: 10 gigs x 50 = under a dollar a month. */
+    audience: 50,
+    /* HOW MANY SONGS THE LIBRARY HOLDS. 100 on the free plan since 2026-09-13
+       (the founder: "add up to 100 songs — and show up to 50 to your audience");
+       the paid plans keep MAX_LIBRARY. `featured` above is the other half: how
+       many of them are live to the room at once. A library already over the line
+       keeps every song it has — the cap refuses the NEXT add, never a song. */
+    library: 100,
     cut: 0.25,            // platform share of tips and vote sales
     seats: 1,
     pricing: false,       // change free-vote count, pack prices, replay/ask costs
     setlists: false,      // named subsets of the library, one active at a time
     merch: false,         // sell things from the community page (Perry: a Plus feature)
-    /* PERMANENTLY DELETING a fan's post. HIDING one is free and always will be —
-       every artist must be able to take something offensive off their page the
-       moment they see it, and hiding does that instantly and reversibly. What a
-       paid plan buys is erasing it for good. Perry's call, 2026-09-05. */
+    /* HIDING a fan's post — sold as "hide 1–2 star reviews". Free until 2026-09-13,
+       when the founder moved it to Bar Star (decision 0060) and dropped deleting
+       for good altogether: a hidden post is off the page at once and can come
+       back, which is all the protection a page needs. The old rule — hide free,
+       delete paid — is reversed, not refined. */
     moderate: false,
+    /* DATA REPORTS — the Money tab's filed nights: fans, votes and tips from every
+       show. Paid since 2026-09-13 (the founder: "viewing data is a paid feature").
+       Every night is still FILED on every plan; what the plan buys is reading it
+       back, so an upgrade finds the whole history waiting. */
+    reports: false,
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
     presskit: false,
@@ -92,9 +106,10 @@ export const PLANS = {
        artist never pays a subscription before they have earned anything. Taken as
        a Stripe `application_fee_amount` on a direct charge — see _connect.mjs. */
     cut: 0.10,
-    audience: 1000,       // a club. Worst single night: $2.76.
+    audience: 300,        // a bar with a floor (the founder, 2026-09-13; was 1,000). Worst single night: well under a dollar.
+    library: 2000,        // MAX_LIBRARY, restated so every plan row reads the same
     seats: 1,
-    pricing: true, setlists: true, merch: true, moderate: true,
+    pricing: true, setlists: true, merch: true, moderate: true, reports: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
@@ -111,8 +126,9 @@ export const PLANS = {
        known to serve. 2,000 lands at 61 MB/s, which is the same neighbourhood.
        Sell what the app can do, not what the margin could afford. */
     audience: 2000,
+    library: 2000,
     seats: 5,
-    pricing: true, setlists: true, merch: true, moderate: true,
+    pricing: true, setlists: true, merch: true, moderate: true, reports: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };
@@ -136,8 +152,10 @@ export const PLANS = {
    direction either. */
 export const NOT_BUILT = ['promote', 'analytics', 'presskit', 'branding'];
 
-/** Everyone can KEEP this many songs; plans only limit how many are live. */
+/** The most any library holds. The free plan holds fewer (`library` above);
+ *  `libraryCap` is the one place that reads which. */
 export const MAX_LIBRARY = 2000;
+export const libraryCap = (limits) => (limits && Number(limits.library) > 0) ? Number(limits.library) : MAX_LIBRARY;
 export const PLAN_KEYS = Object.keys(PLANS);
 
 /** The plan actually in force — a comped period that has run out falls back. */
@@ -163,9 +181,11 @@ export const isPlatformOwner = (aid) => aid === DEFAULT_ARTIST;
  *  the founder predates the registry (planForArtist says free for him), so the owner
  *  bypass is load-bearing here exactly as it is for pricing. */
 export const merchAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.merch === true);
-/** May this artist DELETE a fan's post outright? Hiding is free for everyone; this
- *  is the permanent one. Same owner bypass and the same one-answer rule as merch. */
+/** May this artist HIDE a fan's post? Bar Star and up since 2026-09-13 (decision
+ *  0060). Same owner bypass and the same one-answer rule as merch. */
 export const moderateAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.moderate === true);
+/** May this artist READ the filed nights on the Money tab? Same shape. */
+export const reportsAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.reports === true);
 
 /* ---------- promo codes ---------- */
 const PROMOS = 'promos';

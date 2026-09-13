@@ -15,7 +15,7 @@ process.env.ADMIN_CODE = 'devlocal';
 process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const history = (await import('../netlify/functions/history.mjs')).default;
-const { createArtist, signToken, readArtists, revOf } = await import('../netlify/functions/_auth.mjs');
+const { createArtist, signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
 const { archiveShow, readHistIndex, readHistShow } = await import('../netlify/functions/_history.mjs');
 
 let pass = 0, fail = 0;
@@ -62,8 +62,16 @@ console.log('\nTHE NAME LANDS ON THE DETAIL AND THE ROW');
   eq('the detail document carries it', doc.title, 'Friday at the pier');
   eq('stamped as typed by hand', doc.titleByHand, true);
   eq('and so does the index row the Money tab lists', (await row(mo.artistId, 'hand-1')).title, 'Friday at the pier');
+  /* READING a filed night is a Bar Star feature since 2026-09-13 (decision 0060);
+     the rename above landed on a free plan because it is a write, not a report. */
+  const shut = await hit(history, 'https://x/api/history?show=hand-1', undefined, TM);
+  eq('on the free plan the night cannot be opened — data reports are Bar Star', shut.status, 402);
+  const shutList = await hit(history, 'https://x/api/history', undefined, TM);
+  ok('and the list comes back locked, with the count and no rows',
+     shutList.ok && shutList.locked === 'plus' && shutList.nights === 1 && shutList.shows.length === 0, shutList);
+  await mutateArtists((reg) => { reg.byId[mo.artistId].plan = 'plus'; return true; });
   const one = await hit(history, 'https://x/api/history?show=hand-1', undefined, TM);
-  eq('opening the night from the Studio agrees', one.show.title, 'Friday at the pier');
+  eq('on Bar Star, opening the night from the Studio agrees', one.show.title, 'Friday at the pier');
   const list = await hit(history, 'https://x/api/history', undefined, TM);
   eq('and so does the list the Studio reads', (list.shows || []).map((x) => x.title), ['Friday at the pier']);
   eq('nothing but the name moved: the songs are still there', doc.stats.songsPlayed, 5);

@@ -204,7 +204,8 @@ const FLAG_LABEL = {
   pricing: 'Set your own prices (vote packs, replay, requests)',
   setlists: 'Create named setlists',
   merch: 'Sell merch on your community page',
-  moderate: 'Delete a fan\'s post for good *(hiding is free on every plan)*',
+  moderate: 'Hide a fan\'s post *(sold as "hide 1–2 star reviews"; deleting for good is gone — 0060)*',
+  reports: 'Data reports — the filed nights on the Money tab *(every night is still filed on every plan)*',
   promote: 'Promote gigs in other cities',
   analytics: 'Earnings analytics',
   presskit: 'Press kit',
@@ -238,11 +239,12 @@ worth reading. If a number here is wrong, the source is wrong.*
 | Shows per calendar month (UTC) | ${cap(p.free.gigs)} | ${cap(p.plus.gigs)} | ${cap(p.pro.gigs)} |
 | Songs live to the audience at once | ${cap(p.free.featured)} | ${cap(p.plus.featured)} | ${cap(p.pro.featured)} |
 | People in one room (soft — nobody is refused) | ${p.free.audience.toLocaleString()} | ${p.plus.audience.toLocaleString()} | ${p.pro.audience.toLocaleString()} |
+| Songs the library holds | ${p.free.library.toLocaleString()} | ${p.plus.library.toLocaleString()} | ${p.pro.library.toLocaleString()} |
 | Team seats | ${p.free.seats} | ${p.plus.seats} | ${p.pro.seats} |
 ${Object.keys(FLAG_LABEL).map(flagRow).join('\n')}
 
-Everyone keeps up to **${f.plans.maxLibrary.toLocaleString()}** songs in their library on any plan — the cap
-above limits how many are *live to the audience*, and it never deletes anything.
+The library holds **${p.free.library.toLocaleString()}** songs on ${p.free.label} and **${f.plans.maxLibrary.toLocaleString()}** on the paid plans (decision 0060) —
+a full library refuses the *next* add and never deletes a song; the row above it limits how many are *live to the audience*.
 
 **Designed and not built:** ${f.plans.notBuilt.map((x) => `\`${x}\``).join(', ')}. These are named in
 \`NOT_BUILT\` in \`_plan.mjs\` and are greyed as *"Coming soon"* on **every** plan including ${p.pro.label}.

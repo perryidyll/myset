@@ -315,7 +315,7 @@ a.pc:active{transform:scale(.97)}
 .gigrow .tix{display:inline-block;margin-top:5px;font-size:13px;font-weight:600;color:var(--accent-ink)}
 .dirs{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;
   font-size:13px;font-weight:600;color:var(--accent-ink);padding:10px 15px;
-  border-radius:var(--pill);background:var(--accent-soft)}
+  border-radius:var(--pill);background:var(--grad-soft,var(--accent-soft))}   /* pink-orange words on the soft gradient ground (the founder, 2026-09-13) */
 .dirs svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;flex:0 0 auto}
 /* inside a row: the thin pill the map sheet's cards wear, words only (the founder,
    2026-09-12 — one Directions button on every card everywhere) */
@@ -479,8 +479,11 @@ async function headCount(){
    copy it is pulled back by exactly one set, which the eye cannot see. A finger on
    it, a wheel, or a mouse over it stops it, and the strip is still a native
    scroller under the finger; while stopped, every scroll event resyncs the float
-   position from wherever the finger left it. It picks up again 3 s after the
-   finger lifts, so iOS momentum has finished before the drift takes over. A phone
+   position from wherever the finger left it. It picks up again ONE SECOND after
+   the strip last moved by hand (the founder, 2026-09-13; was 3 s after the finger
+   lifted) — the timer restarts on every scroll event while stopped, so iOS
+   momentum, which keeps scrolling after the finger lifts, finishes before the
+   drift takes over. A phone
    that asked for less motion gets a strip that only moves when swiped (and no
    copies). Bound to the element render() just drew — a redraw replaces it and the
    old loop, finding its strip gone, quits. Nothing moves while the tab is hidden. */
@@ -500,17 +503,17 @@ function startProof(){
      is, and capped so a strip that never measures right cannot grow forever. */
   const ghosts=[...el.children].filter(c=>c.getAttribute('aria-hidden')==='true'); let extra=0;
   const topUp=()=>{const s=span(); if(s>0&&extra<4&&s+el.clientWidth>el.scrollWidth){ghosts.forEach(c=>el.appendChild(c.cloneNode(true)));extra++;}};
-  let hold=false, x=el.scrollLeft, last=0;
+  let hold=false, touching=false, x=el.scrollLeft, last=0;
   const pause=()=>{hold=true;clearTimeout(PR_);};
-  const resume=()=>{clearTimeout(PR_);PR_=setTimeout(()=>{hold=false;x=el.scrollLeft;last=0;},3000);};
-  el.addEventListener('touchstart',pause,{passive:true});
-  el.addEventListener('touchend',resume,{passive:true});
-  el.addEventListener('touchcancel',resume,{passive:true});
+  const resume=()=>{clearTimeout(PR_);PR_=setTimeout(()=>{hold=false;x=el.scrollLeft;last=0;},1000);};
+  el.addEventListener('touchstart',()=>{touching=true;pause();},{passive:true});
+  el.addEventListener('touchend',()=>{touching=false;resume();},{passive:true});
+  el.addEventListener('touchcancel',()=>{touching=false;resume();},{passive:true});
   el.addEventListener('pointerdown',pause,{passive:true});
   el.addEventListener('wheel',()=>{pause();resume();},{passive:true});
   el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')pause();});
   el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')resume();});
-  el.addEventListener('scroll',()=>{if(hold)x=el.scrollLeft;},{passive:true});
+  el.addEventListener('scroll',()=>{if(hold){x=el.scrollLeft;if(!touching)resume();}},{passive:true});
   const step=(t)=>{
     if(!el.isConnected)return;
     PT=requestAnimationFrame(step);

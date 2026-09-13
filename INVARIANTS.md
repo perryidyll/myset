@@ -1706,10 +1706,12 @@ If you are about to violate one, stop and say so rather than working around it.
     the stored device id; an id in a request body proves nothing. Editing closes
     after 24 hours so a five-star review cannot quietly become a one-star one
     under a reply the artist already wrote; deleting your own words has no window.
-    An artist may HIDE any post on any plan — instantly and reversibly, because
-    every artist must be able to take something offensive off their page the second
-    they see it. Deleting for good is a paid feature, refused by the server and not
-    merely greyed in the Studio (15k).
+    HIDING a post is a Bar Star feature since 2026-09-13 (decision 0060, the
+    founder's call, reversing the 2026-09-05 rule that hiding was free on every
+    plan): it hides any post, instantly and reversibly, and the server refuses it
+    on the free plan rather than merely greying it in the Studio (15k). Nothing an
+    artist does erases a fan's words for good — `postDelete` is no longer an
+    action; a hidden post's photos and clip are dropped (0dx), its words stay.
 
 0dz. **A statement never begins before the account did.** `lastMonths` takes a
     floor from the registry's `createdAt`. Twelve rows of zero before somebody

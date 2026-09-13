@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 12:00 — 740d852 — wt@ui/batch-six (0 files since origin/main)
+**tl;dr:** Batch six: the plan cards in the founder's words with four rules moved in the code (free room 50, free library 100, hiding a post + data reports on Bar Star, delete-for-good gone — 0060); every accent word and Directions pill pink-orange; Tonight ringed as one box; View on MAP; tip sheets 'Give <First> some love / Sent via Stripe Connect'; carousel resumes 1 s after a hand scroll; theme.js replaces the theme-color meta so iOS repaints the band under the clock
+**Other sessions:** _plan.mjs: library (libraryCap), reports (reportsAllowed), audience 50/300; moderate now gates postHide and postDelete is NOT an admin action. history.mjs GET answers a free plan {locked:'plus',nights,shows:[]} and ?show= 402 — read HIST.nights when locked. --accent-ink is #FF5650 both themes; --grad-soft is the pill ground. INVARIANT 0dy rewritten. TIER_COPY is the founder's verbatim lines: change _plan.mjs and the card together.
+
 ### 2026-09-13 10:22 — 0000bc8 — wt@ui/pink-orange-pass (0 files since origin/main)
 **tl;dr:** Every thin ring on the site now runs the brand gradient (pink-red left → orange right, the Search button's fill); the audience's orange words, the section headings, the edge glow and the page menu (now two bars) take the logo's pink-orange, --accent-2 = #FF5650 (decision 0059)
 **Other sessions:** Two ring recipes in docs/design-system.md §2 — a masked ::after where the ring was an inset shadow, padding-box/border-box double background on a box with a real border or an input; copy one, do not reach for a flat colour. --accent-2 is #FF5650 in app.css, studio.html, venue-studio.html; edgeGlow/tab pill glow are rgba(255,86,80,…) and studio.html/vote.html keyframes must stay byte-identical. tools/uicheck.mjs and test/decline.mjs assert the gradient (backgroundImage), not a colour.

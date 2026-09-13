@@ -1,4 +1,5 @@
 import { json, bad, requireArtist, getShow, readFans, voteCounts } from './_lib.mjs';
+import { planForArtist, reportsAllowed } from './_plan.mjs';
 import { readHistIndex, readHistShow, reconcileShow, moneyForShow, healHistory, placeShows, renameShow } from './_history.mjs';
 
 /* Artist-only. GET lists past shows (or one in detail); POST re-pulls Stripe for
@@ -33,8 +34,17 @@ export default async (req) => {
     return json({ ok: true, show: d });
   }
 
+  /* DATA REPORTS ARE A BAR STAR FEATURE (decision 0060, 2026-09-13). Every night is
+     still filed on every plan; what the plan buys is reading it back. A free plan
+     gets the running night (its money is its money) and the COUNT of filed nights —
+     the Studio says "N nights are waiting" over the upgrade — but not the rows,
+     and not a night's detail. Refused here as well as greyed in the Studio (15k). */
+  const reports = reportsAllowed(aid, (await planForArtist(aid)).limits);
+  const LOCKED = 'Data reports are a Bar Star feature — every night is still filed, and upgrading opens all of them.';
+
   const wanted = url.searchParams.get('show');
   if (wanted) {
+    if (!reports) return bad(LOCKED, 402);
     const d = await readHistShow(aid, wanted);
     if (!d) return bad('unknown show', 404);
     return json({ ok: true, show: d });
@@ -70,9 +80,7 @@ export default async (req) => {
      `status === 'ended'`, so tapping "Resume it instead" on a finished night (same
      showId, status back to live... and then ended again, or left at 'pre') made the
      archived row disappear from Past shows with no explanation. */
-  return json({
-    ok: true,
-    live,
-    shows: show.status === 'live' ? idx.shows.filter((s) => s.showId !== show.showId) : idx.shows,
-  });
+  const shows = show.status === 'live' ? idx.shows.filter((s) => s.showId !== show.showId) : idx.shows;
+  if (!reports) return json({ ok: true, live, locked: 'plus', nights: shows.length, shows: [] });
+  return json({ ok: true, live, shows });
 };
