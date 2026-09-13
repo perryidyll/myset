@@ -7,6 +7,7 @@ import { readHistIndex } from './_history.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
 import { readPending, dropClipKeys, vidKey } from './_video.mjs';
 import { readFeedback, shapeFeedback } from './_feedback.mjs';
+import { readBiz } from './_biz.mjs';
 import { readMeta } from './_lib.mjs';
 
 /* THE ACCOUNT — what an artist can take with them, and how they leave.
@@ -26,9 +27,9 @@ const IMG = (aid, slot) => `img_${aid}_${slot}`;
 export async function exportArtist(aid) {
   const reg = await readArtists();
   const me = reg.byId[aid] || {};
-  const [profile, show, events, lists, learn, hist, posts, fb, meta] = await Promise.all([
+  const [profile, show, events, lists, learn, hist, posts, fb, meta, biz] = await Promise.all([
     getProfile(aid), readDoc(KEY.show(aid), null), readEvents(aid), readLists(aid), readLearn(aid),
-    readHistIndex(aid), readPosts(aid), readFeedback(aid), readMeta(aid)]);
+    readHistIndex(aid), readPosts(aid), readFeedback(aid), readMeta(aid), readBiz(aid)]);
   const sh = show.data || {};
   return {
     exportedAt: new Date().toISOString(),
@@ -42,6 +43,8 @@ export async function exportArtist(aid) {
     setlists: lists.lists, songsToLearn: learn.list,
     shows: hist.shows,
     money: { tips: (meta.tips || []).map(({ fan, ...t }) => t), orders: (meta.orders || []).map(({ fan, ...o }) => o) },
+    // what the artist typed about their own nights — theirs entirely, no fan in it
+    business: { prefs: biz.prefs, rules: biz.rules, gigs: biz.gigs },
     community: shapeForOwner(posts, aid),
     feedback: shapeFeedback(fb),
   };
@@ -53,7 +56,7 @@ export async function keysFor(aid) {
     `ev_${aid}`, `lists_${aid}`, `learn_${aid}`, `push_${aid}`, `connect_${aid}`, `fb_${aid}`,
     `lock_${aid}`, `apitch_${aid}`, `songstats_${aid}`, `posts_${aid}`, `likes_${aid}`, `billing_${aid}`,
     `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
-    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`];
+    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid)];
   /* `ledger_platform` is the COMPANY's, not this artist's, and is never deleted here. */
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
   const [hist, show, profile, posts, ids, pend] = await Promise.all([

@@ -369,3 +369,37 @@ The folder is kept because it is history, not because any of it is instruction. 
 - A page never references a class that is not in the same commit as the stylesheet that defines it (§ 0). If it must ship first, it carries a copy.
 - Before saying a page is done: `sh test/run.sh`, then `node tools/uicheck.mjs` and, for anything with a sheet, `node tools/sheetcheck.mjs` — and look at it at 375px in both themes. **A green suite proves nothing about a page.**
 - Every number on this page was copied from a file at the line given. If a line no longer says what this page quotes, the page is wrong, not the file.
+
+## 15. The business dashboard's own recipes — `public/studio-money.js` (decision 0065)
+
+The Money tab's dashboard for a paid owner is one lazily loaded module that injects its
+own stylesheet once (`<style id="bizcss">`, the `CSS` string at the top of
+`studio-money.js`; `css()` at line 92 guards the second insert). It composes from the
+Studio's shared recipes — `.sec/.kick`, `.list/.row`, `.stats .c`, the four button
+tiers, `.chip`, `.mono`, the sheet, the toast — and adds only what a dashboard needs,
+every class prefixed `biz` so it can never collide with a Studio rule:
+
+| Class | What it is |
+| --- | --- |
+| `.bizhero` | the profit hero card — a pink-orange *Profit* over the figure in the plan tag's green pill (`.v.pos`; `.v.neg` wears the accent-soft pill) |
+| `.biztiles`, `.bizhd` | the 2×2 stat tiles under the hero (Revenue, Costs incl. splits, $/hour, Hours), each a pink-orange `.bizhd` heading over its figure; the tiles are a subgrid so a wrapped heading moves its whole row's figures together |
+| `.bizchart`, `.bizbar` | the inline-SVG profit chart and a tappable bar (`data-act="bizbar"`) |
+| `.bizeve`, `.bizctl`, `.bizseg`, `.bizfee` | *Total time invested* — the stacked hours bar, *Stage time rate* / *Full evening rate* side by side, the *Total / My cut* segmented toggle and the outlined fee button |
+| `.btn-line` | the outlined pink-orange button — *Generate report*, *Report N shows* — the accent as a ring and as the word, no fill, in both themes |
+| `.biznote` | a pink-orange footnote (the merch legend under the mix donut) |
+| `.bizchip` | the profit chip on a show row (`.pos` / `.neg`) |
+| `.bizro`, `.bizacts` | a show row and its action strip (*Log it*, *Didn't happen*, *Re-check*) |
+| `.bizf`, `.bzrow`, `.bzmoney` | the editor's form, a name-and-amount row, the `$`-prefixed money box |
+| `.bizsk` | the skeleton frame drawn while the book loads |
+| `.chips.scroll` | the period row — one horizontally scrolling line, never the wrapping `.chips` |
+| `.sheet.biz` | the editor sheet; `attachDrag` skips body-drag dismissal for it (fifteen inputs must not vanish on a thumb drag) |
+
+Motion (§ 10 applies): the hero and tiles `.rise` once per tab visit (`Money.reset()`),
+count-ups run only when a tile's value changed and stop when the render generation
+moves on, the chart bars grow by `transform: scaleY` from the baseline, the donut
+sweeps its `stroke-dasharray` once, the hero pulses once on a save — all of it off
+under `prefers-reduced-motion: reduce`, in the CSS and in the JS timers.
+
+The printable report (`public/report.html`) is a **document, not a screen**: light-only,
+paper-white, explicit colours, no `theme.js`, the profit green in its pill under a
+pink-orange heading — the `.qrpaper` precedent, and `test/copy.mjs` pins it.

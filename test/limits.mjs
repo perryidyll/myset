@@ -201,6 +201,34 @@ ok('it names him', /Perry Idyll<\/summary>/.test(page));
 ok('and his line matches what is enforced', /limited to 4\/month on the free plan/.test(page));
 ok('and the old explainer is gone', !/shows a month<\/b> rather than by/.test(page));
 
+console.log('\nTHE BUSINESS DASHBOARD HAS TWO SIZES, AND THEY ARE ENFORCED AGAINST GROWTH  (decision 0065)');
+{
+  /* Band members a show and costs a show, on every row: 0 / 5 / 10. Zero on
+     Hobbyist because the dashboard itself is `reports`, which Hobbyist lacks. */
+  eq('band members a show, by plan', [PLANS.free.band, PLANS.plus.band, PLANS.pro.band], [0, 5, 10]);
+  eq('costs a show, by plan', [PLANS.free.costs, PLANS.plus.costs, PLANS.pro.costs], [0, 5, 10]);
+  ok('reports is the flag that opens the dashboard, on both paid plans', PLANS.plus.reports === true && PLANS.pro.reports === true);
+  ok('and analytics stays where it was — not built', NOT_BUILT.includes('analytics'));
+  const bizSrc = readFileSync(new URL('../netlify/functions/_biz.mjs', import.meta.url), 'utf8');
+  ok('the dashboard is refused server-side on free', /reportsAllowed\(aid, limits\)\) return bad\(BIZ_LOCKED, 402\)/.test(adminSrc));
+  ok('with the plan named', /The business dashboard is a Bar Star feature/.test(adminSrc));
+  ok('the band is capped server-side', /overCap\(out\.band, caps\.band, was\.band\)/.test(bizSrc));
+  ok('and so are the costs', /overCap\(out\.costs, caps\.costs, was\.costs\)/.test(bizSrc));
+  ok('against GROWTH, not size — the record\'s own length is a ceiling too (0s)',
+     /Math\.max\(Number\(cap\) \|\| 0, \(Array\.isArray\(prev\) \? prev : \[\]\)\.length\)/.test(bizSrc));
+  ok('the refusal names both plans, from the table', /\$\{PLANS\.plus\.label\} allows \$\{PLANS\.plus\[what\]\}[^`]*\$\{PLANS\.pro\.label\} allows \$\{PLANS\.pro\[what\]\}/.test(bizSrc));
+  ok('the Studio is told the sizes as numbers', /band: Number\(l\.band\) \|\| 0, costs: Number\(l\.costs\) \|\| 0/.test(adminSrc));
+  /* And the plan card restates them by hand (TIER_COPY, "change one there and
+     here"), so the numbers on the card are pinned to the table the way the other
+     copy numbers are. Wording may move; the numbers may not. */
+  const card = /up to (\d+) band members and (\d+) costs a show/.exec(page);
+  ok('the Rock Star card names the two sizes', !!card, 'no "up to N band members and N costs a show" in the Studio');
+  eq('and they are the table\'s', card ? [+card[1], +card[2]] : null, [PLANS.pro.band, PLANS.pro.costs]);
+  /* The dashboard's own cap line is built from PLAN.plans at run time, so it
+     cannot drift; what can drift is a stray has('band') — a numeric limit read
+     through has() is false on Bar Star (0ca), and that is test/structure.mjs's. */
+}
+
 console.log('\nTHE LIBRARY HAS A SIZE, AND ON THE FREE PLAN IT IS 100  (decision 0060)');
 {
   const { libraryCap, MAX_LIBRARY } = await import('../netlify/functions/_plan.mjs');

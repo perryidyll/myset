@@ -58,6 +58,8 @@ ok('Auto chords resolves a direct Ultimate Guitar chart without copying it into 
 ok('lyrics wrap inside both audience and Studio sheets',
    /\.lyr\{[^}]*white-space:pre-wrap[^}]*overflow-wrap:anywhere/.test(vote)&&
    /\.chartview\.stage-lyrics\{[^}]*white-space:pre-wrap[^}]*overflow-wrap:anywhere/.test(studio));
+/* report.html is NOT on the theme lists below on purpose: it is a paper-white
+   printable document (decision 0065, D13) with no theme.js and no dark palette. */
 ok('the home-page light mode switch persists across every public page',
    /id="themeBtn"[^>]*data-theme-toggle/.test(home)&&
    /localStorage\.setItem\('myset\.theme', next\)/.test(themeScript)&&
@@ -75,6 +77,14 @@ ok('public and Studio loading screens use the active light or dark palette',
    ['studio.html','venue-studio.html'].every(x=>{
      const s=read(`public/${x}`);return /#boot\{[^}]*background:var\(--bg\)/.test(s)&&/html\{background:#F5F5F7\}html\[data-theme=dark\]\{background:#000\}/.test(s);
    }));
+const report = read('public/report.html');
+ok('the business report is a light-only paper document: explicit colours, noindex, and /biz.js is the only script it loads',
+   !/theme\.js|data-theme|prefers-color-scheme|var\(--/.test(report)&&
+   /<meta name="robots" content="noindex,nofollow" ?\/?>/.test(report)&&
+   (report.match(/<script[^>]*\bsrc=/g)||[]).length===1&&/<script src="\/biz\.js\?v=[0-9a-f]{8}">/.test(report)&&
+   /App<small>before fees<\/small>/.test(report)&&/goes to MySet for transaction fees/.test(report)&&!/before app fees/.test(report)&&/App money not available for/.test(report)&&
+   /Stripe's monthly statement of the net is the artist's, exported from the Studio as CSV\./.test(report)&&
+   Buffer.byteLength(report)<=40*1024);
 ok('the $20 plan displays the same 2% transaction fee the server charges',
    /pro:\{name:'Rock Star',price:'\$20 \/ month'[\s\S]{0,1400}Transaction fee<\/span>',' – 2%/.test(studio)&&   // "Transaction fee – 2% on money…" since 2026-09-13
    !/Transaction fee<\/span>',' – 0%/.test(studio)&&

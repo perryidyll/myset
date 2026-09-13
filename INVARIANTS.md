@@ -2236,3 +2236,26 @@ If you are about to violate one, stop and say so rather than working around it.
     is ignored by both copies of the merge. Watched in a real browser with each half
     returning 500 in turn; `test/split.mjs` holds the merge and goes red if the
     board's clock moves back after its reads.
+
+0fn. **An artist or venue with no Connect account has no statement, and a
+    statement remembers whose account it came from.** `stripeFor` answers the
+    platform client with EMPTY options for an owner who has not connected, and
+    `statement` pulls whatever account it is handed — so an unconnected Bar Star
+    artist opening the Money tab was shown MySet's own subscription income,
+    bucketed as their earnings, and it was cached under `ledger_<aid>` (verified
+    by execution, 2026-09-13: gross 1005 for an artist who had never taken a cent);
+    the venue door in `venueadmin.mjs` had the identical hole, caching it under
+    `ledger_v_<vid>`. Two halves, both needed. `ledger` / `ledgerCsv` — on both
+    doors — answer `enabled:false` for an owner with no usable account: no
+    `statement()` call, nothing cached. The founder is the one artist legitimately
+    on the platform account and keeps `platformSplit`; a venue has no such
+    exception. And the cache doc carries `acct`, the account its months were
+    computed against: a cache whose `acct` differs from the current one is wiped
+    and re-stamped on disk the moment the mismatch is seen, BEFORE Stripe is
+    asked, so months computed before Connect are recomputed exactly once — a pull
+    that fails or runs out of pages cannot leave the mismatch on disk to be found
+    again on every read. A cache from before the stamp existed carries no `acct`
+    and is treated as a mismatch that one time. A closed month is never re-read
+    (the monthly close), which is exactly why a poisoned one would otherwise have
+    stayed for ever. `test/books.mjs` "NO ACCOUNT, NO STATEMENT" holds both halves
+    with platform rows in the fake, for an artist and for a venue. Decision `0065`.

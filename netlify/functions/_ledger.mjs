@@ -188,6 +188,29 @@ export async function statement(owner, stripe, opts, { months = 12, now = Date.n
   const want = lastMonths(months, now, since);
   const cache = await readLedger(owner);
   const thisMonth = monthKey(now);
+  /* WHOSE ACCOUNT THESE MONTHS CAME FROM. A closed month is never re-read, so a
+     month computed before the artist connected — against whatever account the
+     caller handed in then — would have stayed on their statement for ever, and
+     nothing on the document said which account it was. The stamp says; a cache
+     from a different account is treated as empty and recomputed once, without
+     anybody having to know to press "Check again" (INVARIANT 0fn). */
+  const acct = (opts && opts.stripeAccount) || '';
+  if ((cache.acct || '') !== acct) {
+    cache.months = {}; cache.at = 0;
+    /* AND SAY SO ON DISK NOW, before Stripe is asked. If the wipe only lived in
+       memory until the pull's own write, a pull that failed or ran out of pages
+       (neither is cached) left the foreign months on disk to be found again on
+       the next read — a wide re-pull on every open, for ever, with the artist's
+       own closed months never landing. Stamping first makes the recomputation
+       happen exactly once; from here on an empty cache is just an empty cache.
+       A cache from before the stamp existed has no `acct` and takes this path
+       that one time. */
+    await casDoc(LEDGER(owner), () => ({ v: 1, months: {}, at: 0 }), (d) => {
+      if ((d.acct || '') === acct) return false;      // another read got here first
+      d.months = {}; d.acct = acct; d.at = 0;
+      return true;
+    }).catch(() => {});
+  }
 
   const missing = want.filter((k) => force || k === thisMonth || !cache.months[k]);
   if (stripe && missing.length) {
@@ -211,6 +234,8 @@ export async function statement(owner, stripe, opts, { months = 12, now = Date.n
     }
     if (!partial) await casDoc(LEDGER(owner), () => ({ v: 1, months: {}, at: 0 }), (d) => {
       d.months ||= {};
+      if ((d.acct || '') !== acct) d.months = {};     // another account's months do not mix with these
+      d.acct = acct;
       for (const [k, v] of Object.entries(fresh)) d.months[k] = v;
       /* Bounded: five years of months is 60 rows of nine numbers. A statement
          older than that is a question for the accountant, not for this app. */

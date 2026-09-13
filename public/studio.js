@@ -17,6 +17,11 @@ let SETQ='', SETFOCUS=false;
 let HISTQ='', HISTFOCUS=false, HSHOWN=[], HROWS=[], HISTALL=false; // past-shows search/collapse
 let LEDGER=null, BOOKS=null, BOOKMONTH='';  // the statement and (for the founder) the P&L
 let LASTSHOW='', LASTSTATUS='';            // when the night changes, the Money cache dies
+/* The business dashboard (decision 0065) is two scripts loaded only when a paid
+   owner opens Money — the maths and the tab. Served immutable like this file, so
+   each carries its own stamp; tools/stamp.mjs rewrites both. */
+const BIZ_V='/biz.js?v=73853ac5', MONEY_V='/studio-money.js?v=4cc5b7bc';
+let MONEY_PROMISE=null, MONEY_FAILED=false;
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
 const collate=(a,b)=>String(a||'').localeCompare(String(b||''),undefined,{sensitivity:'base'});
@@ -666,6 +671,7 @@ async function signOut(){
      state every one of these is in at first paint, so the next load is a first load. */
   D=null;PLAN=null;PROF=null;TEAM=null;PAY=null;HIST=null;REV=null;LEDGER=null;EVENTS=null;PITCHES=null;
   FEAT=null;MERCH=null;ORDERS=null;COMM=null;SESS=null;REC=null;TICK=null;PKEYS=null;
+  if(window.Money)Money.forget();   // the dashboard keeps its own copy of the book (0065)
   gate();
 }
 function signOutEverywhere(){
@@ -1188,7 +1194,7 @@ async function payDash(){
 }
 
 function setTab(t){if(t==='merch')t='profile';TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
-  if(t==='money'){DETAIL=null;loadRev();loadHist();loadOrders();}
+  if(t==='money'){DETAIL=null;loadRev();loadHist();loadOrders(); if(window.Money)Money.reset(); if(bizOwner())ensureMoney().catch(()=>{});}
   if(t==='profile'){ loadProf(); loadComm(); loadPlan(); loadMerch(); loadOrders(); }
   if(t==='setlist') loadPlan();
   /* drawPush paints into a div that render() has just created, and switching INTO
@@ -1306,16 +1312,48 @@ function openGig(id,onDate){
       <p class="muted" style="font-size:12px;margin:7px 0 0">${((D&&D.lists)||[]).length
         ? 'Tapping “Start the show” on the night switches to this automatically. Leave it on the first option and the gig won’t touch your pick.'
         : 'Make a setlist on the Setlist tab and it’ll show up here.'}</p></div>
+    ${bizOwner()?`<details class="why" id="gBiz" style="margin-top:14px"${(ev?ev.date:(onDate||todayStr()))<todayStr()?' open':''}><summary>The business side</summary>
+      <div class="whybody"><p class="muted" style="font-size:12.5px">Applies to every night of this run you haven't logged separately.</p>
+        <div id="gBizBody"><div class="row muted" style="padding:0"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div></div></details>`
+    :(PLAN&&PLAN.ok&&PLAN.plan==='free'&&(PLAN.role||'owner')==='owner')?`<p class="muted" style="font-size:12.5px;margin:14px 0 0">Pay, band splits and costs for every gig are a Bar Star feature — <button class="btn-text" type="button" style="padding:0 4px;font-size:12.5px" onclick="openPlans()">See plans</button></p>`:''}
     <input type="hidden" id="gTz" value="${esc(tz)}">
     <button class="big" style="margin-top:16px" data-act="gigsave" data-id="${esc(ev?ev.id:'')}">${ev?'Save changes':'Add it'}</button>
     ${ev?`<button class="big alt" style="margin-top:10px" data-act="gigdel" data-id="${esc(ev.id)}">Delete this gig${ev.repeat?' and its whole run':''}</button>`:''}`);
+  // the run's pay, band, costs, time and gear — drawn by the dashboard's module once it is here (0065)
+  if(bizOwner()) ensureMoney().then(M=>M.fillGigForm(ev?ev.id:'')).catch(()=>{ const b=$('#gBizBody'); if(b) b.innerHTML='<p class="muted" style="font-size:12.5px;margin:0">Couldn’t load the business side just now — the gig still saves.</p>'; });
 }
+/* Back-filling: a past date on the gig form — new gig or the date changed to one —
+   is the night the Money tab sent the artist here to log, so the business side opens. */
+document.addEventListener('change',(e)=>{
+  if(!e.target||e.target.id!=='gDate')return;
+  const det=$('#gBiz'); if(det&&e.target.value&&e.target.value<todayStr())det.open=true;
+});
 let GIG_MAPS_PROMISE=null;
 async function loadGigMaps(){
   if(window.google&&google.maps)return google.maps;if(GIG_MAPS_PROMISE)return GIG_MAPS_PROMISE;
   GIG_MAPS_PROMISE=(async()=>{const c=await fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json());if(!c.ok||!c.enabled||!c.key)throw Error('maps unavailable');return new Promise((resolve,reject)=>{window.__mysetGigMapsReady=()=>resolve(google.maps);const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(c.key)}&v=weekly&loading=async&language=en&callback=__mysetGigMapsReady`;s.async=true;s.onerror=reject;document.head.appendChild(s)})})();
   return GIG_MAPS_PROMISE;
 }
+/* Who the dashboard is for: a paid owner. A member seat shares the plan's limits
+   but never the owner's pay and splits (D9); a free plan is told, not shown. */
+const bizOwner=()=>has('reports')&&(PLAN&&PLAN.role||'owner')==='owner';
+function ensureMoney(){
+  if(window.Money)return Promise.resolve(window.Money);
+  if(MONEY_PROMISE)return MONEY_PROMISE;
+  const one=(src)=>new Promise((resolve,reject)=>{const sc=document.createElement('script');sc.src=src;sc.async=true;sc.onload=resolve;sc.onerror=()=>reject(Error('could not load '+src));document.head.appendChild(sc);});
+  MONEY_PROMISE=(typeof Biz!=='undefined'?Promise.resolve():one(BIZ_V)).then(()=>one(MONEY_V)).then(()=>{
+    MONEY_FAILED=false; if(TAB==='money'&&D&&!typing())render(); return window.Money; })
+    .catch(e=>{ MONEY_PROMISE=null; MONEY_FAILED=true; if(TAB==='money'&&D)render(); throw e; });
+  return MONEY_PROMISE;
+}
+/* What the tab shows before the module is here: the same frame in grey blocks —
+   or, once a load has failed, the way to try again and never a skeleton. */
+function bizSkeleton(){
+  if(MONEY_FAILED) return `<div class="list" style="margin-top:14px"><div class="row muted" data-act="bizretry" style="cursor:pointer">Couldn't load the dashboard — tap to try again.</div></div>`;
+  return `<div class="bizsk" style="margin:16px 18px 0;display:grid;gap:11px">${['38px','120px','64px','64px','150px'].map(h=>`<i style="display:block;height:${h};background:var(--surface);border-radius:var(--r-sm);box-shadow:var(--sh-1)"></i>`).join('')}</div>`;
+}
+/* render() has no try/catch: an exception in the tab would leave #app unpainted. */
+const bizSafe=(fn)=>{ try{ return fn(); }catch(e){ return bizSkeleton()+`<div class="list" style="margin-top:12px"><div class="row muted">The dashboard hit a snag drawing itself — pull down to reload.</div></div>`; } };
 async function coordinateGig(ev){
   try{
     const p=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventPlace',place:ev}),quiet:true});
@@ -1338,14 +1376,22 @@ async function saveGig2(id){
     repeat:freq?{freq,until:v('gUntil')||null}:null};
   if(!ev.venue){toast('Where is it?');return;}
   if(!ev.date){toast('Pick a date');return;}
+  const bizRoot=$('#gBiz .bizf');
+  /* A time that made no sense shakes on the way out of the field; Add it must not
+     then drop it without a word — same refusal as the editor's Save. */
+  const badTime=bizRoot&&window.Money&&typeof Biz!=='undefined'?[...bizRoot.querySelectorAll('.bzmin')].find(i=>Number.isNaN(Biz.parseHm(i.value))):null;
+  if(badTime){ const det=$('#gBiz'); if(det)det.open=true; badTime.classList.remove('bad'); void badTime.offsetWidth; badTime.classList.add('bad'); toast('Check the time fields'); return; }
   const placeChanged=ev.address!==v('gAddr0')||ev.mapUrl!==v('gMap0');
   if(placeChanged){ev.lat=null;ev.lng=null;}
   if(!Number.isFinite(ev.lat)||!Number.isFinite(ev.lng))await coordinateGig(ev);
+  const bizGig=(bizRoot&&window.Money)?Money.readRows(bizRoot):null;   // read before the sheet goes
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventSave',event:ev})});
   if(!d.ok){toast(d.error||'Could not save');return;}
   const saved=(d.events||[]).find(x=>x.id===d.id);
   EVENTS=null;
   closeSheet(); await loadGigs(true);
+  if(window.Money)Money.stale();   // the book's calendar slots are the server's expansion at its last read (0065)
+  if(bizGig&&d.id) Money.saveRule(d.id,bizGig);   // not awaited: its own toast on failure, never in the gig's way
   if(ev.mapUrl&&saved&&!saved.mapUrl) toast('Gig saved — but that link wasn’t a Google or Apple Maps one');
   else toast(id?'Gig updated':'Gig added');
   } finally { WRITING=false; }
@@ -1355,7 +1401,7 @@ async function delGig(id){
   if(!confirm('Delete this gig? If it repeats, the whole run goes.'))return;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventDelete',id})});
   if(!d.ok){toast(d.error||'Failed');return;}
-  closeSheet(); await loadGigs(true); toast('Deleted');
+  closeSheet(); await loadGigs(true); if(window.Money)Money.stale(); toast('Deleted');
 }
 async function skipGig(pair){
   if(WRITING)return; WRITING=true;
@@ -1365,7 +1411,7 @@ async function skipGig(pair){
   const on=!(occ&&occ.cancelled);
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventSkip',id,date,on})});
   if(!d.ok){toast(d.error||'Failed');return;}
-  await loadGigs(true); toast(on?'That night is cancelled':'Back on');
+  await loadGigs(true); if(window.Money)Money.stale(); toast(on?'That night is cancelled':'Back on');
   } finally { WRITING=false; }
 }
 /* A cancelled night stays visible so it can be restored. Hiding drops it from
@@ -1378,7 +1424,7 @@ async function hideGig(pair){
   try{
     const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventHide',id,date})});
     if(!d.ok){toast(d.error||'Failed');return;}
-    EVENTS=null; await loadGigs(true); toast('Gone from your list');
+    EVENTS=null; await loadGigs(true); if(window.Money)Money.stale(); toast('Gone from your list');
   } finally { WRITING=false; }
 }
 async function loadProf(force){
@@ -1857,6 +1903,11 @@ function render(){
     }
     else{
       const H=HIST,R=REV;
+      /* THREE MONEY TABS (0065). A paid owner gets the business dashboard between
+         tonight and the Stripe cards; a member seat gets today's tab and one line
+         saying why not; a free plan gets today's tab with the reports row reworded. */
+      const biz=bizOwner(), member=!!(PLAN&&PLAN.ok&&PLAN.role&&PLAN.role!=='owner');
+      if(biz&&!window.Money&&!MONEY_FAILED) ensureMoney().catch(()=>{});   // the first paint for a paid owner starts the download
       let head='';
       if(!H) head=`<div class="sec"><span class="kick">Shows</span></div>
         <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`;
@@ -1871,12 +1922,14 @@ function render(){
         </div>
         ${L.unattributed?`<p class="muted" style="font-size:12px;padding:10px 18px 0">Plus $${L.unattributed.toFixed(2)} taken in this window that isn’t tagged to a show — it was paid before MySet started tagging payments. Everything from here on is tagged automatically.</p>`:''}
         <p class="muted" style="font-size:12px;padding:10px 18px 0">${done?'Filed away. Start the next one from the Live tab when the gig begins.':'Tonight gets filed away when you end the show or start a new one.'}</p>
-        ${H.locked?`<div class="sec"><span class="kick">Data reports</span><span class="kick">${H.nights||0}</span></div>
+        ${biz&&done&&window.Money?bizSafe(()=>Money.tonight(L)):''}
+        ${member?`<div class="list" style="margin-top:12px"><div class="row muted">The business dashboard is the owner's — it holds their pay and splits.</div></div>`:''}
+        ${H.locked?`<div class="sec"><span class="kick">Business dashboard</span><span class="kick">${H.nights||0}</span></div>
         <div class="list"><div class="row" style="flex-wrap:wrap">
           <div class="m" style="flex:1 1 100%"><div class="t">${H.nights?`${H.nights} night${H.nights===1?'':'s'} filed and waiting`:'Every night gets filed here'}</div>
-            <div class="s">Data reports — the fans, votes and tips from every show — are a Bar Star feature. Upgrade and ${H.nights?'all of them open':'they open as you play'}.</div></div>
+            <div class="s">The business dashboard — fans, votes and tips plus your pay, splits, costs, hours and profit for every show — is a Bar Star feature. Upgrade and ${H.nights?'all of them open':'they open as you play'}.</div></div>
           <button class="act" onclick="openPlans()">See plans</button></div></div>`:''}
-        ${H.locked?'':`
+        ${H.locked||biz?'':`
         ${(()=>{  /* filter by anything a night is remembered by: its name, venue, city, date, weekday */
           const hw=HISTQ.toLowerCase().split(/\s+/).filter(Boolean);
           const hay=x=>{const d=new Date(x.endedAt||x.startedAt||0);
@@ -1941,7 +1994,10 @@ function render(){
         <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
       }
       // Get-paid card, tonight, bug reports, then the Rock Star numbers preview
-      body=payCard()+head+bugCard()+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard();
+      if(biz) body=head+(window.Money?bizSafe(()=>Money.tab()):bizSkeleton())
+        +`<div class="sec" style="padding-bottom:0;border-top:.5px solid var(--hair);margin-top:26px"><span class="kick" style="color:var(--muted)">Through the app</span></div>`
+        +payCard()+earningsCard()+pays+bugCard()+booksCard()+analyticsCard();
+      else body=payCard()+head+bugCard()+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard();
     }
   }
 
@@ -2672,6 +2728,7 @@ function attachDrag(sh){
     if(t.closest(HSCROLL))return;                   // a sideways carousel is not a dismiss
     const inZone=!!t.closest('.grabzone');
     if(!inZone&&sh.scrollTop>0)return;              // they are reading, not dismissing
+    if(!inZone&&sh.classList.contains('biz'))return;// fifteen inputs must not vanish on a thumb drag (0065)
     start(e,!inZone);
   };
 
@@ -2963,6 +3020,8 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='show') openShow(id);
   if(b.dataset.act==='histname') renameNight(id);
   if(b.dataset.act==='recon') reconcile(id);
+  if(b.dataset.act==='bizretry'&&!window.Money){ MONEY_FAILED=false; render(); ensureMoney().catch(()=>{}); }
+  else if(b.dataset.act.startsWith('biz')&&window.Money) Money.act(e,b,id);
   if(b.dataset.act==='mup') media('mediaMove',id,'up');
   if(b.dataset.act==='mdn') media('mediaMove',id,'down');
   if(b.dataset.act==='mrm') media('mediaRemove',id);
@@ -3634,13 +3693,14 @@ const TIER_COPY={
     ['In-app merch store',' – feature and sell your merch directly from your artist page'],
     ['Hide 1-2 star reviews',' – protect your page from drunk haters'],
     ['Verification badge',' – after credentials are approved'],
-    ['Data reports',' – track the numbers of fans and tips from every show'],
+    ['Business dashboard',' – log your pay, band splits, cash tips, merch, costs and hours for every show, see your profit and your real $/hour, and print a branded report for your accountant'],
     ['Shows that start and end themselves',' – from your calendar'],
     ['<span class="fee">Transaction fee</span>',' – 10% on money taken through the app']]},
   pro:{name:'Rock Star',price:'$20 / month',items:[
     ['Everything in Bar Star',''],
     ['Rooms up to 2,000',' – a bigger night still runs, just a little calmer'],
-    ['Professional business dashboard',' – a sleek, all-in-1 system for managing your earnings from tips and merch sales (by night, venue, etc.), ads and promotions, creating in-app personalized branding, press kits, and more <em class="soon">(coming soon)</em>'],
+    ['A bigger business dashboard',' – up to 10 band members and 10 costs a show'],
+    ['Ads and promotions, personalised branding, press kits',' – <em class="soon">coming soon</em>'],
     ['<span class="fee">Transaction fee</span>',' – 2% on money taken through the app']]},
 };
 const tierList=(k)=>TIER_COPY[k].items.map(x=>`<li><b>${x[0]}</b>${x[1]||''}</li>`).join('');
@@ -3821,6 +3881,8 @@ async function loadPlan(force){
   PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'}),quiet:true});
   /* Any tab can hold a lock now, not just Settings, so any tab needs the repaint. */
   if(D)render();
+  // the dashboard's two scripts, warmed a moment after the plan says they will be wanted (D11)
+  if(bizOwner()) setTimeout(()=>window.Money||ensureMoney().catch(()=>{}),1500);
   /* The owner's two lists are Settings-only data. They used to be awaited here, in
      series, NOT quiet — four round-trips before Perry's own Live tab was allowed to
      appear, with the busy veil painted over the boot screen for the last two. Now
@@ -4342,6 +4404,10 @@ function bootDone(forced){
   setTimeout(()=>el.remove(),320);        // gone for good: it can never flash again
 }
 function start(){clearInterval(timer);
+  /* Every door back in — a code, a recovery code, the Studio code, an expired token
+     re-signed — lands here, and none of them passes through signOut(). Whoever is
+     coming in may not be who was here: the dashboard's book is forgotten first. */
+  if(window.Money)Money.forget();
   handleSubReturn();
   /* Whatever happens, the boot screen goes. A hung request must never leave somebody
      staring at bars — better a half-filled Studio they can use. */

@@ -73,6 +73,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) | the whole library is live on every plan, Bar Star holds 200 songs, the cards say what the page does | 2026-09-13 | plans | decided | perry |
 | [0062](0062-the-name-is-a-first-name-or-a-band-name-plus-an-op.md) | The name is a first name or a band name plus an optional last name, the registry follows the profile, and the top video leads a drifting strip | 2026-09-13 | ui | decided | perry |
 | [0063](0063-the-current-song-has-to-be-ended-before-another-ca.md) | The current song has to be ended before another can start — every ▶ in the Studio asks "End current song?" while one is playing | 2026-09-13 | ui | decided | perry |
+| [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md) | the paid plans get a business dashboard — one document per artist, keyed by the calendar night, profit before app fees, the whole evening in the hourly rate | 2026-09-13 | plans | decided | perry |
 
 ## By area
 
@@ -90,7 +91,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) · [0054](0054-a-signed-in-request-costs-two-hops-not-four.md)
 
-**plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md)
+**plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) · [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md)
 
 **scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md)
 

@@ -1,6 +1,6 @@
 import { getShow, readDoc, casDoc, readFans } from './_lib.mjs';
 import { readArtists } from './_auth.mjs';
-import { readEvents, occurrencesFor, isVenueOwner } from './_events.mjs';
+import { readEvents, occurrencesFor, isVenueOwner, occKey } from './_events.mjs';
 import { utcToDate } from './_time.mjs';
 import { startShow, endShow } from './_lifecycle.mjs';
 
@@ -31,7 +31,7 @@ export const SCHED = 'gigsched';
 export const END_GRACE_MS = 3 * 3600e3;      // "three hours past their scheduled end"
 export const IDLE_MS = 45 * 60e3;            // a song this recent means the set is still on
 
-export const occKey = (o) => `${o.eventId}@${o.date}`;
+export { occKey };                          // lives in _events.mjs now (0065); callers here are unchanged
 
 /** The gig whose night is "now": started already, and not yet past its grace. */
 export function currentOccurrence(events, now) {

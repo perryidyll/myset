@@ -271,6 +271,9 @@ export const KEY = {
      Its own document because a full chart is kilobytes and `show` is on the hot
      read path that every phone in the room polls. */
   chart:   (a, songId) => `chart_${a}_${songId}`,
+  /* The artist's book — pay, band splits, costs, hours per show (decision 0065).
+     One document, read once by the Money tab; never on the audience path. */
+  biz:     (a) => `biz_${a}`,
 };
 /** Artist ids are used inside blob keys, so they must stay boring. */
 export const cleanArtistId = (v) =>

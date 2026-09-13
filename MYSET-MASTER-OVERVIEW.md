@@ -439,11 +439,13 @@ worth reading. If a number here is wrong, the source is wrong.*
 | People in one room (soft — nobody is refused) | 50 | 300 | 2,000 |
 | Songs the library holds | 100 | 200 | 2,000 |
 | Team seats | 1 | 1 | 5 |
+| Band members paid per show, on the business dashboard | 0 | 5 | 10 |
+| Costs logged per show, on the business dashboard | 0 | 5 | 10 |
 | Set your own prices (vote packs, replay, requests) | — | yes | yes |
 | Create named setlists | — | yes | yes |
 | Sell merch on your community page | — | yes | yes |
 | Hide a fan's post *(sold as "hide 1–2 star reviews"; deleting for good is gone — 0060)* | — | yes | yes |
-| Data reports — the filed nights on the Money tab *(every night is still filed on every plan)* | — | yes | yes |
+| Data reports and the business dashboard — the filed nights, pay, band splits, costs, hours and profit on the Money tab, and the printed report *(every night is still filed on every plan)* | — | yes | yes |
 | Promote gigs in other cities | *coming soon* | *coming soon* | *coming soon* |
 | Earnings analytics | *coming soon* | *coming soon* | *coming soon* |
 | Press kit | *coming soon* | *coming soon* | *coming soon* |
@@ -501,20 +503,21 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 
 | | |
 |---|---|
-| Public pages | 10 — about.html, artist.html, artists.html, community.html, index.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
+| Public pages | 11 — about.html, artist.html, artists.html, community.html, index.html, report.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
-| Shared libraries | 46 |
-| Artist Studio actions | 126 |
+| Shared libraries | 47 |
+| Artist Studio actions | 129 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
-| Invariants | 255 (last: 0fk) |
-| Test suites | 45 |
-| Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 63 |
+| The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / pack-down) · 200 rule defaults · the document 400 KB, then a year shard |
+| Invariants | 256 (last: 0fn) |
+| Test suites | 47 |
+| Assertions | **2,693**, 0 failing, last run 2026-09-13 |
+| Decision records | 64 |
 
 ### Feature flags in force
 
@@ -764,7 +767,7 @@ review queue, venue plans, promo minting, venue verification, feature flags, she
 ## 3.4 The artist's public page
 
 `/<slug>`. Cover photo, avatar, name — with the green **✓ Verified** chip when earned and
-on a paid plan — one primary, red **ENTER NOW TO VOTE** button when a show is on, and a
+on a paid plan — one primary **TAP TO VOTE THE SETLIST** button when a show is on, and a
 stats row
 (Joined · Shows · **Fans** · Votes cast · Songs) with a **Community** button in it.
 

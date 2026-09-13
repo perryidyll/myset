@@ -49,7 +49,12 @@ export function topPaidOf(played) {
 /* Every per-night field the artist page reads off an index row. The heal's gate
    below re-opens once for any row missing one of these, so a field added here
    is back-filled on the next Money-tab load without anybody tapping anything. */
-const ROW_TOPS = ['top', 'topPlayed', 'topPaid'];
+/* `source` (0065) is whether the night's money is KNOWN — 'stripe', 'off' or
+   'stripe-unreachable' off the detail's money block — so the artist's book can say
+   "app money not available" instead of writing down a zero. `key` is deliberately
+   NOT here: a night filed before 0065 has no key to back-fill, and re-opening the
+   heal for every account to write null would be a pass that repairs nothing. */
+const ROW_TOPS = ['top', 'topPlayed', 'topPaid', 'source'];
 const stampTops = (row) => { for (const f of ROW_TOPS) if (!(f in row)) row[f] = null; return row; };
 
 /* Stripe stays the source of truth for money (INVARIANT 5d); this is a cache of
@@ -186,6 +191,12 @@ export async function archiveShow(aid, show, fans) {
     title: show.archiveTitle || '',
     venue: show.venue || '', city: show.city || '', showTime: show.showTime || '',
     startedAt: show.startedAt || null, endedAt,
+    /* WHICH GIG THIS WAS. The lifecycle stamps the calendar occurrence on the show
+       (`<eventId>@<date>`, scheduled or hand-started near it — 0065); until now the
+       filed night threw it away and every join back to the calendar was by time
+       or by venue|date. A night that matched no gig files null and stands under
+       its showId. */
+    key: show.autoKey || null,
     played, requested,
     stats: {
       songsPlayed: played.length,
@@ -219,7 +230,9 @@ export async function archiveShow(aid, show, fans) {
          would put show.archiveTitle (or nothing) back over it, and the index row
          below is built from what was kept, so it would follow. */
       const hand = d.titleByHand ? { title: d.title, titleByHand: true } : null;
-      Object.assign(d, doc); if (hand) Object.assign(d, hand); kept = d; return true;
+      // and a key placeShows proved, when the fresh snapshot brings none (0065)
+      const key = d.key && !doc.key ? { key: d.key } : null;
+      Object.assign(d, doc); if (hand) Object.assign(d, hand); if (key) Object.assign(d, key); kept = d; return true;
     }
     Object.assign(d, doc); kept = d; return true;
   }).then(() => { stored = true; })
@@ -245,6 +258,7 @@ export async function archiveShow(aid, show, fans) {
       title: (kept && kept.title) || doc.title || was.title || '',
       venue: (kept && kept.venue) || doc.venue || was.venue || '',
       city: (kept && kept.city) || doc.city || was.city || '',
+      key: (kept && kept.key) || doc.key || was.key || null,
       startedAt: Math.min(...[was.startedAt, doc.startedAt].filter(Boolean).concat(endedAt)),
       endedAt: up(was.endedAt, endedAt),
       songsPlayed: up(was.songsPlayed, st.songsPlayed),
@@ -262,6 +276,8 @@ export async function archiveShow(aid, show, fans) {
          the artist had to open the night to find out otherwise. It is a WINDOW
          figure, not a per-night one — never sum it. */
       unattributed: money.unattributed || 0,
+      // whether that gross is Stripe's answer or the absence of one (see ROW_TOPS)
+      source: money.source || null,
       /* The night's most-voted, most-played and most-paid-for song, title and
          count only, so the public artist page can name the room's favourites from
          this one document instead of opening every night (decision 0043). Never
@@ -393,10 +409,12 @@ export async function healHistory(aid, { force = false } = {}) {
       // the artist's name for the night, with the precedence archiveShow gives it
       title: doc.title || (was && was.title) || '',
       venue: doc.venue || '', city: doc.city || '',
+      key: doc.key || (was && was.key) || null,
       startedAt: doc.startedAt || null, endedAt: doc.endedAt || null,
       songsPlayed: st.songsPlayed || 0, totalVotes: st.totalVotes || 0,
       peakVoters: st.peakVoters || 0, room: st.room || 0, nets: st.nets || 0,
       gross: money.gross || 0, unattributed: money.unattributed || 0,
+      source: money.source || null,
       // from the detail already in hand — no extra read
       top: topOf(was && was.top, st.topSong),
       topPlayed: topOf(was && was.topPlayed, topPlayedOf(doc.played), 'plays'),
@@ -472,53 +490,67 @@ export async function placeShows(aid) {
     await Promise.all([import('./_events.mjs'), import('./_time.mjs')]);
   const idx = await readDoc(INDEX(aid), { shows: [] });
   const rows = (idx.data && idx.data.shows) || [];
-  if (!rows.length) return { ok: true, placed: 0, looked: 0 };
+  if (!rows.length) return { ok: true, placed: 0, keyed: 0, looked: 0 };
 
   const times = rows.map((r) => r.startedAt || r.endedAt || 0).filter(Boolean);
-  if (!times.length) return { ok: true, placed: 0, looked: rows.length };
+  if (!times.length) return { ok: true, placed: 0, keyed: 0, looked: rows.length };
   const events = await readEvents(aid);
   /* A day of margin at each end so an occurrence that straddles midnight in the
      gig's own timezone is still in the expansion window. */
   const occs = occurrencesFor(events,
     utcToDate(Math.min(...times) - 86400000), utcToDate(Math.max(...times) + 86400000));
-  if (!occs.length) return { ok: true, placed: 0, looked: rows.length };
+  if (!occs.length) return { ok: true, placed: 0, keyed: 0, looked: rows.length };
 
   /* Half an hour of grace before the start, because a set that begins at 8:30 is a
      show somebody opened at 8:20. Nothing after the gig's own end. */
   const GRACE = 30 * 60000;
   const placeOf = (t) => occs.find((o) => o.venue && t >= o.startsAt - GRACE && t <= o.endsAt) || null;
 
+  /* And the gig's KEY, for a night that has none (0065): a night filed before the
+     lifecycle stamped one joins the calendar by this same proof, once, and from
+     then on by id. A key already on the night is never overwritten — the
+     scheduler's word beats a time window. */
+  const { occKey } = await import('./_events.mjs');
   const changes = [];
+  /* Two counts, because the Studio toasts "Renamed N nights" from `placed`: a
+     night that was already at the right venue and only gains its key is not a
+     rename, and the first tap after 0065 would otherwise announce a dozen renames
+     that renamed nothing. `keyed` is the stamps, for whoever wants to say so. */
+  let placed = 0, keyed = 0;
   for (const r of rows) {
     const t = r.startedAt || r.endedAt || 0;
     const o = t ? placeOf(t) : null;
-    if (!o || o.venue === r.venue) continue;
-    changes.push([r.showId, o.venue, [o.city, o.country].filter(Boolean).join(', ')]);
+    if (!o || (o.venue === r.venue && r.key)) continue;
+    if (o.venue !== r.venue) placed++;
+    if (!r.key) keyed++;
+    changes.push([r.showId, o.venue, [o.city, o.country].filter(Boolean).join(', '), occKey(o)]);
   }
-  if (!changes.length) return { ok: true, placed: 0, looked: rows.length };
+  if (!changes.length) return { ok: true, placed: 0, keyed: 0, looked: rows.length };
 
   /* The detail document first, then the row. If the second write fails the two
      disagree until the next archive, which is the same way every other repair in
      this file leans — the detail is the record, the row is the summary of it. */
-  for (const [showId, venue, city] of changes) {
+  for (const [showId, venue, city, key] of changes) {
     await casDoc(HIST(aid, showId), () => ({}), (d) => {
-      if (!d || !d.showId || d.venue === venue) return false;
-      d.venue = venue; if (city) d.city = city;
+      if (!d || !d.showId || (d.venue === venue && d.key)) return false;
+      if (d.venue !== venue) { d.venue = venue; if (city) d.city = city; }
+      if (!d.key) d.key = key;
       return true;
     }).catch(() => {});
   }
-  const want = new Map(changes.map(([id, venue, city]) => [id, { venue, city }]));
+  const want = new Map(changes.map(([id, venue, city, key]) => [id, { venue, city, key }]));
   await casDoc(INDEX(aid), () => ({ shows: [] }), (d) => {
     let touched = false;
     for (const r of (d.shows || [])) {
       const w = want.get(r.showId);
-      if (!w || r.venue === w.venue) continue;
-      r.venue = w.venue; if (w.city) r.city = w.city;
+      if (!w || (r.venue === w.venue && r.key)) continue;
+      if (r.venue !== w.venue) { r.venue = w.venue; if (w.city) r.city = w.city; }
+      if (!r.key) r.key = w.key;
       touched = true;
     }
     return touched;
   }).catch(() => {});
-  return { ok: true, placed: changes.length, looked: rows.length };
+  return { ok: true, placed, keyed, looked: rows.length };
 }
 
 /* NAMING ONE NIGHT BY HAND. A show started from the Live tab is filed under the
@@ -570,7 +602,13 @@ export async function reconcileShow(aid, showId) {
   }).catch(() => {});
   await casDoc(INDEX(aid), () => ({ shows: [] }), (idx) => {
     const row = (idx.shows || []).find((x) => x.showId === showId);
-    if (row) row.gross = money.gross;
+    /* The whole money summary the row builders write, not just the figure. The
+       dashboard reads `source` off the ROW (Biz.join: app money is known only when
+       every night says 'stripe'), so a row left at 'stripe-unreachable' after a
+       successful re-pull kept the night's gross out of profit and kept offering
+       the same Re-check for ever — the one button decision 0065 promises clears
+       "app money not available" could not clear it. */
+    if (row) { row.gross = money.gross; row.unattributed = money.unattributed || 0; row.source = money.source || null; }
     return true;
   }).catch(() => {});
   return { ...doc, money };

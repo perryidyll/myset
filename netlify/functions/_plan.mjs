@@ -83,6 +83,17 @@ export const PLANS = {
     library: 100,
     cut: 0.25,            // platform share of tips and vote sales
     seats: 1,
+    /* THE BUSINESS DASHBOARD'S TWO SIZES (decision 0065): how many band members a
+       show can pay and how many costs it can carry. Zero here because the whole
+       dashboard is `reports`, below — a Hobbyist never reaches the editor. Bar
+       Star's 5 is a working band; Rock Star's 10 is a big one. Enforced against
+       GROWTH, never size (INVARIANT 0s): a record written on Rock Star keeps every
+       row after a downgrade and only the next add is refused — see normGig in
+       _biz.mjs. The Studio reads these two as numbers for "n of N", never through
+       has(), which would read Bar Star's 5 as "not the top plan" and grey a
+       working feature (the 0bx1 trap). */
+    band: 0,
+    costs: 0,
     pricing: false,       // change free-vote count, pack prices, replay/ask costs
     setlists: false,      // named subsets of the library, one active at a time
     merch: false,         // sell things from the community page (Perry: a Plus feature)
@@ -95,7 +106,11 @@ export const PLANS = {
     /* DATA REPORTS — the Money tab's filed nights: fans, votes and tips from every
        show. Paid since 2026-09-13 (the founder: "viewing data is a paid feature").
        Every night is still FILED on every plan; what the plan buys is reading it
-       back, so an upgrade finds the whole history waiting. */
+       back, so an upgrade finds the whole history waiting.
+       Since decision 0065 the same flag is the BUSINESS DASHBOARD: pay, band
+       splits, cash tips, merch, costs, hours, profit and the printed report, on
+       the same Money tab. One flag because it is one question — may this artist
+       read what their nights were worth — and `band`/`costs` above size it. */
     reports: false,
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
@@ -114,6 +129,7 @@ export const PLANS = {
     audience: 300,        // a bar with a floor (the founder, 2026-09-13; was 1,000). Worst single night: well under a dollar.
     library: 200,         // "add up to 200 songs" (the founder, 2026-09-13); Rock Star holds MAX_LIBRARY
     seats: 1,
+    band: 5, costs: 5,
     pricing: true, setlists: true, merch: true, moderate: true, reports: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
@@ -133,6 +149,7 @@ export const PLANS = {
     audience: 2000,
     library: 2000,
     seats: 5,
+    band: 10, costs: 10,
     pricing: true, setlists: true, merch: true, moderate: true, reports: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },

@@ -561,8 +561,14 @@ export default async (req) => {
     const { statement, toCsv } = await import('./_ledger.mjs');
     const { stripeFor } = await import('./_connect.mjs');
     const owner = imgOwner(vid);
-    const { stripe, opts } = await stripeFor(owner);
-    if (!stripe) return json({ ok: true, enabled: false, months: [], total: null });
+    const { stripe, opts, acct } = await stripeFor(owner);
+    /* NO ACCOUNT, NO STATEMENT — the same hole the artist door had (INVARIANT
+       0fn). `stripeFor` hands back the platform client with empty options for a
+       venue that has not connected, and `statement` pulls whatever account it is
+       given, so an unconnected venue was shown MySet's own subscription income as
+       its takings and it was cached under the venue's key. A venue has no founder
+       exception: nobody's venue money legitimately sits on the platform account. */
+    if (!stripe || !acct) return json({ ok: true, enabled: false, months: [], total: null });
     /* Never further back than the day the venue joined — see _ledger.mjs. */
     const since = Number(((await venueById(vid)) || {}).createdAt) || 0;
     const st = await statement(owner, stripe, opts,

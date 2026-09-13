@@ -92,10 +92,14 @@ node tools/overview.mjs --tests    # run the suite and stamp the assertion count
 node tools/sheetcheck.mjs          # bottom-sheet touch behaviour, real touch events
 node tools/uicheck.mjs             # rendered layout in a real browser
 python3 tools/prod.py              # read-only health report of the LIVE site
+node --import ./test/register.mjs tools/localhost.mjs   # the whole site on localhost:8950 with the REAL functions on an in-memory store (writes work); open /dev
 ```
 
 **`netlify dev` cannot run the write paths** — its storage sandbox returns no version
-tag, so every write after the first fails as busy. Use the test suite.
+tag, so every write after the first fails as busy. Use the test suite, or
+`tools/localhost.mjs` — the real functions through the suite's module hook, so the
+store is in memory with working etags, Stripe is the fake, and nothing touches
+production; it seeds a Bar Star artist and `/dev` signs the browser in.
 
 **A green suite proves nothing about a page.** Look at it in a real browser at phone
 width. Several defects a month are invisible to the tests and obvious on screen.
