@@ -451,7 +451,9 @@ let ST=null,busy=new Set(),sel={},FILTER='',FOCUS=false,POP=null,PREV=null,BOOTE
    is exactly the path where a real payment is being granted. Both helpers fall
    back rather than throw; do not "simplify" the guards away. */
 const artistName  = (fb='the artist') => (ST && String(ST.artist||'').trim()) || fb;
-const artistFirst = (fb='the artist') => { const n = artistName(''); return n ? n.split(' ')[0] : fb; };
+/* The band name or first name the artist chose (decision 0062), else the first word
+   of the name; every sentence on this page that names them goes through here. */
+const artistFirst = (fb='the artist') => (ST && String(ST.artistFirst||'').trim()) || (artistName('') ? artistName('').split(' ')[0] : fb);
 
 /* skeleton while the first load lands */
 $('#app').innerHTML=`<div class="head"><div><div class="sk" style="width:130px;height:21px"></div>
@@ -1167,7 +1169,7 @@ function render(){
      votes to buy, so it is the tip alone, across the full width. */
   const dock=$('#dock');
   dock.hidden=false;
-  const tipBtn=`<button class="btn btn-pri" onclick="openTip()"><b>Support ${esc((d.artist||'').split(' ')[0]||'the artist')}</b><small>Show your appreciation</small></button>`;
+  const tipBtn=`<button class="btn btn-pri" onclick="openTip()"><b>Support ${esc(artistFirst())}</b><small>Show your appreciation</small></button>`;
   dock.innerHTML=`<div class="dockstate"></div>`+((ended||c.unlimited)
     ? tipBtn
     : `<button class="btn btn-buy" onclick="openBuy()"><b>More votes</b><small>${d.paymentsEnabled?'From '+money(Math.min(...['small','big'].filter(k=>d.packs&&d.packs[k]).map(k=>d.packs[k].cents).concat([500]))):'Ask '+esc(artistFirst())}</small></button>${tipBtn}`);
@@ -1218,14 +1220,14 @@ function askCard(d,open){
   if(!A.song&&!A.birthday&&!A.vibe&&!mine.length) return '';
   const c=d.credits, short=k=>!c.unlimited&&c.remaining<k;
   const vv=n=>`${n} vote${n===1?'':'s'}`;
-  const status={pending:['wait','Waiting on '+esc((d.artist||'the artist').split(' ')[0])],
+  const status={pending:['wait','Waiting on '+esc(artistFirst())],
                 added:['good','On the list — go vote for it'],
                 played:['good','Played 🎉'],
                 declined:['gone','Not tonight — votes refunded']};
   return `<div class="askbox">
     <div class="ah">Not on the list?</div>
     <p class="ap">${A.song||A.birthday||A.vibe
-      ? 'Ask for it with your votes and/or cash. '+esc((d.artist||'The artist').split(' ')[0])+' decides — if it’s a no, your votes come straight back and your card is never charged.'
+      ? 'Ask for it with your votes and/or cash. '+esc(artistFirst('The artist'))+' decides — if it’s a no, your votes come straight back and your card is never charged.'
       : 'Requests are closed now, but here’s what you asked for.'}</p>
     ${A.song||A.birthday||A.vibe?`<div class="askbtns">
       ${A.vibe?`<button class="askbtn" ${!open?'disabled':''} onclick="openVibe()">
@@ -1269,7 +1271,7 @@ function openAskBday(){
     <p class="lede">Whose birthday is it? Costs ${a.cost} vote${a.cost===1?'':'s'} — refunded if it’s a no.</p>
     <input class="inp" id="askName" maxlength="40" placeholder="Their name" autocomplete="off" autocapitalize="words">
     <button class="go" id="askGo" onclick="sendAsk('birthday')">Send it up</button>
-    <p class="fine">${esc((ST.artist||'They').split(' ')[0])} will see the name on stage.</p>`);
+    <p class="fine">${esc(artistFirst('They'))} will see the name on stage.</p>`);
   setTimeout(()=>{const el=$('#askName'); if(el)el.focus();},260);
 }
 let VIBE_PICK='';
@@ -1450,7 +1452,7 @@ function openLeftover(n){
     <p class="lede">${n===1?'That one':'Those'} you paid for and the night ended first. Your call \u2014 no charge either way.</p>
     <div class="tiles">
       <button class="tile" id="lf-keep" onclick="decideLeftover('keep')"><b>Keep ${n===1?'it':'them'}</b><span>For the next show</span></button>
-      <button class="tile" id="lf-gift" onclick="decideLeftover('gift')"><b>Let ${esc((ST.artist||'').split(' ')[0]||'them')} keep it</b><span>Call it a tip</span></button>
+      <button class="tile" id="lf-gift" onclick="decideLeftover('gift')"><b>Let ${esc(artistFirst('them'))} keep it</b><span>Call it a tip</span></button>
     </div>
     <p class="fine">Do nothing and ${n===1?'it stays':'they stay'} yours.</p>`);
 }

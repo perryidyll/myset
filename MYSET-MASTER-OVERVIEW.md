@@ -505,7 +505,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 2 — autocron, sheetcron |
 | Shared libraries | 46 |
-| Artist Studio actions | 125 |
+| Artist Studio actions | 126 |
 | Venue Studio actions | 46 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
@@ -514,7 +514,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 255 (last: 0fk) |
 | Test suites | 45 |
 | Assertions | **2,095**, 0 failing, last run 2026-09-11 |
-| Decision records | 61 |
+| Decision records | 62 |
 
 ### Feature flags in force
 

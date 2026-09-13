@@ -1034,14 +1034,29 @@ async function handleProfile(aid, action, body, req, me) {
     if (!!management !== !!managementUrl)
       return bad('Add both the label or management name and its website, or leave both blank.', 400);
     await mutateProfile(aid, (p) => {
-      for (const k of ['name', 'tagline', 'style', 'management', 'managementUrl', 'bio', 'photo', 'avatar'])
+      for (const k of ['name', 'first', 'last', 'tagline', 'style', 'management', 'managementUrl', 'bio', 'photo', 'avatar'])
         if (typeof body[k] === 'string') p[k] = body[k];
       if (Array.isArray(body.photos)) p.photos = body.photos;
       if (body.links && typeof body.links === 'object')
         p.links = { ...p.links, ...body.links };
       return true;
     });
-    return json({ ok: true, profile: await getProfile(aid) });
+    const prof = await getProfile(aid);
+    /* THE REGISTRY FOLLOWS THE PROFILE (decision 0062). The name on the voting page,
+       the stage and the front door is the registry's, written once at sign-up; the
+       Studio's Profile tab edited a second copy that only the artist page read. A
+       save that carries the two-part name now writes the registry row too — name
+       and `first` — so "Support <First>" everywhere says what the artist typed. One
+       CAS write on the shared doc, and only when something changed. */
+    if (typeof body.first === 'string' && prof.first) {
+      const { mutateArtists } = await import('./_auth.mjs');
+      await mutateArtists((r) => {
+        const e = r.byId[aid]; if (!e) return false;
+        if (e.name === prof.name && e.first === prof.first) return false;
+        e.name = prof.name; e.first = prof.first; return true;
+      }).catch(() => {});
+    }
+    return json({ ok: true, profile: prof });
   }
 
   if (action === 'mediaAdd') {
@@ -1221,6 +1236,20 @@ async function handleProfile(aid, action, body, req, me) {
 
   if (action === 'mediaRemove') {
     await mutateProfile(aid, (p) => { p.media = p.media.filter((x) => x.mid !== body.mid); return true; });
+    return json({ ok: true });
+  }
+
+  /* THE TOP VIDEO (the founder, 2026-09-13): the tick under a media row. One hero
+     at most; normProfile moves it to the front of the list. Ticking the hero again
+     clears it. */
+  if (action === 'mediaHero') {
+    await mutateProfile(aid, (p) => {
+      const m = p.media.find((x) => x.mid === body.mid); if (!m) return false;
+      const on = !m.hero;
+      p.media.forEach((x) => { x.hero = false; });
+      m.hero = on;
+      return true;
+    });
     return json({ ok: true });
   }
 
@@ -1562,7 +1591,7 @@ const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPho
                               'postList', 'postHide', 'postPin', 'postReply',
                               'orderList', 'orderDone', 'orderDetail']);
 
-const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove',
+const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove', 'mediaHero',
                                  'photoUpload', 'photoClear',
                                  // the artist's own verification tick
                                  'verifyStatus', 'idUpload',

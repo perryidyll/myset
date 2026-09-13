@@ -45,7 +45,7 @@ export async function stagePayload(aid) {
   return {
     ok: true,
     show: {
-      artist: show.artist, venue: show.venue, city: show.city, showTime: show.showTime, status: show.status,
+      artist: show.artist, artistFirst: show.artistFirst || '', venue: show.venue, city: show.city, showTime: show.showTime, status: show.status,
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
       played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
       packs: show.packs, showId: show.showId, startedAt: show.startedAt,

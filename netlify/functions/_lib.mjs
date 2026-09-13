@@ -401,6 +401,8 @@ export async function getShow(aid, { withName = true } = {}) {
     const { artistById } = await import('./_auth.mjs');
     const a = await artistById(aid);
     show.artist = (a && a.name) || '';
+    /* The band name or first name, for a sentence — the same row, no extra read. */
+    show.artistFirst = (a && a.first) || '';
   }
   return show;
 }

@@ -1,5 +1,5 @@
 import { json, bad, jsonCached, publicArtist, getShow, playable } from './_lib.mjs';
-import { getProfile, shapeMedia } from './_profile.mjs';
+import { getProfile, shapeMedia, firstOf } from './_profile.mjs';
 import { readHistIndex } from './_history.mjs';
 import { planOf } from './_plan.mjs';
 import { readFeedback } from './_feedback.mjs';
@@ -109,7 +109,7 @@ export default async (req) => {
     comments: commentsOf(posts),
     setlist: playable(show).songs.slice(0, 10).map((s) => String(s.title || '')).filter(Boolean),
     songs: playable(show).songs.length,
-    name: p.name, tagline: p.tagline, style: p.style, bio: p.bio, photo: p.photo,
+    name: p.name, first: firstOf(p, firstOf(who)), last: p.last || '', tagline: p.tagline, style: p.style, bio: p.bio, photo: p.photo,
     avatar: p.avatar || p.photo, photos: p.photos,
     management: p.management, managementUrl: p.managementUrl,
     links: p.links,
