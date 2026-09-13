@@ -138,6 +138,20 @@ const OTHER = await mk('sam@x.com', 'Sam Vega', 'sam-vega');
 const AS = (t, action, extra = {}) => hit(admin, 'https://x/api/admin', { action, ...extra }, t);
 await AS(P.token, 'venue', { venue: 'The Ugly Duckling' });
 await AS(P.token, 'city', { city: 'Koh Phangan' });
+/* THE NAME REACHES THE ROOM (decision 0062, and its follow-up the same evening):
+   a save carrying `first` writes the registry row AND the show record, because
+   getShow skips the registry when the show record names the artist itself — the
+   founder's does — and the board would otherwise never carry `artistFirst`. */
+{
+  const { getShow: gs, mutateShow: ms } = await import('../netlify/functions/_lib.mjs');
+  await ms(P.aid, (sh) => { sh.artist = 'Perry Idyll'; return true; });
+  await AS(P.token, 'profileSet', { first: 'The Weekend Warriors', last: '', links: {} });
+  const sh = await gs(P.aid);
+  eq('the show record follows the profile name', [sh.artist, sh.artistFirst], ['The Weekend Warriors', 'The Weekend Warriors']);
+  eq('and so does the registry row', (await readArtists()).byId[P.aid].first, 'The Weekend Warriors');
+  await AS(P.token, 'profileSet', { first: 'Perry', last: 'Idyll', links: {} });
+  eq('a solo name puts the full name on the show and the first name in the sentence', [(await gs(P.aid)).artist, (await gs(P.aid)).artistFirst], ['Perry Idyll', 'Perry']);
+}
 await AS(P.token, 'addSong', { title: 'Wonderwall', artist: 'Oasis', tags: ['singalong'] });
 /* The two that Sheets would otherwise run as formulas. */
 await AS(P.token, 'addSong', { title: '=1+1', artist: '+Plus Band' });

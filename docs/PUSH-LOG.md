@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-13 22:21 — 67199bf — wt4@ui/save-top (0 files since origin/main)
+**tl;dr:** A second Save profile button at the top of the Profile tab; the voting page now gets the band/first name (the founder's show record names the artist itself, so the registry sync alone never reached the board)
+**Other sessions:** admin.mjs profileSet also mutateShow()s artist + artistFirst on change. If a show record carries its own artist, getShow never reads the registry — remember that for any future field that must reach the board. Investigation of tonight's vote in docs/sessions/2026-09-13-peaceful-easy-feeling.md: no bug, a play spends the vote.
+
 ### 2026-09-13 21:56 — 34215b8 — wt3@ui/fab-live-red (0 files since origin/main)
 **tl;dr:** The artist page's floating bar is red and says ENTER NOW TO VOTE while a show is on; the countdown's 'view setlist' is pink-orange. Plus the ledger/session note for UX-039 (band names + hero video, live as 34215b8)
 **Other sessions:** artist.html: .act.now on the live button; nextLabel() returns HTML (<i class=vs>), the tick writes innerHTML. uicheck/test/copy assert 'ENTER NOW TO VOTE'. UX-039's production build had to be triggered from Netlify (createSiteBuild) after GitHub's outage dropped the webhook — check listSiteDeploys if a merge does not appear.
