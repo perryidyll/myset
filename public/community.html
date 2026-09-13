@@ -59,12 +59,12 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 .menu{position:relative}
 .menu summary{list-style:none;cursor:pointer;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--surface);box-shadow:var(--sh-1);color:var(--ink)}
 .menu summary::-webkit-details-marker{display:none}
-.menu summary svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round}
+.menu summary svg{width:18px;height:18px;stroke:var(--accent-2);fill:none;stroke-width:2.2;stroke-linecap:round}
 .menu[open] summary{background:var(--surface-2)}
 .menu .pop{position:absolute;right:0;top:44px;min-width:200px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-3);padding:6px;z-index:20}
 .menu .pop a{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-xs);font-size:15px;font-weight:600;color:var(--ink)}
 .menu .pop a small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
-.menu .pop a i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-soft);color:var(--accent-ink);font-style:normal;font-size:14px}
+.menu .pop a i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-soft);color:var(--accent-2);font-style:normal;font-size:14px}
 
 .owner{display:flex;align-items:center;gap:12px;margin:4px 18px 0}
 .owner .av{width:48px;height:48px;border-radius:15px;background:var(--bg-2) center/cover;flex:0 0 auto;box-shadow:var(--sh-1)}
@@ -75,7 +75,8 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 @media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
 :root[data-theme=light] .vbadge{background:rgba(40,167,69,.12);color:#187A32}
 :root[data-theme=dark] .vbadge{background:rgba(48,209,88,.18);color:#4CD964}
-.share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1),inset 0 0 0 1.5px var(--accent-2);font-size:13px;font-weight:600}
+.share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600;position:relative}
+.share::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}   /* the brand-gradient ring (the founder, 2026-09-13) */
 /* THE TIP BUTTON, AT THE TOP (Perry, 2026-09-07). Full width and solid, because on
    this page it is the only thing anyone can hand the artist — there are no votes
    here to buy. Only ever on an ARTIST's page: tipping a venue is not a thing. */
@@ -86,8 +87,8 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 .tipbar button:active{transform:scale(.985)}
 .tipbar button{animation:emberGlow 4.2s ease-in-out infinite}
 @keyframes emberGlow{
-  0%,100%{filter:drop-shadow(0 0 5px rgba(255,122,69,.22))}
-  50%{filter:drop-shadow(0 0 13px rgba(255,122,69,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}
+  0%,100%{filter:drop-shadow(0 0 5px rgba(255,86,80,.22))}
+  50%{filter:drop-shadow(0 0 13px rgba(255,86,80,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}
 }
 .tipbar b{font-size:16px;font-weight:700;letter-spacing:-.015em}
 .tipbar small{font-size:12.5px;font-weight:400;color:rgba(255,255,255,.9)}
@@ -269,7 +270,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
     <a class="mark" href="/" aria-label="MySet home"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet<span class="up">↗</span></a>
     <div class="baractions"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
     <details class="menu" id="menu">
-      <summary aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></summary>
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16"/></svg></summary>
       <div class="pop">
         <a id="mArtist" href="/signup"><i>♪</i><span>Artist Studio<small id="mArtistS">Set one up — it’s free</small></span></a>
         <a id="mVenue" href="/venues"><i>⌂</i><span>Venue Studio<small id="mVenueS">Set one up — it’s free</small></span></a>

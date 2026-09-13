@@ -44,7 +44,7 @@ window.__early={stage:g('stage','/api/stage',{headers:h}),plan:g('plan','/api/ad
   --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
   --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
   --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
-  --accent:#FF456E; --accent-2:#FF7A45; --accent-soft:rgba(255,69,110,.16);
+  --accent:#FF456E; --accent-2:#FF5650; --accent-soft:rgba(255,69,110,.16);
   --grad:linear-gradient(135deg,#FF375F,#FF6B45);
   --good:#30D158; --accent-ink:#FF8AA5;
   --r-sm:14px; --r:18px; --r-lg:24px; --pill:999px;
@@ -189,7 +189,7 @@ a{color:inherit;text-decoration:none}
 
 .list{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);overflow:hidden}
 .scroll-shell{position:relative;margin:0 55px 0 18px;border-radius:var(--r);background:var(--surface);
-  border:1.5px solid var(--accent-2);box-shadow:var(--sh-1);overflow:hidden;
+  border:1.5px solid transparent;border-color:transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box;box-shadow:var(--sh-1);overflow:hidden;
   animation:edgeGlow 6.4s cubic-bezier(.45,0,.55,1) infinite}
 .scroll-shell>.scroll-window{margin:0;border:0;border-radius:0;box-shadow:none;animation:none;width:100%}
 /* On the Setlist tab the song list sits the same 12px under the genre chips as the
@@ -203,12 +203,15 @@ a{color:inherit;text-decoration:none}
 .scroll-window{scrollbar-color:rgba(142,142,147,.7) transparent}
 .scroll-window::-webkit-scrollbar{width:7px}.scroll-window::-webkit-scrollbar-track{background:transparent;margin-block:10px}
 .scroll-window::-webkit-scrollbar-thumb{background:rgba(142,142,147,.7);border:2px solid transparent;background-clip:content-box;border-radius:999px}
-.orange-outline{box-shadow:inset 0 0 0 1.5px var(--accent-2)!important}
+/* the brand-gradient ring, as on the front door (the founder, 2026-09-13); a scroll
+   window paints it to its border box instead, since its pseudo-elements would scroll */
+.orange-outline,.votebox,.upg{position:relative}
+.orange-outline::after,.votebox::after,.upg::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 .queue-window{max-height:294px}.setlist-window{max-height:720px}
 .sec.upnext .kick:first-child{font-size:15px;font-weight:750;color:var(--accent-2)}
 @keyframes edgeGlow{
-  0%,100%{box-shadow:var(--sh-1),12px 0 15px rgba(255,122,69,.16),30px 0 38px rgba(255,69,110,.07),54px 0 62px rgba(255,122,69,.025)}
-  50%{box-shadow:var(--sh-1),18px 0 24px rgba(255,122,69,.42),44px 0 54px rgba(255,69,110,.18),72px 0 80px rgba(255,122,69,.07)}
+  0%,100%{box-shadow:var(--sh-1),12px 0 15px rgba(255,86,80,.16),30px 0 38px rgba(255,69,110,.07),54px 0 62px rgba(255,86,80,.025)}
+  50%{box-shadow:var(--sh-1),18px 0 24px rgba(255,86,80,.42),44px 0 54px rgba(255,69,110,.18),72px 0 80px rgba(255,86,80,.07)}
 }
 .row{display:flex;align-items:center;gap:12px;padding:13px 16px;border-top:.5px solid var(--hair)}
 /* A prose row is a SENTENCE, not a row of items. `.row` is a flex container, so
@@ -382,8 +385,7 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
    show control (INVARIANT 0p) — the orange ring, the big orange word and the
    orange "on" half are what keep it from reading as Start/End. */
 .votebox{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 18px 0;
-  padding:12px 12px 12px 16px;border-radius:var(--r);background:var(--surface);
-  box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+  padding:12px 12px 12px 16px;border-radius:var(--r);background:var(--surface)}
 .votebox .vt{display:block;font-size:19px;font-weight:800;letter-spacing:-.025em;color:var(--accent-2);line-height:1.1}
 .votebox .vs{display:block;font-size:12px;color:var(--muted);margin-top:3px}
 .votebox .tog{background:var(--surface-2)}
@@ -402,7 +404,7 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 /* the plan, top right: an orange-ringed Upgrade on free, a green tag with the plan's
    name otherwise — both tappable, both with the same arrow the name carries */
 .upg,.plantag{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:var(--pill);font-size:13px;font-weight:700;flex:0 0 auto;white-space:nowrap}
-.upg{color:var(--accent-2);box-shadow:inset 0 0 0 1.5px var(--accent-2)}
+.upg{color:var(--accent-2)}
 .plantag{background:rgba(48,209,88,.16);color:var(--good)}
 .upg span,.plantag span{font-size:11px;opacity:.75}
 /* The Settings button wears the SAME green as the tag at the top right. A solid
@@ -423,7 +425,7 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .planwhen a{color:var(--accent);font-weight:600}
 /* The plan sheet reads two or three points bigger than the rest of the app: it is
    the one screen somebody squints at before spending money. */
-.tier{border:1.5px solid var(--accent-2);border-radius:var(--r);overflow:hidden;margin-top:14px;background:var(--surface)}
+.tier{border:1.5px solid transparent;border-color:transparent;background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box;border-radius:var(--r);overflow:hidden;margin-top:14px}
 .tier .hd{background:var(--accent-2);color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:baseline;font-weight:800;font-size:21px;letter-spacing:-.02em}
 .tier .hd small{font-size:16px;font-weight:700;opacity:.95}
 .tier ol{margin:0;padding:13px 16px 13px 34px;font-size:16.5px;line-height:1.5;color:var(--ink-2)}

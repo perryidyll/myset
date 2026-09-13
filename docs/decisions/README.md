@@ -68,6 +68,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md) | Fans can RSVP to a listed show without an account | 2026-09-12 | general | decided | perry |
 | [0057](0057-a-filed-night-can-be-renamed-by-hand-from-the-mone.md) | A filed night can be renamed by hand from the Money tab | 2026-09-12 | history | decided | perry-confirmed |
 | [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md) | The Stripe webhook verifies against two signing secrets — one per event destination | 2026-09-12 | money | decided | perry-confirmed |
+| [0059](0059-every-ring-is-the-brand-gradient-and-the-audience.md) | every ring is the brand gradient and the audience colour is the logo's pink-orange | 2026-09-13 | ui | decided | perry |
 
 ## By area
 
@@ -93,7 +94,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
 
-**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) · [0040](0040-the-event-map-resolves-saved-google-short-links.md) · [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md) · [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md) · [0051](0051-every-page-composes-from-four-button-tiers-one-chi.md) · [0052](0052-the-city-feed-widens-a-week-at-a-time-on-request-a.md)
+**ui** — [0009](0009-between-shows-the-room-goes-dark.md) · [0010](0010-last-call-is-a-nudge-not-a-lock.md) · [0015](0015-one-live-profile-cta-and-no-duplicate-show-controls-in-settings.md) · [0024](0024-artist-directory-cards-derive-public-discovery-tag.md) · [0025](0025-filtered-event-maps-use-a-static-image-and-existing.md) · [0027](0027-light-is-the-first-visit-default-and-loading-screens-follow-the-active-theme.md) · [0036](0036-the-artist-event-map-is-interactive-and-asks-the-b.md) · [0038](0038-every-page-paints-the-myset-splash-the-moment-a-li.md) · [0039](0039-between-shows-the-voting-page-counts-down-to-the-n.md) · [0040](0040-the-event-map-resolves-saved-google-short-links.md) · [0041](0041-public-map-pins-use-saved-coordinates-and-open-on-home.md) · [0043](0043-the-public-artist-page-carries-the-room-s-rating-r.md) · [0051](0051-every-page-composes-from-four-button-tiers-one-chi.md) · [0052](0052-the-city-feed-widens-a-week-at-a-time-on-request-a.md) · [0059](0059-every-ring-is-the-brand-gradient-and-the-audience.md)
 
 **voting** — [0001](0001-a-vote-never-comes-back.md) · [0002](0002-free-votes-are-an-allowance-for-the-night.md) · [0014](0014-three-free-votes-and-two-new-default-packs.md) · [0016](0016-an-artist-declined-unplayed-song-returns-its-votes.md) · [0019](0019-mood-votes-are-free-requests-and-artists-cannot-po.md)
 

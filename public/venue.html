@@ -98,7 +98,7 @@ body{padding-bottom:34px}
   stroke-linejoin:round;flex:0 0 auto}
 
 .sect{padding:28px 20px 10px;font-size:13px;font-weight:600;letter-spacing:.06em;
-  text-transform:uppercase;color:var(--accent-ink)}
+  text-transform:uppercase;color:var(--accent-2)}   /* the section headings wear the logo's pink-orange, as the Studios' do (the founder, 2026-09-13) */
 .sect.tight{padding-top:22px}
 .card{margin:0 18px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);padding:18px 20px}
 .about{font-size:16px;line-height:1.55;color:var(--ink-2);white-space:pre-wrap;margin:0}
@@ -148,9 +148,11 @@ body{padding-bottom:34px}
    of opening the artist. The page never waits on app.css for its own controls. */
 .r .rsvpcol{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;z-index:2}
 .r .rsvp{padding:6px 11px;border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.02em;line-height:1;
-  background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);
-  box-shadow:inset 0 0 0 1.5px var(--accent-2);transition:transform .22s var(--spring)}
-.r .rsvp[aria-pressed=true]{background:var(--accent-2);color:#fff;box-shadow:none}
+  background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--accent-2);position:relative;
+  transition:transform .22s var(--spring)}
+.r .rsvp[aria-pressed=true]{background:var(--accent-2);color:#fff}
+.r .rsvp::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}   /* the brand-gradient ring (the founder, 2026-09-13) */
+.r .rsvp[aria-pressed=true]::after{content:none}
 .r .rsvp:active{transform:scale(.94)}
 .r .going{display:block;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .onnow{display:inline-flex;align-items:center;gap:5px;background:var(--accent);color:#fff;font-size:10.5px;
