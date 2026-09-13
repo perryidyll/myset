@@ -45,7 +45,8 @@ nightly copy is not a thing.
 
 The rehearsal ran the whole copy, not a sample: 209 keys, 274 MB, into store
 `rehearsal-20260914` on the production site, every key read back and compared
-by sha256, then wiped. The number and the time are in the session note.
+by sha256, then wiped: **209 of 209 keys restored and read back equal, 287.0 MB,
+580 s**; `deleted 209 of 209`; the store lists empty.
 
 ## What this makes harder
 
@@ -69,6 +70,7 @@ nothing; a day later everything is skipped by etag; a changed document and its
 new version cross and the bytes on R2 are the document; a budget of 0 ms does
 one owner per ring and the cursor carries on until done; with R2 off the ring
 says so. Against the real store: `python3 tools/backup.py --restore … --store
-rehearsal-20260914` — the log is quoted in the session note; `--store myset` is
-refused (run, exit 1). Not checked: the first scheduled ring in production —
+rehearsal-20260914` → `209 of 209 keys restored and read back equal, 287.0 MB,
+580 s`; `--wipe` → `deleted 209 of 209 keys`; `--store myset` is refused (run,
+exit 1). Not checked: the first scheduled ring in production —
 the function log after the deploy is the measurement.

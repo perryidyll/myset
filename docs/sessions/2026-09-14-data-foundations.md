@@ -60,7 +60,24 @@ Efficient Mode, one full gate:
    round-trips byte-for-byte through `blobs:set --input` / `blobs:get -O`
    (`img_perry-idyll_avatar`, 85,398 bytes, sha256 equal).
 
-**The rehearsal.** REHEARSAL_PLACEHOLDER
+**The rehearsal.** `MYSET_SITE_DIR=$HOME/Docs/MySet python3 tools/backup.py
+--restore "$HOME/Docs/Project Handoffs/myset-backups/20260913T150747Z" --store
+rehearsal-20260914` printed:
+
+```
+restoring 209 keys from …/myset-backups/20260913T150747Z into store `rehearsal-20260914`
+  209 of 209 keys restored and read back equal, 287.0 MB, 580 s
+```
+
+— every key written with `blobs:set --input --force`, read back with
+`blobs:get -O`, sha256 equal to the manifest, images and 70 MB clips included;
+eight CLI processes at a time, most of the 580 s spent in the CLI's own start-up
+per call. Then `--wipe rehearsal-20260914 --from …` → `deleted 209 of 209 keys`,
+and `netlify blobs:list rehearsal-20260914` → *empty*. `--store myset` → refused,
+exit 1. So a full restore of today's store from the laptop copy is a ten-minute
+job that a person can run, and the script that runs it cannot be pointed at
+production by accident. (First attempt, from the worktree: 0 of 209 — the CLI was
+not in a linked folder; hence `MYSET_SITE_DIR`.)
 
 **Verified.** `sh test/run.sh` → exit 0, 46 files, **2,932 ✓ / 0 ✗** — new
 `test/foundations.mjs` 60 ✓ (what each assertion holds is in the ledger's
