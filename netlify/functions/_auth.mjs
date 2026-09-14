@@ -338,6 +338,37 @@ export async function sendNotice(email, subject, lines, who) {
   } catch { return { ok: false, why: 'send-failed' }; }
 }
 
+/* A PLAIN LETTER — a message from the page, a reply to a booker (decision 0074).
+   Not a code and not a security notice: an optional greeting, the lines, an optional
+   button, and a footer that says who MySet sent it for. The subject is one line
+   whatever was typed. Never throws; { ok:false, why } when mail is not configured. */
+export async function sendMail(email, subject, lines, { who = '', cta = null } = {}) {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.AUTH_FROM;
+  if (!emailReady()) return { ok: false, why: 'email-not-configured' };
+  if (!validEmail(normEmail(email))) return { ok: false, why: 'bad-address' };
+  const subj = String(subject || 'MySet').replace(/[\r\n]+/g, ' ').trim().slice(0, 120);
+  const body = (Array.isArray(lines) ? lines : [lines]).filter(Boolean).map((l) => String(l));
+  const btn = cta && cta.url && /^https:\/\//.test(String(cta.url))
+    ? `<p style="margin:22px 0 0"><a href="${escapeHtml(cta.url)}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#FF5650;color:#fff;font-weight:700;text-decoration:none">${escapeHtml(cta.label || 'Open')}</a></p>` : '';
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from, to: [normEmail(email)], subject: subj,
+        text: body.concat(cta && cta.url ? [`${cta.label || 'Open'}: ${cta.url}`] : []).join('\n\n') + (who ? `\n\nSent by MySet for ${who} · myset.vip` : '\n\nSent by MySet · myset.vip'),
+        html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:440px;margin:0 auto;padding:28px 8px">
+  ${body.map((l) => `<p style="font-size:15px;color:#1D1D1F;line-height:1.5;margin:0 0 14px;white-space:pre-wrap">${escapeHtml(l)}</p>`).join('')}
+  ${btn}
+  <p style="font-size:12.5px;color:#6E6E73;margin:26px 0 0">Sent by MySet${who ? ' for ' + escapeHtml(who) : ''} · myset.vip</p>
+</div>`,
+      }),
+    });
+    return r.ok ? { ok: true } : { ok: false, why: r.status === 403 ? 'sender-not-verified' : 'send-failed' };
+  } catch { return { ok: false, why: 'send-failed' }; }
+}
+
 const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 

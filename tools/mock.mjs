@@ -21,6 +21,7 @@
      ?canbuy=0    card payments off
      ?allout=1    every item sold out
      ?plan=free   the Studio on the free plan (the merch editor behind its lock)
+     ?tour=1      the artist has a tour poster (the artist page's View tour dates, the Studio's card)
      /one/…       a page with one item     /none/…   a page with none
      /v/demo/…    the venue twin of every fan page
 
@@ -124,6 +125,28 @@ const WISH_ROWS = () => [
   { id: 'w0000002', name: '', text: 'The poster from the Corner Hotel show', item: '', at: NOW - 26 * 3600e3, done: false, doneAt: 0 },
   { id: 'w0000003', name: 'Mo', text: 'Cassette of the new EP', item: '', at: NOW - 9 * 864e5, done: true, doneAt: NOW - 8 * 864e5 },
 ];
+/* THE INBOX (_messages.mjs, decision 0074): six conversations across the five folders —
+   two unread requests (a booking, a collab), one answered and filed under General, a press
+   ask under Business, a thank-you under Casual, one reported to Spam. Each carries the
+   booker's token `k` (the artist page reads a thread with it) and the whole exchange. */
+const MSG_LIMITS = { text: 1000, msgs: 200 };
+const MSG_FOLDERS = ['requests', 'general', 'business', 'casual', 'spam'];
+const MSG_KINDS = ['booking', 'collab', 'press', 'other'];
+const MSG_ROWS = () => [
+  { id: 't0000000001', k: 'k1'.padEnd(32, '1'), folder: 'requests', unread: true, kind: 'booking', name: 'Priya Nair', email: 'priya@cornerhotel.example', phone: '+61 412 000 111', venue: 'The Corner Hotel', when: 'Sat 18 Oct', at: NOW - 2 * 3600e3, reported: false, blocked: false,
+    msgs: [{ by: 'them', text: 'Hi! We run a monthly live night at the Corner Hotel and would love to have you for the October date. It’s a 45-minute set from 9pm — we pay $400 plus a bar tab. Are you free?', at: NOW - 2 * 3600e3 }] },
+  { id: 't0000000002', k: 'k2'.padEnd(32, '2'), folder: 'requests', unread: true, kind: 'collab', name: 'Tomás Reyes', email: 'tomas@example.com', phone: '', venue: '', when: '', at: NOW - 26 * 3600e3, reported: false, blocked: false,
+    msgs: [{ by: 'them', text: 'Loved your set at The Room on Friday. I play trumpet — up for me guesting on a couple of songs at your next show? Happy to rehearse first.', at: NOW - 26 * 3600e3 }] },
+  { id: 't0000000003', k: 'k3'.padEnd(32, '3'), folder: 'general', unread: false, kind: 'booking', name: 'Mel Okafor', email: 'mel.okafor@example.com', phone: '0400 222 333', venue: 'Abbotsford Convent', when: '14 Feb', at: NOW - 3 * 864e5, reported: false, blocked: false,
+    msgs: [{ by: 'them', text: 'Our wedding is on 14 Feb at Abbotsford Convent — could you play the ceremony and an hour after? About 80 guests, outdoors if the weather holds.', at: NOW - 3 * 864e5 },
+           { by: 'me', text: 'Congratulations! Yes — I’m free that day. Send me the running order when you have it and I’ll hold the date.', at: NOW - 2 * 864e5 }] },
+  { id: 't0000000004', k: 'k4'.padEnd(32, '4'), folder: 'business', unread: false, kind: 'press', name: 'Jordan Lee', email: 'jordan@beatmag.example', phone: '', venue: '', when: '', at: NOW - 5 * 864e5, reported: false, blocked: false,
+    msgs: [{ by: 'them', text: 'I write for Beat. We’re doing a piece on Melbourne’s residency nights — could I grab fifteen minutes on the phone this week?', at: NOW - 5 * 864e5 }] },
+  { id: 't0000000005', k: 'k5'.padEnd(32, '5'), folder: 'casual', unread: false, kind: 'other', name: 'Sam', email: 'sam@example.com', phone: '', venue: '', when: '', at: NOW - 9 * 864e5, reported: false, blocked: false,
+    msgs: [{ by: 'them', text: 'Just wanted to say the cover of Best Part on Friday made my week. No reply needed!', at: NOW - 9 * 864e5 }] },
+  { id: 't0000000006', k: 'k6'.padEnd(32, '6'), folder: 'spam', unread: false, kind: 'other', name: 'Growth Team', email: 'promo@fanboost.example', phone: '', venue: '', when: '', at: NOW - 12 * 864e5, reported: true, blocked: false,
+    msgs: [{ by: 'them', text: 'Grow your fanbase 10x with our promotion service. http://fanboost.example/go http://fanboost.example/plans http://fanboost.example/now', at: NOW - 12 * 864e5 }] },
+];
 function fresh() {
   const MERCH = ITEMS();
   return {
@@ -133,8 +156,81 @@ function fresh() {
     VORDERS: ORDER_ROWS().map((o) => ({ ...o, item: venueId(o.item) })),
     WISHES: WISH_ROWS(),
     VWISHES: WISH_ROWS().map((w) => ({ ...w, item: w.item && venueId(w.item) })),
+    MSGS: MSG_ROWS(),
+    TOUR: undefined,          // the tour poster once the Studio has set or cleared it; undefined means "as the ?tour= state says"
+    TOURDATA: null,           // the data URL the Studio uploaded, served back at /api/img?s=tour
     lastPay: null,            // the last /api/pay body, so /api/confirm answers with what was bought
   };
+}
+/* shapeIndex / shapeThread / shapeForBooker, as _messages.mjs draws them: newest first, never a hash, never a token */
+const msgLast = (t) => t.msgs[t.msgs.length - 1] || { text: '', at: t.at, by: 'them' };
+function msgIndex() {
+  const threads = S.MSGS.slice().sort((a, b) => msgLast(b).at - msgLast(a).at).map((t) => ({ id: t.id, folder: t.folder, unread: !!t.unread, kind: t.kind, name: t.name,
+    preview: msgLast(t).text.replace(/\s+/g, ' ').slice(0, 90), lastAt: msgLast(t).at, lastBy: msgLast(t).by, count: t.msgs.length, reported: !!t.reported, blocked: !!t.blocked }));
+  const counts = { requests: 0, general: 0, business: 0, casual: 0, spam: 0, unread: 0 };
+  for (const r of threads) { counts[r.folder] += 1; if (r.unread && r.folder !== 'spam') counts.unread += 1; }
+  return { threads, counts };
+}
+const msgShape = (t) => ({ id: t.id, kind: t.kind, name: t.name, email: t.email, phone: t.phone, venue: t.venue, when: t.when, folder: t.folder, unread: !!t.unread, reported: !!t.reported, blocked: !!t.blocked, at: t.at,
+  msgs: t.msgs.map((m) => ({ by: m.by === 'me' ? 'me' : 'them', text: m.text, at: m.at })) });
+const msgForBooker = (t) => ({ id: t.id, kind: t.kind, name: t.name, at: t.at, artist: { name: NAME.artist }, msgs: t.msgs.map((m) => ({ by: m.by === 'me' ? 'artist' : 'you', text: m.text, at: m.at })) });
+/* the Studio's eight actions (handleMessages): every one changes this process's copy so the tab can be clicked through */
+function msgAction(body) {
+  const a = body.action, t = S.MSGS.find((x) => x.id === String(body.t || body.id || ''));
+  const gone = { ok: false, error: 'That conversation is gone.', status: 404 };
+  switch (a) {
+    case 'msgCount': { const { counts } = msgIndex(); return { ok: true, unread: counts.unread, requests: counts.requests }; }
+    case 'msgList': return { ok: true, ...msgIndex(), limits: MSG_LIMITS, folders: MSG_FOLDERS, kinds: MSG_KINDS, mail: false };   // mail:false — what production says until Resend is set, so the honest copy is the one on screen
+    case 'msgThread': if (!t) return gone; t.unread = false; return { ok: true, thread: msgShape(t), mail: false };
+    case 'msgReply': { if (!t) return gone; const text = String(body.text || '').trim();
+      if (text.length < 1) return { ok: false, error: 'Write something first.', status: 400 };
+      if (text.length > MSG_LIMITS.text) return { ok: false, error: `That’s over ${MSG_LIMITS.text} characters.`, status: 400 };
+      if (t.msgs.length >= MSG_LIMITS.msgs) return { ok: false, error: 'This conversation is full — start a fresh one.', status: 400 };
+      t.msgs.push({ by: 'me', text, at: Date.now() }); t.unread = false; if (t.folder === 'requests') t.folder = 'general'; return { ok: true }; }
+    case 'msgMove': if (!t) return gone; if (!MSG_FOLDERS.includes(body.folder)) return { ok: false, error: 'No such folder.', status: 400 }; t.folder = body.folder; return { ok: true };
+    case 'msgUnread': if (!t) return gone; t.unread = body.on !== false; return { ok: true };
+    case 'msgReport': if (!t) return gone; t.reported = true; t.folder = 'spam'; return { ok: true };
+    case 'msgBlock': if (!t) return gone; t.blocked = body.on !== false; return { ok: true };
+    default: return null;
+  }
+}
+/* the public door (messages.mjs): POST only — send → {ok, id, k, mail}; get by token → the booker's
+   shape (a token never rides in a URL, so there is no GET); reply → {ok}. mail:false is production
+   until Resend is set, so the page's honest copy is what a screenshot shows */
+function publicMsg(method, q, body) {
+  if (method !== 'POST') return { ok: false, error: 'POST only', status: 405 };
+  if (body.action === 'get') {
+    const t = S.MSGS.find((x) => x.id === String(body.t || '') && x.k === String(body.k || ''));
+    return t ? { ok: true, thread: msgForBooker(t), mail: false } : { ok: false, error: 'That conversation isn’t here.', status: 404 };
+  }
+  if (body.action === 'send') {
+    const text = String(body.text || '').trim(), name = String(body.name || '').trim(), email = String(body.email || '').trim();
+    if (!body.fan) return { ok: false, error: 'missing fan', status: 400 };
+    if (name.length < 1) return { ok: false, error: 'Your name, so they know who’s asking.', status: 400 };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: 'An email address they can answer to.', status: 400 };
+    if (text.length < 10) return { ok: false, error: 'A sentence or two about your event.', status: 400 };
+    if (text.length > MSG_LIMITS.text) return { ok: false, error: `That’s over ${MSG_LIMITS.text} characters.`, status: 400 };
+    if (body.hp) return { ok: true, id: 't' + Date.now().toString(36).padStart(10, '0'), k: 'ff'.repeat(16), mail: false };   // a honeypot hit is told yes and stored nowhere
+    const today = S.MSGS.filter((x) => x.fan === body.fan && Date.now() - x.at < 864e5).length;
+    if (today >= 3) return { ok: false, error: 'That’s three messages today from this phone — come back tomorrow.', status: 429 };
+    const id = 't' + Math.random().toString(36).slice(2, 12).padEnd(10, '0'), k = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    const links = (text.match(/https?:\/\//g) || []).length;
+    S.MSGS.push({ id, k, fan: body.fan, folder: links >= 3 ? 'spam' : 'requests', unread: true, kind: MSG_KINDS.includes(body.kind) ? body.kind : 'booking', name: name.slice(0, 60), email: email.slice(0, 120),
+      phone: String(body.phone || '').trim().slice(0, 30), venue: String(body.venue || '').trim().slice(0, 80), when: String(body.when || '').trim().slice(0, 40), at: Date.now(), reported: false, blocked: false,
+      msgs: [{ by: 'them', text, at: Date.now() }] });
+    return { ok: true, id, k, mail: false };
+  }
+  if (body.action === 'reply') {
+    const t = S.MSGS.find((x) => x.id === String(body.t || '') && x.k === String(body.k || ''));
+    if (!t) return { ok: false, error: 'That conversation isn’t here.', status: 404 };
+    const text = String(body.text || '').trim();
+    if (text.length < 1) return { ok: false, error: 'Write something first.', status: 400 };
+    if (text.length > MSG_LIMITS.text) return { ok: false, error: `That’s over ${MSG_LIMITS.text} characters.`, status: 400 };
+    if (t.blocked) return { ok: true };   // a blocked sender is told yes and heard by nobody
+    if (t.msgs.length >= MSG_LIMITS.msgs) return { ok: false, error: 'This conversation is full.', status: 400 };
+    t.msgs.push({ by: 'them', text, at: Date.now() }); t.unread = true; return { ok: true };
+  }
+  return { ok: false, error: 'unknown action', status: 400 };
 }
 /* the Studio's shape: newest first, open before done, the item named from the list */
 const shapeWishes = (rows, list) => rows.slice().reverse().sort((a, b) => (a.done === b.done ? 0 : a.done ? 1 : -1))
@@ -168,13 +264,13 @@ const SHOW_LABEL = 'Fri, Sep 11 · The Room';
    The address on a PAGE request sets the cookies; the API calls that page makes carry the
    cookies back. The query on the API call itself and the referer are read too, so a call
    made by hand (curl) can name a state without a cookie. */
-const FLAGS = ['live', 'canbuy', 'allout', 'plan'];
+const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour'];
 const cookies = (rq) => Object.fromEntries((rq.headers.cookie || '').split(/;\s*/).filter(Boolean).map((c) => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
 function stateOf(rq, q) {
   const ck = cookies(rq);
   let ref = null; try { ref = new URL(rq.headers.referer || '', 'http://x').searchParams; } catch { ref = null; }
   const pick = (k) => q.get(k) ?? ck['mock_' + k] ?? (ref && ref.get(k)) ?? null;
-  return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus' };
+  return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus', tour: pick('tour') === '1' };
 }
 /* what the page request does to the cookies: a flag in the address sets it; a return trip
    from checkout (?paid= / ?cancelled=) keeps them; a plain address clears them all */
@@ -224,8 +320,12 @@ function profileFixture(st) {
     rating: { avg: 4.6, count: 5, nights: 1 }, posts: POSTS.length, topSongs: [], topVoted: null, topPlayed: null, topPaid: null, comments: [],
     setlist: SONGS.map((s) => s.title), songs: SONGS.length,
     name: NAME.artist, first: 'Demo', last: 'Artist', tagline: 'Make my set your set', style: 'Acoustic soul', bio: 'A demo page. Nothing here is real.', photo: '', avatar: img('a1', 'avatar'), photos: [],
-    management: '', managementUrl: '', links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', bandcamp: '', gofundme: '', website: '' }, media: [], updatedAt: NOW };
+    management: '', managementUrl: '', links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', bandcamp: '', gofundme: '', website: '' }, media: [], updatedAt: NOW,
+    tour: tourOf(st) };
 }
+/* the tour poster (decision 0075): what the Studio set in this process, else the ?tour=1 state's picture, else none */
+const TOUR_CAPS = { pdf: 3145728, image: 921600 };
+const tourOf = (st) => S.TOUR !== undefined ? S.TOUR : st.tour ? { url: '/img/band.jpg', type: 'jpeg', link: 'https://tickets.example/tour' } : null;
 /* the artist's diary (events.mjs ?a=): one gig tonight at The Room, one next week */
 const day = (n) => new Date(NOW + n * 864e5).toISOString().slice(0, 10);
 const gig = (n, eventId) => ({ eventId, date: day(n), time: '20:00', endTime: '23:00', tz: 'Australia/Melbourne', startsAt: NOW + n * 864e5 - (n ? 0 : 3600e3), endsAt: NOW + n * 864e5 + 2 * 3600e3,
@@ -309,7 +409,7 @@ function planFixture(st) {
   const plan = PLANS[st.plan] ? st.plan : 'plus', paid = plan !== 'free';
   return { ok: true, plan, limits: PLANS[plan], shareStats: true, until: paid ? NOW + 14 * 864e5 : null, comped: false, discountPct: 0, plans: PLANS,
     billing: paid ? { subscribed: true, plan, portal: true, pastDue: false, renewsAt: NOW + 14 * 864e5, cancelAtPeriodEnd: false } : { subscribed: false, plan: 'free', portal: false, pastDue: false },
-    role: 'owner', del: null, email: 'demo@example.com', owner: false };
+    role: 'owner', tour: TOUR_CAPS, del: null, email: 'demo@example.com', owner: false };
 }
 const TEAM = { ok: true, slug: 'demo', emails: ['demo@example.com'], invited: [], invitedNames: {}, codeSet: false, emailReady: true };
 /* what connectStatus() in _connect.mjs answers: the Get-paid card prints plan, cutPct and the Stripe-fee note */
@@ -385,8 +485,27 @@ function shopAction(body, list, orders, owner, prefix, st) {
 /* one switch, by action — what /api/admin answers when the Studio is signed in */
 function adminStub(body, st) {
   const shop = shopAction(body, S.MERCH, S.ORDERS, 'a1', 'm', st); if (shop) return shop;
+  const msg = msgAction(body); if (msg) return msg;
   switch (body.action) {
     case 'planGet': return planFixture(st);
+    /* the tour poster (admin.mjs tourSet / tourClear): a data URL is "stored" as the poster slot, a link rides alone or with it */
+    case 'tourSet': {
+      const has = (k) => Object.prototype.hasOwnProperty.call(body, k);
+      let cur = tourOf(st) ? { ...tourOf(st) } : null;
+      if (has('data') && body.data) {
+        const m = /^data:(application\/pdf|image\/(?:png|jpeg|jpg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(body.data));
+        if (!m) return { ok: false, error: 'That has to be a PNG, JPEG or PDF.', status: 400 };
+        const bytes = Math.floor(m[2].length * 0.75), pdf = m[1] === 'application/pdf';
+        if (pdf && bytes > TOUR_CAPS.pdf) return { ok: false, error: 'That PDF is over 3 MB. Export it smaller, or as a PNG or JPEG.', status: 400 };
+        if (!pdf && bytes > TOUR_CAPS.image) return { ok: false, error: 'That photo is too big even after shrinking. Try another.', status: 400 };
+        S.TOURDATA = body.data;
+        cur = { url: `/api/img?a=a1&s=tour&v=${Date.now().toString(36)}`, type: pdf ? 'pdf' : m[1].replace('image/', '').replace('jpg', 'jpeg'), link: cur ? cur.link : '' };
+      }
+      if (has('link')) { if (!cur) return { ok: false, error: 'Upload the poster first, then add the link.', status: 400 }; cur.link = /^https:\/\//.test(String(body.link || '')) ? String(body.link) : ''; }
+      S.TOUR = cur;
+      return { ok: true, profile: profileFixture(st), limits: TOUR_CAPS };
+    }
+    case 'tourClear': S.TOUR = null; S.TOURDATA = null; return { ok: true, profile: profileFixture(st) };
     case 'eventList': return { ok: true, events: [], occurrences: [], place: null };
     case 'featureList': return { ok: true, events: [], sessions: [], featured: [] };
     case 'pitchList': return { ok: true, pitches: [], venues: [] };
@@ -465,6 +584,7 @@ const cover = (c) => svg(`<rect width="960" height="540" fill="#1B1B1F"/><rect y
 function picture(q) {
   const s = q.get('s') || q.get('slot') || '';
   if (s === 'cover') return cover(colourOf('8'));
+  if (s === 'tour') return svg(ART.poster(colourOf('3')));
   if (s === 'avatar') return svg(ART.avatar(q.get('a') === 'v_v1' ? COLOURS[4] : COLOURS[0]));
   const base = s.replace(/_[1-4]$/, ''), nth = Number((s.match(/_([1-4])$/) || [0, 0])[1]);
   const item = [...S.MERCH, ...S.VMERCH].find((m) => m.id === base);
@@ -509,11 +629,17 @@ const GROUPS = [
     ['/studio?tab=merch', 'Merch store, straight in', 'the deep link; the Menu tab lit; Requests from the shop under the orders'],
     ['/studio?plan=free', 'Studio on the free plan', 'the items behind the Bar Star lock; the orders never are'],
     ['/studio?live=1&tab=live', 'Studio with the room live', 'Live tab, 12 in the room'],
+    ['/studio?tab=messages', 'Messages, straight in', () => { const c = msgIndex().counts; return `the inbox: ${c.unread} unread of ${S.MSGS.length} conversations across five folders; the Menu tab wears the dot`; }],
+    ['/studio?tab=gigs', 'Gigs tab, no poster', 'the Tour dates poster card under Add a gig: "No poster yet", Upload a poster'],
+    ['/studio?tab=gigs&tour=1', 'Gigs tab with a poster', 'the card with the thumbnail, the tickets link field, Replace and Remove'],
     ['/venues', 'Venue Studio, signed in', () => `a Pro venue; its Merch tab: ${S.VMERCH.length}/12 items, ${S.VORDERS.length} orders`],
     ['/venues?tab=merch', 'Venue Studio, Merch tab', 'straight in'],
   ]],
   ['Other', [
     ['/demo', 'Artist page', 'between shows; ?live=1 for tonight'],
+    ['/demo?tour=1', 'Artist page with a tour poster', 'View tour dates under the shows; the poster window with Download and Grab your tickets'],
+    ['/demo#book', 'Book the artist', 'the Book sheet on arrival; Send lands the request in the Studio\'s inbox'],
+    ['/demo#m=t0000000003.' + 'k3'.padEnd(32, '3'), 'A booker’s thread link', 'the wedding conversation as Mel sees it: her words right, the reply left, a reply box'],
     ['/demo/vote', 'Vote page', 'the setlist, quiet; ?live=1 for the tally'],
     ['/v/demo', 'Venue page', 'hours, who is playing'],
     ['/index.html', 'Home', 'a fresh visitor sees the empty pickers (nothing remembered, no location): pick Australia → Melbourne → Search for the one gig tonight. No map key here, so View on MAP says "Map unavailable"'],
@@ -624,7 +750,10 @@ const srv = http.createServer(async (rq, rs) => {
   }
 
   /* ---------- the API, first, as netlify.toml's first rule ---------- */
-  if (u.pathname === '/api/img') { rs.writeHead(200, { 'content-type': 'image/svg+xml', 'cache-control': 'no-store' }); return rs.end(picture(q)); }
+  if (u.pathname === '/api/img') {
+    /* the poster the Studio uploaded in this process is served back as it came, PDF or picture (img.mjs serves the stored type) */
+    if (q.get('s') === 'tour' && S.TOURDATA) { const m = /^data:([^;]+);base64,(.+)$/.exec(S.TOURDATA); rs.writeHead(200, { 'content-type': m[1], 'cache-control': 'no-store', ...(m[1] === 'application/pdf' ? { 'content-disposition': 'inline' } : {}) }); return rs.end(Buffer.from(m[2], 'base64')); }
+    rs.writeHead(200, { 'content-type': 'image/svg+xml', 'cache-control': 'no-store' }); return rs.end(picture(q)); }
   /* Netlify's image CDN (artist.html's cdn()): the picture behind ?url=, as it is — no resizing here */
   if (u.pathname === '/.netlify/images') {
     const src = new URL(q.get('url') || '/', 'http://x');
@@ -657,7 +786,16 @@ const srv = http.createServer(async (rq, rs) => {
   if (u.pathname === '/api/venue') return json(rs, venuePage(st));
   if (u.pathname === '/api/artists') return json(rs, artistsFixture());
   if (u.pathname === '/api/mapconfig') return json(rs, { ok: true, enabled: false, key: '' });
-  if (u.pathname === '/api/rsvp') return json(rs, { ok: true, count: 12, mine: false });
+  /* the real shape (rsvp.mjs): the fan's own state back, and the night's count — artist.html paints both */
+  if (u.pathname === '/api/rsvp') { const body = rq.method === 'POST' ? await readBody(rq) : {}; const on = !!body.on; return json(rs, { ok: true, on, n: on ? 13 : 12 }); }
+  /* the Book button's door (messages.mjs): a public POST to send, read at the booker's link, or reply — never a GET */
+  if (u.pathname === '/api/messages') {
+    if (q.has('v')) return json(rs, { ok: false, error: 'Venue pages don’t take messages.' }, 400);
+    const body = rq.method === 'POST' ? await readBody(rq) : {};
+    const r = publicMsg(rq.method, q, body);
+    log(`${rq.method.padEnd(4)} /api/messages`, JSON.stringify({ action: body.action, name: body.name, text: String(body.text || '').slice(0, 40) }), '→', r.ok ? (r.id ? `${r.id} k=${r.k.slice(0, 6)}…` : 'ok') : `${r.status} ${r.error}`);
+    return answer(rs, r);
+  }
   if (u.pathname === '/api/pay') {
     const body = rq.method === 'POST' ? await readBody(rq) : {};
     const r = payStub(body, q, st); log('POST /api/pay', JSON.stringify(body), '→', r.url || `${r.status || 200} ${r.error || ''}`);
@@ -668,7 +806,7 @@ const srv = http.createServer(async (rq, rs) => {
   if (u.pathname === '/api/stage') return json(rs, stageFixture(st));
   if (u.pathname === '/api/admin') {
     const body = rq.method === 'POST' ? await readBody(rq) : {};
-    if (!/^(planGet|merchList|orderList|wishList|payStatus|postList|verifyStatus|flagList|eventList|featureList|pitchList)$/.test(body.action || '')) log('POST /api/admin', JSON.stringify(body).slice(0, 160));
+    if (!/^(planGet|merchList|orderList|wishList|payStatus|postList|verifyStatus|flagList|eventList|featureList|pitchList|msgCount|msgList)$/.test(body.action || '')) log('POST /api/admin', JSON.stringify(body).slice(0, 160));
     return answer(rs, adminStub(body, st));
   }
   if (u.pathname === '/api/auth') return json(rs, authStub(rq.method === 'POST' ? await readBody(rq) : {}));

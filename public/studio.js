@@ -5,13 +5,18 @@ let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('my
    link that worked before still works. */
 let ASLUG=localStorage.getItem('myset.aslug')||'';
 let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null, PITCHES=null, CHARTS=null;
-let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, TEAM=null, timer=null;
+let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, PROFERR=null, TEAM=null, timer=null;   // PROFERR: why the page's profile didn't come, so a card never spins for good
 let TAB=localStorage.getItem('myset.tab')||'setlist';
 /* 'merch' is a real tab again — its own option under Menu since 2026-09-13 (the
    founder's call: a store is not a profile field). It was folded into Profile on
    2026-09-12, so a phone that saved 'merch' before then simply lands on the store. */
 let MERCH=null, MERCHMAX=0, MERCHLIM={}, MERCHERR=null, ORDERS=null, WISHES=null, COMM=null;   // the shop (and the caps the server holds it to), why it didn't load, its orders, what fans asked it for, and the community page's posts
 let SESS=null, REC=null;                  // where you're signed in, and your recovery codes
+/* The inbox (decision 0074): MSGN is the badge {unread, requests}, read quietly and
+   never on a timer; MSGL the list as msgList sent it; MSGT the open conversation's
+   id and MSGTH its thread; MSGF/MSGV the folder and All/Unread/Read; MSGDRAFT a
+   reply typed but not sent, per thread, so a repaint never eats it. */
+let MSGN={unread:0,requests:0}, MSGL=null, MSGERR=null, MSGT='', MSGTH=null, MSGF='requests', MSGV='all', MSGDRAFT={}, MSGAT=0, MSGMAIL=false;   // MSGMAIL: the server can email the booker (it says so on every list and thread)
 /* The same search and the same three orders the audience has on the voting page,
    so the two screens never disagree about where a song is. 'votes' keeps the
    server's ranking (votes desc -> voted-first -> title). */
@@ -415,7 +420,10 @@ async function load(opts){
      held for nothing. It paints into #pushBox whenever it lands (PUSHVIEW). */
   if(TAB==='settings'){ if(!TEAM)jobs.push(loadTeam());
     jobs.push(loadTick()); drawPush(); }
-  if(TAB==='gigs'){ if(!EVENTS)jobs.push(loadGigs()); if(!PITCHES)jobs.push(loadPitches()); }
+  if(TAB==='gigs'){ if(!EVENTS)jobs.push(loadGigs()); if(!PITCHES)jobs.push(loadPitches()); if(!PROF)loadProf(); }   // the poster card reads the profile; not awaited
+  /* The inbox waits for the plan, so a crew seat never asks for a list it will be
+     refused; a pull-to-refresh reads it again (the list carries the badge count). */
+  if(TAB==='messages') jobs.push(Promise.resolve(planJob).then(()=>loadMsgs(!first)));
   /* Today's checklist (Live, before a show) reads the calendar and the card state;
      neither is awaited — the card paints its checks as they land. A library with
      no songs asks history whether this is a brand-new account (drawFirstRun). */
@@ -425,6 +433,10 @@ async function load(opts){
   try{ await Promise.all(jobs.map(j=>Promise.resolve(j).catch(()=>null))); }catch(e){}
   bootDone();
   if(TAB==='settings') maybeVerifyIntro();
+  /* The inbox badge: one quiet read once the screen is up — never in the jobs
+     above, never on the poll, never on a timer (9d8, decision 0074). It waits for
+     the plan so a crew seat never asks at all. Not awaited. */
+  Promise.resolve(planJob).then(()=>msgPeek()).catch(()=>{});
 }
 let WRITING=false;
 async function act(action,extra={}){
@@ -579,8 +591,9 @@ async function passwordSignIn(){
 (function(){
   try{
     const q=new URLSearchParams(location.search);
-    if(q.get('tab')==='setlist'){
-      TAB='setlist'; localStorage.setItem('myset.tab','setlist');
+    // ?tab=messages is where a "new booking request" push or email lands (0074)
+    if(q.get('tab')==='setlist'||q.get('tab')==='messages'){
+      TAB=q.get('tab'); localStorage.setItem('myset.tab',TAB);
       history.replaceState({},'',location.pathname);
     }
     if(q.get('connect')){ TAB='money'; localStorage.setItem('myset.tab','money');
@@ -716,8 +729,9 @@ async function signOut(){
      stage (a late loader would repaint it over the sign-in screen), not the plan,
      the team, the card state or the history the first-run steps read. Null is the
      state every one of these is in at first paint, so the next load is a first load. */
-  D=null;PLAN=null;PROF=null;TEAM=null;PAY=null;HIST=null;REV=null;LEDGER=null;EVENTS=null;PITCHES=null;
+  D=null;PLAN=null;PROF=null;PROFERR=null;TEAM=null;PAY=null;HIST=null;REV=null;LEDGER=null;EVENTS=null;PITCHES=null;
   FEAT=null;MERCH=null;MERCHERR=null;ORDERS=null;WISHES=null;COMM=null;SESS=null;REC=null;TICK=null;PKEYS=null;
+  MSGL=null;MSGERR=null;MSGT='';MSGTH=null;MSGDRAFT={};MSGN={unread:0,requests:0};   // the inbox is theirs, not the phone's (0074)
   if(window.Money)Money.forget();   // the dashboard keeps its own copy of the book (0065)
   gate();
 }
@@ -1252,7 +1266,8 @@ function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')load
      on its "Checking…" placeholder for anyone who tapped their way to Settings,
      which is everyone. */
   if(t==='settings'){loadTeam();loadPlan();loadTick();drawPush();maybeVerifyIntro();}
-  if(t==='gigs'){ loadGigs(); loadPitches(); }}
+  if(t==='gigs'){ loadGigs(); loadPitches(); loadProf(); loadPlan(); }
+  if(t==='messages'){ MSGT=''; MSGTH=null; loadMsgs(true); }}   // the list carries the badge count: no second read
 async function loadPitches(force){
   if(PITCHES&&!force)return;
   PITCHES=await api('/admin',{method:'POST',body:JSON.stringify({action:'pitchList'}),quiet:true});
@@ -1479,9 +1494,16 @@ async function hideGig(pair){
 }
 async function loadProf(force){
   if(PROF&&!force)return;
-  // ?t= skips the 15s edge copy (decision 0042): the artist sees their own save at once
-  PROF=await fetch('/api/profile?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
-  if(TAB==='profile'&&D)render();
+  // ?t= skips the 15s edge copy (decision 0042): the artist sees their own save at once.
+  // ?a= names the page: without it the server answers the founding page, which is what
+  // every other artist's Profile tab quietly showed until 0075.
+  const slug=(D&&D.show&&D.show.slug)||'';
+  PROFERR=null;
+  PROF=await fetch('/api/profile?t='+Date.now()+(slug?'&a='+encodeURIComponent(slug):''),{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+  // a miss is null, not a half-answer: a pull-to-refresh asks again, and the screen says why it waits
+  if(!(PROF&&PROF.ok)){ PROF=null; PROFERR='Couldn’t load your page just now — pull down to try again'; }
+  // the Gigs tab draws the tour poster from it too (0075) — not over a link being typed
+  if((TAB==='profile'||(TAB==='gigs'&&!typing()))&&D)render();
 }
 async function saveProfile(){
   const v=id=>(($('#'+id)||{}).value||'').trim();
@@ -1868,6 +1890,7 @@ function render(){
       <div class="wrap" style="padding-top:20px;padding-bottom:6px">
         <button class="big bigplay" onclick="openGig()"><span>+</span><span style="flex:1">Add a gig</span></button>
       </div>
+      ${tourCard()}
       <div class="calhead">
         <b>${monthName(CAL_MONTH)}</b>
         <div class="calnav">
@@ -2058,11 +2081,11 @@ function render(){
   if(TAB==='profile'){
     const P=PROF;
     if(!P||!P.ok) body=`<div class="sec"><span class="kick">Your page</span></div>
-      <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`;
+      <div class="list"><div class="row muted">${PROFERR?esc(PROFERR):'<span class="spin"></span>&nbsp;&nbsp;Loading…'}</div></div>`;
     else{
       const L=P.links||{};
       body=`
-      <div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="/artist.html" style="justify-content:center">View your page ↗</a></div>
+      <div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${(D&&D.show&&D.show.slug)?'/'+esc(D.show.slug):'/artist.html'}" style="justify-content:center">View your page ↗</a></div>
       <div class="wrap" style="padding-top:10px"><button class="big" onclick="saveProfile()">Save profile</button></div>
 
       <div class="sec"><span class="kick">Who you are</span></div>
@@ -2129,6 +2152,13 @@ function render(){
        the orders never do — an order already paid for is theirs to hand over on any
        plan. */
     body=merchSection();
+  }
+
+  if(TAB==='messages'){
+    /* THE INBOX (decision 0074) — the Book button's other end. Its own screen
+       under Menu, beside the Merch store; the list and the open conversation are
+       drawn by msgScreen() so this file's render() stays one block per tab. */
+    body=msgScreen();
   }
 
   if(TAB==='settings'){
@@ -2461,6 +2491,7 @@ function render(){
   if(hq){ hq.addEventListener('input',e=>{HISTFOCUS=true;HISTQ=e.target.value;render();});
     if(HISTFOCUS){ hq.focus(); const v=hq.value; hq.setSelectionRange(v.length,v.length); } }
   wireCount('#pfTag','#cTag',120); wireCount('#pfBio','#cBio',700);
+  wireMsgs();
   drawFirstRun();
   const restoreScroll=()=>{
     const q=$('.queue-window'),l=$('.setlist-window');
@@ -2487,16 +2518,18 @@ const TABICON={
   money:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="3"/><path d="M3 10.5h18M7 15h3"/></svg>',
   menu:'<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'};
 function tabBar(){
-  const on=t=>t==='menu'?(TAB==='profile'||TAB==='merch'||TAB==='settings'):TAB===t;
+  const on=t=>t==='menu'?(TAB==='profile'||TAB==='merch'||TAB==='settings'||TAB==='messages'):TAB===t;
+  // the Menu tab wears a small pink-orange dot while a message waits (0074)
   return `<nav class="tabbar" aria-label="Studio"><div class="in">
     <button data-tab-live class="${TAB==='live'?'on':''}" onclick="setTab('live')" aria-current="${TAB==='live'?'page':'false'}">${TABICON.live}Live</button>
     ${[['setlist','Setlist'],['gigs','Gigs'],['money','Money'],['menu','Menu']].map(([t,l])=>
-      `<button class="${on(t)?'on':''}" onclick="${t==='menu'?'openMenu()':`setTab('${t}')`}" aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}</button>`).join('')}
+      `<button class="${on(t)?'on':''}"${t==='menu'?' data-tab-menu':''} onclick="${t==='menu'?'openMenu()':`setTab('${t}')`}" aria-current="${on(t)?'page':'false'}">${TABICON[t]}${l}${t==='menu'&&MSGN.unread>0?'<i class="tabdot"></i>':''}</button>`).join('')}
   </div></nav>`;
 }
 function openMenu(){
   const s=(D&&D.show)||{};
   const planLine=PLAN&&PLAN.ok?(PLAN.plan==='free'?'Hobbyist plan · see the plans':esc((PLAN.limits&&PLAN.limits.label)||PLAN.plan)+' · manage'):'Plans';
+  msgPeek();   // the count on the row is the freshest it can be without a timer
   openSheet(`<h3>Menu</h3>
     <button class="menurow" onclick="closeSheet();setTab('profile')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
@@ -2504,6 +2537,9 @@ function openMenu(){
     <button class="menurow" onclick="closeSheet();setTab('merch')">
       <svg viewBox="0 0 24 24"><path d="M3.5 4.5h7.5l9.5 9.5-6.5 6.5L3.5 11z"/><circle cx="7.6" cy="8.6" r="1.4"/></svg>
       <div class="m">Merch store<span>Items, sizes, prices and orders</span></div><span class="chev">›</span></button>
+    ${msgAllowed()?`<button class="menurow" data-menu="messages" onclick="closeSheet();setTab('messages')">
+      <svg viewBox="0 0 24 24"><path d="M3.5 7a2.5 2.5 0 0 1 2.5-2.5h12A2.5 2.5 0 0 1 20.5 7v7.5a2.5 2.5 0 0 1-2.5 2.5h-7.2L7 20.5V17H6a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
+      <div class="m">Messages<span>Booking requests and replies</span></div>${MSGN.unread>0?`<b class="bub">${MSGN.unread}</b>`:''}<span class="chev">›</span></button>`:''}
     <button class="menurow" onclick="closeSheet();setTab('settings')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.54h.08A1.7 1.7 0 0 0 10.1 3V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>
       <div class="m">Settings<span>Prices, votes, codes, who can sign in</span></div><span class="chev">›</span></button>
@@ -2829,6 +2865,12 @@ function closeSheet(){const sh=$('#sheet');sh.style.transition='';sh.style.trans
 document.addEventListener('keydown',e=>{ if(e.key!=='Enter'&&e.key!==' ')return;
   const b=e.target&&e.target.closest&&e.target.closest('[data-act="histname"]'); if(!b)return;
   e.preventDefault(); renameNight(b.getAttribute('data-id')); });
+/* Escape over an open conversation with nothing on top of it goes back to the
+   list (0074). Registered BEFORE the sheet's own Escape below: that one closes the
+   sheet first, and this one must see it still open to leave the conversation alone. */
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape'||TAB!=='messages'||!MSGT)return;
+  if($('#sheet').classList.contains('on')||$('#ask').classList.contains('on')||$('#qrbig').classList.contains('on'))return;
+  msgBack(); });
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
   if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
 
@@ -3121,6 +3163,19 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='gigdel') delGig(id);
   if(b.dataset.act==='gigskip') skipGig(id);
   if(b.dataset.act==='gighide') hideGig(id);
+  if(b.dataset.act==='msgfolder'){ MSGF=id; render(); }
+  if(b.dataset.act==='msgview'){ MSGV=id; render(); }
+  if(b.dataset.act==='msgopen') openMsg(id);
+  if(b.dataset.act==='msgback') msgBack();
+  if(b.dataset.act==='msgsend') msgSend(id);
+  if(b.dataset.act==='msgmove') msgMoveAsk(id);
+  if(b.dataset.act==='msgmoveto'){ closeSheet(); msgMove(MSGT,id); }   // the Move sheet's rows: the folder is the id, the thread is the open one
+  if(b.dataset.act==='msgunread') msgUnread(id);
+  if(b.dataset.act==='msgreport') msgReport(id);
+  if(b.dataset.act==='msgblock') msgBlock(id);
+  if(b.dataset.act==='tourpick'){ const f=$('#tourFile'); if(f) f.click(); }
+  if(b.dataset.act==='tourlink') tourLink();
+  if(b.dataset.act==='tourclear') tourClear();
   if(b.dataset.act==='grep'){ const h=$('#gRepeat'); if(h){h.value=id;
     document.querySelectorAll('[data-act="grep"]').forEach(x=>x.classList.toggle('on',x.getAttribute('data-id')===id));} }
 });
@@ -3366,8 +3421,8 @@ async function drawPush(){
     'Your phone is blocking them. Turn them back on in Settings → Notifications → MySet.'));
 
   paint(row(st.on?'Alerts are on':'Get alerts on your phone',
-    st.on?`You'll be told when someone requests a song, even with the screen off.${PUSHKEY.devices>1?` · ${PUSHKEY.devices} devices`:''}`
-         :'Know the moment someone requests a song — no need to watch the screen.',
+    st.on?`You'll be told when someone requests a song or writes to you, even with the screen off.${PUSHKEY.devices>1?` · ${PUSHKEY.devices} devices`:''}`
+         :'Know the moment someone requests a song or writes to you — no need to watch the screen.',
     `<button class="act${st.on?'':' '}" onclick="togglePush(${st.on?'false':'true'})">${st.on?'Turn off':'Turn on'}</button>`));
 }
 
@@ -3482,6 +3537,173 @@ function wishesSection(){
       ||'<div class="row muted">Nothing asked for yet. Requests land here the moment a fan sends one.</div>'}</div>`;
 }
 async function wishDone(id,done){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'wishDone',id,done})}); if(d&&d.ok){WISHES=d.wishes;render();} }
+/* ---------- THE INBOX (decision 0074) -----------------------------------------
+   The Book button on the artist's page ends here. A booker gives a name and an
+   email on purpose so the artist can answer; they read the answer at their own
+   link and by email, and never sign in. Five folders the server keeps, the list,
+   one conversation at a time. The badge (MSGN) is read quietly: once after the
+   boot has painted, when the phone comes back to the front (at most once a
+   minute), when the Menu opens — and on no timer (9d8). The list carries the
+   same count, so opening this tab and every action here refresh the badge with
+   no second read. Crew never sees the row and never asks; while the plan is not
+   in yet nothing is drawn or asked (has()'s rule). Report and Block are the
+   owner's (OWNER_ONLY in admin.mjs), so a seat is not shown them. */
+const MSG_FOLDERS=[['requests','Requests'],['general','General'],['business','Business'],['casual','Casual'],['spam','Spam']];
+const MSG_KINDS={booking:'Booking',collab:'Collab',press:'Press',other:'Other'};
+const MSG_EMPTY={requests:'No requests yet. Your Book button is live on your page.',
+  general:'Nothing here yet. A request moves here once you’ve answered it.',
+  business:'Nothing filed under Business. Move a conversation here from its page.',
+  casual:'Nothing filed under Casual. Move a conversation here from its page.',
+  spam:'No spam. Anything you report lands here.'};
+const msgAllowed=()=>!!PLAN&&(!PLAN.ok||PLAN.role!=='crew');   // not yet fetched reads as no, fetched-and-failed as yes (bar wifi), like has()
+const msgOwner=()=>!!PLAN&&(!PLAN.ok||(PLAN.role||'owner')==='owner');
+const msgFolder=(k)=>(MSG_FOLDERS.find(([f])=>f===k)||[k,esc(String(k||''))])[1];
+const msgAgo=(t)=>{ const h=(Date.now()-t)/3600e3; return h<24?when(t):h<48?'Yesterday':h<24*7?Math.floor(h/24)+' days ago':daystamp(t); };
+const msgFirst=(name)=>String(name||'').trim().split(/\s+/)[0]||'them';
+function paintMsgDot(){
+  const b=document.querySelector('.tabbar button[data-tab-menu]');
+  if(b){ const dot=b.querySelector('.tabdot');
+    if(MSGN.unread>0&&!dot) b.insertAdjacentHTML('beforeend','<i class="tabdot"></i>'); else if(!MSGN.unread&&dot) dot.remove(); }
+  const row=document.querySelector('#sheet.on [data-menu="messages"]');
+  if(row){ const bub=row.querySelector('.bub');
+    if(MSGN.unread>0){ if(bub) bub.textContent=MSGN.unread; else row.querySelector('.chev').insertAdjacentHTML('beforebegin',`<b class="bub">${MSGN.unread}</b>`); }
+    else if(bub) bub.remove(); }
+}
+async function msgPeek(){
+  if(!D||!PLAN||!msgAllowed())return;   // PLAN not in yet: the door back in calls again
+  MSGAT=Date.now();
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgCount'}),quiet:true});
+  if(!d||!d.ok)return;
+  const next={unread:Number(d.unread)||0,requests:Number(d.requests)||0};
+  if(next.unread!==MSGN.unread||next.requests!==MSGN.requests){ MSGN=next; paintMsgDot(); }
+}
+document.addEventListener('visibilitychange',()=>{ if(document.hidden||Date.now()-MSGAT<60000)return; msgPeek(); });
+async function loadMsgs(force){
+  if(MSGL&&!force)return;
+  if(!msgAllowed())return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgList'}),quiet:true});
+  if(!d||!d.ok){ MSGERR=(d&&d.error)||'Couldn’t load your messages — pull down to try again'; if(TAB==='messages'&&D)render(); return; }
+  MSGERR=null; MSGL=d; MSGMAIL=!!d.mail; MSGAT=Date.now();
+  const c=d.counts||{}, next={unread:Number(c.unread)||0,requests:Number(c.requests)||0};   // the list carries the count: the badge is that fresh for free
+  if(next.unread!==MSGN.unread||next.requests!==MSGN.requests){ MSGN=next; paintMsgDot(); }
+  if(TAB==='messages'&&D&&!typing())render();
+}
+function msgScreen(){
+  const head=`<div class="sec"><span class="kick">Messages</span></div>`;
+  if(PLAN===null) return head+`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`;   // whose seat this is decides what is drawn
+  if(!msgAllowed()) return head+`<div class="list"><div class="row muted">Booking requests are for the account owner and band members.</div></div>`;
+  if(MSGT) return msgThreadView();
+  const L=MSGL, c=(L&&L.counts)||{};
+  const rows=L?L.threads.filter(t=>t.folder===MSGF&&(MSGV==='all'||(MSGV==='unread')===!!t.unread)):[];
+  return `<div class="sec"><span class="kick">Messages</span><span class="kick">${c.unread?c.unread+' unread':''}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">From the Book button on your page. Answer here — they read it at their own link${MSGMAIL?' and by email':''}.</p>
+    <div class="wrap"><div class="chips folders">${MSG_FOLDERS.map(([k,l])=>`<button type="button" class="chip ${MSGF===k?'on':''}" data-act="msgfolder" data-id="${k}">${l}${c[k]?` <b>${c[k]}</b>`:''}</button>`).join('')}</div></div>
+    <div class="sortbar">${[['all','All'],['unread','Unread'],['read','Read']].map(([k,l])=>`<button type="button" class="${MSGV===k?'on':''}" data-act="msgview" data-id="${k}">${l}</button>`).join('')}</div>
+    <div class="list" style="margin-top:12px">${L===null
+      ?(MSGERR?`<div class="row muted">${esc(MSGERR)}</div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>')
+      :rows.map(t=>`<button type="button" class="row msgrow ${t.unread?'unread':''}" data-act="msgopen" data-id="${esc(t.id)}">
+        <i class="udot" aria-hidden="true"></i>
+        <div class="m"><div class="t">${esc(t.name||'Someone')} <span class="ktag">${MSG_KINDS[t.kind]||'Other'}</span></div>
+          <div class="by">${t.lastBy==='me'?'You: ':''}${esc(t.preview)}</div>
+          <div class="s">${msgAgo(t.lastAt)}${t.count>1?' · '+t.count+' messages':''}${t.blocked?' · Blocked':''}${t.reported?' · Reported':''}</div></div>
+        <span class="chev">›</span></button>`).join('')
+        ||`<div class="row muted">${MSGV==='all'?MSG_EMPTY[MSGF]:MSGV==='unread'?'Nothing unread in '+msgFolder(MSGF)+'.':'Nothing read in '+msgFolder(MSGF)+' yet.'}</div>`}</div>`;
+}
+function msgThreadView(){
+  const T=MSGTH;
+  const back=`<div class="wrap" style="padding-top:10px"><button type="button" class="btn-text msgback" data-act="msgback">‹ Messages</button></div>`;
+  if(!T||T.id!==MSGT) return back+`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`;
+  const cap=(MSGL&&MSGL.limits&&Number(MSGL.limits.text))||0;
+  const cur=$('#msgText'); if(cur&&cur.dataset.t===T.id) MSGDRAFT[T.id]=cur.value;   // the words typed survive this repaint
+  const tel=String(T.phone||'').replace(/[^\d+]/g,'');
+  return back+`
+    <div class="sec"><span class="kick">${MSG_KINDS[T.kind]||'Other'}${T.kind==='booking'?' request':''}</span><span class="kick">${msgFolder(T.folder)}</span></div>
+    <div class="list"><div class="row muted msghead">
+      <b>${esc(T.name||'Someone')}</b>
+      ${T.email?`<a href="mailto:${esc(T.email)}">${esc(T.email)}</a>`:''}
+      ${T.phone?`<a href="tel:${esc(tel)}">${esc(T.phone)}</a>`:''}
+      ${T.venue||T.when?`<span>${[T.venue,T.when].filter(Boolean).map(esc).join(' · ')}</span>`:''}
+      ${T.blocked?'<span class="warn">Blocked — nothing more arrives from them</span>':T.reported?'<span class="warn">Reported to MySet</span>':''}
+    </div></div>
+    <div class="msgs">${T.msgs.map(m=>`<div class="msg ${m.by==='me'?'me':''}"><div>${esc(m.text)}</div><time>${m.by==='me'?'You · ':''}${dstamp(m.at)}</time></div>`).join('')}</div>
+    <div class="field"><label>Your reply${cap?` <span class="cnt" id="cMsg"></span>`:''}</label>
+      <textarea class="inp" id="msgText" data-t="${esc(T.id)}" rows="3"${cap?` maxlength="${cap}"`:''} placeholder="Write back to ${esc(msgFirst(T.name))}">${esc(MSGDRAFT[T.id]||'')}</textarea></div>
+    <div class="wrap" style="margin-top:10px"><button type="button" class="btn-pri btn-block" data-act="msgsend" data-id="${esc(T.id)}">Send</button></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:8px 0 0">Replies reach them at their link${MSGMAIL?' and by email.':' — email isn’t set up yet.'}</p>
+    <div class="wrap msgacts">
+      <button type="button" class="act" data-act="msgmove" data-id="${esc(T.id)}">Move to…</button>
+      <button type="button" class="act" data-act="msgunread" data-id="${esc(T.id)}">Mark unread</button>
+      ${msgOwner()?`${T.reported?'':`<button type="button" class="act warn" data-act="msgreport" data-id="${esc(T.id)}">Report</button>`}
+      <button type="button" class="act warn" data-act="msgblock" data-id="${esc(T.id)}">${T.blocked?'Unblock':'Block'}</button>`:''}
+    </div>`;
+}
+function wireMsgs(){
+  const t=$('#msgText'); if(!t)return;
+  const cap=(MSGL&&MSGL.limits&&Number(MSGL.limits.text))||0;
+  if(cap) wireCount('#msgText','#cMsg',cap);
+  t.addEventListener('input',()=>{ MSGDRAFT[t.dataset.t]=t.value; });
+}
+async function openMsg(id){
+  MSGT=id; MSGTH=null; render();
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgThread',t:id}),quiet:true});
+  if(MSGT!==id)return;                      // they went back before it landed
+  if(!d||!d.ok){ toast((d&&d.error)||'Couldn’t open that one'); MSGT=''; render(); return; }
+  MSGTH=d.thread; if('mail' in d) MSGMAIL=!!d.mail; render();
+  // opening marks it read on the server: the list (and the badge it carries) follows
+  loadMsgs(true);
+}
+function msgBack(){ MSGT=''; MSGTH=null; render(); }
+/* after a write: the conversation again (it is open, so the read marks nothing),
+   then the list, which carries the badge — every figure on screen is the server's */
+async function msgRefresh(id){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgThread',t:id}),quiet:true});
+  if(d&&d.ok&&MSGT===id){ MSGTH=d.thread; if('mail' in d) MSGMAIL=!!d.mail; }
+  await loadMsgs(true); render();
+}
+async function msgSend(id){
+  const el=$('#msgText'), text=((el&&el.value)||'').trim();
+  if(!text){ toast('Write something first'); return; }
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgReply',t:id,text})});
+  if(!d.ok){ toast(d.error||'Couldn’t send that'); return; }
+  delete MSGDRAFT[id]; if(el) el.value='';   // the box is emptied before the repaint re-reads it
+  toast('Sent');
+  await msgRefresh(id);
+}
+function msgMoveAsk(id){
+  const T=MSGTH||{};
+  openSheet(`<h3>Move to…</h3><p class="lede">Where this conversation with ${esc(msgFirst(T.name))} is filed. Nothing is sent to them.</p>
+    ${MSG_FOLDERS.filter(([k])=>k!==T.folder).map(([k,l])=>`<button type="button" class="menurow" data-act="msgmoveto" data-id="${k}"><div class="m">${l}</div><span class="chev">›</span></button>`).join('')}`);
+}
+async function msgMove(id,folder){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgMove',t:id,folder})});
+  if(!d.ok){ toast(d.error||'Couldn’t move that'); return; }
+  toast('Moved to '+msgFolder(folder)); MSGF=folder;
+  await msgRefresh(id);
+}
+async function msgUnread(id){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgUnread',t:id,on:true})});
+  if(!d.ok){ toast(d.error||'Couldn’t do that'); return; }
+  // reading it again would mark it read again, so this one goes back to the list
+  MSGT=''; MSGTH=null; toast('Marked unread');
+  await loadMsgs(true); render();
+}
+async function msgReport(id){
+  if(!await ask({title:'Report this conversation?',lede:'It moves to Spam and MySet is told. Nothing is sent to them.',yes:'Report',no:'Keep'}))return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgReport',t:id})});
+  if(!d.ok){ toast(d.error||'Couldn’t report that'); return; }
+  toast('Reported — it’s in Spam now'); MSGF='spam';
+  await msgRefresh(id);
+}
+async function msgBlock(id){
+  const T=MSGTH||{}, on=!T.blocked, who=msgFirst(T.name);
+  const go=on?await ask({title:`Block ${who}?`,lede:'Their messages stop arriving. They aren’t told.',yes:'Block',no:'Keep'})
+             :await ask({title:`Unblock ${who}?`,lede:'Their messages arrive again.',yes:'Unblock',no:'Keep'});
+  if(!go)return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'msgBlock',t:id,on})});
+  if(!d.ok){ toast(d.error||'Couldn’t do that'); return; }
+  toast(on?'Blocked':'Unblocked');
+  await msgRefresh(id);
+}
 /* ---------- THE BOOKS -------------------------------------------------------
    Two cards. "Your earnings" is every artist's and every venue's; "MySet's books"
    is the founder's only and is a real P&L — what came in, minus what Perry types
@@ -4153,6 +4375,8 @@ function planWhen(){
 async function loadPlan(force){
   if(PLAN&&!force)return;
   PLAN=await api('/admin',{method:'POST',body:JSON.stringify({action:'planGet'}),quiet:true});
+  // a crew seat has no inbox: a phone that saved the Messages tab lands on Live instead (0074)
+  if(PLAN&&PLAN.ok&&PLAN.role==='crew'&&TAB==='messages'){ TAB='live'; localStorage.setItem('myset.tab','live'); if(D){ if(!EVENTS)loadGigs(); if(!PAY)loadPay(); } }
   /* Any tab can hold a lock now, not just Settings, so any tab needs the repaint. */
   if(D)render();
   // the dashboard's two scripts, warmed a moment after the plan says they will be wanted (D11)
@@ -4722,6 +4946,96 @@ document.addEventListener('change',(e)=>{
   const inp=e.target.closest('input[type=file][data-slot]'); if(!inp)return;
   uploadPhoto(inp.getAttribute('data-slot'), inp.files&&inp.files[0]);
   inp.value='';
+});
+/* ---------- THE TOUR DATES POSTER (decision 0075) ----------
+   One picture or PDF under "Add a gig" on the Gigs tab; while one is up, the
+   artist's page shows a View tour dates button under the shows. A picture shrinks
+   on the phone like the profile photos do (no crop — a poster is framed already);
+   a PDF goes as it is, refused here before it is even read when it is over the
+   server's cap. Both caps ride on planGet (PLAN.tour) — never typed here. Its
+   file input carries NO data-slot on purpose: the listener above would route it
+   to uploadPhoto, which refuses anything that is not a picture. */
+const tourMb=()=>{ const n=PLAN&&PLAN.tour&&Number(PLAN.tour.pdf); return n?Math.round(n/1048576)+' MB':''; };
+function tourCard(){
+  if(!PLAN||(PLAN.ok&&PLAN.role==='crew')) return '';   // owner or member; the plan not in yet draws nothing, and repaints when it lands
+  const P=PROF, t=(P&&P.ok&&P.tour)||null, mb=tourMb();
+  const thumb=t?(t.type==='pdf'
+      ?`<a class="tourthumb pdf" href="${esc(t.url)}" target="_blank" rel="noopener" aria-label="Open the poster"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9.5A1.5 1.5 0 0 1 5.5 19V5A1.5 1.5 0 0 1 7 3.5z"/><path d="M14 3.5v4h4M8.5 12h7M8.5 15.5h7"/></svg>PDF</a>`
+      :`<a class="tourthumb" href="${esc(t.url)}" target="_blank" rel="noopener" aria-label="Open the poster" style="background-image:url('${esc(t.url)}')"></a>`)
+    :'<div class="tourthumb"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 17l3-3.5 2.5 2.5 2-2L18 17"/><circle cx="9" cy="8.5" r="1.5"/></svg></div>';
+  return `<div class="sec"><span class="kick">Tour dates poster</span></div>
+    <div class="list">${P===null?`<div class="row muted">${PROFERR?esc(PROFERR):'<span class="spin"></span>&nbsp;&nbsp;Loading…'}</div>`:`<div class="row tourrow">
+      <div class="tourhead">${thumb}
+        <div class="m"><div class="t">${t?(t.type==='pdf'?'Your poster, as a PDF':'Your poster'):'No poster yet'}</div>
+          <div class="s">${t?'Fans see a <b>View tour dates</b> button under your shows.'+(t.link?' Tickets link on.':'')
+            :'A PNG or JPEG of any size (it’s shrunk on your phone), or a PDF'+(mb?' up to '+mb:'')+'. Fans see a View tour dates button under your shows.'}</div></div></div>
+      <div class="touracts">
+        <button type="button" class="act ${t?'':'pri'}" data-act="tourpick">${t?'Replace it':'Upload a poster'}</button>
+        ${t?'<button type="button" class="act warn" data-act="tourclear">Remove</button>':''}</div>
+      <input type="file" id="tourFile" accept="image/png,image/jpeg,application/pdf" hidden>
+    </div>
+    ${t?`<div class="row" style="display:block"><div class="field" style="padding:0">
+      <label>Where fans get tickets</label>
+      <div style="display:flex;gap:8px;align-items:center"><input class="inp" id="tourLink" type="url" inputmode="url" autocomplete="off" placeholder="https://…" value="${esc(t.link||'')}" style="flex:1;min-width:0">
+        <button type="button" class="act pri" data-act="tourlink" style="min-width:64px">Save</button></div>
+      <p class="muted" style="font-size:12px;margin:7px 0 0">A <b>Grab your tickets</b> button under the poster. An https link, anywhere you sell them. Blank takes it off.</p></div></div>`:''}`}</div>`;
+}
+/* the photo path's canvas, without the crop: max 1800 px on the long edge, JPEG at
+   .86 — PNG kept when the original is one and the shrunk PNG fits the server's cap;
+   a JPEG that does not fit steps down the way shrink() does rather than bouncing */
+async function tourShrink(file){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((res,rej)=>{const i=new Image();
+      i.onload=()=>res(i); i.onerror=()=>rej(new Error('bad image')); i.src=url;});
+    const scale=Math.min(1,1800/Math.max(img.width,img.height));
+    const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.width*scale)); c.height=Math.max(1,Math.round(img.height*scale));
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    const cap=(PLAN&&PLAN.tour&&Number(PLAN.tour.image))||0, fits=d=>!cap||d.length*0.75<cap;
+    if(file.type==='image/png'){ const p=c.toDataURL('image/png'); if(fits(p)) return p; }
+    let last=null;
+    for(const q of [0.86,0.74,0.62,0.5]){ last=c.toDataURL('image/jpeg',q); if(fits(last)) return last; }
+    return last;
+  } finally { URL.revokeObjectURL(url); }
+}
+async function tourUpload(file){
+  if(!file)return;
+  const pdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name||'');
+  let data=null;
+  if(pdf){
+    const cap=(PLAN&&PLAN.tour&&Number(PLAN.tour.pdf))||0;
+    if(cap&&file.size>cap){ toast(`That PDF is over ${tourMb()}. Export it smaller, or as a PNG or JPEG.`); return; }
+    const raw=await new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(String(r.result||'')); r.onerror=()=>rej(r.error); r.readAsDataURL(file);}).catch(()=>'');
+    const b64=raw.split(',')[1]||'';
+    if(!b64){ toast('Couldn’t read that file'); return; }
+    data='data:application/pdf;base64,'+b64;   // the label the server checks, whatever the phone called the file
+  }else if(/^image\/(png|jpeg)$/.test(file.type)){
+    data=await tourShrink(file).catch(()=>null);
+    if(!data){ toast('Couldn’t read that picture'); return; }
+  }else{ toast('That has to be a PNG, JPEG or PDF.'); return; }
+  if(await tourSet({data})) toast('Poster is up');
+}
+async function tourSet(extra){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'tourSet',...extra})});
+  if(!d.ok){ toast(d.error||'Couldn’t save that'); return false; }
+  PROF=null; await loadProf(true); render();   // ?t= past the edge copy, like the Profile tab
+  return true;
+}
+async function tourLink(){
+  const el=$('#tourLink'), link=((el&&el.value)||'').trim();
+  if(link&&!/^https:\/\/\S+$/i.test(link)){ toast('That link needs to start with https://'); return; }
+  if(await tourSet({link})) toast(link?'Tickets link saved':'Tickets link removed');
+}
+async function tourClear(){
+  if(!await ask({title:'Remove the poster?',lede:'The View tour dates button leaves your page.',yes:'Remove',no:'Keep'}))return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'tourClear'})});
+  if(!d.ok){ toast(d.error||'Couldn’t remove it'); return; }
+  PROF=null; await loadProf(true); render(); toast('Poster removed');
+}
+document.addEventListener('change',(e)=>{
+  const inp=e.target.closest('#tourFile'); if(!inp)return;
+  const f=inp.files&&inp.files[0]; inp.value='';
+  tourUpload(f);
 });
 
 function wireCount(inSel,outSel,max){

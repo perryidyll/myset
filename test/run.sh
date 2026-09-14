@@ -161,3 +161,6 @@ node --import ./test/register.mjs test/password.mjs
 echo
 echo "── current show stats: the snapshot ──"
 node --import ./test/register.mjs test/metrics.mjs
+echo
+echo "── the Book button, the inbox and the tour poster ──"
+node --import ./test/register.mjs test/messages.mjs
