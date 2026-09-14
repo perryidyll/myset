@@ -287,6 +287,88 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
   font-size:13.5px;color:var(--faint);line-height:1.8}
 .foot2 a{color:var(--muted);font-weight:500}
 
+/* ── your link · the shop · your business ──────────────────
+   Added 2026-09-14 (docs/landing/MERCH-MONEY-PROFILE-PLAN.md). The three sections
+   are the artist's own page read top to bottom, then the Money tab, so they sit
+   in that order and one orange line hands each to the next — the same device as
+   "Five things happen." Pictures: one still per section and a drifting strip of
+   the rest (the artist page's own marquee, see startReels below). A strip with no
+   pictures yet stays hidden; the words never wait for the pictures. */
+.segue{text-align:center;padding:6px 0 0}
+.segue .pline{font-size:clamp(22px,3.6vw,30px);color:var(--peace-orange)}
+/* The struck-through name in the headline: grey words, an orange line through
+   them, so the strike reads as the point and not as a typo. */
+h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoration-thickness:.09em}
+.vsgrid{display:grid;gap:34px;align-items:center;margin-top:38px}
+@media(min-width:860px){.vsgrid{grid-template-columns:.9fr 1.1fr;gap:54px}}
+.vstxt .pline{font-size:clamp(22px,3.4vw,31px)}
+.vstxt .pline+.pline,.vstxt .chips+.pline{margin-top:22px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:20px}
+.chips span{padding:7px 12px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);
+  font-size:13.5px;font-weight:500;color:var(--ink-2);letter-spacing:-.01em}
+.chips span.more{background:transparent;box-shadow:inset 0 0 0 1px var(--hair);color:var(--faint)}
+/* The comparison: a grey list of links on the left, the page on the right. The
+   list is a wireframe on purpose — it is "a link page", not anybody's product. */
+.vs{display:grid;grid-template-columns:.78fr 1fr;gap:16px;align-items:end;max-width:520px;margin:0 auto}
+.vs-list{border-radius:26px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--hair);
+  padding:26px 16px 22px;display:grid;gap:9px;justify-items:center;opacity:.9;position:relative}
+.vs-list .ava{width:44px;height:44px;border-radius:50%;background:var(--hair-2);margin-bottom:4px}
+.vs-list .nm{width:54%;height:9px;border-radius:5px;background:var(--hair-2);margin-bottom:8px}
+.vs-list .ln{width:100%;height:30px;border-radius:9px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--hair)}
+.vs-list .ln:nth-child(odd){width:100%}
+.vs-list .ln.dim{opacity:.55}.vs-list .ln.dimmer{opacity:.3}
+.vs-list .lbl{position:absolute;left:0;right:0;bottom:-28px;text-align:center;font-size:12.5px;color:var(--faint);letter-spacing:.02em}
+.vs .phone{max-width:240px;margin:0}
+.vs .phone .lbl{position:absolute;left:0;right:0;bottom:-28px;text-align:center;font-size:12.5px;color:var(--accent-ink);font-weight:600;letter-spacing:.02em}
+/* The page, drawn small: a hero video, the numbers, Book and Merch, the proof, the
+   links, tonight. Every element is one the real page has. */
+.mock{border-radius:30px;background:var(--bg);overflow:hidden;font-size:9px;line-height:1.3;color:var(--ink);
+  padding:0 0 12px;display:grid;gap:7px}
+.mock .vid{aspect-ratio:16/10;background:linear-gradient(135deg,#1a1a22,#3a2530 60%,#5a2a2a);display:grid;place-items:center;position:relative}
+.mock .vid::after{content:"";width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.92);
+  clip-path:polygon(38% 28%,38% 72%,72% 50%)}
+.mock .vid i{position:absolute;left:8px;top:8px;padding:3px 7px;border-radius:99px;background:var(--accent);color:#fff;font-style:normal;font-weight:700;font-size:7px;letter-spacing:.04em}
+.mock .row{display:flex;gap:6px;align-items:center;padding:0 10px}
+.mock .name{font-size:12px;font-weight:700;letter-spacing:-.02em;padding:0 10px}
+.mock .stats{font-size:8px;color:var(--muted);padding:0 10px;display:flex;gap:8px}
+.mock .stats b{color:var(--ink);font-weight:700}
+.mock .btn{flex:1;text-align:center;padding:5px 0;border-radius:99px;font-weight:600;font-size:8px;background:var(--surface);box-shadow:var(--sh-1)}
+.mock .btn.pri{background:var(--accent);color:#fff}
+.mock .proof{display:flex;gap:5px;padding:0 10px;overflow:hidden}
+.mock .proof span{flex:0 0 auto;padding:4px 7px;border-radius:8px;background:var(--surface);box-shadow:var(--sh-1);font-size:7.5px;color:var(--ink-2);white-space:nowrap}
+.mock .proof span b{color:var(--accent-ink)}
+.mock .links{display:flex;gap:4px;padding:0 10px;overflow:hidden}
+.mock .links span{flex:0 0 auto;padding:4px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent-ink);font-weight:600;font-size:7.5px;white-space:nowrap}
+.mock .gig{margin:0 10px;padding:7px 8px;border-radius:10px;background:var(--surface);box-shadow:var(--sh-1);display:flex;justify-content:space-between;align-items:center;font-size:8px}
+.mock .gig b{display:block;font-size:8.5px}
+.mock .gig i{font-style:normal;color:var(--muted)}
+/* the shop and the dashboard: a still on one side, the list on the other */
+.sgrid{display:grid;gap:30px;align-items:center;margin-top:36px}
+@media(min-width:860px){.sgrid{grid-template-columns:.85fr 1.15fr;gap:50px}.sgrid.rev>.still{order:2}}
+.sgrid .still{display:grid;justify-items:center}
+.sgrid .still .phone{max-width:300px}
+.sgrid .vlist{margin-top:0}
+/* Until a section has its still, the slot is empty (a comment only) and the list
+   takes the whole width as one centred column, so nothing sits beside a blank. */
+.sgrid:has(.still:empty){grid-template-columns:1fr}
+.sgrid:has(.still:empty) .vlist{width:min(100%,640px);margin:0 auto}
+.sgrid:has(.still:empty) .still{display:none}
+.pull{font-size:clamp(19px,2.6vw,24px);font-weight:600;letter-spacing:-.028em;line-height:1.3;color:var(--ink);
+  max-width:34ch;margin:0 auto;text-wrap:balance}
+.pull em{font-style:italic;color:var(--peace-orange)}
+/* ── the strips ────────────────────────────────────────────
+   A row of phones that turns itself, about 28 px a second, and is still a native
+   scroller under a finger. The set is drawn twice so the seam never shows. */
+.reel-wrap{margin-top:40px;position:relative}
+.reel{display:flex;gap:18px;overflow-x:auto;padding:6px 2px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.reel::-webkit-scrollbar{display:none}
+.reel .phone{flex:0 0 auto;width:200px;max-width:none;margin:0;border-radius:30px;padding:7px}
+.reel .phone img{border-radius:24px;max-height:410px;object-fit:cover;object-position:top}
+.reel .cap{display:block;text-align:center;font-size:12.5px;color:var(--muted);margin-top:9px;line-height:1.4;padding:0 4px}
+.reel-wrap::before,.reel-wrap::after{content:"";position:absolute;top:0;bottom:0;width:36px;z-index:2;pointer-events:none}
+.reel-wrap::before{left:-2px;background:linear-gradient(90deg,var(--bg),transparent)}
+.reel-wrap::after{right:-2px;background:linear-gradient(270deg,var(--bg),transparent)}
+
 /* ── motion ──────────────────────────────────────────────
    Scoped to .anim, which an inline script in <head> adds. If the script never
    runs, or the observer never fires, the page is simply VISIBLE — a reveal
@@ -436,7 +518,7 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
           <p>Out of votes and desperate for one more song? They can buy a few. Had a great
             night? There’s a tip button with your name on it.</p>
           <p>It goes straight into your own account, through Stripe — you connect it once, in the
-            Studio. You never hold out a jar.</p>
+            Studio, and it pays out daily. You never hold out a jar.</p>
         </div>
         <figure>
           <img class="art" src="/about/tips.webp" width="954" height="866" loading="lazy" decoding="async"
@@ -449,7 +531,8 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
           <span class="num">5</span>
           <h3>And afterwards, they can find you</h3>
           <p>Everyone who voted was on a page with your name at the top. It holds your music, your
-            links and every gig you’ve got coming.</p>
+            links, your merch and every gig you’ve got coming — and a Book button for anyone who
+            wants to hire you.</p>
           <p>Your gigs land in a public what’s-on feed for your town, so people looking for
             something to do tonight find you.</p>
         </div>
@@ -524,6 +607,147 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
     </div>
   </section>
 
+  <!-- 4b ─────────────────────────────────────────── YOUR LINK
+       The Linktree play. The headline and the four lines under it are the
+       founder's, 2026-09-14, word for word; only the emphasis was added. -->
+  <section id="link" class="tight">
+    <div class="center up">
+      <p class="kicker">Your link</p>
+      <h2>Like <s>linktr.ee</s> but on steroids.</h2>
+      <p class="lede">No one wants to scroll an ugly list of links.</p>
+    </div>
+    <div class="vsgrid up">
+      <div class="vs" role="img" aria-label="A plain grey page of stacked links beside a MySet artist page with a video, the numbers, Book and Merch buttons, what the room said, the streaming links and tonight’s gig.">
+        <div class="vs-list" aria-hidden="true">
+          <i class="ava"></i><i class="nm"></i>
+          <i class="ln"></i><i class="ln"></i><i class="ln"></i><i class="ln dim"></i><i class="ln dim"></i><i class="ln dimmer"></i><i class="ln dimmer"></i>
+          <span class="lbl">a list of links</span>
+        </div>
+        <div class="phone tall" aria-hidden="true">
+          <div class="mock">
+            <div class="vid"><i>LIVE NOW · VOTE</i></div>
+            <div class="name">Sam &amp; the Late Shift</div>
+            <div class="stats"><span><b>2021</b> Joined</span><span><b>212</b> Shows</span><span><b>1.4k</b> Fans</span><span><b>10.1k</b> Votes</span></div>
+            <div class="row"><span class="btn">Book</span><span class="btn">Merch</span><span class="btn pri">Tip</span></div>
+            <div class="proof"><span><b>★ 4.9</b> from the room</span><span>“Best Thursday in ages”</span><span>Most voted · <b>Fast Car</b></span></div>
+            <div class="links"><span>Spotify</span><span>Apple Music</span><span>YouTube</span><span>Instagram</span><span>Bandcamp</span></div>
+            <div class="gig"><div><b>Tonight · The Corner Bar</b><i>8:30 pm · directions</i></div><i>RSVP</i></div>
+          </div>
+          <span class="lbl">myset.vip/yourname</span>
+        </div>
+      </div>
+      <div class="vstxt">
+        <p class="pline">MySet presents your <em>entire music ecosystem</em> on <b>one beautiful landing page</b>.</p>
+        <div class="chips" aria-label="What the page carries">
+          <span>Social links</span><span>Streaming links</span><span>Show dates</span><span>Merch</span>
+          <span>Bookings</span><span>Tipping</span><span>YouTube videos</span><span>Setlist voting</span>
+          <span>Community engagement</span><span class="more">…</span>
+        </div>
+        <p class="pline">Finally all in <b>a single simple link</b> you can <em>post anywhere</em>.</p>
+        <div class="heroacts" style="margin-top:26px">
+          <a class="big" href="/studio">Claim myset.vip/yourname</a>
+        </div>
+        <p class="reassure">It’s yours the moment you sign up. Put it in every bio you’ve got.</p>
+      </div>
+    </div>
+    <figure class="reel-wrap up" hidden><div class="reel" id="reel-profile" aria-label="The artist page, screen by screen"></div></figure>
+  </section>
+
+  <div class="segue up"><p class="pline">Someone taps <b>Merch</b>.</p></div>
+
+  <!-- 4c ──────────────────────────────────────────── THE SHOP
+       Decision 0064. Nothing here about who may open a shop, the price floor,
+       the per-order cap or the fee — the Studio says those at the moment they
+       matter. -->
+  <section id="shop" class="tight">
+    <div class="center up">
+      <p class="kicker">The shop</p>
+      <h2>Sell the shirt. Match the code.</h2>
+      <p class="lede">Your merch gets its own page — <b>myset.vip/you/shop</b> — one tap from your
+        profile and from the voting page. A real merch table, minus the cash box.</p>
+    </div>
+    <div class="sgrid up">
+      <div class="still" data-still="shop"><!-- the shop grid on a phone: filled when the screenshot lands --></div>
+      <div class="vlist">
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Sizes and options on anything</b>
+          <span>Mark a size sold out and it stays on the page instead of vanishing — nobody
+            wonders whether you pulled it.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Postage is a flat figure you set</b>
+          <span>And it goes to you whole. Post it or hand it over at the gig — the item says which.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Every order comes with a pickup code</b>
+          <span>A few characters on their receipt. Read the code at the table, hand over the shirt.
+            No hunting for a Stripe email in a loud bar.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>“Make a request”</b>
+          <span>A fan asks for the thing you didn’t list. It lands in your Studio — and if you make
+            it, it shows up on the page.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Paid through Stripe, straight to your account</b>
+          <span>Paid out daily, not monthly. A Saturday night’s money is on its way to your bank
+            the next business day.</span>
+        </div></div>
+      </div>
+    </div>
+    <figure class="reel-wrap up" hidden><div class="reel" id="reel-shop" aria-label="The shop, screen by screen"></div></figure>
+  </section>
+
+  <div class="segue up"><p class="pline">And the night <b>ends</b>.</p></div>
+
+  <!-- 4d ─────────────────────────────────────── YOUR BUSINESS
+       Decision 0065. The opening line is the founder's own reason for building
+       it, in the reader's voice. Never "CRM" on the page, never "coming soon",
+       and nothing about which plan carries it — the FAQ answers that. -->
+  <section id="money" class="tight">
+    <div class="center up">
+      <p class="kicker">Your business</p>
+      <h2>Know what the night actually paid.</h2>
+      <p class="pull" style="margin-top:22px">Everyone thinks you got paid to play music for two hours.
+        You know it was <em>four hours of your evening</em> — sometimes more. MySet counts all of it.</p>
+    </div>
+    <div class="sgrid rev up">
+      <div class="still" data-still="money"><!-- the Money tab with the profit figure: filled when the screenshot lands --></div>
+      <div class="vlist">
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Log a night in a minute</b>
+          <span>What the venue paid, who in the band got what, cash tips, merch sold, what it cost
+            you — and the hours: on stage, breaks, travel, set-up and pack-down.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>The app fills in its part</b>
+          <span>Votes and tips fans sent through MySet land on the night by themselves. You never
+            type in a number the app already knows.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Two rates, side by side</b>
+          <span>What you made per hour on stage — and per hour of the evening you actually gave up.
+            The second one is the honest one.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>A residency goes in once</b>
+          <span>Enter the deal one time and every night of the run inherits it. Any single night
+            can be corrected on its own.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>Total, or just your cut</b>
+          <span>The whole act’s night, or your share of it. Your choice, remembered.</span>
+        </div></div>
+        <div class="vrow"><span class="tick">✓</span><div>
+          <b>A report with your name on it</b>
+          <span>Any date range, or any nights you pick. Print it or save it as a PDF — for tax time,
+            a manager, or a venue that wants numbers.</span>
+        </div></div>
+      </div>
+    </div>
+    <figure class="reel-wrap up" hidden><div class="reel" id="reel-money" aria-label="The business dashboard, screen by screen"></div></figure>
+  </section>
+
   <!-- 5 ────────────────────────────────────────────── PROOF -->
   <section class="tight">
     <div class="proof up">
@@ -572,8 +796,8 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
         </div></div>
         <div class="vrow"><span class="tick">✓</span><div>
           <b>People searching “what’s on tonight” find you</b>
-          <span>Pick a country and a city and MySet shows the week. Your bar is in it, with
-            directions, your menu and your offers one tap away.</span>
+          <span>Pick a country and a city and MySet shows the week — or the next few — on a list and a
+            map. Your bar is in it, with directions, your menu and your offers one tap away.</span>
         </div></div>
         <div class="vrow"><span class="tick">✓</span><div>
           <b>You learn who fills the room</b>
@@ -670,6 +894,24 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
           name. Add songs one at a time, paste a list, import a CSV, or pull in a public
           Spotify playlist.</div>
       </details>
+      <details>
+        <summary>Is the shop or the business dashboard free?</summary>
+        <div class="a">They come with the paid plans. Everything the room sees — the voting, the lyrics, tips,
+          your page and your link — is free, and stays free. The Studio shows you the plans when
+          you get there.</div>
+      </details>
+      <details>
+        <summary>What does my link look like?</summary>
+        <div class="a"><b>myset.vip/yourname</b> — you pick the name when you sign up, and your shop
+          sits at <b>myset.vip/yourname/shop</b>. Both work the moment they exist, on any phone,
+          with nothing to install.</div>
+      </details>
+      <details>
+        <summary>Can a venue or a booker contact me through the page?</summary>
+        <div class="a">Yes. The Book button opens a short form — their name, their email, what they
+          want. It lands in your Studio under Messages, you answer from there, and nobody sees
+          anybody’s email address.</div>
+      </details>
     </div>
   </section>
 
@@ -732,6 +974,68 @@ document.querySelectorAll('.faq details').forEach((d) => {
     document.querySelectorAll('.faq details').forEach((o) => { if (o !== d) o.open = false; });
   });
 });
+/* ── THE STRIPS ─────────────────────────────────────────────
+   One entry per screenshot: the file, its real size, and what a person who cannot
+   see it should be told. Order is the order a person meets the screens. A list
+   with nothing in it leaves its strip hidden. Add a picture here and nowhere
+   else; the still beside each list is the `data-still` slot in the markup. */
+const REELS = {
+  profile: [],
+  shop: [],
+  money: [],
+};
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const shotCard = (m, ghost) => `<div class="phone"${ghost ? ' aria-hidden="true"' : ''}>
+    <img src="${esc(m.src)}" width="${m.w}" height="${m.h}" loading="lazy" decoding="async" alt="${ghost ? '' : esc(m.alt)}">
+    ${m.cap ? `<span class="cap">${esc(m.cap)}</span>` : ''}</div>`;
+function startReels() {
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (const [k, list] of Object.entries(REELS)) {
+    const el = document.getElementById('reel-' + k); if (!el || !list.length) continue;
+    /* Two copies of the set (three when the set is short), so the seam is never on
+       screen; a reader who asked for less motion gets one, and a plain scroller. */
+    const copies = still ? 1 : (list.length < 4 ? 3 : 2);
+    let h = '';
+    for (let c = 0; c < copies; c++) for (const m of list) h += shotCard(m, c > 0);
+    el.innerHTML = h;
+    el.closest('.reel-wrap').hidden = false;
+    if (!still) drift(el, 1);
+  }
+}
+/* The artist page's marquee (public/artist.html, drift()), for a strip of stills:
+   about 28 px a second, driven by the frame timestamp; a finger, a wheel or a
+   mouse over it stops it and it is a native scroller under the finger; it picks
+   up again a second after the strip last moved by hand. Nothing moves while the
+   tab is hidden. Kept in step with the original by hand — if that one changes
+   its feel, change this one. */
+function drift(el, dir) {
+  const copy = el.querySelector('[aria-hidden="true"]'); if (!copy) return;
+  const span = () => copy.offsetLeft - el.children[0].offsetLeft;
+  let hold = false, touching = false, x = el.scrollLeft, last = 0, timer = 0, raf = 0;
+  const pause = () => { hold = true; clearTimeout(timer); };
+  const resume = () => { clearTimeout(timer); timer = setTimeout(() => { hold = false; x = el.scrollLeft; last = 0; }, 1000); };
+  el.addEventListener('touchstart', () => { touching = true; pause(); }, { passive: true });
+  el.addEventListener('touchend', () => { touching = false; resume(); }, { passive: true });
+  el.addEventListener('touchcancel', () => { touching = false; resume(); }, { passive: true });
+  el.addEventListener('pointerdown', pause, { passive: true });
+  el.addEventListener('wheel', () => { pause(); resume(); }, { passive: true });
+  el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') pause(); });
+  el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') resume(); });
+  el.addEventListener('scroll', () => { if (hold) { x = el.scrollLeft; if (!touching) resume(); } }, { passive: true });
+  const step = (t) => {
+    if (!el.isConnected) return;
+    raf = requestAnimationFrame(step);
+    if (hold || document.hidden) { last = 0; return; }
+    if (last) {
+      const s = span(); x += dir * 28 * (t - last) / 1000;
+      if (s > 0) { if (x >= s) x -= s; else if (x < 0) x += s; }
+      el.scrollLeft = x;
+    }
+    last = t;
+  };
+  raf = requestAnimationFrame(step);
+}
+startReels();
 /* A pull reloads the page. This one is just content, so a real reload IS the
    refresh — see /pull.js for why an installed app needs to be given one. */
 MySetPull();
