@@ -11,7 +11,7 @@ sources:
   - netlify/functions/messages.mjs, _messages.mjs (the Book button's inbox)
   - public/artist.html (the calendar window, the tour poster, the Book sheet)
 status: loaded
-loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections); f22 370866 and f23 370867 added 2026-09-14 (`Testing` until the PR merges; changelog 1665, 1666)
+loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections); f22 370866 and f23 370867 added 2026-09-14 (`Live` since `a69154f`, PR #51; changelog 1665, 1666)
 verified: code read 2026-09-12 (vote.mjs refusal order; vote.html dock and bug link)
 ---
 

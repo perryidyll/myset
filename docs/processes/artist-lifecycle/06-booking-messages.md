@@ -2,7 +2,7 @@
 tab: Artist lifecycle
 section: Booking messages (the Book button → the inbox)
 puzzle_section_id: 42087
-puzzle_steps: b01 370856 · b02 370857 · b03 370858 · b04 370859 · b05 370860 · b06 370861 · b07 370862 · b08 370863 · b09 370864 · b10 370865 (all `Testing` until the PR merges) · changelog 1665
+puzzle_steps: b01 370856 · b02 370857 · b03 370858 · b04 370859 · b05 370860 · b06 370861 · b07 370862 · b08 370863 · b09 370864 · b10 370865 (all `Live` since `a69154f`, PR #51) · changelog 1665
 sources:
   - netlify/functions/_messages.mjs, messages.mjs (the inbox and the public door)
   - netlify/functions/admin.mjs (MSG_ACTIONS, CAPABILITY, OWNER_ONLY)
