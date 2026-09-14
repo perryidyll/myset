@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 17:28 — f37d5d6 — wt@model/split-and-open-line (9 files since origin/main)
+**tl;dr:** The money model at /moneymodel prices the shared-board split and the open line (decision 0076): every tick is a shared board render + a personal call, big rooms cost ~8× less than the page said, the arena is 'at the edge' not 'breaks', and 'Netlify + the open line' costs a little MORE (every glance is a socket). Seven real nights on the page: 9.4 phones, 2.75 h, $0.68 a head (one $10 tip is most of it). Benchmark 1,000 artists: $5,520 / $3,821 / break-even 92
+**Other sessions:** CORRECTION to the 12 Sep (night) entry: the model did NOT price the split until now. finance/model-test.mjs reads the page beside it (worktree-safe) and pins eleven rooms to tools/loadsim.py — change the ladder in vote.html or loadsim.py and the suite must be re-pinned. tools/actuals.py BYTES has board/me; a mark since 11 Sep 11:17 UTC solves at 2,605 bytes a tick, a bracket the split falls inside is refused. Mark #3 (14 Sep 17:00) is the BEFORE mark for the Ugly Duckling gig — the AFTER mark is the founder's. Open-line production code is still uncommitted in .claude/worktrees/compassionate-chatterjee-41ecbe (its 0036 collides; next free is 0077). New dials: songEveryMin, edgeSpread, meMs/meReads, lineShare/reconnects/nudgeMs.
+
 ### 2026-09-14 14:18 — 5364d56 — tagline-wt@HEAD (1 files since origin/main)
 **tl;dr:** Google/link previews for myset.vip now read 'Live music: fans vote, artists play.' (title, description, og:title in index.html)
 **Other sessions:** Copy only, no code. Google re-crawls on its own schedule; snippet may take days to change.
