@@ -5,7 +5,7 @@ import { json, bad, cleanFanId, getShow, publicArtist, sha,
 import { canTakeMoney } from './_pay.mjs';
 import { readConnect, connectUsable, feeCents, scope } from './_connect.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
-import { getProfile, MIN_CENTS } from './_profile.mjs';
+import { getProfile, MIN_CENTS, merchSoldOut } from './_profile.mjs';
 import { PAYOUT_COUNTRIES } from './_connect.mjs';
 
 /* Where a shipped item can go. Stripe needs an explicit list; this is the payout
@@ -33,9 +33,12 @@ function pickVariant(item, raw) {
   const want = String(raw || '').replace(/\s+/g, ' ').trim().toLowerCase();
   const variant = want ? list.find((v) => v && String(v.label).toLowerCase() === want) : null;
   if (!variant) return { error: bad('Pick a size', 400) };
-  if (variant.out) return { error: bad('That size is sold out', 409) };
+  if (variant.out || variant.stock === 0) return { error: bad('That size is sold out', 409) };
   return { variant };
 }
+/* A size that is counting cannot cover the quantity: a refusal that names the size and what is left. */
+const variantShort = (variant, qty) => (variant && variant.stock != null && variant.stock < qty)
+  ? bad(`Only ${variant.stock} left in ${variant.label}`, 409) : null;
 
 /* Shipping as a REAL Stripe shipping rate, so the total on Stripe's page equals the
    total the sheet promised. Only a shipped item with a shipping figure gets one; a
@@ -58,7 +61,7 @@ const productImages = (origin, item) => {
 /* Sold out by the flag or by the count; a count that cannot cover the quantity is
    a refusal that names what is left, so the sheet can say it (merchSoldOut, takeStock). */
 const stockRefusal = (item, qty) => {
-  if (item.out || item.stock === 0) return bad('That one’s sold out', 409);
+  if (merchSoldOut(item)) return bad('That one’s sold out', 409);
   if (item.stock != null && item.stock < qty) return bad(`Only ${item.stock} left`, 409);
   return null;
 };
@@ -97,6 +100,7 @@ const main = async (req) => {
     if (item.cents < MIN_CENTS) return bad('That one isn’t sold through MySet — ask at the bar', 400);
     const picked = pickVariant(item, body.variant);
     if (picked.error) return picked.error;
+    const shortV = variantShort(picked.variant, qty); if (shortV) return shortV;
     const vlabel = picked.variant ? picked.variant.label : '';
     const conn = await readConnect(owner);
     if (!connectUsable(conn) || !(prof.pay && prof.pay.ready)) return bad('payments-not-configured', 503);
@@ -234,6 +238,7 @@ const main = async (req) => {
     if (item.cents < MIN_CENTS) return bad('That one isn’t sold through MySet — ask at the merch table', 400);
     const picked = pickVariant(item, body.variant);
     if (picked.error) return picked.error;
+    const shortV = variantShort(picked.variant, qty); if (shortV) return shortV;
     const vlabel = picked.variant ? picked.variant.label : '';
     post = postageOf(item);
     line = {

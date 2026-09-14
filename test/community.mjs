@@ -244,6 +244,24 @@ r = await OWNER('merchSave', { item: { id: cap.id, stock: '' } });
 eq('a blank count means not counting again', r.merch.find((m) => m.id === cap.id).stock, null);
 ok('and it sells again', (await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: cap.id, qty: 5, attempt: 'tapc5' })).ok);
 
+console.log('\nTHE COUNT PER SIZE  (a size that is counting: refused past what is left, sold out at zero, the item sold out when every size is)');
+r = await OWNER('merchSave', { item: { title: 'Sized cap', cents: 1500, variants: [{ label: 'S', stock: 1 }, { label: 'M' }, { label: 'L', stock: 0 }] } });
+const scap = r.merch.find((m) => m.title === 'Sized cap');
+eq('each size keeps its own count, blank meaning none', scap.variants.map((v) => v.stock), [1, null, 0]);
+eq('a size at zero is refused as sold out', (await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: scap.id, variant: 'L', attempt: 'tsz1' })).status, 409);
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: scap.id, variant: 'S', qty: 2, attempt: 'tsz2' });
+ok('two of a size with one left is refused, naming the size', r.status === 409 && /Only 1 left in S/.test(r.error || ''), r);
+ok('an uncounted size takes any quantity', (await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: scap.id, variant: 'M', qty: 5, attempt: 'tsz3' })).ok);
+ok('one of S sells', (await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: scap.id, variant: 'S', qty: 1, attempt: 'tsz4' })).ok);
+await hit(confirmFn, `https://x/api/confirm?session_id=${[...__stripe.sessions.keys()].pop()}&fan=phone1`);
+r = (await OWNER('merchList')).merch.find((m) => m.id === scap.id);
+eq('and S came down to zero, the item’s own count untouched', [r.variants[0].stock, r.stock], [0, null]);
+eq('S is now refused as sold out', (await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: scap.id, variant: 'S', attempt: 'tsz5' })).status, 409);
+ok('the item still sells in M', (await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: scap.id, variant: 'M', attempt: 'tsz6' })).ok);
+await OWNER('merchSave', { item: { id: scap.id, variants: [{ label: 'S', stock: 0 }, { label: 'M', out: true }, { label: 'L', stock: 0 }] } });
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: scap.id, variant: 'M', attempt: 'tsz7' });
+ok('every size gone is the item sold out', r.status === 409 && /That one’s sold out/.test(r.error || ''), r);
+
 console.log('\nTHE ORDER OF THE ITEMS  (merchMove — the first is the one on top of the community card)');
 r = await OWNER('merchList');
 const [first, second] = r.merch;

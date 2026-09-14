@@ -26,10 +26,13 @@ export const MAX_PHOTOS = 3;
    THE SHOP PAGE (2026-09-13) added three fields, and this map is the whitelist
    that decides whether they exist at all — a key not named here is dropped on
    every read AND every write, for artists and venues alike:
-     `variants`  sizes or options, `[{ label, out }]`, at most MAX_VARIANTS, each
-                 label VARIANT_LEN characters, de-duplicated without regard to case,
-                 blanks dropped. An empty list means no choice is needed. pay.mjs
-                 refuses a checkout that names none of them, or one marked `out`.
+     `variants`  sizes or options, `[{ label, out, stock }]`, at most MAX_VARIANTS,
+                 each label VARIANT_LEN characters, de-duplicated without regard to
+                 case, blanks dropped. An empty list means no choice is needed.
+                 pay.mjs refuses a checkout that names none of them, or one marked
+                 `out`. `stock` per size (2026-09-14, the founder): null = as many
+                 as you like while the size is in stock; a number comes down per paid
+                 order (takeStock) and 0 reads as that size sold out.
      `out`       the WHOLE item is sold out: the page keeps showing the price with
                  no Buy, pay.mjs refuses it. The artist's older only option was
                  `on:false`, which lost the price signal.
@@ -60,20 +63,29 @@ export const merchSlots = (id) => [id, ...Array.from({ length: MAX_MERCH_IMGS - 
 const slotOf = (url) => { const m = /[?&]s=([a-z0-9_]+)/.exec(String(url || '')); return m ? m[1] : ''; };
 /* The first slot no picture on the record is using, or '' when all five are. */
 export const freeMerchSlot = (item) => { const used = new Set((item.imgs || []).map(slotOf)); return merchSlots(item.id).find((k) => !used.has(k)) || ''; };
-/* Sold out is either the flag or a count that reached zero — one answer for the
-   page, the sheet and pay.mjs. */
-export const merchSoldOut = (m) => !!m && (m.out === true || m.stock === 0);
+/* Sold out is the flag or a count that reached zero — one answer for the page, the
+   sheet and pay.mjs. A size is sold out the same two ways; an item with sizes is sold
+   out when every size is. */
+export const variantSoldOut = (v) => !!v && (v.out === true || v.stock === 0);
+export const merchSoldOut = (m) => !!m && (m.out === true || m.stock === 0
+  || ((m.variants || []).length > 0 && m.variants.every(variantSoldOut)));
 /* Move an item one place in the list; returns false when it cannot move. */
 export function moveMerch(list, id, dir) {
   const i = (list || []).findIndex((m) => m && m.id === id); if (i < 0) return false;
   const j = dir === 'up' ? i - 1 : i + 1; if (j < 0 || j >= list.length) return false;
   [list[i], list[j]] = [list[j], list[i]]; return true;
 }
-/* A paid quantity comes off the count, never below zero; an item that is not
-   counting is left alone. Returns true when the list changed. */
-export function takeStock(list, id, qty) {
-  const m = (list || []).find((x) => x && x.id === id); if (!m || m.stock == null) return false;
-  m.stock = Math.max(0, m.stock - Math.max(1, parseInt(qty, 10) || 1)); return true;
+/* A paid quantity comes off the count, never below zero: the size's count when the
+   order names a size that is counting, else the item's; an uncounted one is left
+   alone. Returns true when the list changed. */
+export function takeStock(list, id, qty, variant = '') {
+  const m = (list || []).find((x) => x && x.id === id); if (!m) return false;
+  const n = Math.max(1, parseInt(qty, 10) || 1);
+  const want = String(variant || '').toLowerCase();
+  const v = want ? (m.variants || []).find((x) => x && String(x.label).toLowerCase() === want) : null;
+  if (v && v.stock != null) { v.stock = Math.max(0, v.stock - n); return true; }
+  if (m.stock == null) return false;
+  m.stock = Math.max(0, m.stock - n); return true;
 }
 const normImgs = (m) => {
   const own = (u) => typeof u === 'string' && u.startsWith('/api/img?') && u.length <= 300;
@@ -98,7 +110,7 @@ export function normVariants(list) {
     const key = label.toLowerCase();
     if (!label || seen.has(key)) continue;
     seen.add(key);
-    out.push({ label, out: !!(v && typeof v === 'object' && v.out === true) });
+    out.push({ label, out: !!(v && typeof v === 'object' && v.out === true), stock: normStock(v && typeof v === 'object' ? v.stock : null) });
     if (out.length >= MAX_VARIANTS) break;
   }
   return out;

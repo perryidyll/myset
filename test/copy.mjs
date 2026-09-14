@@ -120,7 +120,9 @@ ok('"Paid to <name> through Stripe" is pink-orange, the rest of the line is not'
 ok('the community card rings Browse the shop and puts the first item on top', /\.shopcard \.btn::after\{[^}]*background:var\(--grad\)/.test(community) && /\.shopcard \.fan img:nth-child\(1\)\{[^}]*z-index:2/.test(community));
 ok('both Studios open the editor on the photos, take a count, and move items with arrows',
    [studio, venueStudioJs].every((t) => /<label>Photos<\/label>/.test(t) && /Quantity in stock \(optional\)/.test(t) && /action:'merchMove'/.test(t) && /aria-label="Move up"/.test(t)));
-ok('a sold-out count reads as sold out on the shop', /m\.stock===0/.test(shop) && /Only \$\{few\} left/.test(shop));
+ok('a sold-out count reads as sold out on the shop, per size too', /m\.stock===0/.test(shop) && /v\.stock===0/.test(shop) && /Only \$\{fewLeft\(m,SIZE\)\} left/.test(shop));
+ok('both Studios take a count per size under the chips, and hide the item count while there are sizes',
+   [studio, venueStudioJs].every((t) => /How many of each \(optional\) — blank means as many as you like\./.test(t) && /data-vq=/.test(t) && /StockWrap"\$\{(mc|vm)Var\.length\?' hidden':''\}/.test(t)));
 /* MAKE A REQUEST (the founder, 2026-09-13): the shop's button under "how it works" asks the fan
    what they'd buy, posts it as action 'wish' to the same community door, and the Studio's Merch
    store lists it. The way back to the community page is the Community crumb at the very top. */

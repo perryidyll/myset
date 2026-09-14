@@ -216,6 +216,13 @@ Eight more, from using the live shop and the Studio; again none reopens the ques
   number, not a number and a switch; and the decrement is best-effort after the money is
   safe (a lost write leaves the count one high; the artist corrects it; a double write is
   impossible because only the fresh claim reaches it).
+- **A count per size** (later the same day: "optional # fields for each size … nothing entered
+  means infinite while the size is in stock"). `variants[].stock`, null = as many as you like;
+  the fields sit under the size chips and follow the sizes as they are typed; the item's own
+  count hides while there are sizes. `pickVariant` refuses a size at zero as *That size is sold
+  out* and a short one as *Only N left in M*; `takeStock` takes the order's size first and falls
+  back to the item's count; an item is sold out when every size is (`merchSoldOut`). The shop
+  strikes a size at zero and says *Only 2 left in L* once one is picked, capping the stepper.
 - **The items can be re-ordered** (↑ ↓ on each row, `merchMove`); the first is the one on
   top of the community page's trio, which is a little larger with the first item centred.
 - **Browse the shop** wears the brand ring; the step numerals are the brand gradient; the
