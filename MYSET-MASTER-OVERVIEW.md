@@ -488,6 +488,21 @@ Up to **12** merch items. Not built: `tips`, `speakerVotes`.
 | A card sale's price runs | $1–$500 | `MIN_CENTS`, `MAX_CENTS` in `_profile.mjs`; under the floor the shop shows the price and says "ask at the table" — both merchLists send the band |
 | A fan's request to the shop ("Make a request") | up to 200 characters, 3 a day per phone, the newest 100 kept | `MAX_WISH`, `WISHES_PER_DEVICE_PER_DAY`, `MAX_WISHES` in `_wishes.mjs`; lands under Requests from the shop in both Studios' Merch screens |
 
+### The Book button and the inbox (decision 0074), the tour poster (0075)
+
+| Thing | Value | Where it lives |
+| --- | --- | --- |
+| A message from the Book button | 10–1,000 characters, with a name and an email address | `MIN_TEXT`, `MAX_TEXT` in `_messages.mjs`; the Studio reads the cap from `msgList` |
+| New conversations a day | 3 per phone and 3 per address (then a sentence and a 429), 60 per network, 200 per artist (past that they land in Spam) | `THREADS_PER_DEVICE_PER_DAY`, `THREADS_PER_EMAIL_PER_DAY`, `THREADS_PER_NETWORK_PER_DAY`, `THREADS_PER_ARTIST_PER_DAY` — inside the CAS, never only on the page |
+| Letters to the artist a day | 20 — then the badge and push carry it; the booker's receipt goes once per address per day and never carries typed words | `MAILS_PER_ARTIST_PER_DAY`; `day.mail` on the inbox |
+| Replies from the booker | 30 a day per conversation | `REPLIES_PER_THREAD_PER_DAY` |
+| A message with 3 or more links | goes to Spam, not Requests | `SPAM_LINKS` |
+| Conversations the inbox lists | 300; older ones spill to `inboxarch_` and stay on disk | `MAX_THREADS`; `spillInbox` |
+| Messages in one conversation | 200; the next is refused, never dropped | `MAX_MSGS` |
+| Folders | requests · general · business · casual · spam | `FOLDERS`; a new one lands in requests, an answer moves it to general |
+| What a message is about | booking · collab · press · other | `KINDS`; a tag on the row |
+| The tour poster | a picture up to 900 KB after the phone shrinks it, or a PDF up to 3 MB | `MAX_BYTES`, `MAX_TOUR_PDF` in `_img.mjs`; `tourSet` / `tourClear` on `/api/admin`; the `tour` slot |
+
 ### Voting numbers
 
 | | Value | Where it lives |
@@ -517,20 +532,20 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | | |
 |---|---|
 | Public pages | 12 — about.html, artist.html, artists.html, community.html, index.html, report.html, shop.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
+| HTTP functions | 33 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
-| Shared libraries | 55 |
-| Artist Studio actions | 132 |
+| Shared libraries | 56 |
+| Artist Studio actions | 142 |
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / pack-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 264 (last: 0fn) |
-| Test suites | 50 |
-| Assertions | **3,061**, 0 failing, last run 2026-09-14 |
-| Decision records | 73 |
+| Invariants | 265 (last: 0fn) |
+| Test suites | 51 |
+| Assertions | **3,214**, 0 failing, last run 2026-09-14 |
+| Decision records | 75 |
 
 ### Feature flags in force
 

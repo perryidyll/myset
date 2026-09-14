@@ -4,6 +4,7 @@ import { readHistIndex } from './_history.mjs';
 import { planOf } from './_plan.mjs';
 import { readFeedback } from './_feedback.mjs';
 import { readPosts } from './_community.mjs';
+import { MAX_TEXT } from './_messages.mjs';
 
 /* The room's favourites across every archived night, from the index rows alone
    (decision 0043): rows carry `top:{title,votes}`, `topPlayed:{title,plays}` and
@@ -86,6 +87,8 @@ export default async (req) => {
     live: show.status === 'live', venue: show.venue || '', city: show.city || '',
     showId: show.showId || '',
     merch: (p.merch || []).filter((m) => m.on).length,
+    tour: p.tour || null,                      // the tour-dates poster and its tickets link (0075)
+    msgMax: MAX_TEXT,                          // the Book sheet's counter reads this, never a typed cap (0074)
     /* The proof strip. `requests` from the show already in hand; `rating` is the
        average and count only — the notes stay in the Studio; `posts` counts what
        the public feed would show; `topSongs` is at most three {title,votes}, and

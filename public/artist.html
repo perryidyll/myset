@@ -95,6 +95,140 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
 [data-zoom]{cursor:zoom-in}
 .lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:80;display:none;place-items:center;padding:20px;outline:none}
 .lb.on{display:grid;grid-template-rows:100%}.lb img{max-width:100%;max-height:100%;border-radius:8px}
+
+/* THE FLOATING WINDOW (the founder, 2026-09-14): one centred card over a dimmed
+   page, for things to look at — the month calendar, one night's details, the tour
+   poster. It is a sibling of #app so a redraw never throws it away, and it holds
+   nothing until it is opened. The page behind is frozen the way a sheet freezes
+   it (0f2: body.sheeting at the offset it was at) — the dimmed page is visible
+   around the card, so a scroll under it would show. */
+body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
+.win{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:16px;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.win[hidden]{display:none}
+.winbox{position:relative;width:100%;max-width:400px;max-height:calc(100dvh - 32px);overflow:auto;
+  background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-3);
+  padding:18px 16px calc(16px + env(safe-area-inset-bottom));animation:winIn .28s var(--spring)}
+@keyframes winIn{from{transform:scale(.94);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.winbox{animation:none}}
+.winx{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;z-index:1;
+  background:var(--bg-2);color:var(--muted);font-size:14px;display:grid;place-items:center}
+.winbox h3{font-size:20px;font-weight:700;letter-spacing:-.03em;margin:2px 44px 2px 0}
+.winbox .lede{font-size:13.5px;color:var(--muted);margin:0 0 14px;line-height:1.45}
+/* the Studio's Gigs-tab calendar, the same recipe in this page's colours */
+.calhead{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 12px}
+.calhead b{font-size:17px;font-weight:700;letter-spacing:-.02em}
+.calnav{display:flex;gap:6px}
+.calnav button{width:36px;height:36px;border-radius:50%;background:var(--bg-2);color:var(--ink);font-size:20px;line-height:1}
+.calnav button:active{transform:scale(.9)}
+.calnav button:disabled{opacity:.3}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal .dow{text-align:center;font-size:11px;font-weight:600;color:var(--faint);padding:2px 0 6px}
+.cal .cell{aspect-ratio:1;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;font-size:14px;font-weight:500;color:var(--ink);background:none;transition:transform .15s var(--ease)}
+.cal .cell:active{transform:scale(.9)}
+.cal .cell.out{color:var(--faint);opacity:.45}
+.cal .cell.today{box-shadow:inset 0 0 0 1.5px var(--accent-2);color:var(--accent-2);font-weight:700}
+.cal .cell.has{background:var(--accent-soft);font-weight:700}
+.cal .cell .dots{display:flex;gap:2.5px;height:5px}
+.cal .cell .dots i{width:5px;height:5px;border-radius:50%;background:var(--accent-2);display:block}
+.calfoot{font-size:12px;color:var(--muted);text-align:center;margin:12px 0 0}
+/* one night, in the window: the row the list draws, on its own */
+.winbox .gigs{margin:0;box-shadow:none;background:none}
+.winbox .gigrow{padding:12px 0 0}
+.winbox .gigrow:first-child{padding-top:0}
+.winbtns{display:flex;gap:8px;margin-top:14px}
+.winbtns .btn{flex:1}
+.calbtn{width:100%;padding:15px;border-top:.5px solid var(--hair);font-size:14.5px;font-weight:600;
+  color:var(--accent-ink);background:none}
+/* THE TOUR POSTER (the founder, 2026-09-14): a button under the Upcoming shows
+   headline when the artist has uploaded one; the window shows the graphic with
+   Download in the corner and, when a link was set, Grab your tickets. */
+.tourbtn{display:flex;justify-content:center;margin:0 18px 12px}
+.tourbtn a{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 18px;border-radius:var(--pill);
+  font-size:13.5px;font-weight:700;color:var(--accent-2);position:relative;background:var(--surface);box-shadow:var(--sh-1)}
+.tourbtn a svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.winbox.tour{padding:0;overflow:hidden;max-width:440px}
+.tourhead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 56px 10px 16px}
+.tourhead b{font-size:17px;font-weight:700;letter-spacing:-.02em}
+.tourhead .dl{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;color:var(--accent-ink);white-space:nowrap}
+.tourhead .dl svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.tourbody{max-height:calc(100dvh - 190px);overflow:auto;background:var(--bg-2)}
+.tourbody img{display:block;width:100%;height:auto}
+.tourbody iframe{display:block;width:100%;height:calc(100dvh - 190px);border:0;background:#fff}
+.tourfoot{padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
+.tourfoot .btn{width:100%}
+/* THE BOOK SHEET (decision 0074): the community page's sheet, page-local — a grab
+   zone big enough for a thumb, an ✕ in the corner, a real drag (INVARIANTS
+   0f0–0f2). The page behind is frozen by the same freezePage() the window uses,
+   so a sheet and the window can be open together. .bg and .sheet themselves are
+   app.css's, as on every page. */
+#sheet{max-height:88vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.grabzone{position:relative;min-height:56px;display:flex;align-items:center;margin:-8px 0 4px;cursor:grab;touch-action:none}
+.sheet h3,.sheet .lede{touch-action:none;-webkit-user-select:none;user-select:none}
+.grabzone:active{cursor:grabbing}
+.grabzone .grab{margin:0 auto}
+.sheetx{position:absolute;top:6px;right:0;width:38px;height:38px;border-radius:50%;
+  border:0;background:var(--bg-2);color:var(--muted);font-size:15px;display:grid;
+  place-items:center;cursor:pointer;transition:transform .2s var(--spring)}
+.sheetx:active{transform:scale(.9)}
+/* Send and the kind chips: the commit tier and the chip, byte-for-byte from
+   app.css, kept here for the reason .btn-ink is below — the page never waits on a
+   shared-CSS deploy for its form. Every token is app.css's, so they paint nothing
+   before it lands; route() is what keeps a sheet from opening unstyled. */
+.btn-pri{background:var(--grad);color:#fff;box-shadow:var(--sh-accent)}
+.btn-pri:hover{box-shadow:0 8px 26px rgba(255,55,95,.42)}
+.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;border-radius:var(--pill);font-size:14px;font-weight:600;letter-spacing:-.01em;
+  background:var(--surface);color:var(--ink-2);white-space:nowrap;
+  border:.5px solid var(--hair-2);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.chip:active{transform:scale(.94)}
+.chip.on{color:var(--accent-ink);background:var(--accent-soft);border-color:transparent;
+  box-shadow:0 0 0 1.5px var(--accent) inset,var(--sh-1)}
+/* the form: a label over every field, the message with a live count, Send full width */
+.kinds{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 2px}
+.bk label{display:block;margin-top:14px;font-size:13px;font-weight:600;color:var(--muted)}
+.bk label small{font-size:12px;font-weight:500;color:var(--faint)}
+.bk input,.bk textarea{display:block;width:100%;min-height:48px;padding:12px 14px;margin-top:6px;font-size:16px;line-height:1.35;
+  background:var(--bg);border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);
+  transition:box-shadow .2s var(--ease)}
+.bk input:focus,.bk textarea:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+.bk input::placeholder,.bk textarea::placeholder{color:var(--faint)}
+.bk textarea{min-height:118px;resize:vertical}
+.bk .cnt{font-size:12px;color:var(--faint);text-align:right;margin-top:5px;font-variant-numeric:tabular-nums}
+/* off-screen, never display:none — a form field no person can see, kept in the
+   DOM for the bots that fill every field */
+.bk .hp{position:absolute;left:-9999px;top:0;width:1px;height:1px;opacity:0}
+.bk .err{margin:12px 0 0;font-size:14px;font-weight:600;color:var(--accent-ink)}
+.bk .btn.send{width:100%;margin-top:16px}
+/* this phone's conversations with the artist, above the form */
+.convh{margin:16px 0 8px;font-size:13px;font-weight:600;color:var(--muted)}
+.convs{border-radius:var(--r-sm);background:var(--bg);box-shadow:0 0 0 1.5px var(--hair) inset;overflow:hidden}
+.convs button{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:13px 14px;
+  border-top:.5px solid var(--hair);font-size:15px;font-weight:600;text-align:left;color:var(--ink)}
+.convs button:first-child{border-top:none}
+.convs button span{flex:0 0 auto;font-size:12.5px;font-weight:500;color:var(--muted)}
+.convs button:active{opacity:.6}
+/* the thread: the booker's own words on the right in the brand's soft fill, the
+   artist's on the left. It scrolls on its own, so it is no place to start a drag. */
+.thread{display:flex;flex-direction:column;gap:8px;margin:12px 0 0;max-height:46vh;overflow-y:auto;overscroll-behavior:contain;padding:2px 0}
+.bub{max-width:84%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.4;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.bub.you{align-self:flex-end;background:var(--accent-soft);border-bottom-right-radius:6px}
+.bub.artist{align-self:flex-start;background:var(--surface-2);box-shadow:0 0 0 .5px var(--hair-2) inset;border-bottom-left-radius:6px}
+.bub time{display:block;margin-top:4px;font-size:11px;color:var(--muted);text-align:right}
+.thread .none{margin:8px 0;font-size:14px;color:var(--muted);text-align:center}
+.reply .row{display:flex;gap:8px;align-items:flex-end;margin-top:12px}
+.reply .row textarea{flex:1;min-width:0;min-height:48px;max-height:140px;margin-top:0;resize:none}
+.reply .row .btn{flex:0 0 auto;padding:13px 18px}
+.tlink{display:block;margin:10px auto 0;padding:8px 14px;font-size:14px;font-weight:600;color:var(--accent-ink)}
+/* the Sent screen: the way back, in a field with Copy beside it */
+.keep{margin:14px 0 6px;font-size:13px;font-weight:600;color:var(--muted)}
+.sentbox{display:flex;gap:8px}
+.sentbox input{flex:1;min-width:0;min-height:46px;padding:11px 13px;font-size:13.5px;background:var(--bg);border:none;color:var(--ink);
+  box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);font-variant-numeric:tabular-nums;text-overflow:ellipsis}
+.sentbox .btn{flex:0 0 auto;padding:12px 16px;font-size:14px}
+.sheet .btn.done{width:100%;margin-top:16px}
 /* padding-top so the name isn't jammed against the bottom of the cover */
 .pname{flex:1;min-width:0;padding:22px 0 2px;display:flex;flex-direction:column;justify-content:flex-end;
   min-height:96px}
@@ -127,21 +261,25 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
 .menu .pop a i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;
   background:var(--accent-soft);color:var(--accent-2);font-style:normal;font-size:14px}
 
-/* The Community button sits in the stats grid as a sixth cell — on a phone that
-   is the empty slot beneath the fans count and to the right of the songs count.
+/* The buttons under the numbers — Book, Merch, Community — share one recipe.
    Pink-orange, not pink (the founder, 2026-09-12): ring and words are --accent-2, the
    audience colour and the ring colour everywhere else on the site; the pink is for
    warnings and the live state. The icon strokes currentColor, so it follows. */
-.ps.cta{align-self:end}
 .ps.cta a{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:100%;
-  padding:9px 10px;border-radius:var(--pill);font-size:13px;font-weight:700;letter-spacing:-.01em;
-  color:var(--accent-2);position:relative;transition:transform .22s var(--spring)}
+  padding:9px 8px;border-radius:var(--pill);font-size:13px;font-weight:700;letter-spacing:-.01em;
+  color:var(--accent-2);position:relative;transition:transform .22s var(--spring);white-space:nowrap}
 .ps.cta a:active{transform:scale(.95)}
-.ps.cta a svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ps.cta a svg{width:15px;height:15px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 
-/* Five numbers don't fit on a phone alongside a button, so the button gets its
-   own line and the numbers get a three-across grid that wraps to 3 + 2. */
-.pstats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px 10px;margin:20px 22px 0;text-align:center}
+/* Two rows (the founder, 2026-09-14): the four numbers on one line, closer
+   together than before — Joined, Shows, Fans, Votes cast; the songs count is gone —
+   and the buttons on a line of their own beneath: Book at the far left, Merch
+   (only when there is a shop), Community. The numbers keep their size. */
+.pstats{margin:20px 14px 0;text-align:center}
+.pnums{display:flex;justify-content:center;align-items:start;gap:22px}
+.pnums .ps{flex:0 1 auto;max-width:31%}   /* the month and year need more room than a count; 320px still holds all four */
+.pacts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 8px 0}
+.pacts.two{grid-template-columns:repeat(2,1fr)}
 .ps{min-width:0}
 .ps b{display:block;font-size:19px;font-weight:700;letter-spacing:-.03em;line-height:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -403,6 +541,11 @@ a.pc:active{transform:scale(.97)}
      data-nopull: every photo sits at the top of the page, so a swipe down on the black
      sheet would otherwise arm pull.js and reload the page under the fan's thumb -->
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo" tabindex="-1" data-nopull></div>
+<!-- the floating window (calendar, one night, the tour poster); empty until opened -->
+<div class="win" id="win" role="dialog" aria-modal="true" tabindex="-1" data-nopull hidden></div>
+<!-- the Book sheet, and a booker's conversation at their link; empty until opened -->
+<div class="bg" id="bg" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" data-nopull></div>
 
 <!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
 <script src="/theme.js"></script>
@@ -421,6 +564,7 @@ const AQ1=SLUG?'?a='+encodeURIComponent(SLUG):'';
 const HOME=SLUG?'/'+SLUG:'/';
 const VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
 const COMMHREF=SLUG?'/'+SLUG+'/community':'/community.html';
+const SHOPHREF=SLUG?'/'+SLUG+'/shop':'/shop.html';
 let tT;function toast(m){const t=$('#toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
 /* The share sheet where the phone has one, the clipboard where it doesn't. */
 function share(){ const url=new URL(HOME,location.origin).href, title=((P&&P.name)||'MySet')+' — MySet';
@@ -440,6 +584,7 @@ document.getElementById('shareBtn').addEventListener('click',share);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const PROV={youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'};
 const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 /* Photos go through Netlify's Image CDN: resized to what the slot needs, served as
    WebP/AVIF, cached at the edge. A same-origin path is allowed by default. If the
    transform ever fails the <img> falls back to the original (onerror). */
@@ -460,12 +605,15 @@ function whenWord(date){
 const fmtTime=t=>{const p=t.split(':');let h=+p[0];const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
 /* 1400 reads worse than 1.4k in a 110px column, and these are bragging numbers
    rather than accounting ones. */
+/* The whole number up to 9,999 (with its comma), then one decimal place: 10k,
+   10.1k … 999.9k, 1m, 1.1m (the founder, 2026-09-14). The rounding is checked
+   before the unit is chosen so 999,950 says 1m, never 1000k. */
 const compact=n=>{const v=Number(n)||0;
   if(!v) return '';
-  if(v<1000) return String(v);
-  if(v<10000) return (v/1000).toFixed(1).replace(/\.0$/,'')+'k';
-  if(v<1e6) return Math.round(v/1000)+'k';
-  return (v/1e6).toFixed(1).replace(/\.0$/,'')+'m';};
+  if(v<10000) return v.toLocaleString('en-US');
+  const one=x=>x.toFixed(1).replace(/\.0$/,'');
+  if(v/1000<999.95) return one(v/1000)+'k';
+  return one(v/1e6)+'m';};
 const joinedWord=ms=>{if(!ms)return '';const d=new Date(Number(ms));
   return isNaN(d)?'':`${MON[d.getMonth()]} ${d.getFullYear()}`;};
 /* There is no one link that opens in whichever map app a phone uses, so the
@@ -655,7 +803,7 @@ function rsvpRemember(k,on){try{const m=rsvpMap();if(on)m[k]=1;else delete m[k];
 async function rsvpTap(b){
   const g=ROWS[+b.dataset.i]; if(!g||b.dataset.busy)return;
   const k=rsvpKey(g), was=b.getAttribute('aria-pressed')==='true', on=!was;
-  const live=()=>{const all=[...document.querySelectorAll(`#app .rsvp[data-k="${CSS.escape(k)}"]`)];return all.length?all:[b];};
+  const live=()=>{const all=[...document.querySelectorAll(`.rsvp[data-k="${CSS.escape(k)}"]`)];return all.length?all:[b];};
   const n0=Number(g.rsvp)||0, paint=(o,n)=>{for(const x of live()){const cnt=x.nextElementSibling;
       x.setAttribute('aria-pressed',o?'true':'false');if(cnt)cnt.textContent=`${compact(n)||'0'} going`;}
     ROWS.forEach(r=>{if(rsvpKey(r)===k)r.rsvp=n;}); rsvpRemember(k,o);};
@@ -670,6 +818,7 @@ async function rsvpTap(b){
   delete b.dataset.busy;
 }
 document.getElementById('app').addEventListener('click',e=>{const b=e.target.closest('.rsvp');if(b)rsvpTap(b);});
+document.getElementById('win').addEventListener('click',e=>{const b=e.target.closest('.rsvp');if(b)rsvpTap(b);});
 
 /* THE LIGHTBOX (the founder, 2026-09-12). Bound once, by delegation on #app,
    because render() replaces the photos wholesale. The <img> is made on open and
@@ -701,7 +850,398 @@ document.getElementById('app').addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ')return;
   const z=e.target.closest('[data-zoom]'); if(!z)return; e.preventDefault(); lbOpen(z);});
 document.getElementById('lb').addEventListener('click',lbClose);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')lbClose();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){lbClose();winClose();closeSheet();}});
+
+/* THE FLOATING WINDOW. One at a time; opening another replaces the first (the
+   night's card opens over the calendar and Back redraws the calendar). Focus goes
+   to the window while it is up and back to what opened it after. */
+/* THE PAGE BEHIND A WINDOW OR A SHEET IS FROZEN (INVARIANT 0f2): position:fixed at
+   the offset it was at, put back on close — iOS scrolls a page under an overlay
+   that only has overflow:hidden. One counter, so the sheet and the window can be
+   open together without either thawing the page under the other. */
+let FROZEN=0, SHEETY=0;
+function freezePage(){
+  if(FROZEN++)return;
+  SHEETY=window.scrollY||0; document.body.style.top=`-${SHEETY}px`; document.body.classList.add('sheeting');
+}
+function thawPage(){
+  if(!FROZEN||--FROZEN)return;
+  document.body.classList.remove('sheeting'); document.body.style.top=''; window.scrollTo(0,SHEETY);
+}
+let WINF=null;
+function winOpen(html,label,opener){
+  const w=document.getElementById('win');
+  if(w.hidden){ WINF=opener||document.activeElement; freezePage(); }
+  w.setAttribute('aria-label',label||'');
+  w.innerHTML=`<div class="winbox"><button class="winx" type="button" data-win="close" aria-label="Close">✕</button>${html}</div>`;
+  w.hidden=false;
+  try{ w.focus({preventScroll:true}); }catch(e){}
+}
+function winClose(){
+  const w=document.getElementById('win'); if(w.hidden)return;
+  w.hidden=true; w.replaceChildren(); thawPage();
+  if(WINF&&WINF.isConnected){ try{ WINF.focus({preventScroll:true}); }catch(e){} } WINF=null;
+}
+document.getElementById('win').addEventListener('click',e=>{
+  if(e.target===e.currentTarget){ winClose(); return; }     // the dimmed page around the card
+  const a=e.target.closest('[data-win]'); if(!a)return;
+  const what=a.dataset.win;
+  if(what==='close')winClose();
+  else if(what==='month')calMove(+a.dataset.n);
+  else if(what==='day')openDay(a.dataset.id);
+  else if(what==='cal')drawCal();
+});
+
+/* ── THE SHEET ── the community page's, copied: a grab ZONE big enough for a
+   thumb, an ✕ in the corner, a real drag, and the page behind frozen (INVARIANTS
+   0f0–0f2) — by freezePage() above, the one counter the window uses, so opening
+   the thread from the Book sheet, or a window over a sheet, never thaws the page
+   under the other. Opening again while open only swaps the body. */
+function openSheet(h,label){
+  const sh=document.getElementById('sheet');
+  if(!sh.classList.contains('on')) freezePage();
+  sh.setAttribute('aria-label',label||'');
+  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
+    <button class="sheetx" type="button" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
+  sh.style.transform=''; sh.scrollTop=0;
+  document.getElementById('bg').classList.add('on'); sh.classList.add('on');
+  attachDrag(sh);
+}
+function closeSheet(){
+  const sh=document.getElementById('sheet'); sh.style.transition=''; sh.style.transform='';
+  document.getElementById('bg').classList.remove('on');
+  if(!sh.classList.contains('on'))return;
+  sh.classList.remove('on'); thawPage();
+}
+function attachDrag(sh){
+  /* ONE set of listeners for the life of the page, delegated from the sheet —
+     rebinding on every open piled up stale closures that raced each other. */
+  if(sh.__drag)return;
+  sh.__drag=true;
+  let y0=null, dy=0, t0=0, fromBody=false;
+  const CONTROL='input,textarea,select,button,a,label,[contenteditable]';
+  /* THE SHEET IS CENTRED WITH translateX(-50%), so every transform written here
+     has to carry it (INVARIANT 0f0). */
+  const SHIFT='translateX(-50%) ';
+  const HANDLE='.grabzone,h3,.lede';
+  /* Anything that scrolls on its own is NOT a place to start dragging the sheet
+     from (0f1): the thread's bubbles, and a message being typed. */
+  const SCROLLER='.thread,textarea';
+  const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
+    fromBody=!!body; sh.style.transition='none'; };
+  const move=(e)=>{
+    if(y0===null)return;
+    dy=((e.touches?e.touches[0]:e).clientY)-y0;
+    if(dy<0){ dy=0; sh.style.transform=SHIFT+'translateY(0)'; return; }
+    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
+    sh.style.transform=SHIFT+`translateY(${dy}px)`;
+    if(e.cancelable)e.preventDefault();
+  };
+  const end=()=>{
+    if(y0===null)return;
+    const speed=dy/Math.max(1,Date.now()-t0);
+    y0=null;
+    sh.style.transition='';
+    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform=SHIFT+'translateY(0)';
+  };
+  const begin=(e)=>{
+    const t=e.target;
+    if(!t||!t.closest)return;
+    if(t.closest(CONTROL))return;
+    if(t.closest(SCROLLER))return;
+    const inZone=!!t.closest(HANDLE);
+    if(!inZone&&sh.scrollTop>0)return;
+    start(e,!inZone);
+  };
+  sh.addEventListener('touchstart',begin,{passive:true});
+  sh.addEventListener('touchmove',move,{passive:false});
+  sh.addEventListener('touchend',end);
+  sh.addEventListener('touchcancel',end);
+  sh.addEventListener('mousedown',(e)=>{
+    if(!e.target.closest(HANDLE)||e.target.closest(CONTROL))return;
+    start(e,false);
+    const mm=(ev)=>move(ev), mu=()=>{ end();
+      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
+    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
+}
+
+/* THE CALENDAR (the founder, 2026-09-14): the Studio's Gigs-tab month, on the
+   page, with a dot on every night that has a show. The dots come from the diary
+   the page already fetched, and once per open from the full 120-day diary (n=60)
+   so a busy artist's fourth month is not blank because the list only drew 24.
+   A show sits on ITS date string — YYYY-MM-DD, the artist's own day — never on
+   new Date(date), which shifts a night across midnight for a fan in another
+   timezone. Months run from this one to the last one with a show. */
+let CALG=null, CAL_MONTH='';
+const calPad=n=>String(n).padStart(2,'0');
+const monthOf=d=>d.slice(0,7);
+function calCells(month){
+  const [Y,M]=month.split('-').map(Number);
+  const first=new Date(Date.UTC(Y,M-1,1)), lead=first.getUTCDay(), out=[];
+  for(let i=0;i<42;i++){
+    const t=new Date(Date.UTC(Y,M-1,1-lead+i));
+    const date=`${t.getUTCFullYear()}-${calPad(t.getUTCMonth()+1)}-${calPad(t.getUTCDate())}`;
+    out.push({date,day:t.getUTCDate(),out:t.getUTCMonth()!==M-1});
+    if(i>=34&&t.getUTCMonth()!==M-1&&t.getUTCDate()>7)break;
+  }
+  return out;
+}
+const monthShift=(m,n)=>{const [Y,M]=m.split('-').map(Number);const t=new Date(Date.UTC(Y,M-1+n,1));
+  return `${t.getUTCFullYear()}-${calPad(t.getUTCMonth()+1)}`;};
+const calGigs=()=>(CALG||(G&&G.ok?G.gigs:[])||[]).filter(g=>g&&g.date);
+function calLast(){ const ds=calGigs().map(g=>monthOf(g.date)).sort(); return ds.length?ds[ds.length-1]:monthOf(todayISO()); }
+async function openCal(opener){
+  CAL_MONTH=CAL_MONTH||monthOf(todayISO());
+  drawCal(opener);
+  if(CALG)return;
+  try{
+    const r=await fetch(`${API}/fan?what=events&a=${encodeURIComponent(OWNER)}&days=120&n=60`);
+    const j=await r.json().catch(()=>null);
+    if(j&&j.ok&&Array.isArray(j.gigs)){ CALG=j.gigs; if(!document.getElementById('win').hidden&&document.getElementById('calGrid'))drawCal(); }
+  }catch(e){}
+}
+function drawCal(opener){
+  /* The phone's month, or an earlier one if a night is still listed there — a fan
+     already on the 1st while the artist's night on the 31st is still to come. */
+  const today=todayISO(), first=[monthOf(today),...calGigs().map(g=>monthOf(g.date))].sort()[0], last=calLast();
+  if(CAL_MONTH<first)CAL_MONTH=first; if(CAL_MONTH>last)CAL_MONTH=last;
+  const byDate={}; calGigs().forEach(g=>{(byDate[g.date]||=[]).push(g);});
+  const [Y,M]=CAL_MONTH.split('-').map(Number);
+  const n=calGigs().length;
+  winOpen(`<h3>Shows</h3><p class="lede">${n?`${n} night${n===1?'':'s'} listed over the next four months — tap a date.`:'Nothing listed yet.'}</p>
+    <div class="calhead"><b>${MONL[M-1]} ${Y}</b>
+      <div class="calnav">
+        <button type="button" data-win="month" data-n="-1" aria-label="Previous month" ${CAL_MONTH<=first?'disabled':''}>‹</button>
+        <button type="button" data-win="month" data-n="1" aria-label="Next month" ${CAL_MONTH>=last?'disabled':''}>›</button>
+      </div></div>
+    <div class="cal" id="calGrid">
+      ${['S','M','T','W','T','F','S'].map(d=>`<div class="dow">${d}</div>`).join('')}
+      ${calCells(CAL_MONTH).map(c=>{const k=(byDate[c.date]||[]).length;
+        return `<button type="button" class="cell${c.out?' out':''}${c.date===today?' today':''}${k?' has':''}" ${k?`data-win="day" data-id="${c.date}"`:'disabled'} aria-label="${c.date}${k?`, ${k} show${k===1?'':'s'}`:''}">
+          <span>${c.day}</span><span class="dots">${Array.from({length:Math.min(k,3)}).map(()=>'<i></i>').join('')}</span></button>`;}).join('')}
+    </div>`,'Calendar of shows',opener);
+}
+function calMove(n){ CAL_MONTH=monthShift(CAL_MONTH,n); drawCal(); }
+/* One night, in the window: the same row the list draws — venue, day and time,
+   Directions, Tickets, RSVP — with Back to the calendar. */
+function openDay(date){
+  const gs=calGigs().filter(g=>g.date===date); if(!gs.length)return;
+  const mine=rsvpMap();
+  const row=g=>{let i=ROWS.findIndex(r=>r&&r.eventId===g.eventId&&r.date===g.date);
+    if(i<0){ ROWS.push(g); i=ROWS.length-1; }        // a night past the 24 the list drew
+    return `<div class="gigrow${g.live?' live':''}">
+      <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span>${g.maps?dirBtn(g.maps,true):''}</div>
+      <div class="m">
+        ${g.live?'<span class="onnow"><span class="dot"></span>On now</span>':''}
+        <div class="v">${esc(g.venue)}</div>
+        <div class="w">${esc(dowName(g.date))} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.city?' · '+esc(g.city):''}</div>
+        ${g.ticketUrl?`<a class="tix" href="${esc(g.ticketUrl)}" target="_blank" rel="noopener noreferrer">Tickets ↗</a>`:''}
+      </div>
+      <div class="rsvpcol"><button class="rsvp" type="button" data-i="${i}" data-k="${esc(rsvpKey(g))}" aria-pressed="${mine[rsvpKey(g)]?'true':'false'}">RSVP</button>
+        <span class="going">${esc(compact(g.rsvp)||'0')} going</span></div>
+    </div>`;};
+  winOpen(`<h3>${esc(whenWord(date))}</h3><p class="lede">${esc(dowName(date))} ${dayNum(date)} ${esc(monShort(date))}</p>
+    <div class="gigs">${gs.map(row).join('')}</div>
+    <div class="winbtns"><button type="button" class="btn btn-grey" data-win="cal">‹ Calendar</button><button type="button" class="btn btn-ink" data-win="close">Done</button></div>`,'Show details');
+}
+/* THE TOUR POSTER. An image is drawn as one; a PDF in a frame (iOS shows its
+   first page, which for a poster is the whole of it). Download is the file
+   itself from /api/img on this origin — the download attribute holds there.
+   Grab your tickets is drawn only when the artist set a link (rule three). */
+function openTour(opener){
+  const t=P&&P.tour; if(!t||!t.url)return;
+  const ext={pdf:'pdf',png:'png',webp:'webp'}[t.type]||'jpg';
+  const name=`${(firstName()||'tour').toLowerCase().replace(/[^a-z0-9]+/g,'-')}-tour-dates.${ext}`;
+  const w=document.getElementById('win');
+  winOpen(`<div class="tourhead"><b>Tour dates</b><a class="dl" href="${esc(t.url)}" download="${esc(name)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Download</a></div>
+    <div class="tourbody">${t.type==='pdf'
+      ?`<iframe src="${esc(t.url)}#toolbar=0&view=FitH" title="Tour dates"></iframe>`
+      :`<img src="${esc(t.url)}" alt="${esc(P.name||'')} tour dates" decoding="async">`}</div>
+    ${t.link?`<div class="tourfoot"><a class="btn btn-pri" href="${esc(t.link)}" target="_blank" rel="noopener noreferrer">Grab your tickets ↗</a></div>`:''}`,'Tour dates',opener);
+  const box=w.querySelector('.winbox'); if(box)box.classList.add('tour');
+}
+
+/* ── BOOK (decision 0074) ── a contact form with a memory. The booker is not the
+   audience: a name and an email are given on purpose so the artist can answer.
+   The way back is a thread link — myset.vip/<slug>#m=<id>.<key> — shown once on
+   the Sent screen and kept in 'myset.msgs' (per artist, the last ten), so the
+   sheet can list this phone's conversations. The device id rides along only for
+   the server's limits and blocking. Nothing is fetched until Send, or until a
+   thread opens. The message cap rides on the profile payload (msgMax) so it is
+   never typed here; the other maxlengths are hints, the server trims. The
+   sentences are the server's, so the page and the server never disagree about a
+   refusal. */
+const KINDS=[['booking','Booking'],['collab','Collab'],['press','Press'],['other','Other']];
+const BK={name:60,email:120,phone:30,venue:80,when:40,min:10};
+const msgMax=()=>Number(P&&P.msgMax)||1000;
+const SENDFAIL='Couldn’t send that — try again.';
+function msgsMap(){try{const m=JSON.parse(localStorage.getItem('myset.msgs')||'{}');return m&&typeof m==='object'?m:{};}catch(e){return {};}}
+const myMsgs=()=>{const l=msgsMap()[OWNER];return Array.isArray(l)?l.filter(r=>r&&r.id&&r.k):[];};
+function msgsRemember(row){try{const m=msgsMap();m[OWNER]=[row,...myMsgs().filter(r=>r.id!==row.id)].slice(0,10);localStorage.setItem('myset.msgs',JSON.stringify(m));}catch(e){}}
+function msgsForget(id){try{const m=msgsMap();m[OWNER]=myMsgs().filter(r=>r.id!==id);localStorage.setItem('myset.msgs',JSON.stringify(m));}catch(e){}}
+/* when a message was sent, small: the time today, the day and time otherwise */
+const stamp=ms=>{const d=new Date(Number(ms)); if(!(Number(ms)>0)||isNaN(d))return '';
+  const t=`${d.getHours()%12||12}:${String(d.getMinutes()).padStart(2,'0')}${d.getHours()<12?'am':'pm'}`;
+  return d.toDateString()===new Date().toDateString()?t:`${d.getDate()} ${MON[d.getMonth()]} · ${t}`;};
+const bubble=m=>`<div class="bub ${m.by==='artist'?'artist':'you'}">${esc(m.text)}<time>${esc(stamp(m.at))}</time></div>`;
+const msgsApi=()=>`${API}/messages?a=${encodeURIComponent(OWNER)}`;
+function openBook(){
+  const first=esc(firstName()), mine=myMsgs();
+  openSheet(`<h3>Book ${first}</h3><p class="lede">Tell ${first} about your event. They reply here — keep the link you get.</p>
+    ${mine.length?`<div class="convh">Your conversations with ${first}</div><div class="convs">${mine.map(r=>
+      `<button type="button" data-thread="${esc(r.id)}.${esc(r.k)}">${esc(r.name||'You')}<span>${esc(agoWord(r.at))}</span></button>`).join('')}</div>`:''}
+    <form class="bk" id="bookForm" novalidate>
+      <div class="kinds" role="radiogroup" aria-label="What is it about?">${KINDS.map(([k,l],i)=>
+        `<button type="button" class="chip${i?'':' on'}" role="radio" aria-checked="${i?'false':'true'}" data-kind="${k}">${l}</button>`).join('')}</div>
+      <label>Your name<input name="name" maxlength="${BK.name}" autocomplete="name" required></label>
+      <label>Email<input name="email" type="email" maxlength="${BK.email}" autocomplete="email" inputmode="email" required></label>
+      <label>Phone <small>optional</small><input name="phone" type="tel" maxlength="${BK.phone}" autocomplete="tel" inputmode="tel"></label>
+      <label>Venue or event <small>optional</small><input name="venue" maxlength="${BK.venue}"></label>
+      <label>Date <small>optional</small><input name="when" maxlength="${BK.when}" placeholder="Fri 3 Oct"></label>
+      <label>Message<textarea name="text" maxlength="${msgMax()}" required></textarea></label>
+      <div class="cnt" id="bookCnt">0 / ${msgMax()}</div>
+      <input class="hp" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <p class="err" id="bookErr" hidden></p>
+      <button class="btn btn-pri send" type="submit" id="bookSend">Send</button>
+    </form>`,'Book '+firstName());
+}
+async function sendBook(f){
+  const v=n=>String((f.elements[n]&&f.elements[n].value)||'').trim();
+  const err=document.getElementById('bookErr'), btn=document.getElementById('bookSend');
+  const say=m=>{err.textContent=m;err.hidden=!m;};
+  const name=v('name'), email=v('email'), text=v('text');
+  if(!name){ say('Tell them your name.'); f.elements.name.focus(); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)){ say('An email address they can reply to, please.'); f.elements.email.focus(); return; }
+  if(text.length<BK.min){ say('Say a little more — a sentence or two.'); f.elements.text.focus(); return; }
+  say('');
+  const on=f.querySelector('.chip.on'), kind=(on&&on.dataset.kind)||'booking';
+  btn.disabled=true; btn.textContent='Sending…';
+  let j=null;
+  try{
+    const r=await fetch(msgsApi(),{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({action:'send',fan:fanId(),kind,name,email,phone:v('phone'),venue:v('venue'),when:v('when'),text,hp:v('hp')})});
+    j=await r.json().catch(()=>null);
+  }catch(e){}
+  if(!j||!j.ok){ say((j&&j.error)||SENDFAIL); btn.disabled=false; btn.textContent='Send'; return; }
+  if(j.id&&j.k) msgsRemember({id:String(j.id),k:String(j.k),name,at:Date.now()});
+  sentScreen(j,email);
+}
+/* The Sent screen: the link is their way back — the only one when mail is not set
+   up — so it is shown with Copy, not only put in a letter. The email line is drawn
+   only when the server says letters go out (`mail`), so the page never promises
+   one that cannot come. */
+function sentScreen(j,email){
+  const link=j.id&&j.k?`https://myset.vip/${OWNER}#m=${j.id}.${j.k}`:'';
+  openSheet(`<h3>Sent</h3><p class="lede">${esc(firstName())} will answer here.${j.mail?` You’ll also get an email at <b>${esc(email)}</b>.`:''}</p>
+    ${link?`<p class="keep">Keep this link to come back:</p>
+    <div class="sentbox"><input id="sentLink" readonly value="${esc(link)}" aria-label="Your link back to this conversation"><button type="button" class="btn btn-grey" id="copyLink">Copy</button></div>`:''}
+    <button type="button" class="btn btn-ink done" data-sheet="close">Done</button>`,'Sent');
+}
+/* the old synchronous copy first — it has to run inside the tap, before any
+   await — then the clipboard API; if neither takes, the link is left selected
+   and the button says how to take it by hand */
+async function copyLink(){
+  const i=document.getElementById('sentLink'), b=document.getElementById('copyLink'); if(!i||!b)return;
+  const pick=()=>{ i.focus(); i.select(); i.setSelectionRange(0,i.value.length); };
+  let ok=false;
+  try{ pick(); ok=document.execCommand('copy'); }catch(e){}
+  if(!ok){ try{ await navigator.clipboard.writeText(i.value); ok=true; }catch(e){} }
+  if(!ok){ try{ pick(); }catch(e){} }
+  b.textContent=ok?'Copied':'Hold to copy'; clearTimeout(copyLink.t); copyLink.t=setTimeout(()=>{b.textContent='Copy';},2000);
+}
+/* THE THREAD, at the booker's link: their words on the right, the artist's on the
+   left, a reply box, Refresh. A link that finds nothing — a typo, or the artist has
+   left — says so and is dropped from this phone's list. Refresh keeps a reply
+   being typed, and a Refresh that fails keeps the screen. The key rides in the
+   body, never the address (0fb). A link opened here is remembered here, so the
+   list on this phone matches what this phone has opened. */
+async function openThread(id,k){
+  const who=()=>esc((P&&P.name)||'');
+  const draft=(()=>{const f=document.getElementById('replyForm');return f&&f.dataset.t===id?String(f.elements.text.value||''):'';})();
+  if(!document.getElementById('replyForm')) openSheet(`<h3>${who()}</h3><p class="lede">Your conversation</p><div class="thread"><p class="none">Loading…</p></div>`,'Your conversation');
+  let j=null, st=0;
+  try{ const r=await fetch(msgsApi(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'get',t:id,k})}); st=r.status; j=await r.json().catch(()=>null); }catch(e){}
+  if(!j||!j.ok||!j.thread){
+    const f=document.getElementById('replyForm'), err=f&&document.getElementById('replyErr');
+    if(st!==404&&f&&f.dataset.t===id){ if(err){ err.textContent='Couldn’t refresh — try again.'; err.hidden=false; } return; }
+    if(st===404) msgsForget(id);
+    openSheet(`<h3>${who()}</h3><p class="lede">${st===404?'That conversation isn’t here.':'Couldn’t load that — try again.'}</p>
+      <div class="winbtns">${st===404?'':`<button type="button" class="btn btn-grey" data-refresh="${esc(id)}.${esc(k)}">Try again</button>`}<button type="button" class="btn btn-ink" data-sheet="close">Done</button></div>`,'Your conversation');
+    return;
+  }
+  const t=j.thread, ms=Array.isArray(t.msgs)?t.msgs:[], last=ms[ms.length-1];
+  msgsRemember({id:String(t.id||id),k:String(k),name:String(t.name||''),at:Number(last&&last.at)||Date.now()});
+  openSheet(`<h3>${esc((t.artist&&t.artist.name)||(P&&P.name)||'')}</h3><p class="lede">Your conversation</p>
+    <div class="thread" id="thread">${ms.map(bubble).join('')||'<p class="none">Nothing here yet.</p>'}</div>
+    <form class="bk reply" id="replyForm" data-t="${esc(t.id||id)}" data-k="${esc(k)}" novalidate>
+      <div class="row"><textarea name="text" maxlength="${msgMax()}" rows="1" placeholder="Write back…" aria-label="Your reply">${esc(draft)}</textarea><button class="btn btn-pri" type="submit" id="replySend">Send</button></div>
+      <p class="err" id="replyErr" hidden></p>
+    </form>
+    <button type="button" class="tlink" data-refresh="${esc(t.id||id)}.${esc(k)}">Refresh</button>`,'Your conversation');
+  const th=document.getElementById('thread'); th.scrollTop=th.scrollHeight;
+}
+async function sendReply(f){
+  const ta=f.elements.text, text=String(ta.value||'').trim();
+  const err=document.getElementById('replyErr'), btn=document.getElementById('replySend');
+  const say=m=>{err.textContent=m;err.hidden=!m;};
+  if(!text){ say('Write a reply first.'); ta.focus(); return; }
+  say(''); btn.disabled=true; btn.textContent='Sending…';
+  let j=null;
+  try{
+    const r=await fetch(msgsApi(),{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({action:'reply',t:f.dataset.t,k:f.dataset.k,text})});
+    j=await r.json().catch(()=>null);
+  }catch(e){}
+  if(!j||!j.ok) say((j&&j.error)||SENDFAIL);
+  else{
+    const th=document.getElementById('thread'); const none=th&&th.querySelector('.none'); if(none)none.remove();
+    if(th){ th.insertAdjacentHTML('beforeend',bubble({by:'you',text,at:Date.now()})); th.scrollTop=th.scrollHeight; }
+    ta.value='';
+  }
+  btn.disabled=false; btn.textContent='Send';
+}
+/* everything inside the sheet, delegated — its body is replaced on every open */
+document.getElementById('sheet').addEventListener('click',e=>{
+  const c=e.target.closest('.kinds .chip');
+  if(c){ c.parentNode.querySelectorAll('.chip').forEach(x=>{x.classList.toggle('on',x===c);x.setAttribute('aria-checked',x===c?'true':'false');}); return; }
+  const t=e.target.closest('[data-thread],[data-refresh]');
+  if(t){ const [id,k]=(t.dataset.thread||t.dataset.refresh).split('.'); openThread(id,k); return; }
+  if(e.target.closest('#copyLink')){ copyLink(); return; }
+  if(e.target.closest('[data-sheet="close"]')) closeSheet();
+});
+document.getElementById('sheet').addEventListener('input',e=>{
+  if(e.target.name!=='text'||!e.target.closest('#bookForm'))return;
+  const c=document.getElementById('bookCnt'); if(c)c.textContent=`${e.target.value.length} / ${msgMax()}`;
+});
+document.getElementById('sheet').addEventListener('submit',e=>{
+  e.preventDefault();
+  if(e.target.id==='bookForm')sendBook(e.target); else if(e.target.id==='replyForm')sendReply(e.target);
+});
+/* THE HASH IS A DOOR, NOT A PLACE: #book opens the form (the artist hands out
+   myset.vip/<slug>#book), #m=<id>.<key> opens a conversation. Read at boot, once
+   the page has its data, and on every change — and taken off the address once the
+   sheet opens, so a reload or a share of the page does not open it again, and the
+   key never reaches the server or the edge cache. A boot open waits for app.css
+   (.sheet lives there) so the sheet never paints unstyled; a tap needs no wait.
+   The wait is on the preload link itself — its onload flips it to a stylesheet —
+   because the window's load event does not wait for a preload (measured: it fires
+   in 30 ms with app.css two seconds out). A stylesheet that fails opens anyway:
+   the door they were handed still leads somewhere. No answer from the server
+   keeps the hash, so a pull-to-retry still has it. */
+let CSSOK=false;
+const cssLink=()=>document.querySelector('link[href="/app.css"]');
+const cssReady=()=>{ if(CSSOK)return true; const l=cssLink(); return CSSOK=!l||!!l.sheet||l.rel==='stylesheet'; };
+function cssGo(){ CSSOK=true; requestAnimationFrame(route); }   // a frame for the sheet's base state, so it slides rather than jumps
+function route(){
+  const h=location.hash||'', m=/^#m=(t[a-z0-9]{10})\.([0-9a-f]{32})$/.exec(h);
+  if(h!=='#book'&&!m)return;
+  if(!P)return;                                        // no answer yet: the hash waits
+  if(!P.ok){ history.replaceState(null,'',location.pathname+location.search); return; }   // no page, no sheet (an unknown slug)
+  if(!cssReady()){ const l=cssLink(); l.addEventListener('load',cssGo,{once:true}); l.addEventListener('error',cssGo,{once:true}); return; }
+  history.replaceState(null,'',location.pathname+location.search);
+  if(m) openThread(m[1],m[2]); else openBook();
+}
+window.addEventListener('hashchange',route);
 
 async function boot(){
   /* Two fetches, not three: /api/profile now carries live/venue/city, so the page
@@ -710,7 +1250,7 @@ async function boot(){
   /* Paint before the network answers: the last copy this phone saw, or the page's
      frame with grey placeholders. Either way the logo screen goes at once. */
   const K='artist:'+(SLUG||''), L=window.lastSeen?lastSeen.get(K):null;
-  if(L&&L.p&&L.p.ok){ P=L.p; S=null; G=L.g; render(); }
+  if(L&&L.p&&L.p.ok){ P=L.p; S=null; G=L.g; render(); route(); }   // #book / #m= open over the copy
   else $('#app').innerHTML=SKEL;
   hideIntro();
   const [p,g]=await Promise.all([
@@ -720,14 +1260,15 @@ async function boot(){
   if(!p&&L&&L.p&&L.p.ok) return;                       // offline: the copy stands
   if(p&&p.ok&&window.lastSeen) lastSeen.set(K,{p,g});
   if(L&&JSON.stringify({p,g})===JSON.stringify(L)) return;   // nothing changed: no redraw, no flicker
-  P=p; S=null; G=g; render();
+  P=p; S=null; G=g; render(); route();                 // a first visit: the hash waited for the data
 }
 /* The frame a first-time visitor sees while the two answers travel: cover,
    portrait, name, the big button and the stats row, all as shimmering blocks. */
 const SKEL=`<div class="pcover" style="background:var(--hair)"></div>
 <div class="phead"><div class="cluster solo"><div class="pav sk" style="background-image:none"></div></div>
 <div class="pname"><div class="sk" style="height:30px;width:60%;margin:6px auto 8px"></div><div class="sk" style="height:14px;width:40%;margin:0 auto"></div></div></div>
-<div class="pstats">${[1,2,3,4].map(()=>`<div class="ps"><div class="sk" style="height:20px;width:36px;margin:0 auto 6px"></div><div class="sk" style="height:10px;width:44px;margin:0 auto"></div></div>`).join('')}</div>`;
+<div class="pstats"><div class="pnums">${[1,2,3,4].map(()=>`<div class="ps"><div class="sk" style="height:20px;width:36px;margin:0 auto 6px"></div><div class="sk" style="height:10px;width:44px;margin:0 auto"></div></div>`).join('')}</div>
+  <div class="pacts">${[1,2,3].map(()=>`<div class="ps"><div class="sk" style="height:38px;border-radius:999px"></div></div>`).join('')}</div></div>`;
 
 function render(){
   if(!P||!P.ok){
@@ -771,14 +1312,20 @@ function render(){
       ${P.tagline?`<p>${esc(P.tagline)}</p>`:''}
 
     </div>
-  </div>
+  </div>`;
 
-  <div class="pstats">
-    ${[[joinedWord(st.joined),'Joined'],[compact(st.shows),'Shows'],
-       [compact(st.people),'Fans'],[compact(st.votes),'Votes cast'],
-       [compact(st.songs),'Songs']]
-      .filter(([v])=>v).map(([v,l])=>`<div class="ps"><b>${esc(v)}</b><span>${l}</span></div>`).join('')}
-    <div class="ps cta"><a href="${COMMHREF}"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/></svg>Community</a></div>
+  /* Merch goes to the shop only when there is one — a button to an empty shop is
+     the shrug the third rule forbids. Book opens the message window (#book, so
+     the artist can hand out myset.vip/<slug>#book as a booking link). */
+  const acts=[
+    `<div class="ps cta"><a href="#book" id="bookBtn"><svg viewBox="0 0 24 24"><path d="M4 5.5h16v13H4zM4 8l8 5.5L20 8"/></svg>Book</a></div>`,
+    P.merch>0?`<div class="ps cta"><a href="${SHOPHREF}"><svg viewBox="0 0 24 24"><path d="M3.5 4.5h7.5l9.5 9.5-6.5 6.5L3.5 11z"/><circle cx="7.6" cy="8.6" r="1.4"/></svg>Merch</a></div>`:'',
+    `<div class="ps cta"><a href="${COMMHREF}"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/></svg>Community</a></div>`].filter(Boolean);
+  h+=`<div class="pstats">
+    <div class="pnums">${[[joinedWord(st.joined),'Joined'],[compact(st.shows),'Shows'],
+       [compact(st.people),'Fans'],[compact(st.votes),'Votes cast']]
+      .filter(([v])=>v).map(([v,l])=>`<div class="ps"><b>${esc(v)}</b><span>${l}</span></div>`).join('')}</div>
+    <div class="pacts${acts.length===2?' two':''}">${acts.join('')}</div>
   </div>`;
 
   /* Proof, not a pitch (decision 0043). Every field is optional — a copy of the
@@ -865,6 +1412,12 @@ function render(){
      update the count a later redraw reads. No address on a row (the founder,
      2026-09-12): the Directions button is where the address belongs. */
   ROWS=gigs;
+  /* The tour poster's button sits under the headline, so the headline is drawn
+     for a poster even when no night is listed yet (the section is otherwise the
+     rows' — a heading over nothing is a shrug). */
+  const tour=P.tour&&P.tour.url?P.tour:null;
+  const tourBtn=tour?`<div class="tourbtn"><a href="${esc(tour.url)}" id="tourBtn" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>View tour dates</a></div>`:'';
+  if(tour&&!gigs.length) h+=`<div class="sect">Upcoming shows</div>${tourBtn}`;
   if(gigs.length){
     const mine=rsvpMap();
     const row=(g,i)=>`<div class="gigrow${g.live?' live':''}">
@@ -879,10 +1432,11 @@ function render(){
           <span class="going">${esc(compact(g.rsvp)||'0')} going</span></div>
       </div>`;
     const first=gigs.slice(0,3), rest=gigs.slice(3);
-    h+=`<div class="sect">Upcoming shows</div>
+    h+=`<div class="sect">Upcoming shows</div>${tourBtn}
       <div class="gigs">${first.map(row).join('')}
         ${rest.length?`<div class="more" id="moreWrap" hidden>${rest.map((g,j)=>row(g,j+first.length)).join('')}</div>
           <button class="seemore" id="seeMore">See ${rest.length} more ▾</button>`:''}
+        <button class="calbtn" id="calBtn" type="button">View calendar</button>
       </div>`;
   }
 
@@ -932,6 +1486,9 @@ document.addEventListener('click',e=>{
   if(sm){ const w=document.getElementById('moreWrap');
     const open=!w.hidden; w.hidden=open;
     sm.textContent=open?`See ${w.children.length} more ▾`:'Show fewer ▴'; return; }
+  const cb=e.target.closest('#calBtn'); if(cb){ openCal(cb); return; }
+  const tb=e.target.closest('#tourBtn'); if(tb){ e.preventDefault(); openTour(tb); return; }
+  const bb=e.target.closest('#bookBtn'); if(bb){ e.preventDefault(); openBook(); return; }   // the hash never sticks from a tap
   const rc=e.target.closest('.rc[data-reel]');
   if(rc){
     const mid=rc.getAttribute('data-reel'); const m=(P&&P.media||[]).find(x=>x.mid===mid); const slot=document.getElementById('hero');

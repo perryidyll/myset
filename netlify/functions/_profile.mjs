@@ -159,6 +159,9 @@ export const defaultProfile = () => ({
   links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', bandcamp: '', gofundme: '', website: '' },
   media: [],
   merch: [],
+  /* The tour-dates poster (decision 0075): the /api/img address of the file, what it
+     is, and where fans get tickets. null until the artist uploads one. */
+  tour: null,
   updatedAt: Date.now(),
 });
 
@@ -237,7 +240,18 @@ export function normProfile(p) {
   out.media.forEach((m, i) => { m.hero = i === hi; });
   if (hi > 0) out.media.unshift(out.media.splice(hi, 1)[0]);
   out.merch = normMerch(out.merch);
+  out.tour = normTour(out.tour);
   return out;
+}
+/* The poster is only ever a file this app stored (a same-origin /api/img address),
+   of a kind the page knows how to draw; the tickets link is any https address. */
+export const TOUR_KINDS = ['pdf', 'png', 'jpeg', 'webp'];
+export function normTour(t) {
+  if (!t || typeof t !== 'object') return null;
+  const url = String(t.url || '').slice(0, 300);
+  if (!/^\/api\/img\?a=[A-Za-z0-9%._-]+&s=tour&v=[a-z0-9]+$/.test(url)) return null;
+  const type = TOUR_KINDS.includes(String(t.type)) ? String(t.type) : 'jpeg';
+  return { url, type, link: safeLink('website', t.link) };
 }
 
 export async function getProfile(aid) {

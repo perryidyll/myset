@@ -34,9 +34,14 @@ export const POST_SLOT = /^c[a-z0-9]{8}_[0-2]$/;
    family means the poster is served, cached and deleted by the code that already
    does all three for photos — and it is still not `idcheck`, so 0bk holds. */
 export const CLIP_SLOT = /^k[a-z0-9]{10}$/;
+/* The tour-dates poster (decision 0075): one per artist, a picture OR a PDF. Its own
+   family on purpose — never in SLOTS, whose names photoUpload turns into an index
+   into `photos[]`. Decoded by decodeTourFile, never decodeDataUrl. */
+export const TOUR_SLOT = /^tour$/;
 export const isSlot = (name) => SLOTS.has(name) || MERCH_SLOT.test(name)
-  || POST_SLOT.test(name) || CLIP_SLOT.test(name);
+  || POST_SLOT.test(name) || CLIP_SLOT.test(name) || TOUR_SLOT.test(name);
 export const MAX_BYTES = 900 * 1024;
+export const MAX_TOUR_PDF = 3 * 1024 * 1024;   // a poster as a PDF; a picture keeps MAX_BYTES (the phone shrinks it)
 const KEY = (aid, slot) => `img_${aid}_${slot}`;
 
 const TYPES = { jpeg: 'image/jpeg', jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
@@ -58,6 +63,27 @@ export function decodeDataUrl(dataUrl) {
   if (!isJpeg && !isPng && !isWebp) return { error: 'That file isn’t really an image.' };
 
   return { bytes, type: isJpeg ? 'image/jpeg' : isPng ? 'image/png' : 'image/webp' };
+}
+
+/** The tour poster: a JPEG/PNG/WebP under MAX_BYTES (decodeDataUrl's rules) or a PDF
+ *  under MAX_TOUR_PDF whose bytes really begin %PDF-. Returns { bytes, type, kind }
+ *  with kind one of jpeg | png | webp | pdf, or { error }. A PDF is accepted as the
+ *  founder asked; it is served inline from this origin only, and only the signed-in
+ *  artist can put one here (decision 0075 says why that is enough). */
+export function decodeTourFile(dataUrl) {
+  const raw = String(dataUrl || '').trim();
+  const m = /^data:application\/pdf;base64,([A-Za-z0-9+/=]+)$/.exec(raw);
+  if (!m) {
+    const img = decodeDataUrl(raw);
+    if (img.error) return { error: 'That has to be a PNG, JPEG or PDF.' };
+    return { ...img, kind: img.type === 'image/png' ? 'png' : img.type === 'image/webp' ? 'webp' : 'jpeg' };
+  }
+  let bytes;
+  try { bytes = Buffer.from(m[1], 'base64'); } catch { return { error: 'Could not read that file.' }; }
+  if (!bytes.length) return { error: 'That file came through empty.' };
+  if (bytes.length > MAX_TOUR_PDF) return { error: 'That PDF is over 3 MB. Export it smaller, or as a PNG or JPEG.' };
+  if (bytes.subarray(0, 5).toString() !== '%PDF-') return { error: 'That file isn’t really a PDF.' };
+  return { bytes, type: 'application/pdf', kind: 'pdf' };
 }
 
 export async function putImage(aid, slot, bytes, type) {

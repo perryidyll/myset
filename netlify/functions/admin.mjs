@@ -31,7 +31,8 @@ import { startShow, endShow } from './_lifecycle.mjs';
 import { logPlay as filePlay, logLeft } from './_evlog.mjs';
 import { keepVersion } from './_versions.mjs';
 import { stagePayload } from './stage.mjs';
-import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
+import { decodeDataUrl, decodeTourFile, putImage, dropImage, SLOTS, MAX_BYTES, MAX_TOUR_PDF } from './_img.mjs';
+import { MSG_ACTIONS, handleMessages } from './_messages.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, reportsAllowed, redeemPromo,
          readPromos, mutatePromos, cleanCode, MAX_LIBRARY, libraryCap, NOT_BUILT } from './_plan.mjs';
 import { readBiz, mutateBiz, normGig, pruneRules, keyOk, bizCaps, BIZ_FULL, TIME_KINDS, MAX_RULES } from './_biz.mjs';
@@ -75,6 +76,8 @@ async function handlePlan(aid, action, body, req, me) {
                   plans: Object.fromEntries(PLAN_KEYS.map((k) => [k, shapeLimits(PLANS[k])])),
                   billing: mine ? b : { subscribed: b.subscribed, plan: b.plan, portal: false, pastDue: false },
                   role: (me && me.role) || 'owner',
+                  // the tour poster's byte caps (0075) — the Studio never types a cap
+                  tour: { pdf: MAX_TOUR_PDF, image: MAX_BYTES },
                   // the Studio's leaving banner, and the reason everything else is read-only
                   del: (artist && artist.del) || null,
                   email: (me && me.email) || null,
@@ -455,6 +458,11 @@ const CAPABILITY = {
   merchSave: 'profile', merchRemove: 'profile', merchPhoto: 'profile', merchPhotoClear: 'profile', merchMove: 'profile',
   orderList: 'profile', orderDone: 'profile', orderDetail: 'profile', wishList: 'profile', wishDone: 'profile',
   postReply: 'community', postHide: 'community',
+  /* The inbox (decision 0074): a band mate who tends the community page can read and
+     answer bookings; the sound engineer cannot. Block and Report are the owner's (below). */
+  msgCount: 'community', msgList: 'community', msgThread: 'community', msgReply: 'community',
+  msgMove: 'community', msgUnread: 'community', msgReport: 'community', msgBlock: 'community',
+  tourSet: 'profile', tourClear: 'profile',
   accountExport: 'export',
 };
 
@@ -1175,6 +1183,40 @@ async function handleProfile(aid, action, body, req, me) {
     return json({ ok: true, profile: await getProfile(aid) });
   }
 
+  /* ---------- the tour-dates poster (decision 0075) ----------
+     A picture or a PDF, one per artist, under the `tour` slot; and the link where
+     fans get tickets. Either half may be sent alone: a link without a file keeps
+     the file, a file without a link keeps the link. */
+  if (action === 'tourSet') {
+    const has = (k) => Object.prototype.hasOwnProperty.call(body, k);
+    let file = null;
+    if (has('data') && body.data) {
+      const dec = decodeTourFile(body.data);
+      if (dec.error) return bad(dec.error);
+      const url = await putImage(aid, 'tour', dec.bytes, dec.type);
+      file = { url, type: dec.kind };
+    }
+    const link = has('link') ? String(body.link || '') : null;
+    let refused = null;
+    await mutateProfile(aid, (p) => {
+      const cur = p.tour && typeof p.tour === 'object' ? p.tour : null;
+      const next = file ? { ...file, link: cur ? cur.link : '' } : cur ? { ...cur } : null;
+      if (link !== null) {
+        if (!next) { refused = 'Upload the poster first, then add the link.'; return false; }
+        next.link = link;
+      }
+      p.tour = next;
+      return true;
+    });
+    if (refused) return bad(refused);
+    return json({ ok: true, profile: await getProfile(aid), limits: { pdf: MAX_TOUR_PDF, image: MAX_BYTES } });
+  }
+  if (action === 'tourClear') {
+    await dropImage(aid, 'tour');
+    await mutateProfile(aid, (p) => { p.tour = null; return true; });
+    return json({ ok: true, profile: await getProfile(aid) });
+  }
+
   /* ---------- the verification tick, for an ARTIST ----------
      Premium plan + card payments actually set up + a photo ID that matches the
      account + Perry's eyes. See _verify.mjs for why the ID is never public and
@@ -1780,6 +1822,8 @@ const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPho
 
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove', 'mediaHero',
                                  'photoUpload', 'photoClear',
+                                 // the tour-dates poster and its tickets link (decision 0075)
+                                 'tourSet', 'tourClear',
                                  // the artist's own verification tick
                                  'verifyStatus', 'idUpload',
                                  // Stripe Connect onboarding and status
@@ -1839,7 +1883,10 @@ const main = async (req) => {
     'bizGet', 'bizSave', 'bizPrefs',
     /* Promoting a gig spends $10 of the owner's money, so it is the owner's to
        spend. `featureList` is NOT here — a band mate may look at what is booked. */
-    'featureStart', 'featureFinish']);
+    'featureStart', 'featureFinish',
+    /* Blocking a sender and reporting a conversation to MySet are the owner's calls
+       (decision 0074); reading and answering the inbox is a seat's everyday work. */
+    'msgBlock', 'msgReport']);
   if (OWNER_ONLY.has(action) && (me.role || 'owner') !== 'owner')
     return bad('Only the account owner can do that', 403);
 
@@ -1910,6 +1957,7 @@ const main = async (req) => {
   if (BIZ_ACTIONS.has(action)) return handleBiz(aid, action, body);
   if (FEATURE_ACTIONS.has(action)) return handleFeature(req, aid, body, action);
   if (SHOP_ACTIONS.has(action)) return handleShop(aid, action, body);
+  if (MSG_ACTIONS.has(action)) return handleMessages(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);
   if (SONG_ACTIONS.has(action)) return handleSong(aid, action, body, await getShow(aid));

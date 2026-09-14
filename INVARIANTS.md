@@ -435,6 +435,23 @@ If you are about to violate one, stop and say so rather than working around it.
     Sheet card shows the room and links the sheet in use. Decision `0073`;
     `test/sheets.mjs` ROOM.
 
+0fw. **A booker is not the audience, and the door to the inbox answers everyone
+    the same.** The Book button (`/api/messages`, `_messages.mjs`) stores what a
+    booker gave on purpose — a name, an email, their words — under
+    `inbox_<aid>` and `msg_<aid>_<tid>`; the audience stays counted and never
+    named (9g, 0bu, 0fp hold: this is a new category, decision `0074`). The
+    device id is kept only as a hash, only for limits and blocking; the email
+    never reaches a public read (`/api/profile`, `/api/fan`, the community read)
+    and never the booker's own token-gated read. A blocked sender, a filled
+    honeypot and a repeat from one phone get the same `{ok, id, k}` and nothing
+    is stored (9h); every ceiling is inside the CAS (15k, 0dw). A thread read is
+    personal and goes out `json()`, never `jsonCached` (9d6). Block keys on the
+    email hash and the device hash, never the network (0ck). The unread count
+    is never on the live poll (9d8) and never on a timer. Nothing here waits on
+    mail or push: the write lands, the badge and the booker's link are the paths
+    that always work. `keysFor` names the inbox, its archive and every
+    conversation (0cy, 0fr); `test/messages.mjs`.
+
 ## Cost
 
 9d0. **Production deploys are the expensive thing, not traffic.** A production

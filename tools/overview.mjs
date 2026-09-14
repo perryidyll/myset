@@ -55,6 +55,8 @@ async function facts() {
   const biz = await import(join(ROOT, 'netlify/functions/_biz.mjs'));
   const prof = await import(join(ROOT, 'netlify/functions/_profile.mjs'));   // the merch caps (blueprint S7, 2026-09-13)
   const wishes = await import(join(ROOT, 'netlify/functions/_wishes.mjs'));  // Make a request (the founder, 2026-09-13)
+  const msgs = await import(join(ROOT, 'netlify/functions/_messages.mjs'));   // the Book button's inbox (the founder, 2026-09-14)
+  const imgs = await import(join(ROOT, 'netlify/functions/_img.mjs'));        // the tour poster's byte caps
 
   const fns = ls('netlify/functions').filter((f) => f.endsWith('.mjs'));
   const handlers = fns.filter((f) => !f.startsWith('_')).map((f) => f.replace('.mjs', '')).sort();
@@ -106,7 +108,7 @@ async function facts() {
       endpoints: handlers.filter((h) => !crons.includes(h)),
       scheduled: crons,
       libraries: libs,
-      studioActions: actionsIn('admin.mjs'),
+      studioActions: [...new Set([...actionsIn('admin.mjs'), ...actionsIn('_messages.mjs')])],   // the inbox's eight live in _messages.mjs (0074)
       venueActions: actionsIn('venueadmin.mjs'),
       testSuites: suites,
       assertions: lastRun ? lastRun.assertions : null,
@@ -121,6 +123,13 @@ async function facts() {
     merch: { maxItems: prof.MAX_MERCH, maxVariants: prof.MAX_VARIANTS, variantLen: prof.VARIANT_LEN, maxPostCents: prof.MAX_POST,
              minCents: prof.MIN_CENTS, maxCents: prof.MAX_CENTS, maxQty: qtyClamp(), maxImgs: prof.MAX_MERCH_IMGS, maxStock: prof.MAX_STOCK,
              wishLen: wishes.MAX_WISH, wishesPerDay: wishes.WISHES_PER_DEVICE_PER_DAY, wishesKept: wishes.MAX_WISHES },
+    /* the Book button's inbox (decision 0074) and the tour poster (0075) — every cap the
+       Studio and the page lean on is read from the server, never typed */
+    messages: { textLen: msgs.MAX_TEXT, textMin: msgs.MIN_TEXT, perPhonePerDay: msgs.THREADS_PER_DEVICE_PER_DAY, perEmailPerDay: msgs.THREADS_PER_EMAIL_PER_DAY, mailsPerDay: msgs.MAILS_PER_ARTIST_PER_DAY,
+                perNetworkPerDay: msgs.THREADS_PER_NETWORK_PER_DAY, perArtistPerDay: msgs.THREADS_PER_ARTIST_PER_DAY,
+                repliesPerDay: msgs.REPLIES_PER_THREAD_PER_DAY, threadsKept: msgs.MAX_THREADS, msgsPerThread: msgs.MAX_MSGS,
+                spamLinks: msgs.SPAM_LINKS, folders: msgs.FOLDERS, kinds: msgs.KINDS,
+                posterImageBytes: imgs.MAX_BYTES, posterPdfBytes: imgs.MAX_TOUR_PDF },
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
       shards: lib.SHARDS,
@@ -302,6 +311,21 @@ Up to **${f.venuePlans.maxMerch}** merch items. Not built: ${f.venuePlans.notBui
 | Most of one item per order | ${f.merch.maxQty} | the checkout clamp in \`pay.mjs\` (both merch branches); the shop's + stops at the same count |
 | A card sale's price runs | ${money(f.merch.minCents)}–${money(f.merch.maxCents)} | \`MIN_CENTS\`, \`MAX_CENTS\` in \`_profile.mjs\`; under the floor the shop shows the price and says "ask at the table" — both merchLists send the band |
 | A fan's request to the shop ("Make a request") | up to ${f.merch.wishLen} characters, ${f.merch.wishesPerDay} a day per phone, the newest ${f.merch.wishesKept} kept | \`MAX_WISH\`, \`WISHES_PER_DEVICE_PER_DAY\`, \`MAX_WISHES\` in \`_wishes.mjs\`; lands under Requests from the shop in both Studios' Merch screens |
+
+### The Book button and the inbox (decision 0074), the tour poster (0075)
+
+| Thing | Value | Where it lives |
+| --- | --- | --- |
+| A message from the Book button | ${f.messages.textMin}–${f.messages.textLen.toLocaleString()} characters, with a name and an email address | \`MIN_TEXT\`, \`MAX_TEXT\` in \`_messages.mjs\`; the Studio reads the cap from \`msgList\` |
+| New conversations a day | ${f.messages.perPhonePerDay} per phone and ${f.messages.perEmailPerDay} per address (then a sentence and a 429), ${f.messages.perNetworkPerDay} per network, ${f.messages.perArtistPerDay} per artist (past that they land in Spam) | \`THREADS_PER_DEVICE_PER_DAY\`, \`THREADS_PER_EMAIL_PER_DAY\`, \`THREADS_PER_NETWORK_PER_DAY\`, \`THREADS_PER_ARTIST_PER_DAY\` — inside the CAS, never only on the page |
+| Letters to the artist a day | ${f.messages.mailsPerDay} — then the badge and push carry it; the booker's receipt goes once per address per day and never carries typed words | \`MAILS_PER_ARTIST_PER_DAY\`; \`day.mail\` on the inbox |
+| Replies from the booker | ${f.messages.repliesPerDay} a day per conversation | \`REPLIES_PER_THREAD_PER_DAY\` |
+| A message with ${f.messages.spamLinks} or more links | goes to Spam, not Requests | \`SPAM_LINKS\` |
+| Conversations the inbox lists | ${f.messages.threadsKept}; older ones spill to \`inboxarch_\` and stay on disk | \`MAX_THREADS\`; \`spillInbox\` |
+| Messages in one conversation | ${f.messages.msgsPerThread}; the next is refused, never dropped | \`MAX_MSGS\` |
+| Folders | ${f.messages.folders.join(' · ')} | \`FOLDERS\`; a new one lands in requests, an answer moves it to general |
+| What a message is about | ${f.messages.kinds.join(' · ')} | \`KINDS\`; a tag on the row |
+| The tour poster | a picture up to ${Math.round(f.messages.posterImageBytes / 1024)} KB after the phone shrinks it, or a PDF up to ${Math.round(f.messages.posterPdfBytes / 1024 / 1024)} MB | \`MAX_BYTES\`, \`MAX_TOUR_PDF\` in \`_img.mjs\`; \`tourSet\` / \`tourClear\` on \`/api/admin\`; the \`tour\` slot |
 
 ### Voting numbers
 

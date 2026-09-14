@@ -14,6 +14,7 @@ import { readArchivedFeedback, archiveKeys as fbArchiveKeys } from './_feedback.
 import { readEventLog, evtKeys } from './_evlog.mjs';
 import { listVersions, versionKeys, verKey } from './_versions.mjs';
 import { credKey } from './_cred.mjs';
+import { messageKeys, exportMessages } from './_messages.mjs';
 
 /* THE ACCOUNT — what an artist can take with them, and how they leave.
 
@@ -63,7 +64,7 @@ export async function exportArtist(aid) {
     account: { artistId: aid, slug: me.slug, name: me.name, createdAt: me.createdAt, plan: me.plan, planUntil: me.planUntil || null,
                verified: !!me.verified, emails: Object.entries(reg.byEmail).filter(([, v]) => v.artistId === aid).map(([e, v]) => ({ email: e, role: v.role })) },
     profile: { name: profile.name, tagline: profile.tagline, bio: profile.bio, links: profile.links, media: profile.media, merch: profile.merch,
-               photo: profile.photo, avatar: profile.avatar, photos: profile.photos },
+               photo: profile.photo, avatar: profile.avatar, photos: profile.photos, tour: profile.tour },
     show: { venue: sh.venue, city: sh.city, songs: sh.songs || [], freeCredits: sh.freeCredits, replayCost: sh.replayCost, packs: sh.packs,
             requests: sh.requests, birthdays: sh.birthdays, tags: sh.tags || [] },
     gigs: events.list,
@@ -77,6 +78,8 @@ export async function exportArtist(aid) {
     communityArchive: shapeForOwner({ list: oldPosts }, aid),
     feedback: shapeFeedback(fb),
     feedbackArchive: oldFb.map(({ fan, ...r }) => r),            // every note that left the list; never the device
+    // every conversation from the Book button (0074): the booker's words and the artist's, no device hash
+    messages: await exportMessages(aid).catch(() => []),
   };
 }
 
@@ -123,6 +126,10 @@ export async function keysFor(aid) {
      can ever find (`list()` is banned — INVARIANT 1). */
   for (const p of posts.list || []) if (p && p.clip) { keys.push(vidKey(aid, p.clip)); keys.push(IMG(aid, p.clip)); }
   for (const c of Object.keys(pend.by || {})) { keys.push(vidKey(aid, c)); keys.push(IMG(aid, c)); }
+  /* The tour poster (0075), and the inbox with its archive and every conversation the
+     two name (0074) — one read of the index, one of the archive head, no list(). */
+  keys.push(IMG(aid, 'tour'));
+  for (const k of await messageKeys(aid).catch(() => [`inbox_${aid}`, `inboxarch_${aid}`])) keys.push(k);
   return [...new Set(keys)];
 }
 
