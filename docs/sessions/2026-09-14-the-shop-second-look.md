@@ -22,3 +22,5 @@ The founder did not see the count on the editor (the one field sat under Shippin
 ## Shipped
 
 Pushed as `57cc7b6` + push-log `85f6c67`, PR #39, preview looked at 375 px with the founder's two real items (the gallery under the price, *Ask at the show* since his card payments are off — nothing to Buy, nothing bought), merged as **`ab0a05e`**, live by content 36 s later.
+
+The count per size: pushed as `123808a` + push-log, PR #42 (rebased onto `be8d60c` — the email + password door had landed; the stamps and the overview re-made), merged as **`c4df3f0`**, live by content 30 s later.
