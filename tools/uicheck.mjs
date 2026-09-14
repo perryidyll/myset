@@ -499,7 +499,10 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   const songCard=document.querySelector('.songcard'), songActions=songCard&&songCard.querySelector('.songactions');
   { const del=songCard&&songCard.querySelector('[data-act="del"]'), askEl=document.querySelector('#ask'); if(del){ del.click();
       ok('tapping ✕ asks “Delete this song?” in the Studio’s own window, with Yes, delete it and Keep it', askEl.classList.contains('on')&&/Delete this song\?/.test(askEl.innerText)&&/Yes, delete it/.test(askEl.innerText)&&/Keep it/.test(askEl.innerText), askEl.innerText.replace(/\n/g,' | '));
-      askEl.querySelector('#askNo').click(); ok('Keep it closes it and the song stays', !askEl.classList.contains('on')&&!!document.querySelector('.songcard')); } }
+      askEl.querySelector('#askNo').click(); ok('Keep it closes it and the song stays', !askEl.classList.contains('on')&&!!document.querySelector('.songcard')); }
+    const clr=[...document.querySelectorAll('button')].find(b=>/^Clear setlist$/.test(b.textContent.trim())); if(clr){ clr.click();
+      ok('Clear setlist asks “Remove every song?” in the same window', askEl.classList.contains('on')&&/Remove every song\?/.test(askEl.innerText)&&/Yes, remove them/.test(askEl.innerText), askEl.innerText.replace(/\n/g,' | '));
+      askEl.click(); ok('a tap on the dim is a no — the window closes and the setlist stays', !askEl.classList.contains('on')&&!!document.querySelector('.songcard')); } }
   ok('a song card is its words with a column of three small icon buttons at the right — edit at the title’s top edge, delete last — and no taller than its words',
     (()=>{ if(!songCard||!songActions) return false; const acts=[...songActions.querySelectorAll('.act')], t=songCard.querySelector('.t').getBoundingClientRect(), a0=acts[0].getBoundingClientRect(), m=songCard.querySelector('.m').getBoundingClientRect();
       return acts.length===3&&acts.every(a=>a.getBoundingClientRect().height<=32&&(a.querySelector('svg')||a.textContent.trim()==='✕'))&&acts.every(a=>getComputedStyle(a).backgroundColor===getComputedStyle(acts[2]).backgroundColor)&&acts[2].classList.contains('warn')

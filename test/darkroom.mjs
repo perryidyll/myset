@@ -146,6 +146,10 @@ const read = (f) => src(new URL('../public/' + f, import.meta.url));
        && /yes:'Yes, end it',no:'Keep playing'/.test(studio));
   ok('deleting a song asks in the same window, never the browser\u2019s confirm()',
      /title:'Delete this song\?'/.test(studio) && /yes:'Yes, delete it',no:'Keep it'/.test(studio) && !/confirm\('Remove “/.test(studio));
+  { const money=readFileSync(new URL('../public/studio-money.js', import.meta.url), 'utf8');
+    ok('every question in both Studio scripts goes through ask() — not one browser confirm() is left',
+       !/\bconfirm\(/.test(studio.replace(/\/\*[\s\S]*?\*\//g,'')) && !/\bconfirm\(/.test(money) && /return new Promise\(r=>\{ ASK_DONE=r; \}\)/.test(studio)
+         && (studio.match(/await ask\(\{/g)||[]).length>=10 && /await ask\(\{title:'Remove the numbers\?'/.test(money)); }
   ok('End current song is a light red fill with red text, the window\u2019s Yes is red, Keep playing is pink-orange bordered',
      /\.liveactions \.endnow\{[^}]*background:rgba\(255,59,48,[^}]*color:#FF3B30/.test(studio)
        && /#ask \.big\.yes\{background:#FF3B30;color:#fff/.test(studio)

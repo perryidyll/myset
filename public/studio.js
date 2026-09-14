@@ -22,7 +22,7 @@ let LASTSHOW='', LASTSTATUS='';            // when the night changes, the Money 
 /* The business dashboard (decision 0065) is two scripts loaded only when a paid
    owner opens Money — the maths and the tab. Served immutable like this file, so
    each carries its own stamp; tools/stamp.mjs rewrites both. */
-const BIZ_V='/biz.js?v=e5e1ff47', MONEY_V='/studio-money.js?v=0c8976de';
+const BIZ_V='/biz.js?v=e5e1ff47', MONEY_V='/studio-money.js?v=594acc9c';
 let MONEY_PROMISE=null, MONEY_FAILED=false;
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
@@ -173,7 +173,7 @@ async function renameList(id){
 }
 async function deleteList(id){
   const l=((D&&D.lists)||[]).find(x=>x.id===id);
-  if(!confirm(`Delete “${l?l.name:'this setlist'}”? Your songs are not touched.`))return;
+  if(!await ask({title:'Delete this setlist?',lede:`“${l?l.name:'This setlist'}” goes. Your songs are not touched.`,yes:'Yes, delete it',no:'Keep it'}))return;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'listDelete',id})});
   if(!d.ok){toast(d.error||'Failed');return;}
   closeSheet(); await load(); toast('Setlist deleted');
@@ -444,28 +444,36 @@ async function act(action,extra={}){
    playing it opens the small "End current song?" window instead of starting.
    "Yes, end it" sends the same play — the server files the playing song as
    played and starts the new one in one write, exactly what ■ End + ▶ would do. */
-let ASK_GO=null;
+let ASK_GO=null, ASK_DONE=null;
 /* The one small centred window the Studio asks with: a title, a line, a red yes
    and a ringed no. Every question that must not be a mis-tap goes through here —
    never the browser's own confirm(), which an installed app on some phones does
-   not show at all (the founder, 2026-09-14). */
+   not show at all (the founder, 2026-09-14). Two ways to use it: pass `go` and it
+   runs on yes, or `await ask({...})` — true on yes, false on no or a tap on the
+   dim — which is a drop-in for the `if(!confirm(...))return` it replaced. */
 function ask({title,lede,yes,no,go}){
-  ASK_GO=go;
+  ASK_GO=go||null;
   const t=$('#askTitle'); if(t) t.textContent=title;
   const l=$('#askLede'); if(l) l.textContent=lede||'';
   const y=$('#askYes'); if(y) y.textContent=yes;
-  const k=$('#askNo'); if(k) k.textContent=no;
+  const k=$('#askNo'); if(k) k.textContent=no||'Cancel';
   const a=$('#ask'); if(a) a.classList.add('on');
+  return new Promise(r=>{ ASK_DONE=r; });
 }
 function startSong(action,extra={}){
   const now=D&&D.songs&&D.songs.find(x=>x.now);
   if(!now||(action==='play'&&extra.song===now.id)) return act(action,extra);
   ask({title:'End current song?',lede:`${now.title} is still playing.`,yes:'Yes, end it',no:'Keep playing',go:()=>act(action,extra)});
 }
-function closeAsk(){ ASK_GO=null; const a=$('#ask'); if(a) a.classList.remove('on'); }
+function closeAsk(ok){
+  const go=ASK_GO, done=ASK_DONE; ASK_GO=ASK_DONE=null;
+  const a=$('#ask'); if(a) a.classList.remove('on');
+  if(ok&&go) go();
+  if(done) done(!!ok);
+}
 document.addEventListener('click',e=>{
-  if(e.target&&e.target.id==='askYes'){ const go=ASK_GO; closeAsk(); if(go) go(); }
-  else if(e.target&&e.target.id==='ask') closeAsk();      // a tap on the dim keeps playing
+  if(e.target&&e.target.id==='askYes') closeAsk(true);
+  else if(e.target&&e.target.id==='ask') closeAsk(false);      // a tap on the dim is a no
 });
 let GATE_EMAIL='', GATE_FROM='join', PW_PROMPT=false;
 /* THE SIGN-IN SCREEN (decision 0070, the founder's spec, 2026-09-14): email over
@@ -686,7 +694,7 @@ async function submitCode(){
    Studio mid-gig. If the worker is not there at all, a plain reload is still the
    right thing to do rather than nothing. */
 async function hardReset(){
-  if(!confirm('Throw away the offline copy and start the app fresh? You stay signed in.')) return;
+  if(!await ask({title:'Start the app fresh?',lede:'The offline copy is thrown away. You stay signed in.',yes:'Yes, start fresh',no:'Not now'})) return;
   try{
     if('caches' in window) for(const k of await caches.keys()) await caches.delete(k);
     const reg='serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
@@ -714,8 +722,7 @@ async function signOut(){
   gate();
 }
 function signOutEverywhere(){
-  if(!confirm('Sign every device out, including this one? You\u2019ll need a code to get back in.'))return;
-  revokeAll();
+  ask({title:'Sign out everywhere?',lede:'Every device, including this one. You\u2019ll need a code to get back in.',yes:'Yes, sign out',no:'Stay signed in',go:revokeAll});
 }
 /* ---------- the verification tick, from the artist's side ----------
    Built because the review found the whole feature was WRITE-ONLY: the endpoints
@@ -1438,7 +1445,7 @@ async function saveGig2(id){
 }
 async function delGig(id){
   if(WRITING)return;
-  if(!confirm('Delete this gig? If it repeats, the whole run goes.'))return;
+  if(!await ask({title:'Delete this gig?',lede:'If it repeats, the whole run goes.',yes:'Yes, delete it',no:'Keep it'}))return;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventDelete',id})});
   if(!d.ok){toast(d.error||'Failed');return;}
   closeSheet(); await loadGigs(true); if(window.Money)Money.stale(); toast('Deleted');
@@ -1459,7 +1466,7 @@ async function skipGig(pair){
 async function hideGig(pair){
   if(WRITING)return;
   const [id,date]=pair.split('|');
-  if(!confirm('Remove that night from your list? The rest of the run is unaffected.'))return;
+  if(!await ask({title:'Remove that night?',lede:'It comes off your list. The rest of the run is unaffected.',yes:'Yes, remove it',no:'Keep it'}))return;
   WRITING=true;
   try{
     const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'eventHide',id,date})});
@@ -1508,9 +1515,11 @@ async function media(action,mid,dir){
 /* Emptying the board does NOT give anybody their votes back — a vote is spent when
    it is cast, and the artist reaching for this button does not change that. Said out
    loud before it happens, because the room cannot be told afterwards. */
+function newShowAsk(){
+  ask({title:'Start a fresh show?',lede:'The previous show is saved and tonight starts with a clean vote board.',yes:'Yes, start it',no:'Not yet',go:()=>act('newShow')});
+}
 function clearBoardAsk(){
-  if(!confirm('Clear every vote off the board?\n\nNobody gets their votes back \u2014 they were spent when they were cast. The room starts from nothing.'))return;
-  act('resetVotes');
+  ask({title:'Clear every vote?',lede:'Nobody gets their votes back \u2014 they were spent when they were cast. The room starts from nothing.',yes:'Yes, clear the board',no:'Keep the votes',go:()=>act('resetVotes')});
 }
 /* Ten seconds, counted on the button itself so the artist can see it running and
    cannot fire a second one over the top of the first. The countdown the ROOM sees is
@@ -1713,7 +1722,7 @@ function render(){
       <input class="inp" id="nightName" maxlength="80" placeholder="Where was it? e.g. The Corner Hotel" style="flex:1" onkeydown="if(event.key==='Enter')saveNight()">
       <button class="act pri" style="min-width:64px" onclick="saveNight()">Save</button></div></div>`}
     <div class="wrap" style="padding-top:18px;padding-bottom:2px">
-      <button class="big bigplay" onclick="if(confirm('Start a fresh show? The previous show is saved and tonight starts with a clean vote board.'))act('newShow')">
+      <button class="big bigplay" onclick="newShowAsk()">
         <span>●</span><span style="flex:1">Start a new show</span></button>
     </div>
     ${capNote(s)}
@@ -1724,7 +1733,7 @@ function render(){
       — use that if you ended it by mistake.</p>`
     :`${todayCard(s)}
     <div class="wrap" style="padding-top:18px;padding-bottom:2px">
-      <button class="big bigplay" onclick="if(confirm('Start a fresh show? The previous show is saved and tonight starts with a clean vote board.'))act('newShow')">
+      <button class="big bigplay" onclick="newShowAsk()">
         <span>●</span><span style="flex:1">Start the show</span></button>
     </div>
     ${capNote(s)}
@@ -1840,7 +1849,7 @@ function render(){
     </div>
     <div class="wrap" style="padding-top:18px;padding-bottom:8px">
       <button class="big alt" style="justify-content:center;margin:0;color:var(--accent)"
-        onclick="if(confirm('Remove every song from your setlist? This cannot be undone.'))act('clearSetlist')">Clear setlist</button>
+        onclick="ask({title:'Remove every song?',lede:'Your setlist empties. This cannot be undone.',yes:'Yes, remove them',no:'Keep them',go:()=>act('clearSetlist')})">Clear setlist</button>
     </div>
     `;
   }
@@ -3049,8 +3058,7 @@ async function clearLyrics(id){
 }
 function declineSong(id){
   const x=songById(id); if(!x||!x.votes)return;
-  if(confirm('Decline “'+x.title+'” for tonight and return all '+x.votes+' vote'+(x.votes===1?'':'s')+' to the people who cast them?\n\nThe song will be hidden until you choose Show again.'))
-    act('declineSong',{song:id});
+  ask({title:'Decline this song tonight?',lede:'“'+x.title+'” is hidden until you choose Show again, and its '+x.votes+' vote'+(x.votes===1?'':'s')+' go back to the people who cast them.',yes:'Yes, decline it',no:'Keep it',go:()=>act('declineSong',{song:id})});
 }
 function removeSong(id){
   const x=songById(id); if(!x)return;
@@ -3175,7 +3183,7 @@ async function saveEndedShow(){
   closeSheet();await act('status',{status:'ended',title});
 }
 async function discardEndedShow(){
-  if(!confirm('End this show without saving it to Past shows?'))return;
+  if(!await ask({title:'End without saving?',lede:'This show won\u2019t appear in Past shows.',yes:'Yes, end it',no:'Go back'}))return;
   closeSheet();await act('status',{status:'ended',discard:true});
 }
 
@@ -3861,7 +3869,7 @@ async function mcVarOut(i){
   box.innerHTML=mcChips(); render(); toast(was?'Marked sold out':'Back in stock');
 }
 async function rmMerch(id){
-  if(!confirm('Remove this item?'))return;
+  if(!await ask({title:'Remove this item?',lede:'It comes off your merch list.',yes:'Yes, remove it',no:'Keep it'}))return;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchRemove',id})});
   if(d.ok){MERCH=d.merch;render();toast('Removed');}
 }
@@ -3892,7 +3900,7 @@ function commSection(){
         <button class="act" onclick="replyPost('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
         <button class="act" onclick="commAct('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
         ${canHide()?`<button class="act" onclick="${p.hidden?`commAct('postHide','${esc(p.id)}',false)`
-          :`if(confirm(${JSON.stringify((p.photos.length||p.clip)?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}))commAct('postHide','${esc(p.id)}',true)`}">${p.hidden?'Un-hide':'Hide'}</button>`
+          :`hidePostAsk('${esc(p.id)}',${(p.photos.length||p.clip)?'true':'false'})`}">${p.hidden?'Un-hide':'Hide'}</button>`
           :`<button class="act" style="opacity:.5" onclick="toast('Hiding a post is a Bar Star feature');openPlans()">Hide · Bar Star</button>`}
         ${/* Greyed rather than hidden — the founder's rule for a locked feature: show it,
              say what it needs, never pretend it isn't there. The server refuses it
@@ -4073,8 +4081,11 @@ async function undelete(){
   PLAN=null; await loadPlan(true); render();
   toast(d.slugLost?'Your page is back, but its address was taken — pick a new one in Settings.':'Your page is back.');
 }
+function hidePostAsk(id,media){
+  ask({title:'Hide this post?',lede:media?'It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'It comes off your page straight away. You can un-hide it later.',yes:'Yes, hide it',no:'Keep it',go:()=>commAct('postHide',id,true)});
+}
 async function freePageAddress(){
-  if(!confirm('Your page address becomes free for someone else to take. You can still undo the deletion, but your page would need a new address.'))return;
+  if(!await ask({title:'Free your page address?',lede:'Someone else can take it. You can still undo the deletion, but your page would need a new address.',yes:'Yes, free it',no:'Keep it'}))return;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'accountFreeSlug'})});
   if(!d.ok){toast(d.error||'Couldn’t do that');return;}
   toast('Freed. Somebody else can take it now.');
@@ -4208,7 +4219,7 @@ async function addTeam(){
   el.value=''; TEAM=d; render(); toast(`${em} can sign in now`);
 }
 async function removeTeam(email){
-  if(!confirm('Stop '+email+' signing in?'))return;
+  if(!await ask({title:'Stop this sign-in?',lede:email+' can no longer sign in.',yes:'Yes, stop it',no:'Keep it'}))return;
   const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'remove',email})});
   if(!d.ok){toast(d.error||'Failed');return;}
   TEAM=d; render(); toast('Removed');
@@ -4385,7 +4396,7 @@ async function addPasskey(){
 }
 
 async function dropPasskey(id){
-  if(!confirm('Remove this device? You can always add it again.'))return;
+  if(!await ask({title:'Remove this device?',lede:'You can always add it again.',yes:'Yes, remove it',no:'Keep it'}))return;
   const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'passkeyForget',id})});
   if(!d.ok){ toast(d.error||'Couldn’t remove that'); return; }
   PKEYS=d.keys; render();
@@ -4426,7 +4437,7 @@ async function loadRecovery(force){
   if(d&&d.ok){ REC=d; if(TAB==='settings'&&D)render(); }
 }
 async function makeRecovery(){
-  if(REC&&REC.made&&!confirm('Make eight new codes? The old ones stop working straight away.'))return;
+  if(REC&&REC.made&&!await ask({title:'Make eight new codes?',lede:'The old ones stop working straight away.',yes:'Yes, make them',no:'Keep the old ones'}))return;
   const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'recoveryMake'})});
   if(!d.ok){toast(d.error||'Couldn\u2019t make those');return;}
   const list=d.codes.join('\n');

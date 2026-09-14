@@ -20,6 +20,18 @@ could have gone another way.
   `confirm()`, which an installed app on some phones does not show; the small
   centred *End current song?* window (UX-042) is now `ask({title, lede, yes, no, go})`
   and *Delete this song?* — *Yes, delete it* / *Keep it* — goes through it.
+- **Every question goes through that window** (the founder's go, later the same day,
+  PR #48): the seventeen other `confirm()`s in `studio.js` — deleting a setlist or a
+  gig, hiding a night, clearing the board or the setlist, a fresh show, declining a
+  song, ending without saving, a merch item, hiding a post, freeing the page
+  address, a team address, a passkey, new recovery codes, the hard reset, signing
+  out everywhere — and the one in `studio-money.js` (*Remove the numbers?*) now use
+  `ask()`. It returns a promise, so `if(!confirm(x))return` became
+  `if(!await ask({title,lede,yes,no}))return`; the `go` form stays for the inline
+  buttons. A tap on the dim, or the ringed button, resolves false. The window sits at
+  z 66, above every sheet (65), which the *Remove the numbers?* case inside the
+  editor sheet proves. `test/darkroom.mjs` asserts not one `confirm(` is left in
+  either Studio script.
 - **Up next shows ten songs** before it scrolls — cut at the eleventh row's top edge
   by `render()`, since a voted row is taller than a plain one (`studio.html
   .queue-window`).
@@ -28,3 +40,10 @@ Verified: suite 2,733 ✓ / 0 ✗ (45 files); uicheck 231 ✓ / 0 ✗ / 0 page e
 touch drag on the readout closes the editor; the card column measured; the queue
 window equal to its first ten rows); sheetcheck 39 ✓; looked at on the localhost at
 375 px.
+
+Second verification (PR #48, every `confirm()` through `ask()`): suite 2,934 ✓ / 0 ✗
+(48 files); uicheck 244 ✓ / 0 ✗ / 0 page errors (*Clear setlist* opens *Remove every
+song?*, a tap on the dim closes it and the songs stay); the Money editor's *Remove
+this show's numbers* opened *Remove the numbers?* above the sheet on the localhost
+at 375 px, *Keep them* left the record. Not checked: each of the eighteen sites tapped
+by hand — the change at every site is the same one-line substitution.
