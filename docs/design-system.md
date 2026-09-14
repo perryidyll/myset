@@ -399,6 +399,7 @@ every class prefixed `biz` so it can never collide with a Studio rule:
 | `.bizsk` | the skeleton frame drawn while the book loads |
 | `.chips.scroll` | the period row — one horizontally scrolling line, never the wrapping `.chips` |
 | `.sheet.biz` | the editor sheet; its sticky readout `.bizro` counts as the grab zone, and a drag closes it like any sheet — the 24 h draft brings the numbers back (the founder, 2026-09-14) |
+| `#ask` | the one small centred question window (title, a muted line, a red *Yes, …* and a ringed *Keep …*): `ask({title,lede,yes,no,go})` runs `go` on yes, or `await ask({…})` answers true / false — every destructive tap in both Studio scripts goes through it, never the browser's `confirm()`, which an installed app on some phones does not show (the founder, 2026-09-14) |
 | `.songcard`, `.act.ico` | a setlist song card: the words, then a column of three 26 px round buttons on the accent-soft fill — edit, hide, the delete ✕ — so the card is as tall as its words (the founder, 2026-09-14) |
 
 Motion (§ 10 applies): the hero and tiles `.rise` once per tab visit (`Money.reset()`),

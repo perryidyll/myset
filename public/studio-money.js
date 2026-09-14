@@ -594,7 +594,7 @@ async function saveShow(btn){
   draftClear(); ED=null; closeSheet(); PULSE=true; render(); toast('Logged');
 }
 async function removeShow(){
-  if(!ED||!confirm('Remove the numbers for this show?'))return;
+  if(!ED||!await ask({title:'Remove the numbers?',lede:'This show\u2019s log is cleared. The filed night itself stays.',yes:'Yes, remove them',no:'Keep them'}))return;
   const key=ED.saveKey;
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'bizSave',key,remove:true}),quiet:true});
   if(!d||!d.ok){ toast((d&&d.error)||"Couldn't remove that just now"); return; }
