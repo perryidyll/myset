@@ -142,7 +142,10 @@ const read = (f) => src(new URL('../public/' + f, import.meta.url));
      !/act\('play(Top)?'/.test(studio) && /startSong\('playTop'\)/.test(studio) && /startSong\('play',\{song:/.test(studio));
   ok('startSong opens "End current song?" while a song is playing, with Yes, end it and Keep playing',
      /function startSong\(/.test(studio) && /End current song\?/.test(studio)
-       && /class="big yes" id="askYes">Yes, end it</.test(studio) && /class="big keep" onclick="closeAsk\(\)">Keep playing</.test(studio));
+       && /class="big yes" id="askYes">Yes, end it</.test(studio) && /class="big keep" id="askNo" onclick="closeAsk\(\)">Keep playing</.test(studio)
+       && /yes:'Yes, end it',no:'Keep playing'/.test(studio));
+  ok('deleting a song asks in the same window, never the browser\u2019s confirm()',
+     /title:'Delete this song\?'/.test(studio) && /yes:'Yes, delete it',no:'Keep it'/.test(studio) && !/confirm\('Remove “/.test(studio));
   ok('End current song is a light red fill with red text, the window\u2019s Yes is red, Keep playing is pink-orange bordered',
      /\.liveactions \.endnow\{[^}]*background:rgba\(255,59,48,[^}]*color:#FF3B30/.test(studio)
        && /#ask \.big\.yes\{background:#FF3B30;color:#fff/.test(studio)

@@ -497,9 +497,12 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
       setTools[0].getBoundingClientRect().height<=58&&organize&&organize.getBoundingClientRect().top-setTools[0].getBoundingClientRect().bottom>=9,
     setTools.map(x=>Math.round(x.getBoundingClientRect().height)).join('/')+(organize?`; gap ${Math.round(organize.getBoundingClientRect().top-setTools[0].getBoundingClientRect().bottom)}`:''));
   const songCard=document.querySelector('.songcard'), songActions=songCard&&songCard.querySelector('.songactions');
+  { const del=songCard&&songCard.querySelector('[data-act="del"]'), askEl=document.querySelector('#ask'); if(del){ del.click();
+      ok('tapping ✕ asks “Delete this song?” in the Studio’s own window, with Yes, delete it and Keep it', askEl.classList.contains('on')&&/Delete this song\?/.test(askEl.innerText)&&/Yes, delete it/.test(askEl.innerText)&&/Keep it/.test(askEl.innerText), askEl.innerText.replace(/\n/g,' | '));
+      askEl.querySelector('#askNo').click(); ok('Keep it closes it and the song stays', !askEl.classList.contains('on')&&!!document.querySelector('.songcard')); } }
   ok('a song card is its words with a column of three small icon buttons at the right — edit at the title’s top edge, delete last — and no taller than its words',
     (()=>{ if(!songCard||!songActions) return false; const acts=[...songActions.querySelectorAll('.act')], t=songCard.querySelector('.t').getBoundingClientRect(), a0=acts[0].getBoundingClientRect(), m=songCard.querySelector('.m').getBoundingClientRect();
-      return acts.length===3&&acts.every(a=>a.getBoundingClientRect().height<=32&&(a.querySelector('svg')||a.textContent.trim()==='✕'))&&/inset/.test(getComputedStyle(acts[0]).boxShadow)&&/inset/.test(getComputedStyle(acts[1]).boxShadow)&&acts[2].classList.contains('warn')
+      return acts.length===3&&acts.every(a=>a.getBoundingClientRect().height<=32&&(a.querySelector('svg')||a.textContent.trim()==='✕'))&&acts.every(a=>getComputedStyle(a).backgroundColor===getComputedStyle(acts[2]).backgroundColor)&&acts[2].classList.contains('warn')
         &&Math.abs(a0.top-t.top)<=6&&a0.left>=m.right&&acts[2].getBoundingClientRect().top>acts[1].getBoundingClientRect().bottom&&songCard.getBoundingClientRect().height<=Math.max(m.height,songActions.getBoundingClientRect().height)+24&&getComputedStyle(songCard.querySelector('.songmeta')).flexWrap==='wrap'; })(),
     songCard&&`card ${Math.round(songCard.getBoundingClientRect().height)}px, words ${Math.round(songCard.querySelector('.m').getBoundingClientRect().height)}px`);
   ok('the artist setlist is capped at ten rows with the same thumb lane and glow',
