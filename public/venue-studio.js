@@ -295,9 +295,13 @@ async function loadMe(){
   if(PW_PROMPT&&ME&&ME.ok){ PW_PROMPT=false; if(!myPw()) setTimeout(()=>openPasswordSheet(true),600); }
 }
 const myPw=()=>!!(((ME&&ME.emails)||[]).find(x=>x.me)||{}).pw;
+/* A Studio-code session has no address of its own, so the password sheet works
+   on the venue's addresses instead; the one chosen proves itself with a code. */
+const codeAddrs=()=>(ME&&ME.email)?[]:((ME&&ME.emails)||[]);
 /* ---------- your password (decision 0070) ---------- */
 function openPasswordSheet(prompt){
   const has=myPw(), em=(ME&&ME.email)||'';
+  if(!em&&codeAddrs().length){ openPasswordFromCode(); return; }
   openSheet(`<h3>${has?'Change your password':(prompt?'Set a password?':'Create a password')}</h3>
     <p class="lede">${has?'For '+esc(em)+'. Every other device gets signed out.'
       :(prompt?'You’re in with a code. A password means next time it’s just your email and password — no inbox needed. You can do this later in Settings.'
@@ -310,6 +314,30 @@ function openPasswordSheet(prompt){
     <button class="big fill" style="margin-top:14px" onclick="savePassword()">${has?'Change it':'Save my password'}</button>
     ${prompt&&!has?`<button class="big keep" onclick="closeSheet()">Not now</button>`:''}
     <p class="muted" style="font-size:12px;margin:12px 0 0">Your email code keeps working either way.</p>`);
+}
+function openPasswordFromCode(){
+  const rows=codeAddrs(), one=rows.length===1;
+  PW_CODE_MODE=false;
+  openSheet(`<h3>${rows.some(x=>x.pw)?'Change a password':'Create a password'}</h3>
+    <p class="lede">You’re in with the Studio code, so first say which address this password is for. We’ll email a code there to make sure it’s yours.</p>
+    <div class="field"><label>Address</label>${one
+      ?`<input class="inp" id="pwEmail" type="email" value="${esc(rows[0].email)}" readonly>`
+      :`<select class="inp" id="pwEmail">${rows.map(x=>`<option value="${esc(x.email)}">${esc(x.email)}${x.pw?' · has a password':''}</option>`).join('')}</select>`}</div>
+    <button class="big ring" id="pwSend" style="margin-top:10px" onclick="pwCodeToAddress()">Email me a code</button>
+    <div class="field" id="pwCodeWrap" style="display:none;margin-top:10px"><label>The code we emailed you</label><input class="inp" id="pwCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.2em"></div>
+    <div class="field" style="margin-top:10px"><label>New password</label><input class="inp" id="pwNew" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+    <div class="field"><label>Again</label><input class="inp" id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again"></div>
+    <button class="big fill" style="margin-top:14px" onclick="savePassword()">Save my password</button>
+    <p class="muted" style="font-size:12px;margin:12px 0 0">Your Studio code and your email code keep working either way.</p>`);
+}
+async function pwCodeToAddress(){
+  const em=(($('#pwEmail')||{}).value||'').trim();
+  const d=await post('/venueauth',{action:'start',email:em});
+  if(!d.ok){toast(d.error||'Could not send that');return;}
+  PW_CODE_MODE=true;
+  const b=$('#pwCodeWrap'), s=$('#pwSend'); if(b) b.style.display=''; if(s) s.textContent='Code sent to '+em;
+  const c=$('#pwCode'); if(c) c.focus();
+  toast('We emailed you a code');
 }
 let PW_CODE_MODE=false;
 async function pwForgotCode(){
@@ -327,7 +355,12 @@ async function savePassword(){
   if(n1.length<8){toast('At least 8 characters');return;}
   if(n1!==n2){toast('Those don’t match');return;}
   const body={action:'passwordSet',password:n1};
-  if(myPw()){
+  if($('#pwEmail')){
+    body.email=(($('#pwEmail')||{}).value||'').trim();
+    body.code=(($('#pwCode')||{}).value||'').trim();
+    if(!PW_CODE_MODE){toast('Email yourself a code first');return;}
+    if(body.code.length!==6){toast('Enter the code from your email');return;}
+  } else if(myPw()){
     if(PW_CODE_MODE) body.code=(($('#pwCode')||{}).value||'').trim();
     else body.current=(($('#pwCur')||{}).value||'');
     if(!body.code&&!body.current){toast(PW_CODE_MODE?'Enter the code from your email':'Enter your current password');return;}
@@ -1226,9 +1259,14 @@ function render(){
     <div class="list">
       <div class="row"><div class="m"><div class="t">${esc((ME&&ME.email)||'Signed in')}</div>
         <div class="s">Sign-in address${ME&&ME.emails?` · ${ME.emails.length} sign-in${ME.emails.length===1?'':'s'} on this page`:''}</div></div></div>
-      <div class="row"><div class="m"><div class="t">Password${ME&&ME.ok?(myPw()?' · set':' · not set'):''}</div>
+      ${ME&&ME.email?`<div class="row"><div class="m"><div class="t">Password${ME&&ME.ok?(myPw()?' · set':' · not set'):''}</div>
         <div class="s">${myPw()?'Sign in with your email and password. Forget it and a six-digit code to your email gets you back in.':'Set one and you can sign in with your email and password. Until then, a six-digit code to your email gets you in.'}</div></div>
-        <button class="act" onclick="openPasswordSheet()">${myPw()?'Change':'Create'}</button></div>
+        <button class="act" onclick="openPasswordSheet()">${myPw()?'Change':'Create'}</button></div>`
+      :codeAddrs().length?`<div class="row"><div class="m"><div class="t">Password${codeAddrs().some(x=>x.pw)?' · set':' · not set'}</div>
+        <div class="s">You’re in with the Studio code. Set a password for ${codeAddrs().length===1?esc(codeAddrs()[0].email):'one of the addresses on this account'} and you can sign in with your email and password.</div></div>
+        <button class="act" onclick="openPasswordSheet()">${codeAddrs().some(x=>x.pw)?'Change':'Create'}</button></div>`
+      :`<div class="row"><div class="m"><div class="t">Password</div>
+        <div class="s">This sign-in has no email on it. Sign in with your email to set a password for it.</div></div></div>`}
       <div class="row"><div class="m"><div class="t">Where you’re signed in</div>
         <div class="s">Every phone and tablet with a live sign-in.</div></div>
         <button class="act" onclick="openSessions()">See them</button></div>

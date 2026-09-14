@@ -32,9 +32,22 @@ import { createSign } from 'node:crypto';
    the error Google returns for that is a flat 403 with no hint — so `sheetStatus`
    says it in those words rather than making somebody guess. */
 
-const SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+/* Two scopes. `spreadsheets` is the sheet itself. `drive.file` is the narrow
+   Drive scope — it reaches ONLY files this service account created, never the
+   founder's Drive — and it is what lets a full sheet hand over to a new one it
+   makes and shares back (decision 0073). Nothing else in Drive is visible to it. */
+const SCOPE = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const API = 'https://sheets.googleapis.com/v4/spreadsheets';
+const DRIVE = 'https://www.googleapis.com/drive/v3/files';
+
+/* THE SHEET IN USE. GSHEET_ID is where it starts; once a sheet has filled up and
+   handed over, the warehouse points this at the successor for the rest of the run
+   (the id lives in the `gsheet` document, not in an env var somebody must edit). */
+let ACTIVE = '';
+export function useSheet(id) { ACTIVE = String(id || '').trim(); }
+export const activeSheetId = () => ACTIVE || sheetsConfig().id;
+export const sheetUrl = (id) => `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id || activeSheetId())}/edit`;
 
 /* A newline inside a Netlify env var survives, but every paste path that goes
    through a shell or a JSON file turns it into a literal backslash-n. Accept
@@ -105,7 +118,7 @@ async function accessToken() {
 }
 
 async function api(path, init = {}) {
-  const { id } = sheetsConfig();
+  const id = activeSheetId();
   const token = await accessToken();
   const r = await fetch(`${API}/${encodeURIComponent(id)}${path}`, {
     ...init,
@@ -225,6 +238,51 @@ export async function appendTab(tab, rows, header) {
     body: JSON.stringify({ values: out.map(cells) }),
   });
   return rows.length;
+}
+
+/* ---------- room, and the hand-over when there is none left ----------
+   Google caps a spreadsheet at ten million CELLS (not rows), counted over every
+   tab's allocated grid — a fresh tab is 1,000 × 26 before a single value lands.
+   The founder asked to be told before the sheet got too big and for a new one to
+   be made automatically as it neared that point (2026-09-14). */
+export const CELL_LIMIT = 10_000_000;
+
+/** Cells allocated across every tab of the sheet in use. One GET. */
+export async function sheetCells() {
+  const d = await api('?fields=sheets.properties.gridProperties');
+  return ((d && d.sheets) || []).reduce((n, s) => {
+    const g = (s.properties && s.properties.gridProperties) || {};
+    return n + (Number(g.rowCount) || 0) * (Number(g.columnCount) || 0);
+  }, 0);
+}
+
+/** A brand-new spreadsheet owned by the service account. Returns its id. */
+export async function createSheet(title) {
+  const token = await accessToken();
+  const r = await fetch(API, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ properties: { title: String(title || 'MySet data') } }),
+  });
+  const d = await r.json().catch(() => null);
+  if (!r.ok || !d || !d.spreadsheetId)
+    throw new Error(`Google would not make a new sheet: ${(d && d.error && d.error.message) || `HTTP ${r.status}`}`);
+  return d.spreadsheetId;
+}
+
+/** Shares a sheet this account made with people, as editors, quietly. */
+export async function shareSheet(id, emails) {
+  const token = await accessToken();
+  const out = [];
+  for (const email of emails) {
+    const r = await fetch(`${DRIVE}/${encodeURIComponent(id)}/permissions?sendNotificationEmail=false&supportsAllDrives=true`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ role: 'writer', type: 'user', emailAddress: email }),
+    });
+    out.push({ email, ok: r.ok, status: r.status });
+  }
+  return out;
 }
 
 /** True only if the tab has nothing in A1 — so a written-once tab stays written once. */

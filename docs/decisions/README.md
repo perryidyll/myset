@@ -82,6 +82,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0070](0070-the-email-address-is-the-username-and-a-password-si.md) | the email address is the username and a password sits under it — per person, scrypt-hashed, swapped for a session; the six-digit code stays the front door for a new account and the whole of "forgot" | 2026-09-14 | auth | decided | perry |
 | [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) | Current Show Stats is one snapshot of the app's own records, sliced by date in the browser — a night counts when it lines up with a published gig; published daily as an artifact until it is myset.vip/metrics | 2026-09-14 | docs | decided | perry |
 | [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md) | the sheet carries the marketing read (Signals) and the feature adoption (Features) per artist, tags every night real or test, and never writes a row it already holds — the first copy went to the founder as an .xlsx before the service account existed | 2026-09-14 | docs | decided | perry |
+| [0073](0073-sheet-hands-over-before-full.md) | the Google Sheet measures itself every sync, warns the founder at 60% of Google's cell limit and hands over to a new spreadsheet it makes and shares at 80% — nothing moved, the old sheet kept; and a Studio-code session sets a password by naming one of the account's own addresses and proving it with a code | 2026-09-14 | server | decided | perry |
 
 ## By area
 
@@ -104,6 +105,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) · [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md)
 
 **scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md)
+
+**server** — [0073](0073-sheet-hands-over-before-full.md)
 
 **storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md)
 

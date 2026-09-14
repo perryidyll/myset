@@ -62,7 +62,23 @@ function stubGoogle() {
       SHEET.lastJwt = jwt;
       return R({ access_token: 'tok', expires_in: 3600 });
     }
+    /* A successor sheet being shared (decision 0073): Drive's permissions call. */
+    if (u.startsWith('https://www.googleapis.com/drive/v3/files/')) {
+      (SHEET.shared ||= []).push({ id: decodeURIComponent(u.split('/files/')[1].split('/')[0]), ...JSON.parse(init.body || '{}') });
+      return R({ id: 'perm' });
+    }
     if (!u.startsWith('https://sheets.googleapis.com/')) return realFetch(url, init);
+    /* A new spreadsheet being made: POST to the collection, no id in the path. */
+    if (u === 'https://sheets.googleapis.com/v4/spreadsheets' && init.method === 'POST') {
+      const title = JSON.parse(init.body || '{}').properties.title;
+      (SHEET.made ||= []).push(title);
+      return R({ spreadsheetId: `made-${SHEET.made.length}` });
+    }
+    SHEET.hit = decodeURIComponent(u.split('/v4/spreadsheets/')[1].split(/[?/:]/)[0]);
+    if (u.includes('fields=sheets.properties.gridProperties')) {
+      const cells = (SHEET.cellsById || {})[SHEET.hit] ?? SHEET.cells ?? 0;
+      return R({ sheets: cells ? [{ properties: { gridProperties: { rowCount: cells / 26, columnCount: 26 } } }] : [] });
+    }
 
     if (SHEET.failNext > 0) { SHEET.failNext--; return R({ error: { message: 'Google is having a day' } }, 500); }
 
@@ -560,6 +576,51 @@ eq('an unmarked ring after the gap still syncs', await c3.text(), 'ok');
 /* And the button bypasses the gap, because "you already did this" is the wrong
    answer to a person who just asked. */
 ok('the button still works immediately after', (await AS(P.token, 'sheetSync')).ok);
+
+/* ---------- when the sheet is full, the next one starts itself ---------- */
+console.log('\nROOM  (decision 0073: told at 60%, a new sheet at 80%, nothing lost)');
+const sent = [];
+const realFetch2 = globalThis.fetch;
+globalThis.fetch = async (url, init) => {
+  if (String(url).startsWith('https://api.resend.com/')) { sent.push(JSON.parse(init.body)); return new Response('{}', { status: 200 }); }
+  return realFetch2(url, init);
+};
+process.env.RESEND_API_KEY = 'k'; process.env.AUTH_FROM = 'MySet <hi@myset.example>';
+const { readSheetDoc, ROLL_AT, WARN_AT } = W;
+eq('a fresh install: no hand-over yet, the env sheet is in use', (await readSheetDoc()).id, '');
+let st = await AS(P.token, 'sheetStatus');
+eq('status names the sheet in use and how full it is', [st.id, st.pct, st.limit], ['sheet-abc', 0, 10_000_000]);
+ok('and a link to it', /docs\.google\.com\/spreadsheets\/d\/sheet-abc/.test(st.url), st.url);
+
+SHEET.cells = WARN_AT() + 26;
+let r = await AS(P.token, 'sheetSync');
+ok('past 60% the sync still runs', r.ok, r);
+ok('and says how full it is', r.sheet && r.sheet.warned && r.sheet.pct >= 60, r.sheet);
+eq('the founder is told, once, at every owner address', sent.map((m) => m.to[0]).sort(), ['perry@x.com']);
+ok('in plain words with the link', /getting big/.test(sent[0].subject) && /sheet-abc/.test(sent[0].text), sent[0]);
+eq('nothing was made yet', SHEET.made || [], []);
+sent.length = 0;
+r = await AS(P.token, 'sheetSync');
+ok('a second sync past 60% does not nag', sent.length === 0 && r.ok, sent);
+
+SHEET.cells = ROLL_AT();
+SHEET.title = 'MySet data';
+const showsAtRoll = bodyOf('Shows').length;
+r = await AS(P.token, 'sheetSync');
+ok('at 80% the sync makes a new spreadsheet and carries on', r.ok && r.sheet && r.sheet.rolled, r.sheet);
+eq('named after the old one, with the date it took over', SHEET.made, ['MySet data · from ' + new Date().toISOString().slice(0, 10)]);
+eq('shared with the same people, as editors, quietly', (SHEET.shared || []).map((x) => [x.id, x.emailAddress, x.role]), [['made-1', 'perry@x.com', 'writer']]);
+eq('the hand-over is recorded, with the old sheet kept in the chain', [(await readSheetDoc()).id, (await readSheetDoc()).prev.map((p) => p.id)], ['made-1', ['sheet-abc']]);
+eq('this run wrote into the NEW sheet', SHEET.hit, 'made-1');
+eq('the founder is told where it went', sent.length === 1 && /new one has started/.test(sent[0].subject) && /made-1/.test(sent[0].text) && /sheet-abc/.test(sent[0].text), true);
+eq('nothing in the old sheet was touched or moved', bodyOf('Shows').length, showsAtRoll);
+SHEET.cellsById = { 'made-1': 26 * 11 };
+st = await AS(P.token, 'sheetStatus');
+eq('status now points at the new sheet and lists the old one', [st.id, st.prev.map((p) => p.id)], ['made-1', ['sheet-abc']]);
+sent.length = 0;
+r = await AS(P.token, 'sheetSync');
+ok('and the next sync goes into the new sheet without rolling again', r.ok && !r.sheet.rolled && SHEET.hit === 'made-1' && sent.length === 0, r.sheet);
+delete SHEET.cells; delete SHEET.cellsById;
 globalThis.fetch = realFetch;
 
 console.log(`\n${pass} passed, ${fail} failed`);

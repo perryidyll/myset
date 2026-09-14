@@ -345,6 +345,7 @@ Built, in both Studios, without giving up what §9b was protecting:
 | **What it may not be** | Under 8 or over 128 characters, the email itself, one character repeated, or one of a short list everybody tries first. No breach-list call — that is an outbound request on the sign-in path. |
 | **What stays** | The six-digit code is still how an account is made and the whole of recovery. The passkey is still the fast, phishing-proof door. The Studio code — per page, SHA-256, sent on every request, the founder's own door — now lives in a small window off the foot of the sign-in screen; hashing it slowly would cost every Studio poll, since it is checked on each. |
 | **Delete and export** | `keysFor` / `keysForVenue` name the records; a hash is not data an artist takes with them, so the export never carries it. |
+| **From the Studio code** | A code session has no address, so Settings → *Password* lists the account's owner/manager addresses instead: pick one, *Email me a code*, type the code and the new password. The server (`passwordSet` with `email` + `code`) accepts only an address that is on this account and not a member/crew row, and only with a code that address received. Same in the Venue Studio. (The first cut sent a code session away to "sign in with your email first" — a door to a door; the founder hit it on 2026-09-14.) |
 
 The screen: a pink-orange-ringed box, *Welcome back*, Email over Password, a
 filled pink-orange *Sign in*, *Forgot your password?*; below it *New here? Join

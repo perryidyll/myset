@@ -129,22 +129,34 @@ export default async (req) => {
 
   /* ---- your password (decision 0070): yours for your own address ---- */
   if (action === 'passwordSet') {
-    if (!me.email) return bad('Sign in with your email first, then set a password there', 403);
     const pw = String(body.password || '');
-    const why = weakPassword(pw, me.email);
-    if (why) return bad(why);
-    if (await hasPassword(owner, me.email)) {
-      let proven = false;
-      if (body.current) proven = await checkPassword(owner, me.email, String(body.current));
-      else if (body.code) proven = (await checkCode(me.email, String(body.code).replace(/\D/g, '').slice(0, 6), REALM)).ok;
-      if (!proven) return bad(body.current ? 'That isn’t your current password' : 'Check the code and try again', 401);
+    let email = me.email;
+    if (!email) {
+      /* A Studio-code session names one of the venue's own addresses and proves
+         it with a code sent there — the same shape as auth.mjs, same reasons. */
+      email = normEmail(body.email);
+      const row = validEmail(email) ? (await readVenues()).byEmail[email] : null;
+      if (!row || row.venueId !== me.vid) return bad('Pick one of the addresses on this account', 400);
+      const why = weakPassword(pw, email);
+      if (why) return bad(why);
+      const got = await checkCode(email, String(body.code || '').replace(/\D/g, '').slice(0, 6), REALM);
+      if (!got.ok) return bad('Check the code and try again', 401);
+    } else {
+      const why = weakPassword(pw, email);
+      if (why) return bad(why);
+      if (await hasPassword(owner, email)) {
+        let proven = false;
+        if (body.current) proven = await checkPassword(owner, email, String(body.current));
+        else if (body.code) proven = (await checkCode(email, String(body.code).replace(/\D/g, '').slice(0, 6), REALM)).ok;
+        if (!proven) return bad(body.current ? 'That isn’t your current password' : 'Check the code and try again', 401);
+      }
     }
-    await setPassword(owner, me.email, pw);
+    await setPassword(owner, email, pw);
     const { list } = await readSessions(owner, me.sid);
-    const others = list.filter((x) => !x.current && x.email === me.email).map((x) => x.sid);
+    const others = list.filter((x) => !x.current && x.email === email).map((x) => x.sid);
     if (others.length) await killSessions(owner, others);
-    note(owner, 'password.set', me.email, others.length ? `${others.length} other device(s) signed out` : '');
-    return json({ ok: true, signedOut: others.length });
+    note(owner, 'password.set', email, others.length ? `${others.length} other device(s) signed out` : '');
+    return json({ ok: true, signedOut: others.length, email });
   }
   if (action === 'passwordClear') {
     if (!me.email) return bad('No password on this sign-in', 403);

@@ -415,8 +415,25 @@ If you are about to violate one, stop and say so rather than working around it.
     that address's other devices out. The Studio code is NOT this: per page,
     SHA-256, checked on every request — leave it that way, because hashing it
     slowly would cost every Studio poll. The six-digit code stays the only way an
-    account is made and the whole of recovery. Decision `0070`;
+    account is made and the whole of recovery. **From a Studio-code session**
+    (no address of its own) `passwordSet` names one of the ACCOUNT's own
+    owner/manager addresses and proves it with a six-digit code sent there;
+    never a member or crew row, never an address off the account — a code must
+    not be able to turn any inbox into a key. Decision `0070`;
     `test/password.mjs`.
+
+0fv. **The Google Sheet is measured every sync, and hands over before it is
+    full.** Google caps a spreadsheet at ten million cells. `settleSheet`
+    (`_warehouse.mjs`) reads the cell count of the sheet in use on every sync;
+    past 60% the founder is emailed once per sheet; past 80% the sync creates a
+    successor (`createSheet`, named after the old one with the date), shares it
+    with the same people as editors (`shareSheet`, Drive `drive.file` scope —
+    only files the service account made are reachable), records the hand-over
+    in the `gsheet` document (`id`, `since`, `prev[]`), points the client at it
+    (`useSheet`) and carries on in the same run. The old sheet is never written,
+    moved or trimmed. `GSHEET_ID` is only where the chain starts; the Studio's
+    Sheet card shows the room and links the sheet in use. Decision `0073`;
+    `test/sheets.mjs` ROOM.
 
 ## Cost
 
