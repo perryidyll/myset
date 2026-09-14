@@ -1064,6 +1064,9 @@ function sheetCard(){
             <span class="now">${S.reachable?'✓':'!'}</span></div>
           <div class="row"><div class="m"><div class="t">Last updated</div>
             <div class="s muted">${esc(when)}${S.runs?' · '+S.runs+' time'+(S.runs===1?'':'s'):''} · updates itself nightly</div></div></div>
+          ${S.reachable?`<div class="row"><div class="m"><div class="t">Room${S.pct>=60?' · getting full':''}</div>
+            <div class="s muted">${S.pct||0}% of Google\u2019s ${Math.round((S.limit||1e7)/1e6)} million cells${S.prev&&S.prev.length?' · sheet '+(S.prev.length+1)+' of '+(S.prev.length+1):''}. At ${Math.round(100*(S.rollAt||8e6)/(S.limit||1e7))}% the nightly update starts a new sheet by itself, shares it with you and emails you.</div></div>
+            ${S.url?`<a class="act" href="${esc(S.url)}" target="_blank" rel="noopener">Open</a>`:''}</div>`:''}
          </div>
          <div class="wrap" style="margin-top:12px"><button class="big${SHEETBUSY?' alt':''}" onclick="sheetSync()">${SHEETBUSY?'Working…':'Update the sheet now'}</button></div>`
       : `<div class="list"><div class="row"><div class="m"><div class="t">Not connected yet</div>
@@ -2354,6 +2357,9 @@ function render(){
       ${PLAN&&PLAN.email?`<div class="row"><div class="m"><div class="t">Password${TEAM&&TEAM.ok?(myPw()?' \u00b7 set':' \u00b7 not set'):''}</div>
         <div class="s">${myPw()?'Sign in with your email and password. Forget it and a six-digit code to your email gets you back in.':'Set one and you can sign in with your email and password. Until then, a six-digit code to your email gets you in.'}</div></div>
         <button class="act" onclick="openPasswordSheet()">${myPw()?'Change':'Create'}</button></div>`
+      :codeAddrs().length?`<div class="row"><div class="m"><div class="t">Password${codeAddrs().some(x=>x.pw)?' \u00b7 set':' \u00b7 not set'}</div>
+        <div class="s">You\u2019re in with the Studio code. Set a password for ${codeAddrs().length===1?esc(codeAddrs()[0].email):'one of the addresses on this account'} and you can sign in with your email and password.</div></div>
+        <button class="act" onclick="openPasswordSheet()">${codeAddrs().some(x=>x.pw)?'Change':'Create'}</button></div>`
       :`<div class="row"><div class="m"><div class="t">Password</div>
         <div class="s">This sign-in has no email on it. Sign in with your email to set a password for it.</div></div></div>`}
       ${PKSUPPORTED?`<div class="row"><div class="m"><div class="t">Face ID or fingerprint${PKEYS?(PKEYS.length?' \u00b7 '+PKEYS.length+' device'+(PKEYS.length===1?'':'s'):' \u00b7 not set up'):''}</div>
@@ -4199,6 +4205,10 @@ async function loadTeam(force){
 }
 const myRow=()=>((TEAM&&TEAM.emails)||[]).find(x=>x.me)||null;
 const myPw=()=>!!(myRow()&&myRow().pw);
+/* A Studio-code session has no address of its own, so the password sheet works
+   on the ACCOUNT's addresses instead \u2014 owners and managers, never a member or
+   crew row. The address chosen proves itself with a code sent to it. */
+const codeAddrs=()=>(PLAN&&PLAN.email)?[]:((TEAM&&TEAM.emails)||[]).filter(x=>x.role!=='member'&&x.role!=='crew');
 function copyRef(){
   const el=$('#refLink'); if(!el)return;
   el.select();
@@ -4236,6 +4246,7 @@ async function revokeAll(){
    path — a six-digit code emailed to the same address. */
 function openPasswordSheet(prompt){
   const has=myPw(), em=(PLAN&&PLAN.email)||'';
+  if(!em&&codeAddrs().length){ openPasswordFromCode(); return; }
   openSheet(`<h3>${has?'Change your password':(prompt?'Set a password?':'Create a password')}</h3>
     <p class="lede">${has?'For '+esc(em)+'. Every other device gets signed out.'
       :(prompt?'You\u2019re in with a code. A password means next time it\u2019s just your email and password \u2014 no inbox needed. You can do this later in Settings.'
@@ -4248,6 +4259,33 @@ function openPasswordSheet(prompt){
     <button class="big fill" style="margin-top:14px" onclick="savePassword()">${has?'Change it':'Save my password'}</button>
     ${prompt&&!has?`<button class="big keep" onclick="closeSheet()">Not now</button>`:''}
     <p class="muted" style="font-size:12px;margin:12px 0 0">Your email code and Face ID keep working either way.</p>`);
+}
+/* From the Studio code: pick the address, get a code there, choose the password.
+   Same sheet whether that address has a password already or not \u2014 the code is
+   the proof either way (auth.mjs passwordSet, decision 0070). */
+function openPasswordFromCode(){
+  const rows=codeAddrs(), one=rows.length===1;
+  PW_CODE_MODE=false;
+  openSheet(`<h3>${rows.some(x=>x.pw)?'Change a password':'Create a password'}</h3>
+    <p class="lede">You\u2019re in with the Studio code, so first say which address this password is for. We\u2019ll email a code there to make sure it\u2019s yours.</p>
+    <div class="field"><label>Address</label>${one
+      ?`<input class="inp" id="pwEmail" type="email" value="${esc(rows[0].email)}" readonly>`
+      :`<select class="inp" id="pwEmail">${rows.map(x=>`<option value="${esc(x.email)}">${esc(x.email)}${x.pw?' \u00b7 has a password':''}</option>`).join('')}</select>`}</div>
+    <button class="big ring" id="pwSend" style="margin-top:10px" onclick="pwCodeToAddress()">Email me a code</button>
+    <div class="field" id="pwCodeWrap" style="display:none;margin-top:10px"><label>The code we emailed you</label><input class="inp" id="pwCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.2em"></div>
+    <div class="field" style="margin-top:10px"><label>New password</label><input class="inp" id="pwNew" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+    <div class="field"><label>Again</label><input class="inp" id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again"></div>
+    <button class="big fill" style="margin-top:14px" onclick="savePassword()">Save my password</button>
+    <p class="muted" style="font-size:12px;margin:12px 0 0">Your Studio code, your email code and Face ID keep working either way.</p>`);
+}
+async function pwCodeToAddress(){
+  const em=(($('#pwEmail')||{}).value||'').trim();
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'start',email:em})});
+  if(!d.ok){toast(d.error||'Could not send that');return;}
+  PW_CODE_MODE=true;
+  const b=$('#pwCodeWrap'), s=$('#pwSend'); if(b) b.style.display=''; if(s) s.textContent='Code sent to '+em;
+  const c=$('#pwCode'); if(c) c.focus();
+  toast('We emailed you a code');
 }
 let PW_CODE_MODE=false;
 async function pwForgotCode(){
@@ -4265,7 +4303,12 @@ async function savePassword(){
   if(n1.length<8){toast('At least 8 characters');return;}
   if(n1!==n2){toast('Those don\u2019t match');return;}
   const body={action:'passwordSet',password:n1};
-  if(myPw()){
+  if($('#pwEmail')){
+    body.email=(($('#pwEmail')||{}).value||'').trim();
+    body.code=(($('#pwCode')||{}).value||'').trim();
+    if(!PW_CODE_MODE){toast('Email yourself a code first');return;}
+    if(body.code.length!==6){toast('Enter the code from your email');return;}
+  } else if(myPw()){
     if(PW_CODE_MODE) body.code=(($('#pwCode')||{}).value||'').trim();
     else body.current=(($('#pwCur')||{}).value||'');
     if(!body.code&&!body.current){toast(PW_CODE_MODE?'Enter the code from your email':'Enter your current password');return;}

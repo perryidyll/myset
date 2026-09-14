@@ -1,4 +1,4 @@
-import { readDoc, casDoc, getShow } from './_lib.mjs';
+import { readDoc, casDoc, getShow, DEFAULT_ARTIST } from './_lib.mjs';
 import { readArtists } from './_auth.mjs';
 import { planOf, limitsFor, MAX_LIBRARY } from './_plan.mjs';
 import { readHistIndex, readHistShow } from './_history.mjs';
@@ -9,6 +9,7 @@ import { readVenues, venuePlanOf, getVenueProfile } from './_venues.mjs';
 import {
   sheetsOn, sheetsOffReason, ensureTabs, styleTabs, writeTab, appendTab, tabIsEmpty, tabTitles,
   existingKeys, rowKey,
+  useSheet, activeSheetId, sheetUrl, sheetCells, createSheet, shareSheet, CELL_LIMIT,
 } from './_sheets.mjs';
 import { readLists, readLearn } from './_lists.mjs';
 import { chartFlags } from './_chart.mjs';
@@ -61,6 +62,78 @@ import { occurrences, placeNight, happened } from './_metrics.mjs';
      button and a nightly job, and both are outside the show. */
 
 const SYNC = 'sheetsync';
+
+/* ---------- which sheet, and when it is full (decision 0073) ----------
+   A spreadsheet holds ten million cells and then refuses every write. The founder
+   asked to hear about it before then and for the next one to be made on its own
+   (2026-09-14). So: every sync measures the sheet in use; past WARN it emails the
+   founder once per sheet; past ROLL it makes a new spreadsheet, shares it with the
+   same people, records the hand-over in the `gsheet` document and carries on into
+   the new one in the same run. The old sheet is left exactly as it was — nothing
+   is moved, the log tabs simply continue in the successor, and the snapshot tabs
+   are rewritten there in full. GSHEET_ID is only where the chain starts. */
+const GSHEET = 'gsheet';
+const emptyGsheet = () => ({ v: 1, id: '', since: 0, prev: [], warned: {} });
+export const ROLL_AT = () => Math.round(CELL_LIMIT * (Number(process.env.MYSET_SHEET_ROLL_PCT) || 80) / 100);
+export const WARN_AT = () => Math.round(CELL_LIMIT * (Number(process.env.MYSET_SHEET_WARN_PCT) || 60) / 100);
+export async function readSheetDoc() {
+  const { data } = await readDoc(GSHEET, null);
+  const d = { ...emptyGsheet(), ...(data || {}) };
+  d.prev ||= []; d.warned ||= {};
+  return d;
+}
+/* Who a successor is shared with: GSHEET_SHARE (comma-separated) if set, else the
+   owner addresses on the founder's own account — the people the first sheet was
+   shared with by hand. Never the whole registry. */
+async function shareWith(reg) {
+  const env = String(process.env.GSHEET_SHARE || '').split(',').map((x) => x.trim().toLowerCase()).filter((x) => /@/.test(x));
+  if (env.length) return env;
+  return Object.entries((reg && reg.byEmail) || {})
+    .filter(([, v]) => v.artistId === DEFAULT_ARTIST && v.role !== 'member' && v.role !== 'crew')
+    .map(([e]) => e);
+}
+const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);
+const baseTitle = (t) => String(t || 'MySet data').replace(/\s+·\s+from\s+\d{4}-\d{2}-\d{2}$/, '') || 'MySet data';
+
+/** Points the client at the sheet in use, and hands over to a new one if it is full. */
+export async function settleSheet({ now = Date.now(), reg = null } = {}) {
+  const doc = await readSheetDoc();
+  const id = doc.id || activeSheetIdFromEnv();
+  useSheet(id);
+  let cells = 0, title = '';
+  try { cells = await sheetCells(); title = (await tabTitles()).title; } catch { return { id, cells: 0, url: sheetUrl(id) }; }
+  const out = { id, cells, url: sheetUrl(id), limit: CELL_LIMIT, pct: Math.round(100 * cells / CELL_LIMIT) };
+  const people = await shareWith(reg);
+  const { sendNotice } = await import('./_auth.mjs');
+  const tell = (subject, lines) => Promise.all(people.map((e) => sendNotice(e, subject, lines).catch(() => null)));
+
+  if (cells >= ROLL_AT()) {
+    const next = await createSheet(`${baseTitle(title)} · from ${dayOf(now)}`);
+    const shared = await shareSheet(next, people).catch(() => []);
+    await casDoc(GSHEET, emptyGsheet, (d) => {
+      d.prev = (d.prev || []).concat([{ id, from: d.since || 0, until: now, cells }]);
+      d.id = next; d.since = now; d.warned = {};
+      return true;
+    });
+    useSheet(next);
+    await tell('Your MySet sheet was full, so a new one has started',
+      [`The Google Sheet MySet writes to had ${cells.toLocaleString('en-US')} of Google's ${CELL_LIMIT.toLocaleString('en-US')} cells in use, so tonight's sync started a new spreadsheet and carried on there.`,
+       `New sheet: ${sheetUrl(next)}`,
+       `The old one is untouched and still yours: ${sheetUrl(id)}`,
+       'Shows, Requests and Ratings continue in the new sheet from tonight; the snapshot tabs (Artists, Songs, Gigs, Venues, Signals, Features) are rewritten there in full.']);
+    return { ...out, rolled: true, id: next, url: sheetUrl(next), from: id, shared, cells: 0, pct: 0 };
+  }
+  if (cells >= WARN_AT() && !doc.warned[id]) {
+    await casDoc(GSHEET, emptyGsheet, (d) => { d.warned = { ...(d.warned || {}), [id]: now }; return true; }).catch(() => {});
+    await tell('Your MySet sheet is getting big',
+      [`The Google Sheet MySet writes to is at ${out.pct}% of Google's ten-million-cell limit (${cells.toLocaleString('en-US')} cells).`,
+       `Nothing to do: when it reaches ${Math.round(100 * ROLL_AT() / CELL_LIMIT)}% the nightly sync starts a new spreadsheet by itself, shares it with you and tells you.`,
+       `The sheet: ${sheetUrl(id)}`]);
+    return { ...out, warned: true };
+  }
+  return out;
+}
+const activeSheetIdFromEnv = () => String(process.env.GSHEET_ID || '').trim();
 /* A PERSISTENT PER-ARTIST SONG TALLY, and the reason it has to exist.
 
    The Songs tab is a snapshot: it is cleared and rewritten every sync. The first
@@ -749,6 +822,7 @@ async function runSync({ dry, startedAt, state }) {
              tookMs: Date.now() - startedAt };
   }
 
+  const sheet = await settleSheet({ now: startedAt, reg });
   const made = await ensureTabs(TAB_LIST);
   await styleTabs(TAB_LIST).catch(() => {});      // looks are never the reason a sync fails
   if (made.includes(TABS.guide) || (await tabIsEmpty(TABS.guide))) {
@@ -805,6 +879,7 @@ async function runSync({ dry, startedAt, state }) {
   return {
     ok: true, at: startedAt, tookMs: Date.now() - startedAt,
     made, counts: countsOf(plan), broke,
+    sheet,
     capped: anyCap,
     note: capped
       ? `Read the first ${MAX_ARTISTS} artists of ${ids.length}. The rest come next sync.`
@@ -834,9 +909,15 @@ export async function sheetStatus() {
   };
   if (off) return base;
   try {
+    const doc = await readSheetDoc();
+    useSheet(doc.id || '');
     const { title, tabs } = await tabTitles();
+    const cells = await sheetCells().catch(() => 0);
     return { ...base, reachable: true, title, present: tabs.filter((x) => TAB_LIST.includes(x)),
-             missing: TAB_LIST.filter((x) => !tabs.includes(x)) };
+             missing: TAB_LIST.filter((x) => !tabs.includes(x)),
+             id: activeSheetId(), url: sheetUrl(), cells, limit: CELL_LIMIT, rollAt: ROLL_AT(),
+             pct: Math.round(100 * cells / CELL_LIMIT),
+             prev: (doc.prev || []).map((p) => ({ id: p.id, url: sheetUrl(p.id), from: p.from, until: p.until })) };
   } catch (e) {
     return { ...base, reachable: false, error: String(e.message || e).slice(0, 400) };
   }

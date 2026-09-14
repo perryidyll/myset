@@ -108,8 +108,35 @@ ok('and it works', (await A({ action: 'passwordSignIn', email: 'kai@example.com'
 console.log('\nWHOSE IT IS');
 const codeless = await signToken('kai@example.com', revOf(await readArtists(), kai));
 ok('a session with no sid still sets one for its address', (await A({ action: 'passwordSet', password: 'from an old token', current: 'third time lucky' }, codeless)).ok);
-r = await hit(authFn, 'https://x/api/auth?code=devlocal', { action: 'passwordSet', password: 'from the studio code' });
-eq('a Studio-code session has no address: refused with the way forward', [r.status, r.error], [403, 'Sign in with your email first, then set a password there']);
+console.log('\nFROM THE STUDIO CODE  (the founder, 2026-09-14: "i don\u2019t see a set password option")');
+/* A Studio code on kai's own page, so the code session lands on kai's account
+   (the master code lands on the default artist, which is a different page). */
+ok('kai sets a Studio code', (await S({ action: 'setCode', code: 'kai-studio-code' }, codeless)).ok);
+const kaiSlug = (await readArtists()).byId[kai].slug;
+const viaCode = (body) => hit(authFn, `https://x/api/auth?code=kai-studio-code&a=${encodeURIComponent(kaiSlug)}`, body);
+r = await viaCode({ action: 'passwordSet', password: 'from the studio code' });
+eq('a code session must name an address on the account', [r.status, r.error], [400, 'Pick one of the addresses on this account']);
+await A({ action: 'add', email: 'stranger@example.com', role: 'member' }, codeless).catch(() => {});
+const anyOther = (await readArtists()).byEmail;
+r = await viaCode({ action: 'passwordSet', password: 'from the studio code', email: 'nobody@example.com', code: '123456' });
+eq('an address that is not on it: refused before any code is checked', r.status, 400);
+if (anyOther['stranger@example.com'])
+  eq('a member row is not an address a code session may key', (await viaCode({ action: 'passwordSet', password: 'from the studio code', email: 'stranger@example.com', code: '123456' })).status, 400);
+r = await viaCode({ action: 'passwordSet', password: 'from the studio code', email: 'kai@example.com', code: '000000' });
+eq('the right address with a wrong code: refused', [r.status, r.error], [401, 'Check the code and try again']);
+r = await viaCode({ action: 'passwordSet', password: 'from the studio code', email: 'KAI@example.com', code: await issueCode('kai@example.com') });
+eq('the right address with its code: set, and says whose', [r.ok, r.email], [true, 'kai@example.com']);
+ok('and the email+password door opens with it', (await A({ action: 'passwordSignIn', email: 'kai@example.com', password: 'from the studio code' })).ok);
+/* A second owner address on the same page (the shape the founder's account has:
+   two addresses, one page). The code session keys THAT one too, on its own code. */
+const { mutateArtists } = await import('../netlify/functions/_auth.mjs');
+await mutateArtists((reg) => { reg.byEmail['kai.second@example.com'] = { artistId: kai, role: 'owner' }; return true; });
+r = await viaCode({ action: 'passwordSet', password: 'the second address', email: 'kai.second@example.com', code: await issueCode('kai.second@example.com') });
+ok('a second owner address on the page gets its own password the same way', r.ok, r);
+ok('and opens the door on its own', (await A({ action: 'passwordSignIn', email: 'kai.second@example.com', password: 'the second address' })).ok);
+eq('Settings lists both, each with its own state', (await A({ action: 'list' }, codeless)).emails.filter((e) => e.pw).map((e) => e.email).sort(), ['kai.second@example.com', 'kai@example.com']);
+/* Back to the password the rest of the file expects on kai's own address. */
+ok('changing it with the current one still works for a signed-in address', (await A({ action: 'passwordSet', password: 'from an old token', current: 'from the studio code' }, codeless)).ok);
 eq('and that change signed the code session of the same address out', (await S({ action: 'planGet' }, T3)).status, 401);
 r = await A({ action: 'passwordClear', current: 'wrong' }, codeless);
 eq('removing it needs the current one', r.status, 401);

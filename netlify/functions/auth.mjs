@@ -282,29 +282,48 @@ const main = async (req) => {
 
     /* ---- where you are signed in ---- */
     /* ---- your password (decision 0070) ----
-       Yours: every role may set one for its own address; a Studio-code session has
-       no address and is told to sign in with its email first. Changing one needs
+       Yours: every role may set one for its own address. Changing one needs
        the current password OR a fresh six-digit code to the same address (the
        "forgot" path: the inbox is the root of trust, as it always was). A change
        signs every OTHER device out — a changed password usually means a phone was
-       lost or lent — and this one carries on. */
+       lost or lent — and this one carries on.
+
+       FROM A STUDIO-CODE SESSION (the founder, 2026-09-14: "i don't see a set
+       password option"). A code session has no address, and the first cut sent it
+       away to sign in by email first — which is a door to a door. Now it names
+       one of the ACCOUNT'S OWN addresses (`body.email`, an owner/manager row on
+       this page) and proves it with a six-digit code sent there: the code session
+       already proves the page, the code proves the inbox, and a password is only
+       ever set for an address that answered. Never for an address that is not
+       on this account — that would let a code turn any inbox into a key. */
     if (action === 'passwordSet') {
-      if (!me.email) return bad('Sign in with your email first, then set a password there', 403);
       const pw = String(body.password || '');
-      const why = weakPassword(pw, me.email);
-      if (why) return bad(why);
-      if (await hasPassword(aid, me.email)) {
-        let proven = false;
-        if (body.current) proven = await checkPassword(aid, me.email, String(body.current));
-        else if (body.code) proven = (await checkCode(me.email, String(body.code).replace(/\D/g, '').slice(0, 6))).ok;
-        if (!proven) return bad(body.current ? 'That isn’t your current password' : 'Check the code and try again', 401);
+      let email = me.email;
+      if (!email) {
+        email = normEmail(body.email);
+        const row = validEmail(email) ? (await readArtists()).byEmail[email] : null;
+        if (!row || row.artistId !== aid || row.role === 'member' || row.role === 'crew')
+          return bad('Pick one of the addresses on this account', 400);
+        const why = weakPassword(pw, email);
+        if (why) return bad(why);
+        const got = await checkCode(email, String(body.code || '').replace(/\D/g, '').slice(0, 6));
+        if (!got.ok) return bad('Check the code and try again', 401);
+      } else {
+        const why = weakPassword(pw, email);
+        if (why) return bad(why);
+        if (await hasPassword(aid, email)) {
+          let proven = false;
+          if (body.current) proven = await checkPassword(aid, email, String(body.current));
+          else if (body.code) proven = (await checkCode(email, String(body.code).replace(/\D/g, '').slice(0, 6))).ok;
+          if (!proven) return bad(body.current ? 'That isn’t your current password' : 'Check the code and try again', 401);
+        }
       }
-      await setPassword(aid, me.email, pw);
+      await setPassword(aid, email, pw);
       const { list } = await readSessions(aid, me.sid);
-      const others = list.filter((x) => !x.current && x.email === me.email).map((x) => x.sid);
+      const others = list.filter((x) => !x.current && x.email === email).map((x) => x.sid);
       if (others.length) await killSessions(aid, others);
-      note(aid, 'password.set', me.email, others.length ? `${others.length} other device(s) signed out` : '');
-      return json({ ok: true, signedOut: others.length });
+      note(aid, 'password.set', email, others.length ? `${others.length} other device(s) signed out` : '');
+      return json({ ok: true, signedOut: others.length, email });
     }
     if (action === 'passwordClear') {
       if (!me.email) return bad('No password on this sign-in', 403);

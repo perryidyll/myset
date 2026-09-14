@@ -157,6 +157,21 @@ so — then the next run picks up the rest. It will never half-finish quietly.
 **A failed sync loses nothing.** The "how far did I get" marks only move after a
 write succeeds, so a run that dies halfway re-sends the same rows next time.
 
+**It will never fill up on you.** Google stops a spreadsheet at ten million cells.
+Every sync measures the one in use — the Studio's Sheet card shows the percentage
+and links it. At **60%** you get one email saying so. At **80%** the nightly sync
+makes a new spreadsheet itself (named after the old one, with the date it took
+over), shares it with the same addresses as an editor, emails you the link and
+carries on there the same night: the log tabs (Shows, Requests, Ratings)
+continue in the new sheet from that night, the snapshot tabs are rewritten there
+in full, and the old sheet is left exactly as it was — still yours, still linked
+from the Studio card. Nothing is moved or deleted. You never have to change
+`GSHEET_ID`: it is only where the chain starts. If you would rather the new
+sheets go to other addresses, set `GSHEET_SHARE` in Netlify (comma-separated);
+otherwise they go to the owner addresses on the founder's account. (The robot
+needs no extra permission for this — it creates the new file itself, and the
+only Drive access it asks for is to files it created.)
+
 ## When something changes in the app
 
 The tab layout lives in `TABS` and `HEAD` in `netlify/functions/_warehouse.mjs`.
