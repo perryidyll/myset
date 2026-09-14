@@ -67,6 +67,11 @@ stage = (await A('window', { open: true })).stage;
 alpha = stage.songs.find((s) => s.id === 'alpha');
 eq('a tipper who also bought votes is counted once per vote', alpha.paidVotes, 5);
 eq('the Studio is told what the room may see', stage.show.crowd, { votes: false, tips: false });
+/* THE LIVE TAB'S "TIPS" IS TONIGHT'S (15 Sep): Cal's $20 from last week is in the account's
+   history, not in tonight — the Studio used to add it in and the founder counted $30 for $20 */
+eq('the Studio’s tip total is tonight’s, not the account’s history', [stage.tips.total, stage.tips.count], [7, 2]);
+eq('…and the account’s all-time total travels beside it, named', [stage.tips.allTime, stage.tips.allTimeCount], [27, 3]);
+ok('recent tips on the Live tab are tonight’s only', stage.tips.recent.length === 2 && stage.tips.recent.every((t) => t.fan !== 'cal'), stage.tips.recent);
 
 /* WHAT THE ROOM SEES (0079): nothing until the artist switches it on; then the
    tally, then the tips — this window's tips, not the account's history. */

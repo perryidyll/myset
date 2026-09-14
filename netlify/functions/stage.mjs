@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, tippersTonight, firstVotedAt, rankSongs, json, bad,
+import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, tippersTonight, tipsTonight, firstVotedAt, rankSongs, json, bad,
          requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
@@ -41,7 +41,17 @@ export async function stagePayload(aid) {
   const paidCounts = live ? paidVoteCounts(fans, tippersTonight(meta.tips, show.startedAt)) : {};
   const firstAt = live ? firstVotedAt(fans) : {};
   const room = roomCounts(fans);
-  const total = meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0);
+  /* TONIGHT'S TIPS, NOT THE ACCOUNT'S HISTORY. `meta.tips` is every tip the artist has
+     ever taken; the Live tab's "Tips" reads as tonight's, and until 15 Sep it summed the
+     whole list — so a night after a $10 Sunday showed $30 for $20 of tips, and the
+     founder counted a tip that was not there. The window is the show's `startedAt`, the
+     same boundary the vote page (tipsTonight) and the paid-vote pill (tippersTonight)
+     already use; before a show has started there is no tonight, and the total is 0. The
+     account's total travels alongside as `allTime`, named, for anything that wants it. */
+  const since = show.startedAt ? Number(show.startedAt) : Infinity;
+  const tonight = show.startedAt ? tipsTonight(meta.tips, since) : { total: 0, count: 0 };
+  const allTime = Math.round(meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0) * 100) / 100;
+  const recent = (show.startedAt ? meta.tips.filter((t) => t && Number(t.at) >= since) : meta.tips).slice(-15).reverse();
 
   return {
     ok: true,
@@ -87,7 +97,7 @@ export async function stagePayload(aid) {
           votable: canVote(x),          // in the setlist, or already played
         })), counts, firstAt);
     })(),
-    tips: { total: Math.round(total * 100) / 100, count: meta.tips.length, recent: meta.tips.slice(-15).reverse() },
+    tips: { total: tonight.total, count: tonight.count, recent, allTime, allTimeCount: meta.tips.length },
     feedback: shapeFeedback(fb),
     paymentsEnabled: canTakeMoney(aid, show),
     /* Why, if not. The artist should never have to guess where their money went. */
