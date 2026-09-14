@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 10:46 — 6fceff3 — wt11@metrics/cli-stdout (1 files since origin/main)
+**tl;dr:** tools/metrics.mjs read zero artists on its first live run — 'blobs:get -O -' writes a file named '-'; it now reads stdout and refuses an empty registry out loud
+**Other sessions:** One-line tool fix, no page, no function. Rebuilt the Current Show Stats page from production after: 19 nights, 7 real.
+
 ### 2026-09-14 10:42 — 16a113c — wt10@metrics/snapshot (12 files since origin/main)
 **tl;dr:** Current Show Stats: one JSON snapshot of the app's records (nights placed against the calendar, money, posts, RSVPs, sign-ups) fills a page with all-time and 24h/7/30/60/90-day/custom ranges — published daily as the artifact for now, myset.vip/metrics when the founder says so; the Google Sheet's header row and row titles are bold and colour-filled on every sync (decision 0071)
 **Other sessions:** NEW _metrics.mjs (pure; buildSnapshot({registry, venues, parts})), tools/metrics.mjs (read-only Netlify CLI reads by name; MYSET_SITE_DIR from a worktree; --from <backup dir>; --html fills finance/metrics.html at __SNAPSHOT__), finance/metrics.html (NOT published; served by a future metrics.mjs with included_files like moneymodel). _sheets.mjs: tabTitles() now returns ids; styleTabs(TAB_LIST) runs in syncSheet after ensureTabs. No page in public/ changed.
