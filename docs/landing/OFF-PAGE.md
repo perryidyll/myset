@@ -14,18 +14,24 @@ landing page.
 
 ## 1. Plans, tiers and prices
 
-| | Free | Plus | Pro |
+| | Hobbyist (free) | Bar Star (plus) | Rock Star (pro) |
 |---|---|---|---|
 | Price | $0 | $10/mo | $20/mo |
-| Shows | 4 per UTC calendar month | unlimited | unlimited |
-| Room size | 200 | 1,000 | 2,000 |
-| Songs live to the room | 50 of 2,000 kept | unlimited | unlimited |
-| Platform cut | 10% | 2% | 0% |
+| Shows | 10 per UTC calendar month | unlimited | unlimited |
+| Room size | 50 | 300 | 2,000 |
+| Library | 100 songs, all live to the room | 200 | 2,000 |
+| Platform cut | 25% | 10% | 2% |
 | Sign-ins | 1 | 1 | 5 |
 | Own vote/pack pricing | — | ✓ | ✓ |
 | Separate setlists | — | ✓ | ✓ |
-| Merch | — | ✓ | ✓ |
+| Merch shop (`/<slug>/shop`, decision 0064) | — | ✓ | ✓ |
+| Business dashboard + report (`reports`, decision 0065) | — | ✓ | ✓ |
 | Delete a post for good | — | ✓ | ✓ |
+
+Read from `PLANS` on 2026-09-14 (`node -e "import('./netlify/functions/_plan.mjs')…"`).
+The landing page names the shop and the dashboard but never which plan carries
+them — the FAQ answer "Is the shop or the business dashboard free?" says "the paid
+plans", no price, no tier name (the founder, 2026-09-14).
 
 Source of truth: `netlify/functions/_plan.mjs`. **Never repeat these numbers in
 prose** — read them from `PLANS`, the way `test/limits.mjs` does.
