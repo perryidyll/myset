@@ -2755,3 +2755,10 @@ bandwidth = 23 credits for everything the rooms did. Requests/compute: dashboard
 **Also:** `actuals.py` refuses to write when the registry reads as empty (a worktree run
 read zero nights and would have replaced the seven real ones) and honours `MYSET_SITE_DIR`.
 Run it from a worktree as `MYSET_SITE_DIR=~/Docs/MySet python3 tools/actuals.py --write`.
+
+**The exact split, recorded (14 Sep 12:40 UTC, from Netlify's dashboard):** period from 8 Sep —
+production deploys 86 = 1,290 credits (96.3%); web requests 39,505 = 7.9; compute 20.8
+(1.9 GB-h); bandwidth 21.5 (1.1 GB); total 1,340.2. A no-gig day is ~3 credits of compute +
+~1 of requests (background); a gig adds 1–2. Kept in `finance/credits.json` (append-only —
+the API cannot give it); `actuals.py` carries the latest reading as `shipping.dashboard` /
+`traffic.dashboard`; the page's "Two bills" note quotes it.

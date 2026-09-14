@@ -71,3 +71,13 @@ host; per-gig, per-tier and per-show unchanged; traffic + shipping = the bill; 4
 6,000 credits) and the tracker regexes. `tools/actuals.py --write` against production carries
 `shipping` and `traffic`. Browser: the KPI row, the formula table's two bills, the hosts table's
 traffic/shipping columns and the note render; no console errors.
+
+**Then the founder asked for the exact split to be read and recorded.** Read off Netlify's
+own dashboard (Usage & billing › Credit usage breakdown) on 14 Sep at 12:40 UTC, for the
+period from 8 Sep: **production deploys 86 = 1,290 credits (96.3%)**; everything every room
+did — 39,505 web requests = 7.9 credits, compute 20.8 (1.9 GB-hours), bandwidth 21.5 — **50.2
+credits (3.7%)**; total 1,340.2. The per-day chart (in `finance/credits.json`) shows a day
+with no gig still costs ~3 credits of compute and ~1 of requests — the scheduler, the
+warm-door pings, the nightly mirror — and a gig adds one or two on top. The previous period
+(8 Aug–7 Sep) was ~3,000 credits, 53K requests, 1.5 GB-hours. The tracker now carries the
+latest reading into `actuals.json` and the page's note quotes it.

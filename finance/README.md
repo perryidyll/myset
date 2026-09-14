@@ -129,3 +129,11 @@ credits; the four gigs were 18¢). So:
 
 When you read a server figure anywhere — this page, a report, a chat — ask which bill
 it is. If it is "per gig" and it is not the traffic bill, it is wrong.
+
+`credits.json` is the one place Netlify's own per-category split is kept: a reading of
+Usage & billing › Credit usage breakdown (and the per-day chart), appended by hand with
+the date it was read. The API cannot give it. `tools/actuals.py` carries the latest reading
+into `actuals.json` as `shipping.dashboard` / `traffic.dashboard`, and the page's "Two
+bills" note quotes it. First reading, 14 Sep 2026, period from 8 Sep: deploys 1,290 of
+1,340.2 credits (96.3%); everything the rooms did — 39,505 requests = 7.9, compute 20.8,
+bandwidth 21.5 — 50.2 credits.
