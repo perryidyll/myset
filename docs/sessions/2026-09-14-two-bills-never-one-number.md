@@ -73,6 +73,30 @@ platform's.
 - `MYSET_SITE_DIR=~/Docs/MySet python3 tools/actuals.py --write` — 7 nights, `shipping` and
   `traffic` present; the same command from the unlinked worktree refused with the message.
 
+## The exact split, read and recorded (the founder's ask)
+
+Read from the dashboard in the in-app browser, 14 Sep 12:40 UTC, period from 8 Sep:
+
+| Meter | Count | Credits | Share |
+|---|---|---|---|
+| Production deploys | 86 | 1,290 | 96.3% |
+| Web requests | 39,505 | 7.9 | 0.6% |
+| Compute (serverless functions) | 1.9 GB-hours | 20.8 | 1.6% |
+| Bandwidth | 1.1 GB | 21.5 | 1.6% |
+| AI inference | — | 0 | — |
+| **Total** | | **1,340.2** | |
+
+Per day (in `finance/credits.json`): no-gig days cost 2.5–3.4 credits of compute and ~1.3 of
+requests — the background (scheduler every 2 min, warm-door pings every 4 min since 12 Sep,
+nightly mirror and sheet sync); a gig adds roughly 1–2 credits. Deploys the same days: 60–600.
+Bandwidth spikes (8.9 on 7 Sep, 7.5 on 11 Sep) are the clip uploads and the backup/metrics
+reads, not polls. Previous period (8 Aug–7 Sep): ~3,000 credits, 53K requests, 1.5 GB-hours,
+1.1 GB.
+
+Kept in `finance/credits.json` (append-only; the API cannot give it); `tools/actuals.py`
+carries the latest reading into `actuals.json` as `shipping.dashboard` / `traffic.dashboard`;
+the page's "Two bills" note quotes it.
+
 ## For the user
 
 - The exact request/compute split: Netlify › Usage & billing › Credit usage breakdown. I can

@@ -18,28 +18,44 @@
  "roomPlus": null,
  "roomPro": 0.684,
  "roomPerHead": 0.684,
- "deploys": 269,
- "deploysThisPeriod": 84,
+ "deploys": 272,
+ "deploysThisPeriod": 86,
  "billingPeriodStart": "2026-09-08",
  "shipping": {
   "what": "production deploys \u00d7 15 credits \u2014 a cost of shipping code, never of a gig",
-  "deploys30": 269,
-  "credits30": 4035,
-  "deploysThisPeriod": 84,
-  "creditsThisPeriod": 1260,
-  "perDayThisPeriod": 13.5
+  "deploys30": 272,
+  "credits30": 4080,
+  "deploysThisPeriod": 86,
+  "creditsThisPeriod": 1290,
+  "perDayThisPeriod": 13.7,
+  "dashboard": {
+   "readAt": "2026-09-14T12:40:00+00:00",
+   "deploys": 86,
+   "credits": 1290,
+   "shareOfAllCredits": 0.963
+  }
  },
  "traffic": {
   "what": "everything the rooms cause \u2014 bandwidth is the one meter the API exposes; web requests and compute are on Netlify\u2019s Credit usage breakdown page only",
-  "bandwidthBytesThisPeriod": 1166991536,
-  "bandwidthGBThisPeriod": 1.167,
-  "bandwidthCreditsThisPeriod": 23.3,
-  "bandwidthReadAt": "2026-09-14T12:13:37.109+00:00"
+  "bandwidthBytesThisPeriod": 1174962722,
+  "bandwidthGBThisPeriod": 1.175,
+  "bandwidthCreditsThisPeriod": 23.5,
+  "bandwidthReadAt": "2026-09-14T13:14:51.851+00:00",
+  "dashboard": {
+   "readAt": "2026-09-14T12:40:00+00:00",
+   "periodStart": "2026-09-08",
+   "webRequests": 39505,
+   "webRequestCredits": 7.9,
+   "computeCredits": 20.8,
+   "bandwidthCredits": 21.5,
+   "trafficCredits": 50.2,
+   "totalCredits": 1340.2
+  }
  },
  "pollsPerPhoneHour": null,
  "pollsProvisional": null,
  "creditsPerShow": null,
- "note": "7 night(s) on the published calendar where the room used the app, across 1 artist(s) (1 more on the calendar where it went unused); 3 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 19.86. No night is bracketed by two bandwidth marks yet, so polls per phone-hour is still the model's guess. Deploys are account-wide (all five sites share the credit grant): 269 in the last 30 days, 84 this billing period = 1260 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 1.167 GB = 23.3 credits for everything every room did.",
+ "note": "7 night(s) on the published calendar where the room used the app, across 1 artist(s) (1 more on the calendar where it went unused); 3 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 19.86. No night is bracketed by two bandwidth marks yet, so polls per phone-hour is still the model's guess. Deploys are account-wide (all five sites share the credit grant): 272 in the last 30 days, 86 this billing period = 1290 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 1.175 GB = 23.5 credits for everything every room did.",
  "nights": [
   {
    "key": "hist_perry-idyll_2026-09-13-1123-yvaz",

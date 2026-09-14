@@ -10,6 +10,9 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 20:25 — 0f12226 — wt@model/credit-breakdown (9 files since origin/main)
+**tl;dr:** Netlify's own per-category credit split is now on file (finance/credits.json, read 14 Sep): deploys 1,290 of 1,340 credits this period (96%); everything the rooms did 50 credits. The money model's 'Two bills' note quotes it.
+**Other sessions:** finance/credits.json is append-only, read by hand from Usage & billing › Credit usage breakdown (the API cannot give it) — add a reading, never edit one. tools/actuals.py carries readings[-1] into actuals.json as shipping.dashboard / traffic.dashboard. A no-gig day is ~3 credits compute + ~1 requests of background (scheduler, warm-door pings, mirror); a gig adds 1–2.
 ### 2026-09-14 20:21 — 493d32b — wt3@fix/no-default-profile-images (13 files since origin/main)
 **tl;dr:** A new artist page no longer opens with the founder's band photo as its cover and portrait — no photo means a pink-orange cover box and the band's initial (decision 0078, INVARIANT 0fy); the Studio's Save profile button is centred
 **Other sessions:** _profile.mjs DEFAULTS photo is '' and normProfile never fills it; artist.html .pcover.blank / .pav.blank, community + shop .av.blank draw the initial; og:image on artist.html is the MySet icon. The founder's page stores /img/band.jpg by path and is unchanged — do not remove the two stock files. .big.mid centres a one-word big button. Next free invariant: 0fz; decision: 0079.

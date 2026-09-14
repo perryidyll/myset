@@ -1,0 +1,176 @@
+{
+ "what": "Netlify's own credit meters, read off the team dashboard (Usage & billing › Credit usage breakdown, and Account usage insights › Credits, per day). This is the ONLY place the per-category split exists — the API exposes the deploy list and the bandwidth counter, nothing else. Append a reading; never edit an old one. tools/actuals.py carries the latest reading into actuals.json as traffic.dashboard / shipping.dashboard.",
+ "readings": [
+  {
+   "readAt": "2026-09-14T12:40:00+00:00",
+   "readBy": "the assistant, from the dashboard in the in-app browser, at the founder's ask",
+   "period": {
+    "start": "2026-09-08",
+    "end": "2026-10-07",
+    "daysElapsed": 6.5
+   },
+   "breakdown": {
+    "productionDeploys": {
+     "count": 86,
+     "credits": 1290
+    },
+    "webRequests": {
+     "count": 39505,
+     "credits": 7.9
+    },
+    "compute": {
+     "credits": 20.8,
+     "gbHours": 1.9,
+     "note": "Serverless Functions 1.9 GB-hrs; the breakdown's 20.8 may include a rounding of the daily series"
+    },
+    "bandwidth": {
+     "credits": 21.5,
+     "gb": 1.1
+    },
+    "aiInference": {
+     "credits": 0
+    },
+    "total": 1340.2
+   },
+   "shares": {
+    "shipping": 0.963,
+    "traffic": 0.037
+   },
+   "previousPeriod": {
+    "start": "2026-08-08",
+    "end": "2026-09-07",
+    "credits": 3000,
+    "webRequests": 53000,
+    "computeGbHours": 1.5,
+    "bandwidthGb": 1.1,
+    "note": "rounded as the dashboard shows them"
+   },
+   "perDay": {
+    "what": "credits per day per meter, from the daily chart; deploys are 15 each so the count is credits ÷ 15; gig = a real night on the published calendar (tools/actuals.py rule)",
+    "days": [
+     {
+      "day": "2026-08-30",
+      "deploys": 360,
+      "webRequests": 1.8,
+      "functionsCompute": 2.1,
+      "bandwidth": 0.76,
+      "gig": "Sand & Tan, 8 voters (+ load tests)"
+     },
+     {
+      "day": "2026-08-31",
+      "deploys": 600,
+      "webRequests": 0.73,
+      "functionsCompute": 2.0,
+      "bandwidth": 0.61,
+      "gig": "none — load-test bursts"
+     },
+     {
+      "day": "2026-09-01",
+      "deploys": 225,
+      "webRequests": 0.49,
+      "functionsCompute": 0.34,
+      "bandwidth": 0.79,
+      "gig": "none"
+     },
+     {
+      "day": "2026-09-02",
+      "deploys": 300,
+      "webRequests": 0.48,
+      "functionsCompute": 0.25,
+      "bandwidth": 1.5,
+      "gig": "none"
+     },
+     {
+      "day": "2026-09-03",
+      "deploys": 165,
+      "webRequests": 0.37,
+      "functionsCompute": 0.29,
+      "bandwidth": 0.78,
+      "gig": "none"
+     },
+     {
+      "day": "2026-09-04",
+      "deploys": 135,
+      "webRequests": 0.59,
+      "functionsCompute": 1.1,
+      "bandwidth": 0.62,
+      "gig": "Seaflower on the calendar, one phone"
+     },
+     {
+      "day": "2026-09-05",
+      "deploys": 225,
+      "webRequests": 1.4,
+      "functionsCompute": 1.5,
+      "bandwidth": 1.6,
+      "gig": "none (the model was built; tests)"
+     },
+     {
+      "day": "2026-09-06",
+      "deploys": 75,
+      "webRequests": 0.83,
+      "functionsCompute": 2.3,
+      "bandwidth": 1.8,
+      "gig": "Sand & Tan, 8 phones"
+     },
+     {
+      "day": "2026-09-07",
+      "deploys": 75,
+      "webRequests": 1.3,
+      "functionsCompute": 4.2,
+      "bandwidth": 8.9,
+      "gig": "Ugly Duckling, 14 phones (bandwidth: the three ~75 MB clips uploaded)"
+     },
+     {
+      "day": "2026-09-08",
+      "deploys": 165,
+      "webRequests": 1.0,
+      "functionsCompute": 2.3,
+      "bandwidth": 0.92,
+      "gig": "Crystal Day, 7 phones"
+     },
+     {
+      "day": "2026-09-09",
+      "deploys": 60,
+      "webRequests": 1.4,
+      "functionsCompute": 4.2,
+      "bandwidth": 1.5,
+      "gig": "Anantara, 18 phones (record ran 6 h)"
+     },
+     {
+      "day": "2026-09-10",
+      "deploys": 60,
+      "webRequests": 0.94,
+      "functionsCompute": 3.1,
+      "bandwidth": 2.3,
+      "gig": "Crystal Day started, nobody came; hand tests"
+     },
+     {
+      "day": "2026-09-11",
+      "deploys": 195,
+      "webRequests": 1.2,
+      "functionsCompute": 3.2,
+      "bandwidth": 7.5,
+      "gig": "Seaflower, 9 phones (bandwidth: backups/metrics reads that day)"
+     },
+     {
+      "day": "2026-09-12",
+      "deploys": 330,
+      "webRequests": 1.3,
+      "functionsCompute": 2.6,
+      "bandwidth": 4.0,
+      "gig": "none — the warm-door pings began"
+     },
+     {
+      "day": "2026-09-13",
+      "deploys": 210,
+      "webRequests": 1.3,
+      "functionsCompute": 3.4,
+      "bandwidth": 3.9,
+      "gig": "Sand & Tan, 2 phones"
+     }
+    ],
+    "whatItShows": "A day with no gig costs 2.5–3.4 credits of compute and ~1.3 of requests — the background (the scheduler every 2 min, the warm-door pings every 4 min, the nightly mirror and sheet sync). A gig adds roughly 1–2 credits on top. Deploys on the same days: 60–600. Bandwidth spikes are clips and backups, not polls."
+   }
+  }
+ ]
+}

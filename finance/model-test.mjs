@@ -246,6 +246,10 @@ console.log('TWO BILLS, NEVER ONE NUMBER (INVARIANT 0fx)');
   ok('actuals.py reports `shipping` (deploys × 15) and `traffic` (bandwidth) as separate objects, has no deploy byte constant, and says so in its note',
     /'shipping': \{'what': 'production deploys × 15 credits/.test(py) && /'traffic': \{'what': 'everything the rooms cause/.test(py) && !/'deploy'/.test(py.match(/BYTES = \{[^}]*\}/)[0]) && /CR_DEPLOY = 15/.test(py) && /INVARIANT 0fx/.test(py));
   ok('the tracker refuses to write when the registry reads as empty, and reads the store through MYSET_SITE_DIR from a worktree', /the registry read as empty/.test(py) && /sys\.exit\(1\)/.test(py) && /SITE = os\.environ\.get\('MYSET_SITE_DIR'\) or ROOT/.test(py) && /cwd=SITE/.test(py));
+const creditsLog = JSON.parse(fs.readFileSync(new URL('./credits.json', import.meta.url), 'utf8'));
+const lastRead = creditsLog.readings[creditsLog.readings.length - 1], bd = lastRead.breakdown;
+ok('finance/credits.json holds Netlify’s own split and its parts add up to its total (deploys + requests + compute + bandwidth + AI)', Math.abs(bd.productionDeploys.credits + bd.webRequests.credits + bd.compute.credits + bd.bandwidth.credits + bd.aiInference.credits - bd.total) < 0.15 && bd.productionDeploys.credits === bd.productionDeploys.count * 15, bd);
+ok('the tracker carries the latest dashboard reading into actuals.json as shipping.dashboard and traffic.dashboard', /CREDITS = os\.path\.join\(ROOT, 'finance', 'credits\.json'\)/.test(py) && /'dashboard': \{'readAt': dash\['readAt'\], 'deploys'/.test(py) && /'trafficCredits', 'totalCredits'\)\} if dash else None/.test(py));
 ok('no line of the tracker divides deploys by shows, phones or hours', !/deploy[a-zA-Z0-9_'\]]*\s*\/\s*(len\(rows\)|people|hours|shows)/.test(py));
 }
 console.log('SAVED SCENARIOS');

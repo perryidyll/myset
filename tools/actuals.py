@@ -110,6 +110,7 @@ ROOT = os.path.dirname(HERE)
 # is not, so from one set MYSET_SITE_DIR=~/Docs/MySet (the same convention as tools/metrics.mjs)
 SITE = os.environ.get('MYSET_SITE_DIR') or ROOT
 MARKS = os.path.join(ROOT, 'finance', 'marks.json')
+CREDITS = os.path.join(ROOT, 'finance', 'credits.json')   # Netlify's own per-category credit meters, read off the dashboard by hand (append-only)
 ENV = {**os.environ, 'PATH': os.environ['HOME'] + '/.local/node/bin:' + os.environ.get('PATH', '')}
 
 # bytes on the wire per call — MUST equal P0.pollBytes / writeBytes / studioBytes /
@@ -575,6 +576,19 @@ def main():
     acc = account()
     bw = (api(f"/accounts/{acc['id']}/bandwidth") if acc else None) or {}
     bw_used = int(bw.get('used') or 0)
+    # the latest dashboard reading (finance/credits.json) — the only exact per-category split there is
+    dash = None
+    try:
+        readings = json.load(open(CREDITS)).get('readings') or []
+        if readings:
+            r = readings[-1]; b = r['breakdown']
+            dash = {'readAt': r['readAt'], 'periodStart': r['period']['start'], 'deploys': b['productionDeploys']['count'], 'deployCredits': b['productionDeploys']['credits'],
+                    'webRequests': b['webRequests']['count'], 'webRequestCredits': b['webRequests']['credits'], 'computeCredits': b['compute']['credits'],
+                    'bandwidthCredits': b['bandwidth']['credits'], 'totalCredits': b['total'],
+                    'trafficCredits': round(b['webRequests']['credits'] + b['compute']['credits'] + b['bandwidth']['credits'], 1),
+                    'shippingShare': round(b['productionDeploys']['credits'] / b['total'], 3)}
+    except Exception:
+        dash = None
     avg = lambda xs: round(sum(xs) / len(xs), 2) if xs else None
     by = lambda plan: [r for r in rows if r['plan'] == plan]
     known = [r for r in rows if r['moneyKnown']]
@@ -606,10 +620,12 @@ def main():
         'shipping': {'what': 'production deploys × 15 credits — a cost of shipping code, never of a gig',
                      'deploys30': n30, 'credits30': (n30 or 0) * CR_DEPLOY,
                      'deploysThisPeriod': nper, 'creditsThisPeriod': (nper or 0) * CR_DEPLOY,
-                     'perDayThisPeriod': round(nper / max((datetime.now(timezone.utc) - datetime.fromisoformat(pstart + 'T00:00:00-07:00')).total_seconds() / 86400, 0.5), 1) if nper is not None and pstart else None},
+                     'perDayThisPeriod': round(nper / max((datetime.now(timezone.utc) - datetime.fromisoformat(pstart + 'T00:00:00-07:00')).total_seconds() / 86400, 0.5), 1) if nper is not None and pstart else None,
+                     'dashboard': {'readAt': dash['readAt'], 'deploys': dash['deploys'], 'credits': dash['deployCredits'], 'shareOfAllCredits': dash['shippingShare']} if dash else None},
         'traffic': {'what': 'everything the rooms cause — bandwidth is the one meter the API exposes; web requests and compute are on Netlify’s Credit usage breakdown page only',
                     'bandwidthBytesThisPeriod': bw_used, 'bandwidthGBThisPeriod': round(bw_used / 1e9, 3), 'bandwidthCreditsThisPeriod': round(bw_used / 1e9 * CR_PER_GB, 1),
-                    'bandwidthReadAt': bw.get('last_updated_at')},
+                    'bandwidthReadAt': bw.get('last_updated_at'),
+                    'dashboard': {k: dash[k] for k in ('readAt', 'periodStart', 'webRequests', 'webRequestCredits', 'computeCredits', 'bandwidthCredits', 'trafficCredits', 'totalCredits')} if dash else None},
         'pollsPerPhoneHour': rate,
         'pollsProvisional': locals().get('provisional'),
         'creditsPerShow': None,
