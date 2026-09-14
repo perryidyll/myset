@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 11:12 — ace9b49 — wt@studio/song-buttons (6 files since origin/main)
+**tl;dr:** Setlist song cards: edit, hide and delete all wear the delete button's soft fill (no orange outline); tapping ✕ opens 'Delete this song?' (Yes, delete it / Keep it) in the Studio's own window
+**Other sessions:** studio.js: ask({title,lede,yes,no,go}) is the small centred window (was startSong's alone); #askNo is the no button. Any new destructive tap goes through ask(), not confirm() — seventeen confirm()s remain elsewhere for another day.
+
 ### 2026-09-14 10:53 — 943a8d8 — wt@studio/small-things (70 files since origin/main)
 **tl;dr:** Artist Studio: Log a show closes on a drag down; Settings has a gear icon; the tab bar is a little smaller (both Studios); setlist song cards are as tall as their words with edit/hide as outlined icons above the delete ✕; Up next shows ten songs before it scrolls
 **Other sessions:** lock.css .tabbar icon 19px / label 11.5px (the Venue Studio shares it). .queue-window max-height is now set by studio.js render() at the eleventh row — do not put a pixel value back in the CSS. attachDrag: .bizro counts as a grab zone and the editor no longer refuses a body drag.

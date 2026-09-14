@@ -12,9 +12,14 @@ could have gone another way.
 - **Settings wears a gear** in the Menu sheet (`studio.js` menu).
 - **The tab bar is a little smaller** — 19 px icons, 11.5 px labels (`lock.css .tabbar`,
   both Studios).
-- **Song cards are as tall as their words:** edit and hide are outlined pencil-square
-  and eye-slash icons in a column at the right, delete the accent ✕ under them, 26 px
-  each, the edit at the title's top edge (`studio.html .songcard`, `.act.ico`).
+- **Song cards are as tall as their words:** edit (pencil-square), hide (eye-slash)
+  and the delete ✕ in a column at the right, all three on the accent-soft fill the ✕
+  always had (the outlines lasted an hour), 26 px each, the edit at the title's top
+  edge (`studio.html .songcard`, `.act.ico`).
+- **Delete asks in the Studio's own window.** `removeSong` used the browser's
+  `confirm()`, which an installed app on some phones does not show; the small
+  centred *End current song?* window (UX-042) is now `ask({title, lede, yes, no, go})`
+  and *Delete this song?* — *Yes, delete it* / *Keep it* — goes through it.
 - **Up next shows ten songs** before it scrolls — cut at the eleventh row's top edge
   by `render()`, since a voted row is taller than a plain one (`studio.html
   .queue-window`).

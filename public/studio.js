@@ -445,12 +445,22 @@ async function act(action,extra={}){
    "Yes, end it" sends the same play — the server files the playing song as
    played and starts the new one in one write, exactly what ■ End + ▶ would do. */
 let ASK_GO=null;
+/* The one small centred window the Studio asks with: a title, a line, a red yes
+   and a ringed no. Every question that must not be a mis-tap goes through here —
+   never the browser's own confirm(), which an installed app on some phones does
+   not show at all (the founder, 2026-09-14). */
+function ask({title,lede,yes,no,go}){
+  ASK_GO=go;
+  const t=$('#askTitle'); if(t) t.textContent=title;
+  const l=$('#askLede'); if(l) l.textContent=lede||'';
+  const y=$('#askYes'); if(y) y.textContent=yes;
+  const k=$('#askNo'); if(k) k.textContent=no;
+  const a=$('#ask'); if(a) a.classList.add('on');
+}
 function startSong(action,extra={}){
   const now=D&&D.songs&&D.songs.find(x=>x.now);
   if(!now||(action==='play'&&extra.song===now.id)) return act(action,extra);
-  ASK_GO=()=>act(action,extra);
-  const l=$('#askLede'); if(l) l.textContent=`${now.title} is still playing.`;
-  const a=$('#ask'); if(a) a.classList.add('on');
+  ask({title:'End current song?',lede:`${now.title} is still playing.`,yes:'Yes, end it',no:'Keep playing',go:()=>act(action,extra)});
 }
 function closeAsk(){ ASK_GO=null; const a=$('#ask'); if(a) a.classList.remove('on'); }
 document.addEventListener('click',e=>{
@@ -3044,7 +3054,7 @@ function declineSong(id){
 }
 function removeSong(id){
   const x=songById(id); if(!x)return;
-  if(confirm('Remove “'+x.title+'” from your setlist?')) act('removeSong',{song:id});
+  ask({title:'Delete this song?',lede:`“${x.title}” leaves your setlist. Its votes and plays stay in your filed nights.`,yes:'Yes, delete it',no:'Keep it',go:()=>act('removeSong',{song:id})});
 }
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b)return;
