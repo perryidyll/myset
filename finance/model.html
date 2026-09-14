@@ -229,8 +229,8 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
   <p class="lede">Move a dial, watch the business. Every number on this page comes out of one formula:
     how many phones are in how many rooms for how long, what the room and the artists pay, what the
     server and Stripe take, and what is left. Nothing here is fixed — the guesses are marked, and real
-    show numbers replace them as they arrive. One word to know: a <b>poll</b> is one phone quietly asking
-    the server “anything new?” — not a vote. Polls are what the server bill is made of.</p>
+    show numbers replace them as they arrive. One word to know: a <b>tick</b> is one phone quietly asking
+    the server “anything new?” — not a vote. Since 11 September a tick is two small requests: the room’s shared board, and the phone’s own line. Ticks are what the server bill is made of.</p>
 </header>
 
 <div class="kicker" style="margin-top:30px;border-bottom-width:0;padding-bottom:0"><span class="k">A SCENARIO, NOT A REPORT — <span id="kpiWhat">1,000 artists</span>. MySet has <b id="kpiToday">1</b> today.</span>
@@ -342,27 +342,27 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
     </div>
     <div class="note warn" id="noteWave">
       <h3>If a big artist shows up: the tidal wave</h3>
-      <p><b>First, the honest part: at 10,000 phones today’s code does not get expensive, it stops working.</b> Every poll reads every fan record in the room, so a poll gets heavier as the crowd grows (the “extra poll time per person” dial), and in a big room every vote wakes every phone, so the ladder never backs off. A 300-person concert is fine (about 12 polls a second). An arena is hundreds of function calls running at once and thousands of document reads a second against the same handful of keys, plus a vote stampede every time a song ends. The “On this host” column in the size table says which is which — for today’s Netlify setup, and for each other host in the list. The 50,000 festival is not a bill; it is an outage. No real night has had more than 8 voters (short demos aside), so every line above that is simulation.</p>
-      <p>Ranked by what they protect against, cheapest first. The first three need almost no code.</p>
+      <p><b>Since 11 September the room shares one board.</b> Every tick is two requests: the board — the same bytes for every phone, rendered about once per interval for the whole room and an edge hit for everyone else — and a small personal call that reads two documents instead of the whole crowd. So a poll no longer gets heavier as the room grows; the <em>render</em> does, and the room shares it. The server also sets the pace: 3 s between ticks up to 200 phones, 10 s to 3,000, 20 s above — and above 200 the tally moving no longer speeds anyone up. <b>What stops a big room now is the document store</b>, not the function count: the “Store MB/s” column in the size table is what it has to move to answer the room, and past ~50 MB/s the room stops working whatever the bill says (the repo’s simulator puts that wall near 2,500 phones at today’s record size). Pick “Netlify before the split” in the host list to see the old numbers: <span id="liveBefore">—</span>.</p>
+      <p><b>What is built, and what is not.</b></p>
       <ol id="waveList">
-        <li><b>Auto-recharge is already on. Add a burn watchdog.</b> At zero credits Netlify pauses <em>every</em> site on the account (iohm.io and idyllenterprises.com too). Auto top-ups turn that outage into a bill, but Netlify has no spending cap and its alerts only watch the monthly allotment. A five-minute check of credits during a live show that flips the brake below is the only real ceiling. Half a day of scripting.</li>
-        <li><b>Sell the arena instead of absorbing it.</b> A booked, prepaid “Arena / Festival” tier for anything above about 500 expected phones, priced off these numbers. A big artist calling becomes a sales event, and the booking is what switches on the big-room mode. Policy in an hour, the form in a day or two.</li>
-        <li><b>Terms that say so.</b> Above 500 attendees needs an Arena booking; MySet may slow the refresh, pause voting or cap participants to protect the service. Two hours with a template.</li>
-        <li><b>Let the server set the pace (the brake).</b> One field in the poll answer — “ask again in N seconds” — lets a huge room be slowed to 15 s while the bar set stays at 3 s. Switch it on in the dials to see what it does to the size table. A day.</li>
-        <li><b>A kill switch.</b> One flag that puts a room into read-only (votes paused, tally every 60 s) without a deploy. It has to stop the reads, not just the writes. Half a day.</li>
-        <li><b>Cache the answer for three seconds.</b> A room of any size becomes one function call every 3 s; only requests and bandwidth remain per phone. The arena drops to about $9, the festival to about $530 — and the concurrency problem disappears. Needs the head-count write moved off the poll first. Two to three days. Pick “Netlify + 3-second cache” in the host list to see it.</li>
-        <li><b>Big-room mode and a phone cap.</b> Above N phones the poll sends a tiny “what changed” answer; above a hard cap without a booking, late arrivals watch the screen. Two to four days, after the two above.</li>
-        <li><b>Edge rate limits per phone.</b> Bounds a script or a bot, not a real crowd (a whole bar shares one address on venue wifi), so set generously. An hour.</li>
-        <li><b>Votes that queue instead of failing.</b> In a stampede a losing write retries for up to 16 seconds and then says “busy”. Fewer tries under load, a “vote queued” answer, and eventually one small document per fan. A day for the short version.</li>
-        <li><b>The rewrite, when a booking pays for it.</b> One object per live show held in memory: the reads disappear rather than get cheaper. Two to four weeks, and honest pricing includes the per-second duration charge — the earlier “13× cheaper” figure left it out; with it the gap is <span id="liveDo">about 1.4×</span> at bar size and larger at arena size.</li>
+        <li><span class="tag meas">built</span> <b>The shared board</b> (decision 0034). Its cost is in every number on this page; the “edge nodes” dial is the one thing about it nobody has measured — under a 10 s interval the board’s copy lives on each edge node separately, and a bar’s phones may land on one node or several.</li>
+        <li><span class="tag meas">built</span> <b>The server sets the pace.</b> The floor above is sent with every board; the “extra brake” dials on this page sit on top of it, for a room the founder wants slower still.</li>
+        <li><span class="tag meas">built, off</span> <b>The open line</b> (decision 0036). A Cloudflare object holds every phone’s socket and relays each landed vote as a dated hint, so the tally moves in a quarter-second instead of once per interval. Phones keep polling — the line is an add-on, and every failure falls back to the ladder. It is priced here from the probe’s own bill (two requests per socket, one per nudge, duration ≈ 0) as “Netlify + the open line”: <span id="liveDo">—</span> for the bar set. It costs <em>more</em>, not less — a hidden page closes its socket and a shown one reopens it, so every glance is a socket — and what it buys is a live tally, not a saving. It stays off until <code>LINE_URL</code> and <code>LINE_KEY</code> are set, and no real night has run it yet.</li>
+        <li><span class="tag guess">to do</span> <b>Auto-recharge is on. Add a burn watchdog.</b> At zero credits Netlify pauses <em>every</em> site on the account. A five-minute check of credits during a live show is the only real ceiling. Half a day.</li>
+        <li><span class="tag guess">to do</span> <b>Sell the arena instead of absorbing it.</b> A booked, prepaid tier above about 500 expected phones, priced off the “Charge to book” column. Policy in an hour, the form in a day or two.</li>
+        <li><span class="tag guess">to do</span> <b>Terms that say so.</b> Above 500 attendees needs a booking; MySet may slow the refresh, pause voting or cap participants. Two hours with a template.</li>
+        <li><span class="tag guess">to do</span> <b>A kill switch.</b> One flag that puts a room into read-only without a deploy. It has to stop the reads, not just the writes. Half a day.</li>
+        <li><span class="tag guess">to do</span> <b>Move the store off the read wall.</b> The bag of fan records is what the render moves; one small document per fan, or the tally kept in the object the line already has, is what lifts the ~2,500-phone ceiling. Days, after a booking pays for it.</li>
+        <li><span class="tag guess">to do</span> <b>Edge rate limits per phone.</b> Bounds a script or a bot, not a real crowd. An hour.</li>
       </ol>
-      <p class="small" style="margin:8px 0 0" id="waveNote">Do the first three this week: they cost almost nothing and remove the only failure that is truly catastrophic. Then the brake and the kill switch, then the cache. Everything else waits for a real booking.</p>
+      <p class="small" style="margin:8px 0 0" id="waveNote">Every crowd figure above 18 phones is simulation from measured inputs; the biggest room a real night has held is 18.</p>
     </div>
     <div class="note" id="noteAssume">
       <h3>What is measured, what is published, what is guessed</h3>
       <ul>
-        <li><span class="tag meas">measured</span> Bytes per poll (2,530, from production), reads per call (15 per poll, 4 per vote, 21 per Studio poll — counted through the real code on 5 Sep 2026), 42 ms per document read. The 155 ms per poll was a probe before a fix; the account’s own bill implies 70–110 ms, so 120 is the default here.</li>
-        <li><span class="tag guess">simulated</span> The 20-phone, 3-hour gig (<span id="liveGig">about 5,900 polls, 4.8 credits</span> on this page; the repo’s simulator says 6,030 and 4.2 because it runs at 155 ms with no Studio and no extra poll per action) is the polling ladder run against a model of how people glance at phones — reproducible, but no real night has had more than 8 voters (short demos aside). Every crowd figure above that is simulation from measured inputs.</li>
+        <li><span class="tag meas">measured</span> Bytes on the wire: the old poll 2,530 (production, 5 Sep), the board 0.86 × that and the personal call 430 (the same 40-song room, 11 Sep); reads per call (15 per board render, 2 per personal call, 4 per vote, 21 per Studio poll — counted through the real code), 42 ms per document read; one fan’s record 101 bytes plus ~240 per cast. The 155 ms per render was a probe before a fix; the account’s own bill implies 70–110 ms, so 120 is the default here. The open line’s two requests per socket and 1.7 GB-s per 12,202 connections are the probe’s own bill (decision 0035).</li>
+        <li><span class="tag guess">estimated</span> 50 ms per personal call (two parallel reads plus overhead — not yet measured in production); how many edge nodes a bar spans (the “edge nodes” dial, at its midpoint); the nudge’s round trip from Netlify’s region (115–140 ms from a Mac); reconnections and phones on the line at a real gig.</li>
+        <li><span class="tag guess">simulated</span> The 20-phone, 3-hour gig (<span id="liveGig">about 5,900 ticks, 4.8 credits</span> on this page; the repo’s simulator says 5,821 ticks, 2,274 renders and 4.5 credits best case because it runs at 155 ms with no Studio and no extra tick per action — the test suite holds the two within 5%) is the polling ladder run against a model of how people glance at phones — reproducible, but the biggest real room so far is 18 phones. Every crowd figure above that is simulation from measured inputs.</li>
         <li><span class="tag meas">published</span> Netlify credit rates and plan prices; Cloudflare, Vercel rates; Stripe’s card, Billing, Connect and dispute fees — all read from the providers’ own pages on 5 Sep 2026 (links in the footer).</li>
         <li><span class="tag guess">guess</span> How many artists, on which plans, playing how often to how many people; what a room spends; how many gigs get promoted; fixed costs. These are the dials. Turn on “Use real shows” when the numbers exist.</li>
         <li><b>Whose Stripe fee is whose.</b> Tips and vote packs are charged on the <em>artist’s</em> connected account, so Stripe’s card fee on them is the artist’s cost, not MySet’s; MySet’s cut arrives with no extra Stripe fee on it. Subscriptions and featured shows are charged on MySet’s own account (a US account, checked 5 Sep 2026 — so US rates, with about one card in eight international so far — measured on the account’s own charges, so artists’ cards may run higher), so their card fee, the 0.7% Billing fee, disputes and refunds are MySet’s. Express account and payout fees are charged to the platform — and the code pays artists out <em>daily</em>, so a busy artist can cost 25¢ a night in payout fees; the dial defaults to 8 payouts a month and a weekly schedule would cut it. Uncollectable negative balances on artists’ accounts also land on MySet, hence the small bad-debt line.</li>
@@ -395,88 +395,174 @@ const ENGINE = (() => {
   }
 
   /* THE POLLING LADDER, copied from public/vote.html and tools/loadsim.py (keep in step):
-       wait = 3s if QUIET<2, 10s if QUIET<6, else 25s
+       FLOOR = what the server tells the room (pollFloorFor in netlify/functions/_lib.mjs):
+               3 s up to 200 phones, 10 s to 3,000 (the durable cache's minimum), 20 s above
+       base  = FLOOR if QUIET<2, FLOOR×10/3 if QUIET<6, FLOOR×25/3 if QUIET<20, else FLOOR×20
+       wait  = base ± 20% jitter
        screen off -> no request; screen on -> QUIET=0 (wakeUp(full))
        any change in the room since the last poll -> QUIET=0, else QUIET++
-       a tap/scroll lifts a phone out of the 25s rung to QUIET=2 only
-     Additions over loadsim: an interaction by THIS phone (a vote, a request…) fires one
-     extra immediate poll and resets its own ladder. `changeShare` is the fraction of all
-     interactions that change the room signature everybody polls (a vote does; feedback
-     does not). */
-  function onePhone(hours, r, look, roomChangesPerMin, ownPerHour, floorS = 3) {
+       a tap/scroll lifts a phone out of the deep rungs to QUIET=2 only
+     WHAT COUNTS AS "A CHANGE" IS THE WHOLE COST CURVE. In a small room (3 s floor) the
+     tally is part of the signature, so anyone's vote resets everyone's ladder. In a
+     bigger room — and in ANY room while the open line is carrying the tally — only the
+     artist's actions and this phone's own casts do (stageSig), so a busy room settles
+     onto the slow rungs. Additions over loadsim: an interaction by THIS phone fires one
+     extra immediate poll; `changeShare` is the fraction of interactions that change the
+     small-room signature (a vote does; feedback does not). */
+  /* `legacy` is the ladder as it shipped BEFORE the split: a 5 s rung for 201–1,000 phones (loadsim --legacy) */
+  function pollFloor(fans, legacy = false) { return fans <= 200 ? 3 : legacy && fans <= 1000 ? 5 : fans <= 3000 ? 10 : 20; }
+  function onePhone(hours, r, look, roomChangesPerMin, ownPerHour, floorS, times) {
     const total = hours * 3600;
-    let t = 0, quiet = 0, polls = 0, looking = false;
+    let t = 0, quiet = 0, polls = 0, glances = 0, looking = false;
     let nextFlip = r.expo(1 / 25);
     while (t < total) {
-      /* floorS is the server-driven minimum (the big-room brake): 3 s today; a big room can be told 15 s */
-      const wait = Math.max(floorS, quiet < 2 ? 3 : quiet < 6 ? 10 : 25);
+      const base = quiet < 2 ? floorS : quiet < 6 ? floorS * 10 / 3 : quiet < 20 ? floorS * 25 / 3 : floorS * 20;
+      const wait = base * (0.8 + r.random() * 0.4);
       t += wait;
       while (nextFlip < t) {
         looking = !looking;
         const mean = looking ? 25 : 25 * (1 - look) / Math.max(look, 1e-6);
         nextFlip += r.expo(1 / Math.max(mean, 1));
-        if (looking) quiet = 0;
+        if (looking) { quiet = 0; glances++; }     // screen on: the ladder resets, and the open line's socket reopens
       }
       if (!looking) continue;
       polls++;
+      if (times) times.push(t);
       const pRoom = 1 - Math.exp(-roomChangesPerMin / 60 * wait);
       const pOwn = 1 - Math.exp(-ownPerHour / 3600 * wait);
       if (r.random() < pRoom || r.random() < pOwn) quiet = 0; else quiet++;
       if (r.random() < 0.12 && quiet >= 6) quiet = 2;
     }
-    return polls;
+    return { polls, glances };
+  }
+
+  /** How often the shared board is actually RENDERED (loadsim's board_renders): the first
+      request after the edge copy expires runs the function; every other request inside
+      the interval is a hit with no compute and no reads behind it. */
+  function boardRenders(times, ttl) {
+    times.sort((a, b) => a - b);
+    let n = 0, last = -1e9;
+    for (const t of times) if (t >= last + ttl) { n++; last = t; }
+    return n;
   }
 
   const SAMPLE = 300;
   const memo = new Map();
-  /** Polls per PHONE for one gig. Always samples 300 phones (with the real room's
-      activity rate) and averages — a 50,000-phone festival costs the same to compute
-      as a bar, and a 20-phone room gets the same statistical precision. */
-  function pollsPerPhone({ fans, hours, look, interactions, changeShare = 1, seed = 7, floorS = 3 }) {
-    const key = [fans, hours, look, interactions, changeShare, seed, floorS].join('|');
+  /** Polls per PHONE for one gig, and how many board renders the room causes. Always
+      samples 300 phones (with the real room's activity rate) and averages — a 50,000-phone
+      festival costs the same to compute as a bar, and a 20-phone room gets the same
+      statistical precision. Renders are counted on exactly `fans` of the sampled phones
+      when the room is no bigger than the sample; above that the sample's hit rate is
+      raised to the room's size (by then the interval is 10 s or more and nearly every
+      interval renders once anyway). */
+  function pollsPerPhone({ fans, hours, look, interactions, changeShare = 1, seed = 7, floorS = 3, line = false, songEveryMin = 4 }) {
+    const key = [fans, hours, look, interactions, changeShare, seed, floorS, line, songEveryMin].join('|');
     if (memo.has(key)) return memo.get(key);
     const n = Math.max(1, fans);
-    const roomChangesPerMin = n * interactions * changeShare / (hours * 60);
+    /* small room without the line: anyone's vote resets everyone; otherwise only the stage does */
+    const roomChangesPerMin = floorS <= 3 && !line ? n * interactions * changeShare / (hours * 60) : 1 / songEveryMin;
     const ownPerHour = interactions / hours;
     const r = rng(seed);
-    let polls = 0;
-    for (let i = 0; i < SAMPLE; i++) polls += onePhone(hours, r, look, roomChangesPerMin, ownPerHour, floorS);
-    const out = polls / SAMPLE + interactions;    // + one immediate poll per interaction
+    const times = [];
+    let polls = 0, glances = 0;
+    for (let i = 0; i < SAMPLE; i++) {
+      const got = onePhone(hours, r, look, roomChangesPerMin, ownPerHour, floorS, i < n ? times : null);
+      polls += got.polls; glances += got.glances;
+    }
+    const perPhone = polls / SAMPLE + interactions;          // + one immediate poll per interaction
+    const intervals = Math.ceil(hours * 3600 / floorS);
+    let rendersBest = boardRenders(times, floorS);
+    if (n > SAMPLE) { const p0 = 1 - rendersBest / intervals; rendersBest = intervals * (1 - Math.pow(Math.max(p0, 0), n / SAMPLE)); }
+    /* the +1 poll per interaction lands where the room is already awake: a hit, or a render the room shares */
+    const out = { perPhone, glances: glances / SAMPLE, rendersBest: Math.min(rendersBest, intervals), rendersWorst: perPhone * n };
     memo.set(key, out);
     return out;
   }
 
-  /* ---------- traffic for ONE gig, in raw units every host prices differently ---------- */
-  function gigTraffic(p, fans, hours) {
-    /* the big-room brake, if switched on: rooms above bigRoomFrom phones are told to ask no faster than bigRoomFloor seconds */
-    const floorS = p.bigRoomOn && fans >= p.bigRoomFrom ? Math.max(3, p.bigRoomFloor) : 3;
-    const perPhone = pollsPerPhone({ fans, hours, look: p.lookShare / 100, interactions: p.interactions, changeShare: p.changeShare / 100, floorS });
+  /* MEASURED PIECES OF THE STORE'S WORK (tools/loadsim.py, 2026-09-11): the show record and one
+     fan's record as the vote path writes it — 101 bytes for a phone that only watched, ~240 per
+     cast. The read wall is where these, moved per second, pass the ~50 MB/s band MySet is known to serve. */
+  const SHOW_DOC = 6287, REC_BASE = 101, REC_PER_CAST = 240, SHARDS = 12, KNOWN_OK_MBS = 50;
+  /* THE OPEN LINE, from the probe (decision 0035) and the build (0036): two billed requests per
+     socket (open + close), one per nudge, outbound messages free, and 1.7 GB-s of duration for
+     12,202 connections — hibernation makes duration a rounding error. */
+  const DO_GBS_PER_SOCKET = 1.7 / 12202;
+
+  /* ---------- traffic for ONE gig, in raw units every host prices differently ----------
+     SINCE THE SPLIT (decision 0034) EVERY TICK IS TWO REQUESTS: the shared board, the same bytes
+     for every phone and served from the edge for the length of the interval, so it is RENDERED
+     about once per interval for the room (per edge node under 10 s — nobody knows how many nodes
+     a bar's phones land on, so `edgeSpread` slides between the best and worst case); and the
+     personal call, small, never cached, two document reads. `line` prices the same gig with the
+     open line carrying the tally: the ladder settles on the slow rungs, every stage message makes
+     each phone look once, and every landed vote waits for its nudge to Cloudflare. */
+  function gigTraffic(p, fans, hours, line = false) {
+    /* the server's floor, and the optional brake above it (bigRoomFrom / bigRoomFloor) */
+    const floorS = Math.max(pollFloor(fans), p.bigRoomOn && fans >= p.bigRoomFrom ? p.bigRoomFloor : 0);
+    const songEveryMin = Math.max(0.5, p.songEveryMin || 4);
+    const args = { fans, hours, look: p.lookShare / 100, interactions: p.interactions, changeShare: p.changeShare / 100, floorS, songEveryMin };
+    const plain = pollsPerPhone(args);
+    /* only the phones holding a socket run the stage-only ladder; the rest poll as today (lineShare) */
+    const share = line ? Math.min(1, Math.max(0, (p.lineShare == null ? 100 : p.lineShare) / 100)) : 0;
+    const onLine = share > 0 ? pollsPerPhone({ ...args, line: true }) : plain;
+    const mix = (k) => onLine[k] * share + plain[k] * (1 - share);
+    const stageLooks = hours * 60 / songEveryMin * (p.lookShare / 100) * share;   // a stage message over the line: one fetch per phone whose screen is on, spread over 1.5 s
+    const perPhone = mix('perPhone') + stageLooks;
     const polls = perPhone * fans;
-    /* every poll reads every fan record in the room, so a poll gets heavier as the room grows */
-    const pollMs = p.pollMs + fans * p.pollMsPerFan;
+    const spread = Math.min(1, Math.max(0, (p.edgeSpread == null ? 50 : p.edgeSpread) / 100));
+    const intervals = Math.ceil(hours * 3600 / floorS);
+    const rendersBest = Math.min(intervals, mix('rendersBest') + stageLooks), rendersWorst = mix('rendersWorst') + stageLooks * fans;
+    const renders = floorS < 10 ? rendersBest + (rendersWorst - rendersBest) * spread : rendersBest;   // 10 s and up: the durable cache, exact
+    /* the same room on the ladder that shipped before the split (a 5 s rung for 201–1,000 phones) */
+    const lgFloor = Math.max(pollFloor(fans, true), p.bigRoomOn && fans >= p.bigRoomFrom ? p.bigRoomFloor : 0);
+    const lgPolls = (lgFloor === floorS ? plain.perPhone : pollsPerPhone({ ...args, floorS: lgFloor }).perPhone) * fans;
+    /* the board render still reads every fan record in the room, so IT gets heavier as the room grows; the personal call does not */
+    const renderMs = p.pollMs + fans * p.pollMsPerFan;
     const writes = p.interactions * fans;                       // vote / request / feedback… calls
+    const writeMs = p.writeMs + (line ? (p.nudgeMs || 0) * (p.changeShare / 100) : 0);  // with the line on, a landed vote (not feedback) waits for its nudge's round trip
     const studioPolls = p.studioOn ? hours * 3600 / 4 * (p.studioShare / 100) : 0;
     const extraViews = p.extraViews * fans;                     // profile / community / city feed
     /* a posted video clip is served whole to every viewer (edge-cached, so no function time, but every
        byte is bandwidth): one view is ~75 MB, about a third of a whole gig's credits — the one line the
        11 Sep bandwidth reading could not be explained without */
     const clipViews = (p.clipViews || 0);
-    const requests = polls + writes + studioPolls + extraViews + fans * p.pageReqs + clipViews;
-    const bytes = polls * p.pollBytes + writes * p.writeBytes + studioPolls * p.studioBytes
+    const other = writes + studioPolls + extraViews + fans * p.pageReqs + clipViews;
+    const requests = 2 * polls + other;
+    const bytes = polls * (p.boardBytes + p.meBytes) + writes * p.writeBytes + studioPolls * p.studioBytes
                 + extraViews * p.viewBytes + fans * p.pageBytes + clipViews * (p.clipBytes || 0);
-    const fnMs = polls * pollMs + writes * p.writeMs + studioPolls * p.studioMs + extraViews * p.viewMs;
-    /* the 3-second cache: with it the room of any size is one function call per 3 s */
-    const cachedFnMs = fnMs - polls * pollMs + hours * 1200 * pollMs;
-    const reads = polls * p.readsPerPoll + writes * p.readsPerWrite + studioPolls * p.studioReads + extraViews * p.viewReads;
+    const fnMs = renders * renderMs + polls * p.meMs + writes * writeMs + studioPolls * p.studioMs + extraViews * p.viewMs;
+    const reads = renders * p.readsPerPoll + polls * p.meReads + writes * p.readsPerWrite + studioPolls * p.studioReads + extraViews * p.viewReads;
+    /* the same gig as the page polled BEFORE the split: one call per tick that re-read the whole room, on the old ladder */
+    const lgRequests = lgPolls + other;
+    const lgBytes = bytes - polls * (p.boardBytes + p.meBytes) + lgPolls * p.pollBytes;
+    const lgFnMs = lgPolls * renderMs + writes * p.writeMs + studioPolls * p.studioMs + extraViews * p.viewMs;
+    const lgReads = lgPolls * p.readsPerPoll + writes * p.readsPerWrite + studioPolls * p.studioReads + extraViews * p.viewReads;
     const kvWrites = writes * p.writesPerWrite;
-    const cpuMs = (polls + studioPolls + extraViews) * p.cpuMsPerPoll + writes * p.cpuMsPerWrite;
-    const doGBs = hours * 3600 * 0.128;                         // one 128 MB object held for the gig
-    const pollsPerSec = polls / (hours * 3600);
-    const concurrent = pollsPerSec * pollMs / 1000;             // functions running at the same time, on average
-    const readsPerSec = pollsPerSec * p.readsPerPoll;
-    return { perPhone, polls, writes, studioPolls, extraViews, clipViews, clipBytes: clipViews * (p.clipBytes || 0), requests, bytes, fnMs, cachedFnMs, reads, kvWrites, cpuMs, doGBs, pollMs, pollsPerSec, concurrent, readsPerSec, floorS };
+    const cpuMs = (renders + polls + studioPolls + extraViews) * p.cpuMsPerPoll + writes * p.cpuMsPerWrite;
+    /* the open line's own traffic (only priced on the Netlify + open line host). A hidden page closes its
+       socket and a shown one reopens it (INVARIANT 9d12: a phone in a pocket costs nothing), so every
+       GLANCE is a socket — two billed requests — not every phone; `reconnects` adds the drops on top. */
+    const glances = mix('glances');
+    const sockets = line ? fans * share * (glances + (p.reconnects || 0)) : 0;
+    const nudges = line ? writes * (p.changeShare / 100) + hours * 60 / songEveryMin : 0;   // one per landed vote, one per stage action
+    const lineReqs = 2 * sockets + nudges;
+    const doGBs = sockets * DO_GBS_PER_SOCKET;
+    /* what the store moves per second: one shard + the show record per personal poll, the whole bag + the show record per render */
+    const secs = hours * 3600;
+    const bag = fans * (REC_BASE + REC_PER_CAST * p.interactions);
+    const storeMBs = (polls * (SHOW_DOC + bag / SHARDS) + renders * (bag + SHOW_DOC)) / secs / 1e6;
+    const lgStoreMBs = lgPolls * bag / secs / 1e6;
+    const pollsPerSec = polls / secs, lgPollsPerSec = lgPolls / secs;
+    const rendersPerSec = renders / secs;
+    const concurrent = rendersPerSec * renderMs / 1000 + pollsPerSec * p.meMs / 1000;   // functions running at the same time, on average
+    const readsPerSec = rendersPerSec * p.readsPerPoll + pollsPerSec * p.meReads;
+    const lgConcurrent = lgPollsPerSec * renderMs / 1000, lgReadsPerSec = lgPollsPerSec * p.readsPerPoll;
+    return { perPhone, glances, polls, lgPolls, renders, rendersBest, rendersWorst, writes, studioPolls, extraViews, clipViews, clipBytes: clipViews * (p.clipBytes || 0),
+             requests, bytes, fnMs, reads, lgRequests, lgBytes, lgFnMs, lgReads, kvWrites, cpuMs,
+             sockets, nudges, lineReqs, doGBs, renderMs, writeMs, pollsPerSec, rendersPerSec, concurrent, readsPerSec, storeMBs, lgConcurrent, lgReadsPerSec, lgStoreMBs, floorS, line: line ? 1 : 0 };
   }
-  const zeroT = () => ({ perPhone: 0, polls: 0, writes: 0, studioPolls: 0, extraViews: 0, clipViews: 0, clipBytes: 0, requests: 0, bytes: 0, fnMs: 0, cachedFnMs: 0, reads: 0, kvWrites: 0, cpuMs: 0, doGBs: 0, pollMs: 0, pollsPerSec: 0, concurrent: 0, readsPerSec: 0, floorS: 0 });
+  /* only what SUMS over gigs lives in a month's total; the per-gig rates (floor, ms, per-second) stay on `one` */
+  const zeroT = () => Object.fromEntries(['polls', 'lgPolls', 'renders', 'rendersBest', 'rendersWorst', 'writes', 'studioPolls', 'extraViews', 'clipViews', 'clipBytes', 'requests', 'bytes', 'fnMs', 'reads', 'lgRequests', 'lgBytes', 'lgFnMs', 'lgReads', 'kvWrites', 'cpuMs', 'sockets', 'nudges', 'lineReqs', 'doGBs'].map((k) => [k, 0]));
   const addT = (a, b, k = 1) => { for (const key of Object.keys(a)) a[key] += (b[key] || 0) * k; return a; };
 
   /* ---------- Netlify plans (published 5 Sep 2026) ---------- */
@@ -512,7 +598,9 @@ const ENGINE = (() => {
     if (!h) return { usd: 0, lines: [], label: '?' };
     const M = 1e6;
     if (h.kind === 'netlify') {
-      const T2 = { ...T, bytes: T.bytes * h.bytesMul, fnMs: (h.cached ? T.cachedFnMs : T.fnMs) * h.computeMul };
+      /* `legacy` prices the same gigs as the page polled before the split: one call per tick */
+      const T2 = h.legacy ? { ...T, requests: T.lgRequests, bytes: T.lgBytes * h.bytesMul, fnMs: T.lgFnMs * h.computeMul }
+                          : { ...T, bytes: T.bytes * h.bytesMul, fnMs: T.fnMs * h.computeMul };
       const c = netlifyCredits(T2, deploys, h);
       const d = netlifyDollars(c.total, h);
       const per = d.usd / Math.max(c.total, 1e-9);
@@ -527,11 +615,20 @@ const ENGINE = (() => {
       return { usd: h.base + req + cpu + rd + wr, label: h.name, lines: [['Base plan', h.base], ['Requests', req], ['CPU time', cpu], ['KV key reads', rd], ['KV writes', wr]] };
     }
     if (h.kind === 'cf-do') {
-      const req = Math.max(0, T.requests - h.reqIncl) / M * h.reqUsd;
-      const doReq = Math.max(0, (T.polls + T.writes + T.studioPolls) - h.doReqIncl) / M * h.doReqUsd;   // page files never reach the object
+      /* THE OPEN LINE IS AN ADD-ON, NOT A REPLACEMENT (decision 0036): Netlify still serves every
+         poll, vote and page — priced here at the same credit rates — and Cloudflare adds the
+         sockets and the nudges. T must have been built with `line` on (month() and showSizes()
+         do that when this host is chosen), or the Netlify half is the plain split. */
+      const c = netlifyCredits(T, deploys, h);
+      const d = netlifyDollars(c.total, h);
+      const per = d.usd / Math.max(c.total, 1e-9);
+      const req = Math.max(0, T.lineReqs - h.reqIncl) / M * h.reqUsd;        // every socket open/close and every nudge is a Worker request…
+      const doReq = Math.max(0, T.lineReqs - h.doReqIncl) / M * h.doReqUsd;  // …and a Durable Object request
       const dur = Math.max(0, T.doGBs - h.doGBsIncl) / M * h.doGBsUsd;
-      const cpu = Math.max(0, T.cpuMs - h.cpuIncl) / M * h.cpuUsd;
-      return { usd: h.base + req + doReq + dur + cpu, label: h.name, lines: [['Base plan', h.base], ['Worker requests', req], ['Object requests', doReq], ['Object duration', dur], ['CPU time', cpu]] };
+      const cf = h.base + req + doReq + dur;
+      return { usd: d.usd + cf, credits: c.total, plan: d.plan, packs: d.packs, label: h.name, lines: [
+        ['Netlify · function compute', c.cmp * per], ['Netlify · web requests', c.req * per], ['Netlify · bandwidth', c.bw * per], ['Netlify · production deploys', c.dep * per],
+        ['Cloudflare · Workers plan', h.base], ['Cloudflare · socket opens + closes, nudges', req + doReq], ['Cloudflare · object duration', dur]] };
     }
     if (h.kind === 'vercel') {
       const inv = Math.max(0, T.requests - h.invIncl) / M * h.invUsd;
@@ -576,10 +673,11 @@ const ENGINE = (() => {
     const gigsCapped = nFree * Math.max(0, p.gigsFree - p.freeCap);      // nights the cap refuses
 
     /* traffic: one gig's shape × gigs; the per-gig shape depends only on room size/hours */
-    const one = gigTraffic(p, p.fans, p.hours);
+    const lineOn = (p.hosts[p.host] || {}).kind === 'cf-do';
+    const one = gigTraffic(p, p.fans, p.hours, lineOn);
     const T = addT(zeroT(), one, gigs);
     /* background jobs run whether or not anyone plays: the gig scheduler every 2 minutes, a nightly sheet sync, a billing sync */
-    T.requests += p.cronRequests; T.fnMs += p.cronRequests * p.cronMs; T.cachedFnMs += p.cronRequests * p.cronMs; T.reads += p.cronRequests; T.cpuMs += p.cronRequests * p.cpuMsPerPoll;
+    T.requests += p.cronRequests; T.lgRequests += p.cronRequests; T.fnMs += p.cronRequests * p.cronMs; T.lgFnMs += p.cronRequests * p.cronMs; T.reads += p.cronRequests; T.cpuMs += p.cronRequests * p.cpuMsPerPoll;
     const bill = hostBill(p.host, p.hosts, T, p.deploys);
 
     /* revenue */
@@ -728,16 +826,25 @@ const ENGINE = (() => {
   function showSizes(p) {
     return p.sizes.map(sz => {
       const days = sz.days || 1;
-      const one = gigTraffic(p, sz.fans, sz.hours);
-      const T = addT(zeroT(), one, days);
+      const lineOn = (p.hosts[p.host] || {}).kind === 'cf-do';
+      const onePlain = gigTraffic(p, sz.fans, sz.hours, false);
+      const oneLine = gigTraffic(p, sz.fans, sz.hours, true);
+      const one = lineOn ? oneLine : onePlain;                 // what the chosen host actually serves
+      const T = addT(zeroT(), one, days), TL = addT(zeroT(), oneLine, days);
       const onHost = {};
       for (const k of Object.keys(p.hosts)) {
         const h = p.hosts[k];
         if (h.kind === 'netlify') {
-          const c = netlifyCredits({ ...T, bytes: T.bytes * h.bytesMul, fnMs: (h.cached ? T.cachedFnMs : T.fnMs) * h.computeMul }, 0, h);
+          const TP = addT(zeroT(), onePlain, days);
+          const c = netlifyCredits(h.legacy ? { ...TP, requests: TP.lgRequests, bytes: TP.lgBytes * h.bytesMul, fnMs: TP.lgFnMs * h.computeMul } : { ...TP, bytes: TP.bytes * h.bytesMul, fnMs: TP.fnMs * h.computeMul }, 0, h);
           onHost[k] = c.total * (h.usdPerCredit || 10 / 1500);
         } else if (h.kind === 'vps') onHost[k] = 0;
-        else {
+        else if (h.kind === 'cf-do') {
+          /* marginal: Netlify's credits at the auto-picked rate, plus Cloudflare's per-unit lines with the allowances used up */
+          const h2 = { ...h, base: 0, reqIncl: 0, doReqIncl: 0, doGBsIncl: 0 };
+          const M = 1e6;
+          onHost[k] = netlifyCredits(TL, 0, h).total * (h.usdPerCredit || 10 / 1500) + TL.lineReqs / M * (h2.reqUsd + h2.doReqUsd) + TL.doGBs / M * h2.doGBsUsd;
+        } else {
           /* marginal: price the show as if allowances were already used up */
           const h2 = { ...h, base: 0, reqIncl: 0, cpuIncl: 0, readIncl: 0, writeIncl: 0, doReqIncl: 0, doGBsIncl: 0, invIncl: 0, cpuHrIncl: 0, memGBhrIncl: 0, gbIncl: 0, edgeIncl: 0 };
           onHost[k] = hostBill(k, { [k]: h2 }, T, 0).usd;
@@ -763,39 +870,43 @@ const ENGINE = (() => {
       const feeRate = p.stripe.pct / 100 + (p.stripe.intlShare / 100) * (p.stripe.intlPct / 100) + (p.stripe.fxShare / 100) * (p.stripe.fxPct / 100);
       const bookingAt = (margin) => Math.max(0, (server + p.stripe.fixed - mysetRev * (1 - margin)) / Math.max(1 - feeRate - margin, 0.01));
 
-      /* FEASIBILITY, and it depends on the host. A 3-second cache collapses a room of any
-         size to one call every 3 s, and an in-memory object deletes the reads — so the
-         verdict has to move when the host does, or the page tells Perry to pick the cache
-         and then still says "breaks". Netlify publishes no concurrency figure; ~125 at
-         once is the unverified number people quote, and Blobs has no published read-rate
-         limit, so these two thresholds are judgement, not fact. */
+      /* FEASIBILITY, and it depends on the host. Since the split the room shares one board render
+         per interval, so functions running at once and document reads a second are the render's
+         (shared) plus the personal call's (per phone) — the "before the split" host shows the old
+         square-law numbers. What actually stops a room now is the STORE: bytes moved per second
+         against the same handful of keys, over the ~50 MB/s band MySet is known to serve
+         (tools/loadsim.py --ceiling puts that wall near 2,500 phones at today's record size).
+         Netlify publishes no concurrency figure; ~125 at once is the unverified number people
+         quote, so the concurrency thresholds are judgement, not fact. */
       const h = p.hosts[p.host] || {};
-      const cached = !!h.cached;
-      const inMemory = h.kind === 'cf-do';
+      const legacy = !!h.legacy;
       const alwaysOn = h.kind === 'vps';
-      const effConcurrent = cached ? (one.pollMs / 1000) / 3 : one.concurrent;
-      const effReads = inMemory ? 0 : cached ? p.readsPerPoll / 3 : one.readsPerSec;   // one call every 3 s does readsPerPoll reads
-      const status = alwaysOn || inMemory ? (one.pollsPerSec > 5000 ? 'risky' : 'ok')
-        : effConcurrent < 40 && effReads < 2000 ? 'ok'
+      const effConcurrent = legacy ? one.lgConcurrent : one.concurrent;
+      const effReads = legacy ? one.lgReadsPerSec : one.readsPerSec;
+      const effStoreMBs = legacy ? one.lgStoreMBs : one.storeMBs;
+      const status = alwaysOn ? (one.pollsPerSec > 5000 ? 'risky' : 'ok')
+        : effStoreMBs > KNOWN_OK_MBS ? 'breaks'
+        : effConcurrent < 40 && effReads < 2000 && effStoreMBs < KNOWN_OK_MBS / 2 ? 'ok'
         : effConcurrent < 125 && effReads < 6000 ? 'risky' : 'breaks';
-      return { ...sz, days, polls: T.polls, perPhone: one.perPhone, requests: T.requests, gb: T.bytes / 1e9, fnHours: T.fnMs / 3600e3, credits, onHost,
+      return { ...sz, days, polls: T.polls, renders: T.renders, perPhone: one.perPhone, requests: T.requests, gb: T.bytes / 1e9, fnHours: T.fnMs / 3600e3, credits, onHost,
                earn, tier, perHead, cutPct, mysetRev, server, mysetNet, bookingAt,
-               pollMs: one.pollMs, pollsPerSec: one.pollsPerSec, concurrent: one.concurrent, readsPerSec: one.readsPerSec,
-               effConcurrent, effReads, floorS: one.floorS, status };
+               renderMs: one.renderMs, pollsPerSec: one.pollsPerSec, concurrent: one.concurrent, readsPerSec: one.readsPerSec, storeMBs: one.storeMBs,
+               effConcurrent, effReads, effStoreMBs, floorS: one.floorS, line: lineOn, status };
     });
   }
 
   /** Find the screen-on share that reproduces an observed polls-per-phone-hour. */
   function calibrateLook(p, observedPerPhoneHour) {
     let lo = 1, hi = 100;
-    const f = (look) => pollsPerPhone({ fans: p.fans, hours: p.hours, look: look / 100, interactions: p.interactions, changeShare: p.changeShare / 100 }) / p.hours;
+    const floorS = Math.max(pollFloor(p.fans), p.bigRoomOn && p.fans >= p.bigRoomFrom ? p.bigRoomFloor : 0);
+    const f = (look) => pollsPerPhone({ fans: p.fans, hours: p.hours, look: look / 100, interactions: p.interactions, changeShare: p.changeShare / 100, floorS, songEveryMin: Math.max(0.5, p.songEveryMin || 4) }).perPhone / p.hours;
     if (f(hi) < observedPerPhoneHour) return 100;
     if (f(lo) > observedPerPhoneHour) return 1;
     for (let i = 0; i < 24; i++) { const mid = (lo + hi) / 2; if (f(mid) < observedPerPhoneHour) lo = mid; else hi = mid; }
     return Math.round(hi * 10) / 10;
   }
 
-  return { pollsPerPhone, gigTraffic, hostBill, netlifyCredits, netlifyDollars, NETLIFY_PLANS, month, breakEven, timeline, showSizes, cardFee, calibrateLook };
+  return { pollsPerPhone, pollFloor, gigTraffic, hostBill, netlifyCredits, netlifyDollars, NETLIFY_PLANS, month, breakEven, timeline, showSizes, cardFee, calibrateLook };
 })();
 /*ENGINE-END*/
 
@@ -803,21 +914,21 @@ const ENGINE = (() => {
 const HOSTS0 = {
   netlifyPro:   { kind: 'netlify', name: 'Netlify (cheapest plan auto-picked)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, planLock: 'auto', usdPerCredit: 10 / 1500 },
   netlifyPers:  { kind: 'netlify', name: 'Netlify Personal $9 + $5 packs', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, planLock: 'personal', usdPerCredit: 5 / 500 },
-  netlifyOpt:   { kind: 'netlify', name: 'Netlify after the poll slimming (not built)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 0.4, computeMul: 0.35, planLock: 'auto', usdPerCredit: 10 / 1500 },
-  netlifyCache: { kind: 'netlify', name: 'Netlify + 3-second cache on the poll', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, cached: 1, planLock: 'auto', usdPerCredit: 10 / 1500 },
+  netlifyLegacy:{ kind: 'netlify', name: 'Netlify before the split (one call per tick)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, legacy: 1, planLock: 'auto', usdPerCredit: 10 / 1500 },
+  netlifyOpt:   { kind: 'netlify', name: 'Netlify after a further slimming (not built)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 0.4, computeMul: 0.35, planLock: 'auto', usdPerCredit: 10 / 1500 },
   cfKv:         { kind: 'cf-kv', name: 'Cloudflare Workers + KV', base: 5, reqIncl: 10e6, reqUsd: 0.30, cpuIncl: 30e6, cpuUsd: 0.02, readIncl: 10e6, readUsd: 0.50, writeIncl: 1e6, writeUsd: 5 },
-  cfDo:         { kind: 'cf-do', name: 'Cloudflare Durable Objects (rewrite)', base: 5, reqIncl: 10e6, reqUsd: 0.30, doReqIncl: 1e6, doReqUsd: 0.15, doGBsIncl: 400e3, doGBsUsd: 12.5, cpuIncl: 30e6, cpuUsd: 0.02 },
+  cfDo:         { kind: 'cf-do', name: 'Netlify + the open line (Cloudflare Durable Object)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, planLock: 'auto', usdPerCredit: 10 / 1500, base: 5, reqIncl: 10e6, reqUsd: 0.30, doReqIncl: 1e6, doReqUsd: 0.15, doGBsIncl: 400e3, doGBsUsd: 12.5 },
   vercel:       { kind: 'vercel', name: 'Vercel Pro (Fluid compute)', base: 20, invIncl: 0, invUsd: 0.60, cpuHrIncl: 0, cpuHrUsd: 0.128, memGB: 1, memGBhrIncl: 0, memGBhrUsd: 0.0106, gbIncl: 0, gbUsd: 0.15, edgeIncl: 0, edgeUsd: 2, creditUsd: 20 },
   vps:          { kind: 'vps', name: 'Own always-on servers (VPS)', base: 15, reqPerBoxMonth: 200e6, dbUsd: 15, opsHours: 6, opsRate: 25 },
   custom:       { kind: 'custom', name: 'Custom host (type your own rates)', base: 0, reqUsd: 0.30, readUsd: 0, writeUsd: 0, gbUsd: 0.10, memGB: 1, gbHrUsd: 0.07, deployUsd: 0 },
 };
 const HOST_NOTES = {
-  netlifyPro: 'As built today. Credits: 2 per 10k requests, 20 per GB, 10 per GB-hour, 15 per deploy.',
-  netlifyPers: 'The plan Perry is on now. Same rates, dearer top-ups.',
-  netlifyOpt: 'Same platform after the poll answer is slimmed (send only what changed, read fewer documents). Bytes ×0.4, compute ×0.35 — both guesses until built.',
-  netlifyCache: 'The 3-second cache from the tidal-wave list: the poll answer is cached at the edge for 3 s, so a room of any size is one function call every 3 s. Requests and bandwidth are still billed per phone. Not built; the head-count write on the poll has to move first.',
-  cfKv: 'Cheap requests, free bandwidth — but $0.50 per million key reads, and the poll does 15.',
-  cfDo: 'One object per live show holds the state in memory; the reads disappear. A rewrite of the hot path.',
+  netlifyPro: 'As built today: every tick is the shared board (rendered about once per interval for the whole room, a cache hit for everyone else) plus a small personal call. Credits: 2 per 10k requests, 20 per GB, 10 per GB-hour, 15 per deploy.',
+  netlifyPers: 'The plan the founder is on now. Same rates, dearer top-ups.',
+  netlifyLegacy: 'The same gigs as the page polled until 11 Sep 2026: one call per tick that re-read every fan record in the room, on the old ladder (a 5 s rung for 201–1,000 phones). Kept as the comparison column — this is what the split replaced.',
+  netlifyOpt: 'A further slimming on top of the split (send only what changed, read fewer documents). Bytes ×0.4, compute ×0.35 — both guesses, not built.',
+  cfKv: 'Cheap requests, free bandwidth — but $0.50 per million key reads, and a board render does 15.',
+  cfDo: 'BUILT, off by default (decision 0036; on when LINE_URL and LINE_KEY are set). Phones keep polling Netlify on the ladder; a Cloudflare object holds every phone’s socket and relays each landed vote as a hint, so the tally moving no longer speeds anyone’s polling up. Priced from the probe: two requests per socket, one per nudge, duration ≈ 0. Not yet measured at a real gig.',
   vercel: 'Fluid compute: invocations + active CPU + provisioned memory + data transfer. Rates as published 5 Sep 2026; check before relying on them.',
   vps: 'Fixed boxes, near-zero marginal cost, and the founder’s weekends. Ops hours × rate is the honest line.',
   custom: 'Type any host’s unit prices in “Host rates”.',
@@ -832,8 +943,9 @@ const P0 = {
   gigsFree: 3, freeCap: 4, gigsPaid: 8,
   fans: 20, hours: 3, lookShare: 22, interactions: 2.5, changeShare: 90, installedPct: 15, extraViews: 0.5, clipViews: 0.5, clipBytes: 75000000,
   studioOn: true, studioShare: 60,
-  pollBytes: 2530, pollMs: 120, pollMsPerFan: 0.006, readsPerPoll: 15, cpuMsPerPoll: 10,
+  boardBytes: 2175, meBytes: 430, meMs: 50, meReads: 2, edgeSpread: 50, pollBytes: 2530, pollMs: 120, pollMsPerFan: 0.006, readsPerPoll: 15, cpuMsPerPoll: 10,
   bigRoomOn: false, bigRoomFrom: 500, bigRoomFloor: 15,
+  lineShare: 100, reconnects: 0.5, nudgeMs: 130, songEveryMin: 4,
   cronRequests: 22000, cronMs: 80,
   writeBytes: 1200, writeMs: 260, readsPerWrite: 4, writesPerWrite: 1, cpuMsPerWrite: 15,
   studioBytes: 4000, studioMs: 180, studioReads: 21,
@@ -852,7 +964,7 @@ const P0 = {
 };
 let P = JSON.parse(JSON.stringify(P0));
 let ACT = null;           // real-show numbers, when imported
-const SEED_ACT = {"asOf": "2026-09-11", "shows": 5, "people": 11.0, "hours": 2.74, "setHours": 1.92, "recordHours": 3.55, "votes": 23.2, "interactions": 2.35, "songs": 11.0, "nets": 7.0, "peakVoters": 5.4, "gigsOnCalendar": 11, "gigsUsed": 5, "gigsSilent": 5, "roomPerHead": 0.375, "roomFree": null, "roomPlus": null, "roomPro": 0.375, "deploys": 216, "pollsPerPhoneHour": null, "creditsPerShow": null, "source": "tools/actuals.py (seed)", "note": "Five nights on the published calendar where the room used the app — 30 Aug Sand & Tan, then 6 Sep Sand & Tan, 7 Sep Ugly Duckling, 8 Sep Crystal Day, 9 Sep Anantara: 11.0 phones a night on average (7–18; the 30 Aug figure is voters, phones were not counted then), 23.2 votes, 2.35 votes + requests per phone, 11.0 song starts, 2.74 h (the record, or where the 3 h auto-end grace let it overrun the slot, the later of the slot and the last song; first song to last averaged 1.92 h). Room money is still the single $3 vote pack from 30 Aug — $0.375 per VOTER, and only 40–60% of a room's phones ever vote, so per phone it may be nearer $0.15–0.25. Card payments were dead from soon after 30 Aug until the evening of Tue 8 Sep (bad key, replaced); Wednesday's 18-phone room had a working checkout all night but its takings have not been read from Stripe yet, and until 11 Sep a bug in the archive's money lookup made every night say 'unknown' regardless. On the calendar but unused: 4 Sep Seaflower (one phone) and 10 Sep Crystal Day (started, ended after 20 min, nobody came); four more published gigs (31 Aug–3 Sep) were swallowed by one show left running 107.9 h. Ten hand-started tests at random hours and the 31 Aug load-test bursts do not count. Polls per phone-hour is still unmeasured — no night was bracketed by two bandwidth marks — and the 335.7 MB used 8–11 Sep was mostly three ~75 MB profile clips, not polls. Deploys are account-wide, trailing 30 days (216: a heavy shipping week, and at 15 credits each the whole Netlify bill). Run tools/actuals.py for the latest."};
+const SEED_ACT = {"asOf": "2026-09-14", "shows": 7, "people": 9.43, "hours": 2.75, "setHours": 1.71, "recordHours": 3.33, "votes": 19.86, "interactions": 2.32, "songs": 9.29, "nets": 5.5, "peakVoters": 5.0, "gigsOnCalendar": 13, "gigsUsed": 7, "gigsSilent": 5, "roomPerHead": 0.684, "roomFree": null, "roomPlus": null, "roomPro": 0.684, "deploys": 264, "pollsPerPhoneHour": null, "creditsPerShow": null, "source": "tools/actuals.py (seed)", "note": "Seven nights on the published calendar where the room used the app \u2014 30 Aug Sand & Tan, 6 Sep Sand & Tan, 7 Sep Ugly Duckling, 8 Sep Crystal Day, 9 Sep Anantara, 11 Sep Seaflower, 13 Sep Sand & Tan: 9.43 phones a night on average (2\u201318; the 30 Aug figure is voters, phones were not counted then), 19.86 votes, 2.32 votes + requests per phone, 9.29 song starts, 2.75 h (the record, or where the 3 h auto-end grace let it overrun the slot, the later of the slot and the last song; first song to last averaged 1.71 h). Room money is now read on three nights: $3.00 from 8 voters (30 Aug), $0 from 9 phones (11 Sep, working checkout, nobody bought) and a $10 tip from 2 phones (13 Sep) \u2014 $0.684 a head across those 19, and one tip is most of it; the four nights in between had no readable takings (dead Stripe key, then the empty-options bug fixed 11 Sep). Only 40\u201360% of a room's phones ever vote, so treat the per-head figure as a range, not a number. On the calendar but unused: 4 Sep Seaflower (one phone) and 10 Sep Crystal Day (nobody came); four published gigs (31 Aug\u20133 Sep) were swallowed by one show left running 107.9 h. Tests at random hours and the 31 Aug load bursts do not count. Ticks per phone-hour are still unmeasured \u2014 the first mark on the split code was taken 14 Sep 17:00 before the Ugly Duckling gig; the AFTER mark is the founder's. Deploys are account-wide, trailing 30 days (264; 79 this billing period since 8 Sep \u2014 at 15 credits each the whole Netlify bill). Run tools/actuals.py for the latest."};
 
 /* ───────────────────────────── dials spec ───────────────────────────── */
 const DIALS = [
@@ -880,7 +992,7 @@ const DIALS = [
   { key: 'clipBytes', label: 'Bytes per clip view', unit: 'on the wire (the three clips posted so far are 74–79 MB each)', min: 0, max: 200000000, step: 1000000 },
   { key: 'installedPct', label: 'Installed as an app', unit: '% of the room (no cost effect — see note)', min: 0, max: 100, step: 5 },
   { key: 'studioShare', label: 'Studio Live tab open', unit: '% of the gig (one device, polls every 4 s)', min: 0, max: 100, step: 5 },
-  { group: 'Money from the room', help: 'Tips and vote packs are charged on the artist’s own Stripe account; MySet’s cut is the plan’s transaction fee. These are PER PERSON, so a bigger room earns more as well as costing more — the show-size panel uses the same rule. The only figure ever observed is $0.375 a head (30 Aug: $3.00 from 8 people), which is what real nights will fill in; the dials start at a rounder $0.40 until then. Raise them per tier when the nights say so.' },
+  { group: 'Money from the room', help: 'Tips and vote packs are charged on the artist’s own Stripe account; MySet’s cut is the plan’s transaction fee. These are PER PERSON, so a bigger room earns more as well as costing more — the show-size panel uses the same rule. Three nights have readable takings: $3.00 from 8 people (30 Aug), $0 from 9 (11 Sep) and a $10 tip from 2 (13 Sep) — $0.68 a head across the 19, and one tip is most of it. The dials start at a rounder $0.40; “Use real shows” fills in what the nights say.' },
   { key: 'roomFree', label: 'Room money per person · free artist', unit: '$ tips + packs, per person per gig', min: 0, max: 20, step: 0.05, real: 'roomFree' },
   { key: 'roomPlus', label: 'Room money per person · Plus artist', unit: '$ per person per gig', min: 0, max: 20, step: 0.05, real: 'roomPlus' },
   { key: 'roomPro', label: 'Room money per person · Pro artist', unit: '$ per person per gig', min: 0, max: 20, step: 0.05, real: 'roomPro' },
@@ -913,13 +1025,22 @@ const DIALS = [
   { group: 'Server & host', help: 'Pick where MySet runs. The per-call numbers are measured through the real code; change them if the code changes. Netlify bills in credits (about 0.7¢ each on Pro). ms = thousandths of a second of server work; bytes = data sent; a GB-hour = a gigabyte of memory held for an hour.' },
   { key: 'hostSel' },
   { key: 'deploys', label: 'Production deploys', unit: 'per month, ALL sites on the account (15 credits each)', min: 0, max: 400, step: 1, real: 'deploys' },
-  { key: 'readsPerPoll', label: 'Reads per poll', unit: 'documents (measured 15)', min: 0, max: 30, step: 1 },
-  { key: 'pollMs', label: 'Function time per poll', unit: 'ms (probe 155; the bill implies 70–110; 120 leaves headroom)', min: 0, max: 1000, step: 5 },
-  { key: 'pollMsPerFan', label: 'Extra poll time per person in the room', unit: 'ms per person — DERIVED, not measured on the real server (0.004–0.010)', min: 0, max: 1, step: 0.001 },
-  { key: 'bigRoomOn', label: 'Big-room brake (not built yet — see the tidal-wave note)', switch: true },
-  { key: 'bigRoomFrom', label: 'Brake kicks in above', unit: 'phones', min: 0, max: 5000, step: 50 },
-  { key: 'bigRoomFloor', label: 'Slowest poll in a big room', unit: 'seconds between polls', min: 3, max: 120, step: 1 },
-  { key: 'pollBytes', label: 'Bytes per poll', unit: 'on the wire (measured 2,530)', min: 0, max: 20000, step: 10 },
+  { key: 'readsPerPoll', label: 'Reads per board render', unit: 'documents (measured 15)', min: 0, max: 30, step: 1 },
+  { key: 'pollMs', label: 'Function time per board render', unit: 'ms (probe 155; the bill implies 70–110; 120 leaves headroom)', min: 0, max: 1000, step: 5 },
+  { key: 'pollMsPerFan', label: 'Extra render time per person in the room', unit: 'ms per person — DERIVED, not measured on the real server (0.004–0.010); the render reads every fan record, the personal call does not', min: 0, max: 1, step: 0.001 },
+  { key: 'meMs', label: 'Function time per personal call', unit: 'ms — ESTIMATED: two parallel 42 ms reads + overhead, not yet measured in production', min: 0, max: 500, step: 5 },
+  { key: 'meReads', label: 'Reads per personal call', unit: 'documents (one shard + the show record)', min: 0, max: 10, step: 1 },
+  { key: 'edgeSpread', label: 'Edge nodes a small room’s phones land on', unit: '0 = every phone shares one board copy (best case) · 100 = no two phones share (worst) — under a 10 s interval the copy is per node, and nobody knows how many a bar spans', min: 0, max: 100, step: 5 },
+  { key: 'bigRoomOn', label: 'Extra brake above the server’s own floor (3 s to 200 phones, 10 s to 3,000, 20 s above — built)', switch: true },
+  { key: 'bigRoomFrom', label: 'Extra brake kicks in above', unit: 'phones', min: 0, max: 5000, step: 50 },
+  { key: 'bigRoomFloor', label: 'Slowest tick with the extra brake', unit: 'seconds between ticks', min: 3, max: 120, step: 1 },
+  { key: 'songEveryMin', label: 'Minutes between the artist’s actions', unit: 'a song start, a decline, a board clear — what resets the ladder in a room over 200 phones or on the open line, and one nudge each. 4 is the simulator’s assumption; the seven real nights average ~18 min between song starts', min: 0.5, max: 60, step: 0.5 },
+  { key: 'lineShare', label: 'Phones on the open line', unit: '% of the room holding a socket (only the “Netlify + the open line” host uses these three) — a blocked or dropped socket falls back to the ladder', min: 0, max: 100, step: 5 },
+  { key: 'reconnects', label: 'Reconnections per phone per gig', unit: 'each is two more requests (a guess until a real night; the probe’s storm dropped 2 of 4,000)', min: 0, max: 20, step: 0.5 },
+  { key: 'nudgeMs', label: 'Nudge round trip added to every vote', unit: 'ms of function time on Netlify’s write path (115–140 measured from a Mac; unmeasured from Netlify’s region; capped at 1,200)', min: 0, max: 1200, step: 5 },
+  { key: 'boardBytes', label: 'Bytes per board answer', unit: 'on the wire (0.86 × the old 2,530-byte poll — measured ratio on a 40-song room)', min: 0, max: 20000, step: 5 },
+  { key: 'meBytes', label: 'Bytes per personal answer', unit: 'on the wire (measured 430)', min: 0, max: 5000, step: 10 },
+  { key: 'pollBytes', label: 'Bytes per poll, before the split', unit: 'on the wire (measured 2,530) — only the “before the split” host uses it', min: 0, max: 20000, step: 10 },
   { key: 'writeMs', label: 'Function time per action', unit: 'ms (measured 260)', min: 0, max: 1500, step: 5 },
   { key: 'readsPerWrite', label: 'Reads per action', unit: 'documents (measured 4)', min: 0, max: 30, step: 1 },
   { key: 'writeBytes', label: 'Bytes per action', unit: 'on the wire', min: 0, max: 20000, step: 10 },
@@ -1120,7 +1241,7 @@ function renderActSummary() {
 let PRE_ACT = null;             // the guesses, stashed while real numbers are in force
 function applyActuals() {
   if (!P.useActuals || !ACT) return;
-  if (!PRE_ACT) PRE_ACT = { fans: P.fans, hours: P.hours, interactions: P.interactions, roomFree: P.roomFree, roomPlus: P.roomPlus, roomPro: P.roomPro, deploys: P.deploys, lookShare: P.lookShare };
+  if (!PRE_ACT) PRE_ACT = { songEveryMin: P.songEveryMin, fans: P.fans, hours: P.hours, interactions: P.interactions, roomFree: P.roomFree, roomPlus: P.roomPlus, roomPro: P.roomPro, deploys: P.deploys, lookShare: P.lookShare };
   if (ACT.people != null) P.fans = ACT.people;
   if (ACT.hours != null) P.hours = ACT.hours;
   /* votes + song requests per phone, measured — the one behaviour dial a night's record answers directly */
@@ -1132,6 +1253,8 @@ function applyActuals() {
      is the situation for as long as Perry is the only one on the platform. */
   if (ACT.roomPerHead != null) { if (ACT.roomFree == null) P.roomFree = ACT.roomPerHead; if (ACT.roomPlus == null) P.roomPlus = ACT.roomPerHead; if (ACT.roomPro == null) P.roomPro = ACT.roomPerHead; }
   if (ACT.deploys != null) P.deploys = ACT.deploys;
+  /* song starts per night → minutes between the artist's actions (the big-room / open-line ladder's reset) */
+  if (ACT.songs != null && ACT.hours != null && ACT.songs > 0) P.songEveryMin = Math.round(ACT.hours * 60 / ACT.songs * 2) / 2;
   if (ACT.pollsPerPhoneHour != null) P.lookShare = ENGINE.calibrateLook(P, ACT.pollsPerPhoneHour);
 }
 
@@ -1183,21 +1306,24 @@ function render() {
       isFinite(be) ? (P.startArtists >= be ? `you are past it — ${fmt.int(P.startArtists)} today` : `${fmt.int(Math.max(0, be - P.startArtists))} to go from today’s ${fmt.int(P.startArtists)}`) : 'costs exceed revenue at every size',
       isFinite(be) && P.startArtists >= be ? 'good' : ''],
     ['Server plan', R.bill.plan || R.bill.label, R.bill.credits != null ? `${fmt.big(R.bill.credits)} credits/mo${R.bill.packs ? ` · plan + ${R.bill.packs} top-up pack${R.bill.packs === 1 ? '' : 's'}` : ''}` : R.bill.label, ''],
-    ['Polls per gig', fmt.int(R.one.polls), `${fmt.num(R.one.perPhone, 0)} per phone · one every ${fmt.num(P.hours * 3600 / Math.max(R.one.perPhone, 1), 0)} s`, ''],
+    ['Ticks per gig', fmt.int(R.one.polls), `${fmt.num(R.one.perPhone, 0)} per phone · one every ${fmt.num(P.hours * 3600 / Math.max(R.one.perPhone, 1), 0)} s · ${fmt.int(R.one.renders)} board renders${R.one.line ? ' · open line on' : ''}`, ''],
   ];
   $('#kpis').innerHTML = k.map(([l, v, s, c]) => `<div class="kpi"><div class="l">${l}</div><div class="v ${c}">${v}</div><div class="s">${s}</div></div>`).join('');
   $('#kpiWhat').textContent = `${fmt.int(P.artists)} artists, ${P.plusPct}% Plus, ${P.proPct}% Pro`;
   $('#kpiToday').textContent = fmt.int(P.startArtists);
   /* The three dials doing most of the work, named, with what nobody has observed yet. */
-  $('#kpiBand').innerHTML = `<b>What is carrying these numbers:</b> the plan mix (${P.plusPct}% Plus + ${P.proPct}% Pro = ${(P.plusPct + P.proPct)}% paying — published freemium medians are 2–8%), the room spending ${Math.min(P.roomFree, P.roomPlus, P.roomPro) === Math.max(P.roomFree, P.roomPlus, P.roomPro) ? '$' + fmt.num(P.roomFree, 2) : '$' + fmt.num(Math.min(P.roomFree, P.roomPlus, P.roomPro), 2) + '–$' + fmt.num(Math.max(P.roomFree, P.roomPlus, P.roomPro), 2)} a head (one night observed, at $0.375 per voter — and only 40–60% of a room's phones vote; five nights since had no readable takings), and ${P.featPct}% of gigs promoted (never sold one). Nobody has paid for a plan yet. Press <b>Benchmark case</b> to see the same engine on published industry figures.`;
+  $('#kpiBand').innerHTML = `<b>What is carrying these numbers:</b> the plan mix (${P.plusPct}% Plus + ${P.proPct}% Pro = ${(P.plusPct + P.proPct)}% paying — published freemium medians are 2–8%), the room spending ${Math.min(P.roomFree, P.roomPlus, P.roomPro) === Math.max(P.roomFree, P.roomPlus, P.roomPro) ? '$' + fmt.num(P.roomFree, 2) : '$' + fmt.num(Math.min(P.roomFree, P.roomPlus, P.roomPro), 2) + '–$' + fmt.num(Math.max(P.roomFree, P.roomPlus, P.roomPro), 2)} a head (three nights with readable takings: $13 across 19 phones, $10 of it one tip in a two-phone room — four nights had no readable takings, and only 40–60% of a room's phones vote), and ${P.featPct}% of gigs promoted (never sold one). Nobody has paid for a plan yet. Press <b>Benchmark case</b> to see the same engine on published industry figures.`;
   /* live copy: numbers the notes quote must be the numbers the page shows */
-  const lg = $('#liveGig'); if (lg) { const c0 = ENGINE.netlifyCredits(R.one, 0, P.hosts.netlifyPro).total; lg.textContent = `${fmt.int(R.one.polls)} polls, ${fmt.num(c0, 1)} credits`; }
-  const ld = $('#liveDo'); if (ld && sizes[0].onHost.cfDo > 0) ld.textContent = `about ${(sizes[0].onHost.netlifyPro / sizes[0].onHost.cfDo).toFixed(1)}×`;
+  const lg = $('#liveGig'); if (lg) { const g0 = ENGINE.gigTraffic(P, P.fans, P.hours, false); const c0 = ENGINE.netlifyCredits(g0, 0, P.hosts.netlifyPro).total; lg.textContent = `${fmt.int(g0.polls)} ticks, ${fmt.int(g0.renders)} board renders, ${fmt.num(c0, 1)} credits`; }
+  const ld = $('#liveDo'); if (ld && sizes[0].onHost.netlifyPro > 0) ld.textContent = `${fmt.cents(sizes[0].onHost.netlifyPro)} on Netlify alone and ${fmt.cents(sizes[0].onHost.cfDo)} with the line`;
+  const lb = $('#liveBefore'); if (lb) lb.textContent = `${fmt.cents(sizes[0].onHost.netlifyLegacy)} → ${fmt.cents(sizes[0].onHost.netlifyPro)} for the bar set, ${fmt.usd(sizes[2].onHost.netlifyLegacy)} → ${fmt.usd(sizes[2].onHost.netlifyPro)} for the arena`;
   const lk = $('.dial[data-key="lookShare"] .unit'); if (lk) lk.textContent = `% of the gig, in glances (≈ ${Math.round(P.hours * 60 * P.lookShare / 100)} min of ${P.hours} h)`;
   const gp = $('.dial[data-key="gigsPaid"] .unit'); if (gp) gp.textContent = `per month (≈ ${fmt.num(P.gigsPaid / 4.33, 1)} a week)`;
 
   /* host quick prices */
-  for (const key of Object.keys(P.hosts)) { const q = $('#hostQuick_' + key); if (q) q.textContent = fmt.usd(ENGINE.hostBill(key, P.hosts, R.T, P.deploys).usd); }
+  /* each host is priced on the traffic IT would serve: the open line runs a different ladder, so its month is computed on its own */
+  const billFor = (key) => ((P.hosts[key] || {}).kind === 'cf-do') === ((P.hosts[P.host] || {}).kind === 'cf-do') ? ENGINE.hostBill(key, P.hosts, R.T, P.deploys) : ENGINE.month({ ...P, host: key }, P.artists).bill;
+  for (const key of Object.keys(P.hosts)) { const q = $('#hostQuick_' + key); if (q) q.textContent = fmt.usd(billFor(key).usd); }
 
   /* charts */
   $('#tlMonths').textContent = P.months;
@@ -1266,12 +1392,12 @@ function render() {
 
   /* sizes table */
   const hostKeys = Object.keys(P.hosts).filter(k => k !== 'custom' || P.hosts.custom.base || P.hosts.custom.reqUsd);
-  const shortHost = (k) => P.hosts[k].name.split(' (')[0].replace('Netlify, poll optimised', 'Netlify optimised').replace('Netlify + 3-second cache on the poll', 'Netlify + cache').replace('Own always-on servers', 'Own servers').replace('Cloudflare ', 'CF ');
+  const shortHost = (k) => P.hosts[k].name.split(' (')[0].replace('Netlify, poll optimised', 'Netlify optimised').replace('Netlify before the split', 'Before the split').replace('Netlify after a further slimming', 'Netlify slimmed').replace('Netlify + the open line', 'Netlify + line').replace('Own always-on servers', 'Own servers').replace('Cloudflare ', 'CF ');
   const pill = (st) => st === 'ok' ? '<span class="tag" style="border-color:var(--good);color:var(--good)">holds</span>' : st === 'risky' ? '<span class="tag" style="border-color:var(--warn);color:var(--warn)">at the edge</span>' : '<span class="tag" style="border-color:var(--bad);color:var(--bad)">breaks</span>';
   const tierName = { free: 'free', plus: 'Plus', pro: 'Pro' }[P.sizeTier] || 'free';
   const mTarget = isFinite(R.margin) && R.margin > 0 ? R.margin : 0.5;   // price bookings at the platform's margin, or a 50% target while it is losing money
-  $('#sizesTable').innerHTML = `<thead><tr><th>Show</th><th class="n">Phones</th><th class="n">Hours</th><th class="n">Polls</th><th class="n">Per phone</th><th class="n">Running at once</th><th class="n">Reads / s</th><th>On this host</th><th class="n">Room spends</th><th class="n">MySet earns</th><th class="n">Server</th><th class="n">MySet keeps</th><th class="n">Charge to book</th>${hostKeys.map(k => `<th class="n">${shortHost(k)}</th>`).join('')}</tr></thead><tbody>${sizes.map(s => `<tr${s.mysetNet < 0 ? ' class="hi"' : ''}><td class="name">${s.name}${s.days > 1 ? ` <span class="muted">× ${s.days} days</span>` : ''}${s.floorS > 3 ? ` <span class="muted">· brake ${s.floorS} s</span>` : ''}</td><td class="n">${fmt.int(s.fans)}</td><td class="n">${s.hours * s.days}</td><td class="n">${fmt.big(s.polls)}</td><td class="n">${fmt.int(s.perPhone)}</td><td class="n">${fmt.num(s.effConcurrent, 1)}</td><td class="n">${fmt.int(s.effReads)}</td><td>${pill(s.status)}</td><td class="n muted">${fmt.usd(s.earn)}</td><td class="n">${fmt.usd(s.mysetRev)}</td><td class="n">${fmt.usd(s.server)}</td><td class="n ${s.mysetNet >= 0 ? 'pos' : 'neg'}">${fmt.usd(s.mysetNet)}</td><td class="n">${fmt.usd(s.bookingAt(mTarget))}</td>${hostKeys.map(k => `<td class="n${k === P.host ? ' pos' : ''}">${P.hosts[k].kind === 'vps' ? '≈ $0*' : fmt.usd(s.onHost[k])}</td>`).join('')}</tr>`).join('')}</tbody>`;
-  $('#sizesCap').innerHTML = `Priced for a <b>${tierName}</b> artist — MySet takes ${sizes[0].cutPct}% of the room. “Charge to book” is what MySet would have to bill for the show on top of its cut for it to earn ${isFinite(R.margin) && R.margin > 0 ? 'the platform’s current ' + fmt.pct(R.margin) : 'a 50% target'} margin after Stripe’s card fee on the booking${isFinite(R.margin) && R.margin > 0 ? '' : ' (the platform is at ' + fmt.pct(R.margin) + ' right now)'}. * Your own servers cost the same whether or not a show happens.`;
+  $('#sizesTable').innerHTML = `<thead><tr><th>Show</th><th class="n">Phones</th><th class="n">Hours</th><th class="n">Ticks</th><th class="n">Per phone</th><th class="n">Board renders</th><th class="n">Running at once</th><th class="n">Reads / s</th><th class="n">Store MB/s</th><th>On this host</th><th class="n">Room spends</th><th class="n">MySet earns</th><th class="n">Server</th><th class="n">MySet keeps</th><th class="n">Charge to book</th>${hostKeys.map(k => `<th class="n">${shortHost(k)}</th>`).join('')}</tr></thead><tbody>${sizes.map(s => `<tr${s.mysetNet < 0 ? ' class="hi"' : ''}><td class="name">${s.name}${s.days > 1 ? ` <span class="muted">× ${s.days} days</span>` : ''}${s.floorS > 3 ? ` <span class="muted">· ${s.floorS} s floor</span>` : ''}${s.line ? ' <span class="muted">· line</span>' : ''}</td><td class="n">${fmt.int(s.fans)}</td><td class="n">${s.hours * s.days}</td><td class="n">${fmt.big(s.polls)}</td><td class="n">${fmt.int(s.perPhone)}</td><td class="n">${fmt.big(s.renders)}</td><td class="n">${fmt.num(s.effConcurrent, 1)}</td><td class="n">${fmt.int(s.effReads)}</td><td class="n">${fmt.num(s.effStoreMBs, s.effStoreMBs < 1 ? 2 : 1)}</td><td>${pill(s.status)}</td><td class="n muted">${fmt.usd(s.earn)}</td><td class="n">${fmt.usd(s.mysetRev)}</td><td class="n">${fmt.usd(s.server)}</td><td class="n ${s.mysetNet >= 0 ? 'pos' : 'neg'}">${fmt.usd(s.mysetNet)}</td><td class="n">${fmt.usd(s.bookingAt(mTarget))}</td>${hostKeys.map(k => `<td class="n${k === P.host ? ' pos' : ''}">${P.hosts[k].kind === 'vps' ? '≈ $0*' : fmt.usd(s.onHost[k])}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  $('#sizesCap').innerHTML = `Priced for a <b>${tierName}</b> artist — MySet takes ${sizes[0].cutPct}% of the room. “Charge to book” is what MySet would have to bill for the show on top of its cut for it to earn ${isFinite(R.margin) && R.margin > 0 ? 'the platform’s current ' + fmt.pct(R.margin) : 'a 50% target'} margin after Stripe’s card fee on the booking${isFinite(R.margin) && R.margin > 0 ? '' : ' (the platform is at ' + fmt.pct(R.margin) + ' right now)'}. * Your own servers cost the same whether or not a show happens. “Board renders” is how often the shared board is actually computed — every other board request is an edge hit; under a 10 s interval the copy is per edge node, so the bar set carries the “edge nodes” dial’s middle guess. “Store MB/s” is what the document store has to move to answer the room; past ~50 MB/s the room stops working whatever the bill says.`;
 
   /* per-tier contribution */
   const TN = { free: 'Free artist', plus: 'Plus artist', pro: 'Pro artist' };
@@ -1283,7 +1409,7 @@ function render() {
   const g = (n) => rows.push({ group: n }); const r = (name, val, unit, how, cls) => rows.push({ name, val, unit, how, cls });
   g('Artists'); r('Artists', fmt.int(R.artists), 'artists', 'the dial'); r('Free · Plus · Pro', `${fmt.int(R.nFree)} · ${fmt.int(R.nPlus)} · ${fmt.int(R.nPro)}`, 'artists', `artists × mix (${free}% · ${P.plusPct}% · ${P.proPct}%)`);
   g('Gigs'); r('Gigs by free artists', fmt.int(R.G.free), 'gigs / month', `free artists × min(${P.gigsFree} wanted, ${P.freeCap} cap)`); r('Nights the free cap refuses', fmt.int(R.gigsCapped), 'gigs / month', 'free artists × (wanted − cap) — a nudge toward Plus', R.gigsCapped > 0 ? 'neg' : ''); r('Gigs by paid artists', fmt.int(R.G.plus + R.G.pro), 'gigs / month', `(Plus + Pro) × ${P.gigsPaid}`); r('All gigs', fmt.int(R.gigs), 'gigs / month', 'sum');
-  g('One gig’s traffic'); r('Polls per phone', fmt.num(R.one.perPhone, 0), 'polls', `the ladder simulated: ${P.fans} phones, ${P.hours} h, ${P.lookShare}% screen-on, ${P.interactions} actions each (+1 poll per action)`); r('Polls in the room', fmt.int(R.one.polls), 'polls / gig', 'per phone × phones'); r('Function time per poll', fmt.num(R.one.pollMs, 0) + ' ms', '', `${P.pollMs} ms + ${P.fans} people × ${P.pollMsPerFan} ms (every poll reads every fan record)`); r('Actions (writes)', fmt.int(R.one.writes), 'calls / gig', 'actions per person × phones'); r('Studio polls', fmt.int(R.one.studioPolls), 'calls / gig', `${P.hours} h × 3600 ÷ 4 s × ${P.studioShare}%`); r('Requests', fmt.int(R.one.requests), 'requests / gig', 'polls + actions + Studio + other pages + page files'); r('Bytes', fmt.num(R.one.bytes / 1e6, 1) + ' MB', 'per gig', `each call × its measured size${R.one.clipBytes ? `, of which ${fmt.num(R.one.clipBytes / 1e6, 0)} MB is ${P.clipViews} profile clip view${P.clipViews === 1 ? '' : 's'} — a guess, and the biggest single line` : ''}`); r('Function time', fmt.num(R.one.fnMs / 60000, 1) + ' min', 'per gig', `polls × ${fmt.num(R.one.pollMs, 1)} ms + actions × ${P.writeMs} ms + …`); r('Document reads', fmt.int(R.one.reads), 'per gig', `polls × ${P.readsPerPoll} + actions × ${P.readsPerWrite} + Studio × ${P.studioReads}`);
+  g('One gig’s traffic'); r('Ticks per phone', fmt.num(R.one.perPhone, 0), 'ticks', `the ladder simulated: ${P.fans} phones, ${P.hours} h, ${P.lookShare}% screen-on, ${P.interactions} actions each (+1 tick per action)${R.one.line ? `; the open line carries the tally, so only the stage (an action every ${P.songEveryMin} min) resets the ladder, and each stage message makes every phone whose screen is on look once` : ''}; the server’s floor is ${R.one.floorS} s`); r('Ticks in the room', fmt.int(R.one.polls), 'ticks / gig', 'per phone × phones — each tick is two requests: the shared board and the personal call'); r('Board renders', fmt.int(R.one.renders), 'renders / gig', `the shared board is computed once per ${R.one.floorS} s interval for the whole room; every other board request is an edge hit (best ${fmt.int(R.one.rendersBest)}, worst ${fmt.int(R.one.rendersWorst)} — the “edge nodes” dial at ${P.edgeSpread}%)`); r('Function time per render', fmt.num(R.one.renderMs, 0) + ' ms', '', `${P.pollMs} ms + ${P.fans} people × ${P.pollMsPerFan} ms (the render reads every fan record; the personal call is ${P.meMs} ms and reads ${P.meReads})`); r('Actions (writes)', fmt.int(R.one.writes), 'calls / gig', `actions per person × phones${R.one.line ? `, each waiting ${P.nudgeMs} ms for its nudge to the line` : ''}`); r('Studio polls', fmt.int(R.one.studioPolls), 'calls / gig', `${P.hours} h × 3600 ÷ 4 s × ${P.studioShare}%`); r('Requests', fmt.int(R.one.requests), 'requests / gig', '2 × ticks + actions + Studio + other pages + page files'); r('Bytes', fmt.num(R.one.bytes / 1e6, 1) + ' MB', 'per gig', `ticks × (${P.boardBytes} board + ${P.meBytes} personal) + each other call × its measured size${R.one.clipBytes ? `, of which ${fmt.num(R.one.clipBytes / 1e6, 0)} MB is ${P.clipViews} profile clip view${P.clipViews === 1 ? '' : 's'} — a guess, and the biggest single line` : ''}`); r('Function time', fmt.num(R.one.fnMs / 60000, 1) + ' min', 'per gig', `renders × ${fmt.num(R.one.renderMs, 1)} ms + ticks × ${P.meMs} ms + actions × ${fmt.num(R.one.writeMs, 0)} ms + …`); r('Document reads', fmt.int(R.one.reads), 'per gig', `renders × ${P.readsPerPoll} + ticks × ${P.meReads} + actions × ${P.readsPerWrite} + Studio × ${P.studioReads}`); r('Store moves', fmt.num(R.one.storeMBs, 3) + ' MB/s', 'averaged over the gig', 'the read wall is ~50 MB/s (tools/loadsim.py --ceiling: ~2,500 phones at today’s record size)'); if (R.one.line) { r('Sockets to the line', fmt.int(R.one.sockets), 'per gig', `${P.fans} phones × ${P.lineShare}% × (${fmt.num(R.one.glances, 0)} glances — a hidden page closes its socket, a shown one reopens it — + ${P.reconnects} drops)`); r('Nudges to the line', fmt.int(R.one.nudges), 'per gig', `one per landed vote (${P.changeShare}% of actions) + one per stage action (every ${P.songEveryMin} min) — as decision 0036 designed it, not yet counted at a gig`); r('Cloudflare requests', fmt.int(R.one.lineReqs), 'per gig', '2 per socket (open + close, measured on the probe) + 1 per nudge'); } r('Before the split', fmt.int(R.one.lgPolls) + ' ticks · ' + fmt.int(R.one.lgRequests) + ' req · ' + fmt.num(R.one.lgBytes / 1e6, 1) + ' MB · ' + fmt.num(R.one.lgFnMs / 60000, 1) + ' min', 'per gig, for comparison', 'one call per tick that re-read the whole room, on the old ladder (a 5 s rung for 201–1,000 phones)');
   g('The month’s traffic'); r('Requests', fmt.big(R.T.requests), 'per month', 'one gig × all gigs'); r('Bandwidth', fmt.num(R.T.bytes / 1e9, 1) + ' GB', 'per month', ''); r('Function compute', fmt.num(R.T.fnMs / 3600e3, 0) + ' GB-hours', 'per month', '1 GB of memory × wall time'); r('Background jobs', fmt.big(P.cronRequests) + ' calls', 'per month', `the gig scheduler every 2 min + nightly syncs, ${P.cronMs} ms each — runs with nobody playing`); r('Document reads', fmt.big(R.T.reads), 'per month', 'the number every other host prices');
   g('Server bill · ' + R.bill.label); for (const [n, v] of R.bill.lines) r(n, fmt.usdFull(v), '$ / month', ''); if (R.bill.credits != null) r('Credits needed', fmt.int(R.bill.credits), 'credits / month', `→ ${R.bill.plan}`); r('Server total', fmt.usdFull(R.bill.usd), '$ / month', '', 'sum');
   g('Revenue'); r('Plus subscriptions', fmt.usdFull(R.subsPlus), '$ / month', `${fmt.int(R.nPlus)} × $${P.plusPrice} × (1 − ${P.compedPct}% not paying)`); r('Pro subscriptions', fmt.usdFull(R.subsPro), '$ / month', `${fmt.int(R.nPro)} × $${P.proPrice} × (1 − ${P.compedPct}%)`); if (P.venuePro) r('Venue Pro subscriptions', fmt.usdFull(R.subsVenue), '$ / month', `${P.venuePro} × $${P.venuePrice}`); r('Room money (all artists)', fmt.usdFull(R.gmv.free + R.gmv.plus + R.gmv.pro), '$ / month', `gigs × ${P.fans} people × $ per person by tier ($${P.roomFree} · $${P.roomPlus} · $${P.roomPro}) — the artists’ money, not MySet’s`); r('MySet’s cut · free', fmt.usdFull(R.cuts.free), '$ / month', `${fmt.usd(R.gmv.free)} × ${P.cutFree}%`); r('MySet’s cut · Plus', fmt.usdFull(R.cuts.plus), '$ / month', `${fmt.usd(R.gmv.plus)} × ${P.cutPlus}%`); r('MySet’s cut · Pro', fmt.usdFull(R.cuts.pro), '$ / month', `${fmt.usd(R.gmv.pro)} × ${P.cutPro}%`); r('Subscription refunds', '−' + fmt.usdFull(R.refundsLost), '$ / month', `${P.stripe.refundPct}% of subscriptions given back (Stripe keeps its fee on them)`, 'neg'); r('Featured shows', fmt.usdFull(R.feat), '$ / month', `${fmt.int(R.gigs)} gigs × ${P.featPct}% × $${P.featPrice} − ${P.featRefundPct}% refunded`); r('Revenue', fmt.usdFull(R.revenue), '$ / month', 'subscriptions − refunds + cuts + featured', 'sum');
@@ -1293,7 +1419,7 @@ function render() {
   $('#formulaTable').innerHTML = `<thead><tr><th>Quantity</th><th class="n">Value</th><th>Unit</th><th>How</th></tr></thead><tbody>${rows.map(x => x.group ? `<tr class="group"><td colspan="4">${x.group}</td></tr>` : `<tr class="${x.cls && x.cls.includes('sum') ? 'sum' : ''}"><td class="name">${x.name}</td><td class="n ${x.cls || ''}">${x.val}</td><td class="muted">${x.unit}</td><td class="how">${x.how}</td></tr>`).join('')}</tbody>`;
 
   /* hosts table */
-  $('#hostsTable').innerHTML = `<thead><tr><th>Host</th><th class="n">Server / month</th><th class="n">Share of revenue</th><th class="n">Per gig</th><th>What it is</th></tr></thead><tbody>${Object.keys(P.hosts).map(k => { const b = ENGINE.hostBill(k, P.hosts, R.T, P.deploys); return `<tr${k === P.host ? ' class="hi"' : ''}><td class="name">${P.hosts[k].name}${b.plan ? ` <span class="muted">· ${b.plan}</span>` : ''}</td><td class="n">${fmt.usdFull(b.usd)}</td><td class="n">${R.revenue > 0 ? fmt.pct(b.usd / R.revenue) : '—'}</td><td class="n">${fmt.cents(R.gigs > 0 ? b.usd / R.gigs : 0)}</td><td class="how">${HOST_NOTES[k] || ''}</td></tr>`; }).join('')}</tbody>`;
+  $('#hostsTable').innerHTML = `<thead><tr><th>Host</th><th class="n">Server / month</th><th class="n">Share of revenue</th><th class="n">Per gig</th><th>What it is</th></tr></thead><tbody>${Object.keys(P.hosts).map(k => { const b = billFor(k); return `<tr${k === P.host ? ' class="hi"' : ''}><td class="name">${P.hosts[k].name}${b.plan ? ` <span class="muted">· ${b.plan}</span>` : ''}</td><td class="n">${fmt.usdFull(b.usd)}</td><td class="n">${R.revenue > 0 ? fmt.pct(b.usd / R.revenue) : '—'}</td><td class="n">${fmt.cents(R.gigs > 0 ? b.usd / R.gigs : 0)}</td><td class="how">${HOST_NOTES[k] || ''}</td></tr>`; }).join('')}</tbody>`;
 
   /* ladder table */
   $('#ladderTable').innerHTML = `<thead><tr><th class="n">Artists</th><th class="n">Gigs / mo</th><th class="n">Revenue</th><th class="n">Server</th><th class="n">Stripe</th><th class="n">Fixed</th><th class="n">Profit</th><th class="n">Margin</th><th class="n">Server % rev</th><th>Plan</th></tr></thead><tbody>${ladderRows.map(x => `<tr${x.a === P.artists ? ' class="hi"' : ''}><td class="n">${fmt.int(x.a)}</td><td class="n">${fmt.int(x.r.gigs)}</td><td class="n">${fmt.usdFull(x.r.revenue)}</td><td class="n">${fmt.usdFull(x.r.bill.usd)}</td><td class="n">${fmt.usdFull(x.r.stripe)}</td><td class="n">${fmt.usdFull(x.r.fixed)}</td><td class="n ${x.r.profit >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.r.profit)}</td><td class="n">${fmt.pct(x.r.margin)}</td><td class="n">${fmt.pct(x.r.serverPct)}</td><td class="muted">${x.r.bill.plan || x.r.bill.label}</td></tr>`).join('')}</tbody>`;
@@ -1424,6 +1550,12 @@ const strip = (s) => { const { id, ...rest } = s; return JSON.parse(JSON.stringi
 const deepMerge = (a, b) => { for (const k of Object.keys(b || {})) a[k] = b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) ? deepMerge(a[k] && typeof a[k] === 'object' ? a[k] : {}, b[k]) : b[k]; return a; };
 const withDefaults = (params) => {
   const q = deepMerge(JSON.parse(JSON.stringify(P0)), params);
+  /* the host list is the page's, not the scenario's: a retired host (the "3-second cache", the DO rewrite) does
+     not come back from a saved scenario, and a renamed one keeps today's name and rates — only the numeric
+     rates of a host that still exists are taken from the scenario */
+  q.hosts = JSON.parse(JSON.stringify(HOSTS0));
+  for (const k of Object.keys(q.hosts)) for (const f of Object.keys(q.hosts[k])) { const v = params && params.hosts && params.hosts[k] && params.hosts[k][f]; if (typeof v === 'number' && f !== 'legacy' && f !== 'cached') q.hosts[k][f] = v; }
+  if (!q.hosts[q.host]) q.host = 'netlifyPro';
   /* Room money was $ per GIG before v2 and is $ per PERSON now. A scenario saved under
      the old meaning would silently read 20× too high, so convert it once. */
   if (!(params && params.v >= 2)) {
@@ -1445,7 +1577,7 @@ $('#scenSave').addEventListener('click', async () => {
    Benchmark = published freemium conversion medians and the one room-spend figure
    MySet has actually observed. */
 const PRESETS = {
-  bench: { plusPct: 4, proPct: 1, featPct: 1, roomFree: 0.375, roomPlus: 0.375, roomPro: 0.375, fans: SEED_ACT.people, hours: SEED_ACT.hours, interactions: SEED_ACT.interactions, deploys: SEED_ACT.deploys, gigsPaid: 3, gigsFree: 3, churnPct: 5, compedPct: 8 },
+  bench: { plusPct: 4, proPct: 1, featPct: 1, roomFree: SEED_ACT.roomPerHead, roomPlus: SEED_ACT.roomPerHead, roomPro: SEED_ACT.roomPerHead, fans: SEED_ACT.people, hours: SEED_ACT.hours, interactions: SEED_ACT.interactions, deploys: SEED_ACT.deploys, gigsPaid: 3, gigsFree: 3, churnPct: 5, compedPct: 8 },
   hope:  { plusPct: 30, proPct: 10, featPct: 5, roomFree: 1.5, roomPlus: 2, roomPro: 3, fans: 40, gigsPaid: 8, gigsFree: 3, churnPct: 2, compedPct: 5 },
 };
 const applyPreset = (which) => { Object.assign(P, PRESETS[which]); P.useActuals = false; buildDials(); recalc();
