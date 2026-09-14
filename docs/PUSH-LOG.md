@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 18:34 — 81c9433 — landing-wt@landing/screenshots (39 files since origin/main)
+**tl;dr:** The landing page now shows the founder's real screenshots: the Profit tab as the business hero, the shop + community pair, the real artist page in the link comparison, today's Setlist/Gigs/Settings, the front door + map for venues, and four drifting strips (room, Studio, page, dashboard+report) — 33 pictures
+**Other sessions:** public/about/*.webp are 600px from MySet Social Media/Stills/MySet In-App Screenshots (PIL, q80). Old setlist/gigs/rules/page.webp and fills.png deleted. Add or swap a strip picture in the REELS object only. The one CRM shot left out shows a red 'payments never delivered' warning.
+
 ### 2026-09-14 18:08 — 803bd9d — landing-wt@landing/shop-dashboard-profile (5 files since origin/main)
 **tl;dr:** The landing page has three new sections — Your link (the artist page as the link-page replacement), The shop, Your business — with drifting screenshot strips wired but empty until the founder's screenshots land; FAQ answers the plans gate; beat 4 says daily payouts
 **Other sessions:** about.html: add pictures ONLY in the REELS object (one entry per file) and the two data-still slots; the strips hide themselves while empty. node_modules is no longer a tracked symlink (7a62844 committed a loop; tests importing _lib.mjs failed on fresh checkouts) — run npm install if a worktree lacks it. OFF-PAGE.md's plan table re-read from PLANS.
