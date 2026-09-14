@@ -457,7 +457,15 @@ document.addEventListener('click',e=>{
   if(e.target&&e.target.id==='askYes'){ const go=ASK_GO; closeAsk(); if(go) go(); }
   else if(e.target&&e.target.id==='ask') closeAsk();      // a tap on the dim keeps playing
 });
-let GATE_EMAIL='';
+let GATE_EMAIL='', GATE_FROM='join', PW_PROMPT=false;
+/* THE SIGN-IN SCREEN (decision 0070, the founder's spec, 2026-09-14): email over
+   password in a thin pink-orange box under a big pink-orange "Welcome back", a
+   filled pink-orange "Sign in"; below it "New here? Join the MySet family" and a
+   ringed "Create account"; the Studio code as small grey underlined text at the
+   foot that opens a small window. This is what anyone sees who taps Artist
+   Studio on a browser that does not know them. "Forgot your password?" and
+   "Create account" both go through the six-digit email code, which is still the
+   only way an account is made and the whole of recovery. */
 function gate(err,mode){
   bootDone();
   clearInterval(timer);
@@ -467,72 +475,86 @@ function gate(err,mode){
   const fr=$('#firstrun'); if(fr)fr.classList.remove('on');
   const fb=$('#frback'); if(fb)fb.remove();
   const m=mode||'start';
-  const head=`<h2>Artist Studio</h2>`;
+  const canPK=PKSUPPORTED&&(localStorage.getItem('myset.slug')||ASLUG);
   let inner;
   if(m==='code'){
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">We sent a 6-digit code to <b>${esc(GATE_EMAIL)}</b>. It works for ten minutes.</p>
+    inner=`<div class="signbox"><h2>Check your email</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 16px">We sent a 6-digit code to <b>${esc(GATE_EMAIL)}</b>. It works for ten minutes.</p>
       <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code"
         maxlength="6" placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:26px">
-      <button class="big" style="margin-top:12px" onclick="submitCode()">Sign in</button>
-      <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'start')">← Use a different email</button>`;
+      <button class="big fill" style="margin-top:12px" onclick="submitCode()">Continue</button>
+      <button class="act" style="margin-top:6px;width:100%" onclick="gate(null,GATE_FROM)">← Use a different email</button></div>`;
   }else if(m==='name'){
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">You're in. What should we call you? This is the name fans see.</p>
+    inner=`<div class="signbox"><h2>You’re in</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 16px">What should we call you? This is the name fans see.</p>
       <input class="inp" id="newName" maxlength="60" placeholder="Your artist or band name" autocomplete="off">
-      <button class="big" style="margin-top:12px" onclick="claimAccount()">Create my page</button>`;
-  }else{
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">${
-      err==='unauthorized'?'That didn’t work — try again.':'Sign in to run your show.'}</p>
-      ${PKSUPPORTED&&(localStorage.getItem('myset.slug')||ASLUG)?`<button class="big" onclick="passkeySignIn()">Sign in with Face ID</button>
-      <input type="hidden" id="pkslug" value="${esc(localStorage.getItem('myset.slug')||ASLUG)}">
-      <div style="display:flex;align-items:center;gap:12px;margin:18px 0 14px">
-        <span style="flex:1;height:.5px;background:var(--hair)"></span>
-        <span class="kick" style="font-size:12px">or</span>
-        <span style="flex:1;height:.5px;background:var(--hair)"></span>
-      </div>`:''}
-      <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com">
-      <button class="big${PKSUPPORTED&&(localStorage.getItem('myset.slug')||ASLUG)?' alt':''}" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
-      <p class="muted" style="font-size:12.5px;margin:14px 0 0;text-align:center">
-        New here? Same button — we'll set you up right after the code.<br>
-        No password to forget — we email you a code each time.</p>
-      ${/* ALREADY HOLDING A CODE — the email landed on another phone, or this is a
-           second browser. The code is tied to the address, not the device, so it
-           works here as long as the same email is in the box above. This replaced
-           the page-name + Studio-code door on 2026-09-12 (the user's call: one
-           way in, not two on one screen). The server still answers that door; the
-           founder's stored code keeps working. */''}
-      <div class="sec" style="padding-left:0;padding-right:0;margin-top:22px"><span class="kick">Got a code already?</span></div>
-      <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
-        placeholder="My code" style="letter-spacing:.2em">
-      <button class="big alt" style="margin-top:12px" onclick="submitCode()">Sign in with my code</button>
-      <p class="muted" style="font-size:12px;margin:10px 0 0">The 6 digits from the email — type them here with the same address above, on any phone or browser.</p>
-      <p class="muted" style="font-size:12.5px;margin:16px 0 0;text-align:center">
-        <a href="#" onclick="event.preventDefault();gate(null,'recover')" style="color:var(--accent);font-weight:600">Lost your email? Use a recovery code</a>
-        &nbsp;·&nbsp; <a href="#" onclick="event.preventDefault();gate(null,'studiocode')" style="color:var(--muted);font-weight:600">Studio code</a></p>`;
-  }
-  /* The per-page Studio code (set in Settings). Off the front screen since
-     2026-09-12, behind a link, so the Settings card still has a door. */
-  if(m==='studiocode'){
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">The code you set in Settings for this page.</p>
-      <input class="inp" id="aslug" placeholder="Your page name (myset.vip/…)" autocomplete="username" value="${esc(ASLUG)}">
-      <input class="inp" id="code" type="password" placeholder="Studio code" autocomplete="current-password" style="margin-top:8px">
-      <button class="big" style="margin-top:12px" onclick="unlock()">Unlock with code</button>
-      <p class="muted" style="font-size:12px;margin:10px 0 0">Your page name is the bit after myset.vip/ — leave it blank if you set your code before pages existed.</p>
-      <button class="act" style="margin-top:14px;width:100%" onclick="gate()">← Back</button>`;
-  }
-  if(m==='recover'){
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">One of the eight codes you saved. Each works once, and every other device gets signed out.</p>
+      <button class="big fill" style="margin-top:12px" onclick="claimAccount()">Create my page</button></div>`;
+  }else if(m==='join'||m==='forgot'){
+    const join=m==='join';
+    inner=`<div class="signbox"><h2>${join?'Join the MySet family':'Forgot your password?'}</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 16px">${join
+        ?'Your email is your sign-in. We’ll send a 6-digit code; then you pick your name and a password.'
+        :'No problem. We’ll email you a fresh 6-digit code, and you can set a new password once you’re in.'}</p>
+      <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" value="${esc(GATE_EMAIL)}">
+      <button class="big fill" style="margin-top:12px" onclick="sendCode('${m}')">Email me a code</button>
+      <button class="act" style="margin-top:6px;width:100%" onclick="gate()">← Back</button></div>
+      ${join?'':`<p class="foot"><a href="#" onclick="event.preventDefault();gate(null,'recover')">Lost your email too? Use a recovery code</a></p>`}`;
+  }else if(m==='recover'){
+    inner=`<div class="signbox"><h2>Recovery code</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 16px">One of the eight codes you saved. Each works once, and every other device gets signed out.</p>
       <input class="inp" id="rslug" placeholder="Your page name (myset.vip/…)" autocomplete="username" value="${esc(ASLUG)}">
       <input class="inp mono" id="rcode" placeholder="XXXX-XXXX" autocapitalize="characters" autocomplete="off" style="margin-top:8px;letter-spacing:.12em;text-align:center">
-      <button class="big" style="margin-top:12px" onclick="recoverIn()">Sign me in</button>
-      <button class="act" style="margin-top:14px;width:100%" onclick="gate()">← Back</button>`;
+      <button class="big fill" style="margin-top:12px" onclick="recoverIn()">Sign me in</button>
+      <button class="act" style="margin-top:6px;width:100%" onclick="gate()">← Back</button></div>`;
+  }else{
+    inner=`<div class="signbox"><h2>Welcome back</h2>
+      ${err==='unauthorized'?`<p class="muted" style="font-size:14px;margin:0 0 12px">That didn’t work — try again.</p>`:''}
+      <input class="inp" id="email" type="email" inputmode="email" autocomplete="username" placeholder="Email" value="${esc(GATE_EMAIL)}">
+      <input class="inp" id="pw" type="password" autocomplete="current-password" placeholder="Password" style="margin-top:8px">
+      <button class="big fill" style="margin-top:12px" onclick="passwordSignIn()">Sign in</button>
+      <p class="signlinks"><a href="#" onclick="event.preventDefault();gate(null,'forgot')">Forgot your password?</a>
+        ${canPK?` · <a href="#" onclick="event.preventDefault();passkeySignIn()">Sign in with Face ID</a><input type="hidden" id="pkslug" value="${esc(localStorage.getItem('myset.slug')||ASLUG)}">`:''}</p></div>
+      <p class="join">New here? Join the MySet family</p>
+      <button class="big ring" onclick="gate(null,'join')">Create account</button>
+      <p class="foot"><a href="#" onclick="event.preventDefault();openStudioCode()">Sign in with a Studio code instead</a></p>`;
   }
-  document.getElementById('app').innerHTML=`<div class="gate">${head}${inner}</div>`;
-  const first=m==='code'?$('#otp'):($('#newName')||$('#email'));
-  if(first){ first.addEventListener('keydown',e=>{if(e.key==='Enter'){
-      m==='code'?submitCode():m==='name'?claimAccount():sendCode();}});
-    setTimeout(()=>first.focus(),100); }
-  if(m==='start'){ const o=$('#otp'); if(o) o.addEventListener('keydown',e=>{if(e.key==='Enter')submitCode()}); }
+  document.getElementById('app').innerHTML=`<div class="gate">${inner}</div>`;
+  const go={code:submitCode,name:claimAccount,join:()=>sendCode('join'),forgot:()=>sendCode('forgot'),recover:recoverIn,start:passwordSignIn}[m]||passwordSignIn;
+  for(const el of document.querySelectorAll('.gate .inp')) el.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+  const first=$('#otp')||$('#newName')||$('#rslug')||$('#email');
+  if(first) setTimeout(()=>first.focus(),100);
+}
+/* The Studio-code door, in a small window off the foot of the sign-in screen —
+   the per-page code from Settings, kept for the founder and for a phone with no
+   email on it. */
+function openStudioCode(){
+  const p=$('#pop'); if(!p) return;
+  p.querySelector('.box').innerHTML=`<h3>Studio code</h3>
+    <p class="lede">The code set in Settings for this page.</p>
+    <input class="inp" id="aslug" placeholder="Your page name (myset.vip/…)" autocomplete="username" value="${esc(ASLUG)}">
+    <input class="inp" id="code" type="password" placeholder="Studio code" autocomplete="current-password" style="margin-top:8px">
+    <button class="big fill" style="margin-top:12px" onclick="unlock()">Unlock</button>
+    <button class="big keep" onclick="closePop()">Back</button>`;
+  p.classList.add('on');
   const c=$('#code'); if(c) c.addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+  setTimeout(()=>{const a=$('#aslug'); if(a&&!a.value) a.focus(); else if(c) c.focus();},80);
+}
+function closePop(){ const p=$('#pop'); if(p) p.classList.remove('on'); }
+document.addEventListener('click',e=>{ if(e.target&&e.target.id==='pop') closePop(); });
+/* Email + password → the same session every other door mints. One message for
+   every failure, on purpose (the server says nothing more either). */
+async function passwordSignIn(){
+  const em=(($('#email')||{}).value||'').trim(), pw=(($('#pw')||{}).value||'');
+  if(!em){toast('Enter your email');return;}
+  if(!pw){toast('Enter your password — or tap “Forgot your password?”');return;}
+  GATE_EMAIL=em;
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'passwordSignIn',email:em,password:pw})});
+  if(!d.ok){toast(d.error||'That email and password don’t match');return;}
+  TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
+  CODE=''; localStorage.removeItem('myset.admin');
+  if(d.slug){ try{localStorage.setItem('myset.slug',d.slug)}catch(e){} }
+  toast(`Signed in as ${d.email}`);
+  start();
 }
 /* Stripe sends them back to /studio?connect=done. Ask Stripe for the real answer
    rather than assuming the round trip means success — they can abandon it halfway. */
@@ -577,10 +599,10 @@ function unlock(){
   localStorage.setItem('myset.admin',CODE); localStorage.setItem('myset.aslug',ASLUG);
   start();
 }
-async function sendCode(){
+async function sendCode(from){
   const em=(($('#email')||{}).value||'').trim();
   if(!em){toast('Enter your email');return;}
-  GATE_EMAIL=em;
+  GATE_EMAIL=em; GATE_FROM=from||'join';
   const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'start',email:em})});
   if(!d.ok){toast(d.error||'Could not send that');return;}
   gate(null,'code');
@@ -621,6 +643,8 @@ async function claimAccount(){
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
   try{localStorage.setItem('myset.firstrun',(d.artistId||'')+':1')}catch(e){}   // a brand-new account: the first-run steps, keyed to it
+  if(d.slug){ try{localStorage.setItem('myset.slug',d.slug)}catch(e){} }
+  PW_PROMPT=true;
   toast('Welcome \u2014 your page is myset.vip/'+d.slug); start();
 }
 async function submitCode(){
@@ -637,6 +661,8 @@ async function submitCode(){
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
   if(d.isNew){ try{localStorage.setItem('myset.firstrun',(d.artistId||'')+':1')}catch(e){} }
+  if(d.slug){ try{localStorage.setItem('myset.slug',d.slug)}catch(e){} }
+  PW_PROMPT=true;                      // in by code: offer a password once the Studio is up
   toast(d.isNew?`Welcome — your page is myset.vip/${d.slug}`:`Signed in as ${d.email}`);
   start();
 }
@@ -2304,8 +2330,11 @@ function render(){
           not set up \u2014 his own show-locked-features rule. */''}
     <div class="sec"><span class="kick">Signing in</span></div>
     <div class="list">
-      <div class="row"><div class="m"><div class="t">Password</div>
-        <div class="s">You don\u2019t have one. MySet emails you a fresh six-digit code every time \u2014 nothing to remember, nothing to leak.</div></div></div>
+      ${PLAN&&PLAN.email?`<div class="row"><div class="m"><div class="t">Password${TEAM&&TEAM.ok?(myPw()?' \u00b7 set':' \u00b7 not set'):''}</div>
+        <div class="s">${myPw()?'Sign in with your email and password. Forget it and a six-digit code to your email gets you back in.':'Set one and you can sign in with your email and password. Until then, a six-digit code to your email gets you in.'}</div></div>
+        <button class="act" onclick="openPasswordSheet()">${myPw()?'Change':'Create'}</button></div>`
+      :`<div class="row"><div class="m"><div class="t">Password</div>
+        <div class="s">This sign-in has no email on it. Sign in with your email to set a password for it.</div></div></div>`}
       ${PKSUPPORTED?`<div class="row"><div class="m"><div class="t">Face ID or fingerprint${PKEYS?(PKEYS.length?' \u00b7 '+PKEYS.length+' device'+(PKEYS.length===1?'':'s'):' \u00b7 not set up'):''}</div>
         <div class="s">Sign in with a look instead of a code from your email. The key stays on the phone; MySet only keeps the half that can check it. Your code still works if you lose the phone.</div></div>
         <button class="act" onclick="addPasskey()">${PKEYS&&PKEYS.length?'Add another':'Set it up'}</button></div>
@@ -4109,7 +4138,12 @@ async function loadTeam(force){
   if(TEAM&&!force)return;
   TEAM=await api('/auth',{method:'POST',body:JSON.stringify({action:'list'}),quiet:true});
   if((TAB==='settings'||isNew())&&D&&!typing())render();
+  /* Just in by a six-digit code and no password on this address yet: offer one,
+     once. Skippable — the code and Face ID keep working either way. */
+  if(PW_PROMPT&&TEAM&&TEAM.ok){ PW_PROMPT=false; if(!myPw()) setTimeout(()=>openPasswordSheet(true),600); }
 }
+const myRow=()=>((TEAM&&TEAM.emails)||[]).find(x=>x.me)||null;
+const myPw=()=>!!(myRow()&&myRow().pw);
 function copyRef(){
   const el=$('#refLink'); if(!el)return;
   el.select();
@@ -4142,6 +4176,50 @@ async function revokeAll(){
 }
 /* THE CLIENT SAID FOUR AND THE SERVER HAS ALWAYS REFUSED UNDER EIGHT. Somebody
    who did exactly what the box told them got an error. One number now. */
+/* ---------- your password (decision 0070) ----------
+   Create: a new password, twice. Change: the current one, or — the "forgot"
+   path — a six-digit code emailed to the same address. */
+function openPasswordSheet(prompt){
+  const has=myPw(), em=(PLAN&&PLAN.email)||'';
+  openSheet(`<h3>${has?'Change your password':(prompt?'Set a password?':'Create a password')}</h3>
+    <p class="lede">${has?'For '+esc(em)+'. Every other device gets signed out.'
+      :(prompt?'You\u2019re in with a code. A password means next time it\u2019s just your email and password \u2014 no inbox needed. You can do this later in Settings.'
+      :'For '+esc(em)+'. Next time it\u2019s just your email and password.')}</p>
+    ${has?`<div class="field" id="pwCurWrap"><label>Current password</label><input class="inp" id="pwCur" type="password" autocomplete="current-password" placeholder="Your current password"></div>
+    <div class="field" id="pwCodeWrap" style="display:none"><label>The code we emailed you</label><input class="inp" id="pwCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.2em"></div>
+    <p class="muted" style="font-size:12px;margin:6px 0 0"><a href="#" id="pwForgot" onclick="event.preventDefault();pwForgotCode()" style="color:var(--accent-2);font-weight:600">Forgot it? Email me a code instead</a></p>`:''}
+    <div class="field" style="margin-top:10px"><label>New password</label><input class="inp" id="pwNew" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+    <div class="field"><label>Again</label><input class="inp" id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again"></div>
+    <button class="big fill" style="margin-top:14px" onclick="savePassword()">${has?'Change it':'Save my password'}</button>
+    ${prompt&&!has?`<button class="big keep" onclick="closeSheet()">Not now</button>`:''}
+    <p class="muted" style="font-size:12px;margin:12px 0 0">Your email code and Face ID keep working either way.</p>`);
+}
+let PW_CODE_MODE=false;
+async function pwForgotCode(){
+  const em=(PLAN&&PLAN.email)||'';
+  const d=await api('/auth',{method:'POST',body:JSON.stringify({action:'start',email:em})});
+  if(!d.ok){toast(d.error||'Could not send that');return;}
+  PW_CODE_MODE=true;
+  const a=$('#pwCurWrap'), b=$('#pwCodeWrap'), f=$('#pwForgot');
+  if(a) a.style.display='none'; if(b) b.style.display=''; if(f) f.textContent='Code sent to '+em;
+  const c=$('#pwCode'); if(c) c.focus();
+  toast('We emailed you a code');
+}
+async function savePassword(){
+  const n1=(($('#pwNew')||{}).value||''), n2=(($('#pwNew2')||{}).value||'');
+  if(n1.length<8){toast('At least 8 characters');return;}
+  if(n1!==n2){toast('Those don\u2019t match');return;}
+  const body={action:'passwordSet',password:n1};
+  if(myPw()){
+    if(PW_CODE_MODE) body.code=(($('#pwCode')||{}).value||'').trim();
+    else body.current=(($('#pwCur')||{}).value||'');
+    if(!body.code&&!body.current){toast(PW_CODE_MODE?'Enter the code from your email':'Enter your current password');return;}
+  }
+  const d=await api('/auth',{method:'POST',body:JSON.stringify(body)});
+  if(!d.ok){toast(d.error||'Could not save that');return;}
+  PW_CODE_MODE=false; closeSheet(); TEAM=null; loadTeam(true);
+  toast(d.signedOut?`Saved \u2014 ${d.signedOut} other device${d.signedOut===1?'':'s'} signed out`:'Saved \u2014 that\u2019s your password from now on');
+}
 function openCodeSheet(){
   openSheet(`<h3>${TEAM&&TEAM.codeSet?'Change your studio code':'Set a studio code'}</h3>
     <p class="lede">A code for this page, so you can get in from any phone even when email is slow.</p>

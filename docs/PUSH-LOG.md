@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 10:21 — bb28f55 — wt9@auth/password-door (18 files since origin/main)
+**tl;dr:** Artists and venues sign in with email + password on the screen the founder specified (Welcome back · Email · Password · Sign in; New here? Join the MySet family · Create account; the Studio code in a small window off the foot); once in by a code, Settings → Password → Create; Forgot your password? = a fresh six-digit code (ACC-001, decision 0070, INVARIANT 0fu, ACCOUNTS.md §11)
+**Other sessions:** NEW netlify/functions/_cred.mjs (scrypt per email row, cred_<owner>_<hash>; per-address lockout lock_pw_*). auth.mjs + venueauth.mjs: passwordSignIn (public), passwordSet {password, current|code}, passwordClear; list carries pw per email + (venue) email/me. keysFor/keysForVenue name the cred records. studio.js gate() rewritten — modes start/join/forgot/code/name/recover; sendCode(from); openStudioCode() → #pop; PW_PROMPT opens the password sheet once after a code sign-in; venue-studio.js the same. After editing either script run node tools/stamp.mjs. The Studio code door is UNCHANGED on purpose (0fu says why). Founder's standing rule: 'orange' = the brand pink-orange --accent-2.
+
 ### 2026-09-14 10:05 — 2d676ab — wt@docs/shop-second-look-live (2 files since origin/main)
 **tl;dr:** Ledger and session note: the shop's second look is live as ab0a05e (UX-045, decision 0064, PR #39) [skip ci]
 **Other sessions:** Docs only. Numbers now taken: UX-045.

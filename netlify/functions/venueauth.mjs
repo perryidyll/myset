@@ -3,6 +3,8 @@ import { normEmail, validEmail, issueCode, checkCode, sendCode, emailReady,
          signTicket, readTicket, cleanSlug } from './_auth.mjs';
 import { readVenues, mutateVenues, createVenue, requireVenue, signVenueToken,
          verifyVenueToken, getVenueProfile, domainMatches , vRevOf } from './_venues.mjs';
+import { setPassword, checkPassword, hasPassword, clearPassword, weakPassword,
+         passwordLocked, notePasswordFailure, clearPasswordFailures } from './_cred.mjs';
 
 /* Sign-in for VENUES. The same email-and-a-code flow as artists, in its own
    realm: separate registry, separate token tag, separate one-time-code key. The
@@ -91,6 +93,27 @@ export default async (req) => {
                   venueId: link.venueId, slug: venue.slug, name: venue.name, isNew: true });
   }
 
+  /* ---- email + password, the same door the artist side has (decision 0070),
+     in this realm: one sentence for every failure, the same cost for each. ---- */
+  if (action === 'passwordSignIn') {
+    const email = normEmail(body.email);
+    const pw = String(body.password || '');
+    const nope = () => bad('That email and password don’t match', 401);
+    if (!validEmail(email) || !pw) return nope();
+    const reg = await readVenues();
+    const link = reg.byEmail[email];
+    const vid = link ? link.venueId : '';
+    const locked = await passwordLocked(email, REALM);
+    const ok = await checkPassword(vid ? 'v_' + vid : '-', email, pw);
+    if (!vid || locked || !ok) { if (vid && !locked) await notePasswordFailure(email, REALM); return nope(); }
+    await clearPasswordFailures(email, REALM);
+    const venue = reg.byId[vid] || {};
+    const { note } = await import('./_session.mjs');
+    const token = await openV(req, body, vid, email, vRevOf(reg, vid));
+    note('v_' + vid, 'signin.password', email);
+    return json({ ok: true, token, email, venueId: vid, slug: venue.slug || '', name: venue.name || '' });
+  }
+
   /* ---- signed in, from here ---- */
   const me = await requireVenue(req);
   if (!me) return bad('unauthorized', 401);
@@ -103,6 +126,33 @@ export default async (req) => {
 
   const { newSid, killSessions, killEverything, readSessions, sidsFor, note } = await import('./_session.mjs');
   const owner = 'v_' + me.vid;
+
+  /* ---- your password (decision 0070): yours for your own address ---- */
+  if (action === 'passwordSet') {
+    if (!me.email) return bad('Sign in with your email first, then set a password there', 403);
+    const pw = String(body.password || '');
+    const why = weakPassword(pw, me.email);
+    if (why) return bad(why);
+    if (await hasPassword(owner, me.email)) {
+      let proven = false;
+      if (body.current) proven = await checkPassword(owner, me.email, String(body.current));
+      else if (body.code) proven = (await checkCode(me.email, String(body.code).replace(/\D/g, '').slice(0, 6), REALM)).ok;
+      if (!proven) return bad(body.current ? 'That isn’t your current password' : 'Check the code and try again', 401);
+    }
+    await setPassword(owner, me.email, pw);
+    const { list } = await readSessions(owner, me.sid);
+    const others = list.filter((x) => !x.current && x.email === me.email).map((x) => x.sid);
+    if (others.length) await killSessions(owner, others);
+    note(owner, 'password.set', me.email, others.length ? `${others.length} other device(s) signed out` : '');
+    return json({ ok: true, signedOut: others.length });
+  }
+  if (action === 'passwordClear') {
+    if (!me.email) return bad('No password on this sign-in', 403);
+    if (!(await checkPassword(owner, me.email, String(body.current || '')))) return bad('That isn’t your current password', 401);
+    await clearPassword(owner, me.email);
+    note(owner, 'password.clear', me.email);
+    return json({ ok: true });
+  }
 
   if (action === 'sessions') return json({ ok: true, ...(await readSessions(owner, me.sid)) });
   if (action === 'sessionRevoke') {
@@ -227,10 +277,10 @@ export default async (req) => {
   const reg = await readVenues();
   const mine = reg.byId[me.vid] || {};
   return json({ ok: true,
-    venueId: me.vid, slug: mine.slug || '', name: mine.name || '',
+    venueId: me.vid, slug: mine.slug || '', name: mine.name || '', email: me.email || null, role: me.role || 'owner',
     verified: !!mine.verified, verifiedVia: mine.verifiedVia || null,
-    emails: Object.entries(reg.byEmail)
+    emails: await Promise.all(Object.entries(reg.byEmail)
       .filter(([, v]) => v.venueId === me.vid)
-      .map(([e, v]) => ({ email: e, role: v.role || 'owner' })),
+      .map(async ([e, v]) => ({ email: e, role: v.role || 'owner', me: e === me.email, pw: await hasPassword(owner, e) }))),
     emailReady: emailReady() });
 };

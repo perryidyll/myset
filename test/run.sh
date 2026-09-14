@@ -155,3 +155,6 @@ node --import ./test/register.mjs test/errlog.mjs
 echo
 echo "── the data foundations: the event log, versions, archives, the second home ──"
 node --import ./test/register.mjs test/foundations.mjs
+echo
+echo "── email + password, the standard door ──"
+node --import ./test/register.mjs test/password.mjs

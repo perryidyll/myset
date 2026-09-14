@@ -325,7 +325,33 @@ mate on one of five Rock Star seats cannot register a thumbprint and take the ac
   which shares none of this code yet.
 - **When somebody asks:** Sign in with Apple, once there is an iOS app to hang it on.
 - **When a venue group demands SAML:** and not one day before, look at WorkOS.
-- **Never:** passwords.
+- ~~**Never:** passwords.~~ Revised 2026-09-14 by the founder — §11.
+
+---
+
+## 11. Email + password — the standard door (2026-09-14, decision 0070)
+
+The founder asked for "the fully standard shape": the email address as the
+username, a password under it, a sign-in screen that looks like every other one.
+Built, in both Studios, without giving up what §9b was protecting:
+
+| | |
+|---|---|
+| **Per person** | One record per sign-in address, `cred_<owner>_<hash of email>`, never per page. Each of a Rock Star's five keeps their own and their own role. |
+| **Hashed like a password** | scrypt from `node:crypto` (no dependency), a 16-byte salt per record, N=2¹⁴ r=8 p=1 — ~40 ms, paid once at sign-in. Compared in constant time. `_cred.mjs`. |
+| **Swapped for a session** | A correct password mints the same 30-day token every other door mints (`open()`); the password never travels again, and the session can be listed, signed out and revoked like the rest. |
+| **One answer for every failure** | No account, no password set, wrong password, locked out — the same sentence, the same status, the same scrypt cost. Five wrong on one address and it waits fifteen minutes; the lock is per address (and per realm), so a guess at a band mate's password never locks the owner's door. |
+| **Set, change, forget** | Settings → *Password · Create / Change* — the current one to change it, **or a fresh six-digit code to the same address** (the "forgot" path). A change signs that address's other devices out. `passwordClear` needs the current one. After a code sign-in with no password on the address, the Studio offers one, once, skippable. |
+| **What it may not be** | Under 8 or over 128 characters, the email itself, one character repeated, or one of a short list everybody tries first. No breach-list call — that is an outbound request on the sign-in path. |
+| **What stays** | The six-digit code is still how an account is made and the whole of recovery. The passkey is still the fast, phishing-proof door. The Studio code — per page, SHA-256, sent on every request, the founder's own door — now lives in a small window off the foot of the sign-in screen; hashing it slowly would cost every Studio poll, since it is checked on each. |
+| **Delete and export** | `keysFor` / `keysForVenue` name the records; a hash is not data an artist takes with them, so the export never carries it. |
+
+The screen: a pink-orange-ringed box, *Welcome back*, Email over Password, a
+filled pink-orange *Sign in*, *Forgot your password?*; below it *New here? Join
+the MySet family* and a ringed *Create account*; at the foot, small grey
+underlined *Sign in with a Studio code instead*. "Create account" and "Forgot"
+both send a code; after it a new account picks its name and is offered a
+password. `test/password.mjs` holds all of it.
 
 ---
 

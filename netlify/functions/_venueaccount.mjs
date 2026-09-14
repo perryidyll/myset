@@ -1,5 +1,6 @@
 import { store, readDoc, casDoc } from './_lib.mjs';
 import { readArchivedPosts, archiveKeys as postArchiveKeys } from './_community.mjs';
+import { credKey } from './_cred.mjs';
 import { readVenues, mutateVenues, getVenueProfile } from './_venues.mjs';
 import { readEvents } from './_events.mjs';
 import { merchSlots } from './_profile.mjs';
@@ -59,6 +60,9 @@ export async function keysForVenue(vid) {
      venue that left would leave 3MB behind per unattached upload for ever. */
   for (const p of posts.list || []) if (p && p.clip) { keys.push(vidKey(o, p.clip)); keys.push(IMG(vid, p.clip)); }
   for (const c of Object.keys(pend.by || {})) { keys.push(vidKey(o, c)); keys.push(IMG(vid, c)); }
+  // one password record per sign-in address (decision 0070)
+  const reg = await readVenues().catch(() => ({ byEmail: {} }));
+  for (const [e, v] of Object.entries(reg.byEmail || {})) if (v && v.venueId === vid) keys.push(credKey(o, e));
   // posts that left the feed still own their photos and clips (decision 0068)
   for (const k of await postArchiveKeys(o).catch(() => [])) keys.push(k);
   const oldPosts = await readArchivedPosts(o).catch(() => []);

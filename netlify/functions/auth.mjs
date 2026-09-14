@@ -8,6 +8,8 @@ import { newSid, addSession, touchSession, readSessions, killSessions, killEvery
          sidsFor, can } from './_session.mjs';
 import { newChallenge, register as pkRegister, assert as pkAssert, listKeys as pkList,
          forget as pkForget, hasPasskey } from './_passkey.mjs';
+import { setPassword, checkPassword, hasPassword, clearPassword, weakPassword,
+         passwordLocked, notePasswordFailure, clearPasswordFailures } from './_cred.mjs';
 
 /* Every response to an unauthenticated caller is deliberately identical whether
    or not the address is on the list — otherwise this becomes a way to find out
@@ -113,6 +115,30 @@ const main = async (req) => {
                   artistId: link.artistId, slug: artist.slug, name: artist.name, isNew: true });
   }
 
+  /* ---- email + password: the standard door (decision 0070) ----
+     One answer for every failure — no account, no password set, wrong password,
+     locked out — and the same scrypt cost for each, so the door says nothing
+     about which addresses exist or which have a password (INVARIANT 9h). A
+     correct password mints the same session every other door mints; the
+     password itself never travels again. */
+  if (action === 'passwordSignIn') {
+    const email = normEmail(body.email);
+    const pw = String(body.password || '');
+    const nope = () => bad('That email and password don’t match', 401);
+    if (!validEmail(email) || !pw) return nope();
+    const reg = await readArtists();
+    const link = reg.byEmail[email];
+    const aid = link ? link.artistId : '';
+    const locked = await passwordLocked(email);
+    const ok = await checkPassword(aid || '-', email, pw);       // a missing record costs the same
+    if (!aid || locked || !ok) { if (aid && !locked) await notePasswordFailure(email); return nope(); }
+    await clearPasswordFailures(email);
+    const artist = reg.byId[aid] || {};
+    const token = await open(req, body, aid, email, revOf(reg, aid));
+    note(aid, 'signin.password', email);
+    return json({ ok: true, token, email, artistId: aid, slug: artist.slug || '', name: artist.name || '' });
+  }
+
   /* ---- the recovery door: unauthenticated, and it must not become an oracle ---- */
   /* ---------- PASSKEYS ----------------------------------------------------
      Two doors here, and only the second one is public.
@@ -199,7 +225,7 @@ const main = async (req) => {
   /* ---- signed in from here ---- */
   if (['list','add','remove','revokeAll','setSlug','sessions','sessionRevoke','signOut',
        'signOutOthers','recoveryStatus','recoveryMake','activity','emailChangeStart',
-       'emailChangeFinish','roleSet',
+       'emailChangeFinish','roleSet','passwordSet','passwordClear',
        'passkeyList','passkeyStart','passkeyFinish','passkeyForget'].includes(action)) {
     const me = await requireArtist(req);
     if (!me) return bad('unauthorized', 401);
@@ -255,6 +281,39 @@ const main = async (req) => {
     }
 
     /* ---- where you are signed in ---- */
+    /* ---- your password (decision 0070) ----
+       Yours: every role may set one for its own address; a Studio-code session has
+       no address and is told to sign in with its email first. Changing one needs
+       the current password OR a fresh six-digit code to the same address (the
+       "forgot" path: the inbox is the root of trust, as it always was). A change
+       signs every OTHER device out — a changed password usually means a phone was
+       lost or lent — and this one carries on. */
+    if (action === 'passwordSet') {
+      if (!me.email) return bad('Sign in with your email first, then set a password there', 403);
+      const pw = String(body.password || '');
+      const why = weakPassword(pw, me.email);
+      if (why) return bad(why);
+      if (await hasPassword(aid, me.email)) {
+        let proven = false;
+        if (body.current) proven = await checkPassword(aid, me.email, String(body.current));
+        else if (body.code) proven = (await checkCode(me.email, String(body.code).replace(/\D/g, '').slice(0, 6))).ok;
+        if (!proven) return bad(body.current ? 'That isn’t your current password' : 'Check the code and try again', 401);
+      }
+      await setPassword(aid, me.email, pw);
+      const { list } = await readSessions(aid, me.sid);
+      const others = list.filter((x) => !x.current && x.email === me.email).map((x) => x.sid);
+      if (others.length) await killSessions(aid, others);
+      note(aid, 'password.set', me.email, others.length ? `${others.length} other device(s) signed out` : '');
+      return json({ ok: true, signedOut: others.length });
+    }
+    if (action === 'passwordClear') {
+      if (!me.email) return bad('No password on this sign-in', 403);
+      if (!(await checkPassword(aid, me.email, String(body.current || '')))) return bad('That isn’t your current password', 401);
+      await clearPassword(aid, me.email);
+      note(aid, 'password.clear', me.email);
+      return json({ ok: true });
+    }
+
     if (action === 'sessions') return json({ ok: true, ...(await readSessions(aid, me.sid)) });
     if (action === 'sessionRevoke') {
       const sid = String(body.sid || '').slice(0, 24);
@@ -479,9 +538,9 @@ const main = async (req) => {
       artistId: me.aid, slug: mine.slug || '', name: mine.name || '', plan: mine.plan || 'free',
       role, invited: invited.length,
       invitedNames: invited.slice(0, 20).map((x) => x.name),
-      emails: Object.entries(a.byEmail)
+      emails: await Promise.all(Object.entries(a.byEmail)
         .filter(([, v]) => v.artistId === me.aid)
-        .map(([e, v]) => ({ email: e, role: v.role || 'owner', me: e === me.email })),
+        .map(async ([e, v]) => ({ email: e, role: v.role || 'owner', me: e === me.email, pw: await hasPassword(me.aid, e) }))),
       emailReady: emailReady() });
   }
 

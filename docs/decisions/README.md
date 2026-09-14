@@ -79,10 +79,11 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) | the profile, the setlists, the calendar and the library keep a version before every overwrite — write-once, at most one every thirty seconds | 2026-09-14 | storage | decided | perry |
 | [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) | a capped list must have a complete sibling — the feed and the feedback list spill into archives, and an id once minted is never reused | 2026-09-14 | storage | decided | perry |
 | [0069](0069-every-document-is-copied-nightly-to-r2-and-a-restor.md) | every document is copied nightly to R2 under the same key, and a restore from the laptop copy has been rehearsed and refuses production by name | 2026-09-14 | ops | decided | perry |
+| [0070](0070-the-email-address-is-the-username-and-a-password-si.md) | the email address is the username and a password sits under it — per person, scrypt-hashed, swapped for a session; the six-digit code stays the front door for a new account and the whole of "forgot" | 2026-09-14 | auth | decided | perry |
 
 ## By area
 
-**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md)
+**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md)
 
 **general** — [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md)
 
