@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 11:25 — a2a9782 — wt@studio/every-question-in-the-window (8 files since origin/main)
+**tl;dr:** Every question in both Studio scripts (18 confirm() calls) now opens the Studio's own small window — the browser's confirm() is gone from studio.js and studio-money.js.
+**Other sessions:** ask({title,lede,yes,no,go}) in studio.js also returns a promise (true on yes, false on no/dim) — use await ask(...) for new questions, never confirm(); test/darkroom.mjs fails on any confirm( in either Studio script.
+
 ### 2026-09-14 11:12 — ace9b49 — wt@studio/song-buttons (6 files since origin/main)
 **tl;dr:** Setlist song cards: edit, hide and delete all wear the delete button's soft fill (no orange outline); tapping ✕ opens 'Delete this song?' (Yes, delete it / Keep it) in the Studio's own window
 **Other sessions:** studio.js: ask({title,lede,yes,no,go}) is the small centred window (was startSong's alone); #askNo is the no button. Any new destructive tap goes through ask(), not confirm() — seventeen confirm()s remain elsewhere for another day.
