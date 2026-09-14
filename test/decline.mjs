@@ -7,7 +7,7 @@ process.env.MYSET_DOUBLE_TAP_MS = '0';
 const admin = (await import('../netlify/functions/admin.mjs')).default;
 const showFn = (await import('../netlify/functions/show.mjs')).default;
 const voteFn = (await import('../netlify/functions/vote.mjs')).default;
-const { mutateFan, readFans, DEFAULT_ARTIST } = await import('../netlify/functions/_lib.mjs');
+const { mutateFan, mutateMeta, readFans, getShow, DEFAULT_ARTIST } = await import('../netlify/functions/_lib.mjs');
 const { __failWrites } = await import('./blobs-fake.mjs');
 const { readFileSync } = await import('node:fs');
 const { src } = await import('./_src.mjs');
@@ -49,13 +49,49 @@ eq('Alpha has five votes total', alpha.votes, 5);
 eq('two Alpha votes used paid credits', alpha.paidVotes, 2);
 eq('Bravo has one paid vote', [bravo.votes, bravo.paidVotes], [1, 1]);
 
+/* A TIPPER'S VOTES ARE PAID VOTES (decision 0079): Bob voted for free, then tipped
+   tonight — his Alpha vote joins the paid count. Cal voted for free and tipped
+   LAST WEEK — the night boundary is the show's start, so nothing changes. Ann's
+   two bought Alpha votes are not counted again when she tips. */
+console.log('\nWHO PUT MONEY IN');
+const startedAt = (await getShow(DEFAULT_ARTIST)).startedAt;
+ok('Cal adds a free Bravo vote', (await send({ fan: 'cal', song: 'bravo', n: 1, cast: 'declinecast00010' })).ok);
+await mutateMeta(DEFAULT_ARTIST, (m) => { m.tips.push({ fan: 'bob', amount: 5, note: '', at: Date.now() });
+  m.tips.push({ fan: 'cal', amount: 20, note: '', at: startedAt - 7 * 86400e3 }); return true; });
+stage = (await A('window', { open: true })).stage;
+alpha = stage.songs.find((s) => s.id === 'alpha'); bravo = stage.songs.find((s) => s.id === 'bravo');
+eq('Bob’s free vote now counts as paid on Alpha', [alpha.votes, alpha.paidVotes], [5, 3]);
+eq('Cal’s last-week tip counts for nothing tonight', [bravo.votes, bravo.paidVotes], [2, 1]);
+await mutateMeta(DEFAULT_ARTIST, (m) => { m.tips.push({ fan: 'ann', amount: 2, note: '', at: Date.now() }); return true; });
+stage = (await A('window', { open: true })).stage;
+alpha = stage.songs.find((s) => s.id === 'alpha');
+eq('a tipper who also bought votes is counted once per vote', alpha.paidVotes, 5);
+eq('the Studio is told what the room may see', stage.show.crowd, { votes: false, tips: false });
+
+/* WHAT THE ROOM SEES (0079): nothing until the artist switches it on; then the
+   tally, then the tips — this window's tips, not the account's history. */
+console.log('\nWHAT THE ROOM SEES');
+eq('the vote page gets no numbers by default', (await pub('bob')).numbers, null);
+ok('votes + voters switched on', (await A('crowdSet', { which: 'votes', on: true })).ok);
+let seen = (await pub('bob')).numbers;
+eq('the room sees the tally and how many people cast it', seen, { votes: 7, voters: 3 });
+ok('tips switched on', (await A('crowdSet', { which: 'tips', on: true })).ok);
+seen = (await pub('bob')).numbers;
+eq('and tonight’s tips, not last week’s', seen.tips, { total: 7, count: 2 });
+ok('votes switched off again', (await A('crowdSet', { which: 'votes', on: false })).ok);
+seen = (await pub('bob')).numbers;
+eq('each switch stands alone', [seen.votes, seen.tips.total], [undefined, 7]);
+eq('a switch that is not votes or tips is refused', (await A('crowdSet', { which: 'room', on: true })).status, 400);
+ok('tips switched off', (await A('crowdSet', { which: 'tips', on: false })).ok);
+eq('both off: nothing again', (await pub('bob')).numbers, null);
+
 console.log('\nDECLINE AND REFUND');
 const declined = await A('declineSong', { song: 'alpha' });
 ok('decline succeeds', declined.ok, declined);
 alpha = declined.stage.songs.find((s) => s.id === 'alpha');
 bravo = declined.stage.songs.find((s) => s.id === 'bravo');
 eq('the declined song is hidden and empty', [alpha.active, alpha.votes, alpha.paidVotes], [false, 0, 0]);
-eq('another song keeps its vote and paid attribution', [bravo.votes, bravo.paidVotes], [1, 1]);
+eq('another song keeps its votes and paid attribution', [bravo.votes, bravo.paidVotes], [2, 1]);
 
 const ann = await pub('ann');
 const bob = await pub('bob');
@@ -91,7 +127,7 @@ ok('the search, sort control, and voting list wear the brand-gradient ring',
 ok('the vote-pack sheet uses first-name-only pink-orange copy',   // "<First> will receive through Stripe Connect" since 2026-09-13
   /lede buyline[^>]*>\$\{esc\(artistFirst\('The artist'\)\)\} will receive through Stripe Connect/.test(votePage) && /fine secure-votes/.test(votePage));
 ok('the Studio renders paid-vote pills and the decline action',
-  /paidVotes/.test(studioPage) && /paid votes/.test(studioPage) && /Decline \+ refund votes/.test(studioPage));
+  /paidVotes/.test(studioPage) && /Paid votes: \$\{x\.paidVotes\}/.test(studioPage) && /Decline \+ refund votes/.test(studioPage));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

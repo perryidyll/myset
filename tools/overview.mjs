@@ -236,6 +236,7 @@ const FLAG_LABEL = {
   merch: 'Sell merch on your shop page *(`/<slug>/shop`; the community page wears the shop card — 2026-09-13)*',
   moderate: 'Hide a fan\'s post *(sold as "hide 1–2 star reviews"; deleting for good is gone — 0060)*',
   reports: 'Data reports and the business dashboard — the filed nights, pay, band splits, costs, hours and profit on the Money tab, and the printed report *(every night is still filed on every plan)*',
+  crowdNumbers: 'Show the room tonight\'s numbers *(two switches in Settings: votes + voters, and tips; on every phone\'s vote page — 0079)*',
   promote: 'Promote gigs in other cities',
   analytics: 'Earnings analytics',
   presskit: 'Press kit',

@@ -52,6 +52,7 @@ html{touch-action:manipulation}
   border:.5px solid var(--hair-2,rgba(255,255,255,.16));
   border-radius:var(--pill,999px);padding:7px 14px;white-space:nowrap}
 .lockveil b svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;flex:0 0 auto}
+.lockveil b i{font-style:normal;color:var(--accent-2,#FF5650)}   /* the Upgrade word on an artist's plan pill */
 .lock.soon .lockveil b{color:var(--muted,#98989D)}
 
 /* THE REASON GOES UNDER THE LOCK, NOT INSIDE IT.

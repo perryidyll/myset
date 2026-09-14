@@ -88,6 +88,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) | The money model prices the split and the open line from the simulator and the probe, never from list prices | 2026-09-14 | scale | decided | perry-confirmed |
 | [0077](0077-the-server-bill-is-two-bills-traffic-and-shipping.md) | The server bill is two bills — traffic and shipping — and no per-gig figure ever contains a deploy | 2026-09-14 | money | decided | perry |
 | [0078](0078-a-new-page-shows-nobody-elses-band.md) | a new artist page has no photo until its own artist adds one — the cover is a brand tile and the portrait is the band's initial, never a stock picture of another act | 2026-09-14 | product | decided | perry |
+| [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md) | a tipper's votes are paid votes on the artist's song cards; the setup's Prices step no longer sends a new artist to the plans; and Bar Star artists may show the room tonight's votes, voters and tips | 2026-09-15 | product | decided | perry |
 
 ## By area
 
@@ -109,7 +110,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) · [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md)
 
-**product** — [0078](0078-a-new-page-shows-nobody-elses-band.md)
+**product** — [0078](0078-a-new-page-shows-nobody-elses-band.md) · [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md)
 
 **scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md)
 

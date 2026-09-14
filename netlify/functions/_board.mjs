@@ -1,5 +1,5 @@
 import { COUNTDOWN_MS, voteCounts, firstVotedAt, rankSongs, creditsUsed, costOf, unspentPaid,
-         isUnlimited, countInRoom, pollFloorFor, boardLimitFor,
+         isUnlimited, countInRoom, pollFloorFor, boardLimitFor, tipsTonight,
          GENRES, playable, votable } from './_lib.mjs';
 import { MARK } from './_canary.mjs';
 import { canTakeMoney } from './_pay.mjs';
@@ -35,7 +35,7 @@ import { VIBE_OPTIONS } from './_requests.mjs';
  *  landed while the twelve shards were being read is not in this board even though
  *  the render finished after it. Stamping the start makes that board honestly
  *  "older" than the vote. Handlers pass it; a caller that omits it gets now. */
-export function buildBoard({ aid, show, fans, flags, at = Date.now() }) {
+export function buildBoard({ aid, show, fans, flags, meta = null, at = Date.now() }) {
   /* HOW BIG THE ROOM IS TONIGHT — and NOBODY IS EVER TURNED AWAY.
 
      A plan's `audience` number is a BILLING line, not a turnstile. Going over it
@@ -198,11 +198,29 @@ export function buildBoard({ aid, show, fans, flags, at = Date.now() }) {
     nextPollMs: pollFloorFor(heads),
     board: boardMax,
     totalVotes: Object.values(counts).reduce((a, b) => a + b, 0),
+    /* TONIGHT'S NUMBERS FOR THE ROOM (decision 0079) — only what the artist switched
+       on in Settings, only while the show is live, and the tips only when the caller
+       read `meta` (board.mjs reads it just for this, and only when the switch is
+       on). Null means "nothing to show", and the page draws nothing. */
+    numbers: crowdNumbers(show, fans, counts, meta, live),
     // INVARIANT 0ad: never show the room a button that leads to a shrug
     paymentsEnabled: canTakeMoney(aid, show),
     flags,
     updatedAt: show.updatedAt,
   };
+}
+
+/** The Live tab's figures, for the vote page, as far as the artist allows. */
+export function crowdNumbers(show, fans, counts, meta, live) {
+  const c = show.crowd || {};
+  if (!live || !(c.votes || c.tips)) return null;
+  const out = {};
+  if (c.votes) {
+    out.votes = Object.values(counts).reduce((a, b) => a + b, 0);
+    out.voters = Object.values(fans).filter((f) => (f.v || []).length).length;
+  }
+  if (c.tips && meta) out.tips = tipsTonight(meta.tips, show.startedAt);
+  return out;
 }
 
 /** What is true of ONE phone and nobody else. Reads nothing: the caller hands it

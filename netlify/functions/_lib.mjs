@@ -782,13 +782,22 @@ export function chargeVotes(fan, show, songId, cost, count, unlimited = false) {
   chargeFan(fan, show, unlimited ? 0 : cost * count);
 }
 
-/** The number of vote instances on each song that used at least one paid credit. */
-export function paidVoteCounts(fans) {
+/** The number of vote instances on each song that used at least one paid credit —
+ *  plus, since decision 0079, EVERY vote held by a fan who tipped tonight
+ *  (`tippers`: the ids `tippersTonight` returns). The founder's reasoning: late in a
+ *  night the queue is longer than the time left, and the artist choosing what to
+ *  play last should know which requests came from the people who actually put
+ *  money in. A tipper's free votes and bought votes count once each, never twice. */
+export function paidVoteCounts(fans, tippers = new Set()) {
   const counts = {};
   for (const id of Object.keys(fans)) {
     const fan = fans[id] || {};
     const held = {};
     for (const song of fan.v || []) held[song] = (held[song] || 0) + 1;
+    if (tippers.has(id)) {
+      for (const [song, n] of Object.entries(held)) counts[song] = (counts[song] || 0) + n;
+      continue;
+    }
     for (const [song, raw] of Object.entries(fan.va || {})) {
       const rows = Array.isArray(raw) ? raw.slice(0, held[song] || 0) : [];
       for (const row of rows)
@@ -796,6 +805,22 @@ export function paidVoteCounts(fans) {
     }
   }
   return counts;
+}
+
+/** Who tipped since the show started. `meta.tips` is the account's whole history,
+ *  so the night boundary is the show's `startedAt`; a tip with no fan id (an old
+ *  row, a session the return page could not attribute) belongs to nobody. */
+export function tippersTonight(tips, since) {
+  const from = Number(since) || 0, out = new Set();
+  for (const t of tips || []) if (t && t.fan && Number(t.at) >= from) out.add(String(t.fan));
+  return out;
+}
+/** Tonight's card tips, in dollars, and how many — the same window as above. */
+export function tipsTonight(tips, since) {
+  const from = Number(since) || 0;
+  let total = 0, count = 0;
+  for (const t of tips || []) if (t && Number(t.at) >= from) { total += Number(t.amount) || 0; count++; }
+  return { total: Math.round(total * 100) / 100, count };
 }
 
 /** Cash bought FOR one song is already a vote, not a wallet credit. Keep it in the
