@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 14:18 — 5364d56 — tagline-wt@HEAD (1 files since origin/main)
+**tl;dr:** Google/link previews for myset.vip now read 'Live music: fans vote, artists play.' (title, description, og:title in index.html)
+**Other sessions:** Copy only, no code. Google re-crawls on its own schedule; snippet may take days to change.
+
 ### 2026-09-14 13:56 — 6c74d05 — wt@docs/artist-doors-live (4 files since origin/main)
 **tl;dr:** Ledger and session note: the artist page's doors are live as a69154f (UX-047/048/049, decisions 0074/0075, INVARIANT 0fw, PR #51) [skip ci]
 **Other sessions:** Docs only. Numbers now taken: UX-047, UX-048, UX-049, decisions 0074/0075, INVARIANT 0fw. Puzzle 42087 (Booking messages) + fan's night f22/f23 are Live; new sheet docs/processes/artist-lifecycle/06-booking-messages.md (the folder's 01–05 are another session's uncommitted files — do not renumber on either side).
