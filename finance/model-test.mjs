@@ -213,10 +213,41 @@ const other = nt.studioPolls * P0.studioBytes + P0.fans * P0.pageBytes + nt.writ
 ok('bytes − (Studio + page loads + votes + views + clip views) ÷ (board + personal) = the ticks (the method the marks use)', Math.abs((nt.bytes - other) / (P0.boardBytes + P0.meBytes) - nt.polls) < 1e-6);
 console.log('   at the default gig the Studio tab is ' + Math.round(100 * nt.studioPolls * P0.studioBytes / nt.bytes) + '% of the bytes — leave it open the whole night or the solve is off by that much');
 const tierSum = R.perTier.reduce((n, t, i) => n + t.net * [R.nFree, R.nPlus, R.nPro][i], 0);
-ok('per-tier nets summed over the platform equal revenue − server − Stripe (venues aside)', Math.abs(tierSum - (R.revenue - R.bill.usd - R.stripe)) < 1.5, [tierSum, R.revenue - R.bill.usd - R.stripe]);
+ok('per-tier nets summed over the platform equal revenue − TRAFFIC bill − Stripe (venues aside): the shipping bill belongs to the platform, not to any artist', Math.abs(tierSum - (R.revenue - R.trafficUsd - R.stripe)) < 1.5, [tierSum, R.revenue - R.trafficUsd - R.stripe]);
 ok('actuals.py assumes the same Studio share as the model when no minutes were recorded', +py.match(/STUDIO_SHARE = ([\d.]+)/)[1] === P0.studioShare / 100);
 const bookFree = ENGINE.showSizes(P0)[2].bookingAt(0.5);
 ok('the booking price covers Stripe’s card fee on itself (grossed up, not net)', bookFree > ENGINE.showSizes(P0)[2].server / 0.5 - ENGINE.showSizes(P0)[2].mysetRev, bookFree);
+console.log('TWO BILLS, NEVER ONE NUMBER (INVARIANT 0fx)');
+/* The deploys dial is turned from 0 to 400 on every host. Nothing per gig, per phone or per show may move;
+   the bill itself must move by exactly the deploys' marginal cost; and the two bills must sum to the total. */
+{
+  let moved = [], wrongSum = [], noShip = [];
+  for (const host of Object.keys(HOSTS0)) {
+    const a = ENGINE.month({ ...P0, host, deploys: 0 }, 1000), b = ENGINE.month({ ...P0, host, deploys: 400 }, 1000);
+    const same = (x, y) => Math.abs(x - y) < 1e-9;
+    if (!same(a.costPerGig, b.costPerGig) || !same(a.serverPerGig, b.serverPerGig) || !same(a.trafficUsd, b.trafficUsd)) moved.push(host + ' per-gig');
+    if (!a.perTier.every((x, i) => same(x.server, b.perTier[i].server))) moved.push(host + ' per-tier server');
+    const sa = ENGINE.showSizes({ ...P0, host, deploys: 0 }), sb = ENGINE.showSizes({ ...P0, host, deploys: 400 });
+    if (!sa.every((x, i) => same(x.server, sb[i].server) && Object.keys(x.onHost).every((k) => same(x.onHost[k], sb[i].onHost[k])))) moved.push(host + ' show sizes');
+    if (!same(b.bill.trafficUsd + b.bill.deployUsd, b.bill.usd)) wrongSum.push(host);
+    if (!same(a.bill.deployUsd, 0) || !same(a.bill.trafficUsd, a.bill.usd)) wrongSum.push(host + ' at zero deploys');
+    if ((host.startsWith('netlify') || host === 'cfDo' || host === 'custom' && HOSTS0.custom.deployUsd) && !(b.bill.deployUsd > 0)) noShip.push(host);
+    if (b.shippingUsd < 0) wrongSum.push(host + ' negative shipping');
+  }
+  ok('turning deploys 0 → 400 moves NO per-gig, per-tier or per-show figure on any host', moved.length === 0, moved);
+  ok('traffic + shipping = the bill, and at zero deploys the shipping bill is zero', wrongSum.length === 0, wrongSum);
+  ok('on every host that bills deploys, 400 of them cost something', noShip.length === 0, noShip);
+  const c = ENGINE.month({ ...P0, host: 'netlifyPro', deploys: 400 }, 1000);
+  ok('400 deploys on Netlify are 6,000 credits of shipping, and the per-gig figure is the traffic bill ÷ gigs', Math.abs(c.bill.deployCredits - 6000) < 1e-9 && Math.abs(c.costPerGig - c.trafficUsd / c.gigs) < 1e-12, [c.bill.deployCredits, c.costPerGig, c.trafficUsd / c.gigs]);
+  /* the scenario cards and the compare table read the same field, so a saved scenario cannot carry a deploy in its per-gig line */
+  const sumText = html.match(/function summarize\(p\) \{[\s\S]*?\n\}/)[0];
+  ok('the scenario summary reports traffic per gig and the shipping bill as two lines', /costPerGig: R\.costPerGig/.test(sumText) && /shipping: R\.shippingUsd/.test(sumText) && /traffic \$\{fmt\.cents\(R\.costPerGig\)\} per gig · shipping/.test(sumText));
+  /* the tracker keeps the two apart too */
+  ok('actuals.py reports `shipping` (deploys × 15) and `traffic` (bandwidth) as separate objects, has no deploy byte constant, and says so in its note',
+    /'shipping': \{'what': 'production deploys × 15 credits/.test(py) && /'traffic': \{'what': 'everything the rooms cause/.test(py) && !/'deploy'/.test(py.match(/BYTES = \{[^}]*\}/)[0]) && /CR_DEPLOY = 15/.test(py) && /INVARIANT 0fx/.test(py));
+  ok('the tracker refuses to write when the registry reads as empty, and reads the store through MYSET_SITE_DIR from a worktree', /the registry read as empty/.test(py) && /sys\.exit\(1\)/.test(py) && /SITE = os\.environ\.get\('MYSET_SITE_DIR'\) or ROOT/.test(py) && /cwd=SITE/.test(py));
+ok('no line of the tracker divides deploys by shows, phones or hours', !/deploy[a-zA-Z0-9_'\]]*\s*\/\s*(len\(rows\)|people|hours|shows)/.test(py));
+}
 console.log('SAVED SCENARIOS');
 const wdText = html.match(/const deepMerge = [\s\S]*?\nconst withDefaults = [\s\S]*?\n\};\n/)[0];
 const wd = new Function('P0', 'HOSTS0', wdText + '; return withDefaults;')(P0, HOSTS0);

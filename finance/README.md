@@ -104,3 +104,28 @@ checks the free-tier cap, break-even (brute-forced at three settings), the timel
 the show sizes on every host, the big-room brake, the 3-second cache, the calibration
 solver, the audit-fix regressions, and that `tools/actuals.py`'s byte constants still
 match the model's (so the bandwidth method cannot drift from the engine).
+
+## Two bills, never one number (14 Sep 2026, INVARIANT 0fx, decision 0077)
+
+The server bill is two bills that have nothing to do with each other. The **traffic
+bill** is what the rooms cause — web requests, bandwidth, function compute — and it
+scales with gigs, phones and hours. The **shipping bill** is production deploys × 15
+credits, and it scales with how often code is shipped and with nothing a room does.
+Three times a "server cost per gig" carried the deploys spread over the gigs and
+polling looked dear when shipping was (on the first gig week deploys were 98% of the
+credits; the four gigs were 18¢). So:
+
+- `hostBill()` returns `trafficUsd` (the same month at zero deploys) and `deployUsd`
+  (what the deploys add on top); every per-gig, per-phone, per-tier and per-show
+  figure on the page comes from the traffic bill alone.
+- `tools/actuals.py` reports `shipping` (deploys and their credits) and `traffic`
+  (the bandwidth counter) as two objects, and nothing per show, phone or hour may
+  contain a deploy. `BYTES` has no deploy entry.
+- `finance/model-test.mjs` turns the deploys dial from 0 to 400 on every host and
+  fails if any per-gig figure moves, if the two bills do not sum to the total, or if
+  the tracker divides deploys by anything.
+- The exact split by category lives on Netlify's Usage & billing › Credit usage
+  breakdown; the API exposes only the deploy list and the bandwidth counter.
+
+When you read a server figure anywhere — this page, a report, a chat — ask which bill
+it is. If it is "per gig" and it is not the traffic bill, it is wrong.
