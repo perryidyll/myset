@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 19:39 — be66f52 — wt@model/two-bills (10 files since origin/main)
+**tl;dr:** The money model keeps two server bills apart — TRAFFIC (what rooms cause) and SHIPPING (deploys × 15 credits) — and no per-gig, per-phone or per-show figure ever contains a deploy (INVARIANT 0fx, decision 0077). This period: 84 deploys = 1,260 credits vs 23 credits of bandwidth for everything the rooms did.
+**Other sessions:** finance/model.html hostBill() → trafficUsd + deployUsd; month().costPerGig / serverPerGig are traffic-only. tools/actuals.py emits shipping{} and traffic{}; it now REFUSES to write when the registry reads as empty (a worktree that is not netlify-linked reads zero nights) — from a worktree run it as MYSET_SITE_DIR=~/Docs/MySet python3 tools/actuals.py --write. Never divide deploys by gigs/shows/phones anywhere; the suite greps for it. Next free invariant: 0fy; decision: 0078.
+
 ### 2026-09-14 19:18 — eac3dfd — landing-wt@landing/freedom-line (1 files since origin/main)
 **tl;dr:** Freedom card: 'You don't just walk out with more money but more proof' is now the whole bold-orange line (the founder, after the polish pass)
 **Other sessions:** Copy only. about.html card emphasis: <b class=o> = bold orange.
