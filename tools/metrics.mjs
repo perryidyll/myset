@@ -35,8 +35,11 @@ function get(key) {
     const f = path.join(FROM, 'keys', key.replace(/\//g, '%2F'));
     return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null;
   }
+  /* No -O: the CLI prints the blob to stdout (with -O - it writes a file called "-",
+     which is how the first live run read zero artists and said nothing). A key
+     that does not exist prints nothing and exits 1, which is a null here. */
   try {
-    const out = execFileSync('netlify', ['blobs:get', 'myset', key, '-O', '-'], { cwd: SITE, env: ENV, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64e6 });
+    const out = execFileSync('netlify', ['blobs:get', 'myset', key], { cwd: SITE, env: ENV, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64e6 });
     const s = out.toString('utf8'); return s.trim() ? JSON.parse(s) : null;
   } catch { return null; }
 }
@@ -56,4 +59,5 @@ if (opt('--html')) {
   writeFileSync(opt('--html'), tpl.replace('__SNAPSHOT__', () => json.replace(/<\//g, '<\\/')));
 }
 if (!opt('--out') && !opt('--html')) process.stdout.write(json + '\n');
+if (!FROM && !snap.artists.length) { console.error('snapshot: the registry read as empty — is the Netlify CLI signed in, and is MYSET_SITE_DIR the linked folder?'); process.exit(1); }
 console.error(`snapshot: ${snap.artists.length} artists, ${snap.venues.length} venues, ${snap.nights.length} nights (${snap.nights.filter((n) => n.real).length} real), ${snap.money.length} payments, ${snap.posts.length} posts, ${snap.rsvps.length} rsvps, ${snap.gigs.length} gig occurrences`);
