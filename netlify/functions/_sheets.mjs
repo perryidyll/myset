@@ -200,6 +200,21 @@ export async function writeTab(tab, rows) {
 }
 
 /** Adds `rows` under whatever is already there. For tabs that are a log. */
+/* ROWS ALREADY IN THE TAB ARE NOT WRITTEN AGAIN. A log tab is append-only, and
+   the watermark is the normal guard — but a sheet that was filled by another
+   road (the founder's first .xlsx import, decision 0072) or a watermark that was
+   wound back would otherwise double every night. So the tab is read once and
+   rows whose identity columns (`keyCols`, indexes into the row) already appear
+   are dropped. One GET per log tab per sync. */
+export async function existingKeys(tab, keyCols) {
+  if (!keyCols || !keyCols.length) return new Set();
+  const d = await api(`/values/${range(tab, 'A:ZZ')}`);
+  const out = new Set();
+  for (const r of ((d && d.values) || []).slice(1)) out.add(keyCols.map((i) => String(r[i] == null ? '' : r[i])).join('\u0001'));
+  return out;
+}
+export const rowKey = (row, keyCols) => keyCols.map((i) => String(row[i] == null ? '' : row[i])).join('\u0001');
+
 export async function appendTab(tab, rows, header) {
   if (!rows.length) return 0;
   const first = await api(`/values/${range(tab, 'A1:A1')}`);

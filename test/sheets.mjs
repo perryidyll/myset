@@ -171,11 +171,19 @@ await hit(fbFn, 'https://x/api/feedback?a=' + P.slug, { fan: 'ann', stars: 5, no
 await AS(P.token, 'eventSave', { event: { venue: 'The Ugly Duckling', city: 'Koh Phangan',
                                  country: 'Thailand', date: isoIn(7), time: '20:00',
                                  tz: 'Asia/Bangkok' } });
+/* A gig on the calendar for RIGHT NOW (Asia/Bangkok), so the night that just ran
+   lands on it and reads as real on Shows and Signals (decision 0072). */
+{
+  const bkk = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(Date.now() - 10 * 60e3));
+  const g = Object.fromEntries(bkk.map((x) => [x.type, x.value]));
+  await AS(P.token, 'eventSave', { event: { venue: 'The Ugly Duckling', city: 'Koh Phangan', country: 'Thailand',
+                                   date: `${g.year}-${g.month}-${g.day}`, time: `${g.hour === '24' ? '00' : g.hour}:${g.minute}`, tz: 'Asia/Bangkok' } });
+}
 await AS(P.token, 'status', { status: 'ended' });
 
 const r1 = await W.syncSheet();
 ok('the sync runs', r1.ok, r1);
-eq('and made all nine tabs', (r1.made || []).length, 9);
+eq('and made all eleven tabs (Signals and Features since decision 0072)', (r1.made || []).length, 11);
 ok('the token was a real signed JWT', (SHEET.lastJwt || '').split('.').length === 3);
 
 console.log('\nTHE LOOK  (the founder, 2026-09-14: bold, colour-filled title cells)');
@@ -186,6 +194,19 @@ console.log('\nTHE LOOK  (the founder, 2026-09-14: bold, colour-filled title cel
   ok('every tab got its header row styled once per sync', heads.length >= 9, heads.length);
   eq('white bold on the brand pink-orange', [heads[0].cell.userEnteredFormat.backgroundColor, heads[0].cell.userEnteredFormat.textFormat.bold], [HEAD_FILL, true]);
   eq('and the row-title column bold on a pale tint', [titles[0].cell.userEnteredFormat.backgroundColor, titles[0].cell.userEnteredFormat.textFormat.bold], [TITLE_FILL, true]);
+}
+
+console.log('\nSIGNALS AND FEATURES  (decision 0072: the marketing read, and what is used)');
+{
+  const seg = cellsIn('Signals', 'Segment');
+  ok('every artist gets a segment, derived from real nights', seg.length === 2 && seg.every((x) => ['residency', 'regular', 'occasional', 'not yet played', 'gone quiet'].includes(x)), seg);
+  ok('the founding artist with one real night in 90 days is occasional', cellsIn('Signals', 'Name').indexOf('Perry Idyll') >= 0 && seg[cellsIn('Signals', 'Name').indexOf('Perry Idyll')] === 'occasional', seg);
+  eq('real nights all time counts the night on the gig', cellsIn('Signals', 'Real nights all time')[cellsIn('Signals', 'Name').indexOf('Perry Idyll')], 1);
+  const score = cellsIn('Features', 'Features used (of 24)');
+  ok('a feature score per artist, a number', score.length === 2 && score.every((x) => typeof x === 'number'), score);
+  ok('song requests on reads as yes for the founding artist', cellsIn('Features', 'Song requests on')[cellsIn('Features', 'Name').indexOf('Perry Idyll')] === 'yes');
+  eq('Shows rows say whether the night was real', cellsIn('Shows', 'Real night').length, bodyOf('Shows').length);
+  ok('no fan, no device, no password in either tab', !JSON.stringify([SHEET.tabs.get('Signals'), SHEET.tabs.get('Features')]).match(/f1|fan-|scrypt|salt/));
 }
 
 console.log('\nARTISTS  — the marketing tab');
