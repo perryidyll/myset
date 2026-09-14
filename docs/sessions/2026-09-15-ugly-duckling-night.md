@@ -19,10 +19,11 @@ Show `2026-09-14-1330-gap5`, started by the schedule at 20:30:31, ended by the a
   (3 each; *Tennessee Whiskey* was also 7 Sep's top song).
 - **Money, per Stripe via the archive: two $10 card tips — 21:46 and 22:06** — each within a
   minute of a voting spell. $20 = **$1.54 a head**, four times the previous best. Nobody
-  bought a vote pack; six phones hit the 3-credit ceiling and stopped. The founder counts
-  $30: the third $10 is not in MySet's records (cash, or a payment Stripe holds that the
-  webhook did not file — Stripe › Payments for 14 Sep evening settles it). MySet's cut on Pro:
-  2% = $0.40; Stripe's fee on the artist's account ≈ $1.18.
+  bought a vote pack; six phones hit the 3-credit ceiling and stopped. The founder counted
+  $30 because the Studio's Live tab summed the account's whole tip history (Sunday's $10
+  included) — a bug, fixed the same night (see
+  `2026-09-15-live-tab-tips-and-the-founders-money.md`). There was no third tip. MySet's cut:
+  none — his charges are on his own account; Stripe's card fee ≈ $1.18.
 - Across the four money-known nights: $33 from 32 phones = **$1.03 a head** (was $0.68).
 
 ## The cost of the night — from Netlify's own meters, not the model

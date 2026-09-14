@@ -2776,3 +2776,13 @@ since 12 Sep. `actuals.json`: 8 nights, 9.88 phones, 2.78 h, 2.24 actions, **$1.
 (4 money-known nights, $33/32), 272 deploys/30 d. Benchmark 1,000 artists: $8,230 / $6,492 /
 break-even 56 (at $0.375 a head: $3,530 / $1,844 / 171) — the per-head figure is everything.
 Mark #3 had been lost from the shared worktree's marks.json (reset to stale main) — restored.
+
+# SESSION LOG — 2026-09-15 (Live tab tips; the founder's money)
+
+The Studio's Live tab showed $30 during the Ugly Duckling show for $20 of tips: `stage.mjs`
+summed the account's whole tip history. Now tonight's only (since `startedAt`), with
+`allTime` beside it, named; pinned in `test/decline.mjs`; suite 49/49. **There was no third
+tip on 14 Sep — $20.** The founder's charges already go straight to his own Stripe account
+(no Connect, no application fee — `pay.mjs` + `test/connect.mjs`); only Stripe's card fee
+remains. `~/Docs/MySet/node_modules` is a self-pointing symlink (since 7a62844) — use the
+compassionate-chatterjee worktree's real install for `test/run.sh` / `tools/overview.mjs`.
