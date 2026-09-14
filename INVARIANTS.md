@@ -1496,7 +1496,14 @@ If you are about to violate one, stop and say so rather than working around it.
     newest first, capped at 20, rows older than 30 days dropped on write — and
     `slug`+`venue` together name the owner (an artist's `/x` and a venue's `/v/x`
     are separate namespaces), so community.html's shop card and shop.html's compact
-    receipt both filter on `o.slug===SLUG && !!o.venue===VENUE`.
+    receipt both filter on `o.slug===SLUG && !!o.venue===VENUE`. Since 2026-09-14 an
+    item carries `imgs` (up to `MAX_MERCH_IMGS`, its own slots `<id>`, `<id>_1..4` —
+    every key computable, 1) with `img` ALWAYS `imgs[0]`, and `stock` (null = not
+    counting): `merchSoldOut()` — the flag OR a count at zero — is the one answer the
+    page, the sheet and `pay.mjs` give, and `takeStock()` runs once per fresh claim in
+    `redeemSession`, after the order row is safe, never on a replay. The word a person
+    reads for `post`/`ship==='ship'` is *shipping*/*shipped*, everywhere, including
+    Stripe's rate name; the field names did not change.
 
 0fp. **A request from the shop is a sentence, not a channel.** "Make a request" on the
     shop page (`action:'wish'` on `/api/community`, `_wishes.mjs`) stores the fan's

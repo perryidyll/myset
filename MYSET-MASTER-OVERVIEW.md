@@ -481,7 +481,9 @@ Up to **12** merch items. Not built: `tips`, `speakerVotes`.
 |---|---|---|
 | Merch items a page holds (artist / venue) | 12 / 12 | `MAX_MERCH` in `_profile.mjs`, `VMAX_MERCH` in `_venues.mjs` — the Studios show the cap the server sends |
 | Sizes or options per item | 8, each up to 24 characters | `MAX_VARIANTS`, `VARIANT_LEN` in `_profile.mjs` |
-| Flat postage per order, at most | $100 | `MAX_POST` in `_profile.mjs`; a fixed Stripe shipping rate, never part of MySet's cut |
+| Flat shipping per order, at most | $100 | `MAX_POST` in `_profile.mjs` (the field is still `post`; a person reads "shipping" since 2026-09-14); a fixed Stripe shipping rate named *Shipping*, never part of MySet's cut |
+| Pictures per item | 5, swiped through on the item | `MAX_MERCH_IMGS` in `_profile.mjs`; slots `<id>`, `<id>_1..4` (`_img.mjs` MERCH_SLOT); `img` is always the first |
+| A counted item's stock, at most | 9,999 (blank = not counting) | `MAX_STOCK` in `_profile.mjs`; `takeStock` in `redeemSession` brings it down per paid order; 0 reads as sold out and `pay.mjs` refuses (`merchSoldOut`) |
 | Most of one item per order | 5 | the checkout clamp in `pay.mjs` (both merch branches); the shop's + stops at the same count |
 | A card sale's price runs | $1–$500 | `MIN_CENTS`, `MAX_CENTS` in `_profile.mjs`; under the floor the shop shows the price and says "ask at the table" — both merchLists send the band |
 | A fan's request to the shop ("Make a request") | up to 200 characters, 3 a day per phone, the newest 100 kept | `MAX_WISH`, `WISHES_PER_DEVICE_PER_DAY`, `MAX_WISHES` in `_wishes.mjs`; lands under Requests from the shop in both Studios' Merch screens |
@@ -517,9 +519,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Public pages | 12 — about.html, artist.html, artists.html, community.html, index.html, report.html, shop.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
-| Shared libraries | 52 |
-| Artist Studio actions | 131 |
-| Venue Studio actions | 48 |
+| Shared libraries | 53 |
+| Artist Studio actions | 132 |
+| Venue Studio actions | 49 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | Largest clip accepted | 75 MB |

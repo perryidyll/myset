@@ -35,9 +35,53 @@ export const MAX_PHOTOS = 3;
                  `on:false`, which lost the price signal.
      `post`      flat per-order postage in cents, on top of the price, only
                  meaningful when `ship === 'ship'` — it becomes a fixed Stripe
-                 shipping rate, and MySet's cut is never taken on it. 0 = none. */
+                 shipping rate, and MySet's cut is never taken on it. 0 = none.
+
+   THE FOUNDER'S SECOND LOOK (2026-09-14) added two more:
+     `imgs`      up to MAX_MERCH_IMGS pictures, in the order the shop swipes them.
+                 Each is one of the item's own slots — `<id>` for the first-ever
+                 picture (the key every older item already has) and `<id>_1..4`
+                 (_img.mjs MERCH_SLOT) — so a picture still cannot outlive its item
+                 by name, and keysFor() computes every key without list() (1).
+                 `img` stays and is ALWAYS imgs[0]: the grid card, the community
+                 page's fanned trio and Stripe's line read it unchanged.
+     `stock`     how many are left, or null when the artist is not counting. Set in
+                 the Studio; redeemSession takes each paid quantity off it
+                 (takeStock); at 0 the item is sold out on the page and refused by
+                 pay.mjs exactly as `out` is — `out` itself is left alone, so a
+                 restock is one number, not a number and a switch. */
 export const MAX_MERCH = 12;
 export const MERCH_ID = /^m[a-z0-9]{6}$/;
+export const MAX_MERCH_IMGS = 5;
+export const MAX_STOCK = 9999;
+/* An item's picture slots, in the order they are filled: the bare id first (every
+   picture from before 2026-09-14 lives there), then _1 to _4. */
+export const merchSlots = (id) => [id, ...Array.from({ length: MAX_MERCH_IMGS - 1 }, (_, i) => `${id}_${i + 1}`)];
+const slotOf = (url) => { const m = /[?&]s=([a-z0-9_]+)/.exec(String(url || '')); return m ? m[1] : ''; };
+/* The first slot no picture on the record is using, or '' when all five are. */
+export const freeMerchSlot = (item) => { const used = new Set((item.imgs || []).map(slotOf)); return merchSlots(item.id).find((k) => !used.has(k)) || ''; };
+/* Sold out is either the flag or a count that reached zero — one answer for the
+   page, the sheet and pay.mjs. */
+export const merchSoldOut = (m) => !!m && (m.out === true || m.stock === 0);
+/* Move an item one place in the list; returns false when it cannot move. */
+export function moveMerch(list, id, dir) {
+  const i = (list || []).findIndex((m) => m && m.id === id); if (i < 0) return false;
+  const j = dir === 'up' ? i - 1 : i + 1; if (j < 0 || j >= list.length) return false;
+  [list[i], list[j]] = [list[j], list[i]]; return true;
+}
+/* A paid quantity comes off the count, never below zero; an item that is not
+   counting is left alone. Returns true when the list changed. */
+export function takeStock(list, id, qty) {
+  const m = (list || []).find((x) => x && x.id === id); if (!m || m.stock == null) return false;
+  m.stock = Math.max(0, m.stock - Math.max(1, parseInt(qty, 10) || 1)); return true;
+}
+const normImgs = (m) => {
+  const own = (u) => typeof u === 'string' && u.startsWith('/api/img?') && u.length <= 300;
+  const list = (Array.isArray(m.imgs) ? m.imgs : []).filter(own);
+  if (!list.length && own(m.img)) list.push(m.img);   // an item from before imgs: its one picture is the list
+  const seen = new Set(); return list.filter((u) => { const k = slotOf(u); if (!k || seen.has(k)) return false; seen.add(k); return true; }).slice(0, MAX_MERCH_IMGS);
+};
+const normStock = (v) => { if (v === null || v === undefined || v === '') return null; const n = parseInt(v, 10); return Number.isFinite(n) ? Math.max(0, Math.min(MAX_STOCK, n)) : null; };
 export const MAX_VARIANTS = 8;
 export const VARIANT_LEN = 24;
 export const MAX_POST = 10000;
@@ -62,12 +106,14 @@ export function normVariants(list) {
 export function normMerch(list) {
   return (Array.isArray(list) ? list : [])
     .filter((m) => m && typeof m === 'object')
-    .map((m) => ({
+    .map((m) => { const imgs = normImgs(m); return ({
       id: String(m.id || '').replace(/[^a-z0-9]/g, '').slice(0, 7),
       title: clean(m.title, 60),
       blurb: clean(m.blurb, 160),
       cents: Math.max(0, Math.min(MAX_CENTS, parseInt(m.cents, 10) || 0)),
-      img: String(m.img || '').slice(0, 300),
+      img: imgs[0] || '',
+      imgs,
+      stock: normStock(m.stock),
       link: safeLink('website', m.link),
       ship: m.ship === 'ship' ? 'ship' : 'pickup',
       on: m.on !== false,
@@ -75,7 +121,7 @@ export function normMerch(list) {
       variants: normVariants(m.variants),
       out: m.out === true,
       post: Math.max(0, Math.min(MAX_POST, parseInt(m.post, 10) || 0)),
-    }))
+    }); })
     .filter((m) => MERCH_ID.test(m.id) && m.title)
     .slice(0, MAX_MERCH);
 }

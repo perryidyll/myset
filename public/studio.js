@@ -3043,6 +3043,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='mhero') media('mediaHero',id);
   if(b.dataset.act==='rmmail') removeTeam(id);
   if(b.dataset.act==='photoclear'){ e.preventDefault(); clearPhoto(id); }
+  if(b.dataset.act==='mcpicrm'){ e.preventDefault(); mcPicRemove(b.dataset.k); }
   if(b.dataset.act==='mcvout') mcVarOut(id);
   if(b.dataset.act==='promotoggle') togglePromo(id);
   if(b.dataset.act==='qrbig'){ e.preventDefault(); qrBig(id); }
@@ -3385,12 +3386,17 @@ function merchSection(){
   const list=`<div class="sec"><span class="kick">Your items</span><span class="kick">${items.length}${MERCHMAX?'/'+MERCHMAX:''}</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Sells from your shop page. Fans pay you directly through Stripe — MySet takes your plan’s cut on the price, Stripe takes its fee from your side. An item with a link sells wherever that link goes instead.</p>
     ${!D.paymentsEnabled?`<div class="row muted">Fans can’t pay by card until Stripe is set up on the <b>Money</b> tab — items with a link still sell, and everything shows.</div>`:''}
-    <div class="list">${MERCH===null?(MERCHERR?`<div class="row muted" onclick="retryMerch()" style="cursor:pointer"><div class="m"><div class="t">${esc(MERCHERR)}</div><div class="s">Tap to try again</div></div></div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>'):items.map(m=>`<div class="row"${m.on===false||m.out?' style="opacity:.6"':''}>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">The order here is the order on the shop — the first item is the one on top of the card on your community page.</p>
+    <div class="list">${MERCH===null?(MERCHERR?`<div class="row muted" onclick="retryMerch()" style="cursor:pointer"><div class="m"><div class="t">${esc(MERCHERR)}</div><div class="s">Tap to try again</div></div></div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>'):items.map((m,i)=>`<div class="row"${m.on===false||m.out||m.stock===0?' style="opacity:.6"':''} style="flex-wrap:wrap">
+        <div style="display:flex;align-items:center;flex:1 1 100%;min-width:0">
         <div class="slotmini" style="background-image:url('${esc(m.img||'')}')">${m.img?'':'＋'}</div>
         <div class="m"><div class="t">${esc(m.title)}</div>
-          <div class="s">${m.cents?money(m.cents):'No price'} · ${m.ship==='ship'?'Posted'+(m.post>0?' +'+money(m.post):''):'Pickup at the show'}${m.link?' · link':''}${m.out?' · <b style="color:var(--accent)">Sold out</b>':''}${m.on===false?' · Off':''}${sizes(m)}</div></div>
+          <div class="s">${m.cents?money(m.cents):'No price'} · ${m.ship==='ship'?'Shipped'+(m.post>0?' +'+money(m.post):''):'Pickup at the show'}${m.link?' · link':''}${(m.imgs||[]).length>1?' · '+m.imgs.length+' photos':''}${m.stock!=null&&!m.out?(m.stock===0?' · <b style="color:var(--accent)">Sold out</b>':' · '+m.stock+' left'):''}${m.out?' · <b style="color:var(--accent)">Sold out</b>':''}${m.on===false?' · Off':''}${sizes(m)}</div></div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
+        <button class="act" onclick="merchMoveItem('${esc(m.id)}','up')" ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
+        <button class="act" onclick="merchMoveItem('${esc(m.id)}','down')" ${i===items.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
         <button class="act" onclick="openMerch('${esc(m.id)}')">Edit</button>
-        <button class="act warn" onclick="rmMerch('${esc(m.id)}')">✕</button></div>`).join('')||'<div class="row muted">Nothing yet. Add a tee, a print, a sticker.</div>'}</div>
+        <button class="act warn" onclick="rmMerch('${esc(m.id)}')">✕</button></div></div>`).join('')||'<div class="row muted">Nothing yet. Add a tee, a print, a sticker.</div>'}</div>
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openMerch('')">+ Add an item</button></div>`;
   return `<div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${shopHref}" style="justify-content:center">See your shop ↗</a></div>
     ${lock('merch', list, why)}
@@ -3622,12 +3628,12 @@ async function saveCosts(month){
 function ordersSection(){
   const o=ORDERS||[]; const open=o.filter(x=>x.status!=='done');
   return `<div class="sec"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
-    <div class="list">${o.slice(0,40).map(x=>{const done=x.status==='done', posted=x.ship==='ship', verb=posted?'Posted':'Handed over';
+    <div class="list">${o.slice(0,40).map(x=>{const done=x.status==='done', posted=x.ship==='ship', verb=posted?'Shipped':'Handed over';
       return `<div class="row ${done?'muted':''}" style="display:flex;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:12px;flex:1 1 100%;min-width:0">
         ${x.code?`<b style="font-size:24px;font-weight:800;letter-spacing:.08em;font-variant-numeric:tabular-nums;flex:0 0 auto;color:var(--ink)">${esc(x.code)}</b>`:''}
         <div class="m"><div class="t">${esc(x.title)}${x.variant?' ('+esc(x.variant)+')':''}${x.qty>1?' × '+x.qty:''}&nbsp;·&nbsp;$${Number(x.amount||0).toFixed(2)}</div>
-          <div class="s">${posted?'To post':'Pickup'}${x.post>0?' · '+money(x.post)+' postage':''} · ${when(x.at)}${done?' · '+verb:''}</div></div></div>
+          <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+money(x.post)+' shipping':''} · ${when(x.at)}${done?' · '+verb:''}</div></div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
         <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
         <button class="act ${done?'':'pri'}" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button></div></div>`;}).join('')
@@ -3635,7 +3641,7 @@ function ordersSection(){
 }
 /* THE ITEM EDITOR. Sizes are typed as one comma-separated line and become
    `variants` — each with its own sold-out flag, toggled by the chips under the
-   field once the item is saved. Postage is a flat figure per order that Stripe
+   field once the item is saved. Shipping is a flat figure per order that Stripe
    adds on top of the price; MySet's fee is on the price alone, so the field says
    so. The server caps and de-duplicates everything again (normMerch); the caps it
    works to (merchList's maxVariants / variantLen / maxPost) are read from it, never
@@ -3652,13 +3658,13 @@ function mcVariants(){
   return out;
 }
 /* What the server kept against what was sent: fewer sizes, a shortened label, or a
-   postage figure held to its cap. One line naming the cap when it is known. */
+   shipping figure held to its cap. One line naming the cap when it is known. */
 function merchTrimmed(sent,kept){
   if(!kept)return '';
   const sv=sent.variants||[], kv=kept.variants||[], max=MERCHLIM.maxVariants, len=MERCHLIM.variantLen, mp=MERCHLIM.maxPost;
   if(kv.length<sv.length) return max?'Up to '+max+' sizes — the rest were dropped':'Some sizes were dropped';
   if(kv.some((v,i)=>sv[i]&&v.label!==sv[i].label)) return len?'Sizes are up to '+len+' characters — one was shortened':'A size name was shortened';
-  if(sent.ship==='ship'&&(sent.post||0)>(kept.post||0)) return mp?'Postage tops out at '+money(mp)+' — set to that':'Postage was lowered to the most allowed';
+  if(sent.ship==='ship'&&(sent.post||0)>(kept.post||0)) return mp?'Shipping tops out at '+money(mp)+' — set to that':'Shipping was lowered to the most allowed';
   if((sent.cents||0)!==(kept.cents||0)) return kept.cents?'Price tops out at '+money(kept.cents)+' — set to that':'Price cleared — it can’t be below zero';
   if(MERCHLIM.minCents&&kept.cents>0&&kept.cents<MERCHLIM.minCents) return 'Under '+money(MERCHLIM.minCents)+' — the shop shows the price but says “ask at the table” instead of Buy';
   return '';
@@ -3671,48 +3677,100 @@ function mcVarHelp(){ const L=MERCHLIM;
   return 'Leave blank if there’s nothing to choose. Commas between them.'+(L.maxVariants?' Up to '+L.maxVariants+(L.variantLen?', '+L.variantLen+' characters each':'')+'.':'');}
 function mcPostHelp(){ const L=MERCHLIM;
   return 'Added on top at checkout; MySet’s fee is on the price alone.'+(L.maxPost?' Up to '+money(L.maxPost)+' an order.':'');}
-function openMerch(id){
-  const m=(MERCH||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',ship:'pickup',on:true,img:'',variants:[],out:false,post:0};
+/* THE PICTURES, FIRST (the founder, 2026-09-14): up to five per item, on the first page of the
+   editor, for a new item as much as a saved one. A saved item's pictures upload the moment they
+   are cropped (merchPhoto, one slot each); a new item's are STAGED here as cropped data and go up
+   one by one right after the first Save mints the id — the artist never sees a second step. The
+   crop sheet replaces this one, so the typed fields are kept in MCDRAFT and put back after. */
+let mcImgs=[], MCDRAFT=null;   // [{url}] saved, [{data}] staged
+const mcMaxImgs=()=>MERCHLIM.maxImgs||5;
+function mcPicsRow(id){
+  const tiles=mcImgs.map((x,i)=>`<label class="slot sq pic"><img src="${esc(x.url||x.data)}" alt=""><button type="button" class="rm" data-act="mcpicrm" data-k="${x.url?esc(mcSlotOf(x.url)):'new:'+i}" aria-label="Remove picture ${i+1}">✕</button></label>`);
+  if(mcImgs.length<mcMaxImgs()) tiles.push(`<label class="slot sq pic add" data-slot="${id||'mnew'}"><span class="ph"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l4.5-4.5 3.5 3.5 3-3L20 17"/></svg>${mcImgs.length?'Add':'Add photo'}</span><input type="file" accept="image/*" data-slot="${id||'mnew'}"></label>`);
+  return `<div class="slots pics" id="mcPics">${tiles.join('')}</div>
+    <p class="muted" style="font-size:12px;margin:7px 0 0">${mcImgs.length?`${mcImgs.length} of ${mcMaxImgs()} — the first is the one on the card; fans swipe through the rest.`:`Up to ${mcMaxImgs()} — fans swipe through them on the item.`}</p>`;
+}
+const mcSlotOf=u=>{ const m=/[?&]s=([a-z0-9_]+)/.exec(String(u||'')); return m?m[1]:''; };
+/* what is typed right now, so a trip through the crop sheet loses nothing */
+function mcDraft(){
+  const v=k=>(document.getElementById(k)||{}).value; if(v('mcTitle')==null) return MCDRAFT;
+  return {title:v('mcTitle'),blurb:v('mcBlurb'),price:v('mcPrice'),variants:v('mcVariants'),link:v('mcLink'),post:v('mcPostage'),stock:v('mcStock'),ship:mcShip,on:mcOn,out:mcOut,imgs:mcImgs};
+}
+function openMerch(id,draft){
+  const m0=(MERCH||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',ship:'pickup',on:true,img:'',imgs:[],variants:[],out:false,post:0,stock:null};
+  const d=draft||null, m={...m0};
+  if(d){ m.title=d.title; m.blurb=d.blurb; m.link=d.link; m.ship=d.ship; m.on=d.on; m.out=d.out; }
   mcShip=m.ship||'pickup'; mcOn=m.on!==false; mcOut=m.out===true;
-  mcVar=(m.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));
+  mcVar=(m0.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));
+  mcImgs=d?d.imgs:(m0.imgs&&m0.imgs.length?m0.imgs:(m0.img?[m0.img]:[])).map(u=>({url:u}));
+  MCDRAFT=null;
   openSheet(`<h3>${id?'Edit item':'Add an item'}</h3>
-    ${id?`<div class="slots" style="margin:6px 0 10px">${slotBox(id,m.img,'sq')}</div>`:'<p class="lede">Save it first, then add a picture.</p>'}
+    <div class="field"><label>Photos</label>${mcPicsRow(id)}</div>
     <div class="field"><label>Name</label><input class="inp" id="mcTitle" maxlength="60" value="${esc(m.title)}" placeholder="Tour tee"></div>
     <div class="field"><label>A line about it</label><input class="inp" id="mcBlurb" maxlength="160" value="${esc(m.blurb)}" placeholder="Black, heavy cotton"></div>
-    <div class="field"><label>Price (USD)</label><input class="inp" id="mcPrice" inputmode="decimal" value="${m.cents?(m.cents/100):''}" placeholder="25">
+    <div class="field"><label>Price (USD)</label><input class="inp" id="mcPrice" inputmode="decimal" value="${d?esc(d.price):(m.cents?(m.cents/100):'')}" placeholder="25">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${mcPriceHelp()}</p></div>
-    <div class="field"><label>Sizes / options</label><input class="inp" id="mcVariants"${MERCHLIM.maxVariants&&MERCHLIM.variantLen?' maxlength="'+(MERCHLIM.maxVariants*(MERCHLIM.variantLen+2))+'"':''} value="${esc(mcVar.map(v=>v.label).join(', '))}" placeholder="S, M, L, XL" autocomplete="off">
+    <div class="field"><label>Sizes / options</label><input class="inp" id="mcVariants"${MERCHLIM.maxVariants&&MERCHLIM.variantLen?' maxlength="'+(MERCHLIM.maxVariants*(MERCHLIM.variantLen+2))+'"':''} value="${d?esc(d.variants):esc(mcVar.map(v=>v.label).join(', '))}" placeholder="S, M, L, XL" autocomplete="off">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${mcVarHelp()}</p>
       ${id&&mcVar.length?`<p class="muted" style="font-size:12px;margin:10px 0 7px">Tap a size to mark it sold out — it saves straight away.</p>
       <div class="chips" id="mcVarChips" data-item="${esc(id)}">${mcChips()}</div>`:''}</div>
     <div class="field"><label>Or a link to where it sells (optional)</label><input class="inp" id="mcLink" value="${esc(m.link)}" placeholder="https://…"></div>
-    <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Posted asks for an address at checkout</div></div>
+    <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Shipped asks for an address at checkout</div></div>
       <div class="tog"><button id="mcPick" class="${m.ship!=='ship'?'on':''}" onclick="mcShip='pickup';this.classList.add('on');document.getElementById('mcPost').classList.remove('on');document.getElementById('mcPostWrap').hidden=true">Pickup</button>
-      <button id="mcPost" class="${m.ship==='ship'?'on':''}" onclick="mcShip='ship';this.classList.add('on');document.getElementById('mcPick').classList.remove('on');document.getElementById('mcPostWrap').hidden=false">Posted</button></div></div>
-    <div class="field" id="mcPostWrap"${m.ship==='ship'?'':' hidden'}><label>Postage per order (USD)</label><input class="inp" id="mcPostage" inputmode="decimal" value="${m.post?(m.post/100):''}" placeholder="6">
+      <button id="mcPost" class="${m.ship==='ship'?'on':''}" onclick="mcShip='ship';this.classList.add('on');document.getElementById('mcPick').classList.remove('on');document.getElementById('mcPostWrap').hidden=false">Shipped</button></div></div>
+    <div class="field" id="mcPostWrap"${m.ship==='ship'?'':' hidden'}><label>Shipping per order (USD)</label><input class="inp" id="mcPostage" inputmode="decimal" value="${d?esc(d.post):(m.post?(m.post/100):'')}" placeholder="6">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${mcPostHelp()}</p></div>
+    <div class="field"><label>Quantity in stock (optional)</label><input class="inp" id="mcStock" type="number" inputmode="numeric" min="0"${MERCHLIM.maxStock?' max="'+MERCHLIM.maxStock+'"':''} value="${d?esc(d.stock):(m0.stock!=null?m0.stock:'')}" placeholder="Leave blank if you’re not counting">
+      <p class="muted" style="font-size:12px;margin:7px 0 0">Comes down by itself as fans buy; at 0 the item shows as sold out until you put a number back.</p></div>
     <div class="row"><div class="m"><div class="t">Stock</div><div class="s">Sold out stays on the page, greyed, with no Buy</div></div>
       <div class="tog"><button id="mcIn" class="${m.out!==true?'on':''}" onclick="mcOut=false;this.classList.add('on');document.getElementById('mcSold').classList.remove('on')">In stock</button>
       <button id="mcSold" class="${m.out===true?'on':''}" onclick="mcOut=true;this.classList.add('on');document.getElementById('mcIn').classList.remove('on')">Sold out</button></div></div>
     <div class="row"><div class="m"><div class="t">On the page</div></div>
       <div class="tog"><button id="mcOn" class="${m.on!==false?'on':''}" onclick="mcOn=true;this.classList.add('on');document.getElementById('mcOff').classList.remove('on')">On</button>
       <button id="mcOff" class="${m.on===false?'on':''}" onclick="mcOn=false;this.classList.add('on');document.getElementById('mcOn').classList.remove('on')">Off</button></div></div>
-    <button class="big" style="margin-top:14px" onclick="saveMerch('${esc(id)}')">Save</button>`);
-  setTimeout(()=>{const e=document.getElementById('mcTitle'); if(e&&!id)e.focus();},260);
+    <button class="big" style="margin-top:14px" id="mcSave" onclick="saveMerch('${esc(id)}')">Save</button>`);
+  setTimeout(()=>{const e=document.getElementById('mcTitle'); if(e&&!id&&!d)e.focus();},260);
 }
 async function saveMerch(id){
   const v=k=>(document.getElementById(k)||{}).value||'';
   const cents=Math.round(parseFloat(v('mcPrice'))*100)||0;
-  /* the postage figure is sent even while Pickup is chosen, so switching back to
-     Posted later finds it where it was; the server ignores it for a pickup item */
+  /* the shipping figure is sent even while Pickup is chosen, so switching back to
+     Shipped later finds it where it was; the server ignores it for a pickup item */
   const post=Math.round(parseFloat(v('mcPostage'))*100)||0;
-  const item={id:id||undefined,title:v('mcTitle'),blurb:v('mcBlurb'),cents,link:v('mcLink'),ship:mcShip,on:mcOn,out:mcOut,post,variants:mcVariants()};
+  const st=v('mcStock').trim(), stock=st===''?null:Math.max(0,parseInt(st,10)||0);
+  const item={id:id||undefined,title:v('mcTitle'),blurb:v('mcBlurb'),cents,link:v('mcLink'),ship:mcShip,on:mcOn,out:mcOut,post,stock,variants:mcVariants()};
+  const b=document.getElementById('mcSave'); if(b){ b.disabled=true; b.textContent='Saving…'; }
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchSave',item})});
-  if(!d.ok){toast(d.error||'Couldn’t save');return;}
-  MERCH=d.merch; closeSheet(); render();
-  const trimmed=merchTrimmed(item,(MERCH||[]).find(x=>x.id===(id||d.id)));
-  toast(trimmed?'Saved — '+trimmed:'Saved');
-  if(!id) setTimeout(()=>openMerch(d.id),350);       // straight into the picture slot
+  if(!d.ok){ toast(d.error||'Couldn’t save'); if(b){ b.disabled=false; b.textContent='Save'; } return; }
+  MERCH=d.merch;
+  /* a new item's staged pictures go up now, first to last, so the first cropped is the one on the card */
+  const staged=mcImgs.filter(x=>x.data), nid=id||d.id; let failed=0;
+  for(let i=0;i<staged.length;i++){
+    if(b) b.textContent=`Adding photo ${i+1} of ${staged.length}…`;
+    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhoto',id:nid,data:staged[i].data}),quiet:true});
+    if(r&&r.ok) MERCH=r.merch; else failed++;
+  }
+  closeSheet(); render();
+  const trimmed=merchTrimmed(item,(MERCH||[]).find(x=>x.id===nid));
+  toast(failed?`Saved — ${failed} photo${failed===1?'':'s'} didn’t upload; open the item to try again`:trimmed?'Saved — '+trimmed:'Saved');
+}
+/* the order on the shop — and which item is on top of the community page's card */
+async function merchMoveItem(id,dir){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchMove',id,dir})});
+  if(d&&d.ok){ MERCH=d.merch; render(); } else toast((d&&d.error)||'Couldn’t move that');
+}
+/* ✕ on a picture in the editor: a saved one is dropped on the server by its slot; a staged one just leaves the row */
+async function mcPicRemove(k){
+  const box=document.getElementById('mcPics'); if(!box) return;
+  const draft=mcDraft(), id=(box.querySelector('[data-slot]')||{}).dataset||{};
+  if(k.startsWith('new:')){ mcImgs.splice(parseInt(k.slice(4),10),1); box.outerHTML=mcPicsRow(id.slot==='mnew'?'':id.slot); return; }
+  const item=k.replace(/_[1-4]$/,'');
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhotoClear',id:item,slot:k})});
+  if(!d.ok){ toast(d.error||'Couldn’t remove that'); return; }
+  MERCH=d.merch; const it=(MERCH||[]).find(x=>x.id===item);
+  mcImgs=(it&&it.imgs?it.imgs:[]).map(u=>({url:u})); draft.imgs=mcImgs;
+  const wrap=document.getElementById('mcPics'); if(wrap) wrap.outerHTML=mcPicsRow(item);
+  render(); toast('Photo removed');
 }
 /* One size sold out, one tap: flips the flag, repaints the chips, and saves just
    the sizes (merchSave merges over the stored row), so the rest of the sheet —
@@ -3740,10 +3798,10 @@ async function orderDetail(sid){
   if(!d.ok){toast(d.error||'Couldn’t fetch that');return;}
   const o=d.order, b=d.buyer||{}, sh=d.shipping;
   const addr=sh?[sh.name,sh.line1,sh.line2,sh.city,sh.state,sh.postal,sh.country].filter(Boolean).join(', '):'';
-  openSheet(`<h3>${esc(o.title)}${o.variant?' ('+esc(o.variant)+')':''}${o.qty>1?' × '+o.qty:''}</h3><p class="lede">${o.code?'Code <b>'+esc(o.code)+'</b> · ':''}$${Number(o.amount||0).toFixed(2)}${o.post>0?' incl. '+money(o.post)+' postage':''} · ${when(o.at)}</p>
+  openSheet(`<h3>${esc(o.title)}${o.variant?' ('+esc(o.variant)+')':''}${o.qty>1?' × '+o.qty:''}</h3><p class="lede">${o.code?'Code <b>'+esc(o.code)+'</b> · ':''}$${Number(o.amount||0).toFixed(2)}${o.post>0?' incl. '+money(o.post)+' shipping':''} · ${when(o.at)}</p>
     <div class="list" style="margin-top:12px">
       <div class="row"><div class="m"><div class="t">${esc(b.name||'Name not given')}</div><div class="s">${esc(b.email||'')}</div></div></div>
-      ${sh?`<div class="row"><div class="m"><div class="t">Post to</div><div class="s">${esc(addr)}</div></div>
+      ${sh?`<div class="row"><div class="m"><div class="t">Ship to</div><div class="s">${esc(addr)}</div></div>
         <button class="act" data-copy="${esc(addr)}" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.getAttribute('data-copy'));toast('Copied')">Copy</button></div>`
         :`<div class="row muted">Pickup — hand it over at a show.</div>`}
     </div>
@@ -4402,7 +4460,7 @@ function wireCrop(){
   });
   if(z) z.addEventListener('input',()=>{ CROP.zoom=z.value/100; paintCrop(); });
 }
-function cancelCrop(){ if(CROP&&CROP.url)URL.revokeObjectURL(CROP.url); CROP=null; closeSheet(); }
+function cancelCrop(){ const slot=CROP&&CROP.slot; if(CROP&&CROP.url)URL.revokeObjectURL(CROP.url); CROP=null; closeSheet(); if(slot&&MERCH_PIC.test(slot)) mcReturn(slot); }
 async function confirmCrop(){
   if(!CROP||WRITING)return;
   WRITING=true;
@@ -4414,7 +4472,7 @@ async function confirmCrop(){
     /* a merch item's picture: the slot IS the item id. It is drawn ~170px wide on
        a two-up shop grid, so 480px is plenty and the bytes matter more than the
        pixels — a shop page is a dozen of these on bar wifi. */
-    const merch=/^m[a-z0-9]{6}$/.test(slot);
+    const merch=MERCH_PIC.test(slot);
     const outW=slot==='cover'?1200:merch?480:640;   // 1200 is plenty on a phone; half the bytes of 1400
     const outH=Math.round(outW*H/W);
     const c=document.createElement('canvas'); c.width=outW; c.height=outH;
@@ -4429,9 +4487,15 @@ async function confirmCrop(){
       if(!data) data=c.toDataURL('image/jpeg',0.4);
     }
     if(merch){
+      if(slot==='mnew'){   // not saved yet: staged, uploaded by saveMerch once the id exists
+        if(MCDRAFT){ MCDRAFT.imgs=[...(MCDRAFT.imgs||[]),{data}]; }
+        cancelCrop(); return;
+      }
       const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchPhoto',id:slot,data})});
       if(!r.ok){toast(r.error||'Could not save that photo');return;}
-      cancelCrop(); MERCH=r.merch; render(); toast('Photo added'); return;
+      MERCH=r.merch; const it=(MERCH||[]).find(x=>x.id===slot);
+      if(MCDRAFT) MCDRAFT.imgs=(it&&it.imgs?it.imgs:[]).map(u=>({url:u}));
+      cancelCrop(); render(); toast('Photo added'); return;
     }
     const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'photoUpload',slot,data})});
     if(!r.ok){toast(r.error||'Could not save that photo');return;}
@@ -4454,11 +4518,15 @@ function encodeMerch(c){
   for(const q of [0.84,0.74,0.64,0.54]){ last=c.toDataURL('image/jpeg',q); if(fits(last)) return last; }
   return last;
 }
+const MERCH_PIC=/^m[a-z0-9]{6}$|^mnew$/;   // an item's picture (by id), or one staged for an item not yet saved
 async function uploadPhoto(slot,file){
   if(!file)return;
   if(!/^image\//.test(file.type)){toast('That needs to be a photo');return;}
+  if(MERCH_PIC.test(slot)) MCDRAFT=mcDraft();   // the crop sheet replaces the editor: keep what is typed
   await openCrop(slot,file);
 }
+/* back into the item editor after the crop sheet, with the fields as they were */
+function mcReturn(slot){ const id=slot==='mnew'?'':slot; const d=MCDRAFT; setTimeout(()=>openMerch(id,d),60); }
 async function clearPhoto(slot){
   /* a merch item's picture is cleared by item id — photoClear knows only the
      profile's named slots and refuses anything else, so this ✕ used to do nothing */

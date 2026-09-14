@@ -104,8 +104,23 @@ ok('the community page no longer sells — it wears the shop card instead',
 /* the More strip in the product sheet: a scroller, so never a place a sheet drag starts from (0f1), and a
    card swaps the open entry rather than stacking one — Back closes the sheet in one step. tools/sheetcheck.mjs
    and tools/uicheck.mjs prove both in a browser; this is the copy of the rule the suite can read. */
-ok('the sheet\'s More strip is a scroller to the drag code, and a card swaps the history entry',
-   /SCROLLER='\.sizes,\.more'/.test(shop) && /mode==='swap'\)\s*history\.replaceState\(\{m:id\}/.test(shop));
+ok('the sheet\'s More strip and gallery are scrollers to the drag code, and a card swaps the history entry',
+   /SCROLLER='\.sizes,\.more,\.gal'/.test(shop) && /mode==='swap'\)\s*history\.replaceState\(\{m:id\}/.test(shop));
+/* THE FOUNDER'S SECOND LOOK (2026-09-14): the pictures at the top of the sheet under the title
+   and price with the sizes beneath; no pause control; gradient step numerals; "shipping" for
+   "postage" everywhere a person reads; the Paid-to line in the brand pink-orange; the Studio's
+   editor opens on the photos with a count field and the rows have arrows. */
+const venueStudioJs = read('public/venue-studio.html');
+ok('the gallery sits under the price and above the fulfilment line', /\$\{galleryBlock\(m,out\)\}\s*<p class="lede"/.test(shop) && !/class="pic spic/.test(shop));
+ok('no pause control on the strips', !/class="still"/.test(shop) && !/stillBtn/.test(shop));
+ok('the step numerals are the brand gradient', /\.how i\{[^}]*background:var\(--grad\)/.test(shop));
+ok('nobody reads "postage" or "posted to you" any more', ![shop, studio, venueStudioJs].some((t) => /\bpostage\b|Posted to you|posted to you|To post\b/i.test(t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''))));
+ok('Stripe’s rate is called Shipping', /display_name: 'Shipping'/.test(read('netlify/functions/pay.mjs')));
+ok('"Paid to <name> through Stripe" is pink-orange, the rest of the line is not', /<span class="paidto">Paid to \$\{esc\(d\.name\)\} through Stripe<\/span> · Apple Pay/.test(shop) && /\.paidto\{color:var\(--accent-ink\)/.test(shop));
+ok('the community card rings Browse the shop and puts the first item on top', /\.shopcard \.btn::after\{[^}]*background:var\(--grad\)/.test(community) && /\.shopcard \.fan img:nth-child\(1\)\{[^}]*z-index:2/.test(community));
+ok('both Studios open the editor on the photos, take a count, and move items with arrows',
+   [studio, venueStudioJs].every((t) => /<label>Photos<\/label>/.test(t) && /Quantity in stock \(optional\)/.test(t) && /action:'merchMove'/.test(t) && /aria-label="Move up"/.test(t)));
+ok('a sold-out count reads as sold out on the shop', /m\.stock===0/.test(shop) && /Only \$\{few\} left/.test(shop));
 /* MAKE A REQUEST (the founder, 2026-09-13): the shop's button under "how it works" asks the fan
    what they'd buy, posts it as action 'wish' to the same community door, and the Studio's Merch
    store lists it. The way back to the community page is the Community crumb at the very top. */

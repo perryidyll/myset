@@ -2,6 +2,7 @@ import { store, readDoc, casDoc } from './_lib.mjs';
 import { readArchivedPosts, archiveKeys as postArchiveKeys } from './_community.mjs';
 import { readVenues, mutateVenues, getVenueProfile } from './_venues.mjs';
 import { readEvents } from './_events.mjs';
+import { merchSlots } from './_profile.mjs';
 import { readPosts, shapeForOwner } from './_community.mjs';
 import { readPending, dropClipKeys, vidKey } from './_video.mjs';
 
@@ -48,11 +49,11 @@ export async function keysForVenue(vid) {
   const o = OWNER(vid);
   const keys = [`vprofile_${vid}`, `vouch_${vid}`, `ev_${o}`, `posts_${o}`, `likes_${o}`,
     `meta_${o}`, `billing_${o}`, `connect_${o}`, `sess_${o}`, `log_${o}`, `rec_${o}`,
-    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`];
+    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`];
   const [prof, posts, pend] = await Promise.all([getVenueProfile(vid), readPosts(o), readPending(o)]);
   for (const slot of ['cover', 'avatar', 'idcheck', ...Array.from({ length: 12 }, (_, i) => 'p' + i)])
     keys.push(IMG(vid, slot));
-  for (const it of prof.merch || []) keys.push(IMG(vid, it.id));
+  for (const it of prof.merch || []) for (const slot of merchSlots(it.id)) keys.push(IMG(vid, slot));   // five picture slots per item (2026-09-14)
   for (const p of posts.list || []) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(vid, `${p.id}_${i}`));
   /* Clips: the ones a post claims AND the ones still waiting to be claimed, or a
      venue that left would leave 3MB behind per unattached upload for ever. */

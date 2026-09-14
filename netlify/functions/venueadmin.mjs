@@ -2,7 +2,8 @@ import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
          mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU,
          venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH, venuePlanOf, venuePaid } from './_venues.mjs';
-import { normMerch, MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS } from './_profile.mjs';
+import { normMerch, MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS, MAX_MERCH_IMGS, MAX_STOCK, moveMerch } from './_profile.mjs';
+import { addMerchPicture, dropMerchPicture, dropMerchPictures } from './_merchpix.mjs';
 import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
@@ -39,7 +40,7 @@ export default async (req) => {
   const MANAGER_OK = new Set([...CREW_OK, 'eventSave', 'eventDelete', 'eventSkip', 'pitchSet',
                               'set', 'amenity', 'hours', 'menuSet', 'menuAdd', 'menuRemove',
                               'offerSave', 'offerRemove', 'photoUpload', 'photoClear',
-                              'merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear',
+                              'merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear', 'merchMove',
                               'postHide', 'postDelete', 'accountExport']);
   const role = me.role === 'owner' ? 'owner' : (me.role === 'manager' ? 'manager' : 'crew');
   if (role !== 'owner') {
@@ -509,7 +510,7 @@ export default async (req) => {
   if (action === 'merchList') {
     const p = await getVenueProfile(vid);
     return json({ ok: true, merch: p.merch, max: VMAX_MERCH, maxVariants: MAX_VARIANTS, variantLen: VARIANT_LEN, maxPost: MAX_POST,
-                  minCents: MIN_CENTS, maxCents: MAX_CENTS, allowed: !!venueLimits(await venueById(vid)).merch });
+                  minCents: MIN_CENTS, maxCents: MAX_CENTS, maxImgs: MAX_MERCH_IMGS, maxStock: MAX_STOCK, allowed: !!venueLimits(await venueById(vid)).merch });
   }
   if (action === 'merchSave') {
     if (!venueLimits(await venueById(vid)).merch) return bad('Merch on your page comes with Pro — anything you already added stays.', 402);
@@ -522,7 +523,7 @@ export default async (req) => {
       p.merch = Array.isArray(p.merch) ? p.merch : [];
       const at = p.merch.findIndex((m) => m.id === id);
       const prev = at >= 0 ? p.merch[at] : null;
-      const row = normMerch([{ ...(prev || {}), ...incoming, id, img: (prev && prev.img) || '', at: (prev && prev.at) || Date.now() }])[0];
+      const row = normMerch([{ ...(prev || {}), ...incoming, id, img: (prev && prev.img) || '', imgs: (prev && prev.imgs) || [], at: (prev && prev.at) || Date.now() }])[0];
       if (!row) { why = 'Give it a name'; return false; }
       if (!row.link && !payReady) { why = 'Set up card payments (Merch tab → Getting paid) so fans can buy through MySet, or add a link to where it sells.'; return false; }
       if (at >= 0) p.merch[at] = row;
@@ -537,25 +538,26 @@ export default async (req) => {
   if (action === 'merchRemove') {
     const id = String(body.id || '');
     await mutateVenueProfile(vid, (p) => { p.merch = (p.merch || []).filter((m) => m.id !== id); return true; });
-    if (/^m[a-z0-9]{6}$/.test(id)) await dropImage(imgOwner(vid), id);
+    await dropMerchPictures(imgOwner(vid), id);
     return send();
   }
+  if (action === 'merchMove') {
+    const id = String(body.id || ''), dir = body.dir === 'up' ? 'up' : 'down';
+    await mutateVenueProfile(vid, (p) => moveMerch(p.merch || [], id, dir));
+    return send();
+  }
+  // the pictures: up to five per item, in swipe order (_merchpix.mjs, shared with the Artist Studio)
   if (action === 'merchPhoto') {
     if (!venueLimits(await venueById(vid)).merch) return bad('Merch on your page comes with Pro — anything you already added stays.', 402);
-    const id = String(body.id || '');
-    if (!/^m[a-z0-9]{6}$/.test(id)) return bad('unknown item');
-    if (!(await getVenueProfile(vid)).merch.some((m) => m.id === id)) return bad('unknown item', 404);
-    const dec = decodeDataUrl(body.data);
-    if (dec.error) return bad(dec.error);
-    const url = await putImage(imgOwner(vid), id, dec.bytes, dec.type);
-    await mutateVenueProfile(vid, (p) => { const m = (p.merch || []).find((x) => x.id === id); if (!m) return false; m.img = url; return true; });
+    const item = (await getVenueProfile(vid)).merch.find((m) => m.id === String(body.id || ''));
+    if (!item) return bad('unknown item', 404);
+    const r = await addMerchPicture(imgOwner(vid), (fn) => mutateVenueProfile(vid, fn), item, body.data);
+    if (r.error) return bad(r.error, r.status);
     return send();
   }
   if (action === 'merchPhotoClear') {
-    const id = String(body.id || '');
-    if (!/^m[a-z0-9]{6}$/.test(id)) return bad('unknown item');
-    await dropImage(imgOwner(vid), id);
-    await mutateVenueProfile(vid, (p) => { const m = (p.merch || []).find((x) => x.id === id); if (!m) return false; m.img = ''; return true; });
+    const r = await dropMerchPicture(imgOwner(vid), (fn) => mutateVenueProfile(vid, fn), String(body.id || ''), body.slot ? String(body.slot) : '');
+    if (r.error) return bad(r.error, r.status);
     return send();
   }
   if (action === 'postList') {

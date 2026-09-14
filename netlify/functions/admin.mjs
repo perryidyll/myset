@@ -17,7 +17,8 @@ import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
 import { readSubs, saveSub, dropSub, notify } from './_push.mjs';
 import { mutateProfile, getProfile, shapeMedia, parseMedia, MAX_PHOTOS, MAX_MERCH, MERCH_ID, normMerch,
-         MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS } from './_profile.mjs';
+         MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS, MAX_MERCH_IMGS, MAX_STOCK, moveMerch } from './_profile.mjs';
+import { addMerchPicture, dropMerchPicture, dropMerchPictures } from './_merchpix.mjs';
 import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { lookup } from './_embeds.mjs';
 import { readLyrics, saveLyrics, getLyrics } from './_lyrics.mjs';
@@ -451,7 +452,7 @@ const CAPABILITY = {
      that DO exist and could remove merch, change photos and mark orders done. */
   profileSet: 'profile', photoUpload: 'profile', photoClear: 'profile',
   mediaAdd: 'profile', mediaRemove: 'profile', mediaMove: 'profile', mediaHero: 'profile',
-  merchSave: 'profile', merchRemove: 'profile', merchPhoto: 'profile', merchPhotoClear: 'profile',
+  merchSave: 'profile', merchRemove: 'profile', merchPhoto: 'profile', merchPhotoClear: 'profile', merchMove: 'profile',
   orderList: 'profile', orderDone: 'profile', orderDetail: 'profile', wishList: 'profile', wishDone: 'profile',
   postReply: 'community', postHide: 'community',
   accountExport: 'export',
@@ -1333,7 +1334,7 @@ async function handleShop(aid, action, body) {
     const p = await getProfile(aid);
     // the caps ride with the list so the Studio's helper text and trims say the server's figures, never typed ones
     return json({ ok: true, merch: p.merch, max: MAX_MERCH, maxVariants: MAX_VARIANTS, variantLen: VARIANT_LEN, maxPost: MAX_POST,
-                  minCents: MIN_CENTS, maxCents: MAX_CENTS, allowed: await canMerch() });
+                  minCents: MIN_CENTS, maxCents: MAX_CENTS, maxImgs: MAX_MERCH_IMGS, maxStock: MAX_STOCK, allowed: await canMerch() });
   }
   if (action === 'merchSave') {
     if (!(await canMerch())) return bad(merchLocked[0], merchLocked[1]);
@@ -1345,7 +1346,8 @@ async function handleShop(aid, action, body) {
       p.merch = Array.isArray(p.merch) ? p.merch : [];
       const at = p.merch.findIndex((m) => m.id === id);
       const prev = at >= 0 ? p.merch[at] : null;
-      const row = normMerch([{ ...(prev || {}), ...incoming, id, img: (prev && prev.img) || '', at: (prev && prev.at) || Date.now() }])[0];
+      // the pictures are the record's, never the request's: merchPhoto/merchPhotoClear are the only writers
+      const row = normMerch([{ ...(prev || {}), ...incoming, id, img: (prev && prev.img) || '', imgs: (prev && prev.imgs) || [], at: (prev && prev.at) || Date.now() }])[0];
       if (!row) { bad_ = 'Give it a name'; return false; }
       if (at >= 0) p.merch[at] = row;
       else if (p.merch.length >= MAX_MERCH) { full = true; return false; }
@@ -1359,26 +1361,30 @@ async function handleShop(aid, action, body) {
   if (action === 'merchRemove') {
     const id = String(body.id || '');
     await mutateProfile(aid, (p) => { p.merch = (p.merch || []).filter((m) => m.id !== id); return true; });
-    if (MERCH_ID.test(id)) await dropImage(aid, id);
+    await dropMerchPictures(aid, id);
     return json({ ok: true, merch: (await getProfile(aid)).merch });
   }
+  /* the order the shop shows them in — the first item is the one on top of the community page's trio */
+  if (action === 'merchMove') {
+    const id = String(body.id || ''), dir = body.dir === 'up' ? 'up' : 'down';
+    let moved = false;
+    await mutateProfile(aid, (p) => { moved = moveMerch(p.merch || [], id, dir); return moved; });
+    return json({ ok: true, moved, merch: (await getProfile(aid)).merch });
+  }
+  // the pictures: up to five per item, in swipe order (_merchpix.mjs, shared with the Venue Studio)
   if (action === 'merchPhoto') {
     if (!(await canMerch())) return bad(merchLocked[0], merchLocked[1]);
     const id = String(body.id || '');
     if (!MERCH_ID.test(id)) return bad('unknown item');
-    const p0 = await getProfile(aid);
-    if (!p0.merch.some((m) => m.id === id)) return bad('unknown item', 404);
-    const dec = decodeDataUrl(body.data);
-    if (dec.error) return bad(dec.error);
-    const url = await putImage(aid, id, dec.bytes, dec.type);      // the slot IS the item id
-    await mutateProfile(aid, (p) => { const m = (p.merch || []).find((x) => x.id === id); if (!m) return false; m.img = url; return true; });
-    return json({ ok: true, url, merch: (await getProfile(aid)).merch });
+    const item = (await getProfile(aid)).merch.find((m) => m.id === id);
+    if (!item) return bad('unknown item', 404);
+    const r = await addMerchPicture(aid, (fn) => mutateProfile(aid, fn), item, body.data);
+    if (r.error) return bad(r.error, r.status);
+    return json({ ok: true, url: r.url, merch: (await getProfile(aid)).merch });
   }
   if (action === 'merchPhotoClear') {
-    const id = String(body.id || '');
-    if (!MERCH_ID.test(id)) return bad('unknown item');
-    await dropImage(aid, id);
-    await mutateProfile(aid, (p) => { const m = (p.merch || []).find((x) => x.id === id); if (!m) return false; m.img = ''; return true; });
+    const r = await dropMerchPicture(aid, (fn) => mutateProfile(aid, fn), String(body.id || ''), body.slot ? String(body.slot) : '');
+    if (r.error) return bad(r.error, r.status);
     return json({ ok: true, merch: (await getProfile(aid)).merch });
   }
 
@@ -1768,7 +1774,7 @@ async function handleFeature(req, aid, body, action) {
   return bad('unknown action', 400);
 }
 
-const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear',
+const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear', 'merchMove',
                               'postList', 'postHide', 'postPin', 'postReply',
                               'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone']);
 
