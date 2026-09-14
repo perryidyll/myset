@@ -2762,3 +2762,17 @@ production deploys 86 = 1,290 credits (96.3%); web requests 39,505 = 7.9; comput
 ~1 of requests (background); a gig adds 1–2. Kept in `finance/credits.json` (append-only —
 the API cannot give it); `actuals.py` carries the latest reading as `shipping.dashboard` /
 `traffic.dashboard`; the page's "Two bills" note quotes it.
+
+# SESSION LOG — 2026-09-15 (the Ugly Duckling night, 14 Sep)
+
+Record: `docs/sessions/2026-09-15-ugly-duckling-night.md`. 13 phones, 11 networks, 10 voted
+(77%), 22 votes, 13 songs, every vote played; two $10 card tips (21:46, 22:06) = $1.54 a
+head — the founder counts $30 (a third $10 is not in MySet's records: cash, or Stripe holds
+it). Cost of the night from Netlify's own meters (dashboard delta 12:40→17:50 UTC, minus
+12 Sep's background): ~3,500 requests, ~1.9 credits compute, ~0.8 bandwidth ≈ **3 credits**;
+the model guessed 3× the requests (screen-on may be ~8%, not 22% — one night, dial not
+moved). First bandwidth bracket (marks #3/#4, 108 MB / 7.67 h) withheld: background ~8 MB/h
+since 12 Sep. `actuals.json`: 8 nights, 9.88 phones, 2.78 h, 2.24 actions, **$1.03 a head**
+(4 money-known nights, $33/32), 272 deploys/30 d. Benchmark 1,000 artists: $8,230 / $6,492 /
+break-even 56 (at $0.375 a head: $3,530 / $1,844 / 171) — the per-head figure is everything.
+Mark #3 had been lost from the shared worktree's marks.json (reset to stale main) — restored.
