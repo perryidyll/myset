@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 10:05 — 2d676ab — wt@docs/shop-second-look-live (2 files since origin/main)
+**tl;dr:** Ledger and session note: the shop's second look is live as ab0a05e (UX-045, decision 0064, PR #39) [skip ci]
+**Other sessions:** Docs only. Numbers now taken: UX-045.
+
 ### 2026-09-14 10:02 — 57cc7b6 — wt@merch/shop-round-two (27 files since origin/main)
 **tl;dr:** The shop's second look: up to five pictures per item, chosen on the first page of Add an item and swiped through under the price on the shop; a stock count that comes down as fans buy (Only N left, sold out at zero); items re-order with ↑ ↓ (the first is on top of the community card, now larger); shipping/shipped for postage/posted everywhere; the brand ring on Browse the shop, gradient step numerals, no ⏸ on the strips, Paid to <name> in pink-orange (UX-045, decision 0064)
 **Other sessions:** Merch items carry imgs[] (slots <id>, <id>_1..4 — _img.mjs MERCH_SLOT; img is ALWAYS imgs[0]) and stock (null = not counting). New netlify/functions/_merchpix.mjs (add/drop pictures, both Studios). admin/venueadmin: merchPhoto APPENDS to the next free slot, merchPhotoClear takes {slot}, new merchMove {id,dir}; merchList sends maxImgs/maxStock. pay.mjs stockRefusal → 409 'Only N left' / 'sold out'; Stripe rate display_name is 'Shipping'. _pay.mjs takeStockFor runs once per fresh claim (best-effort). keysFor/keysForVenue now list the 4 extra img slots and wishes_. Stored field names post/ship are UNCHANGED — only the words a person reads. After editing studio.js or venue-studio.js run node tools/stamp.mjs.
