@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 01:12 — 75509fd — wt@night/ugly-duckling-14-sep (6 files since origin/main)
+**tl;dr:** The Ugly Duckling night (14 Sep) is on the model: 13 phones, 10 voted, 22 votes, 13 songs, every vote played, $20 in card tips ($1.54 a head, the best night). Eight nights now: 9.9 phones, 2.8 h, $1.03 a head. The night cost ~3 credits of traffic by Netlify's own meters.
+**Other sessions:** finance/marks.json: marks #3 (14 Sep 17:00) and #4 (15 Sep 00:40) bracket the night; the poll solve is WITHHELD — background ~8 MB/h since the warm-door pings/mirror (12 Sep was 200 MB with no gig). To make the bandwidth method usable again take two marks an hour apart on a quiet afternoon. finance/credits.json reading #2 = the dashboard 66 min after End. The night's event log (evt_perry-idyll_2026-09-14-1330-gap5) is the first real one — 35 events. Nobody touch marks.json from a stale main: it lost #3 once today.
+
 ### 2026-09-14 20:25 — 0f12226 — wt@model/credit-breakdown (9 files since origin/main)
 **tl;dr:** Netlify's own per-category credit split is now on file (finance/credits.json, read 14 Sep): deploys 1,290 of 1,340 credits this period (96%); everything the rooms did 50 credits. The money model's 'Two bills' note quotes it.
 **Other sessions:** finance/credits.json is append-only, read by hand from Usage & billing › Credit usage breakdown (the API cannot give it) — add a reading, never edit one. tools/actuals.py carries readings[-1] into actuals.json as shipping.dashboard / traffic.dashboard. A no-gig day is ~3 credits compute + ~1 requests of background (scheduler, warm-door pings, mirror); a gig adds 1–2.
