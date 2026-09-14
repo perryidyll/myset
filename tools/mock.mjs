@@ -96,7 +96,7 @@ const img = (owner, id) => `/api/img?a=${owner}&s=${id}`;
      5 no price, no link, no picture   → Ask at the show, letter tile */
 const ITEMS = () => [
   { id: 'm000001', title: 'Tour tee', blurb: 'Heavy cotton, printed in the van. Runs a little big.', cents: 2500, link: '', ship: 'pickup', on: true, at: NOW - 1 * 864e5, out: false, post: 0,
-    variants: [{ label: 'S', out: false }, { label: 'M', out: true }, { label: 'L', out: false }, { label: 'XL', out: false }] },
+    variants: [{ label: 'S', out: false, stock: null }, { label: 'M', out: true, stock: null }, { label: 'L', out: false, stock: 2 }, { label: 'XL', out: false, stock: 0 }] },
   { id: 'm000002', title: 'Live at the Room — vinyl', blurb: 'Twelve songs from the night the ceiling leaked. 180 g, gatefold.', cents: 3000, link: '', ship: 'ship', on: true, at: NOW - 2 * 864e5, out: false, post: 600, variants: [] },
   { id: 'm000003', title: 'Digital album', blurb: 'Every song, every format, from Bandcamp.', cents: 0, link: 'https://demo.bandcamp.com/album/live-at-the-room', ship: 'pickup', on: true, at: NOW - 3 * 864e5, out: false, post: 0, variants: [] },
   { id: 'm000004', title: 'Screen-printed poster', blurb: 'A2, numbered, fifty made.', cents: 1200, link: '', ship: 'pickup', on: true, at: NOW - 4 * 864e5, out: true, post: 0, variants: [] },
@@ -337,7 +337,8 @@ function normItem(prev, inc, id, owner) {
   for (const v of Array.isArray(inc.variants) ? inc.variants : (prev && prev.variants) || []) {
     const label = str(v && v.label, MERCH_CAPS.variantLen); const k = label.toLowerCase();
     if (!label || seen.has(k)) continue; seen.add(k);
-    row.variants.push({ label, out: !!(v && v.out) }); if (row.variants.length >= MERCH_CAPS.maxVariants) break;
+    const st = v && v.stock !== undefined && v.stock !== null && v.stock !== '' ? Math.max(0, Math.min(MERCH_CAPS.maxStock, parseInt(v.stock, 10) || 0)) : null;
+    row.variants.push({ label, out: !!(v && v.out), stock: st }); if (row.variants.length >= MERCH_CAPS.maxVariants) break;
   }
   row.imgs = (prev && prev.imgs) || []; row.img = row.imgs[0] || ''; row.at = (prev && prev.at) || NOW;
   row.stock = inc.stock === undefined ? (prev ? prev.stock : null) : (inc.stock === null || inc.stock === '' ? null : Math.max(0, Math.min(MERCH_CAPS.maxStock, parseInt(inc.stock, 10) || 0)));
@@ -580,7 +581,8 @@ function payStub(body, q, st) {
     if ((item.variants || []).length) {
       const v = item.variants.find((x) => x.label.toLowerCase() === String(body.variant || '').replace(/\s+/g, ' ').trim().toLowerCase());
       if (!v) return { status: 400, ok: false, error: 'Pick a size' };
-      if (v.out) return { status: 409, ok: false, error: 'That size is sold out' };
+      if (v.out || v.stock === 0) return { status: 409, ok: false, error: 'That size is sold out' };
+      if (v.stock != null && v.stock < qty) return { status: 409, ok: false, error: `Only ${v.stock} left in ${v.label}` };
     }
   } else if (body.kind === 'tip') {
     const cents = Math.round(Number(body.amount) * 100);
@@ -597,7 +599,10 @@ function confirmStub(st) {
   if (p && p.kind !== 'merch') return { ok: true, kind: p.kind, amount: Number(p.amount) || 0, granted: p.kind === 'votes' ? (PACKS[p.pack] || {}).votes || 0 : 0, song: p.song || '', fan: p.fan || '', at: p.at };
   const item = p && merchFor(p.slug, p.venue, st).find((m) => m.id === p.item);
   const qty = p ? Math.max(1, Math.min(5, parseInt(p.qty, 10) || 1)) : 2;
-  if (item && item.stock != null && !p.counted) { item.stock = Math.max(0, item.stock - qty); p.counted = true; }   // the count comes down once per purchase, as redeemSession does
+  if (item && !p.counted) {   // the count comes down once per purchase, the size's first, as takeStock does
+    const v = (item.variants || []).find((x) => x.label.toLowerCase() === String(p.variant || '').toLowerCase());
+    if (v && v.stock != null) v.stock = Math.max(0, v.stock - qty); else if (item.stock != null) item.stock = Math.max(0, item.stock - qty);
+    p.counted = true; }
   const order = item
     ? { item: item.id, title: item.title, qty, variant: (item.variants || []).length ? String(p.variant || '') : '', ship: item.ship, cents: item.cents * qty, post: postOf(item), code: 'K7PQ', show: p.live ? SHOW_LABEL : '', at: p.at }
     : { item: 'm000001', title: 'Tour tee', qty: 2, variant: 'M', ship: 'pickup', cents: 5000, post: 0, code: 'K7PQ', show: st.live ? SHOW_LABEL : '', at: Date.now() };

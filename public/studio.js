@@ -3411,7 +3411,7 @@ function merchSection(){
   const plus=(PLAN&&PLAN.plans&&PLAN.plans.plus)||null;
   const why='Selling merch is part of '+(plus&&plus.label?plus.label:'Bar Star')+(plus&&plus.price?' — '+money$(plus.price)+' a month':'')+'. Anything you add stays saved.';
   /* "S / <s>M</s> / L" — a struck size is sold out; the row says so without a tap. */
-  const sizes=m=>{const v=m.variants||[]; return v.length?' · '+v.map(x=>x.out?'<s>'+esc(x.label)+'</s>':esc(x.label)).join(' / '):'';};
+  const sizes=m=>{const v=m.variants||[]; return v.length?' · '+v.map(x=>(x.out||x.stock===0)?'<s>'+esc(x.label)+'</s>':esc(x.label)+(x.stock!=null?'&thinsp;<small>×'+x.stock+'</small>':'')).join(' / '):'';};
   const list=`<div class="sec"><span class="kick">Your items</span><span class="kick">${items.length}${MERCHMAX?'/'+MERCHMAX:''}</span></div>
     <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Sells from your shop page. Fans pay you directly through Stripe — MySet takes your plan’s cut on the price, Stripe takes its fee from your side. An item with a link sells wherever that link goes instead.</p>
     ${!D.paymentsEnabled?`<div class="row muted">Fans can’t pay by card until Stripe is set up on the <b>Money</b> tab — items with a link still sell, and everything shows.</div>`:''}
@@ -3683,8 +3683,26 @@ function mcVariants(){
   const raw=((document.getElementById('mcVariants')||{}).value||'').split(',').map(s=>{s=s.replace(/\s+/g,' ').trim(); return len?s.slice(0,len):s;}).filter(Boolean);
   const seen=new Set(), out=[];
   for(const label of raw){ const k=label.toLowerCase(); if(seen.has(k))continue; seen.add(k);
-    const prev=mcVar.find(v=>v.label.toLowerCase()===k); out.push({label,out:!!(prev&&prev.out)}); if(max&&out.length>=max)break; }
+    const prev=mcVar.find(v=>v.label.toLowerCase()===k);
+    /* the size's count: the field under the chips when it is on the sheet, else what the record had; blank = as many as you like */
+    const f=document.querySelector(`#mcVarQty input[data-vq="${CSS.escape(k)}"]`);
+    const raw=f?f.value.trim():(prev&&prev.stock!=null?String(prev.stock):'');
+    out.push({label,out:!!(prev&&prev.out),stock:raw===''?null:Math.max(0,parseInt(raw,10)||0)}); if(max&&out.length>=max)break; }
   return out;
+}
+/* PER-SIZE COUNTS (the founder, 2026-09-14): one small field under the chips for each size typed above,
+   live as the sizes are typed — blank means as many as you like while the size is in stock; a number
+   comes down as fans buy and 0 reads as that size sold out. The item's own count is for items without
+   sizes, so it hides while there are any. */
+function mcVarQtyRows(list){
+  if(!list.length) return '';
+  return `<p class="muted" style="font-size:12px;margin:10px 0 6px">How many of each (optional) — blank means as many as you like.</p>
+    <div class="vq">${list.map(v=>`<label><span>${esc(v.label)}</span><input class="inp" type="number" inputmode="numeric" min="0"${MERCHLIM.maxStock?' max="'+MERCHLIM.maxStock+'"':''} data-vq="${esc(v.label.toLowerCase())}" value="${v.stock!=null?v.stock:''}" placeholder="Any" aria-label="How many ${esc(v.label)}"></label>`).join('')}</div>`;
+}
+function mcSyncSizes(){
+  const list=mcVariants(), box=document.getElementById('mcVarQty'), one=document.getElementById('mcStockWrap');
+  if(box) box.innerHTML=mcVarQtyRows(list);
+  if(one) one.hidden=list.length>0;
 }
 /* What the server kept against what was sent: fewer sizes, a shortened label, or a
    shipping figure held to its cap. One line naming the cap when it is known. */
@@ -3723,14 +3741,17 @@ const mcSlotOf=u=>{ const m=/[?&]s=([a-z0-9_]+)/.exec(String(u||'')); return m?m
 /* what is typed right now, so a trip through the crop sheet loses nothing */
 function mcDraft(){
   const v=k=>(document.getElementById(k)||{}).value; if(v('mcTitle')==null) return MCDRAFT;
-  return {title:v('mcTitle'),blurb:v('mcBlurb'),price:v('mcPrice'),variants:v('mcVariants'),link:v('mcLink'),post:v('mcPostage'),stock:v('mcStock'),ship:mcShip,on:mcOn,out:mcOut,imgs:mcImgs};
+  const vq={}; document.querySelectorAll('#mcVarQty input[data-vq]').forEach(i=>{ if(i.value.trim()!=='') vq[i.dataset.vq]=Math.max(0,parseInt(i.value,10)||0); });
+  return {title:v('mcTitle'),blurb:v('mcBlurb'),price:v('mcPrice'),variants:v('mcVariants'),link:v('mcLink'),post:v('mcPostage'),stock:v('mcStock'),ship:mcShip,on:mcOn,out:mcOut,imgs:mcImgs,vq};
 }
 function openMerch(id,draft){
   const m0=(MERCH||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',ship:'pickup',on:true,img:'',imgs:[],variants:[],out:false,post:0,stock:null};
   const d=draft||null, m={...m0};
   if(d){ m.title=d.title; m.blurb=d.blurb; m.link=d.link; m.ship=d.ship; m.on=d.on; m.out=d.out; }
   mcShip=m.ship||'pickup'; mcOn=m.on!==false; mcOut=m.out===true;
-  mcVar=(m0.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));
+  mcVar=(m0.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true,stock:v.stock==null?null:v.stock}));
+  if(d&&d.variants!=null){ const typed=String(d.variants).split(',').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean); const seen=new Set();
+    mcVar=typed.filter(l=>{const k=l.toLowerCase(); if(seen.has(k))return false; seen.add(k); return true;}).map(l=>{const prev=(m0.variants||[]).find(v=>String(v.label).toLowerCase()===l.toLowerCase()); return {label:l,out:!!(prev&&prev.out),stock:prev&&prev.stock!=null?prev.stock:null};}); }
   mcImgs=d?d.imgs:(m0.imgs&&m0.imgs.length?m0.imgs:(m0.img?[m0.img]:[])).map(u=>({url:u}));
   MCDRAFT=null;
   openSheet(`<h3>${id?'Edit item':'Add an item'}</h3>
@@ -3742,15 +3763,16 @@ function openMerch(id,draft){
     <div class="field"><label>Sizes / options</label><input class="inp" id="mcVariants"${MERCHLIM.maxVariants&&MERCHLIM.variantLen?' maxlength="'+(MERCHLIM.maxVariants*(MERCHLIM.variantLen+2))+'"':''} value="${d?esc(d.variants):esc(mcVar.map(v=>v.label).join(', '))}" placeholder="S, M, L, XL" autocomplete="off">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${mcVarHelp()}</p>
       ${id&&mcVar.length?`<p class="muted" style="font-size:12px;margin:10px 0 7px">Tap a size to mark it sold out — it saves straight away.</p>
-      <div class="chips" id="mcVarChips" data-item="${esc(id)}">${mcChips()}</div>`:''}</div>
+      <div class="chips" id="mcVarChips" data-item="${esc(id)}">${mcChips()}</div>`:''}
+      <div id="mcVarQty">${mcVarQtyRows(d?mcVar.map(v=>({...v,stock:(d.vq||{})[v.label.toLowerCase()]??v.stock})):mcVar)}</div></div>
     <div class="field"><label>Or a link to where it sells (optional)</label><input class="inp" id="mcLink" value="${esc(m.link)}" placeholder="https://…"></div>
     <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Shipped asks for an address at checkout</div></div>
       <div class="tog"><button id="mcPick" class="${m.ship!=='ship'?'on':''}" onclick="mcShip='pickup';this.classList.add('on');document.getElementById('mcPost').classList.remove('on');document.getElementById('mcPostWrap').hidden=true">Pickup</button>
       <button id="mcPost" class="${m.ship==='ship'?'on':''}" onclick="mcShip='ship';this.classList.add('on');document.getElementById('mcPick').classList.remove('on');document.getElementById('mcPostWrap').hidden=false">Shipped</button></div></div>
     <div class="field" id="mcPostWrap"${m.ship==='ship'?'':' hidden'}><label>Shipping per order (USD)</label><input class="inp" id="mcPostage" inputmode="decimal" value="${d?esc(d.post):(m.post?(m.post/100):'')}" placeholder="6">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${mcPostHelp()}</p></div>
-    <div class="field"><label>Quantity in stock (optional)</label><input class="inp" id="mcStock" type="number" inputmode="numeric" min="0"${MERCHLIM.maxStock?' max="'+MERCHLIM.maxStock+'"':''} value="${d?esc(d.stock):(m0.stock!=null?m0.stock:'')}" placeholder="Leave blank if you’re not counting">
-      <p class="muted" style="font-size:12px;margin:7px 0 0">Comes down by itself as fans buy; at 0 the item shows as sold out until you put a number back.</p></div>
+    <div class="field" id="mcStockWrap"${mcVar.length?' hidden':''}><label>Quantity in stock (optional)</label><input class="inp" id="mcStock" type="number" inputmode="numeric" min="0"${MERCHLIM.maxStock?' max="'+MERCHLIM.maxStock+'"':''} value="${d?esc(d.stock):(m0.stock!=null?m0.stock:'')}" placeholder="Leave blank if you’re not counting">
+      <p class="muted" style="font-size:12px;margin:7px 0 0">Comes down by itself as fans buy; at 0 the item shows as sold out until you put a number back. With sizes, the counts sit under each size instead.</p></div>
     <div class="row"><div class="m"><div class="t">Stock</div><div class="s">Sold out stays on the page, greyed, with no Buy</div></div>
       <div class="tog"><button id="mcIn" class="${m.out!==true?'on':''}" onclick="mcOut=false;this.classList.add('on');document.getElementById('mcSold').classList.remove('on')">In stock</button>
       <button id="mcSold" class="${m.out===true?'on':''}" onclick="mcOut=true;this.classList.add('on');document.getElementById('mcIn').classList.remove('on')">Sold out</button></div></div>
@@ -3759,6 +3781,7 @@ function openMerch(id,draft){
       <button id="mcOff" class="${m.on===false?'on':''}" onclick="mcOn=false;this.classList.add('on');document.getElementById('mcOn').classList.remove('on')">Off</button></div></div>
     <button class="big" style="margin-top:14px" id="mcSave" onclick="saveMerch('${esc(id)}')">Save</button>`);
   setTimeout(()=>{const e=document.getElementById('mcTitle'); if(e&&!id&&!d)e.focus();},260);
+  const sv=document.getElementById('mcVariants'); if(sv) sv.addEventListener('input',mcSyncSizes);   // the count fields follow the sizes as they are typed
 }
 async function saveMerch(id){
   const v=k=>(document.getElementById(k)||{}).value||'';
@@ -3813,7 +3836,7 @@ async function mcVarOut(i){
   if(!d.ok){ mcVar[i].out=!mcVar[i].out; box.innerHTML=mcChips(); toast(d.error||'Couldn’t save'); return; }
   const was=mcVar[i].out;
   MERCH=d.merch; const it=(MERCH||[]).find(x=>x.id===id);
-  if(it) mcVar=(it.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));   // what the server kept, in its order
+  if(it) mcVar=(it.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true,stock:v.stock==null?null:v.stock}));   // what the server kept, in its order
   box.innerHTML=mcChips(); render(); toast(was?'Marked sold out':'Back in stock');
 }
 async function rmMerch(id){

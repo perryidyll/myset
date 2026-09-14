@@ -781,7 +781,7 @@ function wishesSection(){
 }
 const vmoney=c=>'$'+(c/100).toFixed(c%100?2:0);
 /* "S / <s>M</s> / L" — a struck size is sold out; the row says so without a tap. */
-const vsizes=m=>{const v=m.variants||[]; return v.length?' · '+v.map(x=>x.out?'<s>'+esc(x.label)+'</s>':esc(x.label)).join(' / '):'';};
+const vsizes=m=>{const v=m.variants||[]; return v.length?' · '+v.map(x=>(x.out||x.stock===0)?'<s>'+esc(x.label)+'</s>':esc(x.label)+(x.stock!=null?'&thinsp;<small>×'+x.stock+'</small>':'')).join(' / '):'';};
 function vMerchTab(){
   const items=V.merch||[], stored=V.merchStored||0;
   const list=`<div class="sec"><span class="kick">Your merch</span><span class="kick">${items.length}${V.merchMax?'/'+V.merchMax:''}</span></div>
@@ -827,9 +827,19 @@ function vmVariants(){
   const raw=((document.getElementById('vmVariants')||{}).value||'').split(',').map(s=>{s=s.replace(/\s+/g,' ').trim(); return len?s.slice(0,len):s;}).filter(Boolean);
   const seen=new Set(), out=[];
   for(const label of raw){ const k=label.toLowerCase(); if(seen.has(k))continue; seen.add(k);
-    const prev=vmVar.find(v=>v.label.toLowerCase()===k); out.push({label,out:!!(prev&&prev.out)}); if(max&&out.length>=max)break; }
+    const prev=vmVar.find(v=>v.label.toLowerCase()===k);
+    const f=document.querySelector(`#vmVarQty input[data-vq="${CSS.escape(k)}"]`);   // the size's count field, when it is on the sheet
+    const raw=f?f.value.trim():(prev&&prev.stock!=null?String(prev.stock):'');
+    out.push({label,out:!!(prev&&prev.out),stock:raw===''?null:Math.max(0,parseInt(raw,10)||0)}); if(max&&out.length>=max)break; }
   return out;
 }
+/* per-size counts under the chips, live as the sizes are typed — blank = as many as you like (2026-09-14) */
+function vmVarQtyRows(list){
+  if(!list.length) return '';
+  return `<p class="muted" style="font-size:12px;margin:10px 0 6px">How many of each (optional) — blank means as many as you like.</p>
+    <div class="vq">${list.map(v=>`<label><span>${esc(v.label)}</span><input class="inp" type="number" inputmode="numeric" min="0"${VMLIM.maxStock?' max="'+VMLIM.maxStock+'"':''} data-vq="${esc(v.label.toLowerCase())}" value="${v.stock!=null?v.stock:''}" placeholder="Any" aria-label="How many ${esc(v.label)}"></label>`).join('')}</div>`;
+}
+function vmSyncSizes(){ const list=vmVariants(), box=document.getElementById('vmVarQty'), one=document.getElementById('vmStockWrap'); if(box) box.innerHTML=vmVarQtyRows(list); if(one) one.hidden=list.length>0; }
 /* What the server kept against what was sent: fewer sizes, a shortened label, a
    shipping or price figure held to its cap. One line naming the cap when it is known. */
 function vmTrimmed(sent,kept){
@@ -869,7 +879,7 @@ async function vmPicRemove(k){
 function openVMerch(id){
   const m=(V.merch||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',ship:'pickup',on:true,img:'',imgs:[],variants:[],out:false,post:0,stock:null};
   vmcOn=m.on!==false; vmcOut=m.out===true; vmcShip=m.ship==='ship'?'ship':'pickup';
-  vmVar=(m.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));
+  vmVar=(m.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true,stock:v.stock==null?null:v.stock}));
   vmImgs=(m.imgs&&m.imgs.length?m.imgs:(m.img?[m.img]:[])).map(u=>({url:u}));
   openSheet(`<h3>${id?'Edit item':'Add an item'}</h3>
     <div class="field"><label>Photos</label>${vmPicsRow(id)}</div>
@@ -880,14 +890,15 @@ function openVMerch(id){
     <div class="field"><label>Sizes / options</label><input class="inp" id="vmVariants"${VMLIM.maxVariants&&VMLIM.variantLen?' maxlength="'+(VMLIM.maxVariants*(VMLIM.variantLen+2))+'"':''} value="${esc(vmVar.map(v=>v.label).join(', '))}" placeholder="S, M, L, XL" autocomplete="off">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${vmVarHelp()}</p>
       ${id&&vmVar.length?`<p class="muted" style="font-size:12px;margin:10px 0 7px">Tap a size to mark it sold out — it saves straight away.</p>
-      <div class="chips" id="vmVarChips" data-item="${esc(id)}">${vmChips()}</div>`:''}</div>
+      <div class="chips" id="vmVarChips" data-item="${esc(id)}">${vmChips()}</div>`:''}
+      <div id="vmVarQty">${vmVarQtyRows(vmVar)}</div></div>
     <div class="field"><label>${PAY&&PAY.ready?'Link to where it sells (optional — fans can buy right here)':'Link to where it sells'}</label><input class="inp" id="vmLink" value="${esc(m.link)}" placeholder="https://…"></div>
     <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Shipped asks for an address at checkout</div></div>
       <div class="tog"><button id="vmPick" class="${vmcShip!=='ship'?'on':''}" onclick="vmcShip='pickup';this.classList.add('on');document.getElementById('vmPost').classList.remove('on');document.getElementById('vmPostWrap').hidden=true">Pickup</button>
       <button id="vmPost" class="${vmcShip==='ship'?'on':''}" onclick="vmcShip='ship';this.classList.add('on');document.getElementById('vmPick').classList.remove('on');document.getElementById('vmPostWrap').hidden=false">Shipped</button></div></div>
     <div class="field" id="vmPostWrap"${vmcShip==='ship'?'':' hidden'}><label>Shipping per order (USD)</label><input class="inp" id="vmPostage" inputmode="decimal" value="${m.post?(m.post/100):''}" placeholder="6">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${vmPostHelp()}</p></div>
-    <div class="field"><label>Quantity in stock (optional)</label><input class="inp" id="vmStock" type="number" inputmode="numeric" min="0"${VMLIM.maxStock?' max="'+VMLIM.maxStock+'"':''} value="${m.stock!=null?m.stock:''}" placeholder="Leave blank if you’re not counting">
+    <div class="field" id="vmStockWrap"${vmVar.length?' hidden':''}><label>Quantity in stock (optional)</label><input class="inp" id="vmStock" type="number" inputmode="numeric" min="0"${VMLIM.maxStock?' max="'+VMLIM.maxStock+'"':''} value="${m.stock!=null?m.stock:''}" placeholder="Leave blank if you’re not counting">
       <p class="muted" style="font-size:12px;margin:7px 0 0">Comes down by itself as fans buy; at 0 the item shows as sold out until you put a number back.</p></div>
     <div class="row"><div class="m"><div class="t">Stock</div><div class="s">Sold out stays on the page, greyed, with no Buy</div></div>
       <div class="tog"><button id="vmIn" class="${m.out!==true?'on':''}" onclick="vmcOut=false;this.classList.add('on');document.getElementById('vmSold').classList.remove('on')">In stock</button>
@@ -896,6 +907,7 @@ function openVMerch(id){
       <div class="tog"><button id="vmOn" class="${m.on!==false?'on':''}" onclick="vmcOn=true;this.classList.add('on');document.getElementById('vmOff').classList.remove('on')">On</button>
       <button id="vmOff" class="${m.on===false?'on':''}" onclick="vmcOn=false;this.classList.add('on');document.getElementById('vmOn').classList.remove('on')">Off</button></div></div>
     <button class="big" style="margin-top:14px" id="vmSave" onclick="saveVMerch('${esc(id)}')">Save</button>`);
+  const sv=document.getElementById('vmVariants'); if(sv) sv.addEventListener('input',vmSyncSizes);
 }
 async function saveVMerch(id){
   const v=k=>(document.getElementById(k)||{}).value||'';
@@ -932,7 +944,7 @@ async function vmVarOut(i){
   const d=await save({action:'merchSave',item:{id,variants:vmVariants()}},was?'Marked sold out':'Back in stock');
   if(!d||!d.ok){ vmVar[i].out=!was; box.innerHTML=vmChips(); return; }
   const it=(V.merch||[]).find(x=>x.id===id);
-  if(it) vmVar=(it.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));   // what the server kept, in its order
+  if(it) vmVar=(it.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true,stock:v.stock==null?null:v.stock}));   // what the server kept, in its order
   box.innerHTML=vmChips();
 }
 async function rmVMerch(id){ if(!confirm('Remove this item?'))return; await save({action:'merchRemove',id},'Removed'); }

@@ -2,7 +2,7 @@ import { playable, votable, inPlay, rankSongs, newShowId } from '../netlify/func
 import { shapeLists } from '../netlify/functions/_lists.mjs';
 import { findUltimateGuitarLink, ultimateGuitarSearch } from '../netlify/functions/_chords.mjs';
 import { addressFromMapUrl, resolveShortMapPlace } from '../netlify/functions/_maps.mjs';
-import { normMerch, normVariants, MAX_VARIANTS, VARIANT_LEN, MAX_POST, MAX_MERCH_IMGS, MAX_STOCK, merchSoldOut, moveMerch, takeStock, merchSlots, freeMerchSlot } from '../netlify/functions/_profile.mjs';
+import { normMerch, normVariants, MAX_VARIANTS, VARIANT_LEN, MAX_POST, MAX_MERCH_IMGS, MAX_STOCK, merchSoldOut, variantSoldOut, moveMerch, takeStock, merchSlots, freeMerchSlot } from '../netlify/functions/_profile.mjs';
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -158,11 +158,11 @@ console.log('\nnormMerch(): the whitelist a shop item is — sizes, sold out, po
   const one = (extra) => normMerch([{ id: 'mabc123', title: 'Tee', ...extra }])[0];
   eq('an item without the new fields reads as none of them', [one({}).variants, one({}).out, one({}).post], [[], false, 0]);
   eq('sizes are labels with a sold-out flag, in the order given', one({ variants: [{ label: 'S' }, { label: 'M', out: true }] }).variants,
-    [{ label: 'S', out: false }, { label: 'M', out: true }]);
+    [{ label: 'S', out: false, stock: null }, { label: 'M', out: true, stock: null }]);
   eq('de-duplicated without regard to case, trimmed, blanks dropped',
     one({ variants: [{ label: ' L ' }, { label: 'l' }, { label: '' }, { label: '   ' }, null, 7, { label: 'XL' }] }).variants.map((v) => v.label), ['L', 'XL']);
-  eq('the first spelling wins a duplicate', one({ variants: [{ label: 'Large' }, { label: 'LARGE', out: true }] }).variants, [{ label: 'Large', out: false }]);
-  eq('a bare string is a label', one({ variants: ['S', 'M'] }).variants, [{ label: 'S', out: false }, { label: 'M', out: false }]);
+  eq('the first spelling wins a duplicate', one({ variants: [{ label: 'Large' }, { label: 'LARGE', out: true }] }).variants, [{ label: 'Large', out: false, stock: null }]);
+  eq('a bare string is a label', one({ variants: ['S', 'M'] }).variants, [{ label: 'S', out: false, stock: null }, { label: 'M', out: false, stock: null }]);
   eq(`at most ${MAX_VARIANTS}`, one({ variants: Array.from({ length: 20 }, (_, i) => ({ label: 'v' + i })) }).variants.length, MAX_VARIANTS);
   eq(`each label ${VARIANT_LEN} characters`, one({ variants: [{ label: 'x'.repeat(80) }] }).variants[0].label.length, VARIANT_LEN);
   eq('inner whitespace folds to one space', one({ variants: [{ label: 'One   size\tfits' }] }).variants[0].label, 'One size fits');
@@ -170,7 +170,7 @@ console.log('\nnormMerch(): the whitelist a shop item is — sizes, sold out, po
   eq('a size is out only when exactly true too', one({ variants: [{ label: 'S', out: 'yes' }] }).variants[0].out, false);
   eq('postage is whole cents, never below zero', [one({ post: 600 }).post, one({ post: '600' }).post, one({ post: -5 }).post, one({ post: 'free' }).post, one({ post: 6.99 }).post], [600, 600, 0, 0, 6]);
   eq(`and never above ${MAX_POST}`, one({ post: 999999 }).post, MAX_POST);
-  eq('normVariants alone takes anything and returns a list', [normVariants(null), normVariants('S'), normVariants([{ label: 'S' }])], [[], [], [{ label: 'S', out: false }]]);
+  eq('normVariants alone takes anything and returns a list', [normVariants(null), normVariants('S'), normVariants([{ label: 'S' }])], [[], [], [{ label: 'S', out: false, stock: null }]]);
   eq('the old fields still normalise as they did', normMerch([{ id: 'mabc123', title: ' Tee ', cents: '2500', ship: 'ship', on: false, link: 'javascript:x' }])[0],
     { id: 'mabc123', title: 'Tee', blurb: '', cents: 2500, img: '', imgs: [], stock: null, link: '', ship: 'ship', on: false, at: 0, variants: [], out: false, post: 0 });
   /* THE PICTURES AND THE COUNT (2026-09-14): imgs is the swipe order, img is always imgs[0], an older
@@ -189,6 +189,13 @@ console.log('\nnormMerch(): the whitelist a shop item is — sizes, sold out, po
   const counted = [one({ id: 'maaaaa1', stock: 3 }), one({ id: 'maaaaa2' })];
   eq('takeStock comes down by the quantity, never below zero, and leaves an uncounted item alone',
     [takeStock(counted, 'maaaaa1', 2), counted[0].stock, takeStock(counted, 'maaaaa1', 5), counted[0].stock, takeStock(counted, 'maaaaa2', 1), counted[1].stock], [true, 1, true, 0, false, null]);
+  /* PER-SIZE COUNTS (2026-09-14, later): blank = as many as you like while the size is in stock; a
+     size at 0 is sold out; an item is sold out when every size is; the order's size takes the hit. */
+  eq('a size keeps a count, blank meaning none', one({ variants: [{ label: 'S', stock: 4 }, { label: 'M', stock: '' }, { label: 'L', stock: -1 }] }).variants.map((v) => v.stock), [4, null, 0]);
+  eq('a size at zero is sold out; every size at zero is the item sold out', [variantSoldOut({ label: 'S', out: false, stock: 0 }), merchSoldOut(one({ variants: [{ label: 'S', stock: 0 }, { label: 'M', out: true }] })), merchSoldOut(one({ variants: [{ label: 'S', stock: 0 }, { label: 'M' }] }))], [true, true, false]);
+  const sized = [one({ id: 'maaaaa1', stock: 9, variants: [{ label: 'S', stock: 2 }, { label: 'M' }] })];
+  eq('takeStock with a size takes the size’s count and leaves the item’s', [takeStock(sized, 'maaaaa1', 1, 's'), sized[0].variants[0].stock, sized[0].stock], [true, 1, 9]);
+  eq('a size that is not counting falls back to the item’s count', [takeStock(sized, 'maaaaa1', 2, 'M'), sized[0].stock, sized[0].variants[1].stock], [true, 7, null]);
   eq('merchSlots is the bare id then _1.._4', merchSlots('mabc123'), ['mabc123', 'mabc123_1', 'mabc123_2', 'mabc123_3', 'mabc123_4']);
   eq('freeMerchSlot is the first slot no picture uses', [freeMerchSlot(one({ id: 'mabc123' })), freeMerchSlot(one({ id: 'mabc123', imgs: [own('mabc123'), own('mabc123_2')] })), freeMerchSlot(one({ id: 'mabc123', imgs: ['mabc123', 'mabc123_1', 'mabc123_2', 'mabc123_3', 'mabc123_4'].map(own) }))], ['mabc123', 'mabc123_1', '']);
 }

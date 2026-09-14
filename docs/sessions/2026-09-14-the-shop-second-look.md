@@ -15,6 +15,10 @@
 
 **Not checked:** a real phone's swipe on the gallery (scroll-snap under iOS momentum); a real upload of five photos over bar wifi in one go; Stripe's page with several images on a Connect charge; the venue redeem path's `takeStockFor` (the artist path is under test, the venue branch shares it).
 
+## Later the same day — a count per size (UX-046)
+
+The founder did not see the count on the editor (the one field sat under Shipping, and his Studio may have held yesterday's script) and asked for what he meant: an optional number under each size chip, blank = infinite while the size is in stock. Shipped: `variants[].stock` on the record (`normVariants`), `variantSoldOut`/`merchSoldOut` over every size, `takeStock(list,id,qty,variant)` taking the size first, `pickVariant` refusing a size at zero and `variantShort` naming *Only N left in M*; the shop strikes a size at zero, says *Only 2 left in L* once picked and caps the stepper, and a 409 naming a size lowers that size's count in place; both Studios draw the count fields under the chips, live as the sizes are typed (`mcSyncSizes`/`vmSyncSizes`), hiding the item's own count while there are sizes; the row summary shows `L ×2`; the mock's tee has L ×2 and XL at 0. Gate: suite 3,010 ✓ / 0 ✗ (unit +4, community +9, copy +1), uicheck 239 ✓, sheetcheck 39 ✓, overview current; headless: the editor's four fields (S, M blank; L 2; XL 0) with the item count hidden; a new item typed *One size, Kids* grows two fields live, Kids 4 saved; the shop sheet strikes XL, picks L → *Only 2 left in L*, ＋ stops at 2 with *That's all of them.*
+
 ## Shipped
 
 Pushed as `57cc7b6` + push-log `85f6c67`, PR #39, preview looked at 375 px with the founder's two real items (the gallery under the price, *Ask at the show* since his card payments are off — nothing to Buy, nothing bought), merged as **`ab0a05e`**, live by content 36 s later.

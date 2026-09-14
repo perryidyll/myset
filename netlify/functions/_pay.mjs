@@ -125,14 +125,14 @@ export const canTakeMoney = (aid, show) =>
 
 /* The artist's profile or the venue's, by the owner id's shape (`v_<vid>` is a venue,
    cleanOwnerId). Imported lazily: _profile and _venues both import _lib, as this does. */
-async function takeStockFor(owner, item, qty) {
+async function takeStockFor(owner, item, qty, variant) {
   const { takeStock } = await import('./_profile.mjs');
   if (String(owner).startsWith('v_')) {
     const { mutateVenueProfile } = await import('./_venues.mjs');
-    return mutateVenueProfile(String(owner).slice(2), (p) => takeStock(p.merch, item, qty));
+    return mutateVenueProfile(String(owner).slice(2), (p) => takeStock(p.merch, item, qty, variant));
   }
   const { mutateProfile } = await import('./_profile.mjs');
-  return mutateProfile(owner, (p) => takeStock(p.merch, item, qty));
+  return mutateProfile(owner, (p) => takeStock(p.merch, item, qty, variant));
 }
 
 /* ONE implementation of "grant what this payment bought".
@@ -212,7 +212,7 @@ export async function redeemSession(aid, session, fallbackFan = '') {
        count one high and the artist corrects it in the Studio; a double write is
        impossible because only the fresh claim reaches this line. An item that is
        not counting (stock null) is left alone. */
-    if (orderRow) await takeStockFor(aid, orderRow.item, orderRow.qty).catch(() => {});
+    if (orderRow) await takeStockFor(aid, orderRow.item, orderRow.qty, orderRow.variant).catch(() => {});
   } else {
     granted = Number(pre.paid[sid].granted)
       || (md.kind === 'votes' || md.kind === 'song_votes' ? parseInt(md.votes, 10) || 0 : 0);

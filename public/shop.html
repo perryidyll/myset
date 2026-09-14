@@ -515,8 +515,15 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 /* ---------- the product sheet ---------- */
 let CUR=null, QTY=1, SIZE='', SAYT=0;
 const postOf=m=>(m.ship==='ship'&&m.post>0)?m.post:0;
-const soldOut=m=>!!m.out||m.stock===0||((m.variants||[]).length>0&&m.variants.every(v=>v.out));
-const fewLeft=m=>(m.stock!=null&&m.stock>0&&m.stock<=5)?m.stock:0;   // a true count, said only when it is small enough to matter
+/* a size is sold out by its flag or its count at zero; an item with sizes is sold out when every size is (the server's merchSoldOut) */
+const vOut=v=>!!v.out||v.stock===0;
+const soldOut=m=>!!m.out||m.stock===0||((m.variants||[]).length>0&&m.variants.every(vOut));
+/* what is left, said only when it is small enough to matter: the size's count once one is picked, else the item's, else
+   the sizes' total when every size is counting (one uncounted size means "as many as you like") */
+const leftOf=(m,size)=>{ const vs=m.variants||[]; if(size){ const v=vs.find(x=>x.label===size); return v&&v.stock!=null?v.stock:(m.stock!=null?m.stock:null); }
+  if(m.stock!=null) return m.stock; if(vs.length&&vs.every(v=>vOut(v)||v.stock!=null)) return vs.filter(v=>!vOut(v)).reduce((s,v)=>s+v.stock,0); return null; };
+const fewLeft=(m,size)=>{ const n=leftOf(m,size); return (n!=null&&n>0&&n<=5)?n:0; };
+const capOf=(m,size)=>{ const n=leftOf(m,size); return n!=null?Math.min(5,Math.max(1,n)):5; };   // never more than are left
 /* one item, one history entry: a tap pushes #m<id>, Back pops it; a share, a QR or a cancelled Stripe trip opens it by the hash.
    mode 'swap' (the More strip) REPLACES the open sheet's entry, so Back still closes it in one step; true = arriving from history, write nothing */
 function openItem(id,mode){
@@ -558,12 +565,11 @@ function paintSheet(){
   const m=CUR, d=D; if(!m||!d) return;
   const vars=m.variants||[], out=soldOut(m), buyable=!out&&d.canBuy&&m.cents>=100, post=postOf(m);
   const mine=buyable||out, where=mine?(m.ship==='ship'?'shipped':'pick up')+(post?' · + '+money(post)+' shipping':'')+(buyable&&d.live&&!VENUE&&m.ship==='pickup'?' · Tonight':''):'';
-  const few=buyable?fewLeft(m):0;
   let h=`<h3>${esc(m.title)}</h3>
-    <div class="prow"><b class="price">${m.cents?money(m.cents):'No price listed'}</b>${where?`<span>${where}</span>`:''}${few?`<span class="left">Only ${few} left</span>`:''}</div>
+    <div class="prow"><b class="price">${m.cents?money(m.cents):'No price listed'}</b>${where?`<span>${where}</span>`:''}<span class="left" id="left">${buyable&&fewLeft(m,SIZE)?`Only ${fewLeft(m,SIZE)} left${SIZE?' in '+esc(SIZE):''}`:''}</span></div>
     ${galleryBlock(m,out)}
     <p class="lede" id="lede">${ledeFor(m)}</p>`;
-  if(buyable&&vars.length) h+=`<fieldset class="sizes" id="sizes" data-nopull><legend class="kick">Size</legend><div class="row">${vars.map(v=>`<label class="chip${v.out?' is-out':''}"><input type="radio" name="size" value="${esc(v.label)}"${v.out?' disabled':''}${SIZE===v.label?' checked':''}><span>${esc(v.label)}</span>${v.out?'<span class="sr">, sold out</span>':''}</label>`).join('')}</div></fieldset>`;
+  if(buyable&&vars.length) h+=`<fieldset class="sizes" id="sizes" data-nopull><legend class="kick">Size</legend><div class="row">${vars.map(v=>`<label class="chip${vOut(v)?' is-out':''}"><input type="radio" name="size" value="${esc(v.label)}"${vOut(v)?' disabled':''}${SIZE===v.label?' checked':''}><span>${esc(v.label)}</span>${vOut(v)?'<span class="sr">, sold out</span>':''}</label>`).join('')}</div></fieldset>`;
   if(buyable){
     h+=`<div class="tiles qty"><button class="tile" id="qMinus" aria-label="One fewer">−</button><b id="qty" aria-label="Quantity">${QTY}</b><button class="tile" id="qPlus" aria-label="One more">＋</button></div>
     <p class="fine" id="qmax" hidden>Five is the most per order.</p>
@@ -589,11 +595,11 @@ function paintSheet(){
   /* the More strip: a card swaps the sheet to that item; its ⏸ is the page's one control, so the page redraws with it and the strip follows */
   const mw=$('#moreWrap'); if(mw) mw.addEventListener('click',e=>{ const t=e.target.closest&&e.target.closest('[data-more]'); if(t) openItem(t.dataset.more,'swap'); });
   if(!STILL&&!REDUCED()) drift('more',-1);   // .on is already set: the first frame drift() takes is after the arrival has begun
-  sh.querySelectorAll('input[name="size"]').forEach(i=>i.addEventListener('change',()=>{ SIZE=i.value; paint(); sayTotal(); }));
+  sh.querySelectorAll('input[name="size"]').forEach(i=>i.addEventListener('change',()=>{ SIZE=i.value; QTY=Math.min(QTY,capOf(CUR,SIZE)); paint(); sayTotal(); }));
   const mi=$('#qMinus'), pl=$('#qPlus'), go=$('#buyGo');
   bindGallery(sh);
   if(mi) mi.addEventListener('click',()=>{ QTY=Math.max(1,QTY-1); bump(); paint(); sayTotal(); });
-  if(pl) pl.addEventListener('click',()=>{ QTY=Math.min(m.stock!=null?Math.min(5,Math.max(1,m.stock)):5,QTY+1); bump(); paint(); sayTotal(); });
+  if(pl) pl.addEventListener('click',()=>{ QTY=Math.min(capOf(m,SIZE),QTY+1); bump(); paint(); sayTotal(); });
   /* Pay is never disabled (blueprint §3.3/§3.8): with sizes and none chosen, a tap points at the size row and says why */
   if(go) go.addEventListener('click',()=>{
     if((CUR.variants||[]).length&&!SIZE){ const f=$('#sizes'); if(f){ f.scrollIntoView({block:'center',behavior:REDUCED()?'auto':'smooth'}); f.classList.add('nudge'); setTimeout(()=>f.classList.remove('nudge'),120); }
@@ -621,7 +627,7 @@ function paint(){
   const m=CUR, b=$('#buyGo'); if(!m||!b) return;
   const post=postOf(m), total=m.cents*QTY+post, pick=(m.variants||[]).length>0&&!SIZE;
   const q=$('#qty'), mi=$('#qMinus'), pl=$('#qPlus'), qm=$('#qmax'), t=$('#total');
-  const cap=m.stock!=null?Math.min(5,Math.max(1,m.stock)):5;   // never more than are left
+  const cap=capOf(m,SIZE), lf=$('#left'); if(lf) lf.textContent=fewLeft(m,SIZE)?`Only ${fewLeft(m,SIZE)} left${SIZE?' in '+SIZE:''}`:'';
   if(q) q.textContent=QTY; if(mi) mi.disabled=QTY<=1; if(pl) pl.disabled=QTY>=cap; if(qm){ qm.hidden=QTY<cap; qm.textContent=cap<5?`That’s all ${cap===1?'there is':'of them'}.`:'Five is the most per order.'; }
   b.disabled=false; b.textContent=pick?'Pick a size':`Pay ${money(total)}`;
   if(t){ const show=QTY>1||post>0; t.hidden=!show; if(show) t.innerHTML=`Total <b>${money(total)}</b>${QTY>1?' for '+QTY:''}${post?' · includes '+money(post)+' shipping':''}`; }
@@ -911,8 +917,8 @@ async function buy(){
       if(r.status===503||e==='payments-not-configured'){ toast(`Card payments just went off for ${VENUE?D.name:firstName()} — ${TABLE} takes cash tonight.`); D.canBuy=false; render(); paintSheet(); return; }
       if(r.status===404){ toast('That one just came off sale. Pull down to refresh.'); closeSheet(); return; }
       if(r.status===409&&/size/i.test(e)){ const v=(m.variants||[]).find(x=>x.label===SIZE); if(v) v.out=true; const left=(m.variants||[]).filter(x=>!x.out).map(x=>x.label); toast(`${SIZE} just went${left.length?' — '+left.join(', ')+' left':''}.`); SIZE=''; paintSheet(); return; }
-      const left=/^Only (\d+) left/.exec(e);   // the count came down under the thumb: keep the sheet, cap the quantity, say so
-      if(r.status===409&&left){ m.stock=parseInt(left[1],10); QTY=Math.min(QTY,m.stock); toast(`Only ${m.stock} left — the quantity came down.`); render(); paintSheet(); return; }
+      const left=/^Only (\d+) left(?: in (.+))?$/.exec(e);   // the count came down under the thumb: keep the sheet, cap the quantity, say so
+      if(r.status===409&&left){ const n=parseInt(left[1],10), v=left[2]&&(m.variants||[]).find(x=>x.label===left[2]); if(v) v.stock=n; else m.stock=n; QTY=Math.min(QTY,Math.max(1,n)); toast(`${e} — the quantity came down.`); render(); paintSheet(); return; }
       if(r.status===409){ m.out=true; toast(e||'That one’s sold out'); render(); paintSheet(); return; }
       /* a 400 refuses THIS request (sizes added, price changed): retrying never clears it — re-read and repaint, never a Buy that fails the same way */
       if(r.status===400){

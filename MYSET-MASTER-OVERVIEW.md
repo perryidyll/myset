@@ -529,7 +529,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / pack-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | Invariants | 263 (last: 0fn) |
 | Test suites | 49 |
-| Assertions | **2,867**, 0 failing, last run 2026-09-13 |
+| Assertions | **3,061**, 0 failing, last run 2026-09-14 |
 | Decision records | 70 |
 
 ### Feature flags in force

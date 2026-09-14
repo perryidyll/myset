@@ -1514,8 +1514,10 @@ If you are about to violate one, stop and say so rather than working around it.
     receipt both filter on `o.slug===SLUG && !!o.venue===VENUE`. Since 2026-09-14 an
     item carries `imgs` (up to `MAX_MERCH_IMGS`, its own slots `<id>`, `<id>_1..4` —
     every key computable, 1) with `img` ALWAYS `imgs[0]`, and `stock` (null = not
-    counting): `merchSoldOut()` — the flag OR a count at zero — is the one answer the
-    page, the sheet and `pay.mjs` give, and `takeStock()` runs once per fresh claim in
+    counting; a size carries its own `variants[].stock`, null = as many as you like):
+    `merchSoldOut()` — the flag, a count at zero, or every size gone — is the one answer
+    the page, the sheet and `pay.mjs` give, and `takeStock()` (the order's size first,
+    else the item) runs once per fresh claim in
     `redeemSession`, after the order row is safe, never on a replay. The word a person
     reads for `post`/`ship==='ship'` is *shipping*/*shipped*, everywhere, including
     Stripe's rate name; the field names did not change.
