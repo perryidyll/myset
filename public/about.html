@@ -190,8 +190,9 @@ h3{font-size:20px;font-weight:600;letter-spacing:-.024em;line-height:1.25}
 /* ── beats ─────────────────────────────────────────────── */
 .beats{display:grid;gap:46px;margin-top:40px}
 .beat{display:grid;gap:22px;align-items:center}
-.beat .num{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:11px;
-  background:var(--accent-soft);color:var(--accent-ink);font-size:14.5px;font-weight:700;margin-bottom:13px}
+.beat .num{display:inline-grid;place-items:center;width:64px;height:64px;border-radius:20px;
+  background:var(--grad);color:#fff;font-size:30px;font-weight:700;letter-spacing:-.03em;margin-bottom:16px;
+  box-shadow:0 6px 18px rgba(255,55,95,.3)}
 @media(min-width:820px){
   .beat{grid-template-columns:1fr 1fr;gap:52px}
   .beat:nth-child(even) .txt{order:2}
@@ -299,17 +300,26 @@ details .a{padding:0 0 19px;font-size:15.5px;color:var(--muted);line-height:1.62
 /* The struck-through name in the headline: grey words, an orange line through
    them, so the strike reads as the point and not as a typo. */
 h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoration-thickness:.09em}
+h2 b{color:var(--peace-orange);font-weight:inherit}
+/* Emphasis inside body copy: <b> is bold in the ink colour, .o is orange, b.o both. */
+.o{color:var(--peace-orange)}
+.beat p b,.card p b,.lede b{color:var(--ink);font-weight:600}
+.beat p b.o,.card p b.o{color:var(--peace-orange)}
+#shop .vrow b,#money .vrow b{color:var(--peace-orange)}
 .vsgrid{display:grid;gap:34px;align-items:center;margin-top:38px}
 @media(min-width:860px){.vsgrid{grid-template-columns:.9fr 1.1fr;gap:54px}}
 .vstxt .pline{font-size:clamp(22px,3.4vw,31px)}
 .vstxt .pline+.pline,.vstxt .chips+.pline{margin-top:22px}
-.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:20px}
-.chips span{padding:7px 12px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);
-  font-size:13.5px;font-weight:500;color:var(--ink-2);letter-spacing:-.01em}
-.chips span.more{background:transparent;box-shadow:inset 0 0 0 1px var(--hair);color:var(--faint)}
+/* The founder, 2026-09-14: centred, off-white, an orange ring, bold black — the
+   same in both themes, so the colours are fixed, not tokens. */
+.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:20px}
+.chips span{padding:7px 13px;border-radius:var(--pill);background:#FBFAF8;border:1.5px solid var(--peace-orange);
+  font-size:13.5px;font-weight:700;color:#111;letter-spacing:-.01em}
 /* The comparison: a grey list of links on the left, the page on the right. The
    list is a wireframe on purpose — it is "a link page", not anybody's product. */
-.vs{display:grid;grid-template-columns:.78fr 1fr;gap:16px;align-items:end;max-width:520px;margin:0 auto}
+/* 26px under the frames: the two labels hang 28px below them, so without this
+   they sit on the heading that follows. */
+.vs{display:grid;grid-template-columns:.78fr 1fr;gap:16px;align-items:end;max-width:520px;margin:0 auto 26px}
 .vs-list{border-radius:26px;background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--hair);
   padding:26px 16px 22px;display:grid;gap:9px;justify-items:center;opacity:.9;position:relative}
 .vs-list .ava{width:44px;height:44px;border-radius:50%;background:var(--hair-2);margin-bottom:4px}
@@ -342,15 +352,17 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
    A row of phones that turns itself, about 28 px a second, and is still a native
    scroller under a finger. The set is drawn twice so the seam never shows. */
 .reel-wrap{margin-top:40px;position:relative}
-.rcap{display:block;text-align:center;font-size:12.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:14px}
+.rcap{display:block;text-align:center;font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--peace-orange);margin-bottom:16px}
+.reelbox{position:relative}
 .reel{display:flex;gap:18px;overflow-x:auto;padding:6px 2px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .reel::-webkit-scrollbar{display:none}
 .reel .phone{flex:0 0 auto;width:200px;max-width:none;margin:0;border-radius:30px;padding:7px}
 .reel .phone img{border-radius:24px;max-height:410px;object-fit:cover;object-position:top}
 .reel .cap{display:block;text-align:center;font-size:12.5px;color:var(--muted);margin-top:9px;line-height:1.4;padding:0 4px}
-.reel-wrap::before,.reel-wrap::after{content:"";position:absolute;top:0;bottom:0;width:36px;z-index:2;pointer-events:none}
-.reel-wrap::before{left:-2px;background:linear-gradient(90deg,var(--bg),transparent)}
-.reel-wrap::after{right:-2px;background:linear-gradient(270deg,var(--bg),transparent)}
+/* The fade sits on the box around the strip, never on the caption above it. */
+.reelbox::before,.reelbox::after{content:"";position:absolute;top:0;bottom:0;width:36px;z-index:2;pointer-events:none}
+.reelbox::before{left:-2px;background:linear-gradient(90deg,var(--bg),transparent)}
+.reelbox::after{right:-2px;background:linear-gradient(270deg,var(--bg),transparent)}
 
 /* ── motion ──────────────────────────────────────────────
    Scoped to .anim, which an inline script in <head> adds. If the script never
@@ -456,7 +468,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
   <!-- 3 ────────────────────────────────────── HOW IT WORKS -->
   <section id="how">
     <p class="kicker">The night</p>
-    <h2>Five things happen.<br>Four of them without you.</h2>
+    <h2><b>5</b> things happen.<br><b>4</b> of them without you.</h2>
 
     <div class="beats">
 
@@ -464,8 +476,8 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         <div class="txt">
           <span class="num">1</span>
           <h3>They scan, and they’re in</h3>
-          <p>One code on the table. No app, no sign-up, no email, no password — your
-            fans never make an account. Print it once.</p>
+          <p>One code on the table. <span class="o">No app, no sign-up, no email, no password</span> —
+            <b>your fans never make an account.</b> Print it once.</p>
         </div>
       </div>
 
@@ -474,8 +486,8 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
           <span class="num">2</span>
           <h3>They vote</h3>
           <p>Everyone gets a few free votes for the night, and they choose how many to put
-            on one song. A vote stays on the song it was cast for until you play it — so the
-            queue builds up all evening instead of starting again every few minutes.</p>
+            on one song. <span class="o">When they run out of votes, they can buy more</span> 😉 — fast and
+            secure through Stripe.</p>
           <p>There’s a Lyrics button on the voting page too, so the room can sing along.</p>
         </div>
         <figure>
@@ -488,8 +500,8 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         <div class="txt">
           <span class="num">3</span>
           <h3>You stop guessing</h3>
-          <p>One screen tells you what’s winning, how many people are in the room, and what
-            they’ve asked for. One tap starts the top song.</p>
+          <p>One screen tells you what’s winning, how many people are in the room, and
+            <span class="o">what they’ve asked for.</span> One tap starts the top song.</p>
           <p>Requests cost votes. Fans can add an optional offer — and you can always say no.</p>
         </div>
         <div class="phone tall"><img src="/about/live-now.webp" width="600" height="1309" loading="lazy"
@@ -502,8 +514,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
           <h3>Money happens without you asking</h3>
           <p>Out of votes and desperate for one more song? They can buy a few. Had a great
             night? There’s a tip button with your name on it.</p>
-          <p>It goes straight into your own account, through Stripe — you connect it once, in the
-            Studio, and it pays out daily. You never hold out a jar.</p>
+          <p>It goes straight into your own account, through Stripe.</p>
         </div>
         <figure>
           <img class="art" src="/about/tips.webp" width="954" height="866" loading="lazy" decoding="async"
@@ -516,8 +527,8 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
           <span class="num">5</span>
           <h3>And afterwards, they can find you</h3>
           <p>Everyone who voted was on a page with your name at the top. It holds your music, your
-            links, your merch and every gig you’ve got coming — and a Book button for anyone who
-            wants to hire you.</p>
+            links, your merch and every gig you’ve got coming — <b>and a Book button for anyone who
+            wants to hire you.</b></p>
           <p>Your gigs land in a public what’s-on feed for your town, so people looking for
             something to do tonight find you.</p>
         </div>
@@ -526,7 +537,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
       </div>
 
     </div>
-    <figure class="reel-wrap up" hidden><span class="rcap">The room’s side, screen by screen</span><div class="reel" id="reel-room" aria-label="The voting page, screen by screen"></div></figure>
+    <figure class="reel-wrap up" hidden><span class="rcap">What the crowd sees</span><div class="reelbox"><div class="reel" id="reel-room" aria-label="The voting page, screen by screen"></div></div></figure>
   </section>
 
   <!-- 3b ─────────────────────────────────── YOUR SIDE OF IT -->
@@ -558,7 +569,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
           votes are worth. Or hand out unlimited votes and skip the lot.</p>
       </div>
     </div>
-    <figure class="reel-wrap up" hidden><span class="rcap">The rest of the Studio</span><div class="reel" id="reel-studio" aria-label="The Studio, screen by screen"></div></figure>
+    <figure class="reel-wrap up" hidden><span class="rcap">The rest of the Studio</span><div class="reelbox"><div class="reel" id="reel-studio" aria-label="The Studio, screen by screen"></div></div></figure>
   </section>
 
   <!-- 4 ───────────────────────────────────── WHAT CHANGES -->
@@ -573,23 +584,25 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
       <div class="card up">
         <svg class="ico" viewBox="0 0 64 64" width="40" height="40" aria-label="Microphone"><defs><linearGradient id="clay-mic-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-mic-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-mic-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-mic-b" d="M32 5a10 10 0 0 1 10 10v11a10 10 0 0 1-20 0V15A10 10 0 0 1 32 5zM29 40h6v6h-6zM19 46h26a3 3 0 0 1 0 6H19a3 3 0 0 1 0-6z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><use href="#clay-mic-b" fill="url(#clay-mic-g)"/><use href="#clay-mic-b" fill="url(#clay-mic-d)"/><use href="#clay-mic-b" fill="url(#clay-mic-s)"/><path d="M26 15h12M26 20h12M26 25h12" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="2.2" opacity=".85"/><path d="M19 24v2a13 13 0 0 0 26 0v-2" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="3.2"/></svg>
         <h3>Ease</h3>
-        <p>The gap between songs stops being a decision. You look down, you see what the room wants,
-          you play it. The whole low-grade hum of <em>am I losing them?</em> just goes.</p>
+        <p>The gap between songs stops being a decision. <b>You look down, you see what the room wants,
+          you play it.</b> The background voice wondering “<em>am I losing them?</em>” <b class="o">vanishes</b>.</p>
         <p class="anchor"><b>Why:</b> the queue is ranked live, and one tap starts the winner.</p>
       </div>
       <div class="card up">
         <svg class="ico" viewBox="0 0 64 64" width="40" height="40" aria-label="Star"><defs><linearGradient id="clay-star-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-star-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-star-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-star-b" d="M32.0 6.0L38.8 20.7L54.8 22.6L42.9 33.6L46.1 49.4L32.0 41.5L17.9 49.4L21.1 33.6L9.2 22.6L25.2 20.7Z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><use href="#clay-star-b" fill="url(#clay-star-g)" stroke="url(#clay-star-g)" stroke-width="5" stroke-linejoin="round"/><use href="#clay-star-b" fill="url(#clay-star-d)" stroke="url(#clay-star-d)" stroke-width="5" stroke-linejoin="round"/><use href="#clay-star-b" fill="url(#clay-star-s)" stroke="url(#clay-star-s)" stroke-width="5" stroke-linejoin="round"/><circle cx="24" cy="21" r="2.6" fill="#fff"/></svg>
         <h3>Excitement</h3>
-        <p>A room that chose the song is a room that’s invested in it. They cheer when their pick
-          wins. They watch to see if it does. You feel it from the first chord — and playing to
-          people who are <em>with</em> you is a completely different job.</p>
+        <p>Crowds feel more connected to a show when they get to play a part in shaping it. And
+          everyone loves having more control. Fans cheer when their pick wins. They watch to see if
+          it does. You feel it from the first chord — and playing to people who are <em>with</em> you
+          is a completely different job.</p>
         <p class="anchor"><b>Why:</b> they voted. Nobody’s neutral about a thing they picked.</p>
       </div>
       <div class="card up">
         <svg class="ico" viewBox="0 0 64 64" width="40" height="40" aria-label="Ticket"><defs><linearGradient id="clay-ticket-g" y2="1"><stop stop-color="#FF375F"/><stop offset="1" stop-color="#FF7A45"/></linearGradient><linearGradient id="clay-ticket-d" x2="0" y2="1"><stop offset=".5" stop-color="#600" stop-opacity="0"/><stop offset="1" stop-color="#600" stop-opacity=".3"/></linearGradient><radialGradient id="clay-ticket-s" cx=".32" cy=".2" r=".55"><stop stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><path id="clay-ticket-b" d="M12 14h40a4 4 0 0 1 4 4v7.5a6.5 6.5 0 0 0 0 13V46a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-7.5a6.5 6.5 0 0 0 0-13V18a4 4 0 0 1 4-4z"/></defs><ellipse cx="32" cy="58" rx="17" ry="3.4" fill="#FF375F" opacity=".22"/><use href="#clay-ticket-b" fill="url(#clay-ticket-g)"/><use href="#clay-ticket-b" fill="url(#clay-ticket-d)"/><use href="#clay-ticket-b" fill="url(#clay-ticket-s)"/><path d="M41 19v26" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="2.2" stroke-dasharray="3.2 3.6" opacity=".85"/><path d="M17 27h15M17 34h10M17 41h13" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="3.2"/></svg>
         <h3>Freedom</h3>
-        <p>You walk out with proof — how many people were there, what they wanted, what they paid.
-          You stop hoping the right venue notices you and start choosing which ones you want.</p>
+        <p>You don’t just walk out with more money but <b class="o">more proof</b> — how many people were
+          there, what they wanted, what they paid. You stop hoping the right venue notices you and
+          start choosing which ones you want.</p>
         <p class="anchor"><b>Why:</b> every night is recorded, and it’s yours to show.</p>
       </div>
     </div>
@@ -630,7 +643,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         <p class="reassure">It’s yours the moment you sign up. Put it in every bio you’ve got.</p>
       </div>
     </div>
-    <figure class="reel-wrap up" hidden><span class="rcap">And further down the page</span><div class="reel" id="reel-page" aria-label="The artist page, screen by screen"></div></figure>
+    <figure class="reel-wrap up" hidden><span class="rcap">And further down the page</span><div class="reelbox"><div class="reel" id="reel-page" aria-label="The artist page, screen by screen"></div></div></figure>
   </section>
 
   <div class="segue up"><p class="pline">Someone taps <b>Merch</b>.</p></div>
@@ -730,7 +743,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         </div></div>
       </div>
     </div>
-    <figure class="reel-wrap up" hidden><span class="rcap">The dashboard, and the report it prints</span><div class="reel" id="reel-money" aria-label="The business dashboard, screen by screen"></div></figure>
+    <figure class="reel-wrap up" hidden><span class="rcap">The dashboard, and the report it prints</span><div class="reelbox"><div class="reel" id="reel-money" aria-label="The business dashboard, screen by screen"></div></div></figure>
   </section>
 
   <!-- 5 ────────────────────────────────────────────── PROOF -->
