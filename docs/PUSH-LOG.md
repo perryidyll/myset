@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 01:40 — 2134c37 — wt@fix/live-tab-tips (5 files since origin/main)
+**tl;dr:** The Studio's Live tab now shows TONIGHT's tips (it summed the account's whole history — the founder saw $30 for $20 on 14 Sep). 14 Sep's tips were $20, not $30. The founder's charges already go straight to his own Stripe account, no Connect, no fee.
+**Other sessions:** stage.mjs tips: { total, count, recent } are tonight's (since show.startedAt; 0 before a show starts); the account's are tips.allTime / tips.allTimeCount — do not sum meta.tips for anything labelled tonight. test/decline.mjs pins it. ~/Docs/MySet/node_modules is a symlink to ITSELF since 7a62844 — test/run.sh and tools/overview.mjs need a real install (the compassionate-chatterjee worktree has one).
+
 ### 2026-09-15 01:17 — c5f714b — wt4@studio/paid-votes-crowd-numbers (31 files since origin/main)
 **tl;dr:** Song cards' green pill now reads 'Paid votes: N' and counts every vote from somebody who tipped tonight; Settings → What the room sees (Bar Star+) puts tonight's votes+voters and/or tips on every phone's vote page; setup step 3 no longer offers the plans — Next + an orange note; the Settings lock pill says '· Upgrade' (decision 0079, INVARIANT 0fz)
 **Other sessions:** _lib.mjs paidVoteCounts(fans, tippers) + tippersTonight/tipsTonight; new plan flag crowdNumbers (free off) with crowdNumbersAllowed + admin crowdSet → show.crowd{votes,tips}; buildBoard takes meta and adds numbers (null unless live and on) — board.mjs/show.mjs read meta ONLY when show.crowd.tips. vote.html draws .strip.nums from d.numbers. frPlans is gone. uicheck: 'Paid votes: 2' and the Settings order Requests > What the room sees > Starting by itself. Next free invariant: 0ga; decision: 0080.
