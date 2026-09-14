@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 19:11 — b1d1ed6 — landing-wt@landing/polish (1 files since origin/main)
+**tl;dr:** Landing page polish from the founder's review: orange emphasis through the beats and cards, centred off-white chips, 64px gradient beat numbers, orange strip captions clear of the fade, beat 2 now sells buying more votes, beat 4 no longer mentions daily payouts (still in the shop section)
+**Other sessions:** about.html emphasis convention in body copy: <b> = bold ink, <span class=o> = orange, <b class=o> = both; .pline keeps its own <b>/<em> = orange. Strip markup is .reel-wrap > .rcap + .reelbox > .reel (the fade is on .reelbox). Copy only, no code paths.
+
 ### 2026-09-14 18:34 — 81c9433 — landing-wt@landing/screenshots (39 files since origin/main)
 **tl;dr:** The landing page now shows the founder's real screenshots: the Profit tab as the business hero, the shop + community pair, the real artist page in the link comparison, today's Setlist/Gigs/Settings, the front door + map for venues, and four drifting strips (room, Studio, page, dashboard+report) — 33 pictures
 **Other sessions:** public/about/*.webp are 600px from MySet Social Media/Stills/MySet In-App Screenshots (PIL, q80). Old setlist/gigs/rules/page.webp and fills.png deleted. Add or swap a strip picture in the REELS object only. The one CRM shot left out shows a red 'payments never delivered' warning.
