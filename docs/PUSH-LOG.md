@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 11:39 — 59fa968 — wt12@sheet/marketing-tabs (9 files since origin/main)
+**tl;dr:** The Google Sheet now carries the marketing read (Signals: source, segment, nights per week, rooms, votes per phone, pack conversion, days to first show…) and feature adoption (Features: a column per feature, a score of 24) per artist, tags every Shows row real or test with its published gig, and never appends a row a log tab already holds (decision 0072). The founder's two emails are owner rows on his account
+**Other sessions:** _warehouse.mjs reads ~20 more documents per artist (lists, learn, charts, lyrics, push, posts, profile, sessions, log, recovery, biz, connect, wishes, feats, meta, passkeys, rsvp, cred) — none on a hot path; artistRows returns srow/frow/venueUse/venueGigs; TABS has signals+features (11 tabs — test asserts 11). _sheets.mjs: tabTitles() returns ids; existingKeys(tab, keyCols)/rowKey; styleTabs runs every sync. syncSheet({dry:true}) returns plan. GUIDE exported. The empty sheet in the founder's Drive is 1EhMbA96ZeX9ihG_356FiBfHn9yKZNVPg-LX1-rJ52ok (GSHEET_ID when he connects it). Registry: perryidyll@gmail.com + hello@myset.vip are owner rows on perry-idyll (written by CLI per ACCOUNTS §6.4, 2026-09-14).
+
 ### 2026-09-14 11:25 — a2a9782 — wt@studio/every-question-in-the-window (8 files since origin/main)
 **tl;dr:** Every question in both Studio scripts (18 confirm() calls) now opens the Studio's own small window — the browser's confirm() is gone from studio.js and studio-money.js.
 **Other sessions:** ask({title,lede,yes,no,go}) in studio.js also returns a promise (true on yes, false on no/dim) — use await ask(...) for new questions, never confirm(); test/darkroom.mjs fails on any confirm( in either Studio script.

@@ -13,7 +13,8 @@ on exactly as it does now.
 
 ## What you end up with
 
-One spreadsheet, nine tabs:
+One spreadsheet, eleven tabs (the sync styles them itself — header rows bold white on
+the brand pink-orange and frozen, row titles bold on a pale tint, columns sized):
 
 | Tab | What's in it |
 |---|---|
@@ -26,6 +27,8 @@ One spreadsheet, nine tabs:
 | **Gigs** | The calendar. Every gig booked, past and future, and where in the world. |
 | **Venues** | Bars that signed up, their plan, whether they're verified. |
 | **Growth** | One row every time it syncs. The running totals — this is the tab to chart. |
+| **Signals** | The marketing read, one row per artist: where they came from, how often they play, how big the rooms are, whether the room pays, how fast they got to a first show, whether they are still active — and a *Segment* derived from those numbers (residency / regular / occasional / not yet played / gone quiet). |
+| **Features** | What each artist actually uses — one column per feature, as a count or a yes, and a score out of 24. Sort a column to see which features are used and by whom. |
 
 **Shows, Requests and Ratings only ever get added to.** Nothing rewrites a row you
 have already charted. **Artists, Songs, Gigs and Venues** are wiped and rewritten
@@ -40,7 +43,10 @@ each time, because they are a picture of right now.
    `docs.google.com/spreadsheets/d/`**`1AbC…long…XyZ`**`/edit`.
    That long middle bit is the **sheet id**. Copy it somewhere.
 
-Leave the tabs alone — MySet creates all nine itself the first time it runs.
+Leave the tabs alone — MySet creates all eleven itself the first time it runs. (On
+2026-09-14 the founder's Drive already received **MySet data** with every tab filled
+from a read-only copy of the store — the sync will find those tabs, rewrite the
+snapshots and add only the nights it does not already hold.)
 
 ---
 

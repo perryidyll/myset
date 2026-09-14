@@ -8,7 +8,23 @@ import { readEvents, occurrencesFor } from './_events.mjs';
 import { readVenues, venuePlanOf, getVenueProfile } from './_venues.mjs';
 import {
   sheetsOn, sheetsOffReason, ensureTabs, styleTabs, writeTab, appendTab, tabIsEmpty, tabTitles,
+  existingKeys, rowKey,
 } from './_sheets.mjs';
+import { readLists, readLearn } from './_lists.mjs';
+import { chartFlags } from './_chart.mjs';
+import { readLyrics } from './_lyrics.mjs';
+import { readSubs } from './_push.mjs';
+import { readPosts } from './_community.mjs';
+import { getProfile } from './_profile.mjs';
+import { readSessions, readLog, recoveryStatus } from './_session.mjs';
+import { listKeys as listPasskeys } from './_passkey.mjs';
+import { readBiz } from './_biz.mjs';
+import { readConnect, connectUsable } from './_connect.mjs';
+import { readWishes } from './_wishes.mjs';
+import { readMine as readFeaturedMine } from './_featured.mjs';
+import { readMeta } from './_lib.mjs';
+import { hasPassword } from './_cred.mjs';
+import { occurrences, placeNight, happened } from './_metrics.mjs';
 
 /* WHAT GOES IN THE SHEET.
 
@@ -90,6 +106,8 @@ function tallyOf(doc) {
 export const TABS = {
   guide: 'Guide',
   artists: 'Artists',
+  signals: 'Signals',
+  features: 'Features',
   shows: 'Shows',
   songs: 'Songs',
   requests: 'Requests',
@@ -98,6 +116,21 @@ export const TABS = {
   venues: 'Venues',
   growth: 'Growth',
 };
+/* WHAT THE FOUNDER ASKED FOR ON 2026-09-14: "ALL the pertinent information of each
+   artist & venue … data that is universally considered crucial for making marketing
+   decisions — trends, behaviours, which ICPs to target — and which features of the app
+   are actually being used". Two more snapshot tabs, both one row per artist:
+
+     SIGNALS   the marketing read: where they came from, how often they play, how big
+               their rooms are, whether the room pays, how fast they got to a first show,
+               whether they are still active — and a derived SEGMENT that says which
+               kind of customer they are today (residency / regular / occasional / not
+               yet played / gone quiet). Every column is a number the app already keeps;
+               the segment is arithmetic on them, named as derived.
+     FEATURES  adoption: one column per thing an artist can switch on or use, as a
+               count or a yes — so "which features are used" is a column to sort by.
+
+   Nothing here reads a fan. Nothing here runs during a show. */
 export const TAB_LIST = Object.values(TABS);
 
 /* Caps. A sync is bounded so it can never turn into a job that times out
@@ -136,9 +169,11 @@ export async function mutateWarehouseState(aid, fn) {
 /* ---------- the guide ----------
    Written once, in the same plain language Perry asks for in a report, because
    the person opening this spreadsheet in six months is him and not an engineer. */
-const GUIDE = [
+export const GUIDE = [
   ['Tab', 'What it holds', 'How it behaves'],
   ['Artists', 'Everyone who has signed up: their plan, when they joined, who sent them, whether they can take money yet.', 'Rewritten every sync — always "right now".'],
+  ['Signals', 'The marketing read, one row per artist: how often they play, how big the rooms are, whether the room pays, how fast they got to a first show, whether they are still active — and a Segment that names what kind of customer they are today (derived from the numbers beside it).', 'Rewritten every sync.'],
+  ['Features', 'What each artist actually uses: one column per feature, as a count or a yes, and a score out of 24. Sort by a column to see which features are used and by whom.', 'Rewritten every sync.'],
   ['Shows', 'One row per finished gig: where, how many people, how many votes, what it took.', 'Added to, never changed. Safe to chart.'],
   ['Songs', "Every song in everyone's library, with how often it was played and how many votes it pulled across the nights still in their history.", 'Rewritten every sync.'],
   ['Requests', 'Songs the room asked for that were not on the list. The best answer to "what should I learn next".', 'Added to, never changed.'],
@@ -151,6 +186,8 @@ const GUIDE = [
   ['This sheet is a copy.', 'Nothing in MySet ever reads it. Editing or deleting anything here cannot break the app or lose real data.', ''],
   ['Money comes from the night, not from Stripe.', 'Each show row carries what that night took. Stripe is still the real ledger for anything that has to balance.', ''],
   ['No fan is identified.', 'Phones are counted, never named. There is no device id anywhere in this file.', ''],
+  ['"Real night" on Shows', 'means the show started on a published gig (no earlier than 90 minutes before the slot, before it ended) and something happened in it; anything else is a test or an accident, and the Signals tab counts only real nights.', ''],
+  ['Segment on Signals is derived', 'residency = a real night a week or more over the last 28 days; regular = two or more in 28 days; occasional = at least one in 90 days; not yet played = signed up, no real night; gone quiet = played before, nothing in 90 days.', ''],
   ['Blank money means Stripe was switched off', 'for that night, not that the night earned nothing. The Shows tab has a column that says which.', ''],
 ];
 
@@ -163,6 +200,36 @@ async function artistRows(aid, artist, state, dry) {
   const reqs = await readRequests(aid);
   const fb = await readFeedback(aid);
   const events = await readEvents(aid);
+
+  /* The two marketing tabs read the rest of what the artist owns — none of it
+     on a hot path, all of it by name. A read that fails leaves a blank cell, never
+     an empty row. */
+  const safe = (p, dflt) => p.catch(() => dflt);
+  const [lists, learn, subs, posts, profile, sess, log, rec, biz, connect, wishes, feats, meta, pkeys] = await Promise.all([
+    safe(readLists(aid), { lists: [] }), safe(readLearn(aid), { list: [] }), safe(readSubs(aid), { subs: [] }),
+    safe(readPosts(aid), { list: [] }), safe(getProfile(aid), {}), safe(readSessions(aid, null), { list: [] }),
+    safe(readLog(aid, 100), []), safe(recoveryStatus(aid), { made: false }), safe(readBiz(aid), { gigs: {} }),
+    safe(readConnect(aid), {}), safe(readWishes(aid), { list: [] }), safe(readFeaturedMine(aid), { list: [] }),
+    safe(readMeta(aid), { tips: [], paid: {} }), safe(listPasskeys(aid), []),
+  ]);
+  const songIdsAll = (show.songs || []).map((x) => x.id).filter(Boolean).slice(0, 200);
+  const charts = await safe(chartFlags(aid, songIdsAll), {});
+  const lyricFlags = await Promise.all(songIdsAll.map((id) => safe(readLyrics(aid, id), null)));
+  const lyricsSaved = lyricFlags.filter((d) => d && (d.lyrics || d.text || d.raw)).length;
+  const chartsSaved = Object.values(charts).filter(Boolean).length;
+  let pwSet = 0;
+  for (const e of artist.emails || []) if (await safe(hasPassword(aid, e), false)) pwSet++;
+  const rsvpDoc = await safe(readDoc(`rsvp_${aid}`, null), { data: null });
+  const rsvps = Object.values(((rsvpDoc.data || {}).occ) || {}).reduce((a, o) => a + Object.keys((o && o.fans) || {}).length, 0);
+
+  /* Which nights were REAL — the rule the stats page uses (decision 0071). */
+  const allShows = (hist.shows || []).filter((x) => x && x.startedAt);
+  const span = allShows.length ? [Math.min(...allShows.map((x) => x.startedAt)), Math.max(...allShows.map((x) => x.endedAt || x.startedAt))] : [Date.now(), Date.now()];
+  const occs = occurrences(events.list || [], Math.min(span[0], Date.now() - 120 * 86400000), Math.max(span[1], Date.now() + 30 * 86400000));
+  const gigOf = {};
+  for (const x of allShows) gigOf[x.showId] = placeNight(x, occs);
+  const isReal = (x) => !!gigOf[x.showId] && happened(x);
+  const realNights = allShows.filter(isReal);
 
   const seen = state.byArtist[aid] || {};
   const showsSince = Number(seen.showsUntil) || 0;
@@ -231,6 +298,10 @@ async function artistRows(aid, artist, state, dry) {
       ((detail && detail.requested) || []).length,
       stars,
       plan, s.showId,
+      isReal(s) ? 'yes' : 'test',
+      gigOf[s.showId] ? `${gigOf[s.showId].venue || ''} ${gigOf[s.showId].date}`.trim() : '',
+      s.room ? Math.round(((s.totalVotes || 0) / s.room) * 100) / 100 : '',
+      s.paidVotes ?? '',
     ]);
   }
 
@@ -347,6 +418,81 @@ async function artistRows(aid, artist, state, dry) {
     artist.shareStats === false ? 'no' : 'yes',
   ];
 
+  /* ---- Signals: the marketing read ---- */
+  const now = Date.now();
+  const inLast = (days) => realNights.filter((x) => x.startedAt > now - days * 86400000);
+  const r28 = inLast(28).length, r30 = inLast(30).length, r90 = inLast(90).length;
+  const realRoom = realNights.reduce((a, x) => a + (x.room || 0), 0);
+  const realVotes = realNights.reduce((a, x) => a + (x.totalVotes || 0), 0);
+  const realGross = realNights.reduce((a, x) => a + (Number(x.gross) || 0), 0);
+  const packs = Object.values(meta.paid || {}).filter((p) => p && p.kind !== 'tip' && p.kind !== 'merch');
+  const tips = (meta.tips || []);
+  const firstReal = realNights.slice().sort((a, b) => a.startedAt - b.startedAt)[0] || null;
+  const lastReal = realNights.slice().sort((a, b) => b.startedAt - a.startedAt)[0] || null;
+  const upcoming = occs.filter((o) => o.startsAt > now && o.startsAt < now + 28 * 86400000).length;
+  const due = occs.filter((o) => o.endsAt <= now && o.endsAt > now - 90 * 86400000);
+  const usedKeys = new Set(realNights.map((x) => gigOf[x.showId] && (gigOf[x.showId].eventId + '@' + gigOf[x.showId].date)));
+  const usedPct = due.length ? Math.round(due.filter((o) => usedKeys.has(o.eventId + '@' + o.date)).length / due.length * 100) : '';
+  const cities = {};
+  for (const o of occs) if (o.city) cities[o.city] = (cities[o.city] || 0) + 1;
+  const city = Object.entries(cities).sort((a, b) => b[1] - a[1]).map(([c]) => c)[0] || '';
+  const tagCount = {};
+  for (const sg of songs) for (const tg of sg.tags || []) tagCount[tg] = (tagCount[tg] || 0) + 1;
+  const genres = Object.entries(tagCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t]) => t).join(' / ');
+  const segment = r28 >= 4 ? 'residency' : r28 >= 2 ? 'regular' : r90 >= 1 ? 'occasional'
+    : realNights.length ? 'gone quiet' : 'not yet played';
+  const srow = [
+    artist.name || '', aid, plan, day(artist.createdAt),
+    artist.createdAt ? Math.floor((now - artist.createdAt) / 86400000) : '',
+    artist.src || '', artist.referredBy || '', artist.country || '', city,
+    segment, inLast(14).length ? 'yes' : 'no',
+    realNights.length, r30, Math.round((r28 / 4) * 10) / 10,
+    Math.round((upcoming / 4) * 10) / 10, usedPct,
+    realNights.length ? Math.round(realRoom / realNights.length) : '',
+    Math.max(0, ...realNights.map((x) => x.room || 0)) || '',
+    realRoom ? Math.round((realVotes / realRoom) * 100) / 100 : '',
+    realNights.length ? Math.round(realVotes / realNights.length) : '',
+    packs.length, realRoom ? Math.round((packs.length / realRoom) * 1000) / 10 : '',
+    tips.length,
+    realNights.length ? money(realGross / realNights.length) : '',
+    realRoom ? money(realGross / realRoom) : '',
+    firstReal && artist.createdAt ? Math.max(0, Math.floor((firstReal.startedAt - artist.createdAt) / 86400000)) : '',
+    lastReal ? Math.floor((now - lastReal.startedAt) / 86400000) : '',
+    fb.count ? Math.round((fb.sum / fb.count) * 10) / 10 : '',
+    songs.length, genres, (artist.emails || []).length,
+    allShows.length - realNights.length,
+  ];
+
+  /* ---- Features: adoption, one column each ---- */
+  const links = Object.entries((profile && profile.links) || {}).filter(([, v]) => v).map(([k]) => k);
+  const clips = (posts.list || []).filter((p) => p && p.clip).length;
+  const hero = ((profile && profile.media) || []).some((m) => m && (m.hero || m.tick || m.pick)) || ((profile && profile.media) || []).length > 0;
+  const signins30 = (log || []).filter((e) => e && /^signin/.test(e.e || '') && e.t > now - 30 * 86400000).length;
+  const lastSignin = (log || []).find((e) => e && /^signin/.test(e.e || ''));
+  const bizNights = Object.keys((biz && biz.gigs) || {}).length;
+  const used = [
+    (lists.lists || []).length, (learn.list || []).length, chartsSaved, lyricsSaved,
+    show.requests && show.requests.on ? 1 : 0, show.birthdays && show.birthdays.on ? 1 : 0,
+    show.replayCost && show.replayCost !== 1 ? 1 : 0, ((profile && profile.merch) || []).length, (wishes.list || []).length,
+    (posts.list || []).length, clips, ((profile && profile.photos) || []).filter(Boolean).length, hero ? 1 : 0, links.length,
+    profile && profile.bio ? 1 : 0, profile && profile.tagline ? 1 : 0,
+    (pkeys || []).length, rec.made ? 1 : 0, pwSet, show.codeHash ? 1 : 0, (subs.subs || []).length,
+    bizNights, connectUsable(connect) ? 1 : 0, (feats.list || []).length,
+  ];
+  const frow = [
+    artist.name || '', aid, plan, used.filter(Boolean).length,
+    (lists.lists || []).length, (learn.list || []).length, chartsSaved, lyricsSaved,
+    show.requests && show.requests.on ? 'yes' : '', show.birthdays && show.birthdays.on ? 'yes' : '',
+    show.replayCost && show.replayCost !== 1 ? show.replayCost : '',
+    ((profile && profile.merch) || []).length, (wishes.list || []).length,
+    (posts.list || []).length, clips, ((profile && profile.photos) || []).filter(Boolean).length, hero ? 'yes' : '',
+    links.length, links.join(' / '), profile && profile.bio ? 'yes' : '', profile && profile.tagline ? 'yes' : '',
+    (pkeys || []).length, rec.made ? `${rec.left} of ${rec.of} left` : '', pwSet ? `yes (${pwSet})` : '', show.codeHash ? 'yes' : '',
+    (subs.subs || []).length, (sess.list || []).length, signins30, lastSignin ? day(lastSignin.t) : '',
+    bizNights, connect && connect.acct ? (connectUsable(connect) ? 'live' : 'started') : '', (feats.list || []).length,
+    (events.list || []).length, rsvps,
+  ];
+
   const marks = {
     showsUntil: Math.max(showsSince, ...(fresh.map((s) => s.endedAt || 0)), 0),
     reqsUntil: Math.max(reqsSince, ...((reqs.list || []).map((r) => r.at || 0)), 0),
@@ -354,7 +500,9 @@ async function artistRows(aid, artist, state, dry) {
   };
 
   return {
-    arow, showRows, songRows, reqRows, fbRows, gigRows, marks, cappedShows,
+    arow, srow, frow, showRows, songRows, reqRows, fbRows, gigRows, marks, cappedShows,
+    venueUse: realNights.map((x) => ({ venueId: (occs.find((o) => o.eventId === (gigOf[x.showId] || {}).eventId) || {}).venueId || '', room: x.room || 0, votes: x.totalVotes || 0 })),
+    venueGigs: [...new Set(occs.filter((o) => o.venueId).map((o) => o.venueId))],
     /* RUNNING TOTALS, not this sync's deltas. The Growth tab is a time series
        somebody charts, so every number in it has to be "how much there is", or a
        line on that chart means nothing. `reqs`/`ratings` are the whole stored
@@ -378,7 +526,22 @@ const HEAD = {
   shows: ['Date', 'Started', 'Artist', 'Artist id', 'Venue', 'City', 'Minutes',
           'Songs played', 'Votes', 'Phones in room', 'Networks', 'People who voted',
           'Voted %', 'Top song', 'Money', 'From votes', 'From tips', 'Vote sales',
-          'Tips', 'Money source', 'Asked for and not played', 'Average stars', 'Plan', 'Show id'],
+          'Tips', 'Money source', 'Asked for and not played', 'Average stars', 'Plan', 'Show id',
+          'Real night', 'Published gig', 'Votes per phone', 'Paid votes'],
+  signals: ['Name', 'Artist id', 'Plan', 'Joined', 'Days in', 'Signed up from', 'Referred by',
+            'Country', 'City (from gigs)', 'Segment', 'Active (14 days)',
+            'Real nights all time', 'Real nights last 30 days', 'Nights per week (28 days)',
+            'Gigs on calendar per week (next 28 days)', 'Published gigs used %',
+            'Average room', 'Biggest room', 'Votes per phone', 'Votes per night',
+            'Vote packs bought', 'Pack conversion % (packs per phone)', 'Tips received', 'Money per night', 'Money per phone',
+            'Days to first show', 'Days since last show', 'Average stars', 'Library size',
+            'Top genres', 'Seats used', 'Test nights (not on a gig)'],
+  features: ['Name', 'Artist id', 'Plan', 'Features used (of 24)',
+             'Setlists', 'Songs to learn', 'Charts saved', 'Lyrics saved',
+             'Song requests on', 'Birthday shout-outs on', 'Replay cost set', 'Merch items', 'Shop requests received',
+             'Community posts', 'Clips posted', 'Profile photos', 'Hero video', 'Profile links', 'Which links', 'Bio written', 'Tagline written',
+             'Passkeys', 'Recovery codes', 'Password set', 'Studio code set', 'Push alerts', 'Devices signed in', 'Sign-ins last 30 days', 'Last sign-in',
+             'Business dashboard nights logged', 'Stripe Connect', 'Featured spots bought', 'Gigs on calendar', 'RSVPs received'],
   songs: ['Artist', 'Artist id', 'Song', 'Original artist', 'Key', 'Tags', 'State',
           'Times played', 'Votes all time', 'Votes per play', 'Song id'],
   requests: ['Date', 'When', 'Artist', 'Artist id', 'Kind', 'Asked for', 'Original artist',
@@ -388,7 +551,9 @@ const HEAD = {
          'Time zone', 'Repeat', 'Past or future', 'Address', 'Tickets', 'Note'],
   venues: ['Name', 'Venue id', 'Page', 'Email', 'City', 'Country', 'Plan', 'Verified',
            'Verified by', 'Joined', 'Days in', 'Photos', 'Events listed', 'Amenities',
-           'Has menu', 'Has offers', 'Phone', 'Website'],
+           'Has menu', 'Has offers', 'Phone', 'Website',
+           'Artists playing here (calendar)', 'Nights played here (all time)', 'Phones here (all time)', 'Votes here (all time)',
+           'Community posts', 'Merch items', 'Stripe Connect', 'Seats used', 'Password set', 'Last sign-in'],
   growth: ['When', 'Artists', 'Paying artists', 'Venues', 'Paying venues', 'Nights played',
            'Votes all time', 'Phones all time', 'Money all time', 'Songs in the system',
            'Requests', 'Ratings', 'Average stars', 'Gigs booked', 'Rows added this sync',
@@ -437,12 +602,14 @@ async function runSync({ dry, startedAt, state }) {
 
   /* byEmail is the only place an artist's address lives, and it is keyed the
      other way round. One pass rather than a scan per artist. */
-  const emailOf = {};
+  const emailOf = {}, emailsOf = {};
   for (const [email, link] of Object.entries(reg.byEmail || {})) {
     if (link && link.artistId && !emailOf[link.artistId]) emailOf[link.artistId] = email;
+    if (link && link.artistId) (emailsOf[link.artistId] ||= []).push(email);
   }
 
-  const artists = [], shows = [], songs = [], requests = [], ratings = [], gigs = [];
+  const artists = [], signals = [], features = [], shows = [], songs = [], requests = [], ratings = [], gigs = [];
+  const atVenue = {};            // venueId -> { artists:Set, nights, phones, votes }
   const marks = {};
   const broke = [];
   let cappedShows = false, budgetSpent = false;
@@ -459,7 +626,7 @@ async function runSync({ dry, startedAt, state }) {
     if (shows.length >= MAX_ROWS_PER_TAB || requests.length >= MAX_ROWS_PER_TAB
         || ratings.length >= MAX_ROWS_PER_TAB || songs.length >= MAX_ROWS_PER_TAB
         || artists.length >= MAX_ROWS_PER_TAB) { budgetSpent = true; break; }
-    const a = { ...(reg.byId[aid] || {}), email: emailOf[aid] || '' };
+    const a = { ...(reg.byId[aid] || {}), email: emailOf[aid] || '', emails: emailsOf[aid] || [] };
     let r;
     try {
       r = await artistRows(aid, a, state, dry);
@@ -481,6 +648,9 @@ async function runSync({ dry, startedAt, state }) {
       continue;
     }
     artists.push(r.arow);
+    signals.push(r.srow); features.push(r.frow);
+    for (const vid of r.venueGigs) { const v = (atVenue[vid] ||= { artists: new Set(), nights: 0, phones: 0, votes: 0 }); v.artists.add(aid); }
+    for (const u of r.venueUse) if (u.venueId) { const v = (atVenue[u.venueId] ||= { artists: new Set(), nights: 0, phones: 0, votes: 0 }); v.nights++; v.phones += u.room; v.votes += u.votes; }
     shows.push(...r.showRows);
     songs.push(...r.songRows);
     requests.push(...r.reqRows);
@@ -513,6 +683,13 @@ async function runSync({ dry, startedAt, state }) {
     if (plan !== 'free') paidVenues++;
     let evCount = 0;
     try { evCount = ((await readEvents('v_' + vid)).list || []).length; } catch { evCount = 0; }
+    const o = 'v_' + vid, at = atVenue[vid] || { artists: new Set(), nights: 0, phones: 0, votes: 0 };
+    const vsafe = (pr, dflt) => pr.catch(() => dflt);
+    const [vposts, vconnect, vlog] = await Promise.all([vsafe(readPosts(o), { list: [] }), vsafe(readConnect(o), {}), vsafe(readLog(o, 50), [])]);
+    const vEmails = Object.entries(vreg.byEmail || {}).filter(([, l]) => l && l.venueId === vid).map(([e]) => e);
+    let vpw = 0;
+    for (const e of vEmails) if (await vsafe(hasPassword(o, e), false)) vpw++;
+    const vLast = (vlog || []).find((e) => e && /^signin/.test(e.e || ''));
     venues.push([
       v.name || (p && p.name) || '', vid, v.slug || '', vEmailOf[vid] || '',
       (p && p.city) || v.city || '', (p && p.country) || v.country || '',
@@ -524,6 +701,10 @@ async function runSync({ dry, startedAt, state }) {
       (p && p.menu && ((p.menu.items || []).length || p.menu.url)) ? 'yes' : '',
       (p && (p.offers || []).length) ? 'yes' : '',
       (p && p.phone) || '', (p && (p.links || {}).website) || '',
+      at.artists.size, at.nights, at.phones, at.votes,
+      (vposts.list || []).length, ((p && p.merch) || []).length,
+      vconnect && vconnect.acct ? (connectUsable(vconnect) ? 'live' : 'started') : '',
+      vEmails.length, vpw ? `yes (${vpw})` : '', vLast ? day(vLast.t) : '',
     ]);
   }
 
@@ -544,6 +725,8 @@ async function runSync({ dry, startedAt, state }) {
     tabs: TAB_LIST,
     snapshot: {
       [TABS.artists]: [HEAD.artists, ...artists],
+      [TABS.signals]: [HEAD.signals, ...signals],
+      [TABS.features]: [HEAD.features, ...features],
       [TABS.songs]: [HEAD.songs, ...songs],
       [TABS.gigs]: [HEAD.gigs, ...gigs],
       [TABS.venues]: [HEAD.venues, ...venues],
@@ -551,15 +734,18 @@ async function runSync({ dry, startedAt, state }) {
     /* Each log tab names which watermark field it carries, so a tab that appends
        successfully can have ITS mark committed even if a later tab fails. */
     log: {
-      [TABS.shows]: { head: HEAD.shows, rows: shows, mark: 'showsUntil' },
-      [TABS.requests]: { head: HEAD.requests, rows: requests, mark: 'reqsUntil' },
-      [TABS.ratings]: { head: HEAD.ratings, rows: ratings, mark: 'fbUntil' },
+      [TABS.shows]: { head: HEAD.shows, rows: shows, mark: 'showsUntil', keyCols: [HEAD.shows.indexOf('Show id')] },
+      [TABS.requests]: { head: HEAD.requests, rows: requests, mark: 'reqsUntil', keyCols: [1, 3, 5, 10] },
+      [TABS.ratings]: { head: HEAD.ratings, rows: ratings, mark: 'fbUntil', keyCols: [1, 3, 6] },
       [TABS.growth]: { head: HEAD.growth, rows: growth, mark: null },
     },
   };
 
   if (dry) {
-    return { ok: true, dry: true, counts: countsOf(plan), broke,
+    /* The plan rides along so a session can hand the same rows to a spreadsheet
+       by another road (the first sync into the founder's Drive was an .xlsx built
+       from this, before the service account existed — decision 0072). */
+    return { ok: true, dry: true, counts: countsOf(plan), broke, plan,
              tookMs: Date.now() - startedAt };
   }
 
@@ -586,9 +772,14 @@ async function runSync({ dry, startedAt, state }) {
   }).catch(() => {});
 
   let failed = null;
-  for (const [tab, { head, rows, mark }] of Object.entries(plan.log)) {
+  for (const [tab, { head, rows, mark, keyCols }] of Object.entries(plan.log)) {
     try {
-      await appendTab(tab, rows, head);
+      let fresh = rows;
+      if (keyCols && rows.length) {
+        const have = await existingKeys(tab, keyCols);
+        fresh = rows.filter((r) => !have.has(rowKey(r, keyCols)));
+      }
+      await appendTab(tab, fresh, head);
       if (mark) await commit(mark);
     } catch (e) {
       /* Stop here rather than carrying on: a later tab appending after an earlier

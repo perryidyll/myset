@@ -81,12 +81,13 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0069](0069-every-document-is-copied-nightly-to-r2-and-a-restor.md) | every document is copied nightly to R2 under the same key, and a restore from the laptop copy has been rehearsed and refuses production by name | 2026-09-14 | ops | decided | perry |
 | [0070](0070-the-email-address-is-the-username-and-a-password-si.md) | the email address is the username and a password sits under it — per person, scrypt-hashed, swapped for a session; the six-digit code stays the front door for a new account and the whole of "forgot" | 2026-09-14 | auth | decided | perry |
 | [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) | Current Show Stats is one snapshot of the app's own records, sliced by date in the browser — a night counts when it lines up with a published gig; published daily as an artifact until it is myset.vip/metrics | 2026-09-14 | docs | decided | perry |
+| [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md) | the sheet carries the marketing read (Signals) and the feature adoption (Features) per artist, tags every night real or test, and never writes a row it already holds — the first copy went to the founder as an .xlsx before the service account existed | 2026-09-14 | docs | decided | perry |
 
 ## By area
 
 **auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md)
 
-**docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md)
+**docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) · [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md)
 
 **general** — [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md)
 
