@@ -2700,3 +2700,37 @@ the Durable Objects host from the measured probe (two requests per socket, one p
 nudge, duration ≈ 0) once the line — built in a parallel worktree, off until `LINE_URL`
 and `LINE_KEY` are set — has run one real night. **Numbering:** that worktree's decision
 is `0036`, which collides with `main`'s `0036` (interactive map); renumber at merge.
+
+# SESSION LOG — 2026-09-14 (money model: the split and the open line are priced; seven real nights)
+
+The user asked for the 12 Sep plan to be implemented in full and shipped, using the Current
+Show Stats numbers. Branch `model/split-and-open-line` → PR, squash-merged (decision 0045).
+Record: `docs/sessions/2026-09-14-money-model-split-and-open-line.md`; decision `0076`.
+
+**Engine (`finance/model.html`):** the ladder is now the simulator's (server floor 3/10/20 s,
+four rungs, jitter, stage-only signature above 200 phones); every tick is the shared board
+(rendered once per interval, counted from sampled poll times; per edge node under 10 s — the
+`edgeSpread` dial, default 50%) plus the personal call (50 ms est., 2 reads, 430 bytes).
+New "Store MB/s" feasibility line (wall ~50 MB/s ≈ 2,500 phones). Hosts: "Netlify before the
+split" replaces the "3-second cache (not built)"; "Netlify + the open line" replaces the DO
+rewrite — Netlify's full bill plus 2 requests per socket, 1 per nudge, 1.7 GB-s per 12,202
+sockets; every screen-on glance is a socket (a hidden page closes it), so the line COSTS more
+(+0.5¢ per bar gig, +33% at arena size) and buys a live tally. The old engine over-counted
+big rooms ~8×: arena $27 → $2.77, festival $3,006 → $144.
+
+**Tests (`finance/model-test.mjs`, 75 pass):** eleven rooms re-pinned to today's
+`tools/loadsim.py` (ticks 3.4%, renders 3.2%, credits 4.2–4.3%); the test reads the page
+beside it (was a hard-coded path). **Tracker:** `BYTES` has board/me; a mark since the split
+solves at 2,605 bytes a tick. **Data:** `finance/actuals.json` rewritten from production
+(7 nights, 9.43 phones, 2.75 h, 2.32 actions, $0.684 a head from 3 money-known nights —
+$10 of the $13 is one tip in a 2-phone room; 264 deploys/30 d, 79 this period). Mark #3
+taken 14 Sep 17:00 = the BEFORE mark for tonight's Ugly Duckling gig.
+
+**Benchmark, 1,000 artists:** $5,520 revenue / $3,821 profit / break-even 92 (was
+$3,835 / $2,165 / 148) — the entire move is $0.375 → $0.684 a head, i.e. one tip; at
+$0.375 kept it is $3,408 / $1,731 / 181. The split itself moved profit $12 a month.
+
+**For the user:** tomorrow morning `python3 tools/actuals.py --mark "after Mon gig"
+--studio-min N --clip-views 0` then `--write` — the first bracketed gig on the split;
+merge the open line worktree (renumber its `0036` → next free; main is at 0076) and set
+`LINE_URL`/`LINE_KEY` for one night before trusting the line dials. SSD not mounted.

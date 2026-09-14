@@ -32,7 +32,7 @@ WHAT IT PRODUCES — the fields the model's "Real shows" panel understands:
   votes, songs, setHours, recordHours, nets, peakVoters, gigsOnCalendar, gigsUsed
                      averages for the report; only people/hours/interactions/room/
                      deploys/pollsPerPhoneHour move a dial
-  pollsPerPhoneHour  AUDIENCE polls per phone per hour, solved from the bandwidth
+  pollsPerPhoneHour  AUDIENCE ticks (board + personal call) per phone per hour, solved from the bandwidth
                      marks that bracket a night (null until two marks bracket one)
   creditsPerShow     null — Netlify does not expose per-show credits
   asOf, source, note, nights, notCounted, marks
@@ -72,7 +72,7 @@ not "nothing".
 THE BANDWIDTH METHOD (how pollsPerPhoneHour gets measured, not typed):
 Netlify does not show function calls per site or per night through the API, but it
 does keep a byte-exact, account-wide bandwidth counter for the billing period
-(GET /accounts/<id>/bandwidth). Every audience poll is 2,530 bytes on the wire
+(GET /accounts/<id>/bandwidth). Every audience tick is 2,605 bytes on the wire since the split (2,530 before)
 (measured; the same constant the model uses), so the bytes a night adds to that
 counter, minus what the Studio tab, the page loads and the votes cost, is the
 poll count. So:
@@ -107,7 +107,13 @@ ENV = {**os.environ, 'PATH': os.environ['HOME'] + '/.local/node/bin:' + os.envir
 
 # bytes on the wire per call — MUST equal P0.pollBytes / writeBytes / studioBytes /
 # viewBytes / pageBytes in finance/model.html (model-test.mjs enforces it)
-BYTES = {'poll': 2530, 'write': 1200, 'studio': 4000, 'view': 3000, 'page': 48000, 'clip': 75000000}   # clip = one full view of a posted video (the three so far are 74–79 MB)
+# SINCE THE SPLIT (11 Sep 2026, decision 0034) every audience tick is TWO requests on the wire:
+# the shared board (0.86 × the old 2,530-byte poll, measured ratio) and the personal call (430,
+# measured). 'poll' is the old one-call answer, kept only so a mark taken before the split can
+# still be solved. finance/model-test.mjs checks these against the model page's defaults.
+BYTES = {'board': 2175, 'me': 430, 'poll': 2530, 'write': 1200, 'studio': 4000, 'view': 3000, 'page': 48000, 'clip': 75000000}   # clip = one full view of a posted video (the three so far are 74–79 MB)
+TICK_BYTES = BYTES['board'] + BYTES['me']   # what one tick of the ladder moves since the split
+SPLIT_AT = '2026-09-11T11:17:00+00:00'      # when c3d0a4d (the split) went live; marks before this solve at the old poll size
 STUDIO_POLLS_PER_HOUR = 3600 / 4        # the Studio's own tick, every 4 s while the tab is open
 EXTRA_VIEWS_PER_PHONE = 0.5             # profile / community / city-feed pages, per phone (model default)
 STUDIO_SHARE = 0.6                      # share of the night the Studio Live tab is on screen when nobody recorded it (= P0.studioShare)
@@ -489,6 +495,9 @@ def solve_polls(rows, marks, skipped=()):
         if a.get('periodStart') != b.get('periodStart') or b['used'] < a['used']:
             for r in rs: per_night.append({'key': r['key'], 'polls': None, 'why': 'the billing period rolled over between the two marks'})
             continue
+        if a['at'] < SPLIT_AT <= b['at']:
+            for r in rs: per_night.append({'key': r['key'], 'polls': None, 'why': 'the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 2,605 for the rest'})
+            continue
         window_h = (eff(b) - eff(a)) / 3600e3
         delta = b['used'] - a['used']
         studio_min = b.get('studioMin')
@@ -496,7 +505,8 @@ def solve_polls(rows, marks, skipped=()):
         studio_bytes = studio_h * STUDIO_POLLS_PER_HOUR * BYTES['studio']
         clip_bytes = (b.get('clipViews') or 0) * BYTES['clip']
         other = studio_bytes + clip_bytes + sum(r['people'] * BYTES['page'] + r['votes'] * BYTES['write'] + r['people'] * EXTRA_VIEWS_PER_PHONE * BYTES['view'] for r in rs)
-        polls = (delta - bg * window_h - other) / BYTES['poll']
+        per_tick = TICK_BYTES if a['at'] >= SPLIT_AT else BYTES['poll']   # the split changed what a tick weighs
+        polls = (delta - bg * window_h - other) / per_tick
         ph = sum(r['people'] * r['hours'] for r in rs)
         rate = polls / ph if polls > 0 and ph else None
         studio_share = studio_bytes / max(delta - bg * window_h, 1)

@@ -85,6 +85,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0073](0073-sheet-hands-over-before-full.md) | the Google Sheet measures itself every sync, warns the founder at 60% of Google's cell limit and hands over to a new spreadsheet it makes and shares at 80% — nothing moved, the old sheet kept; and a Studio-code session sets a password by naming one of the account's own addresses and proving it with a code | 2026-09-14 | server | decided | perry |
 | [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) | A booker can write to an artist from the page, and the artist answers from the Studio | 2026-09-14 | storage | decided | perry |
 | [0075](0075-the-artist-page-has-a-month-calendar-and-a-tour-po.md) | The artist page has a month calendar and a tour poster the artist uploads | 2026-09-14 | ui | decided | perry |
+| [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) | The money model prices the split and the open line from the simulator and the probe, never from list prices | 2026-09-14 | scale | decided | perry-confirmed |
 
 ## By area
 
@@ -106,7 +107,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) · [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md)
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
