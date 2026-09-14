@@ -10,6 +10,9 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 10:53 — 943a8d8 — wt@studio/small-things (70 files since origin/main)
+**tl;dr:** Artist Studio: Log a show closes on a drag down; Settings has a gear icon; the tab bar is a little smaller (both Studios); setlist song cards are as tall as their words with edit/hide as outlined icons above the delete ✕; Up next shows ten songs before it scrolls
+**Other sessions:** lock.css .tabbar icon 19px / label 11.5px (the Venue Studio shares it). .queue-window max-height is now set by studio.js render() at the eleventh row — do not put a pixel value back in the CSS. attachDrag: .bizro counts as a grab zone and the editor no longer refuses a body drag.
 ### 2026-09-14 10:46 — 6fceff3 — wt11@metrics/cli-stdout (1 files since origin/main)
 **tl;dr:** tools/metrics.mjs read zero artists on its first live run — 'blobs:get -O -' writes a file named '-'; it now reads stdout and refuses an empty registry out loud
 **Other sessions:** One-line tool fix, no page, no function. Rebuilt the Current Show Stats page from production after: 19 nights, 7 real.
