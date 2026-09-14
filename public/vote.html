@@ -79,6 +79,10 @@
 .strip .r{color:var(--muted);font-weight:500;font-size:13.5px}
 .strip.shut .l{color:var(--muted)}
 .strip.shut .dot{background:var(--faint);animation:none;box-shadow:none}
+.strip.nums{margin-top:8px;padding:10px 17px;font-size:13px}
+.strip.nums .l{color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase;font-size:11px}
+.strip.nums .r{color:var(--ink);font-size:13px;text-align:right}
+.strip.nums .r b{font-weight:700}
 
 /* ── TIER 2 · UP NEXT ─────────────────────────────────── */
 .queue{position:relative;margin:18px 55px 0 18px;border-radius:var(--r-lg);background:var(--surface);
@@ -1071,6 +1075,14 @@ function render(){
   if(!ended) h += `<div class="strip ${open?'':'shut'}">
       <span class="l"><span class="dot"></span>${open?'Voting open':'Voting paused'}</span>
       <span class="r">${c.unlimited?'Unlimited votes':`${c.remaining} vote${c.remaining===1?'':'s'} left`}</span></div>`;
+  /* TONIGHT'S NUMBERS (decision 0079) — the Live tab's tally, on every phone, as
+     far as the artist allows in Settings: votes + voters as one switch, tips as
+     another. `numbers` is null until something is on, and the line is not drawn. */
+  if(live&&d.numbers&&(d.numbers.votes!=null||d.numbers.tips)){ const N=d.numbers;
+    const parts=[];
+    if(N.votes!=null) parts.push(`<b class="mono">${N.votes}</b> vote${N.votes===1?'':'s'} from <b class="mono">${N.voters||0}</b> ${N.voters===1?'person':'people'}`);
+    if(N.tips) parts.push(`<b class="mono">${money(Math.round((N.tips.total||0)*100))}</b> in tips`);
+    h += `<div class="strip nums"><span class="l">Tonight</span><span class="r">${parts.join(' · ')}</span></div>`; }
 
   /* TIER 2 — visible whenever a show is running, even with nothing voted yet.
      Between shows there is no queue to show (the board is blank by design,
@@ -1667,7 +1679,7 @@ function stageSig(){
 }
 function signature(){
   const d=ST; if(!d)return null;
-  return stageSig()+'|'+d.totalVotes;
+  return stageSig()+'|'+d.totalVotes+'|'+(d.numbers?JSON.stringify(d.numbers):'');   // a tip landing redraws the tally line too (0079)
 }
 function schedule(){
   clearTimeout(TIMER);

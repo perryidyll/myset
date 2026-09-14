@@ -446,6 +446,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 | Sell merch on your shop page *(`/<slug>/shop`; the community page wears the shop card — 2026-09-13)* | — | yes | yes |
 | Hide a fan's post *(sold as "hide 1–2 star reviews"; deleting for good is gone — 0060)* | — | yes | yes |
 | Data reports and the business dashboard — the filed nights, pay, band splits, costs, hours and profit on the Money tab, and the printed report *(every night is still filed on every plan)* | — | yes | yes |
+| Show the room tonight's numbers *(two switches in Settings: votes + voters, and tips; on every phone's vote page — 0079)* | — | yes | yes |
 | Promote gigs in other cities | *coming soon* | *coming soon* | *coming soon* |
 | Earnings analytics | *coming soon* | *coming soon* | *coming soon* |
 | Press kit | *coming soon* | *coming soon* | *coming soon* |
@@ -535,17 +536,17 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | HTTP functions | 33 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
 | Shared libraries | 56 |
-| Artist Studio actions | 142 |
+| Artist Studio actions | 143 |
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / pack-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 267 (last: 0fn) |
+| Invariants | 268 (last: 0fn) |
 | Test suites | 51 |
 | Assertions | **3,214**, 0 failing, last run 2026-09-14 |
-| Decision records | 78 |
+| Decision records | 79 |
 
 ### Feature flags in force
 

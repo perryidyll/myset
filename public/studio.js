@@ -908,7 +908,9 @@ function lock(flag,html,why){
   if(has(flag)) return html;
   const soon=isSoon(flag);
   const cap=soon?'Coming soon':needsPlan(flag)+' feature';
-  const pill=`<b>${LOCKICON}${cap}</b>`;
+  /* "· Upgrade" in orange on a plan pill (0079): the greyed section is where a new
+     artist is prompted — the setup no longer sends them to the plans. */
+  const pill=`<b>${LOCKICON}${cap}${soon?'':'<i>· Upgrade</i>'}</b>`;
   /* The reason line sits UNDER the lock rather than inside the veil: a locked row
      of chips is 43px tall and a caption inside it either overflows or gets
      clipped mid-word. */
@@ -1725,7 +1727,8 @@ function render(){
   // same narrowing playTop applies: a played song needs replay votes to re-enter
   const startPool=songs.filter(x=>!x.now&&canVote(x)&&(!x.played||x.votes>0));
   const top=startPool.find(x=>x.votes>0);
-  const paidPill=x=>x&&x.paidVotes>0?`<span class="paidtag">(${x.paidVotes}) paid votes</span>`:'';
+  /* bought votes + every vote from somebody who tipped tonight (0079): the ones to play */
+  const paidPill=x=>x&&x.paidVotes>0?`<span class="paidtag">Paid votes: ${x.paidVotes}</span>`:'';
 
   let body='';
   if(TAB==='live'){
@@ -2233,6 +2236,16 @@ function render(){
       </div>`,'Asking still works — it just costs the standard '+cfg.cost+' votes.')}
       <p class="muted" style="font-size:12px;margin:8px 0 0">Costs <b>${cfg.cost} vote${cfg.cost===1?'':'s'}</b>.</p></div>`:''}`).join('')}
 
+    <div class="sec"><span class="kick">What the room sees</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Your Live tab always shows tonight’s numbers. These put them on everyone’s vote page too — a live tally at the top of the room.</p>
+    ${lock('crowdNumbers',`
+      ${[['votes','Votes and voters','How many votes tonight, and how many people cast them',!!(s.crowd&&s.crowd.votes)],
+         ['tips','Tips','What the room has tipped tonight, as a total',!!(s.crowd&&s.crowd.tips)]].map(([k,t,d,on])=>`
+      <div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div>
+        <div class="tog"><button class="${on?'on':''}" onclick="act('crowdSet',{which:'${k}',on:true})">On</button>
+        <button class="${!on?'on':''}" onclick="act('crowdSet',{which:'${k}',on:false})">Off</button></div></div>`).join('')}`,
+      'Both are off. The room sees its own votes and nothing else until you switch these on.')}
+
     <div class="sec"><span class="kick">Starting by itself</span></div>
     <div class="row"><div class="m"><div class="t">Start shows from my calendar</div>
       <div class="s">${s.autoStart!==false?'A gig on your calendar starts its show at its start time if you haven’t.':'Off — only you start a show. Ending by itself still applies.'}</div></div>
@@ -2612,19 +2625,22 @@ function frStep(n){
     h=`<h2>Prices</h2>
     <p>${has('pricing')
       ?'Every artist starts with these. Keep them for tonight, or change them now — they are all in Settings.'
-      :`Every artist starts with these. Changing them is a ${esc(needsPlan('pricing'))} feature — the plans are in Settings whenever you want a look.`}</p>
+      :'Every artist starts with these. They are all in Settings whenever you want a look.'}</p>
     <div class="prices">
       <div class="lrow"><div class="m"><b>Free votes</b><span>Each person, each night</span></div><span class="cnt">${s.unlimited?'Unlimited':(s.freeCredits||0)}</span></div>
       <div class="lrow"><div class="m"><b>Replay a played song</b><span>Votes it costs</span></div><span class="cnt">${s.replayCost||0}</span></div>
       ${sm.votes?`<div class="lrow"><div class="m"><b>Extra votes, small</b><span>${sm.votes} votes</span></div><span class="cnt">$${((sm.cents||0)/100).toFixed(2)}</span></div>`:''}
       ${bg.votes?`<div class="lrow"><div class="m"><b>Extra votes, big</b><span>${bg.votes} votes</span></div><span class="cnt">$${((bg.cents||0)/100).toFixed(2)}</span></div>`:''}
     </div>
-    <button class="btn-pri btn-block" onclick="frNext()">Keep these</button>
-    ${/* Pricing is a plan feature: on a plan without it the button would land on a
-          veiled box, so it is the plans that are offered instead (rule 3). */''}
+    ${/* Pricing is a plan feature. On a plan without it the step used to offer the
+          plans — which pulled a brand-new artist out of the setup and onto the plan
+          cards (the founder, 2026-09-15: "jarring"). Now it is just Next and one
+          orange line: Settings greys the prices and its lock is the upgrade prompt. */''}
     ${has('pricing')
-      ?`<button class="btn-text" onclick="frPricing()">Change prices</button>`
-      :`<button class="btn-text" onclick="frPlans()">See the plans</button>`}`; }
+      ?`<button class="btn-pri btn-block" onclick="frNext()">Keep these</button>
+         <button class="btn-text" onclick="frPricing()">Change prices</button>`
+      :`<button class="btn-pri btn-block" onclick="frNext()">Next</button>
+         <p class="frnote">You can change these later, in Settings.</p>`}`; }
   if(n===4){ const on=!!(PAY&&(PAY.ready||PAY.chargesEnabled));
     /* Three honest states, the same three the Money tab's card knows: on; started
        on Stripe but not finished (back from an abandoned onboarding — the account
@@ -2677,8 +2693,6 @@ async function frImport(){
 }
 /* Prices live in Settings: hide the steps, go there, and leave a way back. */
 function frPricing(){ FR.hidden=true; frNext(); showPricing(); }
-/* Same shape for a plan that cannot change prices: the plan cards, not a veil. */
-function frPlans(){ FR.hidden=true; frNext(); showPlans(); }
 /* Step 5 when /auth would not answer: the last step, so the setup is done and the
    codes are where Settings keeps them; a retry there refreshes the same list. */
 function frCodes(){ frDone(); setTab('settings'); loadTeam(true);
@@ -4188,6 +4202,7 @@ const TIER_COPY={
     ['Verification badge',' – after credentials are approved'],
     ['Business dashboard',' – log your pay, band splits, cash tips, merch, costs and hours for every show, see your profit and your real $/hour, and print a branded report for your accountant'],
     ['Shows that start and end themselves',' – from your calendar'],
+    ['Show the room your numbers',' – tonight’s votes, voters and tips on every phone’s vote page, if you choose'],
     ['<span class="fee">Transaction fee</span>',' – 10% on money taken through the app']]},
   pro:{name:'Rock Star',price:'$20 / month',items:[
     ['Everything in Bar Star',''],

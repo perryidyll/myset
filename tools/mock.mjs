@@ -397,12 +397,12 @@ function stageFixture(st) {
 }
 const NOT_BUILT = ['promote', 'analytics', 'presskit', 'branding'];
 const planRow = (label, price, o) => ({ label, price, featured: null, gigs: o.gigs === undefined ? null : o.gigs, pricing: !!o.pricing, setlists: !!o.setlists,
-  merch: !!o.merch, moderate: !!o.moderate, reports: !!o.reports, library: o.library, cut: o.cut, cutPct: Math.round(o.cut * 1000) / 10, seats: o.seats,
+  merch: !!o.merch, moderate: !!o.moderate, reports: !!o.reports, crowdNumbers: !!o.crowdNumbers, library: o.library, cut: o.cut, cutPct: Math.round(o.cut * 1000) / 10, seats: o.seats,
   promote: !!o.promote, analytics: !!o.analytics, presskit: !!o.presskit, branding: !!o.branding, soon: NOT_BUILT });
 const PLANS = {
   free: planRow('Hobbyist', 0, { gigs: 10, library: 100, cut: 0.25, seats: 1 }),
-  plus: planRow('Bar Star', 1000, { library: 200, cut: 0.10, seats: 1, pricing: true, setlists: true, merch: true, moderate: true, reports: true }),
-  pro: planRow('Rock Star', 2000, { library: 2000, cut: 0.02, seats: 5, pricing: true, setlists: true, merch: true, moderate: true, reports: true, promote: true, analytics: true, presskit: true, branding: true }),
+  plus: planRow('Bar Star', 1000, { library: 200, cut: 0.10, seats: 1, pricing: true, setlists: true, merch: true, moderate: true, reports: true, crowdNumbers: true }),
+  pro: planRow('Rock Star', 2000, { library: 2000, cut: 0.02, seats: 5, pricing: true, setlists: true, merch: true, moderate: true, reports: true, crowdNumbers: true, promote: true, analytics: true, presskit: true, branding: true }),
 };
 /* a Bar Star who pays the subscription — the plan the Merch store is sold with; ?plan=free is a Hobbyist */
 function planFixture(st) {

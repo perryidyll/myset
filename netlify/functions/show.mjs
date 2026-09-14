@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { getShow, readFans, publicArtist, json, bad, cleanFanId, markPresence,
+import { getShow, readFans, readMeta, publicArtist, json, bad, cleanFanId, markPresence,
          roomHash, clientIp } from './_lib.mjs';
 import { readRequests, myRequests } from './_requests.mjs';
 import { readFlags, flagsFor } from './_flags.mjs';
@@ -41,7 +41,9 @@ const main = async (req) => {
       && me0.ipH === roomHash(aid, clientIp(req));
     if (!already) await markPresence(aid, fanId, show, req);
   }
-  const board = buildBoard({ aid, show, fans, flags: flagsFor(flagDoc, aid), at });
+  // one more read, only for an artist showing the room tonight's tips (0079)
+  const meta = (show.status === 'live' && show.crowd && show.crowd.tips) ? await readMeta(aid).catch(() => null) : null;
+  const board = buildBoard({ aid, show, fans, flags: flagsFor(flagDoc, aid), meta, at });
   /* One extra blob read, and only when there is something to read. This endpoint
      is polled by every phone in the room, so nothing goes on it unconditionally. */
   const asking = show.requests.on || show.birthdays.on;

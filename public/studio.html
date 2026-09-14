@@ -191,6 +191,7 @@ a{color:inherit;text-decoration:none}
 .fr p{font-size:15px;color:var(--muted);margin:0 0 18px;line-height:1.45}
 .fr .btn-pri{margin-top:14px}
 .fr .btn-text{width:100%;margin-top:6px;color:var(--muted)}
+.fr .frnote{margin:14px 0 0;text-align:center;font-size:13.5px;font-weight:600;color:var(--accent-2)}   /* the one orange line under Next */
 .fr .lnk{display:inline;font:inherit;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
 .fr .qrwrap{background:#fff;border-radius:var(--r-lg);padding:18px;display:grid;place-items:center;margin:0 0 14px}
 .fr .qrwrap img{width:min(240px,70vw);height:auto;display:block;image-rendering:pixelated}
@@ -801,7 +802,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=240acf2c"></script>
+<script src="/studio.js?v=17f902b2"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

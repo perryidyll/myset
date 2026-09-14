@@ -510,6 +510,20 @@ If you are about to violate one, stop and say so rather than working around it.
     stores its picture by path. Decision `0078`; `test/sheets.mjs`
     NOBODY ELSE'S BAND.
 
+0fz. **The board carries only what every phone may see, and the room's numbers
+    are the artist's to show.** `buildBoard` adds `numbers` — tonight's votes +
+    voters, and/or tonight's tips — only while the show is live and only for the
+    switch the artist turned on (`show.crowd`, `crowdSet`, plan flag
+    `crowdNumbers`: Bar Star and up, the founder's owner bypass). Off, the field
+    is null and the vote page draws nothing. `board.mjs` / `show.mjs` read
+    `meta` for the tips ONLY when that switch is on, so a room that never
+    touched this costs what it did. The same bytes for every phone (9d6), never
+    anything personal. And on the artist's own cards a **paid vote** is a bought
+    vote or any vote from somebody who tipped tonight (`paidVoteCounts(fans,
+    tippersTonight(meta.tips, show.startedAt))`) — counted once per vote, the
+    filed nights unchanged. Decision `0079`; `test/decline.mjs` WHO PUT MONEY IN
+    / WHAT THE ROOM SEES; `test/limits.mjs`.
+
 9d4. **Only production deploys cost credits — and `credit-burn.sh` used to bill
     the free ones.** It counted every `state == 'ready'` deploy at 15 credits,
     drafts and deploy previews included, and asked for a single page of 200. On

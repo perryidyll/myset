@@ -165,6 +165,13 @@ ok('and the two that ARE built are not in the list',
 /* Both built flags have to be enforced somewhere, or "built" is a claim. */
 ok('pricing is refused server-side on free', /canPrice = isPlatformOwner/.test(adminSrc));
 ok('setlists are refused server-side on free', /limits\.setlists !== true/.test(adminSrc));
+/* Showing the room tonight's numbers (decision 0079): a real flag, Bar Star and
+   up, refused with a 402 on free, forwarded to the Studio so it greys the switches. */
+ok('crowd numbers is a real flag on every row', PLANS.free.crowdNumbers === false && PLANS.plus.crowdNumbers === true && PLANS.pro.crowdNumbers === true);
+ok('and is not in the coming-soon list', !NOT_BUILT.includes('crowdNumbers'));
+ok('crowd numbers are refused server-side on free', /crowdNumbersAllowed\(aid/.test(adminSrc) && /numbers is a Bar Star feature/.test(adminSrc));
+ok('and forwarded to the Studio', /crowdNumbers: !!l\.crowdNumbers/.test(adminSrc));
+ok('which greys the two switches', /lock\('crowdNumbers'/.test(page));
 
 eq('the three venue features with no code behind them are named',
    [...VENUE_NOT_BUILT].sort(), ['speakerVotes', 'tips']);

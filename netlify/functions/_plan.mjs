@@ -112,6 +112,12 @@ export const PLANS = {
        the same Money tab. One flag because it is one question — may this artist
        read what their nights were worth — and `band`/`costs` above size it. */
     reports: false,
+    /* SHOWING THE ROOM TONIGHT'S NUMBERS (decision 0079): two switches in
+       Settings — votes + voters, and the tips — that put the Live tab's figures on
+       every phone's vote page. Off by default on every plan; Bar Star and up may
+       turn them on. The founder: "it could be cool for the audience to see the
+       numbers as well". */
+    crowdNumbers: false,
     promote: false,       // list gigs in cities you don't normally play
     analytics: false,     // earnings by venue / night / song
     presskit: false,
@@ -130,7 +136,7 @@ export const PLANS = {
     library: 200,         // "add up to 200 songs" (the founder, 2026-09-13); Rock Star holds MAX_LIBRARY
     seats: 1,
     band: 5, costs: 5,
-    pricing: true, setlists: true, merch: true, moderate: true, reports: true,
+    pricing: true, setlists: true, merch: true, moderate: true, reports: true, crowdNumbers: true,
     promote: false, analytics: false, presskit: false, branding: false,
   },
   pro: {
@@ -150,7 +156,7 @@ export const PLANS = {
     library: 2000,
     seats: 5,
     band: 10, costs: 10,
-    pricing: true, setlists: true, merch: true, moderate: true, reports: true,
+    pricing: true, setlists: true, merch: true, moderate: true, reports: true, crowdNumbers: true,
     promote: true, analytics: true, presskit: true, branding: true,
   },
 };
@@ -208,6 +214,8 @@ export const merchAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits &
 export const moderateAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.moderate === true);
 /** May this artist READ the filed nights on the Money tab? Same shape. */
 export const reportsAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.reports === true);
+/** May this artist show the room tonight's votes, voters and tips? Same shape (0079). */
+export const crowdNumbersAllowed = (aid, limits) => isPlatformOwner(aid) || !!(limits && limits.crowdNumbers === true);
 
 /* ---------- promo codes ---------- */
 const PROMOS = 'promos';

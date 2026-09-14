@@ -386,8 +386,8 @@ const SETTINGS=await pg.evaluate(async ()=>{
   ok('Settings omits its duplicate Voting section', !/^Voting$/m.test(text));
   ok('Settings omits New show (reset everything)', !/New show \(reset everything\)/.test(text));
   const sections=[...document.querySelectorAll('#app .sec .kick')].map(x=>x.textContent.trim());
-  const requests=sections.indexOf('Requests from fans'), autoshow=sections.indexOf('Starting by itself');
-  ok('Starting by itself is directly after Requests from fans', autoshow===requests+1,
+  const requests=sections.indexOf('Requests from fans'), crowd=sections.indexOf('What the room sees'), autoshow=sections.indexOf('Starting by itself');
+  ok('What the room sees sits between Requests from fans and Starting by itself (0079)', crowd===requests+1&&autoshow===crowd+1,
      sections.slice(Math.max(0,requests),autoshow+2).join(' > '));
   localStorage.removeItem('myset.verify-search-intro.verified-demo');
   VERIFYINTROSHOWN=false;maybeVerifyIntro();await new Promise(r=>setTimeout(r,20));
@@ -427,10 +427,10 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   try{render();}catch(e){out.push('  ✗ Live render threw — '+e.message);return out.join('\n');}
   const top=document.querySelector('.bigplay');
   ok('top-voted action shows the total in words', top&&/\(4 votes total\)/.test(top.innerText), top&&top.innerText.replace(/\n/g,' | '));
-  ok('top-voted action carries the green paid-vote pill', top&&/\(2\) paid votes/.test(top.innerText)&&
+  ok('top-voted action carries the green paid-vote pill', top&&/Paid votes: 2/.test(top.innerText)&&
     ['rgb(24, 122, 50)','rgb(48, 209, 88)'].includes(getComputedStyle(top.querySelector('.paidtag')).color));
   const row=document.querySelector('.list .row');
-  ok('the queue repeats total and paid counts', row&&/4 votes total/.test(row.innerText)&&/\(2\) paid votes/.test(row.innerText));
+  ok('the queue repeats total and paid counts', row&&/4 votes total/.test(row.innerText)&&/Paid votes: 2/.test(row.innerText));
   const studioQueue=document.querySelector('.queue-window');
   const studioQueueShell=document.querySelector('.queue-shell');
   ok('the artist Up next window is orange, indented, and internally scrollable past exactly ten songs',

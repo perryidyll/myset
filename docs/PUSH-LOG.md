@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 01:17 — c5f714b — wt4@studio/paid-votes-crowd-numbers (31 files since origin/main)
+**tl;dr:** Song cards' green pill now reads 'Paid votes: N' and counts every vote from somebody who tipped tonight; Settings → What the room sees (Bar Star+) puts tonight's votes+voters and/or tips on every phone's vote page; setup step 3 no longer offers the plans — Next + an orange note; the Settings lock pill says '· Upgrade' (decision 0079, INVARIANT 0fz)
+**Other sessions:** _lib.mjs paidVoteCounts(fans, tippers) + tippersTonight/tipsTonight; new plan flag crowdNumbers (free off) with crowdNumbersAllowed + admin crowdSet → show.crowd{votes,tips}; buildBoard takes meta and adds numbers (null unless live and on) — board.mjs/show.mjs read meta ONLY when show.crowd.tips. vote.html draws .strip.nums from d.numbers. frPlans is gone. uicheck: 'Paid votes: 2' and the Settings order Requests > What the room sees > Starting by itself. Next free invariant: 0ga; decision: 0080.
+
 ### 2026-09-15 01:12 — 75509fd — wt@night/ugly-duckling-14-sep (6 files since origin/main)
 **tl;dr:** The Ugly Duckling night (14 Sep) is on the model: 13 phones, 10 voted, 22 votes, 13 songs, every vote played, $20 in card tips ($1.54 a head, the best night). Eight nights now: 9.9 phones, 2.8 h, $1.03 a head. The night cost ~3 credits of traffic by Netlify's own meters.
 **Other sessions:** finance/marks.json: marks #3 (14 Sep 17:00) and #4 (15 Sep 00:40) bracket the night; the poll solve is WITHHELD — background ~8 MB/h since the warm-door pings/mirror (12 Sep was 200 MB with no gig). To make the bandwidth method usable again take two marks an hour apart on a quiet afternoon. finance/credits.json reading #2 = the dashboard 66 min after End. The night's event log (evt_perry-idyll_2026-09-14-1330-gap5) is the first real one — 35 events. Nobody touch marks.json from a stale main: it lost #3 once today.

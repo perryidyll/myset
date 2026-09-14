@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, firstVotedAt, rankSongs, json, bad,
+import { getShow, readFans, readMeta, voteCounts, paidVoteCounts, tippersTonight, firstVotedAt, rankSongs, json, bad,
          requireArtist, roomCounts, GENRES, playable, votable , STORE_NAME } from './_lib.mjs';
 import { readLists, readLearn, shapeLists } from './_lists.mjs';
 import { canTakeMoney } from './_pay.mjs';
@@ -37,7 +37,8 @@ export async function stagePayload(aid) {
      durable carry/reset at the true night boundary. */
   const live = show.status === 'live';
   const counts = live ? voteCounts(fans) : {};
-  const paidCounts = live ? paidVoteCounts(fans) : {};
+  // a tipper's votes are paid votes too (decision 0079) — the pill on every song card
+  const paidCounts = live ? paidVoteCounts(fans, tippersTonight(meta.tips, show.startedAt)) : {};
   const firstAt = live ? firstVotedAt(fans) : {};
   const room = roomCounts(fans);
   const total = meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0);
@@ -57,6 +58,8 @@ export async function stagePayload(aid) {
       // who flipped it — 'artist' or 'schedule' — so the Live tab can say so
       startedBy: show.startedBy || null, endedBy: show.endedBy || null,
       sched, autoStart: show.autoStart !== false,
+      // Settings → What the room sees: tonight's votes + voters, and the tips (0079)
+      crowd: { votes: !!(show.crowd && show.crowd.votes), tips: !!(show.crowd && show.crowd.tips) },
     },
     // the genre vocabulary, so the Setlist tab can render chips and filter by them
     tags: { builtin: GENRES.map(([id, label]) => ({ id, label })), own: show.tags },

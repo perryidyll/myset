@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { getShow, readFans, publicArtist, bad } from './_lib.mjs';
+import { getShow, readFans, readMeta, publicArtist, bad } from './_lib.mjs';
 import { readFlags, flagsFor } from './_flags.mjs';
 import { buildBoard } from './_board.mjs';
 
@@ -22,7 +22,9 @@ const main = async (req) => {
   if (!aid) return bad('unknown artist', 404);
   const at = Date.now();                    // before the reads — see buildBoard
   const [show, fans, flagDoc] = await Promise.all([getShow(aid), readFans(aid), readFlags()]);
-  const board = buildBoard({ aid, show, fans, flags: flagsFor(flagDoc, aid), at });
+  // one more read, only for an artist showing the room tonight's tips (0079)
+  const meta = (show.status === 'live' && show.crowd && show.crowd.tips) ? await readMeta(aid).catch(() => null) : null;
+  const board = buildBoard({ aid, show, fans, flags: flagsFor(flagDoc, aid), meta, at });
   /* CACHED FOR AS LONG AS THE ROOM IS TOLD TO WAIT. `nextPollMs` is the interval
      the server hands every phone (pollFloorFor), so a copy served from the edge is
      at most one interval old — two while it is being replaced, because the

@@ -34,7 +34,7 @@ import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, decodeTourFile, putImage, dropImage, SLOTS, MAX_BYTES, MAX_TOUR_PDF } from './_img.mjs';
 import { MSG_ACTIONS, handleMessages } from './_messages.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, reportsAllowed, redeemPromo,
-         readPromos, mutatePromos, cleanCode, MAX_LIBRARY, libraryCap, NOT_BUILT } from './_plan.mjs';
+         readPromos, mutatePromos, cleanCode, MAX_LIBRARY, libraryCap, NOT_BUILT, crowdNumbersAllowed } from './_plan.mjs';
 import { readBiz, mutateBiz, normGig, pruneRules, keyOk, bizCaps, BIZ_FULL, TIME_KINDS, MAX_RULES } from './_biz.mjs';
 
 /* Rebuilds the projection of the active setlist after the library changed.
@@ -422,6 +422,7 @@ const shapeLimits = (l) => ({
   merch: !!l.merch,
   moderate: !!l.moderate,      // hiding a fan's post (Bar Star and up since 0060)
   reports: !!l.reports,        // reading the filed nights on the Money tab
+  crowdNumbers: !!l.crowdNumbers,   // showing the room tonight's votes, voters and tips (0079)
   library: libraryCap(l),      // how many songs the library holds on this plan
   /* Numbers, read directly by the Studio for "n of N" on the business dashboard
      — never through has(), which would read Bar Star's 5 as "not the top plan"
@@ -2012,6 +2013,10 @@ const main = async (req) => {
     canPrice = isPlatformOwner(aid) || (await planForArtist(aid)).limits.pricing === true;
   }
   const PRICE_LOCKED = ['Setting your own prices is a Bar Star feature — the defaults stay on for now.', 402];
+  /* What the room sees (0079): the two switches are a Bar Star feature; the
+     founder's owner bypass applies exactly as it does for pricing. */
+  if (action === 'crowdSet' && !crowdNumbersAllowed(aid, (await planForArtist(aid)).limits))
+    return bad('Showing the room tonight’s numbers is a Bar Star feature.', 402);
 
   let newSongId = null;                       // so the sheet can keep editing it
   /* Read before the mutation, for every action that will settle the paid-vote
@@ -2165,6 +2170,13 @@ const main = async (req) => {
       // Settings → "Start shows from my calendar". Off means the schedule never
       // starts one; ending by itself still applies to a show that is live.
       case 'autoStart': show.autoStart = body.on !== false; break;
+      // Settings → What the room sees. `which` is votes (votes + voters together) or tips.
+      case 'crowdSet': {
+        const which = body.which === 'tips' ? 'tips' : body.which === 'votes' ? 'votes' : '';
+        if (!which) { err = ['which numbers?', 400]; return false; }
+        show.crowd = { votes: !!(show.crowd && show.crowd.votes), tips: !!(show.crowd && show.crowd.tips), [which]: body.on === true };
+        break;
+      }
       /* 'live' and 'ended' never reach here — see the delegation to _lifecycle.mjs
          above, and its header for why a resume deliberately does not reset. */
       case 'status': {
