@@ -519,7 +519,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Public pages | 12 — about.html, artist.html, artists.html, community.html, index.html, report.html, shop.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
-| Shared libraries | 54 |
+| Shared libraries | 55 |
 | Artist Studio actions | 132 |
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
@@ -528,9 +528,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / pack-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | Invariants | 263 (last: 0fn) |
-| Test suites | 49 |
+| Test suites | 50 |
 | Assertions | **3,061**, 0 failing, last run 2026-09-14 |
-| Decision records | 70 |
+| Decision records | 71 |
 
 ### Feature flags in force
 

@@ -7,7 +7,7 @@ import { readFeedback } from './_feedback.mjs';
 import { readEvents, occurrencesFor } from './_events.mjs';
 import { readVenues, venuePlanOf, getVenueProfile } from './_venues.mjs';
 import {
-  sheetsOn, sheetsOffReason, ensureTabs, writeTab, appendTab, tabIsEmpty, tabTitles,
+  sheetsOn, sheetsOffReason, ensureTabs, styleTabs, writeTab, appendTab, tabIsEmpty, tabTitles,
 } from './_sheets.mjs';
 
 /* WHAT GOES IN THE SHEET.
@@ -564,6 +564,7 @@ async function runSync({ dry, startedAt, state }) {
   }
 
   const made = await ensureTabs(TAB_LIST);
+  await styleTabs(TAB_LIST).catch(() => {});      // looks are never the reason a sync fails
   if (made.includes(TABS.guide) || (await tabIsEmpty(TABS.guide))) {
     await writeTab(TABS.guide, GUIDE);
   }
