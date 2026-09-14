@@ -519,7 +519,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Public pages | 12 — about.html, artist.html, artists.html, community.html, index.html, report.html, shop.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 32 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
-| Shared libraries | 53 |
+| Shared libraries | 54 |
 | Artist Studio actions | 132 |
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
@@ -527,10 +527,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / pack-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 262 (last: 0fn) |
-| Test suites | 48 |
+| Invariants | 263 (last: 0fn) |
+| Test suites | 49 |
 | Assertions | **2,867**, 0 failing, last run 2026-09-13 |
-| Decision records | 69 |
+| Decision records | 70 |
 
 ### Feature flags in force
 
@@ -1110,13 +1110,19 @@ split took a 10,000-person gig from $36.40 to **$4.29**.
 
 **The audience never signs in.** That is why the app works in a bar.
 
-**Artists** sign in with **email and a 6-digit code** — not Google, because OAuth needs a
-cloud project, a consent screen and a verification review. Codes last ten minutes, are
-burned on use, and allow five wrong guesses and five sends per hour. Artists may also set
-a **Studio passcode**, used with their page name — the pair behaves like a username and
-password: at least 8 characters, a deny-list, and the door locks for 15 minutes after 10
-failures. **A locked door, a wrong code and an unknown page name all give the same
-answer**, so the lock cannot be used to discover which codes or artists are real.
+**Artists** sign in with **email and password** since 2026-09-14 (decision
+[`0070`](docs/decisions/0070-the-email-address-is-the-username-and-a-password-si.md)):
+the email is the username, the password is per person (scrypt-hashed, salted, checked once
+and swapped for the session token, five wrong per address then a wait), and the screen is
+the standard one — *Welcome back*, Email over Password, *Sign in*. A **6-digit code by
+email** is still how an account is created and the whole of "forgot": codes last ten
+minutes, are burned on use, and allow five wrong guesses and five sends per hour. Not
+Google, because OAuth needs a cloud project, a consent screen and a verification review.
+Artists may also set a **Studio code**, used with their page name from a small window off
+the foot of the sign-in screen: at least 8 characters, a deny-list, and the door locks for
+15 minutes after repeated failures. **A locked door, a wrong code, a wrong password and an
+unknown page name or address all give the same answer**, so no door can be used to
+discover which codes, addresses or artists are real.
 
 **Passkeys** are built, with no npm dependency — WebAuthn verification is SHA-256, a
 signature check, base64url and enough CBOR to read two maps, all of which Node does. *A

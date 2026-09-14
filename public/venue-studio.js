@@ -26,7 +26,10 @@ async function api(p,o={}){
 const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
 
 /* ── the door ───────────────────────────────────────────── */
-let GATE_EMAIL='', TICKET='';
+let GATE_EMAIL='', TICKET='', GATE_FROM='join', PW_PROMPT=false;
+/* The sign-in screen, the artist Studio's shape (decision 0070): email over
+   password in a pink-orange ring under "Welcome back"; "Create account" below;
+   a code by email for a new page and for a forgotten password. */
 function gate(err,mode){
   /* WHATEVER HAPPENS, THE BOOT SCREEN GOES. Without this a visitor with no token
      never reaches start(), so the three bars would spin over the sign-in screen
@@ -35,40 +38,61 @@ function gate(err,mode){
   const m=mode||'start';
   let inner;
   if(m==='code'){
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">We sent a 6-digit code to <b>${esc(GATE_EMAIL)}</b>. It works for ten minutes.</p>
+    inner=`<div class="signbox"><h2>Check your email</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 16px">We sent a 6-digit code to <b>${esc(GATE_EMAIL)}</b>. It works for ten minutes.</p>
       <input class="inp" id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
         placeholder="000000" style="letter-spacing:.3em;text-align:center;font-size:26px">
-      <button class="big" style="margin-top:12px" onclick="submitCode()">Sign in</button>
-      <button class="act" style="margin-top:14px;width:100%" onclick="gate(null,'start')">← Use a different email</button>`;
+      <button class="big fill" style="margin-top:12px" onclick="submitCode()">Continue</button>
+      <button class="act" style="margin-top:6px;width:100%" onclick="gate(null,GATE_FROM)">← Use a different email</button></div>`;
   }else if(m==='name'){
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 16px">You're in. What's the place called? This is the name people will see.</p>
+    inner=`<div class="signbox"><h2>You’re in</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 16px">What's the place called? This is the name people will see.</p>
       <input class="inp" id="newName" maxlength="70" placeholder="The Ugly Duckling" autocomplete="off">
       <div style="display:flex;gap:8px;margin-top:8px">
         <input class="inp" id="newCity" maxlength="60" placeholder="City" style="flex:1">
         <input class="inp" id="newCountry" maxlength="60" placeholder="Country" style="flex:1">
       </div>
-      <button class="big" style="margin-top:12px" onclick="claim()">Create your page</button>
-      <p class="muted" style="font-size:12px;margin:12px 0 0">City and country are how artists' gigs find their way onto your page — put them exactly as they'd write them.</p>`;
+      <button class="big fill" style="margin-top:12px" onclick="claim()">Create your page</button>
+      <p class="muted" style="font-size:12px;margin:12px 0 0">City and country are how artists' gigs find their way onto your page — put them exactly as they'd write them.</p></div>`;
+  }else if(m==='join'||m==='forgot'){
+    const join=m==='join';
+    inner=`<div class="signbox"><h2>${join?'Join the MySet family':'Forgot your password?'}</h2>
+      <p class="muted" style="font-size:14px;margin:0 0 16px">${join
+        ?'A free page for your venue: what’s on, who’s playing, your menu and your offers. We’ll email a 6-digit code; then you name the place and set a password.'
+        :'No problem. We’ll email you a fresh 6-digit code, and you can set a new password once you’re in.'}</p>
+      <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@yourbar.com" value="${esc(GATE_EMAIL)}">
+      <button class="big fill" style="margin-top:12px" onclick="sendCode('${m}')">Email me a code</button>
+      <button class="act" style="margin-top:6px;width:100%" onclick="gate()">← Back</button></div>`;
   }else{
-    inner=`<p class="muted" style="font-size:14px;margin:0 0 6px">${err==='unauthorized'?'That didn’t work — try again.'
-      :'A free page for your venue: what’s on, who’s playing, your menu and your offers.'}</p>
-      <p class="muted" style="font-size:13px;margin:0 0 16px">Artists keep their own gig calendars. Once your page is up, the shows fill themselves in.</p>
-      <input class="inp" id="email" type="email" inputmode="email" autocomplete="email" placeholder="you@yourbar.com">
-      <button class="big" style="margin-top:12px" onclick="sendCode()">Email me a code</button>
-      <p class="muted" style="font-size:12.5px;margin:14px 0 0;text-align:center">New here? Same button — we'll set you up right after the code.</p>
-      <p class="muted" style="font-size:12.5px;margin:22px 0 0;text-align:center">
-        Musician, not a venue? <a href="/studio?tab=setlist" style="color:var(--accent);font-weight:600">Artist Studio →</a></p>`;
+    inner=`<div class="signbox"><h2>Welcome back</h2>
+      ${err==='unauthorized'?`<p class="muted" style="font-size:14px;margin:0 0 12px">That didn’t work — try again.</p>`:''}
+      <input class="inp" id="email" type="email" inputmode="email" autocomplete="username" placeholder="Email" value="${esc(GATE_EMAIL)}">
+      <input class="inp" id="pw" type="password" autocomplete="current-password" placeholder="Password" style="margin-top:8px">
+      <button class="big fill" style="margin-top:12px" onclick="passwordSignIn()">Sign in</button>
+      <p class="signlinks"><a href="#" onclick="event.preventDefault();gate(null,'forgot')">Forgot your password?</a></p></div>
+      <p class="join">New here? Join the MySet family</p>
+      <button class="big ring" onclick="gate(null,'join')">Create account</button>
+      <p class="foot">Musician, not a venue? <a href="/studio?tab=setlist">Artist Studio →</a></p>`;
   }
-  $('#app').innerHTML=`<div class="gate"><h2>Venue Studio</h2>${inner}</div>`;
+  $('#app').innerHTML=`<div class="gate">${inner}</div>`;
+  const go={code:submitCode,name:claim,join:()=>sendCode('join'),forgot:()=>sendCode('forgot'),start:passwordSignIn}[m]||passwordSignIn;
+  for(const el of document.querySelectorAll('.gate .inp')) el.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
   const first=$('#otp')||$('#newName')||$('#email');
-  if(first){ first.addEventListener('keydown',e=>{if(e.key==='Enter'){
-      m==='code'?submitCode():m==='name'?claim():sendCode();}});
-    setTimeout(()=>first.focus(),100); }
+  if(first) setTimeout(()=>first.focus(),100);
 }
-async function sendCode(){
+async function passwordSignIn(){
+  const em=(($('#email')||{}).value||'').trim(), pw=(($('#pw')||{}).value||'');
+  if(!em){toast('Enter your email');return;}
+  if(!pw){toast('Enter your password — or tap “Forgot your password?”');return;}
+  GATE_EMAIL=em;
+  const d=await post('/venueauth',{action:'passwordSignIn',email:em,password:pw});
+  if(!d.ok){toast(d.error||'That email and password don’t match');return;}
+  signedIn(d);
+}
+async function sendCode(from){
   const em=(($('#email')||{}).value||'').trim();
   if(!em){toast('Enter your email');return;}
-  GATE_EMAIL=em;
+  GATE_EMAIL=em; GATE_FROM=from||'join';
   const d=await post('/venueauth',{action:'start',email:em});
   if(!d.ok){toast(d.error||'Could not send that');return;}
   gate(null,'code');
@@ -78,6 +102,7 @@ async function submitCode(){
   const d=await post('/venueauth',{action:'verify',email:GATE_EMAIL,code});
   if(!d.ok){toast(d.error||'Check the code and try again');return;}
   if(d.needName){ TICKET=d.ticket; gate(null,'name'); return; }
+  PW_PROMPT=true;                      // in by code: offer a password once
   signedIn(d);
 }
 async function claim(){
@@ -86,6 +111,7 @@ async function claim(){
   const d=await post('/venueauth',{action:'claim',ticket:TICKET,name:v('newName'),
     city:v('newCity'),country:v('newCountry')});
   if(!d.ok){toast(d.error||'Could not create that');return;}
+  PW_PROMPT=true;
   signedIn(d,`Welcome — your page is myset.vip/v/${d.slug}`);
 }
 function signedIn(d,msg){
@@ -264,7 +290,53 @@ async function loadVenue(){
   if(TAB==='shows'){ loadShows(); loadEvents(); loadPitches(); }
   if(TAB==='numbers') loadStats();
 }
-async function loadMe(){ ME=await post('/venueauth',{action:'list'}); if(V)render(); }
+async function loadMe(){
+  ME=await post('/venueauth',{action:'list'}); if(V)render();
+  if(PW_PROMPT&&ME&&ME.ok){ PW_PROMPT=false; if(!myPw()) setTimeout(()=>openPasswordSheet(true),600); }
+}
+const myPw=()=>!!(((ME&&ME.emails)||[]).find(x=>x.me)||{}).pw;
+/* ---------- your password (decision 0070) ---------- */
+function openPasswordSheet(prompt){
+  const has=myPw(), em=(ME&&ME.email)||'';
+  openSheet(`<h3>${has?'Change your password':(prompt?'Set a password?':'Create a password')}</h3>
+    <p class="lede">${has?'For '+esc(em)+'. Every other device gets signed out.'
+      :(prompt?'You’re in with a code. A password means next time it’s just your email and password — no inbox needed. You can do this later in Settings.'
+      :'For '+esc(em)+'. Next time it’s just your email and password.')}</p>
+    ${has?`<div class="field" id="pwCurWrap"><label>Current password</label><input class="inp" id="pwCur" type="password" autocomplete="current-password" placeholder="Your current password"></div>
+    <div class="field" id="pwCodeWrap" style="display:none"><label>The code we emailed you</label><input class="inp" id="pwCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="letter-spacing:.2em"></div>
+    <p class="muted" style="font-size:12px;margin:6px 0 0"><a href="#" id="pwForgot" onclick="event.preventDefault();pwForgotCode()" style="color:var(--accent-2);font-weight:600">Forgot it? Email me a code instead</a></p>`:''}
+    <div class="field" style="margin-top:10px"><label>New password</label><input class="inp" id="pwNew" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+    <div class="field"><label>Again</label><input class="inp" id="pwNew2" type="password" autocomplete="new-password" placeholder="Type it again"></div>
+    <button class="big fill" style="margin-top:14px" onclick="savePassword()">${has?'Change it':'Save my password'}</button>
+    ${prompt&&!has?`<button class="big keep" onclick="closeSheet()">Not now</button>`:''}
+    <p class="muted" style="font-size:12px;margin:12px 0 0">Your email code keeps working either way.</p>`);
+}
+let PW_CODE_MODE=false;
+async function pwForgotCode(){
+  const em=(ME&&ME.email)||'';
+  const d=await post('/venueauth',{action:'start',email:em});
+  if(!d.ok){toast(d.error||'Could not send that');return;}
+  PW_CODE_MODE=true;
+  const a=$('#pwCurWrap'), b=$('#pwCodeWrap'), f=$('#pwForgot');
+  if(a) a.style.display='none'; if(b) b.style.display=''; if(f) f.textContent='Code sent to '+em;
+  const c=$('#pwCode'); if(c) c.focus();
+  toast('We emailed you a code');
+}
+async function savePassword(){
+  const n1=(($('#pwNew')||{}).value||''), n2=(($('#pwNew2')||{}).value||'');
+  if(n1.length<8){toast('At least 8 characters');return;}
+  if(n1!==n2){toast('Those don’t match');return;}
+  const body={action:'passwordSet',password:n1};
+  if(myPw()){
+    if(PW_CODE_MODE) body.code=(($('#pwCode')||{}).value||'').trim();
+    else body.current=(($('#pwCur')||{}).value||'');
+    if(!body.code&&!body.current){toast(PW_CODE_MODE?'Enter the code from your email':'Enter your current password');return;}
+  }
+  const d=await post('/venueauth',body);
+  if(!d.ok){toast(d.error||'Could not save that');return;}
+  PW_CODE_MODE=false; closeSheet(); loadMe();
+  toast(d.signedOut?`Saved — ${d.signedOut} other device${d.signedOut===1?'':'s'} signed out`:'Saved — that’s your password from now on');
+}
 async function loadShows(force){
   if(SHOWS&&!force)return;
   if(!V||!V.slug)return;
@@ -1142,6 +1214,9 @@ function render(){
     <div class="list">
       <div class="row"><div class="m"><div class="t">${esc((ME&&ME.email)||'Signed in')}</div>
         <div class="s">Sign-in address${ME&&ME.emails?` · ${ME.emails.length} sign-in${ME.emails.length===1?'':'s'} on this page`:''}</div></div></div>
+      <div class="row"><div class="m"><div class="t">Password${ME&&ME.ok?(myPw()?' · set':' · not set'):''}</div>
+        <div class="s">${myPw()?'Sign in with your email and password. Forget it and a six-digit code to your email gets you back in.':'Set one and you can sign in with your email and password. Until then, a six-digit code to your email gets you in.'}</div></div>
+        <button class="act" onclick="openPasswordSheet()">${myPw()?'Change':'Create'}</button></div>
       <div class="row"><div class="m"><div class="t">Where you’re signed in</div>
         <div class="s">Every phone and tablet with a live sign-in.</div></div>
         <button class="act" onclick="openSessions()">See them</button></div>

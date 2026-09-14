@@ -403,6 +403,21 @@ If you are about to violate one, stop and say so rather than working around it.
     Blobs — never in the repo, and one less thing to configure. Bumping
     `artists.rev` signs every device out at once.
 
+0fu. **A password is per person, hashed like one, and never travels after the
+    sign-in.** `cred_<owner>_<hash of email>` — one per sign-in address, never per
+    page — holds scrypt with a per-record salt (`_cred.mjs`), compared in constant
+    time; a correct password mints the same session token every other door mints
+    and is not sent again. Every failure of `passwordSignIn` answers the same
+    sentence, status and cost (a missing record is scrypted against a fixed
+    salt), so the door cannot say which addresses exist or have a password (9h);
+    five wrong on one address lock that address, not the page. A change needs the
+    current password or a fresh six-digit code to the same address, and signs
+    that address's other devices out. The Studio code is NOT this: per page,
+    SHA-256, checked on every request — leave it that way, because hashing it
+    slowly would cost every Studio poll. The six-digit code stays the only way an
+    account is made and the whole of recovery. Decision `0070`;
+    `test/password.mjs`.
+
 ## Cost
 
 9d0. **Production deploys are the expensive thing, not traffic.** A production

@@ -13,6 +13,7 @@ import { readArchivedPosts, archiveKeys as postArchiveKeys } from './_community.
 import { readArchivedFeedback, archiveKeys as fbArchiveKeys } from './_feedback.mjs';
 import { readEventLog, evtKeys } from './_evlog.mjs';
 import { listVersions, versionKeys, verKey } from './_versions.mjs';
+import { credKey } from './_cred.mjs';
 
 /* THE ACCOUNT — what an artist can take with them, and how they leave.
 
@@ -107,6 +108,9 @@ export async function keysFor(aid) {
     for (const k of await versionKeys(base).catch(() => [])) keys.push(k);
   for (const k of await postArchiveKeys(aid).catch(() => [])) keys.push(k);
   for (const k of await fbArchiveKeys(aid).catch(() => [])) keys.push(k);
+  // one password record per sign-in address (decision 0070) — deleted, never exported
+  const reg = await readArtists().catch(() => ({ byEmail: {} }));
+  for (const [e, v] of Object.entries(reg.byEmail || {})) if (v && v.artistId === aid) keys.push(credKey(aid, e));
   const oldPosts = await readArchivedPosts(aid).catch(() => []);
   for (const p of oldPosts) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(aid, `${p.id}_${i}`));
   for (const p of oldPosts) if (p && p.clip) { keys.push(vidKey(aid, p.clip)); keys.push(IMG(aid, p.clip)); }
