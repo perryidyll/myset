@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-14 19:18 — eac3dfd — landing-wt@landing/freedom-line (1 files since origin/main)
+**tl;dr:** Freedom card: 'You don't just walk out with more money but more proof' is now the whole bold-orange line (the founder, after the polish pass)
+**Other sessions:** Copy only. about.html card emphasis: <b class=o> = bold orange.
+
 ### 2026-09-14 19:11 — b1d1ed6 — landing-wt@landing/polish (1 files since origin/main)
 **tl;dr:** Landing page polish from the founder's review: orange emphasis through the beats and cards, centred off-white chips, 64px gradient beat numbers, orange strip captions clear of the fade, beat 2 now sells buying more votes, beat 4 no longer mentions daily payouts (still in the shop section)
 **Other sessions:** about.html emphasis convention in body copy: <b> = bold ink, <span class=o> = orange, <b class=o> = both; .pline keeps its own <b>/<em> = orange. Strip markup is .reel-wrap > .rcap + .reelbox > .reel (the fade is on .reelbox). Copy only, no code paths.
