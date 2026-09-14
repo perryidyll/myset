@@ -2,7 +2,7 @@ import { playable, votable, inPlay, rankSongs, newShowId } from '../netlify/func
 import { shapeLists } from '../netlify/functions/_lists.mjs';
 import { findUltimateGuitarLink, ultimateGuitarSearch } from '../netlify/functions/_chords.mjs';
 import { addressFromMapUrl, resolveShortMapPlace } from '../netlify/functions/_maps.mjs';
-import { normMerch, normVariants, MAX_VARIANTS, VARIANT_LEN, MAX_POST } from '../netlify/functions/_profile.mjs';
+import { normMerch, normVariants, MAX_VARIANTS, VARIANT_LEN, MAX_POST, MAX_MERCH_IMGS, MAX_STOCK, merchSoldOut, moveMerch, takeStock, merchSlots, freeMerchSlot } from '../netlify/functions/_profile.mjs';
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -172,7 +172,25 @@ console.log('\nnormMerch(): the whitelist a shop item is — sizes, sold out, po
   eq(`and never above ${MAX_POST}`, one({ post: 999999 }).post, MAX_POST);
   eq('normVariants alone takes anything and returns a list', [normVariants(null), normVariants('S'), normVariants([{ label: 'S' }])], [[], [], [{ label: 'S', out: false }]]);
   eq('the old fields still normalise as they did', normMerch([{ id: 'mabc123', title: ' Tee ', cents: '2500', ship: 'ship', on: false, link: 'javascript:x' }])[0],
-    { id: 'mabc123', title: 'Tee', blurb: '', cents: 2500, img: '', link: '', ship: 'ship', on: false, at: 0, variants: [], out: false, post: 0 });
+    { id: 'mabc123', title: 'Tee', blurb: '', cents: 2500, img: '', imgs: [], stock: null, link: '', ship: 'ship', on: false, at: 0, variants: [], out: false, post: 0 });
+  /* THE PICTURES AND THE COUNT (2026-09-14): imgs is the swipe order, img is always imgs[0], an older
+     item's one picture becomes its list; stock is null (not counting) unless a number was set. */
+  const own = (k) => `/api/img?a=x&s=${k}&v=1`;
+  eq('an older item’s one picture is its list', one({ img: own('mabc123') }).imgs, [own('mabc123')]);
+  eq('img is always the first of imgs', one({ imgs: [own('mabc123_2'), own('mabc123')] }).img, own('mabc123_2'));
+  eq('a picture that is not ours is dropped', one({ imgs: ['https://evil.example/x.jpg', own('mabc123_1')] }).imgs, [own('mabc123_1')]);
+  eq('one entry per slot', one({ imgs: [own('mabc123'), '/api/img?a=x&s=mabc123&v=2'] }).imgs.length, 1);
+  eq(`at most ${MAX_MERCH_IMGS} pictures`, one({ imgs: ['mabc123', 'mabc123_1', 'mabc123_2', 'mabc123_3', 'mabc123_4', 'mabc123_5', 'mabc123_6'].map(own) }).imgs.length, MAX_MERCH_IMGS);
+  eq('stock: null when not counting, a whole number otherwise', [one({}).stock, one({ stock: '' }).stock, one({ stock: 12 }).stock, one({ stock: '3' }).stock, one({ stock: -4 }).stock, one({ stock: 'lots' }).stock, one({ stock: 99999 }).stock], [null, null, 12, 3, 0, null, MAX_STOCK]);
+  eq('sold out is the flag or a count at zero', [merchSoldOut(one({ out: true })), merchSoldOut(one({ stock: 0 })), merchSoldOut(one({ stock: 1 })), merchSoldOut(one({}))], [true, true, false, false]);
+  const list = [one({ id: 'maaaaa1' }), one({ id: 'maaaaa2' }), one({ id: 'maaaaa3' })];
+  eq('moveMerch swaps neighbours', [moveMerch(list, 'maaaaa3', 'up'), list.map((m) => m.id)], [true, ['maaaaa1', 'maaaaa3', 'maaaaa2']]);
+  eq('and refuses to move past an end', [moveMerch(list, 'maaaaa1', 'up'), moveMerch(list, 'maaaaa2', 'down'), moveMerch(list, 'nope', 'up')], [false, false, false]);
+  const counted = [one({ id: 'maaaaa1', stock: 3 }), one({ id: 'maaaaa2' })];
+  eq('takeStock comes down by the quantity, never below zero, and leaves an uncounted item alone',
+    [takeStock(counted, 'maaaaa1', 2), counted[0].stock, takeStock(counted, 'maaaaa1', 5), counted[0].stock, takeStock(counted, 'maaaaa2', 1), counted[1].stock], [true, 1, true, 0, false, null]);
+  eq('merchSlots is the bare id then _1.._4', merchSlots('mabc123'), ['mabc123', 'mabc123_1', 'mabc123_2', 'mabc123_3', 'mabc123_4']);
+  eq('freeMerchSlot is the first slot no picture uses', [freeMerchSlot(one({ id: 'mabc123' })), freeMerchSlot(one({ id: 'mabc123', imgs: [own('mabc123'), own('mabc123_2')] })), freeMerchSlot(one({ id: 'mabc123', imgs: ['mabc123', 'mabc123_1', 'mabc123_2', 'mabc123_3', 'mabc123_4'].map(own) }))], ['mabc123', 'mabc123_1', '']);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

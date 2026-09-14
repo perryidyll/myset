@@ -197,6 +197,35 @@ because none reopens the question above:
 - **The strip is *What fans are saying*** — with the average alone in the heading; the
   post count no longer fits beside the longer title at 375.
 
+## The founder's second look (2026-09-14)
+
+Eight more, from using the live shop and the Studio; again none reopens the question:
+
+- **The pictures come first, and there are five.** The editor opens on a *Photos* row for
+  a new item as much as a saved one — no "save it first, then add a picture". A saved
+  item's pictures upload as they are cropped; a new item's are staged and go up one by
+  one after the first Save mints the id (the artist never sees a second step). Up to
+  `MAX_MERCH_IMGS` per item in the item's own slots (`<id>`, `<id>_1..4`); `img` is always
+  the first, so the grid card, the community trio and Stripe's line read as before. On the
+  shop the pictures sit under the title and price as 220 px snap squares with dots, the
+  sizes beneath, a tap to enlarge; the picture that was at the bottom of the sheet is gone.
+- **A count.** *Quantity in stock (optional)*: `stock` comes down inside `redeemSession`
+  once per fresh claim (`takeStock`), `pay.mjs` refuses more than are left (*Only 3 left*,
+  409) and refuses at zero as sold out; the shop shows *Only N left* at five or fewer and
+  caps the stepper. What was decided: **zero does not flip `out`** — a restock is one
+  number, not a number and a switch; and the decrement is best-effort after the money is
+  safe (a lost write leaves the count one high; the artist corrects it; a double write is
+  impossible because only the fresh claim reaches it).
+- **The items can be re-ordered** (↑ ↓ on each row, `merchMove`); the first is the one on
+  top of the community page's trio, which is a little larger with the first item centred.
+- **Browse the shop** wears the brand ring; the step numerals are the brand gradient; the
+  strips have **no pause control** (a finger stops them; reduced motion draws them still);
+  *Paid to {name} through Stripe* is pink-orange with the rest of the line muted; the
+  quotes heading has its count back.
+- **"Shipping", not "postage"** — everywhere a person reads, including Stripe's rate name.
+  The record's field is still `post` and `ship==='ship'`; renaming stored fields for a word
+  would have meant a migration for nothing.
+
 ## What this makes harder
 
 Three pages now redeem a Stripe return, each with its own copy of the pending/retry

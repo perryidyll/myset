@@ -769,7 +769,7 @@ console.log('\nARTIST DIRECTORY\n'+DIRECTORY);
    and render() a declaration on purpose, so this drives the page the way the other blocks do. */
 const SHOP_FIX=()=>({ok:true,name:'Demo Artist',first:'Demo',avatar:'',verified:true,live:true,canBuy:true,
   merch:[
-    {id:'m000001',title:'Tour tee',blurb:'Soft cotton.',cents:2500,img:'/api/img?k=1',link:'',ship:'pickup',on:true,at:7,out:false,post:0,variants:[{label:'S',out:false},{label:'M',out:true},{label:'L',out:false}]},
+    {id:'m000001',title:'Tour tee',blurb:'Soft cotton.',cents:2500,img:'/api/img?k=1',imgs:['/api/img?k=1','/api/img?k=11','/api/img?k=12'],stock:4,link:'',ship:'pickup',on:true,at:7,out:false,post:0,variants:[{label:'S',out:false},{label:'M',out:true},{label:'L',out:false}]},
     {id:'m000002',title:'Vinyl',blurb:'',cents:3000,img:'/api/img?k=2',link:'',ship:'ship',on:true,at:6,out:false,post:600,variants:[]},
     {id:'m000003',title:'Bandcamp album',blurb:'',cents:0,img:'/api/img?k=3',link:'https://demo.bandcamp.com/album/x',ship:'pickup',on:true,at:5,out:false,post:0,variants:[]},
     {id:'m000004',title:'Poster',blurb:'',cents:1200,img:'/api/img?k=4',link:'',ship:'pickup',on:true,at:4,out:true,post:0,variants:[]},
@@ -810,9 +810,11 @@ const SHOP=await pg.evaluate(async (FIXD)=>{
   ok('the picks strip is off by default', !document.querySelector('.picks'));   // a founder toggle, ?picks=1 previews it (shop.html PICKS)
   const q=document.querySelector('.quotes');
   ok('two starred posts make the quotes strip', !!q&&q.children.length>0, q?String(q.children.length):'no .quotes');
-  ok('and a pause control for the strips that move', $$('.still').length>0, String($$('.still').length));
+  ok('and no pause control on them — a finger stops them, reduced motion draws them still (2026-09-14)', $$('.still').length===0, String($$('.still').length));
+  ok('the step numerals wear the brand gradient', $$('.how i').length===3&&$$('.how i').every(i=>/gradient/.test(getComputedStyle(i).backgroundImage)&&getComputedStyle(i).color==='rgb(255, 255, 255)'), $$('.how i').map(i=>getComputedStyle(i).backgroundImage.slice(0,20)).join(','));
+  ok('the shop never says postage', !/postage|posted to you/i.test(document.body.innerText), (document.body.innerText.match(/[^\n]*(postage|posted to you)[^\n]*/i)||[''])[0]);
   ok('the strips carry a ghost set so they can wrap', !!q&&q.children.length===4&&q.querySelectorAll('[aria-hidden="true"]').length===2, q?String(q.children.length):'—');
-  // the More strip in the product sheet (2026-09-13): the other six, drawn twice, under the page's one pause control; a card swaps the sheet in place
+  // the More strip in the product sheet (2026-09-13): the other six, drawn twice; a card swaps the sheet in place
   const HL=history.length; openItem('m000001'); await new Promise(r=>setTimeout(r,160));
   const sh2=document.querySelector('#sheet'), mk=()=>$$('#sheet .more [data-more]:not([aria-hidden])');
   let more=document.querySelector('#sheet .more');
@@ -822,9 +824,20 @@ const SHOP=await pg.evaluate(async (FIXD)=>{
   ok('it never offers the item already open', !mk().some(b=>b.dataset.more==='m000001'));
   ok('the sold-out one is in it, dimmed and saying so', (()=>{const b=mk().find(x=>x.dataset.more==='m000004'); return !!b&&b.classList.contains('out')&&/Sold out/.test(b.textContent)&&/\$12/.test(b.textContent);})(), (mk().find(x=>x.dataset.more==='m000004')||{}).textContent);
   const sect=document.querySelector('#sheet .sect');
-  ok('under a heading that names the artist, with the pause control', !!sect&&/^More from Demo/.test(sect.textContent.trim())&&!!sect.querySelector('.still'), sect?sect.textContent.trim():'no .sect');
+  ok('under a heading that names the artist, with no pause control', !!sect&&/^More from Demo/.test(sect.textContent.trim())&&!sect.querySelector('.still'), sect?sect.textContent.trim():'no .sect');
+  /* THE GALLERY (2026-09-14): the pictures sit under the title and the price and above the fulfilment line and the sizes; each is a
+     220 px snap point; a tap opens the lightbox; the count line is pink-orange text before the payment words. */
+  const gal=sh2.querySelector('#gal'), lede=sh2.querySelector('#lede'), h3g=sh2.querySelector('h3');
+  ok('the gallery sits under the title and above the fulfilment line and the sizes', !!gal&&gal.getBoundingClientRect().top>h3g.getBoundingClientRect().bottom&&gal.getBoundingClientRect().bottom<=lede.getBoundingClientRect().top+1&&(!sh2.querySelector('#sizes')||sh2.querySelector('#sizes').getBoundingClientRect().top>gal.getBoundingClientRect().bottom));
+  ok('its pictures are 220 px squares that snap', !!gal&&[...gal.children].every(c=>Math.abs(c.getBoundingClientRect().width-220)<1&&Math.abs(c.getBoundingClientRect().height-220)<1)&&getComputedStyle(gal).scrollSnapType.startsWith('x'), gal?`${gal.children.length} × ${gal.children[0].getBoundingClientRect().width}`:'no #gal');
+  ok('and it is a scroller, never a sheet handle', !!gal&&getComputedStyle(gal).overflowX==='auto'&&getComputedStyle(gal).touchAction==='pan-x pan-y');
+  ok('no picture at the bottom of the sheet any more', !sh2.querySelector('.spic'));
+  ok('three pictures, three dots, the first lit', !!gal&&gal.children.length===3&&sh2.querySelectorAll('#dots i').length===3&&sh2.querySelector('#dots i').classList.contains('on'));
+  ok('a count of four reads "Only 4 left" on the price line (the card keeps Tonight while live — one tag)', /Only 4 left/.test(sh2.querySelector('.prow').textContent)&&/Tonight/.test(cards[0].querySelector('.tag')?.textContent||''), sh2.querySelector('.prow').textContent);
+  const paid=sh2.querySelector('.paidto');
+  ok('"Paid to … through Stripe" is pink-orange and the rest of the line is muted', !!paid&&getComputedStyle(paid).color!==getComputedStyle(paid.parentElement).color&&/^Paid to Demo Artist through Stripe$/.test(paid.textContent), paid?paid.textContent:'no .paidto');
   ok('and the heading wears the gradient bar, in ink', !!sect&&!!sect.querySelector('i')&&/gradient/.test(getComputedStyle(sect.querySelector('i')).backgroundImage)&&getComputedStyle(sect).color===getComputedStyle(sh2.querySelector('h3')).color);
-  ok('the strip sits under the photo', !!more&&more.getBoundingClientRect().top>sh2.querySelector('.spic').getBoundingClientRect().top);
+  ok('the strip sits under the blurb', !!more&&more.getBoundingClientRect().top>(sh2.querySelector('.blurb')||sh2.querySelector('.sticky-act')).getBoundingClientRect().top);
   ok('and never starts a sheet drag: it is a scroller, not a handle', getComputedStyle(more).touchAction==='pan-x pan-y'&&getComputedStyle(more).overflowX==='auto', `${getComputedStyle(more).touchAction} / ${getComputedStyle(more).overflowX}`);
   const a0=more.scrollLeft; await new Promise(r=>setTimeout(r,500)); const a1=more.scrollLeft;
   ok('it drifts the links-strip way — starts one set in, comes back', a0>0&&a1<a0, `${a0} -> ${a1}`);

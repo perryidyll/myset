@@ -638,12 +638,12 @@ async function payDash(){
 function ordersSection(){
   const o=VORDERS||[]; const open=o.filter(x=>x.status!=='done');
   return `<div class="sec"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
-    <div class="list">${o.slice(0,40).map(x=>{const done=x.status==='done', posted=x.ship==='ship', verb=posted?'Posted':'Handed over';
+    <div class="list">${o.slice(0,40).map(x=>{const done=x.status==='done', posted=x.ship==='ship', verb=posted?'Shipped':'Handed over';
       return `<div class="row ${done?'muted':''}" style="display:flex;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:12px;flex:1 1 100%;min-width:0">
         ${x.code?`<b style="font-size:24px;font-weight:800;letter-spacing:.08em;font-variant-numeric:tabular-nums;flex:0 0 auto;color:var(--ink)">${esc(x.code)}</b>`:''}
         <div class="m"><div class="t">${esc(x.title)}${x.variant?' ('+esc(x.variant)+')':''}${x.qty>1?' × '+x.qty:''} · $${Number(x.amount||0).toFixed(2)}</div>
-          <div class="s">${posted?'To post':'Pickup'}${x.post>0?' · '+vmoney(x.post)+' postage':''} · ${vdate(x.at)}${done?' · '+verb:''}</div></div></div>
+          <div class="s">${posted?'To ship':'Pickup'}${x.post>0?' · '+vmoney(x.post)+' shipping':''} · ${vdate(x.at)}${done?' · '+verb:''}</div></div></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
         <button class="act" onclick="orderDetail('${esc(x.sid)}')">Details</button>
         <button class="act ${done?'':'pri'}" onclick="orderDone('${esc(x.sid)}',${done?'false':'true'})">${done?'Undo':verb}</button></div></div>`;}).join('')
@@ -659,7 +659,7 @@ async function orderDetail(sid){
   const o=d.order||{}, b=d.buyer||{}, sh=d.shipping||null;
   const addr=sh?[sh.name,sh.line1,sh.line2,sh.city,sh.state,sh.postal,sh.country].filter(Boolean).join(', '):'';
   openSheet(`<h3>${esc(o.title||'Order')}${o.variant?' ('+esc(o.variant)+')':''}</h3>
-    <div class="list" style="margin:0"><div class="row"><div class="m"><div class="t">${o.code?'Code '+esc(o.code)+' · ':''}$${Number(o.amount||0).toFixed(2)}${o.qty>1?' · × '+o.qty:''}${o.post>0?' · incl. '+vmoney(o.post)+' postage':''}</div><div class="s">${vdate(o.at)} · ${o.ship==='ship'?'To be posted':'Pickup at the bar'}</div></div></div>
+    <div class="list" style="margin:0"><div class="row"><div class="m"><div class="t">${o.code?'Code '+esc(o.code)+' · ':''}$${Number(o.amount||0).toFixed(2)}${o.qty>1?' · × '+o.qty:''}${o.post>0?' · incl. '+vmoney(o.post)+' shipping':''}</div><div class="s">${vdate(o.at)} · ${o.ship==='ship'?'To be shipped':'Pickup at the bar'}</div></div></div>
       ${b.name||b.email?`<div class="row"><div class="m"><div class="t">${esc(b.name||'Name not given')}</div><div class="s">${esc(b.email||'')}${b.email?' · from Stripe':''}</div></div></div>`:''}
       ${addr?`<div class="row"><div class="m"><div class="t">${esc(addr)}</div><div class="s">Post it here</div></div>
         <button class="act" data-copy="${esc(addr)}" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.getAttribute('data-copy'));toast('Copied')">Copy</button></div>`:''}</div>
@@ -714,11 +714,14 @@ function vMerchTab(){
   const items=V.merch||[], stored=V.merchStored||0;
   const list=`<div class="sec"><span class="kick">Your merch</span><span class="kick">${items.length}${V.merchMax?'/'+V.merchMax:''}</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Sells from your shop page. ${PAY&&PAY.ready?'Fans buy right there and the money lands in your Stripe account.':'Until card payments are on (below), each item links to where it sells.'}</p>
-    <div class="list">${items.map(m=>`<div class="row"${m.on===false||m.out?' style="opacity:.6"':''}>
-        <div class="m"><div class="t">${esc(m.title)}</div>
-          <div class="s">${m.cents?vmoney(m.cents):'No price'}${m.link?' · '+esc((m.link||'').replace(/^https?:\/\//,'').slice(0,40)):''}${m.ship==='ship'?' · Posted'+(m.post>0?' +'+vmoney(m.post):''):''}${m.out?' · <b style="color:var(--accent)">Sold out</b>':''}${m.on===false?' · Off':''}${vsizes(m)}</div></div>
+    <div class="list">${items.map((m,i)=>`<div class="row"${m.on===false||m.out||m.stock===0?' style="opacity:.6;flex-wrap:wrap"':' style="flex-wrap:wrap"'}>
+        <div class="m" style="flex:1 1 100%"><div class="t">${esc(m.title)}</div>
+          <div class="s">${m.cents?vmoney(m.cents):'No price'}${m.link?' · '+esc((m.link||'').replace(/^https?:\/\//,'').slice(0,40)):''}${m.ship==='ship'?' · Shipped'+(m.post>0?' +'+vmoney(m.post):''):''}${(m.imgs||[]).length>1?' · '+m.imgs.length+' photos':''}${m.stock!=null&&!m.out?(m.stock===0?' · <b style="color:var(--accent)">Sold out</b>':' · '+m.stock+' left'):''}${m.out?' · <b style="color:var(--accent)">Sold out</b>':''}${m.on===false?' · Off':''}${vsizes(m)}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
+        <button class="act" onclick="vmMove('${esc(m.id)}','up')" ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
+        <button class="act" onclick="vmMove('${esc(m.id)}','down')" ${i===items.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
         <button class="act" onclick="openVMerch('${esc(m.id)}')">Edit</button>
-        <button class="act warn" onclick="rmVMerch('${esc(m.id)}')">✕</button></div>`).join('')||`<div class="row muted">${stored?'Your items are saved and come back with Pro.':'Nothing yet.'}</div>`}</div>
+        <button class="act warn" onclick="rmVMerch('${esc(m.id)}')">✕</button></div></div>`).join('')||`<div class="row muted">${stored?'Your items are saved and come back with Pro.':'Nothing yet.'}</div>`}</div>
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openVMerch('')">+ Add an item</button></div>`;
   const posts=VCOMM||[];
   return `<div class="wrap" style="padding-top:14px">${V.slug?`<a class="big alt orange-outline" href="/v/${esc(V.slug)}/shop">See your shop ↗</a>`:''}</div>
@@ -743,7 +746,7 @@ function vMerchTab(){
 }
 /* THE ITEM EDITOR — the artist Studio's, with the venue's ids. Sizes are one
    comma-separated line that becomes `variants`, each with a sold-out flag toggled
-   by the chips under the field once the item is saved. Postage is a flat figure
+   by the chips under the field once the item is saved. Shipping is a flat figure
    per order Stripe adds on top of the price; MySet's fee is on the price alone.
    The server caps and de-duplicates everything again (normMerch). */
 const vmChips=()=>vmVar.map((v,i)=>`<button type="button" class="chip ${v.out?'':'on'}"${v.out?' style="background:var(--surface-2)"':''} data-act="vmvout" data-id="${i}">${esc(v.label)}${v.out?' · out':''}</button>`).join('');
@@ -756,13 +759,13 @@ function vmVariants(){
   return out;
 }
 /* What the server kept against what was sent: fewer sizes, a shortened label, a
-   postage or price figure held to its cap. One line naming the cap when it is known. */
+   shipping or price figure held to its cap. One line naming the cap when it is known. */
 function vmTrimmed(sent,kept){
   if(!kept)return '';
   const sv=sent.variants||[], kv=kept.variants||[], max=VMLIM.maxVariants, len=VMLIM.variantLen, mp=VMLIM.maxPost;
   if(kv.length<sv.length) return max?'Up to '+max+' sizes — the rest were dropped':'Some sizes were dropped';
   if(kv.some((v,i)=>sv[i]&&v.label!==sv[i].label)) return len?'Sizes are up to '+len+' characters — one was shortened':'A size name was shortened';
-  if(sent.ship==='ship'&&(sent.post||0)>(kept.post||0)) return mp?'Postage tops out at '+vmoney(mp)+' — set to that':'Postage was lowered to the most allowed';
+  if(sent.ship==='ship'&&(sent.post||0)>(kept.post||0)) return mp?'Shipping tops out at '+vmoney(mp)+' — set to that':'Shipping was lowered to the most allowed';
   if((sent.cents||0)!==(kept.cents||0)) return kept.cents?'Price tops out at '+vmoney(kept.cents)+' — set to that':'Price cleared — it can’t be below zero';
   if(VMLIM.minCents&&kept.cents>0&&kept.cents<VMLIM.minCents) return 'Under '+vmoney(VMLIM.minCents)+' — the shop shows the price but says “ask at the bar” instead of Buy';
   return '';
@@ -772,12 +775,32 @@ function vmVarHelp(){ const L=VMLIM;
   return 'Leave blank if there’s nothing to choose. Commas between them.'+(L.maxVariants?' Up to '+L.maxVariants+(L.variantLen?', '+L.variantLen+' characters each':'')+'.':'');}
 function vmPostHelp(){ const L=VMLIM;
   return 'Added on top at checkout; MySet’s fee is on the price alone.'+(L.maxPost?' Up to '+vmoney(L.maxPost)+' an order.':'');}
+/* THE PICTURES, FIRST (the founder, 2026-09-14): up to five per item on the editor's first page. A
+   saved item's go up as they are chosen (merchPhoto, one slot each); a new item's are staged as
+   shrunk data and uploaded one by one after the first Save mints the id. */
+let vmImgs=[];   // [{url}] saved, [{data}] staged
+const vmMaxImgs=()=>VMLIM.maxImgs||5;
+const vmSlotOf=u=>{ const m=/[?&]s=([a-z0-9_]+)/.exec(String(u||'')); return m?m[1]:''; };
+function vmPicsRow(id){
+  const tiles=vmImgs.map((x,i)=>`<label class="slot sq pic"><img src="${esc(x.url||x.data)}" alt=""><button type="button" class="rm" data-act="vmpicrm" data-id="${x.url?esc(vmSlotOf(x.url)):'new:'+i}" aria-label="Remove picture ${i+1}">✕</button></label>`);
+  if(vmImgs.length<vmMaxImgs()) tiles.push(`<label class="slot sq pic add"><span class="ph"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10.5" r="1.8"/><path d="M4 17l4.5-4.5 3.5 3.5 3-3L20 17"/></svg>${vmImgs.length?'Add':'Add photo'}</span><input type="file" accept="image/*" data-slot="${id||'mnew'}"></label>`);
+  return `<div class="slots pics" id="vmPics" data-item="${esc(id)}">${tiles.join('')}</div>
+    <p class="muted" style="font-size:12px;margin:7px 0 0">${vmImgs.length?`${vmImgs.length} of ${vmMaxImgs()} — the first is the one on the card; fans swipe through the rest.`:`Up to ${vmMaxImgs()} — fans swipe through them on the item.`}</p>`;
+}
+function vmRepaintPics(){ const w=document.getElementById('vmPics'); if(w) w.outerHTML=vmPicsRow(w.getAttribute('data-item')||''); }
+async function vmPicRemove(k){
+  const w=document.getElementById('vmPics'); if(!w) return; const id=w.getAttribute('data-item')||'';
+  if(k.startsWith('new:')){ vmImgs.splice(parseInt(k.slice(4),10),1); vmRepaintPics(); return; }
+  const d=await save({action:'merchPhotoClear',id:k.replace(/_[1-4]$/,''),slot:k},'Photo removed'); if(!d||!d.ok) return;
+  const it=(V.merch||[]).find(x=>x.id===id); vmImgs=(it&&it.imgs?it.imgs:[]).map(u=>({url:u})); vmRepaintPics();
+}
 function openVMerch(id){
-  const m=(V.merch||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',ship:'pickup',on:true,img:'',variants:[],out:false,post:0};
+  const m=(V.merch||[]).find(x=>x.id===id)||{title:'',blurb:'',cents:0,link:'',ship:'pickup',on:true,img:'',imgs:[],variants:[],out:false,post:0,stock:null};
   vmcOn=m.on!==false; vmcOut=m.out===true; vmcShip=m.ship==='ship'?'ship':'pickup';
   vmVar=(m.variants||[]).map(v=>({label:String(v.label||''),out:v.out===true}));
+  vmImgs=(m.imgs&&m.imgs.length?m.imgs:(m.img?[m.img]:[])).map(u=>({url:u}));
   openSheet(`<h3>${id?'Edit item':'Add an item'}</h3>
-    ${id?`<div class="slots" style="margin:6px 0 10px">${slotBox(id,m.img,'sq')}</div>`:'<p class="lede">Save it first, then add a picture.</p>'}
+    <div class="field"><label>Photos</label>${vmPicsRow(id)}</div>
     <div class="field"><label>Name</label><input class="inp" id="vmTitle" maxlength="60" value="${esc(m.title)}" placeholder="House cap"></div>
     <div class="field"><label>A line about it</label><input class="inp" id="vmBlurb" maxlength="160" value="${esc(m.blurb)}"></div>
     <div class="field"><label>Price (USD)</label><input class="inp" id="vmPrice" inputmode="decimal" value="${m.cents?(m.cents/100):''}" placeholder="12">
@@ -787,33 +810,44 @@ function openVMerch(id){
       ${id&&vmVar.length?`<p class="muted" style="font-size:12px;margin:10px 0 7px">Tap a size to mark it sold out — it saves straight away.</p>
       <div class="chips" id="vmVarChips" data-item="${esc(id)}">${vmChips()}</div>`:''}</div>
     <div class="field"><label>${PAY&&PAY.ready?'Link to where it sells (optional — fans can buy right here)':'Link to where it sells'}</label><input class="inp" id="vmLink" value="${esc(m.link)}" placeholder="https://…"></div>
-    <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Posted asks for an address at checkout</div></div>
+    <div class="row"><div class="m"><div class="t">How they get it</div><div class="s">Shipped asks for an address at checkout</div></div>
       <div class="tog"><button id="vmPick" class="${vmcShip!=='ship'?'on':''}" onclick="vmcShip='pickup';this.classList.add('on');document.getElementById('vmPost').classList.remove('on');document.getElementById('vmPostWrap').hidden=true">Pickup</button>
-      <button id="vmPost" class="${vmcShip==='ship'?'on':''}" onclick="vmcShip='ship';this.classList.add('on');document.getElementById('vmPick').classList.remove('on');document.getElementById('vmPostWrap').hidden=false">Posted</button></div></div>
-    <div class="field" id="vmPostWrap"${vmcShip==='ship'?'':' hidden'}><label>Postage per order (USD)</label><input class="inp" id="vmPostage" inputmode="decimal" value="${m.post?(m.post/100):''}" placeholder="6">
+      <button id="vmPost" class="${vmcShip==='ship'?'on':''}" onclick="vmcShip='ship';this.classList.add('on');document.getElementById('vmPick').classList.remove('on');document.getElementById('vmPostWrap').hidden=false">Shipped</button></div></div>
+    <div class="field" id="vmPostWrap"${vmcShip==='ship'?'':' hidden'}><label>Shipping per order (USD)</label><input class="inp" id="vmPostage" inputmode="decimal" value="${m.post?(m.post/100):''}" placeholder="6">
       <p class="muted" style="font-size:12px;margin:7px 0 0">${vmPostHelp()}</p></div>
+    <div class="field"><label>Quantity in stock (optional)</label><input class="inp" id="vmStock" type="number" inputmode="numeric" min="0"${VMLIM.maxStock?' max="'+VMLIM.maxStock+'"':''} value="${m.stock!=null?m.stock:''}" placeholder="Leave blank if you’re not counting">
+      <p class="muted" style="font-size:12px;margin:7px 0 0">Comes down by itself as fans buy; at 0 the item shows as sold out until you put a number back.</p></div>
     <div class="row"><div class="m"><div class="t">Stock</div><div class="s">Sold out stays on the page, greyed, with no Buy</div></div>
       <div class="tog"><button id="vmIn" class="${m.out!==true?'on':''}" onclick="vmcOut=false;this.classList.add('on');document.getElementById('vmSold').classList.remove('on')">In stock</button>
       <button id="vmSold" class="${m.out===true?'on':''}" onclick="vmcOut=true;this.classList.add('on');document.getElementById('vmIn').classList.remove('on')">Sold out</button></div></div>
     <div class="row"><div class="m"><div class="t">On the page</div></div>
       <div class="tog"><button id="vmOn" class="${m.on!==false?'on':''}" onclick="vmcOn=true;this.classList.add('on');document.getElementById('vmOff').classList.remove('on')">On</button>
       <button id="vmOff" class="${m.on===false?'on':''}" onclick="vmcOn=false;this.classList.add('on');document.getElementById('vmOn').classList.remove('on')">Off</button></div></div>
-    <button class="big" style="margin-top:14px" onclick="saveVMerch('${esc(id)}')">Save</button>`);
+    <button class="big" style="margin-top:14px" id="vmSave" onclick="saveVMerch('${esc(id)}')">Save</button>`);
 }
 async function saveVMerch(id){
   const v=k=>(document.getElementById(k)||{}).value||'';
   const cents=Math.round(parseFloat(v('vmPrice'))*100)||0;
-  /* the postage figure is sent even while Pickup is chosen, so switching back to
-     Posted later finds it where it was; the server ignores it for a pickup item */
+  /* the shipping figure is sent even while Pickup is chosen, so switching back to
+     Shipped later finds it where it was; the server ignores it for a pickup item */
   const post=Math.round(parseFloat(v('vmPostage'))*100)||0;
-  const item={id:id||undefined,title:v('vmTitle'),blurb:v('vmBlurb'),cents,link:v('vmLink'),ship:vmcShip,on:vmcOn,out:vmcOut,post,variants:vmVariants()};
+  const st=v('vmStock').trim(), stock=st===''?null:Math.max(0,parseInt(st,10)||0);
+  const item={id:id||undefined,title:v('vmTitle'),blurb:v('vmBlurb'),cents,link:v('vmLink'),ship:vmcShip,on:vmcOn,out:vmcOut,post,stock,variants:vmVariants()};
+  const b=document.getElementById('vmSave'); if(b){ b.disabled=true; b.textContent='Saving…'; }
   const d=await save({action:'merchSave',item});
-  if(d&&d.ok){ closeSheet();
-    const kept=id?(V.merch||[]).find(x=>x.id===id):(V.merch||[]).slice(-1)[0];
-    const trimmed=vmTrimmed(item,kept);        // what the server held to a cap is said, not quietly re-drawn
-    toast(trimmed?'Saved — '+trimmed:'Saved');
-    if(!id&&kept) setTimeout(()=>openVMerch(kept.id),350); }
+  if(!d||!d.ok){ if(b){ b.disabled=false; b.textContent='Save'; } return; }
+  const kept=id?(V.merch||[]).find(x=>x.id===id):(V.merch||[]).slice(-1)[0];
+  /* a new item's staged pictures go up now, first to last, so the first chosen is the one on the card */
+  const staged=vmImgs.filter(x=>x.data); let failed=0;
+  for(let i=0;i<staged.length&&kept;i++){
+    if(b) b.textContent=`Adding photo ${i+1} of ${staged.length}…`;
+    const r=await save({action:'merchPhoto',id:kept.id,data:staged[i].data}); if(!r||!r.ok) failed++;
+  }
+  closeSheet();
+  const trimmed=vmTrimmed(item,kept);        // what the server held to a cap is said, not quietly re-drawn
+  toast(failed?`Saved — ${failed} photo${failed===1?'':'s'} didn’t upload; open the item to try again`:trimmed?'Saved — '+trimmed:'Saved');
 }
+async function vmMove(id,dir){ await save({action:'merchMove',id,dir}); }
 /* One size sold out, one tap: flips the flag, repaints the chips, and saves just
    the sizes (merchSave merges over the stored row), so the rest of the sheet —
    half-typed or not — is left alone. */
@@ -1610,10 +1644,12 @@ document.addEventListener('change',async e=>{
   try{
     /* a merch item's picture: the slot IS the item id. It is drawn ~170px wide on a
        two-up shop grid, so 480px is plenty and the bytes matter more than the pixels. */
-    const merch=/^m[a-z0-9]{6}$/.test(slot);
+    const merch=/^m[a-z0-9]{6}$|^mnew$/.test(slot);
     const data=await shrink(file,slot==='cover'?1400:merch?480:800,slot==='cover'?1.6:1,merch);
+    if(slot==='mnew'){ vmImgs.push({data}); vmRepaintPics(); return; }   // not saved yet: staged, uploaded by saveVMerch
     const d=await save(merch?{action:'merchPhoto',id:slot,data}:{action:'photoUpload',slot,data},'Photo added');
     if(!d||!d.ok)return;
+    if(merch){ const it=(V.merch||[]).find(x=>x.id===slot); vmImgs=(it&&it.imgs?it.imgs:[]).map(u=>({url:u})); vmRepaintPics(); }
   }catch(err){ toast('Couldn’t read that photo'); }
   finally{ inp.value=''; if(lab)lab.classList.remove('busy'); }
 });
@@ -1646,6 +1682,7 @@ document.addEventListener('click',e=>{
       if(el) el.outerHTML=slotBox(id,'','sq'); });
     else save({action:'photoClear',slot:id},'Removed'); }
   if(a==='vmvout') vmVarOut(id);
+  if(a==='vmpicrm'){ e.preventDefault(); vmPicRemove(id); }
 });
 function wireCount(inSel,outSel,max){
   const i=$(inSel),o=$(outSel); if(!i||!o)return;

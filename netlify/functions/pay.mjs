@@ -37,19 +37,31 @@ function pickVariant(item, raw) {
   return { variant };
 }
 
-/* Postage as a REAL Stripe shipping rate, so the total on Stripe's page equals the
-   total the sheet promised. Only a posted item with a postage figure gets one; a
-   pickup item never does, whatever `post` says on the record. */
+/* Shipping as a REAL Stripe shipping rate, so the total on Stripe's page equals the
+   total the sheet promised. Only a shipped item with a shipping figure gets one; a
+   pickup item never does, whatever `post` says on the record. (The record's field
+   is still `post`; the word a person sees is "shipping" — the founder, 2026-09-14.) */
 const postageOf = (item) => (item.ship === 'ship' ? Math.max(0, parseInt(item.post, 10) || 0) : 0);
 const shippingRate = (post) => post > 0
-  ? { shipping_options: [{ shipping_rate_data: { type: 'fixed_amount', fixed_amount: { amount: post, currency: 'usd' }, display_name: 'Postage' } }] }
+  ? { shipping_options: [{ shipping_rate_data: { type: 'fixed_amount', fixed_amount: { amount: post, currency: 'usd' }, display_name: 'Shipping' } }] }
   : {};
 
-/* The picture on Stripe's page — trust at the moment of paying. Only a picture
+/* The pictures on Stripe's page — trust at the moment of paying. Only pictures
    this app serves (`/api/img?…`), made absolute with the same origin the return
-   trip uses, so a pasted URL can never ride into Stripe as ours. */
-const productImages = (origin, item) =>
-  (typeof item.img === 'string' && item.img.startsWith('/api/img')) ? { images: [origin + item.img] } : {};
+   trip uses, so a pasted URL can never ride into Stripe as ours. All of the item's
+   (Stripe shows up to eight; the record holds five). */
+const productImages = (origin, item) => {
+  const own = (u) => typeof u === 'string' && u.startsWith('/api/img');
+  const list = (Array.isArray(item.imgs) && item.imgs.length ? item.imgs : [item.img]).filter(own);
+  return list.length ? { images: list.map((u) => origin + u) } : {};
+};
+/* Sold out by the flag or by the count; a count that cannot cover the quantity is
+   a refusal that names what is left, so the sheet can say it (merchSoldOut, takeStock). */
+const stockRefusal = (item, qty) => {
+  if (item.out || item.stock === 0) return bad('That one’s sold out', 409);
+  if (item.stock != null && item.stock < qty) return bad(`Only ${item.stock} left`, 409);
+  return null;
+};
 
 const main = async (req) => {
   if (req.method !== 'POST') return bad('POST only', 405);
@@ -80,14 +92,14 @@ const main = async (req) => {
     if (!VENUE_PLANS[venuePlanOf(reg)].merch) return bad('Merch isn’t on this page right now', 404);
     const item = (prof.merch || []).find((m) => m.id === String(body.item || '') && m.on);
     if (!item) return bad('That item isn’t for sale right now', 404);
-    if (item.out) return bad('That one’s sold out', 409);
+    const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
+    const short = stockRefusal(item, qty); if (short) return short;
     if (item.cents < MIN_CENTS) return bad('That one isn’t sold through MySet — ask at the bar', 400);
     const picked = pickVariant(item, body.variant);
     if (picked.error) return picked.error;
     const vlabel = picked.variant ? picked.variant.label : '';
     const conn = await readConnect(owner);
     if (!connectUsable(conn) || !(prof.pay && prof.pay.ready)) return bad('payments-not-configured', 503);
-    const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
     const vname = prof.name || (reg && reg.name) || 'the venue';
     const vpost = postageOf(item);
     const vline = { quantity: qty, price_data: { currency: 'usd', unit_amount: item.cents,
@@ -217,12 +229,12 @@ const main = async (req) => {
     const prof = await getProfile(aid);
     const item = (prof.merch || []).find((m) => m.id === String(body.item || '') && m.on);
     if (!item) return bad('That item isn’t for sale right now', 404);
-    if (item.out) return bad('That one’s sold out', 409);
+    const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
+    const short = stockRefusal(item, qty); if (short) return short;
     if (item.cents < MIN_CENTS) return bad('That one isn’t sold through MySet — ask at the merch table', 400);
     const picked = pickVariant(item, body.variant);
     if (picked.error) return picked.error;
     const vlabel = picked.variant ? picked.variant.label : '';
-    const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
     post = postageOf(item);
     line = {
       quantity: qty,

@@ -83,7 +83,9 @@ function rewrite(p) {
    (admin.mjs / _pay.mjs), the auth list (auth.mjs), shapeVenue (_venues.mjs). The caps
    are _profile.mjs's numbers. Everything lives on `S` so /__mock/reset can rebuild it. */
 const NOW = Date.now();
-const MERCH_CAPS = { max: 12, maxVariants: 8, variantLen: 24, maxPost: 10000, minCents: 100, maxCents: 50000 };
+const MERCH_CAPS = { max: 12, maxVariants: 8, variantLen: 24, maxPost: 10000, minCents: 100, maxCents: 50000, maxImgs: 5, maxStock: 9999 };
+const slotOf = (u) => { const m = /[?&]s=([a-z0-9_]+)/.exec(String(u || '')); return m ? m[1] : ''; };
+const slotsOf = (id) => [id, `${id}_1`, `${id}_2`, `${id}_3`, `${id}_4`];
 const img = (owner, id) => `/api/img?a=${owner}&s=${id}`;
 /* Nine items: one per state the shop draws, and two the Studio holds "Off" (the fan read
    filters `on`, like the server):
@@ -103,7 +105,9 @@ const ITEMS = () => [
   { id: 'm000007', title: 'Tote bag', blurb: 'Carries a record and a beer.', cents: 1500, link: '', ship: 'pickup', on: true, at: NOW - 7 * 864e5, out: false, post: 0, variants: [] },
   { id: 'm000008', title: 'Last tour’s tee', blurb: 'The 2025 print. A few left in the box.', cents: 1500, link: '', ship: 'pickup', on: false, at: NOW - 40 * 864e5, out: false, post: 0, variants: [{ label: 'S', out: false }, { label: 'M', out: false }] },
   { id: 'm000009', title: 'Cassette (pre-order)', blurb: 'Coming when the duplicator does.', cents: 0, link: 'https://demo.bandcamp.com/album/cassette', ship: 'pickup', on: false, at: NOW - 41 * 864e5, out: false, post: 0, variants: [], noimg: true },
-].map(({ noimg, ...m }) => ({ ...m, img: noimg ? '' : img('a1', m.id) }));
+].map(({ noimg, ...m }) => { const n = m.id === 'm000001' ? 3 : m.id === 'm000002' ? 2 : noimg ? 0 : 1;
+  const imgs = slotsOf(m.id).slice(0, n).map((k) => img('a1', k));
+  return { ...m, imgs, img: imgs[0] || '', stock: m.id === 'm000001' ? 14 : m.id === 'm000007' ? 3 : null }; });
 const clone = (x) => JSON.parse(JSON.stringify(x));
 /* Three orders, newest first like orderList: a pickup with the code the fan shows at the
    table, a posted one that carries an address (orderDetail), one already handed over. */
@@ -124,7 +128,7 @@ function fresh() {
   const MERCH = ITEMS();
   return {
     MERCH,
-    VMERCH: MERCH.map((m) => ({ ...clone(m), id: venueId(m.id), img: m.img ? img('v_v1', venueId(m.id)) : '' })),
+    VMERCH: MERCH.map((m) => { const imgs = (m.imgs || []).map((u) => img('v_v1', venueId(slotOf(u)))); return { ...clone(m), id: venueId(m.id), imgs, img: imgs[0] || '' }; }),
     ORDERS: ORDER_ROWS(),
     VORDERS: ORDER_ROWS().map((o) => ({ ...o, item: venueId(o.item) })),
     WISHES: WISH_ROWS(),
@@ -335,7 +339,8 @@ function normItem(prev, inc, id, owner) {
     if (!label || seen.has(k)) continue; seen.add(k);
     row.variants.push({ label, out: !!(v && v.out) }); if (row.variants.length >= MERCH_CAPS.maxVariants) break;
   }
-  row.img = (prev && prev.img) || ''; row.at = (prev && prev.at) || NOW;
+  row.imgs = (prev && prev.imgs) || []; row.img = row.imgs[0] || ''; row.at = (prev && prev.at) || NOW;
+  row.stock = inc.stock === undefined ? (prev ? prev.stock : null) : (inc.stock === null || inc.stock === '' ? null : Math.max(0, Math.min(MERCH_CAPS.maxStock, parseInt(inc.stock, 10) || 0)));
   return row;
 }
 /* the shop actions both Studios share, on whichever list is theirs */
@@ -356,8 +361,12 @@ function shopAction(body, list, orders, owner, prefix, st) {
     }
     case 'merchRemove': { const i = list.findIndex((m) => m.id === body.id); if (i >= 0) list.splice(i, 1); return { ok: true, merch: list }; }
     case 'merchPhoto': { const m = list.find((x) => x.id === body.id); if (!m) return { ok: false, error: 'unknown item', status: 404 };
-      m.img = img(owner, m.id) + '&v=' + Date.now().toString(36); return { ok: true, url: m.img, merch: list }; }
-    case 'merchPhotoClear': { const m = list.find((x) => x.id === body.id); if (m) m.img = ''; return { ok: true, merch: list }; }
+      m.imgs = m.imgs || []; const used = new Set(m.imgs.map(slotOf)), slot = slotsOf(m.id).find((k) => !used.has(k));
+      if (!slot) return { ok: false, error: `${MERCH_CAPS.maxImgs} pictures is the most for one item — remove one first.`, status: 400 };
+      m.imgs.push(img(owner, slot) + '&v=' + Date.now().toString(36)); m.img = m.imgs[0]; return { ok: true, url: m.imgs[m.imgs.length - 1], merch: list }; }
+    case 'merchPhotoClear': { const m = list.find((x) => x.id === body.id); if (m) { const drop = body.slot ? [String(body.slot)] : slotsOf(m.id); m.imgs = (m.imgs || []).filter((u) => !drop.includes(slotOf(u))); m.img = m.imgs[0] || ''; } return { ok: true, merch: list }; }
+    case 'merchMove': { const i = list.findIndex((x) => x.id === body.id), j = body.dir === 'up' ? i - 1 : i + 1;
+      if (i >= 0 && j >= 0 && j < list.length) [list[i], list[j]] = [list[j], list[i]]; return { ok: true, merch: list }; }
     case 'orderList': return { ok: true, orders: orders.map(ownerOrder) };
     case 'orderDone': { const o = orders.find((x) => x.sid === body.sid);
       if (o) { o.status = body.done === false ? 'new' : 'done'; if (o.status === 'done') o.doneAt = Date.now(); else delete o.doneAt; }
@@ -403,7 +412,7 @@ function venueAdminStub(body, st) {
   const shop = shopAction(body, S.VMERCH, S.VORDERS, 'v_v1', 'v', st);
   const page = () => ({ ok: true, venue: venueFixture(st), vouches: { count: 3, need: 3, names: ['Ana', 'Bo', 'Cy'] }, amenities: [['stage', 'Stage'], ['food', 'Food'], ['garden', 'Beer garden']].map(([key, label]) => ({ key, label })) });
   /* the venue's writes answer with the whole page again, as venueadmin.mjs does */
-  if (/^(get|set|hours|amenity|menuAdd|menuSet|menuRemove|offerSave|offerRemove|photoUpload|photoClear|merchSave|merchRemove|merchPhoto|merchPhotoClear)$/.test(a)) {
+  if (/^(get|set|hours|amenity|menuAdd|menuSet|menuRemove|offerSave|offerRemove|photoUpload|photoClear|merchSave|merchRemove|merchPhoto|merchPhotoClear|merchMove)$/.test(a)) {
     if (shop && !shop.ok) return shop;
     return page();
   }
@@ -456,9 +465,10 @@ function picture(q) {
   const s = q.get('s') || q.get('slot') || '';
   if (s === 'cover') return cover(colourOf('8'));
   if (s === 'avatar') return svg(ART.avatar(q.get('a') === 'v_v1' ? COLOURS[4] : COLOURS[0]));
-  const item = [...S.MERCH, ...S.VMERCH].find((m) => m.id === s);
+  const base = s.replace(/_[1-4]$/, ''), nth = Number((s.match(/_([1-4])$/) || [0, 0])[1]);
+  const item = [...S.MERCH, ...S.VMERCH].find((m) => m.id === base);
   const kind = item ? kindOf(item.title) : 'tee';
-  return svg(ART[kind](colourOf(s)));
+  return svg(ART[kind](colourOf(base + nth)));   // the same item, a different tint per picture, so a swipe visibly moves
 }
 
 /* ---------- the two Studios boot signed in ---------- */
@@ -563,7 +573,9 @@ function payStub(body, q, st) {
     const item = merchFor(slug, venue, st).find((m) => m.id === body.item);
     if (!st.canBuy) return { status: 503, ok: false, error: 'payments-not-configured' };
     if (!item) return { status: 404, ok: false, error: 'That item isn’t for sale right now' };
-    if (item.out) return { status: 409, ok: false, error: 'That one’s sold out' };
+    const qty = Math.max(1, Math.min(5, parseInt(body.qty, 10) || 1));
+    if (item.out || item.stock === 0) return { status: 409, ok: false, error: 'That one’s sold out' };
+    if (item.stock != null && item.stock < qty) return { status: 409, ok: false, error: `Only ${item.stock} left` };
     if (item.cents < MERCH_CAPS.minCents) return { status: 400, ok: false, error: `That one isn’t sold through MySet — ask at the ${venue ? 'bar' : 'merch table'}` };
     if ((item.variants || []).length) {
       const v = item.variants.find((x) => x.label.toLowerCase() === String(body.variant || '').replace(/\s+/g, ' ').trim().toLowerCase());
@@ -585,6 +597,7 @@ function confirmStub(st) {
   if (p && p.kind !== 'merch') return { ok: true, kind: p.kind, amount: Number(p.amount) || 0, granted: p.kind === 'votes' ? (PACKS[p.pack] || {}).votes || 0 : 0, song: p.song || '', fan: p.fan || '', at: p.at };
   const item = p && merchFor(p.slug, p.venue, st).find((m) => m.id === p.item);
   const qty = p ? Math.max(1, Math.min(5, parseInt(p.qty, 10) || 1)) : 2;
+  if (item && item.stock != null && !p.counted) { item.stock = Math.max(0, item.stock - qty); p.counted = true; }   // the count comes down once per purchase, as redeemSession does
   const order = item
     ? { item: item.id, title: item.title, qty, variant: (item.variants || []).length ? String(p.variant || '') : '', ship: item.ship, cents: item.cents * qty, post: postOf(item), code: 'K7PQ', show: p.live ? SHOW_LABEL : '', at: p.at }
     : { item: 'm000001', title: 'Tour tee', qty: 2, variant: 'M', ship: 'pickup', cents: 5000, post: 0, code: 'K7PQ', show: st.live ? SHOW_LABEL : '', at: Date.now() };

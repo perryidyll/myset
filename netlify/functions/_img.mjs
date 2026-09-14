@@ -23,10 +23,11 @@ import { store } from './_lib.mjs';
 export const SLOTS = new Set(['cover', 'avatar',
   ...Array.from({ length: 12 }, (_, i) => 'p' + i)]);
 /* Two more families, named by pattern because their count is the record's business:
-     m<id>      a merch item's picture — the slot IS the item id (see normMerch)
+     m<id>      a merch item's picture — the slot IS the item id (see normMerch);
+                since 2026-09-14 up to four more as m<id>_1..m<id>_4 (MAX_MERCH_IMGS)
      c<id>_<n>  a photo on a community post, up to three per post
    Neither is `idcheck` and neither can be, so the ID photo stays unservable (0bk). */
-export const MERCH_SLOT = /^m[a-z0-9]{6}$/;
+export const MERCH_SLOT = /^m[a-z0-9]{6}(_[1-4])?$/;
 export const POST_SLOT = /^c[a-z0-9]{8}_[0-2]$/;
 /* A clip's POSTER frame. Named after the clip rather than the post, because the
    clip is uploaded before the post exists (see _video.mjs). Keeping it in this

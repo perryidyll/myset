@@ -119,7 +119,7 @@ async function facts() {
     /* the shop's caps, read from _profile.mjs — the Studios read the item cap from the
        server too, so a typed 12, 8, 24 or $100 anywhere is a bug */
     merch: { maxItems: prof.MAX_MERCH, maxVariants: prof.MAX_VARIANTS, variantLen: prof.VARIANT_LEN, maxPostCents: prof.MAX_POST,
-             minCents: prof.MIN_CENTS, maxCents: prof.MAX_CENTS, maxQty: qtyClamp(),
+             minCents: prof.MIN_CENTS, maxCents: prof.MAX_CENTS, maxQty: qtyClamp(), maxImgs: prof.MAX_MERCH_IMGS, maxStock: prof.MAX_STOCK,
              wishLen: wishes.MAX_WISH, wishesPerDay: wishes.WISHES_PER_DEVICE_PER_DAY, wishesKept: wishes.MAX_WISHES },
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
@@ -296,7 +296,9 @@ Up to **${f.venuePlans.maxMerch}** merch items. Not built: ${f.venuePlans.notBui
 |---|---|---|
 | Merch items a page holds (artist / venue) | ${f.merch.maxItems} / ${f.venuePlans.maxMerch} | \`MAX_MERCH\` in \`_profile.mjs\`, \`VMAX_MERCH\` in \`_venues.mjs\` — the Studios show the cap the server sends |
 | Sizes or options per item | ${f.merch.maxVariants}, each up to ${f.merch.variantLen} characters | \`MAX_VARIANTS\`, \`VARIANT_LEN\` in \`_profile.mjs\` |
-| Flat postage per order, at most | ${money(f.merch.maxPostCents)} | \`MAX_POST\` in \`_profile.mjs\`; a fixed Stripe shipping rate, never part of MySet's cut |
+| Flat shipping per order, at most | ${money(f.merch.maxPostCents)} | \`MAX_POST\` in \`_profile.mjs\` (the field is still \`post\`; a person reads "shipping" since 2026-09-14); a fixed Stripe shipping rate named *Shipping*, never part of MySet's cut |
+| Pictures per item | ${f.merch.maxImgs}, swiped through on the item | \`MAX_MERCH_IMGS\` in \`_profile.mjs\`; slots \`<id>\`, \`<id>_1..4\` (\`_img.mjs\` MERCH_SLOT); \`img\` is always the first |
+| A counted item's stock, at most | ${f.merch.maxStock.toLocaleString()} (blank = not counting) | \`MAX_STOCK\` in \`_profile.mjs\`; \`takeStock\` in \`redeemSession\` brings it down per paid order; 0 reads as sold out and \`pay.mjs\` refuses (\`merchSoldOut\`) |
 | Most of one item per order | ${f.merch.maxQty} | the checkout clamp in \`pay.mjs\` (both merch branches); the shop's + stops at the same count |
 | A card sale's price runs | ${money(f.merch.minCents)}–${money(f.merch.maxCents)} | \`MIN_CENTS\`, \`MAX_CENTS\` in \`_profile.mjs\`; under the floor the shop shows the price and says "ask at the table" — both merchLists send the band |
 | A fan's request to the shop ("Make a request") | up to ${f.merch.wishLen} characters, ${f.merch.wishesPerDay} a day per phone, the newest ${f.merch.wishesKept} kept | \`MAX_WISH\`, \`WISHES_PER_DEVICE_PER_DAY\`, \`MAX_WISHES\` in \`_wishes.mjs\`; lands under Requests from the shop in both Studios' Merch screens |

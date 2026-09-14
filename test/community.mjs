@@ -64,7 +64,7 @@ const count = async (fn) => {
 const under = (name, got, ceiling) => ok(`${name} — ${got} (ceiling ${ceiling})`, got <= ceiling, { got, ceiling });
 // a real JPEG signature with a little body — decodeDataUrl trusts the bytes, not the label
 const JPEG = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xff, 0xd9]).toString('base64');
-const lastCall = (m) => [...__stripe.calls].reverse().find((c) => c.method === m);
+const lastCall = (m, pred = () => true) => [...__stripe.calls].reverse().find((c) => c.method === m && pred(c));
 
 console.log('\nMERCH IS A PLUS FEATURE');
 const ana = await createArtist({ email: 'ana@example.com', name: 'Ana Reyes', slug: 'ana-reyes' });
@@ -94,9 +94,28 @@ ok('a picture lands', r.ok && /\/api\/img\?a=ana-reyes&s=m[a-z0-9]{6}&v=/.test(r
 let img = await imgFn(new Request(`https://x/api/img?a=ana-reyes&s=${tee}`));
 eq('and is served', img.status, 200);
 eq('a photo for an unknown item is refused', (await AS(TA, 'merchPhoto', { id: 'mzzzzzz', data: JPEG })).status, 404);
+/* FIVE PICTURES, IN SWIPE ORDER (2026-09-14): the second lands in slot _1, img stays the first,
+   a sixth is refused with the cap named, one ✕ drops one slot, the item takes every slot with it. */
+r = await AS(TA, 'merchPhoto', { id: tee, data: JPEG });
+ok('a second picture lands in the item’s next slot', r.ok && new RegExp(`s=${tee}_1&`).test(r.url), r.url);
+let teeRow = r.merch.find((m) => m.id === tee);
+eq('imgs is the swipe order and img the first', [teeRow.imgs.length, teeRow.img === teeRow.imgs[0], /s=m[a-z0-9]{6}&/.test(teeRow.img)], [2, true, true]);
+for (let i = 0; i < 3; i++) r = await AS(TA, 'merchPhoto', { id: tee, data: JPEG });
+eq('five is the most', r.merch.find((m) => m.id === tee).imgs.length, 5);
+r = await AS(TA, 'merchPhoto', { id: tee, data: JPEG });
+ok('a sixth is refused, naming the cap', r.status === 400 && /5 pictures/.test(r.error || ''), r);
+eq('every slot is served', (await Promise.all([0, 1, 2, 3, 4].map((i) => imgFn(new Request(`https://x/api/img?a=ana-reyes&s=${tee}${i ? '_' + i : ''}`))))).map((x) => x.status), [200, 200, 200, 200, 200]);
+r = await AS(TA, 'merchPhotoClear', { id: tee, slot: `${tee}_2` });
+teeRow = r.merch.find((m) => m.id === tee);
+eq('one ✕ drops one slot and the rest keep their order', [teeRow.imgs.length, teeRow.imgs.some((u) => u.includes(`s=${tee}_2&`)), teeRow.imgs[0] === teeRow.img], [4, false, true]);
+eq('and that picture is gone', (await imgFn(new Request(`https://x/api/img?a=ana-reyes&s=${tee}_2`))).status, 404);
+eq('a slot that is not the item’s is refused', (await AS(TA, 'merchPhotoClear', { id: tee, slot: 'mzzzzzz_1' })).status, 400);
+r = await AS(TA, 'merchPhoto', { id: tee, data: JPEG });
+ok('the freed slot is filled next', r.ok && new RegExp(`s=${tee}_2&`).test(r.url), r.url);
 ok('the item is removed', (await AS(TA, 'merchRemove', { id: tee })).ok);
 img = await imgFn(new Request(`https://x/api/img?a=ana-reyes&s=${tee}`));
 eq('and its picture with it', img.status, 404);
+eq('every slot of it', (await imgFn(new Request(`https://x/api/img?a=ana-reyes&s=${tee}_3`))).status, 404);
 r = await AS(TA, 'merchSave', { item: { id: tee, title: 'Tour tee', blurb: 'Black, all sizes', cents: 2500, ship: 'ship' } });
 ok('saving with a known id re-creates it in place', r.ok && r.merch.some((m) => m.id === tee));
 
@@ -194,6 +213,47 @@ ok('a picture lands on the founder’s tee', (await OWNER('merchPhoto', { id: pt
 await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: pt.id, attempt: 'tap13' });
 created = lastCall('checkout.sessions.create');
 ok('and Stripe’s page shows it, from this origin', /^https:\/\/x\/api\/img\?a=.*&s=m[a-z0-9]{6}/.test(((created.args.line_items[0].price_data.product_data.images || [])[0]) || ''), created.args.line_items[0].price_data.product_data.images);
+await OWNER('merchPhoto', { id: pt.id, data: JPEG });
+await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: pt.id, attempt: 'tap13b' });
+created = lastCall('checkout.sessions.create');
+eq('every picture the item has, when it has more', (created.args.line_items[0].price_data.product_data.images || []).length, 2);
+eq('and the shipping rate is called Shipping', lastCall('checkout.sessions.create', (c) => c.args.shipping_options).args.shipping_options[0].shipping_rate_data.display_name, 'Shipping');
+
+console.log('\nTHE COUNT  (2026-09-14: a quantity that comes down as fans buy)');
+r = await OWNER('merchSave', { item: { title: 'Counted cap', cents: 1500, stock: 3 } });
+const cap = r.merch.find((m) => m.title === 'Counted cap');
+eq('a count is saved as a whole number', cap.stock, 3);
+eq('and the order shows it', (await OWNER('merchList')).merch.find((m) => m.id === cap.id).stock, 3);
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: cap.id, qty: 4, attempt: 'tapc1' });
+ok('more than are left is refused, naming the count', r.status === 409 && /Only 3 left/.test(r.error || ''), r);
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: cap.id, qty: 2, attempt: 'tapc2' });
+ok('two of three is fine', r.ok, r);
+const capSid = [...__stripe.sessions.keys()].pop();
+r = await hit(confirmFn, `https://x/api/confirm?session_id=${capSid}&fan=phone1`);
+ok('the order redeems', r.ok && r.order && r.order.qty === 2, r);
+eq('and the count came down by two', (await OWNER('merchList')).merch.find((m) => m.id === cap.id).stock, 1);
+await hit(confirmFn, `https://x/api/confirm?session_id=${capSid}&fan=phone1`);
+eq('a replay does not count it twice', (await OWNER('merchList')).merch.find((m) => m.id === cap.id).stock, 1);
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: cap.id, qty: 1, attempt: 'tapc3' });
+ok('the last one sells', r.ok, r);
+await hit(confirmFn, `https://x/api/confirm?session_id=${[...__stripe.sessions.keys()].pop()}&fan=phone1`);
+eq('at zero it is sold out on the read', (await OWNER('merchList')).merch.find((m) => m.id === cap.id).stock, 0);
+r = await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: cap.id, qty: 1, attempt: 'tapc4' });
+ok('and refused as sold out, with `out` untouched', r.status === 409 && /sold out/.test(r.error || '') && (await OWNER('merchList')).merch.find((m) => m.id === cap.id).out === false, r);
+r = await OWNER('merchSave', { item: { id: cap.id, stock: '' } });
+eq('a blank count means not counting again', r.merch.find((m) => m.id === cap.id).stock, null);
+ok('and it sells again', (await hit(payFn, 'https://x/api/pay', { fan: 'phone1', kind: 'merch', item: cap.id, qty: 5, attempt: 'tapc5' })).ok);
+
+console.log('\nTHE ORDER OF THE ITEMS  (merchMove — the first is the one on top of the community card)');
+r = await OWNER('merchList');
+const [first, second] = r.merch;
+r = await OWNER('merchMove', { id: second.id, dir: 'up' });
+eq('up swaps it with the one before', [r.moved, r.merch[0].id, r.merch[1].id], [true, second.id, first.id]);
+r = await OWNER('merchMove', { id: second.id, dir: 'up' });
+eq('the first cannot move up', [r.moved, r.merch[0].id], [false, second.id]);
+r = await OWNER('merchMove', { id: second.id, dir: 'down' });
+eq('down puts it back', [r.merch[0].id, r.merch[1].id], [first.id, second.id]);
+eq('the public read keeps that order', (await GET('?code=devlocal')).merch.filter((m) => m.on).map((m) => m.id).slice(0, 2), r.merch.filter((m) => m.on).map((m) => m.id).slice(0, 2));
 
 console.log('\nREDEEMING  an order lands, nothing about the buyer does');
 const sid = [...__stripe.sessions.keys()][0];

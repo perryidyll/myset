@@ -123,6 +123,18 @@ export const canTakeMoney = (aid, show) =>
   !!process.env.STRIPE_SECRET_KEY &&
   (isPlatformOwner(aid) || !!(show && show.pay && show.pay.ready));
 
+/* The artist's profile or the venue's, by the owner id's shape (`v_<vid>` is a venue,
+   cleanOwnerId). Imported lazily: _profile and _venues both import _lib, as this does. */
+async function takeStockFor(owner, item, qty) {
+  const { takeStock } = await import('./_profile.mjs');
+  if (String(owner).startsWith('v_')) {
+    const { mutateVenueProfile } = await import('./_venues.mjs');
+    return mutateVenueProfile(String(owner).slice(2), (p) => takeStock(p.merch, item, qty));
+  }
+  const { mutateProfile } = await import('./_profile.mjs');
+  return mutateProfile(owner, (p) => takeStock(p.merch, item, qty));
+}
+
 /* ONE implementation of "grant what this payment bought".
    Used by the return page (/api/confirm), the Stripe webhook and the artist's
    reconcile sweep, so all three grant identically and none can drift.
@@ -194,6 +206,13 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       const o = (m.paid[sid] || {}).kind === 'merch' ? pubOrder(orderOf(m, sid)) : null;
       return { ok: true, already: true, ...(m.paid[sid] || {}), ...(o ? { order: o } : {}) };
     }
+    /* THE COUNT COMES DOWN once, on the claim that wrote the order (the founder,
+       2026-09-14: a quantity "that automatically adjusts itself as purchases are
+       made"). Best-effort and after the money is safe: a lost write here leaves the
+       count one high and the artist corrects it in the Studio; a double write is
+       impossible because only the fresh claim reaches this line. An item that is
+       not counting (stock null) is left alone. */
+    if (orderRow) await takeStockFor(aid, orderRow.item, orderRow.qty).catch(() => {});
   } else {
     granted = Number(pre.paid[sid].granted)
       || (md.kind === 'votes' || md.kind === 'song_votes' ? parseInt(md.votes, 10) || 0 : 0);

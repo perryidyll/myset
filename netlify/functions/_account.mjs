@@ -1,6 +1,6 @@
 import { store, readDoc, casDoc, KEY, SHARDS, DEFAULT_ARTIST } from './_lib.mjs';
 import { readArtists, mutateArtists } from './_auth.mjs';
-import { getProfile } from './_profile.mjs';
+import { getProfile, merchSlots } from './_profile.mjs';
 import { readEvents, mutateEvents, reindexCities } from './_events.mjs';
 import { readLists, readLearn } from './_lists.mjs';
 import { readHistIndex } from './_history.mjs';
@@ -85,7 +85,7 @@ export async function keysFor(aid) {
     `ev_${aid}`, `lists_${aid}`, `learn_${aid}`, `push_${aid}`, `connect_${aid}`, `fb_${aid}`,
     `lock_${aid}`, `apitch_${aid}`, `songstats_${aid}`, `posts_${aid}`, `likes_${aid}`, `billing_${aid}`,
     `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
-    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid)];
+    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid), `wishes_${aid}`];
   /* `ledger_platform` is the COMPANY's, not this artist's, and is never deleted here. */
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
   const [hist, show, profile, posts, ids, pend] = await Promise.all([
@@ -112,7 +112,7 @@ export async function keysFor(aid) {
   for (const p of oldPosts) if (p && p.clip) { keys.push(vidKey(aid, p.clip)); keys.push(IMG(aid, p.clip)); }
   for (const sg of ((show.data || {}).songs || [])) if (sg && sg.id) { keys.push(`lyr_${aid}_${sg.id}`); keys.push(`chart_${aid}_${sg.id}`); }
   for (const slot of ['cover', 'avatar', 'p0', 'p1', 'p2', 'idcheck']) keys.push(IMG(aid, slot));
-  for (const m of profile.merch || []) keys.push(IMG(aid, m.id));
+  for (const m of profile.merch || []) for (const slot of merchSlots(m.id)) keys.push(IMG(aid, slot));   // five picture slots per item (2026-09-14)
   for (const p of posts.list || []) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(aid, `${p.id}_${i}`));
   /* Clips, and their poster frames. Both the ones a post claims and the ones
      still pending, because an upload that was never posted is 3MB nothing else
