@@ -18,13 +18,28 @@
  "roomPlus": null,
  "roomPro": 0.684,
  "roomPerHead": 0.684,
- "deploys": 264,
- "deploysThisPeriod": 79,
+ "deploys": 269,
+ "deploysThisPeriod": 84,
  "billingPeriodStart": "2026-09-08",
+ "shipping": {
+  "what": "production deploys \u00d7 15 credits \u2014 a cost of shipping code, never of a gig",
+  "deploys30": 269,
+  "credits30": 4035,
+  "deploysThisPeriod": 84,
+  "creditsThisPeriod": 1260,
+  "perDayThisPeriod": 13.5
+ },
+ "traffic": {
+  "what": "everything the rooms cause \u2014 bandwidth is the one meter the API exposes; web requests and compute are on Netlify\u2019s Credit usage breakdown page only",
+  "bandwidthBytesThisPeriod": 1166991536,
+  "bandwidthGBThisPeriod": 1.167,
+  "bandwidthCreditsThisPeriod": 23.3,
+  "bandwidthReadAt": "2026-09-14T12:13:37.109+00:00"
+ },
  "pollsPerPhoneHour": null,
- "pollsProvisional": 10234.9,
+ "pollsProvisional": null,
  "creditsPerShow": null,
- "note": "7 night(s) on the published calendar where the room used the app, across 1 artist(s) (1 more on the calendar where it went unused); 3 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 19.86. A night is bracketed by marks but NO quiet pair measures the other sites' background, so the 10234.9 polls/phone-hour it gives is withheld \u2014 take two marks an hour apart on a quiet day. Deploys are account-wide (all five sites share the credit grant): 264 in the last 30 days, 79 this billing period.",
+ "note": "7 night(s) on the published calendar where the room used the app, across 1 artist(s) (1 more on the calendar where it went unused); 3 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 19.86. No night is bracketed by two bandwidth marks yet, so polls per phone-hour is still the model's guess. Deploys are account-wide (all five sites share the credit grant): 269 in the last 30 days, 84 this billing period = 1260 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 1.167 GB = 23.3 credits for everything every room did.",
  "nights": [
   {
    "key": "hist_perry-idyll_2026-09-13-1123-yvaz",
@@ -620,47 +635,13 @@
   },
   {
    "key": "hist_perry-idyll_2026-09-11-1130-vycr",
-   "bytes": 821750457,
-   "windowHours": 72.9,
-   "background": 0,
-   "studioMinutes": 200,
-   "studioAssumed": true,
-   "studioShareOfBytes": 0.01,
-   "clipViews": null,
-   "clipBytes": 0,
    "polls": null,
-   "pollsShared": 310630,
-   "sharedWith": [
-    "hist_perry-idyll_2026-09-13-1123-yvaz"
-   ],
-   "pollsPerPhoneHour": 10234.9,
-   "confidence": "low \u2014 Studio minutes assumed",
-   "marks": [
-    "11 Sep, after the gig week",
-    "14 Sep 17:00, before Mon Ugly Duckling gig (first mark on the split)"
-   ]
+   "why": "the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 2,605 for the rest"
   },
   {
    "key": "hist_perry-idyll_2026-09-13-1123-yvaz",
-   "bytes": 821750457,
-   "windowHours": 72.9,
-   "background": 0,
-   "studioMinutes": 200,
-   "studioAssumed": true,
-   "studioShareOfBytes": 0.01,
-   "clipViews": null,
-   "clipBytes": 0,
    "polls": null,
-   "pollsShared": 310630,
-   "sharedWith": [
-    "hist_perry-idyll_2026-09-11-1130-vycr"
-   ],
-   "pollsPerPhoneHour": 10234.9,
-   "confidence": "low \u2014 Studio minutes assumed",
-   "marks": [
-    "11 Sep, after the gig week",
-    "14 Sep 17:00, before Mon Ugly Duckling gig (first mark on the split)"
-   ]
+   "why": "the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 2,605 for the rest"
   }
  ],
  "marksOnFile": 3

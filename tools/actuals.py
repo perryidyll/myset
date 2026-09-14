@@ -35,6 +35,10 @@ WHAT IT PRODUCES — the fields the model's "Real shows" panel understands:
   pollsPerPhoneHour  AUDIENCE ticks (board + personal call) per phone per hour, solved from the bandwidth
                      marks that bracket a night (null until two marks bracket one)
   creditsPerShow     null — Netlify does not expose per-show credits
+  shipping           the deploys and their credits (30 days, this billing period, per day) —
+                     THE SHIPPING BILL. Never divided by shows; never in a per-show figure
+  traffic            the bandwidth counter this period, in bytes, GB and credits — the one
+                     traffic meter the API exposes (requests and compute: dashboard only)
   asOf, source, note, nights, notCounted, marks
 
 WHICH NIGHTS COUNT. The founder's rule (11 Sep): only a show that lines up with a gig he
@@ -102,6 +106,9 @@ from zoneinfo import ZoneInfo
 STORE = 'myset'
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+# the Netlify CLI reads the store through the folder that is `netlify link`ed — a git worktree
+# is not, so from one set MYSET_SITE_DIR=~/Docs/MySet (the same convention as tools/metrics.mjs)
+SITE = os.environ.get('MYSET_SITE_DIR') or ROOT
 MARKS = os.path.join(ROOT, 'finance', 'marks.json')
 ENV = {**os.environ, 'PATH': os.environ['HOME'] + '/.local/node/bin:' + os.environ.get('PATH', '')}
 
@@ -113,6 +120,13 @@ ENV = {**os.environ, 'PATH': os.environ['HOME'] + '/.local/node/bin:' + os.envir
 # still be solved. finance/model-test.mjs checks these against the model page's defaults.
 BYTES = {'board': 2175, 'me': 430, 'poll': 2530, 'write': 1200, 'studio': 4000, 'view': 3000, 'page': 48000, 'clip': 75000000}   # clip = one full view of a posted video (the three so far are 74–79 MB)
 TICK_BYTES = BYTES['board'] + BYTES['me']   # what one tick of the ladder moves since the split
+# TWO BILLS, NEVER ONE NUMBER (INVARIANT 0fx). Netlify meters a production deploy (15 credits)
+# separately from everything a room does (web requests, bandwidth, compute). This script reports
+# them as two separate objects — `shipping` and `traffic` — and NOTHING per show, per phone or
+# per hour in its output may ever contain a deploy. Three times a per-gig "server cost" carried
+# the deploys and polling looked dear when shipping was. BYTES has no deploy entry on purpose.
+CR_DEPLOY = 15          # credits per production deploy (previews, branch deploys and failed deploys are free)
+CR_PER_GB = 20          # credits per GB of bandwidth
 SPLIT_AT = '2026-09-11T11:17:00+00:00'      # when c3d0a4d (the split) went live; marks before this solve at the old poll size
 STUDIO_POLLS_PER_HOUR = 3600 / 4        # the Studio's own tick, every 4 s while the tab is open
 EXTRA_VIEWS_PER_PHONE = 0.5             # profile / community / city-feed pages, per phone (model default)
@@ -120,7 +134,7 @@ STUDIO_SHARE = 0.6                      # share of the night the Studio Live tab
 
 
 def run(args):
-    r = subprocess.run(args, capture_output=True, text=True, env=ENV, cwd=ROOT)
+    r = subprocess.run(args, capture_output=True, text=True, env=ENV, cwd=SITE)
     return r.stdout if r.returncode == 0 else ''
 
 
@@ -244,6 +258,11 @@ def shows():
     """One row per night that actually happened. The archive writes the counts
     under `stats` and the money under `money` (see _history.mjs)."""
     artists = blob('artists') or {}
+    if not artists:
+        # an empty registry is a failed read (the CLI not signed in, or this folder not linked — see SITE),
+        # never a fact: writing it out would replace seven real nights with zero, silently
+        print('the registry read as empty — is the Netlify CLI signed in, and is this folder `netlify link`ed (or MYSET_SITE_DIR set to the one that is)?', file=sys.stderr)
+        sys.exit(1)
     rows, skipped, unused = [], [], []
     for k in keys():
         # hist_<artist>_<showId> is the per-artist record; hist_<showId> is a legacy
@@ -553,6 +572,9 @@ def main():
     if rate is not None and not quiet_n:
         provisional, rate = rate, None      # without a quiet pair the background is unknown and the number would be high
     n30, nper, pstart = deploys()
+    acc = account()
+    bw = (api(f"/accounts/{acc['id']}/bandwidth") if acc else None) or {}
+    bw_used = int(bw.get('used') or 0)
     avg = lambda xs: round(sum(xs) / len(xs), 2) if xs else None
     by = lambda plan: [r for r in rows if r['plan'] == plan]
     known = [r for r in rows if r['moneyKnown']]
@@ -579,6 +601,15 @@ def main():
         'deploys': n30,
         'deploysThisPeriod': nper,
         'billingPeriodStart': pstart,
+        # the two bills, kept apart (INVARIANT 0fx): the page reads `shipping` for the deploys dial's
+        # caption and `traffic` for the bandwidth line; neither is ever divided by shows
+        'shipping': {'what': 'production deploys × 15 credits — a cost of shipping code, never of a gig',
+                     'deploys30': n30, 'credits30': (n30 or 0) * CR_DEPLOY,
+                     'deploysThisPeriod': nper, 'creditsThisPeriod': (nper or 0) * CR_DEPLOY,
+                     'perDayThisPeriod': round(nper / max((datetime.now(timezone.utc) - datetime.fromisoformat(pstart + 'T00:00:00-07:00')).total_seconds() / 86400, 0.5), 1) if nper is not None and pstart else None},
+        'traffic': {'what': 'everything the rooms cause — bandwidth is the one meter the API exposes; web requests and compute are on Netlify’s Credit usage breakdown page only',
+                    'bandwidthBytesThisPeriod': bw_used, 'bandwidthGBThisPeriod': round(bw_used / 1e9, 3), 'bandwidthCreditsThisPeriod': round(bw_used / 1e9 * CR_PER_GB, 1),
+                    'bandwidthReadAt': bw.get('last_updated_at')},
         'pollsPerPhoneHour': rate,
         'pollsProvisional': locals().get('provisional'),
         'creditsPerShow': None,
@@ -591,7 +622,8 @@ def main():
                  + (f"Polls measured from bandwidth marks on {sum(1 for n in per_night if n.get('pollsPerPhoneHour'))} night(s), background {bg / 1e6:.2f} MB/h from {quiet_n} quiet pair(s). "
                     if rate else (f"A night is bracketed by marks but NO quiet pair measures the other sites' background, so the {locals().get('provisional')} polls/phone-hour it gives is withheld — take two marks an hour apart on a quiet day. "
                     if locals().get('provisional') else "No night is bracketed by two bandwidth marks yet, so polls per phone-hour is still the model's guess. "))
-                 + f"Deploys are account-wide (all five sites share the credit grant): {n30} in the last 30 days, {nper} this billing period."),
+                 + f"Deploys are account-wide (all five sites share the credit grant): {n30} in the last 30 days, {nper} this billing period = {(nper or 0) * CR_DEPLOY} credits — the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). "
+                 + f"Bandwidth this period: {bw_used / 1e9:.3f} GB = {bw_used / 1e9 * CR_PER_GB:.1f} credits for everything every room did."),
         'nights': [{k: v for k, v in r.items() if k not in ('startedAt', 'endedAt')} for r in sorted(rows, key=lambda r: r['endedAt'] or 0, reverse=True)],
         'onCalendarUnused': [{k: v for k, v in r.items() if k not in ('startedAt', 'endedAt')} for r in unused],
         'silentNights': silent,

@@ -2734,3 +2734,24 @@ $0.375 kept it is $3,408 / $1,731 / 181. The split itself moved profit $12 a mon
 --studio-min N --clip-views 0` then `--write` — the first bracketed gig on the split;
 merge the open line worktree (renumber its `0036` → next free; main is at 0076) and set
 `LINE_URL`/`LINE_KEY` for one night before trusting the line dials. SSD not mounted.
+
+# SESSION LOG — 2026-09-14 (later: two bills, never one number — INVARIANT 0fx, decision 0077)
+
+The user asked whether the model's "cost increase" was the week's deploys, then for a rule
+that ends the deploy-vs-polling confusion for good (the third time). Branch
+`model/two-bills` → PR, squash-merged. Record: `docs/sessions/2026-09-14-two-bills-never-one-number.md`.
+
+**The rule:** the server bill is two bills — the TRAFFIC bill (requests, bandwidth, compute;
+scales with rooms) and the SHIPPING bill (deploys × 15 credits; scales with shipping) — and
+no per-gig, per-phone, per-tier or per-show figure ever contains a deploy. `hostBill()`
+returns `trafficUsd` (the month at zero deploys) + `deployUsd` (what deploys add); every
+per-gig number uses `trafficUsd`; the page names the bill on every server figure and carries
+a note with the real split; `tools/actuals.py` emits `shipping` and `traffic` objects; the
+suite (87) turns deploys 0→400 on every host and fails if anything per gig moves.
+
+**Facts this period (since 8 Sep):** 84 production deploys = 1,260 credits; 1.167 GB
+bandwidth = 23 credits for everything the rooms did. Requests/compute: dashboard only.
+
+**Also:** `actuals.py` refuses to write when the registry reads as empty (a worktree run
+read zero nights and would have replaced the seven real ones) and honours `MYSET_SITE_DIR`.
+Run it from a worktree as `MYSET_SITE_DIR=~/Docs/MySet python3 tools/actuals.py --write`.

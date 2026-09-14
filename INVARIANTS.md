@@ -478,6 +478,29 @@ If you are about to violate one, stop and say so rather than working around it.
     at something. An env-var change needs a rebuild to take effect —
     `git commit --allow-empty` and push, or trigger it from the Netlify UI.
 
+0fx. **The server bill is two bills, and no per-gig figure ever contains a deploy.**
+    Netlify meters production deploys (15 credits each; previews, branch deploys
+    and failed deploys are free) separately from everything a room causes (web
+    requests, bandwidth, compute). The **traffic bill** scales with gigs, phones
+    and hours; the **shipping bill** scales with how often code is shipped and
+    with nothing a room does. Three times — 31 Aug (9d0), 1 Sep (9d3) and the
+    money model's own "server cost per gig" until 14 Sep — the deploys were
+    spread over the gigs and polling looked dear when shipping was; on the first
+    gig week deploys were 98% of the credits and the four gigs 18¢. So, in the
+    engine (`finance/model.html`): `hostBill()` returns `trafficUsd` (what the
+    same month costs with zero deploys) and `deployUsd` (what the deploys add on
+    top — their marginal cost, exact under the plan-and-pack steps), every
+    per-gig, per-phone, per-tier and per-show number is computed from the traffic
+    bill alone, and the page names which bill every server figure belongs to. In
+    the tracker (`tools/actuals.py`): deploys are reported as a `shipping` object
+    and bandwidth as a `traffic` object, `BYTES` has no deploy entry, and nothing
+    per show, phone or hour may contain a deploy. `finance/model-test.mjs` turns
+    the deploys dial from 0 to 400 on every host and fails if any per-gig figure
+    moves, if the two bills do not sum to the total, or if the tracker divides
+    deploys by anything. Decision 0077. The exact per-category split lives on
+    Netlify's own Usage & billing › Credit usage breakdown — the API exposes the
+    deploy list and the bandwidth counter only.
+
 9d4. **Only production deploys cost credits — and `credit-burn.sh` used to bill
     the free ones.** It counted every `state == 'ready'` deploy at 15 credits,
     drafts and deploy previews included, and asked for a single page of 200. On

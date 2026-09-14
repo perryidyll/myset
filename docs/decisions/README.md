@@ -86,6 +86,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) | A booker can write to an artist from the page, and the artist answers from the Studio | 2026-09-14 | storage | decided | perry |
 | [0075](0075-the-artist-page-has-a-month-calendar-and-a-tour-po.md) | The artist page has a month calendar and a tour poster the artist uploads | 2026-09-14 | ui | decided | perry |
 | [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) | The money model prices the split and the open line from the simulator and the probe, never from list prices | 2026-09-14 | scale | decided | perry-confirmed |
+| [0077](0077-the-server-bill-is-two-bills-traffic-and-shipping.md) | The server bill is two bills — traffic and shipping — and no per-gig figure ever contains a deploy | 2026-09-14 | money | decided | perry |
 
 ## By area
 
@@ -99,7 +100,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) · [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md)
 
-**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md) · [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md) · [0064](0064-postage-is-a-shipping-rate-off-the-cut-the-pickup.md)
+**money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md) · [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md) · [0064](0064-postage-is-a-shipping-rate-off-the-cut-the-pickup.md) · [0077](0077-the-server-bill-is-two-bills-traffic-and-shipping.md)
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md) · [0069](0069-every-document-is-copied-nightly-to-r2-and-a-restor.md)
 
