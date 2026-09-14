@@ -501,6 +501,15 @@ If you are about to violate one, stop and say so rather than working around it.
     Netlify's own Usage & billing › Credit usage breakdown — the API exposes the
     deploy list and the bandwidth counter only.
 
+0fy. **A page is its artist's: no profile ever shows another act's picture.**
+    A new profile's `photo` and `avatar` are empty (`_profile.mjs` DEFAULTS;
+    `normProfile` never fills them). With no cover the artist page paints the
+    cover box in the brand pink-orange gradient and no `<img>`; with no portrait
+    it draws the band's initial in a tile; the Community and shop headers do the
+    same. No page falls back to a stock photograph — the founder's own page
+    stores its picture by path. Decision `0078`; `test/sheets.mjs`
+    NOBODY ELSE'S BAND.
+
 9d4. **Only production deploys cost credits — and `credit-burn.sh` used to bill
     the free ones.** It counted every `state == 'ready'` deploy at 15 credits,
     drafts and deploy previews included, and asked for a single page of 200. On

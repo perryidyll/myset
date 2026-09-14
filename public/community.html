@@ -68,6 +68,7 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
 
 .owner{display:flex;align-items:center;gap:12px;margin:4px 18px 0}
 .owner .av{width:48px;height:48px;border-radius:15px;background:var(--bg-2) center/cover;flex:0 0 auto;box-shadow:var(--sh-1)}
+.owner .av.blank{display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background:linear-gradient(160deg,var(--accent-2),#c93a36)}
 .owner .n{flex:1;min-width:0}
 .owner h1{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .owner .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
@@ -474,7 +475,7 @@ async function load(){
 function render(){
   const d=D, who=VENUE?'The venue':'The artist';
   let h=`<div class="owner rise">
-    <div class="av" style="background-image:url('${esc(d.avatar||'/img/band-sm.jpg')}')"></div>
+    ${d.avatar?`<div class="av" style="background-image:url('${esc(d.avatar)}')"></div>`:`<div class="av blank">${esc(String(d.name||'').trim().charAt(0).toUpperCase()||'♪')}</div>`}
     <div class="n"><div class="k">Community</div>
       <h1><a href="${esc(HOME)}">${esc(d.name)}</a>${d.verified?'<span class="vbadge">✓ Verified</span>':''}</h1></div>
     <button class="share" onclick="share()">Share</button>
