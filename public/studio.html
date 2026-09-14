@@ -220,7 +220,7 @@ a{color:inherit;text-decoration:none}
    window paints it to its border box instead, since its pseudo-elements would scroll */
 .orange-outline,.votebox,.upg{position:relative}
 .orange-outline::after,.votebox::after,.upg::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
-.queue-window{max-height:294px}.setlist-window{max-height:720px}
+.queue-window{max-height:none}.setlist-window{max-height:720px}   /* Up next is cut at its eleventh row by studio.js render() */
 .sec.upnext .kick:first-child{font-size:15px;font-weight:750;color:var(--accent-2)}
 @keyframes edgeGlow{
   0%,100%{box-shadow:var(--sh-1),12px 0 15px rgba(255,86,80,.16),30px 0 38px rgba(255,69,110,.07),54px 0 62px rgba(255,86,80,.025)}
@@ -369,8 +369,16 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .songmeta span{font-size:11px;font-weight:600;letter-spacing:.01em;padding:2px 7px;border-radius:var(--pill);
   background:var(--surface-2);color:var(--muted)}
 .songmeta span.k{background:var(--accent-soft);color:var(--accent)}
-.songcard{display:block;padding:15px 16px 13px}
-.songcard>.m{width:100%;min-width:0}
+/* A song card is the words with a thin column of three small round buttons at the
+   right — edit and hide as outlined icons, delete the accent ✕ — so the card is
+   as tall as its words, no taller (the founder, 2026-09-14). */
+.songcard{display:flex;align-items:flex-start;gap:12px;padding:9px 16px 9px}
+.songcard>.m{flex:1 1 auto;min-width:0}
+.songcard .songactions{flex:0 0 auto;width:auto;flex-direction:column;gap:4px;margin-top:0;align-items:center}
+.songcard .songactions .act,.songcard .songactions .act.warn{flex:0 0 26px;width:26px;height:26px;padding:0}
+.act.ico{display:inline-flex;align-items:center;justify-content:center;background:none;box-shadow:inset 0 0 0 1.5px var(--accent);color:var(--accent-ink)}
+.act.ico svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;display:block}
+.act.warn.ico{box-shadow:none;background:var(--accent-soft);color:var(--accent);font-size:12px}
 /* .gigcard is the Gigs tab's "Coming up" row in the same shape: .gighead holds the
    date and the words, .songactions the buttons beneath (the founder, 2026-09-12). */
 .gigcard{display:block;padding:15px 16px 13px}
@@ -748,7 +756,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=12bc117a"></script>
+<script src="/studio.js?v=472ae3f9"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

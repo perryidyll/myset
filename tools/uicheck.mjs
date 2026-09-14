@@ -433,8 +433,9 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
   ok('the queue repeats total and paid counts', row&&/4 votes total/.test(row.innerText)&&/\(2\) paid votes/.test(row.innerText));
   const studioQueue=document.querySelector('.queue-window');
   const studioQueueShell=document.querySelector('.queue-shell');
-  ok('the artist Up next window is orange, indented, and internally scrollable',
+  ok('the artist Up next window is orange, indented, and internally scrollable past exactly ten songs',
     studioQueue&&studioQueueShell&&studioQueue.scrollHeight>studioQueue.clientHeight&&innerWidth-studioQueueShell.getBoundingClientRect().right>=54
+      &&studioQueue.querySelectorAll(':scope > .row').length>10&&Math.abs(studioQueue.clientHeight-(studioQueue.querySelectorAll(':scope > .row')[10].offsetTop-studioQueue.querySelectorAll(':scope > .row')[0].offsetTop))<=2
       &&/linear-gradient\(135deg,\s*rgb\(255,\s*55,\s*95\)/.test(getComputedStyle(studioQueueShell).backgroundImage)
       &&/up next/i.test(document.querySelector('.sec.upnext').innerText),
     studioQueue&&`${studioQueue.clientHeight}/${studioQueue.scrollHeight}; gap ${Math.round(innerWidth-studioQueueShell.getBoundingClientRect().right)}; ${getComputedStyle(studioQueueShell).boxShadow}; ${document.querySelector('.sec.upnext')&&document.querySelector('.sec.upnext').innerText}`);
@@ -496,9 +497,11 @@ const STUDIO_VOTES=await pg.evaluate(async ()=>{
       setTools[0].getBoundingClientRect().height<=58&&organize&&organize.getBoundingClientRect().top-setTools[0].getBoundingClientRect().bottom>=9,
     setTools.map(x=>Math.round(x.getBoundingClientRect().height)).join('/')+(organize?`; gap ${Math.round(organize.getBoundingClientRect().top-setTools[0].getBoundingClientRect().bottom)}`:''));
   const songCard=document.querySelector('.songcard'), songActions=songCard&&songCard.querySelector('.songactions');
-  ok('setlist song copy spans the card and tags/actions each get their own wrapping row',
-    songCard&&songActions&&getComputedStyle(songCard).display==='block'&&songActions.getBoundingClientRect().top>songCard.querySelector('.songmeta').getBoundingClientRect().bottom&&
-      Math.abs(songCard.querySelector('.m').getBoundingClientRect().right-songCard.getBoundingClientRect().right+16)<2&&getComputedStyle(songCard.querySelector('.songmeta')).flexWrap==='wrap');
+  ok('a song card is its words with a column of three small icon buttons at the right — edit at the title’s top edge, delete last — and no taller than its words',
+    (()=>{ if(!songCard||!songActions) return false; const acts=[...songActions.querySelectorAll('.act')], t=songCard.querySelector('.t').getBoundingClientRect(), a0=acts[0].getBoundingClientRect(), m=songCard.querySelector('.m').getBoundingClientRect();
+      return acts.length===3&&acts.every(a=>a.getBoundingClientRect().height<=32&&(a.querySelector('svg')||a.textContent.trim()==='✕'))&&/inset/.test(getComputedStyle(acts[0]).boxShadow)&&/inset/.test(getComputedStyle(acts[1]).boxShadow)&&acts[2].classList.contains('warn')
+        &&Math.abs(a0.top-t.top)<=6&&a0.left>=m.right&&acts[2].getBoundingClientRect().top>acts[1].getBoundingClientRect().bottom&&songCard.getBoundingClientRect().height<=Math.max(m.height,songActions.getBoundingClientRect().height)+24&&getComputedStyle(songCard.querySelector('.songmeta')).flexWrap==='wrap'; })(),
+    songCard&&`card ${Math.round(songCard.getBoundingClientRect().height)}px, words ${Math.round(songCard.querySelector('.m').getBoundingClientRect().height)}px`);
   ok('the artist setlist is capped at ten rows with the same thumb lane and glow',
     studioSet&&studioSetShell&&studioSet.scrollHeight>studioSet.clientHeight&&studioSet.clientHeight<=721
       &&innerWidth-studioSetShell.getBoundingClientRect().right>=54&&getComputedStyle(studioSetShell).animationName==='edgeGlow',
@@ -597,7 +600,7 @@ const MONEY=await pg.evaluate(async ()=>{
   // (the fee toggles above repainted the tab, so the button is found again)
   [...app.querySelectorAll('button')].find(b=>/^Log tonight$/.test(b.textContent.trim())).click(); await new Promise(r=>setTimeout(r,120));
   const sheet=document.querySelector('#sheet');
-  ok('“Log tonight” opens the editor sheet with the drag exception class', sheet.classList.contains('on')&&sheet.classList.contains('biz'));
+  ok('“Log tonight” opens the editor sheet (class biz: the sticky readout is a grab zone)', sheet.classList.contains('on')&&sheet.classList.contains('biz'));
   ok('the sheet says what the room paid for on that night', /40 votes · 17 free · 23 paid · 2 paid requests/.test((sheet.querySelector('.bizvotes')||{}).textContent||''), (sheet.querySelector('.bizvotes')||{}).textContent);
   ok('the sheet is titled Log a show, asks for the total pay from the venue and the splits, and carries no $/h pills', sheet.querySelector('h3').textContent==='Log a show'&&/Total pay from venue/.test(sheet.innerText)&&/Splits/.test(sheet.innerText)&&!sheet.querySelector('[data-act="bizhk"]'), sheet.querySelector('h3').textContent);
   const cutIn=sheet.querySelector('.bz[data-f="cut"]');
@@ -617,7 +620,12 @@ const MONEY=await pg.evaluate(async ()=>{
   ok('1.5 is an hour and a half', tm.value==='1h 30m'&&!tm.classList.contains('bad'), tm.value);
   ok('the draft is kept in the phone while typing', /"key":"g1@/.test(localStorage.getItem('myset.biz.draft')||''));
   ok('nothing in the sheet scrolls sideways', sheet.scrollWidth<=sheet.clientWidth+1, `${sheet.scrollWidth}/${sheet.clientWidth}`);
-  closeSheet(); localStorage.removeItem('myset.biz.draft');
+  // a thumb dragged down on the sticky readout closes the editor like any sheet (the founder, 2026-09-14)
+  { const ro=sheet.querySelector('.bizro'); const touch=(type,y)=>{ const t=new Touch({identifier:1,target:ro,clientX:200,clientY:y}); ro.dispatchEvent(new TouchEvent(type,{touches:type==='touchend'?[]:[t],changedTouches:[t],bubbles:true,cancelable:true})); };
+    touch('touchstart',200); touch('touchmove',260); touch('touchmove',320); touch('touchend',320); await new Promise(r=>setTimeout(r,80));
+    ok('a drag down on the readout closes the editor', !sheet.classList.contains('on'), sheet.className);
+    if(sheet.classList.contains('on')) closeSheet(); }
+  localStorage.removeItem('myset.biz.draft');
   return out.join('\n');
 });
 console.log('\nMONEY TAB\n'+MONEY+`\n  ${heroAt!==null&&heroAt<2000?'✓':'✗'} the dashboard replaced its skeleton ${heroAt===null?'never':'in '+heroAt+' ms'}\n  ${PAGEERRORS===errsBefore?'✓':'✗'} no page errors while booting into the tab (${PAGEERRORS-errsBefore})`);

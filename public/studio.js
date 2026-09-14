@@ -1817,9 +1817,11 @@ function render(){
         ${(x.key||(x.tags||[]).length)?`<div class="songmeta">
           ${x.key?`<span class="k">${esc(x.key)}</span>`:''}
           ${(x.tags||[]).map(t=>`<span>${esc(tagLabel(t))}</span>`).join('')}</div>`:''}</div>
-      <div class="songactions"><button class="act" data-act="edit" data-id="${x.id}">Edit</button>
-      <button class="act" onclick="act('toggleSong',{song:'${x.id}'})">${x.active===false?'Show':'Hide'}</button>
-      <button class="act warn" data-act="del" data-id="${x.id}" aria-label="Delete ${esc(x.title)}">✕</button></div>
+      <div class="songactions"><button class="act ico" data-act="edit" data-id="${x.id}" aria-label="Edit ${esc(x.title)}" title="Edit"><svg viewBox="0 0 24 24"><path d="M12 4.5H6.5A2.5 2.5 0 0 0 4 7v10.5A2.5 2.5 0 0 0 6.5 20H17a2.5 2.5 0 0 0 2.5-2.5V12"/><path d="M9 15.2l.9-3.4 8.1-8.1a1.6 1.6 0 0 1 2.3 2.3l-8.1 8.1z"/></svg></button>
+      <button class="act ico" onclick="act('toggleSong',{song:'${x.id}'})" aria-label="${x.active===false?'Show':'Hide'} ${esc(x.title)}" title="${x.active===false?'Show':'Hide'}">${x.active===false
+        ?'<svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>'
+        :'<svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5c1.6 0 3 .4 4.3 1.1M21.5 12s-3.5 6.5-9.5 6.5c-1.6 0-3-.4-4.3-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M4 20 20 4"/></svg>'}</button>
+      <button class="act warn ico" data-act="del" data-id="${x.id}" aria-label="Delete ${esc(x.title)}" title="Delete">✕</button></div>
     </div>`).join(''):`<div class="row muted">Nothing matches “${esc(SETQ)}”</div>`}</div></div>
     ${learnSection()}
     <div class="wrap" style="padding-top:18px;padding-bottom:0">
@@ -2441,6 +2443,11 @@ function render(){
     if(Math.abs(window.scrollY-pageY)>1)window.scrollTo(0,pageY);
   };
   const qNow=$('.queue-window'),lNow=$('.setlist-window');
+  /* Up next shows ten songs before it scrolls (the founder, 2026-09-14). Rows are
+     not one height (a voted song carries its refund line), so the window is cut
+     at the eleventh row's top edge rather than at a guessed number of pixels;
+     fewer than eleven rows means no cut at all. */
+  if(qNow){ const rows=qNow.querySelectorAll(':scope > .row'); qNow.style.maxHeight=rows.length>10?Math.round(rows[10].offsetTop-rows[0].offsetTop)+'px':'none'; }
   if(qNow)qNow.addEventListener('scroll',()=>{PANEL_SCROLL.queue=qNow.scrollTop},{passive:true});
   if(lNow)lNow.addEventListener('scroll',()=>{PANEL_SCROLL.setlist=lNow.scrollTop},{passive:true});
   restoreScroll();requestAnimationFrame(()=>requestAnimationFrame(restoreScroll));
@@ -2473,7 +2480,7 @@ function openMenu(){
       <svg viewBox="0 0 24 24"><path d="M3.5 4.5h7.5l9.5 9.5-6.5 6.5L3.5 11z"/><circle cx="7.6" cy="8.6" r="1.4"/></svg>
       <div class="m">Merch store<span>Items, sizes, prices and orders</span></div><span class="chev">›</span></button>
     <button class="menurow" onclick="closeSheet();setTab('settings')">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></svg>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.11-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.54h.08A1.7 1.7 0 0 0 10.1 3V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.03H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>
       <div class="m">Settings<span>Prices, votes, codes, who can sign in</span></div><span class="chev">›</span></button>
     <button class="menurow" onclick="closeSheet();openPlans()">
       <svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>
@@ -2770,9 +2777,13 @@ function attachDrag(sh){
     if(!t||!t.closest)return;
     if(t.closest(CONTROL))return;                   // never fight a control
     if(t.closest(HSCROLL))return;                   // a sideways carousel is not a dismiss
-    const inZone=!!t.closest('.grabzone');
+    /* The editor's sticky profit readout (.bizro) sits over the top of the sheet,
+       so a thumb on the handle lands on it — it counts as the grab zone. The
+       editor used to refuse a body drag (fifteen inputs must not vanish); the
+       founder wants it to close like every other sheet, and the 24 h draft brings
+       the numbers back (2026-09-14). */
+    const inZone=!!t.closest('.grabzone,.bizro');
     if(!inZone&&sh.scrollTop>0)return;              // they are reading, not dismissing
-    if(!inZone&&sh.classList.contains('biz'))return;// fifteen inputs must not vanish on a thumb drag (0065)
     start(e,!inZone);
   };
 
