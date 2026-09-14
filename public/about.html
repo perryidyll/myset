@@ -319,34 +319,16 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
 .vs-list .ln.dim{opacity:.55}.vs-list .ln.dimmer{opacity:.3}
 .vs-list .lbl{position:absolute;left:0;right:0;bottom:-28px;text-align:center;font-size:12.5px;color:var(--faint);letter-spacing:.02em}
 .vs .phone{max-width:240px;margin:0}
+.vs .phone img{max-height:440px;object-fit:cover;object-position:top}
 .vs .phone .lbl{position:absolute;left:0;right:0;bottom:-28px;text-align:center;font-size:12.5px;color:var(--accent-ink);font-weight:600;letter-spacing:.02em}
-/* The page, drawn small: a hero video, the numbers, Book and Merch, the proof, the
-   links, tonight. Every element is one the real page has. */
-.mock{border-radius:30px;background:var(--bg);overflow:hidden;font-size:9px;line-height:1.3;color:var(--ink);
-  padding:0 0 12px;display:grid;gap:7px}
-.mock .vid{aspect-ratio:16/10;background:linear-gradient(135deg,#1a1a22,#3a2530 60%,#5a2a2a);display:grid;place-items:center;position:relative}
-.mock .vid::after{content:"";width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.92);
-  clip-path:polygon(38% 28%,38% 72%,72% 50%)}
-.mock .vid i{position:absolute;left:8px;top:8px;padding:3px 7px;border-radius:99px;background:var(--accent);color:#fff;font-style:normal;font-weight:700;font-size:7px;letter-spacing:.04em}
-.mock .row{display:flex;gap:6px;align-items:center;padding:0 10px}
-.mock .name{font-size:12px;font-weight:700;letter-spacing:-.02em;padding:0 10px}
-.mock .stats{font-size:8px;color:var(--muted);padding:0 10px;display:flex;gap:8px}
-.mock .stats b{color:var(--ink);font-weight:700}
-.mock .btn{flex:1;text-align:center;padding:5px 0;border-radius:99px;font-weight:600;font-size:8px;background:var(--surface);box-shadow:var(--sh-1)}
-.mock .btn.pri{background:var(--accent);color:#fff}
-.mock .proof{display:flex;gap:5px;padding:0 10px;overflow:hidden}
-.mock .proof span{flex:0 0 auto;padding:4px 7px;border-radius:8px;background:var(--surface);box-shadow:var(--sh-1);font-size:7.5px;color:var(--ink-2);white-space:nowrap}
-.mock .proof span b{color:var(--accent-ink)}
-.mock .links{display:flex;gap:4px;padding:0 10px;overflow:hidden}
-.mock .links span{flex:0 0 auto;padding:4px 7px;border-radius:99px;background:var(--accent-soft);color:var(--accent-ink);font-weight:600;font-size:7.5px;white-space:nowrap}
-.mock .gig{margin:0 10px;padding:7px 8px;border-radius:10px;background:var(--surface);box-shadow:var(--sh-1);display:flex;justify-content:space-between;align-items:center;font-size:8px}
-.mock .gig b{display:block;font-size:8.5px}
-.mock .gig i{font-style:normal;color:var(--muted)}
 /* the shop and the dashboard: a still on one side, the list on the other */
 .sgrid{display:grid;gap:30px;align-items:center;margin-top:36px}
 @media(min-width:860px){.sgrid{grid-template-columns:.85fr 1.15fr;gap:50px}.sgrid.rev>.still{order:2}}
 .sgrid .still{display:grid;justify-items:center}
 .sgrid .still .phone{max-width:300px}
+/* two phones side by side where one still is not the whole story */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start;max-width:520px;margin:0 auto}
+.pair .phone{max-width:250px;margin:0}
 .sgrid .vlist{margin-top:0}
 /* Until a section has its still, the slot is empty (a comment only) and the list
    takes the whole width as one centred column, so nothing sits beside a blank. */
@@ -360,6 +342,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
    A row of phones that turns itself, about 28 px a second, and is still a native
    scroller under a finger. The set is drawn twice so the seam never shows. */
 .reel-wrap{margin-top:40px;position:relative}
+.rcap{display:block;text-align:center;font-size:12.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:14px}
 .reel{display:flex;gap:18px;overflow-x:auto;padding:6px 2px 14px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .reel::-webkit-scrollbar{display:none}
 .reel .phone{flex:0 0 auto;width:200px;max-width:none;margin:0;border-radius:30px;padding:7px}
@@ -501,7 +484,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         </figure>
       </div>
 
-      <div class="beat solo up">
+      <div class="beat up">
         <div class="txt">
           <span class="num">3</span>
           <h3>You stop guessing</h3>
@@ -509,6 +492,8 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
             they’ve asked for. One tap starts the top song.</p>
           <p>Requests cost votes. Fans can add an optional offer — and you can always say no.</p>
         </div>
+        <div class="phone tall"><img src="/about/live-now.webp" width="600" height="1309" loading="lazy"
+          decoding="async" alt="The Studio’s Live tab during a show: Voting open, 26 votes now, 1 voting, $10.00 in tips. Now playing Tennessee Whiskey by Chris Stapleton with Lyrics, Auto chords and My chart buttons, and a big button reading Start top voted — Feel It Still (5 votes total)."></div>
       </div>
 
       <div class="beat up">
@@ -536,11 +521,12 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
           <p>Your gigs land in a public what’s-on feed for your town, so people looking for
             something to do tonight find you.</p>
         </div>
-        <div class="phone tall"><img src="/about/page.webp" width="600" height="1209" loading="lazy"
-          decoding="async" alt="An artist’s public MySet page: band photo, a Live now — vote the setlist pill, the verified tick, a Join live button, shows, fans, votes cast and songs, and tonight’s gig with directions."></div>
+        <div class="phone tall"><img src="/about/page-links.webp" width="600" height="1309" loading="lazy"
+          decoding="async" alt="Further down an artist’s public page: YouTube Music, Bandcamp and Instagram pills, tonight’s gig — 8:30pm at The Ugly Duckling Irish Pub, Koh Phangan, with RSVP and Directions — an About section, and Upcoming shows for the 14th, 15th and 16th."></div>
       </div>
 
     </div>
+    <figure class="reel-wrap up" hidden><span class="rcap">The room’s side, screen by screen</span><div class="reel" id="reel-room" aria-label="The voting page, screen by screen"></div></figure>
   </section>
 
   <!-- 3b ─────────────────────────────────── YOUR SIDE OF IT -->
@@ -551,26 +537,28 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
     </div>
     <div class="grid3" style="margin-top:38px">
       <div class="shot">
-        <div class="phone tall"><img src="/about/setlist.webp" width="600" height="1303" loading="lazy"
-          decoding="async" alt="The Studio’s Setlist tab: All songs, Make a set, Add a song, Import songs from CSV, text or Spotify, a search box, sort by top voted, and genre chips with an Auto-tag songs button."></div>
+        <div class="phone tall"><img src="/about/studio-setlist.webp" width="600" height="1309" loading="lazy"
+          decoding="async" alt="The Studio’s Setlist tab: Add a song, Import songs, Organize your songs into setlists, Your setlist — 67 of 67 featured, a search box, Top voted / Song A–Z / Artist A–Z, genre chips with an Auto-tag songs button, and the songs — 2009, 3 AM, Ain’t No Rest for the Wicked — each with edit, hide and remove."></div>
         <h3>Your songs</h3>
         <p>Paste a list, import a CSV or pull a Spotify playlist. Genres tag themselves. Turn a song
           off to hide it from tonight.</p>
       </div>
       <div class="shot">
-        <div class="phone tall"><img src="/about/gigs.webp" width="600" height="1303" loading="lazy"
-          decoding="async" alt="The Studio’s Gigs tab: an Add a gig button, a September calendar with a dot on every booked night, and a Coming up list showing thirty gigs."></div>
+        <div class="phone tall"><img src="/about/studio-gigs.webp" width="600" height="1309" loading="lazy"
+          decoding="async" alt="The Studio’s Gigs tab: Add a gig, a Tour dates poster slot with Upload a poster, a September 2026 calendar with a dot on every booked night, Feature a show, Want more gigs? with the Want to perform here? tip, and Coming up — 30."></div>
         <h3>Your calendar</h3>
-        <p>Every gig you’ve got coming, in one place. A residency goes in once and repeats itself.</p>
+        <p>Every gig you’ve got coming, in one place. A residency goes in once and repeats itself.
+          Your tour poster goes here too.</p>
       </div>
       <div class="shot">
-        <div class="phone tall"><img src="/about/rules.webp" width="600" height="1303" loading="lazy"
-          decoding="async" alt="The Studio’s Settings tab: free votes per person set to 5, an unlimited-votes option, the cost to replay a played song set to 5, and the price of extra vote packs."></div>
+        <div class="phone tall"><img src="/about/studio-rules.webp" width="600" height="1309" loading="lazy"
+          decoding="async" alt="The Studio’s Settings: Free votes per person with 3 chosen from 1, 2, 3, 5, 10 or any number, Unlimited votes for everyone, Cost to replay a played song set to 5, and Price of extra votes — a small pack and a big pack you price yourself."></div>
         <h3>Your rules</h3>
         <p>How many free votes each person gets, what it costs to bring a song back, what extra
           votes are worth. Or hand out unlimited votes and skip the lot.</p>
       </div>
     </div>
+    <figure class="reel-wrap up" hidden><span class="rcap">The rest of the Studio</span><div class="reel" id="reel-studio" aria-label="The Studio, screen by screen"></div></figure>
   </section>
 
   <!-- 4 ───────────────────────────────────── WHAT CHANGES -->
@@ -617,22 +605,14 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
       <p class="lede">No one wants to scroll an ugly list of links.</p>
     </div>
     <div class="vsgrid up">
-      <div class="vs" role="img" aria-label="A plain grey page of stacked links beside a MySet artist page with a video, the numbers, Book and Merch buttons, what the room said, the streaming links and tonight’s gig.">
+      <div class="vs" role="img" aria-label="A plain grey page of stacked links beside a real MySet page: a band on the beach, Perry Idyll, Verified, joined Aug 2026, 19 shows, 99 fans, 195 votes cast, Book, Merch and Community buttons, Most voted — All Of Me, the streaming links, and tonight’s gig counting down at the bottom.">
         <div class="vs-list" aria-hidden="true">
           <i class="ava"></i><i class="nm"></i>
           <i class="ln"></i><i class="ln"></i><i class="ln"></i><i class="ln dim"></i><i class="ln dim"></i><i class="ln dimmer"></i><i class="ln dimmer"></i>
           <span class="lbl">a list of links</span>
         </div>
         <div class="phone tall" aria-hidden="true">
-          <div class="mock">
-            <div class="vid"><i>LIVE NOW · VOTE</i></div>
-            <div class="name">Sam &amp; the Late Shift</div>
-            <div class="stats"><span><b>2021</b> Joined</span><span><b>212</b> Shows</span><span><b>1.4k</b> Fans</span><span><b>10.1k</b> Votes</span></div>
-            <div class="row"><span class="btn">Book</span><span class="btn">Merch</span><span class="btn pri">Tip</span></div>
-            <div class="proof"><span><b>★ 4.9</b> from the room</span><span>“Best Thursday in ages”</span><span>Most voted · <b>Fast Car</b></span></div>
-            <div class="links"><span>Spotify</span><span>Apple Music</span><span>YouTube</span><span>Instagram</span><span>Bandcamp</span></div>
-            <div class="gig"><div><b>Tonight · The Corner Bar</b><i>8:30 pm · directions</i></div><i>RSVP</i></div>
-          </div>
+          <img src="/about/page-hero.webp" width="600" height="1309" loading="lazy" decoding="async" alt="">
           <span class="lbl">myset.vip/yourname</span>
         </div>
       </div>
@@ -650,7 +630,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         <p class="reassure">It’s yours the moment you sign up. Put it in every bio you’ve got.</p>
       </div>
     </div>
-    <figure class="reel-wrap up" hidden><div class="reel" id="reel-profile" aria-label="The artist page, screen by screen"></div></figure>
+    <figure class="reel-wrap up" hidden><span class="rcap">And further down the page</span><div class="reel" id="reel-page" aria-label="The artist page, screen by screen"></div></figure>
   </section>
 
   <div class="segue up"><p class="pline">Someone taps <b>Merch</b>.</p></div>
@@ -667,7 +647,12 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         profile and from the voting page. A real merch table, minus the cash box.</p>
     </div>
     <div class="sgrid up">
-      <div class="still" data-still="shop"><!-- the shop grid on a phone: filled when the screenshot lands --></div>
+      <div class="still pair">
+        <div class="phone tall"><img src="/about/shop.webp" width="600" height="1309" loading="lazy" decoding="async"
+          alt="The shop page: Merch, Perry Idyll, Verified — pay here, shipped to you, shipping shown on each item. Two T-shirts with the Every Shade album art, price and postage under each and a Buy button; What fans are saying, five stars from 4 posts; how it works in three steps; and a Make a request button."></div>
+        <div class="phone tall"><img src="/about/community.webp" width="600" height="1309" loading="lazy" decoding="async"
+          alt="The community page: Perry’s merch — 2 items, paid to Perry Idyll through Stripe — with a Browse the shop button, a Support Perry tip button, filter chips, and What fans said: a five-star post from The Ugly Duckling Irish Pub — amazing band, such a fun night — with a photo."></div>
+      </div>
       <div class="vlist">
         <div class="vrow"><span class="tick">✓</span><div>
           <b>Sizes and options on anything</b>
@@ -695,7 +680,6 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         </div></div>
       </div>
     </div>
-    <figure class="reel-wrap up" hidden><div class="reel" id="reel-shop" aria-label="The shop, screen by screen"></div></figure>
   </section>
 
   <div class="segue up"><p class="pline">And the night <b>ends</b>.</p></div>
@@ -712,7 +696,8 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         You know it was <em>four hours of your evening</em> — sometimes more. MySet counts all of it.</p>
     </div>
     <div class="sgrid rev up">
-      <div class="still" data-still="money"><!-- the Money tab with the profit figure: filled when the screenshot lands --></div>
+      <div class="still"><div class="phone tall"><img src="/about/money-hero.webp" width="600" height="1309" loading="lazy" decoding="async"
+          alt="The Studio’s Money tab: Last show — finished, 9 songs played, 63 votes, $14.00 taken, a Log tonight button, This month / Last month / 30 days chips, then Profit $1,033.50 in green — 4 shows, 3 logged — Revenue $1,558.50, Costs incl. splits $525.00, $73.70 an hour, 13h 50m."></div></div>
       <div class="vlist">
         <div class="vrow"><span class="tick">✓</span><div>
           <b>Log a night in a minute</b>
@@ -745,7 +730,7 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
         </div></div>
       </div>
     </div>
-    <figure class="reel-wrap up" hidden><div class="reel" id="reel-money" aria-label="The business dashboard, screen by screen"></div></figure>
+    <figure class="reel-wrap up" hidden><span class="rcap">The dashboard, and the report it prints</span><div class="reel" id="reel-money" aria-label="The business dashboard, screen by screen"></div></figure>
   </section>
 
   <!-- 5 ────────────────────────────────────────────── PROOF -->
@@ -846,8 +831,12 @@ h2 s{color:var(--faint);text-decoration-color:var(--peace-orange);text-decoratio
           <p class="reassure">Free. Your page works whether you verify it or not.</p>
         </div>
         <div>
-          <div class="phone tall"><img src="/about/fills.png" width="640" height="968" loading="lazy"
-            decoding="async" alt="A venue’s what’s-on tab in the Venue Studio, filled automatically with a weekly residency it never typed."></div>
+          <div class="pair">
+            <div class="phone tall"><img src="/about/find.webp" width="600" height="1309" loading="lazy" decoding="async"
+              alt="The MySet front door: Live music near you. You pick what plays. Choose your country — Thailand — and your city — Koh Phangan — Search, View on map, Search for artists, then Tonight, 14 September: 8:30pm Perry Idyll at The Ugly Duckling Irish Pub, RSVP, 1 going."></div>
+            <div class="phone tall"><img src="/about/find-map.webp" width="600" height="1309" loading="lazy" decoding="async"
+              alt="The Upcoming show map: 26 shows over the next 30 days pinned A to F on a map of Koh Phangan, and the list under it — The Ugly Duckling Irish Pub on Monday, Crystal Day on Tuesday, Anantara Rasananda Resort on Wednesday — each with Directions."></div>
+          </div>
         </div>
       </div>
     </div>
@@ -978,11 +967,62 @@ document.querySelectorAll('.faq details').forEach((d) => {
    One entry per screenshot: the file, its real size, and what a person who cannot
    see it should be told. Order is the order a person meets the screens. A list
    with nothing in it leaves its strip hidden. Add a picture here and nowhere
-   else; the still beside each list is the `data-still` slot in the markup. */
+   else; the still beside each list is the `.still` block in the markup. The
+   screenshots are the founder's own Studio and page, 2026-09-14 (600 px wide
+   webp from the PNGs in MySet Social Media/Stills/MySet In-App Screenshots). */
 const REELS = {
-  profile: [],
-  shop: [],
-  money: [],
+  room: [
+    { src: '/about/vote-now.webp', w: 600, h: 1309, cap: 'Playing now, and what’s next',
+      alt: 'The voting page on a fan’s phone: Playing now — Tennessee Whiskey — with a Lyrics button, Voting open, and Up next with Feel It Still winning on 5 votes, Stick Season on 5 and Fast Car on 4. More votes and Support Perry buttons along the bottom.' },
+    { src: '/about/vote-list.webp', w: 600, h: 1309, cap: 'Every song, one tap to vote',
+      alt: 'The song list on the voting page: Vote your favourite songs below, 66 songs, sorted A to Z with genre chips — Stick Season already on 5 votes, then Stop This Train, Summer of ’69, Sunday Morning, Sweet Home Alabama — each with a Vote button.' },
+    { src: '/about/vote-request.webp', w: 600, h: 1309, cap: 'Not on the list? Ask.',
+      alt: 'The Not on the list? card: ask for it with your votes or cash, the artist decides, and if it’s a no the votes come straight back and the card is never charged. Three options — Vibe vote, free, the artist picks the song; Request a song; Birthday shout-out.' },
+    { src: '/about/vote-vibe.webp', w: 600, h: 1309, cap: 'A vibe vote is free',
+      alt: 'The vibe sheet: What should the next song feel like? Choose a vibe for free and the artist picks whatever song feels right — Energetic, Chill, Romantic — and a Send vibe button.' },
+    { src: '/about/vote-packs.webp', w: 600, h: 1309, cap: 'Out of votes? Buy a few',
+      alt: 'The Get more votes sheet: two packs to choose from, paid to the artist through Stripe Connect, a Continue to payment button, and Secure checkout by Stripe — you’ll come right back.' },
+    { src: '/about/vote-tip.webp', w: 600, h: 1309, cap: 'The tip, with a note',
+      alt: 'The tip sheet — Give Perry some love, sent via Stripe Connect: Nice one, Thank you, Encore!, or another amount, a message reading you’re crushing it!!, and Continue to payment.' },
+  ],
+  studio: [
+    { src: '/about/live-checklist.webp', w: 600, h: 1309, cap: 'Before you start',
+      alt: 'The Live tab before a show: Today, The Ugly Duckling Irish Pub, 20:30, and a checklist — Select setlist, Card payments ready, QR code printed or shown, Free votes set to 3 each — then a Start the show button and See what fans see.' },
+    { src: '/about/live-next.webp', w: 600, h: 1309, cap: 'Up next, a Start on each',
+      alt: 'The Live tab’s Up next list: Feel It Still on 5 votes, Stick Season on 5, Fast Car on 4, Hey Jude on 3, Circles — each with a Start button and a Decline and refund votes link, under Start top voted and End current song.' },
+    { src: '/about/studio-setlists.webp', w: 600, h: 1309, cap: 'A set for every room',
+      alt: 'The Your setlists sheet: a setlist is just a named handful of your songs — a beach set, a late set, the one for the Irish pub — pick one and the room only sees those. All songs, Use, and a New setlist button.' },
+    { src: '/about/studio-learn.webp', w: 600, h: 1309, cap: 'Songs you want to learn',
+      alt: 'The Setlist tab lower down: Chicken Fried, Circles and Come Together with their genre tags, then Want to learn — songs you don’t play yet, that nobody can vote for — with Don’t Fear the Reaper and a Learned it button, Add a song to learn, and See what fans see.' },
+    { src: '/about/studio-gig.webp', w: 600, h: 1309, cap: 'One gig, and its run',
+      alt: 'A gig card on the Gigs tab: 18 Sep, Seaflower Bungalows, Friday 18:30–21:30, repeats — with Feature, Edit and remove buttons, See 25 more, and the note that these show on your page and in the city feed automatically.' },
+    { src: '/about/studio-requests.webp', w: 600, h: 1309, cap: 'Requests, on your terms',
+      alt: 'The Requests from fans settings: Request a song on or off and what it costs in votes, Happy birthday shout-out on or off, Start shows from my calendar, and Card payments on.' },
+    { src: '/about/studio-page.webp', w: 600, h: 1309, cap: 'Your link and your codes',
+      alt: 'The Your public page settings: myset.vip/perryidyll with a Save button and an Open link, two QR codes to print — Your page, for the tables during your show, and MySet, find gigs anywhere — and Invite another musician with a sign-up link to copy.' },
+  ],
+  page: [
+    { src: '/about/page-videos.webp', w: 600, h: 1309, cap: 'Your videos, playing right there',
+      alt: 'Watch & listen on the artist page: a live video of Dissolve playing from YouTube with an Open link, then Watch more from Perry — a strip of more clips — under See 21 more and View calendar.' },
+    { src: '/about/page-book.webp', w: 600, h: 1309, cap: 'Book, straight from the page',
+      alt: 'The Book sheet on the artist page: Tell Perry about your event — they reply here, keep the link you get. Chips for Booking, Collab, Press and Other, then name, email, phone, venue or event, date, and a message from a resort asking to book a summer beach party.' },
+    { src: '/about/studio-community.webp', w: 600, h: 1309, cap: 'What fans said, from your side',
+      alt: 'The Studio’s community view: five-star posts from fans — few people do this song justice; whoa, loved this version; amazing band, such a fun night — each with Reply, Pin and Hide buttons.' },
+  ],
+  money: [
+    { src: '/about/money-mix.webp', w: 600, h: 1309, cap: 'Where it came from, and the hours',
+      alt: 'Profit by show as bars for Sep 1, 3, 5 and 13; Where it came from — a ring of $1,558 revenue: gig pay 64%, merch 20%, cash tips 8%, through the app 8%; and Total time invested, 13h 50m over 3 shows — on stage 7h 50m, breaks 50m, travel 3h, set-up and pack-down 2h 10m.' },
+    { src: '/about/money-log.webp', w: 600, h: 1309, cap: 'Log a night',
+      alt: 'The Log a show sheet: Profit for this show $172.00, $57.33 an hour; Sun Sep 13, Sand & Tan, $10.00 came through the app that night; Total pay from venue $350; splits for two band members at $120 each; My cut $120; Add band member; Cash tips $27; Merch sold — one Every Shade shirt at $25.' },
+    { src: '/about/money-lines.webp', w: 600, h: 1309, cap: 'Merch, splits, costs',
+      alt: 'The Money tab’s lines: Merch $310 — T-shirt 7 sold, vinyl 1 sold, logged by hand; Splits $450 — Sam and Kim, 2 shows each; Costs $75 — dinner for the band, taxi boat, petrol; then Through the app and Getting paid.' },
+    { src: '/about/report.webp', w: 600, h: 1309, cap: 'The report',
+      alt: 'The business report, a white printable page: Perry Idyll, Sun Aug 16 to Mon Sep 14 2026, Profit $2,149.00 in green, 10 shows, 7 logged; Revenue $3,687.00, Costs $128.00, Hours 40h 55m, Full evening rate $52.18 an hour, Stage time rate $85.12 an hour, and a Rate settings button.' },
+    { src: '/about/report-mix.webp', w: 600, h: 1309, cap: 'By month, and by source',
+      alt: 'The report’s chart of profit by month, Where it came from — $3,687 revenue: gig pay 73%, merch 13%, cash tips 6%, through the app 7% — and the Shows list with the venue, votes, pay and splits for each night.' },
+    { src: '/about/report-tables.webp', w: 600, h: 1309, cap: 'Every line, itemised',
+      alt: 'The report’s tables: Shows; Splits — Sam and Kim, 2 shows each, $450 total; Costs — dinner, taxi boat, petrol, $75; and Merch — 7 T-shirts and a vinyl, $310 — with a note that the figures were logged by the artist in MySet.' },
+  ],
 };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const shotCard = (m, ghost) => `<div class="phone"${ghost ? ' aria-hidden="true"' : ''}>
