@@ -131,11 +131,40 @@ async function api(path, init = {}) {
 
 /** Every tab that exists right now, by title. */
 export async function tabTitles() {
-  const d = await api('?fields=sheets.properties.title,properties.title');
+  const d = await api('?fields=sheets.properties.title,sheets.properties.sheetId,properties.title');
   return {
     title: (d && d.properties && d.properties.title) || '',
     tabs: ((d && d.sheets) || []).map((s) => s.properties.title),
+    ids: Object.fromEntries(((d && d.sheets) || []).map((s) => [s.properties.title, s.properties.sheetId])),
   };
+}
+
+/* THE SHEET SHOULD LOOK LIKE SOMEBODY MADE IT (the founder, 2026-09-14): every
+   tab's header row bold, white on the brand pink-orange, frozen; the first
+   column — the row titles — bold on a pale tint; columns sized to their words.
+   One batchUpdate for every tab, after the tabs exist, on every sync: the same
+   format applied twice is the same format, so this is idempotent and cheap. */
+export const HEAD_FILL = { red: 1, green: 0.337, blue: 0.314 };      // #FF5650
+export const TITLE_FILL = { red: 1, green: 0.914, blue: 0.906 };     // #FFE9E7
+export async function styleTabs(wanted) {
+  const { ids } = await tabTitles();
+  const requests = [];
+  for (const title of wanted) {
+    const sheetId = ids[title];
+    if (sheetId == null) continue;
+    requests.push({ repeatCell: { range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
+      cell: { userEnteredFormat: { backgroundColor: HEAD_FILL, textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 } },
+                                   verticalAlignment: 'MIDDLE', wrapStrategy: 'WRAP' } },
+      fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,wrapStrategy)' } });
+    requests.push({ repeatCell: { range: { sheetId, startRowIndex: 1, startColumnIndex: 0, endColumnIndex: 1 },
+      cell: { userEnteredFormat: { backgroundColor: TITLE_FILL, textFormat: { bold: true } } },
+      fields: 'userEnteredFormat(backgroundColor,textFormat.bold)' } });
+    requests.push({ updateSheetProperties: { properties: { sheetId, gridProperties: { frozenRowCount: 1 } }, fields: 'gridProperties.frozenRowCount' } });
+    requests.push({ autoResizeDimensions: { dimensions: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: 26 } } });
+  }
+  if (!requests.length) return 0;
+  await api(':batchUpdate', { method: 'POST', body: JSON.stringify({ requests }) });
+  return requests.length / 4;
 }
 
 /** Creates any of `wanted` that is missing. Returns the ones it made. */

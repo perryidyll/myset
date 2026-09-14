@@ -158,3 +158,6 @@ node --import ./test/register.mjs test/foundations.mjs
 echo
 echo "── email + password, the standard door ──"
 node --import ./test/register.mjs test/password.mjs
+echo
+echo "── current show stats: the snapshot ──"
+node --import ./test/register.mjs test/metrics.mjs

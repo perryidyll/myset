@@ -72,6 +72,7 @@ function stubGoogle() {
     if (u.includes(':batchUpdate')) {
       for (const r of payload.requests || []) {
         if (r.addSheet) SHEET.tabs.set(r.addSheet.properties.title, []);
+        if (r.repeatCell) (SHEET.styled ||= []).push(r.repeatCell);
       }
       return R({ replies: [] });
     }
@@ -84,7 +85,7 @@ function stubGoogle() {
     if (init.method === 'PUT') { SHEET.tabs.set(tab, payload.values || []); return R({}); }
     if (u.includes('fields=sheets.properties')) {
       return R({ properties: { title: SHEET.title },
-                 sheets: [...SHEET.tabs.keys()].map((t) => ({ properties: { title: t } })) });
+                 sheets: [...SHEET.tabs.keys()].map((t, i) => ({ properties: { title: t, sheetId: 100 + i } })) });
     }
     // a values GET — used to decide whether a log tab needs its header
     const rows = SHEET.tabs.get(tab) || [];
@@ -176,6 +177,16 @@ const r1 = await W.syncSheet();
 ok('the sync runs', r1.ok, r1);
 eq('and made all nine tabs', (r1.made || []).length, 9);
 ok('the token was a real signed JWT', (SHEET.lastJwt || '').split('.').length === 3);
+
+console.log('\nTHE LOOK  (the founder, 2026-09-14: bold, colour-filled title cells)');
+{
+  const { HEAD_FILL, TITLE_FILL } = await import('../netlify/functions/_sheets.mjs');
+  const heads = (SHEET.styled || []).filter((r) => r.range.startRowIndex === 0 && r.range.endRowIndex === 1);
+  const titles = (SHEET.styled || []).filter((r) => r.range.startRowIndex === 1 && r.range.endColumnIndex === 1);
+  ok('every tab got its header row styled once per sync', heads.length >= 9, heads.length);
+  eq('white bold on the brand pink-orange', [heads[0].cell.userEnteredFormat.backgroundColor, heads[0].cell.userEnteredFormat.textFormat.bold], [HEAD_FILL, true]);
+  eq('and the row-title column bold on a pale tint', [titles[0].cell.userEnteredFormat.backgroundColor, titles[0].cell.userEnteredFormat.textFormat.bold], [TITLE_FILL, true]);
+}
 
 console.log('\nARTISTS  — the marketing tab');
 eq('one row per artist', bodyOf('Artists').length, 2);
