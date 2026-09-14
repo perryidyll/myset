@@ -153,7 +153,9 @@ export const defaultProfile = () => ({
   management: '',
   managementUrl: '',
   bio: '',
-  photo: '/img/band-sm.jpg',   // 800px wide: a phone never draws it bigger, and it is a third of the bytes
+  photo: '',             // the cover. Empty until the artist adds one: the page draws a plain
+                         // brand tile, never somebody else's band (a stock photo of one act
+                         // once opened every new account's page as that act)
   avatar: '',            // the big square portrait
   photos: [],            // up to MAX_PHOTOS small ones clustered around it
   links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', bandcamp: '', gofundme: '', website: '' },
@@ -209,7 +211,7 @@ export function normProfile(p) {
   out.management = clean(out.management, 120);
   out.managementUrl = safeLink('website', out.managementUrl);
   out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 700);    // newlines kept
-  out.photo = String(out.photo == null ? d.photo : out.photo).slice(0, 300);
+  out.photo = String(out.photo || '').slice(0, 300);
   out.avatar = String(out.avatar || '').slice(0, 300);
   /* Positional, for the same reason as the venue's (see normVenue): `.filter`
      compacted the array, so clearing photo 1 slid photo 2 into its slot. Only

@@ -221,6 +221,7 @@ a{color:inherit;text-decoration:none}
 .big:active{transform:scale(.97)}
 .big.alt{background:var(--surface);color:var(--ink);box-shadow:var(--sh-1)}
 .big:disabled{opacity:.42;transform:none}
+.big.mid{justify-content:center;text-align:center}   /* one word, centred: "Save profile" */
 .bigplay{padding:20px 22px;font-size:17px;line-height:1.32;align-items:flex-start;margin-bottom:0}
 .bigplay>span:first-child{flex:0 0 auto;padding-top:1px}
 .setlist-tools{display:flex;gap:9px;align-items:stretch}
@@ -800,7 +801,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=8b319dc4"></script>
+<script src="/studio.js?v=240acf2c"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

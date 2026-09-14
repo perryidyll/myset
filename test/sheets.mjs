@@ -532,6 +532,13 @@ eq('a band has no last name and keeps its whole name', normProfile({ first: 'The
 eq('a profile saved before the split keeps its name', normProfile({ name: 'Perry Idyll' }).name, 'Perry Idyll');
 eq('the word for a band is the band name', firstOf({ first: 'The Weekend Warriors', name: 'The Weekend Warriors' }), 'The Weekend Warriors');
 eq('the word for an artist without the split is the first word', firstOf({ name: 'Perry Idyll' }), 'Perry');
+
+/* NOBODY ELSE'S BAND (decision 0078, INVARIANT 0fy): a new profile has no photo
+   at all — the page draws a brand tile and the band's initial. The stock band
+   photo was every new account's cover for a day; it is nobody's default now. */
+eq('a new profile has no cover', normProfile({ first: 'The Last Cigarettes' }).photo, '');
+eq('a new profile has no portrait', normProfile({ first: 'The Last Cigarettes' }).avatar, '');
+eq('a stored cover is kept', normProfile({ first: 'X', photo: '/img/band.jpg' }).photo, '/img/band.jpg');
 eq('and nobody at all is the fallback', firstOf(null, 'the artist'), 'the artist');
 /* THE TOP VIDEO: one hero at most, and it leads the list. */
 const yt = (id, hero) => ({ mid: 'm' + id, provider: 'youtube', type: 'video', id: 'v' + id, hero });
