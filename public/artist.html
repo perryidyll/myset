@@ -799,7 +799,7 @@ function rsvpRemember(k,on){try{const m=rsvpMap();if(on)m[k]=1;else delete m[k];
 /* The tap flips the button at once and asks the server; the reply is the truth
    (on and the new count), and a failed request puts the button back and says so —
    the button is never left in a state the server did not confirm. Every paint goes
-   to whichever button carries the key NOW, not the one tapped: the fresh diary can
+   to whichever button carries the key NOW, not the one tapped: the fresh gig list can
    land and redraw the rows while the request is out (the cached paint came first),
    and a redraw reads its pressed state from memory — so memory is written at the
    optimistic paint too, and put back with the button if the server says no. */
@@ -969,8 +969,8 @@ function attachDrag(sh){
 }
 
 /* THE CALENDAR (the founder, 2026-09-14): the Studio's Gigs-tab month, on the
-   page, with a dot on every night that has a show. The dots come from the diary
-   the page already fetched, and once per open from the full 120-day diary (n=60)
+   page, with a dot on every night that has a show. The dots come from the gig list
+   the page already fetched, and once per open from the full 120-day gig list (n=60)
    so a busy artist's fourth month is not blank because the list only drew 24.
    A show sits on ITS date string — YYYY-MM-DD, the artist's own day — never on
    new Date(date), which shifts a night across midnight for a fan in another

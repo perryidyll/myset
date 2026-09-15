@@ -41,21 +41,21 @@ export default async (req) => {
     return jsonCached({ ok: true, src: MARK, countries }, 60);   // the front door's picker, one run a minute
   }
 
-  /* ---- one artist's diary ---- */
+  /* ---- one artist's gig list ---- */
   /* `?a=` present but EMPTY is the founding page, exactly as publicArtist reads
-     it — the bare /vote.html has no slug in its path and still needs the diary
+     it — the bare /vote.html has no slug in its path and still needs the gig list
      for its between-shows countdown (decision 0039). Absent means the city feed. */
   const slug = url.searchParams.get('a');
   if (slug !== null) {
     const aid = await publicArtist(req);
     if (!aid) return bad('unknown artist', 404);
-    // the cap is HORIZON_DAYS so an RSVP is never taken on a night the diary cannot show
+    // the cap is HORIZON_DAYS so an RSVP is never taken on a night the gig list cannot show
     const days = Math.max(1, Math.min(HORIZON_DAYS, parseInt(url.searchParams.get('days'), 10) || 60));
     /* `n` is how many nights the caller will actually draw. The artist page shows
        24 and the vote page wants only the next one; a weekly residency over 90
        days is 60 rows at ~750 bytes each, 44KB on bar Wi-Fi for three visible rows. */
     const n = Math.max(1, Math.min(60, parseInt(url.searchParams.get('n'), 10) || 60));
-    // the diary and its RSVP counts together: one hop, not two
+    // the gig list and its RSVP counts together: one hop, not two
     const [events, rs] = await Promise.all([readEvents(aid), readRsvp(aid)]);
     const counts = rsvpCounts(rs);
     const tz = guessTz(events);
@@ -63,7 +63,7 @@ export default async (req) => {
     const occ = occurrencesFor(events, addDays(from, -1), addDays(from, days))
       .filter((o) => o.endsAt > Date.now())
       .slice(0, n);
-    // thirty seconds at the edge — a diary changes by the week, `live` flips by the hour
+    // thirty seconds at the edge — a gig list changes by the week, `live` flips by the hour
     return jsonCached({ ok: true, src: MARK, artistId: aid, gigs: occ.map((o) => shape(o, counts)) }, 30);
   }
 

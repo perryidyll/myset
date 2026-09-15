@@ -326,7 +326,7 @@ function profileFixture(st) {
 /* the tour poster (decision 0075): what the Studio set in this process, else the ?tour=1 state's picture, else none */
 const TOUR_CAPS = { pdf: 3145728, image: 921600 };
 const tourOf = (st) => S.TOUR !== undefined ? S.TOUR : st.tour ? { url: '/img/band.jpg', type: 'jpeg', link: 'https://tickets.example/tour' } : null;
-/* the artist's diary (events.mjs ?a=): one gig tonight at The Room, one next week */
+/* the artist's gig list (events.mjs ?a=): one gig tonight at The Room, one next week */
 const day = (n) => new Date(NOW + n * 864e5).toISOString().slice(0, 10);
 const gig = (n, eventId) => ({ eventId, date: day(n), time: '20:00', endTime: '23:00', tz: 'Australia/Melbourne', startsAt: NOW + n * 864e5 - (n ? 0 : 3600e3), endsAt: NOW + n * 864e5 + 2 * 3600e3,
   venue: NAME.venue, city: 'Melbourne', country: 'Australia', address: '1 Demo St', maps: null, note: '', ticketUrl: '', repeating: false, live: n === 0, rsvp: n ? 4 : 12 });

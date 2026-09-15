@@ -379,7 +379,7 @@ If you are about to violate one, stop and say so rather than working around it.
     `eventId|date`) holds a 16-hex prefix of the hashed device id, never the id;
     it is read in the same hop as the owner's events, never one read per row;
     and a night that the owner has not listed, that has finished, or that lies
-    past the diary's own horizon (`HORIZON_DAYS`, the one cap both read) is a
+    past the gig list's own horizon (`HORIZON_DAYS`, the one cap both read) is a
     404 — a count on a gig nobody listed is a number somebody would eventually
     depend on, and a repeating rule would otherwise grow the document a night
     per anonymous POST. The key is in `keysFor` and `keysForVenue` (0cy), so
@@ -997,7 +997,7 @@ If you are about to violate one, stop and say so rather than working around it.
     **distinctive** — two words, or eight characters. Without that rule a venue
     could register itself as "Beach" and claim every Beach Bar in town. An exact
     match always counts, however short. Consequence worth keeping: a venue signing
-    up today already has its whole diary, with no backfill and no job to run.
+    up today already has its whole gig list, with no backfill and no job to run.
 
 0z. **A page that isn't verified says so, and loses nothing else.** Asking for proof
     before a page exists means no pages exist. Every venue page works fully; the
