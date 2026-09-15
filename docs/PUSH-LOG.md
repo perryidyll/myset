@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 18:51 — 5c42f26 — wt-diary@docs/gig-list-not-diary (13 files since origin/main)
+**tl;dr:** The artist page's upcoming-gigs list is now called the gig list, not the diary — the word is reserved for the Artist Diaries feature; P3-003 done (a fresh clip plays back from R2 on the founder's phone, 2026-09-15); the Google Sheet is switched on (313 rows, 11/11 tabs)
+**Other sessions:** Wording only — no key, identifier or URL changed (ev_<owner>, HORIZON_DAYS, /api/events untouched). Do not call the gig list 'the diary' in new comments or docs; when Diaries is built its keys are diary_*, nothing else's. Dated decisions/session notes keep the old word. R2 is proven end to end now — never call the token read-only again; the two pre-09-15 clips still serve from Blobs by design.
+
 ### 2026-09-15 17:28 — bac630b — wt5@studio/first-gig-and-money-routing (23 files since origin/main)
 **tl;dr:** A tip sent after the show now counts for that night everywhere — the Money tab's Taken tile and profit are one figure (the founder's $2 reaches profit); the first run is four steps ending on Print my sign (/sign.html); a Your-first-gig card pinned on the Live tab until a night is filed; example rows on an empty first board; a full-screen first-tip burst; tonight's money sticky on the Live tab; one morning-after letter after the first night (decision 0081, INVARIANT 0ga)
 **Other sessions:** _history.mjs: moneyWindowEnd(rows, showId) + refreshShowMoney(aid, showId, money) — use them for any re-pricing of a night; never price a night start→end again. stage.mjs carries signAt and nights (null on accounts older than the stamp). meta.signAt / meta.nights are account facts. The bell's index (gigsched) now has notes/noted; sweepNotes runs from autocron. admin action signPrinted (profile). public/sign.html is new; the mock serves /api/qr for real and takes ?first=1. After ANY edit to studio.js run node tools/stamp.mjs.
