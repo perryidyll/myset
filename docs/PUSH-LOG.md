@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 12:59 — 492d2f4 — wt2@docs/stripe-key-restricted (2 files since origin/main)
+**tl;dr:** Docs only: PER-007 closed — STRIPE_SECRET_KEY is now a restricted key (13 permissions, proven by the founder's $1 tip); statement descriptor IDYLL.MYSET; UX-050 recorded [skip ci]
+**Other sessions:** If an artist's Start with Stripe or a fan purchase on an artist page fails after 15 Sep, read the error log first — a missing Connect permission on the restricted key names itself there. The full permission table is in PER-007.
+
 ### 2026-09-15 12:54 — 27bb0ae — wt2@ux/tip-custom-amount (3 files since origin/main)
 **tl;dr:** Tip sheet: tapping 'Or another amount' lights that field orange, dims the $5/$10/$20 tiles, and the Continue button reads the typed amount (both the voting page and the community page; also the paid-replay custom field)
 **Other sessions:** customAmt(inp,...) in vote.html and community.html; app.css .inp.on is the lit state. The amount logic in checkout()/sendTip() is unchanged: a typed value wins, else the tile. No new copy strings beyond ' · $N' on the button.

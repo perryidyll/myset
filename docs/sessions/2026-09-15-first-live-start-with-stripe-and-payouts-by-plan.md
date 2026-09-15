@@ -69,3 +69,10 @@ Continuation of the payments session (`2026-09-12-payments-connect-subscriptions
   page and record the tick.
 - Statement descriptor: say `MYSET.VIP` or `Idyll Enterprises`.
 - First artist who connects: read their Payouts schedule in Stripe → Connected accounts.
+
+## Later the same day
+
+- **The key is restricted (PER-007).** The founder's dashboard showed four standard keys and no restricted one; the key in production (`…y4mF`, created 8 Sep) was a full key. An agent filled the *Create restricted API key* form in the in-app browser — 13 permissions matched to the 25 calls in `netlify/functions/` — and stopped at *Create*; the founder pressed it and pasted the `rk_live_` into Netlify (the value never passed through an agent). Rebuild via `netlify api createSiteBuild` → `479dd91` live 05:26 UTC. Proof: `tools/prod.py` healthy, no error-log bucket for the hour, and the founder's real **$1 tip succeeded** on the new key. He then deleted the two old full keys; the rolled `…8P29` expires by itself.
+- **Statement descriptor** → `IDYLL.MYSET` (Stripe refused `MYSET.VIP`: must resemble the legal name or the business URL). On the $1 charge already. The founder's Revolut push still read *Idyll Mastery* — the bank's cached merchant name, not a Stripe setting; every Stripe name field reads Idyll Enterprises.
+- **UX-050** — the tip sheet's *Or another amount* field lights like a tile, the presets dim, the button names the amount. `98e2320` (PR #68).
+- Found in passing: Stripe shows an *Action required — we need some information for your account* banner (a task for the founder, not opened); `node_modules` is a tracked symlink to itself on `main` since `ffa6cfc` (a fresh worktree cannot resolve the two dependencies without pointing the link elsewhere).
