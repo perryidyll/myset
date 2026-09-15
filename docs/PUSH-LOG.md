@@ -10,6 +10,14 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 19:47 — 0e4c2f8 — landing-wt@qr-copy (2 files since origin/main)
+**tl;dr:** About page: 'Requests cost votes', the tip-button line and the profile-page line are now orange; 'gig' -> 'show' in step 5's profile description
+**Other sessions:** Copy-only, same PR as the QR-code line change (about.html:479-533)
+
+### 2026-09-15 19:41 — 35f8806 — landing-wt@qr-copy (1 files since origin/main)
+**tl;dr:** How-it-works step 1: 'One QR code' and a clearer print/place line (pack on tables and bars per venue)
+**Other sessions:** Copy-only at about.html:479-480
+
 ### 2026-09-15 19:27 — 3597a3f — landing-wt@plates (1 files since origin/main)
 **tl;dr:** About page: the pain line now says everyone's staring at their plates (was phones)
 **Other sessions:** Copy-only change at about.html:423; the picture alt already said plates, so nothing else to touch
