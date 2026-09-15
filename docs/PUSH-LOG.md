@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 12:54 — 27bb0ae — wt2@ux/tip-custom-amount (3 files since origin/main)
+**tl;dr:** Tip sheet: tapping 'Or another amount' lights that field orange, dims the $5/$10/$20 tiles, and the Continue button reads the typed amount (both the voting page and the community page; also the paid-replay custom field)
+**Other sessions:** customAmt(inp,...) in vote.html and community.html; app.css .inp.on is the lit state. The amount logic in checkout()/sendTip() is unchanged: a typed value wins, else the tile. No new copy strings beyond ' · $N' on the button.
+
 ### 2026-09-15 12:35 — 3710953 — landing-wt@venues-orange (1 files since origin/main)
 **tl;dr:** For venues: the bold lead-ins on the venue checklist are now orange, like shop and money
 **Other sessions:** Orange vrow rule is one line: #shop/#money/#venues .vrow b in about.html — add ids there, don't duplicate
