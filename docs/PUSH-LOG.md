@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 12:35 — 3710953 — landing-wt@venues-orange (1 files since origin/main)
+**tl;dr:** For venues: the bold lead-ins on the venue checklist are now orange, like shop and money
+**Other sessions:** Orange vrow rule is one line: #shop/#money/#venues .vrow b in about.html — add ids there, don't duplicate
+
 ### 2026-09-15 11:59 — b778cd7 — wt2@pay/connect-refusal-message (14 files since origin/main)
 **tl;dr:** Hobbyists are paid out every Monday, paid plans daily (decision 0080) — the plan cards say so; and an artist whose Stripe account can't be made reads one MySet sentence instead of Stripe's text (the platform-profile gate that failed the first live Start with Stripe on 15 Sep is acknowledged by the founder)
 **Other sessions:** _connect.mjs syncPayoutSchedule(aid): call it after ANY new code path that writes a plan, or the schedule lags until the next Money-tab look; connect_<owner>.payout is the memo. connectStatus now returns payout + payoutLine. stripe-fake has accounts.update and state.refuse. PR #20 (12 Sep docs) is superseded by this — its session note rides here. NOTE: node_modules is a tracked symlink pointing at ITSELF on main (since ffa6cfc) — a fresh worktree cannot resolve stripe/@netlify/blobs; nobody has fixed it yet.
