@@ -7,7 +7,7 @@ sources:
   - netlify/functions/admin.mjs (planGet, planSync, planCheckout, planFinish, planChange, planRetainOffered, planRetain, planInvoices, planPortal, promoRedeem)
   - MYSET-MASTER-OVERVIEW.md §2.1–2.8
   - ACCOUNTS.md §3 (Plans and billing; The Studios), §4, §5, §7
-  - docs/decisions/0003, 0004, 0005, 0037
+  - docs/decisions/0003, 0004, 0005, 0037, 0080
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps)
 verified: code read 2026-09-12 (_billing.mjs startCheckout/changePlan/handleBillingEvent/billingStatus)
@@ -35,10 +35,11 @@ The ladder (prices, cuts, caps) is generated into overview §2.1. Two rules shap
 | p12 | Card, invoices and receipts | link | Person | Artist R | Stripe | `portalLink` → Stripe's Customer Portal (the founder saved the default configuration in live mode once — the API refuses until one exists). The return URL carries `?billing=back` so the Studio re-reads Stripe on the spot instead of telling someone who just fixed their card that it failed for six more hours. `invoices.list` on demand only — never on page load. `src: _billing.mjs portalLink, invoices; ACCOUNTS.md §5, §7` |
 | p13 | Read the plan in the Studio | notification | Automation | MySet server R · Artist I | Netlify | `billingStatus` on every Studio boot: `{subscribed, status, plan, renewsAt, cancelAtPeriodEnd, retentionUsed, pastDue, graceUntil, portal}`. Top right: *Upgrade ↗* on free; a green tag with the plan's name when paid. `src: _billing.mjs billingStatus; ACCOUNTS.md §3` |
 | p14 | Cancel for deletion | payment | Automation | MySet server R | Stripe | `cancelForDeletion` cancels immediately — used only by account delete. → *Artist lifecycle → Leaving*. `src: _billing.mjs 293; ACCOUNTS.md §6.6` |
+| p15 | The payout schedule follows the plan | database | Automation | MySet server R · Stripe R · Artist I | Stripe | Decision 0080 (2026-09-15): a paid plan is paid out **daily**; Hobbyist **weekly, on Monday** — most gigs are Friday to Sunday, so the weekend's money starts the week in the bank. The schedule is set on the artist's Express account at creation and `syncPayoutSchedule` re-checks it after every plan write (p07, a promo comp, a referral reward) and every read of the account (`syncFromStripe`); `connect_<owner>.payout` remembers what Stripe was last told, so the check is free until the plan moves. A lapsed plan is caught at the next Money-tab look — a day late, never wrong money. The plan cards say it (*Paid out weekly* / *Paid out daily*) and the Get-paid card names the current one. Stripe's $2 per active account per month is unchanged; only the 25¢ per payout shrinks. `src: _connect.mjs payoutScheduleFor, syncPayoutSchedule; _billing.mjs syncSubscription; _plan.mjs payoutFollowsPlan; studio.js TIER_COPY; decision 0080` |
 
 ## Connections
 
-p01 → p02 —owner→ p03 —not subscribed→ p04 → p05 → p06 → p07 → p08; p02 —member→ *403*; p03 —subscribed→ p09; p09 —to free→ p10 → p07; p09 —paid ↔ paid→ p07; p11 → p07; p07 → p13; p12 → p07 (on `?billing=back`); p14 → p07.
+p01 → p02 —owner→ p03 —not subscribed→ p04 → p05 → p06 → p07 → p08; p02 —member→ *403*; p03 —subscribed→ p09; p09 —to free→ p10 → p07; p09 —paid ↔ paid→ p07; p07 → p15; p11 → p07; p07 → p13; p12 → p07 (on `?billing=back`); p14 → p07.
 
 ## The one-time Stripe setup behind this section (founder)
 

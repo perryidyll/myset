@@ -546,7 +546,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 268 (last: 0fn) |
 | Test suites | 51 |
 | Assertions | **3,214**, 0 failing, last run 2026-09-14 |
-| Decision records | 79 |
+| Decision records | 80 |
 
 ### Feature flags in force
 

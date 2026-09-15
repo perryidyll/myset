@@ -92,11 +92,61 @@ eq('and no account was created', __stripe.accounts.size, 0);
 const badCountry = await AS(TA, 'payStart', { country: 'Thailand' });
 eq('a name is not a country code either', badCountry.status, 428);
 
+/* 2026-09-14, the first live press of Start with Stripe: Stripe refused with
+   "Please review the responsibilities of managing losses for connected accounts at
+   https://dashboard.stripe.com/settings/connect/platform-profile." — a dashboard
+   acknowledgement only the founder can give. The artist got that text, URL and
+   all, on step 4 of their first run. The refusal must reach the founder (error
+   log) and the artist must get a sentence they can act on. */
+const STRIPE_REFUSAL = 'Please review the responsibilities of managing losses for connected accounts at https://dashboard.stripe.com/settings/connect/platform-profile.';
+__stripe.refuse = STRIPE_REFUSAL;
+const refused = await AS(TA, 'payStart', { country: 'US' });
+eq('a platform-side refusal is not a success', refused.ok, false);
+eq('the artist reads MySet\'s sentence, not Stripe\'s', refused.error, C.REFUSED);
+ok('...and never a dashboard URL', !/stripe\.com|platform-profile/.test(refused.error || ''), refused.error);
+eq('no half-made account is remembered', (await C.readConnect(ana.artistId)).acct || null, null);
+{
+  const { recentErrs } = await import('../netlify/functions/_errlog.mjs');
+  const row = (await recentErrs(1)).find((r) => r.where === 'connect.create');
+  ok('the real reason is in the error log for the founder', !!row && row.msg === STRIPE_REFUSAL, row);
+  eq('...against the artist', row && row.aid, ana.artistId);
+}
+__stripe.refuse = '';   // the founder acknowledges; the same press now goes through
+
 const start = await AS(TA, 'payStart', { country: 'US' });
 ok('onboarding starts', start.ok && /connect\.stripe\.test\/onboard/.test(start.url || ''), start);
 const acct = (lastCall('accounts.create') && __stripe.accounts.size) ? [...__stripe.accounts.keys()][0] : '';
 ok('an Express account was created', !!acct, acct);
 eq('...as Express', lastCall('accounts.create').args.type, 'express');
+
+/* Decision 0080: a Hobbyist is paid out weekly, on Monday — most gigs are Friday
+   to Sunday, so the weekend's money starts the week in the bank. A paid plan is
+   paid out daily. The schedule sits on the artist's Stripe account, so it must be
+   right at creation and must FOLLOW the plan afterwards. */
+console.log('\nWHEN THE MONEY LANDS FOLLOWS THE PLAN');
+eq('a Hobbyist\'s account is made with weekly payouts, on Monday',
+   lastCall('accounts.create').args.settings.payouts.schedule, { interval: 'weekly', weekly_anchor: 'monday' });
+{
+  const st0 = (await AS(TA, 'payStatus', {})).pay;
+  eq('and the Studio says so', [st0.payout, st0.payoutLine], ['weekly:monday', C.payoutLine('weekly:monday')]);
+  ok('...in words a Hobbyist can act on', /every Monday/.test(st0.payoutLine) && /paid plans/.test(st0.payoutLine), st0.payoutLine);
+  const before = __stripe.calls.length;
+  await AS(TA, 'payStatus', { refresh: 1 });
+  ok('a refresh with no plan change does not touch the schedule',
+     !__stripe.calls.slice(before).some((c) => c.method === 'accounts.update'));
+  await mutateArtists((r) => { r.byId[ana.artistId].plan = 'plus'; r.byId[ana.artistId].planUntil = Date.now() + 30 * 86400000; return true; });
+  const up = await C.syncPayoutSchedule(ana.artistId);
+  eq('upgrading to Bar Star switches her to daily', [up.ok, up.changed, up.payout], [true, true, 'daily']);
+  eq('...on Stripe', lastCall('accounts.update').args.settings.payouts.schedule, { interval: 'daily' });
+  eq('...and the Studio says daily', (await AS(TA, 'payStatus', {})).pay.payoutLine, 'Paid out daily.');
+  eq('asked again, nothing to do', (await C.syncPayoutSchedule(ana.artistId)).changed, false);
+  await mutateArtists((r) => { r.byId[ana.artistId].plan = 'plus'; r.byId[ana.artistId].planUntil = Date.now() - 1000; return true; });
+  await AS(TA, 'payStatus', { refresh: 1 });
+  eq('when the plan lapses, the next look at the Money tab puts her back to Monday',
+     lastCall('accounts.update').args.settings.payouts.schedule, { interval: 'weekly', weekly_anchor: 'monday' });
+  await mutateArtists((r) => { r.byId[ana.artistId].plan = 'free'; delete r.byId[ana.artistId].planUntil; return true; });
+  await C.syncPayoutSchedule(ana.artistId);
+}
 ok('tagged with the artist id so a webhook can find her',
    lastCall('accounts.create').args.metadata.myset_artist === ana.artistId);
 ok('the onboarding link returns to the Studio',

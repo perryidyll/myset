@@ -802,7 +802,11 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
+<<<<<<< HEAD
 <script src="/studio.js?v=17f902b2"></script>
+=======
+<script src="/studio.js?v=0f7e3531"></script>
+>>>>>>> c5fb835 (Payouts follow the plan — Hobbyist every Monday, paid plans daily; a Stripe refusal shows the artist one sentence (decision 0078))
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

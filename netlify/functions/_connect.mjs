@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { casDoc, readDoc, mutateShow } from './_lib.mjs';
+import { logErr } from './_errlog.mjs';
 import { planForArtist, PLANS, isPlatformOwner } from './_plan.mjs';
 import { VENUE_PLANS } from './_venues.mjs';
 
@@ -141,12 +142,16 @@ const indexAccount = (acct, aid) =>
 /* ---------- onboarding ----------
    Express accounts: Stripe hosts the whole KYC flow, which is the difference
    between "paste your bank details" and building identity verification. */
+/** What the Studio shows when Stripe refuses; the real reason goes to the error log. */
+export const REFUSED = 'Stripe could not set up payments just now — MySet has been told. Try again later.';
+
 export async function ensureAccount(aid, email, country) {
   const stripe = stripeClient();
   if (!stripe) return { ok: false, error: 'payments-not-configured' };
   const existing = await readConnect(aid);
   if (existing.acct) return { ok: true, acct: existing.acct, existing: true };
 
+  const want = payoutScheduleFor(await planOfOwner(aid));
   let acct;
   try {
     acct = await stripe.accounts.create({
@@ -158,16 +163,65 @@ export async function ensureAccount(aid, email, country) {
       capabilities: { card_payments: { requested: true }, transfers: { requested: true } },
       /* The fee is taken from the artist's balance, so the artist is the one who
          pays Stripe's processing fee too. Said out loud in the Studio. */
-      settings: { payouts: { schedule: { interval: 'daily' } } },
+      settings: { payouts: { schedule: want } },
       metadata: { myset_owner: aid, myset_kind: isVenueOwner(aid) ? 'venue' : 'artist',
                   ...(isVenueOwner(aid) ? {} : { myset_artist: aid }) },
     });
   } catch (e) {
-    return { ok: false, error: e.message || 'could not create account' };
+    /* Stripe's refusal is about the PLATFORM more often than the artist — on
+       2026-09-14 the first live press failed with "Please review the responsibilities
+       of managing losses … /settings/connect/platform-profile", a dashboard
+       acknowledgement only the founder can give. The artist cannot act on that
+       text and must not be shown a Stripe URL; the founder reads the real message
+       in the error log. */
+    await logErr('connect.create', e, { aid });
+    return { ok: false, error: REFUSED };
   }
-  await mutateConnect(aid, (c) => { c.acct = acct.id; c.at = Date.now(); return true; });
+  await mutateConnect(aid, (c) => { c.acct = acct.id; c.payout = payoutTag(want); c.at = Date.now(); return true; });
   await indexAccount(acct.id, aid);
   return { ok: true, acct: acct.id };
+}
+
+/* ---------- when the money lands ----------
+   Decision 0080 (2026-09-15): a paid plan is paid out DAILY; Hobbyist WEEKLY, on
+   Monday — most gigs are Friday to Sunday, so the weekend's money is in the bank
+   to start the week. The schedule lives on the artist's own Stripe account, so it
+   is set when the account is made and re-checked whenever the plan or the account
+   is looked at. `c.payout` remembers what Stripe was last told, so the re-check
+   costs nothing while nothing has changed and one call when it has. Venues follow
+   the same rule by plan id. Stripe's $2-per-active-account fee is unchanged by
+   this; only the 25¢-per-payout fee shrinks. The reason is the plan card, not the
+   fee: "paid the next day" is something a paid plan gives. */
+export const PAYOUT_WEEKLY_ANCHOR = 'monday';
+export const payoutScheduleFor = (plan) =>
+  plan === 'free' ? { interval: 'weekly', weekly_anchor: PAYOUT_WEEKLY_ANCHOR } : { interval: 'daily' };
+export const payoutTag = (s) => (s.interval === 'weekly' ? `weekly:${s.weekly_anchor}` : 'daily');
+/** What the Studio says under the Get-paid card. */
+export const payoutLine = (tag) =>
+  tag === 'daily' ? 'Paid out daily.' : 'Paid out every Monday — paid plans are paid out daily.';
+
+async function planOfOwner(aid) {
+  if (isVenueOwner(aid)) {
+    const { venueById, venuePlanOf } = await import('./_venues.mjs');
+    return venuePlanOf(await venueById(aid.slice(2)));
+  }
+  return (await planForArtist(aid)).plan;
+}
+
+/** Bring the account's payout schedule in line with the plan. Best-effort at every
+ *  call site: a schedule that lags a day is not a broken gig. */
+export async function syncPayoutSchedule(aid) {
+  const stripe = stripeClient();
+  if (!stripe) return { ok: false, error: 'payments-not-configured' };
+  const c = await readConnect(aid);
+  if (!c.acct) return { ok: true, payout: '' };
+  const want = payoutScheduleFor(await planOfOwner(aid));
+  const tag = payoutTag(want);
+  if (c.payout === tag) return { ok: true, payout: tag, changed: false };
+  try { await stripe.accounts.update(c.acct, { settings: { payouts: { schedule: want } } }); }
+  catch (e) { await logErr('connect.payout', e, { aid }); return { ok: false, error: REFUSED }; }
+  await mutateConnect(aid, (d) => { d.payout = tag; return true; });
+  return { ok: true, payout: tag, changed: true };
 }
 
 /** A fresh onboarding link. They expire quickly, so this is generated on demand. */
@@ -185,7 +239,8 @@ export async function onboardingLink(aid, origin, back = '/studio') {
     });
     return { ok: true, url: link.url };
   } catch (e) {
-    return { ok: false, error: e.message || 'could not start onboarding' };
+    await logErr('connect.link', e, { aid });
+    return { ok: false, error: REFUSED };
   }
 }
 
@@ -273,6 +328,7 @@ export async function syncFromStripe(aid) {
   await mutateConnect(aid, (d) => { Object.assign(d, next, { at: Date.now() }); return true; });
   await mirrorToShow(aid, { ...c, ...next });
   await indexAccount(c.acct, aid);
+  await syncPayoutSchedule(aid).catch(() => {});
   return { ok: true, connect: { ...c, ...next } };
 }
 
@@ -303,11 +359,8 @@ export async function mirrorToShow(owner, c) {
 export async function connectStatus(aid) {
   const c = await readConnect(aid);
   const kind = isVenueOwner(aid) ? 'venue' : 'artist';
-  let plan = 'free';
-  if (kind === 'venue') {
-    const { venueById, venuePlanOf } = await import('./_venues.mjs');
-    plan = venuePlanOf(await venueById(aid.slice(2)));
-  } else plan = (await planForArtist(aid)).plan;
+  const plan = await planOfOwner(aid);
+  const payout = c.acct ? (c.payout || payoutTag(payoutScheduleFor(plan))) : '';
   /* The platform-owner account is deliberately exempt even if it later connects
      a payout account. Keep the customer-facing number identical to the charge. */
   const cut = isPlatformOwner(aid) ? 0 : cutOf(plan, kind);
@@ -323,6 +376,7 @@ export async function connectStatus(aid) {
     country: c.country || '',
     plan,
     cutPct: Math.round(cut * 1000) / 10,
+    payout, payoutLine: payout ? payoutLine(payout) : '',
     /* Not decoration. An artist who reads "10%" and then sees a $5 pack land as
        ~$4.05 will think they have been lied to. Direct charges put Stripe's fee on
        them, and they should hear it from us first. */
