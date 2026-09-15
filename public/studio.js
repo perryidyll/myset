@@ -4203,11 +4203,8 @@ const TIER_COPY={
     ['Verification badge',' – after credentials are approved'],
     ['Business dashboard',' – log your pay, band splits, cash tips, merch, costs and hours for every show, see your profit and your real $/hour, and print a branded report for your accountant'],
     ['Shows that start and end themselves',' – from your calendar'],
-<<<<<<< HEAD
     ['Show the room your numbers',' – tonight’s votes, voters and tips on every phone’s vote page, if you choose'],
-=======
     ['Paid out daily',' – last night’s money is in your bank the next day'],
->>>>>>> c5fb835 (Payouts follow the plan — Hobbyist every Monday, paid plans daily; a Stripe refusal shows the artist one sentence (decision 0078))
     ['<span class="fee">Transaction fee</span>',' – 10% on money taken through the app']]},
   pro:{name:'Rock Star',price:'$20 / month',items:[
     ['Everything in Bar Star',''],
