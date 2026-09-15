@@ -76,3 +76,15 @@ Continuation of the payments session (`2026-09-12-payments-connect-subscriptions
 - **Statement descriptor** → `IDYLL.MYSET` (Stripe refused `MYSET.VIP`: must resemble the legal name or the business URL). On the $1 charge already. The founder's Revolut push still read *Idyll Mastery* — the bank's cached merchant name, not a Stripe setting; every Stripe name field reads Idyll Enterprises.
 - **UX-050** — the tip sheet's *Or another amount* field lights like a tile, the presets dim, the button names the amount. `98e2320` (PR #68).
 - Found in passing: Stripe shows an *Action required — we need some information for your account* banner (a task for the founder, not opened); `node_modules` is a tracked symlink to itself on `main` since `ffa6cfc` (a fresh worktree cannot resolve the two dependencies without pointing the link elsewhere).
+
+## Late: the SSD mirror
+
+The founder plugged the SSD in after a while and asked for everything to be mirrored. `~/Docs/Project Handoffs/mirror-to-ssd.sh` had three holes, fixed tonight:
+
+- `Followthrough` (the second product, new since the script) was not in it — now mirrored, 344 files, equal to the Mac.
+- Only the iOhm project's Claude memory was mirrored; the MySet memory (where this session writes) never had been. Now every `~/.claude/projects/*/memory` goes under `_claude-memory/<project>/` (scratch-workspace projects skipped).
+- **The MySet copy was three days stale**, because the shared checkout at `~/Docs/MySet` is stuck on a 12 Sep base with other sessions' uncommitted work and has *diverged* from `origin/main` (not fast-forwardable; 9 modified files collide with what shipped since). The script now builds `SSD/Docs/MySet` from `origin/main` + the checkout's untracked files + the non-colliding local edits, and writes the colliding edits to `SSD/Docs/MySet-uncommitted-local-edits.patch`. Also added: `RoofEngine`, `iohm-content-engine` (truth), `Health:Fitness`, `Personal:Legal`, `Music`, `Wellmee` (add-only); excluded `.claude/worktrees/`, `.wrangler/`, `.pnpm-store/`, `dist/`, `.turbo/`. A stale `.git` (1,482 files) and a `node_modules` inside the SSD's MySet from older mirrors were removed by hand.
+
+Counts after: MySet 601 (= 545 tracked on `7f13d84` + 57 untracked, minus the symlink), Followthrough 344, Project Handoffs 432, agent-config 92 — each equal to its source. Verified by `find … -type f -not -name '._*' | wc -l` on both sides; the drive's `._*` resource forks are ignored.
+
+Also from the founder tonight: Stripe's *Action required* banner is gone (he did the task; what it asked is not recorded); 2FA (PER-003) is "later". Open risk added: the diverged checkout.

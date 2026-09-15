@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 17:07 — b800271 — wt2@docs/mirror-and-diverged-checkout (2 files since origin/main)
+**tl;dr:** Docs only: SSD mirror rebuilt (Followthrough, all memories, MySet from origin/main); ~/Docs/MySet has DIVERGED from main and is an open risk [skip ci]
+**Other sessions:** Do not build on ~/Docs/MySet — it is a 12 Sep base with 19 modified + 57 untracked files, 9 colliding with what shipped since. Worktrees off origin/main only. The colliding edits are in the SSD's MySet-uncommitted-local-edits.patch. node_modules is still a tracked self-symlink on main — drop it from the index in a small PR.
+
 ### 2026-09-15 12:59 — 492d2f4 — wt2@docs/stripe-key-restricted (2 files since origin/main)
 **tl;dr:** Docs only: PER-007 closed — STRIPE_SECRET_KEY is now a restricted key (13 permissions, proven by the founder's $1 tip); statement descriptor IDYLL.MYSET; UX-050 recorded [skip ci]
 **Other sessions:** If an artist's Start with Stripe or a fan purchase on an artist page fails after 15 Sep, read the error log first — a missing Connect permission on the restricted key names itself there. The full permission table is in PER-007.
