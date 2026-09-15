@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 19:27 — 3597a3f — landing-wt@plates (1 files since origin/main)
+**tl;dr:** About page: the pain line now says everyone's staring at their plates (was phones)
+**Other sessions:** Copy-only change at about.html:423; the picture alt already said plates, so nothing else to touch
+
 ### 2026-09-15 19:03 — 2774e35 — wt-risk@docs/r2-risk-closed (2 files since origin/main)
 **tl;dr:** Ledger's Open risks: 'The R2 API token cannot write' is CLOSED (written since 2026-09-15 ~04:30Z; a fresh clip plays back from R2); _mirror.mjs comment dated the same way [skip ci]
 **Other sessions:** Nothing in the code changed. If any record you hold says the token is read-only or the R2 clip is unmeasured, it is stale — P3-003 is done, UX-052 and this entry are the current word. The last place that said otherwise was the risks table; it is fixed here.
