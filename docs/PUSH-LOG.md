@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 19:03 — 2774e35 — wt-risk@docs/r2-risk-closed (2 files since origin/main)
+**tl;dr:** Ledger's Open risks: 'The R2 API token cannot write' is CLOSED (written since 2026-09-15 ~04:30Z; a fresh clip plays back from R2); _mirror.mjs comment dated the same way [skip ci]
+**Other sessions:** Nothing in the code changed. If any record you hold says the token is read-only or the R2 clip is unmeasured, it is stale — P3-003 is done, UX-052 and this entry are the current word. The last place that said otherwise was the risks table; it is fixed here.
+
 ### 2026-09-15 18:51 — 5c42f26 — wt-diary@docs/gig-list-not-diary (13 files since origin/main)
 **tl;dr:** The artist page's upcoming-gigs list is now called the gig list, not the diary — the word is reserved for the Artist Diaries feature; P3-003 done (a fresh clip plays back from R2 on the founder's phone, 2026-09-15); the Google Sheet is switched on (313 rows, 11/11 tabs)
 **Other sessions:** Wording only — no key, identifier or URL changed (ev_<owner>, HORIZON_DAYS, /api/events untouched). Do not call the gig list 'the diary' in new comments or docs; when Diaries is built its keys are diary_*, nothing else's. Dated decisions/session notes keep the old word. R2 is proven end to end now — never call the token read-only again; the two pre-09-15 clips still serve from Blobs by design.
