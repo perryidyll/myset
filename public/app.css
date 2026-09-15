@@ -200,6 +200,8 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
   border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);
   margin-top:12px;transition:box-shadow .2s var(--ease)}
 .inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+/* the custom-amount field lit like a chosen tile (vote.html / community.html customAmt) */
+.inp.on{box-shadow:0 0 0 2.5px var(--accent) inset;background:var(--accent-soft)}
 .inp::placeholder{color:var(--faint)}
 .go{width:100%;margin-top:18px;padding:17px;background:var(--grad);color:#fff;font-weight:600;
   font-size:17px;border-radius:var(--pill);box-shadow:var(--sh-accent);

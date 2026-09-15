@@ -1147,13 +1147,24 @@ function openTip(){
   openSheet(`<h3>Give ${esc(firstName())} some love</h3>
     <p class="lede checkoutcopy">Sent via Stripe Connect</p>
     <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
-    <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
+    <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)"
+      onfocus="customAmt(this)" oninput="customAmt(this)" onblur="customAmt(this)">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
     <button class="go" id="goTip" onclick="sendTip()">Continue to payment</button>
     <p class="fineprint checkoutcopy" style="margin-top:10px">Secure checkout by Stripe · you’ll come right back</p>`);
 }
 function pickTip(v){TIP=v;[5,10,20].forEach(k=>{const el=$('#t-'+k);if(el)el.classList.toggle('on',k===v);});
-  const a=$('#tipAmt'); if(a)a.value='';}
+  const a=$('#tipAmt'); if(a){a.value='';a.classList.remove('on');}
+  const b=$('#goTip'); if(b&&!b.disabled)b.textContent='Continue to payment';}
+/* The "another amount" field is the fourth tile — same as the voting page: tapping it
+   lights it, dims the presets, and the button names the amount it will charge. */
+function customAmt(inp){
+  const has=inp===document.activeElement||!!inp.value;
+  [5,10,20].forEach(k=>{const el=$('#t-'+k);if(el)el.classList.toggle('on',!has&&k===TIP);});
+  inp.classList.toggle('on',has);
+  const b=$('#goTip'),c=parseFloat(inp.value);
+  if(b&&!b.disabled)b.textContent='Continue to payment'+(has&&Number.isFinite(c)&&c>0?' \u00b7 $'+c:'');
+}
 async function sendTip(){
   const b=$('#goTip'); if(b){b.disabled=true;b.textContent='Opening checkout…';}
   const c=parseFloat(($('#tipAmt')||{}).value);

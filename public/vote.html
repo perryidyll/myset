@@ -766,7 +766,8 @@ function drawVoteSheet(s){
         <div class="tiles" style="margin-top:10px">
           ${[5,10].map(v=>`<button class="tile ${v===5?'on':''}" id="sv-${v}" onclick="pickSongVotes(${v})"><b>$${v}</b><span>${v} paid votes</span></button>`).join('')}
         </div>
-        <input class="inp" id="songVoteAmt" type="number" inputmode="numeric" min="1" max="500" step="1" placeholder="Custom amount ($)">
+        <input class="inp" id="songVoteAmt" type="number" inputmode="numeric" min="1" max="500" step="1" placeholder="Custom amount ($)"
+          onfocus="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')" oninput="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')" onblur="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')">
         <button class="go" id="goSongVotes" onclick="checkout('song_votes')">Continue to payment</button>
         <p class="fine secure-votes">$1 = 1 vote · Secure checkout by Stripe</p>
       </div>`:''}`);
@@ -1505,13 +1506,27 @@ function openTip(){
   sel.tip=10;
   openSheet(`<h3>Give ${esc(artistFirst())} some love</h3><p class="lede buyline">Sent via Stripe Connect</p>
     <div class="tiles">${[5,10,20].map(v=>`<button class="tile ${v===10?'on':''}" id="t-${v}" onclick="pickTip(${v})"><b>$${v}</b><span>${v===5?'Nice one':v===10?'Thank you':'Encore!'}</span></button>`).join('')}</div>
-    <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)">
+    <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)"
+      onfocus="customAmt(this,[5,10,20],'t-',sel.tip,'goTip')" oninput="customAmt(this,[5,10,20],'t-',sel.tip,'goTip')" onblur="customAmt(this,[5,10,20],'t-',sel.tip,'goTip')">
     <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
     <button class="go" id="goTip" onclick="checkout('tip')">Continue to payment</button>
     <p class="fine secure-votes">Secure checkout by Stripe · you’ll come right back</p>`);
 }
-function pickTip(v){sel.tip=v;buzz(8);[5,10,20].forEach(k=>$('#t-'+k).classList.toggle('on',k===v));const a=$('#tipAmt');if(a)a.value='';}
-function pickSongVotes(v){sel.songVotes=v;buzz(8);[5,10].forEach(k=>$('#sv-'+k).classList.toggle('on',k===v));const a=$('#songVoteAmt');if(a)a.value='';}
+function pickTip(v){sel.tip=v;buzz(8);[5,10,20].forEach(k=>$('#t-'+k).classList.toggle('on',k===v));const a=$('#tipAmt');if(a){a.value='';a.classList.remove('on');}const b=$('#goTip');if(b&&!b.disabled)b.textContent='Continue to payment';}
+function pickSongVotes(v){sel.songVotes=v;buzz(8);[5,10].forEach(k=>$('#sv-'+k).classList.toggle('on',k===v));const a=$('#songVoteAmt');if(a){a.value='';a.classList.remove('on');}const b=$('#goSongVotes');if(b&&!b.disabled)b.textContent='Continue to payment';}
+/* The "another amount" field is the fourth tile. Tapping it lights it and dims the
+   presets, and the button names the amount it will charge — so nobody has to guess
+   whether the number they typed or the tile still glowing is what they are paying
+   (the founder, after his own $1 tip, 2026-09-15). Empty and unfocused, the preset
+   comes back. */
+function customAmt(inp,ids,pre,dflt,btn){
+  const has=inp===document.activeElement||!!inp.value;
+  ids.forEach(k=>{const el=$('#'+pre+k);if(el)el.classList.toggle('on',!has&&k===dflt);});
+  inp.classList.toggle('on',has);
+  const b=$('#'+btn),c=parseFloat(inp.value);
+  if(b&&!b.disabled)b.textContent='Continue to payment'+(has&&Number.isFinite(c)&&c>0?' \u00b7 $'+c:'');
+}
+
 async function checkout(kind){
   const btn=kind==='votes'?$('#goBuy'):kind==='song_votes'?$('#goSongVotes'):$('#goTip');
   // one id per TAP, so a retried request reuses the session and a deliberate
