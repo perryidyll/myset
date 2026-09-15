@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, carryFans, newShowId, gigMonthOf, casDoc } from './_lib.mjs';
+import { getShow, mutateShow, readFans, carryFans, newShowId, gigMonthOf, casDoc, mutateMeta } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
 import { readEvents, nextOccurrence, occKey } from './_events.mjs';
@@ -9,6 +9,21 @@ const markLive = (aid, at = Date.now()) => casDoc(AUTO_INDEX,
   () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; d.live[aid] = at; return true; }).catch(() => {});
 const unmarkLive = (aid) => casDoc(AUTO_INDEX,
   () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; delete d.live[aid]; return true; }).catch(() => {});
+/* THE MORNING AFTER THE FIRST NIGHT (2026-09-15). One note, once per account, the
+   morning after the first night that was filed: what the room did and what it
+   paid, and the one next step. Queued here — the only place a night is filed —
+   and sent by the bell (_auto.mjs sweepNotes) when it falls due: ten hours after
+   the end, which is the morning for any set that ends at night, and never inside
+   the same evening. A note is a row on the same index the bell already reads, so
+   it costs nothing to look for (INVARIANT 1: no list()). */
+export const FIRST_NIGHT_NOTE_MS = 10 * 3600e3;
+const queueFirstNightNote = (aid, showId, endedAt) => casDoc(AUTO_INDEX,
+  () => ({ v: 1, byArtist: {}, live: {} }), (d) => {
+    d.notes ||= {};
+    if (d.notes[aid] || (d.noted || {})[aid]) return false;     // once, ever
+    d.notes[aid] = { showId, due: endedAt + FIRST_NIGHT_NOTE_MS, at: endedAt };
+    return true;
+  }).catch(() => {});
 
 /* STARTING AND ENDING A SHOW — the one implementation.
 
@@ -224,7 +239,14 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false 
   if (!discard) try {
     const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
     const fallback = `Untitled show – ${new Date().toISOString().slice(0, 10)}`;
-    await archiveShow(aid, { ...prev, archiveTitle: String(title || fallback).slice(0, 100) }, fans);
+    const filed = await archiveShow(aid, { ...prev, archiveTitle: String(title || fallback).slice(0, 100) }, fans);
+    /* The first night on file gets the morning-after note. archiveShow returns
+       the index it wrote; one row means this was the first. */
+    if (filed && filed.indexed) {
+      /* The count rides on meta so the stage payload can say "first gig" for free. */
+      await mutateMeta(aid, (m) => { if (m.nights === filed.nights) return false; m.nights = filed.nights; return true; }).catch(() => {});
+      if (filed.nights === 1) await queueFirstNightNote(aid, prev.showId, Date.now());
+    }
   } catch { /* never block ending a show on the archive */ }
   await mutateShow(aid, (show) => {
     show.status = 'ended';

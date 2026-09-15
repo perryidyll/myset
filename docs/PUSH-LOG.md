@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-15 17:28 — bac630b — wt5@studio/first-gig-and-money-routing (23 files since origin/main)
+**tl;dr:** A tip sent after the show now counts for that night everywhere — the Money tab's Taken tile and profit are one figure (the founder's $2 reaches profit); the first run is four steps ending on Print my sign (/sign.html); a Your-first-gig card pinned on the Live tab until a night is filed; example rows on an empty first board; a full-screen first-tip burst; tonight's money sticky on the Live tab; one morning-after letter after the first night (decision 0081, INVARIANT 0ga)
+**Other sessions:** _history.mjs: moneyWindowEnd(rows, showId) + refreshShowMoney(aid, showId, money) — use them for any re-pricing of a night; never price a night start→end again. stage.mjs carries signAt and nights (null on accounts older than the stamp). meta.signAt / meta.nights are account facts. The bell's index (gigsched) now has notes/noted; sweepNotes runs from autocron. admin action signPrinted (profile). public/sign.html is new; the mock serves /api/qr for real and takes ?first=1. After ANY edit to studio.js run node tools/stamp.mjs.
+
 ### 2026-09-15 17:07 — b800271 — wt2@docs/mirror-and-diverged-checkout (2 files since origin/main)
 **tl;dr:** Docs only: SSD mirror rebuilt (Followthrough, all memories, MySet from origin/main); ~/Docs/MySet has DIVERGED from main and is an open risk [skip ci]
 **Other sessions:** Do not build on ~/Docs/MySet — it is a 12 Sep base with 19 modified + 57 untracked files, 9 colliding with what shipped since. Worktrees off origin/main only. The colliding edits are in the SSD's MySet-uncommitted-local-edits.patch. node_modules is still a tracked self-symlink on main — drop it from the index in a small PR.

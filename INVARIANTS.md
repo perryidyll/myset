@@ -524,6 +524,20 @@ If you are about to violate one, stop and say so rather than working around it.
     filed nights unchanged. Decision `0079`; `test/decline.mjs` WHO PUT MONEY IN
     / WHAT THE ROOM SEES; `test/limits.mjs`.
 
+0ga. **A night's money is everything tagged to it, whenever it arrived — and the
+    tile and the book are the same figure.** `pay.mjs` tags a tip with
+    `show.showId` whether or not the night is still live, so a night's window for
+    pricing runs from its start to the NEXT night's start, or to now while it is
+    the newest (`moneyWindowEnd`). The Money tab prices the last night start→now
+    for its tile and, when the filed row disagrees, writes the same figure onto
+    the row and the detail (`refreshShowMoney`) — one Stripe read, one number.
+    *Re-check* uses the same window. Only a figure Stripe answered may overwrite
+    a row: 'off' and 'stripe-unreachable' are not answers. Broken on 2026-09-15
+    by two $1 tips sent the day after a night: $22 in the tile, $30 in profit.
+    Decision `0081`; `test/latetips.mjs`. The first-gig pieces beside it —
+    `meta.signAt`, `meta.nights`, the one morning-after note on the bell's
+    index — are facts about the ACCOUNT, never the phone: `test/firstgig.mjs`.
+
 9d4. **Only production deploys cost credits — and `credit-burn.sh` used to bill
     the free ones.** It counted every `state == 'ready'` deploy at 15 credits,
     drafts and deploy previews included, and asked for a single page of 200. On

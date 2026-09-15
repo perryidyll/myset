@@ -111,6 +111,12 @@ echo
 echo "── naming a night by hand ──"
 node --import ./test/register.mjs test/histname.mjs
 echo
+echo "── a tip after the show is still that night's money ──"
+node --import ./test/register.mjs test/latetips.mjs
+echo
+echo "── the first gig: the sign, the count, the morning-after note ──"
+node --import ./test/register.mjs test/firstgig.mjs
+echo
 echo "── a dark room, and the last call ──"
 node --import ./test/register.mjs test/darkroom.mjs
 echo

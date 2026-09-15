@@ -90,6 +90,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0078](0078-a-new-page-shows-nobody-elses-band.md) | a new artist page has no photo until its own artist adds one — the cover is a brand tile and the portrait is the band's initial, never a stock picture of another act | 2026-09-14 | product | decided | perry |
 | [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md) | a tipper's votes are paid votes on the artist's song cards; the setup's Prices step no longer sends a new artist to the plans; and Bar Star artists may show the room tonight's votes, voters and tips | 2026-09-15 | product | decided | perry |
 | [0080](0080-payouts-follow-the-plan-hobbyist-every-monday-paid.md) | payouts follow the plan — Hobbyist every Monday, paid plans daily | 2026-09-15 | money | decided | perry |
+| [0081](0081-the-first-gig-is-the-onboarding-and-a-nights-money-is-everything-tagged-to-it.md) | the first gig is the onboarding, and a night's money is everything tagged to it | 2026-09-15 | studio, money | decided | perry |
 
 ## By area
 
@@ -118,6 +119,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
 **storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md)
+
+**studio, money** — [0081](0081-the-first-gig-is-the-onboarding-and-a-nights-money-is-everything-tagged-to-it.md)
 
 **trust** — [0028](0028-find-artists-lists-only-effectively-verified-artist-profiles.md)
 

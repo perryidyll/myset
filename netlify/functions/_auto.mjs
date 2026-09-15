@@ -205,6 +205,56 @@ export async function sweep({ now = Date.now(), limit = 40, log = () => {} } = {
   return { checked: due.length, deferred: Math.max(0, Object.keys(sched.byArtist).length - due.length), results };
 }
 
+/* THE MORNING-AFTER NOTE (2026-09-15). endShow queues one on the first night an
+   account files (`notes[aid]`, see _lifecycle.mjs); this sends it once it is due
+   and moves the id to `noted` so it can never go twice. The figures are read off
+   the filed row — the same row the Money tab shows — and the letter goes to the
+   owner's address from the registry, which is the only thing that address is for
+   here. A note whose night vanished, or whose account has no owner address, is
+   dropped, not retried: a missing letter beats a daily failure in the log. */
+export async function sweepNotes({ now = Date.now(), limit = 20, log = () => {} } = {}) {
+  const sched = await readSched();
+  const due = Object.entries(sched.notes || {}).filter(([, n]) => n && now >= Number(n.due)).slice(0, limit);
+  if (!due.length) return { checked: 0, sent: 0 };
+  const [{ sendMail }, { readHistIndex }] = await Promise.all([import('./_auth.mjs'), import('./_history.mjs')]);
+  const reg = await readArtists();
+  let sent = 0;
+  const done = [];
+  for (const [aid, n] of due) {
+    try {
+      const a = reg.byId[aid];
+      const owner = Object.entries(reg.byEmail || {}).find(([, r]) => r && r.artistId === aid && r.role === 'owner');
+      const email = owner ? owner[0] : '';
+      const row = a ? (await readHistIndex(aid)).shows.find((x) => x.showId === n.showId) : null;
+      if (a && email && row) {
+        const money = row.source === 'stripe' ? Number(row.gross) || 0 : null;
+        const site = process.env.URL || 'https://myset.vip';
+        const people = Number(row.peakVoters) || 0, votes = Number(row.totalVotes) || 0, played = Number(row.songsPlayed) || 0;
+        const lines = [
+          `Morning, ${a.name || 'there'} — that was your first night on MySet.`,
+          money !== null && money > 0
+            ? `The room put $${money.toFixed(2)} through the app${row.paidVotes ? `, ${row.paidVotes} of the votes were bought` : ''}. ${people} ${people === 1 ? 'person' : 'people'} voted, ${votes} vote${votes === 1 ? '' : 's'} in all, ${played} song${played === 1 ? '' : 's'} played.`
+            : `${people} ${people === 1 ? 'person' : 'people'} voted, ${votes} vote${votes === 1 ? '' : 's'} in all, ${played} song${played === 1 ? '' : 's'} played.${money === null ? '' : ' Nothing came through the app yet — that is normal for a first night.'}`,
+          money !== null && money > 0
+            ? 'Stripe pays that out to your bank on its own schedule — the Money tab shows when.'
+            : 'The nights that pay are the ones where the QR code is on every table and you say out loud that the room picks the next song.',
+          'One thing to do today: put your next show on the calendar. A gig on the calendar starts by itself, shows on your page, and gets you into the city feed.',
+        ];
+        const r = await sendMail(email, 'Your first night on MySet', lines, { cta: { url: `${site}/studio`, label: 'Add your next show' } });
+        if (r.ok) { sent += 1; log(`autocron: first-night note sent for ${aid}`); }
+        else log(`autocron: first-night note for ${aid} not sent (${r.why})`);
+      } else log(`autocron: first-night note for ${aid} dropped (${!a ? 'no account' : !email ? 'no owner address' : 'night not on file'})`);
+      done.push(aid);
+    } catch (e) { console.error(`autocron note: ${aid} failed:`, String((e && e.message) || e)); done.push(aid); }
+  }
+  if (done.length) await casDoc(SCHED, emptySched, (d) => {
+    d.notes ||= {}; d.noted ||= {};
+    for (const aid of done) { delete d.notes[aid]; d.noted[aid] = now; }
+    return true;
+  }).catch(() => {});
+  return { checked: due.length, sent };
+}
+
 /** End any live show with no artist action or audience vote for three hours. */
 export async function sweepIdle({ now = Date.now(), limit = 40, log = () => {} } = {}) {
   const sched = await readSched();

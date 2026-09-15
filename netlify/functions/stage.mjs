@@ -98,6 +98,11 @@ export async function stagePayload(aid) {
         })), counts, firstAt);
     })(),
     tips: { total: tonight.total, count: tonight.count, recent, allTime, allTimeCount: meta.tips.length },
+    signAt: Number(meta.signAt) || 0,     // when the sign was printed — the first-gig card's second tick
+    /* How many nights are on file, stamped by endShow so the Live tab can tell a
+       first gig from a hundredth without a history read on every poll. null on an
+       account that predates the stamp: the Studio asks history once, then. */
+    nights: meta.nights == null ? null : Number(meta.nights) || 0,
     feedback: shapeFeedback(fb),
     paymentsEnabled: canTakeMoney(aid, show),
     /* Why, if not. The artist should never have to guess where their money went. */
