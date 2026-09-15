@@ -276,6 +276,7 @@ export async function archiveShow(aid, show, fans) {
      had plenty. */
   const st = (kept && kept.stats) || doc.stats;
   let indexed = false;
+  let nights = 0;
   await casDoc(INDEX(aid), () => ({ shows: [] }), (idx) => {
     idx.shows ||= [];
     const was = idx.shows.find((x) => x.showId === showId) || {};
@@ -327,6 +328,7 @@ export async function archiveShow(aid, show, fans) {
       idx.shows = idx.shows.slice(0, 400);
     }
     idx.oldestKept = (idx.shows[idx.shows.length - 1] || {}).endedAt || null;
+    nights = idx.shows.length;
     return true;
   }).then(() => { indexed = true; })
     .catch((e) => { console.error('archive: index write failed', aid, showId, e && e.message); });
@@ -349,7 +351,9 @@ export async function archiveShow(aid, show, fans) {
     d.ids = [...d.ids, showId].slice(-50); return true;
   }).catch(() => {});
 
-  return { ...doc, stored, indexed };
+  /* `nights` is how many rows the index holds once this one is in — 1 means this
+     was the account's first night on file (the morning-after note keys off it). */
+  return { ...doc, stored, indexed, nights };
 }
 
 /* THE HEAL — why a finished night can go missing, and how it comes back.
@@ -622,25 +626,50 @@ export async function readHistShow(aid, showId) {
   const { data } = await readDoc(HIST(aid, showId), null);
   return data;
 }
-export async function reconcileShow(aid, showId) {
-  const doc = await readHistShow(aid, showId);
-  if (!doc) return null;
-  const money = await moneyForShow(aid, showId, doc.startedAt, doc.endedAt);
+/* A NIGHT'S MONEY IS EVERYTHING TAGGED TO IT, WHENEVER IT ARRIVED. A tip carries
+   the show's id until the next show starts (pay.mjs tags `show.showId` whether or
+   not the night is still live — a fan tipping after the set is the point), so the
+   honest window for a night runs from its start to the NEXT night's start, or to
+   now while it is still the newest. Until 2026-09-15 the filed row was priced
+   start→end and Re-check used the same closed window, while the Money tab's
+   "Taken" tile priced start→now: two $1 tips sent the day after a night showed
+   in the tile and never reached profit, and a Re-check would have wiped them from
+   the tile as well. Rows are newest first, so the night after this one is the row
+   before it. */
+export function moneyWindowEnd(rows, showId) {
+  const i = (rows || []).findIndex((x) => x.showId === showId);
+  const next = i > 0 ? rows[i - 1] : null;
+  return (next && (next.startedAt || next.endedAt)) || Date.now();
+}
+
+/* Write a fresh money summary onto BOTH copies — the detail and the index row.
+   The whole summary, not just the figure: the dashboard reads `source` off the
+   ROW (Biz.join: app money is known only when every night says 'stripe'), so a row
+   left at 'stripe-unreachable' after a successful re-pull kept the night's gross
+   out of profit and kept offering the same Re-check for ever — the one button
+   decision 0065 promises clears "app money not available" could not clear it. */
+export async function refreshShowMoney(aid, showId, money) {
   await casDoc(HIST(aid, showId), () => ({}), (d) => {
     if (!d || !d.showId) return false;
     d.money = money; return true;
   }).catch(() => {});
+  let kept = null;
   await casDoc(INDEX(aid), () => ({ shows: [] }), (idx) => {
     const row = (idx.shows || []).find((x) => x.showId === showId);
-    /* The whole money summary the row builders write, not just the figure. The
-       dashboard reads `source` off the ROW (Biz.join: app money is known only when
-       every night says 'stripe'), so a row left at 'stripe-unreachable' after a
-       successful re-pull kept the night's gross out of profit and kept offering
-       the same Re-check for ever — the one button decision 0065 promises clears
-       "app money not available" could not clear it. */
-    if (row) { row.gross = money.gross; row.unattributed = money.unattributed || 0; row.source = money.source || null;
-      row.paidVotes = paidOf(money, 'paidVotes', row); row.paidRequests = paidOf(money, 'paidRequests', row); }
+    if (!row) return false;
+    row.gross = money.gross; row.unattributed = money.unattributed || 0; row.source = money.source || null;
+    row.paidVotes = paidOf(money, 'paidVotes', row); row.paidRequests = paidOf(money, 'paidRequests', row);
+    kept = { ...row };
     return true;
   }).catch(() => {});
+  return kept;   // the row as written, or null when there was no row to write
+}
+
+export async function reconcileShow(aid, showId) {
+  const doc = await readHistShow(aid, showId);
+  if (!doc) return null;
+  const idx = await readHistIndex(aid);
+  const money = await moneyForShow(aid, showId, doc.startedAt, moneyWindowEnd(idx.shows, showId));
+  await refreshShowMoney(aid, showId, money);
   return { ...doc, money };
 }

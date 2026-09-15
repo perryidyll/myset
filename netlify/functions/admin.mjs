@@ -1077,6 +1077,15 @@ const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyrics
 /* Profile edits don't touch the show record at all, so they short-circuit before
    the show mutation below. */
 async function handleProfile(aid, action, body, req, me) {
+  /* THE SIGN WAS PRINTED (first gig, 2026-09-15). The Studio's "Your first gig"
+     card stays pinned until the artist has a show on the calendar AND has printed
+     the sign — a fact about the ACCOUNT, so it is kept here and not in the phone's
+     localStorage: a second device, or a cleared browser, must not bring the card
+     back once the first is done. Stamped when "Print my sign" opens the sign. */
+  if (action === 'signPrinted') {
+    await mutateMeta(aid, (m) => { if (m.signAt) return false; m.signAt = Date.now(); return true; });
+    return json({ ok: true, signAt: (await readMeta(aid)).signAt || 0 });
+  }
   if (action === 'profileSet') {
     const management = String(body.management || '').trim();
     const managementUrl = String(body.managementUrl || '').trim();
@@ -1828,7 +1837,9 @@ const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'media
                                  // the artist's own verification tick
                                  'verifyStatus', 'idUpload',
                                  // Stripe Connect onboarding and status
-                                 'payStatus', 'payStart', 'payDashboard']);
+                                 'payStatus', 'payStart', 'payDashboard',
+                                 // the sign was printed — the first-gig card's second tick (2026-09-15)
+                                 'signPrinted']);
 
 const main = async (req) => {
   const me = await requireArtist(req);

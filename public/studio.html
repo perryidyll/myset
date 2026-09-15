@@ -293,6 +293,33 @@ a{color:inherit;text-decoration:none}
   color:var(--faint);font-size:11.5px;font-weight:700}
 .paidtag{display:inline-flex;align-items:center;padding:8px 12px;border-radius:var(--pill);
   background:rgba(48,209,88,.16);color:var(--good);font-size:13px;font-weight:700;white-space:nowrap}
+/* THE FIRST GIG (2026-09-15) — the pinned card, the example rows, the tonight strip, the tip burst */
+.today.golive .th b{background:linear-gradient(135deg,#FF375F,#FF7A45);-webkit-background-clip:text;background-clip:text;color:transparent}
+.exq .row{opacity:.72}.exq .row.muted{opacity:1}
+.exq .act{pointer-events:none;opacity:.55}
+.extag{display:inline-block;vertical-align:2px;margin-left:6px;padding:2px 8px;border-radius:var(--pill);font-size:10.5px;font-weight:800;
+  letter-spacing:.04em;text-transform:uppercase;background:var(--accent-soft);color:var(--accent)}
+.tonight{position:sticky;top:76px;z-index:29;display:flex;align-items:center;gap:10px;margin:0 18px;padding:12px 16px;
+  border-radius:0 0 var(--r-lg) var(--r-lg);background:color-mix(in srgb,var(--bg) 82%,transparent);
+  backdrop-filter:saturate(180%) blur(18px);-webkit-backdrop-filter:saturate(180%) blur(18px);
+  border:.5px solid var(--hair);border-top:0;box-shadow:var(--sh-1)}
+.tonight .l{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2,#FF5650)}
+.tonight b{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--good)}
+.tonight .r{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--muted);text-align:right}
+.tipburst{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:rgba(0,0,0,.55);opacity:0;transition:opacity .28s ease}
+.tipburst.on{opacity:1}
+.tipburst canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.tipburst .tb{position:relative;width:min(100%,340px);padding:30px 24px 24px;border-radius:28px;text-align:center;
+  background:var(--surface);color:var(--ink);box-shadow:0 30px 80px -20px rgba(0,0,0,.6);
+  transform:translateY(14px) scale(.96);transition:transform .32s cubic-bezier(.2,.9,.3,1.2)}
+.tipburst.on .tb{transform:none}
+.tipburst .k{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-2,#FF5650)}
+.tipburst .amt{font-size:64px;font-weight:800;letter-spacing:-.04em;line-height:1.05;margin:8px 0 6px;color:var(--good)}
+.tipburst .n{font-size:15px;font-weight:600;margin:0 0 6px}
+.tipburst .s{font-size:13.5px;color:var(--muted);line-height:1.45;margin:0 0 18px}
+.tipburst .btn-pri{min-width:140px}
+@media (prefers-reduced-motion:reduce){.tipburst,.tipburst .tb{transition:none}}
 .chip.reply{display:inline-block;margin-top:5px;padding:4px 10px;min-width:0;font-size:11.5px;color:var(--muted);
   box-shadow:none;border:.5px solid var(--hair-2)}
 .chip.reply.on{background:var(--accent-soft);color:var(--accent);border-color:transparent;box-shadow:0 0 0 1.5px var(--accent) inset}
@@ -802,7 +829,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=9370948a"></script>
+<script src="/studio.js?v=49df6656"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

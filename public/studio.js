@@ -395,6 +395,7 @@ async function load(opts){
   const idNow=(d.show&&d.show.showId)||'', stNow=(d.show&&d.show.status)||'';
   if(D&&(idNow!==LASTSHOW||stNow!==LASTSTATUS)){ HIST=null; REV=null; HISTALL=false; }
   LASTSHOW=idNow; LASTSTATUS=stNow;
+  tipWatch(D, d);
   D=d; render();
   /* The tab's OWN data arrives after the shell. These were fire-and-forget, so the
      boot screen came down while the page was still filling in — which looked like
@@ -429,6 +430,7 @@ async function load(opts){
      no songs asks history whether this is a brand-new account (drawFirstRun). */
   if(TAB==='live'&&first){ if(!EVENTS)loadGigs(); if(!PAY)loadPay(); }
   if(first&&d.songs&&!d.songs.length&&!HIST) loadHist();
+  if(first&&d.nights==null&&!HIST&&TAB==='live') loadHist();     // an account older than the stamp: is this a first gig?
   if(!first) return;
   try{ await Promise.all(jobs.map(j=>Promise.resolve(j).catch(()=>null))); }catch(e){}
   bootDone();
@@ -439,6 +441,73 @@ async function load(opts){
   Promise.resolve(planJob).then(()=>msgPeek()).catch(()=>{});
 }
 let WRITING=false;
+/* THE FIRST TIP IS LOUD (2026-09-15). A tip used to land as a number changing in a
+   tile. This is the moment an artist becomes a believer, so it gets the whole
+   screen: the amount, a line, a burst of the brand colours, a short chime where
+   the phone allows one, and a buzz where it has one. Compared on every poll and
+   every write's reply — `tips.count` going up while the show is live — never on
+   the first paint, so opening the Studio mid-set does not celebrate old money.
+   Nothing here can throw into the render: every piece is wrapped. */
+function tipWatch(prev,next){
+  try{
+    if(!prev||!next||!next.ok||!next.tips||!prev.tips) return;
+    if(!(next.show&&next.show.status==='live')) return;
+    if(!(next.tips.count>prev.tips.count)) return;
+    const gained=Math.max(0,(next.tips.total||0)-(prev.tips.total||0));
+    const last=(next.tips.recent||[])[0]||null;
+    tipBurst(gained||(last&&Number(last.amount))||0, next.tips.count, last&&last.note||'');
+  }catch(e){}
+}
+function tipBurst(amount,count,note){
+  const old=$('#tipburst'); if(old) old.remove();
+  const first=count===1&&(typeof D.nights==='number'?D.nights===0:firstGig());
+  const el=document.createElement('div'); el.id='tipburst'; el.className='tipburst';
+  el.innerHTML=`<canvas></canvas><div class="tb">
+    <div class="k">${first?'Your first tip on MySet':count===1?'First tip of the night':'Tip'}</div>
+    <div class="amt mono">$${(Number(amount)||0).toFixed(2)}</div>
+    ${note?`<div class="n">“${esc(String(note).slice(0,80))}”</div>`:''}
+    <div class="s">${first?'That’s the room saying thank you. It goes straight to your account.':'Straight to your account.'}</div>
+    <button class="btn-pri" onclick="this.closest('.tipburst').remove()">Nice</button></div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('on'));
+  const timer=setTimeout(()=>{ if(el.isConnected){ el.classList.remove('on'); setTimeout(()=>el.remove(),320); } },6000);
+  el.addEventListener('click',e=>{ if(e.target===el){ clearTimeout(timer); el.remove(); } });
+  try{ if(navigator.vibrate) navigator.vibrate([40,60,80]); }catch(e){}
+  try{ tipChime(); }catch(e){}
+  try{ confetti(el.querySelector('canvas')); }catch(e){}
+}
+/* Two soft notes, a fifth apart. Fails silently before the first user gesture. */
+function tipChime(){
+  const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+  const ac=new AC(); if(ac.state==='suspended') return;
+  const at=ac.currentTime;
+  [[659.25,0],[987.77,.14]].forEach(([f,d])=>{
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.type='sine'; o.frequency.value=f;
+    g.gain.setValueAtTime(0,at+d); g.gain.linearRampToValueAtTime(.18,at+d+.02); g.gain.exponentialRampToValueAtTime(.001,at+d+.7);
+    o.connect(g); g.connect(ac.destination); o.start(at+d); o.stop(at+d+.75);
+  });
+  setTimeout(()=>{ try{ac.close()}catch(e){} },1200);
+}
+/* The brand's two colours and white, falling for two seconds. Skipped for a
+   phone that asked for less motion. */
+function confetti(c){
+  if(!c||(matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  const dpr=Math.min(2,window.devicePixelRatio||1), W=c.width=innerWidth*dpr, H=c.height=innerHeight*dpr;
+  const ctx=c.getContext('2d'); if(!ctx) return;
+  const cols=['#FF375F','#FF7A45','#FF5650','#ffffff','#FFD166'];
+  const P=Array.from({length:110},()=>({x:W/2+(Math.random()-.5)*W*.5,y:H*.42,vx:(Math.random()-.5)*14*dpr,vy:(-9-Math.random()*9)*dpr,
+    r:(3+Math.random()*4)*dpr,a:Math.random()*6.28,s:(Math.random()-.5)*.3,col:cols[Math.random()*cols.length|0],t:0}));
+  const t0=performance.now();
+  (function frame(now){
+    const t=(now-t0)/1000; if(t>2.4||!c.isConnected) return;
+    ctx.clearRect(0,0,W,H);
+    for(const p of P){ p.vy+=.35*dpr; p.x+=p.vx; p.y+=p.vy; p.vx*=.985; p.a+=p.s;
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.a); ctx.globalAlpha=Math.max(0,1-Math.max(0,t-1.6)/.8);
+      ctx.fillStyle=p.col; ctx.fillRect(-p.r,-p.r*.6,p.r*2,p.r*1.2); ctx.restore(); }
+    requestAnimationFrame(frame);
+  })(t0);
+}
 async function act(action,extra={}){
   if(WRITING)return;                       // a second tap is never a second action
   WRITING=true;
@@ -446,7 +515,7 @@ async function act(action,extra={}){
     const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
     if(!d.ok){toast(d.error||'Failed');return;}
     // the write already sent the fresh state back — no second round trip
-    if(d.stage&&d.stage.ok){ D=d.stage; render(); }
+    if(d.stage&&d.stage.ok){ tipWatch(D,d.stage); D=d.stage; render(); }
     else await load();
     if(d.note) toast(d.note);
   } finally { WRITING=false; }
@@ -1670,7 +1739,60 @@ let QRSHOWN=(()=>{try{return !!localStorage.getItem('myset.qrshown')}catch(e){re
    setlists sheet reads it too: its All songs row says "In play" only when this is
    set, and offers Use otherwise — the only way an artist can make the choice. */
 let ALLSONGS=(()=>{try{return localStorage.getItem('myset.allsongs')==='1'}catch(e){return false}})();
+/* YOUR FIRST GIG (2026-09-15). Until an account has a night on file, the Live tab
+   leads with two things and nothing else: a show on the calendar and the sign
+   printed. No prices, no plan, no setlist — those are the Today checklist's, and
+   it takes over the moment both are done. The calendar half is read off the
+   Gigs tab's own list; the sign half is the account's (D.signAt), so a second
+   phone sees the same two ticks. `nights` rides on the stage payload; an account
+   that predates the stamp asks history once (loadHist) and reads its count. */
+function firstGig(){
+  if(!D||!D.show) return false;
+  if(((D.show||{}).played||[]).length) return false;
+  if(typeof D.nights==='number') return D.nights===0;
+  if(HIST&&HIST.ok) return !(HIST.locked?HIST.nights:(Array.isArray(HIST.shows)?HIST.shows.length:1));
+  return false;                          // not known yet: the Today card, never a wrong "first"
+}
+function goLiveCard(s){
+  const gig=tonightGig(s);
+  const up=(EVENTS&&EVENTS.ok&&EVENTS.occurrences||[]).filter(o=>o.date>=todayStr()&&!o.cancelled);
+  const booked=!!(gig||up.length);
+  const signed=!!D.signAt;
+  const rows=[
+    ['ticket','Add your next show',booked?(gig?`Tonight${gig.venue?' · '+esc(gig.venue):''}`:`${esc(up[0].venue||'Your gig')} · ${esc(up[0].date)}`):EVENTS?'Where and when — it goes on your page and starts by itself':'Checking your calendar…',booked,"setTab('gigs');setTimeout(()=>openGig(null),80)"],
+    ['qr','Print your sign',signed?'On the tables, they scan and vote':'Big QR, your name, one tap to print',signed,'printSign()'],
+  ];
+  const next=rows.findIndex(r=>!r[3]);
+  return `<div class="today golive">
+    <div class="th"><b>Your first gig</b><span>${booked&&signed?'You’re set — start the show when the room’s in.':'Two things, then you’re on.'}</span></div>
+    ${rows.map((r,i)=>`<button class="todo ${r[3]?'done':''} ${i===next?'next':''}" onclick="${r[4]}">
+      <span class="ic">${CLAYICON[r[0]]}</span>
+      <span class="m"><span class="t">${r[1]}</span><span class="s">${r[2]}</span></span>
+      <span class="tick">${r[3]?'✓':'○'}</span></button>`).join('')}
+  </div>`;
+}
+/* EXAMPLE REQUESTS (2026-09-15). A first show opens on an empty board, and an
+   empty board on stage reads as "it isn't working". Until the first vote lands the
+   artist — and nobody else: drawn here, never on the board, never on a phone in
+   the room — sees three rows in the shape a request takes, from their own songs,
+   marked as examples. The first real vote takes their place; "Got it" hides them
+   for good on this phone. Only on a first gig: a hundredth night knows the shape. */
+let EXQ=(()=>{try{return localStorage.getItem('myset.exq')==='1'}catch(e){return false}})();
+function exqGotIt(){ EXQ=true; try{localStorage.setItem('myset.exq','1')}catch(e){} render(); }
+function exampleQueue(songs){
+  const pick=songs.filter(x=>!x.now&&x.active!==false&&!x.played).slice(0,3);
+  const rows=pick.length>=3?pick.map((x,i)=>[x.title,x.artist||'',[4,2,1][i]])
+    :[['Wonderwall','Oasis',4],['Valerie','Amy Winehouse',2],['Wish You Were Here','Pink Floyd',1]];
+  return `<div class="sec upnext"><span class="kick">What a request looks like</span><button class="kick" style="color:var(--accent)" onclick="exqGotIt()">Got it</button></div>
+    <div class="list exq">${rows.map(([t,a,v],i)=>`<div class="row">
+      <div class="rk mono ${i===0?'one':''}">${i+1}</div>
+      <div class="m"><div class="t">${esc(t)} <span class="extag">Example</span></div>${a?`<div class="by">${esc(a)}</div>`:''}
+        <div class="songvotes"><span class="mono">${v} vote${v===1?'':'s'} total</span></div></div>
+      <span class="act" aria-hidden="true">▶ Start</span></div>`).join('')}
+    <div class="row muted">Only you see these. The first real vote takes their place — the top one gets a Start button up top, and every phone in the room sees the board move.</div></div>`;
+}
 function todayCard(s){
+  if(firstGig()) return goLiveCard(s);
   const gig=tonightGig(s);
   const named=!!(s.listId||(gig&&gig.listId));
   const listOn=named||ALLSONGS;
@@ -1692,6 +1814,27 @@ function todayCard(s){
       <span class="m"><span class="t">${r[1]}</span><span class="s">${r[2]}</span></span>
       <span class="tick">${r[3]?'✓':'○'}</span></button>`).join('')}
   </div>`;
+}
+/* THE SIGN (2026-09-15). One printable page — /sign.html — opened in its own tab
+   so the print sheet cannot take the Studio with it; on a phone that sheet is
+   also "Save as PDF". The account remembers it was printed (signPrinted →
+   meta.signAt): the first-gig card's second tick, on every device, for good. */
+const signUrl=print=>{const slug=(TEAM&&TEAM.slug)||''; return slug?`/sign.html?a=${encodeURIComponent(slug)}${print?'&print=1':''}`:'';};
+function printSign(){
+  const u=signUrl(true);
+  if(!u){ toast('Fetching your page address…'); loadTeam(true).then(()=>{ if(TEAM&&TEAM.slug) printSign(); else toast('Could not load your page address'); }); return; }
+  window.open(u,'_blank');
+  if(D&&!D.signAt){ D.signAt=Date.now(); api('/admin',{method:'POST',body:JSON.stringify({action:'signPrinted'}),quiet:true}).catch(()=>{}); }
+  if(isNew()&&FR.step===4) frDone(); else if(D&&!typing()) render();
+}
+/* "Text me the link", without a text: the phone's own share sheet — Messages,
+   AirDrop, mail — or the clipboard where there is no sheet. */
+async function sendSign(){
+  const u=signUrl(false);
+  if(!u){ toast('Could not load your page address'); return; }
+  const share={title:'My MySet sign',text:'Print this at the venue',url:location.origin+u};
+  try{ if(navigator.share){ await navigator.share(share); return; } }catch(e){ if(e&&e.name==='AbortError')return; }
+  try{ await navigator.clipboard.writeText(share.url); toast('Link copied'); }catch(e){ toast('Open '+share.url); }
 }
 function showQr(){
   if(TEAM&&TEAM.slug){ qrBig('profile'); return; }
@@ -1769,7 +1912,12 @@ function render(){
   }
 
   if(s.status==='live'){
+    /* TONIGHT'S MONEY, ALWAYS IN VIEW (2026-09-15). The one number an artist should
+       never have to scroll for. Sticky under the header, on every plan: it is the
+       artist's own money, and the aha moment is watching it move. */
     body=`
+    <div class="tonight"><span class="l">Tonight</span><b class="mono">$${D.tips.total.toFixed(2)}</b>
+      <span class="r">${D.tips.count?`${D.tips.count} tip${D.tips.count===1?'':'s'} · `:''}${songs.reduce((a,b)=>a+b.votes,0)} votes · ${D.voters||0} voting</span></div>
     <div class="votebox">
       <div><span class="vt">Voting</span>
         <span class="vs">${s.windowOpen?'Fans can vote right now':'Paused — nobody can vote until you re-open'}</span></div>
@@ -1801,6 +1949,7 @@ function render(){
         <span>▶</span><span style="flex:1;min-width:0">Start top voted — ${esc(top.title)} (${top.votes} votes total) ${paidPill(top)}</span></button>`:''}
       ${now?`<button class="big endnow" onclick="act('endSong')">■ End current song</button>`:''}
     </div>
+    ${!EXQ&&firstGig()&&!songs.some(x=>x.votes>0)?exampleQueue(songs):''}
     <div class="sec upnext"><span class="kick">Up next</span><span class="kick">Tap ▶ to start · ${pool.length}</span></div>
     <div class="scroll-shell queue-shell"><div class="list scroll-window queue-window">${pool.map((x,i)=>`<div class="row">
       <div class="rk ${i===0&&x.votes?'one':''} mono">${i+1}</div>
@@ -2563,11 +2712,14 @@ function openMenu(){
       <svg viewBox="0 0 24 24"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></svg>
       <div class="m">Sign out<span>Of this device</span></div></button>`);
 }
-/* FIRST RUN. Five steps for a brand-new account — name, songs, prices, Stripe,
-   QR — drawn into #firstrun, NOT into #app, so the 4 s repaint and the lazy
-   loaders can never wipe what is being typed. The flag in localStorage carries the
-   step ('1'..'5') so a trip to Stripe and back lands on the same step; 'done'
-   ends it for good. An account with no songs and no shows in history counts as
+/* FIRST RUN. Four steps for a brand-new account — name, songs, Stripe, the sign —
+   drawn into #firstrun, NOT into #app, so the 4 s repaint and the lazy loaders
+   can never wipe what is being typed. The flag in localStorage carries the step
+   ('1'..'4') so a trip to Stripe and back lands on the same step; 'done' ends it
+   for good. The prices step is gone (2026-09-15, the first-gig batch): nothing
+   asks a brand-new artist to decide anything before their first night — every
+   price is a default they can find in Settings, and the last step is the sign
+   they print, because a first gig is a QR on every table and nothing else. An account with no songs and no shows in history counts as
    new too, so a second device sees the same steps.
    The flag is `<artistId>:<step>` — a phone is not an account. One left half-done
    by a new artist must never wall off the established one who signs in next on
@@ -2593,23 +2745,22 @@ function drawFirstRun(){
       b.textContent='Continue setup ›'; b.onclick=()=>{FR.hidden=false;drawFirstRun();}; document.body.appendChild(b); }
     return; }
   if(back)back.remove();
-  if(!FR.step){ const f=parseInt(frFlag(),10); FR.step=(f>=1&&f<=5)?f:1; }
+  /* a phone that was parked on the old step 5 (the QR) lands on the sign, its heir */
+  if(!FR.step){ const f=parseInt(frFlag(),10); FR.step=(f>=1&&f<=4)?f:f===5?4:1; }
   /* The key names every fact the step draws from, so a loader landing repaints
-     it and nothing else does: step 3 the plan (prices are a plan feature), step 4
-     Stripe, step 5 the slug — or that /auth answered without one. */
-  const key=FR.step+(FR.step===3?':'+(has('pricing')?'p':'np'):'')
-    +(FR.step===5?':'+(TEAM?(TEAM.slug||'none'):''):'')
-    +(FR.step===4?':'+(PAY&&(PAY.ready||PAY.chargesEnabled)?'on':PAY&&PAY.started?'started':'off'):'');
+     it and nothing else does: step 3 Stripe, step 4 the slug — or that /auth
+     answered without one. */
+  const key=FR.step+(FR.step===4?':'+(TEAM?(TEAM.slug||'none'):''):'')
+    +(FR.step===3?':'+(PAY&&(PAY.ready||PAY.chargesEnabled)?'on':PAY&&PAY.started?'started':'off'):'');
   if(FR.drawn===key){ el.classList.add('on'); return; }     // same step, same facts: leave the fields alone
   FR.drawn=key;
   el.innerHTML=frStep(FR.step); el.classList.add('on'); el.scrollTop=0;
-  if(FR.step===5&&!TEAM) loadTeam();        // a failed answer is retried by hand, not on every paint
-  if(FR.step===4&&!PAY) loadPay();
-  if(FR.step===3&&!PLAN) loadPlan();
+  if(FR.step===4&&!TEAM) loadTeam();        // a failed answer is retried by hand, not on every paint
+  if(FR.step===3&&!PAY) loadPay();
 }
 function frStep(n){
   const s=(D&&D.show)||{};
-  const bar=`<div class="bar">${[1,2,3,4,5].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div><span class="k">Step ${n} of 5</span>`;
+  const bar=`<div class="bar">${[1,2,3,4].map(i=>`<i class="${i<=n?'on':''}"></i>`).join('')}</div><span class="k">Step ${n} of 4</span>`;
   const skip=`<button class="btn-text" onclick="frNext()">Skip for now</button>`;
   let h='';
   if(n===1) h=`<h2>What’s your page called?</h2>
@@ -2621,27 +2772,7 @@ function frStep(n){
     <textarea class="inp" id="frSongs" rows="7" placeholder="Wonderwall, Oasis&#10;Wish You Were Here — Pink Floyd" oninput="impParse(this.value)"></textarea>
     <p class="muted" id="impCount" style="font-size:13px;margin:12px 2px 0">Nothing to import yet.</p>
     <button class="btn-pri btn-block" id="impGo" onclick="frImport()" disabled>Import these</button>${skip}`;
-  if(n===3){ const P=s.packs||{}, sm=P.small||{}, bg=P.big||{};
-    h=`<h2>Prices</h2>
-    <p>${has('pricing')
-      ?'Every artist starts with these. Keep them for tonight, or change them now — they are all in Settings.'
-      :'Every artist starts with these. They are all in Settings whenever you want a look.'}</p>
-    <div class="prices">
-      <div class="lrow"><div class="m"><b>Free votes</b><span>Each person, each night</span></div><span class="cnt">${s.unlimited?'Unlimited':(s.freeCredits||0)}</span></div>
-      <div class="lrow"><div class="m"><b>Replay a played song</b><span>Votes it costs</span></div><span class="cnt">${s.replayCost||0}</span></div>
-      ${sm.votes?`<div class="lrow"><div class="m"><b>Extra votes, small</b><span>${sm.votes} votes</span></div><span class="cnt">$${((sm.cents||0)/100).toFixed(2)}</span></div>`:''}
-      ${bg.votes?`<div class="lrow"><div class="m"><b>Extra votes, big</b><span>${bg.votes} votes</span></div><span class="cnt">$${((bg.cents||0)/100).toFixed(2)}</span></div>`:''}
-    </div>
-    ${/* Pricing is a plan feature. On a plan without it the step used to offer the
-          plans — which pulled a brand-new artist out of the setup and onto the plan
-          cards (the founder, 2026-09-15: "jarring"). Now it is just Next and one
-          orange line: Settings greys the prices and its lock is the upgrade prompt. */''}
-    ${has('pricing')
-      ?`<button class="btn-pri btn-block" onclick="frNext()">Keep these</button>
-         <button class="btn-text" onclick="frPricing()">Change prices</button>`
-      :`<button class="btn-pri btn-block" onclick="frNext()">Next</button>
-         <p class="frnote">You can change these later, in Settings.</p>`}`; }
-  if(n===4){ const on=!!(PAY&&(PAY.ready||PAY.chargesEnabled));
+  if(n===3){ const on=!!(PAY&&(PAY.ready||PAY.chargesEnabled));
     /* Three honest states, the same three the Money tab's card knows: on; started
        on Stripe but not finished (back from an abandoned onboarding — the account
        exists, so its country is fixed and must not be asked for again); never
@@ -2661,19 +2792,23 @@ function frStep(n){
          <select class="inp" id="frCountry">${payCountries()}</select></div>
        <button class="btn-pri btn-block" onclick="frSet('4');payStart()">Start with Stripe</button>
        <button class="btn-text" onclick="frNext()">Later</button>`; }
-  if(n===5) h=`<h2>Here’s your QR code</h2>
-    <p>On the tables, on the tip jar, on your case. They scan it, they vote, you play.</p>
+  /* THE SIGN is the last step, and printing it finishes the setup: the one thing
+     a first gig needs is this on every table. "Done" is still there for the artist
+     who will print at the venue. */
+  if(n===4) h=`<h2>Here’s your sign</h2>
+    <p>One at the door, one on the tip jar, one on every table. They scan it, they vote, you play.</p>
     ${TEAM&&TEAM.slug?`<div class="qrwrap"><img src="${qrSrc('profile',6)}" alt="Your QR code"></div>
       <p style="text-align:center;margin-top:-6px">myset.vip/${esc(TEAM.slug)}</p>
-      <button class="btn-text" onclick="qrBig('profile')">Show it big to print</button>`
+      <button class="btn-pri btn-block" onclick="printSign()">Print my sign</button>
+      <button class="btn-text" onclick="sendSign()">Send it to my phone</button>`
       :TEAM
       ?`<p class="muted">Couldn’t load your code — <button class="lnk" onclick="frCodes()">open Settings</button>, it’s under Codes to print.</p>
         <button class="btn-text" onclick="frRetryCode(this)">Try again</button>`
       :`<p class="muted">Loading your code…</p>`}
-    <button class="btn-pri btn-block" onclick="frDone()">Done</button>`;
+    <button class="btn-text" onclick="frDone()">Done</button>`;
   return `<div class="fr">${bar}${h}</div>`;
 }
-function frNext(){ FR.step=Math.min(5,FR.step+1); frSet(String(FR.step)); drawFirstRun(); }
+function frNext(){ FR.step=Math.min(4,FR.step+1); frSet(String(FR.step)); drawFirstRun(); }
 async function frName(){
   const nm=(($('#frName')||{}).value||'').trim();
   if(!nm){toast('Give your page a name');return;}
@@ -2691,9 +2826,7 @@ async function frImport(){
   toast(d.note||'Imported'); IMP=[];
   frNext(); render();
 }
-/* Prices live in Settings: hide the steps, go there, and leave a way back. */
-function frPricing(){ FR.hidden=true; frNext(); showPricing(); }
-/* Step 5 when /auth would not answer: the last step, so the setup is done and the
+/* Step 4 when /auth would not answer: the last step, so the setup is done and the
    codes are where Settings keeps them; a retry there refreshes the same list. */
 function frCodes(){ frDone(); setTab('settings'); loadTeam(true);
   setTimeout(()=>{const el=[...document.querySelectorAll('.sec .kick')].find(k=>k.textContent==='Codes to print');

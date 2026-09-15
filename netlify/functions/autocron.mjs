@@ -1,4 +1,4 @@
-import { readSched, emptySched, SCHED, sweep, sweepIdle, heal, HEAL_EVERY_MS } from './_auto.mjs';
+import { readSched, emptySched, SCHED, sweep, sweepIdle, sweepNotes, heal, HEAL_EVERY_MS } from './_auto.mjs';
 import { casDoc } from './_lib.mjs';
 
 /* SHOWS THAT START AND END THEMSELVES — the bell.
@@ -100,8 +100,10 @@ export default async (req) => {
     }
     const r = await sweep({ now, log: (l) => console.log(l) });
     const idle = await sweepIdle({ now, log: (l) => console.log(l) });
+    const notes = await sweepNotes({ now, log: (l) => console.log(l) });
     console.log(`autocron: ok — ${r.checked} checked, ${r.results.filter((x) => x.did).length} acted`,
-                `${idle.ended} idle ended`, marker ? `(scheduled for ${marker})` : '(no scheduler marker)');
+                `${idle.ended} idle ended`, notes.sent ? `${notes.sent} first-night note(s) sent` : '',
+                marker ? `(scheduled for ${marker})` : '(no scheduler marker)');
     return new Response('ok', { status: 200 });
   } catch (e) {
     console.error('autocron failed:', String((e && e.message) || e));

@@ -264,13 +264,13 @@ const SHOW_LABEL = 'Fri, Sep 11 · The Room';
    The address on a PAGE request sets the cookies; the API calls that page makes carry the
    cookies back. The query on the API call itself and the referer are read too, so a call
    made by hand (curl) can name a state without a cookie. */
-const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour'];
+const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first'];
 const cookies = (rq) => Object.fromEntries((rq.headers.cookie || '').split(/;\s*/).filter(Boolean).map((c) => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
 function stateOf(rq, q) {
   const ck = cookies(rq);
   let ref = null; try { ref = new URL(rq.headers.referer || '', 'http://x').searchParams; } catch { ref = null; }
   const pick = (k) => q.get(k) ?? ck['mock_' + k] ?? (ref && ref.get(k)) ?? null;
-  return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus', tour: pick('tour') === '1' };
+  return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus', tour: pick('tour') === '1', first: pick('first') === '1' };
 }
 /* what the page request does to the cookies: a flag in the address sets it; a return trip
    from checkout (?paid= / ?cancelled=) keeps them; a plain address clears them all */
@@ -391,7 +391,10 @@ function stageFixture(st) {
     },
     tags: { builtin: GENRES, own: [] }, lists: [], learn: [], listFellBack: false,
     voters: 0, room: live ? 12 : 0, nets: 0, asks: [], songs: SONGS,
-    tips: { total: 0, count: 0, recent: [] }, feedback: null,
+    tips: { total: st.first ? 0 : 42, count: st.first ? 0 : 3, recent: [] }, feedback: null,
+    /* ?first=1 is an account with no night on file and no sign printed: the
+       first-gig card before a show, the example rows during one */
+    nights: st.first ? 0 : 12, signAt: st.first ? 0 : NOW - 30 * 864e5,
     paymentsEnabled: st.canBuy, payoutsNote: null, store: 'mock',
   };
 }
@@ -629,6 +632,7 @@ const GROUPS = [
     ['/studio?tab=merch', 'Merch store, straight in', 'the deep link; the Menu tab lit; Requests from the shop under the orders'],
     ['/studio?plan=free', 'Studio on the free plan', 'the items behind the Bar Star lock; the orders never are'],
     ['/studio?live=1&tab=live', 'Studio with the room live', 'Live tab, 12 in the room'],
+    ['/studio?first=1&tab=live', 'A first gig', 'the pinned card before a show; add ?live=1 for the example rows'],
     ['/studio?tab=messages', 'Messages, straight in', () => { const c = msgIndex().counts; return `the inbox: ${c.unread} unread of ${S.MSGS.length} conversations across five folders; the Menu tab wears the dot`; }],
     ['/studio?tab=gigs', 'Gigs tab, no poster', 'the Tour dates poster card under Add a gig: "No poster yet", Upload a poster'],
     ['/studio?tab=gigs&tour=1', 'Gigs tab with a poster', 'the card with the thumbnail, the tickets link field, Replace and Remove'],
@@ -802,6 +806,12 @@ const srv = http.createServer(async (rq, rs) => {
     return answer(rs, r);
   }
   if (u.pathname === '/api/confirm') { const r = confirmStub(st); log('GET  /api/confirm', u.search, '→', r.kind, r.order ? `${r.order.qty} × ${r.order.title}${r.order.variant ? ` (${r.order.variant})` : ''} ${r.order.code}` : ''); return json(rs, r); }
+  /* the real code, no store behind it: the sign page (sign.html) draws it inline */
+  if (u.pathname === '/api/qr') {
+    const { qrSvg } = await import('../netlify/functions/_qr.mjs');
+    rs.writeHead(200, { 'content-type': 'image/svg+xml; charset=utf-8' });
+    return rs.end(qrSvg('https://myset.vip/demo', { scale: Math.max(2, Math.min(24, parseInt(u.searchParams.get('s'), 10) || 8)) }));
+  }
   /* the Studios, signed in */
   if (u.pathname === '/api/stage') return json(rs, stageFixture(st));
   if (u.pathname === '/api/admin') {

@@ -1,6 +1,6 @@
 import { json, bad, requireArtist, getShow, readFans, voteCounts } from './_lib.mjs';
 import { planForArtist, reportsAllowed } from './_plan.mjs';
-import { readHistIndex, readHistShow, reconcileShow, moneyForShow, healHistory, placeShows, renameShow } from './_history.mjs';
+import { readHistIndex, readHistShow, reconcileShow, moneyForShow, refreshShowMoney, healHistory, placeShows, renameShow } from './_history.mjs';
 
 /* Artist-only. GET lists past shows (or one in detail); POST re-pulls Stripe for
    a single show. The show currently running is included as a live preview so the
@@ -73,6 +73,21 @@ export default async (req) => {
     ? await moneyForShow(aid, show.showId, show.startedAt, Date.now())
         .catch(() => ({ gross: 0, unattributed: 0, source: 'stripe-unreachable' }))
     : { gross: 0, unattributed: 0, source: 'none' };
+  /* THE TILE AND THE BOOK MUST AGREE. The night above is priced start→now, so a
+     tip that arrives after the show ended (still tagged with its id — see
+     moneyWindowEnd) shows in "Taken" at once; the filed row was priced when the
+     show ended and would never learn. When they differ, the row and the detail
+     take the fresh figure here — one read of Stripe draws the tile AND keeps the
+     book — so profit, the reports and the tile are the same money. Only a figure
+     Stripe actually answered may overwrite the row: 'off' and 'stripe-unreachable'
+     are not answers. */
+  if (show.status !== 'live' && money.source === 'stripe') {
+    const row = idx.shows.find((s) => s.showId === show.showId);
+    if (row && (row.gross !== money.gross || row.source !== 'stripe' || (row.unattributed || 0) !== (money.unattributed || 0))) {
+      const fresh = await refreshShowMoney(aid, show.showId, money).catch(() => null);
+      if (fresh) Object.assign(row, fresh);
+    }
+  }
   const live = {
     showId: show.showId, venue: show.venue, city: show.city,
     startedAt: show.startedAt, endedAt: null, live: true, status: show.status,
