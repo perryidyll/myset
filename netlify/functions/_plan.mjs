@@ -263,6 +263,7 @@ export async function redeemPromo(aid, rawCode) {
   });
 
   const thanks = promo.pct >= 100 ? await rewardReferrer(aid) : null;
+  if (promo.pct >= 100) await payoutFollowsPlan(aid);
   return {
     ok: true, code, plan: promo.plan, pct: promo.pct, months: promo.months,
     comped: promo.pct >= 100, until: promo.pct >= 100 ? until : null,
@@ -295,5 +296,13 @@ export async function rewardReferrer(aid) {
     name = ref.name;
     return true;
   });
+  if (name) await payoutFollowsPlan(refId);
   return name;
+}
+
+/** The payout schedule follows the plan (decision 0080). Best-effort, and a
+ *  dynamic import because _connect.mjs imports this file. */
+async function payoutFollowsPlan(aid) {
+  try { const { syncPayoutSchedule } = await import('./_connect.mjs'); await syncPayoutSchedule(aid); }
+  catch { /* a schedule that lags a day is not a broken gig */ }
 }

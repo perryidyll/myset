@@ -198,6 +198,9 @@ export async function syncSubscription(owner, subId) {
     }
     return true;
   });
+  // the payout schedule follows the plan (decision 0080); best-effort
+  const { syncPayoutSchedule } = await import('./_connect.mjs');
+  await syncPayoutSchedule(owner).catch(() => {});
   return { ok: true, plan, status: sub.status, periodEnd, cancelAtPeriodEnd: !!sub.cancel_at_period_end };
 }
 

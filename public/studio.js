@@ -1198,7 +1198,7 @@ function payCard(){
   if(p.ready) return `<div class="sec"><span class="kick">Getting paid</span></div>
     <div class="list"><div class="row"><div class="m">
       <div class="t">Card payments are on <span class="okmark">✓</span></div>
-      <div class="s muted">MySet takes ${p.cutPct}% of what comes through the app on your ${esc(p.plan)} plan. ${esc(p.stripeFeeNote)}</div>
+      <div class="s muted">MySet takes ${p.cutPct}% of what comes through the app on your ${esc(p.plan)} plan. ${esc(p.stripeFeeNote)}${p.payoutLine?' '+esc(p.payoutLine):''}</div>
     </div><button class="act" onclick="payDash()">Stripe ↗</button></div></div>`;
   const started=p.started;
   return `<div class="sec"><span class="kick">Getting paid</span></div>
@@ -4189,6 +4189,7 @@ const TIER_COPY={
     ['All-in-1 artist page',' – a complete promotional tool for your music: feature your upcoming show/tour schedule, all your streaming links, YouTube video links, Bandcamp/GoFundMe/etc. links, and more'],
     ['A community page',' – fans rate the night, post comments/photos/videos, and you can reply to them directly to build connection and engagement'],
     ['Add up to 100 songs',' – showcase all of them for your audience to vote on'],
+    ['Paid out weekly',' – tips and paid votes land in your bank every Monday'],
     ['<span class="fee">Transaction fee</span>',' – 25% on money taken through the app']]},
   plus:{name:'Bar Star',price:'$10 / month',items:[
     ['Everything in Hobbyist',''],
@@ -4203,6 +4204,7 @@ const TIER_COPY={
     ['Business dashboard',' – log your pay, band splits, cash tips, merch, costs and hours for every show, see your profit and your real $/hour, and print a branded report for your accountant'],
     ['Shows that start and end themselves',' – from your calendar'],
     ['Show the room your numbers',' – tonight’s votes, voters and tips on every phone’s vote page, if you choose'],
+    ['Paid out daily',' – last night’s money is in your bank the next day'],
     ['<span class="fee">Transaction fee</span>',' – 10% on money taken through the app']]},
   pro:{name:'Rock Star',price:'$20 / month',items:[
     ['Everything in Bar Star',''],

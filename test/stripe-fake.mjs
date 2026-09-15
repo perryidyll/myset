@@ -50,6 +50,9 @@ export default class Stripe {
     return {
       create: async (params, opts) => {
         note('accounts.create', params, opts);
+        // set state.refuse to a message and Stripe refuses every account, as the
+        // live platform did on 2026-09-14 until the founder acknowledged losses
+        if (state.refuse) throw new Error(state.refuse);
         const id = `acct_test${state.nextAcct++}`;
         const a = { id, charges_enabled: false, payouts_enabled: false,
                     details_submitted: false, country: params.country || 'US',
@@ -57,6 +60,13 @@ export default class Stripe {
                     business_profile: { name: '' },
                     metadata: params.metadata || {} };
         state.accounts.set(id, a);
+        return a;
+      },
+      update: async (id, params, opts) => {
+        note('accounts.update', { id, ...params }, opts);
+        const a = state.accounts.get(id);
+        if (!a) throw new Error('No such account');
+        if (params.settings) a.settings = { ...(a.settings || {}), ...params.settings };
         return a;
       },
       retrieve: async (id, opts) => {
