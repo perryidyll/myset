@@ -18,12 +18,12 @@ import { casDoc, readDoc, sha } from './_lib.mjs';
 
    ONE DOCUMENT PER OWNER (the artist, or the `v_<venueId>` a venue's own events
    already live under), keyed inside by '<eventId>|<date>' — not one document per
-   night. The diary and the city feed already read one document per owner for
+   night. The gig list and the city feed already read one document per owner for
    the events themselves; the counts ride alongside in the same Promise.all, one
    hop, not one per row. And a weekly residency would otherwise be fifty-two
    documents that nothing could find without list() (INVARIANT 1). Nights more
    than KEEP_DAYS gone are pruned on write, and a night further ahead than
-   HORIZON_DAYS — the furthest the diary itself will show — is refused (rsvp.mjs),
+   HORIZON_DAYS — the furthest the gig list itself will show — is refused (rsvp.mjs),
    so the document stays the size of the calendar a page can draw, whatever the
    residency's age. Without the far edge a repeating rule accepts any Tuesday to
    the end of time and the document grows by one night per anonymous POST.
@@ -36,7 +36,7 @@ import { casDoc, readDoc, sha } from './_lib.mjs';
 const K = (ownerId) => `rsvp_${ownerId}`;
 export const MAX_FANS = 5000;
 export const KEEP_DAYS = 3;
-export const HORIZON_DAYS = 120;   // the diary's own `days=` cap (events.mjs reads this one)
+export const HORIZON_DAYS = 120;   // the gig list's own `days=` cap (events.mjs reads this one)
 export const occKey = (eventId, date) => `${eventId}|${date}`;
 
 const empty = () => ({ v: 1, occ: {} });

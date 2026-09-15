@@ -11,7 +11,7 @@ import { MARK } from './_canary.mjs';
 
    Nothing is stored linking a gig to a venue. The artist typed the venue's name
    into their own calendar, and this matches on that name within the venue's own
-   city. That means a venue signing up today already has its whole diary — no
+   city. That means a venue signing up today already has its whole gig list — no
    backfill, no job, and nothing for an artist to re-enter. It also means the
    listings are the ARTIST's claim, which the page says out loud. */
 

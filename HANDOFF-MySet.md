@@ -744,7 +744,7 @@ website / Instagram / Facebook / Google links.
 name is *distinctive* (two words, or eight characters), so nobody can register as
 "Beach" and claim every Beach Bar in town. An exact match always counts.
 Consequence worth keeping: **a venue signing up today already has its whole
-diary** — no backfill, no job, nothing for an artist to re-enter. Verified live:
+gig list** — no backfill, no job, nothing for an artist to re-enter. Verified live:
 a venue named "The Ugly Duckling Irish Pub" in Koh Phangan picked up all 9 of
 Perry's residency nights with zero data entry. INVARIANT 0y.
 

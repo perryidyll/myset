@@ -5,7 +5,7 @@
        page's anonymous id — no account, no sign-in
      · the reply is the fan's state and the night's count; saying it twice counts
        once; taking it back takes one off
-     · the artist's diary AND the city feed carry the count on the row, from the
+     · the artist's gig list AND the city feed carry the count on the row, from the
        same document, in the same hop as the events
      · a venue's own event counts under the venue, separately from any artist
      · a night that does not exist, or has finished, is a 404 — never a count on
@@ -44,7 +44,7 @@ const hit = async (h, url, body, token) => {
 const rsvp = (q, body) => hit(rsvpFn, 'https://x/api/rsvp' + q, body);
 
 /* Three days out, so the night is inside the city feed's seven-day window and the
-   diary alike; ten days back, so the other has finished whatever the hour. */
+   gig list alike; ten days back, so the other has finished whatever the hour. */
 const SOON = new Date(Date.now() + 3 * 86400e3).toISOString().slice(0, 10);
 const GONE = new Date(Date.now() - 10 * 86400e3).toISOString().slice(0, 10);
 
@@ -86,11 +86,11 @@ eq('taking it back twice is still one', [a4.on, a4.n], [false, 1]);
 
 console.log('\nTHE COUNT RIDES ON EVERY ROW');
 {
-  const diary = await hit(eventsFn, `https://x/api/events?a=${slug}`);
-  const row = (diary.gigs || []).find((g) => g.eventId === 'ahead');
-  eq('the diary row says one going', row && row.rsvp, 1);
+  const list = await hit(eventsFn, `https://x/api/events?a=${slug}`);
+  const row = (list.gigs || []).find((g) => g.eventId === 'ahead');
+  eq('the gig list row says one going', row && row.rsvp, 1);
   const door = await hit(fanFn, `https://x/api/fan?what=events&a=${slug}`);
-  eq('and so does the same diary through the one warm door',
+  eq('and so does the same gig list through the one warm door',
     ((door.gigs || []).find((g) => g.eventId === 'ahead') || {}).rsvp, 1);
   const feed = await hit(eventsFn, 'https://x/api/events?country=Thailand&city=Koh%20Phangan');
   const all = (feed.days || []).flatMap((d) => [...d.gigs, ...(d.featured || [])]);
@@ -171,10 +171,10 @@ console.log('\nOLD NIGHTS ARE PRUNED, AND A NIGHT HAS A CEILING');
   ok('the night from 2020 is gone', !after.occ['ahead|2020-01-01'], Object.keys(after.occ));
   eq('the full night still has exactly its ceiling', Object.keys(after.occ[FULL].fans).length, R.MAX_FANS);
   const feed = await hit(eventsFn, `https://x/api/events?a=${slug}`);
-  eq('and the diary says so', ((feed.gigs || []).find((g) => g.eventId === 'ahead') || {}).rsvp, R.MAX_FANS);
+  eq('and the gig list says so', ((feed.gigs || []).find((g) => g.eventId === 'ahead') || {}).rsvp, R.MAX_FANS);
 }
 
-console.log('\nNEVER A NIGHT THE DIARY CANNOT SHOW');
+console.log('\nNEVER A NIGHT THE GIG LIST CANNOT SHOW');
 {
   /* A weekly rule produces a Tuesday in 2034 as readily as next week's; the first
      review found the write path took any of them, one night per POST, for ever. */
@@ -186,7 +186,7 @@ console.log('\nNEVER A NIGHT THE DIARY CANNOT SHOW');
   eq('a night inside the horizon is taken',
     (await rsvp(`?a=${slug}`, { fan: FAN_A, eventId: 'res', date: week(2), on: true })).n, 1);
   const far = await rsvp(`?a=${slug}`, { fan: FAN_A, eventId: 'res', date: week(30), on: true });
-  eq('a night past the diary’s horizon is a 404, as if it were not listed', far.status, 404);
+  eq('a night past the gig list’s horizon is a 404, as if it were not listed', far.status, 404);
   eq('and adds nothing to the document', Object.keys((await R.readRsvp(aid)).occ).length, before + 1);
 }
 

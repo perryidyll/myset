@@ -917,7 +917,7 @@ const SCROLLPOS={queue:0,list:0};
 let GIGS=null, GIGS_ASKED=false, NEXT_TIMER=null;
 async function loadGigs(){
   if(GIGS_ASKED)return; GIGS_ASKED=true;
-  /* `?a=` with nothing after it is the founding page's own diary (events.mjs). */
+  /* `?a=` with nothing after it is the founding page's own gig list (events.mjs). */
   try{ const d=await fetch(`${API}/fan?what=events${(AQ1||'?a=').replace('?','&')}&n=2`,{cache:'no-store'}).then(r=>r.json()); if(d&&d.ok) GIGS=d.gigs||[]; }
   catch(e){ GIGS=[]; }
   if(ST&&ST.status!=='live') render();          // draws the label and the venue line

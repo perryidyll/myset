@@ -38,7 +38,7 @@ const main = async (req) => {
   if (!ownerId) return bad('unknown artist', 404);
 
   /* The night must be one THIS owner actually has, not over, and no further ahead
-     than the diary will ever show — a count on a gig that never existed is a
+     than the gig list will ever show — a count on a gig that never existed is a
      number somebody would eventually depend on, and a repeating rule would
      otherwise answer for any Tuesday in 2034 (no page offers it; the document
      would grow a night per POST). */
