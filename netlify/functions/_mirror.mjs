@@ -46,7 +46,9 @@ export const PASS_GAP_MS = 20 * 3600e3;
    R2 answered 403 to every PUT (the token can read the bucket, not write it; the
    clips had been falling back to Blobs since 2026-09-11 for the same reason,
    `r2.put 403` in the error log). The ring says the first failure's words so
-   the next person does not have to guess. */
+   the next person does not have to guess. That token has written since
+   2026-09-15 ~04:30Z (Object Read & Write); the retry gap stays for the next
+   refusal, whatever its cause. */
 export const RETRY_GAP_MS = 3600e3;
 export const BUDGET_MS = () => Math.max(0, Number(process.env.MYSET_MIRROR_BUDGET_MS ?? 5500));
 export const GLOBALS = ['artists', 'venues', 'cityindex', 'acctindex', 'flags', 'idqueue', 'promos',
