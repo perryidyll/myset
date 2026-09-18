@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-18 11:18 — ecd0e44 — wt@studio/hours-minutes-boxes (15 files since origin/main)
+**tl;dr:** Money tab: a show's time is two number-pad boxes per kind (hours | minutes) — no more hours logged as minutes; Set-up / break-down; Edit last show's numbers (0084)
+**Other sessions:** Biz.parseHms(h,m) is the reader; the boxes are .bzmin with data-u=h|m and inputmode=numeric; parseHm stays for the report and old drafts; TIME_KINDS label changed in BOTH public/biz.js and netlify/functions/_biz.mjs (the overview reads the server one); tools/uicheck.mjs now expects the fold at five and Past shows.
+
 ### 2026-09-18 10:36 — b7ec8eb — wt@studio/money-tab-batch (20 files since origin/main)
 **tl;dr:** Money tab: the burst on votes bought too (brief over a chart), $x from in-app tips under profit, a currency chip, pay open on every gig form, normal keyboard on hours, the editor's X clear + save lands at the top, the pinch-out zoom fixed (21 chart labels), Past shows, lists fold 5→+20, bugs card last, Delete show; plus swipe-to-reveal + hold on every list row (0082, 0083)
 **Other sessions:** stage.mjs payload has paid{count,total,last}; history rows have tipped (in ROW_TOPS — the heal re-opens once per account); POST /api/history {action:'hide'} flags idx row hidden and history.mjs filters it; bizPrefs takes currency (3 letters, USD clears); Biz.money follows Biz.currency — call it before painting figures (report.html does). studio.js foot module owns swipe/hold — any .row/.songcard/.gigcard with button.act/.bizacts/.btn-text gets it free. tools/mock.mjs now answers bizGet/history/ledger/revenue with rows; after editing studio.js run node tools/stamp.mjs
