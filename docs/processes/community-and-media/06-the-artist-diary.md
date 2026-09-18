@@ -1,8 +1,8 @@
 ---
 tab: Community & media
 section: The artist diary (the stories behind the songs)
-puzzle_section_id: (not loaded yet — see status)
-puzzle_steps: (none yet) · changelog 1835 (in_progress until the batch merges)
+puzzle_section_id: 42869
+puzzle_steps: 376027–376033 (d01–d07) · changelog 1835 (completed 2026-09-18)
 sources:
   - netlify/functions/_diary.mjs, diary.mjs (the document, the cap, the public read)
   - netlify/functions/admin.mjs (DIARY_ACTIONS, CAPABILITY), _plan.mjs (PLANS.*.diary, diaryCap)
@@ -10,8 +10,8 @@ sources:
   - public/diary.html, public/artist.html (the Diary door), public/studio.js (Menu → Diary)
   - docs/decisions/0085
   - INVARIANTS.md 0gb, 0s, 0fs, 1
-status: drafted 2026-09-18 with the build; changelog entry 1835 written the same day (in_progress) — to be loaded into Puzzle (create_process) and the entry moved to completed the day the batch merges
-loaded: (not yet)
+status: loaded 2026-09-18, the day the batch merged as a87ff85 (PR #78); changelog 1835 completed the same day
+loaded: 2026-09-18
 verified: code read 2026-09-18; test/diaries.mjs; walked on tools/localhost.mjs
 ---
 

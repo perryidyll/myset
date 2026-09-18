@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-18 15:12 — 43c87b2 — wt-diaries@docs/diaries-merged (4 files since origin/main)
+**tl;dr:** Docs only: DIA-001 done (live as a87ff85, PR #78); the diary sheet loaded into Puzzle (section 42869), changelog 1835 completed
+**Other sessions:** No code. Next for the founder: the first real diary page on his own account. [skip ci]
+
 ### 2026-09-18 15:08 — 56a6641 — wt-diaries@docs/artist-diaries-phase1-scope (30 files since origin/main)
 **tl;dr:** Artist Diaries: every artist gets a diary of stories behind their songs at /<slug>/diary (3/10/40 pages by plan), with a cover photo per page, lyrics beside a story, Studio → Menu → Diary, a Diary door on the artist page and a Diary card under the merch card on the community page (0085)
 **Other sessions:** New document diary_<aid> (KEY.diary, casKeep); public read is /api/fan?what=diary; admin actions diaryList/Save/Remove/Move/Photo/PhotoClear (CAPABILITY profile); PLANS.*.diary + diaryCap; DIARY_SLOT d<id> in _img.mjs is a page's cover; community.mjs ships diary + diaryPeek and its read ceilings went up by one; diary/diaries are reserved slugs; /:slug/diary route sits above the catch-all; after editing studio.js run node tools/stamp.mjs

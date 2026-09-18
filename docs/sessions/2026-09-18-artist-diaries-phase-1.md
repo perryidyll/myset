@@ -81,11 +81,13 @@ draft and the staged cover, the save minting the id, the cover following —
 its fan, the cover heading the story, ✕ clearing it and the card falling back to
 the initial.
 
-**Not checked:** the deploy preview; the founder's own first page on the live
-site; the editor on a real phone keyboard.
+**Not checked:** the founder's own first page on the live site; the editor and
+the crop on a real phone keyboard.
 
 **Left open:** timed lyrics (wait for audio); a restore-a-version for a page;
 `tools/uicheck.mjs` does not open the diary yet; the Puzzle load + changelog
 entry for 0085 (the sheet is drafted); a Notion task tick.
 
-**Not pushed.** AGENTS.md: never commit or push unless asked.
+**Shipped** on the founder's word the same evening: PR #78, squash-merged as
+`a87ff85` after the preview walk; live on myset.vip verified by content. Puzzle:
+section 42869 (steps 376027–376033) loaded, changelog 1835 completed.
