@@ -10,7 +10,13 @@ let TAB=localStorage.getItem('myset.tab')||'setlist';
 /* 'merch' is a real tab again — its own option under Menu since 2026-09-13 (the
    founder's call: a store is not a profile field). It was folded into Profile on
    2026-09-12, so a phone that saved 'merch' before then simply lands on the store. */
-let MERCH=null, MERCHMAX=0, MERCHLIM={}, MERCHERR=null, ORDERS=null, WISHES=null, COMM=null;   // the shop (and the caps the server holds it to), why it didn't load, its orders, what fans asked it for, and the community page's posts
+let MERCH=null, MERCHMAX=0, MERCHLIM={}, MERCHERR=null, ORDERS=null, WISHES=null, COMM=null;
+/* The artist diary (decision 0085): the pages as diaryList sent them, the cap the
+   server holds this plan to, the field sizes it counts against, and why a load
+   failed. Nothing here is typed — a number that is not in DIARYLIM/DIARYCAP is
+   not on this screen. */
+let DIARY=null, DIARYCAP=0, DIARYLIM={}, DIARYERR=null, DIARYON=true;
+let DCOVER=null;   // a cover cropped for a page not saved yet ({data}); goes up right after the save mints the id   // the shop (and the caps the server holds it to), why it didn't load, its orders, what fans asked it for, and the community page's posts
 let SESS=null, REC=null;                  // where you're signed in, and your recovery codes
 /* The inbox (decision 0074): MSGN is the badge {unread, requests}, read quietly and
    never on a timer; MSGL the list as msgList sent it; MSGT the open conversation's
@@ -416,6 +422,7 @@ async function load(opts){
   if(TAB==='gigs'&&!FEAT)jobs.push(loadFeature());
   if(TAB==='profile'&&!PROF) jobs.push(loadProf());
   if(TAB==='merch'){ if(!MERCH)jobs.push(loadMerch()); if(!ORDERS)jobs.push(loadOrders()); if(!WISHES)jobs.push(loadWishes()); if(!PAY)loadPay(); }
+  if(TAB==='diary'&&!DIARY)jobs.push(loadDiary());
   /* drawPush is NOT awaited: it races serviceWorker.ready for up to four seconds,
      and a boot screen held for a worker that may never come is a boot screen
      held for nothing. It paints into #pushBox whenever it lands (PUSHVIEW). */
@@ -676,8 +683,9 @@ async function passwordSignIn(){
 (function(){
   try{
     const q=new URLSearchParams(location.search);
-    // ?tab=messages is where a "new booking request" push or email lands (0074)
-    if(q.get('tab')==='setlist'||q.get('tab')==='messages'){
+    // ?tab=messages is where a "new booking request" push or email lands (0074);
+    // ?tab=diary is the diary page's own menu door into the Studio (0085)
+    if(q.get('tab')==='setlist'||q.get('tab')==='messages'||q.get('tab')==='diary'){
       TAB=q.get('tab'); localStorage.setItem('myset.tab',TAB);
       history.replaceState({},'',location.pathname);
     }
@@ -816,6 +824,7 @@ async function signOut(){
      state every one of these is in at first paint, so the next load is a first load. */
   D=null;PLAN=null;PROF=null;PROFERR=null;TEAM=null;PAY=null;HIST=null;REV=null;LEDGER=null;EVENTS=null;PITCHES=null;
   FEAT=null;MERCH=null;MERCHERR=null;ORDERS=null;WISHES=null;COMM=null;SESS=null;REC=null;TICK=null;PKEYS=null;
+  DIARY=null;DIARYERR=null;   // the diary is theirs, not the phone's
   MSGL=null;MSGERR=null;MSGT='';MSGTH=null;MSGDRAFT={};MSGN={unread:0,requests:0};   // the inbox is theirs, not the phone's (0074)
   if(window.Money)Money.forget();   // the dashboard keeps its own copy of the book (0065)
   gate();
@@ -1356,6 +1365,7 @@ function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')load
   if(t==='money'){DETAIL=null;FOLDN={};loadRev();loadHist();loadOrders(); if(window.Money)Money.reset(); if(bizOwner())ensureMoney().catch(()=>{});}
   if(t==='profile'){ loadProf(); loadComm(); loadPlan(); }
   if(t==='merch'){ loadMerch(); loadOrders(); loadWishes(); loadPlan(); if(!PAY)loadPay(); }
+  if(t==='diary'){ loadDiary(); loadPlan(); }
   if(t==='setlist') loadPlan();
   /* drawPush paints into a div that render() has just created, and switching INTO
      the tab never called it — only a reload that landed here did. So the panel sat
@@ -2332,6 +2342,13 @@ function render(){
     body=merchSection();
   }
 
+  if(TAB==='diary'){
+    /* THE ARTIST DIARY (decision 0085) — the stories behind the songs, on their
+       own public page. Every plan has it; the plan sizes it, and the size is the
+       server's number (diaryList's `cap`), never one typed here. */
+    body=diarySection();
+  }
+
   if(TAB==='messages'){
     /* THE INBOX (decision 0074) — the Book button's other end. Its own screen
        under Menu, beside the Merch store; the list and the open conversation are
@@ -2706,7 +2723,7 @@ const TABICON={
   money:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12.5" rx="3"/><path d="M3 10.5h18M7 15h3"/></svg>',
   menu:'<svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'};
 function tabBar(){
-  const on=t=>t==='menu'?(TAB==='profile'||TAB==='merch'||TAB==='settings'||TAB==='messages'):TAB===t;
+  const on=t=>t==='menu'?(TAB==='profile'||TAB==='merch'||TAB==='diary'||TAB==='settings'||TAB==='messages'):TAB===t;
   // the Menu tab wears a small pink-orange dot while a message waits (0074)
   return `<nav class="tabbar" aria-label="Studio"><div class="in">
     <button data-tab-live class="${TAB==='live'?'on':''}" onclick="setTab('live')" aria-current="${TAB==='live'?'page':'false'}">${TABICON.live}Live</button>
@@ -2725,6 +2742,9 @@ function openMenu(){
     <button class="menurow" onclick="closeSheet();setTab('merch')">
       <svg viewBox="0 0 24 24"><path d="M3.5 4.5h7.5l9.5 9.5-6.5 6.5L3.5 11z"/><circle cx="7.6" cy="8.6" r="1.4"/></svg>
       <div class="m">Merch store<span>Items, sizes, prices and orders</span></div><span class="chev">›</span></button>
+    <button class="menurow" onclick="closeSheet();setTab('diary')">
+      <svg viewBox="0 0 24 24"><path d="M12 7.5v12M12 7.5c-1.4-1.6-3.6-2-7-2v12c3.4 0 5.6.4 7 2M12 7.5c1.4-1.6 3.6-2 7-2v12c-3.4 0-5.6.4-7 2"/></svg>
+      <div class="m">Diary<span>The stories behind your songs</span></div><span class="chev">›</span></button>
     ${msgAllowed()?`<button class="menurow" data-menu="messages" onclick="closeSheet();setTab('messages')">
       <svg viewBox="0 0 24 24"><path d="M3.5 7a2.5 2.5 0 0 1 2.5-2.5h12A2.5 2.5 0 0 1 20.5 7v7.5a2.5 2.5 0 0 1-2.5 2.5h-7.2L7 20.5V17H6a2.5 2.5 0 0 1-2.5-2.5z"/></svg>
       <div class="m">Messages<span>Booking requests and replies</span></div>${MSGN.unread>0?`<b class="bub">${MSGN.unread}</b>`:''}<span class="chev">›</span></button>`:''}
@@ -4274,6 +4294,104 @@ async function rmMerch(id){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'merchRemove',id})});
   if(d.ok){MERCH=d.merch;render();toast('Removed');}
 }
+/* ---------- THE ARTIST DIARY (decision 0085) ----------
+   The stories behind the songs. A page is a title, a story, an optional moment
+   ("Summer 2019") and an optional song from the library — sent by ID, never by
+   name, so the page can only ever point at a song that exists. The list, the
+   cap and the field sizes are the server's (diaryList); this screen types none
+   of them. A story is the one thing on MySet that cannot be re-derived, so the
+   editor keeps a draft on the phone while it is being written (DDRAFT) and only
+   forgets it once the server has it. */
+async function loadDiary(force){ if(DIARY&&!force)return; const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryList'}),quiet:true});
+  if(d&&d.ok){ DIARY=d.pages; DIARYERR=null; DIARYCAP=Number(d.cap)||0;
+    DIARYLIM={maxTitle:Number(d.maxTitle)||0,maxWhen:Number(d.maxWhen)||0,maxBody:Number(d.maxBody)||0,label:String(d.label||''),plan:String(d.plan||'')}; }
+  else DIARYERR=(d&&d.error)||'Couldn’t load your diary';
+  if(TAB==='diary'&&D&&!typing())render(); }
+function retryDiary(){ DIARYERR=null; DIARY=null; render(); loadDiary(true); }
+const DDRAFT='myset.diary.draft';
+const dDraft=()=>{ try{ return JSON.parse(localStorage.getItem(DDRAFT)||'null'); }catch(e){ return null; } };
+const dDraftClear=()=>{ try{ localStorage.removeItem(DDRAFT); }catch(e){} };
+function dDraftKeep(id){
+  const v=k=>(document.getElementById(k)||{}).value||'';
+  const body=v('dpBody'); if(!body.trim()&&!v('dpTitle').trim()){ dDraftClear(); return; }
+  try{ localStorage.setItem(DDRAFT,JSON.stringify({id:id||'',title:v('dpTitle'),when:v('dpWhen'),songId:v('dpSong'),body,at:Date.now()})); }catch(e){}
+  const c=document.getElementById('dpCount'); if(c&&DIARYLIM.maxBody) c.textContent=`${body.length} / ${DIARYLIM.maxBody}`;
+}
+/* the song a page names, for a row: its title from the library, or the page's own word for it */
+const dSongOf=p=>p&&p.song?p.song.title:(p&&p.songId?'a song no longer in your library':'');
+function diarySection(){
+  const s=D.show, pages=DIARY||[], full=DIARYCAP>0&&pages.length>=DIARYCAP;
+  const diaryHref=s.slug?'/'+esc(s.slug)+'/diary':'/diary.html';
+  const shown=pages.filter(p=>p.on!==false).length;
+  const list=`<div class="sec"><span class="kick">Your pages</span><span class="kick">${pages.length}${DIARYCAP?'/'+DIARYCAP:''}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">The stories behind your songs — how one came to be, the night it landed, a moment worth keeping. A page can point at a song from your library, and fans can read its lyrics beside the story. Your page wears a <b>Diary</b> button as soon as one page is on.</p>
+    ${pages.length&&!shown?`<div class="row muted">Every page is off, so the Diary button isn’t on your page yet. Turn one on and it appears.</div>`:''}
+    <div class="list">${DIARY===null?(DIARYERR?`<div class="row muted" onclick="retryDiary()" style="cursor:pointer"><div class="m"><div class="t">${esc(DIARYERR)}</div><div class="s">Tap to try again</div></div></div>`:'<div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div>'):pages.map((p,i)=>`<div class="row"${p.on===false?' style="opacity:.6;flex-wrap:wrap"':' style="flex-wrap:wrap"'}>
+        <div class="m" style="flex:1 1 100%;min-width:0"><div class="t">${esc(p.title)}</div>
+          <div class="s">${[p.when?esc(p.when):'',dSongOf(p)?'♪ '+esc(dSongOf(p)):'',p.on===false?'Off':''].filter(Boolean).join(' · ')||'A moment'}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;flex:1 1 100%">
+        <button class="act" onclick="diaryMoveItem('${esc(p.id)}','up')" ${i===0?'disabled style="opacity:.3"':''} aria-label="Move up">↑</button>
+        <button class="act" onclick="diaryMoveItem('${esc(p.id)}','down')" ${i===pages.length-1?'disabled style="opacity:.3"':''} aria-label="Move down">↓</button>
+        <button class="act" onclick="openDiaryPage('${esc(p.id)}')">Edit</button>
+        <button class="act warn" onclick="rmDiaryPage('${esc(p.id)}')">✕</button></div></div>`).join('')||'<div class="row muted">Nothing written yet. The first page is the hardest — start with the song people always ask about.</div>'}</div>
+    ${full
+      ? `<p class="muted" style="font-size:12.5px;padding:12px 20px 0"><b style="color:var(--accent)">That’s the ${DIARYCAP} pages ${esc(DIARYLIM.label||'your plan')} holds.</b> Edit one, or make room${DIARYLIM.plan!=='pro'?' — or <a href="#" onclick="showPlans();return false" style="color:var(--accent-ink);font-weight:600">see the plans</a> for a bigger diary':''}.</p>`
+      : `<div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openDiaryPage('')">+ Write a page</button></div>`}`;
+  return `<div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${diaryHref}" style="justify-content:center">See your diary ↗</a></div>
+    ${list}`;
+}
+function openDiaryPage(id){
+  const p0=(DIARY||[]).find(x=>x.id===id)||{title:'',when:'',body:'',songId:'',on:true,updatedAt:0};
+  /* a draft on this phone for THIS page (or for a new one) that is newer than the saved copy comes back — a closed sheet is not a lost story */
+  const dr=dDraft(), useDraft=!!(dr&&(dr.id||'')===(id||'')&&(!p0.updatedAt||dr.at>p0.updatedAt)&&(dr.body||dr.title));
+  const p=useDraft?{...p0,title:dr.title,when:dr.when,body:dr.body,songId:dr.songId}:p0;
+  DIARYON=p0.on!==false;
+  const songs=[...((D&&D.songs)||[])].sort((a,b)=>String(a.title).localeCompare(String(b.title)));
+  const opt=songs.map(x=>`<option value="${esc(x.id)}"${x.id===p.songId?' selected':''}>${esc(x.title)}${x.artist?' — '+esc(x.artist):''}</option>`).join('');
+  const keep=`oninput="dDraftKeep('${esc(id)}')"`;
+  if(id) DCOVER=null;   // a staged cover belongs to a new page only
+  const cover=id?(p0.img||''):(DCOVER&&DCOVER.data||'');
+  openSheet(`<h3>${id?'Edit the page':'Write a page'}</h3>
+    ${useDraft?`<p class="lede">Picked up where you left off — this is the draft from this phone.</p>`:''}
+    <div class="field"><label>Cover (optional)</label>${slotBox(id||'dnew',cover,'wide')}
+      <p class="muted" style="font-size:12px;margin:7px 0 0">A photo for this page — the night, the room, the notebook. It heads the story and stands in for the page on your community card.</p></div>
+    <div class="field"><label>Title</label><input class="inp" id="dpTitle"${DIARYLIM.maxTitle?' maxlength="'+DIARYLIM.maxTitle+'"':''} value="${esc(p.title)}" placeholder="How this one found us" ${keep}></div>
+    <div class="field"><label>When (optional)</label><input class="inp" id="dpWhen"${DIARYLIM.maxWhen?' maxlength="'+DIARYLIM.maxWhen+'"':''} value="${esc(p.when)}" placeholder="Summer 2019 · the night the power went" ${keep}></div>
+    <div class="field"><label>The song it’s about</label><select class="inp" id="dpSong" ${keep}><option value=""${!p.songId?' selected':''}>No song — it’s a moment</option>${opt}</select>
+      ${songs.length?'':'<p class="muted" style="font-size:12px;margin:7px 0 0">Add songs on the Setlist tab and they show up here.</p>'}</div>
+    <div class="field"><label>The story</label><textarea class="inp" id="dpBody" rows="10"${DIARYLIM.maxBody?' maxlength="'+DIARYLIM.maxBody+'"':''} placeholder="Where it came from, who was in the room, what it took. A blank line starts a new paragraph." ${keep}>${esc(p.body)}</textarea>
+      <p class="muted" style="font-size:12px;margin:7px 0 0;display:flex;justify-content:space-between"><span>Your words, in your voice. Fans read this on your diary page.</span><span id="dpCount">${DIARYLIM.maxBody?`${String(p.body||'').length} / ${DIARYLIM.maxBody}`:''}</span></p></div>
+    <div class="row"><div class="m"><div class="t">On the page</div><div class="s">Off keeps it here, out of sight — it still counts as a page</div></div>
+      <div class="tog"><button id="dpOn" class="${DIARYON?'on':''}" onclick="DIARYON=true;this.classList.add('on');document.getElementById('dpOff').classList.remove('on')">On</button>
+      <button id="dpOff" class="${DIARYON?'':'on'}" onclick="DIARYON=false;this.classList.add('on');document.getElementById('dpOn').classList.remove('on')">Off</button></div></div>
+    <button class="big" style="margin-top:14px" id="dpSave" onclick="saveDiaryPage('${esc(id)}')">Save</button>`);
+  setTimeout(()=>{const e=document.getElementById(p.title?'dpBody':'dpTitle'); if(e&&!id)e.focus();},260);
+}
+async function saveDiaryPage(id){
+  const v=k=>(document.getElementById(k)||{}).value||'';
+  const page={id:id||undefined,title:v('dpTitle'),when:v('dpWhen'),songId:v('dpSong'),body:v('dpBody'),on:DIARYON};
+  if(!page.title.trim()){ toast('Give the page a title'); return; }
+  if(!page.body.trim()){ toast('Write the story first'); return; }
+  const b=document.getElementById('dpSave'); if(b){ b.disabled=true; b.textContent='Saving…'; }
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'diarySave',page})});
+  if(!d.ok){ toast(d.error||'Couldn’t save'); if(b){ b.disabled=false; b.textContent='Save'; } return; }   // the draft stays on the phone until the server has it
+  DIARY=d.pages; DIARYCAP=Number(d.cap)||DIARYCAP; dDraftClear();
+  if(!id&&DCOVER&&d.id){   // the page exists now: its cover follows, by the id the server minted
+    const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryPhoto',id:d.id,data:DCOVER.data}),quiet:true});
+    if(r&&r.ok) DIARY=r.pages; else toast((r&&r.error)||'The page is saved; the cover didn’t make it — add it again from Edit');
+  }
+  DCOVER=null;
+  closeSheet(); render(); toast(id?'Saved':'On your diary');
+}
+async function diaryMoveItem(id,dir){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryMove',id,dir})});
+  if(d&&d.ok){ DIARY=d.pages; render(); } else toast((d&&d.error)||'Couldn’t move that');
+}
+async function rmDiaryPage(id){
+  if(!await ask({title:'Remove this page?',lede:'The story comes off your diary. There is no undo — copy it somewhere first if you might want it back.',yes:'Yes, remove it',no:'Keep it'}))return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryRemove',id})});
+  if(d.ok){ DIARY=d.pages; const dr=dDraft(); if(dr&&dr.id===id) dDraftClear(); render(); toast('Removed'); }
+}
 async function orderDone(sid,done){ const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'orderDone',sid,done})}); if(d.ok){ORDERS=d.orders;render();} }
 async function orderDetail(sid){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'orderDetail',sid})});
@@ -4348,6 +4466,7 @@ const TIER_COPY={
     ['All-in-1 artist page',' – a complete promotional tool for your music: feature your upcoming show/tour schedule, all your streaming links, YouTube video links, Bandcamp/GoFundMe/etc. links, and more'],
     ['A community page',' – fans rate the night, post comments/photos/videos, and you can reply to them directly to build connection and engagement'],
     ['Add up to 100 songs',' – showcase all of them for your audience to vote on'],
+    ['An artist diary',(k)=>` – the stories behind your songs, on their own page${diaryPagesOf(k)?': up to '+diaryPagesOf(k)+' pages':''}`],
     ['Paid out weekly',' – tips and paid votes land in your bank every Monday'],
     ['<span class="fee">Transaction fee</span>',' – 25% on money taken through the app']]},
   plus:{name:'Bar Star',price:'$10 / month',items:[
@@ -4355,6 +4474,7 @@ const TIER_COPY={
     ['Unlimited shows',' – play as often as you like'],
     ['Rooms up to 300',' – give everyone a chance to connect'],
     ['Add up to 200 songs',' – showcase all of them for your audience to vote on'],
+    ['A bigger diary',(k)=>diaryPagesOf(k)?` – up to ${diaryPagesOf(k)} pages of stories`:''],
     ['Separate setlists',' – customizable for different gigs and venues'],
     ['Set your own rules',' – # of free votes per person, price of buying more, votes needed to request a song not on your setlist, and more'],
     ['In-app merch store',' – feature and sell your merch directly from your artist page'],
@@ -4369,10 +4489,13 @@ const TIER_COPY={
     ['Everything in Bar Star',''],
     ['Rooms up to 2,000',' – a bigger night still runs, just a little calmer'],
     ['A bigger business dashboard',' – up to 10 band members and 10 costs a show'],
+    ['A bigger diary still',(k)=>diaryPagesOf(k)?` – up to ${diaryPagesOf(k)} pages of stories`:''],
     ['Ads and promotions, personalised branding, press kits',' – <em class="soon">coming soon</em>'],
     ['<span class="fee">Transaction fee</span>',' – 2% on money taken through the app']]},
 };
-const tierList=(k)=>TIER_COPY[k].items.map(x=>`<li><b>${x[0]}</b>${x[1]||''}</li>`).join('');
+/* a line may be a function of the plan key, for a number that must come from the server's table (the diary's page count, 0085) */
+const tierList=(k)=>TIER_COPY[k].items.map(x=>`<li><b>${x[0]}</b>${typeof x[1]==='function'?x[1](k):(x[1]||'')}</li>`).join('');
+const diaryPagesOf=(k)=>{ const n=PLAN&&PLAN.plans&&PLAN.plans[k]&&Number(PLAN.plans[k].diary); return n>0?n:null; };
 const RANK={free:0,plus:1,pro:2};
 function openPlans(){
   if(!PLAN||!PLAN.ok){toast('One moment…');loadPlan(true);return;}
@@ -4977,7 +5100,7 @@ async function openCrop(slot,file){
       i.onload=()=>res(i); i.onerror=()=>rej(new Error('bad')); i.src=url;});
   }catch(e){ URL.revokeObjectURL(url); toast('Could not read that photo'); return; }
 
-  const square=slot!=='cover';
+  const square=slot!=='cover'&&!DIARY_PIC.test(slot);   // the profile cover and a diary page's cover are wide
   const W=Math.min(300, Math.round(window.innerWidth-96));
   const H=square?W:Math.round(W*10/16);
   const base=Math.max(W/img.width,H/img.height);
@@ -5036,7 +5159,7 @@ function wireCrop(){
   });
   if(z) z.addEventListener('input',()=>{ CROP.zoom=z.value/100; paintCrop(); });
 }
-function cancelCrop(){ const slot=CROP&&CROP.slot; if(CROP&&CROP.url)URL.revokeObjectURL(CROP.url); CROP=null; closeSheet(); if(slot&&MERCH_PIC.test(slot)) mcReturn(slot); }
+function cancelCrop(){ const slot=CROP&&CROP.slot; if(CROP&&CROP.url)URL.revokeObjectURL(CROP.url); CROP=null; closeSheet(); if(slot&&MERCH_PIC.test(slot)) mcReturn(slot); else if(slot&&DIARY_PIC.test(slot)) dReturn(slot); }
 async function confirmCrop(){
   if(!CROP||WRITING)return;
   WRITING=true;
@@ -5048,8 +5171,8 @@ async function confirmCrop(){
     /* a merch item's picture: the slot IS the item id. It is drawn ~170px wide on
        a two-up shop grid, so 480px is plenty and the bytes matter more than the
        pixels — a shop page is a dozen of these on bar wifi. */
-    const merch=MERCH_PIC.test(slot);
-    const outW=slot==='cover'?1200:merch?480:640;   // 1200 is plenty on a phone; half the bytes of 1400
+    const merch=MERCH_PIC.test(slot), diary=DIARY_PIC.test(slot);
+    const outW=slot==='cover'||diary?1200:merch?480:640;   // 1200 is plenty on a phone; half the bytes of 1400
     const outH=Math.round(outW*H/W);
     const c=document.createElement('canvas'); c.width=outW; c.height=outH;
     c.getContext('2d').drawImage(img,sx,sy,sw,sh,0,0,outW,outH);
@@ -5073,6 +5196,12 @@ async function confirmCrop(){
       if(MCDRAFT) MCDRAFT.imgs=(it&&it.imgs?it.imgs:[]).map(u=>({url:u}));
       cancelCrop(); render(); toast('Photo added'); return;
     }
+    if(diary){
+      if(slot==='dnew'){ DCOVER={data}; cancelCrop(); return; }   // not saved yet: staged, uploaded by saveDiaryPage once the id exists
+      const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryPhoto',id:slot,data})});
+      if(!r.ok){toast(r.error||'Could not save that photo');return;}
+      DIARY=r.pages; cancelCrop(); render(); toast('Cover added'); return;
+    }
     const r=await api('/admin',{method:'POST',body:JSON.stringify({action:'photoUpload',slot,data})});
     if(!r.ok){toast(r.error||'Could not save that photo');return;}
     cancelCrop(); PROF=null; await loadProf(true); render(); toast('Photo added');
@@ -5095,15 +5224,27 @@ function encodeMerch(c){
   return last;
 }
 const MERCH_PIC=/^m[a-z0-9]{6}$|^mnew$/;   // an item's picture (by id), or one staged for an item not yet saved
+const DIARY_PIC=/^d[a-z0-9]{6}$|^dnew$/;   // a diary page's cover (by page id), or one staged for a page not yet saved (0085)
 async function uploadPhoto(slot,file){
   if(!file)return;
   if(!/^image\//.test(file.type)){toast('That needs to be a photo');return;}
   if(MERCH_PIC.test(slot)) MCDRAFT=mcDraft();   // the crop sheet replaces the editor: keep what is typed
+  if(DIARY_PIC.test(slot)) dDraftKeep(slot==='dnew'?'':slot);   // same for a story: the draft on the phone brings it back
   await openCrop(slot,file);
 }
 /* back into the item editor after the crop sheet, with the fields as they were */
 function mcReturn(slot){ const id=slot==='mnew'?'':slot; const d=MCDRAFT; setTimeout(()=>openMerch(id,d),60); }
+function dReturn(slot){ const id=slot==='dnew'?'':slot; setTimeout(()=>openDiaryPage(id),60); }
 async function clearPhoto(slot){
+  if(DIARY_PIC.test(slot)){   // a diary page's cover: by page id, or the one staged for a page not saved yet
+    if(slot!=='dnew'){
+      const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'diaryPhotoClear',id:slot})});
+      if(!d.ok){toast(d.error||'Failed');return;}
+      DIARY=d.pages; toast('Cover removed');
+    } else DCOVER=null;
+    const el=document.querySelector(`#sheet .slot[data-slot="${slot}"]`); if(el) el.outerHTML=slotBox(slot,'','wide');
+    return;
+  }
   /* a merch item's picture is cleared by item id — photoClear knows only the
      profile's named slots and refuses anything else, so this ✕ used to do nothing */
   if(/^m[a-z0-9]{6}$/.test(slot)){

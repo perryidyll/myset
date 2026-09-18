@@ -81,6 +81,11 @@ export const PLANS = {
        many of them are live to the room at once. A library already over the line
        keeps every song it has — the cap refuses the NEXT add, never a song. */
     library: 100,
+    /* HOW MANY PAGES THE ARTIST DIARY HOLDS (decision 0085): the stories on
+       `/<slug>/diary`. Every plan has the diary; the plan sizes it — 3 / 10 / 40,
+       the founder's numbers, 2026-09-18. Same shape as `library`: a cap on the
+       NEXT add, never on what is already written (0s). Read through diaryCap. */
+    diary: 3,
     cut: 0.25,            // platform share of tips and vote sales
     seats: 1,
     /* THE BUSINESS DASHBOARD'S TWO SIZES (decision 0065): how many band members a
@@ -134,6 +139,7 @@ export const PLANS = {
     cut: 0.10,
     audience: 300,        // a bar with a floor (the founder, 2026-09-13; was 1,000). Worst single night: well under a dollar.
     library: 200,         // "add up to 200 songs" (the founder, 2026-09-13); Rock Star holds MAX_LIBRARY
+    diary: 10,
     seats: 1,
     band: 5, costs: 5,
     pricing: true, setlists: true, merch: true, moderate: true, reports: true, crowdNumbers: true,
@@ -154,6 +160,7 @@ export const PLANS = {
        Sell what the app can do, not what the margin could afford. */
     audience: 2000,
     library: 2000,
+    diary: 40,
     seats: 5,
     band: 10, costs: 10,
     pricing: true, setlists: true, merch: true, moderate: true, reports: true, crowdNumbers: true,
@@ -184,6 +191,10 @@ export const NOT_BUILT = ['promote', 'analytics', 'presskit', 'branding'];
  *  `libraryCap` is the one place that reads which. */
 export const MAX_LIBRARY = 2000;
 export const libraryCap = (limits) => (limits && Number(limits.library) > 0) ? Number(limits.library) : MAX_LIBRARY;
+/** How many pages the artist diary holds on a plan (decision 0085). The one place
+ *  that reads `diary`; the Studio, the refusal and the plan cards all go through it. */
+export const MAX_DIARY = PLANS.pro.diary;
+export const diaryCap = (limits) => (limits && Number(limits.diary) > 0) ? Number(limits.diary) : PLANS.free.diary;
 export const PLAN_KEYS = Object.keys(PLANS);
 
 /** The plan actually in force — a comped period that has run out falls back. */

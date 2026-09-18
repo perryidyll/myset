@@ -538,6 +538,25 @@ If you are about to violate one, stop and say so rather than working around it.
     `meta.signAt`, `meta.nights`, the one morning-after note on the bell's
     index — are facts about the ACCOUNT, never the phone: `test/firstgig.mjs`.
 
+0gb. **The artist diary is every plan's, sized by the plan, and a page names its
+    song by id — never by name.** `diary_<aid>` is one document per artist
+    (`KEY.diary`, decision `0085`), never on the audience poll; the public read is
+    `/api/fan?what=diary` and only shown pages leave the server. The size —
+    `PLANS.*.diary`, read through `diaryCap` and nowhere else — is enforced INSIDE
+    the CAS against growth, never against size (0s): the next page past the cap
+    is a 402 that names the number and the plan, an edit on a full diary still
+    saves, removing is never gated, and a downgrade keeps every page. A page's
+    `songId` is checked against `show.songs` at write time and resolved to a
+    title on every read, so a song that leaves the library leaves the page
+    standing (0fs); the lyrics beside a story are `/api/lyrics`, the vote page's
+    read, nothing new. A page's cover is one picture in slot `d<id>` (`DIARY_SLOT`),
+    written only by `diaryPhoto` / `diaryPhotoClear` — never from a save's body —
+    and named by `keysFor`, so it leaves with the page and with the account. The
+    community page's diary card and the artist page's door are both drawn only
+    when a shown page exists. `diary` and `diaries` are reserved slugs. The artist page
+    wears the Diary door only when `profile.diary > 0` (the third rule).
+    `test/diaries.mjs`.
+
 9d4. **Only production deploys cost credits — and `credit-burn.sh` used to bill
     the free ones.** It counted every `state == 'ready'` deploy at 15 credits,
     drafts and deploy previews included, and asked for a single page of 200. On

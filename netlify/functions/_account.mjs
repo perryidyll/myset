@@ -15,6 +15,7 @@ import { readEventLog, evtKeys } from './_evlog.mjs';
 import { listVersions, versionKeys, verKey } from './_versions.mjs';
 import { credKey } from './_cred.mjs';
 import { messageKeys, exportMessages } from './_messages.mjs';
+import { readDiary } from './_diary.mjs';
 
 /* THE ACCOUNT — what an artist can take with them, and how they leave.
 
@@ -33,10 +34,10 @@ const IMG = (aid, slot) => `img_${aid}_${slot}`;
 export async function exportArtist(aid) {
   const reg = await readArtists();
   const me = reg.byId[aid] || {};
-  const [profile, show, events, lists, learn, hist, posts, fb, meta, biz, ids, oldPosts, oldFb] = await Promise.all([
+  const [profile, show, events, lists, learn, hist, posts, fb, meta, biz, ids, oldPosts, oldFb, diary] = await Promise.all([
     getProfile(aid), readDoc(KEY.show(aid), null), readEvents(aid), readLists(aid), readLearn(aid),
     readHistIndex(aid), readPosts(aid), readFeedback(aid), readMeta(aid), readBiz(aid),
-    readDoc(`histids_${aid}`, null), readArchivedPosts(aid), readArchivedFeedback(aid)]);
+    readDoc(`histids_${aid}`, null), readArchivedPosts(aid), readArchivedFeedback(aid), readDiary(aid)]);
   const sh = show.data || {};
   /* EVERY NIGHT'S EVENT LOG (0066). `d` on a vote is a per-night pseudonym —
      sha256(showId | device), cut short — not the device id, unlinkable to any other
@@ -50,7 +51,7 @@ export async function exportArtist(aid) {
     if (log && log.n) nights[id] = log;
   }
   const versions = {};
-  for (const [name, key, full] of [['profile', KEY.profile(aid), true], ['setlists', `lists_${aid}`, true], ['gigs', `ev_${aid}`, true], ['library', KEY.show(aid), false]]) {
+  for (const [name, key, full] of [['profile', KEY.profile(aid), true], ['setlists', `lists_${aid}`, true], ['gigs', `ev_${aid}`, true], ['library', KEY.show(aid), false], ['diary', KEY.diary(aid), true]]) {
     const vs = await listVersions(key).catch(() => []);
     if (!vs.length) continue;
     versions[name] = [];
@@ -80,6 +81,8 @@ export async function exportArtist(aid) {
     feedbackArchive: oldFb.map(({ fan, ...r }) => r),            // every note that left the list; never the device
     // every conversation from the Book button (0074): the booker's words and the artist's, no device hash
     messages: await exportMessages(aid).catch(() => []),
+    // the artist diary (0085): their stories, shown and hidden alike, with the song each names
+    diary: diary.pages,
   };
 }
 
@@ -89,12 +92,14 @@ export async function keysFor(aid) {
     `ev_${aid}`, `lists_${aid}`, `learn_${aid}`, `push_${aid}`, `connect_${aid}`, `fb_${aid}`,
     `lock_${aid}`, `apitch_${aid}`, `songstats_${aid}`, `posts_${aid}`, `likes_${aid}`, `billing_${aid}`,
     `histids_${aid}`, `histpend_${aid}`, `sess_${aid}`, `log_${aid}`, `rec_${aid}`, `pkeys_${aid}`,
-    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid), `wishes_${aid}`];
+    `vidpend_${aid}`, `ledger_${aid}`, `ledidx_${aid}`, `feats_${aid}`, `rsvp_${aid}`, KEY.biz(aid), `wishes_${aid}`,
+    KEY.diary(aid)];    // the artist diary (0085)
   /* `ledger_platform` is the COMPANY's, not this artist's, and is never deleted here. */
   for (let n = 0; n < SHARDS; n++) keys.push(KEY.fan(aid, n));
-  const [hist, show, profile, posts, ids, pend] = await Promise.all([
+  const [hist, show, profile, posts, ids, pend, diary] = await Promise.all([
     readHistIndex(aid), readDoc(KEY.show(aid), null), getProfile(aid), readPosts(aid),
-    readDoc(`histids_${aid}`, null), readPending(aid)]);
+    readDoc(`histids_${aid}`, null), readPending(aid), readDiary(aid).catch(() => ({ pages: [] }))]);
+  for (const p of diary.pages || []) keys.push(IMG(aid, p.id));   // a diary page's cover: the page id is its slot (0085)
   /* THE INDEX IS CAPPED; THIS LIST IS NOT. Past 400 nights the index drops its
      oldest rows while the detail documents stay on disk, so building the key list
      from the index alone left a deleted artist's oldest gigs behind for ever and
@@ -107,7 +112,7 @@ export async function keysFor(aid) {
      from one read per log — never list() (1). */
   for (const id of new Set(keys.filter((k) => k.startsWith(`hist_${aid}_`)).map((k) => k.slice(`hist_${aid}_`.length))))
     for (const k of await evtKeys(aid, id).catch(() => [])) keys.push(k);
-  for (const base of [KEY.show(aid), KEY.profile(aid), `lists_${aid}`, `ev_${aid}`])
+  for (const base of [KEY.show(aid), KEY.profile(aid), `lists_${aid}`, `ev_${aid}`, KEY.diary(aid)])
     for (const k of await versionKeys(base).catch(() => [])) keys.push(k);
   for (const k of await postArchiveKeys(aid).catch(() => [])) keys.push(k);
   for (const k of await fbArchiveKeys(aid).catch(() => [])) keys.push(k);

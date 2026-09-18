@@ -126,9 +126,9 @@ body.docked .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
    The FIRST item on the shop is the one on top, in the middle; the next two fan out behind it (the founder, 2026-09-14). */
 .shopcard .fan{position:relative;flex:0 0 112px;height:112px}
 .shopcard .fan img,.shopcard .fan b{position:absolute;top:10px;left:19px;width:74px;height:74px;border-radius:14px;object-fit:cover;box-shadow:var(--sh-2);background:var(--bg-2)}
-.shopcard .fan img:nth-child(1){transform:rotate(2deg);z-index:2}
-.shopcard .fan img:nth-child(2){transform:rotate(-10deg) translate(-16px,6px);z-index:1}
-.shopcard .fan img:nth-child(3){transform:rotate(11deg) translate(16px,6px)}
+.shopcard .fan :nth-child(1){transform:rotate(2deg);z-index:2}
+.shopcard .fan :nth-child(2){transform:rotate(-10deg) translate(-16px,6px);z-index:1}
+.shopcard .fan :nth-child(3){transform:rotate(11deg) translate(16px,6px)}   /* img or b: the diary card fans its covers the same way (decision 0085) */
 .shopcard .fan b{display:grid;place-items:center;font-size:26px;font-weight:800;color:var(--ink);background:var(--grad-soft)}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .shopcard .fan img{filter:brightness(.82)}}
 :root[data-theme=dark] .shopcard .fan img{filter:brightness(.82)}
@@ -499,6 +499,23 @@ function render(){
         <span class="btn btn-ink btn-sm">Browse the shop →</span></div>
       <div class="fan" aria-hidden="true">${pics.length?pics.map(m=>`<img src="${esc(m.img)}" width="120" height="120" alt="" loading="lazy" decoding="async">`).join('')
         :`<b>${esc((d.merch[0].title||'?').slice(0,1).toUpperCase())}</b>`}</div>
+    </a>`;
+  }
+
+  /* THE DIARY CARD (the founder, 2026-09-18; decision 0085): the same card as the
+     shop's, right under it — the stories behind the songs live on /<slug>/diary.
+     Drawn only when a page is on (rule 3); the fan holds the covers of the first
+     three pages, exactly as the shop card fans its pictures — a page without a cover
+     shows its initial. Artists only: a venue has no diary. */
+  if(!VENUE&&d.diary>0){
+    const n=d.diary, peek=(d.diaryPeek||[]).slice(0,3);
+    h+=`<a class="shopcard rise" href="${SLUG?esc(HOME)+'/diary':'/diary.html'}" data-leaving="Opening the diary…">
+      <div class="n"><div class="k"><i></i>Diary</div>
+        <h2>${esc(firstName())}’s diary</h2>
+        <p>${n} ${n===1?'story':'stories'} behind the songs · in ${esc(firstName())}’s own words</p>
+        <span class="btn btn-ink btn-sm">Read the diary →</span></div>
+      <div class="fan" aria-hidden="true">${(peek.length?peek:[{}]).map(x=>x.img&&x.img[0]==='/'?`<img src="${esc(x.img)}" width="120" height="120" alt="" loading="lazy" decoding="async">`
+        :`<b>${esc(String(x.title||'').trim().slice(0,1).toUpperCase()||'♪')}</b>`).join('')}</div>
     </a>`;
   }
 

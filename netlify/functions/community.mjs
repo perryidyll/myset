@@ -3,6 +3,7 @@ import { json, bad, publicArtist, getShow, cleanFanId, clientIp, requireArtist, 
 import { cleanSlug } from './_auth.mjs';
 import { getProfile, firstOf } from './_profile.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
+import { readDiary } from './_diary.mjs';
 import { readHistIndex } from './_history.mjs';
 import { readEvents, occurrencesFor } from './_events.mjs';
 import { utcToDate, localDate } from './_time.mjs';
@@ -50,8 +51,9 @@ import { venueBySlug, getVenueProfile, shapeVenue } from './_venues.mjs';
 
    Reads, for an artist page: the registry (twice — once to resolve the slug, once
    for the plan and the tick), the profile, the show (for the money gate and the
-   live status), the history index, the posts, and the likes when a device is
-   named. Counted in test/community.mjs. The audience poll is not involved. */
+   live status), the diary (the count and three titles for its card — 0085), the
+   history index, the posts, and the likes when a device is named. Counted in
+   test/community.mjs. The audience poll is not involved. */
 
 async function resolveOwner(req) {
   const q = new URL(req.url).searchParams;
@@ -69,7 +71,10 @@ async function resolveOwner(req) {
   }
   const aid = await publicArtist(req);
   if (!aid) return null;
-  const [{ artist: who, plan, limits }, p, show] = await Promise.all([planForArtist(aid), getProfile(aid), getShow(aid)]);
+  const [{ artist: who, plan, limits }, p, show, diary] = await Promise.all([planForArtist(aid), getProfile(aid), getShow(aid), readDiary(aid).catch(() => null)]);
+  /* The diary card (decision 0085): the count of shown pages and the first three
+     pages' titles and covers, for the fan of tiles — the card is drawn only when the count is above zero. */
+  const shown = ((diary && diary.pages) || []).filter((x) => x.on);
   return {
     kind: 'artist', id: aid, owner: aid, slug: (who && who.slug) || '', name: p.name || (who && who.name) || '', first: firstOf(p, firstOf(who)),
     avatar: p.avatar || p.photo || '', verified: !!(who && who.verified) && plan !== 'free',
@@ -78,6 +83,7 @@ async function resolveOwner(req) {
     /* ONE money gate, the same one every other button reads (0bl). */
     canBuy: canTakeMoney(aid, show),
     live: show.status === 'live', showId: show.showId || '',
+    diary: shown.length, diaryPeek: shown.slice(0, 3).map((x) => ({ title: x.title, img: x.img || '' })),
   };
 }
 

@@ -274,6 +274,10 @@ export const KEY = {
   /* The artist's book — pay, band splits, costs, hours per show (decision 0065).
      One document, read once by the Money tab; never on the audience path. */
   biz:     (a) => `biz_${a}`,
+  /* The artist diary (decision 0085) — the stories on `/<slug>/diary`. One
+     document, the whole list; read by that page and the Studio, never by the
+     room's poll. The `diary_*` family was reserved for this on 2026-09-15. */
+  diary:   (a) => `diary_${a}`,
 };
 /** Artist ids are used inside blob keys, so they must stay boring. */
 export const cleanArtistId = (v) =>

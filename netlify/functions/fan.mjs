@@ -5,6 +5,7 @@ import board from './board.mjs';
 import me from './me.mjs';
 import community from './community.mjs';
 import venue from './venue.mjs';
+import diary from './diary.mjs';
 
 /* THE ONE WARM DOOR FOR EVERYTHING A FAN READS (decision 0049).
 
@@ -25,8 +26,11 @@ import venue from './venue.mjs';
 
    `what=warm` is the ping: autocron rings it every four minutes so the door is
    awake when the first fan of the evening arrives. It reads nothing and is
-   never cached. */
-const DOORS = { profile, events, board, me, community, venue };
+   never cached.
+
+   `diary` joined on 2026-09-18 (decision 0085): the artist diary page's one
+   read, edge-shared like the profile. */
+const DOORS = { profile, events, board, me, community, venue, diary };
 
 export default async (req, ctx) => {
   const what = new URL(req.url).searchParams.get('what') || '';
