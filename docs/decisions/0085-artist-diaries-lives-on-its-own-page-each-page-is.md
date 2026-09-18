@@ -8,7 +8,7 @@ area: media
 reverses:
 superseded_by:
 invariants: [0gb]
-commits: []
+commits: [a87ff85]
 tests: [test/diaries.mjs]
 files: [netlify/functions/_diary.mjs, netlify/functions/diary.mjs, netlify/functions/community.mjs, netlify/functions/_img.mjs, public/diary.html, public/community.html, public/studio.js, public/artist.html, netlify/functions/_plan.mjs]
 ---
@@ -124,5 +124,7 @@ build followed the same day, in a worktree off `origin/main`:
   the Merch card on `/demo-artist/community` with the cover in its fan, the cover
   heading the story on `/demo-artist/diary`, and ✕ in the editor clearing it (the
   card falls back to the page's initial).
-- Not checked: the deploy preview, and the founder's own first page on the
+- The deploy preview (PR #78) at phone width: the founder's empty diary, no door,
+  no card, the reads at zero; production after the merge verified by content.
+- Not checked: the founder's own first page on the
   live site — that is the next step, and the ledger row `DIA-001` says so.
