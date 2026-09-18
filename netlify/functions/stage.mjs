@@ -52,6 +52,19 @@ export async function stagePayload(aid) {
   const tonight = show.startedAt ? tipsTonight(meta.tips, since) : { total: 0, count: 0 };
   const allTime = Math.round(meta.tips.reduce((a, t) => a + (Number(t.amount) || 0), 0) * 100) / 100;
   const recent = (show.startedAt ? meta.tips.filter((t) => t && Number(t.at) >= since) : meta.tips).slice(-15).reverse();
+  /* TONIGHT'S VOTE PURCHASES, the same window as the tips, so the Studio can
+     celebrate a pack bought the way it celebrates a tip (the founder, 2026-09-17:
+     "every time someone pays for votes or tips"). `meta.paid` is every checkout
+     that landed, keyed by session; a vote buy is kind votes / song_votes. Count and
+     total only — no fan, no session id — and the last one's amount for the burst. */
+  const paid = (() => {
+    const rows = show.startedAt
+      ? Object.values(meta.paid || {}).filter((p) => p && (p.kind === 'votes' || p.kind === 'song_votes') && Number(p.at) >= since)
+      : [];
+    const total = Math.round(rows.reduce((a, p) => a + (Number(p.amount) || 0), 0) * 100) / 100;
+    const last = rows.sort((a, b) => Number(b.at) - Number(a.at))[0];
+    return { count: rows.length, total, last: last ? Number(last.amount) || 0 : 0 };
+  })();
 
   return {
     ok: true,
@@ -98,6 +111,7 @@ export async function stagePayload(aid) {
         })), counts, firstAt);
     })(),
     tips: { total: tonight.total, count: tonight.count, recent, allTime, allTimeCount: meta.tips.length },
+    paid,   // tonight's vote purchases: { count, total, last } — see above
     signAt: Number(meta.signAt) || 0,     // when the sign was printed — the first-gig card's second tick
     /* How many nights are on file, stamped by endShow so the Live tab can tell a
        first gig from a hundredth without a history read on every poll. null on an

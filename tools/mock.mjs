@@ -24,6 +24,10 @@
      ?tour=1      the artist has a tour poster (the artist page's View tour dates, the Studio's card)
      /one/…       a page with one item     /none/…   a page with none
      /v/demo/…    the venue twin of every fan page
+     /studio?tab=money&plan=pro   the Money tab with a book: thirty filed nights, a weekly
+                                  run, four logged, a twelve-month ledger, 48 payments —
+                                  enough rows for every list to fold (bizGet / bizSave /
+                                  bizPrefs / history hide answered from memory)
 
    Each flag is remembered in a cookie set on the page request and read on the API
    calls that page makes, so a state survives the round trip through checkout —
@@ -485,8 +489,63 @@ function shopAction(body, list, orders, owner, prefix, st) {
     default: return null;
   }
 }
+/* THE BUSINESS DASHBOARD'S BOOK (admin.mjs bizGet / bizSave / bizPrefs) and the
+   filed nights it joins (/api/history), so the Money tab can be looked at with
+   enough rows to fold: thirty nights over the last five months, a weekly run on
+   the calendar, a few logged. Edits change only this process. */
+const BIZ_LIMITS = { band: 4, costs: 6 };
+const localDay = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+function NIGHT_ROWS() {
+  const rows = [];
+  for (let i = 0; i < 30; i++) {
+    const at = NOW - (1 + i * 2) * 864e5 + 20 * 3600e3 - (NOW % 864e5) + 12 * 3600e3;   // every other evening, 8pm-ish local
+    const gross = i % 3 === 0 ? 0 : Math.round((8 + (i * 7) % 40) * 100) / 100, tipped = gross ? Math.round(gross * 0.6 * 100) / 100 : 0;
+    rows.push({ showId: `mock-night-${i}`, title: '', venue: ['The Ugly Duckling', 'Bar Roma', 'Sunset Jam'][i % 3], city: 'Koh Phangan',
+      startedAt: at, endedAt: at + 3 * 3600e3, songsPlayed: 12 + (i % 5), totalVotes: 40 + (i * 13) % 60, peakVoters: 9 + (i % 7), room: 20, nets: 3,
+      gross, unattributed: 0, source: 'stripe', paidVotes: gross ? 6 : 0, paidRequests: 0, tipped: i % 4 === 0 ? null : tipped,
+      key: i % 3 === 0 ? `mock-run@${localDay(at)}` : null, top: null, topPlayed: null, topPaid: null });
+  }
+  return rows;
+}
+function BIZ_BOOK() {
+  const gigs = {};
+  for (const n of NIGHT_ROWS().slice(0, 4)) gigs[n.key || n.showId] = { pay: 15000, cut: null, tips: 2000, band: [{ name: 'Sam', cents: 5000 }], costs: [{ name: 'Fuel', cents: 800 }], merch: [], min: { perform: 180, break: 20, travel: 40, setup: 30 }, gear: [], note: '', at: NOW };
+  return { v: 1, at: NOW, prefs: { hours: { perform: true, break: true, travel: true, setup: true } }, rules: { 'mock-run': { pay: 12000, cut: null, tips: null, band: [], costs: [], merch: [], min: { perform: null, break: null, travel: null, setup: null }, gear: [], note: '', at: NOW } }, gigs };
+}
+function bizAction(body, st) {
+  S.BIZ ||= BIZ_BOOK(); S.NIGHTS ||= NIGHT_ROWS();
+  const b = S.BIZ;
+  switch (body.action) {
+    case 'bizGet': {
+      const occ = [];
+      for (let i = 0; i < 26; i++) { const start = NOW - (2 + i * 15) * 864e5; occ.push({ eventId: 'mock-run', date: localDay(start), startsAt: start, endsAt: start + 3 * 3600e3, title: '', venue: 'The Ugly Duckling', city: 'Koh Phangan', tz: 'Asia/Bangkok', repeating: true }); }
+      return { ok: true, biz: b, occ, limits: BIZ_LIMITS, cutPct: 10, name: NAME.artist, from: body.from, to: body.to, dropped: 0, oldestKept: null,
+        ...(body.nights ? { nights: S.NIGHTS } : {}) };
+    }
+    case 'bizSave': {
+      const box = body.rule != null ? b.rules : b.gigs, k = body.rule != null ? String(body.rule) : String(body.key || '');
+      if (body.remove) { delete box[k]; return { ok: true }; }
+      box[k] = { ...(body.gig || {}), at: NOW }; return { ok: true, gig: box[k] };
+    }
+    case 'bizPrefs': {
+      if (body.hours) for (const k of Object.keys(body.hours)) b.prefs.hours[k] = body.hours[k] !== false;
+      if (body.currency != null) { if (String(body.currency).toUpperCase() === 'USD') delete b.prefs.currency; else b.prefs.currency = String(body.currency).toUpperCase().slice(0, 3); }
+      return { ok: true, prefs: b.prefs };
+    }
+    case 'eventHide': { S.HIDDEN_OCC ||= new Set(); S.HIDDEN_OCC.add(`${body.id}|${body.date}`); return { ok: true, events: [] }; }
+    default: return null;
+  }
+}
+/* /api/revenue with a page of payments, so the All payments list has something to fold */
+function revenueFixture() {
+  const payments = [];
+  for (let i = 0; i < 48; i++) payments.push({ amount: i % 4 === 0 ? 5 : 3, kind: i % 4 === 0 ? 'tip' : 'votes', votes: i % 4 === 0 ? 0 : 3, email: `fan${i}@example.com`, note: i % 4 === 0 ? 'Great set!' : '', at: NOW - i * 3 * 864e5, redeemed: true });
+  const sum = (f) => Math.round(payments.filter(f).reduce((a, p) => a + p.amount, 0) * 100) / 100;
+  return { ok: true, enabled: true, payments, unredeemed: 0, totals: { all: sum(() => true), tips: sum((p) => p.kind === 'tip'), votes: sum((p) => p.kind === 'votes'), merch: 0, count: payments.length } };
+}
 /* one switch, by action — what /api/admin answers when the Studio is signed in */
 function adminStub(body, st) {
+  const biz = bizAction(body, st); if (biz) return biz;
   const shop = shopAction(body, S.MERCH, S.ORDERS, 'a1', 'm', st); if (shop) return shop;
   const msg = msgAction(body); if (msg) return msg;
   switch (body.action) {
@@ -517,7 +576,16 @@ function adminStub(body, st) {
       const paid = (PLANS[st.plan] ? st.plan : 'plus') !== 'free';
       return { ok: true, autoWhy: null, checks: { paidPlan: paid, payments: true, idOnFile: false, legalNameGiven: false, dobGiven: false, reviewed: paid, state: paid ? 'verified' : 'none', rejectedWhy: null, readyForReview: false } };
     }
-    case 'ledger': case 'books': return { ok: true, enabled: false, months: [] };
+    /* the artist's Stripe statement, twelve months with a few payments, so the
+       Your-earnings card and its chart paint (MySet's books stay off: not the owner) */
+    case 'ledger': {
+      const months = []; const d = new Date(NOW);
+      for (let i = 0; i < 12; i++) { const y = d.getFullYear(), m = d.getMonth() + 1; const gross = i === 0 ? 3 : i === 1 ? 13 : 0, fee = gross ? Math.round((gross * 0.029 + 0.3 * (gross / 3)) * 100) / 100 : 0;
+        months.push({ month: `${y}-${String(m).padStart(2, '0')}`, gross, stripeFee: fee, platformFee: 0, net: Math.round((gross - fee) * 100) / 100, refunds: 0, count: gross ? gross / 3 : 0, payouts: 0, currency: 'USD' }); d.setMonth(d.getMonth() - 1); }
+      const total = months.reduce((a, m) => ({ gross: a.gross + m.gross, stripeFee: a.stripeFee + m.stripeFee, platformFee: 0, net: a.net + m.net, refunds: 0, count: a.count + m.count }), { gross: 0, stripeFee: 0, platformFee: 0, net: 0, refunds: 0, count: 0 });
+      return { ok: true, enabled: true, months, currency: 'USD', total, at: NOW };
+    }
+    case 'books': return { ok: true, enabled: false, months: [] };
     case 'profileGet': return { ok: true, profile: { name: NAME.artist, bio: 'A demo page.', photo: '', photos: [], links: {}, media: [] } };
     default: return { ok: true, stub: body.action };
   }
@@ -820,8 +888,16 @@ const srv = http.createServer(async (rq, rs) => {
     return answer(rs, adminStub(body, st));
   }
   if (u.pathname === '/api/auth') return json(rs, authStub(rq.method === 'POST' ? await readBody(rq) : {}));
-  if (u.pathname === '/api/revenue') return json(rs, { ok: true, enabled: false, total: 0, nights: [], months: [] });
-  if (u.pathname === '/api/history') return json(rs, { ok: true, shows: [], locked: false, nights: 0 });
+  if (u.pathname === '/api/revenue') return json(rs, revenueFixture());
+  if (u.pathname === '/api/history') {
+    S.NIGHTS ||= NIGHT_ROWS();
+    if (rq.method === 'POST') { const body = await readBody(rq); log('POST /api/history', JSON.stringify(body).slice(0, 160));
+      if (body.action === 'hide') { const r = S.NIGHTS.find((n) => n.showId === body.show); if (!r) return json(rs, { ok: false, error: 'unknown show' }, 404); r.hidden = true; return json(rs, { ok: true, showId: r.showId, hidden: true }); }
+      return json(rs, { ok: true, stub: body.action }); }
+    if (u.searchParams.get('show')) { const r = S.NIGHTS.find((n) => n.showId === u.searchParams.get('show')); return r ? json(rs, { ok: true, show: { ...r, played: [], requested: [] } }) : json(rs, { ok: false, error: 'unknown show' }, 404); }
+    const shows = S.NIGHTS.filter((n) => !n.hidden);
+    return json(rs, { ok: true, live: false, shows, locked: false, nights: shows.length });
+  }
   if (u.pathname === '/api/venueadmin') {
     const body = rq.method === 'POST' ? await readBody(rq) : {};
     if (!/^(get|planGet|merchList|orderList|wishList|payStatus|postList|eventList|pitchList|stats)$/.test(body.action || '')) log('POST /api/venueadmin', JSON.stringify(body).slice(0, 160));

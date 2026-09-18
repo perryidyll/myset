@@ -27,7 +27,7 @@ let LASTSHOW='', LASTSTATUS='';            // when the night changes, the Money 
 /* The business dashboard (decision 0065) is two scripts loaded only when a paid
    owner opens Money — the maths and the tab. Served immutable like this file, so
    each carries its own stamp; tools/stamp.mjs rewrites both. */
-const BIZ_V='/biz.js?v=e5e1ff47', MONEY_V='/studio-money.js?v=594acc9c';
+const BIZ_V='/biz.js?v=1932ebca', MONEY_V='/studio-money.js?v=3b335d1b';
 let MONEY_PROMISE=null, MONEY_FAILED=false;
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
@@ -448,29 +448,45 @@ let WRITING=false;
    every write's reply — `tips.count` going up while the show is live — never on
    the first paint, so opening the Studio mid-set does not celebrate old money.
    Nothing here can throw into the render: every piece is wrapped. */
+/* AND EVERY PAYMENT AFTER IT (the founder, 2026-09-17): a pack of votes bought is
+   the same moment as a tip and gets the same screen — `paid.count` is tonight's
+   vote purchases off the same payload. When a lyrics or chord chart is open the
+   burst is BRIEF: no button, nothing to tap, gone in two seconds, and the chart
+   stays readable under it — the artist is mid-song. */
 function tipWatch(prev,next){
   try{
     if(!prev||!next||!next.ok||!next.tips||!prev.tips) return;
     if(!(next.show&&next.show.status==='live')) return;
-    if(!(next.tips.count>prev.tips.count)) return;
-    const gained=Math.max(0,(next.tips.total||0)-(prev.tips.total||0));
-    const last=(next.tips.recent||[])[0]||null;
-    tipBurst(gained||(last&&Number(last.amount))||0, next.tips.count, last&&last.note||'');
+    if(next.tips.count>prev.tips.count){
+      const gained=Math.max(0,(next.tips.total||0)-(prev.tips.total||0));
+      const last=(next.tips.recent||[])[0]||null;
+      tipBurst(gained||(last&&Number(last.amount))||0, next.tips.count, last&&last.note||'');
+      return;
+    }
+    const p=next.paid, q=prev.paid;
+    if(p&&q&&p.count>q.count){
+      const gained=Math.max(0,(p.total||0)-(q.total||0));
+      tipBurst(gained||p.last||0, p.count, '', 'votes');
+    }
   }catch(e){}
 }
-function tipBurst(amount,count,note){
+/* A chart on screen: the stage's lyrics view, or a chord chart in the sheet. */
+const chartOpen=()=>{ try{ const sh=$('#sheet'); return !!(sh&&sh.classList.contains('on')&&sh.querySelector('.chartview')); }catch(e){ return false; } };
+function tipBurst(amount,count,note,kind){
   const old=$('#tipburst'); if(old) old.remove();
-  const first=count===1&&(typeof D.nights==='number'?D.nights===0:firstGig());
-  const el=document.createElement('div'); el.id='tipburst'; el.className='tipburst';
+  const votes=kind==='votes';
+  const first=!votes&&count===1&&(typeof D.nights==='number'?D.nights===0:firstGig());
+  const brief=chartOpen();
+  const el=document.createElement('div'); el.id='tipburst'; el.className='tipburst'+(brief?' brief':'');
   el.innerHTML=`<canvas></canvas><div class="tb">
-    <div class="k">${first?'Your first tip on MySet':count===1?'First tip of the night':'Tip'}</div>
+    <div class="k">${votes?(count===1?'First votes bought tonight':'Votes bought'):first?'Your first tip on MySet':count===1?'First tip of the night':'Tip'}</div>
     <div class="amt mono">$${(Number(amount)||0).toFixed(2)}</div>
     ${note?`<div class="n">“${esc(String(note).slice(0,80))}”</div>`:''}
-    <div class="s">${first?'That’s the room saying thank you. It goes straight to your account.':'Straight to your account.'}</div>
-    <button class="btn-pri" onclick="this.closest('.tipburst').remove()">Nice</button></div>`;
+    ${brief?'':`<div class="s">${votes?'Someone wants their song. It goes straight to your account.':first?'That’s the room saying thank you. It goes straight to your account.':'Straight to your account.'}</div>
+    <button class="btn-pri" onclick="this.closest('.tipburst').remove()">Nice</button>`}</div>`;
   document.body.appendChild(el);
   requestAnimationFrame(()=>el.classList.add('on'));
-  const timer=setTimeout(()=>{ if(el.isConnected){ el.classList.remove('on'); setTimeout(()=>el.remove(),320); } },6000);
+  const timer=setTimeout(()=>{ if(el.isConnected){ el.classList.remove('on'); setTimeout(()=>el.remove(),320); } },brief?2000:6000);
   el.addEventListener('click',e=>{ if(e.target===el){ clearTimeout(timer); el.remove(); } });
   try{ if(navigator.vibrate) navigator.vibrate([40,60,80]); }catch(e){}
   try{ tipChime(); }catch(e){}
@@ -1220,6 +1236,15 @@ function fbCard(){
     </div>`;
 }
 
+/* A LONG LIST FOLDS (the founder, 2026-09-17: "if someone builds up hundreds of
+   shows I don't want the entire screen to drop into an endless abyss"). Five rows
+   first, twenty more per tap, another "Show more" under each twenty until the end.
+   `FOLDN` remembers how far each list is open until the tab is left. */
+const FOLD_FIRST=5, FOLD_STEP=20; let FOLDN={};
+const foldN=(k)=>FOLDN[k]||FOLD_FIRST;
+const fold=(rows,k)=>(rows||[]).slice(0,foldN(k));
+const foldMore=(rows,k)=>{ const n=(rows||[]).length, at=foldN(k); if(n<=at) return at>FOLD_FIRST?`<button class="seemore" onclick="FOLDN['${k}']=${FOLD_FIRST};render()">Show fewer ▴</button>`:'';
+  return `<button class="seemore" onclick="FOLDN['${k}']=${at+FOLD_STEP};render()">Show ${Math.min(FOLD_STEP,n-at)} more ▾</button>`; };
 /* What fans reported through "Something wrong?", each with the server's own errors
    from the three hours before it. Fetched on tap, never on the poll. */
 function bugCard(){
@@ -1328,7 +1353,7 @@ async function payDash(){
 }
 
 function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
-  if(t==='money'){DETAIL=null;loadRev();loadHist();loadOrders(); if(window.Money)Money.reset(); if(bizOwner())ensureMoney().catch(()=>{});}
+  if(t==='money'){DETAIL=null;FOLDN={};loadRev();loadHist();loadOrders(); if(window.Money)Money.reset(); if(bizOwner())ensureMoney().catch(()=>{});}
   if(t==='profile'){ loadProf(); loadComm(); loadPlan(); }
   if(t==='merch'){ loadMerch(); loadOrders(); loadWishes(); loadPlan(); if(!PAY)loadPay(); }
   if(t==='setlist') loadPlan();
@@ -1448,8 +1473,8 @@ function openGig(id,onDate){
       <p class="muted" style="font-size:12px;margin:7px 0 0">${((D&&D.lists)||[]).length
         ? 'Tapping “Start the show” on the night switches to this automatically. Leave it on the first option and the gig won’t touch your pick.'
         : 'Make a setlist on the Setlist tab and it’ll show up here.'}</p></div>
-    ${bizOwner()?`<details class="why" id="gBiz" style="margin-top:14px"${(ev?ev.date:(onDate||todayStr()))<todayStr()?' open':''}><summary>The business side</summary>
-      <div class="whybody"><p class="muted" style="font-size:12.5px">Applies to every night of this run you haven't logged separately.</p>
+    ${bizOwner()?`<details class="why" id="gBiz" style="margin-top:14px" open><summary>Pay and the business side</summary>
+      <div class="whybody"><p class="muted" style="font-size:12.5px">What this gig pays goes straight into the Money tab — for every night of a run, until you log one separately.</p>
         <div id="gBizBody"><div class="row muted" style="padding:0"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div></div></details>`
     :(PLAN&&PLAN.ok&&PLAN.plan==='free'&&(PLAN.role||'owner')==='owner')?`<p class="muted" style="font-size:12.5px;margin:14px 0 0">Pay, band splits and costs for every gig are a Bar Star feature — <button class="btn-text" type="button" style="padding:0 4px;font-size:12.5px" onclick="openPlans()">See plans</button></p>`:''}
     <input type="hidden" id="gTz" value="${esc(tz)}">
@@ -2212,21 +2237,22 @@ function render(){
           <p>Someone paid and the app didn’t hand over what they bought. This gives it to them — safe to tap twice.</p>
           <button class="big" onclick="recover()">Deliver ${R.unredeemed===1?'it':'them'} now</button></div>`:''}
         <div class="sec"><span class="kick">All payments · last 180 days</span><span class="kick">$${t.all.toFixed(2)}</span></div>
-        <div class="list">${R.payments.map(p=>`<div class="row">
+        <div class="list">${fold(R.payments,'pays').map(p=>`<div class="row">
           <div class="m">
             <div class="t">$${p.amount.toFixed(2)} · ${p.kind==='tip'?'Tip':esc(p.votes+' extra votes')}</div>
             <div class="by">${esc(p.email||'—')}${p.note?' · “'+esc(p.note)+'”':''}</div>
             <div class="s">${dstamp(p.at)}${p.redeemed?'':' · not delivered'}</div>
           </div>
           <span class="cnt" style="font-size:15px;color:${p.redeemed?'var(--good)':'var(--accent)'}">${p.redeemed?'✓':'!'}</span>
-        </div>`).join('')||'<div class="row muted">No payments yet.</div>'}</div>
+        </div>`).join('')||'<div class="row muted">No payments yet.</div>'}${foldMore(R.payments,'pays')}</div>
         <p class="muted" style="font-size:12px;padding:14px 18px 0">Read live from Stripe. Refunds are done in your Stripe dashboard.</p>`;
       }
       // Get-paid card, tonight, bug reports, then the Rock Star numbers preview
+      // "If something broke" goes last on both (the founder, 2026-09-17)
       if(biz) body=head+(window.Money?bizSafe(()=>Money.tab()):bizSkeleton())
         +`<div class="sec" style="padding-bottom:0;border-top:.5px solid var(--hair);margin-top:26px"><span class="kick" style="color:var(--muted)">Through the app</span></div>`
-        +payCard()+earningsCard()+pays+bugCard()+booksCard()+analyticsCard();
-      else body=payCard()+head+bugCard()+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard();
+        +payCard()+earningsCard()+pays+booksCard()+analyticsCard()+bugCard();
+      else body=payCard()+head+pays+ordersSection()+earningsCard()+booksCard()+analyticsCard()+bugCard();
     }
   }
 
@@ -4007,12 +4033,12 @@ function booksCard(){
     <div class="c"><b class="mono">${m$(t.spend)}</b><span>Went out</span></div>
     <div class="c"><b class="mono ${(t.profit||0)>=0?'acc':''}">${m$(t.profit)}</b><span>Kept</span></div>
   </div>
-  <div class="list">${rows.map(m=>`<div class="row" data-act="bookmonth" data-id="${m.month}" style="cursor:pointer">
+  <div class="list">${fold(rows,'books').map(m=>`<div class="row" data-act="bookmonth" data-id="${m.month}" style="cursor:pointer">
     <div class="m"><div class="t">${mlabel(m.month)}</div>
       <div class="s">${m$(m.gross)} in · ${m$(m.stripeFee)} to Stripe · ${m$(m.spend)} costs${
         Object.keys(m.costs||{}).length?' ('+Object.keys(m.costs).map(k=>KIND[k]||k).join(', ')+')':' — none recorded'}</div></div>
     <div class="cnt mono" style="color:${(m.profit||0)>=0?'var(--good)':'var(--accent)'}">${m$(m.profit)}</div>
-    <button class="act" data-act="bookmonth" data-id="${m.month}">Costs</button></div>`).join('')}</div>
+    <button class="act" data-act="bookmonth" data-id="${m.month}">Costs</button></div>`).join('')}${foldMore(rows,'books')}</div>
   <div class="wrap" style="margin-top:12px">
     <p class="muted" style="font-size:12px;margin:0 0 10px">“Came in” is subscriptions plus MySet’s cut of what fans paid artists, after Stripe’s own fee — read from Stripe’s balance, so it is what actually landed. “Went out” is what you type in below, because nothing can read your Netlify bill for you.</p>
     <button class="big alt" onclick="booksCsv()">Download the books</button>
@@ -5283,5 +5309,103 @@ function start(){clearInterval(timer);
    flash, and the tab you were on stays the tab you are on. The installed Studio
    has no address bar and no swipe-down of its own, so without this there is no
    way at all to say "show me now". */
+/* SWIPE TO REVEAL, HOLD FOR MORE (the founder, 2026-09-18: "such a common thing these
+   days that people will likely try it"). Generic and markup-free: any list row that
+   already carries action buttons (.act in .songactions / a .bizacts / an "Open") gets
+   both gestures. Swipe left and the row slides to show its own buttons in a tray,
+   iOS-style — the same buttons, cloned by label, so tapping one is the original tap
+   and no second code path exists. Press and hold (the web's "hard press") ticks the
+   phone and opens the same actions in a sheet, with the row's name on top. Rules:
+   a vertical intent in the first few pixels hands the touch back to scrolling; a
+   full swipe only snaps the tray open, never fires a button (a delete is a tap, not
+   a slip); one tray open at a time; render() throws the tray away with the row and
+   nothing is remembered. Nothing here can throw into the page: every handler is
+   guarded, and a row without buttons is not a swipeable row. */
+(function(){
+  const ACTS='.songactions button,.bizacts button,button.act,button.btn-text';
+  const skip='input,textarea,select,a[href],.bizck,[data-nopull],.sheet,.bg';
+  const HINT='myset.hint.swipe';
+  let open=null;                       // the row whose tray is showing
+  let T=null;                          // the touch in flight
+  let holdT=0, holdRow=null, holdP=null, swallow=false;
+  const rowOf=(t)=>{ const r=t&&t.closest&&t.closest('.row,.songcard,.gigcard'); if(!r||r.classList.contains('muted')||t.closest(skip))return null; return r; };
+  const actsOf=(r)=>[...r.querySelectorAll(ACTS)].filter(b=>!b.disabled&&b.offsetParent!==null&&!b.closest('.swtray'));
+  const labelOf=(b)=>(b.getAttribute('title')||b.getAttribute('aria-label')||b.textContent||'').replace(/\s+/g,' ').trim().split(' ').slice(0,3).join(' ')||'…';
+  const isWarn=(b)=>b.classList.contains('warn')||/^(delete|remove)/i.test(labelOf(b));   // red only where the page already says so
+  function close(){ if(!open)return; const r=open; open=null; r.style.transform=''; r.classList.remove('swopen'); setTimeout(()=>{ const t=r.querySelector('.swtray'); if(t&&!r.classList.contains('swopen'))t.remove(); r.style.position=''; },260); }
+  function tray(r){
+    let t=r.querySelector('.swtray'); if(t)return t;
+    const acts=actsOf(r); if(!acts.length)return null;
+    t=document.createElement('div'); t.className='swtray';
+    acts.slice(0,3).forEach(b=>{ const x=document.createElement('button'); x.type='button'; x.className='swact'+(isWarn(b)?' warn':''); x.textContent=labelOf(b);
+      x.addEventListener('click',e=>{ e.stopPropagation(); close(); setTimeout(()=>b.click(),60); }); t.appendChild(x); });
+    r.style.position='relative'; r.appendChild(t); return t;
+  }
+  const width=(t)=>t?Math.min(t.scrollWidth||t.offsetWidth,Math.round(innerWidth*.6)):0;
+  document.addEventListener('touchstart',e=>{ try{
+    if(e.touches.length!==1)return;
+    const r=rowOf(e.target);
+    if(open&&r!==open){ close(); }
+    if(!r||!actsOf(r).length)return;
+    T={r,x:e.touches[0].clientX,y:e.touches[0].clientY,dx:0,dir:null,base:r===open?-width(r.querySelector('.swtray')):0};
+    r.style.transition='none';
+  }catch(err){ T=null; } },{passive:true});
+  document.addEventListener('touchmove',e=>{ try{
+    if(!T)return;
+    const x=e.touches[0].clientX,y=e.touches[0].clientY, dx=x-T.x, dy=y-T.y;
+    if(!T.dir){ if(Math.abs(dx)<6&&Math.abs(dy)<6)return; T.dir=Math.abs(dx)>Math.abs(dy)*1.2?'h':'v'; if(T.dir==='h'){ clearTimeout(holdT); if(!tray(T.r)){ T=null; return; } } }
+    if(T.dir!=='h')return;
+    const W=width(T.r.querySelector('.swtray'));
+    let tx=Math.min(0,Math.max(-W-24,T.base+dx)); if(tx<-W)tx=-W-(-W-tx)*.35;   // a little give past the end
+    T.dx=tx; T.r.style.transform=`translateX(${tx}px)`;
+    if(e.cancelable)e.preventDefault();
+  }catch(err){} },{passive:false});
+  document.addEventListener('touchend',()=>{ try{
+    clearTimeout(holdT);
+    if(!T)return; const t=T; T=null;
+    if(t.dir!=='h'){ t.r.style.transition=''; return; }
+    const W=width(t.r.querySelector('.swtray')); t.r.style.transition='';
+    if(-t.dx>=W*.4){ t.r.style.transform=`translateX(${-W}px)`; t.r.classList.add('swopen'); open=t.r; try{ if(navigator.vibrate)navigator.vibrate(8); }catch(e){} localStorage.setItem(HINT,'1'); }
+    else { open=t.r; close(); }
+    swallow=true; setTimeout(()=>{ swallow=false; },350);   // the finger lifting is not a tap on the row
+  }catch(err){} },{passive:true});
+  document.addEventListener('touchcancel',()=>{ clearTimeout(holdT); if(T){ const r=T.r; T=null; r.style.transition=''; open=r; close(); } },{passive:true});
+  /* A tap anywhere else puts an open tray away; a tap on the slid row itself is
+     swallowed once so the swipe cannot double as an Open. */
+  document.addEventListener('click',e=>{ try{
+    if(swallow&&(e.target.closest('.row,.songcard,.gigcard')===open||T)){ e.stopPropagation(); e.preventDefault(); return; }
+    if(open&&!e.target.closest('.swtray')){ if(e.target.closest('.row,.songcard,.gigcard')===open){ e.stopPropagation(); e.preventDefault(); } close(); }
+  }catch(err){} },true);
+  /* HOLD. 480 ms with the finger still — the phone ticks, the sheet opens. The click
+     that iOS sends when the finger lifts is swallowed; the long-press callout is off
+     on these rows (studio.html). Mouse users get it too, by pointer events. */
+  document.addEventListener('pointerdown',e=>{ try{
+    clearTimeout(holdT); holdRow=null;
+    if(e.pointerType==='mouse'&&e.button!==0)return;
+    const r=rowOf(e.target); if(!r||e.target.closest('button,a'))return;
+    if(!actsOf(r).length)return;
+    holdRow=r; holdP={x:e.clientX,y:e.clientY};
+    holdT=setTimeout(()=>{ if(holdRow!==r)return; holdRow=null; if(open){close();} T=null; swallow=true; setTimeout(()=>{swallow=false;},500); holdSheet(r); },480);
+  }catch(err){} },{passive:true});
+  document.addEventListener('pointermove',e=>{ if(holdRow&&holdP&&(Math.abs(e.clientX-holdP.x)>8||Math.abs(e.clientY-holdP.y)>8)){ clearTimeout(holdT); holdRow=null; } },{passive:true});
+  document.addEventListener('pointerup',()=>{ clearTimeout(holdT); holdRow=null; },{passive:true});
+  document.addEventListener('pointercancel',()=>{ clearTimeout(holdT); holdRow=null; },{passive:true});
+  document.addEventListener('contextmenu',e=>{ const r=rowOf(e.target); if(r&&actsOf(r).length&&e.pointerType!=='mouse'&&!e.target.closest('input,textarea')) e.preventDefault(); });
+  function holdSheet(r){
+    const acts=actsOf(r); if(!acts.length)return;
+    try{ if(navigator.vibrate)navigator.vibrate(12); }catch(e){}
+    localStorage.setItem(HINT,'1');
+    const name=((r.querySelector('.t')||r).textContent||'').replace(/\s+/g,' ').trim().slice(0,60);
+    const sub=(r.querySelector('.s,.by')||{}).textContent||'';
+    /* The row's own primary tap (data-act on the row) is the first choice: "Open". */
+    const first=r.getAttribute('data-act')&&!r.classList.contains('swopen')?`<button class="big alt swsheet" data-sw="row">Open</button>`:'';
+    openSheet(`<div class="kick">Actions</div><h3 style="margin:2px 0 4px">${esc(name)}</h3>${sub?`<p class="lede">${esc(sub.replace(/\s+/g,' ').trim().slice(0,80))}</p>`:''}
+      ${first}${acts.map((b,i)=>`<button class="big ${isWarn(b)?'alt swwarn':'alt'} swsheet" data-sw="${i}">${esc(labelOf(b))}</button>`).join('')}`,'swipe');
+    const sh=$('#sheet');
+    sh.querySelectorAll('.swsheet').forEach(x=>x.addEventListener('click',()=>{ closeSheet(); const k=x.getAttribute('data-sw'); setTimeout(()=>{ if(k==='row'){ r.click(); } else { const b=acts[Number(k)]; if(b)b.click(); } },80); }));
+  }
+  /* Once: a quiet tip the first time a list with actions is on screen. */
+  setTimeout(()=>{ try{ if(localStorage.getItem(HINT))return; if(!document.querySelector(ACTS))return; toast('Tip: swipe a row left for its actions, or press and hold'); localStorage.setItem(HINT,'1'); }catch(e){} },4000);
+})();
 MySetPull(async()=>{ try{ await load(); }catch(e){} });
 if(CODE||TOKEN){ bootCycle(); start(); } else gate();

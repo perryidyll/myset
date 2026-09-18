@@ -85,6 +85,12 @@ console.log('\nmoney(), hm(), parseHm(), bullets');
   eq('zero', Biz.money(0), '$0.00');
   eq('a million', Biz.money(100000000), '$1,000,000.00');
   eq('null reads as nothing owed', Biz.money(null), '$0.00');
+  // the book's currency (2026-09-17): a symbol in front, never a conversion
+  eq('a chosen currency answers its code', Biz.currency('thb'), 'THB');
+  eq('and its symbol', Biz.money(123450), '฿1,234.50');
+  eq('negative keeps the symbol after the sign', Biz.money(-1200), '-฿12.00');
+  eq('an unknown code falls back to dollars', [Biz.currency('XXX'), Biz.money(100)], ['USD', '$1.00']);
+  eq('nothing chosen is dollars', [Biz.currency(''), Biz.money(100)], ['USD', '$1.00']);
   eq('hm 135', Biz.hm(135), '2h 15m');
   eq('hm 45', Biz.hm(45), '45m');
   eq('hm 180', Biz.hm(180), '3h');
@@ -230,6 +236,22 @@ console.log('\nvotesLine(): what the room paid for');
   eq('two nights on one gig: unknown if either is', [two.nights.length, two.paidVotes], [2, null]);
   eq('bought more than were cast: free votes floor at zero', Biz.join([night('k5', at(2026, 9, 1, 20), { totalVotes: 3, paidVotes: 8, paidRequests: 1 })], [o], {}, NOW)[0].freeVotes, 0);
   eq('the report row carries the three', (({ freeVotes, paidVotes, paidRequests }) => [freeVotes, paidVotes, paidRequests])(Biz.sum([known], null).byShow[0]), [40, 23, 2]);
+}
+
+console.log('\nthe tips alone: "$x from in-app tips" (2026-09-17)');
+{
+  const o = occ('ev10', 2026, 9, 1, 20);
+  const t1 = Biz.join([night('t1', at(2026, 9, 1, 20), { gross: 12.5, tipped: 7.25 })], [o], {}, NOW)[0];
+  eq('a night that says its tips carries them in cents', t1.tipsApp, 725);
+  const t0 = Biz.join([night('t2', at(2026, 9, 1, 20), { gross: 12.5 })], [o], {}, NOW)[0];
+  eq('a night filed before `tipped` existed reads unknown, never zero', t0.tipsApp, null);
+  const two = Biz.join([night('t3', at(2026, 9, 1, 20), { gross: 5, tipped: 2 }), night('t4', at(2026, 9, 1, 21), { gross: 5, tipped: 3 })], [o], {}, NOW)[0];
+  eq('two nights on one gig add up', two.tipsApp, 500);
+  const mixed = Biz.join([night('t5', at(2026, 9, 1, 20), { gross: 5, tipped: 2 }), night('t6', at(2026, 9, 1, 21), { gross: 5 })], [o], {}, NOW)[0];
+  eq('unknown if either night is', mixed.tipsApp, null);
+  const S = Biz.sum([t1, t0], null);
+  eq('the period sums only the nights that know, and counts them', [S.tipsApp, S.tipsAppKnown], [725, 1]);
+  eq('an orphan record has no tips to speak of', (Biz.join([], [], { gigs: { '2026-08-30-2100-zzzz': gig({ pay: 100 }) } }, NOW)[0] || {}).tipsApp, null);
 }
 
 console.log('\nkey(), parseKey(), inRange()');

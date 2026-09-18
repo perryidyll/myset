@@ -142,7 +142,7 @@ footer p{margin:0 0 6px}
 </head>
 <body>
 <div class="page" id="page"><div class="state"><p class="muted">Adding up…</p></div></div>
-<script src="/biz.js?v=e5e1ff47"></script>
+<script src="/biz.js?v=1932ebca"></script>
 <script>
 /* The session is the Studio's, read exactly as studio.html reads it: the passcode
    and the artist it names, or the account token. This page never signs anyone in
@@ -205,6 +205,7 @@ async function load(){
 
 function draw(d){
   const prefs=(d.biz&&d.biz.prefs)||{};
+  Biz.currency(prefs.currency||'USD');   // the book's symbol, chosen on the Money tab
   let shows=Biz.join(d.nights||[],d.occ||[],d.biz,Date.now());
   const from=d.from||'',to=d.to||'';
   shows=PICK.length?shows.filter(s=>PICK.includes(s.key)):shows.filter(s=>Biz.inRange(s,from,to));

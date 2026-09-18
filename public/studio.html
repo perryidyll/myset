@@ -319,6 +319,9 @@ a{color:inherit;text-decoration:none}
 .tipburst .n{font-size:15px;font-weight:600;margin:0 0 6px}
 .tipburst .s{font-size:13.5px;color:var(--muted);line-height:1.45;margin:0 0 18px}
 .tipburst .btn-pri{min-width:140px}
+/* Brief, over a lyrics or chord chart: nothing to tap, the chart stays readable, gone in two seconds */
+.tipburst.brief{pointer-events:none;align-items:flex-start;padding-top:calc(72px + env(safe-area-inset-top))}
+.tipburst.brief .tb{padding:16px 22px 14px;width:min(100%,260px)}.tipburst.brief .amt{font-size:44px;margin:4px 0 0}
 @media (prefers-reduced-motion:reduce){.tipburst,.tipburst .tb{transition:none}}
 .chip.reply{display:inline-block;margin-top:5px;padding:4px 10px;min-width:0;font-size:11.5px;color:var(--muted);
   box-shadow:none;border:.5px solid var(--hair-2)}
@@ -665,6 +668,18 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .gigrow .when span{display:block;font-size:10.5px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.06em}
 .gigrow.off{opacity:.4}
 .gigrow.off .t{text-decoration:line-through}
+/* Swipe to reveal / press and hold (studio.js, 2026-09-18). The tray sits just past
+   the row's right edge and slides in with it; the list's overflow clips it. */
+.row,.songcard,.gigcard{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.row input,.row textarea{-webkit-user-select:text;user-select:text}
+.sheet.swipe{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.row.swopen,.songcard.swopen,.gigcard.swopen{transition:transform .24s var(--spring)}
+.row:not(.swopen),.songcard:not(.swopen),.gigcard:not(.swopen){transition:transform .24s var(--spring)}
+.swtray{position:absolute;top:0;bottom:0;left:100%;display:flex;align-items:stretch;user-select:none;-webkit-user-select:none}
+.swact{display:flex;align-items:center;justify-content:center;min-width:64px;padding:0 12px;font-size:13.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink);background:var(--surface-2);border-left:.5px solid var(--hair);white-space:nowrap}
+.swact.warn{color:#fff;background:var(--accent)}
+.swact:active{filter:brightness(.92)}
+.sheet .swsheet{margin-top:10px;justify-content:center}.sheet .swsheet.swwarn{color:var(--accent);box-shadow:inset 0 0 0 1.5px var(--accent)}
 .seemore{width:100%;padding:15px;border-top:.5px solid var(--hair);font-size:14.5px;font-weight:600;
   color:var(--accent);background:none}
 .warnbox{margin:16px 18px 0;padding:18px 20px;border-radius:var(--r-lg);background:var(--accent-soft);
@@ -829,7 +844,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=49df6656"></script>
+<script src="/studio.js?v=36e5a6ae"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api and always prefers the network for pages —

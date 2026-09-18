@@ -252,6 +252,12 @@ console.log('\nREMOVING, AND THE HOURS');
   eq('and it sticks', (await P('bizGet')).biz.prefs.hours.travel, false);
   eq('and comes back', (await P('bizPrefs', { hours: { travel: true } })).prefs.hours.travel, true);
   eq('a kind that is not a kind is ignored', Object.keys((await P('bizPrefs', { hours: { nap: true } })).prefs.hours), TIME_KINDS.map(([k]) => k));
+  // the book's currency (2026-09-17): a code in prefs, USD when cleared, nothing converted
+  eq('a currency can be chosen', (await P('bizPrefs', { currency: 'thb' })).prefs.currency, 'THB');
+  eq('and it sticks', (await P('bizGet')).biz.prefs.currency, 'THB');
+  eq('choosing dollars clears it', 'currency' in (await P('bizPrefs', { currency: 'USD' })).prefs, false);
+  ok('a code that is not a code is refused', !(await P('bizPrefs', { currency: 'dollars' })).ok);
+  eq('and the hours pref rode along untouched', (await P('bizGet')).biz.prefs.hours.travel, true);
 }
 
 console.log('\nA NIGHT PRE-FILLED FROM A RULE LEANS ON THE RULE  (the growth rule, INVARIANT 0s)');

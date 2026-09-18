@@ -1677,10 +1677,16 @@ async function handleBiz(aid, action, body) {
 
   if (action === 'bizPrefs') {
     const given = (body.hours && typeof body.hours === 'object') ? body.hours : {};
+    /* The book's currency (2026-09-17): a three-letter code, upper-cased, USD when
+       cleared. A label the dashboard writes in front of its figures — nothing is
+       converted, and Stripe's money is still charged in dollars. */
+    const cur = body.currency == null ? null : String(body.currency).toUpperCase();
+    if (cur !== null && !/^[A-Z]{3}$/.test(cur)) return bad('bad currency');
     let prefs = null;
     const r = await mutateBiz(aid, (d) => {
       // a kind not mentioned keeps what it had; a missing pref has always meant ON
       for (const [k] of TIME_KINDS) if (k in given) d.prefs.hours[k] = given[k] !== false;
+      if (cur !== null) { if (cur === 'USD') delete d.prefs.currency; else d.prefs.currency = cur; }
       prefs = d.prefs;
       return true;
     });

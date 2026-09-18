@@ -208,5 +208,21 @@ console.log('\nTHE NAME IS CUT AT 100 CHARACTERS');
   eq('and so does the row', (await row(mo.artistId, 'hand-1')).title.length, 100);
 }
 
+
+console.log('\nHIDING A NIGHT ("Delete show" on the Money tab, 2026-09-17)');
+{
+  const hide = (token, show) => hit(history, 'https://x/api/history', { action: 'hide', show }, token);
+  const list = async (token) => (await hit(history, 'https://x/api/history', undefined, token)).shows || [];
+  ok('the night is listed before', (await list(TM)).some((x) => x.showId === 'hand-1'));
+  const r = await hide(TM, 'hand-1');
+  ok('hiding answers ok', r.ok && r.hidden === true, r);
+  ok('and the night is gone from the list', !(await list(TM)).some((x) => x.showId === 'hand-1'));
+  eq('but the row is still on the index, flagged — nothing was destroyed', (await row(mo.artistId, 'hand-1')).hidden, true);
+  ok('and the detail document is untouched', !!(await readHistShow(mo.artistId, 'hand-1')));
+  eq('another artist cannot hide it', (await hide(TA, 'hand-1')).status, 404);
+  eq('nor a night that does not exist', (await hide(TM, 'nope')).status, 404);
+  ok('hiding twice is fine', (await hide(TM, 'hand-1')).ok);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
