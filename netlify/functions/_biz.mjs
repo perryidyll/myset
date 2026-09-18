@@ -45,7 +45,7 @@ export const LIMITS = { merch: 20, gear: 30, gearChars: 80, name: 60, note: 300,
 /* The four kinds of time, in the order the page shows them. Everything that
    touches minutes iterates this list — a fifth kind is one line here and one in
    public/biz.js (pinned equal by the same test). */
-export const TIME_KINDS = [['perform', 'On stage'], ['break', 'Breaks'], ['travel', 'Travel'], ['setup', 'Set-up / pack-down']];
+export const TIME_KINDS = [['perform', 'On stage'], ['break', 'Breaks'], ['travel', 'Travel'], ['setup', 'Set-up / break-down']];
 
 const hoursOn = () => Object.fromEntries(TIME_KINDS.map(([k]) => [k, true]));
 export const emptyBiz = () => ({ v: 1, at: 0, prefs: { hours: hoursOn() }, rules: {}, gigs: {} });

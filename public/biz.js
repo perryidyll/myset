@@ -15,7 +15,7 @@ const Biz = (() => {
   const LIMITS = { merch: 20, gear: 30, gearChars: 80, name: 60, note: 300, cents: 1e7, minutes: 2880, qty: 999 };
   /* The four kinds of time. Everything iterates this list — calc, sum, the editor,
      the gig form, the report — so a fifth kind is one line here and one server-side. */
-  const TIME_KINDS = [['perform', 'On stage'], ['break', 'Breaks'], ['travel', 'Travel'], ['setup', 'Set-up / pack-down']];
+  const TIME_KINDS = [['perform', 'On stage'], ['break', 'Breaks'], ['travel', 'Travel'], ['setup', 'Set-up / break-down']];
   /* Half an hour of grace before a gig's start — the same GRACE placeShows uses,
      because a set that begins at 8:30 is a show somebody opened at 8:20. */
   const JOIN = { graceMs: 30 * 60000 };
@@ -102,6 +102,18 @@ const Biz = (() => {
     else if ((m = /^(\d*\.?\d+)$/.exec(s))) out = +m[1] > 48 ? NaN : +m[1] * 60;
     else return NaN;
     out = Math.round(out);
+    return out > LIMITS.minutes ? NaN : out;
+  }
+
+  /* Two boxes, hours and minutes, each a plain whole number (the phone's number
+     pad). Both blank is blank; a minute box over 59 rolls into the hours on the way
+     out (parseHms is the sum, the page tidies the boxes); anything that is not a
+     whole number, or a total past the cap, is NaN — "ask again". */
+  function parseHms(h, m) {
+    const H = String(h == null ? '' : h).trim(), M = String(m == null ? '' : m).trim();
+    if (!H && !M) return null;
+    if ((H && !/^\d+$/.test(H)) || (M && !/^\d+$/.test(M))) return NaN;
+    const out = (+H || 0) * 60 + (+M || 0);
     return out > LIMITS.minutes ? NaN : out;
   }
 
@@ -358,6 +370,6 @@ const Biz = (() => {
     return out;
   }
 
-  return { LIMITS, TIME_KINDS, JOIN, CURRENCIES, currency, empty, norm, money, hm, parseHm, bullets, calc, rate, rates, join, period, inRange, votesLine, sum, key, parseKey, localDate };
+  return { LIMITS, TIME_KINDS, JOIN, CURRENCIES, currency, empty, norm, money, hm, parseHm, parseHms, bullets, calc, rate, rates, join, period, inRange, votesLine, sum, key, parseKey, localDate };
 })();
 if (typeof module !== 'undefined') module.exports = Biz;

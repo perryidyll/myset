@@ -95,3 +95,22 @@ held finger until then). Verified in Chrome by synthetic touches and on the iOS
 Simulator with real touch paths (tray on a song, Hide fired from it, hold → sheet).
 Suite exit 0. Not checked: gig rows on a device (the mock has no events); the Venue
 Studio is not ported.
+
+## Addendum — hours and minutes (UX-055, decision 0084)
+
+**Asked:** the founder kept logging hours where he meant minutes. Two fields per kind
+(hours, minutes), no "hours" after the category, the number pad back, *Set-up /
+break-down* not pack-down, and *Edit tonight's numbers* → *Edit last show's numbers*.
+Push it live.
+
+**Shipped:** `Biz.parseHms(h, m)` (both blank → null; a non-whole number or past the
+cap → NaN); the time row draws two `.bzmin` boxes with `data-u="h"|"m"` and
+`inputmode="numeric"`, the unit after each box; blur normalises 90 min → 1 h 30 and
+shakes the box on a refusal; `readRows` and the gig form's *Add it* guard read the
+pair; the slot's h and m are the *On stage* placeholders with a hint line. The kind
+renamed in `public/biz.js` and `netlify/functions/_biz.mjs` (the overview's §2.1 row
+regenerated) and in `about.html`'s prose.
+
+**Verified:** suite exit 0; `tools/uicheck.mjs` exit 0 / 244 ✓ after repairing two
+expectations 0082 had left stale (the fold at five; *Past shows*); Chrome 375px
+against the mock. Not checked: the number pad on a real phone.
