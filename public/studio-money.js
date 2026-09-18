@@ -99,7 +99,7 @@ const CSS=`
 .bizf .cap{font-size:12.5px;color:var(--muted,#98989D);margin:10px 0 0;line-height:1.45}
 .bizf .cap .btn-text{padding:0 4px;font-size:12.5px}
 .bizf .trow{display:flex;gap:8px;align-items:center;margin-top:8px}.bizf .trow label{flex:1 1 auto;margin:0;font-size:13.5px;color:var(--ink-2,#DDDDE0);font-weight:500}
-.bizf .trow .bzmin{flex:0 0 96px;text-align:right}.bizf .trow .bzmin.wide{flex-basis:150px}.bizf .trow .bzmin.bad{box-shadow:0 0 0 2.5px var(--accent,#FF456E) inset;animation:bizshake .32s var(--ease,ease) 1}
+.bizf .trow .bzhm{display:flex;align-items:center;gap:5px;flex:0 0 auto}.bizf .trow .bzmin{flex:0 0 58px;width:58px;text-align:right;padding-left:8px;padding-right:8px}.bizf .trow .bzhm i{font-style:normal;font-size:12.5px;color:var(--ink-3,#9A9AA0);margin-right:5px}.bizf .trow .bzmin.bad{box-shadow:0 0 0 2.5px var(--accent,#FF456E) inset;animation:bizshake .32s var(--ease,ease) 1}
 @keyframes bizshake{0%,100%{transform:none}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .bizf .pill{flex:0 0 auto;font-size:12px;font-weight:700;padding:7px 11px;border-radius:999px;background:var(--surface-2,#2C2C2E);color:var(--muted,#98989D);box-shadow:inset 0 0 0 1px var(--hair-2,rgba(255,255,255,.16))}
 .bizf .pill.on{color:var(--accent-ink,#FF5650);background:var(--accent-soft,rgba(255,86,80,.18));box-shadow:inset 0 0 0 1.5px var(--accent,#FF456E)}
@@ -501,7 +501,7 @@ function tonight(L){
   const s=joined().shows.find(x=>x.nights.some(n=>n.showId===L.showId));
   if(!s)return '';
   return `<div class="wrap" style="margin-top:12px">${s.source==='gig'
-    ?`<button class="btn-ink btn-block" data-act="bizopen" data-id="${esc(s.key)}">Edit tonight's numbers</button>`
+    ?`<button class="btn-ink btn-block" data-act="bizopen" data-id="${esc(s.key)}">Edit last show's numbers</button>`
     :`<button class="btn-pri btn-block" data-act="bizopen" data-id="${esc(s.key)}">Log tonight</button>`}</div>`;
 }
 
@@ -547,9 +547,10 @@ const rows={
   tips:(g)=>`<div class="field"><label>Cash tips</label>${moneyBox(`<input class="inp bz mono" data-f="tips" inputmode="decimal" value="${esc(dollars(g.tips))}">`)}</div>`,
   /* Which kinds count toward $/hour is the dashboard's choice (the $/hour tile),
      never a question asked while logging a night. */
-  time:(g,opts)=>`<div class="field"><label>Time</label>${Biz.TIME_KINDS.map(([k,l])=>`<div class="trow"><label>${l} · hours</label>
-      <input class="inp bzmin mono${opts&&opts.slot?' wide':''}" data-k="${k}" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="${k==='perform'&&opts&&opts.slot?esc(Biz.hm(opts.slot)+' from the gig'):'h:mm'}" value="${esc(Biz.hm(g.min&&g.min[k]))}"></div>`).join('')}
-    <p class="hint">“2:15”, “2h 15m” or just “2” — a bare number is hours.</p></div>`,
+  time:(g,opts)=>`<div class="field"><label>Time</label>${Biz.TIME_KINDS.map(([k,l])=>{ const v=g.min&&g.min[k], has=v!=null, sl=k==='perform'&&opts&&opts.slot?opts.slot:null;
+      const box=(u,val,ph)=>`<input class="inp bzmin mono" data-k="${k}" data-u="${u}" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="${ph}" value="${val}"><i>${u==='h'?'h':'min'}</i>`;
+      return `<div class="trow"><label>${l}</label><span class="bzhm">${box('h',has?Math.floor(v/60):'',sl!=null?Math.floor(sl/60):'0')}${box('m',has?v%60:'',sl!=null?sl%60:'0')}</span></div>`; }).join('')}
+    ${opts&&opts.slot?`<p class="hint">On stage left blank counts as the gig's ${esc(Biz.hm(opts.slot))}.</p>`:''}</div>`,
   gear:(g)=>`<div class="field"><label>Gear</label><textarea class="inp bzgear" rows="3" placeholder="• Taylor 314">${esc(g.gear&&g.gear.length?Biz.bullets.toText(g.gear):'• ')}</textarea></div>`,
   note:(g)=>`<div class="field"><label>Note</label><input class="inp bznote" maxlength="${Biz.LIMITS.note}" placeholder="Anything worth remembering" value="${esc(g.note||'')}"></div>`,
 };
@@ -572,7 +573,7 @@ function readRows(root){
       if(kind==='merch')o.qty=Math.max(0,Math.round(Number($m('.bzqty',r).value))||0);
       return o; });
   }
-  root.querySelectorAll('.bzmin').forEach(i=>{ const m=Biz.parseHm(i.value); g.min[i.getAttribute('data-k')]=Number.isNaN(m)?null:m; });
+  for(const [k] of Biz.TIME_KINDS){ const h=$m(`.bzmin[data-k="${k}"][data-u="h"]`,root), m=$m(`.bzmin[data-k="${k}"][data-u="m"]`,root); if(!h||!m)continue; const t=Biz.parseHms(h.value,m.value); g.min[k]=Number.isNaN(t)?null:t; }
   const gear=$m('.bzgear',root); if(gear)g.gear=Biz.bullets.fromText(gear.value);
   const note=$m('.bznote',root); if(note)g.note=note.value;
   return Biz.norm(g);
@@ -744,11 +745,12 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('focusout',e=>{
   const t=e.target; if(!t.classList||!t.classList.contains('bzmin'))return;
-  const m=Biz.parseHm(t.value);
+  const k=t.getAttribute('data-k'), root=t.closest('.bizf')||document, h=$m(`.bzmin[data-k="${k}"][data-u="h"]`,root), mm=$m(`.bzmin[data-k="${k}"][data-u="m"]`,root);
+  const m=h&&mm?Biz.parseHms(h.value,mm.value):NaN;
   /* The refocus waits a tick; by then the sheet may have been dismissed (✕, Escape,
      the grab zone also blur the field), and focus must not land in a hidden sheet. */
   if(Number.isNaN(m)){ t.classList.add('bad'); setTimeout(()=>{ const sh=t.closest('#sheet'); if(document.contains(t)&&(!sh||sh.classList.contains('on'))) try{ t.focus(); }catch(x){} },0); return; }
-  t.classList.remove('bad'); t.value=Biz.hm(m);
+  t.classList.remove('bad'); if(m!=null){ h.value=String(Math.floor(m/60)); mm.value=String(m%60); }   // 90 min → 1 h 30
 });
 document.addEventListener('keydown',e=>{
   const t=e.target; if(!t.classList||!t.classList.contains('bzgear'))return;

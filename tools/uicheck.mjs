@@ -570,10 +570,8 @@ const MONEY=await pg.evaluate(async ()=>{
   ok('the just-ended night offers “Log tonight” under the tiles', !!log&&log.classList.contains('btn-pri'));
   ok('and its top edge sits in the upper half of an 844px phone', !!log&&log.getBoundingClientRect().top<844*0.5, log&&String(Math.round(log.getBoundingClientRect().top)));
   const first=[...app.querySelectorAll('.list .row[data-act="bizopen"]')], more=app.querySelector('[data-act="bizmore"]');
-  ok('the Shows list shows three at first, newest first, with Show more for the rest', first.length===3&&/The Room/.test(first[0].innerText)&&!!more&&/^Show 1 more$/.test(more.textContent.trim()), `${first.length} rows · ${more&&more.textContent.trim()}`);
-  more.click(); await new Promise(r=>setTimeout(r,60));
-  const rows=[...app.querySelectorAll('.list .row[data-act="bizopen"]')];
-  ok('Show more unfolds every show in the period', rows.length===4&&/Show fewer/.test((app.querySelector('[data-act="bizmore"]')||{}).textContent||''), String(rows.length));
+  ok('the Past shows list holds four shows, newest first, and folds only past five (0082)', first.length===4&&/The Room/.test(first[0].innerText)&&!more, `${first.length} rows · ${more?more.textContent.trim():'no Show more'}`);
+  const rows=first;
   const orphan=rows.find(r=>/Logged show/.test(r.innerText));
   ok('a record whose gig left the calendar is listed as “Logged show”, dated, counted, and says why', !!orphan&&!!orphan.querySelector('.bizchip.pos')&&/\$150\.00 paid/.test(orphan.innerText)&&/no longer on your calendar/.test(orphan.innerText), orphan&&orphan.innerText.replace(/\n/g,' | '));
   ok('the profit chart has a heading', /Profit by show/i.test(text));   // the kick is uppercased by CSS
@@ -601,7 +599,7 @@ const MONEY=await pg.evaluate(async ()=>{
   ok('Generate report is an outlined pink-orange button that opens the printable report for the same dates', !!rep&&rep.textContent.trim()==='Generate report'&&/^\/report\?from=\d{4}-\d\d-\d\d&to=\d{4}-\d\d-\d\d&hours=1$/.test(rep.getAttribute('href'))&&getComputedStyle(rep).backgroundColor==='rgba(0, 0, 0, 0)'&&/inset/.test(getComputedStyle(rep).boxShadow), rep&&rep.getAttribute('href'));
   const kicks=[...app.querySelectorAll('.sec .kick')].map(k=>k.textContent);   // innerText would carry the CSS uppercase
   ok('the Stripe cards follow under one label', kicks.includes('Through the app')&&kicks.some(k=>/^Getting paid/.test(k))&&kicks.some(k=>/^Your earnings/.test(k)), kicks.join(' | '));
-  ok('the old Past shows list is not drawn twice', !/past shows/i.test(text)&&!/Look for missing shows[\s\S]*Look for missing shows/.test(text));
+  ok('the Past shows list is drawn once', (text.match(/past shows/ig)||[]).length===1&&!/Look for missing shows[\s\S]*Look for missing shows/.test(text), String((text.match(/past shows/ig)||[]).length));
   // the editor: opens from the button, keeps its readout live, never dismisses on a body drag
   // (the fee toggles above repainted the tab, so the button is found again)
   [...app.querySelectorAll('button')].find(b=>/^Log tonight$/.test(b.textContent.trim())).click(); await new Promise(r=>setTimeout(r,120));
@@ -611,7 +609,7 @@ const MONEY=await pg.evaluate(async ()=>{
   ok('the sheet is titled Log a show, asks for the total pay from the venue and the splits, and carries no $/h pills', sheet.querySelector('h3').textContent==='Log a show'&&/Total pay from venue/.test(sheet.innerText)&&/Splits/.test(sheet.innerText)&&!sheet.querySelector('[data-act="bizhk"]'), sheet.querySelector('h3').textContent);
   const cutIn=sheet.querySelector('.bz[data-f="cut"]');
   ok('My cut sits in the splits box above + Add band member, blank, with what’s left as its placeholder', !!cutIn&&!!cutIn.closest('[data-rows="band"]')&&cutIn.value===''&&/342\.50 — what's left/.test(cutIn.placeholder)&&!!(cutIn.compareDocumentPosition(sheet.querySelector('[data-act="bizadd"][data-id="band"]'))&Node.DOCUMENT_POSITION_FOLLOWING), cutIn&&cutIn.placeholder);
-  ok('the editor starts from the run’s pay and the slot’s length', sheet.querySelector('.bz[data-f="pay"]').value==='300'&&sheet.querySelector('.bzmin[data-k="perform"]').value==='3h', `${sheet.querySelector('.bz[data-f="pay"]').value} / ${sheet.querySelector('.bzmin[data-k="perform"]').value}`);
+  ok('the editor starts from the run’s pay and the slot’s length', sheet.querySelector('.bz[data-f="pay"]').value==='300'&&sheet.querySelector('.bzmin[data-k="perform"][data-u="h"]').value==='3'&&sheet.querySelector('.bzmin[data-k="perform"][data-u="m"]').value==='0', `${sheet.querySelector('.bz[data-f="pay"]').value} / ${sheet.querySelector('.bzmin[data-k="perform"][data-u="h"]').value}h ${sheet.querySelector('.bzmin[data-k="perform"][data-u="m"]').value}m`);
   const ro=sheet.querySelector('#bizro');
   ok('the sticky readout shows profit and $/h before a key is pressed', /\$342\.50/.test(ro.textContent)&&/\$114\.17\/h/.test(ro.textContent), ro.textContent);
   const pay=sheet.querySelector('.bz[data-f="pay"]'); pay.value='400'; pay.dispatchEvent(new Event('input',{bubbles:true}));
@@ -620,10 +618,12 @@ const MONEY=await pg.evaluate(async ()=>{
   ok('money fields wear a dollar sign that stays', !!sheet.querySelector('.bzmoney > i')&&getComputedStyle(sheet.querySelector('.bzmoney > i')).position==='absolute');
   sheet.querySelector('[data-act="bizadd"][data-id="band"]').click();
   ok('adding a band member adds a row and counts it', sheet.querySelectorAll('[data-rows="band"] .bzrow').length===1&&/1 of 5/.test(sheet.querySelector('[data-rows="band"]').innerText));
-  const tm=sheet.querySelector('.bzmin[data-k="travel"]'); tm.value='90'; tm.dispatchEvent(new Event('focusout',{bubbles:true}));
-  ok('a bare 90 is refused as hours — the field shakes and stays', tm.classList.contains('bad'));
-  tm.value='1.5'; tm.dispatchEvent(new Event('input',{bubbles:true})); tm.dispatchEvent(new Event('focusout',{bubbles:true}));
-  ok('1.5 is an hour and a half', tm.value==='1h 30m'&&!tm.classList.contains('bad'), tm.value);
+  const th=sheet.querySelector('.bzmin[data-k="travel"][data-u="h"]'), tm=sheet.querySelector('.bzmin[data-k="travel"][data-u="m"]');
+  ok('hours and minutes are two boxes on the number pad, no unit after the label', th.getAttribute('inputmode')==='numeric'&&tm.getAttribute('inputmode')==='numeric'&&th.closest('.trow').querySelector('label').textContent==='Travel', th.closest('.trow').querySelector('label').textContent);
+  tm.value='1.5'; tm.dispatchEvent(new Event('focusout',{bubbles:true}));
+  ok('a minute box that is not a whole number is refused — the field shakes and stays', tm.classList.contains('bad'));
+  tm.value='90'; tm.dispatchEvent(new Event('input',{bubbles:true})); tm.dispatchEvent(new Event('focusout',{bubbles:true}));
+  ok('90 minutes rolls into 1 h 30', th.value==='1'&&tm.value==='30'&&!tm.classList.contains('bad'), `${th.value}h ${tm.value}m`);
   ok('the draft is kept in the phone while typing', /"key":"g1@/.test(localStorage.getItem('myset.biz.draft')||''));
   ok('nothing in the sheet scrolls sideways', sheet.scrollWidth<=sheet.clientWidth+1, `${sheet.scrollWidth}/${sheet.clientWidth}`);
   // a thumb dragged down on the sticky readout closes the editor like any sheet (the founder, 2026-09-14)
@@ -657,9 +657,9 @@ const MONEY2=await pg.evaluate(async ()=>{
   setTab('gigs'); await loadGigs(true);
   openGig(undefined,past);
   await until(()=>document.querySelector('#gBiz .bizf'));
-  const det=document.querySelector('#gBiz'), perf=document.querySelector('#gBiz .bzmin[data-k="perform"]');
+  const det=document.querySelector('#gBiz'), perf=document.querySelector('#gBiz .bzmin[data-k="perform"][data-u="h"]');
   ok('a new gig on a past date opens “The business side” for back-filling', !!det&&det.open);
-  ok('the slot length is the On stage placeholder on the gig form, never its value', !!perf&&perf.value===''&&/3h from the gig/.test(perf.placeholder), perf&&`"${perf.value}" / ${perf.placeholder}`);
+  ok('the slot length is the On stage placeholder on the gig form, never its value', !!perf&&perf.value===''&&perf.placeholder==='3'&&/counts as the gig's 3h/.test(det.innerText), perf&&`"${perf.value}" / ${perf.placeholder}`);
   const addBtn=document.querySelector('#gBiz .btn-grey');
   ok('the + Add buttons carry an edge of their own inside the grey box', !!addBtn&&getComputedStyle(addBtn).boxShadow!=='none', addBtn&&getComputedStyle(addBtn).boxShadow);
   // nothing touched on the business side: the gig saves, no rule is written
@@ -673,9 +673,9 @@ const MONEY2=await pg.evaluate(async ()=>{
   // a time that makes no sense blocks the save the way it blocks the editor's
   openGig(undefined,iso(4));
   await until(()=>document.querySelector('#gBiz .bizf'));
-  const perf2=document.querySelector('#gBiz .bzmin[data-k="perform"]');
+  const perf2=document.querySelector('#gBiz .bzmin[data-k="perform"][data-u="m"]');
   document.querySelector('#gV').value='Side Room';
-  perf2.value='90'; perf2.dispatchEvent(new Event('focusout',{bubbles:true}));
+  perf2.value='2.5'; perf2.dispatchEvent(new Event('focusout',{bubbles:true}));
   const n0=acts.length;
   document.querySelector('[data-act="gigsave"]').click(); await new Promise(r=>setTimeout(r,150));
   ok('a refused time blocks “Add it” with the shake and a toast', sheet.classList.contains('on')&&perf2.classList.contains('bad')&&document.querySelector('#toast').textContent==='Check the time fields'&&!acts.slice(n0).includes('eventSave'), `toast “${document.querySelector('#toast').textContent}”, sent ${acts.slice(n0).join(',')||'nothing'}`);
@@ -688,7 +688,7 @@ const MONEY2=await pg.evaluate(async ()=>{
   // the editor: a bad-time refocus never lands in a dismissed sheet; a no-op leaves no draft
   const log=[...app.querySelectorAll('button')].find(b=>/^Log tonight$/.test(b.textContent.trim()));
   log.click(); await until(()=>document.querySelector('#bizf'));
-  const tm=document.querySelector('#bizf .bzmin[data-k="travel"]'); tm.focus(); tm.value='90'; tm.blur(); closeSheet();
+  const tm=document.querySelector('#bizf .bzmin[data-k="travel"][data-u="m"]'); tm.focus(); tm.value='x'; tm.blur(); closeSheet();
   await new Promise(r=>setTimeout(r,40));
   ok('the bad-time refocus does not fire into a dismissed sheet', tm.classList.contains('bad')&&document.activeElement!==tm, document.activeElement&&document.activeElement.tagName);
   localStorage.removeItem('myset.biz.draft');

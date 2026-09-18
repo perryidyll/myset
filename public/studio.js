@@ -27,7 +27,7 @@ let LASTSHOW='', LASTSTATUS='';            // when the night changes, the Money 
 /* The business dashboard (decision 0065) is two scripts loaded only when a paid
    owner opens Money — the maths and the tab. Served immutable like this file, so
    each carries its own stamp; tools/stamp.mjs rewrites both. */
-const BIZ_V='/biz.js?v=1932ebca', MONEY_V='/studio-money.js?v=3b335d1b';
+const BIZ_V='/biz.js?v=6680e3d1', MONEY_V='/studio-money.js?v=4a471b91';
 let MONEY_PROMISE=null, MONEY_FAILED=false;
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
@@ -1540,7 +1540,7 @@ async function saveGig2(id){
   const bizRoot=$('#gBiz .bizf');
   /* A time that made no sense shakes on the way out of the field; Add it must not
      then drop it without a word — same refusal as the editor's Save. */
-  const badTime=bizRoot&&window.Money&&typeof Biz!=='undefined'?[...bizRoot.querySelectorAll('.bzmin')].find(i=>Number.isNaN(Biz.parseHm(i.value))):null;
+  const badTime=bizRoot&&window.Money&&typeof Biz!=='undefined'?[...bizRoot.querySelectorAll('.bzmin[data-u="h"]')].find(i=>{ const m=bizRoot.querySelector(`.bzmin[data-k="${i.getAttribute('data-k')}"][data-u="m"]`); return Number.isNaN(Biz.parseHms(i.value,m&&m.value)); }):null;
   if(badTime){ const det=$('#gBiz'); if(det)det.open=true; badTime.classList.remove('bad'); void badTime.offsetWidth; badTime.classList.add('bad'); toast('Check the time fields'); return; }
   const placeChanged=ev.address!==v('gAddr0')||ev.mapUrl!==v('gMap0');
   if(placeChanged){ev.lat=null;ev.lng=null;}
