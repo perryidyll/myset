@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-18 15:08 — 56a6641 — wt-diaries@docs/artist-diaries-phase1-scope (30 files since origin/main)
+**tl;dr:** Artist Diaries: every artist gets a diary of stories behind their songs at /<slug>/diary (3/10/40 pages by plan), with a cover photo per page, lyrics beside a story, Studio → Menu → Diary, a Diary door on the artist page and a Diary card under the merch card on the community page (0085)
+**Other sessions:** New document diary_<aid> (KEY.diary, casKeep); public read is /api/fan?what=diary; admin actions diaryList/Save/Remove/Move/Photo/PhotoClear (CAPABILITY profile); PLANS.*.diary + diaryCap; DIARY_SLOT d<id> in _img.mjs is a page's cover; community.mjs ships diary + diaryPeek and its read ceilings went up by one; diary/diaries are reserved slugs; /:slug/diary route sits above the catch-all; after editing studio.js run node tools/stamp.mjs
+
 ### 2026-09-18 11:18 — ecd0e44 — wt@studio/hours-minutes-boxes (15 files since origin/main)
 **tl;dr:** Money tab: a show's time is two number-pad boxes per kind (hours | minutes) — no more hours logged as minutes; Set-up / break-down; Edit last show's numbers (0084)
 **Other sessions:** Biz.parseHms(h,m) is the reader; the boxes are .bzmin with data-u=h|m and inputmode=numeric; parseHm stays for the report and old drafts; TIME_KINDS label changed in BOTH public/biz.js and netlify/functions/_biz.mjs (the overview reads the server one); tools/uicheck.mjs now expects the fold at five and Past shows.
