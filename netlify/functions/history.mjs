@@ -1,6 +1,6 @@
 import { json, bad, requireArtist, getShow, readFans, voteCounts } from './_lib.mjs';
 import { planForArtist, reportsAllowed } from './_plan.mjs';
-import { readHistIndex, readHistShow, reconcileShow, moneyForShow, refreshShowMoney, healHistory, placeShows, renameShow } from './_history.mjs';
+import { readHistIndex, readHistShow, reconcileShow, moneyForShow, refreshShowMoney, healHistory, placeShows, renameShow, hideShow } from './_history.mjs';
 
 /* Artist-only. GET lists past shows (or one in detail); POST re-pulls Stripe for
    a single show. The show currently running is included as a live preview so the
@@ -25,6 +25,12 @@ export default async (req) => {
       const title = String(body.title || '').replace(/\s+/g, ' ').trim().slice(0, 100);
       if (!title) return bad('Give the night a name');
       const r = await renameShow(aid, String(body.show || ''), title);
+      if (!r) return bad('unknown show', 404);
+      return json({ ok: true, ...r });
+    }
+    /* "Delete show" on the Money tab — see hideShow: the row is hidden, never lost. */
+    if (body.action === 'hide') {
+      const r = await hideShow(aid, String(body.show || ''));
       if (!r) return bad('unknown show', 404);
       return json({ ok: true, ...r });
     }
@@ -105,7 +111,8 @@ export default async (req) => {
      `status === 'ended'`, so tapping "Resume it instead" on a finished night (same
      showId, status back to live... and then ended again, or left at 'pre') made the
      archived row disappear from Past shows with no explanation. */
-  const shows = show.status === 'live' ? idx.shows.filter((s) => s.showId !== show.showId) : idx.shows;
+  const kept = idx.shows.filter((s) => !s.hidden);   // a night the artist deleted from the Money tab (hideShow)
+  const shows = show.status === 'live' ? kept.filter((s) => s.showId !== show.showId) : kept;
   if (!reports) return json({ ok: true, live, locked: 'plus', nights: shows.length, shows: [] });
   return json({ ok: true, live, shows });
 };

@@ -33,6 +33,9 @@ const CSS=`
 .chips.scroll::-webkit-scrollbar{display:none}.chips.scroll .chip{flex:0 0 auto;padding:9px 15px;font-size:14px;min-width:0}
 .bizbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 18px 0}
 .bizbar .rng{font-size:12.5px;color:var(--muted,#98989D);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bizbar .cur{flex:0 0 auto;font-size:12.5px;font-weight:700;color:var(--muted,#98989D);padding:6px 9px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--hair-2,rgba(255,255,255,.16))}
+.bizcurs{display:grid;gap:6px;margin-top:8px}.bizcurs button{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r-sm,14px);background:var(--surface-2,#2C2C2E);color:var(--ink,#F5F5F7);font-size:15px;text-align:left}
+.bizcurs button.on{box-shadow:inset 0 0 0 1.5px var(--accent,#FF456E)}.bizcurs button b{flex:0 0 44px;font-size:17px}.bizcurs button small{color:var(--muted,#98989D);margin-left:auto;font-size:12.5px}
 .btn-line{display:inline-flex;align-items:center;justify-content:center;font-family:inherit;font-size:14px;font-weight:600;letter-spacing:-.01em;padding:10px 16px;border:0;border-radius:var(--pill,999px);cursor:pointer;white-space:nowrap;background:none;color:var(--accent-ink,#FF5650);box-shadow:inset 0 0 0 1.5px var(--accent-ink,#FF5650);text-decoration:none;flex:0 0 auto;transition:transform .22s var(--spring,ease)}
 .btn-line:active{transform:scale(.965)}.btn-line:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
 .bizhd{display:block;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-2,#FF5650);line-height:1.3}
@@ -42,6 +45,8 @@ const CSS=`
    same soft green, so a profit reads as the thing the top-right corner already says. */
 .bizhero .v{display:inline-block;max-width:100%;font-size:38px;font-weight:700;letter-spacing:-.04em;line-height:1.1;margin-top:8px;padding:6px 18px;border-radius:999px;color:var(--ink,#F5F5F7);background:var(--surface-2,#2C2C2E)}
 .bizhero .v.pos{color:var(--good,#30D158);background:rgba(48,209,88,.16)}.bizhero .v.neg{color:var(--accent-ink,#FF5650);background:var(--accent-soft,rgba(255,86,80,.18))}
+.bizhero .tips,.bizro .tips{display:block;font-size:14px;font-weight:700;letter-spacing:-.01em;color:var(--good,#30D158);margin-top:8px}
+.bizro .tips{font-size:13px;margin-top:2px}
 .bizhero .a{font-size:13.5px;color:var(--muted,#98989D);margin-top:8px;line-height:1.45}.bizhero .a small{display:block;font-size:12.5px;margin-top:4px}.bizhero .a small.fee{color:var(--ink-2,#DDDDE0);font-weight:500}
 .bizhero.pulse{animation:bizpulse .6s var(--ease,ease) 1}
 @keyframes bizpulse{0%{transform:scale(1)}35%{transform:scale(1.022)}100%{transform:scale(1)}}
@@ -57,6 +62,8 @@ const CSS=`
 .bizchart svg rect.bar{transform-box:fill-box;transform-origin:bottom}.bizchart.anim svg rect.bar{animation:bizgrow .55s var(--ease,ease) both}
 @keyframes bizgrow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .bizchart svg rect.hit{cursor:pointer}
+.bizchart .ml{overflow:hidden}.bizchart .ml span{min-width:0;white-space:nowrap}
+.bizchart .ml.dense span:first-child{text-align:left}.bizchart .ml.dense span:last-child{display:flex;justify-content:flex-end}
 .donut.biz svg circle[data-d]{transition:stroke-dasharray .8s var(--ease,ease)}
 .bizeve{margin:12px 18px 0;padding:14px;background:var(--surface,#1C1C1E);border-radius:var(--r-sm,14px);box-shadow:var(--sh-1,none)}
 .bizeve .stack{display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--surface-2,#2C2C2E)}
@@ -99,7 +106,10 @@ const CSS=`
 .bizf .hint{font-size:12.5px;color:var(--muted,#98989D);margin:6px 0 0}
 .bizf .bzcut{margin-top:12px}.bizf .bzcut>label{display:block;font-size:12.5px;font-weight:600;color:var(--muted,#98989D);margin-bottom:7px}
 .bizf textarea.bzgear{min-height:88px}
-.sheet.biz .sheetx{z-index:3}.bizro{position:sticky;top:-10px;z-index:1;margin:0 -20px;padding:16px 20px 12px;background:var(--surface,#1C1C1E);border-bottom:.5px solid var(--hair,rgba(255,255,255,.09))}
+.sheet.biz .sheetx{z-index:3}
+/* The readout starts under the close button, not over half of it: the grab zone is
+   27px tall and the ✕ hangs to 44px (the founder, 2026-09-17: "only half of it is showing"). */
+.bizro{position:sticky;top:-10px;z-index:1;margin:20px -20px 0;padding:16px 20px 12px;background:var(--surface,#1C1C1E);border-bottom:.5px solid var(--hair,rgba(255,255,255,.09))}
 .bizro .k{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#98989D)}
 .bizro b{display:block;font-size:26px;font-weight:700;letter-spacing:-.035em;margin-top:2px;color:var(--ink,#F5F5F7)}
 .bizro b.pos{color:var(--good,#30D158)}.bizro b.neg{color:var(--accent-ink,#FF5650)}.bizro small{font-size:15px;color:var(--muted,#98989D);font-weight:600;margin-left:6px}
@@ -119,8 +129,11 @@ let PULSE=false;         // the hero pulses once on the paint after a save
 let SHOWN={};            // last value each tile showed, so a count-up starts from it
 let PICKS=null;          // a Set of keys while "Pick shows" is on, else null
 let BARI=-1;             // the tapped chart bar
-let MORE=false;          // the Shows list unfolded past its first three (the founder, 2026-09-13)
-const FOLD=3;
+/* The Past shows list: five rows first, twenty more per tap, another Show more
+   under each twenty (the founder, 2026-09-17 — hundreds of shows must not drop the
+   screen into an endless abyss). MORE is how many rows are open. */
+let MORE=0;
+const FOLD=5, STEP=20;
 let ED=null;             // the open editor: {key, show, base, stored}
 let PER=(()=>{ try{ return JSON.parse(localStorage.getItem('myset.biz.period')||'null')||{kind:'month'}; }catch(e){ return {kind:'month'}; } })();
 /* How the hourly rate is read: the whole act's profit or the artist's own cut,
@@ -215,7 +228,7 @@ function stale(){ BZ=null; LOADING=null; FLIGHT=null; REQ++; }
 /* THE BOOK IS FORGOTTEN: sign-out, or a door back in that may be somebody else.
    Every piece of state in this file goes back to what it was before the first
    read — nothing of one account may greet the next one on the same phone. */
-function forget(){ stale(); WIN=null; ED=null; PICKS=null; BARI=-1; MORE=false; SHOWN={}; ANIM=true; PULSE=false; GEN++; }
+function forget(){ stale(); WIN=null; ED=null; PICKS=null; BARI=-1; MORE=0; SHOWN={}; ANIM=true; PULSE=false; GEN++; }
 
 /* ---------- THE JOIN, once per paint. A gig that is on right now (started, not
    over, nothing filed yet) is tonight's business, not an unconfirmed night. */
@@ -234,6 +247,7 @@ function skeleton(){
 function periodBar(P){
   return `<div class="chips scroll" data-hscroll>${KINDS.map(([k,l])=>`<button class="chip ${P.kind===k?'on':''}" data-act="bizperiod" data-id="${k}">${l}</button>`).join('')}</div>
   <div class="bizbar"><span class="rng">${dfull(P.from)} – ${dfull(P.to)}</span>
+    <button class="cur" type="button" data-act="bizcurrency" aria-label="Change currency">${esc(curCode())}</button>
     <a class="btn-line" href="/report?from=${P.from}&to=${P.to}&hours=1">Generate report</a></div>`;
 }
 function hero(S,rise){
@@ -247,7 +261,25 @@ function hero(S,rise){
   if(S.appUnknown>0) notes.push(`<small>App money not available for ${plural(S.appUnknown,'show')}.</small>`);
   return `<div class="bizhero ${rise?'rise':''}"><div class="k">Profit</div>
     <b class="v mono ${S.profit<0?'neg':'pos'}" ${cu('profit',S.profit,'money')}>${Biz.money(S.profit)}</b>
+    ${tipsLine(S.tipsAppKnown?S.tipsApp:null)}
     <div class="a">${plural(S.shows,'show')} · ${S.logged} logged${notes.join('')}</div></div>`;
+}
+/* "$x from in-app tips" under a profit figure (the founder, 2026-09-17), green and a
+   size down. Only when the nights say — a night filed before `tipped` existed reads
+   unknown until the heal fills it, and an unknown is not a zero. */
+const tipsLine=(cents)=>cents==null?'':`<small class="tips mono">${Biz.money(cents)} from in-app tips</small>`;
+/* The book's currency: a code in prefs, USD until chosen; Biz.money follows it. */
+const curCode=()=>Biz.currency(prefsOf().currency||'USD');
+function currencySheet(){
+  const on=curCode();
+  openSheet(`<h3>Currency</h3><p class="lede">The symbol in front of every figure on this tab and its reports. Card payments through the app are still charged in US dollars — this is a label, not a conversion.</p>
+    <div class="bizcurs">${Biz.CURRENCIES.map(([k,sym,name])=>`<button type="button" class="${k===on?'on':''}" data-act="bizsetcur" data-id="${k}"><b>${esc(sym.trim())}</b>${esc(name)}<small>${k}</small></button>`).join('')}</div>`);
+}
+async function setCurrency(code){
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'bizPrefs',currency:code}),quiet:true});
+  if(!d||!d.ok){ toast((d&&d.error)||"Couldn't save that just now"); return; }
+  if(BZ&&BZ.ok)BZ.biz.prefs=d.prefs||BZ.biz.prefs;
+  closeSheet(); render(); toast(`Figures now in ${Biz.currency(code)}`);
 }
 /* What the hourly rate is a rate OF, in words, for the tile and the report line. */
 function viewWords(S){
@@ -290,11 +322,20 @@ function chartBox(S,P,anim){
     return hit+`<rect class="bar" x="${x}" y="${base-h}" width="${bw}" height="${h}" rx="4" fill="${cur||lit?'url(#bizg-bar)':'var(--accent)'}" ${cur||lit?'':'opacity=".55"'} style="animation-delay:${i*30}ms"/>`
       +(lit||(cur&&BARI<0)?label(x+bw/2,base-h-7,v):'');
   }).join('');
-  const lab=rows.map((r,i)=>`<span class="${i===nowI?'now':''}">${byShow?dlabel(r.date).split(' ').slice(-2).join(' ').slice(0,6):'JFMAMJJASOND'[+r.month.slice(5,7)-1]}</span>`).join('');
+  /* THE LABELS MUST NOT WIDEN THE PAGE (the founder, 2026-09-17: the Money tab
+     pinched out to 0.9 and sat with a strip down its right edge). Twenty-one shows
+     in a month was twenty-one "Sep 15"s at flex:1, each refusing to shrink below its
+     own text — 441px on a 393px phone, and iOS lets a page zoom out to whatever it
+     laid out. Past eight bars only every k-th one is named (the last always), and
+     the CSS lets a span clip rather than push. */
+  const every=byShow&&n>8?Math.ceil(n/8):1;
+  const named=(i)=>every===1||i===n-1||(i%every===0&&n-1-i>every);   // every k-th, and always the last — the one before it steps aside
+  const text=(r)=>byShow?dlabel(r.date).split(' ').slice(-2).join(' ').slice(0,6):'JFMAMJJASOND'[+r.month.slice(5,7)-1];
+  const lab=rows.map((r,i)=>`<span class="${i===nowI?'now':''}">${named(i)?text(r):''}</span>`).join('');
   return `<div class="echart bizchart ${anim?'anim':''}" id="bizchart"><svg viewBox="0 0 ${W} ${H}" aria-label="Profit by ${byShow?'show':'month'}">
     <defs><linearGradient id="bizg-bar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent-2)"/><stop offset="1" stop-color="var(--accent)"/></linearGradient></defs>
     <line x1="0" y1="${base}" x2="${W}" y2="${base}" stroke="var(--hair-2)" stroke-width="1"/>${bars}</svg>
-    <div class="ml" style="${byShow&&n>8?'font-size:9px':''}">${lab}</div></div>`;
+    <div class="ml ${every>1?'dense':''}" style="${byShow&&n>8?'font-size:9px':''}">${lab}</div></div>`;
 }
 const label=(x,y,v)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)" class="mono">${Biz.money(v)}</text>`;
 function mix(S,anim){
@@ -356,17 +397,17 @@ function showsList(inP,S,P){
   const hay=s=>[s.title,s.venue,s.city,s.date,dlabel(s.date),dfull(s.date)].filter(Boolean).join(' ').toLowerCase();
   const all=q.length?inP.filter(s=>{const h=hay(s);return q.every(w=>h.includes(w));}):inP;
   /* Three at first, the rest behind Show more — a search or Pick shows lists every row. */
-  const folded=!MORE&&!q.length&&!PICKS&&all.length>FOLD, rows=folded?all.slice(0,FOLD):all;
+  const open=Math.max(FOLD,MORE), folded=!q.length&&!PICKS&&all.length>open, rows=folded?all.slice(0,open):all;
   const n=PICKS?PICKS.size:0;
   const right=PICKS?`<button class="btn-line" id="bizpickbtn" style="padding:8px 14px;font-size:13px" data-act="bizreport" ${n?'':'disabled'}>Report ${n} show${n===1?'':'s'}</button>`
                    :`<button class="btn-text" style="padding:0" data-act="bizpickmode">Pick shows</button>`;
   const weeks=Math.max(1,Math.round((new Date(P.to)-new Date(P.from))/DAY+1)/7);
   const sparse=inP.length<4*weeks;
-  return `<div class="sec"><span class="kick">Shows${q.length?` · ${rows.length} of ${inP.length}`:''}</span>${PICKS?`<span style="display:flex;gap:6px;align-items:center">${right}<button class="btn-text" style="padding:0 4px" data-act="bizpickmode">Cancel</button></span>`:right}</div>
+  return `<div class="sec"><span class="kick">Past shows${q.length?` · ${rows.length} of ${inP.length}`:''}</span>${PICKS?`<span style="display:flex;gap:6px;align-items:center">${right}<button class="btn-text" style="padding:0 4px" data-act="bizpickmode">Cancel</button></span>`:right}</div>
   ${inP.length>12?`<div class="find" style="margin-bottom:8px"><svg class="ic" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 17 17"/></svg>
     <input id="histq" type="search" placeholder="Find a show — venue, city, date…" value="${esc(HISTQ||'')}" autocomplete="off"></div>`:''}
   <div class="list">${rows.map(s=>showRow(s,S)).join('')||`<div class="row muted">Nothing matches “${esc(HISTQ||'')}”.</div>`}
-    ${folded?`<button class="row bizmore" type="button" data-act="bizmore">Show ${all.length-FOLD} more</button>`:MORE&&!q.length&&!PICKS&&all.length>FOLD?`<button class="row bizmore" type="button" data-act="bizmore">Show fewer</button>`:''}
+    ${folded?`<button class="row bizmore" type="button" data-act="bizmore">Show ${Math.min(STEP,all.length-open)} more</button>`:MORE>FOLD&&!q.length&&!PICKS&&all.length>FOLD?`<button class="row bizmore" type="button" data-act="bizfewer">Show fewer</button>`:''}
     ${sparse?`<div class="row muted">Played a night MySet wasn't at? Add it on the Gigs tab — past dates are fine — and it shows up here.</div>`:''}</div>
   ${BZ.dropped>0?`<p class="muted" style="font-size:12px;padding:10px 18px 0;margin:0">MySet keeps your last ${((HIST&&HIST.shows)||[]).length} nights; ${BZ.dropped} older ones are not shown.</p>`:''}
   <div class="wrap bizfoot2" style="margin-top:6px;display:flex;flex-wrap:wrap;gap:0 4px"><button class="btn-text" onclick="healHist()">Look for missing shows</button><button class="btn-text" onclick="placeHist()">Name these from my calendar</button></div>`;
@@ -415,6 +456,7 @@ function tab(){
     if(BZ.status===403) return `<div class="list" style="margin-top:14px"><div class="row muted">The business dashboard is the account owner's.</div></div>`;
     return `<div class="list" style="margin-top:14px"><div class="row muted" data-act="bizretry" style="cursor:pointer">Couldn't load the dashboard — tap to try again.</div></div>`;
   }
+  curCode();   // the book's symbol, before the first figure is written
   const {P,shows,inP,S}=joined();
   const anim=ANIM&&!rm(); ANIM=false;
   requestAnimationFrame(()=>after(gen));
@@ -450,7 +492,7 @@ function after(gen){
   });
   if(PULSE){ PULSE=false; const h=$m('.bizhero'); if(h&&!quiet){ h.classList.add('pulse'); setTimeout(()=>h.classList.remove('pulse'),700); } }
 }
-function reset(){ ANIM=true; BARI=-1; PICKS=null; MORE=false; }
+function reset(){ ANIM=true; BARI=-1; PICKS=null; MORE=0; }
 
 /* "Log tonight" under the Tonight / last show tiles, once the night is filed and
    the dashboard knows which gig it was. */
@@ -506,7 +548,7 @@ const rows={
   /* Which kinds count toward $/hour is the dashboard's choice (the $/hour tile),
      never a question asked while logging a night. */
   time:(g,opts)=>`<div class="field"><label>Time</label>${Biz.TIME_KINDS.map(([k,l])=>`<div class="trow"><label>${l} · hours</label>
-      <input class="inp bzmin mono${opts&&opts.slot?' wide':''}" data-k="${k}" inputmode="decimal" placeholder="${k==='perform'&&opts&&opts.slot?esc(Biz.hm(opts.slot)+' from the gig'):'h:mm'}" value="${esc(Biz.hm(g.min&&g.min[k]))}"></div>`).join('')}
+      <input class="inp bzmin mono${opts&&opts.slot?' wide':''}" data-k="${k}" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="${k==='perform'&&opts&&opts.slot?esc(Biz.hm(opts.slot)+' from the gig'):'h:mm'}" value="${esc(Biz.hm(g.min&&g.min[k]))}"></div>`).join('')}
     <p class="hint">“2:15”, “2h 15m” or just “2” — a bare number is hours.</p></div>`,
   gear:(g)=>`<div class="field"><label>Gear</label><textarea class="inp bzgear" rows="3" placeholder="• Taylor 314">${esc(g.gear&&g.gear.length?Biz.bullets.toText(g.gear):'• ')}</textarea></div>`,
   note:(g)=>`<div class="field"><label>Note</label><input class="inp bznote" maxlength="${Biz.LIMITS.note}" placeholder="Anything worth remembering" value="${esc(g.note||'')}"></div>`,
@@ -548,6 +590,7 @@ async function openBiz(key){
   if(MERCH===null&&typeof loadMerch==='function')loadMerch();
   await ensureLoaded();
   if(!BZ||!BZ.ok){ toast(BZ&&BZ.status===403?"The business dashboard is the account owner's":'Couldn’t load the dashboard just now'); return; }
+  curCode();
   const s=joined().shows.find(x=>x.key===key)||{key,date:(Biz.parseKey(key)||{}).date||'',venue:'',title:'',nights:[],occ:null,biz:BZ.biz.gigs[key]||null,rule:null,source:BZ.biz.gigs[key]?'gig':'none'};
   /* `rec` is the night's own record; `stored` is what the server already holds for
      it — the record, or the run's rule the first time — because a cap is enforced
@@ -560,7 +603,7 @@ async function openBiz(key){
   const g=draft?Biz.norm(draft):base;
   ED={key,saveKey,show:s,stored,base};
   const name=esc(s.title||s.venue||'This show');
-  openSheet(`<div class="bizro"><div class="k">Profit for this show</div><b class="mono" id="bizro"></b></div>
+  openSheet(`<div class="bizro"><div class="k">Profit for this show</div><b class="mono" id="bizro"></b>${tipsLine(s.tipsApp)}</div>
     <h3>${rec?'Edit this show':'Log a show'}</h3>
     <p class="lede"><b>${dlabel(s.date)} · ${name}.</b> ${s.nights.length?(s.appKnown?`${Biz.money(s.app)} came through the app that night, before fees.`:'The app money for this night is not available — Re-check it from the list.'):s.source==='rule'&&!rec?'Started from the run’s usual numbers — change anything that was different.':'Only what you type here is counted.'}</p>
     ${s.nights.length?`<p class="bizvotes">${esc(Biz.votesLine(s))}${s.paidVotes==null?' <span class="muted">· paid votes and requests not counted for this night — Re-check it from the list</span>':''}</p>`:''}
@@ -570,7 +613,8 @@ async function openBiz(key){
     <div style="display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:6px">
       ${s.nights.length?`<button class="btn-text" data-act="biznight" data-id="${esc(s.nights[0].showId)}">What you played</button>`:'<span></span>'}
       <a class="btn-text" href="/report?shows=${encodeURIComponent(key)}&hours=1">Report this show</a></div>
-    ${rec?`<button class="btn-text btn-block" style="color:var(--muted)" data-act="bizremove">Remove this show's numbers</button>`:''}`,'biz');
+    ${rec?`<button class="btn-text btn-block" style="color:var(--muted)" data-act="bizremove">Remove this show's numbers</button>`:''}
+    <button class="btn-text btn-block" style="color:var(--accent-ink)" data-act="bizdelete">Delete show</button>`,'biz');
   readout();
 }
 /* The readout and the "your take" line, recomputed on every keystroke; never render(). */
@@ -591,7 +635,36 @@ async function saveShow(btn){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'bizSave',key,gig}),quiet:true});
   if(!d||!d.ok){ btn.disabled=false; btn.textContent='Save'; toast((d&&d.error)||"Couldn't save — your numbers are still here"); return; }
   if(BZ&&BZ.ok)BZ.biz.gigs[key]=d.gig;
-  draftClear(); ED=null; closeSheet(); PULSE=true; render(); toast('Logged');
+  draftClear(); ED=null; closeSheet(); PULSE=true; toTop(); render(); toast('Logged');
+}
+/* The sheet closed over the middle of the page and left the artist there (the
+   founder's screenshot, 2026-09-17); the tab starts again from its top. BEFORE
+   render(), which puts the page back where it was when it started. */
+const toTop=()=>{ try{ window.scrollTo(0,0); }catch(e){} };
+/* DELETE SHOW (2026-09-17). Everything the show is, in one tap: the logged numbers,
+   the night on the calendar — the whole gig if it plays once, that date alone if it
+   is a run (eventHide, which is what the Gigs tab does) — and the filed night, which
+   is hidden from the lists and never destroyed (history hide). The order is by
+   reversibility: the calendar last, because it is the one the Gigs tab shows. */
+async function deleteShow(){
+  if(!ED)return;
+  const s=ED.show, bits=[];
+  if(s.biz) bits.push('its logged numbers');
+  if(s.occ) bits.push(s.occ.repeating?'this night of the run on the Gigs tab':'the gig on the Gigs tab');
+  if(s.nights.length) bits.push(`the filed night${s.nights.length>1?'s':''}`);
+  const lede=bits.length?`This removes ${bits.join(', ').replace(/, ([^,]*)$/,' and $1')}. The money Stripe took stays on Stripe.`:'Nothing is logged for this show yet.';
+  if(!await ask({title:'Delete this show?',lede,yes:'Yes, delete it',no:'Keep it'}))return;
+  const key=ED.saveKey, calls=[];
+  if(s.biz) calls.push(api('/admin',{method:'POST',body:JSON.stringify({action:'bizSave',key,remove:true}),quiet:true}).then(d=>{ if(d&&d.ok&&BZ&&BZ.ok)delete BZ.biz.gigs[key]; return d; }));
+  for(const n of s.nights) calls.push(api('/history',{method:'POST',body:JSON.stringify({action:'hide',show:n.showId}),quiet:true}));
+  if(s.occ) calls.push(api('/admin',{method:'POST',body:JSON.stringify({action:'eventHide',id:s.occ.eventId,date:s.date}),quiet:true}));
+  const rs=await Promise.all(calls.map(c=>c.catch(()=>null)));
+  const failed=rs.filter(d=>!d||!d.ok).length;
+  draftClear(); ED=null; closeSheet();
+  if(s.nights.length&&typeof HIST!=='undefined'&&HIST&&HIST.shows){ const gone=new Set(s.nights.map(n=>n.showId)); HIST.shows=HIST.shows.filter(x=>!gone.has(x.showId)); }
+  if(s.occ&&typeof loadGigs==='function'){ try{ await loadGigs(true); }catch(e){} }
+  stale(); toTop(); await fetchBiz(); render();
+  toast(failed?`Couldn't remove ${failed===rs.length?'that':'part of that'} — try again`:'Deleted');
 }
 async function removeShow(){
   if(!ED||!await ask({title:'Remove the numbers?',lede:'This show\u2019s log is cleared. The filed night itself stays.',yes:'Yes, remove them',no:'Keep them'}))return;
@@ -695,6 +768,9 @@ document.addEventListener('paste',e=>{
 /* ---------- TAPS. studio.js's dispatcher hands over every data-act that starts
    with "biz"; `b` is the element, `id` its data-id. */
 function tap(e,b,id){
+  if(b.dataset.act==='bizcurrency'){ currencySheet(); return; }
+  if(b.dataset.act==='bizsetcur'){ setCurrency(id); return; }
+  if(b.dataset.act==='bizdelete'){ deleteShow(); return; }
   const a=b.dataset.act;
   if(a==='bizretry'){ BZ=null; render(); }   // the tab's own read failed; a repaint with no book starts it again
   if(a==='bizperiod'){ if(id==='custom')customSheet(); else if(id==='90d')setPeriod('custom',{from:Biz.localDate(Date.now()-89*DAY),to:Biz.period('month').to}); else setPeriod(id); }
@@ -709,7 +785,8 @@ function tap(e,b,id){
   if(a==='bizfee')setView({net:!VIEW.net});
   if(a==='bizbar'){ if(!BZ||!BZ.ok)return; BARI=BARI===Number(id)?-1:Number(id); const {S,P}=joined(); const el=$m('#bizchart'); if(el)el.outerHTML=chartBox(S,P,false); }
   if(a==='bizpickmode'){ PICKS=PICKS?null:new Set(); render(); }
-  if(a==='bizmore'){ MORE=!MORE; render(); }
+  if(a==='bizmore'){ MORE=Math.max(FOLD,MORE)+STEP; render(); }
+  if(a==='bizfewer'){ MORE=0; render(); }
   if(a==='bizpick'){ if(!PICKS)return; if(e.target.closest('button'))return; PICKS.has(id)?PICKS.delete(id):PICKS.add(id);
     const ck=b.querySelector('.bizck'); if(ck&&ck!==e.target)ck.checked=PICKS.has(id);
     const btn=$m('#bizpickbtn'); if(btn){ btn.disabled=!PICKS.size; btn.textContent=`Report ${PICKS.size} show${PICKS.size===1?'':'s'}`; } }

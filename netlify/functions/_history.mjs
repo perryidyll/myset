@@ -67,7 +67,18 @@ const paidOf = (money, field, was) => {
    a money block written before they existed cannot yield them, so re-opening the
    heal for every account to write null would repair nothing — *Re-check* on a
    night asks Stripe again and fills them. A missing field reads as unknown. */
-const ROW_TOPS = ['top', 'topPlayed', 'topPaid', 'source'];
+/* `tipped` (2026-09-17) IS here: the night's tips alone, in dollars, off the money
+   block's `tips.amount` — which every block has carried since the first — so the
+   heal can fill it from the detail already in hand and the Money tab can say
+   "$x from in-app tips" under the profit without asking Stripe again. */
+const ROW_TOPS = ['top', 'topPlayed', 'topPaid', 'source', 'tipped'];
+/* The night's tips in dollars when the block was Stripe's answer, else what the row
+   already said, else null (unknown, never zero). */
+const tippedOf = (money, was) => {
+  const m = money || {};
+  if (m.source !== 'stripe' || !m.tips || m.tips.amount == null) return (was && was.tipped != null) ? was.tipped : null;
+  return Math.round((Number(m.tips.amount) || 0) * 100) / 100;
+};
 const stampTops = (row) => { for (const f of ROW_TOPS) if (!(f in row)) row[f] = null; return row; };
 
 /* Stripe stays the source of truth for money (INVARIANT 5d); this is a cache of
@@ -308,6 +319,7 @@ export async function archiveShow(aid, show, fans) {
       source: money.source || null,
       // what the room paid for: votes bought and requests accepted (null = not asked)
       paidVotes: paidOf(money, 'paidVotes', was), paidRequests: paidOf(money, 'paidRequests', was),
+      tipped: tippedOf(money, was),
       /* The night's most-voted, most-played and most-paid-for song, title and
          count only, so the public artist page can name the room's favourites from
          this one document instead of opening every night (decision 0043). Never
@@ -449,6 +461,7 @@ export async function healHistory(aid, { force = false } = {}) {
       gross: money.gross || 0, unattributed: money.unattributed || 0,
       source: money.source || null,
       paidVotes: paidOf(money, 'paidVotes', was), paidRequests: paidOf(money, 'paidRequests', was),
+      tipped: tippedOf(money, was),
       // from the detail already in hand — no extra read
       top: topOf(was && was.top, st.topSong),
       topPlayed: topOf(was && was.topPlayed, topPlayedOf(doc.played), 'plays'),
@@ -618,6 +631,24 @@ export async function renameShow(aid, showId, title) {
   return { showId, title: t };
 }
 
+/* "Delete show" on the Money tab (2026-09-17). Nothing is destroyed — a filed
+   night is a record of real money (INVARIANT 0s: nothing deletes) — the row is
+   marked hidden and the lists stop showing it. The detail document, the event
+   log and Stripe's own record stay exactly as they were; a heal merges over the
+   row and keeps the flag. Returns null for a night this artist does not have. */
+export async function hideShow(aid, showId) {
+  if (!showId) return null;
+  let found = false;
+  await casDoc(INDEX(aid), () => ({ shows: [] }), (idx) => {
+    const row = (idx.shows || []).find((x) => x.showId === showId);
+    if (!row) return false;
+    found = true;
+    if (row.hidden) return false;
+    row.hidden = true; return true;
+  });
+  return found ? { showId, hidden: true } : null;
+}
+
 export async function readHistIndex(aid) {
   const { data } = await readDoc(INDEX(aid), { shows: [] });
   return { shows: (data && data.shows) || [] };
@@ -659,6 +690,7 @@ export async function refreshShowMoney(aid, showId, money) {
     if (!row) return false;
     row.gross = money.gross; row.unattributed = money.unattributed || 0; row.source = money.source || null;
     row.paidVotes = paidOf(money, 'paidVotes', row); row.paidRequests = paidOf(money, 'paidRequests', row);
+    row.tipped = tippedOf(money, row);
     kept = { ...row };
     return true;
   }).catch(() => {});

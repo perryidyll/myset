@@ -64,11 +64,23 @@ const Biz = (() => {
     };
   }
 
+  /* THE CURRENCY (2026-09-17). The book is the artist's own figures in whatever
+     they are paid in; the dashboard writes one symbol in front of every number,
+     chosen on the Money tab and kept in the book's prefs. Stripe's money is still
+     dollars on Stripe's statement — the symbol is a label, never a conversion. */
+  const CURRENCIES = [['USD', '$', 'US dollar'], ['EUR', '€', 'Euro'], ['GBP', '£', 'British pound'], ['AUD', 'A$', 'Australian dollar'],
+    ['CAD', 'C$', 'Canadian dollar'], ['NZD', 'NZ$', 'New Zealand dollar'], ['THB', '฿', 'Thai baht'], ['JPY', '¥', 'Japanese yen'],
+    ['SGD', 'S$', 'Singapore dollar'], ['MXN', 'MX$', 'Mexican peso'], ['BRL', 'R$', 'Brazilian real'], ['ZAR', 'R', 'South African rand'],
+    ['INR', '₹', 'Indian rupee'], ['PHP', '₱', 'Philippine peso'], ['IDR', 'Rp', 'Indonesian rupiah'], ['CHF', 'CHF ', 'Swiss franc'],
+    ['SEK', 'kr ', 'Swedish krona'], ['NOK', 'kr ', 'Norwegian krone'], ['DKK', 'kr ', 'Danish krone'], ['PLN', 'zł ', 'Polish złoty']];
+  let SYM = '$';
+  const currency = (code) => { const c = CURRENCIES.find(([k]) => k === String(code || '').toUpperCase()); SYM = c ? c[1] : '$'; return c ? c[0] : 'USD'; };
+
   /* Always two decimals and a thousands separator: a book is read down a column. */
   function money(c) {
     const n = Math.round(Number(c) || 0);
     const [i, f] = (Math.abs(n) / 100).toFixed(2).split('.');
-    return (n < 0 ? '-$' : '$') + i.replace(/\B(?=(\d{3})+$)/g, ',') + '.' + f;
+    return (n < 0 ? '-' + SYM : SYM) + i.replace(/\B(?=(\d{3})+$)/g, ',') + '.' + f;
   }
 
   function hm(minutes) {
@@ -214,6 +226,10 @@ const Biz = (() => {
       s.paidVotes = paidKnown ? ns.reduce((t, n) => t + (Number(n.paidVotes) || 0), 0) : null;
       s.paidRequests = paidKnown ? ns.reduce((t, n) => t + (Number(n.paidRequests) || 0), 0) : null;
       s.freeVotes = paidKnown ? Math.max(0, s.votes - s.paidVotes) : null;
+      /* The tips alone, in cents, when every night of the show carries the figure
+         (a row filed before `tipped` existed reads null until the heal fills it). */
+      const tipsKnown = ns.length > 0 && ns.every((n) => n.tipped != null);
+      s.tipsApp = tipsKnown ? ns.reduce((t, n) => t + Math.round((Number(n.tipped) || 0) * 100), 0) : null;
       s.songs = ns.reduce((t, n) => t + (n.songsPlayed || 0), 0);
       s.peak = ns.reduce((t, n) => Math.max(t, n.peakVoters || 0), 0);
       let found = gigs[s.key] ? s.key : null;
@@ -236,7 +252,7 @@ const Biz = (() => {
       const [y, m, d] = date.split('-').map(Number);
       shows.push({ key: k, bizKey: k, date, startsAt: y ? new Date(y, m - 1, d, 12).getTime() : null, endsAt: null,
         venue: '', city: '', title: 'Logged show', repeating: false, occ: null, nights: [], appKnown: false, app: null,
-        votes: 0, songs: 0, peak: 0, paidVotes: null, paidRequests: null, freeVotes: null,
+        votes: 0, songs: 0, peak: 0, paidVotes: null, paidRequests: null, freeVotes: null, tipsApp: null,
         biz: gigs[k], rule: null, gig: gigs[k], source: 'gig', counted: true, orphanRecord: true });
     }
     return shows.sort((a, b) => (b.startsAt || 0) - (a.startsAt || 0));
@@ -280,7 +296,7 @@ const Biz = (() => {
      first spelled. `range.to` places the twelve month buckets; without it they
      end on the newest counted show. */
   function sum(shows, prefs, range, feePct) {
-    const out = { shows: 0, logged: 0, timed: 0, revenue: 0, pay: 0, tips: 0, merch: 0, app: 0, appUnknown: 0,
+    const out = { shows: 0, logged: 0, timed: 0, revenue: 0, pay: 0, tips: 0, merch: 0, app: 0, appUnknown: 0, tipsApp: 0, tipsAppKnown: 0,
       band: 0, costs: 0, profit: 0, fee: 0, cut: 0, minutes: {}, includedMinutes: 0, rate: null, rateStage: null,
       timedSum: { profit: 0, cut: 0, fee: 0, included: 0, perform: 0 },
       byMonth: [], byShow: [], mix: [], bandBy: [], costsBy: [], merchBy: [] };
@@ -302,7 +318,8 @@ const Biz = (() => {
       if (s.biz) out.logged++;
       if (s.nights && s.nights.length && !c.appKnown) out.appUnknown++;
       out.revenue += c.revenue; out.pay += c.pay; out.tips += c.tips; out.merch += c.merch;
-      out.app += c.app || 0; out.band += c.bandTotal; out.costs += c.costs; out.profit += c.profit; out.fee += c.fee; out.cut += c.cut;
+      out.app += c.app || 0; if (s.tipsApp != null) { out.tipsApp += s.tipsApp; out.tipsAppKnown++; }
+      out.band += c.bandTotal; out.costs += c.costs; out.profit += c.profit; out.fee += c.fee; out.cut += c.cut;
       TIME_KINDS.forEach(([k]) => { out.minutes[k] += c.minutes[k] || 0; });
       out.includedMinutes += c.includedMinutes;
       if (c.timed) { out.timed++; T.profit += c.profit; T.cut += c.cut; T.fee += c.fee; T.included += c.includedMinutes; T.perform += c.minutes.perform || 0; }
@@ -341,6 +358,6 @@ const Biz = (() => {
     return out;
   }
 
-  return { LIMITS, TIME_KINDS, JOIN, empty, norm, money, hm, parseHm, bullets, calc, rate, rates, join, period, inRange, votesLine, sum, key, parseKey, localDate };
+  return { LIMITS, TIME_KINDS, JOIN, CURRENCIES, currency, empty, norm, money, hm, parseHm, bullets, calc, rate, rates, join, period, inRange, votesLine, sum, key, parseKey, localDate };
 })();
 if (typeof module !== 'undefined') module.exports = Biz;
