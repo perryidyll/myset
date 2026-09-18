@@ -75,7 +75,8 @@ const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','st
   'v','venue','venues','venuestudio',
   'assets','stage','about','help','support','login','signup','signin','terms','privacy',
   'settings','account','new','index','home','myset','null','undefined',
-  'community','merch','shop','store','orders','c']);
+  'community','merch','shop','store','orders','c',
+  'diary','diaries']);          // `/<slug>/diary` is every artist's (0085), so no artist may be called it
 
 export async function artistBySlug(slug) {
   const a = await readArtists();

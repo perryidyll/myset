@@ -94,6 +94,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0082](0082-every-payment-is-celebrated-the-money-tab-folds-an.md) | Every payment is celebrated, the Money tab folds, and Delete show hides a night but never destroys it | 2026-09-18 | money | decided | perry |
 | [0083](0083-every-list-row-that-has-actions-answers-a-swipe-an.md) | Every list row that has actions answers a swipe and a hold | 2026-09-18 | ui | decided | perry |
 | [0084](0084-a-show-s-time-is-two-number-pad-boxes-per-kind-hou.md) | A show's time is two number-pad boxes per kind, hours and minutes, never parsed from one | 2026-09-18 | money | decided | perry |
+| [0085](0085-artist-diaries-lives-on-its-own-page-each-page-is.md) | Artist Diaries lives on its own page; each page is a written story tied to a song or a moment, and how many an artist can publish is capped by plan | 2026-09-18 | media | decided | perry |
 
 ## By area
 
@@ -105,7 +106,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **history** — [0057](0057-a-filed-night-can-be-renamed-by-hand-from-the-mone.md)
 
-**media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) · [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md)
+**media** — [0011](0011-clips-go-up-as-they-are.md) · [0022](0022-automatic-chords-require-a-licensed-feed-or-record.md) · [0033](0033-a-clip-s-bytes-live-on-cloudflare-r2-and-the-phone.md) · [0085](0085-artist-diaries-lives-on-its-own-page-each-page-is.md)
 
 **money** — [0007](0007-money-is-charged-on-the-artists-own-stripe-account.md) · [0017](0017-artist-transaction-fees-are-25-10-and-2-5-percent.md) · [0018](0018-song-request-offers-are-authorized-now-and-capture.md) · [0026](0026-the-20-artist-plan-takes-a-2-percent-transaction-fee.md) · [0031](0031-a-night-is-evidence-only-if-it-lines-up-with-a-pub.md) · [0032](0032-a-stripe-options-object-is-passed-only-when-it-has.md) · [0044](0044-artists-are-paid-out-daily-on-purpose.md) · [0058](0058-the-stripe-webhook-verifies-against-two-signing-sec.md) · [0064](0064-postage-is-a-shipping-rate-off-the-cut-the-pickup.md) · [0077](0077-the-server-bill-is-two-bills-traffic-and-shipping.md) · [0080](0080-payouts-follow-the-plan-hobbyist-every-monday-paid.md) · [0082](0082-every-payment-is-celebrated-the-money-tab-folds-an.md) · [0084](0084-a-show-s-time-is-two-number-pad-boxes-per-kind-hou.md)
 

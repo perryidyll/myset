@@ -271,6 +271,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 | Songs live to the audience at once (the whole library since decision 0061) | ${cap(p.free.featured)} | ${cap(p.plus.featured)} | ${cap(p.pro.featured)} |
 | People in one room (soft — nobody is refused) | ${p.free.audience.toLocaleString()} | ${p.plus.audience.toLocaleString()} | ${p.pro.audience.toLocaleString()} |
 | Songs the library holds | ${p.free.library.toLocaleString()} | ${p.plus.library.toLocaleString()} | ${p.pro.library.toLocaleString()} |
+| Pages the artist diary holds (\`/<slug>/diary\`, decision 0085) | ${p.free.diary} | ${p.plus.diary} | ${p.pro.diary} |
 | Team seats | ${p.free.seats} | ${p.plus.seats} | ${p.pro.seats} |
 | Band members paid per show, on the business dashboard | ${p.free.band} | ${p.plus.band} | ${p.pro.band} |
 | Costs logged per show, on the business dashboard | ${p.free.costs} | ${p.plus.costs} | ${p.pro.costs} |

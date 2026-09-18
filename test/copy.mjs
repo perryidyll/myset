@@ -64,14 +64,14 @@ ok('the home-page light mode switch persists across every public page',
    /id="themeBtn"[^>]*data-theme-toggle/.test(home)&&
    /localStorage\.setItem\('myset\.theme', next\)/.test(themeScript)&&
    /:root\[data-theme=light\]/.test(theme)&&
-   ['index.html','artist.html','artists.html','community.html','shop.html','vote.html','venue.html','about.html','studio.html','venue-studio.html']
+   ['index.html','artist.html','artists.html','community.html','shop.html','diary.html','vote.html','venue.html','about.html','studio.html','venue-studio.html']
      .every(x=>read(`public/${x}`).includes('/theme.js')));
 ok('light is the first-visit default on every page while a saved dark choice survives',
    /const fallback = \(\) => 'light'/.test(themeScript)&&
-   ['index.html','artist.html','artists.html','community.html','shop.html','vote.html','venue.html','about.html','studio.html','venue-studio.html','stage.html']
+   ['index.html','artist.html','artists.html','community.html','shop.html','diary.html','vote.html','venue.html','about.html','studio.html','venue-studio.html','stage.html']
      .every(x=>read(`public/${x}`).includes("let t='light'")));
 ok('public and Studio loading screens use the active light or dark palette',
-   ['artist.html','venue.html','community.html','shop.html'].every(x=>{
+   ['artist.html','venue.html','community.html','shop.html','diary.html'].every(x=>{
      const s=read(`public/${x}`);return /#intro\{[^}]*background:#F5F5F7/.test(s)&&/data-theme=dark\][^\n]*#intro|data-theme=dark\] #intro/.test(s);
    })&&
    ['studio.html','venue-studio.html'].every(x=>{
@@ -117,7 +117,7 @@ ok('the step numerals are the brand gradient', /\.how i\{[^}]*background:var\(--
 ok('nobody reads "postage" or "posted to you" any more', ![shop, studio, venueStudioJs].some((t) => /\bpostage\b|Posted to you|posted to you|To post\b/i.test(t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, ''))));
 ok('Stripe’s rate is called Shipping', /display_name: 'Shipping'/.test(read('netlify/functions/pay.mjs')));
 ok('"Paid to <name> through Stripe" is pink-orange, the rest of the line is not', /<span class="paidto">Paid to \$\{esc\(d\.name\)\} through Stripe<\/span> · Apple Pay/.test(shop) && /\.paidto\{color:var\(--accent-ink\)/.test(shop));
-ok('the community card rings Browse the shop and puts the first item on top', /\.shopcard \.btn::after\{[^}]*background:var\(--grad\)/.test(community) && /\.shopcard \.fan img:nth-child\(1\)\{[^}]*z-index:2/.test(community));
+ok('the community card rings Browse the shop and puts the first item on top', /\.shopcard \.btn::after\{[^}]*background:var\(--grad\)/.test(community) && /\.shopcard \.fan :nth-child\(1\)\{[^}]*z-index:2/.test(community));
 ok('both Studios open the editor on the photos, take a count, and move items with arrows',
    [studio, venueStudioJs].every((t) => /<label>Photos<\/label>/.test(t) && /Quantity in stock \(optional\)/.test(t) && /action:'merchMove'/.test(t) && /aria-label="Move up"/.test(t)));
 ok('a sold-out count reads as sold out on the shop, per size too', /m\.stock===0/.test(shop) && /v\.stock===0/.test(shop) && /Only \$\{fewLeft\(m,SIZE\)\} left/.test(shop));

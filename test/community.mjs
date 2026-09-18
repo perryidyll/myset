@@ -521,17 +521,19 @@ eq('across nights the same title merges and the biggest count wins',
 
 console.log('\nWHAT IT COSTS  (INVARIANT 9d13)');
 const g = await count(() => GET('?a=ana-reyes&fan=phone1'));
-/* +1 since the picker reads the calendar (ev_) as well as the archive */
-under('the page, reads', g.reads, 9);
+/* +1 since the picker reads the calendar (ev_) as well as the archive; +1 for the
+   diary document (decision 0085), read beside the profile for the diary card — the
+   count and three titles come from it and nowhere else. Not the audience poll. */
+under('the page, reads', g.reads, 10);
 /* the registry three times here: the slug, the plan, and getShow's name lookup because
    the fixture's show record has no artist name. Production is two. */
 under('and global documents', g.globals, 3);
 eq('and writes nothing', g.writes, 0);
 const w = await count(() => POST('?a=ana-reyes', { action: 'post', fan: 'phoneZ', text: 'cheap' }));
-under('a post, reads', w.reads, 8);
+under('a post, reads', w.reads, 9);   // +1: the diary, read in resolveOwner (0085)
 under('a post, writes', w.writes, 2);
 const l = await count(() => POST('?a=ana-reyes', { action: 'like', fan: 'phoneZ', id: 'cnope0000' }));
-under('a like, reads', l.reads, 7);
+under('a like, reads', l.reads, 8);   // +1: the diary (0085)
 
 delete process.env.STRIPE_SECRET_KEY;
 console.log(`\n${pass} passed, ${fail} failed`);

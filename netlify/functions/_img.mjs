@@ -38,8 +38,11 @@ export const CLIP_SLOT = /^k[a-z0-9]{10}$/;
    family on purpose — never in SLOTS, whose names photoUpload turns into an index
    into `photos[]`. Decoded by decodeTourFile, never decodeDataUrl. */
 export const TOUR_SLOT = /^tour$/;
+/* A diary page's cover (decision 0085): one per page, the slot IS the page id, exactly
+   as a merch item's first picture is. Written only by diaryPhoto; deleted with the page. */
+export const DIARY_SLOT = /^d[a-z0-9]{6}$/;
 export const isSlot = (name) => SLOTS.has(name) || MERCH_SLOT.test(name)
-  || POST_SLOT.test(name) || CLIP_SLOT.test(name) || TOUR_SLOT.test(name);
+  || POST_SLOT.test(name) || CLIP_SLOT.test(name) || TOUR_SLOT.test(name) || DIARY_SLOT.test(name);
 export const MAX_BYTES = 900 * 1024;
 export const MAX_TOUR_PDF = 3 * 1024 * 1024;   // a poster as a PDF; a picture keeps MAX_BYTES (the phone shrinks it)
 const KEY = (aid, slot) => `img_${aid}_${slot}`;

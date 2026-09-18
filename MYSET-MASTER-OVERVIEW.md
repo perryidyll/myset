@@ -438,6 +438,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 | Songs live to the audience at once (the whole library since decision 0061) | unlimited | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 50 | 300 | 2,000 |
 | Songs the library holds | 100 | 200 | 2,000 |
+| Pages the artist diary holds (`/<slug>/diary`, decision 0085) | 3 | 10 | 40 |
 | Team seats | 1 | 1 | 5 |
 | Band members paid per show, on the business dashboard | 0 | 5 | 10 |
 | Costs logged per show, on the business dashboard | 0 | 5 | 10 |
@@ -532,10 +533,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 
 | | |
 |---|---|
-| Public pages | 13 — about.html, artist.html, artists.html, community.html, index.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 33 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
+| Public pages | 14 — about.html, artist.html, artists.html, community.html, diary.html, index.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
+| HTTP functions | 34 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
-| Shared libraries | 56 |
+| Shared libraries | 57 |
 | Artist Studio actions | 144 |
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
@@ -543,10 +544,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 269 (last: 0fn) |
-| Test suites | 53 |
-| Assertions | **3,214**, 0 failing, last run 2026-09-14 |
-| Decision records | 84 |
+| Invariants | 270 (last: 0fn) |
+| Test suites | 54 |
+| Assertions | **3,432**, 0 failing, last run 2026-09-18 |
+| Decision records | 85 |
 
 ### Feature flags in force
 

@@ -96,6 +96,13 @@
   to = "/shop.html"
   status = 200
 
+# The artist diary (decision 0085, 2026-09-18): the stories on their own page.
+# Artists only — a venue has no diary. `diary` is a reserved slug like `shop`.
+[[redirects]]
+  from = "/:slug/diary"
+  to = "/diary.html"
+  status = 200
+
 [[redirects]]
   from = "/:slug/vote"
   to = "/vote.html"
@@ -298,5 +305,9 @@
     Cache-Control = "public, max-age=60, stale-while-revalidate=600"
 [[headers]]
   for = "/v/:slug/shop"
+  [headers.values]
+    Cache-Control = "public, max-age=60, stale-while-revalidate=600"
+[[headers]]
+  for = "/:slug/diary"
   [headers.values]
     Cache-Control = "public, max-age=60, stale-while-revalidate=600"

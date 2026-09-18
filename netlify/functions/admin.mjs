@@ -34,7 +34,8 @@ import { stagePayload } from './stage.mjs';
 import { decodeDataUrl, decodeTourFile, putImage, dropImage, SLOTS, MAX_BYTES, MAX_TOUR_PDF } from './_img.mjs';
 import { MSG_ACTIONS, handleMessages } from './_messages.mjs';
 import { PLANS, PLAN_KEYS, planForArtist, isPlatformOwner, merchAllowed, reportsAllowed, redeemPromo,
-         readPromos, mutatePromos, cleanCode, MAX_LIBRARY, libraryCap, NOT_BUILT, crowdNumbersAllowed } from './_plan.mjs';
+         readPromos, mutatePromos, cleanCode, MAX_LIBRARY, libraryCap, diaryCap, NOT_BUILT, crowdNumbersAllowed } from './_plan.mjs';
+import { DIARY_ACTIONS, handleDiary } from './_diary.mjs';
 import { readBiz, mutateBiz, normGig, pruneRules, keyOk, bizCaps, BIZ_FULL, TIME_KINDS, MAX_RULES } from './_biz.mjs';
 
 /* Rebuilds the projection of the active setlist after the library changed.
@@ -424,6 +425,7 @@ const shapeLimits = (l) => ({
   reports: !!l.reports,        // reading the filed nights on the Money tab
   crowdNumbers: !!l.crowdNumbers,   // showing the room tonight's votes, voters and tips (0079)
   library: libraryCap(l),      // how many songs the library holds on this plan
+  diary: diaryCap(l),          // how many pages the artist diary holds on this plan (0085)
   /* Numbers, read directly by the Studio for "n of N" on the business dashboard
      — never through has(), which would read Bar Star's 5 as "not the top plan"
      and grey a working feature (0bx1). */
@@ -464,6 +466,8 @@ const CAPABILITY = {
   msgCount: 'community', msgList: 'community', msgThread: 'community', msgReply: 'community',
   msgMove: 'community', msgUnread: 'community', msgReport: 'community', msgBlock: 'community',
   tourSet: 'profile', tourClear: 'profile',
+  // the artist diary (0085): a band mate who tends the page may write in it; the sound engineer may not
+  diarySave: 'profile', diaryRemove: 'profile', diaryMove: 'profile', diaryPhoto: 'profile', diaryPhotoClear: 'profile',
   accountExport: 'export',
 };
 
@@ -1975,6 +1979,7 @@ const main = async (req) => {
   if (BIZ_ACTIONS.has(action)) return handleBiz(aid, action, body);
   if (FEATURE_ACTIONS.has(action)) return handleFeature(req, aid, body, action);
   if (SHOP_ACTIONS.has(action)) return handleShop(aid, action, body);
+  if (DIARY_ACTIONS.has(action)) return handleDiary(aid, action, body);
   if (MSG_ACTIONS.has(action)) return handleMessages(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
   if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);

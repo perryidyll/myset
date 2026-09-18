@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Diary — MySet</title>
+<meta name="description" content="The stories behind the songs, in the artist's own words.">
+<meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
+<!-- the first call leaves before the page is parsed (shop.html's pattern): one read, the whole diary -->
+<script>(()=>{try{const P=location.pathname.split('/').filter(Boolean),qs=new URLSearchParams(location.search);const S=(P[0]&&P[0]!=='diary.html')?P[0]:(qs.get('a')||'');const f=fetch('/api/fan?what=diary'+(S?'&a='+encodeURIComponent(S):''),{cache:'no-store'});f.catch(()=>{});window.__early={diary:f}}catch(e){}})();</script>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-512.png">
+<!-- FIRST PAINT MATCHES THE SAVED THEME, AND THE SPLASH NEEDS NOTHING FROM THE
+     NETWORK. This inline block comes before any external stylesheet, so the correct
+     ground is painted from the first frame instead of flashing the opposite theme. -->
+<style>html{background:#F5F5F7}html[data-theme=dark]{background:#0D0B0C}
+#intro{position:fixed;inset:0;z-index:90;background:#F5F5F7;display:grid;place-items:center}
+html[data-theme=dark] #intro{background:#0D0B0C}
+#intro.off{opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s .4s}
+#intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
+#intro .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;
+  background:linear-gradient(135deg,#FF375F,#FF7A45);animation:introbar 1.05s ease-in-out infinite alternate}
+#intro .bars i:nth-child(1){animation-delay:.02s;--h:38px}
+#intro .bars i:nth-child(2){animation-delay:.12s;--h:64px}
+#intro .bars i:nth-child(3){animation-delay:.22s;--h:28px}
+#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#1D1D1F}
+html[data-theme=dark] #intro .word{color:#fff}
+@keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
+@media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
+</style>
+<link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/app.css"></noscript>
+<style>
+/* tokens: a byte copy of app.css:5–75 (decision 0051), so the lastSeen paint is styled while the deferred stylesheet is in flight */
+:root{
+  /* Provenance marker. Arbitrary, meaningless, and referenced nowhere — that is
+     the point: a shared value with no function has no innocent explanation.
+     Registered in FINGERPRINTS.md. Do not "clean this up". */
+  --ms-k:ms-k3f9qz;
+  --bg:#F5F5F7;
+  --bg-2:#EBEBEF;
+  --surface:#FFFFFF;
+  --surface-2:#FFFFFF;
+  --ink:#1D1D1F;
+  --ink-2:#3A3A3C;
+  --muted:#6E6E73;
+  --faint:#A1A1A6;
+  --hair:rgba(0,0,0,.07);
+  --hair-2:rgba(0,0,0,.12);
+
+  --accent:#FF375F;
+  --accent-2:#FF5650;   /* the logo's pink-orange: the middle of --grad, not its warm end (the founder, 2026-09-13) */
+  --accent-ink:#FF5650;   /* accent as TEXT — the logo's pink-orange in both themes (the founder, 2026-09-13; was #D6003C / #FF8AA5) */
+  --accent-soft:rgba(255,86,80,.12);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));   /* the soft ground with the brand's hue shift */
+  --grad:linear-gradient(135deg,#FF375F 0%,#FF6B45 100%);
+  --grad-warm:linear-gradient(135deg,#FF375F 0%,#FF9F45 100%);
+
+  --r-xs:10px; --r-sm:14px; --r:18px; --r-lg:24px; --r-xl:30px; --pill:999px;
+
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09);
+  --sh-3:0 6px 18px rgba(0,0,0,.08),0 22px 55px rgba(0,0,0,.14);
+  --sh-accent:0 6px 20px rgba(255,55,95,.32);
+
+  --spring:cubic-bezier(.34,1.4,.64,1);
+  --ease:cubic-bezier(.4,0,.2,1);
+  --maxw:560px;
+  --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#000000; --bg-2:#0A0A0C;
+    --surface:#1C1C1E; --surface-2:#2C2C2E;
+    --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
+    --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
+    --accent:#FF456E; --accent-ink:#FF5650; --accent-soft:rgba(255,86,80,.18);
+    --grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
+    --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+    --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+    --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme=light]{
+  color-scheme:light;
+  --bg:#F5F5F7;--bg-2:#EBEBEF;--surface:#FFFFFF;--surface-2:#FFFFFF;
+  --ink:#1D1D1F;--ink-2:#3A3A3C;--muted:#6E6E73;--faint:#A1A1A6;
+  --hair:rgba(0,0,0,.07);--hair-2:rgba(0,0,0,.12);
+  --accent:#FF375F;--accent-ink:#FF5650;--accent-soft:rgba(255,86,80,.12);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09);
+  --sh-3:0 6px 18px rgba(0,0,0,.08),0 22px 55px rgba(0,0,0,.14)}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#000000;--bg-2:#0A0A0C;--surface:#1C1C1E;--surface-2:#2C2C2E;
+  --ink:#F5F5F7;--ink-2:#DDDDE0;--muted:#98989D;--faint:#68686D;
+  --hair:rgba(255,255,255,.09);--hair-2:rgba(255,255,255,.16);
+  --accent:#FF456E;--accent-ink:#FF5650;--accent-soft:rgba(255,86,80,.18);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
+  --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+  --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+  --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6)}
+/* the shared recipes the first paint depends on, byte-identical to app.css (0051); what opens after a tap may wait for app.css */
+a{color:inherit;text-decoration:none}
+.wrap{max-width:var(--maxw);margin:0 auto}
+.themebtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;
+  background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:17px;
+  transition:transform .2s var(--spring),background .2s var(--ease)}
+.themebtn:active{transform:scale(.9)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:600;letter-spacing:-.01em;padding:15px 22px;border-radius:var(--pill);
+  background:var(--surface);color:var(--ink);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.btn:active{transform:scale(.965)}
+.btn-pri{background:var(--grad);color:#fff;box-shadow:var(--sh-accent)}
+.btn-sm{padding:10px 16px;font-size:14px}
+.btn-ink{background:var(--ink);color:var(--bg);box-shadow:var(--sh-1)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;flex:0 0 auto;
+  box-shadow:0 0 0 0 rgba(255,55,95,.55);animation:ping 2s var(--ease) infinite}
+@keyframes ping{
+  0%{box-shadow:0 0 0 0 rgba(255,55,95,.5)}
+  70%{box-shadow:0 0 0 7px rgba(255,55,95,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,55,95,0)}
+}
+.sk{background:linear-gradient(100deg,var(--hair) 30%,var(--hair-2) 50%,var(--hair) 70%);
+  background-size:220% 100%;animation:sh 1.4s ease-in-out infinite;border-radius:8px}
+@keyframes sh{to{background-position:-120% 0}}
+.rise{animation:rise .5s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+body{padding-bottom:24px}
+body.live{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the live bar; the toast rises above it */
+body.live #toast{bottom:calc(112px + env(safe-area-inset-bottom))}
+.brandbar{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 10px}
+.baractions{display:flex;align-items:center;gap:8px}
+.mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
+.mark i{width:26px;height:26px;border-radius:8px;background:var(--grad);display:grid;place-items:center;flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
+.mark i svg{width:14px;height:14px;fill:#fff;display:block}
+.mark .up{font-size:12px;color:var(--faint);font-weight:600;margin-left:1px}
+/* the way back, at the very top: the artist's own page beside the mark (shop.html's crumb) */
+.crumb{display:inline-flex;align-items:center;gap:3px;margin-left:12px;padding:7px 11px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;max-width:44vw;overflow:hidden;text-overflow:ellipsis}
+.crumb .up{font-size:12px;color:var(--faint);font-weight:600}
+.barleft{display:flex;align-items:center;min-width:0}
+@media (max-width:359px){.crumb{margin-left:8px;padding:7px 9px}}
+.menu{position:relative}
+.menu summary{list-style:none;cursor:pointer;width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:var(--surface);box-shadow:var(--sh-1);color:var(--ink)}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary svg{width:18px;height:18px;stroke:var(--accent-2);fill:none;stroke-width:2.2;stroke-linecap:round}
+.menu[open] summary{background:var(--surface-2)}
+.menu .pop{position:absolute;right:0;top:44px;min-width:200px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-3);padding:6px;z-index:20}
+.menu .pop a{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-xs);font-size:15px;font-weight:600;color:var(--ink)}
+.menu .pop a small{display:block;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.menu .pop a i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;background:var(--accent-soft);color:var(--accent-2);font-style:normal;font-size:14px}
+/* the head: the shop's — a 40 px avatar, the kicker, the name as the way home */
+.dhead{display:flex;align-items:center;gap:12px;margin:4px 18px 0}
+.dhead .av{width:40px;height:40px;border-radius:13px;background:var(--bg-2) center/cover;flex:0 0 auto;box-shadow:var(--sh-1)}
+.dhead .av.blank{display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background:linear-gradient(160deg,var(--accent-2),#c93a36)}
+.dhead .n{flex:1;min-width:0}
+.dhead h1{font-size:22px;font-weight:700;letter-spacing:-.03em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dhead .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.promise{margin:3px 0 0;font-size:13px;line-height:1.35;color:var(--muted);display:flex;align-items:flex-start;gap:6px}
+.promise .dot{margin-top:5px}
+.vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:3px 9px;border-radius:var(--pill);font-size:11px;font-weight:700;letter-spacing:.01em;vertical-align:3px;background:rgba(48,209,88,.14);color:#1B8E3C}
+@media (prefers-color-scheme:dark){.vbadge{background:rgba(48,209,88,.18);color:#4CD964}}
+:root[data-theme=light] .vbadge{background:rgba(40,167,69,.12);color:#187A32}
+:root[data-theme=dark] .vbadge{background:rgba(48,209,88,.18);color:#4CD964}
+.share{padding:9px 13px;border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:13px;font-weight:600;position:relative}
+.share::after,.fab::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}   /* the brand-gradient ring (decision 0059) */
+
+/* THE PAGES. A diary reads, so the type is set for reading: 17 px on a measure
+   the phone already gives us, paragraphs with air between them, one story per
+   card. The title is the loudest thing on the card and the song is a chip under
+   it, because the story is the point and the song is where it came from. */
+.pages{margin:18px 18px 0;display:grid;gap:14px}
+.page{background:var(--surface);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:22px 20px 18px;scroll-margin-top:16px;overflow:hidden}
+/* THE COVER (the founder, 2026-09-18): the artist's own photo for a page, full-bleed
+   across the top of the card, the story under it. 16:10 — the frame the Studio crops it
+   to, the same as the profile's cover; nothing is shown for a page without one. */
+.page .cover{display:block;width:calc(100% + 40px);max-width:none;margin:-22px -20px 18px;aspect-ratio:16/10;object-fit:cover;background:var(--bg-2)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .page .cover{filter:brightness(.88)}}
+:root[data-theme=dark] .page .cover{filter:brightness(.88)}
+.page .when{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;text-transform:uppercase}
+.page h2{font-size:24px;font-weight:700;letter-spacing:-.03em;line-height:1.12;margin:4px 0 0;text-wrap:balance}
+.page .song{display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:7px 12px 7px 9px;border-radius:var(--pill);background:var(--accent-soft);color:var(--ink);font-size:13px;font-weight:600;max-width:100%}
+.page .song svg{width:15px;height:15px;flex:0 0 auto;stroke:var(--accent-2);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.page .song span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.page .song small{color:var(--muted);font-weight:500}
+.page .song small::before{content:' · '}
+.page .body{margin-top:14px;font-size:17px;line-height:1.55;color:var(--ink-2);letter-spacing:-.005em}
+.page .body p{margin:0}
+.page .body p+p{margin-top:13px}
+/* the first line of the first story gets the diary's one flourish: a large initial */
+.page:first-child .body p:first-child::first-letter{font-size:2.6em;font-weight:700;line-height:.82;float:left;margin:5px 7px 0 0;color:var(--accent-ink)}
+.page .lyrbtn{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:10px 16px;border-radius:var(--pill);
+  background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--ink);font:inherit;font-size:14px;font-weight:600;border:0;cursor:pointer;
+  transition:transform .22s var(--spring)}
+.page .lyrbtn:active{transform:scale(.95)}
+.page .lyrbtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
+.page .lyrbtn[disabled]{opacity:.6}
+.lyr{margin-top:14px;padding:16px 18px;border-radius:var(--r);background:var(--bg-2);font-size:15.5px;line-height:1.6;color:var(--ink);
+  white-space:pre-wrap;overflow-wrap:anywhere;max-height:60vh;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.lyr .spin{display:inline-block;width:14px;height:14px;border:2px solid var(--hair-2);border-top-color:var(--accent-2);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lyrfoot{margin-top:8px;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.lyrfoot b{display:block;color:var(--ink);font-weight:600}
+.empty{margin:14px 18px 0;padding:26px 20px;background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1);text-align:center;color:var(--muted);font-size:14.5px}
+.empty b{display:block;color:var(--ink);font-size:18px;font-weight:600;margin-bottom:8px}
+.foot{padding:32px 18px 40px;text-align:center;font-size:13px;color:var(--muted);line-height:1.5}
+.foot a{color:var(--accent-ink);font-weight:600}
+/* the live bar, the shop's: one call to action, pinned to the bottom of the phone */
+.fab{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:50;
+  width:calc(100% - 24px);max-width:calc(var(--maxw) - 24px);
+  margin-bottom:calc(12px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;align-items:center;gap:9px;padding:12px 16px;text-align:center;
+  background:var(--surface);border:.5px solid var(--hair-2);border-radius:var(--r-lg);box-shadow:var(--sh-2)}
+.fab .state{flex:0 0 auto;width:100%;min-width:0;font-size:13px;font-weight:500;color:var(--muted);line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fab .state b{color:var(--accent-2);font-weight:600}
+.fab .state span::before{content:' · '}
+.fab .act{flex:0 0 auto;font-size:13px;font-weight:700;padding:11px 18px;gap:8px;white-space:normal;text-align:center;line-height:1.2;max-width:100%}
+.fab .act.liveglow{animation:emberGlow 4.2s ease-in-out infinite}
+@keyframes emberGlow{
+  0%,100%{filter:drop-shadow(0 0 5px rgba(255,86,80,.22))}
+  50%{filter:drop-shadow(0 0 13px rgba(255,86,80,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}
+}
+.fab .lv{width:8px;height:8px;border-radius:50%;background:#fff;flex:0 0 auto;
+  box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:lvp 1.8s infinite}
+@keyframes lvp{70%{box-shadow:0 0 0 9px rgba(255,255,255,0)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0)}}
+@media (prefers-reduced-motion:reduce){.sk,.dot,.fab .lv,.fab .act.liveglow,.lyr .spin{animation:none}}
+</style>
+</head>
+<body>
+<div id="intro" aria-hidden="true"><div><div class="bars"><i></i><i></i><i></i></div><div class="word">MySet</div></div></div>
+<div class="wrap">
+  <div class="brandbar">
+    <div class="barleft"><a class="mark" href="/" aria-label="MySet home"><i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>MySet<span class="up">↗</span></a>
+    <a class="crumb" id="crumb" href="/artist.html" data-leaving="Opening the artist’s page…"><span id="crumbName">Artist page</span><span class="up" aria-hidden="true">↗</span></a></div>
+    <div class="baractions"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+    <details class="menu" id="menu">
+      <summary aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h16"/></svg></summary>
+      <div class="pop">
+        <a id="mArtist" href="/signup"><i>♪</i><span>Artist Studio<small id="mArtistS">Set one up — it’s free</small></span></a>
+        <a id="mVenue" href="/venues"><i>⌂</i><span>Venue Studio<small id="mVenueS">Set one up — it’s free</small></span></a>
+      </div>
+    </details></div>
+  </div>
+  <!-- the first frame is already the layout: the head and two story cards at the real geometry -->
+  <div id="app"><div style="padding:0 18px">
+    <div style="display:flex;gap:12px;align-items:center;margin-top:4px"><div class="sk" style="width:40px;height:40px;border-radius:13px;flex:0 0 auto"></div><div class="sk" style="height:22px;width:50%"></div></div>
+    <div class="sk" style="height:14px;width:70%;margin:10px 0 18px"></div>
+    <div class="sk" style="height:180px;border-radius:24px;margin-bottom:14px"></div>
+    <div class="sk" style="height:180px;border-radius:24px"></div>
+  </div></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<!-- blocking on purpose, after the splash; MySetPull() is called below (INVARIANT 0cf) -->
+<script src="/theme.js"></script>
+<script src="/leave.js"></script>
+<script src="/pull.js"></script>
+<script>
+const $=s=>document.querySelector(s), API='/api';
+/* /<slug>/diary — and the bare file with ?a= so tools/uicheck.mjs can open it. A
+   venue has no diary, so there is no /v/ branch here. */
+const P=location.pathname.split('/').filter(Boolean), qs=new URLSearchParams(location.search);
+const SLUG=(P[0]&&P[0]!=='diary.html')?P[0]:(qs.get('a')||'');
+const Q=SLUG?'?a='+encodeURIComponent(SLUG):'?';
+const AQ=SLUG?'&a='+encodeURIComponent(SLUG):'';
+const HOME=SLUG?'/'+SLUG:'/artist.html', VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+{ const c=document.getElementById('crumb'); if(c) c.href=HOME; }   // the crumb points at THIS artist's page, resolved with the slug
+(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
+  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
+  if(A){ A.href=a?'/studio?tab=diary':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
+  if(V){ document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
+  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
+})();
+let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
+/* the band name or first name the artist chose (decision 0062), else the first word */
+const firstName=()=>(D&&String(D.first||'').trim())||String(D&&D.name||'the artist').split(' ')[0]||'the artist';
+/* The share sheet where the phone has one, the clipboard where it doesn't. */
+function share(){ const url=new URL(location.pathname,location.origin).href, title=((D&&D.name)||'MySet')+' — Diary';
+  if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
+  try{ navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast(url)); }catch(e){ toast(url); } }
+
+/* ---------- state, load, render ---------- */
+/* globals on purpose: tools/uicheck.mjs sets D and calls render() */
+var D=null;
+let HID=0, LIFT=0;
+const cssReady=()=>{try{return [...document.styleSheets].some(s=>s.href&&/\/app\.css/.test(s.href))}catch(e){return true}};
+/* the splash lifts when the cached paint is styled (app.css has landed) or after 400 ms, whichever is first */
+function lift(wait){
+  const i=document.getElementById('intro'); if(!i||i.classList.contains('off')||LIFT) return;
+  if(!wait||cssReady()){ i.classList.add('off'); return; }
+  LIFT=1; const t0=Date.now();
+  const k=()=>{ if(cssReady()||Date.now()-t0>400) i.classList.add('off'); else requestAnimationFrame(k); }; requestAnimationFrame(k);
+}
+async function load(){
+  try{
+    const E=window.__early||{}; window.__early=null;     // the head started this; see <head>
+    const K='diary:'+Q, L=window.lastSeen?lastSeen.get(K):null;   // the last copy this phone saw paints first — its own key
+    if(L&&L.ok){ D=L; render(); }
+    lift(!!(L&&L.ok));
+    let d=null;
+    try{ const r=await (E.diary||fetch(`${API}/fan?what=diary${AQ}`,{cache:'no-store'})); d=await r.json(); }
+    catch(e){ if(L&&L.ok) return; throw e; }            // offline: the copy stands
+    if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
+    if(window.lastSeen) lastSeen.set(K,d);
+    if(L&&JSON.stringify(d)===JSON.stringify(L)) return;   // nothing changed: keep what is on screen
+    D=d; render();
+  }catch(e){ $('#app').innerHTML=`<div class="empty">Couldn’t load the diary just now. Pull down to retry.</div>`; }
+  finally{ lift(false); }
+}
+/* the page never polls: one read at open, a pull, and a re-read after five minutes away */
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) HID=Date.now(); else if(HID&&Date.now()-HID>300000) load().catch(()=>{}); });
+
+/* a story is paragraphs: blank lines split them, and nothing in them is markup */
+const paras=t=>String(t||'').split(/\n{2,}/).map(p=>p.trim()).filter(Boolean).map(p=>`<p>${esc(p).replace(/\n/g,'<br>')}</p>`).join('');
+function render(){
+  const d=D; if(!d) return;
+  const pages=d.pages||[], live=!!d.live;
+  document.body.classList.toggle('live',live);
+  document.title=`${d.name} · Diary — MySet`;
+  { const c=document.getElementById('crumbName'); if(c) c.textContent=firstName(); }
+  let h=`<div class="dhead rise">
+    ${d.avatar?`<div class="av" style="background-image:url('${esc(d.avatar)}')"></div>`:`<div class="av blank">${esc(String(d.name||'').trim().charAt(0).toUpperCase()||'♪')}</div>`}
+    <div class="n"><div class="k">Diary</div>
+      <h1><a href="${esc(HOME)}">${esc(d.name)}</a>${d.verified?'<span class="vbadge">✓ Verified</span>':''}</h1>
+      ${pages.length?`<p class="promise">${live?'<i class="dot"></i>':''}<span>${pages.length===1?'One story':pages.length+' stories'} behind the songs, in ${esc(firstName())}’s own words.</span></p>`:''}</div>
+    <button class="share" onclick="share()">Share</button>
+  </div>`;
+  if(!pages.length){
+    h+=`<div class="empty"><b>Nothing written yet</b>${esc(firstName())} hasn’t told any stories here — check back after the next show.</div>`;
+  }else{
+    h+=`<div class="pages">${pages.map(p=>`<article class="page rise" id="${esc(p.id)}">
+      ${p.img&&p.img[0]==='/'?`<img class="cover" src="${esc(p.img)}" alt="" loading="lazy" decoding="async">`:''}
+      ${p.when?`<div class="when">${esc(p.when)}</div>`:''}
+      <h2>${esc(p.title)}</h2>
+      ${p.song?`<div class="song"><svg viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg><span>${esc(p.song.title)}${p.song.artist?`<small>${esc(p.song.artist)}</small>`:''}</span></div>`:''}
+      <div class="body">${paras(p.body)}</div>
+      ${p.song?`<button class="lyrbtn" type="button" data-lyrics="${esc(p.song.id)}" aria-expanded="false" aria-controls="lyr-${esc(p.id)}"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg>Read the lyrics</button><div id="lyr-${esc(p.id)}" hidden></div>`:''}
+    </article>`).join('')}</div>`;
+  }
+  h+=`<div class="foot">Stories are ${esc(firstName())}’s own. <a href="${esc(HOME)}">Back to ${esc(firstName())}’s page</a></div>`;
+  if(live) h+=`<div class="fab"><div class="state"><b>Live now</b><span>Voting is open</span></div><a class="btn btn-pri act liveglow" href="${esc(VOTEHREF)}"><span class="lv"></span>TAP TO VOTE THE SETLIST</a></div>`;
+  $('#app').innerHTML=h;
+  /* a link straight to one story (#<pageId>) lands on it — the ids are the server's, never guessed */
+  if(location.hash.length>1){ const t=document.getElementById(location.hash.slice(1)); if(t&&t.classList.contains('page')) t.scrollIntoView({block:'start'}); }
+}
+
+/* THE LYRICS: the vote page's read (/api/lyrics), the vote page's words. Nothing
+   new is served — a song in the library, one at a time, plain text, and the
+   honest label under it. Opened on a tap, never on load, so a diary of forty
+   stories costs one read until somebody wants the words. */
+document.addEventListener('click',async(e)=>{
+  const b=e.target.closest('[data-lyrics]'); if(!b) return;
+  const box=document.getElementById(b.getAttribute('aria-controls')); if(!box) return;
+  if(b.getAttribute('aria-expanded')==='true'){ box.hidden=true; b.setAttribute('aria-expanded','false'); b.lastChild.textContent='Read the lyrics'; return; }
+  b.setAttribute('aria-expanded','true'); b.lastChild.textContent='Hide the lyrics'; box.hidden=false;
+  if(box.dataset.done) return;
+  box.innerHTML=`<div class="lyr"><span class="spin"></span> Finding the words…</div>`;
+  let d=null;
+  try{ d=await fetch(`${API}/lyrics?song=${encodeURIComponent(b.dataset.lyrics)}${AQ}`).then(r=>r.json()); }catch(e2){}
+  if(!d||!d.ok||!d.found){ box.innerHTML=`<div class="lyr" style="white-space:normal;color:var(--muted);font-size:15px">No lyrics for this one yet — the story will have to do.</div>`; box.dataset.done='1'; return; }
+  const el=document.createElement('div'); el.className='lyr'; el.textContent=d.plain;
+  const foot=document.createElement('div'); foot.className='lyrfoot';
+  // "Unofficial" is the honest label: a community-contributed database, not a licensed lyric feed, and it can be wrong.
+  const who=esc(d.credit||('Words & music: '+(d.artist||'')));
+  foot.innerHTML=`<b>Unofficial lyrics</b>${who} · ${d.owned?'provided by the artist':'community-contributed, may not be exact'}.`;
+  box.replaceChildren(el,foot); box.dataset.done='1';
+});
+
+MySetPull(async()=>{ try{ await load(); }catch(e){} });
+load();
+</script>
+<script>
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+</script>
+</body>
+</html>

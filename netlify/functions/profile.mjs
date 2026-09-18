@@ -5,6 +5,7 @@ import { planOf } from './_plan.mjs';
 import { readFeedback } from './_feedback.mjs';
 import { readPosts } from './_community.mjs';
 import { MAX_TEXT } from './_messages.mjs';
+import { readDiary } from './_diary.mjs';
 
 /* The room's favourites across every archived night, from the index rows alone
    (decision 0043): rows carry `top:{title,votes}`, `topPlayed:{title,plays}` and
@@ -50,11 +51,13 @@ export default async (req) => {
   const { artistById } = await import('./_auth.mjs');
   /* `fb_` and `posts_` are the two reads added for the proof strip (decision 0043),
      edge-shared like the rest (below); presence is still never read here (0af).
-     The profile travels in the same batch: all six need only `aid`, so this is one
-     hop to storage, not two (speed pass two). */
-  const [p, hist, show, who, fb, posts] = await Promise.all([
+     The profile travels in the same batch: all seven need only `aid`, so this is one
+     hop to storage, not two (speed pass two). `diary_` is the seventh (0085): the
+     page needs only a count, to know whether to wear the Diary door. */
+  const [p, hist, show, who, fb, posts, diary] = await Promise.all([
     getProfile(aid), readHistIndex(aid), getShow(aid), artistById(aid),
     readFeedback(aid).catch(() => null), readPosts(aid).catch(() => null),
+    readDiary(aid).catch(() => null),
   ]);
   const shows = hist.shows.length;
   const votes = hist.shows.reduce((a, x) => a + (x.totalVotes || 0), 0);
@@ -87,6 +90,7 @@ export default async (req) => {
     live: show.status === 'live', venue: show.venue || '', city: show.city || '',
     showId: show.showId || '',
     merch: (p.merch || []).filter((m) => m.on).length,
+    diary: ((diary && diary.pages) || []).filter((x) => x.on).length,   // shown pages; the Diary door needs one (0085)
     tour: p.tour || null,                      // the tour-dates poster and its tickets link (0075)
     msgMax: MAX_TEXT,                          // the Book sheet's counter reads this, never a typed cap (0074)
     /* The proof strip. `requests` from the show already in hand; `rating` is the
