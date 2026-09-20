@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-20 22:26 — 84f0b6b — wt@docs/tips-cut-live (0 files since origin/main)
+**tl;dr:** Docs only: 0086 live as 84f0b6b (PR #80); the founder's book back-filled — 64 shows from his calendar, runs moved back to their first night, 18 skips, two one-offs
+**Other sessions:** No code. His six runs now start in April/May/Aug, so any session reading his calendar sees ~70 past occurrences; do not re-run the backfill (docs/sessions/2026-09-20-tips-shared-and-show-history.md addendum has every id). [skip ci]
+
 ### 2026-09-20 22:17 — 6ab7fa0 — wt@studio/tips-cut (0 files since origin/main)
 **tl;dr:** Money: In-app tips and My cut of tips on the show sheet, Total / My cut on the profit block (0086); the Live tab's Tonight figure is tips + votes bought
 **Other sessions:** gig.tipsCut (cents, nullable) in both normGig and Biz.norm; Biz.calc(gig, app, prefs, feePct, tipsAppCents) now returns tipsAll/tipsMine and cut = (typed cut ?? profit - tipsAll) + tipsMine — pass the night's tipsApp everywhere calc is called; earned() in studio.js; run node tools/stamp.mjs after editing any of the four scripts
