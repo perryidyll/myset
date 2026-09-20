@@ -40,6 +40,18 @@ unchanged: `cut` blank and `tipsCut` blank is the profit, as before. The Live
 tab's Tonight figure and the "Tips" tile are `tips.total + paid.total` off the
 stage payload — both are the artist's own money (0079, 0082).
 
+## Amended the same day (the founder, 2026-09-20 evening)
+
+*Total* had read as what was left AFTER the band — `profit` had always
+subtracted the splits — so for a three-piece Total and My cut differed only by
+the tips share, and the founder caught it: "how could the total profit only be
+<$100 from my cut if Art and Ball got a third?". **Profit is now the act's
+whole night: revenue less costs, before the band is paid**, headed *Total profit*;
+My cut = profit − splits − the band's share of the tips. And **votes bought count
+as tips** for the share: the In-app box and `tipsAll` take the night's whole app
+money (`app`), not `tipped` alone. Tests recomputed in `test/bizmath.mjs`
+(sum(): profit 67500 not 47500, the timed rate 12000 not 7000, My cut = profit − band).
+
 ## What this makes harder
 
 *My cut* has two boxes now (the pay share, the tips share) instead of one whole
