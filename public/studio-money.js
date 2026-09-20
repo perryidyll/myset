@@ -265,7 +265,7 @@ function hero(S,rise){
   /* Total or My cut, the same toggle as the rates (the founder, 2026-09-20): the
      act's profit, or the artist's own share of it with their cut of the tips. */
   const v=VIEW.mine?S.cut:S.profit;
-  return `<div class="bizhero ${rise?'rise':''}"><div class="k">${VIEW.mine?'My cut':'Profit'}</div>
+  return `<div class="bizhero ${rise?'rise':''}"><div class="k">${VIEW.mine?'My cut':'Total profit'}</div>
     <b class="v mono ${v<0?'neg':'pos'}" ${cu('profit',v,'money')}>${Biz.money(v)}</b>
     ${tipsLine(S.tipsAppKnown?S.tipsApp:null)}
     <div class="a">${plural(S.shows,'show')} · ${S.logged} logged${notes.join('')}</div>
@@ -384,7 +384,7 @@ function viewControls(S){
 }
 const feeWords=()=>VIEW.net?'Rates are after MySet\u2019s transaction fees \u2014 tap for pre-fee rates':'Rates are before MySet\u2019s transaction fees \u2014 tap for post-fee rates';
 function showRow(s,S){
-  const c=s.counted?Biz.calc(s.gig,s.app,prefsOf(),0,s.tipsApp):null;
+  const c=s.counted?Biz.calc(s.gig,s.app,prefsOf(),0,s.app):null;
   /* A record whose gig has left the calendar (moved, deleted, skipped) is still a
      show the artist logged: listed by its date, counted, and open to remove. */
   const name=esc(s.title||s.venue||(s.orphanRecord?'Logged show':'Untitled show'));
@@ -552,13 +552,13 @@ const rows={
   /* The artist's own share, blank unless it differs from what is left after the
      splits and the costs — the editor's readout writes that figure in as the
      placeholder, so the field always says what blank means. */
-  cut:(g)=>`<div class="bzcut"><label>My cut</label>${moneyBox(`<input class="inp bz mono" data-f="cut" inputmode="decimal" placeholder="What's left" value="${esc(dollars(g.cut))}">`)}<p class="hint">Leave blank if what's left after the splits and costs is yours. Tips are shared below, on their own.</p></div>`,
-  /* Cash tips, then the night's in-app tips as a figure nobody can edit (it is
-     Stripe's, and it is already inside the app money), then the artist's own
-     share of both — blank means all of it (the founder, 2026-09-20). */
+  cut:(g)=>`<div class="bzcut"><label>My cut</label>${moneyBox(`<input class="inp bz mono" data-f="cut" inputmode="decimal" placeholder="What's left" value="${esc(dollars(g.cut))}">`)}<p class="hint">Leave blank if what's left after the splits and costs is yours. Tips and votes bought are shared below, on their own.</p></div>`,
+  /* Cash tips, then the night's app money as a figure nobody can edit (it is
+     Stripe's — tips and votes bought, the founder counts both as tips), then the
+     artist's own share of both — blank means all of it (the founder, 2026-09-20). */
   tips:(g,opts)=>{ const app=opts&&opts.app!=null?opts.app:null;
     return `<div class="field"><label>Cash tips</label>${moneyBox(`<input class="inp bz mono" data-f="tips" inputmode="decimal" value="${esc(dollars(g.tips))}">`)}</div>
-    <div class="field"><label>In-app tips</label>${moneyBox(`<input class="inp bz mono" data-f="tipsApp" readonly tabindex="-1" aria-label="Tips through the app, not editable" value="${app==null?'':esc(dollars(app)||'0')}" placeholder="${app==null?'Not available':''}">`)}<p class="hint">What fans tipped through the app that night — counted already, in the app money.</p></div>
+    <div class="field"><label>In-app tips</label>${moneyBox(`<input class="inp bz mono" data-f="tipsApp" readonly tabindex="-1" aria-label="Tips through the app, not editable" value="${app==null?'':esc(dollars(app)||'0')}" placeholder="${app==null?'Not available':''}">`)}<p class="hint">Tips and votes bought through the app that night — counted already, in the app money.</p></div>
     <div class="field"><label>My cut of tips</label>${moneyBox(`<input class="inp bz mono" data-f="tipsCut" inputmode="decimal" placeholder="All of it" value="${esc(dollars(g.tipsCut))}">`)}<p class="hint">Leave blank if the tips are all yours. Splitting three ways? Type a third.</p></div>`; },
   /* Which kinds count toward $/hour is the dashboard's choice (the $/hour tile),
      never a question asked while logging a night. */
@@ -620,12 +620,12 @@ async function openBiz(key){
   const g=draft?Biz.norm(draft):base;
   ED={key,saveKey,show:s,stored,base};
   const name=esc(s.title||s.venue||'This show');
-  openSheet(`<div class="bizro"><div class="k">${VIEW.mine?'My cut of this show':'Profit for this show'}</div><b class="mono" id="bizro"></b>${tipsLine(s.tipsApp)}</div>
+  openSheet(`<div class="bizro"><div class="k">${VIEW.mine?'My cut of this show':'Total profit for this show'}</div><b class="mono" id="bizro"></b>${tipsLine(s.tipsApp)}</div>
     <h3>${rec?'Edit this show':'Log a show'}</h3>
     <p class="lede"><b>${dlabel(s.date)} · ${name}.</b> ${s.nights.length?(s.appKnown?`${Biz.money(s.app)} came through the app that night, before fees.`:'The app money for this night is not available — Re-check it from the list.'):s.source==='rule'&&!rec?'Started from the run’s usual numbers — change anything that was different.':'Only what you type here is counted.'}</p>
     ${s.nights.length?`<p class="bizvotes">${esc(Biz.votesLine(s))}${s.paidVotes==null?' <span class="muted">· paid votes and requests not counted for this night — Re-check it from the list</span>':''}</p>`:''}
     ${draft?`<p class="muted" style="font-size:12.5px;margin:-8px 0 12px">Your unsaved numbers from earlier are back.</p>`:''}
-    <div class="bizf" id="bizf">${datalist()}${rows.pay(g)}${rows.band(g,stored)}${rows.tips(g,{app:s.tipsApp})}${rows.merch(g)}${rows.costs(g,stored)}${rows.time(g)}${rows.gear(g)}${rows.note(g)}</div>
+    <div class="bizf" id="bizf">${datalist()}${rows.pay(g)}${rows.band(g,stored)}${rows.tips(g,{app:s.appKnown?s.app:null})}${rows.merch(g)}${rows.costs(g,stored)}${rows.time(g)}${rows.gear(g)}${rows.note(g)}</div>
     <button class="btn-pri btn-block" style="margin-top:18px" data-act="bizsave">Save</button>
     <div style="display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:6px">
       ${s.nights.length?`<button class="btn-text" data-act="biznight" data-id="${esc(s.nights[0].showId)}">What you played</button>`:'<span></span>'}
@@ -637,10 +637,10 @@ async function openBiz(key){
 /* The readout and the "your take" line, recomputed on every keystroke; never render(). */
 function readout(write){
   const root=$m('#bizf'); if(!root||!ED)return;
-  const g=readRows(root), c=Biz.calc(g,ED.show.app,prefsOf(),0,ED.show.tipsApp);
-  const v=VIEW.mine?c.cut:c.profit;
-  const ro=$m('#bizro'); if(ro){ ro.className='mono '+(v<0?'neg':v>0?'pos':''); ro.innerHTML=`${Biz.money(v)}${c.rate!=null?`<small>${Biz.money(c.rate)}/h</small>`:''}`; }
-  const cut=$m('.bz[data-f="cut"]',root); if(cut) cut.placeholder=`${dollars(c.profit-c.tipsAll)||'0'} — what's left`;
+  const g=readRows(root), c=Biz.calc(g,ED.show.app,prefsOf(),0,ED.show.app);
+  const v=VIEW.mine?c.cut:c.profit, rate=Biz.rate(v,c.includedMinutes);
+  const ro=$m('#bizro'); if(ro){ ro.className='mono '+(v<0?'neg':v>0?'pos':''); ro.innerHTML=`${Biz.money(v)}${rate!=null?`<small>${Biz.money(rate)}/h</small>`:''}`; }
+  const cut=$m('.bz[data-f="cut"]',root); if(cut) cut.placeholder=`${dollars(c.profit-c.bandTotal-c.tipsAll)||'0'} — what's left`;
   const tc=$m('.bz[data-f="tipsCut"]',root); if(tc) tc.placeholder=`${dollars(c.tipsAll)||'0'} — all of it`;
   /* A draft equal to what the sheet opened with is no draft: an empty row added and
      closed again must not announce "unsaved numbers" next time. */

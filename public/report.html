@@ -142,7 +142,7 @@ footer p{margin:0 0 6px}
 </head>
 <body>
 <div class="page" id="page"><div class="state"><p class="muted">Adding up…</p></div></div>
-<script src="/biz.js?v=27fb83eb"></script>
+<script src="/biz.js?v=e2d67ecd"></script>
 <script>
 /* The session is the Studio's, read exactly as studio.html reads it: the passcode
    and the artist it names, or the account token. This page never signs anyone in
@@ -227,13 +227,13 @@ function draw(d){
     ${PICK.length?`<ul class="picked">${counted.map(s=>`<li>${fmtDate(s.date,{day:'numeric',month:'short',year:'numeric'})} · ${esc(s.venue||s.title||'Show')}</li>`).join('')}</ul>`:''}
   </div>
   <div class="hero">
-    <div class="k">Profit</div>
-    <div class="v mono${t.profit<0?' neg':''}">${M(t.profit)}</div>
+    <div class="k">${VIEW.mine?'My cut':'Total profit'}</div>
+    <div class="v mono${(VIEW.mine?t.cut:t.profit)<0?' neg':''}">${M(VIEW.mine?t.cut:t.profit)}</div>
     <div class="s">${t.shows} show${t.shows===1?'':'s'} · ${t.logged} logged${fees?(Number(d.cutPct)>0?` · <b>${esc(d.cutPct)}% (${M(t.fee)}) goes to MySet for transaction fees</b>`:` · includes ${M(t.app)} through the app before Stripe’s fee`):''}${t.appUnknown>0?` · app money not available for ${t.appUnknown} show${t.appUnknown===1?'':'s'}`:''}</div>
   </div>
   <div class="kpis">
     <div class="kpi"><div class="k">Revenue</div><div class="v mono">${M(t.revenue)}</div></div>
-    <div class="kpi"><div class="k">Costs</div><div class="v mono">${M(t.costs)}</div><div class="s">${t.band?`splits ${M(t.band)} on top`:''}</div></div>
+    <div class="kpi"><div class="k">Costs</div><div class="v mono">${M(t.costs)}</div><div class="s">${t.band?`splits ${M(t.band)} paid out of the profit`:''}</div></div>
     <div class="kpi"><div class="k">Hours</div><div class="v mono">${Biz.hm(t.includedMinutes)||'—'}</div><div class="s">${esc(kinds.join(' · '))||'no kinds included'}</div></div>
     <div class="kpi"><div class="k">Full evening rate</div><div class="v mono">${rate(R.evening)}</div><div class="s">${viewWords(fees)}${t.timed<t.shows?` · ${t.timed} of ${t.shows} shows timed`:''}</div></div>
     <div class="kpi"><div class="k">Stage time rate</div><div class="v mono">${rate(R.stage)}</div><div class="s">${viewWords(fees)} · on-stage minutes only</div></div>
@@ -338,7 +338,7 @@ function settings(){
     ${Biz.TIME_KINDS.map(([k,l])=>`<label class="sw"><span>${esc(l)}</span><input type="checkbox" data-hour="${k}" ${on[k]!==false?'checked':''}><i></i></label>`).join('')}
     <h4>Whose rate</h4>
     <div class="seg"><button type="button" class="${VIEW.mine?'':'on'}" data-view="total">Total</button><button type="button" class="${VIEW.mine?'on':''}" data-view="mine">My cut</button></div>
-    <p class="lede" style="margin:8px 0 0;font-size:12px">My cut is what you typed on a show; a show with nothing typed counts its whole profit as yours.</p>
+    <p class="lede" style="margin:8px 0 0;font-size:12px">My cut is your share after the splits and the band's share of the tips; a show with nothing typed counts its whole profit as yours.</p>
     <h4>Fees</h4>
     <label class="sw"><span>Show rates after MySet’s fee</span><input type="checkbox" data-net ${VIEW.net?'checked':''}><i></i></label>
     <p class="saved" id="setsaved"></p>

@@ -3,7 +3,7 @@
    The tab, the editor and the printed report all read one profit figure, one
    hourly rate and one join between filed nights and calendar gigs, from this
    file. So the pins are on the rules, not the pixels:
-     · profit is (pay − band) + cash tips + merch + app − costs, in cents
+     · profit is pay + cash tips + merch + app − costs, in cents — the act's whole night, before the band is paid
      · app money that Stripe could not confirm is UNKNOWN (null), never $0
      · $/hour is over the shows that have hours, not every show
      · a bare number typed into an hours box is hours; "90" is refused
@@ -41,13 +41,13 @@ console.log('\ncalc(): one show\'s numbers');
   const c = Biz.calc(g, 8000);
   eq('take is pay less the band', c.take, 15000);
   eq('revenue = pay + tips + merch + app', c.revenue, 48500);
-  eq('profit = (pay − band) + tips + merch + app − costs', c.profit, 32300);
+  eq('profit = pay + tips + merch + app − costs, before the splits (the founder, 2026-09-20)', c.profit, 47300);
   eq('all four kinds count by default', c.includedMinutes, 240);
-  eq('$/hour is profit over the included hours, in cents', c.rate, 8075);
+  eq('$/hour is profit over the included hours, in cents', c.rate, 11825);
   ok('the show is timed', c.timed === true);
   const off = Biz.calc(g, 8000, { hours: { perform: true, break: false, travel: false, setup: false } });
   eq('toggles narrow the hours', off.includedMinutes, 120);
-  eq('and lift the rate', off.rate, 16150);
+  eq('and lift the rate', off.rate, 23650);
   const none = Biz.calc(gig({ pay: 20000 }), 0);
   eq('rate is null with no minutes, not Infinity', none.rate, null);
   ok('and the show is not timed', none.timed === false);
@@ -57,7 +57,7 @@ console.log('\ncalc(): one show\'s numbers');
   const unk = Biz.calc(g, null);
   eq('app money not available → appKnown false', unk.appKnown, false);
   eq('and app is null, not 0', unk.app, null);
-  eq('and it is left out of profit rather than counted as nothing', unk.profit, 24300);
+  eq('and it is left out of profit rather than counted as nothing', unk.profit, 39300);
   eq('an empty gig is all nulls and empties', Biz.empty(), { pay: null, band: [], cut: null, tips: null, tipsCut: null, merch: [], costs: [],
     min: { perform: null, break: null, travel: null, setup: null }, gear: [], note: '', at: null });
   /* The fee is MySet's cut of the app money at the plan's percentage — the one
@@ -66,7 +66,7 @@ console.log('\ncalc(): one show\'s numbers');
   eq('the fee is 10% of the app money, rounded to a cent', f.fee, 800);
   eq('no fee percentage: no fee', Biz.calc(g, 8000).fee, 0);
   eq('app money unknown: no fee either', Biz.calc(g, null, null, 10).fee, 0);
-  eq('my cut, blank, is what is left after the splits and the costs — the profit', f.cut, 32300);
+  eq('my cut, blank, is what is left after the splits and the costs', f.cut, 32300);
   eq('my cut, typed, is what was typed', Biz.calc(gig({ pay: 30000, cut: 12000 }), 0).cut, 12000);
   eq('and norm keeps it in cents', Biz.norm({ cut: '12000' }).cut, 12000);
   /* The tips are shared on their own (2026-09-20): cash + in-app, and the artist's
@@ -74,8 +74,8 @@ console.log('\ncalc(): one show\'s numbers');
   const t3 = Biz.calc(gig({ pay: 30000, band: [{ name: 'Ball', cents: 10000 }, { name: 'Art', cents: 10000 }], tips: 4500, tipsCut: 2500 }), 3000, null, 0, 3000);
   eq('tipsAll is cash tips plus the in-app tips', t3.tipsAll, 7500);
   eq('tipsMine is what was typed', t3.tipsMine, 2500);
-  eq('profit is the act\u2019s whole night, tips included once', t3.profit, 30000 - 20000 + 4500 + 3000);
-  eq('my cut, blank, is what is left minus the tips, plus my share of them', t3.cut, 30000 - 20000 + 2500);
+  eq('profit is the act\u2019s whole night, before the splits, tips included once', t3.profit, 30000 + 4500 + 3000);
+  eq('my cut, blank, is the profit less the splits and the tips, plus my share of the tips', t3.cut, 30000 - 20000 + 2500);
   eq('my cut, typed, is that plus my share of the tips', Biz.calc(gig({ pay: 30000, tips: 4500, tipsCut: 1500 }), 0).cut, 31500);
   eq('my cut of tips, blank, is all of them', Biz.calc(gig({ pay: 30000, tips: 4500 }), 0, null, 0, 3000).tipsMine, 7500);
   eq('and then my cut is the profit, as before', Biz.calc(gig({ pay: 30000, tips: 4500 }), 3000, null, 0, 3000).cut, 37500);
@@ -320,25 +320,25 @@ console.log('\nsum(): the period\'s totals');
   eq('app: only the confirmed night', t.app, 1000);
   eq('one show whose app money is not available', t.appUnknown, 1);
   eq('revenue', t.revenue, 70500);
-  eq('profit', t.profit, 47500);
+  eq('profit — the act\u2019s whole night, before the splits', t.profit, 67500);
   /* The Jul 4 show alone has minutes: 180 included, its own profit 30000 − 15000 +
      2000 + 4000 + 1000 − 1000 = 21000. The rate is that show's, not the period's
      profit spread over that show's hours. */
-  eq('rate is over the timed subset only', t.rate, 7000);
-  eq('rateStage is the same subset over on-stage minutes', t.rateStage, 10500);
-  eq('the timed totals the four readings come from', t.timedSum, { profit: 21000, cut: 21000, fee: 0, included: 180, perform: 120 });
+  eq('rate is over the timed subset only', t.rate, 12000);
+  eq('rateStage is the same subset over on-stage minutes', t.rateStage, 18000);
+  eq('the timed totals the four readings come from', t.timedSum, { profit: 36000, cut: 21000, fee: 0, included: 180, perform: 120 });
   eq('and rates() over them agrees with rate and rateStage', Biz.rates(t.timedSum, {}), { evening: t.rate, stage: t.rateStage });
   const fee = Biz.sum(shows, null, { to: '2026-09-13' }, 10);
   eq('with the plan\'s cut: the fee is 10% of the confirmed app money', [fee.fee, fee.timedSum.fee], [100, 100]);
-  eq('my cut, nothing typed, is the profit', fee.cut, fee.profit);
-  eq('after the fee the evening rate drops by the fee over the hours', Biz.rates(fee.timedSum, { net: true }).evening, Math.round((21000 - 100) / 180 * 60));
+  eq('my cut, nothing typed, is the profit less the splits', fee.cut, fee.profit - fee.band);
+  eq('after the fee the evening rate drops by the fee over the hours', Biz.rates(fee.timedSum, { net: true }).evening, Math.round((36000 - 100) / 180 * 60));
   eq('minutes by kind', t.minutes, { perform: 120, break: 0, travel: 0 + 60, setup: 0 });
   eq('included minutes', t.includedMinutes, 180);
   const travelOff = Biz.sum(shows, { hours: { perform: true, break: true, travel: false, setup: true } }, { to: '2026-09-13' });
-  eq('a toggle changes the rate', [travelOff.includedMinutes, travelOff.rate], [120, 10500]);
+  eq('a toggle changes the rate', [travelOff.includedMinutes, travelOff.rate], [120, 18000]);
   eq('twelve month buckets ending on the period', [t.byMonth.length, t.byMonth[0].month, t.byMonth[11].month], [12, '2025-10', '2026-09']);
   const jul = t.byMonth.find((m) => m.month === '2026-07'), sep = t.byMonth.find((m) => m.month === '2026-09');
-  eq('July', [jul.profit, jul.revenue, jul.costs, jul.app, jul.shows], [21000, 37000, 1000, 1000, 1]);
+  eq('July', [jul.profit, jul.revenue, jul.costs, jul.app, jul.shows], [36000, 37000, 1000, 1000, 1]);
   eq('September', [sep.profit, sep.app, sep.shows], [10000 - 2000 + 3500, 0, 1]);
   eq('an empty month is zeros', t.byMonth.find((m) => m.month === '2026-03'), { month: '2026-03', profit: 0, revenue: 0, costs: 0, app: 0, shows: 0 });
   eq('without a range the buckets end on the newest show', Biz.sum(shows, null).byMonth[11].month, '2026-09');
@@ -352,7 +352,7 @@ console.log('\nsum(): the period\'s totals');
   eq('costs by name', t.costsBy, [{ name: 'parking', cents: 1500, n: 2 }, { name: 'Strings', cents: 1500, n: 1 }]);
   eq('merch by name', t.merchBy, [{ name: 't-shirt', qty: 3, cents: 6000 }, { name: 'Cap', qty: 1, cents: 1500 }]);
   eq('byShow is the counted shows, newest first', t.byShow.map((s) => [s.key, s.profit, s.app, s.nights]),
-    [['ev2@2026-09-12', 11500, null, 0], ['ev1@2026-08-08', 15000, null, 1], ['ev1@2026-07-04', 21000, 1000, 1]]);
+    [['ev2@2026-09-12', 11500, null, 0], ['ev1@2026-08-08', 20000, null, 1], ['ev1@2026-07-04', 36000, 1000, 1]]);
   eq('sum of nothing', Biz.sum([], null).profit, 0);
 }
 

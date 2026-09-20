@@ -136,15 +136,17 @@ const Biz = (() => {
      is left out of the sum rather than written down as nothing. `feePct` is the
      plan's cut of that app money as a percentage — the only fee this file can
      name; Stripe's is on Stripe's statement — so `fee` is what MySet keeps of
-     the night and `profit - fee` is the post-fee figure the toggles show. `cut`
-     is the artist's own share: what they typed as My cut, or, left blank, what
-     is left once the splits and the costs are paid — a solo act keeps it all.
-     TIPS ARE SHARED SEPARATELY (2026-09-20): `tipsAppCents` is what fans tipped
-     through the app that night (already inside `app`, so never added again);
-     `tipsAll` is those plus the cash tips, and `tipsMine` is the artist's share
-     of them — typed as My cut of tips, or, blank, all of them. My cut, typed or
-     blank, is the share of everything BUT the tips, and the tips share is added
-     on top: a three-piece that splits a $90 night's tips types 30, not a total.
+     the night and `profit - fee` is the post-fee figure the toggles show.
+     PROFIT IS THE ACT'S WHOLE NIGHT (the founder, 2026-09-20): revenue less the
+     costs, BEFORE the band is paid — the Total the dashboard shows. Until that
+     day it was what was left after the splits, so Total and My cut differed by
+     pennies for a three-piece. `cut` is the artist's own share: what they typed
+     as My cut, or, left blank, the profit less the splits and less the tips —
+     and then their share of the tips is added on top. `tipsAppCents` is the
+     night's app money — tips AND votes bought, the founder counts both as tips
+     (already inside `app`, so never added to revenue again); `tipsAll` is those
+     plus the cash tips, `tipsMine` the artist's share — typed as My cut of tips,
+     or, blank, all of them. A solo act with nothing typed keeps the profit.
      Hours count toward $/hour only while their kind is on in prefs; a missing
      pref is ON, because the evening is the job, not just the set. */
   function calc(gig, appCents, prefs, feePct, tipsAppCents) {
@@ -158,9 +160,9 @@ const Biz = (() => {
     const tipsAll = tips + tipsApp;
     const tipsMine = g.tipsCut != null && Number.isFinite(Number(g.tipsCut)) ? Math.round(Number(g.tipsCut)) : tipsAll;
     const revenue = pay + tips + merch + (app || 0);
-    const profit = revenue - bandTotal - costs;
+    const profit = revenue - costs;
     const fee = Math.round((app || 0) * (Number(feePct) || 0) / 100);
-    const cut = (g.cut != null && Number.isFinite(Number(g.cut)) ? Math.round(Number(g.cut)) : profit - tipsAll) + tipsMine;
+    const cut = (g.cut != null && Number.isFinite(Number(g.cut)) ? Math.round(Number(g.cut)) : profit - bandTotal - tipsAll) + tipsMine;
     const minutes = {};
     let includedMinutes = 0, any = 0;
     for (const [k] of TIME_KINDS) {
@@ -335,7 +337,7 @@ const Biz = (() => {
     let latest = '';
     for (const s of shows || []) {
       if (!s.counted) continue;
-      const c = calc(s.gig, s.app, prefs, feePct, s.tipsApp);
+      const c = calc(s.gig, s.app, prefs, feePct, s.app);
       out.shows++;
       if (s.biz) out.logged++;
       if (s.nights && s.nights.length && !c.appKnown) out.appUnknown++;
