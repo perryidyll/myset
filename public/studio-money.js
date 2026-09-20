@@ -104,6 +104,9 @@ const CSS=`
 .bizf .pill{flex:0 0 auto;font-size:12px;font-weight:700;padding:7px 11px;border-radius:999px;background:var(--surface-2,#2C2C2E);color:var(--muted,#98989D);box-shadow:inset 0 0 0 1px var(--hair-2,rgba(255,255,255,.16))}
 .bizf .pill.on{color:var(--accent-ink,#FF5650);background:var(--accent-soft,rgba(255,86,80,.18));box-shadow:inset 0 0 0 1.5px var(--accent,#FF456E)}
 .bizf .hint{font-size:12.5px;color:var(--muted,#98989D);margin:6px 0 0}
+.bizf .bz[readonly]{color:var(--good,#30D158);background:var(--surface-2,#2C2C2E);opacity:1;-webkit-text-fill-color:var(--good,#30D158)}
+.bizf .bz[readonly]::placeholder{color:var(--muted,#98989D);-webkit-text-fill-color:var(--muted,#98989D)}
+.bizhero .bizctl{margin-top:12px}
 .bizf .bzcut{margin-top:12px}.bizf .bzcut>label{display:block;font-size:12.5px;font-weight:600;color:var(--muted,#98989D);margin-bottom:7px}
 .bizf textarea.bzgear{min-height:88px}
 .sheet.biz .sheetx{z-index:3}
@@ -259,10 +262,14 @@ function hero(S,rise){
   if(S.app>0&&cutPct()>0) notes.push(`<small class="fee">${cutPct()}% (${Biz.money(S.fee)}) goes to MySet for transaction fees</small>`);
   else if(S.app>0) notes.push(`<small>Includes ${Biz.money(S.app)} through the app before Stripe's fee.</small>`);
   if(S.appUnknown>0) notes.push(`<small>App money not available for ${plural(S.appUnknown,'show')}.</small>`);
-  return `<div class="bizhero ${rise?'rise':''}"><div class="k">Profit</div>
-    <b class="v mono ${S.profit<0?'neg':'pos'}" ${cu('profit',S.profit,'money')}>${Biz.money(S.profit)}</b>
+  /* Total or My cut, the same toggle as the rates (the founder, 2026-09-20): the
+     act's profit, or the artist's own share of it with their cut of the tips. */
+  const v=VIEW.mine?S.cut:S.profit;
+  return `<div class="bizhero ${rise?'rise':''}"><div class="k">${VIEW.mine?'My cut':'Profit'}</div>
+    <b class="v mono ${v<0?'neg':'pos'}" ${cu('profit',v,'money')}>${Biz.money(v)}</b>
     ${tipsLine(S.tipsAppKnown?S.tipsApp:null)}
-    <div class="a">${plural(S.shows,'show')} · ${S.logged} logged${notes.join('')}</div></div>`;
+    <div class="a">${plural(S.shows,'show')} · ${S.logged} logged${notes.join('')}</div>
+    <div class="bizctl">${viewSeg()}</div></div>`;
 }
 /* "$x from in-app tips" under a profit figure (the founder, 2026-09-17), green and a
    size down. Only when the nights say — a night filed before `tipped` existed reads
@@ -369,14 +376,15 @@ function evening(S){
 /* The two readings of the rate — the toggle between the whole act and the
    artist's own cut, and the fee button when the period has app money to take
    a fee from. Drawn under the rates and again on the $/hour tile's sheet. */
+const viewSeg=()=>`<span class="bizseg" role="group" aria-label="Whose figures"><button type="button" class="${VIEW.mine?'':'on'}" data-act="bizview" data-id="total">Total</button><button type="button" class="${VIEW.mine?'on':''}" data-act="bizview" data-id="mine">My cut</button></span>`;
 function viewControls(S){
-  const seg=`<span class="bizseg" role="group" aria-label="Whose rate"><button type="button" class="${VIEW.mine?'':'on'}" data-act="bizview" data-id="total">Total</button><button type="button" class="${VIEW.mine?'on':''}" data-act="bizview" data-id="mine">My cut</button></span>`;
+  const seg=viewSeg();
   const fee=S.app>0?`<button type="button" class="bizfee" data-act="bizfee">${feeWords()}</button>`:'';
   return `<div class="bizctl">${seg}${fee}</div>`;
 }
 const feeWords=()=>VIEW.net?'Rates are after MySet\u2019s transaction fees \u2014 tap for pre-fee rates':'Rates are before MySet\u2019s transaction fees \u2014 tap for post-fee rates';
 function showRow(s,S){
-  const c=s.counted?Biz.calc(s.gig,s.app,prefsOf()):null;
+  const c=s.counted?Biz.calc(s.gig,s.app,prefsOf(),0,s.tipsApp):null;
   /* A record whose gig has left the calendar (moved, deleted, skipped) is still a
      show the artist logged: listed by its date, counted, and open to remove. */
   const name=esc(s.title||s.venue||(s.orphanRecord?'Logged show':'Untitled show'));
@@ -386,7 +394,8 @@ function showRow(s,S){
   const picking=PICKS!==null;
   const acts=picking?'':(s.counted?'':`<button class="btn-text" data-act="bizopen" data-id="${esc(s.key)}">Log it</button>${s.occ&&s.source==='rule'?`<button class="btn-text" data-act="bizskip" data-id="${esc(s.occ.eventId)}|${esc(s.date)}">Didn't happen</button>`:''}`)
     +(s.nights.length&&!s.appKnown?`<button class="btn-text" data-act="bizrecon" data-id="${esc(s.nights[0].showId)}">Re-check</button>`:'');
-  const chip=c?`<span class="bizchip ${c.profit<0?'neg':'pos'} mono">${Biz.money(c.profit)}</span>`:'';
+  const cv=c?(VIEW.mine?c.cut:c.profit):0;
+  const chip=c?`<span class="bizchip ${cv<0?'neg':'pos'} mono">${Biz.money(cv)}</span>`:'';
   return `<div class="row" data-act="${picking?'bizpick':'bizopen'}" data-id="${esc(s.key)}" style="cursor:pointer">
     ${picking?`<input type="checkbox" class="bizck" ${PICKS.has(s.key)?'checked':''} tabindex="-1" aria-label="Pick ${name}">`:''}
     <div class="m"><div class="t">${dlabel(s.date)} · ${name}</div>${by?`<div class="by">${by}</div>`:''}${sub?`<div class="s">${sub}</div>`:''}${acts?`<div class="bizacts">${acts}</div>`:''}</div>
@@ -543,8 +552,14 @@ const rows={
   /* The artist's own share, blank unless it differs from what is left after the
      splits and the costs — the editor's readout writes that figure in as the
      placeholder, so the field always says what blank means. */
-  cut:(g)=>`<div class="bzcut"><label>My cut</label>${moneyBox(`<input class="inp bz mono" data-f="cut" inputmode="decimal" placeholder="What's left" value="${esc(dollars(g.cut))}">`)}<p class="hint">Leave blank if what's left after the splits and costs is yours.</p></div>`,
-  tips:(g)=>`<div class="field"><label>Cash tips</label>${moneyBox(`<input class="inp bz mono" data-f="tips" inputmode="decimal" value="${esc(dollars(g.tips))}">`)}</div>`,
+  cut:(g)=>`<div class="bzcut"><label>My cut</label>${moneyBox(`<input class="inp bz mono" data-f="cut" inputmode="decimal" placeholder="What's left" value="${esc(dollars(g.cut))}">`)}<p class="hint">Leave blank if what's left after the splits and costs is yours. Tips are shared below, on their own.</p></div>`,
+  /* Cash tips, then the night's in-app tips as a figure nobody can edit (it is
+     Stripe's, and it is already inside the app money), then the artist's own
+     share of both — blank means all of it (the founder, 2026-09-20). */
+  tips:(g,opts)=>{ const app=opts&&opts.app!=null?opts.app:null;
+    return `<div class="field"><label>Cash tips</label>${moneyBox(`<input class="inp bz mono" data-f="tips" inputmode="decimal" value="${esc(dollars(g.tips))}">`)}</div>
+    <div class="field"><label>In-app tips</label>${moneyBox(`<input class="inp bz mono" data-f="tipsApp" readonly tabindex="-1" aria-label="Tips through the app, not editable" value="${app==null?'':esc(dollars(app)||'0')}" placeholder="${app==null?'Not available':''}">`)}<p class="hint">What fans tipped through the app that night — counted already, in the app money.</p></div>
+    <div class="field"><label>My cut of tips</label>${moneyBox(`<input class="inp bz mono" data-f="tipsCut" inputmode="decimal" placeholder="All of it" value="${esc(dollars(g.tipsCut))}">`)}<p class="hint">Leave blank if the tips are all yours. Splitting three ways? Type a third.</p></div>`; },
   /* Which kinds count toward $/hour is the dashboard's choice (the $/hour tile),
      never a question asked while logging a night. */
   time:(g,opts)=>`<div class="field"><label>Time</label>${Biz.TIME_KINDS.map(([k,l])=>{ const v=g.min&&g.min[k], has=v!=null, sl=k==='perform'&&opts&&opts.slot?opts.slot:null;
@@ -566,6 +581,7 @@ function readRows(root){
   const v=(q)=>{ const el=$m(q,root); return el?el.value:''; };
   const pay=$m('.bz[data-f="pay"]',root), tips=$m('.bz[data-f="tips"]',root), cut=$m('.bz[data-f="cut"]',root);
   if(pay)g.pay=toCents(pay.value); if(tips)g.tips=toCents(tips.value); if(cut)g.cut=toCents(cut.value);
+  const tc=$m('.bz[data-f="tipsCut"]',root); if(tc)g.tipsCut=toCents(tc.value);
   for(const kind of ['band','costs','merch']){
     const box=$m(`[data-rows="${kind}"]`,root); if(!box)continue;
     g[kind]=[...box.querySelectorAll('.bzrow')].map(r=>{
@@ -578,7 +594,7 @@ function readRows(root){
   const note=$m('.bznote',root); if(note)g.note=note.value;
   return Biz.norm(g);
 }
-const any=(g)=>!!(g&&(g.pay!=null||g.cut!=null||g.tips!=null||g.band.length||g.costs.length||g.merch.length||g.gear.length||g.note||Biz.TIME_KINDS.some(([k])=>g.min[k]!=null)));
+const any=(g)=>!!(g&&(g.pay!=null||g.cut!=null||g.tips!=null||g.tipsCut!=null||g.band.length||g.costs.length||g.merch.length||g.gear.length||g.note||Biz.TIME_KINDS.some(([k])=>g.min[k]!=null)));
 
 /* ---------- THE EDITOR SHEET ---------- */
 /* The draft is the account's, not the phone's: a draft written by one owner must
@@ -604,12 +620,12 @@ async function openBiz(key){
   const g=draft?Biz.norm(draft):base;
   ED={key,saveKey,show:s,stored,base};
   const name=esc(s.title||s.venue||'This show');
-  openSheet(`<div class="bizro"><div class="k">Profit for this show</div><b class="mono" id="bizro"></b>${tipsLine(s.tipsApp)}</div>
+  openSheet(`<div class="bizro"><div class="k">${VIEW.mine?'My cut of this show':'Profit for this show'}</div><b class="mono" id="bizro"></b>${tipsLine(s.tipsApp)}</div>
     <h3>${rec?'Edit this show':'Log a show'}</h3>
     <p class="lede"><b>${dlabel(s.date)} · ${name}.</b> ${s.nights.length?(s.appKnown?`${Biz.money(s.app)} came through the app that night, before fees.`:'The app money for this night is not available — Re-check it from the list.'):s.source==='rule'&&!rec?'Started from the run’s usual numbers — change anything that was different.':'Only what you type here is counted.'}</p>
     ${s.nights.length?`<p class="bizvotes">${esc(Biz.votesLine(s))}${s.paidVotes==null?' <span class="muted">· paid votes and requests not counted for this night — Re-check it from the list</span>':''}</p>`:''}
     ${draft?`<p class="muted" style="font-size:12.5px;margin:-8px 0 12px">Your unsaved numbers from earlier are back.</p>`:''}
-    <div class="bizf" id="bizf">${datalist()}${rows.pay(g)}${rows.band(g,stored)}${rows.tips(g)}${rows.merch(g)}${rows.costs(g,stored)}${rows.time(g)}${rows.gear(g)}${rows.note(g)}</div>
+    <div class="bizf" id="bizf">${datalist()}${rows.pay(g)}${rows.band(g,stored)}${rows.tips(g,{app:s.tipsApp})}${rows.merch(g)}${rows.costs(g,stored)}${rows.time(g)}${rows.gear(g)}${rows.note(g)}</div>
     <button class="btn-pri btn-block" style="margin-top:18px" data-act="bizsave">Save</button>
     <div style="display:flex;justify-content:space-between;flex-wrap:wrap;margin-top:6px">
       ${s.nights.length?`<button class="btn-text" data-act="biznight" data-id="${esc(s.nights[0].showId)}">What you played</button>`:'<span></span>'}
@@ -621,9 +637,11 @@ async function openBiz(key){
 /* The readout and the "your take" line, recomputed on every keystroke; never render(). */
 function readout(write){
   const root=$m('#bizf'); if(!root||!ED)return;
-  const g=readRows(root), c=Biz.calc(g,ED.show.app,prefsOf());
-  const ro=$m('#bizro'); if(ro){ ro.className='mono '+(c.profit<0?'neg':c.profit>0?'pos':''); ro.innerHTML=`${Biz.money(c.profit)}${c.rate!=null?`<small>${Biz.money(c.rate)}/h</small>`:''}`; }
-  const cut=$m('.bz[data-f="cut"]',root); if(cut) cut.placeholder=`${dollars(c.profit)||'0'} — what's left`;
+  const g=readRows(root), c=Biz.calc(g,ED.show.app,prefsOf(),0,ED.show.tipsApp);
+  const v=VIEW.mine?c.cut:c.profit;
+  const ro=$m('#bizro'); if(ro){ ro.className='mono '+(v<0?'neg':v>0?'pos':''); ro.innerHTML=`${Biz.money(v)}${c.rate!=null?`<small>${Biz.money(c.rate)}/h</small>`:''}`; }
+  const cut=$m('.bz[data-f="cut"]',root); if(cut) cut.placeholder=`${dollars(c.profit-c.tipsAll)||'0'} — what's left`;
+  const tc=$m('.bz[data-f="tipsCut"]',root); if(tc) tc.placeholder=`${dollars(c.tipsAll)||'0'} — all of it`;
   /* A draft equal to what the sheet opened with is no draft: an empty row added and
      closed again must not announce "unsaved numbers" next time. */
   if(write){ if(sameGig(g,ED.base))draftClear(); else draftWrite(ED.key,g); }

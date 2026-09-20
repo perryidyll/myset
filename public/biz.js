@@ -37,7 +37,7 @@ const Biz = (() => {
   function empty() {
     const min = {};
     TIME_KINDS.forEach(([k]) => { min[k] = null; });
-    return { pay: null, band: [], cut: null, tips: null, merch: [], costs: [], min, gear: [], note: '', at: null };
+    return { pay: null, band: [], cut: null, tips: null, tipsCut: null, merch: [], costs: [], min, gear: [], note: '', at: null };
   }
 
   /* The client-side shape-up, so what the sheet sends is what the server keeps:
@@ -54,6 +54,7 @@ const Biz = (() => {
       band: (Array.isArray(g.band) ? g.band : []).map(line).filter(kept),
       cut: clamp(g.cut, LIMITS.cents),
       tips: clamp(g.tips, LIMITS.cents),
+      tipsCut: clamp(g.tipsCut, LIMITS.cents),
       merch: (Array.isArray(g.merch) ? g.merch : []).slice(0, LIMITS.merch)
         .map((r) => Object.assign(line(r), { qty: clamp(r && r.qty, LIMITS.qty) || 0 })).filter((r) => kept(r) || r.qty),
       costs: (Array.isArray(g.costs) ? g.costs : []).map(line).filter(kept),
@@ -138,19 +139,28 @@ const Biz = (() => {
      the night and `profit - fee` is the post-fee figure the toggles show. `cut`
      is the artist's own share: what they typed as My cut, or, left blank, what
      is left once the splits and the costs are paid — a solo act keeps it all.
+     TIPS ARE SHARED SEPARATELY (2026-09-20): `tipsAppCents` is what fans tipped
+     through the app that night (already inside `app`, so never added again);
+     `tipsAll` is those plus the cash tips, and `tipsMine` is the artist's share
+     of them — typed as My cut of tips, or, blank, all of them. My cut, typed or
+     blank, is the share of everything BUT the tips, and the tips share is added
+     on top: a three-piece that splits a $90 night's tips types 30, not a total.
      Hours count toward $/hour only while their kind is on in prefs; a missing
      pref is ON, because the evening is the job, not just the set. */
-  function calc(gig, appCents, prefs, feePct) {
+  function calc(gig, appCents, prefs, feePct, tipsAppCents) {
     const g = gig || empty();
     const on = (prefs && prefs.hours) || {};
     const pay = Number(g.pay) || 0, bandTotal = cents(g.band), tips = Number(g.tips) || 0;
     const merch = cents(g.merch), costs = cents(g.costs);
     const appKnown = appCents != null && Number.isFinite(Number(appCents));
     const app = appKnown ? Math.round(Number(appCents)) : null;
+    const tipsApp = tipsAppCents != null && Number.isFinite(Number(tipsAppCents)) ? Math.round(Number(tipsAppCents)) : 0;
+    const tipsAll = tips + tipsApp;
+    const tipsMine = g.tipsCut != null && Number.isFinite(Number(g.tipsCut)) ? Math.round(Number(g.tipsCut)) : tipsAll;
     const revenue = pay + tips + merch + (app || 0);
     const profit = revenue - bandTotal - costs;
     const fee = Math.round((app || 0) * (Number(feePct) || 0) / 100);
-    const cut = g.cut != null && Number.isFinite(Number(g.cut)) ? Math.round(Number(g.cut)) : profit;
+    const cut = (g.cut != null && Number.isFinite(Number(g.cut)) ? Math.round(Number(g.cut)) : profit - tipsAll) + tipsMine;
     const minutes = {};
     let includedMinutes = 0, any = 0;
     for (const [k] of TIME_KINDS) {
@@ -160,7 +170,7 @@ const Biz = (() => {
       if (n && on[k] !== false) includedMinutes += n;
     }
     return {
-      pay, bandTotal, take: pay - bandTotal, tips, merch, app, appKnown, revenue, costs, profit, fee, cut,
+      pay, bandTotal, take: pay - bandTotal, tips, tipsApp, tipsAll, tipsMine, merch, app, appKnown, revenue, costs, profit, fee, cut,
       minutes, timed: any > 0, includedMinutes,
       rate: rate(profit, includedMinutes),
     };
@@ -309,7 +319,7 @@ const Biz = (() => {
      end on the newest counted show. */
   function sum(shows, prefs, range, feePct) {
     const out = { shows: 0, logged: 0, timed: 0, revenue: 0, pay: 0, tips: 0, merch: 0, app: 0, appUnknown: 0, tipsApp: 0, tipsAppKnown: 0,
-      band: 0, costs: 0, profit: 0, fee: 0, cut: 0, minutes: {}, includedMinutes: 0, rate: null, rateStage: null,
+      band: 0, costs: 0, profit: 0, fee: 0, cut: 0, tipsMine: 0, minutes: {}, includedMinutes: 0, rate: null, rateStage: null,
       timedSum: { profit: 0, cut: 0, fee: 0, included: 0, perform: 0 },
       byMonth: [], byShow: [], mix: [], bandBy: [], costsBy: [], merchBy: [] };
     TIME_KINDS.forEach(([k]) => { out.minutes[k] = 0; });
@@ -325,13 +335,13 @@ const Biz = (() => {
     let latest = '';
     for (const s of shows || []) {
       if (!s.counted) continue;
-      const c = calc(s.gig, s.app, prefs, feePct);
+      const c = calc(s.gig, s.app, prefs, feePct, s.tipsApp);
       out.shows++;
       if (s.biz) out.logged++;
       if (s.nights && s.nights.length && !c.appKnown) out.appUnknown++;
       out.revenue += c.revenue; out.pay += c.pay; out.tips += c.tips; out.merch += c.merch;
       out.app += c.app || 0; if (s.tipsApp != null) { out.tipsApp += s.tipsApp; out.tipsAppKnown++; }
-      out.band += c.bandTotal; out.costs += c.costs; out.profit += c.profit; out.fee += c.fee; out.cut += c.cut;
+      out.band += c.bandTotal; out.costs += c.costs; out.profit += c.profit; out.fee += c.fee; out.cut += c.cut; out.tipsMine += c.tipsMine;
       TIME_KINDS.forEach(([k]) => { out.minutes[k] += c.minutes[k] || 0; });
       out.includedMinutes += c.includedMinutes;
       if (c.timed) { out.timed++; T.profit += c.profit; T.cut += c.cut; T.fee += c.fee; T.included += c.includedMinutes; T.perform += c.minutes.perform || 0; }

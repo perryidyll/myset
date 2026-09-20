@@ -164,6 +164,12 @@ export function normGig(raw, limits, prev) {
   if (tips.bad) return { err: 'That doesn’t look like an amount for tips', status: 400 };
   out.tips = tips.n;
 
+  /* The artist's share of the night's tips, cash and in-app together, typed when
+     the band splits them; blank means all of them (public/biz.js calc). */
+  const tipsCut = cents(g.tipsCut);
+  if (tipsCut.bad) return { err: 'That doesn’t look like an amount for your cut of the tips', status: 400 };
+  out.tipsCut = tipsCut.n;
+
   /* A quantity has a ceiling too, for the same reason cents do: every other
      number in the record has one, and 1e300 t-shirts summed onto a report is
      not a typo anyone should have to find on paper. Mirrored in Biz.LIMITS.qty. */

@@ -58,7 +58,7 @@ console.log('\ncalc(): one show\'s numbers');
   eq('app money not available → appKnown false', unk.appKnown, false);
   eq('and app is null, not 0', unk.app, null);
   eq('and it is left out of profit rather than counted as nothing', unk.profit, 24300);
-  eq('an empty gig is all nulls and empties', Biz.empty(), { pay: null, band: [], cut: null, tips: null, merch: [], costs: [],
+  eq('an empty gig is all nulls and empties', Biz.empty(), { pay: null, band: [], cut: null, tips: null, tipsCut: null, merch: [], costs: [],
     min: { perform: null, break: null, travel: null, setup: null }, gear: [], note: '', at: null });
   /* The fee is MySet's cut of the app money at the plan's percentage — the one
      fee this file can name. My cut is what was typed, else what is left. */
@@ -69,6 +69,18 @@ console.log('\ncalc(): one show\'s numbers');
   eq('my cut, blank, is what is left after the splits and the costs — the profit', f.cut, 32300);
   eq('my cut, typed, is what was typed', Biz.calc(gig({ pay: 30000, cut: 12000 }), 0).cut, 12000);
   eq('and norm keeps it in cents', Biz.norm({ cut: '12000' }).cut, 12000);
+  /* The tips are shared on their own (2026-09-20): cash + in-app, and the artist's
+     share of them typed as My cut of tips or, blank, all of them. */
+  const t3 = Biz.calc(gig({ pay: 30000, band: [{ name: 'Ball', cents: 10000 }, { name: 'Art', cents: 10000 }], tips: 4500, tipsCut: 2500 }), 3000, null, 0, 3000);
+  eq('tipsAll is cash tips plus the in-app tips', t3.tipsAll, 7500);
+  eq('tipsMine is what was typed', t3.tipsMine, 2500);
+  eq('profit is the act\u2019s whole night, tips included once', t3.profit, 30000 - 20000 + 4500 + 3000);
+  eq('my cut, blank, is what is left minus the tips, plus my share of them', t3.cut, 30000 - 20000 + 2500);
+  eq('my cut, typed, is that plus my share of the tips', Biz.calc(gig({ pay: 30000, tips: 4500, tipsCut: 1500 }), 0).cut, 31500);
+  eq('my cut of tips, blank, is all of them', Biz.calc(gig({ pay: 30000, tips: 4500 }), 0, null, 0, 3000).tipsMine, 7500);
+  eq('and then my cut is the profit, as before', Biz.calc(gig({ pay: 30000, tips: 4500 }), 3000, null, 0, 3000).cut, 37500);
+  eq('in-app tips unknown count as none', Biz.calc(gig({ tips: 4500 }), null).tipsAll, 4500);
+  eq('norm keeps tipsCut in cents', Biz.norm({ tipsCut: '1500' }).tipsCut, 1500);
   eq('rate() is null over no minutes', Biz.rate(1000, 0), null);
   /* The four readings, from the timed totals. */
   const T = { profit: 32300, cut: 12000, fee: 800, included: 240, perform: 120 };

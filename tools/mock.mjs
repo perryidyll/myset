@@ -396,6 +396,7 @@ function stageFixture(st) {
     tags: { builtin: GENRES, own: [] }, lists: [], learn: [], listFellBack: false,
     voters: 0, room: live ? 12 : 0, nets: 0, asks: [], songs: SONGS,
     tips: { total: st.first ? 0 : 42, count: st.first ? 0 : 3, recent: [] }, feedback: null,
+    paid: { count: st.first || !live ? 0 : 2, total: st.first || !live ? 0 : 8, last: 5 },
     /* ?first=1 is an account with no night on file and no sign printed: the
        first-gig card before a show, the example rows during one */
     nights: st.first ? 0 : 12, signAt: st.first ? 0 : NOW - 30 * 864e5,
