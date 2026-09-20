@@ -33,7 +33,7 @@ let LASTSHOW='', LASTSTATUS='';            // when the night changes, the Money 
 /* The business dashboard (decision 0065) is two scripts loaded only when a paid
    owner opens Money — the maths and the tab. Served immutable like this file, so
    each carries its own stamp; tools/stamp.mjs rewrites both. */
-const BIZ_V='/biz.js?v=6680e3d1', MONEY_V='/studio-money.js?v=4a471b91';
+const BIZ_V='/biz.js?v=27fb83eb', MONEY_V='/studio-money.js?v=25595234';
 let MONEY_PROMISE=null, MONEY_FAILED=false;
 let SETSORT=(()=>{try{return localStorage.getItem('myset.setsort')||'votes'}catch(e){return 'votes'}})();
 const SETSORTS=[['votes','Top voted'],['title','Song A\u2013Z'],['artist','Artist A\u2013Z']];
@@ -1752,6 +1752,9 @@ function capNote(s){
 /* The gig tonight, if there is one: the server's `sched` when the calendar gig is
    within twelve hours, else today's occurrence from the calendar (loaded lazily;
    null until it lands). */
+/* Tonight's money through the app: the tips plus the votes bought, both off the
+   stage payload and both inside the show's window (0079). */
+const earned=()=>(((D.tips||{}).total)||0)+(((D.paid||{}).total)||0);
 function tonightGig(s){
   if(s.sched&&s.sched.startsAt) return {venue:s.sched.venue||'',time:s.sched.time||'',listId:s.listId||''};
   const oc=(EVENTS&&EVENTS.ok&&EVENTS.occurrences)||[];
@@ -1922,7 +1925,7 @@ function render(){
     <div class="stats">
       <div class="c"><b class="mono">${(s.played||[]).length}</b><span>Songs played</span></div>
       <div class="c"><b class="mono">${songs.reduce((a,b)=>a+(b.votes||0),0)}</b><span>Votes</span></div>
-      <div class="c"><b class="mono acc">$${(((D.tips||{}).total)||0).toFixed(2)}</b><span>Tips</span></div>
+      <div class="c"><b class="mono acc">$${earned().toFixed(2)}</b><span>Tips + votes</span></div>
     </div>
     ${s.venue?'':`<div class="field" style="padding-top:12px"><label>Name this night</label><div style="display:flex;gap:8px">
       <input class="inp" id="nightName" maxlength="80" placeholder="Where was it? e.g. The Corner Hotel" style="flex:1" onkeydown="if(event.key==='Enter')saveNight()">
@@ -1949,10 +1952,12 @@ function render(){
   if(s.status==='live'){
     /* TONIGHT'S MONEY, ALWAYS IN VIEW (2026-09-15). The one number an artist should
        never have to scroll for. Sticky under the header, on every plan: it is the
-       artist's own money, and the aha moment is watching it move. */
+       artist's own money, and the aha moment is watching it move. Tips AND votes
+       bought (the founder, 2026-09-20) — both land in the same account. */
+    const bought=(D.paid&&D.paid.count)||0;
     body=`
-    <div class="tonight"><span class="l">Tonight</span><b class="mono">$${D.tips.total.toFixed(2)}</b>
-      <span class="r">${D.tips.count?`${D.tips.count} tip${D.tips.count===1?'':'s'} · `:''}${songs.reduce((a,b)=>a+b.votes,0)} votes · ${D.voters||0} voting</span></div>
+    <div class="tonight"><span class="l">Tonight</span><b class="mono">$${earned().toFixed(2)}</b>
+      <span class="r">${D.tips.count?`${D.tips.count} tip${D.tips.count===1?'':'s'} · `:''}${bought?`${bought} vote buy${bought===1?'':'s'} · `:''}${songs.reduce((a,b)=>a+b.votes,0)} votes · ${D.voters||0} voting</span></div>
     <div class="votebox">
       <div><span class="vt">Voting</span>
         <span class="vs">${s.windowOpen?'Fans can vote right now':'Paused — nobody can vote until you re-open'}</span></div>
@@ -1968,7 +1973,7 @@ function render(){
     <div class="stats">
       <div class="c"><b class="mono">${songs.reduce((a,b)=>a+b.votes,0)}</b><span>Votes now</span></div>
       <div class="c"><b class="mono">${D.voters||0} voting</b><span>${D.room||D.voters||0} in room${D.nets?` · ${D.nets} network${D.nets===1?'':'s'}`:''}</span></div>
-      <div class="c"><b class="mono acc">$${D.tips.total.toFixed(2)}</b><span>Tips</span></div>
+      <div class="c"><b class="mono acc">$${earned().toFixed(2)}</b><span>Tips + votes</span></div>
     </div>
     ${now?`<div class="np rise"><div class="k">Now playing</div><div class="t">${esc(now.title)}</div>
       ${now.artist?`<div class="a">${esc(now.artist)}</div>`:''}

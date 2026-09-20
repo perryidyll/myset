@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-20 22:17 — 6ab7fa0 — wt@studio/tips-cut (0 files since origin/main)
+**tl;dr:** Money: In-app tips and My cut of tips on the show sheet, Total / My cut on the profit block (0086); the Live tab's Tonight figure is tips + votes bought
+**Other sessions:** gig.tipsCut (cents, nullable) in both normGig and Biz.norm; Biz.calc(gig, app, prefs, feePct, tipsAppCents) now returns tipsAll/tipsMine and cut = (typed cut ?? profit - tipsAll) + tipsMine — pass the night's tipsApp everywhere calc is called; earned() in studio.js; run node tools/stamp.mjs after editing any of the four scripts
+
 ### 2026-09-18 15:12 — 43c87b2 — wt-diaries@docs/diaries-merged (4 files since origin/main)
 **tl;dr:** Docs only: DIA-001 done (live as a87ff85, PR #78); the diary sheet loaded into Puzzle (section 42869), changelog 1835 completed
 **Other sessions:** No code. Next for the founder: the first real diary page on his own account. [skip ci]
