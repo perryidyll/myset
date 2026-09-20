@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-20 22:46 — 2f6a095 — wt@docs/total-profit-live (0 files since origin/main)
+**tl;dr:** Docs only: 0086's amendment live as 2f6a095 (PR #82); the founder's book rewritten — rounded pay, hours by venue, tips share incl. votes bought, 11 test nights hidden
+**Other sessions:** No code. The founder's records now carry min for every show and tipsCut on every band night; uicheck's two profit figures (lines 564/614) are stale until recomputed. [skip ci]
+
 ### 2026-09-20 22:44 — 2b83c14 — wt@money/total-profit (0 files since origin/main)
 **tl;dr:** Money: Total profit is the act's whole night (revenue − costs, before the band is paid); My cut = profit − splits − the band's share of tips; votes bought count as tips for the share; the report's hero follows Total / My cut (0086 amended)
 **Other sessions:** Biz.calc profit no longer subtracts bandTotal — anything that read profit as 'what is left' now wants cut; the 5th calc argument is the night's whole app money (s.app), not tipped; test/bizmath.mjs sum() expectations recomputed; tools/uicheck.mjs lines 564/614 still expect the old profit figures and could not be run here (puppeteer install gone)
