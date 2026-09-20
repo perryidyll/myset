@@ -52,3 +52,29 @@ Sep 4, 6, 7 ×3, 9 ×3, 10 ×3, 11 ×2 — *Delete show* hides each); two calend
 have no record (Crystal Day Tue Sep 15 has a filed night but no Google event; one
 more past slot reads *Log it*); votes bought stay in *My cut* whole — only tips are
 shared; the Sep 13 Sand & Tan night's $10 of in-app tips sit under Seaflower Sep 11.
+
+## Second pass (the founder, same evening) — live as `2f6a095` (PR #82)
+
+**The bug he caught:** Total and My cut differed by under $100 over 64 shows
+although Ball and Art take a third of nearly every gig. `profit` had always been
+`revenue − band − costs` — "what is left" — so *Total* was already after the
+splits. Now `profit = revenue − costs` (the act's whole night, headed **Total
+profit**) and `cut = profit − band − tipsAll + tipsMine`. Votes bought count as
+tips for the share: the fifth `calc` argument is the night's whole app money.
+`test/bizmath.mjs` sum() expectations recomputed (199 ✓); suite exit 0; mock at
+375px: TOTAL PROFIT $805 / MY CUT $605.
+
+**The book, rewritten (64 of 64 saved):** pay rounded — 2000 THB = $60, 4500 =
+$135, 6000 = $180, thirds $45 / $60; every show timed by venue (Crystal Day 1h45 /
+15 / 30 / 10; Seaflower 2h / 20 / 20 / 10; Sand & Tan 2h / 40 / 30 / 10; Ugly
+Duckling 2h / 40 / 20 / 10; Anantara 2h / 40 / 50 / 10); *My cut of tips* = a third
+of cash + the night's app money (Sep 20 $55 → $18.33, Sep 18 $17 → $5.67, Sep 16
+$15 → $5, Sep 14 $22 → $7.33, Sep 13 $10 → $3.33, Seaflower Sep 11 $17 → $5.67).
+Eleven standalone test nights hidden (`POST /api/history {action:'hide'}`: Aug 30
+19:28Z, Sep 7 02:23Z + 18:07Z, Sep 8 16:53Z, Sep 9 07:51Z + 17:40Z, Sep 10 ×4,
+Sep 11 16:48Z); the seven other unkeyed nights sit inside real gig slots at $0
+and stay — they are those gigs' nights.
+
+**Live after (This year):** TOTAL PROFIT $8,686.00 / MY CUT $3,585.33 · 65 shows ·
+64 logged · 64 timed · $/h $44.28 total, $18.28 my cut. Sep 20 row: $235.00 total,
+$78.33 my cut (180 + 20 + 35 − 120 − 55 + 18.33).
