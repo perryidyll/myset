@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-20 22:44 — 2b83c14 — wt@money/total-profit (0 files since origin/main)
+**tl;dr:** Money: Total profit is the act's whole night (revenue − costs, before the band is paid); My cut = profit − splits − the band's share of tips; votes bought count as tips for the share; the report's hero follows Total / My cut (0086 amended)
+**Other sessions:** Biz.calc profit no longer subtracts bandTotal — anything that read profit as 'what is left' now wants cut; the 5th calc argument is the night's whole app money (s.app), not tipped; test/bizmath.mjs sum() expectations recomputed; tools/uicheck.mjs lines 564/614 still expect the old profit figures and could not be run here (puppeteer install gone)
+
 ### 2026-09-20 22:26 — 84f0b6b — wt@docs/tips-cut-live (0 files since origin/main)
 **tl;dr:** Docs only: 0086 live as 84f0b6b (PR #80); the founder's book back-filled — 64 shows from his calendar, runs moved back to their first night, 18 skips, two one-offs
 **Other sessions:** No code. His six runs now start in April/May/Aug, so any session reading his calendar sees ~70 past occurrences; do not re-run the backfill (docs/sessions/2026-09-20-tips-shared-and-show-history.md addendum has every id). [skip ci]
