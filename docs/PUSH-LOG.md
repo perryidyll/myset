@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-24 00:28 — 3e701b9 — landing-wt2@hero-subtext (2 files since origin/main)
+**tl;dr:** Hero subtext now ends 'And you get more tips.' with that phrase and 'from your setlist' both in orange
+**Other sessions:** public/about.html line ~397 only; no code/behavior change
+
 ### 2026-09-24 00:25 — e59468b — landing-wt2@hero-subtext (1 files since origin/main)
 **tl;dr:** Hero subtext now says fans vote from the artist's own setlist, with that phrase in orange
 **Other sessions:** public/about.html line ~397 only; no code/behavior change
