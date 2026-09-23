@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-24 00:25 — e59468b — landing-wt2@hero-subtext (1 files since origin/main)
+**tl;dr:** Hero subtext now says fans vote from the artist's own setlist, with that phrase in orange
+**Other sessions:** public/about.html line ~397 only; no code/behavior change
+
 ### 2026-09-20 22:46 — 2f6a095 — wt@docs/total-profit-live (0 files since origin/main)
 **tl;dr:** Docs only: 0086's amendment live as 2f6a095 (PR #82); the founder's book rewritten — rounded pay, hours by venue, tips share incl. votes bought, 11 test nights hidden
 **Other sessions:** No code. The founder's records now carry min for every show and tipsCut on every band night; uicheck's two profit figures (lines 564/614) are stale until recomputed. [skip ci]
