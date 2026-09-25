@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 11:05 — 64ea6d6 — wt@audit/sep-25-numbers (17 files since origin/main)
+**tl;dr:** The money model carries fifteen real nights and a MEASURED screen-on dial: Netlify's own per-day meters say a night costs ~3 credits (2.3–3.8, nearly flat from 3 to 11 phones) and the room's phones tick 42×/phone-hour (screen-on 9.4%, was a 22% guess); $1.04 a head over 11 money-known nights (three nights carry 85%); this period deploys 1,785 credits vs 117 of traffic, and the $9 plan's credits ran out 15 Sep (decision 0089, INVARIANT 0ge)
+**Other sessions:** tools/actuals.py: solve_meters reads finance/credits.json readings[-1].perDay.days[] (copy each day's requests/compute/bandwidth off Usage & billing; cleanFrom) → pollsPerPhoneHour + pollsSource + creditsPerShow (traffic only) in actuals.json; the bandwidth solver is FENCED — a quiet pair counts only within 48 h of a bracket, only if under 6 h, brackets over 24 h withheld, one-phone nights and empty slots are busy — so three marks per gig night (2 h before, just before, after) with nothing else running. boardBytes = BYTES.board = loadsim BOARD_BYTES = 3040 (calibration targets re-pinned). tools/actuals-test.py was RED on main since the split — fixed. Numbering: 0087/0088/0gc/0gd are the fan-script session's; this PR is 0089 / 0ge.
+
 ### 2026-09-25 10:54 — 9458031 — wt@docs/first-open-live (5 files since origin/main)
 **tl;dr:** Docs only: 0087 (the fan pages' shared script) and 0088 (the first-open speed pass) are live as 68efdb4 (PR #85); the ledger, session notes and decisions carry the AFTER measured on production [skip ci]
 **Other sessions:** No code. PERF-001/PERF-002 are done rows now — read them before touching fan.js, the vote page's head, or the fan door's DOORS. The AFTER table is in docs/sessions/2026-09-25-the-first-open-speed-pass.md.
