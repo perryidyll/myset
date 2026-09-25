@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 10:54 — 9458031 — wt@docs/first-open-live (5 files since origin/main)
+**tl;dr:** Docs only: 0087 (the fan pages' shared script) and 0088 (the first-open speed pass) are live as 68efdb4 (PR #85); the ledger, session notes and decisions carry the AFTER measured on production [skip ci]
+**Other sessions:** No code. PERF-001/PERF-002 are done rows now — read them before touching fan.js, the vote page's head, or the fan door's DOORS. The AFTER table is in docs/sessions/2026-09-25-the-first-open-speed-pass.md.
+
 ### 2026-09-25 10:48 — ce92ad2 — wt@perf/fan-script (38 files since origin/main)
 **tl;dr:** The nine fan pages share one script (public/fan.js, decision 0087) and a fan's first open paints first (0088): one picture per slot on the artist page (~400 KB of originals gone), no blocking script in any head, the vote page's logo screen at HTML arrival with app.css's tokens inline and app.css preloaded, the directory and the map key through the warm door and edge-shared
 **Other sessions:** fan.js is a global namespace — never declare $, esc, toast, openSheet/closeSheet/attachDrag, drift, lift, hideIntro, MON/DOW, SHEETY, FROZEN… on a fan page (test/structure.mjs refuses); after ANY edit to fan.js run node tools/stamp.mjs (nine pages). vote.html's <style id=tokens> must equal app.css's :root blocks byte for byte — a token edit is a two-file edit. Never a layered background-image url(a),url(b) on a fan page (0gd). fan.mjs DOORS += artists, mapconfig (jsonCached 60/300 s); index/artists ask /api/fan?what=…, old addresses still up. uicheck/sheetcheck/clipcheck run again (tools/_puppeteer.mjs finds puppeteer-core by content). The ~/Docs/MySet checkout is 67+ commits behind origin/main — work from a worktree of origin/main.
