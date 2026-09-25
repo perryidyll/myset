@@ -1,4 +1,4 @@
-import { json } from './_lib.mjs';
+import { jsonCached } from './_lib.mjs';
 import { readArtists } from './_auth.mjs';
 import { getProfile } from './_profile.mjs';
 import { readEvents, occurrencesFor } from './_events.mjs';
@@ -87,5 +87,8 @@ export default async (req) => {
   }
 
   artists.sort((a, b) => a.name.localeCompare(b.name));
-  return json({ ok: true, artists });
+  /* The same list for every phone: kept at the edge for a minute (decision 0088).
+     Nothing above read a token or a fan id, and only public-profile fields are
+     in it, so a shared copy leaks nothing a direct call would not. */
+  return jsonCached({ ok: true, artists }, 60);
 };

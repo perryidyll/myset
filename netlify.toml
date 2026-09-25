@@ -141,7 +141,8 @@
     #
     # `script-src` still needs 'unsafe-inline': every page is one file with its
     # script inline and its buttons wired with onclick, which is a deliberate
-    # choice (one request, no build step) and not something to undo for a header.
+    # choice (one request, no build step; since decision 0087 the fan pages also load
+    # the shared fan.js, same-origin under 'self') and not something to undo for a header.
     # It is worth saying plainly what that costs: this policy does NOT stop an
     # injected inline <script>. What it does stop is that script LOADING anything,
     # or sending what it found anywhere — connect-src is 'self', so a stolen token
@@ -268,6 +269,13 @@
     Cache-Control = "public, max-age=31536000, immutable"
 [[headers]]
   for = "/studio-money.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+# The fan pages' shared script (decision 0087) is stamped the same way — every public
+# page loads /fan.js?v=<sha1[:8]> right before its own script — so the same year
+# applies. After /:slug, which also matches it, like the rules above.
+[[headers]]
+  for = "/fan.js"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 # The report is a Studio page opened by one person, a few times a year, to print:

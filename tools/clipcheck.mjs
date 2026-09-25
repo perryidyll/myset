@@ -19,9 +19,10 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import puppeteer from '/Users/perryidyll/Docs/MySet-Content/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
+import { fileURLToPath } from 'node:url';
+import puppeteer from './_puppeteer.mjs';   // resolved by content, not by a typed path (2026-09-25)
 
-const ROOT = process.env.MYSET_PUBLIC || '/Users/perryidyll/Docs/MySet/public';
+const ROOT = process.env.MYSET_PUBLIC || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');   // the public/ beside THIS file, as uicheck and sheetcheck do
 const TYPES = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.json':'application/json','.png':'image/png','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
 const srv = http.createServer((req,res)=>{
   const u = new URL(req.url,'http://x'); const p = path.join(ROOT, u.pathname);

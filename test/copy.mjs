@@ -101,11 +101,12 @@ ok('the shop keeps its own last-seen copy, never the community page\'s', /lastSe
 ok('the shop offers Buy only where the server would take the money', /canBuy\s*&&\s*m\.cents\s*>=\s*100/.test(shop));
 ok('the community page no longer sells — it wears the shop card instead',
    !/data-buy=/.test(community) && /class="shopcard/.test(community));
-/* the More strip in the product sheet: a scroller, so never a place a sheet drag starts from (0f1), and a
-   card swaps the open entry rather than stacking one — Back closes the sheet in one step. tools/sheetcheck.mjs
-   and tools/uicheck.mjs prove both in a browser; this is the copy of the rule the suite can read. */
+/* the More strip in the product sheet: a scroller, so never a place a sheet drag starts from (0f1) — since
+   decision 0087 the page says so on the element (data-scroller, read by fan.js's attachDrag) — and a card swaps
+   the open entry rather than stacking one — Back closes the sheet in one step. tools/sheetcheck.mjs and
+   tools/uicheck.mjs prove both in a browser; this is the copy of the rule the suite can read. */
 ok('the sheet\'s More strip and gallery are scrollers to the drag code, and a card swaps the history entry',
-   /SCROLLER='\.sizes,\.more,\.gal'/.test(shop) && /mode==='swap'\)\s*history\.replaceState\(\{m:id\}/.test(shop));
+   /id="sheet"[^>]*data-scroller="\.sizes,\.more,\.gal"/.test(shop) && /mode==='swap'\)\s*history\.replaceState\(\{m:id\}/.test(shop));
 /* THE FOUNDER'S SECOND LOOK (2026-09-14): the pictures at the top of the sheet under the title
    and price with the sizes beneath; no pause control; gradient step numerals; "shipping" for
    "postage" everywhere a person reads; the Paid-to line in the brand pink-orange; the Studio's
@@ -208,7 +209,7 @@ ok('the home page links to the artist directory and its requested filters',
    /MySet shows in next 30 days/.test(directory)&&/Music released/.test(directory)&&/Signed/.test(directory)&&
    /All countries/.test(directory)&&/All cities/.test(directory)&&/All styles/.test(directory)&&/Any rating/.test(directory));
 ok('the artist directory map is readiness-gated and the CSP permits its Google services',
-   /id="mapBtn"[^>]*hidden/.test(directory)&&/api\/mapconfig/.test(directory)&&/maps\/api\/js/.test(directory)&&/navigator\.geolocation/.test(directory)&&
+   /id="mapBtn"[^>]*hidden/.test(directory)&&/what=mapconfig/.test(directory)&&/maps\/api\/js/.test(directory)&&/navigator\.geolocation/.test(directory)&&
    /URLSearchParams\(location\.search\)\.get\('map'\)==='1'/.test(directory)&&
    /https:\/\/maps\.googleapis\.com/.test(read('netlify.toml')));
 ok('both public maps place pins from saved coordinates rather than address guesses',

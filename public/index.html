@@ -15,6 +15,11 @@
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
+<!-- THE FRONT DOOR'S FIRST READS START HERE, before the rest of the page has arrived (decision 0088,
+     the head start the artist and vote pages have had since 0050): the places picker, and — when this
+     phone remembers a city — that city's feed, so a returning person's gigs are on their way before
+     the body is parsed. boot() and search() pick the promises up; a mismatch is simply not used. -->
+<script>(()=>{try{const g=(u)=>{const f=fetch(u,{cache:'no-store'});f.catch(()=>{});return f};let c='',t='';try{c=localStorage.getItem('myset.country')||'';t=localStorage.getItem('myset.city')||''}catch(e){}window.__early={places:g('/api/fan?what=events&places=1'),feed:(c&&t)?g('/api/fan?what=events&country='+encodeURIComponent(c)+'&city='+encodeURIComponent(t)):null,feedFor:c+'|'+t}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
@@ -29,12 +34,6 @@
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="/app.css">
-<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
-     from an inline script, and a deferred script runs AFTER all of those —
-     so `defer` here makes MySetPull undefined at the moment it is called and
-     the gesture silently never arms. 4KB, same origin, and the service worker
-     serves it from cache, so blocking costs nothing measurable. -->
-<script src="/pull.js"></script>
 <style>
 body{padding-bottom:34px}
 
@@ -283,6 +282,7 @@ body{padding-bottom:34px}
 .bg{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;z-index:60;
   transition:opacity .3s var(--ease)}
 .bg.on{opacity:1;pointer-events:auto}
+body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}   /* frozen under the sheet (0f2) */
 .sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(102%);
   width:100%;max-width:var(--maxw);max-height:92vh;overflow-y:auto;background:var(--surface);
   border-radius:var(--r-lg) var(--r-lg) 0 0;z-index:65;
@@ -389,7 +389,7 @@ body{padding-bottom:34px}
   </div>
 </div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert></div>
 <div class="homemap" id="homeMapModal" hidden role="dialog" aria-modal="true" aria-labelledby="homeMapTitle" data-nopull>
   <section class="hmapsheet">
     <div class="hmaphead" id="homeMapHead"><span class="hgrab" aria-hidden="true"></span><div><h2 id="homeMapTitle">Upcoming show map</h2><p id="homeMapMeta">Loading shows…</p></div><button class="hmapclose" id="homeMapClose" type="button" aria-label="Close map">×</button></div>
@@ -399,9 +399,13 @@ body{padding-bottom:34px}
 
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
+<!-- pull.js sits with the other scripts at the end of the body (decision 0088): a
+     blocking script in the head held the whole page's parse for its own round trip —
+     0.15–0.5 s measured on a first visit, which is the visit that matters — and
+     nothing here calls MySetPull() before the body has arrived. -->
+<script src="/pull.js"></script>
+<script src="/fan.js?v=580721d7"></script>
 <script>
-const $=s=>document.querySelector(s), API='/api';
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 let HOME_MAP_PROMISE=null,HOME_MAP=null,HOME_INFO=null,HOME_MARKERS=new Map();
 const homeCoords=e=>e.maps&&Number.isFinite(e.maps.lat)&&Number.isFinite(e.maps.lng);
 const homeKey=e=>`${e.maps.lat},${e.maps.lng}`;
@@ -457,8 +461,11 @@ let PLACES=null;
 const remember=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 const recall=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}};
 
+let EARLY=null;   // the head-started city feed, used once by search() if it is for the same city
 async function boot(){
-  try{ PLACES=await fetch(`${API}/events?places=1`,{cache:'no-store'}).then(r=>r.json()); }catch(e){}
+  const E=window.__early||{}; window.__early=null;     // the head started these; see <head>
+  EARLY=E.feed?{feed:E.feed,feedFor:E.feedFor}:null;
+  try{ PLACES=await (E.places||fetch(`${API}/fan?what=events&places=1`,{cache:'no-store'})).then(r=>r.json()); }catch(e){}
   const cs=$('#country');
   if(!PLACES||!PLACES.ok||!PLACES.countries.length){
     cs.placeholder='Nothing listed yet'; cs.disabled=true;
@@ -613,8 +620,9 @@ async function search(near){
   if(!near){ remember('myset.country',country); remember('myset.city',city); }
   $('#out').innerHTML=`<div class="blank"><b>Looking…</b></div>`;
   let d=null;
-  try{ d=await fetch(`${API}/events?country=${encodeURIComponent(country)}&city=${encodeURIComponent(city)}`,
-    {cache:'no-store'}).then(r=>r.json()); }catch(e){}
+  const early=(EARLY&&EARLY.feedFor===country+'|'+city)?EARLY.feed:null; EARLY=null;   // the head's copy, if it is this city's
+  try{ d=await (early||fetch(`${API}/fan?what=events&country=${encodeURIComponent(country)}&city=${encodeURIComponent(city)}`,
+    {cache:'no-store'})).then(r=>r.json()); }catch(e){}
   if(!d||!d.ok){ $('#out').innerHTML=`<div class="blank"><b>Couldn’t load that</b><p>Try again in a moment.</p></div>`; return; }
 
   if(!d.total){
@@ -795,24 +803,16 @@ function renderFeed(q){
    whatever the server last said. The state lives on the FEED rows, not in the
    DOM: renderFeed() redraws on every keystroke in the search box, so a button
    only ever paints what the row and the map say. */
-function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
-  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
-  return v;}
 /* Once per load, as vote.html does: a phone that blocks storage would otherwise
    be a new fan on every tap, each one another "going" nobody can take back. */
 const FAN=fanId();
-const RSVP_KEY='myset.rsvp';
-/* The same phone keeps its answers in memory too, so with storage blocked a
-   second tap still reads as "take me off" rather than another yes. */
-let RSVP_MEM={};
-const rsvpMap=()=>{try{const m=JSON.parse(localStorage.getItem(RSVP_KEY)||'{}');return m&&typeof m==='object'?m:{}}catch(e){return RSVP_MEM}};
 /* An artist's gig is keyed by the artist's slug (empty for the founding page,
    exactly as the events fetch and /api/rsvp?a= read it); a venue's own event by
    'v:' and the venue's slug. */
 const rsvpOwner=g=>g.kind==='event'?'v:'+(g.venueSlug||''):(g.slug||'');
 const rsvpKey=g=>`${rsvpOwner(g)}|${g.eventId||''}|${g.date}`;
 const rsvpMine=g=>!!rsvpMap()[rsvpKey(g)];
-function rsvpSet(g,on){const m=rsvpMap(); if(on)m[rsvpKey(g)]=1; else delete m[rsvpKey(g)]; RSVP_MEM=m; try{localStorage.setItem(RSVP_KEY,JSON.stringify(m))}catch(e){}}
+function rsvpSet(g,on){ rsvpRemember(rsvpKey(g),on); }
 const rsvpRows=k=>{const out=[]; if(!FEED)return out;
   for(const day of FEED.days)for(const g of [...(day.featured||[]),...day.gigs])if(rsvpKey(g)===k)out.push(g);
   return out;};
@@ -853,15 +853,8 @@ function bindRsvp(){
   });
 }
 
-const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const shortDate=d=>`${+d.slice(8,10)} ${MON[+d.slice(5,7)-1]}`;
-const MONFULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const dayMonth=d=>`${+d.slice(8,10)} ${MONFULL[+d.slice(5,7)-1]}`;
-/* No single link opens in whichever map app a phone actually uses, so the server
-   builds both and this picks: Apple devices get Apple Maps, everyone else
-   Google. */
-const APPLE=/(iPhone|iPad|iPod|Macintosh|Mac OS X)/i.test(navigator.userAgent||'');
-const dirBtn=m=>{const h=(APPLE?m.apple:m.google)||m.google||m.apple||''; if(!h)return '';
+const dirBtn=m=>{const h=dirHref(m); if(!h)return '';
   return `<a class="dirs" href="${esc(h)}" target="_blank" rel="noopener noreferrer">Directions</a>`;};
 
 /* ── save it to your home screen ────────────────────────
@@ -931,16 +924,11 @@ const A2HS_STEPS = {
     ['That’s it — MySet is on your home screen', 'opens full screen, no address bar'],
   ],
 };
-function openA2HS(){
-  drawA2HSSheet();
-  $('#bg').classList.add('on'); $('#sheet').classList.add('on');
-}
+function openA2HS(){ drawA2HSSheet(); }
 function setOS(v){ OS=v; drawA2HSSheet(); }
 function drawA2HSSheet(){
   const steps=A2HS_STEPS[OS]||A2HS_STEPS.ios;
-  $('#sheet').innerHTML=`<div class="grabzone"><div class="grab"></div>
-      <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>
-    <h3>Put MySet on your home screen</h3>
+  openSheet(`<h3>Put MySet on your home screen</h3>
     <p class="lede">Then it opens like an app — full screen, one tap, and it remembers
       where you were.</p>
     ${INSTALL_EVENT?`<button class="go" onclick="installA2HS()" style="margin:18px 0 0">Install MySet</button>
@@ -954,10 +942,8 @@ function drawA2HSSheet(){
     </div>
     <p class="sheetfoot">${OS==='ios'
       ? 'It has to be <b>Safari</b> on an iPhone — Chrome on iOS can’t add to the home screen.'
-      : 'Wording moves around a little between Android versions; look for “Add to Home screen” or “Install”.'}</p>`;
+      : 'Wording moves around a little between Android versions; look for “Add to Home screen” or “Install”.'}</p>`);
 }
-function closeSheet(){ $('#bg').classList.remove('on'); $('#sheet').classList.remove('on'); }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 drawA2HS();
 
 boot();

@@ -229,6 +229,15 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 .sheet h3{font-size:22px;font-weight:700;letter-spacing:-.03em;margin:12px 0 4px}
 .sheet .lede{font-size:14px;color:var(--muted);margin:0 0 14px;line-height:1.5}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
+/* the grab zone and the ✕ — the same sheet as every other fan page (fan.js, decision 0087) */
+.grabzone{position:relative;min-height:56px;display:flex;align-items:center;margin:-8px 0 4px;cursor:grab;touch-action:none}
+.sheet h3,.sheet .lede{touch-action:none;-webkit-user-select:none;user-select:none}
+.grabzone:active{cursor:grabbing}
+.grabzone .grab{margin:0 auto}
+.sheetx{position:absolute;top:6px;right:0;width:38px;height:38px;border-radius:50%;
+  border:0;background:var(--bg-2);color:var(--muted);font-size:15px;display:grid;
+  place-items:center;cursor:pointer;transition:transform .2s var(--spring)}
+.sheetx:active{transform:scale(.9)}
 .inp{width:100%;min-height:50px;padding:14px 16px;font-size:16px;background:var(--bg);
   border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink)}
 .inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
@@ -315,46 +324,19 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
   <div class="foot">MySet · myset.vip</div>
 </div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert></div>
 <div class="toast" id="toast"></div>
 
 <!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
+<script src="/fan.js?v=580721d7"></script>
 <script>
-const $=s=>document.querySelector(s), API='/api';
 /* /v/<slug> — the second segment is the venue. */
 const SLUG=(()=>{const p=location.pathname.split('/').filter(Boolean);
   return (p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';})();
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const dayNum=d=>+d.slice(8,10);
-(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
-  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
-  if(A){ A.href=a?'/studio?tab=setlist':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
-  if(V){ V.href='/venues'; document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
-  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
-})();
-const monShort=d=>MON[+d.slice(5,7)-1];
-const MONFULL=['January','February','March','April','May','June','July','August','September','October','November','December'];
-const dayMonth=d=>`${+d.slice(8,10)} ${MONFULL[+d.slice(5,7)-1]}`;
-const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOW[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
-const todayISO=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
-function whenWord(date){
-  const t=todayISO(); if(date===t) return 'Tonight';
-  const tm=new Date(Date.now()+86400000);const p=n=>String(n).padStart(2,'0');
-  if(date===`${tm.getFullYear()}-${p(tm.getMonth()+1)}-${p(tm.getDate())}`) return 'Tomorrow';
-  return dowName(date);
-}
-const fmtTime=t=>{const p=String(t||'').split(':');let h=+p[0];
-  if(!Number.isFinite(h))return '';const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
-/* No single link opens in whichever map app a phone actually uses, so the server
-   builds both and this picks. */
-const APPLE=/(iPhone|iPad|iPod|Macintosh|Mac OS X)/i.test(navigator.userAgent||'');
-const dirHref=m=>(m?((APPLE?m.apple:m.google)||m.google||m.apple):'')||'';
+menuDoors();
 const DAYKEY=['sun','mon','tue','wed','thu','fri','sat'];
 
 let V=null, MINE=null;
@@ -405,7 +387,6 @@ const amIcon=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${AMICON[k]||'<circ
    replayed the entrance animations under the reader's thumb. */
 function showAmen(){ AMEN_ALL=true; const e=$('#amen'); if(e) e.classList.remove('folded'); const s=$('.showall'); if(s) s.remove(); }
 
-function hideIntro(){const i=document.getElementById('intro');if(i)i.classList.add('off');}
 async function boot(){
   if(!SLUG){ notFound(); hideIntro(); return; }
   let d=null;
@@ -457,13 +438,8 @@ const dirPill=h=>h?`<a class="dirs" href="${esc(h)}" target="_blank" rel="noopen
    artist's slug, the venue's own event under v:<venueSlug> — so a phone that said
    yes on the front door reads as going here too. A row without an id (an older
    reply) draws no button rather than one that leads to a shrug. */
-function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
-  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
-  return v;}
 const rsvpOwner=g=>g.kind==='event'?'v:'+SLUG:(g.slug||'');
 const rsvpKey=g=>`${rsvpOwner(g)}|${g.eventId}|${g.date}`;
-function rsvpMap(){try{const m=JSON.parse(localStorage.getItem('myset.rsvp')||'{}');return m&&typeof m==='object'?m:{};}catch(e){return {};}}
-function rsvpRemember(k,on){try{const m=rsvpMap();if(on)m[k]=1;else delete m[k];localStorage.setItem('myset.rsvp',JSON.stringify(m));}catch(e){}}
 const rsvpCol=g=>g.eventId?`<div class="rsvpcol"><button class="rsvp" type="button" data-k="${esc(rsvpKey(g))}" aria-pressed="${rsvpMap()[rsvpKey(g)]?'true':'false'}">RSVP</button>
           <span class="going">${Number(g.rsvp)||0} going</span></div>`:'';
 /* Optimistic, then the server's word; a refused tap goes back and says so. Every
@@ -761,30 +737,10 @@ async function doVouch(){
   }catch(e){ toast('Connection hiccup — try again'); }
 }
 
-function share(){ const url=`${location.origin}/v/${SLUG}`, title=`${(V&&V.venue&&V.venue.name)||'A venue'} — MySet`;
-  if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
-  try{ navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast(url)); }catch(e){ toast(url); } }
+function share(){ shareLink(`${location.origin}/v/${SLUG}`, `${(V&&V.venue&&V.venue.name)||'A venue'} — MySet`); }
 
-/* The page behind is frozen while the sheet is up (INVARIANT 0f2) — the same
-   mechanics as vote.html: fix the body at the offset it was at, put it back on
-   close. Without it iOS scrolls the page under the sheet. */
-let SHEETY=0;                    // where the page was before it was frozen
-function openSheet(h){$('#sheet').innerHTML=`<div class="grab"></div>${h}`;
-  if(!document.body.classList.contains('sheeting')){
-    SHEETY=window.scrollY||0;
-    document.body.style.top=`-${SHEETY}px`;
-    document.body.classList.add('sheeting');
-  }
-  $('#sheet').scrollTop=0;
-  $('#bg').classList.add('on');$('#sheet').classList.add('on');}
-function closeSheet(){$('#bg').classList.remove('on');$('#sheet').classList.remove('on');
-  if(document.body.classList.contains('sheeting')){
-    document.body.classList.remove('sheeting'); document.body.style.top='';
-    window.scrollTo(0,SHEETY);
-  }}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet();});
-let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
-  clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3400);}
+/* ── THE SHEET ── openSheet(h,label), closeSheet() and the drag are fan.js's (decision 0087): a grab zone,
+   an ✕, a real drag, the page behind frozen and inert (INVARIANTS 0f0–0f2). Opening again while open only swaps the body. */
 
 boot();
 </script>

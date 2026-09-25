@@ -557,6 +557,35 @@ If you are about to violate one, stop and say so rather than working around it.
     wears the Diary door only when `profile.diary > 0` (the third rule).
     `test/diaries.mjs`.
 
+0gc. **The fan pages share one script, and a name it declares is declared nowhere
+    else.** `public/fan.js` (decision `0087`) is loaded by every fan page right
+    before the page's own `<script>` — the sheet and its drag (0f0–0f2), the toast,
+    the share sheet, the date words, the device id, the strips, the rsvp memory,
+    the menu's doors — and its top-level names are globals the page reads by bare
+    name. A page that declares one of them again throws before its first line runs
+    (`const` twice in the global lexical scope) and paints nothing, the vote page
+    included; `test/structure.mjs` refuses the pair, and refuses a page with a
+    sheet that does not load the file. A page's own needs go in its own script
+    (the community page parks its composer on the sheet's `sheetopen` event) or
+    its markup (the shop's sheet names its drag zones with `data-handle` /
+    `data-scroller`), never in a second copy. The file is addressed by its hash
+    (`?v=sha1[:8]`, `tools/stamp.mjs`, run after ANY edit) and served immutable
+    for a year, so a stale stamp ships last week's helpers under this week's page
+    — the same rule as `studio.js` (0053). What stays per page on purpose: `SLUG`,
+    `FAN`, and the payment-return path (5b) — its logic, that is: the receipt it
+    draws goes through the shared `toast`, `money`, `$` and `esc`, so an edit to
+    those is an edit to the voting page's return trip too.
+
+0gd. **A picture is fetched once — never a layered `background-image` as a
+    fallback.** `background-image: url(small), url(original)` is a STACK, not a
+    fallback: the browser downloads every layer and paints the first one on top.
+    The artist page's three thumbnails and the portrait were drawn that way and
+    pulled ~400 KB of full-size originals on every first open that nobody ever saw
+    (measured in a real browser, 2026-09-25, decision `0088`). A slot is an `<img>`
+    of the small copy with the original only on `error`, the way the cover has
+    always done it; a low-res placeholder behind it is the one exception, because
+    it is meant to be seen. `test/structure.mjs` refuses `), url(` on a fan page.
+
 9d4. **Only production deploys cost credits — and `credit-burn.sh` used to bill
     the free ones.** It counted every `state == 'ready'` deploy at 15 credits,
     drafts and deploy previews included, and asked for a single page of 200. On

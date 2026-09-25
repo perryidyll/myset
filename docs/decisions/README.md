@@ -96,6 +96,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0084](0084-a-show-s-time-is-two-number-pad-boxes-per-kind-hou.md) | A show's time is two number-pad boxes per kind, hours and minutes, never parsed from one | 2026-09-18 | money | decided | perry |
 | [0085](0085-artist-diaries-lives-on-its-own-page-each-page-is.md) | Artist Diaries lives on its own page; each page is a written story tied to a song or a moment, and how many an artist can publish is capped by plan | 2026-09-18 | media | decided | perry |
 | [0086](0086-tips-are-shared-on-their-own-in-app-tips-and-my-cu.md) | Tips are shared on their own: In-app tips and My cut of tips on the show sheet, and the profit block reads Total or My cut | 2026-09-20 | money | accepted | founder |
+| [0087](0087-the-fan-pages-share-one-script.md) | The fan pages share one script | 2026-09-25 | performance | decided | perry |
+| [0088](0088-a-fan-s-first-open-is-the-visit-that-matters.md) | A fan's first open is the visit that matters | 2026-09-25 | performance | decided | perry |
 
 ## By area
 
@@ -113,7 +115,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md) · [0069](0069-every-document-is-copied-nightly-to-r2-and-a-restor.md)
 
-**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) · [0054](0054-a-signed-in-request-costs-two-hops-not-four.md)
+**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) · [0054](0054-a-signed-in-request-costs-two-hops-not-four.md) · [0087](0087-the-fan-pages-share-one-script.md) · [0088](0088-a-fan-s-first-open-is-the-visit-that-matters.md)
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) · [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md)
 

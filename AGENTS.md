@@ -70,6 +70,7 @@ need one that is not in §2.1, add it to `tools/overview.mjs`.
 | Area | Path | Rule |
 | --- | --- | --- |
 | Pages | `public/*.html` | Hand-written, self-contained, no build step. What you see is what ships. |
+| Shared fan script | `public/fan.js` | The sheet, the toast, the share sheet, the date words, the strips — one copy for every fan page (decision 0087, INVARIANT 0gc). A page never redeclares a name it declares; run `node tools/stamp.mjs` after ANY edit. |
 | Shared styles | `public/app.css` | Careful — but note **neither Studio loads it**. |
 | Studio styles | `public/lock.css` | Loaded by both Studios and nothing else. |
 | Studio scripts | `public/studio.js`, `public/venue-studio.js` | Each Studio's whole script, addressed by its own hash (decisions 0053, 0054). **After ANY edit run `node tools/stamp.mjs`** — it rewrites the `?v=` in the page; `test/structure.mjs` fails otherwise. |

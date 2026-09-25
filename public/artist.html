@@ -84,6 +84,13 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
 .cluster.solo .pav{width:120px;height:120px;border-radius:28px}
 .pth{width:40px;height:40px;border-radius:13px;background-size:cover;background-position:center;
   border:3px solid var(--bg);box-shadow:var(--sh-2)}
+/* ONE PICTURE PER SLOT (decision 0088, INVARIANT 0gd). These used to be drawn as layered
+   backgrounds — the 220px copy stacked over the original — as a fallback, and a browser
+   downloads EVERY layer: the three thumbs and the portrait pulled ~400 KB of originals
+   nobody saw. Now an <img> of the small copy, with the original only on error, the way
+   the cover has always done it; the portrait keeps its 48px copy behind as the placeholder. */
+.pth,.pav{overflow:hidden}
+.pth img,.pav img{display:block;width:100%;height:100%;object-fit:cover}
 /* EVERY PHOTO UP TOP ENLARGES ON A TAP (the founder, 2026-09-12): the cover, the
    portrait and the three small ones each carry data-zoom (the stored URL, not the
    thumbnail the slot was drawn from) and open the same lightbox the community page
@@ -541,8 +548,9 @@ a.pc:active{transform:scale(.97)}
   </div>
   <div id="app"></div>
   <div class="foot">MySet · myset.vip</div>
-  <div class="toast" id="toast"></div>
 </div>
+<!-- outside .wrap, like every other fan page: the sheet makes .wrap inert (fan.js), and a toast must still be read -->
+<div class="toast" id="toast"></div>
 <!-- the lightbox; empty until a photo opens it, so no <img> ever sits here with no src.
      data-nopull: every photo sits at the top of the page, so a swipe down on the black
      sheet would otherwise arm pull.js and reload the page under the fan's thumb -->
@@ -551,15 +559,14 @@ a.pc:active{transform:scale(.97)}
 <div class="win" id="win" role="dialog" aria-modal="true" tabindex="-1" data-nopull hidden></div>
 <!-- the Book sheet, and a booker's conversation at their link; empty until opened -->
 <div class="bg" id="bg" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" data-nopull></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" data-nopull inert></div>
 
 <!-- blocking on purpose, and here rather than in <head> so the splash above paints first; MySetPull() is called below (INVARIANT 0cf) -->
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
+<script src="/fan.js?v=580721d7"></script>
 <script>
-function hideIntro(){const i=document.getElementById('intro');if(i)i.classList.add('off');}
-const $=s=>document.querySelector(s), API='/api';
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
    /artist.html routes fall through to the founding artist. */
@@ -572,44 +579,16 @@ const VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
 const COMMHREF=SLUG?'/'+SLUG+'/community':'/community.html';
 const SHOPHREF=SLUG?'/'+SLUG+'/shop':'/shop.html';
 const DIARYHREF=SLUG?'/'+SLUG+'/diary':'/diary.html';
-let tT;function toast(m){const t=$('#toast');if(!t)return;t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
 /* The share sheet where the phone has one, the clipboard where it doesn't. */
-function share(){ const url=new URL(HOME,location.origin).href, title=((P&&P.name)||'MySet')+' — MySet';
-  if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
-  try{ navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast(url)); }catch(e){ toast(url); } }
+function share(){ shareLink(new URL(HOME,location.origin).href, ((P&&P.name)||'MySet')+' — MySet'); }
 document.getElementById('shareBtn').addEventListener('click',share);
-/* The menu's two doors. Whether somebody has a Studio is a local fact — the token
-   in this browser — never a question asked of the server from a public page
-   (INVARIANT 9h). A venue is a different account with its own token (0x). */
-(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
-  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
-  if(A){ A.href=a?'/studio?tab=setlist':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
-  if(V){ V.href='/venues'; document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
-  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
-})();
+menuDoors();
 
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const PROV={youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music'};
-const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
 /* Photos go through Netlify's Image CDN: resized to what the slot needs, served as
    WebP/AVIF, cached at the edge. A same-origin path is allowed by default. If the
    transform ever fails the <img> falls back to the original (onerror). */
 const cdn=(u,w)=>u&&u.startsWith('/')?`/.netlify/images?url=${encodeURIComponent(u)}&w=${w}&q=72`:u;
-const DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const dayNum=d=>+d.slice(8,10);
-const monShort=d=>MON[+d.slice(5,7)-1];
-const dowName=d=>{const [Y,M,D]=d.split('-').map(Number);return DOW[new Date(Date.UTC(Y,M-1,D)).getUTCDay()];};
-const todayISO=()=>{const d=new Date();const p=n=>String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;};
-function whenWord(date){
-  const t=todayISO();
-  if(date===t) return 'Tonight';
-  const tm=new Date(Date.now()+86400000);const p=n=>String(n).padStart(2,'0');
-  if(date===`${tm.getFullYear()}-${p(tm.getMonth()+1)}-${p(tm.getDate())}`) return 'Tomorrow';
-  return dowName(date);
-}
-const fmtTime=t=>{const p=t.split(':');let h=+p[0];const ap=h<12?'am':'pm';h=h%12||12;return `${h}:${p[1]}${ap}`;};
 /* 1400 reads worse than 1.4k in a 110px column, and these are bragging numbers
    rather than accounting ones. */
 /* The whole number up to 9,999 (with its comma), then one decimal place: 10k,
@@ -623,11 +602,6 @@ const compact=n=>{const v=Number(n)||0;
   return one(v/1e6)+'m';};
 const joinedWord=ms=>{if(!ms)return '';const d=new Date(Number(ms));
   return isNaN(d)?'':`${MON[d.getMonth()]} ${d.getFullYear()}`;};
-/* There is no one link that opens in whichever map app a phone uses, so the
-   server builds both and this picks. Safari on iOS and macOS gets Apple Maps;
-   everything else gets Google. */
-const APPLE=/(iPhone|iPad|iPod|Macintosh|Mac OS X)/i.test(navigator.userAgent||'');
-const dirHref=m=>(APPLE?m.apple:m.google)||m.google||m.apple||'';
 const PIN='<svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>';
 const dirBtn=(m,thin)=>{const h=dirHref(m); if(!h)return '';
   return `<a class="dirs${thin?' thin':''}" href="${esc(h)}" target="_blank" rel="noopener noreferrer">${thin?'':PIN}Directions</a>`;};
@@ -637,15 +611,7 @@ function nextGig(){ return (G&&G.ok?G.gigs:[]).find(g=>g.endsAt>Date.now())||nul
    pill that only counts down reads as a status, not a button. */
 function nextLabel(){
   const g=nextGig(); if(!g) return 'See the setlist';
-  let ms=g.startsAt-Date.now();
-  const VS='(<i class="vs">view setlist</i>)';
-  if(ms<=0) return 'Starting now '+VS;
-  const d=Math.floor(ms/86400000); ms-=d*86400000;
-  const h=Math.floor(ms/3600000);  ms-=h*3600000;
-  const m=Math.floor(ms/60000);    const sec=Math.floor((ms-m*60000)/1000);
-  if(d>0) return `Live in ${d}d ${h}h ${m}m ${String(sec).padStart(2,'0')}s ${VS}`;
-  if(h>0) return `Live in ${h}h ${m}m ${String(sec).padStart(2,'0')}s ${VS}`;
-  return `Live in ${m}m ${String(sec).padStart(2,'0')}s ${VS}`;
+  return liveIn(g.startsAt-Date.now(),'(<i class="vs">view setlist</i>)');
 }
 /* "Live now — N voting": the count comes from the shared, edge-cached board the room
    already polls, never from the profile (INVARIANT 0af). Same URL as the vote page
@@ -674,53 +640,11 @@ async function headCount(){
 /* One loop per strip, keyed by id, so the proof strip and the links strip each
    keep their own frame handle and resume timer. dir is +1 for right-to-left (the
    content moves left, as the proof strip always has) and -1 for left-to-right. */
-const DRIFT={};
 function startProof(){ drift('proof',1); drift('links',-1); drift('reel',1); }
-function drift(id,dir){
-  const H=DRIFT[id]||(DRIFT[id]={PT:null,PR_:null});
-  cancelAnimationFrame(H.PT); clearTimeout(H.PR_);
-  const el=document.getElementById(id); if(!el||el.children.length<2)return;
-  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
-  const copy=el.querySelector('[aria-hidden="true"]'); if(!copy)return;
-  /* One set's width, gap included — read every frame, not once: a page drawn from
-     the last-seen copy runs this before the preloaded stylesheet has landed, and a
-     width measured then is the wrong width for the rest of the visit. */
-  const span=()=>copy.offsetLeft-el.children[0].offsetLeft;
-  /* Two cards on a tablet-wide screen: one copy of the set is not enough for the
-     scroll to reach the seam (the strip would stall at its end, then jump back), so
-     more copies go on until it can — checked per frame for the same reason span()
-     is, and capped so a strip that never measures right cannot grow forever. */
-  const ghosts=[...el.children].filter(c=>c.getAttribute('aria-hidden')==='true'); let extra=0;
-  const topUp=()=>{const s=span(); if(s>0&&extra<4&&s+el.clientWidth>el.scrollWidth){ghosts.forEach(c=>el.appendChild(c.cloneNode(true)));extra++;}};
-  let hold=false, touching=false, x=el.scrollLeft, last=0;
-  const pause=()=>{hold=true;clearTimeout(H.PR_);};
-  const resume=()=>{clearTimeout(H.PR_);H.PR_=setTimeout(()=>{hold=false;x=el.scrollLeft;last=0;},1000);};
-  el.addEventListener('touchstart',()=>{touching=true;pause();},{passive:true});
-  el.addEventListener('touchend',()=>{touching=false;resume();},{passive:true});
-  el.addEventListener('touchcancel',()=>{touching=false;resume();},{passive:true});
-  el.addEventListener('pointerdown',pause,{passive:true});
-  el.addEventListener('wheel',()=>{pause();resume();},{passive:true});
-  el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')pause();});
-  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')resume();});
-  el.addEventListener('scroll',()=>{if(hold){x=el.scrollLeft;if(!touching)resume();}},{passive:true});
-  const step=(t)=>{
-    if(!el.isConnected)return;
-    H.PT=requestAnimationFrame(step);
-    if(hold||document.hidden){last=0;return;}
-    /* Running backwards, the scroll starts one set in and is pushed forward by a set
-       whenever it reaches the front — the same seam, seen from the other side. */
-    if(last){ topUp(); const s=span(); x+=dir*28*(t-last)/1000;
-      if(s>0){ if(x>=s)x-=s; else if(x<0)x+=s; } el.scrollLeft=x; }
-    else if(dir<0&&!el.scrollLeft){ const s=span(); if(s>0){x=s;el.scrollLeft=x;} }
-    last=t;
-  };
-  H.PT=requestAnimationFrame(step);
-}
 /* A second copy of a card for a drifting strip: out of the tab order and hidden from
    a screen reader, which reads one set. */
-const ghost=c=>c.replace(/^<a /,'<a tabindex="-1" aria-hidden="true" ').replace(/^<div /,'<div aria-hidden="true" ');
 /* The band name or first name the artist chose (decision 0062), else the first word. */
-const firstName=()=>(P&&String(P.first||'').trim())||String(P&&P.name||'').split(' ')[0]||'the artist';
+const firstName=()=>firstNameOf(P);
 /* One media item as the full card: a poster with a play button, the widget arrives
    on tap (see the click handler). The facade is just a poster — the widget takes its
    real height on load, so a 450px Apple album card doesn't sit there as an empty
@@ -789,17 +713,12 @@ const LABEL={instagram:'Instagram',spotify:'Spotify',applemusic:'Apple Music',yt
 let P=null,S=null,G=null,ROWS=[];
 
 /* RSVP (the founder, 2026-09-12). The fan is the same anonymous id the vote page
-   keeps — the recipe is copied from there, so a phone that has voted RSVPs as the
-   same person. The page remembers its own answers in 'myset.rsvp' (one key per
+   keeps — fanId() in fan.js, one recipe for every page — so a phone that has voted
+   RSVPs as the same person. The page remembers its own answers in 'myset.rsvp' (one key per
    owner|event|date); the count comes from the row the server sent. Every storage
    read and write is wrapped, because private browsing throws. */
-function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
-  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
-  return v;}
 const OWNER=SLUG||'perryidyll';                       // the same fallback the events fetch uses
 const rsvpKey=g=>`${OWNER}|${g.eventId}|${g.date}`;
-function rsvpMap(){try{const m=JSON.parse(localStorage.getItem('myset.rsvp')||'{}');return m&&typeof m==='object'?m:{};}catch(e){return {};}}
-function rsvpRemember(k,on){try{const m=rsvpMap();if(on)m[k]=1;else delete m[k];localStorage.setItem('myset.rsvp',JSON.stringify(m));}catch(e){}}
 /* The tap flips the button at once and asks the server; the reply is the truth
    (on and the new count), and a failed request puts the button back and says so —
    the button is never left in a state the server did not confirm. Every paint goes
@@ -857,24 +776,13 @@ document.getElementById('app').addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ')return;
   const z=e.target.closest('[data-zoom]'); if(!z)return; e.preventDefault(); lbOpen(z);});
 document.getElementById('lb').addEventListener('click',lbClose);
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){lbClose();winClose();closeSheet();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){lbClose();winClose();}});   // the sheet closes itself (fan.js)
 
 /* THE FLOATING WINDOW. One at a time; opening another replaces the first (the
    night's card opens over the calendar and Back redraws the calendar). Focus goes
    to the window while it is up and back to what opened it after. */
-/* THE PAGE BEHIND A WINDOW OR A SHEET IS FROZEN (INVARIANT 0f2): position:fixed at
-   the offset it was at, put back on close — iOS scrolls a page under an overlay
-   that only has overflow:hidden. One counter, so the sheet and the window can be
-   open together without either thawing the page under the other. */
-let FROZEN=0, SHEETY=0;
-function freezePage(){
-  if(FROZEN++)return;
-  SHEETY=window.scrollY||0; document.body.style.top=`-${SHEETY}px`; document.body.classList.add('sheeting');
-}
-function thawPage(){
-  if(!FROZEN||--FROZEN)return;
-  document.body.classList.remove('sheeting'); document.body.style.top=''; window.scrollTo(0,SHEETY);
-}
+/* The page behind a window or a sheet is frozen by fan.js's freezePage()/thawPage()
+   (INVARIANT 0f2) — one counter, so the window and the sheet can be open together. */
 let WINF=null;
 function winOpen(html,label,opener){
   const w=document.getElementById('win');
@@ -899,78 +807,8 @@ document.getElementById('win').addEventListener('click',e=>{
   else if(what==='cal')drawCal();
 });
 
-/* ── THE SHEET ── the community page's, copied: a grab ZONE big enough for a
-   thumb, an ✕ in the corner, a real drag, and the page behind frozen (INVARIANTS
-   0f0–0f2) — by freezePage() above, the one counter the window uses, so opening
-   the thread from the Book sheet, or a window over a sheet, never thaws the page
-   under the other. Opening again while open only swaps the body. */
-function openSheet(h,label){
-  const sh=document.getElementById('sheet');
-  if(!sh.classList.contains('on')) freezePage();
-  sh.setAttribute('aria-label',label||'');
-  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
-    <button class="sheetx" type="button" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
-  sh.style.transform=''; sh.scrollTop=0;
-  document.getElementById('bg').classList.add('on'); sh.classList.add('on');
-  attachDrag(sh);
-}
-function closeSheet(){
-  const sh=document.getElementById('sheet'); sh.style.transition=''; sh.style.transform='';
-  document.getElementById('bg').classList.remove('on');
-  if(!sh.classList.contains('on'))return;
-  sh.classList.remove('on'); thawPage();
-}
-function attachDrag(sh){
-  /* ONE set of listeners for the life of the page, delegated from the sheet —
-     rebinding on every open piled up stale closures that raced each other. */
-  if(sh.__drag)return;
-  sh.__drag=true;
-  let y0=null, dy=0, t0=0, fromBody=false;
-  const CONTROL='input,textarea,select,button,a,label,[contenteditable]';
-  /* THE SHEET IS CENTRED WITH translateX(-50%), so every transform written here
-     has to carry it (INVARIANT 0f0). */
-  const SHIFT='translateX(-50%) ';
-  const HANDLE='.grabzone,h3,.lede';
-  /* Anything that scrolls on its own is NOT a place to start dragging the sheet
-     from (0f1): the thread's bubbles, and a message being typed. */
-  const SCROLLER='.thread,textarea';
-  const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
-    fromBody=!!body; sh.style.transition='none'; };
-  const move=(e)=>{
-    if(y0===null)return;
-    dy=((e.touches?e.touches[0]:e).clientY)-y0;
-    if(dy<0){ dy=0; sh.style.transform=SHIFT+'translateY(0)'; return; }
-    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
-    sh.style.transform=SHIFT+`translateY(${dy}px)`;
-    if(e.cancelable)e.preventDefault();
-  };
-  const end=()=>{
-    if(y0===null)return;
-    const speed=dy/Math.max(1,Date.now()-t0);
-    y0=null;
-    sh.style.transition='';
-    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform=SHIFT+'translateY(0)';
-  };
-  const begin=(e)=>{
-    const t=e.target;
-    if(!t||!t.closest)return;
-    if(t.closest(CONTROL))return;
-    if(t.closest(SCROLLER))return;
-    const inZone=!!t.closest(HANDLE);
-    if(!inZone&&sh.scrollTop>0)return;
-    start(e,!inZone);
-  };
-  sh.addEventListener('touchstart',begin,{passive:true});
-  sh.addEventListener('touchmove',move,{passive:false});
-  sh.addEventListener('touchend',end);
-  sh.addEventListener('touchcancel',end);
-  sh.addEventListener('mousedown',(e)=>{
-    if(!e.target.closest(HANDLE)||e.target.closest(CONTROL))return;
-    start(e,false);
-    const mm=(ev)=>move(ev), mu=()=>{ end();
-      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
-    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
-}
+/* ── THE SHEET ── openSheet(h,label), closeSheet() and the drag are fan.js's (decision 0087): a grab zone,
+   an ✕, a real drag, the page behind frozen and inert (INVARIANTS 0f0–0f2). Opening again while open only swaps the body. */
 
 /* THE CALENDAR (the founder, 2026-09-14): the Studio's Gigs-tab month, on the
    page, with a dot on every night that has a show. The dots come from the gig list
@@ -1016,7 +854,7 @@ function drawCal(opener){
   const [Y,M]=CAL_MONTH.split('-').map(Number);
   const n=calGigs().length;
   winOpen(`<h3>Shows</h3><p class="lede">${n?`${n} night${n===1?'':'s'} listed over the next four months — tap a date.`:'Nothing listed yet.'}</p>
-    <div class="calhead"><b>${MONL[M-1]} ${Y}</b>
+    <div class="calhead"><b>${MONFULL[M-1]} ${Y}</b>
       <div class="calnav">
         <button type="button" data-win="month" data-n="-1" aria-label="Previous month" ${CAL_MONTH<=first?'disabled':''}>‹</button>
         <button type="button" data-win="month" data-n="1" aria-label="Next month" ${CAL_MONTH>=last?'disabled':''}>›</button>
@@ -1235,9 +1073,6 @@ document.getElementById('sheet').addEventListener('submit',e=>{
    in 30 ms with app.css two seconds out). A stylesheet that fails opens anyway:
    the door they were handed still leads somewhere. No answer from the server
    keeps the hash, so a pull-to-retry still has it. */
-let CSSOK=false;
-const cssLink=()=>document.querySelector('link[href="/app.css"]');
-const cssReady=()=>{ if(CSSOK)return true; const l=cssLink(); return CSSOK=!l||!!l.sheet||l.rel==='stylesheet'; };
 function cssGo(){ CSSOK=true; requestAnimationFrame(route); }   // a frame for the sheet's base state, so it slides rather than jumps
 function route(){
   const h=location.hash||'', m=/^#m=(t[a-z0-9]{10})\.([0-9a-f]{32})$/.exec(h);
@@ -1314,8 +1149,8 @@ function render(){
   h+=`
   <div class="phead">
     <div class="cluster ${shots.length?'':'solo'}">
-      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" ${zoom(u)} style="background-image:url('${esc(cdn(u,220))}'),url('${esc(u)}')"></div>`).join('')}</div>`:''}
-      ${avatar?`<div class="pav" ${zoom(avatar)} style="background-image:url('${esc(cdn(avatar,320))}'),url('${esc(cdn(avatar,48))}'),url('${esc(avatar)}')"></div>`:`<div class="pav blank" aria-hidden="true">${initial}</div>`}
+      ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" ${zoom(u)}><img src="${esc(cdn(u,220))}" alt="" decoding="async" data-raw="${esc(u)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"></div>`).join('')}</div>`:''}
+      ${avatar?`<div class="pav" ${zoom(avatar)} style="background-image:url('${esc(cdn(avatar,48))}')"><img src="${esc(cdn(avatar,320))}" alt="" decoding="async" data-raw="${esc(avatar)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"></div>`:`<div class="pav blank" aria-hidden="true">${initial}</div>`}
     </div>
     <div class="pname">
       <h1>${esc(P.name)}</h1>

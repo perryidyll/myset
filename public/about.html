@@ -59,12 +59,6 @@
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="stylesheet" href="/app.css">
-<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
-     from an inline script, and a deferred script runs AFTER all of those —
-     so `defer` here makes MySetPull undefined at the moment it is called and
-     the gesture silently never arms. 4KB, same origin, and the service worker
-     serves it from cache, so blocking costs nothing measurable. -->
-<script src="/pull.js"></script>
 <script>document.documentElement.className='anim';</script>
 <style>
 :root{--maxw:1080px;--gut:22px;--stage:#0B0B0D;--stage-ink:#F4F3F1;--stage-orange:#FF8A4C;
@@ -942,6 +936,12 @@ h2 b{color:var(--peace-orange);font-weight:inherit}
 
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
+<!-- pull.js sits with the other scripts at the end of the body (decision 0088): a
+     blocking script in the head held the whole page's parse for its own round trip —
+     0.15–0.5 s measured on a first visit, which is the visit that matters — and
+     nothing here calls MySetPull() before the body has arrived. -->
+<script src="/pull.js"></script>
+<script src="/fan.js?v=580721d7"></script>
 <script>
 /* Reveal on scroll, and the proof numbers counting up. Everything here is an
    enhancement: without it the page is already fully readable (see .anim above). */
@@ -1037,7 +1037,6 @@ const REELS = {
       alt: 'The report’s tables: Shows; Splits — Sam and Kim, 2 shows each, $450 total; Costs — dinner, taxi boat, petrol, $75; and Merch — 7 T-shirts and a vinyl, $310 — with a note that the figures were logged by the artist in MySet.' },
   ],
 };
-const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const shotCard = (m, ghost) => `<div class="phone"${ghost ? ' aria-hidden="true"' : ''}>
     <img src="${esc(m.src)}" width="${m.w}" height="${m.h}" loading="lazy" decoding="async" alt="${ghost ? '' : esc(m.alt)}">
     ${m.cap ? `<span class="cap">${esc(m.cap)}</span>` : ''}</div>`;
@@ -1052,41 +1051,8 @@ function startReels() {
     for (let c = 0; c < copies; c++) for (const m of list) h += shotCard(m, c > 0);
     el.innerHTML = h;
     el.closest('.reel-wrap').hidden = false;
-    if (!still) drift(el, 1);
+    if (!still) drift(el.id, 1);   // fan.js's strip loop — the artist page's, one copy
   }
-}
-/* The artist page's marquee (public/artist.html, drift()), for a strip of stills:
-   about 28 px a second, driven by the frame timestamp; a finger, a wheel or a
-   mouse over it stops it and it is a native scroller under the finger; it picks
-   up again a second after the strip last moved by hand. Nothing moves while the
-   tab is hidden. Kept in step with the original by hand — if that one changes
-   its feel, change this one. */
-function drift(el, dir) {
-  const copy = el.querySelector('[aria-hidden="true"]'); if (!copy) return;
-  const span = () => copy.offsetLeft - el.children[0].offsetLeft;
-  let hold = false, touching = false, x = el.scrollLeft, last = 0, timer = 0, raf = 0;
-  const pause = () => { hold = true; clearTimeout(timer); };
-  const resume = () => { clearTimeout(timer); timer = setTimeout(() => { hold = false; x = el.scrollLeft; last = 0; }, 1000); };
-  el.addEventListener('touchstart', () => { touching = true; pause(); }, { passive: true });
-  el.addEventListener('touchend', () => { touching = false; resume(); }, { passive: true });
-  el.addEventListener('touchcancel', () => { touching = false; resume(); }, { passive: true });
-  el.addEventListener('pointerdown', pause, { passive: true });
-  el.addEventListener('wheel', () => { pause(); resume(); }, { passive: true });
-  el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') pause(); });
-  el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') resume(); });
-  el.addEventListener('scroll', () => { if (hold) { x = el.scrollLeft; if (!touching) resume(); } }, { passive: true });
-  const step = (t) => {
-    if (!el.isConnected) return;
-    raf = requestAnimationFrame(step);
-    if (hold || document.hidden) { last = 0; return; }
-    if (last) {
-      const s = span(); x += dir * 28 * (t - last) / 1000;
-      if (s > 0) { if (x >= s) x -= s; else if (x < 0) x += s; }
-      el.scrollLeft = x;
-    }
-    last = t;
-  };
-  raf = requestAnimationFrame(step);
 }
 startReels();
 /* A pull reloads the page. This one is just content, so a real reload IS the

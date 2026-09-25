@@ -385,7 +385,9 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 </div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <!-- a dialog while open (the page behind is inert as well as frozen), inert itself while closed -->
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert></div>
+<!-- its drag zones (fan.js): not the lede — a scrolled sheet can still have the fulfilment line mid-screen, and a drag from there must scroll,
+     not close; the size row, the More strip and the gallery scroll on their own (0f1) -->
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert data-handle=".grabzone,h3" data-scroller=".sizes,.more,.gal"></div>
 <div class="lb" id="lb" onclick="this.classList.remove('on')"><img id="lbimg" alt=""></div>
 <div class="toast" id="toast" role="status"></div>
 <div id="paylive" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -394,124 +396,27 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
+<script src="/fan.js?v=580721d7"></script>
 <script>
-const $=s=>document.querySelector(s), API='/api';
 /* /<slug>/shop or /v/<slug>/shop — and the bare file with ?a=|?v= so tools/uicheck.mjs can open it */
 const P=location.pathname.split('/').filter(Boolean), qs=new URLSearchParams(location.search);
 const VENUE=P[0]==='v'||((!P[0]||P[0]==='shop.html')&&!!qs.get('v'));
 const SLUG=P[0]==='v'?(P[1]||''):(P[0]&&P[0]!=='shop.html'?P[0]:(qs.get('a')||qs.get('v')||''));
 const Q=VENUE?'?v='+encodeURIComponent(SLUG):(SLUG?'?a='+encodeURIComponent(SLUG):'?');
 const HOME=VENUE?'/v/'+SLUG:'/'+SLUG, COMMHREF=SLUG?HOME+'/community':'/community.html', VOTEHREF=SLUG?HOME+'/vote':'/vote.html', SHOPHREF=SLUG?HOME+'/shop':'/shop.html';
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 { const c=document.getElementById('crumb'); if(c) c.href=COMMHREF; }   // the crumb points at THIS page's community page, resolved with the slug
-/* the device id, this page's own copy (INVARIANT 5b); FAN goes to /api/pay and /api/confirm, never to the read */
-function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
-  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
-  return v;}
 const FAN=fanId();
-(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
-  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
-  if(A){ A.href=a?'/studio?tab=setlist':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
-  if(V){ document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
-  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
-})();
-let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
-const money=c=>'$'+(c/100).toFixed(c%100?2:0);
-const ago=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
+menuDoors();
 const day=t=>{try{return new Date(t).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}catch(e){return ''}};
 const REDUCED=()=>!!(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches);
 const host=l=>{try{return new URL(l).hostname.replace(/^www\./,'')}catch(e){return 'the link'}};
 const TABLE=VENUE?'the bar':'the merch table';
 /* the band name or first name the artist chose (decision 0062), else the first word; a venue reads d.name */
-const firstName=()=>(D&&String(D.first||'').trim())||String(D&&D.name||'the artist').split(' ')[0]||'the artist';
-/* ── sheets ── community.html's (INVARIANTS 0f0–0f2), plus: the page behind is inert, focus lands on the title and
-   returns to the opener, the closed sheet is inert, and an open sheet is a history entry (#m<id>) so Back closes it. */
-let SHEETY=0, OPENER=null;   // where the page was before it was frozen; what had focus
-function openSheet(h){
-  const sh=$('#sheet');
-  if(!document.body.classList.contains('sheeting')){
-    SHEETY=window.scrollY||0;
-    document.body.style.top=`-${SHEETY}px`;
-    document.body.classList.add('sheeting');
-    OPENER=document.activeElement;
-    const w=$('.wrap'); if(w){ w.inert=true; w.setAttribute('aria-hidden','true'); }
-  }
-  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
-    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
-  sh.style.transform=''; sh.scrollTop=0;
-  $('#bg').classList.add('on'); sh.classList.add('on'); sh.inert=false;
-  const t=sh.querySelector('h3'); if(t){ t.id='sheetTitle'; t.tabIndex=-1; }
-  setTimeout(()=>{ if(sh.classList.contains('on')) try{ (t||sh.querySelector('.sheetx')).focus({preventScroll:true}); }catch(e){} },100);
-  attachDrag(sh);
-}
-function closeSheet(){
-  const sh=$('#sheet');
-  /* when the open sheet is a history entry, closing it IS going back — popstate calls this again with the entry gone */
-  if(sh.classList.contains('on')&&history.state&&history.state.m){ history.back(); return; }
-  sh.style.transition='';sh.style.transform='';
-  $('#bg').classList.remove('on');sh.classList.remove('on'); sh.inert=true;
-  undrift('more');   // the strip in the sheet stops with the sheet
-  if(document.body.classList.contains('sheeting')){
-    document.body.classList.remove('sheeting'); document.body.style.top='';
-    window.scrollTo(0,SHEETY);
-    const w=$('.wrap'); if(w){ w.inert=false; w.removeAttribute('aria-hidden'); }
-    let o=OPENER; if(o&&!o.isConnected&&o.dataset&&o.dataset.item!=null) o=$(`#app [data-item="${o.dataset.item}"]`);   // the page was redrawn under the sheet (a ⏸, a 409): the same card, drawn again
-    if(o&&o.isConnected&&o!==document.body) try{ o.focus({preventScroll:true}); }catch(e){}
-    OPENER=null;
-  }
-  CUR=null;
-}
-function attachDrag(sh){
-  /* ONE set of listeners for the life of the page — rebinding on every open piled up stale closures */
-  if(sh.__drag)return;
-  sh.__drag=true;
-  let y0=null, dy=0, t0=0, fromBody=false;
-  const CONTROL='input,textarea,select,button,a,label,[contenteditable]';
-  /* THE SHEET IS CENTRED WITH translateX(-50%), so every transform written here
-     has to carry it (INVARIANT 0f0). */
-  const SHIFT='translateX(-50%) ';
-  /* NOT .lede (community.html has it): a scrolled sheet can still have the fulfilment line mid-screen, and a drag from there must scroll, not close. */
-  const HANDLE='.grabzone,h3';
-  /* Anything that scrolls on its own is NOT a place to start dragging the sheet from (0f1): here, the size row and the More strip. */
-  const SCROLLER='.sizes,.more,.gal';
-  const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
-    fromBody=!!body; sh.style.transition='none'; };
-  const move=(e)=>{
-    if(y0===null)return;
-    dy=((e.touches?e.touches[0]:e).clientY)-y0;
-    if(dy<0){ dy=0; sh.style.transform=SHIFT+'translateY(0)'; return; }
-    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
-    sh.style.transform=SHIFT+`translateY(${dy}px)`;
-    if(e.cancelable)e.preventDefault();
-  };
-  const end=()=>{
-    if(y0===null)return;
-    const speed=dy/Math.max(1,Date.now()-t0);
-    y0=null;
-    sh.style.transition='';
-    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform=SHIFT+'translateY(0)';
-  };
-  const begin=(e)=>{
-    const t=e.target;
-    if(!t||!t.closest)return;
-    if(t.closest(CONTROL))return;
-    if(t.closest(SCROLLER))return;
-    const inZone=!!t.closest(HANDLE);
-    if(!inZone&&sh.scrollTop>0)return;
-    start(e,!inZone);
-  };
-  sh.addEventListener('touchstart',begin,{passive:true});
-  sh.addEventListener('touchmove',move,{passive:false});
-  sh.addEventListener('touchend',end);
-  sh.addEventListener('touchcancel',end);
-  sh.addEventListener('mousedown',(e)=>{
-    if(!e.target.closest(HANDLE)||e.target.closest(CONTROL))return;
-    start(e,false);
-    const mm=(ev)=>move(ev), mu=()=>{ end();
-      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
-    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
-}
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
+const firstName=()=>firstNameOf(D);
+/* ── sheets ── fan.js's (INVARIANTS 0f0–0f2; decision 0087) — what this page taught it: the page behind is inert, focus lands on
+   the title and returns to the opener, and an open sheet is a history entry (#m<id>) so Back closes it. This page's own two things:
+   its drag zones are on the element (data-handle, data-scroller), and when the sheet closes the strip inside it stops. */
+document.getElementById('sheet').addEventListener('sheetclose',()=>{ undrift('more'); CUR=null; });
 
 /* ---------- the product sheet ---------- */
 let CUR=null, QTY=1, SIZE='', SAYT=0;
@@ -703,20 +608,12 @@ async function sendWish(){
 /* ---------- state, load, render ---------- */
 /* globals on purpose: tools/uicheck.mjs sets D and calls render() */
 var D=null;
-let RECEIPT=null, CHECKING='', HID=0, LIFT=0;
+let RECEIPT=null, CHECKING='', HID=0;
 const STILL=false;   // the strips have no pause control since 2026-09-14 (the founder); a finger stops them, reduced motion draws them still
 /* the picks strip (S8) is a founder toggle, OFF in v1 (NN/g, Baymard: no auto-forwarding strip above the grid); ?picks=1 previews it */
 const PICKS=qs.get('picks')==='1';
 const WV=(()=>{const m=/Instagram|FBAN|FBAV|FB_IAB|BytedanceWebview|musical_ly/i.exec(navigator.userAgent||''); if(!m) return ''; const s=m[0].toLowerCase(); return /instagram/.test(s)?'Instagram':/bytedance|musical/.test(s)?'TikTok':'Facebook';})();
 let HINT=!!WV&&(()=>{try{return localStorage.getItem('myset.shop.hint')!=='1'}catch(e){return true}})();
-const cssReady=()=>{try{return [...document.styleSheets].some(s=>s.href&&/\/app\.css/.test(s.href))}catch(e){return true}};
-/* the splash lifts when the cached paint is styled (app.css has landed) or after 400 ms, whichever is first */
-function lift(wait){
-  const i=document.getElementById('intro'); if(!i||i.classList.contains('off')||LIFT) return;
-  if(!wait||cssReady()){ i.classList.add('off'); return; }
-  LIFT=1; const t0=Date.now();
-  const k=()=>{ if(cssReady()||Date.now()-t0>400) i.classList.add('off'); else requestAnimationFrame(k); }; requestAnimationFrame(k);
-}
 async function load(){
   try{
     const E=window.__early||{}; window.__early=null;     // the head started this; see <head>
@@ -843,57 +740,10 @@ $('#app').addEventListener('click',e=>{
   if(t.dataset.copy!=null){ try{ navigator.clipboard.writeText(location.origin+SHOPHREF); toast('Shop link copied'); }catch(x){ toast(location.origin+SHOPHREF); } return; }
   if(t.dataset.gotit!=null){ HINT=false; try{ localStorage.setItem('myset.shop.hint','1'); }catch(x){} return render(); }
 });
-function share(){ const url=location.origin+SHOPHREF; if(navigator.share){ navigator.share({title:`${D.name} merch`,url}).catch(()=>{}); } else { try{ navigator.clipboard.writeText(url); toast('Shop link copied'); }catch(e){ toast(url); } } }
+function share(){ shareLink(location.origin+SHOPHREF, `${D.name} merch`, 'Shop link copied'); }
 
-/* THE STRIPS TURN THEMSELVES — DRIFT, drift() and ghost() are artist.html's, byte for byte: 28 px/s over a ghost set,
+/* THE STRIPS TURN THEMSELVES — drift(), undrift() and ghost() are fan.js's (decision 0087): 28 px/s over a ghost set,
    stopped by a finger, never under prefers-reduced-motion. The pause control re-renders without the ghost set; the old loop quits. */
-const DRIFT={};
-function drift(id,dir){
-  const H=DRIFT[id]||(DRIFT[id]={PT:null,PR_:null});
-  cancelAnimationFrame(H.PT); clearTimeout(H.PR_);
-  const el=document.getElementById(id); if(!el||el.children.length<2)return;
-  if(matchMedia('(prefers-reduced-motion:reduce)').matches)return;
-  const copy=el.querySelector('[aria-hidden="true"]'); if(!copy)return;
-  /* One set's width, gap included — read every frame, not once: a page drawn from
-     the last-seen copy runs this before the preloaded stylesheet has landed, and a
-     width measured then is the wrong width for the rest of the visit. */
-  const span=()=>copy.offsetLeft-el.children[0].offsetLeft;
-  /* Two cards on a tablet-wide screen: one copy of the set is not enough for the
-     scroll to reach the seam (the strip would stall at its end, then jump back), so
-     more copies go on until it can — checked per frame for the same reason span()
-     is, and capped so a strip that never measures right cannot grow forever. */
-  const ghosts=[...el.children].filter(c=>c.getAttribute('aria-hidden')==='true'); let extra=0;
-  const topUp=()=>{const s=span(); if(s>0&&extra<4&&s+el.clientWidth>el.scrollWidth){ghosts.forEach(c=>el.appendChild(c.cloneNode(true)));extra++;}};
-  let hold=false, touching=false, x=el.scrollLeft, last=0;
-  const pause=()=>{hold=true;clearTimeout(H.PR_);};
-  const resume=()=>{clearTimeout(H.PR_);H.PR_=setTimeout(()=>{hold=false;x=el.scrollLeft;last=0;},1000);};
-  el.addEventListener('touchstart',()=>{touching=true;pause();},{passive:true});
-  el.addEventListener('touchend',()=>{touching=false;resume();},{passive:true});
-  el.addEventListener('touchcancel',()=>{touching=false;resume();},{passive:true});
-  el.addEventListener('pointerdown',pause,{passive:true});
-  el.addEventListener('wheel',()=>{pause();resume();},{passive:true});
-  el.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')pause();});
-  el.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')resume();});
-  el.addEventListener('scroll',()=>{if(hold){x=el.scrollLeft;if(!touching)resume();}},{passive:true});
-  const step=(t)=>{
-    if(!el.isConnected)return;
-    H.PT=requestAnimationFrame(step);
-    if(hold||document.hidden){last=0;return;}
-    /* Running backwards, the scroll starts one set in and is pushed forward by a set
-       whenever it reaches the front — the same seam, seen from the other side. */
-    if(last){ topUp(); const s=span(); x+=dir*28*(t-last)/1000;
-      if(s>0){ if(x>=s)x-=s; else if(x<0)x+=s; } el.scrollLeft=x; }
-    else if(dir<0&&!el.scrollLeft){ const s=span(); if(s>0){x=s;el.scrollLeft=x;} }
-    last=t;
-  };
-  H.PT=requestAnimationFrame(step);
-}
-/* drift() has no cancel path of its own — a strip on the page lives as long as the page. The sheet's strip does not: when the sheet
-   closes or the item switches its loop must stop, or a hidden strip goes on laying out every frame. The smallest one (2026-09-13). */
-function undrift(id){ const H=DRIFT[id]; if(!H) return; cancelAnimationFrame(H.PT); clearTimeout(H.PR_); delete DRIFT[id]; }
-/* A second copy of a card for a drifting strip: out of the tab order and hidden from
-   a screen reader, which reads one set. */
-const ghost=c=>c.replace(/^<a /,'<a tabindex="-1" aria-hidden="true" ').replace(/^<div /,'<div aria-hidden="true" ');
 
 /* ---------- buying ---------- */
 /* PEND is the community page's key on purpose: both redeem()s are replay-safe (INVARIANT 7), so whichever page opens next finishes a lost return */
