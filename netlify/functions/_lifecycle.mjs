@@ -5,10 +5,15 @@ import { readEvents, nextOccurrence, occKey } from './_events.mjs';
 import { planForArtist, isPlatformOwner } from './_plan.mjs';
 
 const AUTO_INDEX = 'gigsched';
+/* `regdirty` rides on the same write (decision 0095): the founder's register
+   (`_register.mjs`) folds an artist's nights the next time its bell rings, and
+   these two CAS writes are the ones every start and end already make — so a night
+   reaches myset.vip/moneymodel/shows within minutes at no extra round trip on the
+   End tap or in the scheduler's ring. The cron clears the mark once it has folded. */
 const markLive = (aid, at = Date.now()) => casDoc(AUTO_INDEX,
-  () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; d.live[aid] = at; return true; }).catch(() => {});
+  () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; d.live[aid] = at; d.regdirty ||= {}; d.regdirty[aid] = at; return true; }).catch(() => {});
 const unmarkLive = (aid) => casDoc(AUTO_INDEX,
-  () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; delete d.live[aid]; return true; }).catch(() => {});
+  () => ({ v: 1, byArtist: {}, live: {} }), (d) => { d.live ||= {}; delete d.live[aid]; d.regdirty ||= {}; d.regdirty[aid] = Date.now(); return true; }).catch(() => {});
 /* THE MORNING AFTER THE FIRST NIGHT (2026-09-15). One note, once per account, the
    morning after the first night that was filed: what the room did and what it
    paid, and the one next step. Queued here — the only place a night is filed —
@@ -89,7 +94,7 @@ export async function roomCapFor(aid) {
    calendar, one name on all five. The calendar already knows where tonight is, and
    it is the same occurrence this function is already holding. */
 async function resolveTonight(aid, now) {
-  const out = { listId: null, note: null, venue: '', city: '', startsAt: null, eventId: null, key: null };
+  const out = { listId: null, note: null, venue: '', city: '', country: '', tz: '', startsAt: null, eventId: null, key: null };
   try {
     const occ = nextOccurrence(await readEvents(aid), now);
     // only a gig that is on now or within the next few hours — not next Tuesday's
@@ -101,6 +106,10 @@ async function resolveTonight(aid, now) {
          venue and the wrong city is no better than before. Only ever taken from a
          gig that is on now or within a few hours — never from next Tuesday's. */
       if (occ.venue) { out.venue = occ.venue; out.city = [occ.city, occ.country].filter(Boolean).join(', '); }
+      /* On their own as well (decision 0095): the register reports nights by country
+         and reads the local clock in the gig's zone, and splitting "City, Country"
+         back apart is a guess for a city with a comma in it. */
+      out.country = occ.country || ''; out.tz = occ.tz || '';
     }
     if (out.listId && out.listId !== 'all'
         && !(await readLists(aid)).lists.some((l) => l.id === out.listId)) {
@@ -133,7 +142,7 @@ async function resolveTonight(aid, now) {
  */
 export async function startShow(aid, { fresh = false, by = 'artist', occKey: schedKey = null, eventId = null } = {}) {
   const now = Date.now();
-  const [gigCap, roomCap] = await Promise.all([gigCapFor(aid), roomCapFor(aid)]);
+  const [gigCap, roomCap, { plan }] = await Promise.all([gigCapFor(aid), roomCapFor(aid), planForArtist(aid)]);
 
   // A finished show must be snapshotted BEFORE anything wipes the tally —
   // carryFans() destroys the only copy.
@@ -170,12 +179,18 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
          RESUME must not relabel a night that is already under way, and an artist
          with an empty calendar keeps exactly what they typed in Settings. */
       const nearManualGig = by === 'artist' && auto.startsAt !== null && auto.startsAt - now <= 3600e3;
-      if (fresh && by === 'artist' && !nearManualGig) { show.venue = ''; show.city = ''; }
+      if (fresh && by === 'artist' && !nearManualGig) { show.venue = ''; show.city = ''; show.country = ''; show.tz = ''; }
+      /* The plan the night is played on, frozen on the record (0095): the room-money
+         figures by tier would otherwise relabel every past night on the first
+         upgrade or lapse. planForArtist was read above for the caps. */
+      show.plan = plan;
       if (auto.venue && (by === 'schedule' || nearManualGig) && auto.venue !== show.venue) {
         placed = [show.venue, auto.venue];
         show.venue = auto.venue;
         if (auto.city) show.city = auto.city;
       }
+      // the gig's country and zone ride along whenever the night is that gig (0095)
+      if (auto.key && (by === 'schedule' || nearManualGig)) { show.country = auto.country || ''; show.tz = auto.tz || ''; }
       /* WHICH GIG THIS NIGHT IS. The scheduler has always stamped its occurrence
          key (below); a hand start never did — and never CLEARED the last one, so
          after one scheduled night every later hand-started night carried the
@@ -239,7 +254,8 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false 
   if (!discard) try {
     const [prev, fans] = await Promise.all([getShow(aid), readFans(aid)]);
     const fallback = `Untitled show – ${new Date().toISOString().slice(0, 10)}`;
-    const filed = await archiveShow(aid, { ...prev, archiveTitle: String(title || fallback).slice(0, 100) }, fans);
+    // `endedBy` is written on the show record below, after the archive — so the filed night is told here (0095)
+    const filed = await archiveShow(aid, { ...prev, archiveTitle: String(title || fallback).slice(0, 100), endedBy: by }, fans);
     /* The first night on file gets the morning-after note. archiveShow returns
        the index it wrote; one row means this was the first. */
     if (filed && filed.indexed) {

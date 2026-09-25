@@ -1,0 +1,43 @@
+{
+"v": 1,
+"showId": "2026-09-15-1200-k15t",
+"artistId": "perry-idyll",
+"title": "Untitled show \u2013 2026-09-15",
+"venue": "Crystal Day (solo) \ud83c\udf05\ud83c\udf71",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1789473658355,
+"endedAt": 1789484524416,
+"key": "gimj34ujp@2026-09-15",
+"played": [],
+"requested": [],
+"stats": {
+"songsPlayed": 0,
+"totalVotes": 0,
+"peakVoters": 0,
+"room": 1,
+"nets": 1,
+"topSong": null
+},
+"money": {
+"currency": "USD",
+"gross": 0,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 0,
+"count": 0
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789558219642
+},
+"archivedAt": 1789558219642
+}

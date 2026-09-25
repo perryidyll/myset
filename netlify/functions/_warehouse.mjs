@@ -25,7 +25,7 @@ import { readWishes } from './_wishes.mjs';
 import { readMine as readFeaturedMine } from './_featured.mjs';
 import { readMeta } from './_lib.mjs';
 import { hasPassword } from './_cred.mjs';
-import { occurrences, placeNight, happened } from './_metrics.mjs';
+import { occurrences, placeNight, judgeRow } from './_nightrule.mjs';
 
 /* WHAT GOES IN THE SHEET.
 
@@ -295,13 +295,15 @@ async function artistRows(aid, artist, state, dry) {
   const rsvpDoc = await safe(readDoc(`rsvp_${aid}`, null), { data: null });
   const rsvps = Object.values(((rsvpDoc.data || {}).occ) || {}).reduce((a, o) => a + Object.keys((o && o.fans) || {}).length, 0);
 
-  /* Which nights were REAL — the rule the stats page uses (decision 0071). */
+  /* Which nights were REAL — the one rule (decision 0071, then 0095: `_nightrule.mjs`,
+     shared with the stats page, the register and the tracker). */
   const allShows = (hist.shows || []).filter((x) => x && x.startedAt);
   const span = allShows.length ? [Math.min(...allShows.map((x) => x.startedAt)), Math.max(...allShows.map((x) => x.endedAt || x.startedAt))] : [Date.now(), Date.now()];
   const occs = occurrences(events.list || [], Math.min(span[0], Date.now() - 120 * 86400000), Math.max(span[1], Date.now() + 30 * 86400000));
-  const gigOf = {};
-  for (const x of allShows) gigOf[x.showId] = placeNight(x, occs);
-  const isReal = (x) => !!gigOf[x.showId] && happened(x);
+  const gigOf = {}, judged = {};
+  const judge = { hasCalendar: (events.list || []).length > 0, tz: ((events.list || []).find((e) => e && e.tz) || {}).tz || 'UTC' };
+  for (const x of allShows) { const j = judgeRow(x, occs, judge); gigOf[x.showId] = j.gig; judged[x.showId] = j; }
+  const isReal = (x) => judged[x.showId] && judged[x.showId].status === 'counted';
   const realNights = allShows.filter(isReal);
 
   const seen = state.byArtist[aid] || {};

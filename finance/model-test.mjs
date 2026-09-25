@@ -290,5 +290,27 @@ ok('the meter method’s credits are requests ÷ 10k × 2 + compute + MB ÷ 1000
 }
 ok('the tracker counts a night only on the published calendar, anchors its hours to the slot or the last song, merges split nights and subtracts clip views from a mark', /def gig_for\(/.test(py) && /max\(gig\['slotHours'\], last_act/.test(py) && /def merge_split_nights/.test(py) && /clipViews/.test(py));
 ok('actuals.py bytes per clip view matches the model', +py.match(/'clip': (\d+)/)[1] === P0.clipBytes);
+console.log('THE LIVE FEED (decision 0095): the register beats a paste unless the paste is newer; the meters are the seed\'s');
+{
+  const eq = (name, got, want) => ok(name, JSON.stringify(got) === JSON.stringify(want), JSON.stringify({ got, want }));
+  const grab = (name) => { const m = html.match(new RegExp(`\\n(function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\n\\})`)); if (!m) throw new Error('no ' + name); return m[1]; };
+  const METER_KEYS = new Function('return ' + html.match(/const METER_KEYS = (\[[^\]]*\]);/)[1])();
+  const fns = new Function('METER_KEYS', grab('mergeLive') + '\n' + grab('pickAct') + '\nreturn { mergeLive, pickAct };')(METER_KEYS);
+  const live = { builtAt: 1_800_000_000_000, act: { asOf: '2026-10-01', shows: 40, people: 12, hours: 3.1, interactions: 2.5, songs: 11, roomPerHead: 1.8, pollsPerPhoneHour: 999, deploys: 1, source: 'the register' } };
+  const merged = fns.mergeLive(seed, live);
+  ok('the live block replaces the platform figures (shows, people, hours, interactions, songs, room money)', merged.shows === 40 && merged.people === 12 && merged.hours === 3.1 && merged.interactions === 2.5 && merged.songs === 11 && merged.roomPerHead === 1.8, merged);
+  ok('…and never a meter: ticks per phone-hour, credits a night, deploys and the two bills stay the seed\'s', METER_KEYS.every((k) => JSON.stringify(merged[k]) === JSON.stringify(seed[k])) && merged.pollsPerPhoneHour === seed.pollsPerPhoneHour && merged.deploys === seed.deploys, METER_KEYS.map((k) => [k, merged[k] === seed[k]]));
+  ok('the merged block says where it came from and when the meters were read', /the register; meters from the 2026-09-25 reading/.test(merged.source) && merged.live.shows === 40 && merged.metersAsOf === '2026-09-25', merged.source);
+  eq('live beats the seed', fns.pickAct(seed, null, live).source, 'live');
+  eq('live beats a paste made BEFORE the live build', fns.pickAct(seed, { shows: 3, pastedAt: live.builtAt - 1 }, live).source, 'live');
+  eq('a paste made AFTER the live build wins', fns.pickAct(seed, { shows: 3, pastedAt: live.builtAt + 1 }, live).source, 'pasted');
+  eq('no live answer: a stored paste, then the seed', [fns.pickAct(seed, { shows: 3, pastedAt: 1 }, null).source, fns.pickAct(seed, null, null).source, fns.pickAct(seed, null, { live: true, act: { shows: 0 }, builtAt: 1 }).source], ['pasted', 'seed', 'seed']);
+  ok('the page asks /moneymodel/live.json with its cookie, only on myset.vip, and falls back to the seed', /fetch\('\/moneymodel\/live\.json', \{ credentials: 'same-origin'/.test(html) && /location\.pathname\)\) return null/.test(html) && /LIVE = live \|\| \{ unreachable: true \}/.test(html) && /SEED of \$\{ACT\.asOf\}<\/b> — the live feed could not be reached/.test(html));
+  ok('the paste box stamps pastedAt and Forget them returns to the live register', /pastedAt: Date\.now\(\)/.test(html) && /Back to the live register/.test(html));
+  const reg = fs.readFileSync(new URL('../netlify/functions/_register.mjs', import.meta.url), 'utf8');
+  const actSrc = reg.slice(reg.indexOf('const act = {'), reg.indexOf('return { totals, byArtist'));
+  ok('the register\'s block carries none of the meter keys (INVARIANT 0fx: no function can read Netlify\'s meters)', METER_KEYS.every((k) => !new RegExp(`\\b${k}:`).test(actSrc)), METER_KEYS.filter((k) => new RegExp(`\\b${k}:`).test(actSrc)));
+  ok('the register\'s block carries the same platform fields the seed does', ['shows', 'people', 'hours', 'recordHours', 'setHours', 'votes', 'interactions', 'songs', 'nets', 'peakVoters', 'gigsOnCalendar', 'gigsUsed', 'gigsSilent', 'roomFree', 'roomPlus', 'roomPro', 'roomPerHead', 'asOf', 'note'].every((k) => new RegExp(`\\b${k}:`).test(actSrc)));
+}
 console.log(fails ? `\n${fails} FAILED` : '\nall passed');
 process.exit(fails ? 1 : 0);

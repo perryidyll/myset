@@ -1,0 +1,178 @@
+{
+"v": 1,
+"showId": "2026-09-14-1330-gap5",
+"artistId": "perry-idyll",
+"title": "Ugly Duckling \u2013 Sep 14, 2026",
+"venue": "The Ugly Duckling | Irish Pub \u2618\ufe0f\ud83c\udf7b",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1789392631917,
+"endedAt": 1789404279940,
+"key": "gx78yyhxp@2026-09-14",
+"played": [
+{
+"songId": "lost-in-love",
+"title": "Lost In Love",
+"artist": "Perry Idyll",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789397980251
+},
+{
+"songId": "shape-of-you",
+"title": "Shape Of You",
+"artist": "Ed Sheeran",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789398004751
+},
+{
+"songId": "i-m-yours",
+"title": "I'm Yours",
+"artist": "Jason Mraz",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789398396908
+},
+{
+"songId": "hey-soul-sister",
+"title": "Hey Soul Sister",
+"artist": "Train",
+"votes": 3,
+"voters": 3,
+"roundVotes": 3,
+"replay": false,
+"at": 1789398859358
+},
+{
+"songId": "until-i-found-you",
+"title": "Until I Found You",
+"artist": "Stephen Sanchez",
+"votes": 2,
+"voters": 2,
+"roundVotes": 2,
+"replay": false,
+"at": 1789399426382
+},
+{
+"songId": "peaceful-easy-feeling",
+"title": "Peaceful Easy Feeling",
+"artist": "Eagles",
+"votes": 3,
+"voters": 6,
+"roundVotes": 3,
+"replay": false,
+"at": 1789401216612
+},
+{
+"songId": "santeria",
+"title": "Santeria",
+"artist": "Sublime",
+"votes": 2,
+"voters": 6,
+"roundVotes": 2,
+"replay": false,
+"at": 1789401515306
+},
+{
+"songId": "tennessee-whiskey",
+"title": "Tennessee Whiskey",
+"artist": "Chris Stapleton",
+"votes": 3,
+"voters": 6,
+"roundVotes": 3,
+"replay": false,
+"at": 1789401812101
+},
+{
+"songId": "bar-song-tipsy",
+"title": "Bar Song (Tipsy)",
+"artist": "Shaboozey",
+"votes": 2,
+"voters": 5,
+"roundVotes": 2,
+"replay": false,
+"at": 1789402122033
+},
+{
+"songId": "wonerwall",
+"title": "Wonerwall",
+"artist": "Oasis",
+"votes": 2,
+"voters": 4,
+"roundVotes": 2,
+"replay": false,
+"at": 1789402402270
+},
+{
+"songId": "perfect",
+"title": "Perfect",
+"artist": "Ed Sheeran",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789402680471
+},
+{
+"songId": "hey-jude",
+"title": "Hey Jude",
+"artist": "The Beatles",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789403049831
+},
+{
+"songId": "ain-t-no-sunshine",
+"title": "Ain't No Sunshine",
+"artist": "Bill Withers",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1789403277434
+}
+],
+"requested": [],
+"stats": {
+"songsPlayed": 13,
+"totalVotes": 22,
+"peakVoters": 6,
+"room": 13,
+"nets": 11,
+"topSong": {
+"songId": "hey-soul-sister",
+"title": "Hey Soul Sister",
+"votes": 3
+}
+},
+"money": {
+"currency": "USD",
+"gross": 22,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 22,
+"count": 4
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789473658564
+},
+"archivedAt": 1789473658564
+}

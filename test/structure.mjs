@@ -201,5 +201,17 @@ check('public/venue-studio.html', [
   console.log(`  ${same ? '✓' : '✗'} @keyframes edgeGlow is byte-identical in studio.html and vote.html${same ? '' : ' — copy the Studio\'s block over'}`);
   if (!same) fail++;
 }
+
+/* EVERY ADDRESS THE TOML ROUTES IS A RESERVED SLUG (decision 0095). A rule above the
+   /:slug catch-all wins over an artist's page; an artist who took that name would have
+   a page nobody could reach. _auth.mjs RESERVED must name every literal first segment. */
+{
+  const toml = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
+  const auth = readFileSync(new URL('../netlify/functions/_auth.mjs', import.meta.url), 'utf8');
+  const reserved = new Set([...auth.slice(auth.indexOf('const RESERVED'), auth.indexOf(']);', auth.indexOf('const RESERVED'))).matchAll(/'([a-z0-9-]+)'/g)].map((m) => m[1]));
+  const froms = [...toml.matchAll(/^\s*from\s*=\s*"\/([a-z0-9-]+)(?:\/|"|\.)/gm)].map((m) => m[1]).filter((seg) => !seg.startsWith(':') && seg !== 'api' && seg !== 'v' && seg !== 'well-known');
+  const missing = [...new Set(froms)].filter((seg) => !reserved.has(seg));
+  if (missing.length) { fail++; console.log('  ✗ routed but not reserved:', missing.join(', ')); } else console.log('  ✓ every routed first segment is a reserved slug (' + [...new Set(froms)].join(', ') + ')');
+}
 console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
 process.exit(fail ? 1 : 0);

@@ -52,7 +52,20 @@ export const PASS_GAP_MS = 20 * 3600e3;
 export const RETRY_GAP_MS = 3600e3;
 export const BUDGET_MS = () => Math.max(0, Number(process.env.MYSET_MIRROR_BUDGET_MS ?? 5500));
 export const GLOBALS = ['artists', 'venues', 'cityindex', 'acctindex', 'flags', 'idqueue', 'promos',
-                        'sheetsync', 'gigsched', 'vidqueue', 'delqueue', 'ledger_platform'];
+                        'sheetsync', 'gigsched', 'vidqueue', 'delqueue', 'ledger_platform',
+                        /* the founder's register (0095): its head, its working state and its
+                           bell's state; the month shards are named by the head (globalKeys) */
+                        'register', 'register_work', 'registersync'];
+/** The global keys, with the register's month shards read off its head — computable, no list(). */
+export async function globalKeys() {
+  const out = [...GLOBALS];
+  try {
+    const { readDoc } = await import('./_lib.mjs');
+    const { data } = await readDoc('register', null);
+    for (const m of (data && data.months) || []) for (let i = 0; i < Math.max(1, m.parts || 1); i++) out.push(i ? `register_${m.ym}_${i}` : `register_${m.ym}`);
+  } catch { /* no head yet */ }
+  return out;
+}
 export const SKIP = /^(sess_|lock_|authc_|authsecret$|f\d+_|vid_)/;
 export const skipped = (k) => SKIP.test(k);
 
@@ -117,7 +130,7 @@ export async function runMirror({ now = Date.now(), budgetMs = BUDGET_MS(), owne
   // every ring copies something (each worker at least one key); more while the clock allows
   while (st.cursor < st.order.length) {
     const owner = st.order[st.cursor];
-    const keys = owner === 'global' ? GLOBALS : await keysOf(owner).catch(() => []);
+    const keys = owner === 'global' ? await globalKeys() : await keysOf(owner).catch(() => []);
     const r = await mirrorOwner(owner, keys, now, deadline, st.keyCursor);
     st.copied += r.copied; st.skipped += r.skipped; st.failed += r.failed;
     st.err ||= r.err;

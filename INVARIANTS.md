@@ -569,6 +569,34 @@ If you are about to violate one, stop and say so rather than working around it.
     filed nights unchanged. Decision `0079`; `test/decline.mjs` WHO PUT MONEY IN
     / WHAT THE ROOM SEES; `test/limits.mjs`.
 
+0gi. **Every show on the platform is filed in one register, folded on the server by one
+    writer, that the founder's dashboard and the money model read; which nights count is
+    one rule in one module; and nothing about a fan crosses into it.** The register
+    (`_register.mjs`, decision 0095) is built by a WALK — the two registries, each
+    artist's `histidx_`/`histids_`, computed keys, never Blobs `list()` (1) — into month
+    shards `register_<YYYY-MM>` under a head `register`, with working state
+    `register_work` and the bell's state `registersync`. Only `foldRegister` writes any
+    of them, under the lock in `registersync`, from the bell (`registercron.mjs`) or the
+    dashboard's Refresh; the End tap and the scheduler's ring only leave a `regdirty`
+    mark on `gigsched` inside a write they already make. The night rule lives in
+    `_nightrule.mjs` and is called by the register, the stats page (`_metrics.mjs`) and
+    the Sheet (`_warehouse.mjs`); `tools/actuals.py` is pinned to the same answers on
+    `finance/fixtures/2026-09-11` and `2026-09-25` (`test/everyshow.mjs`,
+    `tools/actuals-test.py`). Money on a row is Stripe's answer as the archive kept it
+    or `unknown`, never $0; `$ a head` is tips + vote packs + paid requests over phones on
+    money-known nights, merch never in it; untagged money is a window figure taken once.
+    Counts the store forgets (requests, RSVPs, ratings) are frozen on first observation
+    and only ever raised, and the archive now files them on the night; because the
+    register therefore holds numbers nowhere else does, it is mirrored (0ft). No device
+    id, email, tip note, rating note or birthday name may appear in any of the four
+    documents or in the page — `test/everyshow.mjs` stringifies the whole register and
+    looks. `hidden` is a flag beside the status, never a status: the totals follow the
+    rule on both sides. The model's live feed (`/moneymodel/live.json`) never carries a
+    meter (METER_KEYS in `finance/model.html`: ticks per phone-hour, credits a night,
+    deploys, the two bills — 0fx, 0ge); the page keeps those from its seed and names
+    which source won. The dashboard, its data, its CSV, a night's page and the feed sit
+    behind the model's passcode on every path they answer at, `private, no-store`.
+
 0ga. **A night's money is everything tagged to it, whenever it arrived — and the
     tile and the book are the same figure.** `pay.mjs` tags a tip with
     `show.showId` whether or not the night is still live, so a night's window for

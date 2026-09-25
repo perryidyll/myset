@@ -45,6 +45,15 @@ WHAT IT PRODUCES — the fields the model's "Real shows" panel understands:
                      traffic meter the API exposes (requests and compute: dashboard only)
   asOf, source, note, nights, notCounted, marks
 
+SINCE 25 SEP 2026 (decision 0095) THE SAME RULE RUNS ON THE SERVER: netlify/functions/_nightrule.mjs
+judges every filed night for the register (myset.vip/moneymodel/shows), which feeds the money
+model live; test/everyshow.mjs and tools/actuals-test.py pin the two to the same answers on
+finance/fixtures/2026-09-11 and 2026-09-25. Two known differences, on purpose: this script
+expands a calendar by weekday only (weekly/biweekly rules; no `until`, no monthly), where the
+server uses the scheduler's own expansion — the same answer on every calendar so far; and
+this script cannot see a night the artist hid from their Money tab (`hidden` on the index
+row) — the register counts it too and shows it greyed, so the totals agree.
+
 WHICH NIGHTS COUNT. The founder's rule (11 Sep): only a show that lines up with a gig he
 PUBLISHED counts. A show started at a random time of day, or that ran for an inordinate
 stretch, was him starting and ending a show by hand to test something. So a night
@@ -329,7 +338,8 @@ def shows():
         set_hours = (max(played) - min(played)) / 3600e3 if len(played) >= 2 else None
         m = d.get('money') or {}
         money_known = m.get('source') == 'stripe'
-        gross = float(m.get('gross') or 0) + float(m.get('unattributed') or 0)   # a payment not tagged with the show is still the room's money
+        tagged, untagged = float(m.get('gross') or 0), float(m.get('unattributed') or 0)
+        gross = tagged + untagged   # a payment not tagged with the show is still the room's money
         gig = gig_for(aid, s0) if s0 and calendar(aid) else None
         has_cal = bool(calendar(aid))
         # the night's length: the record when the artist ended it inside the slot; when the
@@ -362,7 +372,7 @@ def shows():
                    songs=st.get('songsPlayed') or 0, peakVoters=peak,
                    hours=round(hours, 2) if hours else None, recordHours=round(rec_hours, 2) if rec_hours else None,
                    setHours=round(set_hours, 2) if set_hours else None,
-                   gig=gig, gross=gross if money_known else None,
+                   gig=gig, gross=gross if money_known else None, tagged=tagged if money_known else None, untagged=untagged if money_known else None,
                    moneyKnown=money_known, moneySource=m.get('source'), startedAt=s0, endedAt=e0)
         if why and gig and people <= 1 and not votes:
             unused.append({**row, 'skipped': why})
@@ -402,7 +412,11 @@ def merge_split_nights(rows):
         a['lastActivityHours'] = round(last_act, 2)
         a['hours'] = round(min(a['recordHours'], max(a['gig']['slotHours'], last_act)), 2)
         a['moneyKnown'] = all(r['moneyKnown'] for r in rs)
-        a['gross'] = sum(r['gross'] for r in rs) if a['moneyKnown'] else None
+        # tagged money is summed; UNTAGGED money is a window figure (the archive says never to
+        # sum it — the two records' windows overlap), so the merged night takes it once (0095)
+        a['tagged'] = sum(r['tagged'] for r in rs) if a['moneyKnown'] else None
+        a['untagged'] = max(r['untagged'] for r in rs) if a['moneyKnown'] else None
+        a['gross'] = a['tagged'] + a['untagged'] if a['moneyKnown'] else None
         out.append(a)
     return out
 

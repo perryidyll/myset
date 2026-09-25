@@ -1,0 +1,27 @@
+{
+"v": 1,
+"rev": 1,
+"byId": {
+"idyllstudios": {
+"slug": "idyllstudios",
+"name": "Idyll Studios",
+"createdAt": 1788273553698,
+"city": "Koh Phangan",
+"country": "Thailand",
+"verified": false
+},
+"crystalday": {
+"slug": "crystalday",
+"name": "Crystal Day",
+"createdAt": 1790082906251,
+"city": "Koh Phangan",
+"country": "Thailand",
+"verified": false,
+"plan": "free"
+}
+},
+"bySlug": {
+"idyllstudios": "idyllstudios",
+"crystalday": "crystalday"
+}
+}

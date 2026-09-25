@@ -85,7 +85,7 @@ const stampTops = (row) => { for (const f of ROW_TOPS) if (!(f in row)) row[f] =
    it that the artist can re-pull at any time. Bounded to the show's own window
    and auto-paged, because sessions.list() does NOT paginate on its own and a
    busy month would silently truncate. */
-export async function moneyForShow(aid, showId, fromMs, toMs) {
+export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = false } = {}) {
   const key = process.env.STRIPE_SECRET_KEY;
   /* `votes.paid` is how many votes the room BOUGHT that night (the packs' `votes`
      metadata summed) and `requests` the paid song requests the artist accepted
@@ -110,6 +110,12 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
   const start = fromMs || (end - 24 * 3600e3);
   const gte = Math.floor(start / 1000) - 300;                  // 5 min of slack
   const lte = Math.floor(end / 1000) + 3600;                   // and an hour after
+  /* UNTAGGED money is a window figure, and when the window is closed by the NEXT
+     night's start (reconcileShow) the hour of slack would lay the two nights' windows
+     over each other and count the same untagged payment on both. A tagged payment
+     names its night and is untouched; an untagged one made after the next night began
+     belongs to that window, not this one (0095). */
+  const untaggedUntil = closedByNext ? end : Infinity;
   let after = null;
   try {
     /* Scoped, for the same reason revenue.mjs is: without it a connected artist's
@@ -138,7 +144,7 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
         if ((md.artist || DEFAULT_ARTIST) !== aid) continue;
         const amt = (s.amount_total || 0) / 100;
         if (md.show && md.show !== showId) continue;
-        if (!md.show) { out.unattributed = round(out.unattributed + amt); continue; }
+        if (!md.show) { if ((s.created || 0) * 1000 < untaggedUntil) out.unattributed = round(out.unattributed + amt); continue; }
         out.gross = round(out.gross + amt);
         if (['votes', 'song_votes', 'request_hold'].includes(md.kind)) {
           out.votes.amount = round(out.votes.amount + amt);
@@ -159,6 +165,33 @@ export async function moneyForShow(aid, showId, fromMs, toMs) {
   }
   out.tips.recent = out.tips.recent.sort((a, b) => b.at - a.at).slice(0, 12);
   return out;
+}
+
+/* What the room asked for tonight, as counts (0095). Read here, once, because the
+   request list is capped at 80 rows and forgets — a night's count would otherwise
+   fall to zero as later requests push the old ones out. Best-effort: null means
+   "not read", never zero. */
+async function countRequests(aid, showId) {
+  try {
+    const { readRequests } = await import('./_requests.mjs');
+    const rows = ((await readRequests(aid)).list || []).filter((r) => r && r.showId === showId);
+    const n = (f) => rows.filter(f).length;
+    return { count: rows.length, songs: n((r) => r.kind === 'song'), birthdays: n((r) => r.kind === 'birthday'), vibes: n((r) => r.kind === 'vibe'),
+             accepted: n((r) => r.status === 'added' || r.status === 'played'), played: n((r) => r.status === 'played'), declined: n((r) => r.status === 'declined') };
+  } catch { return null; }
+}
+/* How many said they were coming to this gig (0095) — `rsvp_` prunes three days after
+   the night, so the count is copied onto the record while it still exists. */
+async function countRsvps(aid, autoKey) {
+  if (!autoKey) return null;
+  try {
+    const { readRsvp, occKey } = await import('./_rsvp.mjs');
+    const [eventId, date] = String(autoKey).split('@');
+    if (!eventId || !date) return null;
+    const d = await readRsvp(aid);
+    const o = (d.occ || {})[occKey(eventId, date)];
+    return o ? Number(o.n) || 0 : 0;
+  } catch { return null; }
 }
 
 /* Snapshot a finished show. MUST run before wipeFans()/clearAllFanVotes(),
@@ -218,11 +251,20 @@ export async function archiveShow(aid, show, fans) {
 
   const room = roomCounts(fans || {});
   const money = await moneyForShow(aid, showId, show.startedAt, endedAt);
+  const [filedRequests, filedRsvps] = await Promise.all([countRequests(aid, showId), countRsvps(aid, show.autoKey)]);
 
   const doc = {
     v: 1, showId, artistId: aid,
     title: show.archiveTitle || '',
     venue: show.venue || '', city: show.city || '', showTime: show.showTime || '',
+    // the gig's country and zone, and the plan the night was played on, stamped by the
+    // lifecycle since 0095 (older nights: ''); who started and ended it, for the register
+    country: show.country || '', tz: show.tz || '', plan: show.plan || '',
+    startedBy: show.startedBy || null, endedBy: show.endedBy || null,
+    /* Counts filed WITH the night (0095), because the lists they come from forget:
+       `req_` keeps 80 rows, `rsvp_` prunes three days after the gig. Counts only —
+       never a title a fan typed, never a name. */
+    requests: filedRequests, rsvps: filedRsvps,
     startedAt: show.startedAt || null, endedAt,
     /* WHICH GIG THIS WAS. The lifecycle stamps the calendar occurrence on the show
        (`<eventId>@<date>`, scheduled or hand-started near it — 0065); until now the
@@ -297,7 +339,13 @@ export async function archiveShow(aid, show, fans) {
       title: (kept && kept.title) || doc.title || was.title || '',
       venue: (kept && kept.venue) || doc.venue || was.venue || '',
       city: (kept && kept.city) || doc.city || was.city || '',
+      country: (kept && kept.country) || doc.country || was.country || '',
+      tz: (kept && kept.tz) || doc.tz || was.tz || '',
+      plan: (kept && kept.plan) || doc.plan || was.plan || '',
       key: (kept && kept.key) || doc.key || was.key || null,
+      /* a night the artist hid stays hidden through a re-archive (an End tapped
+         twice used to rebuild the row without the flag) */
+      ...(was.hidden ? { hidden: true } : {}),
       startedAt: Math.min(...[was.startedAt, doc.startedAt].filter(Boolean).concat(endedAt)),
       endedAt: up(was.endedAt, endedAt),
       songsPlayed: up(was.songsPlayed, st.songsPlayed),
@@ -701,7 +749,9 @@ export async function reconcileShow(aid, showId) {
   const doc = await readHistShow(aid, showId);
   if (!doc) return null;
   const idx = await readHistIndex(aid);
-  const money = await moneyForShow(aid, showId, doc.startedAt, moneyWindowEnd(idx.shows, showId));
+  const i = (idx.shows || []).findIndex((x) => x.showId === showId);
+  const closedByNext = i > 0 && !!(idx.shows[i - 1].startedAt || idx.shows[i - 1].endedAt);
+  const money = await moneyForShow(aid, showId, doc.startedAt, moneyWindowEnd(idx.shows, showId), { closedByNext });
   await refreshShowMoney(aid, showId, money);
   return { ...doc, money };
 }

@@ -1,0 +1,155 @@
+{
+"v": 1,
+"showId": "2026-09-20-1130-8yg2",
+"artistId": "perry-idyll",
+"title": "Sand & Tan \u2013 Sep 20, 2026",
+"venue": "Sand & Tan \ud83c\udf05\ud83e\udd42",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1789903818992,
+"endedAt": 1789915467676,
+"key": "guwi123an@2026-09-20",
+"played": [
+{
+"songId": "all-or-nothing",
+"title": "All Or Nothing",
+"artist": "Perry Idyll",
+"votes": 3,
+"voters": 4,
+"roundVotes": 3,
+"replay": false,
+"at": 1789907269151
+},
+{
+"songId": "hey-there-delilah",
+"title": "Hey There Delilah",
+"artist": "Plain White T's",
+"votes": 2,
+"voters": 3,
+"roundVotes": 2,
+"replay": false,
+"at": 1789907283943
+},
+{
+"songId": "fast-car",
+"title": "Fast Car",
+"artist": "Tracy Chapman",
+"votes": 3,
+"voters": 4,
+"roundVotes": 3,
+"replay": false,
+"at": 1789907526024
+},
+{
+"songId": "i-m-yours",
+"title": "I'm Yours",
+"artist": "Jason Mraz",
+"votes": 2,
+"voters": 4,
+"roundVotes": 2,
+"replay": false,
+"at": 1789907941634
+},
+{
+"songId": "sweet-home-alabama",
+"title": "Sweet Home Alabama",
+"artist": "Lynyrd Skynyrd",
+"votes": 3,
+"voters": 3,
+"roundVotes": 3,
+"replay": false,
+"at": 1789908478508
+},
+{
+"songId": "summer-of-69",
+"title": "Summer Of '69",
+"artist": "Bryan Adams",
+"votes": 2,
+"voters": 3,
+"roundVotes": 2,
+"replay": false,
+"at": 1789908805192
+},
+{
+"songId": "landslide",
+"title": "Landslide",
+"artist": "Fleetwood Mac",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789910705925
+},
+{
+"songId": "wish-you-were-here",
+"title": "Wish You Were Here",
+"artist": "Pink Floyd",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789910725141
+},
+{
+"songId": "hallelujah",
+"title": "Hallelujah",
+"artist": "Jeff Buckley",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789911053374
+},
+{
+"songId": "dissolve",
+"title": "Dissolve",
+"artist": "Perry Idyll",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789911483388
+}
+],
+"requested": [
+{
+"songId": "wonerwall",
+"title": "Wonderwall",
+"artist": "Oasis",
+"votes": 5
+}
+],
+"stats": {
+"songsPlayed": 10,
+"totalVotes": 20,
+"peakVoters": 4,
+"room": 9,
+"nets": 6,
+"topSong": {
+"songId": "all-or-nothing",
+"title": "All Or Nothing",
+"votes": 3
+}
+},
+"money": {
+"currency": "USD",
+"gross": 35,
+"votes": {
+"amount": 5,
+"count": 1,
+"paid": 3
+},
+"tips": {
+"amount": 30,
+"count": 3
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789997424472
+},
+"archivedAt": 1789997424472
+}

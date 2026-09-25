@@ -6,7 +6,7 @@ status: decided
 decided_by: perry
 area: docs
 reverses:
-superseded_by:
+superseded_by: 0095
 invariants: []
 commits: []
 tests: [test/metrics.mjs, test/sheets.mjs]
@@ -72,3 +72,11 @@ with the styling asserted. Against the live documents (read-only, 2026-09-14
 Seaflower 11 Sep and Sand & Tan 13 Sep; 66 phones, 139 votes, 65 songs, $10 room
 money, 4 nights unread. Rendered headless: the 30-day, all-time and custom
 ranges recompute the tiles and the table. Suite exit 0 / 3,085 ✓.
+
+## Superseded (2026-09-25, decision 0095)
+
+The founder's surface for these numbers is now the register at `/moneymodel/shows`
+(`_register.mjs`), folded on the server and fed live into the money model. The snapshot
+builder here (`_metrics.mjs`) stays for the Google Sheet and `tools/metrics.mjs`, and
+re-exports the ONE night rule from `_nightrule.mjs` so it cannot disagree with the
+register; the daily republish of the *Current Show Stats* artifact stops (MET-001 retired).

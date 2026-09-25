@@ -1,0 +1,118 @@
+{
+"v": 1,
+"showId": "2026-09-17-1200-qvj2",
+"artistId": "perry-idyll",
+"title": "Crystal Day \u2013 Sep 17, 2026",
+"venue": "Crystal Day (solo) \ud83c\udf05\ud83c\udf71",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1789646441393,
+"endedAt": 1789661705754,
+"key": "g3ei0k6l3@2026-09-17",
+"played": [
+{
+"songId": "brown-eyed-girl",
+"title": "Brown Eyed Girl",
+"artist": "Van Morrison",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789649218994
+},
+{
+"songId": "have-you-ever-seen-the-rain",
+"title": "Have You Ever Seen The Rain",
+"artist": "Creedence Clearwater Revival",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789649514788
+},
+{
+"songId": "landslide",
+"title": "Landslide",
+"artist": "Fleetwood Mac",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789649792652
+},
+{
+"songId": "wish-you-were-here",
+"title": "Wish You Were Here",
+"artist": "Pink Floyd",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789652960896
+},
+{
+"songId": "perfect",
+"title": "Perfect",
+"artist": "Ed Sheeran",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789653000839
+},
+{
+"songId": "drops-of-jupiter",
+"title": "Drops Of Jupiter",
+"artist": "Train",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789653296359
+},
+{
+"songId": "summer-of-69",
+"title": "Summer Of '69",
+"artist": "Bryan Adams",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789653600972
+}
+],
+"requested": [],
+"stats": {
+"songsPlayed": 7,
+"totalVotes": 7,
+"peakVoters": 2,
+"room": 3,
+"nets": 3,
+"topSong": {
+"songId": "brown-eyed-girl",
+"title": "Brown Eyed Girl",
+"votes": 1
+}
+},
+"money": {
+"currency": "USD",
+"gross": 0,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 0,
+"count": 0
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789731026505
+},
+"archivedAt": 1789731026504
+}

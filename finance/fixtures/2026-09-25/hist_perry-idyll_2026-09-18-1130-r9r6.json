@@ -1,0 +1,115 @@
+{
+"v": 1,
+"showId": "2026-09-18-1130-r9r6",
+"artistId": "perry-idyll",
+"title": "Untitled show \u2013 2026-09-18",
+"venue": "Seaflower Bungalows \ud83c\udf05\ud83c\udf77",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1789731026284,
+"endedAt": 1789751044141,
+"key": "gh71d4pfq@2026-09-18",
+"played": [
+{
+"songId": "fast-car",
+"title": "Fast Car",
+"artist": "Tracy Chapman",
+"votes": 4,
+"voters": 2,
+"roundVotes": 4,
+"replay": false,
+"at": 1789738435111
+},
+{
+"songId": "faith",
+"title": "Faith",
+"artist": "George Michael",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789738829984
+},
+{
+"songId": "all-or-nothing",
+"title": "All Or Nothing",
+"artist": "Perry Idyll",
+"votes": 3,
+"voters": 1,
+"roundVotes": 3,
+"replay": false,
+"at": 1789739158427
+},
+{
+"songId": "brown-eyed-girl",
+"title": "Brown Eyed Girl",
+"artist": "Van Morrison",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789739566555
+},
+{
+"songId": "wish-you-were-here",
+"title": "Wish You Were Here",
+"artist": "Pink Floyd",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789739890169
+},
+{
+"songId": "all-of-me",
+"title": "All Of Me",
+"artist": "John Legend",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789740165562
+}
+],
+"requested": [
+{
+"songId": "wonerwall",
+"title": "Wonerwall",
+"artist": "Oasis",
+"votes": 2
+}
+],
+"stats": {
+"songsPlayed": 6,
+"totalVotes": 12,
+"peakVoters": 2,
+"room": 6,
+"nets": 4,
+"topSong": {
+"songId": "fast-car",
+"title": "Fast Car",
+"votes": 4
+}
+},
+"money": {
+"currency": "USD",
+"gross": 0,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 0,
+"count": 0
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789903819230
+},
+"archivedAt": 1789903819229
+}
