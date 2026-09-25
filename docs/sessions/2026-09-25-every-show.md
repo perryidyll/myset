@@ -94,7 +94,7 @@ both sides count them).
 - `node --import ./test/register.mjs test/everyshow.mjs` — 91 ✓.
 - `node finance/model-test.mjs` — all passed (live feed precedence and meters pinned).
 - `python3 tools/actuals-test.py` — all passed (25 Sep snapshot pinned).
-- `sh test/run.sh` — 55 files, 3,601 ✓, 0 failed, exit 0.
+- `sh test/run.sh` — 55 files, 0 failed, exit 0 (3,601 ✓ before the rebase; rerun green on top of 0091–0094).
 - The dashboard opened in a real browser against `tools/localhost.mjs` (real functions,
   in-memory store): the gate, the passcode, the page, Refresh, the rows and the night drawer.
 

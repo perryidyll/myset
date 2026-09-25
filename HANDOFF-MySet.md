@@ -2820,3 +2820,21 @@ no git, from any folder, writes `~/.myset-marks.json`; `tools/actuals.py` reads 
 The page's room-money help, the KPI band, the report and the session note now say the $1.04 a head is a Thai
 floor, not a ceiling, and that no tipping-market night has been measured (memory `user_perry_performs_in_thailand`).
 
+
+**Every show on the platform (later on 2026-09-25, PR after #95):** the founder asked for a system that
+tracks and reports every show every artist runs and feeds the money model continuously. Shipped as
+decision 0095 / INVARIANT 0gi: the **register** (`netlify/functions/_register.mjs`) — one row per filed
+night in month shards under a head with roll-ups by artist / venue / country / city / month, sign-ups,
+most-played songs and the model's `act` block — folded on the server by ONE writer (`registercron.mjs`,
+every ten minutes, from `regdirty` marks the lifecycle and history actions already write; an idle ring is
+two reads; a full walk every six hours; the morning-after Stripe re-check). **One night rule** in
+`_nightrule.mjs`, shared by the register, the stats snapshot and the Sheet, pinned to `tools/actuals.py`
+on two production snapshots (`finance/fixtures/2026-09-25/`: 15 / 2 unused / 13 refused, $1.037 a head).
+The **dashboard** at `myset.vip/moneymodel/shows` (`/shows` 301s there) behind the model's passcode —
+`_showsdash.mjs` + `finance/shows.html`; a night's songs load on tap from its own record. The **live feed**
+`/moneymodel/live.json`: `finance/model.html` lays it over the seed keeping METER_KEYS; live beats a paste
+unless the paste is newer. The archive now files country, zone, plan, who started/ended, request and RSVP
+counts; `hidden` is a flag beside the status and survives a re-archive; tips and paid marks carry the show.
+Record: `docs/sessions/2026-09-25-every-show.md`. Numbering: 0093/0094 and 0gg/0gh were taken by other
+sessions while this was built — this is **0095 / 0gi**. For the founder: PER-010 (`FINMODEL_CODE`) now
+guards every artist's takings per night; the first ring after the merge builds the register on production.
