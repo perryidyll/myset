@@ -534,9 +534,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | | |
 |---|---|
 | Public pages | 15 — about.html, artist.html, artists.html, community.html, diary.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 35 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
-| Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
-| Shared libraries | 57 |
+| HTTP functions | 35 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
+| Scheduled jobs | 4 — autocron, mirrorcron, registercron, sheetcron |
+| Shared libraries | 61 |
 | Artist Studio actions | 144 |
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
@@ -544,10 +544,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 276 (last: 0fn) |
-| Test suites | 55 |
+| Invariants | 277 (last: 0fn) |
+| Test suites | 56 |
 | Assertions | **3,575**, 0 failing, last run 2026-09-25 |
-| Decision records | 94 |
+| Decision records | 95 |
 
 ### Feature flags in force
 
