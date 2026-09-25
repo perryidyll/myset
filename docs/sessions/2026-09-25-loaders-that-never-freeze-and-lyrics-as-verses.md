@@ -21,7 +21,7 @@ The cause, read from WebKit's source and then reproduced:
 - The bars' positive delays (.02/.12/.22 s) also kept them off Core Animation. At
   the moment of the freeze they were still at their 18 px rest, which is three dots.
 
-## What shipped
+## What shipped — **live as `ee39bb1`** (PR #90, merged 2026-09-25 06:22 UTC; verified by content on production ~06:24)
 
 - **Splashes.** Every page-change, boot and busy splash is rebuilt: `leave.js`, the
   six fan-page `#intro`s, and both Studios' `#busy`/`#leave`/`#boot`. Each bar is a
@@ -68,3 +68,13 @@ and the only conflicts were the two generated docs. That batch's new vote-page
   "dragging inside the words does not drag the sheet".
 - `tools/uicheck.mjs` 242 ✓. Its 2 ✗ are the known stale profit figures.
 - **Not checked** on a physical iPhone.
+- **One caveat for the first tap.** Pages are network-first in `sw.js`, but
+  `/leave.js` is stale-while-revalidate. A phone that already held the old copy
+  can show the old dots once on its first page change, and gets the new bars
+  from then on.
+- **The deploy.** One production deploy, ~15 Netlify credits. The balance was
+  ~115 at the time, so no auto-recharge was triggered. This docs PR is
+  `[skip ci]`.
+- **Puzzle.** Changelog entry 2318 (0090) is linked to f02 369762 and f04 369764,
+  and both steps were mirrored from the sheet. f02's citation is corrected from
+  0037 (ten shows) to 0038 (the splash decision) in the sheet and in Puzzle.

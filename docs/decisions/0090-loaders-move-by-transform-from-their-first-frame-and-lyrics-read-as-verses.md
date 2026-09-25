@@ -8,7 +8,7 @@ area: ui
 reverses:
 superseded_by:
 invariants: [0gf, 0dp, 0f1, 9f]
-commits: []
+commits: [ee39bb1]
 tests: [test/copy.mjs, test/structure.mjs, test/syntax.mjs, tools/sheetcheck.mjs, tools/uicheck.mjs]
 files: [public/leave.js, public/vote.html, public/artist.html, public/community.html, public/diary.html, public/shop.html, public/venue.html, public/studio.html, public/venue-studio.html, public/studio.js]
 ---
@@ -155,7 +155,11 @@ the verse blocks.
   - `chartOpen()` is still true with the lyrics open.
   - The chord chart is still `ui-monospace` with `white-space:pre`.
   - Checked in both light and dark themes.
-- `sh test/run.sh`: 3,282 passed, 0 failed.
+- `sh test/run.sh`: 3,282 passed, 0 failed (3,288 after the rebase onto 0087/0088,
+  with the 0gf guard).
+- **Live as `ee39bb1`** (PR #90, merged 2026-09-25 06:22 UTC). Production was
+  verified by content at ~06:24: every changed page and script serves the new code.
+  The deploy preview was checked at 375 px first.
 - **Not checked:**
   - On a physical iPhone, or in a home-screen install.
   - On Android Chrome. Paint holding there can show a still frame for up to 500 ms
