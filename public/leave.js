@@ -15,6 +15,17 @@
    does it navigate. The next page paints its own splash first thing, so from the
    person's point of view the logo is simply there until the new page is ready.
 
+   WHY THE BARS MOVE BY TRANSFORM (decision 0090): the moment a navigation starts,
+   iOS stops drawing new frames of the old page until the next one has painted.
+   A height animation is drawn by the page, so it froze as three still dots for
+   the best part of a second. A transform animation is handed to the system
+   compositor and keeps playing through that gap. Each bar is a rounded window
+   (i, overflow:hidden) with a rounded pill (b) that slides up inside it, so both
+   ends stay round, and a gradient (b::before) that stretches with the part that
+   shows, so every bar runs pink to orange at every height. The delays are
+   negative so the first frame is already mid-swing; a positive delay would keep
+   a bar off the compositor until it starts.
+
    WHAT IT LEAVES ALONE: links to other sites (Stripe, Spotify, YouTube), links
    that open a new tab, downloads, files under /api/ (the QR png), and anchors on
    the same page. A link can opt out with data-nosplash, or set its own message
@@ -31,16 +42,22 @@
     'html[data-theme=dark] #msLeave{background:var(--bg,#0D0B0C)}' +
     '#msLeave.on{display:grid}' +
     '#msLeave .bars{display:flex;align-items:flex-end;gap:9px;height:76px}' +
-    '#msLeave .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;' +
-    'background:linear-gradient(135deg,#FF375F,#FF7A45);animation:msLeaveBar 1.05s ease-in-out infinite alternate}' +
-    '#msLeave .bars i:nth-child(1){animation-delay:.02s;--h:38px}' +
-    '#msLeave .bars i:nth-child(2){animation-delay:.12s;--h:64px}' +
-    '#msLeave .bars i:nth-child(3){animation-delay:.22s;--h:28px}' +
+    '#msLeave .bars i{width:15px;border-radius:8px;display:block;height:var(--h,40px);position:relative;overflow:hidden}' +
+    '#msLeave .bars b,#msLeave .bars b::before{position:absolute;inset:0;' +
+    'animation:1.05s ease-in-out infinite alternate;animation-delay:var(--d,0s)}' +
+    '#msLeave .bars b{border-radius:inherit;overflow:hidden;animation-name:msLeaveBar}' +
+    '#msLeave .bars b::before{content:"";transform-origin:top;background:linear-gradient(135deg,#FF375F,#FF7A45)}' +
+    '#msLeave .bars i:nth-child(1){--d:-.55s;--h:38px}#msLeave .bars i:nth-child(1) b::before{animation-name:msLeaveFill1}' +
+    '#msLeave .bars i:nth-child(2){--d:-.45s;--h:64px}#msLeave .bars i:nth-child(2) b::before{animation-name:msLeaveFill2}' +
+    '#msLeave .bars i:nth-child(3){--d:-.35s;--h:28px}#msLeave .bars i:nth-child(3) b::before{animation-name:msLeaveFill3}' +
     '#msLeave .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:var(--ink,#1D1D1F)}' +
     '#msLeave p{position:absolute;top:calc(50% + 74px);left:0;right:0;text-align:center;' +
     'font-size:13.5px;color:var(--muted,#888);margin:0}' +
-    '@keyframes msLeaveBar{from{height:18px}to{height:var(--h,40px)}}' +
-    '@media (prefers-reduced-motion:reduce){#msLeave .bars i{animation:none;height:var(--h,40px)}}';
+    '@keyframes msLeaveBar{from{transform:translateY(calc(100% - 18px))}to{transform:translateY(0)}}' +
+    '@keyframes msLeaveFill1{from{transform:scaleY(.4737)}to{transform:scaleY(1)}}' +
+    '@keyframes msLeaveFill2{from{transform:scaleY(.2813)}to{transform:scaleY(1)}}' +
+    '@keyframes msLeaveFill3{from{transform:scaleY(.6429)}to{transform:scaleY(1)}}' +
+    '@media (prefers-reduced-motion:reduce){#msLeave .bars b,#msLeave .bars b::before{animation:none}}';
 
   var el = null, offT = 0;
   function make() {
@@ -48,7 +65,7 @@
     var s = document.createElement('style'); s.textContent = CSS;
     document.head.appendChild(s);
     el = document.createElement('div'); el.id = 'msLeave'; el.setAttribute('aria-hidden', 'true');
-    el.innerHTML = '<div><div class="bars"><i></i><i></i><i></i></div><div class="word">MySet</div></div><p></p>';
+    el.innerHTML = '<div><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><div class="word">MySet</div></div><p></p>';
     document.body.appendChild(el);
     return el;
   }

@@ -598,6 +598,25 @@ If you are about to violate one, stop and say so rather than working around it.
     draws goes through the shared `toast`, `money`, `$` and `esc`, so an edit to
     those is an edit to the voting page's return trip too.
 
+0gf. **A loading splash never freezes: its bars move by transform, never height.**
+    The moment a phone starts changing page, iOS stops drawing the old page's own
+    frames until the next one has painted. A height animation is one of those frames,
+    so the MySet splash sat as three still dots for most of a second on every page
+    change (the founder's screen recording, 2026-09-25, decision `0090`). A transform
+    animation is handed to the system compositor and keeps playing through that gap.
+    Every page-change, boot and busy splash therefore has the same shape:
+    - a rounded window `i` with `overflow:hidden`
+    - a rounded pill `b` that slides by `translateY`
+    - a gradient `b::before` that stretches by `scaleY` on the same timing, so both
+      ends stay round and the bar runs pink to orange at every height
+    - negative delays, because a positive delay keeps a bar off the compositor until
+      it starts
+
+    The splashes are `leave.js`, the six fan-page `#intro`s, and both Studios'
+    `#busy`/`#leave`/`#boot`. `test/copy.mjs` refuses a height keyframe on any of
+    them. Two bar animations are not splashes and still move by height: the in-feed
+    clip loader and the home page's one-shot opener. See 0dp.
+
 0gd. **A picture is fetched once — never a layered `background-image` as a
     fallback.** `background-image: url(small), url(original)` is a STACK, not a
     fallback: the browser downloads every layer and paints the first one on top.
@@ -1879,7 +1898,8 @@ If you are about to violate one, stop and say so rather than working around it.
     refresh gesture stands down while a sheet is open — both handlers used to fire,
     so dragging a sheet closed also reloaded the page behind it. A sheet's
     `closeSheet` must clear the inline transform its own drag left, or the sheet
-    sticks halfway and the ✕ looks dead.
+    sticks halfway and the ✕ looks dead. The splash also never freezes mid-change:
+    its bars move by transform (0gf).
 
 0dq. **A clip is uploaded on its own, before the post, and is bounded by BYTES.** A
     function body tops out around 6MB and three photos already spend most of it, so
