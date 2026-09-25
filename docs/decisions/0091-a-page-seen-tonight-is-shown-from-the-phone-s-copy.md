@@ -8,7 +8,7 @@ area: performance
 reverses:
 superseded_by:
 invariants: [0ax, 0ce]
-commits: []
+commits: [ebdce9e]
 tests: [test/sw.mjs]
 files: [public/sw.js, test/sw.mjs, test/run.sh, netlify.toml, INVARIANTS.md, AGENTS.md, public/pull.js, FINGERPRINTS.md, tools/mock.mjs]
 ---

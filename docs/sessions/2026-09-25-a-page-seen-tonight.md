@@ -101,9 +101,41 @@ for `/app.css` from any of community/artist/vote/shop, 98 inline rules, buttons 
 `CSSWAIT` 0; the community page fires `what=community&a=demo` and `…&me=1` from the
 head, 5 posts, the composer docked; the shop asks the shared read alone.
 
+## The line-by-line review, and the ship
+
+The founder's "double check every single line of code one last time before shipping it
+all live": a fresh-context reviewer read the whole diff. Its one real finding — the
+"a post just made never vanishes on a pull" guard kept the phone's newer list but not
+its stamp, so it protected exactly one pull — was fixed (`d.at=L.at`), with its
+test-strength points (the fandoor assertion could not fail when a device was named on the
+shared read; the shared read's no-heart claim was asserted before any like existed) and
+the nits (the shared read no longer consults a token; a like is kept on the phone's copy;
+a no-op in the worker test; four stale sentences). Then main moved under the branch:
+another session had merged 0090 (the loaders) and 0092 (the Instagram dashboard), taking
+decision number 0092 and INVARIANT 0gf — so app.css inline is **0094 / 0gh**; the branch
+was merged with main (four generated or shared files resolved by hand: the ledger, the
+push log, the two indexes), re-stamped, re-suited (3,575/0), re-checked in Chrome
+(uicheck 242 ✓ / 2 ✗ as main, sheetcheck 39/0) and on the mock (the vote page with the
+loader batch's transform bars and the inline sheet, the community page's two reads).
+
+**Live as `ebdce9e`** (PR #94, squash-merged 2026-09-25; the preview verified by content
+first: `sw.js` with `myset-runtime-v4` and the six-hour rule, every fan route with one
+`app-css` block and no `/app.css` link, the inline copy's hash equal to the served file's,
+the fan.js stamp `bb648cef` on all nine pages, the community shared read `"Netlify
+Durable"; stored` with no mark on any post, the personal call answering its four fields).
+
+**AFTER, measured on production 2026-09-25 (read-only GETs from the founder's Mac):**
+
+| What | Before (0088's table) | After |
+|---|---|---|
+| the community page's read | 0.55–0.73 s, `fwd=bypass`, every phone its own URL | the shared read `"Netlify Edge"; hit` **0.44–0.47 s**, `"Netlify Durable"; hit` **0.42 s**; the personal call 0.49 s (`no-store`, `fwd=bypass`) |
+| a fan page's HTML (br) | artist 32 KB-class, no styles in it | `/perryidyll` 36.2 KB, `/perryidyll/community` 30.3 KB, `/about` 26.0 KB — app.css's ~4 KB inside, no second request |
+| `/app.css` | one round trip before or beside every first paint | still served (the source the tool reads), asked for by no page |
+| a page opened tonight | the edge lottery every open | the phone's copy (needs a phone with the new worker — verified on the mock, not yet on a phone) |
+
 ## Not done
 
-Not committed, not pushed, not live at the time of writing — the fresh-context review
-the founder asked for comes first, then the PR. Not checked on production or on a
+A real phone on bar wifi; whether Safari marks a reload `no-cache`; the 0051 token copies
+in shop/diary, now redundant, still to retire. Not checked on production or on a
 phone. Option D (tell the page a newer copy arrived) is still his; the other two 0088
 levers were built later the same session (below).

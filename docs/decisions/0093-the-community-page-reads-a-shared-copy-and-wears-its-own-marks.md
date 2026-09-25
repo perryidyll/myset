@@ -8,7 +8,7 @@ area: scale
 reverses:
 superseded_by:
 invariants: [0gg]
-commits: []
+commits: [ebdce9e]
 tests: [test/community.mjs, test/fandoor.mjs]
 files: [netlify/functions/community.mjs, netlify/functions/_community.mjs, netlify/functions/fan.mjs, public/community.html, tools/mock.mjs]
 ---
