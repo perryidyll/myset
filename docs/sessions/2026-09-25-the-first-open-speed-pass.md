@@ -20,7 +20,7 @@ same branch `perf/fan-script`).
 
 The artist page's waterfall in the app's browser (warm cache, 375 px): HTML 178 ms → profile + events start at 183 ms, arrive at 576 ms → the cover transform's first byte at 1.2 s → **`/api/img?…` originals of 85 / 108 / 123 / 85 KB fetched behind the 220 px thumbnails and the 320 px portrait** — layered backgrounds download every layer.
 
-## What shipped (working tree, branch `perf/fan-script`, on top of 0087 — NOT committed, NOT pushed)
+## What shipped — **live as `68efdb4`** (PR #85, merged 2026-09-25 03:51 UTC; live on production ~30 s later) (one PR for both batches: the tree that was verified end to end)
 
 1. **One picture per slot** — `artist.html`'s three thumbnails and the portrait are `<img>` of the small copy with the original only on error (the cover's own pattern); the portrait keeps its 48 px copy behind as the placeholder. ~400 KB off every first open of an artist page with photos. INVARIANT 0gd; `test/structure.mjs` refuses `), url(` on a fan page.
 2. **No blocking script in any head** — `pull.js` moved to the bottom group on the vote page, the front door and About (its head comment had argued the worker makes it free; a first visit has no worker); `theme.js` is `defer` in both Studios (nothing reads `MySetTheme` at parse). The structure check refuses a non-deferred `<script src>` before `</head>` on a fan page.
@@ -39,6 +39,21 @@ The artist page's waterfall in the app's browser (warm cache, 375 px): HTML 178 
 
 `sh test/run.sh` on the final tree: 52 files, 3,502 assertions, 0 failed. `node tools/uicheck.mjs` 242 ✓ / 2 ✗ (the same two as origin/main: the stale profit figures). `node tools/sheetcheck.mjs` 39 ✓ / 0 ✗. `node tools/clipcheck.mjs` the same one pre-existing ✗. `tools/mock.mjs` in the app's browser at 375 px: vote (logo screen lifts, app.css applied through the preload, tokens inline, pull.js at the bottom, the failure message and the recovery), artist (one `<img>` per slot, no stacked `url(`), front door and directory (both reads through `/api/fan?what=…`, network log). The fresh-context review of 0087 (its findings fixed in the same tree: one declaration per line in `fan.js` so the guard sees every name; the guard now also catches `var` and comma lists; `docs/design-system.md` §8 re-pointed; the artist page's `#toast` moved outside `.wrap`; two stale comments).
 
-## How to measure the AFTER once it is live
+## The AFTER, measured on production 2026-09-25 (same Mac, same loop)
+
+| Read | Before | After |
+|---|---|---|
+| `/api/fan?what=artists&maps=1` | 1.98 s cold, 0.76–0.85 s warm, `fwd=bypass` | 1.49 s on the first call after the deploy, then `"Netlify Durable"; hit` 0.46 s (an Edge hit at 0.17 s) |
+| `/api/fan?what=mapconfig` | 1.15 s cold, 0.60–0.68 s warm, `fwd=bypass` | 0.42 s, durable hits |
+| `/api/fan?what=events&places=1` | 1.77 s cold, 0.43 s hit | 0.42–0.45 s, durable hits, ttl 299 |
+| `/perryidyll` in the app's browser | 4 originals (85/108/123/85 KB) behind the thumbnails | 0 originals; four `<img>` slots |
+| the directory's reads in the browser | — | 322 / 314 ms |
+| the front door's places read in the browser | — | 311 ms |
+| `/fan.js` | — | `public,max-age=31536000,immutable`, Brotli, stamp `580721d7` = the file |
+| `/perryidyll/vote` (curl) | bare until the board | `<style id="tokens">`, `#intro`, app.css preloaded, no `<script src>` in the head |
+
+The old addresses (`/api/artists`, `/api/mapconfig`, `/api/events?places=1`) still answer 200. Not measured: a first open on a phone in a bar.
+
+## How to measure again
 
 From the same Mac, the same read-only loop (`curl -s -o /dev/null -w '%{time_starttransfer}'` with `-H 'accept-encoding: br, gzip'`, three runs each): `/api/fan?what=artists&maps=1` and `/api/fan?what=mapconfig` should answer `"Netlify Durable"; hit` on the second run at ~0.45 s instead of 0.75–2.0 s; `/perryidyll` in the app's browser should show no `/api/img?…` entries behind the thumbnails; the vote page's first paint (Performance API `paint` entries on a cleared cache) should land at the HTML's arrival rather than after app.css. A real phone on bar wifi remains the honest test.

@@ -8,7 +8,7 @@ area: performance
 reverses:
 superseded_by:
 invariants: [0gc]
-commits: []
+commits: [68efdb4]
 tests: [test/structure.mjs, test/_src.mjs, test/copy.mjs, tools/sheetcheck.mjs, tools/uicheck.mjs]
 files: [public/fan.js, public/index.html, public/artist.html, public/artists.html, public/vote.html, public/community.html, public/venue.html, public/about.html, public/shop.html, public/diary.html, tools/stamp.mjs, netlify.toml, test/_src.mjs, test/structure.mjs]
 ---
@@ -99,6 +99,6 @@ community page (tip sheet, composer parked), the shop (product sheet, Back),
 the diary, a venue's page (pitch sheet, new grab zone), the directory and About —
 no console errors, every sheet froze and thawed the page and gave focus back.
 
-NOT checked: a deploy preview (the change is not pushed); `/fan.js` answering
-`immutable` from Netlify — the header rule is the same shape as `/studio.js`'s,
-which does; the first open on a real phone in a bar.
+Checked after the merge (68efdb4, PR #85): the deploy preview at phone width; `/fan.js`
+answers `cache-control: public,max-age=31536000,immutable` with Brotli on production and
+its stamp matches the file. NOT checked: the first open on a real phone in a bar.
