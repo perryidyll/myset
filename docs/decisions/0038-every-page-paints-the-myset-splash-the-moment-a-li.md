@@ -40,7 +40,8 @@ worker help; (4) the default cover photo was a 277 KB image drawn 400 px wide.
 
 A. Each piece is small, independent and reversible, and none of them changes what
 the server does. The HTML pages themselves deliberately keep `must-revalidate` so
-a deploy is on every phone at its next tap (sw.js rule 2 says the same). The
+a deploy is on every phone at its next tap (sw.js rule 2 said the same until
+decision 0091, 2026-09-25: a page seen tonight now comes from the phone's copy first). The
 Studios keep their own `goTo`; `leave.js` steps aside if `window.goTo` exists.
 
 ## What this makes harder

@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 14:18 — bf6fd7a — wt@perf/sw-navigations (60 files since origin/main)
+**tl;dr:** Three speed levers: the service worker shows a page opened in the last six hours from the phone's copy and refreshes it behind (0091 — a pull or reload still gets the newest; the money model is never stored); app.css rides inline in all nine fan pages (0094); the community page reads one shared, edge-kept copy and wears its own marks from a tiny personal call (0093)
+**Other sessions:** sw.js changed on the founder's word — test/sw.mjs runs the real worker, every rule mutation-checked. After ANY edit to public/app.css run node tools/stamp.mjs (the block is <style id="app-css">, never id=app: that is every page's content container); the vote page's 0088 tokens block is gone. Community GET with no fan = the shared read (nothing personal may ever be added to it — the test refuses a mark), &fan=<id>&me=1 = the personal call, the old ?fan= reply stays. tools/mock.mjs pages say no-cache so the worker can be checked there. INVARIANTS 0ax rewritten, 0gh and 0gg new.
+
 ### 2026-09-25 13:56 — 74ac9d3 — wt@docs/mediadash-live (3 files since origin/main)
 **tl;dr:** Docs only: MKT-001 / decision 0092 live as 4f95289 with the four content checks; the squash-inherits-[skip ci] lesson [skip ci]
 **Other sessions:** gh pr merge --squash without --body folds branch commit messages into the squash — a [skip ci] in any of them skips the production build; trigger with netlify api createSiteBuild (not deploy --prod) if that happens.

@@ -8,7 +8,7 @@
    `text-transform` means the DOM text is not what the source says. */
 import { readFileSync, readdirSync } from 'node:fs';
 import { src } from './_src.mjs';
-import { PAIRS, FANPAGES, stampOf, stampRe } from '../tools/stamp.mjs';
+import { PAIRS, FANPAGES, stampOf, stampRe, appBlock, appRe } from '../tools/stamp.mjs';
 let fail = 0;
 const check = (file, needles) => {
   const s = src(new URL('../' + file, import.meta.url));
@@ -128,9 +128,9 @@ check('public/venue-studio.html', [
    and the artist page's thumbnails were pulling ~400 KB of originals nobody saw
    (INVARIANT 0gd). (2) Nothing blocks the head: no <script src> without `defer`
    before </head> on a fan page — pull.js in the head held every first paint for
-   its own round trip. (3) The vote page paints its colours before app.css has
-   arrived: its <style id="tokens"> is the top of app.css, byte for byte, and
-   app.css itself is preloaded rather than render-blocking. */
+   its own round trip. (3) app.css rides inside every fan page, byte for byte
+   (decision 0094, written by tools/stamp.mjs), and no fan page asks the network
+   for it — a stale copy or a re-added <link> is refused here. */
 {
   for (const page of FANPAGES) {
     const html = readFileSync(new URL('../' + page, import.meta.url), 'utf8');
@@ -143,15 +143,16 @@ check('public/venue-studio.html', [
     if (blocking.length) fail++;
   }
   const css = readFileSync(new URL('../public/app.css', import.meta.url), 'utf8');
-  const tokens = css.slice(css.indexOf(':root{'), css.indexOf('*,*::before,*::after{box-sizing:border-box}')).trimEnd();
-  const vote = readFileSync(new URL('../public/vote.html', import.meta.url), 'utf8');
-  const inline = (vote.match(/<style id="tokens">\n([\s\S]*?)\n<\/style>/) || ['', ''])[1];
-  const sameTokens = tokens.length > 500 && inline === tokens;
-  console.log(`  ${sameTokens ? '✓' : '✗'} vote.html's inline tokens are the top of app.css, byte for byte${sameTokens ? '' : ' — copy app.css from :root{ to the box-sizing line into <style id="tokens">'}`);
-  if (!sameTokens) fail++;
-  const async = /<link rel="preload" href="\/app\.css" as="style" onload=/.test(vote) && !/<link rel="stylesheet" href="\/app\.css">(?![\s\S]*<\/noscript>)/.test(vote.replace(/<noscript>[\s\S]*?<\/noscript>/g, ''));
-  console.log(`  ${async ? '✓' : '✗'} vote.html preloads app.css instead of blocking on it`);
-  if (!async) fail++;
+  for (const page of FANPAGES) {
+    const html = readFileSync(new URL('../' + page, import.meta.url), 'utf8');
+    const blocks = html.match(new RegExp(appRe.source, 'g')) || [];
+    const same = blocks.length === 1 && blocks[0] === appBlock(css);
+    console.log(`  ${same ? '✓' : '✗'} ${page} carries app.css inline, byte for byte${same ? '' : blocks.length !== 1 ? ` (${blocks.length} blocks)` : ' — run node tools/stamp.mjs'}`);
+    if (!same) fail++;
+    const links = html.match(/<link[^>]*href="\/app\.css"[^>]*>/g) || [];
+    console.log(`  ${links.length ? '✗' : '✓'} ${page} never asks the network for app.css${links.length ? ' — ' + links.join(' ') : ''}`);
+    if (links.length) fail++;
+  }
 }
 /* THE DASHBOARD MODULE (decision 0065). It reads studio.js's globals by bare name
    from inside one IIFE, so a top-level name declared in both would throw at load

@@ -22,9 +22,10 @@ import mapconfig from './mapconfig.mjs';
    duplicated, and the old addresses stay up for any page a phone cached before
    the switch. The pages ask for /api/fan?what=profile&a=…, ?what=board&a=…, and
    so on. Each handler keeps its own cache headers, so a shared read (profile,
-   events, venue, board) is still kept at the edge under its own URL and a
-   personal one (me, community) is still never kept (INVARIANT 9d6: the URL is
-   the whole key, and `what=` is part of it).
+   events, venue, board, community's shared read since 0093) is still kept at the
+   edge under its own URL and a personal one (me, community with a device named)
+   is still never kept (INVARIANT 9d6: the URL is the whole key, and `what=` is
+   part of it).
 
    `what=warm` is the ping: autocron rings it every four minutes so the door is
    awake when the first fan of the evening arrives. It reads nothing and is

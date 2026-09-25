@@ -30,8 +30,11 @@ The artist page's waterfall in the app's browser (warm cache, 375 px): HTML 178 
 ## What was NOT done, and why (each is a decision the founder can make)
 
 - **Serve navigations stale-while-revalidate from `sw.js`** — the one lever for a returning phone's HTML wait; changes when a deploy lands on a phone during a gig; `sw.js` is do-not-touch (0ax).
+  **Taken up the same day at the founder's word: decision 0091**, `docs/sessions/2026-09-25-a-page-seen-tonight.md`.
 - **Inline all of app.css into every page** — removes the CSS round trip for every first paint but turns every app.css edit into a ~3,600-line diff; the vote page got the 2 KB that matters.
+  **Taken up the same day at the founder's word: decision 0094.**
 - **Split the community read** (shared, cached posts + a small personal call, as 0034 did for the board) — `what=community` is `fwd=bypass` because it carries `fan=`; a real project.
+  **Taken up the same day at the founder's word: decision 0093.**
 - **The HTML edge lottery** is Netlify's per-node cache; a busy bar fills the nodes on its own.
 - **Preload hints for the bottom scripts** — the preload scanner already finds them as the HTML streams; tens of milliseconds at most.
 

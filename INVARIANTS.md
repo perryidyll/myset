@@ -523,6 +523,29 @@ If you are about to violate one, stop and say so rather than working around it.
     a synthetic week; `finance/model-test.mjs` checks the tracker carries the method's
     name and that the seed's ticks solve to a sane screen-on share. Decision 0089.
 
+0gh. **app.css rides inside every fan page, byte for byte — no fan page asks the network
+    for it.** (Decision 0094.) The whole stylesheet sits between `<style id="app-css">`
+    and `</style>` where the `<link>` used to be, written by `node tools/stamp.mjs`
+    after ANY edit to `public/app.css`; `test/structure.mjs` refuses a page whose copy
+    differs from the file by a byte, a page with two blocks, and a page that links
+    `/app.css` again. The id is `app-css`, never `app`: every fan page's content
+    container is `<div id="app">`, and a second element with that id is the one
+    `getElementById` finds first (it was, for an hour, and the page's render wrote its
+    HTML into the stylesheet). With no `<link>`, `cssReady()` in `fan.js` is true at
+    once and the 400 ms first-paint waits end on their first frame.
+
+0gg. **The community page's shared read carries nothing personal, and its personal call
+    carries nothing shared.** (Decision 0093, the shape 0fh gave the vote page.) With no
+    device named, `?what=community&a=<slug>` is the same bytes for every phone — `canPost`
+    true, `mine`/`editable`/`liked` false on every post, no token consulted — and is kept
+    at the edge for 30 s, stale 30 more. `…&fan=<id>&me=1` answers only this phone's own
+    posts, the ones it may still edit, the ones it liked, and whether it may post; it is
+    never cached and reads the registry, the posts and the likes, nothing else. Every
+    reply that carries the list says when it was made (`at`), and the page keeps the
+    newest list it has seen, so a post just made does not vanish on a pull while the
+    edge still holds the copy from before it. `test/community.mjs` refuses a mark in the
+    shared read and a token that changes it.
+
 0fy. **A page is its artist's: no profile ever shows another act's picture.**
     A new profile's `photo` and `avatar` are empty (`_profile.mjs` DEFAULTS;
     `normProfile` never fills them). With no cover the artist page paints the
@@ -1294,12 +1317,25 @@ If you are about to violate one, stop and say so rather than working around it.
     after loading the app and calling the API, the only thing in the cache was
     `/app.css`.
 
-0ax. **Navigations are network-first, and nothing is precached.** The newest version
-    of a page always wins, so a bad deploy is fixed by the next deploy rather than
-    by asking somebody in a bar to clear their browser. Precaching a shell is what
-    makes a service worker ship a stale app; there is no install-time cache to get
-    out of step. Old caches are deleted on activate, and a page can post
-    `myset-unregister` to make the worker stand down entirely.
+0ax. **A page seen tonight is shown from the phone's copy and refreshed behind it;
+    nothing is precached.** (Decision 0091; until then every navigation waited for
+    the network.) `sw.js` shows a page this phone fetched in the last six hours
+    straight from its copy and re-fetches it behind, so the open after next has the
+    newest; a page older than that, or never seen, waits for the network and the
+    copy is only the no-signal fallback. So a deploy reaches a phone by the open
+    after next during a gig and by the next open the next day — never by asking
+    somebody in a bar to clear their browser. The six hours count from the last
+    open, not the first. A deliberate reload — a pull, the Studio's button; the
+    request says `no-cache` or `reload` — asks the network first, so a reload is
+    still the newest page (0ce). A page that says `no-store` or `private` (the
+    passcode-gated money model) is never stored. A stamped file (`?v=…`, served
+    immutable) is never re-asked — load-bearing, not tidiness: a stored page names
+    the stamp it shipped with, and a re-fetch of that old name would be answered
+    with the current file, pairing an old page with a new script for the rest of
+    the night. Precaching a shell is what makes a service worker ship a stale app; there
+    is no install-time cache to get out of step. Old caches are deleted on activate,
+    and a page can post `myset-unregister` to make the worker stand down entirely.
+    `test/sw.mjs` runs the real worker against every one of these sentences.
 
 0ay. **A manifest per surface.** `start_url` is the whole point of installing: an
     artist who puts the Studio on their home screen wants the Studio, not the city
@@ -1573,8 +1609,8 @@ If you are about to violate one, stop and say so rather than working around it.
     than left beside it (12b).
 
 0ce. **A pull cannot rescue broken JavaScript**, which is the exact case somebody
-    most wants a reload. So it is not the only escape: `sw.js` serves navigations
-    network-first, and Settings has a plain reload plus `hardReset()`, which drops
+    most wants a reload. So it is not the only escape: `sw.js` asks the network first
+    for a reload and for any page older than a night (0ax), and Settings has a plain reload plus `hardReset()`, which drops
     every cache and sends the `myset-unregister` message `sw.js` has listened for
     since it shipped and never had a button for. Neither touches songs, votes,
     money or the sign-in token — a fix that signs somebody out mid-gig is not a fix.

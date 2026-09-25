@@ -8,12 +8,15 @@
 <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t;const m=document.createElement('meta');m.id='manualTheme';m.name='theme-color';m.content=t==='light'?'#F5F5F7':'#000000';document.head.appendChild(m)})();</script>
-<!-- THE FIRST CALL LEAVES BEFORE THE PAGE IS PARSED. The page's own script cannot
-     run until the stylesheet and the shared scripts have arrived, so without this
-     the request that decides what is on screen would wait behind them. Here it is
-     already in flight while they load; boot() below picks up the reply. Used once,
-     on the first load only — a pull-to-refresh fetches fresh. -->
-<script>(()=>{try{let T='';try{T=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin')||''}catch(e){}if(T)return;const P=location.pathname.split('/').filter(Boolean);const V=P[0]==='v';const S=V?(P[1]||''):(P[0]&&P[0]!=='community.html'?P[0]:'');const Q=V?'?v='+encodeURIComponent(S):(S?'?a='+encodeURIComponent(S):'?');let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}const f=fetch('/api/fan?what=community'+Q.replace('?','&')+(Q==='?'?'':'&')+'fan='+encodeURIComponent(F),{cache:'no-store'});f.catch(()=>{});window.__early={community:f}}catch(e){}})();</script>
+<!-- THE FIRST CALLS LEAVE BEFORE THE PAGE IS PARSED. The page's own script cannot
+     run until the shared scripts have arrived, so without this the requests that
+     decide what is on screen would wait behind them. Here they are already in flight
+     while those load; load() below picks up the replies. Two of them since decision
+     0093: the SHARED read (no device named — one copy at the edge for every phone)
+     and the PERSONAL call (this phone's own marks; skipped for a signed-in artist,
+     whose load() asks with its token). Used once, on the first load only — a
+     pull-to-refresh fetches fresh. -->
+<script>(()=>{try{const P=location.pathname.split('/').filter(Boolean);const V=P[0]==='v';const S=V?(P[1]||''):(P[0]&&P[0]!=='community.html'?P[0]:'');const Q=V?'?v='+encodeURIComponent(S):(S?'?a='+encodeURIComponent(S):'?');const f=fetch('/api/fan?what=community'+(Q==='?'?'':Q.replace('?','&')),{cache:'no-store'});f.catch(()=>{});let g=null,T='';try{T=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin')||''}catch(e){}if(!T){let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}g=fetch('/api/fan?what=community'+Q.replace('?','&')+(Q==='?'?'':'&')+'fan='+encodeURIComponent(F)+'&me=1',{cache:'no-store'});g.catch(()=>{})}window.__early={community:f,me:g}}catch(e){}})();</script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23FF375F'/><stop offset='1' stop-color='%23FF6B45'/></linearGradient></defs><rect width='100' height='100' rx='24' fill='url(%23g)'/><g fill='%23fff'><rect x='26' y='42' width='11' height='32' rx='5.5'/><rect x='44' y='26' width='11' height='48' rx='5.5'/><rect x='62' y='52' width='11' height='22' rx='5.5'/></g></svg>">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
@@ -46,8 +49,285 @@ html[data-theme=dark] #intro .word{color:#fff}
 @keyframes introfill3{from{transform:scaleY(.6429)}to{transform:scaleY(1)}}
 @media (prefers-reduced-motion:reduce){#intro .bars b,#intro .bars b::before{animation:none}}
 </style>
-<link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/app.css"></noscript>
+<!-- app.css, inline (decision 0094): the whole shared stylesheet, byte for byte, written by
+     tools/stamp.mjs. Edit public/app.css, never this block; test/structure.mjs refuses a stale copy. -->
+<style id="app-css">
+/* ═══════════════════════════════════════════════════════════════
+   MySet — design system v2
+   Soft depth · spring motion · SF-family type · one warm accent
+   ═══════════════════════════════════════════════════════════════ */
+:root{
+  /* Provenance marker. Arbitrary, meaningless, and referenced nowhere — that is
+     the point: a shared value with no function has no innocent explanation.
+     Registered in FINGERPRINTS.md. Do not "clean this up". */
+  --ms-k:ms-k3f9qz;
+  --bg:#F5F5F7;
+  --bg-2:#EBEBEF;
+  --surface:#FFFFFF;
+  --surface-2:#FFFFFF;
+  --ink:#1D1D1F;
+  --ink-2:#3A3A3C;
+  --muted:#6E6E73;
+  --faint:#A1A1A6;
+  --hair:rgba(0,0,0,.07);
+  --hair-2:rgba(0,0,0,.12);
+
+  --accent:#FF375F;
+  --accent-2:#FF5650;   /* the logo's pink-orange: the middle of --grad, not its warm end (the founder, 2026-09-13) */
+  --accent-ink:#FF5650;   /* accent as TEXT — the logo's pink-orange in both themes (the founder, 2026-09-13; was #D6003C / #FF8AA5) */
+  --accent-soft:rgba(255,86,80,.12);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));   /* the soft ground with the brand's hue shift */
+  --grad:linear-gradient(135deg,#FF375F 0%,#FF6B45 100%);
+  --grad-warm:linear-gradient(135deg,#FF375F 0%,#FF9F45 100%);
+
+  --r-xs:10px; --r-sm:14px; --r:18px; --r-lg:24px; --r-xl:30px; --pill:999px;
+
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09);
+  --sh-3:0 6px 18px rgba(0,0,0,.08),0 22px 55px rgba(0,0,0,.14);
+  --sh-accent:0 6px 20px rgba(255,55,95,.32);
+
+  --spring:cubic-bezier(.34,1.4,.64,1);
+  --ease:cubic-bezier(.4,0,.2,1);
+  --maxw:560px;
+  --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#000000; --bg-2:#0A0A0C;
+    --surface:#1C1C1E; --surface-2:#2C2C2E;
+    --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
+    --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
+    --accent:#FF456E; --accent-ink:#FF5650; --accent-soft:rgba(255,86,80,.18);
+    --grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
+    --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+    --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+    --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6);
+  }
+}
+/* A manual choice wins over the phone setting. The compact home-page switch
+   stores one value for every audience, artist-profile and venue page. */
+:root[data-theme=light]{
+  color-scheme:light;
+  --bg:#F5F5F7;--bg-2:#EBEBEF;--surface:#FFFFFF;--surface-2:#FFFFFF;
+  --ink:#1D1D1F;--ink-2:#3A3A3C;--muted:#6E6E73;--faint:#A1A1A6;
+  --hair:rgba(0,0,0,.07);--hair-2:rgba(0,0,0,.12);
+  --accent:#FF375F;--accent-ink:#FF5650;--accent-soft:rgba(255,86,80,.12);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09);
+  --sh-3:0 6px 18px rgba(0,0,0,.08),0 22px 55px rgba(0,0,0,.14)}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#000000;--bg-2:#0A0A0C;--surface:#1C1C1E;--surface-2:#2C2C2E;
+  --ink:#F5F5F7;--ink-2:#DDDDE0;--muted:#98989D;--faint:#68686D;
+  --hair:rgba(255,255,255,.09);--hair-2:rgba(255,255,255,.16);
+  --accent:#FF456E;--accent-ink:#FF5650;--accent-soft:rgba(255,86,80,.18);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
+  --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+  --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+  --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6)}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{background:var(--bg);-webkit-text-size-adjust:100%;touch-action:manipulation}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--f);
+  font-size:16px;line-height:1.45;letter-spacing:-.011em;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  -webkit-tap-highlight-color:transparent;
+}
+img{display:block;max-width:100%;height:auto}
+button{font-family:inherit;background:none;border:none;color:inherit;padding:0;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.themebtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;
+  background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:17px;
+  transition:transform .2s var(--spring),background .2s var(--ease)}
+.themebtn:active{transform:scale(.9)}
+input,select,textarea{font-family:inherit}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:3px;border-radius:6px}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
+.wrap{max-width:var(--maxw);margin:0 auto}
+.pad{padding-left:18px;padding-right:18px}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+[hidden]{display:none!important}   /* author display:* otherwise beats the UA rule */
+.kick{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+
+/* ── live dot ───────────────────────────────────────────── */
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;flex:0 0 auto;
+  box-shadow:0 0 0 0 rgba(255,55,95,.55);animation:ping 2s var(--ease) infinite}
+@keyframes ping{
+  0%{box-shadow:0 0 0 0 rgba(255,55,95,.5)}
+  70%{box-shadow:0 0 0 7px rgba(255,55,95,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,55,95,0)}
+}
+
+/* ── buttons ────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:600;letter-spacing:-.01em;padding:15px 22px;border-radius:var(--pill);
+  background:var(--surface);color:var(--ink);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.btn:hover{box-shadow:var(--sh-2)}
+.btn:active{transform:scale(.965)}
+.btn-pri{background:var(--grad);color:#fff;box-shadow:var(--sh-accent)}
+.btn-pri:hover{box-shadow:0 8px 26px rgba(255,55,95,.42)}
+.btn-ghost{background:var(--surface);color:var(--ink)}
+.btn-block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.btn-sm{padding:10px 16px;font-size:14px}
+/* FOUR TIERS, NOT TWO. A page used to have only "gradient" and "plain surface",
+   so every next-step, every "Show all" and every "Not yet" was invented locally
+   and each one came out different. Compose with .btn: class="btn btn-ink".
+     .btn-pri   commit — the gradient pill above.
+     .btn-ink   next step / neutral primary. Ink on paper; in the dark theme the
+                tokens flip so it stays "the darkest thing on the page" inverted.
+     .btn-grey  secondary ("Show all"). Sits back, no shadow.
+     .btn-text  tertiary ("Not yet"). No fill at all, only the words.
+   The same four live in lock.css for the Studios, which never load this file. */
+.btn-ink{background:var(--ink);color:var(--bg);box-shadow:var(--sh-1)}
+.btn-ink:hover{box-shadow:var(--sh-2)}
+.btn-grey{background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--ink);box-shadow:none}
+.btn-grey:hover{box-shadow:none}
+.btn-text{background:none;color:var(--accent-ink);box-shadow:none;padding:12px 14px}
+.btn-text:hover{box-shadow:none;background:var(--accent-soft)}
+
+/* ── chips ──────────────────────────────────────────────── */
+/* One recipe for every small pressable pill: a hairline AND a soft shadow (the
+   lock veil's pill in lock.css found this combination first). Pages used to
+   pick one or the other and no two looked alike. .on is an accent ring, never a
+   fill — a filled chip reads as a button. */
+.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;border-radius:var(--pill);font-size:14px;font-weight:600;letter-spacing:-.01em;
+  background:var(--surface);color:var(--ink-2);white-space:nowrap;
+  border:.5px solid var(--hair-2);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.chip:active{transform:scale(.94)}
+.chip.on{color:var(--accent-ink);background:var(--accent-soft);border-color:transparent;
+  box-shadow:0 0 0 1.5px var(--accent) inset,var(--sh-1)}
+
+/* ── cards ──────────────────────────────────────────────── */
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
+.card-lg{border-radius:var(--r-lg);box-shadow:var(--sh-2)}
+
+/* ── sticky header ──────────────────────────────────────── */
+.head{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:14px 18px;
+  background:color-mix(in srgb,var(--bg) 78%,transparent);
+  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+  border-bottom:.5px solid var(--hair)}
+.head h1{font-size:19px;font-weight:700}
+.head .sub{font-size:13px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px}
+
+/* credit pill */
+.credits{display:flex;align-items:baseline;gap:1px;padding:8px 14px;border-radius:var(--pill);
+  background:var(--surface);box-shadow:var(--sh-1);font-weight:700;font-size:16px;flex:0 0 auto;
+  transition:transform .3s var(--spring),color .2s}
+.credits small{font-size:12px;font-weight:600;color:var(--muted)}
+.credits.low{color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset,var(--sh-1)}
+.credits.bump{transform:scale(1.14)}
+
+/* ── sheets ─────────────────────────────────────────────── */
+.bg{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);z-index:60;
+  opacity:0;pointer-events:none;transition:opacity .28s var(--ease)}
+.bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(101%);
+  width:100%;max-width:var(--maxw);background:var(--surface);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--sh-3);z-index:61;
+  transition:transform .42s var(--spring);max-height:90vh;overflow-y:auto;
+  padding:10px 18px calc(24px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.sheet.on{transform:translateX(-50%) translateY(0)}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto 18px}
+.sheet h3{font-size:24px;font-weight:700;margin-bottom:6px}
+.sheet .lede{color:var(--muted);font-size:15px;margin:0 0 4px}
+
+.tiles{display:flex;gap:10px;margin:18px 0 4px}
+.tile{flex:1;border-radius:var(--r-sm);padding:16px 12px;text-align:left;background:var(--bg);
+  box-shadow:0 0 0 1.5px var(--hair) inset;transition:transform .24s var(--spring),box-shadow .2s var(--ease)}
+.tile:active{transform:scale(.96)}
+.tile.on{box-shadow:0 0 0 2.5px var(--accent) inset;background:var(--accent-soft)}
+.tile b{display:block;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.tile span{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:4px}
+
+.inp{width:100%;min-height:50px;padding:14px 16px;font-size:16px;background:var(--bg);
+  border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);
+  margin-top:12px;transition:box-shadow .2s var(--ease)}
+.inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+/* the custom-amount field lit like a chosen tile (vote.html / community.html customAmt) */
+.inp.on{box-shadow:0 0 0 2.5px var(--accent) inset;background:var(--accent-soft)}
+.inp::placeholder{color:var(--faint)}
+.go{width:100%;margin-top:18px;padding:17px;background:var(--grad);color:#fff;font-weight:600;
+  font-size:17px;border-radius:var(--pill);box-shadow:var(--sh-accent);
+  transition:transform .22s var(--spring)}
+.go:active{transform:scale(.97)}
+.go:disabled{opacity:.55}
+.fine{font-size:12.5px;color:var(--faint);margin-top:14px;text-align:center}
+
+/* ── toast ──────────────────────────────────────────────── */
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
+  width:calc(100% - 32px);max-width:calc(var(--maxw) - 32px);
+  background:rgba(28,28,30,.92);color:#fff;backdrop-filter:blur(20px);
+  font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
+  box-shadow:var(--sh-3);z-index:70;opacity:0;pointer-events:none;
+  transition:opacity .3s var(--ease),transform .42s var(--spring)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+@media (prefers-color-scheme:dark){.toast{background:rgba(60,60,63,.92)}}
+:root[data-theme=light] .toast{background:rgba(28,28,30,.92)}
+:root[data-theme=dark] .toast{background:rgba(60,60,63,.92)}
+
+/* ── fab ────────────────────────────────────────────────── */
+/* A floating action pill pinned to the bottom of the phone: one line of state
+   on the left, one .btn-pri on the right. The state slot may not push the
+   button off — it shrinks and ellipsises first (min-width:0 is what allows
+   that in a flex row). A page that shows it must pad its own bottom. */
+.fab{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:50;
+  width:calc(100% - 24px);max-width:calc(var(--maxw) - 24px);
+  margin-bottom:calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:12px;padding:10px 10px 10px 18px;
+  background:var(--surface);border:.5px solid var(--hair-2);border-radius:var(--pill);
+  box-shadow:var(--sh-2)}
+.fab .state{flex:1 1 auto;min-width:0;font-size:13px;font-weight:500;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fab .act{flex:0 0 auto}
+
+/* ── misc ───────────────────────────────────────────────── */
+.empty{padding:56px 28px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:18px;font-weight:600;margin-bottom:8px}
+.foot{padding:32px 18px 40px;text-align:center;font-size:12.5px;color:var(--faint)}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid currentColor;
+  border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* skeleton shimmer */
+.sk{background:linear-gradient(100deg,var(--hair) 30%,var(--hair-2) 50%,var(--hair) 70%);
+  background-size:220% 100%;animation:sh 1.4s ease-in-out infinite;border-radius:8px}
+@keyframes sh{to{background-position:-120% 0}}
+
+/* entrance */
+.rise{animation:rise .5s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.stagger>*{animation:rise .45s var(--ease) both}
+.stagger>*:nth-child(1){animation-delay:.02s}
+.stagger>*:nth-child(2){animation-delay:.05s}
+.stagger>*:nth-child(3){animation-delay:.08s}
+.stagger>*:nth-child(4){animation-delay:.11s}
+.stagger>*:nth-child(5){animation-delay:.14s}
+
+/* confetti */
+.confetti{position:fixed;width:9px;height:14px;z-index:90;pointer-events:none;top:-24px;border-radius:2px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+
+/* The locked-feature styling used to be pasted in here. It was moved to its own
+   public/lock.css because NEITHER Studio loads this file, so the rules never
+   reached the only two pages that have locks — verified in a browser on
+   2026-09-03, after they had already been written and believed. */
+</style>
 
 <style>
 body{padding-bottom:34px}
@@ -340,7 +620,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
 <script src="/mp4trim.js"></script>
-<script src="/fan.js?v=580721d7"></script>
+<script src="/fan.js?v=bb648cef"></script>
 <script>
 /* /<slug>/community  or  /v/<slug>/community */
 const P=location.pathname.split('/').filter(Boolean);
@@ -374,21 +654,49 @@ function openComposer(){
    (or 'clips') the feed is narrowed to by the proof chips; '' is everything. */
 let D=null, DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}, SHOWPRE=(new URLSearchParams(location.search).get('show')||''), FILTER='', OPENED=false;
 
+/* The shared read carries nothing personal (decision 0093). wear() puts this phone's own
+   marks on it — which posts are its own, still editable, liked, and whether it may post —
+   from the personal call, or from the copy the phone last saw while that call is on its
+   way. True when a mark changed, so the page redraws only when there is something to show. */
+function wear(d,from){
+  if(!from||!from.ok) return false;
+  const ids=k=>new Set(Array.isArray(from[k])?from[k]:(from.posts||[]).filter(p=>p&&p[k]).map(p=>p.id));
+  const mine=ids('mine'), editable=ids('editable'), liked=ids('liked');
+  const canPost=from.canPost!==false;
+  let changed=(d.canPost!==false)!==canPost; d.canPost=canPost;
+  for(const p of (d.posts||[])){
+    const v={mine:mine.has(p.id),editable:editable.has(p.id),liked:liked.has(p.id)};
+    for(const k in v){ if(!!p[k]!==v[k]){ p[k]=v[k]; changed=true; } }
+  }
+  return changed;
+}
+const sameData=(a,b)=>JSON.stringify({...a,at:0})===JSON.stringify({...b,at:0});   // `at` is when a copy was made, not what it shows
+const LSK=()=>'community:'+Q+(ARTIST_TOKEN?':a':'');
+function keepTyping(){ DRAFT.text=($('#txt')||{}).value||DRAFT.text||''; DRAFT.name=($('#nm')||{}).value||DRAFT.name||''; }
+
 async function load(){
   try{
-    const E=window.__early||{}; window.__early=null;     // the head started this for a fan; see <head>
+    const E=window.__early||{}; window.__early=null;     // the head started both reads; see <head>
     // the last copy this phone saw paints first; the placeholder frame in #app covers a first visit
-    const K='community:'+Q+(ARTIST_TOKEN?':a':''), L=window.lastSeen?lastSeen.get(K):null;
+    const K=LSK(), L=window.lastSeen?lastSeen.get(K):null;
     if(L&&L.ok){ D=L; render(); }
     { const i=document.getElementById('intro'); if(i) i.classList.add('off'); }
+    /* Two reads side by side (decision 0093): the SHARED one — everything anyone would
+       see, one copy at the edge for every phone — and the PERSONAL one, this phone's own
+       marks. The page paints from the first; the second is worn when it lands. */
+    const shared=(E.community||fetch(`${API}/fan?what=community${Q==='?'?'':Q.replace('?','&')}`,{cache:'no-store'})).then(r=>r.json());
+    const personal=((!ARTIST_TOKEN&&E.me)||fetch(`${API}/fan?what=community${Q.replace('?','&')}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}&me=1`,{cache:'no-store',headers:authHeaders()})).then(r=>r.json()).catch(()=>null);
     let d=null;
-    try{ const r=await ((!ARTIST_TOKEN&&E.community)||fetch(`${API}/fan?what=community${Q.replace('?','&')}${Q==='?'?'':'&'}fan=${encodeURIComponent(FAN)}`,{cache:'no-store',headers:authHeaders()})); d=await r.json(); }
+    try{ d=await shared; }
     catch(e){ if(L&&L.ok) return; throw e; }            // offline: the copy stands
     if(!d.ok){ $('#app').innerHTML=`<div class="empty"><b>No page here</b><br>There’s nothing at this address.<br><a href="/" style="color:var(--accent-ink);font-weight:600">Find gigs near you</a></div>`; return; }
+    // the phone's own newer list wins over an older shared copy: a post it just made must not vanish on a pull
+    if(L&&L.ok&&L.at&&d.at&&L.at>d.at&&Array.isArray(L.posts)){ d.posts=L.posts; d.at=L.at; }   // and its stamp, or the next pull would lose it again
+    wear(d,L);                                          // the marks it already knows, until the personal call answers
     if(window.lastSeen) lastSeen.set(K,d);
-    if(L&&JSON.stringify(d)===JSON.stringify(L)) return;   // nothing changed: keep what they may already be typing
-    DRAFT.text=($('#txt')||{}).value||DRAFT.text||''; DRAFT.name=($('#nm')||{}).value||DRAFT.name||'';
-    D=d; render();
+    if(!(L&&sameData(d,L))){ keepTyping(); D=d; render(); }   // nothing changed: keep what they may already be typing
+    const m=await personal;
+    if(m&&m.ok&&wear(d,m)){ keepTyping(); if(window.lastSeen) lastSeen.set(K,d); D=d; render(); }
   }catch(e){ $('#app').innerHTML=`<div class="empty">Couldn’t load this page just now. Pull down to retry.</div>`; }
   finally{ const i=document.getElementById('intro'); if(i) i.classList.add('off');
     // the post-show wrap-up link: open the composer once, with the night already picked
@@ -986,14 +1294,14 @@ async function post(){
     const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:authHeaders(true),body:JSON.stringify(body)});
     const d=await r.json();
     if(!d.ok){ toast(d.error||'Couldn’t post'); btn.disabled=false; btn.textContent='Post'; return; }
-    D.posts=d.posts; DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}; SHOWPRE=''; FILTER=''; closeSheet(); render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
+    D.posts=d.posts; D.at=d.at||Date.now(); if(window.lastSeen) lastSeen.set(LSK(),D); DRAFT={stars:0,photos:[],show:'',where:'',clip:null,open:false}; SHOWPRE=''; FILTER=''; closeSheet(); render(); toast('Posted'); window.scrollTo({top:document.querySelector('.post')?document.querySelector('.post').offsetTop-80:0,behavior:'smooth'});
   }catch(e){ toast('Connection hiccup — try again'); btn.disabled=false; btn.textContent='Post'; }
 }
 async function like(b){
   const id=b.getAttribute('data-like'), on=!b.classList.contains('on');
   b.classList.toggle('on',on); const sp=b.querySelector('span'); const before=+(sp.textContent||0); sp.textContent=Math.max(0,before+(on?1:-1))||''; b.firstChild.textContent=on?'♥ ':'♡ ';
   try{ const r=await fetch(`${API}/community${Q}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:on?'like':'unlike',fan:FAN,id})});
-    const d=await r.json(); if(d.ok){ sp.textContent=d.likes||''; } else throw new Error(d.error); }
+    const d=await r.json(); if(d.ok){ sp.textContent=d.likes||''; const p=((D&&D.posts)||[]).find(x=>x.id===id); if(p){ p.liked=on; p.likes=d.likes||0; if(window.lastSeen) lastSeen.set(LSK(),D); } } else throw new Error(d.error); }
   catch(e){ b.classList.toggle('on',!on); sp.textContent=before||''; b.firstChild.textContent=on?'♡ ':'♥ '; toast('Couldn’t do that just now'); }
 }
 /* THE ⋯ MENU IS TWO DIFFERENT MENUS. On somebody else's post it is "report it";
@@ -1047,7 +1355,7 @@ async function saveEdit(id){
       body:JSON.stringify({action:'postEdit',fan:FAN,id,text,stars:stars||null})});
     const d=await r.json();
     if(!d.ok){ toast(d.error||'Couldn’t save that'); return; }
-    D.posts=d.posts; closeSheet(); render(); toast('Changed');
+    D.posts=d.posts; D.at=d.at||Date.now(); if(window.lastSeen) lastSeen.set(LSK(),D); closeSheet(); render(); toast('Changed');
   }catch(e){ toast('Connection hiccup — try again'); }
 }
 async function removePost(id){
@@ -1057,7 +1365,7 @@ async function removePost(id){
       body:JSON.stringify({action:'postRemove',fan:FAN,id})});
     const d=await r.json();
     if(!d.ok){ toast(d.error||'Couldn’t delete that'); return; }
-    D.posts=d.posts; closeSheet(); render(); toast('Deleted');
+    D.posts=d.posts; D.at=d.at||Date.now(); if(window.lastSeen) lastSeen.set(LSK(),D); closeSheet(); render(); toast('Deleted');
   }catch(e){ toast('Connection hiccup — try again'); }
 }
 async function report(id){

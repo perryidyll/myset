@@ -32,13 +32,16 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<!-- THE TOKENS, INLINE (decision 0088): the top of app.css — every :root block — byte for byte
-     (test/structure.mjs says so), so the first paint has its colours before app.css has
-     arrived. app.css itself is no longer render-blocking: preloaded, applied on arrival, and the
-     board is not drawn until it is here (render() waits for it, 400 ms at most, like lift() on
-     the shop). Measured 2026-09-25: the blocking link cost a first visit 0.16–0.67 s before a
-     single pixel, on top of the HTML's own wait. -->
-<style id="tokens">
+<!-- app.css, INLINE (decision 0094): the whole shared stylesheet rides inside the page, byte for
+     byte — tools/stamp.mjs writes it, test/structure.mjs refuses a stale copy — so the first paint
+     has every recipe before a single request has left the phone. Until 2026-09-25 only the tokens
+     were inline here (0088) and app.css itself was preloaded; measured then, the blocking link had
+     cost a first visit 0.16–0.67 s before a single pixel, on top of the HTML's own wait. -->
+<style id="app-css">
+/* ═══════════════════════════════════════════════════════════════
+   MySet — design system v2
+   Soft depth · spring motion · SF-family type · one warm accent
+   ═══════════════════════════════════════════════════════════════ */
 :root{
   /* Provenance marker. Arbitrary, meaningless, and referenced nowhere — that is
      the point: a shared value with no function has no innocent explanation.
@@ -110,9 +113,207 @@
   --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
   --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
   --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6)}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+html{background:var(--bg);-webkit-text-size-adjust:100%;touch-action:manipulation}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--f);
+  font-size:16px;line-height:1.45;letter-spacing:-.011em;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  -webkit-tap-highlight-color:transparent;
+}
+img{display:block;max-width:100%;height:auto}
+button{font-family:inherit;background:none;border:none;color:inherit;padding:0;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+.themebtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;
+  background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--hair-2);font-size:17px;
+  transition:transform .2s var(--spring),background .2s var(--ease)}
+.themebtn:active{transform:scale(.9)}
+input,select,textarea{font-family:inherit}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2.5px solid var(--accent);outline-offset:3px;border-radius:6px}
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
+.wrap{max-width:var(--maxw);margin:0 auto}
+.pad{padding-left:18px;padding-right:18px}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.muted{color:var(--muted)}
+.hidden{display:none!important}
+[hidden]{display:none!important}   /* author display:* otherwise beats the UA rule */
+.kick{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--muted)}
+
+/* ── live dot ───────────────────────────────────────────── */
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block;flex:0 0 auto;
+  box-shadow:0 0 0 0 rgba(255,55,95,.55);animation:ping 2s var(--ease) infinite}
+@keyframes ping{
+  0%{box-shadow:0 0 0 0 rgba(255,55,95,.5)}
+  70%{box-shadow:0 0 0 7px rgba(255,55,95,0)}
+  100%{box-shadow:0 0 0 0 rgba(255,55,95,0)}
+}
+
+/* ── buttons ────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font-size:16px;font-weight:600;letter-spacing:-.01em;padding:15px 22px;border-radius:var(--pill);
+  background:var(--surface);color:var(--ink);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.btn:hover{box-shadow:var(--sh-2)}
+.btn:active{transform:scale(.965)}
+.btn-pri{background:var(--grad);color:#fff;box-shadow:var(--sh-accent)}
+.btn-pri:hover{box-shadow:0 8px 26px rgba(255,55,95,.42)}
+.btn-ghost{background:var(--surface);color:var(--ink)}
+.btn-block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.btn-sm{padding:10px 16px;font-size:14px}
+/* FOUR TIERS, NOT TWO. A page used to have only "gradient" and "plain surface",
+   so every next-step, every "Show all" and every "Not yet" was invented locally
+   and each one came out different. Compose with .btn: class="btn btn-ink".
+     .btn-pri   commit — the gradient pill above.
+     .btn-ink   next step / neutral primary. Ink on paper; in the dark theme the
+                tokens flip so it stays "the darkest thing on the page" inverted.
+     .btn-grey  secondary ("Show all"). Sits back, no shadow.
+     .btn-text  tertiary ("Not yet"). No fill at all, only the words.
+   The same four live in lock.css for the Studios, which never load this file. */
+.btn-ink{background:var(--ink);color:var(--bg);box-shadow:var(--sh-1)}
+.btn-ink:hover{box-shadow:var(--sh-2)}
+.btn-grey{background:color-mix(in srgb,var(--ink) 9%,var(--surface));color:var(--ink);box-shadow:none}
+.btn-grey:hover{box-shadow:none}
+.btn-text{background:none;color:var(--accent-ink);box-shadow:none;padding:12px 14px}
+.btn-text:hover{box-shadow:none;background:var(--accent-soft)}
+
+/* ── chips ──────────────────────────────────────────────── */
+/* One recipe for every small pressable pill: a hairline AND a soft shadow (the
+   lock veil's pill in lock.css found this combination first). Pages used to
+   pick one or the other and no two looked alike. .on is an accent ring, never a
+   fill — a filled chip reads as a button. */
+.chip{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:9px 14px;border-radius:var(--pill);font-size:14px;font-weight:600;letter-spacing:-.01em;
+  background:var(--surface);color:var(--ink-2);white-space:nowrap;
+  border:.5px solid var(--hair-2);box-shadow:var(--sh-1);
+  transition:transform .22s var(--spring),box-shadow .22s var(--ease),background .18s var(--ease)}
+.chip:active{transform:scale(.94)}
+.chip.on{color:var(--accent-ink);background:var(--accent-soft);border-color:transparent;
+  box-shadow:0 0 0 1.5px var(--accent) inset,var(--sh-1)}
+
+/* ── cards ──────────────────────────────────────────────── */
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
+.card-lg{border-radius:var(--r-lg);box-shadow:var(--sh-2)}
+
+/* ── sticky header ──────────────────────────────────────── */
+.head{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:14px 18px;
+  background:color-mix(in srgb,var(--bg) 78%,transparent);
+  backdrop-filter:saturate(180%) blur(22px);-webkit-backdrop-filter:saturate(180%) blur(22px);
+  border-bottom:.5px solid var(--hair)}
+.head h1{font-size:19px;font-weight:700}
+.head .sub{font-size:13px;color:var(--muted);margin-top:2px;display:flex;align-items:center;gap:6px}
+
+/* credit pill */
+.credits{display:flex;align-items:baseline;gap:1px;padding:8px 14px;border-radius:var(--pill);
+  background:var(--surface);box-shadow:var(--sh-1);font-weight:700;font-size:16px;flex:0 0 auto;
+  transition:transform .3s var(--spring),color .2s}
+.credits small{font-size:12px;font-weight:600;color:var(--muted)}
+.credits.low{color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset,var(--sh-1)}
+.credits.bump{transform:scale(1.14)}
+
+/* ── sheets ─────────────────────────────────────────────── */
+.bg{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);z-index:60;
+  opacity:0;pointer-events:none;transition:opacity .28s var(--ease)}
+.bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(101%);
+  width:100%;max-width:var(--maxw);background:var(--surface);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;box-shadow:var(--sh-3);z-index:61;
+  transition:transform .42s var(--spring);max-height:90vh;overflow-y:auto;
+  padding:10px 18px calc(24px + env(safe-area-inset-bottom));-webkit-overflow-scrolling:touch}
+.sheet.on{transform:translateX(-50%) translateY(0)}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto 18px}
+.sheet h3{font-size:24px;font-weight:700;margin-bottom:6px}
+.sheet .lede{color:var(--muted);font-size:15px;margin:0 0 4px}
+
+.tiles{display:flex;gap:10px;margin:18px 0 4px}
+.tile{flex:1;border-radius:var(--r-sm);padding:16px 12px;text-align:left;background:var(--bg);
+  box-shadow:0 0 0 1.5px var(--hair) inset;transition:transform .24s var(--spring),box-shadow .2s var(--ease)}
+.tile:active{transform:scale(.96)}
+.tile.on{box-shadow:0 0 0 2.5px var(--accent) inset;background:var(--accent-soft)}
+.tile b{display:block;font-size:22px;font-weight:700;letter-spacing:-.02em}
+.tile span{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-top:4px}
+
+.inp{width:100%;min-height:50px;padding:14px 16px;font-size:16px;background:var(--bg);
+  border:none;box-shadow:0 0 0 1.5px var(--hair) inset;border-radius:var(--r-sm);color:var(--ink);
+  margin-top:12px;transition:box-shadow .2s var(--ease)}
+.inp:focus{outline:none;box-shadow:0 0 0 2.5px var(--accent) inset}
+/* the custom-amount field lit like a chosen tile (vote.html / community.html customAmt) */
+.inp.on{box-shadow:0 0 0 2.5px var(--accent) inset;background:var(--accent-soft)}
+.inp::placeholder{color:var(--faint)}
+.go{width:100%;margin-top:18px;padding:17px;background:var(--grad);color:#fff;font-weight:600;
+  font-size:17px;border-radius:var(--pill);box-shadow:var(--sh-accent);
+  transition:transform .22s var(--spring)}
+.go:active{transform:scale(.97)}
+.go:disabled{opacity:.55}
+.fine{font-size:12.5px;color:var(--faint);margin-top:14px;text-align:center}
+
+/* ── toast ──────────────────────────────────────────────── */
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(24px) scale(.96);
+  width:calc(100% - 32px);max-width:calc(var(--maxw) - 32px);
+  background:rgba(28,28,30,.92);color:#fff;backdrop-filter:blur(20px);
+  font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
+  box-shadow:var(--sh-3);z-index:70;opacity:0;pointer-events:none;
+  transition:opacity .3s var(--ease),transform .42s var(--spring)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+@media (prefers-color-scheme:dark){.toast{background:rgba(60,60,63,.92)}}
+:root[data-theme=light] .toast{background:rgba(28,28,30,.92)}
+:root[data-theme=dark] .toast{background:rgba(60,60,63,.92)}
+
+/* ── fab ────────────────────────────────────────────────── */
+/* A floating action pill pinned to the bottom of the phone: one line of state
+   on the left, one .btn-pri on the right. The state slot may not push the
+   button off — it shrinks and ellipsises first (min-width:0 is what allows
+   that in a flex row). A page that shows it must pad its own bottom. */
+.fab{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:50;
+  width:calc(100% - 24px);max-width:calc(var(--maxw) - 24px);
+  margin-bottom:calc(12px + env(safe-area-inset-bottom));
+  display:flex;align-items:center;gap:12px;padding:10px 10px 10px 18px;
+  background:var(--surface);border:.5px solid var(--hair-2);border-radius:var(--pill);
+  box-shadow:var(--sh-2)}
+.fab .state{flex:1 1 auto;min-width:0;font-size:13px;font-weight:500;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fab .act{flex:0 0 auto}
+
+/* ── misc ───────────────────────────────────────────────── */
+.empty{padding:56px 28px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:18px;font-weight:600;margin-bottom:8px}
+.foot{padding:32px 18px 40px;text-align:center;font-size:12.5px;color:var(--faint)}
+.spin{display:inline-block;width:15px;height:15px;border:2px solid currentColor;
+  border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* skeleton shimmer */
+.sk{background:linear-gradient(100deg,var(--hair) 30%,var(--hair-2) 50%,var(--hair) 70%);
+  background-size:220% 100%;animation:sh 1.4s ease-in-out infinite;border-radius:8px}
+@keyframes sh{to{background-position:-120% 0}}
+
+/* entrance */
+.rise{animation:rise .5s var(--ease) both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.stagger>*{animation:rise .45s var(--ease) both}
+.stagger>*:nth-child(1){animation-delay:.02s}
+.stagger>*:nth-child(2){animation-delay:.05s}
+.stagger>*:nth-child(3){animation-delay:.08s}
+.stagger>*:nth-child(4){animation-delay:.11s}
+.stagger>*:nth-child(5){animation-delay:.14s}
+
+/* confetti */
+.confetti{position:fixed;width:9px;height:14px;z-index:90;pointer-events:none;top:-24px;border-radius:2px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
+
+/* The locked-feature styling used to be pasted in here. It was moved to its own
+   public/lock.css because NEITHER Studio loads this file, so the rules never
+   reached the only two pages that have locks — verified in a browser on
+   2026-09-03, after they had already been written and believed. */
 </style>
-<link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/app.css"></noscript>
 <style>
 /* THE LOGO SCREEN, painted by the HTML itself (decision 0088): the same three bars every
    other fan page shows while its first read is on its way. This page used to show a
@@ -546,7 +747,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
      0.15–0.5 s measured on a first visit, which is the visit that matters — and
      nothing here calls MySetPull() before the body has arrived. -->
 <script src="/pull.js"></script>
-<script src="/fan.js?v=580721d7"></script>
+<script src="/fan.js?v=bb648cef"></script>
 <script>
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
@@ -1106,8 +1307,9 @@ function flipPlay(first){
 
 let CSSWAIT=0;   // when the first paint started waiting for app.css (decision 0088)
 function render(){
-  /* The first paint waits for app.css — preloaded, no longer blocking — so the board
-     never flashes unstyled; 400 ms at most, the same bound lift() uses on the shop. */
+  /* The first paint waited for app.css while it was a preload (0088); since 0094 app.css
+     rides inside the page and cssReady() is true at once, so this is a no-op kept for any
+     page that links a stylesheet again — 400 ms at most, the same bound lift() uses on the shop. */
   if(!BOOTED&&!cssReady()){
     if(!CSSWAIT){ CSSWAIT=Date.now(); const k=()=>{ if(cssReady()||Date.now()-CSSWAIT>400) render(); else requestAnimationFrame(k); }; requestAnimationFrame(k); }
     else if(Date.now()-CSSWAIT<=400) return;
@@ -1806,8 +2008,9 @@ function wirePull(){
 </script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
-   worker itself never caches /api and always prefers the network for pages —
-   see public/sw.js. */
+   worker itself never caches /api; a page seen tonight comes from the phone's copy
+   and is refreshed behind, a reload or an older page from the network — see
+   public/sw.js. */
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }

@@ -55,7 +55,7 @@ independently writes *"That one isn't on tonight's list"* with a curly apostroph
 | `Unofficial lyrics` | Yes, always |
 | `The show has ended` | Yes, always |
 | `myset.fan` / `myset.token` localStorage keys | Yes, in the client source |
-| `myset-runtime-v3` service worker cache name | Yes, `/sw.js` |
+| `myset-runtime-v4` service worker cache name | Yes, `/sw.js` |
 | `singalong` in the built-in genre list | Yes. A judgement call, not a real genre — see `_lib.mjs` |
 | `That one isn't on tonight's list` | **Only during a live show** |
 | `That one is playing right now` | **Only during a live show** |

@@ -55,7 +55,9 @@ const out=await pg.evaluate(async()=>{
 
   // a finger on the grab zone still pulls it down and closes it
   const gz=sh.querySelector('.grabzone');
-  ok('the grab area is a real thumb target', gz.getBoundingClientRect().height>=56, gz.getBoundingClientRect().height+'px');
+  // the LAYOUT height, not the bounding box: the sheet is mid-spring when this runs now that
+  // app.css is inline (0094), and a bounding box under a scale of .9999 read 55.99998px once
+  ok('the grab area is a real thumb target', gz.offsetHeight>=56, gz.offsetHeight+'px');
   const h3=sh.querySelector('h3');
   touch('touchstart',300,h3); touch('touchmove',340,h3);
   await new Promise(r=>setTimeout(r,30));

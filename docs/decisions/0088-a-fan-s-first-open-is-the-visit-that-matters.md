@@ -6,7 +6,7 @@ status: decided
 decided_by: perry
 area: performance
 reverses:
-superseded_by:
+superseded_by: 0094 (the vote page's inline tokens block only — app.css itself rides inside every fan page now), 0091 and 0093 (options C and D, taken up the same day)
 invariants: [0gd]
 commits: [68efdb4]
 tests: [test/structure.mjs, test/fandoor.mjs, test/artists.mjs, test/copy.mjs, tools/uicheck.mjs, tools/sheetcheck.mjs]

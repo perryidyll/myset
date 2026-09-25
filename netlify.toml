@@ -187,10 +187,14 @@
 # the load after next rather than costing a wait. The service worker already did
 # this for phones that have it; this does it for every phone, Safari included.
 #
-# NOT the HTML pages: those stay `must-revalidate` on purpose, so a deploy is on
-# every phone at its next navigation (sw.js rule 2 says the same). sw.js itself is
+# NOT the HTML pages: those are a minute fresh and ten minutes stale-while-revalidate
+# (0048, below), so a deploy is on a phone at its first open after that minute — or, on
+# a phone whose service worker holds a copy from the last six hours, the open after
+# (sw.js rule 2, decision 0091; a pull or a reload still goes to the network). sw.js itself is
 # matched by /*.js and that is fine — the browser checks a service worker for
 # updates straight from the network regardless of these headers.
+# (app.css itself rides inside every fan page since decision 0094 — no page asks for it
+# any more; this rule still covers theme.js, pull.js, leave.js and the Studios' lock.css.)
 [[headers]]
   for = "/*.css"
   [headers.values]
