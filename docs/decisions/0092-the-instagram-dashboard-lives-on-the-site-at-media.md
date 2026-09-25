@@ -8,7 +8,7 @@ area: ops
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [4f95289]
 tests: [test/structure.mjs]
 files: [netlify/functions/mediadash.mjs, public/mediadash.html, netlify.toml]
 ---
@@ -65,6 +65,16 @@ the curves to daily points past seven days before raising the cap.
 
 ## How it was verified
 
-Written in `docs/sessions/2026-09-25-mediadash.md`: the suite on this branch, the deploy
-preview checked by content, the push from the engine, and the live page fetched by
-content after the merge. Anything not in that note was not checked.
+- `sh test/run.sh` on the branch: every section green, exit 0.
+- Deploy preview 92, by content: `/mediadash` → `<title>MySet Signal</title>`; `/api/mediadash`
+  → `{ok:true, empty:true}` before any push; a boost without a code → 401; a push with a
+  wrong key → 401; the engine's push → `38 KB, 14 thumb(s)`, then 14 posts · 29 days, covers
+  at `/api/mediadash?thumb=<id>` → 200 image/jpeg; the page in the in-app browser at 1280
+  and 375 wide: Pull hidden, 14 rows with 14 thumbnails loaded, 8 in Up next, no horizontal
+  scroll, no console error of the page's own.
+- Production after the merge (`4f95289`, build triggered by hand because the squash carried
+  `[skip ci]`): the same four checks, ~06:55 UTC 2026-09-25, and a push straight from the
+  engine that answered `ok`.
+- NOT checked: a boost saved from the live page with the founder's code (only the 401 path);
+  the pull-back of a site-logged boost into `boosts.ndjson` (the code path ran against an
+  empty `siteBoosts`).

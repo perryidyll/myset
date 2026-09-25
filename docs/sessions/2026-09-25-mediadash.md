@@ -31,3 +31,19 @@ post, every metric Instagram will give, every pull kept as a curve, boosts logge
   key → 401. The first push from the engine also got 401: the preview had been built before
   `MEDIADASH_KEY` landed in Netlify's env, so the branch was rebuilt (this commit) and the push
   repeated — result below.
+- Preview 92 rebuilt with the key: the engine's push answered `38 KB, 14 thumb(s)`; GET then
+  had 14 posts · 29 days · `pushedAt`; `?thumb=` → 200 image/jpeg 7649 B. The page in the
+  in-app browser (1280 and 375 wide): Pull hidden, `pushed 0 min ago`, 14 rows with 14
+  thumbnails loaded, 8 Up next cards, no horizontal scroll.
+- Merged as `4f95289` (#92). **No production build started**: the squash message inherited
+  `[skip ci]` from the docs commit on the branch. Triggered a build of `main` with
+  `netlify api createSiteBuild` (06:54 UTC; not `netlify deploy --prod`, INVARIANT 9d3 —
+  this is the platform building `main`, the same thing the merge should have done). Live
+  ~60 s later, by content: `<title>MySet Signal</title>`, `/api/mediadash` 14 posts · 29
+  days, thumb 200, boost-without-code 401. A push straight to production then answered ok.
+- Not checked: a boost saved from the live page with the founder's code; the pull-back of a
+  site-logged boost (ran against an empty list).
+
+**Lesson for the next squash.** `gh pr merge --squash` without `--body` folds every branch
+commit message into the squash body; one `[skip ci]` in there and Netlify builds nothing on
+`main`. Pass `--body` (or keep `[skip ci]` off branch commits that ride with code).

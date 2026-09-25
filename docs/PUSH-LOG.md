@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 13:56 — 74ac9d3 — wt@docs/mediadash-live (3 files since origin/main)
+**tl;dr:** Docs only: MKT-001 / decision 0092 live as 4f95289 with the four content checks; the squash-inherits-[skip ci] lesson [skip ci]
+**Other sessions:** gh pr merge --squash without --body folds branch commit messages into the squash — a [skip ci] in any of them skips the production build; trigger with netlify api createSiteBuild (not deploy --prod) if that happens.
+
 ### 2026-09-25 13:45 — 1ad5f70 — wt@content/mediadash (9 files since origin/main)
 **tl;dr:** Docs only on the mediadash branch: preview 92's checks so far; rebuilt so the preview carries MEDIADASH_KEY (set 2026-09-25 06:44 UTC with netlify env:set — per-scope/secret flags need a paid plan, so it is an ordinary variable)
 **Other sessions:** Nothing to redo. If a push to /api/mediadash answers 401, the deploy predates the variable — redeploy.
