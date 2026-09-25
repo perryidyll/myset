@@ -1,62 +1,365 @@
 {
- "asOf": "2026-09-15",
+ "asOf": "2026-09-25",
  "source": "tools/actuals.py against production",
- "shows": 8,
- "people": 9.88,
- "hours": 2.78,
- "recordHours": 3.32,
- "setHours": 1.68,
- "votes": 20.12,
- "interactions": 2.21,
- "songs": 9.75,
- "nets": 6.29,
- "peakVoters": 5.12,
- "gigsOnCalendar": 14,
- "gigsUsed": 8,
+ "shows": 15,
+ "people": 8.6,
+ "hours": 2.73,
+ "recordHours": 3.46,
+ "setHours": 1.5,
+ "votes": 16.6,
+ "interactions": 2.09,
+ "songs": 10.0,
+ "nets": 6.0,
+ "peakVoters": 4.13,
+ "gigsOnCalendar": 22,
+ "gigsUsed": 15,
  "gigsSilent": 5,
  "roomFree": null,
  "roomPlus": null,
- "roomPro": 1.031,
- "roomPerHead": 1.031,
- "deploys": 272,
- "deploysThisPeriod": 87,
+ "roomPro": 1.037,
+ "roomPerHead": 1.037,
+ "deploys": 286,
+ "deploysThisPeriod": 119,
  "billingPeriodStart": "2026-09-08",
  "shipping": {
   "what": "production deploys \u00d7 15 credits \u2014 a cost of shipping code, never of a gig",
-  "deploys30": 272,
-  "credits30": 4080,
-  "deploysThisPeriod": 87,
-  "creditsThisPeriod": 1305,
-  "perDayThisPeriod": 13.5,
+  "deploys30": 286,
+  "credits30": 4290,
+  "deploysThisPeriod": 119,
+  "creditsThisPeriod": 1785,
+  "perDayThisPeriod": 7.1,
   "dashboard": {
-   "readAt": "2026-09-14T17:50:00+00:00",
-   "deploys": 88,
-   "credits": 1320,
-   "shareOfAllCredits": 0.96
+   "readAt": "2026-09-25T02:58:00+00:00",
+   "deploys": 119,
+   "credits": 1785,
+   "shareOfAllCredits": 0.938
   }
  },
  "traffic": {
   "what": "everything the rooms cause \u2014 bandwidth is the one meter the API exposes; web requests and compute are on Netlify\u2019s Credit usage breakdown page only",
-  "bandwidthBytesThisPeriod": 1265806304,
-  "bandwidthGBThisPeriod": 1.266,
-  "bandwidthCreditsThisPeriod": 25.3,
-  "bandwidthReadAt": "2026-09-14T17:40:25.482+00:00",
+  "bandwidthBytesThisPeriod": 2330916514,
+  "bandwidthGBThisPeriod": 2.331,
+  "bandwidthCreditsThisPeriod": 46.6,
+  "bandwidthReadAt": "2026-09-25T03:52:53.498+00:00",
   "dashboard": {
-   "readAt": "2026-09-14T17:50:00+00:00",
+   "readAt": "2026-09-25T02:58:00+00:00",
    "periodStart": "2026-09-08",
-   "webRequests": 43557,
-   "webRequestCredits": 8.7,
-   "computeCredits": 23.3,
-   "bandwidthCredits": 23.2,
-   "trafficCredits": 55.2,
-   "totalCredits": 1375.2
+   "webRequests": 100804,
+   "webRequestCredits": 20.2,
+   "computeCredits": 54,
+   "bandwidthCredits": 42.8,
+   "trafficCredits": 117.0,
+   "totalCredits": 1902
   }
  },
- "pollsPerPhoneHour": null,
- "pollsProvisional": 995.7,
- "creditsPerShow": null,
- "note": "8 night(s) on the published calendar where the room used the app, across 1 artist(s) (1 more on the calendar where it went unused); 4 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 20.12. A night is bracketed by marks but NO quiet pair measures the other sites' background, so the 995.7 polls/phone-hour it gives is withheld \u2014 take two marks an hour apart on a quiet day. Deploys are account-wide (all five sites share the credit grant): 272 in the last 30 days, 87 this billing period = 1305 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 1.266 GB = 25.3 credits for everything every room did.",
+ "pollsPerPhoneHour": 42.0,
+ "pollsSource": "Netlify's own request meter \u2014 7 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay)",
+ "creditsPerShow": 2.98,
+ "meters": {
+  "readAt": "2026-09-25T02:58:00+00:00",
+  "cleanFrom": "2026-09-16",
+  "studioShareAssumed": 0.6,
+  "emptyDays": [
+   "2026-09-19"
+  ],
+  "gigDays": [
+   "2026-09-16",
+   "2026-09-17",
+   "2026-09-18",
+   "2026-09-20",
+   "2026-09-21",
+   "2026-09-22",
+   "2026-09-23"
+  ],
+  "nights": [
+   {
+    "key": "hist_perry-idyll_2026-09-16-1130-ktfa",
+    "day": "2026-09-16",
+    "people": 9,
+    "hours": 3.0,
+    "requestsOverBackground": 3800,
+    "computeCreditsOverBackground": 1.8,
+    "bandwidthMBOverBackground": 28.1,
+    "studioRequestsAssumed": 1620,
+    "ticks": 1052,
+    "ticksPerPhoneHour": 39.0,
+    "creditsTraffic": 3.12
+   },
+   {
+    "key": "hist_perry-idyll_2026-09-17-1200-qvj2",
+    "day": "2026-09-17",
+    "people": 3,
+    "hours": 2.0,
+    "requestsOverBackground": 2400,
+    "computeCreditsOverBackground": 1.4,
+    "bandwidthMBOverBackground": 23.2,
+    "studioRequestsAssumed": 1080,
+    "ticks": 647,
+    "ticksPerPhoneHour": 107.8,
+    "creditsTraffic": 2.34
+   },
+   {
+    "key": "hist_perry-idyll_2026-09-18-1130-r9r6",
+    "day": "2026-09-18",
+    "people": 6,
+    "hours": 3.0,
+    "requestsOverBackground": 2600,
+    "computeCreditsOverBackground": 1.4,
+    "bandwidthMBOverBackground": 37.2,
+    "studioRequestsAssumed": 1620,
+    "ticks": 464,
+    "ticksPerPhoneHour": 25.8,
+    "creditsTraffic": 2.66
+   },
+   {
+    "key": "hist_perry-idyll_2026-09-20-1130-8yg2",
+    "day": "2026-09-20",
+    "people": 9,
+    "hours": 3.0,
+    "requestsOverBackground": 3400,
+    "computeCreditsOverBackground": 1.8,
+    "bandwidthMBOverBackground": 47.0,
+    "studioRequestsAssumed": 1620,
+    "ticks": 850,
+    "ticksPerPhoneHour": 31.5,
+    "creditsTraffic": 3.42
+   },
+   {
+    "key": "hist_perry-idyll_2026-09-21-1330-frj4",
+    "day": "2026-09-21",
+    "people": 11,
+    "hours": 3.0,
+    "requestsOverBackground": 3700,
+    "computeCreditsOverBackground": 2.3,
+    "bandwidthMBOverBackground": 40.1,
+    "studioRequestsAssumed": 1620,
+    "ticks": 997,
+    "ticksPerPhoneHour": 30.2,
+    "creditsTraffic": 3.84
+   },
+   {
+    "key": "hist_perry-idyll_2026-09-22-1200-kf5n",
+    "day": "2026-09-22",
+    "people": 9,
+    "hours": 1.87,
+    "requestsOverBackground": 3700,
+    "computeCreditsOverBackground": 1.1,
+    "bandwidthMBOverBackground": 39.7,
+    "studioRequestsAssumed": 1010,
+    "ticks": 1310,
+    "ticksPerPhoneHour": 77.9,
+    "creditsTraffic": 2.63
+   },
+   {
+    "key": "hist_perry-idyll_2026-09-23-1130-uqwj",
+    "day": "2026-09-23",
+    "people": 3,
+    "hours": 2.86,
+    "requestsOverBackground": 2400,
+    "computeCreditsOverBackground": 1.5,
+    "bandwidthMBOverBackground": 41.4,
+    "studioRequestsAssumed": 1544,
+    "ticks": 415,
+    "ticksPerPhoneHour": 48.3,
+    "creditsTraffic": 2.81
+   }
+  ],
+  "what": "Netlify's own per-day meters (finance/credits.json): a gig day minus an empty day, requests \u00f7 2 less the Studio tick, page loads, votes and extra pages = the room's ticks; the credits are traffic only \u2014 never a deploy (INVARIANT 0fx)",
+  "background": {
+   "requests": 3200,
+   "computeCredits": 1.7,
+   "bandwidthMB": 13.7,
+   "days": [
+    "2026-09-19"
+   ]
+  },
+  "rate": 42.0,
+  "creditsPerShow": 2.98
+ },
+ "note": "15 night(s) on the published calendar where the room used the app, across 1 artist(s) (2 more on the calendar where it went unused); 11 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 16.6. Ticks per phone-hour: 42.0 \u2014 Netlify's own request meter \u2014 7 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay). By the same meters a night adds about 2.98 credits of traffic over an empty day (empty day: 3,200 requests, 1.7 credits of compute, 13.7 MB; 7 gig day(s) since 2026-09-16). 15 bracket(s) of bandwidth marks withheld \u2014 see pollsByNight for why; background over every quiet pair on file 7.04 MB/h from 1 pair(s). Deploys are account-wide (all five sites share the credit grant): 286 in the last 30 days, 119 this billing period = 1785 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 2.331 GB = 46.6 credits for everything every room did.",
  "nights": [
+  {
+   "key": "hist_perry-idyll_2026-09-23-1130-uqwj",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 3,
+   "nets": 3,
+   "votes": 7,
+   "requests": 0,
+   "lastActivityHours": 2.4,
+   "interactions": 2.33,
+   "songs": 15,
+   "peakVoters": 3,
+   "hours": 2.86,
+   "recordHours": 2.86,
+   "setHours": 2.26,
+   "gig": {
+    "eventId": "g9zst3nmn",
+    "venue": "Anantara Rasananda Resort \ud83c\udf05\u26f1\ufe0f",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Wed 23 Sep 18:30"
+   },
+   "gross": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-22-1200-kf5n",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 9,
+   "nets": 9,
+   "votes": 11,
+   "requests": 0,
+   "lastActivityHours": 1.68,
+   "interactions": 1.22,
+   "songs": 10,
+   "peakVoters": 3,
+   "hours": 1.87,
+   "recordHours": 1.87,
+   "setHours": 1.4,
+   "gig": {
+    "eventId": "gimj34ujp",
+    "venue": "Crystal Day (solo) \ud83c\udf05\ud83c\udf71",
+    "slotHours": 2.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Tue 22 Sep 19:00"
+   },
+   "gross": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-21-1330-frj4",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 11,
+   "nets": 10,
+   "votes": 14,
+   "requests": 0,
+   "lastActivityHours": 2.56,
+   "interactions": 1.27,
+   "songs": 12,
+   "peakVoters": 3,
+   "hours": 3.0,
+   "recordHours": 3.1,
+   "setHours": 1.46,
+   "gig": {
+    "eventId": "gx78yyhxp",
+    "venue": "The Ugly Duckling | Irish Pub \u2618\ufe0f\ud83c\udf7b",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Mon 21 Sep 20:30"
+   },
+   "gross": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-20-1130-8yg2",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 9,
+   "nets": 6,
+   "votes": 20,
+   "requests": 1,
+   "lastActivityHours": 2.13,
+   "interactions": 2.33,
+   "songs": 10,
+   "peakVoters": 4,
+   "hours": 3.0,
+   "recordHours": 3.24,
+   "setHours": 1.17,
+   "gig": {
+    "eventId": "guwi123an",
+    "venue": "Sand & Tan \ud83c\udf05\ud83e\udd42",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Sun 20 Sep 18:30"
+   },
+   "gross": 35.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-18-1130-r9r6",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 6,
+   "nets": 4,
+   "votes": 12,
+   "requests": 0,
+   "lastActivityHours": 2.54,
+   "interactions": 2.0,
+   "songs": 6,
+   "peakVoters": 2,
+   "hours": 3.0,
+   "recordHours": 5.56,
+   "setHours": 0.48,
+   "gig": {
+    "eventId": "gh71d4pfq",
+    "venue": "Seaflower Bungalows \ud83c\udf05\ud83c\udf77",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Fri 18 Sep 18:30"
+   },
+   "gross": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-17-1200-qvj2",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 3,
+   "nets": 3,
+   "votes": 7,
+   "requests": 0,
+   "lastActivityHours": 1.99,
+   "interactions": 2.33,
+   "songs": 7,
+   "peakVoters": 2,
+   "hours": 2.0,
+   "recordHours": 4.24,
+   "setHours": 1.22,
+   "gig": {
+    "eventId": "g3ei0k6l3",
+    "venue": "Crystal Day (solo) \ud83c\udf05\ud83c\udf71",
+    "slotHours": 2.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Thu 17 Sep 19:00"
+   },
+   "gross": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-16-1130-ktfa",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 9,
+   "nets": 5,
+   "votes": 17,
+   "requests": 0,
+   "lastActivityHours": 2.46,
+   "interactions": 1.89,
+   "songs": 12,
+   "peakVoters": 4,
+   "hours": 3.0,
+   "recordHours": 4.43,
+   "setHours": 1.25,
+   "gig": {
+    "eventId": "g9zst3nmn",
+    "venue": "Anantara Rasananda Resort \ud83c\udf05\u26f1\ufe0f",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Wed 16 Sep 18:30"
+   },
+   "gross": 15.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
   {
    "key": "hist_perry-idyll_2026-09-14-1330-gap5",
    "artist": "perry-idyll",
@@ -79,7 +382,7 @@
     "startedMinAfterSlot": 0,
     "localStart": "Mon 14 Sep 20:30"
    },
-   "gross": 20.0,
+   "gross": 22.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -194,9 +497,9 @@
    "people": 14,
    "nets": 11,
    "votes": 27,
-   "requests": 0,
+   "requests": 4,
    "lastActivityHours": 2.61,
-   "interactions": 1.93,
+   "interactions": 2.21,
    "songs": 15,
    "peakVoters": 5,
    "hours": 2.81,
@@ -293,6 +596,33 @@
    "moneyKnown": false,
    "moneySource": "stripe-unreachable",
    "skipped": "one phone and no votes \u2014 on the calendar, but the room never used the app"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-15-1200-k15t",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 1,
+   "nets": 1,
+   "votes": 0,
+   "requests": 0,
+   "lastActivityHours": null,
+   "interactions": 0.0,
+   "songs": 0,
+   "peakVoters": 0,
+   "hours": 2.0,
+   "recordHours": 3.02,
+   "setHours": null,
+   "gig": {
+    "eventId": "gimj34ujp",
+    "venue": "Crystal Day (solo) \ud83c\udf05\ud83c\udf71",
+    "slotHours": 2.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Tue 15 Sep 19:00"
+   },
+   "gross": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe",
+   "skipped": "one phone and no votes \u2014 on the calendar, but the room never used the app"
   }
  ],
  "silentNights": [
@@ -327,9 +657,9 @@
   {
    "artist": "perry-idyll",
    "gig": "Crystal Day (solo) \ud83c\udf05\ud83c\udf71",
-   "date": "Thu 10 Sep 19:00",
+   "date": "Thu 24 Sep 19:00",
    "eventId": "g3ei0k6l3",
-   "at": 1789041600000
+   "at": 1790251200000
   }
  ],
  "notCounted": [
@@ -487,9 +817,9 @@
    "people": 3,
    "nets": 2,
    "votes": 11,
-   "requests": 0,
+   "requests": 1,
    "lastActivityHours": 0.18,
-   "interactions": 3.67,
+   "interactions": 4.0,
    "songs": 1,
    "peakVoters": 1,
    "hours": 0.52,
@@ -699,33 +1029,127 @@
   {
    "key": "hist_perry-idyll_2026-09-11-1130-vycr",
    "polls": null,
-   "why": "the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 2,605 for the rest"
+   "why": "the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 3,470 for the rest"
   },
   {
    "key": "hist_perry-idyll_2026-09-13-1123-yvaz",
    "polls": null,
-   "why": "the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 2,605 for the rest"
+   "why": "the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 3,470 for the rest"
   },
   {
    "key": "hist_perry-idyll_2026-09-14-1330-gap5",
+   "polls": null,
    "bytes": 108308639,
    "windowHours": 7.67,
-   "background": 0,
-   "studioMinutes": 108,
-   "studioAssumed": true,
-   "studioShareOfBytes": 0.06,
-   "clipViews": 0.0,
-   "clipBytes": 0,
-   "polls": 38833,
-   "pollsShared": null,
    "sharedWith": null,
-   "pollsPerPhoneHour": 995.7,
-   "confidence": "low \u2014 Studio minutes assumed",
-   "marks": [
-    "14 Sep 17:00, before Mon Ugly Duckling gig (first mark on the split)",
-    "after Mon Ugly Duckling gig, 15 Sep 00:xx"
-   ]
+   "pollsIfNoBackground": 31025,
+   "why": "no quiet pair within 48 h of this bracket (1 on file, none near enough) \u2014 the background of that day is unknown, so the bytes cannot be read as polls; take a pair two hours before the next gig"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-16-1130-ktfa",
+   "polls": null,
+   "bytes": 1058035815,
+   "windowHours": 249.2,
+   "sharedWith": [
+    "hist_perry-idyll_2026-09-17-1200-qvj2",
+    "hist_perry-idyll_2026-09-18-1130-r9r6",
+    "hist_perry-idyll_2026-09-20-1130-8yg2",
+    "hist_perry-idyll_2026-09-21-1330-frj4",
+    "hist_perry-idyll_2026-09-22-1200-kf5n",
+    "hist_perry-idyll_2026-09-23-1130-uqwj"
+   ],
+   "why": "the bracket is 249 h long (7 night(s) inside it) \u2014 longer than 24 h it is not a night, and a clip, a backup or another site can add more than every poll in it"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-17-1200-qvj2",
+   "polls": null,
+   "bytes": 1058035815,
+   "windowHours": 249.2,
+   "sharedWith": [
+    "hist_perry-idyll_2026-09-16-1130-ktfa",
+    "hist_perry-idyll_2026-09-18-1130-r9r6",
+    "hist_perry-idyll_2026-09-20-1130-8yg2",
+    "hist_perry-idyll_2026-09-21-1330-frj4",
+    "hist_perry-idyll_2026-09-22-1200-kf5n",
+    "hist_perry-idyll_2026-09-23-1130-uqwj"
+   ],
+   "why": "the bracket is 249 h long (7 night(s) inside it) \u2014 longer than 24 h it is not a night, and a clip, a backup or another site can add more than every poll in it"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-18-1130-r9r6",
+   "polls": null,
+   "bytes": 1058035815,
+   "windowHours": 249.2,
+   "sharedWith": [
+    "hist_perry-idyll_2026-09-16-1130-ktfa",
+    "hist_perry-idyll_2026-09-17-1200-qvj2",
+    "hist_perry-idyll_2026-09-20-1130-8yg2",
+    "hist_perry-idyll_2026-09-21-1330-frj4",
+    "hist_perry-idyll_2026-09-22-1200-kf5n",
+    "hist_perry-idyll_2026-09-23-1130-uqwj"
+   ],
+   "why": "the bracket is 249 h long (7 night(s) inside it) \u2014 longer than 24 h it is not a night, and a clip, a backup or another site can add more than every poll in it"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-20-1130-8yg2",
+   "polls": null,
+   "bytes": 1058035815,
+   "windowHours": 249.2,
+   "sharedWith": [
+    "hist_perry-idyll_2026-09-16-1130-ktfa",
+    "hist_perry-idyll_2026-09-17-1200-qvj2",
+    "hist_perry-idyll_2026-09-18-1130-r9r6",
+    "hist_perry-idyll_2026-09-21-1330-frj4",
+    "hist_perry-idyll_2026-09-22-1200-kf5n",
+    "hist_perry-idyll_2026-09-23-1130-uqwj"
+   ],
+   "why": "the bracket is 249 h long (7 night(s) inside it) \u2014 longer than 24 h it is not a night, and a clip, a backup or another site can add more than every poll in it"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-21-1330-frj4",
+   "polls": null,
+   "bytes": 1058035815,
+   "windowHours": 249.2,
+   "sharedWith": [
+    "hist_perry-idyll_2026-09-16-1130-ktfa",
+    "hist_perry-idyll_2026-09-17-1200-qvj2",
+    "hist_perry-idyll_2026-09-18-1130-r9r6",
+    "hist_perry-idyll_2026-09-20-1130-8yg2",
+    "hist_perry-idyll_2026-09-22-1200-kf5n",
+    "hist_perry-idyll_2026-09-23-1130-uqwj"
+   ],
+   "why": "the bracket is 249 h long (7 night(s) inside it) \u2014 longer than 24 h it is not a night, and a clip, a backup or another site can add more than every poll in it"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-22-1200-kf5n",
+   "polls": null,
+   "bytes": 1058035815,
+   "windowHours": 249.2,
+   "sharedWith": [
+    "hist_perry-idyll_2026-09-16-1130-ktfa",
+    "hist_perry-idyll_2026-09-17-1200-qvj2",
+    "hist_perry-idyll_2026-09-18-1130-r9r6",
+    "hist_perry-idyll_2026-09-20-1130-8yg2",
+    "hist_perry-idyll_2026-09-21-1330-frj4",
+    "hist_perry-idyll_2026-09-23-1130-uqwj"
+   ],
+   "why": "the bracket is 249 h long (7 night(s) inside it) \u2014 longer than 24 h it is not a night, and a clip, a backup or another site can add more than every poll in it"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-23-1130-uqwj",
+   "polls": null,
+   "bytes": 1058035815,
+   "windowHours": 249.2,
+   "sharedWith": [
+    "hist_perry-idyll_2026-09-16-1130-ktfa",
+    "hist_perry-idyll_2026-09-17-1200-qvj2",
+    "hist_perry-idyll_2026-09-18-1130-r9r6",
+    "hist_perry-idyll_2026-09-20-1130-8yg2",
+    "hist_perry-idyll_2026-09-21-1330-frj4",
+    "hist_perry-idyll_2026-09-22-1200-kf5n"
+   ],
+   "why": "the bracket is 249 h long (7 night(s) inside it) \u2014 longer than 24 h it is not a night, and a clip, a backup or another site can add more than every poll in it"
   }
  ],
- "marksOnFile": 4
+ "marksOnFile": 6
 }

@@ -31,5 +31,21 @@
   "periodStart": "2026-09-08T00:00:00.000-07:00",
   "periodEnd": "2026-10-08T00:00:00.000-07:00",
   "clipViews": 0.0
+ },
+ {
+  "at": "2026-09-25T02:52:35+00:00",
+  "label": "quiet pair A \u2014 Fri 25 Sep 09:52 Bangkok, no show, before the 11:40 mirror",
+  "used": 2323842119,
+  "lastUpdatedAt": "2026-09-25T02:52:34.837+00:00",
+  "periodStart": "2026-09-08T00:00:00.000-07:00",
+  "periodEnd": "2026-10-08T00:00:00.000-07:00"
+ },
+ {
+  "at": "2026-09-25T03:52:53+00:00",
+  "label": "quiet pair B \u2014 Fri 25 Sep 10:5x Bangkok, no show since A; the pair measures today's background",
+  "used": 2330916514,
+  "lastUpdatedAt": "2026-09-25T03:52:53.498+00:00",
+  "periodStart": "2026-09-08T00:00:00.000-07:00",
+  "periodEnd": "2026-10-08T00:00:00.000-07:00"
  }
 ]

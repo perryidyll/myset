@@ -104,7 +104,7 @@ POLL_BYTES   = 2530          # the old one-call poll, on the wire
 POLL_MS      = 155           # ...and what it billed; a board RENDER costs the same
 FN_MEM_GB    = 1.0
 # ---- the split (see the docstring for which of these is measured) ------------
-BOARD_BYTES  = int(POLL_BYTES * 0.86)   # the board is the old poll minus the personal fields
+BOARD_BYTES  = 3040          # the founder's 79-song board, gzipped, measured 25 Sep 2026 (≈ 200 B + 36 B a song; the 40-song room of 11 Sep was 2,175 = 0.86 × the old poll) — must equal P0.boardBytes and actuals.py BYTES["board"]
 ME_BYTES     = 430
 ME_MS        = 50            # ESTIMATED, not measured — two parallel 42 ms reads + overhead
 SHOW_DOC     = 6287          # bytes the store moves for the show record

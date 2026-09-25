@@ -544,10 +544,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 272 (last: 0fn) |
+| Invariants | 273 (last: 0fn) |
 | Test suites | 54 |
 | Assertions | **3,432**, 0 failing, last run 2026-09-18 |
-| Decision records | 88 |
+| Decision records | 89 |
 
 ### Feature flags in force
 

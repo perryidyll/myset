@@ -501,6 +501,28 @@ If you are about to violate one, stop and say so rather than working around it.
     Netlify's own Usage & billing › Credit usage breakdown — the API exposes the
     deploy list and the bandwidth counter only.
 
+0ge. **A night's server cost is read off Netlify's own per-day meters, and a bandwidth
+    bracket is solved only against a quiet pair of its own day.** The account-wide
+    bandwidth counter is byte-exact, but what it counts keeps changing: between 11 and
+    25 Sep the idle traffic went from ~8 MB an hour (the mirror moving clips) to ~0.6
+    (the scheduler, the warm-door pings), and one day with nobody in the room moved
+    488 MB. The 25 Sep quiet pair laid over the 14 Sep bracket reads 350–750 ticks per
+    phone-hour depending on the background believed (7.0 MB/h from the pair, or none) —
+    8–18× what Netlify's own request meter says (~40) — and the 15→25 Sep bracket, 249 h
+    with seven nights and one 488 MB day inside, reads negative. A quiet pair must also be
+    quiet of agents: no tracker run, no probes, between its two marks. So `tools/actuals.py` applies a quiet pair only to a bracket within
+    48 h of it (`QUIET_PAIR_MAX_H`), withholds any bracket longer than 24 h
+    (`MAX_BRACKET_H`) and says why in `pollsByNight`, and otherwise reads ticks per
+    phone-hour and traffic credits per night from the per-day meters Netlify itself
+    bills — requests, compute, bandwidth — as a gig day minus an empty day
+    (`solve_meters`; the counts are copied off Usage & billing into
+    `finance/credits.json` `perDay.days[]`, days before `cleanFrom` ignored). An
+    empty day has no show record of any kind and no published slot. `pollsSource`
+    names the method used. The marks for a night are three: two hours before, just
+    before, after. `tools/actuals-test.py` holds the three fences on synthetic marks and the meter method on
+    a synthetic week; `finance/model-test.mjs` checks the tracker carries the method's
+    name and that the seed's ticks solve to a sane screen-on share. Decision 0089.
+
 0fy. **A page is its artist's: no profile ever shows another act's picture.**
     A new profile's `photo` and `avatar` are empty (`_profile.mjs` DEFAULTS;
     `normProfile` never fills them). With no cover the artist page paints the

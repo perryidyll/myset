@@ -1,0 +1,282 @@
+<meta charset="utf-8">
+<title>Fifteen Nights In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@100..900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+:root{
+  --ground:#EFF1EC; --surface:#F8F9F5; --ink:#141916; --muted:#58625B; --line:#D5DAD2;
+  --hard:#B4521E; --hard-soft:#F3E3D7; --soft:#1F5A43; --soft-tint:#DCE8E0;
+  --display:"Big Shoulders Display","Big Shoulders","Oswald","Arial Narrow",Impact,sans-serif;
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0E1210; --surface:#151B18; --ink:#E6EAE4; --muted:#9BA69F; --line:#2A332E;
+    --hard:#E98E58; --hard-soft:#35231A; --soft:#7FC6A2; --soft-tint:#18291F;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1210; --surface:#151B18; --ink:#E6EAE4; --muted:#9BA69F; --line:#2A332E;
+  --hard:#E98E58; --hard-soft:#35231A; --soft:#7FC6A2; --soft-tint:#18291F;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--ground);color:var(--ink);font-family:var(--serif);font-size:18px;line-height:1.62;padding-inline:20px;padding-block:0 96px;-webkit-font-smoothing:antialiased}
+a{color:var(--soft)}
+::selection{background:var(--soft-tint)}
+.shell{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:48px}
+@media (min-width:1080px){.shell{grid-template-columns:200px minmax(0,1fr)}}
+nav.toc{display:none}
+@media (min-width:1080px){
+  nav.toc{display:block;position:sticky;top:40px;align-self:start;padding-top:180px;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
+  nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 0 5px 12px;border-left:1px solid var(--line);transition:color .25s,border-color .25s}
+  nav.toc a:hover,nav.toc a:focus-visible{color:var(--ink);border-left-color:var(--soft)}
+}
+main{max-width:760px;min-width:0}
+.hero{padding-block:72px 40px}
+.eyebrow,.label{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-size:clamp(54px,12vw,116px);line-height:.86;margin:18px 0 28px;text-transform:uppercase;letter-spacing:-.005em;text-wrap:balance}
+h1 .h{display:block;font-weight:900;color:var(--hard)}
+h1 .s{display:block;font-weight:200;color:var(--soft);animation:exhale 3.2s cubic-bezier(.22,.8,.2,1) .5s both}
+@keyframes exhale{from{font-weight:900;letter-spacing:-.03em}to{font-weight:200;letter-spacing:.01em}}
+@media (prefers-reduced-motion:reduce){h1 .s{animation:none}html{scroll-behavior:auto}}
+.lede{font-size:22px;line-height:1.5;max-width:34em;margin:0 0 14px}
+.legend{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:28px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;vertical-align:0}
+.legend .lh::before{background:var(--hard)} .legend .ls::before{background:var(--soft)}
+section{padding-block:56px 8px;border-top:1px solid var(--line);scroll-margin-top:24px}
+h2{font-family:var(--display);font-weight:800;font-size:clamp(38px,6vw,56px);line-height:.95;text-transform:uppercase;margin:10px 0 22px;text-wrap:balance}
+h3{font-family:var(--display);font-weight:700;font-size:26px;line-height:1.05;text-transform:uppercase;letter-spacing:.01em;margin:40px 0 12px;text-wrap:balance}
+p{margin:0 0 16px;max-width:65ch}
+ul,ol{padding-left:1.2em;margin:0 0 16px} li{margin-bottom:8px} li::marker{color:var(--muted)}
+.hard{color:var(--hard)} .soft{color:var(--soft)}
+.tldr{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:24px 26px;margin-top:8px}
+.tldr ul{margin:0} .tldr li{margin-bottom:10px}
+.principles{list-style:none;padding:0;display:grid;gap:22px;counter-reset:p}
+.principles li{display:grid;grid-template-columns:44px 1fr;gap:4px 14px;margin:0}
+.principles li::before{counter-increment:p;content:counter(p);font-family:var(--display);font-weight:800;font-size:40px;line-height:1;color:var(--soft);grid-row:span 2}
+.principles b{font-family:var(--display);font-weight:700;font-size:23px;text-transform:uppercase;letter-spacing:.01em;line-height:1.1}
+.principles span{color:var(--ink)}
+.pull{font-family:var(--display);font-weight:300;font-size:clamp(30px,5vw,44px);line-height:1.08;text-transform:uppercase;margin:36px 0;padding-left:20px;border-left:3px solid var(--soft);text-wrap:balance;max-width:none}
+.eq{display:grid;grid-template-columns:1fr;gap:10px;margin:28px 0 12px;align-items:stretch}
+@media (min-width:720px){.eq{grid-template-columns:1fr auto 1fr auto 1fr}}
+.term{padding:22px 20px;border-radius:4px;background:var(--surface);border:1px solid var(--line)}
+.term .label{display:block;margin-bottom:8px}
+.term strong{display:block;font-family:var(--display);font-weight:800;font-size:30px;line-height:1;text-transform:uppercase;margin-bottom:10px;font-variant-numeric:tabular-nums}
+.term p{font-size:16px;line-height:1.5;margin:0;color:var(--muted)}
+.term.x strong{color:var(--hard)} .term.y strong,.term.z strong{color:var(--soft)}
+.term.x{background:var(--hard-soft);border-color:transparent}
+.op{display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:300;font-size:34px;color:var(--muted);padding:0 4px}
+.pairs{display:grid;grid-template-columns:1fr;gap:0;margin:18px 0 20px;border-top:1px solid var(--line)}
+.pair{display:grid;grid-template-columns:1fr 28px 1fr;align-items:baseline;gap:8px;padding:11px 0;border-bottom:1px solid var(--line);font-size:16.5px;transition:background .3s}
+.pair:hover{background:var(--surface)}
+.pair .a{color:var(--hard)} .pair .b{color:var(--soft);text-align:left}
+.pair i{font-style:normal;color:var(--muted);text-align:center;font-family:var(--mono);font-size:13px}
+.tw{overflow-x:auto;margin:16px 0 22px;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:15.5px;line-height:1.45;min-width:560px}
+th{font-family:var(--mono);font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 12px 8px 0;border-bottom:1px solid var(--ink)}
+td{padding:12px 12px 12px 0;border-bottom:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums}
+td:first-child{font-family:var(--display);font-weight:700;font-size:17px;text-transform:uppercase;white-space:nowrap}
+td.n,th.n{text-align:right}
+tr.sum td{border-top:1px solid var(--ink);font-weight:600}
+.buckets{display:grid;grid-template-columns:1fr;gap:14px;margin:18px 0}
+@media (min-width:680px){.buckets{grid-template-columns:1fr 1fr}}
+.bucket{padding:20px;border:1px solid var(--line);border-radius:4px;background:var(--surface)}
+.bucket strong{display:block;font-family:var(--display);font-weight:800;font-size:25px;text-transform:uppercase;line-height:1.05;margin:6px 0 8px}
+.bucket p{font-size:15.5px;margin:0 0 8px}
+.note{font-size:15px;color:var(--muted)}
+.callout{border-left:3px solid var(--hard);padding:4px 0 4px 18px;margin:22px 0}
+.callout.soft{border-left-color:var(--soft)}
+.callout p{margin-bottom:8px}
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.sig{font-family:var(--display);font-weight:200;font-size:44px;text-transform:uppercase;color:var(--soft);letter-spacing:.04em;margin:0 0 6px}
+:focus-visible{outline:2px solid var(--soft);outline-offset:3px}
+</style>
+
+<div class="shell">
+<nav class="toc" aria-label="Sections">
+  <a href="#tldr">tl;dr</a>
+  <a href="#nights">The nights</a>
+  <a href="#cost">What a night costs</a>
+  <a href="#fit">Model vs meters</a>
+  <a href="#changed">What changed</a>
+  <a href="#wrong">What was wrong</a>
+  <a href="#flags">Flags</a>
+  <a href="#next">Next</a>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">MySet money model · fortnight audit · 25 September 2026</div>
+  <h1><span class="h">Ninety-five guessed.</span><span class="s">Forty-two measured.</span></h1>
+  <p class="lede">How often a phone in the room asks the server for the board, per phone-hour — the one behaviour dial the whole server bill hangs on. Guessed on 5 September; read off Netlify's own meters on 25 September, seven nights at a time.</p>
+  <p class="lede">Fifteen real nights are on the model now. The room got a little smaller, the tips held at <span class="soft">a dollar a head</span>, and a night costs <span class="soft">about three credits</span> — three cents — whatever its size.</p>
+  <div class="legend"><span class="lh">Orange · guessed, stale, or costly</span><span class="ls">Green · measured, or fixed</span></div>
+</header>
+
+<section id="tldr">
+  <div class="label">tl;dr</div>
+  <h2>The whole audit on one card</h2>
+  <div class="tldr">
+    <ul>
+      <li><b>Fifteen nights</b> (was eight): 8.6 phones a night, 2.73 h, 2.1 votes a phone, 10 songs. The app was used at 15 of 22 published gigs.</li>
+      <li><b>Money holds at $1.04 a head</b> over the eleven nights with readable takings — but three nights carry 85% of it and the median night is $0. Every card tip so far is $10; the first two $5 vote packs arrived.</li>
+      <li><b>A night costs ~3 credits</b> by Netlify's own meters (2.3–3.8 across seven nights), nearly flat from 3 to 11 phones. The model at the old guess said 3.9; calibrated it says 2.8.</li>
+      <li><b>The screen-on dial is now measured:</b> 42 ticks per phone-hour → 9.4% (was a 22% guess). Traffic per gig falls from 2.7¢ to 1.9¢; the arena drops from "at the edge" to "holds".</li>
+      <li><b>Two bills, this period:</b> deploys 1,785 credits (94%), everything the rooms did 117. The plan's 1,000 credits ran out on 15 Sep; a $5.48 pack bought itself.</li>
+      <li><b>The bandwidth-counter method is fenced</b> (decision 0089, INVARIANT 0ge): laid over the 14 September night, this morning's quiet pair reads 350–750 ticks a phone-hour — 8–18× the meters. Netlify's per-day meters are the instrument now.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="nights">
+  <div class="label">15 → 25 September, from the records</div>
+  <h2>The nights</h2>
+  <p>Eight more nights were filed. Seven had a room; Tuesday 15 September had one phone and no votes, and Thursday 24 September ran to an empty room and filed nothing, by design.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Night</th><th>Venue</th><th class="n">Phones</th><th class="n">Hours</th><th class="n">Votes</th><th class="n">Songs</th><th class="n">Money</th></tr></thead>
+    <tbody>
+      <tr><td>Wed 16</td><td>Anantara</td><td class="n">9</td><td class="n">3.0</td><td class="n">17</td><td class="n">12</td><td class="n">$15</td></tr>
+      <tr><td>Thu 17</td><td>Crystal Day</td><td class="n">3</td><td class="n">2.0</td><td class="n">7</td><td class="n">7</td><td class="n">$0</td></tr>
+      <tr><td>Fri 18</td><td>Seaflower</td><td class="n">6</td><td class="n">3.0</td><td class="n">12</td><td class="n">6</td><td class="n">$0</td></tr>
+      <tr><td>Sun 20</td><td>Sand &amp; Tan</td><td class="n">9</td><td class="n">3.0</td><td class="n">20 + 1 request</td><td class="n">10</td><td class="n">$35</td></tr>
+      <tr><td>Mon 21</td><td>Ugly Duckling</td><td class="n">11</td><td class="n">3.0</td><td class="n">14</td><td class="n">12</td><td class="n">$0</td></tr>
+      <tr><td>Tue 22</td><td>Crystal Day</td><td class="n">9</td><td class="n">1.9</td><td class="n">11</td><td class="n">10</td><td class="n">$0</td></tr>
+      <tr><td>Wed 23</td><td>Anantara</td><td class="n">3</td><td class="n">2.9</td><td class="n">7</td><td class="n">15</td><td class="n">$0</td></tr>
+      <tr class="sum"><td>All 15</td><td>30 Aug – 23 Sep</td><td class="n">8.6</td><td class="n">2.73</td><td class="n">16.6</td><td class="n">10.0</td><td class="n">$1.04 / head</td></tr>
+    </tbody>
+  </table></div>
+  <p>Money is lumpy. $85 across 82 phones on eleven nights: $22 (14 Sep), $15 (16 Sep) and $35 (20 Sep) are 85% of it; six of the eleven took nothing. Seven $10 card tips — every real tip has been the middle preset on the sheet — plus two $1 test tips, a $3 pack from 30 August and two $5 vote packs, the first packs since then.</p>
+  <div class="pairs">
+    <div class="pair"><span class="a">8 nights · 9.88 phones</span><i>→</i><span class="b">15 nights · 8.6 phones</span></div>
+    <div class="pair"><span class="a">$1.03 a head, 4 nights</span><i>→</i><span class="b">$1.04 a head, 11 nights</span></div>
+    <div class="pair"><span class="a">272 deploys in 30 days</span><i>→</i><span class="b">286 — but 17 in the last ten days</span></div>
+    <div class="pair"><span class="a">a 40-song board, 2,175 bytes</span><i>→</i><span class="b">the 79-song board, 3,040 bytes</span></div>
+    <div class="pair"><span class="a">screen-on 22%, guessed</span><i>→</i><span class="b">9.4%, from 42 ticks a phone-hour</span></div>
+  </div>
+</section>
+
+<section id="cost">
+  <div class="label">Netlify's own per-day meters</div>
+  <h2>What a night costs</h2>
+  <p>Usage &amp; billing charts, per day, the three things Netlify bills for traffic. Saturday 19 September had no gig and no record of any kind — the empty day. Every night is read against it.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Day</th><th>Room</th><th class="n">Requests</th><th class="n">Compute</th><th class="n">Bandwidth</th><th class="n">Over the empty day</th></tr></thead>
+    <tbody>
+      <tr><td>Sat 19</td><td>none — the empty day</td><td class="n">3,200</td><td class="n">1.7 cr</td><td class="n">13.7 MB</td><td class="n">—</td></tr>
+      <tr><td>Wed 16</td><td>9 phones · 3 h</td><td class="n">7,000</td><td class="n">3.5 cr</td><td class="n">41.8 MB</td><td class="n">3.1 cr</td></tr>
+      <tr><td>Thu 17</td><td>3 phones · 2 h</td><td class="n">5,600</td><td class="n">3.1 cr</td><td class="n">36.9 MB</td><td class="n">2.3 cr</td></tr>
+      <tr><td>Fri 18</td><td>6 phones · 3 h</td><td class="n">5,800</td><td class="n">3.1 cr</td><td class="n">50.9 MB</td><td class="n">2.7 cr</td></tr>
+      <tr><td>Sun 20</td><td>9 phones · 3 h</td><td class="n">6,600</td><td class="n">3.5 cr</td><td class="n">60.7 MB</td><td class="n">3.4 cr</td></tr>
+      <tr><td>Mon 21</td><td>11 phones · 3 h</td><td class="n">6,900</td><td class="n">4.0 cr</td><td class="n">53.8 MB</td><td class="n">3.8 cr</td></tr>
+      <tr><td>Tue 22</td><td>9 phones · 1.9 h</td><td class="n">6,900</td><td class="n">2.8 cr</td><td class="n">53.4 MB</td><td class="n">2.6 cr</td></tr>
+      <tr><td>Wed 23</td><td>3 phones · 2.9 h</td><td class="n">5,600</td><td class="n">3.2 cr</td><td class="n">55.1 MB</td><td class="n">2.8 cr</td></tr>
+      <tr><td>Thu 24</td><td>empty room</td><td class="n">3,700</td><td class="n">2.2 cr</td><td class="n hard">488.1 MB</td><td class="n">not a gig</td></tr>
+    </tbody>
+  </table></div>
+  <div class="eq" role="group" aria-label="What a night adds">
+    <div class="term x"><span class="label">A night adds</span><strong>~3,100 requests</strong><p>over the empty day — the Studio's own tick and the page loads are most of it, which is why 3 phones and 11 cost nearly the same.</p></div>
+    <div class="op" aria-hidden="true">+</div>
+    <div class="term y"><span class="label">and</span><strong>1.6 cr compute</strong><p>0.16 GB-hours of function time.</p></div>
+    <div class="op" aria-hidden="true">+</div>
+    <div class="term z"><span class="label">and</span><strong>37 MB</strong><p>0.7 credits of bandwidth.</p></div>
+  </div>
+  <p class="pull">About three credits a night. Three cents. One deploy is five nights.</p>
+  <h3>The two bills, 8 → 25 September</h3>
+  <div class="buckets">
+    <div class="bucket"><span class="label hard">Shipping</span><strong>1,785 credits</strong><p>119 production deploys × 15 — 94% of everything used. By site (the API's deploy list at the morning's count of 118, plus one that landed during the audit): 110 the app, 7 the content site, 1 the iOhm site.</p></div>
+    <div class="bucket"><span class="label soft">Traffic</span><strong>117 credits</strong><p>100,804 requests (20.2) + compute (54) + bandwidth (42.8) — everything every room did, for seventeen days.</p></div>
+  </div>
+  <div class="callout"><p><b>The plan ran dry on 15 September.</b> The $9 Personal plan carries 1,000 credits a month; a 500-credit pack ($5.48) bought itself, and 146.6 of it were left at reading time — about ten deploys' worth. Traffic on its own would not have reached the plan's 1,000 this period.</p></div>
+</section>
+
+<section id="fit">
+  <div class="label">Calibration</div>
+  <h2>Model vs meters</h2>
+  <p>The requests a night adds, less the Studio tick (assumed on screen 60% of the night), the page loads, the votes and the extra pages, halved — a tick is two requests since the split — are the room's ticks: <b>42 a phone-hour</b>, weighted by phone-hours over the seven nights. The engine's screen-on dial solves to 9.4% from that. At that setting the same seven nights read like this:</p>
+  <div class="tw"><table>
+    <thead><tr><th>Night</th><th>Room</th><th class="n">Metered</th><th class="n">Modelled</th><th class="n">Requests, metered</th><th class="n">Requests, modelled</th></tr></thead>
+    <tbody>
+      <tr><td>Wed 16</td><td>9 × 3 h</td><td class="n">3.12 cr</td><td class="n">3.06 cr</td><td class="n">3,800</td><td class="n">3,955</td></tr>
+      <tr><td>Thu 17</td><td>3 × 2 h</td><td class="n">2.34 cr</td><td class="n">1.84 cr</td><td class="n">2,400</td><td class="n">1,609</td></tr>
+      <tr><td>Fri 18</td><td>6 × 3 h</td><td class="n">2.66 cr</td><td class="n">2.71 cr</td><td class="n">2,600</td><td class="n">3,139</td></tr>
+      <tr><td>Sun 20</td><td>9 × 3 h</td><td class="n">3.42 cr</td><td class="n">3.06 cr</td><td class="n">3,400</td><td class="n">3,955</td></tr>
+      <tr><td>Mon 21</td><td>11 × 3 h</td><td class="n">3.84 cr</td><td class="n">3.29 cr</td><td class="n">3,700</td><td class="n">4,448</td></tr>
+      <tr><td>Tue 22</td><td>9 × 1.9 h</td><td class="n">2.63 cr</td><td class="n">2.23 cr</td><td class="n">3,700</td><td class="n">2,534</td></tr>
+      <tr><td>Wed 23</td><td>3 × 2.9 h</td><td class="n">2.81 cr</td><td class="n">2.29 cr</td><td class="n">2,400</td><td class="n">2,272</td></tr>
+      <tr class="sum"><td>Average</td><td>8.6 × 2.73 h</td><td class="n">2.98 cr</td><td class="n">2.82 cr</td><td class="n">3,100</td><td class="n">3,500</td></tr>
+    </tbody>
+  </table></div>
+  <p>Within 5% on the average night; the small rooms read high, because a fixed cost — the Studio, the page — is being divided by few phone-hours. The one assumption inside the number is how long the Studio's Live tab is on screen: 20% → 100% moves a night from 2.1 to 3.6 credits and the 1,000-artist traffic bill from $70 to $115. It is the next thing to measure.</p>
+</section>
+
+<section id="changed">
+  <div class="label">Shipped in this pass</div>
+  <h2>What changed in the model</h2>
+  <ol class="principles">
+    <li><b>The meter method</b><span>The tracker reads ticks per phone-hour and credits per night off Netlify's per-day counts — a gig day minus an empty day — copied into the credits log by hand with a clean-from date. It names the method it used, and the page shows the metered credits beside its own.</span></li>
+    <li><b>The screen-on dial solves itself</b><span>When real shows are on, the dial is set from the measured ticks (9.4%) and says so; the 22% guess is gone from the defaults' meaning, not from the slider.</span></li>
+    <li><b>The board weighs what it weighs</b><span>3,040 bytes on the wire for the 79-song board — about 200 B plus 36 B a song, gzipped. The tracker's constant matches; the test would fail if they drifted.</span></li>
+    <li><b>Two fences on the bandwidth method</b><span>A quiet pair counts only within 48 hours of a bracket and only if the pair itself is under six hours; a bracket over 24 hours is withheld. Every withheld bracket says why.</span></li>
+    <li><b>The seed, the copy, the tests</b><span>Fifteen nights baked into the page; the room-money help, the "two bills" note and the assumptions note carry the fortnight's numbers; 97 engine checks (was 89) and the tracker's offline suite — which had been failing on main since the split — pass.</span></li>
+  </ol>
+  <h3>The projections, before → after</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Scenario</th><th class="n">15 Sep seed</th><th class="n">25 Sep, calibrated</th></tr></thead>
+    <tbody>
+      <tr><td>1,000 artists</td><td class="n">$14,221 revenue · $11,498 profit</td><td class="n">$13,325 · $10,664</td></tr>
+      <tr><td>… traffic</td><td class="n">$136 · 2.7¢ a gig</td><td class="n">$93 · 1.9¢ a gig</td></tr>
+      <tr><td>… break-even</td><td class="n">32 artists</td><td class="n">35</td></tr>
+      <tr><td>Benchmark</td><td class="n">$8,230 · $6,492</td><td class="n">$7,310 · $5,613</td></tr>
+      <tr><td>… traffic</td><td class="n">$83 · 2.8¢ a gig</td><td class="n">$60 · 2.0¢ a gig</td></tr>
+      <tr><td>… break-even</td><td class="n">56 artists</td><td class="n">64</td></tr>
+      <tr><td>Arena, 10,000</td><td class="n">$2.62 · at the edge</td><td class="n">$1.42 · holds</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">The benchmark is 4% Plus, 1% Pro, three gigs a month each — published freemium medians on the nights measured so far. Revenue moved because rooms got smaller at the same dollar a head; the server moved because phones look a quarter as often as guessed. What dwarfs both: the per-head figure. At $0.50 a head the benchmark breaks even at 143 artists; at $1.50, at 44.</p>
+</section>
+
+<section id="wrong">
+  <div class="label">Falsified</div>
+  <h2>What was wrong before</h2>
+  <ul>
+    <li><b class="hard">The bandwidth counter as a per-night instrument.</b> This morning's quiet pair (mark #5 at 09:52, #6 an hour later — the first ever) laid over the 14 September bracket reads 350–750 ticks a phone-hour at 3,470 bytes a tick, depending on which background is believed (7.0 MB/h from the pair, or none): 8–18× what the request meter says. The pair itself was not clean — that hour held this audit's own reads of the store. The account's idle traffic in mid-September was ten times today's (the mirror moving clips), so a pair from another week measures nothing about that night. And the 15 → 25 September bracket held seven nights and one 488 MB day; with the pair's background over its 249 hours it reads negative. Hence the three fences — and the rule that the marks for a night are taken with nothing else running.</li>
+    <li><b class="hard">"A no-gig day is ~3 credits of compute and ~1 of requests"</b> (14 Sep). It is 1.7 and 0.6 now that the mirror skips clips; the "no-gig" day used then carried hand tests and the first warm-door pings.</li>
+    <li><b class="hard">2,175 bytes a board.</b> True for a 40-song room on 11 September; every song in the library has been live to the room since 13 September, and the founder's board is 79 songs.</li>
+    <li><b class="hard">The tracker's offline test.</b> It built its synthetic night at 2,530 bytes a tick and nobody had run it since the split changed what a tick weighs — it was red on main. Fixed, and the new rules ride on it.</li>
+  </ul>
+</section>
+
+<section id="flags">
+  <div class="label">Worth knowing</div>
+  <h2>Flags</h2>
+  <ul>
+    <li><b>14 September reads $22, not $20.</b> Two $1 test tips from 15 September midday fell inside that night's money window, which runs until the next show starts. Two cents a head across the set; left as is — the window rule is right and production is read-only here.</li>
+    <li><b>488 MB on 24 September</b> with nobody in the room. The requests sat at the empty-day level, so it is not a gig; myset.vip carries 1.9 of the period's 2.2 GB, and that day's landing-page copy edits reloaded a page with 33 screenshots many times — the likeliest source, unproven. Netlify Analytics would name the URL.</li>
+    <li><b>Deploys buy the packs.</b> Auto-recharge is on; ten more deploys and the next $5.48 pack buys itself. Deploys have slowed to under two a day — the pace, not the traffic, sets the bill.</li>
+    <li><b>The Studio share is the last big assumption</b> in a night's cost (see above). The Studio polls every four seconds only while its Live tab is on screen and the show is live, so the founder's own habit decides it.</li>
+    <li><b>The per-head figure carries everything</b> and rests on three nights. One more night like Sunday's, or one more dry week, moves it more than any server number will.</li>
+  </ul>
+</section>
+
+<section id="next">
+  <div class="label">For the founder</div>
+  <h2>Next</h2>
+  <ol>
+    <li><b>Three marks on the next gig night:</b> two hours before, just before, and after (with the Studio minutes and clip views). That pair-and-bracket is the first bandwidth night the fenced method will accept, and it cross-checks the meter method.</li>
+    <li><b>Note how long the Studio's Live tab is actually on screen</b> one night — even roughly. It pins the one assumption left in a night's cost.</li>
+    <li><b>Copy the per-day meters</b> off Usage &amp; billing whenever the credits log is read; the tracker does the rest.</li>
+  </ol>
+</section>
+
+<footer>
+  <p class="sig">Two bills. Three marks.</p>
+  Built from production records (read-only), Netlify's Usage &amp; billing page read 25 September 2026 02:58 UTC, the API's deploy list, and the money model's own engine. Record: docs/sessions/2026-09-25-fortnight-audit.md · decision 0089 · INVARIANT 0ge.
+</footer>
+</main>
+</div>

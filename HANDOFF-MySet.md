@@ -2786,3 +2786,27 @@ tip on 14 Sep — $20.** The founder's charges already go straight to his own St
 (no Connect, no application fee — `pay.mjs` + `test/connect.mjs`); only Stripe's card fee
 remains. `~/Docs/MySet/node_modules` is a self-pointing symlink (since 7a62844) — use the
 compassionate-chatterjee worktree's real install for `test/run.sh` / `tools/overview.mjs`.
+
+# SESSION LOG — 2026-09-25 (the fortnight audit of the money model)
+
+Record: `docs/sessions/2026-09-25-fortnight-audit.md`; report `finance/reports/2026-09-25-fortnight-audit.html`
+(artifact "Fifteen Nights In"); decision 0089; INVARIANT 0ge. **Fifteen nights** on the model (was 8):
+8.6 phones, 2.73 h, 2.09 actions a phone, 10 songs, **$1.04 a head** over 11 money-known nights ($85 / 82
+phones; three nights carry 85%, median night $0; seven $10 card tips, two $5 vote packs), 286 deploys/30 d.
+**Netlify's own per-day meters read as an instrument for the first time:** an empty day (Sat 19 Sep) is
+3,200 requests / 1.7 credits compute / 13.7 MB; a night with a room adds ~3,100 requests, 1.6 compute,
+37 MB = **~3 credits (2.3–3.8), nearly flat in room size** — the Studio tick and page loads are most of
+it. Read as ticks: **42 a phone-hour → screen-on 9.4%** (the 22% guess of 5 Sep gave 95). New in
+`tools/actuals.py`: `solve_meters` (gig day − empty day from `credits.json` `perDay.days[]`, `cleanFrom`),
+`pollsSource`, `creditsPerShow` (traffic only), and three fences on the bandwidth solver — a quiet pair
+counts only within 48 h of a bracket and only if under 6 h itself; a bracket over 24 h is withheld (this
+morning's first quiet pair laid over 14 Sep reads 350–750 ticks/phone-hour, 8–18× the meters; the pair itself held the audit's own store reads — take marks with nothing else running). `boardBytes` 3,040
+(79-song board; 2,175 was a 40-song room). Projections: 1,000 artists $13,325 / $10,664 / BE 35 (traffic
+$93, 1.9¢ a gig); benchmark $7,310 / $5,613 / BE 64 (traffic $60, 2.0¢); arena $2.62 "at the edge" →
+$1.42 "holds". This period: deploys 1,785 credits (94%) vs 117 for every room; the $9 plan's 1,000
+credits ran out 15 Sep, a $5.48 pack auto-bought, 146.6 left at reading. `tools/actuals-test.py` had been
+red on main since the split (synthetic night at 2,530 B/tick) — fixed. Suites: model-test 97 ✓, actuals-test
+✓, `sh test/run.sh` 52 files, 0 failed. Numbering: 0087 is held by two other sessions (fan-script, loaders) and 0gc by
+fan-script — this session took **0089 / 0ge**; 0088 left free. For the founder: three marks a gig night
+(2 h before, just before, after); note the Studio Live tab's on-screen time once; copy the per-day meters
+at each credits reading.

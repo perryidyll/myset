@@ -239,6 +239,256 @@
      "note": "one night, background from one quiet day — provisional; the per-day chart will show 14 Sep whole tomorrow"
     }
    }
+  },
+  {
+   "readAt": "2026-09-25T02:58:00+00:00",
+   "readBy": "the assistant, from the dashboard in the in-app browser, during the 25 Sep audit (no show in the last 10 h)",
+   "period": {
+    "start": "2026-09-08",
+    "end": "2026-10-07",
+    "daysElapsed": 17.1
+   },
+   "plan": {
+    "name": "Personal",
+    "usdPerMonth": 9,
+    "creditsPerMonth": 1000,
+    "pack": {
+     "credits": 500,
+     "usd": 5
+    },
+    "autoRecharge": true,
+    "balance": {
+     "remaining": 146.6,
+     "of": 500,
+     "granted": "2026-09-15",
+     "expires": null
+    },
+    "note": "the dashboard: 1,000 credits a month on the $9 plan; when they run out a 500-credit pack ($5 + tax = $5.48) is bought automatically and never expires. This period has already used the month's 1,000 and most of the 15 Sep pack; the next pack buys itself when 146.6 more credits are spent — about 10 deploys"
+   },
+   "invoices": [
+    {
+     "date": "2026-09-15",
+     "usd": 5.48,
+     "what": "one 500-credit pack (auto-recharge)"
+    },
+    {
+     "date": "2026-09-08",
+     "usd": 9.86,
+     "what": "the Personal plan month"
+    },
+    {
+     "date": "2026-08-30",
+     "usd": 21.9,
+     "what": "packs, the load-test week"
+    },
+    {
+     "date": "2026-08-30",
+     "usd": 5.48,
+     "what": "one pack"
+    },
+    {
+     "date": "2026-08-08",
+     "usd": 9.86,
+     "what": "the Personal plan month"
+    }
+   ],
+   "breakdown": {
+    "productionDeploys": {
+     "count": 119,
+     "credits": 1785
+    },
+    "webRequests": {
+     "count": 100804,
+     "credits": 20.2
+    },
+    "compute": {
+     "credits": 54,
+     "gbHours": 5.1
+    },
+    "bandwidth": {
+     "credits": 42.8,
+     "gb": 2.2
+    },
+    "aiInference": {
+     "credits": 0
+    },
+    "total": 1902
+   },
+   "shares": {
+    "shipping": 0.938,
+    "traffic": 0.062
+   },
+   "trafficCredits": 117.0,
+   "sinceLastReading": {
+    "hours": 249.1,
+    "contains": "eight nights (15–23 Sep; 15 Sep unused, 24 Sep nobody came) and 31 production deploys",
+    "deploys": {
+     "count": 31,
+     "credits": 465
+    },
+    "webRequests": {
+     "count": 57247,
+     "credits": 11.5
+    },
+    "compute": {
+     "credits": 30.7
+    },
+    "bandwidth": {
+     "credits": 19.6
+    },
+    "trafficCreditsPerDay": 5.9,
+    "note": "traffic 61.8 credits in 10.4 days — 5.9 a day with a gig most days; the 24 Sep bandwidth spike (9.5) is inside it"
+   },
+   "bandwidthByDomain": {
+    "what": "Top bandwidth usage per domain, this period (the usage page)",
+    "myset.vip": "1.9 GB",
+    "iohm.io": "64.3 MB",
+    "idyllenterprises.com": "51.1 MB",
+    "myset-content.netlify.app": "33.3 MB",
+    "deployPreviewsAndBranchesTogether": "about 200 MB across ~50 preview URLs",
+    "total": "2 GB"
+   },
+   "perDay": {
+    "what": "credits per day per meter from the daily chart, plus the COUNTS the tracker's meter method needs: webRequestCount (requests), computeGbHours, bandwidthMB. deploys/webRequests/functionsCompute/bandwidth are credits, as in the first reading. The chart's days are UTC; a Bangkok night (18:30–23:59) sits inside one UTC day",
+    "timezone": "UTC",
+    "cleanFrom": "2026-09-16",
+    "cleanFromWhy": "until 15 Sep the account carried hand tests, load work and a mirror moving clips; the meter method (tools/actuals.py solve_meters) ignores days before this",
+    "days": [
+     {
+      "day": "2026-09-14",
+      "deploys": 345,
+      "webRequests": 1.8,
+      "webRequestCount": 9000,
+      "functionsCompute": 5.2,
+      "computeGbHours": 0.47,
+      "bandwidth": 3.2,
+      "bandwidthMB": 168.2,
+      "gig": "Ugly Duckling, 13 phones (23 deploys that day; the mirror still moving clips)"
+     },
+     {
+      "day": "2026-09-15",
+      "deploys": 165,
+      "webRequests": 1.0,
+      "webRequestCount": 5200,
+      "functionsCompute": 2.7,
+      "computeGbHours": 0.23,
+      "bandwidth": 2.8,
+      "bandwidthMB": 143.4,
+      "gig": "Crystal Day, one phone — the room never used the app (11 deploys)"
+     },
+     {
+      "day": "2026-09-16",
+      "deploys": 60,
+      "webRequests": 1.4,
+      "webRequestCount": 7000,
+      "functionsCompute": 3.5,
+      "computeGbHours": 0.36,
+      "bandwidth": 0.81,
+      "bandwidthMB": 41.8,
+      "gig": "Anantara, 9 phones ($15: a $10 tip and a $5 vote pack)"
+     },
+     {
+      "day": "2026-09-17",
+      "deploys": 0,
+      "webRequests": 1.1,
+      "webRequestCount": 5600,
+      "functionsCompute": 3.1,
+      "computeGbHours": 0.31,
+      "bandwidth": 0.72,
+      "bandwidthMB": 36.9,
+      "gig": "Crystal Day, 3 phones"
+     },
+     {
+      "day": "2026-09-18",
+      "deploys": 60,
+      "webRequests": 1.1,
+      "webRequestCount": 5800,
+      "functionsCompute": 3.1,
+      "computeGbHours": 0.29,
+      "bandwidth": 0.99,
+      "bandwidthMB": 50.9,
+      "gig": "Seaflower, 6 phones"
+     },
+     {
+      "day": "2026-09-19",
+      "deploys": 0,
+      "webRequests": 0.64,
+      "webRequestCount": 3200,
+      "functionsCompute": 1.7,
+      "computeGbHours": 0.17,
+      "bandwidth": 0.27,
+      "bandwidthMB": 13.7,
+      "gig": "none — no gig on the calendar, no record of any kind: THE EMPTY DAY (the background)"
+     },
+     {
+      "day": "2026-09-20",
+      "deploys": 30,
+      "webRequests": 1.3,
+      "webRequestCount": 6600,
+      "functionsCompute": 3.5,
+      "computeGbHours": 0.35,
+      "bandwidth": 1.2,
+      "bandwidthMB": 60.7,
+      "gig": "Sand & Tan, 9 phones ($35: three $10 tips and a $5 pack)"
+     },
+     {
+      "day": "2026-09-21",
+      "deploys": 0,
+      "webRequests": 1.4,
+      "webRequestCount": 6900,
+      "functionsCompute": 4.0,
+      "computeGbHours": 0.38,
+      "bandwidth": 1.0,
+      "bandwidthMB": 53.8,
+      "gig": "Ugly Duckling, 11 phones"
+     },
+     {
+      "day": "2026-09-22",
+      "deploys": 0,
+      "webRequests": 1.4,
+      "webRequestCount": 6900,
+      "functionsCompute": 2.8,
+      "computeGbHours": 0.28,
+      "bandwidth": 1.0,
+      "bandwidthMB": 53.4,
+      "gig": "Crystal Day, 9 phones"
+     },
+     {
+      "day": "2026-09-23",
+      "deploys": 60,
+      "webRequests": 1.1,
+      "webRequestCount": 5600,
+      "functionsCompute": 3.2,
+      "computeGbHours": 0.31,
+      "bandwidth": 1.1,
+      "bandwidthMB": 55.1,
+      "gig": "Anantara, 3 phones"
+     },
+     {
+      "day": "2026-09-24",
+      "deploys": 45,
+      "webRequests": 0.73,
+      "webRequestCount": 3700,
+      "functionsCompute": 2.2,
+      "computeGbHours": 0.17,
+      "bandwidth": 9.5,
+      "bandwidthMB": 488.1,
+      "gig": "Crystal Day slot, nobody came (nothing filed — by design). The 488 MB is NOT a gig: requests sit at the empty-day level; myset.vip carries 1.9 of the period's 2.2 GB, and that day's landing-page copy edits reloaded a page with 33 screenshots and four strips many times — the likeliest source; unproven"
+     },
+     {
+      "day": "2026-09-25",
+      "deploys": 0,
+      "webRequests": null,
+      "webRequestCount": 407,
+      "functionsCompute": 0.0,
+      "computeGbHours": 0.0,
+      "bandwidth": null,
+      "bandwidthMB": 5.7,
+      "gig": "partial — the chart was read at 02:58 UTC"
+     }
+    ],
+    "whatItShows": "An empty day (Sat 19 Sep — no gig, no record) is 3,200 requests, 1.7 credits of compute and 13.7 MB: the scheduler every 2 min, the warm-door pings every 4 min, the nightly mirror. A night with a room adds 2,400–3,800 requests, 1.1–2.3 credits of compute and 23–47 MB over that — about 3 credits (2.3–3.8) whatever the room size from 3 to 11 phones, because the Studio's own tick and the page loads are most of it. Deploys on the same days: 0–345 credits. The one bandwidth spike (24 Sep, 488 MB) was not a gig."
+   }
   }
  ]
 }

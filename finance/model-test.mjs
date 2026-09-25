@@ -12,12 +12,12 @@ let fails = 0; const ok = (name, cond, detail) => { console.log((cond ? '  ✓ '
 
 console.log('CALIBRATION vs tools/loadsim.py (2026-09-14: the ladder with the server’s floor, the terminal rung and jitter; stageSig above 200 phones)');
 /* [fans, hours, look, votes each, polls, renders best, renders worst, credits best, credits worst, credits before the split]
-   printed by tools/loadsim.py gig() for the same inputs — the model must reproduce the simulator, not the other way round */
+   printed by tools/loadsim.py gig() for the same inputs (re-pinned 25 Sep 2026 at BOARD_BYTES 3,040) — the model must reproduce the simulator, not the other way round */
 const targets = [
-  [20,3,.22,2.5, 5821,2274,5821, 4.510,6.037,4.056], [20,3,.6,2.5, 15900,2996,15900, 10.777,16.333,10.921], [20,3,1,8, 27460,3227,27460, 17.813,28.246,18.899],
-  [300,3,.22,2.5, 40702,1055,1055, 25.866,25.866,44.299], [300,3,.4,2.5, 72195,1068,1068, 44.484,44.484,78.327], [2000,2,.22,2.5, 179347,721,721, 115.354,115.354,131.214],
-  [8,2.5,.22,2.5, 1965,1179,1965, 1.705,2.044,1.375], [50,4,.3,3, 28107,4143,28107, 18.645,28.962,19.395], [11,2.74,.22,2.35, 2801,1544,2801, 2.368,2.910,1.956],
-  [1000,3,.22,2.5, 134693,1076,1076, 84.591,84.591,146.730], [10000,2,.22,2.5, 589127,363,363, 393.579,393.579,446.543]];
+  [20,3,.22,2.5, 5821,2274,5821, 4.610,6.138,4.056], [20,3,.6,2.5, 15900,2996,15900, 11.052,16.608,10.921], [20,3,1,8, 27460,3227,27460, 18.288,28.721,18.899],
+  [300,3,.22,2.5, 40702,1055,1055, 26.570,26.570,44.299], [300,3,.4,2.5, 72195,1068,1068, 45.733,45.733,78.327], [2000,2,.22,2.5, 179347,721,721, 118.456,118.456,131.214],
+  [8,2.5,.22,2.5, 1965,1179,1965, 1.739,2.078,1.375], [50,4,.3,3, 28107,4143,28107, 19.131,29.449,19.395], [11,2.74,.22,2.35, 2801,1544,2801, 2.417,2.958,1.956],
+  [1000,3,.22,2.5, 134693,1076,1076, 86.921,86.921,146.730], [10000,2,.22,2.5, 589127,363,363, 403.771,403.771,446.543]];
 let worstPolls = 0, worstRenders = 0, worstBest = 0, worstWorst = 0, worstLegacy = 0;
 /* the simulator's shape: no Studio, no extra pages, 155 ms per render with no per-fan growth, 50 ms personal, every action a vote */
 const sim = (fans, hours, look, inter, edgeSpread) => ENGINE.gigTraffic({ ...P0, studioOn: false, extraViews: 0, clipViews: 0, lookShare: look * 100, interactions: inter, changeShare: 100, pollMs: 155, pollMsPerFan: 0, meMs: 50, edgeSpread }, fans, hours);
@@ -42,12 +42,12 @@ const pa = { ...P0, studioOn: false, extraViews: 0, clipViews: 0, interactions: 
 const one = ENGINE.gigTraffic(pa, 20, 3);
 const cr = ENGINE.netlifyCredits(one, 0, HOSTS0.netlifyPro);
 console.log('   ticks', Math.round(one.polls), 'renders', Math.round(one.renders), 'requests', Math.round(one.requests), 'MB', (one.bytes/1e6).toFixed(1), 'fn-min', (one.fnMs/60000).toFixed(1), 'credits', cr.total.toFixed(3), '$', (cr.total*10/1500).toFixed(4));
-ok('the 20-phone gig: 2.70¢ before the split → 3.01¢ after it on Pro (loadsim 4.056 → 4.510 credits, best case)', Math.abs(cr.total - 4.510) / 4.510 < 0.08 && Math.abs(ENGINE.netlifyCredits({ ...one, requests: one.lgRequests, bytes: one.lgBytes, fnMs: one.lgFnMs }, 0, HOSTS0.netlifyPro).total - 4.056) / 4.056 < 0.08, cr.total);
+ok('the 20-phone gig: 2.70¢ before the split → 3.07¢ after it on Pro (loadsim 4.056 → 4.610 credits, best case, at the 79-song board)', Math.abs(cr.total - 4.610) / 4.610 < 0.08 && Math.abs(ENGINE.netlifyCredits({ ...one, requests: one.lgRequests, bytes: one.lgBytes, fnMs: one.lgFnMs }, 0, HOSTS0.netlifyPro).total - 4.056) / 4.056 < 0.08, cr.total);
 const crLg = ENGINE.netlifyCredits({ ...one, requests: one.lgRequests, bytes: one.lgBytes, fnMs: one.lgFnMs }, 0, HOSTS0.netlifyPro);
 ok('at a bar, web requests are now the biggest line (two per tick); compute was, before the split', cr.req > cr.cmp && crLg.cmp > crLg.req, JSON.stringify([cr, crLg]));
 const big1k = ENGINE.gigTraffic(pa, 1000, 3), bigLg = ENGINE.netlifyCredits({ ...big1k, requests: big1k.lgRequests, bytes: big1k.lgBytes, fnMs: big1k.lgFnMs }, 0, HOSTS0.netlifyPro).total, bigSp = ENGINE.netlifyCredits(big1k, 0, HOSTS0.netlifyPro).total;
 console.log('   1,000 phones, 3 h: before ' + (bigLg / 150).toFixed(2) + ' → after $' + (bigSp / 150).toFixed(2) + ' on Pro');
-ok('a 1,000-phone room: $0.98 before the split (the old 5 s rung) → $0.56 after it on Pro (loadsim 146.7 → 84.6 credits)', Math.abs(bigLg / 150 - 0.978) < 0.08 && Math.abs(bigSp / 150 - 0.564) < 0.06, [bigLg / 150, bigSp / 150]);
+ok('a 1,000-phone room: $0.98 before the split (the old 5 s rung) → $0.58 after it on Pro (loadsim 146.7 → 86.9 credits)', Math.abs(bigLg / 150 - 0.978) < 0.08 && Math.abs(bigSp / 150 - 0.579) < 0.06, [bigLg / 150, bigSp / 150]);
 ok('above 200 phones every board request but one per 10 s is an edge hit', big1k.renders <= 3 * 3600 / 10 + 1 && big1k.renders > 3 * 3600 / 10 * 0.95, big1k.renders);
 ok('the floor the server sends: 3 s to 200, 10 s to 3,000, 20 s above', ENGINE.pollFloor(200) === 3 && ENGINE.pollFloor(201) === 10 && ENGINE.pollFloor(3000) === 10 && ENGINE.pollFloor(3001) === 20);
 const mid = ENGINE.gigTraffic({ ...pa, edgeSpread: 50 }, 20, 3);
@@ -266,9 +266,28 @@ ok('people → phones per gig, hours → length, interactions → actions per pe
   applied.fans === 11 && applied.hours === 2.51 && applied.interactions === 2.35 && applied.roomFree === 0.375 && applied.roomPlus === 0.375 && applied.roomPro === 0.375 && applied.deploys === 150 && applied.songEveryMin === 16.5, JSON.stringify([applied.fans, applied.hours, applied.interactions, applied.roomFree, applied.deploys, applied.songEveryMin]));
 const seed = new Function('return ' + html.match(/const SEED_ACT = (\{[\s\S]*?\});\n/)[1])();
 const file = JSON.parse(fs.readFileSync(new URL('./actuals.json', import.meta.url), 'utf8'));
-ok('the seed baked into the page equals finance/actuals.json (people, hours, interactions, room, deploys, shows, asOf)',
-  ['shows', 'people', 'hours', 'interactions', 'roomPerHead', 'deploys', 'asOf'].every((k) => seed[k] === file[k]),
-  JSON.stringify(['shows', 'people', 'hours', 'interactions', 'roomPerHead', 'deploys', 'asOf'].map((k) => [k, seed[k], file[k]])));
+const SEED_KEYS = ['shows', 'people', 'hours', 'interactions', 'roomPerHead', 'deploys', 'asOf', 'songs', 'pollsPerPhoneHour', 'creditsPerShow', 'pollsSource'];
+ok('the seed baked into the page equals finance/actuals.json (people, hours, interactions, room, deploys, shows, asOf, songs, ticks per phone-hour, credits per night, the method)',
+  SEED_KEYS.every((k) => seed[k] === file[k]),
+  JSON.stringify(SEED_KEYS.map((k) => [k, seed[k], file[k]])));
+console.log('THE METER METHOD (decision 0089, INVARIANT 0ge)');
+ok('the tracker reads ticks per phone-hour and credits per night off Netlify’s per-day meters — a gig day minus an empty day — and says which method it used',
+  /def solve_meters\(/.test(py) && /webRequestCount/.test(py) && /cleanFrom/.test(py) && /'pollsSource': rate_src/.test(py) && /'creditsPerShow': meters\.get\('creditsPerShow'\)/.test(py) && /ticks = \(d_req - other\) \/ 2/.test(py));
+ok('a quiet pair counts only within 48 h of a bracket and only if it is under 6 h itself; a bracket over 24 h is withheld', /QUIET_PAIR_MAX_H = 48/.test(py) && /MAX_BRACKET_H = 24/.test(py) && /MAX_QUIET_PAIR_H = 6/.test(py) && /window_h > MAX_BRACKET_H/.test(py) && /0\.5 <= hrs <= MAX_QUIET_PAIR_H/.test(py));
+ok('actuals.py page-open requests match the model', +py.match(/PAGE_REQS = (\d+)/)[1] === P0.pageReqs);
+ok('the meter method’s credits are requests ÷ 10k × 2 + compute + MB ÷ 1000 × 20 — the three traffic meters, and no deploy term anywhere in solve_meters', /cr = d_req \/ 10000 \* 2 \+ d_cmp \+ d_bw \/ 1000 \* CR_PER_GB/.test(py) && !/CR_DEPLOY|\bn30\b|\bnper\b|deploys\(\)/.test(py.slice(py.indexOf('def solve_meters'), py.indexOf('# ---------------------------------------------------------------- the report'))));
+{
+  /* the seed's measured ticks solve to a believable screen-on share, and the model's night lands near the metered credits */
+  const pSeed = withDefaultsTest({ fans: seed.people, hours: seed.hours, interactions: seed.interactions, songEveryMin: Math.round(seed.hours * 60 / seed.songs * 2) / 2 });
+  const look = seed.pollsPerPhoneHour != null ? ENGINE.calibrateLook(pSeed, seed.pollsPerPhoneHour) : null;
+  ok('the seed’s ticks per phone-hour solve to a screen-on share between 3% and 20% (the 5 Sep guess was 22)', look != null && look >= 3 && look <= 20, look);
+  const modelled = look != null ? ENGINE.netlifyCredits(ENGINE.gigTraffic({ ...pSeed, lookShare: look }, seed.people, seed.hours), 0, HOSTS0.netlifyPro).total : null;
+  ok('at that share the modelled night is within 35% of what Netlify’s meters say a night costs (' + (modelled != null ? modelled.toFixed(2) : '?') + ' vs ' + seed.creditsPerShow + ' credits)', modelled != null && seed.creditsPerShow != null && Math.abs(modelled - seed.creditsPerShow) / seed.creditsPerShow < 0.35, [modelled, seed.creditsPerShow]);
+  const creditsLog = JSON.parse(fs.readFileSync(new URL('./credits.json', import.meta.url), 'utf8')), lastRead = creditsLog.readings[creditsLog.readings.length - 1];   // the earlier copies are block-scoped
+  const latestDays = (lastRead.perDay && lastRead.perDay.days) || [];
+  ok('the latest credits.json reading carries per-day counts for at least seven days, with a cleanFrom date', latestDays.filter((d) => d.webRequestCount != null && d.functionsCompute != null && d.bandwidthMB != null).length >= 7 && /^\d{4}-\d{2}-\d{2}$/.test(lastRead.perDay.cleanFrom || ''));
+  ok('every reading in credits.json adds up (deploys + requests + compute + bandwidth + AI = total, deploys = count × 15)', creditsLog.readings.every((r) => { const b = r.breakdown; return Math.abs(b.productionDeploys.credits + b.webRequests.credits + b.compute.credits + b.bandwidth.credits + (b.aiInference ? b.aiInference.credits : 0) - b.total) < 0.15 && b.productionDeploys.credits === b.productionDeploys.count * 15; }));
+}
 ok('the tracker counts a night only on the published calendar, anchors its hours to the slot or the last song, merges split nights and subtracts clip views from a mark', /def gig_for\(/.test(py) && /max\(gig\['slotHours'\], last_act/.test(py) && /def merge_split_nights/.test(py) && /clipViews/.test(py));
 ok('actuals.py bytes per clip view matches the model', +py.match(/'clip': (\d+)/)[1] === P0.clipBytes);
 console.log(fails ? `\n${fails} FAILED` : '\nall passed');
