@@ -3,7 +3,7 @@
 production (finance/fixtures/2026-09-11: every archived night of the first gig week,
 the calendar, the fan requests; nothing secret), and the bandwidth solver against
 synthetic marks. Run: python3 tools/actuals-test.py"""
-import copy, importlib.util, json, os, sys
+import copy, importlib.util, json, os, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIX = os.path.join(HERE, '..', 'finance', 'fixtures', '2026-09-11')
 spec = importlib.util.spec_from_file_location('actuals', os.path.join(HERE, 'actuals.py'))
@@ -111,4 +111,12 @@ ok('…and 3.3 credits of traffic (0.66 requests + 1.7 compute + 0.94 bandwidth)
 ok('a day with a test record on it is not a gig day, and the row says so', any('not a clean gig day' in (n.get('why') or '') for n in m['nights']), m['nights'])
 ok('the rate is phone-hour weighted over the gig days; creditsPerShow is their mean', m['rate'] == round((800.25 + 596.75) / 33, 1) and m['gigDays'] == ['2026-09-17', '2026-09-20'] and m['creditsPerShow'] == round((g['creditsTraffic'] + g2['creditsTraffic']) / 2, 2), (m['rate'], m['gigDays'], m['creditsPerShow']))
 ok('no per-day counts on file → the method stands aside (None), it does not guess', A.solve_meters([r_gig], [], [], [], dict(readAt='x', perDay=dict(days=[dict(day='2026-09-20', webRequests=1.3)]))) is None)
+print("THE FOUNDER'S OWN MARKS FILE (tools/mark.sh writes it; the tracker reads both and folds it in)")
+tmp = tempfile.mkdtemp(); A.MARKS = os.path.join(tmp, 'marks.json'); A.MARKS_OWN = os.path.join(tmp, 'own.json')
+json.dump([dict(at='2026-09-30T10:00:00+00:00', used=1, periodStart='p', label='repo')], open(A.MARKS, 'w'))
+json.dump([dict(at='2026-09-30T09:00:00+00:00', used=0, periodStart='p', label='own'), dict(at='2026-09-30T10:00:00+00:00', used=1, periodStart='p', label='repo copy')], open(A.MARKS_OWN, 'w'))
+ms = A.read_marks()
+ok("the repo's marks and the founder's own file read as one list, oldest first, no mark twice", [m['label'] for m in ms] == ['own', 'repo'], ms)
+os.remove(A.MARKS_OWN)
+ok('no own file yet → just the repo marks', [m['label'] for m in A.read_marks()] == ['repo'])
 print(f'\n{fails} FAILED' if fails else '\nall passed'); sys.exit(1 if fails else 0)

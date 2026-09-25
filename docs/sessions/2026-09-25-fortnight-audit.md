@@ -20,6 +20,10 @@ the model to make sure it works and the projections are as solid as the real dat
   record now reads $22, not $20: two $1 test tips from 15 Sep midday fell inside its money
   window (decision 0081) — 2¢ a head across the set, noted, not corrected (production is
   read-only here and the window rule is right).
+- **Context the founder added afterwards:** every measured night is in Thailand, where the pay
+  is close to nothing and the tipping culture is, in his words, atrocious. So $1.04 a head is a
+  floor for a market where tipping is normal, not a ceiling — and the model does not guess a
+  figure for such a market, because none has been measured. The page and the report say so.
 - **The two bills this period (8 Sep → 25 Sep, Netlify's own Credit usage breakdown):**
   production deploys 119 = 1,785 credits (93.8%); everything the rooms did — 100,804 requests
   = 20.2, compute 54, bandwidth 42.8 — **117 credits**. Total 1,902. The $9 Personal plan's

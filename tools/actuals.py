@@ -6,6 +6,7 @@
     python3 tools/actuals.py --mark "before Sat gig"   # record one bandwidth reading (see below)
     python3 tools/actuals.py --mark "after Sat gig" --studio-min 140 --clip-views 0   # …how long the Studio Live tab was up, and whether anyone watched a posted clip
     python3 tools/actuals.py --marks          # list the readings on file
+    tools/mark.sh before|start|after "venue" [Studio minutes]   # the founder's own way: no git, from any folder (see the script)
 
 WHAT IT READS (all read-only, nothing in production is changed):
   · every artist's show history in the production store (the `hist_*` documents),
@@ -143,6 +144,10 @@ ROOT = os.path.dirname(HERE)
 # is not, so from one set MYSET_SITE_DIR=~/Docs/MySet (the same convention as tools/metrics.mjs)
 SITE = os.environ.get('MYSET_SITE_DIR') or ROOT
 MARKS = os.path.join(ROOT, 'finance', 'marks.json')
+# THE FOUNDER'S OWN MARKS. tools/mark.sh takes a mark from any folder with no git involved and writes it
+# here (MYSET_MARKS_FILE points elsewhere for tests); read_marks() reads this file alongside the repo's,
+# and --write folds anything new into finance/marks.json so the next commit carries it.
+MARKS_OWN = os.environ.get('MYSET_MARKS_FILE') or os.path.expanduser('~/.myset-marks.json')
 CREDITS = os.path.join(ROOT, 'finance', 'credits.json')   # Netlify's own per-category credit meters, read off the dashboard by hand (append-only)
 ENV = {**os.environ, 'PATH': os.environ['HOME'] + '/.local/node/bin:' + os.environ.get('PATH', '')}
 
@@ -466,10 +471,18 @@ def deploys():
 # ---------------------------------------------------------------- bandwidth marks
 
 def read_marks():
-    try:
-        return json.load(open(MARKS))
-    except Exception:
-        return []
+    """The repo's marks and the founder's own file as one list, oldest first, no mark twice."""
+    out = []
+    for path in (MARKS, MARKS_OWN):
+        try:
+            out += json.load(open(path))
+        except Exception:
+            pass
+    seen, uniq = set(), []
+    for m in sorted(out, key=lambda m: m['at']):
+        if m['at'] not in seen:
+            seen.add(m['at']); uniq.append(m)
+    return uniq
 
 
 def mark(label):
@@ -492,12 +505,18 @@ def mark(label):
         m['studioMin'] = float(sys.argv[sys.argv.index('--studio-min') + 1])   # minutes the Studio Live tab was on screen since the previous mark
     if '--clip-views' in sys.argv:
         m['clipViews'] = float(sys.argv[sys.argv.index('--clip-views') + 1])   # full views of a posted video since the previous mark (each is ~75 MB — about 21,600 ticks' worth)
-    marks = read_marks()
-    marks.append(m)
-    os.makedirs(os.path.dirname(MARKS), exist_ok=True)
-    with open(MARKS, 'w') as f:
-        f.write(json.dumps(marks, indent=1) + '\n')
-    print(f"mark #{len(marks)}  {m['at']}  {m['used']:,} bytes used this period  — {label}")
+    # the founder's script sets MYSET_MARKS_FILE and the mark lands in his own file, outside git; a session's mark lands in the repo's
+    target = MARKS_OWN if os.environ.get('MYSET_MARKS_FILE') else MARKS
+    try:
+        mine = json.load(open(target))
+    except Exception:
+        mine = []
+    mine.append(m)
+    os.makedirs(os.path.dirname(target) or '.', exist_ok=True)
+    with open(target, 'w') as f:
+        f.write(json.dumps(mine, indent=1) + '\n')
+    marks = read_marks()                      # both files together, for the numbering and the "since" line
+    print(f"mark #{len(marks)}  {m['at']}  {m['used']:,} bytes used this period  — {label}" + ('' if target == MARKS else f"  (kept in {target})"))
     if stale_min is not None and stale_min > 30:
         print(f"  ⚠ the counter was last updated {stale_min:.0f} minutes ago; if this is the AFTER reading, take it again later", file=sys.stderr)
     if len(marks) >= 2:
@@ -789,6 +808,21 @@ def main():
         with open(os.path.join(ROOT, 'finance', 'actuals.json'), 'w') as f:
             f.write(txt + '\n')
         print('\nwritten to finance/actuals.json', file=sys.stderr)
+        # fold the founder's own marks into the repo's file, so the commit that carries this actuals.json carries them too
+        try:
+            own = json.load(open(MARKS_OWN))
+        except Exception:
+            own = []
+        try:
+            repo = json.load(open(MARKS))
+        except Exception:
+            repo = []
+        have = {m['at'] for m in repo}
+        new = [m for m in own if m['at'] not in have]
+        if new:
+            with open(MARKS, 'w') as f:
+                f.write(json.dumps(sorted(repo + new, key=lambda m: m['at']), indent=1) + '\n')
+            print(f"folded {len(new)} of the founder's own mark(s) into finance/marks.json", file=sys.stderr)
 
 
 if __name__ == '__main__':
