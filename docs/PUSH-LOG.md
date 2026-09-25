@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 13:16 — 9537121 — wt@ux/loader-and-lyrics (22 files since origin/main)
+**tl;dr:** The loading screen's bars now move from the very first frame instead of sitting as three still dots on every page change (every splash moves by transform, decision 0090); both lyrics pop-ups read in the MySet font, one block per verse, alternating white and light grey; the Studio's lyrics no longer drag the sheet closed when scrolled
+**Other sessions:** Every page-change/boot/busy splash is <i><b></b></i>: window i, pill b (translateY), gradient b::before (scaleY), negative delays — never a height keyframe (INVARIANT 0gf, test/copy.mjs refuses it). A new splash copies an existing #intro block. Lyrics: .lyr-st verse blocks via textContent in studio.js verses() and vote.html openLyrics; .chartview stays monospace for chord charts; studio attachDrag skips .chartview. Decision 0090 (0087-0089 were taken). After editing studio.js run node tools/stamp.mjs.
+
 ### 2026-09-25 13:10 — 6a9e270 — wt@docs/mark-launcher (3 files since origin/main)
 **tl;dr:** Docs only: the founder takes bandwidth marks with ~/myset-mark.sh before|start|after "venue" [Studio minutes] — a launcher for ~/Docs/Project Handoffs/myset-mark.sh (his ~/Docs/MySet checkout is an old base and has no tools/mark.sh) [skip ci]
 **Other sessions:** Nothing in the code changed; tools/mark.sh, the handoffs copy and the launcher are the same script. Do not tell the founder to run ~/Docs/MySet/tools/mark.sh — that file is not on his checkout.
