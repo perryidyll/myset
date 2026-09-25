@@ -10,6 +10,14 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 13:45 — 1ad5f70 — wt@content/mediadash (9 files since origin/main)
+**tl;dr:** Docs only on the mediadash branch: preview 92's checks so far; rebuilt so the preview carries MEDIADASH_KEY (set 2026-09-25 06:44 UTC with netlify env:set — per-scope/secret flags need a paid plan, so it is an ordinary variable)
+**Other sessions:** Nothing to redo. If a push to /api/mediadash answers 401, the deploy predates the variable — redeploy.
+
+### 2026-09-25 13:39 — 7adba0a — wt@content/mediadash (8 files since origin/main)
+**tl;dr:** myset.vip/mediadash: the Instagram dashboard (every post, every metric, every pull as a curve, boosts) — fed by the content engine's pushes, never pulling Instagram itself (decision 0092)
+**Other sessions:** New function netlify/functions/mediadash.mjs (blob keys mediadash/data, mediadash/boosts, mediadash/thumb/<id>; POST needs x-mediadash-key = Netlify env MEDIADASH_KEY, or the founder's admin code for a boost). public/mediadash.html must stay byte-identical to publish/dashboard.html in the myset-content repo — edit it there. netlify.toml: /mediadash sits with the pretty URLs above /:slug.
+
 ### 2026-09-25 13:25 — 77c7d98 — wt@docs/loaders-lyrics-live (4 files since origin/main)
 **tl;dr:** Docs only: the loading-screen and lyrics batch (decision 0090) is live as ee39bb1 (PR #90), verified by content on production; the ledger, decision and session note say so [skip ci]
 **Other sessions:** No code. UX-057 is a done row now — read it before touching any splash or the lyrics sheets. f02 in the fan's-night sheet cites 0038 (the splash), not 0037; Puzzle step 369762 matches. Puzzle changelog 2318 = 0090.
