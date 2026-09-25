@@ -10,7 +10,7 @@ The folder `design-handoff/` (git-ignored) describes a different product in a di
 
 | File | Who loads it | What it carries |
 | --- | --- | --- |
-| `public/app.css` | `index`, `artists`, `about`, `artist`, `community`, `venue`, `vote` | tokens, reset, the four button tiers, chips, cards, header, credits pill, sheets, toast, the `.fab` pill, empty state, motion |
+| `public/app.css` | inline in all nine fan pages — `index`, `artists`, `about`, `artist`, `community`, `venue`, `vote`, `shop`, `diary` — written into each by `tools/stamp.mjs` (decision 0092) | tokens, reset, the four button tiers, chips, cards, header, credits pill, sheets, toast, the `.fab` pill, empty state, motion |
 | `public/lock.css` | `studio.html` and `venue-studio.html` — **and nothing else** | lock states, the same four tiers (complete on their own), the chip hairline, the bottom tab bar, the Menu sheet rows |
 | `studio.html:43–63`, `venue-studio.html:29–49` | themselves | each Studio's own token blocks (dark by default, `:root[data-theme=light]` on top) |
 

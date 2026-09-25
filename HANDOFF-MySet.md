@@ -1176,8 +1176,9 @@ fills a song with NO genres, so running it twice is a no-op and hand-tagging alw
 wins. `originals` is applied when a song's artist matches the artist's own name.
 
 **PWA.** `sw.js` plus a manifest per surface. Nothing under `/api` is ever cached —
-verified in a real browser, not assumed. Navigations are network-first, nothing is
-precached, so a bad deploy is fixed by the next deploy. Add-to-home-screen banner on
+verified in a real browser, not assumed. A page seen in the last six hours is shown from
+the phone's copy and re-fetched behind it (decision 0091, `test/sw.mjs`); older pages wait
+for the network; nothing is precached, so a deploy is on a phone by the open after next. Add-to-home-screen banner on
 the homepage with iPhone/Android tabs.
 
 **Polish.** Sheet ✕ moved down to 10px. ↗ on the Studio's MySet mark and on the

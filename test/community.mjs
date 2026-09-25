@@ -519,6 +519,46 @@ eq('and the biggest paid count once it does', topPaidOf([{ songId: 'a', title: '
 eq('across nights the same title merges and the biggest count wins',
   topAcross([{ topPlayed: { title: 'A', plays: 2 } }, { top: { title: 'Z', votes: 9 } }, { topPlayed: { title: 'a', plays: 3 } }, { topPlayed: { title: 'B', plays: 4 } }], 'topPlayed', 'plays', 1), [{ title: 'A', plays: 5 }]);
 
+console.log('\nTHE SHARED READ AND THE PERSONAL CALL  (decision 0093)');
+{
+  const p = await POST('?a=ana-reyes', { action: 'post', fan: 'phoneS', text: 'shared read test', stars: 4 });
+  ok('a post lands, and the reply says when', p.ok && typeof p.at === 'number', p);
+  const raw = await commFn(new Request('https://x/api/community?a=ana-reyes'));
+  const shared = await raw.json();
+  ok('the shared read is kept at the edge for every phone', /public, durable, s-maxage=30/.test(raw.headers.get('netlify-cdn-cache-control') || ''), raw.headers.get('netlify-cdn-cache-control'));
+  ok('and says when it was made', typeof shared.at === 'number');
+  ok('with nothing personal on any post', shared.posts.length > 0 && shared.posts.every((x) => x.mine === false && x.editable === false && x.liked === false), shared.posts);
+  ok('and canPost true for everyone', shared.canPost === true);
+  const rawT = await commFn(new Request('https://x/api/community?a=ana-reyes', { headers: { authorization: 'Bearer ' + TA } }));
+  const sharedT = await rawT.json();
+  /* not `at` (when the copy was made) and not `showId`: getShow mints `show-<now>` for an
+     artist who has never had a show — this fixture — so two reads a millisecond apart differ
+     there with or without a token; a real show's id is fixed */
+  const diffT = Object.keys({ ...shared, ...sharedT }).filter((k) => k !== 'at' && k !== 'showId' && JSON.stringify(shared[k]) !== JSON.stringify(sharedT[k]));
+  ok("the artist's own token changes nothing in the shared read", sharedT.canPost === true && diffT.length === 0, diffT.map((k) => [k, shared[k], sharedT[k]]));
+  const like = await POST('?a=ana-reyes', { action: 'like', fan: 'phoneS', id: p.id });
+  ok('a like lands', like.ok, like);
+  const after = await (await commFn(new Request('https://x/api/community?a=ana-reyes'))).json();
+  ok('and the shared read still shows no heart on any post, whoever liked it', after.posts.every((x) => x.liked === false && x.mine === false) && after.posts.find((x) => x.id === p.id).likes === 1, after.posts);
+  const rawM = await commFn(new Request('https://x/api/community?a=ana-reyes&fan=phoneS&me=1'));
+  const me = await rawM.json();
+  eq('the personal call: mine, editable, liked, canPost', { mine: me.mine, editable: me.editable, liked: me.liked, canPost: me.canPost }, { mine: [p.id], editable: [p.id], liked: [p.id], canPost: true });
+  eq('never cached', rawM.headers.get('netlify-cdn-cache-control'), 'no-store');
+  const meT = await hit(commFn, 'https://x/api/community?a=ana-reyes&fan=phoneS&me=1', undefined, TA);
+  ok('the artist on their own page may not post', meT.ok && meT.canPost === false, meT);
+  const other = await hit(commFn, 'https://x/api/community?a=ana-reyes&fan=phoneOther&me=1');
+  eq('another phone owns and liked nothing', { mine: other.mine, editable: other.editable, liked: other.liked }, { mine: [], editable: [], liked: [] });
+  const nowhere = await hit(commFn, 'https://x/api/community?a=nobody-here&fan=phoneS&me=1');
+  eq('an unknown page is a 404 on the personal call too', nowhere.status, 404);
+  const old = await GET('?a=ana-reyes&fan=phoneS');
+  ok('the old whole reply still answers, with the marks on', old.ok && old.posts.some((x) => x.id === p.id && x.mine && x.liked && x.editable), old.posts);
+  const rawOld = await commFn(new Request('https://x/api/community?a=ana-reyes&fan=phoneS'));
+  eq('and is never cached', rawOld.headers.get('netlify-cdn-cache-control'), 'no-store');
+  const m = await count(() => hit(commFn, 'https://x/api/community?a=ana-reyes&fan=phoneS&me=1'));
+  under('the personal call, reads', m.reads, 4);
+  eq('and writes nothing', m.writes, 0);
+}
+
 console.log('\nWHAT IT COSTS  (INVARIANT 9d13)');
 const g = await count(() => GET('?a=ana-reyes&fan=phone1'));
 /* +1 since the picker reads the calendar (ev_) as well as the archive; +1 for the

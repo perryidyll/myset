@@ -544,10 +544,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 273 (last: 0fn) |
-| Test suites | 54 |
-| Assertions | **3,432**, 0 failing, last run 2026-09-18 |
-| Decision records | 89 |
+| Invariants | 275 (last: 0fn) |
+| Test suites | 55 |
+| Assertions | **3,571**, 0 failing, last run 2026-09-25 |
+| Decision records | 92 |
 
 ### Feature flags in force
 
@@ -1256,7 +1256,9 @@ the server, so they cannot send yet**, and the Studio says so.
 
 **Installable.** Three separate manifests (audience, Studio, venue) so each surface opens
 where it should. The service worker **never caches anything under `/api`** — a cached vote
-is a lost vote — and never precaches, so the newest version always wins.
+is a lost vote — never precaches, and shows a page seen in the last six hours from the
+phone's copy while re-fetching it behind (decision 0091), so a deploy is on a phone by the
+open after next.
 
 **Feature flags** let a question with two real answers be tried both ways without a deploy
 (a production deploy is the expensive thing on this account). Rules: a flag is a question

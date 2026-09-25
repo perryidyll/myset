@@ -307,6 +307,7 @@ function communityFixture(slug, venue, st) {
     merch: merchFor(slug, venue, st), canBuy: st.canBuy, live: venue ? false : st.live, showId: st.live && !venue ? 'show1' : '',
     canPost: true, posts: POSTS, shows: [{ showId: 's1', label: SHOW_LABEL }],
     limits: { text: 500, photos: 3, perDay: 3, clipSeconds: 20, clipBytes: 75 * 1048576, editHours: 24, wish: 200 },
+    at: NOW,
   };
 }
 const SONGS = [
@@ -837,7 +838,7 @@ const srv = http.createServer(async (rq, rs) => {
   }
   if (u.pathname === '/api/fan') {
     const what = q.get('what'), venue = q.has('v'), slug = q.get('a') || q.get('v') || 'demo';
-    if (what === 'community') return json(rs, communityFixture(slug, venue, st));
+    if (what === 'community') return json(rs, q.has('me') ? { ok: true, canPost: true, mine: [], editable: [], liked: [] } : communityFixture(slug, venue, st));   // the shared read and the personal call (0093)
     if (what === 'profile') return json(rs, profileFixture(st));
     if (what === 'events') return json(rs, q.has('places') ? placesFixture() : q.has('a') ? gigsFixture() : cityFeed(q));   // the front door reads through the door too (0088)
     if (what === 'artists') return json(rs, artistsFixture());
@@ -917,7 +918,11 @@ const srv = http.createServer(async (rq, rs) => {
   const p = path.join(ROOT, to);
   if (!p.startsWith(ROOT) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { rs.writeHead(404, { 'content-type': 'text/plain' }); return rs.end('not here: ' + u.pathname); }
   const ext = path.extname(p), head = { 'content-type': T[ext] || 'application/octet-stream', 'cache-control': 'no-store' };
-  if (ext === '.html') head['set-cookie'] = cookieHeaders(q);       // the address sets the state the page's API calls will read
+  /* A page says no-cache, not no-store: the browser still re-asks every time (an edit shows at
+     once), but the service worker may keep a copy — it refuses no-store/private (decision 0091),
+     and production's pages are `public, max-age=60` (netlify.toml), so no-store here would hide
+     the worker's rule 2 from every check on the mock. */
+  if (ext === '.html') { head['cache-control'] = 'no-cache'; head['set-cookie'] = cookieHeaders(q); }   // the address sets the state the page's API calls will read
   rs.writeHead(200, head);
   if (SIGNIN[to]) return rs.end(signedIn(fs.readFileSync(p, 'utf8'), SIGNIN[to], (q.get('tab') || '').replace(/[^a-z]/g, '') || null));
   fs.createReadStream(p).pipe(rs);

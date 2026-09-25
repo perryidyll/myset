@@ -75,6 +75,10 @@ console.log('THE PAGES ASK THE DOOR');
     const src = readFileSync(`public/${page}.html`, 'utf8');
     for (const w of wants) ok(`${page}.html asks /api/fan?${w}`, src.includes('/api/fan?' + w) || src.includes('/fan?' + w));
   }
+  const comm = readFileSync('public/community.html', 'utf8');
+  ok('community.html starts the shared read with no device named, from the head (decision 0093)', comm.includes("fetch('/api/fan?what=community'+(Q==='?'?'':Q.replace('?','&')),{cache:'no-store'})"));
+  ok('…and from load(), the same URL, nothing appended', comm.includes("fetch(`${API}/fan?what=community${Q==='?'?'':Q.replace('?','&')}`,{cache:'no-store'})"));
+  ok('and makes the personal call with &me=1 — from the head and from load()', (comm.match(/&me=1/g) || []).length >= 2 && /what=community/.test(comm));
   const cron = readFileSync('netlify/functions/autocron.mjs', 'utf8');
   ok('autocron rings the ping', cron.includes('/api/fan?what=warm'));
   ok('every fourth minute, not every ring', cron.includes('% 4 === 0'));

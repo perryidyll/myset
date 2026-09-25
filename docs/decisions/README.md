@@ -99,6 +99,9 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0087](0087-the-fan-pages-share-one-script.md) | The fan pages share one script | 2026-09-25 | performance | decided | perry |
 | [0088](0088-a-fan-s-first-open-is-the-visit-that-matters.md) | A fan's first open is the visit that matters | 2026-09-25 | performance | decided | perry |
 | [0089](0089-a-night-s-server-cost-is-read-off-netlify-s-per-da.md) | A night's server cost is read off Netlify's per-day meters; a bandwidth bracket needs a quiet pair of its own day | 2026-09-25 | money | decided | claude |
+| [0091](0091-a-page-seen-tonight-is-shown-from-the-phone-s-copy.md) | A page seen tonight is shown from the phone's copy and refreshed behind it | 2026-09-25 | performance | decided | perry |
+| [0092](0092-app-css-rides-inside-every-fan-page.md) | app.css rides inside every fan page, byte for byte | 2026-09-25 | performance | decided | perry |
+| [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md) | The community page reads a shared copy and wears its own marks | 2026-09-25 | scale | decided | perry |
 
 ## By area
 
@@ -116,13 +119,13 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **ops** — [0013](0013-errors-are-reported-to-a-service-that-outlives-the.md) · [0021](0021-live-shows-end-after-three-hours-without-artist-or.md) · [0029](0029-errors-and-bug-reports-are-kept-in-the-blob-store.md) · [0045](0045-main-is-protected-nothing-lands-except-through-a-p.md) · [0046](0046-the-datastore-is-copied-weekly-and-before-every-gi.md) · [0047](0047-the-repository-stays-public.md) · [0069](0069-every-document-is-copied-nightly-to-r2-and-a-restor.md)
 
-**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) · [0054](0054-a-signed-in-request-costs-two-hops-not-four.md) · [0087](0087-the-fan-pages-share-one-script.md) · [0088](0088-a-fan-s-first-open-is-the-visit-that-matters.md)
+**performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) · [0054](0054-a-signed-in-request-costs-two-hops-not-four.md) · [0087](0087-the-fan-pages-share-one-script.md) · [0088](0088-a-fan-s-first-open-is-the-visit-that-matters.md) · [0091](0091-a-page-seen-tonight-is-shown-from-the-phone-s-copy.md) · [0092](0092-app-css-rides-inside-every-fan-page.md)
 
 **plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) · [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md)
 
 **product** — [0078](0078-a-new-page-shows-nobody-elses-band.md) · [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md)
 
-**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md)
+**scale** — [0006](0006-a-full-room-is-never-refused.md) · [0012](0012-an-open-line-to-the-room-is-not-next.md) · [0030](0030-casting-is-rate-limited-by-a-token-bucket-on-the-f.md) · [0034](0034-the-audience-poll-is-split-into-a-shared-edge-cach.md) · [0035](0035-the-open-line-is-built-now-on-measured-numbers.md) · [0076](0076-the-money-model-prices-the-split-and-the-open-line.md) · [0093](0093-the-community-page-reads-a-shared-copy-and-wears-its-own-marks.md)
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 

@@ -30,6 +30,9 @@ echo
 echo "── trimming an mp4 without re-encoding it ──"
 node test/trim.mjs
 echo
+echo "── the service worker's rules ──"
+node test/sw.mjs
+echo
 echo "── the printed QR codes ──"
 node test/qr.mjs
 echo

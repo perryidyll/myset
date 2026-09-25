@@ -17,8 +17,9 @@
    WHAT IT CANNOT DO, said plainly because it matters: this is JavaScript, so it
    cannot rescue a page whose JavaScript is broken — the exact case where somebody
    most wants a reload. That is what the "Reload MySet" button in the Studio's
-   settings is for, and why the service worker serves navigations network-first
-   (see sw.js rule 2): any navigation gets the newest page.
+   settings is for, and why the service worker asks the network first for a
+   reload (see sw.js rule 2): a page seen tonight is otherwise shown from the
+   phone's copy, but a pull, or the Studio's button, gets the newest page.
 
    The browser's own gesture is deliberately NOT suppressed. Setting
    `overscroll-behavior-y: contain` would stop Chrome's native pull-to-refresh

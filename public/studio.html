@@ -847,8 +847,9 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <script src="/studio.js?v=02fc22f6"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
-   worker itself never caches /api and always prefers the network for pages —
-   see public/sw.js. */
+   worker itself never caches /api; a page seen tonight comes from the phone's copy
+   and is refreshed behind, a reload or an older page from the network — see
+   public/sw.js. */
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
 }
