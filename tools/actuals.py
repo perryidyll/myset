@@ -32,9 +32,12 @@ WHAT IT PRODUCES — the fields the model's "Real shows" panel understands:
   votes, songs, setHours, recordHours, nets, peakVoters, gigsOnCalendar, gigsUsed
                      averages for the report; only people/hours/interactions/room/
                      deploys/pollsPerPhoneHour move a dial
-  pollsPerPhoneHour  AUDIENCE ticks (board + personal call) per phone per hour, solved from the bandwidth
-                     marks that bracket a night (null until two marks bracket one)
-  creditsPerShow     null — Netlify does not expose per-show credits
+  pollsPerPhoneHour  AUDIENCE ticks (board + personal call) per phone per hour — from Netlify's own
+                     per-day request meter (a gig day minus an empty day; THE METER METHOD below), or
+                     from the bandwidth marks that bracket a night when a quiet pair sits within 48 h
+                     of the bracket (THE BANDWIDTH METHOD); `pollsSource` says which
+  creditsPerShow     traffic credits one night adds over an empty day, by the same meters — requests,
+                     compute and bandwidth; never a deploy (null until the per-day meters are on file)
   shipping           the deploys and their credits (30 days, this billing period, per day) —
                      THE SHIPPING BILL. Never divided by shows; never in a per-show figure
   traffic            the bandwidth counter this period, in bytes, GB and credits — the one
@@ -76,19 +79,20 @@ not "nothing".
 THE BANDWIDTH METHOD (how pollsPerPhoneHour gets measured, not typed):
 Netlify does not show function calls per site or per night through the API, but it
 does keep a byte-exact, account-wide bandwidth counter for the billing period
-(GET /accounts/<id>/bandwidth). Every audience tick is 2,605 bytes on the wire since the split (2,530 before)
-(measured; the same constant the model uses), so the bytes a night adds to that
-counter, minus what the Studio tab, the page loads and the votes cost, is the
-poll count. So:
-  · run `--mark "..."` the evening BEFORE a gig and again the morning AFTER it (the
-    counter lags a couple of minutes; a mark records when it was last updated);
-  · run `--mark` twice on a quiet day, an hour or more apart, with no show between:
-    that pair measures the background the other four sites add per hour, which is
-    subtracted from every show window;
+(GET /accounts/<id>/bandwidth). Every audience tick is 3,470 bytes on the wire since the split (2,530 before): the shared
+board — about 200 B plus 36 B per song on it, gzipped: 2,175 for the 40-song room of 11 Sep,
+3,040 for the founder's 79-song board on 25 Sep — and the 430-byte personal call (measured; the
+same constants the model uses), so the bytes a night adds to that counter, minus what the
+Studio tab, the page loads and the votes cost, is the poll count. So:
+  · run `--mark "..."` three times: about two hours BEFORE the gig, JUST BEFORE it starts
+    (those two are the quiet pair — the background of that very day) and AFTER it ends
+    (the counter lags a couple of minutes; a mark records when it was last updated);
+  · a quiet pair measures the background only for a bracket within 48 h of it, and only
+    if the pair itself is under 6 h — see the two rules below;
   · the report then finds, for each counted night, the last mark before it started
     and the first mark after it ended (same billing period — the counter resets on
     the period start, 8 Sep this month) and solves for the polls.
-ONE VIEW OF A POSTED VIDEO CLIP IS ~75 MB — thirty thousand polls' worth. If anybody
+ONE VIEW OF A POSTED VIDEO CLIP IS ~75 MB — about twenty thousand ticks' worth. If anybody
 (including you) watched a clip on the profile between the two marks, pass
 --clip-views N on the AFTER mark or the solve is off by that much; the 8–11 Sep reading
 (335.7 MB in three days, two gigs) was mostly clips, not polls.
@@ -98,6 +102,35 @@ better, pass --studio-min with the minutes it was actually on screen. Without th
 solver assumes it was up 60% of the night (the model's default) and says so.
 The byte constants live in BYTES below and finance/model-test.mjs checks that they
 still match the model's defaults, so the two cannot drift apart silently.
+THREE FENCES THE 25 SEP AUDIT ADDED, each learned from a number that was 8–18× wrong:
+  · a quiet pair measures the background OF ITS OWN DAY. The account's idle traffic changed
+    by 10× inside a fortnight (the mirror moving clips, then the warm-door pings), so a pair
+    is applied only to a bracket within QUIET_PAIR_MAX_H (48 h) of it — today's quiet pair
+    laid over the 14 Sep bracket reads 350–750 ticks per phone-hour depending on the
+    background believed, when the meters say ~40 — and the pair itself (7.0 MB/h) held this audit's
+    own store reads, so a pair must be taken with nothing else running;
+  · a bracket must be a night, not a fortnight: longer than MAX_BRACKET_H (24 h) and it is
+    withheld — the 15→25 Sep bracket held seven nights and one 488 MB day that was not polls;
+    and a quiet pair must be short too (MAX_QUIET_PAIR_H, 6 h) — two marks a week apart with
+    no show between them average every clip and backup of the week into the "background".
+  The way to take the marks, then: one about two hours before the gig, one just before it
+  starts (that pair is the quiet pair), one after it ends. Three marks, one night.
+
+THE METER METHOD (what fills pollsPerPhoneHour and creditsPerShow when no bracket qualifies):
+Netlify's Usage & billing page charts every meter it bills PER DAY — web requests, function
+compute, bandwidth — and finance/credits.json keeps those days as read off the chart by hand
+(`perDay.days[]`, with `webRequestCount`, `functionsCompute` (credits), `bandwidthMB`). A day is
+EMPTY when no show record of any kind — counted, unused or a test — started on it and no
+published slot fell on it; the background is the median of the empty days for requests and
+compute and the QUIETEST empty day for bandwidth (a clip watched or a backup is a one-off, not
+a nightly cost). A GIG DAY is a day with exactly one counted night and nothing else. The
+night's requests over the background, less the Studio tick, the page loads, the votes and the
+extra pages (the same shape the bandwidth method subtracts), halved (a tick is two requests
+since the split) are the room's ticks; ÷ phone-hours is the rate. Days before
+`perDay.cleanFrom` are ignored — until 15 Sep the account carried hand tests, load work and a
+mirror moving clips. The Studio share (STUDIO_SHARE) is the one assumption in it: at a
+three-phone night it is most of the requests, so small rooms read high — the rate is
+phone-hour-weighted for that reason.
 """
 import json, os, subprocess, sys, urllib.request
 from datetime import datetime, timezone, timedelta
@@ -116,10 +149,10 @@ ENV = {**os.environ, 'PATH': os.environ['HOME'] + '/.local/node/bin:' + os.envir
 # bytes on the wire per call — MUST equal P0.pollBytes / writeBytes / studioBytes /
 # viewBytes / pageBytes in finance/model.html (model-test.mjs enforces it)
 # SINCE THE SPLIT (11 Sep 2026, decision 0034) every audience tick is TWO requests on the wire:
-# the shared board (0.86 × the old 2,530-byte poll, measured ratio) and the personal call (430,
-# measured). 'poll' is the old one-call answer, kept only so a mark taken before the split can
+# the shared board (about 200 B + 36 B per song on it, gzipped: 3,040 for the founder's 79-song board on 25 Sep; 2,175
+# for the 40-song room of 11 Sep) and the personal call (430 for a phone that voted, measured). 'poll' is the old one-call answer, kept only so a mark taken before the split can
 # still be solved. finance/model-test.mjs checks these against the model page's defaults.
-BYTES = {'board': 2175, 'me': 430, 'poll': 2530, 'write': 1200, 'studio': 4000, 'view': 3000, 'page': 48000, 'clip': 75000000}   # clip = one full view of a posted video (the three so far are 74–79 MB)
+BYTES = {'board': 3040, 'me': 430, 'poll': 2530, 'write': 1200, 'studio': 4000, 'view': 3000, 'page': 48000, 'clip': 75000000}   # clip = one full view of a posted video (the three so far are 74–79 MB); board = the founder's 79-song board, gzipped, 25 Sep
 TICK_BYTES = BYTES['board'] + BYTES['me']   # what one tick of the ladder moves since the split
 # TWO BILLS, NEVER ONE NUMBER (INVARIANT 0fx). Netlify meters a production deploy (15 credits)
 # separately from everything a room does (web requests, bandwidth, compute). This script reports
@@ -132,6 +165,10 @@ SPLIT_AT = '2026-09-11T11:17:00+00:00'      # when c3d0a4d (the split) went live
 STUDIO_POLLS_PER_HOUR = 3600 / 4        # the Studio's own tick, every 4 s while the tab is open
 EXTRA_VIEWS_PER_PHONE = 0.5             # profile / community / city-feed pages, per phone (model default)
 STUDIO_SHARE = 0.6                      # share of the night the Studio Live tab is on screen when nobody recorded it (= P0.studioShare)
+PAGE_REQS = 6                           # requests to open the voting page — the page, its script, style, icon… (= P0.pageReqs)
+QUIET_PAIR_MAX_H = 48                   # a quiet pair measures the background only for a bracket within this many hours of it
+MAX_BRACKET_H = 24                      # a bracket longer than a day is not a night and is not solved
+MAX_QUIET_PAIR_H = 6                    # two marks with nothing between them measure the background only if they are close together — a pair spanning days averages clips and backups in
 
 
 def run(args):
@@ -454,7 +491,7 @@ def mark(label):
     if '--studio-min' in sys.argv:
         m['studioMin'] = float(sys.argv[sys.argv.index('--studio-min') + 1])   # minutes the Studio Live tab was on screen since the previous mark
     if '--clip-views' in sys.argv:
-        m['clipViews'] = float(sys.argv[sys.argv.index('--clip-views') + 1])   # full views of a posted video since the previous mark (each is ~75 MB — 30,000 polls' worth)
+        m['clipViews'] = float(sys.argv[sys.argv.index('--clip-views') + 1])   # full views of a posted video since the previous mark (each is ~75 MB — about 21,600 ticks' worth)
     marks = read_marks()
     marks.append(m)
     os.makedirs(os.path.dirname(MARKS), exist_ok=True)
@@ -481,7 +518,7 @@ def eff(m):
     return ts((m.get('lastUpdatedAt') or m['at']).replace('Z', '+00:00'))
 
 
-def solve_polls(rows, marks, skipped=()):
+def solve_polls(rows, marks, skipped=(), unused=(), silent=()):
     """For each bracket of marks around counted nights: the bytes between them, less the
     background the quiet pairs show, less everything on the wire that is not an audience
     poll, ÷ bytes per poll. Nights that share a bracket are solved together (one rate
@@ -490,17 +527,30 @@ def solve_polls(rows, marks, skipped=()):
     if len(marks) < 2:
         return None, [], None, 0
     marks = sorted(marks, key=lambda m: m['at'])
-    every = list(rows) + [r for r in skipped if r.get('startedAt') and r.get('endedAt')]   # a test show still moves the counter
-    quiet_bytes = quiet_hours = 0.0; quiet_n = 0
+    # a test show, a one-phone night and a published slot nobody used all keep the Studio ticking, so they are busy windows too
+    every = [r for r in list(rows) + list(skipped) + list(unused) if r.get('startedAt') and r.get('endedAt')] \
+          + [{'startedAt': s['at'], 'endedAt': s['at'] + 4 * 3600e3} for s in silent or [] if s.get('at')]
+    # every quiet pair on file, with WHEN it was taken: the background it measures belongs to its
+    # own day (the account's idle traffic changed 10× inside a fortnight), so a pair is applied
+    # only to a bracket within QUIET_PAIR_MAX_H of it
+    quiet = []
     for a, b in zip(marks, marks[1:]):
         if a.get('periodStart') != b.get('periodStart') or b['used'] < a['used']:
             continue
         t0, t1 = eff(a), eff(b)
         busy = any(r['startedAt'] < t1 and r['endedAt'] > t0 for r in every)
         hrs = (t1 - t0) / 3600e3
-        if not busy and hrs >= 0.5:
-            quiet_bytes += b['used'] - a['used']; quiet_hours += hrs; quiet_n += 1
-    bg = quiet_bytes / quiet_hours if quiet_hours else 0.0
+        if not busy and 0.5 <= hrs <= MAX_QUIET_PAIR_H:
+            quiet.append({'t0': t0, 't1': t1, 'bytes': b['used'] - a['used'], 'hours': hrs})
+    quiet_n = len(quiet)
+    bg = sum(q['bytes'] for q in quiet) / sum(q['hours'] for q in quiet) if quiet else 0.0   # over every pair, for the report
+
+    def background_for(t0, t1):
+        """B/h from the quiet pairs within QUIET_PAIR_MAX_H of the window [t0, t1] — None when there is none."""
+        gap = QUIET_PAIR_MAX_H * 3600e3
+        near = [q for q in quiet if q['t0'] <= t1 + gap and q['t1'] >= t0 - gap]
+        hrs = sum(q['hours'] for q in near)
+        return (sum(q['bytes'] for q in near) / hrs if hrs else None), len(near)
     groups = {}
     per_night = []
     for r in rows:
@@ -516,22 +566,32 @@ def solve_polls(rows, marks, skipped=()):
             for r in rs: per_night.append({'key': r['key'], 'polls': None, 'why': 'the billing period rolled over between the two marks'})
             continue
         if a['at'] < SPLIT_AT <= b['at']:
-            for r in rs: per_night.append({'key': r['key'], 'polls': None, 'why': 'the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 2,605 for the rest'})
+            for r in rs: per_night.append({'key': r['key'], 'polls': None, 'why': 'the split (11 Sep 11:17 UTC) landed between the two marks, so a tick weighed 2,530 bytes for part of the window and 3,470 for the rest'})
             continue
         window_h = (eff(b) - eff(a)) / 3600e3
         delta = b['used'] - a['used']
+        if window_h > MAX_BRACKET_H:
+            for r in rs: per_night.append({'key': r['key'], 'polls': None, 'bytes': delta, 'windowHours': round(window_h, 2), 'sharedWith': [x['key'] for x in rs if x is not r] or None,
+                                           'why': f'the bracket is {window_h:.0f} h long ({len(rs)} night(s) inside it) — longer than {MAX_BRACKET_H} h it is not a night, and a clip, a backup or another site can add more than every poll in it'})
+            continue
+        bg_here, near_n = background_for(eff(a), eff(b))
+        if bg_here is None:
+            for r in rs: per_night.append({'key': r['key'], 'polls': None, 'bytes': delta, 'windowHours': round(window_h, 2), 'sharedWith': [x['key'] for x in rs if x is not r] or None,
+                                           'pollsIfNoBackground': round((delta - sum(x['people'] * BYTES['page'] + x['votes'] * BYTES['write'] for x in rs)) / (TICK_BYTES if a['at'] >= SPLIT_AT else BYTES['poll'])),
+                                           'why': f'no quiet pair within {QUIET_PAIR_MAX_H} h of this bracket ({quiet_n} on file, none near enough) — the background of that day is unknown, so the bytes cannot be read as polls; take a pair two hours before the next gig'})
+            continue
         studio_min = b.get('studioMin')
         studio_h = studio_min / 60 if studio_min is not None else sum(r['hours'] for r in rs) * STUDIO_SHARE
         studio_bytes = studio_h * STUDIO_POLLS_PER_HOUR * BYTES['studio']
         clip_bytes = (b.get('clipViews') or 0) * BYTES['clip']
         other = studio_bytes + clip_bytes + sum(r['people'] * BYTES['page'] + r['votes'] * BYTES['write'] + r['people'] * EXTRA_VIEWS_PER_PHONE * BYTES['view'] for r in rs)
         per_tick = TICK_BYTES if a['at'] >= SPLIT_AT else BYTES['poll']   # the split changed what a tick weighs
-        polls = (delta - bg * window_h - other) / per_tick
+        polls = (delta - bg_here * window_h - other) / per_tick
         ph = sum(r['people'] * r['hours'] for r in rs)
         rate = polls / ph if polls > 0 and ph else None
-        studio_share = studio_bytes / max(delta - bg * window_h, 1)
+        studio_share = studio_bytes / max(delta - bg_here * window_h, 1)
         for r in rs:
-            per_night.append({'key': r['key'], 'bytes': delta, 'windowHours': round(window_h, 2), 'background': round(bg * window_h),
+            per_night.append({'key': r['key'], 'bytes': delta, 'windowHours': round(window_h, 2), 'background': round(bg_here * window_h), 'quietPairsUsed': near_n,
                               'studioMinutes': round(studio_h * 60), 'studioAssumed': studio_min is None, 'studioShareOfBytes': round(studio_share, 2),
                               'clipViews': b.get('clipViews'), 'clipBytes': round(clip_bytes),
                               'polls': round(polls) if len(rs) == 1 else None, 'pollsShared': round(polls) if len(rs) > 1 else None,
@@ -546,6 +606,69 @@ def solve_polls(rows, marks, skipped=()):
     polls_total = sum((n['polls'] if n['polls'] is not None else n['pollsShared'] / len(n['sharedWith'] + [0])) for n in good)
     rate = polls_total / ph if ph else None
     return (round(rate, 1) if rate else None), per_night, bg, quiet_n
+
+
+# ---------------------------------------------------------------- the meter method
+
+def solve_meters(rows, unused, skipped, silent, reading):
+    """Ticks per phone-hour and traffic credits per night from Netlify's OWN per-day meters
+    (finance/credits.json readings[-1].perDay.days, copied off the Usage & billing chart by
+    hand): a gig day minus an empty day. See THE METER METHOD at the top of the file.
+    Returns None when the reading has no per-day counts; otherwise a dict with `rate`,
+    `creditsPerShow`, `background`, `nights` (one row per gig day, or why a day was skipped),
+    `emptyDays`, `gigDays`."""
+    per_day = (reading or {}).get('perDay') or {}
+    clean_from = per_day.get('cleanFrom') or ''
+    table = {d['day']: d for d in per_day.get('days') or []
+             if d.get('webRequestCount') is not None and d.get('functionsCompute') is not None and d.get('bandwidthMB') is not None and d['day'] >= clean_from}
+    if not table:
+        return None
+    utc_day = lambda ms: datetime.fromtimestamp(ms / 1000, timezone.utc).strftime('%Y-%m-%d')
+    by_day = {}
+    for kind, rs in (('night', rows), ('unused', unused), ('test', skipped)):
+        for r in rs:
+            if r.get('startedAt'):
+                by_day.setdefault(utc_day(r['startedAt']), []).append((kind, r))
+    slot_days = {utc_day(s['at']) for s in silent or []}          # a published slot nobody used still had the Studio open
+    read_day = ((reading or {}).get('readAt') or '')[:10]         # the day the chart was read is only part of a day
+    empty = [d for d in sorted(table) if d not in by_day and d not in slot_days and d != read_day]
+    out = {'readAt': (reading or {}).get('readAt'), 'cleanFrom': clean_from or None, 'studioShareAssumed': STUDIO_SHARE, 'emptyDays': empty, 'gigDays': [], 'nights': [],
+           'what': "Netlify's own per-day meters (finance/credits.json): a gig day minus an empty day, requests ÷ 2 less the Studio tick, page loads, votes and extra pages = the room's ticks; the credits are traffic only — never a deploy (INVARIANT 0fx)"}
+    if not empty:
+        out.update(rate=None, creditsPerShow=None, background=None, why='no empty day in the table (a day with no record and no published slot) — the background cannot be read')
+        return out
+    med = lambda xs: (lambda s: s[len(s) // 2] if len(s) % 2 else (s[len(s) // 2 - 1] + s[len(s) // 2]) / 2)(sorted(xs))
+    bg = {'requests': round(med([table[d]['webRequestCount'] for d in empty])), 'computeCredits': round(med([table[d]['functionsCompute'] for d in empty]), 3),
+          'bandwidthMB': round(min(table[d]['bandwidthMB'] for d in empty), 1), 'days': empty}
+    ticks_sum = ph_sum = 0.0; credits = []
+    for day in sorted(table):
+        recs = by_day.get(day)
+        if not recs:
+            continue
+        kinds = [k for k, _ in recs]
+        if kinds != ['night']:
+            out['nights'].append({'day': day, 'why': 'not a clean gig day — records that day: ' + ', '.join(kinds)})
+            continue
+        r = recs[0][1]; t = table[day]
+        d_req = t['webRequestCount'] - bg['requests']
+        d_cmp = t['functionsCompute'] - bg['computeCredits']
+        d_bw = t['bandwidthMB'] - bg['bandwidthMB']
+        studio = r['hours'] * STUDIO_POLLS_PER_HOUR * STUDIO_SHARE
+        other = studio + r['people'] * PAGE_REQS + r['votes'] + r['requests'] + r['people'] * EXTRA_VIEWS_PER_PHONE
+        ticks = (d_req - other) / 2                                    # a tick is two requests since the split
+        ph = r['people'] * r['hours']
+        cr = d_req / 10000 * 2 + d_cmp + d_bw / 1000 * CR_PER_GB      # 2 credits per 10k requests, compute as billed, 20 per GB
+        out['nights'].append({'key': r['key'], 'day': day, 'people': r['people'], 'hours': r['hours'],
+                              'requestsOverBackground': round(d_req), 'computeCreditsOverBackground': round(d_cmp, 2), 'bandwidthMBOverBackground': round(d_bw, 1),
+                              'studioRequestsAssumed': round(studio), 'ticks': round(ticks), 'ticksPerPhoneHour': round(ticks / ph, 1) if ph and ticks > 0 else None,
+                              'creditsTraffic': round(cr, 2)})
+        out['gigDays'].append(day)
+        if ph and ticks > 0:
+            ticks_sum += ticks; ph_sum += ph
+        credits.append(cr)
+    out.update(background=bg, rate=round(ticks_sum / ph_sum, 1) if ph_sum else None,
+               creditsPerShow=round(sum(credits) / len(credits), 2) if credits else None)
+    return out
 
 
 # ---------------------------------------------------------------- the report
@@ -569,9 +692,19 @@ def main():
     rows, skipped, unused = shows()
     silent = silent_nights(rows, unused)
     marks = read_marks()
-    rate, per_night, bg, quiet_n = solve_polls(rows, marks, skipped)
-    if rate is not None and not quiet_n:
-        provisional, rate = rate, None      # without a quiet pair the background is unknown and the number would be high
+    rate, per_night, bg, quiet_n = solve_polls(rows, marks, skipped, unused, silent)
+    try:
+        readings = json.load(open(CREDITS)).get('readings') or []
+    except Exception:
+        readings = []
+    # the meter method: Netlify's own per-day counts, when a reading carries them
+    meters = solve_meters(rows, unused, skipped, silent, readings[-1] if readings else None)
+    if rate is not None:
+        rate_src = f'the bandwidth marks — a night bracketed by two marks with a quiet pair within {QUIET_PAIR_MAX_H} h of it'
+    elif meters and meters.get('rate') is not None:
+        rate, rate_src = meters['rate'], f"Netlify's own request meter — {len(meters['gigDays'])} gig day(s) minus {len(meters['emptyDays'])} empty day(s), the Studio tab assumed on screen {round(STUDIO_SHARE * 100)}% of the night (finance/credits.json perDay)"
+    else:
+        rate_src = None
     n30, nper, pstart = deploys()
     acc = account()
     bw = (api(f"/accounts/{acc['id']}/bandwidth") if acc else None) or {}
@@ -579,7 +712,6 @@ def main():
     # the latest dashboard reading (finance/credits.json) — the only exact per-category split there is
     dash = None
     try:
-        readings = json.load(open(CREDITS)).get('readings') or []
         if readings:
             r = readings[-1]; b = r['breakdown']
             dash = {'readAt': r['readAt'], 'periodStart': r['period']['start'], 'deploys': b['productionDeploys']['count'], 'deployCredits': b['productionDeploys']['credits'],
@@ -627,17 +759,20 @@ def main():
                     'bandwidthReadAt': bw.get('last_updated_at'),
                     'dashboard': {k: dash[k] for k in ('readAt', 'periodStart', 'webRequests', 'webRequestCredits', 'computeCredits', 'bandwidthCredits', 'trafficCredits', 'totalCredits')} if dash else None},
         'pollsPerPhoneHour': rate,
-        'pollsProvisional': locals().get('provisional'),
-        'creditsPerShow': None,
+        'pollsSource': rate_src,
+        # TRAFFIC ONLY (INVARIANT 0fx): what one night adds over an empty day on Netlify's requests, compute and bandwidth meters
+        'creditsPerShow': meters.get('creditsPerShow') if meters else None,
+        'meters': meters,
         'note': (f"{len(rows)} night(s) on the published calendar where the room used the app, across {len(set(r['artist'] for r in rows))} artist(s)"
                  + (f" ({len(unused)} more on the calendar where it went unused)" if unused else '') + '; '
                  f"{len(known)} with money known (per-person figures use only those"
                  + ('' if known else ' — none this time: card payments were down, so room money is unknown, not zero') + '). '
                  f"A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. "
                  f"Votes per night: {avg([r['votes'] for r in rows])}. "
-                 + (f"Polls measured from bandwidth marks on {sum(1 for n in per_night if n.get('pollsPerPhoneHour'))} night(s), background {bg / 1e6:.2f} MB/h from {quiet_n} quiet pair(s). "
-                    if rate else (f"A night is bracketed by marks but NO quiet pair measures the other sites' background, so the {locals().get('provisional')} polls/phone-hour it gives is withheld — take two marks an hour apart on a quiet day. "
-                    if locals().get('provisional') else "No night is bracketed by two bandwidth marks yet, so polls per phone-hour is still the model's guess. "))
+                 + (f"Ticks per phone-hour: {rate} — {rate_src}. " if rate is not None else "No night can be read yet — no bracket with a quiet pair within 48 h and no per-day meters on file — so ticks per phone-hour is still the model's guess. ")
+                 + (f"By the same meters a night adds about {meters['creditsPerShow']} credits of traffic over an empty day (empty day: {meters['background']['requests']:,} requests, {meters['background']['computeCredits']} credits of compute, {meters['background']['bandwidthMB']} MB; {len(meters['gigDays'])} gig day(s) since {meters['cleanFrom']}). "
+                    if meters and meters.get('creditsPerShow') is not None else '')
+                 + (f"{sum(1 for n in per_night if n.get('why'))} bracket(s) of bandwidth marks withheld — see pollsByNight for why; background over every quiet pair on file {bg / 1e6:.2f} MB/h from {quiet_n} pair(s). " if any(n.get('why') for n in per_night) else '')
                  + f"Deploys are account-wide (all five sites share the credit grant): {n30} in the last 30 days, {nper} this billing period = {(nper or 0) * CR_DEPLOY} credits — the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). "
                  + f"Bandwidth this period: {bw_used / 1e9:.3f} GB = {bw_used / 1e9 * CR_PER_GB:.1f} credits for everything every room did."),
         'nights': [{k: v for k, v in r.items() if k not in ('startedAt', 'endedAt')} for r in sorted(rows, key=lambda r: r['endedAt'] or 0, reverse=True)],
