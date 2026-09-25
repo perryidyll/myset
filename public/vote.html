@@ -123,15 +123,26 @@
 :root[data-theme=dark] #intro{background:#0D0B0C}
 #intro.off{opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s .4s}
 #intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
-#intro .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;
-  background:linear-gradient(135deg,#FF375F,#FF7A45);animation:introbar 1.05s ease-in-out infinite alternate}
-#intro .bars i:nth-child(1){animation-delay:.02s;--h:38px}
-#intro .bars i:nth-child(2){animation-delay:.12s;--h:64px}
-#intro .bars i:nth-child(3){animation-delay:.22s;--h:28px}
+/* The bars move by transform, never height: that is the only kind of animation a
+   phone keeps playing while the main thread is busy or a page is changing. Negative
+   delays start them mid-swing, so no frame is ever three still dots (0090). Each bar
+   is a rounded window (i); a rounded pill (b) slides up inside it, and the gradient
+   (b::before) stretches with the part that shows, so it always runs pink to orange. */
+#intro .bars i{width:15px;border-radius:8px;display:block;height:var(--h,40px);position:relative;overflow:hidden}
+#intro .bars b,#intro .bars b::before{position:absolute;inset:0;animation:1.05s ease-in-out infinite alternate;
+  animation-delay:var(--d,0s)}
+#intro .bars b{border-radius:inherit;overflow:hidden;animation-name:introbar}
+#intro .bars b::before{content:'';transform-origin:top;background:linear-gradient(135deg,#FF375F,#FF7A45)}
+#intro .bars i:nth-child(1){--d:-.55s;--h:38px}#intro .bars i:nth-child(1) b::before{animation-name:introfill1}
+#intro .bars i:nth-child(2){--d:-.45s;--h:64px}#intro .bars i:nth-child(2) b::before{animation-name:introfill2}
+#intro .bars i:nth-child(3){--d:-.35s;--h:28px}#intro .bars i:nth-child(3) b::before{animation-name:introfill3}
 #intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#1D1D1F}
 :root[data-theme=dark] #intro .word{color:#fff}
-@keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
-@media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
+@keyframes introbar{from{transform:translateY(calc(100% - 18px))}to{transform:translateY(0)}}
+@keyframes introfill1{from{transform:scaleY(.4737)}to{transform:scaleY(1)}}
+@keyframes introfill2{from{transform:scaleY(.2813)}to{transform:scaleY(1)}}
+@keyframes introfill3{from{transform:scaleY(.6429)}to{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){#intro .bars b,#intro .bars b::before{animation:none}}
 .noboard{margin:80px 22px;text-align:center;color:var(--muted);font-size:15px}
 .noboard b{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
 #app{padding-bottom:172px}
@@ -515,7 +526,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 </head>
 <body>
 <div id="intro" aria-hidden="true"><div>
-  <div class="bars"><i></i><i></i><i></i></div>
+  <div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div>
   <div class="word">MySet</div>
 </div></div>
 <div class="wrap"><div id="app"></div></div>

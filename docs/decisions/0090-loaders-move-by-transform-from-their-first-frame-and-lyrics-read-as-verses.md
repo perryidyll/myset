@@ -7,10 +7,10 @@ decided_by: founder
 area: ui
 reverses:
 superseded_by:
-invariants: [0dp, 0f1, 9f]
+invariants: [0gf, 0dp, 0f1, 9f]
 commits: []
-tests: [test/copy.mjs, test/structure.mjs, test/syntax.mjs]
-files: [public/leave.js, public/artist.html, public/community.html, public/diary.html, public/shop.html, public/venue.html, public/studio.html, public/venue-studio.html, public/studio.js, public/vote.html]
+tests: [test/copy.mjs, test/structure.mjs, test/syntax.mjs, tools/sheetcheck.mjs, tools/uicheck.mjs]
+files: [public/leave.js, public/vote.html, public/artist.html, public/community.html, public/diary.html, public/shop.html, public/venue.html, public/studio.html, public/venue-studio.html, public/studio.js]
 ---
 
 ## The question
@@ -55,7 +55,8 @@ the system's render server through the navigation freeze and while a page's scri
 are busy, so it is the only kind that can "run immediately" here. Where it applies:
 
 - the leave splash (`leave.js`, every fan page)
-- the five fan-page arrival splashes (`#intro`)
+- the six fan-page arrival splashes (`#intro`: artist, community, diary, shop,
+  venue, and the vote page's new one from 0088)
 - both Studios' `#leave`, `#boot` and `#busy`
 
 Two bar animations still move by height, by choice:
@@ -102,16 +103,17 @@ The vote page has refused a drag from inside `.lyr` since INVARIANT 0f1.
 
 ## Landing beside the fan-page script (0087, 0088)
 
-A second batch was built the same day on its own branch, `perf/fan-script`. Its
-decisions are 0087, the fan pages sharing one script, and 0088, the first-open
-speed pass. Its decision numbers are why this record is 0090; 0089 is also taken,
-on another branch. That batch was not shipped when this one was written.
+The fan-page script batch (0087, the fan pages sharing one script, and 0088, the
+first-open speed pass) was built on its own branch on the same day and went live
+first, as 68efdb4. Its decision numbers are why this record is 0090; 0089 had
+also been taken, by the money-model audit.
 
-This diff applies cleanly on top of it (`git apply --check`). But that batch gives
-`vote.html` its own `#intro`, copied from the old height-bar recipe. Whichever
-batch lands second must give that `#intro` the same window, pill and fill shape:
-the `<i><b></b></i>` markup, the `introfill1–3` keyframes and the reduced-motion
-rule. Otherwise the vote page's arrival splash is the one that still freezes.
+This batch was rebased onto it. The only conflicts were in the two generated
+documents. 0088 had given `vote.html` its own `#intro`, copied from the old
+height-bar recipe. It was converted here to the same window, pill and fill shape,
+so the vote page's arrival splash does not freeze either. The vote page's lyrics
+scroller guard now lives in `fan.js` (`SCROLLER` includes `.lyr`) and still covers
+the verse blocks.
 
 ## What would reverse it
 
