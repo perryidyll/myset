@@ -63,6 +63,11 @@ Three commands, all read-only against production:
 cd ~/Docs/MySet && python3 tools/actuals.py --mark "before Sat gig"
 ```
 
+The founder's way, no git and from any folder: `~/Docs/MySet/tools/mark.sh before "Seaflower"`,
+then `… start "Seaflower"`, then `… after "Seaflower" 40` (40 = minutes the Studio's Live tab
+was on screen; leave it off if unsure). It writes to `~/.myset-marks.json`; the tracker reads
+that file alongside `finance/marks.json` and folds it in on its next `--write`.
+
 Three marks make a night: one about **two hours before** the gig, one **just before it
 starts** (those two are the quiet pair — the background of that very day, taken with nothing
 else running: no tracker pass, no probes, no agent reading the store), and one
