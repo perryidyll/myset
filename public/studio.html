@@ -472,8 +472,17 @@ textarea.chart{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .chartview{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px;
   line-height:1.75;white-space:pre;overflow-x:auto;max-height:62vh;overflow-y:auto;
   margin:6px -4px 0;padding:0 4px;color:var(--ink-2);-webkit-user-select:none;user-select:none}
+/* THE WORDS, NOT A CHART. Lyrics are read mid-song from a music stand, so they are
+   set in the MySet face at a stand-reading size, one block per verse, every other
+   block on a light grey band so the eye can find its place again (decision 0090).
+   The box is widened into the sheet's padding so the bands reach out while the
+   words stay in line with the title; the chord chart keeps its fixed-width font. */
 .chartview.stage-lyrics{white-space:pre-wrap;overflow-x:hidden;overflow-wrap:anywhere;word-break:break-word;
-  max-width:100%;min-width:0}
+  max-width:none;min-width:0;font-family:var(--f);font-size:20px;line-height:1.55;letter-spacing:-.012em;
+  color:var(--ink);margin:6px -14px 0;padding:0 14px}
+.lyr-st{margin:0 -14px;padding:16px 14px;border-radius:16px}
+.lyr-st:nth-child(even){background:rgba(120,120,128,.12)}
+html[data-theme=dark] .lyr-st:nth-child(even){background:rgba(120,120,128,.24)}
 .tog{display:flex;gap:3px;padding:3px;background:var(--surface);border-radius:var(--pill);flex:0 0 auto}
 .tog button{padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--muted);border-radius:var(--pill);
   transition:background .22s var(--ease),color .2s}
@@ -752,10 +761,17 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 #busy.on{display:grid;opacity:1}
 button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 #busy .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
-#busy .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
-  transform-origin:bottom;animation:busybar .9s ease-in-out infinite}
-#busy .bars i:nth-child(2){animation-delay:.15s}
-#busy .bars i:nth-child(3){animation-delay:.3s}
+/* Every set of bars here moves by transform, not height, and starts mid-swing:
+   iOS freezes a page's own drawing while it navigates or is busy, and only a
+   compositor animation keeps playing through that (decision 0090). Each bar is a
+   rounded window (i); a rounded pill (b) slides up and down inside it, and the
+   gradient (b::before) stretches with the part that shows. */
+#busy .bars i{width:10px;border-radius:6px;display:block;height:44px;position:relative;overflow:hidden}
+#busy .bars b,#busy .bars b::before{position:absolute;inset:0;animation:.9s ease-in-out -.45s infinite}
+#busy .bars b{border-radius:inherit;overflow:hidden;animation-name:busybar}
+#busy .bars b::before{content:'';transform-origin:top;background:var(--grad);animation-name:bbfill}
+#busy .bars i:nth-child(2) b,#busy .bars i:nth-child(2) b::before{animation-delay:-.3s}
+#busy .bars i:nth-child(3) b,#busy .bars i:nth-child(3) b::before{animation-delay:-.15s}
 /* LEAVING, AND ARRIVING, IN THE ACTIVE THEME. A previous white flash belonged to
    the browser: a tap on a link
    tore this document down and the next one had not painted yet, and a link that
@@ -764,13 +780,15 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 #leave{position:fixed;inset:0;z-index:95;display:none;place-items:center;background:var(--bg)}
 #leave.on{display:grid}
 #leave .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
-#leave .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
-  animation:bb .9s ease-in-out infinite}
-#leave .bars i:nth-child(2){animation-delay:.15s}
-#leave .bars i:nth-child(3){animation-delay:.3s}
+#leave .bars i{width:10px;border-radius:6px;display:block;height:44px;position:relative;overflow:hidden}
+#leave .bars b,#leave .bars b::before{position:absolute;inset:0;animation:.9s ease-in-out -.45s infinite}
+#leave .bars b{border-radius:inherit;overflow:hidden;animation-name:bb}
+#leave .bars b::before{content:'';transform-origin:top;background:var(--grad);animation-name:bbfill}
+#leave .bars i:nth-child(2) b,#leave .bars i:nth-child(2) b::before{animation-delay:-.3s}
+#leave .bars i:nth-child(3) b,#leave .bars i:nth-child(3) b::before{animation-delay:-.15s}
 #leave p{position:absolute;top:calc(50% + 46px);left:0;right:0;text-align:center;
   font-size:13.5px;color:var(--muted);margin:0}
-@media (prefers-reduced-motion:reduce){#leave .bars i{animation:none;height:28px}}
+@media (prefers-reduced-motion:reduce){#leave .bars b{animation:none;transform:translateY(16px)}#leave .bars b::before{animation:none;transform:scaleY(.6364)}}
 /* The boot screen. Painted with the HTML, so the first frame is already this
    instead of a blank page, and removed once for good when the Studio renders —
    never shown again, so it cannot flash mid-session. */
@@ -778,17 +796,20 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
   background:var(--bg);transition:opacity .28s ease}
 #boot.gone{opacity:0;pointer-events:none}
 #boot .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
-#boot .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
-  animation:bb .9s ease-in-out infinite}
-#boot .bars i:nth-child(2){animation-delay:.15s}
-#boot .bars i:nth-child(3){animation-delay:.3s}
+#boot .bars i{width:10px;border-radius:6px;display:block;height:44px;position:relative;overflow:hidden}
+#boot .bars b,#boot .bars b::before{position:absolute;inset:0;animation:.9s ease-in-out -.45s infinite}
+#boot .bars b{border-radius:inherit;overflow:hidden;animation-name:bb}
+#boot .bars b::before{content:'';transform-origin:top;background:var(--grad);animation-name:bbfill}
+#boot .bars i:nth-child(2) b,#boot .bars i:nth-child(2) b::before{animation-delay:-.3s}
+#boot .bars i:nth-child(3) b,#boot .bars i:nth-child(3) b::before{animation-delay:-.15s}
 #bootline{position:absolute;top:calc(50% + 46px);left:0;right:0;text-align:center;
   font-size:13.5px;color:var(--muted);transition:opacity .3s ease}
 #bootline.fade{opacity:0}
-@keyframes busybar{0%,100%{height:12px}50%{height:44px}}
-@keyframes bb{0%,100%{height:12px}50%{height:44px}}
-@media (prefers-reduced-motion:reduce){#boot .bars i{animation:none;height:28px}}
-@media (prefers-reduced-motion:reduce){#busy .bars i{animation:none;height:28px}}
+@keyframes busybar{0%,100%{transform:translateY(32px)}50%{transform:translateY(0)}}
+@keyframes bb{0%,100%{transform:translateY(32px)}50%{transform:translateY(0)}}
+@keyframes bbfill{0%,100%{transform:scaleY(.2727)}50%{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){#boot .bars b{animation:none;transform:translateY(16px)}#boot .bars b::before{animation:none;transform:scaleY(.6364)}}
+@media (prefers-reduced-motion:reduce){#busy .bars b{animation:none;transform:translateY(16px)}#busy .bars b::before{animation:none;transform:scaleY(.6364)}}
 .toast{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(24px) scale(.96);
   width:calc(100% - 36px);max-width:calc(var(--maxw) - 36px);background:rgba(60,60,63,.94);color:#fff;
   backdrop-filter:blur(20px);font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
@@ -824,10 +845,10 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 </style>
 </head>
 <body>
-<div id="busy" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div></div>
+<div id="busy" aria-hidden="true"><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
 <div id="qrbig" onclick="qrHide(event)"></div>
-<div id="leave" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div><p id="leaveline">Opening…</p></div>
-<div id="boot"><div class="bars"><i></i><i></i><i></i></div><div id="bootline">Warming up the room</div></div>
+<div id="leave" aria-hidden="true"><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><p id="leaveline">Opening…</p></div>
+<div id="boot"><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><div id="bootline">Warming up the room</div></div>
 <!-- Both blocking on purpose, and here rather than in <head> so the themed boot screen above paints before they arrive. pull.js must stay before MySetPull() (INVARIANT 0cf). -->
 <link rel="stylesheet" href="/lock.css">
 <script src="/pull.js"></script>
@@ -844,7 +865,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=02fc22f6"></script>
+<script src="/studio.js?v=85eaccb7"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api; a page seen tonight comes from the phone's copy

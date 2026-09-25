@@ -316,13 +316,20 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
   background:var(--bg);transition:opacity .28s ease}
 #boot.gone{opacity:0;pointer-events:none}
 #boot .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
-#boot .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
-  animation:bb .9s ease-in-out infinite}
-#boot .bars i:nth-child(2){animation-delay:.15s}
-#boot .bars i:nth-child(3){animation-delay:.3s}
+/* The bars move by transform, not height, and start mid-swing: iOS freezes a
+   page's own drawing while it navigates or is busy, and only a compositor
+   animation keeps playing through that (decision 0090). Each bar is a rounded
+   window (i); a rounded pill (b) slides up and down inside it, and the gradient
+   (b::before) stretches with the part that shows. */
+#boot .bars i{width:10px;border-radius:6px;display:block;height:44px;position:relative;overflow:hidden}
+#boot .bars b,#boot .bars b::before{position:absolute;inset:0;animation:.9s ease-in-out -.45s infinite}
+#boot .bars b{border-radius:inherit;overflow:hidden;animation-name:bb}
+#boot .bars b::before{content:'';transform-origin:top;background:var(--grad);animation-name:bbfill}
+#boot .bars i:nth-child(2) b,#boot .bars i:nth-child(2) b::before{animation-delay:-.3s}
+#boot .bars i:nth-child(3) b,#boot .bars i:nth-child(3) b::before{animation-delay:-.15s}
 #bootline{position:absolute;top:calc(50% + 46px);left:0;right:0;text-align:center;
   font-size:13.5px;color:var(--muted)}
-@media (prefers-reduced-motion:reduce){#boot .bars i{animation:none;height:28px}}
+@media (prefers-reduced-motion:reduce){#boot .bars b{animation:none;transform:translateY(16px)}#boot .bars b::before{animation:none;transform:scaleY(.6364)}}
 /* LEAVING, AND ARRIVING, IN THE ACTIVE THEME. A previous white flash belonged to
    the browser: a tap on a link
    tore this document down and the next one had not painted yet, and a link that
@@ -331,13 +338,15 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 #leave{position:fixed;inset:0;z-index:95;display:none;place-items:center;background:var(--bg)}
 #leave.on{display:grid}
 #leave .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
-#leave .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
-  animation:bb .9s ease-in-out infinite}
-#leave .bars i:nth-child(2){animation-delay:.15s}
-#leave .bars i:nth-child(3){animation-delay:.3s}
+#leave .bars i{width:10px;border-radius:6px;display:block;height:44px;position:relative;overflow:hidden}
+#leave .bars b,#leave .bars b::before{position:absolute;inset:0;animation:.9s ease-in-out -.45s infinite}
+#leave .bars b{border-radius:inherit;overflow:hidden;animation-name:bb}
+#leave .bars b::before{content:'';transform-origin:top;background:var(--grad);animation-name:bbfill}
+#leave .bars i:nth-child(2) b,#leave .bars i:nth-child(2) b::before{animation-delay:-.3s}
+#leave .bars i:nth-child(3) b,#leave .bars i:nth-child(3) b::before{animation-delay:-.15s}
 #leave p{position:absolute;top:calc(50% + 46px);left:0;right:0;text-align:center;
   font-size:13.5px;color:var(--muted);margin:0}
-@media (prefers-reduced-motion:reduce){#leave .bars i{animation:none;height:28px}}
+@media (prefers-reduced-motion:reduce){#leave .bars b{animation:none;transform:translateY(16px)}#leave .bars b::before{animation:none;transform:scaleY(.6364)}}
 .grabzone{position:relative;padding:12px 0 10px;margin:-10px 0 0;cursor:grab;touch-action:none}
 .grabzone:active{cursor:grabbing}
 .grab{width:44px;height:5px;border-radius:3px;background:var(--hair-2);margin:0 auto}
@@ -350,10 +359,15 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 #busy.on{display:grid;opacity:1}
 button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 #busy .bars{display:flex;align-items:flex-end;gap:7px;height:44px}
-#busy .bars i{width:10px;border-radius:6px;background:var(--grad);display:block;height:12px;
-  transform-origin:bottom;animation:bb .9s ease-in-out infinite}
-#busy .bars i:nth-child(2){animation-delay:.15s}#busy .bars i:nth-child(3){animation-delay:.3s}
-@keyframes bb{0%,100%{height:12px}50%{height:44px}}
+#busy .bars i{width:10px;border-radius:6px;display:block;height:44px;position:relative;overflow:hidden}
+#busy .bars b,#busy .bars b::before{position:absolute;inset:0;animation:.9s ease-in-out -.45s infinite}
+#busy .bars b{border-radius:inherit;overflow:hidden;animation-name:bb}
+#busy .bars b::before{content:'';transform-origin:top;background:var(--grad);animation-name:bbfill}
+#busy .bars i:nth-child(2) b,#busy .bars i:nth-child(2) b::before{animation-delay:-.3s}
+#busy .bars i:nth-child(3) b,#busy .bars i:nth-child(3) b::before{animation-delay:-.15s}
+@keyframes bb{0%,100%{transform:translateY(32px)}50%{transform:translateY(0)}}
+@keyframes bbfill{0%,100%{transform:scaleY(.2727)}50%{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){#busy .bars b{animation:none;transform:translateY(16px)}#busy .bars b::before{animation:none;transform:scaleY(.6364)}}
 .toast{position:fixed;left:50%;bottom:calc(64px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(24px) scale(.96);
   width:calc(100% - 36px);max-width:calc(var(--maxw) - 36px);background:rgba(60,60,63,.94);color:#fff;
   backdrop-filter:blur(20px);font-size:15px;font-weight:500;padding:15px 18px;border-radius:var(--r);
@@ -369,11 +383,11 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 </style>
 </head>
 <body>
-<div id="busy" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div></div>
+<div id="busy" aria-hidden="true"><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
 <div id="qrbig" onclick="qrHide(event)"></div>
 <div id="app"></div>
-<div id="boot"><div class="bars"><i></i><i></i><i></i></div><div id="bootline">Opening the venue</div></div>
-<div id="leave" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div><p id="leaveline">Opening…</p></div>
+<div id="boot"><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><div id="bootline">Opening the venue</div></div>
+<div id="leave" aria-hidden="true"><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div><p id="leaveline">Opening…</p></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>

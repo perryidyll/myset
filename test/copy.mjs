@@ -77,6 +77,32 @@ ok('public and Studio loading screens use the active light or dark palette',
    ['studio.html','venue-studio.html'].every(x=>{
      const s=read(`public/${x}`);return /#boot\{[^}]*background:var\(--bg\)/.test(s)&&/html\{background:#F5F5F7\}html\[data-theme=dark\]\{background:#000\}/.test(s);
    }));
+/* INVARIANT 0gf (decision 0090): a splash that moves by height freezes as three
+   still dots the moment a phone starts changing page. Every page-change, boot and
+   busy splash is a window (i) with a sliding pill (b) and a stretching gradient
+   (b::before), moved by transform, with negative delays. */
+ok('every page-change, boot and busy splash moves by transform, never height (0gf)',
+   ['artist.html','venue.html','community.html','shop.html','diary.html','vote.html'].every(x=>{
+     const s=read(`public/${x}`);
+     return /<div class="bars"><i><b><\/b><\/i><i><b><\/b><\/i><i><b><\/b><\/i><\/div>/.test(s)&&
+       /@keyframes introbar\{from\{transform:translateY\(calc\(100% - 18px\)\)\}/.test(s)&&
+       /@keyframes introfill1\{from\{transform:scaleY/.test(s)&&!/@keyframes introbar\{[^}]*height/.test(s)&&
+       /--d:-\.55s/.test(s)&&/prefers-reduced-motion:reduce\)\{#intro \.bars b,#intro \.bars b::before\{animation:none\}/.test(s);
+   })&&
+   (()=>{const s=read('public/leave.js');
+     return s.includes('<i><b></b></i><i><b></b></i><i><b></b></i>')&&/@keyframes msLeaveBar\{from\{transform:translateY/.test(s)&&
+       /@keyframes msLeaveFill1\{from\{transform:scaleY/.test(s)&&!/@keyframes msLeaveBar\{[^}]*height/.test(s);})()&&
+   ['studio.html','venue-studio.html'].every(x=>{
+     const s=read(`public/${x}`);
+     return (s.match(/<div class="bars"><i><b><\/b><\/i><i><b><\/b><\/i><i><b><\/b><\/i><\/div>/g)||[]).length===3&&
+       /@keyframes bb\{0%,100%\{transform:translateY\(32px\)\}/.test(s)&&/@keyframes bbfill\{0%,100%\{transform:scaleY/.test(s)&&
+       !/@keyframes (bb|busybar)\{[^}]*height/.test(s)&&!/#(busy|leave|boot) \.bars i\{[^}]*animation/.test(s);
+   }));
+ok('both lyrics sheets read in the MySet face, one block per verse, alternate verses banded (0090)',
+   /\.chartview\.stage-lyrics\{[^}]*font-family:var\(--f\)/.test(studio)&&/\.chartview\{font-family:ui-monospace/.test(studio)&&
+   /\.lyr-st:nth-child\(even\)\{background:/.test(studio)&&/\.lyr-st:nth-child\(even\)\{background:/.test(vote)&&
+   /b\.className='lyr-st'; b\.textContent=t/.test(studio)&&/b\.className='lyr-st'; b\.textContent=t/.test(vote)&&
+   /if\(t\.closest\('\.chartview'\)\)return;/.test(studio));
 const report = read('public/report.html');
 ok('the business report is a light-only paper document: explicit colours, noindex, and /biz.js is the only script it loads',
    !/theme\.js|data-theme|prefers-color-scheme|var\(--/.test(report)&&

@@ -14,6 +14,34 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Three speed levers: the service worker shows a page opened in the last six hours from the phone's copy and refreshes it behind (0091 — a pull or reload still gets the newest; the money model is never stored); app.css rides inline in all nine fan pages (0094); the community page reads one shared, edge-kept copy and wears its own marks from a tiny personal call (0093)
 **Other sessions:** sw.js changed on the founder's word — test/sw.mjs runs the real worker, every rule mutation-checked. After ANY edit to public/app.css run node tools/stamp.mjs (the block is <style id="app-css">, never id=app: that is every page's content container); the vote page's 0088 tokens block is gone. Community GET with no fan = the shared read (nothing personal may ever be added to it — the test refuses a mark), &fan=<id>&me=1 = the personal call, the old ?fan= reply stays. tools/mock.mjs pages say no-cache so the worker can be checked there. INVARIANTS 0ax rewritten, 0gh and 0gg new.
 
+### 2026-09-25 13:56 — 74ac9d3 — wt@docs/mediadash-live (3 files since origin/main)
+**tl;dr:** Docs only: MKT-001 / decision 0092 live as 4f95289 with the four content checks; the squash-inherits-[skip ci] lesson [skip ci]
+**Other sessions:** gh pr merge --squash without --body folds branch commit messages into the squash — a [skip ci] in any of them skips the production build; trigger with netlify api createSiteBuild (not deploy --prod) if that happens.
+
+### 2026-09-25 13:45 — 1ad5f70 — wt@content/mediadash (9 files since origin/main)
+**tl;dr:** Docs only on the mediadash branch: preview 92's checks so far; rebuilt so the preview carries MEDIADASH_KEY (set 2026-09-25 06:44 UTC with netlify env:set — per-scope/secret flags need a paid plan, so it is an ordinary variable)
+**Other sessions:** Nothing to redo. If a push to /api/mediadash answers 401, the deploy predates the variable — redeploy.
+
+### 2026-09-25 13:39 — 7adba0a — wt@content/mediadash (8 files since origin/main)
+**tl;dr:** myset.vip/mediadash: the Instagram dashboard (every post, every metric, every pull as a curve, boosts) — fed by the content engine's pushes, never pulling Instagram itself (decision 0092)
+**Other sessions:** New function netlify/functions/mediadash.mjs (blob keys mediadash/data, mediadash/boosts, mediadash/thumb/<id>; POST needs x-mediadash-key = Netlify env MEDIADASH_KEY, or the founder's admin code for a boost). public/mediadash.html must stay byte-identical to publish/dashboard.html in the myset-content repo — edit it there. netlify.toml: /mediadash sits with the pretty URLs above /:slug.
+
+### 2026-09-25 13:25 — 77c7d98 — wt@docs/loaders-lyrics-live (4 files since origin/main)
+**tl;dr:** Docs only: the loading-screen and lyrics batch (decision 0090) is live as ee39bb1 (PR #90), verified by content on production; the ledger, decision and session note say so [skip ci]
+**Other sessions:** No code. UX-057 is a done row now — read it before touching any splash or the lyrics sheets. f02 in the fan's-night sheet cites 0038 (the splash), not 0037; Puzzle step 369762 matches. Puzzle changelog 2318 = 0090.
+
+### 2026-09-25 13:16 — 9537121 — wt@ux/loader-and-lyrics (22 files since origin/main)
+**tl;dr:** The loading screen's bars now move from the very first frame instead of sitting as three still dots on every page change (every splash moves by transform, decision 0090); both lyrics pop-ups read in the MySet font, one block per verse, alternating white and light grey; the Studio's lyrics no longer drag the sheet closed when scrolled
+**Other sessions:** Every page-change/boot/busy splash is <i><b></b></i>: window i, pill b (translateY), gradient b::before (scaleY), negative delays — never a height keyframe (INVARIANT 0gf, test/copy.mjs refuses it). A new splash copies an existing #intro block. Lyrics: .lyr-st verse blocks via textContent in studio.js verses() and vote.html openLyrics; .chartview stays monospace for chord charts; studio attachDrag skips .chartview. Decision 0090 (0087-0089 were taken). After editing studio.js run node tools/stamp.mjs.
+
+### 2026-09-25 13:10 — 6a9e270 — wt@docs/mark-launcher (3 files since origin/main)
+**tl;dr:** Docs only: the founder takes bandwidth marks with ~/myset-mark.sh before|start|after "venue" [Studio minutes] — a launcher for ~/Docs/Project Handoffs/myset-mark.sh (his ~/Docs/MySet checkout is an old base and has no tools/mark.sh) [skip ci]
+**Other sessions:** Nothing in the code changed; tools/mark.sh, the handoffs copy and the launcher are the same script. Do not tell the founder to run ~/Docs/MySet/tools/mark.sh — that file is not on his checkout.
+
+### 2026-09-25 13:07 — 98b2f31 — wt@marks/founder-script (8 files since origin/main)
+**tl;dr:** The founder can take the three bandwidth marks himself with one command and no git: tools/mark.sh before|start|after "venue" [Studio minutes] (copy in ~/Docs/Project Handoffs/myset-mark.sh); and the money model now says every measured night is a Thai night — $1.04 a head is a floor for a tipping market, not a ceiling
+**Other sessions:** tools/actuals.py read_marks() now merges finance/marks.json with ~/.myset-marks.json (MARKS_OWN / MYSET_MARKS_FILE); --write folds the founder's marks into the repo file — commit finance/marks.json after a --write. mark.sh fetches origin/main's tracker fresh each run, so it works from the diverged ~/Docs/MySet checkout. No engine change; SEED unchanged.
+
 ### 2026-09-25 11:05 — 64ea6d6 — wt@audit/sep-25-numbers (17 files since origin/main)
 **tl;dr:** The money model carries fifteen real nights and a MEASURED screen-on dial: Netlify's own per-day meters say a night costs ~3 credits (2.3–3.8, nearly flat from 3 to 11 phones) and the room's phones tick 42×/phone-hour (screen-on 9.4%, was a 22% guess); $1.04 a head over 11 money-known nights (three nights carry 85%); this period deploys 1,785 credits vs 117 of traffic, and the $9 plan's credits ran out 15 Sep (decision 0089, INVARIANT 0ge)
 **Other sessions:** tools/actuals.py: solve_meters reads finance/credits.json readings[-1].perDay.days[] (copy each day's requests/compute/bandwidth off Usage & billing; cleanFrom) → pollsPerPhoneHour + pollsSource + creditsPerShow (traffic only) in actuals.json; the bandwidth solver is FENCED — a quiet pair counts only within 48 h of a bracket, only if under 6 h, brackets over 24 h withheld, one-phone nights and empty slots are busy — so three marks per gig night (2 h before, just before, after) with nothing else running. boardBytes = BYTES.board = loadsim BOARD_BYTES = 3040 (calibration targets re-pinned). tools/actuals-test.py was RED on main since the split — fixed. Numbering: 0087/0088/0gc/0gd are the fan-script session's; this PR is 0089 / 0ge.

@@ -2811,3 +2811,12 @@ red on main since the split (synthetic night at 2,530 B/tick) — fixed. Suites:
 fan-script — this session took **0089 / 0ge**; 0088 left free. For the founder: three marks a gig night
 (2 h before, just before, after); note the Studio Live tab's on-screen time once; copy the per-day meters
 at each credits reading.
+
+**Later the same day (PR after #87):** the founder asked how to take the marks himself, and added that every
+measured night is in Thailand — pay close to nothing, a tipping culture he calls atrocious. Shipped:
+`tools/mark.sh before|start|after "venue" [Studio minutes]` (the founder runs it as `~/myset-mark.sh`, a launcher for the copy at `~/Docs/Project Handoffs/myset-mark.sh` — his `~/Docs/MySet` checkout is an old base without the file) —
+no git, from any folder, writes `~/.myset-marks.json`; `tools/actuals.py` reads that file alongside
+`finance/marks.json` (`MARKS_OWN`, `MYSET_MARKS_FILE`) and `--write` folds it in; tested in `tools/actuals-test.py`.
+The page's room-money help, the KPI band, the report and the session note now say the $1.04 a head is a Thai
+floor, not a ceiling, and that no tipping-market night has been measured (memory `user_perry_performs_in_thailand`).
+

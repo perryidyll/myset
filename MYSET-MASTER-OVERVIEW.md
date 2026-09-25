@@ -533,8 +533,8 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 
 | | |
 |---|---|
-| Public pages | 14 — about.html, artist.html, artists.html, community.html, diary.html, index.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 34 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
+| Public pages | 15 — about.html, artist.html, artists.html, community.html, diary.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
+| HTTP functions | 35 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel`) |
 | Scheduled jobs | 3 — autocron, mirrorcron, sheetcron |
 | Shared libraries | 57 |
 | Artist Studio actions | 144 |
@@ -544,10 +544,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 275 (last: 0fn) |
+| Invariants | 276 (last: 0fn) |
 | Test suites | 55 |
 | Assertions | **3,571**, 0 failing, last run 2026-09-25 |
-| Decision records | 92 |
+| Decision records | 94 |
 
 ### Feature flags in force
 
@@ -1256,9 +1256,7 @@ the server, so they cannot send yet**, and the Studio says so.
 
 **Installable.** Three separate manifests (audience, Studio, venue) so each surface opens
 where it should. The service worker **never caches anything under `/api`** — a cached vote
-is a lost vote — never precaches, and shows a page seen in the last six hours from the
-phone's copy while re-fetching it behind (decision 0091), so a deploy is on a phone by the
-open after next.
+is a lost vote — and never precaches, so the newest version always wins.
 
 **Feature flags** let a question with two real answers be tried both ways without a deploy
 (a production deploy is the expensive thing on this account). Rules: a flag is a question
