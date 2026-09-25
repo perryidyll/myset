@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 14:27 — 0c0477b — wt@docs/three-levers-live (5 files since origin/main)
+**tl;dr:** Docs only: the three levers (0091 the worker, 0094 app.css inline, 0093 the community split) are live as ebdce9e (PR #94); ledger rows PERF-003/004/005 done with the AFTER measured on production [skip ci]
+**Other sessions:** No code. Read PERF-003/004/005 before touching sw.js, app.css (run node tools/stamp.mjs after any edit — nine pages), or community.mjs's GET (the shared read carries nothing personal). Numbering: app.css inline is 0094 / INVARIANT 0gh — 0092 and 0gf were taken while the branch was built; check origin/main's decisions right before writing a record.
+
 ### 2026-09-25 14:18 — bf6fd7a — wt@perf/sw-navigations (60 files since origin/main)
 **tl;dr:** Three speed levers: the service worker shows a page opened in the last six hours from the phone's copy and refreshes it behind (0091 — a pull or reload still gets the newest; the money model is never stored); app.css rides inline in all nine fan pages (0094); the community page reads one shared, edge-kept copy and wears its own marks from a tiny personal call (0093)
 **Other sessions:** sw.js changed on the founder's word — test/sw.mjs runs the real worker, every rule mutation-checked. After ANY edit to public/app.css run node tools/stamp.mjs (the block is <style id="app-css">, never id=app: that is every page's content container); the vote page's 0088 tokens block is gone. Community GET with no fan = the shared read (nothing personal may ever be added to it — the test refuses a mark), &fan=<id>&me=1 = the personal call, the old ?fan= reply stays. tools/mock.mjs pages say no-cache so the worker can be checked there. INVARIANTS 0ax rewritten, 0gh and 0gg new.

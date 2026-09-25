@@ -8,7 +8,7 @@ area: performance
 reverses:
 superseded_by:
 invariants: [0gh]
-commits: []
+commits: [ebdce9e]
 tests: [test/structure.mjs]
 files: [public/app.css, tools/stamp.mjs, public/index.html, public/artist.html, public/artists.html, public/vote.html, public/community.html, public/venue.html, public/about.html, public/shop.html, public/diary.html, public/fan.js, netlify.toml, AGENTS.md, docs/design-system.md]
 ---
