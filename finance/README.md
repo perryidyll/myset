@@ -63,9 +63,10 @@ Three commands, all read-only against production:
 cd ~/Docs/MySet && python3 tools/actuals.py --mark "before Sat gig"
 ```
 
-The founder's way, no git and from any folder: `~/Docs/MySet/tools/mark.sh before "Seaflower"`,
-then `… start "Seaflower"`, then `… after "Seaflower" 40` (40 = minutes the Studio's Live tab
-was on screen; leave it off if unsure). It writes to `~/.myset-marks.json`; the tracker reads
+The founder's way, no git and from any folder: `~/myset-mark.sh before "Seaflower"`, then
+`~/myset-mark.sh start "Seaflower"`, then `~/myset-mark.sh after "Seaflower" 40` (40 = minutes the Studio's Live tab
+was on screen; leave it off if unsure). `~/myset-mark.sh` launches the copy in `~/Docs/Project Handoffs/`
+(the same script as `tools/mark.sh`). It writes to `~/.myset-marks.json`; the tracker reads
 that file alongside `finance/marks.json` and folds it in on its next `--write`.
 
 Three marks make a night: one about **two hours before** the gig, one **just before it

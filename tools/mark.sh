@@ -1,10 +1,14 @@
 #!/bin/sh
 # mark.sh — one bandwidth mark for the money model, from any folder, no git needed.
 #
-#   ~/Docs/MySet/tools/mark.sh before "Seaflower"        about two hours before the gig
-#   ~/Docs/MySet/tools/mark.sh start  "Seaflower"        just before it starts
-#   ~/Docs/MySet/tools/mark.sh after  "Seaflower" 40     right after it ends — 40 = minutes the
-#                                                        Studio's Live tab was on screen (leave it off if unsure)
+#   ~/myset-mark.sh before "Seaflower"        about two hours before the gig
+#   ~/myset-mark.sh start  "Seaflower"        just before it starts
+#   ~/myset-mark.sh after  "Seaflower" 40     right after it ends — 40 = minutes the
+#                                             Studio's Live tab was on screen (leave it off if unsure)
+#
+# ~/myset-mark.sh is a one-line launcher for the copy in ~/Docs/Project Handoffs/myset-mark.sh
+# (the founder's checkout at ~/Docs/MySet is an old base and does not carry this file; a fresh
+# checkout has it at tools/mark.sh — the three are the same script).
 #
 # Three marks make a night (decision 0089): the first two are the quiet pair — the background of
 # that very day — and the third closes the bracket. Nothing else should be touching the site
