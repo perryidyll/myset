@@ -53,6 +53,13 @@
   to = "/artists.html"
   status = 200
 
+# myset.vip/mediadash — the Instagram dashboard (decision 0092). Above the catch-all for
+# the same reason as /moneymodel: /:slug would render it as an artist page.
+[[redirects]]
+  from = "/mediadash"
+  to = "/mediadash.html"
+  status = 200
+
 [[redirects]]
   from = "/venues"
   to = "/venue-studio.html"

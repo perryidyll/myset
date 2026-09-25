@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MySet Signal</title>
+<style>
+:root{
+  --bg:#000;--bg2:#0A0A0C;--surface:#141416;--surface2:#1C1C1E;--ink:#F5F5F7;--ink2:#DDDDE0;--muted:#98989D;--faint:#68686D;
+  --hair:rgba(255,255,255,.08);--hair2:rgba(255,255,255,.16);
+  --accent:#FF7A45;--accent2:#FF9F45;--accent-rgb:255,122,69;--good:#30D158;--live:#FF456E;--blue:#5AC8FA;--violet:#BF5AF2;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
+  --mono:"SF Mono",ui-monospace,Menlo,monospace;
+  --r:22px;--r2:14px;--ease:cubic-bezier(.2,.8,.2,1);
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#F5F5F7;--bg2:#FFF;--surface:#FFF;--surface2:#F0F0F3;--ink:#0A0A0C;--ink2:#1C1C1E;--muted:#6E6E73;--faint:#A1A1A6;
+  --hair:rgba(0,0,0,.08);--hair2:rgba(0,0,0,.16);--accent:#F2612E;--good:#248A3D;--blue:#0071E3;
+}}
+:root[data-theme="light"]{
+  --bg:#F5F5F7;--bg2:#FFF;--surface:#FFF;--surface2:#F0F0F3;--ink:#0A0A0C;--ink2:#1C1C1E;--muted:#6E6E73;--faint:#A1A1A6;
+  --hair:rgba(0,0,0,.08);--hair2:rgba(0,0,0,.16);--accent:#F2612E;--good:#248A3D;--blue:#0071E3;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1,"ss01" 1;letter-spacing:-.01em;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(900px 500px at 15% -10%,rgba(var(--accent-rgb),.13),transparent 60%),radial-gradient(700px 400px at 100% 0%,rgba(90,200,250,.06),transparent 60%)}
+a{color:inherit;text-decoration:none}
+.wrap{position:relative;z-index:1;max-width:1360px;margin:0 auto;padding:0 20px 120px}
+/* ─── top bar ─── */
+header{position:sticky;top:0;z-index:10;backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);background:color-mix(in srgb,var(--bg) 72%,transparent);border-bottom:1px solid var(--hair)}
+.bar{max-width:1360px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:nowrap;min-width:0}
+.meta{white-space:nowrap}
+@media(max-width:760px){#who{display:none}}
+@media(max-width:520px){#pulled{display:none}.mark span{display:none}}
+.mark{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.03em;font-size:17px}
+.mark i{width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(var(--accent-rgb),.18),0 0 18px rgba(var(--accent-rgb),.6);display:inline-block}
+.mark span{color:var(--muted);font-weight:500}
+.spacer{flex:1}
+.meta{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+.btn{appearance:none;border:1px solid var(--hair2);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:transform .25s var(--ease),background .25s,border-color .25s}
+.btn:hover{transform:translateY(-1px);border-color:var(--accent)}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#000}
+.btn svg{width:14px;height:14px}
+.btn.busy svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.theme{width:34px;height:34px;padding:0;justify-content:center}
+/* ─── hero ─── */
+.hero{padding:56px 0 28px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+h1{font-size:clamp(40px,6vw,72px);line-height:.98;letter-spacing:-.045em;font-weight:700;max-width:14ch}
+h1 em{font-style:normal;color:var(--muted);font-weight:600}
+.lede{margin-top:16px;color:var(--muted);font-size:16px;max-width:60ch;line-height:1.5}
+/* ─── KPI tiles ─── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin:36px 0 20px}
+.tile{position:relative;background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:20px 20px 16px;overflow:hidden;transition:transform .4s var(--ease),border-color .3s;animation:rise .7s var(--ease) both}
+.tile:hover{transform:translateY(-3px);border-color:var(--hair2)}
+.tile::after{content:"";position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.04),transparent 40%);pointer-events:none}
+.tile .k{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.02em;display:flex;justify-content:space-between;align-items:center}
+.tile .v{font-size:38px;font-weight:700;letter-spacing:-.04em;margin-top:8px;line-height:1;font-variant-numeric:tabular-nums}
+.tile .d{margin-top:8px;font-size:12px;color:var(--faint);display:flex;gap:8px;align-items:center}
+.tile .d b{font-weight:600;color:var(--good)}
+.tile .d b.down{color:var(--live)}
+.tile svg.spark{position:absolute;right:0;bottom:0;width:56%;height:44%;opacity:.9;pointer-events:none}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.tile:nth-child(2){animation-delay:.05s}.tile:nth-child(3){animation-delay:.1s}.tile:nth-child(4){animation-delay:.15s}.tile:nth-child(5){animation-delay:.2s}.tile:nth-child(6){animation-delay:.25s}
+/* ─── sections ─── */
+section{margin-top:44px}
+.sh{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.sh h2{font-size:22px;letter-spacing:-.03em;font-weight:700}
+.sh p{color:var(--muted);font-size:13px}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r);padding:22px;position:relative;overflow:hidden}
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+/* ─── timeline chart ─── */
+.chart{width:100%;height:260px;display:block}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.tip{position:fixed;pointer-events:none;background:var(--surface2);border:1px solid var(--hair2);border-radius:12px;padding:10px 12px;font-size:12px;line-height:1.5;z-index:20;opacity:0;transform:translateY(4px);transition:opacity .15s,transform .15s;box-shadow:0 12px 40px rgba(0,0,0,.35);white-space:nowrap}
+.tip.on{opacity:1;transform:none}
+.tip b{font-weight:700;font-variant-numeric:tabular-nums}
+/* ─── filters ─── */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.chip{border:1px solid var(--hair2);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;background:transparent;font-family:inherit;transition:all .2s}
+.chip:hover{color:var(--ink)}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+/* ─── posts table ─── */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:600;text-align:right;padding:8px 10px;border-bottom:1px solid var(--hair);cursor:pointer;white-space:nowrap;user-select:none}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl th.on{color:var(--accent)}
+.tbl td{padding:10px;border-bottom:1px solid var(--hair);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink2);white-space:nowrap}
+.tbl tr{transition:background .2s;cursor:pointer}
+.tbl tbody tr:hover{background:var(--surface2)}
+.post{display:flex;align-items:center;gap:12px;min-width:260px}
+.post img,.post .ph{width:40px;height:50px;border-radius:8px;object-fit:cover;background:var(--surface2);flex:none}
+.post .n{font-weight:600;color:var(--ink);white-space:normal;line-height:1.25}
+.post .s{font-size:11px;color:var(--faint);margin-top:3px;display:flex;gap:6px;align-items:center}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:5px;background:var(--surface2);color:var(--muted)}
+.tag.reel{color:var(--accent);background:rgba(var(--accent-rgb),.14)}
+.tag.carousel{color:var(--blue);background:rgba(90,200,250,.14)}
+.tag.single{color:var(--violet);background:rgba(191,90,242,.14)}
+.vb{display:inline-block;height:4px;border-radius:2px;background:var(--accent);vertical-align:middle;margin-left:8px;min-width:2px;transition:width .6s var(--ease)}
+.dim{color:var(--faint)}
+.score{font-weight:700;color:var(--ink)}
+.score.hot{color:var(--accent)}
+.score.cold{color:var(--faint)}
+/* ─── breakdown lists ─── */
+.bd{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.bd .card{padding:18px 20px}
+.bd h3{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:12px;display:flex;justify-content:space-between}
+.bd h3 span{color:var(--faint);font-weight:500}
+.row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 0;font-size:13px}
+.row .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .b{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));grid-column:1/-1;transform-origin:left;animation:grow .8s var(--ease) both}
+.row .b.alt{background:linear-gradient(90deg,var(--blue),var(--violet))}
+@keyframes grow{from{transform:scaleX(0)}}
+.row .v{font-variant-numeric:tabular-nums;font-weight:600}
+.row .v small{color:var(--faint);font-weight:500;margin-left:4px}
+/* ─── upcoming ─── */
+.up{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.up .card{padding:16px}
+.up .when{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.06em}
+.up .n{font-weight:600;margin:6px 0 8px;line-height:1.25}
+.up .st{font-size:11px;display:inline-flex;align-items:center;gap:6px;color:var(--good)}
+.up .st.held{color:var(--accent)}
+.up .st i{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;box-shadow:0 0 8px currentColor}
+/* ─── comments ─── */
+.cm{display:grid;gap:10px}
+.cm .c{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:12px 14px;border:1px solid var(--hair);border-radius:var(--r2);background:var(--surface)}
+.cm .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--violet));display:grid;place-items:center;font-weight:700;font-size:12px;color:#000}
+.cm .t{font-size:13.5px;line-height:1.45}
+.cm .m{font-size:11px;color:var(--faint);margin-top:4px}
+/* ─── drawer ─── */
+.veil{position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .3s;z-index:30}
+.veil.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--bg2);border-left:1px solid var(--hair2);z-index:31;transform:translateX(100%);transition:transform .45s var(--ease);overflow:auto;padding:28px}
+.drawer.on{transform:none}
+.drawer .x{position:absolute;top:16px;right:16px}
+.drawer img{width:100%;border-radius:16px;margin:14px 0}
+.drawer h2{font-size:26px;letter-spacing:-.035em;line-height:1.1}
+.drawer .cap{font-size:13.5px;color:var(--muted);line-height:1.5;white-space:pre-wrap;margin-top:10px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}
+.stats div{background:var(--surface);border:1px solid var(--hair);border-radius:12px;padding:10px 12px}
+.stats .k{font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+.stats .v{font-size:20px;font-weight:700;letter-spacing:-.03em;margin-top:2px}
+.tag.boost{color:var(--good);background:rgba(48,209,88,.14)}
+.boost{border:1px solid rgba(48,209,88,.35);background:linear-gradient(135deg,rgba(48,209,88,.08),transparent 60%);border-radius:var(--r2);padding:14px;margin-top:14px}
+.boost .h{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:8px}
+.boost .h b{color:var(--good);font-weight:600}
+.boost .h a{color:var(--faint);cursor:pointer;font-size:11px}
+.boost .h a:hover{color:var(--live)}
+.bform{display:none;margin-top:14px;border:1px solid var(--hair2);border-radius:var(--r2);padding:14px;background:var(--surface)}
+.bform.on{display:block}
+.bform .g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.bform label{display:block;font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.bform input{width:100%;font:inherit;font-size:15px;font-weight:600;letter-spacing:-.02em;color:var(--ink);background:var(--surface2);border:1px solid var(--hair);border-radius:9px;padding:7px 9px;outline:none;transition:border-color .2s;-moz-appearance:textfield}
+.bform input::-webkit-outer-spin-button,.bform input::-webkit-inner-spin-button{-webkit-appearance:none}
+.bform input:focus{border-color:var(--good)}
+.bform .wide{grid-column:1/-1}
+.bform .act{display:flex;gap:8px;align-items:center;margin-top:12px}
+.bform .act .msg{font-size:12px;color:var(--faint)}
+.btn.good{background:var(--good);border-color:var(--good);color:#000}
+.note{font-size:12px;color:var(--faint);margin-top:12px;line-height:1.5}
+.empty{padding:40px;text-align:center;color:var(--faint);font-size:14px}
+footer{margin-top:60px;color:var(--faint);font-size:12px;line-height:1.7;border-top:1px solid var(--hair);padding-top:18px}
+footer code{font-family:var(--mono);font-size:11px;color:var(--muted)}
+kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--hair2);border-radius:5px;padding:1px 5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <div class="mark"><i></i>MySet <span>Signal</span></div>
+  <div class="meta" id="who"></div>
+  <div class="spacer"></div>
+  <div class="meta" id="pulled"></div>
+  <button class="btn theme" id="theme" title="Toggle theme">◐</button>
+  <button class="btn pri" id="pull"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>Pull now</button>
+</div></header>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="eyebrow">Instagram · @myset.vip · every post, every number, every pull</div>
+    <h1 id="h1">The room is <em>listening.</em></h1>
+    <p class="lede" id="lede"></p>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section>
+    <div class="sh"><h2>Thirty days</h2><p>daily reach (bars) · followers (line) · ▲ a post went out</p></div>
+    <div class="grid2">
+      <div class="card"><svg class="chart" id="timeline"></svg><div class="legend"><span><i style="background:var(--accent)"></i>Reach</span><span><i style="background:var(--blue)"></i>Followers</span><span><i style="background:var(--faint)"></i>Post</span></div></div>
+      <div class="card" id="week"></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sh"><h2>Every post</h2><p>click a column to sort · click a row for its curve and comments</p></div>
+    <div class="chips" id="filters"></div>
+    <div class="card" style="padding:6px 8px;overflow:auto"><table class="tbl" id="posts"></table></div>
+  </section>
+
+  <section>
+    <div class="sh"><h2>What works</h2><p>median views per post, by everything we can slice</p></div>
+    <div class="bd" id="breakdowns"></div>
+  </section>
+
+  <section>
+    <div class="sh"><h2>Leaderboard</h2><p>the top three, per signal</p></div>
+    <div class="bd" id="leaders"></div>
+  </section>
+
+  <section id="boosted-sec">
+    <div class="sh"><h2>Boosted</h2><p>spend and what it bought — logged by hand from the app's boost sheet, the API never sees it</p></div>
+    <div class="card" style="padding:6px 8px;overflow:auto" id="boosted"></div>
+  </section>
+
+  <section>
+    <div class="sh"><h2>Up next</h2><p>the queue as the publisher sees it</p></div>
+    <div class="up" id="upcoming"></div>
+  </section>
+
+  <section>
+    <div class="sh"><h2>Comments</h2><p>everything anyone has said, newest first</p></div>
+    <div class="cm" id="comments"></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<div class="tip" id="tip"></div>
+<div class="veil" id="veil"></div>
+<div class="drawer" id="drawer"></div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const fmt=(n)=>n==null?'–':Math.abs(n)>=1e6?(n/1e6).toFixed(1)+'M':Math.abs(n)>=1e4?(n/1e3).toFixed(1)+'k':String(Math.round(n));
+const money=(n)=>n==null?'–':n<1000?'$'+n.toFixed(2).replace(/\.00$/,''):'$'+Math.round(n).toLocaleString();
+const per=(sp,n)=>sp==null||!n?'–':money(sp/n);
+const pct=(a,b)=>a==null||!b?'–':(100*a/b).toFixed(1)+'%';
+const secs=(ms)=>ms==null?'–':(ms/1000).toFixed(1)+'s';
+const median=(a)=>{const s=a.filter(x=>x!=null).sort((x,y)=>x-y);return s.length?s[Math.floor(s.length/2)]:null};
+const esc=(s)=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const day=(iso)=>new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+const rel=(iso)=>{const m=(Date.now()-new Date(iso))/6e4;return m<60?`${Math.round(m)} min ago`:m<1440?`${Math.round(m/60)} h ago`:`${Math.round(m/1440)} d ago`};
+let D,sortKey='date',sortDir=-1,filter={format:'all',job:'all'};
+/* one page, two homes: localhost:8798 (the content engine, with a Pull button) and myset.vip/mediadash (fed by the engine's pushes) */
+const LOCAL=location.port==='8798';
+const API=LOCAL?{data:'/data',pull:'/pull',boost:'/boost'}:{data:'/api/mediadash',pull:null,boost:'/api/mediadash'};
+const adminHeaders=(reset)=>{if(LOCAL)return{};let c='';try{if(reset)localStorage.removeItem('myset.admin');c=localStorage.getItem('myset.admin')||''}catch{}if(!c){c=(prompt('Your MySet admin code — kept on this device only')||'').trim();try{if(c)localStorage.setItem('myset.admin',c)}catch{}}return c?{'x-admin-code':c}:{}};
+
+/* count-up numbers: the tile lands, then the number arrives */
+function countUp(el,to,f=fmt){const t0=performance.now(),dur=900;const step=(t)=>{const k=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-k,3);el.textContent=f(to*e);if(k<1)requestAnimationFrame(step)};if(to==null){el.textContent='–';return}requestAnimationFrame(step)}
+
+function spark(vals,color){if(!vals||vals.filter(v=>v!=null).length<2)return'';const w=120,h=40,mx=Math.max(...vals,1),mn=0;const pts=vals.map((v,i)=>[i/(vals.length-1)*w,h-((v??0)-mn)/(mx-mn||1)*(h-4)-2]);const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');return`<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><defs><linearGradient id="g${color.replace(/\W/g,'')}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".35"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${d} L${w} ${h} L0 ${h}Z" fill="url(#g${color.replace(/\W/g,'')})"/><path d="${d}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/></svg>`}
+
+function kpis(){
+  const acc=D.account,last=acc[acc.length-1]||{},first=acc[0]||{};
+  const w=D.week||{},t=D.today||{};
+  const days=D.days,reach=days.map(d=>d.reach??0),fol=days.map(d=>d.follower_count??null);
+  const live=D.posts.filter(p=>p.latest.views!=null);
+  const totalViews=live.reduce((s,p)=>s+(p.latest.views||0),0),totalInter=live.reduce((s,p)=>s+(p.latest.total_interactions||0),0),totalReach=live.reduce((s,p)=>s+(p.latest.reach||0),0);
+  const tiles=[
+    {k:'Followers',v:last.followers,d:first.followers!=null&&last.followers!=null?`<b class="${last.followers-first.followers<0?'down':''}">${last.followers-first.followers>=0?'+':''}${last.followers-first.followers}</b> since first pull`:'',s:spark(fol,'#5AC8FA')},
+    {k:'Reach · 7d',v:w.reach,d:`today <b>${fmt(t.reach)}</b>`,s:spark(reach.slice(-14),'#FF7A45')},
+    {k:'Views · 7d',v:w.views,d:`today <b>${fmt(t.views)}</b>`},
+    {k:'Accounts engaged · 7d',v:w.accounts_engaged,d:`${fmt(w.total_interactions)} interactions`},
+    {k:'Profile views · 7d',v:w.profile_views,d:`<b>${fmt(w.website_clicks)}</b> site clicks`},
+    {k:'Engagement rate',v:totalReach?100*totalInter/totalReach:null,f:(x)=>x==null?'–':x.toFixed(1)+'%',d:`${fmt(totalInter)} interactions on ${fmt(totalReach)} reached · all posts`},
+  ];
+  if(D.boosts.length){const sp=D.boosts.reduce((s,b)=>s+(b.spend||0),0),pv=D.boosts.reduce((s,b)=>s+(b.profile_visits||0),0),fo=D.boosts.reduce((s,b)=>s+(b.follows||0),0);tiles.push({k:'Ad spend',v:sp,f:money,d:`${pv?`<b>${money(sp/pv)}</b> per profile visit`:''}${fo?` · ${money(sp/fo)} per follow`:''}${!pv&&!fo?`${D.boosts.length} boost${D.boosts.length>1?'s':''}`:''}`})}
+  $('#kpis').innerHTML=tiles.map(x=>`<div class="tile">${x.s||''}<div class="k">${x.k}</div><div class="v"></div><div class="d">${x.d||''}</div></div>`).join('');
+  [...$('#kpis').children].forEach((el,i)=>countUp($('.v',el),tiles[i].v,tiles[i].f));
+  $('#who').textContent=D.username?'@'+D.username:'';
+  $('#lede').textContent=`${live.length} live post${live.length===1?'':'s'} · ${fmt(totalViews)} views all-time · ${D.planned} planned · ${D.pulls} pull${D.pulls===1?'':'s'} kept, so every number has a curve.`;
+  if(!D.pushedAt)$('#pulled').textContent=live.length&&live[0].latest.at?`pulled ${rel(live.reduce((m,p)=>p.latest.at>m?p.latest.at:m,''))}`:'never pulled';
+  const w1=w||{};$('#week').innerHTML=`<h3 style="font-size:13px;color:var(--muted);margin-bottom:12px">This week, from the account</h3>`+[['Likes',w1.likes],['Comments',w1.comments],['Shares',w1.shares],['Saves',w1.saves],['Replies',w1.replies],['Link taps',w1.profile_links_taps],['Website clicks',w1.website_clicks],['Total interactions',w1.total_interactions]].map(([k,v])=>`<div class="row"><span class="l">${k}</span><span class="v">${fmt(v)}</span></div>`).join('');
+}
+
+function timeline(){
+  const svg=$('#timeline'),W=svg.clientWidth||800,H=260,P={l:36,r:36,t:18,b:26};svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const days=D.days.slice(-30);if(days.length<2){svg.innerHTML=`<text x="${W/2}" y="${H/2}" fill="var(--faint)" text-anchor="middle" font-size="13">no daily series yet — pull once</text>`;return}
+  const x=(i)=>P.l+i/(days.length-1)*(W-P.l-P.r);
+  const mr=Math.max(1,...days.map(d=>d.reach||0)),mf=Math.max(1,...days.map(d=>d.follower_count||0)),nf=Math.min(...days.map(d=>d.follower_count??Infinity));
+  const yr=(v)=>H-P.b-(v/mr)*(H-P.t-P.b),yf=(v)=>H-P.b-((v-nf)/((mf-nf)||1))*(H-P.t-P.b)*.8-10;
+  const bw=Math.max(3,(W-P.l-P.r)/days.length*.55);
+  const posts={};for(const p of D.posts)posts[p.date]=(posts[p.date]||0)+1;
+  let s=`<defs><linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--accent)"/><stop offset="1" stop-color="var(--accent)" stop-opacity=".25"/></linearGradient></defs>`;
+  for(const g of [0,.5,1])s+=`<line x1="${P.l}" x2="${W-P.r}" y1="${yr(mr*g)}" y2="${yr(mr*g)}" stroke="var(--hair)"/><text x="${P.l-6}" y="${yr(mr*g)+4}" fill="var(--faint)" font-size="10" text-anchor="end">${fmt(mr*g)}</text>`;
+  days.forEach((d,i)=>{s+=`<rect class="bar-r" data-i="${i}" x="${x(i)-bw/2}" y="${yr(d.reach||0)}" width="${bw}" height="${H-P.b-yr(d.reach||0)}" rx="3" fill="url(#bg1)"><animate attributeName="height" from="0" to="${H-P.b-yr(d.reach||0)}" dur=".7s" fill="freeze" calcMode="spline" keySplines=".2 .8 .2 1"/><animate attributeName="y" from="${H-P.b}" to="${yr(d.reach||0)}" dur=".7s" fill="freeze" calcMode="spline" keySplines=".2 .8 .2 1"/></rect>`;
+    if(posts[d.day])s+=`<text x="${x(i)}" y="${H-P.b+14}" fill="var(--faint)" font-size="9" text-anchor="middle">▲</text>`;
+    if(i%5===0||i===days.length-1)s+=`<text x="${x(i)}" y="${H-4}" fill="var(--faint)" font-size="10" text-anchor="middle">${day(d.day)}</text>`;});
+  const fp=days.map((d,i)=>d.follower_count==null?null:[x(i),yf(d.follower_count)]).filter(Boolean);
+  if(fp.length>1){const d=fp.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');s+=`<path d="${d}" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linejoin="round" stroke-dasharray="2000" stroke-dashoffset="2000"><animate attributeName="stroke-dashoffset" to="0" dur="1.4s" fill="freeze"/></path>`;const l=fp[fp.length-1];s+=`<circle cx="${l[0]}" cy="${l[1]}" r="4" fill="var(--blue)"/><text x="${l[0]+8}" y="${l[1]+4}" fill="var(--blue)" font-size="11" font-weight="600">${days[days.length-1].follower_count}</text>`}
+  s+=days.map((d,i)=>`<rect data-i="${i}" x="${x(i)-(W-P.l-P.r)/days.length/2}" y="0" width="${(W-P.l-P.r)/days.length}" height="${H}" fill="transparent"/>`).join('');
+  svg.innerHTML=s;
+  const tip=$('#tip');svg.onmousemove=(e)=>{const i=e.target.dataset.i;if(i==null){tip.classList.remove('on');return}const d=days[i];tip.innerHTML=`${day(d.day)}<br>reach <b>${fmt(d.reach)}</b> · followers <b>${d.follower_count??'–'}</b>${posts[d.day]?`<br>${posts[d.day]} post${posts[d.day]>1?'s':''} went out`:''}`;tip.style.left=e.clientX+14+'px';tip.style.top=e.clientY-10+'px';tip.classList.add('on')};svg.onmouseleave=()=>tip.classList.remove('on');
+}
+
+const COLS=[
+  {k:'name',l:'Post',get:p=>p.name},
+  {k:'date',l:'Posted',get:p=>p.date,f:(v,p)=>`${day(v)}<span class="dim"> ${p.time||''}</span>`},
+  {k:'views',l:'Views',get:p=>p.latest.views,bar:true},
+  {k:'reach',l:'Reach',get:p=>p.latest.reach},
+  {k:'likes',l:'Likes',get:p=>p.latest.likes},
+  {k:'comments',l:'Comments',get:p=>p.latest.comments},
+  {k:'saved',l:'Saves',get:p=>p.latest.saved},
+  {k:'shares',l:'Sends',get:p=>p.latest.shares},
+  {k:'er',l:'Eng.',get:p=>p.latest.reach?100*(p.latest.total_interactions||0)/p.latest.reach:null,f:v=>v==null?'–':v.toFixed(0)+'%'},
+  {k:'watch',l:'Watch',get:p=>p.latest.ig_reels_avg_watch_time,f:secs},
+  {k:'hold',l:'Hold',t:'average watch ÷ reel length — over 100% means they watched it round again',get:p=>p.latest.ig_reels_avg_watch_time&&p.duration?100*p.latest.ig_reels_avg_watch_time/1000/p.duration:null,f:v=>v==null?'–':Math.min(999,v).toFixed(0)+'%'},
+  {k:'pv',l:'Profile',get:p=>p.latest.profile_visits},
+  {k:'follows',l:'Follows',get:p=>p.latest.follows},
+  {k:'score',l:'vs norm',get:p=>{const n=norm(p);return n&&p.latest.views!=null?p.latest.views/n:null},f:v=>v==null?'–':`<span class="score ${v>=2?'hot':v<=.5?'cold':''}">${v.toFixed(1)}×</span>`},
+];
+const norm=(p)=>{const k=p.format==='reel'?'reel':'static';return median(D.posts.filter(q=>(q.format==='reel'?'reel':'static')===k).map(q=>q.latest.views))};
+function table(){
+  const rows=D.posts.filter(p=>(filter.format==='all'||(filter.format==='reel'?p.format==='reel':p.format!=='reel'))&&(filter.job==='all'||p.job===filter.job));
+  const col=COLS.find(c=>c.k===sortKey);rows.sort((a,b)=>{const x=col.get(a),y=col.get(b);if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return(x>y?1:x<y?-1:0)*sortDir});
+  const mx=Math.max(1,...rows.map(p=>p.latest.views||0));
+  const t=$('#posts');
+  t.innerHTML=`<thead><tr>${COLS.map(c=>`<th data-k="${c.k}" title="${c.t||''}" class="${c.k===sortKey?'on':''}">${c.l}${c.k===sortKey?(sortDir<0?' ↓':' ↑'):''}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(p=>`<tr data-id="${p.id}">${COLS.map(c=>{const v=c.get(p);if(c.k==='name')return`<td><div class="post">${p.cover?`<img src="${p.cover}" loading="lazy">`:'<div class="ph"></div>'}<div><div class="n">${esc(p.name)}</div><div class="s"><span class="tag ${p.format}">${p.format}</span><span class="tag">${p.job||''}</span>${p.boosts.length?`<span class="tag boost">boosted</span>`:''}${p.music?`<span>♪ ${esc(p.music)}</span>`:''}</div></div></div></td>`;const s=c.f?c.f(v,p):fmt(v);return`<td>${s}${c.bar&&v!=null?`<span class="vb" style="width:${Math.max(2,44*v/mx)}px"></span>`:''}</td>`}).join('')}</tr>`).join(''):`<tr><td colspan="${COLS.length}" class="empty">nothing live matches</td></tr>`}</tbody>`;
+  t.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='name'?1:-1}table()});
+  t.querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=()=>open(tr.dataset.id));
+}
+function filters(){
+  const jobs=[...new Set(D.posts.map(p=>p.job).filter(Boolean))];
+  $('#filters').innerHTML=[['format','all','All'],['format','reel','Reels'],['format','static','Stills'],...jobs.map(j=>['job',j,j[0]+j.slice(1).toLowerCase()])].map(([g,v,l])=>`<button class="chip ${filter[g]===v?'on':''}" data-g="${g}" data-v="${v}">${l}</button>`).join('');
+  $('#filters').querySelectorAll('.chip').forEach(b=>b.onclick=()=>{const g=b.dataset.g,v=b.dataset.v;filter[g]=filter[g]===v&&g==='job'?'all':v;filters();table()});
+}
+
+function breakdowns(){
+  const live=D.posts.filter(p=>p.latest.views!=null);
+  const by=(label,key,alt)=>{const g={};for(const p of live){const k=key(p);if(k==null)continue;(g[k]||=[]).push(p.latest.views||0)}const items=Object.entries(g).map(([k,v])=>[k,median(v),v.length]).sort((a,b)=>b[1]-a[1]);if(!items.length)return'';const mx=Math.max(1,...items.map(i=>i[1]));return`<div class="card"><h3>${label}<span>median views</span></h3>${items.map(([k,v,n])=>`<div class="row"><span class="l">${esc(k)}</span><span class="v">${fmt(v)}<small>×${n}</small></span><span class="b ${alt?'alt':''}" style="width:${100*v/mx}%"></span></div>`).join('')}</div>`};
+  const wd=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  $('#breakdowns').innerHTML=[by('Format',p=>p.format),by('Job',p=>p.job,1),by('Slot',p=>p.time?p.time.replace(':','.')+' ET':null),by('Weekday',p=>wd[new Date(p.date+'T12:00:00').getDay()],1),by('Music',p=>p.music),by('Hook family',p=>p.hook,1),by('Franchise',p=>p.franchise&&p.franchise!=='NONE'?p.franchise:'none')].join('')||'<div class="empty">pull once to see what works</div>';
+  const L=[['Most views','views',p=>p.latest.views],['Most reach','reach',p=>p.latest.reach],['Most liked','likes',p=>p.latest.likes],['Most sent','shares',p=>p.latest.shares],['Most saved','saved',p=>p.latest.saved],['Longest watched','watch',p=>p.latest.ig_reels_avg_watch_time,secs],['Most profile visits','pv',p=>p.latest.profile_visits],['Most talked about','comments',p=>p.latest.comments]];
+  $('#leaders').innerHTML=L.map(([l,k,g,f])=>{const top=live.map(p=>[p,g(p)]).filter(x=>x[1]!=null&&x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,3);if(!top.length)return'';const mx=top[0][1];return`<div class="card"><h3>${l}</h3>${top.map(([p,v],i)=>`<div class="row" style="cursor:pointer" onclick="open('${p.id}')"><span class="l">${i+1}. ${esc(p.name)}</span><span class="v">${(f||fmt)(v)}</span><span class="b ${i?'alt':''}" style="width:${100*v/mx}%;opacity:${1-i*.25}"></span></div>`).join('')}</div>`}).join('')||'<div class="empty">no signal yet</div>';
+}
+function boosted(){
+  const B=D.boosts;const el=$('#boosted');
+  if(!B.length){el.innerHTML='<div class="empty">no boosts logged — open any live post and press <b>Log a boost</b> when you run one</div>';return}
+  const by=(id)=>D.posts.find(p=>p.id===id);
+  const tot=(k)=>B.reduce((s,b)=>s+(b[k]||0),0);
+  const cols=[['Post'],['Started'],['Days'],['Spend'],['Views'],['Reach'],['Interactions'],['Profile visits'],['Follows'],['Link clicks'],['$ / 1k views'],['$ / visit'],['$ / follow']];
+  const row=(b)=>{const p=by(b.id);return`<tr data-id="${b.id}"><td><div class="post"><div><div class="n">${esc(p?.name||b.id)}</div><div class="s">${p?`<span class="tag ${p.format}">${p.format}</span>`:''}${b.note?`<span>${esc(b.note)}</span>`:''}</div></div></div></td><td>${b.start?day(b.start):'–'}</td><td>${fmt(b.days)}</td><td class="score">${money(b.spend)}</td><td>${fmt(b.views)}</td><td>${fmt(b.reach)}</td><td>${fmt(b.interactions)}</td><td>${fmt(b.profile_visits)}</td><td>${fmt(b.follows)}</td><td>${fmt(b.link_clicks)}</td><td>${b.views?money(1000*b.spend/b.views):'–'}</td><td>${per(b.spend,b.profile_visits)}</td><td>${per(b.spend,b.follows)}</td></tr>`};
+  const sp=tot('spend');
+  el.innerHTML=`<table class="tbl"><thead><tr>${cols.map(c=>`<th style="cursor:default">${c[0]}</th>`).join('')}</tr></thead><tbody>${B.map(row).join('')}<tr style="cursor:default;font-weight:600"><td>All boosts</td><td></td><td>${fmt(tot('days'))}</td><td class="score">${money(sp)}</td><td>${fmt(tot('views'))}</td><td>${fmt(tot('reach'))}</td><td>${fmt(tot('interactions'))}</td><td>${fmt(tot('profile_visits'))}</td><td>${fmt(tot('follows'))}</td><td>${fmt(tot('link_clicks'))}</td><td>${tot('views')?money(1000*sp/tot('views')):'–'}</td><td>${per(sp,tot('profile_visits'))}</td><td>${per(sp,tot('follows'))}</td></tr></tbody></table>`;
+  el.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>open(tr.dataset.id));
+}
+function upcoming(){
+  $('#upcoming').innerHTML=D.upcoming.map(u=>`<div class="card"><div class="when">${day(u.date)} · ${u.time||''} ET</div><div class="n">${esc(u.name)}</div><div class="s" style="font-size:11px;color:var(--faint);margin-bottom:8px"><span class="tag ${u.format}">${u.format}</span> ${u.music?'♪ '+esc(u.music):''}</div><div class="st ${u.held?'held':''}"><i></i>${u.held?esc(u.held):'ready'}</div></div>`).join('')||'<div class="empty">the queue is empty</div>';
+}
+function comments(){
+  const all=D.posts.flatMap(p=>p.comments.map(c=>({...c,post:p.name}))).sort((a,b)=>b.at.localeCompare(a.at));
+  $('#comments').innerHTML=all.length?all.map(c=>`<div class="c"><div class="av">${esc((c.by||'?')[0].toUpperCase())}</div><div><div class="t">${esc(c.text)}</div><div class="m">@${esc(c.by)} · on “${esc(c.post)}” · ${rel(c.at)}${c.likes?` · ♥ ${c.likes}`:''}</div></div></div>`).join(''):'<div class="empty">no comments yet — the room is quiet</div>';
+}
+function foot(){
+  $('#foot').innerHTML=`Everything above comes from the Instagram Graph API and is kept in <code>publish/insights.ndjson</code> (per post, per pull) and <code>publish/account.ndjson</code> (account, daily). Reels answer views · reach · likes · comments · saves · sends · interactions · average and total watch time; stills also answer profile visits and follows. Audience demographics unlock at 100 followers. ${API.pull?'<kbd>R</kbd> pulls, ':''}<kbd>Esc</kbd> closes. ${D.workshop?`${D.workshop} post${D.workshop>1?'s':''} in the workshop, off the queue.`:''}`;
+}
+
+window.open=(id)=>{const p=D.posts.find(x=>x.id===id);if(!p)return;const l=p.latest;
+  const c=p.curve,W=460,H=120;let svg='';
+  if(c.length>1){const mx=Math.max(1,...c.map(x=>x.views||0));const pts=c.map((x,i)=>[8+i/(c.length-1)*(W-16),H-8-((x.views||0)/mx)*(H-16)]);const d=pts.map((q,i)=>(i?'L':'M')+q[0]+' '+q[1]).join(' ');svg=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:120px;display:block;margin-top:8px"><path d="${d} L${W-8} ${H-8} L8 ${H-8}Z" fill="rgba(var(--accent-rgb),.15)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="3" fill="var(--accent)"><title>${new Date(c[i].at).toLocaleString()} · ${c[i].views} views</title></circle>`).join('')}</svg><div class="legend"><span>views across ${c.length} pulls · first ${day(c[0].at)} · last ${rel(c[c.length-1].at)}</span></div>`}
+  else svg=`<div class="empty" style="padding:18px">one pull so far — the curve starts on the second</div>`;
+  const st=[['Views',l.views],['Reach',l.reach],['Likes',l.likes],['Comments',l.comments],['Saves',l.saved],['Sends',l.shares],['Interactions',l.total_interactions],['Eng. rate',l.reach?(100*(l.total_interactions||0)/l.reach).toFixed(0)+'%':null],p.format==='reel'?['Avg watch',secs(l.ig_reels_avg_watch_time)]:['Profile visits',l.profile_visits],p.format==='reel'?['Total watch',secs(l.ig_reels_video_view_total_time)]:['Follows',l.follows],['Sends / reach',pct(l.shares,l.reach)],['Saves / reach',pct(l.saved,l.reach)]];
+  $('#drawer').innerHTML=`<button class="btn x" id="close">✕</button><div class="eyebrow">${p.format} · ${p.job||''} · ${day(p.date)} ${p.time||''} ET${p.music?' · ♪ '+esc(p.music):''}</div><h2>${esc(p.name)}</h2>${p.cover?`<img src="${p.cover}">`:''}<div class="stats">${st.map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${typeof v==='string'?v:fmt(v)}</div></div>`).join('')}</div>${svg}${p.comments.length?`<h3 style="margin:22px 0 10px;font-size:14px">Comments</h3><div class="cm">${p.comments.map(c=>`<div class="c"><div class="av">${esc((c.by||'?')[0].toUpperCase())}</div><div><div class="t">${esc(c.text)}</div><div class="m">@${esc(c.by)} · ${rel(c.at)}</div></div></div>`).join('')}</div>`:''}${p.format==='reel'?`<div class="note">Instagram reports profile visits and follows only for stills. For a reel they show up in the boost sheet — log a boost below and they land here.</div>`:''}${p.boosts.map(b=>`<div class="boost"><div class="h"><span><b>Boosted</b> · ${b.start?day(b.start):''}${b.days?` · ${b.days} day${b.days>1?'s':''}`:''}${b.note?` · ${esc(b.note)}`:''}</span><a onclick="removeBoost('${b.boostId}','${p.id}')">remove</a></div><div class="stats" style="margin:0">${[['Spend',money(b.spend)],['Views',fmt(b.views)],['Reach',fmt(b.reach)],['Interactions',fmt(b.interactions)],['Profile visits',fmt(b.profile_visits)],['Follows',fmt(b.follows)],['Link clicks',fmt(b.link_clicks)],['$ / 1k views',b.views?money(1000*b.spend/b.views):'–'],['$ / visit',per(b.spend,b.profile_visits)]].map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div></div>`).join('')}<p style="margin-top:14px"><button class="btn" onclick="$('#bform').classList.toggle('on');$('#bform input').focus()">＋ Log a boost</button></p><form class="bform" id="bform" onsubmit="return saveBoost(event,'${p.id}')"><div class="g">${[['spend','Spent $',true],['days','Days'],['views','Views'],['reach','Reach'],['interactions','Interactions'],['profile_visits','Profile visits'],['follows','Follows'],['link_clicks','Link clicks'],['likes','Likes'],['comments','Comments'],['saves','Saves'],['shares','Shares']].map(([k,l,req])=>`<div><label>${l}</label><input name="${k}" type="number" inputmode="decimal" step="any" min="0" ${req?'required':''} placeholder="–"></div>`).join('')}<div><label>Started</label><input name="start" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="wide"><label>Note</label><input name="note" type="text" placeholder="audience, goal, anything worth remembering"></div></div><div class="act"><button class="btn good" type="submit">Save boost</button><span class="msg">numbers as Instagram's boost sheet shows them</span></div></form><div class="cap">${esc(p.caption||'')}</div>${l.permalink?`<p style="margin-top:18px"><a class="btn" href="${l.permalink}" target="_blank">Open on Instagram ↗</a></p>`:''}`;
+  $('#drawer').classList.add('on');$('#veil').classList.add('on');$('#close').onclick=close};
+window.saveBoost=async(e,id)=>{e.preventDefault();const f=e.target,o={id};for(const el of f.elements)if(el.name)o[el.name]=el.value;const m=$('.msg',f);m.textContent='saving…';try{let res=await fetch(API.boost,{method:'POST',headers:{'content-type':'application/json',...adminHeaders()},body:JSON.stringify(LOCAL?o:{boost:o})});if(res.status===401){res=await fetch(API.boost,{method:'POST',headers:{'content-type':'application/json',...adminHeaders(true)},body:JSON.stringify({boost:o})})}const r=await res.json();if(r.error)throw new Error(r.error);await load();open(id);$('#bform').classList.remove('on')}catch(err){m.textContent=err.message}return false};
+window.removeBoost=async(boostId,id)=>{const o={removed:true,boostId,id};await fetch(API.boost,{method:'POST',headers:{'content-type':'application/json',...adminHeaders()},body:JSON.stringify(LOCAL?o:{boost:o})});await load();open(id)};
+const close=()=>{$('#drawer').classList.remove('on');$('#veil').classList.remove('on')};
+$('#veil').onclick=close;
+document.addEventListener('keydown',(e)=>{if(e.key==='Escape')close();if(e.key==='r'&&API.pull&&!e.metaKey&&!e.ctrlKey&&document.activeElement.tagName!=='INPUT')doPull()});
+
+async function load(){D=await(await fetch(API.data)).json();if(!API.pull)$('#pull').style.display='none';if(D.pushedAt)$('#pulled').textContent='pushed '+rel(D.pushedAt);kpis();timeline();filters();table();breakdowns();boosted();upcoming();comments();foot()}
+async function doPull(){const b=$('#pull');if(b.classList.contains('busy'))return;b.classList.add('busy');b.lastChild.textContent='Pulling…';try{const r=await(await fetch(API.pull,{method:'POST'})).json();if(r.error)throw new Error(r.error);await load();b.lastChild.textContent=r.errors?.length?`${r.errors.length} error(s)`:'Pulled'}catch(e){b.lastChild.textContent='Failed: '+e.message}finally{b.classList.remove('busy');setTimeout(()=>b.lastChild.textContent='Pull now',2500)}}
+$('#pull').onclick=doPull;
+$('#theme').onclick=()=>{const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');r.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch{}};
+try{const t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch{}
+addEventListener('resize',()=>D&&timeline());
+load();
+</script>
+</body>
+</html>
