@@ -6,6 +6,8 @@ import me from './me.mjs';
 import community from './community.mjs';
 import venue from './venue.mjs';
 import diary from './diary.mjs';
+import artists from './artists.mjs';
+import mapconfig from './mapconfig.mjs';
 
 /* THE ONE WARM DOOR FOR EVERYTHING A FAN READS (decision 0049).
 
@@ -29,8 +31,12 @@ import diary from './diary.mjs';
    never cached.
 
    `diary` joined on 2026-09-18 (decision 0085): the artist diary page's one
-   read, edge-shared like the profile. */
-const DOORS = { profile, events, board, me, community, venue, diary };
+   read, edge-shared like the profile. `artists` and `mapconfig` joined on
+   2026-09-25 (decision 0088): the directory and the front door's map were the
+   last two public reads on their own sleeping functions — measured cold at
+   1.8–2.0 s, and never kept at the edge. Through the door they wake with it
+   and are shared for a minute. */
+const DOORS = { profile, events, board, me, community, venue, diary, artists, mapconfig };
 
 export default async (req, ctx) => {
   const what = new URL(req.url).searchParams.get('what') || '';

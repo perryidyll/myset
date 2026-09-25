@@ -6,9 +6,9 @@
    trigger, on one line. Matching the brace-then-newline counts only the render
    blocks. A case-sensitive innerText check has bitten this before too — CSS
    `text-transform` means the DOM text is not what the source says. */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { src } from './_src.mjs';
-import { PAIRS, stampOf, stampRe } from '../tools/stamp.mjs';
+import { PAIRS, FANPAGES, stampOf, stampRe } from '../tools/stamp.mjs';
 let fail = 0;
 const check = (file, needles) => {
   const s = src(new URL('../' + file, import.meta.url));
@@ -59,10 +59,12 @@ check('public/venue-studio.html', [
   ['function tabBar',        /\nfunction tabBar\(\)\{/g],
   ['sticky offset measured', /top:var\(--headh/g, 0],
 ]);
-/* /studio.js, /venue-studio.js, /biz.js and /studio-money.js are served immutable
-   for a year, addressed by their own hash. A stale stamp means a phone keeps
-   running last week's Studio under this week's shell. The pairs come from
-   tools/stamp.mjs itself, in its order, so the test and the tool cannot drift. */
+/* /studio.js, /venue-studio.js, /biz.js, /studio-money.js and /fan.js are served
+   immutable for a year, addressed by their own hash. A stale stamp means a phone
+   keeps running last week's script under this week's page. The pairs come from
+   tools/stamp.mjs itself, in its order, so the test and the tool cannot drift. The
+   inline-script count is the Studios' check only: a fan page keeps its own script
+   inline on purpose and loads fan.js beside it. */
 {
   for (const [page, js] of PAIRS) {
     const want = stampOf(readFileSync(new URL('../public/' + js, import.meta.url), 'utf8'));
@@ -71,12 +73,85 @@ check('public/venue-studio.html', [
     const okStamp = have === want;
     console.log(`  ${okStamp ? '✓' : '✗'} ${js} stamp in ${page} ${okStamp ? 'matches' : `is ${have || 'missing'}, file is ${want} — run: node tools/stamp.mjs`}`);
     if (!okStamp) fail++;
-    if (!page.endsWith('.html')) continue;
+    if (!page.endsWith('.html') || js === 'fan.js') continue;
     const inline = (html.match(/<script>/g) || []).length;
     const okInline = inline <= 3;
     console.log(`  ${okInline ? '✓' : '✗'} ${page} keeps only its small inline scripts (${inline})`);
     if (!okInline) fail++;
   }
+}
+/* THE FAN PAGES' SHARED SCRIPT (decision 0087). Every top-level name in fan.js is a
+   global the page's own script reads by bare name, so a page that declares one of
+   them again throws at load (`const` twice in the global lexical scope) and paints
+   nothing — the vote page included. So: no fan page redeclares a fan.js name; every
+   fan page loads fan.js exactly once, before its own script; and every page with a
+   sheet is a fan page (the shared openSheet is the only one). The copies the file
+   replaced are gone by the same check — a migration that leaves the old copy beside
+   the new one is the half-finished refactor this repo keeps meeting. */
+{
+  const fan = readFileSync(new URL('../public/fan.js', import.meta.url), 'utf8');
+  const names = (s) => new Set([...s.matchAll(/^(?:async\s+)?(?:let|const|var|function|class)\s+([\w$]+)/gm)].map((m) => m[1]));
+  const shared = names(fan);
+  /* fan.js keeps one declaration per line so this regex sees every name; a comma list
+     (`let a=0, b=0`) would hide the second one from the guard (the review of 0087). */
+  const listed = (fan.match(/^(?:let|const|var)\s+[^;\n]*,\s*[A-Za-z_$][\w$]*\s*=(?!>)/gm) || []).length;
+  console.log(`  ${shared.size >= 45 && !listed ? '✓' : '✗'} fan.js declares the shared names one per line (${shared.size}${listed ? `, ${listed} comma list(s)` : ''})`);
+  if (shared.size < 45 || listed) fail++;
+  /* On a page the name may hide anywhere: first or later in a declaration list, as var,
+     as a function — any of those at the global scope throws before the page's first line. */
+  const declares = (js, n) => new RegExp(`(?:^|[;,{}\\s])(?:let|const|var)\\s+(?:[^;\\n]*?,\\s*)?${n.replace(/\$/g, '\\$')}\\s*(?:=(?!>)|[;,\\n])|(?:^|[^\\w$.])(?:async\\s+)?function\\s+${n.replace(/\$/g, '\\$')}\\s*\\(|(?:^|[^\\w$.])class\\s+${n.replace(/\$/g, '\\$')}\\b`, 'm').test(js);
+  for (const page of FANPAGES) {
+    const html = readFileSync(new URL('../' + page, import.meta.url), 'utf8');
+    const inline = [...html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n');
+    const both = [...shared].filter((n) => declares(inline, n));
+    console.log(`  ${both.length ? '✗' : '✓'} ${page} redeclares none of fan.js's names${both.length ? ' — ' + both.join(', ') : ''}`);
+    if (both.length) fail++;
+    const tags = (html.match(/<script src="\/fan\.js\?v=[0-9a-f]{8}"><\/script>/g) || []).length;
+    const at = html.indexOf('<script src="/fan.js?v=');
+    const own = html.indexOf('<script>\n', at);   // the page's own script, the first plain <script> after the tag
+    const okTag = tags === 1 && at >= 0 && own > at;
+    console.log(`  ${okTag ? '✓' : '✗'} ${page} loads fan.js once, before its own script`);
+    if (!okTag) fail++;
+  }
+  for (const f of readdirSync(new URL('../public', import.meta.url)).filter((x) => x.endsWith('.html'))) {
+    const html = readFileSync(new URL('../public/' + f, import.meta.url), 'utf8');
+    if (!/id="sheet"/.test(html)) continue;
+    const isFan = FANPAGES.includes('public/' + f), studio = /studio\.html$/.test(f);
+    const ok = isFan || studio;
+    console.log(`  ${ok ? '✓' : '✗'} ${f} has a sheet and ${studio ? 'is a Studio' : 'loads fan.js'}`);
+    if (!ok) fail++;
+  }
+}
+/* THE FIRST OPEN (decision 0088). Three things the speed pass measured and fixed have
+   to stay fixed. (1) A picture is fetched once: a layered `background-image:
+   url(small), url(original)` is not a fallback — a browser downloads every layer,
+   and the artist page's thumbnails were pulling ~400 KB of originals nobody saw
+   (INVARIANT 0gd). (2) Nothing blocks the head: no <script src> without `defer`
+   before </head> on a fan page — pull.js in the head held every first paint for
+   its own round trip. (3) The vote page paints its colours before app.css has
+   arrived: its <style id="tokens"> is the top of app.css, byte for byte, and
+   app.css itself is preloaded rather than render-blocking. */
+{
+  for (const page of FANPAGES) {
+    const html = readFileSync(new URL('../' + page, import.meta.url), 'utf8');
+    const layered = (html.match(/\),\s*url\(/g) || []).length;
+    console.log(`  ${layered ? '✗' : '✓'} ${page} never stacks two pictures in one background${layered ? ` (${layered})` : ''}`);
+    if (layered) fail++;
+    const head = html.slice(0, html.indexOf('</head>'));
+    const blocking = (head.match(/<script src="[^"]*"(?![^>]*\bdefer\b)[^>]*>/g) || []);
+    console.log(`  ${blocking.length ? '✗' : '✓'} ${page} loads no blocking script in its head${blocking.length ? ' — ' + blocking.join(' ') : ''}`);
+    if (blocking.length) fail++;
+  }
+  const css = readFileSync(new URL('../public/app.css', import.meta.url), 'utf8');
+  const tokens = css.slice(css.indexOf(':root{'), css.indexOf('*,*::before,*::after{box-sizing:border-box}')).trimEnd();
+  const vote = readFileSync(new URL('../public/vote.html', import.meta.url), 'utf8');
+  const inline = (vote.match(/<style id="tokens">\n([\s\S]*?)\n<\/style>/) || ['', ''])[1];
+  const sameTokens = tokens.length > 500 && inline === tokens;
+  console.log(`  ${sameTokens ? '✓' : '✗'} vote.html's inline tokens are the top of app.css, byte for byte${sameTokens ? '' : ' — copy app.css from :root{ to the box-sizing line into <style id="tokens">'}`);
+  if (!sameTokens) fail++;
+  const async = /<link rel="preload" href="\/app\.css" as="style" onload=/.test(vote) && !/<link rel="stylesheet" href="\/app\.css">(?![\s\S]*<\/noscript>)/.test(vote.replace(/<noscript>[\s\S]*?<\/noscript>/g, ''));
+  console.log(`  ${async ? '✓' : '✗'} vote.html preloads app.css instead of blocking on it`);
+  if (!async) fail++;
 }
 /* THE DASHBOARD MODULE (decision 0065). It reads studio.js's globals by bare name
    from inside one IIFE, so a top-level name declared in both would throw at load

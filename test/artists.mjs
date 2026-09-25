@@ -46,7 +46,10 @@ ok('completed MySet show totals are numeric',calendar&&calendar.totalShows===0,c
 ok('the map gets every next-30-day occurrence and its real directions shape',calendar&&calendar.eventsNext30Days.length===1&&calendar.eventsNext30Days[0].venue==='The Room',calendar);
 ok('a streaming link marks music released',music&&music.musicReleased===true,music);
 ok('private registry fields never leave',!JSON.stringify(data).includes('directory-a@example.com'));
-ok('directory responses are never cached',response.headers.get('cache-control')==='no-store');
+/* Public, the same for every phone, so the edge keeps it a minute (decision 0088);
+   the browser still keeps no copy of its own. */
+ok('directory responses are shared at the edge for a minute, never kept by the browser',
+   /durable, s-maxage=60/.test(response.headers.get('netlify-cdn-cache-control')||'')&&response.headers.get('cache-control')==='public, max-age=0, must-revalidate');
 const oldMapKey=process.env.GOOGLE_MAPS_BROWSER_KEY;
 delete process.env.GOOGLE_MAPS_BROWSER_KEY;
 ok('the map stays unavailable without its browser key',(await (await mapconfig()).json()).enabled===false);

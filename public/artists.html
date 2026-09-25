@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t})();</script>
+<!-- the directory's two reads start here, before the page has arrived (decision 0088); the script at the end picks them up -->
+<script>(()=>{try{const g=(u)=>{const f=fetch(u,{cache:'no-store'});f.catch(()=>{});return f};window.__early={artists:g('/api/fan?what=artists&maps=1'),map:g('/api/fan?what=mapconfig')}}catch(e){}})();</script>
 <meta name="theme-color" content="#F5F5F7">
 <meta name="description" content="Find artists and bands on MySet.">
 <title>Find artists — MySet</title>
@@ -70,8 +72,8 @@ body{padding-bottom:42px}
 </div>
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
+<script src="/fan.js?v=580721d7"></script>
 <script>
-const $=s=>document.querySelector(s), esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 let ALL=[], MAPCFG=null, ONLY_UPCOMING=false, ONLY_MUSIC=false, ONLY_SIGNED=false, GMAPS_PROMISE=null, LIVE_MAP=null, INFO=null, MAP_MARKERS=new Map(), USER_MARKER=null, USER_ACCURACY=null;
 const unique=(values)=>[...new Set(values.filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 function fill(select,values,label){const keep=select.value;select.innerHTML=`<option value="">All ${label}</option>`+values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');if(values.includes(keep))select.value=keep;}
@@ -139,7 +141,7 @@ $('#upcoming').addEventListener('click',()=>{ONLY_UPCOMING=!ONLY_UPCOMING;$('#up
 $('#music').addEventListener('click',()=>{ONLY_MUSIC=!ONLY_MUSIC;$('#music').classList.toggle('on',ONLY_MUSIC);$('#music').setAttribute('aria-pressed',String(ONLY_MUSIC));render()});
 $('#signed').addEventListener('click',()=>{ONLY_SIGNED=!ONLY_SIGNED;$('#signed').classList.toggle('on',ONLY_SIGNED);$('#signed').setAttribute('aria-pressed',String(ONLY_SIGNED));render()});
 $('#mapBtn').addEventListener('click',openMap);$('#mapClose').addEventListener('click',closeMap);$('#mapModal').addEventListener('click',e=>{if(e.target===$('#mapModal'))closeMap()});addEventListener('keydown',e=>{if(e.key==='Escape')closeMap()});
-(async()=>{try{const [d,m]=await Promise.all([fetch('/api/artists?maps=1',{cache:'no-store'}).then(r=>r.json()),fetch('/api/mapconfig',{cache:'no-store'}).then(r=>r.json()).catch(()=>null)]);if(!d.ok)throw Error();ALL=d.artists||[];MAPCFG=m&&m.ok?m:null;fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render();if(new URLSearchParams(location.search).get('map')==='1'&&!$('#mapBtn').hidden)openMap()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
+(async()=>{try{const E=window.__early||{};window.__early=null;const [d,m]=await Promise.all([(E.artists||fetch('/api/fan?what=artists&maps=1',{cache:'no-store'})).then(r=>r.json()),(E.map||fetch('/api/fan?what=mapconfig',{cache:'no-store'})).then(r=>r.json()).catch(()=>null)]);if(!d.ok)throw Error();ALL=d.artists||[];MAPCFG=m&&m.ok?m:null;fill($('#country'),unique(ALL.flatMap(a=>a.locations.map(l=>l.country))),'countries');fill($('#city'),cities(),'cities');fill($('#style'),unique(ALL.map(a=>a.style)),'styles');render();if(new URLSearchParams(location.search).get('map')==='1'&&!$('#mapBtn').hidden)openMap()}catch(e){$('#artists').className='';$('#artists').innerHTML='<div class="emptyartists"><b>Couldn’t load artists</b>Please try again in a moment.</div>';$('#count').textContent='Artists'}})();
 if('serviceWorker'in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));
 </script>
 </body>

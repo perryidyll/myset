@@ -3,11 +3,12 @@
 //
 //   node tools/stamp.mjs
 //
-// /studio.js, /venue-studio.js, /biz.js and /studio-money.js are served "immutable,
-// one year" (netlify.toml), so the URL MUST change whenever the file does — the
-// stamp is the first 8 hex of the file's sha1, and test/structure.mjs fails when it
-// is out of date. Run this after every edit to any of them; it is idempotent and
-// prints what it did.
+// /studio.js, /venue-studio.js, /biz.js, /studio-money.js and /fan.js are served
+// "immutable, one year" (netlify.toml), so the URL MUST change whenever the file does
+// — the stamp is the first 8 hex of the file's sha1, and test/structure.mjs fails when
+// it is out of date. Run this after every edit to any of them; it is idempotent and
+// prints what it did. /fan.js is the fan pages' shared script (decision 0087): nine
+// pages carry its stamp, one line each.
 //
 // PAIRS is ORDERED: studio.js carries the stamps of the two dashboard scripts it
 // loads on demand, so those are rewritten first and studio.js's own stamp is taken
@@ -20,7 +21,11 @@ export const PAIRS = [
   ['public/studio.js', 'biz.js'], ['public/studio.js', 'studio-money.js'],
   ['public/report.html', 'biz.js'],
   ['public/studio.html', 'studio.js'], ['public/venue-studio.html', 'venue-studio.js'],
+  ...['index', 'artist', 'artists', 'vote', 'community', 'venue', 'about', 'shop', 'diary'].map((p) => [`public/${p}.html`, 'fan.js']),
 ];
+/* The pages that load the fan pages' shared script — every check that reads one of them
+   reads fan.js too (test/_src.mjs), and none may declare a name fan.js declares. */
+export const FANPAGES = PAIRS.filter(([, js]) => js === 'fan.js').map(([page]) => page);
 export const stampOf = (js) => createHash('sha1').update(js).digest('hex').slice(0, 8);
 export const stampRe = (js) => new RegExp(`(["'/]${js.replace('.', '\\.')}\\?v=)[0-9a-f]{8}`);
 if (process.argv[1] && process.argv[1].endsWith('stamp.mjs')) {

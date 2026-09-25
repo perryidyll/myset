@@ -265,8 +265,8 @@ body.live #toast{bottom:calc(112px + env(safe-area-inset-bottom))}
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
+<script src="/fan.js?v=580721d7"></script>
 <script>
-const $=s=>document.querySelector(s), API='/api';
 /* /<slug>/diary — and the bare file with ?a= so tools/uicheck.mjs can open it. A
    venue has no diary, so there is no /v/ branch here. */
 const P=location.pathname.split('/').filter(Boolean), qs=new URLSearchParams(location.search);
@@ -274,34 +274,17 @@ const SLUG=(P[0]&&P[0]!=='diary.html')?P[0]:(qs.get('a')||'');
 const Q=SLUG?'?a='+encodeURIComponent(SLUG):'?';
 const AQ=SLUG?'&a='+encodeURIComponent(SLUG):'';
 const HOME=SLUG?'/'+SLUG:'/artist.html', VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 { const c=document.getElementById('crumb'); if(c) c.href=HOME; }   // the crumb points at THIS artist's page, resolved with the slug
-(()=>{ let a=null,v=null; try{ a=localStorage.getItem('myset.token')||localStorage.getItem('myset.admin'); v=localStorage.getItem('myset.vtoken'); }catch(e){}
-  const A=document.getElementById('mArtist'), V=document.getElementById('mVenue');
-  if(A){ A.href=a?'/studio?tab=diary':'/signup'; document.getElementById('mArtistS').textContent=a?'Open your Studio':'Set one up — it’s free'; }
-  if(V){ document.getElementById('mVenueS').textContent=v?'Open your Studio':'Set one up — it’s free'; }
-  document.addEventListener('click',(e)=>{ const m=document.getElementById('menu'); if(m&&m.open&&!m.contains(e.target)) m.open=false; });
-})();
-let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
+menuDoors('diary');
 /* the band name or first name the artist chose (decision 0062), else the first word */
-const firstName=()=>(D&&String(D.first||'').trim())||String(D&&D.name||'the artist').split(' ')[0]||'the artist';
+const firstName=()=>firstNameOf(D);
 /* The share sheet where the phone has one, the clipboard where it doesn't. */
-function share(){ const url=new URL(location.pathname,location.origin).href, title=((D&&D.name)||'MySet')+' — Diary';
-  if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
-  try{ navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast(url)); }catch(e){ toast(url); } }
+function share(){ shareLink(new URL(location.pathname,location.origin).href, ((D&&D.name)||'MySet')+' — Diary'); }
 
 /* ---------- state, load, render ---------- */
 /* globals on purpose: tools/uicheck.mjs sets D and calls render() */
 var D=null;
-let HID=0, LIFT=0;
-const cssReady=()=>{try{return [...document.styleSheets].some(s=>s.href&&/\/app\.css/.test(s.href))}catch(e){return true}};
-/* the splash lifts when the cached paint is styled (app.css has landed) or after 400 ms, whichever is first */
-function lift(wait){
-  const i=document.getElementById('intro'); if(!i||i.classList.contains('off')||LIFT) return;
-  if(!wait||cssReady()){ i.classList.add('off'); return; }
-  LIFT=1; const t0=Date.now();
-  const k=()=>{ if(cssReady()||Date.now()-t0>400) i.classList.add('off'); else requestAnimationFrame(k); }; requestAnimationFrame(k);
-}
+let HID=0;
 async function load(){
   try{
     const E=window.__early||{}; window.__early=null;     // the head started this; see <head>

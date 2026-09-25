@@ -13,7 +13,7 @@
    Needs Chrome and puppeteer-core, which live outside this repo, so it is not part
    of `sh test/run.sh` — same arrangement as tools/clipcheck.mjs. */
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
-import puppeteer from '/Users/perryidyll/Docs/MySet-Content/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
+import puppeteer from './_puppeteer.mjs';   // resolved by content, not by a typed path (2026-09-25)
 const ROOT=process.env.MYSET_PUBLIC||path.join(path.dirname(fileURLToPath(import.meta.url)),'..','public');   // the public/ beside THIS file — a worktree checks its own pages; MYSET_PUBLIC overrides (2026-09-13)
 const T={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
 const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');const p=path.join(ROOT,u.pathname);

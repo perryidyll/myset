@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 10:48 — ce92ad2 — wt@perf/fan-script (38 files since origin/main)
+**tl;dr:** The nine fan pages share one script (public/fan.js, decision 0087) and a fan's first open paints first (0088): one picture per slot on the artist page (~400 KB of originals gone), no blocking script in any head, the vote page's logo screen at HTML arrival with app.css's tokens inline and app.css preloaded, the directory and the map key through the warm door and edge-shared
+**Other sessions:** fan.js is a global namespace — never declare $, esc, toast, openSheet/closeSheet/attachDrag, drift, lift, hideIntro, MON/DOW, SHEETY, FROZEN… on a fan page (test/structure.mjs refuses); after ANY edit to fan.js run node tools/stamp.mjs (nine pages). vote.html's <style id=tokens> must equal app.css's :root blocks byte for byte — a token edit is a two-file edit. Never a layered background-image url(a),url(b) on a fan page (0gd). fan.mjs DOORS += artists, mapconfig (jsonCached 60/300 s); index/artists ask /api/fan?what=…, old addresses still up. uicheck/sheetcheck/clipcheck run again (tools/_puppeteer.mjs finds puppeteer-core by content). The ~/Docs/MySet checkout is 67+ commits behind origin/main — work from a worktree of origin/main.
+
 ### 2026-09-24 00:28 — 3e701b9 — landing-wt2@hero-subtext (2 files since origin/main)
 **tl;dr:** Hero subtext now ends 'And you get more tips.' with that phrase and 'from your setlist' both in orange
 **Other sessions:** public/about.html line ~397 only; no code/behavior change

@@ -544,10 +544,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 270 (last: 0fn) |
+| Invariants | 272 (last: 0fn) |
 | Test suites | 54 |
 | Assertions | **3,432**, 0 failing, last run 2026-09-18 |
-| Decision records | 86 |
+| Decision records | 88 |
 
 ### Feature flags in force
 
@@ -1030,7 +1030,11 @@ both Studios provide explicit light palettes rather than assuming a dark stage s
 
 Static HTML pages plus **Netlify Functions** on **Netlify Blobs**. No framework, no build
 step, no database. Every page is one self-contained file with its own styles and script;
-`app.css` carries the shared design tokens and is **not** loaded by either Studio.
+`app.css` carries the shared design tokens and is **not** loaded by either Studio. Since
+decision `0087` the nine fan pages also load one shared script, `public/fan.js` — the
+bottom sheet, the toast, the share sheet, the date words, the strips, the rsvp memory —
+hash-stamped and kept a year like the Studio scripts (`node tools/stamp.mjs` after any
+edit; INVARIANT 0gc: no page redeclares a name it declares).
 
 **Two dependencies only:** `@netlify/blobs` and `stripe`.
 

@@ -839,7 +839,9 @@ const srv = http.createServer(async (rq, rs) => {
     const what = q.get('what'), venue = q.has('v'), slug = q.get('a') || q.get('v') || 'demo';
     if (what === 'community') return json(rs, communityFixture(slug, venue, st));
     if (what === 'profile') return json(rs, profileFixture(st));
-    if (what === 'events') return json(rs, gigsFixture());
+    if (what === 'events') return json(rs, q.has('places') ? placesFixture() : q.has('a') ? gigsFixture() : cityFeed(q));   // the front door reads through the door too (0088)
+    if (what === 'artists') return json(rs, artistsFixture());
+    if (what === 'mapconfig') return json(rs, { ok: true, enabled: false, key: '' });
     if (what === 'board') return json(rs, boardFixture(st));
     if (what === 'me') return json(rs, meFixture(st));
     if (what === 'venue') return json(rs, venuePage(st));

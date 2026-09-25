@@ -38,7 +38,7 @@ export default async (req) => {
       countries.push({ country, cities: list, gigs: list.reduce((s, c) => s + c.gigs, 0) });
     }
     countries.sort((a, b) => b.gigs - a.gigs || a.country.localeCompare(b.country));
-    return jsonCached({ ok: true, src: MARK, countries }, 60);   // the front door's picker, one run a minute
+    return jsonCached({ ok: true, src: MARK, countries }, 300);   // the front door's picker: five minutes at the edge (decision 0088; was one — a new city shows within five)
   }
 
   /* ---- one artist's gig list ---- */

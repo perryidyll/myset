@@ -69,6 +69,8 @@ console.log('THE PAGES ASK THE DOOR');
     ['community', ['what=community']],
     ['shop',      ['what=community']],
     ['venue',     ['what=venue']],
+    ['index',     ['what=events&places=1', 'what=events&country=']],   // decision 0088: the front door through the door too
+    ['artists',   ['what=artists&maps=1', 'what=mapconfig']],
   ]) {
     const src = readFileSync(`public/${page}.html`, 'utf8');
     for (const w of wants) ok(`${page}.html asks /api/fan?${w}`, src.includes('/api/fan?' + w) || src.includes('/fan?' + w));

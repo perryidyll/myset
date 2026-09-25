@@ -11,7 +11,7 @@
    Needs Chrome and puppeteer-core, which live outside this repo — same arrangement
    as tools/clipcheck.mjs and tools/sheetcheck.mjs. */
 import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path'; import { fileURLToPath } from 'node:url';
-import puppeteer from '/Users/perryidyll/Docs/MySet-Content/node_modules/puppeteer-core/lib/esm/puppeteer/puppeteer-core.js';
+import puppeteer from './_puppeteer.mjs';   // resolved by content, not by a typed path (2026-09-25)
 const ROOT=process.env.MYSET_PUBLIC||path.join(path.dirname(fileURLToPath(import.meta.url)),'..','public');   // the public/ beside THIS file — a worktree checks its own pages; MYSET_PUBLIC overrides (2026-09-13)
 const T={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css'};
 /* THE MONEY TAB'S FIXTURE (decision 0065): a signed-in Bar Star owner with one
@@ -71,6 +71,7 @@ const MOCK={
     return {ok:true};
   }};
 const srv=http.createServer((rq,rs)=>{const u=new URL(rq.url,'http://x');
+ if(u.pathname==='/api/fan'&&/^(artists|mapconfig)$/.test(u.searchParams.get('what')||''))u.pathname='/api/'+u.searchParams.get('what');   // the directory reads through the fan door since 0088; the same fixtures answer
  const J=(o)=>{rs.writeHead(200,{'content-type':'application/json'});rs.end(JSON.stringify(o));};
  const whoami=rq.headers.authorization==='Bearer tok-b'?'b':'a';
  if(u.pathname==='/api/stage')return J(whoami==='b'?{...MOCK.stage,show:{...MOCK.stage.show,artistId:'other',slug:'other',artist:'Other Artist'}}:MOCK.stage);

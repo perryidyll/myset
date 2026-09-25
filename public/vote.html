@@ -32,14 +32,108 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="stylesheet" href="/app.css">
-<!-- Loaded BLOCKING, not deferred, on purpose: every page calls MySetPull()
-     from an inline script, and a deferred script runs AFTER all of those —
-     so `defer` here makes MySetPull undefined at the moment it is called and
-     the gesture silently never arms. 4KB, same origin, and the service worker
-     serves it from cache, so blocking costs nothing measurable. -->
-<script src="/pull.js"></script>
+<!-- THE TOKENS, INLINE (decision 0088): the top of app.css — every :root block — byte for byte
+     (test/structure.mjs says so), so the first paint has its colours before app.css has
+     arrived. app.css itself is no longer render-blocking: preloaded, applied on arrival, and the
+     board is not drawn until it is here (render() waits for it, 400 ms at most, like lift() on
+     the shop). Measured 2026-09-25: the blocking link cost a first visit 0.16–0.67 s before a
+     single pixel, on top of the HTML's own wait. -->
+<style id="tokens">
+:root{
+  /* Provenance marker. Arbitrary, meaningless, and referenced nowhere — that is
+     the point: a shared value with no function has no innocent explanation.
+     Registered in FINGERPRINTS.md. Do not "clean this up". */
+  --ms-k:ms-k3f9qz;
+  --bg:#F5F5F7;
+  --bg-2:#EBEBEF;
+  --surface:#FFFFFF;
+  --surface-2:#FFFFFF;
+  --ink:#1D1D1F;
+  --ink-2:#3A3A3C;
+  --muted:#6E6E73;
+  --faint:#A1A1A6;
+  --hair:rgba(0,0,0,.07);
+  --hair-2:rgba(0,0,0,.12);
+
+  --accent:#FF375F;
+  --accent-2:#FF5650;   /* the logo's pink-orange: the middle of --grad, not its warm end (the founder, 2026-09-13) */
+  --accent-ink:#FF5650;   /* accent as TEXT — the logo's pink-orange in both themes (the founder, 2026-09-13; was #D6003C / #FF8AA5) */
+  --accent-soft:rgba(255,86,80,.12);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));   /* the soft ground with the brand's hue shift */
+  --grad:linear-gradient(135deg,#FF375F 0%,#FF6B45 100%);
+  --grad-warm:linear-gradient(135deg,#FF375F 0%,#FF9F45 100%);
+
+  --r-xs:10px; --r-sm:14px; --r:18px; --r-lg:24px; --r-xl:30px; --pill:999px;
+
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09);
+  --sh-3:0 6px 18px rgba(0,0,0,.08),0 22px 55px rgba(0,0,0,.14);
+  --sh-accent:0 6px 20px rgba(255,55,95,.32);
+
+  --spring:cubic-bezier(.34,1.4,.64,1);
+  --ease:cubic-bezier(.4,0,.2,1);
+  --maxw:560px;
+  --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#000000; --bg-2:#0A0A0C;
+    --surface:#1C1C1E; --surface-2:#2C2C2E;
+    --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
+    --hair:rgba(255,255,255,.09); --hair-2:rgba(255,255,255,.16);
+    --accent:#FF456E; --accent-ink:#FF5650; --accent-soft:rgba(255,86,80,.18);
+    --grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
+    --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+    --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+    --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6);
+  }
+}
+/* A manual choice wins over the phone setting. The compact home-page switch
+   stores one value for every audience, artist-profile and venue page. */
+:root[data-theme=light]{
+  color-scheme:light;
+  --bg:#F5F5F7;--bg-2:#EBEBEF;--surface:#FFFFFF;--surface-2:#FFFFFF;
+  --ink:#1D1D1F;--ink-2:#3A3A3C;--muted:#6E6E73;--faint:#A1A1A6;
+  --hair:rgba(0,0,0,.07);--hair-2:rgba(0,0,0,.12);
+  --accent:#FF375F;--accent-ink:#FF5650;--accent-soft:rgba(255,86,80,.12);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.13),rgba(255,107,69,.13));
+  --sh-1:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.05);
+  --sh-2:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.09);
+  --sh-3:0 6px 18px rgba(0,0,0,.08),0 22px 55px rgba(0,0,0,.14)}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --bg:#000000;--bg-2:#0A0A0C;--surface:#1C1C1E;--surface-2:#2C2C2E;
+  --ink:#F5F5F7;--ink-2:#DDDDE0;--muted:#98989D;--faint:#68686D;
+  --hair:rgba(255,255,255,.09);--hair-2:rgba(255,255,255,.16);
+  --accent:#FF456E;--accent-ink:#FF5650;--accent-soft:rgba(255,86,80,.18);
+  --grad-soft:linear-gradient(135deg,rgba(255,55,95,.2),rgba(255,107,69,.2));
+  --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+  --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
+  --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6)}
+</style>
+<link rel="preload" href="/app.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="/app.css"></noscript>
 <style>
+/* THE LOGO SCREEN, painted by the HTML itself (decision 0088): the same three bars every
+   other fan page shows while its first read is on its way. This page used to show a
+   bare background until the board arrived — a QR scan's first second was nothing at
+   all. hideIntro() takes it off at the first paint of the board, or when the board
+   cannot be reached, so it is never a spinner forever. */
+#intro{position:fixed;inset:0;z-index:90;background:#F5F5F7;display:grid;place-items:center}
+:root[data-theme=dark] #intro{background:#0D0B0C}
+#intro.off{opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s .4s}
+#intro .bars{display:flex;align-items:flex-end;gap:9px;height:76px}
+#intro .bars i{width:15px;border-radius:8px;display:block;height:18px;transform-origin:bottom;
+  background:linear-gradient(135deg,#FF375F,#FF7A45);animation:introbar 1.05s ease-in-out infinite alternate}
+#intro .bars i:nth-child(1){animation-delay:.02s;--h:38px}
+#intro .bars i:nth-child(2){animation-delay:.12s;--h:64px}
+#intro .bars i:nth-child(3){animation-delay:.22s;--h:28px}
+#intro .word{margin-top:20px;font-size:23px;font-weight:700;letter-spacing:-.035em;text-align:center;color:#1D1D1F}
+:root[data-theme=dark] #intro .word{color:#fff}
+@keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
+@media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
+.noboard{margin:80px 22px;text-align:center;color:var(--muted);font-size:15px}
+.noboard b{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
 #app{padding-bottom:172px}
 .headtools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 /* The pill is a wallet, not a headline: 14px so the artist's name is the biggest
@@ -414,10 +508,14 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 </style>
 </head>
 <body>
+<div id="intro" aria-hidden="true"><div>
+  <div class="bars"><i></i><i></i><i></i></div>
+  <div class="word">MySet</div>
+</div></div>
 <div class="wrap"><div id="app"></div></div>
 <div class="dock" id="dock" hidden></div>
 <div class="bg" id="bg" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" inert></div>
 <div class="lastcall" id="lastcall" aria-live="assertive">
   <div class="n" id="lcN">10</div>
   <div class="m"><b>Last call</b><span>Get your votes in — the next song is about to start.</span></div>
@@ -426,8 +524,13 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
+<!-- pull.js sits with the other scripts at the end of the body (decision 0088): a
+     blocking script in the head held the whole page's parse for its own round trip —
+     0.15–0.5 s measured on a first visit, which is the visit that matters — and
+     nothing here calls MySetPull() before the body has arrived. -->
+<script src="/pull.js"></script>
+<script src="/fan.js?v=580721d7"></script>
 <script>
-const $=s=>document.querySelector(s), API='/api';
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
    /artist.html routes fall through to the founding artist. */
@@ -438,11 +541,7 @@ const AQ1=SLUG?'?a='+encodeURIComponent(SLUG):'';
 const HOME=SLUG?'/'+SLUG:'/';
 const VOTEHREF=SLUG?'/'+SLUG+'/vote':'/vote.html';
 
-function fanId(){let v=null;try{v=localStorage.getItem('myset.fan')}catch(e){}
-  if(!v){v='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',v)}catch(e){}}
-  return v;}
 const FAN=fanId();
-const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const buzz=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
 let ST=null,busy=new Set(),sel={},FILTER='',FOCUS=false,POP=null,PREV=null,BOOTED=false,SHEETED=false;
 
@@ -503,7 +602,13 @@ async function load(){
   if(m&&m.ok){ ME=m; ME.lastAt=Math.max(Number(ME.lastAt)||0,CAST_AT); }
   const fresh=!!(b&&b.d&&b.d.ok);
   if(fresh){ BOARD=b.d; BOARD.age=b.age; }
-  if(!BOARD) return;
+  if(!BOARD){
+    /* Nothing to draw yet — the logo screen goes and the page says so, rather than
+       staying bare; the poll and a pull both try again. */
+    hideIntro();
+    if(!BOOTED&&!$('#app').firstElementChild) $('#app').innerHTML=`<div class="noboard"><b>Couldn’t reach the room</b><p>Check the wifi, then pull down to try again.</p></div>`;
+    return;
+  }
   try{
     const el=document.activeElement; FOCUS=!!(el&&el.id==='q');
     const d=ST=mergeBoard(BOARD,ME);
@@ -935,14 +1040,7 @@ function nextGig(){ return (GIGS||[]).find(g=>g.endsAt>Date.now())||null; }
 function nextLabel(){
   if(GIGS===null) return 'Checking the calendar\u2026';
   const g=nextGig(); if(!g) return 'Nothing scheduled yet';
-  let ms=g.startsAt-Date.now();
-  if(ms<=0) return 'Starting now';
-  const d=Math.floor(ms/86400000); ms-=d*86400000;
-  const h=Math.floor(ms/3600000);  ms-=h*3600000;
-  const m=Math.floor(ms/60000);    const sec=Math.floor((ms-m*60000)/1000);
-  if(d>0) return `Live in ${d}d ${h}h ${m}m ${String(sec).padStart(2,'0')}s`;
-  if(h>0) return `Live in ${h}h ${m}m ${String(sec).padStart(2,'0')}s`;
-  return `Live in ${m}m ${String(sec).padStart(2,'0')}s`;
+  return liveIn(g.startsAt-Date.now());
 }
 function nextWhere(){
   const g=nextGig(); if(!g) return '';
@@ -957,11 +1055,7 @@ function nextWhere(){
    phone happens to be holding (a ?paid= return, say) and not HOME, which is the
    profile: the title says "Vote the setlist", so the link has to land on the
    voting page. Same shape as community.html's share(). */
-function share(){
-  const url=new URL(VOTEHREF,location.origin).href, title=`Vote the setlist${artistName('')?' — '+artistName(''):''}`;
-  if(navigator.share){ navigator.share({title,url}).catch(()=>{}); return; }
-  try{ navigator.clipboard.writeText(url).then(()=>toast('Link copied'),()=>toast(url)); }catch(e){ toast(url); }
-}
+function share(){ shareLink(new URL(VOTEHREF,location.origin).href, `Vote the setlist${artistName('')?' — '+artistName(''):''}`); }
 
 /* FLIP for the re-rank. render() throws the whole list away, so a song that
    climbed two places simply teleported. Measure every keyed row before the swap,
@@ -993,7 +1087,15 @@ function flipPlay(first){
   setTimeout(()=>moved.forEach(el=>{ el.style.transition=''; }),260);
 }
 
+let CSSWAIT=0;   // when the first paint started waiting for app.css (decision 0088)
 function render(){
+  /* The first paint waits for app.css — preloaded, no longer blocking — so the board
+     never flashes unstyled; 400 ms at most, the same bound lift() uses on the shop. */
+  if(!BOOTED&&!cssReady()){
+    if(!CSSWAIT){ CSSWAIT=Date.now(); const k=()=>{ if(cssReady()||Date.now()-CSSWAIT>400) render(); else requestAnimationFrame(k); }; requestAnimationFrame(k); }
+    else if(Date.now()-CSSWAIT<=400) return;
+  }
+  if(!BOOTED) hideIntro();
   const d=ST,c=d.credits;
   const FIRST=flipFirst();
   const pageY=window.scrollY;
@@ -1347,94 +1449,9 @@ async function sendAsk(kind,withOffer=false){
 function setFilter(v){ FILTER=v; FOCUS=false; render(); }
 
 /* ── sheets ── */
-/* The audience sheet had a 5px-tall bar and nothing else: no way to drag it down and
-   no visible way out, so a fan who opened it by mistake was stuck reading. The
-   Studio's sheets already solved this, so this is that same solution — a grab ZONE
-   big enough for a thumb, an ✕ in the corner, and a real drag. */
-let SHEETY=0;                    // where the page was before it was frozen
-function openSheet(h){
-  const sh=$('#sheet');
-  if(!document.body.classList.contains('sheeting')){
-    SHEETY=window.scrollY||0;
-    document.body.style.top=`-${SHEETY}px`;
-    document.body.classList.add('sheeting');
-  }
-  sh.innerHTML=`<div class="grabzone"><div class="grab"></div>
-    <button class="sheetx" onclick="closeSheet()" aria-label="Close">✕</button></div>${h}`;
-  sh.style.transform=''; sh.scrollTop=0;
-  $('#bg').classList.add('on'); sh.classList.add('on');
-  attachDrag(sh);
-}
-function closeSheet(){
-  const sh=$('#sheet');sh.style.transition='';sh.style.transform='';
-  $('#bg').classList.remove('on');sh.classList.remove('on');
-  if(document.body.classList.contains('sheeting')){
-    document.body.classList.remove('sheeting'); document.body.style.top='';
-    window.scrollTo(0,SHEETY);
-  }
-}
+/* ── THE SHEET ── openSheet(h,label), closeSheet() and the drag are fan.js's (decision 0087): a grab zone,
+   an ✕, a real drag, the page behind frozen and inert (INVARIANTS 0f0–0f2). Opening again while open only swaps the body. */
 
-function attachDrag(sh){
-  /* ONE set of listeners for the life of the page. This used to bind a fresh pair
-     on every openSheet: the .grabzone was replaced each time so its listeners went
-     with it, but the ones on the sheet itself piled up, and each stale closure kept
-     its own y0 and raced the live one at the end of a drag \u2014 which is how a sheet
-     ends up stuck halfway down. Everything is delegated from the sheet now.
-     The \u2715 is a button inside the grab zone, so it is skipped: a drag that began
-     on it called preventDefault and ate the tap. */
-  if(sh.__drag)return;
-  sh.__drag=true;
-  let y0=null, dy=0, t0=0, fromBody=false;
-  const CONTROL='input,textarea,select,button,a,[contenteditable]';
-  /* THE SHEET IS CENTRED WITH translateX(-50%), so every transform written here
-     has to carry it. Dropping it moved the sheet half its own width to the right
-     the instant a finger touched it — which looked like the sheet had come loose
-     rather than like a missing term in one string. */
-  const SHIFT='translateX(-50%) ';
-  const HANDLE='.grabzone,h3,.lede';
-  /* Anything that scrolls on its own — the lyrics — is NOT a place to start
-     dragging the sheet from. Otherwise reading the words pulls the whole sheet
-     down instead of moving the text. */
-  const SCROLLER='.lyr';
-  const start=(e,body)=>{ y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now();
-    fromBody=!!body; sh.style.transition='none'; };
-  const move=(e)=>{
-    if(y0===null)return;
-    dy=((e.touches?e.touches[0]:e).clientY)-y0;
-    if(dy<0){ dy=0; sh.style.transform=SHIFT+'translateY(0)'; return; }
-    // dragging from the body only counts while the sheet is still scrolled to the top
-    if(fromBody&&sh.scrollTop>0){ y0=null; sh.style.transition=''; sh.style.transform=''; return; }
-    sh.style.transform=SHIFT+`translateY(${dy}px)`;
-    if(e.cancelable)e.preventDefault();
-  };
-  const end=()=>{
-    if(y0===null)return;
-    const speed=dy/Math.max(1,Date.now()-t0);
-    y0=null;
-    sh.style.transition='';
-    if(dy>70||speed>0.45) closeSheet(); else sh.style.transform=SHIFT+'translateY(0)';
-  };
-  const begin=(e)=>{
-    const t=e.target;
-    if(!t||!t.closest)return;
-    if(t.closest(CONTROL))return;
-    if(t.closest(SCROLLER))return;
-    const inZone=!!t.closest(HANDLE);
-    if(!inZone&&sh.scrollTop>0)return;
-    start(e,!inZone);
-  };
-  sh.addEventListener('touchstart',begin,{passive:true});
-  sh.addEventListener('touchmove',move,{passive:false});
-  sh.addEventListener('touchend',end);
-  sh.addEventListener('touchcancel',end);
-  sh.addEventListener('mousedown',(e)=>{
-    if(!e.target.closest(HANDLE)||e.target.closest(CONTROL))return;
-    start(e,false);
-    const mm=(ev)=>move(ev), mu=()=>{ end();
-      window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
-    window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
-}
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
 async function openLyrics(){
   const np=ST&&ST.nowPlaying; if(!np)return;
   openSheet(`<h3>${esc(np.title)}</h3>
@@ -1519,13 +1536,6 @@ function pickSongVotes(v){sel.songVotes=v;buzz(8);[5,10].forEach(k=>$('#sv-'+k).
    whether the number they typed or the tile still glowing is what they are paying
    (the founder, after his own $1 tip, 2026-09-15). Empty and unfocused, the preset
    comes back. */
-function customAmt(inp,ids,pre,dflt,btn){
-  const has=inp===document.activeElement||!!inp.value;
-  ids.forEach(k=>{const el=$('#'+pre+k);if(el)el.classList.toggle('on',!has&&k===dflt);});
-  inp.classList.toggle('on',has);
-  const b=$('#'+btn),c=parseFloat(inp.value);
-  if(b&&!b.disabled)b.textContent='Continue to payment'+(has&&Number.isFinite(c)&&c>0?' \u00b7 $'+c:'');
-}
 
 async function checkout(kind){
   const btn=kind==='votes'?$('#goBuy'):kind==='song_votes'?$('#goSongVotes'):$('#goTip');
@@ -1638,8 +1648,6 @@ async function handleReturn(){
     await redeem(p.id,false);
   }
 }
-const money=c=>{const n=(Number(c)||0)/100;return '$'+(n%1?n.toFixed(2):String(n));};
-let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3600);}
 
 /* Adaptive polling. Every phone in the room hitting the server every 3 seconds
    is 24,000 function calls for a two-hour gig — enough to burn a month's free
