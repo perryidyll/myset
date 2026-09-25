@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-25 13:10 — 6a9e270 — wt@docs/mark-launcher (3 files since origin/main)
+**tl;dr:** Docs only: the founder takes bandwidth marks with ~/myset-mark.sh before|start|after "venue" [Studio minutes] — a launcher for ~/Docs/Project Handoffs/myset-mark.sh (his ~/Docs/MySet checkout is an old base and has no tools/mark.sh) [skip ci]
+**Other sessions:** Nothing in the code changed; tools/mark.sh, the handoffs copy and the launcher are the same script. Do not tell the founder to run ~/Docs/MySet/tools/mark.sh — that file is not on his checkout.
+
 ### 2026-09-25 13:07 — 98b2f31 — wt@marks/founder-script (8 files since origin/main)
 **tl;dr:** The founder can take the three bandwidth marks himself with one command and no git: tools/mark.sh before|start|after "venue" [Studio minutes] (copy in ~/Docs/Project Handoffs/myset-mark.sh); and the money model now says every measured night is a Thai night — $1.04 a head is a floor for a tipping market, not a ceiling
 **Other sessions:** tools/actuals.py read_marks() now merges finance/marks.json with ~/.myset-marks.json (MARKS_OWN / MYSET_MARKS_FILE); --write folds the founder's marks into the repo file — commit finance/marks.json after a --write. mark.sh fetches origin/main's tracker fresh each run, so it works from the diverged ~/Docs/MySet checkout. No engine change; SEED unchanged.
