@@ -260,10 +260,16 @@
    behind; `touch-action:pan-y` tells the browser this is a vertical scroller
    before any JS runs, so the first frame of a swipe is never stolen. */
 .lyr{max-height:62vh;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
-  -webkit-overflow-scrolling:touch;margin:4px -4px 0;padding:0 4px;
-  font-size:18px;line-height:1.72;white-space:pre-wrap;overflow-x:hidden;overflow-wrap:anywhere;
-  word-break:break-word;max-width:100%;min-width:0;color:var(--ink-2);letter-spacing:-.005em;
+  -webkit-overflow-scrolling:touch;margin:4px -14px 0;padding:0 14px;
+  font-size:19px;line-height:1.55;white-space:pre-wrap;overflow-x:hidden;overflow-wrap:anywhere;
+  word-break:break-word;max-width:none;min-width:0;color:var(--ink);letter-spacing:-.012em;
   -webkit-user-select:none;user-select:none}
+/* One block per verse, every other one on a light grey band, so a room singing
+   along can find its place again (decision 0090). The box reaches into the sheet's
+   padding so the bands do too, while the words stay in line with the title. */
+.lyr-st{margin:0 -14px;padding:16px 14px;border-radius:16px}
+.lyr-st:nth-child(even){background:rgba(120,120,128,.12)}
+html[data-theme=dark] .lyr-st:nth-child(even){background:rgba(120,120,128,.24)}
 .lyrfoot{margin:16px 0 0;padding-top:13px;border-top:.5px solid var(--hair);
   font-size:12px;color:var(--faint);line-height:1.5}
 .lyrfoot b{display:block;color:var(--muted);font-weight:600;font-size:12.5px;margin-bottom:2px}
@@ -1465,7 +1471,11 @@ async function openLyrics(){
       No lyrics for this one yet — you’ll have to wing it. 🎤</p>`;
     return;
   }
-  el.textContent=d.plain;
+  // one block per verse, split on the blank lines, each set as text — never HTML
+  el.textContent='';
+  String(d.plain||'').replace(/\r\n?/g,'\n').split(/\n(?:[ \t]*\n)+/).forEach(t=>{
+    t=t.replace(/^\n+|\s+$/g,''); if(!t)return;
+    const b=document.createElement('div'); b.className='lyr-st'; b.textContent=t; el.appendChild(b); });
   const foot=document.createElement('div');
   foot.className='lyrfoot';
   // "Unofficial" is the honest label: this is a community-contributed database,

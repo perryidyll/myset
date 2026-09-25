@@ -3036,6 +3036,7 @@ function attachDrag(sh){
     if(!t||!t.closest)return;
     if(t.closest(CONTROL))return;                   // never fight a control
     if(t.closest(HSCROLL))return;                   // a sideways carousel is not a dismiss
+    if(t.closest('.chartview'))return;              // the words scroll on their own (INVARIANT 0f1)
     /* The editor's sticky profit readout (.bizro) sits over the top of the sheet,
        so a thumb on the handle lands on it — it counts as the grab zone. The
        editor used to refuse a body drag (fifteen inputs must not vanish); the
@@ -3255,6 +3256,14 @@ async function openChart(id){
     <button class="big alt" style="margin-top:16px" data-act="edit" data-id="${esc(id)}">Edit this song</button>`);
 }
 
+/* One block per verse, split on the blank lines, each set as text — never HTML.
+   The CSS bands every other one. Same code as the vote page's. */
+function verses(el,plain){
+  el.textContent='';
+  String(plain||'').replace(/\r\n?/g,'\n').split(/\n(?:[ \t]*\n)+/).forEach(t=>{
+    t=t.replace(/^\n+|\s+$/g,''); if(!t)return;
+    const b=document.createElement('div'); b.className='lyr-st'; b.textContent=t; el.appendChild(b); });
+}
 async function openStageLyrics(id){
   const x=songById(id); if(!x)return;
   openSheet(`<h3>${esc(x.title)}</h3><p class="lede">${esc(x.artist||'')}</p>
@@ -3263,8 +3272,8 @@ async function openStageLyrics(id){
   const aq=ASLUG?'&a='+encodeURIComponent(ASLUG):'';
   try{d=await fetch(`${API}/lyrics?song=${encodeURIComponent(id)}${aq}`).then(r=>r.json());}catch(e){}
   const el=$('#stageLyrics');if(!el)return;
-  if(!d||!d.ok||!d.found){el.innerHTML='<p class="muted" style="white-space:normal">No lyrics for this one yet — you’ll have to wing it. 🎤</p>';return;}
-  el.textContent=d.plain;
+  if(!d||!d.ok||!d.found){el.innerHTML='<p class="muted" style="white-space:normal;font-size:15px">No lyrics for this one yet — you’ll have to wing it. 🎤</p>';return;}
+  verses(el,d.plain);
   const foot=document.createElement('p');foot.className='muted';foot.style.cssText='font-size:12px;margin-top:14px';
   foot.textContent='Unofficial lyrics · '+(d.credit||'community-contributed, may not be exact');el.after(foot);
 }
