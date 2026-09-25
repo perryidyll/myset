@@ -25,3 +25,9 @@ post, every metric Instagram will give, every pull kept as a curve, boosts logge
 - `sh test/run.sh` on the branch: every section green, exit 0 (the last sections printed
   44/0, 63/0, 59/0, 20/0, 91/0, 89/0; `test/structure.mjs` walked `public/mediadash.html`
   with the other pages and raised nothing).
+- Deploy preview 92 (`deploy-preview-92--mysetvip.netlify.app`): `/mediadash` answers the page
+  by content (`<title>MySet Signal</title>`, the hero line); `/api/mediadash` answers
+  `{ok:true, empty:true}` before any push; a boost without a code → 401; a push with a wrong
+  key → 401. The first push from the engine also got 401: the preview had been built before
+  `MEDIADASH_KEY` landed in Netlify's env, so the branch was rebuilt (this commit) and the push
+  repeated — result below.
