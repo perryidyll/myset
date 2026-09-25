@@ -38,6 +38,32 @@ ok('samcole (no calendar, not in the registry) falls back to the old rules with 
 ok('interactions = votes + requests per phone (Mon: 27 + 4 over 14 phones)', next(r for r in rows if sid(r) == '2026-09-07-1330-nc5m')['interactions'] == round(31 / 14, 2))
 ok('room money comes only from nights Stripe answered ($0.375, one night)', A.per_head(rows) == 0.375 and sum(r['moneyKnown'] for r in rows) == 1)
 avg = lambda k: round(sum(r[k] for r in rows) / len(rows), 3)
+
+print('\nTHE 25 SEP SNAPSHOT — the fortnight audit, and what the server register must agree with (decision 0095)')
+FIX25 = os.path.join(HERE, '..', 'finance', 'fixtures', '2026-09-25')
+def blob25(key):
+    try:
+        return json.load(open(os.path.join(FIX25, key + '.json')))
+    except Exception:
+        return None
+A.blob = blob25
+A.keys = lambda: [l.strip() for l in open(os.path.join(FIX25, 'keys.txt')) if l.strip()]
+A.calendar.__defaults__[0].clear(); A.requests_by_show.__defaults__[0].clear()
+rows25, skipped25, unused25 = A.shows()
+ok('fifteen nights count, two are unused, thirteen refused', (len(rows25), len(unused25), len(skipped25)) == (15, 2, 13), (len(rows25), len(unused25), len(skipped25)))
+ok('$1.037 a head over eleven money-known nights', A.per_head(rows25) == 1.037 and sum(r['moneyKnown'] for r in rows25) == 11, (A.per_head(rows25), sum(r['moneyKnown'] for r in rows25)))
+ok('8.6 phones and 2.73 h a night — the seed the model carries', (round(sum(r['people'] for r in rows25) / 15, 2), round(sum(r['hours'] for r in rows25) / 15, 2)) == (8.6, 2.73), (round(sum(r['people'] for r in rows25) / 15, 2), round(sum(r['hours'] for r in rows25) / 15, 2)))
+sil25 = A.silent_nights(rows25, unused25, now_ms=1790265600000)   # 2026-09-25T04:00Z, the snapshot's own morning
+ok('five published gigs left no record', len(sil25) == 5, [(s['eventId'], s['date']) for s in sil25])
+# a merged night takes untagged money once
+two = [dict(r) for r in rows25 if r['moneyKnown']][:2]
+two[1] = {**two[1], 'gig': two[0]['gig'], 'startedAt': two[0]['endedAt'] + 1000, 'endedAt': two[0]['endedAt'] + 3600e3, 'tagged': 4.0, 'untagged': 3.0, 'gross': 7.0, 'lastActivityHours': 0.5, 'setHours': None}
+two[0] = {**two[0], 'tagged': 6.0, 'untagged': 3.0, 'gross': 9.0}
+m = A.merge_split_nights(two)
+ok('two records in one slot: tagged money summed, untagged taken once (6 + 4 + 3, not + 6)', len(m) == 1 and m[0]['gross'] == 13.0 and m[0]['untagged'] == 3.0, m[0].get('gross'))
+A.blob = blob
+A.keys = lambda: [l.strip() for l in open(os.path.join(FIX, 'keys.txt')) if l.strip()]
+A.calendar.__defaults__[0].clear(); A.requests_by_show.__defaults__[0].clear()
 ok('averages: 11.0 phones, 2.738 h, 2.348 interactions', avg('people') == 11.0 and avg('hours') == 2.738 and avg('interactions') == 2.348, (avg('people'), avg('hours'), avg('interactions')))
 
 print('SILENT NIGHTS from the calendar')

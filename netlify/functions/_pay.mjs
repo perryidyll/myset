@@ -174,7 +174,8 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       if (m.paid[sid] && m.paid[sid].delivered !== false) { already = true; return false; }
       if (md.kind === 'votes') granted = parseInt(md.votes, 10) || 0;
       if (md.kind === 'song_votes') granted = parseInt(md.votes, 10) || 0;
-      if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at });
+      // the night it was tagged with rides along (0095) so the app's own record can say which show a tip or a pack belonged to without asking Stripe
+      if (md.kind === 'tip') m.tips.push({ fan: who, amount, note: md.note || '', at, show: String(md.show || '').slice(0, 40) });
       /* MERCH. What the buyer bought is an ORDER the artist fulfils by hand, so the
          order record IS the delivery — written inside this same claim, so a session
          can never be claimed without it. Nothing about the buyer is stored: their
@@ -198,7 +199,7 @@ export async function redeemSession(aid, session, fallbackFan = '') {
       }
       const needsGrant = (md.kind === 'votes' || md.kind === 'song_votes') && !!who && granted > 0;
       m.paid[sid] = { kind: md.kind || 'unknown', amount, granted, fan: who, at,
-                      song: md.song || '', delivered: !needsGrant };
+                      song: md.song || '', show: String(md.show || '').slice(0, 40), delivered: !needsGrant };
       return true;
     });
     if (already) {

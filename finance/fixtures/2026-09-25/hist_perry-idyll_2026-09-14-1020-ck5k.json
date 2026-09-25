@@ -1,0 +1,113 @@
+{
+"v": 1,
+"showId": "2026-09-14-1020-ck5k",
+"artistId": "perry-idyll",
+"title": "",
+"venue": "",
+"city": "",
+"showTime": "8:00 PM",
+"startedAt": 1789381227535,
+"endedAt": 1789392632129,
+"key": null,
+"played": [
+{
+"songId": "tennessee-whiskey",
+"title": "Tennessee Whiskey",
+"artist": "Chris Stapleton",
+"votes": 7,
+"voters": 1,
+"roundVotes": 7,
+"replay": false,
+"at": 1789381438772
+}
+],
+"requested": [
+{
+"songId": "feel-it-still",
+"title": "Feel It Still",
+"artist": "Portugal. The Man",
+"votes": 10
+},
+{
+"songId": "stick-season",
+"title": "Stick Season",
+"artist": "Noah Kahan",
+"votes": 10
+},
+{
+"songId": "fast-car",
+"title": "Fast Car",
+"artist": "Tracy Chapman",
+"votes": 8
+},
+{
+"songId": "hey-jude",
+"title": "Hey Jude",
+"artist": "The Beatles",
+"votes": 6
+},
+{
+"songId": "banana-pancakes",
+"title": "Banana Pancakes",
+"artist": "Jack Johnson",
+"votes": 4
+},
+{
+"songId": "circles",
+"title": "Circles",
+"artist": "Post Malone",
+"votes": 4
+},
+{
+"songId": "imagine",
+"title": "Imagine",
+"artist": "John Lennon",
+"votes": 4
+},
+{
+"songId": "jack-diane",
+"title": "Jack & Diane",
+"artist": "John Mellencamp",
+"votes": 2
+},
+{
+"songId": "bar-song-tipsy",
+"title": "Bar Song (Tipsy)",
+"artist": "Shaboozey",
+"votes": 1
+}
+],
+"stats": {
+"songsPlayed": 1,
+"totalVotes": 33,
+"peakVoters": 1,
+"room": 1,
+"nets": 1,
+"topSong": {
+"songId": "tennessee-whiskey",
+"title": "Tennessee Whiskey",
+"votes": 7
+}
+},
+"money": {
+"currency": "USD",
+"gross": 0,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 0,
+"count": 0
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789392632129
+},
+"archivedAt": 1789392632129
+}

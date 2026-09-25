@@ -1,0 +1,198 @@
+{
+"v": 1,
+"showId": "2026-09-23-1130-uqwj",
+"artistId": "perry-idyll",
+"title": "Anantara \u2013 Sep 23, 2026",
+"venue": "Anantara Rasananda Resort \ud83c\udf05\u26f1\ufe0f",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1790163019283,
+"endedAt": 1790173297420,
+"key": "g9zst3nmn@2026-09-23",
+"played": [
+{
+"songId": "catch-release",
+"title": "Catch & Release",
+"artist": "Matt Simons",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790163527509
+},
+{
+"songId": "daises",
+"title": "Daises",
+"artist": "Justin Bieber",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790163896188
+},
+{
+"songId": "all-of-me",
+"title": "All Of Me",
+"artist": "John Legend",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1790164099918
+},
+{
+"songId": "edge-of-desire",
+"title": "Edge Of Desire",
+"artist": "John Mayer",
+"votes": 0,
+"voters": 3,
+"roundVotes": 0,
+"replay": false,
+"at": 1790164731142
+},
+{
+"songId": "perfect",
+"title": "Perfect",
+"artist": "Ed Sheeran",
+"votes": 1,
+"voters": 3,
+"roundVotes": 1,
+"replay": false,
+"at": 1790165059542
+},
+{
+"songId": "fast-car",
+"title": "Fast Car",
+"artist": "Tracy Chapman",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1790165098951
+},
+{
+"songId": "imagine",
+"title": "Imagine",
+"artist": "John Lennon",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1790166611771
+},
+{
+"songId": "hey-jude",
+"title": "Hey Jude",
+"artist": "The Beatles",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1790166899820
+},
+{
+"songId": "lost-in-love",
+"title": "Lost In Love",
+"artist": "Perry Idyll",
+"votes": 2,
+"voters": 1,
+"roundVotes": 2,
+"replay": false,
+"at": 1790167230965
+},
+{
+"songId": "best-part",
+"title": "Best Part",
+"artist": "Daniel Caesar",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790167517895
+},
+{
+"songId": "taylor",
+"title": "Taylor",
+"artist": "Jack Johnson",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790168584393
+},
+{
+"songId": "landslide",
+"title": "Landslide",
+"artist": "Fleetwood Mac",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790168599650
+},
+{
+"songId": "drops-of-jupiter",
+"title": "Drops Of Jupiter",
+"artist": "Train",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790170078876
+},
+{
+"songId": "sitting-on-the-dock-of-the-bay",
+"title": "Sitting On The Dock Of The Bay",
+"artist": "Otis Redding",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790171283032
+},
+{
+"songId": "feel-it-still",
+"title": "Feel It Still",
+"artist": "Portugal. The Man",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790171669723
+}
+],
+"requested": [],
+"stats": {
+"songsPlayed": 15,
+"totalVotes": 7,
+"peakVoters": 3,
+"room": 3,
+"nets": 3,
+"topSong": {
+"songId": "lost-in-love",
+"title": "Lost In Love",
+"votes": 2
+}
+},
+"money": {
+"currency": "USD",
+"gross": 0,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 0,
+"count": 0
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1790251243327
+},
+"archivedAt": 1790251243327
+}

@@ -1001,6 +1001,42 @@ let P = JSON.parse(JSON.stringify(P0));
 let ACT = null;           // real-show numbers, when imported
 const SEED_ACT = {"asOf": "2026-09-25", "shows": 15, "people": 8.6, "hours": 2.73, "recordHours": 3.46, "setHours": 1.5, "votes": 16.6, "interactions": 2.09, "songs": 10.0, "nets": 6.0, "peakVoters": 4.13, "gigsOnCalendar": 22, "gigsUsed": 15, "gigsSilent": 5, "roomFree": null, "roomPlus": null, "roomPro": 1.037, "roomPerHead": 1.037, "deploys": 286, "deploysThisPeriod": 119, "billingPeriodStart": "2026-09-08", "shipping": {"what": "production deploys \u00d7 15 credits \u2014 a cost of shipping code, never of a gig", "deploys30": 286, "credits30": 4290, "deploysThisPeriod": 119, "creditsThisPeriod": 1785, "perDayThisPeriod": 7.1, "dashboard": {"readAt": "2026-09-25T02:58:00+00:00", "deploys": 119, "credits": 1785, "shareOfAllCredits": 0.938}}, "traffic": {"what": "everything the rooms cause \u2014 bandwidth is the one meter the API exposes; web requests and compute are on Netlify\u2019s Credit usage breakdown page only", "bandwidthBytesThisPeriod": 2330916514, "bandwidthGBThisPeriod": 2.331, "bandwidthCreditsThisPeriod": 46.6, "bandwidthReadAt": "2026-09-25T03:52:53.498+00:00", "dashboard": {"readAt": "2026-09-25T02:58:00+00:00", "periodStart": "2026-09-08", "webRequests": 100804, "webRequestCredits": 20.2, "computeCredits": 54, "bandwidthCredits": 42.8, "trafficCredits": 117.0, "totalCredits": 1902}}, "pollsPerPhoneHour": 42.0, "pollsSource": "Netlify's own request meter \u2014 7 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay)", "creditsPerShow": 2.98, "meters": {"readAt": "2026-09-25T02:58:00+00:00", "cleanFrom": "2026-09-16", "studioShareAssumed": 0.6, "emptyDays": ["2026-09-19"], "gigDays": ["2026-09-16", "2026-09-17", "2026-09-18", "2026-09-20", "2026-09-21", "2026-09-22", "2026-09-23"], "what": "Netlify's own per-day meters (finance/credits.json): a gig day minus an empty day, requests \u00f7 2 less the Studio tick, page loads, votes and extra pages = the room's ticks; the credits are traffic only \u2014 never a deploy (INVARIANT 0fx)", "background": {"requests": 3200, "computeCredits": 1.7, "bandwidthMB": 13.7, "days": ["2026-09-19"]}, "rate": 42.0, "creditsPerShow": 2.98}, "note": "15 night(s) on the published calendar where the room used the app, across 1 artist(s) (2 more on the calendar where it went unused); 11 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 16.6. Ticks per phone-hour: 42.0 \u2014 Netlify's own request meter \u2014 7 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay). By the same meters a night adds about 2.98 credits of traffic over an empty day (empty day: 3,200 requests, 1.7 credits of compute, 13.7 MB; 7 gig day(s) since 2026-09-16). 15 bracket(s) of bandwidth marks withheld \u2014 see pollsByNight for why; background over every quiet pair on file 7.04 MB/h from 1 pair(s). Deploys are account-wide (all five sites share the credit grant): 286 in the last 30 days, 119 this billing period = 1785 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 2.331 GB = 46.6 credits for everything every room did.", "marksOnFile": 6, "source": "tools/actuals.py (seed)"};
 
+/* THE LIVE FEED (decision 0095). On myset.vip the page asks /moneymodel/live.json — the
+   register of every show on the platform, folded on the server — and lays its block over
+   the seed, KEEPING THE SEED'S METERS: ticks per phone-hour, credits a night, deploys and
+   the two bills come off Netlify's dashboard by hand (tools/actuals.py) and no function
+   can read them. Precedence, so the founder's phone never sits on a stale paste: the live
+   feed when it answers with nights; a pasted JSON only when it was pasted AFTER the live
+   build; the baked seed otherwise — and the REAL SHOWS stamp says which won. On the
+   published artifact (no myset.vip origin) the fetch is skipped and the seed stands. */
+const METER_KEYS = ['deploys', 'deploysThisPeriod', 'billingPeriodStart', 'shipping', 'traffic', 'pollsPerPhoneHour', 'pollsSource', 'creditsPerShow', 'meters', 'marksOnFile'];
+let LIVE = null;            // the feed's last answer, or { unreachable: true }
+let ACT_SOURCE = 'seed';    // 'live' | 'pasted' | 'stored' | 'seed'
+function mergeLive(seed, live) {
+  const meters = {};
+  for (const k of METER_KEYS) if (seed && seed[k] !== undefined) meters[k] = seed[k];
+  const readAt = seed && seed.meters && seed.meters.readAt ? String(seed.meters.readAt).slice(0, 10) : (seed && seed.asOf) || '';
+  return { ...live.act, ...meters, live: { builtAt: live.builtAt, shows: live.act.shows }, metersAsOf: readAt,
+           source: `${live.act.source || 'the register'}; meters from the ${readAt} reading` };
+}
+function pickAct(seed, stored, live) {
+  if (live && live.act && live.act.shows > 0) {
+    if (stored && stored.pastedAt && stored.pastedAt > live.builtAt) return { act: stored, source: 'pasted' };
+    return { act: mergeLive(seed, live), source: 'live' };
+  }
+  if (stored) return { act: stored, source: stored.pastedAt ? 'pasted' : 'stored' };
+  return { act: seed, source: 'seed' };
+}
+async function fetchLive() {
+  if (!/^https?:$/.test(location.protocol) || !/^\/moneymodel/.test(location.pathname)) return null;
+  try {
+    const r = await fetch('/moneymodel/live.json', { credentials: 'same-origin', headers: { accept: 'application/json' } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j && j.live && j.act && j.act.shows > 0 ? j : null;
+  } catch (e) { return null; }
+}
+
 /* ───────────────────────────── dials spec ───────────────────────────── */
 const DIALS = [
   { group: 'Artists & plans', help: 'Who is on the platform and what they pay. Free is whatever is left after Plus and Pro.' },
@@ -1099,7 +1135,7 @@ const DIALS = [
   { group: 'Show sizes', help: 'The four shows in the table on the right. Change them freely. The tier matters: MySet takes 10% of a free artist’s room, 2% on Plus and nothing on Pro — so the same arena is worth three different amounts.' },
   { key: 'sizeTier' },
   { key: 'sizes' },
-  { group: 'Real shows', help: 'When the numbers from real gigs exist, paste them here (tools/actuals.py prints them). Switch on to let them replace the guesses above.' },
+  { group: 'Real shows', help: 'On myset.vip these come LIVE from the register of every show on the platform (/moneymodel/shows), folded on the server as nights are filed; the meters — ticks per phone-hour, credits a night, deploys — are read off Netlify by hand and stay the page\'s last reading. Paste tools/actuals.py\'s JSON only to override (a paste newer than the live build wins until you forget it). Switch on to let them replace the guesses above.' },
   { key: 'actuals' },
 ];
 
@@ -1191,7 +1227,8 @@ function markReal() {
     const f = $('.from', el); f.hidden = !on; if (on) f.textContent = `from ${ACT.shows} real show${ACT.shows === 1 ? '' : 's'}${viaAll ? ', all plans together' : ''} (as of ${ACT.asOf})`;
   }
   const cs = $('#calibStamp');
-  cs.innerHTML = P.useActuals && ACT ? `REAL SHOWS <b>${ACT.shows} used · ${ACT.asOf}</b>` : `REAL SHOWS <b>${ACT ? ACT.shows + ' on file, not used' : 'none yet'}</b>`;
+  const tag = ACT_SOURCE === 'live' ? 'LIVE' : ACT_SOURCE === 'pasted' ? 'PASTED' : LIVE && LIVE.unreachable ? 'SEED (feed unreachable)' : 'SEED';
+  cs.innerHTML = P.useActuals && ACT ? `REAL SHOWS <b>${ACT.shows} used · ${ACT.asOf} · ${tag}</b>` : `REAL SHOWS <b>${ACT ? ACT.shows + ' on file, not used · ' + tag : 'none yet'}</b>`;
 }
 function renderHostSel() {
   const box = $('#hostSel'); box.innerHTML = '';
@@ -1250,8 +1287,13 @@ function renderActuals() {
     else if (PRE_ACT) { Object.assign(P, PRE_ACT); PRE_ACT = null; }   // put the guesses back
     store.saveUse(P.useActuals); syncInputs(); recalc();
   });
-  $('#actApply').addEventListener('click', () => { try { const j = JSON.parse($('#actJson').value); if (!j || typeof j !== 'object') throw 0; ACT = { ...j }; store.saveActuals(ACT); P.useActuals = true; store.saveUse(true); $('#useActuals').checked = true; applyActuals(); syncInputs(); recalc(); renderActSummary(); toast('Real numbers saved and switched on'); } catch (e) { toast('That is not valid JSON — copy exactly what the script prints'); } });
-  $('#actClear').addEventListener('click', () => { ACT = null; store.saveActuals(null); P.useActuals = false; store.saveUse(false); if (PRE_ACT) { Object.assign(P, PRE_ACT); PRE_ACT = null; } $('#useActuals').checked = false; syncInputs(); recalc(); renderActSummary(); });
+  $('#actApply').addEventListener('click', () => { try { const j = JSON.parse($('#actJson').value); if (!j || typeof j !== 'object') throw 0; ACT = { ...j, pastedAt: Date.now() }; ACT_SOURCE = 'pasted'; store.saveActuals(ACT); P.useActuals = true; store.saveUse(true); $('#useActuals').checked = true; applyActuals(); syncInputs(); recalc(); renderActSummary(); toast('Real numbers saved and switched on'); } catch (e) { toast('That is not valid JSON — copy exactly what the script prints'); } });
+  $('#actClear').addEventListener('click', () => {
+    store.saveActuals(null);
+    /* forgetting a paste goes back to the live feed when there is one, not to nothing */
+    if (LIVE && !LIVE.unreachable) { const pick = pickAct(SEED_ACT, null, LIVE); ACT = pick.act; ACT_SOURCE = pick.source; applyActuals(); syncInputs(); recalc(); renderActSummary(); markReal(); toast('Back to the live register'); return; }
+    ACT = null; ACT_SOURCE = 'seed'; P.useActuals = false; store.saveUse(false); if (PRE_ACT) { Object.assign(P, PRE_ACT); PRE_ACT = null; } $('#useActuals').checked = false; syncInputs(); recalc(); renderActSummary(); markReal();
+  });
   renderActSummary();
   /* the two growth charts are built inside a closed <details>, where a canvas has no
      size; give them one the first time it opens */
@@ -1261,6 +1303,9 @@ function renderActuals() {
 function renderActSummary() {
   const s = $('#actSummary'); if (!s) return;
   if (!ACT) { s.textContent = 'No real numbers on file yet.'; return; }
+  const src = ACT_SOURCE === 'live' ? `<b>LIVE from the register</b> — <a href="/moneymodel/shows">every show on the platform</a>, built ${new Date(ACT.live.builtAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}; meters from the ${ACT.metersAsOf} reading. `
+    : ACT_SOURCE === 'pasted' ? `<b>PASTED</b> ${ACT.pastedAt ? new Date(ACT.pastedAt).toLocaleDateString('en-GB') : ''} — newer than the live register${LIVE && !LIVE.unreachable ? ' (Forget them to go back to it)' : ''}. `
+    : LIVE && LIVE.unreachable ? `<b>SEED of ${ACT.asOf}</b> — the live feed could not be reached, so these are the numbers baked into the page. ` : '';
   const parts = [`${ACT.shows} show${ACT.shows === 1 ? '' : 's'}${ACT.gigsOnCalendar != null && ACT.gigsOnCalendar !== ACT.shows ? ` (the app was used at ${ACT.shows} of ${ACT.gigsOnCalendar} published gigs)` : ''} as of ${ACT.asOf}`];
   if (ACT.people != null) parts.push(`${ACT.people} phones/night`); if (ACT.hours != null) parts.push(`${ACT.hours} h${ACT.setHours != null ? ` (${ACT.setHours} h first song to last)` : ''}`);
   if (ACT.votes != null) parts.push(`${ACT.votes} votes/night`); if (ACT.interactions != null) parts.push(`${ACT.interactions} votes + requests per phone`);
@@ -1271,7 +1316,7 @@ function renderActSummary() {
   /* Compared against the gig the DIALS describe, not the show-size editor's first row —
      which the user can retype to any size, silently changing what the check compares. */
   if (ACT.creditsPerShow != null) { try { const m = ENGINE.netlifyCredits(ENGINE.gigTraffic(P, P.fans, P.hours), 0, P.hosts.netlifyPro).total; parts.push(`${ACT.creditsPerShow} credits of traffic per night by Netlify’s meters vs ${fmt.num(m, 2)} modelled`); } catch (e) {} }
-  s.innerHTML = `<b>On file:</b> ${parts.join(' · ')}${ACT.note ? `<br>${ACT.note}` : ''}`;
+  s.innerHTML = `${src}<b>On file:</b> ${parts.join(' · ')}${ACT.moneyNote ? `<br>Room money: ${ACT.moneyNote}.` : ''}${ACT.note ? `<br>${ACT.note}` : ''}`;
 }
 let PRE_ACT = null;             // the guesses, stashed while real numbers are in force
 function applyActuals() {
@@ -1630,6 +1675,13 @@ $('#stampDate').textContent = new Date().toLocaleDateString('en-GB', { day: 'num
 buildDials(); recalc();
 (async () => {
   await store.init(); await store.loadAll();
+  /* the live register first (0095): live beats a paste unless the paste is newer; the seed last */
+  const stored = ACT && ACT !== SEED_ACT ? ACT : null;
+  const live = await fetchLive();
+  LIVE = live || { unreachable: true };
+  const pick = pickAct(SEED_ACT, stored, live);
+  ACT = pick.act; ACT_SOURCE = pick.source;
+  if (pick.source === 'live' && stored === null) { let pref = null; try { pref = localStorage.getItem('myset.model.useActuals'); } catch (e) {} store.wasOn = pref === null || pref === '1'; }
   if (store.wasOn && ACT) { P.useActuals = true; applyActuals(); buildDials(); }
   renderActSummary(); markReal(); recalc(); renderCards();
 })();

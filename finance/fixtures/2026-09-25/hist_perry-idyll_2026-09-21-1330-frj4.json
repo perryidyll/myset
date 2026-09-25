@@ -1,0 +1,181 @@
+{
+"v": 1,
+"showId": "2026-09-21-1330-frj4",
+"artistId": "perry-idyll",
+"title": "Ugly Duckling \u2013 Sep 21, 2026",
+"venue": "The Ugly Duckling | Irish Pub \u2618\ufe0f\ud83c\udf7b",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1789997424217,
+"endedAt": 1790008599107,
+"key": "gx78yyhxp@2026-09-21",
+"played": [
+{
+"songId": "gravity",
+"title": "Gravity",
+"artist": "John Mayer",
+"votes": 2,
+"voters": 3,
+"roundVotes": 2,
+"replay": false,
+"at": 1790001384664
+},
+{
+"songId": "shape-of-you",
+"title": "Shape Of You",
+"artist": "Ed Sheeran",
+"votes": 2,
+"voters": 3,
+"roundVotes": 2,
+"replay": false,
+"at": 1790001800726
+},
+{
+"songId": "this-love",
+"title": "This Love",
+"artist": "Maroon 5",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1790002195026
+},
+{
+"songId": "ain-t-no-sunshine",
+"title": "Ain't No Sunshine",
+"artist": "Bill Withers",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1790002465791
+},
+{
+"songId": "perfect",
+"title": "Perfect",
+"artist": "Ed Sheeran",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790002829248
+},
+{
+"songId": "hey-jude",
+"title": "Hey Jude",
+"artist": "The Beatles",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790003198904
+},
+{
+"songId": "banana-pancakes",
+"title": "Banana Pancakes",
+"artist": "Jack Johnson",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790003745380
+},
+{
+"songId": "drops-of-jupiter",
+"title": "Drops Of Jupiter",
+"artist": "Train",
+"votes": 2,
+"voters": 3,
+"roundVotes": 2,
+"replay": false,
+"at": 1790005038179
+},
+{
+"songId": "blackbird",
+"title": "Blackbird",
+"artist": "The Beatles",
+"votes": 3,
+"voters": 3,
+"roundVotes": 3,
+"replay": false,
+"at": 1790005389867
+},
+{
+"songId": "2009",
+"title": "2009",
+"artist": "Mac Miller",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790005634421
+},
+{
+"songId": "ain-t-no-rest-for-the-wicked",
+"title": "Ain't No Rest For The Wicked",
+"artist": "Cage The Elephant",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790006259003
+},
+{
+"songId": "santeria",
+"title": "Santeria",
+"artist": "Sublime",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790006631857
+}
+],
+"requested": [
+{
+"songId": "better-together",
+"title": "Better Together",
+"artist": "Jack Johnson",
+"votes": 3
+},
+{
+"songId": "i-m-yours",
+"title": "I'm Yours",
+"artist": "Jason Mraz",
+"votes": 2
+}
+],
+"stats": {
+"songsPlayed": 12,
+"totalVotes": 14,
+"peakVoters": 3,
+"room": 11,
+"nets": 10,
+"topSong": {
+"songId": "blackbird",
+"title": "Blackbird",
+"votes": 3
+}
+},
+"money": {
+"currency": "USD",
+"gross": 0,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 0,
+"count": 0
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1790078437036
+},
+"archivedAt": 1790078437036
+}

@@ -96,7 +96,9 @@ adds to the traffic bill, never a deploy — which the page shows against its ow
 cd ~/Docs/MySet && python3 tools/actuals.py --write
 ```
 
-Then paste `finance/actuals.json` into the dashboard's Real shows panel. It carries
+Then commit `finance/actuals.json` (the page bakes it as its seed and `finance/model-test.mjs`
+checks the two agree). On myset.vip the Real shows panel no longer needs the paste — it reads
+the register live (decision 0095, section below); paste only to override. The file carries
 people and hours per night, room money **per person** by plan (`roomFree` / `roomPlus`
 / `roomPro`) and across plans (`roomPerHead`, which fills any tier that has no figure of
 its own — Perry is comped Pro, so his nights land there), account-wide deploys per 30
@@ -111,6 +113,37 @@ On the night: count heads once (the app keeps the room count itself), notice how
 Studio's Live tab is actually on screen (both methods assume 60% of the night; it only
 polls while it is on screen and the show is live), and **end the show in the Studio** — a
 record left open runs on to the auto-end and reads as a longer night than it was.
+
+## Every show on the platform (25 Sep 2026, decision 0095, INVARIANT 0gi)
+
+The paste is history. **myset.vip/moneymodel/shows** (`myset.vip/shows` lands there) is the
+founder's dashboard of every night every artist has filed — who played and where (artist,
+venue, city, country), how long, how many phones, votes, votes bought, tips, requests,
+merch, songs — one row per show, roll-ups by artist / venue / country / city / month,
+sign-ups, the most-played songs, silent gigs, and a CSV. It sits behind the model's own
+passcode; one sign-in opens both.
+
+It is built by the **register** (`netlify/functions/_register.mjs`): a bell every ten minutes
+(`registercron.mjs`) walks the registries and each artist's own index (no `list()`), reads a
+night's detail only when it is new or its row changed, and writes month shards
+(`register_<YYYY-MM>`) under a head (`register`) that carries the roll-ups and the exact block
+the model's Real shows panel takes. A show starting or ending leaves a mark; the next ring
+folds it. The model asks **`/moneymodel/live.json`** on load and lays that block over its
+baked seed, **keeping the seed's meters** (ticks per phone-hour, credits a night, deploys,
+the two bills — Netlify's dashboard numbers, still read by hand with `tools/actuals.py`).
+Live beats a paste unless the paste is newer; the REAL SHOWS stamp says which won.
+
+Which nights count is now ONE rule in `netlify/functions/_nightrule.mjs`, used by the
+register, the stats snapshot and the Sheet, and pinned against `tools/actuals.py` on two
+snapshots of production (`fixtures/2026-09-11`, `fixtures/2026-09-25`: 15 nights, 2 unused,
+13 refused, $1.037 a head). `hidden` is a flag, not a verdict. Money is Stripe's answer or
+"unknown", never $0; `$ a head` is tips + packs + paid requests over phones on money-known
+nights, merch apart. The morning after a night the bell asks Stripe once more, so a late
+tip lands. `node --import ./test/register.mjs test/everyshow.mjs` is the suite.
+
+`tools/actuals.py` keeps two jobs: the METERS (`--mark`, `credits.json`, `solve_meters`), and
+an independent second opinion on the nights (`--write` still produces `actuals.json`, which
+the page bakes as its seed and the tests compare against).
 
 ## Testing the engine
 

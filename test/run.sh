@@ -171,6 +171,9 @@ echo
 echo "── current show stats: the snapshot ──"
 node --import ./test/register.mjs test/metrics.mjs
 echo
+echo "── every show on the platform: the register, the dashboard, the live feed ──"
+node --import ./test/register.mjs test/everyshow.mjs
+echo
 echo "── the Book button, the inbox and the tour poster ──"
 node --import ./test/register.mjs test/messages.mjs
 echo

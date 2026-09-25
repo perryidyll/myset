@@ -40,7 +40,7 @@ const count = async (fn) => {
        INVARIANT 9d13 built goes blind exactly when a new global is added. It
        missed `sheetsync` on the day it shipped — off every hot path, so no
        ceiling moved, but the check that would have TOLD us was silent. */
-    globals: log.filter((l) => / (artists|promos|flags|cityindex|acctindex|idqueue|sheetsync|gigsched|delqueue|vidqueue)$/.test(l)).length,
+    globals: log.filter((l) => / (artists|promos|flags|cityindex|acctindex|idqueue|sheetsync|gigsched|delqueue|vidqueue|register|register_work|registersync|register_[0-9-]+)$/.test(l)).length,
   };
 };
 const under = (name, got, ceiling) =>

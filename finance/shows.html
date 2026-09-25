@@ -1,0 +1,452 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:,">
+<title>Every Show</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,400;100,500;100,600;100,700;112,600;112,700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* ── tokens — MySet's own system, the money model's: flat, zero radius, one red, 2px rules ── */
+  :root {
+    --ground: #f2f1ee; --surface: #ffffff; --sunken: #e8e6e1; --ink: #131312; --ink-soft: #3a3a37;
+    --muted: #6d6c67; --rule: #d8d6d0; --rule-firm: #b9b7b0; --accent: #ec3013; --accent-ink: #ffffff; --accent-lo: #fbe4df;
+    --good: #0a7a2f; --bad: #b8261a; --warn: #9a6400; --good-lo: #e2f3e7; --bad-lo: #fbe3e0; --warn-lo: #fbefd3;
+    --s-people: #2a78d6; --s-money: #12946a; --s-nights: #4a3aa7; --s-votes: #eb6834;
+    --grid: #e4e2dc; --axis: #c3c2b7; --rule-ctl: #8f8d86; --btn-primary: #d42a10;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0f0f0e; --surface: #171716; --sunken: #1f1f1d; --ink: #ecebe7; --ink-soft: #c9c8c2;
+      --muted: #9b9a93; --rule: #2b2b28; --rule-firm: #3f3e3a; --accent: #ff5236; --accent-ink: #131312; --accent-lo: #3a1a14;
+      --good: #57c98a; --bad: #ff7b6c; --warn: #f0b64a; --good-lo: #14301f; --bad-lo: #3a1a17; --warn-lo: #332a10;
+      --s-people: #3987e5; --s-money: #199e70; --s-nights: #9085e9; --s-votes: #d95926;
+      --grid: #2a2a27; --axis: #3f3e3a; --rule-ctl: #6c6b65; --btn-primary: #ff5236;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0f0f0e; --surface: #171716; --sunken: #1f1f1d; --ink: #ecebe7; --ink-soft: #c9c8c2;
+    --muted: #9b9a93; --rule: #2b2b28; --rule-firm: #3f3e3a; --accent: #ff5236; --accent-ink: #131312; --accent-lo: #3a1a14;
+    --good: #57c98a; --bad: #ff7b6c; --warn: #f0b64a; --good-lo: #14301f; --bad-lo: #3a1a17; --warn-lo: #332a10;
+    --s-people: #3987e5; --s-money: #199e70; --s-nights: #9085e9; --s-votes: #d95926;
+    --grid: #2a2a27; --axis: #3f3e3a; --rule-ctl: #6c6b65; --btn-primary: #ff5236;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.5 "Archivo", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+  .mono, .n, td.n, th.n, .stamp, .tag, .kpi .v, .k { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+  h1, h2, h3 { font-variation-settings: "wdth" 112; letter-spacing: -.01em; margin: 0; }
+  h1 { font-size: clamp(34px, 5vw, 54px); font-weight: 700; line-height: 1.02; text-wrap: balance; }
+  h2 { font-size: 20px; font-weight: 700; }
+  h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  p { margin: 0 0 12px; max-width: 76ch; }
+  a { color: var(--accent); }
+  button, select, input { font: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .page { max-width: 1440px; margin: 0 auto; padding: 0 22px 80px; }
+  .small { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .muted { color: var(--muted); }
+  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 2px 6px; border: 1px solid var(--rule-firm); color: var(--muted); text-transform: uppercase; vertical-align: middle; white-space: nowrap; }
+  .tag.counted { border-color: var(--good); color: var(--good); }
+  .tag.unused { border-color: var(--warn); color: var(--warn); }
+  .tag.refused { border-color: var(--rule-firm); color: var(--muted); }
+  .tag.silent { border-color: var(--rule-firm); color: var(--muted); border-style: dashed; }
+  .tag.hidden { border-color: var(--bad); color: var(--bad); }
+  .tag.known { border-color: var(--good); color: var(--good); }
+  .tag.unknown { border-color: var(--warn); color: var(--warn); }
+  .tag.live { border-color: var(--accent); color: var(--accent); }
+
+  header.mast { padding: 46px 0 0; }
+  .mast .rule { height: 3px; background: var(--ink); margin-bottom: 18px; }
+  .stamp { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; font-size: 11px; letter-spacing: .05em; color: var(--muted); margin-bottom: 20px; }
+  .stamp b { color: var(--ink-soft); font-weight: 500; }
+  .stamp .actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .lede { font-size: 18px; max-width: 800px; color: var(--ink-soft); margin: 14px 0 0; }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 2px; margin: 30px 0 0; background: var(--rule-firm); border: 2px solid var(--ink); }
+  .kpi { background: var(--surface); padding: 14px 16px 12px; min-width: 0; }
+  .kpi .l { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .kpi .v { font-size: clamp(19px, 1.5vw, 25px); font-weight: 700; line-height: 1.1; margin: 6px 0 2px; overflow-wrap: anywhere; }
+  .kpi .v.acc { color: var(--accent); } .kpi .v.good { color: var(--good); } .kpi .v.warn { color: var(--warn); }
+  .kpi .s { font-size: 12px; color: var(--muted); }
+
+  section.block { margin-top: 34px; }
+  .kicker { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; border-bottom: 2px solid var(--ink); padding-bottom: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .kicker .k { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--muted); }
+  .btn { border: 2px solid var(--ink); background: var(--surface); color: var(--ink); padding: 7px 12px; font-weight: 600; font-size: 13px; cursor: pointer; line-height: 1; text-decoration: none; display: inline-block; }
+  .btn:hover { background: var(--sunken); }
+  .btn.primary { background: var(--btn-primary); border-color: var(--btn-primary); color: var(--accent-ink); }
+  .btn.small { padding: 5px 8px; font-size: 12px; border-width: 1px; }
+  .btn.ghost { border-color: var(--rule-ctl); color: var(--ink-soft); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin: 0 0 12px; }
+  .filters .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .filters .pills button { border: 1px solid var(--rule-firm); background: var(--surface); color: var(--ink-soft); padding: 6px 11px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .filters .pills button.on { background: var(--ink); border-color: var(--ink); color: var(--ground); }
+  .filters select, .filters input { border: 1px solid var(--rule-ctl); background: var(--surface); color: var(--ink); padding: 6px 8px; font-size: 13px; max-width: 220px; }
+  .filters label { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+
+  .tablewrap { overflow-x: auto; border: 1px solid var(--rule-firm); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { padding: 8px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 700; position: sticky; top: 0; background: var(--surface); cursor: pointer; user-select: none; }
+  th.on { color: var(--ink); } th.on::after { content: " ▾"; } th.on.asc::after { content: " ▴"; }
+  th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr.night { cursor: pointer; }
+  tbody tr.night:hover td { background: var(--sunken); }
+  tbody tr.night.dim td { color: var(--muted); }
+  tr.detail td { white-space: normal; background: var(--sunken); padding: 14px 16px 16px; }
+  .det { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 22px; font-size: 13px; }
+  .det h3 { margin: 0 0 6px; font-size: 11px; }
+  .det ul { margin: 0; padding-left: 16px; } .det li { margin: 0 0 3px; }
+  .det .row { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted var(--rule-firm); padding: 2px 0; }
+  .det .why { color: var(--warn); }
+  .empty { padding: 18px; border: 1px dashed var(--rule-firm); color: var(--muted); font-size: 13px; }
+  .note { font-size: 13px; color: var(--ink-soft); max-width: 78ch; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+  .chart { background: var(--surface); border: 1px solid var(--rule-firm); padding: 12px 14px 8px; }
+  .chart .t { font-weight: 700; font-size: 13px; } .chart .u { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .chart .c { position: relative; height: 220px; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px 26px; }
+  .rules h3 { margin: 0 0 6px; } .rules p, .rules li { font-size: 13.5px; color: var(--ink-soft); } .rules ul { margin: 0; padding-left: 18px; }
+  .callout { border-left: 3px solid var(--accent); padding: 8px 14px; background: var(--surface); margin: 12px 0; font-size: 13.5px; color: var(--ink-soft); max-width: 78ch; }
+  .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding: 10px 14px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 9; }
+  .toast.on { opacity: 1; }
+  footer { margin-top: 44px; border-top: 2px solid var(--ink); padding-top: 12px; font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 18px; }
+  @media (max-width: 720px) { .page { padding: 0 16px 60px; } table { font-size: 12.5px; } th, td { padding: 7px 8px; } .stamp .actions { margin-left: 0; } }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .toast { transition: none; } }
+</style>
+<div class="page">
+<header class="mast">
+  <div class="rule"></div>
+  <div class="stamp">
+    <span>EVERY SHOW · <b id="stampBuilt">loading…</b></span>
+    <span id="stampCounts"></span>
+    <span class="actions">
+      <button class="btn small ghost" id="refreshBtn" title="Fold every artist's filed nights into the register now">Refresh now</button>
+      <a class="btn small ghost" id="csvBtn" href="/moneymodel/shows.csv">Download CSV</a>
+      <a class="btn small ghost" href="/moneymodel">Money model →</a>
+      <button class="btn small ghost" id="themeBtn" aria-label="switch theme">DARK</button>
+    </span>
+  </div>
+  <h1>Every show on MySet</h1>
+  <p class="lede">One row for every night any artist has run on the platform — who played, where in the world, for how long, how many phones were in the room, what the room voted for and what it paid. Folded on the server from the records the app already keeps; nothing here is typed in. The money model reads its real-show numbers straight off this page's data.</p>
+</header>
+
+<div class="kpis" id="kpis"></div>
+<div class="callout" id="floorNote" hidden></div>
+
+<section class="block" id="showsBlock">
+  <div class="kicker"><h2>Every show</h2><span class="k" id="showsK"></span></div>
+  <div class="filters">
+    <div class="pills" id="rangePills">
+      <button data-r="all" class="on">All time</button><button data-r="30">Last 30 days</button><button data-r="90">Last 90 days</button><button data-r="month">This month</button><button data-r="custom">Custom</button>
+    </div>
+    <label id="customRange" hidden>from <input type="date" id="fromDate"> to <input type="date" id="toDate"></label>
+    <select id="fArtist"><option value="">Every artist</option></select>
+    <select id="fVenue"><option value="">Every venue</option></select>
+    <select id="fCountry"><option value="">Every country</option></select>
+    <select id="fPlan"><option value="">Every plan</option><option value="free">Hobbyist (free)</option><option value="plus">Plus</option><option value="pro">Pro</option></select>
+    <select id="fStatus"><option value="counted">Counted nights only</option><option value="all">Everything (not counted and silent too)</option><option value="unused">On the calendar, unused</option><option value="refused">Not counted (tests, accidents)</option><option value="silent">Published, no record</option><option value="hidden">Hidden by the artist</option></select>
+    <input type="search" id="fSearch" placeholder="search a venue, a song, a title…">
+  </div>
+  <div class="tablewrap"><table id="showsTable"><thead></thead><tbody></tbody></table></div>
+  <p class="small" style="margin-top:8px">Tap a row for the night: the songs played and the votes each won, what the room asked for, every money line, the rating, and why a night was or was not counted. Times are the night's own local clock.</p>
+</section>
+
+<section class="block">
+  <div class="kicker"><h2>Over time</h2><span class="k">COUNTED NIGHTS IN THE FILTER</span></div>
+  <div class="grid2">
+    <div class="chart"><div class="t">Nights a week</div><div class="u">how often the platform is used, week by week</div><div class="c"><canvas id="cWeeks"></canvas></div></div>
+    <div class="chart"><div class="t">Phones in the room</div><div class="u">each counted night, in order</div><div class="c"><canvas id="cPeople"></canvas></div></div>
+    <div class="chart"><div class="t">Room money a night</div><div class="u">tips + packs + paid requests, nights where Stripe answered — unknown nights are left blank, never drawn as $0</div><div class="c"><canvas id="cMoney"></canvas></div></div>
+    <div class="chart"><div class="t">Money a head, by country</div><div class="u">$ per phone per night — one figure per country, on nights where money is known</div><div class="c"><canvas id="cCountry"></canvas></div></div>
+  </div>
+</section>
+
+<section class="block"><div class="kicker"><h2>By artist</h2><span class="k" id="artistK"></span></div><div class="tablewrap"><table id="tArtist"></table></div></section>
+<section class="block"><div class="kicker"><h2>By venue</h2><span class="k" id="venueK"></span></div><div class="tablewrap"><table id="tVenue"></table></div></section>
+<section class="block"><div class="kicker"><h2>By country and city</h2><span class="k" id="placeK"></span></div><div class="grid2"><div class="tablewrap"><table id="tCountry"></table></div><div class="tablewrap"><table id="tCity"></table></div></div></section>
+<section class="block"><div class="kicker"><h2>By month</h2><span class="k">LOCAL MONTH OF THE NIGHT</span></div><div class="tablewrap"><table id="tMonth"></table></div></section>
+<section class="block"><div class="kicker"><h2>Sign-ups</h2><span class="k" id="signupK"></span></div><div class="grid2"><div class="tablewrap"><table id="tSignups"></table></div><div class="tablewrap"><table id="tSources"></table></div></div></section>
+<section class="block"><div class="kicker"><h2>What the rooms wanted</h2><span class="k">SONGS ACROSS EVERY COUNTED NIGHT</span></div><div class="tablewrap"><table id="tSongs"></table></div></section>
+<section class="block"><div class="kicker"><h2>Published gigs that left no record</h2><span class="k" id="silentK"></span></div><div class="tablewrap"><table id="tSilent"></table></div><p class="small" style="margin-top:8px">A gig on an artist's calendar, since their first counted night, where the show never started or nothing was filed. Listed so “nights a week” counts what was published, not what was filed.</p></section>
+
+<section class="block">
+  <div class="kicker"><h2>How these numbers are made</h2><span class="k">READ THIS ONCE</span></div>
+  <div class="rules">
+    <div><h3>Which nights count</h3><p>A night is <b>counted</b> when it started on a published gig — no earlier than 90 minutes before the slot, no later than its end — and something happened in it. Everything else is kept and labelled, never thrown away: <b>unused</b> (the gig was on the calendar, one phone, no votes — the room never used the app), or a <b>test</b> (nobody there; not on the calendar; ten or more phones on one network in under half an hour, which is one machine; under 30 minutes; over 12 hours with no gig). <b>Hidden</b> is a flag, not a verdict: a night the artist deleted from their own Money tab is still on disk, still judged by the same rule and still in the totals (the tracker cannot see the flag, and the two must agree) — it is greyed here and counted in the “hidden” figure.</p></div>
+    <div><h3>How long a night is</h3><p>The record's own length, unless the record overran the published slot (a show that ends itself adds three hours of grace). Then it is the later of the slot and the last song anyone started: a room still voting past the slot was still a room; an empty page left open was not. Two records inside one slot — an accidental End then Start — are one night.</p></div>
+    <div><h3>People</h3><p>Phones that opened the room, not just phones that voted (the app keeps the count itself; for the earliest nights, before it did, the peak voter count). “Networks” is how many different connections those phones came in on — the one check that a crowd was not one phone rotating its id.</p></div>
+    <div><h3>Money</h3><p>Tips, vote packs and paid requests are <b>Stripe's answer</b> for the payments tagged with the night, read when the night was filed and again on a re-check. A night whose lookup failed, or that ran with payments off, says <span class="tag unknown">unknown</span> — never $0 — and stays out of every per-head figure. Untagged money taken in the night's window is shown beside it and never summed across nights. <b>$ a head</b> = (tips + vote packs + paid requests) ÷ phones, over nights with money known — merch is never in it. Merch is the app's own order record (an order is written the moment a session is redeemed, tagged with the newest night — “during the show” is counted separately), goods and postage apart; the artist ships it. The morning after a night the register asks Stripe once more, so a tip sent from the walk home still lands on it.</p></div>
+    <div><h3>Where a night was</h3><p>Country and zone come off the night's own record (stamped from the calendar gig since 25 Sep 2026), else the gig the night lines up with, else a venue in the registry with the same name, else the tail of the “City, Country” text older nights carry. Nights with none are counted in the total and flagged.</p></div>
+    <div><h3>Counts the store forgets</h3><p>The app keeps only the last 80 requests, prunes who-is-coming three days after a gig, and lets a phone replace its own rating. Since 25 Sep 2026 a night's request and RSVP counts are filed with it; for older nights the register keeps the first count it saw and never lowers it. A night that says “unknown for older nights” had its requests forgotten before either existed.</p></div>
+    <div><h3>What the money model takes from here</h3><p>Nights counted, phones and hours a night, votes and songs a night, actions per phone, and room money a head by plan — the same block <code>tools/actuals.py</code> used to print for pasting. The meters — ticks per phone-hour, credits a night, deploys — are Netlify's dashboard numbers and stay the tracker's; the model keeps those from its last reading and says so.</p></div>
+  </div>
+</section>
+
+<footer id="foot"></footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const fmt = {
+  int: (n) => (n == null ? '—' : Math.round(n).toLocaleString('en-US')),
+  num: (n, d = 1) => (n == null || !Number.isFinite(n) ? '—' : Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })),
+  usd: (n, d = 2) => (n == null || !Number.isFinite(n) ? '—' : '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })),
+  h: (n) => (n == null ? '—' : n >= 10 ? Math.round(n) + ' h' : (Math.round(n * 60) >= 60 ? Math.floor(n) + ' h ' + String(Math.round((n % 1) * 60)).padStart(2, '0') : Math.round(n * 60) + ' min')),
+  when: (ms) => (ms ? new Date(ms).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'),
+  day: (d) => (d ? new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' }) : '—'),
+  ago: (ms) => { if (!ms) return '—'; const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? 'just now' : m < 60 ? m + ' min ago' : m < 1440 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' d ago'; },
+};
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2600); };
+const PLAN = { free: 'Hobbyist', plus: 'Plus', pro: 'Pro' };
+const money = (r) => (r.money.known ? fmt.usd(r.money.total) : '<span class="tag unknown" title="Stripe could not be asked, or payments were off">unknown</span>');
+const STATUS_WORD = { counted: 'counted', unused: 'unused', refused: 'not counted', silent: 'silent', hidden: 'hidden' };
+const tagOf = (r) => `<span class="tag ${r.status}" title="${esc(r.why || '')}">${STATUS_WORD[r.status] || r.status}</span>${r.hidden ? ' <span class="tag hidden" title="the artist deleted this night from their Money tab; still on disk, still judged by the rule">hidden</span>' : ''}`;
+
+let REG = null, ROWS = [], VIEW = [];
+const F = { range: 'all', from: '', to: '', artist: '', venue: '', country: '', plan: '', status: 'counted', q: '', sort: 'startedAt', asc: false, open: null };
+
+async function load() {
+  const r = await fetch('/moneymodel/shows.json?months=all', { credentials: 'same-origin', headers: { accept: 'application/json' } });
+  if (r.status === 401) { location.reload(); return; }
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'no data');
+  REG = j;
+  $('#stampBuilt').textContent = j.built ? `built ${fmt.ago(j.builtAt)}` : 'not built yet';
+  if (!j.built) { $('#stampCounts').textContent = ''; $('#kpis').innerHTML = `<div class="kpi" style="grid-column:1/-1"><div class="l">Nothing on file yet</div><div class="s">${esc(j.why || '')} The register folds every ten minutes when a show has started or ended, and walks every artist every six hours; <b>Refresh now</b> builds it this second.</div></div>`; return; }
+  ROWS = j.rows || [];
+  fillSelects();
+  render();
+}
+function fillSelects() {
+  const opt = (sel, vals, label = (v) => v) => { const el = $(sel); const keep = el.value; el.innerHTML = el.options[0].outerHTML + vals.map((v) => `<option value="${esc(v)}">${esc(label(v))}</option>`).join(''); el.value = keep; };
+  const artists = [...new Map(ROWS.map((r) => [r.artist.id, r.artist.name])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  opt('#fArtist', artists.map((a) => a[0]), (id) => artists.find((a) => a[0] === id)[1]);
+  opt('#fVenue', [...new Set(ROWS.map((r) => r.venue).filter(Boolean))].sort());
+  opt('#fCountry', [...new Set(ROWS.map((r) => r.country || '(unknown)'))].sort());
+}
+function inRange(r) {
+  const d = r.localDate || (r.startedAt ? new Date(r.startedAt).toISOString().slice(0, 10) : '');
+  if (F.range === 'all') return true;
+  const today = new Date().toISOString().slice(0, 10);
+  if (F.range === 'month') return d.slice(0, 7) === today.slice(0, 7);
+  if (F.range === 'custom') return (!F.from || d >= F.from) && (!F.to || d <= F.to);
+  const days = Number(F.range); const since = new Date(Date.now() - days * 86400e3).toISOString().slice(0, 10);
+  return d >= since;
+}
+function filtered() {
+  const q = F.q.trim().toLowerCase();
+  return ROWS.filter((r) => (F.status === 'all' || (F.status === 'hidden' ? r.hidden : r.status === F.status))
+    && inRange(r) && (!F.artist || r.artist.id === F.artist) && (!F.venue || r.venue === F.venue) && (!F.country || (r.country || '(unknown)') === F.country) && (!F.plan || r.artist.plan === F.plan)
+    && (!q || [r.venue, r.city, r.country, r.title, r.artist.name, r.topSong && r.topSong.title, ...(r.played || []).map((p) => p.title), ...(r.requested || []).map((p) => p.title)].filter(Boolean).some((s) => String(s).toLowerCase().includes(q))));
+}
+const COLS = [
+  ['startedAt', 'Date', (r) => `<span title="${esc(r.tz || '')}">${fmt.day(r.localDate)}${r.localTime ? ' · ' + esc(r.localTime) : ''}</span>`],
+  ['artist', 'Artist', (r) => `${r.artist.left ? '<span class="muted">(account closed)</span>' : esc(r.artist.name)} <span class="tag" title="${r.artist.planStamped ? 'the plan the night was played on' : 'the artist\'s plan today (nights before 25 Sep 2026 were not stamped)'}">${esc(PLAN[r.artist.plan] || r.artist.plan)}</span>`, (r) => r.artist.name],
+  ['venue', 'Venue', (r) => esc(r.venue || (r.title ? `“${r.title}”` : '—'))],
+  ['place', 'City · Country', (r) => esc([r.city, r.country].filter(Boolean).join(', ') || '—'), (r) => (r.country || '') + (r.city || '')],
+  ['hours', 'Length', (r) => (r.status === 'silent' ? '<span class="muted">—</span>' : `<span class="n" title="record ${fmt.h(r.recordHours)}${r.setHours ? ', first song to last ' + fmt.h(r.setHours) : ''}">${fmt.h(r.hours)}</span>`), null, 'n'],
+  ['people', 'Phones', (r) => (r.status === 'silent' ? '<span class="muted">—</span>' : `<span title="${r.nets ?? '?'} network${r.nets === 1 ? '' : 's'} · peak ${r.peakVoters} voting at once">${fmt.int(r.people)}</span>`), null, 'n'],
+  ['votes', 'Votes', (r) => (r.status === 'silent' ? '<span class="muted">—</span>' : fmt.int(r.votes)), null, 'n'],
+  ['paidVotes', 'Bought', (r) => (r.paidVotes == null ? '<span class="muted">—</span>' : fmt.int(r.paidVotes)), (r) => r.paidVotes ?? -1, 'n'],
+  ['tips', 'Tips', (r) => (r.money.known ? `${fmt.int(r.money.tips.count)} <span class="muted">${fmt.usd(r.money.tips.amount, 0)}</span>` : '<span class="muted">—</span>'), (r) => (r.money.known ? r.money.tips.amount : -1), 'n'],
+  ['requests', 'Requests', (r) => `${fmt.int(r.requests.count)}${r.requests.count ? ` <span class="muted">${r.requests.accepted} played</span>` : ''}`, (r) => r.requests.count, 'n'],
+  ['merch', 'Merch', (r) => (r.money.merch.orders ? `${r.money.merch.items} <span class="muted">${fmt.usd(r.money.merch.amount, 0)}</span>` : '<span class="muted">—</span>'), (r) => r.money.merch.amount, 'n'],
+  ['songs', 'Songs', (r) => (r.status === 'silent' ? '<span class="muted">—</span>' : fmt.int(r.songsPlayed)), (r) => r.songsPlayed, 'n'],
+  ['money', 'Room $', (r) => (r.status === 'silent' ? '<span class="muted">—</span>' : money(r)), (r) => (r.money.known ? r.money.total : -1), 'n'],
+  ['perHead', '$ a head', (r) => (r.money.known && r.people ? fmt.usd(r.money.perHead) : '<span class="muted">—</span>'), (r) => (r.money.perHead ?? -1), 'n'],
+  ['status', 'Status', (r) => tagOf(r)],
+];
+function sortVal(r, key) { const c = COLS.find((x) => x[0] === key); return c && c[3] ? c[3](r) : r[key]; }
+function renderTable() {
+  VIEW = filtered().sort((a, b) => { const x = sortVal(a, F.sort), y = sortVal(b, F.sort); const c = typeof x === 'string' && typeof y === 'string' ? x.localeCompare(y) : (Number(x) || 0) - (Number(y) || 0); return F.asc ? c : -c; });
+  const t = $('#showsTable');
+  $('thead', t).innerHTML = `<tr>${COLS.map(([k, l, , , cls]) => `<th class="${cls || ''} ${F.sort === k ? 'on ' + (F.asc ? 'asc' : '') : ''}" data-k="${k}">${l}</th>`).join('')}</tr>`;
+  $('tbody', t).innerHTML = VIEW.length ? VIEW.map((r) => `<tr class="night ${r.status === 'counted' && !r.hidden ? '' : 'dim'}" data-id="${esc(r.id)}">${COLS.map(([, , cell, , cls]) => `<td class="${cls || ''}">${cell(r)}</td>`).join('')}</tr>${F.open === r.id ? `<tr class="detail"><td colspan="${COLS.length}">${detail(r)}</td></tr>` : ''}`).join('')
+    : `<tr><td colspan="${COLS.length}"><div class="empty">No nights match. Widen the range, or switch the status filter to “Everything filed”.</div></td></tr>`;
+  const counted = VIEW.filter((r) => r.status === 'counted');
+  $('#showsK').textContent = `${VIEW.length} NIGHT${VIEW.length === 1 ? '' : 'S'} · ${counted.length} COUNTED · ${new Set(VIEW.map((r) => r.artist.id)).size} ARTIST${new Set(VIEW.map((r) => r.artist.id)).size === 1 ? '' : 'S'}`;
+  $$('th', t).forEach((th) => th.addEventListener('click', () => { const k = th.dataset.k; if (F.sort === k) F.asc = !F.asc; else { F.sort = k; F.asc = k === 'artist' || k === 'venue' || k === 'place'; } renderTable(); }));
+  $$('tr.night', t).forEach((tr) => tr.addEventListener('click', () => { F.open = F.open === tr.dataset.id ? null : tr.dataset.id; renderTable(); if (F.open) openNight(VIEW.find((r) => r.id === F.open)); }));
+}
+const NIGHT = {};   // showId → the night's own page, fetched once when a row is opened
+async function openNight(r) {
+  if (!r || r.status === 'silent') return;
+  const ids = r.mergedFrom || [r.showId];
+  for (const id of ids) {
+    if (NIGHT[id]) continue;
+    try {
+      const q = await fetch(`/moneymodel/shows/night.json?a=${encodeURIComponent(r.artist.id)}&id=${encodeURIComponent(id)}`, { credentials: 'same-origin', headers: { accept: 'application/json' } });
+      if (q.status === 401) { location.reload(); return; }
+      NIGHT[id] = q.ok ? await q.json() : { ok: false };
+    } catch (e) { NIGHT[id] = { ok: false }; }
+  }
+  if (F.open === r.id) renderTable();
+}
+function detail(r) {
+  const m = r.money;
+  const line = (k, v) => `<div class="row"><span class="muted">${k}</span><span class="n">${v}</span></div>`;
+  if (r.status === 'silent') return `<div class="det"><div><h3>A published gig with no record</h3><p class="small">${esc(r.why)}</p>${r.gig ? line('Calendar gig', esc(r.gig.date)) : ''}</div></div>`;
+  const pages = (r.mergedFrom || [r.showId]).map((id) => NIGHT[id]).filter(Boolean);
+  const loaded = pages.length === (r.mergedFrom || [r.showId]).length && pages.every((p) => p.ok !== false);
+  const played = pages.flatMap((p) => p.played || []);
+  const requested = pages.flatMap((p) => p.requested || []);
+  const placed = { record: 'the night\'s own record', calendar: 'the calendar gig', venue: 'the venue registry', city: 'the “City, Country” text', none: 'nothing — no country on file' };
+  return `<div class="det">
+    <div><h3>The night</h3>
+      ${line('Started', fmt.when(r.startedAt) + ' UTC')}${line('Ended', fmt.when(r.endedAt) + ' UTC')}${line('Local', `${esc(r.localDate || '')} ${esc(r.localTime || '')} <span class="muted">${esc(r.tz || '')}</span>`)}
+      ${line('Counted length', fmt.h(r.hours))}${line('Record length', fmt.h(r.recordHours))}${r.setHours ? line('First song → last', fmt.h(r.setHours)) : ''}
+      ${r.gig ? line('Calendar gig', `${esc(r.gig.date)} · slot ${fmt.h(r.gig.slotHours)}`) : line('Calendar gig', '<span class="muted">none lines up</span>')}
+      ${r.key ? line('Gig key', `<span class="mono small">${esc(r.key)}</span>`) : ''}
+      ${line('Placed by', esc(placed[r.placedBy] || r.placedBy))}
+      ${r.startedBy ? line('Started by', esc(r.startedBy) + (r.endedBy ? ' · ended by ' + esc(r.endedBy) : '')) : ''}
+      ${r.mergedFrom ? line('Merged from', `${r.mergedFrom.length} records`) : ''}
+      ${r.why ? `<p class="why" style="margin:8px 0 0">${esc(r.why)}</p>` : ''}
+      ${r.hidden ? '<p class="why" style="margin:8px 0 0">Hidden by the artist from their own Money tab. Still on disk, still judged by the rule, greyed here.</p>' : ''}
+      ${r.rsvps ? line('Said they were coming', fmt.int(r.rsvps)) : ''}${r.rating ? line('Rated by the room', `${r.rating.avg} ★ · ${r.rating.n}`) : ''}
+    </div>
+    <div><h3>Money ${m.known ? '<span class="tag known">stripe</span>' : `<span class="tag unknown">${esc(m.source || 'unknown')}</span>`}${m.asOf ? ` <span class="muted small">as of ${esc(fmt.when(m.asOf))}</span>` : ''}</h3>
+      ${m.known ? `${line('Room total', fmt.usd(m.total))}${line('Tips', `${m.tips.count} · ${fmt.usd(m.tips.amount)}`)}${line('Vote packs', `${m.packs.count} · ${fmt.usd(m.packs.amount)} · ${m.packs.votes} votes`)}${line('Paid requests', `${m.requests.count} · ${fmt.usd(m.requests.amount)}`)}${m.unattributed ? line('Untagged, in the window', fmt.usd(m.unattributed)) : ''}${r.people ? line('A head', fmt.usd(m.perHead)) : ''}`
+        : `<p class="small">Stripe was not asked, or could not answer, when this night was filed — the register asks once more the morning after; the artist's Money tab has a Re-check too. Unknown is not zero.${m.store && (m.store.tips || m.store.packs) ? ` The app's own record shows ${m.store.tips} tip${m.store.tips === 1 ? '' : 's'} (${fmt.usd(m.store.tipsAmount)}) and ${m.store.packs} pack${m.store.packs === 1 ? '' : 's'} tagged with this night.` : ''}</p>`}
+      ${line('Merch orders', m.merch.orders ? `${m.merch.orders} · ${m.merch.items} item${m.merch.items === 1 ? '' : 's'} · ${fmt.usd(m.merch.goods)} goods${m.merch.postage ? ' + ' + fmt.usd(m.merch.postage) + ' postage' : ''}${m.merch.atShow < m.merch.orders ? ` · ${m.merch.atShow} during the show` : ''}` : '—')}${m.merch.titles && m.merch.titles.length ? `<p class="small">${esc(m.merch.titles.join(', '))}</p>` : ''}
+      ${r.featured ? line('Featured spot bought', `${r.featured.spots} · ${fmt.usd(r.featured.cents / 100)} to MySet`) : ''}
+    </div>
+    <div><h3>Songs played (${r.songsPlayed})</h3>${!loaded ? '<p class="small">Loading the night…</p>' : played.length ? `<ul>${played.map((p) => `<li>${esc(p.title)}${p.artist ? ` <span class="muted">— ${esc(p.artist)}</span>` : ''} <span class="n muted">${p.roundVotes ?? p.votes} vote${(p.roundVotes ?? p.votes) === 1 ? '' : 's'}${p.replay ? ' · replay' : ''}</span></li>`).join('')}</ul>` : '<p class="small">No song was started.</p>'}</div>
+    <div><h3>Asked for and never played (${requested.length})</h3>${!loaded ? '<p class="small">…</p>' : requested.length ? `<ul>${requested.map((p) => `<li>${esc(p.title)} <span class="n muted">${p.votes}</span></li>`).join('')}</ul>` : '<p class="small">Nothing left standing.</p>'}
+      ${r.requests.count ? `<p class="small">Requests from the room: ${r.requests.songs} song${r.requests.songs === 1 ? '' : 's'}, ${r.requests.birthdays} birthday${r.requests.birthdays === 1 ? '' : 's'}, ${r.requests.vibes} vibe${r.requests.vibes === 1 ? '' : 's'} · ${r.requests.accepted} accepted${r.requests.paid ? ` · ${r.requests.paid} paid` : ''}${r.requests.known ? '' : ' · <span class="muted">unknown for older nights</span>'}</p>` : ''}</div>
+  </div>`;
+}
+
+function kpis() {
+  const rows = filtered().filter((r) => r.status === 'counted');
+  const known = rows.filter((r) => r.money.known);
+  const sum = (f) => rows.reduce((a, r) => a + (f(r) || 0), 0);
+  const avg = (f, d = 1) => (rows.length ? fmt.num(sum(f) / rows.length, d) : '—');
+  const heads = known.reduce((a, r) => a + r.people, 0);
+  const perHead = heads ? known.reduce((a, r) => a + r.money.total, 0) / heads : null;
+  const T = REG.totals || {};
+  const k = [
+    ['Nights counted', fmt.int(rows.length), `${fmt.int(T.filed)} filed in all · ${fmt.int(T.unused)} unused · ${fmt.int(T.refused)} not counted · ${fmt.int(T.silent)} silent${T.hidden ? ` · ${fmt.int(T.hidden)} hidden by their artist` : ''}`, 'acc'],
+    ['Phones a night', avg((r) => r.people), `${fmt.int(sum((r) => r.people))} phones in all`],
+    ['Length', rows.length ? fmt.h(sum((r) => r.hours) / rows.length) : '—', `${fmt.num(sum((r) => r.hours), 0)} hours of shows`],
+    ['Votes a night', avg((r) => r.votes), `${fmt.int(sum((r) => r.votes))} votes · ${fmt.num(rows.length ? sum((r) => r.interactions) / rows.filter((r) => r.interactions != null).length : null, 2)} actions a phone`],
+    ['Room money a head', perHead == null ? '—' : fmt.usd(perHead), `tips + vote packs + paid requests ÷ phones · ${known.length} of ${rows.length} nights with money known · ${fmt.usd(known.reduce((a, r) => a + r.money.total, 0), 0)} in all${T.moneyRechecked ? ` · ${T.moneyRechecked} re-checked the morning after` : ''}`, perHead == null ? 'warn' : 'good'],
+    ['Tips', fmt.int(known.reduce((a, r) => a + r.money.tips.count, 0)), fmt.usd(known.reduce((a, r) => a + r.money.tips.amount, 0), 0) + ' · known nights'],
+    ['Votes bought', fmt.int(known.reduce((a, r) => a + (r.money.packs.votes || 0), 0)), `${fmt.int(known.reduce((a, r) => a + r.money.packs.count, 0))} packs · ${fmt.usd(known.reduce((a, r) => a + r.money.packs.amount, 0), 0)}`],
+    ['Merch', fmt.int(sum((r) => r.money.merch.items)), `${fmt.int(sum((r) => r.money.merch.orders))} orders · ${fmt.usd(sum((r) => r.money.merch.amount), 0)}`],
+    ['Requests', fmt.int(sum((r) => r.requests.count)), `${fmt.int(sum((r) => r.requests.accepted))} accepted · ${fmt.int(sum((r) => r.songsPlayed))} songs played`],
+    ['Artists', `${new Set(rows.map((r) => r.artist.id)).size} <span class="muted small">of ${fmt.int(T.artistsOnPlatform)}</span>`, `with counted nights · on the platform`],
+    ['Venues · countries', `${new Set(rows.map((r) => r.venue).filter(Boolean)).size} · ${new Set(rows.map((r) => r.country).filter(Boolean)).size}`, `${new Set(rows.map((r) => r.city).filter(Boolean)).size} cities${T.unplaced ? ` · ${T.unplaced} night${T.unplaced === 1 ? '' : 's'} with no country on file` : ''}`],
+    ['This month', fmt.int((T.thisMonth || {}).nights), `${fmt.int((T.thisMonth || {}).artists)} artists · ${fmt.num((T.thisMonth || {}).people)} phones a night`],
+  ];
+  $('#kpis').innerHTML = k.map(([l, v, s, c]) => `<div class="kpi"><div class="l">${l}</div><div class="v ${c || ''}">${v}</div><div class="s">${s}</div></div>`).join('');
+  $('#stampCounts').innerHTML = `<b>${fmt.int(T.counted)}</b> nights counted · <b>${fmt.int(T.artistsWithNights)}</b> of ${fmt.int(T.artistsOnPlatform)} artists · <b>${fmt.int(T.countries)}</b> countr${T.countries === 1 ? 'y' : 'ies'}${REG.monthsAll ? '' : ` · last ${REG.monthsLoaded.length} months loaded`}`;
+  const countries = [...new Set(known.map((r) => r.country).filter(Boolean))];
+  const fn = $('#floorNote');
+  if (known.length && countries.length === 1 && countries[0] === 'Thailand') { fn.hidden = false; fn.innerHTML = `Every night with money known so far is in <b>Thailand</b>, where pay is close to nothing and tipping is not a habit. Read the <b>${fmt.usd(perHead)} a head</b> as a floor for a market where tipping is normal, not as the ceiling — no such night has been measured yet, so nothing here guesses one.`; }
+  else fn.hidden = true;
+}
+
+function table(sel, cols, rows, empty = 'Nothing yet.') {
+  const t = $(sel);
+  t.innerHTML = `<thead><tr>${cols.map(([l, , cls]) => `<th class="${cls || ''}">${l}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map((r) => `<tr>${cols.map(([, f, cls]) => `<td class="${cls || ''}">${f(r)}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${cols.length}"><div class="empty">${empty}</div></td></tr>`}</tbody>`;
+}
+const usdOrDash = (g) => (g.moneyKnown ? fmt.usd(g.gross, 0) : '<span class="muted">—</span>');
+function rollups() {
+  const R = REG;
+  $('#artistK').textContent = `${R.byArtist.length} ON THE PLATFORM`;
+  table('#tArtist', [
+    ['Artist', (a) => `${a.left ? '<span class="muted">(account closed)</span>' : esc(a.name)} <span class="tag">${esc(PLAN[a.plan] || a.plan)}</span>${a.slug ? ` <a class="small" href="/${esc(a.slug)}" target="_blank" rel="noopener">page</a>` : ''}${a.createdAt && !a.nights ? ` <span class="muted small">signed up ${fmt.when(a.createdAt).split(',')[0]}</span>` : ''}`],
+    ['Nights', (a) => fmt.int(a.nights), 'n'], ['Published', (a) => `${fmt.int(a.published)}${a.silent ? ` <span class="muted">${a.silent} silent</span>` : ''}`, 'n'], ['A week', (a) => (a.nights ? fmt.num(a.nightsPerWeek) : '—'), 'n'],
+    ['First', (a) => (a.first ? fmt.when(a.first).split(',')[0] : '—')], ['Last', (a) => (a.last ? fmt.when(a.last).split(',')[0] : '—')],
+    ['Phones', (a) => fmt.num(a.people), 'n'], ['Length', (a) => (a.hours == null ? '—' : fmt.h(a.hours)), 'n'], ['Votes', (a) => fmt.int(a.votes), 'n'], ['Songs', (a) => fmt.int(a.songs), 'n'],
+    ['Venues', (a) => fmt.int(a.venues), 'n'], ['Countries', (a) => esc((a.countries || []).join(', ') || '—')],
+    ['Room $', (a) => usdOrDash(a), 'n'], ['A head', (a) => (a.perHead == null ? '—' : fmt.usd(a.perHead)), 'n'], ['Tips', (a) => fmt.int(a.tips), 'n'], ['Bought', (a) => fmt.int(a.paidVotes), 'n'], ['Merch', (a) => (a.merchOrders ? `${a.merchOrders} · ${fmt.usd(a.merchAmount, 0)}` : '—'), 'n'],
+  ], R.byArtist);
+  $('#venueK').textContent = `${R.byVenue.length} PLAYED`;
+  table('#tVenue', [
+    ['Venue', (v) => esc(v.venue)], ['City · Country', (v) => esc([v.city, v.country].filter(Boolean).join(', ') || '—')],
+    ['Nights', (v) => fmt.int(v.nights), 'n'], ['Artists', (v) => fmt.int(v.artists), 'n'], ['Phones', (v) => fmt.num(v.people), 'n'], ['Length', (v) => fmt.h(v.hours), 'n'], ['Votes', (v) => fmt.int(v.votes), 'n'],
+    ['Room $', (v) => usdOrDash(v), 'n'], ['A head', (v) => (v.perHead == null ? '—' : fmt.usd(v.perHead)), 'n'], ['First', (v) => fmt.when(v.first).split(',')[0]], ['Last', (v) => fmt.when(v.last).split(',')[0]],
+  ], R.byVenue);
+  $('#placeK').textContent = `${R.byCountry.length} COUNTR${R.byCountry.length === 1 ? 'Y' : 'IES'} · ${R.byCity.length} CIT${R.byCity.length === 1 ? 'Y' : 'IES'}`;
+  table('#tCountry', [['Country', (c) => esc(c.country)], ['Nights', (c) => fmt.int(c.nights), 'n'], ['Cities', (c) => fmt.int(c.cities), 'n'], ['Artists', (c) => fmt.int(c.artists), 'n'], ['Phones', (c) => fmt.num(c.people), 'n'], ['Room $', (c) => usdOrDash(c), 'n'], ['A head', (c) => (c.perHead == null ? '—' : fmt.usd(c.perHead)), 'n']], R.byCountry);
+  table('#tCity', [['City', (c) => esc(c.city)], ['Country', (c) => esc(c.country || '—')], ['Nights', (c) => fmt.int(c.nights), 'n'], ['Venues', (c) => fmt.int(c.venues), 'n'], ['Artists', (c) => fmt.int(c.artists), 'n'], ['Phones', (c) => fmt.num(c.people), 'n'], ['A head', (c) => (c.perHead == null ? '—' : fmt.usd(c.perHead)), 'n']], R.byCity);
+  table('#tMonth', [['Month', (m) => esc(m.month)], ['Nights', (m) => fmt.int(m.nights), 'n'], ['Artists', (m) => fmt.int(m.artists), 'n'], ['Venues', (m) => fmt.int(m.venues), 'n'], ['Phones', (m) => fmt.num(m.people), 'n'], ['Hours', (m) => fmt.num(m.hoursTotal, 0), 'n'], ['Votes', (m) => fmt.int(m.votes), 'n'], ['Songs', (m) => fmt.int(m.songs), 'n'], ['Room $', (m) => usdOrDash(m), 'n'], ['Known', (m) => `${m.moneyKnown}/${m.nights}`, 'n'], ['Tips', (m) => fmt.int(m.tips), 'n'], ['Bought', (m) => fmt.int(m.paidVotes), 'n'], ['Merch', (m) => fmt.int(m.merchOrders), 'n']], [...R.byMonth].reverse());
+  const su = R.signups || { artistsByMonth: [], venuesByMonth: [], bySource: [], referred: 0 };
+  $('#signupK').textContent = `${fmt.int((R.totals || {}).artistsOnPlatform)} ARTISTS · ${fmt.int((R.totals || {}).venuesOnPlatform)} VENUES · ${fmt.int(su.referred)} REFERRED`;
+  const vByM = Object.fromEntries(su.venuesByMonth.map((m) => [m.month, m]));
+  table('#tSignups', [['Month', (m) => esc(m.month)], ['Artists signed up', (m) => fmt.int(m.artists), 'n'], ['…who played a counted night', (m) => fmt.int(m.playing), 'n'], ['Venues signed up', (m) => fmt.int((vByM[m.month] || {}).venues || 0), 'n'], ['…verified', (m) => fmt.int((vByM[m.month] || {}).verified || 0), 'n']], [...su.artistsByMonth].reverse(), 'Nobody has signed up yet.');
+  table('#tSources', [['First touch', (x) => esc(x.source)], ['Artists', (x) => fmt.int(x.artists), 'n']], su.bySource, 'No source recorded.');
+  table('#tSongs', [['Song', (s) => `${esc(s.title)}${s.artist ? ` <span class="muted">— ${esc(s.artist)}</span>` : ''}`], ['Played', (s) => fmt.int(s.plays), 'n'], ['Votes won', (s) => fmt.int(s.votes), 'n'], ['Nights', (s) => fmt.int(s.nights), 'n']], R.topSongs || [], 'No song has been played on a counted night yet.');
+  $('#silentK').textContent = `${(R.silent || []).length} GIG${(R.silent || []).length === 1 ? '' : 'S'}`;
+  const names = Object.fromEntries((R.artists || []).map((a) => [a.id, a.name]));
+  table('#tSilent', [['Date', (s) => fmt.day(s.date)], ['Artist', (s) => esc(names[s.artist] || s.artist)], ['Venue', (s) => esc(s.venue || '—')], ['City · Country', (s) => esc([s.city, s.country].filter(Boolean).join(', ') || '—')]], (R.silent || []).slice(0, 200), 'Every published gig left a record.');
+  const b = R.build || {};
+  $('#foot').innerHTML = `<span>Register built ${esc(fmt.when(R.builtAt))} UTC${b.reason ? ` (${esc(b.reason)})` : ''}</span><span>${fmt.int(b.reads)} reads · ${fmt.int(b.ms)} ms · ${fmt.int(b.artistsWalked)} of ${fmt.int(b.artistsOnPlatform)} artists walked${b.partial ? ' (part of a longer walk)' : ''}</span><span>Folds within ten minutes of a show starting or ending, walks every artist every six hours, asks Stripe once more for a night's money the morning after · decision 0095</span>`;
+}
+
+/* ── charts ── */
+let charts = {};
+const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function mk(id, cfg) { if (charts[id]) charts[id].destroy(); if (!window.Chart) return; charts[id] = new Chart($('#' + id), cfg); }
+function opts(t, yFmt = (v) => v) {
+  return { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { display: false }, tooltip: { backgroundColor: t.ink, titleColor: t.surface, bodyColor: t.surface, padding: 10 } },
+    scales: { x: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+              y: { beginAtZero: true, grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 10 }, callback: yFmt } } } };
+}
+function chartsRender() {
+  const t = { ink: cssVar('--ink'), muted: cssVar('--muted'), grid: cssVar('--grid'), axis: cssVar('--axis'), surface: cssVar('--surface') };
+  const rows = filtered().filter((r) => r.status === 'counted').sort((a, b) => a.startedAt - b.startedAt);
+  const weekOf = (ms) => { const d = new Date(ms); const day = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - day); return d.toISOString().slice(0, 10); };
+  const weeks = new Map();
+  if (rows.length) { for (let w = new Date(weekOf(rows[0].startedAt)); w <= new Date(); w.setUTCDate(w.getUTCDate() + 7)) weeks.set(w.toISOString().slice(0, 10), 0); }
+  for (const r of rows) weeks.set(weekOf(r.startedAt), (weeks.get(weekOf(r.startedAt)) || 0) + 1);
+  const wk = [...weeks.entries()];
+  mk('cWeeks', { type: 'bar', data: { labels: wk.map(([w]) => w.slice(5)), datasets: [{ data: wk.map(([, n]) => n), backgroundColor: cssVar('--s-nights'), borderRadius: 0 }] }, options: opts(t) });
+  const lab = rows.map((r) => (r.localDate || '').slice(5));
+  mk('cPeople', { type: 'bar', data: { labels: lab, datasets: [{ data: rows.map((r) => r.people), backgroundColor: cssVar('--s-people') }] }, options: opts(t) });
+  mk('cMoney', { type: 'bar', data: { labels: lab, datasets: [{ data: rows.map((r) => (r.money.known ? r.money.total : null)), backgroundColor: cssVar('--s-money') }] }, options: opts(t, (v) => '$' + v) });
+  const byC = new Map();
+  for (const r of rows) if (r.money.known && r.people) { const c = byC.get(r.country || '(unknown)') || { g: 0, p: 0 }; c.g += r.money.total; c.p += r.people; byC.set(r.country || '(unknown)', c); }
+  const cs = [...byC.entries()].sort((a, b) => b[1].g / b[1].p - a[1].g / a[1].p);
+  mk('cCountry', { type: 'bar', data: { labels: cs.map(([c]) => c), datasets: [{ data: cs.map(([, c]) => Math.round(c.g / c.p * 100) / 100), backgroundColor: cssVar('--accent') }] }, options: { ...opts(t, (v) => '$' + v), indexAxis: 'y' } });
+}
+
+function render() { if (!REG || !REG.built) return; kpis(); renderTable(); rollups(); chartsRender(); }
+
+/* ── wiring ── */
+$$('#rangePills button').forEach((b) => b.addEventListener('click', () => { $$('#rangePills button').forEach((x) => x.classList.toggle('on', x === b)); F.range = b.dataset.r; $('#customRange').hidden = F.range !== 'custom'; render(); }));
+$('#fromDate').addEventListener('change', (e) => { F.from = e.target.value; render(); });
+$('#toDate').addEventListener('change', (e) => { F.to = e.target.value; render(); });
+for (const [id, k] of [['#fArtist', 'artist'], ['#fVenue', 'venue'], ['#fCountry', 'country'], ['#fPlan', 'plan'], ['#fStatus', 'status']]) $(id).addEventListener('change', (e) => { F[k] = e.target.value; render(); });
+$('#fSearch').addEventListener('input', (e) => { F.q = e.target.value; clearTimeout(render.t); render.t = setTimeout(render, 120); });
+$('#refreshBtn').addEventListener('click', async () => {
+  const b = $('#refreshBtn'); b.disabled = true; b.textContent = 'Folding…';
+  try {
+    const r = await fetch('/moneymodel/shows/refresh', { method: 'POST', credentials: 'same-origin', headers: { accept: 'application/json' } });
+    if (r.status === 401) { location.reload(); return; }
+    const j = await r.json();
+    toast(j.skipped ? j.why : j.ok ? `Folded ${j.shows} night${j.shows === 1 ? '' : 's'} across ${j.artistsWalked} artist${j.artistsWalked === 1 ? '' : 's'} in ${fmt.int(j.ms)} ms` : 'The fold did not finish — try again in a minute');
+    await load();
+  } catch (e) { toast('Could not reach the server'); }
+  b.disabled = false; b.textContent = 'Refresh now';
+});
+const themeBtn = $('#themeBtn');
+const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
+const paintTheme = () => { themeBtn.textContent = isDark() ? 'LIGHT' : 'DARK'; };
+try { const saved = localStorage.getItem('myset.model.theme'); if (saved) document.documentElement.dataset.theme = saved; } catch (e) {}
+themeBtn.addEventListener('click', () => { const next = isDark() ? 'light' : 'dark'; document.documentElement.dataset.theme = next; try { localStorage.setItem('myset.model.theme', next); } catch (e) {} paintTheme(); chartsRender(); });
+paintTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { paintTheme(); chartsRender(); });
+load().catch((e) => { $('#stampBuilt').textContent = 'could not load'; $('#kpis').innerHTML = `<div class="kpi" style="grid-column:1/-1"><div class="l">The register could not be read</div><div class="s">${esc(e && e.message)}</div></div>`; });
+</script>

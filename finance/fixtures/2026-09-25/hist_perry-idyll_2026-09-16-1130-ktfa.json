@@ -1,0 +1,193 @@
+{
+"v": 1,
+"showId": "2026-09-16-1130-ktfa",
+"artistId": "perry-idyll",
+"title": "Anantara \u2013 Sep 16, 2026",
+"venue": "Anantara Rasananda Resort \ud83c\udf05\u26f1\ufe0f",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1789558219401,
+"endedAt": 1789574174304,
+"key": "g9zst3nmn@2026-09-16",
+"played": [
+{
+"songId": "sweet-home-alabama",
+"title": "Sweet Home Alabama",
+"artist": "Lynyrd Skynyrd",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789562574457
+},
+{
+"songId": "summer-of-69",
+"title": "Summer Of '69",
+"artist": "Bryan Adams",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789562730563
+},
+{
+"songId": "wish-you-were-here",
+"title": "Wish You Were Here",
+"artist": "Pink Floyd",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789562947536
+},
+{
+"songId": "ain-t-no-rest-for-the-wicked",
+"title": "Ain't No Rest For The Wicked",
+"artist": "Cage The Elephant",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789563306998
+},
+{
+"songId": "tennessee-whiskey",
+"title": "Tennessee Whiskey",
+"artist": "Chris Stapleton",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1789563628205
+},
+{
+"songId": "this-love",
+"title": "This Love",
+"artist": "Maroon 5",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789565044897
+},
+{
+"songId": "hallelujah",
+"title": "Hallelujah",
+"artist": "Jeff Buckley",
+"votes": 2,
+"voters": 4,
+"roundVotes": 2,
+"replay": false,
+"at": 1789565327545
+},
+{
+"songId": "3-am",
+"title": "3 AM",
+"artist": "Matchbox Twenty",
+"votes": 1,
+"voters": 3,
+"roundVotes": 1,
+"replay": false,
+"at": 1789565714586
+},
+{
+"songId": "ain-t-no-sunshine",
+"title": "Ain't No Sunshine",
+"artist": "Bill Withers",
+"votes": 1,
+"voters": 4,
+"roundVotes": 1,
+"replay": false,
+"at": 1789566013739
+},
+{
+"songId": "have-you-ever-seen-the-rain",
+"title": "Have You Ever Seen The Rain",
+"artist": "Creedence Clearwater Revival",
+"votes": 1,
+"voters": 3,
+"roundVotes": 1,
+"replay": false,
+"at": 1789566415609
+},
+{
+"songId": "free-fallin",
+"title": "Free Fallin'",
+"artist": "Tom Petty (John Mayer version)",
+"votes": 1,
+"voters": 3,
+"roundVotes": 1,
+"replay": false,
+"at": 1789566636796
+},
+{
+"songId": "hey-jude",
+"title": "Hey Jude",
+"artist": "The Beatles",
+"votes": 1,
+"voters": 3,
+"roundVotes": 1,
+"replay": false,
+"at": 1789567058589
+}
+],
+"requested": [
+{
+"songId": "bar-song-tipsy",
+"title": "Bar Song (Tipsy)",
+"artist": "Shaboozey",
+"votes": 7
+},
+{
+"songId": "brown-eyed-girl",
+"title": "Brown Eyed Girl",
+"artist": "Van Morrison",
+"votes": 6
+},
+{
+"songId": "vienna",
+"title": "Vienna",
+"artist": "Billy Joel",
+"votes": 6
+},
+{
+"songId": "catch-release",
+"title": "Catch & Release",
+"artist": "Matt Simons",
+"votes": 5
+}
+],
+"stats": {
+"songsPlayed": 12,
+"totalVotes": 17,
+"peakVoters": 4,
+"room": 9,
+"nets": 5,
+"topSong": {
+"songId": "hallelujah",
+"title": "Hallelujah",
+"votes": 2
+}
+},
+"money": {
+"currency": "USD",
+"gross": 15,
+"votes": {
+"amount": 5,
+"count": 1,
+"paid": 3
+},
+"tips": {
+"amount": 10,
+"count": 1
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789646441638
+},
+"archivedAt": 1789646441638
+}

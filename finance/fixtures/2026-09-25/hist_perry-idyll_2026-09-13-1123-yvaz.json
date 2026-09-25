@@ -1,0 +1,97 @@
+{
+"v": 1,
+"showId": "2026-09-13-1123-yvaz",
+"artistId": "perry-idyll",
+"title": "Sand & Tan \u2013 Sep 13, 2026",
+"venue": "Sand & Tan \ud83c\udf05\ud83e\udd42",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1789298633892,
+"endedAt": 1789308719934,
+"played": [
+{
+"songId": "all-of-me",
+"title": "All Of Me",
+"artist": "John Legend",
+"votes": 2,
+"voters": 1,
+"roundVotes": 2,
+"replay": false,
+"at": 1789300588752
+},
+{
+"songId": "2009",
+"title": "2009",
+"artist": "Mac Miller",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789301949153
+},
+{
+"songId": "have-you-ever-seen-the-rain",
+"title": "Have You Ever Seen The Rain",
+"artist": "Creedence Clearwater Revival",
+"votes": 0,
+"voters": 1,
+"roundVotes": 0,
+"replay": false,
+"at": 1789307447799
+},
+{
+"songId": "peaceful-easy-feeling",
+"title": "Peaceful Easy Feeling",
+"artist": "Eagles",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789307610947
+},
+{
+"songId": "ain-t-no-sunshine",
+"title": "Ain't No Sunshine",
+"artist": "Bill Withers",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1789307637774
+}
+],
+"requested": [],
+"stats": {
+"songsPlayed": 5,
+"totalVotes": 5,
+"peakVoters": 1,
+"room": 2,
+"nets": 2,
+"topSong": {
+"songId": "all-of-me",
+"title": "All Of Me",
+"votes": 2
+}
+},
+"money": {
+"currency": "USD",
+"gross": 10,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 10,
+"count": 1
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789381227764
+},
+"archivedAt": 1789381227764
+}

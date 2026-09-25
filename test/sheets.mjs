@@ -190,10 +190,15 @@ await AS(P.token, 'eventSave', { event: { venue: 'The Ugly Duckling', city: 'Koh
 /* A gig on the calendar for RIGHT NOW (Asia/Bangkok), so the night that just ran
    lands on it and reads as real on Shows and Signals (decision 0072). */
 {
-  const bkk = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(Date.now() - 10 * 60e3));
+  const bkk = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(Date.now() - 130 * 60e3));
   const g = Object.fromEntries(bkk.map((x) => [x.type, x.value]));
   await AS(P.token, 'eventSave', { event: { venue: 'The Ugly Duckling', city: 'Koh Phangan', country: 'Thailand',
                                    date: `${g.year}-${g.month}-${g.day}`, time: `${g.hour === '24' ? '00' : g.hour}:${g.minute}`, tz: 'Asia/Bangkok' } });
+  /* And the night ran two hours, not two milliseconds: since decision 0095 the one
+     night rule (`_nightrule.mjs`) refuses a record shorter than half an hour as a
+     demo, on the Sheet as everywhere else. */
+  const { mutateShow: msh } = await import('../netlify/functions/_lib.mjs');
+  await msh(P.aid, (sh) => { sh.startedAt = Date.now() - 120 * 60e3; return true; });
 }
 await AS(P.token, 'status', { status: 'ended' });
 

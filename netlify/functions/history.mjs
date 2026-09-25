@@ -14,6 +14,9 @@ export default async (req) => {
   if (req.method === 'POST') {
     let body = {};
     try { body = await req.json(); } catch { return bad('bad json'); }
+    /* a filed night changed by hand: the founder's register folds this artist at its
+       next ring (decision 0095) — one small CAS, never a reason the action fails */
+    const dirty = (a) => import('./_register.mjs').then((m) => m.markDirty(a)).catch(() => null);
     /* "Find my missing shows" in the Studio. Forced, so it runs again even after
        the automatic one has stamped the index — the artist asked. */
     if (body.action === 'heal') return json({ ok: true, ...(await healHistory(aid, { force: true })) });
@@ -26,17 +29,20 @@ export default async (req) => {
       if (!title) return bad('Give the night a name');
       const r = await renameShow(aid, String(body.show || ''), title);
       if (!r) return bad('unknown show', 404);
+      await dirty(aid);
       return json({ ok: true, ...r });
     }
     /* "Delete show" on the Money tab — see hideShow: the row is hidden, never lost. */
     if (body.action === 'hide') {
       const r = await hideShow(aid, String(body.show || ''));
       if (!r) return bad('unknown show', 404);
+      await dirty(aid);
       return json({ ok: true, ...r });
     }
     if (body.action !== 'reconcile') return bad('unknown action');
     const d = await reconcileShow(aid, String(body.show || ''));
     if (!d) return bad('unknown show', 404);
+    await dirty(aid);
     return json({ ok: true, show: d });
   }
 

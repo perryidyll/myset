@@ -1,0 +1,60 @@
+{
+"v": 1,
+"showId": "2026-09-11-1648-oi5v",
+"artistId": "perry-idyll",
+"title": "Plantasia \u2013 2026-09-11",
+"venue": "",
+"city": "",
+"showTime": "8:00 PM",
+"startedAt": 1789145316389,
+"endedAt": 1789148284417,
+"played": [
+{
+"songId": "3-am",
+"title": "3 AM",
+"artist": "Matchbox Twenty",
+"votes": 2,
+"voters": 1,
+"roundVotes": 2,
+"replay": false,
+"at": 1789145507879
+}
+],
+"requested": [
+{
+"songId": "all-of-me",
+"title": "All Of Me",
+"artist": "John Legend",
+"votes": 2
+}
+],
+"stats": {
+"songsPlayed": 1,
+"totalVotes": 3,
+"peakVoters": 1,
+"room": 1,
+"nets": 1,
+"topSong": {
+"songId": "3-am",
+"title": "3 AM",
+"votes": 2
+}
+},
+"money": {
+"currency": "USD",
+"gross": 0,
+"votes": {
+"amount": 0,
+"count": 0
+},
+"tips": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1789298634162
+},
+"archivedAt": 1789298634161,
+"titleByHand": true
+}

@@ -76,7 +76,11 @@ const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','st
   'assets','stage','about','help','support','login','signup','signin','terms','privacy',
   'settings','account','new','index','home','myset','null','undefined',
   'community','merch','shop','store','orders','c',
-  'diary','diaries']);          // `/<slug>/diary` is every artist's (0085), so no artist may be called it
+  'diary','diaries',            // `/<slug>/diary` is every artist's (0085), so no artist may be called it
+  /* every address netlify.toml routes above the /:slug catch-all (0095): an artist
+     with one of these names would have a page nobody could reach; test/structure.mjs
+     checks the toml against this list. None was held by anybody on 2026-09-25. */
+  'shows','moneymodel','financialmodel','report','metrics','artists']);
 
 export async function artistBySlug(slug) {
   const a = await readArtists();

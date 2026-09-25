@@ -9,8 +9,10 @@
 
 # The money model is served by a function from OUTSIDE the published folder, so
 # it never leaves the server without the passcode (see moneymodel.mjs).
+# …and, since decision 0095, the founder's register dashboard at /moneymodel/shows,
+# served the same way from the same function behind the same passcode.
 [functions.moneymodel]
-  included_files = ["finance/model.html"]
+  included_files = ["finance/model.html", "finance/shows.html"]
 
 [[redirects]]
   from = "/api/*"
@@ -23,6 +25,22 @@
   from = "/moneymodel"
   to = "/.netlify/functions/moneymodel"
   status = 200
+
+# …and everything under it (decision 0095): /moneymodel/shows — every show on the
+# platform, the founder's register — with /moneymodel/shows.json, /moneymodel/shows.csv,
+# /moneymodel/shows/night.json and /moneymodel/live.json (the model's live feed), all
+# behind the same cookie. Above the /:slug/* rules for the same reason.
+[[redirects]]
+  from = "/moneymodel/*"
+  to = "/.netlify/functions/moneymodel/:splat"
+  status = 200
+
+# myset.vip/shows is the address to remember; the page lives under the model so one
+# passcode opens both. `shows` is a reserved slug, so no artist can be shadowed.
+[[redirects]]
+  from = "/shows"
+  to = "/moneymodel/shows"
+  status = 301
 
 # The address it launched on, 5 Sep. Kept so an open tab or a saved link lands,
 # and above the catch-all for the same reason as the rule before it.

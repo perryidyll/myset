@@ -1,0 +1,148 @@
+{
+"v": 1,
+"showId": "2026-09-22-1200-kf5n",
+"artistId": "perry-idyll",
+"title": "Crystal Day \u2013 Sep 22, 2026",
+"venue": "Crystal Day (solo) \ud83c\udf05\ud83c\udf71",
+"city": "Koh Phangan, Thailand",
+"showTime": "8:00 PM",
+"startedAt": 1790078436805,
+"endedAt": 1790085171465,
+"key": "gimj34ujp@2026-09-22",
+"played": [
+{
+"songId": "blackbird",
+"title": "Blackbird",
+"artist": "The Beatles",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790079444832
+},
+{
+"songId": "all-of-me",
+"title": "All Of Me",
+"artist": "John Legend",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790079655525
+},
+{
+"songId": "tennessee-whiskey",
+"title": "Tennessee Whiskey",
+"artist": "Chris Stapleton",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1790079939780
+},
+{
+"songId": "perfect",
+"title": "Perfect",
+"artist": "Ed Sheeran",
+"votes": 1,
+"voters": 2,
+"roundVotes": 1,
+"replay": false,
+"at": 1790080352520
+},
+{
+"songId": "shape-of-you",
+"title": "Shape Of You",
+"artist": "Ed Sheeran",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790080705798
+},
+{
+"songId": "crazy-little-thing-called-love",
+"title": "Crazy Little Thing Called Love",
+"artist": "Queen",
+"votes": 3,
+"voters": 3,
+"roundVotes": 3,
+"replay": false,
+"at": 1790081330411
+},
+{
+"songId": "all-or-nothing",
+"title": "All Or Nothing",
+"artist": "Perry Idyll",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790081512387
+},
+{
+"songId": "imagine",
+"title": "Imagine",
+"artist": "John Lennon",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790081953516
+},
+{
+"songId": "summer-of-69",
+"title": "Summer Of '69",
+"artist": "Bryan Adams",
+"votes": 1,
+"voters": 1,
+"roundVotes": 1,
+"replay": false,
+"at": 1790082402356
+},
+{
+"songId": "fast-car",
+"title": "Fast Car",
+"artist": "Tracy Chapman",
+"votes": 0,
+"voters": 0,
+"roundVotes": 0,
+"replay": false,
+"at": 1790084483493
+}
+],
+"requested": [],
+"stats": {
+"songsPlayed": 10,
+"totalVotes": 11,
+"peakVoters": 3,
+"room": 9,
+"nets": 9,
+"topSong": {
+"songId": "crazy-little-thing-called-love",
+"title": "Crazy Little Thing Called Love",
+"votes": 3
+}
+},
+"money": {
+"currency": "USD",
+"gross": 0,
+"votes": {
+"amount": 0,
+"count": 0,
+"paid": 0
+},
+"tips": {
+"amount": 0,
+"count": 0
+},
+"requests": {
+"amount": 0,
+"count": 0
+},
+"unattributed": 0,
+"source": "stripe",
+"reconciledAt": 1790163019508
+},
+"archivedAt": 1790163019508
+}

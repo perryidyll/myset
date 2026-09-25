@@ -354,7 +354,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | | |
 |---|---|
 | Public pages | ${f.shape.pages.length} — ${f.shape.pages.join(', ')} |
-| HTTP functions | ${f.shape.endpoints.length} — ${f.shape.endpoints.map((e) => `\`${e}\``).join(', ')} (each served at \`/api/<name>\`, except \`moneymodel\`, which serves \`/moneymodel\`) |
+| HTTP functions | ${f.shape.endpoints.length} — ${f.shape.endpoints.map((e) => `\`${e}\``).join(', ')} (each served at \`/api/<name>\`, except \`moneymodel\`, which serves \`/moneymodel\` and \`/moneymodel/shows\`) |
 | Scheduled jobs | ${f.shape.scheduled.length} — ${f.shape.scheduled.join(', ')} |
 | Shared libraries | ${f.shape.libraries.length} |
 | Artist Studio actions | ${f.shape.studioActions.length} |
