@@ -17,7 +17,7 @@ counter, the vote page's with neither, the venue's without a grab zone); `toast`
 page not null-safe; the About page's strip loop a hand-kept fork of the artist
 page's ("kept in step by hand").
 
-**What shipped (in the working tree — NOT committed, NOT pushed):**
+**What shipped — **live as `68efdb4`** (PR #85, merged 2026-09-25 03:51 UTC; live on production ~30 s later), one PR with 0088:**
 
 - `public/fan.js` (21 KB raw, 8.8 KB gzipped): `$`, `API`, `esc`, `fanId`, `toast`,
   `shareLink`, the date words (`MON`/`MONFULL`/`DOW`, `dayNum`, `monShort`,

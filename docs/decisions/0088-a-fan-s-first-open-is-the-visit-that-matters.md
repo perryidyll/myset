@@ -8,7 +8,7 @@ area: performance
 reverses:
 superseded_by:
 invariants: [0gd]
-commits: []
+commits: [68efdb4]
 tests: [test/structure.mjs, test/fandoor.mjs, test/artists.mjs, test/copy.mjs, tools/uicheck.mjs, tools/sheetcheck.mjs]
 files: [public/vote.html, public/index.html, public/about.html, public/artists.html, public/artist.html, public/studio.html, public/venue-studio.html, netlify/functions/fan.mjs, netlify/functions/artists.mjs, netlify/functions/mapconfig.mjs, netlify/functions/events.mjs, tools/mock.mjs, tools/uicheck.mjs]
 ---
@@ -118,5 +118,7 @@ slot and no stacked `url(`; the front door and the directory read through `/api/
 (network log). Production timings are the BEFORE; the AFTER is measured once this is
 live (the session note says how).
 
-NOT checked: a deploy preview; the cold/warm timing of `what=artists` and
-`what=mapconfig` through the door on production; a real phone on bar wifi.
+Checked after the merge (68efdb4, PR #85): the deploy preview at phone width, and the
+AFTER on production — `what=artists` / `mapconfig` / `places` at 0.42–0.46 s from the
+durable cache (were 1.15–1.98 s cold), the artist page fetching 0 originals (were 4) —
+in the session note's table. NOT checked: a real phone on bar wifi.
