@@ -121,7 +121,7 @@ function rsvpRemember(k,on){const m=rsvpMap(); if(on)m[k]=1; else delete m[k]; R
    first and wait, 400 ms at most, for app.css to land so the copy is styled before
    it is revealed. app.css has arrived when its <link> has a sheet, or the preload
    has become the stylesheet; a page with no link at all is "ready", so nothing
-   waits on it. Since decision 0092 app.css rides inside every fan page: there is no <link>,
+   waits on it. Since decision 0094 app.css rides inside every fan page: there is no <link>,
    cssReady() is true at once, and the waits below end on their first frame — they
    stay for any page that ever links a stylesheet again. */
 let CSSOK=false;

@@ -523,8 +523,8 @@ If you are about to violate one, stop and say so rather than working around it.
     a synthetic week; `finance/model-test.mjs` checks the tracker carries the method's
     name and that the seed's ticks solve to a sane screen-on share. Decision 0089.
 
-0gf. **app.css rides inside every fan page, byte for byte — no fan page asks the network
-    for it.** (Decision 0092.) The whole stylesheet sits between `<style id="app-css">`
+0gh. **app.css rides inside every fan page, byte for byte — no fan page asks the network
+    for it.** (Decision 0094.) The whole stylesheet sits between `<style id="app-css">`
     and `</style>` where the `<link>` used to be, written by `node tools/stamp.mjs`
     after ANY edit to `public/app.css`; `test/structure.mjs` refuses a page whose copy
     differs from the file by a byte, a page with two blocks, and a page that links

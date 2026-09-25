@@ -1,4 +1,4 @@
-# 2026-09-25 — The founder's three levers: the service worker (0091), app.css inline (0092), the community read split (0093)
+# 2026-09-25 — The founder's three levers: the service worker (0091), app.css inline (0094), the community read split (0093)
 
 **Asked:** "let's do the service worker stale-while-revalidate next" — the first of the
 three levers 0088 left to the founder. Same day, after 0087/0088 went live as `68efdb4`.
@@ -64,7 +64,7 @@ The founder, given the three levers in plain words (the worker's rule, inlining 
 splitting the community read), asked for all three, then added: "double check every
 single line of code one last time before shipping it all live".
 
-**app.css inline (decision 0092, INVARIANT 0gf).** `tools/stamp.mjs` gained the inline
+**app.css inline (decision 0094, INVARIANT 0gh).** `tools/stamp.mjs` gained the inline
 step — `appBlock`/`appRe`, the whole file between `<style id="app-css">` and `</style>`
 on all nine fan pages, where the `<link>` stood; the vote page's 0088 tokens block and
 the five preload/noscript pairs are gone; `test/structure.mjs` refuses a stale copy, two

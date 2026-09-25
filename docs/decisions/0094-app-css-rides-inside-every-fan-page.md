@@ -1,5 +1,5 @@
 ---
-id: 0092
+id: 0094
 title: app.css rides inside every fan page, byte for byte
 date: 2026-09-25
 status: decided
@@ -7,7 +7,7 @@ decided_by: perry
 area: performance
 reverses:
 superseded_by:
-invariants: [0gf]
+invariants: [0gh]
 commits: []
 tests: [test/structure.mjs]
 files: [public/app.css, tools/stamp.mjs, public/index.html, public/artist.html, public/artists.html, public/vote.html, public/community.html, public/venue.html, public/about.html, public/shop.html, public/diary.html, public/fan.js, netlify.toml, AGENTS.md, docs/design-system.md]

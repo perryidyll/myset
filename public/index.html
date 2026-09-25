@@ -33,7 +33,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<!-- app.css, inline (decision 0092): the whole shared stylesheet, byte for byte, written by
+<!-- app.css, inline (decision 0094): the whole shared stylesheet, byte for byte, written by
      tools/stamp.mjs. Edit public/app.css, never this block; test/structure.mjs refuses a stale copy. -->
 <style id="app-css">
 /* ═══════════════════════════════════════════════════════════════
@@ -347,7 +347,7 @@ body{padding-bottom:34px}
 /* .signin is a .chip from app.css, worn .on-style: the accent ink and the orange
    ring it always had, so the two calls to action stay the loudest things in the
    bar. The pill, its ground, weight and nowrap are restated here on purpose:
-   app.css was a separate file until decision 0092 (cached ten minutes, served
+   app.css was a separate file until decision 0094 (cached ten minutes, served
    stale-first), so a returning phone could draw this page with an app.css from
    before .chip existed. It rides inside the page now; the restatement is harmless
    and stays. */
@@ -683,7 +683,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}   /* fro
      0.15–0.5 s measured on a first visit, which is the visit that matters — and
      nothing here calls MySetPull() before the body has arrived. -->
 <script src="/pull.js"></script>
-<script src="/fan.js?v=ac8563a0"></script>
+<script src="/fan.js?v=bb648cef"></script>
 <script>
 let HOME_MAP_PROMISE=null,HOME_MAP=null,HOME_INFO=null,HOME_MARKERS=new Map();
 const homeCoords=e=>e.maps&&Number.isFinite(e.maps.lat)&&Number.isFinite(e.maps.lng);

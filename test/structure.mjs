@@ -129,7 +129,7 @@ check('public/venue-studio.html', [
    (INVARIANT 0gd). (2) Nothing blocks the head: no <script src> without `defer`
    before </head> on a fan page — pull.js in the head held every first paint for
    its own round trip. (3) app.css rides inside every fan page, byte for byte
-   (decision 0092, written by tools/stamp.mjs), and no fan page asks the network
+   (decision 0094, written by tools/stamp.mjs), and no fan page asks the network
    for it — a stale copy or a re-added <link> is refused here. */
 {
   for (const page of FANPAGES) {

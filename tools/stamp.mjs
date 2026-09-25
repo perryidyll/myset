@@ -28,7 +28,7 @@ export const PAIRS = [
 export const FANPAGES = PAIRS.filter(([, js]) => js === 'fan.js').map(([page]) => page);
 export const stampOf = (js) => createHash('sha1').update(js).digest('hex').slice(0, 8);
 export const stampRe = (js) => new RegExp(`(["'/]${js.replace('.', '\\.')}\\?v=)[0-9a-f]{8}`);
-/* app.css rides INSIDE every fan page (decision 0092): the whole file, byte for byte, between
+/* app.css rides INSIDE every fan page (decision 0094): the whole file, byte for byte, between
    <style id="app-css"> and </style>, so no first paint waits on a second round trip. Run this
    after ANY edit to app.css; test/structure.mjs refuses a page whose copy is stale. The block is
    rewritten whole — nobody edits it by hand — and app.css may never contain "</style". The id is

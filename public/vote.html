@@ -32,7 +32,7 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-512.png">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<!-- app.css, INLINE (decision 0092): the whole shared stylesheet rides inside the page, byte for
+<!-- app.css, INLINE (decision 0094): the whole shared stylesheet rides inside the page, byte for
      byte — tools/stamp.mjs writes it, test/structure.mjs refuses a stale copy — so the first paint
      has every recipe before a single request has left the phone. Until 2026-09-25 only the tokens
      were inline here (0088) and app.css itself was preloaded; measured then, the blocking link had
@@ -730,7 +730,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
      0.15–0.5 s measured on a first visit, which is the visit that matters — and
      nothing here calls MySetPull() before the body has arrived. -->
 <script src="/pull.js"></script>
-<script src="/fan.js?v=ac8563a0"></script>
+<script src="/fan.js?v=bb648cef"></script>
 <script>
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
@@ -1290,7 +1290,7 @@ function flipPlay(first){
 
 let CSSWAIT=0;   // when the first paint started waiting for app.css (decision 0088)
 function render(){
-  /* The first paint waited for app.css while it was a preload (0088); since 0092 app.css
+  /* The first paint waited for app.css while it was a preload (0088); since 0094 app.css
      rides inside the page and cssReady() is true at once, so this is a no-op kept for any
      page that links a stylesheet again — 400 ms at most, the same bound lift() uses on the shop. */
   if(!BOOTED&&!cssReady()){

@@ -38,7 +38,7 @@
      ground is painted from the first frame instead of flashing the opposite theme. -->
 <style>html{background:#F5F5F7}html[data-theme=dark]{background:#0D0B0C}
 </style>
-<!-- app.css, inline (decision 0092): the whole shared stylesheet, byte for byte, written by
+<!-- app.css, inline (decision 0094): the whole shared stylesheet, byte for byte, written by
      tools/stamp.mjs. Edit public/app.css, never this block; test/structure.mjs refuses a stale copy. -->
 <style id="app-css">
 /* ═══════════════════════════════════════════════════════════════
@@ -842,7 +842,7 @@ a.pc:active{transform:scale(.97)}
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
-<script src="/fan.js?v=ac8563a0"></script>
+<script src="/fan.js?v=bb648cef"></script>
 <script>
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
@@ -1345,7 +1345,7 @@ document.getElementById('sheet').addEventListener('submit',e=>{
    sheet opens, so a reload or a share of the page does not open it again, and the
    key never reaches the server or the edge cache. A boot open once waited for
    app.css (.sheet lives there) so the sheet never painted unstyled; since decision
-   0092 app.css rides inside the page and that wait is over at once (the bound,
+   0094 app.css rides inside the page and that wait is over at once (the bound,
    400 ms, stays for any page that links a stylesheet again). A stylesheet that
    fails opens anyway:
    the door they were handed still leads somewhere. No answer from the server

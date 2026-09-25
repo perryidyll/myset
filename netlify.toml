@@ -186,7 +186,7 @@
 # (sw.js rule 2, decision 0091; a pull or a reload still goes to the network). sw.js itself is
 # matched by /*.js and that is fine — the browser checks a service worker for
 # updates straight from the network regardless of these headers.
-# (app.css itself rides inside every fan page since decision 0092 — no page asks for it
+# (app.css itself rides inside every fan page since decision 0094 — no page asks for it
 # any more; this rule still covers theme.js, pull.js, leave.js and the Studios' lock.css.)
 [[headers]]
   for = "/*.css"

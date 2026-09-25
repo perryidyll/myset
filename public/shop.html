@@ -31,7 +31,7 @@ html[data-theme=dark] #intro .word{color:#fff}
 @keyframes introbar{from{height:18px}to{height:var(--h,40px)}}
 @media (prefers-reduced-motion:reduce){#intro .bars i{animation:none;height:var(--h,40px)}}
 </style>
-<!-- app.css, inline (decision 0092): the whole shared stylesheet, byte for byte, written by
+<!-- app.css, inline (decision 0094): the whole shared stylesheet, byte for byte, written by
      tools/stamp.mjs. Edit public/app.css, never this block; test/structure.mjs refuses a stale copy. -->
 <style id="app-css">
 /* ═══════════════════════════════════════════════════════════════
@@ -311,7 +311,7 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
    2026-09-03, after they had already been written and believed. */
 </style>
 <style>
-/* tokens: a byte copy of app.css:5–75 (decision 0051), so the lastSeen paint was styled while the deferred stylesheet was in flight — redundant since 0092 (app.css rides inline below), kept until 0051's copies are retired */
+/* tokens: a byte copy of app.css:5–75 (decision 0051), so the lastSeen paint was styled while the deferred stylesheet was in flight — redundant since 0094 (app.css rides inline below), kept until 0051's copies are retired */
 :root{
   /* Provenance marker. Arbitrary, meaningless, and referenced nowhere — that is
      the point: a shared value with no function has no innocent explanation.
@@ -383,7 +383,7 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
   --sh-1:0 1px 2px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
   --sh-2:0 2px 6px rgba(0,0,0,.5),0 10px 28px rgba(0,0,0,.5);
   --sh-3:0 6px 18px rgba(0,0,0,.6),0 22px 55px rgba(0,0,0,.6)}
-/* the shared recipes the first paint depends on, byte-identical to app.css (0051); nothing waits for app.css since 0092 */
+/* the shared recipes the first paint depends on, byte-identical to app.css (0051); nothing waits for app.css since 0094 */
 a{color:inherit;text-decoration:none}
 .wrap{max-width:var(--maxw);margin:0 auto}
 .themebtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;
@@ -673,7 +673,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
-<script src="/fan.js?v=ac8563a0"></script>
+<script src="/fan.js?v=bb648cef"></script>
 <script>
 /* /<slug>/shop or /v/<slug>/shop — and the bare file with ?a=|?v= so tools/uicheck.mjs can open it */
 const P=location.pathname.split('/').filter(Boolean), qs=new URLSearchParams(location.search);
