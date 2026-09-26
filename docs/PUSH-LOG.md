@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-26 13:21 — c2f8b53 — wt@ux/gigs-tab-opens-at-top (7 files since origin/main)
+**tl;dr:** A Studio tab now opens at its top: the first tap on Gigs used to land at the bottom of the page once it loaded (both Studios)
+**Other sessions:** setTab in studio.js and venue-studio.js calls window.scrollTo(0,0) when the tab changes — render()'s scroll keeping is for same-tab re-renders only; don't route a tab switch around setTab. Stamps restamped (studio.js, venue-studio.js). test/copy.mjs guards both.
+
 ### 2026-09-26 13:19 — a204495 — wt2@docs/model-look-live (2 files since origin/main)
 **tl;dr:** Docs only: the money model's new look is live as 16137f3, verified by content [skip ci]
 **Other sessions:** Nothing to redo. Ledger EVS-003 row is the record.
