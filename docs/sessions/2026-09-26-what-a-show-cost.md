@@ -28,5 +28,7 @@ with money known, costs come to ≈ $6.29.
 The page was checked in the app's browser on a read-only copy of production's rows,
 priced locally.
 
-**Not verified:** production (after the merge). Stripe's real fee per payment was not
+**Live:** `315f525` (PR #102), deploy ready 06:41 UTC; production's shows.json carries the block (1¢ a credit, 2.98 credits average, 7 measured nights) and prices all 16 counted nights: ≈ $0.48 server, ≈ $5.93 Stripe.
+
+**Not verified:** Stripe's real fee per payment was not
 checked; it is an estimate by design, and the decision note says how to make it exact.
