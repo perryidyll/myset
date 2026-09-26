@@ -29,5 +29,7 @@ read-only copy of production's `shows.json` and night pages (fetched with the pa
 16 counted rows, window 760 px = 15 rows, totals 146 phones / $72 tips / $10 bought,
 carousel 1–2 → 3–4 of 9, drawer, light theme, 375 px wide with no sideways page scroll.
 
-**Not verified:** the page on production (after the merge); Safari (sticky header rows are
+**Live:** `5e978ac` (PR #97), deploy ready 05:50 UTC; the page on production carries the carousel, the totals row and the 15-row cap.
+
+**Not verified:** Safari (sticky header rows are
 set per cell, which Safari supports).
