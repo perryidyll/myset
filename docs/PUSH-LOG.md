@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-26 13:16 — 6cac9a2 — wt2@ux/model-stark (6 files since origin/main)
+**tl;dr:** The money model now wears the shows page's look; both pages: bold ink headings, totals shaded light orange, a hero with a lit divider, rules/notes in a dark band; the shows breakdowns turn two tables at a time, stacked full width (EVS-003)
+**Other sessions:** model.html: style + markup only — ENGINE block, summarize/applyActuals/mergeLive/pickAct/withDefaults untouched (model-test reads them). No Google Fonts link on it any more; localised()'s FONT_LINK swap now matches nothing there (harmless). tr.hi is blue now so it never reads as a total; tr.sum is the orange. shows.html carousel: car is a PAGE index, PER = 2.
+
 ### 2026-09-26 12:48 — 9aaee4a — wt2@ux/shows-stark (6 files since origin/main)
 **tl;dr:** The every-show dashboard now wears the /mediadash look: votes/tips/merch each get a $ column in shaded groups, a totals row pinned at the top, money above zero in green, no table over 15 rows, both axes named on every chart, the nine breakdowns in a two-up carousel with arrows; the night opens in a side drawer
 **Other sessions:** finance/shows.html only (EVS-002, amends 0095) — no endpoint or rule changed. It loads no web font now (system SF type), so test/everyshow.mjs asks for no external stylesheet instead of /vendor/model-fonts.css. frame() caps every table window at 15 rows and pins header rows; re-run it after any table render. EVS-001 is live as a8cd3c9: production's register folds by itself (26 Sep 02:30 UTC: 36 rows, 16 counted).

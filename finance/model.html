@@ -1,231 +1,315 @@
+<!doctype html>
+<html lang="en">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="data:,">
 <title>MySet Money Model</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100,400;100,500;100,600;100,700;112,600;112,700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-  /* ── tokens — MySet's own system: flat, zero radius, one red, 2px rules ─────── */
+  /* ── tokens — the /mediadash system (decision 0092), as on /moneymodel/shows: black glass, SF type,
+     one orange; the data series keep their validated palette, and colour follows the entity everywhere ── */
   :root {
-    --ground: #f2f1ee; --surface: #ffffff; --sunken: #e8e6e1; --ink: #131312; --ink-soft: #3a3a37;
-    --muted: #6d6c67; --rule: #d8d6d0; --rule-firm: #b9b7b0; --accent: #ec3013; --accent-ink: #ffffff;
-    --accent-lo: #fbe4df;
-    --good: #0a7a2f; --bad: #b8261a; --warn: #9a6400; --good-lo: #e2f3e7; --bad-lo: #fbe3e0; --warn-lo: #fbefd3;
-    /* data series — validated palette; colour follows the entity everywhere */
-    --s-subs: #2a78d6; --s-cuts: #eb6834; --s-feat: #12946a;          /* revenue family */
-    --s-server: #4a3aa7; --s-stripe: #c98500; --s-fixed: #898781;     /* cost family */
-    --s-profit: #0ca30c; --s-loss: #d03b3b; --s-rev: #1d5fb8; --s-cost: #6d5cc7;
-    --rule-ctl: #8f8d86; --btn-primary: #d42a10;
-    --grid: #e4e2dc; --axis: #c3c2b7;
-    --shadow: 0 1px 0 rgba(19,19,18,.06);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --ground: #0f0f0e; --surface: #171716; --sunken: #1f1f1d; --ink: #ecebe7; --ink-soft: #c9c8c2;
-      --muted: #9b9a93; --rule: #2b2b28; --rule-firm: #3f3e3a; --accent: #ff5236; --accent-ink: #ffffff;
-      --accent-lo: #3a1a14;
-      --good: #57c98a; --bad: #ff7b6c; --warn: #f0b64a; --good-lo: #14301f; --bad-lo: #3a1a17; --warn-lo: #332a10;
-      --s-subs: #3987e5; --s-cuts: #d95926; --s-feat: #199e70; --s-server: #9085e9; --s-stripe: #c98500; --s-fixed: #898781;
-      --s-profit: #0ca30c; --s-loss: #e66767; --s-rev: #4f97ee; --s-cost: #a396f0;
-      --grid: #2a2a27; --axis: #3f3e3a; --shadow: none; --rule-ctl: #6c6b65; --btn-primary: #ff5236; --accent-ink: #131312;
-    }
-  }
-  :root[data-theme="dark"] {
-    --ground: #0f0f0e; --surface: #171716; --sunken: #1f1f1d; --ink: #ecebe7; --ink-soft: #c9c8c2;
-    --muted: #9b9a93; --rule: #2b2b28; --rule-firm: #3f3e3a; --accent: #ff5236; --accent-ink: #ffffff;
-    --accent-lo: #3a1a14;
-    --good: #57c98a; --bad: #ff7b6c; --warn: #f0b64a; --good-lo: #14301f; --bad-lo: #3a1a17; --warn-lo: #332a10;
+    --bg: #000; --bg2: #0A0A0C; --surface: #141416; --surface2: #1C1C1E; --band: #1E1E22; --hover: #232327;
+    --ink: #F5F5F7; --ink2: #DDDDE0; --muted: #98989D; --faint: #68686D;
+    --hair: rgba(255,255,255,.08); --hair2: rgba(255,255,255,.16);
+    --accent: #FF7A45; --accent-rgb: 255,122,69; --good: #30D158; --good-rgb: 48,209,88; --bad: #FF6961; --warn: #FFD60A; --blue: #5AC8FA; --blue-rgb: 90,200,250;
+    --grid: rgba(255,255,255,.07); --axis: rgba(255,255,255,.18);
+    --tot: color-mix(in srgb, var(--accent) 16%, var(--surface)); --tot-ink: #FFB38F; --dot: rgba(255,255,255,.09);
+    --deep: #101012; --deep-card: #19191C;
     --s-subs: #3987e5; --s-cuts: #d95926; --s-feat: #199e70; --s-server: #9085e9; --s-stripe: #c98500; --s-fixed: #898781;
-    --s-profit: #0ca30c; --s-loss: #e66767; --s-rev: #4f97ee; --s-cost: #a396f0;
-    --grid: #2a2a27; --axis: #3f3e3a; --shadow: none; --rule-ctl: #6c6b65; --btn-primary: #ff5236; --accent-ink: #131312;
+    --s-profit: #30D158; --s-loss: #FF6961; --s-rev: #4f97ee; --s-cost: #a396f0;
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Inter, system-ui, sans-serif;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+    --r: 22px; --r2: 14px; --ease: cubic-bezier(.2,.8,.2,1);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+    --bg: #F5F5F7; --bg2: #FFF; --surface: #FFF; --surface2: #F0F0F3; --band: #F1F1F5; --hover: #EAEAEE;
+    --ink: #0A0A0C; --ink2: #1C1C1E; --muted: #6E6E73; --faint: #A1A1A6;
+    --hair: rgba(0,0,0,.08); --hair2: rgba(0,0,0,.16); --accent: #F2612E; --good: #248A3D; --good-rgb: 36,138,61; --bad: #D70015; --warn: #B25000; --blue: #0071E3; --blue-rgb: 0,113,227;
+    --grid: rgba(0,0,0,.06); --axis: rgba(0,0,0,.2);
+    --tot: color-mix(in srgb, var(--accent) 12%, #fff); --tot-ink: #A8401A; --dot: rgba(0,0,0,.09); --deep: #1D1D1F; --deep-card: #2A2A2D;
+    --s-subs: #2a78d6; --s-cuts: #eb6834; --s-feat: #12946a; --s-server: #4a3aa7; --s-stripe: #c98500; --s-fixed: #898781;
+    --s-profit: #0a8a2a; --s-loss: #d03b3b; --s-rev: #1d5fb8; --s-cost: #6d5cc7;
+    color-scheme: light;
+  } }
+  :root[data-theme="light"] {
+    --bg: #F5F5F7; --bg2: #FFF; --surface: #FFF; --surface2: #F0F0F3; --band: #F1F1F5; --hover: #EAEAEE;
+    --ink: #0A0A0C; --ink2: #1C1C1E; --muted: #6E6E73; --faint: #A1A1A6;
+    --hair: rgba(0,0,0,.08); --hair2: rgba(0,0,0,.16); --accent: #F2612E; --good: #248A3D; --good-rgb: 36,138,61; --bad: #D70015; --warn: #B25000; --blue: #0071E3; --blue-rgb: 0,113,227;
+    --grid: rgba(0,0,0,.06); --axis: rgba(0,0,0,.2);
+    --tot: color-mix(in srgb, var(--accent) 12%, #fff); --tot-ink: #A8401A; --dot: rgba(0,0,0,.09); --deep: #1D1D1F; --deep-card: #2A2A2D;
+    --s-subs: #2a78d6; --s-cuts: #eb6834; --s-feat: #12946a; --s-server: #4a3aa7; --s-stripe: #c98500; --s-fixed: #898781;
+    --s-profit: #0a8a2a; --s-loss: #d03b3b; --s-rev: #1d5fb8; --s-cost: #6d5cc7;
+    color-scheme: light;
   }
 
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html { scroll-behavior: smooth; }
-  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.5 "Archivo", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; }
-  .mono, .n, .kpi .v, input[type=number], td.n, th.n, .stamp, .tag { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
-  h1, h2, h3 { font-variation-settings: "wdth" 112; letter-spacing: -.01em; margin: 0; }
-  h1 { font-size: clamp(34px, 5vw, 54px); font-weight: 700; line-height: 1.02; }
-  h2 { font-size: 20px; font-weight: 700; }
-  h3 { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--font); letter-spacing: -.01em; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  body::before { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(900px 500px at 15% -10%, rgba(var(--accent-rgb),.13), transparent 60%), radial-gradient(700px 400px at 100% 0%, rgba(90,200,250,.06), transparent 60%); }
+  .mono, .n, input[type=number], td.n, th.n, .stamp, .tag { font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { margin: 0; letter-spacing: -.03em; }
+  h2 { font-size: 24px; font-weight: 700; }
+  h3 { font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
   p { margin: 0 0 12px; }
   a { color: var(--accent); }
-  button { font: inherit; }
+  button, select, input, textarea { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .page { max-width: 1440px; margin: 0 auto; padding: 0 22px 80px; }
-  .small { font-size: 13px; color: var(--muted); line-height: 1.45; }
+  .page { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 0 20px; }
+  .small { font-size: 13px; color: var(--muted); line-height: 1.5; }
   .muted { color: var(--muted); }
-  .tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; padding: 2px 6px; border: 1px solid var(--rule-firm); color: var(--muted); text-transform: uppercase; vertical-align: middle; }
-  .tag.real { border-color: var(--good); color: var(--good); }
-  .tag.guess { border-color: var(--warn); color: var(--warn); }
-  .tag.meas { border-color: var(--s-rev); color: var(--s-rev); }
+  code { font-family: var(--mono); font-size: .88em; background: var(--surface2); padding: 1px 5px; border-radius: 5px; }
+  .tag { font-family: var(--mono); display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: .06em; padding: 3px 7px; border-radius: 6px; background: var(--surface2); color: var(--muted); text-transform: uppercase; vertical-align: 1px; white-space: nowrap; }
+  .tag.real { color: var(--good); background: rgba(var(--good-rgb),.14); }
+  .tag.guess { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .tag.meas { color: var(--blue); background: rgba(var(--blue-rgb),.13); }
 
-  /* ── masthead ── */
-  header.mast { padding: 46px 0 0; }
-  .mast .rule { height: 3px; background: var(--ink); margin-bottom: 18px; }
-  .stamp { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 11px; letter-spacing: .05em; color: var(--muted); margin-bottom: 20px; }
-  .stamp b { color: var(--ink-soft); font-weight: 500; }
-  .stamp .theme-btn { margin-left: auto; letter-spacing: .08em; font-size: 10.5px; padding: 3px 7px; }
-  .lede { font-size: 18px; max-width: 760px; color: var(--ink-soft); margin: 14px 0 0; }
+  /* ── top bar ── */
+  .topbar { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); background: color-mix(in srgb, var(--bg) 72%, transparent); border-bottom: 1px solid var(--hair); }
+  .bar { max-width: 1440px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .mark { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.03em; font-size: 17px; white-space: nowrap; color: var(--ink); text-decoration: none; }
+  .mark i { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(var(--accent-rgb),.18), 0 0 18px rgba(var(--accent-rgb),.6); display: inline-block; animation: pulse 2.8s var(--ease) infinite; }
+  .mark span { color: var(--muted); font-weight: 500; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(var(--accent-rgb),.06), 0 0 24px rgba(var(--accent-rgb),.35); } }
+  .spacer { flex: 1; }
 
-  /* ── KPI row ── */
-  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 2px; margin: 30px 0 0; background: var(--rule-firm); border: 2px solid var(--ink); }
-  .kpi { background: var(--surface); padding: 14px 16px 12px; min-width: 0; }
-  .kpi .l { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-  .kpi .v { font-size: clamp(19px, 1.5vw, 25px); font-weight: 700; line-height: 1.1; margin: 6px 0 2px; font-variant-numeric: proportional-nums; overflow-wrap: anywhere; }
+  /* ── buttons: one pill recipe ── */
+  .btn { appearance: none; border: 1px solid var(--hair2); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; line-height: 1.1; text-decoration: none; transition: transform .25s var(--ease), background .25s, border-color .25s; }
+  .btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+  .btn:active { transform: scale(.97); }
+  .btn svg { width: 14px; height: 14px; flex: none; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.small { padding: 6px 11px; font-size: 12px; }
+  .btn.ghost { background: transparent; color: var(--ink2); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+
+  /* ── hero: a dot grid that fades out, a wash of surface, a lit divider under it ── */
+  .herozone { position: relative; padding-bottom: 40px; }
+  .herozone::before { content: ""; position: absolute; z-index: -1; inset: -120px calc(50% - 50vw) 0; pointer-events: none;
+    background-image: radial-gradient(var(--dot) 1px, transparent 1.3px); background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(ellipse 60% 85% at 28% 18%, #000 25%, transparent 72%); mask-image: radial-gradient(ellipse 60% 85% at 28% 18%, #000 25%, transparent 72%); }
+  .herozone::after { content: ""; position: absolute; z-index: -1; inset: -120px calc(50% - 50vw) 0; pointer-events: none; background: linear-gradient(180deg, transparent 40%, color-mix(in srgb, var(--surface) 35%, transparent)); }
+  .divider { position: relative; height: 1px; background: linear-gradient(90deg, transparent, var(--hair2) 12%, var(--hair2) 88%, transparent); }
+  .divider::after { content: ""; position: absolute; left: 50%; top: -1px; width: 140px; height: 3px; margin-left: -70px; border-radius: 3px; background: linear-gradient(90deg, transparent, var(--accent), transparent); box-shadow: 0 0 18px rgba(var(--accent-rgb),.55); }
+  header.mast { padding: 56px 0 0; }
+  .stamp { display: flex; flex-wrap: wrap; gap: 6px 18px; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-bottom: 14px; }
+  .stamp > span:first-child { color: var(--accent); }
+  .stamp b { color: var(--muted); font-weight: 500; }
+  h1 { font-size: clamp(40px, 6vw, 72px); line-height: .98; letter-spacing: -.045em; font-weight: 700; max-width: 16ch; text-wrap: balance;
+    background: linear-gradient(180deg, var(--ink) 55%, color-mix(in srgb, var(--ink) 62%, var(--accent))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  h1 em { font-style: normal; font-weight: 600; -webkit-text-fill-color: var(--muted); }
+  .lede { font-size: 16px; max-width: 72ch; color: var(--muted); margin: 16px 0 0; line-height: 1.55; }
+  .lede b { color: var(--ink2); }
+
+  /* ── scenario line + KPI tiles ── */
+  .scenline { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 34px; }
+  .scenline .k { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .scenline .k b { color: var(--ink); }
+  .scenline .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* revenue, costs, profit lead at twice the size; the six that explain them sit under */
+  .kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin: 14px 0 12px; }
+  .kpis .kpi:nth-child(-n+3) { grid-column: span 2; }
+  .kpis .kpi:nth-child(-n+3) .v { font-size: clamp(34px, 3.6vw, 48px); }
+  @media (max-width: 1100px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .kpis .kpi:nth-child(-n+3) { grid-column: auto; } }
+  @media (max-width: 640px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kpis .kpi:first-child { grid-column: span 2; } }
+  .kpi { position: relative; background: var(--surface); border: 1px solid var(--hair); border-radius: var(--r); padding: 20px 20px 16px; overflow: hidden; min-width: 0; transition: transform .4s var(--ease), border-color .3s; animation: rise .7s var(--ease) both; }
+  .kpi:hover { transform: translateY(-3px); border-color: var(--hair2); }
+  .kpi::after { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.04), transparent 40%); pointer-events: none; }
+  .kpi .l { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+  .kpi .v { font-size: clamp(26px, 2.4vw, 34px); font-weight: 700; letter-spacing: -.04em; margin-top: 8px; line-height: 1.05; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
   .kpi .v.good { color: var(--good); } .kpi .v.bad { color: var(--bad); } .kpi .v.acc { color: var(--accent); }
-  .kpi .s { font-size: 12px; color: var(--muted); }
+  .kpi .s { margin-top: 10px; font-size: 12px; color: var(--faint); line-height: 1.45; }
+  @keyframes rise { from { opacity: .001; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .band { background: var(--surface); border: 1px solid var(--hair); border-radius: var(--r2); padding: 14px 18px; font-size: 13.5px; line-height: 1.55; color: var(--ink2); max-width: 110ch; margin: 0; }
+  .band b { color: var(--ink); }
 
-  section.block { margin-top: 34px; }
-  .kicker { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; border-bottom: 2px solid var(--ink); padding-bottom: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-  .kicker .k { font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--muted); }
+  /* ── sections ── */
+  section.block { margin-top: 52px; }
+  .kicker { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+  .kicker .k { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
   .kicker .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-  /* ── buttons ── */
-  .btn { border: 2px solid var(--ink); background: var(--surface); color: var(--ink); padding: 7px 12px; font-weight: 600; font-size: 13px; cursor: pointer; line-height: 1; }
-  .btn:hover { background: var(--sunken); }
-  .btn.primary { background: var(--btn-primary); border-color: var(--btn-primary); color: var(--accent-ink); }
-  .btn.primary:hover { filter: brightness(.92); }
-  .btn.small { padding: 5px 8px; font-size: 12px; border-width: 1px; }
-  .btn.ghost { border-color: var(--rule-ctl); color: var(--ink-soft); }
-  .btn:disabled { opacity: .45; cursor: not-allowed; }
-
   /* ── scenarios ── */
-  .saveRow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  .saveRow input[type=text] { flex: 1 1 240px; border: 2px solid var(--ink); background: var(--surface); color: var(--ink); padding: 8px 10px; font: inherit; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-  .card { background: var(--surface); border: 1px solid var(--rule-firm); padding: 12px 14px 10px; position: relative; display: grid; gap: 8px; touch-action: pan-y; }
-  .card.active { border: 2px solid var(--accent); padding: 11px 13px 9px; }
+  .saveRow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .saveRow input[type=text] { flex: 1 1 260px; border: 1px solid var(--hair2); background: var(--surface); color: var(--ink); padding: 9px 16px; border-radius: 999px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .card { background: var(--surface); border: 1px solid var(--hair); border-radius: 18px; padding: 16px 18px 14px; position: relative; display: grid; gap: 10px; touch-action: pan-y; transition: border-color .25s, transform .3s var(--ease); }
+  .card:hover { border-color: var(--hair2); }
+  .card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 10px 40px rgba(var(--accent-rgb),.12); }
   .card.dragging { opacity: .35; }
   .card.over { outline: 2px dashed var(--accent); outline-offset: 2px; }
   .card .head { display: flex; align-items: flex-start; gap: 8px; }
-  .card .grip { cursor: grab; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 4px 0 0; user-select: none; touch-action: none; }
+  .card .grip { cursor: grab; color: var(--faint); font-size: 18px; line-height: 1; padding: 2px 4px 0 0; user-select: none; touch-action: none; }
   .card .grip:active { cursor: grabbing; }
-  .card .name { font-weight: 700; font-size: 15px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .card .when { font-size: 11px; color: var(--muted); }
-  .card ul { margin: 0; padding: 0 0 0 14px; font-size: 12.5px; line-height: 1.45; color: var(--ink-soft); }
+  .card .name { font-weight: 700; font-size: 16px; letter-spacing: -.02em; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .card .when { font-size: 11px; color: var(--faint); font-family: var(--mono); letter-spacing: .04em; }
+  .card ul { margin: 0; padding: 0 0 0 16px; font-size: 13px; line-height: 1.5; color: var(--muted); font-variant-numeric: tabular-nums; }
   .card ul b { color: var(--ink); font-weight: 600; }
   .card .row { display: flex; gap: 6px; flex-wrap: wrap; }
-  details.more { margin-top: 10px; }
-  details.more > summary { cursor: pointer; font-weight: 600; font-size: 13px; padding: 8px 0; color: var(--ink-soft); list-style: none; display: flex; align-items: center; gap: 8px; }
-  details.more > summary::before { content: "▸"; font-size: 12px; } details.more[open] > summary::before { content: "▾"; }
-  .empty { padding: 18px; border: 1px dashed var(--rule-firm); color: var(--muted); font-size: 13px; }
+  details.more { margin-top: 12px; }
+  details.more > summary { cursor: pointer; font-weight: 600; font-size: 13.5px; padding: 8px 0; color: var(--ink2); list-style: none; display: flex; align-items: center; gap: 8px; }
+  details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary::before { content: "›"; font-size: 18px; line-height: 1; color: var(--accent); transition: transform .25s var(--ease); }
+  details.more[open] > summary::before { transform: rotate(90deg); }
+  .empty { padding: 22px; border: 1px dashed var(--hair2); border-radius: 18px; color: var(--muted); font-size: 13.5px; }
 
-  /* ── two columns ── */
-  .grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 22px; margin-top: 30px; align-items: start; }
-  aside.dials { position: sticky; top: 0; max-height: 100vh; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
-  aside.dials > details { background: var(--surface); border: 1px solid var(--rule-firm); margin-bottom: 8px; }
-  aside.dials > details > summary { cursor: pointer; padding: 10px 12px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  aside.dials > details > summary::after { content: "+"; font-family: "JetBrains Mono", monospace; color: var(--muted); }
-  aside.dials > details[open] > summary::after { content: "−"; }
-  aside.dials > details[open] > summary { border-bottom: 2px solid var(--ink); }
-  .dbody { padding: 8px 12px 12px; display: grid; gap: 10px; }
-  .help { font-size: 12px; color: var(--muted); line-height: 1.4; margin: -2px 0 2px; }
-  .dial { display: grid; gap: 4px; }
-  .dial .lab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 500; }
-  .dial .lab .unit { font-size: 11px; color: var(--muted); font-weight: 400; }
-  .dial .ctl { display: grid; grid-template-columns: 1fr 96px; gap: 8px; align-items: center; }
+  /* ── two columns: the dials, and what they drive ── */
+  .grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 22px; margin-top: 52px; align-items: start; }
+  aside.dials { position: sticky; top: 72px; max-height: calc(100vh - 84px); overflow-y: auto; padding-right: 4px; scrollbar-width: thin; scroll-padding-top: 8px; }
+  aside.dials > details { background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; margin-bottom: 8px; overflow: hidden; }
+  aside.dials > details > summary { cursor: pointer; padding: 13px 16px; font-weight: 700; font-size: 13.5px; letter-spacing: -.01em; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  aside.dials > details > summary::-webkit-details-marker { display: none; }
+  aside.dials > details > summary::after { content: "+"; font-size: 18px; font-weight: 400; color: var(--faint); line-height: 1; }
+  aside.dials > details[open] > summary::after { content: "−"; color: var(--accent); }
+  aside.dials > details[open] > summary { border-bottom: 1px solid var(--hair); }
+  .dbody { padding: 12px 16px 16px; display: grid; gap: 12px; }
+  .help { font-size: 12px; color: var(--muted); line-height: 1.45; margin: -2px 0 2px; }
+  .dial { display: grid; gap: 5px; }
+  .dial .lab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 600; }
+  .dial .lab .unit { font-size: 11px; color: var(--faint); font-weight: 500; text-align: right; }
+  .dial .ctl { display: grid; grid-template-columns: 1fr 96px; gap: 10px; align-items: center; }
   input[type=range] { width: 100%; accent-color: var(--accent); height: 22px; margin: 0; }
-  input[type=number], select, .dial input[type=text] { width: 100%; border: 1px solid var(--rule-ctl); background: var(--surface); color: var(--ink); padding: 5px 7px; font-size: 13px; font-variant-numeric: tabular-nums; text-align: right; }
-  select { text-align: left; font-family: inherit; }
-  input[type=number]:focus, select:focus { border-color: var(--ink); }
-  .dial.real input[type=number] { border-color: var(--good); background: var(--good-lo); }
+  input[type=number], select, .dial input[type=text] { width: 100%; border: 1px solid var(--hair2); background: var(--surface2); color: var(--ink); padding: 6px 9px; border-radius: 10px; font-size: 13px; font-variant-numeric: tabular-nums; text-align: right; }
+  select { text-align: left; }
+  input[type=number]:focus, select:focus { border-color: var(--accent); outline: none; }
+  .dial.real input[type=number] { border-color: var(--good); background: rgba(var(--good-rgb),.12); }
   .dial .from { font-size: 11px; color: var(--good); }
-  .mixbar { display: flex; height: 10px; border: 1px solid var(--rule-firm); overflow: hidden; }
+  .mixbar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--surface2); gap: 2px; }
   .mixbar i { display: block; height: 100%; }
   .switch { display: flex; align-items: center; gap: 8px; font-size: 13px; }
   .switch input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
   .fixedList { display: grid; gap: 6px; }
-  .fixedList .fx { display: grid; grid-template-columns: 1fr 90px 26px; gap: 6px; align-items: center; }
+  .fixedList .fx { display: grid; grid-template-columns: 1fr 90px 28px; gap: 6px; align-items: center; }
   .fixedList .fx input[type=text] { text-align: left; }
-  .fixedList .fx button { border: 1px solid var(--rule-firm); background: none; color: var(--muted); cursor: pointer; height: 28px; }
-  textarea { width: 100%; min-height: 84px; border: 1px solid var(--rule-ctl); background: var(--surface); color: var(--ink); font: 12px/1.4 "JetBrains Mono", monospace; padding: 6px; }
+  .fixedList .fx button { border: 1px solid var(--hair2); background: none; color: var(--muted); cursor: pointer; height: 28px; border-radius: 8px; }
+  textarea { width: 100%; min-height: 84px; border: 1px solid var(--hair2); background: var(--surface2); color: var(--ink); font: 12px/1.4 var(--mono); padding: 8px; border-radius: 10px; }
   .hostGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
   .hostGrid label { font-size: 11.5px; color: var(--muted); display: grid; gap: 2px; }
   .hostGrid input { padding: 3px 6px; font-size: 12px; }
   .hostSel { display: grid; gap: 6px; }
-  .hostSel label { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; font-size: 13px; padding: 6px 8px; border: 1px solid var(--rule); cursor: pointer; }
-  .hostSel label.on { border: 2px solid var(--accent); padding: 5px 7px; }
+  .hostSel label { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: center; font-size: 13px; padding: 8px 10px; border: 1px solid var(--hair); border-radius: 12px; cursor: pointer; transition: border-color .2s, background .2s; }
+  .hostSel label:hover { border-color: var(--hair2); }
+  .hostSel label.on { border-color: var(--accent); background: rgba(var(--accent-rgb),.08); }
+  .hostSel input { accent-color: var(--accent); }
   .hostSel .n { font-size: 12px; color: var(--muted); }
+  .dialsHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 10px; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
+  .dialsHead button { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
 
   /* ── outputs ── */
-  main.out { min-width: 0; display: grid; gap: 22px; }
-  .panel { background: var(--surface); border: 1px solid var(--rule-firm); padding: 16px 18px; box-shadow: var(--shadow); min-width: 0; }
+  main.out { min-width: 0; display: grid; gap: 16px; }
+  .panel { background: var(--surface); border: 1px solid var(--hair); border-radius: var(--r); padding: 20px 22px; min-width: 0; overflow: hidden; }
   .panel h3 { margin-bottom: 4px; }
-  .panel .sub { font-size: 12.5px; color: var(--muted); margin-bottom: 10px; }
-  .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .panel .sub { font-size: 13px; color: var(--muted); margin: 4px 0 14px; line-height: 1.5; max-width: 90ch; }
+  .panel .sub b { color: var(--ink2); }
+  .panel .kicker { margin-bottom: 0; align-items: baseline; }
+  .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .charts .panel.wide { grid-column: 1 / -1; }
-  .chart { position: relative; height: 280px; }
-  .chart.tall { height: 320px; } .chart.short { height: 240px; }
-  .scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 0 10px 6px 0; border-bottom: 2px solid var(--ink); white-space: nowrap; }
-  td { padding: 7px 10px 7px 0; border-bottom: 1px solid var(--rule); vertical-align: top; color: var(--ink-soft); }
+  .chart { position: relative; height: 300px; }
+  .chart.tall { height: 340px; } .chart.short { height: 260px; }
+
+  /* ── tables: one recipe — ink headings, a shaded band on every other column, 15 rows a window ── */
+  .scroll { overflow: auto; position: relative; scrollbar-width: thin; overscroll-behavior-x: contain; border-radius: 12px; border: 1px solid var(--hair); }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
+  th { text-align: left; font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--ink); padding: 12px 14px; border-bottom: 1px solid var(--hair2); white-space: nowrap; background: var(--surface); position: sticky; top: 0; z-index: 2; }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--hair); vertical-align: top; color: var(--ink2); background: var(--surface); }
+  th:nth-child(even), td:nth-child(even) { background: var(--band); }
   tr:last-child td { border-bottom: 0; }
   td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
   td.n { color: var(--ink); white-space: nowrap; }
-  td.name { color: var(--ink); font-weight: 500; }
-  td.how { font-size: 12px; color: var(--muted); max-width: 420px; }
-  tr.sum td { font-weight: 700; color: var(--ink); border-top: 2px solid var(--ink); }
-  tr.group td { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding-top: 14px; border-bottom: 1px solid var(--rule-firm); }
-  tr.hi td { background: var(--accent-lo); }
-  tr.hi td.how { color: var(--ink-soft); }
-  .scroll { background: linear-gradient(90deg, var(--surface) 30%, transparent), linear-gradient(270deg, var(--surface) 30%, transparent) 100% 0, radial-gradient(farthest-side at 0 50%, rgba(0,0,0,.16), transparent), radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.16), transparent) 100% 0; background-repeat: no-repeat; background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%; background-attachment: local, local, scroll, scroll; }
-  .scroll th:first-child, .scroll td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
-  .scroll tr.hi td:first-child { background: var(--accent-lo); }
+  td.name { color: var(--ink); font-weight: 600; }
+  td.how { font-size: 12.5px; color: var(--muted); min-width: 280px; max-width: 460px; }
+  td.muted { color: var(--muted); }
+  /* totals and sums: the whole row in a light orange, its text in a deep orange, not black */
+  tr.sum td, tr.sum td:nth-child(even) { font-weight: 700; background: var(--tot); color: var(--tot-ink); border-top: 1px solid rgba(var(--accent-rgb),.35); border-bottom-color: rgba(var(--accent-rgb),.35); }
+  tr.sum td.how { font-weight: 500; color: var(--tot-ink); opacity: .85; }
+  tr.group td, tr.group td:nth-child(even) { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink); background: var(--surface2); padding-top: 14px; border-bottom: 1px solid var(--hair2); }
+  /* the selected host, the scenario's own size: a blue wash, so it never reads as a total */
+  tr.hi td, tr.hi td:nth-child(even) { background: color-mix(in srgb, var(--blue) 11%, var(--surface)); }
+  tr.hi td:first-child { box-shadow: inset 3px 0 0 var(--blue); }
+  .scroll th:first-child, .scroll td:first-child { position: sticky; left: 0; z-index: 1; }
+  .scroll thead th:first-child { z-index: 3; }
+  .scroll td.name { white-space: nowrap; }
+  #formulaTable td:nth-child(3) { white-space: nowrap; }
   #sizesEdit table { table-layout: fixed; } #sizesEdit td:first-child { width: 38%; } #sizesEdit input[type=number] { min-width: 64px; padding: 5px 5px; }
-  .card ul { font-variant-numeric: tabular-nums; }
-  .dialsHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 12px; color: var(--muted); }
-  .dialsHead button { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
-  aside.dials { scroll-padding-top: 8px; }
-  .pos { color: var(--good); } .neg { color: var(--bad); }
-  .sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
-  .notes { display: grid; gap: 12px; }
-  .note { border-left: 3px solid var(--accent); padding: 12px 16px; background: var(--surface); }
-  .note.ok { border-left-color: var(--good); } .note.warn { border-left-color: var(--warn); }
-  .note h3 { margin-bottom: 6px; }
-  .note ol, .note ul { margin: 6px 0 0; padding-left: 20px; font-size: 13.5px; line-height: 1.5; }
-  .note li { margin-bottom: 5px; }
-  .note li b { color: var(--ink); }
+  #sizesEdit th, #sizesEdit td { padding: 6px 4px; background: transparent; position: static; font-size: 11px; }
+  #sizesEdit td { border-bottom: 0; }
+  .pos { color: var(--good) !important; font-weight: 600; } .neg { color: var(--bad) !important; font-weight: 600; }
+  .sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 3px; }
   .compare td.best { color: var(--good); font-weight: 700; }
-  footer { margin-top: 50px; border-top: 2px solid var(--ink); padding-top: 16px; }
-  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--ground); padding: 10px 16px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 50; }
-  .toast.on { opacity: 1; }
 
+  /* ── how these numbers are made: a darker room of its own, running to the foot of the page ── */
+  .deep { position: relative; margin-top: 80px; padding: 56px 0 64px; color: #F5F5F7;
+    --surface: var(--deep-card); --surface2: #242428; --ink: #F5F5F7; --ink2: #E8E8ED; --muted: #A1A1A6; --faint: #8A8A8F; --hair: rgba(255,255,255,.09); --hair2: rgba(255,255,255,.16);
+    --good: #30D158; --warn: #FFD60A; --blue: #5AC8FA; --good-rgb: 48,209,88; --blue-rgb: 90,200,250; }
+  .deep::before { content: ""; position: absolute; z-index: -1; inset: 0 calc(50% - 50vw); background: var(--deep); border-top: 1px solid var(--hair); }
+  .deep .sh { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
+  .deep .sh p { color: var(--muted); font-size: 13px; margin: 0; }
+  .notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .note { background: var(--surface); border: 1px solid var(--hair); border-radius: var(--r); padding: 22px 24px; font-size: 14px; line-height: 1.6; color: var(--muted); position: relative; overflow: hidden; }
+  .note::before { content: ""; position: absolute; left: 0; top: 22px; bottom: 22px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+  .note.ok::before { background: var(--good); } .note.warn::before { background: var(--warn); }
+  .note h3 { margin-bottom: 10px; color: var(--ink); }
+  .note b { color: var(--ink2); }
+  .note em { color: var(--ink2); }
+  .note ol, .note ul { margin: 6px 0 0; padding-left: 20px; font-size: 13.5px; line-height: 1.55; }
+  .note li { margin-bottom: 6px; }
+  .note li b { color: var(--ink); }
+  .note .small { color: var(--faint); }
+  footer { margin-top: 40px; border-top: 1px solid var(--hair); padding-top: 16px; }
+  footer .small { color: var(--faint); font-size: 12px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 10px); background: var(--surface2); border: 1px solid var(--hair2); color: var(--ink); padding: 11px 16px; border-radius: 999px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 50; box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+  .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 1100px) { .notes { grid-template-columns: 1fr; } }
   @media (max-width: 980px) {
     .grid { grid-template-columns: 1fr; }
     aside.dials { position: static; max-height: none; }
     .charts { grid-template-columns: 1fr; }
+    input[type=number], select, .dial input[type=text], #fixedList input, #sizesEdit input, textarea { font-size: 16px; }
   }
-  @media (max-width: 980px) { input[type=number], select, .dial input[type=text], #fixedList input, #sizesEdit input, textarea { font-size: 16px; } }
-  @media (max-width: 600px) {
-    .page { padding: 0 14px 60px; }
-    .kpi .v { font-size: 22px; }
+  @media (max-width: 860px) { .btn .lbl { display: none; } }
+  @media (max-width: 720px) {
+    .page { padding: 0 16px; } .bar { padding: 10px 16px; } header.mast { padding-top: 36px; }
+    .kpi .v { font-size: 28px; }
     .cards { grid-template-columns: 1fr; }
-    td.how { min-width: 220px; } td.name, #hostsTable td:first-child { min-width: 140px; } td.n { white-space: nowrap; }
+    .panel { padding: 18px 16px; }
+    td.how { min-width: 220px; } td.name, #hostsTable td:first-child { min-width: 140px; }
   }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } html { scroll-behavior: auto; } }
+  @media (max-width: 520px) { .mark span { display: none; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } html { scroll-behavior: auto; } }
 </style>
+
 <script>
 /* Light / dark: the reader's own choice wins over the system setting, and is remembered in this browser.
    Applied before the first paint so the page never flashes the wrong ground. */
 try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
+<body>
+<header class="topbar">
+  <div class="bar">
+    <a class="mark" href="/moneymodel"><i></i>MySet <span>Money model</span></a>
+    <span class="spacer"></span>
+    <a class="btn" href="/moneymodel/shows"><span class="lbl">Every show</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></a>
+    <button class="btn" id="themeBtn" type="button" aria-label="Switch between light and dark">Light</button>
+  </div>
+</header>
 
 <div class="page">
+<div class="herozone">
 <header class="mast">
-  <div class="rule"></div>
   <div class="stamp">
-    <span>MYSET · <b>MONEY MODEL</b></span>
+    <span>MySet · money model</span>
     <span id="stampDate"></span>
-    <span>RATES CHECKED <b>5 SEP 2026</b></span>
-    <span>STORAGE <b id="storeMode">this browser</b></span>
-    <span id="calibStamp">REAL SHOWS <b>none used yet</b></span>
-    <button class="btn small ghost theme-btn" id="themeBtn" type="button" aria-label="Switch between light and dark">LIGHT</button>
+    <span>Rates checked <b>5 Sep 2026</b></span>
+    <span>Storage <b id="storeMode">this browser</b></span>
+    <span id="calibStamp">Real shows <b>none used yet</b></span>
   </div>
-  <h1>MySet Money Model</h1>
+  <h1>Money model <em>for MySet</em></h1>
   <p class="lede">Move a dial, watch the business. Every number on this page comes out of one formula:
     how many phones are in how many rooms for how long, what the room and the artists pay, what the
     server and Stripe take, and what is left. Nothing here is fixed — the guesses are marked, and real
@@ -233,10 +317,12 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
     the server “anything new?” — not a vote. Since 11 September a tick is two small requests: the room’s shared board, and the phone’s own line. Ticks are what the server bill is made of.</p>
 </header>
 
-<div class="kicker" style="margin-top:30px;border-bottom-width:0;padding-bottom:0"><span class="k">A SCENARIO, NOT A REPORT — <span id="kpiWhat">1,000 artists</span>. MySet has <b id="kpiToday">1</b> today.</span>
+<div class="scenline"><span class="k">A scenario, not a report — <span id="kpiWhat">1,000 artists</span>. MySet has <b id="kpiToday">1</b> today.</span>
   <span class="actions"><button class="btn small ghost" id="presetBench">Benchmark case</button><button class="btn small ghost" id="presetHope">If it all works</button></span></div>
 <section class="kpis" id="kpis" aria-live="polite"></section>
-<p class="small" id="kpiBand" style="margin:8px 0 0"></p>
+<p class="band" id="kpiBand"></p>
+</div>
+<div class="divider" role="presentation"></div>
 
 <section class="block" id="scenarios">
   <div class="kicker"><h2>Scenarios</h2><span class="k"><span id="scenCount">0</span> OF 20 SAVED · DRAG A CARD TO REORDER</span></div>
@@ -287,7 +373,7 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
   </div>
 
   <div class="panel">
-    <div class="kicker" style="border-bottom-width:0;margin-bottom:6px"><h3>The four shows Perry asked about</h3><span class="k">EDIT THE SIZES IN “SHOW SIZES” ON THE LEFT</span></div>
+    <div class="kicker" style="border-bottom-width:0;margin-bottom:6px"><h3>The four shows the founder asked about</h3><span class="k">EDIT THE SIZES IN “SHOW SIZES” ON THE LEFT</span></div>
     <div class="sub" id="sizesCap"></div>
     <div class="scroll"><table id="sizesTable"></table></div>
   </div>
@@ -333,7 +419,12 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
     <div class="panel scroll" style="margin-top:12px"><table id="tlTable"></table></div>
   </details>
 
-  <section class="notes" id="notes">
+</main>
+</div>
+
+<section class="deep" id="how">
+  <div class="sh"><h2>How these numbers are made</h2><p>What is measured, what is guessed, and the rules the engine keeps.</p></div>
+  <div class="notes" id="notes">
     <div class="note ok" id="notePwa">
       <h3>Does installing the page as an app change the server bill?</h3>
       <p><b>No, not today.</b> The voting page asks the server the same way whether it is open in Safari or installed on the home screen: it walks the same 3 s → 10 s → 25 s ladder, it goes silent the moment the screen is off in both cases, and the app’s service worker never caches the live show — every ask still reaches a function. Installing changes nothing the server is charged for.</p>
@@ -376,15 +467,13 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
         <li><b>The free tier’s four-gig cap</b> is applied: a free artist who wants six nights gets four. The refused nights are shown as a line in the formula.</li>
       </ul>
     </div>
-  </section>
-</main>
-</div>
-
-<footer>
+  </div>
+  <footer>
   <p class="small" style="margin:0"><b>Sources.</b> Netlify credit rates and plans: docs.netlify.com, credit-based pricing plans. Cloudflare Workers, KV and Durable Objects: developers.cloudflare.com/workers/platform/pricing. Stripe: stripe.com/pricing (US 2.9% + 30¢, +1.5% international, +1% conversion, $15 disputes), stripe.com/billing/pricing (0.7%), stripe.com/connect/pricing (Express: $2 per active account-month, 0.25% + 25¢ per payout), docs.stripe.com/connect/saas/tasks/app-fees (no Stripe fee on an application fee). Thai rates for comparison: 3.65% + ฿10 domestic, 4.75% + ฿10 international, +2% conversion, ฿500 disputes. Polling ladder: public/vote.html; simulator: tools/loadsim.py; reads per call: test/cost.mjs. Model file: finance/model.html in the MySet repo; real-show importer: tools/actuals.py.</p>
 </footer>
+</section>
 </div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 /*ENGINE-START*/
@@ -1170,7 +1259,7 @@ function buildDials() {
     }
     const el = document.createElement('div');
     if (d.key === 'mixbar') { el.className = 'mixbar'; el.id = 'mixbar'; el.innerHTML = `<i style="background:var(--s-fixed)" title="Free"></i><i style="background:var(--s-subs)" title="Plus"></i><i style="background:var(--s-feat)" title="Pro"></i>`; body.appendChild(el); const cap = document.createElement('div'); cap.className = 'help'; cap.id = 'mixCap'; body.appendChild(cap); continue; }
-    if (d.key === 'stripePreset') { el.className = 'dial'; el.innerHTML = `<div class="lab"><span>Where MySet’s Stripe account lives</span></div><select id="stripePreset">${Object.entries(STRIPE_PRESETS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}</select><div class="help">Perry’s account settles in US dollars, so the US rates are the default. Picking a preset fills the four fee dials below; you can still edit each one.</div>`; body.appendChild(el); $('#stripePreset', el).addEventListener('change', (e) => { const s = STRIPE_PRESETS[e.target.value]; P.stripe.preset = e.target.value; P.stripe.pct = s.pct; P.stripe.fixed = s.fixed; P.stripe.intlPct = s.intlPct; P.stripe.fxPct = s.fxPct; P.stripe.disputeFee = s.disputeFee; syncInputs(); recalc(); }); continue; }
+    if (d.key === 'stripePreset') { el.className = 'dial'; el.innerHTML = `<div class="lab"><span>Where MySet’s Stripe account lives</span></div><select id="stripePreset">${Object.entries(STRIPE_PRESETS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}</select><div class="help">The founder’s account settles in US dollars, so the US rates are the default. Picking a preset fills the four fee dials below; you can still edit each one.</div>`; body.appendChild(el); $('#stripePreset', el).addEventListener('change', (e) => { const s = STRIPE_PRESETS[e.target.value]; P.stripe.preset = e.target.value; P.stripe.pct = s.pct; P.stripe.fixed = s.fixed; P.stripe.intlPct = s.intlPct; P.stripe.fxPct = s.fxPct; P.stripe.disputeFee = s.disputeFee; syncInputs(); recalc(); }); continue; }
     if (d.key === 'hostSel') { el.className = 'hostSel'; el.id = 'hostSel'; body.appendChild(el); continue; }
     if (d.key === 'hostRates') { el.innerHTML = `<details class="more"><summary>Host rates (advanced)</summary><div id="hostRates" style="display:grid;gap:12px;margin-top:6px"></div></details>`; body.appendChild(el); continue; }
     if (d.key === 'fixedList') { el.className = 'fixedList'; el.id = 'fixedList'; body.appendChild(el); const add = document.createElement('button'); add.className = 'btn small ghost'; add.textContent = '+ Add a cost line'; add.onclick = () => { P.fixed.push({ name: 'New cost', usd: 0 }); renderFixed(); recalc(); }; body.appendChild(add); continue; }
@@ -1228,7 +1317,7 @@ function markReal() {
   }
   const cs = $('#calibStamp');
   const tag = ACT_SOURCE === 'live' ? 'LIVE' : ACT_SOURCE === 'pasted' ? 'PASTED' : LIVE && LIVE.unreachable ? 'SEED (feed unreachable)' : 'SEED';
-  cs.innerHTML = P.useActuals && ACT ? `REAL SHOWS <b>${ACT.shows} used · ${ACT.asOf} · ${tag}</b>` : `REAL SHOWS <b>${ACT ? ACT.shows + ' on file, not used · ' + tag : 'none yet'}</b>`;
+  cs.innerHTML = P.useActuals && ACT ? `Real shows <b>${ACT.shows} used · ${ACT.asOf} · ${tag}</b>` : `Real shows <b>${ACT ? ACT.shows + ' on file, not used · ' + tag : 'none yet'}</b>`;
 }
 function renderHostSel() {
   const box = $('#hostSel'); box.innerHTML = '';
@@ -1298,7 +1387,7 @@ function renderActuals() {
   /* the two growth charts are built inside a closed <details>, where a canvas has no
      size; give them one the first time it opens */
   const gw = $('#growthWrap');
-  if (gw) gw.addEventListener('toggle', () => { if (gw.open) for (const k of ['cTimeline', 'cCum']) if (charts[k]) charts[k].resize(); });
+  if (gw) gw.addEventListener('toggle', () => { if (gw.open) { for (const k of ['cTimeline', 'cCum']) if (charts[k]) charts[k].resize(); frameAll(); } });
 }
 function renderActSummary() {
   const s = $('#actSummary'); if (!s) return;
@@ -1341,18 +1430,23 @@ function applyActuals() {
 /* ───────────────────────────── outputs ───────────────────────────── */
 const LADDER = [10, 100, 1000, 10000];
 let charts = {};
+const SANS = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif', MONO = '"SF Mono", ui-monospace, Menlo, monospace';
+/* every chart names both of its axes */
+const axisTitle = (t, text) => ({ display: true, text, color: t.muted, font: { family: SANS, size: 12, weight: '600' }, padding: { top: 8, bottom: 4 } });
 function chartTheme() {
   return { ink: cssVar('--ink'), muted: cssVar('--muted'), grid: cssVar('--grid'), axis: cssVar('--axis'), surface: cssVar('--surface'),
     subs: cssVar('--s-subs'), cuts: cssVar('--s-cuts'), feat: cssVar('--s-feat'), server: cssVar('--s-server'), stripe: cssVar('--s-stripe'), fixed: cssVar('--s-fixed'), profit: cssVar('--s-profit'), loss: cssVar('--s-loss'), rev: cssVar('--s-rev'), cost: cssVar('--s-cost') };
 }
 function baseOpts(t, extra = {}) {
   return { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false }, layout: { padding: { left: 4, right: 12, top: 4, bottom: 0 } },
-    plugins: { legend: { position: 'top', align: 'start', labels: { color: t.ink, boxWidth: 10, boxHeight: 10, font: { family: 'Archivo', size: 12 } } }, tooltip: { backgroundColor: t.ink, titleColor: t.surface, bodyColor: t.surface, padding: 10, displayColors: true, callbacks: { label: (c) => ` ${c.dataset.label}: ${fmt.usd(c.parsed.y != null && c.chart.config.type !== 'doughnut' && c.chart.options.indexAxis !== 'y' ? c.parsed.y : c.parsed)}` } } },
-    scales: { x: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 } } }, y: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => fmt.usd(v, 0) } } }, ...extra };
+    plugins: { legend: { position: 'top', align: 'start', labels: { color: t.ink, boxWidth: 10, boxHeight: 10, font: { family: SANS, size: 12 } } }, tooltip: { backgroundColor: t.ink, titleColor: t.surface, bodyColor: t.surface, padding: 12, cornerRadius: 12, displayColors: true, callbacks: { label: (c) => ` ${c.dataset.label}: ${fmt.usd(c.parsed.y != null && c.chart.config.type !== 'doughnut' && c.chart.options.indexAxis !== 'y' ? c.parsed.y : c.parsed)}` } } },
+    scales: { x: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: MONO, size: 11 } } }, y: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: MONO, size: 11 }, callback: (v) => fmt.usd(v, 0) } } }, ...extra };
 }
 function mk(id, cfg) { if (charts[id]) charts[id].destroy(); charts[id] = new Chart($('#' + id), cfg); }
-function tlOpts(t) {
+function tlOpts(t, yTitle) {
   const o = baseOpts(t);
+  o.scales.x.title = axisTitle(t, 'Month, counted from today');
+  o.scales.y.title = axisTitle(t, yTitle);
   o.scales.x.ticks = { ...o.scales.x.ticks, maxRotation: 0, autoSkip: true, maxTicksLimit: 13 };
   o.plugins.tooltip = { ...o.plugins.tooltip, callbacks: { ...o.plugins.tooltip.callbacks, title: (items) => 'Month ' + String(items[0].label).slice(1) } };
   return o;
@@ -1427,14 +1521,14 @@ function render() {
   ].map(d => ({ ...d, borderColor: t.surface, borderWidth: 2, borderSkipped: false }));
   mk('cMoney', { type: 'bar', data: { labels: ['Revenue', 'Costs', 'Profit'], datasets: moneyBars }, options: {
       ...bo, layout: { padding: { left: 4, right: 12, top: 26, bottom: 0 } },
-      scales: { x: { stacked: true, grid: { display: false }, border: { color: t.axis }, ticks: { color: t.ink, font: { family: 'Archivo', size: 13, weight: '600' } } },
-                y: { stacked: true, beginAtZero: true, grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => fmt.usd(v, 0) } } },
+      scales: { x: { stacked: true, grid: { display: false }, border: { color: t.axis }, ticks: { color: t.ink, font: { family: SANS, size: 13, weight: '600' } }, title: axisTitle(t, 'One month at the dials: what comes in, what goes out, what is left') },
+                y: { stacked: true, beginAtZero: true, grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: MONO, size: 11 }, callback: (v) => fmt.usd(v, 0) }, title: axisTitle(t, 'US dollars a month') } },
       plugins: { ...bo.plugins, tooltip: { ...bo.plugins.tooltip, filter: (c) => c.parsed.y !== 0,
         callbacks: { ...bo.plugins.tooltip.callbacks, footer: (items) => { const i = items[0].dataIndex; return ['Revenue', 'Costs', 'Profit'][i] + ': ' + fmt.usdFull(moneyTotals[i]) + (i === 2 && isFinite(R.margin) ? `  (${fmt.pct(R.margin)} margin)` : ''); } } } },
       datasets: { bar: { barPercentage: .62, categoryPercentage: .82 } } },
     plugins: [{ id: 'moneyTotals', afterDatasetsDraw(c) {
       const { ctx, chartArea: a, scales } = c; ctx.save();
-      ctx.font = '700 13px "JetBrains Mono", monospace'; ctx.textAlign = 'center';
+      ctx.font = '700 13px ' + MONO; ctx.textAlign = 'center';
       moneyTotals.forEach((v, i) => {
         const x = scales.x.getPixelForValue(i);
         ctx.fillStyle = i === 2 ? (v >= 0 ? t.profit : t.loss) : t.ink;
@@ -1447,8 +1541,8 @@ function render() {
   mk('cTimeline', { type: 'line', data: { labels, datasets: [
     { label: 'Revenue', data: tl.map(r => r.revenue), borderColor: t.rev, backgroundColor: t.rev, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .25 },
     { label: 'Costs', data: tl.map(r => r.costs), borderColor: t.cost, backgroundColor: t.cost, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .25 },
-    { label: 'Profit', data: tl.map(r => r.profit), borderColor: t.profit, backgroundColor: t.profit, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .25 }] }, options: tlOpts(t) });
-  mk('cCum', { type: 'line', data: { labels, datasets: [{ label: 'Cumulative profit', data: tl.map(r => r.cum), borderColor: t.profit, backgroundColor: t.profit + '33', fill: 'origin', borderWidth: 2, pointRadius: 0, tension: .25 }] }, options: tlOpts(t) });
+    { label: 'Profit', data: tl.map(r => r.profit), borderColor: t.profit, backgroundColor: t.profit, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: .25 }] }, options: tlOpts(t, 'US dollars a month') });
+  mk('cCum', { type: 'line', data: { labels, datasets: [{ label: 'Cumulative profit', data: tl.map(r => r.cum), borderColor: t.profit, backgroundColor: t.profit + '33', fill: 'origin', borderWidth: 2, pointRadius: 0, tension: .25 }] }, options: tlOpts(t, 'US dollars, added up since month 1') });
 
   const ladderRows = [...LADDER, P.artists].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).map(a => ({ a, r: ENGINE.month(P, a) }));
   const pctOf = (r, v) => r.revenue > 0 ? Math.max(0, v / r.revenue * 100) : 0;
@@ -1460,17 +1554,17 @@ function render() {
     { label: 'Stripe', data: ladderRows.map(x => pctOf(x.r, x.r.stripe)), backgroundColor: t.stripe },
     { label: 'Fixed', data: ladderRows.map(x => pctOf(x.r, x.r.fixed)), backgroundColor: t.fixed },
     { label: 'Profit', data: ladderRows.map(x => x.r.revenue > 0 ? Math.max(0, x.r.profit / x.r.revenue * 100) : 0), backgroundColor: t.profit }] },
-    options: { ...baseOpts(t, { indexAxis: 'y' }), scales: { x: { stacked: true, min: 0, max: ladderMax, grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => v + '%' } }, y: { stacked: true, grid: { display: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 } } } }, plugins: { ...baseOpts(t).plugins, tooltip: { ...baseOpts(t).plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.x.toFixed(1)}% of revenue`, footer: (items) => { const r = ladderRows[items[0].dataIndex].r; return r.profit < 0 ? `a loss: costs are ${(r.costs / Math.max(r.revenue, 1e-9) * 100).toFixed(0)}% of revenue` : ''; } } } }, datasets: { bar: { borderWidth: 0, barPercentage: .6, categoryPercentage: .8, borderSkipped: false } } }, plugins: [{ id: 'over', afterDatasetsDraw(c) { if (!ladderMax) return; const { ctx, chartArea: a } = c, m = c.getDatasetMeta(0); ctx.save(); ctx.font = '11px "JetBrains Mono", monospace'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ladderTot.forEach((tot, i) => { if (tot <= ladderMax) return; const txt = `costs ${fmt.int(tot)}% of revenue ▸`, w = ctx.measureText(txt).width; ctx.fillStyle = t.surface; ctx.globalAlpha = .88; ctx.fillRect(a.right - w - 10, m.data[i].y - 8, w + 8, 16); ctx.globalAlpha = 1; ctx.fillStyle = t.loss; ctx.fillText(txt, a.right - 6, m.data[i].y); }); ctx.restore(); } }] });
-  const centre = (big, small) => ({ id: 'centre', afterDraw(c) { const { ctx, chartArea: a } = c; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = t.ink; ctx.font = '700 18px "JetBrains Mono", monospace'; ctx.fillText(big, (a.left + a.right) / 2, (a.top + a.bottom) / 2 - 8); ctx.font = '11px Archivo, sans-serif'; ctx.fillStyle = t.muted; ctx.fillText(small, (a.left + a.right) / 2, (a.top + a.bottom) / 2 + 12); ctx.restore(); } });
-  const dough = (id, labs, data, cols, total, big, small) => mk(id, { type: 'doughnut', data: { labels: labs, datasets: [{ data, backgroundColor: cols, borderColor: t.surface, borderWidth: 2, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, cutout: '62%', plugins: { legend: { position: 'right', labels: { color: t.ink, boxWidth: 10, boxHeight: 10, font: { family: 'Archivo', size: 12 } } }, tooltip: { backgroundColor: t.ink, titleColor: t.surface, bodyColor: t.surface, callbacks: { label: (c) => ` ${c.label}: ${fmt.usd(c.parsed)} (${total > 0 ? (c.parsed / total * 100).toFixed(1) : 0}%)` } } } }, plugins: [centre(big, small)] });
+    options: { ...baseOpts(t, { indexAxis: 'y' }), scales: { x: { stacked: true, min: 0, max: ladderMax, grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: MONO, size: 11 }, callback: (v) => v + '%' }, title: axisTitle(t, 'Share of each dollar of revenue (%)') }, y: { stacked: true, grid: { display: false }, border: { color: t.axis }, ticks: { color: t.muted, font: { family: MONO, size: 11 } }, title: axisTitle(t, 'Artists on MySet') } }, plugins: { ...baseOpts(t).plugins, tooltip: { ...baseOpts(t).plugins.tooltip, callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.x.toFixed(1)}% of revenue`, footer: (items) => { const r = ladderRows[items[0].dataIndex].r; return r.profit < 0 ? `a loss: costs are ${(r.costs / Math.max(r.revenue, 1e-9) * 100).toFixed(0)}% of revenue` : ''; } } } }, datasets: { bar: { borderWidth: 0, barPercentage: .6, categoryPercentage: .8, borderSkipped: false } } }, plugins: [{ id: 'over', afterDatasetsDraw(c) { if (!ladderMax) return; const { ctx, chartArea: a } = c, m = c.getDatasetMeta(0); ctx.save(); ctx.font = '11px ' + MONO; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ladderTot.forEach((tot, i) => { if (tot <= ladderMax) return; const txt = `costs ${fmt.int(tot)}% of revenue ▸`, w = ctx.measureText(txt).width; ctx.fillStyle = t.surface; ctx.globalAlpha = .88; ctx.fillRect(a.right - w - 10, m.data[i].y - 8, w + 8, 16); ctx.globalAlpha = 1; ctx.fillStyle = t.loss; ctx.fillText(txt, a.right - 6, m.data[i].y); }); ctx.restore(); } }] });
+  const centre = (big, small) => ({ id: 'centre', afterDraw(c) { const { ctx, chartArea: a } = c; ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = t.ink; ctx.font = '700 18px ' + MONO; ctx.fillText(big, (a.left + a.right) / 2, (a.top + a.bottom) / 2 - 8); ctx.font = '11px ' + SANS; ctx.fillStyle = t.muted; ctx.fillText(small, (a.left + a.right) / 2, (a.top + a.bottom) / 2 + 12); ctx.restore(); } });
+  const dough = (id, labs, data, cols, total, big, small) => mk(id, { type: 'doughnut', data: { labels: labs, datasets: [{ data, backgroundColor: cols, borderColor: t.surface, borderWidth: 2, hoverOffset: 4 }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, cutout: '62%', plugins: { legend: { position: 'right', labels: { color: t.ink, boxWidth: 10, boxHeight: 10, font: { family: SANS, size: 12 } } }, tooltip: { backgroundColor: t.ink, titleColor: t.surface, bodyColor: t.surface, callbacks: { label: (c) => ` ${c.label}: ${fmt.usd(c.parsed)} (${total > 0 ? (c.parsed / total * 100).toFixed(1) : 0}%)` } } } }, plugins: [centre(big, small)] });
   dough('cRevMix', ['Subscriptions', 'Cut of room money', 'Featured shows'], [R.subsNet, R.cutRev, R.feat], [t.subs, t.cuts, t.feat], R.revenue, fmt.usd(R.revenue), 'revenue / mo');
   dough('cCostMix', ['Server', 'Card fees', 'Artist payout fees', 'Fixed'], [R.bill.usd, R.feeSubs + R.feeFeat + R.disputes, R.express + R.badDebt, R.fixed], [t.server, t.stripe, t.cuts, t.fixed], R.costs, fmt.pct(R.margin), 'margin');
   /* The server bill as a share of MYSET's revenue from the show. Uncapped, because a
      show that costs more than it earns is exactly the thing worth seeing. */
   const sharePct = (s) => s.mysetRev > 0 ? s.server / s.mysetRev * 100 : 0;   // no revenue: the label carries the loss in dollars
   mk('cSizes', { type: 'bar', data: { labels: sizes.map(s => `${s.name} · ${fmt.int(s.fans)} × ${s.hours}h${s.days > 1 ? ' × ' + s.days + 'd' : ''}`), datasets: [{ label: 'Server bill as a share of MySet’s revenue', data: sizes.map(sharePct), backgroundColor: sizes.map(s => s.mysetNet < 0 ? t.loss : t.server) }] },
-    options: { ...baseOpts(t, { indexAxis: 'y' }), layout: { padding: { left: 4, right: 64, top: 4, bottom: 0 } }, scales: { x: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, min: 0, ticks: { color: t.muted, font: { family: 'JetBrains Mono', size: 11 }, callback: (v) => v + '%' } }, y: { grid: { display: false }, border: { color: t.axis }, ticks: { color: t.ink, font: { family: 'Archivo', size: 12 } } } }, plugins: { ...baseOpts(t).plugins, legend: { display: false }, tooltip: { ...baseOpts(t).plugins.tooltip, callbacks: { label: (c) => { const s = sizes[c.dataIndex]; return [` MySet earns ${fmt.usd(s.mysetRev)} (${s.cutPct}% of the room’s ${fmt.usd(s.earn)}) · server ${fmt.usd(s.server)}`, ` MySet keeps ${fmt.usd(s.mysetNet)} · ${fmt.cents(s.server / Math.max(s.fans, 1))} of server per person`, ` on this host it ${s.status === 'ok' ? 'holds' : s.status === 'risky' ? 'is at the edge' : 'breaks'}`]; } } } }, datasets: { bar: { borderWidth: 0, barPercentage: .55, categoryPercentage: .8 } } },
-    plugins: [{ id: 'vals', afterDatasetsDraw(c) { const { ctx } = c, m = c.getDatasetMeta(0); ctx.save(); ctx.font = '11px "JetBrains Mono", monospace'; ctx.fillStyle = t.ink; ctx.textBaseline = 'middle'; m.data.forEach((b, i) => { const txt = (sizes[i].mysetRev > 0 ? sharePct(sizes[i]).toFixed(0) + '%' : 'no revenue') + ' · keeps ' + fmt.usd(sizes[i].mysetNet), w = ctx.measureText(txt).width; if (b.x + 6 + w > c.width - 2 && b.x - 6 - w > c.chartArea.left) { ctx.textAlign = 'right'; ctx.fillStyle = t.surface; ctx.fillText(txt, b.x - 6, b.y); ctx.fillStyle = t.ink; ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.fillText(txt, b.x - 6 - w, b.y); } else ctx.fillText(txt, b.x + 6, b.y); }); ctx.restore(); } }] });
+    options: { ...baseOpts(t, { indexAxis: 'y' }), layout: { padding: { left: 4, right: 64, top: 4, bottom: 0 } }, scales: { x: { grid: { color: t.grid, drawTicks: false }, border: { color: t.axis }, min: 0, ticks: { color: t.muted, font: { family: MONO, size: 11 }, callback: (v) => v + '%' }, title: axisTitle(t, 'Server bill as a share of MySet’s revenue from the show (%)') }, y: { grid: { display: false }, border: { color: t.axis }, ticks: { color: t.ink, font: { family: SANS, size: 12 } }, title: axisTitle(t, 'The show: phones × hours') } }, plugins: { ...baseOpts(t).plugins, legend: { display: false }, tooltip: { ...baseOpts(t).plugins.tooltip, callbacks: { label: (c) => { const s = sizes[c.dataIndex]; return [` MySet earns ${fmt.usd(s.mysetRev)} (${s.cutPct}% of the room’s ${fmt.usd(s.earn)}) · server ${fmt.usd(s.server)}`, ` MySet keeps ${fmt.usd(s.mysetNet)} · ${fmt.cents(s.server / Math.max(s.fans, 1))} of server per person`, ` on this host it ${s.status === 'ok' ? 'holds' : s.status === 'risky' ? 'is at the edge' : 'breaks'}`]; } } } }, datasets: { bar: { borderWidth: 0, barPercentage: .55, categoryPercentage: .8 } } },
+    plugins: [{ id: 'vals', afterDatasetsDraw(c) { const { ctx } = c, m = c.getDatasetMeta(0); ctx.save(); ctx.font = '11px ' + MONO; ctx.fillStyle = t.ink; ctx.textBaseline = 'middle'; m.data.forEach((b, i) => { const txt = (sizes[i].mysetRev > 0 ? sharePct(sizes[i]).toFixed(0) + '%' : 'no revenue') + ' · keeps ' + fmt.usd(sizes[i].mysetNet), w = ctx.measureText(txt).width; if (b.x + 6 + w > c.width - 2 && b.x - 6 - w > c.chartArea.left) { ctx.textAlign = 'right'; ctx.fillStyle = t.surface; ctx.fillText(txt, b.x - 6, b.y); ctx.fillStyle = t.ink; ctx.globalAlpha = 1; ctx.textAlign = 'left'; ctx.fillText(txt, b.x - 6 - w, b.y); } else ctx.fillText(txt, b.x + 6, b.y); }); ctx.restore(); } }] });
 
   /* sizes table */
   const hostKeys = Object.keys(P.hosts).filter(k => k !== 'custom' || P.hosts.custom.base || P.hosts.custom.reqUsd);
@@ -1510,6 +1604,16 @@ function render() {
   $('#tlTable').innerHTML = `<thead><tr><th class="n">Month</th><th class="n">Artists</th><th class="n">Revenue</th><th class="n">Server</th><th class="n">Stripe</th><th class="n">Fixed</th><th class="n">Acquisition</th><th class="n">Costs</th><th class="n">Profit</th><th class="n">Cumulative</th></tr></thead><tbody>${tl.map(x => `<tr><td class="n">${x.m}</td><td class="n">${fmt.int(x.artists)}</td><td class="n">${fmt.usdFull(x.revenue)}</td><td class="n">${fmt.usdFull(x.server)}</td><td class="n">${fmt.usdFull(x.stripe)}</td><td class="n">${fmt.usdFull(x.fixed)}</td><td class="n">${fmt.usdFull(x.acq || 0)}</td><td class="n">${fmt.usdFull(x.costs)}</td><td class="n ${x.profit >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.profit)}</td><td class="n ${x.cum >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.cum)}</td></tr>`).join('')}</tbody>`;
 
   renderCards();
+  frameAll();
+}
+/* No table window shows more than fifteen rows before it scrolls; the heading stays pinned. */
+const MAX_ROWS = 15;
+function frameAll() {
+  for (const wrap of $$('.scroll')) {
+    const t = $('table', wrap); if (!t || !t.tBodies[0] || !wrap.offsetParent) continue;   // a closed <details> has no size yet
+    const head = t.tHead ? t.tHead.getBoundingClientRect().height : 0, body = [...t.tBodies[0].rows];
+    wrap.style.maxHeight = body.length > MAX_ROWS ? Math.ceil(head + body.slice(0, MAX_ROWS).reduce((a, r) => a + r.getBoundingClientRect().height, 0)) + 2 + 'px' : '';
+  }
 }
 
 /* ───────────────────────────── scenarios ───────────────────────────── */
@@ -1686,11 +1790,14 @@ buildDials(); recalc();
   renderActSummary(); markReal(); recalc(); renderCards();
 })();
 const themeBtn = $('#themeBtn');
-const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
-const paintThemeBtn = () => { themeBtn.textContent = isDark() ? 'LIGHT' : 'DARK'; themeBtn.title = isDark() ? 'Switch to light mode' : 'Switch to dark mode'; };
+const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches; };
+const paintThemeBtn = () => { themeBtn.textContent = isDark() ? 'Light' : 'Dark'; themeBtn.title = isDark() ? 'Switch to light mode' : 'Switch to dark mode'; };
 themeBtn.addEventListener('click', () => { const next = isDark() ? 'light' : 'dark'; document.documentElement.dataset.theme = next; try { localStorage.setItem('myset.model.theme', next); } catch (e) {} paintThemeBtn(); });
 paintThemeBtn();
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { paintThemeBtn(); recalc(); });
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { paintThemeBtn(); recalc(); });
+let rsT; addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(frameAll, 150); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { charts = Object.fromEntries(Object.entries(charts).map(([k, c]) => (c.destroy(), [k, null]))); recalc(); });
 new MutationObserver(recalc).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 </script>
+</body>
+</html>

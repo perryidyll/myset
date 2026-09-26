@@ -13,6 +13,7 @@
   --hair:rgba(255,255,255,.08);--hair2:rgba(255,255,255,.16);
   --accent:#FF7A45;--accent2:#FF9F45;--accent-rgb:255,122,69;--good:#30D158;--good-rgb:48,209,88;--warn:#FFD60A;--live:#FF456E;--blue:#5AC8FA;--violet:#BF5AF2;
   --grid:rgba(255,255,255,.07);--axis:rgba(255,255,255,.18);
+  --tot:color-mix(in srgb,var(--accent) 16%,var(--surface));--tot-ink:#FFB38F;--dot:rgba(255,255,255,.09);--deep:#101012;--deep-card:#19191C;
   --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
   --mono:"SF Mono",ui-monospace,Menlo,monospace;
   --r:22px;--r2:14px;--ease:cubic-bezier(.2,.8,.2,1);
@@ -22,11 +23,13 @@
   --bg:#F5F5F7;--bg2:#FFF;--surface:#FFF;--surface2:#F0F0F3;--band:#F1F1F5;--hover:#EAEAEE;--ink:#0A0A0C;--ink2:#1C1C1E;--muted:#6E6E73;--faint:#A1A1A6;
   --hair:rgba(0,0,0,.08);--hair2:rgba(0,0,0,.16);--accent:#F2612E;--good:#248A3D;--good-rgb:36,138,61;--warn:#B25000;--blue:#0071E3;--violet:#8944AB;
   --grid:rgba(0,0,0,.06);--axis:rgba(0,0,0,.2);color-scheme:light;
+  --tot:color-mix(in srgb,var(--accent) 12%,#fff);--tot-ink:#A8401A;--dot:rgba(0,0,0,.09);--deep:#1D1D1F;--deep-card:#2A2A2D;
 }}
 :root[data-theme="light"]{
   --bg:#F5F5F7;--bg2:#FFF;--surface:#FFF;--surface2:#F0F0F3;--band:#F1F1F5;--hover:#EAEAEE;--ink:#0A0A0C;--ink2:#1C1C1E;--muted:#6E6E73;--faint:#A1A1A6;
   --hair:rgba(0,0,0,.08);--hair2:rgba(0,0,0,.16);--accent:#F2612E;--good:#248A3D;--good-rgb:36,138,61;--warn:#B25000;--blue:#0071E3;--violet:#8944AB;
   --grid:rgba(0,0,0,.06);--axis:rgba(0,0,0,.2);color-scheme:light;
+  --tot:color-mix(in srgb,var(--accent) 12%,#fff);--tot-ink:#A8401A;--dot:rgba(0,0,0,.09);--deep:#1D1D1F;--deep-card:#2A2A2D;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
@@ -37,7 +40,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
 a{color:inherit;text-decoration:none}
 button,select,input{font:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.wrap{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:0 20px 120px}
+.wrap{position:relative;z-index:1;max-width:1440px;margin:0 auto;padding:0 20px}
 .muted{color:var(--muted)}.faint{color:var(--faint)}
 .pos{color:var(--good);font-weight:600}
 .zero{color:var(--faint)}
@@ -62,10 +65,18 @@ header{position:sticky;top:0;z-index:10;backdrop-filter:blur(24px) saturate(160%
 @media(max-width:860px){#meta,.btn .lbl{display:none}.btn{padding:8px 10px}}
 @media(max-width:520px){.mark span{display:none}}
 
-/* ─── hero ─── */
+/* ─── hero: a dot grid that fades out, a wash of surface, a lit divider under it ─── */
+.herozone{position:relative;padding-bottom:40px}
+.herozone::before{content:"";position:absolute;z-index:-1;inset:-120px calc(50% - 50vw) 0;pointer-events:none;
+  background-image:radial-gradient(var(--dot) 1px,transparent 1.3px);background-size:22px 22px;
+  -webkit-mask-image:radial-gradient(ellipse 60% 85% at 28% 18%,#000 25%,transparent 72%);mask-image:radial-gradient(ellipse 60% 85% at 28% 18%,#000 25%,transparent 72%)}
+.herozone::after{content:"";position:absolute;z-index:-1;inset:-120px calc(50% - 50vw) 0;pointer-events:none;background:linear-gradient(180deg,transparent 40%,color-mix(in srgb,var(--surface) 35%,transparent))}
+.divider{position:relative;height:1px;background:linear-gradient(90deg,transparent,var(--hair2) 12%,var(--hair2) 88%,transparent)}
+.divider::after{content:"";position:absolute;left:50%;top:-1px;width:140px;height:3px;margin-left:-70px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--accent),transparent);box-shadow:0 0 18px rgba(var(--accent-rgb),.55)}
 .hero{padding:56px 0 8px}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
-h1{font-size:clamp(40px,6vw,72px);line-height:.98;letter-spacing:-.045em;font-weight:700;max-width:16ch;text-wrap:balance}
+h1{font-size:clamp(40px,6vw,72px);line-height:.98;letter-spacing:-.045em;font-weight:700;max-width:16ch;text-wrap:balance;background:linear-gradient(180deg,var(--ink) 55%,color-mix(in srgb,var(--ink) 62%,var(--accent)));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+h1 em{-webkit-text-fill-color:var(--muted)}
 h1 em{font-style:normal;color:var(--muted);font-weight:600}
 .lede{margin-top:16px;color:var(--muted);font-size:16px;max-width:66ch;line-height:1.5}
 
@@ -108,19 +119,19 @@ section{margin-top:52px}
 .tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:14px}
 .tbl th,.tbl td{padding:12px 14px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--hair);background:var(--surface)}
 .tbl .n{text-align:right;font-variant-numeric:tabular-nums}
-.tbl thead th{position:sticky;top:0;z-index:2;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:600;user-select:none}
+.tbl thead th{position:sticky;top:0;z-index:2;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink);font-weight:800;user-select:none}
 .tbl thead th.sort{cursor:pointer}
-.tbl thead th.sort:hover{color:var(--ink)}
+.tbl thead th.sort:hover{color:var(--accent)}
 .tbl thead th.on{color:var(--accent)}
 .tbl thead th.on::after{content:" ↓"}.tbl thead th.on.asc::after{content:" ↑"}
 .tbl .b1{background:var(--band)}
 .tbl .gl{border-left:1px solid var(--hair2)}
-.tbl tr.grp th{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--muted);padding-top:10px;padding-bottom:6px;border-bottom:0}
-.tbl tr.grp th.g{text-align:center;color:var(--ink2);box-shadow:inset 0 2px 0 var(--accent)}
+.tbl tr.grp th{font-size:12.5px;letter-spacing:.12em;color:var(--ink);font-weight:800;padding-top:12px;padding-bottom:4px;border-bottom:0}
+.tbl tr.grp th.g{text-align:center;box-shadow:inset 0 2px 0 var(--accent)}
 .tbl tr.grp th.g.tips,.tbl tr.grp th.g.merch{box-shadow:inset 0 2px 0 var(--good)}
-.tbl tr.tot th{font-size:14px;text-transform:none;letter-spacing:-.01em;color:var(--ink);font-weight:700;border-bottom:1px solid var(--hair2);box-shadow:inset 0 -1px 0 var(--hair2)}
-.tbl tr.tot th:first-child{color:var(--accent)}
-.tbl tr.tot th small{color:var(--faint);font-weight:500;margin-left:4px}
+.tbl tr.tot th{font-size:14px;text-transform:none;letter-spacing:-.01em;background:var(--tot);color:var(--tot-ink);font-weight:700;border-bottom:1px solid rgba(var(--accent-rgb),.35)}
+.tbl tr.tot th small{color:inherit;opacity:.75;font-weight:500;margin-left:4px}
+.tbl tr.tot th .zero{color:inherit;opacity:.55}
 .tbl th:first-child,.tbl td:first-child{position:sticky;left:0;z-index:1}
 .tbl thead th:first-child{z-index:3}
 .tbl tbody tr{transition:background .2s}
@@ -159,10 +170,10 @@ section{margin-top:52px}
 .arrow:hover{border-color:var(--accent);transform:scale(1.06)}
 .arrow:active{transform:scale(.94)}
 .arrow svg{width:18px;height:18px}
-.track{display:flex;align-items:flex-start;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:4px;scroll-behavior:smooth}
+.track{display:flex;align-items:flex-start;gap:24px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:4px;scroll-behavior:smooth;transition:height .45s var(--ease)}
 .track::-webkit-scrollbar{display:none}
-.slide{flex:0 0 calc((100% - 16px)/2);scroll-snap-align:start;display:flex;flex-direction:column;min-width:0}
-@media(max-width:900px){.slide{flex-basis:100%}}
+.page{flex:0 0 100%;display:flex;flex-direction:column;gap:16px;scroll-snap-align:start;min-width:0}
+.slide{display:flex;flex-direction:column;min-width:0}
 .slide .top{padding:22px 24px 16px;border-bottom:1px solid var(--hair);display:flex;gap:14px;align-items:flex-start}
 .slide .top .no{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:.1em;padding-top:6px}
 .slide h3{font-size:22px;font-weight:700;letter-spacing:-.03em}
@@ -171,11 +182,18 @@ section{margin-top:52px}
 .slide .tw{flex:1}
 .slide .tbl{font-size:15px}
 .slide .tbl th,.slide .tbl td{padding:15px 18px}
-.slide .tbl thead th{font-size:11.5px}
+.slide .tbl thead th{font-size:13px}
 .slide .foot{padding:12px 24px;border-top:1px solid var(--hair);font-size:12.5px;color:var(--faint);line-height:1.45}
 
-/* ─── rules ─── */
-.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+/* ─── the rules: a darker room of their own, running to the foot of the page ─── */
+.deep{position:relative;margin-top:72px;padding:56px 0 64px;color:#F5F5F7;
+  --surface:var(--deep-card);--ink:#F5F5F7;--ink2:#E8E8ED;--muted:#A1A1A6;--faint:#8A8A8F;--hair:rgba(255,255,255,.09);--hair2:rgba(255,255,255,.16)}
+.deep::before{content:"";position:absolute;z-index:-1;inset:0 calc(50% - 50vw);background:var(--deep);border-top:1px solid var(--hair)}
+.deep .rules .card{border-color:var(--hair)}
+.deep footer{margin-top:40px}
+.rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media(max-width:1000px){.rules{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.rules{grid-template-columns:1fr}}
 .rules .card{padding:20px 22px}
 .rules h3{font-size:15px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
 .rules p{font-size:13.5px;color:var(--muted);line-height:1.55}
@@ -209,7 +227,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 
 .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,10px);background:var(--surface2);border:1px solid var(--hair2);color:var(--ink);padding:11px 16px;border-radius:999px;font-size:13px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:40;box-shadow:0 12px 40px rgba(0,0,0,.35)}
 .toast.on{opacity:1;transform:translate(-50%,0)}
-@media(max-width:720px){.wrap{padding:0 16px 80px}.bar{padding:10px 16px}.hero{padding-top:36px}.tile .v{font-size:30px}.stats{grid-template-columns:repeat(2,1fr)}.slide .top{padding:18px}.slide .tbl th,.slide .tbl td{padding:13px 14px}}
+@media(max-width:720px){.wrap{padding:0 16px}.bar{padding:10px 16px}.hero{padding-top:36px}.tile .v{font-size:30px}.stats{grid-template-columns:repeat(2,1fr)}.slide .top{padding:18px}.slide .tbl th,.slide .tbl td{padding:13px 14px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
 <body>
@@ -226,6 +244,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 </header>
 
 <div class="wrap">
+<div class="herozone">
 <div class="hero">
   <div class="eyebrow" id="eyebrow">MySet · the register</div>
   <h1>Every show <em>on MySet</em></h1>
@@ -234,6 +253,8 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 
 <div class="kpis" id="kpis"></div>
 <div class="floor" id="floorNote" hidden></div>
+</div>
+<div class="divider" role="presentation"></div>
 
 <section id="showsBlock">
   <div class="sh"><h2>Every show</h2><p>Tap a row for the night itself.</p><span class="count" id="showsK"></span></div>
@@ -264,7 +285,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 </section>
 
 <section id="breakdowns">
-  <div class="sh"><h2>The breakdowns</h2><p>The same nights, added up nine ways. Two at a time; the arrows turn the carousel.</p></div>
+  <div class="sh"><h2>The breakdowns</h2><p>The same nights, added up nine ways. Two at a time, one above the other; the arrows turn the carousel.</p></div>
   <div class="carhead">
     <div class="nav" id="carNav" role="tablist" aria-label="Breakdown tables"></div>
     <div class="arrows">
@@ -276,7 +297,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
   <div class="track" id="track" tabindex="0" aria-label="Breakdown tables, use the arrow keys to turn"></div>
 </section>
 
-<section>
+<section class="deep">
   <div class="sh"><h2>How these numbers are made</h2><p>Read this once.</p></div>
   <div class="rules">
     <div class="card"><h3>Which nights count</h3><p>A night is <b>counted</b> when it started on a published gig (no earlier than 90 minutes before the slot, no later than its end) and something happened in it. Everything else is kept and labelled, never thrown away: <b>unused</b> (on the calendar, one phone, no votes) or <b>not counted</b> (nobody there; not on the calendar; ten or more phones on one network in under half an hour, which is one machine; under 30 minutes; over 12 hours with no gig). <b>Hidden</b> is a flag, not a verdict: a night the artist deleted from their own Money tab is still judged by the same rule and still in the totals, greyed here.</p></div>
@@ -286,9 +307,8 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <div class="card"><h3>Where a night was</h3><p>Country and time zone come off the night's own record, else the calendar gig the night lines up with, else a venue in the registry with the same name, else the tail of the “City, Country” text older nights carry.</p></div>
     <div class="card"><h3>What the money model takes from here</h3><p>Nights counted, phones and hours a night, votes and songs a night, actions per phone, and room money a head by plan. The meters (ticks per phone-hour, credits a night, deploys) are Netlify's dashboard numbers and stay the tracker's; the model keeps those from its last reading and says so.</p></div>
   </div>
-</section>
-
 <footer id="foot"></footer>
+</section>
 </div>
 
 <div class="veil" id="veil"></div>
@@ -550,7 +570,7 @@ function kpis() {
   else fn.hidden = true;
 }
 
-/* ── the breakdowns: nine tables in a carousel, two in view ── */
+/* ── the breakdowns: nine tables in a carousel, two to a page, one above the other ── */
 function tableHtml(cols, rows, empty) {
   const B = bands(cols.map(([label, , n]) => ({ k: label, n })));
   return `<table class="tbl"><thead><tr>${cols.map(([l, , n], i) => `<th class="${[n ? 'n' : '', B[i].shade ? 'b1' : ''].join(' ')}">${l}</th>`).join('')}</tr></thead><tbody>${rows.length
@@ -603,38 +623,42 @@ function slides() {
     ] },
   ];
 }
-let SLIDES = [], car = 0;
-const perView = () => (matchMedia('(max-width: 900px)').matches ? 1 : 2);
+let SLIDES = [], car = 0;   // car = the page in view
+const PER = 2;
+const pages = () => Math.ceil(SLIDES.length / PER);
 function carousel() {
   SLIDES = slides();
-  $('#track').innerHTML = SLIDES.map((s, i) => `<article class="card slide" id="slide${i}" aria-roledescription="table ${i + 1} of ${SLIDES.length}">
+  const slide = (s, i) => `<article class="card slide" id="slide${i}" aria-roledescription="table ${i + 1} of ${SLIDES.length}">
       <div class="top"><span class="no">${String(i + 1).padStart(2, '0')}</span><div><h3>${s.t}</h3><p>${s.p}</p></div><span class="cnt">${s.c}</span></div>
       <div class="tw">${tableHtml(s.cols, s.rows, s.empty || 'Nothing yet.')}</div>
-    </article>`).join('');
+    </article>`;
+  $('#track').innerHTML = Array.from({ length: pages() }, (_, p) => `<div class="page" id="page${p}">${SLIDES.slice(p * PER, p * PER + PER).map((s, j) => slide(s, p * PER + j)).join('')}</div>`).join('');
   $('#carNav').innerHTML = SLIDES.map((s, i) => `<button class="chip" role="tab" data-i="${i}">${s.t}</button>`).join('');
-  $$('#carNav .chip').forEach((b) => b.addEventListener('click', () => go(Number(b.dataset.i))));
+  $$('#carNav .chip').forEach((b) => b.addEventListener('click', () => go(Math.floor(Number(b.dataset.i) / PER))));
   $$('#track .tw').forEach(frame);
-  go(Math.min(car, SLIDES.length - perView()), true);
+  go(Math.min(car, pages() - 1), true);
 }
-function go(i, instant) {
-  const last = Math.max(0, SLIDES.length - perView());
-  car = i > last ? 0 : i < 0 ? last : i;   // the ends wrap round: it turns, it never stops
-  const s = $('#slide' + car); if (!s) return;
-  $('#track').scrollTo({ left: s.offsetLeft - $('#track').offsetLeft, behavior: instant ? 'auto' : 'smooth' });
-  paintCar();
+/* the track takes the height of the page in view, so a short page leaves no hole under it */
+function fit() { const pg = $('#page' + car); if (pg) $('#track').style.height = pg.offsetHeight + 4 + 'px'; }
+function go(p, instant) {
+  const last = pages() - 1;
+  car = p > last ? 0 : p < 0 ? last : p;   // the ends wrap round: it turns, it never stops
+  const pg = $('#page' + car); if (!pg) return;
+  $('#track').scrollTo({ left: pg.offsetLeft - $('#track').offsetLeft, behavior: instant ? 'auto' : 'smooth' });
+  paintCar(); fit();
 }
 function paintCar() {
-  const pv = perView();
-  $$('#carNav .chip').forEach((b, i) => { const on = i >= car && i < car + pv; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-  $('#carPos').textContent = pv === 1 ? `${car + 1} / ${SLIDES.length}` : `${car + 1}–${Math.min(car + pv, SLIDES.length)} / ${SLIDES.length}`;
+  $$('#carNav .chip').forEach((b, i) => { const on = Math.floor(i / PER) === car; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+  const a = car * PER + 1, z = Math.min(a + PER - 1, SLIDES.length);
+  $('#carPos').textContent = a === z ? `${a} / ${SLIDES.length}` : `${a}–${z} / ${SLIDES.length}`;
 }
 $('#carPrev').addEventListener('click', () => go(car - 1));
 $('#carNext').addEventListener('click', () => go(car + 1));
 $('#track').addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { e.preventDefault(); go(car + 1); } if (e.key === 'ArrowLeft') { e.preventDefault(); go(car - 1); } });
-$('#track').addEventListener('scroll', () => { clearTimeout(go.t); go.t = setTimeout(() => {   // a swipe on a phone lands on a card; follow it
+$('#track').addEventListener('scroll', () => { clearTimeout(go.t); go.t = setTimeout(() => {   // a swipe on a phone lands on a page; follow it
   const tr = $('#track'), x = tr.scrollLeft; let best = 0, d = Infinity;
-  $$('.slide', tr).forEach((s, i) => { const dd = Math.abs(s.offsetLeft - tr.offsetLeft - x); if (dd < d) { d = dd; best = i; } });
-  car = best; paintCar();
+  $$('.page', tr).forEach((s, i) => { const dd = Math.abs(s.offsetLeft - tr.offsetLeft - x); if (dd < d) { d = dd; best = i; } });
+  if (best !== car) { car = best; paintCar(); fit(); }
 }, 120); }, { passive: true });
 
 /* ── charts: every one has both axes named ── */

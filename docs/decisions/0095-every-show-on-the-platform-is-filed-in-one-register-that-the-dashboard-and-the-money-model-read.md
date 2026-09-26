@@ -205,3 +205,17 @@ The night opens in a side drawer. The data, the endpoints and the rules are unch
 
 The by-country chart had printed "$0" on its country axis: the dollar formatter was on
 the wrong axis of a horizontal bar chart. Fixed; the tooltip now says dollars too.
+
+## Amendment, 2026-09-26 (later): the model in the same look
+
+The founder asked for the money model to wear the same look, and for four changes on
+both pages: column headings larger, bold and in the ink colour; the totals row shaded
+light orange with its text not black; the By artist and By venue tables full width and
+stacked, not side by side; the "how these numbers are made" part on a darker ground; a
+divider above the main table and a hero above it. `finance/model.html` now uses the
+shows page's tokens and system type; its engine, its data and its endpoints are
+unchanged, and so are the functions `finance/model-test.mjs` reads out of it. Sum rows
+and totals are one light orange on both pages; the model's selected-host row moved from
+orange to blue so a highlight never reads as a total. Every table on both pages shows at
+most fifteen rows before it scrolls. The breakdown carousel now turns a page of two
+tables, one above the other.
