@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-26 18:01 — d461f80 — wt2@ux/media-dash-name (0 files since origin/main)
+**tl;dr:** The Instagram dashboard at myset.vip/mediadash is now called Media Dash (tab title and top-left mark), not Signal
+**Other sessions:** Name only, public/mediadash.html; the content engine's twin publish/dashboard.html carries the same rename. The Sheets tab 'Signals' is unrelated and unchanged. Older decision/session notes quoting 'MySet Signal' are history, left as written.
+
 ### 2026-09-26 17:12 — cab2c0b — wt2@docs/stripe-rates-live (1 files since origin/main)
 **tl;dr:** Docs only: the measured Stripe rate is live as 03e2b28 [skip ci]
 **Other sessions:** Nothing to redo.
