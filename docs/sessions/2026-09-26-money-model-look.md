@@ -35,4 +35,6 @@ passed. Both pages in the app's browser, light and dark, and at 375 px with no s
 page scroll. The shows carousel went 1–2 → 3–4 of 9 and the track followed the page's
 height (916 → 388 px).
 
-**Not verified:** production (after the merge); Safari.
+**Live:** `16137f3` (PR #99), deploy ready 06:18 UTC. With the passcode, production's /moneymodel answered 200 carrying `frameAll`, `class="deep"` and the titled axes, the chart from /vendor/, no Google Fonts; /moneymodel/shows carries the stacked carousel and the divider; `shows.json` still answers 401 without the cookie.
+
+**Not verified:** Safari.

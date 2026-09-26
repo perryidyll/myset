@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-26 13:19 — a204495 — wt2@docs/model-look-live (2 files since origin/main)
+**tl;dr:** Docs only: the money model's new look is live as 16137f3, verified by content [skip ci]
+**Other sessions:** Nothing to redo. Ledger EVS-003 row is the record.
+
 ### 2026-09-26 13:16 — 6cac9a2 — wt2@ux/model-stark (6 files since origin/main)
 **tl;dr:** The money model now wears the shows page's look; both pages: bold ink headings, totals shaded light orange, a hero with a lit divider, rules/notes in a dark band; the shows breakdowns turn two tables at a time, stacked full width (EVS-003)
 **Other sessions:** model.html: style + markup only — ENGINE block, summarize/applyActuals/mergeLive/pickAct/withDefaults untouched (model-test reads them). No Google Fonts link on it any more; localised()'s FONT_LINK swap now matches nothing there (harmless). tr.hi is blue now so it never reads as a total; tr.sum is the orange. shows.html carousel: car is a PAGE index, PER = 2.
