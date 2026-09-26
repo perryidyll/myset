@@ -109,3 +109,11 @@ both sides count them).
 
 0090 and 0092 are on origin/main (loaders; mediadash); 0091 is held uncommitted by the
 perf/sw-navigations worktree; this PR is **0095 / 0gi**.
+
+## Live
+
+Merged as `a8cd3c9` (PR #96), deploy ready 2026-09-25 07:40 UTC. The first ten-minute
+ring built the register about nine minutes later. At 2026-09-26 02:30 UTC the head read
+36 rows: 16 counted, 2 unused, 13 not counted, 5 silent (the Seaflower night of 25 Sep
+folded on its own), from a cron fold of 544 ms over 15 reads, one artist walked of six.
+Read with the passcode cookie; nothing on production was written or refreshed by hand.

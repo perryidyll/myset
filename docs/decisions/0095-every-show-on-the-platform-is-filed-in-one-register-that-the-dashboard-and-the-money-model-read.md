@@ -8,7 +8,7 @@ area: money
 reverses:
 superseded_by:
 invariants: [0gi]
-commits: []
+commits: [a8cd3c9]
 tests: [test/everyshow.mjs, finance/model-test.mjs, tools/actuals-test.py, test/metrics.mjs, test/sheets.mjs, test/structure.mjs]
 files: [netlify/functions/_register.mjs, netlify/functions/_nightrule.mjs, netlify/functions/_showsdash.mjs, netlify/functions/registercron.mjs, netlify/functions/_passgate.mjs, netlify/functions/moneymodel.mjs, netlify/functions/_lifecycle.mjs, netlify/functions/_history.mjs, netlify/functions/_pay.mjs, netlify/functions/_metrics.mjs, netlify/functions/_warehouse.mjs, netlify/functions/_mirror.mjs, netlify/functions/_auth.mjs, netlify.toml, finance/shows.html, finance/model.html, finance/fixtures/2026-09-25/, tools/actuals.py, INVARIANTS.md, finance/README.md]
 ---
@@ -190,3 +190,18 @@ out of a three-critic review of the design brief and are recorded in the session
   does it; the head's `build` block on the page is the evidence), the empty-day meter after
   the bell has run for a day, and Netlify's actual scheduled-function timeout (BUDGET_MS
   is set to six seconds under the repo's measured ~12 s death).
+
+## Amendment, 2026-09-26: the page's look
+
+The founder asked for the dashboard to wear the /mediadash look (decision 0092) and for
+the tables to read more clearly. `finance/shows.html` now uses the /mediadash tokens and
+the system's own SF type, so it loads no web font at all. The main table groups its
+money columns (Votes: all / bought / $ · Tips: count / $ · Merch: items / $), shades
+alternate column bands with each group as one band, pins a totals row under the headers
+that adds up whatever the filters show, and paints every dollar figure above zero green.
+No table window shows more than fifteen rows before it scrolls. Every chart names both
+axes. The nine breakdown tables sit in a carousel, two in view, turned by arrow buttons.
+The night opens in a side drawer. The data, the endpoints and the rules are unchanged.
+
+The by-country chart had printed "$0" on its country axis: the dollar formatter was on
+the wrong axis of a horizontal bar chart. Fixed; the tooltip now says dollars too.
