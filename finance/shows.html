@@ -129,6 +129,11 @@ section{margin-top:52px}
 .tbl tr.grp th{font-size:12.5px;letter-spacing:.12em;color:var(--ink);font-weight:800;padding-top:12px;padding-bottom:4px;border-bottom:0}
 .tbl tr.grp th.g{text-align:center;box-shadow:inset 0 2px 0 var(--accent)}
 .tbl tr.grp th.g.tips,.tbl tr.grp th.g.merch{box-shadow:inset 0 2px 0 var(--good)}
+.tbl tr.grp th.g.costs{box-shadow:inset 0 2px 0 var(--live)}
+.cost{color:var(--ink2)}
+.neg{color:var(--live);font-weight:600}
+.est{color:var(--faint);font-weight:500;margin-right:1px}
+.tbl tr.tot th .est{color:inherit;opacity:.6}
 .tbl tr.tot th{font-size:14px;text-transform:none;letter-spacing:-.01em;background:var(--tot);color:var(--tot-ink);font-weight:700;border-bottom:1px solid rgba(var(--accent-rgb),.35)}
 .tbl tr.tot th small{color:inherit;opacity:.75;font-weight:500;margin-left:4px}
 .tbl tr.tot th .zero{color:inherit;opacity:.55}
@@ -192,7 +197,9 @@ section{margin-top:52px}
 .deep .rules .card{border-color:var(--hair)}
 .deep footer{margin-top:40px}
 .rules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rules .card:last-child:nth-child(3n+1){grid-column:1/-1}
 @media(max-width:1000px){.rules{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:1000px){.rules .card:last-child:nth-child(3n+1){grid-column:auto}}
 @media(max-width:640px){.rules{grid-template-columns:1fr}}
 .rules .card{padding:20px 22px}
 .rules h3{font-size:15px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
@@ -271,7 +278,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <input class="search" type="search" id="fSearch" placeholder="Search a venue, a song, a title">
   </div>
   <div class="card"><div class="tw" id="showsWrap"><table class="tbl" id="showsTable"><thead></thead><tbody></tbody></table></div></div>
-  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. Times are the night's own local clock.</p>
+  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is an estimate at the published card rates (≈). Times are the night's own local clock.</p>
 </section>
 
 <section>
@@ -304,6 +311,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <div class="card"><h3>How long a night is</h3><p>The record's own length, unless the record overran the published slot. Then it is the later of the slot and the last song anyone started: a room still voting past the slot was still a room; an empty page left open was not. Two records inside one slot (an accidental End then Start) are one night.</p></div>
     <div class="card"><h3>People</h3><p>Phones that opened the room, not just phones that voted. “Networks” is how many different connections those phones came in on: the one check that a crowd was not one phone rotating its id.</p></div>
     <div class="card"><h3>Money</h3><p>Tips, vote packs and paid requests are <b>Stripe's answer</b> for the payments tagged with the night, read when the night was filed and again the morning after, so a tip sent from the walk home still lands. A night Stripe never answered says <b>unknown</b>, never $0, and stays out of every per-head figure. <b>$ a head</b> = (tips + vote packs + paid requests) ÷ phones, over nights with money known. Merch is never in it: merch is the app's own order record, and the artist ships it. Every dollar figure above zero is green.</p></div>
+    <div class="card"><h3>What a show cost</h3><p>Three columns, money going out, so never green. <b>Server</b> is the traffic the night added over an empty day, by Netlify's own per-day meters, at the price of the plan's top-up pack (every credit past the month's grant is bought in one). A night the meters were never read for carries the average of the nights they were, marked ≈. <b>Stripe</b> is an estimate at the published card rates the money model uses, on the room's money and the night's merch; Stripe's own fee is not filed with the night. <b>No deploy is ever in a show's cost</b>: shipping code is the founder's bill, not the room's.</p></div>
     <div class="card"><h3>Where a night was</h3><p>Country and time zone come off the night's own record, else the calendar gig the night lines up with, else a venue in the registry with the same name, else the tail of the “City, Country” text older nights carry.</p></div>
     <div class="card"><h3>What the money model takes from here</h3><p>Nights counted, phones and hours a night, votes and songs a night, actions per phone, and room money a head by plan. The meters (ticks per phone-hour, credits a night, deploys) are Netlify's dashboard numbers and stay the tracker's; the model keeps those from its last reading and says so.</p></div>
   </div>
@@ -335,6 +343,9 @@ const fmt = {
 };
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const dash = '<span class="faint">—</span>';
+/* a cost is money going out: never green; ≈ marks a figure that is an estimate, not a meter reading */
+const $$cost = (n, est) => (fin(n) ? `<span class="cost">${est && n > 0 ? '<span class="est" title="an estimate">≈</span>' : ''}${fmt.usd(n)}</span>` : dash);
+const cost = (r) => r.costs || null;
 /* every dollar figure goes through here: above zero is green, zero is quiet, unknown is a dash */
 const $$usd = (n, d = 2) => (!fin(n) ? dash : n > 0 ? `<span class="pos">${fmt.usd(n, d)}</span>` : `<span class="zero">${fmt.usd(n, d)}</span>`);
 const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2800); };
@@ -410,6 +421,15 @@ const COLS = [
   { k: 'requests', label: 'Requests', n: 1, sort: (r) => r.requests.count, cell: (r) => (silent(r) ? dash : `${fmt.int(r.requests.count)}${r.requests.count ? ` <span class="faint">${r.requests.accepted} played</span>` : ''}`), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.requests.count)) },
   { k: 'merch', label: 'Items', group: 'merch', n: 1, sort: (r) => r.money.merch.items, cell: (r) => (silent(r) ? dash : fmt.int(r.money.merch.items)), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.money.merch.items)) },
   { k: 'merchUsd', label: '$', group: 'merch', n: 1, sort: (r) => r.money.merch.amount, cell: (r) => (silent(r) ? dash : $$usd(r.money.merch.amount)), total: (rows) => $$usd(sumOf(liveRows(rows), (r) => r.money.merch.amount)) },
+  { k: 'costServer', label: 'Server', group: 'costs', n: 1, sort: (r) => (cost(r) && cost(r).server ? cost(r).server.usd : -1),
+    cell: (r) => { const c = cost(r); return c && c.server ? `<span title="${fmt.num(c.server.credits, 2)} credits of traffic — ${c.server.measured ? 'measured by Netlify\'s meters that day' : 'the average of the nights the meters measured'}">${$$cost(c.server.usd, !c.server.measured)}</span>` : dash; },
+    total: (rows) => { const rs = rows.filter((r) => cost(r) && cost(r).server); return rs.length ? $$cost(sumOf(rs, (r) => cost(r).server.usd), rs.some((r) => !cost(r).server.measured)) : dash; } },
+  { k: 'costStripe', label: 'Stripe', group: 'costs', n: 1, sort: (r) => (cost(r) && cost(r).stripe ? cost(r).stripe.usd : -1),
+    cell: (r) => { const c = cost(r); return c && c.stripe ? `<span title="estimate: ${c.stripe.payments} payment${c.stripe.payments === 1 ? '' : 's'} on ${fmt.usd(c.stripe.volume)} at the published card rates">${$$cost(c.stripe.usd, true)}</span>` : dash; },
+    total: (rows) => { const rs = rows.filter((r) => cost(r) && cost(r).stripe); return rs.length ? $$cost(sumOf(rs, (r) => cost(r).stripe.usd), true) : dash; } },
+  { k: 'costTotal', label: 'Total', group: 'costs', n: 1, sort: (r) => (cost(r) && fin(cost(r).total) ? cost(r).total : -1),
+    cell: (r) => { const c = cost(r); return c && fin(c.total) ? `<b>${$$cost(c.total, !c.server.measured || c.stripe.usd > 0)}</b>` : dash; },
+    total: (rows) => { const rs = rows.filter((r) => cost(r) && fin(cost(r).total)); return rs.length ? $$cost(sumOf(rs, (r) => cost(r).total), rs.some((r) => !cost(r).server.measured || cost(r).stripe.usd > 0)) : dash; } },
   { k: 'songs', label: 'Songs', n: 1, sort: (r) => r.songsPlayed, cell: (r) => (silent(r) ? dash : fmt.int(r.songsPlayed)), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.songsPlayed)) },
   { k: 'money', label: 'Room $', n: 1, sort: (r) => (known(r) ? r.money.total : -1), cell: (r) => (silent(r) ? dash : known(r) ? $$usd(r.money.total) : '<span class="tag unknown" title="Stripe could not be asked, or payments were off">unknown</span>'),
     total: (rows) => $$usd(sumOf(knownRows(rows), (r) => r.money.total)) },
@@ -417,7 +437,7 @@ const COLS = [
     total: (rows) => { const k = knownRows(rows); const heads = sumOf(k, (r) => r.people); return heads ? $$usd(sumOf(k, (r) => r.money.total) / heads) : dash; } },
   { k: 'status', label: 'Status', cell: (r) => tagOf(r), total: (rows) => `${fmt.int(rows.filter((r) => r.status === 'counted').length)} <small>counted</small>` },
 ];
-const GROUP_WORD = { votes: 'Votes', tips: 'Tips', merch: 'Merch' };
+const GROUP_WORD = { votes: 'Votes', tips: 'Tips', merch: 'Merch', costs: 'Costs' };
 /* band 0 / 1 alternates per column; a group is one band. gl = the group's left edge. */
 function bands(cols) {
   let band = -1, prev = Symbol('start');
@@ -522,6 +542,7 @@ function detail(r) {
       ${m.merch.titles && m.merch.titles.length ? `<p class="dnote">${esc(m.merch.titles.join(', '))}</p>` : ''}
       ${r.featured ? line('Featured spot bought', `${r.featured.spots} · ${$$usd(r.featured.cents / 100)} to MySet`) : ''}
     </div>
+    ${costsHtml(r, line)}
     <div class="dsec"><h4>Songs played · ${fmt.int(r.songsPlayed)}</h4>${!loaded ? '<p class="dnote">Loading the night…</p>' : played.length ? `<ul class="songs">${played.map((p) => `<li><span>${esc(p.title)}${p.artist ? ` <small>${esc(p.artist)}</small>` : ''}</span><span class="n">${plural(p.roundVotes ?? p.votes, 'vote')}${p.replay ? ' · replay' : ''}</span></li>`).join('')}</ul>` : '<p class="dnote">No song was started.</p>'}</div>
     <div class="dsec"><h4>Asked for, never played · ${loaded ? requested.length : '…'}</h4>${!loaded ? '' : requested.length ? `<ul class="songs">${requested.map((p) => `<li><span>${esc(p.title)}${p.artist ? ` <small>${esc(p.artist)}</small>` : ''}</span><span class="n">${plural(p.votes, 'vote')}</span></li>`).join('')}</ul>` : '<p class="dnote">Nothing left standing.</p>'}
       ${r.requests.count ? `<p class="dnote">Requests from the room: ${plural(r.requests.songs, 'song')}, ${plural(r.requests.birthdays, 'birthday')}, ${plural(r.requests.vibes, 'vibe')} · ${r.requests.accepted} accepted${r.requests.paid ? ` · ${r.requests.paid} paid` : ''}${r.requests.known ? '' : ' · unknown for older nights'}</p>` : ''}</div>
@@ -535,6 +556,21 @@ function detail(r) {
       ${r.mergedFrom ? line('Merged from', plural(r.mergedFrom.length, 'record')) : ''}
       ${r.rsvps ? line('Said they were coming', fmt.int(r.rsvps)) : ''}${r.rating ? line('Rated by the room', `${r.rating.avg} ★ · ${r.rating.n}`) : ''}
     </div>`;
+}
+
+/* ── what the night cost, in the drawer ── */
+function costsHtml(r, line) {
+  const c = cost(r), B = REG.costs;
+  if (!c) return '';
+  const s = c.server, st = c.stripe;
+  const left = st && fin(c.total) && known(r) ? r.money.total + (r.money.merch.amount || 0) - c.total : null;
+  return `<div class="dsec"><h4>Costs <span class="tag">${s && s.measured ? 'server measured' : 'server ≈ average'}</span> <span class="tag">stripe ≈ estimate</span></h4>
+    ${line('Server (traffic)', s ? `${fmt.num(s.credits, 2)} credits · ${$$cost(s.usd, !s.measured)}` : dash)}
+    ${line('Stripe card fees', st ? `${plural(st.payments, 'payment')} on ${fmt.usd(st.volume)} · ${$$cost(st.usd, true)}` : dash)}
+    ${line('Costs in all', fin(c.total) ? `<b>${$$cost(c.total, !s.measured || st.usd > 0)}</b>` : dash)}
+    ${left != null ? line('Room money + merch, less costs', left >= 0 ? $$usd(left) : `<span class="neg">−${fmt.usd(-left)}</span>`) : ''}
+    <p class="dnote">${s ? (s.measured ? 'The server figure is what Netlify\'s own meters say this night added over an empty day.' : `Netlify's meters were not read for this night, so the server figure is the average of the ${B ? B.measuredNights : ''} nights they were read for.`) : ''} Credits at the plan's top-up price${B && B.pack ? ` (${fmt.int(B.pack.credits)} for ${fmt.usd(B.pack.usd)})` : ''}. Stripe is ${B ? B.stripe.effectivePct : '3.1'}% + ${B ? Math.round(B.stripe.fixed * 100) : 30}¢ a payment, the published rate, not Stripe's own figure. No deploy is ever in a show's cost.</p>
+  </div>`;
 }
 
 /* ── KPI tiles ── */
@@ -557,9 +593,10 @@ function kpis() {
     ['Tips', money(sum((r) => r.money.tips.amount, k)), `${plural(sum((r) => r.money.tips.count, k), 'tip')} on nights with money known`, sum((r) => r.money.tips.amount, k) > 0 ? 'pos' : ''],
     ['Votes bought', money(sum((r) => r.money.packs.amount, k)), `${plural(sum((r) => r.money.packs.votes || 0, k), 'vote')} in ${plural(sum((r) => r.money.packs.count, k), 'pack')}`, sum((r) => r.money.packs.amount, k) > 0 ? 'pos' : ''],
     ['Merch', money(sum((r) => r.money.merch.amount)), `${plural(sum((r) => r.money.merch.items), 'item')} in ${plural(sum((r) => r.money.merch.orders), 'order')}`, sum((r) => r.money.merch.amount) > 0 ? 'pos' : ''],
+    (() => { const cs = rows.map(cost).filter(Boolean), srv = cs.filter((c) => c.server), tot = cs.filter((c) => fin(c.total));
+      return ['Costs', tot.length ? `<span class="est">≈</span>${fmt.usd(sumOf(tot, (c) => c.total))}` : '—', `server ${fmt.usd(sumOf(srv, (c) => c.server.usd))} · Stripe ≈ ${fmt.usd(sumOf(cs.filter((c) => c.stripe), (c) => c.stripe.usd))}${tot.length ? ` · ≈ ${fmt.usd(sumOf(tot, (c) => c.total) / tot.length)} a night` : ''}`]; })(),
     ['Requests', fmt.int(sum((r) => r.requests.count)), `${fmt.int(sum((r) => r.requests.accepted))} accepted · ${fmt.int(sum((r) => r.songsPlayed))} songs played`],
-    ['Artists', `${new Set(rows.map((r) => r.artist.id)).size} <small>of ${fmt.int(T.artistsOnPlatform)}</small>`, 'with counted nights, of everyone on the platform'],
-    ['Venues · countries', `${new Set(rows.map((r) => r.venue).filter(Boolean)).size} · ${new Set(rows.map((r) => r.country).filter(Boolean)).size}`, `${plural(new Set(rows.map((r) => r.city).filter(Boolean)).size, 'city', 'cities')}${T.unplaced ? ` · ${plural(T.unplaced, 'night')} with no country on file` : ''}`],
+    ['Artists · venues · countries', `${new Set(rows.map((r) => r.artist.id)).size} · ${new Set(rows.map((r) => r.venue).filter(Boolean)).size} · ${new Set(rows.map((r) => r.country).filter(Boolean)).size}`, `${fmt.int(T.artistsOnPlatform)} artists on the platform · ${plural(new Set(rows.map((r) => r.city).filter(Boolean)).size, 'city', 'cities')}${T.unplaced ? ` · ${plural(T.unplaced, 'night')} with no country on file` : ''}`],
     ['This month', fmt.int(M.nights), `${plural(M.artists || 0, 'artist')} · ${fmt.num(M.people)} phones a night`],
   ];
   $('#kpis').innerHTML = tiles.map(([l, v, d, c], i) => `<div class="tile" style="animation-delay:${i * 0.03}s"><div class="k">${l}</div><div class="v ${c || ''}">${v}</div><div class="d">${d}</div></div>`).join('');

@@ -12,7 +12,7 @@
 # …and, since decision 0095, the founder's register dashboard at /moneymodel/shows,
 # served the same way from the same function behind the same passcode.
 [functions.moneymodel]
-  included_files = ["finance/model.html", "finance/shows.html"]
+  included_files = ["finance/model.html", "finance/shows.html", "finance/actuals.json", "finance/credits.json"]
 
 [[redirects]]
   from = "/api/*"

@@ -267,6 +267,7 @@ console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every pa
   eq('…and never cached or indexed', [page.headers.get('cache-control'), page.headers.get('x-robots-tag')], ['private, no-store', 'noindex, nofollow']);
   const data = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows.json?months=all', { headers: { cookie, accept: 'application/json' } }))).json();
   eq('the data: built, one row, with the roll-ups', [data.ok, data.built, data.rows.length, data.totals.counted, Array.isArray(data.byArtist)], [true, true, 1, 1, true]);
+  ok('…each counted night priced: the server from the meters file, the pack price, no meter in the register', data.costs && data.costs.usdPerCredit > 0 && data.rows[0].costs && data.rows[0].costs.server && data.rows[0].costs.server.usd > 0 && !('byKey' in data.costs), data.costs);
   const csv = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows.csv', { headers: { cookie } }))).text();
   ok('the CSV: a header and one line, no fan', csv.split('\n').filter(Boolean).length === 2 && !/ann|bob/.test(csv), csv.slice(0, 120));
   const night = await (await moneymodel(new Request(`https://myset.vip/moneymodel/shows/night.json?a=${kai.artistId}&id=${show.showId}`, { headers: { cookie, accept: 'application/json' } }))).json();
@@ -294,6 +295,32 @@ console.log('\nTHE BELL  idle rings are cheap; a mark or a stale walk makes it f
   eq('…and a ring inside the gap is a no-op', await ring(), 'too soon');
   await casDoc('registersync', () => ({}), (d) => { d.lastRunAt = Date.now() - 6 * 60e3; d.runningSince = Date.now(); return true; });
   eq('a fold in progress makes the ring wait', await ring(), 'busy');
+}
+
+console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates, never a deploy (EVS-004)');
+{
+  const C = await import('../netlify/functions/_showcosts.mjs');
+  const root = new URL('..', import.meta.url).pathname;
+  const actuals = JSON.parse(readFileSync(path.join(root, 'finance/actuals.json'), 'utf8'));
+  const credits = JSON.parse(readFileSync(path.join(root, 'finance/credits.json'), 'utf8'));
+  const B = C.costBlock(actuals, credits);
+  const model = readFileSync(path.join(root, 'finance/model.html'), 'utf8');
+  const st = new Function('return ' + model.match(/  stripe: (\{[^}]*\}),/)[1])();
+  eq('the Stripe rates are the money model\'s own (P0.stripe)', [C.STRIPE_RATES.pct, C.STRIPE_RATES.fixed, C.STRIPE_RATES.intlShare, C.STRIPE_RATES.intlPct], [st.pct, st.fixed, st.intlShare, st.intlPct]);
+  const pack = credits.readings.at(-1).plan.pack;
+  eq('a credit is priced at the top-up pack on the latest reading', B.usdPerCredit, Math.round(pack.usd / pack.credits * 1e5) / 1e5);
+  const n0 = actuals.meters.nights.find((n) => n.key && n.creditsTraffic != null);
+  const [, aid, sid] = n0.key.match(/^hist_(.+?)_(\d{4}-.*)$/);
+  const row = (o) => ({ status: 'counted', showId: sid, artist: { id: aid }, money: { known: true, total: 10, tips: { count: 1 }, packs: { count: 1 }, requests: { count: 0 }, merch: { orders: 1, amount: 20 } }, ...o });
+  const c1 = C.costOf(row(), B);
+  eq('a night the meters read carries its own credits, marked measured', [c1.server.credits, c1.server.measured], [n0.creditsTraffic, true]);
+  const c2 = C.costOf(row({ showId: 'never-read' }), B);
+  eq('any other counted night carries the average, marked not measured', [c2.server.credits, c2.server.measured], [B.creditsPerShow, false]);
+  eq('Stripe: (room + merch) × the effective rate + 30¢ a payment', c1.stripe.usd, Math.round(((30 * B.stripe.effectivePct / 100) + 3 * 0.30) * 1e4) / 1e4);
+  eq('money Stripe never answered: no Stripe figure and no total, never $0', [C.costOf(row({ money: { known: false, merch: {} } }), B).stripe, C.costOf(row({ money: { known: false, merch: {} } }), B).total], [null, null]);
+  eq('a night that is not counted is not priced', C.costOf(row({ status: 'refused' }), B), null);
+  const busy = C.costBlock({ ...actuals, deploys: 400, deploysThisPeriod: 400, shipping: { credits30: 6000 } }, credits);
+  eq('INVARIANT 0fx: 400 deploys move no show\'s cost', C.costOf(row(), busy), c1);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

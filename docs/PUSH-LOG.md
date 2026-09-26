@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-26 13:40 — 1d59f3e — wt2@feat/show-costs (9 files since origin/main)
+**tl;dr:** The shows table now has a Costs group after Merch — Server, Stripe, Total per night, in the totals row, a Costs tile and the night's drawer (EVS-004)
+**Other sessions:** New _showcosts.mjs; shows.json rows carry costs{server,stripe,total}. finance/actuals.json + credits.json are now in the moneymodel function's included_files — a new meter reading reaches the page on the next deploy. STRIPE_RATES must equal model.html P0.stripe (test holds it). Register untouched, still meter-free.
+
 ### 2026-09-26 13:22 — 0b454fe — wt@docs/gigs-tab-live (2 files since origin/main)
 **tl;dr:** Docs only: the Studio tab-opens-at-top fix (UX-058) is live as beed75b [skip ci]
 **Other sessions:** Nothing to redo.

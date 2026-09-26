@@ -536,7 +536,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Public pages | 15 — about.html, artist.html, artists.html, community.html, diary.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 35 — `admin`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 4 — autocron, mirrorcron, registercron, sheetcron |
-| Shared libraries | 61 |
+| Shared libraries | 62 |
 | Artist Studio actions | 144 |
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
