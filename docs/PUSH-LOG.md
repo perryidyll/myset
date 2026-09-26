@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-26 14:04 — 8790214 — wt2@feat/exact-stripe-fees (10 files since origin/main)
+**tl;dr:** The shows table's Stripe column is now Stripe's own fee for each night (older nights fill in on their own, two every ten minutes); ≈ remains only where a fee is not on file yet (EVS-005)
+**Other sessions:** moneyForShow now expands data.payment_intent.latest_charge.balance_transaction and files money.fees {usd,charges,missing}; index rows carry stripeFees (in rowSig — every artist's first walk after deploy re-reads all details once). New refreshShowFees(): writes the fee ONLY, only when takings match. recheckSome(rows, work, now, deadline); work.feesAsked. test/stripefees.mjs in run.sh.
+
 ### 2026-09-26 13:42 — 96f2639 — wt2@docs/show-costs-live (2 files since origin/main)
 **tl;dr:** Docs only: the show costs are live as 315f525, verified on production [skip ci]
 **Other sessions:** Nothing to redo.
