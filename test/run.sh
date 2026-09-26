@@ -174,6 +174,9 @@ echo
 echo "── every show on the platform: the register, the dashboard, the live feed ──"
 node --import ./test/register.mjs test/everyshow.mjs
 echo
+echo "── Stripe's own fee on every night (EVS-005) ──"
+node --import ./test/register.mjs test/stripefees.mjs
+echo
 echo "── the Book button, the inbox and the tour poster ──"
 node --import ./test/register.mjs test/messages.mjs
 echo

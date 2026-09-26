@@ -240,3 +240,21 @@ added to it: the register is folded from the store and reads none of Netlify's m
   ever not good enough. No figure when Stripe never answered for the night.
 
 Costs are money going out, so they are never green.
+
+## Amendment, 2026-09-26 (night): Stripe's own fee, not an estimate
+
+The founder asked for the exact Stripe fees, always. When a night's money is asked of
+Stripe — at filing, on Re-check, and the morning after — the session list now comes with
+each payment's balance transaction, and the night files Stripe's own processing fee
+(`money.fees`: dollars, how many payments, how many did not come back). The fee is every
+fee line except MySet's own application fee (Stripe's fee and any tax on it), never the
+transaction's total, which on a direct charge includes the application fee; a transaction settled in another currency is converted at
+its own rate or not at all. The figure is exact only when no payment is missing.
+
+Nights filed before this are asked once more by the register, a few each ring, after
+their morning-after ask, and only their fee is written — and only when Stripe's takings
+for the window match what the night already says to the cent, so the backfill can never
+rewrite an old night's money. Until a night has its fee, the table shows the published-rate
+estimate and marks it ≈. Merch orders are not in the night's payment list, so their fee
+stays the estimate. If Stripe ever refuses the expansion, the takings are still read and
+the fees are left missing: the fee is never allowed to cost the night its money.
