@@ -11,7 +11,8 @@ import { baseHeaders } from './_passgate.mjs';
    passcode, on every path (the gate runs before this is reached):
 
      GET  /moneymodel/shows                     the page (finance/shows.html, localised like the model)
-     GET  /moneymodel/shows.json?months=all|N   the head + the rows of those months, merged
+     GET  /moneymodel/shows.json?months=all|N   the head + the rows of those months, merged, each
+                                                counted night priced (server, Stripe — _showcosts.mjs)
      GET  /moneymodel/shows.csv                 every filed night, one line each
      GET  /moneymodel/shows/night.json?a=&id=   one night's songs and money lines, nothing a fan typed
      POST /moneymodel/shows/refresh             fold now, under the register's own lock
@@ -27,7 +28,11 @@ export async function handleShows(req, url, { bundledPage, localised }) {
     const months = url.searchParams.get('months') || 'all';
     const view = await R.readView({ months: months === 'all' ? 'all' : Number(months) || 3 });
     if (!view) return json({ ok: true, built: false, why: 'The register has not been built yet — tap Refresh now, or wait for the ten-minute bell.' });
-    return json({ ok: true, built: true, ...view });
+    /* what each counted night cost — server by the meters, Stripe at published rates (_showcosts.mjs) */
+    const { costBlock, withCosts } = await import('./_showcosts.mjs');
+    let B = null;
+    try { B = costBlock(JSON.parse(bundledPage('finance/actuals.json', 'moneymodel')), JSON.parse(bundledPage('finance/credits.json', 'moneymodel'))); } catch (e) { B = null; }
+    return json({ ok: true, built: true, ...withCosts(view, B) });
   }
   if (/\/shows\.csv$/.test(path)) {
     const view = await R.readView({ months: 'all' });

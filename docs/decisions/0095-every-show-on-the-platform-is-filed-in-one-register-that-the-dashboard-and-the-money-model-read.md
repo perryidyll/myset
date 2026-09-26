@@ -219,3 +219,24 @@ and totals are one light orange on both pages; the model's selected-host row mov
 orange to blue so a highlight never reads as a total. Every table on both pages shows at
 most fifteen rows before it scrolls. The breakdown carousel now turns a page of two
 tables, one above the other.
+
+## Amendment, 2026-09-26 (evening): what each show cost
+
+The founder asked for each show's costs in the main table, grouped like the votes and
+the tips: the server, Stripe, and the total. Neither is in the register, and neither is
+added to it: the register is folded from the store and reads none of Netlify's meters
+(INVARIANT 0fx). `_showcosts.mjs` prices each counted night when shows.json is served:
+
+- **Server**: the traffic credits the night added over an empty day, from Netlify's own
+  per-day meters as `tools/actuals.py` reads them (`finance/actuals.json` meters.nights).
+  A night the meters were never read for carries the average of those that were, and says
+  so (≈). Credits are priced at the auto-recharge pack on the latest reading, because every
+  credit past the month's grant is bought in one. Traffic only: no deploy is ever in a
+  show's cost.
+- **Stripe**: an estimate at the published card rates the money model uses (its
+  P0.stripe), over the room's money and the night's merch, 30¢ a payment. Stripe's own fee
+  is not filed with the night; reading it would mean asking Stripe for each payment's
+  balance transaction when the night is reconciled. That is the upgrade if the estimate is
+  ever not good enough. No figure when Stripe never answered for the night.
+
+Costs are money going out, so they are never green.
