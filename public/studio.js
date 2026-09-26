@@ -1361,7 +1361,11 @@ async function payDash(){
   else toast((d&&d.error)||'Not available yet');
 }
 
-function setTab(t){TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
+/* A new tab opens at its top. render() keeps the page's scroll so the 4 s poll never
+   moves anyone, and a tab switch used to ride that too: the old tab's offset landed
+   on a new tab still short with loading, clamped to its bottom, and stayed there
+   when its data filled in (the founder, 2026-09-26, on Gigs). */
+function setTab(t){if(t!==TAB)window.scrollTo(0,0);TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
   if(t==='money'){DETAIL=null;FOLDN={};loadRev();loadHist();loadOrders(); if(window.Money)Money.reset(); if(bizOwner())ensureMoney().catch(()=>{});}
   if(t==='profile'){ loadProf(); loadComm(); loadPlan(); }
   if(t==='merch'){ loadMerch(); loadOrders(); loadWishes(); loadPlan(); if(!PAY)loadPay(); }

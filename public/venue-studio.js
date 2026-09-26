@@ -377,7 +377,8 @@ async function loadShows(force){
   catch(e){ SHOWS={ok:false}; }
   if(TAB==='shows'&&V)render();
 }
-function setTab(t){ TAB=t; localStorage.setItem('myset.vtab',t); render();
+// a new tab opens at its top, never at the old tab's offset (as the Artist Studio)
+function setTab(t){ if(t!==TAB)window.scrollTo(0,0); TAB=t; localStorage.setItem('myset.vtab',t); render();
   if(t==='shows'){ loadShows(); loadEvents(); loadPitches(); }
   if(t==='numbers') loadStats();
   if(t==='merch'){ loadVComm(); loadVMerchLim(); loadVWishes(); }
