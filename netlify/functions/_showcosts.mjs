@@ -14,10 +14,13 @@
        reading: every credit past the month's grant is bought in that pack, so it is what
        one more night costs. Traffic only, never a deploy — a deploy is the shipping bill,
        the founder's, and never any show's (INVARIANT 0fx).
-     · STRIPE — an ESTIMATE at the published card rates the money model uses (its P0.stripe:
-       2.9% + 30¢, +1.5% on the share of cards from abroad), over the room's money and the
-       night's merch, 30¢ per payment. A night whose room money Stripe never answered has no
-       Stripe figure, never $0.
+     · STRIPE — EXACT where the night's record carries Stripe's own fee (EVS-005: read off
+       every payment's balance transaction when the night's money is asked, `stripeFees` on
+       the row); a night filed before that is asked again by the register and carries an
+       ESTIMATE until then, at the published card rates the money model uses (its P0.stripe:
+       2.9% + 30¢, +1.5% on the share of cards from abroad), 30¢ per payment. Merch is
+       always the estimate: its orders are not in the night's payment list. A night whose
+       room money Stripe never answered has no Stripe figure, never $0.
 
    Served beside the rows in shows.json; the register's own block stays meter-free. */
 
@@ -55,9 +58,13 @@ export function costOf(row, B) {
   const m = row.money || {};
   let stripe = null;
   if (m.known) {
-    const payments = (m.tips.count || 0) + (m.packs.count || 0) + (m.requests.count || 0) + ((m.merch && m.merch.orders) || 0);
-    const volume = (m.total || 0) + ((m.merch && m.merch.amount) || 0);
-    stripe = { usd: round(volume * B.stripe.effectivePct / 100 + payments * B.stripe.fixed), payments, volume: round(volume, 2), estimate: true };
+    const est = (vol, n) => vol * B.stripe.effectivePct / 100 + n * B.stripe.fixed;
+    const roomN = (m.tips.count || 0) + (m.packs.count || 0) + (m.requests.count || 0);
+    const merchN = (m.merch && m.merch.orders) || 0, merchUsd = (m.merch && m.merch.amount) || 0;
+    const exact = Number.isFinite(m.stripeFees);
+    const room = exact ? m.stripeFees : est(m.total || 0, roomN);
+    stripe = { usd: round(room + (merchN ? est(merchUsd, merchN) : 0)), payments: roomN + merchN, volume: round((m.total || 0) + merchUsd, 2),
+               estimate: !exact || merchN > 0, exact };
   }
   return { server, stripe, total: server && stripe ? round(server.usd + stripe.usd) : null };
 }

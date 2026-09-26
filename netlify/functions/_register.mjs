@@ -79,6 +79,7 @@ export const FULL_EVERY_MS = 6 * 3600e3;         // walk the whole registry at l
 export const RECHECK_AFTER_MS = 10 * 3600e3;     // ask Stripe once more for a night's money, the morning after (late tips, 0ga)
 export const RECHECK_UNTIL_MS = 4 * 86400e3;     // …and not for a night older than this
 export const RECHECKS_PER_RING = 2;
+export const FEE_ASKS_PER_RING = 2;          // older nights asked once for their exact Stripe fee (EVS-005)
 export const SHARD_BYTES = 700 * 1024;           // a month past this spills into parts named by the head
 export const TOP_SONGS = 25;
 export { EARLY_MS, MIN_NIGHT_H, MAX_NIGHT_H, LOADTEST_PHONES };
@@ -116,7 +117,9 @@ export function slimNight(doc) {
              gross: num(m.gross), unattributed: num(m.unattributed),
              votes: { amount: num(m.votes && m.votes.amount), count: num(m.votes && m.votes.count), paid: num(m.votes && m.votes.paid) },
              tips: { amount: num(m.tips && m.tips.amount), count: num(m.tips && m.tips.count) },
-             requests: { amount: num(m.requests && m.requests.amount), count: num(m.requests && m.requests.count) } },
+             requests: { amount: num(m.requests && m.requests.amount), count: num(m.requests && m.requests.count) },
+             // Stripe's own fee on the night's payments, when it was read (EVS-005); older records have none yet
+             fees: m.fees && typeof m.fees === 'object' ? { usd: num(m.fees.usd), charges: num(m.fees.charges), missing: num(m.fees.missing) } : null },
     requests: doc.requests && typeof doc.requests === 'object' ? { count: num(doc.requests.count), songs: num(doc.requests.songs), birthdays: num(doc.requests.birthdays), vibes: num(doc.requests.vibes), accepted: num(doc.requests.accepted), played: num(doc.requests.played) } : null,
     rsvps: doc.rsvps == null ? null : num(doc.rsvps),
     firstPlayAt: ats.length ? Math.min(...ats) : null, lastPlayAt: ats.length ? Math.max(...ats) : null,
@@ -133,13 +136,14 @@ export function slimFromRow(aid, r) {
     startedAt: Number(r.startedAt) || null, endedAt: Number(r.endedAt) || null, startedBy: null, endedBy: null,
     stats: { songsPlayed: num(r.songsPlayed), totalVotes: num(r.totalVotes), peakVoters: num(r.peakVoters), room: num(r.room), nets: r.nets == null ? null : num(r.nets), topSong: r.top && r.top.title ? { title: str(r.top.title, 80), votes: num(r.top.votes) } : null },
     money: { source: r.source || null, currency: 'USD', reconciledAt: null, gross: num(r.gross), unattributed: num(r.unattributed),
-             votes: { amount: 0, count: 0, paid: num(r.paidVotes) }, tips: { amount: 0, count: r.tipped ? num(r.tipped) : 0 }, requests: { amount: 0, count: num(r.paidRequests) } },
+             votes: { amount: 0, count: 0, paid: num(r.paidVotes) }, tips: { amount: 0, count: r.tipped ? num(r.tipped) : 0 }, requests: { amount: 0, count: num(r.paidRequests) },
+             fees: r.stripeFees == null ? null : { usd: num(r.stripeFees), charges: 0, missing: 0 } },
     requests: null, rsvps: null, firstPlayAt: null, lastPlayAt: null, songs: {}, detail: false,
   };
 }
 /* What of an index row would change a night's row — read the detail again when this changes. */
 export const rowSig = (r) => JSON.stringify([r.startedAt, r.endedAt, r.songsPlayed, r.totalVotes, r.room, r.nets, r.peakVoters,
-  r.gross, r.unattributed, r.source, r.paidVotes, r.paidRequests, r.tipped, r.title, r.venue, r.city, r.country, r.tz, r.plan, r.key, !!r.hidden]);
+  r.gross, r.unattributed, r.source, r.paidVotes, r.paidRequests, r.tipped, r.stripeFees ?? null, r.title, r.venue, r.city, r.country, r.tz, r.plan, r.key, !!r.hidden]);
 
 /* ---------- where and when ---------- */
 const splitCity = (s) => {
@@ -239,6 +243,9 @@ export function buildRow(aid, artist, n, ctx, venues, { observed = null, hidden 
       tips: { count: known ? m.tips.count : null, amount: known ? m.tips.amount : null },
       packs: { count: known ? m.votes.count - m.requests.count : null, amount: known ? round(m.votes.amount - m.requests.amount) : null, votes: known ? m.votes.paid : null },
       requests: { count: known ? m.requests.count : null, amount: known ? m.requests.amount : null },
+      /* Stripe's own processing fee on those payments, exact, when every one came back
+         (EVS-005); null for a night filed before fees were read — the register asks again */
+      stripeFees: known && m.fees && m.fees.missing === 0 ? round(m.fees.usd, 4) : null,
       /* merch is the app's own order record (written when the session is redeemed, tagged
          with the newest night); goods and postage apart, and "at the show" means during it */
       merch: { orders: orders.length, items: sum(orders.map((o) => o.qty || 1)), goods: round(sum(orders.map((o) => (Number(o.cents) || 0) / 100))),
@@ -291,6 +298,7 @@ export function mergeSplitNights(rows) {
     a.money = { ...a.money, known, source: known ? 'stripe' : (rs.find((r) => !r.money.known) || a).money.source, asOf: Math.max(...rs.map((r) => r.money.asOf || 0)) || null,
       gross: mm((r) => r.money.gross), unattributed, total: known ? round(sum(rs.map((r) => r.money.gross)) + unattributed) : null,
       tips: { count: mm((r) => r.money.tips.count), amount: mm((r) => r.money.tips.amount) },
+      stripeFees: known && rs.every((r) => r.money.stripeFees != null) ? round(sum(rs.map((r) => r.money.stripeFees)), 4) : null,
       packs: { count: mm((r) => r.money.packs.count), amount: mm((r) => r.money.packs.amount), votes: mm((r) => r.money.packs.votes) },
       requests: { count: mm((r) => r.money.requests.count), amount: mm((r) => r.money.requests.amount) },
       merch: { orders: sum(rs.map((r) => r.money.merch.orders)), items: sum(rs.map((r) => r.money.merch.items)), goods: round(sum(rs.map((r) => r.money.merch.goods))), postage: round(sum(rs.map((r) => r.money.merch.postage))),
@@ -472,7 +480,7 @@ export function headOf({ rows, silent, artists, venues, songs, now = Date.now(),
 
 /* ---------- the store side ---------- */
 const emptyState = () => ({ v: 1, lastRunAt: 0, lastFullAt: 0, runningSince: 0, cursor: 0, etags: {}, months: {}, build: null });
-const emptyWork = () => ({ v: 1, sigs: {}, observed: {}, songs: {}, silent: {}, gone: {}, rechecked: {} });
+const emptyWork = () => ({ v: 1, sigs: {}, observed: {}, songs: {}, silent: {}, gone: {}, rechecked: {}, feesAsked: {} });
 export async function readRegister() { const { data } = await readDoc(HEAD, null); return data && data.v ? data : null; }
 export async function readState() { const { data } = await readDoc(STATE, null); return { ...emptyState(), ...(data || {}) }; }
 async function readWork() { const { data } = await readDoc(WORK, null); return { ...emptyWork(), ...(data || {}) }; }
@@ -541,18 +549,30 @@ function slimFromKept(r) {
 }
 
 /** A night's money asked of Stripe once more, the morning after (late tips). Bounded per ring; never inside a hot path. */
-async function recheckSome(rows, work, now) {
+export async function recheckSome(rows, work, now, deadline = Infinity) {   // exported for test/stripefees.mjs
   if (!process.env.STRIPE_SECRET_KEY) return [];
-  const due = rows.filter((r) => r.status === 'counted' && r.endedAt && now - r.endedAt > RECHECK_AFTER_MS && now - r.endedAt < RECHECK_UNTIL_MS && !(work.rechecked || {})[r.id])
+  const late = rows.filter((r) => r.status === 'counted' && r.endedAt && now - r.endedAt > RECHECK_AFTER_MS && now - r.endedAt < RECHECK_UNTIL_MS && !(work.rechecked || {})[r.id])
     .sort((a, b) => a.endedAt - b.endedAt).slice(0, RECHECKS_PER_RING);
+  /* EVS-005: a counted night whose room money Stripe answered but whose exact fee was
+     never read (filed before fees were) is asked once more, whatever its age, a few a
+     ring. Its FEE alone is written (refreshShowFees), and only when Stripe's takings match
+     the night's to the cent: the backfill can never rewrite an old night's money. */
+  /* only a night whose morning-after ask is already behind it (done, or out of its window),
+     so this never spends — and marks — the ask that catches the late tips */
+  const feeless = rows.filter((r) => r.status === 'counted' && r.money && r.money.known && r.money.stripeFees == null && r.endedAt
+      && ((work.rechecked || {})[r.id] || now - r.endedAt >= RECHECK_UNTIL_MS) && !(work.feesAsked || {})[r.id] && !late.includes(r))
+    .sort((a, b) => b.endedAt - a.endedAt).slice(0, FEE_ASKS_PER_RING);
+  const due = [...late, ...feeless];
   const done = [];
   for (const r of due) {
+    if (Date.now() > deadline) break;                           // the ring's time box: the rest wait for the next ring
     try {
-      const { reconcileShow } = await import('./_history.mjs');
-      await reconcileShow(r.artist.id, r.showId);
+      const { reconcileShow, refreshShowFees } = await import('./_history.mjs');
+      const ask = late.includes(r) ? reconcileShow : refreshShowFees;
+      for (const id of r.mergedFrom || [r.showId]) await ask(r.artist.id, id);   // a merged night is asked for each of its records
       done.push(r.artist.id);
     } catch (e) { console.error('register: re-check failed', r.id, e && e.message); }
-    (work.rechecked ||= {})[r.id] = now;
+    if (late.includes(r)) (work.rechecked ||= {})[r.id] = now; else (work.feesAsked ||= {})[r.id] = now;
   }
   return done;
 }
@@ -637,7 +657,7 @@ export async function foldRegister({ full = false, rebuild = false, now = Date.n
     }
     const allRows = Object.values(nowRows).flatMap((rs) => Object.values(rs));
     // the morning-after re-check of a night's money, a couple a ring
-    const rechecked = await recheckSome(allRows, work, now);
+    const rechecked = await recheckSome(allRows, work, now, t0 + budgetMs + 12e3);   // asks get their own 12 s past the walk's box, well inside the 30 s a scheduled function has
     const silent = Object.values(silentBy).flat();
     const artists = artistsOf(registry);
     const finished = !stopped;
@@ -671,7 +691,7 @@ export async function foldRegister({ full = false, rebuild = false, now = Date.n
     head.months = Object.entries(months).map(([ym, m]) => ({ ym, ...m })).sort((a, b) => b.ym.localeCompare(a.ym));
     const big = head.months.find((m) => m.bytes > SHARD_BYTES);
     if (big) console.warn('register: a month past SHARD_BYTES, split into parts', JSON.stringify(big));
-    await casDoc(WORK, emptyWork, (d) => { Object.assign(d, { v: 1, sigs: workSigs, observed, songs, silent: silentBy, gone, rechecked: work.rechecked || {} }); return true; }).catch((e) => console.error('register: work write failed', e && e.message));
+    await casDoc(WORK, emptyWork, (d) => { Object.assign(d, { v: 1, sigs: workSigs, observed, songs, silent: silentBy, gone, rechecked: work.rechecked || {}, feesAsked: work.feesAsked || {} }); return true; }).catch((e) => console.error('register: work write failed', e && e.message));
     let written = false;
     await casDoc(HEAD, () => ({}), (d) => { for (const k of Object.keys(d)) delete d[k]; Object.assign(d, head); return true; }).then(() => { written = true; }).catch((e) => console.error('register: head write failed', e && e.message));
     await release({ lastRunAt: now, lastFullAt: fullDue && finished ? now : (state.lastFullAt || 0), cursor: nextCursor, etags, months, build });

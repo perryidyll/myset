@@ -79,7 +79,37 @@ const tippedOf = (money, was) => {
   if (m.source !== 'stripe' || !m.tips || m.tips.amount == null) return (was && was.tipped != null) ? was.tipped : null;
   return Math.round((Number(m.tips.amount) || 0) * 100) / 100;
 };
+/* Stripe's exact fee for the night when every payment's fee came back, else null (EVS-005) */
+const feesOf = (money) => (money && money.source === 'stripe' && money.fees && money.fees.missing === 0 ? money.fees.usd : null);
 const stampTops = (row) => { for (const f of ROW_TOPS) if (!(f in row)) row[f] = null; return row; };
+
+/* Stripe's processing fee on one paid session, in US dollars, from the charge's own
+   balance transaction (the session list is asked with it expanded). The fee is every
+   line of fee_details except `application_fee` — Stripe's fee, the tax some countries
+   charge on it, any pass-through fee — never `bt.fee` as a whole: on a direct charge it
+   also carries MySet's own application fee (see _feesplit.mjs). A balance transaction settled in
+   another currency (a Thai account settles in THB) is brought back to the charge's
+   currency with its own exchange rate; no rate, no figure. */
+const FEE_EXPAND = 'data.payment_intent.latest_charge.balance_transaction';
+const ZERO_DECIMAL = new Set(['bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf']);
+export function feeOfSession(s) {
+  if (!s) return null;
+  if (!s.amount_total) return 0;                                   // nothing charged, nothing taken
+  const pi = s.payment_intent, ch = pi && typeof pi === 'object' ? pi.latest_charge : null;
+  const bt = ch && typeof ch === 'object' ? ch.balance_transaction : null;
+  if (!bt || typeof bt !== 'object') return null;
+  const lines = Array.isArray(bt.fee_details) ? bt.fee_details.filter((f) => f && f.type !== 'application_fee') : null;
+  const minor = lines ? lines.reduce((a, f) => a + (Number(f.amount) || 0), 0) : Number(bt.fee) || 0;
+  const cur = String(bt.currency || '').toLowerCase();
+  const major = ZERO_DECIMAL.has(cur) ? minor : minor / 100;
+  if (cur === String(s.currency || 'usd').toLowerCase()) return Math.round(major * 10000) / 10000;
+  return bt.exchange_rate ? Math.round(major / bt.exchange_rate * 10000) / 10000 : null;
+}
+function addFee(fees, s) {
+  const f = feeOfSession(s);
+  if (f == null) { fees.missing += 1; return; }
+  fees.usd = Math.round((fees.usd + f) * 10000) / 10000; fees.charges += 1;
+}
 
 /* Stripe stays the source of truth for money (INVARIANT 5d); this is a cache of
    it that the artist can re-pull at any time. Bounded to the show's own window
@@ -99,6 +129,11 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
     tips: { amount: 0, count: 0, recent: [] },
     requests: { amount: 0, count: 0 },
     unattributed: 0, source: key ? 'stripe' : 'off', reconciledAt: Date.now(),
+    /* STRIPE'S OWN FEE on every payment counted above, tagged or in the window (EVS-005):
+       read off each charge's balance transaction, never estimated. `missing` counts the
+       payments whose fee Stripe did not hand back (a hold not yet captured, a charge
+       still settling); the figure is exact only when it is 0. */
+    fees: { usd: 0, charges: 0, missing: 0 },
   };
   if (!key) return out;
 
@@ -129,9 +164,12 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
     const { stripe: scoped, opts: sOpts } = await stripeFor(aid);
     const stripe = scoped || new Stripe(key);
     for (let page = 0; page < 10; page++) {
-      const r = await stripe.checkout.sessions.list({
-        limit: 100, created: { gte, lte }, ...(after ? { starting_after: after } : {}),
+      const ask = (expand) => stripe.checkout.sessions.list({
+        limit: 100, created: { gte, lte }, ...(after ? { starting_after: after } : {}), ...(expand ? { expand: [FEE_EXPAND] } : {}),
       }, ...scope(sOpts));
+      /* the fee is extra: if Stripe ever refuses the expansion, the night's money is still
+         read — its fees then come back missing, never its takings */
+      const r = await ask(true).catch((e) => { console.error('moneyForShow: fee expansion refused, reading without it', e && e.message); return ask(false); });
       for (const s of r.data || []) {
         if (s.payment_status !== 'paid') continue;
         const md = s.metadata || {};
@@ -144,8 +182,9 @@ export async function moneyForShow(aid, showId, fromMs, toMs, { closedByNext = f
         if ((md.artist || DEFAULT_ARTIST) !== aid) continue;
         const amt = (s.amount_total || 0) / 100;
         if (md.show && md.show !== showId) continue;
-        if (!md.show) { if ((s.created || 0) * 1000 < untaggedUntil) out.unattributed = round(out.unattributed + amt); continue; }
+        if (!md.show) { if ((s.created || 0) * 1000 < untaggedUntil) { out.unattributed = round(out.unattributed + amt); addFee(out.fees, s); } continue; }
         out.gross = round(out.gross + amt);
+        addFee(out.fees, s);
         if (['votes', 'song_votes', 'request_hold'].includes(md.kind)) {
           out.votes.amount = round(out.votes.amount + amt);
           out.votes.count += 1;
@@ -358,6 +397,7 @@ export async function archiveShow(aid, show, fans) {
          number an artist pitches with, had no sanity check available beside it. */
       nets: up(was.nets, st.nets),
       gross: money.gross,
+      stripeFees: feesOf(money),
       /* Money taken in the night's window that carried no show tag. It was only ever
          on the detail document, so the list showed $0 for a night that took $3 and
          the artist had to open the night to find out otherwise. It is a WINDOW
@@ -507,6 +547,7 @@ export async function healHistory(aid, { force = false } = {}) {
       songsPlayed: st.songsPlayed || 0, totalVotes: st.totalVotes || 0,
       peakVoters: st.peakVoters || 0, room: st.room || 0, nets: st.nets || 0,
       gross: money.gross || 0, unattributed: money.unattributed || 0,
+      stripeFees: feesOf(money),
       source: money.source || null,
       paidVotes: paidOf(money, 'paidVotes', was), paidRequests: paidOf(money, 'paidRequests', was),
       tipped: tippedOf(money, was),
@@ -737,12 +778,40 @@ export async function refreshShowMoney(aid, showId, money) {
     const row = (idx.shows || []).find((x) => x.showId === showId);
     if (!row) return false;
     row.gross = money.gross; row.unattributed = money.unattributed || 0; row.source = money.source || null;
+    row.stripeFees = feesOf(money);
     row.paidVotes = paidOf(money, 'paidVotes', row); row.paidRequests = paidOf(money, 'paidRequests', row);
     row.tipped = tippedOf(money, row);
     kept = { ...row };
     return true;
   }).catch(() => {});
   return kept;   // the row as written, or null when there was no row to write
+}
+
+/* ONLY THE FEE, for a night filed before fees were read (EVS-005). The register asks
+   Stripe again for the night's window, and writes the fee alone — and only when the
+   answer is Stripe's and its takings match what the night already says to the cent.
+   Anything else (Stripe unreachable, a connected account asked on the wrong side, a
+   window that now reads differently) writes nothing: a fee is never allowed to rewrite
+   a night's money. Returns the fee written, or null. */
+export async function refreshShowFees(aid, showId) {
+  const doc = await readHistShow(aid, showId);
+  if (!doc || !doc.money || doc.money.source !== 'stripe') return null;
+  const idx = await readHistIndex(aid);
+  const i = (idx.shows || []).findIndex((x) => x.showId === showId);
+  const closedByNext = i > 0 && !!(idx.shows[i - 1].startedAt || idx.shows[i - 1].endedAt);
+  const money = await moneyForShow(aid, showId, doc.startedAt, moneyWindowEnd(idx.shows, showId), { closedByNext });
+  const same = money.source === 'stripe' && round(money.gross) === round(Number(doc.money.gross) || 0) && round(money.unattributed || 0) === round(Number(doc.money.unattributed) || 0);
+  if (!same || !money.fees || money.fees.missing) return null;
+  await casDoc(HIST(aid, showId), () => ({}), (d) => {
+    if (!d || !d.showId || !d.money || round(Number(d.money.gross) || 0) !== round(money.gross)) return false;
+    d.money.fees = money.fees; return true;
+  }).catch(() => {});
+  await casDoc(INDEX(aid), () => ({ shows: [] }), (x) => {
+    const row = (x.shows || []).find((r) => r.showId === showId);
+    if (!row || round(Number(row.gross) || 0) !== round(money.gross)) return false;
+    row.stripeFees = money.fees.usd; return true;
+  }).catch(() => {});
+  return money.fees.usd;
 }
 
 export async function reconcileShow(aid, showId) {
