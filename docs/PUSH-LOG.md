@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-26 17:12 — cab2c0b — wt2@docs/stripe-rates-live (1 files since origin/main)
+**tl;dr:** Docs only: the measured Stripe rate is live as 03e2b28 [skip ci]
+**Other sessions:** Nothing to redo.
+
 ### 2026-09-26 17:10 — 9c49d72 — wt2@model/stripe-measured (5 files since origin/main)
 **tl;dr:** The money model now prices Stripe from the real fees: 75% of dollars on cards from abroad (was a 13% guess); margin at the default scenario 78.1% → 77.6% (EVS-006)
 **Other sessions:** P0.stripe.intlShare = 75 and _showcosts STRIPE_RATES.intlShare = 75 — keep them equal (test/everyshow.mjs). Measured from 12 exact-fee payments; revisit as nights accrue.
