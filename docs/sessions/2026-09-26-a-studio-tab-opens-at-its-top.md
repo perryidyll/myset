@@ -27,4 +27,6 @@ same way, and the ask was the top.
 - Same-tab re-render keeps 300 → 300. The Venue Studio's tabs open at 0.
 - `test/copy.mjs` guards both `setTab`s, mutation-tested; `sh test/run.sh` 3,434/0.
 
-**Not checked:** a physical iPhone. Live state: see the push log.
+**Live as `beed75b`** (PR #98, merged 06:21 UTC); production verified by content at 06:22 — both Studios' pages point at the new stamps and the scripts carry the new `setTab`. Main moved twice under the PR (#99, #100); the ledger was re-applied on top each time.
+
+**Not checked:** a physical iPhone. A Studio already open on a phone keeps the old script until it reloads.
