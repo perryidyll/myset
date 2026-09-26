@@ -18,14 +18,15 @@
        every payment's balance transaction when the night's money is asked, `stripeFees` on
        the row); a night filed before that is asked again by the register and carries an
        ESTIMATE until then, at the published card rates the money model uses (its P0.stripe:
-       2.9% + 30¢, +1.5% on the share of cards from abroad), 30¢ per payment. Merch is
+       2.9% + 30¢, +1.5% on the 75% of money on cards from abroad — measured off the exact fees,
+       EVS-006), 30¢ per payment. Merch is
        always the estimate: its orders are not in the night's payment list. A night whose
        room money Stripe never answered has no Stripe figure, never $0.
 
    Served beside the rows in shows.json; the register's own block stays meter-free. */
 
 /* = finance/model.html P0.stripe (US account); test/everyshow.mjs holds the two equal */
-export const STRIPE_RATES = { pct: 2.9, fixed: 0.30, intlShare: 13, intlPct: 1.5 };
+export const STRIPE_RATES = { pct: 2.9, fixed: 0.30, intlShare: 75, intlPct: 1.5 };
 
 const round = (n, d = 4) => Math.round(n * 10 ** d) / 10 ** d;
 const sum = (xs) => xs.reduce((a, b) => a + (Number(b) || 0), 0);

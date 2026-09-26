@@ -258,3 +258,12 @@ rewrite an old night's money. Until a night has its fee, the table shows the pub
 estimate and marks it ≈. Merch orders are not in the night's payment list, so their fee
 stays the estimate. If Stripe ever refuses the expansion, the takings are still read and
 the fees are left missing: the fee is never allowed to cost the night its money.
+
+## Amendment, 2026-09-26 (night, later): the model's Stripe rates from the exact fees
+
+With every money-known night carrying Stripe's own fee, the founder asked for the money
+model to use them. Twelve room payments ($85, fees $7.02) fit the US rates exactly with
+75% of the dollars on cards from abroad, not the 13% guessed on 5 Sep. The model's
+`intlShare` dial and the dashboard's estimate both read 75 now; the dial says where the
+number came from, and that it is fans' cards in Thai rooms, which artists' cards may not
+match.
