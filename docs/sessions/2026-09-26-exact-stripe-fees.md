@@ -24,6 +24,8 @@
   tab's live read now carries the expansion.
 - `test/stripefees.mjs`: new, 29 checks, added to `test/run.sh`.
 
-**Not verified:** a real Stripe answer with the expansion. Tests run against the fake,
+**Live:** `5a25263` (PR #104), deploy ready 07:05 UTC. No fold ran until 08:27 (the register folds only on a mark or the six-hourly walk); from then two nights a ring. At 08:52: 6 of 12 exact, and 20 Sep's $35 night reads Stripe's own **$2.67**, where the estimate said $2.28 — the published-rate estimate runs about 17% low for these rooms.
+
+**Not verified before the merge:** a real Stripe answer with the expansion. Tests run against the fake,
 and this session never handles the founder's Stripe keys. Production is checked after
 the merge by watching `shows.json` gain `stripeFees` as the register asks.
