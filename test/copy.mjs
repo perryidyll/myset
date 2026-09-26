@@ -103,6 +103,9 @@ ok('both lyrics sheets read in the MySet face, one block per verse, alternate ve
    /\.lyr-st:nth-child\(even\)\{background:/.test(studio)&&/\.lyr-st:nth-child\(even\)\{background:/.test(vote)&&
    /b\.className='lyr-st'; b\.textContent=t/.test(studio)&&/b\.className='lyr-st'; b\.textContent=t/.test(vote)&&
    /if\(t\.closest\('\.chartview'\)\)return;/.test(studio));
+ok('a tab change in either Studio opens the new tab at its top, never at the old tab\'s offset',   // the Gigs tab, 2026-09-26
+   /function setTab\(t\)\{if\(t!==TAB\)window\.scrollTo\(0,0\);TAB=t;/.test(studio)&&
+   /function setTab\(t\)\{ if\(t!==TAB\)window\.scrollTo\(0,0\); TAB=t;/.test(read('public/venue-studio.html')));
 const report = read('public/report.html');
 ok('the business report is a light-only paper document: explicit colours, noindex, and /biz.js is the only script it loads',
    !/theme\.js|data-theme|prefers-color-scheme|var\(--/.test(report)&&
