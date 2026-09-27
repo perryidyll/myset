@@ -8,7 +8,7 @@ sources:
   - netlify/functions/stage.mjs — the Live tab's payload
   - MYSET-MASTER-OVERVIEW.md §1.6, §1.14, §1.15, §3.3 Live, §5.7
   - GIG-NIGHT.md
-  - docs/decisions/0001, 0010, 0016, 0021, 0037
+  - docs/decisions/0001, 0010, 0016, 0021, 0037, 0098
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections)
 verified: code read 2026-09-12 (admin.mjs switch cases; _lifecycle.mjs startShow/endShow)
@@ -42,7 +42,7 @@ The Studio is dark-only by design. The Live tab polls `/api/stage` every 4 secon
 | a18 | Accept or decline a request | go_to | Person | Artist R | Netlify | → *Requests and shout-outs* (`askAccept` / `askDecline` / `askDone`). `src: admin.mjs` |
 | a19 | End the show | task | Person | Artist R · MySet server R · Fan I | Netlify | `status: ended` → `endShow(by:'artist')`: **archive first, always** (`archiveShow` with a title; a title-less night falls back to the venue/date); idempotent — ending an ended show refreshes the archive and changes nothing else. Unspent **bought** credits survive; free credits and the board do not. Gift pledges are honoured at this boundary. `src: _lifecycle.mjs endShow; overview §1.6, §1.8; INVARIANT 17c` |
 | a20 | Was that an accident? | conditional | Person | Artist R | Netlify | *Resume it instead* → a03 (fresh:false): the night comes back exactly as left; a fan's gift pledge is quietly cancelled and they are made whole. `src: overview §1.7, §1.13` |
-| a21 | Read tonight's numbers | notification | Automation | MySet server R · Artist I | Netlify | Studio → Money: the songs played, the votes each won, what the room wanted and never got (`leftover`), the vote-pack/tip split, every payment, bug reports from the room, and *What the room said*. One vote is counted once: when its song plays, or in `leftover`. **A night's money is everything tagged to it, whenever it arrived** (INVARIANT 0ga): a tip sent after the show — still tagged with that night's id until the next night starts — shows in the *Taken* tile AND in profit, because opening the Money tab writes the tile's figure onto the filed row (`refreshShowMoney`) and *Re-check* prices to the next night's start or now (`moneyWindowEnd`). The morning after the FIRST night on file, one letter to the owner's address with the night's figures and *Add your next show* (`sweepNotes`, ten hours after the end, once ever). `src: overview §1.16, §3.3 Money; _history.mjs; _auto.mjs` |
+| a21 | Read tonight's numbers | notification | Automation | MySet server R · Artist I | Netlify | Studio → Money: the songs played, the votes each won, what the room wanted and never got (`leftover`), the vote-pack/tip split, every payment, bug reports from the room, and *What the room said*. One vote is counted once: when its song plays, or in `leftover`. **A night's money is everything tagged to it, whenever it arrived** (INVARIANT 0ga): a tip sent after the show — still tagged with that night's id until the next night starts — shows in the *Taken* tile AND in profit, because opening the Money tab writes the tile's figure onto the filed row (`refreshShowMoney`) and *Re-check* prices to the next night's start or now (`moneyWindowEnd`). The morning after the FIRST night on file, one letter to the owner's address with the night's figures and *Add your next show* (`sweepNotes`, ten hours after the end, once ever) — dropped, never sent, if the account has been marked for deletion by then (decision 0098). `src: overview §1.16, §3.3 Money; _history.mjs; _auto.mjs` |
 
 ## Connections
 
