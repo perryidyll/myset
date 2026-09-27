@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-27 11:44 — 133d579 — taxwt@money/tax-follows-the-seller (0 files since origin/main)
+**tl;dr:** The plan checkout now asks for a tax number (optional); tips and votes never do
+**Other sessions:** Decision 0096: tax follows the SELLER. _billing.startCheckout carries tax_id_collection + customer_update; an EU business that gives a VAT number is reverse-charged. Never add this to pay.mjs — a fan's payment is the artist's sale. Stripe: product tax category is now txcd_10103001 (SaaS) on the account and on Bar Star; Connect liability stays 'platform's own sales only'; NO tax registration exists anywhere, so Stripe still adds nothing.
+
 ### 2026-09-26 18:01 — d461f80 — wt2@ux/media-dash-name (0 files since origin/main)
 **tl;dr:** The Instagram dashboard at myset.vip/mediadash is now called Media Dash (tab title and top-left mark), not Signal
 **Other sessions:** Name only, public/mediadash.html; the content engine's twin publish/dashboard.html carries the same rename. The Sheets tab 'Signals' is unrelated and unchanged. Older decision/session notes quoting 'MySet Signal' are history, left as written.
