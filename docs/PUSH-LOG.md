@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-27 11:53 — c808196 — wt@docs/merch-orders-sheet-0097 (1 files since origin/main)
+**tl;dr:** Docs only: the merch-orders process sheet and Puzzle now say an order alerts its owner (0097) [skip ci]
+**Other sessions:** Puzzle changelog 2398 = decision 0097, linked to step 369907 (m08).
+
 ### 2026-09-27 11:52 — 525155f — wt@docs/orders-share-live (2 files since origin/main)
 **tl;dr:** Docs only: order alerts, the Studio reminder and the artist share card are live as a84da01 [skip ci]
 **Other sessions:** Nothing to redo.
