@@ -39,3 +39,11 @@ A fan had bought a shirt, and the artist found out only when the fan asked.
 - the function on a deploy preview
 - a real order's push and letter
 - a real chat preview
+
+**Shipped:** live as `a84da01` (PR #111). `main` moved twice while it was open (the tax decision 0096, then its Tennessee note), so the branch was rebased and the push-log entry re-written.
+
+- **The deploy preview** served `/perryidyll` with his portrait and name on the card, the site-wide headers, and a durable-cache store. An unknown slug came back untouched, apart from Netlify's preview widget.
+- **Production, 04:52 UTC**, checked the same way by content. `studio.js?v=2d0f9764` carries the reminder.
+- **Still not checked:**
+  - a real order's push and letter
+  - a real iMessage or WhatsApp preview (the apps cache previews, so an older paste may keep the old icon)
