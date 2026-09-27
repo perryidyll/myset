@@ -1903,6 +1903,13 @@ If you are about to violate one, stop and say so rather than working around it.
     Everything but undo, export, the plan and the portal answers 423. The purge is
     one account per cron ring, hourly watermark, after the show sweep; the
     `delqueue` entry is removed LAST, so purge is re-runnable by construction.
+    The calendar STAYS un-indexed for the whole window: the daily `heal()` skips a
+    marked row (it re-pointed every row from its calendar, which the window keeps,
+    and the same ring's sweep started a deleted account's gig — found 2026-09-27),
+    and `autoTick` asks `deletionOf` before `startShow`, dropping any `gigsched`
+    entry that got back. Undo re-indexes. `sweepNotes` drops a first-night letter
+    for a marked account rather than send it. `test/autoshow.mjs` and
+    `test/firstgig.mjs` "AN ACCOUNT ON ITS WAY OUT"; decision 0098.
 
 0di. **A held slug, and an old slug that keeps answering.** A page name is printed
     on QR codes stuck to bar tables. Deleting holds it for the whole window (freeing

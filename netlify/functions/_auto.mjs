@@ -1,4 +1,4 @@
-import { getShow, readDoc, casDoc, readFans } from './_lib.mjs';
+import { getShow, readDoc, casDoc, readFans, deletionOf } from './_lib.mjs';
 import { readArtists } from './_auth.mjs';
 import { readEvents, occurrencesFor, isVenueOwner, occKey } from './_events.mjs';
 import { utcToDate } from './_time.mjs';
@@ -68,6 +68,12 @@ export async function heal({ now = Date.now(), limit = HEAL_BATCH } = {}) {
   const start = ids.length ? (Number(sched.healCursor) || 0) % ids.length : 0;
   const slice = ids.slice(start, start + limit);
   for (const aid of slice) {
+    /* AN ACCOUNT ON ITS WAY OUT STAYS OFF (0dh, decision 0098). Day one took it off
+       this index, but its calendar is kept for the thirty days — so re-pointing it
+       from there put a deleted account's gigs back, and the sweep in the same ring
+       started them. Undo re-indexes it (cancelDeletion); from then on it is walked
+       like anybody else. */
+    if ((reg.byId[aid] || {}).del) continue;
     try { await reindexSched(aid, await readEvents(aid), now); }
     catch (e) { console.error(`autocron heal: ${aid} failed:`, String((e && e.message) || e)); }
   }
@@ -143,6 +149,14 @@ export async function autoTick(aid, { now = Date.now() } = {}) {
     // they switch a song on, the next tick starts it (two reads a tick, one artist)
     if (!(show.songs || []).some((s) => s && s.active !== false))
       return { did: null, key, why: 'no songs switched on' };
+    /* NEVER FOR AN ACCOUNT ON ITS WAY OUT (0dh, decision 0098) — the check a tap on
+       Start meets in admin.mjs (423), made here because this start has no request
+       behind it. The heal no longer puts such an account back; this catches an
+       entry that got back anyway (one written before the fix, or a heal that read
+       the registry a moment before the account left). `drop` takes the entry out
+       instead of re-pointing it at the next night. One read, only when a start is
+       actually due — the per-ring "already live" path never reaches it. */
+    if (await deletionOf(aid)) return { did: null, key, why: 'the account is being deleted', drop: true };
     const r = await startShow(aid, { fresh: true, by: 'schedule', occKey: key, eventId: occ.eventId });
     if (r.err) return { did: null, key, why: r.err[0], refused: true };
     return { did: 'start', key, note: r.note };
@@ -185,8 +199,9 @@ export async function sweep({ now = Date.now(), limit = 40, log = () => {} } = {
       const r = await autoTick(aid, { now });
       results.push({ aid, ...r });
       log(`autocron: ${aid} — ${r.did || 'nothing'}${r.why ? ' (' + r.why + ')' : ''}`);
-      // `keep` leaves the entry pointing at tonight so the next ring tries again
-      const next = r.keep ? w : nextWindow(await readEvents(aid), now);
+      // `keep` leaves the entry pointing at tonight so the next ring tries again;
+      // `drop` takes it out — an account on its way out has nothing due (0dh)
+      const next = r.keep ? w : r.drop ? null : nextWindow(await readEvents(aid), now);
       if (next && r.refused && next.k === w.k) next.skip = w.k;
       updates[aid] = next;
     } catch (e) {
@@ -223,10 +238,15 @@ export async function sweepNotes({ now = Date.now(), limit = 20, log = () => {} 
   for (const [aid, n] of due) {
     try {
       const a = reg.byId[aid];
+      /* An account on its way out is not written to (0dh, decision 0098): "put your
+         next show on the calendar" is the wrong letter for somebody who has just
+         left. Dropped, not held — a held note would be re-read every ring for thirty
+         days, and Undo does not need it back. */
+      const leaving = !!(a && a.del);
       const owner = Object.entries(reg.byEmail || {}).find(([, r]) => r && r.artistId === aid && r.role === 'owner');
       const email = owner ? owner[0] : '';
-      const row = a ? (await readHistIndex(aid)).shows.find((x) => x.showId === n.showId) : null;
-      if (a && email && row) {
+      const row = a && !leaving ? (await readHistIndex(aid)).shows.find((x) => x.showId === n.showId) : null;
+      if (a && !leaving && email && row) {
         const money = row.source === 'stripe' ? Number(row.gross) || 0 : null;
         const site = process.env.URL || 'https://myset.vip';
         const people = Number(row.peakVoters) || 0, votes = Number(row.totalVotes) || 0, played = Number(row.songsPlayed) || 0;
@@ -243,7 +263,7 @@ export async function sweepNotes({ now = Date.now(), limit = 20, log = () => {} 
         const r = await sendMail(email, 'Your first night on MySet', lines, { cta: { url: `${site}/studio`, label: 'Add your next show' } });
         if (r.ok) { sent += 1; log(`autocron: first-night note sent for ${aid}`); }
         else log(`autocron: first-night note for ${aid} not sent (${r.why})`);
-      } else log(`autocron: first-night note for ${aid} dropped (${!a ? 'no account' : !email ? 'no owner address' : 'night not on file'})`);
+      } else log(`autocron: first-night note for ${aid} dropped (${!a ? 'no account' : leaving ? 'the account is being deleted' : !email ? 'no owner address' : 'night not on file'})`);
       done.push(aid);
     } catch (e) { console.error(`autocron note: ${aid} failed:`, String((e && e.message) || e)); done.push(aid); }
   }
