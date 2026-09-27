@@ -374,5 +374,67 @@ console.log('\nWHICH GIG A HAND-STARTED NIGHT IS  (decision 0065)');
   eq('resuming leaves the stamp alone', (await getShow(kay.artistId)).autoKey, 'kept@2026-01-01');
 }
 
+console.log('\nAN ACCOUNT ON ITS WAY OUT  stays off the schedule, and never starts itself  (0dh, decision 0098)');
+/* Deleting takes the calendar out of `gigsched` on day one, but the calendar itself
+   is kept for the thirty days — and the daily heal re-pointed EVERY registry row
+   from its own calendar, marked or not. The sweep in the same ring then started the
+   gig: a show nobody could reach (the page is dark), a gig off the month's cap, a
+   night filed, a first-night letter queued to somebody who had left. Found
+   read-only on 2026-09-27. Her night is a week out, clear of everyone above. */
+{
+  const { readEvents } = await import('../netlify/functions/_events.mjs');
+  const D = T0 + 7 * 86400000;
+  const gigAt = (id, at) => ({ event: { id, venue: 'The Corner', city: 'Koh Phangan', country: 'Thailand',
+    tz: 'UTC', date: ymd(at), time: hm(at), endTime: hm(at + 2 * H) } });
+  const gone = await createArtist({ email: 'gone@example.com', name: 'Gone', slug: 'gone' });
+  const TG = await signToken('gone@example.com', revOf(await readArtists(), gone.artistId));
+  await mutateArtists((r) => { r.byId[gone.artistId].plan = 'plus'; return true; });   // no cap to refuse it for her
+  ok('she has a song switched on', (await AS(TG, 'addSong', { title: 'Home', artist: 'G' })).ok);
+  ok('and a gig next week', (await AS(TG, 'eventSave', gigAt('ggone', D))).ok);
+  ok('which the schedule knows', !!(await readSched()).byArtist[gone.artistId]);
+  ok('she deletes her account', (await AS(TG, 'accountDelete', { confirm: 'DELETE' })).ok);
+  eq('day one takes her off the schedule', (await readSched()).byArtist[gone.artistId], undefined);
+  // the ring that runs the daily heal runs the sweep straight after it (autocron.mjs)
+  await casDoc(SCHED, () => ({ v: 1, byArtist: {} }), (d) => { d.healedAt = 0; d.healCursor = 0; return true; });
+  const hd = await heal({ now: D - H });
+  ok('the heal walks the whole registry', hd.complete, hd);
+  eq('THE BUG: and must not put her back on the schedule', (await readSched()).byArtist[gone.artistId], undefined);
+  const sd = await sweep({ now: D + 60e3 });
+  ok('so the ring at her gig does not touch her', !sd.results.some((x) => x.aid === gone.artistId), sd.results);
+  let sg = await getShow(gone.artistId);
+  ok('THE BUG: no show starts', sg.status !== 'live', { status: sg.status, startedBy: sg.startedBy });
+  ok('and none is taken off her month', !(sg.gigCount > 0), sg.gigCount);
+  /* Undo is the other half of the promise: the heal must skip a MARKED row, not a
+     row that was once marked. */
+  ok('she changes her mind', (await AS(TG, 'accountUndelete')).ok);
+  ok('undo puts her gig back on the schedule', !!(await readSched()).byArtist[gone.artistId]);
+  await casDoc(SCHED, () => ({ v: 1, byArtist: {} }), (d) => { delete d.byArtist[gone.artistId]; d.healCursor = 0; return true; });
+  await heal({ now: D - H });
+  ok('and the heal finds her again, like anybody else', !!(await readSched()).byArtist[gone.artistId], (await readSched()).byArtist);
+
+  /* An entry that is ALREADY there — written by the heal before this was fixed, or
+     by a heal that read the registry a moment before the account left — is met at
+     the gig by the same check a tap on Start meets, and taken out rather than
+     re-pointed at the next night. */
+  const left = await createArtist({ email: 'left@example.com', name: 'Left', slug: 'left' });
+  const TLf = await signToken('left@example.com', revOf(await readArtists(), left.artistId));
+  await mutateArtists((r) => { r.byId[left.artistId].plan = 'plus'; return true; });
+  const D2 = D + 86400000;
+  ok('another artist has a song', (await AS(TLf, 'addSong', { title: 'Away', artist: 'L' })).ok);
+  ok('and two gigs', (await AS(TLf, 'eventSave', gigAt('gleft', D2))).ok && (await AS(TLf, 'eventSave', gigAt('gleft2', D2 + 86400000))).ok);
+  ok('she deletes her account', (await AS(TLf, 'accountDelete', { confirm: 'DELETE' })).ok);
+  const stale = nextWindow(await readEvents(left.artistId), D2 - H);
+  await casDoc(SCHED, () => ({ v: 1, byArtist: {} }), (d) => { d.byArtist[left.artistId] = stale; return true; });
+  eq('an old heal put her entry back', ((await readSched()).byArtist[left.artistId] || {}).k, `gleft@${ymd(D2)}`);
+  const sl = await sweep({ now: D2 + 60e3 });
+  const lr = sl.results.find((x) => x.aid === left.artistId);
+  ok('the ring at her gig finds her', !!lr, sl.results);
+  eq('and does not start it', lr && lr.did, null);
+  eq('and says why', lr && lr.why, 'the account is being deleted');
+  sg = await getShow(left.artistId);
+  ok('THE BUG: her show is not live', sg.status !== 'live', { status: sg.status, startedBy: sg.startedBy });
+  eq('and she is taken off the schedule, not moved to her next night', (await readSched()).byArtist[left.artistId], undefined);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

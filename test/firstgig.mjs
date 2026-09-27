@@ -118,5 +118,28 @@ console.log('\nA SECOND NIGHT NEVER QUEUES ANOTHER');
   eq('no note waiting', Object.keys((await readSched()).notes || {}), []);
 }
 
+console.log('\nAN ACCOUNT ON ITS WAY OUT IS NOT WRITTEN TO  (0dh, decision 0098)');
+/* Her first night is filed and its letter queued for the morning — then she
+   deletes the account before it is due. "Put your next show on the calendar" is
+   the wrong letter for somebody who has just left. */
+{
+  const al = await createArtist({ email: 'al@example.com', name: 'Al Gone', slug: 'al-gone' });
+  const TA = await signToken('al@example.com', revOf(await readArtists(), al.artistId));
+  // only the first-night letter counts here: deleting sends its own notice, on purpose
+  const letters = () => SENT.filter((m) => /first night/i.test(m.subject || '') && (m.to || []).includes('al@example.com')).length;
+  ok('a new artist has a song', (await AS(TA, 'addSong', { title: 'Home', artist: 'A' })).ok);
+  ok('and plays her first night', (await AS(TA, 'newShow')).ok);
+  const sh = await getShow(al.artistId);
+  ok('a phone votes', (await hit(voteFn, 'https://x/api/vote?a=al-gone', { fan: 'phoneC', song: sh.songs[0].id })).ok);
+  ok('and she ends it', (await AS(TA, 'status', { status: 'ended' })).ok);
+  const n = ((await readSched()).notes || {})[al.artistId];
+  ok('the morning-after letter is queued', !!n, (await readSched()).notes);
+  ok('she deletes her account before it is due', (await AS(TA, 'accountDelete', { confirm: 'DELETE' })).ok);
+  const r = await sweepNotes({ now: (n ? n.due : 0) + 1000 });
+  eq('THE BUG: the bell sends her nothing', [r.sent, letters()], [0, 0]);
+  const sched = await readSched();
+  ok('and the note is dropped, not retried every ring', !(sched.notes || {})[al.artistId] && !!(sched.noted || {})[al.artistId], sched.notes);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
