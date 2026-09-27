@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 00:08 — d547f38 — nifty-jones-b27e63@docs/deleted-account-live (5 files since origin/main)
+**tl;dr:** Docs only: a deleted account staying off the schedule (decision 0098) is live as 2243aed, verified on Netlify's production deploy [skip ci]
+**Other sessions:** Puzzle changelog 2408 = decision 0098, linked to steps 369848 (s05), 369854 (s11) and 369816 (a21), each reloaded from its sheet. Ledger ACC-003.
+
 ### 2026-09-28 00:04 — 5a44b02 — nifty-jones-b27e63@fix/deleted-account-autoshow (7 files since origin/main)
 **tl;dr:** An account somebody has deleted no longer starts its calendar's gigs by itself or gets the morning-after letter during its thirty days
 **Other sessions:** Decision 0098; INVARIANT 0dh amended. heal() skips reg.byId[aid].del rows; autoTick checks deletionOf right before startShow and returns drop:true, which sweep uses to take the gigsched entry out (beside keep). sweepNotes drops a marked account's note. A new walk over reg.byId must decide what .del means for it.
