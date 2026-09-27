@@ -7,11 +7,11 @@ sources:
   - netlify/functions/_auto.mjs (END_GRACE_MS, IDLE_MS, SHOW_IDLE_MS, occKey, the gigsched index)
   - netlify/functions/_lifecycle.mjs (startShow/endShow — the one implementation)
   - MYSET-MASTER-OVERVIEW.md §5.7
-  - INVARIANTS.md 1, 0i, 9d9, 9d13, 13b, 16, 17c
-  - docs/decisions/0021
+  - INVARIANTS.md 1, 0i, 0dh, 9d9, 9d13, 13b, 16, 17c
+  - docs/decisions/0021, 0098
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps with roles, tools, connections)
-verified: code read 2026-09-12 (autocron.mjs config; _auto.mjs constants and guards)
+verified: code read 2026-09-12 (autocron.mjs config; _auto.mjs constants and guards); s05, s11 re-read 2026-09-28 (decision 0098)
 ---
 
 # Shows that start and end themselves
@@ -26,13 +26,13 @@ The founder's rule (2026-09-04): a gig on the calendar starts its show at the gi
 | s02 | Take the lock | conditional | Automation | Scheduled jobs R | Netlify | Skip if the last run was seconds ago; *"another run is in progress"* / *"lost the lock"* → return 200 `busy`. Two rings cannot act at once. `src: autocron.mjs 37–52` |
 | s03 | Read the one index | database | Automation | Scheduled jobs R | Netlify | `gigsched` — one global document rewritten by every calendar write (the `cityindex` pattern, INVARIANT 0i). A tick reads **one** document to learn who has a gig due; it never `list()`s (INVARIANT 1) and never walks every artist's calendar (9d13). A quiet ring costs one read. `src: _auto.mjs; overview §5.7` |
 | s04 | Is a gig due to start? | conditional | Automation | Scheduled jobs R | Netlify | Now is inside the occurrence window and the artist has not skipped it. Venue-owned events (`v_…`) are never shows. `src: _auto.mjs 179` |
-| s05 | Start the show | task | Automation | Scheduled jobs R · MySet server R · Artist I | Netlify | `startShow(aid, {by:'schedule', occKey, eventId})` — the **same** function the Studio button calls, so the gig cap, the archive, tonight's setlist, the venue name and the paid-vote carry happen identically (9d9, 17c, 13b). The occurrence key is stamped on the show so the same gig is **never started twice**, and a night the artist ended early **stays ended**. Won't start with no songs switched on. The Live tab says *started by itself*. `src: _lifecycle.mjs; _auto.mjs` |
+| s05 | Start the show | task | Automation | Scheduled jobs R · MySet server R · Artist I | Netlify | `startShow(aid, {by:'schedule', occKey, eventId})` — the **same** function the Studio button calls, so the gig cap, the archive, tonight's setlist, the venue name and the paid-vote carry happen identically (9d9, 17c, 13b). The occurrence key is stamped on the show so the same gig is **never started twice**, and a night the artist ended early **stays ended**. Won't start with no songs switched on. **Never for an account on its way out** (0dh, decision 0098): `deletionOf` is asked right before the start — the check a tap on Start meets — and the account's entry is taken out (`drop`), not re-pointed at its next gig. The Live tab says *started by itself*. `src: _lifecycle.mjs; _auto.mjs autoTick` |
 | s06 | Cap refused? | conditional | Automation | Scheduled jobs R · Artist I | Netlify | A free-plan cap refusal is remembered on the index entry so it is **not retried every two minutes** for the rest of the night. `src: _auto.mjs header` |
 | s07 | Is a gig past its grace period? | conditional | Automation | Scheduled jobs R | Netlify | `now ≥ endsAt + END_GRACE_MS` and the show is live. If the show started **after** that moment it is *a later show* and left alone. `src: _auto.mjs 151–153` |
 | s08 | Is a song still recent? | conditional | Automation | Scheduled jobs R | Netlify | A song started within `IDLE_MS` means the set is still on → **defer to the next tick** (never end mid-song, INVARIANT 16) — unless the show is *stale* (six hours past the grace period), in which case it ends anyway. `src: _auto.mjs 161–162` |
 | s09 | End the show | task | Automation | Scheduled jobs R · MySet server R · Artist I · Fan I | Netlify | `endShow(aid, {by:'schedule'})` — archive first, always. The Live tab says *ended by itself*. **A night where nothing happened — no song, no vote, no phone — is not archived**, so an empty scheduled start never becomes "Shows: 1". `src: _lifecycle.mjs endShow; overview §5.7` |
 | s10 | End idle shows | task | Automation | Scheduled jobs R · Artist I | Netlify | Any live show with nothing happening for `SHOW_IDLE_MS` is ended (*"ended after three idle hours"*) — the guard against a show left running all night burning polls. Decision 0021. `src: _auto.mjs 220–222` |
-| s11 | Heal the index | task | Automation | Scheduled jobs R | Netlify | Once a day: walk the artist registry (one global read) and re-point every artist from their own calendar (one read each), in batches with a cursor — catches gigs saved before the index existed and any entry a lost write dropped. `src: _auto.mjs "THE HEAL"` |
+| s11 | Heal the index | task | Automation | Scheduled jobs R | Netlify | Once a day: walk the artist registry (one global read) and re-point every artist from their own calendar (one read each), in batches with a cursor — catches gigs saved before the index existed and any entry a lost write dropped. A row **marked for deletion is skipped**: it came off the index on day one and stays off for the thirty days; Undo re-indexes it (0dh, decision 0098). `src: _auto.mjs "THE HEAL"` |
 | s12 | Sweep the leftovers | task | Automation | Scheduled jobs R | Netlify | Purge expired rows; drop unposted clips left in `vidqueue`. Each in its own try/catch, logged. `src: autocron.mjs 69–81` |
 
 ## Connections
