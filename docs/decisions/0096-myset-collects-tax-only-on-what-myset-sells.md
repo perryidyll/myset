@@ -62,8 +62,17 @@ The field is **optional on purpose**. Most artists on a plan are individuals wit
 no VAT number, and a required tax field is a hobbyist stopped at the till — which
 is the ranking rule (*nothing may break the gig*) applied to the money path.
 
-Tennessee is a separate matter and simply owed: it is the head office, so nexus
-exists from the first sale, and Tennessee taxes remotely-accessed software.
+Tennessee is a separate matter, and less urgent than it first looked. The head
+office is in Johnson City, so the connection to the state is not in question and
+Tennessee does tax remotely-accessed software — but a sales tax is owed on sales
+**sourced to Tennessee**, and Stripe's location list has no Tennessee row at all:
+the four places money has come from are Germany, Spain, California and Thailand.
+So there is nothing to collect there **today**. Registering early is defensible —
+it is free and it means not scrambling on the first Tennessee customer — but it
+starts a filing obligation, and a return is due every period afterwards whether or
+not a dollar was taken. Which way to go is a question for an accountant, together
+with Tennessee's separate business tax and its $100,000 per-jurisdiction
+threshold.
 
 ## What this makes harder
 

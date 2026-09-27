@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-27 11:49 — 90fe669 — taxwt@money/tax-tn-nexus-wording (0 files since origin/main)
+**tl;dr:** Tennessee is not owed yet: no MySet money has come from Tennessee [skip ci]
+**Other sessions:** Correcting 0096 and PER-016 — TN sales tax is owed on sales SOURCED to Tennessee, and Stripe's location list has no TN row (Germany, Spain, California, Thailand). Registering early is a choice, not a duty, and it starts a filing obligation. TNTAP's form asks a sole proprietor for an SSN, so an agent cannot finish it. [skip ci]
+
 ### 2026-09-27 11:44 — 133d579 — taxwt@money/tax-follows-the-seller (0 files since origin/main)
 **tl;dr:** The plan checkout now asks for a tax number (optional); tips and votes never do
 **Other sessions:** Decision 0096: tax follows the SELLER. _billing.startCheckout carries tax_id_collection + customer_update; an EU business that gives a VAT number is reverse-charged. Never add this to pay.mjs — a fan's payment is the artist's sale. Stripe: product tax category is now txcd_10103001 (SaaS) on the account and on Bar Star; Connect liability stays 'platform's own sales only'; NO tax registration exists anywhere, so Stripe still adds nothing.
