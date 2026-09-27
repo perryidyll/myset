@@ -478,6 +478,7 @@ function shopAction(body, list, orders, owner, prefix, st) {
     case 'merchMove': { const i = list.findIndex((x) => x.id === body.id), j = body.dir === 'up' ? i - 1 : i + 1;
       if (i >= 0 && j >= 0 && j < list.length) [list[i], list[j]] = [list[j], list[i]]; return { ok: true, merch: list }; }
     case 'orderList': return { ok: true, orders: orders.map(ownerOrder) };
+    case 'orderCount': return { ok: true, open: orders.filter((o) => o.status !== 'done').length };   // the Studio's reminder on opening (0097)
     case 'orderDone': { const o = orders.find((x) => x.sid === body.sid);
       if (o) { o.status = body.done === false ? 'new' : 'done'; if (o.status === 'done') o.doneAt = Date.now(); else delete o.doneAt; }
       return { ok: true, orders: orders.map(ownerOrder) }; }
@@ -888,7 +889,7 @@ const srv = http.createServer(async (rq, rs) => {
   if (u.pathname === '/api/stage') return json(rs, stageFixture(st));
   if (u.pathname === '/api/admin') {
     const body = rq.method === 'POST' ? await readBody(rq) : {};
-    if (!/^(planGet|merchList|orderList|wishList|payStatus|postList|verifyStatus|flagList|eventList|featureList|pitchList|msgCount|msgList)$/.test(body.action || '')) log('POST /api/admin', JSON.stringify(body).slice(0, 160));
+    if (!/^(planGet|merchList|orderList|orderCount|wishList|payStatus|postList|verifyStatus|flagList|eventList|featureList|pitchList|msgCount|msgList)$/.test(body.action || '')) log('POST /api/admin', JSON.stringify(body).slice(0, 160));
     return answer(rs, adminStub(body, st));
   }
   if (u.pathname === '/api/auth') return json(rs, authStub(rq.method === 'POST' ? await readBody(rq) : {}));

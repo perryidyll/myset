@@ -182,3 +182,9 @@ node --import ./test/register.mjs test/messages.mjs
 echo
 echo "── the artist diary ──"
 node --import ./test/register.mjs test/diaries.mjs
+echo
+echo "── a merch order tells its owner; the Studio says what is waiting (0097) ──"
+node --import ./test/register.mjs test/ordernote.mjs
+echo
+echo "── the artist on their own share card (0097) ──"
+node --import ./test/register.mjs test/sharecard.mjs
