@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-27 11:52 — 525155f — wt@docs/orders-share-live (2 files since origin/main)
+**tl;dr:** Docs only: order alerts, the Studio reminder and the artist share card are live as a84da01 [skip ci]
+**Other sessions:** Nothing to redo.
+
 ### 2026-09-27 11:51 — c95dba2 — wt@feat/orders-reminders-og-photo (16 files since origin/main)
 **tl;dr:** A new merch order now sends the artist a push and an email; the Studio opens with a card for pending orders and unread messages (each with a door and a 24-hour quiet box); a pasted artist link shows the artist's portrait and name
 **Other sessions:** Decision 0097 (0096 is the tax one). /:slug now rewrites to /.netlify/functions/artistpage?a=:slug — netlify.toml [[headers]] do NOT reach it, so a site-wide header change must be made in artistpage.mjs SITE_HEADERS too (test/sharecard.mjs refuses a drift). tellOrder runs only on redeemSession's fresh claim. New admin action orderCount (profile). studio.js ?tab=merch accepted; restamped.
