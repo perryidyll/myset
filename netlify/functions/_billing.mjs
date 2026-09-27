@@ -150,6 +150,16 @@ export async function startCheckout({ owner, plan, email, name, origin, back }) 
       client_reference_id: owner,
       metadata: { owner, plan, kind: 'sub' },
       subscription_data: { metadata: { owner, plan } },
+      /* A business in the EU that gives its VAT number is reverse-charged: the
+         VAT is its own to account for, not MySet's to collect. Collecting the
+         number now — before MySet is registered anywhere — is what keeps that
+         door open; on the day a registration is added, those artists are already
+         marked as businesses and nothing has to be reclaimed from them. It stays
+         OPTIONAL: most artists on a plan are individuals with no VAT number, and
+         a required field would stop them paying. Tips and votes never get this —
+         that money is the artist's sale, not MySet's (decision 0096). */
+      tax_id_collection: { enabled: true },
+      customer_update: { name: 'auto', address: 'auto' },
       ...(discounts.length ? { discounts } : { allow_promotion_codes: true }),
       success_url: `${origin}${back}?sub=done&cs={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}${back}?sub=cancelled`,

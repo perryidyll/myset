@@ -71,6 +71,13 @@ eq('priced from the plan table', (lastCall('prices.create') || {}).args.unit_amo
 ok('a customer was made for her', !!(await readBilling(ana.artistId)).customerId);
 ok('and the session says who it is for', created.args.metadata.owner === ana.artistId && created.args.subscription_data.metadata.plan === 'plus');
 ok('and comes back to the Studio', /\/studio\?sub=done&cs=/.test(created.args.success_url));
+/* THE VAT NUMBER IS ASKED FOR, NEVER DEMANDED. An EU business that gives one is
+   reverse-charged and MySet has no VAT to collect from it; an artist who has no
+   number must still be able to pay, so the field stays optional. If `required`
+   ever appears here, every hobbyist in the EU is stopped at the till. */
+eq('the plan checkout asks for a tax number', (created.args.tax_id_collection || {}).enabled, true);
+eq('and never insists on one', (created.args.tax_id_collection || {}).required, undefined);
+eq('the customer may be updated with what Checkout learns', [created.args.customer_update.name, created.args.customer_update.address], ['auto', 'auto']);
 const cs1 = [...__stripe.sessions.keys()].pop();
 r = await AS(TA, 'planFinish', { cs: cs1 });
 ok('the return trip confirms it', r.ok && r.plan === 'plus', r);
@@ -213,6 +220,9 @@ eq('with the venue plan’s fee minus half of Stripe’s (0 → no fee field at 
 eq('which is 2% minus half of (2.9% + 30¢)', expectFee, Math.max(0, Math.floor(1200 * 0.02) - Math.round(stripeFeeEstimate(1200) / 2)));
 eq('artists are not split (their table says so)', feeCents(1200, 'plus'), Math.floor(1200 * 0.10));
 ok('and returns to the venue’s community page', /\/v\/.*\/community\?paid=/.test(created.args.success_url));
+/* Tips, votes and merch are the ARTIST'S sale, not MySet's: no tax number is
+   asked for on them, and no fan is ever shown a VAT box for buying a cap. */
+eq('a fan’s checkout asks for no tax number', created.args.tax_id_collection, undefined);
 r = await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'merch', item: cap.id, qty: 1, attempt: 'v1s', from: 'shop' });
 ok('bought from the shop, it opens', r.ok, r);
 ok('and returns to the venue’s shop', /\/v\/.*\/shop\?paid=/.test(lastCall('checkout.sessions.create').args.success_url), lastCall('checkout.sessions.create').args.success_url);
