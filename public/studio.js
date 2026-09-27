@@ -445,7 +445,7 @@ async function load(opts){
   /* The inbox badge: one quiet read once the screen is up — never in the jobs
      above, never on the poll, never on a timer (9d8, decision 0074). It waits for
      the plan so a crew seat never asks at all. Not awaited. */
-  Promise.resolve(planJob).then(()=>msgPeek()).catch(()=>{});
+  Promise.resolve(planJob).then(()=>Promise.all([msgPeek(),orderPeek()])).then(nudge).catch(()=>{});
 }
 let WRITING=false;
 /* THE FIRST TIP IS LOUD (2026-09-15). A tip used to land as a number changing in a
@@ -684,8 +684,9 @@ async function passwordSignIn(){
   try{
     const q=new URLSearchParams(location.search);
     // ?tab=messages is where a "new booking request" push or email lands (0074);
-    // ?tab=diary is the diary page's own menu door into the Studio (0085)
-    if(q.get('tab')==='setlist'||q.get('tab')==='messages'||q.get('tab')==='diary'){
+    // ?tab=diary is the diary page's own menu door into the Studio (0085);
+    // ?tab=merch is where a "new merch order" push or email lands (0097)
+    if(q.get('tab')==='setlist'||q.get('tab')==='messages'||q.get('tab')==='diary'||q.get('tab')==='merch'){
       TAB=q.get('tab'); localStorage.setItem('myset.tab',TAB);
       history.replaceState({},'',location.pathname);
     }
@@ -3789,6 +3790,55 @@ async function msgPeek(){
   if(next.unread!==MSGN.unread||next.requests!==MSGN.requests){ MSGN=next; paintMsgDot(); }
 }
 document.addEventListener('visibilitychange',()=>{ if(document.hidden||Date.now()-MSGAT<60000)return; msgPeek(); });
+/* THE REMINDER ON OPENING (the founder, 2026-09-27, decision 0097): a fan bought a
+   shirt and the artist found out when the fan asked. Once per opening of the Studio —
+   after the two quiet counts above, never on the poll — a sheet says what is waiting:
+   pending orders with a door to Merch, unread messages with a door to Messages, and
+   under each a box that keeps that one quiet on this phone for 24 hours. Not while a
+   show is live (the stage is never covered), not over a sheet already open, and not
+   for the thing the Studio was opened onto. */
+let ORDN=0, NUDGED=false;
+const NUDGE_MS=24*3600e3;
+const nudgeKey=(k)=>'myset.nudge.'+((D&&D.show&&D.show.artistId)||'artist')+'.'+k;
+function nudgeQuiet(k){ try{ return Number(localStorage.getItem(nudgeKey(k))||0)>Date.now(); }catch(e){ return false; } }
+function nudgeSnooze(k,on){ try{ if(on) localStorage.setItem(nudgeKey(k),String(Date.now()+NUDGE_MS)); else localStorage.removeItem(nudgeKey(k)); }catch(e){} }
+/* Merch opens at its top (setTab), and the orders sit under the items: once both
+   lists are in, bring the Orders heading up — a few tries, then leave it be. Two
+   frames late, because every render() puts the page back where it was two frames
+   after it paints, and the renders that filled these lists are still in flight. */
+function goOrders(){
+  setTab('merch');
+  const to=()=>{ const el=document.getElementById('orders'), hd=document.querySelector('.head');   // below the sticky header, not under it
+    if(el&&TAB==='merch') window.scrollTo(0,Math.max(0,el.getBoundingClientRect().top+scrollY-(hd?hd.offsetHeight:0)-8)); };
+  const go=(n)=>{ const el=document.getElementById('orders');
+    if(el&&ORDERS&&MERCH!==null&&TAB==='merch'){ requestAnimationFrame(()=>requestAnimationFrame(to)); return; }
+    if(n>0&&TAB==='merch') setTimeout(()=>go(n-1),150); };
+  go(24);
+}
+async function orderPeek(){
+  if(!D||!PLAN||!msgAllowed())return;   // the same seats as the inbox: crew has no shop
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'orderCount'}),quiet:true});
+  if(d&&d.ok) ORDN=Number(d.open)||0;
+}
+function nudge(){
+  if(NUDGED||!D)return;
+  // opened in the background (a home-screen app resumed behind another): wait to be seen
+  if(document.hidden){ document.addEventListener('visibilitychange',()=>setTimeout(nudge,300),{once:true}); return; }
+  if(D.show&&D.show.status==='live')return;
+  if($('#sheet').classList.contains('on'))return;
+  const rows=[];
+  if(ORDN>0&&TAB!=='merch'&&!nudgeQuiet('orders'))
+    rows.push(['orders',`You have ${ORDN} pending order${ORDN===1?'':'s'}`,'Open Merch','merch']);
+  if(MSGN.unread>0&&TAB!=='messages'&&!nudgeQuiet('messages'))
+    rows.push(['messages',`You have ${MSGN.unread} unread message${MSGN.unread===1?'':'s'}`,'Open Messages','messages']);
+  if(!rows.length)return;
+  NUDGED=true;
+  openSheet(`<h3>Waiting for you</h3>${rows.map(([k,line,btn,tab])=>`<div class="nudge">
+      <p class="nudge-line">${line}</p>
+      <button class="big" type="button" onclick="closeSheet();${tab==='merch'?'goOrders()':`setTab('${tab}')`}">${btn}</button>
+      <label class="nudge-skip"><input type="checkbox" onchange="nudgeSnooze('${k}',this.checked)"> Do not remind me again for 24 hours</label>
+    </div>`).join('')}`,'nudges');
+}
 async function loadMsgs(force){
   if(MSGL&&!force)return;
   if(!msgAllowed())return;
@@ -4124,7 +4174,7 @@ async function saveCosts(month){
    actually does: hands it over, or posts it. */
 function ordersSection(){
   const o=ORDERS||[]; const open=o.filter(x=>x.status!=='done');
-  return `<div class="sec"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
+  return `<div class="sec" id="orders"><span class="kick">Orders</span><span class="kick">${open.length?open.length+' to do':o.length}</span></div>
     <div class="list">${o.slice(0,40).map(x=>{const done=x.status==='done', posted=x.ship==='ship', verb=posted?'Shipped':'Handed over';
       return `<div class="row ${done?'muted':''}" style="display:flex;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:12px;flex:1 1 100%;min-width:0">

@@ -459,7 +459,7 @@ const CAPABILITY = {
   profileSet: 'profile', photoUpload: 'profile', photoClear: 'profile',
   mediaAdd: 'profile', mediaRemove: 'profile', mediaMove: 'profile', mediaHero: 'profile',
   merchSave: 'profile', merchRemove: 'profile', merchPhoto: 'profile', merchPhotoClear: 'profile', merchMove: 'profile',
-  orderList: 'profile', orderDone: 'profile', orderDetail: 'profile', wishList: 'profile', wishDone: 'profile',
+  orderList: 'profile', orderDone: 'profile', orderDetail: 'profile', orderCount: 'profile', wishList: 'profile', wishDone: 'profile',
   postReply: 'community', postHide: 'community',
   /* The inbox (decision 0074): a band mate who tends the community page can read and
      answer bookings; the sound engineer cannot. Block and Report are the owner's (below). */
@@ -1473,6 +1473,12 @@ async function handleShop(aid, action, body) {
     const m = await readMeta(aid);
     return json({ ok: true, orders: (m.orders || []).slice().reverse().map(ownerOrder) });
   }
+  /* How many orders are still waiting to leave the table — the Studio's reminder on
+     opening (the founder, 2026-09-27). A count, not the list: one quiet read. */
+  if (action === 'orderCount') {
+    const m = await readMeta(aid);
+    return json({ ok: true, open: (m.orders || []).filter((o) => o && o.status !== 'done').length });
+  }
   if (action === 'orderDone') {
     const { ownerOrder } = await import('./_pay.mjs');
     const sid = String(body.sid || '').slice(0, 120);
@@ -1838,7 +1844,7 @@ async function handleFeature(req, aid, body, action) {
 
 const SHOP_ACTIONS = new Set(['merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear', 'merchMove',
                               'postList', 'postHide', 'postPin', 'postReply',
-                              'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone']);
+                              'orderList', 'orderDone', 'orderDetail', 'orderCount', 'wishList', 'wishDone']);
 
 const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'mediaMove', 'mediaHero',
                                  'photoUpload', 'photoClear',

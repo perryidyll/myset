@@ -558,6 +558,19 @@ html[data-theme=dark] .lyr-st:nth-child(even){background:rgba(120,120,128,.24)}
 .verify-intro h3{color:#fff;font-size:25px;font-weight:800;margin-top:16px}
 .verify-intro .verify-lede{color:var(--accent-2);font-size:18px;font-weight:700;line-height:1.3;margin:10px 0}
 .verify-intro .verify-note{color:#fff;font-size:14px;line-height:1.5;margin:0 0 18px}
+/* The reminder on opening (decision 0097): a small card in the middle, like the
+   verify intro, in the Studio's own colours; one block per thing waiting. */
+.sheet.nudges{top:50%;bottom:auto;width:calc(100% - 32px);max-width:400px;max-height:calc(100vh - 32px);
+  border-radius:var(--r-lg);padding-bottom:22px;
+  transform:translateX(-50%) translateY(calc(-50% + 24px)) scale(.96);opacity:0;pointer-events:none}
+#sheet.nudges.on{transform:translateX(-50%) translateY(-50%) scale(1);opacity:1;pointer-events:auto}
+.nudges h3{margin-top:12px}
+.nudge{padding:14px 0 2px}
+.nudge+.nudge{border-top:1px solid var(--hair);margin-top:14px}
+.nudge-line{font-size:17px;font-weight:700;color:var(--ink);margin:0 0 12px}
+.nudge .big{justify-content:center;margin:0}
+.nudge-skip{display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.nudge-skip input{width:18px;height:18px;margin:0;accent-color:var(--accent-2,#FF5650)}
 .tcard p{margin:0;font-size:16px;line-height:1.45;color:var(--ink-2)}
 .dg .big.no{background:var(--accent-2);color:#fff}
 .dg .big.yes{background:var(--surface-2);color:var(--muted);box-shadow:none;opacity:.7}
@@ -578,7 +591,7 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:120px}
 .cropframe img{position:absolute;top:0;left:0;user-select:none;-webkit-user-drag:none;max-width:none}
 .cropguide{position:absolute;inset:0;border-radius:16px;pointer-events:none;
   box-shadow:inset 0 0 0 2px rgba(255,255,255,.5)}
-.zoom{width:100%;margin:16px 0 0;accent-color:var(--accent)}
+.zoom{width:100%;margin:16px 0 0;accent-color:var(--accent-2,#FF5650)}
 .qrs{display:flex;gap:9px;margin:0 18px}
 .qrcard{flex:1;display:block;background:#fff;border-radius:14px;padding:9px 9px 11px;text-align:center;
   box-shadow:var(--sh-1);transition:transform .2s var(--spring)}
@@ -865,7 +878,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Studio's script lives in /studio.js so a phone downloads it once and keeps
      it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs after
      editing studio.js — the suite checks it). Decision 0053. -->
-<script src="/studio.js?v=df44350a"></script>
+<script src="/studio.js?v=2d0f9764"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api; a page seen tonight comes from the phone's copy

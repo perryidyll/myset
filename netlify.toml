@@ -14,6 +14,10 @@
 [functions.moneymodel]
   included_files = ["finance/model.html", "finance/shows.html", "finance/actuals.json", "finance/credits.json"]
 
+# The artist page's own file rides with the function that serves it (decision 0097).
+[functions.artistpage]
+  included_files = ["public/artist.html"]
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
@@ -133,9 +137,13 @@
   to = "/vote.html"
   status = 200
 
+# The artist page goes through a function (decision 0097) that writes that artist's
+# portrait and name into the share card — og:image, og:title — and otherwise serves
+# artist.html untouched; any failure serves it untouched too. Durable-cached, so it
+# runs about once per artist per five minutes. Still a rewrite: a real file wins.
 [[redirects]]
   from = "/:slug"
-  to = "/artist.html"
+  to = "/.netlify/functions/artistpage?a=:slug"
   status = 200
 
 [[headers]]

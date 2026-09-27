@@ -214,6 +214,9 @@ export async function redeemSession(aid, session, fallbackFan = '') {
        impossible because only the fresh claim reaches this line. An item that is
        not counting (stock null) is left alone. */
     if (orderRow) await takeStockFor(aid, orderRow.item, orderRow.qty, orderRow.variant).catch(() => {});
+    /* …and the owner hears about it (the founder, 2026-09-27): a push and an email,
+       once, from this fresh claim only — time-boxed, never thrown (_ordernote.mjs). */
+    if (orderRow) await import('./_ordernote.mjs').then(({ tellOrder }) => tellOrder(aid, orderRow)).catch(() => {});
   } else {
     granted = Number(pre.paid[sid].granted)
       || (md.kind === 'votes' || md.kind === 'song_votes' ? parseInt(md.votes, 10) || 0 : 0);
