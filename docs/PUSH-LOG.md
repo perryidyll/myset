@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-27 11:51 — c95dba2 — wt@feat/orders-reminders-og-photo (16 files since origin/main)
+**tl;dr:** A new merch order now sends the artist a push and an email; the Studio opens with a card for pending orders and unread messages (each with a door and a 24-hour quiet box); a pasted artist link shows the artist's portrait and name
+**Other sessions:** Decision 0097 (0096 is the tax one). /:slug now rewrites to /.netlify/functions/artistpage?a=:slug — netlify.toml [[headers]] do NOT reach it, so a site-wide header change must be made in artistpage.mjs SITE_HEADERS too (test/sharecard.mjs refuses a drift). tellOrder runs only on redeemSession's fresh claim. New admin action orderCount (profile). studio.js ?tab=merch accepted; restamped.
+
 ### 2026-09-27 11:49 — 90fe669 — taxwt@money/tax-tn-nexus-wording (0 files since origin/main)
 **tl;dr:** Tennessee is not owed yet: no MySet money has come from Tennessee [skip ci]
 **Other sessions:** Correcting 0096 and PER-016 — TN sales tax is owed on sales SOURCED to Tennessee, and Stripe's location list has no TN row (Germany, Spain, California, Thailand). Registering early is a choice, not a duty, and it starts a filing obligation. TNTAP's form asks a sole proprietor for an SSN, so an agent cannot finish it. [skip ci]
