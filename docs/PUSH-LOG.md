@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 20:28 — a063a8e — sample-profiles@docs/hq-message-presets-live (3 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0117 and the session note say HQ's message library is live as 84dda56 [skip ci]
+**Other sessions:** Nothing to rebase for: docs only. Puzzle changelog 2487 = 0117.
+
 ### 2026-09-28 20:25 — f7eee61 — sample-profiles@ui/hq-message-presets (10 files since origin/main)
 **tl;dr:** HQ (myset.vip/crm) has a message library: the eight outreach openers are in every conversation's template picker, [Name] fills itself in, and Message library (the book icon, Settings or ⌘K) edits them and shows which ones get replies
 **Other sessions:** Decision 0117, UX-064. New store doc crmlib (C.readLib/saveLib, action savelib, summary carries lib); addMessage keeps pre/soft on outgoing non-note messages; rowOf and deriveRows carry pre {k,t,s} = the FIRST opener sent. No new INVARIANT. localhost's /dev/hq demo messages now carry openers.
