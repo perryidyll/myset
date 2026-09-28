@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 11:54 — 0569a8b — inspiring-feynman-75227a@fix/founder-tools-owner-seat (12 files since origin/main)
+**tl;dr:** A band mate or the sound engineer signed in to the founding page can no longer change the public Media Dash boost log, and their Studio stops showing the founder's cards; other artists lose an 'If something broke' card that never worked for them
+**Other sessions:** Decision 0100, INVARIANT 0gk; ledger ACC-005 and the session note ride the live-docs PR. studio.js founder() = PLAN.owner AND the owner role: gate any founder tool on it, never on PLAN.owner, which stays the founding page's plan-lock bypass. test/founderseat.mjs tripwire names any founder action the Studio sends from a function outside its list. tools/mock.mjs: ?founder=1, ?seat=member|crew. 0099 (fix/admin-role-gates) is still unmerged: rebase it, put 0gj before 0gk (both after 0dc), ACC-004 before ACC-005, re-run node tools/overview.mjs.
+
 ### 2026-09-28 11:22 — f3993c9 — nostalgic-swanson-d7e46f@docs/process-sheets-tracked (39 files since origin/main)
 **tl;dr:** Docs only: the 39 process sheets that lived only as untracked files in the shared checkout are in git now, and the signing-in sheet and its Puzzle notes say a password exists (0070) [skip ci]
 **Other sessions:** Edit docs/processes sheets in a worktree, never the shared checkout's untracked copies: those match git byte for byte and will block a pull there until removed. marketing-and-growth/08 and onboarding/02 still ride on feat/sample-profiles. Puzzle section 41978's notes reloaded from the sheet. Still stale, left alone: 'no password' in artist-lifecycle/03 and the-gig/03 a01; 41978 has no password step and g01 shows the pre-0070 screen; AUTH_FROM 'absent' in admin-and-finance/03 d02 and onboarding/01 o02; changelog 1661 (0070) links no steps.
