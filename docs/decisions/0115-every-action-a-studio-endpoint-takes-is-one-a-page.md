@@ -8,7 +8,7 @@ area: general
 reverses:
 superseded_by:
 invariants: [0hl, 0q]
-commits: []
+commits: [e043010]
 tests: [test/structure.mjs, test/seatstudio.mjs, test/e2e.mjs, test/request-payments.mjs, test/connect.mjs, test/limits.mjs, test/sheets.mjs, test/verification.mjs, test/accounts.mjs]
 files: [netlify/functions/admin.mjs, netlify/functions/venueadmin.mjs, netlify/functions/stage.mjs, netlify/functions/_board.mjs, netlify/functions/_history.mjs, netlify/functions/_lib.mjs, netlify/functions/_venues.mjs, public/studio.js, public/studio.html, tools/mock.mjs, test/structure.mjs]
 ---
@@ -66,4 +66,4 @@ A server-to-server caller of a Studio endpoint, such as a scheduled job posting 
 - **The rewritten tests:** e2e 71, request-payments 35, connect 69, limits 112, sheets 206, verification 57, accounts 234, seatstudio 90, all with 0 failed.
 - **The whole suite.** `node tools/overview.mjs --tests` exited 0 with 4,516 ✓. The first run caught a browser `confirm()` in the new ✕ (`test/darkroom.mjs`); it now asks through the Studio's own `ask()`.
 - **In a browser, on `tools/localhost.mjs` at 375 px.** A custom genre drew its ✕. Tapping it opened *Delete “Surf Rock”?*, and *Yes, delete it* removed the chip with the song sheet still open. The stage poll's `tags.own` came back empty, and the console showed no errors.
-- **Not checked:** production.
+- **Live.** Merged as `e043010` (PR #134). `https://myset.vip/studio` serves `studio.js?v=1026ed88`, which holds `delOwnTag`.

@@ -36,4 +36,4 @@
 - The new check against `main`'s files named nine of the ten removed actions and failed. It missed `city`, a common word that passes on any mention. Against this branch it passes (144 and 51 names). The restored files were checked with `shasum -c`.
 - The first full run failed on a browser `confirm()` in the new ✕ (`test/darkroom.mjs`), which was fixed to use `ask()`. Then `node tools/overview.mjs --tests` exited 0 with 4,516 ✓.
 - On `tools/localhost.mjs` at 375 px, the ✕ deleted a custom genre with the sheet still open. The stage poll agreed, and the console showed no errors.
-- **Not checked:** production. Nothing is committed.
+- **Shipped** on the founder's word as `e043010` (PR #134, 08:05 UTC), after the preview drew `/studio` at 375 px. **Live:** `https://myset.vip/studio` serves `studio.js?v=1026ed88`, and that file holds `function delOwnTag`. Puzzle: o04 370015, f03 370183, the section 42003 notes, and changelog 2441.
