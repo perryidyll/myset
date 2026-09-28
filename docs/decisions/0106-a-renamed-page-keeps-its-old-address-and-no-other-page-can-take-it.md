@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0di]
-commits: []
+commits: [c940a6e]
 tests: [test/accounts.mjs, test/samples.mjs]
 files: [netlify/functions/auth.mjs, netlify/functions/_auth.mjs, netlify/functions/venueauth.mjs, netlify/functions/_venues.mjs, netlify/functions/_venueaccount.mjs, netlify/functions/_sample.mjs, public/studio.js, public/venue-studio.js]
 ---

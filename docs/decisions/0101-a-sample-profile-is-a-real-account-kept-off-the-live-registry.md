@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0gm]
-commits: []
+commits: [c940a6e]
 tests: [test/samples.mjs, test/tipdecks.mjs, test/factory.mjs]
 files: [netlify/functions/_sample.mjs, netlify/functions/sample.mjs, netlify/functions/factory.mjs, public/factory.html, public/venue.html, public/venue-studio.js, netlify/functions/_lib.mjs, netlify/functions/admin.mjs, netlify/functions/stage.mjs, netlify/functions/auth.mjs, netlify/functions/_auth.mjs, netlify/functions/_venues.mjs, netlify/functions/venueadmin.mjs, netlify/functions/venueauth.mjs, netlify/functions/_img.mjs, netlify/functions/_account.mjs, netlify/functions/_venueaccount.mjs, netlify/functions/profile.mjs, netlify/functions/venue.mjs, netlify/functions/_profile.mjs, public/sample.js, public/artist.html, public/studio.js, public/studio.html]
 ---
