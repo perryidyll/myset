@@ -61,6 +61,25 @@ eq('an unknown slug: artist.html untouched', await r.text(), shell);
 eq('the phone keeps it a minute, as before', r.headers.get('cache-control'), 'public, max-age=60, stale-while-revalidate=600');
 ok('the CDN keeps it on the durable cache', /^public, durable, s-maxage=\d+/.test(r.headers.get('netlify-cdn-cache-control') || ''));
 
+console.log('\nAN ACCOUNT ON ITS WAY OUT HAS NO CARD  (0dh, decision 0098)');
+/* Deleting takes the page dark on day one — every public read of it 404s through
+   publicArtist — but this door resolved the slug on its own, so a pasted link still
+   put the name and the portrait into the chat. */
+{
+  const { startDeletion, cancelDeletion } = await import('../netlify/functions/_account.mjs');
+  const bo = await createArtist({ email: 'bo@example.com', name: 'Bo Lind', slug: 'bo-lind' });
+  await mutateProfile(bo.artistId, (p) => { p.name = 'Bo Lind'; p.avatar = '/api/img?a=bo-lind&s=avatar&v=b1'; return true; });
+  const page = () => handler(new Request('https://myset.vip/.netlify/functions/artistpage?a=bo-lind')).then((x) => x.text());
+  eq('the card, before', meta(await page(), 'og:title'), 'Bo Lind');
+  ok('the account is deleted', (await startDeletion(bo.artistId, 'bo@example.com')).ok);
+  const left = await page();
+  eq('THE BUG: no name on the card of a page that has gone dark', meta(left, 'og:title'), meta(shell, 'og:title'));
+  eq('and no portrait', meta(left, 'og:image'), meta(shell, 'og:image'));
+  ok('the page left behind is artist.html untouched', left === shell);
+  ok('Undo', (await cancelDeletion(bo.artistId)).ok);
+  eq('and the card comes back with the page', meta(await page(), 'og:title'), 'Bo Lind');
+}
+
 console.log('\nTHE SITE-WIDE HEADERS, EQUAL TO NETLIFY.TOML’S');
 const block = toml.slice(toml.indexOf('for = "/*"'), toml.indexOf('[[headers]]', toml.indexOf('for = "/*"')));
 for (const [k, v] of Object.entries(SITE_HEADERS)) {

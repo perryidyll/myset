@@ -1,8 +1,9 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cleanSlug, artistBySlug } from './_auth.mjs';
+import { cleanSlug } from './_auth.mjs';
 import { getProfile } from './_profile.mjs';
+import { publicArtist } from './_lib.mjs';
 
 /* THE ARTIST PAGE, WITH THE ARTIST ON ITS SHARE CARD (the founder, 2026-09-27).
    A link to myset.vip/<slug> pasted into iMessage, WhatsApp or Instagram showed the
@@ -85,7 +86,11 @@ export function withShare(html, { name, image, url }) {
 const within = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);
 
 async function card(slug) {
-  const aid = await artistBySlug(slug);
+  /* THROUGH THE PUBLIC DOOR (0dh, decision 0098). The slug used to be resolved here
+     on its own, so a deleted account's name and portrait stayed on the card while
+     every other public read of the page 404d; publicArtist refuses a marked row
+     from the same single registry read. */
+  const aid = await publicArtist(new Request(`${ORIGIN}/?a=${encodeURIComponent(slug)}`));
   if (!aid) return null;
   const p = await getProfile(aid);
   return { name: String(p.name || '').trim(), image: shareImage(p) };
