@@ -3,22 +3,22 @@ tab: Artist lifecycle
 section: Signing up and signing in
 puzzle_section_id: 41978
 sources:
-  - netlify/functions/auth.mjs (me, start/request, verify, claim, passkeySignInStart/Finish, recoverySignIn), _auth.mjs (issueCode, checkCode, sendCode, createArtist), _passkey.mjs, _session.mjs
+  - netlify/functions/auth.mjs (me, start/request, verify, claim, passkeySignInStart/Finish, recoverySignIn, passwordSignIn/passwordSet/passwordClear), _auth.mjs (issueCode, checkCode, sendCode, createArtist), _cred.mjs, _passkey.mjs, _session.mjs
   - public/studio.html (the sign-in screen after commit 425fb0a)
   - MYSET-MASTER-OVERVIEW.md §5.5
-  - ACCOUNTS.md §6.2, §6.4, §9
-  - docs/decisions/0023
-  - INVARIANTS.md 9g, 9h
+  - ACCOUNTS.md §6.2, §6.4, §9, §11
+  - docs/decisions/0023, 0070
+  - INVARIANTS.md 9g, 9h, 0fu
 status: loaded
-loaded: 2026-09-12 (create_process; read back through list_steps)
-verified: code read 2026-09-12 (auth.mjs start/verify/claim; the byte-identical SENT answer)
+loaded: 2026-09-12 (create_process; read back through list_steps); 2026-09-28 (update_workflow on the section's notes — a password exists since decision 0070, and PER-004's sender is set; read back through list_sections)
+verified: code read 2026-09-12 (auth.mjs start/verify/claim; the byte-identical SENT answer); 2026-09-28 (_cred.mjs; auth.mjs passwordSignIn/passwordSet/passwordClear; studio.js Settings → Password; the ledger's PER-004 row)
 ---
 
 # Signing up and signing in
 
 **Who:** an artist (external) at `/studio` or `/signup`. **Trigger:** wanting in. **Outcome:** an HMAC-signed token in the browser carrying account id, expiry, revocation counter and session id — for a new page or an existing one. **The audience never signs in** (rule 2); everything here is the artist's side only.
 
-There is no password, and Settings says so. The account system is one factor — an inbox — plus three faster doors added on top: a passkey, a Studio code, a recovery code. Sign-in mail comes from a shared address until `AUTH_FROM` is set to a verified myset.vip sender (PER-004; decision 0023) — a stranger will not trust it until then.
+The email address is the username, and a password can sit under it (decision 0070): one per person, scrypt-hashed, swapped for a session at sign-in and never sent again; Settings → *Password* creates or changes it. The root of trust is still one factor — an inbox. The six-digit code sent to it is how an account is made and the whole of *Forgot your password?*, and four faster doors sit on top: a password, a passkey, a Studio code, a recovery code. Sign-in mail comes from `hello@myset.vip`, the verified sender set as `AUTH_FROM` (PER-004, done 2026-09-10; decision 0023).
 
 | id | step | type | executor | role (RACI) | tool | notes |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -36,6 +36,6 @@ There is no password, and Settings says so. The account system is one factor —
 
 g01 → g02 → g03; g03 —no account→ g04 → g05; g03 —existing→ g05; g01 → g06 → g05; g01 → g07 → g05; g01 → g08 → g05; g05 → g09.
 
-## Why not passwords, Google, or an identity provider
+## Why the password is not the root, and why not Google or an identity provider
 
-Passwords add a second thing to steal and a reset flow that is itself an email code. Google sign-in needs a cloud project, a consent screen and a verification review, and hands the customer list to a third party. An identity provider costs per active user for ever and makes sign-in depend on a third party being up during a gig. Passkeys cost the person nothing — one look. `src: ACCOUNTS.md §9b; overview §5.5`
+Passwords were ruled out on 2026-09-05 as a second thing to steal, with a reset flow that is itself an email code. The founder revised that on 2026-09-14 (decision 0070) without giving up what made "never" right: the password is per person and hashed like one, every failure answers the same sentence, and forgetting it is the email code as before — so the inbox stays the credential that matters. Google sign-in needs a cloud project, a consent screen and a verification review, and hands the customer list to a third party. An identity provider costs per active user for ever and makes sign-in depend on a third party being up during a gig. Passkeys cost the person nothing — one look. `src: ACCOUNTS.md §9b, §11; decision 0070; overview §5.5`
