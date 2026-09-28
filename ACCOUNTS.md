@@ -108,7 +108,7 @@ Two honest limits, both written into the Studio copy:
 
 1. **Webhook events** — on the existing endpoint add: `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`, `checkout.session.completed` (already present for payments; it now also handles subscription mode).
 2. **Customer Portal** — Settings → Billing → Customer portal → save the default configuration **in live mode** (the API refuses to open a portal session until a configuration exists).
-3. **`charge.updated`** on the same endpoint — this is what makes the exact fee split (§8) run. Without it the estimate stands and nothing breaks; with it, MySet's share is corrected to the cent.
+3. **`charge.updated`** on the same endpoint — this is what makes the exact fee split (§8) run. Without it the estimate stands and nothing breaks; with it, MySet's share is corrected to the cent. **Done 2026-09-12**, with `account.updated`, which the list above had assumed was already there and was not.
 4. Nothing else: prices, coupons and products are created by the app on first use.
 
 ---
@@ -189,6 +189,16 @@ Since 2026-09-14 each sign-in address can have a password (§11, decision 0070),
 **Recovery codes** are eight one-time codes in a Crockford-ish alphabet (no 0/O, no 1/I/L, because these get written on the back of a setlist in a dark room), hashed with the same site secret the six-digit codes use, shown once and never again. The door is `recoverySignIn { slug, code }`: the page name is public so it grants nothing on its own, it only says which lock to try. A wrong code, an unknown page and a locked-out page answer identically, so this cannot be used to find out who has an account. Using one bumps `rev` — a recovery code means something went wrong, so everything else goes out — then this device gets a fresh session, and everyone on the account is emailed.
 
 The **studio code** was the other bug: the client asked for 4 characters and the server has always refused under 8, so somebody who did exactly what the box told them got an error. One number now, and the "the original code from Netlify keeps working as a backup" line is shown only to the founder, for whom it is true.
+
+#### When everything is gone — the founder's procedure (written 2026-09-12)
+
+No inbox, no password, no recovery codes, no Studio code, no passkey. The app offers nothing further, by design: a "contact us to get back in" door is an enumeration oracle and a social-engineering target. What exists instead is one human, the registry, and this page. Three steps, in this order, and **never while that artist's show is running** (`python3 tools/prod.py` says).
+
+1. **Prove it is them, outside MySet.** Two of these, not one: a message from the Instagram or website linked on their own public page (they set those links from inside the Studio); the email on their Stripe Connect account matching what they claim — read it in the Stripe dashboard under Connect, never ask them for it; a venue on their calendar confirming that is the act they booked. If two cannot be had, stop. A wrong answer hands a page with a Stripe account behind it to a stranger, and nothing below can be undone by the real owner.
+2. **Attach the new address, by hand.** This machine's Netlify CLI is signed in as the site owner. `netlify blobs:get myset artists > artists.json`; in `byEmail`, remove the row for the lost address if there is one and add `"<new address, lower-cased>": { "artistId": "<their aid>", "role": "owner" }`; in `byId[<aid>]` set `rev` one higher than it is (or one higher than the registry's top-level `rev` when the row has none — `bumpFrom` in `_session.mjs`), so every session on the account, including whoever holds the lost phone, is signed out. `netlify blobs:set myset artists --input artists.json`. That write **bypasses the etag** every server mutation uses (`casDoc`, `onlyIfMatch`): anything the app wrote to the registry between the get and the set is lost, which is why it happens in one sitting, with no show running, and is followed by a second `blobs:get` and a diff. Then delete `artists.json` — it holds every sign-in address on the platform. This is the same two edits `emailChangeFinish` makes in one `mutateArtists`, done by a person.
+3. **Get them in, and get them set up.** They sign in with the new address (email and a code); the first thing they do is Settings → *Signing in* → a password, recovery codes and a Studio code. The activity log will not show any of this, so it goes in that day's `docs/sessions/` file.
+
+**Rehearsed:** the read half, 2026-09-12 — `blobs:get myset artists` returned the registry with the shape described (`v`, `rev`, `byId`, `bySlug`, `byEmail`). The write half has not been run. On 2026-09-12 the founder's own account had **no `byEmail` row at all** (the founder signed in with the Studio code and `ADMIN_CODE`), so attaching one was to be the rehearsal; the 2026-09-25 backup shows owner rows on it, so a rehearsal now means adding a spare address to that account and taking it off again, on a quiet afternoon. The right fix is §10 item 6.
 
 ### 6.5 Moving your sign-in address
 
@@ -406,3 +416,4 @@ it is claimed:
 3. **A studio-code reset from the sign-in screen** — the change flow exists inside Settings; the "I'm locked out" version needs the same two-code shape as an email change.
 4. **The Studio's own view of the fee split** — the corrections are recorded per charge in `meta_<owner>.fees`; the Orders list does not show them yet.
 5. **`transfers.create` for the over-the-floor case** — only needed if MySet ever decides to pay a venue MORE than its whole fee, which is out of scope by design.
+6. **An owner-only `ownerEmailSet { slug, newEmail }` in `admin.mjs`** — the "lost everything" procedure in §6.4 done by the app instead of by hand: one `mutateArtists` that swaps the `byEmail` row and bumps the account's `rev`, in the block that takes the founding page's owner seat (`isPlatformOwner` and role `owner`, decision 0099), logged. Twenty lines, and it retires the only production write this document asks a person to make with `blobs:set`.

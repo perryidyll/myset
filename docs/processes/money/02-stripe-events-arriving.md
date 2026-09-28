@@ -9,7 +9,7 @@ sources:
   - INVARIANTS.md 5c, 7, 7b
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps)
-verified: code read 2026-09-12 — every branch below is a branch in webhook.mjs, in order
+verified: code read 2026-09-12 — every branch below is a branch in webhook.mjs, in order; the events paragraph re-read 2026-09-28 (webhook.mjs signing-secret list; decision 0058)
 ---
 
 # Stripe events arriving (the webhook)
@@ -36,6 +36,8 @@ Requires `STRIPE_WEBHOOK_SECRET`; absent, the endpoint is inert and the return p
 
 w01 —good→ w02; w02 —charge.updated→ w03 → w11; w02 —account.updated→ w04 → w05 → w11; w02 —subscription→ w06 → w11; w02 —checkout→ w07 → w08; w08 —hold→ w11; w08 —not a hold→ w09; w09 —feature→ w11; w09 —purchase→ w10 → w11; w02 —anything else→ w11.
 
-## Events the endpoint must be subscribed to (the founder's one-time Stripe task)
+## Events on the MySet destination (checked in the dashboard 2026-09-12)
 
-`checkout.session.completed`, `checkout.session.async_payment_succeeded`, `account.updated`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed` — and **`charge.updated`, still to add** (PER-001). `src: ACCOUNTS.md §5`
+Seven: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `account.updated`, `charge.updated`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`. `account.updated` and `charge.updated` were added that day (PER-001 done — the docs had listed `account.updated` as present; it was not).
+
+**A second destination for *Connected accounts*** (PER-008 done, decision 0058): the MySet destination listens to events from *Your account* only, and Stripe does not let that be changed after creation, so every branch of `webhook.mjs` that reads `event.account` — the fee split, the money-button flip, a direct-charge checkout on an artist's connected account — is served by a second destination made the same day for `account.updated`, `charge.updated`, `checkout.session.completed` and `checkout.session.async_payment_succeeded`. It has its own signing secret (`STRIPE_CONNECT_WEBHOOK_SECRET`), and `webhook.mjs` tries each configured secret in turn. Its first real delivery waits for the first artist to onboard. `src: ACCOUNTS.md §5; Stripe dashboard 2026-09-12; webhook.mjs; decision 0058; IMPLEMENTATION_STATUS.md PER-001, PER-008`

@@ -208,7 +208,12 @@ def keys():
 
 def token():
     """The CLI's own token, so the two raw endpoints the CLI has no verb for
-    (bandwidth, and nothing else) can be read with the same sign-in."""
+    (bandwidth, and nothing else) can be read with the same sign-in.
+    NETLIFY_AUTH_TOKEN wins when set — inside an agent sandbox that is a
+    placeholder the proxy swaps for the real one, and the config file is
+    unreadable there on purpose."""
+    if os.environ.get('NETLIFY_AUTH_TOKEN'):
+        return os.environ['NETLIFY_AUTH_TOKEN']
     for f in (os.path.expanduser('~/Library/Preferences/netlify/config.json'), os.path.expanduser('~/.config/netlify/config.json')):
         try:
             d = json.load(open(f))
