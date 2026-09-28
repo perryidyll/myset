@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 10:40 — dd7a82a — myset@claude/myset-encryption-security-460mph (41 files since origin/main)
+**tl;dr:** Slice C of the security pass is ready but not live: the sign-in key moves out of the store into MYSET_SECRET, and passwords, recovery codes, the booker inbox, sessions, logs, ID photos and HQ's contacts get sealed at rest. It waits for you to set MYSET_SECRET and FINMODEL_CODE in Netlify
+**Other sessions:** Decisions 0112/0113, INVARIANTS 0gy/0gz/0hb, NOT MERGED. New modules _secret.mjs (keysFor: auth/room/wrap) and _seal.mjs (protectedKey, seal/open, ring() over the sealkeys keyring). readDoc/casDoc seal protectedKey families; any raw store().set/get of those families must go through seal/open. signingKeys() replaces authSecret() for verification; storeKey() is the old key for legacy recovery codes and v1 Gmail tokens. Studio codes and recovery codes are scrypt now (s1). sealkeys must never be deleted and MYSET_SECRET never removed once set. HARDENING.md §0 is the rotation runbook.
+
 ### 2026-09-28 16:15 — 693768c — quizzical-haslett-6f8f8b@fix/passcode-door-any-characters (1 files since origin/main)
 **tl;dr:** The money model's passcode box now takes letters and long passcodes, hides what you type, and has Show/Hide
 **Other sessions:** Only _passgate.mjs gatePage changed (type=password, maxlength 200, no digit pattern); the server check was already any string. FINMODEL_CODE is set (secret, three contexts) since 09:02 UTC.

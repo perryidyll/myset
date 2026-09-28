@@ -147,6 +147,15 @@ echo
 echo "── the account system ──"
 node --import ./test/register.mjs test/accounts.mjs
 echo
+echo "── the signing key leaves the store (0112) ──"
+node --import ./test/register.mjs test/secret.mjs
+echo
+echo "── the founder's passcode door (0112) ──"
+node --import ./test/register.mjs test/passgate.mjs
+echo
+echo "── sealed at rest, and a rotation strands nothing (0113) ──"
+node --import ./test/register.mjs test/seal.mjs
+echo
 echo "── sign-in email delivery ──"
 node --import ./test/register.mjs test/email.mjs
 echo

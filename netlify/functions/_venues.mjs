@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { casDoc, readDoc, own } from './_lib.mjs';
-import { authSecret, cleanSlug, normEmail } from './_auth.mjs';
+import { signingKeys, cleanSlug, normEmail } from './_auth.mjs';
 import { normPlace, mapLinks, safeMapUrl, clean } from './_maps.mjs';
 import { normMerch } from './_profile.mjs';
 
@@ -155,7 +155,7 @@ export const vRevOf = (reg, vid) =>
 
 export async function signVenueToken(email, rev, sid) {
   const body = `v|${email}|${Date.now() + TOKEN_TTL}|${rev}` + (sid ? `|${sid}` : '');
-  const mac = createHmac('sha256', await authSecret()).update(body).digest('base64url');
+  const mac = createHmac('sha256', (await signingKeys()).sign).update(body).digest('base64url');
   return `${Buffer.from(body).toString('base64url')}.${mac}`;
 }
 export async function verifyVenueToken(token) {
@@ -164,8 +164,10 @@ export async function verifyVenueToken(token) {
   if (!b64 || !mac) return null;
   let body;
   try { body = Buffer.from(b64, 'base64url').toString(); } catch { return null; }
-  const want = createHmac('sha256', await authSecret()).update(body).digest('base64url');
-  if (!eq(mac, want)) return null;
+  /* Every key the token could have been signed with — the same list, and the same
+     legacy window, as the artist token (signingKeys in _auth.mjs, decision 0112). */
+  const { verify } = await signingKeys();
+  if (!verify.some((k) => eq(mac, createHmac('sha256', k).update(body).digest('base64url')))) return null;
   /* Popped from the end, for the same reason the artist token is (see normEmail in
      _auth.mjs): the fixed fields must not be movable by anything inside an
      address. `v|` still leads, so the tag is read off the front. */

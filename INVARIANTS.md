@@ -2782,3 +2782,28 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
     night meets; never remove the limit. `test/request-payments.mjs` "A WHOLE BAR FITS
     UNDER IT", `test/email.mjs`, `test/rsvp.mjs`, `test/feedback.mjs`,
     `test/errlog.mjs`.
+
+## The security pass, slice C — the server's own secret (2026-09-28, decisions `0112`, `0113`)
+
+0gy. **What signs is not in the store, and nothing long-lived is keyed with it.** With
+    `MYSET_SECRET` set, every token, ticket, six-digit code and cookie is signed with a
+    key cut from it (`signingKeys`, `_auth.mjs`); the store-kept key only verifies, and
+    only for `LEGACY_MS` after the switch. Recovery codes, Studio codes and passwords
+    are slow salted hashes that depend on no key, so a new secret can never strand one;
+    a recovery set made before the switch keeps working against the store key, which
+    is never deleted. `MYSET_SECRET_PREVIOUS` never verifies a token — a rotation signs
+    every device out once. `test/secret.mjs`, `test/studiocode.mjs`.
+
+0gz. **The money model's door has no published key and counts its guesses.** On
+    Netlify it opens for nobody until `FINMODEL_CODE` is set; the cookie is a MAC under
+    the signing key; `TRIES` wrong codes inside `WINDOW` shut it, doubling to `LOCK_CAP`,
+    and shut refuses the right code too. `test/passgate.mjs`.
+
+0hb. **A record that holds a person is sealed at rest, and a new secret strands none.**
+    The families on `protectedKey` (`_seal.mjs`) are sealed by `casDoc` and opened by
+    `readDoc` — and by the four raw doors — under data keys kept wrapped in `sealkeys`.
+    Nothing the room's poll reads is on the list. A record that cannot be opened reads
+    as missing and is never written over; nothing protected is written in the clear
+    while a secret is set; the keyring is never made twice. A rotation re-wraps the one
+    document and keeps every old data key. `MYSET_SECRET` is never removed and
+    `sealkeys` never deleted; the mirror and the backup carry it. `test/seal.mjs`.

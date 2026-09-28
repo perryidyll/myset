@@ -1,5 +1,6 @@
 import { createHash, createHmac, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { casDoc, readDoc, cleanArtistId, own, clientIp, roomHash } from './_lib.mjs';
+import { keysFor } from './_secret.mjs';
 
 /* Magic-link sign-in for ARTISTS. The audience never signs in — that is the
    whole reason the app works in a bar — so this exists only for the Studio.
@@ -27,24 +28,88 @@ export const normEmail = (v) =>
   String(v || '').trim().toLowerCase().replace(/\|/g, '').slice(0, 160);
 const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v);
 
-/* The signing secret is generated once and kept in Blobs — private to the site,
-   same exposure as an env var, and one less thing to configure by hand. */
-export async function authSecret() { return secret(); }
-/* Read once per warm instance. The secret is written once and never rotated —
-   "sign out everywhere" bumps an artist's `rev`, not this — so re-reading it on
-   every signed-in request was a blob round-trip (150–200 ms from the function's
-   region) paid for nothing. Decision 0054. */
-let SECRET = null;
-async function secret() {
-  if (SECRET) return SECRET;
+/* THE SIGNING KEY, AND WHERE IT LIVES (decision 0112).
+
+   Until 2026-09-28 it was generated once into Blobs (`authsecret`) — private to the
+   site, but in the same store as everything it protects, so whoever held the data
+   held the key that mints a session for any account. It now comes from the
+   `MYSET_SECRET` environment variable when that is set (_secret.mjs cuts the `auth`
+   key from it), and the store-kept key becomes a LEGACY key that only verifies:
+
+     · sign      the key every new token, ticket, code and cookie is made with
+     · verify    what a short-lived thing (a token, a ticket, a six-digit code, the
+                 passcode and HQ cookies) is checked against: the current key, and the
+                 store key for LEGACY_MS after the switch — a session lives thirty
+                 days, so nobody is signed out by the move, and after the window the
+                 store key can mint nothing even if it leaks
+
+   The switch is dated the first time a function sees the env key beside a store key
+   (`retiredAt` on the same document, written once). With no `MYSET_SECRET` nothing
+   changes: the store key is made if missing and signs, exactly as before. A later
+   change of `MYSET_SECRET` is a rotation (HARDENING.md §0): the previous value never
+   verifies a token, so every device signs in again once — the right answer after a
+   leak, and a cheap one otherwise. Nothing long-lived is keyed with it: recovery
+   codes, Studio codes and passwords are slow salted hashes (_session.mjs, _lib.mjs,
+   _cred.mjs), and a recovery code made before the switch is checked against the
+   store key, which stays in the store for exactly that (storeKey).
+
+   Read once per warm instance. The store key was never rotated — "sign out
+   everywhere" bumps an artist's `rev`, not this — so re-reading it on every
+   signed-in request was a blob round-trip (150–200 ms from the function's region)
+   paid for nothing. Decision 0054. */
+export const LEGACY_MS = 31 * 86400e3;
+let BLOB = null;     // { k, retiredAt, at } — the store-kept key, read once per warm instance
+/* "There is no store key" is believed for a minute, not for the instance's life: a
+   read that failed looks the same as a key that is not there, and during the month
+   after the switch a wrong "none" would refuse every token signed before it. */
+const NONE_FOR_MS = 60e3;
+async function blobKey(create) {
+  if (BLOB && (BLOB.k || (!create && Date.now() - BLOB.at < NONE_FOR_MS))) return BLOB;
   const { data } = await readDoc('authsecret', null);
-  if (data && data.k) return (SECRET = data.k);
+  if (data && data.k) return (BLOB = { k: data.k, retiredAt: Number(data.retiredAt) || 0 });
+  if (!create) return (BLOB = { k: null, retiredAt: 0, at: Date.now() });
   const k = randomBytes(32).toString('hex');
   await casDoc('authsecret', () => ({}), (d) => { if (d.k) return false; d.k = k; return true; })
     .catch(() => {});
   const again = await readDoc('authsecret', null);
-  return (SECRET = (again.data && again.data.k) || k);
+  return (BLOB = { k: (again.data && again.data.k) || k, retiredAt: Number(again.data && again.data.retiredAt) || 0 });
 }
+/* Dated once, on the document the key lives in. Nothing else is stored: the window
+   is arithmetic on that date, so a store that loses the write simply keeps the
+   window open until a later cold start lands it — the failure on the side of the
+   artist staying signed in. */
+async function retire(b) {
+  const now = Date.now();
+  const r = await casDoc('authsecret', () => ({}), (d) => {
+    if (!d.k || d.retiredAt) return false;
+    d.retiredAt = now;
+    return true;
+  }).catch(() => null);
+  b.retiredAt = (r && r.data && Number(r.data.retiredAt)) || now;
+}
+export async function signingKeys() {
+  const env = keysFor('auth');
+  if (!env) {
+    const b = await blobKey(true);
+    return { sign: b.k, verify: [b.k] };
+  }
+  const b = await blobKey(false);
+  if (!b.k) return { sign: env.sign, verify: [env.sign] };
+  if (!b.retiredAt) await retire(b);
+  return { sign: env.sign, verify: Date.now() < b.retiredAt + LEGACY_MS ? [env.sign, b.k] : [env.sign] };
+}
+/** The key new things are signed with. */
+export async function authSecret() { return (await signingKeys()).sign; }
+/** The store-kept key itself, never made here (null when there is none): what a
+ *  recovery code made before the switch, and HQ's Gmail tokens sealed before it, were
+ *  keyed with. It stays in the store so they keep working; it signs nothing new once
+ *  MYSET_SECRET is set. */
+export async function storeKey() { return (await blobKey(false)).k; }
+/** For tests only: forget the store-kept key so the next call reads it again. */
+export const __resetSecret = () => { BLOB = null; };
+const mac = (key, body, enc = 'base64url') => createHmac('sha256', key).update(body).digest(enc);
+/** Does `given` match the MAC of `body` under any of `keys`? Each compare is constant-time. */
+const macOk = (given, keys, body, enc = 'base64url') => keys.some((k) => eq(given, mac(k, body, enc)));
 
 /* ---------- the artist registry ----------
    One global document. Everything else in the store belongs to exactly one
@@ -172,17 +237,16 @@ export { RESERVED };
 export async function signTicket(email) {
   const exp = Date.now() + 15 * 60e3;
   const body = `t|${email}|${exp}`;
-  const mac = createHmac('sha256', await secret()).update(body).digest('base64url');
-  return `${Buffer.from(body).toString('base64url')}.${mac}`;
+  const sig = mac((await signingKeys()).sign, body);
+  return `${Buffer.from(body).toString('base64url')}.${sig}`;
 }
 export async function readTicket(t) {
   if (typeof t !== 'string' || t.length > 400) return null;
-  const [b64, mac] = t.split('.');
-  if (!b64 || !mac) return null;
+  const [b64, sig] = t.split('.');
+  if (!b64 || !sig) return null;
   let body;
   try { body = Buffer.from(b64, 'base64url').toString(); } catch { return null; }
-  const want = createHmac('sha256', await secret()).update(body).digest('base64url');
-  if (!eq(mac, want)) return null;
+  if (!macOk(sig, (await signingKeys()).verify, body)) return null;
   const [tag, email, exp] = body.split('|');
   if (tag !== 't' || !email || Number(exp) < Date.now()) return null;
   return email;
@@ -200,23 +264,22 @@ export const revOf = (reg, aid) =>
 export async function signToken(email, rev, sid) {
   const exp = Date.now() + TOKEN_TTL;
   const body = sid ? `${email}|${exp}|${rev}|${sid}` : `${email}|${exp}|${rev}`;
-  const mac = createHmac('sha256', await secret()).update(body).digest('base64url');
-  return `${Buffer.from(body).toString('base64url')}.${mac}`;
+  const sig = mac((await signingKeys()).sign, body);
+  return `${Buffer.from(body).toString('base64url')}.${sig}`;
 }
 export const TOKEN_LIFE = TOKEN_TTL;
 export async function verifyToken(token) {
   if (typeof token !== 'string' || token.length > 500) return null;
-  const [b64, mac] = token.split('.');
-  if (!b64 || !mac) return null;
+  const [b64, sig] = token.split('.');
+  if (!b64 || !sig) return null;
   let body;
   try { body = Buffer.from(b64, 'base64url').toString(); } catch { return null; }
-  /* The registry is fetched alongside the secret, not after the MAC check: the
-     check needs the secret, the lookup needs the registry, and neither needs the
+  /* The registry is fetched alongside the keys, not after the MAC check: the
+     check needs the keys, the lookup needs the registry, and neither needs the
      other. A bad token costs one wasted read; every good one saves a round-trip
-     (and on a warm instance the secret is already in memory — see secret()). */
-  const [sec, reg] = await Promise.all([secret(), readArtists()]);
-  const want = createHmac('sha256', sec).update(body).digest('base64url');
-  if (!eq(mac, want)) return null;
+     (and on a warm instance the keys are already in memory — see signingKeys()). */
+  const [keys, reg] = await Promise.all([signingKeys(), readArtists()]);
+  if (!macOk(sig, keys.verify, body)) return null;
   /* POPPED FROM THE END, never destructured from the front: the fixed fields are
      the last two or three, so nothing an address could contain can move them. */
   const parts = body.split('|');
@@ -253,14 +316,14 @@ export async function issueCode(email, pendingName, realm) {
   const key = codeKey(email, realm);
   const now = Date.now();
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-  const salt = await secret();
+  const { sign } = await signingKeys();
   let tooMany = false;
 
   await casDoc(key, () => ({}), (d) => {
     d.sends = (d.sends || []).filter((t) => now - t < 3600e3);
     if (d.sends.length >= MAX_SENDS) { tooMany = true; return false; }
     d.sends.push(now);
-    d.hash = createHmac('sha256', salt).update(code).digest('hex');
+    d.hash = mac(sign, code, 'hex');
     d.exp = now + CODE_TTL;
     d.tries = 0;
     // the name they typed on the way in, so a brand-new account can be created
@@ -274,15 +337,14 @@ export async function issueCode(email, pendingName, realm) {
 /** Returns { ok, name } — name is whatever they typed when the code was sent. */
 export async function checkCode(email, given, realm) {
   const key = codeKey(email, realm);
-  const salt = await secret();
-  const want = createHmac('sha256', salt).update(String(given || '')).digest('hex');
+  const { verify } = await signingKeys();
   let ok = false, name = null;
 
   await casDoc(key, () => ({}), (d) => {
     if (!d.hash || !d.exp || d.exp < Date.now()) return false;
     if ((d.tries || 0) >= MAX_TRIES) { d.hash = null; return true; }
     d.tries = (d.tries || 0) + 1;
-    if (eq(d.hash, want)) { ok = true; name = d.name || null; d.hash = null; }   // burn on success
+    if (macOk(d.hash, verify, String(given || ''), 'hex')) { ok = true; name = d.name || null; d.hash = null; }   // burn on success
     return true;
   }).catch(() => {});
   return { ok, name };

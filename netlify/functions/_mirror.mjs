@@ -55,7 +55,10 @@ export const GLOBALS = ['artists', 'venues', 'cityindex', 'acctindex', 'flags', 
                         'sheetsync', 'gigsched', 'vidqueue', 'delqueue', 'ledger_platform',
                         /* the founder's register (0095): its head, its working state and its
                            bell's state; the month shards are named by the head (globalKeys) */
-                        'register', 'register_work', 'registersync'];
+                        'register', 'register_work', 'registersync',
+                        /* the sealing keyring (0113): wrapped, so safe to copy — and a copy
+                           of the sealed records without it could never be opened again */
+                        'sealkeys'];
 /** The global keys, with the register's month shards read off its head — computable, no list(). */
 export async function globalKeys() {
   const out = [...GLOBALS];

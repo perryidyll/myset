@@ -473,7 +473,7 @@ Linked steps: 369890
 
 ### Sign-in secret (authsecret) — entity 4879
 
-`authsecret` · The HMAC key every session token is signed with — minted once with a compare-and-set, never rotated silently; a restore without it signs everyone out (tools/backup.py verify). `src: _auth.mjs authsecret`
+`authsecret` · The HMAC key every session token was signed with — minted once with a compare-and-set, never rotated silently. Since decision 0112, with `MYSET_SECRET` set, it signs nothing: it verifies tokens for `LEGACY_MS` after the switch (dated in `retiredAt`), and recovery codes made before the switch for ever, so it is never deleted. Not in backups since 0110. Beside it since 0113: `sealkeys`, the keyring the records that hold a person are sealed under, its data keys wrapped by `MYSET_SECRET` — safe to copy, copied by the mirror and the backup, never deleted. `src: _auth.mjs signingKeys; _seal.mjs ring`
 
 | attribute | type | what it holds |
 | --- | --- | --- |

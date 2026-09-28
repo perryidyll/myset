@@ -130,22 +130,47 @@ export async function authUrl(o = {}) {
   return { url: `${AUTH_URL}?${p}`, state };
 }
 
-/* ---------- the tokens, sealed ---------- */
-const sealKey = async () => createHmac('sha256', await authSecret()).update('myset-gmail-token-v1').digest();
+/* ---------- the tokens, sealed ----------
+   `v2.` (decision 0113): sealed with the keyring (_seal.mjs) once the server holds its
+   own secret — the same keys every sealed record uses, which a new MYSET_SECRET
+   re-wraps instead of stranding, so a rotation never disconnects the mailbox. `v1.`
+   is how a token was sealed before, under a key cut from the store-kept key; it is
+   still how one is sealed when no secret is set, and one sealed that way still opens
+   (the store key stays in the store for exactly this — storeKey in _auth.mjs). The
+   whole `crmgmail` document is sealed as well. */
+const TOKEN_AAD = `${GMAIL_DOC}|token`;
+const legacyKey = async (make) => {
+  const { storeKey } = await import('./_auth.mjs');
+  const k = make ? await authSecret() : await storeKey();
+  return k ? createHmac('sha256', k).update('myset-gmail-token-v1').digest() : null;
+};
 export async function encrypt(text) {
+  const { configured } = await import('./_secret.mjs');
+  if (configured()) {
+    const { seal } = await import('./_seal.mjs');
+    return `v2.${(await seal(TOKEN_AAD, Buffer.from(String(text), 'utf8'))).toString('base64url')}`;
+  }
   const iv = randomBytes(12);
-  const c = createCipheriv('aes-256-gcm', await sealKey(), iv, { authTagLength: 16 });
+  const c = createCipheriv('aes-256-gcm', await legacyKey(true), iv, { authTagLength: 16 });
   const ct = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);
   return `v1.${b64u(iv)}.${b64u(c.getAuthTag())}.${b64u(ct)}`;
 }
 /** The text back, or null for anything that was not sealed here or was changed since. */
 export async function decrypt(box) {
   try {
-    const [v, iv, tag, ct, extra] = String(box == null ? '' : box).split('.');
+    const str = String(box == null ? '' : box);
+    if (str.startsWith('v2.')) {
+      const { open } = await import('./_seal.mjs');
+      const o = await open(TOKEN_AAD, Buffer.from(str.slice(3), 'base64url'));
+      return o.fail || o.plain ? null : o.data.toString('utf8');
+    }
+    const [v, iv, tag, ct, extra] = str.split('.');
     if (v !== 'v1' || !iv || !tag || ct === undefined || extra !== undefined) return null;
     const t = Buffer.from(tag, 'base64url'), i = Buffer.from(iv, 'base64url');
     if (t.length !== 16 || i.length !== 12) return null;
-    const d = createDecipheriv('aes-256-gcm', await sealKey(), i, { authTagLength: 16 });
+    const key = await legacyKey(false);
+    if (!key) return null;
+    const d = createDecipheriv('aes-256-gcm', key, i, { authTagLength: 16 });
     d.setAuthTag(t);
     return Buffer.concat([d.update(Buffer.from(ct, 'base64url')), d.final()]).toString('utf8');
   } catch { return null; }

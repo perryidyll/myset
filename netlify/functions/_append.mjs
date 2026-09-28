@@ -1,4 +1,5 @@
 import { store, readDoc, casDoc } from './_lib.mjs';
+import { protectedKey, seal } from './_seal.mjs';
 
 /* AN APPEND-ONLY LOG THAT IS NEVER TRIMMED, IN COMPUTABLE KEYS.
 
@@ -51,7 +52,9 @@ export async function appendLog(key, items = [], extra = null) {
 async function spill(key, head) {
   const i = head.parts, size = CHUNK();
   const body = JSON.stringify({ v: 1, part: i, list: head.list.slice(0, size) });
-  try { await store().set(partKey(key, i), body, { onlyIfNew: true }); } catch { /* re-tried next append */ }
+  // a part of a sealed log is sealed too (0113): readDoc opens it on the way back
+  const pk = partKey(key, i);
+  try { await store().set(pk, protectedKey(pk) ? await seal(pk, body) : body, { onlyIfNew: true }); } catch { /* re-tried next append */ }
   await casDoc(key, empty, (h) => {
     norm(h);
     if (h.parts !== i || h.list.length < size) return false;
