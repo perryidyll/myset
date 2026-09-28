@@ -1,8 +1,8 @@
 ---
 tab: Marketing & growth
 section: "MySet HQ: the outreach desk"
-puzzle_section_id: pending
-puzzle_steps: pending
+puzzle_section_id: 44408
+puzzle_steps: 389724–389737 (h01–h14 in order; h09 and h12 `Draft` until Gmail is switched on, the rest `Live`) · connections 435824–435841 (the arrows inside the section) and 435842 (h03 → *Sample pages* s02, 389195), 435843 (h08 → s18, 389211) · changelog 2444 (decision 0108), 2445 (0109)
 sources:
   - docs/decisions/0108 (HQ: contacts beside the samples, the stage read off the page, the tags, the follow-up), 0109 (email through the founder's own Gmail; first DMs by hand, one tap from HQ)
   - netlify/functions/hq.mjs (summary, generate, save, job, contact, update, note, log, send, thread, seen, remove, gmail; the OAuth return at /api/hq/gmail; syncGmail; MAIL_PER_DAY)
@@ -13,8 +13,8 @@ sources:
   - public/crm.html (the page)
   - INVARIANTS.md 0gr, 0gs, 0hk
   - tools/overview.mjs `hq` → overview §2.1, the "MySet HQ" row (the follow-up, the tags, the messages kept, the day's emails, the passcode's hours, tries and minutes)
-status: drafted
-loaded: not yet
+status: loaded
+loaded: 2026-09-28 (create_process 44408; read back — names, types, executors, roles with RACI, tools, notes and 20 connections match this sheet; Gmail and WhatsApp are not tools in the workspace, so h08 carries Instagram, h12 Netlify and h09 none; section 44328's notes gained the sheet 08 sentence about HQ)
 verified: code read 2026-09-28 in the working tree (branch feat/hq-crm); test/hq.mjs; nothing deployed; 2026-09-28 the move to /crm and the passcode (0hk) read in the working tree; live as 0075a30 (PR #137, Netlify deploy 6aba23d4), verified by content: /crm behind both locks, /api/hq refuses a stranger
 ---
 
@@ -22,7 +22,7 @@ verified: code read 2026-09-28 in the working tree (branch feat/hq-crm); test/hq
 
 **Who:** the founder (role *Founder / operator*) at `myset.vip/crm`; MySet's own servers (roles *MySet server* and *Scheduled jobs*); the artists and venues being reached (roles *Artist* and *Venue manager*, external). **Trigger:** the founder wants somebody on MySet. **Outcome:** a contact in one table, a page built for them, every message to and from them in one thread — and, if they say yes, a claimed page (*Sample pages* s18).
 
-**Status: live** (`0075a30`, PR #137, 2026-09-28). The page-building steps are the factory's, unchanged (*Sample pages: build, send, claim, come back*, s02–s11); HQ is the desk in front of them, and the old console at `/factory` keeps working beside it.
+**Status: live** (`0075a30`, PR #137, and `afeffa0`, PR #138, 2026-09-28). Two steps wait on Gmail: h09 *Read their replies* and h12 *Connect Gmail* need `GMAIL_CLIENT_ID` and `GMAIL_CLIENT_SECRET` in Netlify (not set on 2026-09-28) and the founder's Connect, so they are `Draft` in Puzzle. Until then an email opens in the phone's mail app (h08). The page-building steps are the factory's, unchanged (*Sample pages: build, send, claim, come back*, s02–s11); HQ is the desk in front of them, and the old console at `/factory` keeps working beside it.
 
 **The numbers** — when a follow-up falls due, how many tags a contact takes, how many messages are kept, how many emails go out a day — are in overview §2.1 (the *MySet HQ* row, generated from `_crm.mjs` and `hq.mjs`), and nowhere here.
 
