@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 13:47 — 020b1bf — quizzical-haslett-6f8f8b@docs/seat-access-live (5 files since origin/main)
+**tl;dr:** Docs only: each seat's tabs and own-device sign-out (decisions 0104, 0105) are live as 52047cb — the ledger, the sheet and the decision records say so [skip ci]
+**Other sessions:** Puzzle section 41979 reloaded: t01/t03/t04/t05/t07 updated; NEW t11 = 389538, t12 = 389539; arrows 435592–435595; changelog 2434 = 0104, 2435 = 0105; attribute 46139 is now 'byEmail[email].artistId / role / access'. Notion rows ticked. Security branch 5bcf8f told to rebase on 52047cb and drop its sign-out/revenue/history/settings/pushOn gates; push alerts per seat is 3d368c's next batch and the only place alerts get gated.
+
 ### 2026-09-28 13:40 — cbb5839 — quizzical-haslett-6f8f8b@fix/seat-signout-scope (28 files since origin/main)
 **tl;dr:** A band mate or crew seat can no longer sign the owner's phone out: 'sign out my other devices' reaches only its own. The owner now picks, seat by seat, which Studio tabs each band mate or crew member can see or change (Settings → Who can sign in → Access). Crew no longer sees money or changes the room's prices unless the owner allows it
 **Other sessions:** Decisions 0104, 0105; INVARIANTS 0gp, 0gq; ledger ACC-006. _session.mjs: AREAS, PRESET, levelOf/accessOf/reachOf, can(role, '<tab>_view|_edit', access); CAN is now only member:audit (show/requests/export were read by nothing). Every admin.mjs CAPABILITY row is '<tab>_view|_edit'; a new row must name one. byEmail[email].access = overrides only; accessSet owner-only; verifyToken/requireArtist carry access; stagePayload(aid, seat) strips money. Studio: data-ed/data-see/data-area + seatPass(); a new edit control needs data-ed or test/seatstudio.mjs fails; ownerSeat() for owner-only UI. The security branch (claude/myset-encryption-security-460mph) rebases on this and drops its own sign-out/revenue/history/settings gates.
