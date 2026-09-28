@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 15:47 — 92e59db — untrack-node-modules@config/untrack-node-modules (9 files since origin/main)
+**tl;dr:** Nothing on the site changes: git stops tracking the node_modules link, so resetting the shared checkout can no longer delete the packages every worktree uses, and a worktree needs no install step
+**Other sessions:** Decision 0116 (session 6b338f). node_modules is untracked and .gitignore says node_modules with no slash, so a link is ignored too. Every branch loses its link on its next rebase: harmless under ~/Docs/MySet/.claude/worktrees/, where Node finds ~/Docs/MySet/node_modules by looking in parent folders; a checkout anywhere else (the cloud) runs npm ci. Never delete ~/Docs/MySet/node_modules; after a dependency change merges, worktrees test the old version until npm ci runs there. Resetting the shared checkout stays the founder's call: after this merges, git fetch + git reset --hard origin/main keeps node_modules (one 'unable to unlink' warning); never git restore . or checkout -- . before it, never git clean. Puzzle t01 (370041) and the 0116 changelog entry follow the merge.
+
 ### 2026-09-28 15:44 — df0bd1f — quizzical-haslett-6f8f8b@docs/0115-hq-is-crm (1 files since origin/main)
 **tl;dr:** Docs only: decision 0115 now says HQ lives at /crm (it said /hq, which is nobody's since afeffa0)
 **Other sessions:** No code change. Nothing else on main pointed HQ at /hq.
