@@ -1206,7 +1206,7 @@ export async function requireArtist(req, opts = {}) {
     const { verifyToken } = await import('./_auth.mjs');
     const me = await verifyToken(auth.slice(7));
     // `sid` says WHICH device, so "sign out" can mean this one and not all of them
-    if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner', sid: me.sid || null };
+    if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner', sid: me.sid || null, access: me.access || null };
   }
 
   /* THE SAMPLE DOOR (decision 0101). A page the factory built opens its Studio to

@@ -25,6 +25,9 @@
      ?founder=1   the Studio is the founding page: the founder's cards (codes, venues, sheet, books)
      ?seat=member the signed-in seat is a band mate (or crew), not the owner — with ?founder=1,
                   the server's answer to the founder's tools is its 401 (decisions 0099, 0100)
+     ?access=money:1,gigs:0   that seat's tabs, 0 hidden / 1 view / 2 edit (decision 0105); left
+                  out, the seat is what the owner's grid (Settings → Who can sign in → Access)
+                  last set in this process, from the role's preset
      /one/…       a page with one item     /none/…   a page with none
      /v/demo/…    the venue twin of every fan page
      /studio?tab=money&plan=pro   the Money tab with a book: thirty filed nights, a weekly
@@ -167,6 +170,8 @@ function fresh() {
     TOUR: undefined,          // the tour poster once the Studio has set or cleared it; undefined means "as the ?tour= state says"
     TOURDATA: null,           // the data URL the Studio uploaded, served back at /api/img?s=tour
     lastPay: null,            // the last /api/pay body, so /api/confirm answers with what was bought
+    // the two seats beside the owner (decision 0105): their role and the tabs the owner's grid has changed
+    SEATS: { 'bass@example.com': { role: 'member', access: {} }, 'sound@example.com': { role: 'crew', access: {} } },
   };
 }
 /* shapeIndex / shapeThread / shapeForBooker, as _messages.mjs draws them: newest first, never a hash, never a token */
@@ -271,14 +276,14 @@ const SHOW_LABEL = 'Fri, Sep 11 · The Room';
    The address on a PAGE request sets the cookies; the API calls that page makes carry the
    cookies back. The query on the API call itself and the referer are read too, so a call
    made by hand (curl) can name a state without a cookie. */
-const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first', 'founder', 'seat'];
+const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first', 'founder', 'seat', 'access'];
 const cookies = (rq) => Object.fromEntries((rq.headers.cookie || '').split(/;\s*/).filter(Boolean).map((c) => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
 function stateOf(rq, q) {
   const ck = cookies(rq);
   let ref = null; try { ref = new URL(rq.headers.referer || '', 'http://x').searchParams; } catch { ref = null; }
   const pick = (k) => q.get(k) ?? ck['mock_' + k] ?? (ref && ref.get(k)) ?? null;
   return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus', tour: pick('tour') === '1', first: pick('first') === '1',
-           founder: pick('founder') === '1', seat: ['member', 'crew'].includes(pick('seat')) ? pick('seat') : 'owner' };
+           founder: pick('founder') === '1', seat: ['member', 'crew'].includes(pick('seat')) ? pick('seat') : 'owner', access: pick('access') || '' };
 }
 /* what the page request does to the cookies: a flag in the address sets it; a return trip
    from checkout (?paid= / ?cancelled=) keeps them; a plain address clears them all */
@@ -402,6 +407,8 @@ function stageFixture(st) {
     voters: 0, room: live ? 12 : 0, nets: 0, asks: [], songs: SONGS,
     tips: { total: st.first ? 0 : 42, count: st.first ? 0 : 3, recent: [] }, feedback: null,
     paid: { count: st.first || !live ? 0 : 2, total: st.first || !live ? 0 : 8, last: 5 },
+    // a seat without the Money tab gets the show and not the money (stage.mjs, decision 0105)
+    ...(accessOf(st).money ? {} : { tips: { total: 0, count: 0, recent: [], allTime: 0, allTimeCount: 0 }, paid: { count: 0, total: 0, last: 0 }, money: false }),
     /* ?first=1 is an account with no night on file and no sign printed: the
        first-gig card before a show, the example rows during one */
     nights: st.first ? 0 : 12, signAt: st.first ? 0 : NOW - 30 * 864e5,
@@ -424,9 +431,33 @@ function planFixture(st) {
   return { ok: true, plan, limits: PLANS[plan], shareStats: true, until: paid && mine ? NOW + 14 * 864e5 : null, comped: false, discountPct: 0, plans: PLANS,
     billing: paid ? (mine ? { subscribed: true, plan, portal: true, pastDue: false, renewsAt: NOW + 14 * 864e5, cancelAtPeriodEnd: false } : { subscribed: true, plan, portal: false, pastDue: false })
       : { subscribed: false, plan: 'free', portal: false, pastDue: false },
-    role: st.seat, tour: TOUR_CAPS, del: null, email: 'demo@example.com', owner: st.founder };
+    role: st.seat, access: accessOf(st), tour: TOUR_CAPS, del: null, email: SEAT_EMAIL[st.seat], owner: st.founder };
 }
-const TEAM = { ok: true, slug: 'demo', emails: ['demo@example.com'], invited: [], invitedNames: {}, codeSet: false, emailReady: true };
+/* EACH SEAT, EACH TAB (decision 0105), from _session.mjs itself — it imports the store
+   modules but touches no store until called, so the mock reads the one copy. The signed-in
+   seat is ?seat=; its tabs are the owner's grid's (S.SEATS) with ?access= laid over them. */
+const { AREAS, reachOf, accessOf: seatAccess } = await import('../netlify/functions/_session.mjs');
+const SEAT_EMAIL = { owner: 'demo@example.com', member: 'bass@example.com', crew: 'sound@example.com' };
+function accessOf(st) {
+  const over = { ...((S.SEATS[SEAT_EMAIL[st.seat]] || {}).access || {}) };
+  for (const kv of String(st.access || '').split(',')) { const [a, v] = kv.split(':'); if (AREAS.includes(a) && /^[012]$/.test(v || '')) over[a] = Number(v); }
+  return seatAccess(st.seat, over);
+}
+/* what admin.mjs's CAPABILITY table asks of a seat for the reads and writes the Studio makes
+   here, so a call the page should never send to this seat is refused — and logged — as it would be */
+const TAB_OF = { eventList: ['gigs', 1], featureList: ['gigs', 1], pitchList: ['gigs', 1], eventSave: ['gigs', 2], eventSkip: ['gigs', 2],
+  merchList: ['merch', 1], orderList: ['merch', 1], orderCount: ['merch', 1], orderDetail: ['merch', 1], wishList: ['merch', 1],
+  merchSave: ['merch', 2], orderDone: ['merch', 2], wishDone: ['merch', 2], diaryList: ['diary', 1], diarySave: ['diary', 2],
+  msgCount: ['messages', 1], msgList: ['messages', 1], msgThread: ['messages', 1], msgReply: ['messages', 2],
+  postList: ['profile', 1], profileSet: ['profile', 2], freeCredits: ['settings', 2], packs: ['settings', 2], addSong: ['setlist', 2] };
+function teamFixture(st) {
+  const owner = st.seat === 'owner';
+  const rows = [{ email: 'demo@example.com', role: 'owner', me: owner, pw: false },
+    ...Object.entries(S.SEATS).map(([email, r]) => ({ email, role: r.role, me: SEAT_EMAIL[st.seat] === email, pw: false, access: seatAccess(r.role, r.access) }))];
+  return { ok: true, slug: 'demo', role: st.seat, invited: 0, invitedNames: [], codeSet: false, emailReady: true,
+    emails: owner ? rows : rows.filter((r) => r.me),
+    ...(owner ? { tabs: AREAS.map((area) => ({ area, ...reachOf(area) })) } : {}) };
+}
 /* what connectStatus() in _connect.mjs answers: the Get-paid card prints plan, cutPct and the Stripe-fee note */
 const STRIPE_NOTE = { split: 'Stripe’s own card fee (about 2.9% + 30¢) is shared: MySet’s fee is reduced by half of it, estimated at checkout. The payment is yours, so Stripe takes its fee from your side.',
                       whole: 'Stripe’s own card fee (about 2.9% + 30¢) comes out of your side too, because the payment is yours.' };
@@ -560,6 +591,11 @@ function revenueFixture() {
 const FOUNDER_ONLY = /^(bugList|flagList|flagSet|sheetStatus|sheetSync|idQueue|idApprove|idReject|venuePlan|promoList|promoCreate|promoRevoke|venueList|venueVerify)$/;
 function adminStub(body, st) {
   const founder = st.founder && st.seat === 'owner';
+  const tab = TAB_OF[body.action || ''];
+  if (tab && accessOf(st)[tab[0]] < tab[1]) {
+    log('REFUSED to the ' + st.seat + ' seat (its ' + tab[0] + ' tab is ' + ['hidden', 'view'][accessOf(st)[tab[0]]] + '):', body.action);
+    return { ok: false, error: 'That’s not something this sign-in can do', status: 403 };
+  }
   if (FOUNDER_ONLY.test(body.action || '') && !founder) return { ok: false, error: 'unauthorized', status: 401 };
   if (/^(ledger|ledgerCsv|books|bookCost)$/.test(body.action || '') && st.seat !== 'owner') return { ok: false, error: 'Only the account owner can do that', status: 403 };
   if (/^(books|bookCost)$/.test(body.action || '') && !founder) return { ok: false, error: 'That’s not something this account can do', status: 403 };
@@ -614,9 +650,23 @@ function adminStub(body, st) {
     default: return { ok: true, stub: body.action };
   }
 }
-function authStub(body) {
+function authStub(body, st) {
   switch (body.action) {
-    case 'list': return TEAM;
+    case 'list': return teamFixture(st);
+    /* the owner's grid (auth.mjs accessSet / roleSet): one tab, or a whole preset, for one seat */
+    case 'accessSet': case 'roleSet': {
+      if (st.seat !== 'owner') return { ok: false, error: 'Only the account owner can change this', status: 403 };
+      const row = S.SEATS[body.email];
+      if (!row) return { ok: false, error: 'That address isn’t on this page', status: 400 };
+      if (body.action === 'roleSet') { row.role = body.role === 'crew' ? 'crew' : 'member'; row.access = {}; }
+      else {
+        const r = AREAS.includes(body.area) && reachOf(body.area);
+        if (!r || ![0, 1, 2].includes(body.level) || body.level < r.min || body.level > r.max) return { ok: false, error: 'unknown level', status: 400 };
+        row.access[body.area] = body.level;
+      }
+      log('POST /api/auth', body.action, body.email, body.area || body.role, body.level ?? '');
+      return teamFixture(st);
+    }
     case 'sessions': return { ok: true, sessions: [{ sid: 'mock', device: 'This phone', at: NOW, current: true }] };
     default: return { ok: true, stub: body.action };
   }
@@ -729,6 +779,11 @@ const GROUPS = [
     ['/studio?tab=gigs', 'Gigs tab, no poster', 'the Tour dates poster card under Add a gig: "No poster yet", Upload a poster'],
     ['/studio?tab=gigs&tour=1', 'Gigs tab with a poster', 'the card with the thumbnail, the tickets link field, Replace and Remove'],
     ['/studio?tab=settings&founder=1', 'Settings, the founder’s own seat', 'the founding page’s owner: ID queue, Trying things out, the sheet, Codes you hand out, Venues; Money has MySet’s books and If something broke'],
+    ['/studio?tab=settings', 'Settings, the owner: each seat’s tabs', 'Who can sign in lists a band mate and a sound engineer; Access opens the grid of Hidden / View / Edit (0105)'],
+    ['/studio?tab=live&live=1&seat=crew', 'The Studio as crew', 'Live and Setlist only, no money anywhere, Settings down to their own sign-in (0105); add &access=money:1 to lend the Money tab'],
+    ['/studio?tab=setlist&seat=crew', 'The Setlist, view only', 'every song and setlist, no Add, Import, Edit or Delete, a View only note (0105)'],
+    ['/studio?tab=money&seat=member', 'Money, a band mate', 'the nights and the payments to read, nothing to rename, re-check or deliver; no earnings card (0105)'],
+    ['/studio?tab=settings&seat=member', 'Settings, a band mate', 'the room’s settings; no plan code, page address, sign-ins, Studio code, recovery, export or delete (0105)'],
     ['/studio?tab=settings&founder=1&seat=member', 'Settings, a band mate on the founding page', 'none of the founder’s cards, and none of their calls sent (0100); ?seat=crew for the sound engineer'],
     ['/venues', 'Venue Studio, signed in', () => `a Pro venue; its Merch tab: ${S.VMERCH.length}/12 items, ${S.VORDERS.length} orders`],
     ['/venues?tab=merch', 'Venue Studio, Merch tab', 'straight in'],
@@ -915,7 +970,12 @@ const srv = http.createServer(async (rq, rs) => {
     if (!/^(planGet|merchList|orderList|orderCount|wishList|payStatus|postList|verifyStatus|flagList|eventList|featureList|pitchList|msgCount|msgList)$/.test(body.action || '')) log('POST /api/admin', JSON.stringify(body).slice(0, 160));
     return answer(rs, adminStub(body, st));
   }
-  if (u.pathname === '/api/auth') return json(rs, authStub(rq.method === 'POST' ? await readBody(rq) : {}));
+  if (u.pathname === '/api/auth') return answer(rs, authStub(rq.method === 'POST' ? await readBody(rq) : {}, st));
+  /* the Money tab's two doors (decision 0105): reading is Money view, changing is Money edit */
+  if ((u.pathname === '/api/revenue' || u.pathname === '/api/history') && accessOf(st).money < (rq.method === 'POST' ? 2 : 1)) {
+    log('REFUSED to the ' + st.seat + ' seat (Money):', rq.method, u.pathname);
+    return json(rs, { ok: false, error: 'That’s not something this sign-in can do' }, 403);
+  }
   if (u.pathname === '/api/revenue') return json(rs, revenueFixture());
   if (u.pathname === '/api/history') {
     S.NIGHTS ||= NIGHT_ROWS();

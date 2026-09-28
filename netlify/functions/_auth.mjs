@@ -237,7 +237,8 @@ export async function verifyToken(token) {
      whose time has passed guards a token that has expired anyway. */
   const row = reg.byId[link.artistId] || {};
   if (sid && row.dead && Number(row.dead[sid]) > Date.now()) return null;
-  return { email, artistId: link.artistId, role: link.role || 'owner', sid,
+  // `access`: the tabs the owner has changed for this seat (decision 0105) — off the row already in hand
+  return { email, artistId: link.artistId, role: link.role || 'owner', sid, access: link.access || null,
            artist: reg.byId[link.artistId] };
 }
 

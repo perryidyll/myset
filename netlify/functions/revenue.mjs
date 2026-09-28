@@ -9,6 +9,13 @@ import { redeemSession } from './_pay.mjs';
 export default async (req) => {
   const me = await requireArtist(req);
   if (!me) return bad('unauthorized', 401);
+  /* THE MONEY TAB'S, NOT EVERY SEAT'S (decision 0105). This had no role check at all,
+     so a crew phone read every payment with the buyer's email and note — what
+     admin.mjs keeps from crew by gating orderDetail. Reading is Money view; the
+     delivery sweep below is Money edit. */
+  const { can } = await import('./_session.mjs');
+  if (!can(me.role || 'owner', req.method === 'POST' ? 'money_edit' : 'money_view', me.access))
+    return bad('That’s not something this sign-in can do', 403);
   const aid = me.aid;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) return json({ ok: true, enabled: false, payments: [], unredeemed: 0 });

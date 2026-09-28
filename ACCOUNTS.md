@@ -139,6 +139,8 @@ Revocation lives on the **registry row the verifier is already holding**: `byId[
 
 The list a person looks at is a cold document, `sess_<owner>`, read only when the sessions screen opens. It holds a device CLASS ("iPhone · Safari"), never the raw User-Agent, and never an IP. "Last opened Settings" is written at most once an hour from the two settings actions the Studio already calls — it is labelled that way because printing "last used two hours ago" from a number that only moves when somebody opens Settings would be a number that lies.
 
+**Only the owner sees, and signs out, every device** (decision 0104). For any other seat the list, *Sign out* on a row, and *Sign out my other devices* reach only the devices signed in with that seat's own address. A session id outside that list is refused. Before this a crew phone's *Sign out my other devices* signed the artist's Studio out mid-gig. The venue side is the same.
+
 ### 6.3 Roles
 
 `byEmail[email].role` always existed and carried a string. `_session.mjs` is now the one table that says what it means.
@@ -146,14 +148,31 @@ The list a person looks at is a cold document, `sess_<owner>`, read only when th
 | | Can |
 |---|---|
 | **owner** | Everything. Money, plan, payouts, access, the page address, recovery codes, export, deletion |
-| **member** | The page and the show: library, setlist, gigs, profile, community, requests, stats, export |
-| **crew** | Tonight only: run the show, see the queue and the requests |
+| **member** | The page and the show: edits every tab but Money and Plans, which it sees (§6.3a), and reads the activity log |
+| **crew** | Tonight only: run the show, see the Setlist, the queue and the requests |
 
 A fourth, **`sample`**, belongs to no email at all (decision 0101): it is whoever holds the key in a sample page's link, looking at the Studio of the page the factory built for them. It is an empty set in `CAN`, and `admin.mjs` / `venueadmin.mjs` answer it from `SAMPLE_OK`, a short allowlist of reads; every other action answers `claim: true` and the Studio opens the claim sheet (§12).
 
 **An unknown role falls back to `crew`, the least it could be.** Default-deny, so a role string this table has never heard of can never be an escalation — and `CAN['toString']` is an inherited Function, truthy with no `.has`, which is why the lookup is an own-property check and not a truthiness one.
 
 Venues get the same three, named owner / manager / crew, and the orphan `staff` retires into `crew`.
+
+### 6.3a Each seat, each tab (decision 0105)
+
+Since 2026-09-28 the two roles are **starting points**. The owner opens *Settings → Who can sign in → Access* on a band mate or crew seat and sets each Studio tab to **Hidden**, **View** or **Edit**. The tabs are Setlist, Gigs, Money, Merch, Diary, Messages, Profile, Settings and Plans.
+
+| Preset | Setlist | Gigs | Money | Merch | Diary | Messages | Profile | Settings | Plans |
+|---|---|---|---|---|---|---|---|---|---|
+| **Band mate** (`member`) | Edit | Edit | View | Edit | Edit | Edit | Edit | Edit | View |
+| **Crew** (`crew`) | View | Hidden | Hidden | Hidden | Hidden | Hidden | Hidden | Hidden | Hidden |
+
+- **Presets.** The presets are the reach each role already had, so no seat changes when this ships. Picking *Band mate* or *Crew* on the sheet puts every tab back to that preset.
+- **What the registry stores.** It keeps only the tabs the owner changed (`byEmail[email].access`), so a seat nobody touched costs nothing on the document every request reads.
+- **Floors and ceilings.** The Setlist is never hidden, because the stage needs it. Plans is never more than View. Running the show and the song requests belong to every seat, whatever its tabs say.
+- **Owner-only, whatever a seat is given:** the plan and billing, payouts, the books and the business dashboard, who can sign in, the page address, the Studio code, recovery codes, Face ID, export, and deleting the account.
+- **The server holds the line, the page follows it.** Each Studio action names its tab and whether it reads or changes it, and the server refuses the rest. A seat without Money gets no money on the Live tab either — not tonight's tips, their notes, or the vote buys. The Studio draws a hidden tab nowhere. A tab at View shows everything and changes nothing, under one "View only" note.
+
+A venue keeps its fixed owner / manager / crew for now.
 
 ### 6.4 Recovery, and what "forgot password" means here
 

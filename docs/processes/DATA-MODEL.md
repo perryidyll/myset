@@ -401,7 +401,7 @@ Linked steps: 370078, 370079, 370080, 369863, 369864
 | `byId[aid].verified` (46136) | Single checkbox | the tick (Artist lifecycle 04) |
 | `byId[aid].src / refSlug / referredBy` (46137) | Single-line text | first touch, recorded once and never edited: a short source label (never a URL) and the referring artist's slug — the marketing fact, not a browsing trail |
 | `bySlug` (46138) | Multi-line text | slug → artist id; a renamed page's old names live in `oldSlug` (old name → {aid, at}) and answer for it for good — no other page can take one (decision 0106, INVARIANT 0di) |
-| `byEmail[email].artistId / role` (46139) | Single-line text | who can sign in and as what: owner | manager | crew (Artist lifecycle 02) |
+| `byEmail[email].artistId / role / access` (46139) | Single-line text | who can sign in and as what: owner | member | crew; `access` holds only the Studio tabs the owner changed for that seat, each 0 hidden, 1 view or 2 edit, over the role's preset — normally absent (decision 0105, Artist lifecycle 02) |
 | `dead` (46140) | Multi-line text | revoked session ids — checked on every request, normally absent |
 
 Linked steps: 369946, 369952, 369953, 369959, 369894, 369976

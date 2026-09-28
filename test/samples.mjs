@@ -142,7 +142,7 @@ for (const a of ['addSong', 'profileSet', 'newShow', 'eventSave', 'freeCredits',
 eq('nothing was written by any of that', (await getProfile(aid)).name, 'The Tide Lines');
 eq('the auth door does not take the label', (await call(authFn, 'https://x/api/auth', { headers: SH, body: { action: 'list' } })).status, 401);
 eq('a wrong label is not a sample', (await call(stageFn, 'https://x/api/stage', { headers: { ...SH, 'x-sample-key': 'ABCDEFGHJKMN' } })).status, 401);
-eq('the role can do nothing on its own', ['show', 'library', 'requests', 'profile'].map((c) => can('sample', c)), [false, false, false, false]);
+eq('the role can change nothing on its own', ['audit', 'setlist_edit', 'gigs_edit', 'money_edit'].map((c) => can('sample', c)), [false, false, false, false]);
 
 console.log('\nTHE NAME IS HELD');
 const other = await createArtist({ email: 'someone@example.com', name: 'The Tide Lines' });

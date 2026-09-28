@@ -86,6 +86,9 @@ async function handlePlan(aid, action, body, req, me) {
                   plans: Object.fromEntries(PLAN_KEYS.map((k) => [k, shapeLimits(PLANS[k])])),
                   billing: mine ? b : { subscribed: b.subscribed, plan: b.plan, portal: false, pastDue: false },
                   role: (me && me.role) || 'owner',
+                  /* How far this sign-in reaches into each Studio tab (decision 0105):
+                     the Studio draws only what the server here would allow. */
+                  access: (await import('./_session.mjs')).accessOf((me && me.role) || 'owner', me && me.access),
                   // the tour poster's byte caps (0075) — the Studio never types a cap
                   tour: { pdf: MAX_TOUR_PDF, image: MAX_BYTES },
                   // the Studio's leaving banner, and the reason everything else is read-only
@@ -457,37 +460,48 @@ const FULL = (cap) => cap < MAX_LIBRARY
 /* An action NOT in this table needs no capability beyond being signed in — every
    money, plan and access action is already refused by name inside handlePlan or by
    its founder gate (`isPlatformOwner` and the owner seat). What is listed here is
-   the everyday work of running a page, and the only thing it takes away is from
-   `crew`: the sound engineer running the screen tonight can work the show and the
-   requests, and cannot rewrite the library, the profile, the calendar or the shop. */
+   the everyday work of running a page, BY STUDIO TAB (decision 0105): each row names
+   the tab it belongs to and whether it reads (`_view`) or changes (`_edit`) it, and
+   the owner decides seat by seat how far each seat reaches (_session.mjs). Running
+   the show and the requests are in no row, so no seat can lose them; neither are the
+   Setlist's reads, because no seat can be without the Setlist. */
 const CAPABILITY = {
-  addSong: 'library', editSong: 'library', removeSong: 'library', importSongs: 'library', clearSetlist: 'library',
+  addSong: 'setlist_edit', editSong: 'setlist_edit', removeSong: 'setlist_edit', importSongs: 'setlist_edit', clearSetlist: 'setlist_edit',
   /* The real action names, again (decision 0099). These rows once read songSet /
      bulkSongs / setChart / setLyrics / listSave / listApply / eventUnskip — names no
      handler has — so `crew` could rewrite every setlist, chart, lyric and genre, and
      empty the library. test/structure.mjs now refuses a name no handler takes. */
-  chartSet: 'library', lyricsSet: 'library', lyricsFetch: 'library',
-  tagAdd: 'library', tagRemove: 'library', tagAuto: 'library',
-  listNew: 'library', listRename: 'library', listSongs: 'library', listToggle: 'library', listUse: 'library',
-  listDelete: 'library', learnAdd: 'library', learnRemove: 'library', learnDone: 'library',
-  eventPlace: 'gigs', eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventHide: 'gigs',
-  featureList: 'gigs',
+  chartSet: 'setlist_edit', lyricsSet: 'setlist_edit', lyricsFetch: 'setlist_edit',
+  tagAdd: 'setlist_edit', tagRemove: 'setlist_edit', tagAuto: 'setlist_edit',
+  listNew: 'setlist_edit', listRename: 'setlist_edit', listSongs: 'setlist_edit', listToggle: 'setlist_edit', listUse: 'setlist_edit',
+  listDelete: 'setlist_edit', learnAdd: 'setlist_edit', learnRemove: 'setlist_edit', learnDone: 'setlist_edit',
+  spotifyPeek: 'setlist_edit',
+  eventList: 'gigs_view', featureList: 'gigs_view', pitchList: 'gigs_view', pitchStatus: 'gigs_view',
+  eventPlace: 'gigs_edit', eventSave: 'gigs_edit', eventDelete: 'gigs_edit', eventSkip: 'gigs_edit', eventHide: 'gigs_edit',
+  pitchSend: 'gigs_edit', vouch: 'gigs_edit',
   /* The real action names. This row once read profileSave / merchDelete / imgSave /
      imgDelete — names no handler has — so `crew` sailed past the gate on the actions
      that DO exist and could remove merch, change photos and mark orders done. */
-  profileSet: 'profile', photoUpload: 'profile', photoClear: 'profile',
-  mediaAdd: 'profile', mediaRemove: 'profile', mediaMove: 'profile', mediaHero: 'profile',
-  merchSave: 'profile', merchRemove: 'profile', merchPhoto: 'profile', merchPhotoClear: 'profile', merchMove: 'profile',
-  orderList: 'profile', orderDone: 'profile', orderDetail: 'profile', orderCount: 'profile', wishList: 'profile', wishDone: 'profile',
-  postReply: 'community', postHide: 'community', postPin: 'community',
+  profileSet: 'profile_edit', photoUpload: 'profile_edit', photoClear: 'profile_edit',
+  mediaAdd: 'profile_edit', mediaRemove: 'profile_edit', mediaMove: 'profile_edit', mediaHero: 'profile_edit',
+  tourSet: 'profile_edit', tourClear: 'profile_edit',
+  // the fans' posts on the community page, which the Profile tab tends
+  postList: 'profile_view', postReply: 'profile_edit', postHide: 'profile_edit', postPin: 'profile_edit',
+  // an order carries the buyer's name and address, so reading one is the Merch tab's, not anybody's
+  merchList: 'merch_view', orderList: 'merch_view', orderDetail: 'merch_view', orderCount: 'merch_view', wishList: 'merch_view',
+  merchSave: 'merch_edit', merchRemove: 'merch_edit', merchPhoto: 'merch_edit', merchPhotoClear: 'merch_edit', merchMove: 'merch_edit',
+  orderDone: 'merch_edit', wishDone: 'merch_edit',
   /* The inbox (decision 0074): a band mate who tends the community page can read and
      answer bookings; the sound engineer cannot. Block and Report are the owner's (below). */
-  msgCount: 'community', msgList: 'community', msgThread: 'community', msgReply: 'community',
-  msgMove: 'community', msgUnread: 'community', msgReport: 'community', msgBlock: 'community',
-  tourSet: 'profile', tourClear: 'profile',
-  // the artist diary (0085): a band mate who tends the page may write in it; the sound engineer may not
-  diarySave: 'profile', diaryRemove: 'profile', diaryMove: 'profile', diaryPhoto: 'profile', diaryPhotoClear: 'profile',
-  accountExport: 'export',
+  msgCount: 'messages_view', msgList: 'messages_view', msgThread: 'messages_view',
+  msgReply: 'messages_edit', msgMove: 'messages_edit', msgUnread: 'messages_edit', msgReport: 'messages_edit', msgBlock: 'messages_edit',
+  // the artist diary (0085)
+  diaryList: 'diary_view',
+  diarySave: 'diary_edit', diaryRemove: 'diary_edit', diaryMove: 'diary_edit', diaryPhoto: 'diary_edit', diaryPhotoClear: 'diary_edit',
+  /* What the room is charged and shown, and whether a gig starts itself: the Settings
+     tab. Opening and pausing the vote, last call and naming tonight are the show's. */
+  freeCredits: 'settings_edit', unlimited: 'settings_edit', replayCost: 'settings_edit', packs: 'settings_edit',
+  askSet: 'settings_edit', crowdSet: 'settings_edit', autoStart: 'settings_edit', unlimitedFan: 'settings_edit',
 };
 
 const PLAN_ACTIONS = new Set(['planGet', 'bugList', 'promoRedeem', 'planCheckout', 'planFinish', 'planChange', 'planRetainOffered', 'planRetain', 'planPortal', 'planSync', 'planInvoices', 'accountExport', 'accountDelete', 'accountUndelete', 'accountFreeSlug', 'promoList', 'promoCreate', 'promoRevoke',
@@ -688,7 +702,7 @@ const VENUE_SIDE = new Set(['pitchList', 'pitchStatus', 'pitchSend', 'vouch']);
 /* Everything the song sheet needs, in one round trip: the song, its chart, its
    audience lyrics, and the whole tag vocabulary. Charts live in their own
    documents so this never touches the show record. */
-async function handleSong(aid, action, body, show) {
+async function handleSong(aid, action, body, show, seat) {
   const vocab = () => ({
     builtin: GENRES.map(([id, label]) => ({ id, label })),
     own: show.tags, maxOwn: MAX_OWN_TAGS, maxPerSong: MAX_SONG_TAGS,
@@ -755,7 +769,7 @@ async function handleSong(aid, action, body, show) {
     const warn = await syncActive(aid);
     return json({ ok: true, filled, kept, unknown: unknown.slice(0, 40),
                   unknownCount: unknown.length, mapSize: MAP_SIZE, note: warn,
-                  stage: await stagePayload(aid) });
+                  stage: await stagePayload(aid, seat) });
   }
 
   if (action === 'tagAdd') {
@@ -807,7 +821,7 @@ const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'chordsLink',
    announce. What the artist IS still told is which songs came off the list, which
    `send()` already had in hand. */
 
-async function handleLists(aid, action, body) {
+async function handleLists(aid, action, body, seat) {
   const show = await getShow(aid);
   /* Snapshot what the room can vote for, so `send()` can tell whether the change
      actually took anything away. Two reads already in hand, versus twelve. */
@@ -948,7 +962,7 @@ async function handleLists(aid, action, body) {
        an old setlist still holds — so the projection has to be rebuilt. */
     note = join(note, await syncActive(aid));
     return json({ ok: true, songId: sid, note,
-                  learn: (await readLearn(aid)).list, stage: await stagePayload(aid) });
+                  learn: (await readLearn(aid)).list, stage: await stagePayload(aid, seat) });
   }
   return bad('unknown action', 400);
 }
@@ -957,7 +971,7 @@ const LIST_ACTIONS = new Set(['listAll', 'listNew', 'listRename', 'listDelete', 
 
 /* Requests live in their own document, so accepting or declining one never
    rewrites the show — except for `askAccept`, which has to add a song. */
-async function handleAsks(aid, action, body) {
+async function handleAsks(aid, action, body, seat) {
   const show = await getShow(aid);
 
   if (action === 'askList')
@@ -980,7 +994,7 @@ async function handleAsks(aid, action, body) {
     const note = action === 'askDecline' && row.cost > 0 && !row.refunded
       ? 'Declined. No votes to give back — that request was from an earlier show.' : null;
     return json({ ok: true, refunded: row.refunded || 0, note,
-                  asks: shapeRequests(await readRequests(aid), show), stage: await stagePayload(aid) });
+                  asks: shapeRequests(await readRequests(aid), show), stage: await stagePayload(aid, seat) });
   }
 
   if (action === 'askAccept') {
@@ -1041,7 +1055,7 @@ async function handleAsks(aid, action, body) {
     }
     await attachSong(aid, id, songId);
     return json({ ok: true, songId, note, asks: shapeRequests(await readRequests(aid), show),
-                  stage: await stagePayload(aid) });
+                  stage: await stagePayload(aid, seat) });
   }
   return bad('unknown action', 400);
 }
@@ -1956,12 +1970,13 @@ const main = async (req) => {
 
   /* WHO MAY DO WHAT ELSE. `byEmail[email].role` has always been stored and, outside a
      handful of hand-written checks, never read — so a member could do anything an
-     owner could. One table now, in _session.mjs, and one gate here. */
+     owner could. One table now, in _session.mjs, and one gate here — which since
+     decision 0105 also reads the tabs the owner has given this seat (`me.access`). */
   {
     const { can } = await import('./_session.mjs');
     const need = CAPABILITY[action];
     // a sample reaches here only with a read from SAMPLE_OK above, and may make it
-    if (need && me.role !== 'sample' && !can(me.role || 'owner', need))
+    if (need && me.role !== 'sample' && !can(me.role || 'owner', need, me.access))
       return bad('That’s not something this sign-in can do', 403);
   }
 
@@ -2025,10 +2040,10 @@ const main = async (req) => {
   if (DIARY_ACTIONS.has(action)) return handleDiary(aid, action, body);
   if (MSG_ACTIONS.has(action)) return handleMessages(aid, action, body);
   if (LYRICS_ACTIONS.has(action)) return handleLyrics(aid, action, body, await getShow(aid));
-  if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body);
-  if (SONG_ACTIONS.has(action)) return handleSong(aid, action, body, await getShow(aid));
+  if (LIST_ACTIONS.has(action)) return handleLists(aid, action, body, me);
+  if (SONG_ACTIONS.has(action)) return handleSong(aid, action, body, await getShow(aid), me);
   if (VENUE_SIDE.has(action)) return handleVenueSide(aid, action, body);
-  if (ASK_ACTIONS.has(action)) return handleAsks(aid, action, body);
+  if (ASK_ACTIONS.has(action)) return handleAsks(aid, action, body, me);
   if (EVENT_ACTIONS.has(action)) return handleEvents(aid, action, body);
   if (PLAN_ACTIONS.has(action)) return handlePlan(aid, action, body, req, me);
 
@@ -2042,7 +2057,7 @@ const main = async (req) => {
       : await startShow(aid, { fresh: action === 'newShow', by: 'artist' });
     if (r.err) return bad(r.err[0], r.err[1]);
     let stage = null;
-    try { stage = await stagePayload(aid); } catch { /* the write still succeeded */ }
+    try { stage = await stagePayload(aid, me); } catch { /* the write still succeeded */ }
     return json({ ok: true, stage, note: r.note || null, songId: null });
   }
 
@@ -2457,7 +2472,7 @@ const main = async (req) => {
   // Hand the fresh state back with the write. Without this the Studio does a
   // second round trip for every tap, which is most of why buttons felt slow.
   let stage = null;
-  try { stage = await stagePayload(aid); } catch { /* the write still succeeded */ }
+  try { stage = await stagePayload(aid, me); } catch { /* the write still succeeded */ }
   return json({ ok: true, stage, note, songId: newSongId });
 };
 export default guard('admin', main);

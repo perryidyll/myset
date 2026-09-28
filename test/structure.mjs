@@ -244,11 +244,15 @@ check('public/venue-studio.html', [
     if (!good) fail++;
   }
   /* And every capability a CAPABILITY row asks for is one CAN in _session.mjs gives to
-     somebody. A misspelt value fails the other way: can() refuses every seat but the
-     owner, so a band mate is locked out of that action — mid-gig, if it is a show one. */
+     somebody, or a Studio tab's `_view` / `_edit` (decision 0105: the owner gives each
+     seat its tabs). A misspelt value fails the other way: can() refuses every seat but
+     the owner, so a band mate is locked out of that action — mid-gig, if it is a show one. */
   const session = fn('_session.mjs');
   const at = session.indexOf('export const CAN = {');
   const given = new Set([...session.slice(at, session.indexOf('};', at)).matchAll(/'(\w+)'/g)].map((m) => m[1]));
+  const areasAt = session.indexOf('export const AREAS = [');
+  for (const m of session.slice(areasAt, session.indexOf('];', areasAt)).matchAll(/'(\w+)'/g))
+    if (areasAt >= 0) { given.add(m[1] + '_view'); given.add(m[1] + '_edit'); }
   const asked = [...new Set([...body('const CAPABILITY = {', '\n};').matchAll(/\w+:\s*'(\w+)'/g)].map((m) => m[1]))];
   const unknown = asked.filter((c) => !given.has(c));
   const okCaps = at >= 0 && asked.length >= 3 && !unknown.length;
