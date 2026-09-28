@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 15:37 — 4bdbb9c — sample-profiles@docs/hq-puzzle-ids (1 files since origin/main)
+**tl;dr:** Docs only: HQ's process sheet is loaded into Puzzle, so the outreach desk shows on the Marketing & growth tab [skip ci]
+**Other sessions:** Puzzle section 44408 (h01–h14 = 389724–389737; h09/h12 Draft until Gmail is switched on), connections 435824–435843 (435842 h03→s02, 435843 h08→s18), changelog 2444 = 0108, 2445 = 0109. Section 44328 now says the keys are Production only and names HQ as a second door; changelog 2412 (0101) no longer states the undo window's number.
+
 ### 2026-09-28 15:28 — 0ec92fb — sample-profiles@fix/crm-page-name (8 files since origin/main)
 **tl;dr:** HQ answers only at myset.vip/crm now (its page file was named hq.html, so /hq opened it too); the docs say HQ is live as 0075a30
 **Other sessions:** public/hq.html → public/crm.html; netlify.toml /crm → /crm.html. Netlify serves /<name> from <name>.html by itself, so a founder page's file name IS an address: name it after its route and reserve that slug. Ledger GRO-003/UX-062 live; decisions 0108/0109 commits [0075a30]; sheet 09 live (its Puzzle section is being loaded).
