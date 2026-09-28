@@ -350,7 +350,7 @@ function boardFixture(st) {
   const live = st.live;
   const votes = { s1: 7, s2: 4, s3: 2 };
   const shape = (s) => ({ id: s.id, title: s.title, artist: s.artist, votes: live ? votes[s.id] || 0 : 0, cost: 1, firstAt: live && votes[s.id] ? NOW - 20 * 60e3 : null, tags: s.tags });
-  return { ok: true, src: 'mock', at: NOW, artistId: 'a1', artist: NAME.artist, artistFirst: 'Demo', venue: live ? NAME.venue : '', city: live ? 'Melbourne' : '', showTime: '',
+  return { ok: true, src: 'mock', at: NOW, artistId: 'a1', artist: NAME.artist, artistFirst: 'Demo', venue: live ? NAME.venue : '', city: live ? 'Melbourne' : '',
     status: live ? 'live' : 'ended', windowOpen: live, endedAt: live ? null : NOW - 4 * 3600e3, countdownIn: 0, showId: live ? 'show1' : '',
     nowPlaying: live ? { id: 's4', title: 'Dreams', artist: 'Fleetwood Mac' } : null,
     songs: SONGS.filter((s) => !live || s.id !== 's4').map(shape).sort((a, b) => b.votes - a.votes), played: [], tail: null,
@@ -396,7 +396,7 @@ function stageFixture(st) {
   return {
     ok: true,
     show: {
-      artist: NAME.artist, artistFirst: 'Demo', venue: live ? NAME.venue : '', city: live ? 'Melbourne' : '', showTime: '',
+      artist: NAME.artist, artistFirst: 'Demo', venue: live ? NAME.venue : '', city: live ? 'Melbourne' : '',
       status: live ? 'live' : 'ended', windowOpen: live, nowPlaying: live ? 's4' : null,
       played: [], freeCredits: 3, replayCost: 2, packs: PACKS, showId: live ? 'show1' : 's0', startedAt: live ? NOW - 3600e3 : 0,
       artistId: 'a1', slug: 'demo', unlimited: false, unlimitedFans: [],
@@ -437,6 +437,7 @@ function planFixture(st) {
    modules but touches no store until called, so the mock reads the one copy. The signed-in
    seat is ?seat=; its tabs are the owner's grid's (S.SEATS) with ?access= laid over them. */
 const { AREAS, reachOf, accessOf: seatAccess } = await import('../netlify/functions/_session.mjs');
+const PUSH_KEY = (await import('../netlify/functions/_push.mjs')).generateVapidKeys().publicKey;   // a throwaway, so Settings draws the alerts switch
 const SEAT_EMAIL = { owner: 'demo@example.com', member: 'bass@example.com', crew: 'sound@example.com' };
 function accessOf(st) {
   const over = { ...((S.SEATS[SEAT_EMAIL[st.seat]] || {}).access || {}) };
@@ -588,7 +589,7 @@ function revenueFixture() {
    seat (decisions 0099, 0100), and the owner's statement is refused to any other seat (OWNER_ONLY).
    Anyone else gets the server's own refusal, so a card drawn for the wrong seat looks here exactly
    as it would on myset.vip. */
-const FOUNDER_ONLY = /^(bugList|flagList|flagSet|sheetStatus|sheetSync|idQueue|idApprove|idReject|venuePlan|promoList|promoCreate|promoRevoke|venueList|venueVerify)$/;
+const FOUNDER_ONLY = /^(bugList|flagList|flagSet|sheetStatus|sheetSync|idQueue|idApprove|idReject|promoList|promoCreate|promoRevoke|venueList|venueVerify)$/;
 function adminStub(body, st) {
   const founder = st.founder && st.seat === 'owner';
   const tab = TAB_OF[body.action || ''];
@@ -604,6 +605,7 @@ function adminStub(body, st) {
   const msg = msgAction(body); if (msg) return msg;
   switch (body.action) {
     case 'planGet': return planFixture(st);
+    case 'pushKey': return { ok: true, key: PUSH_KEY, devices: 0 };
     /* the tour poster (admin.mjs tourSet / tourClear): a data URL is "stored" as the poster slot, a link rides alone or with it */
     case 'tourSet': {
       const has = (k) => Object.prototype.hasOwnProperty.call(body, k);

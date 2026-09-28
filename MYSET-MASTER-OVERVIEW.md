@@ -537,8 +537,8 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | HTTP functions | 39 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 5 — autocron, factorycron, mirrorcron, registercron, sheetcron |
 | Shared libraries | 67 |
-| Artist Studio actions | 145 |
-| Venue Studio actions | 49 |
+| Artist Studio actions | 136 |
+| Venue Studio actions | 48 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
@@ -546,10 +546,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
-| Invariants | 288 (last: 0gw) |
-| Test suites | 64 |
-| Assertions | **4,511**, 0 failing, last run 2026-09-28 |
-| Decision records | 108 |
+| Invariants | 290 (last: 0gw) |
+| Test suites | 65 |
+| Assertions | **4,540**, 0 failing, last run 2026-09-28 |
+| Decision records | 110 |
 
 ### Feature flags in force
 
@@ -764,8 +764,8 @@ requests waiting; the free-plan gig-cap warning at two shows or fewer remaining;
 link to see exactly what the audience sees.
 
 **Setlist** — the whole library with search, sort and genre chips; add a song; **import**
-by pasting a list, uploading a CSV or peeking at a Spotify playlist; the song sheet (key,
-private chart, genres, lyrics); **setlists** (named subsets, one active); **songs to
+by pasting a list or uploading a CSV; the song sheet (key,
+private chart, genres, lyrics; your own genres carry a ✕ that deletes one from every song); **setlists** (named subsets, one active); **songs to
 learn**; automatic genre tagging that only ever fills a song with none.
 
 **Gigs** — a calendar with venue, city, country, date, time, duration, timezone, address,
@@ -1166,7 +1166,7 @@ screen while the artist plays. **An unknown role falls back to `crew`**, so a ro
 the table has never heard of can never be an escalation. Venues have the same three, named
 owner / manager / crew.
 
-**Each seat, each tab** (decision 0105). Those roles are now starting points. The owner sets every Studio tab for each band mate or crew seat to Hidden, View or Edit: Setlist, Gigs, Money, Merch, Diary, Messages, Profile, Settings and Plans. That is what "a stint of shows with some guys" needs: the players can see and work the setlist on stage without read/write on the whole account. The Setlist is never hidden, running the show belongs to every seat, and Plans is never more than View. Money, the plan and the account stay the owner's whatever a seat is given. The server refuses what a seat cannot do, and the Studio does not draw it.
+**Each seat, each tab** (decision 0105). Those roles are now starting points. The owner sets every Studio tab for each band mate or crew seat to Hidden, View or Edit: Setlist, Gigs, Money, Merch, Diary, Messages, Profile, Settings and Plans. That is what "a stint of shows with some guys" needs: the players can see and work the setlist on stage without read/write on the whole account. The Setlist is never hidden, running the show belongs to every seat, and Plans is never more than View. Money, the plan and the account stay the owner's whatever a seat is given. The server refuses what a seat cannot do, and the Studio does not draw it. Push alerts follow the same tabs: a seat's phone hears an order only if it can see Merch, a message only if it can see Messages, and every seat hears the requests — songs, moods and birthday shout-outs (decision 0114).
 
 **Sessions.** Every token carries a session id, so one phone can be signed out without
 signing out the band. Revocation lives on the registry row the verifier is already reading
@@ -1259,8 +1259,7 @@ trailing blanks are dropped now.
 never stored raw and never used directly as a frame source.
 
 **Push alerts** were written from the specification by hand with no new dependency and
-checked against the specification's own published test vector. **The keys are not set on
-the server, so they cannot send yet**, and the Studio says so.
+checked against the specification's own published test vector. The keys (`VAPID_*`) have been set in production since 2026-09-15 (PER-004; the three names read back 2026-09-28); no real push to a phone has been checked since. **Every alert names who hears it** (decision 0114): the seats that can see its tab (an order is Merch, a message is Messages), the owner alone (the founder's alerts), or every seat (a request: a song, a mood, a birthday shout-out). An alert that names nobody reaches nobody. Each device belongs to the address and sign-in that switched it on, eight per address, and a sign-out ends that phone's alerts.
 
 **Installable.** Three separate manifests (audience, Studio, venue) so each surface opens
 where it should. The service worker **never caches anything under `/api`** — a cached vote
@@ -1374,15 +1373,14 @@ Never in the repo, never in a chat window. All set by Perry directly in Netlify:
 
 `ADMIN_CODE` · `STRIPE_SECRET_KEY` · `STRIPE_WEBHOOK_SECRET` · `STRIPE_CONNECT_WEBHOOK_SECRET` · `RESEND_API_KEY` ·
 `VAPID_PUBLIC_KEY` · `VAPID_PRIVATE_KEY` · `VAPID_SUBJECT` · `AUTH_FROM` ·
-`SPOTIFY_CLIENT_ID` · `SPOTIFY_CLIENT_SECRET` · `GSHEET_ID` · `GSHEET_EMAIL` · `GSHEET_KEY` ·
+`GSHEET_ID` · `GSHEET_EMAIL` · `GSHEET_KEY` ·
 `R2_ACCOUNT_ID` · `R2_ACCESS_KEY_ID` · `R2_SECRET_ACCESS_KEY` · `R2_BUCKET` · `GOOGLE_MAPS_BROWSER_KEY`
 
 **Eleven are set in production** (`netlify env:list --context production`, 2026-09-12):
 `ADMIN_CODE`, `AUTH_FROM`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
 `STRIPE_CONNECT_WEBHOOK_SECRET`, `RESEND_API_KEY`, `GOOGLE_MAPS_BROWSER_KEY` and the four
 `R2_*` values. Everything else is unset, and each **degrades honestly rather than
-failing** — push alerts say they cannot send, the Sheet is off, Spotify import answers an
-honest 503, and sign-in refuses to claim success until `AUTH_FROM` names a verified,
+failing** — push alerts say they cannot send, the Sheet is off, and sign-in refuses to claim success until `AUTH_FROM` names a verified,
 non-sandbox sender.
 
 **A Netlify env var marked secret is unreadable through the API** — it returns a
@@ -1529,10 +1527,7 @@ records, never the index.**
   uploads).
 - **No off-switch for scheduled starts per gig.** A gig on the calendar starts its show and
   the artist can end it; a per-gig *"don't start by itself"* is the obvious next knob.
-- **Push alerts cannot send** — `VAPID_*` are not set on the server.
-- **Spotify playlist import cannot run** — `SPOTIFY_CLIENT_ID` / `_SECRET` are not set. The
-  button is offered and answers an honest 503. **This is the one place the artist is shown a
-  control that leads to a message rather than a result.**
+- **No real push has been checked.** `VAPID_*` are set in production (2026-09-15, PER-004), but no phone has been seen to receive one since.
 - **Sign-in mail comes from `hello@myset.vip`** — `AUTH_FROM`, set 2026-09-10 on the domain verified in Resend (ledger PER-004). Closed as a gap; kept here for the rule it left: should the variable ever be unset or name Resend's `onboarding@resend.dev`, which can send only to the Resend account owner, sign-in fails closed instead of telling a stranger that an undeliverable code was sent.
 - **Payout countries are a 22-country list**, not Stripe's full set. Deliberate: the
   alternative was accepting any two letters and creating an account in the wrong country,

@@ -447,9 +447,9 @@ export function shapeVenue(p, reg) {
     merchMax: VMAX_MERCH,               // the cap the Venue Studio shows as N/max — never typed there
     // ONE money gate for a venue's page, mirrored from Stripe like show.pay (0bl)
     paymentsEnabled: !!process.env.STRIPE_SECRET_KEY && !!(p.pay && p.pay.ready),
-    /* AND on read: the tick is part of Pro, so a stored flag on a free page does
-       not show one. Belt and braces with the clear in `venuePlan` — this is the
-       half that cannot be missed by a code path that forgot. */
+    /* The tick is part of Pro, so a stored flag on a free page does not show one.
+       Nothing clears the flag when a plan lapses (_billing.mjs leaves it), so this
+       read is the gate, and no code path can forget it. */
     verified: !!r.verified && venuePaid(r), verifiedVia: r.verifiedVia || null,
     plan: venuePlanOf(r),
     /* The plan's limits travel with the page so the Studio can grey what this

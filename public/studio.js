@@ -1110,6 +1110,11 @@ async function signOut(){
   DIARY=null;DIARYERR=null;   // the diary is theirs, not the phone's
   MSGL=null;MSGERR=null;MSGT='';MSGTH=null;MSGDRAFT={};MSGN={unread:0,requests:0};   // the inbox is theirs, not the phone's (0074)
   if(window.Money)Money.forget();   // the dashboard keeps its own copy of the book (0065)
+  /* So are the phone's alerts (decision 0114). The server dropped the ones this sign-in
+     switched on; the browser's own subscription goes too, so the next person on this
+     phone finds alerts off, not a switch saying on for a device nobody writes to. */
+  PUSHKEY=null;PUSHVIEW='';
+  pushState().then((st)=>st.sub&&st.sub.unsubscribe()).catch(()=>{});
   gate();
 }
 function signOutEverywhere(){
@@ -3555,8 +3560,11 @@ function keyRoot(){
 function tagChips(){
   const all=[...SONG.vocab.builtin.map(t=>({...t,own:false})),
              ...SONG.vocab.own.map(t=>({...t,own:true}))];
-  return all.map(t=>`<button class="tg ${t.own?'own':''} ${SONG.tags.has(t.id)?'on':''}"
-      data-act="sgtag" data-id="${esc(t.id)}">${esc(t.label)}</button>`).join('')
+  /* Your own genres carry a ✕ that deletes the genre itself, from every song (tagRemove). */
+  const chip=t=>`<button class="tg ${t.own?'own':''} ${SONG.tags.has(t.id)?'on':''}"
+      data-act="sgtag" data-id="${esc(t.id)}">${esc(t.label)}</button>`;
+  return all.map(t=>t.own?`<span class="tgown">${chip(t)}<button class="tgx" data-ed="setlist" data-act="sgtagdel" data-id="${esc(t.id)}"
+      aria-label="Delete the genre ${esc(t.label)}">✕</button></span>`:chip(t)).join('')
     + (SONG.vocab.own.length<15?`<button class="tg add" data-act="sgtagnew">+ Your own</button>`:'');
 }
 function toggleSongTag(id){
@@ -3581,6 +3589,17 @@ async function addOwnTag(){
   const c=$('#cTags'); if(c) c.textContent=`${SONG.tags.size} of ${SONG.vocab.maxPerSong}`;
   if(D) D.tags={builtin:d.tags.builtin,own:d.tags.own};
   toast('Added — tap it on any song');
+}
+async function delOwnTag(id){
+  const t=SONG.vocab.own.find(x=>x.id===id); if(!t)return;
+  if(!await ask({title:`Delete “${t.label}”?`,lede:'It comes off every song that has it.',yes:'Yes, delete it',no:'Keep it'}))return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'tagRemove',id})});
+  if(!d.ok){toast(d.error||'Could not delete that');return;}
+  SONG.vocab=d.tags; SONG.tags.delete(id);
+  const w=$('#tagwrap'); if(w) w.innerHTML=tagChips();
+  const c=$('#cTags'); if(c) c.textContent=`${SONG.tags.size} of ${SONG.vocab.maxPerSong}`;
+  if(D) D.tags={builtin:d.tags.builtin,own:d.tags.own};
+  toast('Deleted');
 }
 function setKeyRoot(r){
   const el=$('#sgKey'); if(!el)return;
@@ -3723,6 +3742,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='sgmin') setKeyMinor(id==='min');
   if(b.dataset.act==='sgtag') toggleSongTag(id);
   if(b.dataset.act==='sgtagnew') addOwnTag();
+  if(b.dataset.act==='sgtagdel') delOwnTag(id);
   if(PRACTICE&&['chart','lyrics','autochords'].includes(b.dataset.act)){ toast('On a real night your lyrics and chords open right here'); return; }
   if(b.dataset.act==='chart') openChart(id);
   if(b.dataset.act==='lyrics') openStageLyrics(id);
@@ -4028,9 +4048,18 @@ async function drawPush(){
     'Your phone is blocking them. Turn them back on in Settings → Notifications → MySet.'));
 
   paint(row(st.on?'Alerts are on':'Get alerts on your phone',
-    st.on?`You'll be told when someone requests a song or writes to you, even with the screen off.${PUSHKEY.devices>1?` · ${PUSHKEY.devices} devices`:''}`
-         :'Know the moment someone requests a song or writes to you — no need to watch the screen.',
+    st.on?`You'll be told when ${pushWhat()}, even with the screen off.${PUSHKEY.devices>1?` · ${PUSHKEY.devices} devices`:''}`
+         :`Know the moment ${pushWhat()} — no need to watch the screen.`,
     `<button class="act${st.on?'':' '}" onclick="togglePush(${st.on?'false':'true'})">${st.on?'Turn off':'Turn on'}</button>`));
+}
+
+/* What this seat's phone will hear (decision 0114): a request is every seat's, a
+   message or an order only a seat's that can see that tab — as the server sends them. */
+function pushWhat(){
+  const w=['someone requests a song'];
+  if(see('messages'))w.push('writes to you');
+  if(see('merch'))w.push('buys your merch');
+  return w.length>1?w.slice(0,-1).join(', ')+' or '+w[w.length-1]:w[0];
 }
 
 async function togglePush(on){

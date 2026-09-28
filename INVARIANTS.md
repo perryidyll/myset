@@ -333,9 +333,9 @@ If you are about to violate one, stop and say so rather than working around it.
 0p. **"Open / Paused" is the VOTING window, not the show.** It is labelled
     "Voting" in the Studio header because it read as a show control.
 
-0q. **Times shown to the public come from the calendar, not `show.showTime`.**
-    That field is a legacy placeholder and said 8:00 PM while the real gig was
-    at 8:30.
+0q. **Times shown to the public come from the calendar.** The show record once
+    carried a `showTime` placeholder that said 8:00 PM while the real gig was at
+    8:30; the field and the action that set it are gone (decision 0115).
 
 ## Responsiveness
 
@@ -1928,6 +1928,15 @@ If you are about to violate one, stop and say so rather than working around it.
   - A tab at view shows every value and takes no typing.
 - **Samples.** A sample's link (0101) looks at every tab and changes none; its Studio draws as the owner's because a write there opens the claim sheet.
 - **Where it is held.** This widens 0db from a role to a seat. `test/accounts.mjs` holds the server; `test/seatstudio.mjs` holds the page, with a tripwire that fails if the Studio sends an owner-only action from a function outside the gated set. Decision `0105`.
+
+0ha. **An alert reaches only the seats that can see what it is about, and a sign-out ends that phone's alerts.** Every device row in `push_<aid>` carries the address and sign-in (`sid`) that switched it on.
+- **Every alert names its audience.** `notify(aid, msg, to)` takes `{ tab }` (the seats that can see that tab, `can(role, '<tab>_view', access)`), `{ owner: true }`, `{ all: true }` (the song requests, which are every seat's) or `{ endpoint }` (the "Alerts are on" ping to the phone just switched on). An alert that names nobody reaches nobody, and `test/pushseats.mjs` fails if any `notify(` call has no third argument.
+- **Only a seat hears.** A device hears only while its address is still a seat on this page. One that is not is dropped at the next alert. A device with no address (the Studio code, the recovery key, anything switched on before this) is the owner's.
+- **No seat crowds another out.** The cap is eight devices per address.
+- **A sign-out ends that phone's alerts.** `killSessions` and `killEverything` drop the devices of the sign-ins they end. Every sign-out goes through one of the two, and the Studio's own sign-out drops the browser's subscription too.
+- **If the registry cannot be read,** an alert reaches nobody, never everybody. Decision `0114`.
+
+0hl. **Every action a Studio endpoint takes is one a page sends.** A handler nothing calls is still a door: it answers anyone who guesses its name, it is carried through every refactor, and it reads as a feature that exists. `test/structure.mjs` fails when a name `admin.mjs` (with `_messages.mjs` and `_diary.mjs`) or `venueadmin.mjs` branches on does not appear, quoted, in `public/` outside a Set literal. A feature is built with both halves or not at all: the server half of an unbuilt button waits on a branch, not on `main`. The check is textual, so a common word (`status`, `venue`) passes on any mention. Decision `0115`.
 
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and

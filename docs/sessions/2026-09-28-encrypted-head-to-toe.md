@@ -63,7 +63,7 @@ said thirty-eight where the header, the IV and the tag make thirty-seven; and, o
 rebuild, the shared checkout's `node_modules` link pointing at a Mac path — installed
 from the lockfile into the session's own folder and linked, the tree untouched.
 
-**Verified (slice A):** `sh test/run.sh` on the rebuilt branch, exit 0, 4,511 ✓ / 0 ✗
+**Verified (slice A):** `sh test/run.sh` on the rebuilt branch, exit 0, 4,540 ✓ / 0 ✗ (after merging main at `d5e53fb`, which took `askList` away — the pledge test reads the Studio poll instead)
 (the count stamped by `node tools/overview.mjs --tests`); the holes ran red first on
 the original branch where a test could reach them (the forged pledge minting paid
 votes, `__proto__` reaching the prototype, the oracle, the ID photo on R2), and the

@@ -69,6 +69,11 @@ are granted, and each checkout can only be redeemed once.
 
 ---
 
+## Before you leave the house
+
+- `python3 tools/backup.py` — a copy of everything the app holds, in case tonight is the
+  night it matters (decision 0046). A few minutes, touches nothing live.
+
 ## If something goes wrong
 
 - **Nobody's votes are showing** — check OPEN is selected on stage control.

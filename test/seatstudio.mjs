@@ -64,7 +64,7 @@ console.log('\nEVERY EDIT CARRIES ITS TAB  (a data-act that only ever changes so
 for (const [act, tab] of [['edit', 'setlist'], ['del', 'setlist'], ['wdone', 'setlist'], ['wdel', 'setlist'], ['luse', 'setlist'], ['lpick', 'setlist'],
                           ['lrename', 'setlist'], ['ldel', 'setlist'], ['ltoggle', 'setlist'], ['gigedit', 'gigs'], ['gigskip', 'gigs'], ['gighide', 'gigs'],
                           ['mup', 'profile'], ['mdn', 'profile'], ['mrm', 'profile'], ['tourpick', 'profile'], ['tourclear', 'profile'], ['tourlink', 'profile'],
-                          ['msgmove', 'messages'], ['msgunread', 'messages']]) {
+                          ['msgmove', 'messages'], ['msgunread', 'messages'], ['sgtagdel', 'setlist']]) {
   const all = count(new RegExp(`data-act="${act}"`, 'g')), marked = count(new RegExp(`data-ed="${tab}" data-act="${act}"`, 'g'));
   ok(`data-act="${act}" ×${all}, every one data-ed="${tab}"`, all > 0 && all === marked, { all, marked });
 }

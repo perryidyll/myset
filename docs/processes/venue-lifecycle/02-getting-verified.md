@@ -3,7 +3,7 @@ tab: Venue lifecycle
 section: Getting verified (three ways)
 puzzle_section_id: 41984
 sources:
-  - netlify/functions/_verify.mjs (MIN_VOUCHES, checkWebsite, tryVerifyByWebsite, fetchPage, addVouch, readVouches, artistPlaysAt, checksOnly, recheck, venuePaid), _venues.mjs (domainMatches, privateHost), venueadmin.mjs (verifyCheck, verifyPreview), admin.mjs (vouch; venueList, venueVerify)
+  - netlify/functions/_verify.mjs (MIN_VOUCHES, checkWebsite, tryVerifyByWebsite, fetchPage, addVouch, readVouches, artistPlaysAt, checksOnly, recheck, venuePaid), _venues.mjs (domainMatches, privateHost), venueadmin.mjs (verifyCheck), admin.mjs (vouch; venueList, venueVerify)
   - VERIFYING-A-VENUE.md (its stale "ten" corrected 2026-09-12 — the page now cites MIN_VOUCHES)
   - MYSET-MASTER-OVERVIEW.md §5.6
 status: loaded

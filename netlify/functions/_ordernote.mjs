@@ -49,7 +49,7 @@ export async function tellOrder(owner, o) {
     /* A venue has no push devices today (push_<owner> is empty), so this is a no-op
        there; it costs one read and keeps the two owners on one path. */
     const jobs = [notify(owner, { title: 'New merch order', body: `${orderLine(o)} · ${money(total)} · ${o.ship === 'ship' ? 'to ship' : 'pickup ' + o.code}`,
-                                  url: venue ? '/venue-studio' : '/studio?tab=merch', tag: 'order-' + (o.code || '') })];
+                                  url: venue ? '/venue-studio' : '/studio?tab=merch', tag: 'order-' + (o.code || '') }, { tab: 'merch' })];
     if (emailReady()) {
       const [emails, who] = await Promise.all([
         ownerEmails(owner),

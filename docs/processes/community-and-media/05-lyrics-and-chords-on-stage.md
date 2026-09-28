@@ -3,7 +3,7 @@ tab: Community & media
 section: Lyrics and chords on stage
 puzzle_section_id: 42003
 sources:
-  - netlify/functions/_lyrics.mjs (LRCLIB, the two headers, MISS_TTL, readLyrics, saveLyrics), lyrics.mjs (public), admin.mjs (lyricsGet, lyricsSet, lyricsFetch, lyricsWarm — the 350 ms spacing), _chart.mjs (MAX_CHART — the artist's private chart), _chords.mjs (the Ultimate Guitar link resolver, CACHE_MS)
+  - netlify/functions/_lyrics.mjs (LRCLIB, the two headers, MISS_TTL, readLyrics, saveLyrics), lyrics.mjs (public), admin.mjs (songGet — the song sheet reads the words with the song —, lyricsSet, lyricsFetch, lyricsWarm — the 350 ms spacing), _chart.mjs (MAX_CHART — the artist's private chart), _chords.mjs (the Ultimate Guitar link resolver, CACHE_MS)
   - public/vote.html ("Unofficial lyrics"), public/studio.html (lyricsWarm, the chart)
   - MYSET-MASTER-OVERVIEW.md §5.8 Lyrics
   - INVARIANTS.md § Lyrics

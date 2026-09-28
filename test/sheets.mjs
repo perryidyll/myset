@@ -154,7 +154,8 @@ const OTHER = await mk('sam@x.com', 'Sam Vega', 'sam-vega');
 
 const AS = (t, action, extra = {}) => hit(admin, 'https://x/api/admin', { action, ...extra }, t);
 await AS(P.token, 'venue', { venue: 'The Ugly Duckling' });
-await AS(P.token, 'city', { city: 'Koh Phangan' });
+// the night's city: on a real night autoStart copies it from the calendar gig
+await (await import('../netlify/functions/_lib.mjs')).mutateShow(P.aid, (sh) => { sh.city = 'Koh Phangan'; return true; });
 /* THE NAME REACHES THE ROOM (decision 0062, and its follow-up the same evening):
    a save carrying `first` writes the registry row AND the show record, because
    getShow skips the registry when the show record names the artist itself — the
