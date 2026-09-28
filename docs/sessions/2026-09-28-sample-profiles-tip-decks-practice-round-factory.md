@@ -116,3 +116,29 @@ Found on the live site afterwards: Netlify serves `/<name>` from `<name>.html` b
 **Shipped:** PR #145 merged as `a0ab3dc`. Its deploy preview was checked first and rendered light at 375 px. Production served the new page about 40 s after the merge. Verified by content on myset.vip: `/crm` carries `data-act="theme"`, `myset.hq.theme` and the light tokens, and `/api/hq` still answers 401 to a stranger. Not checked on the live site: the switch itself behind the passcode, which is the founder's to open. A browser that opened `/crm` in the last six hours may show its stored copy once; a reload fetches the new page (`sw.js` rule 2).
 
 **Puzzle:** no change. No process step, rule, cited number or decision record changed; only the page's look did.
+
+## The sixth round: a message library (the same day)
+
+**Asked (the founder):** add the outreach openers written for him elsewhere, one per kind of act, "into a preset messages library that i can select within the crm to send to different artists/venues". His notes also said to test a softer ending hard.
+
+**Built** (decision `0117`; ledger UX-064):
+- The eight openers as HQ's message library, in its own document (`crmlib`); the defaults stand until the first save.
+- The composer's picker lists them under *Your presets*, beside the page's drafts, for any contact (a lead with no page included). `[Name]`, `[Venue]` and `[City]` fill in. A contact tagged with an opener's word opens on that opener.
+- *Theirs* / *Softer* swaps the closing question. By default each new contact gets the ending that has gone out less.
+- *Message library* (the book beside the picker, Settings, ⌘K): edit, add, remove, put the originals back; edits save themselves. Each opener and each ending shows replied / sent with a bar that grows in; the leader turns green once there are three sends each.
+- A leftover `[placeholder]` disables Send. An opener by email carries the sign-off, the stop line and the address. A contact with no page gets a one-line reminder to build it before they say yes.
+- The local demo pipeline now sends a few messages from openers, so the bars have something to show.
+
+**Verified:**
+- `test/hq.mjs` *THE MESSAGE LIBRARY*, 14 checks. Two mutations were caught: a note or reply keeping an opener, and a placeholder that could send.
+- The whole suite: 4,627 passed, 0 failed.
+- On `tools/localhost.mjs` in the app's browser, as the founder behind the local passcode, in both themes and at 375 px:
+  - the wedding-tagged lead opened on its opener with the name filled in;
+  - the ending swapped, and swapped again after an edit;
+  - `[Name]` blocked Send;
+  - *Log it* stored the opener on the message and the row;
+  - edits saved;
+  - the bars grew in.
+
+**Puzzle:** a changelog entry for `0117` (see below once it is written); no process step changed.
+

@@ -225,7 +225,7 @@ const main = async (req) => {
     for (const j of w.jobs) if (j.cid && j.st === 'done' && j.owner && w.crm.byId[j.cid] && !w.crm.byId[j.cid].owner) { await C.linkOwner(j.cid, j.owner); touched = true; }
     if (await C.adoptOrphans(w.reg, w.crm, { limit: 10 })) touched = true;
     if (touched) w = { ...w, crm: await C.readCrm() };
-    const [stats, cfg, gmail] = await Promise.all([readStats(), readFactoryCfg(), gmailStatus()]);
+    const [stats, cfg, gmail, lib] = await Promise.all([readStats(), readFactoryCfg(), gmailStatus(), C.readLib()]);
     const month = new Date().toISOString().slice(0, 7), day = new Date().toISOString().slice(0, 10);
     return json({ ok: true, now: Date.now(), cfg,
       keys: { anthropic: !!process.env.ANTHROPIC_API_KEY, youtube: !!process.env.YOUTUBE_API_KEY },
@@ -234,8 +234,11 @@ const main = async (req) => {
       queue: w.jobs.slice(-50).reverse().map((j) => ({ id: j.id, kind: j.kind, label: j.label || '', st: j.st, stage: j.stage || '', pct: j.pct || 0,
         err: j.err || '', cid: j.cid || '', owner: j.owner || '', at: j.at, upd: j.upd })),
       contacts: C.deriveRows(w).sort((a, b) => (b.upd || 0) - (a.upd || 0)),
-      tags: C.tagCounts(w.crm) });
+      tags: C.tagCounts(w.crm), lib });
   }
+
+  /* The message library (decision 0117): the page sends it whole; null puts the defaults back. */
+  if (action === 'savelib') return json({ ok: true, lib: await C.saveLib(body.lib === null ? null : (body.lib || {})) });
 
   if (action === 'generate' || action === 'save') {
     let cid = C.validCid(body.cid) ? body.cid : '';
@@ -341,7 +344,7 @@ const main = async (req) => {
   if (action === 'log') {
     const ch = C.CHANNELS.includes(body.ch) ? body.ch : '';
     if (!ch) return bad('Which way did it go?');
-    const r = await C.addMessage(cid, { ch, dir: body.dir === 'in' ? 'in' : 'out', text: body.text, subject: body.subject });
+    const r = await C.addMessage(cid, { ch, dir: body.dir === 'in' ? 'in' : 'out', text: body.text, subject: body.subject, pre: body.pre, soft: !!body.soft });
     if (!r.ok) return bad(r.error || 'That didn’t save.');
     if (ch !== 'note' && r.msg.dir === 'out' && r.doc.owner) await markSentFor(r.doc.owner, ch);
     return json({ ok: true, msg: r.msg, row: await freshRow(cid) });
@@ -367,7 +370,7 @@ const main = async (req) => {
         inReplyTo: last && last.msgId ? last.msgId : undefined, references: refs || undefined });
     } catch (e) { return bad(e && e.code === 'revoked' ? 'Gmail was disconnected — connect it again in Settings.' : `Gmail didn’t take it: ${cut((e && e.message) || 'failed', 120)}`); }
     const r = await C.addMessage(cid, { ch: 'email', dir: 'out', via: 'gmail', text, subject, to: d.email, from: st.email,
-      gid: sent.id, thread: sent.threadId, msgId: sent.msgId, refs });
+      gid: sent.id, thread: sent.threadId, msgId: sent.msgId, refs, pre: body.pre, soft: !!body.soft });
     if (d.owner) await markSentFor(d.owner, 'email');
     return json({ ok: true, msg: r.msg, row: await freshRow(cid) });
   }

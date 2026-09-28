@@ -358,17 +358,17 @@ async function devHq() {
   const jpg = readFileSync(join(PUBLIC, 'img', 'band.jpg'));
   const now = Date.now(), H1 = 3600e3, D1 = 24 * H1;
   const people = [
-    ['artist', 'Rita Mae', 'Koh Phangan', { instagram: '@ritamae', tiktok: '@ritamae.music' }, 'rita@example.com', 'page', [['ig', 'out', 'Hey Rita! I built you a page.', 3 * D1], ['ig', 'in', 'omg this is so cool, how do I claim it?', 2 * D1 + 5 * H1]], ['friend']],
-    ['artist', 'The Salt Flats', 'Haad Rin', { instagram: '@saltflatsband', youtube: '@saltflats' }, '', 'page', [['tiktok', 'out', 'Hey Salt Flats! Made you something.', 5 * D1]], ['priority']],
-    ['artist', 'Juniper Road', 'Thong Sala', { instagram: '@juniperroad' }, 'hello@juniperroad.example', 'page', [['email', 'out', 'I built you a page — take a look.', 6 * D1]], []],
-    ['venue', 'Harbour Bar', 'Thong Sala', { instagram: '@harbourbar', google: 'https://maps.app.goo.gl/Harb0ur' }, 'bookings@harbourbar.example', 'page', [['inperson', 'out', 'Showed the manager on my phone.', 1 * D1], ['whatsapp', 'in', 'Send me the link please!', 20 * H1]], ['live music 5 nights']],
+    ['artist', 'Rita Mae', 'Koh Phangan', { instagram: '@ritamae', tiktok: '@ritamae.music' }, 'rita@example.com', 'page', [['ig', 'out', 'Hey Rita! I built you a page.', 3 * D1, 'bar'], ['ig', 'in', 'omg this is so cool, how do I claim it?', 2 * D1 + 5 * H1]], ['friend']],
+    ['artist', 'The Salt Flats', 'Haad Rin', { instagram: '@saltflatsband', youtube: '@saltflats' }, '', 'page', [['tiktok', 'out', 'Hey Salt Flats! Made you something.', 5 * D1, 'cover', 1]], ['priority']],
+    ['artist', 'Juniper Road', 'Thong Sala', { instagram: '@juniperroad' }, 'hello@juniperroad.example', 'page', [['email', 'out', 'I built you a page — take a look.', 6 * D1, 'coffee']], []],
+    ['venue', 'Harbour Bar', 'Thong Sala', { instagram: '@harbourbar', google: 'https://maps.app.goo.gl/Harb0ur' }, 'bookings@harbourbar.example', 'page', [['inperson', 'out', 'Showed the manager on my phone.', 1 * D1, 'venue', 1], ['whatsapp', 'in', 'Send me the link please!', 20 * H1]], ['live music 5 nights']],
     ['venue', 'Sunset Deck', 'Srithanu', { instagram: '@sunsetdeck' }, '', 'lead', [], ['next week']],
-    ['artist', 'Moss & Pine', 'Chiang Mai', { instagram: '@mossandpine' }, '', 'lead', [], []],
+    ['artist', 'Moss & Pine', 'Chiang Mai', { instagram: '@mossandpine' }, '', 'lead', [], ['wedding band']],
     ['artist', 'DJ Coralie', 'Koh Samui', { instagram: '@djcoralie', tiktok: '@djcoralie' }, 'coralie@example.com', 'page', [], ['dj']],
-    ['venue', 'The Anchor', 'Koh Tao', { facebook: 'theanchorkohtao', instagram: '@theanchorkt' }, '', 'page', [['fb', 'out', 'Hi Anchor team! I built you a page.', 8 * D1]], []],
-    ['artist', 'Lena Ocean', 'Bangkok', { instagram: '@lenaocean', spotify: 'https://open.spotify.com/artist/4tIdEl1nEs0123456789ab' }, 'lena@example.com', 'page', [['email', 'out', 'A page for you', 9 * D1], ['email', 'in', 'Thanks! Not right now, maybe next month.', 7 * D1]], ['later']],
-    ['artist', 'Northbound', 'Pai', { instagram: '@northboundpai' }, '', 'lead', [], []],
-    ['venue', 'Coconut Grove', 'Haad Yao', { instagram: '@coconutgrovebar', website: 'coconutgrove.co.th' }, 'info@coconutgrove.example', 'page', [['email', 'out', 'Your venue page', 2 * D1]], ['priority']],
+    ['venue', 'The Anchor', 'Koh Tao', { facebook: 'theanchorkohtao', instagram: '@theanchorkt' }, '', 'page', [['fb', 'out', 'Hi Anchor team! I built you a page.', 8 * D1, 'venue']], []],
+    ['artist', 'Lena Ocean', 'Bangkok', { instagram: '@lenaocean', spotify: 'https://open.spotify.com/artist/4tIdEl1nEs0123456789ab' }, 'lena@example.com', 'page', [['email', 'out', 'A page for you', 9 * D1, 'wedding', 1], ['email', 'in', 'Thanks! Not right now, maybe next month.', 7 * D1]], ['later']],
+    ['artist', 'Northbound', 'Pai', { instagram: '@northboundpai' }, '', 'lead', [], ['busker']],
+    ['venue', 'Coconut Grove', 'Haad Yao', { instagram: '@coconutgrovebar', website: 'coconutgrove.co.th' }, 'info@coconutgrove.example', 'page', [['email', 'out', 'Your venue page', 2 * D1, 'venue', 1]], ['priority']],
     ['artist', 'Twin Harbours', 'Phuket', { instagram: '@twinharbours' }, '', 'page', [], []],
   ];
   let n = 0;
@@ -382,7 +382,8 @@ async function devHq() {
         photos: { cover: { bytes: jpg, type: 'image/jpeg' } }, quality: { score: 0.9, review: n % 4 === 1 }, msgs: { hook: '' }, by: n % 4 === 1 ? 'factory' : 'founder' }, { fetchMedia: false });
       if (made.ok) await C.linkOwner(r.cid, made.owner, { now: now - (11 - n) * D1 });
     }
-    for (const [ch, dir, text, ago] of msgs) await C.addMessage(r.cid, { ch, dir, text, subject: ch === 'email' ? 'A MySet page for you' : '', t: now - ago }, { now, unread: dir === 'in' && ch === 'email' });
+    // a fifth and sixth field: the library preset it came from, and the softer ending (decision 0117)
+    for (const [ch, dir, text, ago, pre, soft] of msgs) await C.addMessage(r.cid, { ch, dir, text, subject: ch === 'email' ? 'A MySet page for you' : '', t: now - ago, pre, soft }, { now, unread: dir === 'in' && ch === 'email' });
     // what HQ's own log does when a message goes out, and what a first open does
     const owner = (await C.readContact(r.cid) || {}).owner;
     if (owner && msgs.some((m) => m[1] === 'out')) { const F = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', 'factory.mjs')).href); await F.markSent(owner, msgs[0][0] === 'email' ? 'email' : msgs[0][0] === 'inperson' ? 'inperson' : 'dm'); }
