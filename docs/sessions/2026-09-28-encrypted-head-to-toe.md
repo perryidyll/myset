@@ -86,6 +86,29 @@ script and the cut would have been paid by real fans. Found on the port: the
 original branch never put the checkout limiter's document on the delete lists, so
 deleting an account would have left it behind. It is on both now.
 
+**Slice B live:** merged as `314c809` (PR #144) after main moved twice more under it;
+Netlify's production deploy is ready on `8f9bde6`, which contains it, and every changed
+endpoint loads on it. The limits are write paths and were not exercised on production.
+
+**Slice C (decisions `0112`, `0113`):** cut fresh from `main` `8f9bde6` and rebuilt where
+the review asked, not ported whole. Main had grown four new users of the store-kept
+key since the original branch — HQ's Gmail token sealing, HQ's unlock cookie, the
+Gmail sign-in state and the factory's key — and the original design would have moved
+the key under all of them (the Gmail one would have disconnected the founder's mailbox
+on the day of the switch). And the original keyed recovery codes, Studio codes and a
+data key with the rotating secret, so removing the previous value after a rotation
+would have stranded every code on paper and every sealed record not rewritten in time.
+What changed: recovery and Studio codes are slow salted hashes that depend on no key;
+records are sealed under data keys kept in one keyring the secret wraps, so a new
+secret re-wraps one document; a rotation signs every device out once instead of
+leaving a leaked key valid for a month; HQ's contacts and Gmail record are on the
+sealed list; the mirror carries the keyring and opens it every twenty minutes, and
+`prod.py` says when the previous value may go. The passcode door was ported onto the
+box #149 had just rebuilt. The rotation test caught one trap on the way — removing the
+previous value before the ring is re-wrapped reads sealed records as missing until it
+is put back — which is why the mirror's bell and `prod.py`'s line exist. Pull request
+open, not merged: it waits on `MYSET_SECRET` and `FINMODEL_CODE`.
+
 **Not checked:** production itself until each merge; a signed-in band mate or crew seat
 on production; whether `ADMIN_CODE` was ever rotated after it appeared in a committed
 file on 2026-08-17 — only the founder can see that.

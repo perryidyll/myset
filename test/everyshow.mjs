@@ -252,7 +252,7 @@ console.log('\nA RENAME AND A HIDE reach the register; a departed artist stays, 
 
 console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every path, every address');
 {
-  const cookie = `fm=${stamp(CODE())}`;
+  const cookie = `fm=${await stamp(CODE())}`;
   for (const p of ['/moneymodel/shows', '/moneymodel/shows.json', '/moneymodel/shows.csv', '/moneymodel/shows/night.json?a=x&id=y', '/moneymodel/live.json', '/api/moneymodel/shows.json', '/.netlify/functions/moneymodel/shows.csv']) {
     const r = await moneymodel(new Request('https://myset.vip' + p, { headers: { accept: /json|csv/.test(p) ? 'application/json' : 'text/html' } }));
     const t = await r.text();
@@ -277,7 +277,7 @@ console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every pa
   ok('the feed carries none of the meters', ['pollsPerPhoneHour', 'creditsPerShow', 'deploys', 'shipping', 'traffic', 'meters'].every((k) => !(k in feed.act)));
   const again = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows/refresh', { method: 'POST', headers: { cookie, accept: 'application/json' } }))).json();
   ok('a refresh straight after a fold says so instead of walking the store again', again.ok && again.skipped && /ago/.test(again.why), again);
-  const old = await moneymodel(new Request('https://myset.vip/moneymodel', { headers: { cookie: `fm=stale; fm=${stamp(CODE())}` } }));
+  const old = await moneymodel(new Request('https://myset.vip/moneymodel', { headers: { cookie: `fm=stale; fm=${await stamp(CODE())}` } }));
   eq('two fm cookies (an old path and the new): any matching one opens the door', old.status, 200);
   const signin = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `code=${CODE()}` }));
   eq('the code typed on the dashboard lands on the dashboard, with a cookie scoped to the model', [signin.status, signin.headers.get('location'), /Path=\/moneymodel;/.test(signin.headers.get('set-cookie') || '')], [303, '/moneymodel/shows', true]);

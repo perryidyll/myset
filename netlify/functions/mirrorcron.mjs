@@ -9,6 +9,12 @@ import { runMirror } from './_mirror.mjs';
 export default async (req) => {
   let marker = null;
   try { marker = ((await req.clone().json()) || {}).next_run || null; } catch { marker = null; }
+  /* Keep the sealing keyring on the current MYSET_SECRET (decision 0113). After a
+     rotation the first open re-wraps it; this bell makes sure that happens within
+     twenty minutes of the deploy even on a day nobody signs in, so the runbook can
+     say when MYSET_SECRET_PREVIOUS may go (HARDENING.md §0). Cached per warm
+     instance, so usually not even a read; never allowed to stop the copy. */
+  try { const { ring } = await import('./_seal.mjs'); await ring(); } catch { /* the copy is not the ring */ }
   try {
     const r = await runMirror({
       owners: async () => {

@@ -19,6 +19,10 @@ import { createHmac } from 'node:crypto';
 process.env.GMAIL_CLIENT_ID = 'test-client.apps.googleusercontent.com';   // test values: every call is answered in this process
 process.env.GMAIL_CLIENT_SECRET = 'test-client-secret';
 process.env.URL = 'https://hq.test';
+/* This file holds the `v1.` box — how a token is sealed with no MYSET_SECRET. With one
+   set, tokens go onto the keyring (`v2.`), and test/seal.mjs holds that. */
+delete process.env.MYSET_SECRET;
+delete process.env.MYSET_SECRET_PREVIOUS;
 
 const G = await import('../netlify/functions/_gmail.mjs');
 const { readDoc } = await import('../netlify/functions/_lib.mjs');

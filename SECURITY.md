@@ -10,9 +10,9 @@ true" was checked against the code or the live site on the day this was written.
 
 **Revised 2026-09-28**, after the founder asked for MySet to be *"encrypted head to
 toe"*. Seven audits went over every surface; what they found ships in three slices —
-`0110` (code only, live as `539c2a4`), `0111` (limits on every anonymous write, this revision) and
-`0112`/`0113` (the server's own secret; the records that hold a person sealed at
-rest). The rest of the document stands where it still holds and is corrected where
+`0110` (code only, live as `539c2a4`), `0111` (limits on every anonymous write, live
+as `314c809`) and `0112`/`0113` (the server's own secret; the records that hold a
+person sealed at rest — this revision, waiting on the founder's two variables). The rest of the document stands where it still holds and is corrected where
 it did not.
 
 ---
@@ -41,10 +41,15 @@ never an address. Every number was sized for the worst real night — two hundre
 phones on one bar's wifi, all acting at once — and the test suite runs that night.
 The numbers are in §2.1 of the master overview.
 
-Still to land: **`0112`/`0113`** — the signing key comes from `MYSET_SECRET` instead
-of a document in the store, the founder's passcode becomes a real door, and the
-records that hold a person are sealed at rest. That slice waits on the founder
-setting the variables (the list at the end).
+**Slice C (decisions `0112`, `0113`), ready, not merged.** The signing key comes from
+`MYSET_SECRET` instead of a document in the store, and nobody is signed out by the
+move. The money model's passcode is a real door: required on Netlify, a keyed cookie,
+a lockout. Recovery codes and Studio codes become slow salted hashes that depend on
+no key. The records that hold a person — the booker inbox, passwords, recovery codes,
+sessions, the activity and error logs, push subscriptions, the ID queue and photos,
+HQ's contacts and Gmail — are sealed at rest under a keyring the secret wraps, so a
+later change of secret re-wraps one document and strands nothing. It merges once
+`MYSET_SECRET` and `FINMODEL_CODE` are set (the list at the end; HARDENING.md §0).
 
 **What did not change:** the front end is still public and still fine to be public;
 `script-src` still needs `'unsafe-inline'` (see below); the repository is still public
@@ -176,13 +181,13 @@ company buys with headcount. Almost everything below is paperwork and habits.
 |---|---|
 | **Hardware/passkey 2FA on Google, GitHub, Netlify, Stripe** | The single most likely breach, closed in twenty minutes. |
 | **Stripe restricted keys** | The live key can do everything. Cron and read-only paths should hold keys that can only do what they need. |
-| **A secret-rotation runbook** | Right now there is no written answer to "the key leaked, what do I do in the next ten minutes". One page — it arrives with `0112`, which is what makes the key rotatable at all. |
+| **A secret-rotation runbook** | ~~Right now there is no written answer to "the key leaked, what do I do in the next ten minutes".~~ HARDENING.md §0, with `0112`/`0113`: three steps, nothing stranded, and `tools/prod.py` says when the last one is safe. |
 | **Pin dependencies + Dependabot** | ~~Exact versions, a bot that opens the PR, `npm test` as the gate.~~ The lockfile pins both; `.github/dependabot.yml` opens the pull request (2026-09-28), for a security fix only: Dependabot security updates are on, and routine version bumps are off (limit 0). |
 | **Edge rate limiting** | Netlify has traffic rules. A per-IP ceiling on `/api/*` bounds both abuse and the bill. In-code limits on every anonymous write are `0111`; the edge rule is still worth having as a ceiling on scripts, set well above what a bar's wifi produces. |
 | **A backup you have actually restored** | ~~Blobs are the only datastore. Nobody has ever tested a restore.~~ Done 2026-09-14: `tools/backup.py --restore` wrote the 2026-09-13 copy into a rehearsal store and read every key back equal (decision `0069`, session `2026-09-14-data-foundations.md`); and `mirrorcron` copies every document to R2 nightly. Still to do: rehearse it again in six months, and the R2 copy on a hard delete. |
 | **Error and alert monitoring** | Today a failure is a line in a log nobody reads. Sentry's free tier, or Netlify's own alerts, plus one alert on a spike in 5xx. |
 | **CSP script hashes** | Removes `'unsafe-inline'`. A build step that hashes each inline block, or moving the scripts to files. |
-| **Application-level encryption of ID photos** | Blobs are encrypted at rest by Netlify, but the ID photos are the most sensitive bytes in the system. Encrypting them with a key only the verification path holds means a storage compromise does not hand over passports. Since 2026-09-28 the photo is at least never mirrored and its R2 copy is deleted with the original (`0110`); the sealing itself is `0113`. |
+| **Application-level encryption of ID photos** | Blobs are encrypted at rest by Netlify, but the ID photos are the most sensitive bytes in the system. Encrypting them with a key only the verification path holds means a storage compromise does not hand over passports. Since 2026-09-28 the photo is never mirrored and its R2 copy is deleted with the original (`0110`); `0113` seals it at rest, with the other records that hold a person. |
 | **A privacy policy and a data-retention rule** | You collect email addresses and sell things. Both are legally required in most of the markets you would sell into, and neither exists. |
 
 ### Tier 2 — months, matters when venues start asking
@@ -214,8 +219,9 @@ does not have 2FA is a document about nothing.
 |---|---|---|
 | Everything in Blobs | Encrypted at rest by Netlify; in transit over TLS | Fine. |
 | Session tokens | HMAC-signed, revocable, 30 days | Fine. Shortening to 7 days with silent renewal is a small win. |
-| Recovery codes | HMAC-hashed, single use | Fine — this is how it should be done. |
-| Studio codes | Hashed | Fine. |
+| Recovery codes | HMAC-hashed, single use; with `0112`, a salted scrypt that depends on no key, in a sealed document | Fine — forty bits under a fast hash was one leaked key away from a graphics card. |
+| Studio codes | A bare SHA-256; with `0112`, a salted scrypt | A bare SHA-256 of an eight-character code is an afternoon's work for whoever holds a copy of the show record. Fixed by `0112`. |
+| The booker inbox, passwords, sessions, the logs, HQ's contacts and Gmail | Plain JSON in Blobs; with `0113`, sealed under a keyring `MYSET_SECRET` wraps | **Seal these.** `0113` does it; nothing the room reads is touched. |
 | Passkeys | Only the public half is ever stored | Fine by construction. |
 | **ID verification photos** | Plain bytes in Blobs, unservable over the web; since 2026-09-28 never mirrored, never in a backup, the R2 copy deleted with the original | **Encrypt these.** Tier 1. The most sensitive bytes in the system — `0113` does it. |
 | Sign-in email addresses | Plain, in the registry | Leave. They are the lookup key; encrypting them means either a searchable index (which defeats it) or no sign-in. |
@@ -243,8 +249,8 @@ Slices `0112`/`0113` assume a server that holds its own secret. Until these are
 done, it runs exactly as it did before — safe, but not yet with the new locks turned.
 
 1. **Set `MYSET_SECRET`** in Netlify, for every deploy context (previews share the
-   live store). HARDENING.md §0 (arrives with `0112`) has the command that makes the
-   value on your own machine; never paste it anywhere but the Netlify form.
+   live store). HARDENING.md §0 has the command that makes the value on your own
+   machine; never paste it anywhere but the Netlify form, and never remove it after.
 2. **Set `FINMODEL_CODE`** to something long. Once `0112` lands, without it the money
    model and the register open for nobody — on purpose.
 3. **Rotate `ADMIN_CODE`.** The original value sat in a committed file for a day on

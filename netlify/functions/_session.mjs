@@ -1,6 +1,6 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { casDoc, readDoc } from './_lib.mjs';
-import { authSecret, mutateArtists, readArtists } from './_auth.mjs';
+import { storeKey, mutateArtists, readArtists } from './_auth.mjs';
 
 /* SESSIONS, THE ACTIVITY LOG, AND RECOVERY CODES.
 
@@ -198,10 +198,18 @@ export async function readLog(owner, n = 25) {
 }
 
 /* ---------- recovery codes ----------
-   The honest answer to "what if I lose my email". Eight one-time codes, hashed
-   with the same site secret the six-digit codes use, shown once and never again.
-   Crockford-ish alphabet: no 0/O, no 1/I/L, because these get written on the back
-   of a setlist in a dark room. */
+   The honest answer to "what if I lose my email". Eight one-time codes, shown once
+   and never again. Crockford-ish alphabet: no 0/O, no 1/I/L, because these get
+   written on the back of a setlist in a dark room.
+
+   HOW THEY ARE KEPT (decision 0112). A set made now is `alg: 's1'`: one random salt
+   for the set and a memory-hard scrypt of each code, like a password (_cred.mjs) — a
+   code is forty bits, and an HMAC of forty bits is minutes on a graphics card for
+   whoever holds the key and the document. It depends on no server key on purpose: a
+   code kept on paper for years must survive every change of MYSET_SECRET. The
+   document is also sealed at rest (`rec_`, _seal.mjs). A set made before is the HMAC
+   under the store-kept key, which stays in the store so those codes keep working;
+   making a new set moves an account to the new form. */
 const ALPHA = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
 const oneCode = () => {
   const b = randomBytes(8);
@@ -209,8 +217,11 @@ const oneCode = () => {
   for (let i = 0; i < 8; i++) s += ALPHA[b[i] % ALPHA.length];
   return `${s.slice(0, 4)}-${s.slice(4)}`;
 };
-const hashCode = async (code) =>
-  createHmac('sha256', await authSecret()).update(String(code).toUpperCase().replace(/[^A-Z0-9]/g, '')).digest('hex');
+const normCode = (code) => String(code).toUpperCase().replace(/[^A-Z0-9]/g, '');
+const REC_KDF = { N: 1 << 14, r: 8, p: 1, len: 32 };
+const slowHash = (code, salt) => new Promise((ok, no) =>
+  scrypt(normCode(code), salt, REC_KDF.len, { N: REC_KDF.N, r: REC_KDF.r, p: REC_KDF.p }, (e, k) => (e ? no(e) : ok(k.toString('hex')))));
+const legacyHash = (code, key) => createHmac('sha256', key).update(normCode(code)).digest('hex');
 const same = (a, b) => {
   if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
   try { return timingSafeEqual(Buffer.from(a), Buffer.from(b)); } catch { return false; }
@@ -218,9 +229,12 @@ const same = (a, b) => {
 
 export async function makeRecovery(owner) {
   const codes = Array.from({ length: 8 }, oneCode);
-  const hashes = [];
-  for (const c of codes) hashes.push({ h: await hashCode(c), usedAt: 0 });
-  await casDoc(REC(owner), emptyRec, (d) => { d.madeAt = Date.now(); d.codes = hashes; return true; });
+  const salt = randomBytes(16);
+  const hashes = await Promise.all(codes.map(async (c) => ({ h: await slowHash(c, salt), usedAt: 0 })));
+  await casDoc(REC(owner), emptyRec, (d) => {
+    d.madeAt = Date.now(); d.alg = 's1'; d.salt = salt.toString('base64url'); d.codes = hashes;
+    return true;
+  });
   return codes;
 }
 export async function recoveryStatus(owner) {
@@ -231,9 +245,17 @@ export async function recoveryStatus(owner) {
 }
 /** Burn one code. Returns true only if it matched an unused one. */
 export async function useRecovery(owner, given) {
-  const want = await hashCode(given);
+  /* One read to learn the set's form and salt, one hash, then the burn — which
+     re-checks the form, so a set replaced in between matches nothing. */
+  const { data } = await readDoc(REC(owner), null);
+  if (!data || !Array.isArray(data.codes) || !data.codes.length || !normCode(given || '')) return false;
+  const form = data.alg === 's1' ? `s1|${data.salt}` : 'legacy';
+  let want = '';
+  if (form === 'legacy') { const k = await storeKey(); if (!k) return false; want = legacyHash(given, k); }
+  else want = await slowHash(given, Buffer.from(String(data.salt || ''), 'base64url'));
   let ok = false;
   await casDoc(REC(owner), emptyRec, (d) => {
+    if ((d.alg === 's1' ? `s1|${d.salt}` : 'legacy') !== form) return false;
     for (const c of d.codes || []) {
       if (c.usedAt || !same(c.h, want)) continue;
       c.usedAt = Date.now(); ok = true; return true;

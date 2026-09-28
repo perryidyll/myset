@@ -95,7 +95,7 @@ ok('the owner sees one conversation in Requests, unread', list.ok && list.counts
 ok('the row carries the name, the kind and a preview', list.threads[0].name === 'Val at The Room' && list.threads[0].kind === 'booking' && /Friday in October/.test(list.threads[0].preview), list.threads[0]);
 ok('and never the device hash, the email hash or the token', !('e' in list.threads[0]) && !('f' in list.threads[0]) && !('k' in list.threads[0]), Object.keys(list.threads[0]));
 ok('the list carries the caps so the Studio never types one', list.limits && list.limits.text === M.MAX_TEXT, list.limits);
-const stored = JSON.parse(__dump().get(`msg_${aid}_${T1}`).body);
+const stored = (await readDoc(`msg_${aid}_${T1}`, null)).data;   // through the server's own read: sealed at rest when MYSET_SECRET is set (0113)
 ok('the conversation on disk holds the email and a HASH of the device, never the id', stored.email === 'val@theroom.example' && stored.f && stored.f.length === 10 && !JSON.stringify(stored).includes(FAN), { f: stored.f });
 let cnt = await S({ action: 'msgCount' }, TO);
 eq('the badge count is one unread, one request', [cnt.unread, cnt.requests], [1, 1]);
@@ -176,7 +176,9 @@ ok('Report files it under Spam and flags it', (await S({ action: 'msgReport', t:
 let row = (await S({ action: 'msgList' }, TO)).threads.find((t) => t.id === T2);
 ok('reported, in Spam', row.reported === true && row.folder === 'spam', row);
 const errKeys = [...__dump().keys()].filter((k) => k.startsWith('err_'));
-ok('and MySet’s log has a line with the id and no words or address', errKeys.length && errKeys.some((k) => { const b = __dump().get(k).body; return b.includes('reported ' + T2) && !b.includes('val@theroom') && !b.includes('second, different'); }));
+// read through the server: the error log is sealed at rest when MYSET_SECRET is set (0113)
+const errTexts = await Promise.all(errKeys.map(async (k) => JSON.stringify((await readDoc(k, null)).data || '')));
+ok('and MySet’s log has a line with the id and no words or address', errKeys.length && errTexts.some((b) => b.includes('reported ' + T2) && !b.includes('val@theroom') && !b.includes('second, different')));
 ok('the report goes to the founding account’s addresses with the ids and nothing else', MAIL.some((m) => /reported/.test(m.subject) && m.text.includes(T2) && !m.text.includes('val@theroom') && !m.text.includes('second, different')), MAIL.map((m) => m.subject));
 ok('Block the sender', (await S({ action: 'msgBlock', t: T1, on: true }, TO)).ok);
 row = (await S({ action: 'msgList' }, TO)).threads.find((t) => t.id === T1);
@@ -187,7 +189,7 @@ ok('a new message from that email is "sent" and stored nowhere', r.ok && (await 
 r = await send({ email: 'val.other@example.com', text: 'Same phone, a new address: swallowed too.' });
 ok('and from that phone under another address', r.ok && (await S({ action: 'msgList' }, TO)).threads.length === before, r);
 r = await PUB({ action: 'reply', t: T1, k: K1, text: 'Are you there?' });
-ok('the booker’s reply into a blocked conversation is "sent" and not stored', r.ok && JSON.parse(__dump().get(`msg_${aid}_${T1}`).body).msgs.length === 3, r);
+ok('the booker’s reply into a blocked conversation is "sent" and not stored', r.ok && (await readDoc(`msg_${aid}_${T1}`, null)).data.msgs.length === 3, r);
 ok('Unblock', (await S({ action: 'msgBlock', t: T1, on: false }, TO)).ok);
 // tomorrow: the day's ring is empty again (the phone and the address both spent their three today)
 await casDoc(`inbox_${aid}`, () => ({}), (d) => { d.recent = []; return true; });
@@ -212,7 +214,7 @@ ok('every one of them still landed in Requests', (await S({ action: 'msgList' },
 console.log('\nCAPS — nothing is dropped');
 await casDoc(`msg_${aid}_${T1}`, () => ({}), (t) => { t.msgs = Array.from({ length: M.MAX_MSGS }, (_, i) => ({ by: 'me', text: 'm' + i, at: i })); return true; });
 r = await S({ action: 'msgReply', t: T1, text: 'one more' }, TO);
-ok('the 201st message is refused with a sentence, the 200 stay', !r.ok && /full/.test(r.error) && JSON.parse(__dump().get(`msg_${aid}_${T1}`).body).msgs.length === M.MAX_MSGS, r);
+ok('the 201st message is refused with a sentence, the 200 stay', !r.ok && /full/.test(r.error) && (await readDoc(`msg_${aid}_${T1}`, null)).data.msgs.length === M.MAX_MSGS, r);
 /* Fill the index to the cap with answered conversations, then send one more. */
 let firstOld = '';
 await casDoc(`inbox_${aid}`, () => ({}), (d) => {
@@ -225,7 +227,7 @@ r = await send({ fan: 'fan-late-000008', email: 'late@example.com', text: 'The t
 ok('the 301st conversation is accepted', r.ok, r);
 const idx = await M.readInbox(aid);
 eq('the index is back at the cap', idx.threads.length, M.MAX_THREADS);
-const arch = JSON.parse((__dump().get(`inboxarch_${aid}`) || { body: '{}' }).body);
+const arch = (await readDoc(`inboxarch_${aid}`, {})).data;   // through the server: sealed at rest when MYSET_SECRET is set
 ok('the oldest answered one went to the archive first', arch.list && arch.list.length === 1 && arch.list[0].id === firstOld, arch.list && arch.list.map((t) => t.id));
 ok('and its own document is still on disk', !!__dump().get(`msg_${aid}_${T1}`));
 

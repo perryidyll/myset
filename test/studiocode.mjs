@@ -82,6 +82,34 @@ console.log('\nTHE PAGE\'S OWN NAME IS REFUSED AS A CODE  (0110: the guard read 
 eq('through the endpoint, not only the helper', (await A(TA, 'setCode', { code: 'ana-reyes' })).status, 400);
 ok('while a real code still lands', (await A(TA, 'setCode', { code: 'anacode123' })).ok);
 
+console.log('\nA CODE IS KEPT AS A SLOW SALTED HASH, AND A CODE SET THE OLD WAY STILL OPENS THE DOOR (0112)');
+{
+  const { readDoc, mutateShow, sha } = await import('../netlify/functions/_lib.mjs');
+  const stored = (await readDoc(`show_${ana.artistId}`, null)).data.codeHash;
+  ok('Ana\'s code is stored as s1:<salt>:<scrypt>, never the bare SHA-256 a graphics card turns back into a code',
+     /^s1:[\w-]{16,}:[\w-]{32,}$/.test(stored) && stored !== sha('anacode123'), stored);
+  ok('…and it opens her door', (await stageByCode('anacode123', 'ana-reyes')).ok);
+  ok('…again, from memory, without paying the hash twice', (await stageByCode('anacode123', 'ana-reyes')).ok);
+  eq('a wrong code straight after a right one is still wrong', (await stageByCode('anacode124', 'ana-reyes')).status, 401);
+  await mutateShow(bo.artistId, (s) => { s.codeHash = sha('oldstyle2026'); return true; });
+  ok('a code stored the old way still opens its door', (await stageByCode('oldstyle2026', 'bo-tran')).ok);
+  const rewritten = (await readDoc(`show_${bo.artistId}`, null)).data.codeHash;
+  ok('…and is rewritten the new way on that first use', /^s1:/.test(rewritten) && rewritten !== sha('oldstyle2026'), rewritten);
+  ok('…and opens again as itself', (await stageByCode('oldstyle2026', 'bo-tran')).ok);
+  eq('the wrong code still does not', (await stageByCode('oldstyle2027', 'bo-tran')).status, 401);
+  /* The code depends on no server key, so a new MYSET_SECRET cannot strand it. */
+  const { __resetSecret } = await import('../netlify/functions/_auth.mjs');
+  const { __resetRing } = await import('../netlify/functions/_seal.mjs');
+  const was = [process.env.MYSET_SECRET, process.env.MYSET_SECRET_PREVIOUS];   // put back after, whatever the run set
+  const put = (k, v) => { if (v === undefined) delete process.env[k]; else process.env[k] = v; };
+  process.env.MYSET_SECRET = 'q'.repeat(48); __resetSecret(); __resetRing();
+  ok('MYSET_SECRET arrives: Ana\'s code still opens her door', (await stageByCode('anacode123', 'ana-reyes')).ok);
+  process.env.MYSET_SECRET_PREVIOUS = 'q'.repeat(48); process.env.MYSET_SECRET = 'r'.repeat(48); __resetSecret(); __resetRing();
+  delete process.env.MYSET_SECRET_PREVIOUS; __resetSecret(); __resetRing();
+  ok('a rotation, and the previous value removed: it still does', (await stageByCode('anacode123', 'ana-reyes')).ok);
+  put('MYSET_SECRET', was[0]); put('MYSET_SECRET_PREVIOUS', was[1]); __resetSecret(); __resetRing();
+}
+
 console.log('\nTHE FOUNDER\'S DOORS ARE UNCHANGED  (existing links and the recovery key)');
 const master = await stageByCode('devlocal');
 ok('ADMIN_CODE still reaches the founding artist', master.ok, master.status);

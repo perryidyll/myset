@@ -536,7 +536,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Public pages | 17 — about.html, artist.html, artists.html, community.html, crm.html, diary.html, factory.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 40 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 6 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron |
-| Shared libraries | 70 |
+| Shared libraries | 72 |
 | Artist Studio actions | 136 |
 | Venue Studio actions | 48 |
 | Fan-record shards | 12 |
@@ -548,15 +548,18 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Phones one network may put on one night's RSVP count (`RSVP_PER_NETWORK`) | 400 |
 | Ratings one network may leave for one artist in a day (`FEEDBACK_PER_NETWORK_PER_DAY`) | 150 |
 | Bug reports one network may file for one artist in an hour (`BUG_PER_NETWORK_PER_HOUR`) | 12 |
+| `MYSET_SECRET`: the shortest value used, and how long the old store-kept key still verifies a token after the switch (decision 0112) | 32 characters · 31 days |
+| The money model's passcode: wrong codes inside a window that shut the door, and for how long, doubling to a cap (`_passgate.mjs`) | 10 in 15 min → 15 min, up to 24 h |
+| Record families sealed at rest (`_seal.mjs`, decision 0113) — nothing the room reads is on the list | `msg_`, `inbox_`, `inboxarch_`, `cred_`, `rec_`, `sess_`, `log_`, `push_`, `bugs_`, `err_`, `crm`, `idqueue`, `img_<owner>_idcheck` |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet HQ (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
-| Invariants | 294 (last: 0gx) |
-| Test suites | 67 |
-| Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 114 |
+| Invariants | 297 (last: 0hb) |
+| Test suites | 70 |
+| Assertions | **5,062**, 0 failing, last run 2026-09-28 |
+| Decision records | 116 |
 
 ### Feature flags in force
 

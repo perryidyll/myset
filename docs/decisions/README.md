@@ -121,13 +121,15 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0109](0109-outreach-email-goes-through-the-founders-own-gmail-and-first-dms-are-sent-by-hand.md) | HQ's email goes out through the founder's own Gmail and replies are read back into the conversation; a first Instagram or TikTok message is sent by hand, one tap from HQ, and logged | 2026-09-28 | growth | decided | claude |
 | [0110](0110-the-code-only-security-pass-a-name-is-never-a-key.md) | The code-only security pass — a name is never a key, an id is never markup, a pledge comes only from Stripe | 2026-09-28 | auth | decided | perry-confirmed |
 | [0111](0111-every-anonymous-write-counts-the-network-and-a-whole-bar-fits-under-it.md) | Every anonymous write counts the network as well as the device, and a whole bar on one wifi fits under every limit | 2026-09-28 | auth | decided | perry-confirmed |
+| [0112](0112-the-server-holds-its-own-secret-and-nothing-long-lived-depends-on-it.md) | The server holds its own secret, signs with it, and keys nothing long-lived with it, so changing it strands no code | 2026-09-28 | auth | proposed | claude |
+| [0113](0113-the-records-that-hold-a-person-are-sealed-under-a-keyring-the-secret-wraps.md) | The records that hold a person are sealed at rest under a keyring the secret wraps, so a new secret re-wraps one document | 2026-09-28 | storage | proposed | claude |
 | [0114](0114-an-alert-reaches-the-seats-that-can-see-what-it-is-about.md) | An alert reaches only the seats that can see what it is about, and a sign-out ends that phone's alerts | 2026-09-28 | auth | decided | claude |
 | [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md) | Every action a Studio endpoint takes is one a page sends | 2026-09-28 | general | decided | user-confirmed |
 | [0116](0116-node-modules-is-never-tracked-and-a-worktree-uses.md) | node_modules is never tracked, and a worktree uses the shared checkout's | 2026-09-28 | ops | decided | user-confirmed |
 
 ## By area
 
-**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md) · [0099](0099-a-platform-tool-needs-the-founding-page-s-owner-se.md) · [0100](0100-the-founder-s-tools-need-the-founding-page-s-owner.md) · [0101](0101-a-sample-profile-is-a-real-account-kept-off-the-live-registry.md) · [0104](0104-a-seat-that-is-not-the-owner-signs-out-only-its-ow.md) · [0105](0105-the-owner-gives-each-band-mate-and-crew-seat-tab-b.md) · [0106](0106-a-renamed-page-keeps-its-old-address-and-no-other-page-can-take-it.md) · [0110](0110-the-code-only-security-pass-a-name-is-never-a-key.md) · [0111](0111-every-anonymous-write-counts-the-network-and-a-whole-bar-fits-under-it.md) · [0114](0114-an-alert-reaches-the-seats-that-can-see-what-it-is-about.md)
+**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md) · [0099](0099-a-platform-tool-needs-the-founding-page-s-owner-se.md) · [0100](0100-the-founder-s-tools-need-the-founding-page-s-owner.md) · [0101](0101-a-sample-profile-is-a-real-account-kept-off-the-live-registry.md) · [0104](0104-a-seat-that-is-not-the-owner-signs-out-only-its-ow.md) · [0105](0105-the-owner-gives-each-band-mate-and-crew-seat-tab-b.md) · [0106](0106-a-renamed-page-keeps-its-old-address-and-no-other-page-can-take-it.md) · [0110](0110-the-code-only-security-pass-a-name-is-never-a-key.md) · [0111](0111-every-anonymous-write-counts-the-network-and-a-whole-bar-fits-under-it.md) · [0112](0112-the-server-holds-its-own-secret-and-nothing-long-lived-depends-on-it.md) · [0114](0114-an-alert-reaches-the-seats-that-can-see-what-it-is-about.md)
 
 **docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) · [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md)
 
@@ -153,7 +155,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **server** — [0073](0073-sheet-hands-over-before-full.md)
 
-**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md)
+**storage** — [0008](0008-never-list-blobs-for-live-data.md) · [0066](0066-every-vote-play-and-dollar-of-a-night-is-filed-in-a.md) · [0067](0067-the-profile-the-setlists-the-calendar-and-the-libra.md) · [0068](0068-a-capped-list-must-have-a-complete-sibling-the-feed.md) · [0074](0074-a-booker-can-write-to-an-artist-from-the-page-and.md) · [0113](0113-the-records-that-hold-a-person-are-sealed-under-a-keyring-the-secret-wraps.md)
 
 **studio, money** — [0081](0081-the-first-gig-is-the-onboarding-and-a-nights-money-is-everything-tagged-to-it.md)
 
