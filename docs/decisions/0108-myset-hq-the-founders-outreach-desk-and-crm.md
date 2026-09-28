@@ -8,9 +8,9 @@ area: growth
 reverses:
 superseded_by:
 invariants: [0gr, 0hk]
-commits: []
+commits: [0075a30]
 tests: [test/hq.mjs, test/factory.mjs, test/samples.mjs]
-files: [public/hq.html, netlify/functions/hq.mjs, netlify/functions/_hqlock.mjs, tools/hqpass.mjs, netlify/functions/_crm.mjs, netlify/functions/factory.mjs, netlify/functions/factory-background.mjs, netlify/functions/_sample.mjs, netlify/functions/_auth.mjs, netlify.toml, tools/localhost.mjs]
+files: [public/crm.html, netlify/functions/hq.mjs, netlify/functions/_hqlock.mjs, tools/hqpass.mjs, netlify/functions/_crm.mjs, netlify/functions/factory.mjs, netlify/functions/factory-background.mjs, netlify/functions/_sample.mjs, netlify/functions/_auth.mjs, netlify.toml, tools/localhost.mjs]
 ---
 
 ## The question
@@ -29,7 +29,7 @@ The console at `/factory` already built pages from pasted lines, reviewed them a
 
 | Option | What it does | What it costs | New moving parts | Risk if it goes wrong |
 |---|---|---|---|---|
-| **A — chosen** | A new page, `/crm`, and a CRM beside the samples: one contact per act or venue (`crm_<cid>`, indexed in `crm`), joined to its page by `owner`. The contact's stage is derived from the page's own records on every read. HQ queues builds through the factory's own queue, and page actions stay on `/api/factory` | Two new documents per contact at most, plus one index | `_crm.mjs`, `hq.mjs`, `public/hq.html`, hooks in `_sample.mjs` and the worker | A hook fails and a contact points at a page that went. Every hook is best-effort and the stage is re-derived on every read, so the worst case is a stale owner that shows as a lead |
+| **A — chosen** | A new page, `/crm`, and a CRM beside the samples: one contact per act or venue (`crm_<cid>`, indexed in `crm`), joined to its page by `owner`. The contact's stage is derived from the page's own records on every read. HQ queues builds through the factory's own queue, and page actions stay on `/api/factory` | Two new documents per contact at most, plus one index | `_crm.mjs`, `hq.mjs`, `public/crm.html`, hooks in `_sample.mjs` and the worker | A hook fails and a contact points at a page that went. Every hook is best-effort and the stage is re-derived on every read, so the worst case is a stale owner that shows as a lead |
 | B | Grow `/factory` and hang tags and messages on the sample rows | No new documents | Fields on `samplereg` | Everything on a sample disappears when the page comes down after 30 days, or is erased on a cancel. A lead without a page has nowhere to live |
 | C | An outside CRM (HubSpot, Notion) with a sync | A subscription, and a second copy of every contact | An integration and its keys | Two sources of truth, and the stage in the CRM drifts from the page |
 | D — do nothing | Keep the console | — | — | The founder runs outreach from memory and three apps |
@@ -44,7 +44,7 @@ A. A person outlives their page: a sample comes down after thirty days, can be r
 - Cancel page, and the 180-day erase of a kept copy, turn the contact back into a lead.
 - A rebuild or a revive that lands under a new owner id moves the contact to it.
 
-**The page.** `public/hq.html` is one hand-written file on the Studio's system fonts, with no dependencies. It is dark: glass panels, hairlines, monospace telemetry and one pink-orange glow. It has:
+**The page.** `public/crm.html` is one hand-written file on the Studio's system fonts, with no dependencies. It is dark: glass panels, hairlines, monospace telemetry and one pink-orange glow. It has:
 
 - the New profile form with the Artist ↔ Venue switch;
 - the build card, with an arc-reactor ring, a bar that creeps between the worker's real stage updates, and View sample profile when the page is done;
@@ -109,4 +109,4 @@ How the passcode is kept:
 
 ## How it was verified
 
-`test/hq.mjs` pins each rule, end to end on the in-memory store with a pretend worker and a fake Google. Its passcode section checks every refusal: a stranger's try, another account's cookie, a changed expiry or signature, a stale unlock, lockout, a new passcode, and none set. Two mutations were caught by it, the gate removed and the lockout removed. Its run on 2026-09-28 was 144 passed, 0 failed. The whole suite, on the branch rebased on `d5e53fb`, stamped 4,825 assertions and 0 failing (`node tools/overview.mjs --tests`). `test/factory.mjs` (146) and `test/samples.mjs` (119) pass unchanged against the refactored factory. The page was walked on `tools/localhost.mjs`, where `/dev/hq` fills a demo pipeline and a pretend build walks the eight stages, at 1440, 1024 and 390 px; see the session note for what was seen. Not checked: the live site.
+`test/hq.mjs` pins each rule, end to end on the in-memory store with a pretend worker and a fake Google. Its passcode section checks every refusal: a stranger's try, another account's cookie, a changed expiry or signature, a stale unlock, lockout, a new passcode, and none set. Two mutations were caught by it, the gate removed and the lockout removed. Its run on 2026-09-28 was 144 passed, 0 failed. The whole suite, on the branch rebased on `d5e53fb`, stamped 4,825 assertions and 0 failing (`node tools/overview.mjs --tests`). `test/factory.mjs` (146) and `test/samples.mjs` (119) pass unchanged against the refactored factory. The page was walked on `tools/localhost.mjs`, where `/dev/hq` fills a demo pipeline and a pretend build walks the eight stages, at 1440, 1024 and 390 px; see the session note for what was seen. Live as `0075a30` (PR #137): `/crm` serves the page behind both locks, and `/api/hq` refuses a stranger, whether it asks for the summary or tries a passcode. Not checked live: a right passcode, which is the founder's to type.

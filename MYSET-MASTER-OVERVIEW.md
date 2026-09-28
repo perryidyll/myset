@@ -533,7 +533,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 
 | | |
 |---|---|
-| Public pages | 17 — about.html, artist.html, artists.html, community.html, diary.html, factory.html, hq.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
+| Public pages | 17 — about.html, artist.html, artists.html, community.html, crm.html, diary.html, factory.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 40 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 6 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron |
 | Shared libraries | 70 |
