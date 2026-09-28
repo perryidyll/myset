@@ -104,6 +104,8 @@ python3 tools/prod.py              # read-only health report of the LIVE site
 node --import ./test/register.mjs tools/localhost.mjs   # the whole site on localhost:8950 with the REAL functions on an in-memory store (writes work); open /dev
 ```
 
+**No install step in a worktree.** `node_modules` is never tracked (decision 0116). A worktree under `~/Docs/MySet/.claude/worktrees/` uses the shared checkout's, because Node looks for packages in every parent folder; a checkout anywhere else runs `npm ci` once (the two locked dependencies, nothing new). Never delete `~/Docs/MySet/node_modules`: every worktree reads it.
+
 **`netlify dev` cannot run the write paths** — its storage sandbox returns no version
 tag, so every write after the first fails as busy. Use the test suite, or
 `tools/localhost.mjs` — the real functions through the suite's module hook, so the
