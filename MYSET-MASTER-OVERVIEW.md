@@ -545,10 +545,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
-| Invariants | 282 (last: 0fn) |
-| Test suites | 63 |
-| Assertions | **4,310**, 0 failing, last run 2026-09-28 |
-| Decision records | 105 |
+| Invariants | 284 (last: 0fn) |
+| Test suites | 64 |
+| Assertions | **4,487**, 0 failing, last run 2026-09-28 |
+| Decision records | 107 |
 
 ### Feature flags in force
 
@@ -1165,9 +1165,13 @@ screen while the artist plays. **An unknown role falls back to `crew`**, so a ro
 the table has never heard of can never be an escalation. Venues have the same three, named
 owner / manager / crew.
 
+**Each seat, each tab** (decision 0105). Those roles are now starting points. The owner sets every Studio tab for each band mate or crew seat to Hidden, View or Edit: Setlist, Gigs, Money, Merch, Diary, Messages, Profile, Settings and Plans. That is what "a stint of shows with some guys" needs: the players can see and work the setlist on stage without read/write on the whole account. The Setlist is never hidden, running the show belongs to every seat, and Plans is never more than View. Money, the plan and the account stay the owner's whatever a seat is given. The server refuses what a seat cannot do, and the Studio does not draw it.
+
 **Sessions.** Every token carries a session id, so one phone can be signed out without
 signing out the band. Revocation lives on the registry row the verifier is already reading
 and is normally absent, so it costs nothing on any request.
+
+Only the owner sees and signs out every device on the account; any other seat reaches only its own (decision 0104).
 
 **Recovery.** Eight one-time codes, shown once. Using one **signs out every other device**.
 A wrong code, an unknown page and a locked-out page all answer identically.

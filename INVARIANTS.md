@@ -1911,6 +1911,24 @@ If you are about to violate one, stop and say so rather than working around it.
 
 0gk. **The founder's tools need the founding page's OWNER seat outside `admin.mjs` too: on Media Dash and in the Studio.** `mediadash.mjs` takes a boost row only from the founding page's owner seat; the recovery key and the studio code are owner doors already. Before this, a band mate or the sound engineer signed in to that page could log, overwrite or remove rows on the public dashboard. The Studio draws the founder's cards (the ID queue, the flags, the sheet, the codes you hand out, the venues, MySet's books, the bug list) and sends their calls only when `founder()` is true: `PLAN.owner` AND the owner role. `PLAN.owner` alone means only the page. It keeps that meaning because it is also the founding page's plan-lock bypass (`has()`, `canHide()`), which every seat on that page is owed. This widens 0gj (decision 0099) from `admin.mjs` to the page and to Media Dash. `test/founderseat.mjs` holds both halves, plus a tripwire that names any founder action the Studio sends from a function it does not know. Decision `0100`.
 
+0gq. **The owner gives each band mate and crew seat, tab by tab, hidden, view or edit — and the server holds the line, not the page.**
+- **The model.** Nine Studio tabs (`AREAS` in `_session.mjs`): Setlist, Gigs, Money, Merch, Diary, Messages, Profile, Settings and Plans. Each is at 0, 1 or 2 per seat.
+  - A role is the seat's preset, and the presets are the reach the roles always had: `member` edits everything but Money and Plans (view); `crew` sees the Setlist and nothing else.
+  - `byEmail[email].access` holds only the tabs the owner changed. A seat nobody touched costs nothing on the registry every request reads. `roleSet` puts every tab back to the new preset.
+- **Floors and ceilings.** The Setlist is never below view, because the stage needs it. Running the show and the requests are in no tab. Plans is never above view.
+- **Owner-only stays owner-only.** `OWNER_ONLY` in `admin.mjs` and `auth.mjs` is checked before the table, and no grant reaches past it (0dc). `accessSet` is the owner's; it refuses a level a tab cannot take rather than clamping it.
+- **The server holds the line.**
+  - Every `CAPABILITY` row names a tab and `_view` or `_edit`. `revenue.mjs` and `history.mjs` ask Money view to read and Money edit to change.
+  - The Live poll carries no money — not tonight's tips, their notes, the vote buys or the all-time total — to a seat without Money view, and says `money: false`.
+  - A seat is shown its own row of the team list, never every address on the page.
+  - A stored `access` counts only as an own 0, 1 or 2, so an inherited key or a string is no grant (the `CAN['toString']` lesson, 0db).
+- **The page is honest.**
+  - `planGet` carries the seat's levels, and the Studio draws only what the server allows: a hidden tab is gone from the tab bar and the Menu and its reads are never sent.
+  - An edit control carries `data-ed="<tab>"` (`"owner"` for the owner's own), and `seatPass()` removes what this seat cannot do after every paint and every sheet.
+  - A tab at view shows every value and takes no typing.
+- **Samples.** A sample's link (0101) looks at every tab and changes none; its Studio draws as the owner's because a write there opens the claim sheet.
+- **Where it is held.** This widens 0db from a role to a seat. `test/accounts.mjs` holds the server; `test/seatstudio.mjs` holds the page, with a tripwire that fails if the Studio sends an owner-only action from a function outside the gated set. Decision `0105`.
+
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and
     `normEmail` strips `|`). Revocation is a normally-ABSENT `dead` map on the
@@ -1925,6 +1943,8 @@ If you are about to violate one, stop and say so rather than working around it.
     never a raw User-Agent and never an IP. "Last opened Settings" is written at
     most once an hour, from actions the Studio already calls — it is labelled that
     way because a "last used" built from that number would be false.
+
+0gp. **A seat that is not the owner reaches only its own devices.** `sessions`, `sessionRevoke` and `signOutOthers` were open to every seat while `revokeAll` was the owner's, so a crew phone's "Sign out my other devices" signed the artist's Studio out mid-gig, and `sessionRevoke` killed any session id it was handed. For anyone but the owner all three now read the list narrowed to the seat's own address (`readSessions(owner, sid, onlyEmail)`). The list shows its own devices. A session id outside it is refused with 403, never quietly ignored. "Other devices" means its own. A row with no address belongs to nobody who asks for one. The owner still reaches every device, which is how a lost phone or a departed band mate is cut off. The venue side is the same. `test/accounts.mjs` holds both sides. Decision `0104`.
 
 0df. **There is a way back in.** Eight one-time recovery codes, hashed with the
     site secret, shown once. The door takes the PUBLIC page name plus a code, reuses

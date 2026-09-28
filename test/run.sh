@@ -200,3 +200,6 @@ node --import ./test/register.mjs test/sharecard.mjs
 echo
 echo "── the founder's tools need the founder's owner seat: Media Dash and the Studio (0100) ──"
 node --import ./test/register.mjs test/founderseat.mjs
+echo
+echo "── each seat, each tab: what the Studio draws for a band mate or crew seat (0105) ──"
+node test/seatstudio.mjs

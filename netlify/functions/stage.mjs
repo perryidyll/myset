@@ -7,17 +7,25 @@ import { readRequests, shapeRequests } from './_requests.mjs';
 import { readFeedback, shapeFeedback } from './_feedback.mjs';
 import { readEvents, nextOccurrence } from './_events.mjs';
 import { localTime } from './_time.mjs';
+import { can } from './_session.mjs';
 
 const main = async (req) => {
   /* A sample's Studio reads its stage too (decision 0101) — read-only; it is not in
      the registry, so its address comes from the sample row. */
   const me = await requireArtist(req, { sample: true });
   if (!me) return bad('unauthorized', 401);
-  return json(await stagePayload(me.aid, { slug: me.slug || '' }));
+  return json(await stagePayload(me.aid, me));
 };
 
-/** Shared so a write can return the new state instead of forcing a second fetch. */
-export async function stagePayload(aid, { slug: slugHint = '' } = {}) {
+/** Shared so a write can return the new state instead of forcing a second fetch.
+ *  `seat` is the sign-in asking (requireArtist's answer). A sample's carries the page's
+ *  slug, because a sample is not in the registry (decision 0101). One the owner has not
+ *  given the Money tab gets tonight's show without tonight's money — the tips, their
+ *  notes, the vote buys and the account's all-time total (decision 0105) — and
+ *  `money: false`, so the Live tab draws no dollar figure rather than a false $0.00. */
+export async function stagePayload(aid, seat) {
+  const slugHint = (seat && seat.slug) || '';
+  const money = !seat || can(seat.role || 'owner', 'money_view', seat.access);
   const { artistById } = await import('./_auth.mjs');
   const [show, fans, meta, reqs, lists, learn, fb, events, who] = await Promise.all([
     getShow(aid), readFans(aid), readMeta(aid), readRequests(aid),
@@ -112,8 +120,10 @@ export async function stagePayload(aid, { slug: slugHint = '' } = {}) {
           votable: canVote(x),          // in the setlist, or already played
         })), counts, firstAt);
     })(),
-    tips: { total: tonight.total, count: tonight.count, recent, allTime, allTimeCount: meta.tips.length },
-    paid,   // tonight's vote purchases: { count, total, last } — see above
+    tips: money ? { total: tonight.total, count: tonight.count, recent, allTime, allTimeCount: meta.tips.length }
+      : { total: 0, count: 0, recent: [], allTime: 0, allTimeCount: 0 },
+    paid: money ? paid : { count: 0, total: 0, last: 0 },   // tonight's vote purchases: { count, total, last } — see above
+    ...(money ? {} : { money: false }),
     signAt: Number(meta.signAt) || 0,     // when the sign was printed — the first-gig card's second tick
     /* How many nights are on file, stamped by endShow so the Live tab can tell a
        first gig from a hundredth without a history read on every poll. null on an

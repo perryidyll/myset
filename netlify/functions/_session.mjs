@@ -158,9 +158,14 @@ export async function touchSession(owner, sid, now = Date.now()) {
   }).catch(() => {});
 }
 
-export async function readSessions(owner, mySid) {
+/* `onlyEmail` narrows the list to one sign-in address (decision 0104). A seat that
+   is not the owner is handed its own devices and nobody else's, because this list
+   is where every "Sign out" button, and every sid a sign-out names, comes from.
+   A row with no address belongs to nobody who asks for one. */
+export async function readSessions(owner, mySid, onlyEmail = null) {
   const { data } = await readDoc(SESS(owner), null);
-  const list = ((data && data.list) || []).map((s) => ({
+  const list = ((data && data.list) || [])
+    .filter((s) => onlyEmail === null || (!!s.email && s.email === onlyEmail)).map((s) => ({
     sid: s.sid, email: s.email || '', label: s.label || 'A device we can’t identify',
     tz: s.tz || '', at: s.at || 0, seen: s.seen || s.at || 0, current: !!mySid && s.sid === mySid,
   }));
@@ -243,27 +248,74 @@ export async function useRecovery(owner, given) {
      member  the page and the show: library, setlist, gigs, profile, community,
              requests, stats. Sees money totals; never moves money
      crew    tonight only: run the show, see the queue and the requests
+   (Those two are now presets the owner can change seat by seat — below.)
 
    AN UNKNOWN ROLE FALLS BACK TO `crew`, the least it could be. Default-deny, so a
    role string this table has never heard of can never be an escalation. That also
-   quietly retires `staff`, which venueauth wrote and nothing ever read. */
+   quietly retires `staff`, which venueauth wrote and nothing ever read.
+
+   PER SEAT, PER TAB (decision 0105). The founder, 2026-09-28: "maybe i play a stint
+   of shows with some guys and give them access to my account so they can also see
+   and interact with the setlist while on stage, but that doesn't necessarily mean i
+   want them to have read/write access to my entire account". So the owner gives each
+   seat, for each Studio tab, one of three levels: 0 hidden, 1 view, 2 edit. A role is
+   now the seat's STARTING point — its preset, the same reach it always had — and
+   `access` on its registry row holds only the tabs the owner has changed. A seat
+   nobody has touched costs nothing and behaves exactly as its role always did.
+     · The Setlist is never hidden: the stage needs it. Running the show and the
+       requests stay with every seat whatever its tabs say (`show`, `requests`).
+     · Plans is never more than view. Money, the plan and the account stay the
+       owner's whatever a seat is given (INVARIANT 0dc): OWNER_ONLY in admin.mjs and
+       auth.mjs is checked BEFORE this table, and no grant here reaches past it. */
+export const AREAS = ['setlist', 'gigs', 'money', 'merch', 'diary', 'messages', 'profile', 'settings', 'plans'];
+const FLOOR = { setlist: 1 };
+const CEIL = { plans: 1 };
+export const PRESET = {
+  member: { setlist: 2, gigs: 2, money: 1, merch: 2, diary: 2, messages: 2, profile: 2, settings: 2, plans: 1 },
+  crew:   { setlist: 1, gigs: 0, money: 0, merch: 0, diary: 0, messages: 0, profile: 0, settings: 0, plans: 0 },
+  /* A sample's link (decision 0101) looks at every tab and changes none. Its Studio
+     still draws the owner's page, because a write there opens the claim sheet — and
+     SAMPLE_OK in admin.mjs refuses it before this table is ever asked. */
+  sample: { setlist: 1, gigs: 1, money: 1, merch: 1, diary: 1, messages: 1, profile: 1, settings: 1, plans: 1 },
+};
+/* AN OWN-PROPERTY CHECK, NOT A TRUTHINESS ONE. `CAN['toString']` is an inherited
+   Function: truthy, and with no `.has`, so `CAN[role] || CAN.crew` handed back the
+   function and the next line threw. A role string, and now an `access` map, arrive
+   from stored data and could be anything. admin.mjs learned this on the flags map. */
+const own = (o, k) => !!o && typeof o === 'object' && Object.prototype.hasOwnProperty.call(o, k);
+/** The levels a seat may be given on one tab: the Setlist from view, Plans to view. */
+export const reachOf = (area) => ({ min: own(FLOOR, area) ? FLOOR[area] : 0, max: own(CEIL, area) ? CEIL[area] : 2 });
+/** How far a seat reaches into one tab: 0 hidden, 1 view, 2 edit. */
+export function levelOf(role, access, area) {
+  if (role === 'owner') return 2;
+  const preset = own(PRESET, role) ? PRESET[role] : PRESET.crew;
+  const given = own(access, area) ? access[area] : preset[area];
+  const lvl = given === 0 || given === 1 || given === 2 ? given : (preset[area] || 0);
+  const { min, max } = reachOf(area);
+  return Math.min(max, Math.max(min, lvl));
+}
+/** Every tab at once: what planGet hands the Studio and the owner's grid draws. */
+export const accessOf = (role, access) => Object.fromEntries(AREAS.map((a) => [a, levelOf(role, access, a)]));
+
+/* What is not a tab, and is read somewhere: the activity log (0de, auth.mjs). Running
+   the show and the requests belong to every seat and are in no table at all, and
+   the export is OWNER_ONLY's (admin.mjs), so none of them is a name here. */
 export const CAN = {
   owner: null,                                          // null means everything
-  member: new Set(['show', 'library', 'gigs', 'profile', 'community', 'requests', 'stats', 'export', 'audit']),
-  crew: new Set(['show', 'requests']),
+  member: new Set(['audit']),
+  crew: new Set(),
   /* The person holding a sample's link (decision 0101) may look at the Studio of the
      page built for them and do NOTHING — admin.mjs lets `sample` through only on its
      own short list of reads. Named here, as an empty set, so it can never fall back
      to `crew`, which can run a show. */
   sample: new Set(),
 };
-export const can = (role, what) => {
+/** `what` is a tab and a level ('gigs_view', 'money_edit') or one of CAN's names. */
+export const can = (role, what, access) => {
   if (role === 'owner') return true;
-  /* AN OWN-PROPERTY CHECK, NOT A TRUTHINESS ONE. `CAN['toString']` is an inherited
-     Function: truthy, and with no `.has`, so `CAN[role] || CAN.crew` handed back
-     the function and the next line threw. A role string arrives from stored data
-     and could be anything. admin.mjs already learned this one on the flags map. */
-  const set = Object.prototype.hasOwnProperty.call(CAN, role) ? CAN[role] : CAN.crew;
+  const tab = /^([a-z]+)_(view|edit)$/.exec(String(what));
+  if (tab && AREAS.includes(tab[1])) return levelOf(role, access, tab[1]) >= (tab[2] === 'edit' ? 2 : 1);
+  const set = own(CAN, role) ? CAN[role] : CAN.crew;
   return !!(set instanceof Set ? set : CAN.crew).has(what);
 };
 

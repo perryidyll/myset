@@ -94,6 +94,19 @@ ok('who can sign in', (await S({ action: 'planGet' }, TM)).ok);
 eq('THE BUG: but cannot delete the owner’s address', (await A({ action: 'remove', email: 'rita@example.com' }, TM)).status, 403);
 eq('THE BUG: cannot rename the page every QR code points at', (await A({ action: 'setSlug', slug: 'stolen' }, TM)).status, 403);
 eq('cannot sign the owner out', (await A({ action: 'revokeAll' }, TM)).status, 403);
+/* NOR ONE DEVICE AT A TIME (decision 0104). revokeAll was refused, but sessionRevoke
+   signed out any sid on the account and `sessions` handed every one of them out, the
+   owner's phone included. A seat that is not the owner now sees, and can sign out,
+   only the devices signed in with its own address. */
+const sidR = newSid(), sidB = newSid();
+await addSession(rita, { sid: sidR, email: 'rita@example.com', label: 'iPhone · Safari', at: Date.now() });
+await addSession(rita, { sid: sidB, email: 'bass@example.com', label: 'Android · Chrome', at: Date.now() });
+const TO = await signToken('rita@example.com', revOf(reg, rita), sidR);
+const TB = await signToken('bass@example.com', revOf(reg, rita), sidB);
+eq('a member sees only their own devices, never the owner’s',
+   ((await A({ action: 'sessions' }, TB)).list || []).map((x) => x.sid), [sidB]);
+eq('THE BUG: and cannot sign the owner’s phone out by its id', (await A({ action: 'sessionRevoke', sid: sidR }, TB)).status, 403);
+eq('so the owner is still in', (await S({ action: 'planGet' }, TO)).status, 200);
 eq('cannot open the owner’s Stripe portal', (await S({ action: 'planPortal' }, TM)).status, 403);
 eq('cannot change the plan', (await S({ action: 'planChange', plan: 'free' }, TM)).status, 403);
 eq('cannot delete the account', (await S({ action: 'accountDelete', confirm: 'DELETE' }, TM)).status, 403);
@@ -108,6 +121,28 @@ ok('the owner adds a sound engineer', (await A({ action: 'add', email: 'sound@ex
 reg = await readArtists();
 const TC = await signToken('sound@example.com', revOf(reg, rita), newSid());
 ok('crew can run the show', (await S({ action: 'status', status: 'live' }, TC)).ok);
+/* THE SAME HOLE, ONE TAP WIDE (decision 0104). signOutOthers had no role check and
+   meant every OTHER device on the account, so "Sign out my other devices" on the
+   sound engineer's phone bounced the artist's Studio to the sign-in screen mid-gig.
+   It now means the crew member's own other devices and nobody else's. */
+const sidC = newSid(), sidC2 = newSid();
+await addSession(rita, { sid: sidC, email: 'sound@example.com', label: 'iPad · Safari', at: Date.now() });
+await addSession(rita, { sid: sidC2, email: 'sound@example.com', label: 'Mac · Chrome', at: Date.now() });
+const TC1 = await signToken('sound@example.com', revOf(reg, rita), sidC);
+const TC2 = await signToken('sound@example.com', revOf(reg, rita), sidC2);
+eq('the owner is signed in before', (await S({ action: 'planGet' }, TO)).status, 200);
+eq('crew cannot sign everyone out', (await A({ action: 'revokeAll' }, TC1)).status, 403);
+r = await A({ action: 'signOutOthers' }, TC1);
+ok('crew can sign out their own other devices', r.ok && r.gone === 1, r);
+eq('THE BUG: and the owner is still signed in after', (await S({ action: 'planGet' }, TO)).status, 200);
+ok('so is the band mate', (await S({ action: 'planGet' }, TB)).ok);
+eq('while the crew member’s other device is out', (await S({ action: 'planGet' }, TC2)).status, 401);
+eq('crew cannot name the owner’s phone either', (await A({ action: 'sessionRevoke', sid: sidR }, TC1)).status, 403);
+r = await A({ action: 'sessions' }, TO);
+ok('the owner still sees every device on the account',
+   [sidR, sidB, sidC].every((s) => (r.list || []).some((x) => x.sid === s)), r);
+ok('and can still sign any one of them out', (await A({ action: 'sessionRevoke', sid: sidC }, TO)).ok);
+eq('which reaches the crew phone', (await S({ action: 'planGet' }, TC1)).status, 401);
 eq('crew cannot rewrite the library', (await S({ action: 'addSong', title: 'No', artist: 'X' }, TC)).status, 403);
 eq('crew cannot touch the profile', (await S({ action: 'profileSet', profile: { bio: 'x' } }, TC)).status, 403);
 /* The shop and media writes are tenancy, not the show: each must be refused BEFORE the
@@ -116,12 +151,12 @@ for (const a of ['merchRemove', 'merchPhotoClear', 'photoClear', 'orderDone', 'o
   eq('crew is refused ' + a, (await S({ action: a, id: 'mabcdef', sid: 'cs_x', slot: 'p0' }, TC)).status, 403);
 ok('a member may still work the shop', (await S({ action: 'merchList' }, TM)).ok);
 ok('an unknown role falls back to the least it could be, never the most',
-   can('owner', 'library') && !can('crew', 'library') && !can('made-up-role', 'library'));
+   can('owner', 'setlist_edit') && !can('crew', 'setlist_edit') && !can('made-up-role', 'setlist_edit'));
 /* `CAN['toString']` is an inherited Function: truthy, with no `.has`, so the
    first version of this threw a TypeError on a role string that could arrive
    from stored data. It must fall back to crew, not explode and not open up. */
 ok('and a role name that is a JavaScript builtin falls back to crew rather than crashing',
-   can('toString', 'show') === true && can('toString', 'library') === false);
+   can('toString', 'audit') === false && can('toString', 'setlist_view') === true && can('toString', 'setlist_edit') === false);
 
 console.log('\nEVERY ROW OF THE ROLE TABLE NAMES A REAL ACTION  (setlists, charts, lyrics, tags)');
 /* CAPABILITY gated songSet, bulkSongs, setChart, setLyrics, listSave, listApply and
@@ -184,6 +219,118 @@ console.log('\nTHE FOUNDER’S TOOLS NEED THE FOUNDER’S OWNER SEAT, NOT JUST T
     headers: { 'content-type': 'application/json', 'x-admin-code': process.env.ADMIN_CODE },
     body: JSON.stringify({ action: 'flagList' }) }));
   eq('and so does the recovery key', viaKey.status, 200);
+}
+
+console.log('\nEACH SEAT, EACH TAB  the owner decides (decision 0105)');
+/* The founder, 2026-09-28: a stint of shows with some guys who should see and work
+   the setlist on stage without read/write on the whole account. So the owner sets,
+   for each seat and each Studio tab, hidden, view or edit — and the SERVER holds the
+   line, not just the page. A seat nobody has touched keeps exactly its role's reach,
+   which is why every member and crew check above still passes unchanged. */
+{
+  const revFn = (await import('../netlify/functions/revenue.mjs')).default;
+  const histFn = (await import('../netlify/functions/history.mjs')).default;
+  const { levelOf, reachOf, AREAS, PRESET } = await import('../netlify/functions/_session.mjs');
+  const { mutateMeta } = await import('../netlify/functions/_lib.mjs');
+  const R = (token, post) => hit(revFn, 'https://x/api/revenue', post ? {} : undefined, token);
+  const H = (token, body) => hit(histFn, 'https://x/api/history', body, token);
+  const setTab = (email, area, level, token = TO) => A({ action: 'accessSet', email, area, level }, token);
+  const rowOf = async (email) => (await readArtists()).byEmail[email];
+
+  // the presets are today's reach, so a seat nobody has touched is where it always was
+  eq('a band mate reads the Money tab', (await R(TM)).status, 200);
+  eq('and the book of nights', (await H(TM)).status, 200);
+  eq('but moves nothing: the delivery sweep is Money edit', (await R(TM, true)).status, 403);
+  eq('nor renames or hides a night', (await H(TM, { action: 'rename', show: 'nope', title: 'x' })).status, 403);
+  eq('THE BUG: crew cannot read every payment and its buyer’s email', (await R(TC)).status, 403);
+  eq('THE BUG: nor the book of nights', (await H(TC)).status, 403);
+  eq('THE BUG: nor hide a night from the owner’s book (“Delete show”)', (await H(TC, { action: 'hide', show: 'nope' })).status, 403);
+  eq('THE BUG: nor change what the room pays for a vote', (await S({ action: 'freeCredits', n: 3 }, TC)).status, 403);
+  eq('the Studio is told what this seat can use', (await S({ action: 'planGet' }, TC)).access,
+     { setlist: 1, gigs: 0, money: 0, merch: 0, diary: 0, messages: 0, profile: 0, settings: 0, plans: 0 });
+  eq('and the owner can use everything', Object.values((await S({ action: 'planGet' }, TO)).access), AREAS.map(() => 2));
+
+  // only the owner hands tabs out
+  eq('a band mate cannot give a seat a tab', (await setTab('sound@example.com', 'money', 2, TM)).status, 403);
+  eq('nor can a seat give itself one', (await setTab('sound@example.com', 'money', 2, TC)).status, 403);
+
+  // a grant reaches the server at once — the token reads the registry row it already holds
+  ok('the owner lets the sound engineer see the money', (await setTab('sound@example.com', 'money', 1)).ok);
+  eq('THE POINT: and the same phone can read it now', (await R(TC)).status, 200);
+  eq('but still not move it', (await R(TC, true)).status, 403);
+  ok('then lets them change it too', (await setTab('sound@example.com', 'money', 2)).ok);
+  eq('and a rename reaches the book (404: there is no such night, which is past the gate)',
+     (await H(TC, { action: 'rename', show: 'nope', title: 'x' })).status, 404);
+
+  // and a tab taken away is gone on the server, not just off the screen
+  ok('the owner takes Merch from the band mate', (await setTab('bass@example.com', 'merch', 0)).ok);
+  eq('THE POINT: who can no longer read an order', (await S({ action: 'orderList' }, TM)).status, 403);
+  eq('or the shop', (await S({ action: 'merchList' }, TM)).status, 403);
+  ok('Merch to view', (await setTab('bass@example.com', 'merch', 1)).ok);
+  ok('reads the shop again', (await S({ action: 'merchList' }, TM)).ok);
+  eq('but cannot change it', (await S({ action: 'merchSave', item: { title: 'Tee', price: 20 } }, TM)).status, 403);
+  ok('Messages to view', (await setTab('bass@example.com', 'messages', 1)).ok);
+  ok('reads the inbox', (await S({ action: 'msgList' }, TM)).ok);
+  eq('but cannot answer it', (await S({ action: 'msgReply', id: 'nope', text: 'hi' }, TM)).status, 403);
+  ok('Gigs hidden', (await setTab('bass@example.com', 'gigs', 0)).ok);
+  eq('cannot read the calendar', (await S({ action: 'eventList' }, TM)).status, 403);
+  ok('Settings to view', (await setTab('bass@example.com', 'settings', 1)).ok);
+  eq('cannot change the free votes', (await S({ action: 'freeCredits', n: 3 }, TM)).status, 403);
+  ok('while the Setlist, still theirs, still takes a song', (await S({ action: 'addSong', title: 'Tide', artist: 'R' }, TM)).ok);
+
+  // the bounds, refused rather than quietly clamped
+  eq('the Setlist cannot be hidden: the stage needs it', (await setTab('sound@example.com', 'setlist', 0)).status, 400);
+  eq('Plans is never more than view', (await setTab('bass@example.com', 'plans', 2)).status, 400);
+  eq('an unknown tab is refused', (await setTab('bass@example.com', 'wallet', 1)).status, 400);
+  eq('and an unknown level', (await setTab('bass@example.com', 'gigs', '2')).status, 400);
+  eq('the owner’s own row has no tabs to set', (await setTab('rita@example.com', 'money', 0)).status, 400);
+  eq('nor does an address on nobody’s page', (await setTab('nobody@example.com', 'money', 1)).status, 400);
+
+  // owner-only stays owner-only, whatever a seat is given
+  for (const a of AREAS) await setTab('bass@example.com', a, reachOf(a).max);
+  eq('every tab at its most', (await S({ action: 'planGet' }, TM)).access,
+     Object.fromEntries(AREAS.map((a) => [a, reachOf(a).max])));
+  for (const a of ['planChange', 'planPortal', 'payStart', 'bizGet', 'ledger', 'books', 'accountDelete',
+                   'accountExport', 'promoRedeem', 'setCode', 'featureStart', 'msgBlock', 'msgReport'])
+    eq('THE POINT: and still refused ' + a, (await S({ action: a, plan: 'free', country: 'US', confirm: 'DELETE',
+      code: 'X', id: 'x' }, TM)).status, 403);
+  eq('nor can it add a sign-in', (await A({ action: 'add', email: 'x@example.com' }, TM)).status, 403);
+
+  // the Live poll carries no money to a seat without the Money tab
+  await mutateMeta(rita, (m) => { m.tips.push({ amount: 7, at: Date.now(), note: 'for the bass player' }); return true; });
+  ok('the sound engineer’s Money goes back to hidden', (await setTab('sound@example.com', 'money', 0)).ok);
+  r = await hit(stageFn, 'https://x/api/stage', undefined, TC);
+  ok('the crew phone still gets the show', r.ok && Array.isArray(r.songs), r.error);
+  eq('THE POINT: but not the tips, their notes, or the account’s total',
+     [r.tips.allTime, r.tips.recent.length, r.paid.total, r.money], [0, 0, 0, false]);
+  r = await hit(stageFn, 'https://x/api/stage', undefined, TO);
+  ok('while the owner’s Live tab has them', r.tips.allTime >= 7 && r.money === undefined, r.tips);
+
+  // the team list: the owner sees the band and what each seat can use; a seat sees itself
+  r = await A({ action: 'list' }, TO);
+  eq('the owner’s list says what each seat can use', r.emails.find((x) => x.email === 'sound@example.com').access.money, 0);
+  eq('and which levels each tab can take, so the grid never offers one accessSet refuses',
+     r.tabs.filter((t) => t.min !== 0 || t.max !== 2), [{ area: 'setlist', min: 1, max: 2 }, { area: 'plans', min: 0, max: 1 }]);
+  eq('a seat is not handed that grid', (await A({ action: 'list' }, TM)).tabs, undefined);
+  eq('a seat is shown its own row, not everybody’s address', (await A({ action: 'list' }, TM)).emails.map((x) => x.email), ['bass@example.com']);
+
+  // a role is a starting point: choosing one puts every tab back, and stores nothing
+  ok('the owner sets the band mate back to a band mate', (await A({ action: 'roleSet', email: 'bass@example.com', role: 'member' }, TO)).ok);
+  eq('every tab is the preset again', (await S({ action: 'planGet' }, TM)).access, PRESET.member);
+  eq('with nothing left on the registry row', (await rowOf('bass@example.com')).access, undefined);
+  ok('a tab set to what the preset already says', (await setTab('sound@example.com', 'money', 0)).ok);
+  eq('stores nothing either', (await rowOf('sound@example.com')).access, undefined);
+
+  // stored data could be anything: only an own 0, 1 or 2 is a grant
+  eq('an inherited key is not a grant', levelOf('crew', Object.create({ money: 2 }), 'money'), 0);
+  eq('nor a string', levelOf('crew', { money: '2' }, 'money'), 0);
+  eq('and an unknown role starts from crew', levelOf('made-up-role', null, 'gigs'), 0);
+  /* A sample's link (0101) looks at every tab — its Live tab shows tonight's money, as
+     the demo always did — and changes none, and it never inherits crew's show. */
+  const { accessOf } = await import('../netlify/functions/_session.mjs');
+  eq('a sample looks at every tab', Object.values(accessOf('sample', null)), AREAS.map(() => 1));
+  ok('and changes none of them, nor runs a show',
+     can('sample', 'money_view') && !can('sample', 'gigs_edit') && !can('sample', 'setlist_edit') && !can('sample', 'show'));
 }
 
 console.log('\nRECOVERY CODES  the way back when the inbox is gone');
@@ -298,6 +445,24 @@ eq('THE BUG: but cannot rename the venue page', (await hit(vauthFn, 'https://x/a
 eq('THE BUG: cannot link the payout account', (await hit(vadmin, 'https://x/api/venueadmin', { action: 'payStart', country: 'US' }, TVC)).status, 403);
 eq('cannot change the plan', (await hit(vadmin, 'https://x/api/venueadmin', { action: 'planChange', plan: 'free' }, TVC)).status, 403);
 eq('cannot sign the owner out', (await hit(vauthFn, 'https://x/api/venueauth', { action: 'revokeAll' }, TVC)).status, 403);
+/* Nor one device at a time, nor "every other device" (decision 0104): the venue
+   side had the same two doors open. */
+{
+  const V = (body, token) => hit(vauthFn, 'https://x/api/venueauth', body, token);
+  const vsidO = newSid(), vsidC = newSid(), vsidC2 = newSid();
+  for (const [sid, email] of [[vsidO, 'boss@bar.com'], [vsidC, 'barman@bar.com'], [vsidC2, 'barman@bar.com']])
+    await addSession('v_' + bar.venueId, { sid, email, label: 'iPhone · Safari', at: Date.now() });
+  const TVO1 = await signVenueToken('boss@bar.com', vRevOf(vreg, bar.venueId), vsidO);
+  const TVC1 = await signVenueToken('barman@bar.com', vRevOf(vreg, bar.venueId), vsidC);
+  const TVC2 = await signVenueToken('barman@bar.com', vRevOf(vreg, bar.venueId), vsidC2);
+  eq('the barman sees only the barman’s own devices',
+     ((await V({ action: 'sessions' }, TVC1)).list || []).map((x) => x.email), ['barman@bar.com', 'barman@bar.com']);
+  eq('THE BUG: and cannot sign the owner’s phone out by its id', (await V({ action: 'sessionRevoke', sid: vsidO }, TVC1)).status, 403);
+  r = await V({ action: 'signOutOthers' }, TVC1);
+  ok('“Sign out our other devices” reaches only the barman’s own', r.ok && r.gone === 1, r);
+  ok('THE BUG: so the owner is still in', (await hit(vadmin, 'https://x/api/venueadmin', { action: 'get' }, TVO1)).ok);
+  eq('while the barman’s other device is out', (await hit(vadmin, 'https://x/api/venueadmin', { action: 'get' }, TVC2)).status, 401);
+}
 eq('and cannot delete the page', (await hit(vadmin, 'https://x/api/venueadmin', { action: 'accountDelete', confirm: 'DELETE' }, TVC)).status, 403);
 ok('a venue can finally take its data with it', (await hit(vadmin, 'https://x/api/venueadmin', { action: 'accountExport' }, TVO)).ok);
 r = await hit(vadmin, 'https://x/api/venueadmin', { action: 'accountDelete', confirm: 'DELETE' }, TVO);

@@ -5,7 +5,7 @@ import { normEmail, validEmail, issueCode, checkCode, sendCode, signToken, verif
          cleanSlug, RESERVED , revOf, artistBySlug, sendNotice, emailReady } from './_auth.mjs';
 import { newSid, addSession, touchSession, readSessions, killSessions, killEverything,
          deviceLabel, note, readLog, makeRecovery, recoveryStatus, useRecovery,
-         sidsFor, can } from './_session.mjs';
+         sidsFor, can, AREAS, reachOf, levelOf, accessOf } from './_session.mjs';
 import { newChallenge, register as pkRegister, assert as pkAssert, listKeys as pkList,
          forget as pkForget, hasPasskey } from './_passkey.mjs';
 import { setPassword, checkPassword, hasPassword, clearPassword, weakPassword,
@@ -250,7 +250,7 @@ const main = async (req) => {
   /* ---- signed in from here ---- */
   if (['list','add','remove','revokeAll','setSlug','sessions','sessionRevoke','signOut',
        'signOutOthers','recoveryStatus','recoveryMake','activity','emailChangeStart',
-       'emailChangeFinish','roleSet','passwordSet','passwordClear',
+       'emailChangeFinish','roleSet','accessSet','passwordSet','passwordClear',
        'passkeyList','passkeyStart','passkeyFinish','passkeyForget'].includes(action)) {
     const me = await requireArtist(req);
     if (!me) return bad('unauthorized', 401);
@@ -261,7 +261,7 @@ const main = async (req) => {
        a member on a five-seat Pro page could delete the OWNER's sign-in address and
        take the account, or rename the public page address that is printed on every
        QR code on every table in the bar. Both are one POST. */
-    const OWNER_ONLY = ['add','remove','revokeAll','setSlug','recoveryMake','emailChangeStart','emailChangeFinish','roleSet',
+    const OWNER_ONLY = ['add','remove','revokeAll','setSlug','recoveryMake','emailChangeStart','emailChangeFinish','roleSet','accessSet',
       /* A passkey signs the OWNER in (passkeySignInFinish opens the owner's
          session), so letting a band mate on a Pro seat add one would hand them the
          owner's account with a thumbprint. */
@@ -358,13 +358,23 @@ const main = async (req) => {
       return json({ ok: true });
     }
 
-    if (action === 'sessions') return json({ ok: true, ...(await readSessions(aid, me.sid)) });
+    /* YOUR DEVICES, UNLESS THE ACCOUNT IS YOURS (decision 0104). revokeAll was
+       owner-only while these three were open to every seat: `sessions` listed every
+       device on the account, `sessionRevoke` killed any sid it was handed, and
+       `signOutOthers` meant every OTHER device, so one tap on a crew phone signed
+       the artist's Studio out mid-gig. The owner still reaches every device (that is
+       how a lost phone or a departed band mate is cut off); anyone else reaches the
+       devices signed in with their own address, and a sid outside that is refused. */
+    const onlyEmail = role === 'owner' ? null : (me.email || '');
+    if (action === 'sessions') return json({ ok: true, ...(await readSessions(aid, me.sid, onlyEmail)) });
     if (action === 'sessionRevoke') {
       const sid = String(body.sid || '').slice(0, 24);
       if (!sid) return bad('which one?');
+      if (onlyEmail !== null && !(await readSessions(aid, me.sid, onlyEmail)).list.some((x) => x.sid === sid))
+        return bad('Only the account owner can sign out someone else’s device', 403);
       await killSessions(aid, [sid]);
       note(aid, 'session.revoke', me.email || 'code');
-      return json({ ok: true, ...(await readSessions(aid, me.sid)) });
+      return json({ ok: true, ...(await readSessions(aid, me.sid, onlyEmail)) });
     }
     /* SIGNING OUT NOW SIGNS YOU OUT. It used to clear localStorage and nothing
        else, so a copy of the token kept working for the rest of its thirty days. */
@@ -374,11 +384,11 @@ const main = async (req) => {
       return json({ ok: true, sid: me.sid || null });
     }
     if (action === 'signOutOthers') {
-      const { list } = await readSessions(aid, me.sid);
+      const { list } = await readSessions(aid, me.sid, onlyEmail);
       const others = list.filter((x) => !x.current).map((x) => x.sid);
       if (others.length) await killSessions(aid, others);
       note(aid, 'session.revokeAll', me.email || 'code', `${others.length} device(s)`);
-      return json({ ok: true, gone: others.length, ...(await readSessions(aid, me.sid)) });
+      return json({ ok: true, gone: others.length, ...(await readSessions(aid, me.sid, onlyEmail)) });
     }
     if (action === 'activity') return json({ ok: true, list: await readLog(aid) });
 
@@ -488,10 +498,39 @@ const main = async (req) => {
       await mutateArtists((a) => {
         const cur = a.byEmail[email];
         if (!cur || cur.artistId !== aid || cur.role === 'owner') return false;
-        cur.role = want; hit = true; return true;
+        // a role is a starting point (0105): choosing one puts every tab back to it
+        cur.role = want; delete cur.access; hit = true; return true;
       });
       if (!hit) return bad('That address isn’t on this page');
       note(aid, 'role.change', me.email || 'code', `${email} → ${want}`);
+    }
+
+    /* ---- what a seat can use, tab by tab (decision 0105) ----
+       One tab at a time, from the owner's grid. A level the tab cannot take — the
+       Setlist hidden, Plans changed — is refused, never quietly clamped, so the grid
+       cannot show one thing while the server keeps another. Only what differs from
+       the seat's preset is stored, so a seat set back to its role's levels carries
+       nothing on the registry every request reads. */
+    if (action === 'accessSet') {
+      const email = normEmail(body.email);
+      const area = String(body.area || '');
+      const level = body.level;
+      if (!AREAS.includes(area)) return bad('unknown tab');
+      const { min, max } = reachOf(area);
+      if (![0, 1, 2].includes(level) || level < min || level > max)
+        return bad(area === 'setlist' && level === 0 ? 'Everyone on the page sees the setlist — the stage needs it.'
+          : area === 'plans' && level === 2 ? 'Only you can change the plan.' : 'unknown level');
+      let hit = false;
+      await mutateArtists((a) => {
+        const cur = a.byEmail[email];
+        if (!cur || cur.artistId !== aid || (cur.role || 'owner') === 'owner') return false;
+        const next = { ...(cur.access || {}) };
+        if (level === levelOf(cur.role, null, area)) delete next[area]; else next[area] = level;
+        if (Object.keys(next).length) cur.access = next; else delete cur.access;
+        hit = true; return true;
+      });
+      if (!hit) return bad('That address isn’t on this page');
+      note(aid, 'access.change', me.email || 'code', `${email} ${area} → ${['hidden', 'view', 'edit'][level]}`);
     }
 
     // an artist can only ever touch access to their OWN page
@@ -593,9 +632,15 @@ const main = async (req) => {
       artistId: me.aid, slug: mine.slug || '', name: mine.name || '', plan: mine.plan || 'free',
       role, invited: invited.length,
       invitedNames: invited.slice(0, 20).map((x) => x.name),
+      /* The owner sees every address on the page and what each seat can use (0105);
+         a seat sees its own row, because who else can sign in is the owner's business
+         and not a list to hand every phone on the account. */
       emails: await Promise.all(Object.entries(a.byEmail)
-        .filter(([, v]) => v.artistId === me.aid)
-        .map(async ([e, v]) => ({ email: e, role: v.role || 'owner', me: e === me.email, pw: await hasPassword(me.aid, e) }))),
+        .filter(([e, v]) => v.artistId === me.aid && (role === 'owner' || e === me.email))
+        .map(async ([e, v]) => ({ email: e, role: v.role || 'owner', me: e === me.email, pw: await hasPassword(me.aid, e),
+          ...((v.role || 'owner') === 'owner' ? {} : { access: accessOf(v.role, v.access) }) }))),
+      // the tabs and the levels each can take, so the owner's grid is drawn from the rule and never offers what accessSet refuses
+      ...(role === 'owner' ? { tabs: AREAS.map((area) => ({ area, ...reachOf(area) })) } : {}),
       emailReady: emailReady() });
   }
 

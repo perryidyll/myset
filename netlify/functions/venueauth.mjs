@@ -188,11 +188,18 @@ export default async (req) => {
     return json({ ok: true });
   }
 
-  if (action === 'sessions') return json({ ok: true, ...(await readSessions(owner, me.sid)) });
+  /* Your devices, unless the venue is yours (decision 0104): the same three doors
+     auth.mjs had open to every seat, closed the same way. A manager or the crew
+     reaches the devices signed in with their own address; the owner reaches all. */
+  const onlyEmail = me.role === 'owner' ? null : (me.email || '');
+  if (action === 'sessions') return json({ ok: true, ...(await readSessions(owner, me.sid, onlyEmail)) });
   if (action === 'sessionRevoke') {
-    await killSessions(owner, [String(body.sid || '').slice(0, 24)].filter(Boolean));
+    const sid = String(body.sid || '').slice(0, 24);
+    if (onlyEmail !== null && !(await readSessions(owner, me.sid, onlyEmail)).list.some((x) => x.sid === sid))
+      return bad('Only the venue owner can sign out someone else’s device', 403);
+    await killSessions(owner, [sid].filter(Boolean));
     note(owner, 'session.revoke', me.email || '');
-    return json({ ok: true, ...(await readSessions(owner, me.sid)) });
+    return json({ ok: true, ...(await readSessions(owner, me.sid, onlyEmail)) });
   }
   if (action === 'signOut') {
     if (me.sid) await killSessions(owner, [me.sid]);
@@ -200,10 +207,10 @@ export default async (req) => {
     return json({ ok: true });
   }
   if (action === 'signOutOthers') {
-    const { list } = await readSessions(owner, me.sid);
+    const { list } = await readSessions(owner, me.sid, onlyEmail);
     const others = list.filter((x) => !x.current).map((x) => x.sid);
     if (others.length) await killSessions(owner, others);
-    return json({ ok: true, gone: others.length, ...(await readSessions(owner, me.sid)) });
+    return json({ ok: true, gone: others.length, ...(await readSessions(owner, me.sid, onlyEmail)) });
   }
   if (action === 'roleSet') {
     const email = normEmail(body.email);

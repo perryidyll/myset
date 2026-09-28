@@ -8,6 +8,12 @@ import { readHistIndex, readHistShow, reconcileShow, moneyForShow, refreshShowMo
 export default async (req) => {
   const me = await requireArtist(req);
   if (!me) return bad('unauthorized', 401);
+  /* The book of nights is the Money tab's (decision 0105): reading it is Money view;
+     naming, hiding ("Delete show") and re-checking a night is Money edit. It had no
+     role check, so a crew seat could hide a night from the owner's own book. */
+  const { can } = await import('./_session.mjs');
+  if (!can(me.role || 'owner', req.method === 'POST' ? 'money_edit' : 'money_view', me.access))
+    return bad('That’s not something this sign-in can do', 403);
   const aid = me.aid;
   const url = new URL(req.url);
 
