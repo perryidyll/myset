@@ -4,7 +4,7 @@
   "private": true,
   "description": "MySet \u2014 the crowd builds your set. Live crowd setlist voting.",
   "dependencies": {
-    "@netlify/blobs": "^10.7.13",
+    "@netlify/blobs": "^11.1.1",
     "stripe": "^17.5.0"
   },
   "scripts": {
