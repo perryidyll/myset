@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 16:15 — 693768c — quizzical-haslett-6f8f8b@fix/passcode-door-any-characters (1 files since origin/main)
+**tl;dr:** The money model's passcode box now takes letters and long passcodes, hides what you type, and has Show/Hide
+**Other sessions:** Only _passgate.mjs gatePage changed (type=password, maxlength 200, no digit pattern); the server check was already any string. FINMODEL_CODE is set (secret, three contexts) since 09:02 UTC.
+
 ### 2026-09-28 09:05 — a80e3ff — myset@claude/myset-encryption-security-460mph (31 files since origin/main)
 **tl;dr:** Slice B of the security pass: sign-in codes, checkout, RSVPs, ratings and bug reports now count the network as well as the phone, so a script inventing device ids is stopped; every limit is sized so a packed bar on one wifi never meets it
 **Other sessions:** Decision 0111, INVARIANT 0gx. New helpers: codeSendAllowed (_auth.mjs), payAllowed (_pay.mjs); new keys authnet_<hash> and paylim_<owner> (never mirrored or backed up; paylim_ is on both delete lists). saveBug/saveFeedback/toggleRsvp take the caller's ip as a last argument. Slice A is live as 539c2a4. Slice C (0112/0113) waits on MYSET_SECRET and FINMODEL_CODE.
