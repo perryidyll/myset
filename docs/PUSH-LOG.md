@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 14:04 — bd92f8e — sheets-passwords-sender@docs/agents-md-rules (5 files since origin/main)
+**tl;dr:** Docs only: AGENTS.md on main now has the pull-request deploy flow, the sessions board, the backup-at-start line and the 'Does Puzzle need updating?' hand-off; the day's cross-session review is written up [skip ci]
+**Other sessions:** Worktree sessions read main's AGENTS.md, which still said a push to main deploys. New rules: stage by name (never -A); after gh pr merge, delete the branch yourself (git push origin --delete) — --delete-branch fails from a worktree; keep (#N) in --subject. 74 merged remote branches were deleted and #27 closed as superseded. The security branch (5bcf8f) ships in three slices: A code-only (0110), B limits (0111), C secrets (0112/0113); numbers reserved on the board. Log: docs/sessions/2026-09-28-cross-session-review.md.
+
 ### 2026-09-28 13:52 — 0118f1c — sheets-passwords-sender@docs/sheets-passwords-and-sender (10 files since origin/main)
 **tl;dr:** Docs only: the process sheets and Puzzle say passwords exist (0070, 0073) and the sign-in sender is set (PER-004); new Puzzle steps for signing in with a password and setting one [skip ci]
 **Other sessions:** Puzzle: new steps 389481 (g10, section 41978; arrows 435531/435532) and 389482 (v08, 41980); d01 370272 Live; changelog 1661 (0070) → 9 steps, 1664 (0073) → v08 + h07; 41980 notes say only the owner's seat sees Face ID, the Studio code and recovery codes (0105). Rebased on c13060e (#127–#129) keeping both sides. The read-back's drift list (not fixed) is in docs/sessions/2026-09-28-the-sheets-say-passwords-exist-and-the-sender-is-set.md. Owed by 4b462c after this lands: artist-lifecycle/01's 'Claim a sample page' row (step 389231).
