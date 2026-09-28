@@ -3,12 +3,12 @@ id: 0116
 title: node_modules is never tracked, and a worktree uses the shared checkout's
 date: 2026-09-28
 status: decided
-decided_by: claude
+decided_by: user-confirmed
 area: ops
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [eb18ca1]
 tests: []
 files: [.gitignore, AGENTS.md, MYSET-MASTER-OVERVIEW.md, docs/processes/engineering-os/03-testing-and-looking.md]
 ---
@@ -55,4 +55,4 @@ The Claude app making worktrees outside `~/Docs/MySet`, where no parent folder h
   - A fast-forward merge refused to run.
   - `git clean -fd` without `-x` left the folder.
   - `git restore .` against the old index still wrote the link. So in the shared checkout the reset must come first, never a restore.
-- **Not checked here:** Netlify's own install, on a clone with no link. The deploy preview on this change's pull request is that check.
+- **Netlify's own install**, on a clone with no link: the deploy preview on PR #143 (deploy `6aba29c2`) built and bundled every function, and the production build of the merge `eb18ca1` (deploy `6aba2d19`) was ready at 09:03 UTC. The founder's artist page, which `artistpage.mjs` builds from the store, kept its `og:title` on both.

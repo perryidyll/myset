@@ -123,7 +123,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0111](0111-every-anonymous-write-counts-the-network-and-a-whole-bar-fits-under-it.md) | Every anonymous write counts the network as well as the device, and a whole bar on one wifi fits under every limit | 2026-09-28 | auth | decided | perry-confirmed |
 | [0114](0114-an-alert-reaches-the-seats-that-can-see-what-it-is-about.md) | An alert reaches only the seats that can see what it is about, and a sign-out ends that phone's alerts | 2026-09-28 | auth | decided | claude |
 | [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md) | Every action a Studio endpoint takes is one a page sends | 2026-09-28 | general | decided | user-confirmed |
-| [0116](0116-node-modules-is-never-tracked-and-a-worktree-uses.md) | node_modules is never tracked, and a worktree uses the shared checkout's | 2026-09-28 | ops | decided | claude |
+| [0116](0116-node-modules-is-never-tracked-and-a-worktree-uses.md) | node_modules is never tracked, and a worktree uses the shared checkout's | 2026-09-28 | ops | decided | user-confirmed |
 
 ## By area
 

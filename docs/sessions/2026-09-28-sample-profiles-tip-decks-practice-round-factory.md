@@ -92,3 +92,27 @@
 - `www.myset.vip/crm` redirects to `/crm`.
 
 Found on the live site afterwards: Netlify serves `/<name>` from `<name>.html` by itself, so `/hq` answered with HQ too, and `hq` was no longer reserved. The page file is now `crm.html` (the follow-up PR). Nobody held `hq` or `crm` in the live registries (read-only check).
+
+## The fifth round: a light theme (the same day)
+
+**Asked (the founder), before a full review of HQ:** "please add a dark/light toggle".
+
+**Built** (decision 0108's page paragraph amended; ledger UX-062):
+- A sun in HQ's top bar, beside the lock, switches to a light theme; on the light theme it is a moon. ⌘K has it too (*Light mode* / *Dark mode*; "theme", "dark" and "light" find it). The new theme spreads out from the switch as a circle (a view transition), and where the browser cannot draw one, or motion is reduced, it changes at once.
+- HQ still opens dark. The choice is kept in that browser (`myset.hq.theme`), and a small script in the head applies it before the first paint. It does not follow the computer's setting, because the brief's look is the dark one.
+- The light theme is tokens, not a second stylesheet. The 74 white washes and hairlines are now mixed from `--hi` (white on dark, black on light); six whites stay, each a highlight on a coloured surface. Every colour that is text gets a deeper light shade: the accent, the venue blue, the green, the amber and the reds. The few surfaces that are not tokens (popovers, the drawer, the dialogs, the toast, the lock, the tab bar) get their own light rules in one block.
+- Below 390 px the top bar holds five buttons beside HQ, so "Online" keeps its dot and leaves the word to screen readers; below 360 px the gaps close up a little.
+
+**Verified:**
+- `test/hq.mjs` *THE PAGE'S TWO THEMES*: every text colour keeps 4.5:1 in both themes; no white wash outside the tokens; the head sets the kept theme before the first paint. Broken on purpose, one at a time, each check fails: the light accent put back to `#FF5650` (3.13:1), a new white wash, the head script removed. 149 passed, 0 failed.
+- The whole suite exit 0.
+- On `tools/localhost.mjs` in headless Chrome, as the founder behind the passcode:
+  - at 1440 px, the circle runs (`::view-transition-new(root)` animating 180 ms in);
+  - after a reload the first paint is already light (`rgb(245,245,247)` at DOMContentLoaded);
+  - the lock screen, drawer, palette, settings, question box and toast read in both themes;
+  - at 390, 375, 360 and 320 px the top bar fits with nothing overlapping, in both themes.
+- In the app's own browser the pane was hidden, so the browser skipped the circle and the switch changed at once, as designed.
+
+**Shipped:** PR #145 merged as `a0ab3dc`. Its deploy preview was checked first and rendered light at 375 px. Production served the new page about 40 s after the merge. Verified by content on myset.vip: `/crm` carries `data-act="theme"`, `myset.hq.theme` and the light tokens, and `/api/hq` still answers 401 to a stranger. Not checked on the live site: the switch itself behind the passcode, which is the founder's to open. A browser that opened `/crm` in the last six hours may show its stored copy once; a reload fetches the new page (`sw.js` rule 2).
+
+**Puzzle:** no change. No process step, rule, cited number or decision record changed; only the page's look did.

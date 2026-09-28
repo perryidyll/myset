@@ -30,11 +30,13 @@
   - `git clean -fd` without `-x` kept the folder.
   - `git restore .` against the old index still wrote the link.
 
-**Not checked:** Netlify's own install on a clone with no link. The deploy preview on the pull request is that check.
+- **Netlify's own install**, on a clone with no link: the deploy preview (deploy `6aba29c2`) built and bundled every function, and the founder's artist page, built by `artistpage.mjs` from the store, kept its `og:title`.
+
+**Merged as `eb18ca1`** (PR #143) on the founder's word, 08:54 UTC. Netlify skipped the production build: the commit message said *not [skip ci]*, and Netlify reads the bracketed marker wherever it appears, negated or not. A build started by hand (`netlify api createSiteBuild`) made deploy `6aba2d19`, ready at 09:03 UTC; the artist page on myset.vip kept its `og:title`. #145 merged after it as `a0ab3dc` and also built with no link. A message for a change that must build never writes the marker, not even to deny it.
 
 ## For other sessions
 
 - **Every branch loses its `node_modules` link** on its next rebase onto `main`, or merge of it. Inside `~/Docs/MySet/.claude/worktrees/` nothing breaks. If a checkout elsewhere says `Cannot find package '@netlify/blobs'`, run `npm ci` there. It is ignored now, so it can never be committed.
 - **The shared install must follow `package-lock.json`.** Worktrees test against whatever `npm ci` last put in `~/Docs/MySet/node_modules`. Today that matches `main`: `@netlify/blobs` 10.7.13, `stripe` 17.7.0. If a dependency change merges, worktrees keep testing the old version until `npm ci` runs there, and that needs the reset below first. Dependabot, added by #136, opened two such pull requests today: #140 and #141, major bumps of both packages.
 - **Resetting the shared checkout** is still the founder's call. After this merges, `git fetch` then `git reset --hard origin/main` keeps its `node_modules` folder, and git prints one warning that it cannot unlink it. Run nothing before the reset: a `git restore .` or `git checkout -- .` there still writes the link over the folder, because that checkout's index still holds it. A `git clean` still deletes the founder's never-committed files: `Marketing Foundations/`, two logo PNGs and the push-log kit. With `-x` it deletes `node_modules` too.
-- **Puzzle:** step t01 (370041, section 41989) takes the sheet's new line, and decision 0116 gets its changelog entry linked to t01, once this merges, with the merge commit (as 0114 and 0115 were done).
+- **Puzzle:** step t01 (370041, section 41989) takes the sheet's new line, and decision 0116 gets its changelog entry linked to t01, with the merge commit `eb18ca1` (as 0114 and 0115 were done).

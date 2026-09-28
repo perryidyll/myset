@@ -13,6 +13,22 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-28 09:05 — a80e3ff — myset@claude/myset-encryption-security-460mph (31 files since origin/main)
 **tl;dr:** Slice B of the security pass: sign-in codes, checkout, RSVPs, ratings and bug reports now count the network as well as the phone, so a script inventing device ids is stopped; every limit is sized so a packed bar on one wifi never meets it
 **Other sessions:** Decision 0111, INVARIANT 0gx. New helpers: codeSendAllowed (_auth.mjs), payAllowed (_pay.mjs); new keys authnet_<hash> and paylim_<owner> (never mirrored or backed up; paylim_ is on both delete lists). saveBug/saveFeedback/toggleRsvp take the caller's ip as a last argument. Slice A is live as 539c2a4. Slice C (0112/0113) waits on MYSET_SECRET and FINMODEL_CODE.
+### 2026-09-28 16:13 — 785a02a — untrack-node-modules@config/dependabot-security-only (2 files since origin/main)
+**tl;dr:** Nothing on the site changes: Dependabot now opens a pull request only for a security fix in stripe or @netlify/blobs, no more routine major upgrades
+**Other sessions:** Dependabot alerts + security updates switched ON in the GitHub repo settings (2026-09-28); .github/dependabot.yml limit 0 stops version bumps. #140/#141 (stripe 22, blobs 11) closed unmerged. A security-fix PR from Dependabot changes package-lock.json: after it merges, npm ci in ~/Docs/MySet (after its reset) or worktrees keep testing the old version.
+
+### 2026-09-28 16:11 — 14a3ebc — untrack-node-modules@docs/0116-merged (4 files since origin/main)
+**tl;dr:** Nothing on the site changes: decision 0116 (node_modules out of git) is live as eb18ca1, and the ledger says so
+**Other sessions:** Netlify skips a build whenever a commit message contains the bracketed skip-ci marker ANYWHERE, even inside a denial: #143's production build had to be started by hand (netlify api createSiteBuild). A change that must build never writes the marker, not even to deny it. Branches lose the node_modules link on rebase; inside ~/Docs/MySet/.claude/worktrees/ nothing breaks, elsewhere run npm ci.
+
+### 2026-09-28 16:10 — d76d245 — sample-profiles@docs/hq-light-theme-live (3 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0108 and the session note say HQ's light theme is live as a0ab3dc [skip ci]
+**Other sessions:** Nothing to rebase for: docs only. The session's board row goes back to DONE.
+
+### 2026-09-28 16:07 — a8c1376 — sample-profiles@ui/hq-light-theme (5 files since origin/main)
+**tl;dr:** HQ (myset.vip/crm) has a light theme now: tap the sun in the top bar, or ⌘K → Light mode. It still opens dark, and the choice is remembered in that browser
+**Other sessions:** public/crm.html only (plus test/hq.mjs, 0108's page paragraph, UX-062, the session note). The light theme is tokens: every wash is rgba(var(--hi),a) (white on dark, black on light), text colours have light shades, test/hq.mjs 'THE PAGE’S TWO THEMES' fails on a new rgba(255,255,255,…) wash in the shared rules or a text colour under 4.5:1. localStorage key myset.hq.theme; the head applies it before the first paint. No new numbers.
+
 ### 2026-09-28 15:47 — 92e59db — untrack-node-modules@config/untrack-node-modules (9 files since origin/main)
 **tl;dr:** Nothing on the site changes: git stops tracking the node_modules link, so resetting the shared checkout can no longer delete the packages every worktree uses, and a worktree needs no install step
 **Other sessions:** Decision 0116 (session 6b338f). node_modules is untracked and .gitignore says node_modules with no slash, so a link is ignored too. Every branch loses its link on its next rebase: harmless under ~/Docs/MySet/.claude/worktrees/, where Node finds ~/Docs/MySet/node_modules by looking in parent folders; a checkout anywhere else (the cloud) runs npm ci. Never delete ~/Docs/MySet/node_modules; after a dependency change merges, worktrees test the old version until npm ci runs there. Resetting the shared checkout stays the founder's call: after this merges, git fetch + git reset --hard origin/main keeps node_modules (one 'unable to unlink' warning); never git restore . or checkout -- . before it, never git clean. Puzzle t01 (370041) and the 0116 changelog entry follow the merge.
