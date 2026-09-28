@@ -11,15 +11,22 @@ audiences pay real money through it. There is no staging site.
 
 ## Read this before your first edit
 
-**`main` IS production.** A push to `main` deploys to myset.vip in about a minute.
-No staging, no review gate, no approval step. A bad commit is a live outage during
-somebody's show.
+**`main` IS production.** Anything that lands on `main` deploys to myset.vip in about
+a minute. Since 2026-09-12 nothing lands on `main` except through a pull request
+(decision 0045): a direct push is refused by GitHub, every PR gets a free deploy preview
+to look at first, and merging is the deploy. No staging, no reviewer — the PR is a
+pause, not a gate. A bad merge is a live outage during somebody's show.
 
 **You never commit and you never push unless the user asks you to.** Produce changes
 in the working tree and stop. If you are asked to push, run the tests first.
 
 **Another session may be editing this repo.** Check `git status` before you start. If
 there are changes you did not make, stop and say so rather than building on them.
+
+**Work in a worktree cut from `origin/main`,** never in the shared checkout at
+`~/Docs/MySet`: it is far behind `main`, it holds other sessions' leftovers, and a
+session started there reads a stale copy of this file. Stage files by name — never
+`git add -A`.
 
 ---
 
@@ -108,13 +115,36 @@ width. Several defects a month are invisible to the tests and obvious on screen.
 
 ## Deploying
 
+`main` is protected (decision 0045): direct pushes are refused, force-pushes and deletion
+are blocked, and the only way in is a pull request — with zero required approvals, so the
+person shipping merges their own. Merging **is** the production deploy.
+
 ```bash
-sh test/run.sh && git push
+sh test/run.sh
+git switch -c <area>/<what-changed>          # in a worktree off origin/main
+git add <each file you changed>               # by name, never -A — and only when asked
+git commit
+./tools/pushlog.sh "what changed" "note"      # the push log entry rides on the branch
+git push -u origin HEAD
+gh pr create --fill                           # Netlify posts a deploy preview on the PR
+gh pr merge <n> --squash --subject "… (#<n>)" # this is the deploy; keep the PR number
+git push origin --delete <area>/<what-changed>
 ```
 
-`git push` to `main` **is** the production deploy. **Never also run `netlify deploy
---prod`** — that bills a second deploy for the same change and races over what is live
-(INVARIANT 9d3).
+`gh pr merge --delete-branch` fails from a worktree while `main` is checked out in the
+shared checkout, and leaves the branch on GitHub — delete it yourself, as above.
+
+Look at the deploy preview before merging — it is the "real browser at phone width"
+check, on the exact bytes that will ship. A preview cannot charge a card (the Stripe
+secrets are unset outside production) but it **reads and writes production data**.
+
+Doc-only work keeps `[skip ci]` in its commit message so Netlify does not bill a
+production build for it; a squash of a single commit keeps that message (pass
+`--subject "… [skip ci] (#<n>)"` to `gh pr merge` to be sure). A `[skip ci]` merge
+builds nothing, so it never carries a change that needs a fresh production build.
+
+**Never also run `netlify deploy --prod`** — that bills a second deploy for the same
+change and races over what is live (INVARIANT 9d3).
 
 **Verify by CONTENT, never by status code.** A catch-all slug redirect answers 200 for
 files that do not exist. Fetch the page and grep for the thing you changed.
@@ -133,6 +163,15 @@ preview. Switch to a deep investigation only when the user asks or the risk dema
 read `IMPLEMENTATION_STATUS.md` — current focus, next work item, blockers, deviations.
 Do not redo `done` rows unless the evidence is invalid.
 
+On this Mac, also read the live sessions board, `~/Docs/Project Handoffs/MYSET-SESSIONS-BOARD.md`
+(outside the repo on purpose): who is working where, which numbers are claimed but not
+yet on `main`, and the merge order. Claim a decision or INVARIANT number there before
+you use it — `./tools/decide.sh` only sees what is already on your branch.
+
+Then `python3 tools/backup.py --if-stale` — a read-only copy of the live datastore if the
+newest one is over a week old (decision 0046). A few minutes, touches nothing on the
+site; it is the only backup MySet has.
+
 ### Before every push
 
 Run `./tools/pushlog.sh "what changed, for a person" "what another session must know"` as the
@@ -147,6 +186,7 @@ After work that changes execution state, evidence, decisions, risks or the next 
 | `IMPLEMENTATION_STATUS.md` | Refresh the header, set statuses with **evidence** (paths, commands, commit SHAs), add decisions, record deviations, note new risks |
 | `docs/decisions/` | A record for anything that could have gone another way — `./tools/decide.sh "what is now true"` |
 | `docs/sessions/` | One file per working session: what was asked, what shipped, what broke, what was verified |
+| `docs/processes/` + Puzzle | **Does Puzzle need updating?** — a mandatory handoff question. Anything that changed a process, a rule, a cited number, a decision or a surface updates its sheet under `docs/processes/<tab>/` and its Puzzle section in the same session; a new decision record gets a changelog entry the same day (`docs/processes/CONVENTIONS.md` § Keeping it true) |
 | `~/Docs/Project Handoffs/` | `HANDOFF-MySet.md` and `PORTFOLIO-MASTER-BRIEF.md` |
 | The SSD | `~/Docs/Project\ Handoffs/mirror-to-ssd.sh` |
 

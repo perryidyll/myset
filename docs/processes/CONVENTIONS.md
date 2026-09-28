@@ -77,6 +77,8 @@ One entity per key family in overview §5.2 (`show_`, fan shard `f0…f11_`, `me
 
 ## Keeping it true
 
-- A session that changes a process changes its sheet and reloads the section (this is on the session-end checklist in `AGENTS.md` once Phase 10 lands).
+**The founder's standing rule (2026-09-12): the Puzzle maps are updated in tandem with the master overview, in the same session, for anything that warrants it.** A change to behaviour, copy, a rule, a cited number, a decision or a surface updates its sheet and its Puzzle section before the session ends; a new decision record gets its changelog entry the same day. "Does Puzzle need updating?" is a mandatory handoff question, beside the ledger and the overview.
+
+- A session that changes a process changes its sheet and reloads the section (on the session-end checklist in `AGENTS.md` § Before ending a session since 2026-09-28; the rule itself dates from 2026-09-12).
 - A new decision record gets a changelog entry the same day.
 - Quarterly: read every section back and diff against its sheet.
