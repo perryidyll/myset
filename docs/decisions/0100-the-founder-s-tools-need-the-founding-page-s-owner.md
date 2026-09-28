@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0gk]
-commits: []
+commits: [7a84cb7]
 tests: [test/founderseat.mjs, test/verification.mjs]
 files: [netlify/functions/mediadash.mjs, public/studio.js, public/studio.html, test/founderseat.mjs, test/verification.mjs, test/run.sh, tools/mock.mjs, INVARIANTS.md]
 ---
@@ -69,4 +69,4 @@ In a real browser with `tools/mock.mjs` at 375×812, the Studio served `studio.j
 - **Crew** (`?founder=1&seat=crew`): the same as a member.
 - **An ordinary artist's Money tab**: neither *MySet's books* nor *If something broke* appeared.
 
-Not checked: production (nothing is deployed), a physical phone, and production's registry of seats on the founding page.
+Live as `7a84cb7` (PR #118): Netlify's production deploy `6ab9f51f` was ready at 05:04 UTC on 28 September, the `mediadash` bundle changed, and myset.vip serves `studio.js?v=219d2fe4` with `founder()`. An anonymous POST to `/api/mediadash` answers 401. Not checked: a signed-in member or crew seat on production, a physical phone, and production's registry of seats on the founding page.
