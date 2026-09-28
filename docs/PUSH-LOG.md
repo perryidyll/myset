@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 14:41 — 3a66c20 — quizzical-haslett-6f8f8b@docs/push-per-seat-live (4 files since origin/main)
+**tl;dr:** Docs only: push alerts per seat (decision 0114) are live as 811c9a7 — the ledger, the decision record, the session note and the sheet say so [skip ci]
+**Other sessions:** Puzzle: new step t13 = 389598 in section 41979 (arrows 435707–435710 from t11/t04/t05/t07); o10 370021, d06 370277, j08 370099 now Live (VAPID set), f06 370186 reloaded; changelog 2438 = 0114. HQ (4b462c) must pass {owner:true} to its hq.mjs notify; the security branch (5bcf8f) must drop its pushOn gate and rebase on 811c9a7.
+
 ### 2026-09-28 14:37 — e83d823 — quizzical-haslett-6f8f8b@feat/push-per-seat (26 files since origin/main)
 **tl;dr:** A crew seat's phone no longer gets merch orders or messages: each phone hears only what its seat can see (requests still reach every seat), each seat has its own 8-phone cap so nobody pushes the owner's phone off, and signing a phone out ends its alerts
 **Other sessions:** Decision 0114, INVARIANT 0ha, ledger ACC-008. notify(aid, msg, to) MUST name an audience — {tab:'merch'|'messages'|…}, {owner:true}, {all:true} or {endpoint}; no third arg reaches nobody and test/pushseats.mjs fails the suite (HQ's hq.mjs:63 needs {owner:true}; 4b462c told). killSessions/killEverything call dropDevices; push_<aid> rows carry email+sid. The security branch (5bcf8f) must drop its pushOn/pushOff 'community' gate and its 0ha (told). VAPID_* is set in production (names read); no real push checked yet.
