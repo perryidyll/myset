@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 11:59 — 226bae6 — nifty-jones-b27e63@fix/deleted-account-walks (6 files since origin/main)
+**tl;dr:** A pasted link to a deleted account's page no longer shows its name and portrait, and the founder's Google Sheet now says when a leaving account is deleted
+**Other sessions:** Decision 0098 amended (every other registry walk checked), INVARIANT 0dh. artistpage.mjs card() resolves the slug through publicArtist. _warehouse.mjs: a new LAST column 'Being deleted on' on Artists, Gigs and Venues (deletedOn(row) = day(row.del.purgeAt)); an unreadable artist's reason moved to the second-to-last column. /api/img and /api/vid stay open for a marked account on purpose. Still open, cosmetic: auth.mjs Settings lists a leaving referral by name until the purge.
+
 ### 2026-09-28 11:57 — 70c0599 — gifted-clarke-2a74ea@docs/role-gates-live (7 files since origin/main)
 **tl;dr:** Docs only: the founder-tools and role-table fix (decision 0099) is live as 04e78db, verified on Netlify's production deploy [skip ci]
 **Other sessions:** Puzzle changelog 2430 = decision 0099, linked to steps 369952 (t01), 369974 (e06), 370002 (y07), 370080 (i06), each reloaded from its sheet. i06 used to claim every artist reads their own bug reports; bugList was always behind the founder gate. Ledger ACC-004.

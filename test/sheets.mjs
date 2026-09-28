@@ -589,6 +589,47 @@ eq('an unmarked ring after the gap still syncs', await c3.text(), 'ok');
    answer to a person who just asked. */
 ok('the button still works immediately after', (await AS(P.token, 'sheetSync')).ok);
 
+/* ---------- an account on its way out ---------- */
+console.log('\nAN ACCOUNT ON ITS WAY OUT SAYS SO  (0dh, decision 0098)');
+/* Deleting takes a page dark and its calendar off the schedule on day one, but the
+   data stays for the thirty days, so the sheet went on listing the account as a
+   normal artist, and its gigs as upcoming, until the purge. It stays in the sheet,
+   because its nights happened; every row that stands for it says the day it is
+   deleted, the date its owner sees on the Studio's banner. */
+{
+  const { startDeletion, cancelDeletion } = await import('../netlify/functions/_account.mjs');
+  const { createVenue } = await import('../netlify/functions/_venues.mjs');
+  const { startVenueDeletion, cancelVenueDeletion } = await import('../netlify/functions/_venueaccount.mjs');
+  const GONE = 'Being deleted on';
+  const on = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const LO = await mk('lo@x.com', 'Lo Marr', 'lo-marr');
+  ok('an artist with a gig coming up', (await AS(LO.token, 'eventSave', { event: { venue: 'The Ugly Duckling', city: 'Koh Phangan',
+    country: 'Thailand', date: isoIn(9), time: '21:00', tz: 'Asia/Bangkok' } })).ok);
+  const { venueId: vid } = await createVenue({ email: 'boss@bar.x', name: 'The Last Round', city: 'Koh Phangan', country: 'Thailand' });
+  const cell = (tab, idCol, id) => { const i = cellsIn(tab, idCol).indexOf(id); return i < 0 ? null : bodyOf(tab)[i][col(tab, GONE)]; };
+  const gigsOf = (aid) => bodyOf('Gigs').filter((x) => x[col('Gigs', 'Artist id')] === aid).map((x) => x[col('Gigs', GONE)]);
+  const wide = () => ['Artists', 'Gigs', 'Venues'].every((t) => bodyOf(t).every((x) => x.length === rowsOf(t)[0].length));
+
+  await W.syncSheet();
+  eq('nobody leaving: the column is there on all three tabs, blank',
+     [['Artists', 'Gigs', 'Venues'].map((t) => col(t, GONE) >= 0), [cellsIn('Artists', GONE), cellsIn('Gigs', GONE), cellsIn('Venues', GONE)].flat().filter(Boolean)],
+     [[true, true, true], []]);
+
+  const d = await startDeletion(LO.aid, 'lo@x.com');
+  const v = await startVenueDeletion(vid, 'boss@bar.x');
+  await W.syncSheet();
+  eq('THE GAP: the artist row says the day it is deleted', cell('Artists', 'Artist id', LO.aid), on(d.purgeAt));
+  eq('and the others stay blank', [cell('Artists', 'Artist id', P.aid), cell('Artists', 'Artist id', OTHER.aid)], ['', '']);
+  eq('its gig is still listed, and says so', gigsOf(LO.aid), [on(d.purgeAt)]);
+  ok('nobody else\'s gig does', gigsOf(P.aid).length > 0 && gigsOf(P.aid).every((x) => x === ''), gigsOf(P.aid));
+  eq('a venue on its way out says so too', cell('Venues', 'Venue id', vid), on(v.purgeAt));
+  ok('every row as wide as its header', wide());
+
+  ok('Undo, both', (await cancelDeletion(LO.aid)).ok && (await cancelVenueDeletion(vid)).ok);
+  await W.syncSheet();
+  eq('and the marks go with it', [cell('Artists', 'Artist id', LO.aid), gigsOf(LO.aid), cell('Venues', 'Venue id', vid)], ['', [''], '']);
+}
+
 /* ---------- when the sheet is full, the next one starts itself ---------- */
 console.log('\nROOM  (decision 0073: told at 60%, a new sheet at 80%, nothing lost)');
 const sent = [];

@@ -218,6 +218,11 @@ const day = (ms) => (ms ? new Date(Number(ms)).toISOString().slice(0, 10) : '');
 const stamp = (ms) => (ms ? new Date(Number(ms)).toISOString().slice(0, 16).replace('T', ' ') : '');
 const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0);
+/* AN ACCOUNT ON ITS WAY OUT (0dh, decision 0098). Its data stays for the thirty
+   days, so it stays in the sheet, because its nights happened; but every row that
+   stands for it (Artists, Gigs, Venues) says the day it is deleted, the date its
+   owner sees on the Studio's banner. Blank for everybody else. */
+const deletedOn = (row) => (row && row.del ? day(row.del.purgeAt) || 'yes' : '');
 
 const emptySync = () => ({ v: 1, lastRunAt: 0, runs: 0, byArtist: {} });
 export async function readSyncState() {
@@ -262,6 +267,7 @@ export const GUIDE = [
   ['"Real night" on Shows', 'means the show started on a published gig (no earlier than 90 minutes before the slot, before it ended) and something happened in it; anything else is a test or an accident, and the Signals tab counts only real nights.', ''],
   ['Segment on Signals is derived', 'residency = a real night a week or more over the last 28 days; regular = two or more in 28 days; occasional = at least one in 90 days; not yet played = signed up, no real night; gone quiet = played before, nothing in 90 days.', ''],
   ['Blank money means Stripe was switched off', 'for that night, not that the night earned nothing. The Shows tab has a column that says which.', ''],
+  ['"Being deleted on" on Artists, Gigs and Venues', 'means the account asked to be deleted: its page is already offline and its gigs no longer start by themselves. It is deleted for good on that date unless its owner presses Undo first. Its nights stay in Shows, because they happened.', ''],
 ];
 
 /* ---------- one artist's rows ---------- */
@@ -453,6 +459,7 @@ async function artistRows(aid, artist, state, dry) {
     o.repeating ? 'repeats' : 'one-off',
     o.date >= day(Date.now()) ? 'upcoming' : 'played',
     o.address || '', o.ticketUrl || '', o.note || '',
+    deletedOn(artist),
   ]);
 
   const nights = (hist.shows || []).length;
@@ -491,6 +498,7 @@ async function artistRows(aid, artist, state, dry) {
     show.requests && show.requests.on ? 'on' : 'off',
     show.birthdays && show.birthdays.on ? 'on' : 'off',
     artist.shareStats === false ? 'no' : 'yes',
+    deletedOn(artist),
   ];
 
   /* ---- Signals: the marketing read ---- */
@@ -597,7 +605,7 @@ const HEAD = {
             'Nights played', 'Votes all time', 'Phones all time', 'Money all time',
             'Average room', 'Ratings', 'Average stars', 'Requests', 'Gigs booked',
             'Last night', 'Days since', 'Show status', 'Free votes', 'Replay cost',
-            'Song requests', 'Birthdays', 'Shares stats with venues'],
+            'Song requests', 'Birthdays', 'Shares stats with venues', 'Being deleted on'],
   shows: ['Date', 'Started', 'Artist', 'Artist id', 'Venue', 'City', 'Minutes',
           'Songs played', 'Votes', 'Phones in room', 'Networks', 'People who voted',
           'Voted %', 'Top song', 'Money', 'From votes', 'From tips', 'Vote sales',
@@ -623,12 +631,13 @@ const HEAD = {
              'Cost in votes', 'Status', 'Played it', 'Show id'],
   ratings: ['Date', 'When', 'Artist', 'Artist id', 'Stars', 'What they said', 'Show id'],
   gigs: ['Date', 'Start', 'End', 'Artist', 'Artist id', 'Venue', 'City', 'Country',
-         'Time zone', 'Repeat', 'Past or future', 'Address', 'Tickets', 'Note'],
+         'Time zone', 'Repeat', 'Past or future', 'Address', 'Tickets', 'Note', 'Being deleted on'],
   venues: ['Name', 'Venue id', 'Page', 'Email', 'City', 'Country', 'Plan', 'Verified',
            'Verified by', 'Joined', 'Days in', 'Photos', 'Events listed', 'Amenities',
            'Has menu', 'Has offers', 'Phone', 'Website',
            'Artists playing here (calendar)', 'Nights played here (all time)', 'Phones here (all time)', 'Votes here (all time)',
-           'Community posts', 'Merch items', 'Stripe Connect', 'Seats used', 'Password set', 'Last sign-in'],
+           'Community posts', 'Merch items', 'Stripe Connect', 'Seats used', 'Password set', 'Last sign-in',
+           'Being deleted on'],
   growth: ['When', 'Artists', 'Paying artists', 'Venues', 'Paying venues', 'Nights played',
            'Votes all time', 'Phones all time', 'Money all time', 'Songs in the system',
            'Requests', 'Ratings', 'Average stars', 'Gigs booked', 'Rows added this sync',
@@ -716,7 +725,8 @@ async function runSync({ dry, startedAt, state }) {
       const row = new Array(HEAD.artists.length).fill('');
       row[0] = a.name || ''; row[1] = aid; row[2] = a.slug || ''; row[3] = a.email || '';
       row[4] = planOf(a); row[10] = day(a.createdAt);
-      row[HEAD.artists.length - 1] = why;
+      row[HEAD.artists.length - 2] = why;           // the column it has always used; the mark is last
+      row[HEAD.artists.length - 1] = deletedOn(a);
       artists.push(row);
       broke.push({ artistId: aid, why });
       console.error(`sheet sync: ${aid} failed —`, (e && e.stack) || e);
@@ -780,6 +790,7 @@ async function runSync({ dry, startedAt, state }) {
       (vposts.list || []).length, ((p && p.merch) || []).length,
       vconnect && vconnect.acct ? (connectUsable(vconnect) ? 'live' : 'started') : '',
       vEmails.length, vpw ? `yes (${vpw})` : '', vLast ? day(vLast.t) : '',
+      deletedOn(v),
     ]);
   }
 

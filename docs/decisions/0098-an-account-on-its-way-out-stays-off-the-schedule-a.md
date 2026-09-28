@@ -9,8 +9,8 @@ reverses:
 superseded_by:
 invariants: [0dh]
 commits: [2243aed]
-tests: [test/autoshow.mjs, test/firstgig.mjs]
-files: [netlify/functions/_auto.mjs]
+tests: [test/autoshow.mjs, test/firstgig.mjs, test/sharecard.mjs, test/sheets.mjs]
+files: [netlify/functions/_auto.mjs, netlify/functions/artistpage.mjs, netlify/functions/_warehouse.mjs]
 ---
 
 ## The question
@@ -62,3 +62,21 @@ If soft delete ever stops keeping the calendar for the window, the skip becomes 
 - The whole suite, on the final tree with both halves: `sh test/run.sh` exited 0 in 1m59s across its 59 sections, with no ✗ line.
 - Production, read-only (`netlify blobs:get` of `artists` and `gigsched`, 2026-09-27): 6 accounts, 0 marked for deletion, 1 schedule entry, 0 live; `delqueue` does not exist.
 - Not checked: a real cron ring against a deploy. A preview shares production data, so it is no place to exercise a write path.
+
+## Amendment, 2026-09-28: every other walk
+
+The founder asked for every other registry walk to be checked for the same gap. These are the places that walk `byId` of either registry, or resolve a slug outside `publicArtist`, and what a marked row means in each:
+
+| Where | What it does | Verdict |
+|---|---|---|
+| `artistpage.mjs`, the `/:slug` share card | resolved the slug with `artistBySlug` alone | **The public gap.** A deleted account's name and portrait stayed on link previews. It now resolves through `publicArtist`. |
+| `artists.mjs` | the public directory | already filters `.del` |
+| `events.mjs` featured spots, `_vstats.mjs` | the city feed; a venue's stats | read the city index, which deletion empties on day one |
+| messages, votes, pay, RSVP, diary, lyrics, community and the rest | public doors | all go through `publicArtist` |
+| `img.mjs`, `vid.mjs` | photos and clips, by id or slug | left open on purpose: the edge keeps each URL for a year, and the export and the Studio carry `/api/img?a=<aid>` addresses for the whole window |
+| `auth.mjs` sign-in doors, the studio-code door, `qr.mjs` | the owner signing in; a printable code | must keep working, because Undo needs a way in; a QR code carries only the address it was asked for |
+| `_register.mjs` (registercron), `mirrorcron.mjs`, `tools/metrics.mjs`, the founder's venue list | the register of every night, the R2 copy, a local snapshot, venue verification | include marked accounts on purpose: the nights happened, and the data is kept for the thirty days |
+| `_warehouse.mjs` (sheetcron) | the founder's Google Sheet | **The internal gap, marked at the founder's word.** A leaving account appeared as a normal artist, with its future gigs in the Gigs tab. It stays in the sheet, because its nights happened, and a new last column, `Being deleted on`, carries the purge date on its Artists, Gigs and Venues rows: the date the owner sees on the Studio's banner. Appended, not inserted, so no column the founder already uses moves; the snapshot tabs rewrite their header every sync, so nothing needs deleting by hand. |
+| `auth.mjs` Settings | the names an artist has invited | cosmetic: a leaving account's name stays on its referrer's list until the purge |
+
+Verified: the new section of `test/sharecard.mjs` ("AN ACCOUNT ON ITS WAY OUT HAS NO CARD") failed first with `42 passed, 3 failed` — the card still read `"Bo Lind"` with the portrait — and passes after the fix, `45 passed, 0 failed`. The sheet: the new section of `test/sheets.mjs` ("AN ACCOUNT ON ITS WAY OUT SAYS SO") failed first with `199 passed, 7 failed` (the column absent, the leaving artist's gig listed unmarked) and passes after, `206 passed, 0 failed`; the artist, gig and venue marks knocked out one at a time each gave `205 passed, 1 failed`. The whole suite, on this tree rebased onto 04e78db (decision 0099): `sh test/run.sh` exited 0 across its 59 sections, with no ✗ line.
