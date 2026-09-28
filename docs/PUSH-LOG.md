@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 11:22 — f3993c9 — nostalgic-swanson-d7e46f@docs/process-sheets-tracked (39 files since origin/main)
+**tl;dr:** Docs only: the 39 process sheets that lived only as untracked files in the shared checkout are in git now, and the signing-in sheet and its Puzzle notes say a password exists (0070) [skip ci]
+**Other sessions:** Edit docs/processes sheets in a worktree, never the shared checkout's untracked copies: those match git byte for byte and will block a pull there until removed. marketing-and-growth/08 and onboarding/02 still ride on feat/sample-profiles. Puzzle section 41978's notes reloaded from the sheet. Still stale, left alone: 'no password' in artist-lifecycle/03 and the-gig/03 a01; 41978 has no password step and g01 shows the pre-0070 screen; AUTH_FROM 'absent' in admin-and-finance/03 d02 and onboarding/01 o02; changelog 1661 (0070) links no steps.
+
 ### 2026-09-28 00:08 — d547f38 — nifty-jones-b27e63@docs/deleted-account-live (5 files since origin/main)
 **tl;dr:** Docs only: a deleted account staying off the schedule (decision 0098) is live as 2243aed, verified on Netlify's production deploy [skip ci]
 **Other sessions:** Puzzle changelog 2408 = decision 0098, linked to steps 369848 (s05), 369854 (s11) and 369816 (a21), each reloaded from its sheet. Ledger ACC-003.
