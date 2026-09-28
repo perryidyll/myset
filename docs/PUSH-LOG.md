@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 16:10 — d76d245 — sample-profiles@docs/hq-light-theme-live (3 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0108 and the session note say HQ's light theme is live as a0ab3dc [skip ci]
+**Other sessions:** Nothing to rebase for: docs only. The session's board row goes back to DONE.
+
 ### 2026-09-28 16:07 — a8c1376 — sample-profiles@ui/hq-light-theme (5 files since origin/main)
 **tl;dr:** HQ (myset.vip/crm) has a light theme now: tap the sun in the top bar, or ⌘K → Light mode. It still opens dark, and the choice is remembered in that browser
 **Other sessions:** public/crm.html only (plus test/hq.mjs, 0108's page paragraph, UX-062, the session note). The light theme is tokens: every wash is rgba(var(--hi),a) (white on dark, black on light), text colours have light shades, test/hq.mjs 'THE PAGE’S TWO THEMES' fails on a new rgba(255,255,255,…) wash in the shared rules or a text colour under 4.5:1. localStorage key myset.hq.theme; the head applies it before the first paint. No new numbers.
