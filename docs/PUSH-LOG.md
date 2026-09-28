@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 11:57 — 70c0599 — gifted-clarke-2a74ea@docs/role-gates-live (7 files since origin/main)
+**tl;dr:** Docs only: the founder-tools and role-table fix (decision 0099) is live as 04e78db, verified on Netlify's production deploy [skip ci]
+**Other sessions:** Puzzle changelog 2430 = decision 0099, linked to steps 369952 (t01), 369974 (e06), 370002 (y07), 370080 (i06), each reloaded from its sheet. i06 used to claim every artist reads their own bug reports; bugList was always behind the founder gate. Ledger ACC-004.
+
 ### 2026-09-28 11:54 — 3ec4721 — gifted-clarke-2a74ea@fix/admin-role-gates (9 files since origin/main)
 **tl;dr:** A band mate or the sound engineer signed in to the founder's page can no longer use the founder's platform tools, and crew can no longer rewrite setlists, charts, lyrics or genres or empty the library
 **Other sessions:** Decision 0099, INVARIANT 0gj (0t amended), ledger ACC-004. admin.mjs's platform block now needs isPlatformOwner(aid) AND me.role==='owner'. CAPABILITY is a deny-list: an unlisted action needs only a sign-in, so test/structure.mjs now refuses a CAPABILITY/OWNER_ONLY name no handler takes. 0100 (fix/founder-tools-owner-seat) rebases on this: INVARIANTS 0gk goes after 0gj, ACC-005 above ACC-004. Still open, not in this change: auth.mjs signOutOthers/sessionRevoke let crew sign the owner out (fix/seat-signout-scope).
