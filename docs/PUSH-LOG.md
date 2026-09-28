@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 12:08 — cde47da — inspiring-feynman-75227a@docs/founder-tools-live (6 files since origin/main)
+**tl;dr:** Docs only: the founder's tools needing the founding page's owner seat (decision 0100) is live as 7a84cb7, verified on Netlify's production deploy [skip ci]
+**Other sessions:** Puzzle changelog 2431 = decision 0100, linked to steps 369974 (e06), 370002 (y07) and 370080 (i06), each reloaded from its sheet. Ledger ACC-005; ACC-004's next action no longer lists the two gaps 0100 closed. Still open, not fixed: owner-only Studio controls drawn for member seats on any page (Your earnings, Got a code?, the sign-in Add field).
+
 ### 2026-09-28 12:04 — 8d18d34 — nifty-jones-b27e63@docs/deleted-account-walks-live (18 files since origin/main)
 **tl;dr:** Docs only: the share card and sheet fix for deleted accounts (decision 0098's amendment) is live as 1385b2b, verified on Netlify's production deploy [skip ci]
 **Other sessions:** Puzzle changelog 2408 amended and linked to step 369978 (q03, Lock the account down), reloaded from artist-lifecycle/05. Ledger ACC-003.
