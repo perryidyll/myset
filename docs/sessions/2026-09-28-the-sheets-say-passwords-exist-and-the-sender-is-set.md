@@ -15,9 +15,9 @@
 - Every reload read back through `list_steps` or `list_sections`, matching its sheet.
 - Code read: `studio.js` `gate()`, `passwordSignIn()`, the *Signing in* rows, `openPasswordSheet` / `openPasswordFromCode`; `auth.mjs` `passwordSignIn`, `passwordSet`, `passwordClear` and `OWNER_ONLY`; `_cred.mjs` (`weakPassword`, `LOCK_TRIES` / `LOCK_FOR`); `venueauth.mjs` and `venue-studio.js`.
 - `dig @8.8.8.8`: a DKIM TXT record at `resend._domainkey.myset.vip`, and SPF plus MX on `send.myset.vip`. The local resolver answered nothing.
-- `sh test/run.sh` on the final commit, on top of `f364e51`: exit 0, 3,920 ✓, 0 ✗ (syntax OK, structure OK); again after the rebase on `c940a6e`: exit 0, 4,310 ✓, 0 ✗; `node tools/overview.mjs --check`: current both times.
+- `sh test/run.sh` on the final commit, on top of `f364e51`: exit 0, 3,920 ✓, 0 ✗ (syntax OK, structure OK); again after the rebase on `c940a6e`: exit 0, 4,310 ✓, 0 ✗; again after the rebase on `20bd95e` (PR #127): exit 0, 4,310 ✓, 0 ✗; `node tools/overview.mjs --check`: current each time.
 
-**Found in the read-back, not fixed:** see below. Four items first flagged as "Puzzle ahead" (t01, e06, y07, i06, on decisions 0099 and 0100) were only this branch's older base; after the rebase onto `b4d9ff5` the sheets match Puzzle.
+**Found in the read-back, not fixed:** see below. Four items first flagged as "Puzzle ahead" (t01, e06, y07, i06, on decisions 0099 and 0100) were only this branch's older base; after the rebase onto `b4d9ff5` the sheets match Puzzle. Two more closed while this branch waited: 41966 a02 (the first-gig card, the Tonight strip, the Example rows, the tip burst, Paid votes) and venue n12 *Change the page link* (step 389502, arrows 435550 and 435551) were reloaded by the sample-pages docs (PR #127); read back 2026-09-28.
 
 **Wrong on both sides (check the fact first):**
 
@@ -28,12 +28,10 @@
 - Wrong ids: 42087 b02 and its section description, and 41964 f23, cite INVARIANT 0fv (it is 0fw); 41967 b05 cites decision 0063 (it is 0064); 41964 f22 says "the diary" where the sheet has the rename, "the gig list".
 - 42869 The artist diary: no role and no tool on any step; d04 is named differently; the section notes lack "What is deliberately absent".
 - 42087: the section notes are empty.
-- 41966 a02: none of the first-gig card (0081), the Tonight strip, the Example rows, the tip burst or Paid votes (0079).
 - 41997: the section description says nothing is built, though its step b03 is `Live`.
 - 41969's section notes cite neither 0dh nor 0098; 41967's dead-key row stops at "nothing yet".
 - 41973 p15 cites decision 0078 (it is 0080) and is still `Testing`, though it shipped in PR #66; p16 has no role or tool, and still says Tennessee is "the first registration owed", which decision 0096's correction of 2026-09-27 withdrew. 41974's section notes cite decision 0063 (it is 0064) and still call the steps `Testing` on an unpushed branch; all have been `Live` since PR #33.
 - The Money sheets are well ahead of Puzzle in two sections: 41977 lacks four steps (h13–h16, decision 0095's register), h09's decision 0089 and h03/h04's links to 0065; 42066's section notes lack decision 0086 (Total profit and My cut), and b02, b03, b06 lack 0082, 0084 and 0086. 41973 p05 and p08 lack the tax-number and 0065 sentences.
-- After this branch was rebased on `c940a6e` (sample profiles, PR #126): `venue-lifecycle/01`'s new n12 *Change the page link* and its arrows (n01 → n12 → n10) are not in Puzzle, and neither are that PR's changes to the-gig/03 a02.
 
 **Wrong in the sheet; Puzzle is right:** `the-gig/03` a04 and `money/03`'s intro cite decision 0036 for the gig cap; the cap is 0037. `money/08`'s front matter names the section "(pay, band, …)" where its own body and Puzzle say "splits".
 
