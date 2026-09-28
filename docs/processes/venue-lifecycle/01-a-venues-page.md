@@ -3,13 +3,16 @@ tab: Venue lifecycle
 section: A venue's page, from claim to listing
 puzzle_section_id: 41983
 sources:
-  - netlify/functions/venueauth.mjs (start, verify, claim, me, sessions, roleSet, add, remove, revokeAll, setSlug, checkDomain), venueadmin.mjs (set, hours, amenity, photoUpload, menuSet/Add/Remove, offerSave/Remove, eventSave/Delete/Skip, stats, planGet…, accountExport/Delete/Undelete), venue.mjs, _venues.mjs, _events.mjs (isVenueOwner)
+  - netlify/functions/venueauth.mjs (start, verify, claim, me, sessions, roleSet, add, remove, revokeAll, setSlug, checkDomain), venueadmin.mjs (set, hours, amenity, photoUpload, menuSet/Add/Remove, offerSave/Remove, eventSave/Delete/Skip, stats, planGet…, accountExport/Delete/Undelete), venue.mjs, _venues.mjs (venueBySlug, pickVenueSlug — `oldSlug`), _venueaccount.mjs (`oldSlug` cleared at the erase), _events.mjs (isVenueOwner)
+  - public/venue-studio.js (Settings → Your page link)
   - MYSET-MASTER-OVERVIEW.md §3.1 (routes), §3.6, §2.5 (venue ladder)
   - VERIFYING-A-VENUE.md (the two states)
   - ACCOUNTS.md §3 (venues getting paid), §6.3 (roles), §6.6
+  - INVARIANTS.md 0di (a held slug, and an old slug that keeps answering — for a venue too since 2026-09-28)
+  - docs/decisions/0106 (a renamed page keeps its old address, and no other page can take it)
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps)
-verified: code read 2026-09-12 (venueauth.mjs header and action list; venueadmin.mjs role sets)
+verified: code read 2026-09-12 (venueauth.mjs header and action list; venueadmin.mjs role sets); 2026-09-28 second round (link label, Delete forever, table cards, page link, old addresses) read in the working tree; the sample page, the console, the sign page's print (4 pages as PDF) and both Studios' Settings walked on tools/localhost.mjs at 375 px; not deployed
 ---
 
 # A venue's page, from claim to listing
@@ -31,7 +34,8 @@ verified: code read 2026-09-12 (venueauth.mjs header and action list; venueadmin
 | n09 | Moderate the community page | task | Person | Venue manager R | Netlify | The venue's community page (`/v/<slug>/community`): reply, pin, hide, delete (`postList`, `postReply`, `postDelete`), from the Merch tab. → *Community & media*. `src: venueadmin.mjs; overview §3.6` |
 | n10 | Serve the public page | webpage | Automation | MySet server R · Fan I | Netlify | `/v/<slug>` → `venue.html`: photos, tagline, about, what's on, hours, offers, amenities, directions, the badge if earned or the grey *Unverified listing* chip with a line offering the real owner a way to claim it, a **Community** pill, the artists' *vouch* button. `src: venue.mjs; venue.html; VERIFYING-A-VENUE.md` |
 | n11 | Leave | go_to | Person | Venue manager R | Netlify | Export, two-screen delete, lockdown, undo and purge exactly as artists, on `keysForVenue()`. → *Artist lifecycle → Leaving* q09. `src: ACCOUNTS.md §6.6` |
+| n12 | Change the page link | form | Person | Venue manager R · MySet server R | Netlify | Venue Studio → Settings → **Your page link** (until 2026-09-28 *Your public page*, with no line under it), right after *Your plan*: *"The link you give people, yours to choose. Change it any time — the old one keeps working too, so QR codes already printed still land here."* — `myset.vip/v/` + the field + **Save**, then *Open myset.vip/v/… ↗*. `setSlug` (`venueauth.mjs`), **owner only** (*"Only the venue owner can change this"*): a name a venue sample holds, another venue's address, or **another venue's old address** is refused — *"Another venue already has that address"* (until 2026-09-28 only current addresses were checked). The old address goes into `oldSlug` on the venue registry and **keeps answering for this page** — `venueBySlug` resolves it on every door that finds a venue by its address (the page, its QR code, its community page, pay) — so the codes the bar printed still land here; until 2026-09-28 a venue rename deleted the old address, and every code the bar had printed died with it. An old address is nobody else's: `pickVenueSlug` (a new venue's claim) and the sample picker skip it; the page that had it may take it back; it is cleared when the venue is finally erased. **Testing.** `src: venueauth.mjs setSlug; _venues.mjs venueBySlug/pickVenueSlug; _venueaccount.mjs; public/venue-studio.js render (Settings); INVARIANT 0di; decision 0106` |
 
 ## Connections
 
-n01 → n02 → n03 → n10; n03 → n04 → n10; n03 → n05 → n10; n10 → n06; n10 → n07; n03 → n08; n10 → n09; n01 → n11.
+n01 → n02 → n03 → n10; n03 → n04 → n10; n03 → n05 → n10; n10 → n06; n10 → n07; n03 → n08; n10 → n09; n01 → n11; n01 → n12 → n10.
