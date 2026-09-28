@@ -550,7 +550,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 293 (last: 0gw) |
 | Test suites | 67 |
 | Assertions | **4,849**, 0 failing, last run 2026-09-28 |
-| Decision records | 112 |
+| Decision records | 113 |
 
 ### Feature flags in force
 
@@ -1396,6 +1396,8 @@ reported as *"the recovery key is broken"*. It is not broken; it is unreadable b
 sh test/run.sh              # the whole suite; counts are in §2.1
 node tools/overview.mjs --tests   # run it and stamp the count into this document
 ```
+
+**No install step in a worktree** (decision 0116). `node_modules` is never tracked: a worktree under `~/Docs/MySet/.claude/worktrees/` uses the shared checkout's, because Node looks for packages in every parent folder, and a checkout anywhere else runs `npm ci` once.
 
 The suites run the **real handlers** against an in-memory store that implements the same
 etag behaviour as the real one, injected by a module hook. Stripe is stubbed the same way,

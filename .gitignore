@@ -1,7 +1,9 @@
 .DS_Store
 ._*
 Thumbs.db
-node_modules/
+# No trailing slash: `node_modules/` matches only a folder, and a worktree's node_modules
+# LINK slipped past it into two commits (decision 0116). Worktrees need no copy of their own.
+node_modules
 .netlify/
 archive/
 design-handoff/
