@@ -8,9 +8,9 @@ area: growth
 reverses:
 superseded_by:
 invariants: [0gs]
-commits: []
+commits: [0075a30]
 tests: [test/gmail.mjs, test/hq.mjs]
-files: [netlify/functions/_gmail.mjs, netlify/functions/hq.mjs, netlify/functions/hqcron.mjs, public/hq.html]
+files: [netlify/functions/_gmail.mjs, netlify/functions/hq.mjs, netlify/functions/hqcron.mjs, public/crm.html]
 ---
 
 ## The question
