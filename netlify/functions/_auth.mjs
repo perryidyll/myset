@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
-import { casDoc, readDoc, cleanArtistId, own } from './_lib.mjs';
+import { casDoc, readDoc, cleanArtistId, own, clientIp, roomHash } from './_lib.mjs';
 
 /* Magic-link sign-in for ARTISTS. The audience never signs in — that is the
    whole reason the app works in a bar — so this exists only for the Studio.
@@ -286,6 +286,32 @@ export async function checkCode(email, given, realm) {
     return true;
   }).catch(() => {});
   return { ok, name };
+}
+
+/* ONE NETWORK, SO MANY CODES AN HOUR (decision 0111). The per-address cap above
+   stops one inbox being flooded; it did nothing about one script asking for a code
+   for ten thousand different addresses — every one a billed email, and a stranger's
+   inbox filled with MySet's name on it until the sender's reputation was gone and
+   real sign-ins bounced. So the network asking is counted too, in its own small
+   document, before a code is made. Sixty an hour is a whole festival's worth of
+   bands signing in from one venue's wifi, each asking twice; a script is refused
+   SILENTLY, with the same "sent" every valid address gets (9h). A network the
+   request does not name is not counted, and a limiter that cannot be written never
+   stops a real sign-in. */
+export const NET_CODES_PER_HOUR = 60;
+export async function codeSendAllowed(req, now = Date.now()) {
+  const net = roomHash('auth', clientIp(req));
+  if (!net) return true;
+  let allowed = true;
+  try {
+    await casDoc(`authnet_${net}`, () => ({}), (d) => {
+      d.sends = (Array.isArray(d.sends) ? d.sends : []).filter((t) => now - t < 3600e3);
+      if (d.sends.length >= NET_CODES_PER_HOUR) { allowed = false; return false; }
+      d.sends.push(now);
+      return true;
+    }, null, 5);
+  } catch { /* a limiter that cannot be written must never stop a real sign-in */ }
+  return allowed;
 }
 
 /* ---------- delivery ---------- */

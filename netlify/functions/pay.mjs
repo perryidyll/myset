@@ -2,7 +2,7 @@ import { guard } from './_errlog.mjs';
 import Stripe from 'stripe';
 import { json, bad, cleanFanId, getShow, publicArtist, sha,
          readFans, creditsUsed, isUnlimited } from './_lib.mjs';
-import { canTakeMoney } from './_pay.mjs';
+import { canTakeMoney, payAllowed } from './_pay.mjs';
 import { readConnect, connectUsable, feeCents, scope } from './_connect.mjs';
 import { planForArtist, merchAllowed } from './_plan.mjs';
 import { getProfile, MIN_CENTS, merchSoldOut } from './_profile.mjs';
@@ -90,6 +90,7 @@ const main = async (req) => {
     const vid = await venueBySlug(cleanSlug(vq));
     if (!vid) return bad('unknown venue', 404);
     const owner = `v_${vid}`;
+    if (!(await payAllowed(owner, fan, req))) return bad('Too many tries from this phone — give it a minute', 429);
     const [prof, reg] = await Promise.all([getVenueProfile(vid), venueById(vid)]);
     const { VENUE_PLANS } = await import('./_venues.mjs');
     if (!VENUE_PLANS[venuePlanOf(reg)].merch) return bad('Merch isn’t on this page right now', 404);
@@ -139,6 +140,7 @@ const main = async (req) => {
      should never have offered the button, so this is the backstop, not the UI. */
   const show = await getShow(aid);
   if (!canTakeMoney(aid, show)) return bad('payments-not-configured', 503);
+  if (!(await payAllowed(aid, fan, req))) return bad('Too many tries from this phone — give it a minute', 429);
   const artist = show.artist || 'the artist';
 
   let line, metadata, shipping = false, post = 0;

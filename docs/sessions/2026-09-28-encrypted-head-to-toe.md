@@ -71,7 +71,22 @@ same assertions hold on today's `main`. The one listed artist's public profile w
 read from production (read-only) and every picture address passes `imgUrl`, so
 nothing goes blank on deploy. Nothing was written to production.
 
-**Not checked:** production itself until the merge; a signed-in band mate or crew seat
+**Slice A live:** merged as `539c2a4` (PR #136) after main moved four more times
+under it. Verified by content on myset.vip once the deploy landed: the full HSTS
+directive and `nosniff` on `/api/show`, the policy and `nosniff` on `/api/qr`, the
+artist page's share card intact.
+
+**Slice B (decision `0111`):** cut fresh from `main` `f1e1dbe` and ported from the
+original branch, then re-sized before anything shipped. Checkout's network burst went
+from sixty to more than a bar holds phones, and a test now runs that night (two
+hundred phones on one address, each tapping Buy twice, none refused). The sign-in,
+RSVP, rating and bug numbers were widened the same way, and the RSVP and rating
+retry caps went back to the default, because the network cap already starves a
+script and the cut would have been paid by real fans. Found on the port: the
+original branch never put the checkout limiter's document on the delete lists, so
+deleting an account would have left it behind. It is on both now.
+
+**Not checked:** production itself until each merge; a signed-in band mate or crew seat
 on production; whether `ADMIN_CODE` was ever rotated after it appeared in a committed
 file on 2026-08-17 — only the founder can see that.
 

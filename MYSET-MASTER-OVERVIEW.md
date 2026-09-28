@@ -542,15 +542,21 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
+| Checkouts a device may open in a row / per minute after that (`PAY_BURST`, `PAY_PER_MIN`, decision 0111) | 40 / 10 |
+| …and a whole network — sized so a packed bar on one wifi never meets it (`PAY_NET_BURST`, `PAY_NET_PER_MIN`) | 300 / 120 |
+| Sign-in codes one network may ask for in an hour, artist and venue doors together (`NET_CODES_PER_HOUR`) | 60 |
+| Phones one network may put on one night's RSVP count (`RSVP_PER_NETWORK`) | 400 |
+| Ratings one network may leave for one artist in a day (`FEEDBACK_PER_NETWORK_PER_DAY`) | 150 |
+| Bug reports one network may file for one artist in an hour (`BUG_PER_NETWORK_PER_HOUR`) | 12 |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet HQ (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
-| Invariants | 293 (last: 0gw) |
+| Invariants | 294 (last: 0gx) |
 | Test suites | 67 |
-| Assertions | **4,849**, 0 failing, last run 2026-09-28 |
-| Decision records | 112 |
+| Assertions | **4,882**, 0 failing, last run 2026-09-28 |
+| Decision records | 113 |
 
 ### Feature flags in force
 

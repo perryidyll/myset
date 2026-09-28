@@ -2765,3 +2765,20 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
     the full HSTS directive, a served picture or clip says `nosniff`, and the QR SVG
     carries a policy that lets it run nothing — netlify.toml's header rules do not
     reach a function's reply. `test/foundations.mjs`, `test/errlog.mjs`.
+
+## The security pass, slice B — the network counts too (2026-09-28, decision `0111`)
+
+0gx. **Every anonymous write counts the network as well as the device, and a whole
+    bar on one wifi fits under every limit.** A device id is the phone's to choose;
+    the address is not (Netlify sets it). Sign-in codes (`codeSendAllowed`, artist
+    and venue doors), checkout (`payAllowed`), RSVPs, ratings and bug reports each
+    count the network's hash (`roomHash`) inside the document they already write, and
+    never store the address. A refusal says nothing a script can learn from: the same
+    "sent" (9h), the same "thanks", the same count; checkout alone says "give it a
+    minute". A limiter that cannot be written lets the real thing through. Every
+    network number is sized so the worst real night — two hundred phones on one
+    address, all acting at once — is never refused, and the compare-and-swap retries
+    on the documents a whole room writes stay at the default. Widen a number a real
+    night meets; never remove the limit. `test/request-payments.mjs` "A WHOLE BAR FITS
+    UNDER IT", `test/email.mjs`, `test/rsvp.mjs`, `test/feedback.mjs`,
+    `test/errlog.mjs`.

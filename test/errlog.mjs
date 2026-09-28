@@ -16,7 +16,7 @@ const L      = await import('../netlify/functions/_lib.mjs');
 const E      = await import('../netlify/functions/_errlog.mjs');
 const { readFileSync } = await import('node:fs');
 const { src } = await import('./_src.mjs');
-const { __dump } = await import('./blobs-fake.mjs');
+const { __dump, __opsStart, __opsStop } = await import('./blobs-fake.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -24,9 +24,11 @@ const ok = (name, cond, detail) => {
   else { fail++; console.log('  ✗', name, detail === undefined ? '' : '\n      ' + JSON.stringify(detail)); }
 };
 const eq = (name, got, want) => ok(name, JSON.stringify(got) === JSON.stringify(want), { got, want });
-const hit = async (h, url, body) => {
+const hit = async (h, url, body, ip) => {
+  const headers = { 'content-type': 'application/json' };
+  if (ip) headers['x-nf-client-connection-ip'] = ip;   // what Netlify sets; a bare Request has none
   const r = await h(new Request(url, body === undefined ? {} : {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+    method: 'POST', headers, body: JSON.stringify(body) }));
   const t = await r.text();
   try { return { status: r.status, ...JSON.parse(t) }; } catch { return { status: r.status, raw: t }; }
 };
@@ -107,6 +109,36 @@ console.log('\nA FAN CAN REPORT A BUG, AND THE SERVER ATTACHES WHAT IT SAW');
   const r2 = await report('f1', 'again', []);
   ok('the same device ten seconds later is thanked but not stored twice', r2.ok && r2.already, r2);
   eq('', (await adm({ action: 'bugList' })).list.length, 1);
+}
+
+console.log('\nONE NETWORK CANNOT FLOOD THE BUG LIST BY ROTATING DEVICE IDS (0111)');
+{
+  /* "One per device per ten minutes" is one per call for a loop with a fresh id,
+     and each report used to cost three reads of the hourly error documents before
+     its write. The network is not the caller's to choose, and a refused report is
+     judged on one read of the bugs document alone. */
+  const NET_A = '203.0.113.10', NET_B = '198.51.100.20';
+  const reportFrom = (ip, fan, note) => hit(bugFn, 'https://x/api/bug', { fan, note, recent: [], page: '/vote', ua: 'test' }, ip);
+  const kept = (await adm({ action: 'bugList' })).list.length;
+  let landed = 0, last = null;
+  for (let i = 0; i < E.BUG_PER_NETWORK_PER_HOUR + 4; i++) {
+    last = await reportFrom(NET_A, 'rot' + i, 'it broke ' + i);
+    if (last.ok && !last.already) landed++;
+  }
+  eq('the hour’s allowance lands; the rest are thanked, not stored',
+     [landed, last.status, last.ok, last.already], [E.BUG_PER_NETWORK_PER_HOUR, 200, true, true]);
+  eq('the list grew by exactly the allowance', (await adm({ action: 'bugList' })).list.length - kept, E.BUG_PER_NETWORK_PER_HOUR);
+  __opsStart();
+  const r = await E.saveBug('perry-idyll', 'rotLate', { note: 'again' }, NET_A);
+  const ops = __opsStop();
+  eq('a refused report is the same shape as a repeat from one phone', [r.ok, r.already], [true, true]);
+  eq('and costs ONE read of the bugs document — the hourly error documents are never gathered, nothing is written',
+     [ops.filter((o) => o === 'get bugs_perry-idyll').length, ops.filter((o) => /^get err_/.test(o)).length,
+      ops.filter((o) => /^set /.test(o)).length, ops.length], [1, 0, 0, 1]);
+  const other = await reportFrom(NET_B, 'rotElsewhere', 'from another bar');
+  ok('another network is untouched', other.ok && !other.already, other);
+  const raw = String((__dump().get('bugs_perry-idyll') || {}).body || '');
+  ok('the document holds no address', raw.length > 0 && !raw.includes(NET_A) && !raw.includes(NET_B));
 }
 
 console.log('\nA STALLED LYRICS UPSTREAM CANNOT STALL A FAN’S REQUEST (0110)');

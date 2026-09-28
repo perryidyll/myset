@@ -10,7 +10,7 @@ true" was checked against the code or the live site on the day this was written.
 
 **Revised 2026-09-28**, after the founder asked for MySet to be *"encrypted head to
 toe"*. Seven audits went over every surface; what they found ships in three slices —
-`0110` (code only, this revision), `0111` (limits on every anonymous write) and
+`0110` (code only, live as `539c2a4`), `0111` (limits on every anonymous write, this revision) and
 `0112`/`0113` (the server's own secret; the records that hold a person sealed at
 rest). The rest of the document stands where it still holds and is corrected where
 it did not.
@@ -32,12 +32,19 @@ reach it. The numbers live in §2.1 of the master overview, read from the code.
 | **Headers and deadlines** | A function's reply carried Netlify's bare HSTS; the QR SVG carried no policy; mail and lyrics lookups had no deadline. | The full directive on every reply, `nosniff` on every served file, a policy on the SVG, eight seconds on both. |
 | **The repository** | A real fan's address, the founder's own, and five device ids were in committed files. | Replaced. History keeps them; treat as disclosed. Dependabot opens a pull request for a dependency fix. |
 
-Still to land, in this order: **`0111`** — every anonymous write counts the network
-as well as the device (sign-in codes, RSVPs, ratings, bug reports, checkout), sized
-so a bar's shared wifi never meets a limit; **`0112`/`0113`** — the signing key comes
-from `MYSET_SECRET` instead of a document in the store, the founder's passcode
-becomes a real door, and the records that hold a person are sealed at rest. Those
-two wait on the founder setting the variables (the list at the end).
+**Slice B (decision `0111`).** Every anonymous write now counts the network as
+well as the device — sign-in codes (artist and venue doors), checkout, RSVPs,
+ratings, bug reports — because a device id is the phone's to choose and the address
+is not. A refusal teaches a script nothing (the same "sent", the same "thanks"); a
+limiter that breaks lets the real thing through; the stored documents hold a hash,
+never an address. Every number was sized for the worst real night — two hundred
+phones on one bar's wifi, all acting at once — and the test suite runs that night.
+The numbers are in §2.1 of the master overview.
+
+Still to land: **`0112`/`0113`** — the signing key comes from `MYSET_SECRET` instead
+of a document in the store, the founder's passcode becomes a real door, and the
+records that hold a person are sealed at rest. That slice waits on the founder
+setting the variables (the list at the end).
 
 **What did not change:** the front end is still public and still fine to be public;
 `script-src` still needs `'unsafe-inline'` (see below); the repository is still public

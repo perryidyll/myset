@@ -212,7 +212,7 @@ console.log('\nTHE SECOND HOME');
   ok('a pass copies every key an owner holds', r1.done && r1.copied > 20 && r1.failed === 0, r1);
   const stored = [...__r2.objects.keys()];
   ok('under backup/<key> — the same key, the other store', stored.includes(PREFIX + KEY.show(AID)) && stored.includes(PREFIX + EVT(AID, showId)) && stored.includes(PREFIX + 'cityindex'), stored.slice(0, 5));
-  ok('never a fan shard, a session, a sign-in secret, a clip (already on R2) or an ID photo', !stored.some((k) => /^backup\/(f\d+_|sess_|lock_|authc_|authsecret|vid_)|_idcheck$/.test(k)), stored.filter((k) => /f\d+_|sess_|vid_|idcheck/.test(k)));
+  ok('never a fan shard, a session, a sign-in secret, a clip (already on R2) or an ID photo', !stored.some((k) => /^backup\/(f\d+_|sess_|lock_|authc_|authnet_|paylim_|authsecret|vid_)|_idcheck$/.test(k)), stored.filter((k) => /f\d+_|sess_|vid_|idcheck/.test(k)));
   const r2 = await runMirror({ owners, keysOf });
   eq('the next ring after a finished pass does nothing', [r2.done, r2.copied], [true, undefined]);
   await casDoc(STATE, () => ({}), (d) => { d.passDoneAt = Date.now() - 25 * 3600e3; return true; });

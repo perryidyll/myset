@@ -1,6 +1,6 @@
 import { json, bad } from './_lib.mjs';
 import { normEmail, validEmail, issueCode, checkCode, sendCode, emailReady,
-         signTicket, readTicket, cleanSlug } from './_auth.mjs';
+         signTicket, readTicket, cleanSlug, codeSendAllowed } from './_auth.mjs';
 import { readVenues, mutateVenues, createVenue, requireVenue, signVenueToken,
          verifyVenueToken, getVenueProfile, domainMatches , vRevOf } from './_venues.mjs';
 import { setPassword, checkPassword, hasPassword, clearPassword, weakPassword,
@@ -48,6 +48,7 @@ export default async (req) => {
     if (!emailReady()) return bad('Email sign-in isn’t switched on yet.', 503);
     const reg = await readVenues();
     const link = reg.byEmail[email];
+    if (!(await codeSendAllowed(req))) return json(SENT);          // the network's hour is spent — silently, like the address cap (0111)
     const code = await issueCode(email, null, REALM);
     if (!code) return json(SENT);                                  // rate limited, silently
     const sent = await sendCode(email, code, link ? (reg.byId[link.venueId] || {}).name : '', 'Venue Studio');

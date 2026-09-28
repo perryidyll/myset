@@ -13,7 +13,10 @@
      · the stored document holds a HASH of the fan, never the id itself, and lives
        under a computable key (INVARIANT 1)
      · nights more than three days gone are pruned on write
-     · a night holds at most MAX_FANS; past that 'on' is a no-op that still answers */
+     · a night holds at most MAX_FANS; past that 'on' is a no-op that still answers
+     · one network puts at most RSVP_PER_NETWORK devices on a night — the device id
+       is the phone's to choose, the address is not — and the map that counts it
+       holds no address and is bounded */
 process.env.ADMIN_CODE = 'devlocal';
 
 const admin     = (await import('../netlify/functions/admin.mjs')).default;
@@ -33,9 +36,10 @@ const ok = (name, cond, detail) => {
   else { fail++; console.log('  ✗', name, detail === undefined ? '' : '\n      ' + JSON.stringify(detail)); }
 };
 const eq = (name, got, want) => ok(name, JSON.stringify(got) === JSON.stringify(want), { got, want });
-const hit = async (h, url, body, token) => {
+const hit = async (h, url, body, token, ip) => {
   const headers = { 'content-type': 'application/json' };
   if (token) headers.authorization = 'Bearer ' + token;
+  if (ip) headers['x-nf-client-connection-ip'] = ip;   // what Netlify sets; a bare Request has none
   const r = await h(new Request(url, body === undefined
     ? { headers } : { method: 'POST', headers, body: JSON.stringify(body) }));
   const t = await r.text();
@@ -188,6 +192,40 @@ console.log('\nNEVER A NIGHT THE GIG LIST CANNOT SHOW');
   const far = await rsvp(`?a=${slug}`, { fan: FAN_A, eventId: 'res', date: week(30), on: true });
   eq('a night past the gig list’s horizon is a 404, as if it were not listed', far.status, 404);
   eq('and adds nothing to the document', Object.keys((await R.readRsvp(aid)).occ).length, before + 1);
+}
+
+console.log('\nONE NETWORK CANNOT FILL A NIGHT BY ROTATING DEVICE IDS');
+{
+  /* "One per device" is one per call for a loop that mints a fresh id each time.
+     The network is not the caller's to choose: past RSVP_PER_NETWORK devices from
+     one address a new 'on' is the no-op a full night is — answered, never an
+     error — while another network, and anyone already counted, are untouched. */
+  const NET_A = '203.0.113.10', NET_B = '198.51.100.20';
+  const night = { eventId: 'atbar', date: SOON };
+  const from = (ip, body) => hit(rsvpFn, `https://x/api/rsvp?a=${slug}`, body, null, ip);
+  let last = null;
+  for (let i = 0; i < R.RSVP_PER_NETWORK + 20; i++) last = await from(NET_A, { fan: 'rot' + String(i).padStart(9, '0'), ...night, on: true });
+  eq('rotated ids on one network, past the cap, stop at the cap', last.n, R.RSVP_PER_NETWORK);
+  eq('the refused one is answered calmly — not on, the count still there', [last.status, last.ok, last.on], [200, true, false]);
+  const b = await from(NET_B, { fan: 'fanOnAnotherNet', ...night, on: true });
+  eq('a phone on another network still counts', [b.on, b.n], [true, R.RSVP_PER_NETWORK + 1]);
+  const off = await from(NET_A, { fan: 'rot000000001', ...night, on: false });
+  eq('a phone already counted on the full network can take it back', [off.on, off.n], [false, R.RSVP_PER_NETWORK]);
+  const again = await from(NET_A, { fan: 'rot000000001', ...night, on: true });
+  eq('and say it again — a real fan toggling is never the script', [again.on, again.n], [true, R.RSVP_PER_NETWORK + 1]);
+  const raw = String((__dump().get(`rsvp_${aid}`) || {}).body || '');
+  ok('the document holds no address', raw.length > 0 && !raw.includes(NET_A) && !raw.includes(NET_B));
+  const o = (await R.readRsvp(aid)).occ[R.occKey('atbar', SOON)];
+  eq('two network counters: the capped one at the cap, the other at one',
+     Object.values(o.nets).sort((x, y) => y - x), [R.RSVP_PER_NETWORK, 1]);
+  /* A festival crowd on mobile data is a network per phone; the map stays bounded
+     and the counter that matters — the big one — is the one kept. */
+  for (let i = 0; i < R.RSVP_NETS_KEPT + 5; i++)
+    await from(`10.${(i >> 8) & 255}.${i & 255}.9`, { fan: 'crowd' + String(i).padStart(7, '0'), ...night, on: true });
+  const o2 = (await R.readRsvp(aid)).occ[R.occKey('atbar', SOON)];
+  eq('the counters are pruned to the cap, and the big one survives',
+     [Object.keys(o2.nets).length, Math.max(...Object.values(o2.nets))], [R.RSVP_NETS_KEPT, R.RSVP_PER_NETWORK]);
+  eq('and every one of those phones was counted', o2.n, R.RSVP_PER_NETWORK + 1 + R.RSVP_NETS_KEPT + 5);
 }
 
 console.log('\nDELETING THE ACCOUNT DELETES THE HASHES');
