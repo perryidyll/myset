@@ -17,7 +17,7 @@ import { createHash } from 'node:crypto';
      `/moneymodel` — which a browser also sends to everything under it: the dashboard
      at /moneymodel/shows, its data and the model's live feed (RFC 6265 §5.1.4). One
      sign-in, one cookie, and it never rides the room's polls.
-   · A four-digit code is a courtesy lock, not a vault: it keeps a page off search
+   · A passcode is a courtesy lock, not a vault: it keeps a page off search
      engines and away from anybody who stumbles on the address, and it says plainly
      "this is not public". Anything that would ruin the business if seen does not
      belong behind it, whatever the server does. */
@@ -60,8 +60,11 @@ export const gatePage = ({ wrong = false, action = '/', title = 'MySet Money Mod
   form { background:var(--surface); border:2px solid var(--ink); padding:28px 28px 24px; width:min(420px,100%); }
   .k { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
   h1 { font-size:26px; margin:0 0 6px; letter-spacing:-.01em; } p { margin:0 0 18px; color:var(--muted); }
-  input { width:100%; font:600 26px/1 ui-monospace, Menlo, monospace; letter-spacing:.3em; text-align:center; padding:12px; border:1px solid var(--rule); background:var(--surface); color:var(--ink); }
+  .pw { position:relative; }
+  input { width:100%; font:600 20px/1 ui-monospace, Menlo, monospace; letter-spacing:.08em; padding:12px 64px 12px 12px; border:1px solid var(--rule); background:var(--surface); color:var(--ink); }
   input:focus { outline:2px solid var(--accent); outline-offset:2px; border-color:var(--ink); }
+  .pw button { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:auto; margin:0; padding:8px 10px; font:600 13px/1 inherit; background:none; color:var(--muted); border:0; }
+  .pw button:focus-visible { outline:2px solid var(--accent); }
   button { margin-top:12px; width:100%; font:600 15px/1 inherit; padding:13px; background:var(--accent); color:#fff; border:2px solid var(--accent); cursor:pointer; }
   .no { color:var(--accent); font-weight:600; margin:10px 0 0; }
 </style></head><body>
@@ -69,7 +72,7 @@ export const gatePage = ({ wrong = false, action = '/', title = 'MySet Money Mod
   <div class="k">${kicker}</div>
   <h1>Enter the passcode</h1>
   <p>This page is not public. Ask Perry if you need it.</p>
-  <input name="code" inputmode="numeric" pattern="[0-9]*" maxlength="12" autofocus aria-label="passcode" required>
+  <div class="pw"><input id="code" name="code" type="password" maxlength="200" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus aria-label="passcode" required><button type="button" aria-controls="code" aria-pressed="false" onclick="const i=document.getElementById('code'),on=i.type==='password';i.type=on?'text':'password';this.textContent=on?'Hide':'Show';this.setAttribute('aria-pressed',on);i.focus()">Show</button></div>
   <button type="submit">${button}</button>
   ${wrong ? '<p class="no">That is not the passcode.</p>' : ''}
 </form></body></html>`;
