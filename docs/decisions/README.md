@@ -118,6 +118,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0106](0106-a-renamed-page-keeps-its-old-address-and-no-other-page-can-take-it.md) | A renamed page, an artist's or a venue's, keeps answering at its old address, and no other page can take that address | 2026-09-28 | auth | decided | claude |
 | [0107](0107-the-pre-show-checklist-asks-for-a-big-sign-and-25-50-table-cards.md) | The pre-show checklist asks for one big sign and 25–50 small table cards, and the sign page prints both in one go | 2026-09-28 | ui | decided | perry |
 | [0114](0114-an-alert-reaches-the-seats-that-can-see-what-it-is-about.md) | An alert reaches only the seats that can see what it is about, and a sign-out ends that phone's alerts | 2026-09-28 | auth | decided | claude |
+| [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md) | Every action a Studio endpoint takes is one a page sends | 2026-09-28 | general | decided | user-confirmed |
 
 ## By area
 
@@ -125,7 +126,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) · [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md)
 
-**general** — [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md)
+**general** — [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md) · [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md)
 
 **history** — [0057](0057-a-filed-night-can-be-renamed-by-hand-from-the-mone.md)
 

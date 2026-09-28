@@ -207,7 +207,7 @@ console.log('\nTHE FOUNDER’S TOOLS NEED THE FOUNDER’S OWNER SEAT, NOT JUST T
     eq(`THE BUG: or mint a free plan`,
        (await S({ action: 'promoCreate', code: 'SEAT' + who.toUpperCase(), pct: 100, plan: 'pro', months: 60 }, T)).status, 401);
     for (const a of ['bugList', 'flagList', 'sheetStatus', 'sheetSync', 'idQueue', 'idApprove', 'idReject',
-                     'venuePlan', 'promoList', 'promoRevoke', 'venueList', 'venueVerify'])
+                     'promoList', 'promoRevoke', 'venueList', 'venueVerify'])
       eq(`a ${who} is refused ${a}`, (await S({ action: a }, T)).status, 401);
   }
   eq('no flag moved', ((await readFlags()).byArtist || {})['someone-else'], undefined);

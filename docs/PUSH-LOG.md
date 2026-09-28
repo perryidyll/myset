@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 15:03 — 2882a95 — quizzical-haslett-6f8f8b@chore/dead-admin-actions (30 files since origin/main)
+**tl;dr:** Your own genres in the Studio's song sheet now have a ✕ that deletes the genre from every song; ten server actions no page ever sent are gone (nothing else visible changes)
+**Other sessions:** Decision 0115, INVARIANT 0hl, ledger UX-063. test/structure.mjs now FAILS when admin.mjs (+_messages, _diary) or venueadmin.mjs branches on an action name that no public/ page quotes outside a Set literal — build both halves of a feature together. Removed: showTime (field gone from stage/_board/_history/_lib), city action (show.city stays), askList/listAll/learnList (read the stage poll), lyricsGet (songGet), chartFlags action, verifyPreview, spotifyPeek (no SPOTIFY_* needed), venuePlan (venues pay via their own checkout). Branches adding actions (HQ, security) must add the sender too.
+
 ### 2026-09-28 14:41 — 3a66c20 — quizzical-haslett-6f8f8b@docs/push-per-seat-live (4 files since origin/main)
 **tl;dr:** Docs only: push alerts per seat (decision 0114) are live as 811c9a7 — the ledger, the decision record, the session note and the sheet say so [skip ci]
 **Other sessions:** Puzzle: new step t13 = 389598 in section 41979 (arrows 435707–435710 from t11/t04/t05/t07); o10 370021, d06 370277, j08 370099 now Live (VAPID set), f06 370186 reloaded; changelog 2438 = 0114. HQ (4b462c) must pass {owner:true} to its hq.mjs notify; the security branch (5bcf8f) must drop its pushOn gate and rebase on 811c9a7.

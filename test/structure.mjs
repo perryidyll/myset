@@ -259,5 +259,34 @@ check('public/venue-studio.html', [
   console.log(`  ${okCaps ? '✓' : '✗'} every capability CAPABILITY asks for is one a role in _session.mjs has (${asked.join(', ')})${unknown.length ? ' — unknown: ' + unknown.join(', ') : ''}`);
   if (!okCaps) fail++;
 }
+/* EVERY ACTION A STUDIO ENDPOINT TAKES HAS A SENDER (decision 0115, INVARIANT 0hl).
+   A handler nothing calls is still a door: it answers anyone who guesses its name, it
+   is carried through every refactor, and it reads as a feature that exists. Ten of
+   them had piled up in admin.mjs and venueadmin.mjs (a show-time box, a Spotify import
+   with no button, reads the Studio's poll had replaced). So a name a handler branches
+   on must appear, quoted, somewhere in public/ outside a Set literal (the pages' own
+   lists of names, like SAMPLE_READS, are not calls). A common word — `status`, `venue`
+   — passes on any mention; that is the limit of a text check. */
+{
+  const fn = (f) => readFileSync(new URL('../netlify/functions/' + f, import.meta.url), 'utf8');
+  const taken = (code) => {
+    const names = new Set([...code.matchAll(/action === '(\w+)'|case '(\w+)':/g)].map((m) => m[1] || m[2]));
+    for (const m of code.matchAll(/\[([^\]]*)\]\.includes\(action\)/g))
+      for (const n of m[1].matchAll(/'(\w+)'/g)) names.add(n[1]);
+    return [...names];
+  };
+  const pub = readdirSync(new URL('../public/', import.meta.url)).filter((f) => /\.(js|html)$/.test(f))
+    .map((f) => readFileSync(new URL('../public/' + f, import.meta.url), 'utf8')).join('\n')
+    .replace(/new Set\(\[[\s\S]*?\]\)/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const sent = (n) => new RegExp(`['"\`]${n}['"\`]`).test(pub);
+  for (const [name, code, floor] of [
+    ['admin.mjs', [fn('admin.mjs'), fn('_messages.mjs'), fn('_diary.mjs')].join('\n'), 100],
+    ['venueadmin.mjs', fn('venueadmin.mjs'), 30]]) {
+    const names = taken(code), none = names.filter((n) => !sent(n));
+    const good = names.length >= floor && !none.length;
+    console.log(`  ${good ? '✓' : '✗'} every action ${name} takes is sent by a page (${names.length})${none.length ? ' — no sender: ' + none.join(', ') : ''}`);
+    if (!good) fail++;
+  }
+}
 console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
 process.exit(fail ? 1 : 0);

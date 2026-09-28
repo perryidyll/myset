@@ -295,7 +295,7 @@ export async function archiveShow(aid, show, fans) {
   const doc = {
     v: 1, showId, artistId: aid,
     title: show.archiveTitle || '',
-    venue: show.venue || '', city: show.city || '', showTime: show.showTime || '',
+    venue: show.venue || '', city: show.city || '',
     // the gig's country and zone, and the plan the night was played on, stamped by the
     // lifecycle since 0095 (older nights: ''); who started and ended it, for the register
     country: show.country || '', tz: show.tz || '', plan: show.plan || '',

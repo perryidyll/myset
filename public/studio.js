@@ -3560,8 +3560,11 @@ function keyRoot(){
 function tagChips(){
   const all=[...SONG.vocab.builtin.map(t=>({...t,own:false})),
              ...SONG.vocab.own.map(t=>({...t,own:true}))];
-  return all.map(t=>`<button class="tg ${t.own?'own':''} ${SONG.tags.has(t.id)?'on':''}"
-      data-act="sgtag" data-id="${esc(t.id)}">${esc(t.label)}</button>`).join('')
+  /* Your own genres carry a ✕ that deletes the genre itself, from every song (tagRemove). */
+  const chip=t=>`<button class="tg ${t.own?'own':''} ${SONG.tags.has(t.id)?'on':''}"
+      data-act="sgtag" data-id="${esc(t.id)}">${esc(t.label)}</button>`;
+  return all.map(t=>t.own?`<span class="tgown">${chip(t)}<button class="tgx" data-ed="setlist" data-act="sgtagdel" data-id="${esc(t.id)}"
+      aria-label="Delete the genre ${esc(t.label)}">✕</button></span>`:chip(t)).join('')
     + (SONG.vocab.own.length<15?`<button class="tg add" data-act="sgtagnew">+ Your own</button>`:'');
 }
 function toggleSongTag(id){
@@ -3586,6 +3589,17 @@ async function addOwnTag(){
   const c=$('#cTags'); if(c) c.textContent=`${SONG.tags.size} of ${SONG.vocab.maxPerSong}`;
   if(D) D.tags={builtin:d.tags.builtin,own:d.tags.own};
   toast('Added — tap it on any song');
+}
+async function delOwnTag(id){
+  const t=SONG.vocab.own.find(x=>x.id===id); if(!t)return;
+  if(!await ask({title:`Delete “${t.label}”?`,lede:'It comes off every song that has it.',yes:'Yes, delete it',no:'Keep it'}))return;
+  const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'tagRemove',id})});
+  if(!d.ok){toast(d.error||'Could not delete that');return;}
+  SONG.vocab=d.tags; SONG.tags.delete(id);
+  const w=$('#tagwrap'); if(w) w.innerHTML=tagChips();
+  const c=$('#cTags'); if(c) c.textContent=`${SONG.tags.size} of ${SONG.vocab.maxPerSong}`;
+  if(D) D.tags={builtin:d.tags.builtin,own:d.tags.own};
+  toast('Deleted');
 }
 function setKeyRoot(r){
   const el=$('#sgKey'); if(!el)return;
@@ -3728,6 +3742,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='sgmin') setKeyMinor(id==='min');
   if(b.dataset.act==='sgtag') toggleSongTag(id);
   if(b.dataset.act==='sgtagnew') addOwnTag();
+  if(b.dataset.act==='sgtagdel') delOwnTag(id);
   if(PRACTICE&&['chart','lyrics','autochords'].includes(b.dataset.act)){ toast('On a real night your lyrics and chords open right here'); return; }
   if(b.dataset.act==='chart') openChart(id);
   if(b.dataset.act==='lyrics') openStageLyrics(id);

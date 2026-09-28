@@ -23,6 +23,7 @@ const payFn    = (await import('../netlify/functions/pay.mjs')).default;
 const showFn   = (await import('../netlify/functions/show.mjs')).default;
 const confirmFn = (await import('../netlify/functions/confirm.mjs')).default;
 const hookFn   = (await import('../netlify/functions/webhook.mjs')).default;
+const stageFn  = (await import('../netlify/functions/stage.mjs')).default;
 const C        = await import('../netlify/functions/_connect.mjs');
 const { PLANS } = await import('../netlify/functions/_plan.mjs');
 const { getShow, readFans } = await import('../netlify/functions/_lib.mjs');
@@ -222,7 +223,7 @@ eq('it is held on her account',
 const held = await hit(confirmFn,
   `https://myset.vip/api/confirm?session_id=${offer.id}&fan=holdfan&a=ana-reyes`);
 ok('the held request returns through her account', held.ok, held);
-const askRow = (await AS(TA, 'askList')).asks.find((r) => r.title === 'A New Song');
+const askRow = (await hit(stageFn, 'https://myset.vip/api/stage', undefined, TA)).asks.find((r) => r.title === 'A New Song');
 const added = await AS(TA, 'askAccept', { id: askRow.id });
 const heldSong = added.stage.songs.find((s) => s.title === 'A New Song');
 eq('acceptance creates five paid votes without capture',

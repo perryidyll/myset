@@ -68,14 +68,13 @@ eq('nothing was written to the registry', !!vregAfter.byId[ven.venueId].verified
 console.log('\nPAYING OPENS THE DOOR TO BEING CHECKED — IT DOES NOT BUY THE TICK');
 eq('a free venue is unpaid', V.venuePaid({ plan: 'free' }), false);
 eq('a pro venue is paid', V.venuePaid({ plan: 'pro' }), true);
-const setPlan = await OWNER('venuePlan', { venueId: ven.venueId, plan: 'pro' });
-ok('the owner can put a venue on Pro', setPlan.ok, setPlan);
+// what _billing.mjs writes when a venue's Pro subscription is paid
+await V.mutateVenues((r) => { r.byId[ven.venueId].plan = 'pro'; return true; });
 const cd2 = await hit(vauthFn, 'https://x/api/venueauth', { action: 'checkDomain' }, TV);
 eq('now the paid check passes', cd2.checks.paidPlan, true);
 eq('but with no artist vouches it is STILL not verified', cd2.verified, false);
 ok('and the tick is blocked on the artists, not on the money',
    cd2.checks.artistsDone === false, cd2.checks);
-eq('an unknown plan is refused', (await OWNER('venuePlan', { venueId: ven.venueId, plan: 'platinum' })).status, 400);
 
 console.log('\nTHE ARTIST PATH  premium + payments + an ID + a human');
 const ana = await createArtist({ email: 'ana@example.com', name: 'Ana Reyes', slug: 'ana-reyes' });
@@ -171,13 +170,11 @@ await V.mutateVenues((r) => { r.byId[ven.venueId].verified = true;
   r.byId[ven.venueId].verifiedVia = 'website+artists'; return true; });
 let vreg = await V.readVenues();
 eq('verified while on Pro', V.shapeVenue(await V.getVenueProfile(ven.venueId), vreg.byId[ven.venueId]).verified, true);
-ok('the owner drops them to free', (await OWNER('venuePlan', { venueId: ven.venueId, plan: 'free' })).ok);
+// the plan lapses the way _billing.mjs lapses it: the plan goes, the stored flag stays
+await V.mutateVenues((r) => { r.byId[ven.venueId].plan = 'free'; return true; });
 vreg = await V.readVenues();
-eq('the stored flag is cleared', !!vreg.byId[ven.venueId].verified, false);
-eq('and a lingering flag could not render one either',
-   V.shapeVenue(await V.getVenueProfile(ven.venueId),
-                { ...vreg.byId[ven.venueId], verified: true, plan: 'free' }).verified, false);
-eq('an unknown venue is a 404', (await OWNER('venuePlan', { venueId: 'nope', plan: 'pro' })).status, 404);
+eq('a lingering flag on a free page renders no tick',
+   V.shapeVenue(await V.getVenueProfile(ven.venueId), vreg.byId[ven.venueId]).verified, false);
 
 console.log('\nTHE FLAG SWITCH IS PERRY\u2019S ALONE  (server-side, not just hidden in the UI)');
 /* Perry asked whether "Trying things out" is only on his account. It is, and the

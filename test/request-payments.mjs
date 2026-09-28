@@ -11,6 +11,7 @@ const confirm = (await import('../netlify/functions/confirm.mjs')).default;
 const showFn = (await import('../netlify/functions/show.mjs')).default;
 const requestFn = (await import('../netlify/functions/request.mjs')).default;
 const webhook = (await import('../netlify/functions/webhook.mjs')).default;
+const stageFn = (await import('../netlify/functions/stage.mjs')).default;
 const { readRequests } = await import('../netlify/functions/_requests.mjs');
 const { DEFAULT_ARTIST, getShow } = await import('../netlify/functions/_lib.mjs');
 const { __stripe } = await import('./stripe-fake.mjs');
@@ -31,6 +32,7 @@ const hit = async (fn, url, body, extra = {}) => {
   catch { return { status: r.status, raw: text }; }
 };
 const A = (action, extra = {}) => hit(admin, 'https://x/api/admin?code=devlocal', { action, ...extra });
+const studio = () => hit(stageFn, 'https://x/api/stage?code=devlocal');   // the Studio's poll carries the requests
 const PAY = (body) => hit(pay, 'https://x/api/pay', body);
 const PUB = (fan) => hit(showFn, `https://x/api/show?fan=${fan}`);
 const session = (id) => __stripe.sessions.get(id).session;
@@ -70,7 +72,7 @@ const [authorized, authorizedAgain] = await Promise.all([
 eq('the return creates the request but does not charge',
   [authorized.kind, authorized.amount, intent(pi).status], ['request_hold', 10, 'requires_capture']);
 ok('a simultaneous webhook/return-style race also resolves successfully', authorizedAgain.ok, authorizedAgain);
-let asks = (await A('askList')).asks;
+let asks = (await studio()).asks;
 let row = asks.find((r) => r.title === 'Long Train');
 eq('the artist sees the offered amount and paid-vote value',
   [row.status, row.pledgeCents, row.pledgeVotes, row.pledgeState],
@@ -92,13 +94,13 @@ eq('starting the requested song still does not charge', intent(pi).status, 'requ
 const finished = await A('endSong');
 ok('ending the song succeeds', finished.ok, finished);
 eq('completion captures the held payment exactly once', intent(pi).status, 'succeeded');
-row = (await A('askList')).asks.find((r) => r.id === row.id);
+row = (await studio()).asks.find((r) => r.id === row.id);
 eq('the request records that it was played and captured', [row.status, row.pledgeState], ['played', 'captured']);
 eq('only one capture call was made', __stripe.calls.filter((c) => c.method === 'paymentIntents.capture' && c.args.id === pi).length, 1);
 
 const next = await PAY({ fan: 'nextfan', kind: 'request_hold', title: 'Next Song', amount: 5, attempt: 'ask-next' });
 await hit(confirm, `https://x/api/confirm?session_id=${next.id}&fan=nextfan`);
-let nextRow = (await A('askList')).asks.find((r) => r.title === 'Next Song');
+let nextRow = (await studio()).asks.find((r) => r.title === 'Next Song');
 const nextAdded = await A('askAccept', { id: nextRow.id });
 const nextSong = nextAdded.stage.songs.find((s) => s.title === 'Next Song');
 await A('play', { song: nextSong.id });
@@ -109,7 +111,7 @@ eq('starting another song also captures the one just completed', intent(session(
 console.log('\nDECLINE RELEASES THE HOLD AND RETURNS THE VOTES');
 const no = await PAY({ fan: 'nofan', kind: 'request_hold', title: 'No Thanks', amount: 5, attempt: 'ask-no' });
 await hit(confirm, `https://x/api/confirm?session_id=${no.id}&fan=nofan`);
-let noRow = (await A('askList')).asks.find((r) => r.title === 'No Thanks');
+let noRow = (await studio()).asks.find((r) => r.title === 'No Thanks');
 eq('three votes are attached while it waits', (await PUB('nofan')).credits.used, 3);
 const declined = await A('askDecline', { id: noRow.id });
 eq('decline returns all three votes', [declined.refunded, (await PUB('nofan')).credits.used], [3, 0]);
@@ -121,7 +123,7 @@ const stale = await PAY({ fan: 'stalefan', kind: 'request_hold', title: 'Yesterd
 const event = { type: 'checkout.session.completed', data: { object: session(away.id) } };
 const wh = await hit(webhook, 'https://x/api/webhook', event, { 'stripe-signature': 't=1,v1=test' });
 ok('Stripe webhook is accepted', wh.received, wh);
-ok('and the request reaches the stage', (await A('askList')).asks.some((r) => r.title === 'Phone Closed'));
+ok('and the request reaches the stage', (await studio()).asks.some((r) => r.title === 'Phone Closed'));
 await A('status', { status: 'ended' });
 eq('ending the show releases an unplayed request offer',
   intent(session(away.id).payment_intent).status, 'canceled');
@@ -130,13 +132,13 @@ const late = await hit(confirm, `https://x/api/confirm?session_id=${stale.id}&fa
 eq('a checkout returning in a later show is refused without a charge',
   [late.status, intent(session(stale.id).payment_intent).status], [409, 'canceled']);
 ok('and it cannot create a request in the new room',
-  !(await A('askList')).asks.some((r) => r.title === 'Yesterday Song'));
+  !(await studio()).asks.some((r) => r.title === 'Yesterday Song'));
 
 console.log('\nA REQUEST TITLE IN ANY ALPHABET STILL BECOMES A REAL SONG');
 const thai = await hit(requestFn, 'https://x/api/request?fan=thaifan',
   { fan: 'thaifan', kind: 'song', title: 'ทะเลใจ', artist: 'คาราบาว' });
 ok('the Thai request reaches the artist', thai.ok, thai);
-const thaiRow = (await A('askList')).asks.find((r) => r.title === 'ทะเลใจ');
+const thaiRow = (await studio()).asks.find((r) => r.title === 'ทะเลใจ');
 const thaiAdded = await A('askAccept', { id: thaiRow.id });
 ok('acceptance gives it a non-empty votable song id',
   thaiAdded.ok && thaiAdded.songId && thaiAdded.stage.songs.some((s) => s.id === thaiAdded.songId), thaiAdded);

@@ -333,9 +333,9 @@ If you are about to violate one, stop and say so rather than working around it.
 0p. **"Open / Paused" is the VOTING window, not the show.** It is labelled
     "Voting" in the Studio header because it read as a show control.
 
-0q. **Times shown to the public come from the calendar, not `show.showTime`.**
-    That field is a legacy placeholder and said 8:00 PM while the real gig was
-    at 8:30.
+0q. **Times shown to the public come from the calendar.** The show record once
+    carried a `showTime` placeholder that said 8:00 PM while the real gig was at
+    8:30; the field and the action that set it are gone (decision 0115).
 
 ## Responsiveness
 
@@ -1935,6 +1935,8 @@ If you are about to violate one, stop and say so rather than working around it.
 - **No seat crowds another out.** The cap is eight devices per address.
 - **A sign-out ends that phone's alerts.** `killSessions` and `killEverything` drop the devices of the sign-ins they end. Every sign-out goes through one of the two, and the Studio's own sign-out drops the browser's subscription too.
 - **If the registry cannot be read,** an alert reaches nobody, never everybody. Decision `0114`.
+
+0hl. **Every action a Studio endpoint takes is one a page sends.** A handler nothing calls is still a door: it answers anyone who guesses its name, it is carried through every refactor, and it reads as a feature that exists. `test/structure.mjs` fails when a name `admin.mjs` (with `_messages.mjs` and `_diary.mjs`) or `venueadmin.mjs` branches on does not appear, quoted, in `public/` outside a Set literal. A feature is built with both halves or not at all: the server half of an unbuilt button waits on a branch, not on `main`. The check is textual, so a common word (`status`, `venue`) passes on any mention. Decision `0115`.
 
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and
