@@ -40,3 +40,11 @@
 **Verified:** share card `42 passed, 3 failed` → `45 passed, 0 failed`; sheet `199 passed, 7 failed` → `206 passed, 0 failed`, each of the three marks knocked out alone → `205 passed, 1 failed`; `sh test/run.sh` exit 0, 59 sections, no ✗, on the tree rebased onto `04e78db`.
 
 **Shipped:** live as `1385b2b` (PR #120). Netlify's published production deploy `6ab9f454` is `1385b2b`, `ready` at 05:02 UTC on 28 Sep. By content: `myset.vip/perryidyll` and `myset.vip/thelastcigarettes` carry their names and pictures; an unknown address gets the untouched page. **Not checked live:** the sheet's column, which the 03:20 UTC sync writes; nobody on production is marked, so every cell will be blank.
+
+## Then the invite list
+
+**Asked (the founder):** "hide them from the invite list too".
+
+**Built:** the `list` action in `auth.mjs` counts and names only referrals not marked for deletion; Undo puts them back. `test/accounts.mjs` "AN ACCOUNT ON ITS WAY OUT LEAVES THE INVITE LIST" failed first (`135 passed, 1 failed`: `{"got":[1,["Kid Aldo"]],"want":[0,[]]}`) and passes after; `sh test/run.sh` exit 0, 60 sections, no ✗.
+
+**Shipped:** live as `ad9fc28` (PR #123), merged first by agreement on the sessions board; Netlify's published production deploy is `ad9fc28`, `ready` at 05:14 UTC. Two sessions editing `auth.mjs` and `test/accounts.mjs` were told to rebase.

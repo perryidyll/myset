@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 12:14 — c33ebc9 — nifty-jones-b27e63@docs/invite-list-live (3 files since origin/main)
+**tl;dr:** Docs only: hiding leaving accounts from the invite list (decision 0098) is live as ad9fc28 [skip ci]
+**Other sessions:** Ledger ACC-003 and the session note updated. No process sheet or Puzzle step describes the invite list.
+
 ### 2026-09-28 12:12 — 4a45734 — nifty-jones-b27e63@fix/invited-names-leaving (4 files since origin/main)
 **tl;dr:** An artist's Settings no longer lists somebody they invited who has since deleted their account, by name or in the count
 **Other sessions:** Decision 0098 amended, INVARIANT 0dh: auth.mjs list action filters referredBy rows with !x.del. Sessions rebasing auth.mjs/test/accounts.mjs (3d368c, 4b462c): the change is one filter line and a new section after LEAVING.
