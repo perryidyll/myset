@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 12:28 — dc519f7 — sample-profiles@feat/sample-profiles (63 files since origin/main)
+**tl;dr:** Sample pages: MySet builds a page for an act or a venue that has never heard of it, sent as myset.vip/<name>#sample-profile and claimed in a minute onto Hobbyist (the founder's console is /factory); every Studio tab explains itself once and the Live tab has a practice round; the pre-show checklist asks for a big sign plus 25–50 table cards and the sign page prints both; Your page link sits at the top of Settings; a renamed venue keeps its old address and nobody can take another page's old address
+**Other sessions:** Decisions 0101–0103, 0106, 0107; INVARIANTS 0gm–0go, 0di amended; ledger GRO-001/002, UX-060/061, ACC-007. Samples live in samplereg (never artists/venues until claimed), keys sample_/samplearc_/samplesup/samplestat/factoryq/factorycfg; requireArtist/requireVenue {sample:true} + SAMPLE_OK (admin.mjs, venueadmin.mjs), role 'sample' = empty CAN. The '#sample-profile' label is NOT a secret (address alone opens/claims; guard = founder push + 14-day undo); the sample door has no remove. setSlug (auth.mjs, venueauth.mjs) now refuses another page's oldSlug; venues keep oldSlug (venueBySlug reads it). New stamped scripts: public/tips.js, public/sample.js. The factory builds nothing until ANTHROPIC_API_KEY + YOUTUBE_API_KEY are set. Merged main at f364e51.
+
 ### 2026-09-28 12:14 — c33ebc9 — nifty-jones-b27e63@docs/invite-list-live (3 files since origin/main)
 **tl;dr:** Docs only: hiding leaving accounts from the invite list (decision 0098) is live as ad9fc28 [skip ci]
 **Other sessions:** Ledger ACC-003 and the session note updated. No process sheet or Puzzle step describes the invite list.
