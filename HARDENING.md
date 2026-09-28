@@ -50,14 +50,19 @@ Do not skip step 7. A rotated key that is still live is not rotated.
 
 ## 2 · GitHub hardening (10 minutes)
 
-The repo is private on a personal account with no protections. None of this costs
-anything, and it is also what gives "trade secret" any legal meaning later — you
-cannot claim you kept something secret if there were no measures keeping it.
+The repo is **public** on a personal account (decision 0047 — the founder chose to keep
+it so on 2026-09-12; this page used to say private). Branch protection has been on since
+the same day (decision 0045): a ruleset rather than the classic rule sketched below — a
+pull request with zero approvals, no force-push, no deletion, no bypass. The other steps
+here still apply. None of them costs anything, and they are also what gives "trade
+secret" any legal meaning later — you cannot claim you kept something secret if there
+were no measures keeping it.
 
 **Two-factor** — <https://github.com/settings/security>. If it is not on, nothing
 else on this list matters.
 
-**Branch protection on `main`** — Settings → Branches → Add rule → `main`:
+**Branch protection on `main`** — done 2026-09-12 as a ruleset (decision 0045). As first
+proposed: Settings → Branches → Add rule → `main`:
 - Require a pull request before merging
 - Do not allow bypassing (include administrators)
 

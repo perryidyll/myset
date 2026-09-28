@@ -1,6 +1,6 @@
 # Mapping every MySet process into Puzzle — the plan
 
-**Status:** proposed, 2026-09-12. Nothing in Puzzle has been changed by this plan yet. **Goal:** every process in the product, the engineering practice and the business, down to the rule-and-exception level, laid out in puzzleapp.io as one connected network — and kept true as the code moves.
+**Status:** proposed 2026-09-12, and every phase was done the same day (see *Status 2026-09-12* under the phases). **Goal:** every process in the product, the engineering practice and the business, down to the rule-and-exception level, laid out in puzzleapp.io as one connected network — and kept true as the code moves.
 
 ---
 
@@ -71,7 +71,7 @@ Every step note ends with a **source line**: `src: MYSET-MASTER-OVERVIEW.md §1.
 | Tab | What lives there | Main sources |
 | --- | --- | --- |
 | **1 · The gig** | Everything that happens in the room, on the night: scan → vote → buy → tip → request → decline → last call → end → dark room; the Studio Live tab as the artist runs it; auto-start and auto-end; the polling dial; the rate limit | Overview Parts 1 & 3, `GIG-NIGHT.md`, decisions 0001 0002 0006 0009 0010 0014 0016 0019 0021 0030 0034 |
-| **2 · Artist lifecycle** | Sign-up, passkeys, sessions, roles, recovery, moving the address, verification and the tick, plans and upgrade/downgrade, promo codes, export, 30-day delete | `ACCOUNTS.md`, overview §5.5 §5.6 §2.6 §2.7, decisions 0003 0004 0005 0023 0036 |
+| **2 · Artist lifecycle** | Sign-up, passkeys, sessions, roles, recovery, moving the address, verification and the tick, plans and upgrade/downgrade, promo codes, export, 30-day delete | `ACCOUNTS.md`, overview §5.5 §5.6 §2.6 §2.7, decisions 0003 0004 0005 0023 0037 |
 | **3 · Venue lifecycle** | Venue account, verification (three ways), pitches and replies, the venue fee split, venue plans | `VERIFYING-A-VENUE.md`, `ACCOUNTS.md` §3, overview §3.6 §4.4 |
 | **4 · Money** | The existing Stripe Connect section, extended: vote packs, tips, requests (authorise-then-capture), merch orders, Featured shows, the three delivery paths, reconcile, the books, the monthly close, invoices and failed cards, the fee ladder | Overview Part 4, `ACCOUNTING.md`, `STRIPE-CONNECT.md`, `finance/`, decisions 0007 0017 0018 0026 0031 0032 |
 | **5 · Community & media** | Posts, likes, moderation from the Profile tab, photos and cropping, clips (trim → upload → R2 → signed link → fallback), chords and lyrics licensing, "where a night happened" | Overview §3.7 §3.8, decisions 0011 0020 0022 0033 |
@@ -139,6 +139,8 @@ Ranked by MySet's own rule: *nothing may break the gig*, so the gig is mapped fi
 | **8 · Data model** | 2 | Every remaining entity and attribute, linked to steps | `list_entities` returns every storage family in §5.2 |
 | **9 · History** | 1–2 | Remaining decisions and deviations in the changelog; session files summarised where they explain a twist not covered by a decision record | 37+ changelog entries, each linked |
 | **10 · Keep it true** | 1 | Add to `AGENTS.md` session-end checklist: *"if a process changed, update its sheet and reload the section"*; make `tools/decide.sh` print *"add a changelog entry in Puzzle"*; a quarterly read-back diff of Puzzle against the sheets | The drift rule is in `AGENTS.md` and the ledger's handoff checklist |
+
+**Status 2026-09-12:** phases 0–7, 9 and 10 done — nine workflow tabs loaded (sections 41964–42014), 49 decision records with a changelog entry, the drift rule in `AGENTS.md` (in the shared checkout that day; on `main` since PR #130, 2026-09-28), the ledger's handoff checklist and `tools/decide.sh`. **Phase 8 · Data model done the same day** — `DATA-MODEL.md`, 48 entities and 156 attributes on the Tools canvas, linked to steps. Every phase of this plan is now complete. The founder's browser pass over each tab is outstanding; sheets stay `loaded`, not `verified`, until it happens.
 
 **Rough total: 25–35 working sessions**, producing roughly 70–90 sections, 900–1,400 steps, ~40 changelog entries and ~30 entities. The numbers are estimates from the one real section's density (16 steps for one flow); they are not measured.
 

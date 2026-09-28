@@ -63,18 +63,19 @@ Verified against 13 targets including `169.254.169.254` — all refused.
 
 ## Way 2 — the artists who play there · BUILT
 
-**Ten** different artists who have a gig at the venue **in their own MySet
-calendar** confirm it, from a button on the venue's public page. At ten, the tick
-goes on by itself.
+Enough different artists who have a gig at the venue **in their own MySet
+calendar** confirm it, from a button on the venue's public page. How many is
+`MIN_VOUCHES` in `_verify.mjs` — one constant; `190e2b4` (2026-09-02) lowered it,
+and this page went on saying ten. At that count the tick goes on by itself.
 
 This is the one that works for a bar with no website — which, in a beach town, is
 most of them. It is hard to fake because each vouch needs its own account with its
 own gig history, and an artist with no gig listed there simply **cannot** vouch
 (`artistPlaysAt()` checks their calendar server-side). Nobody can vouch twice.
 
-`MIN_VOUCHES = 10` in `_verify.mjs`. **Worth revisiting:** ten is a lot for a bar
-that only hosts four or five acts. It is one constant, and the studio shows
-progress ("4 of 10 confirmed") so a venue can see how close it is.
+**Worth revisiting** against how many acts a bar actually hosts. It is one
+constant, and the studio shows progress ("N of M confirmed") so a venue can see how
+close it is. Do not write the number here — read it from the code.
 
 Code: `addVouch()` / `readVouches()` / `artistPlaysAt()` in `_verify.mjs`; action
 `vouch` in `admin.mjs`; the button in `venue.html`.
@@ -111,7 +112,7 @@ WAY 1 — YOUR WEBSITE
   [ Check my website now ]
 
 WAY 2 — THE ARTISTS WHO PLAY HERE
-  4 of 10 confirmed                     Perry Idyll, Sam Cole, …
+  N of M confirmed                      Sam Cole, …
   [ Send artists your page ]
 ```
 
