@@ -1919,7 +1919,8 @@ If you are about to violate one, stop and say so rather than working around it.
     share card (`artistpage.mjs`) resolved it alone and kept a deleted account's
     name and portrait on link previews (`test/sharecard.mjs`). The founder's sheet
     keeps a marked account, because its nights happened, and its rows on Artists,
-    Gigs and Venues say `Being deleted on` (`test/sheets.mjs`). Two doors stay open
+    Gigs and Venues say `Being deleted on` (`test/sheets.mjs`). A referrer's Settings drops them from its invite list and count
+    (`test/accounts.mjs`). Two doors stay open
     on purpose: `/api/img` and `/api/vid` serve by id or slug, because the edge
     keeps each URL for a year regardless and the owner's export and Studio carry
     the same `/api/img?a=<aid>` addresses for the whole window.
