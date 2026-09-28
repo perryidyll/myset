@@ -31,8 +31,10 @@
 - 41966 a02: none of the first-gig card (0081), the Tonight strip, the Example rows, the tip burst or Paid votes (0079).
 - 41997: the section description says nothing is built, though its step b03 is `Live`.
 - 41969's section notes cite neither 0dh nor 0098; 41967's dead-key row stops at "nothing yet".
+- 41973 p15 cites decision 0078 (it is 0080) and is still `Testing`, though it shipped in PR #66; p16 has no role or tool, and still says Tennessee is "the first registration owed", which decision 0096's correction of 2026-09-27 withdrew. 41974's section notes cite decision 0063 (it is 0064) and still call the steps `Testing` on an unpushed branch; all have been `Live` since PR #33.
+- The Money sheets are well ahead of Puzzle in two sections: 41977 lacks four steps (h13–h16, decision 0095's register), h09's decision 0089 and h03/h04's links to 0065; 42066's section notes lack decision 0086 (Total profit and My cut), and b02, b03, b06 lack 0082, 0084 and 0086. 41973 p05 and p08 lack the tax-number and 0065 sentences.
 
-**Wrong in the sheet; Puzzle is right:** `the-gig/03` a04 cites decision 0036 for the gig cap. The cap is 0037.
+**Wrong in the sheet; Puzzle is right:** `the-gig/03` a04 and `money/03`'s intro cite decision 0036 for the gig cap; the cap is 0037. `money/08`'s front matter names the section "(pay, band, …)" where its own body and Puzzle say "splits".
 
 **Puzzle is ahead; the sheet catches up first, then a reload:**
 
@@ -41,14 +43,13 @@
 - 41970 l11: In progress in Puzzle (decision 0035 and the socket probe); "not built" in the sheet.
 - 41966's section notes: six tabs, and the same finality hedge.
 - 41996 y03, y04, y05, y07 and 41997 b05 are Draft in Puzzle and unmarked in the sheets; 42087 b03 adds "never on the live poll".
-
-**Money (41971–41977, 42066):** its read-back was still running when this note was committed; the findings follow in the next commit on this branch.
+- 41971 d08 and 41972's closing list: `charge.updated` is on the endpoint and PER-001 is done (PER-008 is the open item); the sheets still say "not yet". 41972 w01: two webhook secrets tried in turn (decision 0058); the sheet has one. 41976 k11 is Draft in Puzzle, unmarked in the sheet.
 
 **Roles, tools and arrows (structural):**
 
-- Where a sheet gives a step a second role (MySet server R, Fan I, Artist I), Puzzle usually has only the first: 41978 g04, g06, g07, g08; 41980 v01, v02, v04, v05, v06; 41983 n01, n02, n04; 41966 a07, a08, a11, a12, a15, a19; 41979 t04, t05; 41981 e02; 41982 q01, q03, q07; 41984 y05, y08; 41968 r05; 41986 o02, o03.
+- Where a sheet gives a step a second role (MySet server R, Fan I, Artist I), Puzzle usually has only the first: 41978 g04, g06, g07, g08; 41980 v01, v02, v04, v05, v06; 41983 n01, n02, n04; 41966 a07, a08, a11, a12, a15, a19; 41979 t04, t05; 41981 e02; 41982 q01, q03, q07; 41984 y05, y08; 41968 r05; 41986 o02, o03; 41973 p16 has no role at all.
 - Roles that disagree: 42087 b03, b04, b06, b07 (both parties Responsible in Puzzle); 41996 y02 (founder and agent swapped); 41997 b03, b06; 41990 d05 (Coding agent missing, tools differ); 41966 a07, a08, a10 (Artist team member in Puzzle only).
-- Arrows: cross-section go_to links the sheets write are not drawn (seven in Marketing, 41964 f22 → f21, 42013 d02 → Onboarding), nor are the "stop" branches (41987 s02, 41988 c02, 41990 d01, d04). Puzzle has arrows the sheets lack: 41969 s06 → s07 and s08 → s10, 41980 v02 → v07, 42005 f12's two labelled edges. A few labels differ.
+- Arrows: cross-section go_to links the sheets write are not drawn (seven in Marketing, 41964 f22 → f21, 42013 d02 → Onboarding), nor are the "stop" branches (41987 s02, 41988 c02, 41990 d01, d04). Puzzle has arrows the sheets lack: 41969 s06 → s07 and s08 → s10, 41980 v02 → v07, 42005 f12's two labelled edges, 41976 k09 → k11. 42066's four cross-section links are not drawn. A few labels differ.
 
 **Changelog:**
 
