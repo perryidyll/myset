@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0db, 0t, 0gj]
-commits: []
+commits: [04e78db]
 tests: [test/accounts.mjs, test/structure.mjs]
 files: [netlify/functions/admin.mjs, test/accounts.mjs, test/structure.mjs, INVARIANTS.md]
 ---
