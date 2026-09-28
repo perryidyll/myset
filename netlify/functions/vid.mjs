@@ -73,6 +73,7 @@ const HEAD = (type, len) => ({
   'netlify-cdn-cache-control': 'public, durable, max-age=31536000, immutable',
   'access-control-allow-origin': '*',
   'content-length': String(len),
+  'x-content-type-options': 'nosniff',      // the type is the whole story (0110) — toml rules do not reach a function's reply
 });
 
 function serve(got, range) {

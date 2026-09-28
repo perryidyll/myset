@@ -1,0 +1,11 @@
+# The two runtime dependencies are pinned by package-lock.json; this opens a pull
+# request when either publishes a security fix, so an update arrives as a diff the
+# founder reads and the suite gates — never as a surprise in a build (SECURITY.md,
+# Tier 1). A pull request is not a deploy: main is production, and only a merge is.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2

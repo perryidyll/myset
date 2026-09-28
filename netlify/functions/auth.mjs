@@ -416,9 +416,12 @@ const main = async (req) => {
       const row = reg.byId[aid] || {};
       if (Date.now() - (Number(row.emailAt) || 0) < 24 * 3600e3)
         return bad('You changed this in the last day. For safety we allow one change a day.');
-      /* Taken or not, the answer is the same sentence: whether an address already
-         has a MySet account is not something this door gets to reveal. */
-      if (reg.byEmail[to]) return bad('We couldn’t move your account to that address');
+      /* Taken or not, the answer is the same: whether an address already has a MySet
+         account is not something this door gets to reveal. Until 2026-09-28 a taken
+         address was a 400 and a free one a 200 — an oracle any signed-in stranger
+         could read for free (9h; decision 0110). A taken address now gets the same
+         "sent" as a free one and no code, so the move simply cannot be finished. */
+      if (reg.byEmail[to]) return json({ ok: true, sent: true });
       const a = await issueCode(to, null, `c-${aid}`);
       const b = await issueCode(me.email, null, `o-${aid}`);
       if (!a || !b) return bad('Too many codes were requested. Try again in an hour.', 429);

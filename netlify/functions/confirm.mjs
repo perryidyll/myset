@@ -73,6 +73,10 @@ const main = async (req) => {
 
   const r = await redeemSession(aid, session, fallbackFan);
   if (!r.ok) return bad(r.error || 'could not grant', 409);
-  return json(r);
+  /* Everything but the device id: a session id pasted from a shared return link is
+     enough to reach this, and the phone holding it needs nothing it does not have
+     already — the grant lands on the buyer's own record either way (0bu). */
+  const { fan, ...pub } = r;
+  return json(pub);
 };
 export default guard('confirm', main);

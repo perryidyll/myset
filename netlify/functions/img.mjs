@@ -41,6 +41,9 @@ const photo = (img) => new Response(img.bytes, {
     'cache-control': 'public, max-age=31536000, immutable',
     'netlify-cdn-cache-control': 'public, durable, max-age=31536000, immutable',
     'access-control-allow-origin': '*',
+    // said here too, because netlify.toml's header rules do not reach a function's
+    // reply: the type is the whole story, never a guess (0110)
+    'x-content-type-options': 'nosniff',
     /* A PDF (the tour poster, decision 0075) says so outright, so the browser
        opens it in its viewer — in the page's frame or on its own — and never
        guesses; Netlify's nosniff on /api/* makes the type the whole story. */

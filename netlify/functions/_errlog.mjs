@@ -13,7 +13,11 @@ import { casDoc, readDoc, bad } from './_lib.mjs';
    Two rules:
      · logging must never throw and never slow the request that failed — a few
        tries, then give up silently; the console line still reaches Netlify's own log
-     · nothing personal is kept — a fan id and a route, never a body, never an email */
+     · nothing personal is kept — a fan id and a route, never a body, never an email.
+       The route is the PATH ALONE: a Studio code (`?code=`) and a Stripe session
+       (`?session_id=cs_…`) travel in the query string of exactly the requests most
+       likely to throw, and a request URL kept whole would put them in a document
+       every bug report reads out (INVARIANT 0fb; decision 0110) */
 
 export const HOUR = 3600e3;
 export const KEEP_PER_HOUR = 100;
@@ -32,7 +36,7 @@ export async function logErr(where, e, ctx = {}) {
     at: now, where: cut(where, 60),
     msg: cut((e && e.message) || e, 300),
     stack: cut(String((e && e.stack) || '').split('\n').slice(0, 6).join('\n'), 1200),
-    aid: cut(ctx.aid, 60), fan: cut(ctx.fan, 40), url: cut(ctx.url, 200),
+    aid: cut(ctx.aid, 60), fan: cut(ctx.fan, 40), url: cut(ctx.url, 200).split('?')[0],
   };
   console.error(`[${row.where}]`, row.msg);
   try {

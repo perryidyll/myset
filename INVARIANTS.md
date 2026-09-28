@@ -2723,3 +2723,45 @@ If you are about to violate one, stop and say so rather than working around it.
     (the monthly close), which is exactly why a poisoned one would otherwise have
     stayed for ever. `test/books.mjs` "NO ACCOUNT, NO STATEMENT" holds both halves
     with platform rows in the fake, for an artist and for a venue. Decision `0065`.
+
+## The security pass, slice A — code only (2026-09-28, decision `0110`)
+
+The first of three slices of the 2026-09-28 security pass: what needed no new
+variable and no new limit. (`emailChangeStart` also answers the same "sent" for a
+taken address and a free one now — 9h was already the rule; it was a 400 and a 200.)
+
+0gt. **A pledge comes from Stripe or from nowhere.** `createRequest` files a paid offer
+    only when its caller has retrieved the PaymentIntent and seen it authorized
+    (`verified`); the public `/api/request` never sets it, so a pledge in a fan's own
+    body is an ordinary request that mints no paid votes.
+    `test/request-payments.mjs` "A PLEDGE IN A FAN'S OWN BODY".
+
+0gu. **A name is never a key.** `cleanFanId` refuses `__proto__`, `constructor` and
+    `prototype`; `mutateFan` reads the shard bag with an own-property lookup; every
+    registry lookup by slug or id is an own-property lookup (`own`, `_lib.mjs`), and
+    `constructor` is a reserved slug. A device called `__proto__` used to write onto
+    `Object.prototype` of the warm instance and `?a=constructor` used to resolve to a
+    function. Any new map keyed by a string a client chose reads through `own`.
+    `test/tenancy.mjs` "0110".
+
+0gv. **An id is never markup, and a picture is an address.** A client-named id keeps
+    to `[A-Za-z0-9_-]` — the event id was the one that did not, and reached an
+    `onclick` attribute in the Studio, where HTML escaping cannot help because the
+    browser decodes the attribute before the script parser reads it. A profile's
+    `photo`, `avatar` and `photos` are a path on this site or an https address
+    (`imgUrl`), never text, because the pages put them inside `style="url('…')"`.
+    `String.replace` writes a person's words through a function, never a string, so
+    `$'` and `$&` stay characters. `test/unit.mjs` "A PICTURE IS AN ADDRESS",
+    `test/sharecard.mjs`.
+
+0gw. **A copy is never more than the original allows, a log never carries a secret,
+    and a call a person waits on has a deadline.** The mirror (`SKIP`) and
+    `tools/backup.py` skip `_idcheck`, `authsecret` and every session-only document;
+    `dropImage` takes an ID photo's copy off R2, so a copy cannot outlive the owner's
+    decision (0bk); `prod.py get` refuses to print a key, a credential hash or an ID
+    photo; `confirm` echoes no device id (0bu). `logErr` keeps the request's path and
+    never its query string (0fb held only by luck). Every upstream call a person waits
+    on has a deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`). Every function reply carries
+    the full HSTS directive, a served picture or clip says `nosniff`, and the QR SVG
+    carries a policy that lets it run nothing — netlify.toml's header rules do not
+    reach a function's reply. `test/foundations.mjs`, `test/errlog.mjs`.

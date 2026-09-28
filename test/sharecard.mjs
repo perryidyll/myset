@@ -80,6 +80,13 @@ console.log('\nAN ACCOUNT ON ITS WAY OUT HAS NO CARD  (0dh, decision 0098)');
   eq('and the card comes back with the page', meta(await page(), 'og:title'), 'Bo Lind');
 }
 
+console.log('\nA NAME THAT IS A REPLACEMENT PATTERN IS WRITTEN AS ITSELF (0110)');
+{
+  const out = withShare(shell, { name: "$' $& $1 Band", image: 'https://myset.vip/i.png', url: 'https://myset.vip/x' });
+  eq('the name, once, exactly (& escaped as HTML wants it)', meta(out, 'og:title'), "$' $&amp; $1 Band");
+  ok('and the page did not swallow a copy of itself', out.length < shell.length + 600, out.length - shell.length);
+}
+
 console.log('\nTHE SITE-WIDE HEADERS, EQUAL TO NETLIFY.TOML’S');
 const block = toml.slice(toml.indexOf('for = "/*"'), toml.indexOf('[[headers]]', toml.indexOf('for = "/*"')));
 for (const [k, v] of Object.entries(SITE_HEADERS)) {

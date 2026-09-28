@@ -8,6 +8,42 @@ bridge it?"*
 Nothing in here is aspirational unless it says so. Everything under "what is already
 true" was checked against the code or the live site on the day this was written.
 
+**Revised 2026-09-28**, after the founder asked for MySet to be *"encrypted head to
+toe"*. Seven audits went over every surface; what they found ships in three slices —
+`0110` (code only, this revision), `0111` (limits on every anonymous write) and
+`0112`/`0113` (the server's own secret; the records that hold a person sealed at
+rest). The rest of the document stands where it still holds and is corrected where
+it did not.
+
+---
+
+## What changed on 2026-09-28 (decision `0110` — slice A of three)
+
+The pattern the audits found was one lock next to one open door, repeated. Every
+item below shipped with a test that showed the hole red first where a test could
+reach it. The numbers live in §2.1 of the master overview, read from the code.
+
+| | What was true | What is true now |
+|---|---|---|
+| **Money** | A fan could file a "$500 offer" in their own request and mint paid votes. | Only Stripe files a pledge. |
+| **Names that were keys** | A device called `__proto__` wrote onto the prototype of every object in the warm instance; `?a=constructor` was a phantom room; an event id reached an `onclick` attribute in the Studio; a picture field took free text into `style="url('…')"`; `$'` in a band name rewrote the share card. | Three names are refused, lookups are own-property lookups, ids keep to one alphabet, a picture is an address, replacements are functions. |
+| **An oracle** | Moving your sign-in address answered differently for a taken address and a free one. | The same answer for both (9h). |
+| **Copies and logs** | The mirror kept an ID photo after the owner's decision deleted it; the backup carried the store-kept signing key; `prod.py` would print it; the error log kept whole URLs with codes in them; `/api/confirm` echoed the buyer's device id. | None of that. |
+| **Headers and deadlines** | A function's reply carried Netlify's bare HSTS; the QR SVG carried no policy; mail and lyrics lookups had no deadline. | The full directive on every reply, `nosniff` on every served file, a policy on the SVG, eight seconds on both. |
+| **The repository** | A real fan's address, the founder's own, and five device ids were in committed files. | Replaced. History keeps them; treat as disclosed. Dependabot opens a pull request for a dependency fix. |
+
+Still to land, in this order: **`0111`** — every anonymous write counts the network
+as well as the device (sign-in codes, RSVPs, ratings, bug reports, checkout), sized
+so a bar's shared wifi never meets a limit; **`0112`/`0113`** — the signing key comes
+from `MYSET_SECRET` instead of a document in the store, the founder's passcode
+becomes a real door, and the records that hold a person are sealed at rest. Those
+two wait on the founder setting the variables (the list at the end).
+
+**What did not change:** the front end is still public and still fine to be public;
+`script-src` still needs `'unsafe-inline'` (see below); the repository is still public
+by decision `0047` — and see the short version at the end for why that is now the one
+thing worth reconsidering.
+
 ---
 
 ## First, the uncomfortable part: you cannot hide the code
@@ -133,13 +169,13 @@ company buys with headcount. Almost everything below is paperwork and habits.
 |---|---|
 | **Hardware/passkey 2FA on Google, GitHub, Netlify, Stripe** | The single most likely breach, closed in twenty minutes. |
 | **Stripe restricted keys** | The live key can do everything. Cron and read-only paths should hold keys that can only do what they need. |
-| **A secret-rotation runbook** | Right now there is no written answer to "the key leaked, what do I do in the next ten minutes". One page. |
-| **Pin dependencies + Dependabot** | Exact versions, a bot that opens the PR, `npm test` as the gate. |
-| **Edge rate limiting** | Netlify has traffic rules. A per-IP ceiling on `/api/*` bounds both abuse and the bill. |
+| **A secret-rotation runbook** | Right now there is no written answer to "the key leaked, what do I do in the next ten minutes". One page — it arrives with `0112`, which is what makes the key rotatable at all. |
+| **Pin dependencies + Dependabot** | ~~Exact versions, a bot that opens the PR, `npm test` as the gate.~~ The lockfile pins both; `.github/dependabot.yml` opens the pull request (2026-09-28). |
+| **Edge rate limiting** | Netlify has traffic rules. A per-IP ceiling on `/api/*` bounds both abuse and the bill. In-code limits on every anonymous write are `0111`; the edge rule is still worth having as a ceiling on scripts, set well above what a bar's wifi produces. |
 | **A backup you have actually restored** | ~~Blobs are the only datastore. Nobody has ever tested a restore.~~ Done 2026-09-14: `tools/backup.py --restore` wrote the 2026-09-13 copy into a rehearsal store and read every key back equal (decision `0069`, session `2026-09-14-data-foundations.md`); and `mirrorcron` copies every document to R2 nightly. Still to do: rehearse it again in six months, and the R2 copy on a hard delete. |
 | **Error and alert monitoring** | Today a failure is a line in a log nobody reads. Sentry's free tier, or Netlify's own alerts, plus one alert on a spike in 5xx. |
 | **CSP script hashes** | Removes `'unsafe-inline'`. A build step that hashes each inline block, or moving the scripts to files. |
-| **Application-level encryption of ID photos** | Blobs are encrypted at rest by Netlify, but the ID photos are the most sensitive bytes in the system. Encrypting them with a key only the verification path holds means a storage compromise does not hand over passports. |
+| **Application-level encryption of ID photos** | Blobs are encrypted at rest by Netlify, but the ID photos are the most sensitive bytes in the system. Encrypting them with a key only the verification path holds means a storage compromise does not hand over passports. Since 2026-09-28 the photo is at least never mirrored and its R2 copy is deleted with the original (`0110`); the sealing itself is `0113`. |
 | **A privacy policy and a data-retention rule** | You collect email addresses and sell things. Both are legally required in most of the markets you would sell into, and neither exists. |
 
 ### Tier 2 — months, matters when venues start asking
@@ -174,7 +210,7 @@ does not have 2FA is a document about nothing.
 | Recovery codes | HMAC-hashed, single use | Fine — this is how it should be done. |
 | Studio codes | Hashed | Fine. |
 | Passkeys | Only the public half is ever stored | Fine by construction. |
-| **ID verification photos** | Plain bytes in Blobs, unservable over the web | **Encrypt these.** Tier 1. The most sensitive bytes in the system. |
+| **ID verification photos** | Plain bytes in Blobs, unservable over the web; since 2026-09-28 never mirrored, never in a backup, the R2 copy deleted with the original | **Encrypt these.** Tier 1. The most sensitive bytes in the system — `0113` does it. |
 | Sign-in email addresses | Plain, in the registry | Leave. They are the lookup key; encrypting them means either a searchable index (which defeats it) or no sign-in. |
 | Card details | **Never touched.** Stripe Checkout only | Fine — and the reason PCI scope is nearly zero. |
 
@@ -193,6 +229,30 @@ accounts are the softest target in the system.* (The restore was rehearsed on
 2026-09-14 — decision `0069`.)
 
 Fix those four and MySet is, genuinely, in the top decile for its stage.
+
+### After 2026-09-28: the five things only Perry can do, in order
+
+Slices `0112`/`0113` assume a server that holds its own secret. Until these are
+done, it runs exactly as it did before — safe, but not yet with the new locks turned.
+
+1. **Set `MYSET_SECRET`** in Netlify, for every deploy context (previews share the
+   live store). HARDENING.md §0 (arrives with `0112`) has the command that makes the
+   value on your own machine; never paste it anywhere but the Netlify form.
+2. **Set `FINMODEL_CODE`** to something long. Once `0112` lands, without it the money
+   model and the register open for nobody — on purpose.
+3. **Rotate `ADMIN_CODE`.** The original value sat in a committed file for a day on
+   2026-08-17 and the repository has been public since; no rotation is recorded
+   anywhere. Make it long and random; it bypasses every lockout by design.
+4. **2FA everywhere** (PER-003). Still the number-one threat, still twenty minutes.
+5. **Check that a stranger's pull request does not get a deploy preview** with the
+   live variables (Netlify → Build & deploy → sensitive variable policy). A preview
+   runs the functions against the production store.
+
+And the one honest limit of all of this: **the code cannot be hidden while the
+repository is public.** Everything above protects the data and the money, which is
+what matters; a copycat with the source has none of either. If "hard to steal the
+code" is also the goal, the one lever is decision `0047` — one click and a few
+dollars a month, the founder's call.
 
 ---
 

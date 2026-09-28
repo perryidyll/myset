@@ -56,6 +56,11 @@ export default async (req) => {
       'content-type': 'image/svg+xml; charset=utf-8',
       'cache-control': 'public, max-age=86400',
       'access-control-allow-origin': '*',
+      /* An SVG is a document: opened on its own it could run script. Nothing in this
+         one may load, run or frame anything (netlify.toml's rules do not reach a
+         function's reply, so it is said here). */
+      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'",
+      'x-content-type-options': 'nosniff',
     },
   });
 };

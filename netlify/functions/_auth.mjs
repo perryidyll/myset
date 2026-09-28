@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
-import { casDoc, readDoc, cleanArtistId } from './_lib.mjs';
+import { casDoc, readDoc, cleanArtistId, own } from './_lib.mjs';
 
 /* Magic-link sign-in for ARTISTS. The audience never signs in — that is the
    whole reason the app works in a bar — so this exists only for the Studio.
@@ -83,7 +83,8 @@ const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','st
   'shows','moneymodel','financialmodel','report','metrics','artists',
   'mediadash',                  // the Instagram dashboard (0092) — found by that check on 2026-09-25
   'factory', 'sample',          // the sample-page console and its door (0101)
-  'crm']);                      // MySet HQ, the founder's outreach desk (0108) — held by nobody on 2026-09-28
+  'crm',                        // MySet HQ, the founder's outreach desk (0108) — held by nobody on 2026-09-28
+  'constructor']);              // the one property name cleanSlug lets through — never a page (0110)
 
 export async function artistBySlug(slug) {
   const a = await readArtists();
@@ -92,12 +93,14 @@ export async function artistBySlug(slug) {
      printed on QR codes stuck to bar tables and pasted into Instagram bios; a
      rename used to delete the old name outright, so every one of those stopped
      resolving and a room full of people got "unknown artist" mid-gig. The old
-     name is kept pointing here and is not claimable by anybody else while it is. */
-  return a.bySlug[want] || ((a.oldSlug || {})[want] || {}).aid || null;
+     name is kept pointing here and is not claimable by anybody else while it is.
+     Own properties only (`own`, _lib.mjs): `constructor` is a legal slug shape and
+     used to resolve to a function. */
+  return own(a.bySlug, want) || (own(a.oldSlug, want) || {}).aid || null;
 }
 export async function artistById(aid) {
   const a = await readArtists();
-  return a.byId[aid] || null;
+  return own(a.byId, aid) || null;
 }
 
 /** Turn a name into a free slug. Deterministic given the registry it is handed,
@@ -299,13 +302,16 @@ export function emailReady() {
     !normEmail(match[1]).endsWith('@resend.dev'));
 }
 
+/* A letter that cannot be handed over in eight seconds is not sent: the person is
+   waiting on this request, and a mail service that hangs must not hang the door. */
+export const MAIL_MS = 8000;
 export async function sendCode(email, code, artistName, which = 'Artist Studio') {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.AUTH_FROM;
   if (!emailReady()) return { ok: false, why: 'email-not-configured' };
   try {
     const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+      method: 'POST', signal: AbortSignal.timeout(MAIL_MS),
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         from,
@@ -335,7 +341,7 @@ export async function sendNotice(email, subject, lines, who) {
   const body = (Array.isArray(lines) ? lines : [lines]).filter(Boolean);
   try {
     const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+      method: 'POST', signal: AbortSignal.timeout(MAIL_MS),
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         from, to: [email], subject,
@@ -366,7 +372,7 @@ export async function sendMail(email, subject, lines, { who = '', cta = null } =
     ? `<p style="margin:22px 0 0"><a href="${escapeHtml(cta.url)}" style="display:inline-block;padding:12px 20px;border-radius:999px;background:#FF5650;color:#fff;font-weight:700;text-decoration:none">${escapeHtml(cta.label || 'Open')}</a></p>` : '';
   try {
     const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+      method: 'POST', signal: AbortSignal.timeout(MAIL_MS),
       headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         from, to: [normEmail(email)], subject: subj,

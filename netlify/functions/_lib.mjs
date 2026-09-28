@@ -433,12 +433,19 @@ export const mutateShow = (aid, fn) => {
 };
 
 /* ---------- fan shards ---------- */
+/* Does this object carry `k` ITSELF — not through its prototype? `bag[fanId]` for a
+   fan called `__proto__` is Object.prototype: truthy, so `||=` kept it, and every
+   `me.v ||= []` that followed wrote onto the prototype of every object in the warm
+   instance (found 2026-09-28; cleanFanId refuses the three names now, and this is
+   the belt to that brace — decision 0110). */
+export const own = (o, k) => (o != null && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
+
 export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
   casDoc(
     shardKey(aid, shardOf(fanId)),
     () => ({}),
     (bag) => {
-      const me = (bag[fanId] ||= { v: [], extra: 0, ts: {} });
+      const me = own(bag, fanId) || (bag[fanId] = { v: [], extra: 0, ts: {} });
       me.v ||= []; me.extra ||= 0; me.ts ||= {}; me.spent ||= 0; me.va ||= {};
       return fn(me, bag);
     },
@@ -1092,6 +1099,10 @@ export function voteCounts(fans) {
 }
 
 /* ---------- http ---------- */
+/* netlify.toml's header rules do not reach a function's reply (measured 2026-09-27),
+   and Netlify's own injected HSTS is the bare max-age. The full directive rides on
+   every reply so no path a phone touches first asserts less than the rest (0110). */
+export const HSTS = 'max-age=31536000; includeSubDomains; preload';
 export const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -1100,6 +1111,7 @@ export const json = (body, status = 200) =>
       'cache-control': 'no-store',
       'netlify-cdn-cache-control': 'no-store',   // said outright, so no header rule can ever cache a personal reply
       'access-control-allow-origin': '*',
+      'strict-transport-security': HSTS,
     },
   });
 /* A PUBLIC READ THAT MANY PHONES SHARE. The reply is kept at the edge for `ttl`
@@ -1121,6 +1133,7 @@ export const jsonCached = (body, ttl = 30) => {
       'cache-control': 'public, max-age=0, must-revalidate',
       'netlify-cdn-cache-control': `public, durable, s-maxage=${t}, stale-while-revalidate=${t}`,
       'access-control-allow-origin': '*',
+      'strict-transport-security': HSTS,
     },
   });
 };
@@ -1182,9 +1195,13 @@ export async function noteCodeFailure(aid) {
     return true;
   }).catch(() => {});
 }
+/* Writes only when there is something to clear: this runs on every request a
+   Studio-code session makes, and an unconditional write was a blob write per poll. */
 export const clearCodeFailures = (aid) =>
-  casDoc(`lock_${aid}`, () => ({}), (d) => { d.fails = []; d.until = 0; return true; })
-    .catch(() => {});
+  casDoc(`lock_${aid}`, () => ({}), (d) => {
+    if (!(d.fails || []).length && !d.until) return false;
+    d.fails = []; d.until = 0; return true;
+  }).catch(() => {});
 
 /** The shortest a self-set studio code may be. Four characters with no lockout is
  *  a ten-thousand-guess space, and the audit found no lockout anywhere. */
@@ -1276,9 +1293,12 @@ export async function publicArtist(req) {
   const { readArtists, cleanSlug } = await import('./_auth.mjs');
   const reg = await readArtists();
   const want = cleanSlug(slug);
-  const aid = reg.bySlug[want] || ((reg.oldSlug || {})[want] || {}).aid || null;
+  /* Own properties only: `?a=constructor` used to resolve to Object's constructor,
+     a truthy function, and the endpoints then worked on a phantom room keyed by its
+     source text instead of answering "unknown artist" (found 2026-09-28). */
+  const aid = own(reg.bySlug, want) || (own(reg.oldSlug, want) || {}).aid || null;
   if (!aid) return null;
-  if ((reg.byId[aid] || {}).del) return null;
+  if ((own(reg.byId, aid) || {}).del) return null;
   return aid;
 }
 /** Is this account on its way out? The Studio needs to know; the public does not. */
@@ -1287,5 +1307,12 @@ export async function deletionOf(aid) {
   const row = (await readArtists()).byId[aid] || {};
   return row.del || null;
 }
-export const cleanFanId = (v) =>
-  typeof v === 'string' ? v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) : '';
+/* The three names that are not a fan: a device called `__proto__`, `constructor` or
+   `prototype` would not be a key on the shard bag but a hole into every object in
+   the warm instance (see `own` above). Refused outright, like an empty id. */
+const NOT_A_KEY = new Set(['__proto__', 'constructor', 'prototype']);
+export const cleanFanId = (v) => {
+  if (typeof v !== 'string') return '';
+  const s = v.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+  return NOT_A_KEY.has(s) ? '' : s;
+};

@@ -73,7 +73,12 @@ export function myRequests(d, fanId, show) {
 /* ---------- creating one ----------
    The votes are taken FIRST. If the row can't then be written the charge is put
    back — the other order would let a failed write hand out free requests. */
-export async function createRequest(aid, show, fanId, body) {
+/* `verified` is set by ONE caller — authorizeRequestSession, after it has retrieved
+   the PaymentIntent from Stripe and seen it authorized. The public /api/request never
+   sets it, so a pledge in a fan's own body is ignored: until 2026-09-28 it was not,
+   and one anonymous POST could file a "$500 offered" request whose acceptance minted
+   five hundred paid votes that nobody had paid for (decision 0110). */
+export async function createRequest(aid, show, fanId, body, { verified = false } = {}) {
   const kind = KINDS.has(body.kind) ? body.kind : 'song';
   const cfg = kind === 'song' ? show.requests : kind === 'birthday' ? show.birthdays : { on: true, cost: 0 };
   if (!cfg || !cfg.on)
@@ -128,7 +133,7 @@ export async function createRequest(aid, show, fanId, body) {
   });
   if (short) return { ok: false, error: 'no-credits', status: 402 };
 
-  const pledge = body.pledge && typeof body.pledge === 'object' ? body.pledge : null;
+  const pledge = verified && body.pledge && typeof body.pledge === 'object' ? body.pledge : null;
   const pledgeCents = pledge ? Math.max(0, Math.min(50000, parseInt(pledge.cents, 10) || 0)) : 0;
   const row = {
     id: requestedId || ('r' + Math.random().toString(36).slice(2, 10)),
@@ -217,7 +222,7 @@ export async function authorizeRequestSession(aid, session, fallbackFan, stripe,
     kind: 'song', title: md.title || '', artist: md.songArtist || '',
     requestId: 'r' + session.id.replace(/[^A-Za-z0-9]/g, '').slice(-18),
     pledge: { cents, intent: piId, session: session.id, account: opts.stripeAccount || '' },
-  });
+  }, { verified: true });
   if (!r.ok) {
     if (pi.status === 'requires_capture') {
       try { await stripe.paymentIntents.cancel(piId, {}, ...scope(opts)); } catch {}

@@ -38,6 +38,9 @@ export const baseHeaders = (type = 'text/html; charset=utf-8') => ({
   'content-security-policy': CSP,
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',
+  'x-frame-options': 'SAMEORIGIN',
+  'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
+  'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
 });
 
 /** Every `fm` cookie on the request — a browser may hold one per path. */

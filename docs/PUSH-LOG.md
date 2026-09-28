@@ -10,6 +10,26 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 08:43 — e69a1bf — myset@claude/myset-encryption-security-460mph (49 files since origin/main)
+**tl;dr:** Slice A merged with main a fourth time (#139, docs only); structure test green, the full suite ran green on the tree one docs commit behind
+**Other sessions:** Merging #136 now.
+
+### 2026-09-28 08:42 — 560f150 — myset@claude/myset-encryption-security-460mph (49 files since origin/main)
+**tl;dr:** Slice A merged with main a third time (#138); suite green on the merged tree
+**Other sessions:** Merging #136 right after this push.
+
+### 2026-09-28 08:32 — 6bba525 — myset@claude/myset-encryption-security-460mph (49 files since origin/main)
+**tl;dr:** Slice A merged with main again after the HQ build (0108/0109): RESERVED keeps both crm and constructor; suite 4,849 ✓
+**Other sessions:** Nothing else changed. Merging #136 next; slice B follows on the same branch.
+
+### 2026-09-28 08:27 — 39373d7 — myset@claude/myset-encryption-security-460mph (49 files since origin/main)
+**tl;dr:** Slice A merged with main after 0114/0115 (askList gone: the pledge test reads the Studio poll); suite 4,540 ✓ on the merged tree
+**Other sessions:** The earlier stamper failure was 0115 removing askList, not a flake. INVARIANTS main now holds 0ha and 0hl; this branch keeps 0gt–0gw for slice A, takes 0gx for B and 0gy/0gz/0hb for C. pushOn gate already dropped from this branch (0114 owns alerts).
+
+### 2026-09-28 08:11 — 9ecfd9a — myset@claude/myset-encryption-security-460mph (48 files since origin/main)
+**tl;dr:** Slice A of the security pass (decision 0110), rebuilt on today's main: a fan's own 'pledge' no longer mints paid votes; __proto__ and constructor are refused as names; an event id is never markup and a picture is an address; moving your sign-in address no longer says whether the new one has an account; the mirror and the backup skip the ID photo and the signing key; every function reply carries the full HSTS; mail and lyrics have deadlines. Still on the branch, NOT live until its PR merges
+**Other sessions:** The 72-file branch is now three slices (cross-session review): A = this (0110, INVARIANTS 0gt–0gw), B = the network limits (0111, next), C = MYSET_SECRET + sealing at rest (0112/0113, after the founder sets the variables). Dropped what #128/0099/0100 already do. New: own(o,k) in _lib.mjs (an own-property read; every registry lookup by slug or id uses it), cleanFanId refuses __proto__/constructor/prototype, HSTS const on json/jsonCached, MAIL_MS and LRCLIB_TIMEOUT_MS exported and in the overview's facts, backup.py SKIP_KEYS/SKIP_PREFIX/SKIP_SUFFIX. venue/city/showTime stay in no CAPABILITY row on purpose (the Live tab's name-the-night). Suite 4,511 ✓ on three of four full runs; one run inside overview --tests exited non-zero without a failing assertion in the captured stderr — watch for a flaky section.
+
 ### 2026-09-28 15:37 — 4bdbb9c — sample-profiles@docs/hq-puzzle-ids (1 files since origin/main)
 **tl;dr:** Docs only: HQ's process sheet is loaded into Puzzle, so the outreach desk shows on the Marketing & growth tab [skip ci]
 **Other sessions:** Puzzle section 44408 (h01–h14 = 389724–389737; h09/h12 Draft until Gmail is switched on), connections 435824–435843 (435842 h03→s02, 435843 h08→s18), changelog 2444 = 0108, 2445 = 0109. Section 44328 now says the keys are Production only and names HQ as a second door; changelog 2412 (0101) no longer states the undo window's number.

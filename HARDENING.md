@@ -57,6 +57,9 @@ pull request with zero approvals, no force-push, no deletion, no bypass. The oth
 here still apply. None of them costs anything, and they are also what gives "trade
 secret" any legal meaning later — you cannot claim you kept something secret if there
 were no measures keeping it.
+Note what public costs, too: no measure in code can keep the code from being
+copied — only making the repository private can, one click and a few dollars a month
+for the rulesets.
 
 **Two-factor** — <https://github.com/settings/security>. If it is not on, nothing
 else on this list matters.
@@ -112,6 +115,10 @@ most commonly skipped step and the most expensive one to fix afterwards.
 | Auth: 6-digit codes, HMAC-stored, 10-min expiry, 5 guesses, constant-time | `_auth.mjs`, INVARIANT 9i |
 | Two direct dependencies, total | `package.json` |
 
-**Still open and genuinely important:** there is no rate limiting on any endpoint.
-That is the same defence as vote manipulation, and it is being designed now rather
-than guessed at.
+**Since 2026-09-28** (decision 0110, slice A of the security pass): a pledge comes
+only from Stripe; `__proto__` and `constructor` are refused as names; an event id is
+never markup and a picture is an address; the mirror and the backup skip the ID
+photo and the store-kept signing key; the error log keeps paths only; every reply
+carries the full HSTS. **Still open:** the network limits on every anonymous write
+(decision 0111, next), and the server's own secret with the records that hold a
+person sealed at rest (0112/0113 — waiting on the three variables above).

@@ -13,6 +13,14 @@ const HEADERS = {
   'X-User-Agent': 'MySet/1.0 (https://myset.vip)',
 };
 const MISS_TTL = 30 * 24 * 3600e3;                 // re-check a miss after a month
+/* ONE DEADLINE FOR THE WHOLE LOOKUP. A fan taps "Lyrics" mid-song; if LRCLIB hangs
+   (it is a free community API, and it has), fetch() with no signal waits as long as
+   the function is allowed to live — the phone's spinner is the upstream's outage.
+   Eight seconds is several times LRCLIB's normal ~0.4 s, well inside the function
+   budget, and shared by the exact-match call and the search that follows a miss, so
+   the two together cannot take sixteen. On the deadline fetch throws, getLyrics
+   catches, and the fan gets the ordinary "not found" — never an error. */
+export const LRCLIB_TIMEOUT_MS = 8000;
 
 export async function readLyrics(aid, songId) {
   const { data } = await readDoc(LKEY(aid, songId), null);
@@ -28,8 +36,8 @@ export async function saveLyrics(aid, songId, doc) {
   return doc;
 }
 
-async function lrclib(path) {
-  const r = await fetch(`https://lrclib.net${path}`, { headers: HEADERS });
+async function lrclib(path, signal) {
+  const r = await fetch(`https://lrclib.net${path}`, { headers: HEADERS, signal });
   if (r.status === 429) {                          // honour Retry-After or risk a ban
     const wait = Math.min(3000, (parseInt(r.headers.get('retry-after'), 10) || 2) * 1000);
     await new Promise((res) => setTimeout(res, wait));
@@ -42,9 +50,10 @@ async function lrclib(path) {
 /** Fetch from LRCLIB. Falls back to /api/search when the exact match 404s. */
 export async function fetchLyrics(title, artist) {
   const q = (o) => new URLSearchParams(o).toString();
-  let d = await lrclib(`/api/get?${q({ track_name: title, artist_name: artist || '' })}`);
+  const signal = AbortSignal.timeout(LRCLIB_TIMEOUT_MS);
+  let d = await lrclib(`/api/get?${q({ track_name: title, artist_name: artist || '' })}`, signal);
   if (!d) {
-    const list = await lrclib(`/api/search?${q({ track_name: title, artist_name: artist || '' })}`);
+    const list = await lrclib(`/api/search?${q({ track_name: title, artist_name: artist || '' })}`, signal);
     if (Array.isArray(list) && list.length) d = list.find((x) => x.plainLyrics) || list[0];
   }
   if (!d || (!d.plainLyrics && !d.syncedLyrics)) return null;
