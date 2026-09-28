@@ -17,7 +17,9 @@
    0hk): nothing opens without it, even for the owner seat; only the owner seat can
    try it; five wrong tries shut the door; the proof is a signed cookie that a new
    passcode, another account or an old expiry cannot use; no hash is written anywhere
-   in the repository.
+   in the repository. And the page's two themes: every colour that is text keeps 4.5:1
+   in both, every wash is mixed from --hi, and the kept theme is set before the first
+   paint.
 
    Run: node --import ./test/register.mjs test/hq.mjs */
 process.env.ADMIN_CODE = 'devlocal';
@@ -474,6 +476,35 @@ console.log('\nTHE SIGN-IN MAIL SENDER IS NOT HQ’S (INVARIANT 0gs)');
     if (!existsSync(p)) continue;
     ok(`${f} never touches Resend, which carries every sign-in code`, !/api\.resend\.com|RESEND_API_KEY|AUTH_FROM/.test(readFileSync(p, 'utf8')), f);
   }
+}
+
+console.log('\nTHE PAGE’S TWO THEMES');
+{
+  /* The founder, 2026-09-28: "please add a dark/light toggle". The light theme lives in
+     the tokens: every wash and hairline is mixed from --hi, and every colour that is
+     text has a light shade of its own. These catch the two ways it rots — a new white
+     wash that vanishes on the light stage, and a shade tuned until small words fail. */
+  const { readFileSync } = await import('node:fs');
+  const page = readFileSync(new URL('../public/crm.html', import.meta.url), 'utf8');
+  const block = (sel) => { const i = page.indexOf(sel + '{'); return i < 0 ? '' : page.slice(i + sel.length + 1, page.indexOf('}', i)); };
+  const tokens = (css) => Object.fromEntries([...css.matchAll(/(--[\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+  const dark = tokens(block(':root')), light = { ...dark, ...tokens(block(':root[data-theme=light]')) };
+  const lum = (hex) => { let h = String(hex).replace('#', ''); if (h.length === 3) h = [...h].map((c) => c + c).join('');
+    const [r, g, b] = [0, 2, 4].map((i) => { const c = parseInt(h.slice(i, i + 2), 16) / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const TEXT = ['--ink', '--ink-2', '--muted', '--accent', '--venue', '--good', '--warn', '--bad', '--bad-1', '--bad-2', '--bad-3', '--warn-2'];
+  for (const [name, T, grounds] of [['dark', dark, ['#000000', '#1C1C20']], ['light', light, ['#FFFFFF', '#F5F5F7']]]) {
+    const low = TEXT.flatMap((k) => grounds.map((g) => [k, g, ratio(T[k], g)])).filter(([, , r]) => !(r >= 4.5));
+    eq(`the ${name} theme: every colour that is text keeps 4.5:1 on the ${name} stage`, low.map(([k, g, r]) => `${k} on ${g}: ${r.toFixed(2)}`), []);
+  }
+  const css = page.slice(page.indexOf('<style>'), page.indexOf(':root[data-theme=light]{'));   // the rules both themes share
+  const whites = (css.match(/rgba\(255,255,255,/g) || []).length;
+  ok('every wash and hairline is mixed from --hi; white stays only as a highlight on a coloured surface (six of them)', whites <= 6, whites);
+  const head = page.slice(0, page.indexOf('<style>'));
+  ok('the head sets the kept theme before the first paint, so a light HQ never flashes dark',
+    head.includes("localStorage.getItem('myset.hq.theme')") && head.includes("dataset.theme='light'"));
+  ok('the sun in the top bar has its handler', page.includes('data-act="theme"') && /\btheme:\(\)=>setTheme\(/.test(page));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
