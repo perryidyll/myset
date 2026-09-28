@@ -113,4 +113,6 @@ Found on the live site afterwards: Netlify serves `/<name>` from `<name>.html` b
   - at 390, 375, 360 and 320 px the top bar fits with nothing overlapping, in both themes.
 - In the app's own browser the pane was hidden, so the browser skipped the circle and the switch changed at once, as designed.
 
+**Shipped:** PR #145 merged as `a0ab3dc`. Its deploy preview was checked first and rendered light at 375 px. Production served the new page about 40 s after the merge. Verified by content on myset.vip: `/crm` carries `data-act="theme"`, `myset.hq.theme` and the light tokens, and `/api/hq` still answers 401 to a stranger. Not checked on the live site: the switch itself behind the passcode, which is the founder's to open. A browser that opened `/crm` in the last six hours may show its stored copy once; a reload fetches the new page (`sw.js` rule 2).
+
 **Puzzle:** no change. No process step, rule, cited number or decision record changed; only the page's look did.
