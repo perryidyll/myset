@@ -788,8 +788,8 @@ address.
 
 **Settings** — Get verified; feature switches (owner only); push alerts; free votes per
 person including ∞; replay cost, pack prices, request and birthday costs; one device
-granted unlimited; **Signing in** (the plain truth that there is no password, the studio
-code, eight one-time recovery codes); **Starting by itself**; QR codes for the home page
+granted unlimited; **Signing in** (your password — create it, change it, or reset it with a code by email — and, on the owner's seat only, Face ID, the studio code and eight one-time recovery codes);
+**Starting by itself**; QR codes for the home page
 and the voting page; team members and roles; **Your account** (sign-in address and moving
 it, where you're signed in, download my data, invoices, sign out of this device, sign out
 everywhere, delete); plan, upgrade, promo codes, referral link; and owner-only tools (ID
@@ -1176,8 +1176,7 @@ Only the owner sees and signs out every device on the account; any other seat re
 **Recovery.** Eight one-time codes, shown once. Using one **signs out every other device**.
 A wrong code, an unknown page and a locked-out page all answer identically.
 
-**MySet has no password**, and Settings says so plainly rather than leaving somebody
-hunting for a "forgot password" link that could not exist.
+**Forgot your password?** is the six-digit code to the same address: one code signs you in, and another stands in for the old password when you choose a new one, which signs that address's other devices out. Settings → *Signing in* shows *Password · set / not set* with *Create* / *Change*; a Studio-code session sets one for one of the account's own addresses by proving it with a code (decision [`0073`](docs/decisions/0073-sheet-hands-over-before-full.md)).
 
 ## 5.6 Verification and the tick
 
@@ -1533,10 +1532,7 @@ records, never the index.**
 - **Spotify playlist import cannot run** — `SPOTIFY_CLIENT_ID` / `_SECRET` are not set. The
   button is offered and answers an honest 503. **This is the one place the artist is shown a
   control that leads to a message rather than a result.**
-- **Public sign-in email is unavailable** because `AUTH_FROM` is unset. Resend's former
-  `onboarding@resend.dev` fallback can send only to the Resend account owner, so MySet now
-  fails closed instead of telling a stranger that an undeliverable code was sent. Verify
-  the MySet domain in Resend and configure a sender on it.
+- **Sign-in mail comes from `hello@myset.vip`** — `AUTH_FROM`, set 2026-09-10 on the domain verified in Resend (ledger PER-004). Closed as a gap; kept here for the rule it left: should the variable ever be unset or name Resend's `onboarding@resend.dev`, which can send only to the Resend account owner, sign-in fails closed instead of telling a stranger that an undeliverable code was sent.
 - **Payout countries are a 22-country list**, not Stripe's full set. Deliberate: the
   alternative was accepting any two letters and creating an account in the wrong country,
   permanently.

@@ -3,14 +3,14 @@ tab: Reliability & security
 section: Secrets and keys
 puzzle_section_id: 41995
 sources:
-  - MYSET-MASTER-OVERVIEW.md §6.3 (the thirteen names, the four set, the placeholder rule), §6.1
+  - MYSET-MASTER-OVERVIEW.md §6.3 (the names, which are set in production and when that was read, the placeholder rule), §6.1
   - INVARIANTS.md 10, 11, 11b, 12, 15d
   - HARDENING.md §1 (restricted Stripe key), §3 (rotate anything ever pasted)
   - netlify/functions/_lib.mjs 25–45 (previews cannot charge), webhook.mjs 10–16, vapid-keys.sh
   - ACCOUNTS.md §5 (5), IMPLEMENTATION_STATUS.md PER-007, PER-008, verification log 2026-09-08
   - SECURITY.md Tier 1 (a secret-rotation runbook)
 status: loaded
-loaded: 2026-09-12 (create_process; read back through list_sections and list_steps)
+loaded: 2026-09-12 (create_process; read back through list_sections and list_steps); 2026-09-28 (update_workflow on j01, step 370092 — `AUTH_FROM` is set, PER-004; the counts now cited from overview §6.3, not copied — and on the section's notes; read back through list_steps and list_sections)
 verified: code read 2026-09-12 (_lib.mjs preview note; webhook.mjs secret check); the dashboard read-back of the MySet destination the same day
 ---
 
@@ -20,7 +20,7 @@ verified: code read 2026-09-12 (_lib.mjs preview note; webhook.mjs secret check)
 
 | id | step | type | executor | role (RACI) | tool | notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| j01 | Know where every secret lives | document | Person | Founder R · Coding agent I | Netlify | Thirteen names in overview §6.3; **four set in production** (`ADMIN_CODE`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `RESEND_API_KEY`). Everything else is unset and **degrades honestly** — push says it cannot send, the Sheet is off, Spotify answers 503, sign-in refuses to claim success until `AUTH_FROM` names a verified sender. Never in the repo (INVARIANT 11 — writing one into a doc broke the build, correctly), never in `public/` (12), never in a chat window, **including one an agent generated itself** (11b — the VAPID keypair printed to a terminal on 2026-09-02 is why `vapid-keys.sh` exists). `src: overview §6.3; INVARIANTS 11, 11b, 12` |
+| j01 | Know where every secret lives | document | Person | Founder R · Coding agent I | Netlify | Every name is in overview §6.3, with which are set in production and when that was read — `AUTH_FROM` among them since 2026-09-10 (PER-004). Anything unset **degrades honestly** — push says it cannot send, the Sheet is off, Spotify answers 503, and sign-in refuses to claim success if `AUTH_FROM` stops naming a verified sender. Never in the repo (INVARIANT 11 — writing one into a doc broke the build, correctly), never in `public/` (12), never in a chat window, **including one an agent generated itself** (11b — the VAPID keypair printed to a terminal on 2026-09-02 is why `vapid-keys.sh` exists). `src: overview §6.3; INVARIANTS 11, 11b, 12; ledger PER-004` |
 | j02 | Read a masked variable correctly | task | AI Agent | Coding agent R | Netlify | A Netlify variable marked secret returns a **placeholder** through the API and the CLI, not the value. That is correct behaviour and it has already caused one false diagnosis — a masked `ADMIN_CODE` sent to the admin door, refused, reported as *"the recovery key is broken"*. **Do not repeat that conclusion.** `src: overview §6.3; tools/prod.py header` |
 | j03 | Keep previews unable to charge | task | Automation | MySet server R | Netlify | `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are **unset for the deploy-preview and branch-deploy contexts**, so a preview reports `paymentsEnabled:false` and cannot charge a card (INVARIANT 9) — confirmed by curl on a draft while production stayed live. A preview still **reads and writes production data**; use one to look at pages, never to exercise a write path. `src: _lib.mjs 25–45; AGENTS.md § Safety` |
 | j04 | Paste a new secret into Netlify | task | Person | Founder R | Netlify | Netlify → the site → *Project configuration* → *Environment variables* → *Add a variable* (or open the existing one → *Edit*): key exactly as the code reads it, value pasted once, **Contains secret values** ticked, scope *All* (functions need it), contexts *Production* only for anything that can charge a card (j03). A function only sees a new or changed variable on the **next deploy** — so the code that reads it goes up after the paste, and pushing is the deploy (INVARIANT 9d3). `src: HARDENING.md §1 step 5–6; overview §6.1` |

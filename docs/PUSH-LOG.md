@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 13:52 — 0118f1c — sheets-passwords-sender@docs/sheets-passwords-and-sender (10 files since origin/main)
+**tl;dr:** Docs only: the process sheets and Puzzle say passwords exist (0070, 0073) and the sign-in sender is set (PER-004); new Puzzle steps for signing in with a password and setting one [skip ci]
+**Other sessions:** Puzzle: new steps 389481 (g10, section 41978; arrows 435531/435532) and 389482 (v08, 41980); d01 370272 Live; changelog 1661 (0070) → 9 steps, 1664 (0073) → v08 + h07; 41980 notes say only the owner's seat sees Face ID, the Studio code and recovery codes (0105). Rebased on c13060e (#127–#129) keeping both sides. The read-back's drift list (not fixed) is in docs/sessions/2026-09-28-the-sheets-say-passwords-exist-and-the-sender-is-set.md. Owed by 4b462c after this lands: artist-lifecycle/01's 'Claim a sample page' row (step 389231).
+
 ### 2026-09-28 13:47 — 020b1bf — quizzical-haslett-6f8f8b@docs/seat-access-live (5 files since origin/main)
 **tl;dr:** Docs only: each seat's tabs and own-device sign-out (decisions 0104, 0105) are live as 52047cb — the ledger, the sheet and the decision records say so [skip ci]
 **Other sessions:** Puzzle section 41979 reloaded: t01/t03/t04/t05/t07 updated; NEW t11 = 389538, t12 = 389539; arrows 435592–435595; changelog 2434 = 0104, 2435 = 0105; attribute 46139 is now 'byEmail[email].artistId / role / access'. Notion rows ticked. Security branch 5bcf8f told to rebase on 52047cb and drop its sign-out/revenue/history/settings/pushOn gates; push alerts per seat is 3d368c's next batch and the only place alerts get gated.

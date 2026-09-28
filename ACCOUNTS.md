@@ -11,11 +11,11 @@ MySet already had the bones of a real account system before this pass. None of i
 | Piece | Where | How it works |
 |---|---|---|
 | **Identity** | `_auth.mjs` | An *artist* (`artistId`, a slug, a name) owns a page. A *venue* (`venueId`) owns a venue page. Both live in one registry document each (`artists`, `venues`) keyed three ways: by id, by slug, by email. |
-| **Sign-in** | `auth.mjs`, `venueauth.mjs` | Passwordless. You type an email, we send a six-digit code (Resend), you type it back. A signed token (HMAC, `signToken`) is stored in the browser. No passwords exist anywhere. |
+| **Sign-in** | `auth.mjs`, `venueauth.mjs` | You type an email, we send a six-digit code (Resend), you type it back. A signed token (HMAC, `signToken`) is stored in the browser. Passwordless when this was written; since 2026-09-14 a password sits under the email, one per sign-in address, and the code is how an account is made and the whole of "forgot" (decision 0070, §11). |
 | **Session revocation** | `_auth.mjs` (`revOf`) | Every token carries the account's *revision*. Removing an email, or any change that must sign everyone out, bumps the revision and every old token dies at once. There is no session list to clean up because there is nothing to list — the revision is the list. |
 | **Members** | `auth.mjs` `list/add/remove` | An artist page can have up to 5 sign-in addresses on Rock Star (1 otherwise). Owner vs member roles; members cannot touch money, plans or deletion. |
 | **The founder's recovery key** | `_lib.mjs` `ownerOf` | `ADMIN_CODE` is checked first so a lock-out can never shut Perry out of his own platform. It never lives *only* in an env var (INVARIANT — see `HARDENING.md`). |
-| **Per-page Studio code** | `show.codeHash` | The older door: a code per page, hashed, with lock-out after repeated failures (`codeLocked`, `noteCodeFailure`). Still works for the founder's own page. **Since 2026-09-12 it is behind a small "Studio code" link on the sign-in screen**, not on it — the screen is email + "Email me a code" + a box for a code already received (so a code emailed to one phone signs in on another). |
+| **Per-page Studio code** | `show.codeHash` | The older door: a code per page, hashed, with lock-out after repeated failures (`codeLocked`, `noteCodeFailure`). Still works for the founder's own page. **Since 2026-09-14 it opens in a small window from "Sign in with a Studio code instead" at the foot of the sign-in screen**, which is email + password (§11); from 2026-09-12 it had sat behind a small "Studio code" link on a screen of email + "Email me a code" + a box for a code already received. |
 | **Plans** | `_plan.mjs`, `_venues.mjs` | Hobbyist / Bar Star ($10) / Rock Star ($20) for artists (ids `free` / `plus` / `pro`, decision 0055); Free / Pro ($20) for venues. `planForArtist` reads the registry row; a plan with a `planUntil` in the past falls back to free. Comps (`billing:'comp'`) were the only way to be on a paid plan. |
 | **Referrals and promo codes** | `_plan.mjs` | A referral rewards the referrer when the referred pays; a promo code sets a `discountPct` on the row. |
 | **Verification** | `_verify.mjs` | ID check queue for the tick; auto-verify from a Stripe Connect identity for artists. |
@@ -176,11 +176,14 @@ A venue keeps its fixed owner / manager / crew for now.
 
 ### 6.4 Recovery, and what "forgot password" means here
 
-MySet has no password. Settings says so, in a row that is always visible:
+Since 2026-09-14 each sign-in address can have a password (§11, decision 0070), and "forgot password" means six-digit codes to that address: one signs you in, and another stands in for the old password when you choose a new one (Settings → *Password* → *Change*). Settings shows the rows under *Signing in* whether or not they are set up — all four on the owner's seat; any other seat gets only its own *Password* row (decision 0105, §6.3a):
 
-> **Password** · You don't have one. MySet emails you a fresh six-digit code every time.
+> **Password** · set / not set. *Create* / *Change* — the current password, or a code emailed to you.
+> **Face ID or fingerprint** · 1 device / not set up (on a phone that supports it).
 > **Studio code** · on / not set. A code for this page, so you can get in from any phone even when email is slow.
 > **Recovery codes** · 6 of 8 unused / not set up yet.
+
+(Until 2026-09-14 the first row read *You don't have one. MySet emails you a fresh six-digit code every time.*)
 
 **Recovery codes** are eight one-time codes in a Crockford-ish alphabet (no 0/O, no 1/I/L, because these get written on the back of a setlist in a dark room), hashed with the same site secret the six-digit codes use, shown once and never again. The door is `recoverySignIn { slug, code }`: the page name is public so it grants nothing on its own, it only says which lock to try. A wrong code, an unknown page and a locked-out page answer identically, so this cannot be used to find out who has an account. Using one bumps `rev` — a recovery code means something went wrong, so everything else goes out — then this device gets a fresh session, and everyone on the account is emailed.
 
