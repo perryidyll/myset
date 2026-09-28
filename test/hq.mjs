@@ -19,7 +19,8 @@
    passcode, another account or an old expiry cannot use; no hash is written anywhere
    in the repository. And the page's two themes: every colour that is text keeps 4.5:1
    in both, every wash is mixed from --hi, and the kept theme is set before the first
-   paint.
+   paint. And the message library (decision 0117): eight openers until the first save,
+   saved whole and tidied, and a message sent from one remembers which, and which ending.
 
    Run: node --import ./test/register.mjs test/hq.mjs */
 process.env.ADMIN_CODE = 'devlocal';
@@ -505,6 +506,48 @@ console.log('\nTHE PAGE’S TWO THEMES');
   ok('the head sets the kept theme before the first paint, so a light HQ never flashes dark',
     head.includes("localStorage.getItem('myset.hq.theme')") && head.includes("dataset.theme='light'"));
   ok('the sun in the top bar has its handler', page.includes('data-act="theme"') && /\btheme:\(\)=>setTheme\(/.test(page));
+}
+
+console.log('\nTHE MESSAGE LIBRARY (decision 0117)');
+{
+  /* The founder's own openers: eight until the first save, edited whole, and every
+     message that goes out with one remembers which (and which ending), so the page
+     can say which opener gets answered. */
+  let lib = (await H({ action: 'summary' })).lib;
+  eq('before any save the library is the eight openers, one for venues', [lib.list.length, lib.list.filter((p) => p.kind === 'venue').map((p) => p.k), lib.ending], [8, ['venue'], 'ab']);
+  ok('every opener has a body with a [Name] or [Venue] and its own closing question', lib.list.every((p) => /\[(Name|Venue)\]/.test(p.text) && /\?$/.test(p.ask)), lib.list);
+  ok('the softer ending is the one the founder was told to test', lib.soft === 'I can send you the link if you want to see what yours looks like?', lib.soft);
+
+  const edited = { ...lib, ending: 'soft', list: [...lib.list.slice(0, 2), { k: 'x', name: '  Folk   duos ', kind: 'artist', text: 'Hi [Name]\n\n\n\nhello', ask: 'Keen?', match: 'Folk, Duo ' },
+    { k: 'x', name: 'dupe', text: 'twice' }, { k: 'BAD KEY', name: 'no', text: 'no' }, { k: 'empty', name: 'no body', text: '   ' }] };
+  let r = await H({ action: 'savelib', lib: edited });
+  eq('a save keeps known fields only: tidy names, match words lower-cased, blank lines squeezed, a repeated or bad key or empty body dropped',
+    r.lib.list.slice(2), [{ k: 'x', name: 'Folk duos', kind: 'artist', text: 'Hi [Name]\n\nhello', ask: 'Keen?', match: ['folk', 'duo'] }]);
+  eq('…and it is what the next summary reads', [(await H({ action: 'summary' })).lib.list.length, (await H({ action: 'summary' })).lib.ending], [3, 'soft']);
+  r = await H({ action: 'savelib', lib: { list: [] } });
+  eq('an empty library stays empty: the founder cleared it', r.lib.list.length, 0);
+  r = await H({ action: 'savelib', lib: null });
+  eq('null puts the originals back', [r.lib.list.length, r.lib.ending], [8, 'ab']);
+  eq('a locked HQ does not save a library', (await H({ action: 'savelib', lib: { list: [] } }, '')).error, 'locked');
+
+  const { out: f } = C.normFields('artist', { name: 'Presets Test Act', city: 'Pai', links: { instagram: '@presetstest' }, tags: ['wedding'] });
+  const pc = (await C.createContact('artist', f, { force: true })).cid;
+  await H({ action: 'log', cid: pc, ch: 'note', dir: 'out', text: 'a private note', pre: 'wedding' });
+  r = await H({ action: 'log', cid: pc, ch: 'ig', dir: 'out', text: 'Hey Presets — …', pre: 'wedding', soft: true });
+  eq('a message sent from a preset remembers it and its ending (a note never does)', [r.msg.pre, r.msg.soft, ((await C.readContact(pc)).msgs.find((m) => m.ch === 'note') || {}).pre], ['wedding', true, undefined]);
+  eq('the row carries the first preset that went out, and when', [r.row.pre && r.row.pre.k, r.row.pre && r.row.pre.s, r.row.pre && r.row.pre.t === r.msg.t], ['wedding', 1, true]);
+  await H({ action: 'log', cid: pc, ch: 'ig', dir: 'out', text: 'second', pre: 'bar' });
+  await C.addMessage(pc, { ch: 'ig', dir: 'in', text: 'yes please!', pre: 'bar', t: Date.now() + 60e3 });   // a minute later: a reply is never the same millisecond
+  const row = await rowOf(pc), got = ((await C.readContact(pc)).msgs.find((m) => m.dir === 'in') || {});
+  eq('a later preset does not take the credit, and a reply carries none', [row.pre.k, got.pre, row.replied > row.pre.t], ['wedding', undefined, true]);
+  r = await H({ action: 'log', cid: pc, ch: 'ig', dir: 'out', text: 'x', pre: '<script>' });
+  eq('a preset key that is not one is not kept', r.msg.pre, undefined);
+
+  const { readFileSync } = await import('node:fs');
+  const page = readFileSync(new URL('../public/crm.html', import.meta.url), 'utf8');
+  ok('the page saves the library, and sends, copies and logs carry the preset', page.includes("api('savelib'") && (page.match(/preBody\(c/g) || []).length === 3 && (page.match(/c\.okPre=preOn\(c\)/g) || []).length === 2,
+    [(page.match(/preBody\(c/g) || []).length, (page.match(/c\.okPre=preOn\(c\)/g) || []).length]);
+  ok('the page will not send an opener with a [placeholder] still in it', /const canSend=[^\n]*!holes\(c\.text\)\.length/.test(page));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

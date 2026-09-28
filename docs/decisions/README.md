@@ -124,6 +124,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0114](0114-an-alert-reaches-the-seats-that-can-see-what-it-is-about.md) | An alert reaches only the seats that can see what it is about, and a sign-out ends that phone's alerts | 2026-09-28 | auth | decided | claude |
 | [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md) | Every action a Studio endpoint takes is one a page sends | 2026-09-28 | general | decided | user-confirmed |
 | [0116](0116-node-modules-is-never-tracked-and-a-worktree-uses.md) | node_modules is never tracked, and a worktree uses the shared checkout's | 2026-09-28 | ops | decided | user-confirmed |
+| [0117](0117-hq-keeps-a-message-library-of-the-founder-s-opener.md) | HQ keeps a message library of the founder's openers, and counts which get answered | 2026-09-28 | growth | decided | perry |
 
 ## By area
 
@@ -133,7 +134,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **general** — [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md) · [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md)
 
-**growth** — [0108](0108-myset-hq-the-founders-outreach-desk-and-crm.md) · [0109](0109-outreach-email-goes-through-the-founders-own-gmail-and-first-dms-are-sent-by-hand.md)
+**growth** — [0108](0108-myset-hq-the-founders-outreach-desk-and-crm.md) · [0109](0109-outreach-email-goes-through-the-founders-own-gmail-and-first-dms-are-sent-by-hand.md) · [0117](0117-hq-keeps-a-message-library-of-the-founder-s-opener.md)
 
 **history** — [0057](0057-a-filed-night-can-be-renamed-by-hand-from-the-mone.md)
 

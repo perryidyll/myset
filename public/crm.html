@@ -761,6 +761,8 @@ input[type=date].inp{color-scheme:dark}
 .sys span{color:var(--muted);flex:1;min-width:0}
 .conn{display:flex;gap:14px;padding:14px;border-radius:var(--r);background:rgba(var(--hi),.03);box-shadow:inset 0 0 0 1px var(--line)}
 .conn+.conn{margin-top:8px}
+.conn.lrow{width:100%;text-align:left;transition:background .2s,transform .2s var(--spring)}
+.conn.lrow:hover{background:rgba(var(--hi),.06)}.conn.lrow:active{transform:scale(.99)}
 .conn>.g{width:22px;height:22px;margin-top:1px;color:var(--ink-2)}
 .conn>div{flex:1;min-width:0}
 .conn b{display:block;font-size:14.5px}
@@ -938,6 +940,43 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
   .tabbar button[aria-current=page] .g{filter:drop-shadow(0 0 8px rgba(255,86,80,.6))}
   .tabbar .tb-u{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--deep);color:#fff;font:700 10px/17px var(--mono);text-align:center}
 }
+/* ---------- the message library (decision 0117) ---------- */
+.cmp-row .ibtn.libb{flex:0 0 auto;width:36px;height:36px}
+.cmp-end{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--muted)}
+.cmp-end .seg button{height:26px;padding:0 11px;font-size:12px}
+.cmp-end .ab{font:600 9.5px/1 var(--mono);letter-spacing:.14em;color:var(--faint)}
+.cmp-t.fill{animation:fillsweep .9s var(--ease) both;background-image:linear-gradient(100deg,transparent 30%,rgba(255,86,80,.16) 50%,transparent 70%);background-size:250% 100%;background-repeat:no-repeat}
+@keyframes fillsweep{from{background-position:120% 0}to{background-position:-30% 0}}
+.lib .lede{margin:-8px 2px 4px}
+.lib .lede b{color:var(--ink);font-weight:600}
+.lsv{margin-left:auto;font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--good);opacity:0;transition:opacity .3s}
+.lsv.on{opacity:1}
+.endc{padding:14px;border-radius:var(--r-sm);background:rgba(var(--hi),.03);box-shadow:inset 0 0 0 1px var(--line)}
+.endc .seg{display:flex}.endc .seg button{flex:1}
+.erow{display:grid;grid-template-columns:78px minmax(0,1fr) 110px;align-items:center;gap:10px;margin-top:12px;font-size:13px}
+.erow b{font:600 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.erow .inp{height:34px;font-size:13px}
+.erow>span{color:var(--muted);min-width:0}
+.rate{display:grid;gap:5px;font:600 10.5px/1 var(--mono);letter-spacing:.06em;color:var(--muted);text-align:right}
+.rate i{position:relative;display:block;height:4px;border-radius:2px;background:rgba(var(--hi),.08);overflow:hidden}
+.rate i::after{content:"";position:absolute;inset:0 auto 0 0;width:0;border-radius:inherit;background:var(--deep);box-shadow:0 0 10px rgba(255,86,80,.6);transition:width .9s var(--ease)}
+.grown .rate i::after{width:var(--w)}
+.grown .rate.best i::after{background:linear-gradient(90deg,#1E7B34,var(--good));box-shadow:0 0 10px rgba(48,209,88,.5)}
+.pl{display:grid;gap:8px}
+.pre{border-radius:var(--r-sm);background:rgba(var(--hi),.025);box-shadow:inset 0 0 0 1px var(--line);transition:box-shadow .25s,background .25s;animation:rise .35s var(--ease) both}
+.pre.on{background:rgba(var(--hi),.045);box-shadow:inset 0 0 0 1px var(--line-2)}
+.pre-h{display:grid;grid-template-columns:minmax(0,1fr) auto 104px 18px;align-items:center;gap:10px;width:100%;padding:12px 14px;text-align:left}
+.pre-n{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pre-h>.g{width:16px;height:16px;color:var(--muted);transition:transform .35s var(--spring)}
+.pre.on .pre-h>.g{transform:rotate(180deg)}
+.pre .fold>div{min-height:0;overflow:hidden}
+.pre-b{padding:0 14px 14px}
+.pre-b .fl:first-child{margin-top:0}
+.pre-b textarea{min-height:120px}
+.pre-b .row{display:flex;align-items:center;gap:8px;margin-top:12px}
+.pre-b .row .btn{margin-left:auto}
+.lib-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+@media(max-width:560px){.pre-h{grid-template-columns:minmax(0,1fr) auto 18px}.pre-h .rate{grid-column:1/3;grid-row:2;text-align:left}.erow{grid-template-columns:64px minmax(0,1fr)}.erow .rate{grid-column:1/-1}}
 @media(max-width:380px){.cmp-row{flex-wrap:wrap}.cmp-row .tplw{width:100%}.bc-2{grid-template-columns:1fr}}
 /* Below 390px the top bar holds five buttons beside HQ: "Online" keeps its dot and
    leaves the word to screen readers, and below 360px the gaps close up a little. */
@@ -1149,6 +1188,8 @@ const G={
   bolt:'<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>', play:'<path d="M8 5.5v13l10.5-6.5z"/>',
   refresh:'<path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/>', gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
   target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/>',
+  book:'<path d="M4.5 5.5A2 2 0 0 1 6.5 3.5h13v15h-13a2 2 0 0 0-2 2z"/><path d="M4.5 20.5a2 2 0 0 1 2-2h13v2.5h-13a2 2 0 0 1-2-2z"/><path d="M9 8h6.5"/>',
+  trash:'<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.75 1.75M16.95 16.95l1.75 1.75M5.3 18.7l1.75-1.75M16.95 7.05l1.75-1.75"/>',
   moon:'<path d="M20.47 12.74A8.5 8.5 0 1 1 11.25 3.53a6.6 6.6 0 0 0 9.22 9.21z"/>',
 };
@@ -1779,13 +1820,40 @@ function pickCh(r){
 }
 function cmpFor(cid){
   if(CMPS[cid])return CMPS[cid];
-  const d=CT[cid]||{}, r=rowBy(cid)||d.row||{};
-  const c=CMPS[cid]={cid,ch:pickCh(r),tpl:d.drafts&&!r.sent?'first':'blank',subj:'',text:'',dirty:false,ok:'',okText:'',okSubj:'',reply:false,rch:'',rtext:''};
-  fillTpl(c); return c;
+  const d=CT[cid]||{}, r=rowBy(cid)||d.row||{}, auto=r.sent?'':autoPre(r);
+  const c=CMPS[cid]={cid,ch:pickCh(r),tpl:auto?'p:'+auto:d.drafts&&!r.sent?'first':'blank',soft:softNext(),subj:'',text:'',dirty:false,ok:'',okText:'',okSubj:'',okPre:null,reply:false,rch:'',rtext:''};
+  fillTpl(c); c.fx=0; return c;
 }
+
+/* THE MESSAGE LIBRARY (decision 0117): the founder's own openers, one per kind of act.
+   [Name] and [Venue] fill themselves in; a contact tagged with a preset's word (wedding,
+   cruise, busk…) opens on that preset. Each opener ends on its own question or the
+   softer one, and what went out is remembered with the message, so the library can
+   say which opener, and which ending, gets answered. */
+const LIBL=()=>(S&&S.lib&&S.lib.list)||[];
+const preBy=k=>LIBL().find(p=>p.k===k);
+const normT=v=>String(v||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function autoPre(r){ const tags=(r.tags||[]).map(normT); if(!tags.length)return '';
+  const p=LIBL().find(p=>p.kind===(r.kind==='venue'?'venue':'artist')&&(p.match||[]).some(m=>tags.some(t=>t.includes(m)))); return p?p.k:''; }
+function softNext(){ const e=(S&&S.lib&&S.lib.ending)||'ab'; if(e!=='ab')return e==='soft';
+  let a=0, b=0; for(const r of (S&&S.contacts)||[])if(r.pre){ if(r.pre.s)b++; else a++; } return b<a; }
+const firstOf=(cid,r)=>{ const f=((((CT[cid]||{}).page||{}).record)||{}).first; return String(f||r.name||'').replace(/^the\s+/i,'').trim(); };
+function preText(p,c){
+  const r=rowBy(c.cid)||(CT[c.cid]||{}).row||{}, nm=firstOf(c.cid,r), end=c.soft?((S.lib||{}).soft||''):p.ask||'';
+  let t=p.text.replace(/\[(first name|name|artist|band)\]/gi,m=>nm||m).replace(/\[venue\]/gi,m=>(r.kind==='venue'&&nm)||m).replace(/\[city\]/gi,m=>r.city||m);
+  if(end)t+=' '+end;
+  if(c.ch==='email'){ const cfg=(S&&S.cfg)||{};
+    t+=`\n\n${cfg.signoff||'The MySet team'}\nMySet · myset.vip\n\nYou're getting this because your ${r.kind==='venue'?"venue's details are":'music is'} public online. Reply "stop" and we won't contact you again.${cfg.address?'\n'+cfg.address:''}`; }
+  return t;
+}
+const preOn=c=>c&&/^p:/.test(c.tpl)?c.tpl.slice(2):'';
+const holes=t=>(String(t).match(/\[[A-Za-z][A-Za-z ]{0,20}\]/g)||[]);
+const preBody=(c,o)=>{ const k=o?c.okPre:preOn(c); return k?(o?{pre:k.k,soft:k.s}:{pre:k,soft:!!c.soft}):{}; };
 function reSubject(cid){ const ms=(((CT[cid]||{}).contact||{}).msgs||[]).filter(m=>m.ch==='email'&&m.subject); const s=ms.length?ms[ms.length-1].subject:''; return s?(/^re:/i.test(s)?s:'Re: '+s):''; }
 function fillTpl(c){
   const d=(CT[c.cid]||{}).drafts, e=(d&&d.email)||{};
+  if(preOn(c)){ const p=preBy(preOn(c)); if(!p){ c.tpl=d?'first':'blank'; return fillTpl(c); }
+    c.text=preText(p,c); c.subj=c.ch==='email'?(reSubject(c.cid)||'Your MySet page'):''; c.dirty=false; c.fx=1; return; }
   if(!d||c.tpl==='blank'){ c.text=''; c.subj=c.ch==='email'?reSubject(c.cid):''; c.dirty=false; return; }
   if(c.tpl==='first'){ if(c.ch==='email'){c.subj=e.subject||'';c.text=e.body||'';} else c.text=c.ch==='inperson'?(d.inperson||''):c.ch==='note'?'':(d.dm||''); }
   else if(c.tpl==='followup'){ c.text=d.followup||''; c.subj=c.ch==='email'?(reSubject(c.cid)||e.subject||''):''; }
@@ -1805,18 +1873,24 @@ function primary(c){
     default: return ['Add note','clog','plus'];
   }
 }
-const canSend=(c,r)=>canCh(c.ch,r)&&(c.ch==='inperson'||!!c.text.trim())&&(c.ch!=='email'||!(S&&S.gmail&&S.gmail.connected)||!!c.subj.trim());
+const canSend=(c,r)=>canCh(c.ch,r)&&(c.ch==='inperson'||!!c.text.trim())&&!holes(c.text).length&&(c.ch!=='email'||!(S&&S.gmail&&S.gmail.connected)||!!c.subj.trim());
 function cmpHtml(loc){
   const cid=CUR[loc], c=cid&&cmpFor(cid); if(!c)return '';
   const d=CT[cid]||{}, r=rowBy(cid)||d.row||{}, dr=d.drafts, [lab,act,ic]=primary(c), g=(S&&S.gmail)||{};
-  const tpls=dr?[['first','First message'],['followup','Follow-up'],['inperson','In person script'],['blank','Blank']]:[['blank','Blank']];
+  const tpls=dr?[['first','First message'],['followup','Follow-up'],['inperson','In person script']]:[];
+  const pres=LIBL().filter(p=>p.kind===(r.kind==='venue'?'venue':'artist')), pk=preOn(c), p=pk&&preBy(pk), hs=holes(c.text);
+  const opt=([k,w])=>`<option value="${esc(k)}"${c.tpl===k?' selected':''}>${esc(w)}</option>`;
   return `<div class="cmp-ch" role="radiogroup" aria-label="Send by">${CHS.map(ch=>{const ok=canCh(ch,r);
       return `<button type="button" role="radio" class="cp" data-act="cch" data-loc="${loc}" data-ch="${ch}" aria-checked="${c.ch===ch}" tabindex="${c.ch===ch?0:-1}"${ok?'':` aria-disabled="true" title="${esc(WHY[ch]||'')}"`}>${ico(CHG[ch])}<span>${CHW[ch]}</span></button>`;}).join('')}</div>
-    <div class="cmp-row"><label class="tplw"><span class="sr">Template</span><select class="inp sm" data-f="tpl" data-loc="${loc}"${dr?'':' disabled title="Templates come from a live sample page"'}>${tpls.map(([k,w])=>`<option value="${k}"${c.tpl===k?' selected':''}>${w}</option>`).join('')}</select></label>
+    <div class="cmp-row"><label class="tplw"><span class="sr">Template</span><select class="inp sm" data-f="tpl" data-loc="${loc}">${tpls.length?`<optgroup label="From their page">${tpls.map(opt).join('')}</optgroup>`:''}${pres.length?`<optgroup label="Your presets">${pres.map(x=>opt(['p:'+x.k,x.name])).join('')}</optgroup>`:''}${opt(['blank','Blank'])}</select></label>
+      <button type="button" class="ibtn libb" data-act="library" data-k="${esc(pk)}" aria-label="Message library" title="Message library">${ico('book')}</button>
       ${c.ch==='email'?`<input class="inp sm" data-f="subj" data-loc="${loc}" placeholder="Subject" aria-label="Subject" value="${esc(c.subj)}" autocomplete="off">`:''}</div>
-    <textarea class="inp cmp-t" data-f="text" data-loc="${loc}" rows="3" placeholder="${c.ch==='note'?'A private note — only you see it':c.ch==='inperson'?'What was said (optional)':'Write a message…'}" aria-label="Message">${esc(c.text)}</textarea>
+    ${p&&(p.ask||(S.lib||{}).soft)?`<div class="cmp-end"><span>Ending</span><div class="seg" role="group" aria-label="How it ends">${[[false,'Theirs',p.ask],[true,'Softer',(S.lib||{}).soft]].map(([v,w,q])=>`<button type="button" data-act="cend" data-loc="${loc}" data-v="${v?1:0}" aria-pressed="${!!c.soft===v}" title="${esc(q||'')}">${w}</button>`).join('')}</div>${(S.lib||{}).ending==='ab'?'<span class="ab" title="Each new message gets the ending that has gone out less">A/B</span>':''}</div>`:''}
+    <textarea class="inp cmp-t${c.fx?' fill':''}" data-f="text" data-loc="${loc}" rows="3" placeholder="${c.ch==='note'?'A private note — only you see it':c.ch==='inperson'?'What was said (optional)':'Write a message…'}" aria-label="Message">${esc(c.text)}</textarea>
     ${c.ch==='email'&&!g.connected?`<p class="cmp-note">Connect Gmail in Settings to send and receive here. <button type="button" class="lnk" data-act="settings">Settings</button></p>`:''}
-    ${c.ch==='email'&&dr&&dr.needsAddress&&c.tpl!=='blank'?'<p class="cmp-note warn">Add your postal address in Settings first — a commercial email has to carry one.</p>':''}
+    ${c.ch==='email'&&c.tpl!=='blank'&&(pk?!((S.cfg||{}).address):dr&&dr.needsAddress)?'<p class="cmp-note warn">Add your postal address in Settings first — a commercial email has to carry one.</p>':''}
+    ${hs.length?`<p class="cmp-note warn">Fill in ${esc([...new Set(hs)].join(', '))} before it goes.</p>`:''}
+    ${pk&&!r.link&&!['building','claimed'].includes(r.stage)?'<p class="cmp-note">No page for them yet — build it before they say yes.</p>':''}
     <div class="cmp-f"><button type="button" class="lnk" data-act="replyform" data-loc="${loc}" aria-expanded="${!!c.reply}">Log their reply</button>
       <button type="button" class="btn pri" data-act="${act}" data-loc="${loc}"${canSend(c,r)?'':' disabled'}>${ico(ic)}${lab}</button></div>
     <div class="cmp-ok${c.ok?' on':''}" role="group" aria-label="Did it send?"><div>${c.ok?`<span>Sent it on ${esc(CHW[c.ok]||c.ok)}?</span><button type="button" class="btn sm pri" data-act="logsent" data-loc="${loc}">${ico('check')}Log as sent</button><button type="button" class="btn sm quiet" data-act="notyet" data-loc="${loc}">Not yet</button>`:''}</div></div>
@@ -1868,7 +1942,7 @@ function paintMsgs(loc,force){ const m=$('#msgs-'+loc), cid=CUR[loc]; if(!m||!ci
   if(m._h!==h){ m._h=h; m.innerHTML=h; }
   if(force||near||m.dataset.first!=='1'){ m.scrollTop=m.scrollHeight; m.dataset.first='1'; } }
 function paintCmp(loc,focusSel2){ const el=$('#cmp-'+loc); if(!el)return; const m=$('#msgs-'+loc), pinned=nearEnd(m);
-  el.innerHTML=cmpHtml(loc); const t=el.querySelector('[data-f=text]'); grow(t);
+  el.innerHTML=cmpHtml(loc); const t=el.querySelector('[data-f=text]'); grow(t); const c=CMPS[CUR[loc]]; if(c)c.fx=0;
   if(pinned)m.scrollTop=m.scrollHeight;
   if(focusSel2){ const f=el.querySelector(focusSel2); if(f)f.focus({preventScroll:true}); } }
 function grow(t){ if(!t)return; const m=t.closest('.thr'), ms=m&&m.querySelector('.msgs'), pinned=nearEnd(ms);
@@ -1899,7 +1973,7 @@ function after(cid,d,msg){   // a message went out or came in: it joins the thre
   if(!CT[cid]||!CT[cid].contact)return;
   if(d.msg)CT[cid].contact.msgs=[...(CT[cid].contact.msgs||[]),d.msg];
   if(d.row)upsert(d.row);
-  const c=CMPS[cid]; if(c){ c.text=''; c.subj=''; c.tpl='blank'; c.dirty=false; c.ok=''; c.reply=false; c.rtext=''; if(c.ch==='email')c.subj=reSubject(cid); }
+  const c=CMPS[cid]; if(c){ c.text=''; c.subj=''; c.tpl='blank'; c.dirty=false; c.ok=''; c.okPre=null; c.reply=false; c.rtext=''; if(c.ch==='email')c.subj=reSubject(cid); }
   paintBoth(cid,'',true); if(msg)toast(msg);
   const cv=$('#convs'); if(cv&&CUR.m===cid&&cv.scrollTop>0)cv.scrollTo({top:0,behavior:REDUCE?'auto':'smooth'});
 }
@@ -2189,7 +2263,7 @@ const srcLi=s=>{ if(!s)return ''; const u=href(s.url), t=esc(s.title||host(s.url
 
 /* ---------- settings ---------- */
 function modal(sel,html){ const m=$(sel); if(!m.classList.contains('on'))m._opener=document.activeElement; m.innerHTML=html; m.classList.add('on'); m.setAttribute('aria-hidden','false'); layer(); }
-function unmodal(sel){ const m=$(sel); if(!m.classList.contains('on'))return; m.classList.remove('on'); m.setAttribute('aria-hidden','true'); layer();
+function unmodal(sel){ const m=$(sel); if(!m.classList.contains('on'))return; if(sel==='#setp')libFlush(); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); layer();
   const o=m._opener; m._opener=null; if(o&&o.isConnected)o.focus({preventScroll:true}); }
 function gmailBlock(){
   const g=(S&&S.gmail)||{};
@@ -2211,6 +2285,7 @@ function openSettings(){
     <div class="conn">${ico('instagram')}<div><b>Instagram</b><p>Manual for now: first DMs are sent from the app (Instagram allows no other way); replies sync here once the Meta messaging permission is added.</p></div></div>
     <div class="conn">${ico('tiktok')}<div><b>TikTok</b><p>Manual: TikTok opens replies to approved apps only.</p></div></div>
     <p class="sub">Messages</p>
+    <button type="button" class="conn lrow" data-act="library">${ico('book')}<div><b>Message library</b><p>Your openers for each kind of act, and which ones get answered.</p></div></button>
     <label class="fl" for="cSign"><span>Sign the messages as</span></label><input class="inp" id="cSign" maxlength="80" autocomplete="off" value="${esc(c.signoff||'The MySet team')}">
     <label class="fl" for="cAddr"><span>Postal address for emails</span></label><textarea class="inp" id="cAddr" rows="3" maxlength="200" autocomplete="street-address" placeholder="Street, city, postcode, country">${esc(c.address||'')}</textarea>
     <p class="hint2">A commercial email has to carry one — a virtual mailbox address works.</p>
@@ -2220,6 +2295,59 @@ function openSettings(){
     <button type="button" class="btn pri big" data-act="savecfg">Save settings</button></div>`);
   setTimeout(()=>{const h=$('#setT');if(h)h.focus({preventScroll:true});},60);
 }
+
+/* ---------- the message library ----------
+   Edits save themselves a moment after the last keystroke; adding, removing and the
+   ending save at once. The whole library goes each time (it is one small document). */
+let LIBD=null, LIBT=0;
+function libStats(){
+  const by={}, end={a:{n:0,r:0},s:{n:0,r:0}};
+  for(const r of S.contacts||[]){ if(!r.pre)continue; const x=by[r.pre.k]||(by[r.pre.k]={n:0,r:0}), e=end[r.pre.s?'s':'a'], got=(r.replied||0)>r.pre.t;
+    x.n++; e.n++; if(got){x.r++;e.r++;} }
+  return {by,end};
+}
+const rpct=x=>x&&x.n?Math.round(100*x.r/x.n):0;
+function rateHtml(x,best){ const n=(x&&x.n)||0; return `<span class="rate${best&&n?' best':''}">${n?`${rpct(x)}% · ${x.r}/${n}`:'Not sent yet'}<i style="--w:${rpct(x)}%"></i></span>`; }
+function preHtml(p,st,best,open){
+  const x=st.by[p.k];
+  return `<li class="pre${open?' on':''}" data-k="${esc(p.k)}"><button type="button" class="pre-h" data-act="libopen" aria-expanded="${!!open}" aria-controls="pb-${esc(p.k)}"><span class="pre-n">${esc(p.name)}</span>${kb(p.kind)}${rateHtml(x,best===p.k)}${ico('chev')}</button>
+    <div class="fold${open?' on':''}" id="pb-${esc(p.k)}"${open?'':' inert'}><div><div class="pre-b">
+      <label class="fl" for="ln-${esc(p.k)}"><span>Name</span></label><input class="inp" id="ln-${esc(p.k)}" data-lf="name" maxlength="40" value="${esc(p.name)}" autocomplete="off">
+      <label class="fl" for="lt-${esc(p.k)}"><span>Message</span><span>[Name] · [Venue] · [City]</span></label><textarea class="inp" id="lt-${esc(p.k)}" data-lf="text" rows="5" maxlength="1500">${esc(p.text)}</textarea>
+      <label class="fl" for="la-${esc(p.k)}"><span>Its closing question</span></label><input class="inp" id="la-${esc(p.k)}" data-lf="ask" maxlength="200" value="${esc(p.ask||'')}" placeholder="Want me to send it?" autocomplete="off">
+      <label class="fl" for="lm-${esc(p.k)}"><span>Opens itself for contacts tagged</span></label><input class="inp" id="lm-${esc(p.k)}" data-lf="match" maxlength="120" value="${esc((p.match||[]).join(', '))}" placeholder="wedding, events" autocomplete="off">
+      <div class="row"><div class="seg" role="group" aria-label="For">${['artist','venue'].map(k=>`<button type="button" data-act="libkind" data-v="${k}" aria-pressed="${p.kind===k}">${k==='venue'?'Venues':'Artists'}</button>`).join('')}</div>
+        <button type="button" class="btn sm quiet" data-act="libdel">${ico('trash')}Remove</button></div>
+    </div></div></div></li>`;
+}
+function libList(open){
+  const st=libStats(), ranked=LIBD.list.filter(p=>(st.by[p.k]||{}).n>=3).sort((a,b)=>rpct(st.by[b.k])-rpct(st.by[a.k])), best=ranked.length>1?ranked[0].k:'';
+  $('#libL').innerHTML=LIBD.list.map(p=>preHtml(p,st,best,p.k===open)).join('')||'<p class="hint2">No presets. Add one, or put the originals back.</p>';
+  const n=$('#libN'); if(n)n.textContent=LIBD.list.length;
+}
+function openLib(open){
+  if(!S)return; LIBD=JSON.parse(JSON.stringify(S.lib||{list:[],soft:'',ending:'ab'}));
+  const st=libStats(), e=st.end, bestE=e.a.n>=3&&e.s.n>=3?(rpct(e.s)>rpct(e.a)?'s':rpct(e.a)>rpct(e.s)?'a':''):'';
+  modal('#setp',`<div class="mcard lib"><div class="mh"><h2 id="setT" tabindex="-1">Message library</h2><span class="lsv" id="libSv" aria-live="polite"></span><button type="button" class="ibtn" data-act="mclose" aria-label="Close">${ico('close')}</button></div>
+    <p class="hint2 lede">Your openers, one per kind of act. <b>[Name]</b> and <b>[Venue]</b> fill themselves in. Pick one from any conversation’s composer.</p>
+    <p class="sub">The ending</p>
+    <div class="endc"><div class="seg" role="group" aria-label="Which ending goes out">${[['ab','Split evenly'],['ask','Always theirs'],['soft','Always softer']].map(([k,w])=>`<button type="button" data-act="libend" data-v="${k}" aria-pressed="${LIBD.ending===k}">${w}</button>`).join('')}</div>
+      <div class="erow"><b>Theirs</b><span>Each preset’s own question</span>${rateHtml(e.a,bestE==='a')}</div>
+      <div class="erow"><b>Softer</b><input class="inp" id="libSoft" data-lf="soft" maxlength="200" value="${esc(LIBD.soft||'')}" aria-label="The softer ending" autocomplete="off">${rateHtml(e.s,bestE==='s')}</div>
+      <p class="hint2">Split evenly gives each new message the ending that has gone out less, so the two get a fair race. A reply counts once, for the first preset that went to them.</p></div>
+    <p class="sub">Presets <span id="libN"></span></p><ul class="pl" id="libL"></ul>
+    <div class="lib-f"><button type="button" class="btn sm" data-act="libadd">${ico('plus')}New preset</button><button type="button" class="lnk" data-act="libreset">Put the originals back</button></div></div>`);
+  libList(open);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const m=$('#setp .mcard'); if(m)m.classList.add('grown'); const o=open&&$(`#libL .pre[data-k="${CSS.escape(open)}"]`); if(o)o.scrollIntoView({block:'nearest',behavior:REDUCE?'auto':'smooth'}); }));
+  setTimeout(()=>{const h=$('#setT');if(h)h.focus({preventScroll:true});},60);
+}
+function libSave(soon){
+  clearTimeout(LIBT); if(soon){ LIBT=setTimeout(()=>libSave(),700); return Promise.resolve(); }
+  const lib={list:LIBD.list,soft:LIBD.soft,ending:LIBD.ending};
+  return api('savelib',{lib}).then(d=>{ if(failed(d))return; S.lib=d.lib; const sv=$('#libSv'); if(sv){ sv.textContent='Saved'; sv.classList.add('on'); clearTimeout(sv._t); sv._t=setTimeout(()=>sv.classList.remove('on'),1400); } });
+}
+function libFlush(){ if(LIBT){ clearTimeout(LIBT); LIBT=0; libSave(); } }
+const libPre=b=>{ const li=b.closest('.pre'); return li&&LIBD&&LIBD.list.find(p=>p.k===li.dataset.k); };
 
 /* ---------- the theme ----------
    Dark is HQ's own; light is one tap on the sun. The choice is kept in this browser
@@ -2246,7 +2374,7 @@ paintTheme();
 
 /* ---------- ⌘K ---------- */
 const CMDS=[['new-artist','New artist profile','mic'],['new-venue','New venue profile','building'],['messages','Messages','bubble'],['pipeline','Pipeline','list'],
-  ['review','Needs review','flag'],['due','Follow-ups due','cal'],['unread','Unread messages','bubble'],['settings','Settings','gear'],['theme','','','theme appearance dark light']];
+  ['review','Needs review','flag'],['due','Follow-ups due','cal'],['unread','Unread messages','bubble'],['settings','Settings','gear'],['library','Message library','book','presets templates openers'],['theme','','','theme appearance dark light']];
 const cmdList=()=>CMDS.map(([k,w,g,kw])=>k==='theme'?[k,isLight()?'Dark mode':'Light mode',isLight()?'moon':'sun',kw]:[k,w,g,kw]);
 let PALI=0, PALS=[];
 function openPal(){
@@ -2275,6 +2403,7 @@ function palGo(i){
   if(k==='new-artist'||k==='new-venue'){ KIND=k==='new-venue'?'venue':'artist'; keep('myset.hq.kind',KIND); kindState(true); if(PHONE)setMTab('create'); showForm(true); $('#pNew').scrollIntoView({behavior:REDUCE?'auto':'smooth',block:'start'}); return; }
   if(k==='messages'){ if(PHONE)setMTab('msg'); else $('#pMsg').scrollIntoView({behavior:REDUCE?'auto':'smooth',block:'start'}); return; }
   if(k==='settings'){ openSettings(); return; }
+  if(k==='library'){ openLib(); return; }
   if(k==='theme'){ setTimeout(()=>setTheme(isLight()?'dark':'light'),REDUCE?0:300); return; }   // after the palette has faded
   if(k==='pipeline'||k==='review'||k==='due'||k==='unread'){ if(k!=='pipeline')setFilter(()=>{F.f=new Set([k]);}); if(PHONE)setMTab('pipe'); else $('#pPipe').scrollIntoView({behavior:REDUCE?'auto':'smooth',block:'start'}); }
 }
@@ -2293,7 +2422,21 @@ const ACTS={
       :'The key is missing in Netlify’s environment. Builds wait in line until it is set.','OK',false,true); },
   lockhq:async()=>{ const d=await api('lock'); if(d&&d.error==='locked')return; if(failed(d))return; lockUp({}); },
   theme:()=>setTheme(isLight()?'dark':'light'),
-  settings:()=>openSettings(), mclose:()=>{unmodal('#setp');unmodal('#pal');}, palette:()=>openPal(), palgo:b=>palGo(+b.dataset.i),
+  settings:()=>openSettings(), mclose:()=>{unmodal('#setp');unmodal('#pal');},
+  library:b=>openLib(b.dataset.k||''),
+  libopen:b=>{ const li=b.closest('.pre'), on=!li.classList.contains('on'); li.classList.toggle('on',on); b.setAttribute('aria-expanded',String(on)); fold('#pb-'+CSS.escape(li.dataset.k),on); },
+  libkind:b=>{ const p=libPre(b); if(!p||p.kind===b.dataset.v)return; p.kind=b.dataset.v; b.parentNode.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    const k=b.closest('.pre').querySelector('.kb'); if(k)k.outerHTML=kb(p.kind); libSave(); },
+  libend:b=>{ LIBD.ending=b.dataset.v; b.parentNode.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); libSave(); },
+  libadd:()=>{ const k='p'+Date.now().toString(36); LIBD.list.push({k,name:'New preset',kind:'artist',text:'Hey [Name] — ',ask:'',match:[]}); libList(k); libSave();
+    const n=$('#ln-'+CSS.escape(k)); if(n){ n.closest('.pre').scrollIntoView({block:'nearest',behavior:REDUCE?'auto':'smooth'}); n.focus({preventScroll:true}); n.select(); } },
+  libdel:async b=>{ const p=libPre(b); if(!p)return; if(!await ask(`Remove “${p.name}”?`,'Messages already sent with it keep their history.','Remove',true))return;
+    LIBD.list=LIBD.list.filter(x=>x!==p); libList(); await libSave(); toast('Preset removed'); },
+  libreset:async()=>{ if(!await ask('Put the originals back?','The eight openers come back as first written. Presets you added go, and so do your edits.','Put them back',true))return;
+    clearTimeout(LIBT); LIBT=0; const d=await api('savelib',{lib:null}); if(failed(d))return; S.lib=d.lib; openLib(); toast('The originals are back'); },
+  cend:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; const v=b.dataset.v==='1'; if(!!c.soft===v)return; const p=preBy(preOn(c)); c.soft=v;
+    if(!c.dirty)fillTpl(c); else if(p){ const was=v?p.ask:(S.lib||{}).soft, now=v?(S.lib||{}).soft:p.ask, i=was?c.text.lastIndexOf(was):-1; if(i>=0){ c.text=c.text.slice(0,i)+now+c.text.slice(i+was.length); c.fx=1; } }
+    paintCmp(loc,`[data-act=cend][data-v="${v?1:0}"]`); }, palette:()=>openPal(), palgo:b=>palGo(+b.dataset.i),
   kind:b=>{ if(KIND===b.dataset.k)return; KIND=b.dataset.k; keep('myset.hq.kind',KIND); kindState(true); },
   more:b=>{ const on=b.getAttribute('aria-expanded')!=='true'; b.setAttribute('aria-expanded',String(on)); fold('#nMore',on); if(on)setTimeout(()=>{const x=$('#nP0');if(x)x.focus({preventScroll:true});},120); },
   savelead:()=>saveLead(),
@@ -2383,23 +2526,23 @@ const ACTS={
     if(c.ch===b.dataset.ch)return; c.ch=b.dataset.ch; c.ok=''; if(!c.dirty)fillTpl(c); else if(c.ch==='email'&&!c.subj)c.subj=reSubject(c.cid)||(((CT[c.cid]||{}).drafts||{}).email||{}).subject||'';
     paintCmp(loc,`[data-act=cch][data-ch="${c.ch}"]`); void r; },
   csend:async b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return;
-    const d=await api('send',{cid:c.cid,subject:c.subj.trim(),text:c.text.trim()});
+    const d=await api('send',{cid:c.cid,subject:c.subj.trim(),text:c.text.trim(),...preBody(c)});
     if(d&&!d.ok&&d.error==='gmail-not-connected'){ toast(ERRW['gmail-not-connected']); await load(); paintBoth(c.cid,'cmp'); return; }
     if(failed(d))return; after(c.cid,d,'Sent from your Gmail'); },
   cmail:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; const e=((CT[c.cid]||{}).contact||{}).email||'';
     const u='mailto:'+encodeURIComponent(e)+'?subject='+encodeURIComponent(c.subj||'')+'&body='+encodeURIComponent(c.text||'');
-    c.ok='email'; c.okText=c.text; c.okSubj=c.subj; location.href=u; paintCmp(loc); },
+    c.ok='email'; c.okText=c.text; c.okSubj=c.subj; c.okPre=preOn(c)?{k:preOn(c),s:!!c.soft}:null; location.href=u; paintCmp(loc); },
   copen:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; const ct=(CT[c.cid]||{}).contact||{}, u=reachUrl(c.ch,ct,c.text);
     if(!u)return toast(WHY[c.ch]||'No way to reach them there yet');
     if(['ig','tiktok','fb'].includes(c.ch)&&c.text)copyNow(c.text);
-    openExt(u); c.ok=c.ch; c.okText=c.text; c.okSubj='';
+    openExt(u); c.ok=c.ch; c.okText=c.text; c.okSubj=''; c.okPre=preOn(c)?{k:preOn(c),s:!!c.soft}:null;
     if(['ig','tiktok','fb'].includes(c.ch))toast(`Copied — paste it into ${CHW[c.ch]}`);
     paintCmp(loc); },
   clog:async b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return;
-    const d=await api('log',{cid:c.cid,ch:c.ch,dir:'out',text:c.text.trim()||(c.ch==='inperson'?'Talked in person.':'')}); if(failed(d))return;
+    const d=await api('log',{cid:c.cid,ch:c.ch,dir:'out',text:c.text.trim()||(c.ch==='inperson'?'Talked in person.':''),...(c.ch==='note'?{}:preBody(c))}); if(failed(d))return;
     after(c.cid,d,c.ch==='note'?'Note added':'Logged'); },
   logsent:async b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c||!c.ok)return;
-    const body={cid:c.cid,ch:c.ok,dir:'out',text:(c.okText||c.text).trim()}; if(c.ok==='email'&&(c.okSubj||c.subj))body.subject=(c.okSubj||c.subj).trim();
+    const body={cid:c.cid,ch:c.ok,dir:'out',text:(c.okText||c.text).trim(),...preBody(c,true)}; if(c.ok==='email'&&(c.okSubj||c.subj))body.subject=(c.okSubj||c.subj).trim();
     const d=await api('log',body); if(failed(d))return; after(c.cid,d,`Logged as sent · ${CHW[c.ok]||c.ok}`); },
   notyet:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; c.ok=''; paintCmp(loc); },
   replyform:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; c.reply=!c.reply; if(c.reply&&!c.rch)c.rch=['email','inperson','note'].includes(c.ch)&&c.ch!=='email'?'ig':c.ch;
@@ -2427,6 +2570,9 @@ document.addEventListener('input',e=>{
   if(t.closest&&t.closest('#ovF'))ovState();
   if(t.closest&&(t.closest('#wF')||t.closest('#lF')))wordsState();
   if(t.dataset&&t.dataset.tag){ const loc=t.dataset.tag; if(/,/.test(t.value)){ t.value.split(',').slice(0,-1).forEach(x=>addTag(loc,x)); t.value=t.value.split(',').pop(); } SUGI[loc]=-1; paintSug(loc); }
+  if(t.dataset&&t.dataset.lf&&LIBD){ const lf=t.dataset.lf;
+    if(lf==='soft')LIBD.soft=t.value; else { const p=libPre(t); if(p){ p[lf]=lf==='match'?t.value.split(','):t.value; if(lf==='name'){ const n=t.closest('.pre').querySelector('.pre-n'); if(n)n.textContent=t.value||'Untitled'; } } }
+    libSave(true); return; }
   const f=t.dataset&&t.dataset.f, loc=t.dataset&&t.dataset.loc, c=loc&&CMPS[CUR[loc]];
   if(c&&(f==='text'||f==='subj'||f==='rtext')){ if(f==='text'){c.text=t.value;c.dirty=true;grow(t);} else if(f==='subj'){c.subj=t.value;} else c.rtext=t.value;
     const r=rowBy(c.cid)||(CT[c.cid]||{}).row, pb=$(`#cmp-${loc} .cmp-f .btn.pri`); if(pb)pb.disabled=!canSend(c,r); }
