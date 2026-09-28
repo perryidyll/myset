@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 12:12 — 4a45734 — nifty-jones-b27e63@fix/invited-names-leaving (4 files since origin/main)
+**tl;dr:** An artist's Settings no longer lists somebody they invited who has since deleted their account, by name or in the count
+**Other sessions:** Decision 0098 amended, INVARIANT 0dh: auth.mjs list action filters referredBy rows with !x.del. Sessions rebasing auth.mjs/test/accounts.mjs (3d368c, 4b462c): the change is one filter line and a new section after LEAVING.
+
 ### 2026-09-28 12:08 — cde47da — inspiring-feynman-75227a@docs/founder-tools-live (6 files since origin/main)
 **tl;dr:** Docs only: the founder's tools needing the founding page's owner seat (decision 0100) is live as 7a84cb7, verified on Netlify's production deploy [skip ci]
 **Other sessions:** Puzzle changelog 2431 = decision 0100, linked to steps 369974 (e06), 370002 (y07) and 370080 (i06), each reloaded from its sheet. Ledger ACC-005; ACC-004's next action no longer lists the two gaps 0100 closed. Still open, not fixed: owner-only Studio controls drawn for member seats on any page (Your earnings, Got a code?, the sign-in Add field).
