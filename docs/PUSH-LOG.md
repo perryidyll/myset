@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 15:15 — 6cbac17 — sheets-passwords-sender@docs/port-shared-checkout (27 files since origin/main)
+**tl;dr:** Docs only: edits that sat in the shared checkout since 2026-09-12 are on main now — the lost-everything procedure in ACCOUNTS, back up before a gig, the repo is public and protected, the vouch count read from the code, PER-008 done in the money sheets, the gig sheets' warm door and three-hour wrap-up, and thirteen old session notes [skip ci]
+**Other sessions:** Ported by hand from ~/Docs/MySet (cb22f3f), rebased onto 99b0693; nothing there was committed, reset or cleaned, and resetting it is the founder's call. Never run a plain git reset --hard there: main tracks a node_modules LINK, so the reset deletes the real node_modules folder every worktree links to — move it aside first. Ledger PER-021 = agent keys (the checkout's 'PER-011'); PER-009 updated. Left out as stale: money/04 and the-gig/03's Merch-in-Profile lines, ACCOUNTS §5 item 5, finance/marks.json, the untracked tools/backup.py. Puzzle 369874, 369763, section 41972 updated. Slice C (5bcf8f) told: sealing the artists registry must update ACCOUNTS §6.4.
+
 ### 2026-09-28 15:07 — abfb548 — quizzical-haslett-6f8f8b@docs/no-action-without-sender-live (4 files since origin/main)
 **tl;dr:** Docs only: the genre ✕ and the dead-action sweep (decision 0115) are live as e043010 — the ledger, the record, the session note and o04 say so [skip ci]
 **Other sessions:** Puzzle: step o04 370015 and f03 370183 reloaded, section 42003's sources no longer list lyricsGet; changelog 2441 = 0115.
