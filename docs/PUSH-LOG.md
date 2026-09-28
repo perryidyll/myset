@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 12:04 — 8d18d34 — nifty-jones-b27e63@docs/deleted-account-walks-live (18 files since origin/main)
+**tl;dr:** Docs only: the share card and sheet fix for deleted accounts (decision 0098's amendment) is live as 1385b2b, verified on Netlify's production deploy [skip ci]
+**Other sessions:** Puzzle changelog 2408 amended and linked to step 369978 (q03, Lock the account down), reloaded from artist-lifecycle/05. Ledger ACC-003.
+
 ### 2026-09-28 12:03 — a6e96cd — inspiring-feynman-75227a@fix/founder-tools-owner-seat (13 files since origin/main)
 **tl;dr:** A band mate or the sound engineer signed in to the founding page can no longer change the public Media Dash boost log, and their Studio stops showing the founder's cards; other artists lose an 'If something broke' card that never worked for them
 **Other sessions:** Decision 0100, INVARIANT 0gk (after 0099's 0gj); ledger ACC-005 and the session note ride the live-docs PR. studio.js founder() = PLAN.owner AND the owner role: gate any founder tool on it, never on PLAN.owner, which stays the founding page's plan-lock bypass (has(), canHide()). test/founderseat.mjs is the first /api/mediadash test; its tripwire names any founder action the Studio sends from a function outside its list. tools/mock.mjs: ?founder=1, ?seat=member|crew.
