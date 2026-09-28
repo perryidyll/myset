@@ -5,7 +5,7 @@ puzzle_section_id: 41989
 sources:
   - test/run.sh (the suite, in order), test/blobs-fake.mjs, test/stripe-fake.mjs, test/register.mjs
   - tools/sheetcheck.mjs, tools/uicheck.mjs, tools/clipcheck.mjs, tools/prod.py, tools/loadsim.py
-  - AGENTS.md § Build and test
+  - AGENTS.md § Build and test (no install step in a worktree: decision 0116)
   - MYSET-MASTER-OVERVIEW.md §6.1 (draft previews), §6.4 (Testing), §6.5, Part 8 (previews share production data)
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_sections — step counts and connections match)
@@ -20,7 +20,7 @@ verified: sources read 2026-09-12; `python3 tools/prod.py` run read-only 2026-09
 
 | id | step | type | executor | role (RACI) | tool | notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| t01 | Run the whole suite | task | AI Agent | Coding agent R | Claude Code | `sh test/run.sh` — every file in `test/`, in the order the script names them, from syntax to the account system. The suites run the **real handlers** against an in-memory store that implements the same etag behaviour as production (`test/blobs-fake.mjs`, injected by `test/register.mjs`); Stripe is a fake that **records the options of every call**, which is how a direct charge is proved direct. No dev server; nothing touches production. The assertion count is in §2.1. `src: test/run.sh; overview §6.4` |
+| t01 | Run the whole suite | task | AI Agent | Coding agent R | Claude Code | `sh test/run.sh` — every file in `test/`, in the order the script names them, from syntax to the account system. The suites run the **real handlers** against an in-memory store that implements the same etag behaviour as production (`test/blobs-fake.mjs`, injected by `test/register.mjs`); Stripe is a fake that **records the options of every call**, which is how a direct charge is proved direct. No dev server; nothing touches production. The assertion count is in §2.1. **No install step in a worktree:** `node_modules` is never tracked, and Node finds the shared checkout's by looking in every parent folder; a checkout anywhere else runs `npm ci` once. `src: test/run.sh; overview §6.4; AGENTS.md § Build and test; decision 0116` |
 | t02 | `netlify dev` cannot run the write paths | conditional | AI Agent | Coding agent R | Netlify | Its storage sandbox returns no version tag, so `casDoc` falls back to `onlyIfNew` and every write after the first fails as busy. Use the suite, not the dev server. `src: AGENTS.md § Build and test; test/run.sh header` |
 | t03 | A test double must not be kinder than the real thing | conditional | AI Agent | Coding agent R | Claude Code | The Stripe fake's `checkout.sessions.list` once ignored the `created` window, so every session was visible in every query — and no test could catch a lookup that only reached back one month. A double more permissive than production is a test that passes for the wrong reason. `src: overview §6.4` |
 | t04 | Stamp the count | task | AI Agent | Coding agent R | Claude Code | `node tools/overview.mjs --tests` runs the suite and writes the assertion count into the overview's generated block. `src: overview §6.4, §7.1` |
