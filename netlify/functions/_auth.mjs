@@ -82,7 +82,8 @@ const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','st
      checks the toml against this list. None was held by anybody on 2026-09-25. */
   'shows','moneymodel','financialmodel','report','metrics','artists',
   'mediadash',                  // the Instagram dashboard (0092) — found by that check on 2026-09-25
-  'factory', 'sample']);        // the sample-page console and its door (0101)
+  'factory', 'sample',          // the sample-page console and its door (0101)
+  'crm']);                      // MySet HQ, the founder's outreach desk (0108) — held by nobody on 2026-09-28
 
 export async function artistBySlug(slug) {
   const a = await readArtists();

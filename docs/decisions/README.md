@@ -117,6 +117,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0105](0105-the-owner-gives-each-band-mate-and-crew-seat-tab-b.md) | The owner gives each band mate and crew seat, tab by tab, hidden, view or edit | 2026-09-28 | auth | decided | user-confirmed |
 | [0106](0106-a-renamed-page-keeps-its-old-address-and-no-other-page-can-take-it.md) | A renamed page, an artist's or a venue's, keeps answering at its old address, and no other page can take that address | 2026-09-28 | auth | decided | claude |
 | [0107](0107-the-pre-show-checklist-asks-for-a-big-sign-and-25-50-table-cards.md) | The pre-show checklist asks for one big sign and 25–50 small table cards, and the sign page prints both in one go | 2026-09-28 | ui | decided | perry |
+| [0108](0108-myset-hq-the-founders-outreach-desk-and-crm.md) | MySet HQ is the founder's outreach desk — a form that builds a page, a CRM table whose stages are read off the pages, and one place for every conversation | 2026-09-28 | growth | decided | perry |
+| [0109](0109-outreach-email-goes-through-the-founders-own-gmail-and-first-dms-are-sent-by-hand.md) | HQ's email goes out through the founder's own Gmail and replies are read back into the conversation; a first Instagram or TikTok message is sent by hand, one tap from HQ, and logged | 2026-09-28 | growth | decided | claude |
 | [0114](0114-an-alert-reaches-the-seats-that-can-see-what-it-is-about.md) | An alert reaches only the seats that can see what it is about, and a sign-out ends that phone's alerts | 2026-09-28 | auth | decided | claude |
 | [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md) | Every action a Studio endpoint takes is one a page sends | 2026-09-28 | general | decided | user-confirmed |
 
@@ -127,6 +129,8 @@ To start a new one: `./tools/decide.sh "a short title"`
 **docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) · [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md)
 
 **general** — [0056](0056-fans-can-rsvp-to-a-listed-show-without-an-account.md) · [0115](0115-every-action-a-studio-endpoint-takes-is-one-a-page.md)
+
+**growth** — [0108](0108-myset-hq-the-founders-outreach-desk-and-crm.md) · [0109](0109-outreach-email-goes-through-the-founders-own-gmail-and-first-dms-are-sent-by-hand.md)
 
 **history** — [0057](0057-a-filed-night-can-be-renamed-by-hand-from-the-mone.md)
 
