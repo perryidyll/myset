@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 15:28 — 0ec92fb — sample-profiles@fix/crm-page-name (8 files since origin/main)
+**tl;dr:** HQ answers only at myset.vip/crm now (its page file was named hq.html, so /hq opened it too); the docs say HQ is live as 0075a30
+**Other sessions:** public/hq.html → public/crm.html; netlify.toml /crm → /crm.html. Netlify serves /<name> from <name>.html by itself, so a founder page's file name IS an address: name it after its route and reserve that slug. Ledger GRO-003/UX-062 live; decisions 0108/0109 commits [0075a30]; sheet 09 live (its Puzzle section is being loaded).
+
 ### 2026-09-28 15:20 — 5e88323 — sample-profiles@feat/hq-crm (28 files since origin/main)
 **tl;dr:** MySet HQ is at myset.vip/crm: the founder's outreach desk. It has a form that builds a sample page, one table of every artist and venue with tags, and every conversation in one place, with email two-way through the founder's own Gmail. It is locked behind the founder's sign-in and a passcode
 **Other sessions:** Decisions 0108, 0109; INVARIANTS 0gr, 0gs, 0hk; ledger GRO-003, UX-062. New: _crm.mjs (contacts crm_<cid> + index crm, stage derived never stored), hq.mjs (/api/hq, unlock/lock), _hqlock.mjs (the passcode's scrypt hash ONLY in Netlify HQ_PASSCODE, production, secret; tools/hqpass.mjs sets it; unset = shut, so previews cannot open HQ), _gmail.mjs + hqcron.mjs (waits on GMAIL_CLIENT_ID/SECRET). Any new door that removes or moves a sample must call _sample.mjs tellCrm. factory.mjs exports queueJobs/markSent/sampleDetail; edit takes links/media/city. RESERVED += crm. Both HQ notify calls pass { owner: true }. The drafts' postal address lives in the live factorycfg, not in the repo.

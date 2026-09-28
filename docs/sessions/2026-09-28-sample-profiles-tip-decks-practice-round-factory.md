@@ -85,3 +85,10 @@
 - `test/hq.mjs` covers each refusal, and removing the gate or the lockout fails it. A tripwire fails on any hash written into the repository.
 - The whole suite, rebased on `d5e53fb`: 4,825 assertions, 0 failing. The page (a helper agent, reviewed; escaping checked on every place a name, a message or a link is drawn) walked on localhost behind the lock at 800 and 390 px.
 - Not checked on the live site: a right passcode opening it. That is the founder's to type.
+
+**Shipped:** PR #137 merged as `0075a30`. Netlify deploy `6aba23d4` was ready at 08:23 UTC. Verified by content on myset.vip:
+- `/crm` serves *HQ — MySet*, with the lock screen and the sign-in gate.
+- `/api/hq` answers 401 to a stranger, both for the summary and for a passcode try.
+- `www.myset.vip/crm` redirects to `/crm`.
+
+Found on the live site afterwards: Netlify serves `/<name>` from `<name>.html` by itself, so `/hq` answered with HQ too, and `hq` was no longer reserved. The page file is now `crm.html` (the follow-up PR). Nobody held `hq` or `crm` in the live registries (read-only check).

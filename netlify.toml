@@ -96,10 +96,11 @@
 
 # myset.vip/crm — MySet HQ, the founder's outreach desk and CRM (decision 0108), behind
 # the owner seat and a passcode. Above the catch-all for the same reason; `crm` is a
-# reserved slug.
+# reserved slug. The file carries the address's name: Netlify serves /<name> from
+# <name>.html by itself, so a file called hq.html also answered at /hq.
 [[redirects]]
   from = "/crm"
-  to = "/hq.html"
+  to = "/crm.html"
   status = 200
 
 # The printable business report (decision 0065). Above the catch-all like the
