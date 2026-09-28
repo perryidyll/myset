@@ -545,10 +545,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
-| Invariants | 281 (last: 0fn) |
-| Test suites | 62 |
+| Invariants | 282 (last: 0fn) |
+| Test suites | 63 |
 | Assertions | **4,182**, 0 failing, last run 2026-09-27 |
-| Decision records | 104 |
+| Decision records | 105 |
 
 ### Feature flags in force
 

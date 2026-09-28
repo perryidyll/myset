@@ -3,13 +3,14 @@ tab: Artist lifecycle
 section: Leaving, with thirty days to change your mind
 puzzle_section_id: 41982
 sources:
-  - netlify/functions/_account.mjs (exportArtist, keysFor, startDeletion, cancelDeletion, freeSlug, DELETE_GRACE_MS, DELQ), admin.mjs (accountExport, accountDelete, accountUndelete, accountFreeSlug), _billing.mjs cancelForDeletion, autocron.mjs (the purge), _auth.mjs publicArtist
+  - netlify/functions/_account.mjs (exportArtist, keysFor, startDeletion, cancelDeletion, freeSlug, DELETE_GRACE_MS, DELQ), admin.mjs (accountExport, accountDelete, accountUndelete, accountFreeSlug), _billing.mjs cancelForDeletion, autocron.mjs (the purge), _auth.mjs publicArtist, artistpage.mjs card, _warehouse.mjs deletedOn
   - ACCOUNTS.md §2, §6.6
   - MYSET-MASTER-OVERVIEW.md §2.7
-  - INVARIANTS.md 0bu
+  - INVARIANTS.md 0bu, 0dh
+  - docs/decisions/0098 (and its amendment, 2026-09-28)
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps)
-verified: code read 2026-09-12 (_account.mjs startDeletion/cancelDeletion/freeSlug; the 423 rule in ACCOUNTS.md)
+verified: code read 2026-09-12 (_account.mjs startDeletion/cancelDeletion/freeSlug; the 423 rule in ACCOUNTS.md); q03 re-read 2026-09-28 against 1385b2b (the share card and the sheet, decision 0098)
 ---
 
 # Leaving, with thirty days to change your mind
@@ -22,7 +23,7 @@ The founder's words: *"a 2-step double confirmation they have to click twice bef
 | --- | --- | --- | --- | --- | --- | --- |
 | q01 | Download my data | document | Person | Artist R · MySet server R | Netlify | `accountExport` → `exportArtist`: every document `keysFor(aid)` names (show, fans, meta, history, events, lists, profile, posts, billing, ledger, passkeys…) as one JSON file — **never a fan's device id** (INVARIANT 0bu; stripped from tips and orders before they leave). Owner and member may export. `src: _account.mjs exportArtist; ACCOUNTS.md §4` |
 | q02 | Delete my account — two screens | form | Person | Artist R | Netlify | Owner only (403 otherwise). Two confirmations, and the word `DELETE` typed (`confirm: 'DELETE'` in the body). `src: admin.mjs accountDelete; ACCOUNTS.md §4` |
-| q03 | Lock the account down | database | Automation | MySet server R · Artist I · Fan I | Netlify | `startDeletion`: the registry row is marked `del = {at, by, purgeAt, slugFreed:false}`; `publicArtist` refuses it, so **every public endpoint 404s for free** — the page, the voting screen and the community page go dark. Any running show is filed; the calendar comes out of the city and schedule indexes. **Sessions are not killed and `rev` is not bumped** — the owner must be able to get back in to undo. `src: _account.mjs startDeletion; ACCOUNTS.md §6.6` |
+| q03 | Lock the account down | database | Automation | MySet server R · Artist I · Fan I | Netlify | `startDeletion`: the registry row is marked `del = {at, by, purgeAt, slugFreed:false}`; `publicArtist` refuses it, so **every public endpoint 404s for free** — the page, the voting screen and the community page go dark, and so does a pasted link's preview (the `/:slug` share card resolves through `publicArtist` too, decision 0098). Any running show is filed; the calendar comes out of the city and schedule indexes. **Sessions are not killed and `rev` is not bumped** — the owner must be able to get back in to undo. The founder's Google Sheet keeps the account, because its nights happened, and its Artists, Gigs and Venues rows say `Being deleted on` with the purge date. `src: _account.mjs startDeletion; artistpage.mjs card; _warehouse.mjs deletedOn; ACCOUNTS.md §6.6; decision 0098` |
 | q04 | Stop billing the same day | payment | Automation | MySet server R | Stripe | `cancelForDeletion` cancels the subscription immediately — never keep charging somebody who has left. → *Money → Plans and billing* p14. `src: _billing.mjs cancelForDeletion` |
 | q05 | Answer 423 to everything else | conditional | Automation | MySet server R · Artist I | Netlify | Every Studio action except undo, export, the plan and the portal answers **423** with the sentence that tells them the way back. Soft delete locks the account down; it must never lock the owner out. `src: ACCOUNTS.md §6.6` |
 | q06 | Hold the page name | conditional | Automation | MySet server R | Netlify | The slug is **held for the whole window** — page names are printed on QR codes stuck to bar tables; freeing it would let a stranger take it and land a room on somebody else's setlist, and Undo would be a promise the system could not keep. The banner offers `accountFreeSlug` → `freeSlug` as a deliberate act, not a surprise. `src: _account.mjs freeSlug; ACCOUNTS.md §6.6` |

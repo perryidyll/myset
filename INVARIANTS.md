@@ -1909,6 +1909,8 @@ If you are about to violate one, stop and say so rather than working around it.
 
 0gj. **The founder's platform tools in `admin.mjs` need the founding page's OWNER seat, and every name in a role table is an action a handler takes.** `isPlatformOwner(aid)` says which page, never who — a member or crew seat signed in to the founding page is on it too — so the platform block at the end of `handlePlan` (flags, the ID queue, promo codes, a venue's plan and tick, the sheet, the bug list) asks for both, and answers anyone else with the same 401. `CAPABILITY` and `OWNER_ONLY` are deny-lists: a row naming an action no handler has does not merely do nothing, it leaves the real action open. That happened twice (`profileSave`; then `setChart`, `listApply` and five more, while crew could empty the library with `clearSetlist`). `test/structure.mjs` refuses a name no handler branches on and a capability no role has; `test/accounts.mjs` holds both halves. Decision `0099`.
 
+0gk. **The founder's tools need the founding page's OWNER seat outside `admin.mjs` too: on Media Dash and in the Studio.** `mediadash.mjs` takes a boost row only from the founding page's owner seat; the recovery key and the studio code are owner doors already. Before this, a band mate or the sound engineer signed in to that page could log, overwrite or remove rows on the public dashboard. The Studio draws the founder's cards (the ID queue, the flags, the sheet, the codes you hand out, the venues, MySet's books, the bug list) and sends their calls only when `founder()` is true: `PLAN.owner` AND the owner role. `PLAN.owner` alone means only the page. It keeps that meaning because it is also the founding page's plan-lock bypass (`has()`, `canHide()`), which every seat on that page is owed. This widens 0gj (decision 0099) from `admin.mjs` to the page and to Media Dash. `test/founderseat.mjs` holds both halves, plus a tripwire that names any founder action the Studio sends from a function it does not know. Decision `0100`.
+
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and
     `normEmail` strips `|`). Revocation is a normally-ABSENT `dead` map on the
@@ -1956,7 +1958,8 @@ If you are about to violate one, stop and say so rather than working around it.
     share card (`artistpage.mjs`) resolved it alone and kept a deleted account's
     name and portrait on link previews (`test/sharecard.mjs`). The founder's sheet
     keeps a marked account, because its nights happened, and its rows on Artists,
-    Gigs and Venues say `Being deleted on` (`test/sheets.mjs`). Two doors stay open
+    Gigs and Venues say `Being deleted on` (`test/sheets.mjs`). A referrer's Settings drops them from its invite list and count
+    (`test/accounts.mjs`). Two doors stay open
     on purpose: `/api/img` and `/api/vid` serve by id or slug, because the edge
     keeps each URL for a year regardless and the owner's export and Studio carry
     the same `/api/img?a=<aid>` addresses for the whole window.

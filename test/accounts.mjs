@@ -272,6 +272,20 @@ ok('undo brings it back', (await S({ action: 'accountUndelete' }, TN)).ok);
 eq('page and all', await publicArtist(new Request('https://x/api/show?a=ritavance')), rita);
 ok('and she can work again', (await S({ action: 'addSong', title: 'Back', artist: 'R' }, TN)).ok);
 
+console.log('\nAN ACCOUNT ON ITS WAY OUT LEAVES THE INVITE LIST  (0dh, decision 0098)');
+/* Settings lists who an artist has brought in. A referral who deleted their account
+   stayed on it, by name and in the count, for the whole thirty days. */
+{
+  const { startDeletion, cancelDeletion } = await import('../netlify/functions/_account.mjs');
+  const kid = (await createArtist({ email: 'kid@example.com', name: 'Kid Aldo', slug: 'kid-aldo', ref: 'ritavance' })).artistId;
+  const team = async () => { const t = await A({ action: 'list' }, TN); return [t.invited, t.invitedNames]; };
+  eq('rita brought Kid in', await team(), [1, ['Kid Aldo']]);
+  ok('Kid deletes', (await startDeletion(kid, 'kid@example.com')).ok);
+  eq('THE GAP: gone from the count and the names', await team(), [0, []]);
+  ok('Undo', (await cancelDeletion(kid)).ok);
+  eq('and back on the list', await team(), [1, ['Kid Aldo']]);
+}
+
 console.log('\nTHE VENUE SIDE HAD THE IDENTICAL HOLE');
 const bar = await createVenue({ email: 'boss@bar.com', name: 'The Corner Bar', city: 'Koh Phangan', country: 'Thailand' });
 let vreg = await readVenues();

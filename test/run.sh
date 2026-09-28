@@ -197,3 +197,6 @@ node --import ./test/register.mjs test/ordernote.mjs
 echo
 echo "── the artist on their own share card (0097) ──"
 node --import ./test/register.mjs test/sharecard.mjs
+echo
+echo "── the founder's tools need the founder's owner seat: Media Dash and the Studio (0100) ──"
+node --import ./test/register.mjs test/founderseat.mjs

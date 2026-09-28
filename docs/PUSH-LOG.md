@@ -10,6 +10,26 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 12:14 — c33ebc9 — nifty-jones-b27e63@docs/invite-list-live (3 files since origin/main)
+**tl;dr:** Docs only: hiding leaving accounts from the invite list (decision 0098) is live as ad9fc28 [skip ci]
+**Other sessions:** Ledger ACC-003 and the session note updated. No process sheet or Puzzle step describes the invite list.
+
+### 2026-09-28 12:12 — 4a45734 — nifty-jones-b27e63@fix/invited-names-leaving (4 files since origin/main)
+**tl;dr:** An artist's Settings no longer lists somebody they invited who has since deleted their account, by name or in the count
+**Other sessions:** Decision 0098 amended, INVARIANT 0dh: auth.mjs list action filters referredBy rows with !x.del. Sessions rebasing auth.mjs/test/accounts.mjs (3d368c, 4b462c): the change is one filter line and a new section after LEAVING.
+
+### 2026-09-28 12:08 — cde47da — inspiring-feynman-75227a@docs/founder-tools-live (6 files since origin/main)
+**tl;dr:** Docs only: the founder's tools needing the founding page's owner seat (decision 0100) is live as 7a84cb7, verified on Netlify's production deploy [skip ci]
+**Other sessions:** Puzzle changelog 2431 = decision 0100, linked to steps 369974 (e06), 370002 (y07) and 370080 (i06), each reloaded from its sheet. Ledger ACC-005; ACC-004's next action no longer lists the two gaps 0100 closed. Still open, not fixed: owner-only Studio controls drawn for member seats on any page (Your earnings, Got a code?, the sign-in Add field).
+
+### 2026-09-28 12:04 — 8d18d34 — nifty-jones-b27e63@docs/deleted-account-walks-live (18 files since origin/main)
+**tl;dr:** Docs only: the share card and sheet fix for deleted accounts (decision 0098's amendment) is live as 1385b2b, verified on Netlify's production deploy [skip ci]
+**Other sessions:** Puzzle changelog 2408 amended and linked to step 369978 (q03, Lock the account down), reloaded from artist-lifecycle/05. Ledger ACC-003.
+
+### 2026-09-28 12:03 — a6e96cd — inspiring-feynman-75227a@fix/founder-tools-owner-seat (13 files since origin/main)
+**tl;dr:** A band mate or the sound engineer signed in to the founding page can no longer change the public Media Dash boost log, and their Studio stops showing the founder's cards; other artists lose an 'If something broke' card that never worked for them
+**Other sessions:** Decision 0100, INVARIANT 0gk (after 0099's 0gj); ledger ACC-005 and the session note ride the live-docs PR. studio.js founder() = PLAN.owner AND the owner role: gate any founder tool on it, never on PLAN.owner, which stays the founding page's plan-lock bypass (has(), canHide()). test/founderseat.mjs is the first /api/mediadash test; its tripwire names any founder action the Studio sends from a function outside its list. tools/mock.mjs: ?founder=1, ?seat=member|crew.
+
 ### 2026-09-28 11:59 — 226bae6 — nifty-jones-b27e63@fix/deleted-account-walks (6 files since origin/main)
 **tl;dr:** A pasted link to a deleted account's page no longer shows its name and portrait, and the founder's Google Sheet now says when a leaving account is deleted
 **Other sessions:** Decision 0098 amended (every other registry walk checked), INVARIANT 0dh. artistpage.mjs card() resolves the slug through publicArtist. _warehouse.mjs: a new LAST column 'Being deleted on' on Artists, Gigs and Venues (deletedOn(row) = day(row.del.purgeAt)); an unreadable artist's reason moved to the second-to-last column. /api/img and /api/vid stay open for a marked account on purpose. Still open, cosmetic: auth.mjs Settings lists a leaving referral by name until the purge.

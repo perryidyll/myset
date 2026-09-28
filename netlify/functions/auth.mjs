@@ -583,7 +583,8 @@ const main = async (req) => {
 
     const a = await readArtists();
     const mine = a.byId[me.aid] || {};
-    const invited = Object.values(a.byId).filter((x) => x.referredBy === me.aid);
+    // an account on its way out leaves the list and the count (0dh, decision 0098)
+    const invited = Object.values(a.byId).filter((x) => x.referredBy === me.aid && !x.del);
     /* Whether a studio code EXISTS, never the code itself. The Settings row has to
        say "on" or "not set" and had no way to know which. */
     const { getShow } = await import('./_lib.mjs');

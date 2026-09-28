@@ -14,7 +14,9 @@ import { guard } from './_errlog.mjs';
 
    Reads are public: the page shows what @myset.vip's own Instagram already shows anyone.
    Writes are two doors: the push key (the Mac) and the founder's own sign-in or recovery
-   code (a boost from the page) — never another artist's token. */
+   code (a boost from the page) — never another artist's token, and never a band mate's or
+   the sound engineer's seat on the founding page: that is the same page, not the founder
+   (decision 0100). */
 
 const K = { data: 'mediadash/data', boosts: 'mediadash/boosts', thumb: (id) => `mediadash/thumb/${id}` };
 const ID = /^[A-Za-z0-9][\w.-]{0,140}$/;
@@ -31,7 +33,7 @@ const sameKey = (given, want) => {
   return d === 0;
 };
 const isPusher = (req) => sameKey(req.headers.get('x-mediadash-key') || '', process.env.MEDIADASH_KEY || '');
-const isFounder = async (req) => { const me = await requireArtist(req); return !!(me && me.aid === DEFAULT_ARTIST); };
+const isFounder = async (req) => { const me = await requireArtist(req); return !!(me && me.aid === DEFAULT_ARTIST && (me.role || 'owner') === 'owner'); };
 
 /** One boost row from the page: the founder's numbers off Instagram's boost sheet. */
 function boostRow(o, posts) {

@@ -194,7 +194,8 @@ const { flagValue, readFlags } = await import('../netlify/functions/_flags.mjs')
 eq('and none of that changed the flag', flagValue(await readFlags(), 'featuredShows', 'perry-idyll'), true);
 const studioSrc = src(new URL('../public/studio.html', import.meta.url));
 ok('the card is also hidden for everyone else, as a courtesy',
-   /function flagCard\(\)\{[\s\S]{0,120}PLAN\.owner/.test(studioSrc), 'flagCard must gate on PLAN.owner');
+   /function flagCard\(\)\{[\s\S]{0,120}founder\(\)/.test(studioSrc) && /const founder=\(\)=>!!\(PLAN&&PLAN\.owner&&/.test(studioSrc),
+   'flagCard must gate on founder(): PLAN.owner and the owner seat (0100)');
 
 delete process.env.STRIPE_SECRET_KEY;
 console.log(`\n${pass} passed, ${fail} failed`);
