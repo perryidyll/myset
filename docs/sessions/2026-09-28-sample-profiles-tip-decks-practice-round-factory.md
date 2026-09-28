@@ -83,4 +83,5 @@
 - It opens only to the owner seat AND the passcode (`_hqlock.mjs`). The passcode is checked on the server and kept only as a salted scrypt hash in Netlify's `HQ_PASSCODE`: production only, secret, set by `tools/hqpass.mjs` and read back through the API. With no hash set, HQ stays shut, as on a deploy preview.
 - A right passcode sets an HttpOnly, SameSite=Strict cookie for `/api/hq`, signed over the account, the expiry and the hash. Five wrong tries shut the door and push to the founder's phone.
 - `test/hq.mjs` covers each refusal, and removing the gate or the lockout fails it. A tripwire fails on any hash written into the repository.
+- The whole suite, rebased on `d5e53fb`: 4,825 assertions, 0 failing. The page (a helper agent, reviewed; escaping checked on every place a name, a message or a link is drawn) walked on localhost behind the lock at 800 and 390 px.
 - Not checked on the live site: a right passcode opening it. That is the founder's to type.
