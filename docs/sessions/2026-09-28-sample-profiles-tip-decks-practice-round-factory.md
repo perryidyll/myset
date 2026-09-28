@@ -52,3 +52,36 @@
 **Not checked:** a real printer or an iPhone's print sheet; Instagram's in-app browser keeping the `#` (`?sample-profile` is the fallback); production until the deploy below.
 
 **Shipped:** PR #126, squash `c940a6e`, Netlify production deploy `6ab9fba3` ready ~05:35 UTC 28 Sep. Verified by content on myset.vip: `sign.html` carries *Table cards*; `/perryidyll` carries the `#sample-profile` hook and still draws the real page; `POST /api/sample` for an unknown address answers `unknown`; `/factory` serves the console, `/api/factory` answers 401 to a stranger; the live `studio.js?v=cce7467b` equals the local stamp and carries *Your page link* and *QR codes out*; `tools/prod.py` clean. The deploy preview was looked at first (the artist page, 36 table cards on the real code, an unknown sample link, the console's sign-in gate) — pages only, no writes. The keys: both created in the founder's Chrome (YouTube in Google Cloud "My First Project", restricted to the YouTube Data API — a new project would have needed a billing account; Claude "myset-factory", Idyll Enterprises, never expires); the founder pastes the values into the two prepared Netlify forms, then a redeploy.
+
+## The third round: the keys, and MySet HQ (the same day)
+
+**Asked (the founder):** "keys in! (i pasted them into all the fields, not just production... is that ok?)"; "'the myset team' is great – and how do i set up a virtual mailbox??"; then a dashboard, "tony stark meets steve jobs aesthetic", like the Wellmee auto-profile console: a profile form with every link and an Artist/Venue toggle; Generate → "a little loading bar with a loading animation, then a 'view sample profile' button"; a table of every artist and venue, clearly labelled, 20 rows before it scrolls, with Edit profile on each; "a mini-crm" with tags (generated or not, shared or not, where the outreach went, and so on); a messages center with Instagram DMs and emails in one place, sent from there, and the same for TikTok if its API allows.
+
+**The keys:** both variables exist in Netlify, secret, in every deploy context (a fork's build needs approval: `untrusted_flow: review`). One production rebuild (`createSiteBuild`, deploy `6aba0a19`, ready 06:34 UTC) and the live console at `myset.vip/factory` reads *Claude key is set* and *YouTube key is set* (read in the founder's Chrome). Puzzle tools 51452/51453 → Active. The key tabs were closed. Recommended to the founder, not done: trim both to Production only, since a deploy preview shares production data. The sign-off is already the default ("The MySet team").
+
+**What the platforms allow** (checked 2026-09-28): Instagram's messaging API cannot send a first message to somebody who has not written to the account, and answers only within 24 hours of their last message. TikTok's Business Messaging API is for approved apps, with the same rule and a 48-hour window. Email has no such rule. Hence decision `0109`.
+
+**Built** (branch `feat/hq-crm`, GRO-003 and UX-062; decisions `0108`, `0109`; INVARIANTS 0gr, 0gs):
+- `netlify/functions/_crm.mjs`: contacts beside the samples, joined by `owner`, their stage read off the page every time; automatic and custom tags, the star, the follow-up; duplicates caught by handle, email, phone or name and place; the page's lifecycle tells the CRM (`tellCrm` in `_sample.mjs`: Delete forever erases the contact, Cancel page and the 180-day erase unlink it, a rebuild or revive relinks it); pages the old console built are adopted.
+- `netlify/functions/hq.mjs` (+ `hqcron.mjs`): the desk's API; Generate queues through the factory's own `queueJobs`/`startJobs` with the contact on the job; the worker links it when done; `log` and `send` mark the page Sent through the console's own `markSent`; Gmail send, the ten-minute sync, the OAuth return at `/api/hq/gmail`.
+- `netlify/functions/_gmail.mjs` (a helper agent, reviewed): the OAuth door with a signed state, tokens sealed with AES-GCM, send with threading, reading replies, quote stripping.
+- `factory.mjs`: `queueJobs`, `markSent`, `sampleDetail` shared; `edit` takes links (canonical, the refused named), the place and an artist's videos; a rebuild keeps the seed's own fields.
+- `public/hq.html` (a helper agent, reviewed): the page.
+- `tools/localhost.mjs`: `/dev/hq` fills a demo pipeline; a pretend build walks the eight stages so Generate can be watched locally (`--real-factory` turns it off); the harness answers a background function's own address.
+- Owed from the second round, done: artist-lifecycle/01 g11 *Claim a sample page* (Puzzle 389231's notes reloaded with the label wording); Puzzle changelog 2412–2414 say live.
+
+## The fourth round: /crm, the passcode, the address, ship it (the same day)
+
+**Asked (the founder):** a plainer explanation of the key contexts; "just use my home address for now" for the drafts' postal line; "please ship this live and send me a link! make the url www.myset.vip/crm and put a legit passcode lock on it".
+
+**The keys:** by 07:17 UTC both were already Production only. The founder changed them, and another session relayed it. Read back through the Netlify API: a value in production and local dev, empty in deploy previews and branch deploys.
+
+**The address:** written into the live `factorycfg` (it did not exist yet, so the console had been reading its defaults), and read back equal. It goes at the foot of email drafts only, never on a page. It is not written in this repository, which is public.
+
+**The door** (decision 0108 amended, INVARIANT 0hk, ledger GRO-003):
+- HQ answers at `/crm` instead of `/hq` (which never shipped). `crm` is reserved; no page held it.
+- It opens only to the owner seat AND the passcode (`_hqlock.mjs`). The passcode is checked on the server and kept only as a salted scrypt hash in Netlify's `HQ_PASSCODE`: production only, secret, set by `tools/hqpass.mjs` and read back through the API. With no hash set, HQ stays shut, as on a deploy preview.
+- A right passcode sets an HttpOnly, SameSite=Strict cookie for `/api/hq`, signed over the account, the expiry and the hash. Five wrong tries shut the door and push to the founder's phone.
+- `test/hq.mjs` covers each refusal, and removing the gate or the lockout fails it. A tripwire fails on any hash written into the repository.
+- The whole suite, rebased on `d5e53fb`: 4,825 assertions, 0 failing. The page (a helper agent, reviewed; escaping checked on every place a name, a message or a link is drawn) walked on localhost behind the lock at 800 and 390 px.
+- Not checked on the live site: a right passcode opening it. That is the founder's to type.

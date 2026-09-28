@@ -63,6 +63,12 @@ echo
 echo "── the sample factory: sources, Claude, the gate, the worker and the ring (0103) ──"
 node --import ./test/register.mjs test/factory.mjs
 echo
+echo "── MySet HQ: the contacts, their stage, outreach logged, Delete forever, Edit profile (0108) ──"
+node --import ./test/register.mjs test/hq.mjs
+echo
+echo "── HQ's Gmail: the OAuth door, the sealed tokens, a sent email, a reply read back (0109) ──"
+node --import ./test/register.mjs test/gmail.mjs
+echo
 echo "── the studio-code door ──"
 node --import ./test/register.mjs test/studiocode.mjs
 echo

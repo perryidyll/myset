@@ -60,6 +60,9 @@ async function facts() {
   const auth = await import(join(ROOT, 'netlify/functions/_auth.mjs'));       // the deadlines a person waits on (decision 0110)
   const lyr = await import(join(ROOT, 'netlify/functions/_lyrics.mjs'));
   const smp = await import(join(ROOT, 'netlify/functions/_sample.mjs'));     // a sample page's clock (decision 0101)
+  const crm = await import(join(ROOT, 'netlify/functions/_crm.mjs'));        // MySet HQ's contacts (decision 0108)
+  const hq = await import(join(ROOT, 'netlify/functions/hq.mjs'));           // HQ's email pace (decision 0109)
+  const hqlock = await import(join(ROOT, 'netlify/functions/_hqlock.mjs'));  // HQ's passcode (decision 0108, INVARIANT 0hk)
 
   const fns = ls('netlify/functions').filter((f) => f.endsWith('.mjs'));
   const handlers = fns.filter((f) => !f.startsWith('_')).map((f) => f.replace('.mjs', '')).sort();
@@ -155,6 +158,9 @@ async function facts() {
       // a sample page (decision 0101): how long it waits, how long its copy is kept, the founder's undo, the factory's default day
       samples: { lifeDays: smp.SAMPLE_LIFE_MS / 86400e3, archiveDays: smp.ARCHIVE_MS / 86400e3, undoDays: smp.UNDO_MS / 86400e3,
                  perDay: smp.defaultFactoryCfg().perDay },
+      // MySet HQ (decisions 0108, 0109): the follow-up after a first message, tags, the conversation kept, the day's emails
+      hq: { followDays: crm.FOLLOW_MS / 86400e3, maxTags: crm.MAX_TAGS, tagChars: crm.TAG_LEN, maxMsgs: crm.MAX_MSGS, msgChars: crm.MSG_LEN, mailPerDay: hq.MAIL_PER_DAY,
+        unlockHours: hqlock.UNLOCK_HOURS, lockTries: hqlock.LOCK_TRIES, lockMinutes: hqlock.LOCK_MINUTES },
     },
     decisions: decisionIndex(),
   };
@@ -375,6 +381,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | A clip link on R2 lives / its redirect is cached | ${f.constants.clipLinkSecs / 3600} h / ${f.constants.clipRedirectCacheSecs / 3600} h |
 | The artist's book, per show (decision 0065) | ${f.constants.biz.merch} merch lines · ${f.constants.biz.gear} gear lines of ${f.constants.biz.gearChars} characters · names ${f.constants.biz.name} · note ${f.constants.biz.note} · one amount up to $${(f.constants.biz.cents / 100).toLocaleString('en-US')} · ${f.constants.biz.minutes / 60} hours per kind of time (${f.constants.biz.timeKinds.join(', ')}) · ${f.constants.biz.rules} rule defaults · the document ${(f.constants.biz.maxBytes / 1000).toFixed(0)} KB, then a year shard |
 | A sample page (decision 0101) | ${f.constants.samples.lifeDays} days to claim · its private copy kept ${f.constants.samples.archiveDays} days after it comes down · a claim can be undone for ${f.constants.samples.undoDays} days · the factory starts at most ${f.constants.samples.perDay} builds a day unless the founder changes it |
+| MySet HQ (decisions 0108, 0109) | a follow-up falls due ${f.constants.hq.followDays} days after the first message out · ${f.constants.hq.maxTags} tags a contact, ${f.constants.hq.tagChars} characters each · the last ${f.constants.hq.maxMsgs} messages kept, ${f.constants.hq.msgChars} characters each · at most ${f.constants.hq.mailPerDay} emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for ${f.constants.hq.unlockHours} hours, ${f.constants.hq.lockTries} wrong in a row shut it for ${f.constants.hq.lockMinutes} minutes |
 | Invariants | ${f.shape.invariants.count} (last: ${f.shape.invariants.last}) |
 | Test suites | ${f.shape.testSuites} |
 | Assertions | ${f.shape.assertions === null ? '*not stamped — run `node tools/overview.mjs --tests`*' : `**${f.shape.assertions.toLocaleString()}**, ${f.shape.testsFailed} failing, last run ${f.shape.testsRunAt}`} |

@@ -94,6 +94,14 @@
   to = "/factory.html"
   status = 200
 
+# myset.vip/crm — MySet HQ, the founder's outreach desk and CRM (decision 0108), behind
+# the owner seat and a passcode. Above the catch-all for the same reason; `crm` is a
+# reserved slug.
+[[redirects]]
+  from = "/crm"
+  to = "/hq.html"
+  status = 200
+
 # The printable business report (decision 0065). Above the catch-all like the
 # others, or an artist called "report" would be handed the accountant's page.
 [[redirects]]

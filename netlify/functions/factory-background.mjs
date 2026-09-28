@@ -114,6 +114,12 @@ export async function work(id) {
   if (!made || !made.ok) return fail(id, run, `create: ${(made && made.error) || 'failed'}`, { cost });
   await settle(id, run, { st: 'done', owner: made.owner, slug: made.slug || '', stage: 'done', pct: 100, err: '', run: '',
     q: r.payload.quality.score, rv: !!r.payload.quality.review, cost: Math.round(((Number(job.cost) || 0) + cost) * 10000) / 10000 });
+  /* A job HQ started carries its contact (decision 0108): the contact now points at the
+     page, and learns the handles the factory found. Best-effort — the page is made. */
+  if (job.cid) {
+    try { const C = await import('./_crm.mjs'); await C.linkOwner(job.cid, made.owner, { links: r.payload.links || {} }); }
+    catch (e) { console.error('factory-background: could not link the contact', msg(e)); }
+  }
   return 'done';
 }
 

@@ -46,6 +46,10 @@ process.env.URL ||= `http://localhost:${PORT}`;
 process.env.ADMIN_CODE ||= 'localhost-founder';
 process.env.RESEND_API_KEY ||= 're_localhost';
 process.env.AUTH_FROM ||= 'MySet <sign-in@myset.vip>';
+/* HQ's passcode on this machine (INVARIANT 0hk): a test value, hashed at start the way
+   tools/hqpass.mjs hashes the real one, which lives only in Netlify. */
+const HQ_LOCAL_PASSCODE = 'hq-on-this-mac';
+process.env.HQ_PASSCODE ||= await (await import('../netlify/functions/_hqlock.mjs')).hashPasscode(HQ_LOCAL_PASSCODE);
 { const real = globalThis.fetch;
   globalThis.fetch = (u, o) => {
     if (String(u).startsWith('https://api.resend.com/')) {
@@ -267,6 +271,7 @@ a{color:#FF375F}code{background:#f0f0f2;padding:1px 5px;border-radius:5px}h1{fon
 <p>Switch the plan: <a href="/dev?plan=plus">Bar Star</a> · <a href="/dev?plan=pro">Rock Star</a> · <a href="/dev?plan=free">Hobbyist</a> · <a href="/dev?reset=1">reseed everything</a></p>
 <p style="color:#6e6e73;font-size:13px">Seeded: a Thursday residency (six nights filed, four logged, one Stripe never answered), a Saturday wedding, last night at Baan Tai (tap <i>Log tonight</i>), a Tuesday MySet ran with no gig on the calendar, a night whose gig was deleted, merch and two app orders, a connected account with a year of statements.</p>
 <p>The founder's sample console: <a href="/dev?founder=1&go=/factory">sign in as the founder and open /factory</a> · <a href="/dev/sample">make an artist sample</a> · <a href="/dev/sample?kind=venue">a venue sample</a></p>
+<p><b>MySet HQ</b> (decision 0108): <a href="/dev?founder=1&go=/crm">sign in as the founder and open /crm</a> · <a href="/dev/hq">fill it with a demo pipeline</a> (a dozen contacts in every stage, with conversations). The passcode on this machine is <code>${HQ_LOCAL_PASSCODE}</code> (the live one is only in Netlify). Generate works here: a pretend build walks the eight stages in about twenty seconds (<code>--real-factory</code> turns that off).</p>
 <script>
 try{${q.get('founder') ? `localStorage.setItem('myset.admin',${JSON.stringify(process.env.ADMIN_CODE)});localStorage.removeItem('myset.token');localStorage.removeItem('myset.aslug');` : `localStorage.setItem('myset.token',${JSON.stringify(t)});localStorage.setItem('myset.aslug',${JSON.stringify(s)});localStorage.removeItem('myset.admin');`}
 ${q.get('tab') ? `localStorage.setItem('myset.tab',${JSON.stringify(q.get('tab'))});` : ''}}catch(e){}
@@ -310,11 +315,93 @@ async function devSample(q) {
 <p style="color:#6e6e73;font-size:13px">Claiming asks for a code: it is printed in this terminal, since no mail leaves this machine.</p>`;
 }
 
+/* ---------- HQ on this machine (decision 0108) ----------
+   The factory's worker needs Claude and YouTube, which never run here. Unless started
+   with --real-factory, a pretend build takes its place: it walks the eight stages a
+   couple of seconds each, so the build card, the bar and the table can be watched, and
+   makes the page from the form's own words and the repo's demo photo. */
+const FAKE_FACTORY = !args.includes('--real-factory');
+async function fakeFactory() {
+  const BG = await fn('factory-background');
+  const mod = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', 'factory-background.mjs')).href);
+  const jpg = readFileSync(join(PUBLIC, 'img', 'band.jpg'));
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  mod.deps.run = async (job, opts) => {
+    const s = job.seed || {};
+    if (opts.isSuppressed && s.line) {
+      const { parseSeed } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_fsrc.mjs')).href);
+      const { suppressIds } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_factory.mjs')).href);
+      if (await opts.isSuppressed(suppressIds(parseSeed(s.line)))) return { ok: false, skipped: 'suppressed', usage: [] };
+    }
+    for (const [st, pct] of [['seed', 5], ['suppress', 8], ['discover', 20], ['collect', 45], ['facts', 60], ['photos', 78], ['copy', 90], ['gate', 96]]) { await opts.onStage(st, pct); await wait(2400); }
+    const venue = job.kind === 'venue', name = s.name || 'The Demo Act';
+    return { ok: true, usage: [], payload: {
+      kind: job.kind, name, first: name, slug: '', city: s.city || 'Koh Phangan', country: s.country || '',
+      tagline: venue ? 'Live music most nights, sunset from the deck' : 'Originals and beach-bar covers',
+      style: venue ? '' : 'Indie folk · covers', bio: `${name} ${venue ? 'is a bar with live music most nights.' : 'play originals and covers around the island.'} (Made on localhost by a pretend build.)`,
+      about: `${name} is a bar with live music most nights. (Made on localhost by a pretend build.)`,
+      links: s.links || {}, media: [], photos: { cover: { bytes: jpg, type: 'image/jpeg', from: 'founder' }, ...(venue ? {} : { avatar: { bytes: jpg, type: 'image/jpeg', from: 'founder' } }) },
+      sources: [{ url: 'https://example.com', kind: 'website', title: 'A pretend source' }], facts: null, provenance: null,
+      quality: { score: 0.91, review: true, checks: {} }, msgs: { hook: '' }, seed: { ...s }, supIds: [], by: 'factory' } };
+  };
+  process.env.ANTHROPIC_API_KEY ||= 'localhost-pretend';
+  process.env.YOUTUBE_API_KEY ||= 'localhost-pretend';
+  return BG;
+}
+if (FAKE_FACTORY) await fakeFactory();
+
+/* /dev/hq: a dozen contacts in every stage, with conversations, so the table scrolls
+   and the messages center has something in it. Run it twice and it adds twelve more. */
+async function devHq() {
+  const C = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_crm.mjs')).href);
+  const S = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_sample.mjs')).href);
+  const jpg = readFileSync(join(PUBLIC, 'img', 'band.jpg'));
+  const now = Date.now(), H1 = 3600e3, D1 = 24 * H1;
+  const people = [
+    ['artist', 'Rita Mae', 'Koh Phangan', { instagram: '@ritamae', tiktok: '@ritamae.music' }, 'rita@example.com', 'page', [['ig', 'out', 'Hey Rita! I built you a page.', 3 * D1], ['ig', 'in', 'omg this is so cool, how do I claim it?', 2 * D1 + 5 * H1]], ['friend']],
+    ['artist', 'The Salt Flats', 'Haad Rin', { instagram: '@saltflatsband', youtube: '@saltflats' }, '', 'page', [['tiktok', 'out', 'Hey Salt Flats! Made you something.', 5 * D1]], ['priority']],
+    ['artist', 'Juniper Road', 'Thong Sala', { instagram: '@juniperroad' }, 'hello@juniperroad.example', 'page', [['email', 'out', 'I built you a page — take a look.', 6 * D1]], []],
+    ['venue', 'Harbour Bar', 'Thong Sala', { instagram: '@harbourbar', google: 'https://maps.app.goo.gl/Harb0ur' }, 'bookings@harbourbar.example', 'page', [['inperson', 'out', 'Showed the manager on my phone.', 1 * D1], ['whatsapp', 'in', 'Send me the link please!', 20 * H1]], ['live music 5 nights']],
+    ['venue', 'Sunset Deck', 'Srithanu', { instagram: '@sunsetdeck' }, '', 'lead', [], ['next week']],
+    ['artist', 'Moss & Pine', 'Chiang Mai', { instagram: '@mossandpine' }, '', 'lead', [], []],
+    ['artist', 'DJ Coralie', 'Koh Samui', { instagram: '@djcoralie', tiktok: '@djcoralie' }, 'coralie@example.com', 'page', [], ['dj']],
+    ['venue', 'The Anchor', 'Koh Tao', { facebook: 'theanchorkohtao', instagram: '@theanchorkt' }, '', 'page', [['fb', 'out', 'Hi Anchor team! I built you a page.', 8 * D1]], []],
+    ['artist', 'Lena Ocean', 'Bangkok', { instagram: '@lenaocean', spotify: 'https://open.spotify.com/artist/4tIdEl1nEs0123456789ab' }, 'lena@example.com', 'page', [['email', 'out', 'A page for you', 9 * D1], ['email', 'in', 'Thanks! Not right now, maybe next month.', 7 * D1]], ['later']],
+    ['artist', 'Northbound', 'Pai', { instagram: '@northboundpai' }, '', 'lead', [], []],
+    ['venue', 'Coconut Grove', 'Haad Yao', { instagram: '@coconutgrovebar', website: 'coconutgrove.co.th' }, 'info@coconutgrove.example', 'page', [['email', 'out', 'Your venue page', 2 * D1]], ['priority']],
+    ['artist', 'Twin Harbours', 'Phuket', { instagram: '@twinharbours' }, '', 'page', [], []],
+  ];
+  let n = 0;
+  for (const [kind, name, city, links, email, how, msgs, tags] of people) {
+    const { out: f } = C.normFields(kind, { name, city, links, email, tags });
+    const r = await C.createContact(kind, f, { now: now - (12 - n) * D1, force: true });
+    if (!r.ok) continue;
+    if (how === 'page') {
+      const made = await S.createSample({ kind, name, first: name, city, tagline: kind === 'venue' ? 'Live music by the water' : 'Originals and covers', style: 'Acoustic',
+        bio: `${name} — a demo page made on localhost.`, about: `${name} — a demo venue page made on localhost.`, links: f.links,
+        photos: { cover: { bytes: jpg, type: 'image/jpeg' } }, quality: { score: 0.9, review: n % 4 === 1 }, msgs: { hook: '' }, by: n % 4 === 1 ? 'factory' : 'founder' }, { fetchMedia: false });
+      if (made.ok) await C.linkOwner(r.cid, made.owner, { now: now - (11 - n) * D1 });
+    }
+    for (const [ch, dir, text, ago] of msgs) await C.addMessage(r.cid, { ch, dir, text, subject: ch === 'email' ? 'A MySet page for you' : '', t: now - ago }, { now, unread: dir === 'in' && ch === 'email' });
+    // what HQ's own log does when a message goes out, and what a first open does
+    const owner = (await C.readContact(r.cid) || {}).owner;
+    if (owner && msgs.some((m) => m[1] === 'out')) { const F = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', 'factory.mjs')).href); await F.markSent(owner, msgs[0][0] === 'email' ? 'email' : msgs[0][0] === 'inperson' ? 'inperson' : 'dm'); }
+    if (owner && msgs.some((m) => m[1] === 'in')) await S.sampleSeen(owner, 'open');
+    n++;
+  }
+  return `<!doctype html><meta charset="utf-8"><title>HQ demo</title><style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 20px}a{color:#FF375F}</style>
+<h1>HQ demo pipeline</h1><p>Added ${n} contacts.</p><p><a href="/dev?founder=1&go=/crm">Open HQ as the founder</a></p>`;
+}
+
 /* ---------- the server ---------- */
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, process.env.URL);
     let path = decodeURIComponent(url.pathname);
+    if (path === '/dev/hq') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(await devHq());
+    }
     if (path === '/dev/sample') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(await devSample(url.searchParams));
@@ -327,7 +414,9 @@ const server = http.createServer(async (req, res) => {
     // real files win over the redirects, as on Netlify
     if (path === '/') path = '/index.html';
     let f = fileAt(path);
-    let target = f ? null : resolveRedirect(path);
+    /* a function called by its own address — the factory's Build knocking on its
+       background worker — goes straight to the function, as on Netlify */
+    let target = f ? null : (path.startsWith('/.netlify/functions/') ? path : resolveRedirect(path));
     if (!f && target) {
       if (target.startsWith('/.netlify/functions/')) {
         /* a rewrite may carry its own query (/:slug → artistpage?a=:slug, decision 0097):
