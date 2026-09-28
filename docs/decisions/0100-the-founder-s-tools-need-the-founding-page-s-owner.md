@@ -15,9 +15,9 @@ files: [netlify/functions/mediadash.mjs, public/studio.js, public/studio.html, t
 
 ## The question
 
-Decision 0099 (branch `fix/admin-role-gates`, not yet merged when this was written) made the platform block in `admin.mjs` ask for `isPlatformOwner(aid)` and the owner role. It left out, on purpose, two more places that ask which page instead of who:
+Decision 0099 (`04e78db`, which landed while this change was waiting to ship) made the platform block in `admin.mjs` ask for `isPlatformOwner(aid)` and the owner role. It left out, on purpose, two more places that ask which page instead of who:
 
-1. **The Studio** draws the founder's cards on `PLAN.owner`, which `planGet` sets from `isPlatformOwner(aid)`. A member or crew seat on the founding page therefore sees cards whose calls the server refuses once 0099 lands, and each card misreads the refusal. The codes card reads "None yet." over a *Create code* form that is refused, the venues card reads "No venues have signed up yet.", and the sheet card reads "Could not ask the server.". MySet's books (already `OWNER_ONLY`) shows "Reading the balance…" and never finishes. Every Studio open also sends `promoList` and `venueList`, and both are refused.
+1. **The Studio** draws the founder's cards on `PLAN.owner`, which `planGet` sets from `isPlatformOwner(aid)`. A member or crew seat on the founding page therefore sees cards whose calls the server refuses since 0099, and each card misreads the refusal. The codes card reads "None yet." over a *Create code* form that is refused, the venues card reads "No venues have signed up yet.", and the sheet card reads "Could not ask the server.". MySet's books (already `OWNER_ONLY`) shows "Reading the balance…" and never finishes. Every Studio open also sends `promoList` and `venueList`, and both are refused.
 2. **Media Dash.** `isFounder` in `mediadash.mjs` was `me.aid === DEFAULT_ARTIST` and nothing else. So a member or crew seat on the founding page could log a boost row on the public `/mediadash` dashboard, overwrite the founder's row by reusing its `boostId`, or remove it.
 
 ## The options
@@ -45,7 +45,7 @@ The agent's calls inside the brief:
 
 - A new founder tool must use `founder()`, not `PLAN.owner`. The tripwire in `test/founderseat.mjs` reads the founder's actions out of `admin.mjs` and names any that the Studio sends from a function outside its list.
 - Every artist other than the founder loses "If something broke" on the Money tab. It never worked for them.
-- The Studio stops offering the founder's tools to a band mate. Until 0099 lands, though, the server still answers them for anyone who sends the calls by hand.
+- The Studio stops offering the founder's tools to a band mate. The server has refused those calls since 0099.
 - Found on the way and not fixed here. A member seat on any page sees *Your earnings* read its `OWNER_ONLY` refusal of `ledger` as "Nothing to add up yet — this fills in once card payments are on and somebody has paid.". The same seat is shown *Got a code?* (`promoRedeem` is owner-only) and the *Add* field under *Who can sign in*. These are the owner's controls (0dc, 0db), not the founder's, and belong in their own change.
 
 ## What would reverse it
@@ -58,7 +58,7 @@ The agent's calls inside the brief:
 
 The tests were written first and run red against origin/main `45a8d07` with only the test added. `node --import ./test/register.mjs test/founderseat.mjs` printed `10 passed, 18 failed`. Member and crew seats each got 200 for a new row, for overwriting the founder's row `b1`, and for removing it (`{"got":200,"want":401}` six times). The founder's row ended removed (`{"got":[null,true],"want":[20,false]}`), and the public read carried `["member-row","crew-row"]` where it should have carried `["b1"]`. All nine Studio checks failed.
 
-After the fix, the file printed `28 passed, 0 failed`. The first full run stopped at the old `flagCard` check in `test/verification.mjs` ("flagCard must gate on PLAN.owner"), as it should have. With that check updated, `sh test/run.sh` exited 0 with 3,841 assertions and none failing. On a scratch copy of this tree with 0099's uncommitted `admin.mjs`, `test/accounts.mjs` and `test/structure.mjs` applied on top, the whole suite also passed: exit 0, 3,898 assertions, 0 failing. The two changes share no code.
+After the fix, the file printed `28 passed, 0 failed`. The first full run stopped at the old `flagCard` check in `test/verification.mjs` ("flagCard must gate on PLAN.owner"), as it should have. With that check updated, `sh test/run.sh` exited 0 with 3,841 assertions and none failing. On a scratch copy of this tree with 0099's uncommitted `admin.mjs`, `test/accounts.mjs` and `test/structure.mjs` applied on top, the whole suite also passed: exit 0, 3,898 assertions, 0 failing. The two changes share no code. 0099 then landed first (`04e78db`, PR #117). With this change merged onto it, `node tools/overview.mjs --tests` ran the whole suite again: 3,898 assertions, 0 failing.
 
 The Studio checks were mutation-tested on `studio.js`, which was restored byte for byte afterwards (stamp `219d2fe4`). Four mutations each turned the file red and named the fault: a new function (`peekBugs`) sending `bugList`; the codes block put back on `PLAN.owner`; `founder()` without the role half; and `has()` changed to use `founder()`.
 

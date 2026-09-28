@@ -10,9 +10,9 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
-### 2026-09-28 11:54 — 0569a8b — inspiring-feynman-75227a@fix/founder-tools-owner-seat (12 files since origin/main)
-**tl;dr:** A band mate or the sound engineer signed in to the founding page can no longer change the public Media Dash boost log, and their Studio stops showing the founder's cards; other artists lose an 'If something broke' card that never worked for them
-**Other sessions:** Decision 0100, INVARIANT 0gk; ledger ACC-005 and the session note ride the live-docs PR. studio.js founder() = PLAN.owner AND the owner role: gate any founder tool on it, never on PLAN.owner, which stays the founding page's plan-lock bypass. test/founderseat.mjs tripwire names any founder action the Studio sends from a function outside its list. tools/mock.mjs: ?founder=1, ?seat=member|crew. 0099 (fix/admin-role-gates) is still unmerged: rebase it, put 0gj before 0gk (both after 0dc), ACC-004 before ACC-005, re-run node tools/overview.mjs.
+### 2026-09-28 11:54 — 3ec4721 — gifted-clarke-2a74ea@fix/admin-role-gates (9 files since origin/main)
+**tl;dr:** A band mate or the sound engineer signed in to the founder's page can no longer use the founder's platform tools, and crew can no longer rewrite setlists, charts, lyrics or genres or empty the library
+**Other sessions:** Decision 0099, INVARIANT 0gj (0t amended), ledger ACC-004. admin.mjs's platform block now needs isPlatformOwner(aid) AND me.role==='owner'. CAPABILITY is a deny-list: an unlisted action needs only a sign-in, so test/structure.mjs now refuses a CAPABILITY/OWNER_ONLY name no handler takes. 0100 (fix/founder-tools-owner-seat) rebases on this: INVARIANTS 0gk goes after 0gj, ACC-005 above ACC-004. Still open, not in this change: auth.mjs signOutOthers/sessionRevoke let crew sign the owner out (fix/seat-signout-scope).
 
 ### 2026-09-28 11:22 — f3993c9 — nostalgic-swanson-d7e46f@docs/process-sheets-tracked (39 files since origin/main)
 **tl;dr:** Docs only: the 39 process sheets that lived only as untracked files in the shared checkout are in git now, and the signing-in sheet and its Puzzle notes say a password exists (0070) [skip ci]
