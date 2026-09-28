@@ -1,9 +1,21 @@
 const $=s=>document.querySelector(s), API='/api';
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 let TOKEN=localStorage.getItem('myset.vtoken')||'';
+/* A SAMPLE'S VENUE STUDIO (decision 0101). The venue page the factory built sends its
+   visitor here with ?sample=<slug>, and the key its link carried is on this phone
+   already (myset.sample, kind 'venue'). Opened that way — or opened at all with no
+   venue sign-in of its own — the Studio runs on that key: it LOOKS at the page's own
+   data and every save opens the claim sheet instead (sampleRoute, below). The phone's
+   real venue sign-in, if it has one, is left untouched in storage and simply not sent. */
+const SAMPLE=(()=>{try{
+  const q=new URLSearchParams(location.search), k=JSON.parse(localStorage.getItem('myset.sample')||'null');
+  if(!k||!k.key||k.kind!=='venue')return null;
+  if(q.get('sample')||!TOKEN)return k;
+}catch(e){} return null;})();
+if(SAMPLE) TOKEN='';
 let V=null, ME=null, SHOWS=null, AMEN=[];
 let EVENTS=null, PITCHES=null, STATS=null, VERIFY=null, VOUCH=null;
-let TAB=localStorage.getItem('myset.vtab')||'page';
+let TAB=SAMPLE?'page':(localStorage.getItem('myset.vtab')||'page');   // a preview opens on its page (0101)
 
 let BUSY=0,BUSY_T=null,LAST_PRESS=null,BUSY_PENDING=null;
 document.addEventListener('pointerdown',e=>{LAST_PRESS=e.target.closest&&e.target.closest('button,a')},{passive:true});
@@ -16,14 +28,48 @@ function busy(on){
   }else{if(BUSY_PENDING)BUSY_PENDING.classList.remove('pending');BUSY_PENDING=null;el.classList.remove('on');}
 }
 async function api(p,o={}){
+  /* A sample's Venue Studio: reads go to the server on the key, everything else is a claim. */
+  if(SAMPLE){ const r=sampleRoute(p,o); if(r) return r; }
   const h={'content-type':'application/json',...(o.headers||{})};
   if(TOKEN) h['authorization']='Bearer '+TOKEN;
+  if(SAMPLE){ h['x-sample-key']=SAMPLE.key; h['x-sample-venue']=SAMPLE.slug; }
   if(!o.quiet) busy(true);
   try{ const r=await fetch(API+p,{...o,headers:h}); return await r.json(); }
   catch(e){ return {ok:false,error:'Connection hiccup — try again'}; }
   finally{ if(!o.quiet) busy(false); }
 }
 const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
+
+/* THE SAMPLE ROUTER (decision 0101). The server answers a venue sample only from a
+   short list of reads (SAMPLE_OK in venueadmin.mjs); this is the same list from the
+   phone's side, so a save never even leaves it — the claim sheet opens instead. The
+   doors a sample has no key to (who can sign in, the devices, the earnings) get the
+   empty answer a brand-new venue would get, so every tab draws as it will on day one. */
+const SAMPLE_READS=new Set(['get','planGet','stats','eventList','pitchList','postList','orderList','wishList','merchList','payStatus']);
+let CLAIMAT=0;
+function sampleRoute(p,o){
+  let action='';
+  try{ action=o.body?(JSON.parse(o.body).action||''):''; }catch(e){}
+  if(p==='/venueadmin'&&SAMPLE_READS.has(action)) return null;
+  if(p==='/venueadmin'&&action==='ledger') return Promise.resolve({ok:true,enabled:false,months:[],total:{}});
+  if(p==='/venueauth'&&action==='list') return Promise.resolve({ok:true,venueId:(V&&V.venueId)||'',slug:SAMPLE.slug,name:(V&&V.name)||'',
+    email:null,role:'sample',verified:false,verifiedVia:null,emails:[],emailReady:true});
+  if(p==='/venueauth'&&action==='sessions') return Promise.resolve({ok:true,list:[],legacy:false});
+  openClaim();
+  return Promise.resolve({ok:false,claim:true,error:'Claim your page to save this.'});
+}
+/* The claim sheet lives in /sample.js (the page and both Studios share it), loaded
+   the first time it is wanted — and asked for again next time if the network lost it. */
+let SAMPLEJS=null;
+function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
+  const j=document.createElement('script'); j.src='/sample.js?v=bb14e96e';
+  j.onload=()=>r(window.Sample||null); j.onerror=()=>{ SAMPLEJS=null; r(null); }; document.head.appendChild(j); })); }
+function openClaim(){
+  if(!SAMPLE)return;
+  CLAIMAT=Date.now(); closeSheet();
+  sampleJs().then(S=>{ if(S) S.claim({name:(V&&V.name)||SAMPLE.name||''});
+    else { CLAIMAT=0; toast('Couldn’t open that — check your connection'); } });
+}
 
 /* ── the door ───────────────────────────────────────────── */
 let GATE_EMAIL='', TICKET='', GATE_FROM='join', PW_PROMPT=false;
@@ -112,6 +158,7 @@ async function claim(){
     city:v('newCity'),country:v('newCountry')});
   if(!d.ok){toast(d.error||'Could not create that');return;}
   PW_PROMPT=true;
+  try{ localStorage.setItem('myset.vtipsauto','1'); }catch(e){}   // a brand-new page: every tab's deck, the first time (0102)
   signedIn(d,`Welcome — your page is myset.vip/v/${d.slug}`);
 }
 function signedIn(d,msg){
@@ -123,10 +170,12 @@ function signedIn(d,msg){
    out has to be signed out on this device regardless of what comes back. The
    server call is what makes the token itself stop working, which it never did. */
 async function signOut(){
+  if(SAMPLE){ location.href='/v/'+encodeURIComponent(SAMPLE.slug); return; }   // a preview has nobody signed in: back to the page
   try{ await post('/venueauth',{action:'signOut'}); }catch(e){}
   TOKEN=''; localStorage.removeItem('myset.vtoken'); V=null; ME=null; gate();
 }
 function signOutEverywhere(){
+  if(SAMPLE){ signOut(); return; }
   if(!confirm('Sign every device out, including this one? You’ll need a code to get back in.'))return;
   revokeAll();
 }
@@ -271,6 +320,7 @@ async function start(){
   setTimeout(bootDone,7000);
   try{ await Promise.all([loadVenue(),loadMe()]); }finally{ bootDone(); }
   loadPlan(); handleReturns();
+  if(!SAMPLE) maybeTips();                // a new page's first deck (0102); a sample's waits for its welcome
 }
 /* A pull re-reads the page, and whichever tab's extra data the tab needs. See
    /pull.js for why this exists at all in an installed app. */
@@ -283,6 +333,17 @@ MySetPull(async()=>{
 async function loadVenue(){
   const d=await post('/venueadmin',{action:'get'});
   if(!d.ok){
+    /* A sample never meets the sign-in screen and never touches the phone's own token:
+       a key that no longer opens it (claimed, removed, its 30 days out) goes back to the
+       page, which says so; anything else is a hiccup a pull can retry. */
+    if(SAMPLE){
+      if(d.error==='unauthorized'){ location.replace('/v/'+encodeURIComponent(SAMPLE.slug)); return; }
+      if(V){ toast(d.error||'Connection hiccup — try again'); return; }
+      bootDone();
+      $('#app').innerHTML=`<div class="gate"><div class="signbox"><h2>Couldn’t open your Studio</h2>
+        <p class="muted" style="font-size:14px;margin:0">Check your connection, then pull down to try again.</p></div></div>`;
+      return;
+    }
     if(d.error==='unauthorized'){ TOKEN=''; localStorage.removeItem('myset.vtoken'); }
     gate(d.error); return;
   }
@@ -292,7 +353,9 @@ async function loadVenue(){
 }
 async function loadMe(){
   ME=await post('/venueauth',{action:'list'}); if(V)render();
-  if(PW_PROMPT&&ME&&ME.ok){ PW_PROMPT=false; if(!myPw()) setTimeout(()=>openPasswordSheet(true),600); }
+  /* PWSOON holds a new page's first deck back until this prompt has been answered —
+     closeSheet() then plays it — so two layers never open at once (0102) */
+  if(PW_PROMPT&&ME&&ME.ok){ PW_PROMPT=false; if(!myPw()){ PWSOON=true; setTimeout(()=>{ PWSOON=false; openPasswordSheet(true); },600); } }
 }
 const myPw=()=>!!(((ME&&ME.emails)||[]).find(x=>x.me)||{}).pw;
 /* A Studio-code session has no address of its own, so the password sheet works
@@ -373,16 +436,20 @@ async function savePassword(){
 async function loadShows(force){
   if(SHOWS&&!force)return;
   if(!V||!V.slug)return;
+  /* the public door does not know a sample until it is claimed: the empty list a
+     brand-new page starts with, rather than a spinner that never stops (0101) */
+  if(SAMPLE){ SHOWS={ok:true,gigs:[]}; if(TAB==='shows')render(); return; }
   try{ SHOWS=await fetch(`${API}/venue?v=${encodeURIComponent(V.slug)}`,{cache:'no-store'}).then(r=>r.json()); }
   catch(e){ SHOWS={ok:false}; }
   if(TAB==='shows'&&V)render();
 }
 // a new tab opens at its top, never at the old tab's offset (as the Artist Studio)
-function setTab(t){ if(t!==TAB)window.scrollTo(0,0); TAB=t; localStorage.setItem('myset.vtab',t); render();
+function setTab(t){ if(t!==TAB)window.scrollTo(0,0); TAB=t; if(!SAMPLE)localStorage.setItem('myset.vtab',t); render();   // a preview leaves the phone's own saved tab alone (0101)
   if(t==='shows'){ loadShows(); loadEvents(); loadPitches(); }
   if(t==='numbers') loadStats();
   if(t==='merch'){ loadVComm(); loadVMerchLim(); loadVWishes(); }
-  if(t==='page') loadVerify(); }
+  if(t==='page') loadVerify();
+  maybeTips(); }   // the tab's own deck, the first time (0102)
 
 async function loadEvents(force){
   if(EVENTS&&!force)return;
@@ -571,7 +638,9 @@ const VTESTIMONIALS=[
 ];
 function openPlans(){
   if(!V) return;
-  if(!VPLAN){ loadPlan().then(openPlans); return; }
+  /* one more try, never a loop: loadPlan answers null when planGet fails, and
+     .then(openPlans) used to call this again and again, one request each time */
+  if(!VPLAN){ loadPlan().then(p=>{ if(p) openPlans(); else toast('Couldn’t load the plans just now — try again'); }); return; }
   const cur=V.plan||'free', sub=VPLAN.billing&&VPLAN.billing.subscribed, comped=cur!=='free'&&!sub;
   const cta=(k)=>{
     if(k===cur) return `<button class="big now" disabled>Your plan</button>`;
@@ -677,6 +746,7 @@ function vEarnings(){
   </div>`;
 }
 async function vLedgerCsv(){
+  if(SAMPLE){ openClaim(); return; }   // its own fetch, so the sample router never sees it
   try{
     const h={'content-type':'application/json'}; if(TOKEN) h["authorization"]="Bearer "+TOKEN;
     const r=await fetch(`${API}/venueadmin`,{method:'POST',headers:h,
@@ -830,14 +900,16 @@ function vMerchTab(){
         <button class="act warn" onclick="rmVMerch('${esc(m.id)}')">✕</button></div></div>`).join('')||`<div class="row muted">${stored?'Your items are saved and come back with Pro.':'Nothing yet.'}</div>`}</div>
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openVMerch('')">+ Add an item</button></div>`;
   const posts=VCOMM||[];
-  return `<div class="wrap" style="padding-top:14px">${V.slug?`<a class="big alt orange-outline" href="/v/${esc(V.slug)}/shop">See your shop ↗</a>`:''}</div>
+  /* a sample's shop and community page are not public until it is claimed (0101), so
+     neither is linked from its Studio: both would answer "No page here" */
+  return `<div class="wrap" style="padding-top:14px">${V.slug&&!SAMPLE?`<a class="big alt orange-outline" href="/v/${esc(V.slug)}/shop">See your shop ↗</a>`:''}</div>
     ${lock('merch', list, 'Merch on your page comes with Pro. Anything you add stays saved.')}
     ${payCard()}
     ${PAY&&PAY.ready?ordersSection():''}
     ${wishesSection()}
     ${PAY&&PAY.ready?vEarnings():''}
     <div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one, hide anything, or delete it. <a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one, hide anything, or delete it.${SAMPLE?'':` <a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">See the page ↗</a>`}</p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
       <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · ${p.reports} report${p.reports===1?'':'s'}`:''}</div>
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}</div>
@@ -1085,7 +1157,7 @@ function render(){
         return rows.join('');})()}
     </div>
     <div class="sec"><span class="kick">Your community page</span></div>
-    <div class="row muted">Fans rate a night and post photos on <a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">your community page ↗</a>. Read and moderate it on the <b>Merch</b> tab.</div>`;
+    <div class="row muted">Fans rate a night and post photos on ${SAMPLE?'your community page':`<a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">your community page ↗</a>`}. Read and moderate it on the <b>Merch</b> tab.</div>`;
   }
 
   if(TAB==='shows'){
@@ -1214,14 +1286,17 @@ function render(){
   if(TAB==='settings'){
     body=`
     ${planBox()}
-    <div class="sec"><span class="kick">Your public page</span></div>
+    <div class="sec"><span class="kick">Your page link</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">The link you give people, yours to choose. Change it any time — the old one keeps working too, so QR codes already printed still land here.</p>
     <div class="field"><label>myset.vip/v/</label><div style="display:flex;gap:8px">
       <input class="inp" id="slugIn" maxlength="32" value="${esc(V.slug||'')}" placeholder="yourbar" style="flex:1">
       <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
     ${V.slug?`<div class="wrap" style="margin-top:10px">
       <a class="big alt" href="/v/${esc(V.slug)}">Open myset.vip/v/${esc(V.slug)} ↗</a></div>`:''}
 
-    <div class="sec"><span class="kick">Verification</span></div>
+    ${/* a sample verifies nothing before the claim (verifyBlock says so on the Page tab),
+         so this section would send its button to a checklist that is not there */''}
+    ${SAMPLE?'':`<div class="sec"><span class="kick">Verification</span></div>
     ${V.verified
       ? `<div class="list"><div class="row"><div class="m"><div class="t">Verified ✓</div>
           <div class="s">${V.verifiedVia==='website+artists'?'Your website checks out and the artists who play here confirmed it'
@@ -1229,11 +1304,14 @@ function render(){
             :'Your website, and the artists who play here'}</div></div>
           <span class="pill ok">✓</span></div></div>`
       : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Your page says <b>Unverified listing</b> for now. Four things are needed and they’re all needed — the checklist, with what’s missing, is at the top of the <b>Page</b> tab.</p>
-         <div class="wrap"><button class="big alt" onclick="setTab('page')">Show me the checklist</button></div>`}
+         <div class="wrap"><button class="big alt" onclick="setTab('page')">Show me the checklist</button></div>`}`}
 
     <div class="sec"><span class="kick">Codes to print</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">On tables, on the bar, by the door. Tap one to bring it up full size.</p>
-    ${V.slug?`<div class="qrs">
+    ${/* a sample's page is not public until it is claimed, so /api/qr has no page to
+         point a code at (0101): no card that opens a broken picture */''}
+    ${SAMPLE?`<div class="list"><div class="row muted">Your codes to print appear here once you claim your page.</div></div>`
+    :V.slug?`<div class="qrs">
       ${QRS.map(([k,t,d])=>`<button class="qrcard" data-act="qrbig" data-id="${k}">
         <img src="${qrSrc(k,6)}" alt="${esc(t)} QR code" loading="lazy">
         <b>${esc(t)}</b><span>${esc(d)}</span></button>`).join('')}
@@ -1258,9 +1336,11 @@ function render(){
           simply never given either half. */''}
     <div class="sec"><span class="kick">Your account</span></div>
     <div class="list">
-      <div class="row"><div class="m"><div class="t">${esc((ME&&ME.email)||'Signed in')}</div>
-        <div class="s">Sign-in address${ME&&ME.emails?` · ${ME.emails.length} sign-in${ME.emails.length===1?'':'s'} on this page`:''}</div></div></div>
-      ${ME&&ME.email?`<div class="row"><div class="m"><div class="t">Password${ME&&ME.ok?(myPw()?' · set':' · not set'):''}</div>
+      ${SAMPLE?`<div class="row"><div class="m"><div class="t">Not claimed yet</div>
+        <div class="s">Claim profile, at the top, makes this page yours: your email, your password.</div></div></div>`
+      :`<div class="row"><div class="m"><div class="t">${esc((ME&&ME.email)||'Signed in')}</div>
+        <div class="s">Sign-in address${ME&&ME.emails?` · ${ME.emails.length} sign-in${ME.emails.length===1?'':'s'} on this page`:''}</div></div></div>`}
+      ${SAMPLE?'':ME&&ME.email?`<div class="row"><div class="m"><div class="t">Password${ME&&ME.ok?(myPw()?' · set':' · not set'):''}</div>
         <div class="s">${myPw()?'Sign in with your email and password. Forget it and a six-digit code to your email gets you back in.':'Set one and you can sign in with your email and password. Until then, a six-digit code to your email gets you in.'}</div></div>
         <button class="act" onclick="openPasswordSheet()">${myPw()?'Change':'Create'}</button></div>`
       :codeAddrs().length?`<div class="row"><div class="m"><div class="t">Password${codeAddrs().some(x=>x.pw)?' · set':' · not set'}</div>
@@ -1300,17 +1380,18 @@ function render(){
     <a class="homemark" href="/" aria-label="MySet home">
       <i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>
     </a>
-    <div style="flex:1;min-width:0"><div class="kick">Venue Studio</div>
+    <div style="flex:1;min-width:0"><div class="kick">${SAMPLE?'Preview':'Venue Studio'}</div>
       ${V.slug
         ? `<a class="whoami" href="/v/${esc(V.slug)}"><h1>${esc(V.name||'Your venue')}</h1><span>↗</span></a>`
         : `<h1>${esc(V.name||'Your venue')}</h1>`}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px">
-      <div class="headtopactions"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
-      ${(V.plan||'free')==='free'
+      <div class="headtopactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+      ${SAMPLE?`<button class="claimbtn" onclick="openClaim()">Claim profile</button>`
+        :(V.plan||'free')==='free'
         ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
         :`<button class="plantag" onclick="openPlans()">${esc((V.limits&&V.limits.label)||'Pro')} <span>↗</span></button>`}</div>
-      <span class="pill ${V.verified?'ok':'no'}">${V.verified?'✓ Verified':'Unverified'}</span>
+      ${SAMPLE?'':`<span class="pill ${V.verified?'ok':'no'}">${V.verified?'✓ Verified':'Unverified'}</span>`}
     </div>
   </div>${leavingBar()}${cardTrouble()}${body}
   <div class="wrap" style="padding-top:26px;padding-bottom:8px">
@@ -1358,10 +1439,64 @@ function openMenu(){
       <div class="m">Sign out<span>Of this device</span></div></button>`);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   TIP DECKS ON EVERY TAB (decision 0102). /tips.js holds the carousel and the words;
+   this decides when. A tab's deck plays once, the first time the tab is opened, for
+   a page made in this Studio (the flag its signup sets) and for a sample; an
+   established venue is never interrupted and has the ? in the header, which plays
+   the current tab's deck any time. Food & drink and Settings sit behind the bar's
+   Menu button but keep a deck each.
+   ───────────────────────────────────────────────────────────────────────────── */
+const DECKOF={page:'v-page',shows:'v-shows',numbers:'v-numbers',merch:'v-merch',menu:'v-menu',settings:'v-settings'};
+function tipScope(){ return SAMPLE?'vsample-'+SAMPLE.slug:'v_'+((V&&V.venueId)||'venue'); }
+function autoTips(){
+  if(SAMPLE) return true;
+  try{ return localStorage.getItem('myset.vtipsauto')==='1'; }catch(e){ return false; }
+}
+let PWSOON=false;   // a password prompt is on its way (loadMe): it goes first, and the deck follows it
+function maybeTips(){
+  if(!window.Tips||!V||!autoTips())return;
+  const deck=DECKOF[TAB]; if(!deck)return;
+  setTimeout(()=>{
+    try{
+      if(!window.Tips||!V||Tips.isOpen()||PWSOON||document.getElementById('boot')||DECKOF[TAB]!==deck)return;
+      if($('#sheet').classList.contains('on')||$('#qrbig').classList.contains('on')||document.querySelector('.scl'))return;
+      if(SAMPLE&&(Date.now()-CLAIMAT<1500||!Tips.seen('v-sample-studio',tipScope())))return;   // the claim sheet, or the welcome, goes first
+      Tips.first(deck,{scope:tipScope()});
+    }catch(e){}
+  },450);
+}
+function showTips(){
+  if(!window.Tips){ toast('Loading…'); return; }
+  Tips.open(DECKOF[TAB]||'v-page');
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   A SAMPLE'S VENUE STUDIO, ON ARRIVAL (decision 0101): the founder hears that the
+   Studio was opened, and the visitor meets a short welcome before the tab's own deck.
+   ───────────────────────────────────────────────────────────────────────────── */
+function sampleSeen(what){
+  if(!SAMPLE)return;
+  fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'seen',what,slug:SAMPLE.slug,key:SAMPLE.key,kind:'venue'})}).catch(()=>{});
+}
+function sampleBoot(){
+  sampleSeen('studio');
+  let tries=0;
+  const go=()=>{
+    if((!V||document.getElementById('boot'))&&tries++<40){ setTimeout(go,300); return; }
+    if(!window.Tips||!V)return;
+    Tips.first('v-sample-studio',{scope:tipScope(),cta:{label:'Show me',go:maybeTips},
+      onDone:(done)=>{ if(!done) maybeTips(); }}).then((shown)=>{ if(!shown) maybeTips(); });
+  };
+  setTimeout(go,500);
+}
+
 /* ── verification ───────────────────────────────────────
    Shown as a CHECKLIST, not a yes/no, because "unverified" with no explanation
    is just a shrug. Every line says exactly what is missing and what to do. */
 function verifyBlock(){
+  if(SAMPLE) return '';   // nothing to verify before the claim; the checklist comes with the page
   if(V.verified) return `<div class="note ok"><b>✓ Verified</b>
     <p>${V.verifiedVia==='website+artists'
         ? 'Your website checks out and the artists who play here confirmed it.'
@@ -1569,7 +1704,8 @@ function attachDrag(sh){
       window.removeEventListener('mousemove',mm); window.removeEventListener('mouseup',mu); };
     window.addEventListener('mousemove',mm); window.addEventListener('mouseup',mu); });
 }
-function closeSheet(){const sh=$('#sheet');sh.style.transition='';sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');}
+function closeSheet(){const sh=$('#sheet'),was=sh.classList.contains('on');sh.style.transition='';sh.style.transform='';$('#bg').classList.remove('on');sh.classList.remove('on');
+  if(was) maybeTips(); }   // a deck held back by a sheet (a new page's password prompt) plays once it closes (0102)
 document.addEventListener('keydown',e=>{ if(e.key!=='Escape')return;
   if($('#qrbig').classList.contains('on')) qrHide(); else closeSheet(); });
 
@@ -1816,7 +1952,8 @@ function wireCount(inSel,outSel,max){
     o.classList.toggle('near',i.value.length>max*0.9);};
   i.addEventListener('input',draw); draw();
 }
-let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');
+let tT;function toast(m){if(SAMPLE&&Date.now()-CLAIMAT<1500)return;   /* the claim sheet is the answer; a "Failed" under it is noise */
+  const t=$('#toast');t.textContent=m;t.classList.add('on');
   clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3200);}
 
-if(TOKEN) start(); else gate();
+if(TOKEN||SAMPLE){ start(); if(SAMPLE) sampleBoot(); } else gate();

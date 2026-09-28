@@ -251,6 +251,11 @@ export const CAN = {
   owner: null,                                          // null means everything
   member: new Set(['show', 'library', 'gigs', 'profile', 'community', 'requests', 'stats', 'export', 'audit']),
   crew: new Set(['show', 'requests']),
+  /* The person holding a sample's link (decision 0101) may look at the Studio of the
+     page built for them and do NOTHING — admin.mjs lets `sample` through only on its
+     own short list of reads. Named here, as an empty set, so it can never fall back
+     to `crew`, which can run a show. */
+  sample: new Set(),
 };
 export const can = (role, what) => {
   if (role === 'owner') return true;

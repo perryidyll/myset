@@ -38,13 +38,15 @@ export const mutateVenues = (fn) =>
     return fn(r);
   });
 
-const VRESERVED = new Set(['api', 'new', 'index', 'home', 'admin', 'studio', 'venue', 'venues',
+export const VRESERVED = new Set(['api', 'new', 'index', 'home', 'admin', 'studio', 'venue', 'venues',
   'about', 'help', 'support', 'login', 'signup', 'terms', 'privacy', 'settings', 'null', 'undefined',
   'community', 'merch', 'shop', 'store', 'orders', 'c']);
 
 export async function venueBySlug(slug) {
   const r = await readVenues();
-  const vid = r.bySlug[cleanSlug(slug)] || null;
+  const want = cleanSlug(slug);
+  // a renamed page keeps answering at its old address (INVARIANT 0di)
+  const vid = r.bySlug[want] || ((r.oldSlug || {})[want] || {}).vid || null;
   /* A venue on its way out goes dark the day it asks, and is only erased thirty
      days later — so the public page has to stop answering now. See startDeletion
      in _account.mjs for why the data does not move. */
@@ -56,10 +58,11 @@ export async function venueById(vid) {
   return r.byId[vid] || null;
 }
 
-export function pickVenueSlug(name, reg, wanted) {
+export function pickVenueSlug(name, reg, wanted, held = null) {
   let base = cleanSlug(wanted || name) || 'venue';
   if (base.length < 3) base = base + 'bar';
-  const free = (v) => !VRESERVED.has(v) && !reg.bySlug[v] && !reg.byId[v];
+  // `held`: names venue samples are holding (decision 0101), read outside the CAS
+  const free = (v) => !VRESERVED.has(v) && !reg.bySlug[v] && !reg.byId[v] && !((reg.oldSlug || {})[v]) && !(held && held.has(v));
   if (free(base)) return base;
   for (let i = 2; i < 500; i++) {
     const t = `${base}${i}`;
@@ -71,9 +74,10 @@ export function pickVenueSlug(name, reg, wanted) {
 export async function createVenue({ email, name, slug, city, country }) {
   const nm = clean(name, 70) || 'New venue';
   let made = null, err = null;
+  const held = await import('./_sample.mjs').then((m) => m.sampleSlugs('venue')).catch(() => null);
   await mutateVenues((reg) => {
     if (reg.byEmail[email]) { err = 'already'; return false; }
-    const s = pickVenueSlug(nm, reg, slug);
+    const s = pickVenueSlug(nm, reg, slug, held);
     if (!s) { err = 'no-slug'; return false; }
     const vid = s;                     // slug and id start identical, like artists
     if (reg.byId[vid]) { err = 'no-slug'; return false; }
@@ -182,7 +186,17 @@ export async function verifyVenueToken(token) {
 }
 
 /** Who is making this request, and which venue do they run? */
-export async function requireVenue(req) {
+export async function requireVenue(req, opts = {}) {
+  /* THE SAMPLE DOOR, venue side (decision 0101): the Venue Studio of a page the
+     factory built, opened to LOOK by whoever holds its link's key — only for a caller
+     that asks (`{ sample: true }`, venueadmin.mjs). See requireArtist in _lib.mjs. */
+  const skey = req.headers.get('x-sample-key') || '';
+  if (skey) {
+    if (!opts.sample) return null;
+    const { verifySample } = await import('./_sample.mjs');
+    const hit = await verifySample(req.headers.get('x-sample-venue') || '', skey, 'venue');
+    return hit ? { vid: hit.owner.slice(2), email: null, role: 'sample', sid: null, row: hit.row } : null;
+  }
   const auth = req.headers.get('authorization') || '';
   if (!auth.startsWith('Bearer ')) return null;
   const me = await verifyVenueToken(auth.slice(7));

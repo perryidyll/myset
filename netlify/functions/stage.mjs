@@ -9,13 +9,15 @@ import { readEvents, nextOccurrence } from './_events.mjs';
 import { localTime } from './_time.mjs';
 
 const main = async (req) => {
-  const me = await requireArtist(req);
+  /* A sample's Studio reads its stage too (decision 0101) — read-only; it is not in
+     the registry, so its address comes from the sample row. */
+  const me = await requireArtist(req, { sample: true });
   if (!me) return bad('unauthorized', 401);
-  return json(await stagePayload(me.aid));
+  return json(await stagePayload(me.aid, { slug: me.slug || '' }));
 };
 
 /** Shared so a write can return the new state instead of forcing a second fetch. */
-export async function stagePayload(aid) {
+export async function stagePayload(aid, { slug: slugHint = '' } = {}) {
   const { artistById } = await import('./_auth.mjs');
   const [show, fans, meta, reqs, lists, learn, fb, events, who] = await Promise.all([
     getShow(aid), readFans(aid), readMeta(aid), readRequests(aid),
@@ -73,7 +75,7 @@ export async function stagePayload(aid) {
       windowOpen: !!show.windowOpen, nowPlaying: show.nowPlaying,
       played: show.played, freeCredits: show.freeCredits, replayCost: show.replayCost,
       packs: show.packs, showId: show.showId, startedAt: show.startedAt,
-      artistId: aid, slug: (who && who.slug) || '',
+      artistId: aid, slug: (who && who.slug) || slugHint || '',
       unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],
       requests: show.requests, birthdays: show.birthdays,
       listId: show.listId, listName: show.listName,

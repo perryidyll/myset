@@ -73,7 +73,9 @@ check('public/venue-studio.html', [
     const okStamp = have === want;
     console.log(`  ${okStamp ? '✓' : '✗'} ${js} stamp in ${page} ${okStamp ? 'matches' : `is ${have || 'missing'}, file is ${want} — run: node tools/stamp.mjs`}`);
     if (!okStamp) fail++;
-    if (!page.endsWith('.html') || js === 'fan.js') continue;
+    /* a fan page keeps its own script inline on purpose — whichever stamped script it
+       also loads (fan.js, and sample.js for a sample's key since decision 0101) */
+    if (!page.endsWith('.html') || js === 'fan.js' || FANPAGES.includes(page)) continue;
     const inline = (html.match(/<script>/g) || []).length;
     const okInline = inline <= 3;
     console.log(`  ${okInline ? '✓' : '✗'} ${page} keeps only its small inline scripts (${inline})`);

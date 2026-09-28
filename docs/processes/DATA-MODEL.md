@@ -400,7 +400,7 @@ Linked steps: 370078, 370079, 370080, 369863, 369864
 | `byId[aid].plan / planUntil` (46135) | Single-line text | free | plus | pro and until when — the ONLY plan fields the app reads; billing and promo codes write them |
 | `byId[aid].verified` (46136) | Single checkbox | the tick (Artist lifecycle 04) |
 | `byId[aid].src / refSlug / referredBy` (46137) | Single-line text | first touch, recorded once and never edited: a short source label (never a URL) and the referring artist's slug — the marketing fact, not a browsing trail |
-| `bySlug` (46138) | Multi-line text | slug → artist id; a renamed page holds its old name for the grace period |
+| `bySlug` (46138) | Multi-line text | slug → artist id; a renamed page's old names live in `oldSlug` (old name → {aid, at}) and answer for it for good — no other page can take one (decision 0106, INVARIANT 0di) |
 | `byEmail[email].artistId / role` (46139) | Single-line text | who can sign in and as what: owner | manager | crew (Artist lifecycle 02) |
 | `dead` (46140) | Multi-line text | revoked session ids — checked on every request, normally absent |
 
@@ -415,7 +415,7 @@ Linked steps: 369946, 369952, 369953, 369959, 369894, 369976
 | `byId[vid].slug / name / city / country / createdAt` (46141) | Single-line text | the venue page |
 | `byId[vid].verified / verifiedVia / verifiedAt` (46142) | Single-line text | the tick and which of the three ways earned it (Venue lifecycle 02) |
 | `byId[vid].plan` (46143) | Single-line text | the venue plan |
-| `bySlug / byEmail` (46144) | Multi-line text | slug → id; email → {venueId, role} with CREW_OK / MANAGER_OK |
+| `bySlug / byEmail` (46144) | Multi-line text | slug → id (a renamed page's old names in `oldSlug`, old name → {vid, at}, answering for it for good since decision 0106); email → {venueId, role} with CREW_OK / MANAGER_OK |
 
 Linked steps: 369985, 369986, 370003, 369996
 

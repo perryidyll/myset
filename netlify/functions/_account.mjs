@@ -135,6 +135,12 @@ export async function keysFor(aid) {
      two name (0074) — one read of the index, one of the archive head, no list(). */
   keys.push(IMG(aid, 'tour'));
   for (const k of await messageKeys(aid).catch(() => [`inbox_${aid}`, `inboxarch_${aid}`])) keys.push(k);
+  /* A page that began as a sample (decision 0101): its record, and the photos the
+     factory stored under the sample's own unguessable name, which IMG(aid, …) above
+     cannot name. */
+  keys.push(`sample_${aid}`);
+  { const { sampleImgKeys } = await import('./_img.mjs');
+    keys.push(...sampleImgKeys([profile.photo, profile.avatar, ...(profile.photos || [])])); }
   return [...new Set(keys)];
 }
 

@@ -54,6 +54,15 @@ echo
 echo "── the 2026-09-02 audit fixes ──"
 node --import ./test/register.mjs test/audit-0902.mjs
 echo
+echo "── sample profiles: the private page, the look-only Studio, the claim, the clock (0101) ──"
+node --import ./test/register.mjs test/samples.mjs
+echo
+echo "── the tip decks, the practice round and the sample page's words (0101, 0102) ──"
+node test/tipdecks.mjs
+echo
+echo "── the sample factory: sources, Claude, the gate, the worker and the ring (0103) ──"
+node --import ./test/register.mjs test/factory.mjs
+echo
 echo "── the studio-code door ──"
 node --import ./test/register.mjs test/studiocode.mjs
 echo

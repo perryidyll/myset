@@ -21,13 +21,25 @@ const evOwner = (vid) => `v_${vid}`;
    ever reach its own records — the id comes from the token, never the body. */
 
 export default async (req) => {
-  const me = await requireVenue(req);
+  const me = await requireVenue(req, { sample: true });
   if (!me) return bad('unauthorized', 401);
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const vid = me.vid;
   const action = body.action;
+
+  /* A SAMPLE'S VENUE STUDIO IS FOR LOOKING (decision 0101) — an allowlist of the
+     reads its tabs draw; anything else answers `claim: true` and the Studio opens
+     the claim sheet. See SAMPLE_OK in admin.mjs. */
+  const SAMPLE_OK = new Set(['get', 'planGet', 'stats', 'eventList', 'pitchList', 'postList',
+                             'orderList', 'wishList', 'merchList', 'payStatus']);
+  if (me.role === 'sample' && !SAMPLE_OK.has(action))
+    return json({ ok: false, claim: true, error: 'Claim your page to save this.' }, 403);
+  // a sample is not in the venue registry: its row stands in wherever the registry's would
+  const regOf = () => (me.role === 'sample'
+    ? Promise.resolve({ slug: me.row.slug, name: me.row.name, createdAt: null, plan: 'free', city: me.row.city || '' })
+    : venueById(vid));
 
   /* WHO MAY DO WHAT, ON THE VENUE SIDE. `byEmail[email].role` was written as
      'staff' by venueauth's `add` and then read by absolutely nothing, so a barman
@@ -43,7 +55,7 @@ export default async (req) => {
                               'merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear', 'merchMove',
                               'postHide', 'postDelete', 'accountExport']);
   const role = me.role === 'owner' ? 'owner' : (me.role === 'manager' ? 'manager' : 'crew');
-  if (role !== 'owner') {
+  if (role !== 'owner' && me.role !== 'sample') {
     const allowed = role === 'manager' ? MANAGER_OK : CREW_OK;
     if (!allowed.has(action))
       return bad('That’s not something this sign-in can do — ask whoever owns the page', 403);
@@ -54,7 +66,7 @@ export default async (req) => {
      happened to run the website check. */
   const send = async () => {
     const [prof, reg, vouches] = await Promise.all([
-      getVenueProfile(vid), venueById(vid), readVouches(vid)]);
+      getVenueProfile(vid), regOf(), readVouches(vid)]);
     const names = Object.values(vouches.by || {}).map((x) => x.name).filter(Boolean);
     return json({ ok: true, venue: shapeVenue(prof, reg),
                   vouches: { count: names.length, need: MIN_VOUCHES, names: names.slice(0, 12) },
@@ -408,7 +420,7 @@ export default async (req) => {
   if (action === 'planGet') {
     const B = await import('./_billing.mjs');
     await B.maybeSync(owner);
-    const reg = await venueById(vid);
+    const reg = (await regOf()) || {};        // a sample is not in the venue registry (0101): its own row stands in
     return json({ ok: true, plan: venuePlanOf(reg), limits: { ...venueLimits(reg), soon: VENUE_NOT_BUILT },
                   plans: Object.fromEntries(Object.entries(VENUE_PLANS).map(([k, v]) => [k, { ...v, soon: VENUE_NOT_BUILT }])),
                   until: reg.planUntil || null, billing: await B.billingStatus(owner), email: me.email || null });

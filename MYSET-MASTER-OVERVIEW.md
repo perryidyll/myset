@@ -533,10 +533,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 
 | | |
 |---|---|
-| Public pages | 15 — about.html, artist.html, artists.html, community.html, diary.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
-| HTTP functions | 36 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
-| Scheduled jobs | 4 — autocron, mirrorcron, registercron, sheetcron |
-| Shared libraries | 63 |
+| Public pages | 16 — about.html, artist.html, artists.html, community.html, diary.html, factory.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
+| HTTP functions | 39 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `history`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
+| Scheduled jobs | 5 — autocron, factorycron, mirrorcron, registercron, sheetcron |
+| Shared libraries | 67 |
 | Artist Studio actions | 145 |
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
@@ -544,10 +544,11 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
-| Invariants | 279 (last: 0fn) |
-| Test suites | 60 |
-| Assertions | **3,915**, 0 failing, last run 2026-09-28 |
-| Decision records | 100 |
+| A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
+| Invariants | 282 (last: 0fn) |
+| Test suites | 63 |
+| Assertions | **4,310**, 0 failing, last run 2026-09-28 |
+| Decision records | 105 |
 
 ### Feature flags in force
 
@@ -1050,13 +1051,16 @@ Netlify Blobs, one store, everything namespaced per artist or venue.
 `connect_` · `fb_` / `fbarch_` · `lock_` · `apitch_` · `songstats_` · `posts_` / `likes_` /
 `postsarch_` · `billing_` · `ledger_` · `vidpend_` · `biz_` · `rsvp_` · `sess_` / `log_` /
 `rec_` / `pkeys_` · `evt_<aid>_<showId>` (the night's event log, 0066) · `ver_` / `vers_`
-(versions of the hand-edited documents, 0067) · `mirror_` (what the nightly copy has seen, 0069)
+(versions of the hand-edited documents, 0067) · `mirror_` (what the nightly copy has seen, 0069) ·
+`sample_` / `samplearc_` (a sample page's record, and its private copy once it comes down, 0101)
 
-**Per venue:** `v_` · `vprofile_` · `vouch_` · `vpitch_` · `posts_v_` / `likes_v_` / `postsarch_v_`
+**Per venue:** `v_` · `vprofile_` · `vouch_` · `vpitch_` · `posts_v_` / `likes_v_` / `postsarch_v_` ·
+`sample_v_` / `samplearc_v_`
 
 **Global — the only shared documents:** `artists` (the registry) · `venues` · `cityindex` ·
 `acctindex` · `flags` · `idqueue` · `promos` · `authsecret` · `authc_` · `sheetsync` ·
-`gigsched` · `vidqueue` · `delqueue` · `mirror`
+`gigsched` · `vidqueue` · `delqueue` · `mirror` · `samplereg` · `samplearc` · `samplesup` · `samplestat` ·
+`factoryq` · `factorycfg` (sample pages and the factory that builds them, 0101 and 0103)
 
 ### The five hard-won storage rules
 

@@ -9,7 +9,7 @@ sources:
   - INVARIANTS.md 0ci (one global read per poll), 0bu
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps)
-verified: code read 2026-09-12 (_session.mjs CAN table; auth.mjs guarded actions)
+verified: code read 2026-09-12 (_session.mjs CAN table; auth.mjs guarded actions); t08 re-read 2026-09-28 in the working tree (branch feat/sample-profiles: Your page link on top, old names nobody else's — test/accounts.mjs), not deployed
 ---
 
 # Sessions, roles and the team
@@ -27,7 +27,7 @@ Two of the holes this closed were ways to lose an account: a member could delete
 | t05 | Sign out everywhere | task | Person | Artist R · MySet server R | Netlify | `signOutOthers` / `revokeAll` (owner): bump `rev`, every token minted before this instant dies. Also what using a recovery code does. `src: auth.mjs; ACCOUNTS.md §6.4` |
 | t06 | Add a team member | form | Person | Artist R · Artist team member I | Netlify | `add {email, role}` — **owner only** (403 otherwise; the venue side had the identical hole plus a `staff` role nothing read, retired into `crew`). Seats per plan are in §2.1. The new address signs in through the ordinary code door; the registry links it to this page with the given role. `src: auth.mjs add; ACCOUNTS.md §6.1` |
 | t07 | Change a role or remove a seat | task | Person | Artist R · Artist team member I | Netlify | `roleSet` / `remove` — owner only. Removing a seat kills its sessions. The owner cannot remove themselves this way (that is *Leaving*). `src: auth.mjs roleSet, remove` |
-| t08 | Rename the public page | task | Person | Artist R | Netlify | `setSlug` — **owner only**, because the slug is printed on QR codes stuck to bar tables; `cleanSlug` refuses reserved names (`v…`). `accountFreeSlug` is the deliberate release during a soft delete. `src: auth.mjs setSlug; ACCOUNTS.md §6.1, §6.6` |
+| t08 | Rename the public page | task | Person | Artist R | Netlify | `setSlug` — **owner only**, because the slug is printed on QR codes stuck to bar tables; `cleanSlug` refuses reserved names (`v…`). The field is **Your page link**, at the top of Settings since 2026-09-28 (*The link you give people, yours to choose…*). The old name keeps answering for the page (`oldSlug`) and is nobody else's: `setSlug` refuses another page's old name, `pickSlug` skips it, and the page may take its own back (decision 0106, INVARIANT 0di — until then only `bySlug` was checked). `accountFreeSlug` is the deliberate release during a soft delete. **Testing.** `src: auth.mjs setSlug; _auth.mjs pickSlug; public/studio.js Settings; ACCOUNTS.md §6.1, §6.6; decision 0106` |
 | t09 | Write the activity log | database | Automation | MySet server R | Netlify | `log_<owner>`, capped at 100 entries, **best-effort with `.catch(() => {})`** — a logging failure must never be the reason a musician cannot start a show. Sign-ins, code sends, seats added and removed, roles changed, the Studio code set, recovery codes made and used, the address moved, deletion started and cancelled. Never an IP, never a fan id, never an amount. `src: _session.mjs; ACCOUNTS.md §6.7` |
 | t10 | Read the activity log | notification | Automation | MySet server R · Artist I | Netlify | `activity` — needs the `audit` capability (owner and member). *"Did somebody else get into my page?"* now has an answer. `src: auth.mjs activity` |
 

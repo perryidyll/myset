@@ -4,9 +4,21 @@ let CODE=localStorage.getItem('myset.admin')||'', TOKEN=localStorage.getItem('my
    credential now — see requireArtist. Blank means the founding artist, so every
    link that worked before still works. */
 let ASLUG=localStorage.getItem('myset.aslug')||'';
+/* A SAMPLE'S STUDIO (decision 0101). The page the factory built sends its visitor
+   here with ?sample=<slug>, and the key its link carried is on this phone already
+   (myset.sample). Opened that way — or opened at all with no sign-in of its own —
+   the Studio runs on that key: it LOOKS at the page's own data and every save opens
+   the claim sheet instead (sampleRoute, below). The phone's real sign-in, if it has
+   one, is left untouched and simply not sent. */
+const SAMPLE=(()=>{try{
+  const q=new URLSearchParams(location.search), k=JSON.parse(localStorage.getItem('myset.sample')||'null');
+  if(!k||!k.key||k.kind==='venue')return null;
+  if(q.get('sample')||(!TOKEN&&!CODE))return k;
+}catch(e){} return null;})();
+if(SAMPLE){ CODE=''; TOKEN=''; ASLUG=SAMPLE.slug; }
 let EVENTS=null, PLAN=null, PROMOS=null, VENUES=null, PITCHES=null, CHARTS=null;
 let D=null, REV=null, HIST=null, DETAIL=null, PROF=null, PROFERR=null, TEAM=null, timer=null;   // PROFERR: why the page's profile didn't come, so a card never spins for good
-let TAB=localStorage.getItem('myset.tab')||'setlist';
+let TAB=SAMPLE?'live':(localStorage.getItem('myset.tab')||'setlist');   // a preview opens where the practice round is (0101)
 /* 'merch' is a real tab again — its own option under Menu since 2026-09-13 (the
    founder's call: a store is not a profile field). It was folded into Profile on
    2026-09-12, so a phone that saved 'merch' before then simply lands on the store. */
@@ -354,6 +366,8 @@ function hdrs(){
   return h;
 }
 async function api(p,o={}){
+  /* A sample's Studio: reads go to the server on the key, everything else is a claim. */
+  if(SAMPLE){ const r=sampleRoute(p,o); if(r) return r; }
   /* The <head> started the first stage read and planGet before this script had
      parsed; use each of those answers once, then fetch like always. */
   const E=window.__early; let early=null;
@@ -362,6 +376,7 @@ async function api(p,o={}){
   const h={'content-type':'application/json',...(o.headers||{})};
   if(CODE){ h['x-admin-code']=CODE; if(ASLUG) h['x-admin-artist']=ASLUG; }
   if(TOKEN) h['authorization']='Bearer '+TOKEN;
+  if(SAMPLE){ h['x-sample-key']=SAMPLE.key; h['x-admin-artist']=SAMPLE.slug; }
   // `quiet` for background refreshes — the live tab re-reads every few seconds,
   // and flashing the overlay at it looked like something was wrong
   if(!o.quiet) busy(true);
@@ -374,7 +389,271 @@ async function api(p,o={}){
   }catch(e){ return {ok:false,offline:true,error:'Connection hiccup — try again'}; }
   finally{ if(!o.quiet) busy(false); }
 }
+/* ─────────────────────────────────────────────────────────────────────────────
+   TIP DECKS ON EVERY TAB (decision 0102). /tips.js holds the carousel and the words;
+   this decides when. A tab's deck plays once, the first time an account opens it,
+   for a new account (a first night still ahead, or the flag a signup or a claim
+   sets) and for a sample; an established artist is never interrupted and has the ?
+   in the header, which plays the current tab's deck any time.
+   ───────────────────────────────────────────────────────────────────────────── */
+const DECKOF={live:'live',setlist:'setlist',gigs:'gigs',money:'money',profile:'profile',merch:'merch',diary:'diary',messages:'messages',settings:'settings'};
+function tipScope(){ return SAMPLE?'sample-'+SAMPLE.slug:((D&&D.show&&D.show.artistId)||'artist'); }
+function autoTips(){
+  if(SAMPLE) return true;
+  try{ if(localStorage.getItem('myset.tipsauto')==='1') return true; }catch(e){}
+  return !!(D&&typeof D.nights==='number'&&D.nights===0&&!((D.show||{}).played||[]).length);
+}
+const practiceCta=()=>(!PRACTICE&&D&&D.show&&D.show.status!=='live')?{label:'Try a practice round',go:startPractice}:null;
+function maybeTips(){
+  if(!window.Tips||!D||PRACTICE||!autoTips())return;
+  const deck=DECKOF[TAB]; if(!deck)return;
+  setTimeout(()=>{
+    try{
+      if(!window.Tips||PRACTICE||Tips.isOpen()||isNew()||document.getElementById('boot')||DECKOF[TAB]!==deck)return;
+      if($('#sheet').classList.contains('on')||$('#tipburst'))return;
+      if(SAMPLE&&!Tips.seen('sample-studio',tipScope()))return;       // the welcome goes first
+      Tips.first(deck,{scope:tipScope(),cta:deck==='live'&&(SAMPLE||firstGig())?practiceCta():null});
+    }catch(e){}
+  },450);
+}
+function showTips(){
+  if(!window.Tips){ toast('Loading…'); return; }
+  const deck=DECKOF[TAB]||'live';
+  Tips.open(deck,{cta:deck==='live'?practiceCta():null});
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   A SAMPLE'S STUDIO, ON ARRIVAL (decision 0101): the founder hears that the Studio
+   was opened, and the visitor meets a four-slide welcome before the tab's own deck.
+   ───────────────────────────────────────────────────────────────────────────── */
+function sampleSeen(what){
+  if(!SAMPLE||SAMPLE.pv)return;          // the founder's own look from the console counts nothing (0101)
+  fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'seen',what,slug:SAMPLE.slug,key:SAMPLE.key,kind:'artist'})}).catch(()=>{});
+}
+function sampleBoot(){
+  sampleSeen('studio');
+  let tries=0;
+  const go=()=>{
+    if((!D||document.getElementById('boot'))&&tries++<40){ setTimeout(go,300); return; }
+    if(!window.Tips)return;
+    Tips.first('sample-studio',{scope:tipScope(),cta:{label:'Show me',go:()=>{ if(TAB!=='live') setTab('live'); else maybeTips(); }},
+      onDone:(done)=>{ if(!done) maybeTips(); }}).then((shown)=>{ if(!shown) maybeTips(); });
+  };
+  setTimeout(go,500);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   THE PRACTICE ROUND (decision 0102). A pretend night on the real Live tab: thirty
+   songs every bar knows, a room that votes, tips and buys votes, and the artist
+   running it with the real buttons — Start, End current song, Open/Paused, Last
+   call, Decline, End the show. Each core move is explained by its own short deck
+   the first time, just before the button it explains starts to pulse.
+
+   IT NEVER WRITES. The whole night is a stage payload built on this phone
+   (practiceState, the same shape stage.mjs returns) and drawn by the same render();
+   act() and askDo() hand every action to practiceAct while it runs, and load()
+   refuses to fetch, so the real poll cannot paint over it and nothing reaches the
+   server. It will not start over a real show, and leaving the Live tab ends it.
+   ───────────────────────────────────────────────────────────────────────────── */
+const PRSONGS=[['Wonderwall','Oasis'],['Hotel California','Eagles'],['Sweet Caroline','Neil Diamond'],['Don’t Stop Believin’','Journey'],
+  ['Mr. Brightside','The Killers'],['Take Me Home, Country Roads','John Denver'],['Hey Jude','The Beatles'],['Zombie','The Cranberries'],
+  ['Wish You Were Here','Pink Floyd'],['Valerie','Amy Winehouse'],['Brown Eyed Girl','Van Morrison'],['Stand by Me','Ben E. King'],
+  ['I’m Yours','Jason Mraz'],['Riptide','Vance Joy'],['Perfect','Ed Sheeran'],['Shallow','Lady Gaga & Bradley Cooper'],
+  ['Hallelujah','Leonard Cohen'],['Let It Be','The Beatles'],['Losing My Religion','R.E.M.'],['Creep','Radiohead'],
+  ['Tennessee Whiskey','Chris Stapleton'],['Jolene','Dolly Parton'],['Bohemian Rhapsody','Queen'],['Summer of ’69','Bryan Adams'],
+  ['Chasing Cars','Snow Patrol'],['Yellow','Coldplay'],['Knockin’ on Heaven’s Door','Bob Dylan'],['Fast Car','Tracy Chapman'],
+  ['Redemption Song','Bob Marley & The Wailers'],['Budapest','George Ezra']];
+const PRNOTES=['','','Play Wonderwall!','🔥🔥🔥','Happy birthday Sam!','','Best night in ages','','You’re amazing',''];
+let PRACTICE=null;
+const r2=(n)=>Math.round(n*100)/100;
+function practiceCard(big){
+  return big
+    ? `<div class="prcard rise"><div class="prt"><b>Try a practice round</b><span>Pretend fans vote, tip and buy votes. You run the night with the real buttons, and nothing is saved.</span></div>
+        <button class="big bigplay" onclick="startPractice()"><span>▶</span><span style="flex:1">Start a practice round</span></button></div>`
+    : `<div class="wrap" style="padding-top:14px"><button class="big alt" style="justify-content:center;margin:0" onclick="startPractice()">Try a practice round</button></div>`;
+}
+function practiceBar(){
+  return `<div class="prbar"><span class="prdot" aria-hidden="true"></span><div class="m"><b>Practice round</b><span>Pretend fans · nothing is saved</span></div>
+    <button class="act" onclick="practiceEnd(true)">Leave</button></div>`;
+}
+function practiceState(){
+  const P=PRACTICE, real=P.real||{}, rs=real.show||{};
+  const songs=P.songs.map(x=>({...x})).sort((a,b)=>(b.now-a.now)||(b.votes-a.votes)||(a.first-b.first)||a.title.localeCompare(b.title));
+  return { ok:true, practice:true,
+    show:{...rs, status:'live', windowOpen:P.window, played:P.played.slice(), nowPlaying:P.now, showId:'practice', startedAt:P.at,
+          startedBy:'artist', endedBy:null, listId:'', listName:'', sched:null, unlimited:false,
+          freeCredits:rs.freeCredits||3, packs:rs.packs||{small:{votes:5,cents:300},big:{votes:15,cents:1000}}},
+    tags:real.tags||{builtin:[],own:[]}, lists:[], learn:[], listFellBack:false,
+    voters:P.voters, room:P.room, nets:1, asks:P.asks.map(a=>({...a})), songs,
+    tips:{total:r2(P.tips.total), count:P.tips.count, recent:P.tips.recent.slice(0,15), allTime:0, allTimeCount:0},
+    paid:{count:P.paid.count, total:r2(P.paid.total), last:P.paid.last},
+    signAt:real.signAt||0, nights:real.nights, feedback:real.feedback||null, paymentsEnabled:true, payoutsNote:null, store:real.store };
+}
+function startPractice(){
+  if(PRACTICE)return;
+  if(!D||!D.show){ toast('One moment…'); return; }
+  if(D.show.status==='live'){ toast('Your show is live — practise after it ends'); return; }
+  closeSheet(); if(window.Tips) Tips.close();
+  sampleSeen('practice');
+  const now=Date.now();
+  /* four songs the pretend room loves, so the top of the list moves the way a real
+     night's does; everything else gets the odd vote */
+  const fav=new Set(); while(fav.size<5) fav.add(Math.random()*PRSONGS.length|0);
+  PRACTICE={real:D, at:now, songs:PRSONGS.map(([title,artist],i)=>({id:'pr'+i,title,artist,key:'',tags:[],active:true,votable:true,inSet:true,
+      votes:0,paidVotes:0,played:false,now:false,first:Infinity,w:fav.has(i)?6+Math.random()*6:1})),
+    played:[], now:null, nowAt:0, lastEnd:0, starts:0, cast:0, voters:0, room:3, window:true,
+    tips:{count:0,total:0,recent:[]}, paid:{count:0,total:0,last:0}, asks:[], asked:false,
+    next:{tip:now+11000, pack:now+19000, ask:now+30000}, step:'intro', pulse:null, t:null, moneyDeck:false};
+  D=practiceState();
+  TAB='live'; try{localStorage.setItem('myset.tab','live')}catch(e){}
+  window.scrollTo(0,0); render();
+  const go=()=>{ if(!PRACTICE)return; PRACTICE.step='voting'; PRACTICE.at=Date.now(); clearInterval(PRACTICE.t); PRACTICE.t=setInterval(practiceTick,650); };
+  if(window.Tips) Tips.first('pr-start',{scope:tipScope()+'.practice',onDone:go}).then((shown)=>{ if(!shown) go(); });
+  else go();
+}
+function prPick(P,heavy){
+  const pool=P.songs.filter(x=>!x.now&&x.active!==false&&(!x.played||heavy));
+  let sum=0; for(const x of pool) sum+=x.w; let r=Math.random()*sum;
+  for(const x of pool){ r-=x.w; if(r<=0) return x; }
+  return pool[0]||null;
+}
+function practiceTick(){
+  const P=PRACTICE; if(!P||document.hidden)return;
+  const now=Date.now(), deck=window.Tips&&Tips.isOpen();
+  if(P.window&&!deck){
+    const n=Math.random()<.5?1:2;
+    for(let i=0;i<n;i++){ const sg=prPick(P); if(sg){ sg.votes++; P.cast++; if(sg.first===Infinity) sg.first=now; } }
+    if(P.voters<28&&Math.random()<.4) P.voters++;
+    if(P.room<P.voters+5&&Math.random()<.35) P.room++;
+    if(P.room<P.voters) P.room=P.voters;   // everybody voting is in the room
+  }
+  /* the money, never while a deck is being read: it waits a few seconds instead */
+  if(deck||$('#tipburst')){ P.next.tip=Math.max(P.next.tip,now+3000); P.next.pack=Math.max(P.next.pack,now+4500); }
+  else if(now>=P.next.tip){
+    const amt=[2,3,5,5,10,20][Math.random()*6|0];
+    P.tips.count++; P.tips.total+=amt; P.tips.recent.unshift({amount:amt,note:PRNOTES[Math.random()*PRNOTES.length|0],at:now});
+    P.next.tip=now+16000+Math.random()*12000;
+  } else if(now>=P.next.pack){
+    const pack=((D.show.packs||{}).small)||{votes:5,cents:300}, sg=prPick(P,true);
+    if(sg){ sg.votes+=pack.votes; sg.paidVotes+=pack.votes; P.cast+=pack.votes; if(sg.first===Infinity) sg.first=now; }
+    P.paid.count++; P.paid.total+=pack.cents/100; P.paid.last=pack.cents/100;
+    P.next.pack=now+22000+Math.random()*14000;
+  }
+  if(!P.asked&&now>=P.next.ask&&!deck){ P.asked=true; P.asks.unshift({id:'pra1',kind:'song',status:'pending',title:'Valerie',artist:'Amy Winehouse',cost:3,at:now}); }
+  const prev=D; D=practiceState();
+  const money=prev&&prev.tips&&((D.tips.count>prev.tips.count)||(D.paid.count>prev.paid.count));
+  tipWatch(prev,D);                      // the same burst, chime and buzz a real tip gets
+  if(money&&!P.moneyDeck){ P.moneyDeck=true;
+    /* after the burst has had its moment, and never on top of another deck: it waits its turn */
+    let tries=0; const later=()=>{ if(!PRACTICE||!window.Tips)return;
+      if((Tips.isOpen()||$('#tipburst'))&&tries++<30){ setTimeout(later,1500); return; }
+      Tips.first('pr-money',{scope:tipScope()+'.practice'}); };
+    setTimeout(later,6600); }
+  /* THE COACH: each move's deck, then its button pulses until it is tapped */
+  const top=D.songs.find(x=>!x.now&&!x.played&&x.active!==false&&x.votes>0);
+  if(!deck){
+    if(P.step==='voting'&&top&&top.votes>=5&&now-P.at>8000){ P.step='start'; P.pulse='start'; if(window.Tips) Tips.first('pr-song',{scope:tipScope()+'.practice'}); }
+    else if(P.step==='playing'&&now-P.nowAt>9000){ P.step='end'; P.pulse='end'; if(window.Tips) Tips.first('pr-endsong',{scope:tipScope()+'.practice'}); }
+    else if(P.step==='voting2'&&top&&top.votes>=4&&!P.now&&P.starts<2){ P.pulse='start'; }
+    else if(P.step==='voting2'&&P.starts>=2&&now-P.lastEnd>6000){ P.step='wrap'; P.pulse='show'; if(window.Tips) Tips.first('pr-end',{scope:tipScope()+'.practice'}); }
+  }
+  if(TAB==='live'&&!typing()&&!$('#sheet').classList.contains('on')&&!$('#ask').classList.contains('on')) render();
+  coach();
+}
+function coach(){
+  const P=PRACTICE;
+  document.querySelectorAll('.coach').forEach(x=>x.classList.remove('coach'));
+  if(!P||!P.pulse)return;
+  const el=P.pulse==='start'?$('.liveactions .bigplay'):P.pulse==='end'?$('.liveactions .endnow'):P.pulse==='show'?$('.prend'):null;
+  if(el) el.classList.add('coach');
+}
+function practiceAct(action,extra={}){
+  const P=PRACTICE; if(!P)return;
+  const now=Date.now();
+  const file=(sg)=>{ if(!sg)return; sg.now=false; sg.played=true; if(!P.played.includes(sg.id)) P.played.push(sg.id); sg.votes=0; sg.paidVotes=0; };
+  const start=(sg)=>{
+    if(!sg)return;
+    file(P.songs.find(x=>x.now));
+    sg.now=true; sg.votes=0; sg.paidVotes=0; P.now=sg.id; P.nowAt=now; P.starts++; P.step='playing'; P.pulse=null;
+    try{ if(navigator.vibrate) navigator.vibrate(18); }catch(e){}
+    toast(`▶ ${sg.title}: every phone in the room sees it’s on`);
+  };
+  if(action==='playTop') start(P.songs.filter(x=>!x.now&&!x.played&&x.active!==false&&x.votes>0).sort((a,b)=>b.votes-a.votes)[0]);
+  else if(action==='play') start(P.songs.find(x=>x.id===extra.song));
+  else if(action==='endSong'){ const cur=P.songs.find(x=>x.now); if(cur){ file(cur); P.now=null; P.lastEnd=now; P.step='voting2'; P.pulse=null; toast('Song ended. The next favourite is climbing'); } }
+  else if(action==='window'){ P.window=extra.open!==false; toast(P.window?'Voting’s open again':'Paused: nobody can vote until you open it'); }
+  else if(action==='unplay'){ const sg=P.songs.find(x=>x.id===extra.song); if(sg){ sg.played=false; P.played=P.played.filter(x=>x!==sg.id); } }
+  else if(action==='declineSong'){ const sg=P.songs.find(x=>x.id===extra.song); if(sg){ sg.votes=0; sg.paidVotes=0; sg.active=false; toast('Declined, and the votes went back'); } }
+  else if(action==='countdown'){ /* the button counts itself down (lastCall) */ }
+  else if(action==='askAccept'||action==='askDone'||action==='askDecline'){
+    const a=P.asks.find(x=>x.id===extra.id);
+    if(a){ a.status=action==='askDecline'?'declined':action==='askAccept'?'added':'played';
+      if(action==='askAccept'){ const sg=P.songs.find(x=>x.title===a.title); if(sg){ sg.votes+=a.cost||3; sg.active=true; } }
+      toast(action==='askDecline'?'Declined, and the votes went back':action==='askAccept'?'Added: the room can vote for it now':'Done'); } }
+  else if(action==='status'&&extra.status==='ended'){ practiceEnd(false); return; }
+  else if(action==='resetVotes'){ P.songs.forEach(x=>{ x.votes=0; x.paidVotes=0; }); toast('Board cleared'); }
+  else toast('That one’s for a real night');
+  D=practiceState(); render(); coach();
+}
+function practiceEnd(leave){
+  const P=PRACTICE; if(!P)return;
+  clearInterval(P.t);
+  const played=P.played.length+(P.now?1:0), votes=P.cast, money=r2(P.tips.total+P.paid.total);
+  PRACTICE=null; D=P.real;
+  document.querySelectorAll('.coach').forEach(x=>x.classList.remove('coach'));
+  if(window.Tips) Tips.close();
+  render(); load({quiet:true}).catch(()=>{});
+  if(leave){ toast('Practice over. Nothing was saved'); return; }
+  { const t=$('#toast'); if(t){ clearTimeout(tT); t.classList.remove('on'); } }   // the last move's toast would sit over the summary's buttons
+  const cta=SAMPLE?`<button class="big fill" style="justify-content:center" onclick="openClaim()">Claim your page and do it for real</button>`
+    :firstGig()?`<button class="big" style="justify-content:center" onclick="closeSheet();setTab('gigs');setTimeout(()=>openGig(null),80)">Add your first gig</button>`:'';
+  openSheet(`<div class="prsum"><div class="k">Practice night</div><h3>That’s a set!</h3>
+    <div class="stats" style="margin:14px 0 0">
+      <div class="c"><b class="mono">${played}</b><span>Songs played</span></div>
+      <div class="c"><b class="mono">${votes}</b><span>Votes</span></div>
+      <div class="c"><b class="mono acc">$${money.toFixed(2)}</b><span>Tips + votes</span></div></div>
+    <p class="lede" style="margin:16px 0">Now picture it on a Friday. On a real night the room votes from their phones, and the tips and vote money go straight to your bank.</p>
+    ${cta}<button class="big alt" style="justify-content:center" onclick="closeSheet()">Done</button></div>`);
+  /* the party is the whole screen's, over the sheet, and gone in three seconds */
+  try{ const c=document.createElement('canvas'); c.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:90;pointer-events:none';
+    document.body.appendChild(c); confetti(c); setTimeout(()=>c.remove(),3000); }catch(e){}
+}
+/* THE SAMPLE ROUTER (decision 0101). The server answers a sample only from a short
+   list of reads (SAMPLE_OK in admin.mjs); this is the same list from the phone's side,
+   so a save never even leaves it — the claim sheet opens instead. The doors a sample
+   has no key to (history, revenue, the sign-in list) get the empty answer a brand-new
+   account would get, so every tab draws as it will on day one. */
+const SAMPLE_READS=new Set(['planGet','eventList','pitchList','featureList','payStatus','pushKey','merchList','orderList',
+  'orderCount','wishList','diaryList','msgCount','msgList','postList','songGet','tagList']);
+let CLAIMAT=0;
+function sampleRoute(p,o){
+  const quiet=!!o.quiet; let action='';
+  try{ action=o.body?(JSON.parse(o.body).action||''):''; }catch(e){}
+  if(p==='/stage'&&!o.method) return null;
+  if(p==='/admin'&&SAMPLE_READS.has(action)) return null;
+  if(p==='/history') return Promise.resolve({ok:true,shows:[],live:{},nights:0,locked:false});
+  if(p==='/revenue') return Promise.resolve({ok:true,enabled:false,payments:[],totals:{all:0},unredeemed:0});
+  if(p==='/auth'&&action==='list') return Promise.resolve({ok:true,slug:SAMPLE.slug,name:(D&&D.show&&D.show.artist)||'',plan:'free',role:'sample',
+    emails:[],codeSet:false,emailReady:true,invited:0,invitedNames:[]});
+  if(p==='/auth'&&action==='passkeyList') return Promise.resolve({ok:true,keys:[]});
+  if(p==='/auth'&&action==='recoveryStatus') return Promise.resolve({ok:true,made:false,left:0,of:0,madeAt:0});
+  if(quiet) return Promise.resolve({ok:false,sample:true,error:''});   // a background read the key cannot make: nothing to show
+  openClaim();
+  return Promise.resolve({ok:false,claim:true,error:'Claim your page to save this.'});
+}
+/* The claim sheet lives in /sample.js (the page and both Studios share it), loaded
+   the first time it is wanted. */
+let SAMPLEJS=null;
+function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
+  const j=document.createElement('script'); j.src='/sample.js?v=bb14e96e'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
+function openClaim(){
+  if(!SAMPLE)return;
+  CLAIMAT=Date.now(); closeSheet();
+  sampleJs().then(S=>{ if(S) S.claim({name:(D&&D.show&&D.show.artist)||''}); else toast('Couldn’t open that — check your connection'); });
+}
 async function load(opts){
+  if(PRACTICE) return;                   // a practice round draws its own pretend night (below)
   /* The very first load has nothing on screen to cover, so the overlay is pure
      flash — and every background loader used to raise it again on top. One boot,
      one paint. */
@@ -442,6 +721,7 @@ async function load(opts){
   try{ await Promise.all(jobs.map(j=>Promise.resolve(j).catch(()=>null))); }catch(e){}
   bootDone();
   if(TAB==='settings') maybeVerifyIntro();
+  if(!SAMPLE) maybeTips();                // a new account's first deck (0102); a sample's waits for its welcome
   /* The inbox badge: one quiet read once the screen is up — never in the jobs
      above, never on the poll, never on a timer (9d8, decision 0074). It waits for
      the plan so a crew seat never asks at all. Not awaited. */
@@ -482,14 +762,14 @@ const chartOpen=()=>{ try{ const sh=$('#sheet'); return !!(sh&&sh.classList.cont
 function tipBurst(amount,count,note,kind){
   const old=$('#tipburst'); if(old) old.remove();
   const votes=kind==='votes';
-  const first=!votes&&count===1&&(typeof D.nights==='number'?D.nights===0:firstGig());
+  const first=!PRACTICE&&!votes&&count===1&&(typeof D.nights==='number'?D.nights===0:firstGig());
   const brief=chartOpen();
   const el=document.createElement('div'); el.id='tipburst'; el.className='tipburst'+(brief?' brief':'');
   el.innerHTML=`<canvas></canvas><div class="tb">
-    <div class="k">${votes?(count===1?'First votes bought tonight':'Votes bought'):first?'Your first tip on MySet':count===1?'First tip of the night':'Tip'}</div>
+    <div class="k">${PRACTICE?(votes?'Practice · votes bought':'Practice · a tip'):votes?(count===1?'First votes bought tonight':'Votes bought'):first?'Your first tip on MySet':count===1?'First tip of the night':'Tip'}</div>
     <div class="amt mono">$${(Number(amount)||0).toFixed(2)}</div>
     ${note?`<div class="n">“${esc(String(note).slice(0,80))}”</div>`:''}
-    ${brief?'':`<div class="s">${votes?'Someone wants their song. It goes straight to your account.':first?'That’s the room saying thank you. It goes straight to your account.':'Straight to your account.'}</div>
+    ${brief?'':`<div class="s">${PRACTICE?(votes?'Someone wants their song. On a real night that money is yours.':'On a real night, that goes straight to your bank.'):votes?'Someone wants their song. It goes straight to your account.':first?'That’s the room saying thank you. It goes straight to your account.':'Straight to your account.'}</div>
     <button class="btn-pri" onclick="this.closest('.tipburst').remove()">Nice</button>`}</div>`;
   document.body.appendChild(el);
   requestAnimationFrame(()=>el.classList.add('on'));
@@ -532,6 +812,7 @@ function confetti(c){
   })(t0);
 }
 async function act(action,extra={}){
+  if(PRACTICE){ practiceAct(action,extra); return; }
   if(WRITING)return;                       // a second tap is never a second action
   WRITING=true;
   try{
@@ -767,7 +1048,7 @@ async function claimAccount(){
   if(!d.ok){toast(d.error||'Could not create that');return;}
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
-  try{localStorage.setItem('myset.firstrun',(d.artistId||'')+':1')}catch(e){}   // a brand-new account: the first-run steps, keyed to it
+  try{localStorage.setItem('myset.firstrun',(d.artistId||'')+':1');localStorage.setItem('myset.tipsauto','1')}catch(e){}   // a brand-new account: the first-run steps, keyed to it, then every tab's deck (0102)
   if(d.slug){ try{localStorage.setItem('myset.slug',d.slug)}catch(e){} }
   PW_PROMPT=true;
   toast('Welcome \u2014 your page is myset.vip/'+d.slug); start();
@@ -785,7 +1066,7 @@ async function submitCode(){
   if(d.needName){ TICKET=d.ticket; gate(null,'name'); return; }
   TOKEN=d.token; localStorage.setItem('myset.token',TOKEN);
   CODE=''; localStorage.removeItem('myset.admin');
-  if(d.isNew){ try{localStorage.setItem('myset.firstrun',(d.artistId||'')+':1')}catch(e){} }
+  if(d.isNew){ try{localStorage.setItem('myset.firstrun',(d.artistId||'')+':1');localStorage.setItem('myset.tipsauto','1')}catch(e){} }
   if(d.slug){ try{localStorage.setItem('myset.slug',d.slug)}catch(e){} }
   PW_PROMPT=true;                      // in by code: offer a password once the Studio is up
   toast(d.isNew?`Welcome — your page is myset.vip/${d.slug}`:`Signed in as ${d.email}`);
@@ -815,6 +1096,7 @@ async function hardReset(){
    whatever the network does: somebody on bar wifi who presses Sign out has to be
    signed out on this phone regardless of what Netlify says back. */
 async function signOut(){
+  if(SAMPLE){ location.href='/'+encodeURIComponent(SAMPLE.slug); return; }   // a preview has nobody signed in: back to the page
   try{ await api('/auth',{method:'POST',body:JSON.stringify({action:'signOut'}),quiet:true}); }catch(e){}
   CODE='';TOKEN='';
   localStorage.removeItem('myset.admin');localStorage.removeItem('myset.token');
@@ -851,6 +1133,7 @@ async function loadTick(){
   if(d&&d.ok){ TICK=d.checks; TICKWHY=d.autoWhy||null; if(TAB==='settings'&&D) render(); }
 }
 function tickCard(){
+  if(SAMPLE) return '';                  // the tick is earned after a claim, never shown on a preview
   if(!TICK){ loadTick(); return ''; }
   const t=TICK;
   const step=(on,label,hint)=>`<div class="row"><div class="m">
@@ -1374,7 +1657,7 @@ async function payDash(){
    moves anyone, and a tab switch used to ride that too: the old tab's offset landed
    on a new tab still short with loading, clamped to its bottom, and stayed there
    when its data filled in (the founder, 2026-09-26, on Gigs). */
-function setTab(t){if(t!==TAB)window.scrollTo(0,0);TAB=t;localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
+function setTab(t){if(t!==TAB)window.scrollTo(0,0);TAB=t;if(PRACTICE&&t!=='live')practiceEnd(true);localStorage.setItem('myset.tab',t);if(t==='money')loadPay();if(t==='gigs')loadFeature();if(t==='settings'){loadRecovery();loadPasskeys();}if(t==='live'){if(!EVENTS)loadGigs();if(!PAY)loadPay();}if(D)render();
   if(t==='money'){DETAIL=null;FOLDN={};loadRev();loadHist();loadOrders(); if(window.Money)Money.reset(); if(bizOwner())ensureMoney().catch(()=>{});}
   if(t==='profile'){ loadProf(); loadComm(); loadPlan(); }
   if(t==='merch'){ loadMerch(); loadOrders(); loadWishes(); loadPlan(); if(!PAY)loadPay(); }
@@ -1386,7 +1669,8 @@ function setTab(t){if(t!==TAB)window.scrollTo(0,0);TAB=t;localStorage.setItem('m
      which is everyone. */
   if(t==='settings'){loadTeam();loadPlan();loadTick();drawPush();maybeVerifyIntro();}
   if(t==='gigs'){ loadGigs(); loadPitches(); loadProf(); loadPlan(); }
-  if(t==='messages'){ MSGT=''; MSGTH=null; loadMsgs(true); }}   // the list carries the badge count: no second read
+  if(t==='messages'){ MSGT=''; MSGTH=null; loadMsgs(true); }
+  maybeTips(); }   // the list carries the badge count: no second read; then the tab's own deck, the first time (0102)
 async function loadPitches(force){
   if(PITCHES&&!force)return;
   PITCHES=await api('/admin',{method:'POST',body:JSON.stringify({action:'pitchList'}),quiet:true});
@@ -1618,7 +1902,10 @@ async function loadProf(force){
   // every other artist's Profile tab quietly showed until 0075.
   const slug=(D&&D.show&&D.show.slug)||'';
   PROFERR=null;
-  PROF=await fetch('/api/profile?t='+Date.now()+(slug?'&a='+encodeURIComponent(slug):''),{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+  /* a sample has no public profile to read: the private door hands over the same shape (0101) */
+  if(SAMPLE) PROF=await fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},
+    body:JSON.stringify({action:'page',quiet:true,slug:SAMPLE.slug,key:SAMPLE.key,kind:'artist'})}).then(r=>r.json()).catch(()=>null);
+  else PROF=await fetch('/api/profile?t='+Date.now()+(slug?'&a='+encodeURIComponent(slug):''),{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
   // a miss is null, not a half-answer: a pull-to-refresh asks again, and the screen says why it waits
   if(!(PROF&&PROF.ok)){ PROF=null; PROFERR='Couldn’t load your page just now — pull down to try again'; }
   // the Gigs tab draws the tour poster from it too (0075) — not over a link being typed
@@ -1626,7 +1913,8 @@ async function loadProf(force){
 }
 async function saveProfile(){
   const v=id=>(($('#'+id)||{}).value||'').trim();
-  const IDS={spotify:'lkSpotify',applemusic:'lkApple',ytmusic:'lkYtm',instagram:'lkIg',bandcamp:'lkBc',gofundme:'lkGfm',website:'lkWeb'};
+  const IDS={spotify:'lkSpotify',applemusic:'lkApple',ytmusic:'lkYtm',instagram:'lkIg',bandcamp:'lkBc',gofundme:'lkGfm',website:'lkWeb',
+    tiktok:'lkTt',youtube:'lkYt',soundcloud:'lkSc',facebook:'lkFb'};   // the last four since decision 0101
   const typed={}; for(const k in IDS) typed[k]=v(IDS[k]);   // capture BEFORE the re-render
   const management=v('pfManagement'), managementUrl=v('pfManagementUrl');
   if(!!management!==!!managementUrl){toast('Add both the label or management name and its website, or leave both blank.');return;}
@@ -1670,6 +1958,7 @@ function clearBoardAsk(){
    the server's — this is only the local echo of it. */
 function lastCall(){
   const b=$('#lastCall'); if(!b||b.disabled)return;
+  if(PRACTICE) toast('On a real night, every phone in the room counts down with you');
   act('countdown');
   let left=10;
   b.disabled=true;
@@ -1811,7 +2100,7 @@ function goLiveCard(s){
   const signed=!!D.signAt;
   const rows=[
     ['ticket','Add your next show',booked?(gig?`Tonight${gig.venue?' · '+esc(gig.venue):''}`:`${esc(up[0].venue||'Your gig')} · ${esc(up[0].date)}`):EVENTS?'Where and when — it goes on your page and starts by itself':'Checking your calendar…',booked,"setTab('gigs');setTimeout(()=>openGig(null),80)"],
-    ['qr','Print your sign',signed?'On the tables, they scan and vote':'Big QR, your name, one tap to print',signed,'printSign()'],
+    ['qr','Print your QR codes',signed?'At the door, on the bar, on every table':'One big sign, plus 25–50 small ones for the tables and the bar',signed,'printSign()'],
   ];
   const next=rows.findIndex(r=>!r[3]);
   return `<div class="today golive">
@@ -1852,7 +2141,7 @@ function todayCard(s){
   const rows=[
     ['mic','Select setlist',named?(s.listName?esc(s.listName):'Set for tonight'):ALLSONGS?'All songs — everything you haven’t hidden':'Tap to pick a set, or all your songs',listOn,'openLists()'],
     ['tip','Card payments ready',payOn?'Tips and extra votes go through Stripe':'Tap to set up Stripe',payOn,"setTab('money')"],
-    ['qr','QR code printed or shown',QRSHOWN?'On the tables, they scan and vote':'Tap to bring it up full size',QRSHOWN,'showQr()'],
+    ['qr','QR codes out',QRSHOWN?'At the door, on the bar, on every table':'The big sign, plus 25–50 small ones on the tables and the bar',QRSHOWN,'showQr()'],
     ['ticket','Free votes set',s.unlimited?'Unlimited votes for everyone':`${s.freeCredits||0} free vote${s.freeCredits===1?'':'s'} each`,votesOn,'showPricing()'],
   ];
   const next=rows.findIndex(r=>!r[3]);
@@ -1872,6 +2161,7 @@ function todayCard(s){
    meta.signAt): the first-gig card's second tick, on every device, for good. */
 const signUrl=print=>{const slug=(TEAM&&TEAM.slug)||''; return slug?`/sign.html?a=${encodeURIComponent(slug)}${print?'&print=1':''}`:'';};
 function printSign(){
+  if(SAMPLE){ openClaim(); return; }     // a sample has no public code yet: claiming is what makes one
   const u=signUrl(true);
   if(!u){ toast('Fetching your page address…'); loadTeam(true).then(()=>{ if(TEAM&&TEAM.slug) printSign(); else toast('Could not load your page address'); }); return; }
   window.open(u,'_blank');
@@ -1881,6 +2171,7 @@ function printSign(){
 /* "Text me the link", without a text: the phone's own share sheet — Messages,
    AirDrop, mail — or the clipboard where there is no sheet. */
 async function sendSign(){
+  if(SAMPLE){ openClaim(); return; }
   const u=signUrl(false);
   if(!u){ toast('Could not load your page address'); return; }
   const share={title:'My MySet sign',text:'Print this at the venue',url:location.origin+u};
@@ -1953,13 +2244,14 @@ function render(){
       <a href="#" onclick="event.preventDefault();act('status',{status:'live'})"
          style="color:var(--accent);font-weight:700">Resume it instead</a>
       — use that if you ended it by mistake.</p>`
-    :`${todayCard(s)}
+    :`${SAMPLE||firstGig()?practiceCard(true):''}${todayCard(s)}
     <div class="wrap" style="padding-top:18px;padding-bottom:2px">
       <button class="big bigplay" onclick="newShowAsk()">
         <span>●</span><span style="flex:1">Start the show</span></button>
     </div>
     ${capNote(s)}
-    <p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to fans until you tap this — or until a gig on your calendar reaches its start time.</p>`;
+    <p class="muted" style="font-size:12px;padding:6px 20px 0">Nothing says “live” to fans until you tap this — or until a gig on your calendar reaches its start time.</p>
+    ${SAMPLE||firstGig()?'':practiceCard(false)}`;
   }
 
   if(s.status==='live'){
@@ -1968,8 +2260,8 @@ function render(){
        artist's own money, and the aha moment is watching it move. Tips AND votes
        bought (the founder, 2026-09-20) — both land in the same account. */
     const bought=(D.paid&&D.paid.count)||0;
-    body=`
-    <div class="tonight"><span class="l">Tonight</span><b class="mono">$${earned().toFixed(2)}</b>
+    body=`${PRACTICE?practiceBar():''}
+    <div class="tonight"><span class="l">${PRACTICE?'Practice':'Tonight'}</span><b class="mono">$${earned().toFixed(2)}</b>
       <span class="r">${D.tips.count?`${D.tips.count} tip${D.tips.count===1?'':'s'} · `:''}${bought?`${bought} vote buy${bought===1?'':'s'} · `:''}${songs.reduce((a,b)=>a+b.votes,0)} votes · ${D.voters||0} voting</span></div>
     <div class="votebox">
       <div><span class="vt">Voting</span>
@@ -2011,7 +2303,7 @@ function render(){
         ${x.votes?`<button class="refundlink" onclick="declineSong('${x.id}')">Decline + refund votes</button>`:''}</div>
       <button class="act" onclick="startSong('play',{song:'${x.id}'})">▶ Start</button></div>`).join('')||'<div class="row muted">Pool is empty.</div>'}</div></div>
     <div class="wrap" style="padding-top:14px;padding-bottom:2px">
-      <button class="big alt orange-outline" onclick="openEndShow()" style="justify-content:center">■ End the show</button>
+      <button class="big alt orange-outline prend" onclick="openEndShow()" style="justify-content:center">■ End the show</button>
     </div>
 
     <div class="sec"><span class="kick">Played (${s.played.length})</span>${s.played.length?`<button class="kick" style="color:var(--accent)" onclick="clearBoardAsk()">Clear the board</button>`:''}</div>
@@ -2071,12 +2363,12 @@ function render(){
         ?'<svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.5 6.5-9.5 6.5S2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>'
         :'<svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-6.5 9.5-6.5c1.6 0 3 .4 4.3 1.1M21.5 12s-3.5 6.5-9.5 6.5c-1.6 0-3-.4-4.3-1.1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M4 20 20 4"/></svg>'}</button>
       <button class="act warn ico" data-act="del" data-id="${x.id}" aria-label="Delete ${esc(x.title)}" title="Delete">✕</button></div>
-    </div>`).join(''):`<div class="row muted">Nothing matches “${esc(SETQ)}”</div>`}</div></div>
+    </div>`).join(''):`<div class="row muted">${SETQ?`Nothing matches “${esc(SETQ)}”`:'Your songs will show up here.'}</div>`}</div></div>
     ${learnSection()}
-    <div class="wrap" style="padding-top:18px;padding-bottom:0">
+    ${SAMPLE?'':`<div class="wrap" style="padding-top:18px;padding-bottom:0">
       <a class="big alt orange-outline" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
          style="justify-content:center">See what fans see ↗</a>
-    </div>
+    </div>`}
     <div class="wrap" style="padding-top:18px;padding-bottom:8px">
       <button class="big alt" style="justify-content:center;margin:0;color:var(--accent)"
         onclick="ask({title:'Remove every song?',lede:'Your setlist empties. This cannot be undone.',yes:'Yes, remove them',no:'Keep them',go:()=>act('clearSetlist')})">Clear setlist</button>
@@ -2322,10 +2614,14 @@ function render(){
       <!-- same order the public page shows them in, so what an artist fills in top
            to bottom is what a fan reads left to right -->
       <div class="field"><label>Instagram</label><input class="inp" id="lkIg" value="${esc(L.instagram||'')}" placeholder="https://instagram.com/…"></div>
+      <div class="field"><label>TikTok</label><input class="inp" id="lkTt" value="${esc(L.tiktok||'')}" placeholder="https://www.tiktok.com/@…"></div>
+      <div class="field"><label>YouTube channel</label><input class="inp" id="lkYt" value="${esc(L.youtube||'')}" placeholder="https://www.youtube.com/@…"></div>
       <div class="field"><label>Spotify</label><input class="inp" id="lkSpotify" value="${esc(L.spotify||'')}" placeholder="https://open.spotify.com/artist/…"></div>
       <div class="field"><label>Apple Music</label><input class="inp" id="lkApple" value="${esc(L.applemusic||'')}" placeholder="https://music.apple.com/…"></div>
       <div class="field"><label>YouTube Music</label><input class="inp" id="lkYtm" value="${esc(L.ytmusic||'')}" placeholder="https://music.youtube.com/…"></div>
+      <div class="field"><label>SoundCloud</label><input class="inp" id="lkSc" value="${esc(L.soundcloud||'')}" placeholder="https://soundcloud.com/…"></div>
       <div class="field"><label>Bandcamp</label><input class="inp" id="lkBc" value="${esc(L.bandcamp||'')}" placeholder="https://yourname.bandcamp.com"></div>
+      <div class="field"><label>Facebook</label><input class="inp" id="lkFb" value="${esc(L.facebook||'')}" placeholder="https://www.facebook.com/…"></div>
       <div class="field"><label>GoFundMe</label><input class="inp" id="lkGfm" value="${esc(L.gofundme||'')}" placeholder="https://www.gofundme.com/f/…"></div>
       <div class="field"><label>Website</label><input class="inp" id="lkWeb" value="${esc(L.website||'')}" placeholder="https://…"></div>
 
@@ -2380,6 +2676,17 @@ function render(){
     ${idQueueCard()}
     ${flagCard()}
     ${sheetCard()}
+    ${/* THE LINK FIRST (the founder, 2026-09-28: he looked for it and did not find it
+          sixteen sections down) — the one setting every account changes once. */''}
+    <div class="sec"><span class="kick">Your page link</span></div>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">The link you give people, yours to choose. Change it any time — the old one keeps working too, so QR codes already printed still land here.</p>
+    <div class="field"><label>myset.vip/</label><div style="display:flex;gap:8px">
+      <input class="inp" id="slugIn" maxlength="32" placeholder="yourname" style="flex:1"
+        value="${esc((TEAM&&TEAM.slug)||'')}">
+      <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
+    ${TEAM&&TEAM.slug?`<div class="wrap" style="margin-top:10px">
+      <a class="big alt" href="/${esc(TEAM.slug)}" style="justify-content:center">Open myset.vip/${esc(TEAM.slug)} ↗</a></div>`:''}
+
     <div class="sec"><span class="kick">Alerts on your phone</span></div>
     <div id="pushBox">${PUSHVIEW||`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div>`}</div>
 
@@ -2552,18 +2859,10 @@ function render(){
         <button class="${!PLAN||PLAN.shareStats!==false?'on':''}" onclick="setShare(true)">On</button>
         <button class="${PLAN&&PLAN.shareStats===false?'on':''}" onclick="setShare(false)">Off</button></div></div>
 
-    <div class="sec"><span class="kick">Your public page</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">This is the link you give people. Change it any time — the old one keeps working too, so QR codes already printed still land here.</p>
-    <div class="field"><label>myset.vip/</label><div style="display:flex;gap:8px">
-      <input class="inp" id="slugIn" maxlength="32" placeholder="yourname" style="flex:1"
-        value="${esc((TEAM&&TEAM.slug)||'')}">
-      <button class="act pri" style="min-width:64px" onclick="saveSlug()">Save</button></div></div>
-    ${TEAM&&TEAM.slug?`<div class="wrap" style="margin-top:10px">
-      <a class="big alt" href="/${esc(TEAM.slug)}" style="justify-content:center">Open myset.vip/${esc(TEAM.slug)} ↗</a></div>`:''}
-
     <div class="sec"><span class="kick">Codes to print</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">Stick these on tables, on the tip jar, or on your case. Tap one to bring it up full size, then screenshot or print it.</p>
-    ${(TEAM&&TEAM.slug)?`<div class="qrs">
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">Stick these on tables, on the tip jar, or on your case. Tap one to bring it up full size, then screenshot or print it.${SAMPLE?'':` Or <button type="button" onclick="printSign()" style="border:0;background:none;padding:0;font:inherit;font-weight:600;color:var(--accent);cursor:pointer">print the big sign and 25–50 table cards</button> in one go.`}</p>
+    ${SAMPLE?`<div class="list"><div class="row muted">Your codes are made the moment the page is yours: claim it and they appear here, ready to print.</div></div>`
+    :(TEAM&&TEAM.slug)?`<div class="qrs">
       ${QRS.map(([k,t,d])=>`
         <button class="qrcard" data-act="qrbig" data-id="${k}">
           <img src="${qrSrc(k,6)}" alt="${esc(t)} QR code" loading="lazy">
@@ -2678,13 +2977,14 @@ function render(){
       <i><svg viewBox="0 0 24 24"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></i>
     </a>
     <div style="flex:1;min-width:0">
-      <div class="kick">${s.status==='live'?'● On stage':'Artist Studio'}</div>
+      <div class="kick">${PRACTICE?'● Practice':SAMPLE?'Preview':s.status==='live'?'● On stage':'Artist Studio'}</div>
       ${s.slug
         ? `<a class="whoami" href="/${esc(s.slug)}"><h1>${esc(s.artist)}</h1><span>↗</span></a>`
         : `<h1>${esc(s.artist)}</h1>`}
     </div>
-    <div class="headactions"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
-    ${PLAN&&PLAN.ok?(PLAN.plan==='free'
+    <div class="headactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+    ${SAMPLE?`<button class="claimbtn" onclick="openClaim()">Claim profile</button>`
+    :PLAN&&PLAN.ok?(PLAN.plan==='free'
       ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
       :`<button class="plantag" onclick="openPlans()">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}</div>
   </div>
@@ -2697,7 +2997,7 @@ function render(){
          to check after editing your bio, your merch or your gigs. Two labels,
          because one button that goes to two different places without saying so is
          worse than two honest ones. */''}
-    ${TAB==='live'
+    ${TAB==='live'&&!SAMPLE   /* a sample has no voting page yet (0101): its page is what it has */
       ? `<a class="big alt orange-outline" href="${s.slug?'/'+esc(s.slug)+'/vote':'/vote.html'}"
            style="justify-content:center">See what fans see ↗</a>`
       : `<a class="big alt ${TAB==='profile'?'orange-outline':''}" href="${s.slug?'/'+esc(s.slug):'/artist.html'}"
@@ -2793,6 +3093,7 @@ const frFlag=()=>{try{const f=localStorage.getItem('myset.firstrun')||'', i=f.in
   return i>0&&f.slice(0,i)===frAid()?f.slice(i+1):'';}catch(e){return ''}};
 const frSet=v=>{try{localStorage.setItem('myset.firstrun',frAid()+':'+v)}catch(e){}};
 function isNew(){
+  if(SAMPLE) return false;               // a sample has no first run: it has the claim (0101)
   const f=frFlag();
   if(f==='done')return false;
   if(f)return true;
@@ -2860,10 +3161,10 @@ function frStep(n){
      a first gig needs is this on every table. "Done" is still there for the artist
      who will print at the venue. */
   if(n===4) h=`<h2>Here’s your sign</h2>
-    <p>One at the door, one on the tip jar, one on every table. They scan it, they vote, you play.</p>
+    <p>One big one for the door, and 25–50 small ones for the tables and the bar: the print has both. They scan it, they vote, you play.</p>
     ${TEAM&&TEAM.slug?`<div class="qrwrap"><img src="${qrSrc('profile',6)}" alt="Your QR code"></div>
       <p style="text-align:center;margin-top:-6px">myset.vip/${esc(TEAM.slug)}</p>
-      <button class="btn-pri btn-block" onclick="printSign()">Print my sign</button>
+      <button class="btn-pri btn-block" onclick="printSign()">Print my QR codes</button>
       <button class="btn-text" onclick="sendSign()">Send it to my phone</button>`
       :TEAM
       ?`<p class="muted">Couldn’t load your code — <button class="lnk" onclick="frCodes()">open Settings</button>, it’s under Codes to print.</p>
@@ -2898,7 +3199,12 @@ function frCodes(){ frDone(); setTab('settings'); loadTeam(true);
 async function frRetryCode(b){ if(b){b.disabled=true;b.textContent='Trying…';}
   await loadTeam(true);
   if(!(TEAM&&TEAM.slug)){ toast('Still couldn’t reach it — try again in a moment'); if(b){b.disabled=false;b.textContent='Try again';} } }
-function frDone(){ frSet('done'); FR.hidden=false; FR.drawn=''; drawFirstRun(); if(D)render(); }
+function frDone(){ frSet('done'); FR.hidden=false; FR.drawn=''; drawFirstRun(); if(D)render();
+  /* THE TOUR (decision 0102): the steps are done, so the Studio says what it is — and
+     offers the practice round before a real room ever sees the page. */
+  try{ localStorage.setItem('myset.tipsauto','1'); }catch(e){}
+  setTimeout(()=>{ if(window.Tips) Tips.first('studio-intro',{scope:tipScope(),cta:{label:'Try a practice round',go:()=>{ setTab('live'); startPractice(); }},
+    onDone:(done)=>{ if(!done) maybeTips(); }}); },500); }
 /* What the room has asked for. Pending first, because a birthday is the one
    thing on this screen that goes stale. */
 /* Venues you've asked for a spot, and what they said. Sits on the Gigs tab
@@ -2958,6 +3264,7 @@ function asksPanel(){
     ${rows.map(row).join('')}</div>`;
 }
 async function askDo(action,id){
+  if(PRACTICE){ practiceAct(action,{id}); return; }
   if(WRITING)return; WRITING=true;
   try{
     const d=await api('/admin',{method:'POST',body:JSON.stringify({action,id})});
@@ -2983,7 +3290,7 @@ function openSheet(h,kind=''){
 }
 let VERIFYINTROSHOWN=false;
 function maybeVerifyIntro(){
-  if(VERIFYINTROSHOWN||!D||TAB!=='settings')return;
+  if(VERIFYINTROSHOWN||!D||TAB!=='settings'||SAMPLE)return;
   const aid=(D.show&&D.show.artistId)||'artist';
   const key='myset.verify-search-intro.'+aid;
   try{if(localStorage.getItem(key))return;}catch(e){}
@@ -3342,6 +3649,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='sgmin') setKeyMinor(id==='min');
   if(b.dataset.act==='sgtag') toggleSongTag(id);
   if(b.dataset.act==='sgtagnew') addOwnTag();
+  if(PRACTICE&&['chart','lyrics','autochords'].includes(b.dataset.act)){ toast('On a real night your lyrics and chords open right here'); return; }
   if(b.dataset.act==='chart') openChart(id);
   if(b.dataset.act==='lyrics') openStageLyrics(id);
   if(b.dataset.act==='autochords') openAutoChords(id);
@@ -3427,6 +3735,7 @@ function qrBig(k){
     </div>
     <div class="qracts">
       <button onclick="qrDownload('${k}')">Download</button>
+      ${k==='profile'?'<button onclick="qrHide();printSign()">Print</button>':''}
       <button onclick="qrHide()">Done</button>
     </div>
   </div>`;
@@ -3451,6 +3760,7 @@ function qrDownload(k){
 }
 
 function openEndShow(){
+  if(PRACTICE){ practiceEnd(false); return; }
   const today=new Date().toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
   openSheet(`<h3>Save this show</h3><p class="lede">Give the night a title for your records, or leave the suggested title as-is.</p>
     <input class="inp" id="endShowTitle" maxlength="100" value="Untitled show – ${esc(today)}" aria-label="Show title">
@@ -3737,7 +4047,7 @@ function merchSection(){
         <button class="act" onclick="openMerch('${esc(m.id)}')">Edit</button>
         <button class="act warn" onclick="rmMerch('${esc(m.id)}')">✕</button></div></div>`).join('')||'<div class="row muted">Nothing yet. Add a tee, a print, a sticker.</div>'}</div>
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="openMerch('')">+ Add an item</button></div>`;
-  return `<div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${shopHref}" style="justify-content:center">See your shop ↗</a></div>
+  return `${SAMPLE?'':`<div class="wrap" style="padding-top:14px"><a class="big alt orange-outline" href="${shopHref}" style="justify-content:center">See your shop ↗</a></div>`}
     ${lock('merch', list, why)}
     ${ordersSection()}
     ${wishesSection()}`;
@@ -3829,7 +4139,7 @@ async function orderPeek(){
   if(d&&d.ok) ORDN=Number(d.open)||0;
 }
 function nudge(){
-  if(NUDGED||!D)return;
+  if(NUDGED||!D||SAMPLE||PRACTICE)return;
   // opened in the background (a home-screen app resumed behind another): wait to be seen
   if(document.hidden){ document.addEventListener('visibilitychange',()=>setTimeout(nudge,300),{once:true}); return; }
   if(D.show&&D.show.status==='live')return;
@@ -4084,7 +4394,7 @@ function openEarnTips(){
   const fv=s&&!s.unlimited&&s.freeCredits>0?`${s.freeCredits} free vote${s.freeCredits===1?'':'s'}`:'their free votes';
   const tips=[
     ['Print the QR big at the door and on the tip jar','The two places every person in the room looks at least once. Big enough to scan from a metre away.'],
-    ['Put a QR table tent on every table','People vote from their seat, not the bar. A folded card on each table gets the whole room on the board.'],
+    ['Put a small QR card on every table and along the bar','People vote from their seat, not the bar. 25–50 small cards (the print page makes them, twelve to a sheet) get the whole room on the board.'],
     ['Open the night in one breath','<em>“Scan the code on your table — you pick what I play next.”</em> Say it, then play. No walkthrough.'],
     ['Frame the evening as theirs','<em>“You’re building tonight’s setlist.”</em> A room that owns the list votes for it, and tips the person playing it.'],
     ['Read the top of the board out loud between songs','Say the leader and the one chasing it. The people who want the runner-up will pay to push it over.'],
@@ -4486,7 +4796,7 @@ async function orderDetail(sid){
 function commSection(){
   const s=D.show, posts=COMM||[];
   return `<div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post and pin one on any plan. Hiding a post is a Bar Star feature — it takes the post off your page at once and deletes its photos and clip, and the words can be un-hidden. <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a></p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Fans rate a night, post photos and videos, and read each other. You can reply once per post and pin one on any plan. Hiding a post is a Bar Star feature — it takes the post off your page at once and deletes its photos and clip, and the words can be un-hidden.${SAMPLE?'':` <a href="${s.slug?'/'+esc(s.slug)+'/community':'/community.html'}" style="color:var(--accent);font-weight:600">See the page ↗</a>`}</p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
       <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · <span style="color:var(--accent)">${p.reports} report${p.reports===1?'':'s'}</span>`:''}</div>
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}${p.showLabel?' · '+esc(p.showLabel):''}</div>
@@ -5446,7 +5756,8 @@ const daystamp=t=>{try{return new Date(t).toLocaleDateString(undefined,
   {day:'numeric',month:'short',year:'numeric'})}catch(e){return ''}};
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const when=t=>{const m=Math.floor((Date.now()-t)/60000);return m<1?'just now':m<60?m+'m ago':Math.floor(m/60)+'h ago';};
-let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3000);}
+let tT;function toast(m){if(SAMPLE&&Date.now()-CLAIMAT<1500)return;   /* the claim sheet is the answer; a "Failed" under it is noise */
+  const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),3000);}
 /* A line that changes while it waits. Not decoration: a screen that says nothing
    feels broken after about a second, and this is the difference between "it's
    stuck" and "it's working". Stops the moment the Studio is up. */
@@ -5625,4 +5936,6 @@ function start(){clearInterval(timer);
   setTimeout(()=>{ try{ if(localStorage.getItem(HINT))return; if(!document.querySelector(ACTS))return; toast('Tip: swipe a row left for its actions, or press and hold'); localStorage.setItem(HINT,'1'); }catch(e){} },4000);
 })();
 MySetPull(async()=>{ try{ await load(); }catch(e){} });
-if(CODE||TOKEN){ bootCycle(); start(); } else gate();
+/* /signup is this page (netlify.toml), and somebody who tapped "set one up — it's
+   free" was greeted with "Welcome back". Now it opens on Create account. */
+if(CODE||TOKEN||SAMPLE){ bootCycle(); start(); if(SAMPLE) sampleBoot(); } else gate(null,location.pathname==='/signup'?'join':undefined);

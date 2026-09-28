@@ -105,3 +105,25 @@ export async function getImage(aid, slot) {
 export async function dropImage(aid, slot) {
   try { await store().delete(KEY(aid, slot)); } catch {}
 }
+
+/* A SAMPLE'S PHOTOS LIVE UNDER A NAME NOBODY CAN GUESS (decision 0101). /api/img
+   serves any stored picture to anyone who can name it, and an artist's pictures
+   are named by their page address — which is fine for a public page and wrong
+   for a private one. So the factory stores a sample's photos under `s` + ten
+   random letters and digits instead of the account id: the address IS the
+   secret, /api/img needs no new check, and nothing on the audience path reads
+   anything extra. The pictures keep that name after a claim — it is only a key.
+   The deleters (keysFor, keysForVenue) call this to find them, because keysFor
+   otherwise only knows the account's own names. */
+export const SAMPLE_NS = /^s[a-z0-9]{10}$/;
+export const newSampleNs = () => 's' + Array.from(crypto.getRandomValues(new Uint8Array(10)),
+  (b) => '0123456789abcdefghijklmnopqrstuvwxyz'[b % 36]).join('');
+/** The `img_…` keys of every sample-named picture these /api/img addresses point at. */
+export function sampleImgKeys(urls) {
+  const out = [];
+  for (const u of urls || []) {
+    const m = /[?&]a=([a-z0-9]+)&s=([a-z0-9_]+)/.exec(String(u || ''));
+    if (m && SAMPLE_NS.test(m[1]) && isSlot(m[2])) out.push(KEY(m[1], m[2]));
+  }
+  return [...new Set(out)];
+}

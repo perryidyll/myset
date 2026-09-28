@@ -174,8 +174,11 @@ const read = (f) => src(new URL('../public/' + f, import.meta.url));
 
   const artist = read('artist.html');
   const order = /const LABEL=\{([^}]*)\}/.exec(artist)[1].split(',').map((x) => x.split(':')[0]);
-  eq('Instagram first, then the three music services, Bandcamp and GoFundMe, the website last', order,
-     ['instagram', 'spotify', 'applemusic', 'ytmusic', 'bandcamp', 'gofundme', 'website']);
+  /* TikTok, the YouTube channel, SoundCloud and Facebook joined with the sample factory
+     (decision 0101): the socials beside Instagram, SoundCloud with the music, Facebook
+     before the fundraiser; Instagram still first and the website still last. */
+  eq('Instagram first, then TikTok and YouTube, the three music services, SoundCloud, Bandcamp, Facebook and GoFundMe, the website last', order,
+     ['instagram', 'tiktok', 'youtube', 'spotify', 'applemusic', 'ytmusic', 'soundcloud', 'bandcamp', 'facebook', 'gofundme', 'website']);
   ok('and the links block is built before the bio',
      artist.indexOf('Listen, follow, &amp; support') < artist.indexOf('<div class="sect">About</div>'));
 }

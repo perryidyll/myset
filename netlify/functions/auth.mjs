@@ -115,6 +115,31 @@ const main = async (req) => {
                   artistId: link.artistId, slug: artist.slug, name: artist.name, isNew: true });
   }
 
+  /* ---- claiming a sample page (decision 0101) ----
+     Two proofs, like every account this door makes: the TICKET says they own the
+     inbox (a six-digit code just came back from it, and `verify` only hands a ticket
+     to an address with no account), and the KEY says they hold the link the page was
+     sent in. The password is set in the same step — the founder's ask: claim, set a
+     password, you're in. The account lands on Hobbyist, the free plan. */
+  if (action === 'claimSample') {
+    const email = await readTicket(body.ticket);
+    if (!email) return bad('That took too long — ask for a new code', 401);
+    const { verifySample, claimSampleArtist } = await import('./_sample.mjs');
+    const hit = await verifySample(String(body.slug || ''), String(body.key || ''), 'artist');
+    if (!hit) return bad('This link has expired or the page was claimed already.', 410);
+    const pw = String(body.password || '');
+    const why = weakPassword(pw, email);
+    if (why) return bad(why);
+    if ((await readArtists()).byEmail[email]) return bad('That address already has a MySet page — use a different email.', 409);
+    const r = await claimSampleArtist({ owner: hit.owner, email });
+    if (!r.ok) return bad(r.error || 'Couldn’t claim that page', 409);
+    await setPassword(r.aid, email, pw);
+    const reg = await readArtists();
+    const token = await open(req, body, r.aid, email, revOf(reg, r.aid));
+    note(r.aid, 'signin', email, 'claimed a sample page');
+    return json({ ok: true, token, email, artistId: r.aid, slug: r.slug, name: r.name, isNew: true, claimed: true });
+  }
+
   /* ---- email + password: the standard door (decision 0070) ----
      One answer for every failure — no account, no password set, wrong password,
      locked out — and the same scrypt cost for each, so the door says nothing
@@ -523,10 +548,20 @@ const main = async (req) => {
       const want = cleanSlug(body.slug);
       if (want.length < 3) return bad('At least 3 letters or numbers');
       if (RESERVED.has(want)) return bad('That one’s reserved — try another');
+      /* A name a sample page is holding (decision 0101) is taken, the same as one an
+         account holds — the answer is the same sentence either way. */
+      const held = await import('./_sample.mjs').then((m) => m.sampleSlugs('artist')).catch(() => new Set());
+      if (held.has(want)) return bad('Someone already has that address');
       let clash = false;
       await mutateArtists((a) => {
         const owner = a.bySlug[want];
         if (owner && owner !== me.aid) { clash = true; return false; }
+        /* An old name answers for the page that had it, so it is nobody else's
+           (INVARIANT 0di): until 2026-09-28 only bySlug was checked, and a second
+           page could take a name that tables still carried on printed codes. */
+        const was = (a.oldSlug || {})[want];
+        if (was && was.aid !== me.aid) { clash = true; return false; }
+        if (was) delete a.oldSlug[want];               // taking its own old name back
         const old = a.byId[me.aid] && a.byId[me.aid].slug;
         if (old && old !== want) {
           delete a.bySlug[old];

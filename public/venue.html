@@ -20,7 +20,12 @@
      the request that decides what is on screen would wait behind them. Here it is
      already in flight while they load; boot() below picks up the reply. Used once,
      on the first load only — a pull-to-refresh fetches fresh. -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const f=fetch('/api/fan?what=venue&v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
+<!-- A SAMPLE (decision 0101): the link the factory sent ends in #sample-profile
+     (?sample-profile works too), or this phone opened it before. The address keeps
+     the label, so a reload or a copy of the link opens the same preview. The private
+     sample door is asked instead of the public one; sample.js is loaded for it alone,
+     so a guest never downloads it. The bare address is the ordinary "no such page". The artist page's hook, for kind 'venue'. -->
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const m=/[#?&]sample-profile(?![\w-])/.test(location.hash+'&'+location.search);let K=null;try{K=JSON.parse(localStorage.getItem('myset.sample')||'null')}catch(e){}if(m){K={slug:S.toLowerCase(),key:'sample-profile',kind:'venue',at:Date.now()};try{localStorage.setItem('myset.sample',JSON.stringify(K))}catch(e){}}if(K&&K.kind==='venue'&&K.slug===S.toLowerCase()){window.__sample=K;const f=fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'page',slug:K.slug,key:K.key,kind:'venue'})});f.catch(()=>{});window.__sampleP=f;const j=document.createElement('script');j.src='/sample.js?v=bb14e96e';window.__sampleJs=new Promise(r=>{j.onload=r;j.onerror=r});document.head.appendChild(j);return}const f=fetch('/api/fan?what=venue&v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -676,6 +681,20 @@ const amIcon=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${AMICON[k]||'<circ
 function showAmen(){ AMEN_ALL=true; const e=$('#amen'); if(e) e.classList.remove('folded'); const s=$('.showall'); if(s) s.remove(); }
 
 async function boot(){
+  /* A SAMPLE (decision 0101): the page's data comes from the private door the head
+     already asked, never from the phone's last copy (a claimed or removed sample must
+     not be drawn from memory), and sample.js dresses the page once it is drawn. Only
+     the door's own "unknown" (404) means the page is gone; no answer at all, or a
+     server hiccup, keeps this phone's note of it and says pull to retry. */
+  if(window.__sample){
+    hideIntro();
+    const r=await (window.__sampleP||Promise.resolve(null)).catch(()=>null);
+    const p=r?await r.json().catch(()=>null):null;
+    await window.__sampleJs;
+    if(p&&p.ok&&p.venue&&p.sample){ V=p; render(); if(window.Sample) Sample.page(V); return; }
+    if(r&&r.status===404&&window.Sample){ Sample.gone(); return; }
+    notFound(); return;
+  }
   if(!SLUG){ notFound(); hideIntro(); return; }
   let d=null;
   const E=window.__early||{}; window.__early=null;     // the head started this; see <head>
@@ -781,8 +800,8 @@ function render(){
     ${dh?`<a class="pri" href="${esc(dh)}" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
       Directions</a>`:''}
-    <a href="/v/${esc(SLUG)}/community"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/></svg>Community</a>
-    <button type="button" onclick="share()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>Share</button>
+    <a class="vcomm" href="/v/${esc(SLUG)}/community"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/></svg>Community</a>
+    <button type="button" class="vshare" onclick="share()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>Share</button>
     ${v.phone?`<a href="tel:${esc(v.phone.replace(/[^0-9+]/g,''))}">
       <svg viewBox="0 0 24 24"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A15 15 0 014 5a2 2 0 012-2z"/></svg>
       Call</a>`:''}
@@ -898,7 +917,7 @@ function render(){
   }
 
   h+=playCard();
-  if(!v.verified) h+=`<p class="fineprint">This page hasn’t been verified yet, so treat the details as a guide. If it’s your venue, <a href="/venues" style="color:var(--accent-ink);font-weight:600">claim it</a>.</p>`;
+  if(!v.verified) h+=`<p class="fineprint vunv">This page hasn’t been verified yet, so treat the details as a guide. If it’s your venue, <a href="/venues" style="color:var(--accent-ink);font-weight:600">claim it</a>.</p>`;
 
   $('#app').innerHTML=h;
   document.title=`${v.name} — MySet`;

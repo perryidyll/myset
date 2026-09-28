@@ -87,6 +87,13 @@
   to = "/venue-studio.html"
   status = 200
 
+# myset.vip/factory — the founder's sample-page console (decision 0101). Above the
+# catch-all like /mediadash; `factory` is a reserved slug.
+[[redirects]]
+  from = "/factory"
+  to = "/factory.html"
+  status = 200
+
 # The printable business report (decision 0065). Above the catch-all like the
 # others, or an artist called "report" would be handed the accountant's page.
 [[redirects]]
@@ -313,6 +320,17 @@
 # applies. After /:slug, which also matches it, like the rules above.
 [[headers]]
   for = "/fan.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+# The tip decks (decision 0102) and the sample layer (decision 0101) are stamped the
+# same way — tools/stamp.mjs writes their hashes into every page and script that
+# loads them — so the same year applies.
+[[headers]]
+  for = "/tips.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+[[headers]]
+  for = "/sample.js"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 # The report is a Studio page opened by one person, a few times a year, to print:

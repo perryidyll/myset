@@ -81,7 +81,8 @@ const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','st
      with one of these names would have a page nobody could reach; test/structure.mjs
      checks the toml against this list. None was held by anybody on 2026-09-25. */
   'shows','moneymodel','financialmodel','report','metrics','artists',
-  'mediadash']);                // the Instagram dashboard (0092) — found by that check on 2026-09-25
+  'mediadash',                  // the Instagram dashboard (0092) — found by that check on 2026-09-25
+  'factory', 'sample']);        // the sample-page console and its door (0101)
 
 export async function artistBySlug(slug) {
   const a = await readArtists();
@@ -100,12 +101,15 @@ export async function artistById(aid) {
 
 /** Turn a name into a free slug. Deterministic given the registry it is handed,
     so a CAS retry can't produce a different one mid-flight. */
-export function pickSlug(name, reg, wanted) {
+export function pickSlug(name, reg, wanted, held = null) {
   let base = cleanSlug(wanted || name) || 'artist';
   if (base.length < 3) base = base + 'live';
   // also skip anything already used as an ID: a slug can be renamed away, but the
-  // id it was created from lives on in every blob key, so reusing it collides
-  const free = (v) => !RESERVED.has(v) && !reg.bySlug[v] && !reg.byId[v];
+  // id it was created from lives on in every blob key, so reusing it collides.
+  // `held`: the names sample pages are holding (decision 0101) — read by the caller
+  // outside its CAS, because a sample is not in this registry
+  // an old name still answers for the page that had it (INVARIANT 0di): nobody else's
+  const free = (v) => !RESERVED.has(v) && !reg.bySlug[v] && !reg.byId[v] && !((reg.oldSlug || {})[v]) && !(held && held.has(v));
   if (free(base)) return base;
   for (let i = 2; i < 500; i++) {
     const t = `${base}${i}`;
@@ -134,9 +138,10 @@ export const cleanSource = (v) => {
 export async function createArtist({ email, name, slug, ref, src }) {
   const clean = String(name || '').trim().slice(0, 60) || 'New artist';
   let made = null, err = null;
+  const held = await import('./_sample.mjs').then((m) => m.sampleSlugs('artist')).catch(() => null);
   await mutateArtists((reg) => {
     if (reg.byEmail[email]) { err = 'already'; return false; }
-    const s = pickSlug(clean, reg, slug);
+    const s = pickSlug(clean, reg, slug, held);
     if (!s) { err = 'no-slug'; return false; }
     const aid = cleanArtistId(s) || s;
     if (reg.byId[aid]) { err = 'no-slug'; return false; }

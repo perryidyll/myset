@@ -245,6 +245,20 @@ eq('the new one resolves', await publicArtist(new Request('https://x/api/show?a=
 eq('THE POINT: and so does every QR code already printed',
    await publicArtist(new Request('https://x/api/show?a=rita')), rita);
 
+console.log('\nAN OLD ADDRESS IS NOBODY ELSE’S  (INVARIANT 0di said so; only bySlug was checked)');
+await createArtist({ email: 'mo@example.com', name: 'Mo Lane' });
+reg = await readArtists();
+const mo = reg.byEmail['mo@example.com'].artistId;
+const TMO = await signToken('mo@example.com', revOf(reg, mo), newSid());
+eq('THE BUG: another page cannot take the name her printed codes carry', (await A({ action: 'setSlug', slug: 'rita' }, TMO)).ok, false);
+eq('so those codes still land on her page', await publicArtist(new Request('https://x/api/show?a=rita')), rita);
+ok('she can take her own old name back', (await A({ action: 'setSlug', slug: 'rita' }, TN)).ok);
+eq('and the name she left answers for her now', await publicArtist(new Request('https://x/api/show?a=ritavance')), rita);
+const { pickSlug } = await import('../netlify/functions/_auth.mjs');
+ok('a signup is never handed a name she left', pickSlug('Rita Vance', await readArtists()) !== 'ritavance');
+eq('nor is another page', (await A({ action: 'setSlug', slug: 'ritavance' }, TMO)).ok, false);
+ok('back to ritavance for the rest of this file', (await A({ action: 'setSlug', slug: 'ritavance' }, TN)).ok);
+
 console.log('\nLEAVING  two screens, then thirty days');
 eq('one confirmation is not enough', (await S({ action: 'accountDelete', confirm: 'yes' }, TN)).status, 400);
 r = await S({ action: 'accountDelete', confirm: 'DELETE' }, TN);
@@ -291,6 +305,18 @@ ok('and finally leave', r.ok && r.purgeAt > Date.now() + 29 * 86400e3, r);
 const { venueBySlug } = await import('../netlify/functions/_venues.mjs');
 eq('its page goes dark the same day', await venueBySlug((await readVenues()).byId[bar.venueId].slug), null);
 ok('and undo brings it back', (await hit(vadmin, 'https://x/api/venueadmin', { action: 'accountUndelete' }, TVO)).ok);
+
+console.log('\nA VENUE’S OLD ADDRESS KEEPS ANSWERING TOO  (it did not, until 2026-09-28)');
+const vslug0 = (await readVenues()).byId[bar.venueId].slug;
+ok('the owner renames the page', (await hit(vauthFn, 'https://x/api/venueauth', { action: 'setSlug', slug: 'cornerbarkp' }, TVO)).ok);
+eq('the new address resolves', await venueBySlug('cornerbarkp'), bar.venueId);
+eq('THE POINT: and so does every code already printed', await venueBySlug(vslug0), bar.venueId);
+const bar2 = await createVenue({ email: 'rival@bar.com', name: 'Rival Bar', city: 'Koh Phangan', country: 'Thailand' });
+vreg = await readVenues();
+const TV2 = await signVenueToken('rival@bar.com', vRevOf(vreg, bar2.venueId), newSid());
+eq('another venue cannot take the old name', (await hit(vauthFn, 'https://x/api/venueauth', { action: 'setSlug', slug: vslug0 }, TV2)).ok, false);
+ok('the owner can take it back', (await hit(vauthFn, 'https://x/api/venueauth', { action: 'setSlug', slug: vslug0 }, TVO)).ok
+  && await venueBySlug('cornerbarkp') === bar.venueId && await venueBySlug(vslug0) === bar.venueId);
 
 console.log('\nA PIPE IN AN EMAIL CANNOT MOVE THE FIELDS OF A TOKEN');
 const { normEmail, verifyToken } = await import('../netlify/functions/_auth.mjs');
