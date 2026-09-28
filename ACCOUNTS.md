@@ -176,7 +176,7 @@ A venue keeps its fixed owner / manager / crew for now.
 
 ### 6.4 Recovery, and what "forgot password" means here
 
-Since 2026-09-14 each sign-in address can have a password (§11, decision 0070), and "forgot password" means six-digit codes to that address: one signs you in, and another stands in for the old password when you choose a new one (Settings → *Password* → *Change*). Settings shows the rows under *Signing in* whether or not they are set up:
+Since 2026-09-14 each sign-in address can have a password (§11, decision 0070), and "forgot password" means six-digit codes to that address: one signs you in, and another stands in for the old password when you choose a new one (Settings → *Password* → *Change*). Settings shows the rows under *Signing in* whether or not they are set up — all four on the owner's seat; any other seat gets only its own *Password* row (decision 0105, §6.3a):
 
 > **Password** · set / not set. *Create* / *Change* — the current password, or a code emailed to you.
 > **Face ID or fingerprint** · 1 device / not set up (on a phone that supports it).

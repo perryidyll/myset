@@ -788,7 +788,7 @@ address.
 
 **Settings** — Get verified; feature switches (owner only); push alerts; free votes per
 person including ∞; replay cost, pack prices, request and birthday costs; one device
-granted unlimited; **Signing in** (your password — create it, change it, or reset it with a code by email — Face ID, the studio code, eight one-time recovery codes);
+granted unlimited; **Signing in** (your password — create it, change it, or reset it with a code by email — and, on the owner's seat only, Face ID, the studio code and eight one-time recovery codes);
 **Starting by itself**; QR codes for the home page
 and the voting page; team members and roles; **Your account** (sign-in address and moving
 it, where you're signed in, download my data, invoices, sign out of this device, sign out

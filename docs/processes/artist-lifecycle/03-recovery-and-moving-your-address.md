@@ -5,19 +5,19 @@ puzzle_section_id: 41980
 sources:
   - netlify/functions/auth.mjs (recoveryStatus, recoveryMake, recoverySignIn, emailChangeStart, emailChangeFinish, passkeyList/Start/Finish/Forget, setCode, passwordSet, passwordClear), _cred.mjs, _session.mjs
   - public/studio.js (Settings → Signing in; openPasswordSheet, openPasswordFromCode)
-  - ACCOUNTS.md §6.4, §6.5, §9, §11
+  - ACCOUNTS.md §6.3a, §6.4, §6.5, §9, §11
   - MYSET-MASTER-OVERVIEW.md §5.5 Recovery
-  - docs/decisions/0070, 0073; INVARIANT 0fu
+  - docs/decisions/0070, 0073, 0105 (which rows a non-owner seat sees); INVARIANT 0fu
 status: loaded
-loaded: 2026-09-12 (create_process; read back through list_steps); 2026-09-28 (update_workflow on the section's notes — the Settings rows since decision 0070; create_process added v08 *Set a password* as step 389482; changelog 1661 and 1664 linked to it; read back through list_sections and list_steps)
-verified: code read 2026-09-12 (auth.mjs action list; ACCOUNTS.md as amended in 425fb0a); 2026-09-28 (studio.js Settings → Signing in, openPasswordSheet/openPasswordFromCode; auth.mjs passwordSet/passwordClear; _cred.mjs weakPassword)
+loaded: 2026-09-12 (create_process; read back through list_steps); 2026-09-28 (update_workflow on the section's notes — the Settings rows since decision 0070; create_process added v08 *Set a password* as step 389482; changelog 1661 and 1664 linked to it; read back through list_sections and list_steps); 2026-09-28 again (update_workflow on the section's notes — only the owner's seat sees Face ID, the Studio code and the recovery codes, decision 0105; read back through list_sections)
+verified: code read 2026-09-12 (auth.mjs action list; ACCOUNTS.md as amended in 425fb0a); 2026-09-28 (studio.js Settings → Signing in, openPasswordSheet/openPasswordFromCode; auth.mjs passwordSet/passwordClear; _cred.mjs weakPassword); 2026-09-28 after 52047cb (studio.js `data-ed="owner"` on the Face ID, Studio code and recovery rows; auth.mjs OWNER_ONLY)
 ---
 
 # Recovery and moving your address
 
 **Who:** the owner, in Settings → Signing in. **Trigger:** setting up before it is needed, or losing the inbox. **Outcome:** an account that can be got back into without a human, and an address that can be moved without a Pro seat and without a stolen session walking off with it.
 
-The rows under Settings → *Signing in* are always visible, set up or not: *Password · set / not set* (**Create** / **Change**) · *Face ID or fingerprint · N devices / not set up* (on a phone that supports it) · *Studio code · on / not set* · *Recovery codes · N of 8 unused / not set up yet.*
+On the owner's seat the rows under Settings → *Signing in* are always visible, set up or not: *Password · set / not set* (**Create** / **Change**) · *Face ID or fingerprint · N devices / not set up* (on a phone that supports it) · *Studio code · on / not set* · *Recovery codes · N of 8 unused / not set up yet.* Any other seat sees only its own *Password* row: Face ID, the Studio code and the recovery codes are the owner's alone (decision 0105, 2026-09-28; the server refused a band mate's passkey and recovery calls before that).
 
 | id | step | type | executor | role (RACI) | tool | notes |
 | --- | --- | --- | --- | --- | --- | --- |
