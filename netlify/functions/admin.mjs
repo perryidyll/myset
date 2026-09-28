@@ -198,8 +198,12 @@ async function handlePlan(aid, action, body, req, me) {
     return json({ ok: true, shareStats: (r.byId[aid] || {}).shareStats !== false });
   }
 
-  /* ---- owner only, from here ---- */
-  if (!isPlatformOwner(aid)) return bad('unauthorized', 401);
+  /* ---- owner only, from here ----
+     The founding PAGE is not enough: isPlatformOwner asks which page, and a band mate
+     or the sound engineer signed in to it is on that page too. Everything below acts
+     on every artist — flags, ID checks, promo codes, venues, the sheet — so it takes
+     the founding page's OWNER seat (decision 0099). */
+  if (!isPlatformOwner(aid) || (me && me.role) !== 'owner') return bad('unauthorized', 401);
 
   /* Feature flags. Owner only, because a flag changes what every artist's room
      does. Never written during a show — see _flags.mjs. */
@@ -452,15 +456,21 @@ const FULL = (cap) => cap < MAX_LIBRARY
   : `That's ${MAX_LIBRARY} songs — more than any setlist needs.`;
 /* An action NOT in this table needs no capability beyond being signed in — every
    money, plan and access action is already refused by name inside handlePlan or by
-   `isPlatformOwner`. What is listed here is the everyday work of running a page,
-   and the only thing it takes away is from `crew`: the sound engineer running the
-   screen tonight can work the show and the requests, and cannot rewrite the
-   library, the profile, the calendar or the shop. */
+   its founder gate (`isPlatformOwner` and the owner seat). What is listed here is
+   the everyday work of running a page, and the only thing it takes away is from
+   `crew`: the sound engineer running the screen tonight can work the show and the
+   requests, and cannot rewrite the library, the profile, the calendar or the shop. */
 const CAPABILITY = {
-  addSong: 'library', editSong: 'library', removeSong: 'library', importSongs: 'library',
-  songSet: 'library', bulkSongs: 'library', setChart: 'library', setLyrics: 'library',
-  listSave: 'library', listDelete: 'library', listApply: 'library', learnAdd: 'library', learnRemove: 'library',
-  eventPlace: 'gigs', eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventUnskip: 'gigs',
+  addSong: 'library', editSong: 'library', removeSong: 'library', importSongs: 'library', clearSetlist: 'library',
+  /* The real action names, again (decision 0099). These rows once read songSet /
+     bulkSongs / setChart / setLyrics / listSave / listApply / eventUnskip — names no
+     handler has — so `crew` could rewrite every setlist, chart, lyric and genre, and
+     empty the library. test/structure.mjs now refuses a name no handler takes. */
+  chartSet: 'library', lyricsSet: 'library', lyricsFetch: 'library',
+  tagAdd: 'library', tagRemove: 'library', tagAuto: 'library',
+  listNew: 'library', listRename: 'library', listSongs: 'library', listToggle: 'library', listUse: 'library',
+  listDelete: 'library', learnAdd: 'library', learnRemove: 'library', learnDone: 'library',
+  eventPlace: 'gigs', eventSave: 'gigs', eventDelete: 'gigs', eventSkip: 'gigs', eventHide: 'gigs',
   featureList: 'gigs',
   /* The real action names. This row once read profileSave / merchDelete / imgSave /
      imgDelete — names no handler has — so `crew` sailed past the gate on the actions
@@ -469,7 +479,7 @@ const CAPABILITY = {
   mediaAdd: 'profile', mediaRemove: 'profile', mediaMove: 'profile', mediaHero: 'profile',
   merchSave: 'profile', merchRemove: 'profile', merchPhoto: 'profile', merchPhotoClear: 'profile', merchMove: 'profile',
   orderList: 'profile', orderDone: 'profile', orderDetail: 'profile', orderCount: 'profile', wishList: 'profile', wishDone: 'profile',
-  postReply: 'community', postHide: 'community',
+  postReply: 'community', postHide: 'community', postPin: 'community',
   /* The inbox (decision 0074): a band mate who tends the community page can read and
      answer bookings; the sound engineer cannot. Block and Report are the owner's (below). */
   msgCount: 'community', msgList: 'community', msgThread: 'community', msgReply: 'community',

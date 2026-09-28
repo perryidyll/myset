@@ -123,6 +123,69 @@ ok('an unknown role falls back to the least it could be, never the most',
 ok('and a role name that is a JavaScript builtin falls back to crew rather than crashing',
    can('toString', 'show') === true && can('toString', 'library') === false);
 
+console.log('\nEVERY ROW OF THE ROLE TABLE NAMES A REAL ACTION  (setlists, charts, lyrics, tags)');
+/* CAPABILITY gated songSet, bulkSongs, setChart, setLyrics, listSave, listApply and
+   eventUnskip — names no handler has. An action missing from that table needs nothing
+   beyond being signed in, so the actions that DO exist were open to crew: every
+   setlist, chart, lyric and genre, the to-learn list, a pinned post, a gig on the
+   calendar, and the whole library in one tap (clearSetlist). The same slip as the
+   profileSet row; test/structure.mjs now refuses a key no handler takes. */
+{
+  const song = (await hit(stageFn, 'https://x/api/stage', undefined, TM)).songs[0];
+  ok('a member may make a setlist', (await S({ action: 'listNew', name: 'Friday' }, TM)).ok);
+  ok('write a chart', (await S({ action: 'chartSet', song: song.id, chart: 'Am  G  C  F' }, TM)).ok);
+  ok('put the words up', (await S({ action: 'lyricsSet', song: song.id, plain: 'Wires in the rain' }, TM)).ok);
+  ok('and add a genre of the band’s own', (await S({ action: 'tagAdd', label: 'Sea shanty' }, TM)).ok);
+  const before = (await hit(stageFn, 'https://x/api/stage', undefined, TM)).songs.length;
+  // clearSetlist last: if the gate is open, it empties the library the check below counts
+  for (const a of ['listNew', 'listRename', 'listSongs', 'listToggle', 'listUse', 'chartSet', 'lyricsSet',
+                   'lyricsFetch', 'tagAdd', 'tagAuto', 'tagRemove', 'learnDone', 'postPin', 'eventHide', 'clearSetlist'])
+    eq('THE BUG: crew is refused ' + a, (await S({ action: a, id: 'lx', song: 'nope', name: 'Crew set',
+      label: 'Crew tag', chart: 'x', plain: 'x', date: '2026-10-01', songs: [] }, TC)).status, 403);
+  eq('and the library is all still there', (await hit(stageFn, 'https://x/api/stage', undefined, TM)).songs.length, before);
+}
+
+console.log('\nTHE FOUNDER’S TOOLS NEED THE FOUNDER’S OWNER SEAT, NOT JUST THE FOUNDING PAGE');
+/* The platform block in handlePlan asked WHICH PAGE, never WHO: isPlatformOwner is
+   `aid === DEFAULT_ARTIST`, and not one of these actions is in OWNER_ONLY or
+   CAPABILITY. So a band mate or the sound engineer signed in to the founding page
+   could flip a flag for every artist, approve an ID check, mint a free plan or set a
+   venue's plan — one POST each. */
+{
+  const { DEFAULT_ARTIST } = await import('../netlify/functions/_lib.mjs');
+  const { readFlags } = await import('../netlify/functions/_flags.mjs');
+  const { readPromos } = await import('../netlify/functions/_plan.mjs');
+  await mutateArtists((a) => {
+    a.byId[DEFAULT_ARTIST] ||= { slug: DEFAULT_ARTIST, name: 'Founder', createdAt: 1 };
+    a.byEmail['founder@example.com'] = { artistId: DEFAULT_ARTIST, role: 'owner' };
+    a.byEmail['founder-band@example.com'] = { artistId: DEFAULT_ARTIST, role: 'member' };
+    a.byEmail['founder-sound@example.com'] = { artistId: DEFAULT_ARTIST, role: 'crew' };
+    return true;
+  });
+  reg = await readArtists();
+  const seat = (email) => signToken(email, revOf(reg, DEFAULT_ARTIST), newSid());
+  for (const [who, email] of [['member', 'founder-band@example.com'], ['crew', 'founder-sound@example.com']]) {
+    const T = await seat(email);
+    ok(`a ${who} seat on the founding page signs in`, (await S({ action: 'planGet' }, T)).ok);
+    eq(`THE BUG: but a ${who} cannot set a feature flag`,
+       (await S({ action: 'flagSet', flag: 'featuredShows', artistId: 'someone-else', on: false }, T)).status, 401);
+    eq(`THE BUG: or mint a free plan`,
+       (await S({ action: 'promoCreate', code: 'SEAT' + who.toUpperCase(), pct: 100, plan: 'pro', months: 60 }, T)).status, 401);
+    for (const a of ['bugList', 'flagList', 'sheetStatus', 'sheetSync', 'idQueue', 'idApprove', 'idReject',
+                     'venuePlan', 'promoList', 'promoRevoke', 'venueList', 'venueVerify'])
+      eq(`a ${who} is refused ${a}`, (await S({ action: a }, T)).status, 401);
+  }
+  eq('no flag moved', ((await readFlags()).byArtist || {})['someone-else'], undefined);
+  eq('no code was minted', Object.keys((await readPromos()).codes).filter((c) => c.startsWith('SEAT')), []);
+  const TF = await seat('founder@example.com');
+  ok('the founder’s own seat still reads the flags and mints a code',
+     (await S({ action: 'flagList' }, TF)).ok && (await S({ action: 'promoCreate', code: 'FOUNDER50', pct: 50 }, TF)).ok);
+  const viaKey = await admin(new Request('https://x/api/admin', { method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-admin-code': process.env.ADMIN_CODE },
+    body: JSON.stringify({ action: 'flagList' }) }));
+  eq('and so does the recovery key', viaKey.status, 200);
+}
+
 console.log('\nRECOVERY CODES  the way back when the inbox is gone');
 const codes = await makeRecovery(rita);
 eq('eight of them', codes.length, 8);

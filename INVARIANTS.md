@@ -303,7 +303,8 @@ If you are about to violate one, stop and say so rather than working around it.
 0s. **A cap never deletes anything.** The free 50-song ceiling blocks adding a
     51st; it does not touch a setlist that is already larger.
 
-0t. **Only the founding artist can mint promo codes** (`isPlatformOwner`). A 100%
+0t. **Only the founding artist can mint promo codes** (`isPlatformOwner` and the
+    owner seat — a member or crew seat on the founding page cannot, 0gj). A 100%
     code comps the plan outright; anything less is recorded as `discountPct` for
     a future checkout, because there is no billing to halve yet.
 
@@ -1901,6 +1902,8 @@ If you are about to violate one, stop and say so rather than working around it.
     (0bx2) — and the renewal date, the portal flag and the card's state are
     stripped from that payload for anyone but the owner.
 
+0gj. **The founder's platform tools in `admin.mjs` need the founding page's OWNER seat, and every name in a role table is an action a handler takes.** `isPlatformOwner(aid)` says which page, never who — a member or crew seat signed in to the founding page is on it too — so the platform block at the end of `handlePlan` (flags, the ID queue, promo codes, a venue's plan and tick, the sheet, the bug list) asks for both, and answers anyone else with the same 401. `CAPABILITY` and `OWNER_ONLY` are deny-lists: a row naming an action no handler has does not merely do nothing, it leaves the real action open. That happened twice (`profileSave`; then `setChart`, `listApply` and five more, while crew could empty the library with `clearSetlist`). `test/structure.mjs` refuses a name no handler branches on and a capability no role has; `test/accounts.mjs` holds both halves. Decision `0099`.
+
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and
     `normEmail` strips `|`). Revocation is a normally-ABSENT `dead` map on the
@@ -1944,6 +1947,14 @@ If you are about to violate one, stop and say so rather than working around it.
     entry that got back. Undo re-indexes. `sweepNotes` drops a first-night letter
     for a marked account rather than send it. `test/autoshow.mjs` and
     `test/firstgig.mjs` "AN ACCOUNT ON ITS WAY OUT"; decision 0098.
+    A public door that takes a slug goes through `publicArtist` — the `/:slug`
+    share card (`artistpage.mjs`) resolved it alone and kept a deleted account's
+    name and portrait on link previews (`test/sharecard.mjs`). The founder's sheet
+    keeps a marked account, because its nights happened, and its rows on Artists,
+    Gigs and Venues say `Being deleted on` (`test/sheets.mjs`). Two doors stay open
+    on purpose: `/api/img` and `/api/vid` serve by id or slug, because the edge
+    keeps each URL for a year regardless and the owner's export and Studio carry
+    the same `/api/img?a=<aid>` addresses for the whole window.
 
 0di. **A held slug, and an old slug that keeps answering.** A page name is printed
     on QR codes stuck to bar tables. Deleting holds it for the whole window (freeing

@@ -215,5 +215,45 @@ check('public/venue-studio.html', [
   const missing = [...new Set(froms)].filter((seg) => !reserved.has(seg));
   if (missing.length) { fail++; console.log('  ✗ routed but not reserved:', missing.join(', ')); } else console.log('  ✓ every routed first segment is a reserved slug (' + [...new Set(froms)].join(', ') + ')');
 }
+
+/* EVERY NAME IN THE ROLE TABLES IS AN ACTION A HANDLER TAKES (decision 0099). Both
+   tables in admin.mjs are deny-lists: an action missing from CAPABILITY needs nothing
+   beyond being signed in, and one missing from OWNER_ONLY is open to members. So a
+   misspelt row does not merely do nothing — it leaves the real action open. It
+   happened twice: profileSave for profileSet, then songSet, bulkSongs, setChart,
+   setLyrics, listSave, listApply and eventUnskip. A name counts as real when a handler
+   branches on it — `action === '…'`, `case '…':`, or an array tested with
+   `.includes(action)` — in admin.mjs or the two modules it hands actions to. */
+{
+  const fn = (f) => readFileSync(new URL('../netlify/functions/' + f, import.meta.url), 'utf8');
+  const admin = fn('admin.mjs');
+  const code = [admin, fn('_messages.mjs'), fn('_diary.mjs')].join('\n');
+  const real = new Set([...code.matchAll(/action === '(\w+)'|case '(\w+)':/g)].map((m) => m[1] || m[2]));
+  for (const m of code.matchAll(/\[([^\]]*)\]\.includes\(action\)/g))
+    for (const n of m[1].matchAll(/'(\w+)'/g)) real.add(n[1]);
+  const body = (open, close) => {
+    const at = admin.indexOf(open);
+    return at < 0 ? '' : admin.slice(at + open.length, admin.indexOf(close, at)).replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+  };
+  for (const [name, names, floor] of [
+    ['CAPABILITY', [...body('const CAPABILITY = {', '\n};').matchAll(/(\w+):\s*'\w+'/g)].map((m) => m[1]), 50],
+    ['OWNER_ONLY', [...body('const OWNER_ONLY = new Set([', ']);').matchAll(/'(\w+)'/g)].map((m) => m[1]), 20]]) {
+    const none = names.filter((n) => !real.has(n));
+    const good = names.length >= floor && !none.length;
+    console.log(`  ${good ? '✓' : '✗'} every ${name} name in admin.mjs is an action a handler takes (${names.length})${none.length ? ' — no handler: ' + none.join(', ') : ''}`);
+    if (!good) fail++;
+  }
+  /* And every capability a CAPABILITY row asks for is one CAN in _session.mjs gives to
+     somebody. A misspelt value fails the other way: can() refuses every seat but the
+     owner, so a band mate is locked out of that action — mid-gig, if it is a show one. */
+  const session = fn('_session.mjs');
+  const at = session.indexOf('export const CAN = {');
+  const given = new Set([...session.slice(at, session.indexOf('};', at)).matchAll(/'(\w+)'/g)].map((m) => m[1]));
+  const asked = [...new Set([...body('const CAPABILITY = {', '\n};').matchAll(/\w+:\s*'(\w+)'/g)].map((m) => m[1]))];
+  const unknown = asked.filter((c) => !given.has(c));
+  const okCaps = at >= 0 && asked.length >= 3 && !unknown.length;
+  console.log(`  ${okCaps ? '✓' : '✗'} every capability CAPABILITY asks for is one a role in _session.mjs has (${asked.join(', ')})${unknown.length ? ' — unknown: ' + unknown.join(', ') : ''}`);
+  if (!okCaps) fail++;
+}
 console.log(fail ? `\n${fail} structure check(s) FAILED` : '\nstructure OK');
 process.exit(fail ? 1 : 0);

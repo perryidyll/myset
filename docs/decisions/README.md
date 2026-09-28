@@ -108,13 +108,14 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0096](0096-myset-collects-tax-only-on-what-myset-sells.md) | MySet collects tax only on what MySet sells | 2026-09-27 | money | decided | perry |
 | [0097](0097-a-merch-order-tells-its-owner-the-studio-says-what.md) | A merch order tells its owner, the Studio says what is waiting, and an artist link shows the artist | 2026-09-27 | ui | decided | perry |
 | [0098](0098-an-account-on-its-way-out-stays-off-the-schedule-a.md) | An account on its way out stays off the schedule, never starts a show by itself, and gets no first-night letter | 2026-09-27 | ops | decided | user-confirmed |
+| [0099](0099-a-platform-tool-needs-the-founding-page-s-owner-se.md) | A platform tool needs the founding page's owner seat, and every name in the role tables is a real action | 2026-09-28 | auth | decided | claude |
 | [0101](0101-a-sample-profile-is-a-real-account-kept-off-the-live-registry.md) | A sample profile is a real account kept off the live registry until its owner claims it with a key from their link | 2026-09-28 | auth | decided | user-confirmed |
 | [0102](0102-every-studio-tab-explains-itself-once-and-a-practice-round-never-writes.md) | Every Studio tab explains itself once in a one-sentence-a-slide deck, and a practice round runs a pretend night that never writes | 2026-09-28 | ui | decided | user-confirmed |
 | [0103](0103-the-sample-factory-builds-pages-on-myset-s-own-servers-from.md) | The sample factory builds pages on MySet's own servers from YouTube, the act's website and Claude, and never scrapes Instagram | 2026-09-28 | ops | decided | user-confirmed |
 
 ## By area
 
-**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md) · [0101](0101-a-sample-profile-is-a-real-account-kept-off-the-live-registry.md)
+**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md) · [0099](0099-a-platform-tool-needs-the-founding-page-s-owner-se.md) · [0101](0101-a-sample-profile-is-a-real-account-kept-off-the-live-registry.md)
 
 **docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) · [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md)
 

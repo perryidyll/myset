@@ -10,6 +10,22 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 11:59 — 226bae6 — nifty-jones-b27e63@fix/deleted-account-walks (6 files since origin/main)
+**tl;dr:** A pasted link to a deleted account's page no longer shows its name and portrait, and the founder's Google Sheet now says when a leaving account is deleted
+**Other sessions:** Decision 0098 amended (every other registry walk checked), INVARIANT 0dh. artistpage.mjs card() resolves the slug through publicArtist. _warehouse.mjs: a new LAST column 'Being deleted on' on Artists, Gigs and Venues (deletedOn(row) = day(row.del.purgeAt)); an unreadable artist's reason moved to the second-to-last column. /api/img and /api/vid stay open for a marked account on purpose. Still open, cosmetic: auth.mjs Settings lists a leaving referral by name until the purge.
+
+### 2026-09-28 11:57 — 70c0599 — gifted-clarke-2a74ea@docs/role-gates-live (7 files since origin/main)
+**tl;dr:** Docs only: the founder-tools and role-table fix (decision 0099) is live as 04e78db, verified on Netlify's production deploy [skip ci]
+**Other sessions:** Puzzle changelog 2430 = decision 0099, linked to steps 369952 (t01), 369974 (e06), 370002 (y07), 370080 (i06), each reloaded from its sheet. i06 used to claim every artist reads their own bug reports; bugList was always behind the founder gate. Ledger ACC-004.
+
+### 2026-09-28 11:54 — 3ec4721 — gifted-clarke-2a74ea@fix/admin-role-gates (9 files since origin/main)
+**tl;dr:** A band mate or the sound engineer signed in to the founder's page can no longer use the founder's platform tools, and crew can no longer rewrite setlists, charts, lyrics or genres or empty the library
+**Other sessions:** Decision 0099, INVARIANT 0gj (0t amended), ledger ACC-004. admin.mjs's platform block now needs isPlatformOwner(aid) AND me.role==='owner'. CAPABILITY is a deny-list: an unlisted action needs only a sign-in, so test/structure.mjs now refuses a CAPABILITY/OWNER_ONLY name no handler takes. 0100 (fix/founder-tools-owner-seat) rebases on this: INVARIANTS 0gk goes after 0gj, ACC-005 above ACC-004. Still open, not in this change: auth.mjs signOutOthers/sessionRevoke let crew sign the owner out (fix/seat-signout-scope).
+
+### 2026-09-28 11:22 — f3993c9 — nostalgic-swanson-d7e46f@docs/process-sheets-tracked (39 files since origin/main)
+**tl;dr:** Docs only: the 39 process sheets that lived only as untracked files in the shared checkout are in git now, and the signing-in sheet and its Puzzle notes say a password exists (0070) [skip ci]
+**Other sessions:** Edit docs/processes sheets in a worktree, never the shared checkout's untracked copies: those match git byte for byte and will block a pull there until removed. marketing-and-growth/08 and onboarding/02 still ride on feat/sample-profiles. Puzzle section 41978's notes reloaded from the sheet. Still stale, left alone: 'no password' in artist-lifecycle/03 and the-gig/03 a01; 41978 has no password step and g01 shows the pre-0070 screen; AUTH_FROM 'absent' in admin-and-finance/03 d02 and onboarding/01 o02; changelog 1661 (0070) links no steps.
+
 ### 2026-09-28 00:08 — d547f38 — nifty-jones-b27e63@docs/deleted-account-live (5 files since origin/main)
 **tl;dr:** Docs only: a deleted account staying off the schedule (decision 0098) is live as 2243aed, verified on Netlify's production deploy [skip ci]
 **Other sessions:** Puzzle changelog 2408 = decision 0098, linked to steps 369848 (s05), 369854 (s11) and 369816 (a21), each reloaded from its sheet. Ledger ACC-003.
