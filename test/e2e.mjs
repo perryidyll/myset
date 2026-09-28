@@ -13,6 +13,7 @@ const showFn  = (await import('../netlify/functions/show.mjs')).default;
 const voteFn  = (await import('../netlify/functions/vote.mjs')).default;
 const reqFn   = (await import('../netlify/functions/request.mjs')).default;
 const histFn  = (await import('../netlify/functions/history.mjs')).default;
+const stageFn = (await import('../netlify/functions/stage.mjs')).default;
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -33,6 +34,8 @@ const hit = async (h, url, body) => {
   try { return { status: r.status, ...JSON.parse(t) }; } catch { return { status: r.status, raw: t }; }
 };
 const A       = (action, extra = {}) => hit(admin, 'https://x/api/admin?code=devlocal', { action, ...extra });
+// what the Studio reads every few seconds: the requests, the setlists, the to-learn list
+const studio  = () => hit(stageFn, 'https://x/api/stage?code=devlocal');
 const pubShow = (fan) => hit(showFn, `https://x/api/show${fan ? '?fan=' + fan : ''}`);
 const vote    = (fan, song, n) => hit(voteFn, 'https://x/api/vote', { fan, song, ...(n ? { n } : {}) });
 const ask     = (fan, title) => hit(reqFn, `https://x/api/request?fan=${fan}`, { kind: 'song', title });
@@ -60,7 +63,7 @@ await A('status', { status: 'live' });
 await A('askSet', { kind: 'song', on: true, cost: 3 });
 const r0 = await ask('fanA', 'Foxtrot');
 ok('the fan could pay for it', r0.ok, r0);
-const rid = (await A('askList')).asks[0].id;
+const rid = (await studio()).asks[0].id;
 const acc = await A('askAccept', { id: rid });
 ok('accepted', acc.ok, acc);
 ok('and the artist is told where it landed', /Late set/.test(acc.note || ''), acc.note);
@@ -69,7 +72,7 @@ ok('THE BUG: the room can see it', p1.songs.some((x) => x.title === 'Foxtrot'),
    p1.songs.map((x) => x.title));
 const v0 = await vote('fanA', 'foxtrot');
 ok('THE BUG: and can vote for it', v0.ok && v0.voted === true, v0);
-const mem = (await A('listAll')).lists.find((l) => l.id === lid).songs;
+const mem = (await studio()).lists.find((l) => l.id === lid).songs;
 ok('it really joined the set', mem.includes('foxtrot'), mem);
 await vote('fanA', 'foxtrot');
 
@@ -162,7 +165,7 @@ await A('removeSong', { song: 'golf' });
 S = await st();
 ok('golf is gone from the library, so out of play', !S.songs.some((x) => x.id === 'golf'));
 ok('but the list still holds its id',
-   (await A('listAll')).lists.find((l) => l.id === lid).songs.length === 2);   // filtered on read
+   (await studio()).lists.find((l) => l.id === lid).songs.length === 2);   // filtered on read
 const wid = (await A('learnAdd', { title: 'Golf', artist: 'Test' })).learn.find((x) => x.title === 'Golf').id;
 const ld = await A('learnDone', { id: wid });
 ok('learned it', ld.ok, ld);
@@ -210,13 +213,13 @@ await A('askSet', { kind: 'song', on: true, cost: 3 });
 await A('freeCredits', { n: 9 });
 const rq = await ask('fanR', 'Wanted Song');
 ok('the fan paid for it', rq.ok, rq);
-const rid2 = (await A('askList')).asks.find((x) => x.title === 'Wanted Song').id;
+const rid2 = (await studio()).asks.find((x) => x.title === 'Wanted Song').id;
 const dec = await A('askDecline', { id: rid2 });
 eq('declined in this show refunds the real cost', dec.refunded, 3);
 
 const rq2 = await ask('fanS', 'Stale Song');
 ok('a second fan pays', rq2.ok, rq2);
-const rid3 = (await A('askList')).asks.find((x) => x.title === 'Stale Song').id;
+const rid3 = (await studio()).asks.find((x) => x.title === 'Stale Song').id;
 await A('newShow');                       // their credits have already refreshed
 const dec2 = await A('askDecline', { id: rid3 });
 eq('THE BUG: a stale request reports NO refund, not a fake one', dec2.refunded, 0);

@@ -8,7 +8,7 @@ import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSo
          DEFAULT_FREE_CREDITS, readDoc, KEY } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';
-import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
+import { readChart, saveChart, MAX_CHART } from './_chart.mjs';
 import { genresFor, MAP_SIZE } from './_genremap.mjs';
 import { readRequests, shapeRequests, resolveRequest, attachSong,
          completeSongRequests, declineRequestsForSong } from './_requests.mjs';
@@ -345,31 +345,6 @@ async function handlePlan(aid, action, body, req, me) {
       ...(idGone ? {} : { note: 'Their ID photo could not be deleted — try again.' }) });
   }
 
-  /* A venue's plan. There is no venue self-serve billing yet, so the owner sets it
-     — which is also how the tick gets unlocked for a venue. */
-  if (action === 'venuePlan') {
-    const { mutateVenues, VENUE_PLANS } = await import('./_venues.mjs');
-    const vid = String(body.venueId || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
-    const plan = String(body.plan || 'free');
-    if (!VENUE_PLANS[plan]) return bad('unknown plan');
-    let found = false;
-    await mutateVenues((r) => {
-      if (!r.byId[vid]) return false;
-      r.byId[vid].plan = plan;
-      /* The tick is part of Pro, so it goes with Pro. Leaving it set meant a venue
-         kept a green tick on a free page for ever, which is a purchased trust
-         signal that stopped being purchased. */
-      if (plan === 'free' && r.byId[vid].verified) {
-        r.byId[vid].verified = false;
-        r.byId[vid].verifiedVia = null;
-        r.byId[vid].verifiedAt = null;
-      }
-      found = true; return true;
-    });
-    if (!found) return bad('unknown venue', 404);
-    return json({ ok: true, venueId: vid, plan });
-  }
-
   if (action === 'promoList') {
     const d = await readPromos();
     return json({ ok: true, codes: Object.entries(d.codes).map(([code, c]) => ({
@@ -475,7 +450,6 @@ const CAPABILITY = {
   tagAdd: 'setlist_edit', tagRemove: 'setlist_edit', tagAuto: 'setlist_edit',
   listNew: 'setlist_edit', listRename: 'setlist_edit', listSongs: 'setlist_edit', listToggle: 'setlist_edit', listUse: 'setlist_edit',
   listDelete: 'setlist_edit', learnAdd: 'setlist_edit', learnRemove: 'setlist_edit', learnDone: 'setlist_edit',
-  spotifyPeek: 'setlist_edit',
   eventList: 'gigs_view', featureList: 'gigs_view', pitchList: 'gigs_view', pitchStatus: 'gigs_view',
   eventPlace: 'gigs_edit', eventSave: 'gigs_edit', eventDelete: 'gigs_edit', eventSkip: 'gigs_edit', eventHide: 'gigs_edit',
   pitchSend: 'gigs_edit', vouch: 'gigs_edit',
@@ -506,9 +480,9 @@ const CAPABILITY = {
 
 const PLAN_ACTIONS = new Set(['planGet', 'bugList', 'promoRedeem', 'planCheckout', 'planFinish', 'planChange', 'planRetainOffered', 'planRetain', 'planPortal', 'planSync', 'planInvoices', 'accountExport', 'accountDelete', 'accountUndelete', 'accountFreeSlug', 'promoList', 'promoCreate', 'promoRevoke',
                               'venueList', 'venueVerify', 'shareStats',
-                              // the ID review queue and a venue's plan — owner only,
+                              // the ID review queue — owner only,
                               // enforced inside handlePlan, not by this set
-                              'idQueue', 'idApprove', 'idReject', 'venuePlan',
+                              'idQueue', 'idApprove', 'idReject',
                               'flagList', 'flagSet',
                               // the Google Sheet export — owner only, same as above
                               'sheetStatus', 'sheetSync']);
@@ -730,9 +704,6 @@ async function handleSong(aid, action, body, show, seat) {
     return json({ ok: true, chart: await readChart(aid, song.id) });
   }
 
-  if (action === 'chartFlags')
-    return json({ ok: true, flags: await chartFlags(aid, show.songs.map((x) => x.id)) });
-
   if (action === 'chordsLink') {
     const song = show.songs.find((x) => x.id === body.song);
     if (!song) return bad('unknown song', 404);
@@ -808,7 +779,7 @@ async function handleSong(aid, action, body, show, seat) {
   }
   return bad('unknown action', 400);
 }
-const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chartFlags', 'chordsLink', 'tagList', 'tagAdd',
+const SONG_ACTIONS = new Set(['songGet', 'chartSet', 'chordsLink', 'tagList', 'tagAdd',
                               'tagRemove', 'tagAuto']);
 
 /* SETLISTS and the to-learn list. Both live in their own documents, so none of
@@ -830,8 +801,6 @@ async function handleLists(aid, action, body, seat) {
     return json({ ok: true, lists: shapeLists(d, sh),
                   listId: sh.listId, listName: sh.listName, ...extra });
   };
-
-  if (action === 'listAll') return send();
 
   if (action === 'listNew') {
     /* Making a NEW setlist is a Plus feature. Everything else about setlists keeps
@@ -908,7 +877,6 @@ async function handleLists(aid, action, body, seat) {
   }
 
   /* ---------- songs to learn ---------- */
-  if (action === 'learnList') return json({ ok: true, learn: (await readLearn(aid)).list });
 
   if (action === 'learnAdd') {
     const title = String(body.title || '').replace(/\s+/g, ' ').trim().slice(0, 80);
@@ -966,16 +934,13 @@ async function handleLists(aid, action, body, seat) {
   }
   return bad('unknown action', 400);
 }
-const LIST_ACTIONS = new Set(['listAll', 'listNew', 'listRename', 'listDelete', 'listSongs',
-  'listToggle', 'listUse', 'learnList', 'learnAdd', 'learnRemove', 'learnDone']);
+const LIST_ACTIONS = new Set(['listNew', 'listRename', 'listDelete', 'listSongs',
+  'listToggle', 'listUse', 'learnAdd', 'learnRemove', 'learnDone']);
 
 /* Requests live in their own document, so accepting or declining one never
    rewrites the show — except for `askAccept`, which has to add a song. */
 async function handleAsks(aid, action, body, seat) {
   const show = await getShow(aid);
-
-  if (action === 'askList')
-    return json({ ok: true, asks: shapeRequests(await readRequests(aid), show) });
 
   const id = String(body.id || '').slice(0, 24);
   if (!id) return bad('which request?', 400);
@@ -1059,19 +1024,12 @@ async function handleAsks(aid, action, body, seat) {
   }
   return bad('unknown action', 400);
 }
-const ASK_ACTIONS = new Set(['askList', 'askAccept', 'askDone', 'askDecline']);
+const ASK_ACTIONS = new Set(['askAccept', 'askDone', 'askDecline']);
 
 /* Lyrics live in their own flat docs, not on the show, so these short-circuit too. */
 async function handleLyrics(aid, action, body, show) {
   const song = show.songs.find((x) => x.id === body.song);
   if (!song && action !== 'lyricsWarm') return bad('unknown song', 404);
-
-  if (action === 'lyricsGet') {
-    const d = await readLyrics(aid, body.song);
-    return json({ ok: true, song: body.song, title: song.title, artist: song.artist || '',
-                  plain: (d && d.plain) || '', credit: (d && d.credit) || '',
-                  state: (d && d.state) || 'unfetched', owned: !!(d && d.owned) });
-  }
 
   if (action === 'lyricsSet') {
     const plain = String(body.plain || '').replace(/\r/g, '').slice(0, 20000).trim();
@@ -1109,7 +1067,7 @@ async function handleLyrics(aid, action, body, show) {
   }
   return bad('unknown action', 400);
 }
-const LYRICS_ACTIONS = new Set(['lyricsGet', 'lyricsSet', 'lyricsFetch', 'lyricsWarm']);
+const LYRICS_ACTIONS = new Set(['lyricsSet', 'lyricsFetch', 'lyricsWarm']);
 
 /* Profile edits don't touch the show record at all, so they short-circuit before
    the show mutation below. */
@@ -1980,39 +1938,6 @@ const main = async (req) => {
       return bad('That’s not something this sign-in can do', 403);
   }
 
-  /* Read a PUBLIC Spotify playlist's tracks, returning them for the artist to
-     confirm — it writes nothing, so it must never sit inside a CAS callback.
-     Needs SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET (client-credentials flow,
-     no user login); without them it says so instead of pretending. */
-  if (action === 'spotifyPeek') {
-    const cid = process.env.SPOTIFY_CLIENT_ID, sec = process.env.SPOTIFY_CLIENT_SECRET;
-    if (!cid || !sec) return bad('Spotify import isn’t switched on yet — paste your songs as text instead', 503);
-    const m = String(body.url || '').match(/playlist[/:]([A-Za-z0-9]{10,34})/);
-    if (!m) return bad('That doesn’t look like a Spotify playlist link', 400);
-    try {
-      const tok = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded',
-                   authorization: 'Basic ' + Buffer.from(`${cid}:${sec}`).toString('base64') },
-        body: 'grant_type=client_credentials',
-      }).then((r) => r.json());
-      if (!tok.access_token) return bad('Spotify wouldn’t let us in — check the keys', 502);
-      const tracks = [];
-      let url = `https://api.spotify.com/v1/playlists/${m[1]}/tracks?limit=100&fields=items(track(name,artists(name))),next`;
-      for (let page = 0; page < 3 && url; page++) {          // 300 tracks is plenty
-        const r = await fetch(url, { headers: { authorization: `Bearer ${tok.access_token}` } });
-        if (r.status === 404) return bad('Spotify can’t see that playlist — is it public?', 404);
-        const d = await r.json();
-        for (const it of d.items || []) {
-          const t = it && it.track;
-          if (t && t.name) tracks.push({ title: t.name, artist: ((t.artists || [])[0] || {}).name || '' });
-        }
-        url = d.next;
-      }
-      return json({ ok: true, tracks });
-    } catch { return bad('Couldn’t reach Spotify — try again in a minute', 502); }
-  }
-
   /* Push subscriptions. Read/write one small document, never the show, so they
      short-circuit before the show mutation like the other side-documents do. Every
      seat may switch alerts on for its own phone; what that phone then hears follows
@@ -2267,8 +2192,6 @@ const main = async (req) => {
         break;
       }
       case 'venue': show.venue = String(body.venue || '').slice(0, 80); break;
-      case 'city': show.city = String(body.city || '').slice(0, 80); break;
-      case 'showTime': show.showTime = String(body.showTime || '').slice(0, 40); break;
       /* Changing the price starts a fresh contest. Votes already cast were priced
          against the OLD numbers, and leaving them in place re-prices them
          retroactively: a fan who spent 3 of 3 free credits would suddenly be 2 over

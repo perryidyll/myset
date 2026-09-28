@@ -10,7 +10,7 @@ import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
          endTimeOf, MAX_EVENTS } from './_events.mjs';
 import { readPitches, shapeForVenue, setPitchStatus } from './_pitch.mjs';
 import { venueStats } from './_vstats.mjs';
-import { checkWebsite, recheck, ownerEmail, readVouches, MIN_VOUCHES } from './_verify.mjs';
+import { recheck, ownerEmail, readVouches, MIN_VOUCHES } from './_verify.mjs';
 import { localDate, addDays } from './_time.mjs';
 
 /** A venue's own events live in the same store as artists' gigs, under an owner
@@ -210,12 +210,6 @@ export default async (req) => {
       passed: res.passed, checks: res.checks, why: res.why,
       vouches: names.length, need: MIN_VOUCHES, vouchedBy: names.slice(0, 12),
       email: owner, youAre: me.email, isOwner: owner === me.email });
-  }
-
-  if (action === 'verifyPreview') {           // just look, don't verify
-    const p = await getVenueProfile(vid);
-    const reg = await venueById(vid);
-    return json({ ok: true, ...(await checkWebsite(shapeVenue(p, reg))) });
   }
 
   if (action === 'set') {

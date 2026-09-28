@@ -11,6 +11,7 @@ process.env.ADMIN_CODE = 'devlocal';
 process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const admin = (await import('../netlify/functions/admin.mjs')).default;
+const stageFn = (await import('../netlify/functions/stage.mjs')).default;
 const { gigMonthOf, getShow } = await import('../netlify/functions/_lib.mjs');
 const { PLANS } = await import('../netlify/functions/_plan.mjs');
 const { createArtist, signToken, readArtists, revOf, mutateArtists } =
@@ -85,7 +86,7 @@ eq('a free artist is refused', blocked.status, 402);
 ok('and told it is a Bar Star feature', /Bar Star feature/i.test(blocked.error || ''), blocked.error);
 ok('and reassured nothing is taken away',
    /keeps working/i.test(blocked.error || ''), blocked.error);
-eq('nothing was created', ((await A('listAll')).lists || []).length, 0);
+eq('nothing was created', ((await hit(stageFn, 'https://x/api/stage', undefined, TA)).lists || []).length, 0);
 
 console.log('\n...AND EVERYTHING ELSE ABOUT SETLISTS STILL WORKS ON FREE');
 /* A cap never deletes anything (INVARIANT 0s). An artist who made sets on Plus and
