@@ -203,3 +203,6 @@ node --import ./test/register.mjs test/founderseat.mjs
 echo
 echo "── each seat, each tab: what the Studio draws for a band mate or crew seat (0105) ──"
 node test/seatstudio.mjs
+echo
+echo "── push alerts per seat: who hears what, and a sign-out ends them (0114) ──"
+node --import ./test/register.mjs test/pushseats.mjs

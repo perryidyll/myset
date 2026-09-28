@@ -308,7 +308,7 @@ export async function reportThread(aid, tid) {
    push to the founding account and a letter to its owner addresses, carrying the
    artist's id and the conversation's id — never the words, never the address. */
 async function tellPlatform(aid, tid) {
-  const jobs = [notify(DEFAULT_ARTIST, { title: 'A conversation was reported', body: `${aid} · ${tid}`, url: '/studio', tag: 'msgreport' })];
+  const jobs = [notify(DEFAULT_ARTIST, { title: 'A conversation was reported', body: `${aid} · ${tid}`, url: '/studio', tag: 'msgreport' }, { owner: true })];
   const reg = await readArtists().catch(() => null);
   const emails = reg ? Object.entries(reg.byEmail || {}).filter(([, v]) => v && v.artistId === DEFAULT_ARTIST && (v.role || 'owner') === 'owner').map(([e]) => e) : [];
   for (const e of emails.slice(0, 3))
@@ -361,7 +361,7 @@ const threadLink = (slug, id, k) => `https://myset.vip/${encodeURIComponent(slug
 
 async function tellArtist(aid, who, { id, name, kd, body, fresh, mail }) {
   const title = fresh ? `New ${kd === 'booking' ? 'booking request' : 'message'} from ${name}` : `${name} replied`;
-  const jobs = [notify(aid, { title, body: preview(body), url: '/studio?tab=messages', tag: 'msg-' + id })];
+  const jobs = [notify(aid, { title, body: preview(body), url: '/studio?tab=messages', tag: 'msg-' + id }, { tab: 'messages' })];
   if (mail && emailReady()) {
     const reg = await readArtists().catch(() => null);
     const emails = reg ? Object.entries(reg.byEmail || {}).filter(([, v]) => v && v.artistId === aid && (v.role || 'owner') === 'owner').map(([e]) => e) : [];

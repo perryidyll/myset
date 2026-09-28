@@ -171,6 +171,7 @@ Since 2026-09-28 the two roles are **starting points**. The owner opens *Setting
 - **Floors and ceilings.** The Setlist is never hidden, because the stage needs it. Plans is never more than View. Running the show and the song requests belong to every seat, whatever its tabs say.
 - **Owner-only, whatever a seat is given:** the plan and billing, payouts, the books and the business dashboard, who can sign in, the page address, the Studio code, recovery codes, Face ID, export, and deleting the account.
 - **The server holds the line, the page follows it.** Each Studio action names its tab and whether it reads or changes it, and the server refuses the rest. A seat without Money gets no money on the Live tab either — not tonight's tips, their notes, or the vote buys. The Studio draws a hidden tab nowhere. A tab at View shows everything and changes nothing, under one "View only" note.
+- **Alerts follow the tabs** (decision 0114). Every seat can switch alerts on for its own phone (*Settings → Alerts on your phone*). A seat's phone hears a merch order only if the seat can see Merch, and a message only if it can see Messages. Every seat hears the requests (songs, moods, birthday shout-outs). The owner alone hears the founder's alerts. Each address keeps up to eight phones, so no seat pushes another's out. Signing a phone out, removing a seat, or signing out everywhere ends those phones' alerts.
 
 A venue keeps its fixed owner / manager / crew for now.
 

@@ -437,6 +437,7 @@ function planFixture(st) {
    modules but touches no store until called, so the mock reads the one copy. The signed-in
    seat is ?seat=; its tabs are the owner's grid's (S.SEATS) with ?access= laid over them. */
 const { AREAS, reachOf, accessOf: seatAccess } = await import('../netlify/functions/_session.mjs');
+const PUSH_KEY = (await import('../netlify/functions/_push.mjs')).generateVapidKeys().publicKey;   // a throwaway, so Settings draws the alerts switch
 const SEAT_EMAIL = { owner: 'demo@example.com', member: 'bass@example.com', crew: 'sound@example.com' };
 function accessOf(st) {
   const over = { ...((S.SEATS[SEAT_EMAIL[st.seat]] || {}).access || {}) };
@@ -604,6 +605,7 @@ function adminStub(body, st) {
   const msg = msgAction(body); if (msg) return msg;
   switch (body.action) {
     case 'planGet': return planFixture(st);
+    case 'pushKey': return { ok: true, key: PUSH_KEY, devices: 0 };
     /* the tour poster (admin.mjs tourSet / tourClear): a data URL is "stored" as the poster slot, a link rides alone or with it */
     case 'tourSet': {
       const has = (k) => Object.prototype.hasOwnProperty.call(body, k);

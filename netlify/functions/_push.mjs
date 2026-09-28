@@ -1,6 +1,8 @@
 import { createHmac, createHash, createPrivateKey, createPublicKey, createSign,
          createCipheriv, diffieHellman, randomBytes, createECDH } from 'node:crypto';
 import { casDoc, readDoc } from './_lib.mjs';
+import { readArtists } from './_auth.mjs';
+import { can } from './_session.mjs';
 
 /* WEB PUSH — a notification the server can send to an artist's phone without the
    app being open, and without an App Store.
@@ -122,8 +124,12 @@ export async function vapidHeaders(endpoint, subject, publicRaw, privateRaw) {
 }
 
 /* ---------- storage: one document per artist, holding their devices ---------- */
+/* EACH DEVICE BELONGS TO A SEAT (decision 0114). A row carries the address and the
+   sign-in (`sid`) that switched it on, so an alert can reach the seats allowed to see
+   what it is about, a sign-out can end that phone's alerts, and one seat's phones can
+   never push another's out of the cap. */
 const SUBS = (aid) => `push_${aid}`;
-const MAX_DEVICES = 8;
+const MAX_DEVICES = 8;   // per seat
 
 export async function readSubs(aid) {
   const { data } = await readDoc(SUBS(aid), null);
@@ -136,29 +142,65 @@ export const mutateSubs = (aid, fn) =>
     d.subs = Array.isArray(d.subs) ? d.subs : []; return fn(d);
   });
 
-export async function saveSub(aid, sub) {
+/** `who` is the sign-in switching it on: requireArtist's `{ email, sid }`. */
+export async function saveSub(aid, sub, who = {}) {
   const endpoint = String((sub && sub.endpoint) || '');
   const keys = (sub && sub.keys) || {};
   if (!/^https:\/\//.test(endpoint) || !keys.p256dh || !keys.auth) return false;
+  const email = who.email || null;
   await mutateSubs(aid, (d) => {
     d.subs = d.subs.filter((s) => s.endpoint !== endpoint);
-    d.subs.push({ endpoint, p256dh: String(keys.p256dh), auth: String(keys.auth), at: Date.now() });
-    // newest wins; an artist with nine phones is a lost device, not a fleet
-    if (d.subs.length > MAX_DEVICES) d.subs = d.subs.slice(-MAX_DEVICES);
+    d.subs.push({ endpoint, p256dh: String(keys.p256dh), auth: String(keys.auth), at: Date.now(),
+                  ...(email ? { email } : {}), ...(who.sid ? { sid: who.sid } : {}) });
+    // newest wins, per seat: a seat with nine phones is a lost device, not a fleet,
+    // and it never costs the owner theirs
+    const mine = d.subs.filter((s) => (s.email || null) === email);
+    if (mine.length > MAX_DEVICES) {
+      const old = new Set(mine.slice(0, mine.length - MAX_DEVICES));
+      d.subs = d.subs.filter((s) => !old.has(s));
+    }
     return true;
   });
   return true;
 }
-export const dropSub = (aid, endpoint) =>
+const dropWhere = (aid, gone) =>
   mutateSubs(aid, (d) => {
     const n = d.subs.length;
-    d.subs = d.subs.filter((s) => s.endpoint !== endpoint);
+    d.subs = d.subs.filter((s) => !gone(s));
     return d.subs.length !== n;
   }).catch(() => {});
+export const dropSub = (aid, endpoint) => dropWhere(aid, (s) => s.endpoint === endpoint);
+/** A device's alerts end with the sign-in that switched them on. killSessions and
+ *  killEverything call this, so every sign-out — one phone, a removed seat, "sign out
+ *  everywhere", a recovery code — reaches the alerts too. `sids` null is every device. */
+export const dropDevices = (owner, sids) =>
+  dropWhere(owner, sids ? (s) => !!s.sid && sids.includes(s.sid) : () => true);
+/** How many devices this address has switched on here: what its Studio counts. */
+export const devicesOf = async (aid, email) =>
+  (await readSubs(aid)).subs.filter((s) => (s.email || null) === (email || null)).length;
 
-/** Fire and forget, to every device the artist has. Never throws: a notification
- *  that fails must never break the thing that triggered it (INVARIANT 16). */
-export async function notify(aid, { title, body, url = '/studio', tag = 'myset' }) {
+/* WHO HEARS IT. An alert names its audience, and a device hears it only while its
+   address is still a seat on this page and that seat may see what the alert is about:
+     { tab: 'merch' }     the seats that can see that Studio tab (decision 0105)
+     { owner: true }      the owner's seat alone (the founder's alerts, decision 0100)
+     { all: true }        every seat: the show and its requests are everyone's
+     { endpoint }         one device: the "Alerts are on" ping to the phone just switched on
+   An alert that names nobody reaches nobody, so a new one that forgets is silent rather
+   than loud on every seat's phone (test/pushseats.mjs has a tripwire for it).
+   A device with no address was switched on through the Studio code, which only the
+   owner holds, or before this change, when the page's alerts were the owner's: it is
+   the owner's. A device whose address is no longer a seat here is dropped. */
+const seatOf = (reg, aid, s) => {
+  if (!s.email) return { role: 'owner', access: null };
+  const link = reg.byEmail[s.email];
+  return link && link.artistId === aid ? { role: link.role || 'owner', access: link.access || null } : null;
+};
+const hears = (seat, to) =>
+  to.all ? true : to.owner ? seat.role === 'owner' : to.tab ? can(seat.role, to.tab + '_view', seat.access) : false;
+
+/** Fire and forget. Never throws: a notification that fails must never break the
+ *  thing that triggered it (INVARIANT 16). */
+export async function notify(aid, { title, body, url = '/studio', tag = 'myset' }, to = {}) {
   const pub = process.env.VAPID_PUBLIC_KEY, priv = process.env.VAPID_PRIVATE_KEY;
   const subject = process.env.VAPID_SUBJECT || 'mailto:hello@myset.vip';
   if (!pub || !priv) return { ok: false, reason: 'not-configured' };
@@ -166,20 +208,34 @@ export async function notify(aid, { title, body, url = '/studio', tag = 'myset' 
   const { subs } = await readSubs(aid);
   if (!subs.length) return { ok: true, sent: 0 };
 
+  const gone = new Set();
+  let hear;
+  if (to.endpoint) hear = subs.filter((s) => s.endpoint === to.endpoint);
+  else {
+    const reg = await readArtists().catch(() => null);
+    if (!reg) return { ok: false, reason: 'no-registry' };   // nobody, rather than everybody
+    hear = subs.filter((s) => {
+      const seat = seatOf(reg, aid, s);
+      if (!seat) { gone.add(s.endpoint); return false; }
+      return hears(seat, to);
+    });
+  }
+
   const payload = JSON.stringify({ title, body, url, tag });
-  let sent = 0, gone = 0;
-  await Promise.all(subs.map(async (s) => {
+  let sent = 0;
+  await Promise.all(hear.map(async (s) => {
     try {
       const enc = encryptPayload(payload, unb64u(s.p256dh), unb64u(s.auth));
       const h = await vapidHeaders(s.endpoint, subject, unb64u(pub), unb64u(priv));
       const r = await fetch(s.endpoint, {
         method: 'POST', headers: { ...h, ttl: '900' }, body: enc,
       });
-      if (r.status === 404 || r.status === 410) { await dropSub(aid, s.endpoint); gone++; }
+      if (r.status === 404 || r.status === 410) gone.add(s.endpoint);
       else if (r.ok) sent++;
     } catch { /* a dead push service is not the artist's problem */ }
   }));
-  return { ok: true, sent, gone };
+  if (gone.size) await dropWhere(aid, (s) => gone.has(s.endpoint));
+  return { ok: true, sent, gone: gone.size };
 }
 
 /** Generate a VAPID pair. Perry runs this once and sets the two env vars himself;

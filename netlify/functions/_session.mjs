@@ -100,13 +100,18 @@ export async function killSessions(owner, sids, until) {
     d.list = (d.list || []).filter((s) => !sids.includes(s.sid));
     return d.list.length !== before;
   }).catch(() => {});
+  // and the phone stops hearing the page (decision 0114): every device, when the cap signed everyone out
+  const { dropDevices } = await import('./_push.mjs');
+  await dropDevices(owner, overflowed ? null : sids);
   return { ok: true, everywhere: overflowed };
 }
 
-/** Sign every device out, this one included. */
+/** Sign every device out, this one included — and end every device's alerts. */
 export async function killEverything(owner) {
   await mutateOwnerRow(owner, (row, reg) => { row.rev = bumpFrom(row, reg); delete row.dead; return true; });
   await casDoc(SESS(owner), emptySess, (d) => { if (!(d.list || []).length) return false; d.list = []; return true; }).catch(() => {});
+  const { dropDevices } = await import('./_push.mjs');
+  await dropDevices(owner, null);
   return { ok: true };
 }
 

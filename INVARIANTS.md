@@ -1929,6 +1929,13 @@ If you are about to violate one, stop and say so rather than working around it.
 - **Samples.** A sample's link (0101) looks at every tab and changes none; its Studio draws as the owner's because a write there opens the claim sheet.
 - **Where it is held.** This widens 0db from a role to a seat. `test/accounts.mjs` holds the server; `test/seatstudio.mjs` holds the page, with a tripwire that fails if the Studio sends an owner-only action from a function outside the gated set. Decision `0105`.
 
+0ha. **An alert reaches only the seats that can see what it is about, and a sign-out ends that phone's alerts.** Every device row in `push_<aid>` carries the address and sign-in (`sid`) that switched it on.
+- **Every alert names its audience.** `notify(aid, msg, to)` takes `{ tab }` (the seats that can see that tab, `can(role, '<tab>_view', access)`), `{ owner: true }`, `{ all: true }` (the song requests, which are every seat's) or `{ endpoint }` (the "Alerts are on" ping to the phone just switched on). An alert that names nobody reaches nobody, and `test/pushseats.mjs` fails if any `notify(` call has no third argument.
+- **Only a seat hears.** A device hears only while its address is still a seat on this page. One that is not is dropped at the next alert. A device with no address (the Studio code, the recovery key, anything switched on before this) is the owner's.
+- **No seat crowds another out.** The cap is eight devices per address.
+- **A sign-out ends that phone's alerts.** `killSessions` and `killEverything` drop the devices of the sign-ins they end. Every sign-out goes through one of the two, and the Studio's own sign-out drops the browser's subscription too.
+- **If the registry cannot be read,** an alert reaches nobody, never everybody. Decision `0114`.
+
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and
     `normEmail` strips `|`). Revocation is a normally-ABSENT `dead` map on the

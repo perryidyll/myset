@@ -222,7 +222,7 @@ Linked steps: 370164, 370165
 
 ### Push subscriptions (push_) — entity 4858
 
-`push_<aid>` · The artist's phones that asked to be told about a request while the Studio is closed. Hand-written Web Push (RFC 8291/8188/8292) with two dependencies total. Cannot send until VAPID keys exist (Admin d06). `src: _push.mjs`
+`push_<aid>` · The phones on this page that asked to be told about a request, a message or an order while the Studio is closed. Each row carries the address and sign-in (`sid`) that switched it on; eight per address; a sign-out drops the rows of the sign-ins it ends (decision 0114). Hand-written Web Push (RFC 8291/8188/8292) with two dependencies total. The keys are set in production (Admin d06). `src: _push.mjs`
 
 | attribute | type | what it holds |
 | --- | --- | --- |
