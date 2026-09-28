@@ -43,3 +43,5 @@ sed -e "s/^id: 0000/id: $NEXT/" \
 echo "$FILE"
 echo
 echo "Fill it in, then run:  node tools/overview.mjs"
+echo "Then add a changelog entry in Puzzle for it, linked to the steps it governs — same day (docs/processes/CONVENTIONS.md § Changelog = decision records)."
+echo "Other sessions may hold numbers not yet on main: check the sessions board before you keep $NEXT."
