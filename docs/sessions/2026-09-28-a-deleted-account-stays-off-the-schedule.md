@@ -24,3 +24,19 @@
 **Not checked:** a real deletion on production. Nobody has deleted an account, and a deploy preview shares production data, so it is no place to try one.
 
 **Shipped:** live as `2243aed` (PR #114), merged 17:05:48 UTC on 27 Sep. Netlify's published production deploy is `2243aed`, `ready` at 17:06:16 UTC; the `autocron` bundle id moved from `4726ff1a2541` (on `a84da01`) to `9a0d7006f44c`.
+
+## Later the same day: every other walk
+
+**Asked (the founder):** check the other registry walks for the same `.del` gap; then, on the report, "ship it, and add the sheet column too".
+
+**Found:** two gaps among every walk over either registry and every slug lookup outside `publicArtist` (the table is in decision `0098`'s amendment).
+
+- The `/:slug` share card (`artistpage.mjs`) resolved the slug alone, so a pasted link to a deleted account kept its name and portrait. It now goes through `publicArtist`.
+- The founder's Google Sheet listed a leaving account as a normal artist and its gigs as upcoming. A new last column, `Being deleted on`, carries the purge date on its Artists, Gigs and Venues rows; the account stays, because its nights happened.
+- Left open on purpose: `/api/img` and `/api/vid` (a year on the edge regardless; the export and the Studio use the same addresses). Still open, cosmetic: a referrer's Settings lists a leaving referral by name until the purge.
+
+**What broke on the way:** nothing in the code. A live check first fetched `myset.vip/perry-idyll` and got the plain card, which looked like a regression; the founder's page address is `perryidyll` (the id has the hyphen, the slug does not), and the real address shows his name and portrait.
+
+**Verified:** share card `42 passed, 3 failed` → `45 passed, 0 failed`; sheet `199 passed, 7 failed` → `206 passed, 0 failed`, each of the three marks knocked out alone → `205 passed, 1 failed`; `sh test/run.sh` exit 0, 59 sections, no ✗, on the tree rebased onto `04e78db`.
+
+**Shipped:** live as `1385b2b` (PR #120). Netlify's published production deploy `6ab9f454` is `1385b2b`, `ready` at 05:02 UTC on 28 Sep. By content: `myset.vip/perryidyll` and `myset.vip/thelastcigarettes` carry their names and pictures; an unknown address gets the untouched page. **Not checked live:** the sheet's column, which the 03:20 UTC sync writes; nobody on production is marked, so every cell will be blank.

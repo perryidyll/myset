@@ -8,7 +8,7 @@ area: ops
 reverses:
 superseded_by:
 invariants: [0dh]
-commits: [2243aed]
+commits: [2243aed, 1385b2b]
 tests: [test/autoshow.mjs, test/firstgig.mjs, test/sharecard.mjs, test/sheets.mjs]
 files: [netlify/functions/_auto.mjs, netlify/functions/artistpage.mjs, netlify/functions/_warehouse.mjs]
 ---
