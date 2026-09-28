@@ -18,7 +18,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 const root = new URL('../', import.meta.url);
 export const PAIRS = [
-  ['public/studio.js', 'biz.js'], ['public/studio.js', 'studio-money.js'],
+  /* sample.js carries tips.js's stamp (it loads the decks on the artist page), so it is
+     rewritten before anything takes sample.js's own stamp (decisions 0101, 0102) */
+  ['public/sample.js', 'tips.js'],
+  ['public/studio.js', 'biz.js'], ['public/studio.js', 'studio-money.js'], ['public/studio.js', 'sample.js'],
+  ['public/venue-studio.js', 'sample.js'],
+  ['public/studio.html', 'tips.js'], ['public/venue-studio.html', 'tips.js'],
+  ['public/artist.html', 'sample.js'], ['public/venue.html', 'sample.js'],
   ['public/report.html', 'biz.js'],
   ['public/studio.html', 'studio.js'], ['public/venue-studio.html', 'venue-studio.js'],
   ...['index', 'artist', 'artists', 'vote', 'community', 'venue', 'about', 'shop', 'diary'].map((p) => [`public/${p}.html`, 'fan.js']),

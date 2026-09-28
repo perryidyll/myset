@@ -158,7 +158,14 @@ export const defaultProfile = () => ({
                          // once opened every new account's page as that act)
   avatar: '',            // the big square portrait
   photos: [],            // up to MAX_PHOTOS small ones clustered around it
-  links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', bandcamp: '', gofundme: '', website: '' },
+  links: { spotify: '', applemusic: '', ytmusic: '', instagram: '', bandcamp: '', gofundme: '', website: '',
+           tiktok: '', youtube: '', soundcloud: '', facebook: '' },
+  /* WHERE THE FACE IS (decision 0101, 2026-09-28). A CSS object-position for
+     the cover and the portrait, e.g. "42% 30%". A photo the artist crops in the
+     Studio is already framed, so theirs is blank and the page keeps its old
+     centre; a photo the sample factory picked off a video frame is not, and a
+     square cut from a wide frame would otherwise slice through the face. */
+  focus: { cover: '', avatar: '' },
   media: [],
   merch: [],
   /* The tour-dates poster (decision 0075): the /api/img address of the file, what it
@@ -180,6 +187,14 @@ const LINK_HOSTS = {
      does not pass. Added with GoFundMe at the founder's ask, 2026-09-13. */
   bandcamp: ['bandcamp.com', '*.bandcamp.com'],
   gofundme: ['gofundme.com', 'www.gofundme.com', 'gf.me'],
+  /* Four more places an act lives (the founder, 2026-09-28, with the sample
+     factory, which finds them): a TikTok profile, a YouTube CHANNEL (a video
+     still goes in Videos & music; this is the follow link), SoundCloud and a
+     Facebook page. Exact hosts, the same rule as the rest. */
+  tiktok: ['tiktok.com', 'www.tiktok.com'],
+  youtube: ['youtube.com', 'www.youtube.com', 'm.youtube.com'],
+  soundcloud: ['soundcloud.com', 'www.soundcloud.com', 'on.soundcloud.com'],
+  facebook: ['facebook.com', 'www.facebook.com', 'm.facebook.com', 'fb.com', 'www.fb.com'],
   website: null,                      // any https host
 };
 const hostOk = (allow, host) => allow.some((a) => a.startsWith('*.') ? host.endsWith(a.slice(1)) && host.length > a.length - 1 : a === host);
@@ -229,7 +244,16 @@ export function normProfile(p) {
     bandcamp: safeLink('bandcamp', L.bandcamp),
     gofundme: safeLink('gofundme', L.gofundme),
     website: safeLink('website', L.website),
+    tiktok: safeLink('tiktok', L.tiktok),
+    youtube: safeLink('youtube', L.youtube),
+    soundcloud: safeLink('soundcloud', L.soundcloud),
+    facebook: safeLink('facebook', L.facebook),
   };
+  /* Only a percentage pair reaches the page's style attribute — anything else is
+     dropped, never escaped and passed through. */
+  const F = out.focus && typeof out.focus === 'object' ? out.focus : {};
+  const pos = (v) => (/^(100|\d{1,2})% (100|\d{1,2})%$/.test(String(v || '')) ? String(v) : '');
+  out.focus = { cover: pos(F.cover), avatar: pos(F.avatar) };
   // anything that can no longer produce a valid embed src is dropped, whatever
   // it claims to be — the stored record is not trusted on read either
   out.media = (Array.isArray(out.media) ? out.media : [])

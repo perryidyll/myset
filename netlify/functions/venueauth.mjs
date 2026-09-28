@@ -93,6 +93,28 @@ export default async (req) => {
                   venueId: link.venueId, slug: venue.slug, name: venue.name, isNew: true });
   }
 
+  /* ---- claiming a venue sample page (decision 0101) ----
+     The artist door's twin (auth.mjs claimSample): the ticket proves the inbox, the
+     key proves the link, the password is set in the same step, and the page lands
+     on the free plan. */
+  if (action === 'claimSample') {
+    const email = await readTicket(body.ticket);
+    if (!email) return bad('That took too long — ask for a new code', 401);
+    const { verifySample, claimSampleVenue } = await import('./_sample.mjs');
+    const hit = await verifySample(String(body.slug || ''), String(body.key || ''), 'venue');
+    if (!hit) return bad('This link has expired or the page was claimed already.', 410);
+    const pw = String(body.password || '');
+    const why = weakPassword(pw, email);
+    if (why) return bad(why);
+    if ((await readVenues()).byEmail[email]) return bad('That address already runs a venue page — use a different email.', 409);
+    const r = await claimSampleVenue({ owner: hit.owner, email });
+    if (!r.ok) return bad(r.error || 'Couldn’t claim that page', 409);
+    await setPassword('v_' + r.vid, email, pw);
+    const reg = await readVenues();
+    return json({ ok: true, token: await openV(req, body, r.vid, email, vRevOf(reg, r.vid)), email,
+                  venueId: r.vid, slug: r.slug, name: r.name, isNew: true, claimed: true });
+  }
+
   /* ---- email + password, the same door the artist side has (decision 0070),
      in this realm: one sentence for every failure, the same cost for each. ---- */
   if (action === 'passwordSignIn') {
@@ -201,12 +223,25 @@ export default async (req) => {
   if (action === 'setSlug') {
     const want = cleanSlug(body.slug);
     if (want.length < 3) return bad('At least 3 letters or numbers');
+    // a name a venue sample is holding is taken (decision 0101) — the same sentence
+    const held = await import('./_sample.mjs').then((m) => m.sampleSlugs('venue')).catch(() => new Set());
+    if (held.has(want)) return bad('Another venue already has that address');
     let clash = false;
     await mutateVenues((r) => {
       const owner = r.bySlug[want];
       if (owner && owner !== me.vid) { clash = true; return false; }
+      const was = (r.oldSlug || {})[want];
+      if (was && was.vid !== me.vid) { clash = true; return false; }
+      if (was) delete r.oldSlug[want];                // taking its own old name back
       const old = r.byId[me.vid] && r.byId[me.vid].slug;
-      if (old && old !== want) delete r.bySlug[old];
+      if (old && old !== want) {
+        delete r.bySlug[old];
+        /* THE PRINTED QR CODE OUTLIVES THE RENAME, for a venue as for an artist
+           (INVARIANT 0di; the venue side had no such thing until 2026-09-28): the
+           old name keeps answering for this page and is nobody else's. */
+        r.oldSlug ||= {};
+        r.oldSlug[old] = { vid: me.vid, at: Date.now() };
+      }
       r.bySlug[want] = me.vid;
       if (r.byId[me.vid]) r.byId[me.vid].slug = want;
       return true;

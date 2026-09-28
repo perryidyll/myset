@@ -14,12 +14,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex" />
 <title>Your MySet sign</title>
-<!-- THE SIGN (first gig, 2026-09-15). One page, one QR, printed at the door and on
-     every table: the artist's name, what to do, the code, the address. Opened from
-     the Studio's "Print my sign"; ?a= is the page's slug, ?print=1 opens the print
-     sheet as soon as the code has loaded, which on a phone is also "Save as PDF".
-     No script from anywhere else and nothing to sign in to — the code and the
-     name are both public already. -->
+<!-- THE SIGN (first gig, 2026-09-15). One page, one QR, for the door or the tip jar:
+     the artist's name, what to do, the code, the address. Then THE TABLE CARDS (the
+     founder, 2026-09-28: one big code is not enough, the room votes from its seats):
+     the same four things small, twelve to a page, 24, 36 or 48 of them (36 unless
+     this phone chose otherwise), for every table and along the bar. Opened from the
+     Studio's "Print your QR codes"; ?a= is the page's slug, ?cards= a count, ?print=1
+     opens the print sheet as soon as the codes have loaded, which on a phone is also
+     "Save as PDF". No script from anywhere else and nothing to sign in to — the
+     code and the name are both public already. -->
 <style>
 :root{--f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
   --accent:#FF5650;--ink:#111;--muted:#6E6E73;--paper:#fff;--bg:#F5F5F7}
@@ -47,6 +50,25 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);-w
 .note{max-width:560px;margin:0 auto;padding:0 16px 30px;font-size:13px;color:var(--muted);line-height:1.5}
 .note b{color:var(--ink)}
 .err{padding:60px 20px;text-align:center;color:var(--muted)}
+.cards{max-width:560px;margin:0 auto;padding:0 16px 10px}
+.ch{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:4px 2px 10px}
+.ch b{font-size:17px;letter-spacing:-.01em;white-space:nowrap}
+.ch span{font-size:13px;color:var(--muted);text-align:right}
+.seg{display:flex;gap:6px;margin:0 0 14px}
+.seg button{flex:1;appearance:none;border:0;border-radius:999px;padding:10px 0;font:inherit;font-size:14.5px;font-weight:700;cursor:pointer;
+  background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08);transition:background .2s,color .2s}
+.seg button[aria-checked="true"]{background:var(--ink);color:#fff}
+.seg button:active{transform:scale(.97)}
+.sheet{width:100%;aspect-ratio:8.5/11;background:var(--paper);border-radius:14px;box-shadow:0 20px 50px -20px rgba(0,0,0,.35),0 1px 2px rgba(0,0,0,.06);
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(4,1fr);padding:3.5%;overflow:hidden}
+.sheets .sheet+.sheet{display:none}        /* on screen one page stands for them all; print shows every one */
+.card{container-type:inline-size;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  min-width:0;overflow:hidden;padding:5% 7%;border:1px dashed #D2D2D7;margin:0 -1px -1px 0}
+.card p{margin:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .cn{font-size:9cqw;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.card .cl{font-size:9.5cqw;font-weight:800;color:var(--accent);line-height:1.15}
+.card .cq{width:64%;aspect-ratio:1;display:block;margin:5% auto 4%}
+.card .cu{font-size:7.2cqw;font-weight:700;letter-spacing:-.01em}
 @media print{
   @page{size:auto;margin:10mm}
   html,body{background:#fff}
@@ -56,6 +78,11 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);-w
   .qr{width:68%;max-width:none}
   .name{font-size:52px}.lead{font-size:44px}.how{font-size:24px}.url{font-size:32px}.foot{font-size:15px}
   .lead{color:var(--accent);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .cards{max-width:none;padding:0}
+  .ch,.seg{display:none!important}
+  .sheet{width:100%;height:100vh;aspect-ratio:auto;border-radius:0;box-shadow:none;padding:0;break-before:page;page-break-before:always}
+  .sheets .sheet+.sheet{display:grid}
+  .card .cl{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style>
 </head>
@@ -71,32 +98,62 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);-w
       <p class="foot"><i></i>MySet</p></div>
   </div>
 </div>
-<p class="note"><b>Print</b> opens your phone's print sheet — pick a printer, or <b>Save as PDF</b> to send it anywhere. Put one at the door, one on the tip jar, one on every table. Big enough to scan from a metre away.</p>
+<section class="cards" id="cards">
+  <div class="ch"><b>Table cards</b><span id="cardsWhat">36 small cards, 12 to a page</span></div>
+  <div class="seg" role="radiogroup" aria-label="How many table cards to print">
+    <button type="button" role="radio" data-n="0">None</button><button type="button" role="radio" data-n="24">24</button><button type="button" role="radio" data-n="36">36</button><button type="button" role="radio" data-n="48">48</button></div>
+  <div class="sheets" id="sheets"></div>
+</section>
+<p class="note"><b>Print</b> opens your phone's print sheet — pick a printer, or <b>Save as PDF</b> to send it anywhere. The big sign goes at the door or on the tip jar, big enough to scan from a metre away. The small cards go on every table and along the bar: cut along the dashed lines.</p>
 <script>
 (()=>{
   const q=new URLSearchParams(location.search);
   const slug=(q.get('a')||'').toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,40);
   const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const $=s=>document.querySelector(s);
-  if(!slug){ $('.stage').innerHTML='<p class="err">This sign needs a page. Open it from the Studio: Live → Print my sign.</p>'; $('.bar').hidden=true; return; }
+  if(!slug){ $('.stage').innerHTML='<p class="err">This sign needs a page. Open it from the Studio: Live → Print your QR codes.</p>'; $('.bar').hidden=true; $('#cards').hidden=true; return; }
   const url='myset.vip/'+slug;
   $('#url').textContent=url;
   $('#name').textContent=q.get('n')||slug;
   $('#who').textContent='Your sign · '+url;
   /* The name off the public profile, the same one the page shows. Nothing waits on it. */
   fetch('/api/profile?a='+encodeURIComponent(slug)).then(r=>r.json()).then(p=>{
-    if(p&&p.name){ $('#name').textContent=p.name; $('#who').textContent=p.name+' · '+url; document.title=p.name+' — MySet sign'; }
+    if(p&&p.name){ $('#name').textContent=p.name; $('#who').textContent=p.name+' · '+url; document.title=p.name+' — MySet sign';
+      document.querySelectorAll('.cn').forEach(e=>{e.textContent=p.name;}); }
   }).catch(()=>{});
-  /* The code itself, inline so print never races an image that has not arrived.
-     A failed fetch falls back to an <img> of the same thing. */
+  /* THE TABLE CARDS. How many: ?cards=, else what this phone chose last time, else 36
+     — the middle of the 25 to 50 a room wants. Every card is the one code, drawn once:
+     a blob of the inline SVG, so forty-eight cards cost nothing more to load. */
+  const PER=12, CHOICES=[0,24,36,48];
+  let N=36, cardSrc='';
+  try{ const v=+localStorage.getItem('myset.cards'); if(localStorage.getItem('myset.cards')!==null&&CHOICES.includes(v)) N=v; }catch(e){}
+  if(q.has('cards')&&CHOICES.includes(+q.get('cards'))) N=+q.get('cards');
+  const drawCards=()=>{
+    $('#cardsWhat').textContent=N?`${N} small cards, ${PER} to a page`:'Just the big sign';
+    document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-checked',String(+b.dataset.n===N)));
+    if(!cardSrc){ $('#sheets').innerHTML=''; return; }
+    const card=`<div class="card"><p class="cn">${esc($('#name').textContent)}</p><p class="cl">Pick the next song</p><img class="cq" alt="" src="${cardSrc}"><p class="cu">${esc(url)}</p></div>`;
+    let h=''; for(let i=0;i<N/PER;i++) h+=`<div class="sheet">${card.repeat(PER)}</div>`;
+    $('#sheets').innerHTML=h;
+  };
+  document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
+    N=+b.dataset.n; try{localStorage.setItem('myset.cards',String(N))}catch(e){}
+    ready=false; drawCards(); settle();
+  }));
+  drawCards();
+  /* The code itself, inline so print never races an image that has not arrived; the
+     cards wait for their copies to decode for the same reason. A failed fetch falls
+     back to an <img> of the same thing. */
   const src='/api/qr?k=profile&a='+encodeURIComponent(slug)+'&s=12';
-  let ready=false;
-  const go=()=>{ ready=true; if(q.get('print')==='1') setTimeout(()=>window.print(),350); };
+  let ready=false, asked=false;
+  const settle=()=>Promise.all([...document.querySelectorAll('.cq')].map(i=>i.decode?i.decode().catch(()=>{}):0)).then(()=>{ ready=true; });
+  const go=()=>{ drawCards(); settle().then(()=>{ if(q.get('print')==='1'&&!asked){ asked=true; setTimeout(()=>window.print(),350); } }); };
   fetch(src).then(r=>r.ok?r.text():Promise.reject()).then(svg=>{
     if(!/^\s*<svg/i.test(svg)) throw 0;
     $('#qr').innerHTML=svg; const s=$('#qr svg'); if(s){s.removeAttribute('width');s.removeAttribute('height');}
+    try{ cardSrc=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml'})); }catch(e){ cardSrc=src; }
     go();
-  }).catch(()=>{ const i=new Image(); i.alt='Your QR code'; i.onload=go; i.src=src; $('#qr').replaceChildren(i); });
+  }).catch(()=>{ const i=new Image(); i.alt='Your QR code'; i.onload=()=>{ cardSrc=src; go(); }; i.src=src; $('#qr').replaceChildren(i); });
   $('#print').onclick=()=>{ if(!ready){ $('#print').textContent='One moment…'; setTimeout(()=>{$('#print').textContent='Print';window.print();},600); return; } window.print(); };
   /* "Text me the link" without a text: the phone's own share sheet — Messages,
      AirDrop, mail, notes — or the clipboard where there is no sheet. */

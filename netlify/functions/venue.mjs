@@ -25,8 +25,15 @@ export default async (req) => {
 
   const vid = await venueBySlug(slug);
   if (!vid) return bad('unknown venue', 404);
+  return jsonCached(await venuePayload(vid), 30);   // public, shared by every phone: 30s at the edge
+};
+
+/* THE PAGE'S DATA, for a public venue page AND for a venue sample (decision 0101): a
+   sample is not in the venue registry, so the private sample door hands its row in
+   as `reg`. One shape, one page. */
+export async function venuePayload(vid, { reg: given = null } = {}) {
   // the vouches need only the id, so they travel with the registry and profile reads
-  const [reg, prof, vouches] = await Promise.all([venueById(vid), getVenueProfile(vid), readVouches(vid)]);
+  const [reg, prof, vouches] = await Promise.all([given ? Promise.resolve(given) : venueById(vid), getVenueProfile(vid), readVouches(vid)]);
   const venue = shapeVenue(prof, reg);
 
   const [gigs, own] = await Promise.all([gigsAt(venue), ownEvents(vid, venue)]);
@@ -40,11 +47,11 @@ export default async (req) => {
   const whatsOn = [...gigs, ...own].sort((a, b) => a.startsAt - b.startsAt).slice(0, 200);
   const names = Object.values(vouches.by || {}).map((x) => x.name).filter(Boolean);
 
-  return jsonCached({ ok: true, src: MARK, venue,   // public, shared by every phone: 30s at the edge
+  return { ok: true, src: MARK, venue,
                 gigs: whatsOn, artists: acts.slice(0, 24),
                 vouches: { count: names.length, need: MIN_VOUCHES, names: names.slice(0, 12) },
-                truncated: whatsOn.length >= 200 }, 30);
-};
+                truncated: whatsOn.length >= 200 };
+}
 
 /** The venue's own listings — a quiz night, a DJ, the football. Same engine. */
 /* Every row carries `eventId` and `rsvp` (the count, never a fan), read in the

@@ -28,6 +28,10 @@ import { join, extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const ROOT = resolve(new URL('..', import.meta.url).pathname);
+/* The functions look for files relative to the working directory first (artistpage.mjs
+   reads public/artist.html), so a launcher that starts this from somewhere else — the
+   Browser pane does — would hand them another checkout's pages. */
+process.chdir(ROOT);
 const PUBLIC = join(ROOT, 'public');
 const args = process.argv.slice(2);
 const PORT = Number((args[args.indexOf('--port') + 1]) || 0) || 8950;
@@ -35,6 +39,21 @@ const PORT = Number((args[args.indexOf('--port') + 1]) || 0) || 8950;
 /* The fakes are "on" only when a key is present — the same switch production reads. */
 process.env.STRIPE_SECRET_KEY ||= 'sk_test_localhost_fake_key';
 process.env.URL ||= `http://localhost:${PORT}`;
+/* Sign-in codes (a sample's claim, a new account) are printed here instead of mailed:
+   the send is answered locally and never leaves this machine. */
+/* The founding page's recovery code, locally only, so /dev?founder=1 can sign this browser in
+   as the founder — the only account the sample console (/factory, decision 0101) opens for. */
+process.env.ADMIN_CODE ||= 'localhost-founder';
+process.env.RESEND_API_KEY ||= 're_localhost';
+process.env.AUTH_FROM ||= 'MySet <sign-in@myset.vip>';
+{ const real = globalThis.fetch;
+  globalThis.fetch = (u, o) => {
+    if (String(u).startsWith('https://api.resend.com/')) {
+      try { const b = JSON.parse((o && o.body) || '{}'); console.log(`[mail] to ${(b.to || []).join(', ')} · ${b.subject}`); } catch {}
+      return Promise.resolve(new Response('{"id":"local"}', { status: 200 }));
+    }
+    return real(u, o);
+  }; }
 
 /* ---------- the redirects, read from netlify.toml so this cannot drift ---------- */
 function redirects() {
@@ -247,11 +266,48 @@ a{color:#FF375F}code{background:#f0f0f2;padding:1px 5px;border-radius:5px}h1{fon
 </ul>
 <p>Switch the plan: <a href="/dev?plan=plus">Bar Star</a> · <a href="/dev?plan=pro">Rock Star</a> · <a href="/dev?plan=free">Hobbyist</a> · <a href="/dev?reset=1">reseed everything</a></p>
 <p style="color:#6e6e73;font-size:13px">Seeded: a Thursday residency (six nights filed, four logged, one Stripe never answered), a Saturday wedding, last night at Baan Tai (tap <i>Log tonight</i>), a Tuesday MySet ran with no gig on the calendar, a night whose gig was deleted, merch and two app orders, a connected account with a year of statements.</p>
+<p>The founder's sample console: <a href="/dev?founder=1&go=/factory">sign in as the founder and open /factory</a> · <a href="/dev/sample">make an artist sample</a> · <a href="/dev/sample?kind=venue">a venue sample</a></p>
 <script>
-try{localStorage.setItem('myset.token',${JSON.stringify(t)});localStorage.setItem('myset.aslug',${JSON.stringify(s)});localStorage.removeItem('myset.admin');
+try{${q.get('founder') ? `localStorage.setItem('myset.admin',${JSON.stringify(process.env.ADMIN_CODE)});localStorage.removeItem('myset.token');localStorage.removeItem('myset.aslug');` : `localStorage.setItem('myset.token',${JSON.stringify(t)});localStorage.setItem('myset.aslug',${JSON.stringify(s)});localStorage.removeItem('myset.admin');`}
 ${q.get('tab') ? `localStorage.setItem('myset.tab',${JSON.stringify(q.get('tab'))});` : ''}}catch(e){}
 ${q.get('go') ? `location.replace(${JSON.stringify(q.get('go'))});` : ''}
 </script>`;
+}
+
+/* ---------- /dev/sample: a sample page to walk, artist or venue (decision 0101) ----------
+   Made the way the factory makes one (createSample), from the repo's demo photo, so the
+   whole flow — the page with its banner, the look-only Studio, the practice round, the
+   claim with a code (printed here: no mail leaves this machine) — can be walked on
+   localhost. /dev/sample?kind=venue for a venue. Each visit makes a fresh one under the
+   same name, so the second shows how a name somebody has gets a word after it
+   (thetidelines-music, harbourbar-live). */
+async function devSample(q) {
+  const S = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_sample.mjs')).href);
+  await S.mutateFactoryCfg((c) => { c.auto = true; return true; }).catch(() => {});
+  const jpg = readFileSync(join(PUBLIC, 'img', 'band.jpg'));
+  const venue = q.get('kind') === 'venue';
+  const made = venue
+    ? await S.createSample({ kind: 'venue', name: 'Harbour Bar', city: 'Koh Phangan', country: 'Thailand',
+        tagline: 'Live music by the pier, every night from eight', about: 'A beach bar at the end of the pier in Thong Sala, with live acoustic sets every night and a view of the sunset.',
+        address: 'Thong Sala Pier, Koh Phangan', links: { instagram: 'https://instagram.com/harbourbar', website: 'https://harbourbar.example' },
+        photos: { cover: { bytes: jpg, type: 'image/jpeg' } }, sources: [{ url: 'https://harbourbar.example', kind: 'website', title: 'Site' }, { url: 'https://www.openstreetmap.org', kind: 'osm', title: 'OSM' }],
+        quality: { score: 0.9, review: false }, msgs: { hook: 'I played your sunset slot last month and loved the room.' }, by: 'founder' }, { fetchMedia: false })
+    : await S.createSample({ kind: 'artist', name: 'The Tide Lines', first: 'The Tide Lines', city: 'Koh Phangan',
+        tagline: 'Indie-folk duo from Koh Phangan · originals and beach covers',
+        style: 'Indie folk · covers',
+        bio: 'The Tide Lines are an indie-folk duo based on Koh Phangan, playing originals and stripped-back covers on the island’s beach bars. Their live session of “Salt & Sand” is their most-watched video.',
+        links: { instagram: 'https://instagram.com/thetidelines', youtube: 'https://www.youtube.com/@thetidelines', spotify: 'https://open.spotify.com/artist/4Z8W4fKeB5YxbusRsdQVPb', website: 'https://thetidelines.example' },
+        media: [{ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', hero: true, title: 'Salt & Sand (live session)' }],
+        photos: { cover: { bytes: jpg, type: 'image/jpeg', focus: '50% 35%', from: 'youtube' }, avatar: { bytes: jpg, type: 'image/jpeg', focus: '45% 40%', from: 'website' },
+                  p0: { bytes: jpg, type: 'image/jpeg' } },
+        sources: [{ url: 'https://www.youtube.com/@thetidelines', kind: 'youtube', title: 'YouTube' }, { url: 'https://thetidelines.example', kind: 'website', title: 'Site' }],
+        quality: { score: 0.93, review: false }, msgs: { hook: 'Your live session of Salt & Sand stopped me.' }, by: 'founder' }, { fetchMedia: false });
+  const link = String(made.link || '').replace(/^https?:\/\/[^/]+/, '');
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A sample page</title><style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 20px}a{color:#FF375F}</style>
+<h1>${venue ? 'A venue' : 'An artist'} sample page</h1><p>${made.ok ? `Made <b>${link}</b>.` : 'Could not make it: ' + made.error}</p>
+<ul><li><a href="${link}">Open it as the ${venue ? 'venue' : 'artist'} would</a> (the link the DM carries)</li><li><a href="/factory">The factory console</a> (sign in at /dev first)</li></ul>
+<p style="color:#6e6e73;font-size:13px">Claiming asks for a code: it is printed in this terminal, since no mail leaves this machine.</p>`;
 }
 
 /* ---------- the server ---------- */
@@ -259,6 +315,10 @@ const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, process.env.URL);
     let path = decodeURIComponent(url.pathname);
+    if (path === '/dev/sample') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(await devSample(url.searchParams));
+    }
     if (path === '/dev') {
       if (url.searchParams.get('reset') || url.searchParams.get('plan')) await seed(url.searchParams.get('plan') || SEED.plan);
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
@@ -270,13 +330,18 @@ const server = http.createServer(async (req, res) => {
     let target = f ? null : resolveRedirect(path);
     if (!f && target) {
       if (target.startsWith('/.netlify/functions/')) {
-        const name = target.slice('/.netlify/functions/'.length).split('/')[0];
+        /* a rewrite may carry its own query (/:slug → artistpage?a=:slug, decision 0097):
+           the name stops at it, and the function is handed the target's address with it */
+        const name = target.slice('/.netlify/functions/'.length).split(/[/?]/)[0];
         const h = await fn(name);
         if (!h) { res.writeHead(404); return res.end('no such function: ' + name); }
         const chunks = []; for await (const c of req) chunks.push(c);
         const body = Buffer.concat(chunks);
         const headers = {}; for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers[k] = v;
-        const request = new Request(process.env.URL + req.url, { method: req.method, headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : body });
+        const tq = target.includes('?') ? new URLSearchParams(target.split('?')[1]) : null;
+        const reqUrl = new URL(process.env.URL + req.url);
+        if (tq) for (const [k, v] of tq) reqUrl.searchParams.set(k, v);
+        const request = new Request(reqUrl.href, { method: req.method, headers, body: ['GET', 'HEAD'].includes(req.method) ? undefined : body });
         const out = await h(request, CTX);
         const hdrs = {}; out.headers.forEach((v, k) => { hdrs[k] = v; }); hdrs['cache-control'] = 'no-store';
         res.writeHead(out.status, hdrs);

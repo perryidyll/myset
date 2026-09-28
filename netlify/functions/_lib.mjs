@@ -1200,13 +1200,29 @@ export const weakCode = (code, slug) => {
     || (slug && c === String(slug).toLowerCase());
 };
 
-export async function requireArtist(req) {
+export async function requireArtist(req, opts = {}) {
   const auth = req.headers.get('authorization') || '';
   if (auth.startsWith('Bearer ')) {
     const { verifyToken } = await import('./_auth.mjs');
     const me = await verifyToken(auth.slice(7));
     // `sid` says WHICH device, so "sign out" can mean this one and not all of them
     if (me) return { aid: me.artistId, email: me.email, role: me.role || 'owner', sid: me.sid || null };
+  }
+
+  /* THE SAMPLE DOOR (decision 0101). A page the factory built opens its Studio to
+     whoever holds the key in its link — to LOOK, never to change anything: the role
+     is `sample`, which admin.mjs answers from a short list of reads and nothing else
+     ("claim to save"). Only a caller that asks for it (`{ sample: true }` — admin.mjs
+     and stage.mjs) can be reached this way at all; every other endpoint that calls
+     requireArtist never sees a sample and answers 401 as it always did. A present
+     `x-sample-key` settles which door this is: it never falls through to the Studio
+     code below, whose failures count towards a real page's lockout. */
+  const skey = req.headers.get('x-sample-key') || '';
+  if (skey) {
+    if (!opts.sample) return null;
+    const { verifySample } = await import('./_sample.mjs');
+    const hit = await verifySample(req.headers.get('x-admin-artist') || '', skey, 'artist');
+    return hit ? { aid: hit.owner, email: null, role: 'sample', by: 'sample-key', slug: hit.row.slug } : null;
   }
 
   const url = new URL(req.url);

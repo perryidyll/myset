@@ -50,6 +50,15 @@ async function syncActive(aid) {
   catch { return 'Saved — but tonight’s setlist didn’t refresh. Reopen the Setlist tab.'; }
 }
 const join = (note, warn) => (warn ? (note ? `${note} ${warn}` : warn) : note);
+/* A page that began as a sample keeps its first photos under the sample's own name
+   (decision 0101, SAMPLE_NS in _img.mjs), which dropImage(aid, slot) cannot reach —
+   so a photo replaced or cleared from one of those addresses is deleted by its own
+   name, or it would sit in Blobs for ever, pointed at by nothing. */
+async function dropSamplePicture(url) {
+  const { sampleImgKeys } = await import('./_img.mjs');
+  const m = /[?&]a=([a-z0-9]+)&s=([a-z0-9_]+)/.exec(String(url || ''));
+  if (m && sampleImgKeys([url]).length) await dropImage(m[1], m[2]).catch(() => {});
+}
 
 /* Plans, entitlements, billing, the account, and the codes Perry hands out. */
 async function handlePlan(aid, action, body, req, me) {
@@ -1167,17 +1176,19 @@ async function handleProfile(aid, action, body, req, me) {
     const dec = decodeDataUrl(body.data);
     if (dec.error) return bad(dec.error);
     const url = await putImage(aid, slot, dec.bytes, dec.type);
+    let was = '';
     await mutateProfile(aid, (p) => {
-      if (slot === 'cover') p.photo = url;
-      else if (slot === 'avatar') p.avatar = url;
+      if (slot === 'cover') { was = p.photo; p.photo = url; }
+      else if (slot === 'avatar') { was = p.avatar; p.avatar = url; }
       else {
         const i = Number(slot.slice(1));
         p.photos = Array.isArray(p.photos) ? p.photos : [];
         while (p.photos.length <= i) p.photos.push('');
-        p.photos[i] = url;
+        was = p.photos[i]; p.photos[i] = url;
       }
       return true;
     });
+    await dropSamplePicture(was);
     return json({ ok: true, url, profile: await getProfile(aid) });
   }
 
@@ -1185,15 +1196,17 @@ async function handleProfile(aid, action, body, req, me) {
     const slot = String(body.slot || '');
     if (!SLOTS.has(slot)) return bad('unknown photo slot');
     await dropImage(aid, slot);
+    let was = '';
     await mutateProfile(aid, (p) => {
-      if (slot === 'cover') p.photo = '';
-      else if (slot === 'avatar') p.avatar = '';
+      if (slot === 'cover') { was = p.photo; p.photo = ''; }
+      else if (slot === 'avatar') { was = p.avatar; p.avatar = ''; }
       else {
         const i = Number(slot.slice(1));
-        if (Array.isArray(p.photos) && p.photos[i]) p.photos[i] = '';
+        if (Array.isArray(p.photos) && p.photos[i]) { was = p.photos[i]; p.photos[i] = ''; }
       }
       return true;
     });
+    await dropSamplePicture(was);
     return json({ ok: true, profile: await getProfile(aid) });
   }
 
@@ -1241,8 +1254,9 @@ async function handleProfile(aid, action, body, req, me) {
      _connect.mjs and INVARIANT 0bl. */
   if (action === 'payStatus') {
     const { connectStatus, syncFromStripe } = await import('./_connect.mjs');
-    // a cheap refresh when they have started but Stripe has not called back yet
-    if (body.refresh) {
+    // a cheap refresh when they have started but Stripe has not called back yet —
+    // never on a sample's look (0101): it has no payout account, and a look writes nothing
+    if (body.refresh && !(me && me.role === 'sample')) {
       await syncFromStripe(aid).catch(() => {});
       // Stripe may have finished its identity check since they last looked
       const { tryAutoVerify } = await import('./_verify.mjs');
@@ -1858,13 +1872,25 @@ const PROFILE_ACTIONS = new Set(['profileSet', 'mediaAdd', 'mediaRemove', 'media
                                  'signPrinted']);
 
 const main = async (req) => {
-  const me = await requireArtist(req);
+  const me = await requireArtist(req, { sample: true });
   if (!me) return bad('unauthorized', 401);
   const aid = me.aid;
   if (req.method !== 'POST') return bad('POST only', 405);
   let body = {};
   try { body = await req.json(); } catch { return bad('bad json'); }
   const action = body.action;
+
+  /* A SAMPLE'S STUDIO IS FOR LOOKING (decision 0101). Whoever holds the key in a
+     sample's link may read what the Studio's tabs draw — the list below — and
+     nothing else. An allowlist, the LEAVING_OK shape, never a list of what it may not
+     do: an action added next month is refused here until somebody decides a sample
+     may read it. Everything else answers `claim: true`, and the Studio opens the
+     claim sheet instead of a toast that says no. */
+  const SAMPLE_OK = new Set(['planGet', 'eventList', 'pitchList', 'featureList', 'payStatus', 'pushKey',
+                             'merchList', 'orderList', 'orderCount', 'wishList', 'diaryList', 'msgCount', 'msgList',
+                             'postList', 'songGet', 'tagList']);
+  if (me.role === 'sample' && !SAMPLE_OK.has(action))
+    return json({ ok: false, claim: true, error: 'Claim your page to save this.' }, 403);
 
   /* AN ACCOUNT ON ITS WAY OUT IS READ-ONLY, NOT LOCKED OUT. The owner has to be
      able to get in — to change their mind, and to take their data with them — but
@@ -1924,7 +1950,8 @@ const main = async (req) => {
   {
     const { can } = await import('./_session.mjs');
     const need = CAPABILITY[action];
-    if (need && !can(me.role || 'owner', need))
+    // a sample reaches here only with a read from SAMPLE_OK above, and may make it
+    if (need && me.role !== 'sample' && !can(me.role || 'owner', need))
       return bad('That’s not something this sign-in can do', 403);
   }
 

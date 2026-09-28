@@ -68,6 +68,11 @@ export async function keysForVenue(vid) {
   const oldPosts = await readArchivedPosts(o).catch(() => []);
   for (const p of oldPosts) for (let i = 0; i < (p.photos || []).length; i++) keys.push(IMG(vid, `${p.id}_${i}`));
   for (const p of oldPosts) if (p && p.clip) { keys.push(vidKey(o, p.clip)); keys.push(IMG(vid, p.clip)); }
+  /* A page that began as a sample (decision 0101): its record, and the photos stored
+     under the sample's own unguessable name. */
+  keys.push(`sample_${o}`);
+  { const { sampleImgKeys } = await import('./_img.mjs');
+    keys.push(...sampleImgKeys([prof.photo, ...(prof.photos || [])])); }
   return [...new Set(keys)];
 }
 
@@ -91,6 +96,7 @@ export async function deleteVenue(vid) {
   await mutateVenues((reg) => {
     const me = reg.byId[vid];
     if (me && me.slug && reg.bySlug[me.slug] === vid) delete reg.bySlug[me.slug];
+    if (reg.oldSlug) for (const [k, v] of Object.entries(reg.oldSlug)) if (v.vid === vid) delete reg.oldSlug[k];
     for (const [e, v] of Object.entries(reg.byEmail)) if (v.venueId === vid) delete reg.byEmail[e];
     delete reg.byId[vid];
     return true;

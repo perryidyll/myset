@@ -57,6 +57,7 @@ async function facts() {
   const wishes = await import(join(ROOT, 'netlify/functions/_wishes.mjs'));  // Make a request (the founder, 2026-09-13)
   const msgs = await import(join(ROOT, 'netlify/functions/_messages.mjs'));   // the Book button's inbox (the founder, 2026-09-14)
   const imgs = await import(join(ROOT, 'netlify/functions/_img.mjs'));        // the tour poster's byte caps
+  const smp = await import(join(ROOT, 'netlify/functions/_sample.mjs'));     // a sample page's clock (decision 0101)
 
   const fns = ls('netlify/functions').filter((f) => f.endsWith('.mjs'));
   const handlers = fns.filter((f) => !f.startsWith('_')).map((f) => f.replace('.mjs', '')).sort();
@@ -146,6 +147,9 @@ async function facts() {
       ladder: heads.map((n) => ({ heads: n, pollMs: lib.pollFloorFor(n), board: lib.boardLimitFor(n) })),
       // the artist's book (decision 0065): the fixed caps, the rule cap and the document ceiling
       biz: { ...biz.LIMITS, rules: biz.MAX_RULES, maxBytes: biz.BIZ_MAX_BYTES, timeKinds: biz.TIME_KINDS.map(([, label]) => label) },
+      // a sample page (decision 0101): how long it waits, how long its copy is kept, the founder's undo, the factory's default day
+      samples: { lifeDays: smp.SAMPLE_LIFE_MS / 86400e3, archiveDays: smp.ARCHIVE_MS / 86400e3, undoDays: smp.UNDO_MS / 86400e3,
+                 perDay: smp.defaultFactoryCfg().perDay },
     },
     decisions: decisionIndex(),
   };
@@ -364,6 +368,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | Largest clip accepted | ${(f.constants.maxVideoBytes / 1048576).toFixed(0)} MB |
 | A clip link on R2 lives / its redirect is cached | ${f.constants.clipLinkSecs / 3600} h / ${f.constants.clipRedirectCacheSecs / 3600} h |
 | The artist's book, per show (decision 0065) | ${f.constants.biz.merch} merch lines · ${f.constants.biz.gear} gear lines of ${f.constants.biz.gearChars} characters · names ${f.constants.biz.name} · note ${f.constants.biz.note} · one amount up to $${(f.constants.biz.cents / 100).toLocaleString('en-US')} · ${f.constants.biz.minutes / 60} hours per kind of time (${f.constants.biz.timeKinds.join(', ')}) · ${f.constants.biz.rules} rule defaults · the document ${(f.constants.biz.maxBytes / 1000).toFixed(0)} KB, then a year shard |
+| A sample page (decision 0101) | ${f.constants.samples.lifeDays} days to claim · its private copy kept ${f.constants.samples.archiveDays} days after it comes down · a claim can be undone for ${f.constants.samples.undoDays} days · the factory starts at most ${f.constants.samples.perDay} builds a day unless the founder changes it |
 | Invariants | ${f.shape.invariants.count} (last: ${f.shape.invariants.last}) |
 | Test suites | ${f.shape.testSuites} |
 | Assertions | ${f.shape.assertions === null ? '*not stamped — run `node tools/overview.mjs --tests`*' : `**${f.shape.assertions.toLocaleString()}**, ${f.shape.testsFailed} failing, last run ${f.shape.testsRunAt}`} |

@@ -47,6 +47,19 @@ export function commentsOf(posts) {
 export default async (req) => {
   const aid = await publicArtist(req);
   if (!aid) return bad('unknown artist', 404);
+  /* Fifteen seconds at the edge (jsonCached): everybody opening this artist in
+     the same quarter-minute shares one run of the reads in profilePayload. The only
+     thing here that moves fast is `live`, and a Live pill up to 30s behind is the same
+     lag the room's own poll ladder accepts. The Studio reads /api/profile?t=now
+     after a save and so never sees a copy. */
+  return jsonCached(await profilePayload(aid));
+};
+
+/* THE PAGE'S DATA, for a public page AND for a sample (decision 0101). A sample is
+   not in the registry, so the private sample door hands its row in as `who`; every
+   other reader passes nothing and the registry is read as it always was. One shape,
+   so the one artist page draws both and neither can drift. */
+export async function profilePayload(aid, { who: given = null } = {}) {
   // Real numbers only. No follower count, because there is no follow yet.
   const { artistById } = await import('./_auth.mjs');
   /* `fb_` and `posts_` are the two reads added for the proof strip (decision 0043),
@@ -55,7 +68,7 @@ export default async (req) => {
      hop to storage, not two (speed pass two). `diary_` is the seventh (0085): the
      page needs only a count, to know whether to wear the Diary door. */
   const [p, hist, show, who, fb, posts, diary] = await Promise.all([
-    getProfile(aid), readHistIndex(aid), getShow(aid), artistById(aid),
+    getProfile(aid), readHistIndex(aid), getShow(aid), given ? Promise.resolve(given) : artistById(aid),
     readFeedback(aid).catch(() => null), readPosts(aid).catch(() => null),
     readDiary(aid).catch(() => null),
   ]);
@@ -73,12 +86,7 @@ export default async (req) => {
      wears in shapeVenue. Only the boolean travels — never the ID row (0bk). */
   const verified = !!(who && who.verified) && planOf(who) !== 'free';
 
-  /* Fifteen seconds at the edge (jsonCached): everybody opening this artist in
-     the same quarter-minute shares one run of the five reads above. The only thing
-     here that moves fast is `live`, and a Live pill up to 30s behind is the same
-     lag the room's own poll ladder accepts. The Studio reads /api/profile?t=now
-     after a save and so never sees a copy. */
-  return jsonCached({
+  return {
     ok: true, artistId: aid,
     stats: { shows, votes, people,
              songs: (show.songs || []).filter((x) => x.active !== false).length,
@@ -121,6 +129,7 @@ export default async (req) => {
     management: p.management, managementUrl: p.managementUrl,
     links: p.links,
     media: p.media.map(shapeMedia).filter(Boolean),
+    focus: p.focus,                            // where the face is, for a factory-picked photo (0101)
     updatedAt: p.updatedAt,
-  });
-};
+  };
+}

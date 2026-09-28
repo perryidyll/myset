@@ -149,6 +149,8 @@ The list a person looks at is a cold document, `sess_<owner>`, read only when th
 | **member** | The page and the show: library, setlist, gigs, profile, community, requests, stats, export |
 | **crew** | Tonight only: run the show, see the queue and the requests |
 
+A fourth, **`sample`**, belongs to no email at all (decision 0101): it is whoever holds the key in a sample page's link, looking at the Studio of the page the factory built for them. It is an empty set in `CAN`, and `admin.mjs` / `venueadmin.mjs` answer it from `SAMPLE_OK`, a short allowlist of reads; every other action answers `claim: true` and the Studio opens the claim sheet (§12).
+
 **An unknown role falls back to `crew`, the least it could be.** Default-deny, so a role string this table has never heard of can never be an escalation — and `CAN['toString']` is an inherited Function, truthy with no `.has`, which is why the lookup is an own-property check and not a truthiness one.
 
 Venues get the same three, named owner / manager / crew, and the orphan `staff` retires into `crew`.
@@ -353,6 +355,22 @@ the MySet family* and a ringed *Create account*; at the foot, small grey
 underlined *Sign in with a Studio code instead*. "Create account" and "Forgot"
 both send a code; after it a new account picks its name and is offered a
 password. `test/password.mjs` holds all of it.
+
+## 12. Sample pages and the claim (2026-09-28, decision 0101)
+
+The factory builds a page for an artist or a venue who never asked for one, and sends
+it as `myset.vip/<slug>#k=<key>` (`/v/<slug>#k=` for a venue). Until it is claimed:
+
+| | |
+|---|---|
+| **Not on the list** | The account's data lives under its own keys like any account's, but it is registered in `samplereg`, not in `artists` / `venues` — so no public door, directory, sheet or metric can find it, and the registry every phone reads never grows by one. |
+| **The key** | An HMAC of the owner and a counter, twelve characters, never stored. After the `#`, so it never reaches a server log or a link-preview bot; the page keeps it on the phone and takes it off the address. A wrong key answers like an unknown page. It dies at the claim. |
+| **Looking, not touching** | The Studio opens on the key under the role `sample` (§6.3): its tabs draw, a save opens the claim sheet. Only `admin.mjs`, `stage.mjs` and `venueadmin.mjs` accept the key; every other door answers 401. |
+| **The claim** | The door every account uses — email, six-digit code, `verify`'s ticket — then `claimSample` (`auth.mjs` / `venueauth.mjs`) with the key and a password, in one sheet. One registry write adds the row on the free plan (Hobbyist, `src: 'sample'`) and the email as owner; the password is set; a session opens; the first-run picks up at the songs. An inbox that already has a page is told so and the founder is asked to merge. The founder can undo a claim for fourteen days (`undoClaim`), from the console's *Claimed* list. |
+| **Remove** | One tap on the page: everything erased at once, and the act's identifiers kept as hashes so the factory never builds them again. |
+| **The clock** | Thirty days to claim, then the page comes down: a private snapshot is kept one hundred and eighty days for a second campaign (`reviveSample`, a new key and thirty more days), then erased. The page's own note says so. |
+
+`test/samples.mjs` holds all of it.
 
 ---
 

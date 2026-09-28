@@ -188,3 +188,28 @@ html{touch-action:manipulation}
 .menurow .chev{color:var(--faint,#68686D);font-size:18px;flex:0 0 auto}
 .menurow.out{color:var(--accent,#FF375F)}
 .menurow.out svg{color:var(--accent,#FF375F)}
+
+/* THE ? AND CLAIM PROFILE, top right in both Studios (decisions 0101, 0102). The ?
+   plays the current tab's tip deck; Claim profile stands where the plan badge
+   stands, on a sample's look-only Studio, in the logo's pink-orange. */
+.tipsbtn{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border-radius:50%;border:0;cursor:pointer;
+  background:var(--surface,#1C1C1E);color:var(--accent-2,#FF5650);font-weight:800;font-size:16px;line-height:1;font-family:inherit;
+  box-shadow:inset 0 0 0 1.5px var(--hair-2,rgba(255,255,255,.16));transition:transform .2s cubic-bezier(.34,1.4,.64,1)}
+.tipsbtn:active{transform:scale(.9)}
+.claimbtn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:999px;border:0;cursor:pointer;flex:0 0 auto;white-space:nowrap;
+  background:var(--accent-2,#FF5650);color:#fff;font-weight:700;font-size:13.5px;line-height:1;font-family:inherit;box-shadow:0 4px 14px rgba(255,86,80,.34);
+  animation:claimglow 2.6s ease-in-out infinite}
+.claimbtn:active{transform:scale(.95)}
+@keyframes claimglow{0%,100%{box-shadow:0 4px 14px rgba(255,86,80,.30)}50%{box-shadow:0 4px 22px rgba(255,86,80,.62)}}
+/* The ? joined the header (decision 0102). At phone width the name may take two lines
+   rather than shrink to "The T…", and the gaps give a little room back. */
+@media (max-width:430px){
+  .head{gap:9px;padding-left:14px;padding-right:14px}
+  .headactions{gap:6px}.headtopactions{gap:6px}
+  .head h1{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.12;font-size:18px}
+  .claimbtn{padding:9px 12px}
+}
+/* the practice round's coach: the one button to tap next breathes */
+.coach{position:relative;animation:coachpulse 1.25s ease-in-out infinite;z-index:1}
+@keyframes coachpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,86,80,.55),0 6px 20px rgba(255,55,95,.3)}60%{box-shadow:0 0 0 12px rgba(255,86,80,0),0 6px 20px rgba(255,55,95,.3)}}
+@media (prefers-reduced-motion:reduce){.claimbtn,.coach{animation:none}.coach{box-shadow:0 0 0 3px var(--accent-2,#FF5650)}}

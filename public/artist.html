@@ -20,7 +20,12 @@
      the request that decides what is on screen would wait behind them. Here it is
      already in flight while they load; boot() below picks up the reply. Used once,
      on the first load only — a pull-to-refresh fetches fresh. -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const q=S?'?a='+encodeURIComponent(S):'';const g=(u)=>{const f=fetch(u,{cache:'no-store'});f.catch(()=>{});return f};window.__early={profile:g('/api/fan?what=profile'+q.replace('?','&')),events:g('/api/fan?what=events&a='+encodeURIComponent(S||'perryidyll')+'&days=90&n=24')}}catch(e){}})();</script>
+<!-- A SAMPLE (decision 0101): the link the factory sent ends in #sample-profile
+     (?sample-profile works too), or this phone opened it before. The address keeps
+     the label, so a reload or a copy of the link opens the same preview. The private
+     sample door is asked instead of the public one; sample.js is loaded for it alone,
+     so a fan never downloads it. The bare address is the ordinary "no such page". -->
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const m=/[#?&]sample-profile(?![\w-])/.test(location.hash+'&'+location.search);let K=null;try{K=JSON.parse(localStorage.getItem('myset.sample')||'null')}catch(e){}if(S&&m){K={slug:S.toLowerCase(),key:'sample-profile',kind:'artist',at:Date.now(),pv:/[?&]pv=1/.test(location.search)};try{localStorage.setItem('myset.sample',JSON.stringify(K))}catch(e){}}if(S&&K&&K.kind==='artist'&&K.slug===S.toLowerCase()){window.__sample=K;const f=fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'page',quiet:!!K.pv,slug:K.slug,key:K.key,kind:'artist'})});f.catch(()=>{});window.__sampleP=f;const j=document.createElement('script');j.src='/sample.js?v=bb14e96e';window.__sampleJs=new Promise(r=>{j.onload=r;j.onerror=r});document.head.appendChild(j);return}const q=S?'?a='+encodeURIComponent(S):'';const g=(u)=>{const f=fetch(u,{cache:'no-store'});f.catch(()=>{});return f};window.__early={profile:g('/api/fan?what=profile'+q.replace('?','&')),events:g('/api/fan?what=events&a='+encodeURIComponent(S||'perryidyll')+'&days=90&n=24')}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -991,12 +996,17 @@ const ICON={
   bandcamp:'<svg viewBox="0 0 24 24" fill="#1DA0C3"><path d="M2 18 8.5 6H22l-6.5 12z"/></svg>',
   gofundme:'<svg viewBox="0 0 24 24" fill="#02A95C"><path d="M12 21s-7-4.6-7-10.2A4.3 4.3 0 0112 8a4.3 4.3 0 017 2.8C19 16.4 12 21 12 21z"/></svg>',
   website:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>',
+  /* four more (decision 0101): the places the sample factory finds an act, and any artist can paste */
+  tiktok:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 3c.4 2.2 1.8 3.6 4 3.8v3.1a7.4 7.4 0 01-4-1.2v6.2A5.9 5.9 0 1110.7 9v3.2a2.8 2.8 0 102 2.7V3z"/></svg>',
+  youtube:'<svg viewBox="0 0 24 24" fill="#FF0000"><path d="M22.5 7.2a2.8 2.8 0 00-2-2C18.8 4.8 12 4.8 12 4.8s-6.8 0-8.5.4a2.8 2.8 0 00-2 2A29 29 0 001.1 12a29 29 0 00.4 4.8 2.8 2.8 0 002 2c1.7.4 8.5.4 8.5.4s6.8 0 8.5-.4a2.8 2.8 0 002-2 29 29 0 00.4-4.8 29 29 0 00-.4-4.8zM9.8 15.1V8.9l5.6 3.1z"/></svg>',
+  soundcloud:'<svg viewBox="0 0 24 24" fill="#FF5500"><path d="M11 7.5v10h8.3a3.3 3.3 0 00.4-6.6A5.6 5.6 0 0011 7.5zM9 9v8.5h1V8.6zM7 10.2v7.3h1v-7.5zM5 11.3v6.2h1v-6.4zM3 12.6v4.9h1v-5zM1 14v3.2h1V13.8z"/></svg>',
+  facebook:'<svg viewBox="0 0 24 24" fill="#1877F2"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg>',
 };
 /* THE ORDER OF THIS OBJECT IS THE ORDER ON THE PAGE. Instagram first (Perry,
    2026-09-07): it is where a room that just watched somebody play actually goes, and
    the streaming links are what they use later. Website last, because it is the one
    nobody taps from a phone in a bar. */
-const LABEL={instagram:'Instagram',spotify:'Spotify',applemusic:'Apple Music',ytmusic:'YouTube Music',bandcamp:'Bandcamp',gofundme:'GoFundMe',website:'Website'};   /* Bandcamp and GoFundMe since 2026-09-13 (the founder) */
+const LABEL={instagram:'Instagram',tiktok:'TikTok',youtube:'YouTube',spotify:'Spotify',applemusic:'Apple Music',ytmusic:'YouTube Music',soundcloud:'SoundCloud',bandcamp:'Bandcamp',facebook:'Facebook',gofundme:'GoFundMe',website:'Website'};   /* Bandcamp and GoFundMe since 2026-09-13 (the founder) */
 
 let P=null,S=null,G=null,ROWS=[];
 
@@ -1374,6 +1384,21 @@ function route(){
 window.addEventListener('hashchange',route);
 
 async function boot(){
+  /* A SAMPLE (decision 0101): the page's data comes from the private door the head
+     already asked, never from the phone's last copy (a claimed or removed sample must
+     not be drawn from memory), and sample.js dresses the page once it is drawn. */
+  if(window.__sample){
+    $('#app').innerHTML=SKEL; hideIntro();
+    /* Only the door's own "unknown" (a 404) means the page is gone. No answer, or a
+       server hiccup on bar wifi, keeps this phone's note of it and says pull to retry. */
+    const r=await (window.__sampleP||Promise.resolve(null)).catch(()=>null);
+    const p=r?await r.json().catch(()=>null):null;
+    await window.__sampleJs;
+    if(p&&p.ok&&p.sample){ P=p; S=null; G={ok:true,gigs:[]}; render(); if(window.Sample) Sample.page(P); return; }
+    if(r&&r.status===404&&window.Sample){ Sample.gone(); return; }
+    $('#app').innerHTML='<div class="empty">Couldn’t load this page just now. Pull down to retry.</div>';
+    return;
+  }
   /* Two fetches, not three: /api/profile now carries live/venue/city, so the page
      no longer pays a full 15-read audience poll just to draw the Live pill. */
   const E=window.__early||{}; window.__early=null;     // the head started these; see <head>
@@ -1427,9 +1452,14 @@ function render(){
      Only a stored photo gets them. No photo yet: the cover is a plain brand tile and
      the portrait is the band's initial — never a picture of some other band. */
   const zoom=u=>`data-zoom="${esc(u)}" role="button" tabindex="0" aria-label="Enlarge photo"`;
+  /* Where the face is (decision 0101): a photo the sample factory took off a video
+     frame carries a focus point; the artist's own crops carry none and keep the old
+     centre. Only a percentage pair is ever written into the style. */
+  const fpos=v=>/^(100|\d{1,2})% (100|\d{1,2})%$/.test(String(v||''))?String(v):'';
+  const fc=fpos(P.focus&&P.focus.cover), fa=fpos(P.focus&&P.focus.avatar);
   const initial=esc(String(P.name||'').trim().charAt(0).toUpperCase()||'♪');
   h+=cover?`<div class="pcover rise" ${zoom(cover)} style="background-image:url('${esc(cdn(cover,48))}');background-size:cover;background-position:center">
-    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw}" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
+    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw}" alt="" width="1600" height="1000" fetchpriority="high" decoding="async"${fc?` style="object-position:${fc}"`:''}>
     <div class="veil"></div>
   </div>
 `:`<div class="pcover rise blank"><div class="veil"></div></div>
@@ -1438,7 +1468,7 @@ function render(){
   <div class="phead">
     <div class="cluster ${shots.length?'':'solo'}">
       ${shots.length?`<div class="strip">${shots.map(u=>`<div class="pth" ${zoom(u)}><img src="${esc(cdn(u,220))}" alt="" decoding="async" data-raw="${esc(u)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"></div>`).join('')}</div>`:''}
-      ${avatar?`<div class="pav" ${zoom(avatar)} style="background-image:url('${esc(cdn(avatar,48))}')"><img src="${esc(cdn(avatar,320))}" alt="" decoding="async" data-raw="${esc(avatar)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"></div>`:`<div class="pav blank" aria-hidden="true">${initial}</div>`}
+      ${avatar?`<div class="pav" ${zoom(avatar)} style="background-image:url('${esc(cdn(avatar,48))}')${fa?`;background-position:${fa}`:''}"><img src="${esc(cdn(avatar,320))}" alt="" decoding="async" data-raw="${esc(avatar)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"${fa?` style="object-position:${fa}"`:''}></div>`:`<div class="pav blank" aria-hidden="true">${initial}</div>`}
     </div>
     <div class="pname">
       <h1>${esc(P.name)}</h1>

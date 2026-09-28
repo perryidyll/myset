@@ -523,6 +523,40 @@ If you are about to violate one, stop and say so rather than working around it.
     a synthetic week; `finance/model-test.mjs` checks the tracker carries the method's
     name and that the seed's ticks solve to a sane screen-on share. Decision 0089.
 
+0gm. **A sample profile is never in the live registry, and its Studio can only look.**
+    (Decision 0101.) A page the factory builds is registered in `samplereg`, never in
+    `artists` or `venues`, until its owner claims it — so every public door refuses it by
+    construction, no registry walk can count it, and the registry every phone polls never
+    grows by a sample. It opens only through `sample.mjs` with the key from its link (an
+    HMAC of the owner and `krev`, never stored); a wrong key answers exactly like an unknown
+    page. Its Studio is reached only by the two callers that pass `{ sample: true }` to
+    `requireArtist` / `requireVenue` (`admin.mjs`, `stage.mjs`, `venueadmin.mjs`), under the
+    role `sample`, which `SAMPLE_OK` — an allowlist of reads, the `LEAVING_OK` shape —
+    answers and which every other action answers `claim: true`; `CAN.sample` is an empty set
+    so it can never fall back to `crew`. The phone's `SAMPLE_READS` equals the server's list
+    (test/tipdecks.mjs). A sample's photos live under an unguessable `s…` name, which
+    `keysFor`/`keysForVenue` find by it. Names a sample holds are skipped by `pickSlug`,
+    `pickVenueSlug` and both `setSlug`s (`sampleSlugs`). test/samples.mjs walks every public
+    door with and without the key, every write, the claim, Remove, the clock and the venue path.
+
+0gn. **The practice round never writes.** (Decision 0102.) `act()`, `askDo()` and
+    `load()` in `studio.js` hand over to it before anything else while it runs; its code
+    calls no API; it will not start over a live show; leaving the Live tab ends it; and
+    every burst it plays says "Practice". The night is a stage payload built on the phone
+    (`practiceState`) and drawn by the Live tab's own `render()`. test/tipdecks.mjs pins
+    each hand-over.
+
+0go. **The sample factory never scrapes Instagram, never builds a suppressed act, and
+    never writes a line it cannot source.** (Decision 0103.) The server fetches only the
+    act's own website (robots.txt obeyed, private and link-local addresses refused, every
+    redirect hop re-checked), YouTube's Data API, RSS and oEmbed, MusicBrainz, iTunes and
+    OpenStreetMap — never Instagram, Facebook, Linktree or Bandcamp pages, whose links it
+    may keep but never read. Instagram photos arrive only by address, from the founder.
+    `isSuppressed` is asked before the first fetch and again after discovery. Every fact
+    cites a numbered source and every bio sentence its facts; an unsourced sentence or an
+    invented number is dropped, never softened. A build starts only through `startJobs`
+    (the day's cap, `factorycfg.perDay`). test/factory.mjs holds each rule.
+
 0gh. **app.css rides inside every fan page, byte for byte — no fan page asks the network
     for it.** (Decision 0094.) The whole stylesheet sits between `<style id="app-css">`
     and `</style>` where the `<link>` used to be, written by `node tools/stamp.mjs`
