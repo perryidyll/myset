@@ -5,7 +5,7 @@
   "description": "MySet \u2014 the crowd builds your set. Live crowd setlist voting.",
   "dependencies": {
     "@netlify/blobs": "^10.7.13",
-    "stripe": "^17.5.0"
+    "stripe": "^22.6.2"
   },
   "scripts": {
     "test": "./test/run.sh"
