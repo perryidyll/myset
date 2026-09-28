@@ -8,7 +8,7 @@ area: growth
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [84dda56]
 tests: [test/hq.mjs]
 files: [public/crm.html, netlify/functions/_crm.mjs, netlify/functions/hq.mjs, tools/localhost.mjs]
 ---
@@ -88,3 +88,5 @@ The page was walked on `tools/localhost.mjs` with the demo pipeline, which now s
 - logging sent from an opener stored `pre` on the message and the row;
 - the library's edits saved;
 - the bars grow in, and the leading ending turned green.
+
+Live as `84dda56` (PR #151): `/crm` on myset.vip carries the library, and `/api/hq` still answers 401 to a stranger, `savelib` included. Not checked live: the library behind the passcode, which is the founder's to open.
