@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 16:11 — 14a3ebc — untrack-node-modules@docs/0116-merged (4 files since origin/main)
+**tl;dr:** Nothing on the site changes: decision 0116 (node_modules out of git) is live as eb18ca1, and the ledger says so
+**Other sessions:** Netlify skips a build whenever a commit message contains the bracketed skip-ci marker ANYWHERE, even inside a denial: #143's production build had to be started by hand (netlify api createSiteBuild). A change that must build never writes the marker, not even to deny it. Branches lose the node_modules link on rebase; inside ~/Docs/MySet/.claude/worktrees/ nothing breaks, elsewhere run npm ci.
+
 ### 2026-09-28 16:10 — d76d245 — sample-profiles@docs/hq-light-theme-live (3 files since origin/main)
 **tl;dr:** Docs only: the ledger, decision 0108 and the session note say HQ's light theme is live as a0ab3dc [skip ci]
 **Other sessions:** Nothing to rebase for: docs only. The session's board row goes back to DONE.
