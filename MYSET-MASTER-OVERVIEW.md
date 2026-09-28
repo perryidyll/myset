@@ -547,7 +547,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | Invariants | 282 (last: 0fn) |
 | Test suites | 63 |
-| Assertions | **4,182**, 0 failing, last run 2026-09-27 |
+| Assertions | **4,310**, 0 failing, last run 2026-09-28 |
 | Decision records | 105 |
 
 ### Feature flags in force
