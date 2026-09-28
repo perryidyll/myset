@@ -22,6 +22,9 @@
      ?allout=1    every item sold out
      ?plan=free   the Studio on the free plan (the merch editor behind its lock)
      ?tour=1      the artist has a tour poster (the artist page's View tour dates, the Studio's card)
+     ?founder=1   the Studio is the founding page: the founder's cards (codes, venues, sheet, books)
+     ?seat=member the signed-in seat is a band mate (or crew), not the owner — with ?founder=1,
+                  the server's answer to the founder's tools is its 401 (decisions 0099, 0100)
      /one/…       a page with one item     /none/…   a page with none
      /v/demo/…    the venue twin of every fan page
      /studio?tab=money&plan=pro   the Money tab with a book: thirty filed nights, a weekly
@@ -268,13 +271,14 @@ const SHOW_LABEL = 'Fri, Sep 11 · The Room';
    The address on a PAGE request sets the cookies; the API calls that page makes carry the
    cookies back. The query on the API call itself and the referer are read too, so a call
    made by hand (curl) can name a state without a cookie. */
-const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first'];
+const FLAGS = ['live', 'canbuy', 'allout', 'plan', 'tour', 'first', 'founder', 'seat'];
 const cookies = (rq) => Object.fromEntries((rq.headers.cookie || '').split(/;\s*/).filter(Boolean).map((c) => { const i = c.indexOf('='); return [c.slice(0, i), decodeURIComponent(c.slice(i + 1))]; }));
 function stateOf(rq, q) {
   const ck = cookies(rq);
   let ref = null; try { ref = new URL(rq.headers.referer || '', 'http://x').searchParams; } catch { ref = null; }
   const pick = (k) => q.get(k) ?? ck['mock_' + k] ?? (ref && ref.get(k)) ?? null;
-  return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus', tour: pick('tour') === '1', first: pick('first') === '1' };
+  return { live: pick('live') === '1', canBuy: pick('canbuy') !== '0', allOut: pick('allout') === '1', plan: pick('plan') || 'plus', tour: pick('tour') === '1', first: pick('first') === '1',
+           founder: pick('founder') === '1', seat: ['member', 'crew'].includes(pick('seat')) ? pick('seat') : 'owner' };
 }
 /* what the page request does to the cookies: a flag in the address sets it; a return trip
    from checkout (?paid= / ?cancelled=) keeps them; a plain address clears them all */
@@ -415,10 +419,12 @@ const PLANS = {
 };
 /* a Bar Star who pays the subscription — the plan the Merch store is sold with; ?plan=free is a Hobbyist */
 function planFixture(st) {
-  const plan = PLANS[st.plan] ? st.plan : 'plus', paid = plan !== 'free';
-  return { ok: true, plan, limits: PLANS[plan], shareStats: true, until: paid ? NOW + 14 * 864e5 : null, comped: false, discountPct: 0, plans: PLANS,
-    billing: paid ? { subscribed: true, plan, portal: true, pastDue: false, renewsAt: NOW + 14 * 864e5, cancelAtPeriodEnd: false } : { subscribed: false, plan: 'free', portal: false, pastDue: false },
-    role: 'owner', tour: TOUR_CAPS, del: null, email: 'demo@example.com', owner: false };
+  const plan = PLANS[st.plan] ? st.plan : 'plus', paid = plan !== 'free', mine = st.seat === 'owner';
+  // any seat but the owner gets the limits, never the renewal date, the portal or the card's state (planGet, 0dc)
+  return { ok: true, plan, limits: PLANS[plan], shareStats: true, until: paid && mine ? NOW + 14 * 864e5 : null, comped: false, discountPct: 0, plans: PLANS,
+    billing: paid ? (mine ? { subscribed: true, plan, portal: true, pastDue: false, renewsAt: NOW + 14 * 864e5, cancelAtPeriodEnd: false } : { subscribed: true, plan, portal: false, pastDue: false })
+      : { subscribed: false, plan: 'free', portal: false, pastDue: false },
+    role: st.seat, tour: TOUR_CAPS, del: null, email: 'demo@example.com', owner: st.founder };
 }
 const TEAM = { ok: true, slug: 'demo', emails: ['demo@example.com'], invited: [], invitedNames: {}, codeSet: false, emailReady: true };
 /* what connectStatus() in _connect.mjs answers: the Get-paid card prints plan, cutPct and the Stripe-fee note */
@@ -547,7 +553,16 @@ function revenueFixture() {
   return { ok: true, enabled: true, payments, unredeemed: 0, totals: { all: sum(() => true), tips: sum((p) => p.kind === 'tip'), votes: sum((p) => p.kind === 'votes'), merch: 0, count: payments.length } };
 }
 /* one switch, by action — what /api/admin answers when the Studio is signed in */
+/* the founder's tools: admin.mjs's platform block and MySet's books take the founding page's OWNER
+   seat (decisions 0099, 0100), and the owner's statement is refused to any other seat (OWNER_ONLY).
+   Anyone else gets the server's own refusal, so a card drawn for the wrong seat looks here exactly
+   as it would on myset.vip. */
+const FOUNDER_ONLY = /^(bugList|flagList|flagSet|sheetStatus|sheetSync|idQueue|idApprove|idReject|venuePlan|promoList|promoCreate|promoRevoke|venueList|venueVerify)$/;
 function adminStub(body, st) {
+  const founder = st.founder && st.seat === 'owner';
+  if (FOUNDER_ONLY.test(body.action || '') && !founder) return { ok: false, error: 'unauthorized', status: 401 };
+  if (/^(ledger|ledgerCsv|books|bookCost)$/.test(body.action || '') && st.seat !== 'owner') return { ok: false, error: 'Only the account owner can do that', status: 403 };
+  if (/^(books|bookCost)$/.test(body.action || '') && !founder) return { ok: false, error: 'That’s not something this account can do', status: 403 };
   const biz = bizAction(body, st); if (biz) return biz;
   const shop = shopAction(body, S.MERCH, S.ORDERS, 'a1', 'm', st); if (shop) return shop;
   const msg = msgAction(body); if (msg) return msg;
@@ -574,7 +589,13 @@ function adminStub(body, st) {
     case 'eventList': return { ok: true, events: [], occurrences: [], place: null };
     case 'featureList': return { ok: true, events: [], sessions: [], featured: [] };
     case 'pitchList': return { ok: true, pitches: [], venues: [] };
-    case 'flagList': return { ok: true, flags: {} };
+    case 'flagList': return { ok: true, flags: [{ name: 'featuredShows', what: 'Featured shows on the city feed', remove: 'when the trial ends', default: true, inForce: true }], byArtist: {} };
+    /* the rest of the founder's cards, as the founding page's owner seat sees them (?founder=1) */
+    case 'promoList': return { ok: true, codes: [{ code: 'FRIENDS100', pct: 100, plan: 'pro', months: 12, used: 3, maxUses: 10, revoked: false }, { code: 'HALFOFF', pct: 50, plan: 'plus', months: 6, used: 0, maxUses: 0, revoked: true }] };
+    case 'venueList': return { ok: true, venues: [{ venueId: 'v1', name: 'The Room', slug: 'demo', city: 'Austin', country: 'US', verified: true, via: 'its own website' }, { venueId: 'v2', name: 'Back Bar', slug: 'back-bar', city: 'Austin', country: 'US', verified: false }] };
+    case 'sheetStatus': return { ok: true, on: false, reason: 'GOOGLE_SHEET_ID is not set in Netlify.' };
+    case 'idQueue': return { ok: true, queue: [{ artistId: 'a2', legalName: 'Rita Vance', slug: 'rita', account: 'Rita V', nameMatch: 'matches', dobMatch: true, at: NOW - 3600e3 }] };
+    case 'bugList': return { ok: true, list: [] };
     case 'verifyStatus': {   // the shape of admin.mjs verifyStatus → _verify.mjs artistVerifyChecks; a paid plan is verified, a Hobbyist sees the steps
       const paid = (PLANS[st.plan] ? st.plan : 'plus') !== 'free';
       return { ok: true, autoWhy: null, checks: { paidPlan: paid, payments: true, idOnFile: false, legalNameGiven: false, dobGiven: false, reviewed: paid, state: paid ? 'verified' : 'none', rejectedWhy: null, readyForReview: false } };
@@ -707,6 +728,8 @@ const GROUPS = [
     ['/studio?tab=messages', 'Messages, straight in', () => { const c = msgIndex().counts; return `the inbox: ${c.unread} unread of ${S.MSGS.length} conversations across five folders; the Menu tab wears the dot`; }],
     ['/studio?tab=gigs', 'Gigs tab, no poster', 'the Tour dates poster card under Add a gig: "No poster yet", Upload a poster'],
     ['/studio?tab=gigs&tour=1', 'Gigs tab with a poster', 'the card with the thumbnail, the tickets link field, Replace and Remove'],
+    ['/studio?tab=settings&founder=1', 'Settings, the founder’s own seat', 'the founding page’s owner: ID queue, Trying things out, the sheet, Codes you hand out, Venues; Money has MySet’s books and If something broke'],
+    ['/studio?tab=settings&founder=1&seat=member', 'Settings, a band mate on the founding page', 'none of the founder’s cards, and none of their calls sent (0100); ?seat=crew for the sound engineer'],
     ['/venues', 'Venue Studio, signed in', () => `a Pro venue; its Merch tab: ${S.VMERCH.length}/12 items, ${S.VORDERS.length} orders`],
     ['/venues?tab=merch', 'Venue Studio, Merch tab', 'straight in'],
   ]],

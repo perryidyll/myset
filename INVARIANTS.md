@@ -1867,6 +1867,8 @@ If you are about to violate one, stop and say so rather than working around it.
     (0bx2) — and the renewal date, the portal flag and the card's state are
     stripped from that payload for anyone but the owner.
 
+0gk. **The founder's tools need the founding page's OWNER seat outside `admin.mjs` too: on Media Dash and in the Studio.** `mediadash.mjs` takes a boost row only from the founding page's owner seat; the recovery key and the studio code are owner doors already. Before this, a band mate or the sound engineer signed in to that page could log, overwrite or remove rows on the public dashboard. The Studio draws the founder's cards (the ID queue, the flags, the sheet, the codes you hand out, the venues, MySet's books, the bug list) and sends their calls only when `founder()` is true: `PLAN.owner` AND the owner role. `PLAN.owner` alone means only the page. It keeps that meaning because it is also the founding page's plan-lock bypass (`has()`, `canHide()`), which every seat on that page is owed. This widens 0gj (decision 0099) from `admin.mjs` to the page and to Media Dash. `test/founderseat.mjs` holds both halves, plus a tripwire that names any founder action the Studio sends from a function it does not know. Decision `0100`.
+
 0dd. **Signing out signs you out.** A token carries a session id (`email|exp|rev|sid`,
     popped from the END so nothing inside an address can shift the fields — and
     `normEmail` strips `|`). Revocation is a normally-ABSENT `dead` map on the
