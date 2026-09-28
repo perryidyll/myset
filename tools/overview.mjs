@@ -59,6 +59,10 @@ async function facts() {
   const imgs = await import(join(ROOT, 'netlify/functions/_img.mjs'));        // the tour poster's byte caps
   const auth = await import(join(ROOT, 'netlify/functions/_auth.mjs'));       // the deadlines a person waits on (decision 0110)
   const lyr = await import(join(ROOT, 'netlify/functions/_lyrics.mjs'));
+  const payLim = await import(join(ROOT, 'netlify/functions/_pay.mjs'));     // the network limits (decision 0111)
+  const rsvpLim = await import(join(ROOT, 'netlify/functions/_rsvp.mjs'));
+  const fbLim = await import(join(ROOT, 'netlify/functions/_feedback.mjs'));
+  const errLim = await import(join(ROOT, 'netlify/functions/_errlog.mjs'));
   const smp = await import(join(ROOT, 'netlify/functions/_sample.mjs'));     // a sample page's clock (decision 0101)
   const crm = await import(join(ROOT, 'netlify/functions/_crm.mjs'));        // MySet HQ's contacts (decision 0108)
   const hq = await import(join(ROOT, 'netlify/functions/hq.mjs'));           // HQ's email pace (decision 0109)
@@ -138,7 +142,11 @@ async function facts() {
                 posterImageBytes: imgs.MAX_BYTES, posterPdfBytes: imgs.MAX_TOUR_PDF },
     /* The security dials (decision 0110 onward) — every limit a door keeps, read from the
        code so SECURITY.md and the ledger never type one. */
-    security: { mailDeadlineMs: auth.MAIL_MS, lyricsDeadlineMs: lyr.LRCLIB_TIMEOUT_MS },
+    security: { mailDeadlineMs: auth.MAIL_MS, lyricsDeadlineMs: lyr.LRCLIB_TIMEOUT_MS,
+                netCodesPerHour: auth.NET_CODES_PER_HOUR,
+                payBurst: payLim.PAY_BURST, payPerMin: payLim.PAY_PER_MIN, payNetBurst: payLim.PAY_NET_BURST, payNetPerMin: payLim.PAY_NET_PER_MIN,
+                rsvpPerNetwork: rsvpLim.RSVP_PER_NETWORK, feedbackPerNetworkPerDay: fbLim.FEEDBACK_PER_NETWORK_PER_DAY,
+                bugPerNetworkPerHour: errLim.BUG_PER_NETWORK_PER_HOUR },
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
       shards: lib.SHARDS,
@@ -377,6 +385,12 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | Fan-record shards | ${f.constants.shards} |
 | Casts a device may make in a row / per minute after that | ${f.constants.castBurst} / ${f.constants.castPerMin} |
 | A sign-in letter's deadline / a lyrics lookup's deadline (\`MAIL_MS\`, \`LRCLIB_TIMEOUT_MS\`) | ${f.security.mailDeadlineMs / 1000} s / ${f.security.lyricsDeadlineMs / 1000} s |
+| Checkouts a device may open in a row / per minute after that (\`PAY_BURST\`, \`PAY_PER_MIN\`, decision 0111) | ${f.security.payBurst} / ${f.security.payPerMin} |
+| …and a whole network — sized so a packed bar on one wifi never meets it (\`PAY_NET_BURST\`, \`PAY_NET_PER_MIN\`) | ${f.security.payNetBurst} / ${f.security.payNetPerMin} |
+| Sign-in codes one network may ask for in an hour, artist and venue doors together (\`NET_CODES_PER_HOUR\`) | ${f.security.netCodesPerHour} |
+| Phones one network may put on one night's RSVP count (\`RSVP_PER_NETWORK\`) | ${f.security.rsvpPerNetwork} |
+| Ratings one network may leave for one artist in a day (\`FEEDBACK_PER_NETWORK_PER_DAY\`) | ${f.security.feedbackPerNetworkPerDay} |
+| Bug reports one network may file for one artist in an hour (\`BUG_PER_NETWORK_PER_HOUR\`) | ${f.security.bugPerNetworkPerHour} |
 | Largest clip accepted | ${(f.constants.maxVideoBytes / 1048576).toFixed(0)} MB |
 | A clip link on R2 lives / its redirect is cached | ${f.constants.clipLinkSecs / 3600} h / ${f.constants.clipRedirectCacheSecs / 3600} h |
 | The artist's book, per show (decision 0065) | ${f.constants.biz.merch} merch lines · ${f.constants.biz.gear} gear lines of ${f.constants.biz.gearChars} characters · names ${f.constants.biz.name} · note ${f.constants.biz.note} · one amount up to $${(f.constants.biz.cents / 100).toLocaleString('en-US')} · ${f.constants.biz.minutes / 60} hours per kind of time (${f.constants.biz.timeKinds.join(', ')}) · ${f.constants.biz.rules} rule defaults · the document ${(f.constants.biz.maxBytes / 1000).toFixed(0)} KB, then a year shard |

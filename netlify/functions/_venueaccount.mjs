@@ -50,7 +50,7 @@ export async function keysForVenue(vid) {
   const o = OWNER(vid);
   const keys = [`vprofile_${vid}`, `vouch_${vid}`, `ev_${o}`, `posts_${o}`, `likes_${o}`,
     `meta_${o}`, `billing_${o}`, `connect_${o}`, `sess_${o}`, `log_${o}`, `rec_${o}`,
-    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`];
+    `apitch_${o}`, `lock_${o}`, `vidpend_${o}`, `ledger_${o}`, `ledidx_${o}`, `rsvp_${o}`, `wishes_${o}`, `paylim_${o}`];   // paylim_: the checkout limiter (0111)
   const [prof, posts, pend] = await Promise.all([getVenueProfile(vid), readPosts(o), readPending(o)]);
   for (const slot of ['cover', 'avatar', 'idcheck', ...Array.from({ length: 12 }, (_, i) => 'p' + i)])
     keys.push(IMG(vid, slot));

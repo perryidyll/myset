@@ -1,6 +1,57 @@
 import { createHash } from 'node:crypto';
-import { mutateFan, mutateMeta, readMeta, cleanFanId, cleanArtistId, readDoc, grantPaidSongVotes } from './_lib.mjs';
+import { mutateFan, mutateMeta, readMeta, cleanFanId, cleanArtistId, readDoc, grantPaidSongVotes,
+         casDoc, own, roomHash, clientIp } from './_lib.mjs';
 import { isPlatformOwner } from './_plan.mjs';
+
+/* THE DOOR TO CHECKOUT HAS A LIMIT (decision 0111). /api/pay made a Checkout Session
+   for every request it was handed, and a script handing it a fresh `attempt` each
+   time could open thousands — on the artist's own Stripe account — until Stripe's
+   rate limit shut the door on the real buyer behind it. Two token buckets, in one
+   small document per owner, in the shape decision 0030 chose for casting: a device
+   may open PAY_BURST checkouts in a row and PAY_PER_MIN a minute after that; a
+   whole network, PAY_NET_BURST and PAY_NET_PER_MIN. A real buyer taps Buy a handful
+   of times a night, so the device's numbers are wide enough that a page retrying
+   on a bad connection is never refused. The network's are sized for the worst real
+   night, not the average one: a bar's wifi is one address with two hundred phones
+   behind it, and the moment the artist says "tip jar's open" is when they all tap
+   at once — so the network may open more checkouts in a row than the bar holds
+   phones, and refill faster than a room can tap. The first sizing (sixty in a row)
+   would have shown that room "Too many tries" at the buy moment; the cross-session
+   review caught it before it shipped. A device id is the client's to choose, so the
+   network bucket is the one a script actually meets — and a script held to a couple
+   of checkouts a second is a nuisance on the artist's Stripe dashboard, not a
+   denial of the door. A refused attempt writes nothing; a limiter that cannot be
+   written never refuses a sale (the CAS gets five tries, then lets go). */
+export const PAY_BURST = 40, PAY_PER_MIN = 10;
+export const PAY_NET_BURST = 300, PAY_NET_PER_MIN = 120;
+const PAYLIM = (owner) => `paylim_${owner}`;
+const MAX_BUCKETS = 400;
+export async function payAllowed(owner, fan, req, now = Date.now()) {
+  const net = roomHash(owner, clientIp(req));
+  let allowed = true;
+  try {
+    await casDoc(PAYLIM(owner), () => ({ v: 1, b: {} }), (d) => {
+      d.b = d.b && typeof d.b === 'object' ? d.b : {};
+      const take = (id, burst, perMin) => {
+        const b = own(d.b, id) || { t: burst, at: now };
+        const t = Math.min(burst, (Number(b.t) || 0) + Math.max(0, now - (Number(b.at) || now)) / 60e3 * perMin);
+        if (t < 1) return false;
+        d.b[id] = { t: t - 1, at: now };
+        return true;
+      };
+      const okFan = take('f:' + fan, PAY_BURST, PAY_PER_MIN);
+      const okNet = !net || take('n:' + net, PAY_NET_BURST, PAY_NET_PER_MIN);
+      if (!okFan || !okNet) { allowed = false; return false; }
+      const ids = Object.keys(d.b);
+      if (ids.length > MAX_BUCKETS) {
+        ids.sort((a, c) => (d.b[a].at || 0) - (d.b[c].at || 0));
+        for (const id of ids.slice(0, ids.length - MAX_BUCKETS)) delete d.b[id];
+      }
+      return true;
+    }, null, 5);
+  } catch { /* the limiter is not the sale */ }
+  return allowed;
+}
 
 /* WHOSE MONEY A SESSION IS. `metadata.artist` is an OWNER id: an artist id, or
    `v_<vid>` for a venue (0x). Running it through cleanArtistId strips the

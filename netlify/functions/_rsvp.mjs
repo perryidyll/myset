@@ -1,4 +1,4 @@
-import { casDoc, readDoc, sha } from './_lib.mjs';
+import { casDoc, readDoc, sha, roomHash } from './_lib.mjs';
 
 /* WHO SAYS THEY ARE COMING.
 
@@ -29,14 +29,41 @@ import { casDoc, readDoc, sha } from './_lib.mjs';
    the end of time and the document grows by one night per anonymous POST.
 
    The honest limits, said once: a count is a SOCIAL SIGNAL, not a headcount. A
-   script with a fresh id per call can inflate it; a cleared browser forgets it
-   was going; the hash is of a self-chosen id, so it proves nothing about who.
-   Never money, never identity, never a number a venue should plan a night on. */
+   script with a fresh id per call can inflate it — up to RSVP_PER_NETWORK from any
+   one network, see below; a cleared browser forgets it was going; the hash is of
+   a self-chosen id, so it proves nothing about who.
+   Never money, never identity, never a number a venue should plan a night on.
+
+   ONE NETWORK MAY PUT AT MOST RSVP_PER_NETWORK DEVICES ON A NIGHT. The device id
+   is chosen by the phone, so a loop that mints a fresh one per call is 5,000
+   "going" from one laptop in under a minute — the one thing about this count that
+   was unbounded. The network address is the one thing the caller does NOT choose
+   (Netlify sets the header), so each night keeps a small map of network hash →
+   devices admitted from it, on the occurrence already being written (the shape
+   decision 0030 chose for casting: the limit lives on the record, a refused write
+   writes nothing). Past the cap a new 'on' is the same no-op a full night is —
+   the count is still answered, the button never leads to a shrug. Four hundred is
+   deliberately twice the phones any bar has on one wifi — a venue's own gig list
+   is RSVP'd from the venue's own network the week before, by staff and regulars
+   alike — and the cost of being wrong is only that the 401st phone on one network
+   is not counted. Taking an RSVP back frees a place on the network it is taken back
+   from; the map is pruned to RSVP_NETS_KEPT entries (smallest first) so a festival
+   crowd on mobile data cannot grow the document past a few kilobytes per night.
+   The hash is roomHash (the owner id and the address, hashed), never the address.
+
+   casDoc keeps its default retries: this is one document per owner that a whole
+   room may tap at once, and a real fan losing the race forty times is not a thing
+   a room produces. When it does happen, rsvp.mjs answers with a calm 503 the page
+   already knows how to take, never the guard's 500. (The first build cut the
+   retries to eight to starve a script; the per-network cap does that job, and a
+   cut here would have been paid by real fans on a packed night. Decision 0111.) */
 
 const K = (ownerId) => `rsvp_${ownerId}`;
 export const MAX_FANS = 5000;
 export const KEEP_DAYS = 3;
 export const HORIZON_DAYS = 120;   // the gig list's own `days=` cap (events.mjs reads this one)
+export const RSVP_PER_NETWORK = 400;   // distinct devices one network may put on one night
+export const RSVP_NETS_KEPT = 300;     // network counters kept per night; the smallest fall off
 export const occKey = (eventId, date) => `${eventId}|${date}`;
 
 const empty = () => ({ v: 1, occ: {} });
@@ -57,10 +84,13 @@ export function rsvpCounts(doc) {
 
 /** Returns { on, n } — this fan's state AFTER the write and the night's total.
  *  `occurrence` is one row of occurrencesFor(), already checked by the caller to
- *  belong to this owner and to not have finished. */
-export async function toggleRsvp(ownerId, occurrence, fanId, on) {
+ *  belong to this owner and to not have finished. `ip` is the caller's network
+ *  (clientIp); without one — a local run, a test — no per-network cap applies.
+ *  Throws when the document cannot be written; the caller answers. */
+export async function toggleRsvp(ownerId, occurrence, fanId, on, ip = '') {
   const key = occKey(occurrence.eventId, occurrence.date);
   const h = sha(fanId).slice(0, 16);
+  const net = roomHash(ownerId, ip);
   const now = Date.now();
   const floor = new Date(now - KEEP_DAYS * 86400000).toISOString().slice(0, 10);
   let out = { on: false, n: 0 };
@@ -73,9 +103,20 @@ export async function toggleRsvp(ownerId, occurrence, fanId, on) {
     }
     const o = d.occ[key] || (d.occ[key] = { n: 0, fans: {} });
     o.fans = o.fans && typeof o.fans === 'object' ? o.fans : {};
+    o.nets = o.nets && typeof o.nets === 'object' ? o.nets : {};
     const had = !!o.fans[h];
-    if (on && !had && Object.keys(o.fans).length < MAX_FANS) { o.fans[h] = now; changed = true; }
-    else if (!on && had) { delete o.fans[h]; changed = true; }
+    const room = !net || (Number(o.nets[net]) || 0) < RSVP_PER_NETWORK;
+    if (on && !had && Object.keys(o.fans).length < MAX_FANS && room) {
+      o.fans[h] = now; changed = true;
+      if (net) o.nets[net] = (Number(o.nets[net]) || 0) + 1;
+    }
+    else if (!on && had) {
+      delete o.fans[h]; changed = true;
+      if (net && o.nets[net]) { o.nets[net] = Math.max(0, (Number(o.nets[net]) || 0) - 1); if (!o.nets[net]) delete o.nets[net]; }
+    }
+    const nets = Object.keys(o.nets);
+    if (nets.length > RSVP_NETS_KEPT)
+      for (const k of nets.sort((a, b) => o.nets[a] - o.nets[b]).slice(0, nets.length - RSVP_NETS_KEPT)) delete o.nets[k];
     o.n = Object.keys(o.fans).length;
     out = { on: !!o.fans[h], n: o.n };
     if (!o.n) delete d.occ[key];             // never keep an empty night

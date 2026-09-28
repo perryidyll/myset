@@ -1,4 +1,4 @@
-import { json, bad, cleanFanId, publicArtist, getShow } from './_lib.mjs';
+import { json, bad, cleanFanId, publicArtist, getShow, clientIp } from './_lib.mjs';
 import { saveBug, guard } from './_errlog.mjs';
 
 /* "Something wrong?" from the audience page. Public and anonymous like /api/vote —
@@ -16,7 +16,7 @@ const main = async (req) => {
   if (!aid) return bad('unknown artist', 404);
 
   const show = await getShow(aid);
-  const r = await saveBug(aid, fan, { ...body, show: show.showId });
+  const r = await saveBug(aid, fan, { ...body, show: show.showId }, clientIp(req));
   if (!r.ok) return bad('Say what went wrong first', 400);
   return json({ ok: true, already: !!r.already });
 };

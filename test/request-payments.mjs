@@ -15,6 +15,7 @@ const stageFn = (await import('../netlify/functions/stage.mjs')).default;
 const { readRequests } = await import('../netlify/functions/_requests.mjs');
 const { DEFAULT_ARTIST, getShow } = await import('../netlify/functions/_lib.mjs');
 const { __stripe } = await import('./stripe-fake.mjs');
+const { __failWrites } = await import('./blobs-fake.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -152,6 +153,48 @@ console.log('\nA PLEDGE IN A FAN\'S OWN BODY IS NOT A PAYMENT (0110)');
   const took = await A('askAccept', { id: forged.id });
   const boosted = took.stage.songs.find((s) => s.title === 'Boost Me');
   eq('accepting it mints no paid votes', [boosted.votes, boosted.paidVotes || 0], [0, 0]);
+}
+
+console.log('\nTHE DOOR TO CHECKOUT HAS A LIMIT, AND A WHOLE BAR FITS UNDER IT (0111)');
+{
+  const { PAY_BURST, PAY_NET_BURST } = await import('../netlify/functions/_pay.mjs');
+  const made = () => __stripe.calls.filter((c) => /checkout\.sessions\.create/.test(c.method || c)).length;
+  const at = (fan, ip, attempt) => hit(pay, 'https://x/api/pay',
+    { fan, kind: 'tip', amount: 5, attempt }, ip ? { 'x-nf-client-connection-ip': ip } : {});
+  const start = made();
+  let refused = null;
+  for (let i = 0; i < PAY_BURST + 3; i++) {
+    const r = await at('flood', '203.0.113.5', `flood-${i}`);
+    if (r.status === 429 && refused === null) refused = i;
+  }
+  eq(`one phone opens ${PAY_BURST} checkouts in a row, then is told to wait`, [refused, made() - start], [PAY_BURST, PAY_BURST]);
+  const other = await at('another-phone', '203.0.113.5', 'other-1');
+  ok('another phone on the same network is not held up by it', other.ok && !!other.id, other);
+  /* The worst real night: the artist says "tip jar's open" and two hundred phones
+     on the bar's one wifi tap Buy in the same breath, each twice (a double tap, a
+     retry on a bad signal). Not one of them may meet "Too many tries" — the first
+     sizing of this limit would have refused all but sixty. */
+  let barRefused = 0;
+  for (let i = 0; i < 200; i++) for (let t = 0; t < 2 && 2 * i + t < PAY_NET_BURST; t++) {
+    const r = await at(`bar-${i}`, '198.51.100.80', `bar-${i}-${t}`);
+    if (r.status === 429) barRefused++;
+  }
+  eq('a packed bar on one wifi, everyone buying at once: nobody is refused', barRefused, 0);
+  /* A script, meanwhile, invents a fresh device id per call. The bucket refills
+     while the loop runs, so the test asserts the shape, not a count: nothing under
+     the burst is refused, and a long enough run is. */
+  let firstNetRefusal = null;
+  for (let i = 0; i < PAY_NET_BURST + 40 && firstNetRefusal === null; i++) {
+    const r = await at(`phone-${i}`, '198.51.100.44', `net-${i}`);
+    if (r.status === 429) firstNetRefusal = i;
+  }
+  ok(`a script on one network is held near ${PAY_NET_BURST} in a row, however many device ids it invents`,
+     firstNetRefusal !== null && firstNetRefusal >= PAY_NET_BURST, { firstNetRefusal });
+  ok('a phone on a different network is unaffected', (await at('phone-x', '192.0.2.1', 'x-1')).ok);
+  __failWrites(/^paylim_/);
+  const open = await at('unlucky', '192.0.2.2', 'u-1');
+  ok('a limiter that cannot be written never refuses a sale', open.ok && !!open.id, open);
+  __failWrites(null);
 }
 
 console.log('\nA REQUEST TITLE IN ANY ALPHABET STILL BECOMES A REAL SONG');

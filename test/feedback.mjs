@@ -6,6 +6,9 @@
    the page, because a localStorage rule is a suggestion:
      · one rating per device per week
      · nothing stored without a star count
+     · and, because the device id is the phone's to choose, at most
+       FEEDBACK_PER_NETWORK_PER_DAY a day from one network — refused in the same
+       words as a repeat, so nothing about the limit can be learned
    And it must never be write-only: the artist has to be able to read it. */
 process.env.ADMIN_CODE = 'devlocal';
 process.env.MYSET_DOUBLE_TAP_MS = '0';
@@ -16,6 +19,7 @@ const fbFn    = (await import('../netlify/functions/feedback.mjs')).default;
 const F       = await import('../netlify/functions/_feedback.mjs');
 const { readFileSync } = await import('node:fs');
 const { src } = await import('./_src.mjs');
+const { __dump } = await import('./blobs-fake.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -23,9 +27,11 @@ const ok = (name, cond, detail) => {
   else { fail++; console.log('  ✗', name, detail === undefined ? '' : '\n      ' + JSON.stringify(detail)); }
 };
 const eq = (name, got, want) => ok(name, JSON.stringify(got) === JSON.stringify(want), { got, want });
-const hit = async (h, url, body) => {
+const hit = async (h, url, body, ip) => {
+  const headers = { 'content-type': 'application/json' };
+  if (ip) headers['x-nf-client-connection-ip'] = ip;   // what Netlify sets; a bare Request has none
   const r = await h(new Request(url, body === undefined ? {} : {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }));
+    method: 'POST', headers, body: JSON.stringify(body) }));
   const t = await r.text();
   try { return { status: r.status, ...JSON.parse(t) }; } catch { return { status: r.status, raw: t }; }
 };
@@ -90,6 +96,38 @@ ok('THE PRIVACY LINE: never a device id', !JSON.stringify(st.feedback.recent).in
    st.feedback.recent);
 const studio = src(new URL('../public/studio.html', import.meta.url));
 ok('and the Studio renders it', /function fbCard\(/.test(studio) && /fbCard\(\)/.test(studio));
+
+console.log('\nONE NETWORK CANNOT RATE FOR THE WHOLE ROOM BY ROTATING DEVICE IDS');
+{
+  /* "One per device per week" is one per call for a loop that mints a fresh id —
+     and every rating past MAX_NOTES spills into an archive that is never trimmed.
+     The network is not the caller's to choose. */
+  const NET_A = '203.0.113.10', NET_B = '198.51.100.20';
+  const rateFrom = (ip, fan, stars, note) => hit(fbFn, 'https://x/api/feedback', { fan, stars, note }, ip);
+  /* Fill the Studio's list to its cap first, so every rating accepted past it is
+     one more row in the archive — the growth the cap exists to stop. */
+  await casDoc('fb_perry-idyll', () => ({}), (d) => {
+    d.list = Array.isArray(d.list) ? d.list : [];
+    while (d.list.length < F.MAX_NOTES) d.list.push({ fan: 'seed' + d.list.length, stars: 3, note: '', at: Date.now() - 3600e3, show: '' });
+    return true;
+  });
+  const before = (await F.readFeedback('perry-idyll')).count;
+  const arch0 = (await F.readArchivedFeedback('perry-idyll')).length;
+  let landed = 0, refused = 0, last = null;
+  for (let i = 0; i < F.FEEDBACK_PER_NETWORK_PER_DAY + 10; i++) {
+    last = await rateFrom(NET_A, 'rot' + i, 5, 'best night ever ' + i);
+    if (last.ok && last.already) refused++; else if (last.ok) landed++;
+  }
+  eq('the day’s allowance lands and the rest are refused', [landed, refused], [F.FEEDBACK_PER_NETWORK_PER_DAY, 10]);
+  eq('a refusal is the same calm answer as a repeat rating — no oracle', [last.status, last.ok, last.already], [200, true, true]);
+  eq('the count grew by exactly the allowance', (await F.readFeedback('perry-idyll')).count - before, F.FEEDBACK_PER_NETWORK_PER_DAY);
+  eq('and so did the archive — then it stopped', (await F.readArchivedFeedback('perry-idyll')).length - arch0, F.FEEDBACK_PER_NETWORK_PER_DAY);
+  const other = await rateFrom(NET_B, 'rotElsewhere', 4, '');
+  ok('another network still counts', other.ok && !other.already, other);
+  const raw = String((__dump().get('fb_perry-idyll') || {}).body || '');
+  ok('the document holds no address', raw.length > 0 && !raw.includes(NET_A) && !raw.includes(NET_B));
+  ok('and the Studio’s shape carries no network either', !('nets' in F.shapeFeedback(await F.readFeedback('perry-idyll'))));
+}
 
 console.log('\nTHE PAGE\'S OWN RULES ARE THE ONES PERRY ASKED FOR');
 const page = readFileSync(new URL('../public/vote.html', import.meta.url), 'utf8');

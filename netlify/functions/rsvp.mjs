@@ -1,5 +1,5 @@
-import { guard } from './_errlog.mjs';
-import { json, bad, cleanFanId, publicArtist } from './_lib.mjs';
+import { guard, logErr } from './_errlog.mjs';
+import { json, bad, cleanFanId, publicArtist, clientIp } from './_lib.mjs';
 import { readEvents, occurrencesFor } from './_events.mjs';
 import { venueBySlug } from './_venues.mjs';
 import { toggleRsvp, HORIZON_DAYS } from './_rsvp.mjs';
@@ -47,7 +47,13 @@ const main = async (req) => {
     .find((o) => o.eventId === eventId && o.date === date && o.endsAt > Date.now());
   if (!occ || date > addDays(localDate(Date.now(), occ.tz), HORIZON_DAYS)) return bad('no such show', 404);
 
-  const r = await toggleRsvp(ownerId, occ, fan, body.on);
+  /* The network rides along for the per-network cap (_rsvp.mjs). A document that
+     cannot be written is a 503 in the same words /api/vote uses, not the
+     guard's 500: the page reverts the pill to what the server last confirmed and
+     the room can still vote. */
+  let r;
+  try { r = await toggleRsvp(ownerId, occ, fan, body.on, clientIp(req)); }
+  catch (e) { await logErr('rsvp', e, { aid: ownerId, fan }); return bad('busy', 503); }
   return json({ ok: true, on: r.on, n: r.n });
 };
 export default guard('rsvp', main);

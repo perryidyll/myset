@@ -1,5 +1,5 @@
 import { guard } from './_errlog.mjs';
-import { json, bad, cleanFanId, publicArtist, getShow } from './_lib.mjs';
+import { json, bad, cleanFanId, publicArtist, getShow, clientIp } from './_lib.mjs';
 import { saveFeedback } from './_feedback.mjs';
 
 /* Public, like /api/vote — the audience never signs in (INVARIANT 9g), so this is
@@ -15,7 +15,7 @@ const main = async (req) => {
   if (!aid) return bad('unknown artist', 404);
 
   const show = await getShow(aid);
-  const r = await saveFeedback(aid, fan, body.stars, body.note, show.showId);
+  const r = await saveFeedback(aid, fan, body.stars, body.note, show.showId, clientIp(req));
   /* A rejected rating must never look like a failure to the fan — they were doing
      us a favour. `already` is reported so the page can stop asking. */
   if (!r.ok) return bad('Pick a star rating first', 400);

@@ -2,7 +2,7 @@ import { guard } from './_errlog.mjs';
 import { json, bad, requireArtist } from './_lib.mjs';
 import { normEmail, validEmail, issueCode, checkCode, sendCode, signToken, verifyToken,
          signTicket, readTicket, readArtists, mutateArtists, createArtist,
-         cleanSlug, RESERVED , revOf, artistBySlug, sendNotice, emailReady } from './_auth.mjs';
+         cleanSlug, RESERVED , revOf, artistBySlug, sendNotice, emailReady, codeSendAllowed } from './_auth.mjs';
 import { newSid, addSession, touchSession, readSessions, killSessions, killEverything,
          deviceLabel, note, readLog, makeRecovery, recoveryStatus, useRecovery,
          sidsFor, can, AREAS, reachOf, levelOf, accessOf } from './_session.mjs';
@@ -63,6 +63,9 @@ const main = async (req) => {
        by `verify`, once they have proved they own the inbox. */
     const reg = await readArtists();
     const link = reg.byEmail[email];
+    /* The network asking is counted too (codeSendAllowed, decision 0111) — refused
+       silently, with the same answer, so a script learns nothing and pays for nothing. */
+    if (!(await codeSendAllowed(req))) return json(SENT);
     const code = await issueCode(email);
     if (!code) return json(SENT);                       // rate limited, silently
     const sent = await sendCode(email, code, link ? (reg.byId[link.artistId] || {}).name : '');
