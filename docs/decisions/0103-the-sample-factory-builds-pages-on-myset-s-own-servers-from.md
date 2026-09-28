@@ -8,7 +8,7 @@ area: ops
 reverses:
 superseded_by:
 invariants: [0go]
-commits: []
+commits: [c940a6e]
 tests: [test/factory.mjs, test/samples.mjs]
 files: [netlify/functions/_fsrc.mjs, netlify/functions/_fai.mjs, netlify/functions/_factory.mjs, netlify/functions/factory-background.mjs, netlify/functions/factorycron.mjs, netlify/functions/factory.mjs, public/factory.html]
 ---
