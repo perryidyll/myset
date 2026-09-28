@@ -66,4 +66,6 @@
   - The rendered on/off wording, because the mock runs no service worker, so the switch stops at "Couldn't start alerts here". At phone width the emulation reads as an iPad and shows the install step.
   - The browser subscription dropped on sign-out.
   - A real push to a real phone.
-  - Production.
+  - A live alert through the new code.
+
+**Shipped:** on the founder's word, after a cross-session re-check at 07:35 UTC. Main had not moved since `5aca670`; two branches that are not merged yet needed a fix, and both sessions were told: HQ's new `notify` call in `hq.mjs` names no audience, and the security branch had added a `pushOn` gate and taken INVARIANT 0ha. PR #131 was squash-merged at 07:39 UTC as `811c9a7`. The preview drew `/studio` at 375 px. **Live:** `https://myset.vip/studio` serves `studio.js?v=ef099c29`, and that file holds `function pushWhat`.

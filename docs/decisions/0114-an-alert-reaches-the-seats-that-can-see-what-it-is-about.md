@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0ha]
-commits: []
+commits: [811c9a7]
 tests: [test/pushseats.mjs, test/push.mjs, test/ordernote.mjs]
 files: [netlify/functions/_push.mjs, netlify/functions/_session.mjs, netlify/functions/admin.mjs, netlify/functions/_ordernote.mjs, netlify/functions/_messages.mjs, netlify/functions/_requests.mjs, netlify/functions/_sample.mjs, public/studio.js, tools/mock.mjs, test/pushseats.mjs]
 ---
@@ -101,4 +101,4 @@ Each counts as the owner's. The 2026-09-25 production backup held no push docume
 - **Not checked:**
   - A real push to a real phone. `VAPID_*` has been set in production since 2026-09-15, and no real push has been checked since.
   - The browser subscription dropped on sign-out. The mock runs no service worker.
-  - Production.
+  - Production, beyond the page: `https://myset.vip/studio` serves `studio.js?v=ef099c29`, which holds `pushWhat` (merged as `811c9a7`, PR #131). No alert has been sent through the new code yet.
