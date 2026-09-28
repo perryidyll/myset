@@ -177,6 +177,12 @@ export function noteSample(owner, e, m = '') {
 export async function tellFounder(title, body) {
   try { const { notify } = await import('./_push.mjs'); await notify(DEFAULT_ARTIST, { title, body, url: '/factory', tag: 'samples' }, { owner: true }); } catch {}
 }
+/* HQ's contacts follow their page (decision 0108): every place a page goes, or moves to
+   a new owner id, tells the CRM here. Best-effort and last: a CRM hiccup is never why a
+   take-down, a delete or a rebuild fails. */
+async function tellCrm(what, ...args) {
+  try { const C = await import('./_crm.mjs'); await C[what](...args); } catch (e) { console.error('crm:', what, 'failed', e && e.message); }
+}
 
 /* ---------- the factory's settings ----------
    `auto`: a page that passes the quality check goes straight to Ready; off, every
@@ -241,6 +247,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
     if (!taken) { slug = s; owner = o; }
   }
   if (!owner) return { ok: false, error: 'Couldn’t hold a page address — try again.' };
+  if (payload.replace && owner !== payload.replace) await tellCrm('relinkOwner', payload.replace, owner);
 
   /* The photos, under the sample's own unguessable name (see SAMPLE_NS in _img.mjs). */
   const shots = {};
@@ -414,6 +421,7 @@ export async function removeSample(owner, { by = 'asked' } = {}) {
   await eraseData(owner);
   await mutateSampleReg((r) => dropRow(r, owner));
   await bump(by === 'asked' ? 'removed' : 'cancelled');
+  await tellCrm(by === 'asked' ? 'forgetOwner' : 'unlinkOwner', owner, ...(by === 'asked' ? [] : ['page cancelled']));
   return { ok: true };
 }
 
@@ -430,6 +438,7 @@ export async function optOut(owner) {
   await store().delete(ARCDOC(owner)).catch(() => {});
   await casDoc(ARC, () => ({ v: 1, byOwner: {} }), (d) => { if (!d.byOwner || !d.byOwner[owner]) return false; delete d.byOwner[owner]; return true; }).catch(() => {});
   await bump('removed');
+  await tellCrm('forgetOwner', owner);
   return { ok: true };
 }
 
@@ -502,6 +511,7 @@ export async function reviveSample(owner, { fetch: F = globalThis.fetch } = {}) 
   await casDoc(ARC, () => ({ v: 1, byOwner: {} }), (d) => { if (!d.byOwner || !d.byOwner[owner]) return false; delete d.byOwner[owner]; return true; }).catch(() => {});
   await bump('revived');
   await noteSample(made.owner, 'revived', `campaign ${(snap.row.cp || 1) + 1}`);
+  if (made.owner !== owner) await tellCrm('relinkOwner', owner, made.owner);
   return made;
 }
 
@@ -525,6 +535,7 @@ export async function sweepSamples(now = Date.now(), limit = 5) {
       await store().delete(ARCDOC(owner)).catch(() => {});
       await casDoc(ARC, () => ({ v: 1, byOwner: {} }), (d) => { if (!d.byOwner || !d.byOwner[owner]) return false; delete d.byOwner[owner]; return true; });
       erased.push(owner);
+      await tellCrm('unlinkOwner', owner, 'its kept copy was erased after 180 days');
     } catch (e) { console.error('sample erase failed for', owner, e && e.message); }
   }
   /* A claim's undo window closes: the record that made undo possible goes. */

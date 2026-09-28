@@ -15,14 +15,14 @@ sources:
   - docs/sessions/2026-09-28-sample-profiles-tip-decks-practice-round-factory.md
 status: loaded
 loaded: 2026-09-28 (create_process 44328; read back through list_sections and list_steps — names, types, executors, roles with RACI, tools, notes and 29 connections match this sheet; reloaded 2026-09-28 after the second round went live — 30 connections, all steps Live, read back; decision numbers are the renumbered 0101/0102/0103)
-verified: not yet — code read 2026-09-28 in the working tree (branch feat/sample-profiles); nothing is deployed, so there is nothing live to check; the founder's browser check of the tab is outstanding; 2026-09-28 second round (link label, Delete forever, table cards, page link, old addresses) read in the working tree; the sample page, the console, the sign page's print (4 pages as PDF) and both Studios' Settings walked on tools/localhost.mjs at 375 px; not deployed; live as c940a6e (PR #126, Netlify deploy 6ab9fba3 ready 2026-09-28 ~05:35 UTC, verified by content on myset.vip)
+verified: not yet — code read 2026-09-28 in the working tree (branch feat/sample-profiles); nothing is deployed, so there is nothing live to check; the founder's browser check of the tab is outstanding; 2026-09-28 second round (link label, Delete forever, table cards, page link, old addresses) read in the working tree; the sample page, the console, the sign page's print (4 pages as PDF) and both Studios' Settings walked on tools/localhost.mjs at 375 px; not deployed; live as c940a6e (PR #126, Netlify deploy 6ab9fba3 ready 2026-09-28 ~05:35 UTC, verified by content on myset.vip); 2026-09-28 third round: keys live (deploy 6aba0a19, read on the live console); the HQ cross-link added (branch feat/hq-crm)
 ---
 
 # Sample pages: build, send, claim, come back
 
 **Who:** the founder at the console (role *Founder / operator*); the factory on MySet's own servers (roles *MySet server* and *Scheduled jobs*); the artist or venue it was built for (roles *Artist* and *Venue manager*, external — they never asked for it). **Trigger:** the founder pastes names or links into `myset.vip/factory`. **Outcome:** a finished, unpublished page — their photos, a short sourced bio, their links and videos — sent by hand as one link; claimed free onto Hobbyist in a minute, or deleted forever when they say no; unclaimed, it comes down at the deadline to a private copy that a second campaign can bring back, and the copy is erased at its own limit. The founder means this to be the main way the first artists arrive, running almost entirely by itself at scale (decision 0103).
 
-**Every step is `Live`** (on myset.vip since `c940a6e`, PR #126). The whole loop is built and tested in the working tree (branch `feat/sample-profiles`, 2026-09-28) — live as `c940a6e`, and no real build has run: the Claude and YouTube keys are not set yet, so the quality of real discovery and copy is unknown until the first real builds. 
+**Every step is `Live`** (on myset.vip since `c940a6e`, PR #126). The Claude and YouTube keys are set in Netlify and live since the production rebuild of 2026-09-28 (deploy `6aba0a19`; the console reads *Claude key is set* and *YouTube key is set*); the quality of real discovery and copy is unknown until the first real builds. **MySet HQ** (`/crm`, decision 0108, *MySet HQ: the outreach desk*) is now a second door into this loop: a form instead of a line, one table of every contact, and every message in one thread.
 
 **The numbers this loop runs on** — the days an act has to claim, the days the private copy is kept after the page comes down, the days the founder has to undo a claim, and the factory's default builds a day — are in overview §2.1 (the *A sample page* row, generated from `_sample.mjs`), and nowhere here.
 
@@ -65,13 +65,14 @@ s01 → s02 → s03; s03 —clear→ s04 (—suppressed→ the job ends `skipped
 
 ## Cross-links
 
+- *Marketing & growth → MySet HQ: the outreach desk* (`09-myset-hq.md`) — the founder's desk in front of this loop: h02–h05 start and watch a build (s01–s11 from a form), h08 sends what s14 drafts (s15), h13 is s21 from HQ, and every contact follows its page through s18–s24 (decision 0108).
 - *Onboarding → The Studio teaches itself: tip decks and the practice round* (`docs/processes/onboarding/02-the-studio-teaches-itself.md`) — what a sample's visitor meets in the Studio (s17).
-- *Artist lifecycle → Signing up and signing in* (Puzzle section 41978) — one `Live` step added there, **Claim a sample page** (step 389231), between *Redeem the code* and *Open a session*: the second way in (decision 0101). Its row in `artist-lifecycle/01-signing-up-and-signing-in.md` is added once PR #125 (that sheet's password edits) has landed.
+- *Artist lifecycle → Signing up and signing in* (Puzzle section 41978) — one `Live` step added there, **Claim a sample page** (step 389231), between *Redeem the code* and *Open a session*: the second way in (decision 0101). Its row in `artist-lifecycle/01-signing-up-and-signing-in.md` is **g11** (added 2026-09-28, after PR #125).
 - *Marketing & growth → Recruiting the Founding 50* and *The cold start* — the hand-made outreach this loop scales; the DM rules there (never automated, replies are the relationship) still hold: the factory drafts, the founder sends.
 
 ## What is deliberately absent
 
-- No automatic sending: every message goes by hand from the founder's own accounts, and never through MySet's mail sender.
+- No automatic sending: every message is the founder's own — sent by hand from the founder's accounts, or, through MySet HQ, an email from the founder's own Gmail one at a time (decision 0109) — and never through MySet's mail sender.
 - No Instagram scraping, and no Places API: Instagram photos arrive only by address; a venue's map is a plain Google Maps link.
 - No public unclaimed pages: a sample is found only through its link (decision 0101 names a public version as a reversal that would need a legal review first).
 - No secret in the link, and no way to erase a page from the page: the label is the same on every page (the founder's call, 2026-09-28), so the door that checks it reads and counts and never erases; saying no is a message (s20), and only the founder's Delete forever erases (s21).

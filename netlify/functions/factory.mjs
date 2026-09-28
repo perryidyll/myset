@@ -26,6 +26,9 @@ import { readSampleReg, mutateSampleReg, readArchive, readStats, linkFor, SAMPLE
    sign-in codes, and cold mail through it could cost every artist their way in. */
 
 const Q = 'factoryq';
+/* The links a page itself carries (normProfile / normVenue), which Edit profile writes. */
+const ARTIST_PAGE_LINKS = ['instagram', 'tiktok', 'youtube', 'spotify', 'applemusic', 'ytmusic', 'soundcloud', 'bandcamp', 'facebook', 'website', 'gofundme'];
+const VENUE_PAGE_LINKS = ['website', 'instagram', 'facebook', 'google'];
 const emptyQ = () => ({ v: 1, jobs: [], day: '', started: 0 });
 
 const SRCWORD = { youtube: 'YouTube', website: 'website', instagram: 'Instagram', spotify: 'Spotify', apple: 'Apple Music',
@@ -164,6 +167,75 @@ export async function startJobs(n = 3, origin = '') {
 
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
 const newId = () => 'j' + Math.random().toString(36).slice(2, 10);
+
+/* THE QUEUE'S ONE WRITER for new jobs: the console's lines and HQ's form (decision
+   0108) both come through here, so the week's pruning and the "already queued" rule
+   are one rule. `items`: [{ seed: { line, …fields }, label?, cid?, replace? }]. A job
+   whose seed line is already waiting or running is not queued twice — its id comes
+   back in `skipped`, so a double tap follows the build that is already going. */
+export async function queueJobs(kind, items) {
+  const k = kind === 'venue' ? 'venue' : 'artist';
+  const now = Date.now(), added = [], skipped = [];
+  await casDoc(Q, emptyQ, (q) => {
+    q.jobs ||= [];
+    /* finished rows older than a week go, so the document stays small */
+    q.jobs = q.jobs.filter((j) => ['queued', 'running'].includes(j.st) || now - (j.upd || j.at || 0) < 7 * 86400e3);
+    added.length = 0; skipped.length = 0;
+    for (const it of items) {
+      const line = String((it.seed && it.seed.line) || '');
+      const dup = q.jobs.find((j) => j.seed && j.seed.line === line && ['queued', 'running'].includes(j.st));
+      if (dup) { skipped.push({ line, why: 'already queued', id: dup.id }); continue; }
+      const id = newId();
+      q.jobs.push({ id, kind: k, seed: it.seed, label: clean(it.label || line, 80), st: 'queued', stage: '', pct: 0, at: now, upd: now, tries: 0,
+        ...(it.cid ? { cid: String(it.cid) } : {}), ...(it.replace ? { replace: String(it.replace) } : {}) });
+      added.push({ id, line });
+    }
+    return added.length > 0;
+  });
+  return { added, skipped };
+}
+
+/* SENT, one rule for every door that says a message went out — the console's Mark
+   sent and HQ's log and Gmail send (decision 0108): the first send stamps `sent` and
+   counts once in the month's funnel; every channel is remembered; a page that was
+   Ready (or still waiting for a look) becomes Sent. `ch`: dm, email or inperson. */
+export async function markSent(owner, ch) {
+  const c = ['dm', 'email', 'inperson'].includes(ch) ? ch : 'dm';
+  let first = false, out = null;
+  await mutateSampleReg((r) => { const x = r.byId[owner]; if (!x) return false;
+    first = false;
+    if (!x.sent) { x.sent = Date.now(); first = true; }
+    x.ch = x.ch && !x.ch.split(',').includes(c) ? `${x.ch},${c}` : (x.ch || c);
+    if (x.st === 'ready' || x.st === 'review') x.st = 'sent';
+    out = liveRow(owner, x); return true; });
+  if (out) await noteSample(owner, 'sent', c);
+  if (first) await bump('sent');
+  return out;
+}
+
+/** Everything the console and HQ show about one live sample: its row, its link and the
+ *  quiet preview address, the page as it is, how it was made, and the drafts. */
+export async function sampleDetail(owner, row) {
+  const [{ data: rec }, cfg, lk] = await Promise.all([readDoc(SAMPLE(owner), null), readCfg(), linkFor(owner, row)]);
+  let profile;
+  if (isVenueOwner(owner)) {
+    const { getVenueProfile } = await import('./_venues.mjs');
+    const p = await getVenueProfile(owner.slice(2));
+    profile = { name: p.name, tagline: p.tagline, bio: p.about, links: p.links, photo: p.photo, photos: p.photos, city: p.city, country: p.country, address: p.address, media: [] };
+  } else {
+    const { getProfile, shapeMedia } = await import('./_profile.mjs');
+    const p = await getProfile(owner);
+    profile = { name: p.name, first: p.first, tagline: p.tagline, style: p.style, bio: p.bio, links: p.links, photo: p.photo, avatar: p.avatar, city: row.city || '',
+                photos: p.photos, focus: p.focus, media: p.media.map(shapeMedia).filter(Boolean).map((m) => ({ mid: m.mid, title: m.title, provider: m.provider, thumb: m.thumb, hero: m.hero })) };
+  }
+  /* `preview`: the same link with ?pv=1, which the founder opens — the page and its Studio
+     then count nothing and push nothing, so a look from the console is never mistaken
+     for the act's own first open */
+  return { row: liveRow(owner, row), link: lk.link, preview: lk.link.replace('#', '?pv=1#'), key: lk.key, profile,
+    record: rec ? { sources: rec.sources || [], facts: rec.facts || null, provenance: rec.provenance || null, photos: rec.photos || [],
+                    quality: rec.quality || null, events: rec.events || [], seed: rec.seed || null, usage: rec.usage || null } : null,
+    msgs: messagesFor(row, rec, lk.link, cfg) };
+}
 /* One shape for a live page everywhere the console reads one — the list, the detail, a
    reply to Mark sent — so a card never has to guess which spelling it was handed. */
 const liveRow = (owner, r) => ({ owner, kind: r.k === 'v' ? 'venue' : 'artist', slug: r.slug, name: r.name,
@@ -200,22 +272,9 @@ const main = async (req) => {
     const lines = (Array.isArray(body.lines) ? body.lines : String(body.lines || '').split('\n'))
       .map((l) => clean(l, 400)).filter(Boolean).slice(0, 200);
     if (!lines.length) return bad('Nothing to build — one per line.');
-    const now = Date.now();
-    let added = 0; const skipped = [];
-    await casDoc(Q, emptyQ, (q) => {
-      q.jobs ||= [];
-      /* finished rows older than a week go, so the document stays small */
-      q.jobs = q.jobs.filter((j) => ['queued', 'running'].includes(j.st) || now - (j.upd || j.at || 0) < 7 * 86400e3);
-      added = 0; skipped.length = 0;
-      for (const line of lines) {
-        if (q.jobs.some((j) => j.seed && j.seed.line === line && ['queued', 'running'].includes(j.st))) { skipped.push({ line, why: 'already queued' }); continue; }
-        q.jobs.push({ id: newId(), kind, seed: { line }, label: line.slice(0, 80), st: 'queued', stage: '', pct: 0, at: now, upd: now, tries: 0 });
-        added++;
-      }
-      return added > 0;
-    });
-    const started = added ? await startJobs(3, origin) : 0;
-    return json({ ok: true, added, skipped, started });
+    const { added, skipped } = await queueJobs(kind, lines.map((line) => ({ seed: { line }, label: line.slice(0, 80) })));
+    const started = added.length ? await startJobs(3, origin) : 0;
+    return json({ ok: true, added: added.length, skipped: skipped.map(({ line, why }) => ({ line, why })), started });
   }
 
   if (action === 'run') return json({ ok: true, started: await startJobs(3, origin) });
@@ -271,27 +330,7 @@ const main = async (req) => {
   }
   if (!row) return bad('That page has gone — claimed, removed or taken down.', 404);
 
-  if (action === 'detail') {
-    const [{ data: rec }, cfg, lk] = await Promise.all([readDoc(SAMPLE(owner), null), readCfg(), linkFor(owner, row)]);
-    let profile;
-    if (isVenueOwner(owner)) {
-      const { getVenueProfile } = await import('./_venues.mjs');
-      const p = await getVenueProfile(owner.slice(2));
-      profile = { name: p.name, tagline: p.tagline, bio: p.about, links: p.links, photo: p.photo, photos: p.photos, city: p.city, address: p.address, media: [] };
-    } else {
-      const { getProfile, shapeMedia } = await import('./_profile.mjs');
-      const p = await getProfile(owner);
-      profile = { name: p.name, first: p.first, tagline: p.tagline, style: p.style, bio: p.bio, links: p.links, photo: p.photo, avatar: p.avatar,
-                  photos: p.photos, focus: p.focus, media: p.media.map(shapeMedia).filter(Boolean).map((m) => ({ title: m.title, provider: m.provider, thumb: m.thumb })) };
-    }
-    /* `preview`: the same link with ?pv=1, which the founder opens — the page and its Studio
-       then count nothing and push nothing, so a look from the console is never mistaken
-       for the act's own first open */
-    return json({ ok: true, row: liveRow(owner, row), link: lk.link, preview: lk.link.replace('#', '?pv=1#'), key: lk.key, profile,
-      record: rec ? { sources: rec.sources || [], facts: rec.facts || null, provenance: rec.provenance || null, photos: rec.photos || [],
-                      quality: rec.quality || null, events: rec.events || [], seed: rec.seed || null, usage: rec.usage || null } : null,
-      msgs: messagesFor(row, rec, lk.link, cfg) });
-  }
+  if (action === 'detail') return json({ ok: true, ...(await sampleDetail(owner, row)) });
 
   if (action === 'approve') {
     await mutateSampleReg((r) => { const x = r.byId[owner]; if (!x) return false; x.rv = false; if (x.st === 'review') x.st = 'ready'; return true; });
@@ -301,41 +340,63 @@ const main = async (req) => {
 
   if (action === 'sent') {
     const ch = ['dm', 'email', 'inperson'].includes(body.ch) ? body.ch : 'dm';
-    let first = false, out = null;
-    await mutateSampleReg((r) => { const x = r.byId[owner]; if (!x) return false;
-      if (!x.sent) { x.sent = Date.now(); first = true; }
-      x.ch = x.ch && !x.ch.split(',').includes(ch) ? `${x.ch},${ch}` : (x.ch || ch);
-      if (x.st === 'ready' || x.st === 'review') x.st = 'sent';
-      out = liveRow(owner, x); return true; });
-    await noteSample(owner, 'sent', ch);
-    if (first) await bump('sent');
-    return json({ ok: true, row: out });
+    return json({ ok: true, row: await markSent(owner, ch) });
   }
 
   if (action === 'edit') {
+    /* The page's words, its links, its place and (an artist's) videos — HQ's Edit
+       profile (decision 0108) and the console's Review. Links go through the same
+       canonical reader the factory's seeds do, then through the profile's own
+       allowlist on the way in (normProfile / normVenue), so a sample can hold no link
+       an artist could not have pasted themselves; `dropped` names the ones refused. */
     const f = body.fields || {};
+    const given = f.links && typeof f.links === 'object' ? f.links : null;
+    const { canonLink } = await import('./_crm.mjs');
+    const pageLink = (k, v) => { const raw = String(v == null ? '' : v).trim().slice(0, 400); return raw ? (canonLink(k, raw) || raw) : ''; };
+    let dropped = [];
     if (isVenueOwner(owner)) {
-      const { mutateVenueProfile } = await import('./_venues.mjs');
+      const { mutateVenueProfile, getVenueProfile } = await import('./_venues.mjs');
       await mutateVenueProfile(owner.slice(2), (p) => {
         if (f.name != null) p.name = clean(f.name, 70);
         if (f.tagline != null) p.tagline = clean(f.tagline, 120);
         if (f.bio != null) p.about = String(f.bio).replace(/\r/g, '').slice(0, 900);
+        if (f.city != null) p.city = clean(f.city, 60);
+        if (f.country != null) p.country = clean(f.country, 60);
+        if (given) { p.links ||= {}; for (const k of VENUE_PAGE_LINKS) if (given[k] != null) p.links[k] = pageLink(k, given[k]); }
         return true;
       });
+      if (given) { const p = await getVenueProfile(owner.slice(2)); dropped = VENUE_PAGE_LINKS.filter((k) => given[k] != null && String(given[k]).trim() && !(p.links || {})[k]); }
     } else {
-      const { mutateProfile } = await import('./_profile.mjs');
+      const { mutateProfile, getProfile, parseMedia } = await import('./_profile.mjs');
+      let add = null;
+      if (f.media && f.media.add) {
+        const m = parseMedia(String(f.media.add).trim());
+        if (!m) return bad('That link isn’t a video or a track the page can play (YouTube, Spotify or Apple Music).');
+        const { lookup } = await import('./_embeds.mjs');
+        const info = await lookup(m).catch(() => ({ ok: false }));
+        if (!info || !info.ok) return bad((info && info.why) || 'Couldn’t read that link — is it public?');
+        add = { mid: 'm' + Math.random().toString(36).slice(2, 9), ...m, title: clean(info.title, 120), thumb: String(info.thumb || '').slice(0, 300), hero: false };
+      }
       await mutateProfile(owner, (p) => {
         if (f.name != null) { p.first = clean(f.name, 60); p.last = ''; p.name = clean(f.name, 60); }
         if (f.tagline != null) p.tagline = clean(f.tagline, 120);
         if (f.style != null) p.style = clean(f.style, 60);
         if (f.bio != null) p.bio = String(f.bio).replace(/\r/g, '').slice(0, 700);
+        if (given) { p.links ||= {}; for (const k of ARTIST_PAGE_LINKS) if (given[k] != null) p.links[k] = pageLink(k, given[k]); }
+        p.media = Array.isArray(p.media) ? p.media : [];
+        if (add && !p.media.some((x) => x.provider === add.provider && x.id === add.id && (x.list || null) === (add.list || null))) p.media.push(add);
+        if (f.media && f.media.remove) p.media = p.media.filter((m) => m.mid !== f.media.remove);
+        if (f.media && f.media.hero) p.media.forEach((m) => { m.hero = m.mid === f.media.hero; });
         return true;
       });
       if (f.name != null) { const { mutateShow } = await import('./_lib.mjs'); await mutateShow(owner, (s) => { s.artist = clean(f.name, 60); return true; }).catch(() => {}); }
+      if (given) { const p = await getProfile(owner); dropped = ARTIST_PAGE_LINKS.filter((k) => given[k] != null && String(given[k]).trim() && !(p.links || {})[k]); }
     }
-    if (f.name != null) await mutateSampleReg((r) => { if (!r.byId[owner]) return false; r.byId[owner].name = clean(f.name, 70); return true; });
+    if (f.name != null || f.city != null) await mutateSampleReg((r) => { const x = r.byId[owner]; if (!x) return false;
+      if (f.name != null) x.name = clean(f.name, 70); if (f.city != null) x.city = clean(f.city, 60); return true; });
     await noteSample(owner, 'edited', Object.keys(f).join(','));
-    return json({ ok: true });
+    const now = (await readSampleReg()).byId[owner] || row;
+    return json({ ok: true, dropped, ...(await sampleDetail(owner, now)) });
   }
 
   if (action === 'addPhoto') {
@@ -394,11 +455,15 @@ const main = async (req) => {
 
   if (action === 'rebuild') {
     const { data: rec } = await readDoc(SAMPLE(owner), null);
-    const line = rec && rec.seed && (rec.seed.line || rec.seed.raw);
+    const sd = (rec && rec.seed) || {};
+    const line = sd.line || sd.raw;
     if (!line) return bad('This page wasn’t built from a line the factory can read again.');
-    const now = Date.now();
-    await casDoc(Q, emptyQ, (q) => { q.jobs ||= []; q.jobs.push({ id: newId(), kind: row.k === 'v' ? 'venue' : 'artist', seed: { line },
-      label: `Rebuild · ${row.name}`.slice(0, 80), replace: owner, st: 'queued', stage: '', pct: 0, at: now, upd: now, tries: 0 }); return true; });
+    /* the seed's own fields ride along (a page HQ built from its form has them), so a
+       rebuild reads what the first build read, not only the line's rendering of it */
+    const seed = { line, ...(sd.name ? { name: sd.name } : {}), ...(sd.city ? { city: sd.city } : {}), ...(sd.country ? { country: sd.country } : {}),
+      ...(sd.links ? { links: sd.links } : {}), ...(Array.isArray(sd.photos) && sd.photos.length ? { photos: sd.photos } : {}) };
+    const { added, skipped } = await queueJobs(row.k === 'v' ? 'venue' : 'artist', [{ seed, label: `Rebuild · ${row.name}`, replace: owner }]);
+    if (!added.length && skipped.length) return json({ ok: true, started: 0, already: true });
     return json({ ok: true, started: await startJobs(1, origin) });
   }
 
