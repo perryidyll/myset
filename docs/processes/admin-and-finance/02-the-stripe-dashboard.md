@@ -1,0 +1,38 @@
+---
+tab: Admin & finance
+section: The Stripe dashboard
+puzzle_section_id: 42012
+sources:
+  - ACCOUNTING.md § One Stripe account, two businesses; § A payout is not an expense; § What is deliberately NOT here (this code only ever reads)
+  - HARDENING.md §1 (the restricted key; step 7 — revoke the old one), § What is already done
+  - STRIPE-CONNECT.md; netlify/functions/_connect.mjs (payout schedule daily); _billing.mjs (Stripe Checkout to start, the Customer Portal to change)
+  - IMPLEMENTATION_STATUS.md PER-001 (done), PER-007 (done), PER-008 (Connected-accounts destination)
+  - docs/decisions/0007 (money is charged on the artist's own account), 0044 (daily payouts, on purpose)
+  - docs/processes/money/ (the code side of every item here)
+status: loaded
+loaded: 2026-09-12 (create_process; read back through list_sections — names, statuses, connections match)
+verified: not yet — the founder's browser check of the tab is outstanding; code read 2026-09-12 for mapconfig.mjs, moneymodel.mjs, _connect.mjs, _billing.mjs
+---
+
+# The Stripe dashboard
+
+**Who:** the founder, signed in to dashboard.stripe.com as the platform account. **Trigger:** a webhook to keep true, a key to hold, a portal to configure, a refund or dispute to answer, a payout question from an artist. **Outcome:** the dashboard side of every money process is done by the one person who can do it, and the code side stays what it is — **MySet only ever reads Stripe from code**; everything that writes to Stripe by hand happens here, on purpose, with a record.
+
+`Live` where the item is done and read back; `Draft` where the founder's hands are still owed (the run sheet lists them).
+
+| id | step | type | executor | role (RACI) | tool | notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| s01 | Know that one account is two businesses | task | Person | Founder R | Stripe | The platform account holds the **company** (subscriptions as ordinary charges; Connect fees as `application_fee` entries, half given back by the fee split) *and* the **founder's own gig money** (vote packs and tips taken before Connect existed). Stripe never adds the company's number up anywhere; the books do (→ *Money → The books* k06 separates the two, exactly, by the `kind` and `artist` tags on every charge). The day the founder links a Stripe account of their own, the two must not overwrite each other — `ledger_platform` is the company's document, never `ledger_<founder>`. `src: ACCOUNTING.md § One Stripe account, two businesses` |
+| s02 | Keep the MySet event destination true | task | Person | Founder R · Stripe webhooks I | Stripe | Developers → Event destinations → the MySet destination (*Your account*): the events `webhook.mjs` handles — `charge.updated` and `account.updated` were added 2026-09-12 (PER-001; the docs had listed `account.updated` as present and it was not). Read the destination back after every change; the code side is → *Money → Stripe events arriving*. `src: PER-001; docs/processes/money/02` |
+| s03 | Add the Connected-accounts destination | alias | Person | Founder R · Coding agent C | Stripe | → *Reliability & security → Secrets and keys* j07 — **Draft, PER-008.** The MySet destination listens to *Your account* only, fixed at creation; every `event.account` branch is silent until a second destination for *Connected accounts* exists and its secret is pasted as `STRIPE_CONNECT_WEBHOOK_SECRET`. Fallbacks cover it today; every live charge is on the platform account. `src: sheet j07; PER-008` |
+| s04 | Hold a restricted key, and revoke the full one | alias | Person | Founder R | Stripe | → *Secrets and keys* j06. MySet needs exactly one permission — Checkout Sessions, write — because all three of its Stripe calls are Checkout Sessions. The key was replaced 2026-09-08 (PER-007, verified by a live checkout); **whether it is restricted is unrecorded** — the run sheet asks. A rotated key that is still live is not rotated: step 7 of HARDENING §1 is the revoke. `src: HARDENING.md §1; PER-007; sheet j06` |
+| s05 | Save the Customer Portal configuration in live mode | task | Person | Founder R · Artist I | Stripe | **Draft — the run sheet's item 2.** Plans start through Checkout and are *changed* through Stripe's Customer Portal (`_billing.mjs`); the portal answers only once its configuration is saved in **live** mode, separately from test mode. Unsaved, the Studio's *Manage billing* button simply errors — the one kind of button rule 3 forbids, and there is no fallback for it. Done when Studio → Money → Manage billing opens a Stripe page (`portalLink` in `_billing.mjs`). `src: netlify/functions/_billing.mjs; docs/processes/money/03; run sheet` |
+| s06 | Leave payouts daily | task | Person | Founder R · Artist I | Stripe | Every Express account is created with `payouts.schedule.interval: 'daily'` (`_connect.mjs`) and that is **on purpose** — the artist gets a near-instant reward loop for using the app (decision 0044). Do not change the platform default in the dashboard to weekly or monthly for the sake of tidiness; what would reverse it is in the record. `src: _connect.mjs 161; decision 0044` |
+| s07 | Read a night from both sides | go_to | Person | Founder R | Stripe | → *Money → The books* k07: the same payment read from the platform side (the fee) and the artist's side (the charge); k10 reconciles one night. The dashboard's balance page is the artist's truth for *when the money reaches the bank*; a payout is **not** an expense and never un-earns anything. `src: ACCOUNTING.md § A payout is not an expense; sheet k07` |
+| s08 | Refund by hand, with the window in mind | task | Person | Founder R · Fan I | Stripe | **Draft — no procedure has run.** Refunds happen in the dashboard, never from code. A refund lands in the month it *settles* while the charge may be months older, and a refund object carries no `kind` of its own — the books reach four months further back for sessions so a refund of the founder's own gig money is not booked as a company loss. A refund of a vote pack does **not** take the votes back off the tally (no path exists for that; the show is over). `src: ACCOUNTING.md § One Stripe account, two businesses (the session window)` |
+| s09 | Answer a dispute | task | Person | Founder R | Stripe | **Draft — none has happened.** Stripe's dispute fee is a cost line in the money model. What MySet can offer as evidence is thin by design — no card data, no fan account, a device id the fan can clear — so the honest response is the Checkout receipt and the show record. Do not build a dispute workflow for a thing that has not occurred. `src: finance/README.md (dispute fees); SECURITY.md § What is already true` |
+| s10 | Keep tax settings honest | task | Person | Founder R | Stripe | **Draft — not configured.** MySet collects nothing on an artist's behalf beyond the fee; the artist's own tax is the artist's (their statement is → *The books* k09). The company's own filing uses `ledger_platform` and the hand-typed costs; when there is revenue worth reconciling, a real package with Stripe's connector becomes the book of record (k11) — never the blob store. `src: ACCOUNTING.md § The recommendation, plainly; § What did I earn, for my tax return` |
+
+## Connections
+
+s01 → s02 → s03; s01 → s04; s01 → s05; s01 → s06; s01 → s07; s07 → s08 → s09; s07 → s10.
