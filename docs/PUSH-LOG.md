@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 14:37 — e83d823 — quizzical-haslett-6f8f8b@feat/push-per-seat (26 files since origin/main)
+**tl;dr:** A crew seat's phone no longer gets merch orders or messages: each phone hears only what its seat can see (requests still reach every seat), each seat has its own 8-phone cap so nobody pushes the owner's phone off, and signing a phone out ends its alerts
+**Other sessions:** Decision 0114, INVARIANT 0ha, ledger ACC-008. notify(aid, msg, to) MUST name an audience — {tab:'merch'|'messages'|…}, {owner:true}, {all:true} or {endpoint}; no third arg reaches nobody and test/pushseats.mjs fails the suite (HQ's hq.mjs:63 needs {owner:true}; 4b462c told). killSessions/killEverything call dropDevices; push_<aid> rows carry email+sid. The security branch (5bcf8f) must drop its pushOn/pushOff 'community' gate and its 0ha (told). VAPID_* is set in production (names read); no real push checked yet.
+
 ### 2026-09-28 14:04 — bd92f8e — sheets-passwords-sender@docs/agents-md-rules (5 files since origin/main)
 **tl;dr:** Docs only: AGENTS.md on main now has the pull-request deploy flow, the sessions board, the backup-at-start line and the 'Does Puzzle need updating?' hand-off; the day's cross-session review is written up [skip ci]
 **Other sessions:** Worktree sessions read main's AGENTS.md, which still said a push to main deploys. New rules: stage by name (never -A); after gh pr merge, delete the branch yourself (git push origin --delete) — --delete-branch fails from a worktree; keep (#N) in --subject. 74 merged remote branches were deleted and #27 closed as superseded. The security branch (5bcf8f) ships in three slices: A code-only (0110), B limits (0111), C secrets (0112/0113); numbers reserved on the board. Log: docs/sessions/2026-09-28-cross-session-review.md.

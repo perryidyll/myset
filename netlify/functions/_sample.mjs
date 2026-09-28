@@ -175,7 +175,7 @@ export function noteSample(owner, e, m = '') {
 /* The founder hears about the moments that matter, on the phone that already gets
    MySet's pushes. Never awaited by anything a visitor is waiting on. */
 export async function tellFounder(title, body) {
-  try { const { notify } = await import('./_push.mjs'); await notify(DEFAULT_ARTIST, { title, body, url: '/factory', tag: 'samples' }); } catch {}
+  try { const { notify } = await import('./_push.mjs'); await notify(DEFAULT_ARTIST, { title, body, url: '/factory', tag: 'samples' }, { owner: true }); } catch {}
 }
 
 /* ---------- the factory's settings ----------

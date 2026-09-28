@@ -169,7 +169,7 @@ export async function createRequest(aid, show, fanId, body) {
     }
     return { ok: false, error: 'Couldn’t get that through — try again', status: 503 };
   }
-  /* Tell the artist, if they have installed the Studio and switched alerts on.
+  /* Tell the band, on every phone that has installed the Studio and switched alerts on.
      Deliberately AFTER the request is stored and read back — a notification is
      never allowed to be the reason a paid request fails (INVARIANT 16) — and
      never awaited into the response, so a slow push service cannot make the fan
@@ -180,7 +180,7 @@ export async function createRequest(aid, show, fanId, body) {
       ? `${title}${artist ? ' — ' + artist : ''}${row.cost ? ` · ${row.cost} votes` : ''}${row.pledgeCents ? ` · $${row.pledgeCents / 100} offered` : ''}`
       : kind === 'vibe' ? title : `For ${name}${row.cost ? ` · ${row.cost} votes` : ''}`,
     url: '/studio', tag: 'ask',
-  }).catch(() => {});
+  }, { all: true }).catch(() => {});   // the requests are every seat's (decision 0105)
 
   return { ok: true, request: storedRow, charged: free ? 0 : cost,
            already: !inserted || debitAlready };

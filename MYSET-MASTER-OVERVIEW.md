@@ -545,10 +545,10 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
-| Invariants | 284 (last: 0fn) |
-| Test suites | 64 |
-| Assertions | **4,487**, 0 failing, last run 2026-09-28 |
-| Decision records | 107 |
+| Invariants | 285 (last: 0fn) |
+| Test suites | 65 |
+| Assertions | **4,520**, 0 failing, last run 2026-09-28 |
+| Decision records | 108 |
 
 ### Feature flags in force
 
@@ -1165,7 +1165,7 @@ screen while the artist plays. **An unknown role falls back to `crew`**, so a ro
 the table has never heard of can never be an escalation. Venues have the same three, named
 owner / manager / crew.
 
-**Each seat, each tab** (decision 0105). Those roles are now starting points. The owner sets every Studio tab for each band mate or crew seat to Hidden, View or Edit: Setlist, Gigs, Money, Merch, Diary, Messages, Profile, Settings and Plans. That is what "a stint of shows with some guys" needs: the players can see and work the setlist on stage without read/write on the whole account. The Setlist is never hidden, running the show belongs to every seat, and Plans is never more than View. Money, the plan and the account stay the owner's whatever a seat is given. The server refuses what a seat cannot do, and the Studio does not draw it.
+**Each seat, each tab** (decision 0105). Those roles are now starting points. The owner sets every Studio tab for each band mate or crew seat to Hidden, View or Edit: Setlist, Gigs, Money, Merch, Diary, Messages, Profile, Settings and Plans. That is what "a stint of shows with some guys" needs: the players can see and work the setlist on stage without read/write on the whole account. The Setlist is never hidden, running the show belongs to every seat, and Plans is never more than View. Money, the plan and the account stay the owner's whatever a seat is given. The server refuses what a seat cannot do, and the Studio does not draw it. Push alerts follow the same tabs: a seat's phone hears an order only if it can see Merch, a message only if it can see Messages, and every seat hears the requests — songs, moods and birthday shout-outs (decision 0114).
 
 **Sessions.** Every token carries a session id, so one phone can be signed out without
 signing out the band. Revocation lives on the registry row the verifier is already reading
@@ -1258,8 +1258,7 @@ trailing blanks are dropped now.
 never stored raw and never used directly as a frame source.
 
 **Push alerts** were written from the specification by hand with no new dependency and
-checked against the specification's own published test vector. **The keys are not set on
-the server, so they cannot send yet**, and the Studio says so.
+checked against the specification's own published test vector. The keys (`VAPID_*`) have been set in production since 2026-09-15 (PER-004; the three names read back 2026-09-28); no real push to a phone has been checked since. **Every alert names who hears it** (decision 0114): the seats that can see its tab (an order is Merch, a message is Messages), the owner alone (the founder's alerts), or every seat (a request: a song, a mood, a birthday shout-out). An alert that names nobody reaches nobody. Each device belongs to the address and sign-in that switched it on, eight per address, and a sign-out ends that phone's alerts.
 
 **Installable.** Three separate manifests (audience, Studio, venue) so each surface opens
 where it should. The service worker **never caches anything under `/api`** — a cached vote
@@ -1528,7 +1527,7 @@ records, never the index.**
   uploads).
 - **No off-switch for scheduled starts per gig.** A gig on the calendar starts its show and
   the artist can end it; a per-gig *"don't start by itself"* is the obvious next knob.
-- **Push alerts cannot send** — `VAPID_*` are not set on the server.
+- **No real push has been checked.** `VAPID_*` are set in production (2026-09-15, PER-004), but no phone has been seen to receive one since.
 - **Spotify playlist import cannot run** — `SPOTIFY_CLIENT_ID` / `_SECRET` are not set. The
   button is offered and answers an honest 503. **This is the one place the artist is shown a
   control that leads to a message rather than a result.**
