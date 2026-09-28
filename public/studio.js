@@ -927,6 +927,13 @@ function shrinkToDataUrl(file,maxW,q){
   });
 }
 
+/* THE FOUNDER'S TOOLS take the founding page's OWNER seat, not just the page (0099,
+   0100). PLAN.owner is isPlatformOwner — which page — and keeps that meaning for the
+   plan-lock bypass in has() and canHide(). A band mate or the sound engineer signed in
+   to the founding page is on that page too, and the server refuses them every card
+   below; drawn anyway, each read the refusal as "None yet." or a spinner. */
+const founder=()=>!!(PLAN&&PLAN.owner&&(PLAN.role||'owner')==='owner');
+
 /* ---------- the flag switches ----------
    Owner only. A flag with no switch can only be flipped with hand-made HTTP, which
    makes "run a gig each way and pick one" a thing only its author can do. */
@@ -937,7 +944,7 @@ async function loadFlags(){
   if(D) render();
 }
 function flagCard(){
-  if(!PLAN||!PLAN.owner) return '';
+  if(!founder()) return '';
   if(FLAGS_D===null){ loadFlags(); return ''; }
   if(!FLAGS_D.length) return '';
   return `<div class="sec"><span class="kick">Trying things out</span></div>
@@ -1162,7 +1169,7 @@ async function loadSheet(){
   if(D) render();
 }
 function sheetCard(){
-  if(!PLAN||!PLAN.owner) return '';
+  if(!founder()) return '';
   if(SHEET===null){ loadSheet(); return ''; }
   const S=SHEET;
   const when=S.lastRunAt?dstamp(S.lastRunAt):'never';
@@ -1204,7 +1211,7 @@ async function loadIdQueue(){
   if(D) render();
 }
 function idQueueCard(){
-  if(!PLAN||!PLAN.owner) return '';
+  if(!founder()) return '';
   if(IDQ===null){ loadIdQueue(); return ''; }
   if(!IDQ.length) return '';
   return `<div class="sec"><span class="kick">Waiting for you \u00b7 ${IDQ.length}</span></div>
@@ -1258,6 +1265,7 @@ const foldMore=(rows,k)=>{ const n=(rows||[]).length, at=foldN(k); if(n<=at) ret
 /* What fans reported through "Something wrong?", each with the server's own errors
    from the three hours before it. Fetched on tap, never on the poll. */
 function bugCard(){
+  if(!founder()) return '';
   return `<div class="sec"><span class="kick">If something broke</span></div>
     <div class="list"><div class="row" onclick="loadBugs()" style="cursor:pointer"><div class="m">
       <div class="t">Bug reports from the room</div>
@@ -2507,7 +2515,7 @@ function render(){
       <div class="field"><label>Got a code?</label><div style="display:flex;gap:8px">
         <input class="inp" id="promoIn" maxlength="24" placeholder="FRIENDS100" autocapitalize="characters" style="flex:1">
         <button class="act pri" style="min-width:64px" onclick="redeemPromo()">Apply</button></div></div>
-      ${PLAN.owner?`
+      ${founder()?`
         <div class="sec"><span class="kick">Codes you hand out</span></div>
         <div class="list">${(PROMOS&&PROMOS.codes||[]).map(c=>`<div class="row ${c.revoked?'off':''}">
           <div class="m"><div class="t mono">${esc(c.code)}</div>
@@ -3977,7 +3985,7 @@ async function msgBlock(id){
 async function loadLedger(force){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'ledger',months:12,force:!!force}),quiet:true});
   if(d){ LEDGER=d; if(TAB==='money'&&D)render(); }
-  if(PLAN&&PLAN.owner&&!BOOKS) loadBooks(force);
+  if(founder()&&!BOOKS) loadBooks(force);
 }
 async function loadBooks(force){
   const d=await api('/admin',{method:'POST',body:JSON.stringify({action:'books',months:12,force:!!force}),quiet:true});
@@ -4106,7 +4114,7 @@ async function downloadLedger(){
    as the page hiding it (admin.mjs OWNER_ONLY + the founder check) — INVARIANT 15k:
    a limit that only the page enforces is not a limit. */
 function booksCard(){
-  if(!PLAN||!PLAN.owner) return '';
+  if(!founder()) return '';
   const B=BOOKS;
   if(!B) return `<div class="sec"><span class="kick">MySet’s books</span></div>
     <div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Reading the balance…</div></div>`;
@@ -4752,7 +4760,7 @@ async function loadPlan(force){
      series, NOT quiet — four round-trips before Perry's own Live tab was allowed to
      appear, with the busy veil painted over the boot screen for the last two. Now
      they load behind the page and repaint Settings if that is where he is. */
-  if(PLAN&&PLAN.owner&&(!PROMOS||!VENUES)) (async()=>{
+  if(founder()&&(!PROMOS||!VENUES)) (async()=>{
     const q=(action)=>api('/admin',{method:'POST',body:JSON.stringify({action}),quiet:true});
     const [pr,ve]=await Promise.all([PROMOS?null:q('promoList'),VENUES?null:q('venueList')]);
     if(pr)PROMOS=pr; if(ve)VENUES=ve;
