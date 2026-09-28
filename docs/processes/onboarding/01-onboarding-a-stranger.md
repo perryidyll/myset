@@ -8,10 +8,10 @@ sources:
   - MYSET-MASTER-OVERVIEW.md §3.3 (Setlist import, Settings QR codes), §4.2 (onboarding copy), §5.5
   - GIG-NIGHT.md; STRIPE-CONNECT.md §4 (the two founder decisions)
   - public/about.html, studio.html
-  - docs/decisions/0023, 0028
+  - docs/decisions/0023, 0028, 0070
 status: loaded
-loaded: 2026-09-12 (create_process; read back through list_steps)
-verified: code read 2026-09-12 for the pieces that exist (auth.mjs claim; admin.mjs importSongs/spotifyPeek/starterSetlist; QR in Settings). The end-to-end journey has never been run by anyone but the founder — GATE-002 in_progress
+loaded: 2026-09-12 (create_process; read back through list_steps); 2026-09-28 (update_workflow on o02 — step 370013 — and on the section's notes: the sender is set, PER-004; changelog 1661 linked to o02; read back through list_steps and list_sections)
+verified: code read 2026-09-12 for the pieces that exist (auth.mjs claim; admin.mjs importSongs/spotifyPeek/starterSetlist; QR in Settings). The end-to-end journey has never been run by anyone but the founder — GATE-002 in_progress. o02 re-read 2026-09-28 (studio.js gate(); the ledger's PER-004 row)
 ---
 
 # Onboarding a stranger (sign-up → Connect → first gig, no help)
@@ -23,7 +23,7 @@ verified: code read 2026-09-12 for the pieces that exist (auth.mjs claim; admin.
 | id | step | type | executor | role (RACI) | tool | notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | o01 | Land on the sales page | webpage | Person | Artist R | Netlify | `/about` — the landing page; the 2026-09-06 landing-page audit found 69 upheld contradictions with the app, six critical, all in the plan cards, since corrected (decisions 0004, 0005). The Founding 50 offer lives in the marketing strategy, not yet on the page. **Draft: no stranger has arrived this way yet.** `src: docs/landing/; MySet_Master_Marketing_Strategy_v3.md §5.2` |
-| o02 | Sign up | form | Person | Artist R · MySet server R | Resend | `/signup` → email + code → claim a name and page address. → *Artist lifecycle → Signing up and signing in*. **Live.** But the code arrives from a shared sender until `AUTH_FROM` is set (**P4-002 / PER-004, Draft, the founder's**): `RESEND_API_KEY` exists and the domain has a DKIM record; the sender is absent. A stranger will not trust sign-in mail from a shared address. `src: auth.mjs claim; ledger PER-004; decision 0023` |
+| o02 | Sign up | form | Person | Artist R · MySet server R | Resend | *Create account* on the sign-in screen (`/studio`, or `/signup`, which serves the same page) → email → a six-digit code → a name and page address → a password, offered once and skippable. → *Artist lifecycle → Signing up and signing in*. **Live.** The code comes from `hello@myset.vip` — `AUTH_FROM` on the verified domain, set 2026-09-10 (PER-004, so P4-002 is done; → *Mail, maps and the name* d02). `src: auth.mjs start/verify/claim; studio.js gate(); ledger PER-004; decisions 0023, 0070` |
 | o03 | Read the first-Settings notice | notification | Automation | MySet server R · Artist I | Netlify | One account-scoped notice on the first Settings visit explaining that *Find artists* lists only verified profiles and what verification takes; dismissing it is remembered on that device. **Live.** `src: decision 0028` |
 | o04 | Build a setlist | form | Person | Artist R | Netlify | Studio → Setlist: add a song; **import** by pasting a list, uploading a CSV, or peeking at a Spotify playlist (`spotifyPeek`); or take the starter setlist (`starterSetlist`). Genre tagging fills only songs with none. Library cap per plan in §2.1 (it never deletes anything; the cap is what is live to the audience). **Live.** `src: admin.mjs importSongs, spotifyPeek, starterSetlist; overview §3.3 Setlist` |
 | o05 | Connect Stripe | payment | Person | Artist R · MySet server R | Stripe | Studio → Money → Getting paid: country (cannot be changed afterwards), *Start with Stripe*, Express onboarding, `charges_enabled` before any button appears. The Studio says the platform fee is not the whole cost of taking a card. **Live** (the founder did it; nobody else has). → *Money → Stripe Connect Onboarding & Payments*. Two founder decisions still open in `STRIPE-CONNECT.md §4`: how much hand-holding artists get, and who pays the card fee (answered for venues by the split). `src: STRIPE-CONNECT.md; overview §4.2` |
@@ -41,4 +41,4 @@ o01 → o02 → o03 → o04 → o05 → o06 → o07 → o08 → o09; o07 → o10
 
 ## What has to be true before this section is `Live`
 
-P4-002 (`AUTH_FROM`), P4-004 (VAPID keys), P4-003 (the four rows), and one stranger who has walked o02 → o09 with money landing in their own Stripe account. `src: IMPLEMENTATION_PLAN.md § Dependencies`
+P4-002 (`AUTH_FROM`) — done 2026-09-10 (PER-004); P4-004 (VAPID keys), P4-003 (the four rows), and one stranger who has walked o02 → o09 with money landing in their own Stripe account. `src: IMPLEMENTATION_PLAN.md § Dependencies`
