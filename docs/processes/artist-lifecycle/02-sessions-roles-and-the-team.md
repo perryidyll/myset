@@ -10,7 +10,7 @@ sources:
   - INVARIANTS.md 0ci (one global read per poll), 0bu, 0gp, 0gq
 status: loaded
 loaded: 2026-09-12 (create_process; read back through list_steps)
-verified: code read 2026-09-12 (_session.mjs CAN table; auth.mjs guarded actions); t08 re-read 2026-09-28 in the working tree (branch feat/sample-profiles: Your page link on top, old names nobody else's — test/accounts.mjs), not deployed; live as c940a6e (PR #126, verified by content on myset.vip 2026-09-28); t01, t03–t05, t07, t11, t12 re-read 2026-09-28 in the working tree (branch fix/seat-signout-scope, decisions 0104 and 0105 — test/accounts.mjs, test/seatstudio.mjs), not yet in Puzzle
+verified: code read 2026-09-12 (_session.mjs CAN table; auth.mjs guarded actions); t08 re-read 2026-09-28 in the working tree (branch feat/sample-profiles: Your page link on top, old names nobody else's — test/accounts.mjs), not deployed; live as c940a6e (PR #126, verified by content on myset.vip 2026-09-28); t01, t03–t05, t07, t11, t12 (decisions 0104 and 0105 — test/accounts.mjs, test/seatstudio.mjs) live as 52047cb (PR #128, verified by content on myset.vip 2026-09-28) and reloaded into Puzzle the same day: t01 369952, t03 369954, t04 369955, t05 369956, t07 369958 updated; new t11 = 389538, t12 = 389539; arrows 435592 (t11→t12), 435593 (t01→t12), 435594 (t06→t11), 435595 (t11→t09); changelog 2434 (0104), 2435 (0105); attribute 46139 renamed and linked to t01, t11, t12
 ---
 
 # Sessions, roles and the team

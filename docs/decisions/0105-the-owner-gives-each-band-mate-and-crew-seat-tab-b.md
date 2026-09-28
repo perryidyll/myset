@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: [0gq]
-commits: []
+commits: [52047cb]
 tests: [test/accounts.mjs, test/seatstudio.mjs, test/structure.mjs, test/copy.mjs, test/tipdecks.mjs]
 files: [netlify/functions/_session.mjs, netlify/functions/_auth.mjs, netlify/functions/_lib.mjs, netlify/functions/admin.mjs, netlify/functions/auth.mjs, netlify/functions/revenue.mjs, netlify/functions/history.mjs, netlify/functions/stage.mjs, public/studio.js, public/studio.html, tools/mock.mjs]
 ---
