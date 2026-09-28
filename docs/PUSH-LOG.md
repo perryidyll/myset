@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 15:44 — df0bd1f — quizzical-haslett-6f8f8b@docs/0115-hq-is-crm (1 files since origin/main)
+**tl;dr:** Docs only: decision 0115 now says HQ lives at /crm (it said /hq, which is nobody's since afeffa0)
+**Other sessions:** No code change. Nothing else on main pointed HQ at /hq.
+
 ### 2026-09-28 08:43 — e69a1bf — myset@claude/myset-encryption-security-460mph (49 files since origin/main)
 **tl;dr:** Slice A merged with main a fourth time (#139, docs only); structure test green, the full suite ran green on the tree one docs commit behind
 **Other sessions:** Merging #136 now.

@@ -52,7 +52,7 @@ A. The founder said yes to each item on 2026-09-28: the eight leftovers, removin
 ## What this makes harder
 
 - **A feature is built with both halves or not at all.** A server action written ahead of its button fails the build. It waits on a branch, which is the point.
-- **The check is textual.** A common word (`status`, `venue`, `city`) passes on any mention in a page. It would not have caught `city`. A founder tool with no page cannot live in these endpoints; if one is ever needed, it gets a page (the founder's console is `/factory`, HQ is `/hq`).
+- **The check is textual.** A common word (`status`, `venue`, `city`) passes on any mention in a page. It would not have caught `city`. A founder tool with no page cannot live in these endpoints; if one is ever needed, it gets a page (the founder's console is `/factory`, HQ is `/crm`).
 - **Setting a venue's plan by hand** is gone. A comp for a venue goes through a promo code, or the tool comes back with a page.
 
 ## What would reverse it
