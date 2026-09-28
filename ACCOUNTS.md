@@ -359,16 +359,18 @@ password. `test/password.mjs` holds all of it.
 ## 12. Sample pages and the claim (2026-09-28, decision 0101)
 
 The factory builds a page for an artist or a venue who never asked for one, and sends
-it as `myset.vip/<slug>#k=<key>` (`/v/<slug>#k=` for a venue). Until it is claimed:
+it as `myset.vip/<slug>#sample-profile` (`/v/<slug>#sample-profile` for a venue; a name
+somebody already has gets a word after it, `-music` or `-live`, never a number). Until
+it is claimed:
 
 | | |
 |---|---|
 | **Not on the list** | The account's data lives under its own keys like any account's, but it is registered in `samplereg`, not in `artists` / `venues` — so no public door, directory, sheet or metric can find it, and the registry every phone reads never grows by one. |
-| **The key** | An HMAC of the owner and a counter, twelve characters, never stored. After the `#`, so it never reaches a server log or a link-preview bot; the page keeps it on the phone and takes it off the address. A wrong key answers like an unknown page. It dies at the claim. |
-| **Looking, not touching** | The Studio opens on the key under the role `sample` (§6.3): its tabs draw, a save opens the claim sheet. Only `admin.mjs`, `stage.mjs` and `venueadmin.mjs` accept the key; every other door answers 401. |
-| **The claim** | The door every account uses — email, six-digit code, `verify`'s ticket — then `claimSample` (`auth.mjs` / `venueauth.mjs`) with the key and a password, in one sheet. One registry write adds the row on the free plan (Hobbyist, `src: 'sample'`) and the email as owner; the password is set; a session opens; the first-run picks up at the songs. An inbox that already has a page is told so and the founder is asked to merge. The founder can undo a claim for fourteen days (`undoClaim`), from the console's *Claimed* list. |
-| **Remove** | One tap on the page: everything erased at once, and the act's identifiers kept as hashes so the factory never builds them again. |
-| **The clock** | Thirty days to claim, then the page comes down: a private snapshot is kept one hundred and eighty days for a second campaign (`reviveSample`, a new key and thirty more days), then erased. The page's own note says so. |
+| **The label, not a key** | `#sample-profile` is the same on every page — the founder's call on 2026-09-28, because twelve random characters read as spam. So it is NOT a secret: the address alone opens the page and the address alone can claim it. The guard is the founder's push on every claim and the fourteen-day undo. The bare address, without the label, is the ordinary "no such page". A wrong label answers like an unknown page. |
+| **Looking, not touching** | The Studio opens on the label under the role `sample` (§6.3): its tabs draw, a save opens the claim sheet. Only `admin.mjs`, `stage.mjs` and `venueadmin.mjs` accept it; every other door answers 401. |
+| **The claim** | The door every account uses — email, six-digit code, `verify`'s ticket — then `claimSample` (`auth.mjs` / `venueauth.mjs`) with the address and a password, in one sheet. One registry write adds the row on the free plan (Hobbyist, `src: 'sample'`) and the email as owner; the password is set; a session opens; the first-run picks up at the songs. An inbox that already has a page is told so and the founder is asked to merge. The founder can undo a claim for fourteen days (`undoClaim`), from the console's *Claimed* list. |
+| **Saying no** | Nothing to tap: every message and the page's own note say "Don't want it? Let us know and we'll delete this preview forever – no harm, no foul!", and the founder's **Delete forever** on the console erases the page (or the copy kept after it came down) at once and keeps the act's identifiers as hashes so the factory never builds them again. The public sample door erases nothing — it has no secret to check. |
+| **The clock** | Thirty days to claim, then the page comes down: a private snapshot is kept one hundred and eighty days for a second campaign (`reviveSample`: the same link while the address is free, and thirty more days), then erased. The page's own note says so. |
 
 `test/samples.mjs` holds all of it.
 

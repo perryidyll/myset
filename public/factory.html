@@ -553,7 +553,7 @@ function renderFunnel(){
         `<span class="cx" style="grid-column:${2*i+2}/span 2;--w:${conv(i+1)}%"><i></i><em>${v[i]?conv(i+1)+'%':'–'}</em></span>`).join('')}</div>
       <div class="fl">${FUN.map(([,w])=>`<span>${w}</span>`).join('')}</div></div>
     <ol class="sr">${FUN.map(([,w],i)=>`<li>${w}: ${v[i]}${i&&v[i-1]?`, ${conv(i)}% of ${FUN[i-1][1].toLowerCase()}`:''}</li>`).join('')}</ol>
-    <p class="fq">${[['claimStart','Started a claim'],['removed','Removed'],['expired','Expired'],['revived','Revived']].map(([k,w])=>`${w} <b>${Math.max(0,Math.round(+st[k]||0))}</b>`).join(' · ')}</p>`;
+    <p class="fq">${[['claimStart','Started a claim'],['removed','Deleted forever'],['expired','Expired'],['revived','Revived']].map(([k,w])=>`${w} <b>${Math.max(0,Math.round(+st[k]||0))}</b>`).join(' · ')}</p>`;
   const el=$('#funnel'); if(!paint('funnel',html))return;
   if(FIRST&&!REDUCE){ el.classList.add('pre'); el.querySelectorAll('.fn b').forEach(b=>countUp(b,+b.dataset.n));
     const go=()=>el.classList.remove('pre'); requestAnimationFrame(()=>requestAnimationFrame(go)); setTimeout(go,150); }

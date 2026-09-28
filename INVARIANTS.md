@@ -528,17 +528,22 @@ If you are about to violate one, stop and say so rather than working around it.
     (Decision 0101.) A page the factory builds is registered in `samplereg`, never in
     `artists` or `venues`, until its owner claims it — so every public door refuses it by
     construction, no registry walk can count it, and the registry every phone polls never
-    grows by a sample. It opens only through `sample.mjs` with the key from its link (an
-    HMAC of the owner and `krev`, never stored); a wrong key answers exactly like an unknown
-    page. Its Studio is reached only by the two callers that pass `{ sample: true }` to
+    grows by a sample. It opens only through `sample.mjs`, for its address asked with the
+    label its link ends in (`#sample-profile` — since the founder's second round, 2026-09-28,
+    the same on every page and NOT a secret: the address alone opens and claims it, and the
+    founder's push per claim plus the fourteen-day undo are the guard); a wrong label answers
+    exactly like an unknown page, and the bare address is the ordinary "no such page". A door
+    with no secret erases nothing: `sample.mjs` has no `remove`, and only the founder's
+    Delete forever (`optOut`) erases and suppresses. Its Studio is reached only by the two callers that pass `{ sample: true }` to
     `requireArtist` / `requireVenue` (`admin.mjs`, `stage.mjs`, `venueadmin.mjs`), under the
     role `sample`, which `SAMPLE_OK` — an allowlist of reads, the `LEAVING_OK` shape —
     answers and which every other action answers `claim: true`; `CAN.sample` is an empty set
     so it can never fall back to `crew`. The phone's `SAMPLE_READS` equals the server's list
     (test/tipdecks.mjs). A sample's photos live under an unguessable `s…` name, which
     `keysFor`/`keysForVenue` find by it. Names a sample holds are skipped by `pickSlug`,
-    `pickVenueSlug` and both `setSlug`s (`sampleSlugs`). test/samples.mjs walks every public
-    door with and without the key, every write, the claim, Remove, the clock and the venue path.
+    `pickVenueSlug` and both `setSlug`s (`sampleSlugs`); a name somebody has gets a word
+    (`-music`, `-live`…), never a number. test/samples.mjs walks every public door, the
+    label, every write, the claim, Delete forever, the clock and the venue path.
 
 0gn. **The practice round never writes.** (Decision 0102.) `act()`, `askDo()` and
     `load()` in `studio.js` hand over to it before anything else while it runs; its code
@@ -1960,8 +1965,13 @@ If you are about to violate one, stop and say so rather than working around it.
     on QR codes stuck to bar tables. Deleting holds it for the whole window (freeing
     it would make Undo a promise the system cannot keep, and would land a room full
     of people on a stranger's setlist); renaming keeps the old one resolving through
-    `oldSlug`. Neither is claimable while it is there — `pickSlug` and `setSlug`
-    both refuse a name already in `bySlug`.
+    `oldSlug` — for a venue too since decision 0106 (a venue rename used to delete the
+    old address, and every code the bar had printed died with it). Neither is
+    claimable while it is there: `pickSlug`, `pickVenueSlug`, the sample picker and
+    both `setSlug` doors refuse a name in `bySlug` OR in another page's `oldSlug`
+    (until 0106 only `bySlug` was checked, so a second page could take a name that
+    tables still carried); the page that had it may take it back. test/accounts.mjs
+    "AN OLD ADDRESS IS NOBODY ELSE'S" and "A VENUE'S OLD ADDRESS KEEPS ANSWERING TOO".
 
 0dj. **Last night's show must not swallow tonight.** `autoTick`'s start branch
     answered a flat "already live", so once a show failed to end itself every

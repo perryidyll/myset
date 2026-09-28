@@ -2153,6 +2153,7 @@ function todayCard(s){
    meta.signAt): the first-gig card's second tick, on every device, for good. */
 const signUrl=print=>{const slug=(TEAM&&TEAM.slug)||''; return slug?`/sign.html?a=${encodeURIComponent(slug)}${print?'&print=1':''}`:'';};
 function printSign(){
+  if(SAMPLE){ openClaim(); return; }     // a sample has no public code yet: claiming is what makes one
   const u=signUrl(true);
   if(!u){ toast('Fetching your page address…'); loadTeam(true).then(()=>{ if(TEAM&&TEAM.slug) printSign(); else toast('Could not load your page address'); }); return; }
   window.open(u,'_blank');
@@ -2162,6 +2163,7 @@ function printSign(){
 /* "Text me the link", without a text: the phone's own share sheet — Messages,
    AirDrop, mail — or the clipboard where there is no sheet. */
 async function sendSign(){
+  if(SAMPLE){ openClaim(); return; }
   const u=signUrl(false);
   if(!u){ toast('Could not load your page address'); return; }
   const share={title:'My MySet sign',text:'Print this at the venue',url:location.origin+u};

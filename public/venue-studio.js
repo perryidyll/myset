@@ -1294,7 +1294,9 @@ function render(){
     ${V.slug?`<div class="wrap" style="margin-top:10px">
       <a class="big alt" href="/v/${esc(V.slug)}">Open myset.vip/v/${esc(V.slug)} ↗</a></div>`:''}
 
-    <div class="sec"><span class="kick">Verification</span></div>
+    ${/* a sample verifies nothing before the claim (verifyBlock says so on the Page tab),
+         so this section would send its button to a checklist that is not there */''}
+    ${SAMPLE?'':`<div class="sec"><span class="kick">Verification</span></div>
     ${V.verified
       ? `<div class="list"><div class="row"><div class="m"><div class="t">Verified ✓</div>
           <div class="s">${V.verifiedVia==='website+artists'?'Your website checks out and the artists who play here confirmed it'
@@ -1302,7 +1304,7 @@ function render(){
             :'Your website, and the artists who play here'}</div></div>
           <span class="pill ok">✓</span></div></div>`
       : `<p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">Your page says <b>Unverified listing</b> for now. Four things are needed and they’re all needed — the checklist, with what’s missing, is at the top of the <b>Page</b> tab.</p>
-         <div class="wrap"><button class="big alt" onclick="setTab('page')">Show me the checklist</button></div>`}
+         <div class="wrap"><button class="big alt" onclick="setTab('page')">Show me the checklist</button></div>`}`}
 
     <div class="sec"><span class="kick">Codes to print</span></div>
     <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 10px">On tables, on the bar, by the door. Tap one to bring it up full size.</p>

@@ -31,4 +31,22 @@
 
 **Not checked:** anything on production (nothing deployed); a real factory build (no Claude or YouTube key yet); Instagram's in-app browser keeping the `#`; push delivery to the founder's phone; a physical iPhone.
 
-**Shipped:** nothing. Worktree `.claude/worktrees/sample-profiles`, branch `feat/sample-profiles`, uncommitted.
+**Shipped (first round):** nothing — the founder saw the report first.
+
+## The second round (the same day, after the report)
+
+**Asked (the founder):** the pre-show checklist should ask for one big QR code AND 25–50 small ones for the tables and the bar, on the real Studio too; the sample link must not end in "some long string of numbers" but in `#sample-profile`, with "-music", "-live" or similar after a repeated name; is there a field for choosing one's own page address (add one to Settings); no "They said stop" button — "there can simply be instructions in the outreach message that say don't want it? let us know and we'll delete this preview forever – no harm no foul!"; then ship it live; then the two keys in Chrome; and what the sign-off and the postal address are.
+
+**Built:**
+- **The link** (decision `0101` amended, INVARIANT 0gm): `myset.vip/<slug>#sample-profile`, `?sample-profile` too; the same label on every page, so not a secret — the address alone opens and claims a sample, and the guard is the founder's push per claim plus the 14-day undo (said plainly in the record, with "what would reverse it"). The HMAC key, `krev` and the alphabet are gone; the plumbing still calls it the key, so a secret can come back without new doors. The page keeps the label on the address; a claimed page reached with it goes to its bare address (the old `location.reload()` would have looped). A taken name gets a word (`-music`, `-live`, `-band`, `-official`; venues `-live`, `-music`, `-venue`, `-official`) inside 32 characters; a revive keeps its address while free; an undone claim keeps its link.
+- **No Remove.** The page's note and all four drafts say "Don't want it? Let us know and we'll delete this preview forever – no harm, no foul!"; the sample door lost `remove` (a door without a secret must not erase anything); the console's "They said stop" is **Delete forever**, the funnel says "Deleted forever".
+- **Table cards** (decision `0107`, UX-061): `/sign.html` prints the big sign and then None · 24 · 36 · 48 cards, twelve to a page; both pre-show checklists, the first-run's last step, the big-code sheet (+ Print), Settings and *Earn more tonight* say so; a sample's Studio opens the claim sheet instead of a sign it cannot have.
+- **Your page link** — the field existed in both Studios (`setSlug`), sixteen sections down the artist's Settings; now at the top of both.
+- **Old addresses** (decision `0106`, ACC-007, INVARIANT 0di): a venue rename deleted its old address (every printed venue code died); venues keep `oldSlug` now. And an old address was claimable by another page — `setSlug` checked only `bySlug` — so one artist's printed codes could open another's page; refused now, for both. The test fails with the fix taken out.
+- A venue sample's Settings no longer shows Verification (its button led to a checklist samples do not have).
+
+**Merged main in twice** (0099 and 0100 went live meanwhile; the invite-list fix ad9fc28); the coordination board at `~/Docs/Project Handoffs/MYSET-SESSIONS-BOARD.md` holds the numbers (this branch: 0106, 0107, ACC-007, UX-061).
+
+**Verified:** the whole suite exit 0; `test/samples.mjs` 119 ✓, `test/accounts.mjs` 89 ✓, `test/tipdecks.mjs` 93 ✓, `test/factory.mjs` 146 ✓; walked on `tools/localhost.mjs` at 375 px: the sample page from `#sample-profile` (label kept, the new note, no button), the bare address "No page here", `/thetidelines-music#sample-profile`, the venue's, the console's DM draft and Review sheet, the sign page's cards, the print as PDF (4 pages: the sign + 3 × 12, pages 1–2 rendered), both Studios' Settings, the first-gig card in a sample's Studio.
+
+**Not checked:** a real printer or an iPhone's print sheet; Instagram's in-app browser keeping the `#` (`?sample-profile` is the fallback); production until the deploy below.
