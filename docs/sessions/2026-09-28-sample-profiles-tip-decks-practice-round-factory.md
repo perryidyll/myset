@@ -140,5 +140,7 @@ Found on the live site afterwards: Netlify serves `/<name>` from `<name>.html` b
   - edits saved;
   - the bars grew in.
 
-**Puzzle:** a changelog entry for `0117` (see below once it is written); no process step changed.
+**Shipped:** PR #151 merged as `84dda56`; its deploy preview served the new page first. Verified by content on myset.vip: `/crm` carries the library (`data-act="library"`), and `/api/hq` answers 401 to a stranger's `savelib`. Not checked live: the library behind the passcode.
+
+**Puzzle:** changelog 2487 = `0117`, completed, linked to *Send the first message* (389731) and *Follow up* (389734). No process step changed.
 
