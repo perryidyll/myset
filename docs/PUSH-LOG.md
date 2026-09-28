@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 15:07 — abfb548 — quizzical-haslett-6f8f8b@docs/no-action-without-sender-live (4 files since origin/main)
+**tl;dr:** Docs only: the genre ✕ and the dead-action sweep (decision 0115) are live as e043010 — the ledger, the record, the session note and o04 say so [skip ci]
+**Other sessions:** Puzzle: step o04 370015 and f03 370183 reloaded, section 42003's sources no longer list lyricsGet; changelog 2441 = 0115.
+
 ### 2026-09-28 15:03 — 2882a95 — quizzical-haslett-6f8f8b@chore/dead-admin-actions (30 files since origin/main)
 **tl;dr:** Your own genres in the Studio's song sheet now have a ✕ that deletes the genre from every song; ten server actions no page ever sent are gone (nothing else visible changes)
 **Other sessions:** Decision 0115, INVARIANT 0hl, ledger UX-063. test/structure.mjs now FAILS when admin.mjs (+_messages, _diary) or venueadmin.mjs branches on an action name that no public/ page quotes outside a Set literal — build both halves of a feature together. Removed: showTime (field gone from stage/_board/_history/_lib), city action (show.city stays), askList/listAll/learnList (read the stage poll), lyricsGet (songGet), chartFlags action, verifyPreview, spotifyPeek (no SPOTIFY_* needed), venuePlan (venues pay via their own checkout). Branches adding actions (HQ, security) must add the sender too.
