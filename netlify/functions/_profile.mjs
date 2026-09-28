@@ -226,14 +226,14 @@ export function normProfile(p) {
   out.management = clean(out.management, 120);
   out.managementUrl = safeLink('website', out.managementUrl);
   out.bio = String(out.bio || '').replace(/\r/g, '').slice(0, 700);    // newlines kept
-  out.photo = String(out.photo || '').slice(0, 300);
-  out.avatar = String(out.avatar || '').slice(0, 300);
+  out.photo = imgUrl(out.photo);
+  out.avatar = imgUrl(out.avatar);
   /* Positional, for the same reason as the venue's (see normVenue): `.filter`
      compacted the array, so clearing photo 1 slid photo 2 into its slot. Only
      trailing blanks are dropped, so the array stays short when it can. */
   out.photos = (Array.isArray(out.photos) ? out.photos : [])
     .slice(0, MAX_PHOTOS)
-    .map((x) => String(x || '').slice(0, 300));
+    .map(imgUrl);
   while (out.photos.length && !out.photos[out.photos.length - 1]) out.photos.pop();
   const L = out.links || {};
   out.links = {
@@ -269,6 +269,16 @@ export function normProfile(p) {
   out.tour = normTour(out.tour);
   return out;
 }
+/* A picture is an address this app can draw: one of its own /api/img files or an
+   https URL — never free text. The pages put these inside `style="background-image:
+   url('…')"`, where HTML escaping does not help (the browser decodes the entities
+   before the CSS parser reads the quote), so a profile saved straight at the API
+   with a crafted value could restyle the public page (found 2026-09-28, 0110). */
+export const imgUrl = (u) => {
+  const s = String(u || '').trim().slice(0, 300);
+  // a path on this site (an /api/img file, a picture under /img/), or an https address
+  return /^\/(?!\/)[A-Za-z0-9%&=._~/?-]*$/.test(s) || /^https:\/\/[^\s'"()\\<>]+$/.test(s) ? s : '';
+};
 /* The poster is only ever a file this app stored (a same-origin /api/img address),
    of a kind the page knows how to draw; the tickets link is any https address. */
 export const TOUR_KINDS = ['pdf', 'png', 'jpeg', 'webp'];

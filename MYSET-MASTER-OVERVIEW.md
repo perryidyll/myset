@@ -541,14 +541,15 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Venue Studio actions | 49 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
+| A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
-| Invariants | 284 (last: 0fn) |
+| Invariants | 288 (last: 0gw) |
 | Test suites | 64 |
-| Assertions | **4,487**, 0 failing, last run 2026-09-28 |
-| Decision records | 107 |
+| Assertions | **4,511**, 0 failing, last run 2026-09-28 |
+| Decision records | 108 |
 
 ### Feature flags in force
 

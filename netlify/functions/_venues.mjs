@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { casDoc, readDoc } from './_lib.mjs';
+import { casDoc, readDoc, own } from './_lib.mjs';
 import { authSecret, cleanSlug, normEmail } from './_auth.mjs';
 import { normPlace, mapLinks, safeMapUrl, clean } from './_maps.mjs';
 import { normMerch } from './_profile.mjs';
@@ -45,8 +45,9 @@ export const VRESERVED = new Set(['api', 'new', 'index', 'home', 'admin', 'studi
 export async function venueBySlug(slug) {
   const r = await readVenues();
   const want = cleanSlug(slug);
-  // a renamed page keeps answering at its old address (INVARIANT 0di)
-  const vid = r.bySlug[want] || ((r.oldSlug || {})[want] || {}).vid || null;
+  // a renamed page keeps answering at its old address (INVARIANT 0di); own
+  // properties only, for the reason publicArtist gives (0110)
+  const vid = own(r.bySlug, want) || (own(r.oldSlug, want) || {}).vid || null;
   /* A venue on its way out goes dark the day it asks, and is only erased thirty
      days later — so the public page has to stop answering now. See startDeletion
      in _account.mjs for why the data does not move. */

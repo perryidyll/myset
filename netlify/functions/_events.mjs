@@ -50,7 +50,7 @@ const FREQ = new Set(['weekly', 'biweekly', 'monthly', 'yearly']);
 
 export function normEvent(e) {
   const out = {
-    id: str(e.id, 24),
+    id: str(e.id, 24).replace(/[^a-zA-Z0-9_-]/g, ''),     // an id is never markup — see eventSave
     /* Only a VENUE's own events have a title — a quiz night, a DJ, the football.
        For an artist's gig the artist IS the title, so this stays empty. */
     title: str(e.title, 70),

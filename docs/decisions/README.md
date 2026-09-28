@@ -117,10 +117,11 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0105](0105-the-owner-gives-each-band-mate-and-crew-seat-tab-b.md) | The owner gives each band mate and crew seat, tab by tab, hidden, view or edit | 2026-09-28 | auth | decided | user-confirmed |
 | [0106](0106-a-renamed-page-keeps-its-old-address-and-no-other-page-can-take-it.md) | A renamed page, an artist's or a venue's, keeps answering at its old address, and no other page can take that address | 2026-09-28 | auth | decided | claude |
 | [0107](0107-the-pre-show-checklist-asks-for-a-big-sign-and-25-50-table-cards.md) | The pre-show checklist asks for one big sign and 25–50 small table cards, and the sign page prints both in one go | 2026-09-28 | ui | decided | perry |
+| [0110](0110-the-code-only-security-pass-a-name-is-never-a-key.md) | The code-only security pass — a name is never a key, an id is never markup, a pledge comes only from Stripe | 2026-09-28 | auth | decided | perry-confirmed |
 
 ## By area
 
-**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md) · [0099](0099-a-platform-tool-needs-the-founding-page-s-owner-se.md) · [0100](0100-the-founder-s-tools-need-the-founding-page-s-owner.md) · [0101](0101-a-sample-profile-is-a-real-account-kept-off-the-live-registry.md) · [0104](0104-a-seat-that-is-not-the-owner-signs-out-only-its-ow.md) · [0105](0105-the-owner-gives-each-band-mate-and-crew-seat-tab-b.md) · [0106](0106-a-renamed-page-keeps-its-old-address-and-no-other-page-can-take-it.md)
+**auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md) · [0099](0099-a-platform-tool-needs-the-founding-page-s-owner-se.md) · [0100](0100-the-founder-s-tools-need-the-founding-page-s-owner.md) · [0101](0101-a-sample-profile-is-a-real-account-kept-off-the-live-registry.md) · [0104](0104-a-seat-that-is-not-the-owner-signs-out-only-its-ow.md) · [0105](0105-the-owner-gives-each-band-mate-and-crew-seat-tab-b.md) · [0106](0106-a-renamed-page-keeps-its-old-address-and-no-other-page-can-take-it.md) · [0110](0110-the-code-only-security-pass-a-name-is-never-a-key.md)
 
 **docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) · [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md)
 

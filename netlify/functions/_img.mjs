@@ -104,6 +104,15 @@ export async function getImage(aid, slot) {
 
 export async function dropImage(aid, slot) {
   try { await store().delete(KEY(aid, slot)); } catch {}
+  /* An ID photo is gone everywhere it could be: the nightly mirror skips the slot
+     now (_mirror.mjs SKIP), and a copy it made before that is taken off R2 here,
+     best-effort — a failure is logged by r2Delete's caller chain, never thrown. */
+  if (slot === 'idcheck') {
+    try {
+      const [{ r2Enabled, r2Delete }, { PREFIX }] = await Promise.all([import('./_r2.mjs'), import('./_mirror.mjs')]);
+      if (r2Enabled()) await r2Delete(PREFIX + KEY(aid, slot));
+    } catch { /* the store copy is gone; the mirror copy is retried by hand if this ever fails */ }
+  }
 }
 
 /* A SAMPLE'S PHOTOS LIVE UNDER A NAME NOBODY CAN GUESS (decision 0101). /api/img

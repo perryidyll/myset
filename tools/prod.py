@@ -101,6 +101,12 @@ if __name__ == '__main__':
         for k in keys():
             print(k)
     elif cmd == 'get':
-        print(json.dumps(blob(sys.argv[2]), indent=1))
+        key = sys.argv[2]
+        # A key, a credential hash or an ID photo never crosses into a terminal or a
+        # chat window (INVARIANT 11b, decision 0110) — the report above says what it
+        # needs to about them without printing them.
+        if key == 'authsecret' or key.endswith('_idcheck') or key.startswith(('cred_', 'rec_', 'sess_', 'authc_', 'idqueue')):
+            sys.exit(f'refusing to print {key}: a signing key, a credential or an ID photo is never read out')
+        print(json.dumps(blob(key), indent=1))
     else:
         report()

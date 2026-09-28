@@ -12,7 +12,7 @@ import { readChart, saveChart, chartFlags, MAX_CHART } from './_chart.mjs';
 import { genresFor, MAP_SIZE } from './_genremap.mjs';
 import { readRequests, shapeRequests, resolveRequest, attachSong,
          completeSongRequests, declineRequestsForSong } from './_requests.mjs';
-import { readArtists, mutateArtists } from './_auth.mjs';
+import { readArtists, mutateArtists, artistById } from './_auth.mjs';
 import { sendPitch, shapeForArtist, readPitches } from './_pitch.mjs';
 import { addVouch, readVouches, artistPlaysAt, MIN_VOUCHES } from './_verify.mjs';
 import { readSubs, saveSub, dropSub, notify } from './_push.mjs';
@@ -549,7 +549,10 @@ async function handleEvents(aid, action, body) {
 
   if (action === 'eventSave') {
     const incoming = body.event || {};
-    const id = String(incoming.id || '').slice(0, 24) ||
+    /* The same alphabet every other client-named id keeps to. An id was the one
+       string that reached the Studio's own markup unfiltered (an onclick attribute,
+       studio.js), so a band mate could plant script the owner's browser ran (0110). */
+    const id = String(incoming.id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 24) ||
                'g' + Math.random().toString(36).slice(2, 10);   // outside the CAS
     let full = false;
     const ev = normEvent({ ...incoming, id });
@@ -2119,6 +2122,10 @@ const main = async (req) => {
      compares the playable set before and after. */
   const NEEDS_BEFORE = new Set(['play', 'playTop', 'freeCredits', 'replayCost']);
   const prevShow = NEEDS_BEFORE.has(action) ? await getShow(aid) : null;
+  /* setCode's deny-list refuses the page's own name, which is a registry read and
+     so is taken before the CAS. `show.slug` was never a field, so that refusal
+     silently never fired until 2026-09-28 (0110). */
+  const pageSlug = action === 'setCode' ? ((await artistById(aid)) || {}).slug || '' : '';
 
   let libChanged = false;
   /* The night this write belongs to, and the record as it was — the event log
@@ -2411,7 +2418,7 @@ const main = async (req) => {
            requireArtist), so it gets a real minimum and a deny-list — and the
            artist's own page name is refused, because that is the half of the
            credential anyone can already read. */
-        if (weakCode(code, show.slug)) {
+        if (weakCode(code, pageSlug)) {
           err = [`Pick at least ${MIN_CODE} characters, and not your page name`, 400];
           return false;
         }

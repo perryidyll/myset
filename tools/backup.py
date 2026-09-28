@@ -75,6 +75,21 @@ KEEP_DAYS = 90
 KEEP_MONTHLY_DAYS = 365
 
 
+# NEVER COPIED (decision 0110): the store-kept signing key, the ID photos, and the
+# documents only a live session needs. A backup is the most complete plaintext copy
+# of the store there is, kept for a year on a laptop and an SSD — so it carries
+# nothing that mints a session, and no passport. A restore without the key signs
+# everyone out once (they sign back in with a password or a code); a year of copies
+# each holding the key that mints any session is the worse trade.
+SKIP_KEYS = ('authsecret',)
+SKIP_PREFIX = ('sess_', 'lock_', 'authc_')
+SKIP_SUFFIX = ('_idcheck',)
+
+
+def wanted(k):
+    return k not in SKIP_KEYS and not k.startswith(SKIP_PREFIX) and not k.endswith(SKIP_SUFFIX)
+
+
 def keys():
     r = subprocess.run(['netlify', 'blobs:list', STORE], capture_output=True, text=True, env=ENV, cwd=SITE_DIR)
     if r.returncode != 0:
@@ -83,7 +98,7 @@ def keys():
     for line in r.stdout.splitlines():
         if line.startswith('|') and '"' in line:
             out.append(line.split('|')[1].strip())
-    return sorted(out)
+    return sorted(k for k in out if wanted(k))
 
 
 def fname(key):
@@ -192,8 +207,10 @@ def verify(out):
             if aid not in by_id:
                 print(f'  an email row points at unknown artist {aid}'); ok = False
         print(f'  registry: {len(by_id)} artists, {len(reg.get("bySlug") or {})} slugs, {len(reg.get("byEmail") or {})} email rows')
-    if 'authsecret' not in docs:
-        print('  authsecret is missing — every session would be signed out on restore'); ok = False
+    # Copies made before 2026-09-28 carry the store-kept signing key; newer ones do not
+    # (decision 0110). A restore from a newer copy signs everyone out once.
+    if 'authsecret' in docs:
+        print('  note: this copy carries the store-kept signing key — keep it as private as a password')
 
     print(f'  {len(rows)} keys, {len(docs)} JSON documents, {len(rows) - len(docs) - len(stray)} binary, {len(stray)} stray')
     print('  copy is whole' if ok else '  COPY IS NOT WHOLE — do not rely on it')

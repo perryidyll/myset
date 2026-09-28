@@ -316,5 +316,19 @@ eq('a venue token on /api/stage -> 401', vOnStage.status, 401);
 const aOnVenue = await hit(vadminFn, 'https://x/api/venueadmin', { action: 'profile' }, TA2);
 eq('an artist token on /api/venueadmin -> 401', aOnVenue.status, 401);
 
+console.log('\n0110  a name is never a key');
+{
+  /* `?a=constructor` used to resolve through Object.prototype to a truthy function
+     and a phantom room; a device called `__proto__` used to write onto the prototype
+     of every object in the warm instance. */
+  const { publicArtist, cleanFanId, mutateFan } = await import('../netlify/functions/_lib.mjs');
+  eq('?a=constructor is nobody, not a phantom room', await publicArtist(new Request('https://x/api/show?a=constructor')), null);
+  eq('…while a real page still resolves', await publicArtist(new Request('https://x/api/show?a=ana-reyes')), ana.artistId);
+  eq('a device called __proto__, constructor or prototype is no device', ['__proto__', 'constructor', 'prototype'].map(cleanFanId), ['', '', '']);
+  eq('…so a vote from one is refused', (await hit(voteFn, 'https://x/api/vote?a=ana-reyes', { fan: '__proto__', song: 'ana-only-one' })).status, 400);
+  await mutateFan(ana.artistId, '__proto__', (me) => { me.v.push('ana-only-one'); me.extra = 99; return true; }).catch(() => {});
+  ok('and even written to directly, the shard never reaches Object.prototype', ({}).v === undefined && ({}).va === undefined && ({}).extra === undefined && !('spent' in {}));
+}
+
 console.log(`\n${pass} passed, ${fail} failed\n`);
 process.exit(fail ? 1 : 0);

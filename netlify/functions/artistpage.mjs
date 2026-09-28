@@ -76,11 +76,14 @@ export function shareImage(p) {
 export function withShare(html, { name, image, url }) {
   if (!/<meta property="og:image"[^>]*>/.test(html)) return html;
   const tag = (k, v, by = 'property') => `<meta ${by}="${k}" content="${attr(v)}" />`;
-  let out = html.replace(/<meta property="og:image"[^>]*>/, tag('og:image', image));
-  if (name) out = out.replace(/<meta property="og:title"[^>]*>/, tag('og:title', name));
+  /* Function replacements, so a name containing `$'` or `$&` is written as itself:
+     as a string replacement those are String.replace's own patterns, and a band
+     called "$'" had the rest of the page written into its share card (0110). */
+  let out = html.replace(/<meta property="og:image"[^>]*>/, () => tag('og:image', image));
+  if (name) out = out.replace(/<meta property="og:title"[^>]*>/, () => tag('og:title', name));
   const extra = [tag('og:url', url), tag('twitter:card', 'summary_large_image', 'name'), tag('twitter:image', image, 'name')]
     .filter((t) => !out.includes(t.slice(0, t.indexOf('content='))));
-  return out.replace(/(<meta property="og:image"[^>]*>)/, `$1\n${extra.join('\n')}`);
+  return out.replace(/(<meta property="og:image"[^>]*>)/, (m) => `${m}\n${extra.join('\n')}`);
 }
 
 const within = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(() => r(null), ms))]);

@@ -3,7 +3,9 @@
    A token bucket on the fan record: twenty casts in a row, then thirty a minute,
    checked inside the write that already happens (decision 0030). And an error log
    in the blob store, one document per hour, that a fan's bug report gathers up —
-   because Netlify's own logs are gone in 24 hours (decision 0029). */
+   because Netlify's own logs are gone in 24 hours (decision 0029). The log keeps a
+   route's path and never its query string, and a lyrics lookup has a deadline, so a
+   hung upstream is a "not found", never a hung fan (decision 0110). */
 process.env.ADMIN_CODE = 'devlocal';
 process.env.MYSET_DOUBLE_TAP_MS = '0';
 
@@ -14,6 +16,7 @@ const L      = await import('../netlify/functions/_lib.mjs');
 const E      = await import('../netlify/functions/_errlog.mjs');
 const { readFileSync } = await import('node:fs');
 const { src } = await import('./_src.mjs');
+const { __dump } = await import('./blobs-fake.mjs');
 
 let pass = 0, fail = 0;
 const ok = (name, cond, detail) => {
@@ -79,6 +82,15 @@ console.log('\nERRORS LAND IN THE BLOB STORE, ONE DOCUMENT PER HOUR');
   const r = await guarded(new Request('https://x/api/t'));
   eq('an uncaught throw becomes a 500, not a crash', r.status, 500);
   ok('and is on the record', (await E.recentErrs(1)).some((x) => x.msg === 'unexpected'));
+  /* INVARIANT 0fb: a Studio code and a Stripe session id ride in the query string
+     of the very requests most likely to throw. The row keeps the path alone. */
+  const leaky = E.guard('t2', async () => { throw new Error('leaky'); });
+  await leaky(new Request('https://x/api/t?code=SECRET123&session_id=cs_test_abc'));
+  const row = (await E.recentErrs(1)).find((x) => x.msg === 'leaky');
+  eq('the row keeps the route’s path, never its query string', row && row.url, 'https://x/api/t');
+  const hour = String((__dump().get(E.hourKey()) || {}).body || '');
+  ok('and nothing in the hour’s document carries the code or the session id',
+     hour.length > 0 && !hour.includes('SECRET123') && !hour.includes('cs_test_abc'));
 }
 
 console.log('\nA FAN CAN REPORT A BUG, AND THE SERVER ATTACHES WHAT IT SAW');
@@ -95,6 +107,37 @@ console.log('\nA FAN CAN REPORT A BUG, AND THE SERVER ATTACHES WHAT IT SAW');
   const r2 = await report('f1', 'again', []);
   ok('the same device ten seconds later is thanked but not stored twice', r2.ok && r2.already, r2);
   eq('', (await adm({ action: 'bugList' })).list.length, 1);
+}
+
+console.log('\nA STALLED LYRICS UPSTREAM CANNOT STALL A FAN’S REQUEST (0110)');
+{
+  /* LRCLIB answering nothing at all — the shape of a hung upstream to Node's
+     fetch: the promise settles only when the signal it was handed says stop. A
+     fetch handed NO signal here never settles, which is exactly the bug. */
+  const Ly = await import('../netlify/functions/_lyrics.mjs');
+  const lyricsFn = (await import('../netlify/functions/lyrics.mjs')).default;
+  const realFetch = globalThis.fetch;
+  let handedSignal = 0;
+  globalThis.fetch = (_url, opts = {}) => new Promise((_, reject) => {
+    const s = opts.signal;
+    if (!s) return;
+    handedSignal++;
+    const stop = () => reject(s.reason || new Error('aborted'));
+    if (s.aborted) stop(); else s.addEventListener('abort', stop, { once: true });
+  });
+  const t0 = Date.now();
+  let backstop;
+  const r = await Promise.race([
+    hit(lyricsFn, `https://x/api/lyrics?song=${song}`),
+    new Promise((res) => { backstop = setTimeout(res, Ly.LRCLIB_TIMEOUT_MS + 4000, { hung: true }); }),
+  ]);
+  clearTimeout(backstop);
+  globalThis.fetch = realFetch;
+  const took = Date.now() - t0;
+  ok('the fan is answered on the deadline, not when the upstream feels like it',
+     !r.hung && took >= Ly.LRCLIB_TIMEOUT_MS - 100 && took < Ly.LRCLIB_TIMEOUT_MS + 2000, { took, r });
+  eq('with the ordinary not-found shape — never an error', [r.status, r.ok, r.found], [200, true, false]);
+  ok('because the fetch was handed the deadline', handedSignal >= 1, handedSignal);
 }
 
 console.log('\nTHE PAGES');

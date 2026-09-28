@@ -4,7 +4,7 @@
 Google Sheet … ALL the pertinent information of each artist & venue … marketing
 decisions … ICPs … what features of the app are actually being utilized …
 formatted with bolded, colour-filled column/row title cells." Plus: add
-`perryidyll@gmail.com` and `hello@myset.vip` to the founder's account with a
+`founder@example.com` and `hello@myset.vip` to the founder's account with a
 password equal to his Studio code; make venues the same; allow one email to hold
 an artist page and a venue page.
 
@@ -39,7 +39,7 @@ he imported are not appended again.
 
 **The founder's emails.** Per ACCOUNTS.md §6.4: the registry read by
 `blobs:get`, re-read to confirm nothing had moved, two owner rows added
-(`perryidyll@gmail.com`, `hello@myset.vip` → `perry-idyll`, role owner),
+(`founder@example.com`, `hello@myset.vip` → `perry-idyll`, role owner),
 written with `blobs:set`, read back equal; `byId` / `bySlug` intact; the site
 answered. **The password was not set by an agent:** a password is a credential
 the founder types himself — Studio → Settings → *Signing in* → *Password ·

@@ -333,6 +333,15 @@ console.log('\nEACH SEAT, EACH TAB  the owner decides (decision 0105)');
      can('sample', 'money_view') && !can('sample', 'gigs_edit') && !can('sample', 'setlist_edit') && !can('sample', 'show'));
 }
 
+console.log('\nMOVING TO A TAKEN ADDRESS LOOKS EXACTLY LIKE MOVING TO A FREE ONE  (9h; decision 0110)');
+{
+  /* A taken address answered 400 and a free one 200 — whether an address has a MySet
+     account, readable by any signed-in stranger for free. */
+  const taken = await A({ action: 'emailChangeStart', email: 'bass@example.com' }, T1);
+  const free = await A({ action: 'emailChangeStart', email: 'nobody-yet@example.com' }, T1);
+  eq('moving to an address that has an account looks exactly like moving to one that does not', taken, free);
+}
+
 console.log('\nRECOVERY CODES  the way back when the inbox is gone');
 const codes = await makeRecovery(rita);
 eq('eight of them', codes.length, 8);

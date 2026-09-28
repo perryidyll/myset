@@ -66,7 +66,10 @@ export async function globalKeys() {
   } catch { /* no head yet */ }
   return out;
 }
-export const SKIP = /^(sess_|lock_|authc_|authsecret$|f\d+_|vid_)/;
+/* Never the ID photo: it is deleted the moment the owner decides (0bk), and a copy
+   on R2 would outlive that decision — the mirror copies, it does not delete. Found
+   2026-09-28 (decision 0110); dropImage also removes any copy already made. */
+export const SKIP = /^(sess_|lock_|authc_|authsecret$|f\d+_|vid_)|_idcheck$/;
 export const skipped = (k) => SKIP.test(k);
 
 const emptyState = () => ({ v: 1, order: [], cursor: 0, keyCursor: 0, passStartedAt: 0, passDoneAt: 0, copied: 0, skipped: 0, failed: 0, err: null });

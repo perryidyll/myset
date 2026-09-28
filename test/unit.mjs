@@ -200,5 +200,16 @@ console.log('\nnormMerch(): the whitelist a shop item is — sizes, sold out, po
   eq('freeMerchSlot is the first slot no picture uses', [freeMerchSlot(one({ id: 'mabc123' })), freeMerchSlot(one({ id: 'mabc123', imgs: [own('mabc123'), own('mabc123_2')] })), freeMerchSlot(one({ id: 'mabc123', imgs: ['mabc123', 'mabc123_1', 'mabc123_2', 'mabc123_3', 'mabc123_4'].map(own) }))], ['mabc123', 'mabc123_1', '']);
 }
 
+console.log('\nA PICTURE IS AN ADDRESS AND AN ID IS NEVER MARKUP (0110)');
+{
+  const { normProfile, imgUrl } = await import('../netlify/functions/_profile.mjs');
+  const { normEvent } = await import('../netlify/functions/_events.mjs');
+  eq('own files and https addresses pass', [imgUrl('/api/img?a=ana&s=avatar&v=k1'), imgUrl('https://cdn.example.com/a.jpg')], ['/api/img?a=ana&s=avatar&v=k1', 'https://cdn.example.com/a.jpg']);
+  eq('anything that could close a url() or a quote is dropped', [imgUrl("x');background:red"), imgUrl("https://e.example.com/a.jpg')"), imgUrl('javascript:alert(1)'), imgUrl('/api/img?a=x"onload="1'), imgUrl('data:image/png;base64,AAAA')], ['', '', '', '', '']);
+  const p = normProfile({ avatar: "x'); background:red", photo: 'https://ok.example.com/p.jpg', photos: ['/api/img?a=x&s=p0&v=1', "bad'"] });
+  eq('normProfile applies it to avatar, photo and photos', [p.avatar, p.photo, p.photos], ['', 'https://ok.example.com/p.jpg', ['/api/img?a=x&s=p0&v=1']]);
+  eq('an event id keeps to the alphabet every other id keeps to', [normEvent({ id: "a');x//", date: '2030-01-01' }).id, normEvent({ id: 'g1234abcd', date: '2030-01-01' }).id], ['ax', 'g1234abcd']);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

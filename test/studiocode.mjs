@@ -78,6 +78,10 @@ eq("and Bo's does not open Ana's", boAtAna.status, 401);
 const anaNoSlug = await stageByCode('anacode123');
 eq('with no page name it is tried against the founder, and fails', anaNoSlug.status, 401);
 
+console.log('\nTHE PAGE\'S OWN NAME IS REFUSED AS A CODE  (0110: the guard read `show.slug`, a field that never existed)');
+eq('through the endpoint, not only the helper', (await A(TA, 'setCode', { code: 'ana-reyes' })).status, 400);
+ok('while a real code still lands', (await A(TA, 'setCode', { code: 'anacode123' })).ok);
+
 console.log('\nTHE FOUNDER\'S DOORS ARE UNCHANGED  (existing links and the recovery key)');
 const master = await stageByCode('devlocal');
 ok('ADMIN_CODE still reaches the founding artist', master.ok, master.status);

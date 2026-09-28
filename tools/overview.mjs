@@ -57,6 +57,8 @@ async function facts() {
   const wishes = await import(join(ROOT, 'netlify/functions/_wishes.mjs'));  // Make a request (the founder, 2026-09-13)
   const msgs = await import(join(ROOT, 'netlify/functions/_messages.mjs'));   // the Book button's inbox (the founder, 2026-09-14)
   const imgs = await import(join(ROOT, 'netlify/functions/_img.mjs'));        // the tour poster's byte caps
+  const auth = await import(join(ROOT, 'netlify/functions/_auth.mjs'));       // the deadlines a person waits on (decision 0110)
+  const lyr = await import(join(ROOT, 'netlify/functions/_lyrics.mjs'));
   const smp = await import(join(ROOT, 'netlify/functions/_sample.mjs'));     // a sample page's clock (decision 0101)
 
   const fns = ls('netlify/functions').filter((f) => f.endsWith('.mjs'));
@@ -131,6 +133,9 @@ async function facts() {
                 repliesPerDay: msgs.REPLIES_PER_THREAD_PER_DAY, threadsKept: msgs.MAX_THREADS, msgsPerThread: msgs.MAX_MSGS,
                 spamLinks: msgs.SPAM_LINKS, folders: msgs.FOLDERS, kinds: msgs.KINDS,
                 posterImageBytes: imgs.MAX_BYTES, posterPdfBytes: imgs.MAX_TOUR_PDF },
+    /* The security dials (decision 0110 onward) — every limit a door keeps, read from the
+       code so SECURITY.md and the ledger never type one. */
+    security: { mailDeadlineMs: auth.MAIL_MS, lyricsDeadlineMs: lyr.LRCLIB_TIMEOUT_MS },
     flags: Object.fromEntries(Object.entries(flags.FLAGS).map(([k, v]) => [k, { default: v.default, what: v.what }])),
     constants: {
       shards: lib.SHARDS,
@@ -365,6 +370,7 @@ ${f.constants.ladder.map((r) => `| ${r.heads.toLocaleString()} | ${r.pollMs / 10
 | Venue Studio actions | ${f.shape.venueActions.length} |
 | Fan-record shards | ${f.constants.shards} |
 | Casts a device may make in a row / per minute after that | ${f.constants.castBurst} / ${f.constants.castPerMin} |
+| A sign-in letter's deadline / a lyrics lookup's deadline (\`MAIL_MS\`, \`LRCLIB_TIMEOUT_MS\`) | ${f.security.mailDeadlineMs / 1000} s / ${f.security.lyricsDeadlineMs / 1000} s |
 | Largest clip accepted | ${(f.constants.maxVideoBytes / 1048576).toFixed(0)} MB |
 | A clip link on R2 lives / its redirect is cached | ${f.constants.clipLinkSecs / 3600} h / ${f.constants.clipRedirectCacheSecs / 3600} h |
 | The artist's book, per show (decision 0065) | ${f.constants.biz.merch} merch lines · ${f.constants.biz.gear} gear lines of ${f.constants.biz.gearChars} characters · names ${f.constants.biz.name} · note ${f.constants.biz.note} · one amount up to $${(f.constants.biz.cents / 100).toLocaleString('en-US')} · ${f.constants.biz.minutes / 60} hours per kind of time (${f.constants.biz.timeKinds.join(', ')}) · ${f.constants.biz.rules} rule defaults · the document ${(f.constants.biz.maxBytes / 1000).toFixed(0)} KB, then a year shard |

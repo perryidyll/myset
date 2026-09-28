@@ -22,7 +22,7 @@ difference.
 
 **Two checks, and both must pass.** Either one alone is not proof.
 
-1. **The sign-in email is on the website's own domain.** `manager@uglyduckling.com`
+1. **The sign-in email is on the website's own domain.** `you@uglyduckling.com`
    against `https://uglyduckling.com`. Free-mail domains (gmail, yahoo, icloud,
    proton, …) are rejected outright, so this can only ever be a real business
    domain.
@@ -104,8 +104,8 @@ Unverified listing
 
 WAY 1 — YOUR WEBSITE
   [ ] Your website is on your page      Add it under "Getting hold of you"
-  [ ] You're signed in with an email    You're bar@gmail.com — needs to be
-      at that domain                    anything@uglyduckling.com
+  [ ] You're signed in with an email    You're you@example.com — needs to be
+      at that domain                    you@uglyduckling.com
   [ ] Your website names your venue     We read the page and couldn't find
                                         "The Ugly Duckling" on it
   [ Check my website now ]

@@ -132,6 +132,26 @@ eq('a checkout returning in a later show is refused without a charge',
 ok('and it cannot create a request in the new room',
   !(await A('askList')).asks.some((r) => r.title === 'Yesterday Song'));
 
+console.log('\nA PLEDGE IN A FAN\'S OWN BODY IS NOT A PAYMENT (0110)');
+{
+  /* Until 2026-09-28 the public door took `pledge` from the body as if Stripe had
+     said so: one anonymous POST filed a "$500 offered" request whose acceptance
+     minted five hundred paid votes nobody had paid for. Only the Stripe-verified
+     path (authorizeRequestSession) may carry a pledge. */
+  const fake = await hit(requestFn, 'https://x/api/request?fan=forger',
+    { fan: 'forger', kind: 'song', title: 'Boost Me', artist: 'Nobody',
+      pledge: { cents: 50000, session: 'cs_anything', intent: 'pi_anything', account: '' } });
+  ok('the request itself goes through (it is an ordinary request)', fake.ok, fake);
+  const forged = (await readRequests(DEFAULT_ARTIST)).list.find((r) => r.title === 'Boost Me');
+  eq('…with no money on it', [forged.pledgeCents, forged.pledgeVotes, forged.pledgeState, forged.paymentSession, forged.paymentIntent],
+     [undefined, undefined, undefined, undefined, undefined]);
+  const shown = (await A('askList')).asks.find((r) => r.title === 'Boost Me');
+  ok('the artist is not shown an offer', !shown.pledgeCents && !shown.pledgeVotes, shown);
+  const took = await A('askAccept', { id: forged.id });
+  const boosted = took.stage.songs.find((s) => s.title === 'Boost Me');
+  eq('accepting it mints no paid votes', [boosted.votes, boosted.paidVotes || 0], [0, 0]);
+}
+
 console.log('\nA REQUEST TITLE IN ANY ALPHABET STILL BECOMES A REAL SONG');
 const thai = await hit(requestFn, 'https://x/api/request?fan=thaifan',
   { fan: 'thaifan', kind: 'song', title: 'ทะเลใจ', artist: 'คาราบาว' });
