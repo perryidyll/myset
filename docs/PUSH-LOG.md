@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-28 11:59 — 69e6a75 — inspiring-feynman-75227a@fix/founder-tools-owner-seat (13 files since origin/main)
+**tl;dr:** A band mate or the sound engineer signed in to the founding page can no longer change the public Media Dash boost log, and their Studio stops showing the founder's cards; other artists lose an 'If something broke' card that never worked for them
+**Other sessions:** Decision 0100, INVARIANT 0gk (after 0099's 0gj), merged onto 0099; ledger ACC-005 and the session note ride the live-docs PR. studio.js founder() = PLAN.owner AND the owner role: gate any founder tool on it, never on PLAN.owner, which stays the founding page's plan-lock bypass (has(), canHide()). test/founderseat.mjs is the first /api/mediadash test; its tripwire names any founder action the Studio sends from a function outside its list. tools/mock.mjs: ?founder=1, ?seat=member|crew.
+
 ### 2026-09-28 11:57 — 70c0599 — gifted-clarke-2a74ea@docs/role-gates-live (7 files since origin/main)
 **tl;dr:** Docs only: the founder-tools and role-table fix (decision 0099) is live as 04e78db, verified on Netlify's production deploy [skip ci]
 **Other sessions:** Puzzle changelog 2430 = decision 0099, linked to steps 369952 (t01), 369974 (e06), 370002 (y07), 370080 (i06), each reloaded from its sheet. i06 used to claim every artist reads their own bug reports; bugList was always behind the founder gate. Ledger ACC-004.
