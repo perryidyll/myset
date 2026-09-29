@@ -8,7 +8,7 @@ area: product
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [0c4bde2]
 tests: [test/pitchmsgs.mjs]
 files: [netlify/functions/_pitch.mjs, netlify/functions/_messages.mjs, netlify/functions/admin.mjs, netlify/functions/venueadmin.mjs, public/studio.js, public/venue-studio.js, public/venue-studio.html, public/venue.html, public/tips.js, test/pitchmsgs.mjs, test/run.sh]
 ---
@@ -67,4 +67,5 @@ A. The artist already has a working inbox, with folders, unread counts, the Wait
   - The artist's Venues folder and thread.
   - The Gigs row's Messages button, which lands on the thread.
   - The Venue Studio's pitch row and its conversation sheet.
+- **Live as `0c4bde2` (PR #167)**: verified by content on myset.vip at 14:48 UTC (`studio.js?v=e46927ab`, `venue-studio.js?v=397b7e90` carries `pitchReply`, venue.html carries "Open the conversation").
 - Not yet checked on a real phone.
