@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 21:01 — 101a6b0 — tip-decks@docs/tip-decks-live (1 files since origin/main)
+**tl;dr:** Docs only: session note for the tip-deck copy pass (live as 0a90d08) [skip ci]
+**Other sessions:** Open: venue pitches (_pitch.mjs) may move into Messages; awaiting the founder.
+
 ### 2026-09-29 20:50 — a63423e — tip-decks@ui/tip-deck-copy (11 files since origin/main)
 **tl;dr:** Studio tip cards: payouts say every Monday (Hobbyist) or daily (paid plans); no more Spotify-playlist promise; Money gets Total/My cut and all-in hourly-rate cards; Gigs' last card explains recurring pay; the ? button glows; the repeat arrows turn counter-clockwise
 **Other sessions:** tips.js: {payday} var filled by studio.js tipVars() from PLAN.plan (mirrors _connect.mjs payoutScheduleFor); Money deck may have 5 slides (test/tipdecks allows it); the Ask-a-venue slide is gone pending a decision on moving pitches into Messages. about.html + the setlist empty state no longer mention Spotify playlists. lock.css .tipsbtn animation tipsglow. Rebased on 0122 (413d116).
