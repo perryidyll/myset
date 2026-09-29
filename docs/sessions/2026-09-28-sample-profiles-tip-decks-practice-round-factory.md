@@ -156,6 +156,28 @@ Found on the live site afterwards: Netlify serves `/<name>` from `<name>.html` b
   - Web client *MySet HQ*. The two variables were set in Netlify (Production) with Keychain copies, and production was rebuilt. The founder connected Gmail.
 - **Privacy notice:** decision 0118, live as `9f2b1c0` (#154). Once it was live, the consent screen got its homepage and privacy links and was published.
 
-**Not checked:** the Gmail connection itself behind the passcode. The founder reported "connected on HQ". A token from before publishing ends after seven days, so he reconnects once.
+**Not checked:** the Gmail connection itself behind the passcode. The founder reported "connected on HQ", then disconnected and reconnected after publishing, so the token is a Production one. He confirmed the operator line and hello@myset.vip on the page.
 
 **Puzzle:** changelog 2524 = 0118.
+
+## Eighth round, 2026-09-29: terms of use
+
+**Asked:** "yes, write the terms page too".
+
+**Shipped:** decision 0119, live as `635fe02` (#156). It is verified by content on myset.vip: `/terms` carries the Stripe Connected Account Agreement line, the home page links `/terms`, and `/studio` serves `studio.js?v=0102fe10` with the agreement line.
+
+**How it was written:** from a read-only inventory of the money, account and content paths, with file and line citations.
+- **Who is the seller:** the artist or venue, through direct charges.
+- **Votes:** final.
+- **Request offers:** a hold, captured only when the song is played.
+- **Refunds:** the seller's.
+- **Plans:** monthly; the paid month is kept; a downgrade deletes nothing.
+- **Content:** a licence to show it, and rules for it.
+- **Law:** Tennessee.
+
+No prices are on the page. The home, About and privacy footers link it. A one-line "you agree" sits under Create my page in both Studios and under Claim my page.
+
+**Found and not fixed:** six places where a page or document contradicts the code. They are listed in 0119 under "What this makes harder".
+
+**Puzzle:** changelog 2526 = 0119.
+
