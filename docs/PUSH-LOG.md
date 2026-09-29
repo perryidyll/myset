@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 17:59 — 6383aec — sample-profiles@docs/terms-live (3 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0119 and the session note say the terms page is live [skip ci]
+**Other sessions:** Nothing to rebase for. Puzzle changelog 2526 = 0119.
+
 ### 2026-09-29 17:46 — d8857e9 — sample-profiles@pages/terms (16 files since origin/main)
 **tl;dr:** myset.vip/terms: plain-language terms of use (who the seller is, votes final, request holds, refunds, plans, content rules, Tennessee law), linked from the footers and under every create-a-page button
 **Other sessions:** Decision 0119. public/terms.html is a claim about the code, like privacy.html: a change to the seller, refunds, holds, plans, cancellation or deletion updates it in the same PR. No prices on it on purpose. The 0119 record lists six page/doc-vs-code contradictions found and NOT fixed.

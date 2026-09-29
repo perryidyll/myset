@@ -8,7 +8,7 @@ area: trust
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [635fe02]
 tests: [test/structure.mjs]
 files: [public/terms.html, netlify.toml, public/index.html, public/about.html, public/privacy.html, public/studio.js, public/venue-studio.js, public/sample.js]
 ---
@@ -75,3 +75,5 @@ A lawyer's terms replacing these. The inventory in this record is the checklist 
 - **The inventory.** It was read out of the server code with file and line citations.
 - **The suite.** It passed, 4,627 tests, including test/structure.mjs's check that every top-level route is a reserved slug. `terms` has been reserved in both slug lists from the start.
 - **The page on `tools/localhost.mjs`.** At 375 px there is no sideways scroll. `/terms` serves the page, and the home footer links `/about /privacy /terms`.
+
+Live as `635fe02` (PR #156). Checked by content on myset.vip: `/terms` carries the Stripe Connected Account Agreement line, the home footer links `/terms`, and `/studio` serves `studio.js?v=0102fe10`, the stamped copy with the agreement line. The same was checked first on the deploy preview, along with About, privacy and `sample.js`.
