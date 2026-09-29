@@ -434,7 +434,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
-| Free shows, in total (a discarded one doesn't count) | 10 | unlimited | unlimited |
+| Free shows, in total (a discarded test show doesn't count) | 10 | unlimited | unlimited |
 | Songs live to the audience at once (the whole library since decision 0061) | unlimited | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 50 | 300 | 2,000 |
 | Songs the library holds | 100 | 200 | 2,000 |
@@ -556,7 +556,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 294 (last: 0gx) |
 | Test suites | 67 |
 | Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 119 |
+| Decision records | 120 |
 
 ### Feature flags in force
 
@@ -569,7 +569,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Flag | What paying buys | Enforced in |
 |---|---|---|
 | `cut` | the platform's share of every tip, vote pack and merch sale | `_connect.mjs`, as a Stripe `application_fee_amount` on a direct charge |
-| `gigs` | how many shows may be **started** on the free plan, in total (decision 0120; a discarded night, or a calendar-started one with no votes, gives its count back) | `admin.mjs` and `_lifecycle.mjs` — both the button and the scheduler go through one function |
+| `gigs` | how many shows may be **started** on the free plan, in total (decision 0120; a discarded test night, or a calendar-started one with no votes, gives its count back; a discarded real night counts after one warning, 0122) | `admin.mjs` and `_lifecycle.mjs` — both the button and the scheduler go through one function |
 | `featured` | how many songs are **live to the audience** at once (never how many are stored) — unlimited on every plan since decision 0061, the check kept | `admin.mjs` on `toggleSong`, and the payload builder |
 | `audience` | a **soft** ceiling stamped onto the show; the room slows and shortens, nobody is refused | `_lib.mjs` (`pollFloorFor`, `boardLimitFor`), `show.mjs` |
 | `seats` | team members who can sign in | `_account.mjs` |
@@ -600,7 +600,10 @@ real nights; a working artist moves to Bar Star.
 Counted **ever, not per month** (decision 0120, 2026-09-29, when the code was made to match
 the plan card's "10 shows for free"). Only a show started on the free plan counts; a night
 played on a paid plan never does, a night the artist **discards** gives its count back, and
-so does a night the **calendar** started that ended without a single vote.
+so does a night the **calendar** started that ended without a single vote. A discard is
+for a test: a discarded **real night** (over an hour, five or more votes) is given back once,
+with a warning, and counts after that (decision 0122); every free-plan discard is listed on
+the Sheet's Discards tab.
 The count is **stamped onto the show record**, and the Studio only reads it, so the "x/10"
 beside the Hobbyist tag and the server's refusal cannot disagree, and it cannot be fudged
 from a phone.

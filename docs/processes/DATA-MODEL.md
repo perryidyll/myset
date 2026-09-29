@@ -36,7 +36,7 @@ verified: code read 2026-09-12 for the shapes quoted; the canvas in a browser is
 | `freeCredits / replayCost / packs` (46032) | Number | the night's prices — the free allowance, the cost of a replay, the vote packs; numbers cited from overview §2.1, never copied |
 | `requests / birthdays` (46033) | Single-line text | {on, cost} for each kind of ask; off by default — an artist who cannot play requests is never asked for them |
 | `listId / listName / listSongs` (46034) | Multi-line text | which setlist is in play and a PROJECTION of its ids, kept here so the poll never reads a second document (_lists.mjs) |
-| `gigMonth / gigCount` (46035) | Number | shows started this calendar month, for the free plan's gig cap — stored, because a show in progress is not in history yet |
+| `gigCount / freeNight / discardWarnedAt` (46035) | Number | free-plan shows started, in total, for the gig cap (0120) — stored, because a show in progress is not in history yet; `freeNight` is what the current night used, `discardWarnedAt` when the one warning about discarding a real night was given (0122) |
 | `showId / startedAt / log` (46036) | Single-line text | the night's identity; one log entry per song started; the auto-start stamps the gig occurrence key so a cron that rings twice cannot start it twice |
 
 Linked steps: 369798, 369802, 369814, 369848, 369852

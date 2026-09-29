@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 20:32 — 87e6937 — discard-guard@fix/discard-guard (15 files since origin/main)
+**tl;dr:** Free artists: discarding a real show (over an hour, 5+ votes) now asks first; the first one is given back with a warning, later ones count. Every free-plan discard is listed on the Sheet's new Discards tab.
+**Other sessions:** Decision 0122. endShow(discard) may return {confirm} -> admin answers 409 {ok:false, confirm}; the Studio re-sends with ack:'warned'|'counted'. show.discardWarnedAt (normShow), meta.discards (last 30), REAL_NIGHT/discardVerdict/nightVotes/nightPaid in _lifecycle.mjs. act() in studio.js now returns the response. The Sheet has 12 tabs.
+
 ### 2026-09-29 19:58 — 019bf6f — contradictions-0119@docs/0120-live (3 files since origin/main)
 **tl;dr:** Docs only: decision 0120, the ledger and a session note say ten free shows in total is live [skip ci]
 **Other sessions:** Decision 0120 = 9adf0be (#158); Puzzle changelog 2533.

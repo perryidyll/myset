@@ -105,6 +105,66 @@ console.log('\nA SHOW THE CALENDAR STARTED, AND NOBODY VOTED ON, IS NOT COUNTED 
   ok('a stale marker from another night is ignored', !quietAutoNight({ ...sh, showId: 's2' }, {}));
 }
 
+console.log('\nA DISCARD IS FOR A TEST: A REAL NIGHT IS WARNED ABOUT ONCE, THEN COUNTS  (decision 0122)');
+{
+  const { readMeta, mutateMeta } = await import('../netlify/functions/_lib.mjs');
+  const { discardVerdict, REAL_NIGHT } = await import('../netlify/functions/_lifecycle.mjs');
+  eq('a real night is over an hour with five or more votes', REAL_NIGHT, { minutes: 60, votes: 5 });
+  const cy = await createArtist({ email: 'cy@example.com', name: 'Cy Moss', slug: 'cy-moss' });
+  const TC = await signToken('cy@example.com', revOf(await readArtists(), cy.artistId));
+  const C = (action, extra = {}) => hit(admin, 'https://x/api/admin', { action, ...extra }, TC);
+  const used = async () => (await getShow(cy.artistId)).gigCount;
+  const makeReal = (min, votes) => mutateShow(cy.artistId, (sh) => {
+    sh.startedAt = Date.now() - min * 60000; sh.log = [{ songId: 'x', title: 'Valerie', votes, roundVotes: votes }]; return true; });
+  const lastLog = async () => (await readMeta(cy.artistId)).discards.slice(-1)[0];
+
+  ok('a test night starts', (await C('newShow')).ok);
+  const t1 = await C('status', { status: 'ended', discard: true });
+  ok('a short night with no votes is discarded without a question', t1.ok && !t1.confirm, t1);
+  eq('and given back', await used(), 0);
+  eq('and written down as a test', (await lastLog()).outcome, 'given');
+
+  ok('a night that ran 30 minutes with 10 votes', (await C('newShow')).ok);
+  await makeReal(30, 10);
+  ok('is still a test: both conditions are needed', (await C('status', { status: 'ended', discard: true })).ok);
+  eq('given back', await used(), 0);
+
+  ok('a real night: two hours, six votes', (await C('newShow')).ok);
+  await makeReal(120, 6);
+  const w = await C('status', { status: 'ended', discard: true });
+  eq('THE RULE: the first discard of a real night is asked about first', [w.status, w.confirm && w.confirm.outcome], [409, 'warned']);
+  ok('with what it was', w.confirm && w.confirm.minutes >= 119 && w.confirm.votes === 6 && w.confirm.cap === CAP, w.confirm);
+  eq('and nothing ended yet', (await getShow(cy.artistId)).status, 'live');
+  ok('she discards it anyway', (await C('status', { status: 'ended', discard: true, ack: 'warned' })).ok);
+  eq('the warned one is given back', await used(), 0);
+  ok('and the warning is remembered', (await getShow(cy.artistId)).discardWarnedAt > 0);
+  eq('and written down', (await lastLog()).outcome, 'warned');
+
+  ok('another real night, and a $5 tip', (await C('newShow')).ok);
+  await makeReal(90, 12);
+  await mutateMeta(cy.artistId, (m) => { m.tips.push({ amount: 5, at: Date.now() }); return true; });
+  const k = await C('status', { status: 'ended', discard: true });
+  eq('after the warning, a real night discarded will count, and says so first', [k.status, k.confirm && k.confirm.outcome], [409, 'counted']);
+  eq('naming the money', k.confirm && k.confirm.paid.total, 5);
+  eq('an ack for the old question asks again', (await C('status', { status: 'ended', discard: true, ack: 'warned' })).status, 409);
+  const kk = await C('status', { status: 'ended', discard: true, ack: 'counted' });
+  ok('she discards it', kk.ok && /still counts/.test(kk.note || ''), kk);
+  eq('THE RULE: it counts', await used(), 1);
+  eq('written down as counted, with the money', [(await lastLog()).outcome, (await lastLog()).paid], ['counted', 5]);
+  const n = (await readMeta(cy.artistId)).discards.length;
+  ok('discarding the ended night again', (await C('status', { status: 'ended', discard: true })).ok);
+  eq('writes nothing new', (await readMeta(cy.artistId)).discards.length, n);
+
+  const real = { showId: 's', startedAt: Date.now() - 7200e3, status: 'live', freeNight: { id: 's', n: 1 }, log: [{ roundVotes: 9 }] };
+  eq('a paid plan or the founder is never asked', discardVerdict(real, {}, {}, Date.now(), null), null);
+  ok('an ended night is measured to when it ended', discardVerdict({ ...real, status: 'ended', endedAt: real.startedAt + 1800e3 }, {}, {}, Date.now(), 10) === null);
+
+  const js = src('public/studio.js');
+  ok('the Studio asks again with what the server said, and sends back the outcome it showed',
+     /c\.outcome==='warned'/.test(js) && /ack:c\.outcome/.test(js));
+  ok('and its copy says a TEST show you discard does not count', /A test show you discard doesn't count/.test(js) && !/ A show you discard doesn't count/.test(js));
+}
+
 console.log('\nIT IS COUNTED ON THE RECORD, NOT GUESSED');
 const show = await getShow(ana.artistId);
 eq('every kept show is counted', show.gigCount, CAP);

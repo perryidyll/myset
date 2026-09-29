@@ -127,6 +127,9 @@ export function defaultShow() {
        night gives them back; `auto` marks a night the calendar started, given back
        when it ends with no votes. */
     gigCount: 0, freeNight: null,
+    /* When a free artist was first told that discarding a real night will count
+       (decision 0122). Once set, it stays: the warning is given once. */
+    discardWarnedAt: null,
     songs: [],
     showId: null,
     artistId: ARTIST_ID,
@@ -381,6 +384,7 @@ function normShow(s) {
   show.gigCount = Math.max(0, parseInt(show.gigCount, 10) || 0);
   const fn = show.freeNight;
   show.freeNight = fn && typeof fn.id === 'string' && fn.n > 0 ? { id: fn.id, n: parseInt(fn.n, 10) || 1, auto: fn.auto === true } : null;
+  show.discardWarnedAt = Number(show.discardWarnedAt) > 0 ? Number(show.discardWarnedAt) : null;
   /* Songs carry a key and genre tags. Tags are filtered against what actually
      exists, so deleting a custom tag cleans itself up on the next read. */
   const ids = new Set(show.songs.map((x) => x && x.id));

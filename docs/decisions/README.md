@@ -129,6 +129,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0119](0119-myset-publishes-terms-of-use-at-terms-written-from-th.md) | MySet publishes terms of use at /terms, written from the code | 2026-09-29 | trust | decided | perry |
 | [0120](0120-the-free-plan-is-ten-shows-in-total-not-ten-a-month.md) | The free plan is ten shows in total, not ten a month | 2026-09-29 | plans | decided | perry |
 | [0121](0121-the-theme-switch-grows-as-a-circle-from-the-button.md) | The theme switch grows as a circle from the button, everywhere theme.js runs | 2026-09-29 | ui | decided | perry |
+| [0122](0122-a-discarded-real-night-counts-after-one-warning.md) | A discarded real night counts after one warning | 2026-09-29 | plans | decided | perry |
 
 ## By area
 
@@ -150,7 +151,7 @@ To start a new one: `./tools/decide.sh "a short title"`
 
 **performance** — [0042](0042-public-reads-are-shared-at-the-edge-and-every-page.md) · [0048](0048-the-pages-and-the-static-files-live-at-the-edge-th.md) · [0049](0049-everything-a-fan-reads-comes-through-one-warm-door.md) · [0050](0050-the-studio-s-first-two-reads-start-from-the-head-a.md) · [0053](0053-the-studio-s-script-is-a-file-the-phone-keeps.md) · [0054](0054-a-signed-in-request-costs-two-hops-not-four.md) · [0087](0087-the-fan-pages-share-one-script.md) · [0088](0088-a-fan-s-first-open-is-the-visit-that-matters.md) · [0091](0091-a-page-seen-tonight-is-shown-from-the-phone-s-copy.md) · [0094](0094-app-css-rides-inside-every-fan-page.md)
 
-**plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) · [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md) · [0120](0120-the-free-plan-is-ten-shows-in-total-not-ten-a-month.md)
+**plans** — [0003](0003-the-free-tier-is-capped-by-gigs-not-features.md) · [0004](0004-locked-features-are-shown-greyed-not-hidden.md) · [0005](0005-an-unbuilt-feature-is-never-shown-as-yours.md) · [0037](0037-the-free-plan-allows-ten-shows-a-calendar-month.md) · [0055](0055-the-artist-plans-are-sold-as-hobbyist-bar-star-and.md) · [0060](0060-hiding-a-post-the-filed-nights-and-a-library-past.md) · [0061](0061-the-whole-library-is-live-on-every-plan-bar-star-h.md) · [0065](0065-the-paid-plans-get-a-business-dashboard-one-docume.md) · [0120](0120-the-free-plan-is-ten-shows-in-total-not-ten-a-month.md) · [0122](0122-a-discarded-real-night-counts-after-one-warning.md)
 
 **product** — [0078](0078-a-new-page-shows-nobody-elses-band.md) · [0079](0079-paid-votes-count-tippers-the-room-may-see-the-numbers.md)
 

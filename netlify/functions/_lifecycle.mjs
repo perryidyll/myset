@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, carryFans, newShowId, casDoc, mutateMeta, voteCounts } from './_lib.mjs';
+import { getShow, mutateShow, readFans, readMeta, carryFans, newShowId, casDoc, mutateMeta, voteCounts } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
 import { readEvents, nextOccurrence, occKey } from './_events.mjs';
@@ -74,13 +74,44 @@ export function uncountGig(sh) {
  *  Carried fans hold `extra`, never `v`, so a previous night's votes are not here. */
 export function quietAutoNight(sh, fans) {
   if (!sh || !sh.freeNight || !sh.freeNight.auto || sh.freeNight.id !== sh.showId) return false;
+  return nightVotes(sh, fans) === 0;
+}
+/** Every vote the night took: each round's (the log keeps them; starting a song
+ *  wipes the board) plus what still stands. */
+export function nightVotes(sh, fans) {
   const rounds = (sh.log || []).reduce((a, p) => a + (p.roundVotes ?? p.votes ?? 0), 0);
-  const standing = Object.values(voteCounts(fans || {})).reduce((a, b) => a + b, 0);
-  return rounds + standing === 0;
+  return rounds + Object.values(voteCounts(fans || {})).reduce((a, b) => a + b, 0);
 }
 
+/* A DISCARD IS FOR A TEST, NOT FOR A REAL NIGHT (decision 0122). Giving a discarded
+   night back (0120) is so an artist can try "Start the show" for free — but it would
+   also let a free artist play every gig and discard it after, for ever. A night that
+   ran over an hour AND took five or more votes is a real night. The FIRST time a free
+   artist discards one, it is still given back, and the Studio says that the next one
+   will count; after that, a real night discarded counts. Money taken in the night is
+   named in the warning, not a trigger of its own: an artist trying their own tip
+   button is testing. The founder, 2026-09-29. */
+export const REAL_NIGHT = { minutes: 60, votes: 5 };
+/** Money the night took, from `meta` (tips and every paid checkout since it began). */
+export function nightPaid(meta, since) {
+  const rows = [...((meta && meta.tips) || []), ...Object.values((meta && meta.paid) || {})]
+    .filter((p) => p && Number(p.at) >= since);
+  return { count: rows.length, total: Math.round(rows.reduce((a, p) => a + (Number(p.amount) || 0), 0) * 100) / 100 };
+}
+/** What discarding this night means on the free plan: null when it is simply given
+ *  back (a test, a paid plan, the founder, a night that is not the counted one), else
+ *  { outcome: 'warned' | 'counted', minutes, votes, paid }. */
+export function discardVerdict(sh, fans, meta, now, gigCap) {
+  if (gigCap === null || !sh || !sh.startedAt || !sh.freeNight || sh.freeNight.id !== sh.showId) return null;
+  const minutes = Math.floor(((sh.status === 'ended' && sh.endedAt ? sh.endedAt : now) - sh.startedAt) / 60000);
+  const votes = nightVotes(sh, fans);
+  if (minutes < REAL_NIGHT.minutes || votes < REAL_NIGHT.votes) return null;
+  return { outcome: sh.discardWarnedAt ? 'counted' : 'warned', minutes, votes, paid: nightPaid(meta, sh.startedAt) };
+}
+const DISCARDS_KEPT = 30;
+
 export const CAP_REFUSAL = (cap) =>
-  `That's your ${cap} free shows. Upgrade to Bar Star to keep playing — a show you discard doesn't count.`;
+  `That's your ${cap} free shows. Upgrade to Bar Star to keep playing — a test show you discard doesn't count.`;
 
 /** The free plan's cap for this artist, or null when there is none. */
 export async function gigCapFor(aid) {
@@ -267,7 +298,20 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
  * End a show. Archives first, always; idempotent (ending an ended show refreshes
  * the archive and changes nothing else). `by` is stamped for the Studio.
  */
-export async function endShow(aid, { by = 'artist', title = '', discard = false } = {}) {
+export async function endShow(aid, { by = 'artist', title = '', discard = false, ack = '' } = {}) {
+  /* A discard of a real night is asked about FIRST, before anything is released or
+     ended: the Studio shows what it means and sends `ack` with the outcome it showed.
+     An ack that no longer matches (the night changed underneath) asks again. */
+  let verdict = null, gigCap = null, hadNight = false;
+  if (discard) {
+    gigCap = await gigCapFor(aid);
+    if (gigCap !== null) {
+      const [sh, fans, meta] = await Promise.all([getShow(aid), readFans(aid), readMeta(aid)]);
+      verdict = discardVerdict(sh, fans, meta, Date.now(), gigCap);
+      if (verdict && ack !== verdict.outcome)
+        return { ok: false, err: ['This was a real show. Check what discarding it means first.', 409], confirm: { ...verdict, cap: gigCap, used: sh.gigCount }, note: null };
+    }
+  }
   /* Ending the night is not the same as finishing the current song. Anything the
      artist never explicitly completed is released, never charged. */
   try {
@@ -291,14 +335,29 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false 
     }
   } catch { /* never block ending a show on the archive */ }
   await mutateShow(aid, (show) => {
-    if (discard || quiet) uncountGig(show);
+    hadNight = !!(show.freeNight && show.freeNight.id === show.showId);
+    if (quiet || (discard && (!verdict || verdict.outcome === 'warned'))) uncountGig(show);
+    if (discard && verdict && verdict.outcome === 'warned') show.discardWarnedAt = Date.now();
+    // a counted discard is settled: the night keeps its count and has nothing left to give back
+    if (discard && verdict && verdict.outcome === 'counted' && hadNight) show.freeNight = null;
     show.status = 'ended';
     show.endedBy = by;
     show.endedAt = Date.now();
     return true;
   });
   await unmarkLive(aid);
-  return { ok: true, err: null, note: null };
+  /* Every free-plan discard is written down (0122), so a pattern shows on the Sheet's
+     Discards tab: when, how long, how many votes, what it took, and what happened. */
+  if (discard && gigCap !== null && hadNight) {
+    await mutateMeta(aid, (m) => {
+      m.discards = [...(m.discards || []), { at: Date.now(), outcome: verdict ? verdict.outcome : 'given',
+        minutes: verdict ? verdict.minutes : null, votes: verdict ? verdict.votes : null,
+        paid: verdict ? verdict.paid.total : null }].slice(-DISCARDS_KEPT);
+      return true;
+    }).catch(() => {});
+  }
+  const note = verdict && verdict.outcome === 'counted' ? `Discarded — it still counts as one of your ${gigCap} free shows.` : null;
+  return { ok: true, err: null, note };
 }
 
 const joinNote = (note, warn) => (warn ? (note ? `${note} ${warn}` : warn) : note);

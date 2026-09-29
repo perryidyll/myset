@@ -186,6 +186,7 @@ export const TABS = {
   requests: 'Requests',
   ratings: 'Ratings',
   gigs: 'Gigs',
+  discards: 'Discards',
   venues: 'Venues',
   growth: 'Growth',
 };
@@ -257,6 +258,7 @@ export const GUIDE = [
   ['Requests', 'Songs the room asked for that were not on the list. The best answer to "what should I learn next".', 'Added to, never changed.'],
   ['Ratings', 'What fans thought of MySet itself — stars out of five and their own words.', 'Added to, never changed.'],
   ['Gigs', 'The calendar: every gig booked, past and future, and where in the world it is.', 'Rewritten every sync.'],
+  ['Discards', 'Every show a free-plan artist ended with Discard: when, how long it ran, its votes, what it took, and what happened — given back (a test), warned (a real night, given back once with a warning) or counted (a real night after the warning). Watch for one artist with many.', 'Rewritten every sync; the last 30 per artist.'],
   ['Venues', 'Bars and venues that have signed up, their plan and whether they are verified.', 'Rewritten every sync.'],
   ['Growth', 'One row each time this syncs: the running totals. This is the tab to chart.', 'One new row per sync.'],
   ['', '', ''],
@@ -452,6 +454,14 @@ async function artistRows(aid, artist, state, dry) {
      person would actually ask about: the last three months and the next six. */
   const from = day(Date.now() - 92 * 86400000);
   const to = day(Date.now() + 183 * 86400000);
+  /* Free-plan discards (decision 0122), newest first: the watch on "play every gig,
+     discard it after". Minutes, votes and money are blank for a test night. */
+  const DISCARD_SAID = { given: 'given back (a test)', warned: 'given back, warned', counted: 'counted' };
+  const discardRows = [...(meta.discards || [])].reverse().map((x) => [
+    day(x.at), stamp(x.at), artist.name || aid, aid, plan,
+    x.minutes ?? '', x.votes ?? '', x.paid == null ? '' : money(x.paid),
+    DISCARD_SAID[x.outcome] || x.outcome || '', show.gigCount || 0,
+  ]);
   const gigRows = occurrencesFor(events, from, to).map((o) => [
     o.date, o.time, o.endTime || '',
     artist.name || aid, aid,
@@ -583,7 +593,7 @@ async function artistRows(aid, artist, state, dry) {
   };
 
   return {
-    arow, srow, frow, showRows, songRows, reqRows, fbRows, gigRows, marks, cappedShows,
+    arow, srow, frow, showRows, songRows, reqRows, fbRows, gigRows, discardRows, marks, cappedShows,
     venueUse: realNights.map((x) => ({ venueId: (occs.find((o) => o.eventId === (gigOf[x.showId] || {}).eventId) || {}).venueId || '', room: x.room || 0, votes: x.totalVotes || 0 })),
     venueGigs: [...new Set(occs.filter((o) => o.venueId).map((o) => o.venueId))],
     /* RUNNING TOTALS, not this sync's deltas. The Growth tab is a time series
@@ -630,6 +640,7 @@ const HEAD = {
   requests: ['Date', 'When', 'Artist', 'Artist id', 'Kind', 'Asked for', 'Original artist',
              'Cost in votes', 'Status', 'Played it', 'Show id'],
   ratings: ['Date', 'When', 'Artist', 'Artist id', 'Stars', 'What they said', 'Show id'],
+  discards: ['Date', 'When', 'Artist', 'Artist id', 'Plan', 'Minutes', 'Votes', 'Money', 'What happened', 'Free shows used'],
   gigs: ['Date', 'Start', 'End', 'Artist', 'Artist id', 'Venue', 'City', 'Country',
          'Time zone', 'Repeat', 'Past or future', 'Address', 'Tickets', 'Note', 'Being deleted on'],
   venues: ['Name', 'Venue id', 'Page', 'Email', 'City', 'Country', 'Plan', 'Verified',
@@ -692,7 +703,7 @@ async function runSync({ dry, startedAt, state }) {
     if (link && link.artistId) (emailsOf[link.artistId] ||= []).push(email);
   }
 
-  const artists = [], signals = [], features = [], shows = [], songs = [], requests = [], ratings = [], gigs = [];
+  const artists = [], signals = [], features = [], shows = [], songs = [], requests = [], ratings = [], gigs = [], discards = [];
   const atVenue = {};            // venueId -> { artists:Set, nights, phones, votes }
   const marks = {};
   const broke = [];
@@ -741,6 +752,7 @@ async function runSync({ dry, startedAt, state }) {
     requests.push(...r.reqRows);
     ratings.push(...r.fbRows);
     gigs.push(...r.gigRows);
+    discards.push(...r.discardRows);
     marks[aid] = r.marks;
     cappedShows = cappedShows || r.cappedShows;
     t.nights += r.totals.nights; t.votes += r.totals.votes; t.room += r.totals.room;
@@ -815,6 +827,7 @@ async function runSync({ dry, startedAt, state }) {
       [TABS.features]: [HEAD.features, ...features],
       [TABS.songs]: [HEAD.songs, ...songs],
       [TABS.gigs]: [HEAD.gigs, ...gigs],
+      [TABS.discards]: [HEAD.discards, ...discards],
       [TABS.venues]: [HEAD.venues, ...venues],
     },
     /* Each log tab names which watermark field it carries, so a tab that appends

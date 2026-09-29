@@ -817,7 +817,7 @@ async function act(action,extra={}){
   WRITING=true;
   try{
     const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
-    if(!d.ok){toast(d.error||'Failed');return;}
+    if(!d.ok){ if(!d.confirm) toast(d.error||'Failed'); return d; }
     // the write already sent the fresh state back — no second round trip
     if(d.stage&&d.stage.ok){ tipWatch(D,d.stage); D=d.stage; render(); }
     else await load();
@@ -2111,8 +2111,8 @@ function capNote(s){
   const left=Math.max(0,cap-(s.gigCount||0));
   if(left>2)return '';
   return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">${left===0
-    ? `<b style="color:var(--accent)">That's your ${cap} free shows.</b> Upgrade in Settings to keep playing — a show you discard doesn't count.`
-    : `<b>${left} free show${left===1?'':'s'} left.</b> A show you discard doesn't count.`}</p>`;
+    ? `<b style="color:var(--accent)">That's your ${cap} free shows.</b> Upgrade in Settings to keep playing — a test show you discard doesn't count.`
+    : `<b>${left} free show${left===1?'':'s'} left.</b> A test show you discard doesn't count.`}</p>`;
 }
 /* The gig tonight, if there is one: the server's `sched` when the calendar gig is
    within twelve hours, else today's occurrence from the calendar (loaded lazily;
@@ -3879,7 +3879,22 @@ async function saveEndedShow(){
 }
 async function discardEndedShow(){
   if(!await ask({title:'End without saving?',lede:'This show won\u2019t appear in Past shows.',yes:'Yes, end it',no:'Go back'}))return;
-  closeSheet();await act('status',{status:'ended',discard:true});
+  closeSheet();
+  const d=await act('status',{status:'ended',discard:true});
+  /* A REAL NIGHT (over an hour, five or more votes) is asked about once more, with
+     what discarding it means on the free plan (decision 0122). The server decides;
+     this only says it, and sends back the outcome it showed. */
+  const c=d&&d.confirm; if(!c) return;
+  const h=Math.floor(c.minutes/60), m=c.minutes%60;
+  const ran=`${h} h${m?` ${m} min`:''}`, money=c.paid&&c.paid.total>0?`, and you were paid $${c.paid.total.toFixed(2)}`:'';
+  const first=c.outcome==='warned';
+  if(!await ask({
+    title:first?'This looks like a real show':'This one will count',
+    lede:first
+      ? `It ran ${ran} and got ${c.votes} votes${money}. We won\u2019t count this one, but from now on a show you discard that runs over an hour with 5 or more votes counts as one of your ${c.cap} free shows.`
+      : `It ran ${ran} and got ${c.votes} votes${money}, so discarding it still uses one of your ${c.cap} free shows. Save it instead and it\u2019s in Past shows.`,
+    yes:first?'Discard it':'Discard, and count it', no:'Go back'})) return;
+  await act('status',{status:'ended',discard:true,ack:c.outcome});
 }
 
 /* Same key the voting page uses, so flipping this on here affects the phone
