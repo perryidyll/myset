@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 21:48 — 323fce6 — pitch-msgs@docs/pitches-live (3 files since origin/main)
+**tl;dr:** Docs only: decision 0123, the ledger and the session note say venue pitches as conversations are live [skip ci]
+**Other sessions:** 0123 live as 0c4bde2 (#167); Puzzle changelog 2535.
+
 ### 2026-09-29 21:45 — ed7eff3 — pitch-msgs@feat/pitches-in-messages (22 files since origin/main)
 **tl;dr:** Asking a venue for a spot is now a conversation: it lands in the artist's Messages (new Venues folder), the venue replies from its Venue Studio, and Keen / Not this time each send one line
 **Other sessions:** Decision 0123. Pitch rows carry tid (thread in msg_<aid>_<tid>, kind 'pitch', folder 'venues') and vunread; new venueadmin actions pitchThread (CREW_OK) and pitchReply (MANAGER_OK); FOLDERS gains 'venues' (counts too); msgBlock refuses kind 'pitch'; _pitch.mjs imports _messages.mjs (and _messages lazily imports _pitch). Studio ?tab=messages&f=venues opens the folder.
