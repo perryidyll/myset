@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 20:41 — 3fea26a — docs-0122@docs/discard-guard-live (3 files since origin/main)
+**tl;dr:** Docs only: decision 0122, the ledger and a session note say the discard guard is live; money is confirmed not a trigger [skip ci]
+**Other sessions:** 0122 live as 413d116 (#162). Real night = 60+ min AND 5+ votes (REAL_NIGHT); money named in the warning, never a trigger, by the founder's word.
+
 ### 2026-09-29 20:32 — 87e6937 — discard-guard@fix/discard-guard (15 files since origin/main)
 **tl;dr:** Free artists: discarding a real show (over an hour, 5+ votes) now asks first; the first one is given back with a warning, later ones count. Every free-plan discard is listed on the Sheet's new Discards tab.
 **Other sessions:** Decision 0122. endShow(discard) may return {confirm} -> admin answers 409 {ok:false, confirm}; the Studio re-sends with ack:'warned'|'counted'. show.discardWarnedAt (normShow), meta.discards (last 30), REAL_NIGHT/discardVerdict/nightVotes/nightPaid in _lifecycle.mjs. act() in studio.js now returns the response. The Sheet has 12 tabs.
