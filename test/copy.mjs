@@ -66,6 +66,17 @@ ok('the home-page light mode switch persists across every public page',
    /:root\[data-theme=light\]/.test(theme)&&
    ['index.html','artist.html','artists.html','community.html','shop.html','diary.html','vote.html','venue.html','about.html','studio.html','venue-studio.html']
      .every(x=>read(`public/${x}`).includes('/theme.js')));
+/* Decision 0121: the switch grows as a circle from the button — only where the
+   browser can draw one and the person has not asked for less motion, and the
+   home-screen reload waits for the circle rather than cutting it in half. */
+ok('the theme switch grows as a circle from the button, and falls back to instant',
+   /startViewTransition\(swap\)/.test(themeScript)&&
+   /prefers-reduced-motion: reduce/.test(themeScript)&&
+   /typeof document\.startViewTransition === 'function'/.test(themeScript)&&
+   /if \(!done\) swap\(\)/.test(themeScript)&&
+   /pseudoElement: '::view-transition-new\(root\)'/.test(themeScript)&&
+   /if \(button\) toggle\(button\)/.test(themeScript)&&
+   /if \(done\) done\.then\(\(\) => setTimeout\(\(\) => location\.reload\(\), 60\)\)/.test(themeScript));
 ok('light is the first-visit default on every page while a saved dark choice survives',
    /const fallback = \(\) => 'light'/.test(themeScript)&&
    ['index.html','artist.html','artists.html','community.html','shop.html','diary.html','vote.html','venue.html','about.html','studio.html','venue-studio.html','stage.html']
