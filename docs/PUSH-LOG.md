@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 15:21 — 08fad16 — sample-profiles@ui/dashboard-favicons (0 files since origin/main)
+**tl;dr:** The money model, its passcode page, the shows log and the media dash now show the MySet icon (three pink-orange bars) in the browser tab, the same one as HQ
+**Other sessions:** Same data-URI icon line as public/crm.html in finance/model.html, finance/shows.html, _passgate.mjs gatePage and public/mediadash.html. mediadash twin (engine publish/dashboard.html) updated to match: 7aec18e in myset-content.
+
 ### 2026-09-28 20:28 — a063a8e — sample-profiles@docs/hq-message-presets-live (3 files since origin/main)
 **tl;dr:** Docs only: the ledger, decision 0117 and the session note say HQ's message library is live as 84dda56 [skip ci]
 **Other sessions:** Nothing to rebase for: docs only. Puzzle changelog 2487 = 0117.
