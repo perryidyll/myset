@@ -177,7 +177,8 @@ body.sampled{padding-top:var(--sbh,112px)}
         <input id="sclPw" type="password" autocomplete="new-password" placeholder="Password">
         <input id="sclPw2" type="password" autocomplete="new-password" placeholder="Again">
         <div class="scl-err">${esc(err || '')}</div>
-        <button class="scl-go" type="button">Claim my page</button>`;
+        <button class="scl-go" type="button">Claim my page</button>
+        <p style="font-size:12px;margin:10px 0 0;opacity:.72">By claiming it you agree to MySet’s <a href="/terms" target="_blank" rel="noopener" style="color:inherit">terms</a> and <a href="/privacy" target="_blank" rel="noopener" style="color:inherit">privacy notice</a>.</p>`;
       const a = $('#sclPw', body), b = $('#sclPw2', body), go = $('.scl-go', body);
       const done = async () => {
         if ((a.value || '').length < 8) { $('.scl-err', body).textContent = 'At least 8 characters'; return; }

@@ -1,0 +1,239 @@
+<!doctype html>
+<!--
+  MySet — myset.vip/terms. The terms of use (decision 0119).
+
+  EVERY FACTUAL SENTENCE HERE IS A CLAIM ABOUT THE CODE. It was written on 2026-09-29
+  from an inventory of the money, account and content paths (see the decision record)
+  and must be changed in the same pull request as any change that makes a line untrue:
+  who the seller is, how refunds, request holds, plans or cancellation work, what
+  happens on deletion. Prices and percentages are deliberately NOT on this page: they
+  live in the code and are shown in the Studio before anyone pays. The Stripe
+  Connected Account Agreement line is Stripe's requirement for a Connect platform.
+
+  Self-contained on purpose (no app.css, no fan.js): a page a lawyer or a reviewer
+  opens once, that must load even when everything else is broken.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+<script>(()=>{try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')document.documentElement.dataset.theme=s}catch(e){}})()</script>
+<title>MySet — Terms</title>
+<meta name="description" content="The terms for using MySet: fans, artists and venues, in plain words. Who is paid, what is final, and what each side can expect." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
+<style>
+:root{
+  --bg:#F5F5F7;--surface:#FFFFFF;--ink:#1D1D1F;--ink-2:#3A3A3C;--muted:#6E6E73;
+  --hair:rgba(0,0,0,.08);--hair-2:rgba(0,0,0,.14);
+  --accent:#FF5650;--accent-soft:rgba(255,86,80,.12);--link:#C4291F;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#000;--surface:#141416;--ink:#F5F5F7;--ink-2:#DDDDE0;--muted:#98989D;
+  --hair:rgba(255,255,255,.08);--hair-2:rgba(255,255,255,.16);--accent-soft:rgba(255,86,80,.18);--link:#FF7A70;
+}}
+:root[data-theme="dark"]{
+  --bg:#000;--surface:#141416;--ink:#F5F5F7;--ink-2:#DDDDE0;--muted:#98989D;
+  --hair:rgba(255,255,255,.08);--hair-2:rgba(255,255,255,.16);--accent-soft:rgba(255,86,80,.18);--link:#FF7A70;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px 96px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px}
+.brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-weight:700;letter-spacing:-.01em}
+.bars{display:inline-flex;align-items:flex-end;gap:3px;height:22px}
+.bars i{display:block;width:5px;border-radius:3px;background:var(--accent);transform-origin:bottom;animation:rise .7s var(--ease) both}
+.bars i:nth-child(1){height:12px;animation-delay:.05s}.bars i:nth-child(2){height:20px;animation-delay:.12s}.bars i:nth-child(3){height:8px;animation-delay:.19s}
+@keyframes rise{from{transform:scaleY(.1);opacity:0}to{transform:none;opacity:1}}
+.hero{padding:44px 0 8px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(34px,7vw,52px);line-height:1.05;letter-spacing:-.03em;margin:10px 0 14px;font-weight:800}
+h1 span{color:var(--accent)}
+.lede{font-size:19px;color:var(--ink-2);margin:0 0 6px;max-width:60ch}
+.date{font-size:14px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:20px;padding:22px 24px;margin:28px 0}
+.card h2{margin-top:0}
+.short li{margin:6px 0}
+nav.toc{position:sticky;top:0;z-index:2;margin:0 -20px;padding:10px 20px;background:color-mix(in srgb,var(--bg) 86%,transparent);
+  -webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--hair);
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+nav.toc::-webkit-scrollbar{display:none}
+nav.toc a{flex:none;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;padding:7px 12px;border-radius:999px;
+  transition:color .2s var(--ease),background-color .25s var(--ease)}
+nav.toc a:hover{color:var(--ink)}
+nav.toc a.on{color:var(--ink);background:var(--accent-soft)}
+section{padding-top:18px;scroll-margin-top:64px}
+h2{font-size:26px;letter-spacing:-.02em;line-height:1.2;margin:36px 0 10px}
+h3{font-size:18px;margin:24px 0 6px}
+p,li{color:var(--ink-2)}
+ul{padding-left:1.2em}
+li{margin:5px 0}
+strong{color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:15px;margin:12px 0}
+.tbl th,.tbl td{text-align:left;vertical-align:top;padding:10px 12px 10px 0;border-bottom:1px solid var(--hair)}
+.tbl th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tbl td:first-child{color:var(--ink);font-weight:500;width:38%}
+.note{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:18px 0}
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--hair);font-size:14px;color:var(--muted)}
+/* arrival: each section rises in as it reaches the screen */
+.rise{opacity:0;transform:translateY(14px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.rise.in{opacity:1;transform:none}
+@media (max-width:560px){body{font-size:16px}.card{padding:18px}.tbl td:first-child{width:44%}}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}.bars i{animation:none}.rise{opacity:1;transform:none;transition:none}nav.toc a{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/" aria-label="MySet home"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>MySet</a>
+  </header>
+
+
+  <div class="hero">
+    <div class="eyebrow">Terms</div>
+    <h1>The deal, <span>in plain words.</span></h1>
+    <p class="lede">The terms for using MySet, whether you're in the audience, on stage or running the room.</p>
+    <div class="date">Last updated 29 September 2026</div>
+  </div>
+
+  <div class="card short rise">
+    <h2>The short version</h2>
+    <ul>
+      <li>Fans never need an account. Using MySet means you agree to these terms and our <a href="/privacy">privacy notice</a>.</li>
+      <li>When you tip, buy votes, make a paid request or buy merch, you're paying <strong>the artist or venue</strong>, not MySet. They are the seller; Stripe processes the payment.</li>
+      <li>Votes are final once you confirm them. A paid song request is only charged if the song is played.</li>
+      <li>Artists and venues own what they post, keep their page accurate, and are responsible for what they sell.</li>
+      <li>Questions or problems: <a href="mailto:hello@myset.vip">hello@myset.vip</a>.</li>
+    </ul>
+  </div>
+
+  <nav class="toc" aria-label="On this page">
+    <a href="#who">Who we are</a>
+    <a href="#audience">Audience</a>
+    <a href="#artists">Artists &amp; venues</a>
+    <a href="#plans">Plans</a>
+    <a href="#content">Content</a>
+    <a href="#samples">Sample pages</a>
+    <a href="#service">The service</a>
+    <a href="#legal">The legal bits</a>
+  </nav>
+
+  <section id="who" class="rise">
+    <h2>Who we are</h2>
+    <p>MySet (myset.vip) lets an audience vote from their own phones on what an artist plays next. It is run by Idyll Enterprises in Johnson City, Tennessee, USA ("MySet", "we", "us"). These terms are an agreement between you and us. If you don't agree with them, please don't use MySet.</p>
+    <p>You must be at least 13 to use MySet. To make an artist or venue account, sell anything or get paid, you must be old enough to make a binding contract where you live (18 in most places) and meet Stripe's requirements.</p>
+  </section>
+
+  <section id="audience" class="rise">
+    <h2>If you're in the audience</h2>
+    <p><strong>No account.</strong> Your phone keeps a random ID so the page knows which votes are yours. Anything tied to it, such as votes you've bought and not used, stays on that phone and browser; if you clear its site data, we can't get it back.</p>
+    <p><strong>Who you're paying.</strong> Tips, vote packs, paid votes, paid song requests and merch are sold by the artist or venue whose page you're on, through their own Stripe account. They are the seller of record and they set their prices. MySet takes a fee from their side of the sale; you pay the price shown. (On the founder's own artist page, MySet itself is the seller.)</p>
+    <p><strong>Votes are final.</strong> Once you confirm a vote, it's spent. Votes you bought and didn't use carry over to that artist's next show. If an artist declines your request, or passes on a song you voted for, the votes come back to you.</p>
+    <p><strong>Paid song requests.</strong> When you offer money for a request, your card is only held. You're charged if the artist plays and finishes the song. If they decline it, or the show ends before it's played, the hold is released and you pay nothing.</p>
+    <p><strong>Refunds.</strong> A tip or a vote is a payment to the artist, and refunds are their call. They handle them in their Stripe account. If you can't reach them, email us with the show and roughly when, and we'll pass it on. Nothing here takes away a right to a refund that the law gives you.</p>
+    <p><strong>Merch.</strong> The artist or venue sells, ships or hands over your order, and handles returns and problems with it. The shop tells you whether an item ships or is picked up at the show.</p>
+    <p><strong>Be decent.</strong> Don't flood a show with votes by script, don't try to break or fool the voting, and don't post anything that breaks the content rules below.</p>
+  </section>
+
+  <section id="artists" class="rise">
+    <h2>If you're an artist or a venue</h2>
+    <p><strong>Your account.</strong> Keep your sign-in safe; you're responsible for what happens under it. The owner of a page decides who else gets a seat on it, and answers for what they do there. One email can hold one artist page.</p>
+    <p><strong>Getting paid.</strong> Payments to you are processed by Stripe on your own Stripe account. Payment processing services for artists and venues on MySet are provided by Stripe and are subject to the <a href="https://stripe.com/connect-account/legal" rel="noopener">Stripe Connected Account Agreement</a>, which includes the <a href="https://stripe.com/legal" rel="noopener">Stripe Terms of Service</a> (together, the "Stripe Services Agreement"). By getting paid through MySet, you agree to the Stripe Services Agreement, as Stripe may change it from time to time. As a condition of MySet enabling payment processing through Stripe, you agree to give us accurate and complete information about you and your business, and you authorize us to share it, and transaction information related to your use of the payment processing services provided by Stripe.</p>
+    <p><strong>Our fee and Stripe's.</strong> MySet takes a fee on each sale made through your page, set by your plan and shown in the Studio. Stripe's own card fee comes out of your side too. How often you're paid out depends on your plan and on Stripe.</p>
+    <p><strong>You're the seller.</strong> For tips, votes, requests and merch sold on your page, you are the merchant. That means:</p>
+    <ul>
+      <li>refunds, disputes and chargebacks are yours to handle, in your Stripe account;</li>
+      <li>taxes on your sales are yours to work out and pay;</li>
+      <li>merch must be yours to sell and legal to sell, described honestly, and sent or handed over as promised;</li>
+      <li>the gigs you list must be real, with the right place and time, because people travel to them;</li>
+      <li>if you take money for a request, play it or decline it.</li>
+    </ul>
+    <p><strong>Performing songs.</strong> Playing other people's music in public needs a licence, which is usually the venue's. MySet doesn't provide one.</p>
+    <p><strong>The verified tick</strong> means a page passed our checks. It can't be bought, and it isn't an endorsement.</p>
+  </section>
+
+  <section id="plans" class="rise">
+    <h2>Paid plans</h2>
+    <ul>
+      <li>Plans are billed monthly through Stripe, at the price shown when you choose one. The free plan stays free.</li>
+      <li>Moving up takes effect straight away, and you pay the difference for the rest of the month.</li>
+      <li><strong>Cancel any time.</strong> A paid month is yours to the end of it; after that your page moves to the free plan. We don't refund part-months.</li>
+      <li>Moving down never deletes anything. Features beyond the free plan switch off, and merch leaves your page until you're back on a plan that includes it.</li>
+      <li>Deleting your account cancels the plan at once.</li>
+      <li>If we change a plan's price, we'll tell you in the Studio before it applies to you.</li>
+    </ul>
+    <p>Plans and featured spots are sold by us, so a question about one comes to <a href="mailto:hello@myset.vip">hello@myset.vip</a>.</p>
+  </section>
+
+  <section id="content" class="rise">
+    <h2>What you post</h2>
+    <p><strong>It stays yours.</strong> Photos, clips, posts, diaries, song lists, merch pictures and messages belong to whoever made them. By posting on MySet, you give us permission to store it, show it on MySet, and use it to show off your page (in a share card or a featured spot, say), for as long as it's up. That permission ends when you delete it, apart from copies in backups.</p>
+    <p><strong>Only post what you have the right to post.</strong> Nothing that is:</p>
+    <ul>
+      <li>illegal, or infringes someone else's copyright, trademark or privacy;</li>
+      <li>hateful, harassing or threatening, or sexual content involving anyone under 18;</li>
+      <li>spam, a scam, or pretending to be someone you're not.</li>
+    </ul>
+    <p>Venues, and artists on a paid plan, can hide posts on their own pages. We can remove anything that breaks these rules, and suspend or close an account that keeps breaking them.</p>
+    <p><strong>Lyrics</strong> on the voting page come from LRCLIB, a community collection, and are shown as unofficial, for singing along in the room. An artist can remove them from any song.</p>
+    <p><strong>Something of yours posted without permission?</strong> Email <a href="mailto:hello@myset.vip">hello@myset.vip</a> with a link to it and why it's yours, and we'll look into it and take it down if it shouldn't be there.</p>
+  </section>
+
+  <section id="samples" class="rise">
+    <h2>Sample pages</h2>
+    <p>We sometimes build a sample page for an artist or venue from what they've already made public, and send them the link. Only the artist or venue it's about may claim it; claiming it makes it a free account under these terms. If you'd rather it didn't exist, tell us and it's deleted. The <a href="/privacy#samples">privacy notice</a> has the details.</p>
+  </section>
+
+  <section id="service" class="rise">
+    <h2>The service</h2>
+    <p>MySet is built so the room can keep voting when something goes wrong, and we work hard to keep it running. Still, we can't promise it will always be available, fast or free of mistakes, and we may change, add or remove features.</p>
+    <p><strong>Leaving.</strong> Fans can simply stop using it. Artists and venues can download their data and delete their account from the Studio; there are 30 days to change your mind before it's erased. We may suspend or close an account that breaks these terms or puts other people at risk, and where we reasonably can, we'll tell you why first.</p>
+  </section>
+
+  <section id="legal" class="rise">
+    <h2>The legal bits</h2>
+    <h3>No warranties</h3>
+    <p>MySet is provided "as is" and "as available". To the extent the law allows, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose and non-infringement.</p>
+    <h3>Limits on our liability</h3>
+    <p>To the extent the law allows, MySet isn't liable for indirect, incidental, special or consequential losses, or for lost profits, revenue or data. Our total liability for any claim about MySet is limited to the greater of what you paid us (not an artist or venue) in the 12 months before the claim, or US$100. We aren't responsible for what artists, venues or fans do, say, sell or post, or for a show that changes or doesn't happen.</p>
+    <h3>Your responsibility to us</h3>
+    <p>If you're an artist or venue and a claim is brought against us because of what you sold, posted or did through MySet, or because you broke these terms, you agree to cover our reasonable costs of it.</p>
+    <h3>The law that applies</h3>
+    <p>These terms are governed by the laws of the State of Tennessee, USA, and any dispute goes to the state or federal courts in Tennessee. If you're a consumer, you keep any protections the law where you live gives you and can't be signed away.</p>
+    <h3>Changes</h3>
+    <p>When these terms change, the date at the top changes. If a change matters to account holders, we'll tell them in the Studio before it applies. Using MySet after that means you accept the new terms.</p>
+    <h3>Everything else</h3>
+    <p>If part of these terms can't be enforced, the rest still applies. If we don't enforce something straight away, we haven't given up the right to. These terms and the <a href="/privacy">privacy notice</a> are the whole agreement between us about MySet.</p>
+    <h3>Contact</h3>
+    <p>Idyll Enterprises, Johnson City, Tennessee, USA · <a href="mailto:hello@myset.vip">hello@myset.vip</a></p>
+  </section>
+
+  <footer>MySet · myset.vip · <a href="/">Home</a> · <a href="/about">How MySet works</a> · <a href="/privacy">Privacy</a></footer>
+</div>
+<script>
+(()=>{
+  const R=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rise=[...document.querySelectorAll('.rise')];
+  if(R||!('IntersectionObserver' in window)) rise.forEach(e=>e.classList.add('in'));
+  else{const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{rootMargin:'0px 0px -8% 0px'});rise.forEach(e=>io.observe(e))}
+  /* the table of contents follows the reader */
+  const nav=document.querySelector('nav.toc'), links=[...nav.querySelectorAll('a')], map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+  const secs=[...document.querySelectorAll('section[id]')].filter(s=>map.has(s.id));
+  let cur=null;
+  const mark=()=>{let id=secs[0].id;for(const s of secs){if(s.getBoundingClientRect().top<120)id=s.id}
+    if(id===cur)return;cur=id;links.forEach(a=>a.classList.remove('on'));const a=map.get(id);a.classList.add('on');
+    nav.scrollTo({left:a.offsetLeft-nav.clientWidth/2+a.offsetWidth/2,behavior:R?'auto':'smooth'})};
+  addEventListener('scroll',()=>requestAnimationFrame(mark),{passive:true});mark();
+})();
+</script>
+</body>
+</html>

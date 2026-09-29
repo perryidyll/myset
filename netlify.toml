@@ -110,6 +110,13 @@
   to = "/privacy.html"
   status = 200
 
+# myset.vip/terms — the terms of use (decision 0119). Same shape as /privacy; `terms`
+# has been a reserved slug since the start.
+[[redirects]]
+  from = "/terms"
+  to = "/terms.html"
+  status = 200
+
 # The printable business report (decision 0065). Above the catch-all like the
 # others, or an artist called "report" would be handed the accountant's page.
 [[redirects]]
