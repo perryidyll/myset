@@ -144,3 +144,18 @@ Found on the live site afterwards: Netlify serves `/<name>` from `<name>.html` b
 
 **Puzzle:** changelog 2487 = `0117`, completed, linked to *Send the first message* (389731) and *Follow up* (389734). No process step changed.
 
+## Seventh round, 2026-09-29: dashboard icons, Gmail switched on, a privacy notice
+
+**Asked:** the MySet icon on the money model, the shows log and the media dash; "add the gmail switch-on steps"; then "write the privacy page and whatever else needs to be done".
+
+**Shipped:**
+- **Dashboard icons:** HQ's tab icon (three pink-orange bars) on `finance/model.html`, `finance/shows.html`, the passcode page (`_passgate.mjs`) and `public/mediadash.html`. Live as `654a61a` (#153). The media dash's twin in the content engine was updated to match (`7aec18e` there).
+- **Gmail switched on.**
+  - The only existing Google Cloud project is branded Idyll Mastery. I published it and enabled Gmail there, then put both back and made a separate project, *MySet* (`myset-510109`), on the founder's yes to the Maps billing account. The Gmail API is free.
+  - Consent screen: *MySet*, External. The founder ticked Google's User Data Policy himself.
+  - Web client *MySet HQ*. The two variables were set in Netlify (Production) with Keychain copies, and production was rebuilt. The founder connected Gmail.
+- **Privacy notice:** decision 0118, live as `9f2b1c0` (#154). Once it was live, the consent screen got its homepage and privacy links and was published.
+
+**Not checked:** the Gmail connection itself behind the passcode. The founder reported "connected on HQ". A token from before publishing ends after seven days, so he reconnects once.
+
+**Puzzle:** changelog 2524 = 0118.

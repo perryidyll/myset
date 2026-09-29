@@ -8,7 +8,7 @@ area: trust
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [9f2b1c0]
 tests: [test/structure.mjs]
 files: [public/privacy.html, netlify.toml, public/index.html, public/about.html]
 ---
@@ -65,3 +65,5 @@ The data inventory was read out of the server code with file and line citations.
 The page was viewed on `tools/localhost.mjs` at 375 px and desktop, light and dark: no sideways scroll, the contents bar follows the reader, no console errors.
 
 The suite passed, 4,627 tests, including test/structure.mjs's check that every top-level route is a reserved slug.
+
+Live as `9f2b1c0` (PR #154), checked by content on myset.vip: `/privacy` carries the Limited Use statement, and `/` and `/about` link to it. The Google app was then published (In production) with `https://myset.vip/privacy` as its privacy link.

@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 17:08 — 9f2b1c0 — sample-profiles@docs/privacy-and-gmail-live (0 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0118 and the session note say the privacy page and HQ's Gmail are live [skip ci]
+**Other sessions:** Nothing to rebase for. Gmail: Google project myset-510109, OAuth app published 2026-09-29; GMAIL_CLIENT_ID/SECRET Production only. Puzzle changelog 2524 = 0118.
+
 ### 2026-09-29 17:04 — 654a61a — sample-profiles@pages/privacy (0 files since origin/main)
 **tl;dr:** myset.vip/privacy is live-ready: a plain-language privacy notice (what the audience, artists, sample pages and HQ's Gmail keep, who handles it, how long, how to delete), linked from the home and About footers
 **Other sessions:** Decision 0118. public/privacy.html is a claim about the code: any change that stores something new, adds a processor or changes a retention period updates it in the same PR. Its Gmail section is what Google reviews for HQ's OAuth app (project myset-510109).
