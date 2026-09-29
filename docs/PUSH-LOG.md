@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 19:52 — 4b1849a — contradictions-0119@docs/contradictions-0119 (28 files since origin/main)
+**tl;dr:** A free show the calendar started by itself, with no votes all night, no longer uses one of the ten.
+**Other sessions:** show.freeNight now carries auto (set by countGig(sh, by) when by==='schedule'); quietAutoNight(show, fans) in _lifecycle.mjs decides the give-back in endShow and, for a still-running night replaced by a fresh one, in startShow. An artist-started quiet night still counts.
+
 ### 2026-09-29 19:44 — 57db21e — theme-circle@docs/theme-circle-live (3 files since origin/main)
 **tl;dr:** Docs only: the ledger, decision 0121 and the session note say the theme circle is live [skip ci]
 **Other sessions:** Nothing to rebase for. Decision 0121 = d10d24e (#159).
@@ -17,6 +21,10 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-29 19:40 — 84f583c — theme-circle@ui/theme-circle (5 files since origin/main)
 **tl;dr:** Every MySet page's light/dark button now reveals the new theme as a circle growing from the button (like HQ's); instant as before on older phones or with Reduce Motion
 **Other sessions:** Decision 0121. public/theme.js: toggle(el) uses document.startViewTransition + clip-path on ::view-transition-new(root), injects its own CSS; the iOS home-screen reload and the scroll nudge wait for vt.finished. .theme-now kills transitions for one frame.
+
+### 2026-09-29 19:40 — d7adba8 — contradictions-0119@docs/contradictions-0119 (22 files since origin/main)
+**tl;dr:** Free plan is now 10 shows in total (not 10 a month); a discarded show gives its count back; the Studio shows 'Hobbyist · x/10'. Plus six places where pages or docs said something the code doesn't do are fixed.
+**Other sessions:** Decision 0120 (reverses 0037), INVARIANT 9d9 rewritten. gigMonth, gigMonthOf and the Studio's monthKey are GONE; show.gigCount is lifetime free shows and show.freeNight records what the current night used; countGig/uncountGig in _lifecycle.mjs. The stage payload no longer sends gigMonth.
 
 ### 2026-09-29 17:59 — 6383aec — sample-profiles@docs/terms-live (3 files since origin/main)
 **tl;dr:** Docs only: the ledger, decision 0119 and the session note say the terms page is live [skip ci]

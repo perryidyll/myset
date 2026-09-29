@@ -4,7 +4,7 @@ import { COUNTDOWN_MS, getShow, mutateShow, readFans, consumePlayedVotes, dropSo
          MIN_CODE, weakCode, cleanArtistId,
          normPacks, normAsk,
          GENRES, GENRE_IDS, cleanKey, cleanTagLabel, tagId, normOwnTags,
-         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, gigMonthOf, DEFAULT_ARTIST,
+         MAX_OWN_TAGS, MAX_SONG_TAGS, votable, playable, DEFAULT_ARTIST,
          DEFAULT_FREE_CREDITS, readDoc, KEY } from './_lib.mjs';
 import { readLists, mutateLists, readLearn, mutateLearn, applyList, refreshActive,
          shapeLists, MAX_LISTS, MAX_NAME, MAX_LEARN } from './_lists.mjs';

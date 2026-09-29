@@ -614,7 +614,6 @@ const VTIER_COPY={
     ['Hide any post',' — instantly, and undo it'],
     ['Codes to print',' for tables, the bar and the door'],
     ['Your numbers',': who voted, what got played, night by night'],
-    ['Verification',', once your website and your artists check out'],
     ['<span class="fee">Transaction fee: 10%</span>',' on merch sold through the app, with Stripe’s card fee shared']]},
   pro:{name:'Pro',price:'$20 / month',items:[
     ['Your page on myset.vip',' — address, hours, what’s on, how to get there'],
@@ -624,7 +623,7 @@ const VTIER_COPY={
     ['A community page',' — fans rate the night and post photos, you reply'],
     ['Merch on your shop page',', paid straight to your Stripe account'],
     ['Delete a post for good',' \u2014 hiding is free on every plan'],
-    ['The green verified tick',' beside your name'],
+    ['The green verified tick',' beside your name, once your website and your artists check out'],
     ['Codes to print',' for tables, the bar and the door'],
     ['Your numbers',': who voted, what got played, night by night'],
     ['Coming soon, included',': tips for your staff, and votes for what plays between the sets'],
