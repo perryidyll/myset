@@ -1984,8 +1984,11 @@ const main = async (req) => {
      carry. Only `status: 'pre'` still falls through to the switch below. */
   if (action === 'newShow' || (action === 'status' && (body.status === 'live' || body.status === 'ended'))) {
     const r = (action === 'status' && body.status === 'ended')
-      ? await endShow(aid, { by: 'artist', title: String(body.title || '').trim().slice(0, 100), discard: body.discard === true })
+      ? await endShow(aid, { by: 'artist', title: String(body.title || '').trim().slice(0, 100), discard: body.discard === true,
+                             ack: body.ack === 'warned' || body.ack === 'counted' ? body.ack : '' })
       : await startShow(aid, { fresh: action === 'newShow', by: 'artist' });
+    // a discard of a real night comes back with what it means, for the Studio to ask (0122)
+    if (r.confirm) return json({ ok: false, error: r.err[0], confirm: r.confirm }, r.err[1]);
     if (r.err) return bad(r.err[0], r.err[1]);
     let stage = null;
     try { stage = await stagePayload(aid, me); } catch { /* the write still succeeded */ }
