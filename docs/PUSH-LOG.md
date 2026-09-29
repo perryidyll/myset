@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 23:56 — 6486e3e — venue-push@feat/venue-push (20 files since origin/main)
+**tl;dr:** Venues can switch on push alerts (Venue Studio → Settings → Alerts): a new ask to play, an artist writing back, a merch order
+**Other sessions:** Decision 0124. Venue phones live in push_v_<vid> (same owner id as venue sessions, so venue sign-outs already drop them); notify() reads the venue registry for owner ids starting v_, and every venue seat hears a {tab} alert. venueadmin pushKey/pushOn/pushOff (CREW_OK; pushKey takes endpoint, answers mine). _pitch.mjs tellVenue; venueUnread(vid, aid, text) now pushes. Venue Studio reads ?tab=.
+
 ### 2026-09-29 21:48 — 323fce6 — pitch-msgs@docs/pitches-live (3 files since origin/main)
 **tl;dr:** Docs only: decision 0123, the ledger and the session note say venue pitches as conversations are live [skip ci]
 **Other sessions:** 0123 live as 0c4bde2 (#167); Puzzle changelog 2535.
