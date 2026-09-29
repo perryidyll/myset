@@ -94,7 +94,9 @@ most commonly skipped step and the most expensive one to fix afterwards.
 - **Trademark "MySet".** Plausibly the highest-leverage anti-copycat move that
   exists, since features are copyable and a name is not. Talk to someone who does
   this for a living; Thailand-plus-international is not a DIY situation.
-- **A privacy policy and terms.** You take money and you store device identifiers.
+- **A privacy policy and terms.** The privacy notice is live at /privacy since 2026-09-29
+  (decision 0118, written from the code, not by a lawyer); terms are still open.
+  You take money and you store device identifiers.
   A ToS that prohibits scraping also gives you a contract claim, which is faster
   and cheaper than an IP suit.
 

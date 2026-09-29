@@ -1,0 +1,255 @@
+<!doctype html>
+<!--
+  MySet — myset.vip/privacy. The privacy notice (decision 0118).
+
+  EVERY SENTENCE HERE IS A CLAIM ABOUT THE CODE. It was written on 2026-09-29 from a
+  data inventory of the server (file-by-file, see the decision record) and must be
+  changed in the same pull request as any change that makes a line untrue: a new
+  thing stored, a new company that handles data, a new retention period. Google reads
+  the "Gmail and other Google data" section when it reviews the HQ Gmail connection
+  (decision 0109), so that section stays word-for-word true about _gmail.mjs.
+
+  Self-contained on purpose (no app.css, no fan.js): a page a lawyer or a reviewer
+  opens once, that must load even when everything else is broken.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F5F5F7" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000" />
+<script>(()=>{try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')document.documentElement.dataset.theme=s}catch(e){}})()</script>
+<title>MySet — Privacy</title>
+<meta name="description" content="What MySet keeps, why, for how long, and how to have it deleted. The audience never signs in." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
+<style>
+:root{
+  --bg:#F5F5F7;--surface:#FFFFFF;--ink:#1D1D1F;--ink-2:#3A3A3C;--muted:#6E6E73;
+  --hair:rgba(0,0,0,.08);--hair-2:rgba(0,0,0,.14);
+  --accent:#FF5650;--accent-soft:rgba(255,86,80,.12);--link:#C4291F;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#000;--surface:#141416;--ink:#F5F5F7;--ink-2:#DDDDE0;--muted:#98989D;
+  --hair:rgba(255,255,255,.08);--hair-2:rgba(255,255,255,.16);--accent-soft:rgba(255,86,80,.18);--link:#FF7A70;
+}}
+:root[data-theme="dark"]{
+  --bg:#000;--surface:#141416;--ink:#F5F5F7;--ink-2:#DDDDE0;--muted:#98989D;
+  --hair:rgba(255,255,255,.08);--hair-2:rgba(255,255,255,.16);--accent-soft:rgba(255,86,80,.18);--link:#FF7A70;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 var(--font);-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px 96px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:20px 0 8px}
+.brand{display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none;font-weight:700;letter-spacing:-.01em}
+.bars{display:inline-flex;align-items:flex-end;gap:3px;height:22px}
+.bars i{display:block;width:5px;border-radius:3px;background:var(--accent);transform-origin:bottom;animation:rise .7s var(--ease) both}
+.bars i:nth-child(1){height:12px;animation-delay:.05s}.bars i:nth-child(2){height:20px;animation-delay:.12s}.bars i:nth-child(3){height:8px;animation-delay:.19s}
+@keyframes rise{from{transform:scaleY(.1);opacity:0}to{transform:none;opacity:1}}
+.hero{padding:44px 0 8px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:clamp(34px,7vw,52px);line-height:1.05;letter-spacing:-.03em;margin:10px 0 14px;font-weight:800}
+h1 span{color:var(--accent)}
+.lede{font-size:19px;color:var(--ink-2);margin:0 0 6px;max-width:60ch}
+.date{font-size:14px;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:20px;padding:22px 24px;margin:28px 0}
+.card h2{margin-top:0}
+.short li{margin:6px 0}
+nav.toc{position:sticky;top:0;z-index:2;margin:0 -20px;padding:10px 20px;background:color-mix(in srgb,var(--bg) 86%,transparent);
+  -webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--hair);
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+nav.toc::-webkit-scrollbar{display:none}
+nav.toc a{flex:none;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none;padding:7px 12px;border-radius:999px;
+  transition:color .2s var(--ease),background-color .25s var(--ease)}
+nav.toc a:hover{color:var(--ink)}
+nav.toc a.on{color:var(--ink);background:var(--accent-soft)}
+section{padding-top:18px;scroll-margin-top:64px}
+h2{font-size:26px;letter-spacing:-.02em;line-height:1.2;margin:36px 0 10px}
+h3{font-size:18px;margin:24px 0 6px}
+p,li{color:var(--ink-2)}
+ul{padding-left:1.2em}
+li{margin:5px 0}
+strong{color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;font-size:15px;margin:12px 0}
+.tbl th,.tbl td{text-align:left;vertical-align:top;padding:10px 12px 10px 0;border-bottom:1px solid var(--hair)}
+.tbl th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.tbl td:first-child{color:var(--ink);font-weight:500;width:38%}
+.note{border-left:3px solid var(--accent);padding:4px 0 4px 16px;margin:18px 0}
+footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--hair);font-size:14px;color:var(--muted)}
+/* arrival: each section rises in as it reaches the screen */
+.rise{opacity:0;transform:translateY(14px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.rise.in{opacity:1;transform:none}
+@media (max-width:560px){body{font-size:16px}.card{padding:18px}.tbl td:first-child{width:44%}}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}.bars i{animation:none}.rise{opacity:1;transform:none;transition:none}nav.toc a{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="/" aria-label="MySet home"><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>MySet</a>
+  </header>
+
+  <div class="hero">
+    <div class="eyebrow">Privacy</div>
+    <h1>The room votes. <span>Nobody signs in.</span></h1>
+    <p class="lede">What MySet keeps, why, for how long, and how to have it deleted, in plain words.</p>
+    <div class="date">Last updated 29 September 2026</div>
+  </div>
+
+  <div class="card short rise">
+    <h2>The short version</h2>
+    <ul>
+      <li>If you're in the audience, you never make an account. We don't know your name unless you type it into something.</li>
+      <li>No ads, no analytics, no tracking cookies, and we don't sell anyone's data.</li>
+      <li>Money goes through Stripe. We never see a card number.</li>
+      <li>Artists and venues can download or delete everything in their account from the Studio.</li>
+      <li>Anyone can email <a href="mailto:hello@myset.vip">hello@myset.vip</a> to see, fix or delete what we hold about them.</li>
+    </ul>
+  </div>
+
+  <nav class="toc" aria-label="On this page">
+    <a href="#who">Who we are</a>
+    <a href="#audience">Audience</a>
+    <a href="#artists">Artists &amp; venues</a>
+    <a href="#samples">Sample pages</a>
+    <a href="#google">Gmail &amp; Google</a>
+    <a href="#others">Who else</a>
+    <a href="#keep">How long</a>
+    <a href="#rights">Your choices</a>
+  </nav>
+
+  <section id="who" class="rise">
+    <h2>Who we are</h2>
+    <p>MySet (myset.vip) lets an audience vote from their own phones on what an artist plays next. It is run by Idyll Enterprises in Johnson City, Tennessee, USA. For anything on this page, email <a href="mailto:hello@myset.vip">hello@myset.vip</a>.</p>
+  </section>
+
+  <section id="audience" class="rise">
+    <h2>If you're in the audience</h2>
+    <p><strong>No account, ever.</strong> When you open an artist's page, your phone makes up a random ID and keeps it in its own storage, so the page knows your votes are yours. It isn't linked to your name, number or email. Clear your browser's site data and your phone forgets it.</p>
+    <p><strong>Your network.</strong> We read your internet address to stop one script from flooding a show, but we never store the address itself, only a scrambled code made from it.</p>
+    <p><strong>Votes.</strong> Tonight's votes are wiped when the artist's next show starts; votes you paid for and didn't use carry over. We keep a permanent count of what was voted for, with your phone's ID scrambled beyond recovery.</p>
+    <p><strong>Tips, paid votes and song requests.</strong> Stripe handles the payment on the artist's own Stripe account. Stripe collects your email and card; we never see the card. We keep the amount, the time, the show and any note you add (up to 120 characters). The artist can see your email and note, so they can say thanks or sort out a problem.</p>
+    <p><strong>Merch.</strong> If an item ships, Stripe asks for your name, email and address. They stay at Stripe and are shown to the artist only when they open your order to send it. We keep the order itself: what, how many, and a pickup code. We don't ask for a phone number.</p>
+    <p><strong>Things you choose to post.</strong> RSVPs are stored against a scrambled ID with no name. Star ratings and notes (up to 400 characters) go to the artist. Community posts carry the name you type, your words, and any photos or short clip you add. Shop wishes and birthday shout-outs carry the name you type. If you report a bug, we get your note, the page, your browser type and the recent errors.</p>
+    <p><strong>Booking an artist.</strong> The Book button sends your name, email, phone, venue and date to that artist, so they can reply. We keep the message in their inbox.</p>
+    <p><strong>Location.</strong> The home page can suggest your city. Your location is compared on your phone; nothing is sent to us or stored.</p>
+    <p><strong>Cookies.</strong> Fans get none. Your phone's own storage also keeps small preferences: light or dark, sort order, your city, your recent orders.</p>
+  </section>
+
+  <section id="artists" class="rise">
+    <h2>If you're an artist or a venue</h2>
+    <p><strong>Your account.</strong> Your email; your page (name, bio, photos, links, gigs, songs, setlists, merch, tour, diary); your business numbers; and how you sign in: a 6-digit code by email (it expires after 10 minutes), a password (stored only as a one-way hash), a passkey or recovery codes.</p>
+    <p><strong>Signed-in devices.</strong> We record the kind of device (say, "iPhone · Safari") so you can sign one out. We don't keep its internet address. Your account shows its last 100 security events.</p>
+    <p><strong>Getting paid.</strong> Stripe verifies your identity and holds your bank details. We keep your Stripe account ID and the money records you see in the Studio.</p>
+    <p><strong>The verified tick.</strong> You type your legal name and date of birth to be checked. We never store the date of birth; the name and the ID photo are deleted once the check is decided.</p>
+    <p><strong>Alerts.</strong> If you turn on notifications, your browser's push service gives us an address to send them to. Signing out of a device stops them.</p>
+    <p><strong>Our own records.</strong> We may keep a private spreadsheet of accounts (email, plan, country, show counts and ratings) to run the business.</p>
+  </section>
+
+  <section id="samples" class="rise">
+    <h2>Sample pages</h2>
+    <p>To show an artist or venue what MySet would look like for them, we sometimes build a sample page before they've signed up, from what they've already made public:</p>
+    <ul>
+      <li>their own website (we obey its robots.txt);</li>
+      <li>YouTube, MusicBrainz, Apple's iTunes search and OpenStreetMap;</li>
+      <li>a web search done by an AI model (Anthropic's Claude);</li>
+      <li>photos we pick by hand from their public posts.</li>
+    </ul>
+    <p>We never scrape Instagram, Facebook or TikTok pages. A sample page isn't listed anywhere on MySet: we send its link to the artist, and we see when it's opened.</p>
+    <p>If nobody claims it within 30 days, the page comes down and a private copy is kept for 180 days, then erased. <strong>Want it gone now?</strong> Reply to our message or email us: we delete the page and our notes about you, and keep only a scrambled fingerprint of your links so we never build one again.</p>
+  </section>
+
+  <section id="outreach" class="rise">
+    <h2>When we contact you</h2>
+    <p>When we reach out to an artist or venue, we keep a contact record: the name, email, phone and social handles you've made public, our notes, and the messages between us. It stays until you ask us to delete it.</p>
+  </section>
+
+  <section id="google" class="rise">
+    <h2>Gmail and other Google data</h2>
+    <p>MySet's outreach desk can connect <strong>the founder's own Gmail account</strong>. It is the only Gmail account MySet connects; nobody else is ever asked to connect theirs.</p>
+    <ul>
+      <li><strong>What it can do:</strong> send email from that account, and read it.</li>
+      <li><strong>What it reads:</strong> only messages to or from people in the contact list, from the last 14 days, and a conversation's history when one is opened.</li>
+      <li><strong>What it keeps:</strong> for those messages only, the subject, sender, recipients, date and up to 4,000 characters of the text. Messages from anyone else are passed over and not stored.</li>
+      <li><strong>Security:</strong> the keys Google issues are encrypted before they're stored. Disconnecting withdraws them at Google.</li>
+    </ul>
+    <p class="note">MySet's use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements. Gmail data is used only to show and send that outreach email. It is never used for advertising, never sold, never used to train AI models, and never read by anyone but the account's owner.</p>
+    <p>Pages that show a map load Google Maps in your browser, under <a href="https://policies.google.com/privacy" rel="noopener">Google's privacy policy</a>.</p>
+  </section>
+
+  <section id="others" class="rise">
+    <h2>Who else handles data for us</h2>
+    <table class="tbl">
+      <thead><tr><th>Company</th><th>What for</th></tr></thead>
+      <tbody>
+        <tr><td>Stripe</td><td>Payments, artist payouts and subscriptions.</td></tr>
+        <tr><td>Netlify</td><td>Runs the site and stores its data.</td></tr>
+        <tr><td>Cloudflare (R2)</td><td>Stores short video clips and a daily backup.</td></tr>
+        <tr><td>Resend</td><td>Sends sign-in codes and account email.</td></tr>
+        <tr><td>Google</td><td>Maps, the founder's Gmail, spreadsheets, and YouTube details for sample pages.</td></tr>
+        <tr><td>Anthropic</td><td>The AI web search that drafts sample pages.</td></tr>
+        <tr><td>Your browser's push service</td><td>Delivers alerts to artists who turn them on.</td></tr>
+        <tr><td>YouTube, Spotify, Apple Music</td><td>Players an artist adds to their page load from those services when you press play.</td></tr>
+        <tr><td>LRCLIB, MusicBrainz, iTunes, OpenStreetMap</td><td>Song lyrics and public music and place facts. We send them a song or place name, never who you are.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="keep" class="rise">
+    <h2>How long we keep things</h2>
+    <table class="tbl">
+      <tbody>
+        <tr><td>Tonight's votes</td><td>Until the artist's next show starts.</td></tr>
+        <tr><td>Sign-in codes</td><td>10 minutes.</td></tr>
+        <tr><td>RSVPs</td><td>3 days after the night.</td></tr>
+        <tr><td>Unclaimed sample page</td><td>30 days live, then a private copy for 180 days.</td></tr>
+        <tr><td>A deleted account</td><td>30 days to change your mind, then erased.</td></tr>
+        <tr><td>Payments and orders</td><td>As long as the account exists, because they are the artist's books. Stripe keeps its own records as the law requires.</td></tr>
+        <tr><td>Ratings, posts, contact records</td><td>Until you, the artist or the venue asks us to remove them.</td></tr>
+        <tr><td>Backups</td><td>We keep backups so a failure can't wipe anyone's history. A deletion doesn't reach into them by itself; ask, and we'll erase you from them too.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="rights" class="rise">
+    <h2>Your choices</h2>
+    <ul>
+      <li><strong>Artists and venues:</strong> the Studio downloads your account's data as one file, and deletes the account (with 30 days to undo).</li>
+      <li><strong>Everyone:</strong> email <a href="mailto:hello@myset.vip">hello@myset.vip</a> to see, correct or delete anything we hold about you, backups included. If you were in an audience, tell us the show and roughly when. We answer within 30 days.</li>
+      <li>Wherever you live, you get the same rights. We don't sell or share personal data for advertising.</li>
+    </ul>
+    <h3>Keeping it safe</h3>
+    <p>Everything travels encrypted. Passwords are stored as one-way hashes, and sign-in keys for other services are encrypted at rest. Access to the data is limited to the people who run MySet.</p>
+    <h3>Children</h3>
+    <p>MySet isn't meant for children under 13, and we don't knowingly collect anything about them. If you think we have, email us and we'll delete it.</p>
+    <h3>Changes</h3>
+    <p>When this page changes, the date at the top changes. If a change matters to account holders, we'll tell them in the Studio.</p>
+  </section>
+
+  <footer>MySet · myset.vip · <a href="/">Home</a> · <a href="/about">How MySet works</a></footer>
+</div>
+<script>
+(()=>{
+  const R=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rise=[...document.querySelectorAll('.rise')];
+  if(R||!('IntersectionObserver' in window)) rise.forEach(e=>e.classList.add('in'));
+  else{const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{rootMargin:'0px 0px -8% 0px'});rise.forEach(e=>io.observe(e))}
+  /* the table of contents follows the reader */
+  const nav=document.querySelector('nav.toc'), links=[...nav.querySelectorAll('a')], map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+  const secs=[...document.querySelectorAll('section[id]')].filter(s=>map.has(s.id));
+  let cur=null;
+  const mark=()=>{let id=secs[0].id;for(const s of secs){if(s.getBoundingClientRect().top<120)id=s.id}
+    if(id===cur)return;cur=id;links.forEach(a=>a.classList.remove('on'));const a=map.get(id);a.classList.add('on');
+    nav.scrollTo({left:a.offsetLeft-nav.clientWidth/2+a.offsetWidth/2,behavior:R?'auto':'smooth'})};
+  addEventListener('scroll',()=>requestAnimationFrame(mark),{passive:true});mark();
+})();
+</script>
+</body>
+</html>
