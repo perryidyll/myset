@@ -62,7 +62,7 @@ function sampleRoute(p,o){
    the first time it is wanted — and asked for again next time if the network lost it. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=7dd1f554';
+  const j=document.createElement('script'); j.src='/sample.js?v=87001924';
   j.onload=()=>r(window.Sample||null); j.onerror=()=>{ SAMPLEJS=null; r(null); }; document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;

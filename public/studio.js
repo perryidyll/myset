@@ -412,15 +412,18 @@ function maybeTips(){
       if(!window.Tips||PRACTICE||Tips.isOpen()||isNew()||document.getElementById('boot')||DECKOF[TAB]!==deck)return;
       if($('#sheet').classList.contains('on')||$('#tipburst'))return;
       if(SAMPLE&&!Tips.seen('sample-studio',tipScope()))return;       // the welcome goes first
-      Tips.first(deck,{scope:tipScope(),cta:deck==='live'&&(SAMPLE||firstGig())?practiceCta():null});
+      Tips.first(deck,{scope:tipScope(),vars:tipVars(),cta:deck==='live'&&(SAMPLE||firstGig())?practiceCta():null});
     }catch(e){}
   },450);
 }
 function showTips(){
   if(!window.Tips){ toast('Loading…'); return; }
   const deck=DECKOF[TAB]||'live';
-  Tips.open(deck,{cta:deck==='live'?practiceCta():null});
+  Tips.open(deck,{vars:tipVars(),cta:deck==='live'?practiceCta():null});
 }
+/* The words a deck fills in. {payday} follows the plan's payout schedule
+   (_connect.mjs payoutScheduleFor): Hobbyist weekly on Monday, the paid plans daily. */
+const tipVars=()=>({payday:(PLAN&&PLAN.ok&&PLAN.plan&&PLAN.plan!=='free')?'payouts are sent daily':'payouts are sent every Monday'});
 
 /* ─────────────────────────────────────────────────────────────────────────────
    A SAMPLE'S STUDIO, ON ARRIVAL (decision 0101): the founder hears that the Studio
@@ -646,7 +649,7 @@ function sampleRoute(p,o){
    the first time it is wanted. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=7dd1f554'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
+  const j=document.createElement('script'); j.src='/sample.js?v=87001924'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;
   CLAIMAT=Date.now(); closeSheet();
@@ -2399,7 +2402,7 @@ function render(){
     ${setPick()}
 
     ${songs.length?'':`<div class="sec"><span class="kick">No songs yet</span></div>
-      <div class="list"><div class="row muted">Add a song above, or import a CSV, pasted list, or public Spotify playlist.</div></div>`}
+      <div class="list"><div class="row muted">Add a song above, or import a CSV or pasted list.</div></div>`}
     <div class="sec"><span class="kick">Your setlist — ${active} of ${songs.length} featured</span>${
       SETQ?`<span class="kick">${shown.length} match${shown.length===1?'':'es'}</span>`:''}</div>
     <div class="find">

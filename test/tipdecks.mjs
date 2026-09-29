@@ -46,7 +46,7 @@ for (const [id, deck] of Object.entries(D)) {
   const noArt = deck.s.filter(([g]) => !glyphs.has(g));
   ok(`${id}: one short sentence a slide, a picture that exists`, !long.length && !multi.length && !noArt.length, { long, multi, noArt });
 }
-for (const id of tabDecks) ok(`${id}: four slides at most`, D[id].s.length >= 1 && D[id].s.length <= 4);
+for (const id of tabDecks) ok(`${id}: four slides at most (five on Money)`, D[id].s.length >= 1 && D[id].s.length <= (id === 'money' ? 5 : 4));
 const all = (id) => D[id].s.map(([, l]) => l).join(' ');
 ok('merch names its plan (Bar Star)', /Bar Star/.test(all('merch')));
 ok('the tick names the paid plans', /paid plans/.test(all('settings')));

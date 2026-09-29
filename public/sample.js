@@ -25,7 +25,7 @@
 (function () {
   'use strict';
   if (window.Sample) return;
-  const TIPS_V = '/tips.js?v=c2e2e009';
+  const TIPS_V = '/tips.js?v=8b698078';
   const O = '#FF5650';
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
   const $ = (s, r) => (r || document).querySelector(s);
