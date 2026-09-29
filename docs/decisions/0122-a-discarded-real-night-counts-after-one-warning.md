@@ -8,7 +8,7 @@ area: plans
 reverses:
 superseded_by:
 invariants: [9d9]
-commits: []
+commits: [413d116]
 tests: [test/limits.mjs, test/sheets.mjs]
 files: [netlify/functions/_lifecycle.mjs, netlify/functions/_lib.mjs, netlify/functions/admin.mjs, netlify/functions/_warehouse.mjs, public/studio.js]
 ---
@@ -31,7 +31,7 @@ Decision 0120 made the free plan ten shows in total, and gave a discarded show i
 Option A, the founder's own suggestion, made one step stricter than a warning alone: the server enforces it, so the Studio cannot be bypassed.
 
 - **A real night** ran for 60 minutes or more (to when it ended, if it has) and took 5 or more votes (every round's, plus what still stands). Both conditions are needed. The numbers are `REAL_NIGHT` in `_lifecycle.mjs`.
-- **Money is named, not a trigger.** The warning says "and you were paid $X" when there was money, but money alone does not make a night real, because an artist trying their own tip button is testing. This is the one judgement call beyond the founder's words.
+- **Money is named, not a trigger.** The warning says "and you were paid $X" when there was money, but money alone does not make a night real. The founder confirmed this at the merge: "just those 2 requirements must be met: >1 hour and 5+ votes; if they're getting money paid through the app then we still take 25% of it, and if they're not playing more than an hour or getting more than 5 votes then it wasn't a great success for them and i don't want them to be penalized for it".
 - **The flow.** A discard of a real night on the free plan answers 409 with `confirm: { outcome, minutes, votes, paid, cap, used }` and changes nothing. The Studio shows it, and sends the discard again with `ack` set to the outcome it showed. An ack that no longer matches asks again.
   - **First time (`warned`):** "This looks like a real show… We won't count this one, but from now on a show you discard that runs over an hour with 5 or more votes counts as one of your 10 free shows." The night is given back, and `show.discardWarnedAt` is set, for good.
   - **After that (`counted`):** "This one will count… Save it instead and it's in Past shows." The night keeps its count, and `freeNight` is cleared so a second discard of the same night has nothing to give back.
@@ -64,3 +64,5 @@ Option A, the founder's own suggestion, made one step stricter than a warning al
 - Suite: 4,686 passed, 0 failed.
 - Localhost at 375 px: the warning renders in the Studio's own window, and tapping through ends and gives back a test night (0/10).
 - Not checked: a real night's discard on production (it needs an hour and five votes).
+
+Live as `413d116` (PR #162), Netlify production deploy ready. Checked by content on myset.vip: `/studio` serves `studio.js?v=515988b6`, which carries "This looks like a real show" and "A test show you discard doesn't count". The server-side rule and the Discards tab were checked by the suite only.
