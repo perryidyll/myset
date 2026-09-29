@@ -8,7 +8,7 @@ area: plans
 reverses: 0037
 superseded_by:
 invariants: [9d9]
-commits: []
+commits: [9adf0be]
 tests: [test/limits.mjs, test/tenancy.mjs, test/autoshow.mjs]
 files: [netlify/functions/_lifecycle.mjs, netlify/functions/_lib.mjs, netlify/functions/_plan.mjs, netlify/functions/stage.mjs, public/studio.js, public/venue-studio.js, public/about.html]
 ---
@@ -72,8 +72,8 @@ A new free-show rule from the founder, which changes `PLANS.free.gigs`, `countGi
 
 ## How it was verified
 
-- **The suite:** 4,641 passed, 0 failed.
-- **`test/limits.mjs` (126 ✓) pins:**
+- **The suite:** 4,657 passed, 0 failed, on the tree merged with `main`.
+- **`test/limits.mjs` (141 ✓) pins:**
   - a discard gives back;
   - a resume counts again, and a discard of that night gives both back;
   - a kept show stays counted;
@@ -81,5 +81,8 @@ A new free-show rule from the founder, which changes `PLANS.free.gigs`, `countGi
   - time gives nothing back;
   - the gigMonth migration, both ways;
   - paid nights don't count;
+  - a calendar-started night with no votes is given back when it ends, or when a new show replaces it still running; one with votes stays counted; a quiet night the artist started still counts;
   - the Studio reads `s.gigCount`, draws Hobbyist · x/10 only for a free non-founder plan, and turns it into Upgrade once all ten are used.
 - **`test/tenancy.mjs` and `test/autoshow.mjs`:** updated for the new words, and for a Bar Star night no longer counting.
+
+Live as `9adf0be` (PR #158), Netlify production deploy ready 12:57 UTC. Checked by content on myset.vip: `/studio` serves `studio.js?v=3edaa519`, which carries "free shows used", and About carries the new payout line. The quiet-calendar-night rule is server-side and was checked by the suite only. Puzzle changelog entry 2533.
