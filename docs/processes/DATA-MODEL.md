@@ -277,6 +277,7 @@ Linked steps: 369945, 369949, 370120
 | `list[].message` (46102) | Multi-line text | the pitch, with a link to the artist's real numbers |
 | `list[].status` (46103) | Single-line text | new | keen | nope — the venue's answer, shown on the artist's Gigs tab |
 | `list[].at` (46104) | Date picker | sent |
+| `list[].tid / vunread` | Single-line text | the conversation this pitch opened in the artist's inbox (`msg_<aid>_<tid>`), and whether the artist has answered since the venue last read it (decision 0123) |
 
 Linked steps: 370006, 370007, 370008, 370009, 370010
 

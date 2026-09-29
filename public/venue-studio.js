@@ -45,6 +45,7 @@ const post=(path,body)=>api(path,{method:'POST',body:JSON.stringify(body)});
    phone's side, so a save never even leaves it — the claim sheet opens instead. The
    doors a sample has no key to (who can sign in, the devices, the earnings) get the
    empty answer a brand-new venue would get, so every tab draws as it will on day one. */
+const STATUS_LINE={keen:'We’re keen — let’s talk.',nope:'Not this time, but thanks for asking.'};   // the same words _pitch.mjs sends
 const SAMPLE_READS=new Set(['get','planGet','stats','eventList','pitchList','postList','orderList','wishList','merchList','payStatus']);
 let CLAIMAT=0;
 function sampleRoute(p,o){
@@ -62,7 +63,7 @@ function sampleRoute(p,o){
    the first time it is wanted — and asked for again next time if the network lost it. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=87001924';
+  const j=document.createElement('script'); j.src='/sample.js?v=a3e9238a';
   j.onload=()=>r(window.Sample||null); j.onerror=()=>{ SAMPLEJS=null; r(null); }; document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;
@@ -1201,15 +1202,15 @@ function render(){
     ${pitches===null?`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Loading…</div></div>`
      :!pitches.length?`<div class="list"><div class="row muted">Nobody yet. The button is on your public page — the more acts see it, the more you’ll get.</div></div>`
      :`<div class="list">${pitches.map(p=>`<div class="row ${p.status==='nope'?'off':''}">
-        <div class="m"><div class="t">${esc(p.name)}${p.status==='keen'?' · you said keen':p.status==='nope'?' · passed':''}</div>
+        <div class="m"><div class="t"><a href="/${esc(p.slug)}" style="color:inherit">${esc(p.name)} ↗</a>${p.status==='keen'?' · you said keen':p.status==='nope'?' · passed':''}${p.unread?' · <span style="color:var(--accent)">new reply</span>':''}</div>
           <div class="by">${p.stats.nights} night${p.stats.nights===1?'':'s'} · ${p.stats.people} in the room · ${p.stats.votes} votes · ${p.stats.songs} songs</div>
           ${p.message?`<div class="s">“${esc(p.message)}”</div>`:''}</div>
-        <a class="act" href="/${esc(p.slug)}">Page</a>
+        ${SAMPLE?`<a class="act" href="/${esc(p.slug)}">Page</a>`:`<button class="act" data-act="pchat" data-id="${esc(p.id)}">Reply</button>`}
         ${p.status==='new'?`<button class="act pri" data-act="pkeen" data-id="${esc(p.id)}">Keen</button>
           <button class="act warn" data-act="pnope" data-id="${esc(p.id)}">✕</button>`
          :`<button class="act" data-act="pnew" data-id="${esc(p.id)}">Undo</button>`}
       </div>`).join('')}</div>`}
-    <p class="muted" style="font-size:12px;padding:16px 20px 0">Marking someone <b>Keen</b> shows on their own MySet studio, so they know to get in touch. Nobody’s email is shared either way.</p>
+    <p class="muted" style="font-size:12px;padding:16px 20px 0"><b>Reply</b> writes to them in their MySet Messages. <b>Keen</b> and <b>✕</b> each send them one line (“${esc(STATUS_LINE.keen)}” or “${esc(STATUS_LINE.nope)}”). Nobody’s email is shared either way.</p>
     ${speakerCard()}`;
   }
 
@@ -1777,11 +1778,38 @@ async function skipEvent(pair){
   if(!d.ok){toast(d.error||'Failed');return;}
   EVENTS=null; await loadEvents(true); render(); toast('That one is off');
 }
+/* The conversation a pitch opened (decision 0123): the artist's words and yours,
+   read and answered here; the artist reads it in their Studio's Messages. */
+async function openPitchChat(id){
+  openSheet(`<h3>Conversation</h3><p class="lede"><span class="spin"></span> Loading…</p>`);
+  const d=await post('/venueadmin',{action:'pitchThread',id});
+  if(!d.ok){ openSheet(`<h3>Conversation</h3><p class="lede">${esc(d.error||'Couldn’t load that just now.')}</p>`); return; }
+  drawPitchChat(id,d.thread);
+  if(PITCHES&&PITCHES.ok){ const p=(PITCHES.pitches||[]).find(x=>x.id===id); if(p&&p.unread){ p.unread=false; render(); } }
+}
+function drawPitchChat(id,t){
+  const at=x=>{ try{ return new Date(x).toLocaleString(undefined,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}); }catch(e){ return ''; } };
+  openSheet(`<h3>${esc(t.name||'Conversation')}</h3>
+    <p class="lede">${t.slug?`<a href="/${esc(t.slug)}" style="color:var(--accent);font-weight:600">Their MySet page ↗</a> · `:''}They read this in their Studio’s Messages.</p>
+    <div class="pmsgs">${(t.msgs||[]).map(m=>`<div class="pmsg ${m.by==='you'?'you':''}"><div>${esc(m.text)}</div><time>${m.by==='you'?'You · ':''}${at(m.at)}</time></div>`).join('')
+      ||'<p class="muted">No words yet — they sent their page and their numbers.</p>'}</div>
+    <textarea class="inp" id="pchatText" rows="3" maxlength="1000" placeholder="Write back to ${esc(t.name||'them')}"></textarea>
+    <button class="big" style="margin-top:10px" data-act="pchatsend" data-id="${esc(id)}">Send</button>`);
+}
+async function sendPitchChat(id){
+  const el=$('#pchatText'), text=((el&&el.value)||'').trim();
+  if(!text){ toast('Write something first'); return; }
+  const d=await post('/venueadmin',{action:'pitchReply',id,text});
+  if(!d.ok){ toast(d.error||'Couldn’t send that'); return; }
+  if(d.pitches) PITCHES={ok:true,pitches:d.pitches};
+  toast('Sent'); render();
+  if(d.thread) drawPitchChat(id,d.thread);
+}
 async function setPitch(id,status){
   const d=await post('/venueadmin',{action:'pitchSet',id,status});
   if(!d.ok){toast(d.error||'Failed');return;}
   PITCHES=d; render();
-  toast(status==='keen'?'Marked keen — they’ll see it':status==='nope'?'Passed':'Back to new');
+  toast(status==='keen'?'Marked keen — they’ve been told':status==='nope'?'Passed — they’ve been told':'Back to new');
 }
 
 function openMenuItem(){
@@ -1936,6 +1964,8 @@ document.addEventListener('click',e=>{
   if(a==='pkeen') setPitch(id,'keen');
   if(a==='pnope') setPitch(id,'nope');
   if(a==='pnew') setPitch(id,'new');
+  if(a==='pchat') openPitchChat(id);
+  if(a==='pchatsend') sendPitchChat(id);
   if(a==='photoclear'){ e.preventDefault();
     /* a merch item's picture is cleared by item id — photoClear knows only the
        page's named slots and refuses anything else, so this ✕ used to do nothing */
