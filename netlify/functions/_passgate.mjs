@@ -52,7 +52,7 @@ export const allowed = (req) => readCookies(req).includes(stamp(CODE()));
 
 const setCookie = (value, maxAge, path = '/') => `${COOKIE}=${value}; Path=${path}; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`;
 
-export const gatePage = ({ wrong = false, action = '/', title = 'MySet Money Model', kicker = 'MySet · Money Model', button = 'Open the model' } = {}) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${title}</title>
+export const gatePage = ({ wrong = false, action = '/', title = 'MySet Money Model', kicker = 'MySet · Money Model', button = 'Open the model' } = {}) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${title}</title><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
 <style>
   :root { color-scheme: light dark; --ground:#f2f1ee; --surface:#fff; --ink:#131312; --muted:#6d6c67; --rule:#b9b7b0; --accent:#ec3013; }
   @media (prefers-color-scheme: dark) { :root { --ground:#0f0f0e; --surface:#171716; --ink:#ecebe7; --muted:#9b9a93; --rule:#3f3e3a; --accent:#ff5236; } }
