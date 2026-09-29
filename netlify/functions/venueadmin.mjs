@@ -8,7 +8,7 @@ import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
          endTimeOf, MAX_EVENTS } from './_events.mjs';
-import { readPitches, shapeForVenue, setPitchStatus } from './_pitch.mjs';
+import { readPitches, shapeForVenue, setPitchStatus, venueReply, venueThread } from './_pitch.mjs';
 import { venueStats } from './_vstats.mjs';
 import { recheck, ownerEmail, readVouches, MIN_VOUCHES } from './_verify.mjs';
 import { localDate, addDays } from './_time.mjs';
@@ -47,9 +47,9 @@ export default async (req) => {
      the plan or sign the owner out. A bar shares one iPad; this is not a theory.
      Anything not on this list is OWNER ONLY, which is the safe way round: a new
      action is locked until somebody decides it should not be. */
-  const CREW_OK = new Set(['get', 'stats', 'eventList', 'pitchList', 'postList', 'postReply',
+  const CREW_OK = new Set(['get', 'stats', 'eventList', 'pitchList', 'pitchThread', 'postList', 'postReply',
                            'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone', 'planGet']);
-  const MANAGER_OK = new Set([...CREW_OK, 'eventSave', 'eventDelete', 'eventSkip', 'pitchSet',
+  const MANAGER_OK = new Set([...CREW_OK, 'eventSave', 'eventDelete', 'eventSkip', 'pitchSet', 'pitchReply',
                               'set', 'amenity', 'hours', 'menuSet', 'menuAdd', 'menuRemove',
                               'offerSave', 'offerRemove', 'photoUpload', 'photoClear',
                               'merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear', 'merchMove',
@@ -184,6 +184,20 @@ export default async (req) => {
     const row = await setPitchStatus(vid, String(body.id || ''), String(body.status || ''));
     if (!row) return bad('Could not update that');
     return json({ ok: true, pitches: await shapeForVenue(await readPitches(vid)) });
+  }
+
+  // the conversation a pitch opened (0123): read it, and answer it
+  if (action === 'pitchThread') {
+    const t = await venueThread(vid, String(body.id || ''));
+    if (!t) return bad('That enquiry is gone.', 404);
+    return json({ ok: true, thread: t });
+  }
+  if (action === 'pitchReply') {
+    const id = String(body.id || '');
+    const r = await venueReply(vid, id, body.text);
+    if (!r.ok) return bad(r.error);
+    return json({ ok: true, thread: await venueThread(vid, id),
+                  pitches: await shapeForVenue(await readPitches(vid)) });
   }
 
   /* ---------- what happened in the room ---------- */

@@ -652,7 +652,7 @@ async function handleVenueSide(aid, action, body) {
       readPitches(vid), readVouches(vid), artistPlaysAt(aid, venue)]);
     const mine = (d.list || []).find((x) => x.aid === aid);
     return json({ ok: true,
-      sent: !!mine, status: mine ? mine.status : null, message: mine ? mine.message : '',
+      sent: !!mine, status: mine ? mine.status : null, message: mine ? mine.message : '', tid: (mine && mine.tid) || '',
       canVouch, vouched: !!(vouches.by || {})[aid],
       vouches: Object.keys(vouches.by || {}).length, need: MIN_VOUCHES,
       venue: { name: venue.name, slug: venue.slug, verified: venue.verified } });

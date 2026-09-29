@@ -501,7 +501,7 @@ Up to **12** merch items. Not built: `tips`, `speakerVotes`.
 | A message with 3 or more links | goes to Spam, not Requests | `SPAM_LINKS` |
 | Conversations the inbox lists | 300; older ones spill to `inboxarch_` and stay on disk | `MAX_THREADS`; `spillInbox` |
 | Messages in one conversation | 200; the next is refused, never dropped | `MAX_MSGS` |
-| Folders | requests · general · business · casual · spam | `FOLDERS`; a new one lands in requests, an answer moves it to general |
+| Folders | requests · venues · general · business · casual · spam | `FOLDERS`; a new one lands in requests, an answer moves it to general |
 | What a message is about | booking · collab · press · other | `KINDS`; a tag on the row |
 | The tour poster | a picture up to 900 KB after the phone shrinks it, or a PDF up to 3 MB | `MAX_BYTES`, `MAX_TOUR_PDF` in `_img.mjs`; `tourSet` / `tourClear` on `/api/admin`; the `tour` slot |
 
@@ -538,7 +538,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Scheduled jobs | 6 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron |
 | Shared libraries | 70 |
 | Artist Studio actions | 136 |
-| Venue Studio actions | 48 |
+| Venue Studio actions | 50 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
@@ -554,9 +554,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet HQ (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
 | Invariants | 294 (last: 0gx) |
-| Test suites | 67 |
+| Test suites | 68 |
 | Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 120 |
+| Decision records | 121 |
 
 ### Feature flags in force
 
@@ -786,7 +786,8 @@ learn**; automatic genre tagging that only ever fills a song with none.
 **Gigs** — a calendar with venue, city, country, date, time, duration, timezone, address,
 ticket link, notes; **repeats** (weekly, fortnightly, monthly, yearly, with an end date);
 cancel one night or hide it; each gig can name which setlist to play; **Featured shows**
-($10 to top a city's list for a night); and pitches sent to venues with their replies.
+($10 to top a city's list for a night); and pitches sent to venues, each one a conversation in
+Messages' **Venues** folder (decision 0123).
 
 **Money** — Getting paid (Stripe Connect status, what MySet takes, what Stripe takes);
 tonight's numbers; **past shows** with the songs played, the votes they won, what the
@@ -851,7 +852,8 @@ offers**, **Merch** (Pro; the same tab moderates the venue's community page), an
 the badge if earned, a **Community** pill, and the same top-right menu.
 
 **The two sides meet** through pitches: only signed-in artists can pitch a venue, so a
-stranger cannot spam a bar. Gigs and venues are matched by **name within a city, never by
+stranger cannot spam a bar. A pitch is a conversation: the artist talks in Messages, the
+venue replies from its Venue Studio (decision 0123). Gigs and venues are matched by **name within a city, never by
 a stored link**, so neither side can break the other.
 
 ## 3.7 The community page

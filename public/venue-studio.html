@@ -26,6 +26,10 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 html{background:var(--bg)}
+.pmsgs{display:flex;flex-direction:column;gap:8px;margin:6px 0 14px}
+.pmsg{max-width:86%;align-self:flex-start;padding:10px 14px 8px;border-radius:18px 18px 18px 6px;background:var(--surface-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.pmsg.you{align-self:flex-end;border-radius:18px 18px 6px 18px;background:var(--grad,#FF5650);color:#fff}
+.pmsg time{display:block;font-size:11px;opacity:.7;margin-top:4px}
 :root{
   --bg:#000; --surface:#1C1C1E; --surface-2:#2C2C2E;
   --ink:#F5F5F7; --ink-2:#DDDDE0; --muted:#98989D; --faint:#68686D;
@@ -397,8 +401,8 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
 <!-- The Venue Studio's script lives in /venue-studio.js so a phone downloads it once
      and keeps it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs
      after editing venue-studio.js — the suite checks it). Decision 0053. -->
-<script src="/tips.js?v=8b698078"></script>   <!-- the tab decks (decision 0102); stamped like venue-studio.js -->
-<script src="/venue-studio.js?v=e39eb923"></script>
+<script src="/tips.js?v=a83a2e12"></script>   <!-- the tab decks (decision 0102); stamped like venue-studio.js -->
+<script src="/venue-studio.js?v=397b7e90"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api; a page seen tonight comes from the phone's copy

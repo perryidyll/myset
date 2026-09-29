@@ -95,6 +95,7 @@
       ['camera', 'Give each page a cover photo, and fans find your diary from your page.']] },
     messages: { t: 'Messages', s: [
       ['chat', 'Venues and fans who want to book you land here, not in your DMs.'],
+      ['pin', 'Ask a venue for a spot from its page, then talk it through here in the Venues folder.'],
       ['check', 'Reply from here and keep every booking in one place.']] },
     settings: { t: 'Settings', s: [
       ['vote', 'Choose how many free votes each fan gets, and on Bar Star set your own prices.'],

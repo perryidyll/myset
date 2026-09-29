@@ -195,6 +195,9 @@ echo
 echo "── the Book button, the inbox and the tour poster ──"
 node --import ./test/register.mjs test/messages.mjs
 echo
+echo "── a venue you asked is a conversation (0123) ──"
+node --import ./test/register.mjs test/pitchmsgs.mjs
+echo
 echo "── the artist diary ──"
 node --import ./test/register.mjs test/diaries.mjs
 echo
