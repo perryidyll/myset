@@ -62,7 +62,7 @@ These are wording only; the code already matched the cards:
 
 ## What this makes harder
 
-- **Auto-start spends free shows.** A gig on a Hobbyist's calendar starts its show by itself, and that counts. If nobody discards it, it is kept when it ends by itself. An artist who lists a gig and doesn't turn up loses one of their ten. The Settings switch "Start shows from my calendar" stays on every plan, so they can turn it off. This is open with the founder.
+- **A night the calendar started and nobody voted on is given back.** The founder's answer to "auto-start spends free shows" was "don't count auto-started shows with no votes". `countGig` marks a night the schedule began (`freeNight.auto`); `quietAutoNight` checks every round's votes plus what still stands on the board, and a quiet one is given back when it ends, or when a new show replaces it while it is still running. A quiet night the ARTIST started still counts: they pressed the button. The marker costs one field on the show record, and a tip with no votes does not save the night.
 - **The cap is small, and a free account never gets shows back.** A free artist who uses up ten can only pay. Making a second account needs a second email.
 - **Existing free artists start from this month's count.** Earlier months were never stored.
 

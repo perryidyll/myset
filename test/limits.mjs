@@ -76,6 +76,35 @@ ok('and says it is the free shows, in total', /your \d+ free shows\./i.test(over
 ok('and does NOT promise a reset', !/month|on the 1st|resets/i.test(over.error || ''), over.error);
 ok('and names the way on', /Bar Star/.test(over.error || ''), over.error);
 
+console.log('\nA SHOW THE CALENDAR STARTED, AND NOBODY VOTED ON, IS NOT COUNTED  (decision 0120)');
+{
+  const { startShow, endShow, quietAutoNight } = await import('../netlify/functions/_lifecycle.mjs');
+  const bo = await createArtist({ email: 'bo@example.com', name: 'Bo Lane', slug: 'bo-lane' });
+  ok('the calendar starts a night', (await startShow(bo.artistId, { fresh: true, by: 'schedule' })).ok);
+  eq('it counts while it runs', (await getShow(bo.artistId)).gigCount, 1);
+  eq('and remembers the calendar began it', (await getShow(bo.artistId)).freeNight.auto, true);
+  await endShow(bo.artistId, { by: 'schedule' });
+  eq('THE RULE: no votes, so it is given back', (await getShow(bo.artistId)).gigCount, 0);
+
+  ok('another calendar night', (await startShow(bo.artistId, { fresh: true, by: 'schedule' })).ok);
+  await mutateShow(bo.artistId, (sh) => { sh.log = [{ songId: 'x', title: 'Valerie', votes: 3, roundVotes: 3 }]; return true; });
+  await endShow(bo.artistId, { by: 'schedule' });
+  eq('a calendar night the room voted on stays counted', (await getShow(bo.artistId)).gigCount, 1);
+
+  ok('a quiet calendar night is left running', (await startShow(bo.artistId, { fresh: true, by: 'schedule' })).ok);
+  eq('and counts', (await getShow(bo.artistId)).gigCount, 2);
+  ok('then the artist starts a new show over it', (await startShow(bo.artistId, { fresh: true, by: 'artist' })).ok);
+  eq('the quiet one is given back, the new one counts', (await getShow(bo.artistId)).gigCount, 2);
+  eq('a night the artist started is not the calendar\'s', (await getShow(bo.artistId)).freeNight.auto, false);
+  await endShow(bo.artistId, { by: 'artist' });
+  eq('a quiet night the ARTIST started still counts', (await getShow(bo.artistId)).gigCount, 2);
+
+  const sh = { showId: 's1', freeNight: { id: 's1', n: 1, auto: true }, log: [] };
+  ok('votes still standing on the board count as votes', !quietAutoNight(sh, { f1: { v: ['a'] } }));
+  ok('carried credits are not votes', quietAutoNight(sh, { f1: { v: [], extra: 4 } }));
+  ok('a stale marker from another night is ignored', !quietAutoNight({ ...sh, showId: 's2' }, {}));
+}
+
 console.log('\nIT IS COUNTED ON THE RECORD, NOT GUESSED');
 const show = await getShow(ana.artistId);
 eq('every kept show is counted', show.gigCount, CAP);

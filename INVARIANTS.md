@@ -852,7 +852,9 @@ If you are about to violate one, stop and say so rather than working around it.
    "New show" and the schedule. Only a start on the free plan counts (a paid night never
    does, the founder never is); a resume counts again, so one night cannot be stretched
    over many; a night ended with **Discard** gives back everything it used (`uncountGig`,
-   inside the end's own CAS). Refused BEFORE the mutation with the same words, counted
+   inside the end's own CAS), and so does a night the CALENDAR started that ended with no
+   vote cast (`quietAutoNight`, decided before the fans are wiped; a new show over a
+   still-running one decides it in `startShow`). Refused BEFORE the mutation with the same words, counted
    INSIDE the CAS (0bi), never mid-show (16). A scheduled start that is refused is
    remembered on the index entry so it is not retried every two minutes. The Studio only
    READS `show.gigCount` — the "Hobbyist · x/10" tag and the warning at two left.

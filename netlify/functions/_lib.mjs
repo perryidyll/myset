@@ -124,7 +124,8 @@ export function defaultShow() {
        rather than counted from history because a show in progress is not in
        history yet, and the cap has to include tonight. `freeNight` is how many of
        them the current showId used (a resume counts again), so discarding that
-       night gives them back. */
+       night gives them back; `auto` marks a night the calendar started, given back
+       when it ends with no votes. */
     gigCount: 0, freeNight: null,
     songs: [],
     showId: null,
@@ -379,7 +380,7 @@ function normShow(s) {
   if (show.gigMonth !== undefined) { if (show.plan && show.plan !== 'free') show.gigCount = 0; delete show.gigMonth; }
   show.gigCount = Math.max(0, parseInt(show.gigCount, 10) || 0);
   const fn = show.freeNight;
-  show.freeNight = fn && typeof fn.id === 'string' && fn.n > 0 ? { id: fn.id, n: parseInt(fn.n, 10) || 1 } : null;
+  show.freeNight = fn && typeof fn.id === 'string' && fn.n > 0 ? { id: fn.id, n: parseInt(fn.n, 10) || 1, auto: fn.auto === true } : null;
   /* Songs carry a key and genre tags. Tags are filtered against what actually
      exists, so deleting a custom tag cleans itself up on the next read. */
   const ids = new Set(show.songs.map((x) => x && x.id));
