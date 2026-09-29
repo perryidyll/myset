@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 19:44 — 57db21e — theme-circle@docs/theme-circle-live (3 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0121 and the session note say the theme circle is live [skip ci]
+**Other sessions:** Nothing to rebase for. Decision 0121 = d10d24e (#159).
+
 ### 2026-09-29 19:40 — 84f583c — theme-circle@ui/theme-circle (5 files since origin/main)
 **tl;dr:** Every MySet page's light/dark button now reveals the new theme as a circle growing from the button (like HQ's); instant as before on older phones or with Reduce Motion
 **Other sessions:** Decision 0121. public/theme.js: toggle(el) uses document.startViewTransition + clip-path on ::view-transition-new(root), injects its own CSS; the iOS home-screen reload and the scroll nudge wait for vt.finished. .theme-now kills transitions for one frame.

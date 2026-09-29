@@ -8,7 +8,7 @@ area: ui
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [d10d24e]
 tests: [test/copy.mjs]
 files: [public/theme.js, test/copy.mjs]
 ---
@@ -64,3 +64,7 @@ against `tools/mock.mjs` `/studio?tab=settings`: 300 ms after the tap the
 light outside; at 1.2 s the theme was dark, stored, the icon ☀︎ and no class left
 behind. With reduced motion emulated the switch was instant. Not checked: a real
 iPhone, including the home-screen reload after the circle.
+
+Live as `d10d24e` (PR #159). The deploy preview ran the same circle on the home page
+(`circle(0px at 153px 36px)` → `circle(842px …)`, light → dark), and at 12:44 UTC
+`https://myset.vip/theme.js` served `startViewTransition(swap)`.
