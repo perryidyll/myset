@@ -500,7 +500,7 @@ export async function handleMessages(aid, action, body) {
     const r = await ownerReply(aid, tid, body.text, await whoAmI());
     if (!r.ok) return bad(r.error);
     // a venue's conversation: its Venue Studio shows the pitch as answered
-    if (r.vid) { const { venueUnread } = await import('./_pitch.mjs'); await venueUnread(r.vid, aid).catch(() => {}); delete r.vid; }
+    if (r.vid) { const { venueUnread } = await import('./_pitch.mjs'); await venueUnread(r.vid, aid, body.text).catch(() => {}); delete r.vid; }
     return json(r);
   }
   if (action === 'msgMove') { const r = await moveThread(aid, tid, String(body.folder || '')); return r.ok ? json(r) : bad(r.error); }

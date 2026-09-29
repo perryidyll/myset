@@ -46,7 +46,7 @@ A. The artist already has a working inbox, with folders, unread counts, the Wait
 
 ## What this makes harder
 
-- Venues get no push or email about an artist's reply, because venues have no push yet. They see it only on the What's on tab, as "new reply".
+- Venues get no email about an artist's reply; they see it on the What's on tab, as "new reply". (Push came with decision 0124: a venue's phones now hear each reply and each new ask.)
 - A pitch conversation cannot be blocked. A venue that becomes a nuisance can still be reported, which moves the thread to Spam, or simply left unanswered.
 
 ## What would reverse it

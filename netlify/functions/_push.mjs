@@ -123,7 +123,7 @@ export async function vapidHeaders(endpoint, subject, publicRaw, privateRaw) {
   };
 }
 
-/* ---------- storage: one document per artist, holding their devices ---------- */
+/* ---------- storage: one document per artist or venue, holding their devices ---------- */
 /* EACH DEVICE BELONGS TO A SEAT (decision 0114). A row carries the address and the
    sign-in (`sid`) that switched it on, so an alert can reach the seats allowed to see
    what it is about, a sign-out can end that phone's alerts, and one seat's phones can
@@ -189,14 +189,28 @@ export const devicesOf = async (aid, email) =>
    than loud on every seat's phone (test/pushseats.mjs has a tripwire for it).
    A device with no address was switched on through the Studio code, which only the
    owner holds, or before this change, when the page's alerts were the owner's: it is
-   the owner's. A device whose address is no longer a seat here is dropped. */
+   the owner's. A device whose address is no longer a seat here is dropped.
+
+   A VENUE'S PHONES (decision 0124) live under the same owner id its sign-ins do,
+   `v_<vid>`, so every venue sign-out already ends them (killSessions → dropDevices).
+   Its seats are read from the venue registry, and every venue seat sees what a venue
+   is told about — its merch orders and the artists asking to play (CREW_OK in
+   venueadmin.mjs) — so a tab names every seat there; `{ owner: true }` still means the
+   owner alone. */
+const isVenue = (aid) => String(aid).startsWith('v_');
+const registryOf = (aid) => (isVenue(aid)
+  ? import('./_venues.mjs').then((m) => m.readVenues())
+  : readArtists());
 const seatOf = (reg, aid, s) => {
   if (!s.email) return { role: 'owner', access: null };
   const link = reg.byEmail[s.email];
+  if (isVenue(aid))
+    return link && 'v_' + link.venueId === aid ? { role: link.role || 'owner', venue: true } : null;
   return link && link.artistId === aid ? { role: link.role || 'owner', access: link.access || null } : null;
 };
 const hears = (seat, to) =>
-  to.all ? true : to.owner ? seat.role === 'owner' : to.tab ? can(seat.role, to.tab + '_view', seat.access) : false;
+  to.all ? true : to.owner ? seat.role === 'owner'
+  : to.tab ? (seat.venue || can(seat.role, to.tab + '_view', seat.access)) : false;
 
 /** Fire and forget. Never throws: a notification that fails must never break the
  *  thing that triggered it (INVARIANT 16). */
@@ -212,7 +226,7 @@ export async function notify(aid, { title, body, url = '/studio', tag = 'myset' 
   let hear;
   if (to.endpoint) hear = subs.filter((s) => s.endpoint === to.endpoint);
   else {
-    const reg = await readArtists().catch(() => null);
+    const reg = await registryOf(aid).catch(() => null);
     if (!reg) return { ok: false, reason: 'no-registry' };   // nobody, rather than everybody
     hear = subs.filter((s) => {
       const seat = seatOf(reg, aid, s);

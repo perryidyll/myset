@@ -538,7 +538,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Scheduled jobs | 6 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron |
 | Shared libraries | 70 |
 | Artist Studio actions | 136 |
-| Venue Studio actions | 50 |
+| Venue Studio actions | 53 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
@@ -554,9 +554,9 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet HQ (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
 | Invariants | 294 (last: 0gx) |
-| Test suites | 68 |
+| Test suites | 69 |
 | Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 121 |
+| Decision records | 122 |
 
 ### Feature flags in force
 
@@ -853,7 +853,7 @@ the badge if earned, a **Community** pill, and the same top-right menu.
 
 **The two sides meet** through pitches: only signed-in artists can pitch a venue, so a
 stranger cannot spam a bar. A pitch is a conversation: the artist talks in Messages, the
-venue replies from its Venue Studio (decision 0123). Gigs and venues are matched by **name within a city, never by
+venue replies from its Venue Studio (decision 0123). A venue's phones get push alerts for a new ask, an artist's reply and a merch order, switched on per phone in the Venue Studio's Settings (decision 0124). Gigs and venues are matched by **name within a city, never by
 a stored link**, so neither side can break the other.
 
 ## 3.7 The community page
