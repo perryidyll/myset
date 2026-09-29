@@ -76,7 +76,7 @@ Each counts as the owner's. The 2026-09-25 production backup held no push docume
 ## What would reverse it
 
 - A seat that must hear about a tab it cannot open. That would be a new audience, not a wider tab.
-- Venues switching alerts on. The venue side has no `pushOn` today, and `notify` reads the artist registry. A venue alert would need the venue registry's seats, the same way.
+- Venues switching alerts on. The venue side has no `pushOn` today, and `notify` reads the artist registry. A venue alert would need the venue registry's seats, the same way. (Done in decision 0124: `notify` reads the venue registry for an owner id `v_<vid>`.)
 - The registry read per alert showing up in the Blobs bill at scale. Then carry the seat's reach on the device and re-stamp it on `accessSet` and `roleSet`, which are the only places it changes.
 
 ## How it was verified

@@ -222,7 +222,7 @@ Linked steps: 370164, 370165
 
 ### Push subscriptions (push_) — entity 4858
 
-`push_<aid>` · The phones on this page that asked to be told about a request, a message or an order while the Studio is closed. Each row carries the address and sign-in (`sid`) that switched it on; eight per address; a sign-out drops the rows of the sign-ins it ends (decision 0114). Hand-written Web Push (RFC 8291/8188/8292) with two dependencies total. The keys are set in production (Admin d06). `src: _push.mjs`
+`push_<aid>` · The phones on this page that asked to be told about a request, a message or an order while the Studio is closed. Each row carries the address and sign-in (`sid`) that switched it on; eight per address; a sign-out drops the rows of the sign-ins it ends (decision 0114). A venue's phones are `push_v_<vid>`, under the same owner id as its sign-ins, and hear new asks, artist replies and merch orders (decision 0124). Hand-written Web Push (RFC 8291/8188/8292) with two dependencies total. The keys are set in production (Admin d06). `src: _push.mjs`
 
 | attribute | type | what it holds |
 | --- | --- | --- |

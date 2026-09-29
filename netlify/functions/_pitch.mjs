@@ -29,6 +29,21 @@ export const emptyPitches = () => ({ v: 1, list: [] });
 
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
 
+/* THE VENUE HEARS IT (decision 0124): a new ask and each artist reply push to every
+   phone the venue's seats switched alerts on for, opening the What's on tab. Time-boxed
+   and swallowed like every other alert — the ask or the reply is already saved when
+   this runs, and a slow push service must never hold the artist's answer (INVARIANT 16). */
+export const VENUE_NOTE_MS = 1500;
+async function tellVenue(vid, { title, body, tag }) {
+  try {
+    const { notify } = await import('./_push.mjs');
+    await Promise.race([
+      notify('v_' + vid, { title, body: clean(body, 120), url: '/venues?tab=shows', tag }, { tab: 'shows' }),
+      new Promise((r) => setTimeout(r, VENUE_NOTE_MS)),
+    ]);
+  } catch { /* an alert that fails is never the ask's problem */ }
+}
+
 export async function readPitches(vid) {
   const { data } = await readDoc(VK(vid), null);
   const d = data || emptyPitches();
@@ -88,6 +103,10 @@ export async function sendPitch({ vid, venueName, venueSlug, aid, artist, messag
     d.list = d.list.slice(-60);
     return true;
   }).catch(() => {});
+
+  // a new ask is news; the same ask again, or reworded, is not a second alert
+  if (!already) await tellVenue(vid, { title: `🎤 ${artist.name || 'An artist'} wants to play here`,
+                                       body: msg || 'They asked about a spot.', tag: 'pitch-' + aid });
 
   return { ok: true, already, updated: changed, tid: row ? row.tid || '' : '' };
 }
@@ -167,12 +186,16 @@ async function markVenueRead(vid, id) {
   });
 }
 /** The artist answered in Messages: the venue's list shows it as new. */
-export async function venueUnread(vid, aid) {
+export async function venueUnread(vid, aid, text = '') {
+  let name = null;
   await casDoc(VK(vid), emptyPitches, (d) => {
     const r = (d.list || []).find((x) => x.aid === aid);
-    if (!r || r.vunread) return false;
+    if (!r) return false;
+    name = r.name || 'The artist';
+    if (r.vunread) return false;
     r.vunread = true; return true;
   });
+  if (name) await tellVenue(vid, { title: `💬 ${name} wrote back`, body: text, tag: 'pitch-' + aid });
 }
 
 /** What the venue sees: the pitch plus the artist's real, public numbers. */

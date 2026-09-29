@@ -48,7 +48,8 @@ export default async (req) => {
      Anything not on this list is OWNER ONLY, which is the safe way round: a new
      action is locked until somebody decides it should not be. */
   const CREW_OK = new Set(['get', 'stats', 'eventList', 'pitchList', 'pitchThread', 'postList', 'postReply',
-                           'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone', 'planGet']);
+                           'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone', 'planGet',
+                           'pushKey', 'pushOn', 'pushOff']);
   const MANAGER_OK = new Set([...CREW_OK, 'eventSave', 'eventDelete', 'eventSkip', 'pitchSet', 'pitchReply',
                               'set', 'amenity', 'hours', 'menuSet', 'menuAdd', 'menuRemove',
                               'offerSave', 'offerRemove', 'photoUpload', 'photoClear',
@@ -102,6 +103,30 @@ export default async (req) => {
   }
 
   if (action === 'get') return send();
+
+  /* ---------- alerts on this phone (decision 0124) ----------
+     The artist side's machinery (_push.mjs), under the owner id the venue's sign-ins
+     already use, so a sign-out ends the phone's alerts as it does an artist's. Every
+     seat may switch them on for its own phone. `mine` says whether THIS phone is on
+     for this venue: one browser holds one subscription, and a phone that also runs an
+     artist Studio would otherwise read that as "on here". */
+  if (action === 'pushKey' || action === 'pushOn' || action === 'pushOff') {
+    const { saveSub, dropSub, devicesOf, readSubs, notify } = await import('./_push.mjs');
+    const owner = 'v_' + vid;
+    const endpoint = String((body.sub && body.sub.endpoint) || body.endpoint || '');
+    const state = async () => ({ ok: true, key: process.env.VAPID_PUBLIC_KEY || null,
+      devices: await devicesOf(owner, me.email),
+      mine: !!endpoint && (await readSubs(owner)).subs.some((s) => s.endpoint === endpoint) });
+    if (action === 'pushOn') {
+      if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY)
+        return bad('Alerts aren’t switched on for MySet yet', 503);
+      if (!(await saveSub(owner, body.sub, me))) return bad('That subscription looks wrong', 400);
+      await notify(owner, { title: 'Alerts are on', body: 'You’ll hear when an artist asks to play or writes back, and when someone buys your merch.',
+                            url: '/venues', tag: 'setup' }, { endpoint });
+    }
+    if (action === 'pushOff') await dropSub(owner, endpoint);
+    return json(await state());
+  }
 
   /* ---------- the venue's own events ----------
      Same recurrence engine as artists' gigs: one record for "every Tuesday", no

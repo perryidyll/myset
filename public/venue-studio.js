@@ -174,7 +174,71 @@ function signedIn(d,msg){
 async function signOut(){
   if(SAMPLE){ location.href='/v/'+encodeURIComponent(SAMPLE.slug); return; }   // a preview has nobody signed in: back to the page
   try{ await post('/venueauth',{action:'signOut'}); }catch(e){}
-  TOKEN=''; localStorage.removeItem('myset.vtoken'); V=null; ME=null; gate();
+  TOKEN=''; localStorage.removeItem('myset.vtoken'); V=null; ME=null;
+  VPUSHKEY=null; VPUSHVIEW='';   // the server ended this sign-in's alerts (0124); the next person here starts from off
+  gate();
+}
+
+/* ---------- alerts on this phone (decision 0124) ----------
+   The artist Studio's Web Push, pointed at the venue: a new ask to play, an artist
+   writing back, a merch order. iPhone allows it only once the Venue Studio is on the
+   home screen, so there the honest answer is instructions, not a button that fails.
+   "On" is the server's word for THIS venue (`mine`), not merely that the browser has a
+   subscription: a phone that also runs an artist Studio holds one subscription for both.
+   It paints through VPUSHVIEW because render() recreates the box. */
+const VPUSH_INSTALLED = matchMedia('(display-mode: standalone)').matches
+  || navigator.standalone === true
+  || new URLSearchParams(location.search).get('src')==='pwa';
+const VPUSH_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+let VPUSHKEY=null, VPUSHVIEW='';
+const b64ToBytes=(s)=>{ const raw=atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(raw,c=>c.charCodeAt(0)); };
+async function vpushState(){
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)) return {can:false,why:'browser'};
+  if(VPUSH_IOS && !VPUSH_INSTALLED) return {can:false,why:'ios'};
+  // serviceWorker.ready never resolves without an active worker: race it (as the Studio)
+  const reg=await Promise.race([navigator.serviceWorker.ready.catch(()=>null),new Promise(r=>setTimeout(()=>r(null),4000))]);
+  if(!reg) return {can:false,why:'no-worker'};
+  const sub=await reg.pushManager.getSubscription().catch(()=>null);
+  return {can:true,reg,sub,denied:typeof Notification!=='undefined'&&Notification.permission==='denied'};
+}
+async function drawVPush(){
+  const paint=(h)=>{ VPUSHVIEW=h; const b=$('#vpushBox'); if(b)b.innerHTML=h; };
+  const row=(t,sub,btn)=>`<div class="list"><div class="row"><div class="m"><div class="t">${t}</div><div class="s">${sub}</div></div>${btn||''}</div></div>`;
+  const st=await vpushState();
+  if(!VPUSHKEY){ const d=await api('/venueadmin',{method:'POST',quiet:true,
+      body:JSON.stringify({action:'pushKey',endpoint:(st.sub&&st.sub.endpoint)||''})});
+    VPUSHKEY=d&&d.ok?d:{key:null,devices:0,mine:false}; }
+  if(!VPUSHKEY.key) return paint(row('Not switched on yet','MySet’s alert keys aren’t set on the server, so nothing can be sent yet.'));
+  if(!st.can&&st.why==='browser') return paint(row('This browser can’t do alerts','Chrome on Android, or the Venue Studio added to your home screen on iPhone.'));
+  if(!st.can&&st.why==='ios') return paint(row('Add the Venue Studio to your home screen first',
+    'On iPhone, alerts only work from the home screen: tap Share, then Add to Home Screen, and open it from there.'));
+  if(!st.can) return paint(row('Couldn’t start alerts here','Reload the page and try again.',
+    `<button class="act" onclick="VPUSHKEY=null;drawVPush()">Retry</button>`));
+  if(st.denied) return paint(row('Alerts are blocked','Your phone is blocking them. Turn them back on in its Settings → Notifications.'));
+  const on=!!(st.sub&&VPUSHKEY.mine);
+  paint(row(on?'Alerts are on':'Get alerts on this phone',
+    on?`You’ll hear when an artist asks to play or writes back, and when someone buys your merch.${VPUSHKEY.devices>1?` · ${VPUSHKEY.devices} devices`:''}`
+      :'Know the moment an artist asks to play here or writes back, and when someone buys your merch.',
+    `<button class="act${on?'':' pri'}" onclick="toggleVPush(${on?'false':'true'})">${on?'Turn off':'Turn on'}</button>`));
+}
+async function toggleVPush(on){
+  const st=await vpushState();
+  if(!st.can) return;
+  try{
+    if(on){
+      if(await Notification.requestPermission()!=='granted'){ drawVPush(); return; }
+      const sub=st.sub||await st.reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(VPUSHKEY.key)});
+      const d=await post('/venueadmin',{action:'pushOn',sub:sub.toJSON()});
+      toast(d&&d.ok?'Alerts on — check your notifications':(d&&d.error)||'Couldn’t switch alerts on');
+    }else{
+      // only this venue lets go: the phone's subscription may be an artist Studio's too
+      if(st.sub) await post('/venueadmin',{action:'pushOff',endpoint:st.sub.endpoint});
+      toast('Alerts off');
+    }
+  }catch(e){ toast('Your phone wouldn’t allow that'); }
+  VPUSHKEY=null; drawVPush();
 }
 function signOutEverywhere(){
   if(SAMPLE){ signOut(); return; }
@@ -695,6 +759,9 @@ async function openPortal(){
 /* back from Stripe: confirm on the server, never trust the URL */
 async function handleReturns(){
   const q=new URLSearchParams(location.search);
+  // an alert opens the tab it is about (0124): ?tab=shows for an ask, ?tab=merch for an order
+  const tab=q.get('tab');
+  if(['page','shows','numbers','merch','menu','settings'].includes(tab)){ history.replaceState(null,'',location.pathname); setTab(tab); return; }
   if(q.get('connect')){ TAB='merch'; history.replaceState(null,'',location.pathname); setTimeout(()=>loadPay(true),400); return; }
   if(q.get('sub')==='cancelled'){ toast('No change made'); history.replaceState(null,'',location.pathname); return; }
   if(q.get('sub')==='done'&&q.get('cs')){
@@ -1318,6 +1385,9 @@ function render(){
         <b>${esc(t)}</b><span>${esc(d)}</span></button>`).join('')}
     </div>`:`<div class="list"><div class="row muted">Set your page address above first.</div></div>`}
 
+    ${SAMPLE?'':`<div class="sec"><span class="kick">Alerts</span></div>
+    <div id="vpushBox">${VPUSHVIEW||`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Checking…</div></div>`}</div>`}
+
     <div class="sec"><span class="kick">Who can sign in</span></div>
     ${ME&&ME.ok?`<div class="list">${(ME.emails||[]).map(e=>`<div class="row">
         <div class="m"><div class="t">${esc(e.email)}</div><div class="s">${esc(e.role)}</div></div>
@@ -1399,6 +1469,7 @@ function render(){
     ${V.slug?`<a class="big alt ${TAB==='page'?'orange-outline':''}" href="/v/${esc(V.slug)}">See your public page ↗</a>`:''}
   </div>
   ${tabBar()}`;
+  if(TAB==='settings'&&!SAMPLE&&!VPUSHVIEW) drawVPush();   // not awaited: it paints #vpushBox when it lands
   wireCount('#fTag','#cTag',120); wireCount('#fAbout','#cAbout',900);
   document.querySelectorAll('input[data-hday]').forEach(el=>
     el.addEventListener('change',()=>save({action:'hours',day:el.dataset.hday,

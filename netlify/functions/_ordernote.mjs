@@ -46,10 +46,10 @@ export async function tellOrder(owner, o) {
     const studio = venue ? 'https://myset.vip/venue-studio' : 'https://myset.vip/studio?tab=merch';
     const total = (o.cents || 0) + (o.post || 0);
     const title = `New merch order: ${orderLine(o)}`;
-    /* A venue has no push devices today (push_<owner> is empty), so this is a no-op
-       there; it costs one read and keeps the two owners on one path. */
+    /* A venue's phones hear it too since decision 0124: every venue seat sees its
+       orders, so `{ tab: 'merch' }` reaches each of them (_push.mjs). */
     const jobs = [notify(owner, { title: 'New merch order', body: `${orderLine(o)} · ${money(total)} · ${o.ship === 'ship' ? 'to ship' : 'pickup ' + o.code}`,
-                                  url: venue ? '/venue-studio' : '/studio?tab=merch', tag: 'order-' + (o.code || '') }, { tab: 'merch' })];
+                                  url: venue ? '/venues?tab=merch' : '/studio?tab=merch', tag: 'order-' + (o.code || '') }, { tab: 'merch' })];
     if (emailReady()) {
       const [emails, who] = await Promise.all([
         ownerEmails(owner),
