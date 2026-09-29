@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 20:38 — cadd9d5 — tip-decks@ui/tip-deck-copy (11 files since origin/main)
+**tl;dr:** Studio tip cards: payouts say every Monday (Hobbyist) or daily (paid plans); no more Spotify-playlist promise; Money gets Total/My cut and all-in hourly-rate cards; Gigs' last card explains recurring pay; the ? button glows; the repeat arrows turn counter-clockwise
+**Other sessions:** tips.js: {payday} var filled by studio.js tipVars() from PLAN.plan (mirrors _connect.mjs payoutScheduleFor); Money deck may have 5 slides (test/tipdecks allows it); the Ask-a-venue slide is gone pending a decision on moving pitches into Messages. about.html + the setlist empty state no longer mention Spotify playlists (import is CSV/paste only). lock.css .tipsbtn animation tipsglow.
+
 ### 2026-09-29 19:58 — 019bf6f — contradictions-0119@docs/0120-live (3 files since origin/main)
 **tl;dr:** Docs only: decision 0120, the ledger and a session note say ten free shows in total is live [skip ci]
 **Other sessions:** Decision 0120 = 9adf0be (#158); Puzzle changelog 2533.
