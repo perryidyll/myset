@@ -8,7 +8,7 @@ area: product
 reverses:
 superseded_by:
 invariants: [0ha]
-commits: []
+commits: [db35911]
 tests: [test/venuepush.mjs, test/pushseats.mjs]
 files: [netlify/functions/_push.mjs, netlify/functions/venueadmin.mjs, netlify/functions/_pitch.mjs, netlify/functions/_messages.mjs, netlify/functions/_ordernote.mjs, public/venue-studio.js, public/venue-studio.html, test/venuepush.mjs, test/run.sh]
 ---
@@ -51,4 +51,5 @@ A, because almost all of it already existed. A venue's sessions live under `v_<v
 
 - **Suite:** `test/venuepush.mjs` (19 checks): any seat switches its own phone on and gets the "Alerts are on" ping alone; a malformed subscription is refused; `mine` is false for the artist's endpoint; a new ask reaches both venue phones and not the artist's, asking again reaches nobody; each artist reply reaches both; a venue merch order reaches both; owner-only reaches the owner; no audience reaches nobody; Turn off, a sign-out and a removed seat each end a phone's alerts; the artist's phone is never touched. `test/pushseats.mjs`'s tripwire still finds every `notify(` naming its audience. `sh test/run.sh` exit 0.
 - **Browser:** headless Chrome at 390 px against `tools/localhost.mjs`, with the service worker registered by hand (the page registers it only on https): the card reads "Get alerts on this phone", Turn on made a real Chrome push subscription and the card turned to "Alerts are on"; `/venues?tab=shows` landed on What's on. No console errors.
+- **Live as `db35911` (PR #169):** verified by content on myset.vip at 16:59 UTC (`venue-studio.js?v=9f565ed2` carries `toggleVPush`).
 - **Not checked:** a real phone, and a real alert arriving on one.
