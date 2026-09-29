@@ -269,7 +269,7 @@ await A(TA4, 'freeCredits', { n: 3 });
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'free'; return true; });
 
 /* ── the free plan's gig cap ─────────────────────────────────────── */
-console.log('\nGIG CAP  ten free shows a month, counted where a gig starts');
+console.log('\nGIG CAP  ten free shows in total, counted where a gig starts');
 
 /* Ana is on the free plan. A gig starts on newShow, and on status->live from
    anything that is not already live. She has already used one earlier in this
@@ -287,7 +287,7 @@ eq(`she can start exactly the rest of her ${CAP}`, started, Math.max(0, CAP - us
 
 const overCap = await A(TA4, 'newShow');
 eq('one past the cap is refused', overCap.status, 402);
-ok('and says when it resets', /resets on the 1st/i.test(overCap.error || ''), overCap.error);
+ok('and names the way on, with no reset promised', /Bar Star/.test(overCap.error || '') && !/resets/i.test(overCap.error || ''), overCap.error);
 
 /* newShow leaves the show LIVE, and setting live when already live is a no-op —
    correctly uncapped. End it first, then the Start button is the capped path. */

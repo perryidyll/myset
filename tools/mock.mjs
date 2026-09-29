@@ -400,7 +400,7 @@ function stageFixture(st) {
       status: live ? 'live' : 'ended', windowOpen: live, nowPlaying: live ? 's4' : null,
       played: [], freeCredits: 3, replayCost: 2, packs: PACKS, showId: live ? 'show1' : 's0', startedAt: live ? NOW - 3600e3 : 0,
       artistId: 'a1', slug: 'demo', unlimited: false, unlimitedFans: [],
-      requests: true, birthdays: true, listId: '', listName: '', gigMonth: '', gigCount: 2,
+      requests: true, birthdays: true, listId: '', listName: '', gigCount: 2,
       startedBy: live ? 'artist' : null, endedBy: null, sched: null, autoStart: true,
     },
     tags: { builtin: GENRES, own: [] }, lists: [], learn: [], listFellBack: false,

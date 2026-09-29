@@ -1,4 +1,4 @@
-import { getShow, mutateShow, readFans, carryFans, newShowId, gigMonthOf, casDoc, mutateMeta } from './_lib.mjs';
+import { getShow, mutateShow, readFans, carryFans, newShowId, casDoc, mutateMeta } from './_lib.mjs';
 import { readLists, applyList } from './_lists.mjs';
 import { archiveShow } from './_history.mjs';
 import { readEvents, nextOccurrence, occKey } from './_events.mjs';
@@ -50,16 +50,25 @@ const queueFirstNightNote = (aid, showId, endedAt) => casDoc(AUTO_INDEX,
      · the founder is never capped, and a show that is already live is a no-op
        rather than a second gig on the counter */
 
-/** Exactly how a night is counted against the free plan. Called INSIDE a CAS
- *  callback, so a retry recomputes rather than double-counts (INVARIANT 0bi). */
+/** Exactly how a night is counted against the free plan: ten in total, ever
+ *  (decision 0120). Called INSIDE a CAS callback, after the showId is set, so a
+ *  retry recomputes rather than double-counts (INVARIANT 0bi). Only a start on the
+ *  free plan counts; a night played on a paid plan never does. */
 export function countGig(sh) {
-  const m = gigMonthOf();
-  if (sh.gigMonth !== m) { sh.gigMonth = m; sh.gigCount = 0; }
   sh.gigCount += 1;
+  sh.freeNight = sh.freeNight && sh.freeNight.id === sh.showId
+    ? { id: sh.showId, n: sh.freeNight.n + 1 } : { id: sh.showId, n: 1 };
+}
+/** A night the artist DISCARDS gives back what it used (decision 0120): a free show
+ *  is one kept, not one tried. Inside the same CAS as the end; idempotent. */
+export function uncountGig(sh) {
+  if (!sh.freeNight || sh.freeNight.id !== sh.showId) return;
+  sh.gigCount = Math.max(0, sh.gigCount - sh.freeNight.n);
+  sh.freeNight = null;
 }
 
 export const CAP_REFUSAL = (cap) =>
-  `That's your ${cap} free shows this month. Upgrade to keep playing — your allowance resets on the 1st.`;
+  `That's your ${cap} free shows. Upgrade to Bar Star to keep playing — a show you discard doesn't count.`;
 
 /** The free plan's cap for this artist, or null when there is none. */
 export async function gigCapFor(aid) {
@@ -166,9 +175,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
   let err = null, already = false, placed = null;
   await mutateShow(aid, (show) => {
     if (!fresh && show.status === 'live') { already = true; return false; }
-    const used = show.gigMonth === gigMonthOf() ? show.gigCount : 0;
-    if (gigCap !== null && used >= gigCap) { err = [CAP_REFUSAL(gigCap), 402]; return false; }
-    countGig(show);
+    if (gigCap !== null && show.gigCount >= gigCap) { err = [CAP_REFUSAL(gigCap), 402]; return false; }
     if (fresh) {
       show.played = []; show.nowPlaying = null; show.nowPlayingAt = null;
       show.log = [];
@@ -209,6 +216,7 @@ export async function startShow(aid, { fresh = false, by = 'artist', occKey: sch
        changes size underneath the people standing in it. Every show from here on
        carries its number. */
     show.roomCap = roomCap;
+    if (gigCap !== null) countGig(show);   // after the fresh showId, so the night it names is this one
     show.status = 'live';
     show.startedBy = by;
     show.endedBy = null;
@@ -265,6 +273,7 @@ export async function endShow(aid, { by = 'artist', title = '', discard = false 
     }
   } catch { /* never block ending a show on the archive */ }
   await mutateShow(aid, (show) => {
+    if (discard) uncountGig(show);
     show.status = 'ended';
     show.endedBy = by;
     show.endedAt = Date.now();

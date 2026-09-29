@@ -434,7 +434,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
-| Shows per calendar month (UTC) | 10 | unlimited | unlimited |
+| Free shows, in total (a discarded one doesn't count) | 10 | unlimited | unlimited |
 | Songs live to the audience at once (the whole library since decision 0061) | unlimited | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 50 | 300 | 2,000 |
 | Songs the library holds | 100 | 200 | 2,000 |
@@ -556,7 +556,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Invariants | 294 (last: 0gx) |
 | Test suites | 67 |
 | Assertions | **4,882**, 0 failing, last run 2026-09-28 |
-| Decision records | 117 |
+| Decision records | 118 |
 
 ### Feature flags in force
 
@@ -569,7 +569,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Flag | What paying buys | Enforced in |
 |---|---|---|
 | `cut` | the platform's share of every tip, vote pack and merch sale | `_connect.mjs`, as a Stripe `application_fee_amount` on a direct charge |
-| `gigs` | how many shows may be **started** in a UTC calendar month | `admin.mjs` and `_lifecycle.mjs` — both the button and the scheduler go through one function |
+| `gigs` | how many shows may be **started** on the free plan, in total (decision 0120; a discarded night gives its count back) | `admin.mjs` and `_lifecycle.mjs` — both the button and the scheduler go through one function |
 | `featured` | how many songs are **live to the audience** at once (never how many are stored) — unlimited on every plan since decision 0061, the check kept | `admin.mjs` on `toggleSong`, and the payload builder |
 | `audience` | a **soft** ceiling stamped onto the show; the room slows and shortens, nobody is refused | `_lib.mjs` (`pollFloorFor`, `boardLimitFor`), `show.mjs` |
 | `seats` | team members who can sign in | `_account.mjs` |
@@ -594,15 +594,18 @@ returns "free" for him. `merchAllowed` and `moderateAllowed` both bypass on
 
 Every phone in the room polls for the whole gig, so what MySet costs to run is driven by
 **gigs played**, not by artists signed up. Capping free on the real cost driver is what
-makes free survivable. **Four shows a month is a hobbyist; five is somebody earning from
-it.**
+makes free survivable. **The free plan is ten shows in total** — enough to try MySet on
+real nights; a working artist moves to Bar Star.
 
-Counted in **UTC calendar months**, resetting on the 1st, and **stamped onto the show
-record** — so what the Studio shows and what the server enforces are computed the same
-way, and the count cannot be fudged from a phone.
+Counted **ever, not per month** (decision 0120, 2026-09-29, when the code was made to match
+the plan card's "10 shows for free"). Only a show started on the free plan counts; a night
+played on a paid plan never does, and a night the artist **discards** gives its count back.
+The count is **stamped onto the show record**, and the Studio only reads it, so the "x/10"
+beside the Hobbyist tag and the server's refusal cannot disagree, and it cannot be fudged
+from a phone.
 
-Decision record
-[`0003`](docs/decisions/0003-the-free-tier-is-capped-by-gigs-not-features.md).
+Decision records
+[`0003`](docs/decisions/0003-the-free-tier-is-capped-by-gigs-not-features.md) and 0120.
 
 ## 2.4 "Bar Star feature" versus "Coming soon"
 
@@ -681,8 +684,9 @@ back: an audience that gets a sing-along at one gig and not the next learns that
 is unreliable, which costs more than the subscription is worth.
 
 That covers: voting itself, the lyrics sheet, pull-to-refresh, the community page,
-hiding an offensive post, the gig calendar, the city feed, and the whole Studio's
-show-running surface.
+the gig calendar, the city feed, and the whole Studio's show-running surface. Hiding a
+fan's post is not on the list: for artists it is Bar Star and up (decision 0060,
+`moderateAllowed`); venues can hide on any plan.
 
 ---
 

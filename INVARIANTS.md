@@ -846,13 +846,16 @@ If you are about to violate one, stop and say so rather than working around it.
     When no show is live, it does not poll at all: there is no board to keep current,
     and the previous show's numbers belong in Money → Past shows rather than Live.
 
-9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Four a
-   month (UTC), read from `PLANS.free.gigs` — enforced in ONE place, `startShow` in
-   `_lifecycle.mjs`, which every start path calls: "Start the show", "New show" and
-   the schedule. Refused BEFORE the mutation with the same words, counted INSIDE the
-   CAS (0bi), never mid-show (16). A scheduled start that is refused is remembered on
-   the index entry so it is not retried every two minutes; the Studio's own warning
-   at two shows left is unchanged. Nothing the ROOM experiences is capped (0w).
+9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Ten in
+   total, ever (decision 0120; the number is `PLANS.free.gigs`) — enforced in ONE place,
+   `startShow` in `_lifecycle.mjs`, which every start path calls: "Start the show",
+   "New show" and the schedule. Only a start on the free plan counts (a paid night never
+   does, the founder never is); a resume counts again, so one night cannot be stretched
+   over many; a night ended with **Discard** gives back everything it used (`uncountGig`,
+   inside the end's own CAS). Refused BEFORE the mutation with the same words, counted
+   INSIDE the CAS (0bi), never mid-show (16). A scheduled start that is refused is
+   remembered on the index entry so it is not retried every two minutes. The Studio only
+   READS `show.gigCount` — the "Hobbyist · x/10" tag and the warning at two left.
 
 9d10. **A tap is not a change.** `wakeUp()` used to reset the poll ladder to its
     fastest rung on every `pointerdown` — which fires on every scroll — so 66% of

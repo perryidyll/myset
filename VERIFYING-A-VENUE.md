@@ -10,7 +10,7 @@ Every page is one of two things:
 | State | What the page says | How you get there |
 |---|---|---|
 | Unverified listing | a grey `Unverified listing` chip, plus a line at the bottom offering the real owner a way to claim it | the default |
-| Verified | a green `✓ Verified` chip | any one of the three ways below |
+| Verified | a green `✓ Verified` chip | on the Pro plan, Way 1 **and** Way 2 together (the tick goes on by itself), or Way 3 alone |
 
 Nothing about the page is hidden while unverified. A bar that never verifies still
 gets its listing, its shows, its menu and its QR code. The chip is the whole
@@ -66,10 +66,12 @@ Verified against 13 targets including `169.254.169.254` — all refused.
 Enough different artists who have a gig at the venue **in their own MySet
 calendar** confirm it, from a button on the venue's public page. How many is
 `MIN_VOUCHES` in `_verify.mjs` — one constant; `190e2b4` (2026-09-02) lowered it,
-and this page went on saying ten. At that count the tick goes on by itself.
+and this page went on saying ten. At that count, **with Way 1 passed and the venue
+on Pro**, the tick goes on by itself (`tryVerify` in `_verify.mjs` requires every
+one of them; the Pro plan opens the door to being checked, it never buys the tick).
 
-This is the one that works for a bar with no website — which, in a beach town, is
-most of them. It is hard to fake because each vouch needs its own account with its
+On its own this is not enough: a bar with no website — which, in a beach town, is
+most of them — is verified by Way 3. It is hard to fake because each vouch needs its own account with its
 own gig history, and an artist with no gig listed there simply **cannot** vouch
 (`artistPlaysAt()` checks their calendar server-side). Nobody can vouch twice.
 

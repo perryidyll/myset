@@ -6,7 +6,7 @@ status: decided
 decided_by: perry
 area: plans
 reverses:
-superseded_by:
+superseded_by: 0120
 invariants: []
 commits: []
 tests: [test/limits.mjs, test/tenancy.mjs]

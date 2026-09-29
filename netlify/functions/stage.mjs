@@ -87,7 +87,7 @@ export async function stagePayload(aid, seat) {
       unlimited: !!show.unlimited, unlimitedFans: show.unlimitedFans || [],
       requests: show.requests, birthdays: show.birthdays,
       listId: show.listId, listName: show.listName,
-      gigMonth: show.gigMonth, gigCount: show.gigCount,
+      gigCount: show.gigCount,
       // who flipped it — 'artist' or 'schedule' — so the Live tab can say so
       startedBy: show.startedBy || null, endedBy: show.endedBy || null,
       sched, autoStart: show.autoStart !== false,

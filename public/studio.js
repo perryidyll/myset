@@ -1740,10 +1740,6 @@ async function loadRev(force){
 }
 /* ---- gig calendar ---- */
 const pad=n=>String(n).padStart(2,'0');
-/* The same bucket the server counts in (gigMonthOf in _lib.mjs) — UTC year-month.
-   If these two ever disagree the artist is told a different number from the one
-   that is enforced, so they are computed the same way in both places. */
-const monthKey=(now=Date.now())=>new Date(now).toISOString().slice(0,7);
 const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;};
 let CAL_MONTH=todayStr().slice(0,7);
 const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -2097,16 +2093,26 @@ async function recover(){
 }
 
 const PANEL_SCROLL={queue:0,setlist:0};
+/* The free plan's ten shows in total (decision 0120): the cap, or 0 when there is
+   none (a paid plan, or the founder, who is never capped). The server counts in
+   show.gigCount; the Studio only ever reads it. */
+const freeCap=()=>{ const c=PLAN&&PLAN.ok&&!PLAN.owner&&PLAN.plan==='free'&&PLAN.limits&&PLAN.limits.gigs; return c&&isFinite(c)?c:0; };
+/* The top-right tag on the free plan (decision 0120): one chip, like every paid plan's,
+   green with the shows used while there are some left, the pink Upgrade once all ten
+   are gone. One chip, not two, because two push the artist's name off a phone. */
+function freeTag(s){
+  const cap=freeCap(), used=Math.min((s&&s.gigCount)||0,cap);
+  if(!cap||used>=cap) return `<button class="upg" onclick="openPlans()"${cap?` aria-label="All ${cap} free shows used — upgrade"`:''}>Upgrade <span>↗</span></button>`;
+  return `<button class="plantag" onclick="openPlans()" aria-label="Hobbyist — ${used} of your ${cap} free shows used">Hobbyist · ${used}/${cap} <span>↗</span></button>`;
+}
 /* The free-show cap, shown only when it is about to matter. */
 function capNote(s){
-  const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
-  if(!cap||cap===null||!isFinite(cap))return '';
-  const used=s.gigMonth===monthKey()?(s.gigCount||0):0;
-  const left=Math.max(0,cap-used);
+  const cap=freeCap(); if(!cap)return '';
+  const left=Math.max(0,cap-(s.gigCount||0));
   if(left>2)return '';
   return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">${left===0
-    ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
-    : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
+    ? `<b style="color:var(--accent)">That's your ${cap} free shows.</b> Upgrade in Settings to keep playing — a show you discard doesn't count.`
+    : `<b>${left} free show${left===1?'':'s'} left.</b> A show you discard doesn't count.`}</p>`;
 }
 /* The gig tonight, if there is one: the server's `sched` when the calendar gig is
    within twelve hours, else today's occurrence from the calendar (loaded lazily;
@@ -2795,7 +2801,7 @@ function render(){
       'The standard prices stay on, and the money is still yours.')}
 
     <div class="sec"><span class="kick">Requests from fans</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Let the room ask for something that isn't on your list. They pay in votes, not money, and you decide — turning one down refunds them automatically. Both are off until you switch them on.</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Let the room ask for something that isn't on your list. They pay in votes, and once you take card payments a song request can also carry a money offer: a card hold, charged only if you play and finish it. You decide — turning one down refunds the votes and releases the hold automatically. Both are off until you switch them on.</p>
     ${[['song','Request a song','A title you haven’t got listed',s.requests],
        ['birthday','Happy birthday shout-out','With the name of whoever it’s for',s.birthdays]].map(([k,t,d,cfg])=>`
       <div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div>
@@ -2862,9 +2868,9 @@ function render(){
       <p>So a packed 3-hour show produces tens of thousands of those little questions,
       each of which costs credits ($$) on my server… and they add up fast — very
       fast.</p>
-      <p>That's why the shows are limited to 4/month on the free plan, which basically
-      means a hobbyist gets to play for free — forever — while the musicians earning
-      money from it cover the costs, as well as their own.</p>
+      <p>That's why the free plan comes with 10 shows, which basically means anyone
+      gets to try it on real nights for free, while the musicians earning money from
+      it cover the costs, as well as their own.</p>
       <p>Of course, I am also an entrepreneur and want to earn a living like everyone
       else! So creating a basic business model out of it is certainly something I want
       as well. But without some kind of monetization structure the app literally
@@ -2881,7 +2887,7 @@ function render(){
             thing Perry could not find. */''}
       <div class="planbox" id="planbox">
         <button class="bigup" onclick="openPlans()">${!ownerSeat()?'See the plans':PLAN.plan==='pro'?'Rock Star membership':'Upgrade your plan'} <span>↗</span></button>
-        <p class="planwhen">${planWhen()}</p>
+        <p class="planwhen">${planWhen(s)}</p>
       </div>
       <div class="field" data-ed="owner"><label>Got a code?</label><div style="display:flex;gap:8px">
         <input class="inp" id="promoIn" maxlength="24" placeholder="FRIENDS100" autocapitalize="characters" style="flex:1">
@@ -3062,7 +3068,7 @@ function render(){
     <div class="headactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
     ${SAMPLE?`<button class="claimbtn" onclick="openClaim()">Claim profile</button>`
     :PLAN&&PLAN.ok?(!see('plans')?'':PLAN.plan==='free'
-      ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
+      ?freeTag(s)
       :`<button class="plantag" onclick="openPlans()">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}</div>
   </div>
   ${leavingBar()}${cardTrouble(s)}${viewNote(TABAREA[TAB])}${body}
@@ -5147,7 +5153,7 @@ function cardTrouble(s){
     <p style="margin-top:8px">Everything keeps working until ${daystamp(ends)}.</p></div>`;
   if(days>=0) return `<div class="paybar">
     <b>Your card still hasn’t gone through</b>
-    <p>If it isn’t sorted by tomorrow your page goes back to Hobbyist. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} shows a month, merch comes off your shop page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
+    <p>If it isn’t sorted by tomorrow your page goes back to Hobbyist. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} free shows in total, merch comes off your shop page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
     <button class="big" style="margin-top:12px" ${fix}>Update my card</button></div>`;
   return `<div class="paybar">
     <b>You’re on Hobbyist for now</b>
@@ -5162,12 +5168,12 @@ function cardTrouble(s){
    The date comes from Stripe's period end, not from `planUntil`: planUntil carries
    three days of grace for a late card, and telling somebody they renew three days
    after they actually do is a small lie the app should not tell. */
-function planWhen(){
+function planWhen(s){
   if(!PLAN||!PLAN.ok)return '';
   const b=PLAN.billing||{}, name=esc(PLAN.limits.label);
   const link=b.portal?` · <a href="#" onclick="event.preventDefault();openPortal()">Card, invoices and receipts ↗</a>`:'';
   if(PLAN.comped) return `${name}, on the house${PLAN.until?' until '+daystamp(PLAN.until):''}`;
-  if(PLAN.plan==='free') return 'Hobbyist — free, forever'+(PLAN.discountPct?` · ${PLAN.discountPct}% off saved for your first month`:'');
+  if(PLAN.plan==='free') return 'Hobbyist'+(freeCap()?` — ${Math.min((s&&s.gigCount)||0,freeCap())} of your ${freeCap()} free shows used`:'')+(PLAN.discountPct?` · ${PLAN.discountPct}% off saved for your first month`:'');
   const when=b.renewsAt||PLAN.until;
   if(when) return `${b.cancelAtPeriodEnd?'Ends':'Renews'} ${daystamp(when)}${link}`;
   return `Active${link}`;

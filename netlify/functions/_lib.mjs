@@ -60,7 +60,6 @@ export const DEFAULT_ARTIST = 'perry-idyll';
    unique tail. */
 /** UTC year-month, the bucket the free gig cap counts in. Resets on the 1st.
  *  Briefly an ISO week on 2026-09-03; changed straight back. */
-export const gigMonthOf = (now = Date.now()) => new Date(now).toISOString().slice(0, 7);
 
 export function newShowId(now = Date.now(), rand = Math.random()) {
   const d = new Date(now), p = (n) => String(n).padStart(2, '0');
@@ -121,10 +120,12 @@ export function defaultShow() {
        second document on the poll — see the note in _lists.mjs. Only
        applyList() writes it, and normShow re-filters it below. */
     listId: '', listName: '', listSongs: [],
-    /* Shows started this calendar month, for the free plan's gig cap. Stored
+    /* Shows played on the free plan, ever, for its gig cap (decision 0120). Stored
        rather than counted from history because a show in progress is not in
-       history yet, and the cap has to include tonight. */
-    gigMonth: '', gigCount: 0,
+       history yet, and the cap has to include tonight. `freeNight` is how many of
+       them the current showId used (a resume counts again), so discarding that
+       night gives them back. */
+    gigCount: 0, freeNight: null,
     songs: [],
     showId: null,
     artistId: ARTIST_ID,
@@ -368,14 +369,17 @@ function normShow(s) {
   show.listId = String(show.listId || '').replace(/[^a-z0-9]/gi, '').slice(0, 12);
   show.listName = String(show.listName || '').replace(/\s+/g, ' ').trim().slice(0, 40);
   show.listSongs = Array.isArray(show.listSongs) ? show.listSongs : [];
-  /* The cap was weekly for a few hours on 2026-09-03. A record stamped with a
-     `gigWeek` cannot be honestly translated into a month — there is no way to know
-     which month those shows fell in from a week label that can straddle two — so it
-     is dropped and the artist starts the month clean. Erring generous is the right
-     side for somebody who did nothing wrong. */
-  if (show.gigWeek !== undefined) { delete show.gigWeek; show.gigMonth = ''; show.gigCount = 0; }
-  show.gigMonth = String(show.gigMonth || '').slice(0, 7);
+  /* The cap was weekly for a few hours on 2026-09-03, then monthly until
+     2026-09-29, when it became ten free shows in total (decision 0120). A
+     `gigWeek` record starts clean. A `gigMonth` record keeps its count — those
+     were shows really played — unless its last night was on a paid plan, when the
+     count was paid shows, which never count against the free ten. Erring generous
+     is the right side for somebody who did nothing wrong. */
+  if (show.gigWeek !== undefined) { delete show.gigWeek; show.gigCount = 0; }
+  if (show.gigMonth !== undefined) { if (show.plan && show.plan !== 'free') show.gigCount = 0; delete show.gigMonth; }
   show.gigCount = Math.max(0, parseInt(show.gigCount, 10) || 0);
+  const fn = show.freeNight;
+  show.freeNight = fn && typeof fn.id === 'string' && fn.n > 0 ? { id: fn.id, n: parseInt(fn.n, 10) || 1 } : null;
   /* Songs carry a key and genre tags. Tags are filtered against what actually
      exists, so deleting a custom tag cleans itself up on the next read. */
   const ids = new Set(show.songs.map((x) => x && x.id));
