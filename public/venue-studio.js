@@ -62,7 +62,7 @@ function sampleRoute(p,o){
    the first time it is wanted — and asked for again next time if the network lost it. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=bb14e96e';
+  const j=document.createElement('script'); j.src='/sample.js?v=7dd1f554';
   j.onload=()=>r(window.Sample||null); j.onerror=()=>{ SAMPLEJS=null; r(null); }; document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;
@@ -99,7 +99,8 @@ function gate(err,mode){
         <input class="inp" id="newCountry" maxlength="60" placeholder="Country" style="flex:1">
       </div>
       <button class="big fill" style="margin-top:12px" onclick="claim()">Create your page</button>
-      <p class="muted" style="font-size:12px;margin:12px 0 0">City and country are how artists' gigs find their way onto your page — put them exactly as they'd write them.</p></div>`;
+      <p class="muted" style="font-size:12px;margin:12px 0 0">City and country are how artists' gigs find their way onto your page — put them exactly as they'd write them.</p>
+      <p class="muted" style="font-size:12px;margin:8px 0 0">By creating a page you agree to MySet’s <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy notice</a>.</p></div>`;
   }else if(m==='join'||m==='forgot'){
     const join=m==='join';
     inner=`<div class="signbox"><h2>${join?'Join the MySet family':'Forgot your password?'}</h2>

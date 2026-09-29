@@ -646,7 +646,7 @@ function sampleRoute(p,o){
    the first time it is wanted. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=bb14e96e'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
+  const j=document.createElement('script'); j.src='/sample.js?v=7dd1f554'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;
   CLAIMAT=Date.now(); closeSheet();
@@ -891,7 +891,8 @@ function gate(err,mode){
     inner=`<div class="signbox"><h2>You’re in</h2>
       <p class="muted" style="font-size:14px;margin:0 0 16px">What should we call you? This is the name fans see.</p>
       <input class="inp" id="newName" maxlength="60" placeholder="Your artist or band name" autocomplete="off">
-      <button class="big fill" style="margin-top:12px" onclick="claimAccount()">Create my page</button></div>`;
+      <button class="big fill" style="margin-top:12px" onclick="claimAccount()">Create my page</button>
+      <p class="muted" style="font-size:12px;margin:12px 0 0">By creating a page you agree to MySet’s <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy notice</a>.</p></div>`;
   }else if(m==='join'||m==='forgot'){
     const join=m==='join';
     inner=`<div class="signbox"><h2>${join?'Join the MySet family':'Forgot your password?'}</h2>

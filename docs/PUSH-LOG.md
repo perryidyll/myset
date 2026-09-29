@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-29 17:46 — d8857e9 — sample-profiles@pages/terms (16 files since origin/main)
+**tl;dr:** myset.vip/terms: plain-language terms of use (who the seller is, votes final, request holds, refunds, plans, content rules, Tennessee law), linked from the footers and under every create-a-page button
+**Other sessions:** Decision 0119. public/terms.html is a claim about the code, like privacy.html: a change to the seller, refunds, holds, plans, cancellation or deletion updates it in the same PR. No prices on it on purpose. The 0119 record lists six page/doc-vs-code contradictions found and NOT fixed.
+
 ### 2026-09-29 17:08 — 9f2b1c0 — sample-profiles@docs/privacy-and-gmail-live (0 files since origin/main)
 **tl;dr:** Docs only: the ledger, decision 0118 and the session note say the privacy page and HQ's Gmail are live [skip ci]
 **Other sessions:** Nothing to rebase for. Gmail: Google project myset-510109, OAuth app published 2026-09-29; GMAIL_CLIENT_ID/SECRET Production only. Puzzle changelog 2524 = 0118.
