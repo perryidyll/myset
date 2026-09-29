@@ -37,15 +37,52 @@
       if (meta) meta.replaceWith(fresh); else document.head.appendChild(fresh);
     }
   };
-  const toggle = () => {
+  /* THE SWITCH GROWS AS A CIRCLE FROM THE BUTTON (decision 0121), the way HQ's
+     does. The browser photographs the page, the theme changes underneath, and the
+     new page is revealed through a circle the graphics chip grows over 0.72 s —
+     nothing is re-laid-out while it plays. Where the browser has no view
+     transitions (iOS before 18), where the person asked for less motion, or while
+     the page is in the background, the switch is instant, as it always was. */
+  const REDUCE = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return true; } })();
+  let styled = false;
+  const style = () => {
+    if (styled) return; styled = true;
+    const s = document.createElement('style');
+    s.textContent = '::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}'
+      + '.theme-now *,.theme-now *::before,.theme-now *::after{transition:none!important}';
+    document.head.appendChild(s);
+  };
+  const toggle = (from) => {
     const next = active() === 'dark' ? 'light' : 'dark';
-    root.dataset.theme = next;
+    const swap = () => {
+      root.classList.add('theme-now');
+      root.dataset.theme = next;
+      sync();
+      getComputedStyle(root).color;
+      requestAnimationFrame(() => root.classList.remove('theme-now'));
+    };
     try { localStorage.setItem('myset.theme', next); } catch (_) {}
-    sync();
+    let done = null;
+    if (!REDUCE && !document.hidden && typeof document.startViewTransition === 'function') {
+      try {
+        style();
+        const r = from && from.getBoundingClientRect ? from.getBoundingClientRect() : null;
+        const x = r && r.width ? r.left + r.width / 2 : innerWidth / 2;
+        const y = r && r.height ? r.top + r.height / 2 : 0;
+        const far = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        const vt = document.startViewTransition(swap);
+        vt.ready.then(() => root.animate(
+          { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${far}px at ${x}px ${y}px)`] },
+          { duration: 720, easing: 'cubic-bezier(.45,0,.25,1)', pseudoElement: '::view-transition-new(root)' }
+        )).catch(() => {});
+        done = vt.finished.catch(() => {});
+      } catch (_) { done = null; }
+    }
+    if (!done) swap();
     /* A one-pixel nudge of the scroll position, put straight back: iOS re-samples
        the colour behind the status bar on scroll, and this is the cheapest scroll
        there is. Nothing visible moves. */
-    requestAnimationFrame(() => { const y = scrollY; scrollTo(0, y + 1); scrollTo(0, y); });
+    (done || Promise.resolve()).then(() => requestAnimationFrame(() => { const y = scrollY; scrollTo(0, y + 1); scrollTo(0, y); }));
     /* AND, FROM THE HOME SCREEN, A RELOAD. The founder's phone (2026-09-13, twice):
        a MySet opened from its icon keeps the band under the clock in the OLD colour
        after the toggle — the replaced meta above made a refresh fix it where before
@@ -57,10 +94,16 @@
        localStorage and the <head> script applies it as the page parses, so the
        reload lands in the new theme with no flash. Deferred a beat so the tap's
        own paint lands first. */
-    if (navigator.standalone === true) setTimeout(() => location.reload(), 60);
+    /* With the circle playing, the reload waits for it to finish: a reload
+       mid-circle would cut it in half. */
+    if (navigator.standalone === true) {
+      if (done) done.then(() => setTimeout(() => location.reload(), 60));
+      else setTimeout(() => location.reload(), 60);
+    }
   };
   document.addEventListener('click', (event) => {
-    if (event.target.closest('[data-theme-toggle]')) toggle();
+    const button = event.target.closest('[data-theme-toggle]');
+    if (button) toggle(button);
   });
   new MutationObserver(sync).observe(document.documentElement, { childList: true, subtree: true });
   addEventListener('DOMContentLoaded', sync, { once: true });
