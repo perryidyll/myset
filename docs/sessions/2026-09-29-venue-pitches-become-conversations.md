@@ -19,6 +19,8 @@
 - The venue's pitch row was cramped with Page + Reply + Keen + ✕. The artist's name is now the page link.
 - "Write back to The" became the whole name, for venues and for bands.
 
+**Shipped:** live as `0c4bde2` (PR #167), verified by content on myset.vip at 14:48 UTC. Puzzle: section 41985 z03–z06 notes, new step 392107, changelog 2535.
+
 **Verified:**
 - `test/pitchmsgs.mjs`: 27 ✓.
 - `sh test/run.sh` exit 0, 4,989 ✓.
