@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 01:07 — 9fde2c7 — venue-pages@docs/venue-pages-live (0 files since origin/main)
+**tl;dr:** Docs: venue batch (0126-0129) recorded as live; the dash record renumbered 0127 -> 0130 [skip ci]
+**Other sessions:** Decision 0127 is venue plans/tips/fee; the Show log lock + /dash is now 0130 (comments in netlify.toml, _auth, _showlock, moneymodel, dash.html, everyshow updated; no behaviour change, no build). Claim numbers on the sessions board.
+
 ### 2026-10-01 01:03 — 096d812 — venue-pages@feat/venue-pages (48 files since origin/main)
 **tl;dr:** Venue pages batch brought up to date with main (dash hero, show-log profit, locks) before merging
 **Other sessions:** Merge of origin/main into feat/venue-pages; only the push log conflicted (entries interleaved by time). Suite 5076/0.

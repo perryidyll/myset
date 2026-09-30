@@ -94,7 +94,7 @@
   to = "/factory.html"
   status = 200
 
-# myset.vip/dash — the founder's four dashboards in one place (decision 0127): the Show log,
+# myset.vip/dash — the founder's four dashboards in one place (decision 0130): the Show log,
 # the Media Dash, the CRM and the money model. Open; the Show log and the CRM keep their
 # own locks. Above the catch-all like the others; `dash` is a reserved slug.
 [[redirects]]

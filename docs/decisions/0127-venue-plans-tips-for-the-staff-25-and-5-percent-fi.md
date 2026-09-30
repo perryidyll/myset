@@ -8,7 +8,7 @@ area: venues
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [9fde2c7]
 tests: [test/billing.mjs, test/community.mjs, test/limits.mjs, test/gigok.mjs, test/sheets.mjs]
 files: [netlify/functions/_venues.mjs, netlify/functions/pay.mjs, netlify/functions/_pay.mjs, netlify/functions/_ordernote.mjs, netlify/functions/venueadmin.mjs, netlify/functions/_suggest.mjs, netlify/functions/_warehouse.mjs, public/venue.html, public/venue-studio.js, public/venue-studio.html]
 ---
@@ -57,3 +57,4 @@ Option A. The one call beyond the founder's words: **tips are on both plans**, t
 - `test/sheets.mjs`: thirteen tabs.
 - Localhost at 375 px: the tip bar and sheet, the Studio's tips section, the locked Hide, both plan cards, Suggestions & feedback sent.
 - Not checked: a real card through a venue's tip on production.
+- **Live as `9fde2c7` (PR #177, which carried #175):** Netlify production deploy ready 2026-10-01; checked by content on myset.vip — `/venue.html` carries "Tip the staff", "See more · ", `drift('links'`, "Confirmed by the venue" and `myset.pending.vtip`; `/venue-studio.js` carries "Everything in Free, plus" and no testimonials. Suite 5,076 passed, 0 failed on the merged tree.
