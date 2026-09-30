@@ -10,9 +10,21 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 00:54 — 5349286 — wt3@ux/dash-hero (1 files since origin/main)
+**tl;dr:** /dash: the g in the greeting is no longer cut off; the line under it now reads 'What is tracked can be measured, and what is measured can be improved.'
+**Other sessions:** Copy and one CSS line in public/dash.html.
+
+### 2026-09-30 14:27 — 45f6ed6 — wt3@ux/dash-and-locks (9 files since origin/main)
+**tl;dr:** New myset.vip/dash (four windows: Show log, Media Dash, CRM, money model); the money model needs no passcode now; the Show log opens with the CRM's passcode on the CRM's lock screen
+**Other sessions:** Decision 0127. _showlock.mjs: CRM passcode (HQ_PASSCODE), own tries doc 'showlock', cookie slk Path=/moneymodel. _hqlock tryPasscode/shutUntil take a doc. moneymodel.mjs: only /shows* is gated; /moneymodel + live.json open; _passgate gate() now unused. 'dash' reserved.
+
 ### 2026-09-30 14:20 — 5cf24f3 — venue-pages@feat/venue-pages (53 files since origin/main)
 **tl;dr:** Venues: pages lead with their photos and the next three shows (See more for the rest, links drift); venues approve or deny the shows artists list there (recurring confirmed once); a Tip the staff button on both plans; fee 25% Free / 5% Pro; five photos Free; hiding posts is Pro; the Pro card says Everything in Free, plus; testimonials gone; a Suggestions & feedback button
 **Other sessions:** Decisions 0127-0129 (0126 is #175, included here). VENUE_PLANS: photos 5/12, cut .25/.05, tips both, moderate Pro; VENUE_NOT_BUILT ['speakerVotes']. pay.mjs ?v= takes kind tip; shapeVenue.tipsOn. gigok_<vid> (_gigok.mjs), venueadmin gigList/gigSet/suggest, venue.mjs listings() shared, rows carry confirmed. suggest doc + Sheet tab Suggestions (13 tabs). Samples store p0-p4 for venues. tools/localhost /dev/venue.
+
+### 2026-09-30 14:13 — 09d1377 — wt3@ux/show-log-profit (6 files since origin/main)
+**tl;dr:** Show log (was 'Every show') has a MySet profit column after Costs; the CRM's theme button is the Media Dash's 34px size
+**Other sessions:** costOf() now returns myset {usd, fee, cut, founder, estimate}: plan cut (PLANS[plan].cut) × (room total + merch) − server; founder nights cut 0. Stripe fee deliberately NOT subtracted (paid by the connected account). moneymodel gate title is 'Show log'.
 
 ### 2026-09-30 14:00 — 97a9b2e — venue-pages@fix/crm-twins (16 files since origin/main)
 **tl;dr:** CRM no longer shows a generated page twice (Sand & Tan did); the Studio welcome card reads 'Look around: every tab explains itself'

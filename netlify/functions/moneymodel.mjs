@@ -1,9 +1,16 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { gate, baseHeaders } from './_passgate.mjs';
+import { baseHeaders } from './_passgate.mjs';
 
-/* THE MONEY MODEL, BEHIND A PASSCODE — myset.vip/moneymodel
+/* THE MONEY MODEL — myset.vip/moneymodel
+
+   OPEN SINCE 2026-09-30 (decision 0127). The founder: "remove the pass code on the money
+   model for now, there's nothing there that needs security. but the shows log, that
+   definitely needs one". So /moneymodel and its live feed answer anyone, and every
+   /moneymodel/shows address stands behind the CRM's passcode (_showlock.mjs). The
+   history below is how it got here; the courtesy code (_passgate.mjs) now only lends
+   its headers.
 
    Perry, 2026-09-05: "push it live to myset.vip/financialmodel with a simple
    passcode to view it that is 2068." Renamed to /moneymodel on his ask the next
@@ -66,14 +73,44 @@ export function localised(html) {
              .replace(PRECONNECT, '');
 }
 
-const LANDING = '/moneymodel';
+const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: baseHeaders('application/json; charset=utf-8') });
+
+/* THE SHOW LOG'S DOOR (decision 0127): the CRM's passcode, its lock screen, its count of
+   wrong tries. Returns a Response while the door is shut, or null once it is open. */
+async function showDoor(req, url) {
+  const L = await import('./_showlock.mjs');
+  const secure = url.protocol === 'https:';
+  if (/\/shows\/unlock$/.test(url.pathname)) {
+    if (req.method !== 'POST') return json({ ok: false, error: 'POST' }, 405);
+    if (!L.ready()) return json({ ok: false, error: 'not-set-up' }, 401);
+    let code = '';
+    try { code = String(((await req.json()) || {}).code || ''); } catch { code = ''; }
+    const r = await L.tryPasscode(code);
+    if (r.ok) { const res = json({ ok: true }); res.headers.append('set-cookie', await L.unlockCookie({ secure })); return res; }
+    if (r.shut) {
+      try {
+        const [{ notify }, { DEFAULT_ARTIST }] = await Promise.all([import('./_push.mjs'), import('./_lib.mjs')]);
+        await notify(DEFAULT_ARTIST, { title: '🔒 The Show log is locked', body: `${L.LOCK_TRIES} wrong passcodes in a row, so it stays shut for ${L.LOCK_MINUTES} minutes. If that wasn’t you, change the CRM passcode.`, url: '/moneymodel/shows', tag: 'show-lock' }, { owner: true });
+      } catch {}
+    }
+    return r.until ? json({ ok: false, error: 'locked-out', until: r.until }, 429) : json({ ok: false, error: 'wrong', left: r.left }, 401);
+  }
+  if (url.searchParams.get('lock') === '1') {
+    return new Response(null, { status: 303, headers: { ...baseHeaders(), location: '/moneymodel/shows', 'set-cookie': L.clearCookie(secure) } });
+  }
+  if (await L.unlocked(req)) return null;
+  const until = L.ready() ? await L.shutUntil() : 0;
+  /* data addresses and the page's own actions get a JSON refusal; the page gets the lock screen */
+  if (/\.(json|csv)$/.test(url.pathname) || req.method === 'POST' || (req.headers.get('accept') || '').includes('application/json')) {
+    return json({ ok: false, error: 'locked', ready: L.ready(), until }, 401);
+  }
+  return new Response(L.lockPage({ ready: L.ready(), until }), { status: 200, headers: baseHeaders() });
+}
 
 export default async (req) => {
   const url = new URL(req.url);
-  /* a sign-in on the dashboard lands on the dashboard; the cookie's scope is /moneymodel either way */
   const onShows = /\/shows(\.|\/|$)/.test(url.pathname);
-  const refused = await gate(req, { landing: onShows ? '/moneymodel/shows' : LANDING, page: onShows ? { title: 'Every show on MySet', kicker: 'MySet · Every show', button: 'Open the dashboard' } : {} });
-  if (refused) return refused;
+  if (onShows) { const shut = await showDoor(req, url); if (shut) return shut; }
 
   /* the founder's register dashboard and its data (decision 0095) — _showsdash.mjs */
   if (/\/moneymodel\/shows(\.|\/|$)/.test(url.pathname) || /\/moneymodel\/shows$/.test(url.pathname)) {

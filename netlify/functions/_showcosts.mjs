@@ -23,7 +23,16 @@
        always the estimate: its orders are not in the night's payment list. A night whose
        room money Stripe never answered has no Stripe figure, never $0.
 
+     · MYSET PROFIT — what MySet itself kept from the night: its cut of the money that
+       came through the app (tips, vote packs, requests and merch, at the plan's `cut` in
+       _plan.mjs — the application fee pay.mjs takes, floored per payment there, estimated
+       on the night's total here) less the server. Stripe's card fee is NOT taken off: on a
+       direct charge it comes out of the artist's own account, never MySet's. The founder's
+       own nights pay no cut (isPlatformOwner — there is nobody to take a fee from), so they
+       read as the server alone, a loss. No money answer, or no server figure, no profit.
+
    Served beside the rows in shows.json; the register's own block stays meter-free. */
+import { PLANS, isPlatformOwner } from './_plan.mjs';
 
 /* = finance/model.html P0.stripe (US account); test/everyshow.mjs holds the two equal */
 export const STRIPE_RATES = { pct: 2.9, fixed: 0.30, intlShare: 75, intlPct: 1.5 };
@@ -67,7 +76,16 @@ export function costOf(row, B) {
     stripe = { usd: round(room + (merchN ? est(merchUsd, merchN) : 0)), payments: roomN + merchN, volume: round((m.total || 0) + merchUsd, 2),
                estimate: !exact || merchN > 0, exact };
   }
-  return { server, stripe, total: server && stripe ? round(server.usd + stripe.usd) : null };
+  let myset = null;
+  if (m.known && server) {
+    const founder = isPlatformOwner(aid);
+    const plan = (row.artist && row.artist.plan) || 'free';
+    const cut = founder ? 0 : ((PLANS[plan] || PLANS.free).cut || 0);
+    const base = (m.total || 0) + ((m.merch && m.merch.amount) || 0);
+    const fee = round(base * cut);
+    myset = { usd: round(fee - server.usd), fee, cut, founder, estimate: fee > 0 || !server.measured };
+  }
+  return { server, stripe, total: server && stripe ? round(server.usd + stripe.usd) : null, myset };
 }
 
 /** The view, each row priced, and the block that says how. */

@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
-<title>Every show on MySet</title>
+<title>Show log — MySet</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 /* ── tokens — the /mediadash system (decision 0092): black glass, SF type, one orange, Apple green for money ── */
@@ -242,12 +242,13 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 <body>
 <header>
   <div class="bar">
-    <a class="mark" href="/moneymodel/shows"><i></i>MySet <span>Every show</span></a>
+    <a class="mark" href="/moneymodel/shows"><i></i>MySet <span>Show log</span></a>
     <span class="spacer"></span>
     <span class="meta" id="meta">loading…</span>
     <button class="btn" id="refreshBtn" title="Fold every artist's filed nights into the register now"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/></svg><span class="lbl">Refresh</span></button>
     <a class="btn" id="csvBtn" href="/moneymodel/shows.csv"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m0 0L5 7m3 3 3-3M3 13h10"/></svg><span class="lbl">CSV</span></a>
     <a class="btn" href="/moneymodel"><span class="lbl">Money model</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></a>
+    <a class="btn icon" href="/moneymodel/shows?lock=1" aria-label="Lock the Show log" title="Lock the Show log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg></a>
     <button class="btn icon" id="themeBtn" aria-label="Switch between light and dark">◐</button>
   </div>
 </header>
@@ -256,7 +257,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 <div class="herozone">
 <div class="hero">
   <div class="eyebrow" id="eyebrow">MySet · the register</div>
-  <h1>Every show <em>on MySet</em></h1>
+  <h1>Show <em>log</em></h1>
   <p class="lede">One row for every night any artist has run on the platform: who played, where in the world, for how long, how many phones were in the room, what the room voted for and what it paid. Folded on the server from the records the app already keeps. The money model reads its real-show numbers straight off this data.</p>
 </div>
 
@@ -266,7 +267,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 <div class="divider" role="presentation"></div>
 
 <section id="showsBlock">
-  <div class="sh"><h2>Every show</h2><p>Tap a row for the night itself.</p><span class="count" id="showsK"></span></div>
+  <div class="sh"><h2>Show log</h2><p>Tap a row for the night itself.</p><span class="count" id="showsK"></span></div>
   <div class="filters">
     <div class="chips" id="rangePills">
       <button class="chip on" data-r="all">All time</button><button class="chip" data-r="30">30 days</button><button class="chip" data-r="90">90 days</button><button class="chip" data-r="month">This month</button><button class="chip" data-r="custom">Custom</button>
@@ -280,7 +281,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <input class="search" type="search" id="fSearch" placeholder="Search a venue, a song, a title">
   </div>
   <div class="card"><div class="tw" id="showsWrap"><table class="tbl" id="showsTable"><thead></thead><tbody></tbody></table></div></div>
-  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is Stripe's own fee on each payment (≈ only where it has not been read yet, then the published card rates). Times are the night's own local clock.</p>
+  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. MySet profit is MySet's cut of the night's money (25% Hobbyist · 10% Bar Star · 2% Rock Star; none on the founder's own nights) less the server — Stripe's fee comes out of the artist's account, not MySet's. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is Stripe's own fee on each payment (≈ only where it has not been read yet, then the published card rates). Times are the night's own local clock.</p>
 </section>
 
 <section>
@@ -348,6 +349,8 @@ const dash = '<span class="faint">—</span>';
 /* a cost is money going out: never green; ≈ marks a figure that is an estimate, not a meter reading */
 const $$cost = (n, est) => (fin(n) ? `<span class="cost">${est && n > 0 ? '<span class="est" title="an estimate">≈</span>' : ''}${fmt.usd(n)}</span>` : dash);
 const cost = (r) => r.costs || null;
+/* MySet's profit on a night: green when MySet kept something, red when the night cost it more than it earned */
+const $$profit = (n, est) => (!fin(n) ? dash : `<span class="${n > 0 ? 'pos' : n < 0 ? 'neg' : 'zero'}">${est ? '<span class="est" title="an estimate">≈</span>' : ''}${n < 0 ? '−' : ''}${fmt.usd(Math.abs(n))}</span>`);
 /* every dollar figure goes through here: above zero is green, zero is quiet, unknown is a dash */
 const $$usd = (n, d = 2) => (!fin(n) ? dash : n > 0 ? `<span class="pos">${fmt.usd(n, d)}</span>` : `<span class="zero">${fmt.usd(n, d)}</span>`);
 const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2800); };
@@ -432,6 +435,9 @@ const COLS = [
   { k: 'costTotal', label: 'Total', group: 'costs', n: 1, sort: (r) => (cost(r) && fin(cost(r).total) ? cost(r).total : -1),
     cell: (r) => { const c = cost(r); return c && fin(c.total) ? `<b>${$$cost(c.total, !c.server.measured || (c.stripe.estimate && c.stripe.usd > 0))}</b>` : dash; },
     total: (rows) => { const rs = rows.filter((r) => cost(r) && fin(cost(r).total)); return rs.length ? $$cost(sumOf(rs, (r) => cost(r).total), rs.some((r) => !cost(r).server.measured || (cost(r).stripe.estimate && cost(r).stripe.usd > 0))) : dash; } },
+  { k: 'profit', label: 'MySet profit', n: 1, sort: (r) => (cost(r) && cost(r).myset ? cost(r).myset.usd : -1e9),
+    cell: (r) => { const p = cost(r) && cost(r).myset; return p ? `<span title="${p.founder ? 'the founder\'s own night: no MySet cut' : `MySet's ${Math.round(p.cut * 100)}% cut ${fmt.usd(p.fee)}`} − server ${fmt.usd(p.fee - p.usd)}">${$$profit(p.usd, p.estimate)}</span>` : dash; },
+    total: (rows) => { const ps = rows.map((r) => cost(r) && cost(r).myset).filter(Boolean); return ps.length ? `<b>${$$profit(sumOf(ps, (p) => p.usd), ps.some((p) => p.estimate))}</b>` : dash; } },
   { k: 'songs', label: 'Songs', n: 1, sort: (r) => r.songsPlayed, cell: (r) => (silent(r) ? dash : fmt.int(r.songsPlayed)), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.songsPlayed)) },
   { k: 'money', label: 'Room $', n: 1, sort: (r) => (known(r) ? r.money.total : -1), cell: (r) => (silent(r) ? dash : known(r) ? $$usd(r.money.total) : '<span class="tag unknown" title="Stripe could not be asked, or payments were off">unknown</span>'),
     total: (rows) => $$usd(sumOf(knownRows(rows), (r) => r.money.total)) },
@@ -570,6 +576,7 @@ function costsHtml(r, line) {
     ${line('Server (traffic)', s ? `${fmt.num(s.credits, 2)} credits · ${$$cost(s.usd, !s.measured)}` : dash)}
     ${line('Stripe card fees', st ? `${plural(st.payments, 'payment')} on ${fmt.usd(st.volume)} · ${$$cost(st.usd, st.estimate)}` : dash)}
     ${line('Costs in all', fin(c.total) ? `<b>${$$cost(c.total, !s.measured || (st.estimate && st.usd > 0))}</b>` : dash)}
+    ${c.myset ? line('MySet profit', `${c.myset.founder ? 'no cut on the founder\'s own night' : `${Math.round(c.myset.cut * 100)}% cut ${fmt.usd(c.myset.fee)}`} − server · <b>${$$profit(c.myset.usd, c.myset.estimate)}</b>`) : ''}
     ${left != null ? line('Room money + merch, less costs', left >= 0 ? $$usd(left) : `<span class="neg">−${fmt.usd(-left)}</span>`) : ''}
     <p class="dnote">${s ? (s.measured ? 'The server figure is what Netlify\'s own meters say this night added over an empty day.' : `Netlify's meters were not read for this night, so the server figure is the average of the ${B ? B.measuredNights : ''} nights they were read for.`) : ''} Credits at the plan's top-up price${B && B.pack ? ` (${fmt.int(B.pack.credits)} for ${fmt.usd(B.pack.usd)})` : ''}. ${st && st.exact ? `Stripe is its own fee on each payment, read off the charge${st.estimate ? ' (the merch part is still the published-rate estimate)' : ''}.` : `Stripe's own fee has not been read for this night yet; until it is, this is ${B ? B.stripe.effectivePct : '3.1'}% + ${B ? Math.round(B.stripe.fixed * 100) : 30}¢ a payment, the published rate.`} No deploy is ever in a show's cost.</p>
   </div>`;

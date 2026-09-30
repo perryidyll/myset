@@ -94,7 +94,15 @@
   to = "/factory.html"
   status = 200
 
-# myset.vip/crm — MySet HQ, the founder's outreach desk and CRM (decision 0108), behind
+# myset.vip/dash — the founder's four dashboards in one place (decision 0127): the Show log,
+# the Media Dash, the CRM and the money model. Open; the Show log and the CRM keep their
+# own locks. Above the catch-all like the others; `dash` is a reserved slug.
+[[redirects]]
+  from = "/dash"
+  to = "/dash.html"
+  status = 200
+
+# myset.vip/crm — MySet CRM, the founder's outreach desk and CRM (decision 0108), behind
 # the owner seat and a passcode. Above the catch-all for the same reason; `crm` is a
 # reserved slug. The file carries the address's name: Netlify serves /<name> from
 # <name>.html by itself, so a file called hq.html also answered at /hq.
