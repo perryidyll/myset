@@ -39,7 +39,7 @@ A, because almost all of it already existed. A venue's sessions live under `v_<v
 ## What this makes harder
 
 - A phone that runs both Studios shares one subscription. The artist Studio's Turn off or Sign out unsubscribes the browser, which silently ends that phone's venue alerts. The Venue Studio then honestly shows "Get alerts on this phone", and the stale row is dropped at the next alert's 410.
-- The service worker (untouched, by rule) focuses an open `/studio` window when any alert is tapped, so on a phone with both Studios open, a venue alert brings up the artist Studio. With no `/studio` window it opens the Venue Studio on the right tab.
+- The service worker (untouched, by rule) focuses an open `/studio` window when any alert is tapped, so on a phone with both Studios open, a venue alert brings up the artist Studio. With no `/studio` window it opens the Venue Studio on the right tab. *(Fixed by decision 0125 on the founder's word: a tap now focuses its own app.)*
 - iPhone needs the Venue Studio on the home screen first; the card says so rather than offering a button that fails.
 
 ## What would reverse it

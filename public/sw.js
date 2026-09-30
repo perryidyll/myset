@@ -89,14 +89,17 @@ self.addEventListener('push', (e) => {
   }));
 });
 
-/* Focus the Studio if it is already open rather than stacking a second copy. */
+/* Focus the page the alert belongs to if it is already open rather than stacking a
+   second copy: a Venue Studio alert (/venues) finds the Venue Studio, an artist alert
+   (/studio) the Studio, even on a phone that has both open (decision 0125). */
+const appOf = (u) => new URL(u, self.location.origin).pathname.split('/')[1];
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const url = (e.notification.data && e.notification.data.url) || '/studio';
   e.waitUntil((async () => {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const c of all) {
-      if (new URL(c.url).pathname.startsWith('/studio')) { await c.focus(); return; }
+      if (appOf(c.url) === appOf(url)) { await c.focus(); return; }
     }
     await self.clients.openWindow(url);
   })());
