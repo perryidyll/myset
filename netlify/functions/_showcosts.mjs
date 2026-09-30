@@ -23,14 +23,13 @@
        always the estimate: its orders are not in the night's payment list. A night whose
        room money Stripe never answered has no Stripe figure, never $0.
 
-     · MYSET PROFIT — what MySet itself kept from the night: its cut of the money that
-       came through the app (tips, vote packs, requests and merch, at the plan's `cut` in
+     · MYSET CUT and MYSET PROFIT — MySet's cut is its share of the money that came
+       through the app (tips, vote packs, requests and merch, at the plan's `cut` in
        _plan.mjs — the application fee pay.mjs takes, floored per payment there, estimated
-       on the night's total here) less the server. Stripe's card fee is NOT taken off: on a
-       direct charge it comes out of the artist's own account, never MySet's. The founder's
-       own nights pay no cut (isPlatformOwner — there is nobody to take a fee from), so they
-       read as the server alone, a loss. No money answer, or no server figure, no profit.
-
+       on the night's total here). None on the founder's own nights (isPlatformOwner —
+       there is nobody to take a fee from). MySet profit is that cut less BOTH costs, the
+       server and Stripe (the founder, 2026-10-01: "the amount left over after the server
+       + stripe costs"). No money answer, or no server figure, no profit.
    Served beside the rows in shows.json; the register's own block stays meter-free. */
 import { PLANS, isPlatformOwner } from './_plan.mjs';
 
@@ -83,7 +82,8 @@ export function costOf(row, B) {
     const cut = founder ? 0 : ((PLANS[plan] || PLANS.free).cut || 0);
     const base = (m.total || 0) + ((m.merch && m.merch.amount) || 0);
     const fee = round(base * cut);
-    myset = { usd: round(fee - server.usd), fee, cut, founder, estimate: fee > 0 || !server.measured };
+    const stripeUsd = stripe ? stripe.usd : 0;
+    myset = { usd: round(fee - server.usd - stripeUsd), fee, cut, founder, estimate: fee > 0 || !server.measured || !!(stripe && stripe.estimate && stripe.usd > 0) };
   }
   return { server, stripe, total: server && stripe ? round(server.usd + stripe.usd) : null, myset };
 }

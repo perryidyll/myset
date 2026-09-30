@@ -340,9 +340,10 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   eq('a night that is not counted is not priced', C.costOf(row({ status: 'refused' }), B), null);
   const cp = (o) => C.costOf(row({ showId: 'never-read', ...o }), B).myset;
   const srv = c2.server.usd, r4 = (n) => Math.round(n * 1e4) / 1e4;
-  eq('MySet profit: the plan\'s cut of room + merch, less the server (Hobbyist 25%)', cp({ artist: { id: 'someone-else', plan: 'free' } }).usd, r4(30 * 0.25 - srv));
-  eq('MySet profit on a Rock Star night: 2%', cp({ artist: { id: 'someone-else', plan: 'pro' } }).usd, r4(30 * 0.02 - srv));
-  eq('the founder\'s own night pays no cut: the server alone, a loss', [cp({ artist: { id: 'perry-idyll', plan: 'pro' } }).usd, cp({ artist: { id: 'perry-idyll' } }).fee], [r4(-srv), 0]);
+  eq('MySet profit: the plan\'s cut of room + merch, less the server and Stripe (Hobbyist 25%)', cp({ artist: { id: 'someone-else', plan: 'free' } }).usd, r4(30 * 0.25 - srv - c2.stripe.usd));
+  eq('MySet cut: the fee and the rate', [cp({ artist: { id: 'someone-else', plan: 'free' } }).fee, cp({ artist: { id: 'someone-else', plan: 'free' } }).cut], [7.5, 0.25]);
+  eq('MySet profit on a Rock Star night: 2%', cp({ artist: { id: 'someone-else', plan: 'pro' } }).usd, r4(30 * 0.02 - srv - c2.stripe.usd));
+  eq('the founder\'s own night pays no cut: the server and Stripe, a loss', [cp({ artist: { id: 'perry-idyll', plan: 'pro' } }).usd, cp({ artist: { id: 'perry-idyll' } }).fee], [r4(-srv - c2.stripe.usd), 0]);
   eq('money Stripe never answered: no profit, never a guess', C.costOf(row({ money: { known: false, merch: {} } }), B).myset, null);
   const busy = C.costBlock({ ...actuals, deploys: 400, deploysThisPeriod: 400, shipping: { credits30: 6000 } }, credits);
   eq('INVARIANT 0fx: 400 deploys move no show\'s cost', C.costOf(row(), busy), c1);

@@ -245,6 +245,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <a class="mark" href="/moneymodel/shows"><i></i>MySet <span>Show log</span></a>
     <span class="spacer"></span>
     <span class="meta" id="meta">loading…</span>
+    <a class="btn" href="/dash" title="All four dashboards"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.4"/><rect x="9" y="2" width="5" height="5" rx="1.4"/><rect x="2" y="9" width="5" height="5" rx="1.4"/><rect x="9" y="9" width="5" height="5" rx="1.4"/></svg><span class="lbl">Dash</span></a>
     <button class="btn" id="refreshBtn" title="Fold every artist's filed nights into the register now"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/></svg><span class="lbl">Refresh</span></button>
     <a class="btn" id="csvBtn" href="/moneymodel/shows.csv"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m0 0L5 7m3 3 3-3M3 13h10"/></svg><span class="lbl">CSV</span></a>
     <a class="btn" href="/moneymodel"><span class="lbl">Money model</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></a>
@@ -281,7 +282,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <input class="search" type="search" id="fSearch" placeholder="Search a venue, a song, a title">
   </div>
   <div class="card"><div class="tw" id="showsWrap"><table class="tbl" id="showsTable"><thead></thead><tbody></tbody></table></div></div>
-  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. MySet profit is MySet's cut of the night's money (25% Hobbyist · 10% Bar Star · 2% Rock Star; none on the founder's own nights) less the server — Stripe's fee comes out of the artist's account, not MySet's. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is Stripe's own fee on each payment (≈ only where it has not been read yet, then the published card rates). Times are the night's own local clock.</p>
+  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. MySet cut is MySet's share of the money that came through the app (25% Hobbyist · 10% Bar Star · 2% Rock Star; none on the founder's own nights); MySet profit is that cut less the server and Stripe. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is Stripe's own fee on each payment (≈ only where it has not been read yet, then the published card rates). Times are the night's own local clock.</p>
 </section>
 
 <section>
@@ -435,8 +436,11 @@ const COLS = [
   { k: 'costTotal', label: 'Total', group: 'costs', n: 1, sort: (r) => (cost(r) && fin(cost(r).total) ? cost(r).total : -1),
     cell: (r) => { const c = cost(r); return c && fin(c.total) ? `<b>${$$cost(c.total, !c.server.measured || (c.stripe.estimate && c.stripe.usd > 0))}</b>` : dash; },
     total: (rows) => { const rs = rows.filter((r) => cost(r) && fin(cost(r).total)); return rs.length ? $$cost(sumOf(rs, (r) => cost(r).total), rs.some((r) => !cost(r).server.measured || (cost(r).stripe.estimate && cost(r).stripe.usd > 0))) : dash; } },
+  { k: 'cut', label: 'MySet cut', n: 1, sort: (r) => (cost(r) && cost(r).myset ? cost(r).myset.fee : -1),
+    cell: (r) => { const p = cost(r) && cost(r).myset; return p ? `<span title="${p.founder ? 'the founder\'s own night: MySet takes no cut' : `${Math.round(p.cut * 100)}% of the ${fmt.usd(p.cut ? p.fee / p.cut : 0)} that came through the app`}">${$$usd(p.fee)} <span class="faint">${Math.round(p.cut * 100)}%</span></span>` : dash; },
+    total: (rows) => { const ps = rows.map((r) => cost(r) && cost(r).myset).filter(Boolean); if (!ps.length) return dash; const fee = sumOf(ps, (p) => p.fee), base = sumOf(ps, (p) => (p.cut ? p.fee / p.cut : 0)); return `${$$usd(fee)}${base ? ` <span class="faint">${Math.round(fee / base * 100)}%</span>` : ''}`; } },
   { k: 'profit', label: 'MySet profit', n: 1, sort: (r) => (cost(r) && cost(r).myset ? cost(r).myset.usd : -1e9),
-    cell: (r) => { const p = cost(r) && cost(r).myset; return p ? `<span title="${p.founder ? 'the founder\'s own night: no MySet cut' : `MySet's ${Math.round(p.cut * 100)}% cut ${fmt.usd(p.fee)}`} − server ${fmt.usd(p.fee - p.usd)}">${$$profit(p.usd, p.estimate)}</span>` : dash; },
+    cell: (r) => { const c = cost(r), p = c && c.myset; return p ? `<span title="cut ${fmt.usd(p.fee)} − server ${fmt.usd(c.server ? c.server.usd : 0)} − Stripe ${fmt.usd(c.stripe ? c.stripe.usd : 0)}">${$$profit(p.usd, p.estimate)}</span>` : dash; },
     total: (rows) => { const ps = rows.map((r) => cost(r) && cost(r).myset).filter(Boolean); return ps.length ? `<b>${$$profit(sumOf(ps, (p) => p.usd), ps.some((p) => p.estimate))}</b>` : dash; } },
   { k: 'songs', label: 'Songs', n: 1, sort: (r) => r.songsPlayed, cell: (r) => (silent(r) ? dash : fmt.int(r.songsPlayed)), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.songsPlayed)) },
   { k: 'money', label: 'Room $', n: 1, sort: (r) => (known(r) ? r.money.total : -1), cell: (r) => (silent(r) ? dash : known(r) ? $$usd(r.money.total) : '<span class="tag unknown" title="Stripe could not be asked, or payments were off">unknown</span>'),
@@ -576,7 +580,7 @@ function costsHtml(r, line) {
     ${line('Server (traffic)', s ? `${fmt.num(s.credits, 2)} credits · ${$$cost(s.usd, !s.measured)}` : dash)}
     ${line('Stripe card fees', st ? `${plural(st.payments, 'payment')} on ${fmt.usd(st.volume)} · ${$$cost(st.usd, st.estimate)}` : dash)}
     ${line('Costs in all', fin(c.total) ? `<b>${$$cost(c.total, !s.measured || (st.estimate && st.usd > 0))}</b>` : dash)}
-    ${c.myset ? line('MySet profit', `${c.myset.founder ? 'no cut on the founder\'s own night' : `${Math.round(c.myset.cut * 100)}% cut ${fmt.usd(c.myset.fee)}`} − server · <b>${$$profit(c.myset.usd, c.myset.estimate)}</b>`) : ''}
+    ${c.myset ? line('MySet profit', `${c.myset.founder ? 'no cut on the founder\'s own night' : `${Math.round(c.myset.cut * 100)}% cut ${fmt.usd(c.myset.fee)}`} − server − Stripe · <b>${$$profit(c.myset.usd, c.myset.estimate)}</b>`) : ''}
     ${left != null ? line('Room money + merch, less costs', left >= 0 ? $$usd(left) : `<span class="neg">−${fmt.usd(-left)}</span>`) : ''}
     <p class="dnote">${s ? (s.measured ? 'The server figure is what Netlify\'s own meters say this night added over an empty day.' : `Netlify's meters were not read for this night, so the server figure is the average of the ${B ? B.measuredNights : ''} nights they were read for.`) : ''} Credits at the plan's top-up price${B && B.pack ? ` (${fmt.int(B.pack.credits)} for ${fmt.usd(B.pack.usd)})` : ''}. ${st && st.exact ? `Stripe is its own fee on each payment, read off the charge${st.estimate ? ' (the merch part is still the published-rate estimate)' : ''}.` : `Stripe's own fee has not been read for this night yet; until it is, this is ${B ? B.stripe.effectivePct : '3.1'}% + ${B ? Math.round(B.stripe.fixed * 100) : 30}¢ a payment, the published rate.`} No deploy is ever in a show's cost.</p>
   </div>`;
