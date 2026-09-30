@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-30 14:13 — 09d1377 — wt3@ux/show-log-profit (6 files since origin/main)
+**tl;dr:** Show log (was 'Every show') has a MySet profit column after Costs; the CRM's theme button is the Media Dash's 34px size
+**Other sessions:** costOf() now returns myset {usd, fee, cut, founder, estimate}: plan cut (PLANS[plan].cut) × (room total + merch) − server; founder nights cut 0. Stripe fee deliberately NOT subtracted (paid by the connected account). moneymodel gate title is 'Show log'.
+
 ### 2026-09-30 13:37 — 31de66c — wt3@ux/crm-name-toggle-icon (35 files since origin/main)
 **tl;dr:** The /crm page is called CRM everywhere instead of HQ; every light/dark button now shows the Media Dash's half-moon icon
 **Other sessions:** Only words changed: hq.mjs, /api/hq, the hqk cookie, HQ_PASSCODE and data-act=lockhq keep their names on purpose. theme.js paints '◐' always (no sun/moon swap). studio.js/venue-studio.js restamped. Docs/decisions still say HQ as history.
