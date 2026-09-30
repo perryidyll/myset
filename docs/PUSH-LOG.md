@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 01:48 — e0f67aa — venue-hero@ux/venue-hero (18 files since origin/main)
+**tl;dr:** No change for people: re-pushed so Netlify builds the #182 preview (its first build could not find the PR)
+**Other sessions:** Same tree as the previous push.
+
 ### 2026-10-01 01:31 — 1aa42bc — venue-hero@ux/venue-hero (17 files since origin/main)
 **tl;dr:** Venue pages: never an empty cover (last photo stands in; the generator takes a venue's best wide photo); Menu / Events / What guests say / Directions as a 2x2 beside the square; links right under the tagline; extra photos swipe in the lightbox instead of a stray rail
 **Other sessions:** Decision 0131. venue.html: GALLERY + lbStep (swipeable lightbox), jump(id) to #vmenu/#vevents, .vdoors; prail and the Find them section are gone; sample.js no longer hides .vcomm (gone). parsePage(html,base,'venue').menu -> readSite.menu -> payload.menuUrl -> sample p.menu.url. pickPhotos: venue cover fallback >=800px wide.
