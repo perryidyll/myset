@@ -133,10 +133,13 @@ To start a new one: `./tools/decide.sh "a short title"`
 | [0123](0123-asking-a-venue-for-a-spot-is-a-conversation-in-messages.md) | Asking a venue for a spot is a conversation in Messages | 2026-09-29 | product | decided | founder |
 | [0124](0124-a-venue-s-phones-get-push-alerts-a-new-ask-to-play.md) | A venue's phones get push alerts: a new ask to play, an artist writing back, a merch order | 2026-09-29 | product | decided | founder |
 | [0125](0125-a-tapped-alert-lands-in-its-own-app.md) | A tapped alert lands in its own app: a Venue Studio alert finds the Venue Studio, an artist alert the Studio | 2026-09-30 | ui | decided | founder |
+| [0126](0126-a-page-crm-asked-for-is-never-adopted-twice.md) | A page CRM asked for is never adopted twice | 2026-09-30 | crm | decided | founder |
 
 ## By area
 
 **auth** — [0020](0020-artists-cannot-publish-public-posts-on-their-own-a.md) · [0023](0023-public-email-sign-in-requires-a-verified-sender-an.md) · [0070](0070-the-email-address-is-the-username-and-a-password-si.md) · [0099](0099-a-platform-tool-needs-the-founding-page-s-owner-se.md) · [0100](0100-the-founder-s-tools-need-the-founding-page-s-owner.md) · [0101](0101-a-sample-profile-is-a-real-account-kept-off-the-live-registry.md) · [0104](0104-a-seat-that-is-not-the-owner-signs-out-only-its-ow.md) · [0105](0105-the-owner-gives-each-band-mate-and-crew-seat-tab-b.md) · [0106](0106-a-renamed-page-keeps-its-old-address-and-no-other-page-can-take-it.md) · [0110](0110-the-code-only-security-pass-a-name-is-never-a-key.md) · [0111](0111-every-anonymous-write-counts-the-network-and-a-whole-bar-fits-under-it.md) · [0114](0114-an-alert-reaches-the-seats-that-can-see-what-it-is-about.md)
+
+**crm** — [0126](0126-a-page-crm-asked-for-is-never-adopted-twice.md)
 
 **docs** — [0071](0071-current-show-stats-is-one-snapshot-of-the-app-s-own.md) · [0072](0072-the-sheet-carries-the-marketing-read-and-the-featur.md)
 

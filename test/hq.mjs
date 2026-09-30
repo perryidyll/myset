@@ -275,6 +275,25 @@ await H({ action: 'remove', cid: adopted.cid, mode: 'contact' });
 r = await H({ action: 'summary' });
 ok('Delete contact: gone, and NOT adopted back — the page stays', !r.contacts.some((x) => x.owner === orphan.owner) && (await S.readSampleReg()).byId[orphan.owner], r.contacts.map((x) => x.name));
 
+/* THE RACE (Sand & Tan, 2026-09-30): the page is written before its contact is linked,
+   and a summary poll in between used to adopt it as an orphan — two rows, one page. */
+r = await H({ action: 'save', kind: 'venue', fields: { name: 'Race Bar', city: 'Hua Hin', links: { instagram: '@racebar' } } });
+const race = r.cid;
+await C.mutateContact(race, (x) => { x.jobId = 'jrace'; return true; });
+const midRace = await S.createSample({ kind: 'venue', name: 'Race Bar', city: 'Hua Hin', cid: race, quality: { score: 0.9, review: false }, by: 'founder' }, { fetchMedia: false });
+r = await H({ action: 'summary' });
+eq('a poll mid-build links the contact that asked, and makes no second one', r.contacts.filter((x) => x.owner === midRace.owner).map((x) => x.cid), [race]);
+const twin = await C.createContact('venue', { name: 'Race Bar', city: 'Hua Hin' }, { force: true });
+await C.linkOwner(twin.cid, midRace.owner);
+r = await H({ action: 'summary' });
+eq('a twin made before the fix is dropped; the contact CRM built for stays', r.contacts.filter((x) => x.owner === midRace.owner).map((x) => x.cid), [race]);
+const twin2 = await C.createContact('venue', { name: 'Race Bar', city: 'Hua Hin' }, { force: true });
+await C.linkOwner(twin2.cid, midRace.owner);
+await C.addMessage(twin2.cid, { ch: 'ig', dir: 'out', text: 'hi' });
+r = await H({ action: 'summary' });
+ok('but a twin somebody wrote from is kept', r.contacts.some((x) => x.cid === twin2.cid), r.contacts.filter((x) => x.owner === midRace.owner));
+await C.eraseContact(twin2.cid);
+
 r = await H({ action: 'save', kind: 'artist', fields: { name: 'Cancel Me', links: { instagram: '@cancelme' } } });
 const cm = r.cid;
 ok('Save as lead: a contact, no build', r.ok && r.row.stage === 'lead' && !(await C.readContact(cm)).jobId, r.row);

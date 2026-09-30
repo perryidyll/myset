@@ -161,12 +161,12 @@
       ['check', 'Claiming it is free and takes a minute, and you have {days} to do it.']] },
     'sample-studio': { t: 'Your Studio', s: [
       ['star', 'This is your Studio, the backstage of your page.'],
-      ['vote', 'Look around, because every tab explains itself the first time you open it.'],
+      ['vote', 'Look around: every tab explains itself the first time you open it.'],
       ['play', 'On the Live tab, try a practice round with pretend fans and real buttons.'],
       ['key', 'It’s look-only until you claim it with Claim profile, top right.']] },
     'v-sample-studio': { t: 'Your Venue Studio', s: [
       ['star', 'This is your Venue Studio, the backstage of your page.'],
-      ['vote', 'Look around, because every tab explains itself the first time you open it.'],
+      ['vote', 'Look around: every tab explains itself the first time you open it.'],
       ['key', 'It’s look-only until you claim it with Claim profile, top right.']] },
   };
 

@@ -219,11 +219,13 @@ const main = async (req) => {
 
   if (action === 'summary') {
     let w = await world();
-    /* two repairs, both rare: a finished build whose contact never heard (the worker's
-       link failed), and pages the old console built before CRM, which get a contact */
+    /* three repairs, all rare: a finished build whose contact never heard (the worker's
+       link failed), pages the old console built before CRM, which get a contact, and a
+       second contact that a poll once made for a page mid-build (dropTwins) */
     let touched = false;
     for (const j of w.jobs) if (j.cid && j.st === 'done' && j.owner && w.crm.byId[j.cid] && !w.crm.byId[j.cid].owner) { await C.linkOwner(j.cid, j.owner); touched = true; }
-    if (await C.adoptOrphans(w.reg, w.crm, { limit: 10 })) touched = true;
+    if (await C.adoptOrphans(w.reg, w.crm, { limit: 10, jobs: w.jobs })) touched = true;
+    if (await C.dropTwins(touched ? await C.readCrm() : w.crm)) touched = true;
     if (touched) w = { ...w, crm: await C.readCrm() };
     const [stats, cfg, gmail, lib] = await Promise.all([readStats(), readFactoryCfg(), gmailStatus(), C.readLib()]);
     const month = new Date().toISOString().slice(0, 7), day = new Date().toISOString().slice(0, 10);

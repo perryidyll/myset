@@ -240,7 +240,9 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       r.byId[o] = { k: kind === 'venue' ? 'v' : 'a', slug: s, name, at: now, exp: now + SAMPLE_LIFE_MS,
                     st: review ? 'review' : 'ready', cp: Number(payload.cp) || 1,
                     q: Math.round((Number(payload.quality && payload.quality.score) || 0) * 100) / 100,
-                    rv: review, ns, city: clean(payload.city, 60) };
+                    rv: review, ns, city: clean(payload.city, 60),
+                    // the CRM contact that asked for it, so its summary links it and never adopts it twice
+                    ...(/^c[a-f0-9]{10}$/.test(String(payload.cid || '')) ? { cid: payload.cid } : {}) };
       if (kind === 'venue') r.vbySlug[s] = id; else r.bySlug[s] = id;
       return true;
     });

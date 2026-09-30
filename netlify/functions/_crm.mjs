@@ -459,14 +459,20 @@ export function tagCounts(crm) {
 }
 
 /** Samples the old console built, before CRM existed, get a contact of their own, so the
- *  table is the whole picture. A few at a time; the next summary does the rest. */
-export async function adoptOrphans(reg, crm, { limit = 10, now = Date.now() } = {}) {
+ *  table is the whole picture. A few at a time; the next summary does the rest.
+ *  A page CRM asked for is never adopted: between the factory writing the page and
+ *  linking its contact, a summary poll used to see an orphan and make a second contact
+ *  for the same page (Sand & Tan, 2026-09-30). Its registry row names the contact
+ *  (`cid`), so that contact is linked instead; a job that made it is skipped too. */
+export async function adoptOrphans(reg, crm, { limit = 10, now = Date.now(), jobs = [] } = {}) {
   const have = new Set(Object.values(crm.byId).map((r) => r.owner).filter(Boolean));
+  const byJob = new Set(jobs.filter((j) => j.cid && j.owner).map((j) => j.owner));
   // `skip`: pages whose contact the founder deleted on purpose (Delete contact) stay out
   const skip = crm.skip || {};
-  const todo = Object.entries(reg.byId || {}).filter(([o]) => !have.has(o) && !skip[o]).slice(0, limit);
+  const todo = Object.entries(reg.byId || {}).filter(([o]) => !have.has(o) && !skip[o] && !byJob.has(o)).slice(0, limit);
   let made = 0;
   for (const [owner, row] of todo) {
+    if (row.cid && crm.byId[row.cid]) { if (!crm.byId[row.cid].owner && await linkOwner(row.cid, owner)) made++; continue; }
     const kind = row.k === 'v' ? 'venue' : 'artist';
     let links = {};
     try {
@@ -478,6 +484,26 @@ export async function adoptOrphans(reg, crm, { limit = 10, now = Date.now() } = 
     if (r.ok) { await linkOwner(r.cid, owner, { now: row.at || now }); made++; }
   }
   return made;
+}
+
+/** The repair for that race: two contacts on one page. The one CRM built it for (it
+ *  carries the job) stays; a twin the adoption made is erased, but only while nobody
+ *  has touched it — no message, note, tag, star, follow-up, email or phone. */
+export async function dropTwins(crm) {
+  const by = new Map();
+  for (const [cid, r] of Object.entries(crm.byId || {})) if (r.owner) (by.get(r.owner) || by.set(r.owner, []).get(r.owner)).push([cid, r]);
+  let dropped = 0;
+  for (const list of by.values()) {
+    if (list.length < 2) continue;
+    const keep = (list.find(([, r]) => r.jobId) || list.slice().sort((a, b) => (a[1].at || 0) - (b[1].at || 0))[0])[0];
+    for (const [cid, r] of list) {
+      if (cid === keep || r.jobId || r.last || r.sent || (r.tags || []).length || r.star || r.fu || (r.has && (r.has.email || r.has.phone))) continue;
+      const d = await readContact(cid);
+      if (!d || (d.notes || []).length || (d.msgs || []).length) continue;
+      await eraseContact(cid); dropped++;
+    }
+  }
+  return dropped;
 }
 
 /** A seed for suppression when a contact with no page says no. */
