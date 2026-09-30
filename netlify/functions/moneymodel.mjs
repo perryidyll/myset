@@ -5,7 +5,7 @@ import { baseHeaders } from './_passgate.mjs';
 
 /* THE MONEY MODEL — myset.vip/moneymodel
 
-   OPEN SINCE 2026-09-30 (decision 0127). The founder: "remove the pass code on the money
+   OPEN SINCE 2026-09-30 (decision 0130). The founder: "remove the pass code on the money
    model for now, there's nothing there that needs security. but the shows log, that
    definitely needs one". So /moneymodel and its live feed answer anyone, and every
    /moneymodel/shows address stands behind the CRM's passcode (_showlock.mjs). The
@@ -75,7 +75,7 @@ export function localised(html) {
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: baseHeaders('application/json; charset=utf-8') });
 
-/* THE SHOW LOG'S DOOR (decision 0127): the CRM's passcode, its lock screen, its count of
+/* THE SHOW LOG'S DOOR (decision 0130): the CRM's passcode, its lock screen, its count of
    wrong tries. Returns a Response while the door is shut, or null once it is open. */
 async function showDoor(req, url) {
   const L = await import('./_showlock.mjs');

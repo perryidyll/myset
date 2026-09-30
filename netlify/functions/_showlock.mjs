@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { authSecret } from './_auth.mjs';
 import * as L from './_hqlock.mjs';
 
-/* THE SHOW LOG'S LOCK (decision 0127). The founder, 2026-09-30: the money model needs
+/* THE SHOW LOG'S LOCK (decision 0130). The founder, 2026-09-30: the money model needs
    no passcode, "but the shows log, that definitely needs one — build it the exact same
    way and style as the crm passcode". So it is the CRM's door, not the old courtesy
    code (_passgate.mjs, whose fallback sits in this public repository):

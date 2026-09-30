@@ -8,7 +8,7 @@ area: venues
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [9fde2c7]
 tests: [test/samples.mjs, test/factory.mjs]
 files: [public/venue.html, netlify/functions/_fai.mjs, netlify/functions/_factory.mjs, netlify/functions/_sample.mjs, netlify/functions/factory.mjs, public/crm.html, public/factory.html]
 ---
@@ -35,3 +35,4 @@ A venue page whose best asset is its menu or its hours rather than its room.
 - Localhost at 375 px, a venue with a cover and five photos and a weekly residency: cover, square, strip and rail drawn; See more · 6 opens to its full height and reads See less; the links strip moves and nothing scrolls sideways. The image CDN answers only on Netlify (the page falls back to the stored picture on localhost, as the artist page does).
 - Suite as a whole; `test/samples.mjs`, `test/factory.mjs`, `test/hq.mjs` unchanged and green.
 - Not checked: a regenerated Sand & Tan on production (Rebuild in CRM after merge).
+- **Live as `9fde2c7` (PR #177, which carried #175):** Netlify production deploy ready 2026-10-01; checked by content on myset.vip — `/venue.html` carries "Tip the staff", "See more · ", `drift('links'`, "Confirmed by the venue" and `myset.pending.vtip`; `/venue-studio.js` carries "Everything in Free, plus" and no testimonials. Suite 5,076 passed, 0 failed on the merged tree.

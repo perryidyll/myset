@@ -261,7 +261,7 @@ console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every pa
     ok(`without the passcode, ${p} gives nothing away`, (/json|csv/.test(p) ? r.status === 401 : /Enter the passcode/.test(t) && /MySet Show log/.test(t)) && !/Seaflower/.test(t), [r.status, t.slice(0, 80)]);
   }
   const openModel = await moneymodel(new Request('https://myset.vip/moneymodel', { headers: { accept: 'text/html' } }));
-  ok('the money model itself is open: no passcode (decision 0127)', openModel.status === 200 && !/Enter the passcode/.test(await openModel.text()));
+  ok('the money model itself is open: no passcode (decision 0130)', openModel.status === 200 && !/Enter the passcode/.test(await openModel.text()));
   const refresh = await moneymodel(new Request('https://myset.vip/moneymodel/shows/refresh', { method: 'POST', headers: { accept: 'application/json' } }));
   eq('nor does a refresh without the code', refresh.status, 401);
   const page = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { cookie } }));

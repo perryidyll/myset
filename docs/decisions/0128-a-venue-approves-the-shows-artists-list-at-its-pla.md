@@ -8,7 +8,7 @@ area: venues
 reverses:
 superseded_by:
 invariants: [0y]
-commits: []
+commits: [9fde2c7]
 tests: [test/gigok.mjs]
 files: [netlify/functions/_gigok.mjs, netlify/functions/venue.mjs, netlify/functions/venueadmin.mjs, netlify/functions/admin.mjs, public/venue.html, public/venue-studio.js]
 ---
@@ -51,3 +51,4 @@ Option A: the venue's word is added to the artist's claim, never required for it
 
 - `test/gigok.mjs` (28 ✓): one row per rule; a recurring show refused without the word, then confirmed for every week on the public page; Not here leaves the page, Undo brings it back; a confirmed one-off turned weekly waits again; another venue's show, a bad key and a bad answer are refused; another venue sees none; the venue's phone hears a new listing once, not an edit, not another place.
 - Localhost at 375 px: the Waiting / Confirmed sections, the recurring sheet ("Yes, it's every Thursday"), and nine nights marked Confirmed on the page.
+- **Live as `9fde2c7` (PR #177, which carried #175):** Netlify production deploy ready 2026-10-01; checked by content on myset.vip — `/venue.html` carries "Tip the staff", "See more · ", `drift('links'`, "Confirmed by the venue" and `myset.pending.vtip`; `/venue-studio.js` carries "Everything in Free, plus" and no testimonials. Suite 5,076 passed, 0 failed on the merged tree.

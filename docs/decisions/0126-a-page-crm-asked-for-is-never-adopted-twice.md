@@ -8,7 +8,7 @@ area: crm
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [9fde2c7]
 tests: [test/hq.mjs]
 files: [netlify/functions/_crm.mjs, netlify/functions/_sample.mjs, netlify/functions/factory-background.mjs, netlify/functions/hq.mjs]
 ---
@@ -45,3 +45,4 @@ A second row appearing for one page again.
 - `test/hq.mjs` (166 ✓): a poll mid-build links the contact that asked and makes no second one; a twin made before the fix is dropped and the contact CRM built for stays; a twin somebody wrote from is kept.
 - Suite: 4,741 passed, 0 failed.
 - Not checked on production until merged.
+- **Live as `9fde2c7` (PR #177, which carried #175):** Netlify production deploy ready 2026-10-01; checked by content on myset.vip — `/venue.html` carries "Tip the staff", "See more · ", `drift('links'`, "Confirmed by the venue" and `myset.pending.vtip`; `/venue-studio.js` carries "Everything in Free, plus" and no testimonials. Suite 5,076 passed, 0 failed on the merged tree.

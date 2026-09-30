@@ -1,5 +1,5 @@
 ---
-id: 0127
+id: 0130
 title: The Show log has the CRM's lock, the money model is open, and /dash is the front door to all four dashboards
 date: 2026-09-30
 status: decided
@@ -8,7 +8,7 @@ area: auth
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [3cbf332]
 tests: [test/everyshow.mjs]
 files: [netlify/functions/_showlock.mjs, netlify/functions/_hqlock.mjs, netlify/functions/moneymodel.mjs, finance/shows.html, public/dash.html, netlify.toml, netlify/functions/_auth.mjs]
 ---
@@ -57,3 +57,5 @@ is open; the CRM passcode sets `slk`; five wrong tries shut it while the CRM's o
 stays open; Lock clears the cookie; no passcode set means shut. Locally (tools/localhost.mjs)
 in headless Chrome: a wrong try shakes and counts down, the right one opens the Show log,
 /moneymodel opens with no passcode, and /dash renders in both themes and at phone width.
+
+**Renumbered 0127 → 0130 on 2026-10-01:** this record merged as 0127 in PR #178 while the sessions board had 0126–0129 held for the venue batch (PR #177, merged after it). Only the number moved.
