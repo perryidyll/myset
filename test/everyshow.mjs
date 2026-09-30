@@ -176,7 +176,9 @@ const cron = (await import('../netlify/functions/registercron.mjs')).default;
 const { createArtist, signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
 const { mutateShow, readDoc, casDoc } = await import('../netlify/functions/_lib.mjs');
 const { __opsStart, __opsStop } = await import('./blobs-fake.mjs');
-const { stamp, CODE } = await import('../netlify/functions/_passgate.mjs');
+const SL = await import('../netlify/functions/_showlock.mjs');
+const HQL = await import('../netlify/functions/_hqlock.mjs');
+process.env.HQ_PASSCODE = await HQL.hashPasscode('show-log-test');
 
 const hit = async (h, url, body, token, extra = {}) => {
   const headers = { 'content-type': 'application/json', ...(extra.headers || {}) };
@@ -252,12 +254,14 @@ console.log('\nA RENAME AND A HIDE reach the register; a departed artist stays, 
 
 console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every path, every address');
 {
-  const cookie = `fm=${stamp(CODE())}`;
-  for (const p of ['/moneymodel/shows', '/moneymodel/shows.json', '/moneymodel/shows.csv', '/moneymodel/shows/night.json?a=x&id=y', '/moneymodel/live.json', '/api/moneymodel/shows.json', '/.netlify/functions/moneymodel/shows.csv']) {
+  const cookie = (await SL.unlockCookie()).split(';')[0];
+  for (const p of ['/moneymodel/shows', '/moneymodel/shows.json', '/moneymodel/shows.csv', '/moneymodel/shows/night.json?a=x&id=y', '/api/moneymodel/shows.json', '/.netlify/functions/moneymodel/shows.csv']) {
     const r = await moneymodel(new Request('https://myset.vip' + p, { headers: { accept: /json|csv/.test(p) ? 'application/json' : 'text/html' } }));
     const t = await r.text();
-    ok(`without the code, ${p} gives nothing away`, (/json|csv/.test(p) ? r.status === 401 : /Enter the passcode/.test(t)) && !/Seaflower/.test(t), [r.status, t.slice(0, 80)]);
+    ok(`without the passcode, ${p} gives nothing away`, (/json|csv/.test(p) ? r.status === 401 : /Enter the passcode/.test(t) && /MySet Show log/.test(t)) && !/Seaflower/.test(t), [r.status, t.slice(0, 80)]);
   }
+  const openModel = await moneymodel(new Request('https://myset.vip/moneymodel', { headers: { accept: 'text/html' } }));
+  ok('the money model itself is open: no passcode (decision 0127)', openModel.status === 200 && !/Enter the passcode/.test(await openModel.text()));
   const refresh = await moneymodel(new Request('https://myset.vip/moneymodel/shows/refresh', { method: 'POST', headers: { accept: 'application/json' } }));
   eq('nor does a refresh without the code', refresh.status, 401);
   const page = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { cookie } }));
@@ -277,10 +281,25 @@ console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every pa
   ok('the feed carries none of the meters', ['pollsPerPhoneHour', 'creditsPerShow', 'deploys', 'shipping', 'traffic', 'meters'].every((k) => !(k in feed.act)));
   const again = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows/refresh', { method: 'POST', headers: { cookie, accept: 'application/json' } }))).json();
   ok('a refresh straight after a fold says so instead of walking the store again', again.ok && again.skipped && /ago/.test(again.why), again);
-  const old = await moneymodel(new Request('https://myset.vip/moneymodel', { headers: { cookie: `fm=stale; fm=${stamp(CODE())}` } }));
-  eq('two fm cookies (an old path and the new): any matching one opens the door', old.status, 200);
-  const signin = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `code=${CODE()}` }));
-  eq('the code typed on the dashboard lands on the dashboard, with a cookie scoped to the model', [signin.status, signin.headers.get('location'), /Path=\/moneymodel;/.test(signin.headers.get('set-cookie') || '')], [303, '/moneymodel/shows', true]);
+  const unl = (code) => moneymodel(new Request('https://myset.vip/moneymodel/shows/unlock', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }) }));
+  const good = await unl('show-log-test');
+  const sc = good.headers.get('set-cookie') || '';
+  ok('the CRM\'s passcode opens it, with a cookie a page script cannot read, scoped to /moneymodel', good.status === 200 && /^slk=\d+\.[\w-]{40,}; Path=\/moneymodel; Max-Age=43200; HttpOnly; SameSite=Strict; Secure$/.test(sc), sc);
+  const opened = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { cookie: sc.split(';')[0] } }));
+  ok('…and that cookie opens the page', opened.status === 200 && !/Enter the passcode/.test(await opened.text()));
+  let w = null; for (let i = 0; i < SL.LOCK_TRIES; i++) w = await (await unl('nope')).json();
+  eq(`${SL.LOCK_TRIES} wrong in a row shut the door, with a time`, [w.ok, w.error, w.until > Date.now()], [false, 'locked-out', true]);
+  eq('…even to the right passcode, until then', (await (await unl('show-log-test')).json()).error, 'locked-out');
+  eq('…and the CRM keeps its own count: its door is still open', await HQL.shutUntil(), 0);
+  const locked = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { accept: 'text/html' } }))).text();
+  ok('the lock screen says when it opens again', /data-state="out"/.test(locked));
+  await casDoc(SL.DOC, () => ({}), (d) => { d.until = 0; d.fails = 0; return true; });
+  const bye = await moneymodel(new Request('https://myset.vip/moneymodel/shows?lock=1', { headers: { cookie } }));
+  ok('Lock clears the cookie', bye.status === 303 && /^slk=; Path=\/moneymodel; Max-Age=0/.test(bye.headers.get('set-cookie') || ''));
+  const was = process.env.HQ_PASSCODE; delete process.env.HQ_PASSCODE;
+  const preview = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { cookie, accept: 'text/html' } }));
+  ok('with no passcode set (a deploy preview) the Show log stays shut and says why', /isn’t set up here/.test(await preview.text()));
+  process.env.HQ_PASSCODE = was;
 }
 
 console.log('\nTHE BELL  idle rings are cheap; a mark or a stale walk makes it fold');

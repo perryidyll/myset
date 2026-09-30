@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<!--
+  MySet — myset.vip/dash · the founder's four dashboards in one place (decision 0127).
+  Open, no passcode: it is a set of doors, not a room. The Show log and the CRM keep
+  their own locks behind their windows; the two numbers painted here come from the two
+  feeds that are already public (the Media Dash's /api/mediadash and the money model's
+  /moneymodel/live.json). The drawings in the windows are drawings, not data, apart from
+  the Media Dash's bars, which are its last posts' real views once the feed answers.
+-->
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#000000" />
+<script>(()=>{let t='light';try{const s=localStorage.getItem('myset.theme');if(s==='light'||s==='dark')t=s}catch(e){}document.documentElement.dataset.theme=t})();</script>
+<script src="/theme.js" defer></script>
+<title>Dash — MySet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
+<style>
+/* THE STAGE. Light is the bare root (the site's default choice); dark is the stage the
+   CRM and the lock screens live on. Every colour below is a token. */
+:root{
+  --hi:0,0,0;
+  --bg:#F2F2F5; --bg-glow:rgba(255,86,80,.10); --bg-glow-2:rgba(100,210,255,.10);
+  --win:rgba(255,255,255,.78); --win-solid:#fff; --screen:#FAFAFC;
+  --line:rgba(0,0,0,.08); --line-2:rgba(0,0,0,.14);
+  --ink:#1D1D1F; --ink-2:#3A3A3C; --muted:#6E6E73; --faint:#A1A1A6;
+  --accent:#D6304F; --coral:#FF5650; --cyan:#0A84C6; --green:#1E8E3E; --gold:#B7791F;
+  --grad:linear-gradient(135deg,#FF375F,#FF6B45);
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 24px 60px -30px rgba(0,0,0,.28);
+  --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.4,.64,1);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --hi:255,255,255;
+  --bg:#000; --bg-glow:rgba(255,86,80,.13); --bg-glow-2:rgba(100,210,255,.07);
+  --win:rgba(20,20,24,.72); --win-solid:#101013; --screen:#07070A;
+  --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.15);
+  --ink:#F5F5F7; --ink-2:#D1D1D6; --muted:#8E8E93; --faint:#5C5C62;
+  --accent:#FF5650; --cyan:#64D2FF; --green:#30D158; --gold:#FFD60A;
+  --shadow:0 0 0 1px rgba(255,255,255,.02),0 30px 80px -40px rgba(0,0,0,.9);
+  color-scheme:dark;
+}}
+:root[data-theme=dark]{
+  --hi:255,255,255;
+  --bg:#000; --bg-glow:rgba(255,86,80,.13); --bg-glow-2:rgba(100,210,255,.07);
+  --win:rgba(20,20,24,.72); --win-solid:#101013; --screen:#07070A;
+  --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.15);
+  --ink:#F5F5F7; --ink-2:#D1D1D6; --muted:#8E8E93; --faint:#5C5C62;
+  --accent:#FF5650; --cyan:#64D2FF; --green:#30D158; --gold:#FFD60A;
+  --shadow:0 0 0 1px rgba(255,255,255,.02),0 30px 80px -40px rgba(0,0,0,.9);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.45;letter-spacing:-.01em;
+  -webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overflow-x:clip}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+
+/* the room: two soft lights and a grid that fades out from the top */
+.room{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(1000px 640px at 12% -10%,var(--bg-glow),transparent 62%),radial-gradient(900px 600px at 100% 0,var(--bg-glow-2),transparent 60%)}
+.room::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(var(--hi),.035) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--hi),.035) 1px,transparent 1px);
+  background-size:56px 56px;-webkit-mask-image:radial-gradient(ellipse at 50% 0,#000,transparent 70%);mask-image:radial-gradient(ellipse at 50% 0,#000,transparent 70%)}
+
+.wrap{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding:0 max(20px,env(safe-area-inset-left)) calc(40px + env(safe-area-inset-bottom))}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:14px;height:64px;padding-top:env(safe-area-inset-top)}
+.mark{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.02em}
+.mark svg{width:28px;height:28px;border-radius:8px;box-shadow:0 0 0 1px rgba(255,86,80,.3),0 6px 18px -6px rgba(255,86,80,.6)}
+.mark span{color:var(--muted);font-weight:500}
+.sp{flex:1}
+.clock{font:600 12px/1 var(--mono);letter-spacing:.12em;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:8px}
+.clock i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 2.4s ease-in-out infinite}
+.themebtn{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;line-height:1;
+  background:var(--win);box-shadow:inset 0 0 0 1px var(--line-2);transition:transform .18s var(--spring),background .2s}
+.themebtn:hover{background:rgba(var(--hi),.08)}.themebtn:active{transform:scale(.9)}
+
+/* the hero */
+.hero{padding:36px 0 30px;display:grid;gap:10px}
+.eyebrow{font:600 11px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--accent)}
+.hero h1{margin:0;font-size:clamp(40px,6.4vw,76px);font-weight:750;letter-spacing:-.045em;line-height:1;text-wrap:balance}
+.hero h1 .w{display:inline-block;animation:word .9s var(--ease) both;animation-delay:calc(var(--d) * 70ms + 80ms)}
+.hero h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);font-size:16px;animation:fade .8s .35s var(--ease) both}
+.sub b{color:var(--ink);font-weight:600}
+
+/* THE FOUR WINDOWS */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;perspective:1600px}
+.win{--mx:50%;--my:50%;--rx:0deg;--ry:0deg;position:relative;display:grid;grid-template-rows:auto 1fr auto;min-height:340px;border-radius:26px;
+  background:var(--win);box-shadow:var(--shadow),inset 0 0 0 1px var(--line);-webkit-backdrop-filter:blur(22px) saturate(1.4);backdrop-filter:blur(22px) saturate(1.4);
+  transform:rotateX(var(--rx)) rotateY(var(--ry));transform-style:preserve-3d;transition:transform .5s var(--ease),box-shadow .35s var(--ease);
+  animation:arrive .95s var(--ease) both;animation-delay:calc(var(--i) * 110ms + 260ms);outline:none;isolation:isolate}
+/* the glass catches the pointer: a light that follows it, and an edge that lights up in the window's colour */
+.win::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;opacity:0;transition:opacity .35s;
+  background:radial-gradient(420px circle at var(--mx) var(--my),rgba(var(--hue-rgb),.16),transparent 60%)}
+.win::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:3;opacity:.0;transition:opacity .35s;
+  background:radial-gradient(260px circle at var(--mx) var(--my),rgba(var(--hue-rgb),.95),rgba(var(--hue-rgb),.15) 45%,transparent 70%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.win:hover::before,.win:focus-visible::before,.win:hover::after,.win:focus-visible::after{opacity:1}
+.win:hover,.win:focus-visible{box-shadow:var(--shadow),inset 0 0 0 1px var(--line-2),0 30px 90px -40px rgba(var(--hue-rgb),.55)}
+.win:focus-visible{box-shadow:var(--shadow),0 0 0 2px rgba(var(--hue-rgb),.9),0 30px 90px -40px rgba(var(--hue-rgb),.55)}
+.win:active{transform:rotateX(var(--rx)) rotateY(var(--ry)) scale(.985);transition-duration:.15s}
+
+.chrome{display:flex;align-items:center;gap:10px;padding:16px 20px 0;font:600 11px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.chrome .dot{width:8px;height:8px;border-radius:50%;background:rgb(var(--hue-rgb));box-shadow:0 0 12px rgba(var(--hue-rgb),.9);animation:blink 2.8s ease-in-out infinite;animation-delay:calc(var(--i) * -.7s)}
+.chrome .key{margin-left:auto;min-width:22px;height:22px;display:grid;place-items:center;border-radius:7px;font-size:11px;letter-spacing:0;color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-2),0 1px 0 var(--line-2)}
+.chrome .lock{display:flex;align-items:center;gap:5px;letter-spacing:.14em}
+.chrome .lock svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.screen{position:relative;margin:14px 14px 0;border-radius:16px;overflow:hidden;background:var(--screen);box-shadow:inset 0 0 0 1px var(--line);min-height:170px;transform:translateZ(18px)}
+.screen::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(var(--hi),.035),transparent 40%)}
+.screen svg.art{position:absolute;inset:0;width:100%;height:100%}
+.stat{position:absolute;left:16px;top:14px;display:grid;gap:4px;z-index:1}
+.stat b{font-size:30px;font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
+.stat small{font:600 10.5px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stat.off{opacity:0;transform:translateY(6px)}
+.stat{transition:opacity .6s var(--ease),transform .6s var(--ease)}
+
+.foot{display:grid;grid-template-columns:1fr auto;align-items:end;gap:6px 16px;padding:16px 20px 20px;transform:translateZ(10px)}
+.foot h2{margin:0;font-size:26px;font-weight:700;letter-spacing:-.035em;line-height:1.05}
+.foot p{grid-column:1/2;margin:0;color:var(--muted);font-size:14px;line-height:1.4;max-width:46ch}
+.foot .url{grid-column:1/2;font:500 11.5px/1 var(--mono);color:var(--faint);letter-spacing:.02em}
+.foot .go{grid-row:1/4;grid-column:2;align-self:center;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(135deg,rgba(var(--hue-rgb),1),rgba(var(--hue-rgb),.72));box-shadow:0 10px 26px -10px rgba(var(--hue-rgb),.9);transition:transform .4s var(--spring)}
+.foot .go svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.win:hover .go,.win:focus-visible .go{transform:translate(3px,-3px) scale(1.06)}
+
+/* the drawings */
+.art .ln{stroke:rgba(var(--hi),.07);stroke-width:1}
+/* 1 · Show log — a ledger whose rows land one by one while a scan line reads them */
+.ledger .row{animation:rowin .7s var(--ease) both;animation-delay:calc(var(--r) * 90ms + 700ms)}
+.ledger .c{fill:rgba(var(--hi),.10)}
+.ledger .c.k{fill:rgba(var(--hi),.2)}
+.ledger .c.p{fill:rgba(48,209,88,.55)}
+.ledger .c.m{fill:rgba(255,86,80,.55)}
+.ledger .scan{fill:url(#scanG);animation:scan 4.8s var(--ease) infinite 1.6s}
+/* 2 · Media Dash — the last posts' views as bars */
+.bars rect{fill:url(#barG);transform-box:fill-box;transform-origin:50% 100%;animation:grow 1s var(--ease) both;animation-delay:calc(var(--b) * 45ms + 700ms);transition:height .8s var(--ease),y .8s var(--ease)}
+.bars rect.hot{fill:url(#barHot)}
+.bars .pulse{fill:rgb(var(--hue-rgb));animation:ping 2.2s ease-out infinite 1.8s;transform-box:fill-box;transform-origin:center}
+/* 3 · CRM — people moving through the pipeline towards the one that says yes */
+.pipe .lane{fill:none;stroke:rgba(var(--hi),.08);stroke-width:1.2;stroke-dasharray:3 5}
+.pipe .stage{fill:rgba(var(--hi),.06);stroke:rgba(var(--hi),.12)}
+.pipe .who{fill:rgb(var(--hue-rgb));filter:drop-shadow(0 0 5px rgba(var(--hue-rgb),.9))}
+.pipe .yes{fill:none;stroke:rgb(var(--hue-rgb));stroke-width:1.5;opacity:.5;transform-box:fill-box;transform-origin:center;animation:ping 2.6s ease-out infinite}
+.pipe .core{fill:rgb(var(--hue-rgb))}
+/* 4 · Money model — a curve that draws itself, and the point it reaches */
+.curve .area{fill:url(#moneyG);opacity:0;animation:fade 1.2s 1.5s var(--ease) forwards}
+.curve .line{fill:none;stroke:rgb(var(--hue-rgb));stroke-width:2.5;stroke-linecap:round;stroke-dasharray:900;stroke-dashoffset:900;animation:draw 2.2s .8s var(--ease) forwards;filter:drop-shadow(0 0 6px rgba(var(--hue-rgb),.6))}
+.curve .end{fill:rgb(var(--hue-rgb));opacity:0;animation:fade .4s 2.9s forwards}
+.curve .endring{fill:none;stroke:rgb(var(--hue-rgb));stroke-width:1.5;opacity:0;transform-box:fill-box;transform-origin:center;animation:ping 2.4s ease-out infinite 3s}
+/* a window being opened: the drawings hurry */
+.win:hover .ledger .scan{animation-duration:2.4s}
+
+/* the opening: the window's colour grows from the window itself to the whole screen */
+.portal{position:fixed;z-index:50;border-radius:26px;pointer-events:none;background:var(--win-solid);box-shadow:inset 0 0 0 1px rgba(var(--hue-rgb),.6),0 0 120px rgba(var(--hue-rgb),.35)}
+.portal::after{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(circle at 50% 40%,rgba(var(--hue-rgb),.28),transparent 70%)}
+
+.hint{margin-top:26px;text-align:center;color:var(--faint);font:500 12px/1.4 var(--mono);letter-spacing:.06em;animation:fade 1s 1.2s both}
+.hint kbd{font:inherit;color:var(--ink-2);padding:2px 6px;border-radius:6px;box-shadow:inset 0 0 0 1px var(--line-2)}
+
+@keyframes arrive{from{opacity:0;transform:translateY(34px) scale(.965);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+@keyframes word{from{opacity:0;transform:translateY(.35em);filter:blur(6px)}to{opacity:1;transform:none;filter:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes rowin{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes scan{0%{transform:translateY(-30px);opacity:0}10%{opacity:1}85%{opacity:1}100%{transform:translateY(150px);opacity:0}}
+@keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(3.2);opacity:0}}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+@media (max-width:820px){
+  .grid{grid-template-columns:1fr;gap:16px}
+  .win{min-height:0}
+  .screen{min-height:150px}
+  .hero{padding:20px 0 22px}
+  .clock .date{display:none}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .curve .line{stroke-dashoffset:0}.curve .area,.curve .end{opacity:1}
+  .win{transform:none!important}
+}
+</style>
+</head>
+<body>
+<div class="room" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="top">
+    <a class="mark" href="/dash" aria-label="MySet Dash"><svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#000"/><g fill="#FF5650"><rect x="24" y="42" width="11" height="34" rx="5"/><rect x="44" y="24" width="11" height="52" rx="5"/><rect x="64" y="54" width="11" height="22" rx="5"/></g></svg>MySet <span>Dash</span></a>
+    <span class="sp"></span>
+    <span class="clock" aria-hidden="true"><i></i><span class="date" id="date"></span><span id="clock">--:--:--</span></span>
+    <button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
+  </header>
+
+  <section class="hero">
+    <div class="eyebrow">MySet · Dash</div>
+    <h1 id="hi"><span class="w" style="--d:0">Good</span> <span class="w g" style="--d:1">evening.</span></h1>
+    <p class="sub" id="sub">Four windows on MySet. <b>Two are locked</b> with the CRM’s passcode.</p>
+  </section>
+
+  <main class="grid">
+    <!-- 1 · SHOW LOG -->
+    <a class="win" href="/moneymodel/shows" data-key="1" style="--i:0;--hue-rgb:255,86,80">
+      <div class="chrome"><span class="dot"></span>Show log<span class="lock"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>Locked</span><span class="key">1</span></div>
+      <div class="screen">
+        <svg class="art ledger" viewBox="0 0 400 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <defs><linearGradient id="scanG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(255,86,80)" stop-opacity="0"/><stop offset=".5" stop-color="rgb(255,86,80)" stop-opacity=".22"/><stop offset="1" stop-color="rgb(255,86,80)" stop-opacity="0"/></linearGradient></defs>
+          <g id="ledgerRows"></g>
+          <rect class="scan" x="0" y="0" width="400" height="28"/>
+        </svg>
+      </div>
+      <div class="foot"><h2>Show log</h2><p>Every night on MySet: who played, where, what the room paid, what it cost, and what MySet kept.</p><span class="url">myset.vip/moneymodel/shows</span>
+        <span class="go"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></div>
+    </a>
+
+    <!-- 2 · MEDIA DASH -->
+    <a class="win" href="/mediadash" data-key="2" style="--i:1;--hue-rgb:100,210,255">
+      <div class="chrome"><span class="dot"></span>Media Dash<span class="key">2</span></div>
+      <div class="screen">
+        <svg class="art bars" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="barG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(100,210,255)" stop-opacity=".85"/><stop offset="1" stop-color="rgb(100,210,255)" stop-opacity=".12"/></linearGradient>
+            <linearGradient id="barHot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF6B45"/><stop offset="1" stop-color="#FF375F" stop-opacity=".25"/></linearGradient>
+          </defs>
+          <line class="ln" x1="0" y1="60" x2="400" y2="60"/><line class="ln" x1="0" y1="110" x2="400" y2="110"/><line class="ln" x1="0" y1="160" x2="400" y2="160"/>
+          <g id="barRows"></g>
+        </svg>
+        <div class="stat off" id="mdStat"><b id="mdN">0</b><small id="mdL">views this week</small></div>
+      </div>
+      <div class="foot"><h2>Media Dash</h2><p>Instagram, post by post: views, reach and what the room saw this week.</p><span class="url">myset.vip/mediadash</span>
+        <span class="go"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></div>
+    </a>
+
+    <!-- 3 · CRM -->
+    <a class="win" href="/crm" data-key="3" style="--i:2;--hue-rgb:255,55,95">
+      <div class="chrome"><span class="dot"></span>CRM<span class="lock"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>Locked</span><span class="key">3</span></div>
+      <div class="screen">
+        <svg class="art pipe" viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <path id="l1" class="lane" d="M-10 40 C 120 40, 200 100, 330 100"/>
+          <path id="l2" class="lane" d="M-10 100 C 120 100, 200 100, 330 100"/>
+          <path id="l3" class="lane" d="M-10 160 C 120 160, 200 100, 330 100"/>
+          <rect class="stage" x="96" y="22" width="36" height="156" rx="10"/>
+          <rect class="stage" x="192" y="40" width="36" height="120" rx="10"/>
+          <g id="pipeDots"></g>
+          <circle class="yes" cx="330" cy="100" r="10"/>
+          <circle class="core" cx="330" cy="100" r="6"/>
+        </svg>
+      </div>
+      <div class="foot"><h2>CRM</h2><p>Every artist and venue being reached: the pipeline, the messages, the pages being built.</p><span class="url">myset.vip/crm</span>
+        <span class="go"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></div>
+    </a>
+
+    <!-- 4 · MONEY MODEL -->
+    <a class="win" href="/moneymodel" data-key="4" style="--i:3;--hue-rgb:48,209,88">
+      <div class="chrome"><span class="dot"></span>Money model<span class="key">4</span></div>
+      <div class="screen">
+        <svg class="art curve" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
+          <defs><linearGradient id="moneyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(48,209,88)" stop-opacity=".32"/><stop offset="1" stop-color="rgb(48,209,88)" stop-opacity="0"/></linearGradient></defs>
+          <line class="ln" x1="0" y1="50" x2="400" y2="50"/><line class="ln" x1="0" y1="100" x2="400" y2="100"/><line class="ln" x1="0" y1="150" x2="400" y2="150"/>
+          <line class="ln" x1="100" y1="0" x2="100" y2="200"/><line class="ln" x1="200" y1="0" x2="200" y2="200"/><line class="ln" x1="300" y1="0" x2="300" y2="200"/>
+          <path class="area" d="M0 178 C 60 176, 90 168, 130 150 S 210 128, 250 104 S 330 60, 372 38 L 372 200 L 0 200 Z"/>
+          <path class="line" d="M0 178 C 60 176, 90 168, 130 150 S 210 128, 250 104 S 330 60, 372 38"/>
+          <circle class="endring" cx="372" cy="38" r="6"/>
+          <circle class="end" cx="372" cy="38" r="5"/>
+        </svg>
+        <div class="stat off" id="mmStat"><b id="mmN">0</b><small id="mmL">real nights in the model</small></div>
+      </div>
+      <div class="foot"><h2>Money model</h2><p>What MySet earns and spends as it grows, fed live by the real nights in the Show log.</p><span class="url">myset.vip/moneymodel</span>
+        <span class="go"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></div>
+    </a>
+  </main>
+
+  <p class="hint">Press <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> <kbd>4</kbd> to open a window</p>
+</div>
+
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const NS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+
+/* the greeting and the clock: the viewer's own time */
+const hour = new Date().getHours();
+const part = hour < 5 ? 'night.' : hour < 12 ? 'morning.' : hour < 18 ? 'afternoon.' : 'evening.';
+$('#hi .g').textContent = part;
+if (hour < 5) $('#hi .w').textContent = 'Late';
+const tick = () => {
+  const d = new Date();
+  $('#clock').textContent = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  $('#date').textContent = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase() + ' ·';
+};
+tick(); setInterval(tick, 1000);
+
+/* 1 · the ledger: seven rows of cells, the last one money in or money out */
+{
+  const g = $('#ledgerRows'), widths = [[44, 70, 58, 30, 36], [44, 52, 80, 26, 44], [44, 88, 46, 34, 30], [44, 60, 64, 22, 40], [44, 76, 50, 30, 34], [44, 58, 72, 28, 46], [44, 66, 54, 32, 38]].slice(0, 6);
+  widths.forEach((w, r) => {
+    const row = svgEl('g', { class: 'row', style: `--r:${r}` });
+    let x = 18; const y = 14 + r * 21;
+    w.forEach((cw, c) => {
+      const cls = c === 0 ? 'c k' : c === w.length - 1 ? (r % 3 === 2 ? 'c m' : 'c p') : 'c';
+      row.appendChild(svgEl('rect', { class: cls, x, y, width: cw, height: 10, rx: 5 }));
+      x += cw + 16 + (c === 2 ? 30 : 0);
+    });
+    g.appendChild(row);
+  });
+}
+
+/* 2 · the bars: shaped like MySet's mark until the Media Dash's feed answers, then its last posts' real views */
+const BARS = 16, bg = $('#barRows'), rects = [];
+for (let i = 0; i < BARS; i++) {
+  const h = 20 + 80 * Math.abs(Math.sin(i * 1.7 + 0.6));
+  const r = svgEl('rect', { x: 12 + i * 24, y: 180 - h, width: 14, height: h, rx: 4, style: `--b:${i}` });
+  bg.appendChild(r); rects.push(r);
+}
+const countUp = (el, to, fmt) => {
+  if (REDUCE) { el.textContent = fmt(to); return; }
+  const t0 = performance.now(), dur = 1400;
+  const step = (t) => { const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 4); el.textContent = fmt(to * e); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+};
+const int = (n) => Math.round(n).toLocaleString('en-US');
+fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+  if (!d) return;
+  const posts = (d.posts || []).filter((p) => p.latest && Number.isFinite(p.latest.views)).sort((a, b) => String(a.publishedAt).localeCompare(String(b.publishedAt))).slice(-BARS);
+  if (posts.length) {
+    const max = Math.max(...posts.map((p) => p.latest.views), 1), best = posts.findIndex((p) => p.latest.views === max);
+    rects.forEach((r, i) => {
+      const p = posts[i - (BARS - posts.length)];
+      const h = p ? Math.max(6, 108 * p.latest.views / max) : 4;
+      r.setAttribute('y', 180 - h); r.setAttribute('height', h);
+      r.classList.toggle('hot', !!p && i - (BARS - posts.length) === best);
+    });
+  }
+  const views = d.week && Number(d.week.views);
+  if (Number.isFinite(views)) {
+    $('#mdL').textContent = 'views this week' + (d.account && d.account.length ? ` · ${int(d.account[d.account.length - 1].followers)} followers` : '');
+    $('#mdStat').classList.remove('off'); countUp($('#mdN'), views, int);
+  }
+}).catch(() => {});
+
+/* 4 · the model's live block: how many real nights it reads, and the room's money a head */
+fetch('/moneymodel/live.json', { headers: { accept: 'application/json' }, credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((d) => {
+  if (!d || !d.live || !d.act) return;
+  const a = d.act, head = Number(a.roomPerHead);
+  $('#mmL').textContent = `real night${a.shows === 1 ? '' : 's'} in the model` + (Number.isFinite(head) ? ` · $${head.toFixed(2)} a head` : '');
+  $('#mmStat').classList.remove('off'); countUp($('#mmN'), a.shows || 0, int);
+}).catch(() => {});
+
+/* 3 · the pipeline: people set off along three lanes and meet at the yes */
+if (!REDUCE) {
+  const dots = $('#pipeDots');
+  ['l1', 'l2', 'l3'].forEach((lane, li) => {
+    for (let k = 0; k < 3; k++) {
+      const c = svgEl('circle', { class: 'who', r: 3.5 - li * 0.4 });
+      const m = svgEl('animateMotion', { dur: `${5.4 + li * 1.1}s`, repeatCount: 'indefinite', begin: `${(k * (5.4 + li) / 3 + li * 0.6).toFixed(2)}s`, keyPoints: '0;1', keyTimes: '0;1', calcMode: 'spline', keySplines: '.45 0 .25 1' });
+      m.appendChild(svgEl('mpath', { href: `#${lane}` }));
+      c.appendChild(m); dots.appendChild(c);
+    }
+  });
+}
+
+/* the windows lean towards the pointer, and the light on the glass follows it */
+const FINE = matchMedia('(hover: hover) and (pointer: fine)').matches;
+$$('.win').forEach((w) => {
+  if (!FINE || REDUCE) return;
+  w.addEventListener('pointermove', (e) => {
+    const r = w.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    w.style.setProperty('--mx', `${x * 100}%`); w.style.setProperty('--my', `${y * 100}%`);
+    w.style.setProperty('--ry', `${(x - 0.5) * 5}deg`); w.style.setProperty('--rx', `${(0.5 - y) * 4}deg`);
+  });
+  w.addEventListener('pointerleave', () => { w.style.setProperty('--rx', '0deg'); w.style.setProperty('--ry', '0deg'); });
+});
+
+/* OPENING A WINDOW: it grows out of itself to fill the screen, then the dashboard loads
+   underneath. A click with a modifier (a new tab) is left to the browser. */
+const open = (w) => {
+  if (REDUCE) { location.href = w.href; return; }
+  const r = w.getBoundingClientRect(), p = document.createElement('div');
+  p.className = 'portal'; p.style.setProperty('--hue-rgb', getComputedStyle(w).getPropertyValue('--hue-rgb'));
+  Object.assign(p.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  document.body.appendChild(p);
+  const sx = innerWidth / r.width, sy = innerHeight / r.height;
+  const dx = (innerWidth / 2) - (r.left + r.width / 2), dy = (innerHeight / 2) - (r.top + r.height / 2);
+  p.animate([{ transform: 'none', borderRadius: '26px', opacity: .0 }, { opacity: 1, offset: .25 }, { transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})`, borderRadius: '0px', opacity: 1 }],
+    { duration: 560, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'forwards' });
+  w.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.02)' }], { duration: 300, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'forwards' });
+  setTimeout(() => { location.href = w.href; }, 470);
+};
+$$('.win').forEach((w) => w.addEventListener('click', (e) => {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+  e.preventDefault(); open(w);
+}));
+addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || /input|textarea|select/i.test((e.target && e.target.tagName) || '')) return;
+  const w = $(`.win[data-key="${e.key}"]`); if (w) { e.preventDefault(); open(w); }
+});
+/* back from a dashboard (the page restored as it was left): no portal left over */
+addEventListener('pageshow', (e) => { if (e.persisted) $$('.portal').forEach((p) => p.remove()); });
+})();
+</script>
+</body>
+</html>
