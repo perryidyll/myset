@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-30 14:00 — 97a9b2e — venue-pages@fix/crm-twins (16 files since origin/main)
+**tl;dr:** CRM no longer shows a generated page twice (Sand & Tan did); the Studio welcome card reads 'Look around: every tab explains itself'
+**Other sessions:** Decision 0126: samplereg rows carry cid (the CRM contact that asked); adoptOrphans(reg, crm, {jobs}) links it instead of adopting; dropTwins erases an untouched twin on each summary. tips.js restamped everywhere.
+
 ### 2026-09-30 13:37 — 31de66c — wt3@ux/crm-name-toggle-icon (35 files since origin/main)
 **tl;dr:** The /crm page is called CRM everywhere instead of HQ; every light/dark button now shows the Media Dash's half-moon icon
 **Other sessions:** Only words changed: hq.mjs, /api/hq, the hqk cookie, HQ_PASSCODE and data-act=lockhq keep their names on purpose. theme.js paints '◐' always (no sun/moon swap). studio.js/venue-studio.js restamped. Docs/decisions still say HQ as history.
