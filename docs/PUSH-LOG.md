@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 01:31 — 1aa42bc — venue-hero@ux/venue-hero (17 files since origin/main)
+**tl;dr:** Venue pages: never an empty cover (last photo stands in; the generator takes a venue's best wide photo); Menu / Events / What guests say / Directions as a 2x2 beside the square; links right under the tagline; extra photos swipe in the lightbox instead of a stray rail
+**Other sessions:** Decision 0131. venue.html: GALLERY + lbStep (swipeable lightbox), jump(id) to #vmenu/#vevents, .vdoors; prail and the Find them section are gone; sample.js no longer hides .vcomm (gone). parsePage(html,base,'venue').menu -> readSite.menu -> payload.menuUrl -> sample p.menu.url. pickPhotos: venue cover fallback >=800px wide.
+
 ### 2026-10-01 01:07 — 6275f41 — wt3@ux/dash-links-profit (53 files since origin/main)
 **tl;dr:** Every dashboard (Show log, Media Dash, CRM, money model) has a Dash button back to /dash; the Show log has a MySet cut column ($ and %) and MySet profit is now the cut minus the server AND Stripe
 **Other sessions:** costOf().myset.usd = fee − server − stripe (founder's word, 2026-10-01; the earlier 'Stripe not subtracted' reading is superseded). mediadash.html twin in the content repo updated alongside.
