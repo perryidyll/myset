@@ -236,6 +236,8 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 .toast.on{opacity:1;transform:translate(-50%,0)}
 @media(max-width:720px){.wrap{padding:0 16px}.bar{padding:10px 16px}.hero{padding-top:36px}.tile .v{font-size:30px}.stats{grid-template-columns:repeat(2,1fr)}.slide .top{padding:18px}.slide .tbl th,.slide .tbl td{padding:13px 14px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+.theme-now *,.theme-now *::before,.theme-now *::after{transition:none!important}
 </style>
 <body>
 <header>
@@ -768,7 +770,21 @@ $('#refreshBtn').addEventListener('click', async () => {
 });
 const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches; };
 try { const saved = localStorage.getItem('myset.model.theme'); if (saved) document.documentElement.dataset.theme = saved; } catch (e) {}
-$('#themeBtn').addEventListener('click', () => { const next = isDark() ? 'light' : 'dark'; document.documentElement.dataset.theme = next; try { localStorage.setItem('myset.model.theme', next); } catch (e) {} chartsRender(); });
+/* The theme switch grows as a circle from the button, the way HQ's does (decision 0121).
+   Instant where the browser has no view transitions or the person asked for less motion. */
+function ripple(btn, swap) {
+  const R = document.documentElement;
+  const run = () => { R.classList.add('theme-now'); swap(); getComputedStyle(R).color; requestAnimationFrame(() => R.classList.remove('theme-now')); };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden || typeof document.startViewTransition !== 'function') { run(); return; }
+  const r = btn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const far = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+  try {
+    document.startViewTransition(run).ready.then(() => R.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${far}px at ${x}px ${y}px)`] },
+      { duration: 720, easing: 'cubic-bezier(.45,0,.25,1)', pseudoElement: '::view-transition-new(root)' })).catch(() => {});
+  } catch (e) { run(); }
+}
+$('#themeBtn').addEventListener('click', (ev) => { const next = isDark() ? 'light' : 'dark'; try { localStorage.setItem('myset.model.theme', next); } catch (e) {} ripple(ev.currentTarget, () => { document.documentElement.dataset.theme = next; chartsRender(); }); });
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', chartsRender);
 load().catch((e) => { $('#meta').textContent = 'Could not load'; $('#kpis').innerHTML = `<div class="tile" style="grid-column:1/-1"><div class="k">The register could not be read</div><div class="d">${esc(e && e.message)}</div></div>`; });
 </script>
