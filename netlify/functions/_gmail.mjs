@@ -2,8 +2,8 @@ import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEq
 import { readDoc, casDoc, store } from './_lib.mjs';
 import { authSecret } from './_auth.mjs';
 
-/* THE FOUNDER'S OWN GMAIL, FOR HQ (the outreach dashboard at /crm). Outreach email goes
-   out from his own address and the replies come back into HQ's message centre, through
+/* THE FOUNDER'S OWN GMAIL, FOR CRM (the outreach dashboard at /crm). Outreach email goes
+   out from his own address and the replies come back into CRM's message centre, through
    Google's OAuth. Never through MySet's transactional sender (Resend): that one carries
    every sign-in code, and one artist marking a cold email as spam must never cost
    another artist their code at a gig.
@@ -21,11 +21,11 @@ import { authSecret } from './_auth.mjs';
    - A refresh token comes back only with access_type=offline, and reliably only with
      prompt=consent. connect() refuses to keep a connection without one.
    - Granular consent lets a person untick one of the two Gmail boxes. connect() refuses
-     half a grant: an HQ that can read but not send is a button that leads to a shrug.
+     half a grant: a CRM that can read but not send is a button that leads to a shrug.
    - A refresh token dies when it is revoked, when the Google password changes (Gmail
      scopes), after six months unused, and after seven days while the Google Cloud app's
      publishing status is "Testing". Every one of those answers `invalid_grant`, which
-     becomes err 'revoked' on the document and "connect Gmail again" in HQ.
+     becomes err 'revoked' on the document and "connect Gmail again" in CRM.
    - Gmail puts its own Message-ID on what it sends, so sendMail reads it back: the next
      reply needs it to thread.
 
@@ -41,7 +41,7 @@ import { authSecret } from './_auth.mjs';
 export const GMAIL_DOC = 'crmgmail';
 export const SCOPES = Object.freeze(['openid', 'email',
   'https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.readonly']);
-const NEED = SCOPES.slice(2);            // HQ cannot work without these two; `email` comes back renamed userinfo.email
+const NEED = SCOPES.slice(2);            // CRM cannot work without these two; `email` comes back renamed userinfo.email
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const REVOKE_URL = 'https://oauth2.googleapis.com/revoke';
@@ -185,7 +185,7 @@ export async function connect(o = {}) {
   return { ok: true, email };
 }
 
-/** For HQ's summary: never a token. */
+/** For CRM's summary: never a token. */
 export async function status() {
   const { data } = await readDoc(GMAIL_DOC, null);
   const d = data || {};

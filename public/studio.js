@@ -3069,7 +3069,7 @@ function render(){
         ? `<a class="whoami" href="/${esc(s.slug)}"><h1>${esc(s.artist)}</h1><span>↗</span></a>`
         : `<h1>${esc(s.artist)}</h1>`}
     </div>
-    <div class="headactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+    <div class="headactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
     ${SAMPLE?`<button class="claimbtn" onclick="openClaim()">Claim profile</button>`
     :PLAN&&PLAN.ok?(!see('plans')?'':PLAN.plan==='free'
       ?freeTag(s)

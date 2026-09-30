@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { casDoc, readDoc, store } from './_lib.mjs';
 import { classifyUrl, parseSeed } from './_fsrc.mjs';
 
-/* MYSET HQ'S CRM (decision 0108): who the founder is reaching out to, and everything
+/* MYSET'S CRM (decision 0108): who the founder is reaching out to, and everything
    said to them, beside the sample pages the factory builds for them.
 
    A CONTACT IS NOT A SAMPLE. A contact is a person or a place the founder means to
@@ -441,7 +441,7 @@ export function deriveRows({ crm, reg, arc = {}, jobs = [], artists = { byId: {}
     else if (job && job.st === 'skipped') { stage = 'failed'; err = 'Skipped: they are on the opt-out list.'; }
     else if (job && job.st === 'done' && job.owner && !o) { stage = 'building'; pct = 100; }          // done a moment ago; the link lands on the next write
     const ch = Object.keys(r.ch || {});
-    // a page marked sent from the old console, before HQ: DM, email or in person, as it was recorded
+    // a page marked sent from the old console, before CRM: DM, email or in person, as it was recorded
     for (const c of String(sampleCh).split(',').filter(Boolean)) { const k = c === 'dm' ? 'dm' : c; if (!ch.includes(k) && !(k === 'dm' && ch.some((x) => ['ig', 'tiktok', 'whatsapp', 'sms', 'fb'].includes(x)))) ch.push(k); }
     const sent = [r.sent, sampleSent].filter(Boolean).sort((a, b) => a - b)[0] || 0;
     rows.push({ cid, kind, name: r.name || '', city: r.city || '', country: r.country || '', cover, slug, owner: o, link, stage, pct, err, jobId: r.jobId || '',
@@ -458,7 +458,7 @@ export function tagCounts(crm) {
   return [...n.values()].sort((a, b) => b.n - a.n || a.tag.localeCompare(b.tag));
 }
 
-/** Samples the old console built, before HQ existed, get a contact of their own, so the
+/** Samples the old console built, before CRM existed, get a contact of their own, so the
  *  table is the whole picture. A few at a time; the next summary does the rest. */
 export async function adoptOrphans(reg, crm, { limit = 10, now = Date.now() } = {}) {
   const have = new Set(Object.values(crm.byId).map((r) => r.owner).filter(Boolean));

@@ -381,7 +381,7 @@ document.addEventListener('keydown',(e)=>{if(e.key==='Escape')close();if(e.key==
 async function load(){D=await(await fetch(API.data)).json();if(!API.pull)$('#pull').style.display='none';if(D.pushedAt)$('#pulled').textContent='pushed '+rel(D.pushedAt);kpis();timeline();filters();table();breakdowns();boosted();upcoming();comments();foot()}
 async function doPull(){const b=$('#pull');if(b.classList.contains('busy'))return;b.classList.add('busy');b.lastChild.textContent='Pulling…';try{const r=await(await fetch(API.pull,{method:'POST'})).json();if(r.error)throw new Error(r.error);await load();b.lastChild.textContent=r.errors?.length?`${r.errors.length} error(s)`:'Pulled'}catch(e){b.lastChild.textContent='Failed: '+e.message}finally{b.classList.remove('busy');setTimeout(()=>b.lastChild.textContent='Pull now',2500)}}
 $('#pull').onclick=doPull;
-/* The theme switch grows as a circle from the button, the way HQ's does (decision 0121).
+/* The theme switch grows as a circle from the button, the way CRM's does (decision 0121).
    Instant where the browser has no view transitions or the person asked for less motion. */
 function ripple(btn, swap) {
   const R = document.documentElement;

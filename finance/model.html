@@ -297,7 +297,7 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
     <a class="mark" href="/moneymodel"><i></i>MySet <span>Money model</span></a>
     <span class="spacer"></span>
     <a class="btn" href="/moneymodel/shows"><span class="lbl">Every show</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></a>
-    <button class="btn" id="themeBtn" type="button" aria-label="Switch between light and dark">Light</button>
+    <button class="btn" id="themeBtn" type="button" aria-label="Switch between light and dark">◐</button>
   </div>
 </header>
 
@@ -1793,8 +1793,8 @@ buildDials(); recalc();
 })();
 const themeBtn = $('#themeBtn');
 const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches; };
-const paintThemeBtn = () => { themeBtn.textContent = isDark() ? 'Light' : 'Dark'; themeBtn.title = isDark() ? 'Switch to light mode' : 'Switch to dark mode'; };
-/* The theme switch grows as a circle from the button, the way HQ's does (decision 0121).
+const paintThemeBtn = () => { themeBtn.textContent = '◐'; themeBtn.title = isDark() ? 'Switch to light mode' : 'Switch to dark mode'; };
+/* The theme switch grows as a circle from the button, the way CRM's does (decision 0121).
    Instant where the browser has no view transitions or the person asked for less motion. */
 function ripple(btn, swap) {
   const R = document.documentElement;

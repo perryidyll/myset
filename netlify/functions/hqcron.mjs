@@ -1,10 +1,10 @@
 import { syncGmail } from './hq.mjs';
 
-/* HQ'S MAIL RING (decision 0109). Every ten minutes, while Gmail is connected, the
+/* CRM'S MAIL RING (decision 0109). Every ten minutes, while Gmail is connected, the
    replies to the founder's outreach are read into their conversations (hq.mjs
    syncGmail) and a reply pushes to the founder's phone. Nothing else happens here.
 
-   Skips when the open HQ page synced in the last four minutes (the page asks every
+   Skips when the open CRM page synced in the last four minutes (the page asks every
    minute while it is on screen), and costs one small read when Gmail is not
    connected. Logged, never thrown: a thrown scheduled function is retried. */
 export const deps = { sync: syncGmail };

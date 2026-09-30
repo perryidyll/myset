@@ -46,7 +46,7 @@ process.env.URL ||= `http://localhost:${PORT}`;
 process.env.ADMIN_CODE ||= 'localhost-founder';
 process.env.RESEND_API_KEY ||= 're_localhost';
 process.env.AUTH_FROM ||= 'MySet <sign-in@myset.vip>';
-/* HQ's passcode on this machine (INVARIANT 0hk): a test value, hashed at start the way
+/* CRM's passcode on this machine (INVARIANT 0hk): a test value, hashed at start the way
    tools/hqpass.mjs hashes the real one, which lives only in Netlify. */
 const HQ_LOCAL_PASSCODE = 'hq-on-this-mac';
 process.env.HQ_PASSCODE ||= await (await import('../netlify/functions/_hqlock.mjs')).hashPasscode(HQ_LOCAL_PASSCODE);
@@ -271,7 +271,7 @@ a{color:#FF375F}code{background:#f0f0f2;padding:1px 5px;border-radius:5px}h1{fon
 <p>Switch the plan: <a href="/dev?plan=plus">Bar Star</a> · <a href="/dev?plan=pro">Rock Star</a> · <a href="/dev?plan=free">Hobbyist</a> · <a href="/dev?reset=1">reseed everything</a></p>
 <p style="color:#6e6e73;font-size:13px">Seeded: a Thursday residency (six nights filed, four logged, one Stripe never answered), a Saturday wedding, last night at Baan Tai (tap <i>Log tonight</i>), a Tuesday MySet ran with no gig on the calendar, a night whose gig was deleted, merch and two app orders, a connected account with a year of statements.</p>
 <p>The founder's sample console: <a href="/dev?founder=1&go=/factory">sign in as the founder and open /factory</a> · <a href="/dev/sample">make an artist sample</a> · <a href="/dev/sample?kind=venue">a venue sample</a></p>
-<p><b>MySet HQ</b> (decision 0108): <a href="/dev?founder=1&go=/crm">sign in as the founder and open /crm</a> · <a href="/dev/hq">fill it with a demo pipeline</a> (a dozen contacts in every stage, with conversations). The passcode on this machine is <code>${HQ_LOCAL_PASSCODE}</code> (the live one is only in Netlify). Generate works here: a pretend build walks the eight stages in about twenty seconds (<code>--real-factory</code> turns that off).</p>
+<p><b>MySet CRM</b> (decision 0108): <a href="/dev?founder=1&go=/crm">sign in as the founder and open /crm</a> · <a href="/dev/hq">fill it with a demo pipeline</a> (a dozen contacts in every stage, with conversations). The passcode on this machine is <code>${HQ_LOCAL_PASSCODE}</code> (the live one is only in Netlify). Generate works here: a pretend build walks the eight stages in about twenty seconds (<code>--real-factory</code> turns that off).</p>
 <script>
 try{${q.get('founder') ? `localStorage.setItem('myset.admin',${JSON.stringify(process.env.ADMIN_CODE)});localStorage.removeItem('myset.token');localStorage.removeItem('myset.aslug');` : `localStorage.setItem('myset.token',${JSON.stringify(t)});localStorage.setItem('myset.aslug',${JSON.stringify(s)});localStorage.removeItem('myset.admin');`}
 ${q.get('tab') ? `localStorage.setItem('myset.tab',${JSON.stringify(q.get('tab'))});` : ''}}catch(e){}
@@ -315,7 +315,7 @@ async function devSample(q) {
 <p style="color:#6e6e73;font-size:13px">Claiming asks for a code: it is printed in this terminal, since no mail leaves this machine.</p>`;
 }
 
-/* ---------- HQ on this machine (decision 0108) ----------
+/* ---------- CRM on this machine (decision 0108) ----------
    The factory's worker needs Claude and YouTube, which never run here. Unless started
    with --real-factory, a pretend build takes its place: it walks the eight stages a
    couple of seconds each, so the build card, the bar and the table can be watched, and
@@ -384,14 +384,14 @@ async function devHq() {
     }
     // a fifth and sixth field: the library preset it came from, and the softer ending (decision 0117)
     for (const [ch, dir, text, ago, pre, soft] of msgs) await C.addMessage(r.cid, { ch, dir, text, subject: ch === 'email' ? 'A MySet page for you' : '', t: now - ago, pre, soft }, { now, unread: dir === 'in' && ch === 'email' });
-    // what HQ's own log does when a message goes out, and what a first open does
+    // what CRM's own log does when a message goes out, and what a first open does
     const owner = (await C.readContact(r.cid) || {}).owner;
     if (owner && msgs.some((m) => m[1] === 'out')) { const F = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', 'factory.mjs')).href); await F.markSent(owner, msgs[0][0] === 'email' ? 'email' : msgs[0][0] === 'inperson' ? 'inperson' : 'dm'); }
     if (owner && msgs.some((m) => m[1] === 'in')) await S.sampleSeen(owner, 'open');
     n++;
   }
-  return `<!doctype html><meta charset="utf-8"><title>HQ demo</title><style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 20px}a{color:#FF375F}</style>
-<h1>HQ demo pipeline</h1><p>Added ${n} contacts.</p><p><a href="/dev?founder=1&go=/crm">Open HQ as the founder</a></p>`;
+  return `<!doctype html><meta charset="utf-8"><title>CRM demo</title><style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 20px}a{color:#FF375F}</style>
+<h1>CRM demo pipeline</h1><p>Added ${n} contacts.</p><p><a href="/dev?founder=1&go=/crm">Open CRM as the founder</a></p>`;
 }
 
 /* ---------- the server ---------- */

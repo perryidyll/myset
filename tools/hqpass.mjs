@@ -1,10 +1,10 @@
-/* Set MySet HQ's passcode (decision 0108, INVARIANT 0hk).
+/* Set MySet CRM's passcode (decision 0108, INVARIANT 0hk).
 
    Asks for the new passcode twice and does not echo it. It then stores ONLY its salted
    scrypt hash in Netlify's HQ_PASSCODE, for the production context and marked secret.
-   Deploy previews never get it, so a preview's HQ stays shut. The passcode itself goes
+   Deploy previews never get it, so a preview's CRM stays shut. The passcode itself goes
    nowhere, and the hash is never printed, because this repository is public.
-   A new passcode locks every open HQ.
+   A new passcode locks every open CRM.
 
      node tools/hqpass.mjs              asks, then sets it on the live site
      node tools/hqpass.mjs --dry-run    asks and checks, sets nothing
@@ -38,7 +38,7 @@ function ask(q) {
   });
 }
 
-const code = await ask('New HQ passcode: ');
+const code = await ask('New CRM passcode: ');
 if (process.stdin.isTTY && code !== await ask('Again: ')) { console.error('They differ. Nothing changed.'); process.exit(1); }
 if (code.length < 8) { console.error('Eight characters at least. Nothing changed.'); process.exit(1); }
 
@@ -50,4 +50,4 @@ if (dry) { console.log('Checked: the hash opens with that passcode and nothing e
 
 const r = spawnSync('netlify', ['env:set', 'HQ_PASSCODE', hash, '--context', 'production', '--secret', '--force', '--site', SITE], { encoding: 'utf8' });
 if (r.status !== 0) { console.error('Netlify refused: ' + String(r.stderr || r.stdout).replace(hash, '[hash]').trim()); process.exit(1); }
-console.log('HQ_PASSCODE is set for production (secret). The next deploy uses it; every open HQ will ask again.');
+console.log('HQ_PASSCODE is set for production (secret). The next deploy uses it; every open CRM will ask again.');

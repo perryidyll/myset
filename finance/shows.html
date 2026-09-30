@@ -248,7 +248,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <button class="btn" id="refreshBtn" title="Fold every artist's filed nights into the register now"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/></svg><span class="lbl">Refresh</span></button>
     <a class="btn" id="csvBtn" href="/moneymodel/shows.csv"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m0 0L5 7m3 3 3-3M3 13h10"/></svg><span class="lbl">CSV</span></a>
     <a class="btn" href="/moneymodel"><span class="lbl">Money model</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></a>
-    <button class="btn icon" id="themeBtn" aria-label="Switch between light and dark"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11" /><path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor"/></svg></button>
+    <button class="btn icon" id="themeBtn" aria-label="Switch between light and dark">◐</button>
   </div>
 </header>
 
@@ -770,7 +770,7 @@ $('#refreshBtn').addEventListener('click', async () => {
 });
 const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches; };
 try { const saved = localStorage.getItem('myset.model.theme'); if (saved) document.documentElement.dataset.theme = saved; } catch (e) {}
-/* The theme switch grows as a circle from the button, the way HQ's does (decision 0121).
+/* The theme switch grows as a circle from the button, the way CRM's does (decision 0121).
    Instant where the browser has no view transitions or the person asked for less motion. */
 function ripple(btn, swap) {
   const R = document.documentElement;
