@@ -8,7 +8,7 @@ area: ui
 reverses:
 superseded_by:
 invariants: [0ha]
-commits: []
+commits: [9b5fce8]
 tests: [test/sw.mjs]
 files: [public/sw.js, test/sw.mjs]
 ---
