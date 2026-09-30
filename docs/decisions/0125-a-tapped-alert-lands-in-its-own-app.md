@@ -8,7 +8,7 @@ area: ui
 reverses:
 superseded_by:
 invariants: [0ha]
-commits: [9b5fce8]
+commits: [3c161bd]
 tests: [test/sw.mjs]
 files: [public/sw.js, test/sw.mjs]
 ---
@@ -40,4 +40,5 @@ People tapping an alert and not finding the thing it named, because their app wa
 ## How it was verified
 
 - **Suite:** `test/sw.mjs` gains six checks that run the real `sw.js` notificationclick in the fake browser: a venue alert focuses an open Venue Studio and not the Studio; with only the Studio open it opens `/venues?tab=shows`; the reverse for an artist alert; an alert with no address still goes to the Studio; a fan page is never mistaken for the app. Against the old worker three of them fail. `sh test/run.sh` exit 0.
+- **Live as `3c161bd` (PR #171):** verified by content on myset.vip at 05:59 UTC 2026-09-30 (`/sw.js` carries `appOf`).
 - **Not checked:** a real phone.
