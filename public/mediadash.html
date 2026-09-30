@@ -169,6 +169,8 @@ section{margin-top:44px}
 footer{margin-top:60px;color:var(--faint);font-size:12px;line-height:1.7;border-top:1px solid var(--hair);padding-top:18px}
 footer code{font-family:var(--mono);font-size:11px;color:var(--muted)}
 kbd{font-family:var(--mono);font-size:10.5px;border:1px solid var(--hair2);border-radius:5px;padding:1px 5px;color:var(--muted)}
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+.theme-now *,.theme-now *::before,.theme-now *::after{transition:none!important}
 </style>
 </head>
 <body>
@@ -379,7 +381,21 @@ document.addEventListener('keydown',(e)=>{if(e.key==='Escape')close();if(e.key==
 async function load(){D=await(await fetch(API.data)).json();if(!API.pull)$('#pull').style.display='none';if(D.pushedAt)$('#pulled').textContent='pushed '+rel(D.pushedAt);kpis();timeline();filters();table();breakdowns();boosted();upcoming();comments();foot()}
 async function doPull(){const b=$('#pull');if(b.classList.contains('busy'))return;b.classList.add('busy');b.lastChild.textContent='Pulling…';try{const r=await(await fetch(API.pull,{method:'POST'})).json();if(r.error)throw new Error(r.error);await load();b.lastChild.textContent=r.errors?.length?`${r.errors.length} error(s)`:'Pulled'}catch(e){b.lastChild.textContent='Failed: '+e.message}finally{b.classList.remove('busy');setTimeout(()=>b.lastChild.textContent='Pull now',2500)}}
 $('#pull').onclick=doPull;
-$('#theme').onclick=()=>{const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');r.dataset.theme=cur==='dark'?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch{}};
+/* The theme switch grows as a circle from the button, the way HQ's does (decision 0121).
+   Instant where the browser has no view transitions or the person asked for less motion. */
+function ripple(btn, swap) {
+  const R = document.documentElement;
+  const run = () => { R.classList.add('theme-now'); swap(); getComputedStyle(R).color; requestAnimationFrame(() => R.classList.remove('theme-now')); };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || document.hidden || typeof document.startViewTransition !== 'function') { run(); return; }
+  const r = btn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  const far = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+  try {
+    document.startViewTransition(run).ready.then(() => R.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${far}px at ${x}px ${y}px)`] },
+      { duration: 720, easing: 'cubic-bezier(.45,0,.25,1)', pseudoElement: '::view-transition-new(root)' })).catch(() => {});
+  } catch (e) { run(); }
+}
+$('#theme').onclick=()=>{const r=document.documentElement;const cur=r.dataset.theme||(matchMedia('(prefers-color-scheme:light)').matches?'light':'dark');const next=cur==='dark'?'light':'dark';try{localStorage.setItem('theme',next)}catch{}ripple($('#theme'),()=>{r.dataset.theme=next})};
 try{const t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch{}
 addEventListener('resize',()=>D&&timeline());
 load();

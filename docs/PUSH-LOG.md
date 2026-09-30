@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-30 13:03 — 9b6d767 — wt3@ux/theme-ripple (13 files since origin/main)
+**tl;dr:** The money model, the register (/moneymodel/shows) and the Media Dash now switch light/dark with the same circle wipe from the button as HQ and /about
+**Other sessions:** Each page carries its own small ripple(btn, swap) helper (they do not load theme.js: separate storage keys). public/mediadash.html has a twin in the content repo's publish/dashboard.html — keep them identical. /about already had the circle via theme.js; unchanged.
+
 ### 2026-09-30 13:00 — 2374305 — alert-tap@docs/alert-tap-live (3 files since origin/main)
 **tl;dr:** Docs only: decision 0125 and the ledger say the alert-tap fix is live [skip ci]
 **Other sessions:** 0125 live as 3c161bd (#171).
