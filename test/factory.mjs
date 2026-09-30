@@ -315,6 +315,10 @@ const pg = S.parsePage('<meta property="og:title" content="x"><img src="/uploads
   + '<img src="/icons/fb.png"><img data-src="/gigs/barrow-night.jpg"><img src="/a.jpg" alt="facebook icon"><img src="/thumb.jpg" width="120"><a href="#top">top</a>', 'https://x.test/');
 eq('a page’s pictures: plain <img>, lazy data-src; no logos, icons, thumbnails — and never the page itself',
    pg.images.map((i) => i.url), ['https://x.test/uploads/lexicon-band.jpg', 'https://x.test/gigs/barrow-night.jpg']);
+const mhtml = '<a href="/about">About</a><a href="https://x.test/files/food-menu.pdf">Download</a><a href="/eat">Our Menu</a><a href="http://x.test/menu">m</a><a href="https://other.test/menu">Menu</a>';
+eq('a venue’s own menu link: its words say menu, on its own site, https (the Menu door, 2026-10-01)', S.parsePage(mhtml, 'https://x.test/', 'venue').menu, 'https://x.test/eat');
+eq('a menu PDF by its path when no link says menu', S.parsePage('<a href="/files/food-menu.pdf">Download</a><a href="https://other.test/menu">Menu</a>', 'https://x.test/', 'venue').menu, 'https://x.test/files/food-menu.pdf');
+eq('an artist’s page looks for none', S.parsePage(mhtml, 'https://x.test/', 'artist').menu, undefined);
 
 console.log('\nYOUTUBE  the Data API, never search.list, never a youtube.com page');
 const yt = await S.youtube(S.parseSeed('https://youtube.com/@thetidelines'), { ...net, ytKey: 'test-youtube-key' });
@@ -362,6 +366,12 @@ const pk = A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, co
 eq('the founder’s rule: a good-enough YouTube picture beats a better website one', pk.cover.id, 'b');
 eq('but a thumbnail with its title across it does not', A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, coverOk: true, quality: 0.95, textOverlay: 0, width: 1600, height: 900 },
   { id: 'b', from: 'youtube', group: 'y', isAct: true, coverOk: true, quality: 0.9, textOverlay: 0.5, width: 1280, height: 720 }]).cover.id, 'a');
+/* A venue whose site has no 1000-px hero still gets a cover (2026-10-01, Sand & Tan opened on a gradient). */
+const vsite = [{ id: 'v1', from: 'website', group: 'w1', isAct: true, coverOk: false, quality: 0.8, textOverlay: 0, width: 900, height: 600, kind: 'room' },
+  { id: 'v2', from: 'website', group: 'w2', isAct: true, coverOk: false, quality: 0.9, textOverlay: 0, width: 700, height: 900, kind: 'food' }];
+eq('a venue with no 1000-px cover takes its best wide photo instead', A.pickPhotos(vsite, { kind: 'venue' }).cover.id, 'v1');
+eq('an artist does not: its cover must be the act, big and wide', A.pickPhotos(vsite).cover, null);
+eq('and a venue never makes a tall photo its cover', A.pickPhotos([vsite[1]], { kind: 'venue' }).cover, null);
 
 console.log('\nTHE GATE  when the founder should look first');
 const full = { kind: 'artist', name: 'X', identity: { ok: true, confidence: 0.9 }, cover: true, avatar: true, extras: 2, sentences: 3, tagline: 't', links: { instagram: 'i', website: 'w' }, media: 2 };

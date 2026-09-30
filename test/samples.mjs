@@ -248,7 +248,7 @@ ok('at one hundred and eighty days the snapshot is erased too', sw.erased.includ
 console.log('\nVENUES');
 const v = await S.createSample({ kind: 'venue', name: 'Harbour Bar', slug: 'harbourbar', city: 'Koh Phangan', country: 'Thailand',
   tagline: 'Live music by the pier', about: 'A bar by the pier.', links: { instagram: 'https://instagram.com/harbourbar' },
-  photos: { cover: { bytes: JPEG, type: 'image/jpeg' } }, by: 'founder' });
+  photos: { cover: { bytes: JPEG, type: 'image/jpeg' } }, menuUrl: 'https://harbourbar.example/menu', by: 'founder' });
 ok('a venue sample is made at /v/', v.ok && v.link.endsWith('/v/harbourbar#sample-profile'), v);
 const vtwin = await S.createSample({ kind: 'venue', name: 'Harbour Bar', city: 'Koh Samui', by: 'founder' });
 eq('a second venue of a taken name gets a word', vtwin.slug, 'harbourbar-live');
@@ -257,6 +257,7 @@ ok('not in the venue registry', !(await readVenues()).bySlug.harbourbar);
 eq('the public venue page 404s', (await call(venueFn, 'https://x/api/venue?v=harbourbar')).status, 404);
 r = await door({ action: 'page', kind: 'venue', slug: 'harbourbar', key: v.key });
 ok('the label opens it, in the venue shape', r.ok && r.venue && r.venue.name === 'Harbour Bar' && r.venue.slug === 'harbourbar', r);
+eq('the menu the generator found is the page’s Menu door', r.venue.menu && r.venue.menu.url, 'https://harbourbar.example/menu');
 eq('an artist-kind request for it finds nothing', (await door({ action: 'page', slug: 'harbourbar', key: v.key })).status, 404);
 const VH = { 'x-sample-key': v.key, 'x-sample-venue': 'harbourbar' };
 r = await call(vadmin, 'https://x/api/venueadmin', { headers: VH, body: { action: 'get' } });

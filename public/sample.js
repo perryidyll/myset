@@ -267,7 +267,7 @@ body.sampled{padding-top:var(--sbh,112px)}
   function decorate(P) {
     const S = P.sample;
     const app = $('#app'); if (!app) return;
-    app.querySelectorAll('.pacts, .fab, #joinBtn, .rsvpcol, .tourbtn, .calbtn, .vcomm, .vshare, .playcard, .vunv, .vbadge.no').forEach((x) => { x.style.display = 'none'; });
+    app.querySelectorAll('.pacts, .fab, #joinBtn, .rsvpcol, .tourbtn, .calbtn, .vshare, .playcard, .vunv, .vbadge.no').forEach((x) => { x.style.display = 'none'; });
     if (app.querySelector('.sbx-note')) return;
     const until = new Date(Number(S.exp) || Date.now()).toLocaleDateString(undefined, { day: 'numeric', month: 'long' });
     const note = document.createElement('div');

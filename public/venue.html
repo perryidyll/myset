@@ -25,7 +25,7 @@
      the label, so a reload or a copy of the link opens the same preview. The private
      sample door is asked instead of the public one; sample.js is loaded for it alone,
      so a guest never downloads it. The bare address is the ordinary "no such page". The artist page's hook, for kind 'venue'. -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const m=/[#?&]sample-profile(?![\w-])/.test(location.hash+'&'+location.search);let K=null;try{K=JSON.parse(localStorage.getItem('myset.sample')||'null')}catch(e){}if(m){K={slug:S.toLowerCase(),key:'sample-profile',kind:'venue',at:Date.now()};try{localStorage.setItem('myset.sample',JSON.stringify(K))}catch(e){}}if(K&&K.kind==='venue'&&K.slug===S.toLowerCase()){window.__sample=K;const f=fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'page',slug:K.slug,key:K.key,kind:'venue'})});f.catch(()=>{});window.__sampleP=f;const j=document.createElement('script');j.src='/sample.js?v=503961fa';window.__sampleJs=new Promise(r=>{j.onload=r;j.onerror=r});document.head.appendChild(j);return}const f=fetch('/api/fan?what=venue&v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const m=/[#?&]sample-profile(?![\w-])/.test(location.hash+'&'+location.search);let K=null;try{K=JSON.parse(localStorage.getItem('myset.sample')||'null')}catch(e){}if(m){K={slug:S.toLowerCase(),key:'sample-profile',kind:'venue',at:Date.now()};try{localStorage.setItem('myset.sample',JSON.stringify(K))}catch(e){}}if(K&&K.kind==='venue'&&K.slug===S.toLowerCase()){window.__sample=K;const f=fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'page',slug:K.slug,key:K.key,kind:'venue'})});f.catch(()=>{});window.__sampleP=f;const j=document.createElement('script');j.src='/sample.js?v=6cd55772';window.__sampleJs=new Promise(r=>{j.onload=r;j.onerror=r});document.head.appendChild(j);return}const f=fetch('/api/fan?what=venue&v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -336,7 +336,8 @@ body{padding-bottom:34px}
    the way the artist profiles are set up with the photos"): the artist page's cover,
    its portrait-and-strip cluster over the cover's foot, the same lightbox. A venue
    has no portrait, so its first photo takes that square and the next three the
-   strip; any after that ride a rail under the name. Every picture enlarges on a tap. */
+   strip; any after that are in the lightbox, a swipe away (2026-10-01: a lone photo on a
+   rail under the name looked lost). Every picture enlarges on a tap. */
 .pcover{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
 .pcover img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:center 40%;display:block}
 .pcover.blank{aspect-ratio:16/10;background:var(--grad);display:grid;place-items:center;
@@ -356,20 +357,55 @@ body{padding-bottom:34px}
 .cluster.solo .pav{width:120px;height:120px;border-radius:28px}
 .pth{width:40px;height:40px;border-radius:13px;border:3px solid var(--bg);box-shadow:var(--sh-2);overflow:hidden}
 .pth img,.pav img{display:block;width:100%;height:100%;object-fit:cover}
-.pth,.pav,.prail div{animation:pop .55s var(--spring) both}
+.pth,.pav{animation:pop .55s var(--spring) both}
 .strip .pth:nth-child(2){animation-delay:.06s}.strip .pth:nth-child(3){animation-delay:.12s}
 @keyframes pop{from{opacity:0;transform:scale(.6)}}
 .strip .pth:nth-child(1){animation-name:pop1}
 @keyframes pop1{from{opacity:0;transform:translateX(20px) scale(.6)}to{transform:translateX(20px)}}
-.prail{display:flex;gap:9px;overflow-x:auto;padding:14px 18px 2px;scrollbar-width:none;scroll-snap-type:x mandatory}
-.prail::-webkit-scrollbar{display:none}
-.prail div{flex:0 0 96px;height:96px;border-radius:18px;overflow:hidden;box-shadow:var(--sh-1);scroll-snap-align:start}
-.prail img{display:block;width:100%;height:100%;object-fit:cover}
+/* THE FOUR DOORS (the founder, 2026-10-01: "menu and events buttons, as well as a
+   'what guests say' button … in a 2x2 layout in this blank space to the right of the
+   main profile photo"): the artist page's door recipe, a pink-orange ring and words,
+   as four tiles exactly the square's height. The top pair sits on the cover's faded
+   foot, so each tile carries its own frosted ground. */
+.vdoors{flex:1 1 auto;min-width:0;margin-left:12px;display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:52px;gap:8px}
+.vdoors.wide{margin:16px 20px 0;grid-template-columns:repeat(var(--n,4),1fr);grid-auto-rows:56px}
+/* Three doors (a venue with no menu and no phone): the last one takes the whole row, never a hole. */
+.vdoors:not(.wide) .vdoor:last-child:nth-child(odd){grid-column:span 2}
+.vdoor{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;
+  padding:4px 6px;border-radius:16px;position:relative;text-align:center;
+  background:var(--surface);background:color-mix(in srgb,var(--surface) 80%,transparent);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:var(--sh-1);
+  color:var(--accent-2);font:inherit;font-size:11.5px;font-weight:700;letter-spacing:-.01em;line-height:1.12;
+  cursor:pointer;border:0;-webkit-tap-highlight-color:transparent;
+  transition:transform .22s var(--spring);animation:pop .5s var(--spring) both}
+.vdoor::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;background:var(--grad);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask-composite:exclude;pointer-events:none}
+.vdoor:active{transform:scale(.94)}
+.vdoor svg{width:17px;height:17px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
+.vdoor:nth-child(2){animation-delay:.06s}.vdoor:nth-child(3){animation-delay:.12s}.vdoor:nth-child(4){animation-delay:.18s}
+@media (max-width:359px){.vdoor svg{display:none}.vdoor{font-size:11px}}
+/* A section a door jumps to says hello when it lands. */
+.sect{scroll-margin-top:14px}
+.sect.hi{animation:secthi 1.1s var(--ease)}
+@keyframes secthi{0%,40%{color:var(--accent);transform:translateX(4px)}}
+/* More photos than the cluster holds: the last thumb says how many, and the
+   lightbox swipes through them all. */
+.pth{position:relative}
+.pth .plus{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.52);
+  color:#fff;font-size:12px;font-weight:700;letter-spacing:-.02em}
+.lbn{position:fixed;left:0;right:0;bottom:max(22px,env(safe-area-inset-bottom));text-align:center;
+  color:rgba(255,255,255,.8);font-size:13px;font-weight:600;letter-spacing:.02em;pointer-events:none}
+.lb img.nx{animation:lbnx .32s var(--spring) both}.lb img.pv{animation:lbpv .32s var(--spring) both}
+@keyframes lbnx{from{transform:translateX(38px);opacity:0}}@keyframes lbpv{from{transform:translateX(-38px);opacity:0}}
+/* The links, straight under the one line that says what the place is. */
+.links.vlinks{margin-top:14px}
+.vhead.vsub{padding-top:0}
 [data-zoom]{cursor:zoom-in}
 .lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:80;display:none;place-items:center;padding:20px;outline:none}
 .lb.on{display:grid;grid-template-rows:100%;animation:lbin .25s var(--ease) both}.lb img{max-width:100%;max-height:100%;border-radius:8px;animation:lbimg .35s var(--spring) both}
 @keyframes lbin{from{opacity:0}}@keyframes lbimg{from{transform:scale(.92);opacity:0}}
-@media (prefers-reduced-motion:reduce){.pth,.pav,.prail div,.strip .pth:nth-child(1),.lb.on,.lb img{animation:none}}
+@media (prefers-reduced-motion:reduce){.pth,.pav,.vdoor,.sect.hi,.strip .pth:nth-child(1),.lb.on,.lb img,.lb img.nx,.lb img.pv{animation:none}}
 
 .vhead{padding:18px 20px 0}
 .cluster+.vhead{padding-top:14px}
@@ -404,7 +440,6 @@ body{padding-bottom:34px}
   font-size:14.5px;font-weight:600;letter-spacing:-.012em;background:var(--surface);box-shadow:var(--sh-1);
   transition:transform .22s var(--spring)}
 .vacts a:active,.vacts button:active{transform:scale(.96)}
-.vacts a.pri{background:var(--accent);color:#fff;box-shadow:0 5px 18px rgba(255,55,95,.36)}
 .vacts a svg,.vacts button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;
   stroke-linejoin:round;flex:0 0 auto}
 
@@ -758,27 +793,45 @@ function seeMore(b){
   b.setAttribute('aria-expanded',SEE_MORE?'true':'false');
   const n=b.querySelector('span'); if(n) n.textContent=SEE_MORE?'See less':`See more · ${m?m.querySelectorAll('.r').length:''}`;
 }
-/* THE LIGHTBOX — the artist page's: one black sheet, a tap anywhere closes it. */
-let LBF=null;
+/* THE LIGHTBOX — the artist page's: one black sheet, a tap anywhere closes it. Since
+   2026-10-01 it is also the album: a swipe (or an arrow key) moves through every photo
+   on the page, so a photo the cluster has no room for is still one swipe away. */
+let LBF=null, GALLERY=[], LBI=-1, LBSWIPED=0;
+function lbShow(i,dir){
+  const lb=document.getElementById('lb'), u=GALLERY[i]; if(!u)return;
+  LBI=i;
+  const im=document.createElement('img');
+  im.alt=''; im.decoding='async'; im.onerror=()=>{if(im.getAttribute('src')!==u)im.src=u;};
+  im.src=cdn(u,1600); if(dir) im.className=dir>0?'nx':'pv';
+  const kids=[im];
+  if(GALLERY.length>1){ const n=document.createElement('div'); n.className='lbn'; n.textContent=`${i+1} / ${GALLERY.length}`; kids.push(n); }
+  lb.replaceChildren(...kids);
+}
 function lbOpen(el){
   const u=el.getAttribute('data-zoom'); if(!u)return;
-  const lb=document.getElementById('lb'), im=document.createElement('img');
-  im.alt=''; im.decoding='async'; im.onerror=()=>{if(im.getAttribute('src')!==u)im.src=u;};
-  im.src=cdn(u,1600); lb.replaceChildren(im); lb.classList.add('on');
+  if(!GALLERY.includes(u)) GALLERY=[u];
+  lbShow(GALLERY.indexOf(u),0);
+  const lb=document.getElementById('lb'); lb.classList.add('on');
   LBF=el; document.body.style.overflow='hidden';
   try{ lb.focus({preventScroll:true}); }catch(e){}
 }
+function lbStep(d){ if(GALLERY.length<2||LBI<0)return; lbShow((LBI+d+GALLERY.length)%GALLERY.length,d); }
 function lbClose(){
   const lb=document.getElementById('lb'); if(!lb.classList.contains('on'))return;
-  lb.classList.remove('on'); lb.replaceChildren(); document.body.style.overflow='';
+  lb.classList.remove('on'); lb.replaceChildren(); document.body.style.overflow=''; LBI=-1;
   if(LBF&&LBF.isConnected){ try{ LBF.focus({preventScroll:true}); }catch(e){} } LBF=null;
 }
 document.getElementById('app').addEventListener('click',e=>{const z=e.target.closest('[data-zoom]');if(z)lbOpen(z);});
 document.getElementById('app').addEventListener('keydown',e=>{
   if(e.key!=='Enter'&&e.key!==' ')return;
   const z=e.target.closest('[data-zoom]'); if(!z)return; e.preventDefault(); lbOpen(z);});
-document.getElementById('lb').addEventListener('click',lbClose);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')lbClose();});
+(()=>{ const lb=document.getElementById('lb'); let x0=null, y0=0;
+  lb.addEventListener('touchstart',e=>{const t=e.touches[0]; x0=t.clientX; y0=t.clientY;},{passive:true});
+  lb.addEventListener('touchend',e=>{ if(x0==null)return; const t=e.changedTouches[0], dx=t.clientX-x0, dy=t.clientY-y0; x0=null;
+    if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.3){ LBSWIPED=Date.now(); lbStep(dx<0?1:-1); } },{passive:true});
+  lb.addEventListener('click',()=>{ if(Date.now()-LBSWIPED<400)return; lbClose(); });
+})();
+document.addEventListener('keydown',e=>{if(e.key==='Escape')lbClose(); else if(LBI>=0&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){e.preventDefault(); lbStep(e.key==='ArrowRight'?1:-1);}});
 
 /* TIP THE STAFF (decision 0127): the community page's tip sheet, for the venue's
    team. Checkout comes back here (?paid=), and the server — never the URL — says
@@ -925,6 +978,14 @@ async function rsvpTap(b){
   delete b.dataset.busy;
 }
 document.getElementById('app').addEventListener('click',e=>{const b=e.target.closest('.rsvp');if(b){e.preventDefault();rsvpTap(b);}});
+/* A door on the page jumps to its section, which says hello when it lands. */
+function jump(id){
+  const el=document.getElementById(id); if(!el) return true;
+  const calm=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  el.scrollIntoView({behavior:calm?'auto':'smooth',block:'start'});
+  el.classList.remove('hi'); void el.offsetWidth; el.classList.add('hi');
+  return false;
+}
 function render(){
   const v=V.venue, gigs=V.gigs||[];
   const liveNow=gigs.find(g=>g.live)||null;
@@ -935,49 +996,81 @@ function render(){
   /* THE PHOTOS UP TOP (decision 0129): cover, then the first photo as the square and
      the next three as the strip over the cover's foot, then a rail for any more. */
   const shots=(v.photos||[]).filter(Boolean);
+  /* No cover but photos to spare (the generator found no wide shot good enough): the
+     last photo stands in, so the page never opens on an empty gradient. */
+  const cover=v.photo||(shots.length>=2?shots.pop():'');
+  GALLERY=[cover,...shots].filter(Boolean);
   const zoom=u=>`data-zoom="${esc(u)}" role="button" tabindex="0" aria-label="Enlarge photo"`;
   const img=(u,w,extra='')=>`<img src="${esc(cdn(u,w))}" alt="" decoding="async" data-raw="${esc(u)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"${extra}>`;
   const onair=liveNow?(liveNow.kind==='event'
       ? `<span class="onair"><span class="dot"></span>${esc(liveNow.title||'On now')}</span>`
       : `<a class="onair" href="/${esc(liveNow.slug)}/vote"><span class="dot"></span>${esc(liveNow.artist)} — on now</a>`):'';
-  h+=v.photo?`<div class="pcover rise" ${zoom(v.photo)} style="background-image:url('${esc(cdn(v.photo,48))}');background-size:cover;background-position:center">
-    <img src="${esc(cdn(v.photo,800))}" srcset="${esc(cdn(v.photo,480))} 480w, ${esc(cdn(v.photo,800))} 800w, ${esc(cdn(v.photo,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(v.photo)}" onerror="if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw}" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
+  h+=cover?`<div class="pcover rise" ${zoom(cover)} style="background-image:url('${esc(cdn(cover,48))}');background-size:cover;background-position:center">
+    <img src="${esc(cdn(cover,800))}" srcset="${esc(cdn(cover,480))} 480w, ${esc(cdn(cover,800))} 800w, ${esc(cdn(cover,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(cover)}" onerror="if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw}" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
     <div class="veil"></div>${onair}</div>`
     :`<div class="pcover rise blank">${esc((v.name||'?').slice(0,1).toUpperCase())}${onair}</div>`;
+  /* THE FOUR DOORS beside the square: Menu, Events, What guests say, Directions —
+     each only when it leads somewhere (the third rule), the gap filled by Call, then
+     Share, so the grid stays two by two. */
+  const sample=!!window.__sample;
+  const I={menu:'<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/>',
+    ev:'<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+    say:'<path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/><path d="M12 8.6l1 2.1 2.3.3-1.7 1.6.4 2.3-2-1.1-2 1.1.4-2.3-1.7-1.6 2.3-.3z"/>',
+    dir:'<path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/>',
+    call:'<path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A15 15 0 014 5a2 2 0 012-2z"/>',
+    share:'<path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>'};
+  const door=(k,label,attrs)=>`<a class="vdoor" data-door="${k}" ${attrs}><svg viewBox="0 0 24 24">${I[k]}</svg><span>${label}</span></a>`;
+  const hasMenu=!!(v.menu&&(((v.menu.items||[]).length)||v.menu.note));
+  const tel=v.phone?v.phone.replace(/[^0-9+]/g,''):'';
+  let doors=[
+    hasMenu?door('menu','Menu',`href="#vmenu" onclick="return jump('vmenu')"`)
+      :(v.menu&&v.menu.url?door('menu','Menu',`href="${esc(v.menu.url)}" target="_blank" rel="noopener noreferrer"`):''),
+    door('ev','Events',`href="#vevents" onclick="return jump('vevents')"`),
+    sample?door('say','What guests say',`href="#" onclick="toast('Guests’ posts, photos and reviews land here once the page is claimed.');return false"`)
+      :door('say','What guests say',`href="/v/${esc(SLUG)}/community"`),
+    dh?door('dir','Directions',`href="${esc(dh)}" target="_blank" rel="noopener noreferrer"`):'',
+  ].filter(Boolean);
+  const spare=[tel?door('call','Call',`href="tel:${esc(tel)}"`):'', sample?'':door('share','Share',`href="#" onclick="share();return false"`)].filter(Boolean);
+  while(doors.length<4&&spare.length) doors.push(spare.shift());
+  const inDoors=k=>doors.some(d=>d.includes(`data-door="${k}"`));
+  const doorsHtml=doors.join('');
+
   if(shots.length){
-    const side=shots.slice(1,4);
+    const side=shots.slice(1,4), more=shots.length-4;
     h+=`<div class="cluster${side.length?'':' solo'}">
-      ${side.length?`<div class="strip">${side.map(u=>`<div class="pth" ${zoom(u)}>${img(u,220)}</div>`).join('')}</div>`:''}
-      <div class="pav" ${zoom(shots[0])} style="background-image:url('${esc(cdn(shots[0],48))}')">${img(shots[0],320)}</div></div>`;
+      ${side.length?`<div class="strip">${side.map((u,i)=>`<div class="pth" ${zoom(u)}>${img(u,220)}${i===2&&more>0?`<span class="plus">+${more}</span>`:''}</div>`).join('')}</div>`:''}
+      <div class="pav" ${zoom(shots[0])} style="background-image:url('${esc(cdn(shots[0],48))}')">${img(shots[0],320)}</div>
+      <nav class="vdoors" aria-label="On this page">${doorsHtml}</nav></div>`;
   }
+
+  /* THE LINKS, DRIFTING (decision 0129), now straight under the tagline (the founder,
+     2026-10-01: "directly beneath their 1-sentence description"). */
+  const L=v.links||{};
+  const lkeys=Object.keys(VLABEL).filter(k=>L[k]);
+  const pills=lkeys.map(k=>`<a href="${esc(L[k])}" target="_blank" rel="noopener noreferrer">${VICON[k]}${VLABEL[k]}</a>`);
+  const linksHtml=pills.length?`<div class="links vlinks" id="links">${pills.join('')}${pills.length>=2&&!matchMedia('(prefers-reduced-motion:reduce)').matches?pills.map(ghost).join(''):''}</div>`:'';
 
   h+=`<div class="vhead">
     <h1>${esc(v.name)}${v.verified
       ? '<span class="vbadge">✓ Verified</span>'
       : '<span class="vbadge no">Unverified listing</span>'}</h1>
     ${v.tagline?`<p class="tag">${esc(v.tagline)}</p>`:''}
+  </div>
+  ${linksHtml}
+  <div class="vhead vsub">
     <p class="place">${esc(v.address||[v.city,v.country].filter(Boolean).join(', '))}</p>
     ${(V.vouches&&V.vouches.count)?`<p class="place" style="color:var(--accent-ink);font-weight:600">
       ${V.vouches.count} artist${V.vouches.count===1?'':'s'} who play${V.vouches.count===1?'s':''} here confirmed it${V.verified?'':' \u2014 one of the things the green tick needs'}</p>`:''}
   </div>
-  ${shots.length>4?`<div class="prail">${shots.slice(4).map(u=>`<div ${zoom(u)}>${img(u,240)}</div>`).join('')}</div>`:''}
-
-  <div class="vacts">
-    ${dh?`<a class="pri" href="${esc(dh)}" target="_blank" rel="noopener noreferrer">
-      <svg viewBox="0 0 24 24"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
-      Directions</a>`:''}
-    <a class="vcomm" href="/v/${esc(SLUG)}/community"><svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.4A8 8 0 1121 12z"/></svg>Community</a>
-    <button type="button" class="vshare" onclick="share()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7.5 7.5L12 3l4.5 4.5M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>Share</button>
-    ${v.phone?`<a href="tel:${esc(v.phone.replace(/[^0-9+]/g,''))}">
-      <svg viewBox="0 0 24 24"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A15 15 0 014 5a2 2 0 012-2z"/></svg>
-      Call</a>`:''}
-    ${v.whatsapp?`<a href="https://wa.me/${esc(v.whatsapp.replace(/[^0-9]/g,''))}" target="_blank" rel="noopener noreferrer">
+  ${shots.length?'':`<nav class="vdoors wide" style="--n:${doors.length}" aria-label="On this page">${doorsHtml}</nav>`}`;
+  /* What the doors did not take stays a pill: Share, Call, WhatsApp. */
+  const rest=[
+    inDoors('share')?'':`<button type="button" class="vshare" onclick="share()"><svg viewBox="0 0 24 24">${I.share}</svg>Share</button>`,
+    tel&&!inDoors('call')?`<a href="tel:${esc(tel)}"><svg viewBox="0 0 24 24">${I.call}</svg>Call</a>`:'',
+    v.whatsapp?`<a href="https://wa.me/${esc(v.whatsapp.replace(/[^0-9]/g,''))}" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 24 24"><path d="M21 11.5a8.5 8.5 0 01-12.6 7.4L4 20l1.2-4.2A8.5 8.5 0 1121 11.5z"/></svg>
-      WhatsApp</a>`:''}
-    ${v.menu&&v.menu.url?`<a href="${esc(v.menu.url)}" target="_blank" rel="noopener noreferrer">
-      <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>
-      Menu</a>`:''}
-  </div>`;
+      WhatsApp</a>`:''].filter(Boolean);
+  if(rest.length) h+=`<div class="vacts">${rest.join('')}</div>`;
   /* TIP THE STAFF (decision 0127): only while the venue takes cards and its plan has
      tips — the server's own gate (shapeVenue tipsOn), so the button never shrugs. */
   if(v.tipsOn) h+=`<div class="tipbar"><button onclick="openTip()"><b>Tip the staff</b><small>Show the team some love</small></button></div>`;
@@ -996,11 +1089,11 @@ function render(){
           ${g.confirmed?'<span class="okv">✓ Confirmed by the venue</span>':''}
         </div>${rsvpCol(g)}${isEv?'':'<span class="chev">›</span>'}</div>`;
   };
-  if(liveNow) h+=`<div class="sect">On now</div><div class="rows">${gigRow(liveNow,false)}</div>`;
+  if(liveNow) h+=`<div class="sect" id="vevents">On now</div><div class="rows">${gigRow(liveNow,false)}</div>`;
   const upcoming=gigs.filter(g=>!g.live);
   if(upcoming.length){
     const first=upcoming.slice(0,3), rest=upcoming.slice(3);
-    h+=`<div class="sect">Coming up</div><div class="rows">${first.map(g=>gigRow(g,true)).join('')}</div>`;
+    h+=`<div class="sect"${liveNow?'':' id="vevents"'}>Coming up</div><div class="rows">${first.map(g=>gigRow(g,true)).join('')}</div>`;
     if(rest.length){
       const days=[];
       for(const g of rest){ const d=days.find(x=>x.date===g.date); if(d) d.gigs.push(g); else days.push({date:g.date,gigs:[g]}); }
@@ -1011,24 +1104,16 @@ function render(){
     }
     h+=`<p class="fineprint">Shows are listed by the artists themselves from their own MySet calendars${gigs.some(g=>g.confirmed)?'; a ✓ means the venue confirmed it':''}. Times can change — check with the venue.</p>`;
   } else if(!liveNow){
-    h+=`<div class="sect">Coming up</div>
+    h+=`<div class="sect" id="vevents">Coming up</div>
       <div class="empty"><b>Nothing listed yet</b>
         <p style="margin:0">When an artist adds a gig here to their MySet calendar, it shows up on this page on its own.</p></div>`;
   }
 
   if(v.about) h+=`<div class="sect">About</div><div class="card"><p class="about">${esc(v.about)}</p></div>`;
 
-  /* THE LINKS, DRIFTING (decision 0129): the artist page's strip, same engine. */
-  const L=v.links||{};
-  const keys=Object.keys(VLABEL).filter(k=>L[k]);
-  if(keys.length){
-    const pills=keys.map(k=>`<a href="${esc(L[k])}" target="_blank" rel="noopener noreferrer">${VICON[k]}${VLABEL[k]}</a>`);
-    h+=`<div class="sect">Find them</div><div class="links" id="links">${pills.join('')}${pills.length>=2&&!matchMedia('(prefers-reduced-motion:reduce)').matches?pills.map(ghost).join(''):''}</div>`;
-  }
-
   const items=(v.menu&&v.menu.items)||[];
   if(items.length||(v.menu&&(v.menu.url||v.menu.note))){
-    h+=`<div class="sect">Menu</div><div class="rows">`;
+    h+=`<div class="sect" id="vmenu">Menu</div><div class="rows">`;
     if(v.menu.note) h+=`<div class="mi"><div class="n">${esc(v.menu.note)}</div></div>`;
     let sec=null;
     for(const it of items){

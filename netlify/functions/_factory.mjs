@@ -414,7 +414,8 @@ function buildPayload(st, { facts, sources, copy, shots, usage, ctx }) {
     // hours only when all seven days are known: a guessed "open till one" sends somebody to a shut door
     const hours = parseHours(o.hours) || parseHours(ld.hours);
     return Object.assign(payload, { about: copy.text, address, mapUrl, phone: clean(o.phone || ld.telephone, 28), lat: o.lat ?? ld.lat ?? null,
-      lng: o.lng ?? ld.lng ?? null, amenities: amenitiesOf(o.tags, facts), ...(hours ? { hours } : {}) });
+      lng: o.lng ?? ld.lng ?? null, amenities: amenitiesOf(o.tags, facts), ...(hours ? { hours } : {}),
+      ...(st.site && st.site.ok && st.site.menu ? { menuUrl: st.site.menu } : {}) });
   }
   const { first, last } = splitName(st.name, actTypeOf(facts, st.d));
   return Object.assign(payload, { first, last, style: copy.style.text, bio: copy.text });

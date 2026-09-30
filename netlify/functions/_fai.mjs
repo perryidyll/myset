@@ -287,7 +287,13 @@ const FROM_RANK = { youtube: 0, website: 1, instagram: 2, founder: 2 };
 export function pickPhotos(judged, { kind = 'artist' } = {}) {
   const J = (judged || []).filter((j) => j && j.isAct && !j.dup && j.textOverlay < 0.3);
   const rank = (a, b) => (FROM_RANK[a.from] ?? 3) - (FROM_RANK[b.from] ?? 3) || b.quality - a.quality;
-  const cover = J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && j.width >= j.height * 1.2).sort(rank)[0] || null;
+  const wide = (j) => j.width >= j.height * 1.2;
+  /* A venue's site rarely has a 1000-px hero the judge calls a cover, and a venue page
+     without one opened on an empty gradient (Sand & Tan, 2026-10-01). So a venue takes
+     the best wide photo it has, down to 800 px, before it goes without. */
+  const cover = J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j)).sort(rank)[0]
+    || (kind === 'venue' && J.filter((j) => j.quality >= 0.6 && j.width >= 800 && wide(j) && (j.coverOk || j.textOverlay < 0.15)).sort(rank)[0])
+    || null;
   let avatar = null;
   if (kind !== 'venue') {                                   // a venue page has no portrait
     const ok = J.filter((j) => j !== cover && j.avatarOk && j.quality >= 0.6 && j.people >= 1 && Math.min(j.width, j.height) >= 400

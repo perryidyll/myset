@@ -315,6 +315,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       if (Array.isArray(payload.amenities)) p.amenities = payload.amenities;
       if (payload.hours && typeof payload.hours === 'object') p.hours = { ...p.hours, ...payload.hours };
       p.links = { ...p.links, ...(payload.links || {}) };
+      if (/^https:\/\//.test(String(payload.menuUrl || ''))) p.menu = { ...(p.menu || {}), url: String(payload.menuUrl).slice(0, 300) };   // the page's Menu door
       if (shots.cover) p.photo = shots.cover.url;
       p.photos = ['p0', 'p1', 'p2', 'p3', 'p4'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
       return true;
