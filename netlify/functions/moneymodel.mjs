@@ -72,7 +72,7 @@ export default async (req) => {
   const url = new URL(req.url);
   /* a sign-in on the dashboard lands on the dashboard; the cookie's scope is /moneymodel either way */
   const onShows = /\/shows(\.|\/|$)/.test(url.pathname);
-  const refused = await gate(req, { landing: onShows ? '/moneymodel/shows' : LANDING, page: onShows ? { title: 'Every show on MySet', kicker: 'MySet · Every show', button: 'Open the dashboard' } : {} });
+  const refused = await gate(req, { landing: onShows ? '/moneymodel/shows' : LANDING, page: onShows ? { title: 'Show log', kicker: 'MySet · Every show', button: 'Open the dashboard' } : {} });
   if (refused) return refused;
 
   /* the founder's register dashboard and its data (decision 0095) — _showsdash.mjs */

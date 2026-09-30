@@ -262,7 +262,7 @@ console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every pa
   eq('nor does a refresh without the code', refresh.status, 401);
   const page = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { cookie } }));
   const html = await page.text();
-  ok('with it, the page comes through the model\'s door', page.status === 200 && /Every show on MySet/.test(html));
+  ok('with it, the page comes through the model\'s door', page.status === 200 && /Show log/.test(html));
   ok('…with no external script, stylesheet or font (the CSP): the chart from /vendor/, the type is the system\'s (the /mediadash look)', !/<script src="http/.test(html) && !/<link rel="stylesheet" href="http/.test(html) && !/fonts\.googleapis/.test(html) && /\/vendor\/chart\.umd\.min\.js/.test(html));
   eq('…and never cached or indexed', [page.headers.get('cache-control'), page.headers.get('x-robots-tag')], ['private, no-store', 'noindex, nofollow']);
   const data = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows.json?months=all', { headers: { cookie, accept: 'application/json' } }))).json();
@@ -319,6 +319,12 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   eq('Stripe: (room + merch) × the effective rate + 30¢ a payment', c1.stripe.usd, Math.round(((30 * B.stripe.effectivePct / 100) + 3 * 0.30) * 1e4) / 1e4);
   eq('money Stripe never answered: no Stripe figure and no total, never $0', [C.costOf(row({ money: { known: false, merch: {} } }), B).stripe, C.costOf(row({ money: { known: false, merch: {} } }), B).total], [null, null]);
   eq('a night that is not counted is not priced', C.costOf(row({ status: 'refused' }), B), null);
+  const cp = (o) => C.costOf(row({ showId: 'never-read', ...o }), B).myset;
+  const srv = c2.server.usd, r4 = (n) => Math.round(n * 1e4) / 1e4;
+  eq('MySet profit: the plan\'s cut of room + merch, less the server (Hobbyist 25%)', cp({ artist: { id: 'someone-else', plan: 'free' } }).usd, r4(30 * 0.25 - srv));
+  eq('MySet profit on a Rock Star night: 2%', cp({ artist: { id: 'someone-else', plan: 'pro' } }).usd, r4(30 * 0.02 - srv));
+  eq('the founder\'s own night pays no cut: the server alone, a loss', [cp({ artist: { id: 'perry-idyll', plan: 'pro' } }).usd, cp({ artist: { id: 'perry-idyll' } }).fee], [r4(-srv), 0]);
+  eq('money Stripe never answered: no profit, never a guess', C.costOf(row({ money: { known: false, merch: {} } }), B).myset, null);
   const busy = C.costBlock({ ...actuals, deploys: 400, deploysThisPeriod: 400, shipping: { credits30: 6000 } }, credits);
   eq('INVARIANT 0fx: 400 deploys move no show\'s cost', C.costOf(row(), busy), c1);
 }
