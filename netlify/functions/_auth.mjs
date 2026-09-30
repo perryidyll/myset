@@ -84,6 +84,7 @@ const RESERVED = new Set(['api','studio','vote','artist','admin','app','www','st
   'mediadash',                  // the Instagram dashboard (0092) — found by that check on 2026-09-25
   'factory', 'sample',          // the sample-page console and its door (0101)
   'crm',                        // MySet CRM, the founder's outreach desk (0108) — held by nobody on 2026-09-28
+  'dash',                       // the founder's four dashboards (0127) — held by nobody on 2026-09-30
   'constructor']);              // the one property name cleanSlug lets through — never a page (0110)
 
 export async function artistBySlug(slug) {

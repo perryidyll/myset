@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-30 14:27 — 45f6ed6 — wt3@ux/dash-and-locks (9 files since origin/main)
+**tl;dr:** New myset.vip/dash (four windows: Show log, Media Dash, CRM, money model); the money model needs no passcode now; the Show log opens with the CRM's passcode on the CRM's lock screen
+**Other sessions:** Decision 0127. _showlock.mjs: CRM passcode (HQ_PASSCODE), own tries doc 'showlock', cookie slk Path=/moneymodel. _hqlock tryPasscode/shutUntil take a doc. moneymodel.mjs: only /shows* is gated; /moneymodel + live.json open; _passgate gate() now unused. 'dash' reserved.
+
 ### 2026-09-30 14:13 — 09d1377 — wt3@ux/show-log-profit (6 files since origin/main)
 **tl;dr:** Show log (was 'Every show') has a MySet profit column after Costs; the CRM's theme button is the Media Dash's 34px size
 **Other sessions:** costOf() now returns myset {usd, fee, cut, founder, estimate}: plan cut (PLANS[plan].cut) × (room total + merch) − server; founder nights cut 0. Stripe fee deliberately NOT subtracted (paid by the connected account). moneymodel gate title is 'Show log'.

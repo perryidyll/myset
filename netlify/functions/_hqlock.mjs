@@ -59,7 +59,7 @@ export async function checkPasscode(code, env = process.env) {
 /* The cookie is `<expiry>.<mac>`. The mac covers the account, the expiry and a
    fingerprint of the stored hash, so a copied cookie opens nothing for another
    account, and a new passcode invalidates every earlier one. */
-const fingerprint = (env) => createHash('sha256').update(String(env.HQ_PASSCODE || '').trim()).digest('base64url').slice(0, 16);
+export const fingerprint = (env) => createHash('sha256').update(String(env.HQ_PASSCODE || '').trim()).digest('base64url').slice(0, 16);
 const mac = async (aid, exp, env) => createHmac('sha256', await authSecret()).update(`hq-unlock|${aid}|${exp}|${fingerprint(env)}`).digest('base64url');
 const attrs = (maxAge, secure) => `Path=${PATH}; Max-Age=${maxAge}; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}`;
 
@@ -84,19 +84,20 @@ export async function unlocked(req, aid, { now = Date.now(), env = process.env }
 }
 
 /** When the door opens again after too many wrong tries (0 while it is open). */
-export async function shutUntil(now = Date.now()) {
-  const { data } = await readDoc(LOCK_DOC, null);
+export async function shutUntil(now = Date.now(), doc = LOCK_DOC) {
+  const { data } = await readDoc(doc, null);
   return data && data.until > now ? data.until : 0;
 }
 
 /** One try: { ok: true } | { ok: false, left } | { ok: false, until, shut }. `shut` is
- *  true on the try that shut the door, so the founder's phone hears it once. */
-export async function tryPasscode(code, { now = Date.now(), env = process.env } = {}) {
-  const until = await shutUntil(now);
+ *  true on the try that shut the door, so the founder's phone hears it once. `doc` is
+ *  whose count it is: the Show log's door keeps its own (_showlock.mjs). */
+export async function tryPasscode(code, { now = Date.now(), env = process.env, doc = LOCK_DOC } = {}) {
+  const until = await shutUntil(now, doc);
   if (until) return { ok: false, until };
   const good = await checkPasscode(code, env);
   let out = null;
-  await casDoc(LOCK_DOC, () => ({}), (d) => {
+  await casDoc(doc, () => ({}), (d) => {
     if (d.until > now) { out = { ok: false, until: d.until }; return false; }
     if (good) { out = { ok: true }; if (!d.fails) return false; d.fails = 0; return true; }
     d.fails = (d.last && now - d.last < LOCK_MINUTES * 60e3 ? d.fails || 0 : 0) + 1;
