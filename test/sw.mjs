@@ -168,4 +168,19 @@ await handlers.activate({ waitUntil: (p) => p });
 await new Promise((res) => setTimeout(res, 10));
 ok('activate deletes every other cache', !stores.has('myset-runtime-v3') && stores.has('myset-runtime-v4'));
 
+/* --- a tapped alert lands in its own app (decision 0125) --- */
+async function tap(url, open) {
+  const log = [];
+  self.clients.matchAll = async () => open.map((u) => ({ url: ORIGIN + u, async focus() { log.push('focus ' + u); } }));
+  self.clients.openWindow = async (u) => { log.push('open ' + u); };
+  let w; handlers.notificationclick({ notification: { data: url ? { url } : undefined, close() {} }, waitUntil(p) { w = p; } });
+  await w; return log.join(', ');
+}
+ok('a venue alert focuses the open Venue Studio, not the Studio', await tap('/venues?tab=shows', ['/studio?tab=merch', '/venues']) === 'focus /venues');
+ok('a venue alert opens the Venue Studio when only the Studio is open', await tap('/venues?tab=shows', ['/studio']) === 'open /venues?tab=shows');
+ok('an artist alert focuses the Studio, not the Venue Studio', await tap('/studio?tab=merch', ['/venues', '/studio']) === 'focus /studio');
+ok('an artist alert opens the Studio when only the Venue Studio is open', await tap('/studio?tab=merch', ['/venues?tab=shows']) === 'open /studio?tab=merch');
+ok('an alert with no address still goes to the Studio', await tap(null, ['/studio']) === 'focus /studio');
+ok('a fan page is never mistaken for the app', await tap('/crm', ['/perryidyll', '/studio']) === 'open /crm');
+
 console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0);
