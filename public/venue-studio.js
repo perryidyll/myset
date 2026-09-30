@@ -13,7 +13,7 @@ const SAMPLE=(()=>{try{
   if(q.get('sample')||!TOKEN)return k;
 }catch(e){} return null;})();
 if(SAMPLE) TOKEN='';
-let V=null, ME=null, SHOWS=null, AMEN=[];
+let V=null, ME=null, GIGS=null, AMEN=[];
 let EVENTS=null, PITCHES=null, STATS=null, VERIFY=null, VOUCH=null;
 let TAB=SAMPLE?'page':(localStorage.getItem('myset.vtab')||'page');   // a preview opens on its page (0101)
 
@@ -414,7 +414,7 @@ async function loadVenue(){
     gate(d.error); return;
   }
   V=d.venue; AMEN=d.amenities||[]; VOUCH=d.vouches||VOUCH; render();
-  if(TAB==='shows'){ loadShows(); loadEvents(); loadPitches(); }
+  if(TAB==='shows'){ loadGigs(); loadEvents(); loadPitches(); }
   if(TAB==='numbers') loadStats();
 }
 async function loadMe(){
@@ -499,19 +499,57 @@ async function savePassword(){
   PW_CODE_MODE=false; closeSheet(); loadMe();
   toast(d.signedOut?`Saved — ${d.signedOut} other device${d.signedOut===1?'':'s'} signed out`:'Saved — that’s your password from now on');
 }
-async function loadShows(force){
-  if(SHOWS&&!force)return;
-  if(!V||!V.slug)return;
-  /* the public door does not know a sample until it is claimed: the empty list a
-     brand-new page starts with, rather than a spinner that never stops (0101) */
-  if(SAMPLE){ SHOWS={ok:true,gigs:[]}; if(TAB==='shows')render(); return; }
-  try{ SHOWS=await fetch(`${API}/venue?v=${encodeURIComponent(V.slug)}`,{cache:'no-store'}).then(r=>r.json()); }
-  catch(e){ SHOWS={ok:false}; }
+/* THE SHOWS ARTISTS LIST HERE, one row per calendar rule, with the venue's answer
+   (decision 0128): '' waiting, 'ok' confirmed, 'no' not at this place. */
+async function loadGigs(force){
+  if(GIGS&&!force)return;
+  GIGS=await post('/venueadmin',{action:'gigList'});
   if(TAB==='shows'&&V)render();
+}
+const REPEAT_WORD={weekly:d=>'Every '+dowName(d),biweekly:d=>'Every other '+dowName(d),monthly:()=>'Every month',yearly:()=>'Every year'};
+const lc1=t=>t.charAt(0).toLowerCase()+t.slice(1);   // "every Thursday", the day keeps its capital
+const gigWhen=g=>`${g.repeat&&REPEAT_WORD[g.repeat]?REPEAT_WORD[g.repeat](g.next)+' · next '+dayMonth(g.next):dowName(g.next)+' '+dayMonth(g.next)} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}`;
+function gigsSection(gigs){
+  if(gigs===null) return `<div class="sec"><span class="kick">Shows artists listed here</span></div><div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Looking…</div></div>`;
+  if(!gigs.length) return `<div class="sec"><span class="kick">Shows artists listed here</span></div><div class="list"><div class="row muted">No gigs point here yet. Two things to check: your <b>name</b>, and your <b>city and country</b> — they have to match what the artists type.</div></div>`;
+  const row=(g,btns)=>`<div class="row" style="flex-wrap:wrap">
+      <div class="m" style="flex:1 1 200px"><div class="t">${esc(g.artist)}${g.st==='ok'?' <span style="color:var(--good)">✓</span>':''}</div>
+        <div class="by">${esc(gigWhen(g))}</div>
+        <div class="s">Listed as “${esc(g.listedAs)}”${g.repeat?' · a recurring show':''}</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px">${btns}<a class="act" href="/${esc(g.slug)}">Page</a></div></div>`;
+  const wait=gigs.filter(g=>!g.st), ok=gigs.filter(g=>g.st==='ok'), no=gigs.filter(g=>g.st==='no');
+  const k=g=>esc(g.key);
+  return `${wait.length?`<div class="sec"><span class="kick">Waiting for you</span><span class="kick">${wait.length}</span></div>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Is each of these really at your place? Your page shows them either way until you say.</p>
+    <div class="list">${wait.map(g=>row(g,`<button class="act pri" onclick="gigAnswer('${k(g)}','ok')">Approve</button><button class="act warn" onclick="gigAnswer('${k(g)}','no')">Not here</button>`)).join('')}</div>`:''}
+    <div class="sec"><span class="kick">Confirmed</span><span class="kick">${ok.length}</span></div>
+    ${ok.length?`<div class="list">${ok.map(g=>row(g,`<button class="act" onclick="gigAnswer('${k(g)}','')">Undo</button>`)).join('')}</div>`
+      :`<div class="list"><div class="row muted">Nothing confirmed yet — a show you approve says “Confirmed by the venue” on your page.</div></div>`}
+    ${no.length?`<div class="sec"><span class="kick">Not at your place</span><span class="kick">${no.length}</span></div>
+    <div class="list">${no.map(g=>row(g,`<button class="act" onclick="gigAnswer('${k(g)}','')">Undo</button>`)).join('')}</div>`:''}`;
+}
+function gigAnswer(key,st){
+  const g=((GIGS&&GIGS.gigs)||[]).find(x=>x.key===key); if(!g)return;
+  /* A recurring show is confirmed AS recurring, in words, before it is sent — the
+     founder: "it must be made clear that they are confirming it's a recurring show". */
+  if(st==='ok'&&g.repeat){
+    openSheet(`<div class="dg"><h3>Is this a recurring show?</h3>
+      <p class="muted" style="font-size:14px"><b>${esc(g.artist)}</b> says they play here <b>${esc(lc1(REPEAT_WORD[g.repeat](g.next)))}</b> at ${fmtTime(g.time)}. Approving it confirms <b>every</b> one of those nights, not just the next — you only do this once.</p>
+      <button class="big" style="margin-top:16px" onclick="closeSheet();gigSend('${esc(key)}','ok',true)">Yes, it’s ${esc(lc1(REPEAT_WORD[g.repeat](g.next)))}</button>
+      <button class="big alt" style="margin-top:10px" onclick="closeSheet()">Not now</button></div>`);
+    return;
+  }
+  gigSend(key,st,false);
+}
+async function gigSend(key,st,recurring){
+  const d=await post('/venueadmin',{action:'gigSet',key,st,recurring});
+  if(!d.ok){ toast(d.error||'Couldn’t save that'); return; }
+  GIGS=d; render();
+  toast(st==='ok'?'Confirmed — it says so on your page':st==='no'?'Taken off your page':'Undone');
 }
 // a new tab opens at its top, never at the old tab's offset (as the Artist Studio)
 function setTab(t){ if(t!==TAB)window.scrollTo(0,0); TAB=t; if(!SAMPLE)localStorage.setItem('myset.vtab',t); render();   // a preview leaves the phone's own saved tab alone (0101)
-  if(t==='shows'){ loadShows(); loadEvents(); loadPitches(); }
+  if(t==='shows'){ loadGigs(); loadEvents(); loadPitches(); }
   if(t==='numbers') loadStats();
   if(t==='merch'){ loadVComm(); loadVMerchLim(); loadVWishes(); }
   if(t==='page') loadVerify();
@@ -561,8 +599,8 @@ async function savePage(){
   // a link that isn't a map link is dropped on the way in — say so rather than
   // letting it look saved
   if(typedMap&&!(V.maps&&V.maps.source)) toast('Saved — but that wasn’t a Google or Apple Maps link');
-  SHOWS=null; EVENTS=null; STATS=null;   // the place changed, so everything derived does
-  loadShows(true); loadEvents(true);
+  GIGS=null; EVENTS=null; STATS=null;   // the place changed, so everything derived does
+  loadGigs(true); loadEvents(true);
   if(val('lkWeb')) autoVerify();
 }
 /* Saving a website is the moment to check it, so verification can happen without
@@ -668,39 +706,27 @@ let VPLAN=null;
 async function loadPlan(force){ if(VPLAN&&!force) return VPLAN; const d=await post('/venueadmin',{action:'planGet'}); if(d&&d.ok){ VPLAN=d; if(V){ V.plan=d.plan; V.limits=d.limits; V.plans=d.plans; render(); } } return VPLAN; }
 const vTierList=(k)=>VTIER_COPY[k].items.map(x=>Array.isArray(x)
   ?`<li><b>${x[0]}</b>${x[1]||''}</li>`:`<li>${x}</li>`).join('');
-/* [the thing, what it means] — the first half bold, the second not. */
+/* [the thing, what it means] — the first half bold, the second not. Pro lists only
+   what it adds, under "Everything in Free, plus" (the founder, 2026-09-30). */
 const VTIER_COPY={
   free:{name:'Free',price:'$0',items:[
     ['Your page on myset.vip',' — address, hours, what’s on, how to get there'],
-    ['Three photos',' on your page'],
+    ['Five photos',' on your page'],
+    ['Tips for your staff',' — a Tip the staff button on your page, paid straight to your Stripe account'],
     ['Every artist who plays here',' linked to your page, and you to theirs'],
+    ['Approve the shows',' artists list at your place'],
     ['Your nights listed in your city',', and artists pitching to play'],
     ['A community page',' — fans rate the night and post photos, you reply'],
-    ['Hide any post',' — instantly, and undo it'],
     ['Codes to print',' for tables, the bar and the door'],
     ['Your numbers',': who voted, what got played, night by night'],
-    ['<span class="fee">Transaction fee: 10%</span>',' on merch sold through the app, with Stripe’s card fee shared']]},
-  pro:{name:'Pro',price:'$20 / month',items:[
-    ['Your page on myset.vip',' — address, hours, what’s on, how to get there'],
+    ['<span class="fee">Transaction fee: 25%</span>',' on tips, with Stripe’s card fee shared']]},
+  pro:{name:'Pro',price:'$20 / month',lead:'Everything in Free, plus:',items:[
     ['Twelve photos',' on your page'],
-    ['Every artist who plays here',' linked to your page, and you to theirs'],
-    ['Your nights listed in your city',', and artists pitching to play'],
-    ['A community page',' — fans rate the night and post photos, you reply'],
     ['Merch on your shop page',', paid straight to your Stripe account'],
-    ['Delete a post for good',' \u2014 hiding is free on every plan'],
+    ['Hide or delete any post',' on your community page'],
     ['The green verified tick',' beside your name, once your website and your artists check out'],
-    ['Codes to print',' for tables, the bar and the door'],
-    ['Your numbers',': who voted, what got played, night by night'],
-    ['Coming soon, included',': tips for your staff, and votes for what plays between the sets'],
-    ['<span class="fee">Transaction fee: 2%</span>',' on merch sold through the app, with Stripe’s card fee shared']]},
+    ['<span class="fee">Transaction fee: 5%</span>',' on tips and merch, with Stripe’s card fee shared']]},
 };
-/* PLACEHOLDERS — the layout is approved first, then these come down until real
-   ones are submitted by venues. Nothing here is a real quote. */
-const VTESTIMONIALS=[
-  {name:'Sample bar',where:'Koh Phangan',text:'Thursday used to empty out at eleven. Now people stay to see if their song wins. (placeholder)'},
-  {name:'Sample pub',where:'Chiang Mai',text:'We can finally see which acts actually pull a crowd, in numbers, the next morning. (placeholder)'},
-  {name:'Sample café',where:'Bali',text:'The community page did our marketing for us — photos from the night, posted by the people in them. (placeholder)'},
-];
 function openPlans(){
   if(!V) return;
   /* one more try, never a loop: loadPlan answers null when planGet fails, and
@@ -713,14 +739,31 @@ function openPlans(){
     if(comped) return `<button class="big now" disabled>Comped${VPLAN.until?' until '+vdate(VPLAN.until):''}</button>`;
     return `<button class="big alt" onclick="confirmDowngrade()">Switch to Free</button>`;
   };
-  openSheet(`<div class="plansheet"><h3>Plans</h3><p class="lede">Everything in each plan, listed in full. Change any time.</p>
+  openSheet(`<div class="plansheet"><h3>Plans</h3><p class="lede">What each plan gives you. Change any time.</p>
     ${['free','pro'].map(k=>`<div class="tier">
       <div class="hd"><span>${VTIER_COPY[k].name}</span><small>${VTIER_COPY[k].price}</small></div>
-      <ol>${vTierList(k)}</ol>
+      ${VTIER_COPY[k].lead?`<p class="plus">${VTIER_COPY[k].lead}</p>`:''}<ol>${vTierList(k)}</ol>
       <div class="cta">${cta(k)}</div></div>`).join('')}
-    ${VTESTIMONIALS.length?`<div class="sec" style="padding-left:0;margin-top:18px"><span class="kick">What MySet members have to say</span></div>
-    <div class="testi">${VTESTIMONIALS.map(t=>`<div class="tcard"><div class="who"><i>${esc(t.name.slice(0,1))}</i><div><b>${esc(t.name)}</b><span>${esc(t.where)}</span></div></div><p>${esc(t.text.slice(0,180))}</p></div>`).join('')}</div>`:''}
-    <p class="fine">Stripe handles the card. Cancel any time; a paid month is always yours to the end.</p></div>`);
+    <p class="fine">Stripe handles the card. Cancel any time; a paid month is always yours to the end.</p>
+    <button class="big alt" style="margin-top:14px" onclick="openSuggest()">Suggestions &amp; feedback</button></div>`);
+}
+/* SUGGESTIONS & FEEDBACK (decision 0127): straight to MySet — the founder's phone and
+   the Sheet's Suggestions tab. Any seat may send one. */
+function openSuggest(){
+  if(SAMPLE){ openClaim(); return; }
+  openSheet(`<div class="dg"><h3>Suggestions &amp; feedback</h3>
+    <p class="muted" style="font-size:14px">What would make MySet better for your venue? Anything goes — it comes straight to us.</p>
+    <textarea class="inp" id="sugT" rows="5" maxlength="1000" placeholder="I wish MySet could…" style="margin-top:12px;min-height:120px"></textarea>
+    <button class="big" id="sugGo" style="margin-top:12px" onclick="sendSuggest()">Send it</button></div>`);
+  setTimeout(()=>{const t=$('#sugT'); if(t) t.focus();},80);
+}
+async function sendSuggest(){
+  const t=(($('#sugT')||{}).value||'').trim(), b=$('#sugGo');
+  if(t.length<3){ toast('Write a few words first'); return; }
+  if(b){ b.disabled=true; b.textContent='Sending…'; }
+  const d=await post('/venueadmin',{action:'suggest',text:t});
+  if(!d.ok){ toast(d.error||'Couldn’t send that — try again'); if(b){ b.disabled=false; b.textContent='Send it'; } return; }
+  closeSheet(); toast('Sent — thank you');
 }
 async function startCheckout(){
   const d=await post('/venueadmin',{action:'planCheckout'});
@@ -734,7 +777,7 @@ async function changePlan(plan){
 }
 function confirmDowngrade(){
   openSheet(`<div class="dg"><h3>Are you sure you want to lose your Pro membership benefits?</h3>
-    <p class="muted" style="font-size:14px">Merch, the tick and twelve photos go with it. Your items stay saved.</p>
+    <p class="muted" style="font-size:14px">Merch, the tick, hiding posts and the photos past five go with it. Your items stay saved.</p>
     <button class="big no" style="margin-top:16px" onclick="closeSheet()">No, keep Pro</button>
     <button class="big yes" style="margin-top:10px" onclick="retentionOffer()">Yes, switch to Free</button></div>`);
 }
@@ -775,8 +818,8 @@ async function handleReturns(){
 /* ---------- getting paid: Stripe Connect, the same as an artist ----------
    Direct charges land in the venue's own Stripe account; MySet's transaction fee
    comes off the top, reduced by half of Stripe's card fee (see _connect.mjs). */
-let PAY=null, VORDERS=null;
-async function loadPay(force){ const d=await post('/venueadmin',{action:'payStatus',refresh:!!force}); if(d&&d.ok){ PAY=d.pay; if(TAB==='merch') render(); if(PAY.ready&&VORDERS===null){ loadOrders(); loadVLedger(); } } }
+let PAY=null, VORDERS=null, VTIPS=null;
+async function loadPay(force){ const d=await post('/venueadmin',{action:'payStatus',refresh:!!force}); if(d&&d.ok){ PAY=d.pay; VTIPS=d.tips||null; if(TAB==='merch') render(); if(PAY.ready&&VORDERS===null){ loadOrders(); loadVLedger(); } } }
 
 /* A VENUE'S OWN EARNINGS. The same reporting layer the artist Studio uses, scoped
    to this venue's Stripe account (_ledger.mjs). A bar that takes tips and sells
@@ -835,6 +878,28 @@ function payCountries(){
   const c=((V&&V.country)||'').toLowerCase();
   const guess=(PAY_COUNTRIES.find(([,n])=>n.toLowerCase()===c)||[''])[0];
   return `<option value="">Choose…</option>`+PAY_COUNTRIES.map(([k,n])=>`<option value="${k}"${k===guess?' selected':''}>${esc(n)}</option>`).join('');
+}
+/* TIPS FOR YOUR STAFF (decision 0127): real on both plans. A "Tip the staff" button
+   shows on the venue's page once card payments are on; the money lands in the venue's
+   own Stripe account, less MySet's fee. What came in is listed here — amounts, notes
+   and when, never who. */
+function tipsSection(){
+  const T=VTIPS, on=!!(PAY&&PAY.ready), pct=PAY&&PAY.cutPct!=null?PAY.cutPct:null;
+  const head=`<div class="sec"><span class="kick">Tips for your staff</span>${T&&T.count?`<span class="kick">${vm$(Math.round(T.total*100))}</span>`:''}</div>`;
+  if(!on) return head+`<div class="list"><div class="row" style="display:block">
+      <div class="t">Let fans tip your team</div>
+      <p class="s" style="margin:6px 0 0">Switch on card payments below and a <b>Tip the staff</b> button appears on your page. Tips go straight to your Stripe account${pct!=null?`, less MySet’s ${pct}% fee`:''}.</p></div></div>`;
+  const recent=(T&&T.recent)||[];
+  return head+`<div class="stats">
+      <div class="c"><b class="mono">${vm$(Math.round(((T&&T.month.total)||0)*100))}</b><span>This month</span></div>
+      <div class="c"><b class="mono">${(T&&T.month.count)||0}</b><span>Tips this month</span></div>
+      <div class="c"><b class="mono acc">${vm$(Math.round(((T&&T.total)||0)*100))}</b><span>All time</span></div>
+    </div>
+    <div class="list">${recent.length?recent.map(t=>`<div class="row"><div class="m">
+        <div class="t mono">${vm$(Math.round(t.amount*100))}</div>
+        <div class="s">${t.note?`“${esc(t.note)}” · `:''}${vdate(new Date(t.at).toISOString())}</div></div></div>`).join('')
+      :`<div class="row muted">Your page shows <b>&nbsp;Tip the staff&nbsp;</b> — the first one lands here.</div>`}</div>
+    <p class="muted" style="font-size:12px;padding:10px 20px 0">Tips land in your Stripe account${pct!=null?`, less MySet’s ${pct}% fee`:''}. Share them however your team does.${V.slug&&!SAMPLE?` <a href="/v/${esc(V.slug)}" style="color:var(--accent);font-weight:600">See your page ↗</a>`:''}</p>`;
 }
 function payCard(){
   if(!PAY){ loadPay(); return ''; }
@@ -911,11 +976,6 @@ async function orderDetail(sid){
     <button class="big alt" style="margin-top:14px" onclick="closeSheet()">Close</button>`);
 }
 
-const tipsCard=()=>soonCard('tips','Tips for your staff',
-  'A tip jar on your page that goes to your team, not to the act.',
-  [['Straight to your account','MySet never holds it'],
-   ['Split how you like','Whole team, or the bar'],
-   ['A thank-you on screen','So the tipper knows it landed']]);
 const speakerCard=()=>soonCard('speakerVotes','What plays between the sets',
   'When there is no band on, the room votes for what comes out of your speakers.',
   [['Your playlist, their choice','You put the songs in, they pick the order'],
@@ -971,13 +1031,14 @@ function vMerchTab(){
   /* a sample's shop and community page are not public until it is claimed (0101), so
      neither is linked from its Studio: both would answer "No page here" */
   return `<div class="wrap" style="padding-top:14px">${V.slug&&!SAMPLE?`<a class="big alt orange-outline" href="/v/${esc(V.slug)}/shop">See your shop ↗</a>`:''}</div>
+    ${tipsSection()}
     ${lock('merch', list, 'Merch on your page comes with Pro. Anything you add stays saved.')}
     ${payCard()}
     ${PAY&&PAY.ready?ordersSection():''}
     ${wishesSection()}
     ${PAY&&PAY.ready?vEarnings():''}
     <div class="sec"><span class="kick">Your community page</span><span class="kick">${posts.length}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one, hide anything, or delete it.${SAMPLE?'':` <a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">See the page ↗</a>`}</p>
+    <p class="muted" style="font-size:12px;padding:0 20px;margin:0 0 8px">Fans rate a night and post photos. Reply once per post, pin one${`, and hide or delete anything${has('moderate')?'':' on Pro'}`}.${SAMPLE?'':` <a href="/v/${esc(V.slug)}/community" style="color:var(--accent);font-weight:600">See the page ↗</a>`}</p>
     <div class="list">${posts.slice(0,30).map(p=>`<div class="row ${p.hidden?'muted':''}" style="flex-wrap:wrap">
       <div class="m" style="flex:1 1 100%"><div class="t">${esc(p.name||'Someone')}${p.stars?' <span style="color:var(--accent-2)">'+'★'.repeat(p.stars)+'</span>':''}${p.pinned?' · pinned':''}${p.hidden?' · hidden':''}${p.reports?` · ${p.reports} report${p.reports===1?'':'s'}`:''}</div>
         <div class="s">${esc((p.text||'').slice(0,140))}${p.photos.length?' · '+p.photos.length+' photo'+(p.photos.length===1?'':'s'):''}${p.video?' · video':''}</div>
@@ -985,9 +1046,10 @@ function vMerchTab(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:6px">
         <button class="act" onclick="vReply('${esc(p.id)}')">${p.reply?'Edit reply':'Reply'}</button>
         <button class="act" onclick="vComm('postPin','${esc(p.id)}',${p.pinned?'false':'true'})">${p.pinned?'Unpin':'Pin'}</button>
-        <button class="act" onclick="${p.hidden?`vComm('postHide','${esc(p.id)}',false)`
-  :`if(confirm(${JSON.stringify((p.photos&&p.photos.length)||p.clip?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}))vComm('postHide','${esc(p.id)}',true)`}">${p.hidden?'Show':'Hide'}</button>
-        <button class="act warn" onclick="if(confirm('Delete this post for good?'))vComm('postDelete','${esc(p.id)}')">✕</button></div>
+        ${p.hidden?`<button class="act" onclick="vComm('postHide','${esc(p.id)}',false)">Show</button>`
+  :has('moderate')?`<button class="act" onclick="${esc(`if(confirm(${JSON.stringify((p.photos&&p.photos.length)||p.clip?'Hide this post? It comes off your page straight away, and its photos and clip are deleted. You can un-hide the words later.':'Hide this post? It comes off your page straight away, and you can un-hide it later.')}))vComm('postHide','${esc(p.id)}',true)`)}">Hide</button>
+        <button class="act warn" onclick="if(confirm('Delete this post for good?'))vComm('postDelete','${esc(p.id)}')">✕</button>`
+  :`<button class="act" onclick="showPlans()" aria-label="Hiding or deleting a post comes with Pro">${LOCKICON.replace('<svg ','<svg style="width:13px;height:13px;vertical-align:-2px;fill:none;stroke:currentColor;stroke-width:2" ')} Hide · Pro</button>`}</div>
     </div>`).join('')||'<div class="row muted">Nothing posted yet.</div>'}</div>`;
 }
 /* THE ITEM EDITOR — the artist Studio's, with the venue's ids. Sizes are one
@@ -1229,7 +1291,7 @@ function render(){
   }
 
   if(TAB==='shows'){
-    const music=(SHOWS&&SHOWS.ok?(SHOWS.gigs||[]).filter(g=>g.kind!=='event'):null);
+    const gigs=(GIGS&&GIGS.ok?(GIGS.gigs||[]):null);
     const occ=(EVENTS&&EVENTS.ok?(EVENTS.occurrences||[]):null);
     const rules=(EVENTS&&EVENTS.ok?(EVENTS.events||[]):[]);
     const pitches=(PITCHES&&PITCHES.ok?(PITCHES.pitches||[]):null);
@@ -1237,17 +1299,9 @@ function render(){
 
     body=`
     <div class="note"><b>The music fills itself in</b>
-      <p>Artists keep their own gig calendars in MySet. Any gig at a venue name matching <b>${esc(V.name||'yours')}</b> in ${esc([V.city,V.country].filter(Boolean).join(', ')||'your city')} appears here and on your public page automatically. Nothing for you to type. Everything else — quiz night, a DJ, the football — you add below.</p></div>
+      <p>Artists keep their own gig calendars in MySet. Any gig at a venue name matching <b>${esc(V.name||'yours')}</b> in ${esc([V.city,V.country].filter(Boolean).join(', ')||'your city')} appears here and on your public page automatically. <b>Approve</b> the ones that are really here, and anything that isn’t comes off your page. Everything else — quiz night, a DJ, the football — you add below.</p></div>
 
-    <div class="sec"><span class="kick">Live music</span><span class="kick">${music?music.length:''}</span></div>
-    ${music===null?`<div class="list"><div class="row muted"><span class="spin"></span>&nbsp;&nbsp;Looking…</div></div>`
-     :!music.length?`<div class="list"><div class="row muted">No gigs point here yet. Two things to check: your <b>name</b>, and your <b>city and country</b> — they have to match what the artists type.</div></div>`
-     :`<div class="list">${music.map(g=>`<div class="row">
-        <div class="m"><div class="t">${esc(g.artist)}${g.live?' · on now':''}</div>
-          <div class="by">${esc(dowName(g.date))} ${dayMonth(g.date)} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}</div>
-          <div class="s">Listed as “${esc(g.listedAs)}”${g.repeating?' · repeats':''}</div></div>
-        <a class="act" href="/${esc(g.slug)}">Page</a>
-      </div>`).join('')}</div>`}
+    ${gigsSection(gigs)}
     <div class="wrap" style="margin-top:14px"><button class="big alt" onclick="shareInvite()">Invite acts to list their gigs here</button></div>
 
     <div class="sec"><span class="kick">Your own events</span><span class="kick">${occ?occ.length:''}</span></div>
@@ -1315,8 +1369,7 @@ function render(){
           <div class="t mono">${n.people}</div>
           <div class="s">${n.votes} votes</div></div>
       </div>`).join('')}</div>
-      <p class="muted" style="font-size:12px;padding:14px 20px 0">What each artist earned is <b>not</b> here and never will be — that’s their business. Any act can switch these numbers off from their own studio.</p>
-      ${tipsCard()}`;
+      <p class="muted" style="font-size:12px;padding:14px 20px 0">What each artist earned is <b>not</b> here and never will be — that’s their business. Any act can switch these numbers off from their own studio.</p>`;
   }
 
   if(TAB==='menu'){
@@ -1729,7 +1782,7 @@ function attachDrag(sh){
   sh.__drag=true;
   let y0=null, dy=0, t0=0, fromBody=false;
   const CONTROL='input,textarea,select,button,a,[contenteditable]';
-  const HSCROLL='.testi,[data-hscroll]';
+  const HSCROLL='[data-hscroll]';
 
   const start=(e,body)=>{
     y0=(e.touches?e.touches[0]:e).clientY; dy=0; t0=Date.now(); fromBody=!!body;

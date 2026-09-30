@@ -447,7 +447,7 @@ const STAGE={seed:'Reading the line',suppress:'Checking the opt-out list',discov
   facts:'Pulling out the facts',photos:'Choosing photos',copy:'Writing the words',gate:'Running the quality check'};
 const STW={review:'Needs review',ready:'Ready',sent:'Sent',opened:'Opened',claiming:'Claiming'};
 const CHW={dm:'DM',email:'email',inperson:'in person'};
-const SLOTW={cover:'Cover',avatar:'Portrait',p0:'Photo 1',p1:'Photo 2',p2:'Photo 3'};
+const SLOTW={cover:'Cover',avatar:'Portrait',p0:'Photo 1',p1:'Photo 2',p2:'Photo 3',p3:'Photo 4',p4:'Photo 5'};
 const FUN=[['built','Built'],['sent','Sent'],['opened','Opened'],['studio','Studio'],['practice','Practice'],['claimed','Claimed']];
 const FILTERS=[['all','All'],['review','Needs review'],['ready','Ready'],['sent','Sent'],['opened','Opened'],['claiming','Claiming']];
 const KINDW={youtube:'YouTube',instagram:'Instagram',website:'Website',tiktok:'TikTok',facebook:'Facebook',spotify:'Spotify',applemusic:'Apple Music',
@@ -477,6 +477,8 @@ const thumb=r=>`<span class="th" aria-hidden="true"><em>${esc(([...String(r.name
 const chipSt=r=>{const s=stOf(r);return `<span class="st ${esc(s)}">${STW[s]||esc(human(s))}${s==='sent'&&r.ch?' · '+esc(CHW[r.ch]||r.ch):''}</span>`;};
 const img=(u,alt)=>imgSrc(u)?`<img src="${esc(imgSrc(u))}" alt="${esc(alt||'')}" loading="lazy" onerror="this.remove()">`:'';
 const mailto=e=>'mailto:?subject='+encodeURIComponent(e.subject||'')+'&body='+encodeURIComponent(e.body||'');
+/* a venue has no portrait and five photos; an artist a portrait and three (0129) */
+const slotsFor=o=>String(o||'').startsWith('v_')?['cover','p0','p1','p2','p3','p4']:['cover','avatar','p0','p1','p2'];
 const slotSet=(w,s)=>w+(s==='cover'||s==='avatar'?' the ':' ')+SLOTW[s].toLowerCase();
 const gated=()=>!!$('#app').dataset.gate;
 
@@ -755,7 +757,7 @@ function reviewHtml(){
       <button type="button" class="big" data-act="approve">Approve — mark it Ready</button></div>`:''}
     <h4 class="sub">Photos<span>Tap one to use it</span></h4><div id="rvP">${photosHtml()}</div>
     <div class="addp"><input class="inp" id="pUrl" type="url" inputmode="url" autocomplete="off" placeholder="Add a photo by link — Instagram, website…" aria-label="Photo link">
-      <select class="inp" id="pSlot" aria-label="Where the photo goes">${Object.keys(SLOTW).map(s=>`<option value="${s}">${SLOTW[s]}</option>`).join('')}</select>
+      <select class="inp" id="pSlot" aria-label="Where the photo goes">${slotsFor(REV.owner).map(s=>`<option value="${s}">${SLOTW[s]}</option>`).join('')}</select>
       <button type="button" class="act pri" data-act="addurl">Add</button></div>
     <h4 class="sub">Words</h4>
     ${f('fName','Name',p.name,60,0)}${f('fTag','Tagline',p.tagline,120,2)}${f('fStyle','Style',p.style,60,2)}${f('fBio',r.kind==='venue'?'About':'Bio',p.bio,r.kind==='venue'?900:700,8)}
@@ -772,14 +774,15 @@ function reviewHtml(){
 }
 function photosHtml(){
   const d=DET[REV.owner]||{}, ph=(d.record||{}).photos||[], p=d.profile||{}, x=ph[REV.pick], ps=p.photos||[];
-  const on=[['cover',p.photo],['avatar',p.avatar],['p0',ps[0]],['p1',ps[1]],['p2',ps[2]]];
+  const venue=String(REV.owner||'').startsWith('v_');
+  const on=[['cover',p.photo],...(venue?[]:[['avatar',p.avatar]]),['p0',ps[0]],['p1',ps[1]],['p2',ps[2]],...(venue?[['p3',ps[3]],['p4',ps[4]]]:[])];
   return `<div class="onp" aria-label="On the page now">${on.map(([s,u])=>`<div><span><em>${u?'No preview':'Empty'}</em>${img(u,SLOTW[s])}</span>${SLOTW[s]}</div>`).join('')}</div>
     ${ph.length?`<div class="photos">${ph.map((y,i)=>`<button type="button" class="ph" data-act="pick" data-i="${i}" aria-pressed="${i===REV.pick}" aria-label="Photo ${i+1}${y.slot?', now the '+(SLOTW[y.slot]||y.slot).toLowerCase():''}">
       <span class="im"><em>No preview${host(y.url)?'<br>'+esc(host(y.url)):''}</em>${img(y.url)}${y.slot?`<span class="sb">${esc(SLOTW[y.slot]||y.slot)}</span>`:''}</span>
       <span class="cap">${esc(kindW(y.from||'found'))}${y.score!=null?' · '+Math.round(y.score*100)+'%':''}</span></button>`).join('')}</div>`
       :'<p class="empty" style="margin-top:12px">No photos found — add one by link below.</p>'}
     ${x?`<div class="phx"><p>${esc(x.why||'No note from the factory.')}${href(x.src)?` <a href="${esc(href(x.src))}" target="_blank" rel="noopener noreferrer">Where it came from ↗</a>`:''}</p>
-      <div class="uses">${Object.keys(SLOTW).map(s=>`<button type="button" class="act" data-act="use" data-slot="${s}"${x.slot===s?' aria-current="true"':''}>Use as ${SLOTW[s].toLowerCase()}</button>`).join('')}</div></div>`:''}`;
+      <div class="uses">${slotsFor(REV.owner).map(s=>`<button type="button" class="act" data-act="use" data-slot="${s}"${x.slot===s?' aria-current="true"':''}>Use as ${SLOTW[s].toLowerCase()}</button>`).join('')}</div></div>`:''}`;
 }
 function provHtml(){
   const rec=(DET[REV.owner]||{}).record||{}, pv=rec.provenance||{}, srcs=rec.sources||[], bio=pv.bio||[], tag=(pv.tagline&&pv.tagline.src)||[];

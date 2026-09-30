@@ -217,7 +217,7 @@ eq('as a direct charge on the venue’s account', created.opts.stripeAccount, ac
 eq('for the venue owner', created.args.metadata.artist, 'v_' + bar.venueId);
 const expectFee = feeCents(1200, 'pro', 'venue');
 eq('with the venue plan’s fee minus half of Stripe’s (0 → no fee field at all)', ((created.args.payment_intent_data||{}).application_fee_amount)||0, expectFee);
-eq('which is 2% minus half of (2.9% + 30¢)', expectFee, Math.max(0, Math.floor(1200 * 0.02) - Math.round(stripeFeeEstimate(1200) / 2)));
+eq('which is 5% minus half of (2.9% + 30¢) (0127)', expectFee, Math.max(0, Math.floor(1200 * 0.05) - Math.round(stripeFeeEstimate(1200) / 2)));
 eq('artists are not split (their table says so)', feeCents(1200, 'plus'), Math.floor(1200 * 0.10));
 ok('and returns to the venue’s community page', /\/v\/.*\/community\?paid=/.test(created.args.success_url));
 /* Tips, votes and merch are the ARTIST'S sale, not MySet's: no tax number is
@@ -273,6 +273,32 @@ await hit(webhookFn, 'https://x/api/webhook', { type: 'checkout.session.complete
 delete process.env.STRIPE_WEBHOOK_SECRET;
 r = await VS(TV, 'orderList');
 eq('a webhook for a venue session writes the order where the Venue Studio reads it', r.orders.map((o) => o.sid).sort(), [hoodieSid, lastHoodie].sort());
+
+console.log('\nTIPS FOR THE STAFF (decision 0127)');
+{
+  const fanFn = (await import('../netlify/functions/fan.mjs')).default;
+  let p = await hit(fanFn, `https://x/api/fan?what=venue&v=${bar.slug}`);
+  eq('the venue page offers Tip the staff once cards are on', p.venue && p.venue.tipsOn, true);
+  r = await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'tip', amount: 20, note: 'Great bar staff', attempt: 'vt1' });
+  ok('a tip checkout opens', r.ok && /checkout/.test(r.url), r);
+  const tc = lastCall('checkout.sessions.create');
+  eq('on the venue’s own account, for the venue, as a tip', [tc.opts.stripeAccount, tc.args.metadata.artist, tc.args.metadata.kind], [acct, 'v_' + bar.venueId, 'tip']);
+  eq('with the Pro fee: 5% less half of Stripe’s', (tc.args.payment_intent_data || {}).application_fee_amount || 0, feeCents(2000, 'pro', 'venue'));
+  ok('and back to the venue’s page', new RegExp(`/v/${bar.slug}\\?paid=`).test(tc.args.success_url), tc.args.success_url);
+  eq('a tip outside $1–$500 is refused', (await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone1', kind: 'tip', amount: 0.5 })).status, 400);
+  const tipSid = [...__stripe.sessions.keys()].pop();
+  r = await hit(confirmFn, `https://x/api/confirm?session_id=${tipSid}&fan=phone1&v=${bar.slug}`);
+  ok('the return trip redeems it', r.ok && r.kind === 'tip', r);
+  r = await VS(TV, 'payStatus');
+  eq('the Studio lists it: the amount and the note, never who', [r.tips.count, r.tips.total, r.tips.month.count, r.tips.recent[0].note, 'fan' in r.tips.recent[0]], [1, 20, 1, 'Great bar staff', false]);
+  eq('the Free fee is 25% less half of Stripe’s', feeCents(2000, 'free', 'venue'), Math.max(0, Math.floor(2000 * 0.25) - Math.round(stripeFeeEstimate(2000) / 2)));
+  await mutateVenues((reg) => { reg.byId[bar.venueId].plan = 'free'; return true; });
+  p = await hit(fanFn, `https://x/api/fan?what=venue&v=${bar.slug}`);
+  eq('tips stay on the Free plan', p.venue && p.venue.tipsOn, true);
+  r = await hit(payFn, `https://x/api/pay?v=${bar.slug}`, { fan: 'phone2', kind: 'tip', amount: 20, attempt: 'vt2' });
+  eq('and a Free venue’s tip takes the Free fee', (lastCall('checkout.sessions.create').args.payment_intent_data || {}).application_fee_amount, feeCents(2000, 'free', 'venue'));
+  await mutateVenues((reg) => { reg.byId[bar.venueId].plan = 'pro'; return true; });
+}
 ok('and never under a mangled owner id', ![...__dump().keys()].some((k) => /^meta_v[a-z]/.test(k)), [...__dump().keys()].filter((k) => k.startsWith('meta_')));
 r = await hit(confirmFn, `https://x/api/confirm?session_id=${lastHoodie}&fan=phone1&v=${bar.slug}`);
 ok('the return trip after the webhook is a replay with the same code', r.ok && r.already === true && r.order && r.order.code === (await VS(TV, 'orderList')).orders.find((o) => o.sid === lastHoodie).code, r);
@@ -317,10 +343,10 @@ console.log('\nHALF OF STRIPE’S CARD FEE, EXACTLY  (once Stripe knows what it 
 
   /* The floor, said honestly: on a small basket MySet's fee is already zero at
      checkout, so there is nothing to give back and nothing to correct. */
-  eq('a $12 cap on Pro takes no fee in the first place', feeCents(1200, 'pro', 'venue'), 0);
+  eq('a $4 badge on Pro takes no fee in the first place', feeCents(400, 'pro', 'venue'), 0);
   __stripe.bts.set('txn_2', { id: 'txn_2', currency: 'usd', fee: 65,
     fee_details: [{ type: 'stripe_fee', amount: 65 }], __account: acct });
-  r = await settleSplit(owner, acct, { id: 'ch_2', amount: 1200, currency: 'usd',
+  r = await settleSplit(owner, acct, { id: 'ch_2', amount: 400, currency: 'usd',
     balance_transaction: 'txn_2', payment_intent: 'pi_2' });
   eq('so the correction records it and stops', (await readMeta(owner)).fees.ch_2.state, 'nothing');
 

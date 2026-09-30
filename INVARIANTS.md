@@ -1193,6 +1193,10 @@ If you are about to violate one, stop and say so rather than working around it.
     could register itself as "Beach" and claim every Beach Bar in town. An exact
     match always counts, however short. Consequence worth keeping: a venue signing
     up today already has its whole gig list, with no backfill and no job to run.
+    The venue may answer each listing (decision 0128, `gigok_<vid>`, keyed by the
+    artist's calendar RULE): confirmed shows say so, and a show it says is not at
+    its place leaves the venue's page, never the artist's. An unanswered listing
+    shows as before; a recurring show is confirmed only as recurring.
 
 0z. **A page that isn't verified says so, and loses nothing else.** Asking for proof
     before a page exists means no pages exist. Every venue page works fully; the
@@ -2564,7 +2568,7 @@ If you are about to violate one, stop and say so rather than working around it.
     something. It never hides now: between shows it is the tip alone, full width,
     because there are no votes left to buy. On the community page it sits directly
     under the shop card, which exists only when there is something to sell; still
-    above the proof and the feed (artist pages only — tipping a venue is not a thing).
+    above the proof and the feed (artist pages only — a venue's staff are tipped from `/v/<slug>`, decision 0127).
     A tip started from the community page posts `from:'community'` so the return trip
     lands back there, and a shirt bought from the shop posts `from:'shop'` (0fo);
     `from` selects between paths the SERVER builds and is never used as a url,

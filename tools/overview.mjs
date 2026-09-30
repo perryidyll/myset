@@ -319,6 +319,7 @@ Deleting a name from that list is the last step of building the feature, and
 | Verification tick | ${yes(v.free.tick)} | ${yes(v.pro.tick)} |
 | Community page | ${yes(v.free.reviews)} | ${yes(v.pro.reviews)} |
 | Merch on the shop page (\`/v/<slug>/shop\`) | ${yes(v.free.merch)} | ${yes(v.pro.merch)} |
+| Hide or delete a community post | ${yes(v.free.moderate)} | ${yes(v.pro.moderate)} |
 | Receive tips | ${vcell('tips', 'free')} | ${vcell('tips', 'pro')} |
 | Voting on the venue's own speaker music | ${vcell('speakerVotes', 'free')} | ${vcell('speakerVotes', 'pro')} |
 

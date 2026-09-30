@@ -285,8 +285,10 @@ ok('crowd numbers are refused server-side on free', /crowdNumbersAllowed\(aid/.t
 ok('and forwarded to the Studio', /crowdNumbers: !!l\.crowdNumbers/.test(adminSrc));
 ok('which greys the two switches', /lock\('crowdNumbers'/.test(page));
 
-eq('the three venue features with no code behind them are named',
-   [...VENUE_NOT_BUILT].sort(), ['speakerVotes', 'tips']);
+eq('the one venue feature with no code behind it is named (tips are real since 0127)',
+   [...VENUE_NOT_BUILT].sort(), ['speakerVotes']);
+eq('0127: five photos on Free, twelve on Pro; the fee is 25% and 5%', [VENUE_PLANS.free.photos, VENUE_PLANS.pro.photos, VENUE_PLANS.free.cut, VENUE_PLANS.pro.cut], [5, 12, 0.25, 0.05]);
+ok('0127: tips for the staff on both plans; hiding or deleting a post is Pro', VENUE_PLANS.free.tips && VENUE_PLANS.pro.tips && !VENUE_PLANS.free.moderate && VENUE_PLANS.pro.moderate);
 /* `reviews` became the community page on 2026-09-04 and is free on both rows (0w). */
 ok('venue reviews are free on both plans', VENUE_PLANS.free.reviews === true && VENUE_PLANS.pro.reviews === true);
 ok('venue merch is Pro', VENUE_PLANS.free.merch === false && VENUE_PLANS.pro.merch === true);

@@ -404,8 +404,9 @@ const main = async (req) => {
        shot — fetched here, checked the way an upload is (the bytes, not the label),
        and stored under the sample's own name. Never a page the server scrapes: the
        address has to point at the picture itself. */
-    const slot = ['cover', 'avatar', 'p0', 'p1', 'p2'].includes(body.slot) ? body.slot : null;
+    const slot = ['cover', 'avatar', 'p0', 'p1', 'p2', 'p3', 'p4'].includes(body.slot) ? body.slot : null;
     if (!slot) return bad('Which slot?');
+    if (!isVenueOwner(owner) && (slot === 'p3' || slot === 'p4')) return bad('An artist page has three small photos.');
     if (isVenueOwner(owner) && slot === 'avatar') return bad('A venue page has no portrait.');
     let bytes = null, type = null;
     if (body.data) {

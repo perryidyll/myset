@@ -540,9 +540,10 @@ async function handleEvents(aid, action, body) {
       const known = new Set((await readLists(aid)).lists.map((l) => l.id));
       if (!known.has(ev.listId)) ev.listId = '';
     }
-    let movedFrom = null;
+    let movedFrom = null, before = null;
     await mutateEvents(aid, (d) => {
       const at = d.list.findIndex((x) => x.id === id);
+      before = at >= 0 ? d.list[at] : null;
       if (at >= 0) {
         const was = d.list[at];
         // a one-off gig moved to another day — the night logged under it moves too (below)
@@ -567,7 +568,9 @@ async function handleEvents(aid, action, body) {
         if (!d.at || !(oldKey in d.gigs) || newKey in d.gigs) return false;
         d.gigs[newKey] = d.gigs[oldKey]; delete d.gigs[oldKey];
         return true;
-      }).catch(() => {}) : null]);
+      }).catch(() => {}) : null,
+      // a venue on MySet named by this gig hears it, to approve it (decision 0128)
+      import('./_gigok.mjs').then(({ tellVenueOfGig }) => tellVenueOfGig(aid, '', ev, before)).catch(() => {})]);
     return json({ ok: true, id, events: events.list });
   }
 

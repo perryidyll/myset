@@ -141,6 +141,8 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .act{flex:0 0 auto;height:36px;padding:0 14px;border-radius:var(--pill);font-size:13.5px;font-weight:600;
   background:var(--surface-2);color:var(--ink);transition:transform .2s var(--spring)}
 .act:active{transform:scale(.92)}
+/* a link dressed as .act (the Page links) sits on the same middle line as the buttons */
+a.act{display:inline-flex;align-items:center}
 .act.pri{background:var(--grad);color:#fff}
 .act.warn{color:var(--accent);background:var(--accent-soft)}
 /* the plan, top right: an orange-ringed Upgrade on free, a green tag with the plan's
@@ -168,23 +170,16 @@ input[type="time"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.
 .tier ol li b{color:var(--ink);font-weight:700}
 .tier ol li{padding:2px 0}
 .tier .fee{color:var(--accent-2);font-weight:700}
+.tier .plus{margin:13px 16px -4px;font-size:16.5px;font-weight:700;color:var(--ink)}
 .tier .cta{margin:2px 14px 14px}
 .tier .cta .big{margin:0}
 .tier .cta .big.now{background:var(--surface-2);color:var(--muted);box-shadow:none;cursor:default}
-.testi{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 8px;scroll-snap-type:x mandatory;scrollbar-width:none}
-.testi::-webkit-scrollbar{display:none}
-.tcard{flex:0 0 250px;scroll-snap-align:start;background:var(--surface-2);border-radius:var(--r);padding:14px}
-.tcard .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.tcard .who i{width:38px;height:38px;border-radius:12px;background:var(--grad) center/cover;display:grid;place-items:center;font-style:normal;font-weight:800;color:#fff}
-.tcard .who b{display:block;font-size:14px}.tcard .who span{font-size:12px;color:var(--muted)}
 .plansheet h3{font-size:25px}
 .plansheet .lede{font-size:16.5px}
 /* `.fine` is used on the plan sheet and is defined in app.css, which neither
    Studio loads — the same trap `.note` fell into on this page. Defined here. */
 .fine{font-size:12.5px;color:var(--faint);margin-top:14px;text-align:center}
 .plansheet .fine{font-size:14.5px}
-.plansheet .sec .kick{font-size:14px}
-.tcard p{margin:0;font-size:13.5px;line-height:1.45;color:var(--ink-2)}
 .dg .big.no{background:var(--accent-2);color:#fff;box-shadow:none}
 .dg .big.yes{background:var(--surface-2);color:var(--muted);box-shadow:none;opacity:.7}
 .tog{display:flex;gap:3px;padding:3px;background:var(--surface);border-radius:var(--pill);flex:0 0 auto}
@@ -402,7 +397,7 @@ button.pending,a.pending{transform:scale(.97)!important;filter:brightness(.82)}
      and keeps it for a year; the ?v= stamp is the file's own hash (node tools/stamp.mjs
      after editing venue-studio.js — the suite checks it). Decision 0053. -->
 <script src="/tips.js?v=6dd18982"></script>   <!-- the tab decks (decision 0102); stamped like venue-studio.js -->
-<script src="/venue-studio.js?v=ec96d6d3"></script>
+<script src="/venue-studio.js?v=d4d71e46"></script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The
    worker itself never caches /api; a page seen tonight comes from the phone's copy

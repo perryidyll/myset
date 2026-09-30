@@ -79,12 +79,12 @@ const main = async (req) => {
   const fan = cleanFanId(body.fan);
   if (!fan) return bad('missing fan');
 
-  /* A VENUE'S MERCH. The owner is `v_<vid>`; the charge is a direct charge on the
-     venue's connected account with the venue plan's fee (and Stripe's fee shared —
-     see feeCents). Only merch: a venue has no votes or tips to sell. */
+  /* A VENUE'S MERCH, AND TIPS FOR ITS STAFF. The owner is `v_<vid>`; the charge is a
+     direct charge on the venue's connected account with the venue plan's fee (and
+     Stripe's fee shared — see feeCents). A venue has no votes to sell. */
   const vq = new URL(req.url).searchParams.get('v');
   if (vq) {
-    if (body.kind !== 'merch') return bad('unknown kind');
+    if (body.kind !== 'merch' && body.kind !== 'tip') return bad('unknown kind');
     const { venueBySlug, getVenueProfile, venueById, venuePlanOf } = await import('./_venues.mjs');
     const { cleanSlug } = await import('./_auth.mjs');
     const vid = await venueBySlug(cleanSlug(vq));
@@ -93,6 +93,31 @@ const main = async (req) => {
     if (!(await payAllowed(owner, fan, req))) return bad('Too many tries from this phone — give it a minute', 429);
     const [prof, reg] = await Promise.all([getVenueProfile(vid), venueById(vid)]);
     const { VENUE_PLANS } = await import('./_venues.mjs');
+    /* TIPS FOR THE STAFF (decision 0127): the same $1–$500 as an artist's tip, the same
+       record on return (redeemSession writes it to the venue's own meta.tips), back to
+       the venue's page. The same gate the page reads (shapeVenue tipsOn). */
+    if (body.kind === 'tip') {
+      if (!VENUE_PLANS[venuePlanOf(reg)].tips) return bad('Tips aren’t on this page right now', 404);
+      const conn = await readConnect(owner);
+      if (!connectUsable(conn) || !(prof.pay && prof.pay.ready)) return bad('payments-not-configured', 503);
+      const cents = Math.round(Number(body.amount) * 100);
+      if (!Number.isFinite(cents) || cents < 100 || cents > 50000) return bad('Tip must be between $1 and $500');
+      const vname = prof.name || (reg && reg.name) || 'the venue';
+      const tline = { quantity: 1, price_data: { currency: 'usd', unit_amount: cents,
+        product_data: { name: `Tip for the staff at ${vname}`, description: 'Thanks for a great night' } } };
+      const attempt = String(body.attempt || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40);
+      const fee = feeCents(cents, venuePlanOf(reg), 'venue');
+      try {
+        const session = await stripe.checkout.sessions.create({
+          mode: 'payment', line_items: [tline],
+          metadata: { fan, kind: 'tip', note: String(body.note || '').slice(0, 120), artist: owner },
+          payment_intent_data: { ...(fee > 0 ? { application_fee_amount: fee } : {}), metadata: { kind: 'tip', artist: owner, base: String(cents) } },
+          success_url: `${origin}/v/${reg.slug}?paid={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${origin}/v/${reg.slug}?cancelled=1`,
+        }, { ...(attempt ? { idempotencyKey: sha(`myset-pay|${owner}|${fan}|tip|${attempt}`).slice(0, 48) } : {}), stripeAccount: conn.acct });
+        return json({ ok: true, url: session.url, id: session.id });
+      } catch (e) { return bad(e.message || 'stripe error', 502); }
+    }
     if (!VENUE_PLANS[venuePlanOf(reg)].merch) return bad('Merch isn’t on this page right now', 404);
     const item = (prof.merch || []).find((m) => m.id === String(body.item || '') && m.on);
     if (!item) return bad('That item isn’t for sale right now', 404);

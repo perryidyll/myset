@@ -201,6 +201,9 @@ echo
 echo "── a venue's phone hears it (0124) ──"
 node --import ./test/register.mjs test/venuepush.mjs
 echo
+echo "── a venue answers the shows listed at its place (0128) ──"
+node --import ./test/register.mjs test/gigok.mjs
+echo
 echo "── the artist diary ──"
 node --import ./test/register.mjs test/diaries.mjs
 echo

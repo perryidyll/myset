@@ -201,7 +201,7 @@ export const mutateFactoryCfg = (fn) => casDoc(CFG, defaultFactoryCfg, fn);
    are parsed and checked exactly as the Studio's "Add" does (parseMedia + lookup),
    so a sample can hold nothing an artist could not have pasted themselves. */
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
-const PHOTO_SLOTS = ['cover', 'avatar', 'p0', 'p1', 'p2'];
+const PHOTO_SLOTS = ['cover', 'avatar', 'p0', 'p1', 'p2', 'p3', 'p4'];   // p3, p4: a venue's five (0129)
 
 export async function createSample(payload = {}, { fetchMedia = true } = {}) {
   const kind = payload.kind === 'venue' ? 'venue' : 'artist';
@@ -316,7 +316,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       if (payload.hours && typeof payload.hours === 'object') p.hours = { ...p.hours, ...payload.hours };
       p.links = { ...p.links, ...(payload.links || {}) };
       if (shots.cover) p.photo = shots.cover.url;
-      p.photos = ['p0', 'p1', 'p2'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
+      p.photos = ['p0', 'p1', 'p2', 'p3', 'p4'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
       return true;
     });
   }
