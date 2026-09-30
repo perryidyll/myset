@@ -86,7 +86,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .eyebrow{font:600 11px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--accent)}
 .hero h1{margin:0;font-size:clamp(40px,6.4vw,76px);font-weight:750;letter-spacing:-.045em;line-height:1;text-wrap:balance}
 .hero h1 .w{display:inline-block;animation:word .9s var(--ease) both;animation-delay:calc(var(--d) * 70ms + 80ms)}
-.hero h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero h1 .g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:.14em;margin-bottom:-.14em}   /* room for the descenders: the gradient is clipped to the box */
 .sub{color:var(--muted);font-size:16px;animation:fade .8s .35s var(--ease) both}
 .sub b{color:var(--ink);font-weight:600}
 
@@ -203,7 +203,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   <section class="hero">
     <div class="eyebrow">MySet · Dash</div>
     <h1 id="hi"><span class="w" style="--d:0">Good</span> <span class="w g" style="--d:1">evening.</span></h1>
-    <p class="sub" id="sub">Four windows on MySet. <b>Two are locked</b> with the CRM’s passcode.</p>
+    <p class="sub" id="sub">What is tracked can be measured, and what is measured <b>can be improved.</b></p>
   </section>
 
   <main class="grid">
