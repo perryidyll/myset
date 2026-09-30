@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 01:07 — 6275f41 — wt3@ux/dash-links-profit (53 files since origin/main)
+**tl;dr:** Every dashboard (Show log, Media Dash, CRM, money model) has a Dash button back to /dash; the Show log has a MySet cut column ($ and %) and MySet profit is now the cut minus the server AND Stripe
+**Other sessions:** costOf().myset.usd = fee − server − stripe (founder's word, 2026-10-01; the earlier 'Stripe not subtracted' reading is superseded). mediadash.html twin in the content repo updated alongside.
+
 ### 2026-10-01 01:07 — 9fde2c7 — venue-pages@docs/venue-pages-live (0 files since origin/main)
 **tl;dr:** Docs: venue batch (0126-0129) recorded as live; the dash record renumbered 0127 -> 0130 [skip ci]
 **Other sessions:** Decision 0127 is venue plans/tips/fee; the Show log lock + /dash is now 0130 (comments in netlify.toml, _auth, _showlock, moneymodel, dash.html, everyshow updated; no behaviour change, no build). Claim numbers on the sessions board.
