@@ -2,9 +2,9 @@ import { scrypt, randomBytes, timingSafeEqual, createHmac, createHash } from 'no
 import { readDoc, casDoc } from './_lib.mjs';
 import { authSecret } from './_auth.mjs';
 
-/* HQ'S PASSCODE (decision 0108, INVARIANT 0hk). The founder, 2026-09-28: "make the url
-   www.myset.vip/crm and put a legit passcode lock on it". HQ opens to the founding
-   page's owner seat AND this passcode: two locks, because HQ sends mail as the founder
+/* CRM'S PASSCODE (decision 0108, INVARIANT 0hk). The founder, 2026-09-28: "make the url
+   www.myset.vip/crm and put a legit passcode lock on it". CRM opens to the founding
+   page's owner seat AND this passcode: two locks, because CRM sends mail as the founder
    and can erase a contact forever. A signed-in phone left on a table is not enough, and
    neither is a guessed passcode.
 
@@ -13,17 +13,17 @@ import { authSecret } from './_auth.mjs';
    · Is checked here on the server, never in the browser. The page never holds the
      passcode or the proof that it was given.
    · Stores only a salted scrypt hash, in Netlify's HQ_PASSCODE for production, never
-     in the repository. While that is unset, HQ stays shut. A deploy preview reads and
+     in the repository. While that is unset, CRM stays shut. A deploy preview reads and
      writes production data, so it cannot be opened at all.
    · Answers a right passcode with `hqk`, a cookie that is HttpOnly, SameSite=Strict,
      limited to /api/hq and good for UNLOCK_HOURS. It is signed with the site's auth
      secret and bound to the account and to this passcode, so a new passcode locks
-     every open HQ.
+     every open CRM.
    · Shuts the door for LOCK_MINUTES after LOCK_TRIES wrong tries in a row, and tells
      the founder's phone. Only a signed-in owner seat can try at all.
    `node tools/hqpass.mjs` sets a new passcode. */
 
-export const UNLOCK_HOURS = 12;   // how long one right passcode keeps HQ open in that browser
+export const UNLOCK_HOURS = 12;   // how long one right passcode keeps CRM open in that browser
 export const LOCK_TRIES = 5;      // wrong tries in a row before the door shuts
 export const LOCK_MINUTES = 15;   // how long it stays shut, and how long a wrong try is remembered
 export const LOCK_DOC = 'hqlock';

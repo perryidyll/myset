@@ -9,7 +9,7 @@
   const sync = () => {
     const theme = active(), dark = theme === 'dark';
     document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
-      const icon = dark ? '☀︎' : '☾';
+      const icon = '◐';   // one icon on every page, the Media Dash's
       if (button.textContent !== icon) button.textContent = icon;
       const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
       button.setAttribute('aria-label', label);
@@ -37,7 +37,7 @@
       if (meta) meta.replaceWith(fresh); else document.head.appendChild(fresh);
     }
   };
-  /* THE SWITCH GROWS AS A CIRCLE FROM THE BUTTON (decision 0121), the way HQ's
+  /* THE SWITCH GROWS AS A CIRCLE FROM THE BUTTON (decision 0121), the way CRM's
      does. The browser photographs the page, the theme changes underneath, and the
      new page is revealed through a circle the graphics chip grows over 0.72 s —
      nothing is re-laid-out while it plays. Where the browser has no view

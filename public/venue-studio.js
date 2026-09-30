@@ -1457,7 +1457,7 @@ function render(){
         : `<h1>${esc(V.name||'Your venue')}</h1>`}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px">
-      <div class="headtopactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+      <div class="headtopactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
       ${SAMPLE?`<button class="claimbtn" onclick="openClaim()">Claim profile</button>`
         :(V.plan||'free')==='free'
         ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`

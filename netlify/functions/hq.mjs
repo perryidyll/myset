@@ -6,17 +6,17 @@ import { readSampleReg, readArchive, readStats, readFactoryCfg, linkFor, optOut,
 import { QKEY } from './_factory.mjs';
 import * as L from './_hqlock.mjs';
 
-/* MYSET HQ, server side (decision 0108) — myset.vip/crm, the founder's outreach desk:
+/* MYSET CRM, server side (decision 0108) — myset.vip/crm, the founder's outreach desk:
    make a page from a form, keep every act and venue in one table with the tags that
    sort it, and every conversation with them in one place.
 
    The founder's alone, behind two locks: the factory console's gate (the founding
-   page's OWNER seat, decision 0099), then a passcode (_hqlock.mjs, INVARIANT 0hk). HQ
+   page's OWNER seat, decision 0099), then a passcode (_hqlock.mjs, INVARIANT 0hk). CRM
    reads every contact, every message and every sample, sends mail as the founder, and
    can erase all of it.
 
    WHAT LIVES WHERE. Contacts and conversations are _crm.mjs's. Pages are still the
-   factory's: HQ queues builds through factory.mjs's queueJobs/startJobs, and the page
+   factory's: CRM queues builds through factory.mjs's queueJobs/startJobs, and the page
    actions (edit, photos, approve, rebuild, cancel, revive, undo a claim) stay on
    /api/factory, so there is one door for each thing a page can do.
 
@@ -24,11 +24,11 @@ import * as L from './_hqlock.mjs';
    (_gmail.mjs), never MySet's mail sender: that one carries sign-in codes, and cold
    mail through it could cost every artist their way in. Instagram and TikTok allow no
    app to send the first message to somebody who has not written first, so those are
-   sent from the phone — HQ copies the words and opens the chat — and logged here.
+   sent from the phone — CRM copies the words and opens the chat — and logged here.
    Every outgoing message marks the page Sent the same way the console's button does
    (factory.mjs markSent), so the funnel counts it once, whichever door it came in by. */
 
-export const MAIL_PER_DAY = 60;   // emails HQ sends in a UTC day: a person's pace, which keeps a Gmail account in good standing
+export const MAIL_PER_DAY = 60;   // emails CRM sends in a UTC day: a person's pace, which keeps a Gmail account in good standing
 const SYNC_GAP_UI = 45e3;         // the open page asks at most this often
 const SYNC_GAP_RING = 4 * 60e3;   // the ten-minute ring skips when the page just did it
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
@@ -68,7 +68,7 @@ async function pushReply(doc, text) {
 async function pushShut(until) {
   try {
     const { notify } = await import('./_push.mjs');
-    await notify(DEFAULT_ARTIST, { title: '🔒 HQ is locked', body: `${L.LOCK_TRIES} wrong passcodes in a row, so it stays shut for ${L.LOCK_MINUTES} minutes. If that wasn’t you, sign out your other devices in Settings.`, url: '/crm', tag: 'hq-lock' }, { owner: true });
+    await notify(DEFAULT_ARTIST, { title: '🔒 CRM is locked', body: `${L.LOCK_TRIES} wrong passcodes in a row, so it stays shut for ${L.LOCK_MINUTES} minutes. If that wasn’t you, sign out your other devices in Settings.`, url: '/crm', tag: 'hq-lock' }, { owner: true });
   } catch {}
 }
 /** One of the day's emails, or false when the day's allowance is spent. */
@@ -193,7 +193,7 @@ const main = async (req) => {
 
   /* THE SECOND LOCK (_hqlock.mjs). Only the owner seat reaches this line, so only the
      owner seat can try a passcode. `unlock` and `lock` are the only actions a locked
-     HQ answers; everything below needs the cookie a right passcode set. */
+     CRM answers; everything below needs the cookie a right passcode set. */
   const secure = url.protocol === 'https:';
   if (action === 'unlock') {
     if (!L.ready()) return json({ ok: false, error: 'locked', ready: false, until: 0 }, 401);
@@ -220,7 +220,7 @@ const main = async (req) => {
   if (action === 'summary') {
     let w = await world();
     /* two repairs, both rare: a finished build whose contact never heard (the worker's
-       link failed), and pages the old console built before HQ, which get a contact */
+       link failed), and pages the old console built before CRM, which get a contact */
     let touched = false;
     for (const j of w.jobs) if (j.cid && j.st === 'done' && j.owner && w.crm.byId[j.cid] && !w.crm.byId[j.cid].owner) { await C.linkOwner(j.cid, j.owner); touched = true; }
     if (await C.adoptOrphans(w.reg, w.crm, { limit: 10 })) touched = true;

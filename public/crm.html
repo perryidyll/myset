@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  MySet — myset.vip/crm · HQ, the founder's command center.
+  MySet — myset.vip/crm · CRM, the founder's command center.
   © 2026 MySet. All rights reserved.
 
   The whole outreach desk on one page: make a sample profile from a form (the factory
@@ -21,14 +21,14 @@
 <meta name="theme-color" content="#000000" />
 <meta name="color-scheme" content="dark" />
 <meta name="robots" content="noindex,nofollow" />
-<script>/* The theme is set before the first paint, so a light HQ never flashes dark. */
+<script>/* The theme is set before the first paint, so a light CRM never flashes dark. */
 try{if(localStorage.getItem('myset.hq.theme')==='light'){document.documentElement.dataset.theme='light';
   document.querySelector('meta[name=theme-color]').content='#F5F5F7';document.querySelector('meta[name=color-scheme]').content='light';}}catch(e){}</script>
-<title>HQ — MySet</title>
+<title>CRM — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
 <style>
 /* THE STAGE: black, one accent (MySet's pink-orange, used like a reactor's glow),
-   everything else grey. That is the dark theme, and HQ opens in it; the light theme
+   everything else grey. That is the dark theme, and CRM opens in it; the light theme
    (below the phone rules) redefines these tokens and repaints the few surfaces that
    are not tokens. `--hi` is the colour every wash and hairline is mixed from: white
    on the dark stage, black on the light one. */
@@ -45,7 +45,7 @@ try{if(localStorage.getItem('myset.hq.theme')==='light'){document.documentElemen
   --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.4,.64,1);
-  /* HQ's own. The bright gradient is light, not a surface for words: white type sits
+  /* CRM's own. The bright gradient is light, not a surface for words: white type sits
      on the deep one, which keeps 4.7:1 or better end to end. */
   --deep:linear-gradient(135deg,#D6304F,#CC4527); --vdeep:linear-gradient(135deg,#1C8FD0,#2F5EE8);
   --vlit:linear-gradient(135deg,#64D2FF,#3AA0FF); --tint:rgba(255,86,80,.1); --vtint:rgba(100,210,255,.08);
@@ -828,7 +828,7 @@ input[type=date].inp{color-scheme:dark}
 .gate p{margin:0 0 18px;color:var(--muted);font-size:14.5px}
 
 /* ---------- the lock ----------
-   HQ starts behind it and goes back behind it whenever the server says so. Nothing
+   CRM starts behind it and goes back behind it whenever the server says so. Nothing
    about anyone is painted until the first summary answers ok: while the body is
    locked, the page under the lock is not drawn at all (visibility), though what was
    typed into it stays where it was. */
@@ -978,7 +978,7 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
 .lib-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
 @media(max-width:560px){.pre-h{grid-template-columns:minmax(0,1fr) auto 18px}.pre-h .rate{grid-column:1/3;grid-row:2;text-align:left}.erow{grid-template-columns:64px minmax(0,1fr)}.erow .rate{grid-column:1/-1}}
 @media(max-width:380px){.cmp-row{flex-wrap:wrap}.cmp-row .tplw{width:100%}.bc-2{grid-template-columns:1fr}}
-/* Below 390px the top bar holds five buttons beside HQ: "Online" keeps its dot and
+/* Below 390px the top bar holds five buttons beside CRM: "Online" keeps its dot and
    leaves the word to screen readers, and below 360px the gaps close up a little. */
 @media(max-width:389px){.online{font-size:0;gap:0}}
 @media(max-width:359px){.top .in{gap:8px}}
@@ -1044,12 +1044,12 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
 <header class="top" id="top">
   <div class="in">
     <a class="mark" href="/studio" aria-label="Back to the Studio"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></a>
-    <div class="brand"><h1>HQ</h1><span class="online" id="online"><i></i>Online</span><span class="boot" aria-hidden="true">Systems online</span></div>
+    <div class="brand"><h1>CRM</h1><span class="online" id="online"><i></i>Online</span><span class="boot" aria-hidden="true">Systems online</span></div>
     <div class="tele" id="tele"></div>
     <button type="button" class="cluster" id="cluster" data-act="settings" aria-label="Systems and settings"></button>
     <button type="button" class="kbtn" data-act="palette" aria-label="Search and commands" aria-keyshortcuts="Meta+K Control+K"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></svg><span>Search</span><kbd id="kbd">⌘K</kbd></button>
-    <button type="button" class="ibtn thm" id="thm" data-act="theme" aria-label="Switch to light mode" title="Light mode"><svg class="g sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.75 1.75M16.95 16.95l1.75 1.75M5.3 18.7l1.75-1.75M16.95 7.05l1.75-1.75"/></svg><svg class="g moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.47 12.74A8.5 8.5 0 1 1 11.25 3.53a6.6 6.6 0 0 0 9.22 9.21z"/></svg></button>
-    <button type="button" class="ibtn" data-act="lockhq" aria-label="Lock HQ" title="Lock HQ"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg></button>
+    <button type="button" class="ibtn thm" id="thm" data-act="theme" aria-label="Switch to light mode" title="Light mode">◐</button>
+    <button type="button" class="ibtn" data-act="lockhq" aria-label="Lock CRM" title="Lock CRM"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg></button>
     <button type="button" class="ibtn gear" data-act="settings" aria-label="Settings"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.6a1.7 1.7 0 0 1 3.4 0 1.7 1.7 0 0 0 2.6 1.1 1.7 1.7 0 0 1 2.4 2.4 1.7 1.7 0 0 0 1.1 2.6 1.7 1.7 0 0 1 0 3.4 1.7 1.7 0 0 0-1.1 2.6 1.7 1.7 0 0 1-2.4 2.4 1.7 1.7 0 0 0-2.6 1.1 1.7 1.7 0 0 1-3.4 0 1.7 1.7 0 0 0-2.6-1.1 1.7 1.7 0 0 1-2.4-2.4 1.7 1.7 0 0 0-1.1-2.6 1.7 1.7 0 0 1 0-3.4 1.7 1.7 0 0 0 1.1-2.6 1.7 1.7 0 0 1 2.4-2.4 1.7 1.7 0 0 0 2.6-1.1z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </div>
   <i class="scan" aria-hidden="true"></i>
@@ -1116,8 +1116,8 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
     <i class="rx-core"></i>
     <svg class="g lk-ic" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path class="sh" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg>
   </div>
-  <p class="lk-k">MySet HQ</p>
-  <h1 id="lockT">Opening HQ</h1>
+  <p class="lk-k">MySet CRM</p>
+  <h1 id="lockT">Opening CRM</h1>
   <form class="lk-f" id="lockF" novalidate>
     <label class="sr" for="lockIn">Passcode</label>
     <input class="inp" id="lockIn" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Passcode" enterkeyhint="go">
@@ -1216,7 +1216,7 @@ const SLOTW={cover:'Cover',avatar:'Portrait',p0:'Photo 1',p1:'Photo 2',p2:'Photo
 const KINDW={youtube:'YouTube',instagram:'Instagram',website:'Website',tiktok:'TikTok',facebook:'Facebook',spotify:'Spotify',applemusic:'Apple Music',
   bandcamp:'Bandcamp',soundcloud:'SoundCloud',google:'Google',founder:'Added by you'};
 const EVW={seed:'Line read',suppress:'Opt-out check',discover:'Pages found',collect:'Sources read',facts:'Facts pulled',photos:'Photos chosen',copy:'Words written',gate:'Quality check',
-  created:'Added to HQ',lead:'Saved as a lead',generate:'Build started',built:'Page built',failed:'Build failed',sent:'Message sent',reply:'Reply',note:'Note',approved:'Approved',
+  created:'Added to CRM',lead:'Saved as a lead',generate:'Build started',built:'Page built',failed:'Build failed',sent:'Message sent',reply:'Reply',note:'Note',approved:'Approved',
   cancelled:'Page cancelled',claimed:'Claimed',archived:'Came down',revived:'Revived',edited:'Edited',photo:'Photo changed',linked:'Page linked',adopted:'Added from the factory'};
 const human=k=>{const s=String(k||'').replace(/[_-]+/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').trim().toLowerCase();return s?s[0].toUpperCase()+s.slice(1):'';};
 const kindW=k=>KINDW[k]||human(k);
@@ -1279,7 +1279,7 @@ async function call(path,action,body,quiet){
   try{
     const r=await fetch(path,{method:'POST',headers:h,body:JSON.stringify(Object.assign({action},body||{}))});
     const t=await r.text(); let j;
-    try{j=JSON.parse(t);}catch(e){return {ok:false,error:'HQ answered with something unexpected — try again'};}
+    try{j=JSON.parse(t);}catch(e){return {ok:false,error:'CRM answered with something unexpected — try again'};}
     if(path==='/api/hq'&&j&&j.error==='locked')lockUp(j);   // the unlock ran out, or never was: the lock goes over everything
     return j;
   }catch(e){return {ok:false,offline:true,error:'Connection hiccup — try again'};}
@@ -1479,7 +1479,7 @@ function vmark(inp){
 function markDropped(p,dropped){
   (dropped||[]).forEach(k=>{ const inp=document.getElementById(k==='email'?(p==='n'?'nEmail':p+'Email'):k==='phone'?(p==='n'?'nPhone':p+'Phone'):p+'L-'+k); if(!inp)return;
     const row=inp.closest('.lr')||inp.closest('.fi'); row.dataset.v='bad'; inp.setAttribute('aria-invalid','true');
-    const hint=document.getElementById(inp.getAttribute('aria-describedby')||''); if(hint)hint.textContent=`HQ couldn’t use that ${LW[k]||k} — check it.`; });
+    const hint=document.getElementById(inp.getAttribute('aria-describedby')||''); if(hint)hint.textContent=`CRM couldn’t use that ${LW[k]||k} — check it.`; });
   if(dropped&&dropped.length)toast(`Saved — but ${dropped.map(k=>LW[k]||k).join(', ')} ${dropped.length===1?'wasn’t':'weren’t'} understood`);
 }
 function fold(sel,on){ const f=$(sel); if(!f)return; f.classList.toggle('on',on); f.inert=!on; }
@@ -1491,7 +1491,7 @@ function resetForm(){
 function showForm(focus){ fold('#nB',false); fold('#nF',true); $('#nMeta').innerHTML=''; if(focus)setTimeout(()=>{const n=$('#nName');if(n)n.focus({preventScroll:false});},80); }
 function showDup(cid,msg){
   const r=rowBy(cid), el=$('#nDup');
-  el.innerHTML=`<span>${esc(msg||'Already in HQ')}${r?` — <b>${esc(r.name||'')}</b>`:''}</span><button type="button" class="btn sm" data-act="edit" data-cid="${esc(cid)}" data-t="ov">Open it</button>`;
+  el.innerHTML=`<span>${esc(msg||'Already in CRM')}${r?` — <b>${esc(r.name||'')}</b>`:''}</span><button type="button" class="btn sm" data-act="edit" data-cid="${esc(cid)}" data-t="ov">Open it</button>`;
   el.hidden=false;
 }
 /* THE CARD COMES AT ONCE. The server can take a few seconds to hand the build to its
@@ -1506,7 +1506,7 @@ async function generate(){
   const mine=PJ===tmp, b=B[tmp]; delete B[tmp];
   if(!d||!d.ok){
     if(mine)showForm(false);
-    if(d&&d.cid&&(d.error==='duplicate'||/already has a page/i.test(d.error||''))){ showDup(d.cid,d.error==='duplicate'?'Already in HQ':d.error); return; }
+    if(d&&d.cid&&(d.error==='duplicate'||/already has a page/i.test(d.error||''))){ showDup(d.cid,d.error==='duplicate'?'Already in CRM':d.error); return; }
     failed(d); return;
   }
   NCID=d.cid||'';
@@ -1745,7 +1745,7 @@ function pipeShell(){
   if(box.dataset.mode===want)return;
   box.dataset.mode=want;
   box.innerHTML=PHONE?`<ul class="plist" id="plist" aria-label="Contacts"></ul><div id="pEmpty"></div>`
-    :`<div class="twrap" id="twrap"><div class="tw" id="tw"><table class="tbl" id="tbl"><caption class="sr">Every artist and venue in HQ. Sorted by what needs you first; the column buttons sort it.</caption><thead><tr>
+    :`<div class="twrap" id="twrap"><div class="tw" id="tw"><table class="tbl" id="tbl"><caption class="sr">Every artist and venue in CRM. Sorted by what needs you first; the column buttons sort it.</caption><thead><tr>
       <th scope="col" class="c-star"><span class="sr">Starred</span></th>${thSort('name','c-name')}<th scope="col" class="c-type">Type</th>${thSort('stage','c-stage')}
       <th scope="col" class="c-tags">Tags</th>${thSort('last','c-last')}${thSort('fu','c-fu')}${thSort('left','c-left')}<th scope="col" class="c-act"><span class="sr">Actions</span></th></tr></thead><tbody id="tb"></tbody></table></div><i class="tfade"><button type="button" data-act="tmore" tabindex="-1" aria-hidden="true"><span id="tmn"></span>${ico('up')}</button></i></div><div id="pEmpty"></div>`;
   const tw=$('#tw'); if(tw)tw.addEventListener('scroll',tmore,{passive:true});
@@ -1978,7 +1978,7 @@ function after(cid,d,msg){   // a message went out or came in: it joins the thre
   const cv=$('#convs'); if(cv&&CUR.m===cid&&cv.scrollTop>0)cv.scrollTo({top:0,behavior:REDUCE?'auto':'smooth'});
 }
 /* THE FIRST DM IS SENT BY HAND. Instagram lets no app open a conversation, and TikTok only
-   approved ones, so HQ copies the words and opens their chat in the same tap (a browser
+   approved ones, so CRM copies the words and opens their chat in the same tap (a browser
    allows a new tab only while the tap is happening), and then asks whether it went —
    nothing is logged until the founder says so. */
 function handleFrom(k,u){
@@ -2104,14 +2104,14 @@ function ovHtml(){
     <p class="sub">Tags<span class="subr tagcount" id="tcd"></span></p>${tagbox('d')}
     <p class="sub">Follow-up</p><div class="furow"><label class="sr" for="ovFu">Follow-up date</label><input class="inp sm" type="date" id="ovFu" value="${fuv}">
       ${[[1,'Tomorrow'],[3,'+3 days'],[7,'+1 week']].map(([n,w])=>`<button type="button" class="btn sm" data-act="fu" data-k="${n}">${w}</button>`).join('')}${fuT?'<button type="button" class="btn sm quiet" data-act="fu" data-k="0">Clear</button>':''}</div>
-      <p class="hint2">${fuT?`${isDue({fu:fuT})?'Due':'Set for'} ${esc(when(fuT))}`:'No follow-up set. HQ sets one for you after a message goes out.'}</p>
+      <p class="hint2">${fuT?`${isDue({fu:fuT})?'Due':'Set for'} ${esc(when(fuT))}`:'No follow-up set. CRM sets one for you after a message goes out.'}</p>
     <p class="sub">Private notes<span class="subr">only you see these</span></p>
     <div class="nadd"><label class="sr" for="ovNote">New note</label><textarea class="inp" id="ovNote" rows="1" placeholder="Add a note"></textarea><button type="button" class="btn sm" data-act="addnote">Add</button></div>
     <ul class="notes">${(c.notes||[]).map(n=>`<li><time>${esc(when(n.t))}</time>${esc(n.text)}</li>`).join('')}</ul>
     <p class="sub">Activity</p><ol class="tl">${ev.slice(0,40).map(e=>`<li class="${e.k}"><time>${esc(when(e.t))}</time><b>${esc(e.w)}</b>${e.m?' — '+esc(e.m):''}</li>`).join('')||'<li>Nothing yet.</li>'}</ol>
     <section class="dz" aria-label="Danger zone"><p class="sub">Danger zone</p>
-      <button type="button" class="btn bad" data-act="delc">${ico('close')}Delete contact</button><p class="hint2">Takes them out of HQ only — a live page stays up at its link.</p>
-      <button type="button" class="btn bad solid" data-act="delf">Delete forever — they asked</button><p class="hint2">Their page and everything HQ holds on them are erased, and the factory never builds them again.</p></section>`;
+      <button type="button" class="btn bad" data-act="delc">${ico('close')}Delete contact</button><p class="hint2">Takes them out of CRM only — a live page stays up at its link.</p>
+      <button type="button" class="btn bad solid" data-act="delf">Delete forever — they asked</button><p class="hint2">Their page and everything CRM holds on them are erased, and the factory never builds them again.</p></section>`;
 }
 const OVMAP={oName:'name',oCity:'city',oCountry:'country',oEmail:'email',oPhone:'phone'};
 function ovDirty(){ const f=$('#ovF'); if(!f)return false; return $$('#ovF input').some(i=>i.dataset.was!=null&&i.value!==i.dataset.was); }
@@ -2200,7 +2200,7 @@ function videosHtml(pr){
 function claimedHtml(p,r){
   const link=pageUrl(p.link||r.link), undo=p.undo===true||(p.undo==null&&FSUM&&(FSUM.claimed||[]).some(x=>x.owner===r.owner&&(x.until||0)>Date.now()));
   if(p.undo==null&&!FSUM)fsum();
-  return `<div class="state good"><span class="si">${ico('check')}</span><h3>Claimed — this page is theirs now</h3><p>They run it from their own Studio. HQ keeps the conversation.</p>
+  return `<div class="state good"><span class="si">${ico('check')}</span><h3>Claimed — this page is theirs now</h3><p>They run it from their own Studio. CRM keeps the conversation.</p>
     ${link?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link.replace(/^https?:\/\//,''))} ${ico('out')}</a>`:''}
     ${undo?`<button type="button" class="btn bad" data-act="undoclaim">Undo claim</button><p class="hint2">Only for a short while after a claim — their account closes and the page goes back to being a sample.</p>`:''}</div>`;
 }
@@ -2267,7 +2267,7 @@ function unmodal(sel){ const m=$(sel); if(!m.classList.contains('on'))return; if
   const o=m._opener; m._opener=null; if(o&&o.isConnected)o.focus({preventScroll:true}); }
 function gmailBlock(){
   const g=(S&&S.gmail)||{};
-  if(!g.ready)return `<b>Gmail</b><p>Needs the Google client ID and secret in Netlify first. Once they are there, connect it here and email sends and syncs from HQ.</p>`;
+  if(!g.ready)return `<b>Gmail</b><p>Needs the Google client ID and secret in Netlify first. Once they are there, connect it here and email sends and syncs from CRM.</p>`;
   if(g.connected)return `<b>Gmail</b><p><span class="okl">Connected as ${esc(g.email||'your Gmail')}</span> · last sync ${esc(g.lastSync?ago(g.lastSync):'not yet')}</p>${g.err?`<p style="color:var(--bad-2)">${g.err==='revoked'?'Google took the permission back — connect it again.':esc(g.err)}</p>`:''}
     <div class="row"><button type="button" class="btn sm" data-act="gsync">${ico('refresh')}Sync now</button><button type="button" class="btn sm quiet" data-act="gdisc">Disconnect</button>${g.err?'<button type="button" class="btn sm pri" data-act="gconn">Connect again</button>':''}</div>`;
   return `<b>Gmail</b><p>Send from your own Gmail, and their replies land in the thread. MySet’s sign-in mail is never used for outreach.</p><div class="row"><button type="button" class="btn sm pri" data-act="gconn">${ico('email')}Connect Gmail</button></div>`;
@@ -2350,7 +2350,7 @@ function libFlush(){ if(LIBT){ clearTimeout(LIBT); LIBT=0; libSave(); } }
 const libPre=b=>{ const li=b.closest('.pre'); return li&&LIBD&&LIBD.list.find(p=>p.k===li.dataset.k); };
 
 /* ---------- the theme ----------
-   Dark is HQ's own; light is one tap on the sun. The choice is kept in this browser
+   Dark is CRM's own; light is one tap on the half-moon. The choice is kept in this browser
    (the head sets it before the first paint), and the new theme spreads out from the
    switch as a circle where the browser can draw one. */
 const isLight=()=>document.documentElement.dataset.theme==='light';
@@ -2485,10 +2485,10 @@ const ACTS={
     drawerBody(true); toast('Note added'); },
   ovreset:()=>{ $$('#ovF input').forEach(i=>{ if(i.dataset.was!=null)i.value=i.dataset.was; }); $$('#ovF [data-link]').forEach(vmark); $$('#ovF [data-v]').forEach(e=>{ if(!e.querySelector('[data-link]'))delete e.dataset.v; }); ovState(); },
   delc:async()=>{ const cid=DR.cid, r=rowBy(cid)||{};
-    if(!await ask(`Delete ${r.name||'this contact'}?`,'They leave HQ, with their notes and the conversation. A live page stays up at its link.','Delete contact',true))return;
+    if(!await ask(`Delete ${r.name||'this contact'}?`,'They leave CRM, with their notes and the conversation. A live page stays up at its link.','Delete contact',true))return;
     const d=await api('remove',{cid,mode:'contact'}); if(failed(d))return; closeDrawer(); dropRow(cid); toast('Contact deleted'); load(); },
   delf:async()=>{ const cid=DR.cid, r=rowBy(cid)||{};
-    if(!await ask('Delete them forever?',`For when they asked. ${r.name||'Their'} page, any copy kept of it and everything HQ holds on them are erased now, and the factory never builds them again.`,'Delete forever',true))return;
+    if(!await ask('Delete them forever?',`For when they asked. ${r.name||'Their'} page, any copy kept of it and everything CRM holds on them are erased now, and the factory never builds them again.`,'Delete forever',true))return;
     const d=await api('remove',{cid,mode:'forever'}); if(failed(d))return; closeDrawer(); dropRow(cid); toast('Deleted forever. The factory won’t build them again'); load(); },
   approve:async()=>{ const cid=DR.cid, r=rowBy(cid); if(!r)return; const d=await fapi('approve',{owner:r.owner}); if(failed(d))return;
     toast('Approved — it’s Ready to send'); await load(); await refreshContact(cid,true); },
@@ -2496,7 +2496,7 @@ const ACTS={
     if(!await ask('Rebuild this page?','The factory runs it again from its sources. Words you changed here may be replaced.','Rebuild'))return;
     const d=await fapi('rebuild',{owner:r.owner}); if(failed(d))return; toast('Rebuilding — it’s back in the queue'); await load(); await refreshContact(cid,true); },
   cancelpage:async()=>{ const cid=DR.cid, r=rowBy(cid); if(!r)return;
-    if(!await ask('Cancel this page?','Its link stops working. They stay in HQ as a lead, with the conversation.','Cancel page',true))return;
+    if(!await ask('Cancel this page?','Its link stops working. They stay in CRM as a lead, with the conversation.','Cancel page',true))return;
     const d=await fapi('cancel',{owner:r.owner}); if(failed(d))return; toast('Page cancelled'); await load(); await refreshContact(cid,true); },
   undoclaim:async()=>{ const cid=DR.cid, r=rowBy(cid); if(!r)return;
     if(!await ask(`Undo the claim on ${r.name||'this page'}?`,'Their account closes and its sign-in stops working; the page goes back to being an unclaimed sample, at the same link.','Undo claim',true))return;
@@ -2515,7 +2515,7 @@ const ACTS={
   savecfg:async()=>{ const per=Math.round(+val('cPer')), sign=val('cSign'), address=val('cAddr'); if(!(per>=1))return toast('Pick at least one page a day');
     const d=await fapi('settings',{perDay:per,signoff:sign,address}); if(failed(d))return; if(S&&d.cfg)S.cfg=d.cfg; unmodal('#setp'); toast('Settings saved'); load(); },
   gconn:async()=>{ const d=await api('gmail',{op:'connect'}); if(failed(d))return; const u=pageUrl(d.url); if(u)location.href=u; },
-  gdisc:async()=>{ if(!await ask('Disconnect Gmail?','HQ stops sending and syncing email. Nothing in your Gmail changes.','Disconnect',true))return;
+  gdisc:async()=>{ if(!await ask('Disconnect Gmail?','CRM stops sending and syncing email. Nothing in your Gmail changes.','Disconnect',true))return;
     const d=await api('gmail',{op:'disconnect'}); if(failed(d))return; toast('Gmail disconnected'); await load(); const g=$('#gmb'); if(g)g.innerHTML=gmailBlock(); },
   gsync:async()=>{ const d=await api('gmail',{op:'sync'}); if(failed(d))return; toast(d.added?`${plural(+d.added,'new email')}`:'Up to date'); await load(); const g=$('#gmb'); if(g)g.innerHTML=gmailBlock(); refreshThreads(); },
   untag:b=>{ const loc=b.dataset.loc; TAGS[loc].splice(+b.dataset.i,1); paintTags(loc); if(loc==='d')saveTags(); const i=$('#tg-'+loc); if(i)i.focus({preventScroll:true}); },
@@ -2660,7 +2660,7 @@ function askDone(v){ $('#ask').classList.remove('on'); ASKI.forEach(e=>{e.inert=
 $('#askY').onclick=()=>askDone(true); $('#askN').onclick=()=>askDone(false);
 $('#ask').addEventListener('click',e=>{ if(e.target.id==='ask')askDone(false); });
 
-/* ---------- Gmail, quietly, while HQ is open ---------- */
+/* ---------- Gmail, quietly, while CRM is open ---------- */
 function gsync(){
   clearTimeout(GSYNC); if(document.hidden||gated()||LOCKED)return;
   GSYNC=setTimeout(async()=>{ if(S&&S.gmail&&S.gmail.connected){ const d=await api('gmail',{op:'sync'},true); if(d&&d.ok&&d.added){ await load(); refreshThreads(); } } gsync(); },60000);
@@ -2690,15 +2690,15 @@ function lockUp(d){
 function lockState(st,d){
   d=d||{}; const el=$('#lock'), s=$('#lockS'), t=$('#lockT'), inp=$('#lockIn'), go=$('#lockGo');
   el.dataset.state=st; clearInterval(LK_T); s.className='lk-s'; inp.disabled=false; go.disabled=false;
-  if(st==='boot'){ t.textContent='Opening HQ'; s.textContent='Checking the door…'; return; }
-  if(st==='nocode'){ t.textContent='HQ isn’t set up here'; s.textContent='This copy of the site has no HQ passcode (a deploy preview). Open HQ on myset.vip.'; return; }
+  if(st==='boot'){ t.textContent='Opening CRM'; s.textContent='Checking the door…'; return; }
+  if(st==='nocode'){ t.textContent='CRM isn’t set up here'; s.textContent='This copy of the site has no CRM passcode (a deploy preview). Open CRM on myset.vip.'; return; }
   t.textContent='Enter the passcode';
   if(st==='out'){
     const until=+d.until||0, at=new Date(until).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
     inp.disabled=true; go.disabled=true; s.classList.add('bad');
     const tick=()=>{ const ms=until-Date.now();
       if(ms<=0){ lockState('ready',{msg:'Try again.'}); return; }
-      s.innerHTML=`Too many tries. HQ opens again at ${esc(at)}<span class="lk-cd" aria-hidden="true">${mmss(ms)}</span>`; };
+      s.innerHTML=`Too many tries. CRM opens again at ${esc(at)}<span class="lk-cd" aria-hidden="true">${mmss(ms)}</span>`; };
     tick(); LK_T=setInterval(tick,1000); return; }
   s.textContent=d.msg||''; if(d.bad)s.classList.add('bad');
   setTimeout(()=>{ if(!inp.disabled&&el.classList.contains('on'))inp.focus({preventScroll:true}); },80);
@@ -2736,9 +2736,9 @@ function gate(kind,msg){
   document.body.classList.remove('locked'); document.body.classList.add('live'); ['#top','#app','#tabbar'].forEach(s=>{const x=$(s); if(x)x.inert=false;});
   clearTimeout(POLL); clearTimeout(GSYNC); clearTimeout(JP); closeDrawer(); unmodal('#setp'); unmodal('#pal');
   const app=$('#app'); app.dataset.gate=kind; $('#tele').innerHTML=''; $('#cluster').hidden=true; $('#tabbar').hidden=true; PAINTED.tele='';
-  const T={signin:['Sign in to your Studio first','HQ uses your Studio sign-in. Sign in there, then come back to this page.'],
+  const T={signin:['Sign in to your Studio first','CRM uses your Studio sign-in. Sign in there, then come back to this page.'],
     founder:['This page is for the MySet founder’s account','Sign in with that account in the Studio, then come back here.'],
-    offline:['Connection hiccup',msg||'HQ didn’t answer. Check the connection and try again.']}[kind];
+    offline:['Connection hiccup',msg||'CRM didn’t answer. Check the connection and try again.']}[kind];
   app.innerHTML=`<div class="panel gate rise"><div class="fx" aria-hidden="true"><i></i></div><span class="mark" aria-hidden="true">${MARK}</span><h2>${esc(T[0])}</h2><p>${esc(T[1])}</p>
     ${kind==='offline'?'<button type="button" class="btn pri big" data-act="reload">Try again</button>':`<a class="btn pri big" href="/studio">${kind==='signin'?'Sign in to the Studio':'Go to the Studio'}</a>`}</div>`;
 }

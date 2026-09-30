@@ -1,4 +1,4 @@
-/* MYSET HQ — the founder's outreach desk and its CRM (decisions 0108, 0109), run end to
+/* MYSET CRM — the founder's outreach desk and its CRM (decisions 0108, 0109), run end to
    end on the in-memory store with no network: the factory's worker is played by a
    fake build, Google by a fake fetch.
 
@@ -11,7 +11,7 @@
    archived); a logged message marks the page Sent once, sets the follow-up, and a reply
    clears it; tags are tidy; pages the old console built are adopted, and a contact
    deleted on purpose is not adopted back; Cancel page leaves a lead; Delete forever —
-   from HQ or from the old console — erases the page AND the contact and suppresses
+   from CRM or from the old console — erases the page AND the contact and suppresses
    them, page or no page; Edit profile writes canonical links, names the refused ones
    and edits videos; a rebuild keeps the seed's fields. And the passcode (INVARIANT
    0hk): nothing opens without it, even for the owner seat; only the owner seat can
@@ -124,7 +124,7 @@ eq('a stranger cannot even try the passcode', (await call(hqFn, 'https://hq.test
 eq('nor can another artist', (await call(hqFn, 'https://hq.test/api/hq', { headers: { authorization: 'Bearer ' + ot }, body: { action: 'unlock', code: PASS } })).error, 'unauthorized');
 r = await H({ action: 'unlock', code: PASS });
 ok('the right passcode opens it for twelve hours', r.status === 200 && r.ok && r.until > Date.now() + (L.UNLOCK_HOURS * 3600e3 - 60e3), r);
-ok('with a cookie a page script cannot read, sent to HQ’s API alone', /^hqk=\d+\.[\w-]{40,}; Path=\/api\/hq; Max-Age=43200; HttpOnly; SameSite=Strict; Secure$/.test(r.cookie), r.cookie);
+ok('with a cookie a page script cannot read, sent to CRM’s API alone', /^hqk=\d+\.[\w-]{40,}; Path=\/api\/hq; Max-Age=43200; HttpOnly; SameSite=Strict; Secure$/.test(r.cookie), r.cookie);
 JAR = r.cookie.split(';')[0];
 r = await H({ action: 'summary' });
 ok('the founder gets the desk: keys, Gmail, today, the month, contacts, tags', r.ok && r.keys && r.gmail && r.today && r.month && Array.isArray(r.contacts) && Array.isArray(r.tags), r);
@@ -150,7 +150,7 @@ console.log('\nTHE PASSCODE (INVARIANT 0hk)');
   const fifth = await H({ action: 'unlock', code: 'guess 4' }, '');
   eq('the fifth shuts the door', [fifth.status, fifth.error, !!fifth.cookie], [429, 'locked-out', false]);
   let x = await H({ action: 'summary' }, '');
-  ok('and a locked HQ says until when', x.status === 401 && x.error === 'locked' && x.until > Date.now() + (L.LOCK_MINUTES * 60e3 - 60e3), x);
+  ok('and a locked CRM says until when', x.status === 401 && x.error === 'locked' && x.until > Date.now() + (L.LOCK_MINUTES * 60e3 - 60e3), x);
   x = await H({ action: 'unlock', code: PASS }, '');
   ok('while it is shut, even the right passcode waits', x.status === 429 && x.error === 'locked-out' && !x.cookie, x);
   eq('Lock is per browser: another browser that was already open stays open', (await H({ action: 'summary' })).ok, true);
@@ -168,11 +168,11 @@ console.log('\nTHE PASSCODE (INVARIANT 0hk)');
 
   const keep = process.env.HQ_PASSCODE;
   process.env.HQ_PASSCODE = await L.hashPasscode('a new one');
-  eq('a new passcode locks every open HQ', pin(await H({ action: 'summary' })), [401, 'locked']);
+  eq('a new passcode locks every open CRM', pin(await H({ action: 'summary' })), [401, 'locked']);
   eq('and the old passcode no longer opens it', (await H({ action: 'unlock', code: PASS }, '')).error, 'wrong');
   delete process.env.HQ_PASSCODE;
   x = await H({ action: 'summary' });
-  eq('with no passcode set (a deploy preview) HQ stays shut and says why', [x.status, x.error, x.ready], [401, 'locked', false]);
+  eq('with no passcode set (a deploy preview) CRM stays shut and says why', [x.status, x.error, x.ready], [401, 'locked', false]);
   x = await H({ action: 'unlock', code: PASS }, '');
   eq('and nothing unlocks it', [x.status, x.ok, x.ready, !!x.cookie], [401, false, false, false]);
   for (const bad of ['', 'a plain passcode', 'scrypt$1024$8$1$c2FsdHNhbHRzYWx0c2FsdA$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYXNoaGFzaGhhc2g', 'scrypt$1073741824$8$1$c2FsdHNhbHRzYWx0c2FsdA$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYXNoaGFzaGhhc2g']) {
@@ -182,7 +182,7 @@ console.log('\nTHE PASSCODE (INVARIANT 0hk)');
   process.env.HQ_PASSCODE = keep;
   x = await H({ action: 'unlock', code: PASS }, '');
   JAR = x.cookie.split(';')[0];
-  ok('the passcode is back and HQ opens', (await H({ action: 'summary' })).ok, x);
+  ok('the passcode is back and CRM opens', (await H({ action: 'summary' })).ok, x);
 
   const t0 = Date.now(); await L.checkPasscode('timing');
   ok('a try costs a real hash (scrypt), not a string compare', Date.now() - t0 >= 15, Date.now() - t0);
@@ -306,7 +306,7 @@ BG.deps.run = fakeBuild({ review: false });
 await BG.work(r.job.id);
 const noOwner = (await C.readContact(no)).owner;
 r = await H({ action: 'remove', cid: no, mode: 'forever' });
-ok('from HQ: the page, the contact — gone', r.ok && !(await S.readSampleReg()).byId[noOwner] && !(await C.readContact(no)) && !(await C.readCrm()).byId[no]);
+ok('from CRM: the page, the contact — gone', r.ok && !(await S.readSampleReg()).byId[noOwner] && !(await C.readContact(no)) && !(await C.readCrm()).byId[no]);
 ok('and they are suppressed: the factory will not build them again', await S.isSuppressed(['saynoband']));
 eq('their keys are gone from the index', Object.values((await C.readCrm()).byKey).includes(no), false);
 
@@ -418,7 +418,7 @@ console.log('\nGMAIL: CONNECT, SEND, A REPLY READ BACK (decision 0109)');
     && auth.searchParams.get('redirect_uri') === 'https://hq.test/api/hq/gmail' && (auth.searchParams.get('state') || '').includes('.'), r.url);
   const back = async (q) => { const res = await hqFn(new Request(`https://hq.test/api/hq/gmail?${q}`)); return [res.status, res.headers.get('location') || '']; };
   const [st1, loc1] = await back(`code=good-code&state=${encodeURIComponent('forged.state')}`);
-  ok('a return with a state HQ never handed out is refused', st1 === 302 && loc1.startsWith('/crm?gmail=error') && !(await H({ action: 'summary' })).gmail.connected, loc1);
+  ok('a return with a state CRM never handed out is refused', st1 === 302 && loc1.startsWith('/crm?gmail=error') && !(await H({ action: 'summary' })).gmail.connected, loc1);
   const [st2, loc2] = await back(`error=access_denied&state=x`);
   ok('the founder pressing Cancel at Google comes back as an error, nothing kept', st2 === 302 && /gmail=error&why=access_denied/.test(loc2), loc2);
   const [st3, loc3] = await back(`code=good-code&state=${encodeURIComponent(auth.searchParams.get('state'))}`);
@@ -469,7 +469,7 @@ console.log('\nGMAIL: CONNECT, SEND, A REPLY READ BACK (decision 0109)');
   globalThis.fetch = before;
 }
 
-console.log('\nTHE SIGN-IN MAIL SENDER IS NOT HQ’S (INVARIANT 0gs)');
+console.log('\nTHE SIGN-IN MAIL SENDER IS NOT CRM’S (INVARIANT 0gs)');
 {
   const { readFileSync, existsSync } = await import('node:fs');
   for (const f of ['hq.mjs', '_crm.mjs', 'hqcron.mjs', '_gmail.mjs']) {
@@ -503,7 +503,7 @@ console.log('\nTHE PAGE’S TWO THEMES');
   const whites = (css.match(/rgba\(255,255,255,/g) || []).length;
   ok('every wash and hairline is mixed from --hi; white stays only as a highlight on a coloured surface (six of them)', whites <= 6, whites);
   const head = page.slice(0, page.indexOf('<style>'));
-  ok('the head sets the kept theme before the first paint, so a light HQ never flashes dark',
+  ok('the head sets the kept theme before the first paint, so a light CRM never flashes dark',
     head.includes("localStorage.getItem('myset.hq.theme')") && head.includes("dataset.theme='light'"));
   ok('the sun in the top bar has its handler', page.includes('data-act="theme"') && /\btheme:\(\)=>setTheme\(/.test(page));
 }
@@ -528,7 +528,7 @@ console.log('\nTHE MESSAGE LIBRARY (decision 0117)');
   eq('an empty library stays empty: the founder cleared it', r.lib.list.length, 0);
   r = await H({ action: 'savelib', lib: null });
   eq('null puts the originals back', [r.lib.list.length, r.lib.ending], [8, 'ab']);
-  eq('a locked HQ does not save a library', (await H({ action: 'savelib', lib: { list: [] } }, '')).error, 'locked');
+  eq('a locked CRM does not save a library', (await H({ action: 'savelib', lib: { list: [] } }, '')).error, 'locked');
 
   const { out: f } = C.normFields('artist', { name: 'Presets Test Act', city: 'Pai', links: { instagram: '@presetstest' }, tags: ['wedding'] });
   const pc = (await C.createContact('artist', f, { force: true })).cid;

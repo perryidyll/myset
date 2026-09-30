@@ -177,7 +177,7 @@ export function noteSample(owner, e, m = '') {
 export async function tellFounder(title, body) {
   try { const { notify } = await import('./_push.mjs'); await notify(DEFAULT_ARTIST, { title, body, url: '/factory', tag: 'samples' }, { owner: true }); } catch {}
 }
-/* HQ's contacts follow their page (decision 0108): every place a page goes, or moves to
+/* CRM's contacts follow their page (decision 0108): every place a page goes, or moves to
    a new owner id, tells the CRM here. Best-effort and last: a CRM hiccup is never why a
    take-down, a delete or a rebuild fails. */
 async function tellCrm(what, ...args) {
