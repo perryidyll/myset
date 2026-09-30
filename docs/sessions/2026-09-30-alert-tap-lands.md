@@ -6,6 +6,6 @@
 
 **Changed (decision 0125):** the worker now focuses an open window whose first path segment matches the alert's address, and otherwise opens the address. The cache rules, the cache name and the fetch handler are untouched. INVARIANT 0ha gains one sentence.
 
-**Verified:** `test/sw.mjs` +6 checks against the real worker (three fail on the old one); `sh test/run.sh` exit 0.
+**Verified:** `test/sw.mjs` +6 checks against the real worker (three fail on the old one); `sh test/run.sh` exit 0, 5,014 ✓. Deploy preview served the new worker; **live as `3c161bd` (PR #171)**, verified by content on myset.vip at 05:59 UTC (`/sw.js` carries `appOf`).
 
 **Not checked:** a real phone. An app that is already open is focused on the tab it was showing, not the alert's tab (unchanged for artists; the record says what would change it).

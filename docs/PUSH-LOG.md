@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-30 13:00 — 2374305 — alert-tap@docs/alert-tap-live (3 files since origin/main)
+**tl;dr:** Docs only: decision 0125 and the ledger say the alert-tap fix is live [skip ci]
+**Other sessions:** 0125 live as 3c161bd (#171).
+
 ### 2026-09-30 12:57 — 98cc943 — alert-tap@fix/alert-tap-lands (9 files since origin/main)
 **tl;dr:** Tapping an alert now opens the app it is for: a venue alert brings up the Venue Studio even when the artist Studio is open too
 **Other sessions:** Decision 0125, on the founder's word: sw.js notificationclick focuses an open window whose first path segment matches the alert's url (appOf), else openWindow(url). Cache name, fetch rules unchanged. test/sw.mjs +6. A focused app is not switched to the alert's tab (no reload by design).
