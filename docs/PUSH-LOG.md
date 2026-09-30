@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-09-30 14:20 — 5cf24f3 — venue-pages@feat/venue-pages (53 files since origin/main)
+**tl;dr:** Venues: pages lead with their photos and the next three shows (See more for the rest, links drift); venues approve or deny the shows artists list there (recurring confirmed once); a Tip the staff button on both plans; fee 25% Free / 5% Pro; five photos Free; hiding posts is Pro; the Pro card says Everything in Free, plus; testimonials gone; a Suggestions & feedback button
+**Other sessions:** Decisions 0127-0129 (0126 is #175, included here). VENUE_PLANS: photos 5/12, cut .25/.05, tips both, moderate Pro; VENUE_NOT_BUILT ['speakerVotes']. pay.mjs ?v= takes kind tip; shapeVenue.tipsOn. gigok_<vid> (_gigok.mjs), venueadmin gigList/gigSet/suggest, venue.mjs listings() shared, rows carry confirmed. suggest doc + Sheet tab Suggestions (13 tabs). Samples store p0-p4 for venues. tools/localhost /dev/venue.
+
 ### 2026-09-30 14:00 — 97a9b2e — venue-pages@fix/crm-twins (16 files since origin/main)
 **tl;dr:** CRM no longer shows a generated page twice (Sand & Tan did); the Studio welcome card reads 'Look around: every tab explains itself'
 **Other sessions:** Decision 0126: samplereg rows carry cid (the CRM contact that asked); adoptOrphans(reg, crm, {jobs}) links it instead of adopting; dropTwins erases an untouched twin on each summary. tips.js restamped everywhere.
