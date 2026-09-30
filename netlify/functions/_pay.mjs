@@ -268,6 +268,7 @@ export async function redeemSession(aid, session, fallbackFan = '') {
     /* …and the owner hears about it (the founder, 2026-09-27): a push and an email,
        once, from this fresh claim only — time-boxed, never thrown (_ordernote.mjs). */
     if (orderRow) await import('./_ordernote.mjs').then(({ tellOrder }) => tellOrder(aid, orderRow)).catch(() => {});
+    if (md.kind === 'tip' && String(aid).startsWith('v_')) await import('./_ordernote.mjs').then(({ tellVenueTip }) => tellVenueTip(aid, amount, md.note)).catch(() => {});
   } else {
     granted = Number(pre.paid[sid].granted)
       || (md.kind === 'votes' || md.kind === 'song_votes' ? parseInt(md.votes, 10) || 0 : 0);

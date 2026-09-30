@@ -63,3 +63,14 @@ export async function tellOrder(owner, o) {
     await within(Promise.allSettled(jobs), ORDER_NOTE_MS);
   } catch { /* an alert that fails is never the order's problem */ }
 }
+
+/* A TIP FOR A VENUE'S STAFF TELLS THE VENUE (decision 0127): a push to every venue
+   seat, opening the Merch tab where the tips are listed. Same rules as an order: the
+   fresh claim only, time-boxed, never thrown, nothing about the tipper but the note. */
+export async function tellVenueTip(owner, amount, note) {
+  try {
+    if (!String(owner).startsWith('v_')) return;
+    await within(notify(owner, { title: `A ${'$' + (Number(amount) || 0).toFixed(2)} tip for the staff`, body: note ? `“${String(note).slice(0, 100)}”` : 'Someone loved their night.',
+                                 url: '/venues?tab=merch', tag: 'tip-' + Date.now().toString(36) }, { tab: 'merch' }), ORDER_NOTE_MS);
+  } catch { /* the tip is safe; an alert is a courtesy */ }
+}

@@ -25,7 +25,7 @@
      the label, so a reload or a copy of the link opens the same preview. The private
      sample door is asked instead of the public one; sample.js is loaded for it alone,
      so a guest never downloads it. The bare address is the ordinary "no such page". The artist page's hook, for kind 'venue'. -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const m=/[#?&]sample-profile(?![\w-])/.test(location.hash+'&'+location.search);let K=null;try{K=JSON.parse(localStorage.getItem('myset.sample')||'null')}catch(e){}if(m){K={slug:S.toLowerCase(),key:'sample-profile',kind:'venue',at:Date.now()};try{localStorage.setItem('myset.sample',JSON.stringify(K))}catch(e){}}if(K&&K.kind==='venue'&&K.slug===S.toLowerCase()){window.__sample=K;const f=fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'page',slug:K.slug,key:K.key,kind:'venue'})});f.catch(()=>{});window.__sampleP=f;const j=document.createElement('script');j.src='/sample.js?v=a3e9238a';window.__sampleJs=new Promise(r=>{j.onload=r;j.onerror=r});document.head.appendChild(j);return}const f=fetch('/api/fan?what=venue&v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]==='v'&&p[1]&&!p[1].includes('.'))?p[1]:'';if(!S)return;const m=/[#?&]sample-profile(?![\w-])/.test(location.hash+'&'+location.search);let K=null;try{K=JSON.parse(localStorage.getItem('myset.sample')||'null')}catch(e){}if(m){K={slug:S.toLowerCase(),key:'sample-profile',kind:'venue',at:Date.now()};try{localStorage.setItem('myset.sample',JSON.stringify(K))}catch(e){}}if(K&&K.kind==='venue'&&K.slug===S.toLowerCase()){window.__sample=K;const f=fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'page',slug:K.slug,key:K.key,kind:'venue'})});f.catch(()=>{});window.__sampleP=f;const j=document.createElement('script');j.src='/sample.js?v=503961fa';window.__sampleJs=new Promise(r=>{j.onload=r;j.onerror=r});document.head.appendChild(j);return}const f=fetch('/api/fan?what=venue&v='+encodeURIComponent(S),{cache:'no-store'});f.catch(()=>{});window.__early={venue:f}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -332,18 +332,47 @@ body{padding-bottom:34px}
 .mark i svg{width:14px;height:14px;fill:#fff;display:block}
 .mark small{font-size:12px;color:var(--muted);font-weight:500}
 
-.vcover{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
-.vcover img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}
-.vcover .noimg{width:100%;aspect-ratio:16/10;background:var(--grad);display:grid;place-items:center;
-  color:#fff;font-size:44px;font-weight:700;letter-spacing:-.04em;opacity:.92}
-.vcover .veil{position:absolute;inset:0;
-  background:linear-gradient(to top,rgba(0,0,0,.5) 0%,rgba(0,0,0,.14) 40%,transparent 70%)}
-.onair{position:absolute;top:15px;left:15px;display:inline-flex;align-items:center;gap:8px;
+/* THE PHOTOS ARE THE PAGE'S FRONT (decision 0129, the founder, 2026-09-30: "model
+   the way the artist profiles are set up with the photos"): the artist page's cover,
+   its portrait-and-strip cluster over the cover's foot, the same lightbox. A venue
+   has no portrait, so its first photo takes that square and the next three the
+   strip; any after that ride a rail under the name. Every picture enlarges on a tap. */
+.pcover{position:relative;margin:4px 18px 0;border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-2)}
+.pcover img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:center 40%;display:block}
+.pcover.blank{aspect-ratio:16/10;background:var(--grad);display:grid;place-items:center;
+  color:#fff;font-size:44px;font-weight:700;letter-spacing:-.04em}
+.pcover .veil{position:absolute;inset:0;
+  background:linear-gradient(to top,var(--ground,var(--bg)) 0%,rgba(0,0,0,.3) 22%,transparent 62%)}
+.onair{position:absolute;top:15px;left:15px;display:inline-flex;align-items:center;gap:8px;z-index:2;
   background:var(--accent);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:-.01em;
   padding:9px 15px;border-radius:var(--pill);box-shadow:0 4px 16px rgba(255,55,95,.45)}
 .onair .dot{background:#fff;width:7px;height:7px}
+.cluster{display:flex;align-items:flex-end;margin:-46px 18px 0 20px;position:relative;z-index:2}
+.strip{display:flex;flex-direction:column;gap:8px;flex:0 0 auto;position:relative;z-index:3}
+.strip .pth:nth-child(1){transform:translateX(20px)}
+.pav{width:112px;height:112px;border-radius:26px;background-size:cover;background-position:center;
+  border:4px solid var(--bg);box-shadow:var(--sh-3);flex:0 0 auto;position:relative;z-index:1;overflow:hidden}
+.cluster:not(.solo) .pav{margin-left:-22px}
+.cluster.solo .pav{width:120px;height:120px;border-radius:28px}
+.pth{width:40px;height:40px;border-radius:13px;border:3px solid var(--bg);box-shadow:var(--sh-2);overflow:hidden}
+.pth img,.pav img{display:block;width:100%;height:100%;object-fit:cover}
+.pth,.pav,.prail div{animation:pop .55s var(--spring) both}
+.strip .pth:nth-child(2){animation-delay:.06s}.strip .pth:nth-child(3){animation-delay:.12s}
+@keyframes pop{from{opacity:0;transform:scale(.6)}}
+.strip .pth:nth-child(1){animation-name:pop1}
+@keyframes pop1{from{opacity:0;transform:translateX(20px) scale(.6)}to{transform:translateX(20px)}}
+.prail{display:flex;gap:9px;overflow-x:auto;padding:14px 18px 2px;scrollbar-width:none;scroll-snap-type:x mandatory}
+.prail::-webkit-scrollbar{display:none}
+.prail div{flex:0 0 96px;height:96px;border-radius:18px;overflow:hidden;box-shadow:var(--sh-1);scroll-snap-align:start}
+.prail img{display:block;width:100%;height:100%;object-fit:cover}
+[data-zoom]{cursor:zoom-in}
+.lb{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:80;display:none;place-items:center;padding:20px;outline:none}
+.lb.on{display:grid;grid-template-rows:100%;animation:lbin .25s var(--ease) both}.lb img{max-width:100%;max-height:100%;border-radius:8px;animation:lbimg .35s var(--spring) both}
+@keyframes lbin{from{opacity:0}}@keyframes lbimg{from{transform:scale(.92);opacity:0}}
+@media (prefers-reduced-motion:reduce){.pth,.pav,.prail div,.strip .pth:nth-child(1),.lb.on,.lb img{animation:none}}
 
 .vhead{padding:18px 20px 0}
+.cluster+.vhead{padding-top:14px}
 .vhead h1{margin:0;font-size:29px;font-weight:700;letter-spacing:-.04em;line-height:1.08}
 .vhead .tag{margin:7px 0 0;font-size:15px;color:var(--muted);font-weight:500;line-height:1.4}
 .vhead .place{margin:8px 0 0;font-size:14px;color:var(--faint)}
@@ -468,11 +497,40 @@ body{padding-bottom:34px}
 .hrs.today .t{color:var(--ink)}
 .hrs .t.shut{color:var(--faint)}
 
-.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 18px}
-.gal div{aspect-ratio:1;border-radius:14px;background-size:cover;background-position:center;box-shadow:var(--sh-1)}
-.links{display:flex;flex-wrap:wrap;gap:9px;margin:0 18px}
-.links a{display:inline-flex;align-items:center;gap:8px;padding:12px 17px;border-radius:var(--pill);
-  background:var(--surface);box-shadow:var(--sh-1);font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+/* The links drift like the artist page's (decision 0129): one strip, each pill
+   drawn twice so the loop has no seam, moved by drift() in fan.js; a finger stops it. */
+.links{display:flex;gap:9px;overflow-x:auto;padding:0 18px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.links::-webkit-scrollbar{display:none}
+.links a{flex:0 0 auto;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;padding:12px 17px;border-radius:var(--pill);
+  background:var(--surface);box-shadow:var(--sh-1);font-size:14.5px;font-weight:600;letter-spacing:-.01em;transition:transform .22s var(--spring)}
+.links a:active{transform:scale(.96)}
+.links a svg{width:17px;height:17px;flex:0 0 auto}
+/* TIP THE STAFF (decision 0127): the community page's tip bar, for the team. */
+.tipbar{margin:16px 18px 0}
+.tipbar button{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  padding:14px 17px;border-radius:var(--r-sm);background:var(--grad);color:#fff;
+  box-shadow:var(--sh-accent);transition:transform .18s var(--spring);animation:emberGlow 4.2s ease-in-out infinite}
+.tipbar button:active{transform:scale(.985)}
+@keyframes emberGlow{0%,100%{filter:drop-shadow(0 0 5px rgba(255,86,80,.22))}
+  50%{filter:drop-shadow(0 0 13px rgba(255,86,80,.68)) drop-shadow(0 0 22px rgba(255,69,110,.22))}}
+.tipbar b{font-size:16px;font-weight:700;letter-spacing:-.015em}
+.tipbar small{font-size:12.5px;font-weight:400;color:rgba(255,255,255,.9)}
+@media (prefers-reduced-motion:reduce){.tipbar button{animation:none}}
+.receipt{margin:12px 18px 0;padding:14px 16px;border-radius:var(--r-sm);background:var(--accent-soft);font-size:14px;line-height:1.45}
+.receipt b{display:block;font-size:15.5px}
+/* THE NEXT THREE, THE REST FOLDED (decision 0129): "See more" opens the fold in
+   place, its height eased open (grid rows 0fr → 1fr), and the button turns. */
+.more{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--ease)}
+.more>div{overflow:hidden;min-height:0}
+.more.open{grid-template-rows:1fr}
+.seemore{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 36px);margin:12px 18px 0;padding:13px;
+  border-radius:var(--pill);background:var(--surface);box-shadow:var(--sh-1);font-size:14.5px;font-weight:600;color:var(--accent-ink);
+  transition:transform .22s var(--spring)}
+.seemore:active{transform:scale(.97)}
+.seemore svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;transition:transform .35s var(--spring)}
+.seemore[aria-expanded=true] svg{transform:rotate(180deg)}
+.okv{display:inline-block;font-size:11px;font-weight:700;color:var(--good,#1B8E3C);margin-top:3px}
+@media (prefers-reduced-motion:reduce){.more{transition:none}.seemore svg{transition:none}}
 .fineprint{padding:14px 22px 0;font-size:12.5px;color:var(--faint);line-height:1.5}
 .empty{margin:0 18px;padding:26px 20px;text-align:center;color:var(--muted);font-size:14.5px;
   background:var(--surface);border-radius:var(--r);box-shadow:var(--sh-1)}
@@ -613,6 +671,7 @@ textarea.inp{resize:vertical;line-height:1.5;min-height:100px}
       </div>
     </details></div>
   </div>
+  <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo" tabindex="-1" data-nopull></div>
   <div id="app"><div style="padding:18px"><div class="sk" style="height:180px;border-radius:16px"></div><div class="sk" style="height:28px;width:55%;margin:18px 0 8px"></div><div class="sk" style="height:14px;width:35%"></div><div class="sk" style="height:48px;margin-top:20px;border-radius:14px"></div></div></div>
   <div class="foot">MySet · myset.vip</div>
 </div>
@@ -679,6 +738,102 @@ const amIcon=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${AMICON[k]||'<circ
    by a class, so this never re-renders — a render() here rebuilt the cover and
    replayed the entrance animations under the reader's thumb. */
 function showAmen(){ AMEN_ALL=true; const e=$('#amen'); if(e) e.classList.remove('folded'); const s=$('.showall'); if(s) s.remove(); }
+
+/* Pictures through Netlify's image CDN at the width the slot needs (the artist
+   page's helper); a stored URL that is not ours passes through. */
+const cdn=(u,w)=>u&&u.startsWith('/')?`/.netlify/images?url=${encodeURIComponent(u)}&w=${w}&q=72`:u;
+/* The links a venue keeps (_venues.mjs), in this order, each with its mark. */
+const VLABEL={instagram:'Instagram',facebook:'Facebook',website:'Website',google:'On the map'};
+const VICON={
+  instagram:'<svg viewBox="0 0 24 24" fill="none" stroke="#C13584" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.2" fill="#C13584" stroke="none"/></svg>',
+  facebook:'<svg viewBox="0 0 24 24" fill="#1877F2"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg>',
+  website:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>',
+  google:'<svg viewBox="0 0 24 24" fill="none" stroke="#EA4335" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.3 7-11.5A7 7 0 005 9.5C5 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>',
+};
+/* "See more" opens in place, never by a redraw (the rows would replay their
+   entrance), and stays open through the redraws a later reply triggers. */
+let SEE_MORE=false;
+function seeMore(b){
+  SEE_MORE=!SEE_MORE; const m=$('#more'); if(m) m.classList.toggle('open',SEE_MORE);
+  b.setAttribute('aria-expanded',SEE_MORE?'true':'false');
+  const n=b.querySelector('span'); if(n) n.textContent=SEE_MORE?'See less':`See more · ${m?m.querySelectorAll('.r').length:''}`;
+}
+/* THE LIGHTBOX — the artist page's: one black sheet, a tap anywhere closes it. */
+let LBF=null;
+function lbOpen(el){
+  const u=el.getAttribute('data-zoom'); if(!u)return;
+  const lb=document.getElementById('lb'), im=document.createElement('img');
+  im.alt=''; im.decoding='async'; im.onerror=()=>{if(im.getAttribute('src')!==u)im.src=u;};
+  im.src=cdn(u,1600); lb.replaceChildren(im); lb.classList.add('on');
+  LBF=el; document.body.style.overflow='hidden';
+  try{ lb.focus({preventScroll:true}); }catch(e){}
+}
+function lbClose(){
+  const lb=document.getElementById('lb'); if(!lb.classList.contains('on'))return;
+  lb.classList.remove('on'); lb.replaceChildren(); document.body.style.overflow='';
+  if(LBF&&LBF.isConnected){ try{ LBF.focus({preventScroll:true}); }catch(e){} } LBF=null;
+}
+document.getElementById('app').addEventListener('click',e=>{const z=e.target.closest('[data-zoom]');if(z)lbOpen(z);});
+document.getElementById('app').addEventListener('keydown',e=>{
+  if(e.key!=='Enter'&&e.key!==' ')return;
+  const z=e.target.closest('[data-zoom]'); if(!z)return; e.preventDefault(); lbOpen(z);});
+document.getElementById('lb').addEventListener('click',lbClose);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')lbClose();});
+
+/* TIP THE STAFF (decision 0127): the community page's tip sheet, for the venue's
+   team. Checkout comes back here (?paid=), and the server — never the URL — says
+   whether it landed (INVARIANT 6); a lost return trip is retried on the next open. */
+let TIP=10;
+const PEND='myset.pending.vtip';
+function openTip(){
+  const v=V&&V.venue; if(!v||!v.tipsOn) return;
+  TIP=10;
+  openSheet(`<h3>Tip the staff</h3>
+    <p class="lede">For the team at ${esc(v.name)} · sent via Stripe</p>
+    <div class="tiles">${[5,10,20].map(x=>`<button class="tile ${x===10?'on':''}" id="t-${x}" onclick="pickTip(${x})"><b>$${x}</b><span>${x===5?'Cheers':x===10?'Thank you':'Great night!'}</span></button>`).join('')}</div>
+    <input class="inp" id="tipAmt" type="number" inputmode="decimal" min="1" max="500" placeholder="Or another amount ($)"
+      onfocus="customAmt(this,[5,10,20],'t-',TIP,'goTip')" oninput="customAmt(this,[5,10,20],'t-',TIP,'goTip')" onblur="customAmt(this,[5,10,20],'t-',TIP,'goTip')">
+    <input class="inp" id="tipNote" maxlength="120" placeholder="Add a note (optional)">
+    <button class="go" id="goTip" onclick="sendTip()">Continue to payment</button>
+    <p class="fineprint" style="margin-top:10px;padding:0;text-align:center">Secure checkout by Stripe · you’ll come right back</p>`,'Tip the staff');
+}
+function pickTip(x){TIP=x;[5,10,20].forEach(k=>{const el=$('#t-'+k);if(el)el.classList.toggle('on',k===x);});
+  const a=$('#tipAmt'); if(a){a.value='';a.classList.remove('on');}
+  const b=$('#goTip'); if(b&&!b.disabled)b.textContent='Continue to payment';}
+async function sendTip(){
+  const b=$('#goTip'); if(b){b.disabled=true;b.textContent='Opening checkout…';}
+  const c=parseFloat(($('#tipAmt')||{}).value);
+  const body={fan:fanId(),kind:'tip',amount:Number.isFinite(c)&&c>0?c:TIP,
+    note:(($('#tipNote')||{}).value||'').slice(0,120),
+    attempt:'t'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-5)};
+  try{
+    const r=await fetch(`${API}/pay?v=${encodeURIComponent(SLUG)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(!d.ok||!d.url) throw new Error(d.error||'no url');
+    try{ localStorage.setItem(PEND,JSON.stringify({id:d.id,at:Date.now()})); }catch(e){}
+    if(typeof goTo==='function') goTo(d.url,'Opening secure checkout…'); else location.href=d.url;
+  }catch(e){ toast('Couldn’t open checkout — try again in a moment'); if(b){b.disabled=false;b.textContent='Continue to payment';} }
+}
+async function redeemTip(sid){
+  try{
+    const r=await fetch(`${API}/confirm?session_id=${encodeURIComponent(sid)}&fan=${encodeURIComponent(fanId())}&v=${encodeURIComponent(SLUG)}`);
+    const d=await r.json();
+    if(d.ok){ try{ localStorage.removeItem(PEND); }catch(e){}
+      const app=$('#app'), card=document.createElement('div'); card.className='receipt';
+      card.innerHTML=`<b>Paid — thank you</b>${d.already?'That tip was already in.':`The team at ${esc((V&&V.venue&&V.venue.name)||'the venue')} has your tip.`}`;
+      app.insertBefore(card,app.firstChild); return true; }
+    if(d.error==='not paid') return false;
+  }catch(e){}
+  return false;
+}
+async function handleReturn(){
+  const q=new URLSearchParams(location.search);
+  if(q.get('cancelled')){ toast('Payment cancelled'); history.replaceState(null,'',location.pathname); }
+  const sid=q.get('paid');
+  if(sid){ await redeemTip(sid); history.replaceState(null,'',location.pathname); return; }
+  let p=null; try{ p=JSON.parse(localStorage.getItem(PEND)||'null'); }catch(e){}
+  if(p&&p.id&&Date.now()-p.at<86400000){ const ok=await redeemTip(p.id); if(!ok){ try{ localStorage.removeItem(PEND); }catch(e){} } }
+}
 
 async function boot(){
   /* A SAMPLE (decision 0101): the page's data comes from the private door the head
@@ -777,16 +932,26 @@ function render(){
   const dh=dirHref(v.maps);
   let h='';
 
-  h+=`<div class="vcover rise">
-    ${v.photo?`<img src="${esc(v.photo)}" alt="" width="1600" height="1000" fetchpriority="high">`
-             :`<div class="noimg">${esc((v.name||'?').slice(0,1).toUpperCase())}</div>`}
-    <div class="veil"></div>
-    ${liveNow?(liveNow.kind==='event'
+  /* THE PHOTOS UP TOP (decision 0129): cover, then the first photo as the square and
+     the next three as the strip over the cover's foot, then a rail for any more. */
+  const shots=(v.photos||[]).filter(Boolean);
+  const zoom=u=>`data-zoom="${esc(u)}" role="button" tabindex="0" aria-label="Enlarge photo"`;
+  const img=(u,w,extra='')=>`<img src="${esc(cdn(u,w))}" alt="" decoding="async" data-raw="${esc(u)}" onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src=this.dataset.raw}"${extra}>`;
+  const onair=liveNow?(liveNow.kind==='event'
       ? `<span class="onair"><span class="dot"></span>${esc(liveNow.title||'On now')}</span>`
-      : `<a class="onair" href="/${esc(liveNow.slug)}/vote"><span class="dot"></span>${esc(liveNow.artist)} — on now</a>`):''}
-  </div>
+      : `<a class="onair" href="/${esc(liveNow.slug)}/vote"><span class="dot"></span>${esc(liveNow.artist)} — on now</a>`):'';
+  h+=v.photo?`<div class="pcover rise" ${zoom(v.photo)} style="background-image:url('${esc(cdn(v.photo,48))}');background-size:cover;background-position:center">
+    <img src="${esc(cdn(v.photo,800))}" srcset="${esc(cdn(v.photo,480))} 480w, ${esc(cdn(v.photo,800))} 800w, ${esc(cdn(v.photo,1200))} 1200w" sizes="(max-width:720px) 100vw, 720px" data-raw="${esc(v.photo)}" onerror="if(this.src!==this.dataset.raw){this.removeAttribute('srcset');this.src=this.dataset.raw}" alt="" width="1600" height="1000" fetchpriority="high" decoding="async">
+    <div class="veil"></div>${onair}</div>`
+    :`<div class="pcover rise blank">${esc((v.name||'?').slice(0,1).toUpperCase())}${onair}</div>`;
+  if(shots.length){
+    const side=shots.slice(1,4);
+    h+=`<div class="cluster${side.length?'':' solo'}">
+      ${side.length?`<div class="strip">${side.map(u=>`<div class="pth" ${zoom(u)}>${img(u,220)}</div>`).join('')}</div>`:''}
+      <div class="pav" ${zoom(shots[0])} style="background-image:url('${esc(cdn(shots[0],48))}')">${img(shots[0],320)}</div></div>`;
+  }
 
-  <div class="vhead">
+  h+=`<div class="vhead">
     <h1>${esc(v.name)}${v.verified
       ? '<span class="vbadge">✓ Verified</span>'
       : '<span class="vbadge no">Unverified listing</span>'}</h1>
@@ -795,6 +960,7 @@ function render(){
     ${(V.vouches&&V.vouches.count)?`<p class="place" style="color:var(--accent-ink);font-weight:600">
       ${V.vouches.count} artist${V.vouches.count===1?'':'s'} who play${V.vouches.count===1?'s':''} here confirmed it${V.verified?'':' \u2014 one of the things the green tick needs'}</p>`:''}
   </div>
+  ${shots.length>4?`<div class="prail">${shots.slice(4).map(u=>`<div ${zoom(u)}>${img(u,240)}</div>`).join('')}</div>`:''}
 
   <div class="vacts">
     ${dh?`<a class="pri" href="${esc(dh)}" target="_blank" rel="noopener noreferrer">
@@ -812,48 +978,52 @@ function render(){
       <svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg>
       Menu</a>`:''}
   </div>`;
+  /* TIP THE STAFF (decision 0127): only while the venue takes cards and its plan has
+     tips — the server's own gate (shapeVenue tipsOn), so the button never shrugs. */
+  if(v.tipsOn) h+=`<div class="tipbar"><button onclick="openTip()"><b>Tip the staff</b><small>Show the team some love</small></button></div>`;
 
-  if(liveNow||next){
-    const g=liveNow||next;
-    const isEv=g.kind==='event';
-    h+=`<div class="sect">${liveNow?'On now':'Next up'}</div>
-      <div class="rows"><div class="r ${liveNow?'live':''}">
+  /* ON NOW, THEN THE NEXT THREE; everything after them folded under "See more"
+     (decision 0129, the founder: "only the next 3 performances and hide the rest"). */
+  const gigRow=(g,withDay)=>{
+    const isEv=g.kind==='event', on=!!g.live;
+    return `<div class="r ${on?'live':''}">
         ${isEv?'':`<a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>`}
-        <div class="d"><b>${liveNow?'●':dayNum(g.date)}</b><span>${liveNow?'Now':monShort(g.date)}</span>${dirPill(dh)}</div>
+        <div class="d"><b>${on?'●':dayNum(g.date)}</b><span>${on?'Now':monShort(g.date)}</span>${dirPill(dh)}</div>
         <div class="m">
-          ${liveNow?'<span class="onnow"><span class="dot"></span>On now</span>':isEv?'<span class="evtag">At the venue</span>':''}
+          ${on?'<span class="onnow"><span class="dot"></span>On now</span>':isEv?'<span class="evtag">At the venue</span>':''}
           <div class="v">${esc(isEv?(g.title||'Event'):g.artist)}</div>
-          <div class="w">${esc(whenWord(g.date))} · ${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}</div>
-        </div>${rsvpCol(g)}${isEv?'':'<span class="chev">›</span>'}</div></div>`;
+          <div class="w">${withDay?esc(whenWord(g.date))+' · ':''}${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.repeating?' · every week':''}${g.note?' · '+esc(g.note):''}</div>
+          ${g.confirmed?'<span class="okv">✓ Confirmed by the venue</span>':''}
+        </div>${rsvpCol(g)}${isEv?'':'<span class="chev">›</span>'}</div>`;
+  };
+  if(liveNow) h+=`<div class="sect">On now</div><div class="rows">${gigRow(liveNow,false)}</div>`;
+  const upcoming=gigs.filter(g=>!g.live);
+  if(upcoming.length){
+    const first=upcoming.slice(0,3), rest=upcoming.slice(3);
+    h+=`<div class="sect">Coming up</div><div class="rows">${first.map(g=>gigRow(g,true)).join('')}</div>`;
+    if(rest.length){
+      const days=[];
+      for(const g of rest){ const d=days.find(x=>x.date===g.date); if(d) d.gigs.push(g); else days.push({date:g.date,gigs:[g]}); }
+      h+=`<div class="more${SEE_MORE?' open':''}" id="more"><div>${days.slice(0,14).map(day=>`
+        <div class="dayline">${esc(whenWord(day.date))} <em>– ${dayMonth(day.date)}</em></div>
+        <div class="rows">${day.gigs.map(g=>gigRow(g,false)).join('')}</div>`).join('')}</div></div>
+        <button type="button" class="seemore" aria-expanded="${SEE_MORE?'true':'false'}" aria-controls="more" onclick="seeMore(this)"><span>${SEE_MORE?'See less':`See more · ${rest.length}`}</span><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>`;
+    }
+    h+=`<p class="fineprint">Shows are listed by the artists themselves from their own MySet calendars${gigs.some(g=>g.confirmed)?'; a ✓ means the venue confirmed it':''}. Times can change — check with the venue.</p>`;
+  } else if(!liveNow){
+    h+=`<div class="sect">Coming up</div>
+      <div class="empty"><b>Nothing listed yet</b>
+        <p style="margin:0">When an artist adds a gig here to their MySet calendar, it shows up on this page on its own.</p></div>`;
   }
 
   if(v.about) h+=`<div class="sect">About</div><div class="card"><p class="about">${esc(v.about)}</p></div>`;
 
-  /* Grouped by night, so "what's on this week" reads at a glance. */
-  const rest=gigs.filter(g=>g!==(liveNow||next));
-  if(rest.length){
-    const days=[];
-    for(const g of rest){
-      const d=days.find(x=>x.date===g.date);
-      if(d) d.gigs.push(g); else days.push({date:g.date,gigs:[g]});
-    }
-    h+=`<div class="sect">What’s on</div>`;
-    h+=days.slice(0,14).map(day=>`
-      <div class="dayline">${esc(whenWord(day.date))} <em>– ${dayMonth(day.date)}</em></div>
-      <div class="rows">${day.gigs.map(g=>{
-        const isEv=g.kind==='event';
-        return `<div class="r">
-        ${isEv?'':`<a class="rowlink" href="/${esc(g.slug)}" aria-label="${esc(g.artist)}"></a>`}
-        <div class="d"><b>${dayNum(g.date)}</b><span>${monShort(g.date)}</span>${dirPill(dh)}</div>
-        <div class="m">${isEv?'<span class="evtag">At the venue</span>':''}
-          <div class="v">${esc(isEv?(g.title||'Event'):g.artist)}</div>
-          <div class="w">${fmtTime(g.time)}${g.endTime?'–'+fmtTime(g.endTime):''}${g.repeating?' · every week':''}${g.note?' · '+esc(g.note):''}</div></div>
-        ${rsvpCol(g)}${isEv?'':'<span class="chev">›</span>'}</div>`;}).join('')}</div>`).join('');
-    h+=`<p class="fineprint">Shows are listed by the artists themselves from their own MySet calendars. Times can change — check with the venue.</p>`;
-  } else if(!liveNow&&!next){
-    h+=`<div class="sect">What’s on</div>
-      <div class="empty"><b>Nothing listed yet</b>
-        <p style="margin:0">When an artist adds a gig here to their MySet calendar, it shows up on this page on its own.</p></div>`;
+  /* THE LINKS, DRIFTING (decision 0129): the artist page's strip, same engine. */
+  const L=v.links||{};
+  const keys=Object.keys(VLABEL).filter(k=>L[k]);
+  if(keys.length){
+    const pills=keys.map(k=>`<a href="${esc(L[k])}" target="_blank" rel="noopener noreferrer">${VICON[k]}${VLABEL[k]}</a>`);
+    h+=`<div class="sect">Find them</div><div class="links" id="links">${pills.join('')}${pills.length>=2&&!matchMedia('(prefers-reduced-motion:reduce)').matches?pills.map(ghost).join(''):''}</div>`;
   }
 
   const items=(v.menu&&v.menu.items)||[];
@@ -901,16 +1071,6 @@ function render(){
     h+=`</div>`;
   }
 
-  const shots=(v.photos||[]).filter(Boolean);
-  if(shots.length) h+=`<div class="sect">Photos</div><div class="gal">${
-    shots.map(u=>`<div style="background-image:url('${esc(u)}')"></div>`).join('')}</div>`;
-
-  const L=v.links||{};
-  const LB={website:'Website',instagram:'Instagram',facebook:'Facebook',google:'On the map'};
-  const keys=Object.keys(LB).filter(k=>L[k]);
-  if(keys.length) h+=`<div class="sect">Find them</div><div class="links">${
-    keys.map(k=>`<a href="${esc(L[k])}" target="_blank" rel="noopener noreferrer">${LB[k]} ↗</a>`).join('')}</div>`;
-
   if((V.artists||[]).length>1){
     h+=`<div class="sect">Who plays here</div><div class="chipwrap">${
       V.artists.map(a=>`<a class="am" href="/${esc(a.slug)}">${esc(a.name)}</a>`).join('')}</div>`;
@@ -921,6 +1081,7 @@ function render(){
 
   $('#app').innerHTML=h;
   document.title=`${v.name} — MySet`;
+  drift('links',-1);
 }
 /* ── "Want to perform here?" ─────────────────────────────
    Only a signed-in artist can send one, deliberately. An open contact form is a
@@ -1049,7 +1210,7 @@ function share(){ shareLink(`${location.origin}/v/${SLUG}`, `${(V&&V.venue&&V.ve
 /* ── THE SHEET ── openSheet(h,label), closeSheet() and the drag are fan.js's (decision 0087): a grab zone,
    an ✕, a real drag, the page behind frozen and inert (INVARIANTS 0f0–0f2). Opening again while open only swaps the body. */
 
-boot();
+boot().then(()=>{ if(V&&V.venue&&!window.__sample) handleReturn(); });
 </script>
 <script>
 /* Registered late and non-blocking, so it can never delay the first paint. The

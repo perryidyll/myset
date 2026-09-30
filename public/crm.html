@@ -659,7 +659,7 @@ input[type=date].inp{color-scheme:dark}
 .rvw b{display:block;font-size:15.5px;color:var(--accent)}
 .rvw p{margin:4px 0 12px;font-size:13.5px;color:var(--ink-2)}
 .slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.slots.v4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.slots.v6{grid-template-columns:repeat(3,minmax(0,1fr))}
 .slot{position:relative;display:block;aspect-ratio:1;border-radius:14px;overflow:hidden;background:rgba(var(--hi),.04);box-shadow:inset 0 0 0 1px var(--line-2);transition:box-shadow .2s,transform .25s var(--spring)}
 .slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .slot em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:11px;color:var(--muted)}
@@ -919,7 +919,7 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
   .dr-h{padding-left:16px;padding-right:12px}
   .dr-body{padding:18px 16px calc(28px + env(safe-area-inset-bottom))}
   .ov-save{margin:14px -16px 0;padding:12px 16px}
-  .slots{grid-template-columns:repeat(3,minmax(0,1fr))}.slots.v4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .slots{grid-template-columns:repeat(3,minmax(0,1fr))}.slots.v6{grid-template-columns:repeat(3,minmax(0,1fr))}
   .cands{grid-template-columns:repeat(3,minmax(0,1fr))}
   .cmp-row .tplw{width:140px}
   .cmp{padding:10px 12px calc(12px + env(safe-area-inset-bottom))}
@@ -1214,7 +1214,7 @@ const LPH={instagram:'@handle or instagram.com/…',tiktok:'@handle or tiktok.co
   applemusic:'music.apple.com/…',soundcloud:'@name or soundcloud.com/…',bandcamp:'name.bandcamp.com',facebook:'facebook.com/…',website:'their-site.com',
   google:'a Google Maps link',ytmusic:'music.youtube.com/…',gofundme:'gofundme.com/f/…'};
 const LG=k=>k==='google'?'google':G[k]?k:'website';
-const SLOTW={cover:'Cover',avatar:'Portrait',p0:'Photo 1',p1:'Photo 2',p2:'Photo 3'};
+const SLOTW={cover:'Cover',avatar:'Portrait',p0:'Photo 1',p1:'Photo 2',p2:'Photo 3',p3:'Photo 4',p4:'Photo 5'};
 const KINDW={youtube:'YouTube',instagram:'Instagram',website:'Website',tiktok:'TikTok',facebook:'Facebook',spotify:'Spotify',applemusic:'Apple Music',
   bandcamp:'Bandcamp',soundcloud:'SoundCloud',google:'Google',founder:'Added by you'};
 const EVW={seed:'Line read',suppress:'Opt-out check',discover:'Pages found',collect:'Sources read',facts:'Facts pulled',photos:'Photos chosen',copy:'Words written',gate:'Quality check',
@@ -2158,7 +2158,7 @@ function seedHtml(d,r){
 }
 function liveHtml(p,r){
   const pr=p.profile||{}, venue=r.kind==='venue', rec=p.record||{}, q=rec.quality||{}, bad=Object.entries(q.checks||{}).filter(([,c])=>!c||!c.ok);
-  const L=pr.links||{}, ph=pr.photos||[], slots=[['cover',pr.photo],...(venue?[]:[['avatar',pr.avatar]]),['p0',ph[0]],['p1',ph[1]],['p2',ph[2]]];
+  const L=pr.links||{}, ph=pr.photos||[], slots=[['cover',pr.photo],...(venue?[]:[['avatar',pr.avatar]]),['p0',ph[0]],['p1',ph[1]],['p2',ph[2]],...(venue?[['p3',ph[3]],['p4',ph[4]]]:[])];
   const ms=r.exp?r.exp-Date.now():0;
   return `<div class="pg-top"><button type="button" class="btn pri" data-act="pview">View ${ico('out')}</button><button type="button" class="btn" data-act="copylink">${ico('copy')}Copy link</button>${r.exp?`<span class="pg-exp${ms<5*DAY?' soon':''}">${esc(daysW(r.exp))}</span>`:''}</div>
     ${r.stage==='review'?`<div class="rvw"><b>Waiting for your look</b><p>${bad.length?`${plural(bad.length,'check')} did not pass: ${bad.map(([k])=>esc(human(k))).join(', ')}.`:S&&S.cfg&&S.cfg.auto?'The factory flagged it for a look.':'Auto-approve is off, so every page waits for a look.'}</p><button type="button" class="btn pri big" data-act="approve">${ico('check')}Approve — mark it Ready</button></div>`:''}
@@ -2169,7 +2169,7 @@ function liveHtml(p,r){
     <form id="lF" novalidate autocomplete="off">${PAGEL[r.kind||'artist'].map(k=>linkRow('p',k,L[k]||'')).join('')}
       <div style="display:flex;justify-content:flex-end;margin-top:12px"><button type="submit" class="btn pri" id="lS" disabled>Save links</button></div></form>
     <p class="sub">Photos<span class="subr">tap one to change it</span></p>
-    <div class="slots${venue?' v4':''}">${slots.map(([s,u])=>`<button type="button" class="slot" data-act="slot" data-slot="${s}" aria-expanded="${DR.pick===s}" aria-label="${SLOTW[s]}${u?'':' — empty'}: change">${u?'':'<em>Empty</em>'}${img(u,'')}<span class="sl2">${SLOTW[s]}</span></button>`).join('')}</div>
+    <div class="slots${venue?' v6':''}">${slots.map(([s,u])=>`<button type="button" class="slot" data-act="slot" data-slot="${s}" aria-expanded="${DR.pick===s}" aria-label="${SLOTW[s]}${u?'':' — empty'}: change">${u?'':'<em>Empty</em>'}${img(u,'')}<span class="sl2">${SLOTW[s]}</span></button>`).join('')}</div>
     <div id="pick">${DR.pick?chooserHtml():''}</div>
     ${venue?'':`<p class="sub">Videos</p>${videosHtml(pr)}`}
     <div class="pg-dz"><button type="button" class="btn" data-act="rebuild">${ico('refresh')}Rebuild from sources</button><button type="button" class="btn bad" data-act="cancelpage">Cancel page</button></div>`;

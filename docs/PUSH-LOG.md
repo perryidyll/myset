@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 01:03 — 096d812 — venue-pages@feat/venue-pages (48 files since origin/main)
+**tl;dr:** Venue pages batch brought up to date with main (dash hero, show-log profit, locks) before merging
+**Other sessions:** Merge of origin/main into feat/venue-pages; only the push log conflicted (entries interleaved by time). Suite 5076/0.
+
 ### 2026-10-01 00:54 — 5349286 — wt3@ux/dash-hero (1 files since origin/main)
 **tl;dr:** /dash: the g in the greeting is no longer cut off; the line under it now reads 'What is tracked can be measured, and what is measured can be improved.'
 **Other sessions:** Copy and one CSS line in public/dash.html.
@@ -18,9 +22,17 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** New myset.vip/dash (four windows: Show log, Media Dash, CRM, money model); the money model needs no passcode now; the Show log opens with the CRM's passcode on the CRM's lock screen
 **Other sessions:** Decision 0127. _showlock.mjs: CRM passcode (HQ_PASSCODE), own tries doc 'showlock', cookie slk Path=/moneymodel. _hqlock tryPasscode/shutUntil take a doc. moneymodel.mjs: only /shows* is gated; /moneymodel + live.json open; _passgate gate() now unused. 'dash' reserved.
 
+### 2026-09-30 14:20 — 5cf24f3 — venue-pages@feat/venue-pages (53 files since origin/main)
+**tl;dr:** Venues: pages lead with their photos and the next three shows (See more for the rest, links drift); venues approve or deny the shows artists list there (recurring confirmed once); a Tip the staff button on both plans; fee 25% Free / 5% Pro; five photos Free; hiding posts is Pro; the Pro card says Everything in Free, plus; testimonials gone; a Suggestions & feedback button
+**Other sessions:** Decisions 0127-0129 (0126 is #175, included here). VENUE_PLANS: photos 5/12, cut .25/.05, tips both, moderate Pro; VENUE_NOT_BUILT ['speakerVotes']. pay.mjs ?v= takes kind tip; shapeVenue.tipsOn. gigok_<vid> (_gigok.mjs), venueadmin gigList/gigSet/suggest, venue.mjs listings() shared, rows carry confirmed. suggest doc + Sheet tab Suggestions (13 tabs). Samples store p0-p4 for venues. tools/localhost /dev/venue.
+
 ### 2026-09-30 14:13 — 09d1377 — wt3@ux/show-log-profit (6 files since origin/main)
 **tl;dr:** Show log (was 'Every show') has a MySet profit column after Costs; the CRM's theme button is the Media Dash's 34px size
 **Other sessions:** costOf() now returns myset {usd, fee, cut, founder, estimate}: plan cut (PLANS[plan].cut) × (room total + merch) − server; founder nights cut 0. Stripe fee deliberately NOT subtracted (paid by the connected account). moneymodel gate title is 'Show log'.
+
+### 2026-09-30 14:00 — 97a9b2e — venue-pages@fix/crm-twins (16 files since origin/main)
+**tl;dr:** CRM no longer shows a generated page twice (Sand & Tan did); the Studio welcome card reads 'Look around: every tab explains itself'
+**Other sessions:** Decision 0126: samplereg rows carry cid (the CRM contact that asked); adoptOrphans(reg, crm, {jobs}) links it instead of adopting; dropTwins erases an untouched twin on each summary. tips.js restamped everywhere.
 
 ### 2026-09-30 13:37 — 31de66c — wt3@ux/crm-name-toggle-icon (35 files since origin/main)
 **tl;dr:** The /crm page is called CRM everywhere instead of HQ; every light/dark button now shows the Media Dash's half-moon icon

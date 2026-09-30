@@ -279,6 +279,42 @@ ${q.get('go') ? `location.replace(${JSON.stringify(q.get('go'))});` : ''}
 </script>`;
 }
 
+/* ---------- /dev/venue: a claimed venue to walk (decisions 0127–0129) ----------
+   The Ugly Duckling Irish Pub — where the seed's Thursday residency plays — with a
+   cover and five photos, card payments on, a tip in, a fan's post, and the Venue
+   Studio signed in. ?plan=pro|free. Opens ?go= (default the public page). */
+async function devVenue(q) {
+  const V = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_venues.mjs')).href);
+  const { putImage } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_img.mjs')).href);
+  const { mutateConnect } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_connect.mjs')).href);
+  const { casDoc, KEY } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_lib.mjs')).href);
+  const { addPost } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_community.mjs')).href);
+  const { __stripe } = await import(pathToFileURL(join(ROOT, 'test', 'stripe-fake.mjs')).href);
+  const email = 'boss@duckling.local';
+  let reg = await V.readVenues(), vid = (reg.byEmail[email] || {}).venueId;
+  if (!vid) {
+    const made = await V.createVenue({ email, name: 'The Ugly Duckling Irish Pub', slug: 'the-ugly-duckling', city: 'Koh Phangan', country: 'Thailand' });
+    vid = made.venueId;
+    const jpg = readFileSync(join(PUBLIC, 'img', 'band.jpg'));
+    const urls = [];
+    for (const slot of ['cover', 'p0', 'p1', 'p2', 'p3', 'p4']) urls.push(await putImage(V.imgOwner(vid), slot, jpg, 'image/jpeg'));
+    await V.mutateVenueProfile(vid, (p) => { p.photo = urls[0]; p.photos = urls.slice(1); p.tagline = 'Guinness, live music and the best Sunday roast on the island';
+      p.about = 'An Irish pub in Haad Rin with live music five nights a week.'; p.links = { instagram: 'https://instagram.com/uglyduckling', facebook: 'https://facebook.com/uglyduckling', website: 'https://uglyduckling.example', google: '' };
+      p.pay = { ready: true, acct: 'acct_localvenue1' }; return true; });
+    const acct = 'acct_localvenue1';
+    __stripe.accounts.set(acct, { id: acct, charges_enabled: true, payouts_enabled: true, details_submitted: true, country: 'TH', metadata: { artist: 'v_' + vid } });
+    await mutateConnect('v_' + vid, (c) => { c.acct = acct; c.chargesEnabled = true; c.payoutsEnabled = true; c.detailsSubmitted = true; c.country = 'TH'; return true; });
+    await casDoc(KEY.meta('v_' + vid), () => ({ tips: [], paid: {}, gifts: [], orders: [], fees: {} }), (m) => { m.tips ||= []; m.tips.push({ fan: 'f1', amount: 10, note: 'Best barman on the island', at: Date.now() - 3600e3 }); return true; });
+    await addPost(V.imgOwner(vid), { fan: 'fanlocal01', ip: '10.0.0.9', name: 'Mia', text: 'Brilliant night, the trio was great', stars: 5 }).catch(() => {});
+  }
+  const plan = q.get('plan') === 'pro' ? 'pro' : q.get('plan') === 'free' ? 'free' : null;
+  if (plan) await V.mutateVenues((r) => { r.byId[vid].plan = plan; return true; });
+  reg = await V.readVenues();
+  const tok = await V.signVenueToken(email, V.vRevOf(reg, vid));
+  const go = q.get('go') || '/v/the-ugly-duckling';
+  return `<!doctype html><meta charset="utf-8"><script>try{localStorage.setItem('myset.vtoken',${JSON.stringify(tok)});}catch(e){}location.replace(${JSON.stringify(go)});</script>`;
+}
+
 /* ---------- /dev/sample: a sample page to walk, artist or venue (decision 0101) ----------
    Made the way the factory makes one (createSample), from the repo's demo photo, so the
    whole flow — the page with its banner, the look-only Studio, the practice round, the
@@ -402,6 +438,10 @@ const server = http.createServer(async (req, res) => {
     if (path === '/dev/hq') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(await devHq());
+    }
+    if (path === '/dev/venue') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(await devVenue(url.searchParams));
     }
     if (path === '/dev/sample') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });

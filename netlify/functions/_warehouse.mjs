@@ -187,6 +187,7 @@ export const TABS = {
   ratings: 'Ratings',
   gigs: 'Gigs',
   discards: 'Discards',
+  suggest: 'Suggestions',
   venues: 'Venues',
   growth: 'Growth',
 };
@@ -259,6 +260,7 @@ export const GUIDE = [
   ['Ratings', 'What fans thought of MySet itself — stars out of five and their own words.', 'Added to, never changed.'],
   ['Gigs', 'The calendar: every gig booked, past and future, and where in the world it is.', 'Rewritten every sync.'],
   ['Discards', 'Every show a free-plan artist ended with Discard: when, how long it ran, its votes, what it took, and what happened — given back (a test), warned (a real night, given back once with a warning) or counted (a real night after the warning). Watch for one artist with many.', 'Rewritten every sync; the last 30 per artist.'],
+  ['Suggestions', 'What venues typed into Suggestions & feedback in their Studio: when, who, their plan, and the words.', 'Rewritten every sync; the newest 300.'],
   ['Venues', 'Bars and venues that have signed up, their plan and whether they are verified.', 'Rewritten every sync.'],
   ['Growth', 'One row each time this syncs: the running totals. This is the tab to chart.', 'One new row per sync.'],
   ['', '', ''],
@@ -641,6 +643,7 @@ const HEAD = {
              'Cost in votes', 'Status', 'Played it', 'Show id'],
   ratings: ['Date', 'When', 'Artist', 'Artist id', 'Stars', 'What they said', 'Show id'],
   discards: ['Date', 'When', 'Artist', 'Artist id', 'Plan', 'Minutes', 'Votes', 'Money', 'What happened', 'Free shows used'],
+  suggest: ['Date', 'When', 'From', 'Name', 'Id', 'Plan', 'Suggestion'],
   gigs: ['Date', 'Start', 'End', 'Artist', 'Artist id', 'Venue', 'City', 'Country',
          'Time zone', 'Repeat', 'Past or future', 'Address', 'Tickets', 'Note', 'Being deleted on'],
   venues: ['Name', 'Venue id', 'Page', 'Email', 'City', 'Country', 'Plan', 'Verified',
@@ -819,6 +822,10 @@ async function runSync({ dry, startedAt, state }) {
     anyCap ? 'yes — some rows were left for the next sync' : '',
   ]];
 
+  const { readSuggestions } = await import('./_suggest.mjs');
+  const suggest = (await readSuggestions().catch(() => [])).slice().reverse()
+    .map((x) => [day(x.at), stamp(x.at), x.from || '', x.name || '', x.id || '', x.plan || '', x.text || '']);
+
   const plan = {
     tabs: TAB_LIST,
     snapshot: {
@@ -828,6 +835,7 @@ async function runSync({ dry, startedAt, state }) {
       [TABS.songs]: [HEAD.songs, ...songs],
       [TABS.gigs]: [HEAD.gigs, ...gigs],
       [TABS.discards]: [HEAD.discards, ...discards],
+      [TABS.suggest]: [HEAD.suggest, ...suggest],
       [TABS.venues]: [HEAD.venues, ...venues],
     },
     /* Each log tab names which watermark field it carries, so a tab that appends

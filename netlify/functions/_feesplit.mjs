@@ -40,8 +40,8 @@ import { stripeFor, stripeFeeEstimate } from './_connect.mjs';
         zero" rule by refusing to refund more than the fee that was taken.
 
    HOW SMALL THE NUMBERS ARE, said plainly: venue merch is a Pro feature, so every
-   venue sale runs the 2% row, and half of Stripe's fee exceeds 2% of anything
-   under about $29. Below that, MySet's fee is already zero at checkout, there is
+   venue sale runs the 5% row (0127), and half of Stripe's fee exceeds 5% of
+   anything under about $4. Below that, MySet's fee is already zero at checkout, there is
    nothing to refund, and this records `nothing` and stops. It is built so the
    arithmetic is right when the baskets get bigger, not because it moves money
    today. */

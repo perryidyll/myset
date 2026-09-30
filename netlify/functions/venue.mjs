@@ -6,6 +6,7 @@ import { localDate, addDays } from './_time.mjs';
 import { artistById } from './_auth.mjs';
 import { readVouches, MIN_VOUCHES } from './_verify.mjs';
 import { MARK } from './_canary.mjs';
+import { readGigOk, gigStatus, gigKey } from './_gigok.mjs';
 
 /* Public. A venue page, and who is playing there.
 
@@ -13,7 +14,9 @@ import { MARK } from './_canary.mjs';
    into their own calendar, and this matches on that name within the venue's own
    city. That means a venue signing up today already has its whole gig list — no
    backfill, no job, and nothing for an artist to re-enter. It also means the
-   listings are the ARTIST's claim, which the page says out loud. */
+   listings are the ARTIST's claim, which the page says out loud — until the venue
+   answers it (decision 0128): a show it confirmed says so, one it says is not at
+   its place leaves this page. */
 
 const HORIZON = 60;              // days ahead
 const MAX_ARTISTS = 60;          // per city, per page view
@@ -36,7 +39,7 @@ export async function venuePayload(vid, { reg: given = null } = {}) {
   const [reg, prof, vouches] = await Promise.all([given ? Promise.resolve(given) : venueById(vid), getVenueProfile(vid), readVouches(vid)]);
   const venue = shapeVenue(prof, reg);
 
-  const [gigs, own] = await Promise.all([gigsAt(venue), ownEvents(vid, venue)]);
+  const [gigs, own] = await Promise.all([gigsAt(venue, vid), ownEvents(vid, venue)]);
 
   const acts = [];
   for (const g of gigs) {
@@ -79,33 +82,60 @@ async function ownEvents(vid, venue) {
     .slice(0, 120);
 }
 
-async function gigsAt(venue) {
+/* Every artist gig rule that names this venue in its city, with each one's upcoming
+   nights. Shared by the public page (gigsAt) and the Venue Studio's approvals
+   (gigRules), so both see exactly the same shows. */
+async function listings(venue, vid) {
   if (!venue.country || !venue.city || !venue.name) return [];
-  const idx = await readCityIndex();
-  const ids = (((idx.countries || {})[venue.country] || {})[venue.city] || []).slice(0, MAX_ARTISTS);
+  const [idx, ok] = await Promise.all([readCityIndex(), readGigOk(vid)]);
+  const ids = (((idx.countries || {})[venue.country] || {})[venue.city] || []).filter((x) => !String(x).startsWith('v_')).slice(0, MAX_ARTISTS);
   const now = Date.now();
-  const rows = [];
-
+  const out = [];
   for (const aid of ids) {
     const [events, who, rs] = await Promise.all([readEvents(aid), artistById(aid), readRsvp(aid)]);
     if (!who) continue;
-    const counts = rsvpCounts(rs);
     const tz = ((events.list || []).find((x) => x.tz) || {}).tz || 'UTC';
     const from = localDate(now, tz);
-    for (const o of occurrencesFor(events, addDays(from, -1), addDays(from, HORIZON))) {
-      if (o.endsAt <= now) continue;
-      if (o.city !== venue.city || o.country !== venue.country) continue;
-      if (!sameVenue(o.venue, venue.name)) continue;
+    const nights = occurrencesFor(events, addDays(from, -1), addDays(from, HORIZON))
+      .filter((o) => o.endsAt > now && o.city === venue.city && o.country === venue.country && sameVenue(o.venue, venue.name));
+    for (const e of events.list || []) {
+      const mine = nights.filter((o) => o.eventId === e.id);
+      if (!mine.length) continue;
+      out.push({ aid, who, rule: e, nights: mine, rs, st: gigStatus(ok, aid, e.id, !!e.repeat) });
+    }
+  }
+  return out;
+}
+
+async function gigsAt(venue, vid) {
+  const now = Date.now();
+  const rows = [];
+  for (const L of await listings(venue, vid)) {
+    if (L.st === 'no') continue;                         // the venue said it is not here
+    const counts = rsvpCounts(L.rs);
+    for (const o of L.nights) {
       rows.push({
         kind: 'gig', eventId: o.eventId, rsvp: counts[occKey(o.eventId, o.date)] || 0,
         date: o.date, time: o.time, endTime: o.endTime, tz: o.tz,
         startsAt: o.startsAt, endsAt: o.endsAt,
-        artist: who.name, slug: who.slug,
+        artist: L.who.name, slug: L.who.slug,
         listedAs: o.venue, note: o.note, ticketUrl: o.ticketUrl,
-        repeating: o.repeating,
+        repeating: o.repeating, confirmed: L.st === 'ok',
         live: now >= o.startsAt && now < o.endsAt,
       });
     }
   }
   return rows.sort((a, b) => a.startsAt - b.startsAt).slice(0, 200);
+}
+
+/** The Venue Studio's list to approve: one row per artist RULE, never per night. */
+export async function gigRules(vid) {
+  const [reg, prof] = await Promise.all([venueById(vid), getVenueProfile(vid)]);
+  const venue = shapeVenue(prof, reg);
+  return (await listings(venue, vid)).map((L) => ({
+    key: gigKey(L.aid, L.rule.id), artist: L.who.name, slug: L.who.slug, listedAs: L.rule.venue,
+    next: L.nights[0].date, time: L.nights[0].time, endTime: L.nights[0].endTime || '',
+    repeat: (L.rule.repeat && L.rule.repeat.freq) || '', nights: L.nights.length, st: L.st,
+    startsAt: L.nights[0].startsAt,
+  })).sort((a, b) => a.startsAt - b.startsAt);
 }
