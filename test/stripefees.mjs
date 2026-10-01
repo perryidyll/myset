@@ -79,14 +79,14 @@ eq('so the row has no exact figure', (await readHistIndex(kai.artistId)).shows.f
 
 console.log('\nTHE TABLE: EXACT WHERE FILED, THE ESTIMATE ONLY WHERE NOT');
 {
-  const B = { usdPerCredit: 0.01, creditsPerShow: 3, byKey: {}, stripe: { effectivePct: 3.095, fixed: 0.3 } };
+  const B = { usdPerCredit: 0.01, creditsPerShow: 3, byKey: {}, stripe: { effectivePct: 4.025, fixed: 0.3 } };
   const row = (money) => ({ status: 'counted', showId: 'x', artist: { id: 'a' }, money: { known: true, total: 20, tips: { count: 1 }, packs: { count: 1 }, requests: { count: 0 }, merch: { orders: 0, amount: 0 }, ...money } });
   const exact = costOf(row({ stripeFees: 1.19 }), B).stripe;
   eq('a night with its fee: Stripe\'s figure, exact, no ≈', [exact.usd, exact.exact, exact.estimate], [1.19, true, false]);
   const old = costOf(row({ stripeFees: null }), B).stripe;
-  eq('a night without: the published-rate estimate, marked', [old.usd, old.exact, old.estimate], [Math.round((20 * 0.03095 + 0.6) * 1e4) / 1e4, false, true]);
+  eq('a night without: the published-rate estimate, marked', [old.usd, old.exact, old.estimate], [Math.round((20 * 0.04025 + 0.6) * 1e4) / 1e4, false, true]);
   const merch = costOf(row({ stripeFees: 1.19, merch: { orders: 1, amount: 10 } }), B).stripe;
-  eq('merch orders are not in the night\'s payments: their part stays the estimate, and says so', [merch.usd, merch.estimate], [Math.round((1.19 + 10 * 0.03095 + 0.3) * 1e4) / 1e4, true]);
+  eq('merch orders are not in the night\'s payments: their part stays the estimate, and says so', [merch.usd, merch.estimate], [Math.round((1.19 + 10 * 0.04025 + 0.3) * 1e4) / 1e4, true]);
 }
 
 console.log('\nTHE REGISTER ASKS AN OLDER NIGHT ONCE FOR ITS FEE — NEVER SPENDING THE LATE-TIP ASK');

@@ -18,6 +18,54 @@ can see the others' chat. This file is the one place they all speak.
 **tl;dr:** Venue pages: never an empty cover (last photo stands in; the generator takes a venue's best wide photo); Menu / Events / What guests say / Directions as a 2x2 beside the square; links right under the tagline; extra photos swipe in the lightbox instead of a stray rail
 **Other sessions:** Decision 0131. venue.html: GALLERY + lbStep (swipeable lightbox), jump(id) to #vmenu/#vevents, .vdoors; prail and the Find them section are gone; sample.js no longer hides .vcomm (gone). parsePage(html,base,'venue').menu -> readSite.menu -> payload.menuUrl -> sample p.menu.url. pickPhotos: venue cover fallback >=800px wide.
 
+### 2026-10-01 18:58 — 02a8aae — wt4@dash-logo-home (6 files since origin/main)
+**tl;dr:** The MySet logo on every dashboard (money model, Show log, Media Dash, CRM, sample-page console, business report) now goes to the homepage
+**Other sessions:** CRM and factory logos used to go to /studio; now '/'. Media Dash and report marks became <a> with color:inherit. Content repo twin pushed (cb64d14).
+
+### 2026-10-01 17:16 — d54af8d — wt4@meters-and-pack-price (15 files since origin/main)
+**tl;dr:** Money: Stripe's card fee on an artist's night is the artist's, so MySet profit, both Show log tier tables and the money model's tier table no longer take it off MySet (still off on the founder's own nights); Netlify costs now include tax ($5.48 a pack); fresh server meters after the 25 Sep bell: 2.72 credits a show (was 2.98)
+**Other sessions:** wt4 (0133): _showcosts myset.stripeMine; TIER MATH subtracts t.stripeMine (both pages, still byte-identical); model hosts taxMul 1.096; credits.json reading 1 Oct with perDay.bandwidthCleanFrom (solve_meters honours it). Tick rate 16.9/phone-h rests on 2 nights and one empty day (26 Sep, 12 deploys) — thin, re-read when another empty day lands. Current Show Stats scheduled task disabled.
+
+### 2026-10-01 16:20 — c4a8a57 — MySet-books-docs@docs/books-clock-ledger (2 files since origin/main)
+**tl;dr:** Docs only: the ledger and a session note record the test/books.mjs clock fix (c0fdbf0, #191). [skip ci]
+**Other sessions:** Nothing to redo. The suite is green end to end again (5,085 ✓); any red suite from here is new.
+
+### 2026-10-01 16:19 — ce88275 — MySet-books-clock@test/books-clock (3 files since origin/main)
+**tl;dr:** test/books.mjs passes again in October: the venue ledger check pins the clock instead of following the wall clock. The full suite runs to the end again.
+**Other sessions:** Test-only. The bug was the test mixing a pinned NOW (15 Sep) with a handler on the real clock; venueadmin ledger logic is right and unchanged. Pattern for any handler without a now: stub Date.now = () => NOW around the call, restore in finally.
+
+### 2026-10-01 15:43 — 770d9d1 — wt4@audit/dashboards-oct1 (14 files since origin/main)
+**tl;dr:** The 1 Oct audit of every dashboard number (0132): the money model's free plan is ten shows in total, not four a month (Plus crossover $56.60, was $418.77); Show log cost totals add up; the Media Dash no longer counts a deleted duplicate reel (26 posts, not 27); CRM funnel rails are a true rate; stale typed numbers now read the live register
+**Other sessions:** dashboards-wt4: finance/model.html freeCap is a LIFETIME total (test pins it to _plan.mjs gigs); cut base = merch amount − postage in _showcosts.mjs and both tier tables; register totals gained peopleKnown + merchPostage; mediadash.mjs dedupes posts by id. Left open for the founder: Stripe inside 'MySet profit' on connected artists, $5 vs $5.48 a pack, meters after the register bell.
+
+### 2026-10-01 14:46 — 730be56 — wt4@showlog-bullets (1 files since origin/main)
+**tl;dr:** Show log: the intro, both table notes and the seven 'How these numbers are made' cards are now short coloured bullet points
+**Other sessions:** ul.pts / ul.lede in finance/shows.html mirror the money model's; text only, no math or columns changed.
+
+### 2026-10-01 13:20 — 6aa5158 — wt4@model-bullets (1 files since origin/main)
+**tl;dr:** Money model: the dials column folds away (remembered per browser); every long explainer is now short coloured bullets; the size table is '4 core show categories' with its dial group 'Core show sizes'
+**Other sessions:** ul.pts is the bullet style in finance/model.html; dial groups are details.grp inside #dialsList. Text only otherwise — no math changed.
+
+### 2026-10-01 13:05 — f9ffe08 — wt4@ux/paying-founder (3 files since origin/main)
+**tl;dr:** FIX: the money model's top tiles showed ∞ since this morning (a comment hid three dials); now right again. Show log: 'If the founder were a paying customer' toggle on both tables, a clearer Money model button and a link by the tier table; money model hero's y no longer clipped and its intro is bullets
+**Other sessions:** mine(r) in finance/shows.html = costs.myset, re-priced on the account's plan when PAYING. test/everyshow.mjs now fails if a P0 dial sits after a // on its line.
+
+### 2026-10-01 12:44 — 61c8176 — wt4@fix/tier-seed-packs (1 files since origin/main)
+**tl;dr:** Money model tier table: vote packs start at the real average even before the register refolds
+**Other sessions:** tpLive() derives packsAmount = gross − tips − paid requests when live.json lacks it.
+
+### 2026-10-01 12:41 — 4b9f19b — wt4@feat/tier-tables (5 files since origin/main)
+**tl;dr:** Show log: a 'Profit by membership tiers' table under the main one (totals and a show on average, per plan, as-if or as-played); money model: the same table with every input editable (shows, dollars by source, MySet fee, plan prices)
+**Other sessions:** tierMath() is duplicated word for word in finance/shows.html and finance/model.html — test/everyshow.mjs fails if they drift. STRIPE_RATES gained billingPct 0.7 (plan fees only). live.json totals gained packsAmount, paidRequests, paidRequestsAmount. P0.freePrice is new and only the projection reads it.
+
+### 2026-10-01 12:19 — cbaecb2 — wt4@ux/showlog-plan-fees (1 files since origin/main)
+**tl;dr:** Show log: a Plan fees column ($10/mo, $20/mo in blue) right after Artist replaces the blue plan tag; MySet profit now reads 'on transactions' underneath; plan names say Bar Star / Rock Star
+**Other sessions:** PLAN_USD in finance/shows.html mirrors _plan.mjs prices; founder shows $0/mo (never charged). Profit math unchanged.
+
+### 2026-10-01 12:04 — 7b85798 — wt4@feat/dash-about-link (1 files since origin/main)
+**tl;dr:** /dash: an 'About MySet' link at the top goes to /about; the MySet logo now goes to the home page
+**Other sessions:** Top-bar only in public/dash.html; the clock hides under 560px to make room.
+
 ### 2026-10-01 01:07 — 6275f41 — wt3@ux/dash-links-profit (53 files since origin/main)
 **tl;dr:** Every dashboard (Show log, Media Dash, CRM, money model) has a Dash button back to /dash; the Show log has a MySet cut column ($ and %) and MySet profit is now the cut minus the server AND Stripe
 **Other sessions:** costOf().myset.usd = fee − server − stripe (founder's word, 2026-10-01; the earlier 'Stripe not subtracted' reading is superseded). mediadash.html twin in the content repo updated alongside.

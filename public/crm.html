@@ -1045,7 +1045,7 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
 <div id="busy" aria-hidden="true"><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
 <header class="top" id="top">
   <div class="in">
-    <a class="mark" href="/studio" aria-label="Back to the Studio"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></a>
+    <a class="mark" href="/" aria-label="MySet home"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></a>
     <div class="brand"><h1>CRM</h1><span class="online" id="online"><i></i>Online</span><span class="boot" aria-hidden="true">Systems online</span></div>
     <div class="tele" id="tele"></div>
     <button type="button" class="cluster" id="cluster" data-act="settings" aria-label="Systems and settings"></button>
@@ -1225,8 +1225,8 @@ const human=k=>{const s=String(k||'').replace(/[_-]+/g,' ').replace(/([a-z])([A-
 const kindW=k=>KINDW[k]||human(k);
 const stageW=(s,kind)=>s==='collect'&&kind==='venue'?'Reading the web':STAGE[s]||(s?human(s):'Starting');
 const ago=t=>{const m=Math.floor((Date.now()-(+t||0))/6e4);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
-const agoS=t=>{const s=(Date.now()-(+t||0))/1e3;if(s<45)return 'now';const m=s/60;if(m<60)return Math.round(m)+'m';const h=m/60;if(h<24)return Math.round(h)+'h';const d=h/24;
-  return d<7?Math.round(d)+'d':new Date(+t).toLocaleDateString(undefined,{month:'short',day:'numeric'});};
+const agoS=t=>{const s=(Date.now()-(+t||0))/1e3;if(s<45)return 'now';const m=s/60;if(m<60)return Math.max(1,Math.floor(m))+'m';const h=m/60;if(h<24)return Math.floor(h)+'h';const d=h/24;
+  return d<7?Math.floor(d)+'d':new Date(+t).toLocaleDateString(undefined,{month:'short',day:'numeric'});};
 const plural=(n,w)=>n+' '+w+(n===1?'':'s');
 const when=t=>{try{return new Date(t).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
 const clock=t=>{try{return new Date(t).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}catch(e){return ''}};
@@ -1237,7 +1237,7 @@ const dayW=t=>{const n=dayDiff(t);return n===0?'Today':n===-1?'Yesterday':new Da
 const fmtN=n=>n>=1e4?Math.round(n/1e3)+'k':n>=1e3?(n/1e3).toFixed(1).replace(/\.0$/,'')+'k':String(n);
 const pct=v=>Math.max(0,Math.min(100,Math.round(+v||0)));
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return ''}};
-const daysW=exp=>{const d=Math.ceil((exp-Date.now())/DAY);return d>1?d+' days left':d===1?'1 day left':'Ends today';};
+const daysW=exp=>{if(exp<=Date.now())return 'Ended';const d=Math.ceil((exp-Date.now())/DAY);return d>1?d+' days left':d===1?'1 day left':'Ends today';};
 const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1e3));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
 const kb=k=>`<span class="kb ${k==='venue'?'v':'a'}">${k==='venue'?'Venue':'Artist'}</span>`;
 const initial=r=>esc(([...String(r.name||r.slug||'?').trim()][0]||'?').toUpperCase());
@@ -1383,7 +1383,10 @@ const counts=rows=>({leads:rows.length,gen:rows.filter(isGen).length,shared:rows
 const kpiOn=k=>k!=='leads'&&F.f.size===1&&F.f.has(k);
 function renderKpis(){
   const box=$('#kg'), c=counts(S.contacts), v=KP.map(([k])=>c[k]);
-  const conv=i=>v[i-1]?Math.min(100,Math.round(v[i]/v[i-1]*100)):0;
+  /* each rail is the share of the stage before it that ALSO reached this one, counted on the two sets together —
+     a true rate even when a contact skipped a stage (a reply logged before the page was ever opened) */
+  const SETS=[()=>true,isGen,r=>r.sent>0,isOpened,r=>r.replied>0,r=>r.stage==='claimed'];
+  const conv=i=>v[i-1]?Math.round(S.contacts.filter(r=>SETS[i](r)&&SETS[i-1](r)).length/v[i-1]*100):0;
   if(!box.dataset.ok){
     box.innerHTML=KP.map(([k,w],i)=>(i?`<div class="rail" aria-hidden="true"><em data-cv="${i}"></em><i data-cw="${i}"></i></div>`:'')
       +`<button type="button" class="kpi" data-act="kpi" data-k="${k}" aria-pressed="false"><span class="kl">${w}</span><b class="kn num" data-kn="${k}">0</b><span class="kc" data-kc="${i}" aria-hidden="true"></span></button>`).join('');
@@ -1398,7 +1401,7 @@ function renderKpis(){
       const rail=box.querySelector(`[data-cw="${i}"]`); if(FIRST&&!REDUCE)requestAnimationFrame(()=>requestAnimationFrame(()=>{rail.style.width=conv(i)+'%';})); else rail.style.width=conv(i)+'%'; }
   });
   const m=S.month||{}, n=x=>Math.max(0,Math.round(+m[x]||0));
-  paint('month',`This month · built <b class="num">${n('built')}</b> · sent <b class="num">${n('sent')}</b> · opened <b class="num">${n('opened')}</b> · claimed <b class="num">${n('claimed')}</b>`);
+  paint('month',`This month (UTC) · built <b class="num">${n('built')}</b> · sent <b class="num">${n('sent')}</b> · opened <b class="num">${n('opened')}</b> · claimed <b class="num">${n('claimed')}</b>`);
 }
 /* THE COUNT-UP ONLY DECORATES: the real number is on the page first, and the frames,
    if they come, count up to it. */
@@ -1537,6 +1540,7 @@ function paintTags(loc){
   box.innerHTML=TAGS[loc].map((t,i)=>`<span class="tg">${esc(t)}<button type="button" data-act="untag" data-loc="${loc}" data-i="${i}" aria-label="Remove tag ${esc(t)}">${ico('close')}</button></span>`).join('');
   const inp=$('#tg-'+loc); if(inp)inp.placeholder=TAGS[loc].length>=12?'12 tags — that’s the most':TAGS[loc].length?'Add another':'Add a tag — Enter or comma';
   if(loc==='n')goState();
+  if(loc==='d'){ const tc=$('#tcd'); if(tc)tc.textContent=TAGS.d.length?`${TAGS.d.length}/12`:''; }
 }
 function addTag(loc,t){
   t=String(t||'').replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,24); if(!t)return false;
@@ -1690,7 +1694,7 @@ const FG=[
   ['profile','Profile',[['gen','Generated'],['notgen','Not generated'],['review','Needs review'],['failed','Build failed'],['claimed','Claimed'],['archived','Archived']]],
   ['out','Outreach',[['shared','Shared'],['notshared','Not shared'],['via:ig','Via Instagram'],['via:tiktok','Via TikTok'],['via:email','Via Email'],['via:whatsapp','Via WhatsApp'],
     ['via:sms','Via SMS'],['via:fb','Via Messenger'],['via:inperson','In person'],['via:dm','DM (old console)']]],
-  ['resp','Response',[['opened','Opened'],['replied','Replied'],['waiting','Waiting for reply'],['unread','Unread']]],
+  ['resp','Response',[['opened','Opened'],['replied','Replied'],['waiting','No reply yet'],['unread','Unread']]],
   ['flag','Flags',[['due','Follow-up due'],['exp','Expiring soon'],['star','Starred']]],
 ];
 const TEST={gen:isGen,notgen:r=>!isGen(r),review:r=>r.stage==='review',failed:r=>r.stage==='failed',claimed:r=>r.stage==='claimed',archived:r=>r.stage==='archived',
@@ -1725,7 +1729,7 @@ function tagsCell(r){
 function lastCell(r){ const l=r.last, t=l?l.t:(r.upd||r.at); if(!t)return '<span class="dim">—</span>';
   return `<span class="lt">${r.unread?'<i class="ud" role="img" aria-label="Unread"></i>':''}<span class="num">${esc(agoS(t))}</span>${l?`${ico(CHG[l.ch]||'dm')}<em title="${l.dir==='in'?'From them':'From you'}">${l.dir==='in'?'↘':'↗'}</em><span class="sr">${l.dir==='in'?'from them':'from you'} by ${esc(CHW[l.ch]||l.ch)}</span>`:''}</span>`; }
 const fuCell=r=>r.fu?`<span class="fu${isDue(r)?' due':''}">${esc(shortDate(r.fu))}</span>`:'<span class="dim">—</span>';
-const leftCell=r=>{ const ms=leftMs(r); if(ms==null)return '<span class="dim">—</span>'; const d=Math.max(0,Math.ceil(ms/DAY)); return `<span class="left${d<=5?' soon':''}" title="${esc(daysW(r.exp))}">${d}d</span>`; };
+const leftCell=r=>{ const ms=leftMs(r); if(ms==null)return '<span class="dim">—</span>'; const d=Math.max(0,Math.ceil(ms/DAY)); return `<span class="left${d<=5?' soon':''}" title="${esc(daysW(r.exp))}">${ms<=0?'ended':d+'d'}</span>`; };
 function trHtml(r){
   const nm=esc(r.name||r.slug||'Untitled'), c=esc(r.cid), sub=r.slug?`/${r.kind==='venue'?'v/':''}${esc(r.slug)}`:esc([r.city,r.country].filter(Boolean).join(', '))||'&nbsp;';
   return `<tr data-key="${c}" data-act="row" data-cid="${c}"${r.unread?' class="unr"':''}>
@@ -1773,7 +1777,8 @@ function tmore(){ const tw=$('#tw'), w=$('#twrap'); if(!tw||!w)return; const res
   const more=rest>4; w.classList.toggle('more',more);
   if(more){ const rh=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rowh'))||52, n=Math.max(1,Math.round(rest/rh)); const t=$('#tmn'); if(t)t.textContent=n+' more'; } }
 function popHtml(){
-  const rows=(S&&S.contacts)||[], cnt=k=>rows.filter(r=>ftest(k,r)).length;
+  /* the counts follow the Artists/Venues switch and the search box, like the "X of Y" above the table */
+  const q=F.q.trim().toLowerCase(), rows=((S&&S.contacts)||[]).filter(r=>(F.kf==='all'||r.kind===F.kf)&&qhit(r,q)), cnt=k=>rows.filter(r=>ftest(k,r)).length;
   const groups=[...FG,['tags','Tags',((S&&S.tags)||[]).map(t=>['tag:'+t.tag,'#'+t.tag])]];
   return groups.filter(g=>g[2].length).map(([g,w,items])=>`<p class="sub">${w}</p><div class="fcs">${items.filter(([k])=>!(k==='via:dm'&&!cnt(k))).map(([k,l])=>`<button type="button" class="fc" data-act="fchip" data-f="${esc(k)}" aria-pressed="${F.f.has(k)}">${k.startsWith('via:')?ico(CHG[k.slice(4)]):''}${esc(l)}<b class="num">${cnt(k)}</b></button>`).join('')}</div>`).join('')
     +`<div class="pop-f"><button type="button" class="btn quiet sm" data-act="fclear">Clear all</button><button type="button" class="btn sm pri" data-act="filters">Done</button></div>`;
@@ -1888,7 +1893,7 @@ function cmpHtml(loc){
     <div class="cmp-row"><label class="tplw"><span class="sr">Template</span><select class="inp sm" data-f="tpl" data-loc="${loc}">${tpls.length?`<optgroup label="From their page">${tpls.map(opt).join('')}</optgroup>`:''}${pres.length?`<optgroup label="Your presets">${pres.map(x=>opt(['p:'+x.k,x.name])).join('')}</optgroup>`:''}${opt(['blank','Blank'])}</select></label>
       <button type="button" class="ibtn libb" data-act="library" data-k="${esc(pk)}" aria-label="Message library" title="Message library">${ico('book')}</button>
       ${c.ch==='email'?`<input class="inp sm" data-f="subj" data-loc="${loc}" placeholder="Subject" aria-label="Subject" value="${esc(c.subj)}" autocomplete="off">`:''}</div>
-    ${p&&(p.ask||(S.lib||{}).soft)?`<div class="cmp-end"><span>Ending</span><div class="seg" role="group" aria-label="How it ends">${[[false,'Theirs',p.ask],[true,'Softer',(S.lib||{}).soft]].map(([v,w,q])=>`<button type="button" data-act="cend" data-loc="${loc}" data-v="${v?1:0}" aria-pressed="${!!c.soft===v}" title="${esc(q||'')}">${w}</button>`).join('')}</div>${(S.lib||{}).ending==='ab'?'<span class="ab" title="Each new message gets the ending that has gone out less">A/B</span>':''}</div>`:''}
+    ${p&&(p.ask||(S.lib||{}).soft)?`<div class="cmp-end"><span>Ending</span><div class="seg" role="group" aria-label="How it ends">${[[false,'Theirs',p.ask],[true,'Softer',(S.lib||{}).soft]].map(([v,w,q])=>`<button type="button" data-act="cend" data-loc="${loc}" data-v="${v?1:0}" aria-pressed="${!!c.soft===v}" title="${esc(q||'')}">${w}</button>`).join('')}</div>${(S.lib||{}).ending==='ab'?'<span class="ab" title="Each new contact gets the ending that has gone out less">A/B</span>':''}</div>`:''}
     <textarea class="inp cmp-t${c.fx?' fill':''}" data-f="text" data-loc="${loc}" rows="3" placeholder="${c.ch==='note'?'A private note — only you see it':c.ch==='inperson'?'What was said (optional)':'Write a message…'}" aria-label="Message">${esc(c.text)}</textarea>
     ${c.ch==='email'&&!g.connected?`<p class="cmp-note">Connect Gmail in Settings to send and receive here. <button type="button" class="lnk" data-act="settings">Settings</button></p>`:''}
     ${c.ch==='email'&&c.tpl!=='blank'&&(pk?!((S.cfg||{}).address):dr&&dr.needsAddress)?'<p class="cmp-note warn">Add your postal address in Settings first — a commercial email has to carry one.</p>':''}
@@ -1933,7 +1938,7 @@ function threadHtml(loc){
 function paintThreadPane(){
   if(PHONE)return;
   const el=$('#mT');
-  if(!CUR.m){ const n=S?S.contacts.reduce((a,r)=>a+(r.unread>0?1:0),0):0, w=S?S.contacts.filter(r=>r.last&&r.last.dir==='out').length:0;
+  if(!CUR.m){ const n=S?S.contacts.reduce((a,r)=>a+(+r.unread||0),0):0, w=S?S.contacts.filter(r=>r.last&&r.last.dir==='out').length:0;
     const h=`<div class="mempty"><svg class="reticle" viewBox="0 0 120 120" fill="none" stroke="currentColor" aria-hidden="true"><g class="rt1"><circle cx="60" cy="60" r="54" stroke-opacity=".35" stroke-dasharray="22 8 4 8"/></g><g class="rt2"><circle cx="60" cy="60" r="40" stroke-opacity=".6" stroke-width="2" stroke-dasharray="40 16"/></g><circle cx="60" cy="60" r="4" fill="currentColor" stroke="none"/><path d="M60 14v14M60 92v14M14 60h14M92 60h14" stroke-opacity=".5"/></svg>
       <b>Pick a conversation</b><span class="stats">${n} unread · ${w} waiting for a reply</span></div>`;
     if(el.dataset.empty!==h){ el.dataset.empty=h; el.innerHTML=h; } return; }
@@ -2304,7 +2309,7 @@ function openSettings(){
       <li><i class="${k.anthropic?'':'no'}"></i><b>Claude</b><span>${k.anthropic?'Key set — reads the sources, writes the words, judges the photos.':'Key missing in Netlify — builds wait in line until it is set.'}</span></li>
       <li><i class="${k.youtube?'':'no'}"></i><b>YouTube</b><span>${k.youtube?'Key set — reads channels, videos and thumbnails.':'Key missing in Netlify — builds wait in line until it is set.'}</span></li>
       <li><i class="${g.connected?(g.err?'no':''):'off'}"></i><b>Gmail</b><span>${g.connected?'Connected as '+esc(g.email||''):g.ready?'Not connected':'Not set up yet'}</span></li>
-      <li><i class="${(+t.started||0)>=(+t.cap||1)?'no':''}"></i><b>Builds</b><span>${+t.started||0} of ${+t.cap||0} started today</span></li></ul>
+      <li><i class="${(+t.started||0)>=(+t.cap||1)?'no':''}"></i><b>Builds</b><span>${+t.started||0} of ${+t.cap||0} started today (UTC day)</span></li></ul>
     <p class="sub">Connections</p>
     <div class="conn">${ico('email')}<div id="gmb">${gmailBlock()}</div></div>
     <div class="conn">${ico('instagram')}<div><b>Instagram</b><p>Manual for now: first DMs are sent from the app (Instagram allows no other way); replies sync here once the Meta messaging permission is added.</p></div></div>
@@ -2359,7 +2364,7 @@ function openLib(open){
     <div class="endc"><div class="seg" role="group" aria-label="Which ending goes out">${[['ab','Split evenly'],['ask','Always theirs'],['soft','Always softer']].map(([k,w])=>`<button type="button" data-act="libend" data-v="${k}" aria-pressed="${LIBD.ending===k}">${w}</button>`).join('')}</div>
       <div class="erow"><b>Theirs</b><span>Each preset’s own question</span>${rateHtml(e.a,bestE==='a')}</div>
       <div class="erow"><b>Softer</b><input class="inp" id="libSoft" data-lf="soft" maxlength="200" value="${esc(LIBD.soft||'')}" aria-label="The softer ending" autocomplete="off">${rateHtml(e.s,bestE==='s')}</div>
-      <p class="hint2">Split evenly gives each new message the ending that has gone out less, so the two get a fair race. A reply counts once, for the first preset that went to them.</p></div>
+      <p class="hint2">Split evenly gives each new contact the ending that has gone out less, so the two get a fair race. A reply counts once, for the first preset that went to them.</p></div>
     <p class="sub">Presets <span id="libN"></span></p><ul class="pl" id="libL"></ul>
     <div class="lib-f"><button type="button" class="btn sm" data-act="libadd">${ico('plus')}New preset</button><button type="button" class="lnk" data-act="libreset">Put the originals back</button></div></div>`);
   libList(open);
