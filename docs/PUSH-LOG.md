@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 16:19 — ce88275 — MySet-books-clock@test/books-clock (3 files since origin/main)
+**tl;dr:** test/books.mjs passes again in October: the venue ledger check pins the clock instead of following the wall clock. The full suite runs to the end again.
+**Other sessions:** Test-only. The bug was the test mixing a pinned NOW (15 Sep) with a handler on the real clock; venueadmin ledger logic is right and unchanged. Pattern for any handler without a now: stub Date.now = () => NOW around the call, restore in finally.
+
 ### 2026-10-01 15:43 — 770d9d1 — wt4@audit/dashboards-oct1 (14 files since origin/main)
 **tl;dr:** The 1 Oct audit of every dashboard number (0132): the money model's free plan is ten shows in total, not four a month (Plus crossover $56.60, was $418.77); Show log cost totals add up; the Media Dash no longer counts a deleted duplicate reel (26 posts, not 27); CRM funnel rails are a true rate; stale typed numbers now read the live register
 **Other sessions:** dashboards-wt4: finance/model.html freeCap is a LIFETIME total (test pins it to _plan.mjs gigs); cut base = merch amount − postage in _showcosts.mjs and both tier tables; register totals gained peopleKnown + merchPostage; mediadash.mjs dedupes posts by id. Left open for the founder: Stripe inside 'MySet profit' on connected artists, $5 vs $5.48 a pack, meters after the register bell.
