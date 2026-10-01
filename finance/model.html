@@ -2049,7 +2049,22 @@ buildDials(); tpBuild(); recalc();
   if (store.wasOn && ACT) { P.useActuals = true; applyActuals(); buildDials(); }
   if (!TP_MINE) TP = tpSeed();
   renderActSummary(); markReal(); recalc(); renderCards();
+  dashPeek();
 })();
+/* THE DASH'S THREE LINES. /dash draws revenue, costs and profit growing to this page's DEFAULT scenario
+   (the dials as they open, with the live register laid on the way this page lays it). Its numbers stay
+   behind the passcode: they are left on this device only, never sent anywhere. One month at every size
+   from no artists to the scenario's, so the end of each line is exactly this page's hero bars at defaults. */
+function dashPeek() {
+  const keepP = P, keepPre = PRE_ACT;
+  try {
+    P = JSON.parse(JSON.stringify(P0)); PRE_ACT = null;
+    if (ACT && ACT_SOURCE === 'live') { P.useActuals = true; applyActuals(); }
+    const q = P, N = 24, pts = [];
+    for (let k = 0; k <= N; k++) { const r = ENGINE.month(q, Math.round(q.artists * Math.pow(k / N, 1.6))); pts.push([r.revenue, r.costs, r.profit].map((v) => Math.round(v * 100) / 100)); }
+    localStorage.setItem('myset.dash.money', JSON.stringify({ at: new Date().toISOString(), artists: q.artists, pts }));
+  } catch (e) {} finally { P = keepP; PRE_ACT = keepPre; }
+}
 const themeBtn = $('#themeBtn');
 const isDark = () => { const t = document.documentElement.dataset.theme; return t ? t === 'dark' : !matchMedia('(prefers-color-scheme: light)').matches; };
 const paintThemeBtn = () => { themeBtn.textContent = '◐'; themeBtn.title = isDark() ? 'Switch to light mode' : 'Switch to dark mode'; };

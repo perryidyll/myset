@@ -147,6 +147,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* 2 · Media Dash — the last posts' views as bars */
 .bars rect{fill:url(#barG);transform-box:fill-box;transform-origin:50% 100%;animation:grow 1s var(--ease) both;animation-delay:calc(var(--b) * 45ms + 700ms);transition:height .8s var(--ease),y .8s var(--ease)}
 .bars rect.hot{fill:url(#barHot)}
+.bars .fol{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.bars .fol.halo{stroke:var(--screen);stroke-width:6}
+.bars .fol.ink{stroke:#7CC8FF;filter:drop-shadow(0 0 4px rgba(124,200,255,.7))}
+/* the followers line draws itself through the bars, rests on today's count, fades, and draws again */
+.bars .fols{opacity:0;transition:opacity .6s var(--ease)}
+.bars .fols.on .fol{stroke-dasharray:1;animation:folDraw 7s var(--ease) infinite 1.6s}
+.folEnd{position:absolute;z-index:1;display:flex;align-items:center;gap:6px;transform:translate(-5px,-50%);pointer-events:none;opacity:0}
+.folEnd.on{animation:folDot 7s var(--ease) infinite 1.6s}
+.folEnd i{width:9px;height:9px;border-radius:50%;background:#7CC8FF;box-shadow:0 0 0 2px var(--screen),0 0 10px rgba(124,200,255,.8)}
+.folEnd b{position:absolute;right:16px;bottom:8px;font:700 12px/1 var(--mono);color:#7CC8FF;font-variant-numeric:tabular-nums;white-space:nowrap}
 .bars .pulse{fill:rgb(var(--hue-rgb));animation:ping 2.2s ease-out infinite 1.8s;transform-box:fill-box;transform-origin:center}
 /* 3 · CRM — people moving through the pipeline towards the one that says yes */
 .pipe .lane{fill:none;stroke:rgba(var(--hi),.08);stroke-width:1.2;stroke-dasharray:3 5}
@@ -154,11 +164,21 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .pipe .who{fill:rgb(var(--hue-rgb));filter:drop-shadow(0 0 5px rgba(var(--hue-rgb),.9))}
 .pipe .yes{fill:none;stroke:rgb(var(--hue-rgb));stroke-width:1.5;opacity:.5;transform-box:fill-box;transform-origin:center;animation:ping 2.6s ease-out infinite}
 .pipe .core{fill:rgb(var(--hue-rgb))}
-/* 4 · Money model — a curve that draws itself, and the point it reaches */
-.curve .area{fill:url(#moneyG);opacity:0;animation:fade 1.2s 1.5s var(--ease) forwards}
-.curve .line{fill:none;stroke:rgb(var(--hue-rgb));stroke-width:2.5;stroke-linecap:round;stroke-dasharray:900;stroke-dashoffset:900;animation:draw 2.2s .8s var(--ease) forwards;filter:drop-shadow(0 0 6px rgba(var(--hue-rgb),.6))}
-.curve .end{fill:rgb(var(--hue-rgb));opacity:0;animation:fade .4s 2.9s forwards}
-.curve .endring{fill:none;stroke:rgb(var(--hue-rgb));stroke-width:1.5;opacity:0;transform-box:fill-box;transform-origin:center;animation:ping 2.4s ease-out infinite 3s}
+/* 4 · Money model — revenue, costs and profit grow from nothing to the default scenario's month, rest, fade, and grow again */
+.curve .zero{stroke:rgba(var(--hi),.16);stroke-width:1;stroke-dasharray:2 4}
+.curve .tri{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;animation:folDraw 7s var(--ease) infinite 1s}
+.curve .tri.rev{filter:drop-shadow(0 0 5px rgba(48,209,88,.6))}
+.curve .tri.cost{filter:drop-shadow(0 0 5px rgba(255,107,69,.5))}
+.curve .tri.prof{filter:drop-shadow(0 0 5px rgba(255,214,10,.5))}
+.triEnd{position:absolute;z-index:1;left:98%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:currentColor;box-shadow:0 0 0 2px var(--screen),0 0 9px currentColor;pointer-events:none;opacity:0;animation:folDot2 7s var(--ease) infinite 1s}
+.rev{color:rgb(48,209,88)}.cost{color:#FF6B45}.prof{color:#C9A400}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .prof{color:#FFD60A}}
+:root[data-theme=dark] .prof{color:#FFD60A}
+.curve .tri.rev,.curve .tri.cost,.curve .tri.prof{stroke:currentColor}
+.triKey{position:absolute;z-index:1;right:10px;bottom:6px;display:flex;gap:12px;pointer-events:none;opacity:0;animation:folKey 7s var(--ease) infinite 1s;font:700 10.5px/1 var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.triKey span{display:flex;align-items:center;gap:5px}
+.triKey span::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.triKey small{font:600 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 /* a window being opened: the drawings hurry */
 .win:hover .ledger .scan{animation-duration:2.4s}
 
@@ -177,6 +197,10 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @keyframes scan{0%{transform:translateY(-30px);opacity:0}10%{opacity:1}85%{opacity:1}100%{transform:translateY(150px);opacity:0}}
 @keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 @keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(3.2);opacity:0}}
+@keyframes folDraw{0%{stroke-dashoffset:1;opacity:1}45%{stroke-dashoffset:0}82%{opacity:1}94%,100%{stroke-dashoffset:0;opacity:0}}
+@keyframes folDot{0%,42%{opacity:0;transform:translate(-5px,-50%) scale(.4)}50%{opacity:1;transform:translate(-5px,-50%) scale(1)}82%{opacity:1;transform:translate(-5px,-50%) scale(1)}94%,100%{opacity:0;transform:translate(-5px,-50%) scale(1)}}
+@keyframes folDot2{0%,42%{opacity:0;transform:scale(.4)}50%,82%{opacity:1;transform:scale(1)}94%,100%{opacity:0;transform:scale(1)}}
+@keyframes folKey{0%,44%{opacity:0;transform:translateY(4px)}54%,82%{opacity:1;transform:none}94%,100%{opacity:0;transform:none}}
 @keyframes draw{to{stroke-dashoffset:0}}
 
 @media (max-width:820px){
@@ -189,7 +213,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
-  .curve .line{stroke-dashoffset:0}.curve .area,.curve .end{opacity:1}
+  .curve .tri{stroke-dasharray:none}.folEnd.on,.triEnd,.triKey{opacity:1}
   .win{transform:none!important}
 }
 </style>
@@ -237,7 +261,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
           </defs>
           <line class="ln" x1="0" y1="60" x2="400" y2="60"/><line class="ln" x1="0" y1="110" x2="400" y2="110"/><line class="ln" x1="0" y1="160" x2="400" y2="160"/>
           <g id="barRows"></g>
+          <g class="fols" id="fols"><path class="fol halo" pathLength="1"/><path class="fol ink" pathLength="1"/></g>
         </svg>
+        <span class="folEnd" id="folEnd" aria-hidden="true"><i></i><b></b></span>
         <div class="stat off" id="mdStat"><b id="mdN">0</b><small id="mdL">views in the last 7 days</small></div>
       </div>
       <div class="foot"><h2>Media Dash</h2><p>Instagram, post by post: views, reach and what the room saw this week.</p><span class="url">myset.vip/mediadash</span>
@@ -268,14 +294,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
       <div class="chrome"><span class="dot"></span>Money model<span class="key">4</span></div>
       <div class="screen">
         <svg class="art curve" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
-          <defs><linearGradient id="moneyG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgb(48,209,88)" stop-opacity=".32"/><stop offset="1" stop-color="rgb(48,209,88)" stop-opacity="0"/></linearGradient></defs>
+          
           <line class="ln" x1="0" y1="50" x2="400" y2="50"/><line class="ln" x1="0" y1="100" x2="400" y2="100"/><line class="ln" x1="0" y1="150" x2="400" y2="150"/>
           <line class="ln" x1="100" y1="0" x2="100" y2="200"/><line class="ln" x1="200" y1="0" x2="200" y2="200"/><line class="ln" x1="300" y1="0" x2="300" y2="200"/>
-          <path class="area" d="M0 178 C 60 176, 90 168, 130 150 S 210 128, 250 104 S 330 60, 372 38 L 372 200 L 0 200 Z"/>
-          <path class="line" d="M0 178 C 60 176, 90 168, 130 150 S 210 128, 250 104 S 330 60, 372 38"/>
-          <circle class="endring" cx="372" cy="38" r="6"/>
-          <circle class="end" cx="372" cy="38" r="5"/>
+          <line class="zero" id="mmZero" x1="0" y1="170" x2="400" y2="170"/>
+          <path class="tri cost" id="triCost" pathLength="1"/>
+          <path class="tri prof" id="triProf" pathLength="1"/>
+          <path class="tri rev" id="triRev" pathLength="1"/>
         </svg>
+        <i class="triEnd rev" id="endRev"></i><i class="triEnd cost" id="endCost"></i><i class="triEnd prof" id="endProf"></i>
+        <div class="triKey" id="triKey" aria-hidden="true"><span class="rev"></span><span class="cost"></span><span class="prof"></span></div>
         <div class="stat off" id="mmStat"><b id="mmN">0</b><small id="mmL">real nights in the model</small></div>
       </div>
       <div class="foot"><h2>Money model</h2><p>What MySet earns and spends as it grows, fed live by the real nights in the Show log.</p><span class="url">myset.vip/moneymodel</span>
@@ -346,12 +374,46 @@ fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) =>
       r.classList.toggle('hot', !!p && i - (BARS - posts.length) === best);
     });
   }
+  /* the followers line: at each bar, the followers the account had when that post went up; it ends on today's count */
+  const acc = (d.account || []).filter((a) => a.at && Number.isFinite(a.followers)).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  if (posts.length > 1 && acc.length) {
+    const at = (iso) => { let v = acc[0].followers; for (const a of acc) { if (String(a.at) <= String(iso)) v = a.followers; else break; } return v; };
+    const now = acc[acc.length - 1].followers, off = BARS - posts.length;
+    const pts = posts.map((p, k) => [12 + (k + off) * 24 + 7, at(p.publishedAt)]).concat([[392, now]]);
+    const lo = Math.min(...pts.map((q) => q[1])), hi = Math.max(...pts.map((q) => q[1]));
+    const y = (f) => (hi === lo ? 100 : 150 - 100 * (f - lo) / (hi - lo));
+    const path = pts.map((q, k) => (k ? 'L' : 'M') + q[0] + ' ' + y(q[1]).toFixed(1)).join(' ');
+    $$('#fols path').forEach((e) => e.setAttribute('d', path));
+    const end = $('#folEnd');
+    end.style.left = (100 * 392 / 400) + '%'; end.style.top = (100 * y(now) / 200) + '%';
+    $('b', end).textContent = int(now) + ' followers';
+    $('#fols').style.opacity = 1; $('#fols').classList.add('on'); end.classList.add('on');
+  }
   const views = d.week && Number(d.week.views);
   if (Number.isFinite(views)) {
     $('#mdL').textContent = 'views in the last 7 days' + (d.account && d.account.length ? ` · ${int(d.account[d.account.length - 1].followers)} followers` : '');
     $('#mdStat').classList.remove('off'); countUp($('#mdN'), views, int);
   }
 }).catch(() => {});
+
+/* 4 · the three lines: one month of the money model's DEFAULT scenario at every size from no artists to the
+   scenario's own. The model is behind the passcode, so its numbers never come from a public feed: the model page
+   leaves them on this device (localStorage myset.dash.money) when the founder opens it. Anyone else sees the
+   lines' shape with no amounts. */
+{
+  let M = null;
+  try { const j = JSON.parse(localStorage.getItem('myset.dash.money') || 'null'); if (j && Array.isArray(j.pts) && j.pts.length > 2 && j.pts.every((q) => q.length === 3 && q.every(Number.isFinite))) M = j; } catch (e) {}
+  const pts = M ? M.pts : Array.from({ length: 25 }, (_, k) => { const n = k / 24; return [1000 * n, 120 + 380 * n, 1000 * n - (120 + 380 * n)]; });
+  const all = pts.flat(), lo = Math.min(0, ...all), hi = Math.max(...all, 1);
+  const Y = (v) => 166 - 134 * (v - lo) / (hi - lo), X = (k) => 8 + 384 * k / (pts.length - 1);
+  const line = (j) => pts.map((q, k) => (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(q[j]).toFixed(1)).join(' ');
+  $('#triRev').setAttribute('d', line(0)); $('#triCost').setAttribute('d', line(1)); $('#triProf').setAttribute('d', line(2));
+  $('#mmZero').setAttribute('y1', Y(0)); $('#mmZero').setAttribute('y2', Y(0));
+  const usd = (v) => (v < 0 ? '−$' : '$') + (Math.abs(v) >= 1e4 ? (Math.abs(v) / 1e3).toFixed(1) + 'k' : Math.round(Math.abs(v)).toLocaleString('en-US'));
+  const last = pts[pts.length - 1], ids = ['#endRev', '#endCost', '#endProf'], names = ['revenue', 'costs', 'profit'];
+  ids.forEach((id, j) => { $(id).style.top = (100 * Y(last[j]) / 200) + '%'; });
+  $$('#triKey span').forEach((el, j) => { el.innerHTML = `<small>${names[j]}</small>` + (M ? usd(last[j]) : ''); });
+}
 
 /* 4 · the model's live block: how many real nights it reads, and the room's money a head */
 fetch('/moneymodel/live.json', { headers: { accept: 'application/json' }, credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((d) => {

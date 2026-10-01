@@ -10,6 +10,17 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 20:09 — 8b3ed35 — wt4@dash-followers-line (25 files since origin/main)
+**tl;dr:** Money model window: revenue, costs and profit amounts now sit in a small key along the bottom instead of beside the line ends
+**Other sessions:** dash.html only; .triKey legend, end dots stay on the lines. Profit ink darker in light mode.
+
+### 2026-10-01 20:06 — af47cfd — wt4@dash-followers-line (3 files since origin/main)
+**tl;dr:** The master dashboard's money model window now draws three lines, revenue, costs and profit, growing from no artists to the default scenario's month, then fades and draws again
+**Other sessions:** Amounts never leave the passcode: model.html dashPeek() writes localStorage myset.dash.money (25 points, one month at each size, P0 + live actuals as the page lays them); /dash reads it, else draws unlabelled shapes. Old single green curve removed.
+
+### 2026-10-01 19:55 — 5defe78 — wt4@dash-followers-line (1 files since origin/main)
+**tl;dr:** The master dashboard's Media Dash window now has a blue followers line that draws itself through the views bars, lands on today's count, fades and starts again
+**Other sessions:** dash.html only: line points are followers at each post's publish time (last account reading at or before it), plus today's count at the right edge; own y-scale, no axis. Reduced motion shows it still.
 ### 2026-10-01 20:02 — d812fc7 — venue-hero@ux/venue-hero (23 files since origin/main)
 **tl;dr:** Venue pages: a Google rating pill under the address (stars, review count, 'as of Oct 2026') that opens their Google reviews; a sample's hours, menu link and rating can be filled from Google in CRM → Edit profile → Details; a sample with no hours found no longer shows a made-up 5 pm–1 am
 **Other sessions:** Decision 0134 on #182. _factory.mjs humanHours(text) → parseHours (one reader). Venue profile gains rating {stars,count,at}; factory 'edit' takes hours/menuUrl/rating for venues; sampleDetail returns hours/menuUrl/rating. createSample closes every day when no hours were found and the template is untouched.
