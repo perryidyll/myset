@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 13:20 — 6aa5158 — wt4@model-bullets (1 files since origin/main)
+**tl;dr:** Money model: the dials column folds away (remembered per browser); every long explainer is now short coloured bullets; the size table is '4 core show categories' with its dial group 'Core show sizes'
+**Other sessions:** ul.pts is the bullet style in finance/model.html; dial groups are details.grp inside #dialsList. Text only otherwise — no math changed.
+
 ### 2026-10-01 13:05 — f9ffe08 — wt4@ux/paying-founder (3 files since origin/main)
 **tl;dr:** FIX: the money model's top tiles showed ∞ since this morning (a comment hid three dials); now right again. Show log: 'If the founder were a paying customer' toggle on both tables, a clearer Money model button and a link by the tier table; money model hero's y no longer clipped and its intro is bullets
 **Other sessions:** mine(r) in finance/shows.html = costs.myset, re-priced on the account's plan when PAYING. test/everyshow.mjs now fails if a P0 dial sits after a // on its line.
