@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 13:26 — 1e46a1f — myset@claude/myset-encryption-security-460mph (44 files since origin/main)
+**tl;dr:** Slice C (still not live) is up to date with today's main and can be switched on with one command: tools/serversecret.mjs sets MYSET_SECRET from the founder's Mac without ever showing it. The Show log stays open the day it lands, and the Studios' suggestions box is sealed too
+**Other sessions:** PR #150 merged main at e56a4af. _showlock.mjs verifies slk under signingKeys().verify like _hqlock. 'suggest' is sealed (_seal.mjs EXACT): read it through readDoc only. FINMODEL_CODE no longer blocks the merge (0130, PER-018 cancelled). MYSET_SECRET goes in Production, Deploy Previews and Branch deploys only, never Local development (Netlify never hides those); Netlify never shows a secret again, so the founder's Keychain copy is the only one
+
 ### 2026-10-01 18:58 — 02a8aae — wt4@dash-logo-home (6 files since origin/main)
 **tl;dr:** The MySet logo on every dashboard (money model, Show log, Media Dash, CRM, sample-page console, business report) now goes to the homepage
 **Other sessions:** CRM and factory logos used to go to /studio; now '/'. Media Dash and report marks became <a> with color:inherit. Content repo twin pushed (cb64d14).
