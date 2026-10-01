@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 16:20 — c4a8a57 — MySet-books-docs@docs/books-clock-ledger (2 files since origin/main)
+**tl;dr:** Docs only: the ledger and a session note record the test/books.mjs clock fix (c0fdbf0, #191). [skip ci]
+**Other sessions:** Nothing to redo. The suite is green end to end again (5,085 ✓); any red suite from here is new.
+
 ### 2026-10-01 16:19 — ce88275 — MySet-books-clock@test/books-clock (3 files since origin/main)
 **tl;dr:** test/books.mjs passes again in October: the venue ledger check pins the clock instead of following the wall clock. The full suite runs to the end again.
 **Other sessions:** Test-only. The bug was the test mixing a pinned NOW (15 Sep) with a handler on the real clock; venueadmin ledger logic is right and unchanged. Pattern for any handler without a now: stub Date.now = () => NOW around the call, restore in finally.
