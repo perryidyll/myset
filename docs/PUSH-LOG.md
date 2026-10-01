@@ -21,6 +21,9 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-01 19:55 — 5defe78 — wt4@dash-followers-line (1 files since origin/main)
 **tl;dr:** The master dashboard's Media Dash window now has a blue followers line that draws itself through the views bars, lands on today's count, fades and starts again
 **Other sessions:** dash.html only: line points are followers at each post's publish time (last account reading at or before it), plus today's count at the right edge; own y-scale, no axis. Reduced motion shows it still.
+### 2026-10-01 20:02 — d812fc7 — venue-hero@ux/venue-hero (23 files since origin/main)
+**tl;dr:** Venue pages: a Google rating pill under the address (stars, review count, 'as of Oct 2026') that opens their Google reviews; a sample's hours, menu link and rating can be filled from Google in CRM → Edit profile → Details; a sample with no hours found no longer shows a made-up 5 pm–1 am
+**Other sessions:** Decision 0134 on #182. _factory.mjs humanHours(text) → parseHours (one reader). Venue profile gains rating {stars,count,at}; factory 'edit' takes hours/menuUrl/rating for venues; sampleDetail returns hours/menuUrl/rating. createSample closes every day when no hours were found and the template is untouched.
 
 ### 2026-10-01 18:58 — 02a8aae — wt4@dash-logo-home (6 files since origin/main)
 **tl;dr:** The MySet logo on every dashboard (money model, Show log, Media Dash, CRM, sample-page console, business report) now goes to the homepage
@@ -85,6 +88,14 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-01 00:54 — 5349286 — wt3@ux/dash-hero (1 files since origin/main)
 **tl;dr:** /dash: the g in the greeting is no longer cut off; the line under it now reads 'What is tracked can be measured, and what is measured can be improved.'
 **Other sessions:** Copy and one CSS line in public/dash.html.
+
+### 2026-10-01 01:48 — e0f67aa — venue-hero@ux/venue-hero (18 files since origin/main)
+**tl;dr:** No change for people: re-pushed so Netlify builds the #182 preview (its first build could not find the PR)
+**Other sessions:** Same tree as the previous push.
+
+### 2026-10-01 01:31 — 1aa42bc — venue-hero@ux/venue-hero (17 files since origin/main)
+**tl;dr:** Venue pages: never an empty cover (last photo stands in; the generator takes a venue's best wide photo); Menu / Events / What guests say / Directions as a 2x2 beside the square; links right under the tagline; extra photos swipe in the lightbox instead of a stray rail
+**Other sessions:** Decision 0131. venue.html: GALLERY + lbStep (swipeable lightbox), jump(id) to #vmenu/#vevents, .vdoors; prail and the Find them section are gone; sample.js no longer hides .vcomm (gone). parsePage(html,base,'venue').menu -> readSite.menu -> payload.menuUrl -> sample p.menu.url. pickPhotos: venue cover fallback >=800px wide.
 
 ### 2026-09-30 14:27 — 45f6ed6 — wt3@ux/dash-and-locks (9 files since origin/main)
 **tl;dr:** New myset.vip/dash (four windows: Show log, Media Dash, CRM, money model); the money model needs no passcode now; the Show log opens with the CRM's passcode on the CRM's lock screen
@@ -205,6 +216,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-28 09:05 — a80e3ff — myset@claude/myset-encryption-security-460mph (31 files since origin/main)
 **tl;dr:** Slice B of the security pass: sign-in codes, checkout, RSVPs, ratings and bug reports now count the network as well as the phone, so a script inventing device ids is stopped; every limit is sized so a packed bar on one wifi never meets it
 **Other sessions:** Decision 0111, INVARIANT 0gx. New helpers: codeSendAllowed (_auth.mjs), payAllowed (_pay.mjs); new keys authnet_<hash> and paylim_<owner> (never mirrored or backed up; paylim_ is on both delete lists). saveBug/saveFeedback/toggleRsvp take the caller's ip as a last argument. Slice A is live as 539c2a4. Slice C (0112/0113) waits on MYSET_SECRET and FINMODEL_CODE.
+
 ### 2026-09-28 16:13 — 785a02a — untrack-node-modules@config/dependabot-security-only (2 files since origin/main)
 **tl;dr:** Nothing on the site changes: Dependabot now opens a pull request only for a security fix in stripe or @netlify/blobs, no more routine major upgrades
 **Other sessions:** Dependabot alerts + security updates switched ON in the GitHub repo settings (2026-09-28); .github/dependabot.yml limit 0 stops version bumps. #140/#141 (stripe 22, blobs 11) closed unmerged. A security-fix PR from Dependabot changes package-lock.json: after it merges, npm ci in ~/Docs/MySet (after its reset) or worktrees keep testing the old version.
@@ -572,6 +584,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-14 20:25 — 0f12226 — wt@model/credit-breakdown (9 files since origin/main)
 **tl;dr:** Netlify's own per-category credit split is now on file (finance/credits.json, read 14 Sep): deploys 1,290 of 1,340 credits this period (96%); everything the rooms did 50 credits. The money model's 'Two bills' note quotes it.
 **Other sessions:** finance/credits.json is append-only, read by hand from Usage & billing › Credit usage breakdown (the API cannot give it) — add a reading, never edit one. tools/actuals.py carries readings[-1] into actuals.json as shipping.dashboard / traffic.dashboard. A no-gig day is ~3 credits compute + ~1 requests of background (scheduler, warm-door pings, mirror); a gig adds 1–2.
+
 ### 2026-09-14 20:21 — 493d32b — wt3@fix/no-default-profile-images (13 files since origin/main)
 **tl;dr:** A new artist page no longer opens with the founder's band photo as its cover and portrait — no photo means a pink-orange cover box and the band's initial (decision 0078, INVARIANT 0fy); the Studio's Save profile button is centred
 **Other sessions:** _profile.mjs DEFAULTS photo is '' and normProfile never fills it; artist.html .pcover.blank / .pav.blank, community + shop .av.blank draw the initial; og:image on artist.html is the MySet icon. The founder's page stores /img/band.jpg by path and is unchanged — do not remove the two stock files. .big.mid centres a one-word big button. Next free invariant: 0fz; decision: 0079.
@@ -631,6 +644,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-14 10:53 — 943a8d8 — wt@studio/small-things (70 files since origin/main)
 **tl;dr:** Artist Studio: Log a show closes on a drag down; Settings has a gear icon; the tab bar is a little smaller (both Studios); setlist song cards are as tall as their words with edit/hide as outlined icons above the delete ✕; Up next shows ten songs before it scrolls
 **Other sessions:** lock.css .tabbar icon 19px / label 11.5px (the Venue Studio shares it). .queue-window max-height is now set by studio.js render() at the eleventh row — do not put a pixel value back in the CSS. attachDrag: .bizro counts as a grab zone and the editor no longer refuses a body drag.
+
 ### 2026-09-14 10:46 — 6fceff3 — wt11@metrics/cli-stdout (1 files since origin/main)
 **tl;dr:** tools/metrics.mjs read zero artists on its first live run — 'blobs:get -O -' writes a file named '-'; it now reads stdout and refuses an empty registry out loud
 **Other sessions:** One-line tool fix, no page, no function. Rebuilt the Current Show Stats page from production after: 19 nights, 7 real.
@@ -646,6 +660,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-09-14 10:24 — c030535 — wt@merch/size-quantities (31 files since origin/main)
 **tl;dr:** A count per size: optional number fields under each size chip in both Studios (blank = as many as you like while the size is in stock, live as the sizes are typed); the shop strikes a size at zero, says Only N left in L once picked and stops the stepper there (UX-046, decision 0064)
 **Other sessions:** variants[] now carry stock (null = uncounted) — normVariants keeps it. pay.mjs pickVariant refuses stock 0 as 'That size is sold out' and variantShort gives 409 'Only N left in <label>'; stockRefusal uses merchSoldOut (every size gone = item sold out). takeStock(list,id,qty,variant) takes the size's count first, else the item's; redeemSession passes orderRow.variant. Studio: mcVarQtyRows/mcSyncSizes (vm* in the Venue Studio); the item-level count field hides while sizes exist. Stamped.
+
 ### 2026-09-14 10:21 — bb28f55 — wt9@auth/password-door (18 files since origin/main)
 **tl;dr:** Artists and venues sign in with email + password on the screen the founder specified (Welcome back · Email · Password · Sign in; New here? Join the MySet family · Create account; the Studio code in a small window off the foot); once in by a code, Settings → Password → Create; Forgot your password? = a fresh six-digit code (ACC-001, decision 0070, INVARIANT 0fu, ACCOUNTS.md §11)
 **Other sessions:** NEW netlify/functions/_cred.mjs (scrypt per email row, cred_<owner>_<hash>; per-address lockout lock_pw_*). auth.mjs + venueauth.mjs: passwordSignIn (public), passwordSet {password, current|code}, passwordClear; list carries pw per email + (venue) email/me. keysFor/keysForVenue name the cred records. studio.js gate() rewritten — modes start/join/forgot/code/name/recover; sendCode(from); openStudioCode() → #pop; PW_PROMPT opens the password sheet once after a code sign-in; venue-studio.js the same. After editing either script run node tools/stamp.mjs. The Studio code door is UNCHANGED on purpose (0fu says why). Founder's standing rule: 'orange' = the brand pink-orange --accent-2.

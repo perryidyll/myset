@@ -367,6 +367,17 @@ r = await F({ action: 'edit', owner: barOwner, fields: { links: { website: 'suns
 const vp = await getVenueProfile(barOwner.slice(2));
 ok('a venue’s links, the same way', r.ok && vp.links.website === 'https://sunsetbar.co.th/' && vp.links.facebook === 'https://www.facebook.com/sunsetbarhaadrin' && r.dropped.join() === 'instagram', [vp.links, r.dropped]);
 
+r = await F({ action: 'edit', owner: barOwner, fields: { hours: 'Daily 8am-10pm', menuUrl: 'https://online.anyflip.com/uqxta/oyru/mobile/index.html', rating: { stars: 4.5, count: 1100 } } });
+const vd = await getVenueProfile(barOwner.slice(2));
+ok('DETAILS (0132): hours as typed, the menu link, the rating with the day it was read', r.ok && vd.hours.sat.open === '08:00' && vd.hours.sat.close === '22:00' && !vd.hours.mon.closed
+  && vd.menu.url === 'https://online.anyflip.com/uqxta/oyru/mobile/index.html' && vd.rating.stars === 4.5 && vd.rating.count === 1100 && Date.now() - vd.rating.at < 60e3, [vd.hours, vd.menu, vd.rating]);
+ok('and CRM reads them back', r.profile && r.profile.menuUrl === vd.menu.url && r.profile.rating.count === 1100 && r.profile.hours.sun.open === '08:00', r.profile);
+eq('hours it cannot read are refused, the page untouched', [(await F({ action: 'edit', owner: barOwner, fields: { hours: 'whenever' } })).status, (await getVenueProfile(barOwner.slice(2))).hours.sat.open], [400, '08:00']);
+eq('a menu link that is not https is refused', (await F({ action: 'edit', owner: barOwner, fields: { menuUrl: 'javascript:alert(1)' } })).status, 400);
+eq('a rating out of range is not stored', (await F({ action: 'edit', owner: barOwner, fields: { rating: { stars: 9, count: 3 } } })) && (await getVenueProfile(barOwner.slice(2))).rating, null);
+r = await F({ action: 'edit', owner: barOwner, fields: { hours: '' } });
+ok('cleared hours hide the block', (await getVenueProfile(barOwner.slice(2))).hours && Object.values((await getVenueProfile(barOwner.slice(2))).hours).every((h) => h.closed));
+
 r = await F({ action: 'rebuild', owner: emOwner });
 q = (await readDoc('factoryq', null)).data;
 j = q.jobs.find((x) => x.replace === emOwner && x.st !== 'done');

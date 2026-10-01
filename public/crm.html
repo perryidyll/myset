@@ -2174,11 +2174,33 @@ function liveHtml(p,r){
     <p class="sub">Links<span class="subr">on the page</span></p>
     <form id="lF" novalidate autocomplete="off">${PAGEL[r.kind||'artist'].map(k=>linkRow('p',k,L[k]||'')).join('')}
       <div style="display:flex;justify-content:flex-end;margin-top:12px"><button type="submit" class="btn pri" id="lS" disabled>Save links</button></div></form>
+    ${venue?detailsHtml(pr):''}
     <p class="sub">Photos<span class="subr">tap one to change it</span></p>
     <div class="slots${venue?' v6':''}">${slots.map(([s,u])=>`<button type="button" class="slot" data-act="slot" data-slot="${s}" aria-expanded="${DR.pick===s}" aria-label="${SLOTW[s]}${u?'':' — empty'}: change">${u?'':'<em>Empty</em>'}${img(u,'')}<span class="sl2">${SLOTW[s]}</span></button>`).join('')}</div>
     <div id="pick">${DR.pick?chooserHtml():''}</div>
     ${venue?'':`<p class="sub">Videos</p>${videosHtml(pr)}`}
     <div class="pg-dz"><button type="button" class="btn" data-act="rebuild">${ico('refresh')}Rebuild from sources</button><button type="button" class="btn bad" data-act="cancelpage">Cancel page</button></div>`;
+}
+/* Details (0132): hours, the menu link and the Google rating — filled from the venue's
+   Google listing by an agent session, or typed. Hours read as a person writes them. */
+const DK=['mon','tue','wed','thu','fri','sat','sun'], DW={mon:'Mon',tue:'Tue',wed:'Wed',thu:'Thu',fri:'Fri',sat:'Sat',sun:'Sun'};
+function hoursText(H){
+  if(!H||DK.every(d=>!H[d]||H[d].closed))return '';
+  const t=x=>{const [h,m]=x.split(':').map(Number);return `${h%12||12}${m?':'+String(m).padStart(2,'0'):''}${h<12?'am':'pm'}`;};
+  const k=d=>H[d].closed?'closed':`${t(H[d].open)}-${t(H[d].close)}`, out=[];
+  for(let i=0;i<7;){ let j=i; while(j<6&&k(DK[j+1])===k(DK[i]))j++;
+    out.push(`${i===0&&j===6?'Daily':j>i?`${DW[DK[i]]}-${DW[DK[j]]}`:DW[DK[i]]} ${k(DK[i])}`); i=j+1; }
+  return out.join('; ');
+}
+function detailsHtml(pr){
+  const r=pr.rating||{};
+  return `<p class="sub">Details<span class="subr">${r.at?`rating read ${esc(new Date(r.at).toLocaleDateString(undefined,{month:'short',day:'numeric'}))}`:'from their Google listing'}</span></p>
+    <form id="dF" novalidate autocomplete="off">
+      <label class="fl" for="dHours"><span>Hours</span></label><input class="inp" id="dHours" data-was="${esc(hoursText(pr.hours))}" value="${esc(hoursText(pr.hours))}" placeholder="Daily 8am-10pm · Mon-Fri 5pm-1am; Sun closed">
+      <label class="fl" for="dMenu"><span>Menu link</span></label><input class="inp" id="dMenu" type="url" inputmode="url" data-was="${esc(pr.menuUrl||'')}" value="${esc(pr.menuUrl||'')}" placeholder="https://…">
+      <div class="two"><div><label class="fl" for="dStars"><span>Google rating</span></label><input class="inp" id="dStars" inputmode="decimal" data-was="${r.stars||''}" value="${r.stars||''}" placeholder="4.5"></div>
+        <div><label class="fl" for="dCount"><span>Reviews</span></label><input class="inp" id="dCount" inputmode="numeric" data-was="${r.count||''}" value="${r.count||''}" placeholder="1100"></div></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px"><button type="submit" class="btn pri" id="dS">Save details</button></div></form>`;
 }
 const wf=(id,label,v,max,rows)=>`<label class="fl" for="${id}"><span>${label}</span><span class="cnt" id="c-${id}"></span></label>${rows
   ?`<textarea class="inp" id="${id}" rows="${rows}" data-max="${max}" data-was="${esc(v||'')}">${esc(v||'')}</textarea>`
@@ -2615,6 +2637,14 @@ document.addEventListener('submit',async e=>{
     for(const [k,id] of Object.entries(map)){ const el=$('#'+id); if(el&&el.value!==el.dataset.was)fields[k]=el.value.trim(); }
     if(!Object.keys(fields).length)return; const d=await pageEdit(fields,'Words saved'); if(!d)return;
     Object.values(map).forEach(id=>{const el=$('#'+id); if(el)el.dataset.was=el.value;}); wordsState(); if(fields.name)drawerHead(); return; }
+  if(f.id==='dF'){ const fields={}, ch=id=>{const el=$('#'+id);return el&&el.value.trim()!==el.dataset.was?el.value.trim():null;};
+    const h=ch('dHours'), m=ch('dMenu'), st=ch('dStars'), ct=ch('dCount');
+    if(h!=null)fields.hours=h; if(m!=null)fields.menuUrl=m;
+    if(st!=null||ct!=null){ const S2=parseFloat(($('#dStars').value||'').replace(',','.')), C2=parseInt(($('#dCount').value||'').replace(/[^\d]/g,''),10)||0;
+      if(!$('#dStars').value.trim()&&!$('#dCount').value.trim())fields.rating=null;
+      else if(!(S2>=1&&S2<=5)||!C2)return toast('A rating from 1 to 5, and how many reviews');
+      else fields.rating={stars:S2,count:C2}; }
+    if(!Object.keys(fields).length)return toast('Nothing changed'); const d=await pageEdit(fields,'Details saved'); if(d)drawerBody(true); return; }
   if(f.id==='lF'){ const links={}; $$('#lF [data-link]').forEach(el=>{ if(el.value!==el.dataset.was)links[el.dataset.link]=el.value.trim(); });
     if(!Object.keys(links).length)return; const d=await pageEdit({links},'Links saved'); if(!d)return;
     const dropped=d.dropped||[]; drawerBody(true); if(dropped.length)markDropped('p',dropped); return; }

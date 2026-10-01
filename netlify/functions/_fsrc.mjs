@@ -438,6 +438,20 @@ export function parsePage(html, base, kind = 'artist') {
     } else if (!seen.has(c.url)) { seen.add(c.url); out.links.push({ ...c, me: me.has(h) }); }
   }
   out.sub = [...sub].sort((x, y) => y[1] - x[1]).map(([u]) => u).slice(0, 3);
+  /* A venue's own menu (2026-10-01: the page's Menu door): a link on its own site whose
+     words say "menu", or whose path is a menu page or a menu PDF. https only, as the
+     venue profile keeps it. */
+  if (kind === 'venue' && host) {
+    const cands = [];
+    for (const m of src.matchAll(/<a\b([^>]*)>([\s\S]{0,200}?)<\/a\s*>/gi)) {
+      const h = abs(attrs('<a' + m[1] + '>').href || ''); if (!h) continue;
+      let u; try { u = new URL(h); } catch { continue; }
+      if (u.protocol !== 'https:' || u.hostname.replace(/^www\./, '') !== host) continue;
+      const words = /\bmenus?\b/i.test(clean(stripTags(m[2]), 60)), path = /\/(?:[\w-]*-)?(menus?|food|drinks)(?:-[\w-]*)?(?:\/|\.pdf|$)/i.test(u.pathname);
+      if (words || path) cands.push({ url: u.href, score: (words ? 2 : 0) + (path ? 1 : 0) });
+    }
+    out.menu = (cands.sort((x, y) => y.score - x.score)[0] || {}).url || '';
+  }
   const imgs = [];
   const push = (url, w, h, from, alts = []) => { if (url && !JUNK_IMG.test(url) && !/\.(svg|gif|ico)(\?|$)/i.test(url)) imgs.push({ url, w: w || 0, h: h || 0, from, alts }); };
   push(abs(out.og['og:image'] || ''), +out.og['og:image:width'] || 0, +out.og['og:image:height'] || 0, 'og');
@@ -476,7 +490,7 @@ export async function readSite(url, opts = {}, kind = 'artist') {
   };
   const p0 = take(home);
   for (const s of p0.sub) { const r = await fetchPage(s, o); if (r.ok) take(r); }
-  return { ok: true, url: home.finalUrl, pages, links, images: images.slice(0, 30), ld: pages.flatMap((p) => p.ld) };
+  return { ok: true, url: home.finalUrl, pages, links, images: images.slice(0, 30), ld: pages.flatMap((p) => p.ld), ...(kind === 'venue' ? { menu: p0.menu || '' } : {}) };
 }
 
 /* ---------- YouTube ----------
