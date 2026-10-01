@@ -1,183 +1,258 @@
 {
- "asOf": "2026-09-25",
+ "asOf": "2026-10-01",
  "source": "tools/actuals.py against production",
- "shows": 15,
- "people": 8.6,
- "hours": 2.73,
- "recordHours": 3.46,
- "setHours": 1.5,
- "votes": 16.6,
- "interactions": 2.09,
- "songs": 10.0,
- "nets": 6.0,
- "peakVoters": 4.13,
- "gigsOnCalendar": 22,
- "gigsUsed": 15,
- "gigsSilent": 5,
+ "shows": 19,
+ "people": 9.0,
+ "hours": 2.76,
+ "recordHours": 3.42,
+ "setHours": 1.59,
+ "votes": 16.32,
+ "interactions": 1.88,
+ "songs": 11.32,
+ "nets": 5.83,
+ "peakVoters": 4.16,
+ "gigsOnCalendar": 25,
+ "gigsUsed": 19,
+ "gigsSilent": 4,
  "roomFree": null,
  "roomPlus": null,
- "roomPro": 1.037,
- "roomPerHead": 1.037,
- "deploys": 286,
- "deploysThisPeriod": 119,
+ "roomPro": 0.766,
+ "roomPerHead": 0.766,
+ "deploys": 273,
+ "deploysThisPeriod": 193,
  "billingPeriodStart": "2026-09-08",
  "shipping": {
   "what": "production deploys \u00d7 15 credits \u2014 a cost of shipping code, never of a gig",
-  "deploys30": 286,
-  "credits30": 4290,
-  "deploysThisPeriod": 119,
-  "creditsThisPeriod": 1785,
-  "perDayThisPeriod": 7.1,
+  "deploys30": 273,
+  "credits30": 4095,
+  "deploysThisPeriod": 193,
+  "creditsThisPeriod": 2895,
+  "perDayThisPeriod": 8.3,
   "dashboard": {
-   "readAt": "2026-09-25T02:58:00+00:00",
-   "deploys": 119,
-   "credits": 1785,
-   "shareOfAllCredits": 0.938
+   "readAt": "2026-10-01T10:30:00+00:00",
+   "deploys": 185,
+   "credits": 2775,
+   "shareOfAllCredits": 0.947
   }
  },
  "traffic": {
   "what": "everything the rooms cause \u2014 bandwidth is the one meter the API exposes; web requests and compute are on Netlify\u2019s Credit usage breakdown page only",
-  "bandwidthBytesThisPeriod": 2330916514,
-  "bandwidthGBThisPeriod": 2.331,
-  "bandwidthCreditsThisPeriod": 46.6,
-  "bandwidthReadAt": "2026-09-25T03:52:53.498+00:00",
+  "bandwidthBytesThisPeriod": 2838221475,
+  "bandwidthGBThisPeriod": 2.838,
+  "bandwidthCreditsThisPeriod": 56.8,
+  "bandwidthReadAt": "2026-10-01T09:33:56.363+00:00",
   "dashboard": {
-   "readAt": "2026-09-25T02:58:00+00:00",
+   "readAt": "2026-10-01T10:30:00+00:00",
    "periodStart": "2026-09-08",
-   "webRequests": 100804,
-   "webRequestCredits": 20.2,
-   "computeCredits": 54,
-   "bandwidthCredits": 42.8,
-   "trafficCredits": 117.0,
-   "totalCredits": 1902
+   "webRequests": 131960,
+   "webRequestCredits": 26.4,
+   "computeCredits": 77.3,
+   "bandwidthCredits": 52.1,
+   "trafficCredits": 155.8,
+   "totalCredits": 2930.8
   }
  },
- "pollsPerPhoneHour": 42.0,
- "pollsSource": "Netlify's own request meter \u2014 7 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay)",
- "creditsPerShow": 2.98,
+ "pollsPerPhoneHour": 16.9,
+ "pollsSource": "Netlify's own request meter \u2014 4 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay)",
+ "creditsPerShow": 2.72,
  "meters": {
-  "readAt": "2026-09-25T02:58:00+00:00",
-  "cleanFrom": "2026-09-16",
+  "readAt": "2026-10-01T10:30:00+00:00",
+  "cleanFrom": "2026-09-25",
   "studioShareAssumed": 0.6,
   "emptyDays": [
-   "2026-09-19"
+   "2026-09-26"
   ],
   "gigDays": [
-   "2026-09-16",
-   "2026-09-17",
-   "2026-09-18",
-   "2026-09-20",
-   "2026-09-21",
-   "2026-09-22",
-   "2026-09-23"
+   "2026-09-25",
+   "2026-09-27",
+   "2026-09-28",
+   "2026-09-30"
   ],
   "nights": [
    {
-    "key": "hist_perry-idyll_2026-09-16-1130-ktfa",
-    "day": "2026-09-16",
-    "people": 9,
-    "hours": 3.0,
-    "requestsOverBackground": 3800,
-    "computeCreditsOverBackground": 1.8,
-    "bandwidthMBOverBackground": 28.1,
-    "studioRequestsAssumed": 1620,
-    "ticks": 1052,
-    "ticksPerPhoneHour": 39.0,
-    "creditsTraffic": 3.12
+    "key": "hist_perry-idyll_2026-09-25-1130-txs5",
+    "day": "2026-09-25",
+    "people": 17,
+    "hours": 2.63,
+    "requestsOverBackground": 2923,
+    "computeCreditsOverBackground": 1.46,
+    "bandwidthMBOverBackground": 65.8,
+    "studioRequestsAssumed": 1420,
+    "ticks": 678,
+    "ticksPerPhoneHour": 15.2,
+    "creditsTraffic": 3.36
    },
    {
-    "key": "hist_perry-idyll_2026-09-17-1200-qvj2",
-    "day": "2026-09-17",
+    "key": "hist_perry-idyll_2026-09-27-1126-r5rz",
+    "day": "2026-09-27",
+    "people": 8,
+    "hours": 3.0,
+    "requestsOverBackground": 764,
+    "computeCreditsOverBackground": 0.65,
+    "bandwidthMBOverBackground": 31.9,
+    "studioRequestsAssumed": 1620,
+    "ticks": -457,
+    "ticksPerPhoneHour": null,
+    "creditsTraffic": 1.44
+   },
+   {
+    "key": "hist_perry-idyll_2026-09-28-1330-9k2n",
+    "day": "2026-09-28",
+    "people": 14,
+    "hours": 3.0,
+    "requestsOverBackground": 3311,
+    "computeCreditsOverBackground": 2.43,
+    "bandwidthMBOverBackground": 49.7,
+    "studioRequestsAssumed": 1620,
+    "ticks": 790,
+    "ticksPerPhoneHour": 18.8,
+    "creditsTraffic": 4.09
+   },
+   {
+    "day": "2026-09-29",
+    "why": "not a clean gig day \u2014 records that day: test"
+   },
+   {
+    "key": "hist_perry-idyll_2026-09-30-1130-qlhi",
+    "day": "2026-09-30",
     "people": 3,
-    "hours": 2.0,
-    "requestsOverBackground": 2400,
-    "computeCreditsOverBackground": 1.4,
-    "bandwidthMBOverBackground": 23.2,
-    "studioRequestsAssumed": 1080,
-    "ticks": 647,
-    "ticksPerPhoneHour": 107.8,
-    "creditsTraffic": 2.34
-   },
-   {
-    "key": "hist_perry-idyll_2026-09-18-1130-r9r6",
-    "day": "2026-09-18",
-    "people": 6,
-    "hours": 3.0,
-    "requestsOverBackground": 2600,
-    "computeCreditsOverBackground": 1.4,
-    "bandwidthMBOverBackground": 37.2,
-    "studioRequestsAssumed": 1620,
-    "ticks": 464,
-    "ticksPerPhoneHour": 25.8,
-    "creditsTraffic": 2.66
-   },
-   {
-    "key": "hist_perry-idyll_2026-09-20-1130-8yg2",
-    "day": "2026-09-20",
-    "people": 9,
-    "hours": 3.0,
-    "requestsOverBackground": 3400,
-    "computeCreditsOverBackground": 1.8,
-    "bandwidthMBOverBackground": 47.0,
-    "studioRequestsAssumed": 1620,
-    "ticks": 850,
-    "ticksPerPhoneHour": 31.5,
-    "creditsTraffic": 3.42
-   },
-   {
-    "key": "hist_perry-idyll_2026-09-21-1330-frj4",
-    "day": "2026-09-21",
-    "people": 11,
-    "hours": 3.0,
-    "requestsOverBackground": 3700,
-    "computeCreditsOverBackground": 2.3,
-    "bandwidthMBOverBackground": 40.1,
-    "studioRequestsAssumed": 1620,
-    "ticks": 997,
-    "ticksPerPhoneHour": 30.2,
-    "creditsTraffic": 3.84
-   },
-   {
-    "key": "hist_perry-idyll_2026-09-22-1200-kf5n",
-    "day": "2026-09-22",
-    "people": 9,
-    "hours": 1.87,
-    "requestsOverBackground": 3700,
-    "computeCreditsOverBackground": 1.1,
-    "bandwidthMBOverBackground": 39.7,
-    "studioRequestsAssumed": 1010,
-    "ticks": 1310,
-    "ticksPerPhoneHour": 77.9,
-    "creditsTraffic": 2.63
-   },
-   {
-    "key": "hist_perry-idyll_2026-09-23-1130-uqwj",
-    "day": "2026-09-23",
-    "people": 3,
-    "hours": 2.86,
-    "requestsOverBackground": 2400,
-    "computeCreditsOverBackground": 1.5,
-    "bandwidthMBOverBackground": 41.4,
-    "studioRequestsAssumed": 1544,
-    "ticks": 415,
-    "ticksPerPhoneHour": 48.3,
-    "creditsTraffic": 2.81
+    "hours": 2.84,
+    "requestsOverBackground": -98,
+    "computeCreditsOverBackground": 1.56,
+    "bandwidthMBOverBackground": 22.5,
+    "studioRequestsAssumed": 1534,
+    "ticks": -826,
+    "ticksPerPhoneHour": null,
+    "creditsTraffic": 1.99
    }
   ],
   "what": "Netlify's own per-day meters (finance/credits.json): a gig day minus an empty day, requests \u00f7 2 less the Studio tick, page loads, votes and extra pages = the room's ticks; the credits are traffic only \u2014 never a deploy (INVARIANT 0fx)",
   "background": {
-   "requests": 3200,
-   "computeCredits": 1.7,
-   "bandwidthMB": 13.7,
+   "requests": 4019,
+   "computeCredits": 2.69,
+   "bandwidthMB": 13.3,
    "days": [
-    "2026-09-19"
-   ]
+    "2026-09-26"
+   ],
+   "bandwidthDay": "2026-09-19"
   },
-  "rate": 42.0,
-  "creditsPerShow": 2.98
+  "rate": 16.9,
+  "creditsPerShow": 2.72
  },
- "note": "15 night(s) on the published calendar where the room used the app, across 1 artist(s) (2 more on the calendar where it went unused); 11 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 16.6. Ticks per phone-hour: 42.0 \u2014 Netlify's own request meter \u2014 7 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay). By the same meters a night adds about 2.98 credits of traffic over an empty day (empty day: 3,200 requests, 1.7 credits of compute, 13.7 MB; 7 gig day(s) since 2026-09-16). 15 bracket(s) of bandwidth marks withheld \u2014 see pollsByNight for why; background over every quiet pair on file 7.04 MB/h from 1 pair(s). Deploys are account-wide (all five sites share the credit grant): 286 in the last 30 days, 119 this billing period = 1785 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 2.331 GB = 46.6 credits for everything every room did.",
+ "note": "19 night(s) on the published calendar where the room used the app, across 1 artist(s) (2 more on the calendar where it went unused); 15 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 16.32. Ticks per phone-hour: 16.9 \u2014 Netlify's own request meter \u2014 4 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay). By the same meters a night adds about 2.72 credits of traffic over an empty day (empty day: 4,019 requests, 2.69 credits of compute, 13.3 MB; 4 gig day(s) since 2026-09-25). 19 bracket(s) of bandwidth marks withheld \u2014 see pollsByNight for why; background over every quiet pair on file 7.04 MB/h from 1 pair(s). Deploys are account-wide (all five sites share the credit grant): 273 in the last 30 days, 193 this billing period = 2895 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 2.838 GB = 56.8 credits for everything every room did.",
  "nights": [
+  {
+   "key": "hist_perry-idyll_2026-09-30-1130-qlhi",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 3,
+   "nets": 1,
+   "votes": 0,
+   "requests": 0,
+   "lastActivityHours": 0.7,
+   "interactions": 0.0,
+   "songs": 7,
+   "peakVoters": 0,
+   "hours": 2.84,
+   "recordHours": 2.84,
+   "setHours": 0.67,
+   "gig": {
+    "eventId": "g9zst3nmn",
+    "venue": "Anantara Rasananda Resort \ud83c\udf05\u26f1\ufe0f",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Wed 30 Sep 18:30"
+   },
+   "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-28-1330-9k2n",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 14,
+   "nets": 8,
+   "votes": 21,
+   "requests": 0,
+   "lastActivityHours": 2.83,
+   "interactions": 1.5,
+   "songs": 23,
+   "peakVoters": 3,
+   "hours": 3.0,
+   "recordHours": 3.34,
+   "setHours": 2.59,
+   "gig": {
+    "eventId": "gx78yyhxp",
+    "venue": "The Ugly Duckling | Irish Pub \u2618\ufe0f\ud83c\udf7b",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Mon 28 Sep 20:30"
+   },
+   "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-27-1126-r5rz",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 8,
+   "nets": 6,
+   "votes": 3,
+   "requests": 3,
+   "lastActivityHours": 2.51,
+   "interactions": 0.75,
+   "songs": 17,
+   "peakVoters": 1,
+   "hours": 3.0,
+   "recordHours": 4.39,
+   "setHours": 2.42,
+   "gig": {
+    "eventId": "guwi123an",
+    "venue": "Sand & Tan \ud83c\udf05\ud83e\udd42",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": -4,
+    "localStart": "Sun 27 Sep 18:26"
+   },
+   "gross": 10.0,
+   "tagged": 10.0,
+   "untagged": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-25-1130-txs5",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 17,
+   "nets": 6,
+   "votes": 37,
+   "requests": 0,
+   "lastActivityHours": 2.52,
+   "interactions": 2.18,
+   "songs": 18,
+   "peakVoters": 13,
+   "hours": 2.63,
+   "recordHours": 2.63,
+   "setHours": 1.91,
+   "gig": {
+    "eventId": "gh71d4pfq",
+    "venue": "Seaflower Bungalows \ud83c\udf05\ud83c\udf77",
+    "slotHours": 3.0,
+    "startedMinAfterSlot": 0,
+    "localStart": "Fri 25 Sep 18:30"
+   },
+   "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe"
+  },
   {
    "key": "hist_perry-idyll_2026-09-23-1130-uqwj",
    "artist": "perry-idyll",
@@ -201,6 +276,8 @@
     "localStart": "Wed 23 Sep 18:30"
    },
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -227,6 +304,8 @@
     "localStart": "Tue 22 Sep 19:00"
    },
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -253,6 +332,8 @@
     "localStart": "Mon 21 Sep 20:30"
    },
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -279,6 +360,8 @@
     "localStart": "Sun 20 Sep 18:30"
    },
    "gross": 35.0,
+   "tagged": 35.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -305,6 +388,8 @@
     "localStart": "Fri 18 Sep 18:30"
    },
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -331,6 +416,8 @@
     "localStart": "Thu 17 Sep 19:00"
    },
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -357,6 +444,8 @@
     "localStart": "Wed 16 Sep 18:30"
    },
    "gross": 15.0,
+   "tagged": 15.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -383,6 +472,8 @@
     "localStart": "Mon 14 Sep 20:30"
    },
    "gross": 22.0,
+   "tagged": 22.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -409,6 +500,8 @@
     "localStart": "Sun 13 Sep 18:23"
    },
    "gross": 10.0,
+   "tagged": 10.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -435,6 +528,8 @@
     "localStart": "Fri 11 Sep 18:30"
    },
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   },
@@ -461,6 +556,8 @@
     "localStart": "Wed 09 Sep 18:30"
    },
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "off"
   },
@@ -487,6 +584,8 @@
     "localStart": "Tue 08 Sep 18:53"
    },
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "off"
   },
@@ -513,6 +612,8 @@
     "localStart": "Mon 07 Sep 20:30"
    },
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable"
   },
@@ -539,6 +640,8 @@
     "localStart": "Sun 06 Sep 18:30"
    },
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable"
   },
@@ -565,6 +668,8 @@
     "localStart": "Sun 30 Aug 19:10"
    },
    "gross": 3.0,
+   "tagged": 0.0,
+   "untagged": 3.0,
    "moneyKnown": true,
    "moneySource": "stripe"
   }
@@ -593,6 +698,8 @@
     "localStart": "Fri 04 Sep 18:50"
    },
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable",
    "skipped": "one phone and no votes \u2014 on the calendar, but the room never used the app"
@@ -620,6 +727,8 @@
     "localStart": "Tue 15 Sep 19:00"
    },
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe",
    "skipped": "one phone and no votes \u2014 on the calendar, but the room never used the app"
@@ -653,13 +762,6 @@
    "date": "Thu 03 Sep 19:00",
    "eventId": "g3ei0k6l3",
    "at": 1788436800000
-  },
-  {
-   "artist": "perry-idyll",
-   "gig": "Crystal Day (solo) \ud83c\udf05\ud83c\udf71",
-   "date": "Thu 24 Sep 19:00",
-   "eventId": "g3ei0k6l3",
-   "at": 1790251200000
   }
  ],
  "notCounted": [
@@ -680,6 +782,8 @@
    "setHours": null,
    "gig": null,
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe",
    "skipped": "nobody there"
@@ -701,6 +805,8 @@
    "setHours": 71.98,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable",
    "skipped": "not on the published calendar \u2014 started Mon 31 Aug 02:28 local, no gig within 90 min; a test or an accident"
@@ -722,6 +828,8 @@
    "setHours": null,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable",
    "skipped": "not on the published calendar \u2014 started Mon 07 Sep 09:23 local, no gig within 90 min; a test or an accident"
@@ -743,6 +851,8 @@
    "setHours": 2.61,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable",
    "skipped": "not on the published calendar \u2014 started Tue 08 Sep 01:07 local, no gig within 90 min; a test or an accident"
@@ -764,6 +874,8 @@
    "setHours": 11.33,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable",
    "skipped": "not on the published calendar \u2014 started Tue 08 Sep 23:53 local, no gig within 90 min; a test or an accident"
@@ -785,6 +897,8 @@
    "setHours": null,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable",
    "skipped": "not on the published calendar \u2014 started Wed 09 Sep 14:51 local, no gig within 90 min; a test or an accident"
@@ -806,6 +920,8 @@
    "setHours": null,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "off",
    "skipped": "not on the published calendar \u2014 started Thu 10 Sep 00:40 local, no gig within 90 min; a test or an accident"
@@ -827,6 +943,8 @@
    "setHours": null,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "off",
    "skipped": "not on the published calendar \u2014 started Thu 10 Sep 11:12 local, no gig within 90 min; a test or an accident"
@@ -848,6 +966,8 @@
    "setHours": null,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "off",
    "skipped": "not on the published calendar \u2014 started Thu 10 Sep 11:44 local, no gig within 90 min; a test or an accident"
@@ -869,6 +989,8 @@
    "setHours": 0.65,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "off",
    "skipped": "not on the published calendar \u2014 started Thu 10 Sep 14:30 local, no gig within 90 min; a test or an accident"
@@ -890,6 +1012,8 @@
    "setHours": null,
    "gig": null,
    "gross": null,
+   "tagged": null,
+   "untagged": null,
    "moneyKnown": false,
    "moneySource": "stripe-unreachable",
    "skipped": "not on the published calendar \u2014 started Thu 10 Sep 15:10 local, no gig within 90 min; a test or an accident"
@@ -911,6 +1035,8 @@
    "setHours": null,
    "gig": null,
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe",
    "skipped": "not on the published calendar \u2014 started Fri 11 Sep 23:48 local, no gig within 90 min; a test or an accident"
@@ -932,9 +1058,34 @@
    "setHours": null,
    "gig": null,
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe",
    "skipped": "not on the published calendar \u2014 started Mon 14 Sep 17:20 local, no gig within 90 min; a test or an accident"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-29-1201-pb1w",
+   "artist": "perry-idyll",
+   "plan": "pro",
+   "people": 2,
+   "nets": 0,
+   "votes": 0,
+   "requests": 0,
+   "lastActivityHours": null,
+   "interactions": 0.0,
+   "songs": 0,
+   "peakVoters": 0,
+   "hours": 3.02,
+   "recordHours": 3.02,
+   "setHours": null,
+   "gig": null,
+   "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
+   "moneyKnown": true,
+   "moneySource": "stripe",
+   "skipped": "not on the published calendar \u2014 started Tue 29 Sep 19:00 local, no gig within 90 min; a test or an accident"
   },
   {
    "key": "hist_samcole_2026-08-31-1227",
@@ -953,6 +1104,8 @@
    "setHours": 0.06,
    "gig": null,
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe",
    "skipped": "31 phones all on one network and over in 4 minutes \u2014 a load test from one machine, not a room"
@@ -974,6 +1127,8 @@
    "setHours": 0.06,
    "gig": null,
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe",
    "skipped": "44 phones all on one network and over in 6 minutes \u2014 a load test from one machine, not a room"
@@ -995,6 +1150,8 @@
    "setHours": null,
    "gig": null,
    "gross": 0.0,
+   "tagged": 0.0,
+   "untagged": 0.0,
    "moneyKnown": true,
    "moneySource": "stripe",
    "skipped": "26 phones all on one network and over in 4 minutes \u2014 a load test from one machine, not a room"
@@ -1003,6 +1160,26 @@
  "pollsByNight": [
   {
    "key": "hist_perry-idyll_2026-08-30-1210",
+   "polls": null,
+   "why": "no mark on both sides of this night (the counter must have caught up before the AFTER mark counts)"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-25-1130-txs5",
+   "polls": null,
+   "why": "no mark on both sides of this night (the counter must have caught up before the AFTER mark counts)"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-27-1126-r5rz",
+   "polls": null,
+   "why": "no mark on both sides of this night (the counter must have caught up before the AFTER mark counts)"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-28-1330-9k2n",
+   "polls": null,
+   "why": "no mark on both sides of this night (the counter must have caught up before the AFTER mark counts)"
+  },
+  {
+   "key": "hist_perry-idyll_2026-09-30-1130-qlhi",
    "polls": null,
    "why": "no mark on both sides of this night (the counter must have caught up before the AFTER mark counts)"
   },

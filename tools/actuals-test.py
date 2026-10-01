@@ -136,6 +136,15 @@ ok('the 9-phone night: 3,300 requests over the background − 1,620 Studio − 5
 ok('…and 3.3 credits of traffic (0.66 requests + 1.7 compute + 0.94 bandwidth) — no deploy anywhere in it', g['creditsTraffic'] == 3.3, g)
 ok('a day with a test record on it is not a gig day, and the row says so', any('not a clean gig day' in (n.get('why') or '') for n in m['nights']), m['nights'])
 ok('the rate is phone-hour weighted over the gig days; creditsPerShow is their mean', m['rate'] == round((800.25 + 596.75) / 33, 1) and m['gigDays'] == ['2026-09-17', '2026-09-20'] and m['creditsPerShow'] == round((g['creditsTraffic'] + g2['creditsTraffic']) / 2, 2), (m['rate'], m['gigDays'], m['creditsPerShow']))
+# bandwidthCleanFrom: requests and compute after cleanFrom, the bandwidth floor may reach back further
+rb = dict(readAt='2026-10-01T10:30:00+00:00', perDay=dict(cleanFrom='2026-09-25', bandwidthCleanFrom='2026-09-16', days=[
+    day('2026-09-19', 3200, 1.7, 13.3), day('2026-09-26', 4000, 2.7, 192.5), day('2026-09-24', 9000, 2.0, 5.0),
+    day('2026-09-20', 6600, 3.5, 60.7), day('2026-09-27', 6000, 3.7, 55.0)]))
+g_old = dict(r_gig, key='gold')                                                                     # 20 Sep: a gig before cleanFrom
+g_new = dict(r_gig, key='gnew', startedAt=ms('2026-09-27T11:30:00+00:00'), endedAt=ms('2026-09-27T14:30:00+00:00'))
+mb = A.solve_meters([g_old, g_new], [], [], [], rb)
+ok('bandwidthCleanFrom: requests + compute from empty days after cleanFrom, bandwidth from the quietest empty day since bandwidthCleanFrom', mb['emptyDays'] == ['2026-09-26'] and mb['background']['requests'] == 4000 and mb['background']['bandwidthMB'] == 5.0 and mb['background']['bandwidthDay'] == '2026-09-24', mb.get('background'))
+ok('…a gig day before cleanFrom is never read; the one after it is, against the earlier bandwidth floor', mb['gigDays'] == ['2026-09-27'] and mb['nights'][0]['bandwidthMBOverBackground'] == 50.0 and mb['nights'][0]['creditsTraffic'] == round(2000 / 10000 * 2 + 1.0 + 50 / 1000 * 20, 2), mb.get('nights'))
 ok('no per-day counts on file → the method stands aside (None), it does not guess', A.solve_meters([r_gig], [], [], [], dict(readAt='x', perDay=dict(days=[dict(day='2026-09-20', webRequests=1.3)]))) is None)
 print("THE FOUNDER'S OWN MARKS FILE (tools/mark.sh writes it; the tracker reads both and folds it in)")
 tmp = tempfile.mkdtemp(); A.MARKS = os.path.join(tmp, 'marks.json'); A.MARKS_OWN = os.path.join(tmp, 'own.json')

@@ -340,8 +340,10 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   eq('the money model\'s free plan is _plan.mjs\'s shows in total (0120), and its room caps are the plans\' own', [Number(model.match(/freeCap: (\d+)/)[1]), new Function('return ' + model.match(/const PLAN_ROOM = (\{[^}]*\})/)[1])()], [PLANS.free.gigs, { free: PLANS.free.audience, plus: PLANS.plus.audience, pro: PLANS.pro.audience }]);
   {
     const tierMath = new Function(block(shows) + '; return tierMath;')();
-    const x = tierMath({ shows: 15, tips: 72, packs: 23, requests: 0, merch: 0, other: 0, server: 0.57, stripe: 8.02, cut: 0.10, price: 10, months: 1 }, C.STRIPE_RATES);
-    eq('a Bar Star month: cut, profit on shows, plan fee after Stripe, revenue, profit', [x.inApp, x.cut, +x.onShows.toFixed(2), +x.planNet.toFixed(2), x.revenue, +x.profit.toFixed(2)], [95, 9.5, 0.91, 9.23, 19.5, 10.14]);
+    const x = tierMath({ shows: 15, tips: 72, packs: 23, requests: 0, merch: 0, other: 0, server: 0.57, stripe: 8.02, stripeMine: 0, cut: 0.10, price: 10, months: 1 }, C.STRIPE_RATES);
+    eq('a Bar Star month: cut, profit on shows (Stripe\'s card fee is the artist\'s), plan fee after Stripe, revenue, profit', [x.inApp, x.cut, +x.onShows.toFixed(2), +x.planNet.toFixed(2), x.revenue, +x.profit.toFixed(2)], [95, 9.5, 8.93, 9.23, 19.5, 18.16]);
+    const xf = tierMath({ shows: 15, tips: 72, packs: 23, requests: 0, merch: 0, other: 0, server: 0.57, stripe: 8.02, stripeMine: 8.02, cut: 0.10, price: 10, months: 1 }, C.STRIPE_RATES);
+    eq('…on the founder\'s own account the card fee is MySet\'s and comes off', [+xf.onShows.toFixed(2), +xf.profit.toFixed(2)], [0.91, 10.14]);
   }
   const pack = credits.readings.at(-1).plan.pack;
   eq('a credit is priced at the top-up pack on the latest reading', B.usdPerCredit, Math.round(pack.usd / pack.credits * 1e5) / 1e5);
@@ -357,11 +359,11 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   eq('a night that is not counted is not priced', C.costOf(row({ status: 'refused' }), B), null);
   const cp = (o) => C.costOf(row({ showId: 'never-read', ...o }), B).myset;
   const srv = c2.server.usd, r4 = (n) => Math.round(n * 1e4) / 1e4;
-  eq('MySet profit: the plan\'s cut of room + merch, less the server and Stripe (Hobbyist 25%)', cp({ artist: { id: 'someone-else', plan: 'free' } }).usd, r4(30 * 0.25 - srv - c2.stripe.usd));
+  eq('MySet profit: the plan\'s cut of room + merch, less the server — Stripe\'s card fee is the artist\'s (Hobbyist 25%)', [cp({ artist: { id: 'someone-else', plan: 'free' } }).usd, cp({ artist: { id: 'someone-else', plan: 'free' } }).stripeMine], [r4(30 * 0.25 - srv), 0]);
   eq('MySet cut: the fee and the rate', [cp({ artist: { id: 'someone-else', plan: 'free' } }).fee, cp({ artist: { id: 'someone-else', plan: 'free' } }).cut], [7.5, 0.25]);
   eq('the cut is on merch goods, never on postage (pay.mjs never fees a stamp)', cp({ artist: { id: 'someone-else', plan: 'free' }, money: { known: true, total: 30, tips: { count: 1 }, packs: { count: 0 }, requests: { count: 0 }, merch: { orders: 1, goods: 36, postage: 4, amount: 40 } } }).fee, r4((30 + 36) * 0.25));
   eq('an order from before the shop page has no goods figure: its whole amount is goods', cp({ artist: { id: 'someone-else', plan: 'free' }, money: { known: true, total: 30, tips: { count: 1 }, packs: { count: 0 }, requests: { count: 0 }, merch: { orders: 1, goods: 0, postage: 0, amount: 40 } } }).fee, r4((30 + 40) * 0.25));
-  eq('MySet profit on a Rock Star night: 2%', cp({ artist: { id: 'someone-else', plan: 'pro' } }).usd, r4(30 * 0.02 - srv - c2.stripe.usd));
+  eq('MySet profit on a Rock Star night: 2%, less the server only', cp({ artist: { id: 'someone-else', plan: 'pro' } }).usd, r4(30 * 0.02 - srv));
   eq('the founder\'s own night pays no cut: the server and Stripe, a loss', [cp({ artist: { id: 'perry-idyll', plan: 'pro' } }).usd, cp({ artist: { id: 'perry-idyll' } }).fee], [r4(-srv - c2.stripe.usd), 0]);
   eq('money Stripe never answered: no profit, never a guess', C.costOf(row({ money: { known: false, merch: {} } }), B).myset, null);
   const busy = C.costBlock({ ...actuals, deploys: 400, deploysThisPeriod: 400, shipping: { credits30: 6000 } }, credits);

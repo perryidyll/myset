@@ -13,6 +13,8 @@ tests: [test/everyshow.mjs, test/stripefees.mjs, finance/model-test.mjs]
 files: [finance/model.html, finance/shows.html, netlify/functions/_showcosts.mjs, netlify/functions/_register.mjs, netlify/functions/mediadash.mjs, public/mediadash.html, public/dash.html, public/crm.html]
 ---
 
+> **Answered 2026-10-01 (decision 0133):** the four open questions below were answered by the founder: Stripe's card fee is the artist's on an artist's night; Netlify is priced with tax ($5.48 a pack); the Current Show Stats task is off; the meters were re-read (2.72 credits a show).
+
 ## The question
 
 The founder, 2026-10-01: run a full audit "through every formula and number in every cell

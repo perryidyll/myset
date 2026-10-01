@@ -138,7 +138,10 @@ night's requests over the background, less the Studio tick, the page loads, the 
 extra pages (the same shape the bandwidth method subtracts), halved (a tick is two requests
 since the split) are the room's ticks; ÷ phone-hours is the rate. Days before
 `perDay.cleanFrom` are ignored — until 15 Sep the account carried hand tests, load work and a
-mirror moving clips. The Studio share (STUDIO_SHARE) is the one assumption in it: at a
+mirror moving clips; from the 1 Oct reading cleanFrom is 25 Sep, the register's bell. The one
+exception is the BANDWIDTH floor: `perDay.bandwidthCleanFrom` (never later than cleanFrom) lets
+it come from the quietest empty day since that earlier date, because a job that adds requests
+adds next to no bytes (`background.bandwidthDay` names the day used). The Studio share (STUDIO_SHARE) is the one assumption in it: at a
 three-phone night it is most of the requests, so small rooms read high — the rate is
 phone-hour-weighted for that reason.
 """
@@ -657,8 +660,12 @@ def solve_meters(rows, unused, skipped, silent, reading):
     `emptyDays`, `gigDays`."""
     per_day = (reading or {}).get('perDay') or {}
     clean_from = per_day.get('cleanFrom') or ''
+    # bandwidth may reach further back than requests and compute: a background job that adds requests
+    # (the register's bell, 25 Sep) adds next to no bytes, so the quietest empty day before it is still
+    # a fair bandwidth floor. Never later than cleanFrom; requests, compute and gig days stay after it.
+    bw_from = min(per_day.get('bandwidthCleanFrom') or clean_from, clean_from)
     table = {d['day']: d for d in per_day.get('days') or []
-             if d.get('webRequestCount') is not None and d.get('functionsCompute') is not None and d.get('bandwidthMB') is not None and d['day'] >= clean_from}
+             if d.get('webRequestCount') is not None and d.get('functionsCompute') is not None and d.get('bandwidthMB') is not None and d['day'] >= bw_from}
     if not table:
         return None
     utc_day = lambda ms: datetime.fromtimestamp(ms / 1000, timezone.utc).strftime('%Y-%m-%d')
@@ -669,7 +676,9 @@ def solve_meters(rows, unused, skipped, silent, reading):
                 by_day.setdefault(utc_day(r['startedAt']), []).append((kind, r))
     slot_days = {utc_day(s['at']) for s in silent or []}          # a published slot nobody used still had the Studio open
     read_day = ((reading or {}).get('readAt') or '')[:10]         # the day the chart was read is only part of a day
-    empty = [d for d in sorted(table) if d not in by_day and d not in slot_days and d != read_day]
+    empty_all = [d for d in sorted(table) if d not in by_day and d not in slot_days and d != read_day]
+    empty = [d for d in empty_all if d >= clean_from]
+    empty_bw = [d for d in empty_all if d >= bw_from]
     out = {'readAt': (reading or {}).get('readAt'), 'cleanFrom': clean_from or None, 'studioShareAssumed': STUDIO_SHARE, 'emptyDays': empty, 'gigDays': [], 'nights': [],
            'what': "Netlify's own per-day meters (finance/credits.json): a gig day minus an empty day, requests ÷ 2 less the Studio tick, page loads, votes and extra pages = the room's ticks; the credits are traffic only — never a deploy (INVARIANT 0fx)"}
     if not empty:
@@ -677,11 +686,12 @@ def solve_meters(rows, unused, skipped, silent, reading):
         return out
     med = lambda xs: (lambda s: s[len(s) // 2] if len(s) % 2 else (s[len(s) // 2 - 1] + s[len(s) // 2]) / 2)(sorted(xs))
     bg = {'requests': round(med([table[d]['webRequestCount'] for d in empty])), 'computeCredits': round(med([table[d]['functionsCompute'] for d in empty]), 3),
-          'bandwidthMB': round(min(table[d]['bandwidthMB'] for d in empty), 1), 'days': empty}
+          'bandwidthMB': round(min(table[d]['bandwidthMB'] for d in empty_bw), 1), 'days': empty,
+          'bandwidthDay': min(empty_bw, key=lambda d: table[d]['bandwidthMB'])}
     ticks_sum = ph_sum = 0.0; credits = []
     for day in sorted(table):
         recs = by_day.get(day)
-        if not recs:
+        if not recs or day < clean_from:
             continue
         kinds = [k for k, _ in recs]
         if kinds != ['night']:
