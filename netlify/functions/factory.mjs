@@ -168,7 +168,7 @@ export async function startJobs(n = 3, origin = '') {
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
 const newId = () => 'j' + Math.random().toString(36).slice(2, 10);
 
-/* THE QUEUE'S ONE WRITER for new jobs: the console's lines and HQ's form (decision
+/* THE QUEUE'S ONE WRITER for new jobs: the console's lines and CRM's form (decision
    0108) both come through here, so the week's pruning and the "already queued" rule
    are one rule. `items`: [{ seed: { line, …fields }, label?, cid?, replace? }]. A job
    whose seed line is already waiting or running is not queued twice — its id comes
@@ -196,7 +196,7 @@ export async function queueJobs(kind, items) {
 }
 
 /* SENT, one rule for every door that says a message went out — the console's Mark
-   sent and HQ's log and Gmail send (decision 0108): the first send stamps `sent` and
+   sent and CRM's log and Gmail send (decision 0108): the first send stamps `sent` and
    counts once in the month's funnel; every channel is remembered; a page that was
    Ready (or still waiting for a look) becomes Sent. `ch`: dm, email or inperson. */
 export async function markSent(owner, ch) {
@@ -213,7 +213,7 @@ export async function markSent(owner, ch) {
   return out;
 }
 
-/** Everything the console and HQ show about one live sample: its row, its link and the
+/** Everything the console and CRM show about one live sample: its row, its link and the
  *  quiet preview address, the page as it is, how it was made, and the drafts. */
 export async function sampleDetail(owner, row) {
   const [{ data: rec }, cfg, lk] = await Promise.all([readDoc(SAMPLE(owner), null), readCfg(), linkFor(owner, row)]);
@@ -344,7 +344,7 @@ const main = async (req) => {
   }
 
   if (action === 'edit') {
-    /* The page's words, its links, its place and (an artist's) videos — HQ's Edit
+    /* The page's words, its links, its place and (an artist's) videos — CRM's Edit
        profile (decision 0108) and the console's Review. Links go through the same
        canonical reader the factory's seeds do, then through the profile's own
        allowlist on the way in (normProfile / normVenue), so a sample can hold no link
@@ -404,8 +404,9 @@ const main = async (req) => {
        shot — fetched here, checked the way an upload is (the bytes, not the label),
        and stored under the sample's own name. Never a page the server scrapes: the
        address has to point at the picture itself. */
-    const slot = ['cover', 'avatar', 'p0', 'p1', 'p2'].includes(body.slot) ? body.slot : null;
+    const slot = ['cover', 'avatar', 'p0', 'p1', 'p2', 'p3', 'p4'].includes(body.slot) ? body.slot : null;
     if (!slot) return bad('Which slot?');
+    if (!isVenueOwner(owner) && (slot === 'p3' || slot === 'p4')) return bad('An artist page has three small photos.');
     if (isVenueOwner(owner) && slot === 'avatar') return bad('A venue page has no portrait.');
     let bytes = null, type = null;
     if (body.data) {
@@ -458,7 +459,7 @@ const main = async (req) => {
     const sd = (rec && rec.seed) || {};
     const line = sd.line || sd.raw;
     if (!line) return bad('This page wasn’t built from a line the factory can read again.');
-    /* the seed's own fields ride along (a page HQ built from its form has them), so a
+    /* the seed's own fields ride along (a page CRM built from its form has them), so a
        rebuild reads what the first build read, not only the line's rendering of it */
     const seed = { line, ...(sd.name ? { name: sd.name } : {}), ...(sd.city ? { city: sd.city } : {}), ...(sd.country ? { country: sd.country } : {}),
       ...(sd.links ? { links: sd.links } : {}), ...(Array.isArray(sd.photos) && sd.photos.length ? { photos: sd.photos } : {}) };

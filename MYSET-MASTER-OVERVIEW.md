@@ -434,7 +434,7 @@ worth reading. If a number here is wrong, the source is wrong.*
 |---|---|---|---|
 | Price per month | $0 | **$10** | **$20** |
 | MySet's cut of money taken through the app | **25%** | **10%** | **2%** |
-| Shows per calendar month (UTC) | 10 | unlimited | unlimited |
+| Free shows, in total (a discarded test show doesn't count) | 10 | unlimited | unlimited |
 | Songs live to the audience at once (the whole library since decision 0061) | unlimited | unlimited | unlimited |
 | People in one room (soft — nobody is refused) | 50 | 300 | 2,000 |
 | Songs the library holds | 100 | 200 | 2,000 |
@@ -466,16 +466,17 @@ Deleting a name from that list is the last step of building the feature, and
 | | Free | Pro |
 |---|---|---|
 | Price per month | $0 | **$20** |
-| MySet's cut | 10% | 2% |
+| MySet's cut | 25% | 5% |
 | Stripe's card fee shared evenly with MySet | yes | yes |
-| Photos | 3 | 12 |
+| Photos | 5 | 12 |
 | Verification tick | — | yes |
 | Community page | yes | yes |
 | Merch on the shop page (`/v/<slug>/shop`) | — | yes |
-| Receive tips | *coming soon* | *coming soon* |
+| Hide or delete a community post | — | yes |
+| Receive tips | yes | yes |
 | Voting on the venue's own speaker music | *coming soon* | *coming soon* |
 
-Up to **12** merch items. Not built: `tips`, `speakerVotes`.
+Up to **12** merch items. Not built: `speakerVotes`.
 
 ### The shop
 
@@ -501,7 +502,7 @@ Up to **12** merch items. Not built: `tips`, `speakerVotes`.
 | A message with 3 or more links | goes to Spam, not Requests | `SPAM_LINKS` |
 | Conversations the inbox lists | 300; older ones spill to `inboxarch_` and stay on disk | `MAX_THREADS`; `spillInbox` |
 | Messages in one conversation | 200; the next is refused, never dropped | `MAX_MSGS` |
-| Folders | requests · general · business · casual · spam | `FOLDERS`; a new one lands in requests, an answer moves it to general |
+| Folders | requests · venues · general · business · casual · spam | `FOLDERS`; a new one lands in requests, an answer moves it to general |
 | What a message is about | booking · collab · press · other | `KINDS`; a tag on the row |
 | The tour poster | a picture up to 900 KB after the phone shrinks it, or a PDF up to 3 MB | `MAX_BYTES`, `MAX_TOUR_PDF` in `_img.mjs`; `tourSet` / `tourClear` on `/api/admin`; the `tour` slot |
 
@@ -533,12 +534,12 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 
 | | |
 |---|---|
-| Public pages | 17 — about.html, artist.html, artists.html, community.html, crm.html, diary.html, factory.html, index.html, mediadash.html, report.html, shop.html, sign.html, stage.html, studio.html, venue-studio.html, venue.html, vote.html |
+| Public pages | 20 — about.html, artist.html, artists.html, community.html, crm.html, dash.html, diary.html, factory.html, index.html, mediadash.html, privacy.html, report.html, shop.html, sign.html, stage.html, studio.html, terms.html, venue-studio.html, venue.html, vote.html |
 | HTTP functions | 40 — `admin`, `artistpage`, `artists`, `auth`, `board`, `bug`, `clipup`, `community`, `confirm`, `diary`, `events`, `factory`, `factory-background`, `fan`, `feedback`, `gift`, `history`, `hq`, `img`, `lyrics`, `mapconfig`, `me`, `mediadash`, `messages`, `moneymodel`, `pay`, `profile`, `qr`, `request`, `revenue`, `rsvp`, `sample`, `show`, `stage`, `venue`, `venueadmin`, `venueauth`, `vid`, `vote`, `webhook` (each served at `/api/<name>`, except `moneymodel`, which serves `/moneymodel` and `/moneymodel/shows`) |
 | Scheduled jobs | 6 — autocron, factorycron, hqcron, mirrorcron, registercron, sheetcron |
-| Shared libraries | 72 |
+| Shared libraries | 75 |
 | Artist Studio actions | 136 |
-| Venue Studio actions | 48 |
+| Venue Studio actions | 57 |
 | Fan-record shards | 12 |
 | Casts a device may make in a row / per minute after that | 20 / 30 |
 | A sign-in letter's deadline / a lyrics lookup's deadline (`MAIL_MS`, `LRCLIB_TIMEOUT_MS`) | 8 s / 8 s |
@@ -550,16 +551,16 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Bug reports one network may file for one artist in an hour (`BUG_PER_NETWORK_PER_HOUR`) | 12 |
 | `MYSET_SECRET`: the shortest value used, and how long the old store-kept key still verifies a token after the switch (decision 0112) | 32 characters · 31 days |
 | The money model's passcode: wrong codes inside a window that shut the door, and for how long, doubling to a cap (`_passgate.mjs`) | 10 in 15 min → 15 min, up to 24 h |
-| Record families sealed at rest (`_seal.mjs`, decision 0113) — nothing the room reads is on the list | `msg_`, `inbox_`, `inboxarch_`, `cred_`, `rec_`, `sess_`, `log_`, `push_`, `bugs_`, `err_`, `crm`, `idqueue`, `img_<owner>_idcheck` |
+| Record families sealed at rest (`_seal.mjs`, decision 0113) — nothing the room reads is on the list | `msg_`, `inbox_`, `inboxarch_`, `cred_`, `rec_`, `sess_`, `log_`, `push_`, `bugs_`, `err_`, `crm`, `idqueue`, `suggest`, `img_<owner>_idcheck` |
 | Largest clip accepted | 75 MB |
 | A clip link on R2 lives / its redirect is cached | 4 h / 1 h |
 | The artist's book, per show (decision 0065) | 20 merch lines · 30 gear lines of 80 characters · names 60 · note 300 · one amount up to $100,000 · 48 hours per kind of time (On stage, Breaks, Travel, Set-up / break-down) · 200 rule defaults · the document 400 KB, then a year shard |
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
-| MySet HQ (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
+| MySet CRM (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
 | Invariants | 297 (last: 0hb) |
-| Test suites | 70 |
+| Test suites | 73 |
 | Assertions | **5,062**, 0 failing, last run 2026-09-28 |
-| Decision records | 116 |
+| Decision records | 132 |
 
 ### Feature flags in force
 
@@ -572,7 +573,7 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | Flag | What paying buys | Enforced in |
 |---|---|---|
 | `cut` | the platform's share of every tip, vote pack and merch sale | `_connect.mjs`, as a Stripe `application_fee_amount` on a direct charge |
-| `gigs` | how many shows may be **started** in a UTC calendar month | `admin.mjs` and `_lifecycle.mjs` — both the button and the scheduler go through one function |
+| `gigs` | how many shows may be **started** on the free plan, in total (decision 0120; a discarded test night, or a calendar-started one with no votes, gives its count back; a discarded real night counts after one warning, 0122) | `admin.mjs` and `_lifecycle.mjs` — both the button and the scheduler go through one function |
 | `featured` | how many songs are **live to the audience** at once (never how many are stored) — unlimited on every plan since decision 0061, the check kept | `admin.mjs` on `toggleSong`, and the payload builder |
 | `audience` | a **soft** ceiling stamped onto the show; the room slows and shortens, nobody is refused | `_lib.mjs` (`pollFloorFor`, `boardLimitFor`), `show.mjs` |
 | `seats` | team members who can sign in | `_account.mjs` |
@@ -597,15 +598,22 @@ returns "free" for him. `merchAllowed` and `moderateAllowed` both bypass on
 
 Every phone in the room polls for the whole gig, so what MySet costs to run is driven by
 **gigs played**, not by artists signed up. Capping free on the real cost driver is what
-makes free survivable. **Four shows a month is a hobbyist; five is somebody earning from
-it.**
+makes free survivable. **The free plan is ten shows in total** — enough to try MySet on
+real nights; a working artist moves to Bar Star.
 
-Counted in **UTC calendar months**, resetting on the 1st, and **stamped onto the show
-record** — so what the Studio shows and what the server enforces are computed the same
-way, and the count cannot be fudged from a phone.
+Counted **ever, not per month** (decision 0120, 2026-09-29, when the code was made to match
+the plan card's "10 shows for free"). Only a show started on the free plan counts; a night
+played on a paid plan never does, a night the artist **discards** gives its count back, and
+so does a night the **calendar** started that ended without a single vote. A discard is
+for a test: a discarded **real night** (over an hour, five or more votes) is given back once,
+with a warning, and counts after that (decision 0122); every free-plan discard is listed on
+the Sheet's Discards tab.
+The count is **stamped onto the show record**, and the Studio only reads it, so the "x/10"
+beside the Hobbyist tag and the server's refusal cannot disagree, and it cannot be fudged
+from a phone.
 
-Decision record
-[`0003`](docs/decisions/0003-the-free-tier-is-capped-by-gigs-not-features.md).
+Decision records
+[`0003`](docs/decisions/0003-the-free-tier-is-capped-by-gigs-not-features.md) and 0120.
 
 ## 2.4 "Bar Star feature" versus "Coming soon"
 
@@ -684,8 +692,9 @@ back: an audience that gets a sing-along at one gig and not the next learns that
 is unreliable, which costs more than the subscription is worth.
 
 That covers: voting itself, the lyrics sheet, pull-to-refresh, the community page,
-hiding an offensive post, the gig calendar, the city feed, and the whole Studio's
-show-running surface.
+the gig calendar, the city feed, and the whole Studio's show-running surface. Hiding a
+fan's post is not on the list: for artists it is Bar Star and up (decision 0060,
+`moderateAllowed`); venues can hide on any plan.
 
 ---
 
@@ -781,7 +790,8 @@ learn**; automatic genre tagging that only ever fills a song with none.
 **Gigs** — a calendar with venue, city, country, date, time, duration, timezone, address,
 ticket link, notes; **repeats** (weekly, fortnightly, monthly, yearly, with an end date);
 cancel one night or hide it; each gig can name which setlist to play; **Featured shows**
-($10 to top a city's list for a night); and pitches sent to venues with their replies.
+($10 to top a city's list for a night); and pitches sent to venues, each one a conversation in
+Messages' **Venues** folder (decision 0123).
 
 **Money** — Getting paid (Stripe Connect status, what MySet takes, what Stripe takes);
 tonight's numbers; **past shows** with the songs played, the votes they won, what the
@@ -846,7 +856,8 @@ offers**, **Merch** (Pro; the same tab moderates the venue's community page), an
 the badge if earned, a **Community** pill, and the same top-right menu.
 
 **The two sides meet** through pitches: only signed-in artists can pitch a venue, so a
-stranger cannot spam a bar. Gigs and venues are matched by **name within a city, never by
+stranger cannot spam a bar. A pitch is a conversation: the artist talks in Messages, the
+venue replies from its Venue Studio (decision 0123). A venue's phones get push alerts for a new ask, an artist's reply and a merch order, switched on per phone in the Venue Studio's Settings (decision 0124). Gigs and venues are matched by **name within a city, never by
 a stored link**, so neither side can break the other.
 
 ## 3.7 The community page
@@ -855,7 +866,7 @@ a stored link**, so neither side can break the other.
 
 - **The Tip button is the first thing under the name** on an artist's page — somebody who
   came back to say the night was good should not have to scroll past a shop to do
-  something about it. (Artist pages only; tipping a venue is not a thing.) A tip started
+  something about it. (Artist pages only here; a venue's staff are tipped from the venue's own page, decision 0127.) A tip started
   here **returns here**: the page sends `from:'community'` and the **server** chooses
   between two paths it builds itself. It is never used as a URL — a caller-supplied
   redirect is an open redirect however innocent the caller looks.

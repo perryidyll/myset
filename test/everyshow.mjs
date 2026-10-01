@@ -176,7 +176,9 @@ const cron = (await import('../netlify/functions/registercron.mjs')).default;
 const { createArtist, signToken, readArtists, revOf, mutateArtists } = await import('../netlify/functions/_auth.mjs');
 const { mutateShow, readDoc, casDoc } = await import('../netlify/functions/_lib.mjs');
 const { __opsStart, __opsStop } = await import('./blobs-fake.mjs');
-const { stamp, CODE } = await import('../netlify/functions/_passgate.mjs');
+const SL = await import('../netlify/functions/_showlock.mjs');
+const HQL = await import('../netlify/functions/_hqlock.mjs');
+process.env.HQ_PASSCODE = await HQL.hashPasscode('show-log-test');
 
 const hit = async (h, url, body, token, extra = {}) => {
   const headers = { 'content-type': 'application/json', ...(extra.headers || {}) };
@@ -252,17 +254,19 @@ console.log('\nA RENAME AND A HIDE reach the register; a departed artist stays, 
 
 console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every path, every address');
 {
-  const cookie = `fm=${await stamp(CODE())}`;
-  for (const p of ['/moneymodel/shows', '/moneymodel/shows.json', '/moneymodel/shows.csv', '/moneymodel/shows/night.json?a=x&id=y', '/moneymodel/live.json', '/api/moneymodel/shows.json', '/.netlify/functions/moneymodel/shows.csv']) {
+  const cookie = (await SL.unlockCookie()).split(';')[0];
+  for (const p of ['/moneymodel/shows', '/moneymodel/shows.json', '/moneymodel/shows.csv', '/moneymodel/shows/night.json?a=x&id=y', '/api/moneymodel/shows.json', '/.netlify/functions/moneymodel/shows.csv']) {
     const r = await moneymodel(new Request('https://myset.vip' + p, { headers: { accept: /json|csv/.test(p) ? 'application/json' : 'text/html' } }));
     const t = await r.text();
-    ok(`without the code, ${p} gives nothing away`, (/json|csv/.test(p) ? r.status === 401 : /Enter the passcode/.test(t)) && !/Seaflower/.test(t), [r.status, t.slice(0, 80)]);
+    ok(`without the passcode, ${p} gives nothing away`, (/json|csv/.test(p) ? r.status === 401 : /Enter the passcode/.test(t) && /MySet Show log/.test(t)) && !/Seaflower/.test(t), [r.status, t.slice(0, 80)]);
   }
+  const openModel = await moneymodel(new Request('https://myset.vip/moneymodel', { headers: { accept: 'text/html' } }));
+  ok('the money model itself is open: no passcode (decision 0130)', openModel.status === 200 && !/Enter the passcode/.test(await openModel.text()));
   const refresh = await moneymodel(new Request('https://myset.vip/moneymodel/shows/refresh', { method: 'POST', headers: { accept: 'application/json' } }));
   eq('nor does a refresh without the code', refresh.status, 401);
   const page = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { cookie } }));
   const html = await page.text();
-  ok('with it, the page comes through the model\'s door', page.status === 200 && /Every show on MySet/.test(html));
+  ok('with it, the page comes through the model\'s door', page.status === 200 && /Show log/.test(html));
   ok('…with no external script, stylesheet or font (the CSP): the chart from /vendor/, the type is the system\'s (the /mediadash look)', !/<script src="http/.test(html) && !/<link rel="stylesheet" href="http/.test(html) && !/fonts\.googleapis/.test(html) && /\/vendor\/chart\.umd\.min\.js/.test(html));
   eq('…and never cached or indexed', [page.headers.get('cache-control'), page.headers.get('x-robots-tag')], ['private, no-store', 'noindex, nofollow']);
   const data = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows.json?months=all', { headers: { cookie, accept: 'application/json' } }))).json();
@@ -277,10 +281,25 @@ console.log('\nTHE DOOR  the dashboard, its data, its CSV, the feed — every pa
   ok('the feed carries none of the meters', ['pollsPerPhoneHour', 'creditsPerShow', 'deploys', 'shipping', 'traffic', 'meters'].every((k) => !(k in feed.act)));
   const again = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows/refresh', { method: 'POST', headers: { cookie, accept: 'application/json' } }))).json();
   ok('a refresh straight after a fold says so instead of walking the store again', again.ok && again.skipped && /ago/.test(again.why), again);
-  const old = await moneymodel(new Request('https://myset.vip/moneymodel', { headers: { cookie: `fm=stale; fm=${await stamp(CODE())}` } }));
-  eq('two fm cookies (an old path and the new): any matching one opens the door', old.status, 200);
-  const signin = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: `code=${CODE()}` }));
-  eq('the code typed on the dashboard lands on the dashboard, with a cookie scoped to the model', [signin.status, signin.headers.get('location'), /Path=\/moneymodel;/.test(signin.headers.get('set-cookie') || '')], [303, '/moneymodel/shows', true]);
+  const unl = (code) => moneymodel(new Request('https://myset.vip/moneymodel/shows/unlock', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code }) }));
+  const good = await unl('show-log-test');
+  const sc = good.headers.get('set-cookie') || '';
+  ok('the CRM\'s passcode opens it, with a cookie a page script cannot read, scoped to /moneymodel', good.status === 200 && /^slk=\d+\.[\w-]{40,}; Path=\/moneymodel; Max-Age=43200; HttpOnly; SameSite=Strict; Secure$/.test(sc), sc);
+  const opened = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { cookie: sc.split(';')[0] } }));
+  ok('…and that cookie opens the page', opened.status === 200 && !/Enter the passcode/.test(await opened.text()));
+  let w = null; for (let i = 0; i < SL.LOCK_TRIES; i++) w = await (await unl('nope')).json();
+  eq(`${SL.LOCK_TRIES} wrong in a row shut the door, with a time`, [w.ok, w.error, w.until > Date.now()], [false, 'locked-out', true]);
+  eq('…even to the right passcode, until then', (await (await unl('show-log-test')).json()).error, 'locked-out');
+  eq('…and the CRM keeps its own count: its door is still open', await HQL.shutUntil(), 0);
+  const locked = await (await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { accept: 'text/html' } }))).text();
+  ok('the lock screen says when it opens again', /data-state="out"/.test(locked));
+  await casDoc(SL.DOC, () => ({}), (d) => { d.until = 0; d.fails = 0; return true; });
+  const bye = await moneymodel(new Request('https://myset.vip/moneymodel/shows?lock=1', { headers: { cookie } }));
+  ok('Lock clears the cookie', bye.status === 303 && /^slk=; Path=\/moneymodel; Max-Age=0/.test(bye.headers.get('set-cookie') || ''));
+  const was = process.env.HQ_PASSCODE; delete process.env.HQ_PASSCODE;
+  const preview = await moneymodel(new Request('https://myset.vip/moneymodel/shows', { headers: { cookie, accept: 'text/html' } }));
+  ok('with no passcode set (a deploy preview) the Show log stays shut and says why', /isn’t set up here/.test(await preview.text()));
+  process.env.HQ_PASSCODE = was;
 }
 
 console.log('\nTHE BELL  idle rings are cheap; a mark or a stale walk makes it fold');
@@ -306,7 +325,26 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   const B = C.costBlock(actuals, credits);
   const model = readFileSync(path.join(root, 'finance/model.html'), 'utf8');
   const st = new Function('return ' + model.match(/  stripe: (\{[^}]*\}),/)[1])();
-  eq('the Stripe rates are the money model\'s own (P0.stripe)', [C.STRIPE_RATES.pct, C.STRIPE_RATES.fixed, C.STRIPE_RATES.intlShare, C.STRIPE_RATES.intlPct], [st.pct, st.fixed, st.intlShare, st.intlPct]);
+  eq('the Stripe rates are the money model\'s own (P0.stripe)', [C.STRIPE_RATES.pct, C.STRIPE_RATES.fixed, C.STRIPE_RATES.intlShare, C.STRIPE_RATES.intlPct, C.STRIPE_RATES.billingPct], [st.pct, st.fixed, st.intlShare, st.intlPct, st.billingPct]);
+  /* no dial hides behind a comment: a // on a P0 line must not swallow a key after it (compedPct was lost that way on 2026-10-01) */
+  const p0 = model.slice(model.indexOf('const P0 = {'), model.indexOf('\n};', model.indexOf('const P0 = {')));
+  eq('no P0 dial sits inside a comment', p0.split('\n').filter((l) => l.includes('//') && /\b\w+: [-\d'{[]/.test(l.slice(l.indexOf('//')))), []);
+  /* the tier tables: one formula on both pages, and the Show log's plan cuts and prices are _plan.mjs's */
+  const shows = readFileSync(path.join(root, 'finance/shows.html'), 'utf8');
+  const block = (src) => (src.match(/\/\* TIER MATH[\s\S]*?\n\}\n/) || [''])[0];
+  eq('the tier formula is word for word the same on the Show log and the money model', block(shows).length > 200 && block(shows) === block(model), true);
+  const { PLANS } = await import('../netlify/functions/_plan.mjs');
+  const showsConst = (name) => new Function('return ' + shows.match(new RegExp('const ' + name + ' = (\\{[^}]*\\})'))[1])();
+  eq('the Show log\'s plan prices are _plan.mjs\'s', showsConst('PLAN_USD'), { free: PLANS.free.price / 100, plus: PLANS.plus.price / 100, pro: PLANS.pro.price / 100 });
+  eq('the Show log\'s plan cuts are _plan.mjs\'s', showsConst('PLAN_CUT'), { free: PLANS.free.cut, plus: PLANS.plus.cut, pro: PLANS.pro.cut });
+  eq('the money model\'s free plan is _plan.mjs\'s shows in total (0120), and its room caps are the plans\' own', [Number(model.match(/freeCap: (\d+)/)[1]), new Function('return ' + model.match(/const PLAN_ROOM = (\{[^}]*\})/)[1])()], [PLANS.free.gigs, { free: PLANS.free.audience, plus: PLANS.plus.audience, pro: PLANS.pro.audience }]);
+  {
+    const tierMath = new Function(block(shows) + '; return tierMath;')();
+    const x = tierMath({ shows: 15, tips: 72, packs: 23, requests: 0, merch: 0, other: 0, server: 0.57, stripe: 8.02, stripeMine: 0, cut: 0.10, price: 10, months: 1 }, C.STRIPE_RATES);
+    eq('a Bar Star month: cut, profit on shows (Stripe\'s card fee is the artist\'s), plan fee after Stripe, revenue, profit', [x.inApp, x.cut, +x.onShows.toFixed(2), +x.planNet.toFixed(2), x.revenue, +x.profit.toFixed(2)], [95, 9.5, 8.93, 9.23, 19.5, 18.16]);
+    const xf = tierMath({ shows: 15, tips: 72, packs: 23, requests: 0, merch: 0, other: 0, server: 0.57, stripe: 8.02, stripeMine: 8.02, cut: 0.10, price: 10, months: 1 }, C.STRIPE_RATES);
+    eq('…on the founder\'s own account the card fee is MySet\'s and comes off', [+xf.onShows.toFixed(2), +xf.profit.toFixed(2)], [0.91, 10.14]);
+  }
   const pack = credits.readings.at(-1).plan.pack;
   eq('a credit is priced at the top-up pack on the latest reading', B.usdPerCredit, Math.round(pack.usd / pack.credits * 1e5) / 1e5);
   const n0 = actuals.meters.nights.find((n) => n.key && n.creditsTraffic != null);
@@ -319,6 +357,15 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   eq('Stripe: (room + merch) × the effective rate + 30¢ a payment', c1.stripe.usd, Math.round(((30 * B.stripe.effectivePct / 100) + 3 * 0.30) * 1e4) / 1e4);
   eq('money Stripe never answered: no Stripe figure and no total, never $0', [C.costOf(row({ money: { known: false, merch: {} } }), B).stripe, C.costOf(row({ money: { known: false, merch: {} } }), B).total], [null, null]);
   eq('a night that is not counted is not priced', C.costOf(row({ status: 'refused' }), B), null);
+  const cp = (o) => C.costOf(row({ showId: 'never-read', ...o }), B).myset;
+  const srv = c2.server.usd, r4 = (n) => Math.round(n * 1e4) / 1e4;
+  eq('MySet profit: the plan\'s cut of room + merch, less the server — Stripe\'s card fee is the artist\'s (Hobbyist 25%)', [cp({ artist: { id: 'someone-else', plan: 'free' } }).usd, cp({ artist: { id: 'someone-else', plan: 'free' } }).stripeMine], [r4(30 * 0.25 - srv), 0]);
+  eq('MySet cut: the fee and the rate', [cp({ artist: { id: 'someone-else', plan: 'free' } }).fee, cp({ artist: { id: 'someone-else', plan: 'free' } }).cut], [7.5, 0.25]);
+  eq('the cut is on merch goods, never on postage (pay.mjs never fees a stamp)', cp({ artist: { id: 'someone-else', plan: 'free' }, money: { known: true, total: 30, tips: { count: 1 }, packs: { count: 0 }, requests: { count: 0 }, merch: { orders: 1, goods: 36, postage: 4, amount: 40 } } }).fee, r4((30 + 36) * 0.25));
+  eq('an order from before the shop page has no goods figure: its whole amount is goods', cp({ artist: { id: 'someone-else', plan: 'free' }, money: { known: true, total: 30, tips: { count: 1 }, packs: { count: 0 }, requests: { count: 0 }, merch: { orders: 1, goods: 0, postage: 0, amount: 40 } } }).fee, r4((30 + 40) * 0.25));
+  eq('MySet profit on a Rock Star night: 2%, less the server only', cp({ artist: { id: 'someone-else', plan: 'pro' } }).usd, r4(30 * 0.02 - srv));
+  eq('the founder\'s own night pays no cut: the server and Stripe, a loss', [cp({ artist: { id: 'perry-idyll', plan: 'pro' } }).usd, cp({ artist: { id: 'perry-idyll' } }).fee], [r4(-srv - c2.stripe.usd), 0]);
+  eq('money Stripe never answered: no profit, never a guess', C.costOf(row({ money: { known: false, merch: {} } }), B).myset, null);
   const busy = C.costBlock({ ...actuals, deploys: 400, deploysThisPeriod: 400, shipping: { credits30: 6000 } }, credits);
   eq('INVARIANT 0fx: 400 deploys move no show\'s cost', C.costOf(row(), busy), c1);
 }

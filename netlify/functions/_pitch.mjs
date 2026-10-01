@@ -1,4 +1,5 @@
 import { casDoc, readDoc } from './_lib.mjs';
+import { newThreadId, pitchOpen, pitchAgain, pitchSay, readThread, shapeForVenueThread } from './_messages.mjs';
 
 /* "Want to perform here?"
 
@@ -10,9 +11,13 @@ import { casDoc, readDoc } from './_lib.mjs';
    Only a signed-in ARTIST can send one, deliberately. No open contact form: that
    is a spam funnel, and it throws away the only thing that makes this useful.
 
-   Nobody's email address is exposed. The venue marks a pitch "keen" and the
-   artist sees that on their own Gigs tab; they take it from there through the
-   links on each other's pages. */
+   Nobody's email address is exposed. Since decision 0123 a pitch is a
+   conversation: it opens in the artist's Messages (the Venues folder) under the
+   id kept on the pitch row (`tid`), the venue replies from its Venue Studio, and
+   Keen / Not this time each drop one line into it. The conversation lives with
+   the artist (`msg_<aid>_<tid>`, _messages.mjs); the venue reads it through its
+   own pitch row, never by a key it could guess. `vunread` marks a pitch the
+   artist has answered and the venue has not opened since. */
 
 export const MAX_PITCHES = 120;          // kept per venue
 const STATUS = new Set(['new', 'keen', 'nope']);
@@ -23,6 +28,21 @@ const AK = (aid) => `apitch_${aid}`;      // the artist's pointers, so they can 
 export const emptyPitches = () => ({ v: 1, list: [] });
 
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+
+/* THE VENUE HEARS IT (decision 0124): a new ask and each artist reply push to every
+   phone the venue's seats switched alerts on for, opening the What's on tab. Time-boxed
+   and swallowed like every other alert — the ask or the reply is already saved when
+   this runs, and a slow push service must never hold the artist's answer (INVARIANT 16). */
+export const VENUE_NOTE_MS = 1500;
+async function tellVenue(vid, { title, body, tag }) {
+  try {
+    const { notify } = await import('./_push.mjs');
+    await Promise.race([
+      notify('v_' + vid, { title, body: clean(body, 120), url: '/venues?tab=shows', tag }, { tab: 'shows' }),
+      new Promise((r) => setTimeout(r, VENUE_NOTE_MS)),
+    ]);
+  } catch { /* an alert that fails is never the ask's problem */ }
+}
 
 export async function readPitches(vid) {
   const { data } = await readDoc(VK(vid), null);
@@ -41,25 +61,38 @@ export async function readSent(aid) {
 export async function sendPitch({ vid, venueName, venueSlug, aid, artist, message }) {
   const msg = clean(message, 400);
   const id = 'p' + Math.random().toString(36).slice(2, 10);      // outside the CAS
-  let already = false, full = false, changed = false;
+  const tid0 = newThreadId();                                       // so is the conversation's
+  let already = false, full = false, changed = false, row = null, fresh = false;
 
   await casDoc(VK(vid), emptyPitches, (d) => {
     d.list = Array.isArray(d.list) ? d.list : [];
+    already = false; changed = false; fresh = false; row = null;   // a CAS retry starts clean
     const mine = d.list.find((x) => x.aid === aid);
     if (mine) {
       already = true;
+      let write = false;
+      if (!mine.tid) { mine.tid = tid0; fresh = true; write = true; }   // a pitch from before 0123
       // resending the identical text is not a change, and must not say it was
       if (msg && msg !== mine.message) {
-        mine.message = msg; mine.at = Date.now(); changed = true; return true;
+        mine.message = msg; mine.at = Date.now(); changed = true; write = true;
       }
-      return false;
+      row = { ...mine };
+      return write;
     }
     if (d.list.length >= MAX_PITCHES) { full = true; return false; }
-    d.list.push({ id, aid, slug: artist.slug || '', name: artist.name || '',
-                  message: msg, at: Date.now(), status: 'new' });
+    row = { id, aid, tid: tid0, slug: artist.slug || '', name: artist.name || '',
+            message: msg, at: Date.now(), status: 'new' };
+    d.list.push(row); fresh = true;
     return true;
   });
   if (full) return { ok: false, error: 'This venue has a lot of enquiries in — try again later' };
+
+  // the conversation in the artist's Messages: opened once, and a changed ask is a new line in it
+  const where = { vid, vslug: venueSlug, venueName, p: row };
+  if (row && row.tid) {
+    await pitchOpen(aid, row.tid, where).catch(() => {});
+    if (changed && !fresh) await pitchAgain(aid, row.tid, msg).catch(() => {});
+  }
 
   // the artist's pointer, so "venues I've asked" needs no scan of every venue
   await casDoc(AK(aid), emptyPitches, (d) => {
@@ -71,20 +104,98 @@ export async function sendPitch({ vid, venueName, venueSlug, aid, artist, messag
     return true;
   }).catch(() => {});
 
-  return { ok: true, already, updated: changed };
+  // a new ask is news; the same ask again, or reworded, is not a second alert
+  if (!already) await tellVenue(vid, { title: `🎤 ${artist.name || 'An artist'} wants to play here`,
+                                       body: msg || 'They asked about a spot.', tag: 'pitch-' + aid });
+
+  return { ok: true, already, updated: changed, tid: row ? row.tid || '' : '' };
+}
+
+/* The one line each quick button drops into the conversation (0123). Undo sends nothing. */
+export const STATUS_LINE = { keen: 'We’re keen — let’s talk.', nope: 'Not this time, but thanks for asking.' };
+
+/** The pitch row with its conversation id, minting one for a pitch from before 0123. */
+async function withThread(vid, id) {
+  const tid0 = newThreadId();
+  let row = null;
+  await casDoc(VK(vid), emptyPitches, (d) => {
+    row = null;
+    const r = (d.list || []).find((x) => x.id === id);
+    if (!r) return false;
+    row = r;
+    if (r.tid) return false;
+    r.tid = tid0; return true;
+  });
+  return row ? { ...row } : null;
+}
+async function venueOf(vid) {
+  const { venueById } = await import('./_venues.mjs');
+  const v = await venueById(vid).catch(() => null);
+  return { vslug: (v && v.slug) || '', venueName: (v && v.name) || '' };
 }
 
 export async function setPitchStatus(vid, id, status) {
   if (!STATUS.has(status)) return null;
   let row = null;
   await casDoc(VK(vid), emptyPitches, (d) => {
+    row = null;
     const r = (d.list || []).find((x) => x.id === id);
     if (!r || r.status === status) return false;
     r.status = status; r.seenAt = Date.now();
     row = { ...r };
     return true;
   });
+  if (row && STATUS_LINE[status]) {
+    const p = await withThread(vid, id);
+    if (p) {
+      await pitchOpen(p.aid, p.tid, { vid, ...(await venueOf(vid)), p }).catch(() => {});
+      await pitchSay(p.aid, p.tid, STATUS_LINE[status], { status }).catch(() => {});
+    }
+  }
   return row;
+}
+
+/** The venue writes back. Opening the conversation first means a pitch from
+ *  before 0123 gets one the moment the venue answers it. */
+export async function venueReply(vid, id, text) {
+  const p = await withThread(vid, id);
+  if (!p) return { ok: false, error: 'That enquiry is gone.' };
+  const t = await pitchOpen(p.aid, p.tid, { vid, ...(await venueOf(vid)), p }).catch(() => null);
+  if (!t) return { ok: false, error: 'Couldn’t open that conversation — try again.' };
+  const r = await pitchSay(p.aid, p.tid, text);
+  if (r.ok) await markVenueRead(vid, id).catch(() => {});
+  return r;
+}
+/** The venue reads the conversation. A pitch with no conversation yet reads as
+ *  its own message, and reading it opens nothing. */
+export async function venueThread(vid, id) {
+  const d = await readPitches(vid);
+  const p = d.list.find((x) => x.id === id);
+  if (!p) return null;
+  const t = p.tid ? await readThread(p.aid, p.tid).catch(() => null) : null;
+  if (p.vunread) await markVenueRead(vid, id).catch(() => {});
+  if (t) return { ...shapeForVenueThread(t), name: p.name || '', slug: p.slug || '' };   // the thread is named for the venue; the venue is talking to the artist
+  return { id: '', name: p.name || '', slug: p.slug || '', status: p.status || 'new',
+           msgs: [{ by: 'artist', text: p.message || '', at: p.at || 0 }].filter((m) => m.text) };
+}
+async function markVenueRead(vid, id) {
+  await casDoc(VK(vid), emptyPitches, (d) => {
+    const r = (d.list || []).find((x) => x.id === id);
+    if (!r || !r.vunread) return false;
+    r.vunread = false; return true;
+  });
+}
+/** The artist answered in Messages: the venue's list shows it as new. */
+export async function venueUnread(vid, aid, text = '') {
+  let name = null;
+  await casDoc(VK(vid), emptyPitches, (d) => {
+    const r = (d.list || []).find((x) => x.aid === aid);
+    if (!r) return false;
+    name = r.name || 'The artist';
+    if (r.vunread) return false;
+    r.vunread = true; return true;
+  });
+  if (name) await tellVenue(vid, { title: `💬 ${name} wrote back`, body: text, tag: 'pitch-' + aid });
 }
 
 /** What the venue sees: the pitch plus the artist's real, public numbers. */
@@ -102,7 +213,7 @@ export async function shapeForVenue(d) {
       songs = (show.songs || []).filter((x) => x.active !== false).length;
     } catch { /* a missing history must not hide the enquiry */ }
     rows.push({ id: p.id, slug: p.slug, name: p.name, message: p.message || '',
-                at: p.at, status: p.status || 'new',
+                at: p.at, status: p.status || 'new', unread: !!p.vunread,
                 stats: { nights, people, votes, songs } });
   }
   return rows;
@@ -113,13 +224,14 @@ export async function shapeForArtist(aid) {
   const sent = await readSent(aid);
   const out = [];
   for (const row of (sent.list || []).sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, 40)) {
-    let status = 'new';
+    let status = 'new', tid = '';
     try {
       const d = await readPitches(row.vid);
       const mine = (d.list || []).find((x) => x.aid === aid);
       status = (mine && mine.status) || 'new';
+      tid = (mine && mine.tid) || '';
     } catch {}
-    out.push({ vid: row.vid, slug: row.slug, name: row.name, at: row.at, status });
+    out.push({ vid: row.vid, slug: row.slug, name: row.name, at: row.at, status, tid });
   }
   return out;
 }

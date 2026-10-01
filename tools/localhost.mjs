@@ -46,7 +46,7 @@ process.env.URL ||= `http://localhost:${PORT}`;
 process.env.ADMIN_CODE ||= 'localhost-founder';
 process.env.RESEND_API_KEY ||= 're_localhost';
 process.env.AUTH_FROM ||= 'MySet <sign-in@myset.vip>';
-/* HQ's passcode on this machine (INVARIANT 0hk): a test value, hashed at start the way
+/* CRM's passcode on this machine (INVARIANT 0hk): a test value, hashed at start the way
    tools/hqpass.mjs hashes the real one, which lives only in Netlify. */
 const HQ_LOCAL_PASSCODE = 'hq-on-this-mac';
 process.env.HQ_PASSCODE ||= await (await import('../netlify/functions/_hqlock.mjs')).hashPasscode(HQ_LOCAL_PASSCODE);
@@ -271,12 +271,48 @@ a{color:#FF375F}code{background:#f0f0f2;padding:1px 5px;border-radius:5px}h1{fon
 <p>Switch the plan: <a href="/dev?plan=plus">Bar Star</a> · <a href="/dev?plan=pro">Rock Star</a> · <a href="/dev?plan=free">Hobbyist</a> · <a href="/dev?reset=1">reseed everything</a></p>
 <p style="color:#6e6e73;font-size:13px">Seeded: a Thursday residency (six nights filed, four logged, one Stripe never answered), a Saturday wedding, last night at Baan Tai (tap <i>Log tonight</i>), a Tuesday MySet ran with no gig on the calendar, a night whose gig was deleted, merch and two app orders, a connected account with a year of statements.</p>
 <p>The founder's sample console: <a href="/dev?founder=1&go=/factory">sign in as the founder and open /factory</a> · <a href="/dev/sample">make an artist sample</a> · <a href="/dev/sample?kind=venue">a venue sample</a></p>
-<p><b>MySet HQ</b> (decision 0108): <a href="/dev?founder=1&go=/crm">sign in as the founder and open /crm</a> · <a href="/dev/hq">fill it with a demo pipeline</a> (a dozen contacts in every stage, with conversations). The passcode on this machine is <code>${HQ_LOCAL_PASSCODE}</code> (the live one is only in Netlify). Generate works here: a pretend build walks the eight stages in about twenty seconds (<code>--real-factory</code> turns that off).</p>
+<p><b>MySet CRM</b> (decision 0108): <a href="/dev?founder=1&go=/crm">sign in as the founder and open /crm</a> · <a href="/dev/hq">fill it with a demo pipeline</a> (a dozen contacts in every stage, with conversations). The passcode on this machine is <code>${HQ_LOCAL_PASSCODE}</code> (the live one is only in Netlify). Generate works here: a pretend build walks the eight stages in about twenty seconds (<code>--real-factory</code> turns that off).</p>
 <script>
 try{${q.get('founder') ? `localStorage.setItem('myset.admin',${JSON.stringify(process.env.ADMIN_CODE)});localStorage.removeItem('myset.token');localStorage.removeItem('myset.aslug');` : `localStorage.setItem('myset.token',${JSON.stringify(t)});localStorage.setItem('myset.aslug',${JSON.stringify(s)});localStorage.removeItem('myset.admin');`}
 ${q.get('tab') ? `localStorage.setItem('myset.tab',${JSON.stringify(q.get('tab'))});` : ''}}catch(e){}
 ${q.get('go') ? `location.replace(${JSON.stringify(q.get('go'))});` : ''}
 </script>`;
+}
+
+/* ---------- /dev/venue: a claimed venue to walk (decisions 0127–0129) ----------
+   The Ugly Duckling Irish Pub — where the seed's Thursday residency plays — with a
+   cover and five photos, card payments on, a tip in, a fan's post, and the Venue
+   Studio signed in. ?plan=pro|free. Opens ?go= (default the public page). */
+async function devVenue(q) {
+  const V = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_venues.mjs')).href);
+  const { putImage } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_img.mjs')).href);
+  const { mutateConnect } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_connect.mjs')).href);
+  const { casDoc, KEY } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_lib.mjs')).href);
+  const { addPost } = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', '_community.mjs')).href);
+  const { __stripe } = await import(pathToFileURL(join(ROOT, 'test', 'stripe-fake.mjs')).href);
+  const email = 'boss@duckling.local';
+  let reg = await V.readVenues(), vid = (reg.byEmail[email] || {}).venueId;
+  if (!vid) {
+    const made = await V.createVenue({ email, name: 'The Ugly Duckling Irish Pub', slug: 'the-ugly-duckling', city: 'Koh Phangan', country: 'Thailand' });
+    vid = made.venueId;
+    const jpg = readFileSync(join(PUBLIC, 'img', 'band.jpg'));
+    const urls = [];
+    for (const slot of ['cover', 'p0', 'p1', 'p2', 'p3', 'p4']) urls.push(await putImage(V.imgOwner(vid), slot, jpg, 'image/jpeg'));
+    await V.mutateVenueProfile(vid, (p) => { p.photo = urls[0]; p.photos = urls.slice(1); p.tagline = 'Guinness, live music and the best Sunday roast on the island';
+      p.about = 'An Irish pub in Haad Rin with live music five nights a week.'; p.links = { instagram: 'https://instagram.com/uglyduckling', facebook: 'https://facebook.com/uglyduckling', website: 'https://uglyduckling.example', google: '' };
+      p.pay = { ready: true, acct: 'acct_localvenue1' }; return true; });
+    const acct = 'acct_localvenue1';
+    __stripe.accounts.set(acct, { id: acct, charges_enabled: true, payouts_enabled: true, details_submitted: true, country: 'TH', metadata: { artist: 'v_' + vid } });
+    await mutateConnect('v_' + vid, (c) => { c.acct = acct; c.chargesEnabled = true; c.payoutsEnabled = true; c.detailsSubmitted = true; c.country = 'TH'; return true; });
+    await casDoc(KEY.meta('v_' + vid), () => ({ tips: [], paid: {}, gifts: [], orders: [], fees: {} }), (m) => { m.tips ||= []; m.tips.push({ fan: 'f1', amount: 10, note: 'Best barman on the island', at: Date.now() - 3600e3 }); return true; });
+    await addPost(V.imgOwner(vid), { fan: 'fanlocal01', ip: '10.0.0.9', name: 'Mia', text: 'Brilliant night, the trio was great', stars: 5 }).catch(() => {});
+  }
+  const plan = q.get('plan') === 'pro' ? 'pro' : q.get('plan') === 'free' ? 'free' : null;
+  if (plan) await V.mutateVenues((r) => { r.byId[vid].plan = plan; return true; });
+  reg = await V.readVenues();
+  const tok = await V.signVenueToken(email, V.vRevOf(reg, vid));
+  const go = q.get('go') || '/v/the-ugly-duckling';
+  return `<!doctype html><meta charset="utf-8"><script>try{localStorage.setItem('myset.vtoken',${JSON.stringify(tok)});}catch(e){}location.replace(${JSON.stringify(go)});</script>`;
 }
 
 /* ---------- /dev/sample: a sample page to walk, artist or venue (decision 0101) ----------
@@ -315,7 +351,7 @@ async function devSample(q) {
 <p style="color:#6e6e73;font-size:13px">Claiming asks for a code: it is printed in this terminal, since no mail leaves this machine.</p>`;
 }
 
-/* ---------- HQ on this machine (decision 0108) ----------
+/* ---------- CRM on this machine (decision 0108) ----------
    The factory's worker needs Claude and YouTube, which never run here. Unless started
    with --real-factory, a pretend build takes its place: it walks the eight stages a
    couple of seconds each, so the build card, the bar and the table can be watched, and
@@ -358,17 +394,17 @@ async function devHq() {
   const jpg = readFileSync(join(PUBLIC, 'img', 'band.jpg'));
   const now = Date.now(), H1 = 3600e3, D1 = 24 * H1;
   const people = [
-    ['artist', 'Rita Mae', 'Koh Phangan', { instagram: '@ritamae', tiktok: '@ritamae.music' }, 'rita@example.com', 'page', [['ig', 'out', 'Hey Rita! I built you a page.', 3 * D1], ['ig', 'in', 'omg this is so cool, how do I claim it?', 2 * D1 + 5 * H1]], ['friend']],
-    ['artist', 'The Salt Flats', 'Haad Rin', { instagram: '@saltflatsband', youtube: '@saltflats' }, '', 'page', [['tiktok', 'out', 'Hey Salt Flats! Made you something.', 5 * D1]], ['priority']],
-    ['artist', 'Juniper Road', 'Thong Sala', { instagram: '@juniperroad' }, 'hello@juniperroad.example', 'page', [['email', 'out', 'I built you a page — take a look.', 6 * D1]], []],
-    ['venue', 'Harbour Bar', 'Thong Sala', { instagram: '@harbourbar', google: 'https://maps.app.goo.gl/Harb0ur' }, 'bookings@harbourbar.example', 'page', [['inperson', 'out', 'Showed the manager on my phone.', 1 * D1], ['whatsapp', 'in', 'Send me the link please!', 20 * H1]], ['live music 5 nights']],
+    ['artist', 'Rita Mae', 'Koh Phangan', { instagram: '@ritamae', tiktok: '@ritamae.music' }, 'rita@example.com', 'page', [['ig', 'out', 'Hey Rita! I built you a page.', 3 * D1, 'bar'], ['ig', 'in', 'omg this is so cool, how do I claim it?', 2 * D1 + 5 * H1]], ['friend']],
+    ['artist', 'The Salt Flats', 'Haad Rin', { instagram: '@saltflatsband', youtube: '@saltflats' }, '', 'page', [['tiktok', 'out', 'Hey Salt Flats! Made you something.', 5 * D1, 'cover', 1]], ['priority']],
+    ['artist', 'Juniper Road', 'Thong Sala', { instagram: '@juniperroad' }, 'hello@juniperroad.example', 'page', [['email', 'out', 'I built you a page — take a look.', 6 * D1, 'coffee']], []],
+    ['venue', 'Harbour Bar', 'Thong Sala', { instagram: '@harbourbar', google: 'https://maps.app.goo.gl/Harb0ur' }, 'bookings@harbourbar.example', 'page', [['inperson', 'out', 'Showed the manager on my phone.', 1 * D1, 'venue', 1], ['whatsapp', 'in', 'Send me the link please!', 20 * H1]], ['live music 5 nights']],
     ['venue', 'Sunset Deck', 'Srithanu', { instagram: '@sunsetdeck' }, '', 'lead', [], ['next week']],
-    ['artist', 'Moss & Pine', 'Chiang Mai', { instagram: '@mossandpine' }, '', 'lead', [], []],
+    ['artist', 'Moss & Pine', 'Chiang Mai', { instagram: '@mossandpine' }, '', 'lead', [], ['wedding band']],
     ['artist', 'DJ Coralie', 'Koh Samui', { instagram: '@djcoralie', tiktok: '@djcoralie' }, 'coralie@example.com', 'page', [], ['dj']],
-    ['venue', 'The Anchor', 'Koh Tao', { facebook: 'theanchorkohtao', instagram: '@theanchorkt' }, '', 'page', [['fb', 'out', 'Hi Anchor team! I built you a page.', 8 * D1]], []],
-    ['artist', 'Lena Ocean', 'Bangkok', { instagram: '@lenaocean', spotify: 'https://open.spotify.com/artist/4tIdEl1nEs0123456789ab' }, 'lena@example.com', 'page', [['email', 'out', 'A page for you', 9 * D1], ['email', 'in', 'Thanks! Not right now, maybe next month.', 7 * D1]], ['later']],
-    ['artist', 'Northbound', 'Pai', { instagram: '@northboundpai' }, '', 'lead', [], []],
-    ['venue', 'Coconut Grove', 'Haad Yao', { instagram: '@coconutgrovebar', website: 'coconutgrove.co.th' }, 'info@coconutgrove.example', 'page', [['email', 'out', 'Your venue page', 2 * D1]], ['priority']],
+    ['venue', 'The Anchor', 'Koh Tao', { facebook: 'theanchorkohtao', instagram: '@theanchorkt' }, '', 'page', [['fb', 'out', 'Hi Anchor team! I built you a page.', 8 * D1, 'venue']], []],
+    ['artist', 'Lena Ocean', 'Bangkok', { instagram: '@lenaocean', spotify: 'https://open.spotify.com/artist/4tIdEl1nEs0123456789ab' }, 'lena@example.com', 'page', [['email', 'out', 'A page for you', 9 * D1, 'wedding', 1], ['email', 'in', 'Thanks! Not right now, maybe next month.', 7 * D1]], ['later']],
+    ['artist', 'Northbound', 'Pai', { instagram: '@northboundpai' }, '', 'lead', [], ['busker']],
+    ['venue', 'Coconut Grove', 'Haad Yao', { instagram: '@coconutgrovebar', website: 'coconutgrove.co.th' }, 'info@coconutgrove.example', 'page', [['email', 'out', 'Your venue page', 2 * D1, 'venue', 1]], ['priority']],
     ['artist', 'Twin Harbours', 'Phuket', { instagram: '@twinharbours' }, '', 'page', [], []],
   ];
   let n = 0;
@@ -382,15 +418,16 @@ async function devHq() {
         photos: { cover: { bytes: jpg, type: 'image/jpeg' } }, quality: { score: 0.9, review: n % 4 === 1 }, msgs: { hook: '' }, by: n % 4 === 1 ? 'factory' : 'founder' }, { fetchMedia: false });
       if (made.ok) await C.linkOwner(r.cid, made.owner, { now: now - (11 - n) * D1 });
     }
-    for (const [ch, dir, text, ago] of msgs) await C.addMessage(r.cid, { ch, dir, text, subject: ch === 'email' ? 'A MySet page for you' : '', t: now - ago }, { now, unread: dir === 'in' && ch === 'email' });
-    // what HQ's own log does when a message goes out, and what a first open does
+    // a fifth and sixth field: the library preset it came from, and the softer ending (decision 0117)
+    for (const [ch, dir, text, ago, pre, soft] of msgs) await C.addMessage(r.cid, { ch, dir, text, subject: ch === 'email' ? 'A MySet page for you' : '', t: now - ago, pre, soft }, { now, unread: dir === 'in' && ch === 'email' });
+    // what CRM's own log does when a message goes out, and what a first open does
     const owner = (await C.readContact(r.cid) || {}).owner;
     if (owner && msgs.some((m) => m[1] === 'out')) { const F = await import(pathToFileURL(join(ROOT, 'netlify', 'functions', 'factory.mjs')).href); await F.markSent(owner, msgs[0][0] === 'email' ? 'email' : msgs[0][0] === 'inperson' ? 'inperson' : 'dm'); }
     if (owner && msgs.some((m) => m[1] === 'in')) await S.sampleSeen(owner, 'open');
     n++;
   }
-  return `<!doctype html><meta charset="utf-8"><title>HQ demo</title><style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 20px}a{color:#FF375F}</style>
-<h1>HQ demo pipeline</h1><p>Added ${n} contacts.</p><p><a href="/dev?founder=1&go=/crm">Open HQ as the founder</a></p>`;
+  return `<!doctype html><meta charset="utf-8"><title>CRM demo</title><style>body{font:16px/1.5 -apple-system,system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 20px}a{color:#FF375F}</style>
+<h1>CRM demo pipeline</h1><p>Added ${n} contacts.</p><p><a href="/dev?founder=1&go=/crm">Open CRM as the founder</a></p>`;
 }
 
 /* ---------- the server ---------- */
@@ -401,6 +438,10 @@ const server = http.createServer(async (req, res) => {
     if (path === '/dev/hq') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
       return res.end(await devHq());
+    }
+    if (path === '/dev/venue') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      return res.end(await devVenue(url.searchParams));
     }
     if (path === '/dev/sample') {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });

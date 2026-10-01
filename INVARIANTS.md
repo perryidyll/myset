@@ -517,7 +517,8 @@ If you are about to violate one, stop and say so rather than working around it.
     phone-hour and traffic credits per night from the per-day meters Netlify itself
     bills — requests, compute, bandwidth — as a gig day minus an empty day
     (`solve_meters`; the counts are copied off Usage & billing into
-    `finance/credits.json` `perDay.days[]`, days before `cleanFrom` ignored). An
+    `finance/credits.json` `perDay.days[]`, days before `cleanFrom` ignored, except that
+    the bandwidth floor may reach back to `bandwidthCleanFrom`). An
     empty day has no show record of any kind and no published slot. `pollsSource`
     names the method used. The marks for a night are three: two hours before, just
     before, after. `tools/actuals-test.py` holds the three fences on synthetic marks and the meter method on
@@ -629,7 +630,7 @@ If you are about to violate one, stop and say so rather than working around it.
     the Sheet (`_warehouse.mjs`); `tools/actuals.py` is pinned to the same answers on
     `finance/fixtures/2026-09-11` and `2026-09-25` (`test/everyshow.mjs`,
     `tools/actuals-test.py`). Money on a row is Stripe's answer as the archive kept it
-    or `unknown`, never $0; `$ a head` is tips + vote packs + paid requests over phones on
+    or `unknown`, never $0; `$ a head` is tips + vote packs + paid requests (plus the night's untagged window money) over phones on
     money-known nights, merch never in it; untagged money is a window figure taken once.
     Counts the store forgets (requests, RSVPs, ratings) are frozen on first observation
     and only ever raised, and the archive now files them on the night; because the
@@ -846,13 +847,22 @@ If you are about to violate one, stop and say so rather than working around it.
     When no show is live, it does not poll at all: there is no board to keep current,
     and the previous show's numbers belong in Money → Past shows rather than Live.
 
-9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Four a
-   month (UTC), read from `PLANS.free.gigs` — enforced in ONE place, `startShow` in
-   `_lifecycle.mjs`, which every start path calls: "Start the show", "New show" and
-   the schedule. Refused BEFORE the mutation with the same words, counted INSIDE the
-   CAS (0bi), never mid-show (16). A scheduled start that is refused is remembered on
-   the index entry so it is not retried every two minutes; the Studio's own warning
-   at two shows left is unchanged. Nothing the ROOM experiences is capped (0w).
+9d9. **The free tier is capped by GIGS, because gigs are what cost money.** Ten in
+   total, ever (decision 0120; the number is `PLANS.free.gigs`) — enforced in ONE place,
+   `startShow` in `_lifecycle.mjs`, which every start path calls: "Start the show",
+   "New show" and the schedule. Only a start on the free plan counts (a paid night never
+   does, the founder never is); a resume counts again, so one night cannot be stretched
+   over many; a night ended with **Discard** gives back everything it used (`uncountGig`,
+   inside the end's own CAS), and so does a night the CALENDAR started that ended with no
+   vote cast (`quietAutoNight`, decided before the fans are wiped; a new show over a
+   still-running one decides it in `startShow`). A discard of a REAL night (60+ minutes
+   and 5+ votes, `REAL_NIGHT`) is asked about first — the server answers 409 with what it
+   means and changes nothing until the Studio sends `ack` — and is given back ONCE, with a
+   warning (`show.discardWarnedAt`); after that it counts (decision 0122). Every free-plan
+   discard is written to `meta.discards` for the Sheet's Discards tab. Refused BEFORE the mutation with the same words, counted
+   INSIDE the CAS (0bi), never mid-show (16). A scheduled start that is refused is
+   remembered on the index entry so it is not retried every two minutes. The Studio only
+   READS `show.gigCount` — the "Hobbyist · x/10" tag and the warning at two left.
 
 9d10. **A tap is not a change.** `wakeUp()` used to reset the poll ladder to its
     fastest rung on every `pointerdown` — which fires on every scroll — so 66% of
@@ -1184,6 +1194,10 @@ If you are about to violate one, stop and say so rather than working around it.
     could register itself as "Beach" and claim every Beach Bar in town. An exact
     match always counts, however short. Consequence worth keeping: a venue signing
     up today already has its whole gig list, with no backfill and no job to run.
+    The venue may answer each listing (decision 0128, `gigok_<vid>`, keyed by the
+    artist's calendar RULE): confirmed shows say so, and a show it says is not at
+    its place leaves the venue's page, never the artist's. An unanswered listing
+    shows as before; a recurring show is confirmed only as recurring.
 
 0z. **A page that isn't verified says so, and loses nothing else.** Asking for proof
     before a page exists means no pages exist. Every venue page works fully; the
@@ -1941,6 +1955,7 @@ If you are about to violate one, stop and say so rather than working around it.
 - **No seat crowds another out.** The cap is eight devices per address.
 - **A sign-out ends that phone's alerts.** `killSessions` and `killEverything` drop the devices of the sign-ins they end. Every sign-out goes through one of the two, and the Studio's own sign-out drops the browser's subscription too.
 - **If the registry cannot be read,** an alert reaches nobody, never everybody. Decision `0114`.
+- **A venue's phones follow the same rules** under the owner id its sign-ins use, `push_v_<vid>`: `notify` reads the venue registry for its seats, every venue seat hears a `{ tab }` alert (every venue role reads asks and orders), and venue sign-outs end them through the same `killSessions` / `killEverything`. Decision `0124`, `test/venuepush.mjs`. A tapped alert focuses an open window of its own app (the alert address's first path segment: `/venues`, `/studio`, `/crm`), never another one, and otherwise opens its address. Decision `0125`, `test/sw.mjs`.
 
 0hl. **Every action a Studio endpoint takes is one a page sends.** A handler nothing calls is still a door: it answers anyone who guesses its name, it is carried through every refactor, and it reads as a feature that exists. `test/structure.mjs` fails when a name `admin.mjs` (with `_messages.mjs` and `_diary.mjs`) or `venueadmin.mjs` branches on does not appear, quoted, in `public/` outside a Set literal. A feature is built with both halves or not at all: the server half of an unbuilt button waits on a branch, not on `main`. The check is textual, so a common word (`status`, `venue`) passes on any mention. Decision `0115`.
 
@@ -2554,7 +2569,7 @@ If you are about to violate one, stop and say so rather than working around it.
     something. It never hides now: between shows it is the tip alone, full width,
     because there are no votes left to buy. On the community page it sits directly
     under the shop card, which exists only when there is something to sell; still
-    above the proof and the feed (artist pages only — tipping a venue is not a thing).
+    above the proof and the feed (artist pages only — a venue's staff are tipped from `/v/<slug>`, decision 0127).
     A tip started from the community page posts `from:'community'` so the return trip
     lands back there, and a shirt bought from the shop posts `from:'shop'` (0fo);
     `from` selects between paths the SERVER builds and is never used as a url,

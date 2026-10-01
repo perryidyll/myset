@@ -298,7 +298,7 @@ export function pickPhotos(judged, { kind = 'artist' } = {}) {
   const used = new Set([cover, avatar].filter(Boolean).map((j) => j.group)), extras = [], kinds = new Set();
   const pool = J.filter((j) => j !== cover && j !== avatar && j.quality >= 0.6 && Math.min(j.width, j.height) >= 400).sort(rank);
   for (const varied of [true, false]) for (const j of pool) {
-    if (extras.length >= 3 || extras.includes(j) || used.has(j.group) || (varied && kinds.has(j.kind))) continue;
+    if (extras.length >= (kind === 'venue' ? 5 : 3) || extras.includes(j) || used.has(j.group) || (varied && kinds.has(j.kind))) continue;
     extras.push(j); used.add(j.group); kinds.add(j.kind);
   }
   return { cover, avatar, extras };

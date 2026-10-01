@@ -88,12 +88,12 @@ let sh = await getShow(mia.artistId);
 eq('the show is live', sh.status, 'live');
 eq('started by the schedule', sh.startedBy, 'schedule');
 ok('with a fresh showId', /^\d{4}-\d{2}-\d{2}-\d{4}-/.test(sh.showId || ''), sh.showId);
-eq('and it counted as a gig', sh.gigCount, 1);
+eq('and, on Bar Star, it is not one of the free ten (0120)', sh.gigCount, 0);
 ok('the Studio is told who started it', (await hit(stageFn, 'https://x/api/stage', undefined, TM)).show.startedBy === 'schedule');
 
 r = await autoTick(mia.artistId, { now: T0 + 5 * 60e3 });
 eq('a second tick does nothing', r.did, null);
-eq('and does not count another gig', (await getShow(mia.artistId)).gigCount, 1);
+eq('and a second tick does not count anything either', (await getShow(mia.artistId)).gigCount, 0);
 
 console.log('\nTHE ARTIST ENDS IT EARLY  the schedule does not overrule a person');
 ok('she ends the show herself', (await AS(TM, 'status', { status: 'ended' })).ok);
@@ -173,7 +173,7 @@ const sw = await sweep({ now: T0 + 60e3 });
 const leoR = sw.results.find((x) => x.aid === leo.artistId);
 ok('the cron tried him', !!leoR, sw);
 eq('and was refused', leoR && leoR.refused, true);
-ok('with the words a tap gets', /this month/i.test((leoR && leoR.why) || '') && /on the 1st/i.test((leoR && leoR.why) || ''), leoR);
+ok('with the words a tap gets', /your \d+ free shows\./i.test((leoR && leoR.why) || '') && /Bar Star/.test((leoR && leoR.why) || ''), leoR);
 ok('his show is not live', (await getShow(leo.artistId)).status !== 'live', (await getShow(leo.artistId)).status);
 sched = await readSched();
 eq('the refusal is remembered on his entry', sched.byArtist[leo.artistId].skip, sched.byArtist[leo.artistId].k);

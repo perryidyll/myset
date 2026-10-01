@@ -22,7 +22,7 @@ Stripe take, and what is left. Built 2026-09-05.
 Every number on the page comes out of one block of code at the top of the
 script, marked `ENGINE-START` … `ENGINE-END`. It simulates the voting page's real
 polling ladder (3 s → 10 s → 25 s, nothing while the screen is off — copied from
-`public/vote.html`, calibrated to `tools/loadsim.py` within 3%) for a room of a
+`public/vote.html`, calibrated to `tools/loadsim.py`; `model-test.mjs` holds the two within 8%) for a room of a
 given size and length, turns the polls, votes, Studio polls and page loads into raw
 units (requests, bytes, function time, document reads, writes), prices those units
 on whichever host is selected, and lays the revenue lines (subscriptions, MySet's
@@ -35,7 +35,7 @@ MySet's own charges, Express fees, fixed costs) beside them.
   call (15 poll / 4 vote / ~17 Studio), 42 ms per document read. The 155 ms per
   poll was a probe before a fix; the account's bill implies 70–110 ms, so the
   default is 120.
-- **Published** on 2026-09-05: Netlify credit rates and plan tiers, Cloudflare
+- **Published** on 2026-09-05 and re-read 2026-10-01: Netlify credit rates and plan tiers, Cloudflare
   Workers/KV/Durable Objects, Vercel Fluid compute, Stripe US card / Billing /
   Connect Express / dispute fees. Links in the page footer.
 - **Simulated**: the 20-phone, 3-hour reference gig (6,030 polls, 4.2 credits at

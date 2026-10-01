@@ -1,4 +1,4 @@
-/* HQ'S GMAIL — the founder's own mailbox, through Google's OAuth (_gmail.mjs), run end to
+/* CRM'S GMAIL — the founder's own mailbox, through Google's OAuth (_gmail.mjs), run end to
    end with NO network. `google()` below plays the token endpoint, the revoke endpoint and
    the Gmail API; the real fetch is swapped for one that counts, and the last check is
    that it was never called.

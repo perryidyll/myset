@@ -10,6 +10,182 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 18:58 — 02a8aae — wt4@dash-logo-home (6 files since origin/main)
+**tl;dr:** The MySet logo on every dashboard (money model, Show log, Media Dash, CRM, sample-page console, business report) now goes to the homepage
+**Other sessions:** CRM and factory logos used to go to /studio; now '/'. Media Dash and report marks became <a> with color:inherit. Content repo twin pushed (cb64d14).
+
+### 2026-10-01 17:16 — d54af8d — wt4@meters-and-pack-price (15 files since origin/main)
+**tl;dr:** Money: Stripe's card fee on an artist's night is the artist's, so MySet profit, both Show log tier tables and the money model's tier table no longer take it off MySet (still off on the founder's own nights); Netlify costs now include tax ($5.48 a pack); fresh server meters after the 25 Sep bell: 2.72 credits a show (was 2.98)
+**Other sessions:** wt4 (0133): _showcosts myset.stripeMine; TIER MATH subtracts t.stripeMine (both pages, still byte-identical); model hosts taxMul 1.096; credits.json reading 1 Oct with perDay.bandwidthCleanFrom (solve_meters honours it). Tick rate 16.9/phone-h rests on 2 nights and one empty day (26 Sep, 12 deploys) — thin, re-read when another empty day lands. Current Show Stats scheduled task disabled.
+
+### 2026-10-01 16:20 — c4a8a57 — MySet-books-docs@docs/books-clock-ledger (2 files since origin/main)
+**tl;dr:** Docs only: the ledger and a session note record the test/books.mjs clock fix (c0fdbf0, #191). [skip ci]
+**Other sessions:** Nothing to redo. The suite is green end to end again (5,085 ✓); any red suite from here is new.
+
+### 2026-10-01 16:19 — ce88275 — MySet-books-clock@test/books-clock (3 files since origin/main)
+**tl;dr:** test/books.mjs passes again in October: the venue ledger check pins the clock instead of following the wall clock. The full suite runs to the end again.
+**Other sessions:** Test-only. The bug was the test mixing a pinned NOW (15 Sep) with a handler on the real clock; venueadmin ledger logic is right and unchanged. Pattern for any handler without a now: stub Date.now = () => NOW around the call, restore in finally.
+
+### 2026-10-01 15:43 — 770d9d1 — wt4@audit/dashboards-oct1 (14 files since origin/main)
+**tl;dr:** The 1 Oct audit of every dashboard number (0132): the money model's free plan is ten shows in total, not four a month (Plus crossover $56.60, was $418.77); Show log cost totals add up; the Media Dash no longer counts a deleted duplicate reel (26 posts, not 27); CRM funnel rails are a true rate; stale typed numbers now read the live register
+**Other sessions:** dashboards-wt4: finance/model.html freeCap is a LIFETIME total (test pins it to _plan.mjs gigs); cut base = merch amount − postage in _showcosts.mjs and both tier tables; register totals gained peopleKnown + merchPostage; mediadash.mjs dedupes posts by id. Left open for the founder: Stripe inside 'MySet profit' on connected artists, $5 vs $5.48 a pack, meters after the register bell.
+
+### 2026-10-01 14:46 — 730be56 — wt4@showlog-bullets (1 files since origin/main)
+**tl;dr:** Show log: the intro, both table notes and the seven 'How these numbers are made' cards are now short coloured bullet points
+**Other sessions:** ul.pts / ul.lede in finance/shows.html mirror the money model's; text only, no math or columns changed.
+
+### 2026-10-01 13:20 — 6aa5158 — wt4@model-bullets (1 files since origin/main)
+**tl;dr:** Money model: the dials column folds away (remembered per browser); every long explainer is now short coloured bullets; the size table is '4 core show categories' with its dial group 'Core show sizes'
+**Other sessions:** ul.pts is the bullet style in finance/model.html; dial groups are details.grp inside #dialsList. Text only otherwise — no math changed.
+
+### 2026-10-01 13:05 — f9ffe08 — wt4@ux/paying-founder (3 files since origin/main)
+**tl;dr:** FIX: the money model's top tiles showed ∞ since this morning (a comment hid three dials); now right again. Show log: 'If the founder were a paying customer' toggle on both tables, a clearer Money model button and a link by the tier table; money model hero's y no longer clipped and its intro is bullets
+**Other sessions:** mine(r) in finance/shows.html = costs.myset, re-priced on the account's plan when PAYING. test/everyshow.mjs now fails if a P0 dial sits after a // on its line.
+
+### 2026-10-01 12:44 — 61c8176 — wt4@fix/tier-seed-packs (1 files since origin/main)
+**tl;dr:** Money model tier table: vote packs start at the real average even before the register refolds
+**Other sessions:** tpLive() derives packsAmount = gross − tips − paid requests when live.json lacks it.
+
+### 2026-10-01 12:41 — 4b9f19b — wt4@feat/tier-tables (5 files since origin/main)
+**tl;dr:** Show log: a 'Profit by membership tiers' table under the main one (totals and a show on average, per plan, as-if or as-played); money model: the same table with every input editable (shows, dollars by source, MySet fee, plan prices)
+**Other sessions:** tierMath() is duplicated word for word in finance/shows.html and finance/model.html — test/everyshow.mjs fails if they drift. STRIPE_RATES gained billingPct 0.7 (plan fees only). live.json totals gained packsAmount, paidRequests, paidRequestsAmount. P0.freePrice is new and only the projection reads it.
+
+### 2026-10-01 12:19 — cbaecb2 — wt4@ux/showlog-plan-fees (1 files since origin/main)
+**tl;dr:** Show log: a Plan fees column ($10/mo, $20/mo in blue) right after Artist replaces the blue plan tag; MySet profit now reads 'on transactions' underneath; plan names say Bar Star / Rock Star
+**Other sessions:** PLAN_USD in finance/shows.html mirrors _plan.mjs prices; founder shows $0/mo (never charged). Profit math unchanged.
+
+### 2026-10-01 12:04 — 7b85798 — wt4@feat/dash-about-link (1 files since origin/main)
+**tl;dr:** /dash: an 'About MySet' link at the top goes to /about; the MySet logo now goes to the home page
+**Other sessions:** Top-bar only in public/dash.html; the clock hides under 560px to make room.
+
+### 2026-10-01 01:07 — 6275f41 — wt3@ux/dash-links-profit (53 files since origin/main)
+**tl;dr:** Every dashboard (Show log, Media Dash, CRM, money model) has a Dash button back to /dash; the Show log has a MySet cut column ($ and %) and MySet profit is now the cut minus the server AND Stripe
+**Other sessions:** costOf().myset.usd = fee − server − stripe (founder's word, 2026-10-01; the earlier 'Stripe not subtracted' reading is superseded). mediadash.html twin in the content repo updated alongside.
+
+### 2026-10-01 01:07 — 9fde2c7 — venue-pages@docs/venue-pages-live (0 files since origin/main)
+**tl;dr:** Docs: venue batch (0126-0129) recorded as live; the dash record renumbered 0127 -> 0130 [skip ci]
+**Other sessions:** Decision 0127 is venue plans/tips/fee; the Show log lock + /dash is now 0130 (comments in netlify.toml, _auth, _showlock, moneymodel, dash.html, everyshow updated; no behaviour change, no build). Claim numbers on the sessions board.
+
+### 2026-10-01 01:03 — 096d812 — venue-pages@feat/venue-pages (48 files since origin/main)
+**tl;dr:** Venue pages batch brought up to date with main (dash hero, show-log profit, locks) before merging
+**Other sessions:** Merge of origin/main into feat/venue-pages; only the push log conflicted (entries interleaved by time). Suite 5076/0.
+
+### 2026-10-01 00:54 — 5349286 — wt3@ux/dash-hero (1 files since origin/main)
+**tl;dr:** /dash: the g in the greeting is no longer cut off; the line under it now reads 'What is tracked can be measured, and what is measured can be improved.'
+**Other sessions:** Copy and one CSS line in public/dash.html.
+
+### 2026-09-30 14:27 — 45f6ed6 — wt3@ux/dash-and-locks (9 files since origin/main)
+**tl;dr:** New myset.vip/dash (four windows: Show log, Media Dash, CRM, money model); the money model needs no passcode now; the Show log opens with the CRM's passcode on the CRM's lock screen
+**Other sessions:** Decision 0127. _showlock.mjs: CRM passcode (HQ_PASSCODE), own tries doc 'showlock', cookie slk Path=/moneymodel. _hqlock tryPasscode/shutUntil take a doc. moneymodel.mjs: only /shows* is gated; /moneymodel + live.json open; _passgate gate() now unused. 'dash' reserved.
+
+### 2026-09-30 14:20 — 5cf24f3 — venue-pages@feat/venue-pages (53 files since origin/main)
+**tl;dr:** Venues: pages lead with their photos and the next three shows (See more for the rest, links drift); venues approve or deny the shows artists list there (recurring confirmed once); a Tip the staff button on both plans; fee 25% Free / 5% Pro; five photos Free; hiding posts is Pro; the Pro card says Everything in Free, plus; testimonials gone; a Suggestions & feedback button
+**Other sessions:** Decisions 0127-0129 (0126 is #175, included here). VENUE_PLANS: photos 5/12, cut .25/.05, tips both, moderate Pro; VENUE_NOT_BUILT ['speakerVotes']. pay.mjs ?v= takes kind tip; shapeVenue.tipsOn. gigok_<vid> (_gigok.mjs), venueadmin gigList/gigSet/suggest, venue.mjs listings() shared, rows carry confirmed. suggest doc + Sheet tab Suggestions (13 tabs). Samples store p0-p4 for venues. tools/localhost /dev/venue.
+
+### 2026-09-30 14:13 — 09d1377 — wt3@ux/show-log-profit (6 files since origin/main)
+**tl;dr:** Show log (was 'Every show') has a MySet profit column after Costs; the CRM's theme button is the Media Dash's 34px size
+**Other sessions:** costOf() now returns myset {usd, fee, cut, founder, estimate}: plan cut (PLANS[plan].cut) × (room total + merch) − server; founder nights cut 0. Stripe fee deliberately NOT subtracted (paid by the connected account). moneymodel gate title is 'Show log'.
+
+### 2026-09-30 14:00 — 97a9b2e — venue-pages@fix/crm-twins (16 files since origin/main)
+**tl;dr:** CRM no longer shows a generated page twice (Sand & Tan did); the Studio welcome card reads 'Look around: every tab explains itself'
+**Other sessions:** Decision 0126: samplereg rows carry cid (the CRM contact that asked); adoptOrphans(reg, crm, {jobs}) links it instead of adopting; dropTwins erases an untouched twin on each summary. tips.js restamped everywhere.
+
+### 2026-09-30 13:37 — 31de66c — wt3@ux/crm-name-toggle-icon (35 files since origin/main)
+**tl;dr:** The /crm page is called CRM everywhere instead of HQ; every light/dark button now shows the Media Dash's half-moon icon
+**Other sessions:** Only words changed: hq.mjs, /api/hq, the hqk cookie, HQ_PASSCODE and data-act=lockhq keep their names on purpose. theme.js paints '◐' always (no sun/moon swap). studio.js/venue-studio.js restamped. Docs/decisions still say HQ as history.
+
+### 2026-09-30 13:03 — 9b6d767 — wt3@ux/theme-ripple (13 files since origin/main)
+**tl;dr:** The money model, the register (/moneymodel/shows) and the Media Dash now switch light/dark with the same circle wipe from the button as HQ and /about
+**Other sessions:** Each page carries its own small ripple(btn, swap) helper (they do not load theme.js: separate storage keys). public/mediadash.html has a twin in the content repo's publish/dashboard.html — keep them identical. /about already had the circle via theme.js; unchanged.
+
+### 2026-09-30 13:00 — 2374305 — alert-tap@docs/alert-tap-live (3 files since origin/main)
+**tl;dr:** Docs only: decision 0125 and the ledger say the alert-tap fix is live [skip ci]
+**Other sessions:** 0125 live as 3c161bd (#171).
+
+### 2026-09-30 12:57 — 98cc943 — alert-tap@fix/alert-tap-lands (9 files since origin/main)
+**tl;dr:** Tapping an alert now opens the app it is for: a venue alert brings up the Venue Studio even when the artist Studio is open too
+**Other sessions:** Decision 0125, on the founder's word: sw.js notificationclick focuses an open window whose first path segment matches the alert's url (appOf), else openWindow(url). Cache name, fetch rules unchanged. test/sw.mjs +6. A focused app is not switched to the alert's tab (no reload by design).
+
+### 2026-09-29 23:59 — 0352ae5 — venue-push@docs/venue-push-live (3 files since origin/main)
+**tl;dr:** Docs only: decision 0124, the ledger and a session note say push alerts for venues are live [skip ci]
+**Other sessions:** 0124 live as db35911 (#169).
+
+### 2026-09-29 23:56 — 6486e3e — venue-push@feat/venue-push (20 files since origin/main)
+**tl;dr:** Venues can switch on push alerts (Venue Studio → Settings → Alerts): a new ask to play, an artist writing back, a merch order
+**Other sessions:** Decision 0124. Venue phones live in push_v_<vid> (same owner id as venue sessions, so venue sign-outs already drop them); notify() reads the venue registry for owner ids starting v_, and every venue seat hears a {tab} alert. venueadmin pushKey/pushOn/pushOff (CREW_OK; pushKey takes endpoint, answers mine). _pitch.mjs tellVenue; venueUnread(vid, aid, text) now pushes. Venue Studio reads ?tab=.
+
+### 2026-09-29 21:48 — 323fce6 — pitch-msgs@docs/pitches-live (3 files since origin/main)
+**tl;dr:** Docs only: decision 0123, the ledger and the session note say venue pitches as conversations are live [skip ci]
+**Other sessions:** 0123 live as 0c4bde2 (#167); Puzzle changelog 2535.
+
+### 2026-09-29 21:45 — ed7eff3 — pitch-msgs@feat/pitches-in-messages (22 files since origin/main)
+**tl;dr:** Asking a venue for a spot is now a conversation: it lands in the artist's Messages (new Venues folder), the venue replies from its Venue Studio, and Keen / Not this time each send one line
+**Other sessions:** Decision 0123. Pitch rows carry tid (thread in msg_<aid>_<tid>, kind 'pitch', folder 'venues') and vunread; new venueadmin actions pitchThread (CREW_OK) and pitchReply (MANAGER_OK); FOLDERS gains 'venues' (counts too); msgBlock refuses kind 'pitch'; _pitch.mjs imports _messages.mjs (and _messages lazily imports _pitch). Studio ?tab=messages&f=venues opens the folder.
+
+### 2026-09-29 21:01 — 101a6b0 — tip-decks@docs/tip-decks-live (1 files since origin/main)
+**tl;dr:** Docs only: session note for the tip-deck copy pass (live as 0a90d08) [skip ci]
+**Other sessions:** Open: venue pitches (_pitch.mjs) may move into Messages; awaiting the founder.
+
+### 2026-09-29 20:50 — a63423e — tip-decks@ui/tip-deck-copy (11 files since origin/main)
+**tl;dr:** Studio tip cards: payouts say every Monday (Hobbyist) or daily (paid plans); no more Spotify-playlist promise; Money gets Total/My cut and all-in hourly-rate cards; Gigs' last card explains recurring pay; the ? button glows; the repeat arrows turn counter-clockwise
+**Other sessions:** tips.js: {payday} var filled by studio.js tipVars() from PLAN.plan (mirrors _connect.mjs payoutScheduleFor); Money deck may have 5 slides (test/tipdecks allows it); the Ask-a-venue slide is gone pending a decision on moving pitches into Messages. about.html + the setlist empty state no longer mention Spotify playlists. lock.css .tipsbtn animation tipsglow. Rebased on 0122 (413d116).
+
+### 2026-09-29 20:41 — 3fea26a — docs-0122@docs/discard-guard-live (3 files since origin/main)
+**tl;dr:** Docs only: decision 0122, the ledger and a session note say the discard guard is live; money is confirmed not a trigger [skip ci]
+**Other sessions:** 0122 live as 413d116 (#162). Real night = 60+ min AND 5+ votes (REAL_NIGHT); money named in the warning, never a trigger, by the founder's word.
+
+### 2026-09-29 20:32 — 87e6937 — discard-guard@fix/discard-guard (15 files since origin/main)
+**tl;dr:** Free artists: discarding a real show (over an hour, 5+ votes) now asks first; the first one is given back with a warning, later ones count. Every free-plan discard is listed on the Sheet's new Discards tab.
+**Other sessions:** Decision 0122. endShow(discard) may return {confirm} -> admin answers 409 {ok:false, confirm}; the Studio re-sends with ack:'warned'|'counted'. show.discardWarnedAt (normShow), meta.discards (last 30), REAL_NIGHT/discardVerdict/nightVotes/nightPaid in _lifecycle.mjs. act() in studio.js now returns the response. The Sheet has 12 tabs.
+
+### 2026-09-29 19:58 — 019bf6f — contradictions-0119@docs/0120-live (3 files since origin/main)
+**tl;dr:** Docs only: decision 0120, the ledger and a session note say ten free shows in total is live [skip ci]
+**Other sessions:** Decision 0120 = 9adf0be (#158); Puzzle changelog 2533.
+
+### 2026-09-29 19:52 — 4b1849a — contradictions-0119@docs/contradictions-0119 (28 files since origin/main)
+**tl;dr:** A free show the calendar started by itself, with no votes all night, no longer uses one of the ten.
+**Other sessions:** show.freeNight now carries auto (set by countGig(sh, by) when by==='schedule'); quietAutoNight(show, fans) in _lifecycle.mjs decides the give-back in endShow and, for a still-running night replaced by a fresh one, in startShow. An artist-started quiet night still counts.
+
+### 2026-09-29 19:44 — 57db21e — theme-circle@docs/theme-circle-live (3 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0121 and the session note say the theme circle is live [skip ci]
+**Other sessions:** Nothing to rebase for. Decision 0121 = d10d24e (#159).
+
+### 2026-09-29 19:40 — 84f583c — theme-circle@ui/theme-circle (5 files since origin/main)
+**tl;dr:** Every MySet page's light/dark button now reveals the new theme as a circle growing from the button (like HQ's); instant as before on older phones or with Reduce Motion
+**Other sessions:** Decision 0121. public/theme.js: toggle(el) uses document.startViewTransition + clip-path on ::view-transition-new(root), injects its own CSS; the iOS home-screen reload and the scroll nudge wait for vt.finished. .theme-now kills transitions for one frame.
+
+### 2026-09-29 19:40 — d7adba8 — contradictions-0119@docs/contradictions-0119 (22 files since origin/main)
+**tl;dr:** Free plan is now 10 shows in total (not 10 a month); a discarded show gives its count back; the Studio shows 'Hobbyist · x/10'. Plus six places where pages or docs said something the code doesn't do are fixed.
+**Other sessions:** Decision 0120 (reverses 0037), INVARIANT 9d9 rewritten. gigMonth, gigMonthOf and the Studio's monthKey are GONE; show.gigCount is lifetime free shows and show.freeNight records what the current night used; countGig/uncountGig in _lifecycle.mjs. The stage payload no longer sends gigMonth.
+
+### 2026-09-29 17:59 — 6383aec — sample-profiles@docs/terms-live (3 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0119 and the session note say the terms page is live [skip ci]
+**Other sessions:** Nothing to rebase for. Puzzle changelog 2526 = 0119.
+
+### 2026-09-29 17:46 — d8857e9 — sample-profiles@pages/terms (16 files since origin/main)
+**tl;dr:** myset.vip/terms: plain-language terms of use (who the seller is, votes final, request holds, refunds, plans, content rules, Tennessee law), linked from the footers and under every create-a-page button
+**Other sessions:** Decision 0119. public/terms.html is a claim about the code, like privacy.html: a change to the seller, refunds, holds, plans, cancellation or deletion updates it in the same PR. No prices on it on purpose. The 0119 record lists six page/doc-vs-code contradictions found and NOT fixed.
+
+### 2026-09-29 17:08 — 9f2b1c0 — sample-profiles@docs/privacy-and-gmail-live (0 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0118 and the session note say the privacy page and HQ's Gmail are live [skip ci]
+**Other sessions:** Nothing to rebase for. Gmail: Google project myset-510109, OAuth app published 2026-09-29; GMAIL_CLIENT_ID/SECRET Production only. Puzzle changelog 2524 = 0118.
+
+### 2026-09-29 17:04 — 654a61a — sample-profiles@pages/privacy (0 files since origin/main)
+**tl;dr:** myset.vip/privacy is live-ready: a plain-language privacy notice (what the audience, artists, sample pages and HQ's Gmail keep, who handles it, how long, how to delete), linked from the home and About footers
+**Other sessions:** Decision 0118. public/privacy.html is a claim about the code: any change that stores something new, adds a processor or changes a retention period updates it in the same PR. Its Gmail section is what Google reviews for HQ's OAuth app (project myset-510109).
+
+### 2026-09-29 15:21 — 08fad16 — sample-profiles@ui/dashboard-favicons (0 files since origin/main)
+**tl;dr:** The money model, its passcode page, the shows log and the media dash now show the MySet icon (three pink-orange bars) in the browser tab, the same one as HQ
+**Other sessions:** Same data-URI icon line as public/crm.html in finance/model.html, finance/shows.html, _passgate.mjs gatePage and public/mediadash.html. mediadash twin (engine publish/dashboard.html) updated to match: 7aec18e in myset-content.
+
+### 2026-09-28 20:28 — a063a8e — sample-profiles@docs/hq-message-presets-live (3 files since origin/main)
+**tl;dr:** Docs only: the ledger, decision 0117 and the session note say HQ's message library is live as 84dda56 [skip ci]
+**Other sessions:** Nothing to rebase for: docs only. Puzzle changelog 2487 = 0117.
+
+### 2026-09-28 20:25 — f7eee61 — sample-profiles@ui/hq-message-presets (10 files since origin/main)
+**tl;dr:** HQ (myset.vip/crm) has a message library: the eight outreach openers are in every conversation's template picker, [Name] fills itself in, and Message library (the book icon, Settings or ⌘K) edits them and shows which ones get replies
+**Other sessions:** Decision 0117, UX-064. New store doc crmlib (C.readLib/saveLib, action savelib, summary carries lib); addMessage keeps pre/soft on outgoing non-note messages; rowOf and deriveRows carry pre {k,t,s} = the FIRST opener sent. No new INVARIANT. localhost's /dev/hq demo messages now carry openers.
+
 ### 2026-09-28 10:40 — dd7a82a — myset@claude/myset-encryption-security-460mph (41 files since origin/main)
 **tl;dr:** Slice C of the security pass is ready but not live: the sign-in key moves out of the store into MYSET_SECRET, and passwords, recovery codes, the booker inbox, sessions, logs, ID photos and HQ's contacts get sealed at rest. It waits for you to set MYSET_SECRET and FINMODEL_CODE in Netlify
 **Other sessions:** Decisions 0112/0113, INVARIANTS 0gy/0gz/0hb, NOT MERGED. New modules _secret.mjs (keysFor: auth/room/wrap) and _seal.mjs (protectedKey, seal/open, ring() over the sealkeys keyring). readDoc/casDoc seal protectedKey families; any raw store().set/get of those families must go through seal/open. signingKeys() replaces authSecret() for verification; storeKey() is the old key for legacy recovery codes and v1 Gmail tokens. Studio codes and recovery codes are scrypt now (s1). sealkeys must never be deleted and MYSET_SECRET never removed once set. HARDENING.md §0 is the rotation runbook.

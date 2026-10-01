@@ -132,17 +132,21 @@ const TOKEN_TTL = 30 * 24 * 3600e3;
    `splitFee` is Perry's ask (2026-09-04): Stripe's own processing fee is shared
    evenly — MySet's fee is reduced by half of Stripe's estimated fee, never below
    zero. See feeCents in _connect.mjs for the arithmetic and its honest limits. */
+/* 2026-09-30 (decision 0127, the founder's word): five photos on Free; the fee is 25%
+   on Free and 5% on Pro, the artist ladder's shape; tips for the staff are real on
+   both plans, so the Free fee is a fee on something; hiding or deleting a community
+   post (`moderate`) is Pro only. */
 export const VENUE_PLANS = {
-  free: { label: 'Free', price: 0, photos: 3, reviews: true, tick: false, merch: false, tips: false, speakerVotes: false, cut: 0.10, splitFee: true },
-  pro:  { label: 'Pro', price: 2000, photos: 12, reviews: true, tick: true, merch: true, tips: true, speakerVotes: true, cut: 0.02, splitFee: true },
+  free: { label: 'Free', price: 0, photos: 5, reviews: true, tick: false, merch: false, tips: true, moderate: false, speakerVotes: false, cut: 0.25, splitFee: true },
+  pro:  { label: 'Pro', price: 2000, photos: 12, reviews: true, tick: true, merch: true, tips: true, moderate: true, speakerVotes: true, cut: 0.05, splitFee: true },
 };
 /* Which of those venue flags is a real feature today. Same rule, same reason as
    NOT_BUILT in _plan.mjs: the Venue Studio SHOWS every locked feature rather than
    hiding it, so a flag with no code behind it has to be greyed as "coming" and
    never as "yours" — otherwise the first venue that pays for Pro finds dead ends.
-   `photos`, `tick`, `reviews` and `merch` are real and enforced; these two are
-   not. Deleting a name from here is the last step of building it. */
-export const VENUE_NOT_BUILT = ['tips', 'speakerVotes'];
+   `photos`, `tick`, `reviews`, `merch`, `tips` and `moderate` are real and enforced;
+   this one is not. Deleting a name from here is the last step of building it. */
+export const VENUE_NOT_BUILT = ['speakerVotes'];
 export const VMAX_MERCH = 12;
 
 export const venuePlanOf = (v) => (v && VENUE_PLANS[v.plan] ? v.plan : 'free');
@@ -449,6 +453,8 @@ export function shapeVenue(p, reg) {
     merchMax: VMAX_MERCH,               // the cap the Venue Studio shows as N/max — never typed there
     // ONE money gate for a venue's page, mirrored from Stripe like show.pay (0bl)
     paymentsEnabled: !!process.env.STRIPE_SECRET_KEY && !!(p.pay && p.pay.ready),
+    // the "Tip the staff" button: card payments on, and the plan has tips (0127)
+    tipsOn: !!process.env.STRIPE_SECRET_KEY && !!(p.pay && p.pay.ready) && !!venueLimits(r).tips,
     /* The tick is part of Pro, so a stored flag on a free page does not show one.
        Nothing clears the flag when a plan lapses (_billing.mjs leaves it), so this
        read is the gate, and no code path can forget it. */

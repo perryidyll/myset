@@ -36,7 +36,7 @@ verified: code read 2026-09-12 for the shapes quoted; the canvas in a browser is
 | `freeCredits / replayCost / packs` (46032) | Number | the night's prices — the free allowance, the cost of a replay, the vote packs; numbers cited from overview §2.1, never copied |
 | `requests / birthdays` (46033) | Single-line text | {on, cost} for each kind of ask; off by default — an artist who cannot play requests is never asked for them |
 | `listId / listName / listSongs` (46034) | Multi-line text | which setlist is in play and a PROJECTION of its ids, kept here so the poll never reads a second document (_lists.mjs) |
-| `gigMonth / gigCount` (46035) | Number | shows started this calendar month, for the free plan's gig cap — stored, because a show in progress is not in history yet |
+| `gigCount / freeNight / discardWarnedAt` (46035) | Number | free-plan shows started, in total, for the gig cap (0120) — stored, because a show in progress is not in history yet; `freeNight` is what the current night used, `discardWarnedAt` when the one warning about discarding a real night was given (0122) |
 | `showId / startedAt / log` (46036) | Single-line text | the night's identity; one log entry per song started; the auto-start stamps the gig occurrence key so a cron that rings twice cannot start it twice |
 
 Linked steps: 369798, 369802, 369814, 369848, 369852
@@ -222,7 +222,7 @@ Linked steps: 370164, 370165
 
 ### Push subscriptions (push_) — entity 4858
 
-`push_<aid>` · The phones on this page that asked to be told about a request, a message or an order while the Studio is closed. Each row carries the address and sign-in (`sid`) that switched it on; eight per address; a sign-out drops the rows of the sign-ins it ends (decision 0114). Hand-written Web Push (RFC 8291/8188/8292) with two dependencies total. The keys are set in production (Admin d06). `src: _push.mjs`
+`push_<aid>` · The phones on this page that asked to be told about a request, a message or an order while the Studio is closed. Each row carries the address and sign-in (`sid`) that switched it on; eight per address; a sign-out drops the rows of the sign-ins it ends (decision 0114). A venue's phones are `push_v_<vid>`, under the same owner id as its sign-ins, and hear new asks, artist replies and merch orders (decision 0124). Hand-written Web Push (RFC 8291/8188/8292) with two dependencies total. The keys are set in production (Admin d06). `src: _push.mjs`
 
 | attribute | type | what it holds |
 | --- | --- | --- |
@@ -277,6 +277,7 @@ Linked steps: 369945, 369949, 370120
 | `list[].message` (46102) | Multi-line text | the pitch, with a link to the artist's real numbers |
 | `list[].status` (46103) | Single-line text | new | keen | nope — the venue's answer, shown on the artist's Gigs tab |
 | `list[].at` (46104) | Date picker | sent |
+| `list[].tid / vunread` | Single-line text | the conversation this pitch opened in the artist's inbox (`msg_<aid>_<tid>`), and whether the artist has answered since the venue last read it (decision 0123) |
 
 Linked steps: 370006, 370007, 370008, 370009, 370010
 

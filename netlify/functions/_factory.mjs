@@ -323,7 +323,8 @@ async function ytCandidates(st, ctx) {
   });
 }
 async function webCandidates(st, ctx) {
-  const jobs = ((st.site && st.site.ok && st.site.images) || []).slice(0, 9);
+  // a venue's page wants five photos besides its cover (0129), so it looks at more of its site
+  const jobs = ((st.site && st.site.ok && st.site.images) || []).slice(0, st.kind === 'venue' ? 16 : 9);
   if (st.yt && st.yt.ok && st.yt.channel.banner) jobs.push({ url: st.yt.channel.banner, banner: true });
   return mapLimit(jobs, 4, async (t) => {
     const r = await fetchImage(t.url, { ...ctx, alts: t.alts || [] });
@@ -343,7 +344,7 @@ async function founderCandidates(st, ctx) {
 async function choosePhotos(st, ctx, { late }) {
   const judged = [], seen = new Set();
   let picks = { cover: null, avatar: null, extras: [] };
-  const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && picks.extras.length >= 2;
+  const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && picks.extras.length >= (st.kind === 'venue' ? 5 : 2);
   for (const [p, round] of [['y', ytCandidates], ['w', webCandidates], ['f', founderCandidates]]) {
     if (enough() || (judged.length && late())) break;
     // the same picture twice (og:image and an <img>) is judged once; over 8000 px the vision API refuses it
@@ -365,7 +366,7 @@ function buildPayload(st, { facts, sources, copy, shots, usage, ctx }) {
   const photos = {};
   if (picks.cover) photos.cover = shot(picks.cover);
   if (!venue && picks.avatar) photos.avatar = shot(picks.avatar);
-  picks.extras.slice(0, 3).forEach((j, i) => { photos[`p${i}`] = shot(j); });
+  picks.extras.slice(0, venue ? 5 : 3).forEach((j, i) => { photos[`p${i}`] = shot(j); });
   const media = [];
   if (!venue) {
     const add = (url, title = '') => { if (url && parseMedia(url) && !media.some((m) => m.url === url)) media.push({ url, hero: false, title: clean(title, 120) }); };

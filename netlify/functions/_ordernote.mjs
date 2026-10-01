@@ -46,10 +46,10 @@ export async function tellOrder(owner, o) {
     const studio = venue ? 'https://myset.vip/venue-studio' : 'https://myset.vip/studio?tab=merch';
     const total = (o.cents || 0) + (o.post || 0);
     const title = `New merch order: ${orderLine(o)}`;
-    /* A venue has no push devices today (push_<owner> is empty), so this is a no-op
-       there; it costs one read and keeps the two owners on one path. */
+    /* A venue's phones hear it too since decision 0124: every venue seat sees its
+       orders, so `{ tab: 'merch' }` reaches each of them (_push.mjs). */
     const jobs = [notify(owner, { title: 'New merch order', body: `${orderLine(o)} · ${money(total)} · ${o.ship === 'ship' ? 'to ship' : 'pickup ' + o.code}`,
-                                  url: venue ? '/venue-studio' : '/studio?tab=merch', tag: 'order-' + (o.code || '') }, { tab: 'merch' })];
+                                  url: venue ? '/venues?tab=merch' : '/studio?tab=merch', tag: 'order-' + (o.code || '') }, { tab: 'merch' })];
     if (emailReady()) {
       const [emails, who] = await Promise.all([
         ownerEmails(owner),
@@ -62,4 +62,15 @@ export async function tellOrder(owner, o) {
     }
     await within(Promise.allSettled(jobs), ORDER_NOTE_MS);
   } catch { /* an alert that fails is never the order's problem */ }
+}
+
+/* A TIP FOR A VENUE'S STAFF TELLS THE VENUE (decision 0127): a push to every venue
+   seat, opening the Merch tab where the tips are listed. Same rules as an order: the
+   fresh claim only, time-boxed, never thrown, nothing about the tipper but the note. */
+export async function tellVenueTip(owner, amount, note) {
+  try {
+    if (!String(owner).startsWith('v_')) return;
+    await within(notify(owner, { title: `A ${'$' + (Number(amount) || 0).toFixed(2)} tip for the staff`, body: note ? `“${String(note).slice(0, 100)}”` : 'Someone loved their night.',
+                                 url: '/venues?tab=merch', tag: 'tip-' + Date.now().toString(36) }, { tab: 'merch' }), ORDER_NOTE_MS);
+  } catch { /* the tip is safe; an alert is a courtesy */ }
 }

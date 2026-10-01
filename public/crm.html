@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  MySet — myset.vip/crm · HQ, the founder's command center.
+  MySet — myset.vip/crm · CRM, the founder's command center.
   © 2026 MySet. All rights reserved.
 
   The whole outreach desk on one page: make a sample profile from a form (the factory
@@ -21,14 +21,14 @@
 <meta name="theme-color" content="#000000" />
 <meta name="color-scheme" content="dark" />
 <meta name="robots" content="noindex,nofollow" />
-<script>/* The theme is set before the first paint, so a light HQ never flashes dark. */
+<script>/* The theme is set before the first paint, so a light CRM never flashes dark. */
 try{if(localStorage.getItem('myset.hq.theme')==='light'){document.documentElement.dataset.theme='light';
   document.querySelector('meta[name=theme-color]').content='#F5F5F7';document.querySelector('meta[name=color-scheme]').content='light';}}catch(e){}</script>
-<title>HQ — MySet</title>
+<title>CRM — MySet</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23000'/><g fill='%23FF5650'><rect x='24' y='42' width='11' height='34' rx='5'/><rect x='44' y='24' width='11' height='52' rx='5'/><rect x='64' y='54' width='11' height='22' rx='5'/></g></svg>" />
 <style>
 /* THE STAGE: black, one accent (MySet's pink-orange, used like a reactor's glow),
-   everything else grey. That is the dark theme, and HQ opens in it; the light theme
+   everything else grey. That is the dark theme, and CRM opens in it; the light theme
    (below the phone rules) redefines these tokens and repaints the few surfaces that
    are not tokens. `--hi` is the colour every wash and hairline is mixed from: white
    on the dark stage, black on the light one. */
@@ -45,7 +45,7 @@ try{if(localStorage.getItem('myset.hq.theme')==='light'){document.documentElemen
   --f:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",system-ui,sans-serif;
   --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
   --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.4,.64,1);
-  /* HQ's own. The bright gradient is light, not a surface for words: white type sits
+  /* CRM's own. The bright gradient is light, not a surface for words: white type sits
      on the deep one, which keeps 4.7:1 or better end to end. */
   --deep:linear-gradient(135deg,#D6304F,#CC4527); --vdeep:linear-gradient(135deg,#1C8FD0,#2F5EE8);
   --vlit:linear-gradient(135deg,#64D2FF,#3AA0FF); --tint:rgba(255,86,80,.1); --vtint:rgba(100,210,255,.08);
@@ -123,7 +123,9 @@ kbd{font:600 10.5px/1 var(--mono);padding:4px 6px;border-radius:6px;background:r
 .ibtn:hover{background:rgba(var(--hi),.08);color:var(--ink)}
 .ibtn:active{transform:scale(.9)}
 .ibtn .g{width:18px;height:18px}
-.ibtn.sm{width:30px;height:30px}.ibtn.sm .g{width:16px;height:16px}
+.ibtn.sm{width:30px;height:30px}
+/* the theme switch is the Media Dash's: a 34px circle and a 13px half-moon, the same on every MySet page */
+.ibtn.thm{width:34px;height:34px;font-size:13px;font-weight:600;line-height:1;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif}.ibtn.sm .g{width:16px;height:16px}
 /* The theme switch shows the sun on the dark stage and the moon on the light one;
    the two trade places with a turn. */
 .thm .g{position:absolute;inset:0;margin:auto;transition:transform .55s var(--spring),opacity .3s var(--ease)}
@@ -657,7 +659,7 @@ input[type=date].inp{color-scheme:dark}
 .rvw b{display:block;font-size:15.5px;color:var(--accent)}
 .rvw p{margin:4px 0 12px;font-size:13.5px;color:var(--ink-2)}
 .slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
-.slots.v4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.slots.v6{grid-template-columns:repeat(3,minmax(0,1fr))}
 .slot{position:relative;display:block;aspect-ratio:1;border-radius:14px;overflow:hidden;background:rgba(var(--hi),.04);box-shadow:inset 0 0 0 1px var(--line-2);transition:box-shadow .2s,transform .25s var(--spring)}
 .slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .slot em{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-size:11px;color:var(--muted)}
@@ -761,6 +763,8 @@ input[type=date].inp{color-scheme:dark}
 .sys span{color:var(--muted);flex:1;min-width:0}
 .conn{display:flex;gap:14px;padding:14px;border-radius:var(--r);background:rgba(var(--hi),.03);box-shadow:inset 0 0 0 1px var(--line)}
 .conn+.conn{margin-top:8px}
+.conn.lrow{width:100%;text-align:left;transition:background .2s,transform .2s var(--spring)}
+.conn.lrow:hover{background:rgba(var(--hi),.06)}.conn.lrow:active{transform:scale(.99)}
 .conn>.g{width:22px;height:22px;margin-top:1px;color:var(--ink-2)}
 .conn>div{flex:1;min-width:0}
 .conn b{display:block;font-size:14.5px}
@@ -826,7 +830,7 @@ input[type=date].inp{color-scheme:dark}
 .gate p{margin:0 0 18px;color:var(--muted);font-size:14.5px}
 
 /* ---------- the lock ----------
-   HQ starts behind it and goes back behind it whenever the server says so. Nothing
+   CRM starts behind it and goes back behind it whenever the server says so. Nothing
    about anyone is painted until the first summary answers ok: while the body is
    locked, the page under the lock is not drawn at all (visibility), though what was
    typed into it stays where it was. */
@@ -915,7 +919,7 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
   .dr-h{padding-left:16px;padding-right:12px}
   .dr-body{padding:18px 16px calc(28px + env(safe-area-inset-bottom))}
   .ov-save{margin:14px -16px 0;padding:12px 16px}
-  .slots{grid-template-columns:repeat(3,minmax(0,1fr))}.slots.v4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .slots{grid-template-columns:repeat(3,minmax(0,1fr))}.slots.v6{grid-template-columns:repeat(3,minmax(0,1fr))}
   .cands{grid-template-columns:repeat(3,minmax(0,1fr))}
   .cmp-row .tplw{width:140px}
   .cmp{padding:10px 12px calc(12px + env(safe-area-inset-bottom))}
@@ -938,8 +942,45 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
   .tabbar button[aria-current=page] .g{filter:drop-shadow(0 0 8px rgba(255,86,80,.6))}
   .tabbar .tb-u{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--deep);color:#fff;font:700 10px/17px var(--mono);text-align:center}
 }
+/* ---------- the message library (decision 0117) ---------- */
+.cmp-row .ibtn.libb{flex:0 0 auto;width:36px;height:36px}
+.cmp-end{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:12px;color:var(--muted)}
+.cmp-end .seg button{height:26px;padding:0 11px;font-size:12px}
+.cmp-end .ab{font:600 9.5px/1 var(--mono);letter-spacing:.14em;color:var(--faint)}
+.cmp-t.fill{animation:fillsweep .9s var(--ease) both;background-image:linear-gradient(100deg,transparent 30%,rgba(255,86,80,.16) 50%,transparent 70%);background-size:250% 100%;background-repeat:no-repeat}
+@keyframes fillsweep{from{background-position:120% 0}to{background-position:-30% 0}}
+.lib .lede{margin:-8px 2px 4px}
+.lib .lede b{color:var(--ink);font-weight:600}
+.lsv{margin-left:auto;font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--good);opacity:0;transition:opacity .3s}
+.lsv.on{opacity:1}
+.endc{padding:14px;border-radius:var(--r-sm);background:rgba(var(--hi),.03);box-shadow:inset 0 0 0 1px var(--line)}
+.endc .seg{display:flex}.endc .seg button{flex:1}
+.erow{display:grid;grid-template-columns:78px minmax(0,1fr) 110px;align-items:center;gap:10px;margin-top:12px;font-size:13px}
+.erow b{font:600 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.erow .inp{height:34px;font-size:13px}
+.erow>span{color:var(--muted);min-width:0}
+.rate{display:grid;gap:5px;font:600 10.5px/1 var(--mono);letter-spacing:.06em;color:var(--muted);text-align:right}
+.rate i{position:relative;display:block;height:4px;border-radius:2px;background:rgba(var(--hi),.08);overflow:hidden}
+.rate i::after{content:"";position:absolute;inset:0 auto 0 0;width:0;border-radius:inherit;background:var(--deep);box-shadow:0 0 10px rgba(255,86,80,.6);transition:width .9s var(--ease)}
+.grown .rate i::after{width:var(--w)}
+.grown .rate.best i::after{background:linear-gradient(90deg,#1E7B34,var(--good));box-shadow:0 0 10px rgba(48,209,88,.5)}
+.pl{display:grid;gap:8px}
+.pre{border-radius:var(--r-sm);background:rgba(var(--hi),.025);box-shadow:inset 0 0 0 1px var(--line);transition:box-shadow .25s,background .25s;animation:rise .35s var(--ease) both}
+.pre.on{background:rgba(var(--hi),.045);box-shadow:inset 0 0 0 1px var(--line-2)}
+.pre-h{display:grid;grid-template-columns:minmax(0,1fr) auto 104px 18px;align-items:center;gap:10px;width:100%;padding:12px 14px;text-align:left}
+.pre-n{font-size:14px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pre-h>.g{width:16px;height:16px;color:var(--muted);transition:transform .35s var(--spring)}
+.pre.on .pre-h>.g{transform:rotate(180deg)}
+.pre .fold>div{min-height:0;overflow:hidden}
+.pre-b{padding:0 14px 14px}
+.pre-b .fl:first-child{margin-top:0}
+.pre-b textarea{min-height:120px}
+.pre-b .row{display:flex;align-items:center;gap:8px;margin-top:12px}
+.pre-b .row .btn{margin-left:auto}
+.lib-f{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+@media(max-width:560px){.pre-h{grid-template-columns:minmax(0,1fr) auto 18px}.pre-h .rate{grid-column:1/3;grid-row:2;text-align:left}.erow{grid-template-columns:64px minmax(0,1fr)}.erow .rate{grid-column:1/-1}}
 @media(max-width:380px){.cmp-row{flex-wrap:wrap}.cmp-row .tplw{width:100%}.bc-2{grid-template-columns:1fr}}
-/* Below 390px the top bar holds five buttons beside HQ: "Online" keeps its dot and
+/* Below 390px the top bar holds five buttons beside CRM: "Online" keeps its dot and
    leaves the word to screen readers, and below 360px the gaps close up a little. */
 @media(max-width:389px){.online{font-size:0;gap:0}}
 @media(max-width:359px){.top .in{gap:8px}}
@@ -1004,13 +1045,14 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
 <div id="busy" aria-hidden="true"><div class="bars"><i><b></b></i><i><b></b></i><i><b></b></i></div></div>
 <header class="top" id="top">
   <div class="in">
-    <a class="mark" href="/studio" aria-label="Back to the Studio"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></a>
-    <div class="brand"><h1>HQ</h1><span class="online" id="online"><i></i>Online</span><span class="boot" aria-hidden="true">Systems online</span></div>
+    <a class="mark" href="/" aria-label="MySet home"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="9" width="3.4" height="11" rx="1.7"/><rect x="10.3" y="4" width="3.4" height="16" rx="1.7"/><rect x="16.6" y="12" width="3.4" height="8" rx="1.7"/></svg></a>
+    <div class="brand"><h1>CRM</h1><span class="online" id="online"><i></i>Online</span><span class="boot" aria-hidden="true">Systems online</span></div>
     <div class="tele" id="tele"></div>
     <button type="button" class="cluster" id="cluster" data-act="settings" aria-label="Systems and settings"></button>
     <button type="button" class="kbtn" data-act="palette" aria-label="Search and commands" aria-keyshortcuts="Meta+K Control+K"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></svg><span>Search</span><kbd id="kbd">⌘K</kbd></button>
-    <button type="button" class="ibtn thm" id="thm" data-act="theme" aria-label="Switch to light mode" title="Light mode"><svg class="g sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.75 1.75M16.95 16.95l1.75 1.75M5.3 18.7l1.75-1.75M16.95 7.05l1.75-1.75"/></svg><svg class="g moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.47 12.74A8.5 8.5 0 1 1 11.25 3.53a6.6 6.6 0 0 0 9.22 9.21z"/></svg></button>
-    <button type="button" class="ibtn" data-act="lockhq" aria-label="Lock HQ" title="Lock HQ"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg></button>
+    <a class="ibtn" href="/dash" aria-label="All four dashboards" title="Dash"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/></svg></a>
+    <button type="button" class="ibtn thm" id="thm" data-act="theme" aria-label="Switch to light mode" title="Light mode">◐</button>
+    <button type="button" class="ibtn" data-act="lockhq" aria-label="Lock CRM" title="Lock CRM"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg></button>
     <button type="button" class="ibtn gear" data-act="settings" aria-label="Settings"><svg class="g" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.6a1.7 1.7 0 0 1 3.4 0 1.7 1.7 0 0 0 2.6 1.1 1.7 1.7 0 0 1 2.4 2.4 1.7 1.7 0 0 0 1.1 2.6 1.7 1.7 0 0 1 0 3.4 1.7 1.7 0 0 0-1.1 2.6 1.7 1.7 0 0 1-2.4 2.4 1.7 1.7 0 0 0-2.6 1.1 1.7 1.7 0 0 1-3.4 0 1.7 1.7 0 0 0-2.6-1.1 1.7 1.7 0 0 1-2.4-2.4 1.7 1.7 0 0 0-1.1-2.6 1.7 1.7 0 0 1 0-3.4 1.7 1.7 0 0 0 1.1-2.6 1.7 1.7 0 0 1 2.4-2.4 1.7 1.7 0 0 0 2.6-1.1z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </div>
   <i class="scan" aria-hidden="true"></i>
@@ -1077,8 +1119,8 @@ body.locked #app,body.locked #tabbar,body.locked #drawer,body.locked .modal,body
     <i class="rx-core"></i>
     <svg class="g lk-ic" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path class="sh" d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg>
   </div>
-  <p class="lk-k">MySet HQ</p>
-  <h1 id="lockT">Opening HQ</h1>
+  <p class="lk-k">MySet CRM</p>
+  <h1 id="lockT">Opening CRM</h1>
   <form class="lk-f" id="lockF" novalidate>
     <label class="sr" for="lockIn">Passcode</label>
     <input class="inp" id="lockIn" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Passcode" enterkeyhint="go">
@@ -1149,6 +1191,8 @@ const G={
   bolt:'<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>', play:'<path d="M8 5.5v13l10.5-6.5z"/>',
   refresh:'<path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/>', gear:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/>',
   target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/><path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4"/>',
+  book:'<path d="M4.5 5.5A2 2 0 0 1 6.5 3.5h13v15h-13a2 2 0 0 0-2 2z"/><path d="M4.5 20.5a2 2 0 0 1 2-2h13v2.5h-13a2 2 0 0 1-2-2z"/><path d="M9 8h6.5"/>',
+  trash:'<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
   sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.75 1.75M16.95 16.95l1.75 1.75M5.3 18.7l1.75-1.75M16.95 7.05l1.75-1.75"/>',
   moon:'<path d="M20.47 12.74A8.5 8.5 0 1 1 11.25 3.53a6.6 6.6 0 0 0 9.22 9.21z"/>',
 };
@@ -1171,18 +1215,18 @@ const LPH={instagram:'@handle or instagram.com/…',tiktok:'@handle or tiktok.co
   applemusic:'music.apple.com/…',soundcloud:'@name or soundcloud.com/…',bandcamp:'name.bandcamp.com',facebook:'facebook.com/…',website:'their-site.com',
   google:'a Google Maps link',ytmusic:'music.youtube.com/…',gofundme:'gofundme.com/f/…'};
 const LG=k=>k==='google'?'google':G[k]?k:'website';
-const SLOTW={cover:'Cover',avatar:'Portrait',p0:'Photo 1',p1:'Photo 2',p2:'Photo 3'};
+const SLOTW={cover:'Cover',avatar:'Portrait',p0:'Photo 1',p1:'Photo 2',p2:'Photo 3',p3:'Photo 4',p4:'Photo 5'};
 const KINDW={youtube:'YouTube',instagram:'Instagram',website:'Website',tiktok:'TikTok',facebook:'Facebook',spotify:'Spotify',applemusic:'Apple Music',
   bandcamp:'Bandcamp',soundcloud:'SoundCloud',google:'Google',founder:'Added by you'};
 const EVW={seed:'Line read',suppress:'Opt-out check',discover:'Pages found',collect:'Sources read',facts:'Facts pulled',photos:'Photos chosen',copy:'Words written',gate:'Quality check',
-  created:'Added to HQ',lead:'Saved as a lead',generate:'Build started',built:'Page built',failed:'Build failed',sent:'Message sent',reply:'Reply',note:'Note',approved:'Approved',
+  created:'Added to CRM',lead:'Saved as a lead',generate:'Build started',built:'Page built',failed:'Build failed',sent:'Message sent',reply:'Reply',note:'Note',approved:'Approved',
   cancelled:'Page cancelled',claimed:'Claimed',archived:'Came down',revived:'Revived',edited:'Edited',photo:'Photo changed',linked:'Page linked',adopted:'Added from the factory'};
 const human=k=>{const s=String(k||'').replace(/[_-]+/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').trim().toLowerCase();return s?s[0].toUpperCase()+s.slice(1):'';};
 const kindW=k=>KINDW[k]||human(k);
 const stageW=(s,kind)=>s==='collect'&&kind==='venue'?'Reading the web':STAGE[s]||(s?human(s):'Starting');
 const ago=t=>{const m=Math.floor((Date.now()-(+t||0))/6e4);return m<1?'just now':m<60?m+'m ago':m<1440?Math.floor(m/60)+'h ago':Math.floor(m/1440)+'d ago';};
-const agoS=t=>{const s=(Date.now()-(+t||0))/1e3;if(s<45)return 'now';const m=s/60;if(m<60)return Math.round(m)+'m';const h=m/60;if(h<24)return Math.round(h)+'h';const d=h/24;
-  return d<7?Math.round(d)+'d':new Date(+t).toLocaleDateString(undefined,{month:'short',day:'numeric'});};
+const agoS=t=>{const s=(Date.now()-(+t||0))/1e3;if(s<45)return 'now';const m=s/60;if(m<60)return Math.max(1,Math.floor(m))+'m';const h=m/60;if(h<24)return Math.floor(h)+'h';const d=h/24;
+  return d<7?Math.floor(d)+'d':new Date(+t).toLocaleDateString(undefined,{month:'short',day:'numeric'});};
 const plural=(n,w)=>n+' '+w+(n===1?'':'s');
 const when=t=>{try{return new Date(t).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
 const clock=t=>{try{return new Date(t).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit',hourCycle:'h23'})}catch(e){return ''}};
@@ -1193,7 +1237,7 @@ const dayW=t=>{const n=dayDiff(t);return n===0?'Today':n===-1?'Yesterday':new Da
 const fmtN=n=>n>=1e4?Math.round(n/1e3)+'k':n>=1e3?(n/1e3).toFixed(1).replace(/\.0$/,'')+'k':String(n);
 const pct=v=>Math.max(0,Math.min(100,Math.round(+v||0)));
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return ''}};
-const daysW=exp=>{const d=Math.ceil((exp-Date.now())/DAY);return d>1?d+' days left':d===1?'1 day left':'Ends today';};
+const daysW=exp=>{if(exp<=Date.now())return 'Ended';const d=Math.ceil((exp-Date.now())/DAY);return d>1?d+' days left':d===1?'1 day left':'Ends today';};
 const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1e3));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
 const kb=k=>`<span class="kb ${k==='venue'?'v':'a'}">${k==='venue'?'Venue':'Artist'}</span>`;
 const initial=r=>esc(([...String(r.name||r.slug||'?').trim()][0]||'?').toUpperCase());
@@ -1238,7 +1282,7 @@ async function call(path,action,body,quiet){
   try{
     const r=await fetch(path,{method:'POST',headers:h,body:JSON.stringify(Object.assign({action},body||{}))});
     const t=await r.text(); let j;
-    try{j=JSON.parse(t);}catch(e){return {ok:false,error:'HQ answered with something unexpected — try again'};}
+    try{j=JSON.parse(t);}catch(e){return {ok:false,error:'CRM answered with something unexpected — try again'};}
     if(path==='/api/hq'&&j&&j.error==='locked')lockUp(j);   // the unlock ran out, or never was: the lock goes over everything
     return j;
   }catch(e){return {ok:false,offline:true,error:'Connection hiccup — try again'};}
@@ -1339,7 +1383,10 @@ const counts=rows=>({leads:rows.length,gen:rows.filter(isGen).length,shared:rows
 const kpiOn=k=>k!=='leads'&&F.f.size===1&&F.f.has(k);
 function renderKpis(){
   const box=$('#kg'), c=counts(S.contacts), v=KP.map(([k])=>c[k]);
-  const conv=i=>v[i-1]?Math.min(100,Math.round(v[i]/v[i-1]*100)):0;
+  /* each rail is the share of the stage before it that ALSO reached this one, counted on the two sets together —
+     a true rate even when a contact skipped a stage (a reply logged before the page was ever opened) */
+  const SETS=[()=>true,isGen,r=>r.sent>0,isOpened,r=>r.replied>0,r=>r.stage==='claimed'];
+  const conv=i=>v[i-1]?Math.round(S.contacts.filter(r=>SETS[i](r)&&SETS[i-1](r)).length/v[i-1]*100):0;
   if(!box.dataset.ok){
     box.innerHTML=KP.map(([k,w],i)=>(i?`<div class="rail" aria-hidden="true"><em data-cv="${i}"></em><i data-cw="${i}"></i></div>`:'')
       +`<button type="button" class="kpi" data-act="kpi" data-k="${k}" aria-pressed="false"><span class="kl">${w}</span><b class="kn num" data-kn="${k}">0</b><span class="kc" data-kc="${i}" aria-hidden="true"></span></button>`).join('');
@@ -1354,7 +1401,7 @@ function renderKpis(){
       const rail=box.querySelector(`[data-cw="${i}"]`); if(FIRST&&!REDUCE)requestAnimationFrame(()=>requestAnimationFrame(()=>{rail.style.width=conv(i)+'%';})); else rail.style.width=conv(i)+'%'; }
   });
   const m=S.month||{}, n=x=>Math.max(0,Math.round(+m[x]||0));
-  paint('month',`This month · built <b class="num">${n('built')}</b> · sent <b class="num">${n('sent')}</b> · opened <b class="num">${n('opened')}</b> · claimed <b class="num">${n('claimed')}</b>`);
+  paint('month',`This month (UTC) · built <b class="num">${n('built')}</b> · sent <b class="num">${n('sent')}</b> · opened <b class="num">${n('opened')}</b> · claimed <b class="num">${n('claimed')}</b>`);
 }
 /* THE COUNT-UP ONLY DECORATES: the real number is on the page first, and the frames,
    if they come, count up to it. */
@@ -1438,7 +1485,7 @@ function vmark(inp){
 function markDropped(p,dropped){
   (dropped||[]).forEach(k=>{ const inp=document.getElementById(k==='email'?(p==='n'?'nEmail':p+'Email'):k==='phone'?(p==='n'?'nPhone':p+'Phone'):p+'L-'+k); if(!inp)return;
     const row=inp.closest('.lr')||inp.closest('.fi'); row.dataset.v='bad'; inp.setAttribute('aria-invalid','true');
-    const hint=document.getElementById(inp.getAttribute('aria-describedby')||''); if(hint)hint.textContent=`HQ couldn’t use that ${LW[k]||k} — check it.`; });
+    const hint=document.getElementById(inp.getAttribute('aria-describedby')||''); if(hint)hint.textContent=`CRM couldn’t use that ${LW[k]||k} — check it.`; });
   if(dropped&&dropped.length)toast(`Saved — but ${dropped.map(k=>LW[k]||k).join(', ')} ${dropped.length===1?'wasn’t':'weren’t'} understood`);
 }
 function fold(sel,on){ const f=$(sel); if(!f)return; f.classList.toggle('on',on); f.inert=!on; }
@@ -1450,7 +1497,7 @@ function resetForm(){
 function showForm(focus){ fold('#nB',false); fold('#nF',true); $('#nMeta').innerHTML=''; if(focus)setTimeout(()=>{const n=$('#nName');if(n)n.focus({preventScroll:false});},80); }
 function showDup(cid,msg){
   const r=rowBy(cid), el=$('#nDup');
-  el.innerHTML=`<span>${esc(msg||'Already in HQ')}${r?` — <b>${esc(r.name||'')}</b>`:''}</span><button type="button" class="btn sm" data-act="edit" data-cid="${esc(cid)}" data-t="ov">Open it</button>`;
+  el.innerHTML=`<span>${esc(msg||'Already in CRM')}${r?` — <b>${esc(r.name||'')}</b>`:''}</span><button type="button" class="btn sm" data-act="edit" data-cid="${esc(cid)}" data-t="ov">Open it</button>`;
   el.hidden=false;
 }
 /* THE CARD COMES AT ONCE. The server can take a few seconds to hand the build to its
@@ -1465,7 +1512,7 @@ async function generate(){
   const mine=PJ===tmp, b=B[tmp]; delete B[tmp];
   if(!d||!d.ok){
     if(mine)showForm(false);
-    if(d&&d.cid&&(d.error==='duplicate'||/already has a page/i.test(d.error||''))){ showDup(d.cid,d.error==='duplicate'?'Already in HQ':d.error); return; }
+    if(d&&d.cid&&(d.error==='duplicate'||/already has a page/i.test(d.error||''))){ showDup(d.cid,d.error==='duplicate'?'Already in CRM':d.error); return; }
     failed(d); return;
   }
   NCID=d.cid||'';
@@ -1493,6 +1540,7 @@ function paintTags(loc){
   box.innerHTML=TAGS[loc].map((t,i)=>`<span class="tg">${esc(t)}<button type="button" data-act="untag" data-loc="${loc}" data-i="${i}" aria-label="Remove tag ${esc(t)}">${ico('close')}</button></span>`).join('');
   const inp=$('#tg-'+loc); if(inp)inp.placeholder=TAGS[loc].length>=12?'12 tags — that’s the most':TAGS[loc].length?'Add another':'Add a tag — Enter or comma';
   if(loc==='n')goState();
+  if(loc==='d'){ const tc=$('#tcd'); if(tc)tc.textContent=TAGS.d.length?`${TAGS.d.length}/12`:''; }
 }
 function addTag(loc,t){
   t=String(t||'').replace(/[<>]/g,'').replace(/\s+/g,' ').trim().slice(0,24); if(!t)return false;
@@ -1646,7 +1694,7 @@ const FG=[
   ['profile','Profile',[['gen','Generated'],['notgen','Not generated'],['review','Needs review'],['failed','Build failed'],['claimed','Claimed'],['archived','Archived']]],
   ['out','Outreach',[['shared','Shared'],['notshared','Not shared'],['via:ig','Via Instagram'],['via:tiktok','Via TikTok'],['via:email','Via Email'],['via:whatsapp','Via WhatsApp'],
     ['via:sms','Via SMS'],['via:fb','Via Messenger'],['via:inperson','In person'],['via:dm','DM (old console)']]],
-  ['resp','Response',[['opened','Opened'],['replied','Replied'],['waiting','Waiting for reply'],['unread','Unread']]],
+  ['resp','Response',[['opened','Opened'],['replied','Replied'],['waiting','No reply yet'],['unread','Unread']]],
   ['flag','Flags',[['due','Follow-up due'],['exp','Expiring soon'],['star','Starred']]],
 ];
 const TEST={gen:isGen,notgen:r=>!isGen(r),review:r=>r.stage==='review',failed:r=>r.stage==='failed',claimed:r=>r.stage==='claimed',archived:r=>r.stage==='archived',
@@ -1681,7 +1729,7 @@ function tagsCell(r){
 function lastCell(r){ const l=r.last, t=l?l.t:(r.upd||r.at); if(!t)return '<span class="dim">—</span>';
   return `<span class="lt">${r.unread?'<i class="ud" role="img" aria-label="Unread"></i>':''}<span class="num">${esc(agoS(t))}</span>${l?`${ico(CHG[l.ch]||'dm')}<em title="${l.dir==='in'?'From them':'From you'}">${l.dir==='in'?'↘':'↗'}</em><span class="sr">${l.dir==='in'?'from them':'from you'} by ${esc(CHW[l.ch]||l.ch)}</span>`:''}</span>`; }
 const fuCell=r=>r.fu?`<span class="fu${isDue(r)?' due':''}">${esc(shortDate(r.fu))}</span>`:'<span class="dim">—</span>';
-const leftCell=r=>{ const ms=leftMs(r); if(ms==null)return '<span class="dim">—</span>'; const d=Math.max(0,Math.ceil(ms/DAY)); return `<span class="left${d<=5?' soon':''}" title="${esc(daysW(r.exp))}">${d}d</span>`; };
+const leftCell=r=>{ const ms=leftMs(r); if(ms==null)return '<span class="dim">—</span>'; const d=Math.max(0,Math.ceil(ms/DAY)); return `<span class="left${d<=5?' soon':''}" title="${esc(daysW(r.exp))}">${ms<=0?'ended':d+'d'}</span>`; };
 function trHtml(r){
   const nm=esc(r.name||r.slug||'Untitled'), c=esc(r.cid), sub=r.slug?`/${r.kind==='venue'?'v/':''}${esc(r.slug)}`:esc([r.city,r.country].filter(Boolean).join(', '))||'&nbsp;';
   return `<tr data-key="${c}" data-act="row" data-cid="${c}"${r.unread?' class="unr"':''}>
@@ -1704,7 +1752,7 @@ function pipeShell(){
   if(box.dataset.mode===want)return;
   box.dataset.mode=want;
   box.innerHTML=PHONE?`<ul class="plist" id="plist" aria-label="Contacts"></ul><div id="pEmpty"></div>`
-    :`<div class="twrap" id="twrap"><div class="tw" id="tw"><table class="tbl" id="tbl"><caption class="sr">Every artist and venue in HQ. Sorted by what needs you first; the column buttons sort it.</caption><thead><tr>
+    :`<div class="twrap" id="twrap"><div class="tw" id="tw"><table class="tbl" id="tbl"><caption class="sr">Every artist and venue in CRM. Sorted by what needs you first; the column buttons sort it.</caption><thead><tr>
       <th scope="col" class="c-star"><span class="sr">Starred</span></th>${thSort('name','c-name')}<th scope="col" class="c-type">Type</th>${thSort('stage','c-stage')}
       <th scope="col" class="c-tags">Tags</th>${thSort('last','c-last')}${thSort('fu','c-fu')}${thSort('left','c-left')}<th scope="col" class="c-act"><span class="sr">Actions</span></th></tr></thead><tbody id="tb"></tbody></table></div><i class="tfade"><button type="button" data-act="tmore" tabindex="-1" aria-hidden="true"><span id="tmn"></span>${ico('up')}</button></i></div><div id="pEmpty"></div>`;
   const tw=$('#tw'); if(tw)tw.addEventListener('scroll',tmore,{passive:true});
@@ -1729,7 +1777,8 @@ function tmore(){ const tw=$('#tw'), w=$('#twrap'); if(!tw||!w)return; const res
   const more=rest>4; w.classList.toggle('more',more);
   if(more){ const rh=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rowh'))||52, n=Math.max(1,Math.round(rest/rh)); const t=$('#tmn'); if(t)t.textContent=n+' more'; } }
 function popHtml(){
-  const rows=(S&&S.contacts)||[], cnt=k=>rows.filter(r=>ftest(k,r)).length;
+  /* the counts follow the Artists/Venues switch and the search box, like the "X of Y" above the table */
+  const q=F.q.trim().toLowerCase(), rows=((S&&S.contacts)||[]).filter(r=>(F.kf==='all'||r.kind===F.kf)&&qhit(r,q)), cnt=k=>rows.filter(r=>ftest(k,r)).length;
   const groups=[...FG,['tags','Tags',((S&&S.tags)||[]).map(t=>['tag:'+t.tag,'#'+t.tag])]];
   return groups.filter(g=>g[2].length).map(([g,w,items])=>`<p class="sub">${w}</p><div class="fcs">${items.filter(([k])=>!(k==='via:dm'&&!cnt(k))).map(([k,l])=>`<button type="button" class="fc" data-act="fchip" data-f="${esc(k)}" aria-pressed="${F.f.has(k)}">${k.startsWith('via:')?ico(CHG[k.slice(4)]):''}${esc(l)}<b class="num">${cnt(k)}</b></button>`).join('')}</div>`).join('')
     +`<div class="pop-f"><button type="button" class="btn quiet sm" data-act="fclear">Clear all</button><button type="button" class="btn sm pri" data-act="filters">Done</button></div>`;
@@ -1779,13 +1828,40 @@ function pickCh(r){
 }
 function cmpFor(cid){
   if(CMPS[cid])return CMPS[cid];
-  const d=CT[cid]||{}, r=rowBy(cid)||d.row||{};
-  const c=CMPS[cid]={cid,ch:pickCh(r),tpl:d.drafts&&!r.sent?'first':'blank',subj:'',text:'',dirty:false,ok:'',okText:'',okSubj:'',reply:false,rch:'',rtext:''};
-  fillTpl(c); return c;
+  const d=CT[cid]||{}, r=rowBy(cid)||d.row||{}, auto=r.sent?'':autoPre(r);
+  const c=CMPS[cid]={cid,ch:pickCh(r),tpl:auto?'p:'+auto:d.drafts&&!r.sent?'first':'blank',soft:softNext(),subj:'',text:'',dirty:false,ok:'',okText:'',okSubj:'',okPre:null,reply:false,rch:'',rtext:''};
+  fillTpl(c); c.fx=0; return c;
 }
+
+/* THE MESSAGE LIBRARY (decision 0117): the founder's own openers, one per kind of act.
+   [Name] and [Venue] fill themselves in; a contact tagged with a preset's word (wedding,
+   cruise, busk…) opens on that preset. Each opener ends on its own question or the
+   softer one, and what went out is remembered with the message, so the library can
+   say which opener, and which ending, gets answered. */
+const LIBL=()=>(S&&S.lib&&S.lib.list)||[];
+const preBy=k=>LIBL().find(p=>p.k===k);
+const normT=v=>String(v||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function autoPre(r){ const tags=(r.tags||[]).map(normT); if(!tags.length)return '';
+  const p=LIBL().find(p=>p.kind===(r.kind==='venue'?'venue':'artist')&&(p.match||[]).some(m=>tags.some(t=>t.includes(m)))); return p?p.k:''; }
+function softNext(){ const e=(S&&S.lib&&S.lib.ending)||'ab'; if(e!=='ab')return e==='soft';
+  let a=0, b=0; for(const r of (S&&S.contacts)||[])if(r.pre){ if(r.pre.s)b++; else a++; } return b<a; }
+const firstOf=(cid,r)=>{ const f=((((CT[cid]||{}).page||{}).record)||{}).first; return String(f||r.name||'').replace(/^the\s+/i,'').trim(); };
+function preText(p,c){
+  const r=rowBy(c.cid)||(CT[c.cid]||{}).row||{}, nm=firstOf(c.cid,r), end=c.soft?((S.lib||{}).soft||''):p.ask||'';
+  let t=p.text.replace(/\[(first name|name|artist|band)\]/gi,m=>nm||m).replace(/\[venue\]/gi,m=>(r.kind==='venue'&&nm)||m).replace(/\[city\]/gi,m=>r.city||m);
+  if(end)t+=' '+end;
+  if(c.ch==='email'){ const cfg=(S&&S.cfg)||{};
+    t+=`\n\n${cfg.signoff||'The MySet team'}\nMySet · myset.vip\n\nYou're getting this because your ${r.kind==='venue'?"venue's details are":'music is'} public online. Reply "stop" and we won't contact you again.${cfg.address?'\n'+cfg.address:''}`; }
+  return t;
+}
+const preOn=c=>c&&/^p:/.test(c.tpl)?c.tpl.slice(2):'';
+const holes=t=>(String(t).match(/\[[A-Za-z][A-Za-z ]{0,20}\]/g)||[]);
+const preBody=(c,o)=>{ const k=o?c.okPre:preOn(c); return k?(o?{pre:k.k,soft:k.s}:{pre:k,soft:!!c.soft}):{}; };
 function reSubject(cid){ const ms=(((CT[cid]||{}).contact||{}).msgs||[]).filter(m=>m.ch==='email'&&m.subject); const s=ms.length?ms[ms.length-1].subject:''; return s?(/^re:/i.test(s)?s:'Re: '+s):''; }
 function fillTpl(c){
   const d=(CT[c.cid]||{}).drafts, e=(d&&d.email)||{};
+  if(preOn(c)){ const p=preBy(preOn(c)); if(!p){ c.tpl=d?'first':'blank'; return fillTpl(c); }
+    c.text=preText(p,c); c.subj=c.ch==='email'?(reSubject(c.cid)||'Your MySet page'):''; c.dirty=false; c.fx=1; return; }
   if(!d||c.tpl==='blank'){ c.text=''; c.subj=c.ch==='email'?reSubject(c.cid):''; c.dirty=false; return; }
   if(c.tpl==='first'){ if(c.ch==='email'){c.subj=e.subject||'';c.text=e.body||'';} else c.text=c.ch==='inperson'?(d.inperson||''):c.ch==='note'?'':(d.dm||''); }
   else if(c.tpl==='followup'){ c.text=d.followup||''; c.subj=c.ch==='email'?(reSubject(c.cid)||e.subject||''):''; }
@@ -1805,18 +1881,24 @@ function primary(c){
     default: return ['Add note','clog','plus'];
   }
 }
-const canSend=(c,r)=>canCh(c.ch,r)&&(c.ch==='inperson'||!!c.text.trim())&&(c.ch!=='email'||!(S&&S.gmail&&S.gmail.connected)||!!c.subj.trim());
+const canSend=(c,r)=>canCh(c.ch,r)&&(c.ch==='inperson'||!!c.text.trim())&&!holes(c.text).length&&(c.ch!=='email'||!(S&&S.gmail&&S.gmail.connected)||!!c.subj.trim());
 function cmpHtml(loc){
   const cid=CUR[loc], c=cid&&cmpFor(cid); if(!c)return '';
   const d=CT[cid]||{}, r=rowBy(cid)||d.row||{}, dr=d.drafts, [lab,act,ic]=primary(c), g=(S&&S.gmail)||{};
-  const tpls=dr?[['first','First message'],['followup','Follow-up'],['inperson','In person script'],['blank','Blank']]:[['blank','Blank']];
+  const tpls=dr?[['first','First message'],['followup','Follow-up'],['inperson','In person script']]:[];
+  const pres=LIBL().filter(p=>p.kind===(r.kind==='venue'?'venue':'artist')), pk=preOn(c), p=pk&&preBy(pk), hs=holes(c.text);
+  const opt=([k,w])=>`<option value="${esc(k)}"${c.tpl===k?' selected':''}>${esc(w)}</option>`;
   return `<div class="cmp-ch" role="radiogroup" aria-label="Send by">${CHS.map(ch=>{const ok=canCh(ch,r);
       return `<button type="button" role="radio" class="cp" data-act="cch" data-loc="${loc}" data-ch="${ch}" aria-checked="${c.ch===ch}" tabindex="${c.ch===ch?0:-1}"${ok?'':` aria-disabled="true" title="${esc(WHY[ch]||'')}"`}>${ico(CHG[ch])}<span>${CHW[ch]}</span></button>`;}).join('')}</div>
-    <div class="cmp-row"><label class="tplw"><span class="sr">Template</span><select class="inp sm" data-f="tpl" data-loc="${loc}"${dr?'':' disabled title="Templates come from a live sample page"'}>${tpls.map(([k,w])=>`<option value="${k}"${c.tpl===k?' selected':''}>${w}</option>`).join('')}</select></label>
+    <div class="cmp-row"><label class="tplw"><span class="sr">Template</span><select class="inp sm" data-f="tpl" data-loc="${loc}">${tpls.length?`<optgroup label="From their page">${tpls.map(opt).join('')}</optgroup>`:''}${pres.length?`<optgroup label="Your presets">${pres.map(x=>opt(['p:'+x.k,x.name])).join('')}</optgroup>`:''}${opt(['blank','Blank'])}</select></label>
+      <button type="button" class="ibtn libb" data-act="library" data-k="${esc(pk)}" aria-label="Message library" title="Message library">${ico('book')}</button>
       ${c.ch==='email'?`<input class="inp sm" data-f="subj" data-loc="${loc}" placeholder="Subject" aria-label="Subject" value="${esc(c.subj)}" autocomplete="off">`:''}</div>
-    <textarea class="inp cmp-t" data-f="text" data-loc="${loc}" rows="3" placeholder="${c.ch==='note'?'A private note — only you see it':c.ch==='inperson'?'What was said (optional)':'Write a message…'}" aria-label="Message">${esc(c.text)}</textarea>
+    ${p&&(p.ask||(S.lib||{}).soft)?`<div class="cmp-end"><span>Ending</span><div class="seg" role="group" aria-label="How it ends">${[[false,'Theirs',p.ask],[true,'Softer',(S.lib||{}).soft]].map(([v,w,q])=>`<button type="button" data-act="cend" data-loc="${loc}" data-v="${v?1:0}" aria-pressed="${!!c.soft===v}" title="${esc(q||'')}">${w}</button>`).join('')}</div>${(S.lib||{}).ending==='ab'?'<span class="ab" title="Each new contact gets the ending that has gone out less">A/B</span>':''}</div>`:''}
+    <textarea class="inp cmp-t${c.fx?' fill':''}" data-f="text" data-loc="${loc}" rows="3" placeholder="${c.ch==='note'?'A private note — only you see it':c.ch==='inperson'?'What was said (optional)':'Write a message…'}" aria-label="Message">${esc(c.text)}</textarea>
     ${c.ch==='email'&&!g.connected?`<p class="cmp-note">Connect Gmail in Settings to send and receive here. <button type="button" class="lnk" data-act="settings">Settings</button></p>`:''}
-    ${c.ch==='email'&&dr&&dr.needsAddress&&c.tpl!=='blank'?'<p class="cmp-note warn">Add your postal address in Settings first — a commercial email has to carry one.</p>':''}
+    ${c.ch==='email'&&c.tpl!=='blank'&&(pk?!((S.cfg||{}).address):dr&&dr.needsAddress)?'<p class="cmp-note warn">Add your postal address in Settings first — a commercial email has to carry one.</p>':''}
+    ${hs.length?`<p class="cmp-note warn">Fill in ${esc([...new Set(hs)].join(', '))} before it goes.</p>`:''}
+    ${pk&&!r.link&&!['building','claimed'].includes(r.stage)?'<p class="cmp-note">No page for them yet — build it before they say yes.</p>':''}
     <div class="cmp-f"><button type="button" class="lnk" data-act="replyform" data-loc="${loc}" aria-expanded="${!!c.reply}">Log their reply</button>
       <button type="button" class="btn pri" data-act="${act}" data-loc="${loc}"${canSend(c,r)?'':' disabled'}>${ico(ic)}${lab}</button></div>
     <div class="cmp-ok${c.ok?' on':''}" role="group" aria-label="Did it send?"><div>${c.ok?`<span>Sent it on ${esc(CHW[c.ok]||c.ok)}?</span><button type="button" class="btn sm pri" data-act="logsent" data-loc="${loc}">${ico('check')}Log as sent</button><button type="button" class="btn sm quiet" data-act="notyet" data-loc="${loc}">Not yet</button>`:''}</div></div>
@@ -1856,7 +1938,7 @@ function threadHtml(loc){
 function paintThreadPane(){
   if(PHONE)return;
   const el=$('#mT');
-  if(!CUR.m){ const n=S?S.contacts.reduce((a,r)=>a+(r.unread>0?1:0),0):0, w=S?S.contacts.filter(r=>r.last&&r.last.dir==='out').length:0;
+  if(!CUR.m){ const n=S?S.contacts.reduce((a,r)=>a+(+r.unread||0),0):0, w=S?S.contacts.filter(r=>r.last&&r.last.dir==='out').length:0;
     const h=`<div class="mempty"><svg class="reticle" viewBox="0 0 120 120" fill="none" stroke="currentColor" aria-hidden="true"><g class="rt1"><circle cx="60" cy="60" r="54" stroke-opacity=".35" stroke-dasharray="22 8 4 8"/></g><g class="rt2"><circle cx="60" cy="60" r="40" stroke-opacity=".6" stroke-width="2" stroke-dasharray="40 16"/></g><circle cx="60" cy="60" r="4" fill="currentColor" stroke="none"/><path d="M60 14v14M60 92v14M14 60h14M92 60h14" stroke-opacity=".5"/></svg>
       <b>Pick a conversation</b><span class="stats">${n} unread · ${w} waiting for a reply</span></div>`;
     if(el.dataset.empty!==h){ el.dataset.empty=h; el.innerHTML=h; } return; }
@@ -1868,7 +1950,7 @@ function paintMsgs(loc,force){ const m=$('#msgs-'+loc), cid=CUR[loc]; if(!m||!ci
   if(m._h!==h){ m._h=h; m.innerHTML=h; }
   if(force||near||m.dataset.first!=='1'){ m.scrollTop=m.scrollHeight; m.dataset.first='1'; } }
 function paintCmp(loc,focusSel2){ const el=$('#cmp-'+loc); if(!el)return; const m=$('#msgs-'+loc), pinned=nearEnd(m);
-  el.innerHTML=cmpHtml(loc); const t=el.querySelector('[data-f=text]'); grow(t);
+  el.innerHTML=cmpHtml(loc); const t=el.querySelector('[data-f=text]'); grow(t); const c=CMPS[CUR[loc]]; if(c)c.fx=0;
   if(pinned)m.scrollTop=m.scrollHeight;
   if(focusSel2){ const f=el.querySelector(focusSel2); if(f)f.focus({preventScroll:true}); } }
 function grow(t){ if(!t)return; const m=t.closest('.thr'), ms=m&&m.querySelector('.msgs'), pinned=nearEnd(ms);
@@ -1899,12 +1981,12 @@ function after(cid,d,msg){   // a message went out or came in: it joins the thre
   if(!CT[cid]||!CT[cid].contact)return;
   if(d.msg)CT[cid].contact.msgs=[...(CT[cid].contact.msgs||[]),d.msg];
   if(d.row)upsert(d.row);
-  const c=CMPS[cid]; if(c){ c.text=''; c.subj=''; c.tpl='blank'; c.dirty=false; c.ok=''; c.reply=false; c.rtext=''; if(c.ch==='email')c.subj=reSubject(cid); }
+  const c=CMPS[cid]; if(c){ c.text=''; c.subj=''; c.tpl='blank'; c.dirty=false; c.ok=''; c.okPre=null; c.reply=false; c.rtext=''; if(c.ch==='email')c.subj=reSubject(cid); }
   paintBoth(cid,'',true); if(msg)toast(msg);
   const cv=$('#convs'); if(cv&&CUR.m===cid&&cv.scrollTop>0)cv.scrollTo({top:0,behavior:REDUCE?'auto':'smooth'});
 }
 /* THE FIRST DM IS SENT BY HAND. Instagram lets no app open a conversation, and TikTok only
-   approved ones, so HQ copies the words and opens their chat in the same tap (a browser
+   approved ones, so CRM copies the words and opens their chat in the same tap (a browser
    allows a new tab only while the tap is happening), and then asks whether it went —
    nothing is logged until the founder says so. */
 function handleFrom(k,u){
@@ -2030,14 +2112,14 @@ function ovHtml(){
     <p class="sub">Tags<span class="subr tagcount" id="tcd"></span></p>${tagbox('d')}
     <p class="sub">Follow-up</p><div class="furow"><label class="sr" for="ovFu">Follow-up date</label><input class="inp sm" type="date" id="ovFu" value="${fuv}">
       ${[[1,'Tomorrow'],[3,'+3 days'],[7,'+1 week']].map(([n,w])=>`<button type="button" class="btn sm" data-act="fu" data-k="${n}">${w}</button>`).join('')}${fuT?'<button type="button" class="btn sm quiet" data-act="fu" data-k="0">Clear</button>':''}</div>
-      <p class="hint2">${fuT?`${isDue({fu:fuT})?'Due':'Set for'} ${esc(when(fuT))}`:'No follow-up set. HQ sets one for you after a message goes out.'}</p>
+      <p class="hint2">${fuT?`${isDue({fu:fuT})?'Due':'Set for'} ${esc(when(fuT))}`:'No follow-up set. CRM sets one for you after a message goes out.'}</p>
     <p class="sub">Private notes<span class="subr">only you see these</span></p>
     <div class="nadd"><label class="sr" for="ovNote">New note</label><textarea class="inp" id="ovNote" rows="1" placeholder="Add a note"></textarea><button type="button" class="btn sm" data-act="addnote">Add</button></div>
     <ul class="notes">${(c.notes||[]).map(n=>`<li><time>${esc(when(n.t))}</time>${esc(n.text)}</li>`).join('')}</ul>
     <p class="sub">Activity</p><ol class="tl">${ev.slice(0,40).map(e=>`<li class="${e.k}"><time>${esc(when(e.t))}</time><b>${esc(e.w)}</b>${e.m?' — '+esc(e.m):''}</li>`).join('')||'<li>Nothing yet.</li>'}</ol>
     <section class="dz" aria-label="Danger zone"><p class="sub">Danger zone</p>
-      <button type="button" class="btn bad" data-act="delc">${ico('close')}Delete contact</button><p class="hint2">Takes them out of HQ only — a live page stays up at its link.</p>
-      <button type="button" class="btn bad solid" data-act="delf">Delete forever — they asked</button><p class="hint2">Their page and everything HQ holds on them are erased, and the factory never builds them again.</p></section>`;
+      <button type="button" class="btn bad" data-act="delc">${ico('close')}Delete contact</button><p class="hint2">Takes them out of CRM only — a live page stays up at its link.</p>
+      <button type="button" class="btn bad solid" data-act="delf">Delete forever — they asked</button><p class="hint2">Their page and everything CRM holds on them are erased, and the factory never builds them again.</p></section>`;
 }
 const OVMAP={oName:'name',oCity:'city',oCountry:'country',oEmail:'email',oPhone:'phone'};
 function ovDirty(){ const f=$('#ovF'); if(!f)return false; return $$('#ovF input').some(i=>i.dataset.was!=null&&i.value!==i.dataset.was); }
@@ -2082,7 +2164,7 @@ function seedHtml(d,r){
 }
 function liveHtml(p,r){
   const pr=p.profile||{}, venue=r.kind==='venue', rec=p.record||{}, q=rec.quality||{}, bad=Object.entries(q.checks||{}).filter(([,c])=>!c||!c.ok);
-  const L=pr.links||{}, ph=pr.photos||[], slots=[['cover',pr.photo],...(venue?[]:[['avatar',pr.avatar]]),['p0',ph[0]],['p1',ph[1]],['p2',ph[2]]];
+  const L=pr.links||{}, ph=pr.photos||[], slots=[['cover',pr.photo],...(venue?[]:[['avatar',pr.avatar]]),['p0',ph[0]],['p1',ph[1]],['p2',ph[2]],...(venue?[['p3',ph[3]],['p4',ph[4]]]:[])];
   const ms=r.exp?r.exp-Date.now():0;
   return `<div class="pg-top"><button type="button" class="btn pri" data-act="pview">View ${ico('out')}</button><button type="button" class="btn" data-act="copylink">${ico('copy')}Copy link</button>${r.exp?`<span class="pg-exp${ms<5*DAY?' soon':''}">${esc(daysW(r.exp))}</span>`:''}</div>
     ${r.stage==='review'?`<div class="rvw"><b>Waiting for your look</b><p>${bad.length?`${plural(bad.length,'check')} did not pass: ${bad.map(([k])=>esc(human(k))).join(', ')}.`:S&&S.cfg&&S.cfg.auto?'The factory flagged it for a look.':'Auto-approve is off, so every page waits for a look.'}</p><button type="button" class="btn pri big" data-act="approve">${ico('check')}Approve — mark it Ready</button></div>`:''}
@@ -2093,7 +2175,7 @@ function liveHtml(p,r){
     <form id="lF" novalidate autocomplete="off">${PAGEL[r.kind||'artist'].map(k=>linkRow('p',k,L[k]||'')).join('')}
       <div style="display:flex;justify-content:flex-end;margin-top:12px"><button type="submit" class="btn pri" id="lS" disabled>Save links</button></div></form>
     <p class="sub">Photos<span class="subr">tap one to change it</span></p>
-    <div class="slots${venue?' v4':''}">${slots.map(([s,u])=>`<button type="button" class="slot" data-act="slot" data-slot="${s}" aria-expanded="${DR.pick===s}" aria-label="${SLOTW[s]}${u?'':' — empty'}: change">${u?'':'<em>Empty</em>'}${img(u,'')}<span class="sl2">${SLOTW[s]}</span></button>`).join('')}</div>
+    <div class="slots${venue?' v6':''}">${slots.map(([s,u])=>`<button type="button" class="slot" data-act="slot" data-slot="${s}" aria-expanded="${DR.pick===s}" aria-label="${SLOTW[s]}${u?'':' — empty'}: change">${u?'':'<em>Empty</em>'}${img(u,'')}<span class="sl2">${SLOTW[s]}</span></button>`).join('')}</div>
     <div id="pick">${DR.pick?chooserHtml():''}</div>
     ${venue?'':`<p class="sub">Videos</p>${videosHtml(pr)}`}
     <div class="pg-dz"><button type="button" class="btn" data-act="rebuild">${ico('refresh')}Rebuild from sources</button><button type="button" class="btn bad" data-act="cancelpage">Cancel page</button></div>`;
@@ -2126,7 +2208,7 @@ function videosHtml(pr){
 function claimedHtml(p,r){
   const link=pageUrl(p.link||r.link), undo=p.undo===true||(p.undo==null&&FSUM&&(FSUM.claimed||[]).some(x=>x.owner===r.owner&&(x.until||0)>Date.now()));
   if(p.undo==null&&!FSUM)fsum();
-  return `<div class="state good"><span class="si">${ico('check')}</span><h3>Claimed — this page is theirs now</h3><p>They run it from their own Studio. HQ keeps the conversation.</p>
+  return `<div class="state good"><span class="si">${ico('check')}</span><h3>Claimed — this page is theirs now</h3><p>They run it from their own Studio. CRM keeps the conversation.</p>
     ${link?`<a class="btn" href="${esc(link)}" target="_blank" rel="noopener noreferrer">${esc(link.replace(/^https?:\/\//,''))} ${ico('out')}</a>`:''}
     ${undo?`<button type="button" class="btn bad" data-act="undoclaim">Undo claim</button><p class="hint2">Only for a short while after a claim — their account closes and the page goes back to being a sample.</p>`:''}</div>`;
 }
@@ -2189,11 +2271,11 @@ const srcLi=s=>{ if(!s)return ''; const u=href(s.url), t=esc(s.title||host(s.url
 
 /* ---------- settings ---------- */
 function modal(sel,html){ const m=$(sel); if(!m.classList.contains('on'))m._opener=document.activeElement; m.innerHTML=html; m.classList.add('on'); m.setAttribute('aria-hidden','false'); layer(); }
-function unmodal(sel){ const m=$(sel); if(!m.classList.contains('on'))return; m.classList.remove('on'); m.setAttribute('aria-hidden','true'); layer();
+function unmodal(sel){ const m=$(sel); if(!m.classList.contains('on'))return; if(sel==='#setp')libFlush(); m.classList.remove('on'); m.setAttribute('aria-hidden','true'); layer();
   const o=m._opener; m._opener=null; if(o&&o.isConnected)o.focus({preventScroll:true}); }
 function gmailBlock(){
   const g=(S&&S.gmail)||{};
-  if(!g.ready)return `<b>Gmail</b><p>Needs the Google client ID and secret in Netlify first. Once they are there, connect it here and email sends and syncs from HQ.</p>`;
+  if(!g.ready)return `<b>Gmail</b><p>Needs the Google client ID and secret in Netlify first. Once they are there, connect it here and email sends and syncs from CRM.</p>`;
   if(g.connected)return `<b>Gmail</b><p><span class="okl">Connected as ${esc(g.email||'your Gmail')}</span> · last sync ${esc(g.lastSync?ago(g.lastSync):'not yet')}</p>${g.err?`<p style="color:var(--bad-2)">${g.err==='revoked'?'Google took the permission back — connect it again.':esc(g.err)}</p>`:''}
     <div class="row"><button type="button" class="btn sm" data-act="gsync">${ico('refresh')}Sync now</button><button type="button" class="btn sm quiet" data-act="gdisc">Disconnect</button>${g.err?'<button type="button" class="btn sm pri" data-act="gconn">Connect again</button>':''}</div>`;
   return `<b>Gmail</b><p>Send from your own Gmail, and their replies land in the thread. MySet’s sign-in mail is never used for outreach.</p><div class="row"><button type="button" class="btn sm pri" data-act="gconn">${ico('email')}Connect Gmail</button></div>`;
@@ -2205,12 +2287,13 @@ function openSettings(){
       <li><i class="${k.anthropic?'':'no'}"></i><b>Claude</b><span>${k.anthropic?'Key set — reads the sources, writes the words, judges the photos.':'Key missing in Netlify — builds wait in line until it is set.'}</span></li>
       <li><i class="${k.youtube?'':'no'}"></i><b>YouTube</b><span>${k.youtube?'Key set — reads channels, videos and thumbnails.':'Key missing in Netlify — builds wait in line until it is set.'}</span></li>
       <li><i class="${g.connected?(g.err?'no':''):'off'}"></i><b>Gmail</b><span>${g.connected?'Connected as '+esc(g.email||''):g.ready?'Not connected':'Not set up yet'}</span></li>
-      <li><i class="${(+t.started||0)>=(+t.cap||1)?'no':''}"></i><b>Builds</b><span>${+t.started||0} of ${+t.cap||0} started today</span></li></ul>
+      <li><i class="${(+t.started||0)>=(+t.cap||1)?'no':''}"></i><b>Builds</b><span>${+t.started||0} of ${+t.cap||0} started today (UTC day)</span></li></ul>
     <p class="sub">Connections</p>
     <div class="conn">${ico('email')}<div id="gmb">${gmailBlock()}</div></div>
     <div class="conn">${ico('instagram')}<div><b>Instagram</b><p>Manual for now: first DMs are sent from the app (Instagram allows no other way); replies sync here once the Meta messaging permission is added.</p></div></div>
     <div class="conn">${ico('tiktok')}<div><b>TikTok</b><p>Manual: TikTok opens replies to approved apps only.</p></div></div>
     <p class="sub">Messages</p>
+    <button type="button" class="conn lrow" data-act="library">${ico('book')}<div><b>Message library</b><p>Your openers for each kind of act, and which ones get answered.</p></div></button>
     <label class="fl" for="cSign"><span>Sign the messages as</span></label><input class="inp" id="cSign" maxlength="80" autocomplete="off" value="${esc(c.signoff||'The MySet team')}">
     <label class="fl" for="cAddr"><span>Postal address for emails</span></label><textarea class="inp" id="cAddr" rows="3" maxlength="200" autocomplete="street-address" placeholder="Street, city, postcode, country">${esc(c.address||'')}</textarea>
     <p class="hint2">A commercial email has to carry one — a virtual mailbox address works.</p>
@@ -2221,8 +2304,61 @@ function openSettings(){
   setTimeout(()=>{const h=$('#setT');if(h)h.focus({preventScroll:true});},60);
 }
 
+/* ---------- the message library ----------
+   Edits save themselves a moment after the last keystroke; adding, removing and the
+   ending save at once. The whole library goes each time (it is one small document). */
+let LIBD=null, LIBT=0;
+function libStats(){
+  const by={}, end={a:{n:0,r:0},s:{n:0,r:0}};
+  for(const r of S.contacts||[]){ if(!r.pre)continue; const x=by[r.pre.k]||(by[r.pre.k]={n:0,r:0}), e=end[r.pre.s?'s':'a'], got=(r.replied||0)>r.pre.t;
+    x.n++; e.n++; if(got){x.r++;e.r++;} }
+  return {by,end};
+}
+const rpct=x=>x&&x.n?Math.round(100*x.r/x.n):0;
+function rateHtml(x,best){ const n=(x&&x.n)||0; return `<span class="rate${best&&n?' best':''}">${n?`${rpct(x)}% · ${x.r}/${n}`:'Not sent yet'}<i style="--w:${rpct(x)}%"></i></span>`; }
+function preHtml(p,st,best,open){
+  const x=st.by[p.k];
+  return `<li class="pre${open?' on':''}" data-k="${esc(p.k)}"><button type="button" class="pre-h" data-act="libopen" aria-expanded="${!!open}" aria-controls="pb-${esc(p.k)}"><span class="pre-n">${esc(p.name)}</span>${kb(p.kind)}${rateHtml(x,best===p.k)}${ico('chev')}</button>
+    <div class="fold${open?' on':''}" id="pb-${esc(p.k)}"${open?'':' inert'}><div><div class="pre-b">
+      <label class="fl" for="ln-${esc(p.k)}"><span>Name</span></label><input class="inp" id="ln-${esc(p.k)}" data-lf="name" maxlength="40" value="${esc(p.name)}" autocomplete="off">
+      <label class="fl" for="lt-${esc(p.k)}"><span>Message</span><span>[Name] · [Venue] · [City]</span></label><textarea class="inp" id="lt-${esc(p.k)}" data-lf="text" rows="5" maxlength="1500">${esc(p.text)}</textarea>
+      <label class="fl" for="la-${esc(p.k)}"><span>Its closing question</span></label><input class="inp" id="la-${esc(p.k)}" data-lf="ask" maxlength="200" value="${esc(p.ask||'')}" placeholder="Want me to send it?" autocomplete="off">
+      <label class="fl" for="lm-${esc(p.k)}"><span>Opens itself for contacts tagged</span></label><input class="inp" id="lm-${esc(p.k)}" data-lf="match" maxlength="120" value="${esc((p.match||[]).join(', '))}" placeholder="wedding, events" autocomplete="off">
+      <div class="row"><div class="seg" role="group" aria-label="For">${['artist','venue'].map(k=>`<button type="button" data-act="libkind" data-v="${k}" aria-pressed="${p.kind===k}">${k==='venue'?'Venues':'Artists'}</button>`).join('')}</div>
+        <button type="button" class="btn sm quiet" data-act="libdel">${ico('trash')}Remove</button></div>
+    </div></div></div></li>`;
+}
+function libList(open){
+  const st=libStats(), ranked=LIBD.list.filter(p=>(st.by[p.k]||{}).n>=3).sort((a,b)=>rpct(st.by[b.k])-rpct(st.by[a.k])), best=ranked.length>1?ranked[0].k:'';
+  $('#libL').innerHTML=LIBD.list.map(p=>preHtml(p,st,best,p.k===open)).join('')||'<p class="hint2">No presets. Add one, or put the originals back.</p>';
+  const n=$('#libN'); if(n)n.textContent=LIBD.list.length;
+}
+function openLib(open){
+  if(!S)return; LIBD=JSON.parse(JSON.stringify(S.lib||{list:[],soft:'',ending:'ab'}));
+  const st=libStats(), e=st.end, bestE=e.a.n>=3&&e.s.n>=3?(rpct(e.s)>rpct(e.a)?'s':rpct(e.a)>rpct(e.s)?'a':''):'';
+  modal('#setp',`<div class="mcard lib"><div class="mh"><h2 id="setT" tabindex="-1">Message library</h2><span class="lsv" id="libSv" aria-live="polite"></span><button type="button" class="ibtn" data-act="mclose" aria-label="Close">${ico('close')}</button></div>
+    <p class="hint2 lede">Your openers, one per kind of act. <b>[Name]</b> and <b>[Venue]</b> fill themselves in. Pick one from any conversation’s composer.</p>
+    <p class="sub">The ending</p>
+    <div class="endc"><div class="seg" role="group" aria-label="Which ending goes out">${[['ab','Split evenly'],['ask','Always theirs'],['soft','Always softer']].map(([k,w])=>`<button type="button" data-act="libend" data-v="${k}" aria-pressed="${LIBD.ending===k}">${w}</button>`).join('')}</div>
+      <div class="erow"><b>Theirs</b><span>Each preset’s own question</span>${rateHtml(e.a,bestE==='a')}</div>
+      <div class="erow"><b>Softer</b><input class="inp" id="libSoft" data-lf="soft" maxlength="200" value="${esc(LIBD.soft||'')}" aria-label="The softer ending" autocomplete="off">${rateHtml(e.s,bestE==='s')}</div>
+      <p class="hint2">Split evenly gives each new contact the ending that has gone out less, so the two get a fair race. A reply counts once, for the first preset that went to them.</p></div>
+    <p class="sub">Presets <span id="libN"></span></p><ul class="pl" id="libL"></ul>
+    <div class="lib-f"><button type="button" class="btn sm" data-act="libadd">${ico('plus')}New preset</button><button type="button" class="lnk" data-act="libreset">Put the originals back</button></div></div>`);
+  libList(open);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const m=$('#setp .mcard'); if(m)m.classList.add('grown'); const o=open&&$(`#libL .pre[data-k="${CSS.escape(open)}"]`); if(o)o.scrollIntoView({block:'nearest',behavior:REDUCE?'auto':'smooth'}); }));
+  setTimeout(()=>{const h=$('#setT');if(h)h.focus({preventScroll:true});},60);
+}
+function libSave(soon){
+  clearTimeout(LIBT); if(soon){ LIBT=setTimeout(()=>libSave(),700); return Promise.resolve(); }
+  const lib={list:LIBD.list,soft:LIBD.soft,ending:LIBD.ending};
+  return api('savelib',{lib}).then(d=>{ if(failed(d))return; S.lib=d.lib; const sv=$('#libSv'); if(sv){ sv.textContent='Saved'; sv.classList.add('on'); clearTimeout(sv._t); sv._t=setTimeout(()=>sv.classList.remove('on'),1400); } });
+}
+function libFlush(){ if(LIBT){ clearTimeout(LIBT); LIBT=0; libSave(); } }
+const libPre=b=>{ const li=b.closest('.pre'); return li&&LIBD&&LIBD.list.find(p=>p.k===li.dataset.k); };
+
 /* ---------- the theme ----------
-   Dark is HQ's own; light is one tap on the sun. The choice is kept in this browser
+   Dark is CRM's own; light is one tap on the half-moon. The choice is kept in this browser
    (the head sets it before the first paint), and the new theme spreads out from the
    switch as a circle where the browser can draw one. */
 const isLight=()=>document.documentElement.dataset.theme==='light';
@@ -2246,7 +2382,7 @@ paintTheme();
 
 /* ---------- ⌘K ---------- */
 const CMDS=[['new-artist','New artist profile','mic'],['new-venue','New venue profile','building'],['messages','Messages','bubble'],['pipeline','Pipeline','list'],
-  ['review','Needs review','flag'],['due','Follow-ups due','cal'],['unread','Unread messages','bubble'],['settings','Settings','gear'],['theme','','','theme appearance dark light']];
+  ['review','Needs review','flag'],['due','Follow-ups due','cal'],['unread','Unread messages','bubble'],['settings','Settings','gear'],['library','Message library','book','presets templates openers'],['theme','','','theme appearance dark light']];
 const cmdList=()=>CMDS.map(([k,w,g,kw])=>k==='theme'?[k,isLight()?'Dark mode':'Light mode',isLight()?'moon':'sun',kw]:[k,w,g,kw]);
 let PALI=0, PALS=[];
 function openPal(){
@@ -2275,6 +2411,7 @@ function palGo(i){
   if(k==='new-artist'||k==='new-venue'){ KIND=k==='new-venue'?'venue':'artist'; keep('myset.hq.kind',KIND); kindState(true); if(PHONE)setMTab('create'); showForm(true); $('#pNew').scrollIntoView({behavior:REDUCE?'auto':'smooth',block:'start'}); return; }
   if(k==='messages'){ if(PHONE)setMTab('msg'); else $('#pMsg').scrollIntoView({behavior:REDUCE?'auto':'smooth',block:'start'}); return; }
   if(k==='settings'){ openSettings(); return; }
+  if(k==='library'){ openLib(); return; }
   if(k==='theme'){ setTimeout(()=>setTheme(isLight()?'dark':'light'),REDUCE?0:300); return; }   // after the palette has faded
   if(k==='pipeline'||k==='review'||k==='due'||k==='unread'){ if(k!=='pipeline')setFilter(()=>{F.f=new Set([k]);}); if(PHONE)setMTab('pipe'); else $('#pPipe').scrollIntoView({behavior:REDUCE?'auto':'smooth',block:'start'}); }
 }
@@ -2293,7 +2430,21 @@ const ACTS={
       :'The key is missing in Netlify’s environment. Builds wait in line until it is set.','OK',false,true); },
   lockhq:async()=>{ const d=await api('lock'); if(d&&d.error==='locked')return; if(failed(d))return; lockUp({}); },
   theme:()=>setTheme(isLight()?'dark':'light'),
-  settings:()=>openSettings(), mclose:()=>{unmodal('#setp');unmodal('#pal');}, palette:()=>openPal(), palgo:b=>palGo(+b.dataset.i),
+  settings:()=>openSettings(), mclose:()=>{unmodal('#setp');unmodal('#pal');},
+  library:b=>openLib(b.dataset.k||''),
+  libopen:b=>{ const li=b.closest('.pre'), on=!li.classList.contains('on'); li.classList.toggle('on',on); b.setAttribute('aria-expanded',String(on)); fold('#pb-'+CSS.escape(li.dataset.k),on); },
+  libkind:b=>{ const p=libPre(b); if(!p||p.kind===b.dataset.v)return; p.kind=b.dataset.v; b.parentNode.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    const k=b.closest('.pre').querySelector('.kb'); if(k)k.outerHTML=kb(p.kind); libSave(); },
+  libend:b=>{ LIBD.ending=b.dataset.v; b.parentNode.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b))); libSave(); },
+  libadd:()=>{ const k='p'+Date.now().toString(36); LIBD.list.push({k,name:'New preset',kind:'artist',text:'Hey [Name] — ',ask:'',match:[]}); libList(k); libSave();
+    const n=$('#ln-'+CSS.escape(k)); if(n){ n.closest('.pre').scrollIntoView({block:'nearest',behavior:REDUCE?'auto':'smooth'}); n.focus({preventScroll:true}); n.select(); } },
+  libdel:async b=>{ const p=libPre(b); if(!p)return; if(!await ask(`Remove “${p.name}”?`,'Messages already sent with it keep their history.','Remove',true))return;
+    LIBD.list=LIBD.list.filter(x=>x!==p); libList(); await libSave(); toast('Preset removed'); },
+  libreset:async()=>{ if(!await ask('Put the originals back?','The eight openers come back as first written. Presets you added go, and so do your edits.','Put them back',true))return;
+    clearTimeout(LIBT); LIBT=0; const d=await api('savelib',{lib:null}); if(failed(d))return; S.lib=d.lib; openLib(); toast('The originals are back'); },
+  cend:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; const v=b.dataset.v==='1'; if(!!c.soft===v)return; const p=preBy(preOn(c)); c.soft=v;
+    if(!c.dirty)fillTpl(c); else if(p){ const was=v?p.ask:(S.lib||{}).soft, now=v?(S.lib||{}).soft:p.ask, i=was?c.text.lastIndexOf(was):-1; if(i>=0){ c.text=c.text.slice(0,i)+now+c.text.slice(i+was.length); c.fx=1; } }
+    paintCmp(loc,`[data-act=cend][data-v="${v?1:0}"]`); }, palette:()=>openPal(), palgo:b=>palGo(+b.dataset.i),
   kind:b=>{ if(KIND===b.dataset.k)return; KIND=b.dataset.k; keep('myset.hq.kind',KIND); kindState(true); },
   more:b=>{ const on=b.getAttribute('aria-expanded')!=='true'; b.setAttribute('aria-expanded',String(on)); fold('#nMore',on); if(on)setTimeout(()=>{const x=$('#nP0');if(x)x.focus({preventScroll:true});},120); },
   savelead:()=>saveLead(),
@@ -2342,10 +2493,10 @@ const ACTS={
     drawerBody(true); toast('Note added'); },
   ovreset:()=>{ $$('#ovF input').forEach(i=>{ if(i.dataset.was!=null)i.value=i.dataset.was; }); $$('#ovF [data-link]').forEach(vmark); $$('#ovF [data-v]').forEach(e=>{ if(!e.querySelector('[data-link]'))delete e.dataset.v; }); ovState(); },
   delc:async()=>{ const cid=DR.cid, r=rowBy(cid)||{};
-    if(!await ask(`Delete ${r.name||'this contact'}?`,'They leave HQ, with their notes and the conversation. A live page stays up at its link.','Delete contact',true))return;
+    if(!await ask(`Delete ${r.name||'this contact'}?`,'They leave CRM, with their notes and the conversation. A live page stays up at its link.','Delete contact',true))return;
     const d=await api('remove',{cid,mode:'contact'}); if(failed(d))return; closeDrawer(); dropRow(cid); toast('Contact deleted'); load(); },
   delf:async()=>{ const cid=DR.cid, r=rowBy(cid)||{};
-    if(!await ask('Delete them forever?',`For when they asked. ${r.name||'Their'} page, any copy kept of it and everything HQ holds on them are erased now, and the factory never builds them again.`,'Delete forever',true))return;
+    if(!await ask('Delete them forever?',`For when they asked. ${r.name||'Their'} page, any copy kept of it and everything CRM holds on them are erased now, and the factory never builds them again.`,'Delete forever',true))return;
     const d=await api('remove',{cid,mode:'forever'}); if(failed(d))return; closeDrawer(); dropRow(cid); toast('Deleted forever. The factory won’t build them again'); load(); },
   approve:async()=>{ const cid=DR.cid, r=rowBy(cid); if(!r)return; const d=await fapi('approve',{owner:r.owner}); if(failed(d))return;
     toast('Approved — it’s Ready to send'); await load(); await refreshContact(cid,true); },
@@ -2353,7 +2504,7 @@ const ACTS={
     if(!await ask('Rebuild this page?','The factory runs it again from its sources. Words you changed here may be replaced.','Rebuild'))return;
     const d=await fapi('rebuild',{owner:r.owner}); if(failed(d))return; toast('Rebuilding — it’s back in the queue'); await load(); await refreshContact(cid,true); },
   cancelpage:async()=>{ const cid=DR.cid, r=rowBy(cid); if(!r)return;
-    if(!await ask('Cancel this page?','Its link stops working. They stay in HQ as a lead, with the conversation.','Cancel page',true))return;
+    if(!await ask('Cancel this page?','Its link stops working. They stay in CRM as a lead, with the conversation.','Cancel page',true))return;
     const d=await fapi('cancel',{owner:r.owner}); if(failed(d))return; toast('Page cancelled'); await load(); await refreshContact(cid,true); },
   undoclaim:async()=>{ const cid=DR.cid, r=rowBy(cid); if(!r)return;
     if(!await ask(`Undo the claim on ${r.name||'this page'}?`,'Their account closes and its sign-in stops working; the page goes back to being an unclaimed sample, at the same link.','Undo claim',true))return;
@@ -2372,7 +2523,7 @@ const ACTS={
   savecfg:async()=>{ const per=Math.round(+val('cPer')), sign=val('cSign'), address=val('cAddr'); if(!(per>=1))return toast('Pick at least one page a day');
     const d=await fapi('settings',{perDay:per,signoff:sign,address}); if(failed(d))return; if(S&&d.cfg)S.cfg=d.cfg; unmodal('#setp'); toast('Settings saved'); load(); },
   gconn:async()=>{ const d=await api('gmail',{op:'connect'}); if(failed(d))return; const u=pageUrl(d.url); if(u)location.href=u; },
-  gdisc:async()=>{ if(!await ask('Disconnect Gmail?','HQ stops sending and syncing email. Nothing in your Gmail changes.','Disconnect',true))return;
+  gdisc:async()=>{ if(!await ask('Disconnect Gmail?','CRM stops sending and syncing email. Nothing in your Gmail changes.','Disconnect',true))return;
     const d=await api('gmail',{op:'disconnect'}); if(failed(d))return; toast('Gmail disconnected'); await load(); const g=$('#gmb'); if(g)g.innerHTML=gmailBlock(); },
   gsync:async()=>{ const d=await api('gmail',{op:'sync'}); if(failed(d))return; toast(d.added?`${plural(+d.added,'new email')}`:'Up to date'); await load(); const g=$('#gmb'); if(g)g.innerHTML=gmailBlock(); refreshThreads(); },
   untag:b=>{ const loc=b.dataset.loc; TAGS[loc].splice(+b.dataset.i,1); paintTags(loc); if(loc==='d')saveTags(); const i=$('#tg-'+loc); if(i)i.focus({preventScroll:true}); },
@@ -2383,23 +2534,23 @@ const ACTS={
     if(c.ch===b.dataset.ch)return; c.ch=b.dataset.ch; c.ok=''; if(!c.dirty)fillTpl(c); else if(c.ch==='email'&&!c.subj)c.subj=reSubject(c.cid)||(((CT[c.cid]||{}).drafts||{}).email||{}).subject||'';
     paintCmp(loc,`[data-act=cch][data-ch="${c.ch}"]`); void r; },
   csend:async b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return;
-    const d=await api('send',{cid:c.cid,subject:c.subj.trim(),text:c.text.trim()});
+    const d=await api('send',{cid:c.cid,subject:c.subj.trim(),text:c.text.trim(),...preBody(c)});
     if(d&&!d.ok&&d.error==='gmail-not-connected'){ toast(ERRW['gmail-not-connected']); await load(); paintBoth(c.cid,'cmp'); return; }
     if(failed(d))return; after(c.cid,d,'Sent from your Gmail'); },
   cmail:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; const e=((CT[c.cid]||{}).contact||{}).email||'';
     const u='mailto:'+encodeURIComponent(e)+'?subject='+encodeURIComponent(c.subj||'')+'&body='+encodeURIComponent(c.text||'');
-    c.ok='email'; c.okText=c.text; c.okSubj=c.subj; location.href=u; paintCmp(loc); },
+    c.ok='email'; c.okText=c.text; c.okSubj=c.subj; c.okPre=preOn(c)?{k:preOn(c),s:!!c.soft}:null; location.href=u; paintCmp(loc); },
   copen:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; const ct=(CT[c.cid]||{}).contact||{}, u=reachUrl(c.ch,ct,c.text);
     if(!u)return toast(WHY[c.ch]||'No way to reach them there yet');
     if(['ig','tiktok','fb'].includes(c.ch)&&c.text)copyNow(c.text);
-    openExt(u); c.ok=c.ch; c.okText=c.text; c.okSubj='';
+    openExt(u); c.ok=c.ch; c.okText=c.text; c.okSubj=''; c.okPre=preOn(c)?{k:preOn(c),s:!!c.soft}:null;
     if(['ig','tiktok','fb'].includes(c.ch))toast(`Copied — paste it into ${CHW[c.ch]}`);
     paintCmp(loc); },
   clog:async b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return;
-    const d=await api('log',{cid:c.cid,ch:c.ch,dir:'out',text:c.text.trim()||(c.ch==='inperson'?'Talked in person.':'')}); if(failed(d))return;
+    const d=await api('log',{cid:c.cid,ch:c.ch,dir:'out',text:c.text.trim()||(c.ch==='inperson'?'Talked in person.':''),...(c.ch==='note'?{}:preBody(c))}); if(failed(d))return;
     after(c.cid,d,c.ch==='note'?'Note added':'Logged'); },
   logsent:async b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c||!c.ok)return;
-    const body={cid:c.cid,ch:c.ok,dir:'out',text:(c.okText||c.text).trim()}; if(c.ok==='email'&&(c.okSubj||c.subj))body.subject=(c.okSubj||c.subj).trim();
+    const body={cid:c.cid,ch:c.ok,dir:'out',text:(c.okText||c.text).trim(),...preBody(c,true)}; if(c.ok==='email'&&(c.okSubj||c.subj))body.subject=(c.okSubj||c.subj).trim();
     const d=await api('log',body); if(failed(d))return; after(c.cid,d,`Logged as sent · ${CHW[c.ok]||c.ok}`); },
   notyet:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; c.ok=''; paintCmp(loc); },
   replyform:b=>{ const loc=b.dataset.loc, c=CMPS[CUR[loc]]; if(!c)return; c.reply=!c.reply; if(c.reply&&!c.rch)c.rch=['email','inperson','note'].includes(c.ch)&&c.ch!=='email'?'ig':c.ch;
@@ -2427,6 +2578,9 @@ document.addEventListener('input',e=>{
   if(t.closest&&t.closest('#ovF'))ovState();
   if(t.closest&&(t.closest('#wF')||t.closest('#lF')))wordsState();
   if(t.dataset&&t.dataset.tag){ const loc=t.dataset.tag; if(/,/.test(t.value)){ t.value.split(',').slice(0,-1).forEach(x=>addTag(loc,x)); t.value=t.value.split(',').pop(); } SUGI[loc]=-1; paintSug(loc); }
+  if(t.dataset&&t.dataset.lf&&LIBD){ const lf=t.dataset.lf;
+    if(lf==='soft')LIBD.soft=t.value; else { const p=libPre(t); if(p){ p[lf]=lf==='match'?t.value.split(','):t.value; if(lf==='name'){ const n=t.closest('.pre').querySelector('.pre-n'); if(n)n.textContent=t.value||'Untitled'; } } }
+    libSave(true); return; }
   const f=t.dataset&&t.dataset.f, loc=t.dataset&&t.dataset.loc, c=loc&&CMPS[CUR[loc]];
   if(c&&(f==='text'||f==='subj'||f==='rtext')){ if(f==='text'){c.text=t.value;c.dirty=true;grow(t);} else if(f==='subj'){c.subj=t.value;} else c.rtext=t.value;
     const r=rowBy(c.cid)||(CT[c.cid]||{}).row, pb=$(`#cmp-${loc} .cmp-f .btn.pri`); if(pb)pb.disabled=!canSend(c,r); }
@@ -2514,7 +2668,7 @@ function askDone(v){ $('#ask').classList.remove('on'); ASKI.forEach(e=>{e.inert=
 $('#askY').onclick=()=>askDone(true); $('#askN').onclick=()=>askDone(false);
 $('#ask').addEventListener('click',e=>{ if(e.target.id==='ask')askDone(false); });
 
-/* ---------- Gmail, quietly, while HQ is open ---------- */
+/* ---------- Gmail, quietly, while CRM is open ---------- */
 function gsync(){
   clearTimeout(GSYNC); if(document.hidden||gated()||LOCKED)return;
   GSYNC=setTimeout(async()=>{ if(S&&S.gmail&&S.gmail.connected){ const d=await api('gmail',{op:'sync'},true); if(d&&d.ok&&d.added){ await load(); refreshThreads(); } } gsync(); },60000);
@@ -2544,15 +2698,15 @@ function lockUp(d){
 function lockState(st,d){
   d=d||{}; const el=$('#lock'), s=$('#lockS'), t=$('#lockT'), inp=$('#lockIn'), go=$('#lockGo');
   el.dataset.state=st; clearInterval(LK_T); s.className='lk-s'; inp.disabled=false; go.disabled=false;
-  if(st==='boot'){ t.textContent='Opening HQ'; s.textContent='Checking the door…'; return; }
-  if(st==='nocode'){ t.textContent='HQ isn’t set up here'; s.textContent='This copy of the site has no HQ passcode (a deploy preview). Open HQ on myset.vip.'; return; }
+  if(st==='boot'){ t.textContent='Opening CRM'; s.textContent='Checking the door…'; return; }
+  if(st==='nocode'){ t.textContent='CRM isn’t set up here'; s.textContent='This copy of the site has no CRM passcode (a deploy preview). Open CRM on myset.vip.'; return; }
   t.textContent='Enter the passcode';
   if(st==='out'){
     const until=+d.until||0, at=new Date(until).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
     inp.disabled=true; go.disabled=true; s.classList.add('bad');
     const tick=()=>{ const ms=until-Date.now();
       if(ms<=0){ lockState('ready',{msg:'Try again.'}); return; }
-      s.innerHTML=`Too many tries. HQ opens again at ${esc(at)}<span class="lk-cd" aria-hidden="true">${mmss(ms)}</span>`; };
+      s.innerHTML=`Too many tries. CRM opens again at ${esc(at)}<span class="lk-cd" aria-hidden="true">${mmss(ms)}</span>`; };
     tick(); LK_T=setInterval(tick,1000); return; }
   s.textContent=d.msg||''; if(d.bad)s.classList.add('bad');
   setTimeout(()=>{ if(!inp.disabled&&el.classList.contains('on'))inp.focus({preventScroll:true}); },80);
@@ -2590,9 +2744,9 @@ function gate(kind,msg){
   document.body.classList.remove('locked'); document.body.classList.add('live'); ['#top','#app','#tabbar'].forEach(s=>{const x=$(s); if(x)x.inert=false;});
   clearTimeout(POLL); clearTimeout(GSYNC); clearTimeout(JP); closeDrawer(); unmodal('#setp'); unmodal('#pal');
   const app=$('#app'); app.dataset.gate=kind; $('#tele').innerHTML=''; $('#cluster').hidden=true; $('#tabbar').hidden=true; PAINTED.tele='';
-  const T={signin:['Sign in to your Studio first','HQ uses your Studio sign-in. Sign in there, then come back to this page.'],
+  const T={signin:['Sign in to your Studio first','CRM uses your Studio sign-in. Sign in there, then come back to this page.'],
     founder:['This page is for the MySet founder’s account','Sign in with that account in the Studio, then come back here.'],
-    offline:['Connection hiccup',msg||'HQ didn’t answer. Check the connection and try again.']}[kind];
+    offline:['Connection hiccup',msg||'CRM didn’t answer. Check the connection and try again.']}[kind];
   app.innerHTML=`<div class="panel gate rise"><div class="fx" aria-hidden="true"><i></i></div><span class="mark" aria-hidden="true">${MARK}</span><h2>${esc(T[0])}</h2><p>${esc(T[1])}</p>
     ${kind==='offline'?'<button type="button" class="btn pri big" data-act="reload">Try again</button>':`<a class="btn pri big" href="/studio">${kind==='signin'?'Sign in to the Studio':'Go to the Studio'}</a>`}</div>`;
 }

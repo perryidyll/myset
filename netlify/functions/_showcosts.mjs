@@ -23,10 +23,22 @@
        always the estimate: its orders are not in the night's payment list. A night whose
        room money Stripe never answered has no Stripe figure, never $0.
 
+     · MYSET CUT and MYSET PROFIT — MySet's cut is its share of the money that came
+       through the app (tips, vote packs, requests and merch GOODS — never postage, at the plan's `cut` in
+       _plan.mjs — the application fee pay.mjs takes, floored per payment there, estimated
+       on the night's total here). None on the founder's own nights (isPlatformOwner —
+       there is nobody to take a fee from). MySet profit is that cut less the server, and
+       less Stripe ONLY on the founder's own nights: an artist's room money is a direct charge
+       on the artist's connected account, so Stripe's card fee there is the artist's, never
+       MySet's (ACCOUNTING.md; the founder, 2026-10-01). The Stripe column still shows the fee
+       on every night — it is what the night cost someone. No money answer, or no server
+       figure, no profit.
    Served beside the rows in shows.json; the register's own block stays meter-free. */
+import { PLANS, isPlatformOwner } from './_plan.mjs';
 
 /* = finance/model.html P0.stripe (US account); test/everyshow.mjs holds the two equal */
-export const STRIPE_RATES = { pct: 2.9, fixed: 0.30, intlShare: 75, intlPct: 1.5 };
+/* billingPct: Stripe Billing's extra on a subscription charge (the plan fee), never on a room payment */
+export const STRIPE_RATES = { pct: 2.9, fixed: 0.30, intlShare: 75, intlPct: 1.5, billingPct: 0.7 };
 
 const round = (n, d = 4) => Math.round(n * 10 ** d) / 10 ** d;
 const sum = (xs) => xs.reduce((a, b) => a + (Number(b) || 0), 0);
@@ -42,7 +54,8 @@ export function costBlock(actuals, credits) {
   return {
     usdPerCredit: pack.credits ? round(pack.usd / pack.credits, 5) : null,
     plan: plan.name || null, pack: pack.credits ? { credits: pack.credits, usd: pack.usd } : null,
-    creditsPerShow: Number.isFinite(m.creditsPerShow) ? m.creditsPerShow : (actuals && Number.isFinite(actuals.creditsPerShow) ? actuals.creditsPerShow : null),
+    /* a reading that solves to nothing or less is a bad background day, never a free show: no figure then */
+    creditsPerShow: Number.isFinite(m.creditsPerShow) && m.creditsPerShow > 0 ? m.creditsPerShow : (actuals && Number.isFinite(actuals.creditsPerShow) && actuals.creditsPerShow > 0 ? actuals.creditsPerShow : null),
     metersReadAt: m.readAt || null, measuredNights: Object.keys(byKey).length, byKey,
     stripe: { ...STRIPE_RATES, effectivePct: round(effPct, 3) },
   };
@@ -67,7 +80,22 @@ export function costOf(row, B) {
     stripe = { usd: round(room + (merchN ? est(merchUsd, merchN) : 0)), payments: roomN + merchN, volume: round((m.total || 0) + merchUsd, 2),
                estimate: !exact || merchN > 0, exact };
   }
-  return { server, stripe, total: server && stripe ? round(server.usd + stripe.usd) : null };
+  let myset = null;
+  if (m.known && server) {
+    const founder = isPlatformOwner(aid);
+    const plan = (row.artist && row.artist.plan) || 'free';
+    const cut = founder ? 0 : ((PLANS[plan] || PLANS.free).cut || 0);
+    /* merch: the goods only — pay.mjs never takes a cut of a stamp (postage is a shipping rate). Taken as the
+       amount less the postage, never the `goods` field: an order from before the shop page carries no goods
+       figure (it reads 0) though every dollar of it was goods */
+    const merchGoods = m.merch ? Math.max(0, (m.merch.amount || 0) - (m.merch.postage || 0)) : 0;
+    const base = (m.total || 0) + merchGoods;
+    const fee = round(base * cut);
+    /* Stripe's card fee is MySet's only where the money landed on MySet's own account: the founder's night */
+    const stripeUsd = founder && stripe ? stripe.usd : 0;
+    myset = { usd: round(fee - server.usd - stripeUsd), fee, cut, founder, stripeMine: round(stripeUsd), estimate: fee > 0 || !server.measured || !!(stripeUsd && stripe.estimate) };
+  }
+  return { server, stripe, total: server && stripe ? round(server.usd + stripe.usd) : null, myset };
 }
 
 /** The view, each row priced, and the block that says how. */

@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { casDoc, readDoc, store } from './_lib.mjs';
 import { classifyUrl, parseSeed } from './_fsrc.mjs';
 
-/* MYSET HQ'S CRM (decision 0108): who the founder is reaching out to, and everything
+/* MYSET'S CRM (decision 0108): who the founder is reaching out to, and everything
    said to them, beside the sample pages the factory builds for them.
 
    A CONTACT IS NOT A SAMPLE. A contact is a person or a place the founder means to
@@ -164,6 +164,9 @@ export async function readContact(cid) {
 const blank = (cid, kind) => ({ v: 1, cid, kind: kind === 'venue' ? 'venue' : 'artist', name: '', city: '', country: '', links: {}, email: '', phone: '',
   photos: [], tags: [], star: false, fu: 0, notes: [], msgs: [], events: [], owner: '', jobId: '', pageAt: 0, claimedAt: 0, at: 0, upd: 0 });
 
+/** The first preset that went to them, and when: the library's reply rates are read off it (decision 0117). */
+const preOf = (out) => { const m = out.filter((x) => x.pre).sort((a, b) => a.t - b.t)[0]; return m ? { k: m.pre, t: m.t, ...(m.soft ? { s: 1 } : {}) } : null; };
+
 /** The table's row for a contact, rebuilt whole every time from the document. */
 export function rowOf(d) {
   const L = d.links || {};
@@ -183,6 +186,7 @@ export function rowOf(d) {
     last: lm ? { t: lm.t, dir: lm.dir, ch: lm.ch, text: cut(String(lm.subject ? `${lm.subject} — ${lm.text}` : lm.text).replace(/\s+/g, ' '), 90) } : null,
     has: { email: !!d.email, phone: !!d.phone, ig: !!L.instagram, tiktok: !!L.tiktok, fb: !!L.facebook },
     gt: (d.msgs || []).filter((m) => m.thread).map((m) => m.thread).slice(-3),
+    pre: preOf(out),
   };
 }
 /** Write the contact, then its row and keys. `fn(doc)` mutates; false aborts. */
@@ -277,7 +281,8 @@ export async function addMessage(cid, m, { now = Date.now(), unread = false } = 
     text: String(m.text || '').replace(/\r/g, '').trim().slice(0, MSG_LEN), subject: clean(m.subject, 200), via: m.via === 'gmail' ? 'gmail' : 'manual',
     ...(m.from ? { from: clean(m.from, 160) } : {}), ...(m.to ? { to: clean(m.to, 300) } : {}),
     ...(m.gid ? { gid: String(m.gid).slice(0, 40) } : {}), ...(m.thread ? { thread: String(m.thread).slice(0, 40) } : {}),
-    ...(m.msgId ? { msgId: String(m.msgId).slice(0, 300) } : {}), ...(m.refs ? { refs: String(m.refs).slice(0, 2000) } : {}) };
+    ...(m.msgId ? { msgId: String(m.msgId).slice(0, 300) } : {}), ...(m.refs ? { refs: String(m.refs).slice(0, 2000) } : {}),
+    ...(dir === 'out' && ch !== 'note' && validPre(m.pre) ? { pre: m.pre, ...(m.soft ? { soft: true } : {}) } : {}) };
   if (!msg.text && !msg.subject) return { ok: false, error: 'Nothing to log.' };
   let dup = false;
   const r = await mutateContact(cid, (d) => {
@@ -294,6 +299,71 @@ export async function addMessage(cid, m, { now = Date.now(), unread = false } = 
   });
   if (dup) return { ok: true, dup: true };
   return r.ok ? { ok: true, msg, doc: r.doc } : r;
+}
+
+/* ---------- the message library (decision 0117) ----------
+   The founder's own openers, one per kind of act, that the composer fills in:
+   [Name] and [Venue] become the contact's. One document (`crmlib`); until the first
+   save it is the defaults below. Each opener is a body and its closing question, so the
+   closing can be traded for the softer one: `ending` 'ab' gives each new send the
+   ending that has gone out less (an even test with nothing to remember), 'ask' and
+   'soft' always use one. A message remembers the preset and the ending it came from
+   (addMessage), and the row carries the first (rowOf), so the page can count sends and
+   replies per opener and per ending. */
+export const LIB = 'crmlib';
+export const MAX_PRESETS = 30, PRESET_LEN = 1500, ASK_LEN = 200;
+export const ENDINGS = ['ab', 'ask', 'soft'];
+export const validPre = (k) => /^[a-z0-9][a-z0-9-]{0,23}$/.test(String(k || ''));
+export const SOFT_ASK = 'I can send you the link if you want to see what yours looks like?';
+export const DEFAULT_PRESETS = [
+  { k: 'bar', name: 'Bar singers', kind: 'artist', match: ['bar', 'pub'],
+    text: 'Hey [Name] — I mocked up a MySet page for you with your photos, music, links, gigs, etc. It also lets people at your shows scan a QR and vote on what you play next, so the room actually gets involved instead of just staring at their phones 😅',
+    ask: 'Want me to send you your page?' },
+  { k: 'coffee', name: 'Coffee-shop singers', kind: 'artist', match: ['coffee', 'cafe'],
+    text: 'Hey [Name] — I made you a sample MySet page with your music, socials, photos and upcoming gigs already filled in. The idea is to turn more of those casual coffee-shop listeners into people who actually interact with your set and follow you afterward.',
+    ask: 'Want to see yours?' },
+  { k: 'cruise', name: 'Cruise-ship soloists', kind: 'artist', match: ['cruise'],
+    text: 'Hey [Name] — I mocked up a MySet page for you that gives passengers one QR to see your music/socials and vote on songs from your setlist live. Could be a really easy way to make cruise sets more interactive and turn passengers into followers before they disappear at the next port 😂',
+    ask: 'Want me to send it?' },
+  { k: 'wedding', name: 'Wedding singers & bands', kind: 'artist', match: ['wedding'],
+    text: 'Hey [Name] — I made a sample MySet page for you that lets wedding guests interact with a curated setlist and vote for songs they want to hear, while also giving you a polished page for your music, photos, links and gigs. Thought it could be a fun way to make the crowd feel involved without handing them control of the whole set 😅',
+    ask: 'Want to see it?' },
+  { k: 'jazz', name: 'Jazz lounge musicians', kind: 'artist', match: ['jazz', 'lounge'],
+    text: 'Hey [Name] — I mocked up a MySet page for you with your music, photos, links and gigs already on it. At shows, you can also let the room interact with a curated list of songs without turning the night into a request-line free-for-all.',
+    ask: 'Want me to send you the sample?' },
+  { k: 'cover', name: 'Cover bands', kind: 'artist', match: ['cover'],
+    text: 'Hey [Name] — I made you a sample MySet page that lets the crowd scan a QR and vote on which songs from your repertoire they want next. For a cover band it basically turns ‘PLAY FREE BIRD!’ into an actual ranked crowd vote 😂 — plus your gigs, music and socials all live on the same page.',
+    ask: 'Want to see yours?' },
+  { k: 'busk', name: 'Buskers', kind: 'artist', match: ['busk', 'street'],
+    text: 'Hey [Name] — I mocked up a MySet page for you so someone walking past can scan one QR, interact with your song list, hear more of your music and find all your socials afterward. Basically a way to turn more 30-second street encounters into actual fans.',
+    ask: 'Want me to send you your page?' },
+  { k: 'venue', name: 'Venues', kind: 'venue', match: [],
+    text: 'Hey [Venue] — I mocked up a MySet page for you with your photos, info, links and live-music listings already filled in. It gives people one clean place to see what’s on and discover the artists playing there, without you having to build anything first.',
+    ask: 'Want me to send over the sample?' },
+];
+const para = (v, n) => String(v == null ? '' : v).replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/ *\n */g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, n);
+/** Whatever arrives, a library the page can use: known fields only, keys unique, a
+ *  missing list means the defaults (an empty one stays empty: the founder cleared it). */
+export function normLib(x) {
+  const src = x && Array.isArray(x.list) ? x.list : DEFAULT_PRESETS;
+  const seen = new Set(), list = [];
+  for (const p of src) {
+    if (list.length >= MAX_PRESETS) break;
+    const k = p && validPre(p.k) ? p.k : '', text = para(p && p.text, PRESET_LEN);
+    if (!k || seen.has(k) || !text) continue;
+    seen.add(k);
+    const match = (Array.isArray(p.match) ? p.match : String(p.match || '').split(',')).map((m) => norm(m).slice(0, 24)).filter(Boolean).slice(0, 6);
+    list.push({ k, name: clean(p.name, 40) || 'Untitled', kind: p.kind === 'venue' ? 'venue' : 'artist', text, ask: clean(p.ask, ASK_LEN), match });
+  }
+  const soft = x && x.soft != null ? clean(x.soft, ASK_LEN) : SOFT_ASK;
+  return { v: 1, list, soft: soft || SOFT_ASK, ending: x && ENDINGS.includes(x.ending) ? x.ending : 'ab', upd: Number(x && x.upd) || 0 };
+}
+export async function readLib() { const { data } = await readDoc(LIB, null); return normLib(data); }
+/** Replace the library whole (the page sends all of it); null puts the defaults back. */
+export async function saveLib(x, now = Date.now()) {
+  const lib = { ...normLib(x), upd: now };
+  await casDoc(LIB, () => ({}), (d) => { for (const k of Object.keys(d)) delete d[k]; Object.assign(d, lib); return true; });
+  return lib;
 }
 
 /* ---------- a contact and its page ----------
@@ -371,12 +441,12 @@ export function deriveRows({ crm, reg, arc = {}, jobs = [], artists = { byId: {}
     else if (job && job.st === 'skipped') { stage = 'failed'; err = 'Skipped: they are on the opt-out list.'; }
     else if (job && job.st === 'done' && job.owner && !o) { stage = 'building'; pct = 100; }          // done a moment ago; the link lands on the next write
     const ch = Object.keys(r.ch || {});
-    // a page marked sent from the old console, before HQ: DM, email or in person, as it was recorded
+    // a page marked sent from the old console, before CRM: DM, email or in person, as it was recorded
     for (const c of String(sampleCh).split(',').filter(Boolean)) { const k = c === 'dm' ? 'dm' : c; if (!ch.includes(k) && !(k === 'dm' && ch.some((x) => ['ig', 'tiktok', 'whatsapp', 'sms', 'fb'].includes(x)))) ch.push(k); }
     const sent = [r.sent, sampleSent].filter(Boolean).sort((a, b) => a - b)[0] || 0;
     rows.push({ cid, kind, name: r.name || '', city: r.city || '', country: r.country || '', cover, slug, owner: o, link, stage, pct, err, jobId: r.jobId || '',
       exp, opens, sent, ch, replied: r.replied || 0, unread: r.unread || 0, last: r.last || null, tags: r.tags || [], star: !!r.star, fu: r.fu || 0,
-      has: r.has || {}, at: r.at || 0, upd: Math.max(r.upd || 0, (live && live.op) || 0) });
+      has: r.has || {}, pre: r.pre || null, at: r.at || 0, upd: Math.max(r.upd || 0, (live && live.op) || 0) });
   }
   return rows;
 }
@@ -388,15 +458,21 @@ export function tagCounts(crm) {
   return [...n.values()].sort((a, b) => b.n - a.n || a.tag.localeCompare(b.tag));
 }
 
-/** Samples the old console built, before HQ existed, get a contact of their own, so the
- *  table is the whole picture. A few at a time; the next summary does the rest. */
-export async function adoptOrphans(reg, crm, { limit = 10, now = Date.now() } = {}) {
+/** Samples the old console built, before CRM existed, get a contact of their own, so the
+ *  table is the whole picture. A few at a time; the next summary does the rest.
+ *  A page CRM asked for is never adopted: between the factory writing the page and
+ *  linking its contact, a summary poll used to see an orphan and make a second contact
+ *  for the same page (Sand & Tan, 2026-09-30). Its registry row names the contact
+ *  (`cid`), so that contact is linked instead; a job that made it is skipped too. */
+export async function adoptOrphans(reg, crm, { limit = 10, now = Date.now(), jobs = [] } = {}) {
   const have = new Set(Object.values(crm.byId).map((r) => r.owner).filter(Boolean));
+  const byJob = new Set(jobs.filter((j) => j.cid && j.owner).map((j) => j.owner));
   // `skip`: pages whose contact the founder deleted on purpose (Delete contact) stay out
   const skip = crm.skip || {};
-  const todo = Object.entries(reg.byId || {}).filter(([o]) => !have.has(o) && !skip[o]).slice(0, limit);
+  const todo = Object.entries(reg.byId || {}).filter(([o]) => !have.has(o) && !skip[o] && !byJob.has(o)).slice(0, limit);
   let made = 0;
   for (const [owner, row] of todo) {
+    if (row.cid && crm.byId[row.cid]) { if (!crm.byId[row.cid].owner && await linkOwner(row.cid, owner)) made++; continue; }
     const kind = row.k === 'v' ? 'venue' : 'artist';
     let links = {};
     try {
@@ -408,6 +484,26 @@ export async function adoptOrphans(reg, crm, { limit = 10, now = Date.now() } = 
     if (r.ok) { await linkOwner(r.cid, owner, { now: row.at || now }); made++; }
   }
   return made;
+}
+
+/** The repair for that race: two contacts on one page. The one CRM built it for (it
+ *  carries the job) stays; a twin the adoption made is erased, but only while nobody
+ *  has touched it — no message, note, tag, star, follow-up, email or phone. */
+export async function dropTwins(crm) {
+  const by = new Map();
+  for (const [cid, r] of Object.entries(crm.byId || {})) if (r.owner) (by.get(r.owner) || by.set(r.owner, []).get(r.owner)).push([cid, r]);
+  let dropped = 0;
+  for (const list of by.values()) {
+    if (list.length < 2) continue;
+    const keep = (list.find(([, r]) => r.jobId) || list.slice().sort((a, b) => (a[1].at || 0) - (b[1].at || 0))[0])[0];
+    for (const [cid, r] of list) {
+      if (cid === keep || r.jobId || r.last || r.sent || (r.tags || []).length || r.star || r.fu || (r.has && (r.has.email || r.has.phone))) continue;
+      const d = await readContact(cid);
+      if (!d || (d.notes || []).length || (d.msgs || []).length) continue;
+      await eraseContact(cid); dropped++;
+    }
+  }
+  return dropped;
 }
 
 /** A seed for suppression when a contact with no page says no. */

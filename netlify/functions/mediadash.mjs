@@ -62,11 +62,14 @@ const main = async (req) => {
       return new Response(buf, { status: 200, headers: { 'content-type': 'image/jpeg', 'cache-control': 'public, max-age=86400' } });
     }
     const [{ data }, { data: b }] = await Promise.all([readDoc(K.data, null), readDoc(K.boosts, emptyBoosts())]);
-    if (!data) return json({ ok: true, empty: true, posts: [], boosts: [], days: [], account: [], upcoming: [], pulls: 0 }, 200);
+    if (!data) return json({ ok: true, empty: true, posts: [], boosts: [], days: [], account: [], upcoming: [], pulls: 0, planned: 0, workshop: 0 }, 200);
     const site = Object.values(b.rows || {}).filter((r) => !r.removed);
     const seen = new Set(site.map((r) => r.boostId));
     const boosts = [...(data.boosts || []).filter((r) => !seen.has(r.boostId)), ...site].sort((x, y) => String(x.start || x.at).localeCompare(String(y.start || y.at)));
-    const posts = (data.posts || []).map((p) => ({ ...p, boosts: boosts.filter((r) => r.id === p.id) }));
+    /* one row per post id: a duplicate publish (two media for one post, the second deleted — the 29 Sep double
+       post) must never count twice in a total, a median or a table. The first row is the surviving media. */
+    const once = new Set();
+    const posts = (data.posts || []).filter((p) => !p.id || (!once.has(p.id) && once.add(p.id))).map((p) => ({ ...p, boosts: boosts.filter((r) => r.id === p.id) }));
     return new Response(JSON.stringify({ ...data, posts, boosts, siteBoosts: Object.values(b.rows || {}) }),
       { status: 200, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
   }

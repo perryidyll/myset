@@ -779,7 +779,7 @@ const artistFirst = (fb='the artist') => (ST && String(ST.artistFirst||'').trim(
 /* skeleton while the first load lands */
 $('#app').innerHTML=`<div class="head"><div><div class="sk" style="width:130px;height:21px"></div>
   <div class="sk" style="width:170px;height:13px;margin-top:7px"></div></div>
-  <div class="headtools"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+  <div class="headtools"><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
   <div class="sk" style="width:64px;height:38px;border-radius:999px"></div></div></div>
   <div class="sk" style="height:132px;margin:14px 18px 0;border-radius:24px"></div>
   <div class="sk" style="height:48px;margin:14px 18px 0;border-radius:999px"></div>
@@ -1364,7 +1364,7 @@ function render(){
         :`<span class="dot"></span>Live${d.venue?' · '+esc(d.venue):''}`}${
         d.setlist?` · ${esc(d.setlist.name)}`:''}</div>
     </div>
-    <div class="headtools"><button class="themebtn sharebtn" type="button" onclick="share()" aria-label="Share this page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+    <div class="headtools"><button class="themebtn sharebtn" type="button" onclick="share()" aria-label="Share this page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
     <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞ votes':`${freeRemaining}<small>/${freeTotal} votes</small>`}</div></div>
   </div>`;
 

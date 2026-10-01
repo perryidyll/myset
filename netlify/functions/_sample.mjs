@@ -177,7 +177,7 @@ export function noteSample(owner, e, m = '') {
 export async function tellFounder(title, body) {
   try { const { notify } = await import('./_push.mjs'); await notify(DEFAULT_ARTIST, { title, body, url: '/factory', tag: 'samples' }, { owner: true }); } catch {}
 }
-/* HQ's contacts follow their page (decision 0108): every place a page goes, or moves to
+/* CRM's contacts follow their page (decision 0108): every place a page goes, or moves to
    a new owner id, tells the CRM here. Best-effort and last: a CRM hiccup is never why a
    take-down, a delete or a rebuild fails. */
 async function tellCrm(what, ...args) {
@@ -201,7 +201,7 @@ export const mutateFactoryCfg = (fn) => casDoc(CFG, defaultFactoryCfg, fn);
    are parsed and checked exactly as the Studio's "Add" does (parseMedia + lookup),
    so a sample can hold nothing an artist could not have pasted themselves. */
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
-const PHOTO_SLOTS = ['cover', 'avatar', 'p0', 'p1', 'p2'];
+const PHOTO_SLOTS = ['cover', 'avatar', 'p0', 'p1', 'p2', 'p3', 'p4'];   // p3, p4: a venue's five (0129)
 
 export async function createSample(payload = {}, { fetchMedia = true } = {}) {
   const kind = payload.kind === 'venue' ? 'venue' : 'artist';
@@ -240,7 +240,9 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       r.byId[o] = { k: kind === 'venue' ? 'v' : 'a', slug: s, name, at: now, exp: now + SAMPLE_LIFE_MS,
                     st: review ? 'review' : 'ready', cp: Number(payload.cp) || 1,
                     q: Math.round((Number(payload.quality && payload.quality.score) || 0) * 100) / 100,
-                    rv: review, ns, city: clean(payload.city, 60) };
+                    rv: review, ns, city: clean(payload.city, 60),
+                    // the CRM contact that asked for it, so its summary links it and never adopts it twice
+                    ...(/^c[a-f0-9]{10}$/.test(String(payload.cid || '')) ? { cid: payload.cid } : {}) };
       if (kind === 'venue') r.vbySlug[s] = id; else r.bySlug[s] = id;
       return true;
     });
@@ -314,7 +316,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       if (payload.hours && typeof payload.hours === 'object') p.hours = { ...p.hours, ...payload.hours };
       p.links = { ...p.links, ...(payload.links || {}) };
       if (shots.cover) p.photo = shots.cover.url;
-      p.photos = ['p0', 'p1', 'p2'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
+      p.photos = ['p0', 'p1', 'p2', 'p3', 'p4'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
       return true;
     });
   }

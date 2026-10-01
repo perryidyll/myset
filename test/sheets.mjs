@@ -205,7 +205,7 @@ await AS(P.token, 'status', { status: 'ended' });
 
 const r1 = await W.syncSheet();
 ok('the sync runs', r1.ok, r1);
-eq('and made all eleven tabs (Signals and Features since decision 0072)', (r1.made || []).length, 11);
+eq('and made all thirteen tabs (Signals and Features since 0072, Discards since 0122, Suggestions since 0127)', (r1.made || []).length, 13);
 ok('the token was a real signed JWT', (SHEET.lastJwt || '').split('.').length === 3);
 
 console.log('\nTHE LOOK  (the founder, 2026-09-14: bold, colour-filled title cells)');

@@ -116,3 +116,68 @@ Found on the live site afterwards: Netlify serves `/<name>` from `<name>.html` b
 **Shipped:** PR #145 merged as `a0ab3dc`. Its deploy preview was checked first and rendered light at 375 px. Production served the new page about 40 s after the merge. Verified by content on myset.vip: `/crm` carries `data-act="theme"`, `myset.hq.theme` and the light tokens, and `/api/hq` still answers 401 to a stranger. Not checked on the live site: the switch itself behind the passcode, which is the founder's to open. A browser that opened `/crm` in the last six hours may show its stored copy once; a reload fetches the new page (`sw.js` rule 2).
 
 **Puzzle:** no change. No process step, rule, cited number or decision record changed; only the page's look did.
+
+## The sixth round: a message library (the same day)
+
+**Asked (the founder):** add the outreach openers written for him elsewhere, one per kind of act, "into a preset messages library that i can select within the crm to send to different artists/venues". His notes also said to test a softer ending hard.
+
+**Built** (decision `0117`; ledger UX-064):
+- The eight openers as HQ's message library, in its own document (`crmlib`); the defaults stand until the first save.
+- The composer's picker lists them under *Your presets*, beside the page's drafts, for any contact (a lead with no page included). `[Name]`, `[Venue]` and `[City]` fill in. A contact tagged with an opener's word opens on that opener.
+- *Theirs* / *Softer* swaps the closing question. By default each new contact gets the ending that has gone out less.
+- *Message library* (the book beside the picker, Settings, ⌘K): edit, add, remove, put the originals back; edits save themselves. Each opener and each ending shows replied / sent with a bar that grows in; the leader turns green once there are three sends each.
+- A leftover `[placeholder]` disables Send. An opener by email carries the sign-off, the stop line and the address. A contact with no page gets a one-line reminder to build it before they say yes.
+- The local demo pipeline now sends a few messages from openers, so the bars have something to show.
+
+**Verified:**
+- `test/hq.mjs` *THE MESSAGE LIBRARY*, 14 checks. Two mutations were caught: a note or reply keeping an opener, and a placeholder that could send.
+- The whole suite: 4,627 passed, 0 failed.
+- On `tools/localhost.mjs` in the app's browser, as the founder behind the local passcode, in both themes and at 375 px:
+  - the wedding-tagged lead opened on its opener with the name filled in;
+  - the ending swapped, and swapped again after an edit;
+  - `[Name]` blocked Send;
+  - *Log it* stored the opener on the message and the row;
+  - edits saved;
+  - the bars grew in.
+
+**Shipped:** PR #151 merged as `84dda56`; its deploy preview served the new page first. Verified by content on myset.vip: `/crm` carries the library (`data-act="library"`), and `/api/hq` answers 401 to a stranger's `savelib`. Not checked live: the library behind the passcode.
+
+**Puzzle:** changelog 2487 = `0117`, completed, linked to *Send the first message* (389731) and *Follow up* (389734). No process step changed.
+
+## Seventh round, 2026-09-29: dashboard icons, Gmail switched on, a privacy notice
+
+**Asked:** the MySet icon on the money model, the shows log and the media dash; "add the gmail switch-on steps"; then "write the privacy page and whatever else needs to be done".
+
+**Shipped:**
+- **Dashboard icons:** HQ's tab icon (three pink-orange bars) on `finance/model.html`, `finance/shows.html`, the passcode page (`_passgate.mjs`) and `public/mediadash.html`. Live as `654a61a` (#153). The media dash's twin in the content engine was updated to match (`7aec18e` there).
+- **Gmail switched on.**
+  - The only existing Google Cloud project is branded Idyll Mastery. I published it and enabled Gmail there, then put both back and made a separate project, *MySet* (`myset-510109`), on the founder's yes to the Maps billing account. The Gmail API is free.
+  - Consent screen: *MySet*, External. The founder ticked Google's User Data Policy himself.
+  - Web client *MySet HQ*. The two variables were set in Netlify (Production) with Keychain copies, and production was rebuilt. The founder connected Gmail.
+- **Privacy notice:** decision 0118, live as `9f2b1c0` (#154). Once it was live, the consent screen got its homepage and privacy links and was published.
+
+**Not checked:** the Gmail connection itself behind the passcode. The founder reported "connected on HQ", then disconnected and reconnected after publishing, so the token is a Production one. He confirmed the operator line and hello@myset.vip on the page.
+
+**Puzzle:** changelog 2524 = 0118.
+
+## Eighth round, 2026-09-29: terms of use
+
+**Asked:** "yes, write the terms page too".
+
+**Shipped:** decision 0119, live as `635fe02` (#156). It is verified by content on myset.vip: `/terms` carries the Stripe Connected Account Agreement line, the home page links `/terms`, and `/studio` serves `studio.js?v=0102fe10` with the agreement line.
+
+**How it was written:** from a read-only inventory of the money, account and content paths, with file and line citations.
+- **Who is the seller:** the artist or venue, through direct charges.
+- **Votes:** final.
+- **Request offers:** a hold, captured only when the song is played.
+- **Refunds:** the seller's.
+- **Plans:** monthly; the paid month is kept; a downgrade deletes nothing.
+- **Content:** a licence to show it, and rules for it.
+- **Law:** Tennessee.
+
+No prices are on the page. The home, About and privacy footers link it. A one-line "you agree" sits under Create my page in both Studios and under Claim my page.
+
+**Found and not fixed:** six places where a page or document contradicts the code. They are listed in 0119 under "What this makes harder".
+
+**Puzzle:** changelog 2526 = 0119.
+

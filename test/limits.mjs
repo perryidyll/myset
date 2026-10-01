@@ -1,9 +1,10 @@
 /* THE FREE PLAN'S TWO LIMITS, AND THAT THEY ARE REALLY ENFORCED.
 
-   Shows are capped per CALENDAR MONTH, UTC, resetting on the 1st. The number lives
-   in the plan table and is read from there rather than repeated here, because it
-   has already changed twice — four a month, briefly two a week, then back — and a
-   test that hard-codes it turns every pricing decision into a test edit.
+   Shows are capped IN TOTAL, EVER, on the free plan (decision 0120): a night played
+   on a paid plan never counts, and a night the artist discards gives its count
+   back. The number lives in the plan table and is read from there rather than
+   repeated here, because it has already changed four times, and a test that
+   hard-codes it turns every pricing decision into a test edit.
 
    And CREATING a setlist is a Plus feature. Everything else about setlists keeps
    working on free, because a cap never deletes anything (INVARIANT 0s). */
@@ -12,7 +13,7 @@ process.env.MYSET_DOUBLE_TAP_MS = '0';
 
 const admin = (await import('../netlify/functions/admin.mjs')).default;
 const stageFn = (await import('../netlify/functions/stage.mjs')).default;
-const { gigMonthOf, getShow } = await import('../netlify/functions/_lib.mjs');
+const { getShow, mutateShow } = await import('../netlify/functions/_lib.mjs');
 const { PLANS } = await import('../netlify/functions/_plan.mjs');
 const { createArtist, signToken, readArtists, revOf, mutateArtists } =
   await import('../netlify/functions/_auth.mjs');
@@ -34,16 +35,11 @@ const hit = async (h, url, body, token) => {
 };
 
 console.log('\nTHE NUMBERS ARE WHAT PERRY ASKED FOR');
-eq('ten shows a month', PLANS.free.gigs, 10);
+eq('ten free shows', PLANS.free.gigs, 10);
 eq('and setlists are not on free', PLANS.free.setlists, false);
 eq('but are on Plus', PLANS.plus.setlists, true);
 eq('and on Pro', PLANS.pro.setlists, true);
 
-console.log('\nTHE BUCKET IS A CALENDAR MONTH, THE SAME ONE EVERYWHERE');
-eq('early September', gigMonthOf(Date.parse('2026-09-03T12:00:00Z')), '2026-09');
-eq('the last instant of the month is still it', gigMonthOf(Date.parse('2026-09-30T23:59:59Z')), '2026-09');
-eq('the 1st is a new one', gigMonthOf(Date.parse('2026-10-01T00:00:00Z')), '2026-10');
-eq('and it rolls over the year', gigMonthOf(Date.parse('2027-01-01T00:00:00Z')), '2027-01');
 
 console.log('\nSETUP  a free artist');
 const ana = await createArtist({ email: 'ana@example.com', name: 'Ana Reyes', slug: 'ana-reyes' });
@@ -53,31 +49,145 @@ const A = (action, extra = {}) => hit(admin, 'https://x/api/admin', { action, ..
 await A('addSong', { title: 'Valerie', artist: 'Amy Winehouse' });
 await A('addSong', { title: 'Dreams', artist: 'Fleetwood Mac' });
 
-console.log(`\n${PLANS.free.gigs} SHOWS A MONTH, THEN A REFUSAL THAT EXPLAINS ITSELF`);
+console.log(`\n${PLANS.free.gigs} FREE SHOWS IN TOTAL, THEN A REFUSAL THAT EXPLAINS ITSELF  (decision 0120)`);
 const CAP = PLANS.free.gigs;
-for (let i = 0; i < CAP; i++) ok(`show ${i + 1} starts`, (await A('newShow')).ok);
+/* A discarded night gives its count back: a free show is one KEPT, not one tried. */
+ok('a first show starts', (await A('newShow')).ok);
+eq('and is counted', (await getShow(ana.artistId)).gigCount, 1);
+ok('she discards it', (await A('status', { status: 'ended', discard: true })).ok);
+eq('THE RULE: a discarded show gives its count back', (await getShow(ana.artistId)).gigCount, 0);
+ok('discarding an ended show again changes nothing', (await A('status', { status: 'ended', discard: true })).ok);
+eq('still nothing used', (await getShow(ana.artistId)).gigCount, 0);
+/* A resume counts again (so a night cannot be stretched over many), and a discard
+   gives back everything that night used. */
+ok('a show starts', (await A('newShow')).ok);
+ok('she ends it', (await A('status', { status: 'ended' })).ok);
+ok('and resumes it', (await A('status', { status: 'live' })).ok);
+eq('the resume counted too', (await getShow(ana.artistId)).gigCount, 2);
+ok('then discards the night', (await A('status', { status: 'ended', discard: true })).ok);
+eq('and both come back', (await getShow(ana.artistId)).gigCount, 0);
+ok('a kept show is not given back', (await A('newShow')).ok);
+ok('ended and saved', (await A('status', { status: 'ended', title: 'Kept' })).ok);
+eq('it stays counted', (await getShow(ana.artistId)).gigCount, 1);
+for (let i = 1; i < CAP; i++) ok(`show ${i + 1} starts`, (await A('newShow')).ok);
 const over = await A('newShow');
 eq('one past the cap is refused', over.status, 402);
-ok('and says it is a MONTHLY allowance', /this month/i.test(over.error || ''), over.error);
-ok('and when it comes back', /on the 1st/i.test(over.error || ''), over.error);
+ok('and says it is the free shows, in total', /your \d+ free shows\./i.test(over.error || ''), over.error);
+ok('and does NOT promise a reset', !/month|on the 1st|resets/i.test(over.error || ''), over.error);
+ok('and names the way on', /Bar Star/.test(over.error || ''), over.error);
+
+console.log('\nA SHOW THE CALENDAR STARTED, AND NOBODY VOTED ON, IS NOT COUNTED  (decision 0120)');
+{
+  const { startShow, endShow, quietAutoNight } = await import('../netlify/functions/_lifecycle.mjs');
+  const bo = await createArtist({ email: 'bo@example.com', name: 'Bo Lane', slug: 'bo-lane' });
+  ok('the calendar starts a night', (await startShow(bo.artistId, { fresh: true, by: 'schedule' })).ok);
+  eq('it counts while it runs', (await getShow(bo.artistId)).gigCount, 1);
+  eq('and remembers the calendar began it', (await getShow(bo.artistId)).freeNight.auto, true);
+  await endShow(bo.artistId, { by: 'schedule' });
+  eq('THE RULE: no votes, so it is given back', (await getShow(bo.artistId)).gigCount, 0);
+
+  ok('another calendar night', (await startShow(bo.artistId, { fresh: true, by: 'schedule' })).ok);
+  await mutateShow(bo.artistId, (sh) => { sh.log = [{ songId: 'x', title: 'Valerie', votes: 3, roundVotes: 3 }]; return true; });
+  await endShow(bo.artistId, { by: 'schedule' });
+  eq('a calendar night the room voted on stays counted', (await getShow(bo.artistId)).gigCount, 1);
+
+  ok('a quiet calendar night is left running', (await startShow(bo.artistId, { fresh: true, by: 'schedule' })).ok);
+  eq('and counts', (await getShow(bo.artistId)).gigCount, 2);
+  ok('then the artist starts a new show over it', (await startShow(bo.artistId, { fresh: true, by: 'artist' })).ok);
+  eq('the quiet one is given back, the new one counts', (await getShow(bo.artistId)).gigCount, 2);
+  eq('a night the artist started is not the calendar\'s', (await getShow(bo.artistId)).freeNight.auto, false);
+  await endShow(bo.artistId, { by: 'artist' });
+  eq('a quiet night the ARTIST started still counts', (await getShow(bo.artistId)).gigCount, 2);
+
+  const sh = { showId: 's1', freeNight: { id: 's1', n: 1, auto: true }, log: [] };
+  ok('votes still standing on the board count as votes', !quietAutoNight(sh, { f1: { v: ['a'] } }));
+  ok('carried credits are not votes', quietAutoNight(sh, { f1: { v: [], extra: 4 } }));
+  ok('a stale marker from another night is ignored', !quietAutoNight({ ...sh, showId: 's2' }, {}));
+}
+
+console.log('\nA DISCARD IS FOR A TEST: A REAL NIGHT IS WARNED ABOUT ONCE, THEN COUNTS  (decision 0122)');
+{
+  const { readMeta, mutateMeta } = await import('../netlify/functions/_lib.mjs');
+  const { discardVerdict, REAL_NIGHT } = await import('../netlify/functions/_lifecycle.mjs');
+  eq('a real night is over an hour with five or more votes', REAL_NIGHT, { minutes: 60, votes: 5 });
+  const cy = await createArtist({ email: 'cy@example.com', name: 'Cy Moss', slug: 'cy-moss' });
+  const TC = await signToken('cy@example.com', revOf(await readArtists(), cy.artistId));
+  const C = (action, extra = {}) => hit(admin, 'https://x/api/admin', { action, ...extra }, TC);
+  const used = async () => (await getShow(cy.artistId)).gigCount;
+  const makeReal = (min, votes) => mutateShow(cy.artistId, (sh) => {
+    sh.startedAt = Date.now() - min * 60000; sh.log = [{ songId: 'x', title: 'Valerie', votes, roundVotes: votes }]; return true; });
+  const lastLog = async () => (await readMeta(cy.artistId)).discards.slice(-1)[0];
+
+  ok('a test night starts', (await C('newShow')).ok);
+  const t1 = await C('status', { status: 'ended', discard: true });
+  ok('a short night with no votes is discarded without a question', t1.ok && !t1.confirm, t1);
+  eq('and given back', await used(), 0);
+  eq('and written down as a test', (await lastLog()).outcome, 'given');
+
+  ok('a night that ran 30 minutes with 10 votes', (await C('newShow')).ok);
+  await makeReal(30, 10);
+  ok('is still a test: both conditions are needed', (await C('status', { status: 'ended', discard: true })).ok);
+  eq('given back', await used(), 0);
+
+  ok('a real night: two hours, six votes', (await C('newShow')).ok);
+  await makeReal(120, 6);
+  const w = await C('status', { status: 'ended', discard: true });
+  eq('THE RULE: the first discard of a real night is asked about first', [w.status, w.confirm && w.confirm.outcome], [409, 'warned']);
+  ok('with what it was', w.confirm && w.confirm.minutes >= 119 && w.confirm.votes === 6 && w.confirm.cap === CAP, w.confirm);
+  eq('and nothing ended yet', (await getShow(cy.artistId)).status, 'live');
+  ok('she discards it anyway', (await C('status', { status: 'ended', discard: true, ack: 'warned' })).ok);
+  eq('the warned one is given back', await used(), 0);
+  ok('and the warning is remembered', (await getShow(cy.artistId)).discardWarnedAt > 0);
+  eq('and written down', (await lastLog()).outcome, 'warned');
+
+  ok('another real night, and a $5 tip', (await C('newShow')).ok);
+  await makeReal(90, 12);
+  await mutateMeta(cy.artistId, (m) => { m.tips.push({ amount: 5, at: Date.now() }); return true; });
+  const k = await C('status', { status: 'ended', discard: true });
+  eq('after the warning, a real night discarded will count, and says so first', [k.status, k.confirm && k.confirm.outcome], [409, 'counted']);
+  eq('naming the money', k.confirm && k.confirm.paid.total, 5);
+  eq('an ack for the old question asks again', (await C('status', { status: 'ended', discard: true, ack: 'warned' })).status, 409);
+  const kk = await C('status', { status: 'ended', discard: true, ack: 'counted' });
+  ok('she discards it', kk.ok && /still counts/.test(kk.note || ''), kk);
+  eq('THE RULE: it counts', await used(), 1);
+  eq('written down as counted, with the money', [(await lastLog()).outcome, (await lastLog()).paid], ['counted', 5]);
+  const n = (await readMeta(cy.artistId)).discards.length;
+  ok('discarding the ended night again', (await C('status', { status: 'ended', discard: true })).ok);
+  eq('writes nothing new', (await readMeta(cy.artistId)).discards.length, n);
+
+  const real = { showId: 's', startedAt: Date.now() - 7200e3, status: 'live', freeNight: { id: 's', n: 1 }, log: [{ roundVotes: 9 }] };
+  eq('a paid plan or the founder is never asked', discardVerdict(real, {}, {}, Date.now(), null), null);
+  ok('an ended night is measured to when it ended', discardVerdict({ ...real, status: 'ended', endedAt: real.startedAt + 1800e3 }, {}, {}, Date.now(), 10) === null);
+
+  const js = src('public/studio.js');
+  ok('the Studio asks again with what the server said, and sends back the outcome it showed',
+     /c\.outcome==='warned'/.test(js) && /ack:c\.outcome/.test(js));
+  ok('and its copy says a TEST show you discard does not count', /A test show you discard doesn't count/.test(js) && !/ A show you discard doesn't count/.test(js));
+}
 
 console.log('\nIT IS COUNTED ON THE RECORD, NOT GUESSED');
 const show = await getShow(ana.artistId);
-eq('the month is stamped', show.gigMonth, gigMonthOf());
-eq('and every show is counted', show.gigCount, CAP);
+eq('every kept show is counted', show.gigCount, CAP);
+ok('there is no month on the record any more', show.gigMonth === undefined, show.gigMonth);
 ok('the short-lived weekly field is gone', show.gigWeek === undefined, show.gigWeek);
 
-console.log('\nA NEW MONTH GIVES THE ALLOWANCE BACK');
-const { mutateShow } = await import('../netlify/functions/_lib.mjs');
-await mutateShow(ana.artistId, (sh) => { sh.gigMonth = '2020-01'; return true; });
-ok('a show starts again', (await A('newShow')).ok);
-const after = await getShow(ana.artistId);
-eq('and the counter restarted at one', after.gigCount, 1);
-eq('in the current month', after.gigMonth, gigMonthOf());
+console.log('\nTIME DOES NOT GIVE THE ALLOWANCE BACK');
+ok('still refused', (await A('newShow')).status === 402);
 
-console.log('\nPAYING LIFTS IT');
+console.log('\nA RECORD FROM THE MONTHLY DAYS  (normShow, one-way)');
+await mutateShow(ana.artistId, (sh) => { sh.gigMonth = '2026-09'; sh.gigCount = 4; sh.plan = 'free'; return true; });
+let mig = await getShow(ana.artistId);
+eq('a free month keeps its count — those shows were played', mig.gigCount, 4);
+ok('and the month is dropped', mig.gigMonth === undefined, mig.gigMonth);
+await mutateShow(ana.artistId, (sh) => { sh.gigMonth = '2026-09'; sh.gigCount = 7; sh.plan = 'plus'; return true; });
+mig = await getShow(ana.artistId);
+eq('a month whose last night was paid counted paid shows, which never count', mig.gigCount, 0);
+await mutateShow(ana.artistId, (sh) => { sh.gigCount = CAP; sh.plan = 'free'; return true; });
+
+console.log('\nPAYING LIFTS IT, AND A PAID NIGHT NEVER COUNTS');
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'plus'; return true; });
 for (let i = 0; i < 4; i++) ok(`an extra show on Plus (${i + 1})`, (await A('newShow')).ok);
+eq('none of them touched the free count', (await getShow(ana.artistId)).gigCount, CAP);
 
 console.log('\nCREATING A SETLIST IS A PLUS FEATURE');
 await mutateArtists((r) => { r.byId[ana.artistId].plan = 'free'; return true; });
@@ -103,10 +213,11 @@ ok('...and still delete it', (await A('listDelete', { id: made.id })).ok);
 
 console.log('\nTHE STUDIO SAYS THE SAME THING THE SERVER ENFORCES');
 const page = src(new URL('../public/studio.html', import.meta.url));
-ok('the Live warning counts by month', /s\.gigMonth===monthKey\(\)/.test(page));
-ok('and the page computes the SAME bucket the server does', /const monthKey=/.test(page));
-ok('the wording says month', /free shows this month/.test(page));
-ok('and the 1st, not Monday', /resets on the 1st/i.test(page));
+ok('the Live warning reads the server\'s count, nothing else', /cap-\(s\.gigCount\|\|0\)/.test(page));
+ok('the header shows how many are used, x of the cap', /Hobbyist · \$\{used\}\/\$\{cap\}/.test(page));
+ok('and turns into Upgrade once they are all used', /if\(!cap\|\|used>=cap\) return `<button class="upg"/.test(page));
+ok('and never to the founder or a paid plan', /!PLAN\.owner&&PLAN\.plan==='free'/.test(page));
+ok('NOTHING monthly is left in the Studio\'s cap wording', !/free shows this month|resets on the 1st|monthKey|gigMonth/i.test(page));
 /* The copy has been wrong in both directions now. Nothing weekly may survive
    anywhere in the Studio, including inside the founder's note. */
 ok('NOTHING weekly is left anywhere', !/this week|resets Monday|2\/week|isoWeek|gigWeek/.test(page));
@@ -174,8 +285,10 @@ ok('crowd numbers are refused server-side on free', /crowdNumbersAllowed\(aid/.t
 ok('and forwarded to the Studio', /crowdNumbers: !!l\.crowdNumbers/.test(adminSrc));
 ok('which greys the two switches', /lock\('crowdNumbers'/.test(page));
 
-eq('the three venue features with no code behind them are named',
-   [...VENUE_NOT_BUILT].sort(), ['speakerVotes', 'tips']);
+eq('the one venue feature with no code behind it is named (tips are real since 0127)',
+   [...VENUE_NOT_BUILT].sort(), ['speakerVotes']);
+eq('0127: five photos on Free, twelve on Pro; the fee is 25% and 5%', [VENUE_PLANS.free.photos, VENUE_PLANS.pro.photos, VENUE_PLANS.free.cut, VENUE_PLANS.pro.cut], [5, 12, 0.25, 0.05]);
+ok('0127: tips for the staff on both plans; hiding or deleting a post is Pro', VENUE_PLANS.free.tips && VENUE_PLANS.pro.tips && !VENUE_PLANS.free.moderate && VENUE_PLANS.pro.moderate);
 /* `reviews` became the community page on 2026-09-04 and is free on both rows (0w). */
 ok('venue reviews are free on both plans', VENUE_PLANS.free.reviews === true && VENUE_PLANS.pro.reviews === true);
 ok('venue merch is Pro', VENUE_PLANS.free.merch === false && VENUE_PLANS.pro.merch === true);
@@ -206,7 +319,7 @@ console.log('\nTHE FOUNDER\'S NOTE IS THERE, AND IT COLLAPSES');
 ok('it is a real disclosure element', /<details class="why">/.test(page));
 ok('the heading is the button', /<summary>Why there's a limit at all/.test(page));
 ok('it names him', /Perry Idyll<\/summary>/.test(page));
-ok('and his line matches what is enforced', /limited to 4\/month on the free plan/.test(page));
+ok('and his line matches what is enforced', new RegExp(`free plan comes with ${PLANS.free.gigs} shows`).test(page));
 ok('and the old explainer is gone', !/shows a month<\/b> rather than by/.test(page));
 
 console.log('\nTHE BUSINESS DASHBOARD HAS TWO SIZES, AND THEY ARE ENFORCED AGAINST GROWTH  (decision 0065)');

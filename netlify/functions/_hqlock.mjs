@@ -2,9 +2,9 @@ import { scrypt, randomBytes, timingSafeEqual, createHmac, createHash } from 'no
 import { readDoc, casDoc } from './_lib.mjs';
 import { authSecret, signingKeys } from './_auth.mjs';
 
-/* HQ'S PASSCODE (decision 0108, INVARIANT 0hk). The founder, 2026-09-28: "make the url
-   www.myset.vip/crm and put a legit passcode lock on it". HQ opens to the founding
-   page's owner seat AND this passcode: two locks, because HQ sends mail as the founder
+/* CRM'S PASSCODE (decision 0108, INVARIANT 0hk). The founder, 2026-09-28: "make the url
+   www.myset.vip/crm and put a legit passcode lock on it". CRM opens to the founding
+   page's owner seat AND this passcode: two locks, because CRM sends mail as the founder
    and can erase a contact forever. A signed-in phone left on a table is not enough, and
    neither is a guessed passcode.
 
@@ -13,17 +13,17 @@ import { authSecret, signingKeys } from './_auth.mjs';
    · Is checked here on the server, never in the browser. The page never holds the
      passcode or the proof that it was given.
    · Stores only a salted scrypt hash, in Netlify's HQ_PASSCODE for production, never
-     in the repository. While that is unset, HQ stays shut. A deploy preview reads and
+     in the repository. While that is unset, CRM stays shut. A deploy preview reads and
      writes production data, so it cannot be opened at all.
    · Answers a right passcode with `hqk`, a cookie that is HttpOnly, SameSite=Strict,
      limited to /api/hq and good for UNLOCK_HOURS. It is signed with the site's auth
      secret and bound to the account and to this passcode, so a new passcode locks
-     every open HQ.
+     every open CRM.
    · Shuts the door for LOCK_MINUTES after LOCK_TRIES wrong tries in a row, and tells
      the founder's phone. Only a signed-in owner seat can try at all.
    `node tools/hqpass.mjs` sets a new passcode. */
 
-export const UNLOCK_HOURS = 12;   // how long one right passcode keeps HQ open in that browser
+export const UNLOCK_HOURS = 12;   // how long one right passcode keeps CRM open in that browser
 export const LOCK_TRIES = 5;      // wrong tries in a row before the door shuts
 export const LOCK_MINUTES = 15;   // how long it stays shut, and how long a wrong try is remembered
 export const LOCK_DOC = 'hqlock';
@@ -59,7 +59,7 @@ export async function checkPasscode(code, env = process.env) {
 /* The cookie is `<expiry>.<mac>`. The mac covers the account, the expiry and a
    fingerprint of the stored hash, so a copied cookie opens nothing for another
    account, and a new passcode invalidates every earlier one. */
-const fingerprint = (env) => createHash('sha256').update(String(env.HQ_PASSCODE || '').trim()).digest('base64url').slice(0, 16);
+export const fingerprint = (env) => createHash('sha256').update(String(env.HQ_PASSCODE || '').trim()).digest('base64url').slice(0, 16);
 const macWith = (key, aid, exp, env) => createHmac('sha256', key).update(`hq-unlock|${aid}|${exp}|${fingerprint(env)}`).digest('base64url');
 const mac = async (aid, exp, env) => macWith(await authSecret(), aid, exp, env);
 const attrs = (maxAge, secure) => `Path=${PATH}; Max-Age=${maxAge}; HttpOnly; SameSite=Strict${secure ? '; Secure' : ''}`;
@@ -90,19 +90,20 @@ export async function unlocked(req, aid, { now = Date.now(), env = process.env }
 }
 
 /** When the door opens again after too many wrong tries (0 while it is open). */
-export async function shutUntil(now = Date.now()) {
-  const { data } = await readDoc(LOCK_DOC, null);
+export async function shutUntil(now = Date.now(), doc = LOCK_DOC) {
+  const { data } = await readDoc(doc, null);
   return data && data.until > now ? data.until : 0;
 }
 
 /** One try: { ok: true } | { ok: false, left } | { ok: false, until, shut }. `shut` is
- *  true on the try that shut the door, so the founder's phone hears it once. */
-export async function tryPasscode(code, { now = Date.now(), env = process.env } = {}) {
-  const until = await shutUntil(now);
+ *  true on the try that shut the door, so the founder's phone hears it once. `doc` is
+ *  whose count it is: the Show log's door keeps its own (_showlock.mjs). */
+export async function tryPasscode(code, { now = Date.now(), env = process.env, doc = LOCK_DOC } = {}) {
+  const until = await shutUntil(now, doc);
   if (until) return { ok: false, until };
   const good = await checkPasscode(code, env);
   let out = null;
-  await casDoc(LOCK_DOC, () => ({}), (d) => {
+  await casDoc(doc, () => ({}), (d) => {
     if (d.until > now) { out = { ok: false, until: d.until }; return false; }
     if (good) { out = { ok: true }; if (!d.fails) return false; d.fails = 0; return true; }
     d.fails = (d.last && now - d.last < LOCK_MINUTES * 60e3 ? d.fails || 0 : 0) + 1;

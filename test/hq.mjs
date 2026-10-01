@@ -1,4 +1,4 @@
-/* MYSET HQ — the founder's outreach desk and its CRM (decisions 0108, 0109), run end to
+/* MYSET CRM — the founder's outreach desk and its CRM (decisions 0108, 0109), run end to
    end on the in-memory store with no network: the factory's worker is played by a
    fake build, Google by a fake fetch.
 
@@ -11,7 +11,7 @@
    archived); a logged message marks the page Sent once, sets the follow-up, and a reply
    clears it; tags are tidy; pages the old console built are adopted, and a contact
    deleted on purpose is not adopted back; Cancel page leaves a lead; Delete forever —
-   from HQ or from the old console — erases the page AND the contact and suppresses
+   from CRM or from the old console — erases the page AND the contact and suppresses
    them, page or no page; Edit profile writes canonical links, names the refused ones
    and edits videos; a rebuild keeps the seed's fields. And the passcode (INVARIANT
    0hk): nothing opens without it, even for the owner seat; only the owner seat can
@@ -19,7 +19,8 @@
    passcode, another account or an old expiry cannot use; no hash is written anywhere
    in the repository. And the page's two themes: every colour that is text keeps 4.5:1
    in both, every wash is mixed from --hi, and the kept theme is set before the first
-   paint.
+   paint. And the message library (decision 0117): eight openers until the first save,
+   saved whole and tidied, and a message sent from one remembers which, and which ending.
 
    Run: node --import ./test/register.mjs test/hq.mjs */
 process.env.ADMIN_CODE = 'devlocal';
@@ -123,7 +124,7 @@ eq('a stranger cannot even try the passcode', (await call(hqFn, 'https://hq.test
 eq('nor can another artist', (await call(hqFn, 'https://hq.test/api/hq', { headers: { authorization: 'Bearer ' + ot }, body: { action: 'unlock', code: PASS } })).error, 'unauthorized');
 r = await H({ action: 'unlock', code: PASS });
 ok('the right passcode opens it for twelve hours', r.status === 200 && r.ok && r.until > Date.now() + (L.UNLOCK_HOURS * 3600e3 - 60e3), r);
-ok('with a cookie a page script cannot read, sent to HQ’s API alone', /^hqk=\d+\.[\w-]{40,}; Path=\/api\/hq; Max-Age=43200; HttpOnly; SameSite=Strict; Secure$/.test(r.cookie), r.cookie);
+ok('with a cookie a page script cannot read, sent to CRM’s API alone', /^hqk=\d+\.[\w-]{40,}; Path=\/api\/hq; Max-Age=43200; HttpOnly; SameSite=Strict; Secure$/.test(r.cookie), r.cookie);
 JAR = r.cookie.split(';')[0];
 r = await H({ action: 'summary' });
 ok('the founder gets the desk: keys, Gmail, today, the month, contacts, tags', r.ok && r.keys && r.gmail && r.today && r.month && Array.isArray(r.contacts) && Array.isArray(r.tags), r);
@@ -149,7 +150,7 @@ console.log('\nTHE PASSCODE (INVARIANT 0hk)');
   const fifth = await H({ action: 'unlock', code: 'guess 4' }, '');
   eq('the fifth shuts the door', [fifth.status, fifth.error, !!fifth.cookie], [429, 'locked-out', false]);
   let x = await H({ action: 'summary' }, '');
-  ok('and a locked HQ says until when', x.status === 401 && x.error === 'locked' && x.until > Date.now() + (L.LOCK_MINUTES * 60e3 - 60e3), x);
+  ok('and a locked CRM says until when', x.status === 401 && x.error === 'locked' && x.until > Date.now() + (L.LOCK_MINUTES * 60e3 - 60e3), x);
   x = await H({ action: 'unlock', code: PASS }, '');
   ok('while it is shut, even the right passcode waits', x.status === 429 && x.error === 'locked-out' && !x.cookie, x);
   eq('Lock is per browser: another browser that was already open stays open', (await H({ action: 'summary' })).ok, true);
@@ -167,11 +168,11 @@ console.log('\nTHE PASSCODE (INVARIANT 0hk)');
 
   const keep = process.env.HQ_PASSCODE;
   process.env.HQ_PASSCODE = await L.hashPasscode('a new one');
-  eq('a new passcode locks every open HQ', pin(await H({ action: 'summary' })), [401, 'locked']);
+  eq('a new passcode locks every open CRM', pin(await H({ action: 'summary' })), [401, 'locked']);
   eq('and the old passcode no longer opens it', (await H({ action: 'unlock', code: PASS }, '')).error, 'wrong');
   delete process.env.HQ_PASSCODE;
   x = await H({ action: 'summary' });
-  eq('with no passcode set (a deploy preview) HQ stays shut and says why', [x.status, x.error, x.ready], [401, 'locked', false]);
+  eq('with no passcode set (a deploy preview) CRM stays shut and says why', [x.status, x.error, x.ready], [401, 'locked', false]);
   x = await H({ action: 'unlock', code: PASS }, '');
   eq('and nothing unlocks it', [x.status, x.ok, x.ready, !!x.cookie], [401, false, false, false]);
   for (const bad of ['', 'a plain passcode', 'scrypt$1024$8$1$c2FsdHNhbHRzYWx0c2FsdA$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYXNoaGFzaGhhc2g', 'scrypt$1073741824$8$1$c2FsdHNhbHRzYWx0c2FsdA$aGFzaGhhc2hoYXNoaGFzaGhhc2hoYXNoaGFzaGhhc2g']) {
@@ -181,7 +182,7 @@ console.log('\nTHE PASSCODE (INVARIANT 0hk)');
   process.env.HQ_PASSCODE = keep;
   x = await H({ action: 'unlock', code: PASS }, '');
   JAR = x.cookie.split(';')[0];
-  ok('the passcode is back and HQ opens', (await H({ action: 'summary' })).ok, x);
+  ok('the passcode is back and CRM opens', (await H({ action: 'summary' })).ok, x);
 
   const t0 = Date.now(); await L.checkPasscode('timing');
   ok('a try costs a real hash (scrypt), not a string compare', Date.now() - t0 >= 15, Date.now() - t0);
@@ -274,6 +275,25 @@ await H({ action: 'remove', cid: adopted.cid, mode: 'contact' });
 r = await H({ action: 'summary' });
 ok('Delete contact: gone, and NOT adopted back — the page stays', !r.contacts.some((x) => x.owner === orphan.owner) && (await S.readSampleReg()).byId[orphan.owner], r.contacts.map((x) => x.name));
 
+/* THE RACE (Sand & Tan, 2026-09-30): the page is written before its contact is linked,
+   and a summary poll in between used to adopt it as an orphan — two rows, one page. */
+r = await H({ action: 'save', kind: 'venue', fields: { name: 'Race Bar', city: 'Hua Hin', links: { instagram: '@racebar' } } });
+const race = r.cid;
+await C.mutateContact(race, (x) => { x.jobId = 'jrace'; return true; });
+const midRace = await S.createSample({ kind: 'venue', name: 'Race Bar', city: 'Hua Hin', cid: race, quality: { score: 0.9, review: false }, by: 'founder' }, { fetchMedia: false });
+r = await H({ action: 'summary' });
+eq('a poll mid-build links the contact that asked, and makes no second one', r.contacts.filter((x) => x.owner === midRace.owner).map((x) => x.cid), [race]);
+const twin = await C.createContact('venue', { name: 'Race Bar', city: 'Hua Hin' }, { force: true });
+await C.linkOwner(twin.cid, midRace.owner);
+r = await H({ action: 'summary' });
+eq('a twin made before the fix is dropped; the contact CRM built for stays', r.contacts.filter((x) => x.owner === midRace.owner).map((x) => x.cid), [race]);
+const twin2 = await C.createContact('venue', { name: 'Race Bar', city: 'Hua Hin' }, { force: true });
+await C.linkOwner(twin2.cid, midRace.owner);
+await C.addMessage(twin2.cid, { ch: 'ig', dir: 'out', text: 'hi' });
+r = await H({ action: 'summary' });
+ok('but a twin somebody wrote from is kept', r.contacts.some((x) => x.cid === twin2.cid), r.contacts.filter((x) => x.owner === midRace.owner));
+await C.eraseContact(twin2.cid);
+
 r = await H({ action: 'save', kind: 'artist', fields: { name: 'Cancel Me', links: { instagram: '@cancelme' } } });
 const cm = r.cid;
 ok('Save as lead: a contact, no build', r.ok && r.row.stage === 'lead' && !(await C.readContact(cm)).jobId, r.row);
@@ -305,7 +325,7 @@ BG.deps.run = fakeBuild({ review: false });
 await BG.work(r.job.id);
 const noOwner = (await C.readContact(no)).owner;
 r = await H({ action: 'remove', cid: no, mode: 'forever' });
-ok('from HQ: the page, the contact — gone', r.ok && !(await S.readSampleReg()).byId[noOwner] && !(await C.readContact(no)) && !(await C.readCrm()).byId[no]);
+ok('from CRM: the page, the contact — gone', r.ok && !(await S.readSampleReg()).byId[noOwner] && !(await C.readContact(no)) && !(await C.readCrm()).byId[no]);
 ok('and they are suppressed: the factory will not build them again', await S.isSuppressed(['saynoband']));
 eq('their keys are gone from the index', Object.values((await C.readCrm()).byKey).includes(no), false);
 
@@ -417,7 +437,7 @@ console.log('\nGMAIL: CONNECT, SEND, A REPLY READ BACK (decision 0109)');
     && auth.searchParams.get('redirect_uri') === 'https://hq.test/api/hq/gmail' && (auth.searchParams.get('state') || '').includes('.'), r.url);
   const back = async (q) => { const res = await hqFn(new Request(`https://hq.test/api/hq/gmail?${q}`)); return [res.status, res.headers.get('location') || '']; };
   const [st1, loc1] = await back(`code=good-code&state=${encodeURIComponent('forged.state')}`);
-  ok('a return with a state HQ never handed out is refused', st1 === 302 && loc1.startsWith('/crm?gmail=error') && !(await H({ action: 'summary' })).gmail.connected, loc1);
+  ok('a return with a state CRM never handed out is refused', st1 === 302 && loc1.startsWith('/crm?gmail=error') && !(await H({ action: 'summary' })).gmail.connected, loc1);
   const [st2, loc2] = await back(`error=access_denied&state=x`);
   ok('the founder pressing Cancel at Google comes back as an error, nothing kept', st2 === 302 && /gmail=error&why=access_denied/.test(loc2), loc2);
   const [st3, loc3] = await back(`code=good-code&state=${encodeURIComponent(auth.searchParams.get('state'))}`);
@@ -468,7 +488,7 @@ console.log('\nGMAIL: CONNECT, SEND, A REPLY READ BACK (decision 0109)');
   globalThis.fetch = before;
 }
 
-console.log('\nTHE SIGN-IN MAIL SENDER IS NOT HQ’S (INVARIANT 0gs)');
+console.log('\nTHE SIGN-IN MAIL SENDER IS NOT CRM’S (INVARIANT 0gs)');
 {
   const { readFileSync, existsSync } = await import('node:fs');
   for (const f of ['hq.mjs', '_crm.mjs', 'hqcron.mjs', '_gmail.mjs']) {
@@ -502,9 +522,51 @@ console.log('\nTHE PAGE’S TWO THEMES');
   const whites = (css.match(/rgba\(255,255,255,/g) || []).length;
   ok('every wash and hairline is mixed from --hi; white stays only as a highlight on a coloured surface (six of them)', whites <= 6, whites);
   const head = page.slice(0, page.indexOf('<style>'));
-  ok('the head sets the kept theme before the first paint, so a light HQ never flashes dark',
+  ok('the head sets the kept theme before the first paint, so a light CRM never flashes dark',
     head.includes("localStorage.getItem('myset.hq.theme')") && head.includes("dataset.theme='light'"));
   ok('the sun in the top bar has its handler', page.includes('data-act="theme"') && /\btheme:\(\)=>setTheme\(/.test(page));
+}
+
+console.log('\nTHE MESSAGE LIBRARY (decision 0117)');
+{
+  /* The founder's own openers: eight until the first save, edited whole, and every
+     message that goes out with one remembers which (and which ending), so the page
+     can say which opener gets answered. */
+  let lib = (await H({ action: 'summary' })).lib;
+  eq('before any save the library is the eight openers, one for venues', [lib.list.length, lib.list.filter((p) => p.kind === 'venue').map((p) => p.k), lib.ending], [8, ['venue'], 'ab']);
+  ok('every opener has a body with a [Name] or [Venue] and its own closing question', lib.list.every((p) => /\[(Name|Venue)\]/.test(p.text) && /\?$/.test(p.ask)), lib.list);
+  ok('the softer ending is the one the founder was told to test', lib.soft === 'I can send you the link if you want to see what yours looks like?', lib.soft);
+
+  const edited = { ...lib, ending: 'soft', list: [...lib.list.slice(0, 2), { k: 'x', name: '  Folk   duos ', kind: 'artist', text: 'Hi [Name]\n\n\n\nhello', ask: 'Keen?', match: 'Folk, Duo ' },
+    { k: 'x', name: 'dupe', text: 'twice' }, { k: 'BAD KEY', name: 'no', text: 'no' }, { k: 'empty', name: 'no body', text: '   ' }] };
+  let r = await H({ action: 'savelib', lib: edited });
+  eq('a save keeps known fields only: tidy names, match words lower-cased, blank lines squeezed, a repeated or bad key or empty body dropped',
+    r.lib.list.slice(2), [{ k: 'x', name: 'Folk duos', kind: 'artist', text: 'Hi [Name]\n\nhello', ask: 'Keen?', match: ['folk', 'duo'] }]);
+  eq('…and it is what the next summary reads', [(await H({ action: 'summary' })).lib.list.length, (await H({ action: 'summary' })).lib.ending], [3, 'soft']);
+  r = await H({ action: 'savelib', lib: { list: [] } });
+  eq('an empty library stays empty: the founder cleared it', r.lib.list.length, 0);
+  r = await H({ action: 'savelib', lib: null });
+  eq('null puts the originals back', [r.lib.list.length, r.lib.ending], [8, 'ab']);
+  eq('a locked CRM does not save a library', (await H({ action: 'savelib', lib: { list: [] } }, '')).error, 'locked');
+
+  const { out: f } = C.normFields('artist', { name: 'Presets Test Act', city: 'Pai', links: { instagram: '@presetstest' }, tags: ['wedding'] });
+  const pc = (await C.createContact('artist', f, { force: true })).cid;
+  await H({ action: 'log', cid: pc, ch: 'note', dir: 'out', text: 'a private note', pre: 'wedding' });
+  r = await H({ action: 'log', cid: pc, ch: 'ig', dir: 'out', text: 'Hey Presets — …', pre: 'wedding', soft: true });
+  eq('a message sent from a preset remembers it and its ending (a note never does)', [r.msg.pre, r.msg.soft, ((await C.readContact(pc)).msgs.find((m) => m.ch === 'note') || {}).pre], ['wedding', true, undefined]);
+  eq('the row carries the first preset that went out, and when', [r.row.pre && r.row.pre.k, r.row.pre && r.row.pre.s, r.row.pre && r.row.pre.t === r.msg.t], ['wedding', 1, true]);
+  await H({ action: 'log', cid: pc, ch: 'ig', dir: 'out', text: 'second', pre: 'bar' });
+  await C.addMessage(pc, { ch: 'ig', dir: 'in', text: 'yes please!', pre: 'bar', t: Date.now() + 60e3 });   // a minute later: a reply is never the same millisecond
+  const row = await rowOf(pc), got = ((await C.readContact(pc)).msgs.find((m) => m.dir === 'in') || {});
+  eq('a later preset does not take the credit, and a reply carries none', [row.pre.k, got.pre, row.replied > row.pre.t], ['wedding', undefined, true]);
+  r = await H({ action: 'log', cid: pc, ch: 'ig', dir: 'out', text: 'x', pre: '<script>' });
+  eq('a preset key that is not one is not kept', r.msg.pre, undefined);
+
+  const { readFileSync } = await import('node:fs');
+  const page = readFileSync(new URL('../public/crm.html', import.meta.url), 'utf8');
+  ok('the page saves the library, and sends, copies and logs carry the preset', page.includes("api('savelib'") && (page.match(/preBody\(c/g) || []).length === 3 && (page.match(/c\.okPre=preOn\(c\)/g) || []).length === 2,
+    [(page.match(/preBody\(c/g) || []).length, (page.match(/c\.okPre=preOn\(c\)/g) || []).length]);
+  ok('the page will not send an opener with a [placeholder] still in it', /const canSend=[^\n]*!holes\(c\.text\)\.length/.test(page));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

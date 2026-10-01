@@ -1,14 +1,14 @@
 import { json, bad } from './_lib.mjs';
 import { requireVenue, mutateVenueProfile, getVenueProfile, shapeVenue, venueById,
          mutateVenues, imgOwner, AMENITIES, DAYS, VMAX_OFFERS, VMAX_MENU,
-         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH, venuePlanOf, venuePaid } from './_venues.mjs';
+         venueLimits, VENUE_PLANS, VENUE_NOT_BUILT, VMAX_MERCH, venuePlanOf } from './_venues.mjs';
 import { normMerch, MAX_VARIANTS, VARIANT_LEN, MAX_POST, MIN_CENTS, MAX_CENTS, MAX_MERCH_IMGS, MAX_STOCK, moveMerch } from './_profile.mjs';
 import { addMerchPicture, dropMerchPicture, dropMerchPictures } from './_merchpix.mjs';
 import { readPosts, shapeForOwner, moderate } from './_community.mjs';
 import { decodeDataUrl, putImage, dropImage, SLOTS } from './_img.mjs';
 import { readEvents, mutateEvents, normEvent, reindexCities, occurrencesFor,
          endTimeOf, MAX_EVENTS } from './_events.mjs';
-import { readPitches, shapeForVenue, setPitchStatus } from './_pitch.mjs';
+import { readPitches, shapeForVenue, setPitchStatus, venueReply, venueThread } from './_pitch.mjs';
 import { venueStats } from './_vstats.mjs';
 import { recheck, ownerEmail, readVouches, MIN_VOUCHES } from './_verify.mjs';
 import { localDate, addDays } from './_time.mjs';
@@ -32,7 +32,7 @@ export default async (req) => {
   /* A SAMPLE'S VENUE STUDIO IS FOR LOOKING (decision 0101) — an allowlist of the
      reads its tabs draw; anything else answers `claim: true` and the Studio opens
      the claim sheet. See SAMPLE_OK in admin.mjs. */
-  const SAMPLE_OK = new Set(['get', 'planGet', 'stats', 'eventList', 'pitchList', 'postList',
+  const SAMPLE_OK = new Set(['get', 'planGet', 'stats', 'eventList', 'gigList', 'pitchList', 'postList',
                              'orderList', 'wishList', 'merchList', 'payStatus']);
   if (me.role === 'sample' && !SAMPLE_OK.has(action))
     return json({ ok: false, claim: true, error: 'Claim your page to save this.' }, 403);
@@ -47,9 +47,10 @@ export default async (req) => {
      the plan or sign the owner out. A bar shares one iPad; this is not a theory.
      Anything not on this list is OWNER ONLY, which is the safe way round: a new
      action is locked until somebody decides it should not be. */
-  const CREW_OK = new Set(['get', 'stats', 'eventList', 'pitchList', 'postList', 'postReply',
-                           'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone', 'planGet']);
-  const MANAGER_OK = new Set([...CREW_OK, 'eventSave', 'eventDelete', 'eventSkip', 'pitchSet',
+  const CREW_OK = new Set(['get', 'suggest', 'gigList', 'stats', 'eventList', 'pitchList', 'pitchThread', 'postList', 'postReply',
+                           'orderList', 'orderDone', 'orderDetail', 'wishList', 'wishDone', 'planGet',
+                           'pushKey', 'pushOn', 'pushOff']);
+  const MANAGER_OK = new Set([...CREW_OK, 'gigSet', 'eventSave', 'eventDelete', 'eventSkip', 'pitchSet', 'pitchReply',
                               'set', 'amenity', 'hours', 'menuSet', 'menuAdd', 'menuRemove',
                               'offerSave', 'offerRemove', 'photoUpload', 'photoClear',
                               'merchList', 'merchSave', 'merchRemove', 'merchPhoto', 'merchPhotoClear', 'merchMove',
@@ -102,6 +103,30 @@ export default async (req) => {
   }
 
   if (action === 'get') return send();
+
+  /* ---------- alerts on this phone (decision 0124) ----------
+     The artist side's machinery (_push.mjs), under the owner id the venue's sign-ins
+     already use, so a sign-out ends the phone's alerts as it does an artist's. Every
+     seat may switch them on for its own phone. `mine` says whether THIS phone is on
+     for this venue: one browser holds one subscription, and a phone that also runs an
+     artist Studio would otherwise read that as "on here". */
+  if (action === 'pushKey' || action === 'pushOn' || action === 'pushOff') {
+    const { saveSub, dropSub, devicesOf, readSubs, notify } = await import('./_push.mjs');
+    const owner = 'v_' + vid;
+    const endpoint = String((body.sub && body.sub.endpoint) || body.endpoint || '');
+    const state = async () => ({ ok: true, key: process.env.VAPID_PUBLIC_KEY || null,
+      devices: await devicesOf(owner, me.email),
+      mine: !!endpoint && (await readSubs(owner)).subs.some((s) => s.endpoint === endpoint) });
+    if (action === 'pushOn') {
+      if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY)
+        return bad('Alerts aren’t switched on for MySet yet', 503);
+      if (!(await saveSub(owner, body.sub, me))) return bad('That subscription looks wrong', 400);
+      await notify(owner, { title: 'Alerts are on', body: 'You’ll hear when an artist asks to play or writes back, and when someone buys your merch.',
+                            url: '/venues', tag: 'setup' }, { endpoint });
+    }
+    if (action === 'pushOff') await dropSub(owner, endpoint);
+    return json(await state());
+  }
 
   /* ---------- the venue's own events ----------
      Same recurrence engine as artists' gigs: one record for "every Tuesday", no
@@ -184,6 +209,20 @@ export default async (req) => {
     const row = await setPitchStatus(vid, String(body.id || ''), String(body.status || ''));
     if (!row) return bad('Could not update that');
     return json({ ok: true, pitches: await shapeForVenue(await readPitches(vid)) });
+  }
+
+  // the conversation a pitch opened (0123): read it, and answer it
+  if (action === 'pitchThread') {
+    const t = await venueThread(vid, String(body.id || ''));
+    if (!t) return bad('That enquiry is gone.', 404);
+    return json({ ok: true, thread: t });
+  }
+  if (action === 'pitchReply') {
+    const id = String(body.id || '');
+    const r = await venueReply(vid, id, body.text);
+    if (!r.ok) return bad(r.error);
+    return json({ ok: true, thread: await venueThread(vid, id),
+                  pitches: await shapeForVenue(await readPitches(vid)) });
   }
 
   /* ---------- what happened in the room ---------- */
@@ -389,7 +428,16 @@ export default async (req) => {
   if (action === 'payStatus') {
     const { connectStatus, syncFromStripe } = await import('./_connect.mjs');
     if (body.refresh) await syncFromStripe(owner).catch(() => {});
-    return json({ ok: true, pay: await connectStatus(owner) });
+    /* The staff's tips (decision 0127), read off the venue's own meta: the amounts, the
+       notes and when — never who. */
+    const { readMeta } = await import('./_lib.mjs');
+    const list = ((await readMeta(owner).catch(() => null)) || {}).tips || [];
+    const month = new Date().toISOString().slice(0, 7);
+    const sum = (a) => Math.round(a.reduce((n, t) => n + (Number(t.amount) || 0), 0) * 100) / 100;
+    const thisMonth = list.filter((t) => new Date(Number(t.at) || 0).toISOString().slice(0, 7) === month);
+    const tips = { count: list.length, total: sum(list), month: { count: thisMonth.length, total: sum(thisMonth) },
+                   recent: list.slice(-10).reverse().map((t) => ({ amount: Number(t.amount) || 0, note: String(t.note || '').slice(0, 120), at: Number(t.at) || 0 })) };
+    return json({ ok: true, pay: await connectStatus(owner), tips });
   }
   if (action === 'payStart') {
     const { ensureAccount, onboardingLink, connectStatus, cleanCountry, readConnect } = await import('./_connect.mjs');
@@ -566,17 +614,40 @@ export default async (req) => {
     if (r.error) return bad(r.error, r.status);
     return send();
   }
+  /* Suggestions and feedback for MySet (decision 0127): any seat may send one. */
+  if (action === 'suggest') {
+    const { addSuggestion } = await import('./_suggest.mjs');
+    const reg = await venueById(vid);
+    const r = await addSuggestion({ from: 'venue', id: vid, name: (reg && reg.name) || '', plan: venuePlanOf(reg), text: body.text });
+    if (!r.ok) return bad(r.error, r.status);
+    return json({ ok: true });
+  }
+  /* SHOWS ARTISTS LIST HERE (decision 0128): the venue approves or denies each one,
+     and a recurring show is confirmed as recurring, once. The key must be a show
+     that names this venue right now, so nothing can be answered for a stranger. */
+  if (action === 'gigList' || action === 'gigSet') {
+    const { gigRules } = await import('./venue.mjs');
+    const rules = await gigRules(vid);
+    if (action === 'gigSet') {
+      const { setGigOk } = await import('./_gigok.mjs');
+      const rule = rules.find((r) => r.key === String(body.key || ''));
+      if (!rule) return bad('That show isn’t listed here any more.', 404);
+      const r = await setGigOk(vid, rule.key, String(body.st || ''), { repeats: !!rule.repeat, recurring: body.recurring === true });
+      if (!r.ok) return json({ ok: false, error: r.error, recurring: !!r.recurring }, r.status);
+      return json({ ok: true, gigs: await gigRules(vid) });
+    }
+    return json({ ok: true, gigs: rules });
+  }
   if (action === 'postList') {
     return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid)), imgOwner(vid)) });
   }
   if (['postHide', 'postPin', 'postReply', 'postDelete'].includes(action)) {
-    /* THE SAME GATE THE ARTIST SIDE HAS. Permanent deletion was gated in admin.mjs
-       and free here — the identical action, on the identical community feed, one
-       endpoint along. Hiding stays free on every plan for both, because every owner
-       must be able to take something offensive off their page the second they see
-       it; what a paid plan buys is erasing it. */
-    if (action === 'postDelete' && !venuePaid(await venueById(vid)))
-      return bad('Deleting a post for good is a Pro feature — you can hide it on any plan, and hiding is instant and undoable.', 402);
+    /* HIDING OR DELETING A POST IS PRO (decision 0127, the founder's word, 2026-09-30),
+       as hiding is a paid feature on the artist side. Showing a post a venue hid
+       before stays open on every plan, so nothing is ever stuck hidden. */
+    const hides = action === 'postDelete' || (action === 'postHide' && body.on !== false);
+    if (hides && !venueLimits(await venueById(vid)).moderate)
+      return bad('Hiding or deleting a post is a Pro feature.', 402);
     const r = await moderate(imgOwner(vid), { action, id: String(body.id || '').slice(0, 12), text: body.text, on: body.on });
     if (!r.ok) return bad(r.error, 404);
     return json({ ok: true, posts: shapeForOwner(await readPosts(imgOwner(vid)), imgOwner(vid)) });

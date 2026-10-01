@@ -8,7 +8,8 @@
    (with fallbacks), so it looks at home in the Studio and on the artist page alike, and
    it touches nothing outside its own `.tdk` tree.
 
-   RULES THE WORDS KEEP. One sentence a slide, four slides at most for a tab. A feature
+   RULES THE WORDS KEEP. One sentence a slide, four slides at most for a tab (five on
+   Money, on the founder's word, 2026-09-29). A feature
    that costs money says which plan, so a free account is never shown a door it cannot
    open (INVARIANT 0bx). No slide promises what the product does not do.
 
@@ -55,28 +56,32 @@
   const art = (k) => `<svg class="tdk-g" viewBox="0 0 64 64" aria-hidden="true">${G[k] || G.sparkle}</svg>`;
 
   /* ---------- the words ----------
-     `{first}`, `{days}` and `{sources}` are filled in from `vars` when a deck opens. */
+     `{first}`, `{days}` and `{sources}` are filled in from `vars` when a deck opens;
+     `{payday}` is the Studio's (studio.js tipVars): the plan's own payout schedule,
+     which is weekly on Monday for Hobbyist and daily on the paid plans (_connect.mjs). */
   const D = {
     /* the Artist Studio, one per tab */
     live: { t: 'Live', s: [
       ['mic', 'This is your stage, where the room votes from their phones once the show starts.'],
       ['vote', 'The most-voted song climbs to the top, so tap ▶ Start and play it.'],
-      ['coin', 'Tips and bought votes land here as they happen, straight to your bank.'],
+      ['coin', 'Tips and bought votes land here as they happen, and {payday}.'],
       ['check', 'Tap End the show when you’re done, and the night files itself.']] },
     setlist: { t: 'Setlist', s: [
       ['list', 'Your songs are the menu the room votes from, and one tap switches each on or off.'],
-      ['paste', 'Paste a list, drop in a CSV or borrow a Spotify playlist to add songs in seconds.'],
+      ['paste', 'Paste a list or drop in a CSV, or simply add songs by hand and customize each one’s lyrics, chords and more.'],
       ['lyrics', 'Open any song for its key, your own chart and the lyrics on stage.'],
       ['folder', 'Group songs into setlists: a beach set, a late set, the one for the Irish pub.']] },
     gigs: { t: 'Gigs', s: [
       ['calendar', 'Add a gig once, and it shows on your page and in the city’s gig finder.'],
       ['clock', 'At start time voting opens by itself, so you just walk on stage.'],
       ['repeat', 'Set a weekly night to repeat and your calendar fills itself.'],
-      ['pin', 'Ask venues on MySet for a spot and keep every reply right here.']] },
+      ['chart', 'On Bar Star, recurring shows keep the same pay and time invested unless changed, and fill the Money tab by themselves.']] },
     money: { t: 'Money', s: [
-      ['card', 'Connect Stripe once, and tips and vote packs go straight to your bank.'],
+      ['card', 'Connect Stripe once, and tips and vote packs go straight to your bank ({payday}).'],
       ['chart', 'Every night is filed for you: the songs, the votes, the money.'],
-      ['coin', 'Your earnings month by month, with a spreadsheet ready for tax time.']] },
+      ['people', 'Toggle between your band’s total earnings and your individual cut (a Bar Star feature).'],
+      ['clock', 'View your hourly rate not just by stage time but with breaks, set‑up/break‑down and travel too.'],
+      ['coin', 'View your earnings month by month, with a spreadsheet ready for tax time.']] },
     profile: { t: 'Profile', s: [
       ['star', 'This is your public page, the one fans see after the set.'],
       ['camera', 'Photos, a short bio, your links and your best videos, all in one place.'],
@@ -90,6 +95,7 @@
       ['camera', 'Give each page a cover photo, and fans find your diary from your page.']] },
     messages: { t: 'Messages', s: [
       ['chat', 'Venues and fans who want to book you land here, not in your DMs.'],
+      ['pin', 'Ask a venue for a spot from its page, then talk it through here in the Venues folder.'],
       ['check', 'Reply from here and keep every booking in one place.']] },
     settings: { t: 'Settings', s: [
       ['vote', 'Choose how many free votes each fan gets, and on Bar Star set your own prices.'],
@@ -155,12 +161,12 @@
       ['check', 'Claiming it is free and takes a minute, and you have {days} to do it.']] },
     'sample-studio': { t: 'Your Studio', s: [
       ['star', 'This is your Studio, the backstage of your page.'],
-      ['vote', 'Look around, because every tab explains itself the first time you open it.'],
+      ['vote', 'Look around: every tab explains itself the first time you open it.'],
       ['play', 'On the Live tab, try a practice round with pretend fans and real buttons.'],
       ['key', 'It’s look-only until you claim it with Claim profile, top right.']] },
     'v-sample-studio': { t: 'Your Venue Studio', s: [
       ['star', 'This is your Venue Studio, the backstage of your page.'],
-      ['vote', 'Look around, because every tab explains itself the first time you open it.'],
+      ['vote', 'Look around: every tab explains itself the first time you open it.'],
       ['key', 'It’s look-only until you claim it with Claim profile, top right.']] },
   };
 
@@ -192,6 +198,7 @@
 .tdk-g .g-disc,.tdk-g .g-cal,.tdk-g .g-clip,.tdk-g .g-cam,.tdk-g .g-bub,.tdk-g .g-cardb,.tdk-g .g-jar,.tdk-g .g-bellb,.tdk-g .g-badge,.tdk-g .g-fold,.tdk-g .g-pinb,.tdk-g .g-micb,.tdk-g .g-keyh,.tdk-g .g-bagb{fill:url(#tdkgrad)}
 .tdk-g .g-tick,.tdk-g .g-cur,.tdk-g .g-lens,.tdk-g .g-type circle,.tdk-g .g-pind,.tdk-g .g-sq,.tdk-g .g-flash{fill:#fff;stroke:#fff}
 .tdk-g .g-tick{fill:none;stroke-width:5}
+.tdk-g .g-hand,.tdk-g .g-hand2{stroke:#fff}   /* the clock's hands, white on its disc (they were the disc's own colour) */
 .tdk-g .g-cur{font:800 16px/1 system-ui,sans-serif}
 .tdk-g .g-plus{font:800 11px/1 system-ui,sans-serif;fill:var(--accent-2,#FF5650)}
 .tdk-g .g-shadow{fill:rgba(0,0,0,.14)}
@@ -234,7 +241,7 @@
 .tdk-slide.on .g-s2{animation-delay:-.5s}.tdk-slide.on .g-s3{animation-delay:-.9s}
 .tdk-slide.on .g-tick{stroke-dasharray:60;animation:tdk-draw .7s .15s ease-out both}
 .tdk-slide.on .g-dot{animation:tdk-pop .6s .2s cubic-bezier(.3,1.5,.6,1) both}
-.tdk-slide.on .g-spin{animation:tdk-spin 3.2s linear infinite}
+.tdk-slide.on .g-spin{animation:tdk-spin 3.2s linear infinite reverse}   /* counter-clockwise, the way the arrows point */
 .tdk-slide.on .g-slide{animation:tdk-slidex 1.8s ease-in-out infinite}
 .tdk-slide.on .g-line{stroke-dasharray:60;animation:tdk-draw 1s ease-out both}
 .tdk-slide.on .g-end{animation:tdk-pop .5s .8s both}

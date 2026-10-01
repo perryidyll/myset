@@ -412,15 +412,18 @@ function maybeTips(){
       if(!window.Tips||PRACTICE||Tips.isOpen()||isNew()||document.getElementById('boot')||DECKOF[TAB]!==deck)return;
       if($('#sheet').classList.contains('on')||$('#tipburst'))return;
       if(SAMPLE&&!Tips.seen('sample-studio',tipScope()))return;       // the welcome goes first
-      Tips.first(deck,{scope:tipScope(),cta:deck==='live'&&(SAMPLE||firstGig())?practiceCta():null});
+      Tips.first(deck,{scope:tipScope(),vars:tipVars(),cta:deck==='live'&&(SAMPLE||firstGig())?practiceCta():null});
     }catch(e){}
   },450);
 }
 function showTips(){
   if(!window.Tips){ toast('Loading…'); return; }
   const deck=DECKOF[TAB]||'live';
-  Tips.open(deck,{cta:deck==='live'?practiceCta():null});
+  Tips.open(deck,{vars:tipVars(),cta:deck==='live'?practiceCta():null});
 }
+/* The words a deck fills in. {payday} follows the plan's payout schedule
+   (_connect.mjs payoutScheduleFor): Hobbyist weekly on Monday, the paid plans daily. */
+const tipVars=()=>({payday:(PLAN&&PLAN.ok&&PLAN.plan&&PLAN.plan!=='free')?'payouts are sent daily':'payouts are sent every Monday'});
 
 /* ─────────────────────────────────────────────────────────────────────────────
    A SAMPLE'S STUDIO, ON ARRIVAL (decision 0101): the founder hears that the Studio
@@ -646,7 +649,7 @@ function sampleRoute(p,o){
    the first time it is wanted. */
 let SAMPLEJS=null;
 function sampleJs(){ return SAMPLEJS||(SAMPLEJS=new Promise(r=>{ if(window.Sample)return r(window.Sample);
-  const j=document.createElement('script'); j.src='/sample.js?v=bb14e96e'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
+  const j=document.createElement('script'); j.src='/sample.js?v=503961fa'; j.onload=()=>r(window.Sample||null); j.onerror=()=>r(null); document.head.appendChild(j); })); }
 function openClaim(){
   if(!SAMPLE)return;
   CLAIMAT=Date.now(); closeSheet();
@@ -817,7 +820,7 @@ async function act(action,extra={}){
   WRITING=true;
   try{
     const d=await api('/admin',{method:'POST',body:JSON.stringify({action,...extra})});
-    if(!d.ok){toast(d.error||'Failed');return;}
+    if(!d.ok){ if(!d.confirm) toast(d.error||'Failed'); return d; }
     // the write already sent the fresh state back — no second round trip
     if(d.stage&&d.stage.ok){ tipWatch(D,d.stage); D=d.stage; render(); }
     else await load();
@@ -891,7 +894,8 @@ function gate(err,mode){
     inner=`<div class="signbox"><h2>You’re in</h2>
       <p class="muted" style="font-size:14px;margin:0 0 16px">What should we call you? This is the name fans see.</p>
       <input class="inp" id="newName" maxlength="60" placeholder="Your artist or band name" autocomplete="off">
-      <button class="big fill" style="margin-top:12px" onclick="claimAccount()">Create my page</button></div>`;
+      <button class="big fill" style="margin-top:12px" onclick="claimAccount()">Create my page</button>
+      <p class="muted" style="font-size:12px;margin:12px 0 0">By creating a page you agree to MySet’s <a href="/terms" target="_blank" rel="noopener">terms</a> and <a href="/privacy" target="_blank" rel="noopener">privacy notice</a>.</p></div>`;
   }else if(m==='join'||m==='forgot'){
     const join=m==='join';
     inner=`<div class="signbox"><h2>${join?'Join the MySet family':'Forgot your password?'}</h2>
@@ -969,6 +973,7 @@ async function passwordSignIn(){
     // ?tab=merch is where a "new merch order" push or email lands (0097)
     if(q.get('tab')==='setlist'||q.get('tab')==='messages'||q.get('tab')==='diary'||q.get('tab')==='merch'){
       TAB=q.get('tab'); localStorage.setItem('myset.tab',TAB);
+      if(TAB==='messages'&&q.get('f')==='venues') MSGF='venues';   // a venue's reply, or the venue page's door (0123)
       history.replaceState({},'',location.pathname);
     }
     if(q.get('connect')){ TAB='money'; localStorage.setItem('myset.tab','money');
@@ -1739,10 +1744,6 @@ async function loadRev(force){
 }
 /* ---- gig calendar ---- */
 const pad=n=>String(n).padStart(2,'0');
-/* The same bucket the server counts in (gigMonthOf in _lib.mjs) — UTC year-month.
-   If these two ever disagree the artist is told a different number from the one
-   that is enforced, so they are computed the same way in both places. */
-const monthKey=(now=Date.now())=>new Date(now).toISOString().slice(0,7);
 const todayStr=()=>{const d=new Date();return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;};
 let CAL_MONTH=todayStr().slice(0,7);
 const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -2096,16 +2097,26 @@ async function recover(){
 }
 
 const PANEL_SCROLL={queue:0,setlist:0};
+/* The free plan's ten shows in total (decision 0120): the cap, or 0 when there is
+   none (a paid plan, or the founder, who is never capped). The server counts in
+   show.gigCount; the Studio only ever reads it. */
+const freeCap=()=>{ const c=PLAN&&PLAN.ok&&!PLAN.owner&&PLAN.plan==='free'&&PLAN.limits&&PLAN.limits.gigs; return c&&isFinite(c)?c:0; };
+/* The top-right tag on the free plan (decision 0120): one chip, like every paid plan's,
+   green with the shows used while there are some left, the pink Upgrade once all ten
+   are gone. One chip, not two, because two push the artist's name off a phone. */
+function freeTag(s){
+  const cap=freeCap(), used=Math.min((s&&s.gigCount)||0,cap);
+  if(!cap||used>=cap) return `<button class="upg" onclick="openPlans()"${cap?` aria-label="All ${cap} free shows used — upgrade"`:''}>Upgrade <span>↗</span></button>`;
+  return `<button class="plantag" onclick="openPlans()" aria-label="Hobbyist — ${used} of your ${cap} free shows used">Hobbyist · ${used}/${cap} <span>↗</span></button>`;
+}
 /* The free-show cap, shown only when it is about to matter. */
 function capNote(s){
-  const cap=(PLAN&&PLAN.ok&&PLAN.limits&&PLAN.limits.gigs)||0;
-  if(!cap||cap===null||!isFinite(cap))return '';
-  const used=s.gigMonth===monthKey()?(s.gigCount||0):0;
-  const left=Math.max(0,cap-used);
+  const cap=freeCap(); if(!cap)return '';
+  const left=Math.max(0,cap-(s.gigCount||0));
   if(left>2)return '';
   return `<p class="muted" style="font-size:12.5px;padding:8px 20px 0">${left===0
-    ? `<b style="color:var(--accent)">That's your ${cap} free shows this month.</b> Your allowance resets on the 1st — or upgrade in Settings to play as often as you like.`
-    : `<b>${left} free show${left===1?'':'s'} left this month.</b> Resets on the 1st.`}</p>`;
+    ? `<b style="color:var(--accent)">That's your ${cap} free shows.</b> Upgrade in Settings to keep playing — a test show you discard doesn't count.`
+    : `<b>${left} free show${left===1?'':'s'} left.</b> A test show you discard doesn't count.`}</p>`;
 }
 /* The gig tonight, if there is one: the server's `sched` when the calendar gig is
    within twelve hours, else today's occurrence from the calendar (loaded lazily;
@@ -2392,7 +2403,7 @@ function render(){
     ${setPick()}
 
     ${songs.length?'':`<div class="sec"><span class="kick">No songs yet</span></div>
-      <div class="list"><div class="row muted">Add a song above, or import a CSV, pasted list, or public Spotify playlist.</div></div>`}
+      <div class="list"><div class="row muted">Add a song above, or import a CSV or pasted list.</div></div>`}
     <div class="sec"><span class="kick">Your setlist — ${active} of ${songs.length} featured</span>${
       SETQ?`<span class="kick">${shown.length} match${shown.length===1?'':'es'}</span>`:''}</div>
     <div class="find">
@@ -2794,7 +2805,7 @@ function render(){
       'The standard prices stay on, and the money is still yours.')}
 
     <div class="sec"><span class="kick">Requests from fans</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Let the room ask for something that isn't on your list. They pay in votes, not money, and you decide — turning one down refunds them automatically. Both are off until you switch them on.</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 8px">Let the room ask for something that isn't on your list. They pay in votes, and once you take card payments a song request can also carry a money offer: a card hold, charged only if you play and finish it. You decide — turning one down refunds the votes and releases the hold automatically. Both are off until you switch them on.</p>
     ${[['song','Request a song','A title you haven’t got listed',s.requests],
        ['birthday','Happy birthday shout-out','With the name of whoever it’s for',s.birthdays]].map(([k,t,d,cfg])=>`
       <div class="row"><div class="m"><div class="t">${t}</div><div class="s">${d}</div></div>
@@ -2861,9 +2872,9 @@ function render(){
       <p>So a packed 3-hour show produces tens of thousands of those little questions,
       each of which costs credits ($$) on my server… and they add up fast — very
       fast.</p>
-      <p>That's why the shows are limited to 4/month on the free plan, which basically
-      means a hobbyist gets to play for free — forever — while the musicians earning
-      money from it cover the costs, as well as their own.</p>
+      <p>That's why the free plan comes with 10 shows, which basically means anyone
+      gets to try it on real nights for free, while the musicians earning money from
+      it cover the costs, as well as their own.</p>
       <p>Of course, I am also an entrepreneur and want to earn a living like everyone
       else! So creating a basic business model out of it is certainly something I want
       as well. But without some kind of monetization structure the app literally
@@ -2880,7 +2891,7 @@ function render(){
             thing Perry could not find. */''}
       <div class="planbox" id="planbox">
         <button class="bigup" onclick="openPlans()">${!ownerSeat()?'See the plans':PLAN.plan==='pro'?'Rock Star membership':'Upgrade your plan'} <span>↗</span></button>
-        <p class="planwhen">${planWhen()}</p>
+        <p class="planwhen">${planWhen(s)}</p>
       </div>
       <div class="field" data-ed="owner"><label>Got a code?</label><div style="display:flex;gap:8px">
         <input class="inp" id="promoIn" maxlength="24" placeholder="FRIENDS100" autocapitalize="characters" style="flex:1">
@@ -3058,10 +3069,10 @@ function render(){
         ? `<a class="whoami" href="/${esc(s.slug)}"><h1>${esc(s.artist)}</h1><span>↗</span></a>`
         : `<h1>${esc(s.artist)}</h1>`}
     </div>
-    <div class="headactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">☀︎</button>
+    <div class="headactions"><button class="tipsbtn" type="button" onclick="showTips()" aria-label="How this tab works">?</button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
     ${SAMPLE?`<button class="claimbtn" onclick="openClaim()">Claim profile</button>`
     :PLAN&&PLAN.ok?(!see('plans')?'':PLAN.plan==='free'
-      ?`<button class="upg" onclick="openPlans()">Upgrade <span>↗</span></button>`
+      ?freeTag(s)
       :`<button class="plantag" onclick="openPlans()">${esc(PLAN.limits.label)} <span>↗</span></button>`):''}</div>
   </div>
   ${leavingBar()}${cardTrouble(s)}${viewNote(TABAREA[TAB])}${body}
@@ -3286,7 +3297,8 @@ function frDone(){ frSet('done'); FR.hidden=false; FR.drawn=''; drawFirstRun(); 
 /* What the room has asked for. Pending first, because a birthday is the one
    thing on this screen that goes stale. */
 /* Venues you've asked for a spot, and what they said. Sits on the Gigs tab
-   because that is where you think about where you're playing next. */
+   because that is where you think about where you're playing next; the talking
+   happens in Messages (the Venues folder, decision 0123), one tap away. */
 function pitchPanel(){
   const rows=(PITCHES&&PITCHES.ok?(PITCHES.pitches||[]):null);
   if(rows===null||!rows.length) return `
@@ -3301,9 +3313,9 @@ function pitchPanel(){
       const keen=p.status==='keen';
       return `<div class="row ${p.status==='nope'?'off':''}">
         <div class="m"><div class="t">${esc(p.name)}</div>
-          <div class="s">${keen?'Get in touch':'Asked'} · ${when(p.at)}</div>
+          <div class="s">Asked · ${when(p.at)}</div>
           <span class="chip reply ${keen?'on':''}">${reply[p.status]||reply.new}</span></div>
-        <a class="act" href="/v/${esc(p.slug)}">Open</a>
+        ${p.tid&&msgAllowed()?`<button type="button" class="act" data-act="pitchmsg" data-id="${esc(p.tid)}">Messages</button>`:`<a class="act" href="/v/${esc(p.slug)}">Open</a>`}
       </div>`;}).join('')}</div>`;
 }
 
@@ -3791,6 +3803,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.act==='msgfolder'){ MSGF=id; render(); }
   if(b.dataset.act==='msgview'){ MSGV=id; render(); }
   if(b.dataset.act==='msgopen') openMsg(id);
+  if(b.dataset.act==='pitchmsg'){ setTab('messages'); MSGF='venues'; openMsg(id); }   // Gigs → the venue's conversation (0123)
   if(b.dataset.act==='msgback') msgBack();
   if(b.dataset.act==='msgsend') msgSend(id);
   if(b.dataset.act==='msgmove') msgMoveAsk(id);
@@ -3872,7 +3885,22 @@ async function saveEndedShow(){
 }
 async function discardEndedShow(){
   if(!await ask({title:'End without saving?',lede:'This show won\u2019t appear in Past shows.',yes:'Yes, end it',no:'Go back'}))return;
-  closeSheet();await act('status',{status:'ended',discard:true});
+  closeSheet();
+  const d=await act('status',{status:'ended',discard:true});
+  /* A REAL NIGHT (over an hour, five or more votes) is asked about once more, with
+     what discarding it means on the free plan (decision 0122). The server decides;
+     this only says it, and sends back the outcome it showed. */
+  const c=d&&d.confirm; if(!c) return;
+  const h=Math.floor(c.minutes/60), m=c.minutes%60;
+  const ran=`${h} h${m?` ${m} min`:''}`, money=c.paid&&c.paid.total>0?`, and you were paid $${c.paid.total.toFixed(2)}`:'';
+  const first=c.outcome==='warned';
+  if(!await ask({
+    title:first?'This looks like a real show':'This one will count',
+    lede:first
+      ? `It ran ${ran} and got ${c.votes} votes${money}. We won\u2019t count this one, but from now on a show you discard that runs over an hour with 5 or more votes counts as one of your ${c.cap} free shows.`
+      : `It ran ${ran} and got ${c.votes} votes${money}, so discarding it still uses one of your ${c.cap} free shows. Save it instead and it\u2019s in Past shows.`,
+    yes:first?'Discard it':'Discard, and count it', no:'Go back'})) return;
+  await act('status',{status:'ended',discard:true,ack:c.outcome});
 }
 
 /* Same key the voting page uses, so flipping this on here affects the phone
@@ -4184,9 +4212,10 @@ async function wishDone(id,done){ const d=await api('/admin',{method:'POST',body
    no second read. Crew never sees the row and never asks; while the plan is not
    in yet nothing is drawn or asked (has()'s rule). Report and Block are the
    owner's (OWNER_ONLY in admin.mjs), so a seat is not shown them. */
-const MSG_FOLDERS=[['requests','Requests'],['general','General'],['business','Business'],['casual','Casual'],['spam','Spam']];
-const MSG_KINDS={booking:'Booking',collab:'Collab',press:'Press',other:'Other'};
+const MSG_FOLDERS=[['requests','Requests'],['venues','Venues'],['general','General'],['business','Business'],['casual','Casual'],['spam','Spam']];
+const MSG_KINDS={booking:'Booking',collab:'Collab',press:'Press',other:'Other',pitch:'Venue'};
 const MSG_EMPTY={requests:'No requests yet. Your Book button is live on your page.',
+  venues:'No venues yet. Tap “Want to perform here?” on a venue’s page and the conversation lands here.',
   general:'Nothing here yet. A request moves here once you’ve answered it.',
   business:'Nothing filed under Business. Move a conversation here from its page.',
   casual:'Nothing filed under Casual. Move a conversation here from its page.',
@@ -4195,7 +4224,7 @@ const msgAllowed=()=>see('messages');   // not yet fetched reads as no, fetched-
 const msgOwner=()=>!!PLAN&&(!PLAN.ok||(PLAN.role||'owner')==='owner');
 const msgFolder=(k)=>(MSG_FOLDERS.find(([f])=>f===k)||[k,esc(String(k||''))])[1];
 const msgAgo=(t)=>{ const h=(Date.now()-t)/3600e3; return h<24?when(t):h<48?'Yesterday':h<24*7?Math.floor(h/24)+' days ago':daystamp(t); };
-const msgFirst=(name)=>String(name||'').trim().split(/\s+/)[0]||'them';
+const msgFirst=(name,kind)=>kind==='pitch'?(String(name||'').trim()||'them'):String(name||'').trim().split(/\s+/)[0]||'them';   // a venue is called by its whole name
 function paintMsgDot(){
   const b=document.querySelector('.tabbar button[data-tab-menu]');
   if(b){ const dot=b.querySelector('.tabdot');
@@ -4281,7 +4310,7 @@ function msgScreen(){
   const L=MSGL, c=(L&&L.counts)||{};
   const rows=L?L.threads.filter(t=>t.folder===MSGF&&(MSGV==='all'||(MSGV==='unread')===!!t.unread)):[];
   return `<div class="sec"><span class="kick">Messages</span><span class="kick">${c.unread?c.unread+' unread':''}</span></div>
-    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">From the Book button on your page. Answer here — they read it at their own link${MSGMAIL?' and by email':''}.</p>
+    <p class="muted" style="font-size:12px;padding:0 14px;margin:0 0 10px">${MSGF==='venues'?'Venues you’ve asked for a spot. They answer from their Venue Studio, and read your replies there.':`From the Book button on your page. Answer here — they read it at their own link${MSGMAIL?' and by email':''}.`}</p>
     <div class="wrap"><div class="chips folders">${MSG_FOLDERS.map(([k,l])=>`<button type="button" class="chip ${MSGF===k?'on':''}" data-act="msgfolder" data-id="${k}">${l}${c[k]?` <b>${c[k]}</b>`:''}</button>`).join('')}</div></div>
     <div class="sortbar">${[['all','All'],['unread','Unread'],['read','Read']].map(([k,l])=>`<button type="button" class="${MSGV===k?'on':''}" data-act="msgview" data-id="${k}">${l}</button>`).join('')}</div>
     <div class="list" style="margin-top:12px">${L===null
@@ -4301,10 +4330,13 @@ function msgThreadView(){
   const cap=(MSGL&&MSGL.limits&&Number(MSGL.limits.text))||0;
   const cur=$('#msgText'); if(cur&&cur.dataset.t===T.id) MSGDRAFT[T.id]=cur.value;   // the words typed survive this repaint
   const tel=String(T.phone||'').replace(/[^\d+]/g,'');
+  const venue=T.kind==='pitch', said={keen:'They’re keen',nope:'Not this time'}[T.status];
   return back+`
     <div class="sec"><span class="kick">${MSG_KINDS[T.kind]||'Other'}${T.kind==='booking'?' request':''}</span><span class="kick">${msgFolder(T.folder)}</span></div>
     <div class="list"><div class="row muted msghead">
       <b>${esc(T.name||'Someone')}</b>
+      ${venue&&T.venueSlug?`<a href="/v/${esc(T.venueSlug)}">Their page ↗</a>`:''}
+      ${venue&&said?`<span class="chip reply ${T.status==='keen'?'on':''}">${said}</span>`:''}
       ${T.email?`<a href="mailto:${esc(T.email)}">${esc(T.email)}</a>`:''}
       ${T.phone?`<a href="tel:${esc(tel)}">${esc(T.phone)}</a>`:''}
       ${T.venue||T.when?`<span>${[T.venue,T.when].filter(Boolean).map(esc).join(' · ')}</span>`:''}
@@ -4312,14 +4344,14 @@ function msgThreadView(){
     </div></div>
     <div class="msgs">${T.msgs.map(m=>`<div class="msg ${m.by==='me'?'me':''}"><div>${esc(m.text)}</div><time>${m.by==='me'?'You · ':''}${dstamp(m.at)}</time></div>`).join('')}</div>
     <div class="field" data-ed="messages"><label>Your reply${cap?` <span class="cnt" id="cMsg"></span>`:''}</label>
-      <textarea class="inp" id="msgText" data-t="${esc(T.id)}" rows="3"${cap?` maxlength="${cap}"`:''} placeholder="Write back to ${esc(msgFirst(T.name))}">${esc(MSGDRAFT[T.id]||'')}</textarea></div>
+      <textarea class="inp" id="msgText" data-t="${esc(T.id)}" rows="3"${cap?` maxlength="${cap}"`:''} placeholder="Write back to ${esc(msgFirst(T.name,T.kind))}">${esc(MSGDRAFT[T.id]||'')}</textarea></div>
     <div class="wrap" style="margin-top:10px" data-ed="messages"><button type="button" class="btn-pri btn-block" data-act="msgsend" data-id="${esc(T.id)}">Send</button></div>
-    <p class="muted" data-ed="messages" style="font-size:12px;padding:0 14px;margin:8px 0 0">Replies reach them at their link${MSGMAIL?' and by email.':' — email isn’t set up yet.'}</p>
+    <p class="muted" data-ed="messages" style="font-size:12px;padding:0 14px;margin:8px 0 0">${venue?'They read your replies in their Venue Studio.':`Replies reach them at their link${MSGMAIL?' and by email.':' — email isn’t set up yet.'}`}</p>
     <div class="wrap msgacts">
       <button type="button" class="act" data-ed="messages" data-act="msgmove" data-id="${esc(T.id)}">Move to…</button>
       <button type="button" class="act" data-ed="messages" data-act="msgunread" data-id="${esc(T.id)}">Mark unread</button>
       ${msgOwner()?`${T.reported?'':`<button type="button" class="act warn" data-act="msgreport" data-id="${esc(T.id)}">Report</button>`}
-      <button type="button" class="act warn" data-act="msgblock" data-id="${esc(T.id)}">${T.blocked?'Unblock':'Block'}</button>`:''}
+      ${venue?'':`<button type="button" class="act warn" data-act="msgblock" data-id="${esc(T.id)}">${T.blocked?'Unblock':'Block'}</button>`}`:''}
     </div>`;
 }
 function wireMsgs(){
@@ -4356,7 +4388,7 @@ async function msgSend(id){
 }
 function msgMoveAsk(id){
   const T=MSGTH||{};
-  openSheet(`<h3>Move to…</h3><p class="lede">Where this conversation with ${esc(msgFirst(T.name))} is filed. Nothing is sent to them.</p>
+  openSheet(`<h3>Move to…</h3><p class="lede">Where this conversation with ${esc(msgFirst(T.name,T.kind))} is filed. Nothing is sent to them.</p>
     ${MSG_FOLDERS.filter(([k])=>k!==T.folder).map(([k,l])=>`<button type="button" class="menurow" data-act="msgmoveto" data-id="${k}"><div class="m">${l}</div><span class="chev">›</span></button>`).join('')}`);
 }
 async function msgMove(id,folder){
@@ -5146,7 +5178,7 @@ function cardTrouble(s){
     <p style="margin-top:8px">Everything keeps working until ${daystamp(ends)}.</p></div>`;
   if(days>=0) return `<div class="paybar">
     <b>Your card still hasn’t gone through</b>
-    <p>If it isn’t sorted by tomorrow your page goes back to Hobbyist. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} shows a month, merch comes off your shop page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
+    <p>If it isn’t sorted by tomorrow your page goes back to Hobbyist. <b>Nothing gets deleted</b> — your songs, gigs, history, photos and community page all stay exactly as they are. What changes is ${PLAN.plans&&PLAN.plans.free&&PLAN.plans.free.gigs?PLAN.plans.free.gigs:10} free shows in total, merch comes off your shop page, MySet’s cut goes back to ${PLAN.plans&&PLAN.plans.free?PLAN.plans.free.cutPct:25}%, and you couldn’t make new setlists or set your own prices.</p>
     <button class="big" style="margin-top:12px" ${fix}>Update my card</button></div>`;
   return `<div class="paybar">
     <b>You’re on Hobbyist for now</b>
@@ -5161,12 +5193,12 @@ function cardTrouble(s){
    The date comes from Stripe's period end, not from `planUntil`: planUntil carries
    three days of grace for a late card, and telling somebody they renew three days
    after they actually do is a small lie the app should not tell. */
-function planWhen(){
+function planWhen(s){
   if(!PLAN||!PLAN.ok)return '';
   const b=PLAN.billing||{}, name=esc(PLAN.limits.label);
   const link=b.portal?` · <a href="#" onclick="event.preventDefault();openPortal()">Card, invoices and receipts ↗</a>`:'';
   if(PLAN.comped) return `${name}, on the house${PLAN.until?' until '+daystamp(PLAN.until):''}`;
-  if(PLAN.plan==='free') return 'Hobbyist — free, forever'+(PLAN.discountPct?` · ${PLAN.discountPct}% off saved for your first month`:'');
+  if(PLAN.plan==='free') return 'Hobbyist'+(freeCap()?` — ${Math.min((s&&s.gigCount)||0,freeCap())} of your ${freeCap()} free shows used`:'')+(PLAN.discountPct?` · ${PLAN.discountPct}% off saved for your first month`:'');
   const when=b.renewsAt||PLAN.until;
   if(when) return `${b.cancelAtPeriodEnd?'Ends':'Renews'} ${daystamp(when)}${link}`;
   return `Active${link}`;

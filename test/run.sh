@@ -63,10 +63,10 @@ echo
 echo "── the sample factory: sources, Claude, the gate, the worker and the ring (0103) ──"
 node --import ./test/register.mjs test/factory.mjs
 echo
-echo "── MySet HQ: the contacts, their stage, outreach logged, Delete forever, Edit profile (0108) ──"
+echo "── MySet CRM: the contacts, their stage, outreach logged, Delete forever, Edit profile (0108) ──"
 node --import ./test/register.mjs test/hq.mjs
 echo
-echo "── HQ's Gmail: the OAuth door, the sealed tokens, a sent email, a reply read back (0109) ──"
+echo "── CRM's Gmail: the OAuth door, the sealed tokens, a sent email, a reply read back (0109) ──"
 node --import ./test/register.mjs test/gmail.mjs
 echo
 echo "── the studio-code door ──"
@@ -203,6 +203,15 @@ node --import ./test/register.mjs test/stripefees.mjs
 echo
 echo "── the Book button, the inbox and the tour poster ──"
 node --import ./test/register.mjs test/messages.mjs
+echo
+echo "── a venue you asked is a conversation (0123) ──"
+node --import ./test/register.mjs test/pitchmsgs.mjs
+echo
+echo "── a venue's phone hears it (0124) ──"
+node --import ./test/register.mjs test/venuepush.mjs
+echo
+echo "── a venue answers the shows listed at its place (0128) ──"
+node --import ./test/register.mjs test/gigok.mjs
 echo
 echo "── the artist diary ──"
 node --import ./test/register.mjs test/diaries.mjs

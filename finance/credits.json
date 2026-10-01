@@ -489,6 +489,264 @@
     ],
     "whatItShows": "An empty day (Sat 19 Sep — no gig, no record) is 3,200 requests, 1.7 credits of compute and 13.7 MB: the scheduler every 2 min, the warm-door pings every 4 min, the nightly mirror. A night with a room adds 2,400–3,800 requests, 1.1–2.3 credits of compute and 23–47 MB over that — about 3 credits (2.3–3.8) whatever the room size from 3 to 11 phones, because the Studio's own tick and the page loads are most of it. Deploys on the same days: 0–345 credits. The one bandwidth spike (24 Sep, 488 MB) was not a gig."
    }
+  },
+  {
+   "readAt": "2026-10-01T10:30:00+00:00",
+   "readBy": "the assistant, from the team's Account usage insights in Chrome (the chart's own per-day numbers, exact, not read off the bars), 1 Oct 2026",
+   "period": {
+    "start": "2026-09-08",
+    "end": "2026-10-07",
+    "daysElapsed": 23.4
+   },
+   "plan": {
+    "name": "Personal",
+    "usdPerMonth": 9,
+    "creditsPerMonth": 1000,
+    "pack": {
+     "credits": 500,
+     "usd": 5.48,
+     "usdBeforeTax": 5
+    },
+    "autoRecharge": true,
+    "balance": {
+     "remaining": 480.8,
+     "of": 500,
+     "granted": "2026-10-01",
+     "expires": null
+    },
+    "note": "Priced WITH tax from this reading on (the founder, 1 Oct 2026: use $5.48): a 500-credit pack is $5 + about 9.6% tax = $5.48 on the invoice, so a credit costs 1.096¢. The month's 1,000 credits and the 15 Sep pack are spent; a new pack started 1 Oct with 480.8 left."
+   },
+   "invoices": [
+    {
+     "date": "2026-09-15",
+     "usd": 5.48,
+     "what": "one 500-credit pack (auto-recharge)"
+    },
+    {
+     "date": "2026-09-08",
+     "usd": 9.86,
+     "what": "the Personal plan month"
+    },
+    {
+     "date": "2026-08-30",
+     "usd": 21.9,
+     "what": "packs, the load-test week"
+    },
+    {
+     "date": "2026-08-30",
+     "usd": 5.48,
+     "what": "one pack"
+    },
+    {
+     "date": "2026-08-08",
+     "usd": 9.86,
+     "what": "the Personal plan month"
+    }
+   ],
+   "breakdown": {
+    "what": "Sep 8–30 (UTC days, the 23 whole days before this reading), summed from the same per-day numbers",
+    "productionDeploys": {
+     "count": 185,
+     "credits": 2775
+    },
+    "webRequests": {
+     "count": 131960,
+     "credits": 26.4
+    },
+    "compute": {
+     "credits": 77.3,
+     "gbHours": 7.73
+    },
+    "bandwidth": {
+     "credits": 52.1,
+     "gb": 2.6
+    },
+    "aiInference": {
+     "credits": 0
+    },
+    "total": 2930.8
+   },
+   "shares": {
+    "shipping": 0.947,
+    "traffic": 0.053
+   },
+   "trafficCredits": 155.8,
+   "perDay": {
+    "what": "credits per day per meter from the daily chart, plus the COUNTS the tracker's meter method needs: webRequestCount (requests), computeGbHours, bandwidthMB. deploys/webRequests/functionsCompute/bandwidth are credits, as in the first reading. The chart's days are UTC; a Bangkok night (18:30–23:59) sits inside one UTC day",
+    "timezone": "UTC",
+    "cleanFrom": "2026-09-25",
+    "cleanFromWhy": "the register's bell started 25 Sep (decision 0095): six background jobs, about 96,000 requests a month, run every day since. A background read from before it would count the bell as gig traffic, so the meter method uses only days from 25 Sep. Days 16–24 Sep are kept for the record.",
+    "bandwidthCleanFrom": "2026-09-16",
+    "bandwidthCleanFromWhy": "the only empty day since the bell (26 Sep) carried 192.5 MB that no gig made — twelve deploys and the landing page that day; used as the bandwidth floor it makes every night read negative. The bell adds requests, not bytes, so the bandwidth floor is the quietest empty day since 16 Sep (19 Sep, 13.3 MB). Requests and compute still come from days after 25 Sep only (tools/actuals.py solve_meters).",
+    "days": [
+     {
+      "day": "2026-09-16",
+      "deploys": 60,
+      "deployCount": 4,
+      "webRequests": 1.387,
+      "webRequestCount": 6936,
+      "functionsCompute": 3.47,
+      "computeGbHours": 0.3469,
+      "bandwidth": 0.81,
+      "bandwidthMB": 40.5
+     },
+     {
+      "day": "2026-09-17",
+      "deploys": 0,
+      "deployCount": 0,
+      "webRequests": 1.112,
+      "webRequestCount": 5562,
+      "functionsCompute": 3.13,
+      "computeGbHours": 0.313,
+      "bandwidth": 0.721,
+      "bandwidthMB": 36.0
+     },
+     {
+      "day": "2026-09-18",
+      "deploys": 60,
+      "deployCount": 4,
+      "webRequests": 1.149,
+      "webRequestCount": 5747,
+      "functionsCompute": 3.1,
+      "computeGbHours": 0.3101,
+      "bandwidth": 0.993,
+      "bandwidthMB": 49.6
+     },
+     {
+      "day": "2026-09-19",
+      "deploys": 0,
+      "deployCount": 0,
+      "webRequests": 0.636,
+      "webRequestCount": 3182,
+      "functionsCompute": 1.67,
+      "computeGbHours": 0.1672,
+      "bandwidth": 0.266,
+      "bandwidthMB": 13.3
+     },
+     {
+      "day": "2026-09-20",
+      "deploys": 30,
+      "deployCount": 2,
+      "webRequests": 1.315,
+      "webRequestCount": 6574,
+      "functionsCompute": 3.49,
+      "computeGbHours": 0.3495,
+      "bandwidth": 1.185,
+      "bandwidthMB": 59.2
+     },
+     {
+      "day": "2026-09-21",
+      "deploys": 0,
+      "deployCount": 0,
+      "webRequests": 1.369,
+      "webRequestCount": 6845,
+      "functionsCompute": 3.98,
+      "computeGbHours": 0.398,
+      "bandwidth": 1.049,
+      "bandwidthMB": 52.4
+     },
+     {
+      "day": "2026-09-22",
+      "deploys": 0,
+      "deployCount": 0,
+      "webRequests": 1.366,
+      "webRequestCount": 6829,
+      "functionsCompute": 2.82,
+      "computeGbHours": 0.2821,
+      "bandwidth": 1.039,
+      "bandwidthMB": 51.9
+     },
+     {
+      "day": "2026-09-23",
+      "deploys": 60,
+      "deployCount": 4,
+      "webRequests": 1.126,
+      "webRequestCount": 5628,
+      "functionsCompute": 3.19,
+      "computeGbHours": 0.3191,
+      "bandwidth": 1.076,
+      "bandwidthMB": 53.8
+     },
+     {
+      "day": "2026-09-24",
+      "deploys": 45,
+      "deployCount": 3,
+      "webRequests": 0.727,
+      "webRequestCount": 3635,
+      "functionsCompute": 2.23,
+      "computeGbHours": 0.2231,
+      "bandwidth": 9.531,
+      "bandwidthMB": 476.5,
+      "note": "the 488 MB spike of the last reading (not a gig; see the 25 Sep reading)"
+     },
+     {
+      "day": "2026-09-25",
+      "deploys": 105,
+      "deployCount": 7,
+      "webRequests": 1.388,
+      "webRequestCount": 6942,
+      "functionsCompute": 4.15,
+      "computeGbHours": 0.415,
+      "bandwidth": 1.582,
+      "bandwidthMB": 79.1
+     },
+     {
+      "day": "2026-09-26",
+      "deploys": 180,
+      "deployCount": 12,
+      "webRequests": 0.804,
+      "webRequestCount": 4019,
+      "functionsCompute": 2.69,
+      "computeGbHours": 0.2692,
+      "bandwidth": 3.85,
+      "bandwidthMB": 192.5
+     },
+     {
+      "day": "2026-09-27",
+      "deploys": 75,
+      "deployCount": 5,
+      "webRequests": 0.957,
+      "webRequestCount": 4783,
+      "functionsCompute": 3.34,
+      "computeGbHours": 0.334,
+      "bandwidth": 0.904,
+      "bandwidthMB": 45.2
+     },
+     {
+      "day": "2026-09-28",
+      "deploys": 240,
+      "deployCount": 16,
+      "webRequests": 1.466,
+      "webRequestCount": 7330,
+      "functionsCompute": 5.12,
+      "computeGbHours": 0.5116,
+      "bandwidth": 1.26,
+      "bandwidthMB": 63.0
+     },
+     {
+      "day": "2026-09-29",
+      "deploys": 240,
+      "deployCount": 16,
+      "webRequests": 0.908,
+      "webRequestCount": 4542,
+      "functionsCompute": 4.02,
+      "computeGbHours": 0.4019,
+      "bandwidth": 1.044,
+      "bandwidthMB": 52.2
+     },
+     {
+      "day": "2026-09-30",
+      "deploys": 150,
+      "deployCount": 10,
+      "webRequests": 0.784,
+      "webRequestCount": 3921,
+      "functionsCompute": 4.25,
+      "computeGbHours": 0.4246,
+      "bandwidth": 0.715,
+      "bandwidthMB": 35.8
+     }
+    ]
+   }
   }
  ]
 }

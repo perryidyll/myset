@@ -423,6 +423,17 @@ eq('never with a Buy', r.canBuy, false);
 eq('but with the item', r.merch.length, 1);
 ok('a fan posts on a venue page', (await POST(`?v=${bar.slug}`, { action: 'post', fan: 'phone1', text: 'Great beer', stars: 4 })).ok);
 ok('the venue moderates it', (await VS(TV, 'postList')).posts.length === 1);
+{ // decision 0127: hiding or deleting a post is Pro for a venue; showing one again never is
+  const vp = (await VS(TV, 'postList')).posts[0];
+  await mutateVenues((reg) => { reg.byId[bar.venueId].plan = 'free'; return true; });
+  eq('a Free venue cannot hide a post (0127)', (await VS(TV, 'postHide', { id: vp.id, on: true })).status, 402);
+  eq('nor delete one', (await VS(TV, 'postDelete', { id: vp.id })).status, 402);
+  await mutateVenues((reg) => { reg.byId[bar.venueId].plan = 'pro'; return true; });
+  ok('on Pro it hides', (await VS(TV, 'postHide', { id: vp.id, on: true })).ok);
+  await mutateVenues((reg) => { reg.byId[bar.venueId].plan = 'free'; return true; });
+  ok('and back on Free a hidden post can still be shown again', (await VS(TV, 'postHide', { id: vp.id, on: false })).ok);
+  await mutateVenues((reg) => { reg.byId[bar.venueId].plan = 'pro'; return true; });
+}
 eq('a venue slug that is not a venue is a 404', (await GET('?v=nobody')).status, 404);
 
 console.log('\nARTISTS DO NOT COMMENT ON THEIR OWN PAGE');

@@ -25,6 +25,13 @@ import { logErr } from './_errlog.mjs';
    said yes; mail needs a verified sender. Both are wired and best-effort; the
    Studio's badge and the booker's link are the paths that always work.
 
+   A VENUE YOU ASKED (decision 0123) is a conversation here too, in its own
+   Venues folder: "Want to perform here?" opens it with the artist's words, the
+   venue answers from its Venue Studio (Keen and Not this time are one-tap
+   lines), and the artist replies here. The venue is not a stranger at a door —
+   it has an account — so there is no token, no email and no Block; the venue's
+   side of it is read through the pitch that names it (_pitch.mjs).
+
    Keys: `inbox_<aid>` (the index the Studio lists: one small document, capped and
    spilled into `inboxarch_<aid>` — 0fr), `msg_<aid>_<tid>` (one conversation).
    Nothing global (0a); every key is computable from the index (1, 0cy). */
@@ -52,7 +59,7 @@ export const REPLIES_PER_THREAD_PER_DAY = 30;
 export const SPAM_LINKS = 3;                     // three links in one message is a pitch, not a booking
 export const MAX_BLOCKED = 500;
 export const MAILS_PER_ARTIST_PER_DAY = 20;      // "you have a message" letters a day; push has no such cap (it coalesces by tag)
-export const FOLDERS = ['requests', 'general', 'business', 'casual', 'spam'];
+export const FOLDERS = ['requests', 'venues', 'general', 'business', 'casual', 'spam'];
 export const KINDS = ['booking', 'collab', 'press', 'other'];
 export const NOTIFY_MS = 1500;                   // the reply never waits longer than this on mail or push
 
@@ -240,7 +247,7 @@ export async function ownerReply(aid, tid, text, who = {}) {
   if (err) return { ok: false, error: err };
   await touchRow(aid, tid, (r) => { r.unread = false; if (r.folder === 'requests') r.folder = 'general'; r.preview = preview(body); r.lastAt = now; r.lastBy = 'me'; r.count = thread.msgs.length; }, () => rowOf(thread));
   await tellBooker(aid, who, { id: tid, k: thread.k, email: thread.email, artistReply: body }).catch(() => {});
-  return { ok: true, folder: thread.folder };
+  return { ok: true, folder: thread.folder, ...(thread.kind === 'pitch' ? { vid: thread.vid } : {}) };
 }
 
 /** The booker writes again, by the token. A blocked conversation swallows it (9h). */
@@ -320,6 +327,7 @@ async function tellPlatform(aid, tid) {
 export async function blockSender(aid, tid, on) {
   const t = await readThread(aid, tid);
   if (!t) return { ok: false, error: 'That conversation is gone.' };
+  if (t.kind === 'pitch') return { ok: false, error: 'That’s a venue you asked — move it to another folder instead.' };
   const e = h10(t.email), f = t.f || '';
   await casDoc(INBOX(aid), emptyInbox, (d) => {
     normInbox(d);
@@ -340,18 +348,86 @@ export function shapeIndex(inbox) {
     .map((t) => ({ id: t.id, folder: FOLDERS.includes(t.folder) ? t.folder : 'general', unread: !!t.unread, kind: t.kind || 'booking',
       name: t.name || '', preview: t.preview || '', lastAt: t.lastAt || 0, lastBy: t.lastBy || 'them', count: t.count || 1,
       reported: !!t.reported, blocked: !!t.blocked }));
-  const counts = { requests: 0, general: 0, business: 0, casual: 0, spam: 0, unread: 0 };
+  const counts = { requests: 0, venues: 0, general: 0, business: 0, casual: 0, spam: 0, unread: 0 };
   for (const r of rows) { counts[r.folder] += 1; if (r.unread && r.folder !== 'spam') counts.unread += 1; }
   return { threads: rows, counts };
 }
 export function shapeThread(t) {
   return { id: t.id, kind: t.kind || 'booking', name: t.name || '', email: t.email || '', phone: t.phone || '', venue: t.venue || '',
-    when: t.when || '', folder: t.folder || 'general', unread: !!t.unread, reported: !!t.reported, blocked: !!t.blocked, at: t.at || 0,
+    when: t.when || '', ...(t.kind === 'pitch' ? { venueSlug: t.vslug || '', status: t.status || 'new' } : {}), folder: t.folder || 'general', unread: !!t.unread, reported: !!t.reported, blocked: !!t.blocked, at: t.at || 0,
     msgs: (t.msgs || []).map((m) => ({ by: m.by === 'me' ? 'me' : 'them', text: m.text || '', at: m.at || 0 })) };
 }
 /** What the booker sees at their link: their own words and the artist's, no more. */
 export function shapeForBooker(t, artistName) {
   return { id: t.id, kind: t.kind || 'booking', name: t.name || '', at: t.at || 0, artist: { name: artistName || '' },
+    msgs: (t.msgs || []).map((m) => ({ by: m.by === 'me' ? 'artist' : 'you', text: m.text || '', at: m.at || 0 })) };
+}
+
+/* ---------- a venue you asked (decision 0123) ---------- */
+export const PITCH_OPENER = 'Asked about a spot.';   // the first line when the artist sent no words
+/** Makes sure the conversation for a pitch exists, and its row in the index —
+ *  idempotent, so the artist's send, the venue's reply and a pitch from before
+ *  0123 all come through the same door. `p` is the venue's pitch row. */
+export async function pitchOpen(aid, tid, { vid, vslug, venueName, p }) {
+  const at = (p && p.at) || Date.now();
+  const text = cleanText((p && p.message) || '') || PITCH_OPENER;
+  let made = null;
+  await casDoc(THREAD(aid, tid), () => ({}), (t) => {
+    if (t.id) { made = t; return false; }
+    Object.assign(t, { v: 1, id: tid, aid, kind: 'pitch', vid, vslug: vslug || '', name: oneLine(venueName, MAX_VENUE) || 'A venue',
+      email: '', phone: '', venue: '', when: '', k: '', e: h10('venue|' + vid), f: '', folder: 'venues', unread: false,
+      reported: false, blocked: false, status: (p && p.status) || 'new', at, rday: { d: '', n: 0 }, msgs: [{ by: 'me', text, at }] });
+    made = t;
+    return true;
+  });
+  await touchRow(aid, tid, () => {}, () => ({ ...rowOf(made), unread: !!made.unread, lastAt: at, lastBy: 'me' }));
+  return made;
+}
+/** The artist changed the words of their ask: the new words go into the conversation. */
+export async function pitchAgain(aid, tid, text) {
+  const body = cleanText(text);
+  if (!body) return;
+  const now = Date.now();
+  let thread = null;
+  await casDoc(THREAD(aid, tid), () => ({}), (t) => {
+    if (!t.id || (t.msgs || []).length >= MAX_MSGS) return false;
+    t.msgs.push({ by: 'me', text: body, at: now }); thread = t; return true;
+  });
+  if (thread) await touchRow(aid, tid, (r) => { r.preview = preview(body); r.lastAt = now; r.lastBy = 'me'; r.count = thread.msgs.length; }, () => rowOf(thread));
+}
+/** The venue writes (a reply, or the line Keen / Not this time sends). The artist
+ *  sees it unread and is told, like a booker's reply. */
+export async function pitchSay(aid, tid, text, { status } = {}) {
+  const body = cleanText(text);
+  if (!body) return { ok: false, error: 'Write a reply first.' };
+  const now = Date.now();
+  let err = null, thread = null, wasUnread = false;
+  await casDoc(THREAD(aid, tid), () => ({}), (t) => {
+    if (!t.id) { err = 'That conversation is gone.'; return false; }
+    t.msgs = Array.isArray(t.msgs) ? t.msgs : [];
+    if (t.msgs.length >= MAX_MSGS) { err = 'This conversation is full.'; return false; }
+    t.rday = t.rday && t.rday.d === dayOf(now) ? t.rday : { d: dayOf(now), n: 0 };
+    if (t.rday.n >= REPLIES_PER_THREAD_PER_DAY) { err = 'That’s a lot for one day — try again tomorrow.'; return false; }
+    t.rday.n += 1;
+    t.msgs.push({ by: 'them', text: body, at: now });
+    if (status) t.status = status;
+    wasUnread = !!t.unread; t.unread = true; thread = t;
+    return true;
+  });
+  if (err) return { ok: false, error: err };
+  await touchRow(aid, tid, (r) => { r.unread = true; r.preview = preview(body); r.lastAt = now; r.lastBy = 'them'; r.count = thread.msgs.length; }, () => rowOf(thread));
+  let mail = false;
+  if (!wasUnread && thread.folder !== 'spam')
+    await casDoc(INBOX(aid), emptyInbox, (d) => { normInbox(d); if (d.day.d !== dayOf(now)) d.day = { d: dayOf(now), n: 0, mail: 0 }; if ((d.day.mail || 0) >= MAILS_PER_ARTIST_PER_DAY) return false; d.day.mail = (d.day.mail || 0) + 1; mail = true; return true; }).catch(() => {});
+  if (thread.folder !== 'spam') {
+    const a = await artistById(aid).catch(() => null);
+    await tellArtist(aid, { artistName: (a && a.name) || '' }, { id: tid, name: thread.name, kd: 'pitch', body, fresh: false, mail }).catch(() => {});
+  }
+  return { ok: true };
+}
+/** What the venue sees: the artist's words and its own, no more. */
+export function shapeForVenueThread(t) {
+  return { id: t.id, name: t.name || '', status: t.status || 'new',
     msgs: (t.msgs || []).map((m) => ({ by: m.by === 'me' ? 'artist' : 'you', text: m.text || '', at: m.at || 0 })) };
 }
 
@@ -361,13 +437,14 @@ const threadLink = (slug, id, k) => `https://myset.vip/${encodeURIComponent(slug
 
 async function tellArtist(aid, who, { id, name, kd, body, fresh, mail }) {
   const title = fresh ? `New ${kd === 'booking' ? 'booking request' : 'message'} from ${name}` : `${name} replied`;
-  const jobs = [notify(aid, { title, body: preview(body), url: '/studio?tab=messages', tag: 'msg-' + id }, { tab: 'messages' })];
+  const url = '/studio?tab=messages' + (kd === 'pitch' ? '&f=venues' : '');
+  const jobs = [notify(aid, { title, body: preview(body), url, tag: 'msg-' + id }, { tab: 'messages' })];
   if (mail && emailReady()) {
     const reg = await readArtists().catch(() => null);
     const emails = reg ? Object.entries(reg.byEmail || {}).filter(([, v]) => v && v.artistId === aid && (v.role || 'owner') === 'owner').map(([e]) => e) : [];
     for (const e of emails.slice(0, 5))
-      jobs.push(sendMail(e, title, [`${name} wrote on your MySet page:`, `“${preview(body)}${body.length > MAX_PREVIEW ? '…' : ''}”`, 'Open Messages in your Studio to read and reply.'],
-        { who: who.artistName || '', cta: { label: 'Open Messages', url: 'https://myset.vip/studio?tab=messages' } }));
+      jobs.push(sendMail(e, title, [kd === 'pitch' ? `${name} wrote back about a spot:` : `${name} wrote on your MySet page:`, `“${preview(body)}${body.length > MAX_PREVIEW ? '…' : ''}”`, 'Open Messages in your Studio to read and reply.'],
+        { who: who.artistName || '', cta: { label: 'Open Messages', url: 'https://myset.vip' + url } }));
   }
   await within(Promise.allSettled(jobs), NOTIFY_MS);
 }
@@ -419,7 +496,13 @@ export async function handleMessages(aid, action, body) {
     if (t.unread) await setUnread(aid, tid, false).catch(() => {});
     return json({ ok: true, thread: { ...shapeThread(t), unread: false }, mail: emailReady() });
   }
-  if (action === 'msgReply') { const r = await ownerReply(aid, tid, body.text, await whoAmI()); return r.ok ? json(r) : bad(r.error); }
+  if (action === 'msgReply') {
+    const r = await ownerReply(aid, tid, body.text, await whoAmI());
+    if (!r.ok) return bad(r.error);
+    // a venue's conversation: its Venue Studio shows the pitch as answered
+    if (r.vid) { const { venueUnread } = await import('./_pitch.mjs'); await venueUnread(r.vid, aid, body.text).catch(() => {}); delete r.vid; }
+    return json(r);
+  }
   if (action === 'msgMove') { const r = await moveThread(aid, tid, String(body.folder || '')); return r.ok ? json(r) : bad(r.error); }
   if (action === 'msgUnread') { const r = await setUnread(aid, tid, body.on !== false); return r.ok ? json(r) : bad(r.error); }
   if (action === 'msgReport') { const r = await reportThread(aid, tid); return r.ok ? json(r) : bad(r.error); }
