@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 00:55 — a6caa6d — wt4@dash-crm-heading (1 files since origin/main)
+**tl;dr:** The master dashboard's CRM window now has the heading 'Automatic profile generator and contact list'
+**Other sessions:** dash.html only; reuses the .stat.goal style from the money window.
+
 ### 2026-10-01 21:11 — 86b8384 — wt4@dash-money-goal (1 files since origin/main)
 **tl;dr:** The master dashboard's money model window is headed '2027 Q2 Goal: $10,000/Month Profit', and revenue, costs and profit all start from zero
 **Other sessions:** dash.html only: the goal heading is always shown (no longer the real-nights count-up); the real-nights count moved into the small line under it when live.json answers. A [0,0,0] point is prepended to the lines.
