@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 13:05 — f9ffe08 — wt4@ux/paying-founder (3 files since origin/main)
+**tl;dr:** FIX: the money model's top tiles showed ∞ since this morning (a comment hid three dials); now right again. Show log: 'If the founder were a paying customer' toggle on both tables, a clearer Money model button and a link by the tier table; money model hero's y no longer clipped and its intro is bullets
+**Other sessions:** mine(r) in finance/shows.html = costs.myset, re-priced on the account's plan when PAYING. test/everyshow.mjs now fails if a P0 dial sits after a // on its line.
+
 ### 2026-10-01 12:44 — 61c8176 — wt4@fix/tier-seed-packs (1 files since origin/main)
 **tl;dr:** Money model tier table: vote packs start at the real average even before the register refolds
 **Other sessions:** tpLive() derives packsAmount = gross − tips − paid requests when live.json lacks it.
