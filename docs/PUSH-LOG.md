@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 20:06 — af47cfd — wt4@dash-followers-line (3 files since origin/main)
+**tl;dr:** The master dashboard's money model window now draws three lines, revenue, costs and profit, growing from no artists to the default scenario's month, then fades and draws again
+**Other sessions:** Amounts never leave the passcode: model.html dashPeek() writes localStorage myset.dash.money (25 points, one month at each size, P0 + live actuals as the page lays them); /dash reads it, else draws unlabelled shapes. Old single green curve removed.
+
 ### 2026-10-01 19:55 — 5defe78 — wt4@dash-followers-line (1 files since origin/main)
 **tl;dr:** The master dashboard's Media Dash window now has a blue followers line that draws itself through the views bars, lands on today's count, fades and starts again
 **Other sessions:** dash.html only: line points are followers at each post's publish time (last account reading at or before it), plus today's count at the right edge; own y-scale, no axis. Reduced motion shows it still.
