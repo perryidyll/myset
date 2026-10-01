@@ -342,18 +342,25 @@ console.log('\nA VENUE HAS BOOKS TOO');
      venue joined — and a venue created a second ago genuinely has no last month. */
   await (await import('../netlify/functions/_venues.mjs')).mutateVenues((reg) => {
     reg.byId[V.venueId].createdAt = Date.UTC(2026, 0, 1); return true; });
+  /* The handler takes no `now` (a request must never be able to choose its own
+     clock), so the test pins Date.now to NOW for the call. Without that the
+     two-month window followed the wall clock and this read zero from 1 Oct 2026:
+     LAST is August, the real window was September and October. */
+  const realNow = Date.now; Date.now = () => NOW;
   const vtok = await signVenueToken('vbooks@example.com', vRevOf(await readVenues(), V.venueId));
   await ready(`v_${V.venueId}`, 'acct_venue1');
-  /* LAST month, not this one: the handler uses the real clock (it takes no `now`),
-     so a date later in THIS month is in the future and Stripe is asked for a window
-     that has not happened yet. Worth pinning — it is exactly how a report can read
-     zero while the money is plainly there. */
+  /* LAST month, not this one: a date later in THIS month is in the future and
+     Stripe is asked for a window that has not happened yet. Worth pinning — it is
+     exactly how a report can read zero while the money is plainly there. */
   bt({ __account: 'acct_venue1', created: at(LAST, 10), type: 'charge', amount: 3000, fee: 117, net: 2883,
        fee_details: [{ type: 'stripe_fee', amount: 117 }] });
-  const r = await vadmin(new Request('https://x/api/venueadmin', { method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${vtok}` },
-    body: JSON.stringify({ action: 'ledger', months: 2 }) }));
-  const d = await jget(r);
+  let r, d;
+  try {
+    r = await vadmin(new Request('https://x/api/venueadmin', { method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${vtok}` },
+      body: JSON.stringify({ action: 'ledger', months: 2 }) }));
+    d = await jget(r);
+  } finally { Date.now = realNow; }
   ok('a venue owner can read theirs', r.status === 200 && d.ok, d);
   eq('with the venue’s own gross', (d.months || []).reduce((s, m) => s + m.gross, 0), 3000);
 
