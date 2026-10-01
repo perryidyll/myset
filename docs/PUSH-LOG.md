@@ -13,6 +13,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-02 01:48 — 09041ca — photo-roles@ux/sample-photo-roles (12 files since origin/main)
 **tl;dr:** CRM's page tab shows a sample's photos where the page shows them (Cover, Main/Profile shot, Small top/middle/bottom), drag or 'Swap with' to rearrange, a Generator notes box the next rebuild reads, and Rebuild now keeps the photos, hours, menu link and rating unless unticked (0136)
 **Other sessions:** factory.mjs: new actions arrange {order} and notes {notes}; addPhoto places by role (ROLES/rolesOf/writeRoles in _sample.mjs) and stores under an unused slot name; rebuild takes keep (default true) → job.keep → createSample keptOf/eraseData(spare). sampleDetail profile.roles is the one order. Seed.notes ≠ the contact's private note. Decision 0135 is on #199: whichever merges second regenerates overview + decisions README.
+
 ### 2026-10-02 01:37 — 682f9fc — wt4@dash/headings (1 files since origin/main)
 **tl;dr:** Master dash: Show log window heading 'Every stat from every show'; Media Dash heading reads 'N views | N followers' (7-day views, today's followers)
 **Other sessions:** dash.html only; #mdF holds followers, counted up beside #mdN.
