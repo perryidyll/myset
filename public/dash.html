@@ -246,6 +246,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
           <g id="ledgerRows"></g>
           <rect class="scan" x="0" y="0" width="400" height="28"/>
         </svg>
+        <div class="stat goal"><b>Every stat from every show</b></div>
       </div>
       <div class="foot"><h2>Show log</h2><p>Every night on MySet: who played, where, what the room paid, what it cost, and what MySet kept.</p><span class="url">myset.vip/moneymodel/shows</span>
         <span class="go"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></div>
@@ -265,7 +266,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
           <g class="fols" id="fols"><path class="fol halo" pathLength="1"/><path class="fol ink" pathLength="1"/></g>
         </svg>
         <span class="folEnd" id="folEnd" aria-hidden="true"><i></i><b></b></span>
-        <div class="stat off" id="mdStat"><b id="mdN">0</b><small id="mdL">views in the last 7 days</small></div>
+        <div class="stat goal off" id="mdStat"><b><span id="mdN">0</span> views | <span id="mdF">0</span> followers</b><small id="mdL">views in the last 7 days</small></div>
       </div>
       <div class="foot"><h2>Media Dash</h2><p>Instagram, post by post: views, reach and what the room saw this week.</p><span class="url">myset.vip/mediadash</span>
         <span class="go"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></div>
@@ -393,8 +394,9 @@ fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) =>
   }
   const views = d.week && Number(d.week.views);
   if (Number.isFinite(views)) {
-    $('#mdL').textContent = 'views in the last 7 days' + (d.account && d.account.length ? ` · ${int(d.account[d.account.length - 1].followers)} followers` : '');
+    const fol = d.account && d.account.length ? Number(d.account[d.account.length - 1].followers) : NaN;
     $('#mdStat').classList.remove('off'); countUp($('#mdN'), views, int);
+    if (Number.isFinite(fol)) countUp($('#mdF'), fol, int); else $('#mdF').textContent = '—';
   }
 }).catch(() => {});
 

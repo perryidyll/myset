@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 01:37 — 682f9fc — wt4@dash/headings (1 files since origin/main)
+**tl;dr:** Master dash: Show log window heading 'Every stat from every show'; Media Dash heading reads 'N views | N followers' (7-day views, today's followers)
+**Other sessions:** dash.html only; #mdF holds followers, counted up beside #mdN.
+
 ### 2026-10-02 00:55 — a6caa6d — wt4@dash-crm-heading (1 files since origin/main)
 **tl;dr:** The master dashboard's CRM window now has the heading 'Automatic profile generator and contact list'
 **Other sessions:** dash.html only; reuses the .stat.goal style from the money window.
