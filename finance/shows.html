@@ -78,7 +78,21 @@ header{position:sticky;top:0;z-index:10;backdrop-filter:blur(24px) saturate(160%
 h1{font-size:clamp(40px,6vw,72px);line-height:.98;letter-spacing:-.045em;font-weight:700;max-width:16ch;text-wrap:balance;background:linear-gradient(180deg,var(--ink) 55%,color-mix(in srgb,var(--ink) 62%,var(--accent)));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 h1 em{-webkit-text-fill-color:var(--muted)}
 h1 em{font-style:normal;color:var(--muted);font-weight:600}
-.lede{margin-top:16px;color:var(--muted);font-size:16px;max-width:66ch;line-height:1.5}
+ul.lede{margin:16px 0 0;color:var(--muted);font-size:16px;max-width:66ch;line-height:1.5;list-style:none;padding:0;display:grid;gap:7px}
+ul.lede li{position:relative;padding-left:20px;animation:ledeIn .6s var(--ease) both}
+ul.lede li::before{content:"";position:absolute;left:3px;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px rgba(var(--accent-rgb),.6)}
+ul.lede li:nth-child(2){animation-delay:.05s}ul.lede li:nth-child(3){animation-delay:.1s}ul.lede li:nth-child(4){animation-delay:.15s}
+ul.lede b{color:var(--ink2)}
+@keyframes ledeIn{from{opacity:.001;transform:translateY(8px)}}
+@media(prefers-reduced-motion:reduce){ul.lede li{animation:none}}
+/* coloured bullet points: every explainer on the page is a short list, not a paragraph */
+ul.pts{list-style:none;padding:0;margin:6px 0 0;display:grid;gap:6px}
+ul.pts li{position:relative;padding-left:18px;margin:0}
+ul.pts li::before{content:"";position:absolute;left:2px;top:.6em;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+ul.pts li:nth-child(4n+2)::before{background:var(--blue)}
+ul.pts li:nth-child(4n+3)::before{background:var(--good)}
+ul.pts li:nth-child(4n+4)::before{background:var(--warn)}
+ul.pts b{color:var(--ink2);font-weight:600}
 
 /* ─── KPI tiles ─── */
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:36px 0 12px}
@@ -170,7 +184,8 @@ small.on{display:block;font-size:10px;font-weight:500;color:var(--faint);letter-
 @keyframes tierIn{from{opacity:.001;transform:translateY(6px)}}
 @media (prefers-reduced-motion:reduce){.tbl.tiers tbody tr{animation:none}}
 .tag.plan{color:var(--blue);background:color-mix(in srgb,var(--blue) 13%,transparent)}
-.hint{font-size:12.5px;color:var(--faint);margin-top:10px}
+.hint{font-size:12.5px;color:var(--faint);margin-top:10px;line-height:1.5}
+ul.hint{margin-top:12px;color:var(--muted)}
 
 /* ─── charts ─── */
 .charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -217,7 +232,8 @@ small.on{display:block;font-size:10px;font-weight:500;color:var(--faint);letter-
 @media(max-width:640px){.rules{grid-template-columns:1fr}}
 .rules .card{padding:20px 22px}
 .rules h3{font-size:15px;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
-.rules p{font-size:13.5px;color:var(--muted);line-height:1.55}
+.rules p,.rules ul.pts{font-size:13.5px;color:var(--muted);line-height:1.55}
+.rules ul.pts{margin-top:0}
 .rules b{color:var(--ink2);font-weight:600}
 footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-size:12px;color:var(--faint);display:flex;flex-wrap:wrap;gap:8px 20px;line-height:1.5}
 
@@ -273,7 +289,12 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 <div class="hero">
   <div class="eyebrow" id="eyebrow">MySet · the register</div>
   <h1>Show <em>log</em></h1>
-  <p class="lede">One row for every night any artist has run on the platform: who played, where in the world, for how long, how many phones were in the room, what the room voted for and what it paid. Folded on the server from the records the app already keeps. The money model reads its real-show numbers straight off this data.</p>
+  <ul class="lede">
+    <li><b>One row for every night</b> any artist has run on the platform.</li>
+    <li>Who played, where in the world, for how long, how many phones were in the room, what the room voted for and what it paid.</li>
+    <li>Folded on the server from the records the app already keeps.</li>
+    <li>The money model reads its real-show numbers straight off this data.</li>
+  </ul>
 </div>
 
 <div class="kpis" id="kpis"></div>
@@ -297,14 +318,33 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <button class="chip pay" type="button" aria-pressed="false" title="Price the founder's own nights on the account's plan: its cut, its monthly fee">If the founder were a paying customer</button>
   </div>
   <div class="card"><div class="tw" id="showsWrap"><table class="tbl" id="showsTable"><thead></thead><tbody></tbody></table></div></div>
-  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. MySet cut is MySet's share of the money that came through the app (25% Hobbyist · 10% Bar Star · 2% Rock Star; none on the founder's own nights, unless <b>If the founder were a paying customer</b> is on); MySet profit is that cut less the server and Stripe. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is Stripe's own fee on each payment (≈ only where it has not been read yet, then the published card rates). Times are the night's own local clock.</p>
+  <ul class="pts hint">
+    <li>The totals row adds up whatever the filters show.</li>
+    <li>Money is Stripe's answer. A night Stripe never answered reads “unknown”, never $0.</li>
+    <li><b>MySet cut</b> is MySet's share of the money that came through the app: 25% Hobbyist · 10% Bar Star · 2% Rock Star. None on the founder's own nights, unless <b>If the founder were a paying customer</b> is on.</li>
+    <li><b>MySet profit</b> is that cut less the server and Stripe.</li>
+    <li>Costs are money going out, so they are never green.</li>
+    <li><b>Server</b> is Netlify's own meters for that night. ≈ means that night was never read, so it carries the average.</li>
+    <li><b>Stripe</b> is Stripe's own fee on each payment. ≈ means it has not been read yet, so it uses the published card rates.</li>
+    <li>Times are the night's own local clock.</li>
+  </ul>
 </section>
 
 <section id="tiersBlock">
   <div class="sh"><h2>Profit by membership tiers</h2><p id="tiersSub"></p></div>
   <div class="filters"><div class="chips" id="tierMode" role="group" aria-label="How to price the nights"><button class="chip on" data-m="asif">If every night were on each plan</button><button class="chip" data-m="played">As actually played</button></div><button class="chip pay" type="button" aria-pressed="false" title="Price the founder's own nights on the account's plan: its cut, its monthly fee">If the founder were a paying customer</button><a class="mmlink" href="/moneymodel#tpPanel">Project it on the money model →</a></div>
   <div class="card"><div class="tw" id="tiersWrap"><table class="tbl tiers" id="tiersTable"></table></div></div>
-  <p class="hint">Each plan has two lines: the total for the nights, then one show on average. <b>In-app transactions</b> are what the room paid through the app, by source. <b>Server</b> and <b>Stripe</b> are the same costs as the table above. <b>Fee</b> is the share MySet takes, and <b>cut on transactions</b> is that share of the total. <b>Profit on shows</b> is the cut less the server and Stripe. <b>Plan fees</b> are the monthly price after Stripe's card fee and its 0.7% billing fee, for each month the nights span (an artist's first night to their last, one month at least). <b>Total revenue</b> is the cut plus the plan price; <b>total profit</b> is the profit on shows plus the plan fees after Stripe. “As actually played” uses each night's real plan: no cut and no plan fee on the founder's own nights, unless <b>If the founder were a paying customer</b> is on (it changes nothing in the first view, which already prices every night as paying).</p>
+  <ul class="pts hint">
+    <li>Each plan has two lines: the total for the nights, then one show on average.</li>
+    <li><b>In-app transactions</b> are what the room paid through the app, by source.</li>
+    <li><b>Server</b> and <b>Stripe</b> are the same costs as the table above.</li>
+    <li><b>Fee</b> is the share MySet takes. <b>Cut on transactions</b> is that share of the total.</li>
+    <li><b>Profit on shows</b> is the cut less the server and Stripe.</li>
+    <li><b>Plan fees</b> are the monthly price after Stripe's card fee and its 0.7% billing fee, for each month the nights span (an artist's first night to their last, one month at least).</li>
+    <li><b>Total revenue</b> is the cut plus the plan price. <b>Total profit</b> is the profit on shows plus the plan fees after Stripe.</li>
+    <li>“As actually played” uses each night's real plan: no cut and no plan fee on the founder's own nights, unless <b>If the founder were a paying customer</b> is on.</li>
+    <li>That switch changes nothing in the first view, which already prices every night as paying.</li>
+  </ul>
 </section>
 
 <section>
@@ -333,13 +373,48 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
 <section class="deep">
   <div class="sh"><h2>How these numbers are made</h2><p>Read this once.</p></div>
   <div class="rules">
-    <div class="card"><h3>Which nights count</h3><p>A night is <b>counted</b> when it started on a published gig (no earlier than 90 minutes before the slot, no later than its end) and something happened in it. Everything else is kept and labelled, never thrown away: <b>unused</b> (on the calendar, one phone, no votes) or <b>not counted</b> (nobody there; not on the calendar; ten or more phones on one network in under half an hour, which is one machine; under 30 minutes; over 12 hours with no gig). <b>Hidden</b> is a flag, not a verdict: a night the artist deleted from their own Money tab is still judged by the same rule and still in the totals, greyed here.</p></div>
-    <div class="card"><h3>How long a night is</h3><p>The record's own length, unless the record overran the published slot. Then it is the later of the slot and the last song anyone started: a room still voting past the slot was still a room; an empty page left open was not. Two records inside one slot (an accidental End then Start) are one night.</p></div>
-    <div class="card"><h3>People</h3><p>Phones that opened the room, not just phones that voted. “Networks” is how many different connections those phones came in on: the one check that a crowd was not one phone rotating its id.</p></div>
-    <div class="card"><h3>Money</h3><p>Tips, vote packs and paid requests are <b>Stripe's answer</b> for the payments tagged with the night, read when the night was filed and again the morning after, so a tip sent from the walk home still lands. A night Stripe never answered says <b>unknown</b>, never $0, and stays out of every per-head figure. <b>$ a head</b> = (tips + vote packs + paid requests) ÷ phones, over nights with money known. Merch is never in it: merch is the app's own order record, and the artist ships it. Every dollar figure above zero is green.</p></div>
-    <div class="card"><h3>What a show cost</h3><p>Three columns, money going out, so never green. <b>Server</b> is the traffic the night added over an empty day, by Netlify's own per-day meters, at the price of the plan's top-up pack (every credit past the month's grant is bought in one). A night the meters were never read for carries the average of the nights they were, marked ≈. <b>Stripe</b> is Stripe's own fee on each of the night's payments, read off the charge when the night's money is asked. A night filed before fees were read is asked again on its own; until then it carries the published-rate estimate, marked ≈. Merch orders are always the estimate. <b>No deploy is ever in a show's cost</b>: shipping code is the founder's bill, not the room's.</p></div>
-    <div class="card"><h3>Where a night was</h3><p>Country and time zone come off the night's own record, else the calendar gig the night lines up with, else a venue in the registry with the same name, else the tail of the “City, Country” text older nights carry.</p></div>
-    <div class="card"><h3>What the money model takes from here</h3><p>Nights counted, phones and hours a night, votes and songs a night, actions per phone, and room money a head by plan. The meters (ticks per phone-hour, credits a night, deploys) are Netlify's dashboard numbers and stay the tracker's; the model keeps those from its last reading and says so.</p></div>
+    <div class="card"><h3>Which nights count</h3><ul class="pts">
+      <li>A night is <b>counted</b> when it started on a published gig (no earlier than 90 minutes before the slot, no later than its end) and something happened in it.</li>
+      <li>Everything else is kept and labelled, never thrown away.</li>
+      <li><b>Unused:</b> on the calendar, one phone, no votes.</li>
+      <li><b>Not counted:</b> nobody there; not on the calendar; ten or more phones on one network in under half an hour (that is one machine); under 30 minutes; over 12 hours with no gig.</li>
+      <li><b>Hidden</b> is a flag, not a verdict. A night the artist deleted from their own Money tab is still judged by the same rule and still in the totals, greyed here.</li>
+    </ul></div>
+    <div class="card"><h3>How long a night is</h3><ul class="pts">
+      <li>The record's own length, unless the record overran the published slot.</li>
+      <li>Then it is the later of the slot and the last song anyone started. A room still voting past the slot was still a room; an empty page left open was not.</li>
+      <li>Two records inside one slot (an accidental End then Start) are one night.</li>
+    </ul></div>
+    <div class="card"><h3>People</h3><ul class="pts">
+      <li>Phones that opened the room, not just phones that voted.</li>
+      <li><b>Networks</b> is how many different connections those phones came in on: the one check that a crowd was not one phone rotating its id.</li>
+    </ul></div>
+    <div class="card"><h3>Money</h3><ul class="pts">
+      <li>Tips, vote packs and paid requests are <b>Stripe's answer</b> for the payments tagged with the night.</li>
+      <li>Read when the night was filed and again the morning after, so a tip sent from the walk home still lands.</li>
+      <li>A night Stripe never answered says <b>unknown</b>, never $0, and stays out of every per-head figure.</li>
+      <li><b>$ a head</b> = (tips + vote packs + paid requests) ÷ phones, over nights with money known.</li>
+      <li>Merch is never in it. Merch is the app's own order record, and the artist ships it.</li>
+      <li>Every dollar figure above zero is green.</li>
+    </ul></div>
+    <div class="card"><h3>What a show cost</h3><ul class="pts">
+      <li>Three columns, money going out, so never green.</li>
+      <li><b>Server</b> is the traffic the night added over an empty day, by Netlify's own per-day meters, at the price of the plan's top-up pack (every credit past the month's grant is bought in one).</li>
+      <li>A night the meters were never read for carries the average of the nights they were, marked ≈.</li>
+      <li><b>Stripe</b> is Stripe's own fee on each of the night's payments, read off the charge when the night's money is asked.</li>
+      <li>A night filed before fees were read is asked again on its own. Until then it carries the published-rate estimate, marked ≈. Merch orders are always the estimate.</li>
+      <li><b>No deploy is ever in a show's cost.</b> Shipping code is the founder's bill, not the room's.</li>
+    </ul></div>
+    <div class="card"><h3>Where a night was</h3><ul class="pts">
+      <li>Country and time zone come off the night's own record.</li>
+      <li>Else the calendar gig the night lines up with.</li>
+      <li>Else a venue in the registry with the same name.</li>
+      <li>Else the tail of the “City, Country” text older nights carry.</li>
+    </ul></div>
+    <div class="card"><h3>What the money model takes from here</h3><ul class="pts">
+      <li>Nights counted, phones and hours a night, votes and songs a night, actions per phone, and room money a head by plan.</li>
+      <li>The meters (ticks per phone-hour, credits a night, deploys) are Netlify's dashboard numbers and stay the tracker's. The model keeps those from its last reading and says so.</li>
+    </ul></div>
   </div>
 <footer id="foot"></footer>
 </section>
