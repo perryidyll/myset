@@ -155,6 +155,8 @@ section{margin-top:52px}
 .tag.refused{color:var(--muted)}
 .tag.silent{color:var(--faint);background:transparent;box-shadow:inset 0 0 0 1px var(--hair2)}
 .tag.hidden{color:var(--live);background:rgba(255,69,110,.13)}
+.fee{color:var(--blue);font-weight:600;font-variant-numeric:tabular-nums}
+small.on{display:block;font-size:10px;font-weight:500;color:var(--faint);letter-spacing:.02em;margin:1px 0 0!important;opacity:1!important}
 .tag.plan{color:var(--blue);background:color-mix(in srgb,var(--blue) 13%,transparent)}
 .hint{font-size:12.5px;color:var(--faint);margin-top:10px}
 
@@ -277,7 +279,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <select class="sel" id="fArtist" aria-label="Artist"><option value="">Every artist</option></select>
     <select class="sel" id="fVenue" aria-label="Venue"><option value="">Every venue</option></select>
     <select class="sel" id="fCountry" aria-label="Country"><option value="">Every country</option></select>
-    <select class="sel" id="fPlan" aria-label="Plan"><option value="">Every plan</option><option value="free">Hobbyist (free)</option><option value="plus">Plus</option><option value="pro">Pro</option></select>
+    <select class="sel" id="fPlan" aria-label="Plan"><option value="">Every plan</option><option value="free">Hobbyist (free)</option><option value="plus">Bar Star</option><option value="pro">Rock Star</option></select>
     <select class="sel" id="fStatus" aria-label="Which nights"><option value="counted">Counted nights</option><option value="all">Everything filed</option><option value="unused">On the calendar, unused</option><option value="refused">Not counted (tests, accidents)</option><option value="silent">Published, no record</option><option value="hidden">Hidden by the artist</option></select>
     <input class="search" type="search" id="fSearch" placeholder="Search a venue, a song, a title">
   </div>
@@ -355,7 +357,11 @@ const $$profit = (n, est) => (!fin(n) ? dash : `<span class="${n > 0 ? 'pos' : n
 /* every dollar figure goes through here: above zero is green, zero is quiet, unknown is a dash */
 const $$usd = (n, d = 2) => (!fin(n) ? dash : n > 0 ? `<span class="pos">${fmt.usd(n, d)}</span>` : `<span class="zero">${fmt.usd(n, d)}</span>`);
 const toast = (t) => { const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2800); };
-const PLAN = { free: 'Hobbyist', plus: 'Plus', pro: 'Pro' };
+const PLAN = { free: 'Hobbyist', plus: 'Bar Star', pro: 'Rock Star' };
+/* = netlify/functions/_plan.mjs PLANS[*].price / 100; the founder (isPlatformOwner) is never charged */
+const PLAN_USD = { free: 0, plus: 10, pro: 20 };
+const isFounder = (r) => r.artist.id === 'perry-idyll' || !!(cost(r) && cost(r).myset && cost(r).myset.founder);
+const feeOf = (r) => (isFounder(r) ? 0 : PLAN_USD[r.artist.plan] || 0);
 const STATUS_WORD = { counted: 'counted', unused: 'unused', refused: 'not counted', silent: 'silent' };
 const tagOf = (r) => `<span class="tag ${r.status}" title="${esc(r.why || '')}">${STATUS_WORD[r.status] || r.status}</span>${r.hidden ? ' <span class="tag hidden" title="the artist deleted this night from their Money tab; still on disk, still judged by the rule">hidden</span>' : ''}`;
 const plural = (n, one, many = one + 's') => `${fmt.int(n)} ${n === 1 ? one : many}`;
@@ -409,8 +415,11 @@ const liveRows = (rows) => rows.filter((r) => !silent(r));
 const COLS = [
   { k: 'startedAt', label: 'Date', cell: (r) => `<span title="${esc(r.tz || '')}">${fmt.day(r.localDate)}${r.localTime ? ` <span class="faint">${esc(r.localTime)}</span>` : ''}</span>`,
     total: (rows) => `Totals<small>${plural(rows.length, 'night')}</small>` },
-  { k: 'artist', label: 'Artist', sort: (r) => r.artist.name || '', cell: (r) => `<span class="who">${r.artist.left ? '<span class="faint">(account closed)</span>' : `<b>${esc(r.artist.name)}</b>`}</span> <span class="tag plan" title="${r.artist.planStamped ? 'the plan the night was played on' : 'the artist\'s plan today (nights before 25 Sep 2026 were not stamped)'}">${esc(PLAN[r.artist.plan] || r.artist.plan)}</span>`,
+  { k: 'artist', label: 'Artist', sort: (r) => r.artist.name || '', cell: (r) => `<span class="who">${r.artist.left ? '<span class="faint">(account closed)</span>' : `<b>${esc(r.artist.name)}</b>`}</span>`,
     total: (rows) => plural(new Set(rows.map((r) => r.artist.id)).size, 'artist') },
+  { k: 'planFee', label: 'Plan fees', n: 1, sort: (r) => feeOf(r),
+    cell: (r) => `<span class="fee" title="${esc(PLAN[r.artist.plan] || r.artist.plan)}${isFounder(r) ? ' — the founder\'s account, never charged' : ''}; ${r.artist.planStamped ? 'the plan the night was played on' : 'the artist\'s plan today (nights before 25 Sep 2026 were not stamped)'}">$${feeOf(r)}/mo</span>`,
+    total: (rows) => { const by = new Map(rows.map((r) => [r.artist.id, feeOf(r)])); return `<span class="fee">$${[...by.values()].reduce((a, b) => a + b, 0)}/mo</span>`; } },
   { k: 'venue', label: 'Venue', sort: (r) => r.venue || '', cell: (r) => esc(r.venue || (r.title ? `“${r.title}”` : '—')),
     total: (rows) => plural(new Set(rows.map((r) => r.venue).filter(Boolean)).size, 'venue') },
   { k: 'place', label: 'City · Country', sort: (r) => (r.country || '') + (r.city || ''), cell: (r) => esc([r.city, r.country].filter(Boolean).join(', ') || '—'),
@@ -440,8 +449,8 @@ const COLS = [
     cell: (r) => { const p = cost(r) && cost(r).myset; return p ? `<span title="${p.founder ? 'the founder\'s own night: MySet takes no cut' : `${Math.round(p.cut * 100)}% of the ${fmt.usd(p.cut ? p.fee / p.cut : 0)} that came through the app`}">${$$usd(p.fee)} <span class="faint">${Math.round(p.cut * 100)}%</span></span>` : dash; },
     total: (rows) => { const ps = rows.map((r) => cost(r) && cost(r).myset).filter(Boolean); if (!ps.length) return dash; const fee = sumOf(ps, (p) => p.fee), base = sumOf(ps, (p) => (p.cut ? p.fee / p.cut : 0)); return `${$$usd(fee)}${base ? ` <span class="faint">${Math.round(fee / base * 100)}%</span>` : ''}`; } },
   { k: 'profit', label: 'MySet profit', n: 1, sort: (r) => (cost(r) && cost(r).myset ? cost(r).myset.usd : -1e9),
-    cell: (r) => { const c = cost(r), p = c && c.myset; return p ? `<span title="cut ${fmt.usd(p.fee)} − server ${fmt.usd(c.server ? c.server.usd : 0)} − Stripe ${fmt.usd(c.stripe ? c.stripe.usd : 0)}">${$$profit(p.usd, p.estimate)}</span>` : dash; },
-    total: (rows) => { const ps = rows.map((r) => cost(r) && cost(r).myset).filter(Boolean); return ps.length ? `<b>${$$profit(sumOf(ps, (p) => p.usd), ps.some((p) => p.estimate))}</b>` : dash; } },
+    cell: (r) => { const c = cost(r), p = c && c.myset; return p ? `<span title="cut ${fmt.usd(p.fee)} − server ${fmt.usd(c.server ? c.server.usd : 0)} − Stripe ${fmt.usd(c.stripe ? c.stripe.usd : 0)}">${$$profit(p.usd, p.estimate)}</span><small class="on">on transactions</small>` : dash; },
+    total: (rows) => { const ps = rows.map((r) => cost(r) && cost(r).myset).filter(Boolean); return ps.length ? `<b>${$$profit(sumOf(ps, (p) => p.usd), ps.some((p) => p.estimate))}</b><small class="on">on transactions</small>` : dash; } },
   { k: 'songs', label: 'Songs', n: 1, sort: (r) => r.songsPlayed, cell: (r) => (silent(r) ? dash : fmt.int(r.songsPlayed)), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.songsPlayed)) },
   { k: 'money', label: 'Room $', n: 1, sort: (r) => (known(r) ? r.money.total : -1), cell: (r) => (silent(r) ? dash : known(r) ? $$usd(r.money.total) : '<span class="tag unknown" title="Stripe could not be asked, or payments were off">unknown</span>'),
     total: (rows) => $$usd(sumOf(knownRows(rows), (r) => r.money.total)) },
