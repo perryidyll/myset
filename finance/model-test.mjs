@@ -54,7 +54,7 @@ const mid = ENGINE.gigTraffic({ ...pa, edgeSpread: 50 }, 20, 3);
 ok('the edge-nodes dial slides renders between the best and the worst case', Math.abs(mid.renders - (mid.rendersBest + mid.rendersWorst) / 2) < 1e-6 && mid.rendersWorst > mid.rendersBest);
 ok('the store: a bar moves kilobytes a second, ten thousand phones sit at the ~50 MB/s wall (loadsim 48.7)', one.storeMBs < 0.05 && Math.abs(ENGINE.gigTraffic(pa, 10000, 2).storeMBs - 48.7) / 48.7 < 0.1, [one.storeMBs, ENGINE.gigTraffic(pa, 10000, 2).storeMBs]);
 
-console.log('THE OPEN LINE (decision 0036: an add-on to polling, priced from the probe)');
+console.log('THE OPEN LINE (decision 0035: an add-on to polling, priced from the probe)');
 const plainL = ENGINE.gigTraffic(pa, 20, 3, false), lineL = ENGINE.gigTraffic(pa, 20, 3, true);
 /* at a 20-phone bar the tally changes about as often as the stage does (50 votes over 3 h ≈ a song every 4 min), so the line
    cannot slow the ladder much there, and every stage message adds a look — the line saves ticks only in a BUSY room under 200 phones */
@@ -78,7 +78,7 @@ ok('the month on the open-line host runs the line-on ladder and carries Cloudfla
 console.log('THE MONTH, independent re-computation');
 const R = ENGINE.month(P0, P0.artists);
 const nFree = 1000 * .6, nPlus = 300, nPro = 100;
-const gigsFreeRun = Math.min(P0.gigsFree, P0.freeCap);
+const gigsFreeRun = P0.gigsFree;   // the free plan is ten shows in total (0120), never a monthly cap
 const gigs = nFree * gigsFreeRun + (nPlus + nPro) * P0.gigsPaid;
 ok('gigs = ' + gigs, Math.abs(R.gigs - gigs) < 1e-6, R.gigs);
 const paying = 1 - P0.compedPct / 100;
@@ -101,7 +101,7 @@ const subCount = (nPlus + nPro) * paying;
 const S = P0.stripe;
 const card = (amt, n) => amt * (S.pct / 100 + (S.intlShare / 100) * (S.intlPct / 100) + (S.fxShare / 100) * (S.fxPct / 100)) + n * S.fixed;
 const paidOut = gmvAll - cutRev;
-const payouts = (nFree * Math.min(S.payoutsPerMonth, gigsFreeRun) + (nPlus + nPro) * Math.min(S.payoutsPerMonth, P0.gigsPaid)) * (P0.activePayoutPct / 100);
+const payouts = (nFree * Math.min(S.payoutsPerMonth, gigsFreeRun, 52 / 12) + (nPlus + nPro) * Math.min(S.payoutsPerMonth, P0.gigsPaid)) * (P0.activePayoutPct / 100);
 const earning = 1000 * P0.activePayoutPct / 100;
 const stripe = card(subs, subCount) + subs * S.billingPct / 100 + card(featCount * P0.featPrice, featCount)
   + (subCount + featCount) * (S.disputePct / 100) * S.disputeFee
@@ -167,8 +167,8 @@ ok('KV is worse than Netlify; the open line is Netlify PLUS Cloudflare, so it is
 
 console.log('FREE CAP');
 const capped = ENGINE.month({ ...P0, gigsFree: 6, plusPct: 0, proPct: 0 }, 100);
-ok('a free artist wanting 6 nights gets 4: gigs = 400', Math.abs(capped.gigs - 400) < 1e-6, capped.gigs);
-ok('and 200 refused nights are reported', Math.abs(capped.gigsCapped - 200) < 1e-6, capped.gigsCapped);
+ok('a free artist wanting 6 nights plays 6 — the cap is ten shows in total (0120), not a monthly one: gigs = 600', Math.abs(capped.gigs - 600) < 1e-6, capped.gigs);
+ok('and the ten last 10 ÷ 6 months', Math.abs(capped.freeMonths - P0.freeCap / 6) < 1e-9 && P0.freeCap === 10, capped.freeMonths);
 
 console.log('BREAK-EVEN + TIMELINE + SIZES');
 const be = ENGINE.breakEven(P0); const atBe = ENGINE.month(P0, be), below = ENGINE.month(P0, Math.max(0, be - 1));

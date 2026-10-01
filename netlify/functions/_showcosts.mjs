@@ -24,7 +24,7 @@
        room money Stripe never answered has no Stripe figure, never $0.
 
      · MYSET CUT and MYSET PROFIT — MySet's cut is its share of the money that came
-       through the app (tips, vote packs, requests and merch, at the plan's `cut` in
+       through the app (tips, vote packs, requests and merch GOODS — never postage, at the plan's `cut` in
        _plan.mjs — the application fee pay.mjs takes, floored per payment there, estimated
        on the night's total here). None on the founder's own nights (isPlatformOwner —
        there is nobody to take a fee from). MySet profit is that cut less BOTH costs, the
@@ -81,7 +81,11 @@ export function costOf(row, B) {
     const founder = isPlatformOwner(aid);
     const plan = (row.artist && row.artist.plan) || 'free';
     const cut = founder ? 0 : ((PLANS[plan] || PLANS.free).cut || 0);
-    const base = (m.total || 0) + ((m.merch && m.merch.amount) || 0);
+    /* merch: the goods only — pay.mjs never takes a cut of a stamp (postage is a shipping rate). Taken as the
+       amount less the postage, never the `goods` field: an order from before the shop page carries no goods
+       figure (it reads 0) though every dollar of it was goods */
+    const merchGoods = m.merch ? Math.max(0, (m.merch.amount || 0) - (m.merch.postage || 0)) : 0;
+    const base = (m.total || 0) + merchGoods;
     const fee = round(base * cut);
     const stripeUsd = stripe ? stripe.usd : 0;
     myset = { usd: round(fee - server.usd - stripeUsd), fee, cut, founder, estimate: fee > 0 || !server.measured || !!(stripe && stripe.estimate && stripe.usd > 0) };

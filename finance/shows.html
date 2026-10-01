@@ -321,9 +321,9 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
   <ul class="pts hint">
     <li>The totals row adds up whatever the filters show.</li>
     <li>Money is Stripe's answer. A night Stripe never answered reads “unknown”, never $0.</li>
-    <li><b>MySet cut</b> is MySet's share of the money that came through the app: 25% Hobbyist · 10% Bar Star · 2% Rock Star. None on the founder's own nights, unless <b>If the founder were a paying customer</b> is on.</li>
+    <li><b>MySet cut</b> is MySet's share of the money that came through the app (merch goods included, postage never): 25% Hobbyist · 10% Bar Star · 2% Rock Star. None on the founder's own nights, unless <b>If the founder were a paying customer</b> is on.</li>
     <li><b>MySet profit</b> is that cut less the server and Stripe.</li>
-    <li>Costs are money going out, so they are never green.</li>
+    <li>Costs are money going out, so they are never green. The server is priced on every counted night; Stripe only where the money is known; the Total adds the two.</li>
     <li><b>Server</b> is Netlify's own meters for that night. ≈ means that night was never read, so it carries the average.</li>
     <li><b>Stripe</b> is Stripe's own fee on each payment. ≈ means it has not been read yet, so it uses the published card rates.</li>
     <li>Times are the night's own local clock.</li>
@@ -337,11 +337,11 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
   <ul class="pts hint">
     <li>Each plan has two lines: the total for the nights, then one show on average.</li>
     <li><b>In-app transactions</b> are what the room paid through the app, by source.</li>
-    <li><b>Server</b> and <b>Stripe</b> are the same costs as the table above.</li>
-    <li><b>Fee</b> is the share MySet takes. <b>Cut on transactions</b> is that share of the total.</li>
+    <li><b>Server</b> and <b>Stripe</b> are the same per-night costs as the table above, added up over the nights with money known.</li>
+    <li><b>Fee</b> is the share MySet takes. <b>Cut on transactions</b> is that share of the total (merch counts its goods, never postage).</li>
     <li><b>Profit on shows</b> is the cut less the server and Stripe.</li>
-    <li><b>Plan fees</b> are the monthly price after Stripe's card fee and its 0.7% billing fee, for each month the nights span (an artist's first night to their last, one month at least).</li>
-    <li><b>Total revenue</b> is the cut plus the plan price. <b>Total profit</b> is the profit on shows plus the plan fees after Stripe.</li>
+    <li><b>Plan fees</b> are the monthly price after Stripe's card fee and its 0.7% billing fee, for the months the nights span (an artist's first night to their last, rounded to whole months, one at least).</li>
+    <li><b>Total revenue</b> is the cut plus the plan price for those months. <b>Total profit</b> is the profit on shows plus the plan fees after Stripe.</li>
     <li>“As actually played” uses each night's real plan: no cut and no plan fee on the founder's own nights, unless <b>If the founder were a paying customer</b> is on.</li>
     <li>That switch changes nothing in the first view, which already prices every night as paying.</li>
   </ul>
@@ -376,7 +376,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <div class="card"><h3>Which nights count</h3><ul class="pts">
       <li>A night is <b>counted</b> when it started on a published gig (no earlier than 90 minutes before the slot, no later than its end) and something happened in it.</li>
       <li>Everything else is kept and labelled, never thrown away.</li>
-      <li><b>Unused:</b> on the calendar, one phone, no votes.</li>
+      <li><b>Unused:</b> on the calendar, one phone at most, no votes.</li>
       <li><b>Not counted:</b> nobody there; not on the calendar; ten or more phones on one network in under half an hour (that is one machine); under 30 minutes; over 12 hours with no gig.</li>
       <li><b>Hidden</b> is a flag, not a verdict. A night the artist deleted from their own Money tab is still judged by the same rule and still in the totals, greyed here.</li>
     </ul></div>
@@ -393,7 +393,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
       <li>Tips, vote packs and paid requests are <b>Stripe's answer</b> for the payments tagged with the night.</li>
       <li>Read when the night was filed and again the morning after, so a tip sent from the walk home still lands.</li>
       <li>A night Stripe never answered says <b>unknown</b>, never $0, and stays out of every per-head figure.</li>
-      <li><b>$ a head</b> = (tips + vote packs + paid requests) ÷ phones, over nights with money known.</li>
+      <li><b>$ a head</b> = all the room's money through the app (tips + vote packs + paid requests, plus any untagged payment inside the night's window) ÷ phones, over nights with money known.</li>
       <li>Merch is never in it. Merch is the app's own order record, and the artist ships it.</li>
       <li>Every dollar figure above zero is green.</li>
     </ul></div>
@@ -459,12 +459,15 @@ const isFounder = (r) => r.artist.id === 'perry-idyll' || !!(cost(r) && cost(r).
 const PLAN_CUT = { free: 0.25, plus: 0.1, pro: 0.02 };
 /* "If the founder were a paying customer": the founder's nights priced on the account's own
    plan — its cut on the room's money and its monthly fee — instead of the founder's none */
+/* merch goods only — MySet never takes a cut of a stamp (postage is a shipping rate in pay.mjs): the order's
+   amount less its postage, the same rule as _showcosts.mjs */
+const merchGoods = (r) => (r.money.merch ? Math.max(0, (r.money.merch.amount || 0) - (r.money.merch.postage || 0)) : 0);
 let PAYING = false;
 const feeOf = (r) => (isFounder(r) && !PAYING ? 0 : PLAN_USD[r.artist.plan] || 0);
 const mine = (r) => {
   const c = cost(r), p = c && c.myset;
   if (!p || !PAYING || !p.founder) return p;
-  const cut = PLAN_CUT[r.artist.plan] ?? PLAN_CUT.free, base = (r.money.total || 0) + ((r.money.merch && r.money.merch.amount) || 0);
+  const cut = PLAN_CUT[r.artist.plan] ?? PLAN_CUT.free, base = (r.money.total || 0) + merchGoods(r);
   const fee = Math.round(base * cut * 1e4) / 1e4;
   return { ...p, cut, fee, founder: false, usd: Math.round((fee - (c.server ? c.server.usd : 0) - (c.stripe ? c.stripe.usd : 0)) * 1e4) / 1e4, estimate: p.estimate || fee > 0 };
 };
@@ -525,7 +528,7 @@ const COLS = [
     total: (rows) => plural(new Set(rows.map((r) => r.artist.id)).size, 'artist') },
   { k: 'planFee', label: 'Plan fees', n: 1, sort: (r) => feeOf(r),
     cell: (r) => `<span class="fee" title="${esc(PLAN[r.artist.plan] || r.artist.plan)}${isFounder(r) ? (PAYING ? ' — what the founder would pay as a customer' : ' — the founder\'s account, never charged') : ''}; ${r.artist.planStamped ? 'the plan the night was played on' : 'the artist\'s plan today (nights before 25 Sep 2026 were not stamped)'}">$${feeOf(r)}/mo</span>`,
-    total: (rows) => { const by = new Map(rows.map((r) => [r.artist.id, feeOf(r)])); return `<span class="fee">$${[...by.values()].reduce((a, b) => a + b, 0)}/mo</span>`; } },
+    total: (rows) => { const by = new Map(rows.slice().sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0)).map((r) => [r.artist.id, feeOf(r)])); return `<span class="fee">$${[...by.values()].reduce((a, b) => a + b, 0)}/mo</span>`; } },
   { k: 'venue', label: 'Venue', sort: (r) => r.venue || '', cell: (r) => esc(r.venue || (r.title ? `“${r.title}”` : '—')),
     total: (rows) => plural(new Set(rows.map((r) => r.venue).filter(Boolean)).size, 'venue') },
   { k: 'place', label: 'City · Country', sort: (r) => (r.country || '') + (r.city || ''), cell: (r) => esc([r.city, r.country].filter(Boolean).join(', ') || '—'),
@@ -539,7 +542,7 @@ const COLS = [
   { k: 'packsUsd', label: '$', group: 'votes', n: 1, sort: (r) => (known(r) ? r.money.packs.amount : -1), cell: (r) => (silent(r) || !known(r) ? dash : $$usd(r.money.packs.amount)), total: (rows) => $$usd(sumOf(knownRows(rows), (r) => r.money.packs.amount)) },
   { k: 'tips', label: 'Count', group: 'tips', n: 1, sort: (r) => (known(r) ? r.money.tips.count : -1), cell: (r) => (silent(r) || !known(r) ? dash : fmt.int(r.money.tips.count)), total: (rows) => fmt.int(sumOf(knownRows(rows), (r) => r.money.tips.count)) },
   { k: 'tipsUsd', label: '$', group: 'tips', n: 1, sort: (r) => (known(r) ? r.money.tips.amount : -1), cell: (r) => (silent(r) || !known(r) ? dash : $$usd(r.money.tips.amount)), total: (rows) => $$usd(sumOf(knownRows(rows), (r) => r.money.tips.amount)) },
-  { k: 'requests', label: 'Requests', n: 1, sort: (r) => r.requests.count, cell: (r) => (silent(r) ? dash : `${fmt.int(r.requests.count)}${r.requests.count ? ` <span class="faint">${r.requests.accepted} played</span>` : ''}`), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.requests.count)) },
+  { k: 'requests', label: 'Requests', n: 1, sort: (r) => r.requests.count, cell: (r) => (silent(r) ? dash : `${fmt.int(r.requests.count)}${r.requests.count ? ` <span class="faint">${r.requests.played ?? r.requests.accepted} played</span>` : ''}`), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.requests.count)) },
   { k: 'merch', label: 'Items', group: 'merch', n: 1, sort: (r) => r.money.merch.items, cell: (r) => (silent(r) ? dash : fmt.int(r.money.merch.items)), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.money.merch.items)) },
   { k: 'merchUsd', label: '$', group: 'merch', n: 1, sort: (r) => r.money.merch.amount, cell: (r) => (silent(r) ? dash : $$usd(r.money.merch.amount)), total: (rows) => $$usd(sumOf(liveRows(rows), (r) => r.money.merch.amount)) },
   { k: 'costServer', label: 'Server', group: 'costs', n: 1, sort: (r) => (cost(r) && cost(r).server ? cost(r).server.usd : -1),
@@ -550,7 +553,9 @@ const COLS = [
     total: (rows) => { const rs = rows.filter((r) => cost(r) && cost(r).stripe); return rs.length ? $$cost(sumOf(rs, (r) => cost(r).stripe.usd), rs.some((r) => cost(r).stripe.estimate && cost(r).stripe.usd > 0)) : dash; } },
   { k: 'costTotal', label: 'Total', group: 'costs', n: 1, sort: (r) => (cost(r) && fin(cost(r).total) ? cost(r).total : -1),
     cell: (r) => { const c = cost(r); return c && fin(c.total) ? `<b>${$$cost(c.total, !c.server.measured || (c.stripe.estimate && c.stripe.usd > 0))}</b>` : dash; },
-    total: (rows) => { const rs = rows.filter((r) => cost(r) && fin(cost(r).total)); return rs.length ? $$cost(sumOf(rs, (r) => cost(r).total), rs.some((r) => !cost(r).server.measured || (cost(r).stripe.estimate && cost(r).stripe.usd > 0))) : dash; } },
+    /* server is priced on every counted night, Stripe only where the money is known: the total adds the two column totals */
+    total: (rows) => { const sv = rows.filter((r) => cost(r) && cost(r).server), st = rows.filter((r) => cost(r) && cost(r).stripe); if (!sv.length && !st.length) return dash;
+      return $$cost(sumOf(sv, (r) => cost(r).server.usd) + sumOf(st, (r) => cost(r).stripe.usd), sv.some((r) => !cost(r).server.measured) || st.some((r) => cost(r).stripe.estimate && cost(r).stripe.usd > 0)); } },
   { k: 'cut', label: 'MySet cut', n: 1, sort: (r) => (mine(r) ? mine(r).fee : -1),
     cell: (r) => { const p = mine(r); return p ? `<span title="${p.founder ? 'the founder\'s own night: MySet takes no cut' : `${Math.round(p.cut * 100)}% of the ${fmt.usd(p.cut ? p.fee / p.cut : 0)} that came through the app`}">${$$usd(p.fee)} <span class="faint">${Math.round(p.cut * 100)}%</span></span>` : dash; },
     total: (rows) => { const ps = rows.map(mine).filter(Boolean); if (!ps.length) return dash; const fee = sumOf(ps, (p) => p.fee), base = sumOf(ps, (p) => (p.cut ? p.fee / p.cut : 0)); return `${$$usd(fee)}${base ? ` <span class="faint">${Math.round(fee / base * 100)}%</span>` : ''}`; } },
@@ -690,14 +695,12 @@ function costsHtml(r, line) {
   const c = cost(r), B = REG.costs;
   if (!c) return '';
   const s = c.server, st = c.stripe;
-  const left = st && fin(c.total) && known(r) ? r.money.total + (r.money.merch.amount || 0) - c.total : null;
   return `<div class="dsec"><h4>Costs <span class="tag">${s && s.measured ? 'server measured' : 'server ≈ average'}</span> <span class="tag">${st && st.exact && !st.estimate ? 'stripe exact' : 'stripe ≈ estimate'}</span></h4>
     ${line('Server (traffic)', s ? `${fmt.num(s.credits, 2)} credits · ${$$cost(s.usd, !s.measured)}` : dash)}
     ${line('Stripe card fees', st ? `${plural(st.payments, 'payment')} on ${fmt.usd(st.volume)} · ${$$cost(st.usd, st.estimate)}` : dash)}
     ${line('Costs in all', fin(c.total) ? `<b>${$$cost(c.total, !s.measured || (st.estimate && st.usd > 0))}</b>` : dash)}
     ${c.myset ? line('MySet profit', `${c.myset.founder ? 'no cut on the founder\'s own night' : `${Math.round(c.myset.cut * 100)}% cut ${fmt.usd(c.myset.fee)}`} − server − Stripe · <b>${$$profit(c.myset.usd, c.myset.estimate)}</b>`) : ''}
-    ${left != null ? line('Room money + merch, less costs', left >= 0 ? $$usd(left) : `<span class="neg">−${fmt.usd(-left)}</span>`) : ''}
-    <p class="dnote">${s ? (s.measured ? 'The server figure is what Netlify\'s own meters say this night added over an empty day.' : `Netlify's meters were not read for this night, so the server figure is the average of the ${B ? B.measuredNights : ''} nights they were read for.`) : ''} Credits at the plan's top-up price${B && B.pack ? ` (${fmt.int(B.pack.credits)} for ${fmt.usd(B.pack.usd)})` : ''}. ${st && st.exact ? `Stripe is its own fee on each payment, read off the charge${st.estimate ? ' (the merch part is still the published-rate estimate)' : ''}.` : `Stripe's own fee has not been read for this night yet; until it is, this is ${B ? B.stripe.effectivePct : '3.1'}% + ${B ? Math.round(B.stripe.fixed * 100) : 30}¢ a payment, the published rate.`} No deploy is ever in a show's cost.</p>
+    <p class="dnote">${s ? (s.measured ? 'The server figure is what Netlify\'s own meters say this night added over an empty day.' : `Netlify's meters were not read for this night, so the server figure is the average of the ${B ? B.measuredNights : ''} nights they were read for.`) : ''} Credits at the plan's top-up price${B && B.pack ? ` (${fmt.int(B.pack.credits)} for ${fmt.usd(B.pack.usd)})` : ''}. ${st && st.exact ? `Stripe is its own fee on each payment, read off the charge${st.estimate ? ' (the merch part is still the published-rate estimate)' : ''}.` : `Stripe's own fee has not been read for this night yet; until it is, this is ${B ? B.stripe.effectivePct : '4.03'}% + ${B ? Math.round(B.stripe.fixed * 100) : 30}¢ a payment, the published rate.`} No deploy is ever in a show's cost.</p>
   </div>`;
 }
 
@@ -717,14 +720,15 @@ function kpis() {
     ['Phones a night', avg((r) => r.people), `${fmt.int(sum((r) => r.people))} phones in all`],
     ['Length', rows.length ? fmt.h(sum((r) => r.hours) / rows.length) : '—', `${fmt.num(sum((r) => r.hours), 0)} hours of shows`],
     ['Votes a night', avg((r) => r.votes), `${fmt.int(sum((r) => r.votes))} votes · ${withI.length ? fmt.num(sumOf(withI, (r) => r.interactions) / withI.length, 2) : '—'} actions a phone`],
-    ['Room money a head', perHead == null ? '—' : fmt.usd(perHead), `tips + vote packs + paid requests ÷ phones · ${k.length} of ${rows.length} nights with money known · ${money(gross)} in all`, perHead ? 'pos' : perHead == null ? 'warn' : ''],
+    ['Room money a head', perHead == null ? '—' : fmt.usd(perHead), `room money through the app ÷ phones · ${k.length} of ${rows.length} nights with money known · ${money(gross)} in all`, perHead ? 'pos' : perHead == null ? 'warn' : ''],
     ['Tips', money(sum((r) => r.money.tips.amount, k)), `${plural(sum((r) => r.money.tips.count, k), 'tip')} on nights with money known`, sum((r) => r.money.tips.amount, k) > 0 ? 'pos' : ''],
     ['Votes bought', money(sum((r) => r.money.packs.amount, k)), `${plural(sum((r) => r.money.packs.votes || 0, k), 'vote')} in ${plural(sum((r) => r.money.packs.count, k), 'pack')}`, sum((r) => r.money.packs.amount, k) > 0 ? 'pos' : ''],
     ['Merch', money(sum((r) => r.money.merch.amount)), `${plural(sum((r) => r.money.merch.items), 'item')} in ${plural(sum((r) => r.money.merch.orders), 'order')}`, sum((r) => r.money.merch.amount) > 0 ? 'pos' : ''],
     (() => { const cs = rows.map(cost).filter(Boolean), srv = cs.filter((c) => c.server), tot = cs.filter((c) => fin(c.total));
-      return ['Costs', tot.length ? `<span class="est">≈</span>${fmt.usd(sumOf(tot, (c) => c.total))}` : '—', `server ${fmt.usd(sumOf(srv, (c) => c.server.usd))} · Stripe ${cs.some((c) => c.stripe && c.stripe.estimate && c.stripe.usd > 0) ? '≈ ' : ''}${fmt.usd(sumOf(cs.filter((c) => c.stripe), (c) => c.stripe.usd))}${tot.length ? ` · ≈ ${fmt.usd(sumOf(tot, (c) => c.total) / tot.length)} a night` : ''}`]; })(),
+      const srvUsd = sumOf(srv, (c) => c.server.usd), stUsd = sumOf(cs.filter((c) => c.stripe), (c) => c.stripe.usd), est = srv.some((c) => !c.server.measured) || cs.some((c) => c.stripe && c.stripe.estimate && c.stripe.usd > 0);
+      return ['Costs', srv.length || cs.some((c) => c.stripe) ? `${est ? '<span class="est">≈</span>' : ''}${fmt.usd(srvUsd + stUsd)}` : '—', `server ${srv.some((c) => !c.server.measured) ? '≈ ' : ''}${fmt.usd(srvUsd)} on ${plural(srv.length, 'night')} · Stripe ${cs.some((c) => c.stripe && c.stripe.estimate && c.stripe.usd > 0) ? '≈ ' : ''}${fmt.usd(stUsd)} on ${plural(cs.filter((c) => c.stripe).length, 'night')} with money known${tot.length ? ` · ≈ ${fmt.usd(sumOf(tot, (c) => c.total) / tot.length)} a night` : ''}`]; })(),
     ['Requests', fmt.int(sum((r) => r.requests.count)), `${fmt.int(sum((r) => r.requests.accepted))} accepted · ${fmt.int(sum((r) => r.songsPlayed))} songs played`],
-    ['Artists · venues · countries', `${new Set(rows.map((r) => r.artist.id)).size} · ${new Set(rows.map((r) => r.venue).filter(Boolean)).size} · ${new Set(rows.map((r) => r.country).filter(Boolean)).size}`, `${fmt.int(T.artistsOnPlatform)} artists on the platform · ${plural(new Set(rows.map((r) => r.city).filter(Boolean)).size, 'city', 'cities')}${T.unplaced ? ` · ${plural(T.unplaced, 'night')} with no country on file` : ''}`],
+    ['Artists · venues · countries', `${new Set(rows.map((r) => r.artist.id)).size} · ${new Set(rows.map((r) => r.venue).filter(Boolean)).size} · ${new Set(rows.map((r) => r.country).filter(Boolean)).size}`, `${plural(T.artistsOnPlatform, 'artist')} on the platform · ${plural(new Set(rows.map((r) => r.city).filter(Boolean)).size, 'city', 'cities')}${T.unplaced ? ` · ${plural(T.unplaced, 'night')} with no country on file` : ''}`],
     ['This month', fmt.int(M.nights), `${plural(M.artists || 0, 'artist')} · ${fmt.num(M.people)} phones a night`],
   ];
   $('#kpis').innerHTML = tiles.map(([l, v, d, c], i) => `<div class="tile" style="animation-delay:${i * 0.03}s"><div class="k">${l}</div><div class="v ${c || ''}">${v}</div><div class="d">${d}</div></div>`).join('');
@@ -783,7 +787,7 @@ function slides() {
     { t: 'What the rooms wanted', p: 'Songs across every counted night: how often each was played and how many votes it won.', c: plural((R.topSongs || []).length, 'song'), rows: R.topSongs || [], empty: 'No song has been played on a counted night yet.', cols: [
       ['Song', (s) => `<b>${esc(s.title)}</b>${s.artist ? ` <span class="faint">${esc(s.artist)}</span>` : ''}`], ['Times played', (s) => fmt.int(s.plays), 1], ['Votes won', (s) => fmt.int(s.votes), 1], ['Nights', (s) => fmt.int(s.nights), 1],
     ] },
-    { t: 'Silent gigs', p: 'Published on an artist\'s calendar since their first counted night, but the show never started or nothing was filed. Listed so “nights a week” counts what was published, not what was filed.', c: plural((R.silent || []).length, 'gig'), rows: (R.silent || []).slice(0, 200), empty: 'Every published gig left a record.', cols: [
+    { t: 'Silent gigs', p: 'Published on an artist\'s calendar since their first counted night, but the show never started or nothing was filed. Listed so what was published sits beside what was played; “A week” in the artist table counts counted nights only.', c: plural((R.silent || []).length, 'gig'), rows: (R.silent || []).slice(0, 200), empty: 'Every published gig left a record.', cols: [
       ['Date', (s) => fmt.day(s.date)], ['Artist', (s) => `<b>${esc(names[s.artist] || s.artist)}</b>`], ['Venue', (s) => esc(s.venue || '—')], ['City · Country', (s) => esc([s.city, s.country].filter(Boolean).join(', ') || '—')],
     ] },
   ];
@@ -846,10 +850,12 @@ function chartsRender() {
   const t = { ink: cssVar('--ink'), muted: cssVar('--muted'), grid: cssVar('--grid'), axis: cssVar('--axis'), surface2: cssVar('--surface2'), hair2: cssVar('--hair2'), font: cssVar('--font'), mono: cssVar('--mono') };
   const bar = (color) => ({ backgroundColor: color, hoverBackgroundColor: color, borderRadius: 6, borderSkipped: false, maxBarThickness: 44 });
   const rows = filtered().filter((r) => r.status === 'counted').sort((a, b) => a.startedAt - b.startedAt);
-  const weekOf = (ms) => { const d = new Date(ms); const day = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - day); return d.toISOString().slice(0, 10); };
+  /* a night belongs to the week of its own local date (the date every table shows), never the UTC date */
+  const dayOf = (r) => r.localDate || new Date(r.startedAt).toISOString().slice(0, 10);
+  const weekOf = (iso) => { const d = new Date(iso + 'T12:00:00Z'); const day = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - day); return d.toISOString().slice(0, 10); };
   const weeks = new Map();
-  if (rows.length) { for (let w = new Date(weekOf(rows[0].startedAt)); w <= new Date(); w.setUTCDate(w.getUTCDate() + 7)) weeks.set(w.toISOString().slice(0, 10), 0); }
-  for (const r of rows) weeks.set(weekOf(r.startedAt), (weeks.get(weekOf(r.startedAt)) || 0) + 1);
+  if (rows.length) { for (let w = new Date(weekOf(dayOf(rows[0])) + 'T12:00:00Z'); w <= new Date(); w.setUTCDate(w.getUTCDate() + 7)) weeks.set(w.toISOString().slice(0, 10), 0); }
+  for (const r of rows) weeks.set(weekOf(dayOf(r)), (weeks.get(weekOf(dayOf(r))) || 0) + 1);
   const wk = [...weeks.entries()];
   const intTick = (v) => (Number.isInteger(v) ? v : '');
   mk('cWeeks', { type: 'bar', data: { labels: wk.map(([w]) => fmt.short(w)), datasets: [{ data: wk.map(([, n]) => n), ...bar(cssVar('--blue')) }] },
@@ -875,7 +881,7 @@ function tierMath(t, st) {
   const inApp = t.tips + t.packs + t.requests + t.merch + t.other;
   const cut = inApp * t.cut;
   const onShows = cut - t.server - t.stripe;
-  const subFee = t.price > 0 ? t.price * (st.pct + (st.intlShare / 100) * st.intlPct + st.billingPct) / 100 + st.fixed : 0;
+  const subFee = t.price > 0 ? Math.round((t.price * (st.pct + (st.intlShare / 100) * st.intlPct + st.billingPct) / 100 + st.fixed) * 100) / 100 : 0;
   const planNet = (t.price - subFee) * t.months;
   const revenue = cut + t.price * t.months;
   return { inApp, cut, onShows, subFee, planNet, revenue, profit: onShows + planNet };
@@ -895,7 +901,7 @@ const monthsOf = (rows) => {
 function tierInputs(rows, plan) {
   const own = TIER_MODE === 'asif' ? rows : rows.filter((r) => r.artist.plan === plan);
   const m = (f) => sumOf(own, f);
-  const tips = m((r) => r.money.tips.amount), packs = m((r) => r.money.packs.amount), requests = m((r) => r.money.requests.amount), merch = m((r) => r.money.merch.amount);
+  const tips = m((r) => r.money.tips.amount), packs = m((r) => r.money.packs.amount), requests = m((r) => r.money.requests.amount), merch = m(merchGoods);
   const other = Math.max(0, m((r) => r.money.total) - tips - packs - requests);
   let cut = PLAN_CUT[plan], months = monthsOf(own);
   if (TIER_MODE === 'played') {

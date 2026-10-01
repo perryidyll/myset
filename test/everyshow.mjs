@@ -337,6 +337,7 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   const showsConst = (name) => new Function('return ' + shows.match(new RegExp('const ' + name + ' = (\\{[^}]*\\})'))[1])();
   eq('the Show log\'s plan prices are _plan.mjs\'s', showsConst('PLAN_USD'), { free: PLANS.free.price / 100, plus: PLANS.plus.price / 100, pro: PLANS.pro.price / 100 });
   eq('the Show log\'s plan cuts are _plan.mjs\'s', showsConst('PLAN_CUT'), { free: PLANS.free.cut, plus: PLANS.plus.cut, pro: PLANS.pro.cut });
+  eq('the money model\'s free plan is _plan.mjs\'s shows in total (0120), and its room caps are the plans\' own', [Number(model.match(/freeCap: (\d+)/)[1]), new Function('return ' + model.match(/const PLAN_ROOM = (\{[^}]*\})/)[1])()], [PLANS.free.gigs, { free: PLANS.free.audience, plus: PLANS.plus.audience, pro: PLANS.pro.audience }]);
   {
     const tierMath = new Function(block(shows) + '; return tierMath;')();
     const x = tierMath({ shows: 15, tips: 72, packs: 23, requests: 0, merch: 0, other: 0, server: 0.57, stripe: 8.02, cut: 0.10, price: 10, months: 1 }, C.STRIPE_RATES);
@@ -358,6 +359,8 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   const srv = c2.server.usd, r4 = (n) => Math.round(n * 1e4) / 1e4;
   eq('MySet profit: the plan\'s cut of room + merch, less the server and Stripe (Hobbyist 25%)', cp({ artist: { id: 'someone-else', plan: 'free' } }).usd, r4(30 * 0.25 - srv - c2.stripe.usd));
   eq('MySet cut: the fee and the rate', [cp({ artist: { id: 'someone-else', plan: 'free' } }).fee, cp({ artist: { id: 'someone-else', plan: 'free' } }).cut], [7.5, 0.25]);
+  eq('the cut is on merch goods, never on postage (pay.mjs never fees a stamp)', cp({ artist: { id: 'someone-else', plan: 'free' }, money: { known: true, total: 30, tips: { count: 1 }, packs: { count: 0 }, requests: { count: 0 }, merch: { orders: 1, goods: 36, postage: 4, amount: 40 } } }).fee, r4((30 + 36) * 0.25));
+  eq('an order from before the shop page has no goods figure: its whole amount is goods', cp({ artist: { id: 'someone-else', plan: 'free' }, money: { known: true, total: 30, tips: { count: 1 }, packs: { count: 0 }, requests: { count: 0 }, merch: { orders: 1, goods: 0, postage: 0, amount: 40 } } }).fee, r4((30 + 40) * 0.25));
   eq('MySet profit on a Rock Star night: 2%', cp({ artist: { id: 'someone-else', plan: 'pro' } }).usd, r4(30 * 0.02 - srv - c2.stripe.usd));
   eq('the founder\'s own night pays no cut: the server and Stripe, a loss', [cp({ artist: { id: 'perry-idyll', plan: 'pro' } }).usd, cp({ artist: { id: 'perry-idyll' } }).fee], [r4(-srv - c2.stripe.usd), 0]);
   eq('money Stripe never answered: no profit, never a guess', C.costOf(row({ money: { known: false, merch: {} } }), B).myset, null);
