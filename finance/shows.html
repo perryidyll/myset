@@ -107,6 +107,8 @@ section{margin-top:52px}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{border:1px solid var(--hair2);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;background:transparent;transition:all .2s;white-space:nowrap}
 .chip:hover{color:var(--ink)}
+.chip.pay{border-style:dashed}.chip.pay.on{border-style:solid;background:var(--blue);border-color:var(--blue);color:#fff}.chip.pay.moot{opacity:.45}
+.mmlink{margin-left:auto;font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap;transition:transform .2s cubic-bezier(.3,1.4,.5,1)}.mmlink:hover{transform:translateX(3px)}
 .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .sel,.search,.date{appearance:none;-webkit-appearance:none;border:1px solid var(--hair2);border-radius:999px;background:var(--surface);color:var(--ink);padding:7px 30px 7px 13px;font-size:12.5px;font-weight:600;max-width:230px;cursor:pointer;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%2398989D' stroke-width='1.6'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
@@ -260,7 +262,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <a class="btn" href="/dash" title="All four dashboards"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1.4"/><rect x="9" y="2" width="5" height="5" rx="1.4"/><rect x="2" y="9" width="5" height="5" rx="1.4"/><rect x="9" y="9" width="5" height="5" rx="1.4"/></svg><span class="lbl">Dash</span></a>
     <button class="btn" id="refreshBtn" title="Fold every artist's filed nights into the register now"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/></svg><span class="lbl">Refresh</span></button>
     <a class="btn" id="csvBtn" href="/moneymodel/shows.csv"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 2v8m0 0L5 7m3 3 3-3M3 13h10"/></svg><span class="lbl">CSV</span></a>
-    <a class="btn" href="/moneymodel"><span class="lbl">Money model</span><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3l5 5-5 5"/></svg></a>
+    <a class="btn" href="/moneymodel" title="The money model"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 13.5h11M4.5 11V8M8 11V4.5M11.5 11V6.5"/></svg><span class="lbl">Money model</span></a>
     <a class="btn icon" href="/moneymodel/shows?lock=1" aria-label="Lock the Show log" title="Lock the Show log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2.5"/></svg></a>
     <button class="btn icon" id="themeBtn" aria-label="Switch between light and dark">◐</button>
   </div>
@@ -292,16 +294,17 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <select class="sel" id="fPlan" aria-label="Plan"><option value="">Every plan</option><option value="free">Hobbyist (free)</option><option value="plus">Bar Star</option><option value="pro">Rock Star</option></select>
     <select class="sel" id="fStatus" aria-label="Which nights"><option value="counted">Counted nights</option><option value="all">Everything filed</option><option value="unused">On the calendar, unused</option><option value="refused">Not counted (tests, accidents)</option><option value="silent">Published, no record</option><option value="hidden">Hidden by the artist</option></select>
     <input class="search" type="search" id="fSearch" placeholder="Search a venue, a song, a title">
+    <button class="chip pay" type="button" aria-pressed="false" title="Price the founder's own nights on the account's plan: its cut, its monthly fee">If the founder were a paying customer</button>
   </div>
   <div class="card"><div class="tw" id="showsWrap"><table class="tbl" id="showsTable"><thead></thead><tbody></tbody></table></div></div>
-  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. MySet cut is MySet's share of the money that came through the app (25% Hobbyist · 10% Bar Star · 2% Rock Star; none on the founder's own nights); MySet profit is that cut less the server and Stripe. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is Stripe's own fee on each payment (≈ only where it has not been read yet, then the published card rates). Times are the night's own local clock.</p>
+  <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. MySet cut is MySet's share of the money that came through the app (25% Hobbyist · 10% Bar Star · 2% Rock Star; none on the founder's own nights, unless <b>If the founder were a paying customer</b> is on); MySet profit is that cut less the server and Stripe. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is Stripe's own fee on each payment (≈ only where it has not been read yet, then the published card rates). Times are the night's own local clock.</p>
 </section>
 
 <section id="tiersBlock">
   <div class="sh"><h2>Profit by membership tiers</h2><p id="tiersSub"></p></div>
-  <div class="filters"><div class="chips" id="tierMode" role="group" aria-label="How to price the nights"><button class="chip on" data-m="asif">If every night were on each plan</button><button class="chip" data-m="played">As actually played</button></div></div>
+  <div class="filters"><div class="chips" id="tierMode" role="group" aria-label="How to price the nights"><button class="chip on" data-m="asif">If every night were on each plan</button><button class="chip" data-m="played">As actually played</button></div><button class="chip pay" type="button" aria-pressed="false" title="Price the founder's own nights on the account's plan: its cut, its monthly fee">If the founder were a paying customer</button><a class="mmlink" href="/moneymodel#tpPanel">Project it on the money model →</a></div>
   <div class="card"><div class="tw" id="tiersWrap"><table class="tbl tiers" id="tiersTable"></table></div></div>
-  <p class="hint">Each plan has two lines: the total for the nights, then one show on average. <b>In-app transactions</b> are what the room paid through the app, by source. <b>Server</b> and <b>Stripe</b> are the same costs as the table above. <b>Fee</b> is the share MySet takes, and <b>cut on transactions</b> is that share of the total. <b>Profit on shows</b> is the cut less the server and Stripe. <b>Plan fees</b> are the monthly price after Stripe's card fee and its 0.7% billing fee, for each month the nights span (an artist's first night to their last, one month at least). <b>Total revenue</b> is the cut plus the plan price; <b>total profit</b> is the profit on shows plus the plan fees after Stripe. “As actually played” uses each night's real plan: no cut and no plan fee on the founder's own nights.</p>
+  <p class="hint">Each plan has two lines: the total for the nights, then one show on average. <b>In-app transactions</b> are what the room paid through the app, by source. <b>Server</b> and <b>Stripe</b> are the same costs as the table above. <b>Fee</b> is the share MySet takes, and <b>cut on transactions</b> is that share of the total. <b>Profit on shows</b> is the cut less the server and Stripe. <b>Plan fees</b> are the monthly price after Stripe's card fee and its 0.7% billing fee, for each month the nights span (an artist's first night to their last, one month at least). <b>Total revenue</b> is the cut plus the plan price; <b>total profit</b> is the profit on shows plus the plan fees after Stripe. “As actually played” uses each night's real plan: no cut and no plan fee on the founder's own nights, unless <b>If the founder were a paying customer</b> is on (it changes nothing in the first view, which already prices every night as paying).</p>
 </section>
 
 <section>
@@ -378,7 +381,18 @@ const PLAN = { free: 'Hobbyist', plus: 'Bar Star', pro: 'Rock Star' };
 /* = netlify/functions/_plan.mjs PLANS[*].price / 100; the founder (isPlatformOwner) is never charged */
 const PLAN_USD = { free: 0, plus: 10, pro: 20 };
 const isFounder = (r) => r.artist.id === 'perry-idyll' || !!(cost(r) && cost(r).myset && cost(r).myset.founder);
-const feeOf = (r) => (isFounder(r) ? 0 : PLAN_USD[r.artist.plan] || 0);
+const PLAN_CUT = { free: 0.25, plus: 0.1, pro: 0.02 };
+/* "If the founder were a paying customer": the founder's nights priced on the account's own
+   plan — its cut on the room's money and its monthly fee — instead of the founder's none */
+let PAYING = false;
+const feeOf = (r) => (isFounder(r) && !PAYING ? 0 : PLAN_USD[r.artist.plan] || 0);
+const mine = (r) => {
+  const c = cost(r), p = c && c.myset;
+  if (!p || !PAYING || !p.founder) return p;
+  const cut = PLAN_CUT[r.artist.plan] ?? PLAN_CUT.free, base = (r.money.total || 0) + ((r.money.merch && r.money.merch.amount) || 0);
+  const fee = Math.round(base * cut * 1e4) / 1e4;
+  return { ...p, cut, fee, founder: false, usd: Math.round((fee - (c.server ? c.server.usd : 0) - (c.stripe ? c.stripe.usd : 0)) * 1e4) / 1e4, estimate: p.estimate || fee > 0 };
+};
 const STATUS_WORD = { counted: 'counted', unused: 'unused', refused: 'not counted', silent: 'silent' };
 const tagOf = (r) => `<span class="tag ${r.status}" title="${esc(r.why || '')}">${STATUS_WORD[r.status] || r.status}</span>${r.hidden ? ' <span class="tag hidden" title="the artist deleted this night from their Money tab; still on disk, still judged by the rule">hidden</span>' : ''}`;
 const plural = (n, one, many = one + 's') => `${fmt.int(n)} ${n === 1 ? one : many}`;
@@ -435,7 +449,7 @@ const COLS = [
   { k: 'artist', label: 'Artist', sort: (r) => r.artist.name || '', cell: (r) => `<span class="who">${r.artist.left ? '<span class="faint">(account closed)</span>' : `<b>${esc(r.artist.name)}</b>`}</span>`,
     total: (rows) => plural(new Set(rows.map((r) => r.artist.id)).size, 'artist') },
   { k: 'planFee', label: 'Plan fees', n: 1, sort: (r) => feeOf(r),
-    cell: (r) => `<span class="fee" title="${esc(PLAN[r.artist.plan] || r.artist.plan)}${isFounder(r) ? ' — the founder\'s account, never charged' : ''}; ${r.artist.planStamped ? 'the plan the night was played on' : 'the artist\'s plan today (nights before 25 Sep 2026 were not stamped)'}">$${feeOf(r)}/mo</span>`,
+    cell: (r) => `<span class="fee" title="${esc(PLAN[r.artist.plan] || r.artist.plan)}${isFounder(r) ? (PAYING ? ' — what the founder would pay as a customer' : ' — the founder\'s account, never charged') : ''}; ${r.artist.planStamped ? 'the plan the night was played on' : 'the artist\'s plan today (nights before 25 Sep 2026 were not stamped)'}">$${feeOf(r)}/mo</span>`,
     total: (rows) => { const by = new Map(rows.map((r) => [r.artist.id, feeOf(r)])); return `<span class="fee">$${[...by.values()].reduce((a, b) => a + b, 0)}/mo</span>`; } },
   { k: 'venue', label: 'Venue', sort: (r) => r.venue || '', cell: (r) => esc(r.venue || (r.title ? `“${r.title}”` : '—')),
     total: (rows) => plural(new Set(rows.map((r) => r.venue).filter(Boolean)).size, 'venue') },
@@ -462,12 +476,12 @@ const COLS = [
   { k: 'costTotal', label: 'Total', group: 'costs', n: 1, sort: (r) => (cost(r) && fin(cost(r).total) ? cost(r).total : -1),
     cell: (r) => { const c = cost(r); return c && fin(c.total) ? `<b>${$$cost(c.total, !c.server.measured || (c.stripe.estimate && c.stripe.usd > 0))}</b>` : dash; },
     total: (rows) => { const rs = rows.filter((r) => cost(r) && fin(cost(r).total)); return rs.length ? $$cost(sumOf(rs, (r) => cost(r).total), rs.some((r) => !cost(r).server.measured || (cost(r).stripe.estimate && cost(r).stripe.usd > 0))) : dash; } },
-  { k: 'cut', label: 'MySet cut', n: 1, sort: (r) => (cost(r) && cost(r).myset ? cost(r).myset.fee : -1),
-    cell: (r) => { const p = cost(r) && cost(r).myset; return p ? `<span title="${p.founder ? 'the founder\'s own night: MySet takes no cut' : `${Math.round(p.cut * 100)}% of the ${fmt.usd(p.cut ? p.fee / p.cut : 0)} that came through the app`}">${$$usd(p.fee)} <span class="faint">${Math.round(p.cut * 100)}%</span></span>` : dash; },
-    total: (rows) => { const ps = rows.map((r) => cost(r) && cost(r).myset).filter(Boolean); if (!ps.length) return dash; const fee = sumOf(ps, (p) => p.fee), base = sumOf(ps, (p) => (p.cut ? p.fee / p.cut : 0)); return `${$$usd(fee)}${base ? ` <span class="faint">${Math.round(fee / base * 100)}%</span>` : ''}`; } },
-  { k: 'profit', label: 'MySet profit', n: 1, sort: (r) => (cost(r) && cost(r).myset ? cost(r).myset.usd : -1e9),
-    cell: (r) => { const c = cost(r), p = c && c.myset; return p ? `<span title="cut ${fmt.usd(p.fee)} − server ${fmt.usd(c.server ? c.server.usd : 0)} − Stripe ${fmt.usd(c.stripe ? c.stripe.usd : 0)}">${$$profit(p.usd, p.estimate)}</span><small class="on">on transactions</small>` : dash; },
-    total: (rows) => { const ps = rows.map((r) => cost(r) && cost(r).myset).filter(Boolean); return ps.length ? `<b>${$$profit(sumOf(ps, (p) => p.usd), ps.some((p) => p.estimate))}</b><small class="on">on transactions</small>` : dash; } },
+  { k: 'cut', label: 'MySet cut', n: 1, sort: (r) => (mine(r) ? mine(r).fee : -1),
+    cell: (r) => { const p = mine(r); return p ? `<span title="${p.founder ? 'the founder\'s own night: MySet takes no cut' : `${Math.round(p.cut * 100)}% of the ${fmt.usd(p.cut ? p.fee / p.cut : 0)} that came through the app`}">${$$usd(p.fee)} <span class="faint">${Math.round(p.cut * 100)}%</span></span>` : dash; },
+    total: (rows) => { const ps = rows.map(mine).filter(Boolean); if (!ps.length) return dash; const fee = sumOf(ps, (p) => p.fee), base = sumOf(ps, (p) => (p.cut ? p.fee / p.cut : 0)); return `${$$usd(fee)}${base ? ` <span class="faint">${Math.round(fee / base * 100)}%</span>` : ''}`; } },
+  { k: 'profit', label: 'MySet profit', n: 1, sort: (r) => (mine(r) ? mine(r).usd : -1e9),
+    cell: (r) => { const c = cost(r), p = mine(r); return p ? `<span title="cut ${fmt.usd(p.fee)} − server ${fmt.usd(c.server ? c.server.usd : 0)} − Stripe ${fmt.usd(c.stripe ? c.stripe.usd : 0)}">${$$profit(p.usd, p.estimate)}</span><small class="on">on transactions</small>` : dash; },
+    total: (rows) => { const ps = rows.map(mine).filter(Boolean); return ps.length ? `<b>${$$profit(sumOf(ps, (p) => p.usd), ps.some((p) => p.estimate))}</b><small class="on">on transactions</small>` : dash; } },
   { k: 'songs', label: 'Songs', n: 1, sort: (r) => r.songsPlayed, cell: (r) => (silent(r) ? dash : fmt.int(r.songsPlayed)), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.songsPlayed)) },
   { k: 'money', label: 'Room $', n: 1, sort: (r) => (known(r) ? r.money.total : -1), cell: (r) => (silent(r) ? dash : known(r) ? $$usd(r.money.total) : '<span class="tag unknown" title="Stripe could not be asked, or payments were off">unknown</span>'),
     total: (rows) => $$usd(sumOf(knownRows(rows), (r) => r.money.total)) },
@@ -793,7 +807,6 @@ function tierMath(t, st) {
 }
 
 /* ── Profit by membership tiers: the nights in the filter, priced on each plan ── */
-const PLAN_CUT = { free: 0.25, plus: 0.1, pro: 0.02 };
 const TIERS = ['free', 'plus', 'pro'];
 let TIER_MODE = 'asif';
 /* how many months of plan fee the nights stand for: each artist's first night to last, in
@@ -813,8 +826,8 @@ function tierInputs(rows, plan) {
   if (TIER_MODE === 'played') {
     /* as played: the cut MySet actually took (none on the founder's nights), and no plan fee from the founder */
     const base = tips + packs + requests + merch + other;
-    cut = base ? m((r) => cost(r).myset.fee) / base : PLAN_CUT[plan];
-    months = monthsOf(own.filter((r) => !isFounder(r)));
+    cut = base ? m((r) => mine(r).fee) / base : PLAN_CUT[plan];
+    months = monthsOf(own.filter((r) => PAYING || !isFounder(r)));
   }
   return { shows: own.length, tips, packs, requests, merch, other, server: m((r) => cost(r).server.usd), stripe: m((r) => (cost(r).stripe ? cost(r).stripe.usd : 0)), cut, price: PLAN_USD[plan], months };
 }
@@ -851,8 +864,15 @@ function renderTiers() {
   t.innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
   frame($('#tiersWrap'));
 }
+$$('.chip.pay').forEach((b) => b.addEventListener('click', () => {
+  PAYING = !PAYING;
+  $$('.chip.pay').forEach((c) => { c.classList.toggle('on', PAYING); c.setAttribute('aria-pressed', String(PAYING)); });
+  render();
+}));
+$('#tiersBlock .chip.pay').classList.add('moot');
 $$('#tierMode .chip').forEach((b) => b.addEventListener('click', () => {
   TIER_MODE = b.dataset.m; $$('#tierMode .chip').forEach((c) => c.classList.toggle('on', c === b));
+  $('#tiersBlock .chip.pay').classList.toggle('moot', TIER_MODE === 'asif');
   if (REG && REG.built) renderTiers();
 }));
 

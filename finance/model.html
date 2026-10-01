@@ -102,9 +102,16 @@
   .stamp b { color: var(--muted); font-weight: 500; }
   h1 { font-size: clamp(40px, 6vw, 72px); line-height: .98; letter-spacing: -.045em; font-weight: 700; max-width: 16ch; text-wrap: balance;
     background: linear-gradient(180deg, var(--ink) 55%, color-mix(in srgb, var(--ink) 62%, var(--accent))); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  h1 { padding-bottom: .12em; margin-bottom: -.12em; }   /* room for the y's tail inside the clipped gradient */
   h1 em { font-style: normal; font-weight: 600; -webkit-text-fill-color: var(--muted); }
   .lede { font-size: 16px; max-width: 72ch; color: var(--muted); margin: 16px 0 0; line-height: 1.55; }
   .lede b { color: var(--ink2); }
+  ul.lede { list-style: none; padding: 0; display: grid; gap: 7px; }
+  ul.lede li { position: relative; padding-left: 20px; animation: ledeIn .6s var(--ease) both; }
+  ul.lede li::before { content: ""; position: absolute; left: 3px; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px rgba(var(--accent-rgb),.6); }
+  ul.lede li:nth-child(2) { animation-delay: .05s; } ul.lede li:nth-child(3) { animation-delay: .1s; } ul.lede li:nth-child(4) { animation-delay: .15s; } ul.lede li:nth-child(5) { animation-delay: .2s; } ul.lede li:nth-child(6) { animation-delay: .25s; }
+  @keyframes ledeIn { from { opacity: .001; transform: translateY(5px); } }
+  @media (prefers-reduced-motion: reduce) { ul.lede li { animation: none; } }
 
   /* ── scenario line + KPI tiles ── */
   .scenline { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 34px; }
@@ -333,11 +340,14 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
     <span id="calibStamp">Real shows <b>none used yet</b></span>
   </div>
   <h1>Money model <em>for MySet</em></h1>
-  <p class="lede">Move a dial, watch the business. Every number on this page comes out of one formula:
-    how many phones are in how many rooms for how long, what the room and the artists pay, what the
-    server and Stripe take, and what is left. Nothing here is fixed — the guesses are marked, and real
-    show numbers replace them as they arrive. One word to know: a <b>tick</b> is one phone quietly asking
-    the server “anything new?” — not a vote. Since 11 September a tick is two small requests: the room’s shared board, and the phone’s own line. Ticks are what the server bill is made of.</p>
+  <ul class="lede">
+    <li><b>Move a dial, watch the business.</b> Every number on this page comes out of one formula.</li>
+    <li>The formula: how many phones are in how many rooms for how long, what the room and the artists pay, what the server and Stripe take, and what is left.</li>
+    <li>Nothing here is fixed. Guesses are marked, and real show numbers replace them as they arrive.</li>
+    <li>A <b>tick</b> is one phone quietly asking the server “anything new?” It is not a vote.</li>
+    <li>Since 11 September a tick is two small requests: the room’s shared board, and the phone’s own line.</li>
+    <li>Ticks are what the server bill is made of.</li>
+  </ul>
 </header>
 
 <div class="scenline"><span class="k">A scenario, not a report — <span id="kpiWhat">1,000 artists</span>. MySet has <b id="kpiToday">1</b> today.</span>
@@ -1093,7 +1103,8 @@ const STRIPE_PRESETS = {
 const P0 = {
   v: 2,                       // schema: room money became $ per PERSON per gig at v2
   artists: 1000, plusPct: 30, proPct: 10, plusPrice: 10, proPrice: 20,
-  freePrice: 0,               // only the tier projection reads it; the engine's free plan stays free compedPct: 8, venuePro: 0, venuePrice: 20,
+  compedPct: 8, venuePro: 0, venuePrice: 20,
+  freePrice: 0,               // only the tier projection reads it; the engine's free plan stays free
   gigsFree: 3, freeCap: 4, gigsPaid: 8,
   fans: 20, hours: 3, lookShare: 22, interactions: 2.5, changeShare: 90, installedPct: 15, extraViews: 0.5, clipViews: 0.5, clipBytes: 75000000,
   studioOn: true, studioShare: 60,
