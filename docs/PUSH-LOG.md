@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 12:41 — 4b9f19b — wt4@feat/tier-tables (5 files since origin/main)
+**tl;dr:** Show log: a 'Profit by membership tiers' table under the main one (totals and a show on average, per plan, as-if or as-played); money model: the same table with every input editable (shows, dollars by source, MySet fee, plan prices)
+**Other sessions:** tierMath() is duplicated word for word in finance/shows.html and finance/model.html — test/everyshow.mjs fails if they drift. STRIPE_RATES gained billingPct 0.7 (plan fees only). live.json totals gained packsAmount, paidRequests, paidRequestsAmount. P0.freePrice is new and only the projection reads it.
+
 ### 2026-10-01 12:19 — cbaecb2 — wt4@ux/showlog-plan-fees (1 files since origin/main)
 **tl;dr:** Show log: a Plan fees column ($10/mo, $20/mo in blue) right after Artist replaces the blue plan tag; MySet profit now reads 'on transactions' underneath; plan names say Bar Star / Rock Star
 **Other sessions:** PLAN_USD in finance/shows.html mirrors _plan.mjs prices; founder shows $0/mo (never charged). Profit math unchanged.
