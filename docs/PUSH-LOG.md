@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 20:02 — d812fc7 — venue-hero@ux/venue-hero (23 files since origin/main)
+**tl;dr:** Venue pages: a Google rating pill under the address (stars, review count, 'as of Oct 2026') that opens their Google reviews; a sample's hours, menu link and rating can be filled from Google in CRM → Edit profile → Details; a sample with no hours found no longer shows a made-up 5 pm–1 am
+**Other sessions:** Decision 0134 on #182. _factory.mjs humanHours(text) → parseHours (one reader). Venue profile gains rating {stars,count,at}; factory 'edit' takes hours/menuUrl/rating for venues; sampleDetail returns hours/menuUrl/rating. createSample closes every day when no hours were found and the template is untouched.
+
 ### 2026-10-01 18:58 — 02a8aae — wt4@dash-logo-home (6 files since origin/main)
 **tl;dr:** The MySet logo on every dashboard (money model, Show log, Media Dash, CRM, sample-page console, business report) now goes to the homepage
 **Other sessions:** CRM and factory logos used to go to /studio; now '/'. Media Dash and report marks became <a> with color:inherit. Content repo twin pushed (cb64d14).

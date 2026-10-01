@@ -55,6 +55,6 @@ A venue owner asking for a live rating. The Places API's display terms changing 
   - the hours list shows 8:00am – 10:00pm every day;
   - the Menu door opens the menu link;
   - there is no horizontal overflow.
-- Full suite: one failure, `test/books.mjs` "with the venue's own gross". It also fails with this change stashed, so it is a date edge on 1 October and not from this change.
+- Full suite after merging main at 02a8aae: exit 0, 5,105 ✓.
 - In CRM on localhost, with the local test passcode: Edit profile → Details showed the stored values. Typing "Mon-Sat 5pm-1am; Sun closed" and 4.6, then Save, toasted "Details saved", and the form read the same text back.
 - NOT checked: Sand & Tan on production.
