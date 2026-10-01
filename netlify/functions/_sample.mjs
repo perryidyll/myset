@@ -314,7 +314,13 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       if (payload.phone) p.phone = payload.phone;
       if (Array.isArray(payload.amenities)) p.amenities = payload.amenities;
       if (payload.hours && typeof payload.hours === 'object') p.hours = { ...p.hours, ...payload.hours };
+      /* No hours found: shut every day, which hides the block. A new profile's template
+         (every day 17:00–01:00) is a starting point for an owner, and on a sample it would
+         send someone to a shut door (0132). Hours set since (CRM's Details) are kept. */
+      else if (Object.values(p.hours || {}).every((h) => !h.closed && h.open === '17:00' && h.close === '01:00'))
+        p.hours = Object.fromEntries(Object.entries(p.hours || {}).map(([d, h]) => [d, { ...h, closed: true }]));
       p.links = { ...p.links, ...(payload.links || {}) };
+      if (payload.rating) p.rating = payload.rating;   // carried through a revive (0132)
       if (/^https:\/\//.test(String(payload.menuUrl || ''))) p.menu = { ...(p.menu || {}), url: String(payload.menuUrl).slice(0, 300) };   // the page's Menu door
       if (shots.cover) p.photo = shots.cover.url;
       p.photos = ['p0', 'p1', 'p2', 'p3', 'p4'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
@@ -504,7 +510,8 @@ export async function reviveSample(owner, { fetch: F = globalThis.fetch } = {}) 
   const rec = snap.record || {};
   const payload = kind === 'venue'
     ? { kind, name: p.name || snap.row.name, slug: snap.row.slug, tagline: p.tagline, about: p.about, city: p.city, country: p.country,
-        address: p.address, mapUrl: p.mapUrl, lat: p.lat, lng: p.lng, phone: p.phone, amenities: p.amenities, hours: p.hours, links: p.links }
+        address: p.address, mapUrl: p.mapUrl, lat: p.lat, lng: p.lng, phone: p.phone, amenities: p.amenities, hours: p.hours, links: p.links,
+        menuUrl: (p.menu || {}).url, rating: p.rating }
     : { kind, name: p.name || snap.row.name, first: p.first, last: p.last, slug: snap.row.slug, tagline: p.tagline, style: p.style, bio: p.bio,
         links: p.links, media: (p.media || []).map((m) => ({ url: m.provider === 'youtube' && m.id ? `https://www.youtube.com/watch?v=${m.id}` : (m.href || ''), hero: m.hero, title: m.title })) };
   const made = await createSample({ ...payload, photos, cp: (snap.row.cp || 1) + 1, seed: rec.seed, sources: rec.sources, facts: rec.facts,

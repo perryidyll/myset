@@ -258,6 +258,8 @@ eq('the public venue page 404s', (await call(venueFn, 'https://x/api/venue?v=har
 r = await door({ action: 'page', kind: 'venue', slug: 'harbourbar', key: v.key });
 ok('the label opens it, in the venue shape', r.ok && r.venue && r.venue.name === 'Harbour Bar' && r.venue.slug === 'harbourbar', r);
 eq('the menu the generator found is the page’s Menu door', r.venue.menu && r.venue.menu.url, 'https://harbourbar.example/menu');
+ok('NO HOURS FOUND, NONE SHOWN (0132): not the template’s 5 pm to 1 am', r.venue.hours.every((h) => h.closed), r.venue.hours);
+eq('no rating until one is read', r.venue.rating, null);
 eq('an artist-kind request for it finds nothing', (await door({ action: 'page', slug: 'harbourbar', key: v.key })).status, 404);
 const VH = { 'x-sample-key': v.key, 'x-sample-venue': 'harbourbar' };
 r = await call(vadmin, 'https://x/api/venueadmin', { headers: VH, body: { action: 'get' } });

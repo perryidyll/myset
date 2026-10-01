@@ -472,6 +472,12 @@ eq('the hours reader: a week that wraps, 26:00 as two in the morning', F.parseHo
      thu: { closed: true, open: '17:00', close: '01:00' }, fri: { closed: true, open: '17:00', close: '01:00' }, sat: { closed: false, open: '20:00', close: '02:00' },
      sun: { closed: false, open: '20:00', close: '02:00' } });
 eq('anything richer is left out, never guessed', [F.parseHours('Mo-Su 10:00-22:00; PH off'), F.parseHours('24/7'), F.parseHours('Mo-Fr 09:00-12:00,14:00-18:00')], [null, null, null]);
+const hk = (o) => o && Object.entries(o).map(([d, x]) => d + (x.closed ? ':shut' : `:${x.open}-${x.close}`)).join(' ');
+eq('HOURS AS A PERSON TYPES THEM (0132): daily, am/pm, an en dash', hk(F.humanHours('Daily 8 AM–10 PM')), 'mon:08:00-22:00 tue:08:00-22:00 wed:08:00-22:00 thu:08:00-22:00 fri:08:00-22:00 sat:08:00-22:00 sun:08:00-22:00');
+eq('ranges, a list of days, "to", a day shut after the fact', hk(F.humanHours('Mon-Fri 5pm-1am; Sat, Sun 12pm to 2am; Tue closed')),
+   'mon:17:00-01:00 tue:shut wed:17:00-01:00 thu:17:00-01:00 fri:17:00-01:00 sat:12:00-02:00 sun:12:00-02:00');
+eq('full day names, "till", midnight', hk(F.humanHours('Thursday to Sunday 6pm till midnight')), 'mon:shut tue:shut wed:shut thu:18:00-00:00 fri:18:00-00:00 sat:18:00-00:00 sun:18:00-00:00');
+eq('what it cannot read is refused, never guessed', [F.humanHours('blah'), F.humanHours('Mon-Fri'), F.humanHours('Daily 13pm-2am'), F.humanHours('')], [null, null, null, null]);
 ok('it builds', r.ok, r.error);
 eq('the seven days, from the OSM hours: Tuesday shut', V.hours && [V.hours.mon, V.hours.tue], [{ closed: false, open: '17:00', close: '01:00' }, { closed: true, open: '17:00', close: '01:00' }]);
 ok('amenities from OSM tags and sourced facts, every one a real key', V.amenities && V.amenities.includes('outdoor') && V.amenities.includes('livemusic'), V.amenities);

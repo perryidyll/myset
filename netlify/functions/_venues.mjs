@@ -398,6 +398,13 @@ export function normVenue(p) {
   o.merch = normMerch(o.merch);
   o.pay = { ready: !!(o.pay && o.pay.ready), acct: String((o.pay && o.pay.acct) || '').slice(0, 40) };
 
+  /* The Google rating, typed in by hand from the venue's Google listing (decision 0132).
+     Never fetched: Google's terms forbid keeping its data (0103), so it is a fact copied
+     once and carries the day it was read. */
+  const G = o.rating && typeof o.rating === 'object' ? o.rating : {};
+  const stars = Math.round(Number(G.stars) * 10) / 10, rcount = Math.floor(Number(G.count));
+  o.rating = stars >= 1 && stars <= 5 && rcount > 0 ? { stars, count: Math.min(rcount, 1e7), at: Number(G.at) || Date.now() } : null;
+
   const L = o.links || {};
   o.links = {
     website: safeVLink('website', L.website),
@@ -443,7 +450,7 @@ export function shapeVenue(p, reg) {
     photo: p.photo, photos: p.photos,
     amenities: p.amenities.map((k) => ({ key: k, label: (AMENITIES.find(([x]) => x === k) || [, k])[1] })),
     hours: DAYS.map((d) => ({ day: d, label: DAY_LABEL[d], ...p.hours[d] })),
-    menu: p.menu, offers: p.offers, links: p.links,
+    menu: p.menu, offers: p.offers, links: p.links, rating: p.rating,
     /* Merch shows only while the plan has it — never deleted when a plan lapses,
        just not shown (0s). Same AND-on-read as the tick below. */
     merch: venueLimits(r).merch ? p.merch : [],

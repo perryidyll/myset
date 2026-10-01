@@ -412,6 +412,20 @@ body{padding-bottom:34px}
 .vhead h1{margin:0;font-size:29px;font-weight:700;letter-spacing:-.04em;line-height:1.08}
 .vhead .tag{margin:7px 0 0;font-size:15px;color:var(--muted);font-weight:500;line-height:1.4}
 .vhead .place{margin:8px 0 0;font-size:14px;color:var(--faint)}
+.grate{display:inline-flex;align-items:center;flex-wrap:wrap;gap:2px 7px;margin:10px 0 0;font-size:13.5px;color:var(--ink-2,var(--faint));text-decoration:none;
+  padding:7px 14px 7px 12px;border-radius:14px;background:var(--bg-2);transition:transform .18s cubic-bezier(.3,1.4,.5,1),background .2s}
+.grate:hover{background:color-mix(in srgb,var(--bg-2) 80%,var(--accent) 20%)}
+.grate:active{transform:scale(.96)}
+.grate b{font-size:14.5px;color:var(--ink,inherit)}
+.grate em{font-style:normal;color:var(--faint);font-size:12px;flex-basis:100%;margin-top:-2px}
+.gst{display:inline-flex;gap:1px}
+.gst i{width:13px;height:13px;background:var(--line,#8884);clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%)}
+.gst i.on{background:#F5B82E}
+.gst i.half{background:linear-gradient(90deg,#F5B82E 50%,var(--line,#8884) 50%)}
+.gst i{animation:gpop .4s cubic-bezier(.3,1.5,.5,1) both}
+.gst i:nth-child(2){animation-delay:.05s}.gst i:nth-child(3){animation-delay:.1s}.gst i:nth-child(4){animation-delay:.15s}.gst i:nth-child(5){animation-delay:.2s}
+@keyframes gpop{from{transform:scale(.3);opacity:0}}
+@media (prefers-reduced-motion:reduce){.gst i{animation:none}.grate{transition:none}}
 .vbadge{display:inline-flex;align-items:center;gap:5px;margin-left:8px;padding:4px 10px;
   border-radius:var(--pill);font-size:11.5px;font-weight:700;letter-spacing:.01em;vertical-align:5px;
   background:rgba(48,209,88,.14);color:#1B8E3C}
@@ -1059,6 +1073,7 @@ function render(){
   ${linksHtml}
   <div class="vhead vsub">
     <p class="place">${esc(v.address||[v.city,v.country].filter(Boolean).join(', '))}</p>
+    ${ratingHtml(v)}
     ${(V.vouches&&V.vouches.count)?`<p class="place" style="color:var(--accent-ink);font-weight:600">
       ${V.vouches.count} artist${V.vouches.count===1?'':'s'} who play${V.vouches.count===1?'s':''} here confirmed it${V.verified?'':' \u2014 one of the things the green tick needs'}</p>`:''}
   </div>
@@ -1167,6 +1182,20 @@ function render(){
   $('#app').innerHTML=h;
   document.title=`${v.name} — MySet`;
   drift('links',-1);
+}
+/* The Google rating (0132): copied from the venue's Google listing on the day in `at`, never
+   fetched live, so it says when it was read rather than pretend to be current. The link
+   opens their Google reviews: their own Google link, or a search for them. */
+function ratingHtml(v){
+  const r=v.rating; if(!r||!r.stars||!r.count)return '';
+  const n=r.count>=1000?`${(r.count/1000).toFixed(r.count>=10000?0:1).replace(/\.0$/,'')}K`:String(r.count);
+  const when=new Date(r.at).toLocaleDateString(undefined,{month:'short',year:'numeric'});
+  const q=[v.name,v.city,'reviews'].filter(Boolean).join(' ');
+  const href=(v.links&&v.links.google)||`https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  const full=Math.round(r.stars*2)/2;
+  const stars=[1,2,3,4,5].map(i=>`<i class="${i<=full?'on':i-.5===full?'half':''}"></i>`).join('');
+  return `<a class="grate" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${r.stars} out of 5 from ${r.count} Google reviews, as of ${esc(when)}. Opens Google.">
+    <b>${r.stars.toFixed(1)}</b><span class="gst" aria-hidden="true">${stars}</span><span>${n} Google reviews</span><em>as of ${esc(when)}</em></a>`;
 }
 /* ── "Want to perform here?" ─────────────────────────────
    Only a signed-in artist can send one, deliberately. An open contact form is a
