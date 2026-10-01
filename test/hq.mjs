@@ -53,6 +53,8 @@ const { readDoc, casDoc, DEFAULT_ARTIST } = await import('../netlify/functions/_
 const { createArtist, signToken } = await import('../netlify/functions/_auth.mjs');
 const { getProfile } = await import('../netlify/functions/_profile.mjs');
 const { getVenueProfile } = await import('../netlify/functions/_venues.mjs');
+const { getImage, putImage } = await import('../netlify/functions/_img.mjs');
+const { mutateVenueProfile } = await import('../netlify/functions/_venues.mjs');
 const { suppressIds } = await import('../netlify/functions/_factory.mjs');
 const { parseSeed } = await import('../netlify/functions/_fsrc.mjs');
 
@@ -377,6 +379,55 @@ eq('a menu link that is not https is refused', (await F({ action: 'edit', owner:
 eq('a rating out of range is not stored', (await F({ action: 'edit', owner: barOwner, fields: { rating: { stars: 9, count: 3 } } })) && (await getVenueProfile(barOwner.slice(2))).rating, null);
 r = await F({ action: 'edit', owner: barOwner, fields: { hours: '' } });
 ok('cleared hours hide the block', (await getVenueProfile(barOwner.slice(2))).hours && Object.values((await getVenueProfile(barOwner.slice(2))).hours).every((h) => h.closed));
+
+console.log('\nPHOTOS IN THEIR PLACES, NOTES FOR THE GENERATOR (0136)');
+{
+  const JPG = (n) => 'data:image/jpeg;base64,' + Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(64, n), Buffer.from([0xff, 0xd9])]).toString('base64');
+  const roles = async () => (await F({ action: 'detail', owner: barOwner })).profile.roles;
+  // as a build leaves a venue the generator found no wide shot for: five photos, no cover
+  const ns = (await S.readSampleReg()).byId[barOwner].ns, five = [];
+  for (let i = 0; i < 5; i++) five.push(await putImage(ns, `p${i}`, Buffer.from(JPG(i + 1).split(',')[1], 'base64'), 'image/jpeg'));
+  await mutateVenueProfile(barOwner.slice(2), (p) => { p.photo = ''; p.photos = five; return true; });
+  const vp0 = await getVenueProfile(barOwner.slice(2)), R0 = await roles();
+  ok('five photos and no cover: the console shows what the page shows — the last one up top', !vp0.photo && vp0.photos.length === 5 && R0[0] === vp0.photos[4] && R0[1] === vp0.photos[0] && R0.length === 6 && !R0[5], [vp0, R0]);
+  r = await F({ action: 'arrange', owner: barOwner, order: [R0[1], R0[0], ...R0.slice(2)] });
+  const vp1 = await getVenueProfile(barOwner.slice(2));
+  ok('a swap: the main shot becomes the cover, the cover the main shot, stored plainly', r.ok && vp1.photo === R0[1] && vp1.photos[0] === R0[0] && vp1.photos.length === 4, vp1);
+  eq('the list card’s thumbnail follows the cover', (await S.readSampleReg()).byId[barOwner].cv, R0[1]);
+  eq('an order with a photo the page does not hold is refused', (await F({ action: 'arrange', owner: barOwner, order: ['/api/img?a=sxxxxxxxxxx&s=p0&v=1', ...R0.slice(1)] })).status, 400);
+  eq('so is one that loses a photo', (await F({ action: 'arrange', owner: barOwner, order: ['', ...(await roles()).slice(1)] })).status, 400);
+  const R1 = await roles();
+  r = await F({ action: 'addPhoto', owner: barOwner, slot: 'p4', data: JPG(9) });
+  const name = (u) => (/&s=([a-z0-9]+)/.exec(u) || [])[1], R2 = await roles();
+  ok('a new photo is stored under a name no other photo uses, so nothing it shares a name with changes', r.ok && R2[5] === r.src && R1.slice(0, 5).every((u, i) => u === R2[i])
+    && !R2.slice(0, 5).map(name).includes(name(r.src)), [R1, R2]);
+  r = await F({ action: 'addPhoto', owner: barOwner, slot: 'p1', url: R2[0] });
+  const R3 = await roles();
+  ok('choosing a photo already on the page trades the two places', r.ok && R3[2] === R2[0] && R3[0] === R2[2], [R2, R3]);
+  eq('a venue has no portrait', (await F({ action: 'addPhoto', owner: barOwner, slot: 'avatar', data: JPG(3) })).status, 400);
+
+  const hand = await S.createSample({ kind: 'artist', name: 'Hand Made Act', quality: { score: 0.9, review: false }, by: 'founder' }, { fetchMedia: false });
+  eq('a page made by hand has no build for notes to steer', (await F({ action: 'notes', owner: hand.owner, notes: 'Lead with the duo.' })).status, 400);
+  r = await F({ action: 'notes', owner: barOwner, notes: '  Mention the Sunday sunset sessions.\r\nLeave out the pool.  ' });
+  ok('notes are kept on the seed, trimmed', r.ok && r.notes === 'Mention the Sunday sunset sessions.\nLeave out the pool.' && (await readDoc(S.SAMPLE(barOwner), null)).data.seed.notes === r.notes, r);
+  await F({ action: 'edit', owner: barOwner, fields: { hours: 'Daily 8am-10pm', rating: { stars: 4.5, count: 1079 } } });
+  r = await F({ action: 'rebuild', owner: barOwner });
+  q = (await readDoc('factoryq', null)).data;
+  j = q.jobs.find((x) => x.replace === barOwner && x.st !== 'done');
+  ok('a rebuild carries the notes to the generator, and keeps by default', r.ok && j.seed.notes === 'Mention the Sunday sunset sessions.\nLeave out the pool.' && j.keep === true, j);
+  BG.deps.run = fakeBuild({ review: false });
+  await BG.work(j.id);
+  const vk = await getVenueProfile(barOwner.slice(2)), RK = await roles();
+  ok('REBUILT, KEPT: the photos in their places, the hours, the menu link and the rating', RK.join() === R3.join() && vk.rating && vk.rating.count === 1079 && vk.hours.sat.open === '08:00'
+    && vk.menu.url === 'https://online.anyflip.com/uqxta/oyru/mobile/index.html' && vk.tagline === 'Songs for the golden hour', [RK, R3, vk.rating, vk.menu]);
+  ok('the kept pictures are still stored', (await Promise.all(RK.filter(Boolean).map((u) => getImage(...u.match(/a=([a-z0-9]+)&s=([a-z0-9]+)/).slice(1))))).every(Boolean));
+  eq('and the notes survive the rebuild', (await readDoc(S.SAMPLE(barOwner), null)).data.seed.notes, 'Mention the Sunday sunset sessions.\nLeave out the pool.');
+  r = await F({ action: 'rebuild', owner: barOwner, keep: false });
+  j = (await readDoc('factoryq', null)).data.jobs.find((x) => x.replace === barOwner && x.st !== 'done');
+  await BG.work(j.id);
+  const vf = await getVenueProfile(barOwner.slice(2));
+  ok('asked for a fresh start: the new build’s photos (none here), and what was set by hand goes', j.keep === false && !vf.photo && !(vf.photos || []).length && !vf.rating, vf);
+}
 
 r = await F({ action: 'rebuild', owner: emOwner });
 q = (await readDoc('factoryq', null)).data;

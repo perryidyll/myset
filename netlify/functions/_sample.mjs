@@ -203,6 +203,29 @@ export const mutateFactoryCfg = (fn) => casDoc(CFG, defaultFactoryCfg, fn);
 const clean = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
 const PHOTO_SLOTS = ['cover', 'avatar', 'p0', 'p1', 'p2', 'p3', 'p4'];   // p3, p4: a venue's five (0129)
 
+/* THE PHOTOS IN THE ORDER THE PAGE SHOWS THEM (decision 0136). A venue: the cover,
+   the square, the three small ones top to bottom, then the rail. An artist: the cover,
+   the portrait, the three small ones. `rolesOf` reads a profile the way venue.html and
+   artist.html draw it — a venue with no cover shows its last photo there, and blanks
+   in `photos` are skipped — so the console's labels are what a visitor sees. Every
+   console write goes through `writeRoles`, which stores that order plainly. */
+export const ROLES = { venue: ['cover', 'p0', 'p1', 'p2', 'p3', 'p4'], artist: ['cover', 'avatar', 'p0', 'p1', 'p2'] };
+export function rolesOf(kind, p = {}) {
+  const shots = (p.photos || []).filter(Boolean);
+  const out = kind === 'venue' ? [p.photo || (shots.length >= 2 ? shots.pop() : ''), ...shots] : [p.photo || '', p.avatar || '', ...shots];
+  while (out.length < ROLES[kind].length) out.push('');
+  return out;
+}
+export function writeRoles(kind, p, roles) {
+  const was = { cover: p.photo || '', avatar: p.avatar || '' };
+  p.photo = roles[0] || '';
+  if (kind === 'venue') { p.photos = roles.slice(1).filter(Boolean); return; }
+  p.avatar = roles[1] || '';
+  p.photos = roles.slice(2).filter(Boolean);
+  // a crop belongs to its frame: a photo moved into the cover or the portrait is cropped afresh (0135)
+  p.focus = { cover: p.photo && p.photo === was.cover ? (p.focus || {}).cover || '' : '', avatar: p.avatar && p.avatar === was.avatar ? (p.focus || {}).avatar || '' : '' };
+}
+
 export async function createSample(payload = {}, { fetchMedia = true } = {}) {
   const kind = payload.kind === 'venue' ? 'venue' : 'artist';
   const name = clean(payload.name || [payload.first, payload.last].filter(Boolean).join(' '), kind === 'venue' ? 70 : 60);
@@ -210,14 +233,22 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
   /* A REBUILD (`replace`: the owner it replaces) takes the old page's place: the old
      one is erased first so its address is free and the new one takes it, so a link
      already sent opens the new page. Only a page nobody has claimed. */
+  let kept = null;
   if (payload.replace) {
     const old = (await readSampleReg()).byId[payload.replace];
     if (old && old.st !== 'claiming') {
       payload = { ...payload, slug: payload.slug || old.slug, cp: old.cp };
-      await eraseData(payload.replace);
+      /* KEEP (decision 0136): a rebuild rewrites the words and links from the sources
+         and the founder's notes, and leaves what the founder set by hand — the photos
+         in their places, and a venue's hours, menu link and Google rating. The kept
+         pictures stay where they are stored; the new build's own are not stored. */
+      if (payload.keep) kept = await keptOf(payload.replace, kind);
+      await eraseData(payload.replace, kept ? kept.roles : []);
       await mutateSampleReg((r) => dropRow(r, payload.replace));
     }
   }
+  if (kept && kept.roles.some(Boolean)) payload = { ...payload, photos: {} };
+  else if (kept) kept.roles = null;
   const { newSampleNs, putImage, decodeDataUrl } = await import('./_img.mjs');
   const ns = newSampleNs();                          // outside every CAS: a retry keeps it
   /* Ready, or waiting for a look: a hand-made page is the founder's look already;
@@ -293,6 +324,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       if (shots.avatar) p.avatar = shots.avatar.url;
       p.photos = ['p0', 'p1', 'p2'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
       p.focus = { cover: (shots.cover && shots.cover.focus) || '', avatar: (shots.avatar && shots.avatar.focus) || '' };
+      if (kept && kept.roles) { writeRoles('artist', p, kept.roles); p.focus = kept.focus; }
       return true;
     });
     /* The Studio's header reads the name off the show record when the registry has
@@ -324,6 +356,10 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       if (/^https:\/\//.test(String(payload.menuUrl || ''))) p.menu = { ...(p.menu || {}), url: String(payload.menuUrl).slice(0, 300) };   // the page's Menu door
       if (shots.cover) p.photo = shots.cover.url;
       p.photos = ['p0', 'p1', 'p2', 'p3', 'p4'].map((k) => (shots[k] ? shots[k].url : '')).filter(Boolean);
+      if (kept && kept.roles) writeRoles('venue', p, kept.roles);
+      if (kept && kept.rating) p.rating = kept.rating;
+      if (kept && kept.menuUrl) p.menu = { ...(p.menu || {}), url: kept.menuUrl };
+      if (kept && kept.hours) p.hours = kept.hours;
       return true;
     });
   }
@@ -333,7 +369,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
       v: 1, owner, kind, slug, name, first: clean(payload.first || name, 60), ns,
       seed: payload.seed || null, sources: (payload.sources || []).slice(0, 60),
       facts: payload.facts || null, provenance: payload.provenance || null,
-      photos: photoMeta, quality: payload.quality || null, msgs: payload.msgs || {},
+      photos: kept && kept.roles ? kept.meta : photoMeta, quality: payload.quality || null, msgs: payload.msgs || {},
       supIds: (payload.supIds || []).slice(0, 12), by: payload.by === 'founder' ? 'founder' : 'factory',
       usage: payload.usage || null, events: [{ t: Date.now(), e: 'built', m: payload.by || 'factory' }],
     });
@@ -341,7 +377,7 @@ export async function createSample(payload = {}, { fetchMedia = true } = {}) {
   });
   /* The console's card shows a thumbnail; keeping its address on the row saves a
      profile read per card. */
-  const cv = (shots.cover || shots.avatar || {}).url || '';
+  const cv = kept && kept.roles ? kept.roles[0] || (kind === 'artist' ? kept.roles[1] : '') || '' : (shots.cover || shots.avatar || {}).url || '';
   if (cv) await mutateSampleReg((r) => { if (!r.byId[owner]) return false; r.byId[owner].cv = cv; return true; }).catch(() => {});
   await bump('built');
   const row = (await readSampleReg()).byId[owner];
@@ -384,7 +420,7 @@ export async function sampleSeen(owner, what = 'open') {
    The account's own keys (keysFor / keysForVenue, the same lists that erase a
    deleted account), the photos under the sample's own name, and the sample's record.
    Re-runnable: deleting what is already gone is a no-op. */
-async function eraseData(owner) {
+async function eraseData(owner, spare = []) {
   const { sampleImgKeys } = await import('./_img.mjs');
   let keys = [];
   let urls = [];
@@ -403,9 +439,29 @@ async function eraseData(owner) {
     keys = await keysFor(owner).catch(() => []);
   }
   keys.push(...sampleImgKeys(urls), SAMPLE(owner));
+  // a rebuild that keeps the photos (0136) spares them — the account's own lists name them too
+  const keep = new Set(sampleImgKeys(spare));
   let gone = 0;
-  for (const k of new Set(keys)) { try { await store().delete(k); gone++; } catch {} }
+  for (const k of new Set(keys)) { if (keep.has(k)) continue; try { await store().delete(k); gone++; } catch {} }
   return gone;
+}
+/* What a rebuild keeps (0136), read before the old page is erased. Hours count as
+   set by hand only when some day is open: a page whose hours were never found has
+   every day shut, and a new build's hours are better than none. */
+async function keptOf(owner, kind) {
+  const { data: rec } = await readDoc(SAMPLE(owner), null);
+  let p = {};
+  if (kind === 'venue') { const { getVenueProfile } = await import('./_venues.mjs'); p = await getVenueProfile(owner.slice(2)).catch(() => ({})); }
+  else { const { getProfile } = await import('./_profile.mjs'); p = await getProfile(owner).catch(() => ({})); }
+  const roles = rolesOf(kind, p);
+  const out = { roles, focus: { cover: (p.focus || {}).cover || '', avatar: (p.focus || {}).avatar || '' },
+    meta: ((rec && rec.photos) || []).filter((x) => x && roles.includes(x.url)) };
+  if (kind === 'venue') {
+    if (p.rating && p.rating.stars) out.rating = p.rating;
+    if (p.menu && /^https:\/\//.test(String(p.menu.url || ''))) out.menuUrl = p.menu.url;
+    if (p.hours && Object.values(p.hours).some((h) => h && !h.closed)) out.hours = p.hours;
+  }
+  return out;
 }
 function dropRow(r, owner) {
   const row = r.byId[owner];

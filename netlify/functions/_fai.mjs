@@ -311,11 +311,16 @@ export function pickPhotos(judged, { kind = 'artist' } = {}) {
 }
 /** `cands`: [{id, from, group, bytes, type, width, height, src, note}]. Ten a call.
  *  Returns { judged: cands with the verdict merged in, picks }. */
-export async function judgePhotos(cands, ctx, { kind = 'artist', name = '' } = {}) {
+/* THE FOUNDER'S NOTES (decision 0136) ride into the photo judge and the copy as wishes,
+   never as licence: what they ask is followed where the facts and the pictures allow,
+   and a fact the notes state reaches the copy only through the founder's note source,
+   cited like any other. */
+const notesBlock = (notes) => (notes ? `\n\nTHE FOUNDER'S NOTES FOR THIS PAGE (follow them where the facts allow; never invent anything to satisfy one):\n${clean(notes, 600)}` : '');
+export async function judgePhotos(cands, ctx, { kind = 'artist', name = '', notes = '' } = {}) {
   const judged = [];
   for (let i = 0; i < (cands || []).length; i += 10) {
     const batch = cands.slice(i, i + 10), ids = batch.map((c) => c.id);
-    const content = [{ type: 'text', text: `${kind === 'venue' ? 'Venue' : 'Act'}: ${name || '(no name)'}. ${batch.length} image(s) follow; judge every one.` }];
+    const content = [{ type: 'text', text: `${kind === 'venue' ? 'Venue' : 'Act'}: ${name || '(no name)'}. ${batch.length} image(s) follow; judge every one.${notesBlock(notes)}` }];
     for (const c of batch) {
       content.push({ type: 'text', text: `Image id=${c.id} · from ${c.from} · ${c.width}x${c.height}${c.note ? ' · ' + c.note : ''}` });
       content.push({ type: 'image', source: { type: 'base64', media_type: c.type, data: Buffer.from(c.bytes).toString('base64') } });
@@ -399,11 +404,11 @@ export function tidyCopy(o, facts, venue) {
 /** `facts` [{k, v, src}], `sources` [{url, kind, title}]. Returns { tagline, style?, hook,
  *  sentences:[{s, f, src}], text } — `f` the fact numbers a line rests on, `src` the
  *  sources those facts came from. */
-export async function writeCopy(facts, sources, kind, ctx, { name = '' } = {}) {
+export async function writeCopy(facts, sources, kind, ctx, { name = '', notes = '' } = {}) {
   const venue = kind === 'venue';
   if (!facts || !facts.length) return tidyCopy({ tagline: {}, hook: {}, style: {}, bio: [], about: [] }, [], venue);
   const content = `${venue ? 'VENUE' : 'ACT'}: ${name || '(no name)'}\n\nFACTS (cite these numbers in src):\n${facts.map((f, i) => `[${i}] ${f.k}: ${f.v}`).join('\n')}`
-    + `\n\nWHERE THE FACTS CAME FROM (for your information only):\n${(sources || []).map((s, i) => `(${i}) ${s.kind} · ${s.title || s.url || ''}`).join('\n')}`;
+    + `\n\nWHERE THE FACTS CAME FROM (for your information only):\n${(sources || []).map((s, i) => `(${i}) ${s.kind} · ${s.title || s.url || ''}`).join('\n')}` + notesBlock(notes);
   const o = await askJSON({ call: 'copy', model: modelSmart(ctx), system: venue ? VENUE_COPY_SYSTEM : COPY_SYSTEM, content,
                             check: (x) => checkCopy(x, venue), maxTokens: 16000, ctx });
   return tidyCopy(o, facts, venue);
