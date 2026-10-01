@@ -1508,7 +1508,12 @@ const TP_CUT = { free: 'cutFree', plus: 'cutPlus', pro: 'cutPro' };
 const TP_PRICE = { free: 'freePrice', plus: 'plusPrice', pro: 'proPrice' };
 let TP = null, TP_MINE = false;
 try { const t = JSON.parse(localStorage.getItem(TP_KEY) || 'null'); if (t && TP_PLANS.every((p) => t[p] && isFinite(t[p].shows) && TP_SRC.every((k) => isFinite(t[p][k])))) { TP = t; TP_MINE = true; } } catch (e) {}
-const tpLive = () => (LIVE && !LIVE.unreachable && LIVE.totals && LIVE.totals.moneyKnown ? LIVE.totals : null);
+/* a register folded before the sources were split carries no packsAmount: the packs are then what
+   is left of the room's total after tips and paid requests */
+const tpLive = () => {
+  const t = LIVE && !LIVE.unreachable && LIVE.totals && LIVE.totals.moneyKnown ? LIVE.totals : null;
+  return t && t.packsAmount == null ? { ...t, packsAmount: Math.max(0, (t.gross || 0) - (t.tipsAmount || 0) - (t.paidRequestsAmount || 0)) } : t;
+};
 const c2 = (v) => Math.round(v * 100) / 100;
 function tpSeed() {
   const t = tpLive(), k = t ? t.moneyKnown : 0;
