@@ -238,7 +238,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
           <line class="ln" x1="0" y1="60" x2="400" y2="60"/><line class="ln" x1="0" y1="110" x2="400" y2="110"/><line class="ln" x1="0" y1="160" x2="400" y2="160"/>
           <g id="barRows"></g>
         </svg>
-        <div class="stat off" id="mdStat"><b id="mdN">0</b><small id="mdL">views this week</small></div>
+        <div class="stat off" id="mdStat"><b id="mdN">0</b><small id="mdL">views in the last 7 days</small></div>
       </div>
       <div class="foot"><h2>Media Dash</h2><p>Instagram, post by post: views, reach and what the room saw this week.</p><span class="url">myset.vip/mediadash</span>
         <span class="go"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></div>
@@ -348,7 +348,7 @@ fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) =>
   }
   const views = d.week && Number(d.week.views);
   if (Number.isFinite(views)) {
-    $('#mdL').textContent = 'views this week' + (d.account && d.account.length ? ` · ${int(d.account[d.account.length - 1].followers)} followers` : '');
+    $('#mdL').textContent = 'views in the last 7 days' + (d.account && d.account.length ? ` · ${int(d.account[d.account.length - 1].followers)} followers` : '');
     $('#mdStat').classList.remove('off'); countUp($('#mdN'), views, int);
   }
 }).catch(() => {});
@@ -357,7 +357,7 @@ fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) =>
 fetch('/moneymodel/live.json', { headers: { accept: 'application/json' }, credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((d) => {
   if (!d || !d.live || !d.act) return;
   const a = d.act, head = Number(a.roomPerHead);
-  $('#mmL').textContent = `real night${a.shows === 1 ? '' : 's'} in the model` + (Number.isFinite(head) ? ` · $${head.toFixed(2)} a head` : '');
+  $('#mmL').textContent = `real night${a.shows === 1 ? '' : 's'} in the model` + (Number.isFinite(head) ? ` · $${head.toFixed(2)} a head${a.moneyKnownNights ? ` over the ${a.moneyKnownNights} with money known` : ''}` : '');
   $('#mmStat').classList.remove('off'); countUp($('#mmN'), a.shows || 0, int);
 }).catch(() => {});
 

@@ -136,7 +136,9 @@ export function slimFromRow(aid, r) {
     startedAt: Number(r.startedAt) || null, endedAt: Number(r.endedAt) || null, startedBy: null, endedBy: null,
     stats: { songsPlayed: num(r.songsPlayed), totalVotes: num(r.totalVotes), peakVoters: num(r.peakVoters), room: num(r.room), nets: r.nets == null ? null : num(r.nets), topSong: r.top && r.top.title ? { title: str(r.top.title, 80), votes: num(r.top.votes) } : null },
     money: { source: r.source || null, currency: 'USD', reconciledAt: null, gross: num(r.gross), unattributed: num(r.unattributed),
-             votes: { amount: 0, count: 0, paid: num(r.paidVotes) }, tips: { amount: 0, count: r.tipped ? num(r.tipped) : 0 }, requests: { amount: 0, count: num(r.paidRequests) },
+             /* the index row carries the tips in DOLLARS (`tipped`), never a count; votes.count is floored at
+                the paid requests so packs (votes − requests) can never go negative */
+             votes: { amount: 0, count: num(r.paidRequests), paid: num(r.paidVotes) }, tips: { amount: r.tipped ? num(r.tipped) : 0, count: 0 }, requests: { amount: 0, count: num(r.paidRequests) },
              fees: r.stripeFees == null ? null : { usd: num(r.stripeFees), charges: 0, missing: 0 } },
     requests: null, rsvps: null, firstPlayAt: null, lastPlayAt: null, songs: {}, detail: false,
   };
@@ -360,11 +362,11 @@ const finish = (g) => {
     ...g, nights: rs.length, artists: new Set(rs.map((r) => r.artist.id)).size, venues: new Set(rs.map((r) => r.venueKey || r.venue).filter(Boolean)).size,
     people: avg(rs.map((r) => r.people), 1), peopleTotal: sum(rs.map((r) => r.people)), hours: avg(rs.map((r) => r.hours)), hoursTotal: round(sum(rs.map((r) => r.hours)), 1),
     votes: sum(rs.map((r) => r.votes)), songs: sum(rs.map((r) => r.songsPlayed)), requests: sum(rs.map((r) => r.requests.count)), requestsAccepted: sum(rs.map((r) => r.requests.accepted)),
-    moneyKnown: known.length, gross: round(sum(known.map((r) => r.money.total))), tips: sum(known.map((r) => r.money.tips.count)), tipsAmount: round(sum(known.map((r) => r.money.tips.amount))),
+    moneyKnown: known.length, peopleKnown: sum(known.map((r) => r.people)), gross: round(sum(known.map((r) => r.money.total))), tips: sum(known.map((r) => r.money.tips.count)), tipsAmount: round(sum(known.map((r) => r.money.tips.amount))),
     packs: sum(known.map((r) => r.money.packs.count)), paidVotes: sum(known.map((r) => r.money.packs.votes)),
     /* each source's dollars apart (the money model's tier projection seeds from them) */
     packsAmount: round(sum(known.map((r) => r.money.packs.amount))), paidRequests: sum(known.map((r) => r.money.requests.count)), paidRequestsAmount: round(sum(known.map((r) => r.money.requests.amount))),
-    merchOrders: sum(rs.map((r) => r.money.merch.orders)), merchAmount: round(sum(rs.map((r) => r.money.merch.amount))),
+    merchOrders: sum(rs.map((r) => r.money.merch.orders)), merchAmount: round(sum(rs.map((r) => r.money.merch.amount))), merchPostage: round(sum(rs.map((r) => r.money.merch.postage || 0))),
     perHead: perHead(rs),
     rated: rn, ratingAvg: rn ? round(sum(rr.map((r) => r.rating.avg * r.rating.n)) / rn, 1) : null,
     first: rs.length ? Math.min(...rs.map((r) => r.startedAt)) : null, last: rs.length ? Math.max(...rs.map((r) => r.startedAt)) : null,
@@ -422,10 +424,10 @@ export function rollup({ rows, silent, artists, venues, songs = {}, now = Date.n
     venuesPlayed: all.venues, countries: new Set(counted.map((r) => r.country).filter(Boolean)).size, cities: new Set(counted.map((r) => r.city).filter(Boolean)).size,
     unplaced: counted.filter((r) => !r.country).length,
     people: all.people, peopleTotal: all.peopleTotal, hours: all.hours, hoursTotal: all.hoursTotal, votes: all.votes, songs: all.songs, requests: all.requests, requestsAccepted: all.requestsAccepted,
-    moneyKnown: known.length, moneyRechecked: known.filter((r) => r.money.asOf && r.endedAt && r.money.asOf > r.endedAt + 3600e3).length,
+    moneyKnown: known.length, peopleKnown: sum(known.map((r) => r.people)), moneyRechecked: known.filter((r) => r.money.asOf && r.endedAt && r.money.asOf > r.endedAt + 3600e3).length,
     gross: all.gross, tips: all.tips, tipsAmount: all.tipsAmount, packs: all.packs, paidVotes: all.paidVotes,
     packsAmount: all.packsAmount, paidRequests: all.paidRequests, paidRequestsAmount: all.paidRequestsAmount,
-    merchOrders: sum(counted.map((r) => r.money.merch.orders)), merchAmount: round(sum(counted.map((r) => r.money.merch.amount))), merchOrdersAllFiled: sum(rows.map((r) => r.money.merch.orders)),
+    merchOrders: sum(counted.map((r) => r.money.merch.orders)), merchAmount: round(sum(counted.map((r) => r.money.merch.amount))), merchPostage: round(sum(counted.map((r) => r.money.merch.postage || 0))), merchOrdersAllFiled: sum(rows.map((r) => r.money.merch.orders)),
     featuredSpots: sum(counted.map((r) => (r.featured ? r.featured.spots : 0))), featuredCents: sum(counted.map((r) => (r.featured ? r.featured.cents : 0))),
     rated: all.rated, ratingAvg: all.ratingAvg, rsvps: sum(counted.map((r) => r.rsvps || 0)),
     perHead: perHead(counted), knownCountries, first: all.first, last: all.last,

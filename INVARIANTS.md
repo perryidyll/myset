@@ -629,7 +629,7 @@ If you are about to violate one, stop and say so rather than working around it.
     the Sheet (`_warehouse.mjs`); `tools/actuals.py` is pinned to the same answers on
     `finance/fixtures/2026-09-11` and `2026-09-25` (`test/everyshow.mjs`,
     `tools/actuals-test.py`). Money on a row is Stripe's answer as the archive kept it
-    or `unknown`, never $0; `$ a head` is tips + vote packs + paid requests over phones on
+    or `unknown`, never $0; `$ a head` is tips + vote packs + paid requests (plus the night's untagged window money) over phones on
     money-known nights, merch never in it; untagged money is a window figure taken once.
     Counts the store forgets (requests, RSVPs, ratings) are frozen on first observation
     and only ever raised, and the archive now files them on the night; because the
