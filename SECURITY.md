@@ -248,18 +248,23 @@ Fix those four and MySet is, genuinely, in the top decile for its stage.
 Slices `0112`/`0113` assume a server that holds its own secret. Until these are
 done, it runs exactly as it did before — safe, but not yet with the new locks turned.
 
-1. **Set `MYSET_SECRET`** in Netlify, for every deploy context (previews share the
-   live store). HARDENING.md §0 has the command that makes the value on your own
-   machine; never paste it anywhere but the Netlify form, and never remove it after.
-2. **Set `FINMODEL_CODE`** to something long. Once `0112` lands, without it the money
-   model and the register open for nobody — on purpose.
+1. **Set `MYSET_SECRET`** — one command on your own Mac (`tools/serversecret.mjs`,
+   HARDENING.md §0). It makes the value, keeps a copy in your Keychain (Netlify never
+   shows a secret again, and a rotation needs the old value), and sets it for
+   Production, Deploy Previews and Branch deploys, marked secret — never Local
+   development, which Netlify never hides. Never paste it into a chat, and never
+   remove it after.
+2. ~~Set `FINMODEL_CODE`~~ — not needed since decision `0130`: the money model is open,
+   and the Show log stands behind the CRM's passcode.
 3. **Rotate `ADMIN_CODE`.** The original value sat in a committed file for a day on
    2026-08-17 and the repository has been public since; no rotation is recorded
    anywhere. Make it long and random; it bypasses every lockout by design.
 4. **2FA everywhere** (PER-003). Still the number-one threat, still twenty minutes.
 5. **Check that a stranger's pull request does not get a deploy preview** with the
-   live variables (Netlify → Build & deploy → sensitive variable policy). A preview
-   runs the functions against the production store.
+   live variables (Netlify → Project configuration → Environment variables → Site
+   policies → sensitive variable policy: **Require approval**, Netlify's default for a
+   public repository; every variable marked secret falls under it). A preview runs
+   the functions against the production store.
 
 And the one honest limit of all of this: **the code cannot be hidden while the
 repository is public.** Everything above protects the data and the money, which is

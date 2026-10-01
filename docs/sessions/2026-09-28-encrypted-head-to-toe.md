@@ -119,3 +119,40 @@ to a long one; rotate `ADMIN_CODE`; turn on 2FA everywhere; check that Netlify d
 not build deploy previews for pull requests from strangers with the live variables;
 consider making the repository private, because a public repository is the one thing
 that cannot be secured by code.
+
+## 2026-10-01 — slice C brought up to today's main, and the secret set in one command
+
+**Asked:** "please get me as far along in this task as possible before i need to do the
+actual copying and pasting" — the `MYSET_SECRET` step.
+
+**What was wrong in the runbook.** Two things Netlify's own documentation says (Secrets
+Controller page, read 2026-10-01): a value marked secret is never shown again, by the
+UI, the CLI or the API; and a value in the Local development context is never hidden,
+secret or not. HARDENING.md §0 said "Same value for all deploy contexts" (which takes in
+Local development) and its rotation began "copy its current value" (which Netlify will
+not show). Fixed: Production, Deploy Previews and Branch deploys only, and a copy kept
+on the founder's Mac.
+
+**What shipped on the branch.** `tools/serversecret.mjs`: one command on the founder's
+Mac makes the value, keeps a copy in the login Keychain, sets it in the three contexts
+marked secret (the same `netlify env:set … --secret --force --site` call
+`tools/hqpass.mjs` proved on this site), reads it back masked, and never prints it. It
+refuses a second run, and puts the Keychain's copy back if a run stopped half way or the
+variable was deleted. `test/serversecret.mjs` (28 checks) runs it against a fake Netlify
+and a fake Keychain; three mutations each fail it (a leaked error, a missing secret
+flag, Local development).
+
+**Main had moved forty-one commits.** Merged at `e56a4af`. Seven conflicts, all
+resolved by keeping both sides. Two things in main's new code needed slice C's care:
+the Show log's lock (`0130`) signed its cookie with the signing key and checked it
+under that key alone, so the switch would have locked the founder out of it once — it
+now checks every verify key, like HQ (`test/secret.mjs`, mutation-checked); and the
+Studios' suggestions box (`0127`) holds names and free text, so `suggest` joined the
+sealed list. `0130` also opened the money model, so `FINMODEL_CODE` no longer blocks the
+merge (PER-018 cancelled); the hardened door stays in the code.
+
+**Verified:** `sh test/run.sh` green on the merged branch, and again with `MYSET_SECRET`
+set; live `myset.vip/moneymodel` answers the model with no passcode (`0130`, as
+intended). **Not checked:** the tool against the real Netlify CLI and Keychain — that
+run is the founder's; `DATA-MODEL.md` has no entity for `suggest` (main's `0127` did not
+add one).

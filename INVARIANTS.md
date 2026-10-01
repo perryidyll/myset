@@ -2812,7 +2812,10 @@ taken address and a free one now — 9h was already the rule; it was a 400 and a
 0gz. **The money model's door has no published key and counts its guesses.** On
     Netlify it opens for nobody until `FINMODEL_CODE` is set; the cookie is a MAC under
     the signing key; `TRIES` wrong codes inside `WINDOW` shut it, doubling to `LOCK_CAP`,
-    and shut refuses the right code too. `test/passgate.mjs`.
+    and shut refuses the right code too. Since decision 0130 the money model is open
+    and nothing calls this door; this holds for the day a passcode comes back, and the
+    Show log's own lock (`_showlock.mjs`) checks its cookie under every signing key, as
+    HQ's does. `test/passgate.mjs`, `test/secret.mjs`.
 
 0hb. **A record that holds a person is sealed at rest, and a new secret strands none.**
     The families on `protectedKey` (`_seal.mjs`) are sealed by `casDoc` and opened by

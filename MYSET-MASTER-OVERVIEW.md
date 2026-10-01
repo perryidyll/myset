@@ -558,8 +558,8 @@ Nobody is ever refused entry. The room polls slower and shows a shorter board in
 | A sample page (decision 0101) | 30 days to claim · its private copy kept 180 days after it comes down · a claim can be undone for 14 days · the factory starts at most 40 builds a day unless the founder changes it |
 | MySet CRM (decisions 0108, 0109) | a follow-up falls due 4 days after the first message out · 12 tags a contact, 24 characters each · the last 300 messages kept, 4000 characters each · at most 60 emails a day through Gmail · behind the owner seat and a passcode: a right one opens it for 12 hours, 5 wrong in a row shut it for 15 minutes |
 | Invariants | 297 (last: 0hb) |
-| Test suites | 73 |
-| Assertions | **5,062**, 0 failing, last run 2026-09-28 |
+| Test suites | 74 |
+| Assertions | **5,296**, 0 failing, last run 2026-10-01 |
 | Decision records | 132 |
 
 ### Feature flags in force

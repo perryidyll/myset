@@ -53,7 +53,7 @@ export const MAGIC = 'MS1:';
 export const RING_KEY = 'sealkeys';
 const HEAD = 9, IV = 12, TAG = 16, DEK = 32;          // "MS1:kkkk:" + iv + tag, then the ciphertext
 const PREFIXES = ['msg_', 'inbox_', 'inboxarch_', 'cred_', 'rec_', 'sess_', 'log_', 'push_', 'bugs_', 'err_', 'crm'];
-const EXACT = new Set(['idqueue']);
+const EXACT = new Set(['idqueue', 'suggest']);   // suggest: the Studios' suggestions box (0127), a name and free text
 /* A version (`ver_<key>_<ts>`) is sealed when the document it copies is. */
 const inner = (key) => String(key || '').replace(/^ver_/, '');
 /** The sealed families, as the master overview names them (tools/overview.mjs). */

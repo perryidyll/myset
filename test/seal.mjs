@@ -48,7 +48,8 @@ const secret = (cur, prev) => {
 
 console.log('\nWHAT IS ON THE LIST, AND WHAT NEVER IS');
 ok('the booker threads, the inbox and its archive parts', ['msg_ana_t1', 'inbox_ana', 'inboxarch_ana', 'inboxarch_ana_p3'].every(protectedKey));
-ok('credentials, recovery codes, sessions, the activity log, push, bugs, errors, the ID queue', ['cred_ana_abc', 'rec_ana', 'sess_ana', 'log_ana', 'push_ana', 'bugs_ana', 'err_2026-09-28T01', 'idqueue'].every(protectedKey));
+ok('credentials, recovery codes, sessions, the activity log, push, bugs, errors, the ID queue, the suggestions box', ['cred_ana_abc', 'rec_ana', 'sess_ana', 'log_ana', 'push_ana', 'bugs_ana', 'err_2026-09-28T01', 'idqueue', 'suggest'].every(protectedKey));
+ok('…the suggestions box by its exact name, not as a prefix', !protectedKey('suggestions_index') && !protectedKey('suggested'));
 ok('HQ: the contact index, every contact, the Gmail record', ['crm', 'crm_c0123456789', 'crmgmail'].every(protectedKey));
 ok('the ID photo — an artist\'s or a venue\'s', protectedKey('img_ana-reyes_idcheck') && protectedKey('img_v_bar1_idcheck'));
 ok('a version of a sealed document', protectedKey('ver_msg_ana_t1_1700000000000') && !protectedKey('ver_profile_ana_1700000000000'));

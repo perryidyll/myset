@@ -28,6 +28,7 @@ const { makeRecovery, useRecovery, recoveryStatus, REC } = await import('../netl
 const { createVenue, signVenueToken, verifyVenueToken, readVenues, vRevOf } = await import('../netlify/functions/_venues.mjs');
 const { keysFor, configured, MIN_LENGTH } = await import('../netlify/functions/_secret.mjs');
 const { hashPasscode, unlockCookie, unlocked } = await import('../netlify/functions/_hqlock.mjs');
+const SL = await import('../netlify/functions/_showlock.mjs');
 const { readDoc, casDoc } = await import('../netlify/functions/_lib.mjs');
 const { __resetRing } = await import('../netlify/functions/_seal.mjs');
 
@@ -43,6 +44,7 @@ const flip = () => { __resetSecret(); __resetRing(); };
 const macOf = (key, token) => createHmac('sha256', key).update(Buffer.from(token.split('.')[0], 'base64url')).digest('base64url');
 const HQ_ENV = { HQ_PASSCODE: await hashPasscode('a hq passcode') };
 const hqReq = (header) => new Request('https://myset.vip/api/hq', { headers: { cookie: header.split(';')[0] } });
+const slReq = (header) => new Request('https://myset.vip/moneymodel/shows', { headers: { cookie: header.split(';')[0] } });
 
 console.log('\nNOTHING SET  the store key is made and signs, as it always did');
 eq('no MYSET_SECRET means not configured', configured(), false);
@@ -61,6 +63,8 @@ const oldVenueToken = await signVenueToken('bar@example.com', vRevOf(await readV
 ok('a venue token signed under the store key verifies', !!(await verifyVenueToken(oldVenueToken)));
 const oldHq = await unlockCookie(rita.artistId, { env: HQ_ENV });
 ok('an HQ unlock made under the store key opens HQ', await unlocked(hqReq(oldHq.header), rita.artistId, { env: HQ_ENV }));
+const oldSl = await SL.unlockCookie({ env: HQ_ENV });
+ok('a Show log unlock made under the store key opens the Show log (decision 0130)', await SL.unlocked(slReq(oldSl), { env: HQ_ENV }));
 /* A recovery set made the OLD way — an HMAC of each code under the store key, which
    is what every set on production is today. Written as that code wrote it. */
 const LEGACY = ['ABCD-EFGH', 'JKMN-PQRS', 'TVWX-YZ23'];
@@ -90,6 +94,7 @@ ok('the old token still verifies', !!(await verifyToken(oldToken)));
 ok('the old ticket still reads', (await readTicket(oldTicket)) === 'rita@example.com');
 ok('the old venue token still verifies', !!(await verifyVenueToken(oldVenueToken)));
 ok('HQ stays open in the browser that opened it', await unlocked(hqReq(oldHq.header), rita.artistId, { env: HQ_ENV }));
+ok('…and so does the Show log', await SL.unlocked(slReq(oldSl), { env: HQ_ENV }));
 const after = (await readDoc('authsecret', null)).data;
 ok('the switch was dated on the store key\'s own document', after && Number(after.retiredAt) > Date.now() - 60e3, after);
 const newToken = await signToken('rita@example.com', rev, 'dev2');
@@ -107,6 +112,9 @@ const newVenueToken = await signVenueToken('bar@example.com', vRevOf(await readV
 ok('a new venue token verifies', !!(await verifyVenueToken(newVenueToken)));
 const newHq = await unlockCookie(rita.artistId, { env: HQ_ENV });
 ok('a new HQ unlock opens HQ', await unlocked(hqReq(newHq.header), rita.artistId, { env: HQ_ENV }));
+const newSl = await SL.unlockCookie({ env: HQ_ENV });
+ok('a new Show log unlock opens the Show log', await SL.unlocked(slReq(newSl), { env: HQ_ENV }));
+ok('…and is signed with the new key, not the store key', newSl.split(';')[0] !== oldSl.split(';')[0]);
 ok('the store key is still there for the codes on paper', (await storeKey()) === after.k);
 
 console.log('\nTHIRTY-ONE DAYS LATER  the store key can mint nothing, even if it leaks');
@@ -116,6 +124,8 @@ ok('the old token is refused', !(await verifyToken(oldToken)));
 ok('the old venue token is refused', !(await verifyVenueToken(oldVenueToken)));
 ok('the old ticket is refused', !(await readTicket(oldTicket)));
 ok('an HQ unlock made under the store key is refused', !(await unlocked(hqReq(oldHq.header), rita.artistId, { env: HQ_ENV })));
+ok('a Show log unlock made under the store key is refused', !(await SL.unlocked(slReq(oldSl), { env: HQ_ENV })));
+ok('…and the new one still opens it', await SL.unlocked(slReq(newSl), { env: HQ_ENV }));
 ok('the new token still verifies', !!(await verifyToken(newToken)));
 ok('the new venue token still verifies', !!(await verifyVenueToken(newVenueToken)));
 const forged = (() => {

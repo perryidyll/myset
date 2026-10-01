@@ -156,6 +156,9 @@ echo
 echo "── sealed at rest, and a rotation strands nothing (0113) ──"
 node --import ./test/register.mjs test/seal.mjs
 echo
+echo "── setting MYSET_SECRET from the founder's Mac, never on screen (0112) ──"
+node test/serversecret.mjs
+echo
 echo "── sign-in email delivery ──"
 node --import ./test/register.mjs test/email.mjs
 echo

@@ -26,8 +26,9 @@ password hashes, the recovery codes, every session, the error log and — since 
 
 **Seal those records, and nothing the room reads.** `protectedKey` is an allow-list of
 prefixes: `msg_`, `inbox_`, `inboxarch_`, `cred_`, `rec_`, `sess_`, `log_`, `push_`,
-`bugs_`, `err_`, `crm` (HQ's index, contacts and Gmail record), `idqueue` and the ID
-photo. `readDoc` opens and `casDoc` seals, so every caller is covered without a
+`bugs_`, `err_`, `crm` (HQ's index, contacts and Gmail record), `idqueue`, the ID
+photo, and — since main grew it in `0127` — the Studios' suggestions box (`suggest`), a
+name and free text like a bug report. `readDoc` opens and `casDoc` seals, so every caller is covered without a
 change; the four raw writes (a password, an ID photo, a spilled log part, a version)
 seal themselves. AES-256-GCM, a fresh IV each time, the record's own key as the
 authenticated data. Thirty-seven bytes and microseconds a record. `test/seal.mjs`

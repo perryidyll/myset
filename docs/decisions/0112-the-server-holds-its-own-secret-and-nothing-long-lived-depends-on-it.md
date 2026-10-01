@@ -9,8 +9,8 @@ reverses:
 superseded_by:
 invariants: [0gy, 0gz]
 commits: []
-tests: [test/secret.mjs, test/passgate.mjs, test/studiocode.mjs, test/everyshow.mjs, test/gmail.mjs, test/hq.mjs]
-files: [netlify/functions/_secret.mjs, netlify/functions/_auth.mjs, netlify/functions/_session.mjs, netlify/functions/_venues.mjs, netlify/functions/_lib.mjs, netlify/functions/_passgate.mjs, netlify/functions/_hqlock.mjs, netlify/functions/admin.mjs, HARDENING.md]
+tests: [test/secret.mjs, test/passgate.mjs, test/studiocode.mjs, test/everyshow.mjs, test/gmail.mjs, test/hq.mjs, test/serversecret.mjs]
+files: [netlify/functions/_secret.mjs, netlify/functions/_auth.mjs, netlify/functions/_session.mjs, netlify/functions/_venues.mjs, netlify/functions/_lib.mjs, netlify/functions/_passgate.mjs, netlify/functions/_hqlock.mjs, netlify/functions/_showlock.mjs, netlify/functions/admin.mjs, tools/serversecret.mjs, HARDENING.md]
 ---
 
 ## The question
@@ -59,7 +59,18 @@ HARDENING.md §0.
 door opens for nobody without it and says so); the cookie is an HMAC under the
 signing key; ten wrong codes in fifteen minutes shut the door for fifteen minutes,
 doubling to a day, and shut means the right code too (a cookie already held still
-opens). Ported onto the box #149 had just given letters and a Show button.
+opens). Ported onto the box #149 had just given letters and a Show button. Since `0130`
+(2026-09-30) the money model is open and nothing calls this door; it stays hardened for
+the day a passcode comes back. The Show log `0130` put behind the CRM's passcode signs
+its cookie like HQ's and checks it under every signing key, so the switch locks nobody
+out of it either.
+
+**The value is made on the founder's Mac and kept there.** Netlify never shows a value
+marked secret again, and never hides a value in its Local development context. So
+`tools/serversecret.mjs` makes it, keeps the one copy outside Netlify in the login
+Keychain, sets it for Production, Deploy Previews and Branch deploys only, marked
+secret, reads it back and never prints it. A rotation takes the old value from that
+copy (HARDENING.md §0).
 
 | Option | Why not |
 |---|---|
@@ -74,8 +85,8 @@ A rotation is a sign-in for everybody, so it is not done during a show. A cold S
 instance pays one scrypt on the first poll that carries a code. A backup made after
 `0110` does not carry the store key, so after a restore from one, recovery codes made
 before this decision stop working: make a new set (the Studio's Security section).
-The founder's money-model passcode must be set in Netlify before this merges, or that
-page is shut.
+Without the Keychain's copy a rotation could not re-wrap the keyring, so the copy is
+kept for as long as the variable is. Since `0130` nothing waits on `FINMODEL_CODE`.
 
 ## What would reverse it
 
