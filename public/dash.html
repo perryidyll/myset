@@ -147,6 +147,16 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* 2 · Media Dash — the last posts' views as bars */
 .bars rect{fill:url(#barG);transform-box:fill-box;transform-origin:50% 100%;animation:grow 1s var(--ease) both;animation-delay:calc(var(--b) * 45ms + 700ms);transition:height .8s var(--ease),y .8s var(--ease)}
 .bars rect.hot{fill:url(#barHot)}
+.bars .fol{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.bars .fol.halo{stroke:var(--screen);stroke-width:6}
+.bars .fol.ink{stroke:#7CC8FF;filter:drop-shadow(0 0 4px rgba(124,200,255,.7))}
+/* the followers line draws itself through the bars, rests on today's count, fades, and draws again */
+.bars .fols{opacity:0;transition:opacity .6s var(--ease)}
+.bars .fols.on .fol{stroke-dasharray:1;animation:folDraw 7s var(--ease) infinite 1.6s}
+.folEnd{position:absolute;z-index:1;display:flex;align-items:center;gap:6px;transform:translate(-5px,-50%);pointer-events:none;opacity:0}
+.folEnd.on{animation:folDot 7s var(--ease) infinite 1.6s}
+.folEnd i{width:9px;height:9px;border-radius:50%;background:#7CC8FF;box-shadow:0 0 0 2px var(--screen),0 0 10px rgba(124,200,255,.8)}
+.folEnd b{position:absolute;right:16px;bottom:8px;font:700 12px/1 var(--mono);color:#7CC8FF;font-variant-numeric:tabular-nums;white-space:nowrap}
 .bars .pulse{fill:rgb(var(--hue-rgb));animation:ping 2.2s ease-out infinite 1.8s;transform-box:fill-box;transform-origin:center}
 /* 3 · CRM — people moving through the pipeline towards the one that says yes */
 .pipe .lane{fill:none;stroke:rgba(var(--hi),.08);stroke-width:1.2;stroke-dasharray:3 5}
@@ -177,6 +187,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @keyframes scan{0%{transform:translateY(-30px);opacity:0}10%{opacity:1}85%{opacity:1}100%{transform:translateY(150px);opacity:0}}
 @keyframes grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 @keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(3.2);opacity:0}}
+@keyframes folDraw{0%{stroke-dashoffset:1;opacity:1}45%{stroke-dashoffset:0}82%{opacity:1}94%,100%{stroke-dashoffset:0;opacity:0}}
+@keyframes folDot{0%,42%{opacity:0;transform:translate(-5px,-50%) scale(.4)}50%{opacity:1;transform:translate(-5px,-50%) scale(1)}82%{opacity:1;transform:translate(-5px,-50%) scale(1)}94%,100%{opacity:0;transform:translate(-5px,-50%) scale(1)}}
 @keyframes draw{to{stroke-dashoffset:0}}
 
 @media (max-width:820px){
@@ -189,7 +201,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
-  .curve .line{stroke-dashoffset:0}.curve .area,.curve .end{opacity:1}
+  .curve .line{stroke-dashoffset:0}.folEnd.on{opacity:1}.curve .area,.curve .end{opacity:1}
   .win{transform:none!important}
 }
 </style>
@@ -237,7 +249,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
           </defs>
           <line class="ln" x1="0" y1="60" x2="400" y2="60"/><line class="ln" x1="0" y1="110" x2="400" y2="110"/><line class="ln" x1="0" y1="160" x2="400" y2="160"/>
           <g id="barRows"></g>
+          <g class="fols" id="fols"><path class="fol halo" pathLength="1"/><path class="fol ink" pathLength="1"/></g>
         </svg>
+        <span class="folEnd" id="folEnd" aria-hidden="true"><i></i><b></b></span>
         <div class="stat off" id="mdStat"><b id="mdN">0</b><small id="mdL">views in the last 7 days</small></div>
       </div>
       <div class="foot"><h2>Media Dash</h2><p>Instagram, post by post: views, reach and what the room saw this week.</p><span class="url">myset.vip/mediadash</span>
@@ -345,6 +359,21 @@ fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) =>
       r.setAttribute('y', 180 - h); r.setAttribute('height', h);
       r.classList.toggle('hot', !!p && i - (BARS - posts.length) === best);
     });
+  }
+  /* the followers line: at each bar, the followers the account had when that post went up; it ends on today's count */
+  const acc = (d.account || []).filter((a) => a.at && Number.isFinite(a.followers)).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  if (posts.length > 1 && acc.length) {
+    const at = (iso) => { let v = acc[0].followers; for (const a of acc) { if (String(a.at) <= String(iso)) v = a.followers; else break; } return v; };
+    const now = acc[acc.length - 1].followers, off = BARS - posts.length;
+    const pts = posts.map((p, k) => [12 + (k + off) * 24 + 7, at(p.publishedAt)]).concat([[392, now]]);
+    const lo = Math.min(...pts.map((q) => q[1])), hi = Math.max(...pts.map((q) => q[1]));
+    const y = (f) => (hi === lo ? 100 : 150 - 100 * (f - lo) / (hi - lo));
+    const path = pts.map((q, k) => (k ? 'L' : 'M') + q[0] + ' ' + y(q[1]).toFixed(1)).join(' ');
+    $$('#fols path').forEach((e) => e.setAttribute('d', path));
+    const end = $('#folEnd');
+    end.style.left = (100 * 392 / 400) + '%'; end.style.top = (100 * y(now) / 200) + '%';
+    $('b', end).textContent = int(now) + ' followers';
+    $('#fols').style.opacity = 1; $('#fols').classList.add('on'); end.classList.add('on');
   }
   const views = d.week && Number(d.week.views);
   if (Number.isFinite(views)) {
