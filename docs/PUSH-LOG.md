@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 18:58 — 02a8aae — wt4@dash-logo-home (6 files since origin/main)
+**tl;dr:** The MySet logo on every dashboard (money model, Show log, Media Dash, CRM, sample-page console, business report) now goes to the homepage
+**Other sessions:** CRM and factory logos used to go to /studio; now '/'. Media Dash and report marks became <a> with color:inherit. Content repo twin pushed (cb64d14).
+
 ### 2026-10-01 17:16 — d54af8d — wt4@meters-and-pack-price (15 files since origin/main)
 **tl;dr:** Money: Stripe's card fee on an artist's night is the artist's, so MySet profit, both Show log tier tables and the money model's tier table no longer take it off MySet (still off on the founder's own nights); Netlify costs now include tax ($5.48 a pack); fresh server meters after the 25 Sep bell: 2.72 credits a show (was 2.98)
 **Other sessions:** wt4 (0133): _showcosts myset.stripeMine; TIER MATH subtracts t.stripeMine (both pages, still byte-identical); model hosts taxMul 1.096; credits.json reading 1 Oct with perDay.bandwidthCleanFrom (solve_meters honours it). Tick rate 16.9/phone-h rests on 2 nights and one empty day (26 Sep, 12 deploys) — thin, re-read when another empty day lands. Current Show Stats scheduled task disabled.
