@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 12:04 — 7b85798 — wt4@feat/dash-about-link (1 files since origin/main)
+**tl;dr:** /dash: an 'About MySet' link at the top goes to /about; the MySet logo now goes to the home page
+**Other sessions:** Top-bar only in public/dash.html; the clock hides under 560px to make room.
+
 ### 2026-10-01 01:07 — 6275f41 — wt3@ux/dash-links-profit (53 files since origin/main)
 **tl;dr:** Every dashboard (Show log, Media Dash, CRM, money model) has a Dash button back to /dash; the Show log has a MySet cut column ($ and %) and MySet profit is now the cut minus the server AND Stripe
 **Other sessions:** costOf().myset.usd = fee − server − stripe (founder's word, 2026-10-01; the earlier 'Stripe not subtracted' reading is superseded). mediadash.html twin in the content repo updated alongside.
