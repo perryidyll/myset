@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 21:11 — 86b8384 — wt4@dash-money-goal (1 files since origin/main)
+**tl;dr:** The master dashboard's money model window is headed '2027 Q2 Goal: $10,000/Month Profit', and revenue, costs and profit all start from zero
+**Other sessions:** dash.html only: the goal heading is always shown (no longer the real-nights count-up); the real-nights count moved into the small line under it when live.json answers. A [0,0,0] point is prepended to the lines.
+
 ### 2026-10-01 20:46 — 6fa3630 — venue-hero@docs/venue-0131-0134-live (0 files since origin/main)
 **tl;dr:** Docs: decisions 0131 and 0134 recorded as live (db02acf), session note, status header [skip ci]
 **Other sessions:** Sand & Tan's hours, menu link and Google rating (4.5/1,079) were filled through CRM's edit action on production; do not refill. Not rebuilt.
