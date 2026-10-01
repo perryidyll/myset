@@ -221,7 +221,8 @@ export async function sampleDetail(owner, row) {
   if (isVenueOwner(owner)) {
     const { getVenueProfile } = await import('./_venues.mjs');
     const p = await getVenueProfile(owner.slice(2));
-    profile = { name: p.name, tagline: p.tagline, bio: p.about, links: p.links, photo: p.photo, photos: p.photos, city: p.city, country: p.country, address: p.address, media: [] };
+    profile = { name: p.name, tagline: p.tagline, bio: p.about, links: p.links, photo: p.photo, photos: p.photos, city: p.city, country: p.country, address: p.address, media: [],
+                hours: p.hours, menuUrl: (p.menu || {}).url || '', rating: p.rating };
   } else {
     const { getProfile, shapeMedia } = await import('./_profile.mjs');
     const p = await getProfile(owner);
@@ -355,8 +356,19 @@ const main = async (req) => {
     const pageLink = (k, v) => { const raw = String(v == null ? '' : v).trim().slice(0, 400); return raw ? (canonLink(k, raw) || raw) : ''; };
     let dropped = [];
     if (isVenueOwner(owner)) {
+      /* Details (0132): hours as a person types them, the menu link, the Google rating. */
+      let hours = null;
+      if (f.hours != null && String(f.hours).trim()) {
+        const { humanHours } = await import('./_factory.mjs');
+        hours = humanHours(f.hours);
+        if (!hours) return bad('Couldn’t read those hours — try “Daily 8am-10pm” or “Mon-Fri 5pm-1am; Sun closed”.');
+      }
+      if (f.menuUrl != null && String(f.menuUrl).trim() && !/^https:\/\/\S+$/i.test(String(f.menuUrl).trim())) return bad('The menu link needs to start with https://');
       const { mutateVenueProfile, getVenueProfile } = await import('./_venues.mjs');
       await mutateVenueProfile(owner.slice(2), (p) => {
+        if (f.hours != null) p.hours = hours || Object.fromEntries(Object.keys(p.hours || {}).map((d) => [d, { ...p.hours[d], closed: true }]));
+        if (f.menuUrl != null) p.menu = { ...(p.menu || {}), url: String(f.menuUrl).trim().slice(0, 300) };
+        if (f.rating !== undefined) p.rating = f.rating && Number(f.rating.stars) ? { stars: f.rating.stars, count: f.rating.count, at: Date.now() } : null;
         if (f.name != null) p.name = clean(f.name, 70);
         if (f.tagline != null) p.tagline = clean(f.tagline, 120);
         if (f.bio != null) p.about = String(f.bio).replace(/\r/g, '').slice(0, 900);

@@ -231,6 +231,49 @@ export function parseHours(raw) {
   return open ? out : null;
 }
 
+/* Hours as a person types them — "Daily 8am-10pm", "Mon-Fri 5pm-1am; Sat-Sun 12pm-2am; Tue
+   closed" — for CRM's Details (decision 0132), turned into the simple OSM form above and read
+   by parseHours, so there is one reader of hours. Anything it cannot read is refused (null),
+   never guessed. */
+const HDAY = { mo: 'Mo', tu: 'Tu', we: 'We', th: 'Th', fr: 'Fr', sa: 'Sa', su: 'Su' };
+function hDays(s) {
+  const t = s.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (/^(daily|every ?day|7 days( a week)?|mon(day)?\s*(-|–|to)\s*sun(day)?)$/.test(t)) return 'Mo-Su';
+  if (/^week ?days$/.test(t)) return 'Mo-Fr';
+  if (/^week ?ends?$/.test(t)) return 'Sa,Su';
+  const one = (w) => { const k = w.trim().slice(0, 2); return /^(mon|tue|wed|thu|fri|sat|sun)/.test(w.trim()) ? HDAY[k] : null; };
+  const parts = t.split(/\s*(?:,|&|\band\b)\s*/).filter(Boolean).map((x) => {
+    const r = x.split(/\s*(?:-|–|—|\bto\b)\s*/);
+    if (r.length > 2) return null;
+    const a = one(r[0]), z = r[1] != null ? one(r[1]) : a;
+    return a && z ? (a === z ? a : `${a}-${z}`) : null;
+  });
+  return parts.length && parts.every(Boolean) ? parts.join(',') : null;
+}
+function hTime(s) {
+  const m = /^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/i.exec(s.trim());
+  if (!m) return null;
+  let h = +m[1]; const mm = m[2] || '00', ap = (m[3] || '').toLowerCase()[0];
+  if (ap) { if (h < 1 || h > 12) return null; h = (h % 12) + (ap === 'p' ? 12 : 0); }
+  return h <= 24 && +mm < 60 ? `${String(h % 24).padStart(2, '0')}:${mm}` : null;
+}
+export function humanHours(raw) {
+  const rules = String(raw || '').replace(/\bmidnight\b/gi, '12am').replace(/\bnoon\b/gi, '12pm').split(/\s*[;\n]\s*/).filter(Boolean).slice(0, 14);
+  if (!rules.length) return null;
+  const osm = [];
+  for (const rule of rules) {
+    const m = /^(.+?)[\s:]+(closed|off|(\d[\d:.]*\s*(?:[ap]\.?m\.?)?)\s*(?:-|–|—|\bto\b|\btill\b|\buntil\b)\s*(\d[\d:.]*\s*(?:[ap]\.?m\.?)?))$/i.exec(rule.trim());
+    if (!m) return null;
+    const days = hDays(m[1]);
+    if (!days) return null;
+    if (/^(closed|off)$/i.test(m[2])) { osm.push(`${days} off`); continue; }
+    const a = hTime(m[3]), z = hTime(m[4]);
+    if (!a || !z) return null;
+    osm.push(`${days} ${a}-${z}`);
+  }
+  return parseHours(osm.join('; '));
+}
+
 async function mapLimit(items, n, fn) {
   const out = new Array(items.length); let next = 0;
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
@@ -414,7 +457,8 @@ function buildPayload(st, { facts, sources, copy, shots, usage, ctx }) {
     // hours only when all seven days are known: a guessed "open till one" sends somebody to a shut door
     const hours = parseHours(o.hours) || parseHours(ld.hours);
     return Object.assign(payload, { about: copy.text, address, mapUrl, phone: clean(o.phone || ld.telephone, 28), lat: o.lat ?? ld.lat ?? null,
-      lng: o.lng ?? ld.lng ?? null, amenities: amenitiesOf(o.tags, facts), ...(hours ? { hours } : {}) });
+      lng: o.lng ?? ld.lng ?? null, amenities: amenitiesOf(o.tags, facts), ...(hours ? { hours } : {}),
+      ...(st.site && st.site.ok && st.site.menu ? { menuUrl: st.site.menu } : {}) });
   }
   const { first, last } = splitName(st.name, actTypeOf(facts, st.d));
   return Object.assign(payload, { first, last, style: copy.style.text, bio: copy.text });

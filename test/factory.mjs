@@ -315,6 +315,10 @@ const pg = S.parsePage('<meta property="og:title" content="x"><img src="/uploads
   + '<img src="/icons/fb.png"><img data-src="/gigs/barrow-night.jpg"><img src="/a.jpg" alt="facebook icon"><img src="/thumb.jpg" width="120"><a href="#top">top</a>', 'https://x.test/');
 eq('a page’s pictures: plain <img>, lazy data-src; no logos, icons, thumbnails — and never the page itself',
    pg.images.map((i) => i.url), ['https://x.test/uploads/lexicon-band.jpg', 'https://x.test/gigs/barrow-night.jpg']);
+const mhtml = '<a href="/about">About</a><a href="https://x.test/files/food-menu.pdf">Download</a><a href="/eat">Our Menu</a><a href="http://x.test/menu">m</a><a href="https://other.test/menu">Menu</a>';
+eq('a venue’s own menu link: its words say menu, on its own site, https (the Menu door, 2026-10-01)', S.parsePage(mhtml, 'https://x.test/', 'venue').menu, 'https://x.test/eat');
+eq('a menu PDF by its path when no link says menu', S.parsePage('<a href="/files/food-menu.pdf">Download</a><a href="https://other.test/menu">Menu</a>', 'https://x.test/', 'venue').menu, 'https://x.test/files/food-menu.pdf');
+eq('an artist’s page looks for none', S.parsePage(mhtml, 'https://x.test/', 'artist').menu, undefined);
 
 console.log('\nYOUTUBE  the Data API, never search.list, never a youtube.com page');
 const yt = await S.youtube(S.parseSeed('https://youtube.com/@thetidelines'), { ...net, ytKey: 'test-youtube-key' });
@@ -362,6 +366,12 @@ const pk = A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, co
 eq('the founder’s rule: a good-enough YouTube picture beats a better website one', pk.cover.id, 'b');
 eq('but a thumbnail with its title across it does not', A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, coverOk: true, quality: 0.95, textOverlay: 0, width: 1600, height: 900 },
   { id: 'b', from: 'youtube', group: 'y', isAct: true, coverOk: true, quality: 0.9, textOverlay: 0.5, width: 1280, height: 720 }]).cover.id, 'a');
+/* A venue whose site has no 1000-px hero still gets a cover (2026-10-01, Sand & Tan opened on a gradient). */
+const vsite = [{ id: 'v1', from: 'website', group: 'w1', isAct: true, coverOk: false, quality: 0.8, textOverlay: 0, width: 900, height: 600, kind: 'room' },
+  { id: 'v2', from: 'website', group: 'w2', isAct: true, coverOk: false, quality: 0.9, textOverlay: 0, width: 700, height: 900, kind: 'food' }];
+eq('a venue with no 1000-px cover takes its best wide photo instead', A.pickPhotos(vsite, { kind: 'venue' }).cover.id, 'v1');
+eq('an artist does not: its cover must be the act, big and wide', A.pickPhotos(vsite).cover, null);
+eq('and a venue never makes a tall photo its cover', A.pickPhotos([vsite[1]], { kind: 'venue' }).cover, null);
 
 console.log('\nTHE GATE  when the founder should look first');
 const full = { kind: 'artist', name: 'X', identity: { ok: true, confidence: 0.9 }, cover: true, avatar: true, extras: 2, sentences: 3, tagline: 't', links: { instagram: 'i', website: 'w' }, media: 2 };
@@ -462,6 +472,12 @@ eq('the hours reader: a week that wraps, 26:00 as two in the morning', F.parseHo
      thu: { closed: true, open: '17:00', close: '01:00' }, fri: { closed: true, open: '17:00', close: '01:00' }, sat: { closed: false, open: '20:00', close: '02:00' },
      sun: { closed: false, open: '20:00', close: '02:00' } });
 eq('anything richer is left out, never guessed', [F.parseHours('Mo-Su 10:00-22:00; PH off'), F.parseHours('24/7'), F.parseHours('Mo-Fr 09:00-12:00,14:00-18:00')], [null, null, null]);
+const hk = (o) => o && Object.entries(o).map(([d, x]) => d + (x.closed ? ':shut' : `:${x.open}-${x.close}`)).join(' ');
+eq('HOURS AS A PERSON TYPES THEM (0132): daily, am/pm, an en dash', hk(F.humanHours('Daily 8 AM–10 PM')), 'mon:08:00-22:00 tue:08:00-22:00 wed:08:00-22:00 thu:08:00-22:00 fri:08:00-22:00 sat:08:00-22:00 sun:08:00-22:00');
+eq('ranges, a list of days, "to", a day shut after the fact', hk(F.humanHours('Mon-Fri 5pm-1am; Sat, Sun 12pm to 2am; Tue closed')),
+   'mon:17:00-01:00 tue:shut wed:17:00-01:00 thu:17:00-01:00 fri:17:00-01:00 sat:12:00-02:00 sun:12:00-02:00');
+eq('full day names, "till", midnight', hk(F.humanHours('Thursday to Sunday 6pm till midnight')), 'mon:shut tue:shut wed:shut thu:18:00-00:00 fri:18:00-00:00 sat:18:00-00:00 sun:18:00-00:00');
+eq('what it cannot read is refused, never guessed', [F.humanHours('blah'), F.humanHours('Mon-Fri'), F.humanHours('Daily 13pm-2am'), F.humanHours('')], [null, null, null, null]);
 ok('it builds', r.ok, r.error);
 eq('the seven days, from the OSM hours: Tuesday shut', V.hours && [V.hours.mon, V.hours.tue], [{ closed: false, open: '17:00', close: '01:00' }, { closed: true, open: '17:00', close: '01:00' }]);
 ok('amenities from OSM tags and sourced facts, every one a real key', V.amenities && V.amenities.includes('outdoor') && V.amenities.includes('livemusic'), V.amenities);
