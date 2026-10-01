@@ -27,9 +27,12 @@
        through the app (tips, vote packs, requests and merch GOODS — never postage, at the plan's `cut` in
        _plan.mjs — the application fee pay.mjs takes, floored per payment there, estimated
        on the night's total here). None on the founder's own nights (isPlatformOwner —
-       there is nobody to take a fee from). MySet profit is that cut less BOTH costs, the
-       server and Stripe (the founder, 2026-10-01: "the amount left over after the server
-       + stripe costs"). No money answer, or no server figure, no profit.
+       there is nobody to take a fee from). MySet profit is that cut less the server, and
+       less Stripe ONLY on the founder's own nights: an artist's room money is a direct charge
+       on the artist's connected account, so Stripe's card fee there is the artist's, never
+       MySet's (ACCOUNTING.md; the founder, 2026-10-01). The Stripe column still shows the fee
+       on every night — it is what the night cost someone. No money answer, or no server
+       figure, no profit.
    Served beside the rows in shows.json; the register's own block stays meter-free. */
 import { PLANS, isPlatformOwner } from './_plan.mjs';
 
@@ -51,7 +54,8 @@ export function costBlock(actuals, credits) {
   return {
     usdPerCredit: pack.credits ? round(pack.usd / pack.credits, 5) : null,
     plan: plan.name || null, pack: pack.credits ? { credits: pack.credits, usd: pack.usd } : null,
-    creditsPerShow: Number.isFinite(m.creditsPerShow) ? m.creditsPerShow : (actuals && Number.isFinite(actuals.creditsPerShow) ? actuals.creditsPerShow : null),
+    /* a reading that solves to nothing or less is a bad background day, never a free show: no figure then */
+    creditsPerShow: Number.isFinite(m.creditsPerShow) && m.creditsPerShow > 0 ? m.creditsPerShow : (actuals && Number.isFinite(actuals.creditsPerShow) && actuals.creditsPerShow > 0 ? actuals.creditsPerShow : null),
     metersReadAt: m.readAt || null, measuredNights: Object.keys(byKey).length, byKey,
     stripe: { ...STRIPE_RATES, effectivePct: round(effPct, 3) },
   };
@@ -87,8 +91,9 @@ export function costOf(row, B) {
     const merchGoods = m.merch ? Math.max(0, (m.merch.amount || 0) - (m.merch.postage || 0)) : 0;
     const base = (m.total || 0) + merchGoods;
     const fee = round(base * cut);
-    const stripeUsd = stripe ? stripe.usd : 0;
-    myset = { usd: round(fee - server.usd - stripeUsd), fee, cut, founder, estimate: fee > 0 || !server.measured || !!(stripe && stripe.estimate && stripe.usd > 0) };
+    /* Stripe's card fee is MySet's only where the money landed on MySet's own account: the founder's night */
+    const stripeUsd = founder && stripe ? stripe.usd : 0;
+    myset = { usd: round(fee - server.usd - stripeUsd), fee, cut, founder, stripeMine: round(stripeUsd), estimate: fee > 0 || !server.measured || !!(stripeUsd && stripe.estimate) };
   }
   return { server, stripe, total: server && stripe ? round(server.usd + stripe.usd) : null, myset };
 }

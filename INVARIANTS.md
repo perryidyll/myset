@@ -517,7 +517,8 @@ If you are about to violate one, stop and say so rather than working around it.
     phone-hour and traffic credits per night from the per-day meters Netlify itself
     bills — requests, compute, bandwidth — as a gig day minus an empty day
     (`solve_meters`; the counts are copied off Usage & billing into
-    `finance/credits.json` `perDay.days[]`, days before `cleanFrom` ignored). An
+    `finance/credits.json` `perDay.days[]`, days before `cleanFrom` ignored, except that
+    the bandwidth floor may reach back to `bandwidthCleanFrom`). An
     empty day has no show record of any kind and no published slot. `pollsSource`
     names the method used. The marks for a night are three: two hours before, just
     before, after. `tools/actuals-test.py` holds the three fences on synthetic marks and the meter method on

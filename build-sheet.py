@@ -107,7 +107,7 @@ A = [
  ("Credits per GB-hour compute",   10,     "credits",      "Netlify pricing."),
  ("Function memory",               128,    "MB",           "Netlify default."),
  ("Function duration",             200,    "ms",           "Estimate: /api/show is one strong-consistency read plus 12 shard reads."),
- ("Price per credit",              0.01,   "USD",          "$5 per 500-credit pack. INVARIANT 9d1: never drop to Free, packs are forfeited."),
+ ("Price per credit",              0.01096, "USD",         "$5.48 per 500-credit pack, tax in (the invoices). INVARIANT 9d1: never drop to Free, packs are forfeited."),
  ("Revenue per artist",            10.00,  "USD/month",    "The target subscription price."),
  ("Production deploys per month",  20,     "deploys",      "Post-9d3, one per shipped change. Was ~77 when we were deploying twice."),
  ("Credits per production deploy", 15,     "credits",      "INVARIANT 9d0."),

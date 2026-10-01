@@ -183,7 +183,7 @@ ok('calibration recovers ~22% screen-on from 100.5 polls/phone-hour: ' + cal + '
 console.log('REVIEW FIXES');
 const old = ENGINE.month(withDefaultsTest({ artists: 500 }), 500);
 ok('a scenario missing every new key still computes (deep-merge over defaults)', isFinite(old.costs) && isFinite(old.profit));
-ok('whole credit packs: 3,001 credits on Pro costs $30, not $20.01', Math.abs(ENGINE.netlifyDollars(3001, HOSTS0.netlifyPro).usd - 30) < 1e-9, ENGINE.netlifyDollars(3001, HOSTS0.netlifyPro).usd);
+ok('whole credit packs: 3,001 credits on Pro costs $30 + the invoices\' 9.6% tax = $32.88, not $20.01', Math.abs(ENGINE.netlifyDollars(3001, HOSTS0.netlifyPro).usd - 32.88) < 1e-9, ENGINE.netlifyDollars(3001, HOSTS0.netlifyPro).usd);
 const zero = ENGINE.month({ ...P0, plusPrice: 0, proPrice: 0, roomFree: 0, roomPlus: 0, roomPro: 0, featPrice: 0, venuePro: 0 }, 100);
 ok('zero revenue → margin is not a number, not 0%', Number.isNaN(zero.margin) && Number.isNaN(zero.serverPct));
 ok('VPS with 0 requests per box does not explode', ENGINE.hostBill('vps', { vps: { ...HOSTS0.vps, reqPerBoxMonth: 0 } }, R.T, 0).usd < 1000);
@@ -300,7 +300,7 @@ console.log('THE LIVE FEED (decision 0095): the register beats a paste unless th
   const merged = fns.mergeLive(seed, live);
   ok('the live block replaces the platform figures (shows, people, hours, interactions, songs, room money)', merged.shows === 40 && merged.people === 12 && merged.hours === 3.1 && merged.interactions === 2.5 && merged.songs === 11 && merged.roomPerHead === 1.8, merged);
   ok('…and never a meter: ticks per phone-hour, credits a night, deploys and the two bills stay the seed\'s', METER_KEYS.every((k) => JSON.stringify(merged[k]) === JSON.stringify(seed[k])) && merged.pollsPerPhoneHour === seed.pollsPerPhoneHour && merged.deploys === seed.deploys, METER_KEYS.map((k) => [k, merged[k] === seed[k]]));
-  ok('the merged block says where it came from and when the meters were read', /the register; meters from the 2026-09-25 reading/.test(merged.source) && merged.live.shows === 40 && merged.metersAsOf === '2026-09-25', merged.source);
+  ok('the merged block says where it came from and when the meters were read', new RegExp('the register; meters from the ' + seed.asOf + ' reading').test(merged.source) && merged.live.shows === 40 && merged.metersAsOf === seed.asOf, merged.source);
   eq('live beats the seed', fns.pickAct(seed, null, live).source, 'live');
   eq('live beats a paste made BEFORE the live build', fns.pickAct(seed, { shows: 3, pastedAt: live.builtAt - 1 }, live).source, 'live');
   eq('a paste made AFTER the live build wins', fns.pickAct(seed, { shows: 3, pastedAt: live.builtAt + 1 }, live).source, 'pasted');

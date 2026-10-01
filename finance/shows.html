@@ -322,7 +322,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <li>The totals row adds up whatever the filters show.</li>
     <li>Money is Stripe's answer. A night Stripe never answered reads “unknown”, never $0.</li>
     <li><b>MySet cut</b> is MySet's share of the money that came through the app (merch goods included, postage never): 25% Hobbyist · 10% Bar Star · 2% Rock Star. None on the founder's own nights, unless <b>If the founder were a paying customer</b> is on.</li>
-    <li><b>MySet profit</b> is that cut less the server and Stripe.</li>
+    <li><b>MySet profit</b> is that cut less the server. Stripe's fee comes off it only on the founder's own nights; on an artist's night the artist pays it.</li>
     <li>Costs are money going out, so they are never green. The server is priced on every counted night; Stripe only where the money is known; the Total adds the two.</li>
     <li><b>Server</b> is Netlify's own meters for that night. ≈ means that night was never read, so it carries the average.</li>
     <li><b>Stripe</b> is Stripe's own fee on each payment. ≈ means it has not been read yet, so it uses the published card rates.</li>
@@ -339,7 +339,7 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
     <li><b>In-app transactions</b> are what the room paid through the app, by source.</li>
     <li><b>Server</b> and <b>Stripe</b> are the same per-night costs as the table above, added up over the nights with money known.</li>
     <li><b>Fee</b> is the share MySet takes. <b>Cut on transactions</b> is that share of the total (merch counts its goods, never postage).</li>
-    <li><b>Profit on shows</b> is the cut less the server and Stripe.</li>
+    <li><b>Profit on shows</b> is the cut less the server. The <b>Stripe</b> column is paid by the artist, so it is not taken off, except on the founder's own nights as played (and not then if the founder is shown as a paying customer).</li>
     <li><b>Plan fees</b> are the monthly price after Stripe's card fee and its 0.7% billing fee, for the months the nights span (an artist's first night to their last, rounded to whole months, one at least).</li>
     <li><b>Total revenue</b> is the cut plus the plan price for those months. <b>Total profit</b> is the profit on shows plus the plan fees after Stripe.</li>
     <li>“As actually played” uses each night's real plan: no cut and no plan fee on the founder's own nights, unless <b>If the founder were a paying customer</b> is on.</li>
@@ -469,7 +469,8 @@ const mine = (r) => {
   if (!p || !PAYING || !p.founder) return p;
   const cut = PLAN_CUT[r.artist.plan] ?? PLAN_CUT.free, base = (r.money.total || 0) + merchGoods(r);
   const fee = Math.round(base * cut * 1e4) / 1e4;
-  return { ...p, cut, fee, founder: false, usd: Math.round((fee - (c.server ? c.server.usd : 0) - (c.stripe ? c.stripe.usd : 0)) * 1e4) / 1e4, estimate: p.estimate || fee > 0 };
+  /* as a paying artist, the night's money would be a direct charge on their own account: Stripe's fee is theirs */
+  return { ...p, cut, fee, founder: false, stripeMine: 0, usd: Math.round((fee - (c.server ? c.server.usd : 0)) * 1e4) / 1e4, estimate: !c.server.measured || fee > 0 };
 };
 const STATUS_WORD = { counted: 'counted', unused: 'unused', refused: 'not counted', silent: 'silent' };
 const tagOf = (r) => `<span class="tag ${r.status}" title="${esc(r.why || '')}">${STATUS_WORD[r.status] || r.status}</span>${r.hidden ? ' <span class="tag hidden" title="the artist deleted this night from their Money tab; still on disk, still judged by the rule">hidden</span>' : ''}`;
@@ -560,7 +561,7 @@ const COLS = [
     cell: (r) => { const p = mine(r); return p ? `<span title="${p.founder ? 'the founder\'s own night: MySet takes no cut' : `${Math.round(p.cut * 100)}% of the ${fmt.usd(p.cut ? p.fee / p.cut : 0)} that came through the app`}">${$$usd(p.fee)} <span class="faint">${Math.round(p.cut * 100)}%</span></span>` : dash; },
     total: (rows) => { const ps = rows.map(mine).filter(Boolean); if (!ps.length) return dash; const fee = sumOf(ps, (p) => p.fee), base = sumOf(ps, (p) => (p.cut ? p.fee / p.cut : 0)); return `${$$usd(fee)}${base ? ` <span class="faint">${Math.round(fee / base * 100)}%</span>` : ''}`; } },
   { k: 'profit', label: 'MySet profit', n: 1, sort: (r) => (mine(r) ? mine(r).usd : -1e9),
-    cell: (r) => { const c = cost(r), p = mine(r); return p ? `<span title="cut ${fmt.usd(p.fee)} − server ${fmt.usd(c.server ? c.server.usd : 0)} − Stripe ${fmt.usd(c.stripe ? c.stripe.usd : 0)}">${$$profit(p.usd, p.estimate)}</span><small class="on">on transactions</small>` : dash; },
+    cell: (r) => { const c = cost(r), p = mine(r); return p ? `<span title="cut ${fmt.usd(p.fee)} − server ${fmt.usd(c.server ? c.server.usd : 0)}${p.founder ? ` − Stripe ${fmt.usd(c.stripe ? c.stripe.usd : 0)}` : ' (Stripe\'s fee is the artist\'s)'}">${$$profit(p.usd, p.estimate)}</span><small class="on">on transactions</small>` : dash; },
     total: (rows) => { const ps = rows.map(mine).filter(Boolean); return ps.length ? `<b>${$$profit(sumOf(ps, (p) => p.usd), ps.some((p) => p.estimate))}</b><small class="on">on transactions</small>` : dash; } },
   { k: 'songs', label: 'Songs', n: 1, sort: (r) => r.songsPlayed, cell: (r) => (silent(r) ? dash : fmt.int(r.songsPlayed)), total: (rows) => fmt.int(sumOf(liveRows(rows), (r) => r.songsPlayed)) },
   { k: 'money', label: 'Room $', n: 1, sort: (r) => (known(r) ? r.money.total : -1), cell: (r) => (silent(r) ? dash : known(r) ? $$usd(r.money.total) : '<span class="tag unknown" title="Stripe could not be asked, or payments were off">unknown</span>'),
@@ -699,7 +700,7 @@ function costsHtml(r, line) {
     ${line('Server (traffic)', s ? `${fmt.num(s.credits, 2)} credits · ${$$cost(s.usd, !s.measured)}` : dash)}
     ${line('Stripe card fees', st ? `${plural(st.payments, 'payment')} on ${fmt.usd(st.volume)} · ${$$cost(st.usd, st.estimate)}` : dash)}
     ${line('Costs in all', fin(c.total) ? `<b>${$$cost(c.total, !s.measured || (st.estimate && st.usd > 0))}</b>` : dash)}
-    ${c.myset ? line('MySet profit', `${c.myset.founder ? 'no cut on the founder\'s own night' : `${Math.round(c.myset.cut * 100)}% cut ${fmt.usd(c.myset.fee)}`} − server − Stripe · <b>${$$profit(c.myset.usd, c.myset.estimate)}</b>`) : ''}
+    ${mine(r) ? line('MySet profit', `${mine(r).founder ? 'no cut on the founder\'s own night' : `${Math.round(mine(r).cut * 100)}% cut ${fmt.usd(mine(r).fee)}`} − server${mine(r).founder ? ' − Stripe' : ' (Stripe is the artist\'s)'} · <b>${$$profit(mine(r).usd, mine(r).estimate)}</b>`) : ''}
     <p class="dnote">${s ? (s.measured ? 'The server figure is what Netlify\'s own meters say this night added over an empty day.' : `Netlify's meters were not read for this night, so the server figure is the average of the ${B ? B.measuredNights : ''} nights they were read for.`) : ''} Credits at the plan's top-up price${B && B.pack ? ` (${fmt.int(B.pack.credits)} for ${fmt.usd(B.pack.usd)})` : ''}. ${st && st.exact ? `Stripe is its own fee on each payment, read off the charge${st.estimate ? ' (the merch part is still the published-rate estimate)' : ''}.` : `Stripe's own fee has not been read for this night yet; until it is, this is ${B ? B.stripe.effectivePct : '4.03'}% + ${B ? Math.round(B.stripe.fixed * 100) : 30}¢ a payment, the published rate.`} No deploy is ever in a show's cost.</p>
   </div>`;
 }
@@ -876,11 +877,13 @@ function chartsRender() {
 /* TIER MATH — one plan's money, word for word the same in finance/shows.html and finance/model.html
    (test/everyshow.mjs holds the two identical). t: the room's dollars by source, the server and
    Stripe on them, the plan's cut (0 to 1), its price a month and how many months; st: Stripe's rates.
-   The plan fee pays Stripe's card rate plus Stripe Billing's extra, once a month. */
+   t.stripe is what Stripe took on the room's money; t.stripeMine is the part MySet pays — none on an
+   artist's own account (a direct charge: the card fee is the artist's), all of it on the founder's.
+   The plan fee pays Stripe's card rate plus Stripe Billing's extra, once a month: that one is MySet's. */
 function tierMath(t, st) {
   const inApp = t.tips + t.packs + t.requests + t.merch + t.other;
   const cut = inApp * t.cut;
-  const onShows = cut - t.server - t.stripe;
+  const onShows = cut - t.server - t.stripeMine;
   const subFee = t.price > 0 ? Math.round((t.price * (st.pct + (st.intlShare / 100) * st.intlPct + st.billingPct) / 100 + st.fixed) * 100) / 100 : 0;
   const planNet = (t.price - subFee) * t.months;
   const revenue = cut + t.price * t.months;
@@ -910,7 +913,10 @@ function tierInputs(rows, plan) {
     cut = base ? m((r) => mine(r).fee) / base : PLAN_CUT[plan];
     months = monthsOf(own.filter((r) => PAYING || !isFounder(r)));
   }
-  return { shows: own.length, tips, packs, requests, merch, other, server: m((r) => cost(r).server.usd), stripe: m((r) => (cost(r).stripe ? cost(r).stripe.usd : 0)), cut, price: PLAN_USD[plan], months };
+  /* Stripe's card fee comes off MySet only on a night played as the founder (as played, not paying):
+     priced as if on a plan, every night is an artist's own direct charge and the fee is the artist's */
+  const stripeMine = TIER_MODE === 'played' ? m((r) => { const q = mine(r); return q && q.founder && cost(r).stripe ? cost(r).stripe.usd : 0; }) : 0;
+  return { shows: own.length, tips, packs, requests, merch, other, server: m((r) => cost(r).server.usd), stripe: m((r) => (cost(r).stripe ? cost(r).stripe.usd : 0)), stripeMine, cut, price: PLAN_USD[plan], months };
 }
 function renderTiers() {
   const t = $('#tiersTable'); if (!t) return;
@@ -922,7 +928,7 @@ function renderTiers() {
   const g = (cls, span, word) => `<th colspan="${span}" class="g ${cls} gl">${word}</th>`;
   const head = `<tr class="grp"><th></th><th></th>${g('tips', 5, 'In-app transactions')}${g('costs', 2, 'Costs')}${g('', 7, 'MySet')}</tr>
     <tr><th>Plan</th><th class="n">Shows</th><th class="n gl">Total</th><th class="n b1">Tips</th><th class="n">Vote packs</th><th class="n b1">Requests</th><th class="n">Merch</th>
-    <th class="n gl">Server</th><th class="n b1">Stripe</th>
+    <th class="n gl">Server</th><th class="n b1">Stripe <small>${TIER_MODE === 'asif' || PAYING ? 'the artist\'s' : 'MySet\'s on the founder\'s nights only'}</small></th>
     <th class="n gl">Fee</th><th class="n b1">Cut on transactions</th><th class="n">Profit on shows</th><th class="n b1">Plan price</th><th class="n">Plan fees <small>after Stripe</small></th><th class="n b1">Total revenue</th><th class="n">Total profit</th></tr>`;
   const body = TIERS.map((p) => {
     const i = tierInputs(rows, p), x = st ? tierMath(i, st) : null, n = i.shows;

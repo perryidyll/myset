@@ -564,7 +564,7 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
     <li>Cloudflare Workers, KV and Durable Objects: developers.cloudflare.com/workers/platform/pricing.</li>
     <li>Stripe: stripe.com/pricing (US 2.9% + 30¢, +1.5% international, +1% conversion, $15 per dispute received and $15 more if countered and lost); stripe.com/billing/pricing (0.7%); stripe.com/connect/pricing (Express: $2 per active account a month, 0.25% + 25¢ per payout); no Stripe fee on MySet’s cut (docs.stripe.com/connect/saas/tasks/app-fees).</li>
     <li>Thai rates for comparison: 3.65% + ฿10 domestic, 4.75% + ฿10 international, +2% conversion, ฿500 per dispute received and ฿500 more if countered.</li>
-    <li>Netlify’s invoices add about 9.6% tax ($5.48 for a $5 pack). The prices on this page are before that tax.</li>
+    <li>Netlify’s invoices add about 9.6% tax ($5.48 for a $5 pack, $9.86 for the $9 plan). Every Netlify cost on this page includes it.</li>
     <li>In the MySet repo: the polling pace in public/vote.html, the simulator in tools/loadsim.py, reads per call in test/cost.mjs, real shows via tools/actuals.py.</li>
   </ul></div>
 </footer>
@@ -757,7 +757,7 @@ const ENGINE = (() => {
   const zeroT = () => Object.fromEntries(['polls', 'lgPolls', 'renders', 'rendersBest', 'rendersWorst', 'writes', 'studioPolls', 'extraViews', 'clipViews', 'clipBytes', 'requests', 'bytes', 'fnMs', 'reads', 'lgRequests', 'lgBytes', 'lgFnMs', 'lgReads', 'kvWrites', 'cpuMs', 'sockets', 'nudges', 'lineReqs', 'doGBs'].map((k) => [k, 0]));
   const addT = (a, b, k = 1) => { for (const key of Object.keys(a)) a[key] += (b[key] || 0) * k; return a; };
 
-  /* ---------- Netlify plans (published 5 Sep 2026; re-read 1 Oct 2026, unchanged; prices before the ~9.6% tax the invoices add) ---------- */
+  /* ---------- Netlify plans (published 5 Sep 2026; re-read 1 Oct 2026, unchanged; the published prices — netlifyDollars adds the ~9.6% tax the invoices carry) ---------- */
   const NETLIFY_PLANS = [
     { key: 'personal', name: 'Personal $9', base: 9, credits: 1000, pack: 500, packUsd: 5 },
     { key: 'pro3', name: 'Pro $20', base: 20, credits: 3000, pack: 1500, packUsd: 10 },
@@ -778,7 +778,7 @@ const ENGINE = (() => {
     for (const pl of NETLIFY_PLANS) {
       if (h.planLock && h.planLock !== 'auto' && pl.key !== h.planLock) continue;
       const packs = Math.ceil(Math.max(0, credits - pl.credits) / pl.pack);   // top-ups are sold in whole packs
-      const usd = pl.base + packs * pl.packUsd;
+      const usd = (pl.base + packs * pl.packUsd) * (h.taxMul || 1);   // what the invoice says, tax in
       if (!best || usd < best.usd) best = { plan: pl.name, usd, topups: Math.max(0, credits - pl.credits), packs };
     }
     return best;
@@ -1060,13 +1060,13 @@ const ENGINE = (() => {
         if (h.kind === 'netlify') {
           const TP = addT(zeroT(), onePlain, days);
           const c = netlifyCredits(h.legacy ? { ...TP, requests: TP.lgRequests, bytes: TP.lgBytes * h.bytesMul, fnMs: TP.lgFnMs * h.computeMul } : { ...TP, bytes: TP.bytes * h.bytesMul, fnMs: TP.fnMs * h.computeMul }, 0, h);
-          onHost[k] = c.total * (h.usdPerCredit || 10 / 1500);
+          onHost[k] = c.total * (h.usdPerCredit || 10 / 1500) * (h.taxMul || 1);
         } else if (h.kind === 'vps') onHost[k] = 0;
         else if (h.kind === 'cf-do') {
           /* marginal: Netlify's credits at the auto-picked rate, plus Cloudflare's per-unit lines with the allowances used up */
           const h2 = { ...h, base: 0, reqIncl: 0, doReqIncl: 0, doGBsIncl: 0 };
           const M = 1e6;
-          onHost[k] = netlifyCredits(TL, 0, h).total * (h.usdPerCredit || 10 / 1500) + TL.lineReqs / M * (h2.reqUsd + h2.doReqUsd) + TL.doGBs / M * h2.doGBsUsd;
+          onHost[k] = netlifyCredits(TL, 0, h).total * (h.usdPerCredit || 10 / 1500) * (h.taxMul || 1) + TL.lineReqs / M * (h2.reqUsd + h2.doReqUsd) + TL.doGBs / M * h2.doGBsUsd;
         } else {
           /* marginal: price the show as if allowances were already used up */
           const h2 = { ...h, base: 0, reqIncl: 0, cpuIncl: 0, readIncl: 0, writeIncl: 0, doReqIncl: 0, doGBsIncl: 0, invIncl: 0, cpuHrIncl: 0, memGBhrIncl: 0, gbIncl: 0, edgeIncl: 0 };
@@ -1134,13 +1134,16 @@ const ENGINE = (() => {
 /*ENGINE-END*/
 
 /* ───────────────────────────── defaults ───────────────────────────── */
+/* Netlify's invoices add tax: $5.48 for a $5 pack, $9.86 for the $9 plan (finance/credits.json invoices).
+   Every Netlify dollar on this page is priced WITH it — the founder, 1 Oct 2026: use $5.48. A host's
+   usdPerCredit stays the published price; taxMul (1.096 on every host Netlify bills) turns it into what is paid. */
 const HOSTS0 = {
-  netlifyPro:   { kind: 'netlify', name: 'Netlify (cheapest plan auto-picked)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, planLock: 'auto', usdPerCredit: 10 / 1500 },
-  netlifyPers:  { kind: 'netlify', name: 'Netlify Personal $9 + $5 packs', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, planLock: 'personal', usdPerCredit: 5 / 500 },
-  netlifyLegacy:{ kind: 'netlify', name: 'Netlify before the split (one call per tick)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, legacy: 1, planLock: 'auto', usdPerCredit: 10 / 1500 },
-  netlifyOpt:   { kind: 'netlify', name: 'Netlify after a further slimming (not built)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 0.4, computeMul: 0.35, planLock: 'auto', usdPerCredit: 10 / 1500 },
+  netlifyPro:   { kind: 'netlify', name: 'Netlify (cheapest plan auto-picked)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, planLock: 'auto', usdPerCredit: 10 / 1500, taxMul: 1.096 },
+  netlifyPers:  { kind: 'netlify', name: 'Netlify Personal $9 + $5 packs', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, planLock: 'personal', usdPerCredit: 5 / 500, taxMul: 1.096 },
+  netlifyLegacy:{ kind: 'netlify', name: 'Netlify before the split (one call per tick)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 1, computeMul: 1, legacy: 1, planLock: 'auto', usdPerCredit: 10 / 1500, taxMul: 1.096 },
+  netlifyOpt:   { kind: 'netlify', name: 'Netlify after a further slimming (not built)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, bytesMul: 0.4, computeMul: 0.35, planLock: 'auto', usdPerCredit: 10 / 1500, taxMul: 1.096 },
   cfKv:         { kind: 'cf-kv', name: 'Cloudflare Workers + KV', base: 5, reqIncl: 10e6, reqUsd: 0.30, cpuIncl: 30e6, cpuUsd: 0.02, readIncl: 10e6, readUsd: 0.50, writeIncl: 1e6, writeUsd: 5 },
-  cfDo:         { kind: 'cf-do', name: 'Netlify + the open line (Cloudflare Durable Object)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, planLock: 'auto', usdPerCredit: 10 / 1500, base: 5, reqIncl: 10e6, reqUsd: 0.30, doReqIncl: 1e6, doReqUsd: 0.15, doGBsIncl: 400e3, doGBsUsd: 12.5 },
+  cfDo:         { kind: 'cf-do', name: 'Netlify + the open line (Cloudflare Durable Object)', crReq: 2, crGB: 20, crGBhr: 10, crDeploy: 15, memGB: 1, planLock: 'auto', usdPerCredit: 10 / 1500, taxMul: 1.096, base: 5, reqIncl: 10e6, reqUsd: 0.30, doReqIncl: 1e6, doReqUsd: 0.15, doGBsIncl: 400e3, doGBsUsd: 12.5 },
   vercel:       { kind: 'vercel', name: 'Vercel Pro (Fluid compute)', base: 20, invIncl: 0, invUsd: 0.60, cpuHrIncl: 0, cpuHrUsd: 0.128, memGB: 1, memGBhrIncl: 0, memGBhrUsd: 0.0106, gbIncl: 1000, gbUsd: 0.15, edgeIncl: 1e6, edgeUsd: 2, creditUsd: 20 },
   vps:          { kind: 'vps', name: 'Own always-on servers (VPS)', base: 15, reqPerBoxMonth: 200e6, dbUsd: 15, opsHours: 6, opsRate: 25 },
   custom:       { kind: 'custom', name: 'Custom host (type your own rates)', base: 0, reqUsd: 0.30, readUsd: 0, writeUsd: 0, gbUsd: 0.10, memGB: 1, gbHrUsd: 0.07, deployUsd: 0 },
@@ -1193,7 +1196,7 @@ let P = JSON.parse(JSON.stringify(P0));
 /* the biggest room each plan allows (_plan.mjs `audience`); test/everyshow.mjs holds the two equal */
 const PLAN_ROOM = { free: 50, plus: 300, pro: 2000 };
 let ACT = null;           // real-show numbers, when imported
-const SEED_ACT = {"asOf": "2026-09-25", "shows": 15, "people": 8.6, "hours": 2.73, "recordHours": 3.46, "setHours": 1.5, "votes": 16.6, "interactions": 2.09, "songs": 10.0, "nets": 6.0, "peakVoters": 4.13, "gigsOnCalendar": 22, "gigsUsed": 15, "gigsSilent": 5, "roomFree": null, "roomPlus": null, "roomPro": 1.037, "roomPerHead": 1.037, "deploys": 286, "deploysThisPeriod": 119, "billingPeriodStart": "2026-09-08", "shipping": {"what": "production deploys \u00d7 15 credits \u2014 a cost of shipping code, never of a gig", "deploys30": 286, "credits30": 4290, "deploysThisPeriod": 119, "creditsThisPeriod": 1785, "perDayThisPeriod": 7.1, "dashboard": {"readAt": "2026-09-25T02:58:00+00:00", "deploys": 119, "credits": 1785, "shareOfAllCredits": 0.938}}, "traffic": {"what": "everything the rooms cause \u2014 bandwidth is the one meter the API exposes; web requests and compute are on Netlify\u2019s Credit usage breakdown page only", "bandwidthBytesThisPeriod": 2330916514, "bandwidthGBThisPeriod": 2.331, "bandwidthCreditsThisPeriod": 46.6, "bandwidthReadAt": "2026-09-25T03:52:53.498+00:00", "dashboard": {"readAt": "2026-09-25T02:58:00+00:00", "periodStart": "2026-09-08", "webRequests": 100804, "webRequestCredits": 20.2, "computeCredits": 54, "bandwidthCredits": 42.8, "trafficCredits": 117.0, "totalCredits": 1902}}, "pollsPerPhoneHour": 42.0, "pollsSource": "Netlify's own request meter \u2014 7 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay)", "creditsPerShow": 2.98, "meters": {"readAt": "2026-09-25T02:58:00+00:00", "cleanFrom": "2026-09-16", "studioShareAssumed": 0.6, "emptyDays": ["2026-09-19"], "gigDays": ["2026-09-16", "2026-09-17", "2026-09-18", "2026-09-20", "2026-09-21", "2026-09-22", "2026-09-23"], "what": "Netlify's own per-day meters (finance/credits.json): a gig day minus an empty day, requests \u00f7 2 less the Studio tick, page loads, votes and extra pages = the room's ticks; the credits are traffic only \u2014 never a deploy (INVARIANT 0fx)", "background": {"requests": 3200, "computeCredits": 1.7, "bandwidthMB": 13.7, "days": ["2026-09-19"]}, "rate": 42.0, "creditsPerShow": 2.98}, "note": "15 night(s) on the published calendar where the room used the app, across 1 artist(s) (2 more on the calendar where it went unused); 11 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 16.6. Ticks per phone-hour: 42.0 \u2014 Netlify's own request meter \u2014 7 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay). By the same meters a night adds about 2.98 credits of traffic over an empty day (empty day: 3,200 requests, 1.7 credits of compute, 13.7 MB; 7 gig day(s) since 2026-09-16). 15 bracket(s) of bandwidth marks withheld \u2014 see pollsByNight for why; background over every quiet pair on file 7.04 MB/h from 1 pair(s). Deploys are account-wide (all five sites share the credit grant): 286 in the last 30 days, 119 this billing period = 1785 credits \u2014 the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 2.331 GB = 46.6 credits for everything every room did.", "marksOnFile": 6, "source": "tools/actuals.py (seed)"};
+const SEED_ACT = {"asOf": "2026-10-01", "shows": 19, "people": 9.0, "hours": 2.76, "recordHours": 3.42, "setHours": 1.59, "votes": 16.32, "interactions": 1.88, "songs": 11.32, "nets": 5.83, "peakVoters": 4.16, "gigsOnCalendar": 25, "gigsUsed": 19, "gigsSilent": 4, "roomFree": null, "roomPlus": null, "roomPro": 0.766, "roomPerHead": 0.766, "deploys": 273, "deploysThisPeriod": 193, "billingPeriodStart": "2026-09-08", "shipping": {"what": "production deploys × 15 credits — a cost of shipping code, never of a gig", "deploys30": 273, "credits30": 4095, "deploysThisPeriod": 193, "creditsThisPeriod": 2895, "perDayThisPeriod": 8.3, "dashboard": {"readAt": "2026-10-01T10:30:00+00:00", "deploys": 185, "credits": 2775, "shareOfAllCredits": 0.947}}, "traffic": {"what": "everything the rooms cause — bandwidth is the one meter the API exposes; web requests and compute are on Netlify’s Credit usage breakdown page only", "bandwidthBytesThisPeriod": 2838221475, "bandwidthGBThisPeriod": 2.838, "bandwidthCreditsThisPeriod": 56.8, "bandwidthReadAt": "2026-10-01T09:33:56.363+00:00", "dashboard": {"readAt": "2026-10-01T10:30:00+00:00", "periodStart": "2026-09-08", "webRequests": 131960, "webRequestCredits": 26.4, "computeCredits": 77.3, "bandwidthCredits": 52.1, "trafficCredits": 155.8, "totalCredits": 2930.8}}, "pollsPerPhoneHour": 16.9, "pollsSource": "Netlify's own request meter — 4 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay)", "creditsPerShow": 2.72, "meters": {"readAt": "2026-10-01T10:30:00+00:00", "cleanFrom": "2026-09-25", "studioShareAssumed": 0.6, "emptyDays": ["2026-09-26"], "gigDays": ["2026-09-25", "2026-09-27", "2026-09-28", "2026-09-30"], "nights": [{"key": "hist_perry-idyll_2026-09-25-1130-txs5", "day": "2026-09-25", "people": 17, "hours": 2.63, "requestsOverBackground": 2923, "computeCreditsOverBackground": 1.46, "bandwidthMBOverBackground": 65.8, "studioRequestsAssumed": 1420, "ticks": 678, "ticksPerPhoneHour": 15.2, "creditsTraffic": 3.36}, {"key": "hist_perry-idyll_2026-09-27-1126-r5rz", "day": "2026-09-27", "people": 8, "hours": 3.0, "requestsOverBackground": 764, "computeCreditsOverBackground": 0.65, "bandwidthMBOverBackground": 31.9, "studioRequestsAssumed": 1620, "ticks": -457, "ticksPerPhoneHour": null, "creditsTraffic": 1.44}, {"key": "hist_perry-idyll_2026-09-28-1330-9k2n", "day": "2026-09-28", "people": 14, "hours": 3.0, "requestsOverBackground": 3311, "computeCreditsOverBackground": 2.43, "bandwidthMBOverBackground": 49.7, "studioRequestsAssumed": 1620, "ticks": 790, "ticksPerPhoneHour": 18.8, "creditsTraffic": 4.09}, {"day": "2026-09-29", "why": "not a clean gig day — records that day: test"}, {"key": "hist_perry-idyll_2026-09-30-1130-qlhi", "day": "2026-09-30", "people": 3, "hours": 2.84, "requestsOverBackground": -98, "computeCreditsOverBackground": 1.56, "bandwidthMBOverBackground": 22.5, "studioRequestsAssumed": 1534, "ticks": -826, "ticksPerPhoneHour": null, "creditsTraffic": 1.99}], "what": "Netlify's own per-day meters (finance/credits.json): a gig day minus an empty day, requests ÷ 2 less the Studio tick, page loads, votes and extra pages = the room's ticks; the credits are traffic only — never a deploy (INVARIANT 0fx)", "background": {"requests": 4019, "computeCredits": 2.69, "bandwidthMB": 13.3, "days": ["2026-09-26"], "bandwidthDay": "2026-09-19"}, "rate": 16.9, "creditsPerShow": 2.72}, "note": "19 night(s) on the published calendar where the room used the app, across 1 artist(s) (2 more on the calendar where it went unused); 15 with money known (per-person figures use only those). A night's hours are the record unless it overran the published slot (auto-end adds a 3 h grace), then the later of the slot and the last song started. Votes per night: 16.32. Ticks per phone-hour: 16.9 — Netlify's own request meter — 4 gig day(s) minus 1 empty day(s), the Studio tab assumed on screen 60% of the night (finance/credits.json perDay). By the same meters a night adds about 2.72 credits of traffic over an empty day (empty day: 4,019 requests, 2.69 credits of compute, 13.3 MB; 4 gig day(s) since 2026-09-25). 19 bracket(s) of bandwidth marks withheld — see pollsByNight for why; background over every quiet pair on file 7.04 MB/h from 1 pair(s). Deploys are account-wide (all five sites share the credit grant): 273 in the last 30 days, 193 this billing period = 2895 credits — the SHIPPING bill, kept apart from the traffic bill and never spread over shows (INVARIANT 0fx). Bandwidth this period: 2.838 GB = 56.8 credits for everything every room did.", "marksOnFile": 6, "source": "tools/actuals.py against production"};
 
 /* THE LIVE FEED (decision 0095). On myset.vip the page asks /moneymodel/live.json — the
    register of every show on the platform, folded on the server — and lays its block over
@@ -1566,11 +1569,13 @@ function tlOpts(t, yTitle) {
 /* TIER MATH — one plan's money, word for word the same in finance/shows.html and finance/model.html
    (test/everyshow.mjs holds the two identical). t: the room's dollars by source, the server and
    Stripe on them, the plan's cut (0 to 1), its price a month and how many months; st: Stripe's rates.
-   The plan fee pays Stripe's card rate plus Stripe Billing's extra, once a month. */
+   t.stripe is what Stripe took on the room's money; t.stripeMine is the part MySet pays — none on an
+   artist's own account (a direct charge: the card fee is the artist's), all of it on the founder's.
+   The plan fee pays Stripe's card rate plus Stripe Billing's extra, once a month: that one is MySet's. */
 function tierMath(t, st) {
   const inApp = t.tips + t.packs + t.requests + t.merch + t.other;
   const cut = inApp * t.cut;
-  const onShows = cut - t.server - t.stripe;
+  const onShows = cut - t.server - t.stripeMine;
   const subFee = t.price > 0 ? Math.round((t.price * (st.pct + (st.intlShare / 100) * st.intlPct + st.billingPct) / 100 + st.fixed) * 100) / 100 : 0;
   const planNet = (t.price - subFee) * t.months;
   const revenue = cut + t.price * t.months;
@@ -1606,15 +1611,15 @@ function tpTickets() {
   const t = tpLive(), tk = (amt, n, d) => (t && n > 0 && amt > 0 ? amt / n : d);
   return { tips: tk(t && t.tipsAmount, t && t.tips, 5), packs: tk(t && t.packsAmount, t && t.packs, 2), requests: tk(t && t.paidRequestsAmount, t && t.paidRequests, 3), merch: tk(t && Math.max(0, (t.merchAmount || 0) - (t.merchPostage || 0)), t && t.merchOrders, 25) };
 }
-/* a show's server: Netlify's meters (credits a night) at the top-up pack MySet actually buys */
-const tpCredit = () => (P.hosts.netlifyPers && P.hosts.netlifyPers.usdPerCredit) || 0.01;
+/* a show's server: Netlify's meters (credits a night) at the top-up pack MySet actually buys, tax in ($5.48 for 500) */
+const tpCredit = () => ((P.hosts.netlifyPers && P.hosts.netlifyPers.usdPerCredit) || 0.01) * ((P.hosts.netlifyPers && P.hosts.netlifyPers.taxMul) || 1);
 const tpServer = () => ((ACT && ACT.creditsPerShow) || SEED_ACT.creditsPerShow) * tpCredit();
 function tpRow(p) {
   const s = TP[p], n = Math.max(0, s.shows), tk = tpTickets(), st = P.stripe;
   const tot = (k) => s[k] * n, vol = TP_SRC.reduce((a, k) => a + tot(k), 0);
   const payments = TP_SRC.reduce((a, k) => a + (tk[k] > 0 ? tot(k) / tk[k] : 0), 0);
   const i = { shows: n, tips: tot('tips'), packs: tot('packs'), requests: tot('requests'), merch: tot('merch'), other: 0,
-    server: n * tpServer(), stripe: vol * (st.pct + (st.intlShare / 100) * st.intlPct) / 100 + payments * st.fixed,
+    server: n * tpServer(), stripe: vol * (st.pct + (st.intlShare / 100) * st.intlPct) / 100 + payments * st.fixed, stripeMine: 0,
     cut: (Number(P[TP_CUT[p]]) || 0) / 100, price: Number(P[TP_PRICE[p]]) || 0, months: 1 };
   return { i, x: tierMath(i, st) };
 }
@@ -1625,7 +1630,7 @@ function tpBuild() {
   const src = (p, r) => `<td class="n gl">${inp(p, 'total', r, '$')}</td>` + TP_SRC.map((k) => `<td class="n">${inp(p, k, r, '$')}</td>`).join('');
   const money = (p, r) => `${out(p, 'server', r, 'gl')}${out(p, 'stripe', r)}`;
   t.innerHTML = `<thead><tr><th></th><th></th><th colspan="5" class="tpg in">In-app transactions</th><th colspan="2" class="tpg out">Costs</th><th colspan="7" class="tpg my">MySet</th></tr>
-    <tr><th>Plan</th><th class="n">Shows</th><th class="n">Total</th><th class="n">Tips</th><th class="n">Vote packs</th><th class="n">Requests</th><th class="n">Merch</th><th class="n">Server</th><th class="n">Stripe</th>
+    <tr><th>Plan</th><th class="n">Shows</th><th class="n">Total</th><th class="n">Tips</th><th class="n">Vote packs</th><th class="n">Requests</th><th class="n">Merch</th><th class="n">Server</th><th class="n">Stripe<small>the artist’s</small></th>
     <th class="n">Fee</th><th class="n">Cut on transactions</th><th class="n">Profit on shows</th><th class="n">Plan price</th><th class="n">Plan fee for 1 month<small>after Stripe</small></th><th class="n">Total revenue</th><th class="n">Total profit</th></tr></thead>
     <tbody>${TP_PLANS.map((p) => `<tr class="tpT"><td class="name">${TP_NAME[p]}<small>total</small></td><td class="n" rowspan="2">${inp(p, 'shows', '', '', '', 1)}</td>${src(p, 't')}${money(p, 't')}
       <td class="n" rowspan="2">${inp(p, 'cut', '', '', '%', 0.5)}</td>${out(p, 'cut', 't')}${out(p, 'onShows', 't')}<td class="n" rowspan="2">${inp(p, 'price', '', '$', '/mo', 1)}</td>${out(p, 'planNet', 't')}${out(p, 'revenue', 't')}${out(p, 'profit', 't', 'big')}</tr>
@@ -1670,6 +1675,7 @@ function tpPaint(all) {
     + `<li>One artist on each plan, for one month. ${TP_MINE ? '<b>Your numbers.</b>' : t2 ? `<b>Seeded live</b> from the average show over ${fmt.int(t2.moneyKnown)} nights with money known.` : '<b>An example</b> (the live show list was not reachable).'}</li>`
     + `<li>Type over any boxed figure: a show’s dollars by source (either line), the shows, MySet’s fee or the plan price. The last two are dials on the left too.</li>`
     + `<li><b>Server:</b> ${fmt.num((ACT && ACT.creditsPerShow) || SEED_ACT.creditsPerShow, 2)} credits a show by Netlify’s meters, at ${fmt.cents(tpCredit())} a credit = ${fmt.usdFull(tpServer())} a show.</li>`
+    + `<li><b>Stripe’s card fee is the artist’s.</b> The room pays on the artist’s own Stripe account, so the fee comes out of the artist’s share, never MySet’s cut. It is shown, not taken off MySet’s profit.</li>`
     + `<li><b>Stripe:</b> ${fmt.num(st.pct + (st.intlShare / 100) * st.intlPct, 2)}% + ${Math.round(st.fixed * 100)}¢ a payment. An average payment is ${fmt.usdFull(tk.tips)} a tip, ${fmt.usdFull(tk.packs)} a vote pack, ${fmt.usdFull(tk.requests)} a request${t2 && t2.paidRequests > 0 ? '' : ' (assumed: none yet)'}, ${fmt.usdFull(tk.merch)} a merch order${t2 && t2.merchOrders > 0 ? '' : ' (assumed: none yet)'}.</li>`
     + `<li>The plan fee also pays Stripe Billing’s ${fmt.num(st.billingPct, 1)}%.</li></ul>`;
 }
