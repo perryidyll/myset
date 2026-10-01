@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 14:46 — 730be56 — wt4@showlog-bullets (1 files since origin/main)
+**tl;dr:** Show log: the intro, both table notes and the seven 'How these numbers are made' cards are now short coloured bullet points
+**Other sessions:** ul.pts / ul.lede in finance/shows.html mirror the money model's; text only, no math or columns changed.
+
 ### 2026-10-01 13:20 — 6aa5158 — wt4@model-bullets (1 files since origin/main)
 **tl;dr:** Money model: the dials column folds away (remembered per browser); every long explainer is now short coloured bullets; the size table is '4 core show categories' with its dial group 'Core show sizes'
 **Other sessions:** ul.pts is the bullet style in finance/model.html; dial groups are details.grp inside #dialsList. Text only otherwise — no math changed.
