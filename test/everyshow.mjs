@@ -326,6 +326,9 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   const model = readFileSync(path.join(root, 'finance/model.html'), 'utf8');
   const st = new Function('return ' + model.match(/  stripe: (\{[^}]*\}),/)[1])();
   eq('the Stripe rates are the money model\'s own (P0.stripe)', [C.STRIPE_RATES.pct, C.STRIPE_RATES.fixed, C.STRIPE_RATES.intlShare, C.STRIPE_RATES.intlPct, C.STRIPE_RATES.billingPct], [st.pct, st.fixed, st.intlShare, st.intlPct, st.billingPct]);
+  /* no dial hides behind a comment: a // on a P0 line must not swallow a key after it (compedPct was lost that way on 2026-10-01) */
+  const p0 = model.slice(model.indexOf('const P0 = {'), model.indexOf('\n};', model.indexOf('const P0 = {')));
+  eq('no P0 dial sits inside a comment', p0.split('\n').filter((l) => l.includes('//') && /\b\w+: [-\d'{[]/.test(l.slice(l.indexOf('//')))), []);
   /* the tier tables: one formula on both pages, and the Show log's plan cuts and prices are _plan.mjs's */
   const shows = readFileSync(path.join(root, 'finance/shows.html'), 'utf8');
   const block = (src) => (src.match(/\/\* TIER MATH[\s\S]*?\n\}\n/) || [''])[0];
