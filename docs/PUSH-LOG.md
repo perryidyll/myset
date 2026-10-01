@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 19:55 — 5defe78 — wt4@dash-followers-line (1 files since origin/main)
+**tl;dr:** The master dashboard's Media Dash window now has a blue followers line that draws itself through the views bars, lands on today's count, fades and starts again
+**Other sessions:** dash.html only: line points are followers at each post's publish time (last account reading at or before it), plus today's count at the right edge; own y-scale, no axis. Reduced motion shows it still.
+
 ### 2026-10-01 18:58 — 02a8aae — wt4@dash-logo-home (6 files since origin/main)
 **tl;dr:** The MySet logo on every dashboard (money model, Show log, Media Dash, CRM, sample-page console, business report) now goes to the homepage
 **Other sessions:** CRM and factory logos used to go to /studio; now '/'. Media Dash and report marks became <a> with color:inherit. Content repo twin pushed (cb64d14).
