@@ -167,13 +167,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 /* 4 · Money model — revenue, costs and profit grow from nothing to the default scenario's month, rest, fade, and grow again */
 .curve .zero{stroke:rgba(var(--hi),.16);stroke-width:1;stroke-dasharray:2 4}
 .curve .tri{fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;animation:folDraw 7s var(--ease) infinite 1s}
-.curve .tri.rev{stroke:rgb(48,209,88);filter:drop-shadow(0 0 5px rgba(48,209,88,.6))}
-.curve .tri.cost{stroke:#FF6B45;filter:drop-shadow(0 0 5px rgba(255,107,69,.5))}
-.curve .tri.prof{stroke:#FFD60A;filter:drop-shadow(0 0 5px rgba(255,214,10,.5))}
-.triEnd{position:absolute;z-index:1;right:calc(2% + 2px);display:flex;align-items:center;gap:7px;transform:translateY(-50%);pointer-events:none;opacity:0;animation:folDot2 7s var(--ease) infinite 1s;font:700 11px/1 var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
-.triEnd i{order:2;width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 0 2px var(--screen),0 0 9px currentColor}
-.triEnd.rev{color:rgb(48,209,88)}.triEnd.cost{color:#FF6B45}.triEnd.prof{color:#FFD60A}
-.triEnd small{font:600 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;opacity:.75;margin-right:2px}
+.curve .tri.rev{filter:drop-shadow(0 0 5px rgba(48,209,88,.6))}
+.curve .tri.cost{filter:drop-shadow(0 0 5px rgba(255,107,69,.5))}
+.curve .tri.prof{filter:drop-shadow(0 0 5px rgba(255,214,10,.5))}
+.triEnd{position:absolute;z-index:1;left:98%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:currentColor;box-shadow:0 0 0 2px var(--screen),0 0 9px currentColor;pointer-events:none;opacity:0;animation:folDot2 7s var(--ease) infinite 1s}
+.rev{color:rgb(48,209,88)}.cost{color:#FF6B45}.prof{color:#C9A400}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .prof{color:#FFD60A}}
+:root[data-theme=dark] .prof{color:#FFD60A}
+.curve .tri.rev,.curve .tri.cost,.curve .tri.prof{stroke:currentColor}
+.triKey{position:absolute;z-index:1;right:10px;bottom:6px;display:flex;gap:12px;pointer-events:none;opacity:0;animation:folKey 7s var(--ease) infinite 1s;font:700 10.5px/1 var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.triKey span{display:flex;align-items:center;gap:5px}
+.triKey span::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.triKey small{font:600 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 /* a window being opened: the drawings hurry */
 .win:hover .ledger .scan{animation-duration:2.4s}
 
@@ -194,7 +199,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 @keyframes ping{0%{transform:scale(1);opacity:.7}100%{transform:scale(3.2);opacity:0}}
 @keyframes folDraw{0%{stroke-dashoffset:1;opacity:1}45%{stroke-dashoffset:0}82%{opacity:1}94%,100%{stroke-dashoffset:0;opacity:0}}
 @keyframes folDot{0%,42%{opacity:0;transform:translate(-5px,-50%) scale(.4)}50%{opacity:1;transform:translate(-5px,-50%) scale(1)}82%{opacity:1;transform:translate(-5px,-50%) scale(1)}94%,100%{opacity:0;transform:translate(-5px,-50%) scale(1)}}
-@keyframes folDot2{0%,42%{opacity:0;transform:translateY(-50%) scale(.6)}50%,82%{opacity:1;transform:translateY(-50%) scale(1)}94%,100%{opacity:0;transform:translateY(-50%) scale(1)}}
+@keyframes folDot2{0%,42%{opacity:0;transform:scale(.4)}50%,82%{opacity:1;transform:scale(1)}94%,100%{opacity:0;transform:scale(1)}}
+@keyframes folKey{0%,44%{opacity:0;transform:translateY(4px)}54%,82%{opacity:1;transform:none}94%,100%{opacity:0;transform:none}}
 @keyframes draw{to{stroke-dashoffset:0}}
 
 @media (max-width:820px){
@@ -207,7 +213,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
-  .curve .tri{stroke-dasharray:none}.folEnd.on,.triEnd{opacity:1}
+  .curve .tri{stroke-dasharray:none}.folEnd.on,.triEnd,.triKey{opacity:1}
   .win{transform:none!important}
 }
 </style>
@@ -296,7 +302,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
           <path class="tri prof" id="triProf" pathLength="1"/>
           <path class="tri rev" id="triRev" pathLength="1"/>
         </svg>
-        <span class="triEnd rev" id="endRev"><i></i><span></span></span><span class="triEnd cost" id="endCost"><i></i><span></span></span><span class="triEnd prof" id="endProf"><i></i><span></span></span>
+        <i class="triEnd rev" id="endRev"></i><i class="triEnd cost" id="endCost"></i><i class="triEnd prof" id="endProf"></i>
+        <div class="triKey" id="triKey" aria-hidden="true"><span class="rev"></span><span class="cost"></span><span class="prof"></span></div>
         <div class="stat off" id="mmStat"><b id="mmN">0</b><small id="mmL">real nights in the model</small></div>
       </div>
       <div class="foot"><h2>Money model</h2><p>What MySet earns and spends as it grows, fed live by the real nights in the Show log.</p><span class="url">myset.vip/moneymodel</span>
@@ -398,16 +405,14 @@ fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) =>
   try { const j = JSON.parse(localStorage.getItem('myset.dash.money') || 'null'); if (j && Array.isArray(j.pts) && j.pts.length > 2 && j.pts.every((q) => q.length === 3 && q.every(Number.isFinite))) M = j; } catch (e) {}
   const pts = M ? M.pts : Array.from({ length: 25 }, (_, k) => { const n = k / 24; return [1000 * n, 120 + 380 * n, 1000 * n - (120 + 380 * n)]; });
   const all = pts.flat(), lo = Math.min(0, ...all), hi = Math.max(...all, 1);
-  const Y = (v) => 172 - 140 * (v - lo) / (hi - lo), X = (k) => 8 + 384 * k / (pts.length - 1);
+  const Y = (v) => 166 - 134 * (v - lo) / (hi - lo), X = (k) => 8 + 384 * k / (pts.length - 1);
   const line = (j) => pts.map((q, k) => (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(q[j]).toFixed(1)).join(' ');
   $('#triRev').setAttribute('d', line(0)); $('#triCost').setAttribute('d', line(1)); $('#triProf').setAttribute('d', line(2));
   $('#mmZero').setAttribute('y1', Y(0)); $('#mmZero').setAttribute('y2', Y(0));
   const usd = (v) => (v < 0 ? '−$' : '$') + (Math.abs(v) >= 1e4 ? (Math.abs(v) / 1e3).toFixed(1) + 'k' : Math.round(Math.abs(v)).toLocaleString('en-US'));
   const last = pts[pts.length - 1], ids = ['#endRev', '#endCost', '#endProf'], names = ['revenue', 'costs', 'profit'];
-  /* the three end labels, nudged apart so they never sit on each other */
-  const ys = last.map((v, j) => ({ j, y: Y(v) })).sort((a, b) => a.y - b.y);
-  for (let k = 1; k < ys.length; k++) ys[k].y = Math.max(ys[k].y, ys[k - 1].y + 22);
-  ys.forEach(({ j, y }) => { const el = $(ids[j]); el.style.top = (100 * Math.min(y, 192) / 200) + '%'; $('span', el).innerHTML = M ? `<small>${names[j]}</small>${usd(last[j])}` : `<small>${names[j]}</small>`; });
+  ids.forEach((id, j) => { $(id).style.top = (100 * Y(last[j]) / 200) + '%'; });
+  $$('#triKey span').forEach((el, j) => { el.innerHTML = `<small>${names[j]}</small>` + (M ? usd(last[j]) : ''); });
 }
 
 /* 4 · the model's live block: how many real nights it reads, and the room's money a head */
