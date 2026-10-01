@@ -238,6 +238,26 @@
   #sizesEdit table { table-layout: fixed; } #sizesEdit td:first-child { width: 38%; } #sizesEdit input[type=number] { min-width: 64px; padding: 5px 5px; }
   #sizesEdit th, #sizesEdit td { padding: 6px 4px; background: transparent; position: static; font-size: 11px; }
   #sizesEdit td { border-bottom: 0; }
+  /* the tier projection: plain cells (rowspans would throw the column bands off), boxed inputs, a blip on what changed */
+  #tpTable th, #tpTable td { background: var(--surface); }
+  #tpTable th small, #tpTable td small { display: block; font-size: 10.5px; font-weight: 500; color: var(--faint); letter-spacing: .02em; text-transform: none; }
+  #tpTable th.tpg { text-align: center; font-size: 11px; letter-spacing: .12em; padding: 10px 14px 4px; border-bottom: 0; box-shadow: inset 0 2px 0 var(--accent); }
+  #tpTable th.tpg.in { box-shadow: inset 0 2px 0 var(--good); } #tpTable th.tpg.out { box-shadow: inset 0 2px 0 var(--bad); }
+  #tpTable tr.tpT td { border-bottom: 0; padding-bottom: 4px; }
+  #tpTable tr.tpA td { font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--hair2); }
+  #tpTable tr.tpA td:first-child { font-size: 11.5px; color: var(--faint); padding-left: 22px; white-space: nowrap; }
+  #tpTable td[rowspan] { vertical-align: middle; border-bottom: 1px solid var(--hair2); }
+  #tpTable td.gl { border-left: 1px solid var(--hair2); }
+  #tpTable td.big span { font-weight: 800; font-size: 14.5px; }
+  .tpi { display: inline-flex; align-items: center; gap: 2px; padding: 3px 6px; border-radius: 8px; border: 1px solid var(--hair2); background: var(--surface2); color: var(--muted); font-variant-numeric: tabular-nums; transition: border-color .2s, box-shadow .2s, transform .18s var(--ease); }
+  .tpi:hover { border-color: var(--accent); }
+  .tpi:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.18); transform: translateY(-1px); }
+  .tpi input { width: 64px; border: 0; background: transparent; text-align: right; color: var(--ink); font-weight: 600; padding: 0; outline: none; -moz-appearance: textfield; }
+  .tpi input::-webkit-outer-spin-button, .tpi input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  tr.tpA .tpi input { font-weight: 500; width: 56px; }
+  #tpTable td.blip { animation: tpBlip .7s cubic-bezier(.2,.8,.2,1); }
+  @keyframes tpBlip { from { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); } }
+  @media (prefers-reduced-motion: reduce) { #tpTable td.blip { animation: none; } .tpi, .tpi:focus-within { transition: none; transform: none; } }
   .pos { color: var(--good) !important; font-weight: 600; } .neg { color: var(--bad) !important; font-weight: 600; }
   .sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; border-radius: 3px; }
   .compare td.best { color: var(--good); font-weight: 700; }
@@ -385,6 +405,12 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
     <h3>What one artist is worth, by tier</h3>
     <div class="sub" id="tierCap"></div>
     <div class="scroll"><table id="tierTable"></table></div>
+  </div>
+
+  <div class="panel" id="tpPanel">
+    <div class="kicker" style="border-bottom-width:0;margin-bottom:6px"><h3>Profit by membership tiers</h3><span class="actions"><button class="btn small ghost" id="tpReset" type="button">Back to the live averages</button></span></div>
+    <div class="sub" id="tpCap"></div>
+    <div class="scroll"><table id="tpTable"></table></div>
   </div>
 
   <div class="panel">
@@ -1066,7 +1092,8 @@ const STRIPE_PRESETS = {
 };
 const P0 = {
   v: 2,                       // schema: room money became $ per PERSON per gig at v2
-  artists: 1000, plusPct: 30, proPct: 10, plusPrice: 10, proPrice: 20, compedPct: 8, venuePro: 0, venuePrice: 20,
+  artists: 1000, plusPct: 30, proPct: 10, plusPrice: 10, proPrice: 20,
+  freePrice: 0,               // only the tier projection reads it; the engine's free plan stays free compedPct: 8, venuePro: 0, venuePrice: 20,
   gigsFree: 3, freeCap: 4, gigsPaid: 8,
   fans: 20, hours: 3, lookShare: 22, interactions: 2.5, changeShare: 90, installedPct: 15, extraViews: 0.5, clipViews: 0.5, clipBytes: 75000000,
   studioOn: true, studioShare: 60,
@@ -1455,6 +1482,109 @@ function tlOpts(t, yTitle) {
   return o;
 }
 
+/* TIER MATH — one plan's money, word for word the same in finance/shows.html and finance/model.html
+   (test/everyshow.mjs holds the two identical). t: the room's dollars by source, the server and
+   Stripe on them, the plan's cut (0 to 1), its price a month and how many months; st: Stripe's rates.
+   The plan fee pays Stripe's card rate plus Stripe Billing's extra, once a month. */
+function tierMath(t, st) {
+  const inApp = t.tips + t.packs + t.requests + t.merch + t.other;
+  const cut = inApp * t.cut;
+  const onShows = cut - t.server - t.stripe;
+  const subFee = t.price > 0 ? t.price * (st.pct + (st.intlShare / 100) * st.intlPct + st.billingPct) / 100 + st.fixed : 0;
+  const planNet = (t.price - subFee) * t.months;
+  const revenue = cut + t.price * t.months;
+  return { inApp, cut, onShows, subFee, planNet, revenue, profit: onShows + planNet };
+}
+
+/* ── Profit by membership tiers, projected: the Show log's table, every input yours ──
+   One artist on each plan for one month. The room's dollars a show by source and the shows
+   are this table's own (kept in this browser); MySet's fee and the plan prices are the dials
+   on the left, so the two can never disagree. Seeded from the live register's averages. */
+const TP_KEY = 'myset.model.tiers';
+const TP_PLANS = ['free', 'plus', 'pro'];
+const TP_SRC = ['tips', 'packs', 'requests', 'merch'];
+const TP_NAME = { free: 'Hobbyist', plus: 'Bar Star', pro: 'Rock Star' };
+const TP_CUT = { free: 'cutFree', plus: 'cutPlus', pro: 'cutPro' };
+const TP_PRICE = { free: 'freePrice', plus: 'plusPrice', pro: 'proPrice' };
+let TP = null, TP_MINE = false;
+try { const t = JSON.parse(localStorage.getItem(TP_KEY) || 'null'); if (t && TP_PLANS.every((p) => t[p] && isFinite(t[p].shows) && TP_SRC.every((k) => isFinite(t[p][k])))) { TP = t; TP_MINE = true; } } catch (e) {}
+const tpLive = () => (LIVE && !LIVE.unreachable && LIVE.totals && LIVE.totals.moneyKnown ? LIVE.totals : null);
+const c2 = (v) => Math.round(v * 100) / 100;
+function tpSeed() {
+  const t = tpLive(), k = t ? t.moneyKnown : 0;
+  const per = t ? { tips: t.tipsAmount / k, packs: (t.packsAmount || 0) / k, requests: (t.paidRequestsAmount || 0) / k, merch: (t.merchAmount || 0) / k } : { tips: 4.8, packs: 1.5, requests: 0, merch: 0 };
+  return Object.fromEntries(TP_PLANS.map((p) => [p, { shows: k || 15, ...per }]));
+}
+/* one payment's average size by source, for Stripe's 30¢ a payment */
+function tpTickets() {
+  const t = tpLive(), tk = (amt, n, d) => (t && n > 0 && amt > 0 ? amt / n : d);
+  return { tips: tk(t && t.tipsAmount, t && t.tips, 5), packs: tk(t && t.packsAmount, t && t.packs, 2), requests: tk(t && t.paidRequestsAmount, t && t.paidRequests, 3), merch: tk(t && t.merchAmount, t && t.merchOrders, 25) };
+}
+/* a show's server: Netlify's meters (credits a night) at the top-up pack MySet actually buys */
+const tpCredit = () => (P.hosts.netlifyPers && P.hosts.netlifyPers.usdPerCredit) || 0.01;
+const tpServer = () => ((ACT && ACT.creditsPerShow) || SEED_ACT.creditsPerShow) * tpCredit();
+function tpRow(p) {
+  const s = TP[p], n = Math.max(0, s.shows), tk = tpTickets(), st = P.stripe;
+  const tot = (k) => s[k] * n, vol = TP_SRC.reduce((a, k) => a + tot(k), 0);
+  const payments = TP_SRC.reduce((a, k) => a + (tk[k] > 0 ? tot(k) / tk[k] : 0), 0);
+  const i = { shows: n, tips: tot('tips'), packs: tot('packs'), requests: tot('requests'), merch: tot('merch'), other: 0,
+    server: n * tpServer(), stripe: vol * (st.pct + (st.intlShare / 100) * st.intlPct) / 100 + payments * st.fixed,
+    cut: (Number(P[TP_CUT[p]]) || 0) / 100, price: Number(P[TP_PRICE[p]]) || 0, months: 1 };
+  return { i, x: tierMath(i, st) };
+}
+function tpBuild() {
+  const t = $('#tpTable'); if (!t) return;
+  const inp = (p, f, r, pre, post, step) => `<label class="tpi">${pre || ''}<input type="number" inputmode="decimal" min="0" step="${step || 0.01}" data-p="${p}" data-f="${f}" data-r="${r || ''}" aria-label="${TP_NAME[p]} ${f}${r === 'a' ? ' a show' : r === 't' ? ' total' : ''}">${post || ''}</label>`;
+  const out = (p, k, r, cls) => `<td class="n ${cls || ''}" data-o="${p}.${k}.${r}"></td>`;
+  const src = (p, r) => `<td class="n gl">${inp(p, 'total', r, '$')}</td>` + TP_SRC.map((k) => `<td class="n">${inp(p, k, r, '$')}</td>`).join('');
+  const money = (p, r) => `${out(p, 'server', r, 'gl')}${out(p, 'stripe', r)}`;
+  t.innerHTML = `<thead><tr><th></th><th></th><th colspan="5" class="tpg in">In-app transactions</th><th colspan="2" class="tpg out">Costs</th><th colspan="7" class="tpg my">MySet</th></tr>
+    <tr><th>Plan</th><th class="n">Shows</th><th class="n">Total</th><th class="n">Tips</th><th class="n">Vote packs</th><th class="n">Requests</th><th class="n">Merch</th><th class="n">Server</th><th class="n">Stripe</th>
+    <th class="n">Fee</th><th class="n">Cut on transactions</th><th class="n">Profit on shows</th><th class="n">Plan price</th><th class="n">Plan fee for 1 month<small>after Stripe</small></th><th class="n">Total revenue</th><th class="n">Total profit</th></tr></thead>
+    <tbody>${TP_PLANS.map((p) => `<tr class="tpT"><td class="name">${TP_NAME[p]}<small>total</small></td><td class="n" rowspan="2">${inp(p, 'shows', '', '', '', 1)}</td>${src(p, 't')}${money(p, 't')}
+      <td class="n" rowspan="2">${inp(p, 'cut', '', '', '%', 0.5)}</td>${out(p, 'cut', 't')}${out(p, 'onShows', 't')}<td class="n" rowspan="2">${inp(p, 'price', '', '$', '/mo', 1)}</td>${out(p, 'planNet', 't')}${out(p, 'revenue', 't')}${out(p, 'profit', 't', 'big')}</tr>
+      <tr class="tpA"><td>a show, on average</td>${src(p, 'a')}${money(p, 'a')}${out(p, 'cut', 'a')}${out(p, 'onShows', 'a')}${out(p, 'planNet', 'a')}${out(p, 'revenue', 'a')}${out(p, 'profit', 'a')}</tr>`).join('')}</tbody>`;
+  t.addEventListener('input', (e) => {
+    const el = e.target; if (!el.dataset || !el.dataset.p) return;
+    const v = Math.max(0, Number(el.value)); if (!isFinite(v) || el.value === '') return;
+    const p = el.dataset.p, f = el.dataset.f, r = el.dataset.r, s = TP[p];
+    if (f === 'cut' || f === 'price') { P[f === 'cut' ? TP_CUT[p] : TP_PRICE[p]] = v; syncInputs(); recalc(); return; }
+    if (f === 'shows') s.shows = Math.round(v);
+    else {
+      const per = r === 't' ? (s.shows ? v / s.shows : 0) : v;
+      if (f === 'total') { const cur = TP_SRC.reduce((a, k) => a + s[k], 0); if (cur > 0) TP_SRC.forEach((k) => { s[k] = s[k] * per / cur; }); else s.tips = per; }
+      else s[f] = per;
+    }
+    TP_MINE = true; try { localStorage.setItem(TP_KEY, JSON.stringify(TP)); } catch (er) {}
+    tpPaint();
+  });
+  $('#tpReset').addEventListener('click', () => { TP = tpSeed(); TP_MINE = false; try { localStorage.removeItem(TP_KEY); } catch (er) {} tpPaint(true); toast(tpLive() ? 'Back to the live averages' : 'Back to the example'); });
+}
+function tpPaint(all) {
+  const t = $('#tpTable'); if (!t || !t.tBodies.length) return;
+  if (!TP) TP = tpSeed();
+  const R = Object.fromEntries(TP_PLANS.map((p) => [p, tpRow(p)]));
+  for (const el of t.querySelectorAll('input[data-p]')) {
+    if (!all && el === document.activeElement) continue;
+    const p = el.dataset.p, f = el.dataset.f, r = el.dataset.r, s = TP[p];
+    const v = f === 'cut' ? P[TP_CUT[p]] : f === 'price' ? P[TP_PRICE[p]] : f === 'shows' ? s.shows
+      : (f === 'total' ? TP_SRC.reduce((a, k) => a + s[k], 0) : s[f]) * (r === 't' ? s.shows : 1);
+    el.value = f === 'shows' ? Math.round(v || 0) : c2(Number(v) || 0);
+  }
+  for (const el of t.querySelectorAll('[data-o]')) {
+    const [p, k, r] = el.dataset.o.split('.'), { i, x } = R[p], n = i.shows;
+    const raw = k === 'server' || k === 'stripe' ? i[k] : x[k];
+    const v = r === 'a' ? (n ? raw / n : null) : raw;
+    const cls = v == null ? 'muted' : k === 'server' || k === 'stripe' ? '' : v < -0.004 ? 'neg' : v > 0.004 && (k === 'onShows' || k === 'profit') ? 'pos' : '';
+    const html = v == null ? '—' : `<span class="${cls}">${fmt.usdFull(v)}</span>${k === 'planNet' && r === 't' && i.price > 0 ? `<small>${fmt.usdFull(x.subFee)} to Stripe</small>` : ''}`;
+    if (el.innerHTML !== html) { el.innerHTML = html; if (!all) { el.classList.remove('blip'); void el.offsetWidth; el.classList.add('blip'); } }
+  }
+  const t2 = tpLive(), tk = tpTickets(), st = P.stripe;
+  $('#tpCap').innerHTML = `One artist on each plan, for one month. ${TP_MINE ? '<b>Your numbers</b> — ' : t2 ? `<b>Seeded LIVE</b> from the register: the average show over ${fmt.int(t2.moneyKnown)} nights with money known — ` : '<b>An example</b> (the live register was not reachable) — '}type over any boxed figure: a show's dollars by source in either line, the shows, MySet's fee or the plan price (those two are the dials on the left too). `
+    + `Server: ${fmt.num((ACT && ACT.creditsPerShow) || SEED_ACT.creditsPerShow, 2)} credits a show by Netlify's meters at ${fmt.cents(tpCredit())} a credit = ${fmt.usdFull(tpServer())} a show. `
+    + `Stripe: ${fmt.num(st.pct + (st.intlShare / 100) * st.intlPct, 2)}% + ${Math.round(st.fixed * 100)}¢ a payment, an average payment being ${fmt.usdFull(tk.tips)} a tip, ${fmt.usdFull(tk.packs)} a vote pack, ${fmt.usdFull(tk.requests)} a request, ${fmt.usdFull(tk.merch)} a merch order; the plan fee also pays Stripe Billing's ${fmt.num(st.billingPct, 1)}%.`;
+}
+
 function recalc() { if (recalc.raf) return; recalc.raf = requestAnimationFrame(() => { recalc.raf = 0; render(); }); }
 let softT; function recalcSoon() { clearTimeout(softT); softT = setTimeout(recalc, 300); }
 
@@ -1582,6 +1712,7 @@ function render() {
   const TN = { free: 'Free artist', plus: 'Plus artist', pro: 'Pro artist' };
   $('#tierTable').innerHTML = `<thead><tr><th>Per artist, per month</th><th class="n">Gigs</th><th class="n">Subscription</th><th class="n">Room spends</th><th class="n">MySet’s cut</th><th class="n">Featured</th><th class="n">Revenue</th><th class="n">Server</th><th class="n">Stripe</th><th class="n">Net to MySet</th></tr></thead><tbody>${R.perTier.map(x => `<tr><td class="name">${TN[x.tier]}</td><td class="n">${fmt.num(x.gigs, 1)}</td><td class="n">${fmt.usdFull(x.sub)}</td><td class="n muted">${fmt.usdFull(x.room)}</td><td class="n">${fmt.usdFull(x.cut)}</td><td class="n">${fmt.usdFull(x.featRev)}</td><td class="n">${fmt.usdFull(x.rev)}</td><td class="n">${fmt.usdFull(x.server)}</td><td class="n">${fmt.usdFull(x.stripe)}</td><td class="n ${x.net >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.net)}</td></tr>`).join('')}</tbody>`;
   $('#tierCap').innerHTML = `Before fixed costs and before the shipping bill (${fmt.usd(R.shippingUsd)} of deploys, the platform’s cost, not any artist’s), at this scenario’s room size and gig rate. Server here is the traffic bill only. This is the line that answers “is the free tier worth keeping” and “should I push everyone to Plus”. <b>Plus stops paying for MySet above ${isFinite(R.plusCrossover) ? fmt.usdFull(R.plusCrossover) : '—'} of room money a month per artist</b> (a Plus artist's ${P.gigsPaid} nights against the free plan's ${Math.min(P.freeCap, P.gigsPaid)}-night cap) — above that, the ${P.cutFree}% cut on a free artist is worth more than the subscription. This scenario has a Plus artist's room spending ${fmt.usdFull(R.perTier[1].room)} a month.`;
+  tpPaint();
 
   /* formula table */
   const rows = [];
@@ -1779,7 +1910,7 @@ $('#scenExport').addEventListener('click', async () => { const txt = JSON.string
 $('#scenImport').addEventListener('click', async () => { const txt = prompt('Paste the JSON you exported'); if (!txt) return; try { const j = JSON.parse(txt); const inc = (j.scenarios || []).filter(s => s.params && s.name); let n = 0, dup = 0; for (const s of inc) { if (SCEN.length >= MAX_SCEN) break; s.params = withDefaults(s.params); if (SCEN.some(x => x.name === s.name && JSON.stringify(x.params) === JSON.stringify(s.params))) { dup++; continue; } s.id = uid(); s.summary = summarize(s.params); SCEN.push(s); await store.save(s); n++; } if (j.actuals) { ACT = j.actuals; store.saveActuals(ACT); renderActSummary(); } renderCards(); toast(n === 0 ? (dup ? 'Nothing new — those scenarios are already here' : 'Nothing imported — 20 scenarios already saved, delete one first') : `Imported ${n} of ${inc.length} scenario${inc.length === 1 ? '' : 's'}${dup ? ` (${dup} already here)` : ''}`); } catch (e) { toast('That JSON could not be read'); } });
 
 $('#stampDate').textContent = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
-buildDials(); recalc();
+buildDials(); tpBuild(); recalc();
 (async () => {
   await store.init(); await store.loadAll();
   /* the live register first (0095): live beats a paste unless the paste is newer; the seed last */
@@ -1790,6 +1921,7 @@ buildDials(); recalc();
   ACT = pick.act; ACT_SOURCE = pick.source;
   if (pick.source === 'live' && stored === null) { let pref = null; try { pref = localStorage.getItem('myset.model.useActuals'); } catch (e) {} store.wasOn = pref === null || pref === '1'; }
   if (store.wasOn && ACT) { P.useActuals = true; applyActuals(); buildDials(); }
+  if (!TP_MINE) TP = tpSeed();
   renderActSummary(); markReal(); recalc(); renderCards();
 })();
 const themeBtn = $('#themeBtn');

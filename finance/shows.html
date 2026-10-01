@@ -157,6 +157,16 @@ section{margin-top:52px}
 .tag.hidden{color:var(--live);background:rgba(255,69,110,.13)}
 .fee{color:var(--blue);font-weight:600;font-variant-numeric:tabular-nums}
 small.on{display:block;font-size:10px;font-weight:500;color:var(--faint);letter-spacing:.02em;margin:1px 0 0!important;opacity:1!important}
+.tbl.tiers tr.tierA td{color:var(--muted);font-size:13px;padding-top:6px;border-bottom:1px solid var(--hair2)}
+.tbl.tiers tr.tierT td{border-bottom:0;padding-bottom:6px}
+.tbl.tiers tr.tierA td:first-child{font-size:12px;padding-left:22px;color:var(--faint)}
+.tbl.tiers td[rowspan]{vertical-align:middle;border-bottom:1px solid var(--hair2)}
+.tbl.tiers thead th small{display:block;font-size:10px;letter-spacing:.04em;color:var(--faint);font-weight:600}
+.tbl.tiers tbody tr{animation:tierIn .5s cubic-bezier(.2,.8,.2,1) both}
+.tbl.tiers tbody tr:nth-child(3),.tbl.tiers tbody tr:nth-child(4){animation-delay:.06s}
+.tbl.tiers tbody tr:nth-child(5),.tbl.tiers tbody tr:nth-child(6){animation-delay:.12s}
+@keyframes tierIn{from{opacity:.001;transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){.tbl.tiers tbody tr{animation:none}}
 .tag.plan{color:var(--blue);background:color-mix(in srgb,var(--blue) 13%,transparent)}
 .hint{font-size:12.5px;color:var(--faint);margin-top:10px}
 
@@ -285,6 +295,13 @@ footer{margin-top:48px;border-top:1px solid var(--hair);padding-top:16px;font-si
   </div>
   <div class="card"><div class="tw" id="showsWrap"><table class="tbl" id="showsTable"><thead></thead><tbody></tbody></table></div></div>
   <p class="hint">The totals row adds up whatever the filters show. Money is Stripe's answer; a night Stripe never answered reads “unknown”, never $0. MySet cut is MySet's share of the money that came through the app (25% Hobbyist · 10% Bar Star · 2% Rock Star; none on the founder's own nights); MySet profit is that cut less the server and Stripe. Costs are money going out, so they are never green: the server is Netlify's own meters for that night (≈ where the night was never read, then the average), Stripe is Stripe's own fee on each payment (≈ only where it has not been read yet, then the published card rates). Times are the night's own local clock.</p>
+</section>
+
+<section id="tiersBlock">
+  <div class="sh"><h2>Profit by membership tiers</h2><p id="tiersSub"></p></div>
+  <div class="filters"><div class="chips" id="tierMode" role="group" aria-label="How to price the nights"><button class="chip on" data-m="asif">If every night were on each plan</button><button class="chip" data-m="played">As actually played</button></div></div>
+  <div class="card"><div class="tw" id="tiersWrap"><table class="tbl tiers" id="tiersTable"></table></div></div>
+  <p class="hint">Each plan has two lines: the total for the nights, then one show on average. <b>In-app transactions</b> are what the room paid through the app, by source. <b>Server</b> and <b>Stripe</b> are the same costs as the table above. <b>Fee</b> is the share MySet takes, and <b>cut on transactions</b> is that share of the total. <b>Profit on shows</b> is the cut less the server and Stripe. <b>Plan fees</b> are the monthly price after Stripe's card fee and its 0.7% billing fee, for each month the nights span (an artist's first night to their last, one month at least). <b>Total revenue</b> is the cut plus the plan price; <b>total profit</b> is the profit on shows plus the plan fees after Stripe. “As actually played” uses each night's real plan: no cut and no plan fee on the founder's own nights.</p>
 </section>
 
 <section>
@@ -761,7 +778,85 @@ function chartsRender() {
       tip: (c) => { const v = cs[c.dataIndex][1]; return [` ${fmt.usd(c.parsed.x)} a phone, a night`, ` ${fmt.usd(v.g)} over ${plural(v.p, 'phone')}, ${plural(v.n, 'night')}`]; } }) });
 }
 
-function render() { if (!REG || !REG.built) return; kpis(); renderTable(); carousel(); chartsRender(); foot(); }
+/* TIER MATH — one plan's money, word for word the same in finance/shows.html and finance/model.html
+   (test/everyshow.mjs holds the two identical). t: the room's dollars by source, the server and
+   Stripe on them, the plan's cut (0 to 1), its price a month and how many months; st: Stripe's rates.
+   The plan fee pays Stripe's card rate plus Stripe Billing's extra, once a month. */
+function tierMath(t, st) {
+  const inApp = t.tips + t.packs + t.requests + t.merch + t.other;
+  const cut = inApp * t.cut;
+  const onShows = cut - t.server - t.stripe;
+  const subFee = t.price > 0 ? t.price * (st.pct + (st.intlShare / 100) * st.intlPct + st.billingPct) / 100 + st.fixed : 0;
+  const planNet = (t.price - subFee) * t.months;
+  const revenue = cut + t.price * t.months;
+  return { inApp, cut, onShows, subFee, planNet, revenue, profit: onShows + planNet };
+}
+
+/* ── Profit by membership tiers: the nights in the filter, priced on each plan ── */
+const PLAN_CUT = { free: 0.25, plus: 0.1, pro: 0.02 };
+const TIERS = ['free', 'plus', 'pro'];
+let TIER_MODE = 'asif';
+/* how many months of plan fee the nights stand for: each artist's first night to last, in
+   whole months (at least one) — a month of shows is one month of subscription */
+const MONTH_MS = 30.44 * 86400e3;
+const monthsOf = (rows) => {
+  const by = new Map();
+  for (const r of rows) { const a = by.get(r.artist.id) || [Infinity, -Infinity]; by.set(r.artist.id, [Math.min(a[0], r.startedAt), Math.max(a[1], r.startedAt)]); }
+  return [...by.values()].reduce((s, [a, b]) => s + Math.max(1, Math.round((b - a) / MONTH_MS)), 0);
+};
+function tierInputs(rows, plan) {
+  const own = TIER_MODE === 'asif' ? rows : rows.filter((r) => r.artist.plan === plan);
+  const m = (f) => sumOf(own, f);
+  const tips = m((r) => r.money.tips.amount), packs = m((r) => r.money.packs.amount), requests = m((r) => r.money.requests.amount), merch = m((r) => r.money.merch.amount);
+  const other = Math.max(0, m((r) => r.money.total) - tips - packs - requests);
+  let cut = PLAN_CUT[plan], months = monthsOf(own);
+  if (TIER_MODE === 'played') {
+    /* as played: the cut MySet actually took (none on the founder's nights), and no plan fee from the founder */
+    const base = tips + packs + requests + merch + other;
+    cut = base ? m((r) => cost(r).myset.fee) / base : PLAN_CUT[plan];
+    months = monthsOf(own.filter((r) => !isFounder(r)));
+  }
+  return { shows: own.length, tips, packs, requests, merch, other, server: m((r) => cost(r).server.usd), stripe: m((r) => (cost(r).stripe ? cost(r).stripe.usd : 0)), cut, price: PLAN_USD[plan], months };
+}
+function renderTiers() {
+  const t = $('#tiersTable'); if (!t) return;
+  const st = REG.costs && REG.costs.stripe;
+  const rows = filtered().filter((r) => r.status === 'counted' && cost(r) && cost(r).myset);
+  $('#tiersSub').textContent = TIER_MODE === 'asif'
+    ? `The ${plural(rows.length, 'night')} with money known inside the filter above, priced as if every one had been played on each plan.`
+    : `The ${plural(rows.length, 'night')} with money known inside the filter above, each under the plan it was really played on.`;
+  const g = (cls, span, word) => `<th colspan="${span}" class="g ${cls} gl">${word}</th>`;
+  const head = `<tr class="grp"><th></th><th></th>${g('tips', 5, 'In-app transactions')}${g('costs', 2, 'Costs')}${g('', 7, 'MySet')}</tr>
+    <tr><th>Plan</th><th class="n">Shows</th><th class="n gl">Total</th><th class="n b1">Tips</th><th class="n">Vote packs</th><th class="n b1">Requests</th><th class="n">Merch</th>
+    <th class="n gl">Server</th><th class="n b1">Stripe</th>
+    <th class="n gl">Fee</th><th class="n b1">Cut on transactions</th><th class="n">Profit on shows</th><th class="n b1">Plan price</th><th class="n">Plan fees <small>after Stripe</small></th><th class="n b1">Total revenue</th><th class="n">Total profit</th></tr>`;
+  const body = TIERS.map((p) => {
+    const i = tierInputs(rows, p), x = st ? tierMath(i, st) : null, n = i.shows;
+    if (!n || !x) return `<tr class="tierT"><td><b>${PLAN[p]}</b></td><td class="n">0</td><td colspan="14" class="faint">${TIER_MODE === 'played' ? 'No nights played on this plan in the filter.' : 'No nights with money known in the filter.'}</td></tr>`;
+    const a = (v) => v / n;
+    const src = (f) => [$$usd(f(i.tips + i.packs + i.requests + i.merch + i.other)), $$usd(f(i.tips)), $$usd(f(i.packs)), $$usd(f(i.requests)), $$usd(f(i.merch))];
+    const line = (f, avg) => {
+      const s = src(f);
+      return `<td class="n gl">${avg ? s[0] : `<b>${s[0]}</b>`}${i.other && !avg ? `<small class="on" title="money Stripe has that was not tagged to a source">${fmt.usd(i.other)} untagged</small>` : ''}</td><td class="n b1">${s[1]}</td><td class="n">${s[2]}</td><td class="n b1">${s[3]}</td><td class="n">${s[4]}</td>
+        <td class="n gl">${$$cost(f(i.server))}</td><td class="n b1">${$$cost(f(i.stripe))}</td>`;
+    };
+    const mine = (f, avg) => `<td class="n b1">${$$usd(f(x.cut))}</td><td class="n">${$$profit(f(x.onShows))}</td>`;
+    const tail = (f, avg) => `<td class="n">${$$usd(f(x.planNet))}${avg ? '' : `<small class="on">${plural(i.months, 'month')}</small>`}</td><td class="n b1">${$$usd(f(x.revenue))}</td><td class="n">${avg ? $$profit(f(x.profit)) : `<b>${$$profit(f(x.profit))}</b>`}</td>`;
+    const pct = Math.round(i.cut * 1000) / 10;
+    const id = (v) => v;
+    return `<tr class="tierT"><td><b>${PLAN[p]}</b><small class="on">total</small></td><td class="n" rowspan="2">${fmt.int(n)}</td>${line(id, false)}
+        <td class="n gl" rowspan="2">${pct}%</td>${mine(id, false)}<td class="n b1" rowspan="2"><span class="fee">$${i.price}/mo</span></td>${tail(id, false)}</tr>
+      <tr class="tierA"><td>a show, on average</td>${line(a, true)}${mine(a, true)}${tail(a, true)}</tr>`;
+  }).join('');
+  t.innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+  frame($('#tiersWrap'));
+}
+$$('#tierMode .chip').forEach((b) => b.addEventListener('click', () => {
+  TIER_MODE = b.dataset.m; $$('#tierMode .chip').forEach((c) => c.classList.toggle('on', c === b));
+  if (REG && REG.built) renderTiers();
+}));
+
+function render() { if (!REG || !REG.built) return; kpis(); renderTable(); renderTiers(); carousel(); chartsRender(); foot(); }
 function foot() {
   const R = REG, b = R.build || {};
   $('#foot').innerHTML = `<span>Register built ${esc(fmt.when(R.builtAt))} UTC${b.reason ? ` (${esc(b.reason)})` : ''}</span><span>${fmt.int(b.reads)} reads · ${fmt.int(b.ms)} ms · ${fmt.int(b.artistsWalked)} of ${fmt.int(b.artistsOnPlatform)} artists walked${b.partial ? ' (part of a longer walk)' : ''}</span><span>Folds within ten minutes of a show starting or ending, walks every artist every six hours, asks Stripe once more the morning after · decision 0095</span>`;

@@ -34,7 +34,8 @@
 import { PLANS, isPlatformOwner } from './_plan.mjs';
 
 /* = finance/model.html P0.stripe (US account); test/everyshow.mjs holds the two equal */
-export const STRIPE_RATES = { pct: 2.9, fixed: 0.30, intlShare: 75, intlPct: 1.5 };
+/* billingPct: Stripe Billing's extra on a subscription charge (the plan fee), never on a room payment */
+export const STRIPE_RATES = { pct: 2.9, fixed: 0.30, intlShare: 75, intlPct: 1.5, billingPct: 0.7 };
 
 const round = (n, d = 4) => Math.round(n * 10 ** d) / 10 ** d;
 const sum = (xs) => xs.reduce((a, b) => a + (Number(b) || 0), 0);

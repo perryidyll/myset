@@ -325,7 +325,20 @@ console.log('\nWHAT A SHOW COST  server by the meters, Stripe at published rates
   const B = C.costBlock(actuals, credits);
   const model = readFileSync(path.join(root, 'finance/model.html'), 'utf8');
   const st = new Function('return ' + model.match(/  stripe: (\{[^}]*\}),/)[1])();
-  eq('the Stripe rates are the money model\'s own (P0.stripe)', [C.STRIPE_RATES.pct, C.STRIPE_RATES.fixed, C.STRIPE_RATES.intlShare, C.STRIPE_RATES.intlPct], [st.pct, st.fixed, st.intlShare, st.intlPct]);
+  eq('the Stripe rates are the money model\'s own (P0.stripe)', [C.STRIPE_RATES.pct, C.STRIPE_RATES.fixed, C.STRIPE_RATES.intlShare, C.STRIPE_RATES.intlPct, C.STRIPE_RATES.billingPct], [st.pct, st.fixed, st.intlShare, st.intlPct, st.billingPct]);
+  /* the tier tables: one formula on both pages, and the Show log's plan cuts and prices are _plan.mjs's */
+  const shows = readFileSync(path.join(root, 'finance/shows.html'), 'utf8');
+  const block = (src) => (src.match(/\/\* TIER MATH[\s\S]*?\n\}\n/) || [''])[0];
+  eq('the tier formula is word for word the same on the Show log and the money model', block(shows).length > 200 && block(shows) === block(model), true);
+  const { PLANS } = await import('../netlify/functions/_plan.mjs');
+  const showsConst = (name) => new Function('return ' + shows.match(new RegExp('const ' + name + ' = (\\{[^}]*\\})'))[1])();
+  eq('the Show log\'s plan prices are _plan.mjs\'s', showsConst('PLAN_USD'), { free: PLANS.free.price / 100, plus: PLANS.plus.price / 100, pro: PLANS.pro.price / 100 });
+  eq('the Show log\'s plan cuts are _plan.mjs\'s', showsConst('PLAN_CUT'), { free: PLANS.free.cut, plus: PLANS.plus.cut, pro: PLANS.pro.cut });
+  {
+    const tierMath = new Function(block(shows) + '; return tierMath;')();
+    const x = tierMath({ shows: 15, tips: 72, packs: 23, requests: 0, merch: 0, other: 0, server: 0.57, stripe: 8.02, cut: 0.10, price: 10, months: 1 }, C.STRIPE_RATES);
+    eq('a Bar Star month: cut, profit on shows, plan fee after Stripe, revenue, profit', [x.inApp, x.cut, +x.onShows.toFixed(2), +x.planNet.toFixed(2), x.revenue, +x.profit.toFixed(2)], [95, 9.5, 0.91, 9.23, 19.5, 10.14]);
+  }
   const pack = credits.readings.at(-1).plan.pack;
   eq('a credit is priced at the top-up pack on the latest reading', B.usdPerCredit, Math.round(pack.usd / pack.credits * 1e5) / 1e5);
   const n0 = actuals.meters.nights.find((n) => n.key && n.creditsTraffic != null);
