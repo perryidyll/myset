@@ -38,7 +38,7 @@ a{color:#1D1D1F}
 
 /* Brand header: the mark and wordmark every page shares (index.html .mark). */
 .top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em}
+.mark{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;letter-spacing:-.02em;color:inherit;text-decoration:none}
 .mark i{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#FF375F,#FF6B45);display:grid;place-items:center;
   flex:0 0 auto;box-shadow:0 2px 8px rgba(255,55,95,.36)}
 .mark i svg{width:14px;height:14px;fill:#fff;display:block}
@@ -217,7 +217,7 @@ function draw(d){
 
   $('#page').innerHTML=`
   <div class="top">
-    <span class="mark">${MARK}MySet <small>Business report</small></span>
+    <a class="mark" href="/" aria-label="MySet home">${MARK}MySet <small>Business report</small></a>
     <span class="tools"><a class="btn" href="/studio">← Studio</a><button class="btn pri" onclick="window.print()">Print / Save as PDF</button></span>
   </div>
   <div class="title">
