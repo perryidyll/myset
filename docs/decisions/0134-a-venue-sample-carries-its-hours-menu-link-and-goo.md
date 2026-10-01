@@ -8,7 +8,7 @@ area: venues
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [db02acf]
 tests: [test/factory.mjs, test/samples.mjs, test/hq.mjs]
 files: [netlify/functions/_factory.mjs, netlify/functions/factory.mjs, netlify/functions/_venues.mjs, netlify/functions/_sample.mjs, public/venue.html, public/crm.html]
 ---
@@ -57,4 +57,6 @@ A venue owner asking for a live rating. The Places API's display terms changing 
   - there is no horizontal overflow.
 - Full suite after merging main at 02a8aae: exit 0, 5,105 ✓.
 - In CRM on localhost, with the local test passcode: Edit profile → Details showed the stored values. Typing "Mon-Sat 5pm-1am; Sun closed" and 4.6, then Save, toasted "Details saved", and the form read the same text back.
-- NOT checked: Sand & Tan on production.
+- Sand & Tan filled on production 2026-10-01: read from its Google Maps listing in the founder's browser (4.5 stars, 1,079 reviews, open until 10 PM), saved through the `edit` action from the unlocked CRM. The response read back hours 08:00–22:00 every day, the anyflip menu link, `rating {stars:4.5,count:1079}` with today's date, and `links.google` as the listing's `maps.google.com/?cid=` link.
+- NOT checked: Sand & Tan's page itself (not opened, since opens are counted). It has not been rebuilt, because a rebuild can replace words edited in CRM.
+- **Live as `db02acf` (PR #182, which carried 0131 and 0134):** merged on the founder's word 2026-10-01; checked by content on myset.vip — `/venue.html` carries `function ratingHtml`, `/crm` carries `function detailsHtml`. Suite 5,105 ✓ on the branch after merging main at 02a8aae.

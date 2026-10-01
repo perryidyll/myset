@@ -8,7 +8,7 @@ area: venues
 reverses:
 superseded_by:
 invariants: []
-commits: []
+commits: [db02acf]
 tests: [test/factory.mjs, test/samples.mjs]
 files: [public/venue.html, public/sample.js, netlify/functions/_fai.mjs, netlify/functions/_fsrc.mjs, netlify/functions/_factory.mjs, netlify/functions/_sample.mjs]
 ---
@@ -43,3 +43,4 @@ Guests not finding the extra photos (then a rail comes back, but only for two or
 - `test/samples.mjs` (120 ✓): a sample made with a menu link serves it as `venue.menu.url`.
 - `tools/localhost.mjs` at 375 px and 320 px, light and dark: four doors 112 px tall beside the 112-px square; three doors with the last spanning; the no-cover case draws the last photo as the cover with no stray photo; Menu jumps to the menu section and highlights it; the lightbox steps 2 / 5 → 3 / 5 → 1 / 5 and Escape closes it; a sample's What guests say shows its toast; no horizontal overflow.
 - Not checked: Sand & Tan itself (a sample; not opened on production or a preview, since opens are counted). It needs a Rebuild for the generator's cover and menu changes; the page-side cover fallback applies without one.
+- **Live as `db02acf` (PR #182, which carried 0131 and 0134):** merged on the founder's word 2026-10-01; checked by content on myset.vip — `/venue.html` carries `function ratingHtml`, `/crm` carries `function detailsHtml`. Suite 5,105 ✓ on the branch after merging main at 02a8aae.

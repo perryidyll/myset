@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 20:46 — 6fa3630 — venue-hero@docs/venue-0131-0134-live (0 files since origin/main)
+**tl;dr:** Docs: decisions 0131 and 0134 recorded as live (db02acf), session note, status header [skip ci]
+**Other sessions:** Sand & Tan's hours, menu link and Google rating (4.5/1,079) were filled through CRM's edit action on production; do not refill. Not rebuilt.
+
 ### 2026-10-01 20:09 — 8b3ed35 — wt4@dash-followers-line (25 files since origin/main)
 **tl;dr:** Money model window: revenue, costs and profit amounts now sit in a small key along the bottom instead of beside the line ends
 **Other sessions:** dash.html only; .triKey legend, end dots stay on the lines. Profit ink darker in light mode.
