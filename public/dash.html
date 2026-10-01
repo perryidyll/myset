@@ -123,6 +123,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .stat{position:absolute;left:16px;top:14px;display:grid;gap:4px;z-index:1}
 .stat b{font-size:30px;font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
 .stat small{font:600 10.5px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stat.goal b{font-size:clamp(15px,2.1vw,19px);letter-spacing:-.02em;line-height:1.15;max-width:85%}
 .stat.off{opacity:0;transform:translateY(6px)}
 .stat{transition:opacity .6s var(--ease),transform .6s var(--ease)}
 
@@ -304,7 +305,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
         </svg>
         <i class="triEnd rev" id="endRev"></i><i class="triEnd cost" id="endCost"></i><i class="triEnd prof" id="endProf"></i>
         <div class="triKey" id="triKey" aria-hidden="true"><span class="rev"></span><span class="cost"></span><span class="prof"></span></div>
-        <div class="stat off" id="mmStat"><b id="mmN">0</b><small id="mmL">real nights in the model</small></div>
+        <div class="stat goal" id="mmStat"><b>2027 Q2 Goal: $10,000/Month Profit</b><small id="mmL"></small></div>
       </div>
       <div class="foot"><h2>Money model</h2><p>What MySet earns and spends as it grows, fed live by the real nights in the Show log.</p><span class="url">myset.vip/moneymodel</span>
         <span class="go"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></svg></span></div>
@@ -403,7 +404,8 @@ fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) =>
 {
   let M = null;
   try { const j = JSON.parse(localStorage.getItem('myset.dash.money') || 'null'); if (j && Array.isArray(j.pts) && j.pts.length > 2 && j.pts.every((q) => q.length === 3 && q.every(Number.isFinite))) M = j; } catch (e) {}
-  const pts = M ? M.pts : Array.from({ length: 25 }, (_, k) => { const n = k / 24; return [1000 * n, 120 + 380 * n, 1000 * n - (120 + 380 * n)]; });
+  /* every line starts at zero: the month before MySet runs anything (the first real size then carries the fixed costs) */
+  const pts = M ? [[0, 0, 0], ...M.pts] : Array.from({ length: 25 }, (_, k) => { const n = k / 24; return [1000 * n, 120 + 380 * n, 1000 * n - (120 + 380 * n)]; }).map((q, k) => (k ? q : [0, 0, 0]));
   const all = pts.flat(), lo = Math.min(0, ...all), hi = Math.max(...all, 1);
   const Y = (v) => 166 - 134 * (v - lo) / (hi - lo), X = (k) => 8 + 384 * k / (pts.length - 1);
   const line = (j) => pts.map((q, k) => (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(q[j]).toFixed(1)).join(' ');
@@ -419,8 +421,7 @@ fetch('/api/mediadash', { headers: { accept: 'application/json' } }).then((r) =>
 fetch('/moneymodel/live.json', { headers: { accept: 'application/json' }, credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((d) => {
   if (!d || !d.live || !d.act) return;
   const a = d.act, head = Number(a.roomPerHead);
-  $('#mmL').textContent = `real night${a.shows === 1 ? '' : 's'} in the model` + (Number.isFinite(head) ? ` · $${head.toFixed(2)} a head${a.moneyKnownNights ? ` over the ${a.moneyKnownNights} with money known` : ''}` : '');
-  $('#mmStat').classList.remove('off'); countUp($('#mmN'), a.shows || 0, int);
+  $('#mmL').textContent = `${int(a.shows || 0)} real night${a.shows === 1 ? '' : 's'} in the model` + (Number.isFinite(head) ? ` · $${head.toFixed(2)} a head${a.moneyKnownNights ? ` over the ${a.moneyKnownNights} with money known` : ''}` : '');
 }).catch(() => {});
 
 /* 3 · the pipeline: people set off along three lanes and meet at the yes */
