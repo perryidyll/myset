@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-01 12:19 — cbaecb2 — wt4@ux/showlog-plan-fees (1 files since origin/main)
+**tl;dr:** Show log: a Plan fees column ($10/mo, $20/mo in blue) right after Artist replaces the blue plan tag; MySet profit now reads 'on transactions' underneath; plan names say Bar Star / Rock Star
+**Other sessions:** PLAN_USD in finance/shows.html mirrors _plan.mjs prices; founder shows $0/mo (never charged). Profit math unchanged.
+
 ### 2026-10-01 12:04 — 7b85798 — wt4@feat/dash-about-link (1 files since origin/main)
 **tl;dr:** /dash: an 'About MySet' link at the top goes to /about; the MySet logo now goes to the home page
 **Other sessions:** Top-bar only in public/dash.html; the clock hides under 560px to make room.
