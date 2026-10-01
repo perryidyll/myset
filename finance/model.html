@@ -168,12 +168,13 @@
   /* ── two columns: the dials, and what they drive ── */
   .grid { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 22px; margin-top: 52px; align-items: start; }
   aside.dials { position: sticky; top: 72px; max-height: calc(100vh - 84px); overflow-y: auto; padding-right: 4px; scrollbar-width: thin; scroll-padding-top: 8px; }
-  aside.dials > details { background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; margin-bottom: 8px; overflow: hidden; }
-  aside.dials > details > summary { cursor: pointer; padding: 13px 16px; font-weight: 700; font-size: 13.5px; letter-spacing: -.01em; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  aside.dials > details > summary::-webkit-details-marker { display: none; }
-  aside.dials > details > summary::after { content: "+"; font-size: 18px; font-weight: 400; color: var(--faint); line-height: 1; }
-  aside.dials > details[open] > summary::after { content: "−"; color: var(--accent); }
-  aside.dials > details[open] > summary { border-bottom: 1px solid var(--hair); }
+  .dialsList details { margin-bottom: 8px; }
+  aside.dials details.grp { background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; margin-bottom: 8px; overflow: hidden; }
+  aside.dials details.grp > summary { cursor: pointer; padding: 13px 16px; font-weight: 700; font-size: 13.5px; letter-spacing: -.01em; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  aside.dials details.grp > summary::-webkit-details-marker { display: none; }
+  aside.dials details.grp > summary::after { content: "+"; font-size: 18px; font-weight: 400; color: var(--faint); line-height: 1; }
+  aside.dials details.grp[open] > summary::after { content: "−"; color: var(--accent); }
+  aside.dials details.grp[open] > summary { border-bottom: 1px solid var(--hair); }
   .dbody { padding: 12px 16px 16px; display: grid; gap: 12px; }
   .help { font-size: 12px; color: var(--muted); line-height: 1.45; margin: -2px 0 2px; }
   .dial { display: grid; gap: 5px; }
@@ -206,6 +207,24 @@
   .hostSel .n { font-size: 12px; color: var(--muted); }
   .dialsHead { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 10px; font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
   .dialsHead button { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; padding: 0; }
+  .dialsHead .fold { display: inline-flex; align-items: center; gap: 6px; color: var(--ink2); }
+  .dialsHead .fold svg { width: 12px; height: 12px; transition: transform .35s var(--ease); }
+  aside.dials.folded .dialsHead .fold svg { transform: rotate(-90deg); }
+  aside.dials.folded .dialsHead .all { opacity: 0; pointer-events: none; }
+  .dialsHead .all { transition: opacity .25s var(--ease); }
+  .dialsList { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .45s var(--ease), opacity .3s var(--ease); }
+  .dialsList > div { min-height: 0; overflow: hidden; }
+  aside.dials.folded .dialsList { grid-template-rows: 0fr; opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { .dialsList, .dialsHead .fold svg, .dialsHead .all { transition: none; } }
+  /* coloured bullet points: every explainer on the page is a short list, not a paragraph */
+  ul.pts { list-style: none; padding: 0 !important; margin: 6px 0 0; display: grid; gap: 6px; }
+  ul.pts li { position: relative; padding-left: 18px; margin: 0; }
+  ul.pts li::before { content: ""; position: absolute; left: 2px; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  ul.pts li:nth-child(4n+2)::before { background: var(--blue); }
+  ul.pts li:nth-child(4n+3)::before { background: var(--good); }
+  ul.pts li:nth-child(4n+4)::before { background: var(--warn); }
+  ul.pts li .tag { margin-right: 4px; }
+  .note h4 { margin: 14px 0 0; font-size: 12px; font-family: var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
 
   /* ── outputs ── */
   main.out { min-width: 0; display: grid; gap: 16px; }
@@ -353,7 +372,7 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
 <div class="scenline"><span class="k">A scenario, not a report — <span id="kpiWhat">1,000 artists</span>. MySet has <b id="kpiToday">1</b> today.</span>
   <span class="actions"><button class="btn small ghost" id="presetBench">Benchmark case</button><button class="btn small ghost" id="presetHope">If it all works</button></span></div>
 <section class="kpis" id="kpis" aria-live="polite"></section>
-<p class="band" id="kpiBand"></p>
+<div class="band" id="kpiBand"></div>
 </div>
 <div class="divider" role="presentation"></div>
 
@@ -380,7 +399,7 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
   <div class="charts">
     <div class="panel wide">
       <h3>The money, at the dials as they stand</h3>
-      <div class="sub">One month at this scenario’s size. Nothing here is projected forward: revenue split by where it comes from, costs by where they go, and what is left. Move a dial and all three bars move with it.</div>
+      <div class="sub"><ul class="pts"><li>One month at this scenario’s size. Nothing is projected forward.</li><li>Revenue by where it comes from, costs by where they go, and what is left.</li><li>Move a dial and all three bars move.</li></ul></div>
       <div class="chart tall"><canvas id="cMoney"></canvas></div>
     </div>
     <div class="panel wide">
@@ -400,13 +419,13 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
     </div>
     <div class="panel wide">
       <h3>What one show earns MySet, against what it costs</h3>
-      <div class="sub">For each size on the selected host: the server bill as a share of <b>MySet’s own revenue</b> from that show — the plan’s cut of the room’s money, not the artist’s takings. Bars past 100% are shows that lose money. Switch the tier in “Show sizes” on the left: the same arena is worth 10% of the room on free, 2% on Plus and nothing on Pro.</div>
+      <div class="sub"><ul class="pts"><li>Each core show size on the selected host: the server bill as a share of <b>what MySet earns</b> from that show.</li><li>MySet earns its cut of the room’s money, not the artist’s takings.</li><li>Bars past 100% are shows that lose money.</li><li>Switch the plan in “Core show sizes” on the left. A bigger cut makes the same show worth more.</li></ul></div>
       <div class="chart short"><canvas id="cSizes"></canvas></div>
     </div>
   </div>
 
   <div class="panel">
-    <div class="kicker" style="border-bottom-width:0;margin-bottom:6px"><h3>The four shows the founder asked about</h3><span class="k">EDIT THE SIZES IN “SHOW SIZES” ON THE LEFT</span></div>
+    <div class="kicker" style="border-bottom-width:0;margin-bottom:6px"><h3>4 core show categories</h3><span class="k">EDIT THEM IN “CORE SHOW SIZES” ON THE LEFT</span></div>
     <div class="sub" id="sizesCap"></div>
     <div class="scroll"><table id="sizesTable"></table></div>
   </div>
@@ -442,7 +461,7 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
   </div>
 
   <details class="more" id="growthWrap"><summary>If it grew to this size over <span id="tlMonths">36</span> months — the only invented path on the page</summary>
-    <p class="small" style="margin:6px 0 10px">Everything above is one month at the dials as they stand. This section is not: it makes up a path from today’s artist count to this scenario’s size at the growth rate in <b>Growth over time</b>, and charges the cost of signing each new artist and losing some of them along the way. Useful for “when would this have paid for itself”. Not a forecast — the growth rate is a guess, and nothing outside this box depends on it.</p>
+    <ul class="pts small" style="margin:6px 0 12px;color:var(--muted);font-size:13px"><li>Everything above is one month at the dials as they stand. This box is not.</li><li>It makes up a path from today’s artists to this scenario’s size, at the rate in <b>Growth over time</b>.</li><li>It charges the cost of signing each new artist, and of losing some along the way.</li><li>Good for “when would this have paid for itself?” Not a forecast: the growth rate is a guess, and nothing outside this box uses it.</li></ul>
     <div class="charts">
       <div class="panel">
         <h3>Revenue, costs and profit, month by month</h3>
@@ -466,49 +485,87 @@ try { const t = localStorage.getItem('myset.model.theme'); if (t === 'light' || 
   <div class="notes" id="notes">
     <div class="note ok" id="notePwa">
       <h3>Does installing the page as an app change the server bill?</h3>
-      <p><b>No, not today.</b> The voting page asks the server the same way whether it is open in Safari or installed on the home screen: it walks the same 3 s → 10 s → 25 s ladder, it goes silent the moment the screen is off in both cases, and the app’s service worker never caches the live show — every ask still reaches a function. Installing changes nothing the server is charged for.</p>
-      <p>What <em>would</em> change the bill is replacing asking with telling — push instead of polling. That only works for an installed app on iPhone, it needs a permission prompt, and it fits the <b>artist</b> (who installs the Studio anyway) far better than a stranger in a bar. So the honest reasons to reward installing are retention, not cost: a home-screen icon brings people back, it opens faster, and it makes a future “your artist plays tonight” notification possible.</p>
-      <p class="small" style="margin:0">Three things worth knowing before nudging anyone to install: the voting page never actually asks (the install card lives on the city page, not the page the room is holding); on iPhone an installed app keeps its own storage, so a fan who installs <em>mid-gig</em> becomes a stranger and loses paid votes — ask after the show, never during; and installing cannot be checked by the server, so never attach money to it. Sound reasons to ask anyway: Safari wipes a site’s memory after seven days of not visiting, an installed app keeps it, and that memory is the fan’s credits and requests. The dial “Installed as an app” stays on the page so this is not forgotten; it deliberately moves no cost line.</p>
+      <ul class="pts">
+        <li><b>No, not today.</b> The voting page asks the server the same way in Safari or on the home screen.</li>
+        <li>Same 3 s → 10 s → 25 s pace, silent when the screen is off, and the live show is never cached.</li>
+        <li>What <em>would</em> lower the bill is the server telling phones instead of phones asking (push). That needs an installed app and a permission prompt — a better fit for the <b>artist</b> than a stranger in a bar.</li>
+        <li>So the reasons to reward installing are <b>coming back</b>, not cost: a home-screen icon, a faster open, and future “your artist plays tonight” alerts.</li>
+      </ul>
+      <h4>Before nudging anyone to install</h4>
+      <ul class="pts">
+        <li>The voting page never asks — the install card lives on the city page.</li>
+        <li>On iPhone an installed app has its own memory. A fan who installs <em>mid-gig</em> loses their paid votes. Ask after the show, never during.</li>
+        <li>The server can’t check who installed, so never attach money to it.</li>
+        <li>A good reason anyway: Safari wipes a site’s memory after 7 days away, and that memory is the fan’s credits and requests. An installed app keeps it.</li>
+        <li>The “Installed as an app” dial stays on the page as a reminder. It moves no cost on purpose.</li>
+      </ul>
     </div>
     <div class="note" id="noteBills">
       <h3>Two bills, never one number</h3>
-      <p><b>The server bill is two bills that have nothing to do with each other.</b> The <b>traffic bill</b> is what the rooms cause — web requests, bandwidth, function compute — and it scales with gigs, phones and hours. The <b>shipping bill</b> is production deploys × 15 credits, and it scales with how often code is shipped and with nothing a room does. Three times a "server cost per gig" on this page or in a report quietly carried the deploys spread over the month's gigs, and polling looked dear when shipping was. On the week of the first four gigs, deploys were 98% of the credits and the gigs were 18¢.</p>
-      <p>So the rule, written into the engine and held by the test suite (INVARIANT 0fx): <b>no per-gig, per-phone or per-show figure ever contains a deploy.</b> The traffic bill is what the same month would cost with zero deploys; the shipping bill is what the deploys add on top. Turn the deploys dial from 0 to 400 and no per-gig number moves — the suite checks exactly that on every host. The tracker reports the two the same way: <span id="liveShip">—</span>. Netlify itself meters them separately (Usage &amp; billing › Credit usage breakdown), which is where the exact split lives; each reading is kept in <code>finance/credits.json</code> and the tracker carries the latest one here. A day with no gig costs about 1.7 credits of compute, 0.6 of requests and 0.3 of bandwidth (Sat 19 Sep 2026: 3,200 requests, 13.7 MB — the scheduler, the warm-door pings, the nightly mirror), and a night with a room adds about 3 credits on top — 2.3 to 3.8 across the seven nights of 16–23 Sep, by the same meters.</p>
+      <ul class="pts">
+        <li>The <b>traffic bill</b> is what the rooms cause: requests, bandwidth, compute. It grows with gigs, phones and hours.</li>
+        <li>The <b>shipping bill</b> is code updates (deploys) × 15 credits. It grows with how often code ships, and nothing a room does.</li>
+        <li>Mixing them made polling look expensive three times. The week of the first four gigs, deploys were 98% of the credits and the gigs cost 18¢.</li>
+        <li><b>The rule (INVARIANT 0fx): no per-gig, per-phone or per-show number ever includes a deploy.</b> Turn the deploys dial from 0 to 400 and no per-gig number moves — the tests check this on every host.</li>
+        <li>Latest reading: <span id="liveShip">—</span>.</li>
+        <li>Netlify meters the two separately (Usage &amp; billing › Credit usage breakdown). Each reading is saved and the latest shows here.</li>
+        <li>A day with no gig costs about 2.6 credits (scheduled jobs and checks). A night with a room adds about <b>3 credits</b> — 2.3 to 3.8 across seven nights, 16–23 Sep 2026.</li>
+      </ul>
     </div>
     <div class="note warn" id="noteWave">
       <h3>If a big artist shows up: the tidal wave</h3>
-      <p><b>Since 11 September the room shares one board.</b> Every tick is two requests: the board — the same bytes for every phone, rendered about once per interval for the whole room and an edge hit for everyone else — and a small personal call that reads two documents instead of the whole crowd. So a poll no longer gets heavier as the room grows; the <em>render</em> does, and the room shares it. The server also sets the pace: 3 s between ticks up to 200 phones, 10 s to 3,000, 20 s above — and above 200 the tally moving no longer speeds anyone up. <b>What stops a big room now is the document store</b>, not the function count: the “Store MB/s” column in the size table is what it has to move to answer the room, and past ~50 MB/s the room stops working whatever the bill says (the repo’s simulator puts that wall near 2,500 phones at today’s record size). Pick “Netlify before the split” in the host list to see the old numbers: <span id="liveBefore">—</span>.</p>
-      <p><b>What is built, and what is not.</b></p>
-      <ol id="waveList">
+      <ul class="pts">
+        <li><b>Since 11 September the room shares one board.</b> Each tick is two requests: the shared board (same for every phone) and a tiny personal call.</li>
+        <li>So a phone’s check no longer gets heavier as the room grows. Building the board does, and the whole room shares that.</li>
+        <li>The server sets the pace: a tick every 3 s up to 200 phones, 10 s up to 3,000, 20 s above.</li>
+        <li><b>What stops a big room now is the database</b>, not the bill. Past about 50 MB/s (“Store MB/s” in the table) the room stops working — near 2,500 phones today.</li>
+        <li>Pick “Netlify before the split” in the host list to see the old numbers: <span id="liveBefore">—</span>.</li>
+      </ul>
+      <h4>What is built, and what is not</h4>
+      <ul class="pts" id="waveList">
         <li><span class="tag meas">built</span> <b>The shared board</b> (decision 0034). Its cost is in every number on this page; the “edge nodes” dial is the one thing about it nobody has measured — under a 10 s interval the board’s copy lives on each edge node separately, and a bar’s phones may land on one node or several.</li>
         <li><span class="tag meas">built</span> <b>The server sets the pace.</b> The floor above is sent with every board; the “extra brake” dials on this page sit on top of it, for a room the founder wants slower still.</li>
-        <li><span class="tag meas">built, off</span> <b>The open line</b> (decision 0036). A Cloudflare object holds every phone’s socket and relays each landed vote as a dated hint, so the tally moves in a quarter-second instead of once per interval. Phones keep polling — the line is an add-on, and every failure falls back to the ladder. It is priced here from the probe’s own bill (two requests per socket, one per nudge, duration ≈ 0) as “Netlify + the open line”: <span id="liveDo">—</span> for the bar set. It costs <em>more</em>, not less — a hidden page closes its socket and a shown one reopens it, so every glance is a socket — and what it buys is a live tally, not a saving. It stays off until <code>LINE_URL</code> and <code>LINE_KEY</code> are set, and no real night has run it yet.</li>
+        <li><span class="tag meas">built, off</span> <b>The open line</b> (decision 0036). Moves the tally in a quarter-second instead of once per tick. Phones keep polling underneath, so any failure falls back safely. It costs <em>more</em>, not less: <span id="liveDo">—</span> for the bar set. It buys a live tally, not a saving. Off until its two keys are set; no real night has used it yet.</li>
         <li><span class="tag guess">to do</span> <b>Auto-recharge is on. Add a burn watchdog.</b> At zero credits Netlify pauses <em>every</em> site on the account. A five-minute check of credits during a live show is the only real ceiling. Half a day.</li>
         <li><span class="tag guess">to do</span> <b>Sell the arena instead of absorbing it.</b> A booked, prepaid tier above about 500 expected phones, priced off the “Charge to book” column. Policy in an hour, the form in a day or two.</li>
         <li><span class="tag guess">to do</span> <b>Terms that say so.</b> Above 500 attendees needs a booking; MySet may slow the refresh, pause voting or cap participants. Two hours with a template.</li>
         <li><span class="tag guess">to do</span> <b>A kill switch.</b> One flag that puts a room into read-only without a deploy. It has to stop the reads, not just the writes. Half a day.</li>
         <li><span class="tag guess">to do</span> <b>Move the store off the read wall.</b> The bag of fan records is what the render moves; one small document per fan, or the tally kept in the object the line already has, is what lifts the ~2,500-phone ceiling. Days, after a booking pays for it.</li>
         <li><span class="tag guess">to do</span> <b>Edge rate limits per phone.</b> Bounds a script or a bot, not a real crowd. An hour.</li>
-      </ol>
-      <p class="small" style="margin:8px 0 0" id="waveNote">Every crowd figure above 18 phones is simulation from measured inputs; the biggest room a real night has held is 18.</p>
+      </ul>
+      <p class="small" style="margin:10px 0 0" id="waveNote">Every crowd figure above 18 phones is simulation from measured inputs; the biggest room a real night has held is 18.</p>
     </div>
     <div class="note" id="noteAssume">
       <h3>What is measured, what is published, what is guessed</h3>
-      <ul>
-        <li><span class="tag meas">measured</span> <b>What a night really costs, by Netlify’s own meters</b> (seven nights, 16–23 Sep 2026, each read against the one empty day of the same week): a room of 3–11 phones adds about 3,100 requests, 1.6 credits of compute and 37 MB over an empty day — <b>about 3 credits</b>, 2.3–3.8 across the seven — and the number barely moves with the room’s size, because the Studio’s own tick and the page loads are most of it. Read as ticks, with the Studio tab assumed on screen 60% of the night, that is ~40 ticks per phone-hour; the screen-on dial is solved from it (the 5 Sep guess of 22% gave 95). The method and the days are in <code>tools/actuals.py</code> and <code>finance/credits.json</code>; the bandwidth-counter method stays, but only for a bracket with a quiet pair of marks from the same day (decision 0089).</li>
-        <li><span class="tag meas">measured</span> Bytes on the wire: the old poll 2,530 (production, 5 Sep); the board 2,175 for a 40-song room (11 Sep) and 3,040 for the founder’s 79-song board (25 Sep) — about 200 B plus 36 B a song, gzipped, and the room downloads it on every tick; the personal call 430 for a phone that voted, 208 for one that only watched; reads per call (15 per board render, 2 per personal call, 4 per vote, 21 per Studio poll — counted through the real code), 42 ms per document read; one fan’s record 101 bytes plus ~240 per cast. The 155 ms per render was a probe before a fix; the account’s own bill implies 70–110 ms, so 120 is the default here. The open line’s two requests per socket and 1.7 GB-s per 12,202 connections are the probe’s own bill (decision 0035).</li>
-        <li><span class="tag guess">estimated</span> 50 ms per personal call (two parallel reads plus overhead — not yet measured in production); how many edge nodes a bar spans (the “edge nodes” dial, at its midpoint); the nudge’s round trip from Netlify’s region (115–140 ms from a Mac); reconnections and phones on the line at a real gig.</li>
-        <li><span class="tag guess">simulated</span> The 20-phone, 3-hour gig (<span id="liveGig">about 5,900 ticks, 4.8 credits</span> on this page; the repo’s simulator says 5,821 ticks, 2,274 renders and 4.5 credits best case because it runs at 155 ms with no Studio and no extra tick per action — the test suite holds the two within 5%) is the polling ladder run against a model of how people glance at phones — reproducible, but the biggest real room so far is 18 phones. Every crowd figure above that is simulation from measured inputs.</li>
-        <li><span class="tag meas">published</span> Netlify credit rates and plan prices; Cloudflare, Vercel rates; Stripe’s card, Billing, Connect and dispute fees — all read from the providers’ own pages on 5 Sep 2026 (links in the footer).</li>
-        <li><span class="tag guess">guess</span> How many artists, on which plans, playing how often to how many people; what a room spends; how many gigs get promoted; fixed costs. These are the dials. Turn on “Use real shows” when the numbers exist.</li>
-        <li><b>Whose Stripe fee is whose.</b> Tips and vote packs are charged on the <em>artist’s</em> connected account, so Stripe’s card fee on them is the artist’s cost, not MySet’s; MySet’s cut arrives with no extra Stripe fee on it. Subscriptions and featured shows are charged on MySet’s own account (a US account, checked 5 Sep 2026 — so US rates. Three dollars in four are on cards from abroad: Stripe’s own fees on the 12 room payments so far, $7.02 on $85, fit the US rates exactly at 75% international (the 5 Sep guess of one card in eight read the fees 17% low). Those are fans’ cards in Thai rooms; artists paying for plans may differ), so their card fee, the 0.7% Billing fee, disputes and refunds are MySet’s. Express account and payout fees are charged to the platform — and the code pays artists out <em>daily</em>, so a busy artist can cost 25¢ a night in payout fees; the dial defaults to 8 payouts a month and a weekly schedule would cut it. Uncollectable negative balances on artists’ accounts also land on MySet, hence the small bad-debt line.</li>
-        <li><b>Two things the code promises that the money does not yet do.</b> The referral “free month” only moves a date in the registry; a paying referrer keeps being billed. And the founder’s own gigs cost server credits but produce no platform revenue. Neither is modelled as a separate line.</li>
-        <li><b>The free tier’s four-gig cap</b> is applied: a free artist who wants six nights gets four. The refused nights are shown as a line in the formula.</li>
+      <ul class="pts">
+        <li><span class="tag meas">measured</span> <b>What a night really costs:</b> about <b>3 credits</b> (2.3–3.8 across seven nights, 16–23 Sep 2026) by Netlify’s own meters. It barely changes with room size, because the Studio and page loads are most of it. That works out to ~40 ticks per phone-hour (decision 0089).</li>
+        <li><span class="tag meas">measured</span> <b>Sizes and speeds:</b> the board is about 200 bytes + 36 a song; a personal call 208–430 bytes; 42 ms a database read; about 120 ms to build a board.</li>
+        <li><span class="tag guess">estimated</span> 50 ms per personal call; how many nearby servers a bar spans (“edge nodes”); open-line reconnects at a real gig.</li>
+        <li><span class="tag guess">simulated</span> The 20-phone, 3-hour gig: <span id="liveGig">about 5,900 ticks, 4.8 credits</span>, from a model of how people glance at phones. The repo’s simulator agrees within 5%. The biggest real room so far is 18 phones.</li>
+        <li><span class="tag meas">published</span> Netlify, Cloudflare and Vercel rates; Stripe’s card, Billing, Connect and dispute fees. Read from their own pages, 5 Sep 2026 (links at the bottom).</li>
+        <li><span class="tag guess">guess</span> How many artists, which plans, how many gigs and fans, what a room spends, fixed costs. These are the dials. Turn on “Use real shows” when the numbers exist.</li>
+        <li><b>Whose Stripe fee is whose:</b>
+          <ul class="pts">
+            <li>Tips and vote packs are charged on the <em>artist’s</em> account, so that card fee is the artist’s. MySet’s cut arrives with no extra fee.</li>
+            <li>Plans and featured shows are charged on MySet’s own US account, so their card fee, the 0.7% Billing fee, disputes and refunds are MySet’s.</li>
+            <li>3 of every 4 dollars come from cards abroad. Stripe’s real fees on the first 12 payments ($7.02 on $85) match US rates at 75% international.</li>
+            <li>Those were fans’ cards in Thai rooms. Artists paying for plans may differ.</li>
+            <li>Payout fees land on MySet. Artists are paid out <em>daily</em>, so a busy artist can cost 25¢ a night. The dial assumes 8 payouts a month; weekly would cut it.</li>
+            <li>Unpaid negative balances also land on MySet — hence the small bad-debt line.</li>
+          </ul></li>
+        <li><b>Two promises the money does not keep yet:</b> a referral “free month” moves a date but the referrer is still billed; and the founder’s own gigs cost server credits but earn no platform revenue. Neither has its own line.</li>
+        <li><b>The free plan’s 4-gig cap</b> is applied: a free artist who wants six nights gets four. The refused nights show as a line in the formula.</li>
       </ul>
     </div>
   </div>
   <footer>
-  <p class="small" style="margin:0"><b>Sources.</b> Netlify credit rates and plans: docs.netlify.com, credit-based pricing plans. Cloudflare Workers, KV and Durable Objects: developers.cloudflare.com/workers/platform/pricing. Stripe: stripe.com/pricing (US 2.9% + 30¢, +1.5% international, +1% conversion, $15 disputes), stripe.com/billing/pricing (0.7%), stripe.com/connect/pricing (Express: $2 per active account-month, 0.25% + 25¢ per payout), docs.stripe.com/connect/saas/tasks/app-fees (no Stripe fee on an application fee). Thai rates for comparison: 3.65% + ฿10 domestic, 4.75% + ฿10 international, +2% conversion, ฿500 disputes. Polling ladder: public/vote.html; simulator: tools/loadsim.py; reads per call: test/cost.mjs. Model file: finance/model.html in the MySet repo; real-show importer: tools/actuals.py.</p>
+  <div class="small"><b>Sources</b><ul class="pts">
+    <li>Netlify: docs.netlify.com, credit-based pricing plans.</li>
+    <li>Cloudflare Workers, KV and Durable Objects: developers.cloudflare.com/workers/platform/pricing.</li>
+    <li>Stripe: stripe.com/pricing (US 2.9% + 30¢, +1.5% international, +1% conversion, $15 disputes); stripe.com/billing/pricing (0.7%); stripe.com/connect/pricing (Express: $2 per active account a month, 0.25% + 25¢ per payout); no Stripe fee on MySet’s cut (docs.stripe.com/connect/saas/tasks/app-fees).</li>
+    <li>Thai rates for comparison: 3.65% + ฿10 domestic, 4.75% + ฿10 international, +2% conversion, ฿500 disputes.</li>
+    <li>In the MySet repo: the polling pace in public/vote.html, the simulator in tools/loadsim.py, reads per call in test/cost.mjs, real shows via tools/actuals.py.</li>
+  </ul></div>
 </footer>
 </section>
 </div>
@@ -1262,10 +1319,10 @@ const DIALS = [
   { key: 'churnPct', label: 'Artists leaving', unit: '% per month (only used to count how many you must sign)', min: 0, max: 30, step: 0.5 },
   { key: 'cacUsd', label: 'Cost to sign one artist', unit: '$ — set this before trusting the cumulative chart', min: 0, max: 200, step: 1 },
   { key: 'months', label: 'Months to chart', unit: 'months', min: 6, max: 60, step: 1 },
-  { group: 'Show sizes', help: 'The four shows in the table on the right. Change them freely. The tier matters: MySet takes 10% of a free artist’s room, 2% on Plus and nothing on Pro — so the same arena is worth three different amounts.' },
+  { group: 'Core show sizes', help: '<ul class="pts"><li>The 4 core show categories in the table on the right. Change them freely.</li><li>The plan matters: MySet’s cut is bigger on a free artist, so the same show is worth a different amount on each plan.</li></ul>' },
   { key: 'sizeTier' },
   { key: 'sizes' },
-  { group: 'Real shows', help: 'On myset.vip these come LIVE from the register of every show on the platform (/moneymodel/shows), folded on the server as nights are filed; the meters — ticks per phone-hour, credits a night, deploys — are read off Netlify by hand and stay the page\'s last reading. Paste tools/actuals.py\'s JSON only to override (a paste newer than the live build wins until you forget it). Switch on to let them replace the guesses above.' },
+  { group: 'Real shows', help: '<ul class="pts"><li>On myset.vip these come <b>live</b> from the list of every show, added up on the server as nights are filed.</li><li>The meters (ticks per phone-hour, credits a night, deploys) are read off Netlify by hand and stay at the last reading.</li><li>Paste a reading below only to override it. A newer paste wins until you clear it.</li><li>Switch on to let real shows replace the guesses above.</li></ul>' },
   { key: 'actuals' },
 ];
 
@@ -1288,15 +1345,19 @@ let toastT; function toast(msg) { const t = $('#toast'); t.textContent = msg; t.
 
 /* ───────────────────────────── build the dials ───────────────────────────── */
 function buildDials() {
-  const root = $('#dials'); root.innerHTML = '<div class="dialsHead"><span>The dials</span><span><button type="button" id="dialsOpen">Expand all</button> · <button type="button" id="dialsClose">Collapse all</button></span></div>';
-  $('#dialsOpen').onclick = () => $$('aside.dials > details').forEach(x => x.open = true);
-  $('#dialsClose').onclick = () => $$('aside.dials > details').forEach(x => x.open = false);
+  const root = $('#dials'); root.innerHTML = '<div class="dialsHead"><button type="button" class="fold" id="dialsFold" aria-expanded="true" aria-controls="dialsList"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>The dials</button><span class="all"><button type="button" id="dialsOpen">Expand all</button> · <button type="button" id="dialsClose">Collapse all</button></span></div><div class="dialsList" id="dialsList"><div></div></div>';
+  const list = $('#dialsList > div', root);
+  const fold = (on) => { root.classList.toggle('folded', on); $('#dialsFold').setAttribute('aria-expanded', String(!on)); $('#dialsList').inert = on; try { localStorage.setItem('myset.model.dialsFolded', on ? '1' : ''); } catch (e) {} };
+  $('#dialsFold').onclick = () => fold(!root.classList.contains('folded'));
+  try { if (localStorage.getItem('myset.model.dialsFolded')) fold(true); } catch (e) {}
+  $('#dialsOpen').onclick = () => $$('aside.dials details.grp').forEach(x => x.open = true);
+  $('#dialsClose').onclick = () => $$('aside.dials details.grp').forEach(x => x.open = false);
   let sec = null, body = null, groupIndex = 0;
   for (const d of DIALS) {
     if (d.group) {
-      sec = document.createElement('details'); if (groupIndex < 2) sec.open = true; groupIndex++;
+      sec = document.createElement('details'); sec.className = 'grp'; if (groupIndex < 2) sec.open = true; groupIndex++;
       sec.innerHTML = `<summary>${d.group}</summary><div class="dbody">${d.help ? `<div class="help">${d.help}</div>` : ''}</div>`;
-      body = $('.dbody', sec); root.appendChild(sec); continue;
+      body = $('.dbody', sec); list.appendChild(sec); continue;
     }
     const el = document.createElement('div');
     if (d.key === 'mixbar') { el.className = 'mixbar'; el.id = 'mixbar'; el.innerHTML = `<i style="background:var(--s-fixed)" title="Free"></i><i style="background:var(--s-subs)" title="Plus"></i><i style="background:var(--s-feat)" title="Pro"></i>`; body.appendChild(el); const cap = document.createElement('div'); cap.className = 'help'; cap.id = 'mixCap'; body.appendChild(cap); continue; }
@@ -1596,9 +1657,12 @@ function tpPaint(all) {
     if (el.innerHTML !== html) { el.innerHTML = html; if (!all) { el.classList.remove('blip'); void el.offsetWidth; el.classList.add('blip'); } }
   }
   const t2 = tpLive(), tk = tpTickets(), st = P.stripe;
-  $('#tpCap').innerHTML = `One artist on each plan, for one month. ${TP_MINE ? '<b>Your numbers</b> — ' : t2 ? `<b>Seeded LIVE</b> from the register: the average show over ${fmt.int(t2.moneyKnown)} nights with money known — ` : '<b>An example</b> (the live register was not reachable) — '}type over any boxed figure: a show's dollars by source in either line, the shows, MySet's fee or the plan price (those two are the dials on the left too). `
-    + `Server: ${fmt.num((ACT && ACT.creditsPerShow) || SEED_ACT.creditsPerShow, 2)} credits a show by Netlify's meters at ${fmt.cents(tpCredit())} a credit = ${fmt.usdFull(tpServer())} a show. `
-    + `Stripe: ${fmt.num(st.pct + (st.intlShare / 100) * st.intlPct, 2)}% + ${Math.round(st.fixed * 100)}¢ a payment, an average payment being ${fmt.usdFull(tk.tips)} a tip, ${fmt.usdFull(tk.packs)} a vote pack, ${fmt.usdFull(tk.requests)} a request, ${fmt.usdFull(tk.merch)} a merch order; the plan fee also pays Stripe Billing's ${fmt.num(st.billingPct, 1)}%.`;
+  $('#tpCap').innerHTML = `<ul class="pts">`
+    + `<li>One artist on each plan, for one month. ${TP_MINE ? '<b>Your numbers.</b>' : t2 ? `<b>Seeded live</b> from the average show over ${fmt.int(t2.moneyKnown)} nights with money known.` : '<b>An example</b> (the live show list was not reachable).'}</li>`
+    + `<li>Type over any boxed figure: a show’s dollars by source (either line), the shows, MySet’s fee or the plan price. The last two are dials on the left too.</li>`
+    + `<li><b>Server:</b> ${fmt.num((ACT && ACT.creditsPerShow) || SEED_ACT.creditsPerShow, 2)} credits a show by Netlify’s meters, at ${fmt.cents(tpCredit())} a credit = ${fmt.usdFull(tpServer())} a show.</li>`
+    + `<li><b>Stripe:</b> ${fmt.num(st.pct + (st.intlShare / 100) * st.intlPct, 2)}% + ${Math.round(st.fixed * 100)}¢ a payment. An average payment is ${fmt.usdFull(tk.tips)} a tip, ${fmt.usdFull(tk.packs)} a vote pack, ${fmt.usdFull(tk.requests)} a request, ${fmt.usdFull(tk.merch)} a merch order.</li>`
+    + `<li>The plan fee also pays Stripe Billing’s ${fmt.num(st.billingPct, 1)}%.</li></ul>`;
 }
 
 function recalc() { if (recalc.raf) return; recalc.raf = requestAnimationFrame(() => { recalc.raf = 0; render(); }); }
@@ -1636,7 +1700,12 @@ function render() {
   $('#kpiWhat').textContent = `${fmt.int(P.artists)} artists, ${P.plusPct}% Plus, ${P.proPct}% Pro`;
   $('#kpiToday').textContent = fmt.int(P.startArtists);
   /* The three dials doing most of the work, named, with what nobody has observed yet. */
-  $('#kpiBand').innerHTML = `<b>What is carrying these numbers:</b> the plan mix (${P.plusPct}% Plus + ${P.proPct}% Pro = ${(P.plusPct + P.proPct)}% paying — published freemium medians are 2–8%), the room spending ${Math.min(P.roomFree, P.roomPlus, P.roomPro) === Math.max(P.roomFree, P.roomPlus, P.roomPro) ? '$' + fmt.num(P.roomFree, 2) : '$' + fmt.num(Math.min(P.roomFree, P.roomPlus, P.roomPro), 2) + '–$' + fmt.num(Math.max(P.roomFree, P.roomPlus, P.roomPro), 2)} a head (eleven nights with readable takings: $85 across 82 phones, three nights carrying 85% of it — the median night is $0 — all of them in Thailand, where tipping is not a habit: a floor for a tipping market, not a ceiling), and ${P.featPct}% of gigs promoted (never sold one). Nobody has paid for a plan yet. Press <b>Benchmark case</b> to see the same engine on published industry figures.`;
+  $('#kpiBand').innerHTML = `<b>What is carrying these numbers</b><ul class="pts">`
+    + `<li><b>The plan mix:</b> ${P.plusPct}% Plus + ${P.proPct}% Pro = ${(P.plusPct + P.proPct)}% paying. Published freemium averages are 2–8%.</li>`
+    + `<li><b>The room spending</b> ${Math.min(P.roomFree, P.roomPlus, P.roomPro) === Math.max(P.roomFree, P.roomPlus, P.roomPro) ? '$' + fmt.num(P.roomFree, 2) : '$' + fmt.num(Math.min(P.roomFree, P.roomPlus, P.roomPro), 2) + '–$' + fmt.num(Math.max(P.roomFree, P.roomPlus, P.roomPro), 2)} a head. Real nights so far: $85 across 82 phones; three nights carried 85% of it, and the middle night made $0.</li>`
+    + `<li>Every real night was in Thailand, where tipping is not a habit. Read them as a floor, not a ceiling.</li>`
+    + `<li><b>${P.featPct}% of gigs promoted.</b> None sold yet, and nobody has paid for a plan yet.</li>`
+    + `<li>Press <b>Benchmark case</b> to see the same engine on published industry figures.</li></ul>`;
   /* live copy: numbers the notes quote must be the numbers the page shows */
   const lg = $('#liveGig'); if (lg) { const g0 = ENGINE.gigTraffic(P, P.fans, P.hours, false); const c0 = ENGINE.netlifyCredits(g0, 0, P.hosts.netlifyPro).total; lg.textContent = `${fmt.int(g0.polls)} ticks, ${fmt.int(g0.renders)} board renders, ${fmt.num(c0, 1)} credits`; }
   const ld = $('#liveDo'); if (ld && sizes[0].onHost.netlifyPro > 0) ld.textContent = `${fmt.cents(sizes[0].onHost.netlifyPro)} on Netlify alone and ${fmt.cents(sizes[0].onHost.cfDo)} with the line`;
@@ -1722,12 +1791,24 @@ function render() {
   const tierName = { free: 'free', plus: 'Plus', pro: 'Pro' }[P.sizeTier] || 'free';
   const mTarget = isFinite(R.margin) && R.margin > 0 ? R.margin : 0.5;   // price bookings at the platform's margin, or a 50% target while it is losing money
   $('#sizesTable').innerHTML = `<thead><tr><th>Show</th><th class="n">Phones</th><th class="n">Hours</th><th class="n">Ticks</th><th class="n">Per phone</th><th class="n">Board renders</th><th class="n">Running at once</th><th class="n">Reads / s</th><th class="n">Store MB/s</th><th>On this host</th><th class="n">Room spends</th><th class="n">MySet earns</th><th class="n">Server</th><th class="n">MySet keeps</th><th class="n">Charge to book</th>${hostKeys.map(k => `<th class="n">${shortHost(k)}</th>`).join('')}</tr></thead><tbody>${sizes.map(s => `<tr${s.mysetNet < 0 ? ' class="hi"' : ''}><td class="name">${s.name}${s.days > 1 ? ` <span class="muted">× ${s.days} days</span>` : ''}${s.floorS > 3 ? ` <span class="muted">· ${s.floorS} s floor</span>` : ''}${s.line ? ' <span class="muted">· line</span>' : ''}</td><td class="n">${fmt.int(s.fans)}</td><td class="n">${s.hours * s.days}</td><td class="n">${fmt.big(s.polls)}</td><td class="n">${fmt.int(s.perPhone)}</td><td class="n">${fmt.big(s.renders)}</td><td class="n">${fmt.num(s.effConcurrent, 1)}</td><td class="n">${fmt.int(s.effReads)}</td><td class="n">${fmt.num(s.effStoreMBs, s.effStoreMBs < 1 ? 2 : 1)}</td><td>${pill(s.status)}</td><td class="n muted">${fmt.usd(s.earn)}</td><td class="n">${fmt.usd(s.mysetRev)}</td><td class="n">${fmt.usd(s.server)}</td><td class="n ${s.mysetNet >= 0 ? 'pos' : 'neg'}">${fmt.usd(s.mysetNet)}</td><td class="n">${fmt.usd(s.bookingAt(mTarget))}</td>${hostKeys.map(k => `<td class="n${k === P.host ? ' pos' : ''}">${P.hosts[k].kind === 'vps' ? '≈ $0*' : fmt.usd(s.onHost[k])}</td>`).join('')}</tr>`).join('')}</tbody>`;
-  $('#sizesCap').innerHTML = `Priced for a <b>${tierName}</b> artist — MySet takes ${sizes[0].cutPct}% of the room. “Charge to book” is what MySet would have to bill for the show on top of its cut for it to earn ${isFinite(R.margin) && R.margin > 0 ? 'the platform’s current ' + fmt.pct(R.margin) : 'a 50% target'} margin after Stripe’s card fee on the booking${isFinite(R.margin) && R.margin > 0 ? '' : ' (the platform is at ' + fmt.pct(R.margin) + ' right now)'}. * Your own servers cost the same whether or not a show happens. Every figure in this table is the traffic bill only — a show never carries a deploy (INVARIANT 0fx). “Board renders” is how often the shared board is actually computed — every other board request is an edge hit; under a 10 s interval the copy is per edge node, so the bar set carries the “edge nodes” dial’s middle guess. “Store MB/s” is what the document store has to move to answer the room; past ~50 MB/s the room stops working whatever the bill says.`;
+  $('#sizesCap').innerHTML = `<ul class="pts">`
+    + `<li>Priced for a <b>${tierName}</b> artist: MySet takes ${sizes[0].cutPct}% of the room.</li>`
+    + `<li><b>Charge to book</b> is what MySet would bill for the show, on top of its cut, to earn ${isFinite(R.margin) && R.margin > 0 ? 'the platform’s current ' + fmt.pct(R.margin) : 'a 50% target'} margin after Stripe’s card fee${isFinite(R.margin) && R.margin > 0 ? '' : ' (the platform is at ' + fmt.pct(R.margin) + ' right now)'}.</li>`
+    + `<li>Every figure is the <b>traffic bill only</b>. A show never carries the cost of shipping code (INVARIANT 0fx).</li>`
+    + `<li>* Your own servers cost the same whether or not a show happens.</li>`
+    + `<li><b>Board renders</b> is how often the room’s shared board is actually built. Every other request is a cheap copy from a nearby server.</li>`
+    + `<li>Under a 10 s pace each nearby server keeps its own copy, so the bar set uses the middle “edge nodes” guess.</li>`
+    + `<li><b>Store MB/s</b> is what the database must move to answer the room. Past about 50 MB/s the room stops working, whatever the bill says.</li></ul>`;
 
   /* per-tier contribution */
   const TN = { free: 'Free artist', plus: 'Plus artist', pro: 'Pro artist' };
   $('#tierTable').innerHTML = `<thead><tr><th>Per artist, per month</th><th class="n">Gigs</th><th class="n">Subscription</th><th class="n">Room spends</th><th class="n">MySet’s cut</th><th class="n">Featured</th><th class="n">Revenue</th><th class="n">Server</th><th class="n">Stripe</th><th class="n">Net to MySet</th></tr></thead><tbody>${R.perTier.map(x => `<tr><td class="name">${TN[x.tier]}</td><td class="n">${fmt.num(x.gigs, 1)}</td><td class="n">${fmt.usdFull(x.sub)}</td><td class="n muted">${fmt.usdFull(x.room)}</td><td class="n">${fmt.usdFull(x.cut)}</td><td class="n">${fmt.usdFull(x.featRev)}</td><td class="n">${fmt.usdFull(x.rev)}</td><td class="n">${fmt.usdFull(x.server)}</td><td class="n">${fmt.usdFull(x.stripe)}</td><td class="n ${x.net >= 0 ? 'pos' : 'neg'}">${fmt.usdFull(x.net)}</td></tr>`).join('')}</tbody>`;
-  $('#tierCap').innerHTML = `Before fixed costs and before the shipping bill (${fmt.usd(R.shippingUsd)} of deploys, the platform’s cost, not any artist’s), at this scenario’s room size and gig rate. Server here is the traffic bill only. This is the line that answers “is the free tier worth keeping” and “should I push everyone to Plus”. <b>Plus stops paying for MySet above ${isFinite(R.plusCrossover) ? fmt.usdFull(R.plusCrossover) : '—'} of room money a month per artist</b> (a Plus artist's ${P.gigsPaid} nights against the free plan's ${Math.min(P.freeCap, P.gigsPaid)}-night cap) — above that, the ${P.cutFree}% cut on a free artist is worth more than the subscription. This scenario has a Plus artist's room spending ${fmt.usdFull(R.perTier[1].room)} a month.`;
+  $('#tierCap').innerHTML = `<ul class="pts">`
+    + `<li>Before fixed costs, and before the shipping bill (${fmt.usd(R.shippingUsd)} of deploys — the platform’s cost, not any artist’s).</li>`
+    + `<li>At this scenario’s room size and gig rate. Server is the traffic bill only.</li>`
+    + `<li>Answers “is the free plan worth keeping?” and “should I push everyone to Plus?”</li>`
+    + `<li><b>Plus stops paying for MySet above ${isFinite(R.plusCrossover) ? fmt.usdFull(R.plusCrossover) : '—'} of room money a month per artist</b> (a Plus artist’s ${P.gigsPaid} nights against the free plan’s ${Math.min(P.freeCap, P.gigsPaid)}-night cap). Above that, the ${P.cutFree}% free cut earns more than the subscription.</li>`
+    + `<li>In this scenario a Plus artist’s room spends ${fmt.usdFull(R.perTier[1].room)} a month.</li></ul>`;
   tpPaint();
 
   /* formula table */
