@@ -389,7 +389,9 @@ async function founderCandidates(st, ctx) {
 async function choosePhotos(st, ctx, { late }) {
   const judged = [], seen = new Set();
   let picks = { cover: null, avatar: null, extras: [] };
-  const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && picks.extras.length >= (st.kind === 'venue' ? 5 : 2);
+  /* three small photos for an artist (0137), each from a source not yet used if one
+     can be had: a second frame of the same video only once every source is judged */
+  const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && pickPhotos(judged, { kind: st.kind, again: false }).extras.length >= (st.kind === 'venue' ? 5 : 3);
   for (const [p, round] of [['y', ytCandidates], ['w', webCandidates], ['f', founderCandidates]]) {
     if (enough() || (judged.length && late())) break;
     // the same picture twice (og:image and an <img>) is judged once; over 8000 px the vision API refuses it
