@@ -255,8 +255,10 @@ body.sampled{padding-top:var(--sbh,112px)}
       decorate(P);
       new MutationObserver(() => decorate(P)).observe($('#app') || document.body, { childList: true });
 
-      /* the welcome, once per sample on this phone */
-      tips().then((T) => { if (T) T.first(venue ? 'v-welcome' : 'welcome', { scope: 'sample-' + S.slug,
+      /* the welcome, every time the link itself is opened (the founder's call); a
+         visit without the label (the stored key, a tap on the logo) does not repeat it */
+      const viaLink = /[#?&]sample-profile(?![\w-])/.test(location.hash + '&' + location.search);
+      tips().then((T) => { if (T) T[viaLink ? 'open' : 'first'](venue ? 'v-welcome' : 'welcome', { scope: 'sample-' + S.slug,
         /* "Hey Tide Lines", not "Hey The Tide Lines": a band is greeted the way people say its name */
         vars: { first: String(S.first || S.name).replace(/^the\s+/i, ''), days: days(S.days), sources: words((S.sources || []).map((x) => x.label)) },   // tips.js escapes the whole line
         cta: { label: 'Show me' } }); });

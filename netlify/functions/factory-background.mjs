@@ -108,7 +108,7 @@ export async function work(id) {
 
   /* A rebuild takes the old page's place — and its ADDRESS: the link already sent must
      keep opening it, so the slug is left for createSample to carry over. */
-  const payload = { ...(job.replace ? { ...r.payload, slug: '', replace: job.replace } : r.payload), ...(job.cid ? { cid: job.cid } : {}) };
+  const payload = { ...(job.replace ? { ...r.payload, slug: '', replace: job.replace, keep: !!job.keep } : r.payload), ...(job.cid ? { cid: job.cid } : {}) };
   let made;
   try { made = await mod.createSample(payload); } catch (e) { made = { ok: false, error: msg(e) }; }
   if (!made || !made.ok) return fail(id, run, `create: ${(made && made.error) || 'failed'}`, { cost });

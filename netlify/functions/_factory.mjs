@@ -123,6 +123,7 @@ function seedOf(job) {
     seed.media.push(...x.media);
   }
   seed.photos = [].concat((s && s.photos) || []).map(String).filter((u) => /^https:\/\/\S+$/.test(u)).slice(0, 6);
+  seed.notes = String((s && typeof s === 'object' && s.notes) || '').replace(/\r/g, '').trim().slice(0, 600);   // the founder's notes (0136)
   seed.line = line;
   return seed;
 }
@@ -329,7 +330,8 @@ function sourceTexts(st) {
   const out = [];
   const add = (kind, url, title, text) => { if (clean(text, 60).length >= 20) out.push({ kind, url: url || '', title: clean(title, 140), text: String(text).slice(0, 14000) }); };
   add('seed', '', 'The founder’s note', [st.seed.name && `Name given by the founder: ${st.seed.name}`,
-    st.seed.city && `Where the founder came across them: ${[st.seed.city, st.seed.country].filter(Boolean).join(', ')}`].filter(Boolean).join('\n'));
+    st.seed.city && `Where the founder came across them: ${[st.seed.city, st.seed.country].filter(Boolean).join(', ')}`,
+    st.seed.notes && `The founder's notes: ${st.seed.notes}`].filter(Boolean).join('\n'));
   for (const p of (st.site && st.site.ok && st.site.pages) || []) add('website', p.url, p.title, [p.description, ldSummary(p.ld), p.text].filter(Boolean).join('\n'));
   if (st.yt && st.yt.ok) {
     const c = st.yt.channel;
@@ -387,7 +389,9 @@ async function founderCandidates(st, ctx) {
 async function choosePhotos(st, ctx, { late }) {
   const judged = [], seen = new Set();
   let picks = { cover: null, avatar: null, extras: [] };
-  const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && picks.extras.length >= (st.kind === 'venue' ? 5 : 2);
+  /* three small photos for an artist (0137), each from a source not yet used if one
+     can be had: a second frame of the same video only once every source is judged */
+  const enough = () => picks.cover && (st.kind === 'venue' || picks.avatar) && pickPhotos(judged, { kind: st.kind, again: false }).extras.length >= (st.kind === 'venue' ? 5 : 3);
   for (const [p, round] of [['y', ytCandidates], ['w', webCandidates], ['f', founderCandidates]]) {
     if (enough() || (judged.length && late())) break;
     // the same picture twice (og:image and an <img>) is judged once; over 8000 px the vision API refuses it
@@ -395,7 +399,7 @@ async function choosePhotos(st, ctx, { late }) {
       .filter((c) => { const h = createHash('sha1').update(c.bytes).digest('hex'); return !seen.has(h) && seen.add(h); })
       .map((c, i) => ({ ...c, id: `${p}${i + 1}` }));
     if (!cands.length) continue;
-    try { judged.push(...(await judgePhotos(cands, ctx, { kind: st.kind, name: st.name })).judged); }
+    try { judged.push(...(await judgePhotos(cands, ctx, { kind: st.kind, name: st.name, notes: st.seed.notes })).judged); }
     catch (e) { if (e.code === 'no-key' || e.code === 'auth') throw e; st.errors.photos = clean(e.message, 160); continue; }
     picks = pickPhotos(judged, { kind: st.kind });
   }
@@ -520,7 +524,7 @@ export async function runJob(job, opts = {}) {
     await stage('copy');
     // better a clear "try again" now than the platform's kill at fifteen minutes mid-write
     if (now() - t0 > 13 * 60e3) return { ok: false, error: 'timeout: the build ran past thirteen minutes', usage };
-    const copy = await writeCopy(facts, sources, kind, ctx, { name: st.name });
+    const copy = await writeCopy(facts, sources, kind, ctx, { name: st.name, notes: st.seed.notes });
 
     await stage('gate');
     const payload = buildPayload(st, { facts, sources, copy, shots, usage, ctx });

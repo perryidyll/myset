@@ -243,19 +243,20 @@ export async function extractFacts(texts, ctx, { kind = 'artist', name = '' } = 
 }
 
 /* ---------- photos ---------- */
-const PHOTO_KINDS = ['performing', 'portrait', 'group', 'venue-inside', 'venue-outside', 'artwork', 'logo', 'text-heavy', 'other'];
+const PHOTO_KINDS = ['performing', 'portrait', 'group', 'video-scene', 'venue-inside', 'venue-outside', 'artwork', 'logo', 'text-heavy', 'other'];
 const PHOTOS_SYSTEM = `MYSET FACTORY · PHOTOS
 
 You judge candidate pictures for ONE live-music act's (or venue's) sample page on MySet. Each image comes after a line naming its id. Judge EVERY image and answer with ONE JSON object and nothing else:
 {"photos":[{"id":"y1","isAct":true,"people":2,"kind":"performing","quality":0.8,"textOverlay":0.1,"focus":"48% 32%","coverOk":true,"avatarOk":false,"dup":"","why":"both members on stage, sharp, warm light"}]}
 
-- isAct: it shows THIS act (the artist, the band); for a venue, the venue itself. Not a crowd, another act, a poster or a line-up.
+- isAct: it shows THIS act (the artist, the band); for a venue, the venue itself. Not a crowd, another act, a poster or a line-up. A music video often casts actors: a person counts as the act only when they are plainly the same person as in the act's other pictures here, or are the one playing or singing.
+- kind "video-scene": a frame from a music video's story (actors, a couple, a scene acted out) rather than the act playing or posing. Use it whenever nobody in the frame is playing or singing and it is not a portrait of the act.
 - people: how many people are clearly visible.
 - kind: ${PHOTO_KINDS.join(', ')}.
 - quality 0..1: sharp, well lit, well framed; would a stranger think it looks professional? Blurry, dark, tiny or smeared by compression is low.
 - textOverlay 0..1: how much of it is covered by titles, captions, watermarks or logos (0 none, 1 all text).
 - focus "x% y%": the point to keep when the picture is cropped. A person: between the eyes. A group: the middle of the faces. Otherwise the subject.
-- coverOk: works as a wide header across a page: landscape, the act clearly shown, little or no text.
+- coverOk: works as a wide header across a page: landscape, little or no text, and the act clearly PERFORMING, or a proper band or promo photo of the act. Never a video-scene, never a frame with black bars across the top and bottom or blurred panels down the sides.
 - avatarOk: works cropped to a square around focus: a face, or the act clearly.
 - dup: the id of an EARLIER image here that is essentially the same shot, else "".
 - why: at most twelve words.
@@ -284,14 +285,19 @@ function checkPhotos(o, ids) {
    Nothing that is not the act, nothing with text across it, never the same shot twice
    (one frame per video, and whatever the judge marked a duplicate). */
 const FROM_RANK = { youtube: 0, website: 1, instagram: 2, founder: 2 };
-export function pickPhotos(judged, { kind = 'artist' } = {}) {
+export function pickPhotos(judged, { kind = 'artist', again = true } = {}) {
   const J = (judged || []).filter((j) => j && j.isAct && !j.dup && j.textOverlay < 0.3);
   const rank = (a, b) => (FROM_RANK[a.from] ?? 3) - (FROM_RANK[b.from] ?? 3) || b.quality - a.quality;
   const wide = (j) => j.width >= j.height * 1.2;
   /* A venue's site rarely has a 1000-px hero the judge calls a cover, and a venue page
      without one opened on an empty gradient (Sand & Tan, 2026-10-01). So a venue takes
      the best wide photo it has, down to 800 px, before it goes without. */
-  const cover = J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j)).sort(rank)[0]
+  /* An artist's cover is the act playing, or a proper band or promo photo — never a
+     music video's story frame (Andrew's first page, 2026-10-02: two actors on a
+     dock). Playing beats posing; then the founder's source order. */
+  const tier = (j) => (j.kind === 'performing' || j.kind === 'group' ? 0 : 1);
+  const cover = (kind === 'venue' ? J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j)).sort(rank)[0]
+    : J.filter((j) => j.coverOk && j.quality >= 0.7 && j.width >= 1000 && wide(j) && ['performing', 'group', 'portrait'].includes(j.kind)).sort((a, b) => tier(a) - tier(b) || rank(a, b))[0])
     || (kind === 'venue' && J.filter((j) => j.quality >= 0.6 && j.width >= 800 && wide(j) && (j.coverOk || j.textOverlay < 0.15)).sort(rank)[0])
     || null;
   let avatar = null;
@@ -302,20 +308,30 @@ export function pickPhotos(judged, { kind = 'artist' } = {}) {
     avatar = other && (!same || other.quality >= same.quality - 0.15) ? other : same || other || null;
   }
   const used = new Set([cover, avatar].filter(Boolean).map((j) => j.group)), extras = [], kinds = new Set();
-  const pool = J.filter((j) => j !== cover && j !== avatar && j.quality >= 0.6 && Math.min(j.width, j.height) >= 400).sort(rank);
-  for (const varied of [true, false]) for (const j of pool) {
-    if (extras.length >= (kind === 'venue' ? 5 : 3) || extras.includes(j) || used.has(j.group) || (varied && kinds.has(j.kind))) continue;
+  const pool = J.filter((j) => j !== cover && j !== avatar && j.kind !== 'video-scene' && j.quality >= 0.6 && Math.min(j.width, j.height) >= 400).sort(rank);
+  /* Three small photos, every time there are three to be had: the page's strip is
+     drawn for three (decision 0137). One per source first, varied kinds first; then a
+     second frame from a video or site already used — a different moment, never a
+     shot the judge marked a duplicate. `again: false` leaves that last pass out, so
+     the factory asks the next source before settling for a second frame. */
+  for (const pass of again ? ['varied', 'any', 'again'] : ['varied', 'any']) for (const j of pool) {
+    if (extras.length >= (kind === 'venue' ? 5 : 3) || extras.includes(j) || (pass !== 'again' && used.has(j.group)) || (pass === 'varied' && kinds.has(j.kind))) continue;
     extras.push(j); used.add(j.group); kinds.add(j.kind);
   }
   return { cover, avatar, extras };
 }
 /** `cands`: [{id, from, group, bytes, type, width, height, src, note}]. Ten a call.
  *  Returns { judged: cands with the verdict merged in, picks }. */
-export async function judgePhotos(cands, ctx, { kind = 'artist', name = '' } = {}) {
+/* THE FOUNDER'S NOTES (decision 0136) ride into the photo judge and the copy as wishes,
+   never as licence: what they ask is followed where the facts and the pictures allow,
+   and a fact the notes state reaches the copy only through the founder's note source,
+   cited like any other. */
+const notesBlock = (notes) => (notes ? `\n\nTHE FOUNDER'S NOTES FOR THIS PAGE (follow them where the facts allow; never invent anything to satisfy one):\n${clean(notes, 600)}` : '');
+export async function judgePhotos(cands, ctx, { kind = 'artist', name = '', notes = '' } = {}) {
   const judged = [];
   for (let i = 0; i < (cands || []).length; i += 10) {
     const batch = cands.slice(i, i + 10), ids = batch.map((c) => c.id);
-    const content = [{ type: 'text', text: `${kind === 'venue' ? 'Venue' : 'Act'}: ${name || '(no name)'}. ${batch.length} image(s) follow; judge every one.` }];
+    const content = [{ type: 'text', text: `${kind === 'venue' ? 'Venue' : 'Act'}: ${name || '(no name)'}. ${batch.length} image(s) follow; judge every one.${notesBlock(notes)}` }];
     for (const c of batch) {
       content.push({ type: 'text', text: `Image id=${c.id} · from ${c.from} · ${c.width}x${c.height}${c.note ? ' · ' + c.note : ''}` });
       content.push({ type: 'image', source: { type: 'base64', media_type: c.type, data: Buffer.from(c.bytes).toString('base64') } });
@@ -399,11 +415,11 @@ export function tidyCopy(o, facts, venue) {
 /** `facts` [{k, v, src}], `sources` [{url, kind, title}]. Returns { tagline, style?, hook,
  *  sentences:[{s, f, src}], text } — `f` the fact numbers a line rests on, `src` the
  *  sources those facts came from. */
-export async function writeCopy(facts, sources, kind, ctx, { name = '' } = {}) {
+export async function writeCopy(facts, sources, kind, ctx, { name = '', notes = '' } = {}) {
   const venue = kind === 'venue';
   if (!facts || !facts.length) return tidyCopy({ tagline: {}, hook: {}, style: {}, bio: [], about: [] }, [], venue);
   const content = `${venue ? 'VENUE' : 'ACT'}: ${name || '(no name)'}\n\nFACTS (cite these numbers in src):\n${facts.map((f, i) => `[${i}] ${f.k}: ${f.v}`).join('\n')}`
-    + `\n\nWHERE THE FACTS CAME FROM (for your information only):\n${(sources || []).map((s, i) => `(${i}) ${s.kind} · ${s.title || s.url || ''}`).join('\n')}`;
+    + `\n\nWHERE THE FACTS CAME FROM (for your information only):\n${(sources || []).map((s, i) => `(${i}) ${s.kind} · ${s.title || s.url || ''}`).join('\n')}` + notesBlock(notes);
   const o = await askJSON({ call: 'copy', model: modelSmart(ctx), system: venue ? VENUE_COPY_SYSTEM : COPY_SYSTEM, content,
                             check: (x) => checkCopy(x, venue), maxTokens: 16000, ctx });
   return tidyCopy(o, facts, venue);

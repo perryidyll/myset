@@ -25,7 +25,7 @@
      the label, so a reload or a copy of the link opens the same preview. The private
      sample door is asked instead of the public one; sample.js is loaded for it alone,
      so a fan never downloads it. The bare address is the ordinary "no such page". -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const m=/[#?&]sample-profile(?![\w-])/.test(location.hash+'&'+location.search);let K=null;try{K=JSON.parse(localStorage.getItem('myset.sample')||'null')}catch(e){}if(S&&m){K={slug:S.toLowerCase(),key:'sample-profile',kind:'artist',at:Date.now(),pv:/[?&]pv=1/.test(location.search)};try{localStorage.setItem('myset.sample',JSON.stringify(K))}catch(e){}}if(S&&K&&K.kind==='artist'&&K.slug===S.toLowerCase()){window.__sample=K;const f=fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'page',quiet:!!K.pv,slug:K.slug,key:K.key,kind:'artist'})});f.catch(()=>{});window.__sampleP=f;const j=document.createElement('script');j.src='/sample.js?v=6cd55772';window.__sampleJs=new Promise(r=>{j.onload=r;j.onerror=r});document.head.appendChild(j);return}const q=S?'?a='+encodeURIComponent(S):'';const g=(u)=>{const f=fetch(u,{cache:'no-store'});f.catch(()=>{});return f};window.__early={profile:g('/api/fan?what=profile'+q.replace('?','&')),events:g('/api/fan?what=events&a='+encodeURIComponent(S||'perryidyll')+'&days=90&n=24')}}catch(e){}})();</script>
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const m=/[#?&]sample-profile(?![\w-])/.test(location.hash+'&'+location.search);let K=null;try{K=JSON.parse(localStorage.getItem('myset.sample')||'null')}catch(e){}if(S&&m){K={slug:S.toLowerCase(),key:'sample-profile',kind:'artist',at:Date.now(),pv:/[?&]pv=1/.test(location.search)};try{localStorage.setItem('myset.sample',JSON.stringify(K))}catch(e){}}if(S&&K&&K.kind==='artist'&&K.slug===S.toLowerCase()){window.__sample=K;const f=fetch('/api/sample',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'page',quiet:!!K.pv,slug:K.slug,key:K.key,kind:'artist'})});f.catch(()=>{});window.__sampleP=f;const j=document.createElement('script');j.src='/sample.js?v=72b23eb1';window.__sampleJs=new Promise(r=>{j.onload=r;j.onerror=r});document.head.appendChild(j);return}const q=S?'?a='+encodeURIComponent(S):'';const g=(u)=>{const f=fetch(u,{cache:'no-store'});f.catch(()=>{});return f};window.__early={profile:g('/api/fan?what=profile'+q.replace('?','&')),events:g('/api/fan?what=events&a='+encodeURIComponent(S||'perryidyll')+'&days=90&n=24')}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
 <meta name="format-detection" content="telephone=no" />
@@ -321,6 +321,16 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
    public/lock.css because NEITHER Studio loads this file, so the rules never
    reached the only two pages that have locks — verified in a browser on
    2026-09-03, after they had already been written and believed. */
+
+/* An About, one sentence at a time (decision 0135): a hairline in the ink colour
+   between sentences, drawn in from the left as the card arrives. */
+.aline{display:block;padding:12px 0}
+.aline:first-child{padding-top:0}
+.aline:last-child{padding-bottom:0}
+.aline+.aline{border-top:1px solid transparent;background:linear-gradient(var(--ink),var(--ink)) top left/0 1px no-repeat;animation:aline .6s cubic-bezier(.22,1,.36,1) calc(.15s + var(--i)*.08s) forwards}
+@keyframes aline{to{background-size:100% 1px}}
+@supports (animation-timeline:view()){.aline+.aline{animation-timeline:view();animation-range:entry 20% cover 35%;animation-delay:0s}}
+@media (prefers-reduced-motion:reduce){.aline+.aline{animation:none;background-size:100% 1px}}
 </style>
 
 <style>
@@ -357,7 +367,9 @@ body{padding-bottom:calc(116px + env(safe-area-inset-bottom))}   /* room for the
        edge, which is what turns the flat column into an arc
    The portrait is pulled left with a negative margin rather than a negative gap
    (there is no such thing), and the whole strip sits above it. */
-.strip .pth:nth-child(1){transform:translateX(20px)}
+/* only when there are three: two or one sit where the middle and bottom ones sit,
+   flush, instead of the top one's nudge reading as a crooked middle (decision 0137) */
+.strip .pth:first-child:nth-last-child(3){transform:translateX(20px)}
 .strip .pth{position:relative;z-index:3}
 .cluster{flex:0 0 auto}
 .pav{width:112px;height:112px;border-radius:26px;background-size:cover;background-position:center;
@@ -858,7 +870,7 @@ a.pc:active{transform:scale(.97)}
 <script src="/theme.js"></script>
 <script src="/leave.js"></script>
 <script src="/pull.js"></script>
-<script src="/fan.js?v=bb648cef"></script>
+<script src="/fan.js?v=423330ff"></script>
 <script>
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
@@ -1571,7 +1583,9 @@ function render(){
     </div>`;
   }
 
-  if(P.bio) h+=`<div class="sect">About</div><div class="card"><p class="bio">${esc(P.bio)}</p></div>`;
+  /* A sample's About reads one sentence a line (decision 0135); an artist's own bio
+     keeps the shape they gave it. */
+  if(P.bio) h+=`<div class="sect">About</div><div class="card">${window.__sample?`<div class="bio">${aboutLines(P.bio)}</div>`:`<p class="bio">${esc(P.bio)}</p>`}</div>`;
 
   const gigs=(G&&G.ok?G.gigs:[]).slice(0,24);
   /* ROWS keeps what was drawn so a tap can find its gig, and an RSVP reply can
@@ -1639,6 +1653,7 @@ function render(){
   h+=`<div class="fab"><div class="state">${state}</div>${act}</div>`;
 
   $('#app').innerHTML=h;
+  coverFocus(document.querySelector('.pcover img'));
   if(P.name) document.title = P.name + ' — MySet';
   startTick(); startProof();
   if(live) headCount();

@@ -1,9 +1,9 @@
 import { guard } from './_errlog.mjs';
-import { json, bad, requireArtist, casDoc, readDoc } from './_lib.mjs';
+import { json, bad, requireArtist, casDoc, readDoc, store } from './_lib.mjs';
 import { isPlatformOwner } from './_plan.mjs';
 import { readSampleReg, mutateSampleReg, readArchive, readStats, linkFor, SAMPLE, isVenueOwner, bump, noteSample,
          removeSample, reviveSample, undoClaim, UNDO_MS, createSample, optOut, readFactoryCfg as readCfg, mutateFactoryCfg,
-         defaultFactoryCfg as defaultCfg } from './_sample.mjs';
+         defaultFactoryCfg as defaultCfg, ROLES, rolesOf, writeRoles } from './_sample.mjs';
 
 /* THE SAMPLE FACTORY'S CONSOLE, server side (decision 0101) — myset.vip/factory.
 
@@ -187,7 +187,7 @@ export async function queueJobs(kind, items) {
       if (dup) { skipped.push({ line, why: 'already queued', id: dup.id }); continue; }
       const id = newId();
       q.jobs.push({ id, kind: k, seed: it.seed, label: clean(it.label || line, 80), st: 'queued', stage: '', pct: 0, at: now, upd: now, tries: 0,
-        ...(it.cid ? { cid: String(it.cid) } : {}), ...(it.replace ? { replace: String(it.replace) } : {}) });
+        ...(it.cid ? { cid: String(it.cid) } : {}), ...(it.replace ? { replace: String(it.replace), keep: !!it.keep } : {}) });
       added.push({ id, line });
     }
     return added.length > 0;
@@ -222,12 +222,12 @@ export async function sampleDetail(owner, row) {
     const { getVenueProfile } = await import('./_venues.mjs');
     const p = await getVenueProfile(owner.slice(2));
     profile = { name: p.name, tagline: p.tagline, bio: p.about, links: p.links, photo: p.photo, photos: p.photos, city: p.city, country: p.country, address: p.address, media: [],
-                hours: p.hours, menuUrl: (p.menu || {}).url || '', rating: p.rating };
+                hours: p.hours, menuUrl: (p.menu || {}).url || '', rating: p.rating, roles: rolesOf('venue', p) };
   } else {
     const { getProfile, shapeMedia } = await import('./_profile.mjs');
     const p = await getProfile(owner);
     profile = { name: p.name, first: p.first, tagline: p.tagline, style: p.style, bio: p.bio, links: p.links, photo: p.photo, avatar: p.avatar, city: row.city || '',
-                photos: p.photos, focus: p.focus, media: p.media.map(shapeMedia).filter(Boolean).map((m) => ({ mid: m.mid, title: m.title, provider: m.provider, thumb: m.thumb, hero: m.hero })) };
+                photos: p.photos, roles: rolesOf('artist', p), focus: p.focus, media: p.media.map(shapeMedia).filter(Boolean).map((m) => ({ mid: m.mid, title: m.title, provider: m.provider, thumb: m.thumb, hero: m.hero })) };
   }
   /* `preview`: the same link with ?pv=1, which the founder opens — the page and its Studio
      then count nothing and push nothing, so a look from the console is never mistaken
@@ -415,18 +415,23 @@ const main = async (req) => {
     /* A photo by address — an Instagram post's image the founder copied, a press
        shot — fetched here, checked the way an upload is (the bytes, not the label),
        and stored under the sample's own name. Never a page the server scrapes: the
-       address has to point at the picture itself. */
-    const slot = ['cover', 'avatar', 'p0', 'p1', 'p2', 'p3', 'p4'].includes(body.slot) ? body.slot : null;
-    if (!slot) return bad('Which slot?');
-    if (!isVenueOwner(owner) && (slot === 'p3' || slot === 'p4')) return bad('An artist page has three small photos.');
-    if (isVenueOwner(owner) && slot === 'avatar') return bad('A venue page has no portrait.');
+       address has to point at the picture itself. A picture the factory already
+       stored for this page (a candidate in the chooser) is placed, not fetched. */
+    const kind = isVenueOwner(owner) ? 'venue' : 'artist', at = ROLES[kind].indexOf(body.slot);
+    if (at < 0) return bad(kind === 'venue' ? 'A venue page has a cover and five photos.' : 'An artist page has a cover, a portrait and three small photos.');
+    const slot = body.slot;
+    const readP = async () => (kind === 'venue' ? (await import('./_venues.mjs')).getVenueProfile(owner.slice(2)) : (await import('./_profile.mjs')).getProfile(owner));
+    const { data: rec0 } = await readDoc(SAMPLE(owner), null);
+    const mine = String(body.url || ''), now0 = rolesOf(kind, await readP());
+    let src = (now0.includes(mine) || ((rec0 && rec0.photos) || []).some((x) => x && x.url === mine)) && /^\/api\/img\?a=s[a-z0-9]{10}&/.test(mine) ? mine : '';
     let bytes = null, type = null;
-    if (body.data) {
+    if (src) { /* already stored */ }
+    else if (body.data) {
       const { decodeDataUrl } = await import('./_img.mjs');
       const d = decodeDataUrl(body.data); if (d.error) return bad(d.error);
       bytes = d.bytes; type = d.type;
     } else {
-      const url = String(body.url || '');
+      const url = mine;
       if (!/^https:\/\/\S+$/i.test(url)) return bad('That needs to be an https:// link to the picture itself.');
       try {
         const { fetchImage } = await import('./_fsrc.mjs');
@@ -435,35 +440,78 @@ const main = async (req) => {
         bytes = got.bytes; type = got.type;
       } catch { return bad('Couldn’t fetch that picture.'); }
     }
-    const { putImage } = await import('./_img.mjs');
-    const src = await putImage(row.ns, slot, Buffer.from(bytes), type);
-    const focus = /^(100|\d{1,2})% (100|\d{1,2})%$/.test(String(body.focus || '')) ? body.focus : '';
-    const from = /cdninstagram|fbcdn/.test(String(body.url || '')) ? 'instagram' : 'founder';
-    if (isVenueOwner(owner)) {
-      const { mutateVenueProfile } = await import('./_venues.mjs');
-      await mutateVenueProfile(owner.slice(2), (p) => {
-        if (slot === 'cover') p.photo = src;
-        else { const i = Number(slot.slice(1)); p.photos = Array.isArray(p.photos) ? p.photos : []; while (p.photos.length <= i) p.photos.push(''); p.photos[i] = src; }
-        return true;
-      });
-    } else {
-      const { mutateProfile } = await import('./_profile.mjs');
-      await mutateProfile(owner, (p) => {
-        if (slot === 'cover') { p.photo = src; p.focus = { ...p.focus, cover: focus }; }
-        else if (slot === 'avatar') { p.avatar = src; p.focus = { ...p.focus, avatar: focus }; }
-        else { const i = Number(slot.slice(1)); p.photos = Array.isArray(p.photos) ? p.photos : []; while (p.photos.length <= i) p.photos.push(''); p.photos[i] = src; }
-        return true;
-      });
+    /* Stored under a name no other photo on the page uses (0136): once photos can
+       move between places, the name `p4` may hold the cover, and writing over it
+       would change a picture the page shows somewhere else. */
+    const { putImage, SLOTS, sampleImgKeys } = await import('./_img.mjs');
+    if (!src) {
+      const held = [...now0, ...((rec0 && rec0.photos) || []).map((x) => x && x.url)].filter(Boolean);
+      const used = new Set(held.map((u) => (/[?&]a=([a-z0-9]+)&s=([a-z0-9_]+)/.exec(u) || []).slice(1).join('/')));
+      const name = [...SLOTS].find((n) => !used.has(`${row.ns}/${n}`));
+      src = await putImage(row.ns, name, Buffer.from(bytes), type);
     }
+    const focus = /^(100|\d{1,2})% (100|\d{1,2})%$/.test(String(body.focus || '')) ? body.focus : '';
+    const from = /cdninstagram|fbcdn/.test(mine) ? 'instagram' : 'founder';
+    let gone = '', roles = null;
+    const place = (p) => {
+      const r = rolesOf(kind, p), j = r.indexOf(src);
+      gone = r[at];
+      if (j >= 0 && j !== at) { r[j] = r[at]; gone = ''; }   // already on the page elsewhere: the two trade places
+      r[at] = src; writeRoles(kind, p, r); roles = r;
+      if (kind === 'artist' && (slot === 'cover' || slot === 'avatar')) p.focus = { ...p.focus, [slot]: focus };
+      return true;
+    };
+    if (kind === 'venue') await (await import('./_venues.mjs')).mutateVenueProfile(owner.slice(2), place);
+    else await (await import('./_profile.mjs')).mutateProfile(owner, place);
+    // the picture it replaced, if nothing else on the page shows it and the chooser does not offer it
+    const offered = ((rec0 && rec0.photos) || []).some((x) => x && x.url === gone);
+    if (gone && gone !== src && !roles.includes(gone) && !offered) for (const k of sampleImgKeys([gone])) { try { await store().delete(k); } catch {} }
     await casDoc(SAMPLE(owner), () => ({ v: 1, owner }), (d) => {
-      d.photos = (d.photos || []).filter((x) => x.slot !== slot);
-      d.photos.push({ slot, from, src: null, score: null, why: 'added by the founder', focus, url: src });
+      d.photos = (d.photos || []).map((x) => ({ ...x, slot: ROLES[kind][roles.indexOf(x.url)] || '' }));
+      if (!d.photos.some((x) => x.url === src)) d.photos.push({ slot, from, src: null, score: null, why: 'added by the founder', focus, url: src });
       return true;
     }).catch(() => {});
-    if (slot === 'cover' || (slot === 'avatar' && !row.cv))
-      await mutateSampleReg((r) => { if (!r.byId[owner]) return false; r.byId[owner].cv = src; return true; });
+    const cv = roles[0] || (kind === 'artist' ? roles[1] : '') || '';
+    await mutateSampleReg((r) => { if (!r.byId[owner]) return false; r.byId[owner].cv = cv; return true; });
     await noteSample(owner, 'photo', `${slot} from ${from}`);
     return json({ ok: true, src });
+  }
+
+  if (action === 'arrange') {
+    /* The photos moved between places (0136): `order` is every place's photo, in the
+       order of ROLES — the same pictures the page holds now, nothing added or lost. */
+    const kind = isVenueOwner(owner) ? 'venue' : 'artist', n = ROLES[kind].length;
+    const want = Array.isArray(body.order) ? body.order.map((u) => String(u || '')) : [];
+    if (want.length !== n) return bad('Which order?');
+    let stale = false, roles = null;
+    const apply = (p) => {
+      const now = rolesOf(kind, p), same = (a) => a.filter(Boolean).sort().join('\n');
+      if (same(now.slice(0, n)) !== same(want)) { stale = true; return false; }
+      roles = [...want, ...now.slice(n)]; writeRoles(kind, p, roles);
+      return true;
+    };
+    if (kind === 'venue') await (await import('./_venues.mjs')).mutateVenueProfile(owner.slice(2), apply);
+    else await (await import('./_profile.mjs')).mutateProfile(owner, apply);
+    if (stale) return bad('The photos changed while you were moving them — have another look.');
+    await casDoc(SAMPLE(owner), () => ({ v: 1, owner }), (d) => {
+      d.photos = (d.photos || []).map((x) => ({ ...x, slot: ROLES[kind][roles.indexOf(x.url)] || '' }));
+      return true;
+    }).catch(() => {});
+    const cv = roles[0] || (kind === 'artist' ? roles[1] : '') || '';
+    await mutateSampleReg((r) => { if (!r.byId[owner]) return false; r.byId[owner].cv = cv; return true; });
+    await noteSample(owner, 'photo', 'moved');
+    return json({ ok: true, roles: roles.slice(0, n) });
+  }
+
+  if (action === 'notes') {
+    /* NOTES FOR THE GENERATOR (0136): what the founder wants said, left out or led
+       with. Kept on the page's seed, so every rebuild reads them; never on the page. */
+    const notes = String(body.notes || '').replace(/\r/g, '').trim().slice(0, 600);
+    let built = false;
+    await casDoc(SAMPLE(owner), () => ({ v: 1, owner }), (d) => { built = !!(d.seed && (d.seed.line || d.seed.raw)); if (!built) return false; d.seed = { ...d.seed, notes }; return true; });
+    if (!built) return bad('This page was made by hand, so there is no build for notes to steer.');
+    await noteSample(owner, 'notes', notes ? `${notes.length} characters` : 'cleared');
+    return json({ ok: true, notes });
   }
 
   if (action === 'rebuild') {
@@ -474,8 +522,10 @@ const main = async (req) => {
     /* the seed's own fields ride along (a page CRM built from its form has them), so a
        rebuild reads what the first build read, not only the line's rendering of it */
     const seed = { line, ...(sd.name ? { name: sd.name } : {}), ...(sd.city ? { city: sd.city } : {}), ...(sd.country ? { country: sd.country } : {}),
-      ...(sd.links ? { links: sd.links } : {}), ...(Array.isArray(sd.photos) && sd.photos.length ? { photos: sd.photos } : {}) };
-    const { added, skipped } = await queueJobs(row.k === 'v' ? 'venue' : 'artist', [{ seed, label: `Rebuild · ${row.name}`, replace: owner }]);
+      ...(sd.links ? { links: sd.links } : {}), ...(Array.isArray(sd.photos) && sd.photos.length ? { photos: sd.photos } : {}),
+      ...(sd.notes ? { notes: sd.notes } : {}) };
+    // keep (0136): the photos and a venue's details stay unless the founder asked for fresh ones
+    const { added, skipped } = await queueJobs(row.k === 'v' ? 'venue' : 'artist', [{ seed, label: `Rebuild · ${row.name}`, replace: owner, keep: body.keep !== false }]);
     if (!added.length && skipped.length) return json({ ok: true, started: 0, already: true });
     return json({ ok: true, started: await startJobs(1, origin) });
   }

@@ -364,8 +364,17 @@ ok('a call that timed out is not tried again: fifteen minutes is the whole budge
 const pk = A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, coverOk: true, quality: 0.95, textOverlay: 0, width: 1600, height: 900, kind: 'performing' },
   { id: 'b', from: 'youtube', group: 'y', isAct: true, coverOk: true, quality: 0.72, textOverlay: 0.1, width: 1280, height: 720, kind: 'performing' }]);
 eq('the founder’s rule: a good-enough YouTube picture beats a better website one', pk.cover.id, 'b');
-eq('but a thumbnail with its title across it does not', A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, coverOk: true, quality: 0.95, textOverlay: 0, width: 1600, height: 900 },
-  { id: 'b', from: 'youtube', group: 'y', isAct: true, coverOk: true, quality: 0.9, textOverlay: 0.5, width: 1280, height: 720 }]).cover.id, 'a');
+eq('but a thumbnail with its title across it does not', A.pickPhotos([{ id: 'a', from: 'website', group: 'w', isAct: true, coverOk: true, quality: 0.95, textOverlay: 0, width: 1600, height: 900, kind: 'performing' },
+  { id: 'b', from: 'youtube', group: 'y', isAct: true, coverOk: true, quality: 0.9, textOverlay: 0.5, width: 1280, height: 720, kind: 'performing' }]).cover.id, 'a');
+/* 0137: Andrew's first page opened on two actors from his music video. */
+const shot = (id, from, group, kind, q = 0.8, w = 1280, h = 720, more = {}) => ({ id, from, group, isAct: true, coverOk: true, avatarOk: false, quality: q, textOverlay: 0, width: w, height: h, kind, people: 2, ...more });
+eq('an artist\'s cover is never a music video\'s story frame', A.pickPhotos([shot('s', 'youtube', 'yt:a', 'video-scene', 0.95), shot('w', 'website', 'web:1', 'performing', 0.75)]).cover.id, 'w');
+eq('the act playing beats a portrait, even from a later source', A.pickPhotos([shot('p', 'youtube', 'yt:a', 'portrait', 0.9), shot('g', 'website', 'web:1', 'group', 0.75)]).cover.id, 'g');
+eq('a portrait still covers when nothing shows them playing', A.pickPhotos([shot('p', 'youtube', 'yt:a', 'portrait', 0.9), shot('x', 'website', 'web:1', 'other', 0.95)]).cover.id, 'p');
+eq('and a story frame is not one of the small photos either', A.pickPhotos([shot('c', 'website', 'web:0', 'performing', 0.9, 1600, 900), shot('s', 'youtube', 'yt:a', 'video-scene', 0.95)]).extras.length, 0);
+const three = A.pickPhotos([shot('c', 'website', 'web:0', 'performing', 0.9, 1600, 900), shot('y1', 'youtube', 'yt:a', 'performing'), shot('y2', 'youtube', 'yt:a', 'performing', 0.7), shot('y3', 'youtube', 'yt:a', 'portrait', 0.65), shot('w1', 'website', 'web:1', 'portrait')]);
+eq('three small photos when three are there: a second frame of a video fills the strip', three.extras.map((j) => j.id).join(), 'c,w1,y2');
+eq('but never a shot the judge called a duplicate', A.pickPhotos([shot('c', 'website', 'web:0', 'performing', 0.9, 1600, 900), shot('y1', 'youtube', 'yt:a', 'performing'), shot('y2', 'youtube', 'yt:a', 'performing', 0.7, 1280, 720, { dup: 'y1' })]).extras.map((j) => j.id).join(), 'c');
 /* A venue whose site has no 1000-px hero still gets a cover (2026-10-01, Sand & Tan opened on a gradient). */
 const vsite = [{ id: 'v1', from: 'website', group: 'w1', isAct: true, coverOk: false, quality: 0.8, textOverlay: 0, width: 900, height: 600, kind: 'room' },
   { id: 'v2', from: 'website', group: 'w2', isAct: true, coverOk: false, quality: 0.9, textOverlay: 0, width: 700, height: 900, kind: 'food' }];
