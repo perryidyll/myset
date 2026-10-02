@@ -7,7 +7,7 @@ decided_by: claude
 area: media
 reverses:
 superseded_by:
-invariants: [1, 0ii]
+invariants: [1, 0iw]
 commits: []
 tests: [test/clips.mjs]
 files: [netlify/functions/community.mjs, netlify/functions/clipup.mjs, netlify/functions/_video.mjs, netlify/functions/_account.mjs, netlify/functions/_venueaccount.mjs, tools/backup.py]

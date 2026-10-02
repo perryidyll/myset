@@ -7,7 +7,7 @@ decided_by: claude
 area: plans
 reverses:
 superseded_by:
-invariants: [0ij]
+invariants: [0ix]
 commits: []
 tests: [test/billing.mjs]
 files: [netlify/functions/_plan.mjs, netlify/functions/admin.mjs, tools/backup.py]
