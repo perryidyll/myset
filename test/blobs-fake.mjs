@@ -58,10 +58,10 @@ export const __failReads = (re, { hang = false } = {}) => { failReadRe = re; fai
    repeats exactly). `stats` counts what the store was asked to do. Used by
    tools/roomsim.mjs on a virtual clock; every other test leaves it off. */
 let lat = null;
-export const stats = { gets: 0, sets: 0, setFail: 0, bytesR: 0, bytesW: 0 };
+export const stats = { calls: 0, gets: 0, sets: 0, setFail: 0, bytesR: 0, bytesW: 0 };
 export const __latency = (cfg) => {
   lat = cfg ? { r: 42, rPerMB: 20, w: 80, wPerMB: 40, jitter: 0.15, rand: Math.random, ...cfg } : null;
-  Object.assign(stats, { gets: 0, sets: 0, setFail: 0, bytesR: 0, bytesW: 0 });
+  Object.assign(stats, { calls: 0, gets: 0, sets: 0, setFail: 0, bytesR: 0, bytesW: 0 });
 };
 const pause = (base, perMB, bytes) =>
   new Promise((r) => setTimeout(r, Math.max(0, Math.round(base + perMB * bytes / 1e6 + (lat.rand() * 2 - 1) * lat.jitter * base))));
@@ -69,6 +69,7 @@ const pause = (base, perMB, bytes) =>
 export function getStore() {
   return {
     async getWithMetadata(key, opts = {}) {
+      stats.calls++;
       note('get', key);
       if (failReadRe && failReadRe.test(key)) {
         if (failReadHang) await new Promise(() => {});
@@ -88,6 +89,7 @@ export function getStore() {
       return r ? r.data : null;
     },
     async set(key, body, opts = {}) {
+      stats.calls++;
       note('set', key);
       if (failRe && failRe.test(key)) return { modified: false };   // acked, not stuck
       if (lat) { await pause(lat.w, lat.wPerMB, body.length); stats.sets++; }

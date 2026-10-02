@@ -134,7 +134,17 @@ if (play) at(burstSec * 500, async () => {
   const r = await adm('playTop');
   res.play = { code: r.code, ms: Date.now() - t0, error: r.error || null };
 });
-const flush = () => new Promise((r) => setImmediate(r));
+/* Let everything that can happen at this virtual millisecond happen before the
+   clock moves. One turn of the event loop is not always enough (reading a request
+   body takes more turns on some Node versions), and a run whose work spilled into
+   the next millisecond by chance would not repeat to the byte. So turn the loop
+   until the store has seen no new call for a whole turn. */
+const flush = async () => {
+  for (let i = 0, seen = -1; i < 64 && seen !== blobs.stats.calls; i++) {
+    seen = blobs.stats.calls;
+    await new Promise((r) => setImmediate(r));
+  }
+};
 const cap = (A.capSec ?? 240) * 1000, wall0 = process.hrtime.bigint();
 let vt = 0;
 while (pending > 0 && vt < cap) { mock.timers.tick(1); vt++; await flush(); }
