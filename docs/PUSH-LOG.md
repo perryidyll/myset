@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-03 01:53 — 33740d5 — about-voice@ux/about-magazine-voice (5 files since origin/main)
+**tl;dr:** New sample pages get a fun, magazine-style About instead of a plain one (0161)
+**Other sessions:** Only the copy prompts in _fai.mjs changed: bio and venue about ask for a magazine voice with one wink of humour; facts-only, src, no-hype and two-sentence rules unchanged; tagline/style stay plain. Decision 0161 (0160 is cdfdf5's rate rules, still in #210).
+
 ### 2026-10-03 00:18 — 4dc1301 — photo-roles@docs/about-cover-0158-0159-live (0 files since origin/main)
 **tl;dr:** Docs: decisions 0158 and 0159 recorded as live (cb2272f, 1a4456b), session note, status header [skip ci]
 **Other sessions:** Puzzle changelog 2694 (0158), 2695 (0159). Andrew's sample is fixed by hand (cover = Pinch live at The Hollow); don't rebuild it with Keep unticked or the hand-picked photos go.
