@@ -3,7 +3,7 @@ id: 0184
 title: A paid plan is applied before it is marked synced, grace counts from the failed renewal, and Stripe is asked before a second subscription
 date: 2026-10-03
 status: decided
-decided_by: perry-confirmed
+decided_by: claude
 area: plans
 reverses:
 superseded_by:
