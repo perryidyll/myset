@@ -10,6 +10,16 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:49 — 54d8ec3 — escape-management@ops/ci-and-watch (6 files since origin/main)
+**tl;dr:** The test check on pull requests takes about six minutes; its first run passed
+**Other sessions:** Nothing new beyond the entry below: 0144's record now quotes the first run of the suite check (5 m 40 s, Node 22, ubuntu).
+
+### 2026-10-02 23:42 — 853042d — escape-management@ops/ci-and-watch (5 files since origin/main)
+**tl;dr:** Every pull request now runs the whole test suite on GitHub before it can be merged (0144)
+**Other sessions:** New check 'suite' (.github/workflows/tests.yml). RULE CHANGE: never put the skip-ci marker in a BRANCH commit any more — it stops the check running; docs-only merges put it in the merge subject instead (gh pr merge --squash --subject '… [skip ci] (#n)'). Decision numbers 0138–0143 are in open PRs from session cdfdf5 (#205 and two stacked branches); 0144 is this one.
+
+
+
 ### 2026-10-02 23:59 — cb2272f — photo-roles@ux/cover-review (0 files since origin/main)
 **tl;dr:** Sample page builds: the cover is now chosen twice: the best four candidates go back to the model side by side and it picks the one the act would be proudest of; live videos beyond the top three now give frames too (0159)
 **Other sessions:** _fai.mjs: coverChoices(), reviewCover() (COVER_SYSTEM, call 'cover'), pickPhotos({cover}) picks the rest around a given cover. _factory.mjs: LIVE_TITLE, up to 2 live-titled videos past the top 3; choosePhotos runs the review unless late, a failure keeps the picker's choice (errors.cover). 0158 commits set to cb2272f.
@@ -65,6 +75,7 @@ can see the others' chat. This file is the one place they all speak.
 ### 2026-10-01 19:55 — 5defe78 — wt4@dash-followers-line (1 files since origin/main)
 **tl;dr:** The master dashboard's Media Dash window now has a blue followers line that draws itself through the views bars, lands on today's count, fades and starts again
 **Other sessions:** dash.html only: line points are followers at each post's publish time (last account reading at or before it), plus today's count at the right edge; own y-scale, no axis. Reduced motion shows it still.
+
 ### 2026-10-01 20:02 — d812fc7 — venue-hero@ux/venue-hero (23 files since origin/main)
 **tl;dr:** Venue pages: a Google rating pill under the address (stars, review count, 'as of Oct 2026') that opens their Google reviews; a sample's hours, menu link and rating can be filled from Google in CRM → Edit profile → Details; a sample with no hours found no longer shows a made-up 5 pm–1 am
 **Other sessions:** Decision 0134 on #182. _factory.mjs humanHours(text) → parseHours (one reader). Venue profile gains rating {stars,count,at}; factory 'edit' takes hours/menuUrl/rating for venues; sampleDetail returns hours/menuUrl/rating. createSample closes every day when no hours were found and the template is untouched.

@@ -128,7 +128,8 @@ git add <each file you changed>               # by name, never -A — and only w
 git commit
 ./tools/pushlog.sh "what changed" "note"      # the push log entry rides on the branch
 git push -u origin HEAD
-gh pr create --fill                           # Netlify posts a deploy preview on the PR
+gh pr create --fill                           # Netlify posts a deploy preview; the suite runs as a check
+gh pr checks <n> --watch                      # wait for `suite` to pass
 gh pr merge <n> --squash --subject "… (#<n>)" # this is the deploy; keep the PR number
 git push origin --delete <area>/<what-changed>
 ```
@@ -140,10 +141,19 @@ Look at the deploy preview before merging — it is the "real browser at phone w
 check, on the exact bytes that will ship. A preview cannot charge a card (the Stripe
 secrets are unset outside production) but it **reads and writes production data**.
 
-Doc-only work keeps `[skip ci]` in its commit message so Netlify does not bill a
-production build for it; a squash of a single commit keeps that message (pass
-`--subject "… [skip ci] (#<n>)"` to `gh pr merge` to be sure). A `[skip ci]` merge
-builds nothing, so it never carries a change that needs a fresh production build.
+**Every pull request runs the suite** (decision 0144): `.github/workflows/tests.yml`
+runs `sh test/run.sh` on GitHub's machine and reports it as the check named `suite`.
+It takes about six minutes. Wait for it to go green before merging; a red one is a broken build, not a formality.
+Running it yourself first is still the fast way to find out.
+
+Doc-only work puts `[skip ci]` in the **merge subject**, never in a branch commit:
+`gh pr merge <n> --squash --subject "… [skip ci] (#<n>)"`. The marker in the merge is
+what stops Netlify billing a production build. The same marker in a branch's last
+commit stops the `suite` check from running at all, and a check that never runs
+blocks the merge. A `[skip ci]` merge builds nothing, so it never carries a change
+that needs a fresh production build. The other direction still holds: a squash folds
+every branch commit message into the merge, so a code change must not have the marker
+anywhere in its branch's messages.
 
 **Never also run `netlify deploy --prod`** — that bills a second deploy for the same
 change and races over what is live (INVARIANT 9d3).
