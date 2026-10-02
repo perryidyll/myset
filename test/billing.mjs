@@ -115,8 +115,8 @@ console.log('\nA PROMO CODE CANNOT BE GUESSED  (decision 0190)');
   });
   const cy = await createArtist({ email: 'cy@example.com', name: 'Cy Guesser', slug: 'cy-guesser' });
   const TC = await signToken('cy@example.com', revOf(await readArtists(), cy.artistId));
-  const dee = await createArtist({ email: 'dee@example.com', name: 'Dee Honest', slug: 'dee-honest' });
-  const TD = await signToken('dee@example.com', revOf(await readArtists(), dee.artistId));
+  const dee = await createArtist({ email: 'honest@example.com', name: 'Dee Honest', slug: 'dee-honest' });   // not dee@: 0184's section below signs her up
+  const TD = await signToken('honest@example.com', revOf(await readArtists(), dee.artistId));
   const RD = (tok, code, ip) => hit(admin, 'https://x/api/admin', { action: 'promoRedeem', code }, tok, { 'x-nf-client-connection-ip': ip });
 
   const unknown = await RD(TC, 'NOSUCHCODE', '203.0.113.50');
