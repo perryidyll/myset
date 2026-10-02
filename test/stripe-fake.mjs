@@ -197,11 +197,15 @@ export default class Stripe {
   }
   get refunds() {
     /* Idempotent by key, like the real thing: a webhook retry that refunds the same
-       payment twice is the bug this exists to make visible. */
+       payment twice is the bug this exists to make visible. Set `state.refuseRefunds`
+       to a message and every refund throws it, as Stripe does when it is down — the
+       way a test proves a refund that failed is still owed (decision 0178). A
+       refund names its account like everything else, so the scope can be asserted. */
     return { create: async (params, opts) => { note('refunds.create', params, opts);
+      if (state.refuseRefunds) throw new Error(state.refuseRefunds);
       const k = (opts && opts.idempotencyKey) || '';
       if (k && state.refunds.has(k)) return state.refunds.get(k);
-      const r = { id: `re_test${state.refunds.size + 1}`, ...params, status: 'succeeded' };
+      const r = { id: `re_test${state.refunds.size + 1}`, ...params, status: 'succeeded', __account: (opts && opts.stripeAccount) || '' };
       if (k) state.refunds.set(k, r);
       return r; } };
   }
@@ -302,6 +306,8 @@ export default class Stripe {
             created: NOW(), metadata: params.metadata || {},
             payment_intent: pi,
             payment_intent_data: params.payment_intent_data || null,
+            // kept as asked, so a test can read the clock a checkout was given (0178)
+            ...(params.expires_at ? { expires_at: params.expires_at } : {}),
           };
         }
         state.sessions.set(id, { session, onAccount: (opts && opts.stripeAccount) || '' });
@@ -327,10 +333,17 @@ export default class Stripe {
            older charge gets booked against the wrong side of the books. */
         const g = ((params || {}).created || {}).gte ?? 0;
         const l = ((params || {}).created || {}).lte ?? 9e12;
-        return { data: [...state.sessions.values()]
+        /* `payment_intent` finds the one session behind a charge, as Stripe's list
+           does — how a refund or a dispute, which carry only the payment, is traced
+           back to what was bought (decision 0177). Absent, nothing changes. */
+        const pi = (params || {}).payment_intent || '';
+        const piOf = (s) => (typeof s.payment_intent === 'string' ? s.payment_intent : (s.payment_intent && s.payment_intent.id) || '');
+        const rows = [...state.sessions.values()]
           .filter((r) => r.onAccount === asked && r.session.mode !== 'subscription'
-                      && (r.session.created ?? 0) >= g && (r.session.created ?? 0) <= l)
-          .map((r) => r.session) };
+                      && (r.session.created ?? 0) >= g && (r.session.created ?? 0) <= l
+                      && (!pi || piOf(r.session) === pi))
+          .map((r) => r.session);
+        return { data: pi && params.limit ? rows.slice(0, params.limit) : rows };
       },
     } };
   }

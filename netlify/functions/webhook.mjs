@@ -58,6 +58,18 @@ const main = async (req) => {
     return json({ received: true });
   }
 
+  /* MONEY THAT WENT BACK (decision 0177): a refund, or a chargeback opening, moving
+     or being decided — on the platform's own charges and, through the Connect
+     endpoint, on every artist's and venue's. The payment's marker and its row say
+     what went back, the fan's unspent wallet votes from it are taken back, and the
+     artist is told once. Not caught (0138): a throw answers 500 and Stripe sends the
+     event again; every step is safe to repeat. See _refunds.mjs. */
+  if (event.type === 'charge.refunded' || String(event.type || '').startsWith('charge.dispute.')) {
+    const { settleLoss } = await import('./_refunds.mjs');
+    await settleLoss(event);
+    return json({ received: true });
+  }
+
   /* An account finished (or lost) onboarding. This is the ONE writer that flips a
      room's money buttons on, so it also mirrors the answer onto the show record
      where the audience poll can read it for free. */

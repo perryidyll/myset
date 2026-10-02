@@ -57,6 +57,10 @@ not include refunds, disputes or payouts, and **they do not exist at all for a
 subscription renewal**. The balance transaction knows all of it, in the settlement
 currency, and it is what an accountant would ask for.
 
+### Money that went back (2026-10-03, decision 0177 — proposed)
+
+The statements above already include refunds and chargebacks: they are balance transactions. What did not were the session-based figures — the night's money, tonight's tips, the merch order list — because a refunded session still says `paid`. Now a `charge.refunded` or `charge.dispute.*` event writes `lost` (cents no longer held) on the payment's marker and on its tip or order row, and those figures subtract it; the night's money also takes the charge's own `amount_refunded`, Stripe's figure, when no event ever arrived. Nothing here re-derives a charge: `lost` is a cache of what Stripe said, the same posture as the rest of this file. The Money tab's payment list (`revenue.mjs`) does not subtract it yet.
+
 ### The same payment, read from both sides
 
 A $10 vote pack on an artist's connected account produces **one** `charge` entry
