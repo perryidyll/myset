@@ -23,7 +23,7 @@ import { readBiz } from './_biz.mjs';
 import { readConnect, connectUsable } from './_connect.mjs';
 import { readWishes } from './_wishes.mjs';
 import { readMine as readFeaturedMine } from './_featured.mjs';
-import { readMeta } from './_lib.mjs';
+import { readMeta, tipGone } from './_lib.mjs';
 import { hasPassword } from './_cred.mjs';
 import { occurrences, placeNight, judgeRow } from './_nightrule.mjs';
 
@@ -520,8 +520,9 @@ async function artistRows(aid, artist, state, dry) {
   const realRoom = realNights.reduce((a, x) => a + (x.room || 0), 0);
   const realVotes = realNights.reduce((a, x) => a + (x.totalVotes || 0), 0);
   const realGross = realNights.reduce((a, x) => a + (Number(x.gross) || 0), 0);
-  const packs = Object.values(meta.paid || {}).filter((p) => p && p.kind !== 'tip' && p.kind !== 'merch');
-  const tips = (meta.tips || []);
+  /* A pack or tip refunded in full is not a sale (decision 0179, net of `lost`). */
+  const packs = Object.values(meta.paid || {}).filter((p) => p && p.kind !== 'tip' && p.kind !== 'merch' && !tipGone(p));
+  const tips = (meta.tips || []).filter((t) => t && !tipGone(t));
   const firstReal = realNights.slice().sort((a, b) => a.startedAt - b.startedAt)[0] || null;
   const lastReal = realNights.slice().sort((a, b) => b.startedAt - a.startedAt)[0] || null;
   const upcoming = occs.filter((o) => o.startsAt > now && o.startsAt < now + 28 * 86400000).length;
