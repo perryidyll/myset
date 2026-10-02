@@ -1,5 +1,5 @@
 ---
-id: 0159
+id: 0160
 title: Two rate rules at the edge, sized so a room never meets them
 date: 2026-10-03
 status: decided

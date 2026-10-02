@@ -168,7 +168,7 @@ await A('newShow');
 const proShow = await getShow(a.artistId);
 eq('Pro’s number is stamped on the new night', proShow.roomCap, PLANS.pro.audience);
 
-console.log('\nTHE EDGE’S RATE RULE NEVER MEETS A REAL ROOM  (decision 0159)');
+console.log('\nTHE EDGE’S RATE RULE NEVER MEETS A REAL ROOM  (decision 0160)');
 /* netlify.toml caps /api/* per address per minute. A venue's wifi is ONE address
    with the whole room behind it, and every phone asks twice a tick (the board and
    its own state). So the cap has to clear the worst room at every poll floor — and

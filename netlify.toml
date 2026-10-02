@@ -18,7 +18,7 @@
 [functions.artistpage]
   included_files = ["public/artist.html"]
 
-# TWO RATE RULES (decision 0159) — the two the plan allows. Netlify counts requests
+# TWO RATE RULES (decision 0160) — the two the plan allows. Netlify counts requests
 # per address per window at its edge and answers 429 for a minute once a window is
 # over. Both are sized so that a real room can never meet them:
 #
