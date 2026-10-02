@@ -168,5 +168,31 @@ await A('newShow');
 const proShow = await getShow(a.artistId);
 eq('Pro’s number is stamped on the new night', proShow.roomCap, PLANS.pro.audience);
 
+console.log('\nTHE EDGE’S RATE RULE NEVER MEETS A REAL ROOM  (decision 0160)');
+/* netlify.toml caps /api/* per address per minute. A venue's wifi is ONE address
+   with the whole room behind it, and every phone asks twice a tick (the board and
+   its own state). So the cap has to clear the worst room at every poll floor — and
+   this fails the day somebody lowers a floor, or the cap, without doing the sum. */
+{
+  const { readFileSync } = await import('node:fs');
+  const toml = readFileSync(new URL('../netlify.toml', import.meta.url), 'utf8');
+  const rule = (from) => {
+    const m = toml.match(new RegExp('from = "' + from.replace(/[*/]/g, '\\$&') + '"[\\s\\S]*?\\[redirects\\.rate_limit\\]\\s*window_limit = (\\d+)\\s*window_size = (\\d+)'));
+    return m ? { limit: Number(m[1]), size: Number(m[2]) } : null;
+  };
+  const api = rule('/api/*'), auth = rule('/api/auth');
+  ok('the /api/* rule is there, per minute', !!api && api.size === 60, api);
+  ok('the /api/auth rule is there, per minute', !!auth && auth.size === 60, auth);
+  ok('and sits above the general one, or it would never be the rule that matches',
+     toml.indexOf('from = "/api/auth"') > 0 && toml.indexOf('from = "/api/auth"') < toml.indexOf('from = "/api/*"'));
+  for (const heads of [200, 3000, 5000, 10000]) {
+    const perMin = Math.ceil(heads * 2 * 60000 / pollFloorFor(heads));
+    ok(`${heads} phones on one address ask ${perMin} times a minute at most — under the cap of ${api && api.limit}`,
+       !!api && perMin <= api.limit, { heads, perMin, cap: api && api.limit });
+  }
+  ok('a 5,000 room has at least half the cap to spare for votes and page loads',
+     !!api && Math.ceil(5000 * 2 * 60000 / pollFloorFor(5000)) * 2 <= api.limit);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
