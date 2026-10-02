@@ -1555,7 +1555,7 @@ function render(){
   if(P.management&&P.managementUrl)links.push('management');
   if(links.length){
     const pills=links.map(k=>
-      `<a href="${esc(k==='management'?P.managementUrl:P.links[k])}" target="_blank" rel="noopener noreferrer">${k==='management'?'↗ ':ICON[k]}${k==='management'?P.management:LABEL[k]}</a>`);
+      `<a href="${esc(k==='management'?P.managementUrl:P.links[k])}" target="_blank" rel="noopener noreferrer">${k==='management'?'↗ ':ICON[k]}${k==='management'?esc(P.management):LABEL[k]}</a>`);
     h+=`<div class="sect">Listen, follow, &amp; support</div><div class="links" id="links">${pills.join('')}${pills.length>=2&&!matchMedia('(prefers-reduced-motion:reduce)').matches?pills.map(ghost).join(''):''}</div>`;
   }
 

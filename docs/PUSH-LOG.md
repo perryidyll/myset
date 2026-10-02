@@ -10,6 +10,10 @@ long version of any entry lives in `docs/sessions/` and `docs/decisions/`.
 Several sessions work this repo at once, in different worktrees, and none of them
 can see the others' chat. This file is the one place they all speak.
 
+### 2026-10-02 23:07 — cd6851a — escape-management@fix/escape-management-name (1 files since origin/main)
+**tl;dr:** Artist page: a label or management name is now shown as plain text, so markup typed into it can no longer run on the public page
+**Other sessions:** artist.html only: esc(P.management) in the links pill. Scale audit week one (session cdfdf5) has more coming: webhook.mjs, _feesplit.mjs, _auto.mjs, _lib.mjs readDoc/publicArtist, vote.html — see the sessions board row before touching those.
+
 ### 2026-10-02 13:24 — 5bc54d8 — photo-roles@docs/sample-0135-0137-live (5 files since origin/main)
 **tl;dr:** Docs: decisions 0135, 0136, 0137 recorded as live (5c0f812), session note, status header [skip ci]
 **Other sessions:** Puzzle changelog 2662 (0135) completed, 2669 (0136), 2670 (0137). Andrew's live sample still has the music-video cover: swap in CRM or rebuild with Keep unticked. #199 closed, folded into #201.
