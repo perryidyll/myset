@@ -494,7 +494,7 @@ export const mutateShow = (aid, fn) => {
    the belt to that brace — decision 0110). */
 export const own = (o, k) => (o != null && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : undefined);
 
-export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
+export const mutateFan = (aid, fanId, fn, verifyFan = null, tries = 40) =>
   casDoc(
     shardKey(aid, shardOf(fanId)),
     () => ({}),
@@ -503,7 +503,8 @@ export const mutateFan = (aid, fanId, fn, verifyFan = null) =>
       me.v ||= []; me.extra ||= 0; me.ts ||= {}; me.spent ||= 0; me.va ||= {};
       return fn(me, bag);
     },
-    verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null
+    verifyFan ? (bag) => verifyFan((bag && bag[fanId]) || { v: [], extra: 0 }) : null,
+    tries
   );
 
 /** All fan records, merged from every shard (parallel strong reads). */
@@ -1020,7 +1021,13 @@ export function roomCounts(fans) {
 export const uniqueRoom = (fans) => roomCounts(fans).phones;
 
 /** One write per device per show. Called only from the voting page, only while a
- *  show is live, and skipped entirely once the stamp is already there. */
+ *  show is live, and skipped entirely once the stamp is already there.
+ *  AT MOST PRESENCE_TRIES GOES (decision 0185). It shares a shard with the votes, and
+ *  a room scanning in at once used to spend up to forty tries — seconds — per phone
+ *  on a head-count, taking the turns votes needed. A stamp that loses three times is
+ *  simply missed: the next personal call tries again, and a phone that votes is
+ *  counted by its vote (roomCounts). */
+export const PRESENCE_TRIES = 3;
 export async function markPresence(aid, fanId, show, req) {
   if (!fanId || !show || show.status !== 'live') return;
   const ipH = roomHash(aid, clientIp(req));
@@ -1029,7 +1036,7 @@ export async function markPresence(aid, fanId, show, req) {
       if (me.seenShow === show.showId && me.ipH === ipH) return false;   // already counted
       me.ipH = ipH; me.seenShow = show.showId;
       return true;
-    });
+    }, null, PRESENCE_TRIES);
   } catch { /* a missed head-count must never break the voting page */ }
 }
 

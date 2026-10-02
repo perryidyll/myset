@@ -19,8 +19,11 @@
      run until the stylesheet and the shared scripts have arrived, so without this
      the request that decides what is on screen would wait behind them. Here it is
      already in flight while they load; boot() below picks up the reply. Used once,
-     on the first load only — a pull-to-refresh fetches fresh. -->
-<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const a=S?'&a='+encodeURIComponent(S):'',a1=S?'?a='+encodeURIComponent(S):'';let F=null;try{F=localStorage.getItem('myset.fan')}catch(e){}if(!F){F='f'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);try{localStorage.setItem('myset.fan',F)}catch(e){}}const g=(u,o)=>{const f=fetch(u,o);f.catch(()=>{});return f};window.__early={board:g('/api/fan?what=board'+a1.replace('?','&')),me:g('/api/fan?what=me&fan='+encodeURIComponent(F)+'&in=1'+a,{cache:'no-store'})}}catch(e){}})();</script>
+     on the first load only — a pull-to-refresh fetches fresh. Only the BOARD leaves
+     from here: the personal call (and the head-count stamp it makes) waits until the
+     board is on screen, so a room arriving at once never holds anyone's first paint
+     on a write (decision 0185). -->
+<script>(()=>{try{const p=location.pathname.split('/').filter(Boolean);const S=(p[0]&&!p[0].includes('.'))?p[0]:'';const a1=S?'?a='+encodeURIComponent(S):'';const g=(u,o)=>{const f=fetch(u,o);f.catch(()=>{});return f};window.__early={board:g('/api/fan?what=board'+a1.replace('?','&'))}}catch(e){}})();</script>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="MySet" />
@@ -354,6 +357,20 @@ h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.028em;line-height:1.08}
 @media (prefers-reduced-motion:reduce){#intro .bars b,#intro .bars b::before{animation:none}}
 .noboard{margin:80px 22px;text-align:center;color:var(--muted);font-size:15px}
 .noboard b{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
+/* the in-app-browser hint on a sheet that sells votes (wvHint) */
+.wvhint{margin:14px 0;padding:14px 16px;border-radius:var(--r);background:var(--bg);font-size:14px;color:var(--ink);line-height:1.4;text-align:left}
+.wvhint b{display:block;margin-bottom:2px}
+.wvhint .btn{margin-top:10px}
+/* the screen came back on and the board is older than the room (wake(), decision 0185):
+   the old one stays, dimmed, and says so until the new one lands */
+#app .now,#app .strip,#app .queue,#app .list{transition:opacity .24s var(--spring)}
+#app.catching .now,#app.catching .strip,#app.catching .queue,#app.catching .list{opacity:.45}
+#app.catching::before{content:'Catching up…';position:fixed;z-index:35;left:50%;
+  top:calc(env(safe-area-inset-top,0px) + 80px);transform:translateX(-50%);padding:7px 14px;
+  border-radius:999px;background:var(--surface);box-shadow:var(--sh-1);color:var(--muted);
+  font-size:13px;font-weight:600;animation:catchin .24s var(--spring) both}
+@keyframes catchin{from{opacity:0;transform:translate(-50%,-6px)}}
+@media (prefers-reduced-motion:reduce){#app .now,#app .strip,#app .queue,#app .list{transition:none}#app.catching::before{animation:none}}
 #app{padding-bottom:172px}
 .headtools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
 /* The pill is a wallet, not a headline: 14px so the artist's name is the biggest
@@ -755,7 +772,7 @@ body.sheeting{position:fixed;left:0;right:0;width:100%;overflow:hidden}
      0.15–0.5 s measured on a first visit, which is the visit that matters — and
      nothing here calls MySetPull() before the body has arrived. -->
 <script src="/pull.js"></script>
-<script src="/fan.js?v=15f13758"></script>
+<script src="/fan.js?v=0831c190"></script>
 <script>
 /* Which artist is this page about? From the URL: /perryidyll or /perryidyll/vote.
    A path segment containing a dot is a real file, so the legacy /vote.html and
@@ -815,7 +832,7 @@ let BOARD=null, ME=null, CAST_AT=0;
    its own: one call that never answers held the poll loop for as long as the phone
    cared to wait, and held a song's button with it. `timed` gives up after `ms` and
    rejects, which every caller here already treats as "couldn't reach the room".
-   `within` is the same clock for a request somebody else started (the two the
+   `within` is the same clock for a request somebody else started (the board the
    <head> fires before this script has parsed). */
 function timed(url,opts,ms){
   if(typeof AbortController!=='function') return fetch(url,opts||{});
@@ -826,23 +843,31 @@ const within=(p,ms)=>new Promise((yes,no)=>{ const t=setTimeout(()=>no(new Error
   p.then(v=>{clearTimeout(t);yes(v);},e=>{clearTimeout(t);no(e);}); });
 /* How many loads in a row came back without a board. schedule() reads it. */
 let FAILS=0;
+/* THE PERSONAL CALL IS NOT ON EVERY TICK (decision 0185). The board is one shared
+   copy at the edge; /api/me is a function call per phone, and on every tick it was
+   the load that grew with the room. What it carries only changes when this phone
+   acts (a vote, a purchase, a request, a leftover choice — each sets ME_DUE before
+   its load), when the artist changes the show (the board's `updatedAt` or `showId`
+   moves: a song played, a request taken, a new night), when the screen comes back
+   on, or on the first load. Otherwise it is asked once a minute as a safety, and
+   15 s after one that did not answer. Between those the board carries the tallies,
+   and a cast's own answer has already corrected the wallet (applyCast). */
+const ME_EVERY=60000, ME_RETRY=15000;
+let ME_DUE=true, ME_AT=0, ME_MISS=false, ME_SEEN=false, STAGE=null, BOARD_T=0;
+const meDue=()=>ME_DUE||Date.now()-ME_AT>=(ME_MISS?ME_RETRY:ME_EVERY);
 async function load(){
   /* The board fetch is NOT `cache:'no-store'` on purpose: that mode makes the
      browser send `Cache-Control: no-cache`, which some edges honour as "skip the
      cache", and the cache is the whole point. The server's own `max-age=0,
      must-revalidate` already stops the browser keeping a copy. The `Age` header is
      how old the edge's copy is, and the countdown is corrected by it. */
-  const E=window.__early||{}; window.__early=null;     // the head started these; see <head>
-  const [b,m]=await Promise.all([
-    (E.board?within(E.board,10000):timed(`${API}/fan?what=board${AQ1.replace('?','&')}`)).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null),
-    (E.me?within(E.me,10000):timed(`${API}/fan?what=me&fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'})).then(r=>r.json()).catch(()=>null),
-  ]);
-  /* A personal reply can have left the server before this phone's last cast landed
-     (it was already in flight when the tap happened), so its `lastAt` may be older
-     than a vote this phone has already been told about. The vote's own clock wins. */
-  if(m&&m.ok){ ME=m; ME.lastAt=Math.max(Number(ME.lastAt)||0,CAST_AT); }
+  const E=window.__early||{}; window.__early=null;     // the head started this; see <head>
+  const b=await (E.board?within(E.board,10000):timed(`${API}/fan?what=board${AQ1.replace('?','&')}`)).then(async r=>({d:await r.json(),age:Number(r.headers.get('age'))||0})).catch(()=>null);
   const fresh=!!(b&&b.d&&b.d.ok);
-  if(fresh){ BOARD=b.d; BOARD.age=b.age; }
+  if(fresh){ BOARD=b.d; BOARD.age=b.age; BOARD_T=Date.now()-b.age*1000;
+    $('#app').classList.remove('catching');               // see wake()
+    // the artist changed the show: what is true of this phone may have changed with it
+    const k=BOARD.showId+'|'+BOARD.updatedAt; if(STAGE!==null&&k!==STAGE) ME_DUE=true; STAGE=k; }
   /* A board that did not arrive — unreachable, timed out, or the server saying
      "busy" — is counted, and the poll slows down for it (schedule). A board that
      did arrive puts the count back to nothing. */
@@ -856,8 +881,28 @@ async function load(){
     if(!BOOTED) $('#app').innerHTML=`<div class="noboard"><b>Couldn’t reach the room</b><p>Check the wifi, then pull down to try again.</p></div>`;
     return;
   }
+  /* THE BOARD IS PAINTED FIRST, the personal call made after it (decision 0185). A
+     room scanning in at once used to hold every phone's first paint on /api/me, which
+     stamps the head-count with a write; now the board is on screen as it lands, and
+     the wallet fills in a moment later. A load whose board did not arrive does not ask
+     either — the room is not answering (0143) — and ME_DUE waits for the next one. */
+  paint(fresh);
+  if(!fresh||!meDue()) return;
+  ME_DUE=false; ME_AT=Date.now();
+  const m=await timed(`${API}/fan?what=me&fan=${encodeURIComponent(FAN)}&in=1${AQ}`,{cache:'no-store'}).then(r=>r.json()).catch(()=>null);
+  ME_MISS=!(m&&m.ok); ME_SEEN=true;
+  /* A personal reply can have left the server before this phone's last cast landed
+     (it was already in flight when the tap happened), so its `lastAt` may be older
+     than a vote this phone has already been told about. The vote's own clock wins. */
+  if(!ME_MISS){ ME=m; ME.lastAt=Math.max(Number(ME.lastAt)||0,CAST_AT); }
+  paint(false);
+}
+/* The board and this phone's half, merged and drawn. `fresh` is true only for a board
+   that just arrived: only that one may feed the countdown (below). */
+let CARET=null;
+function paint(fresh){
   try{
-    const el=document.activeElement; FOCUS=!!(el&&el.id==='q');
+    const el=document.activeElement; FOCUS=!!(el&&el.id==='q'); CARET=FOCUS?el.selectionStart:null;
     const d=ST=mergeBoard(BOARD,ME);
     /* THE SERVER SETS THE PACE NOW. See pollFloorFor in _lib.mjs: the interval
        widens with the size of the room, so a packed night slows itself down
@@ -1120,7 +1165,7 @@ function drawVoteSheet(s){
         </div>
         <input class="inp" id="songVoteAmt" type="number" inputmode="numeric" min="1" max="500" step="1" placeholder="Custom amount ($)"
           onfocus="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')" oninput="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')" onblur="customAmt(this,[5,10],'sv-',sel.songVotes||5,'goSongVotes')">
-        <button class="go" id="goSongVotes" onclick="checkout('song_votes')">Continue to payment</button>
+        ${wvHint()}<button class="go" id="goSongVotes" onclick="checkout('song_votes')">Continue to payment</button>
         <p class="fine secure-votes">$1 = 1 vote · Secure checkout by Stripe</p>
       </div>`:''}`);
 }
@@ -1176,7 +1221,7 @@ async function vote(id,n,castId){
     else toast(d.error==='busy'?'The room is very busy and that vote didn’t land — tap it again':(d.error||'Could not save that vote')); }
   if(d&&d.ok) applyCast(id,q,s,d);
   else delete SHOWN[id];       // refused or unreachable: the board's number is the truth again
-  busy.delete(id); wakeUp(true); load();
+  busy.delete(id); ME_DUE=true; wakeUp(true); load();
 }
 /* A CAST, WRITTEN INTO THE PERSONAL STATE THIS PHONE HOLDS. Normally the very next
    /api/me replaces all of this with the server's word a moment later. But if that
@@ -1390,6 +1435,11 @@ function render(){
   const by=a=>a?`<div class="by">${esc(a)}</div>`:'';
   const freeTotal=Number.isFinite(c.freeTotal)?c.freeTotal:Math.max(0,(c.total||0)-(c.extra||0));
   const freeRemaining=Number.isFinite(c.freeRemaining)?c.freeRemaining:Math.max(0,(c.remaining||0)-(c.paidLeft||0));
+  /* The board is painted before the personal call answers (decision 0185). Until it has
+     answered once, the wallet is not known, so the pill and the strip do not guess:
+     a fan who spent seven votes must not see "10/10" for a moment. A call that failed
+     ends the wait, and the fresh-phone numbers stand in as they always have. */
+  const meWait=!ME&&!ME_SEEN;
 
   let h=`<div class="head">
     <div style="min-width:0">
@@ -1399,7 +1449,7 @@ function render(){
         d.setlist?` · ${esc(d.setlist.name)}`:''}</div>
     </div>
     <div class="headtools"><button class="themebtn sharebtn" type="button" onclick="share()" aria-label="Share this page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg></button><button class="themebtn" type="button" data-theme-toggle aria-label="Switch theme">◐</button>
-    <div class="credits ${!c.unlimited&&c.remaining<=0?'low':''} mono" id="cr">${c.unlimited?'∞ votes':`${freeRemaining}<small>/${freeTotal} votes</small>`}</div></div>
+    <div class="credits ${!c.unlimited&&c.remaining<=0&&!meWait?'low':''} mono" id="cr">${meWait?'<span class="sk" style="display:inline-block;width:46px;height:14px;vertical-align:middle"></span>':c.unlimited?'∞ votes':`${freeRemaining}<small>/${freeTotal} votes</small>`}</div></div>
   </div>`;
 
   /* An ENDED show must not claim a song is playing. The header says "That's a wrap"
@@ -1430,7 +1480,7 @@ function render(){
 
   if(!ended) h += `<div class="strip ${open?'':'shut'}">
       <span class="l"><span class="dot"></span>${open?'Voting open':'Voting paused'}</span>
-      <span class="r">${c.unlimited?'Unlimited votes':`${c.remaining} vote${c.remaining===1?'':'s'} left`}</span></div>`;
+      <span class="r">${meWait?'':c.unlimited?'Unlimited votes':`${c.remaining} vote${c.remaining===1?'':'s'} left`}</span></div>`;
   /* TONIGHT'S NUMBERS (decision 0079) — the Live tab's tally, on every phone, as
      far as the artist allows in Settings: votes + voters as one switch, tips as
      another. `numbers` is null until something is on, and the line is not drawn. */
@@ -1520,8 +1570,11 @@ function render(){
     b.addEventListener('click',()=>setGenre(b.getAttribute('data-genre'))));
 
   const qi=$('#q');
-  if(qi){ qi.addEventListener('input',e=>{FILTER=e.target.value;render();});
-    if(FOCUS){ qi.focus(); const v=qi.value; qi.setSelectionRange(v.length,v.length); } }
+  /* render() rebuilds the box, so the box the fan is typing in is replaced on every
+     letter. It is focused again, with the caret where it was — FOCUS used to be set
+     only by a poll, so typing dropped the keyboard after one letter (decision 0185). */
+  if(qi){ qi.addEventListener('input',e=>{FILTER=e.target.value;FOCUS=true;CARET=e.target.selectionStart;render();FOCUS=false;});
+    if(FOCUS){ qi.focus(); const v=qi.value, at=CARET==null?v.length:Math.min(CARET,v.length); qi.setSelectionRange(at,at); } }
 
   /* delight: bump the credit pill when it changes */
   const cr=$('#cr');
@@ -1694,7 +1747,7 @@ async function sendAsk(kind,withOffer=false){
     }
     closeSheet(); buzz([10,40,10]);
     toast(kind==='birthday'?'Sent up — 🎂':kind==='vibe'?'Vibe sent — ✨':'Request sent');
-    await load();
+    ME_DUE=true; await load();
   }catch(e){ toast('Connection hiccup — try again');
     if(btn){btn.disabled=false;btn.textContent='Send';} }
   finally{ ASKING=false; }
@@ -1753,7 +1806,7 @@ async function decideLeftover(choice){
     if(choice==='gift'){ buzz([10,40,10]); toast('Lovely \u2014 thank you'); }
     else toast('Saved \u2014 they\u2019ll be here next show');
   }catch(e){ toast('Couldn\u2019t save that \u2014 your votes are safe'); }
-  load();
+  ME_DUE=true; load();
 }
 function openBuy(){
   /* Reached from the vote sheet (it is open, with its review card) the pack is for
@@ -1770,8 +1823,17 @@ function openBuy(){
       ${KEYS.map(k=>`<button class="tile ${k==='small'?'on':''}" id="p-${k}" onclick="pickPack('${k}')">
         <b>${money(P[k].cents)}</b><span>${P[k].votes} votes</span></button>`).join('')}
     </div>
-    <button class="go" id="goBuy" onclick="checkout('votes')">Continue to payment</button>
+    ${wvHint()}<button class="go" id="goBuy" onclick="checkout('votes')">Continue to payment</button>
     <p class="fine secure-votes">Secure checkout by Stripe · you’ll come right back</p>`);
+}
+/* IN AN APP'S OWN BROWSER (WV, fan.js) the votes a fan buys stay in that browser, and
+   the bank's page can hand the return to Safari or Chrome — where the wallet is empty
+   (decision 0185). The shop's hint, said for votes: it never blocks the purchase, and
+   there is no reliable way out of the app's browser, so it only tells them how. */
+function wvHint(){
+  if(!WV) return '';
+  return `<div class="wvhint"><b>You’re in ${WV}’s browser.</b>Votes you buy stay in the browser you buy them in, and paying can finish in another one. To be safe, open this page in your browser first: tap the ··· menu, then <em>Open in browser</em>.
+    <button class="btn btn-grey btn-sm" type="button" onclick="shareLink(location.origin+VOTEHREF,'Vote the setlist','Link copied — paste it in your browser')">Copy link</button></div>`;
 }
 function pickPack(p){sel.pack=p;buzz(8);
   ['small','big'].forEach(k=>{const el=$('#p-'+k); if(el)el.classList.toggle('on',k===p);});}
@@ -1818,7 +1880,11 @@ async function checkout(kind){
       // venue wifi, wallet app hijacks the redirect) the next page load redeems it.
       if(d.id) pendingSet({id:d.id,at:Date.now(),song:kind==='votes'&&BUYSONG?BUYSONG:''});
       goTo(d.url,'Opening secure checkout…');return;}
-    toast(`Card payments aren’t working right now — grab ${artistFirst()} between songs`);
+    /* 429 is the checkout limiter (payAllowed), which counts the bar's wifi as well as
+       the phone — a busy room, not a broken card. Say that, and leave the button
+       working; anything else is still "card payments aren't working" (decision 0185). */
+    toast(r.status===429?'Lots of people are buying at once — try again in a moment.'
+      :`Card payments aren’t working right now — grab ${artistFirst()} between songs`);
   }catch(e){toast(`Card payments aren’t working right now — grab ${artistFirst()} between songs`);}
   if(btn){btn.disabled=false;btn.textContent='Continue to payment';}
 }
@@ -1850,17 +1916,28 @@ async function redeem(sid,loud){
          record is cleared, and only trust it for THIS session and a pack of votes
          (song votes and tips land on their own; nothing is left to confirm). */
       const p=pendingGet(), forSong=(p&&p.id===sid&&d.kind==='votes'&&p.song)||'';
-      pendingSet(null);
-      if(!d.already){
+      /* A PACK BOUGHT IN ANOTHER BROWSER. Votes belong to the device id that started
+         the checkout, and the return can land somewhere else — Instagram's browser
+         hands the bank's page to Safari, and Safari comes back here. This browser then
+         has no pending record for the session, and its wallet did not change: saying
+         "added" here sent the fan looking for votes that are in the other browser. The
+         server never says whose they are (0bu); the page only knows it did not start it. */
+      /* Replay votes the song could no longer take (the replay began, the night ended)
+         land in the wallet instead — `asCredits` — and a wallet is per browser too. */
+      const wallet=d.kind==='votes'||(d.kind==='song_votes'&&d.asCredits===true);
+      const elsewhere=wallet&&!(p&&p.id===sid);
+      if(p&&p.id===sid) pendingSet(null);
+      if(elsewhere){ if(!d.already||loud) toast('Paid — the votes went to the browser you started in. Open this page there to use them.'); }
+      else if(!d.already){
         if(d.kind!=='request_hold')confetti(); buzz([12,50,12]);
         toast(d.kind==='tip'?`Thank you! Your $${d.amount} tip reached ${artistFirst()}`
           :d.kind==='request_hold'?`Request sent — $${d.amount} is held, not charged`
-          :d.kind==='song_votes'?`${d.granted||0} paid votes added to that song`
+          :d.kind==='song_votes'?(d.asCredits===true?`That replay had already started, so your ${d.granted||0} votes went to your wallet instead.`:`${d.granted||0} paid votes added to that song`)
           :`${d.granted||0} extra votes added — vote away!`); }
       else if(loud) toast('Already added — you\u2019re all set');
       /* The fresh board first (it carries the fuller wallet), then the sheet. Not
          awaited: the boot sequence never waited on this load and still must not. */
-      load().then(()=>{ if(forSong) resumeVote(forSong); });
+      ME_DUE=true; load().then(()=>{ if(forSong) resumeVote(forSong); });
       return true;
     }
     // 402 = not paid yet; keep it pending. A hard 4xx means it will never work.
@@ -2037,19 +2114,38 @@ function wakeUp(full){
   else return;                               // already lively — leave the ladder alone
   schedule();
 }
+/* THE SCREEN COMES BACK ON (decision 0185). wakeUp(true) only re-arms the ladder, and
+   in a big room its first rung is twenty seconds — so a fan who unlocked their phone
+   for a ten-second glance never saw the room move, and tapped "Voting open" on a
+   window that had shut. Now a board older than the floor is fetched at once — after
+   a random 0–1.5 s, so a room of phones unlocked by the same moment does not arrive
+   as one spike (the board is the edge's copy; this is cheap) — and until it lands
+   the old board is dimmed and says it is catching up, rather than passing for the
+   room as it is now. The personal call goes with that load: the wallet may have
+   moved while the screen was off. A board that does not arrive leaves the dimming
+   on; it is still old. */
+let CATCHUP=null;
+function wake(){
+  ME_DUE=true;
+  wakeUp(true);
+  if(!BOARD||Date.now()-BOARD_T<=FLOOR) return;     // fresh enough: the ladder's next tick
+  $('#app').classList.add('catching');
+  clearTimeout(CATCHUP);
+  CATCHUP=setTimeout(()=>{ CATCHUP=null; tick(); }, Math.random()*1500);
+}
 
 /* PULL TO REFRESH — the gesture is in /pull.js; this says what it should do.
    The poll settles at 25s when a room is quiet, so there has to be a way to say
    "no, tell me now": refetch, and put the poll back on its fast rung. */
 function wirePull(){
-  MySetPull(async()=>{ try{ await load(); }catch(e){} wakeUp(true); });
+  MySetPull(async()=>{ ME_DUE=true; try{ await load(); }catch(e){} wakeUp(true); });
 }
 
 (async function(){
   await load(); await handleReturn();
   LASTSIG=signature();
   schedule();
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) wakeUp(true); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) wake(); });
   document.addEventListener('pointerdown',()=>wakeUp(false),{passive:true});
   wirePull();
 })();
